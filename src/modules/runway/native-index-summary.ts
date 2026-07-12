@@ -28,6 +28,13 @@ export function buildNativeIndexSummary() {
       files: paths,
       source,
       freshness,
+      execution: objectField(selected, 'execution') ?? {
+        mode: 'read_only',
+        helper_execution: 'skipped',
+        cache_hit: false,
+        cache_reason: 'read_only',
+        reused_index_keys: [],
+      },
       health: buildHealthSummary({
         current,
         lastSuccess,

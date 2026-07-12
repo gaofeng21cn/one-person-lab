@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use std::collections::BTreeMap;
 use std::env;
@@ -85,10 +85,12 @@ struct FileEntry {
     modified_unix_ms: Option<u128>,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 struct JsonValidationEntry {
     path: String,
     relative_path: String,
+    bytes: u64,
+    modified_unix_ms: Option<u128>,
     valid: bool,
     skipped: bool,
     error: Option<String>,
@@ -238,6 +240,7 @@ fn build_artifact_index(request: &Value) -> Result<Value, HelperError> {
             max_depth,
             &|path| extension_matches(path, &extensions),
             &limits,
+            &[],
             &mut report,
         )?;
     }
@@ -275,9 +278,12 @@ fn build_state_index(request: &Value) -> Result<Value, HelperError> {
     let max_depth = optional_u64(request, "max_depth").unwrap_or(8) as usize;
     let limits = scan_limits(request)?;
     let max_json_bytes = optional_limit_u64(request, "max_json_bytes", DEFAULT_MAX_JSON_BYTES)?;
+    let excluded_dir_names = string_list(request, "excluded_dir_names").unwrap_or_default();
+    let previous_json_validation = previous_json_validation_entries(request);
 
     let mut root_entries = Vec::new();
     let mut json_entries = Vec::new();
+    let mut reused_json_count = 0usize;
     for root in workspace_roots {
         let mut report = ScanReport::new(&limits);
         scan_files(
@@ -286,6 +292,7 @@ fn build_state_index(request: &Value) -> Result<Value, HelperError> {
             max_depth,
             &|path| path.is_file(),
             &limits,
+            &excluded_dir_names,
             &mut report,
         )?;
         report
@@ -296,14 +303,23 @@ fn build_state_index(request: &Value) -> Result<Value, HelperError> {
             .iter()
             .filter(|entry| entry.path.ends_with(".json"))
         {
+            if let Some(previous) = previous_json_validation.get(&file.path) {
+                if previous.bytes == file.bytes && previous.modified_unix_ms == file.modified_unix_ms {
+                    json_entries.push(previous.clone());
+                    reused_json_count += 1;
+                    continue;
+                }
+            }
             json_entries.push(validate_json_file(file, max_json_bytes));
         }
+        let fingerprint = stable_file_fingerprint(&report.files);
         root_entries.push(json!({
             "root": path_to_string(root),
             "file_count": report.files.len(),
             "total_bytes": report.files.iter().map(|entry| entry.bytes).sum::<u64>(),
             "truncated": report.truncated,
-            "max_files": report.max_files
+            "max_files": report.max_files,
+            "fingerprint": fingerprint
         }));
     }
 
@@ -321,6 +337,7 @@ fn build_state_index(request: &Value) -> Result<Value, HelperError> {
             "checked_files_count": json_entries.len(),
             "invalid_files_count": invalid_json_count,
             "skipped_files_count": skipped_json_count,
+            "reused_files_count": reused_json_count,
             "max_json_bytes": max_json_bytes,
             "files": json_entries
         }
@@ -342,6 +359,7 @@ fn build_runtime_watch(request: &Value) -> Result<Value, HelperError> {
         })?;
     let max_depth = optional_u64(request, "max_depth").unwrap_or(6) as usize;
     let limits = scan_limits(request)?;
+    let excluded_dir_names = string_list(request, "excluded_dir_names").unwrap_or_default();
     let mut roots = Vec::new();
     for root in watch_roots {
         let mut report = ScanReport::new(&limits);
@@ -351,6 +369,7 @@ fn build_runtime_watch(request: &Value) -> Result<Value, HelperError> {
             max_depth,
             &|path| path.is_file(),
             &limits,
+            &excluded_dir_names,
             &mut report,
         )?;
         let fingerprint = stable_file_fingerprint(&report.files);
@@ -377,12 +396,13 @@ fn scan_files(
     max_depth: usize,
     accepts: &dyn Fn(&Path) -> bool,
     limits: &ScanLimits,
+    excluded_dir_names: &[String],
     report: &mut ScanReport,
 ) -> Result<(), HelperError> {
     if !root.exists() {
         return Ok(());
     }
-    scan_files_inner(root, base, max_depth, 0, accepts, limits, report)
+    scan_files_inner(root, base, max_depth, 0, accepts, limits, excluded_dir_names, report)
 }
 
 fn scan_files_inner(
@@ -392,6 +412,7 @@ fn scan_files_inner(
     depth: usize,
     accepts: &dyn Fn(&Path) -> bool,
     limits: &ScanLimits,
+    excluded_dir_names: &[String],
     report: &mut ScanReport,
 ) -> Result<(), HelperError> {
     if report.truncated {
@@ -435,10 +456,19 @@ fn scan_files_inner(
     }
     paths.sort();
     for path in paths {
-        if should_skip_dir(&path) {
+        if should_skip_dir(&path, excluded_dir_names) {
             continue;
         }
-        scan_files_inner(&path, base, max_depth, depth + 1, accepts, limits, report)?;
+        scan_files_inner(
+            &path,
+            base,
+            max_depth,
+            depth + 1,
+            accepts,
+            limits,
+            excluded_dir_names,
+            report,
+        )?;
         if report.truncated {
             return Ok(());
         }
@@ -468,6 +498,8 @@ fn validate_json_file(file: &FileEntry, max_json_bytes: u64) -> JsonValidationEn
         return JsonValidationEntry {
             path: file.path.clone(),
             relative_path: file.relative_path.clone(),
+            bytes: file.bytes,
+            modified_unix_ms: file.modified_unix_ms,
             valid: false,
             skipped: true,
             error: None,
@@ -480,6 +512,8 @@ fn validate_json_file(file: &FileEntry, max_json_bytes: u64) -> JsonValidationEn
             Ok(_) => JsonValidationEntry {
                 path: file.path.clone(),
                 relative_path: file.relative_path.clone(),
+                bytes: file.bytes,
+                modified_unix_ms: file.modified_unix_ms,
                 valid: true,
                 skipped: false,
                 error: None,
@@ -488,6 +522,8 @@ fn validate_json_file(file: &FileEntry, max_json_bytes: u64) -> JsonValidationEn
             Err(error) => JsonValidationEntry {
                 path: file.path.clone(),
                 relative_path: file.relative_path.clone(),
+                bytes: file.bytes,
+                modified_unix_ms: file.modified_unix_ms,
                 valid: false,
                 skipped: false,
                 error: Some(error.to_string()),
@@ -497,6 +533,8 @@ fn validate_json_file(file: &FileEntry, max_json_bytes: u64) -> JsonValidationEn
         Err(error) => JsonValidationEntry {
             path: file.path.clone(),
             relative_path: file.relative_path.clone(),
+            bytes: file.bytes,
+            modified_unix_ms: file.modified_unix_ms,
             valid: false,
             skipped: false,
             error: Some(error.to_string()),
@@ -518,14 +556,24 @@ fn stable_file_fingerprint(files: &[FileEntry]) -> String {
     format!("{:016x}", hasher.finish())
 }
 
-fn should_skip_dir(path: &Path) -> bool {
+fn should_skip_dir(path: &Path, excluded_dir_names: &[String]) -> bool {
     if !path.is_dir() {
         return false;
     }
-    matches!(
-        path.file_name().and_then(|value| value.to_str()),
-        Some(".git" | ".venv" | "node_modules" | "target" | ".worktrees")
-    )
+    let name = path.file_name().and_then(|value| value.to_str());
+    matches!(name, Some(".git" | ".venv" | "node_modules" | "target" | ".worktrees"))
+        || name.is_some_and(|candidate| excluded_dir_names.iter().any(|value| value == candidate))
+}
+
+fn previous_json_validation_entries(request: &Value) -> BTreeMap<String, JsonValidationEntry> {
+    let Some(values) = request.get("previous_json_validation").and_then(Value::as_array) else {
+        return BTreeMap::new();
+    };
+    values
+        .iter()
+        .filter_map(|value| serde_json::from_value::<JsonValidationEntry>(value.clone()).ok())
+        .map(|entry| (entry.path.clone(), entry))
+        .collect()
 }
 
 fn extension_matches(path: &Path, extensions: &[String]) -> bool {
@@ -747,6 +795,43 @@ mod tests {
             result["json_validation"]["files"][0]["skip_reason"],
             "file exceeds max_json_bytes (4)"
         );
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn state_indexer_reuses_unchanged_json_validation_and_skips_explicit_directories() {
+        let root = unique_temp_root();
+        fs::create_dir_all(root.join("ignored")).unwrap();
+        fs::write(root.join("stable.json"), "{\"ok\":true}").unwrap();
+        fs::write(root.join("ignored").join("should-not-be-scanned.json"), "{").unwrap();
+
+        let first = run_helper(
+            "opl-state-indexer",
+            &json!({
+                "workspace_root": path_to_string(&root),
+                "max_depth": 2,
+                "excluded_dir_names": ["ignored"]
+            })
+            .to_string(),
+        );
+        let first_result = first.result.unwrap();
+        let previous = first_result["json_validation"]["files"].clone();
+
+        let second = run_helper(
+            "opl-state-indexer",
+            &json!({
+                "workspace_root": path_to_string(&root),
+                "max_depth": 2,
+                "excluded_dir_names": ["ignored"],
+                "previous_json_validation": previous
+            })
+            .to_string(),
+        );
+        let second_result = second.result.unwrap();
+        assert_eq!(second_result["roots"][0]["fingerprint"].as_str().is_some(), true);
+        assert_eq!(second_result["json_validation"]["checked_files_count"], 1);
+        assert_eq!(second_result["json_validation"]["reused_files_count"], 1);
+        assert_eq!(second_result["json_validation"]["invalid_files_count"], 0);
         fs::remove_dir_all(root).unwrap();
     }
 

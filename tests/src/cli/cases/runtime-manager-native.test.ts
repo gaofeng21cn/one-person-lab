@@ -161,6 +161,25 @@ test('runtime manager reports stale and expired native index freshness from the 
     assert.equal(expiredFreshness.failure_count, 2);
 });
 
+test('runtime manager reuses a fresh native index without refreshing it', (t) => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-warm-state-'));
+  const helperBinDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-native-helper-warm-bin-'));
+  writeNativeHelperFixtureScripts(helperBinDir, { includeVersionFields: true });
+  t.after(() => removeTempRoots(stateRoot, helperBinDir));
+
+  const first = runTemporalRuntimeManager(stateRoot, helperBinDir);
+  assert.equal(first.runtime_manager.state_index_target.persistence.execution.cache_hit, false);
+  assert.equal(first.runtime_manager.state_index_target.persistence.execution.helper_execution, 'executed');
+
+  const second = runTemporalRuntimeManager(stateRoot, helperBinDir);
+  const execution = second.runtime_manager.state_index_target.persistence.execution;
+  assert.equal(execution.mode, 'auto');
+  assert.equal(execution.cache_hit, true);
+  assert.equal(execution.helper_execution, 'reused');
+  assert.deepEqual(execution.reused_index_keys, ['state_index', 'artifact_manifest', 'runtime_health']);
+  assert.equal(second.runtime_manager.state_index_target.persistence.freshness.status, 'fresh');
+});
+
 test('runtime manager records structured native index diff and history GC reporting', (t) => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-index-gc-state-'));
   const helperBinDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-native-helper-index-gc-bin-'));

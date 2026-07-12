@@ -78,6 +78,19 @@ export type NativeIndexGcReport = {
 
 export type NativeIndexFailureCategory = 'helper_unavailable' | 'helper_error' | 'write_failed';
 
+export type NativeIndexExecution = {
+  mode: 'auto' | 'refresh' | 'read_only';
+  helper_execution: 'executed' | 'reused' | 'skipped';
+  cache_hit: boolean;
+  cache_reason:
+    | 'fresh_cache'
+    | 'refresh_requested'
+    | 'cache_missing'
+    | 'cache_expired'
+    | 'read_only';
+  reused_index_keys: string[];
+};
+
 export type NativeStateIndexPersistence = {
   status: 'written' | 'skipped_helper_unavailable' | 'skipped_helper_error' | 'write_failed' | 'read_only';
   state_dir: string;
@@ -104,6 +117,7 @@ export type NativeStateIndexPersistence = {
     last_success_expired: boolean | null;
     failure_count: number;
   };
+  execution: NativeIndexExecution;
   source_of_truth_rule: string;
   errors: NativeIndexError[];
 };
@@ -234,6 +248,7 @@ export function nativeStateIndexPaths(stateDir: string) {
 export function readNativeStateIndexPersistence(input: {
   stateDir: string;
   sourceOfTruthRule: string;
+  execution?: NativeIndexExecution;
 }): NativeStateIndexPersistence {
   const paths = nativeStateIndexPaths(input.stateDir);
   const current = readPreviousNativeIndex(paths.indexFile);
@@ -266,6 +281,13 @@ export function readNativeStateIndexPersistence(input: {
       history_count_after_gc: historyCount,
     },
     freshness: readOnlyNativeIndexFreshness(paths, current, lastSuccess),
+    execution: input.execution ?? {
+      mode: 'read_only',
+      helper_execution: 'skipped',
+      cache_hit: false,
+      cache_reason: 'read_only',
+      reused_index_keys: [],
+    },
     source_of_truth_rule: input.sourceOfTruthRule,
     errors: [],
   };
@@ -411,6 +433,7 @@ function persistenceStatus(
     expiresAt: string;
     diff: NativeIndexDiffSummary;
     gc: NativeIndexGcReport;
+    execution: NativeIndexExecution;
   }> = {},
 ): NativeStateIndexPersistence {
   const historyCount = countJsonlLines(paths.historyFile);
@@ -436,6 +459,13 @@ function persistenceStatus(
       generatedAt: input.generatedAt ?? null,
       expiresAt: input.expiresAt ?? null,
     }),
+    execution: input.execution ?? {
+      mode: 'refresh',
+      helper_execution: 'executed',
+      cache_hit: false,
+      cache_reason: 'refresh_requested',
+      reused_index_keys: [],
+    },
     source_of_truth_rule: sourceOfTruthRule,
     errors,
   };

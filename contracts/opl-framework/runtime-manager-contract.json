@@ -178,9 +178,23 @@
       },
       "freshness_statuses": [
         "fresh",
+        "expired_current_index",
         "stale_last_success_available",
         "expired_last_success",
         "unavailable_no_success"
+      ],
+      "execution_policy": {
+        "default_mode": "auto",
+        "auto_mode": "reuse_a_fresh_index_when_the_helper_binary_is_resolved",
+        "refresh_mode": "explicit_refresh_native_indexes_executes_all_index_helpers",
+        "read_only_mode": "read_existing_native_index_without_persisting"
+      },
+      "execution_fields": [
+        "mode",
+        "helper_execution",
+        "cache_hit",
+        "cache_reason",
+        "reused_index_keys"
       ],
       "diff_summary": {
         "compared_fields": [

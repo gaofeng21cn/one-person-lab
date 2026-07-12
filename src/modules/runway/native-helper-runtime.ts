@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { parseJsonText, readJsonPayloadFile } from '../../kernel/json-file.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from './runtime-state-paths.ts';
 import {
+  type NativeIndexExecution,
   type NativeStateIndexPersistence,
   persistNativeStateIndex,
   readNativeStateIndexPersistence,
@@ -56,6 +57,8 @@ type NativeHelperProjection = {
   };
   persistence: NativeStateIndexPersistence;
 };
+
+type NativeIndexExecutionMode = 'auto' | 'refresh' | 'read_only';
 
 type NativeHelperLifecycle = {
   status: 'ready_to_build' | 'package_source_incomplete';
@@ -180,6 +183,8 @@ const RUNTIME_MANAGER_HELPER_SEQUENCE = [
     input: () => ({
       workspace_roots: [repoRoot(), resolveOplStatePaths().state_dir],
       max_depth: 4,
+      excluded_dir_names: nativeStateIndexExcludedDirNames(),
+      previous_json_validation: readPreviousJsonValidation(resolveOplStatePaths().state_dir),
     }),
     index_key: 'state_index',
   },
@@ -210,25 +215,61 @@ const RUNTIME_MANAGER_HELPER_SEQUENCE = [
 
 export function buildNativeHelperProjection(
   helpers: readonly NativeHelperDefinition[],
-  input: { persistIndexes?: boolean } = {},
+  input: { persistIndexes?: boolean; refreshIndexes?: boolean } = {},
 ): NativeHelperProjection {
   const statePaths = ensureOplStateDir();
   const lifecycle = buildNativeHelperLifecycle();
-  const runtime = inspectNativeHelperRuntime(helpers);
-  const persistence = input.persistIndexes === false
-    ? readNativeStateIndexPersistence({
-      stateDir: statePaths.state_dir,
-      sourceOfTruthRule: SOURCE_OF_TRUTH_RULE,
-    })
-    : persistNativeStateIndex({
-      stateDir: statePaths.state_dir,
-      invocations: runtime.invocations,
-      indexSpecs: RUNTIME_MANAGER_HELPER_SEQUENCE
-        .filter((spec) => spec.helper_id !== 'opl-doctor-native')
-        .map((spec) => ({ helper_id: spec.helper_id, index_key: spec.index_key })),
-      protocolVersion: PROTOCOL_VERSION,
-      sourceOfTruthRule: SOURCE_OF_TRUTH_RULE,
-    });
+  const mode: NativeIndexExecutionMode = input.persistIndexes === false
+    ? 'read_only'
+    : input.refreshIndexes
+      ? 'refresh'
+      : 'auto';
+  const existing = readNativeStateIndexPersistence({
+    stateDir: statePaths.state_dir,
+    sourceOfTruthRule: SOURCE_OF_TRUTH_RULE,
+  });
+  const cacheCanBeReused = mode !== 'refresh' && existing.freshness.status === 'fresh';
+  const cachedIndexes = cacheCanBeReused
+    ? readCachedNativeIndexInvocations(statePaths.state_dir)
+    : {};
+  const runtime = inspectNativeHelperRuntime(helpers, {
+    cachedIndexes: cacheCanBeReused ? cachedIndexes : {},
+  });
+  const reusedIndexKeys = Object.keys(cachedIndexes).filter((indexKey) => {
+    const spec = RUNTIME_MANAGER_HELPER_SEQUENCE.find((candidate) => candidate.index_key === indexKey);
+    const invocation = runtime.invocations.find((candidate) => candidate.request_id === spec?.request_id);
+    return Boolean(spec && invocation?.status === 'ok' && cachedIndexes[indexKey]);
+  });
+  const execution: NativeIndexExecution = {
+    mode,
+    helper_execution: reusedIndexKeys.length > 0 ? 'reused' : mode === 'read_only' ? 'skipped' : 'executed',
+    cache_hit: reusedIndexKeys.length > 0,
+    cache_reason: mode === 'refresh'
+      ? 'refresh_requested'
+      : existing.freshness.status === 'fresh'
+        ? 'fresh_cache'
+        : existing.freshness.status === 'unavailable_no_success'
+          ? 'cache_missing'
+          : 'cache_expired',
+    reused_index_keys: reusedIndexKeys,
+  };
+  const persistence = mode === 'read_only' || (mode === 'auto' && reusedIndexKeys.length > 0)
+    ? {
+      ...existing,
+      execution,
+    }
+    : {
+      ...persistNativeStateIndex({
+        stateDir: statePaths.state_dir,
+        invocations: runtime.invocations,
+        indexSpecs: RUNTIME_MANAGER_HELPER_SEQUENCE
+          .filter((spec) => spec.helper_id !== 'opl-doctor-native')
+          .map((spec) => ({ helper_id: spec.helper_id, index_key: spec.index_key })),
+        protocolVersion: PROTOCOL_VERSION,
+        sourceOfTruthRule: SOURCE_OF_TRUTH_RULE,
+      }),
+      execution,
+    };
 
   return {
     lifecycle,
@@ -383,6 +424,7 @@ export function buildNativeHelperLifecycle(): NativeHelperLifecycle {
 
 function inspectNativeHelperRuntime(
   helpers: readonly NativeHelperDefinition[],
+  input: { cachedIndexes?: Record<string, NativeHelperInvocation> } = {},
 ): NativeHelperProjection['runtime'] {
   const resolutions = helpers.map(resolveNativeHelper);
   const helperById = new Map(helpers.map((helper) => [helper.helper_id, helper]));
@@ -395,6 +437,15 @@ function inspectNativeHelperRuntime(
       return missingInvocation(spec.helper_id, spec.request_id);
     }
     const requestInput = typeof spec.input === 'function' ? spec.input() : spec.input;
+    const cachedInvocation = input.cachedIndexes?.[spec.index_key];
+    if (cachedInvocation && resolution.status === 'resolved') {
+      return {
+        ...cachedInvocation,
+        helper_id: helper.helper_id,
+        request_id: spec.request_id,
+        resolution,
+      };
+    }
     return invokeNativeHelper(helper, resolution, {
       ...requestInput,
       request_id: spec.request_id,
@@ -411,6 +462,55 @@ function inspectNativeHelperRuntime(
     },
     invocations,
   };
+}
+
+function readCachedNativeIndexInvocations(stateDir: string): Record<string, NativeHelperInvocation> {
+  const indexFile = path.join(stateDir, 'runtime-manager', 'native-state-index.json');
+  try {
+    const payload = readJsonPayloadFile(indexFile);
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+      return {};
+    }
+    const nativeIndexes = (payload as Record<string, unknown>).native_indexes;
+    if (!nativeIndexes || typeof nativeIndexes !== 'object' || Array.isArray(nativeIndexes)) {
+      return {};
+    }
+    return Object.fromEntries(
+      Object.entries(nativeIndexes as Record<string, unknown>)
+        .filter(([, value]) => value && typeof value === 'object' && !Array.isArray(value))
+        .map(([indexKey, value]) => [indexKey, value as NativeHelperInvocation]),
+    );
+  } catch {
+    return {};
+  }
+}
+
+function readPreviousJsonValidation(stateDir: string): unknown[] {
+  const cached = readCachedNativeIndexInvocations(stateDir).state_index?.result;
+  if (!cached || typeof cached !== 'object' || Array.isArray(cached)) {
+    return [];
+  }
+  const validation = (cached as Record<string, unknown>).json_validation;
+  if (!validation || typeof validation !== 'object' || Array.isArray(validation)) {
+    return [];
+  }
+  const files = (validation as Record<string, unknown>).files;
+  return Array.isArray(files) ? files : [];
+}
+
+function nativeStateIndexExcludedDirNames() {
+  return [
+    '.git',
+    '.venv',
+    'node_modules',
+    'target',
+    '.worktrees',
+    'generated_images',
+    'cache',
+    'tmp-debug-home',
+    'quarantine',
+    'worktree-backups',
+  ];
 }
 
 function invokeNativeHelper(
