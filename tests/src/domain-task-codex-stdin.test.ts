@@ -28,3 +28,17 @@ test('Codex streaming transport writes the supplied prompt to child stdin', asyn
   assert.equal(result.exitCode, 0);
   assert.equal(result.stdout.trimEnd(), prompt);
 });
+
+test('Codex streaming transport tolerates a completed child closing stdin early', async () => {
+  const result = await runCodexCommandStreaming([
+    '-e',
+    'process.stdout.write("completed\\n"); process.exit(0);',
+  ], {
+    binaryPath: process.execPath,
+    stdin: 'x'.repeat(4 * 1024 * 1024),
+    timeoutMs: 5000,
+  });
+
+  assert.equal(result.exitCode, 0);
+  assert.equal(result.stdout, 'completed\n');
+});
