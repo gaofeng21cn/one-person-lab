@@ -343,6 +343,15 @@ export function buildActionCatalog(contracts: FrameworkContracts) {
       payload_fields: ['path'],
       mutates: 'opl_workspace_root_config',
     },
+    {
+      action_id: 'codex_user_instructions_set',
+      label: 'Save Codex user instructions',
+      surface: 'opl app action execute',
+      delegated_surface: '$CODEX_HOME/AGENTS.md atomic write',
+      payload_fields: ['content', 'expected_sha256'],
+      mutates: 'codex_home_agents_md',
+      dry_run_supported: true,
+    },
     ...SETTINGS_CONTROL_CENTER_ACTIONS.map((action) => ({
       action_id: action.action_id,
       label: action.label,

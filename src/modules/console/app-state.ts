@@ -34,6 +34,7 @@ import { buildRuntimeTraySnapshot } from './runtime-tray-snapshot.ts';
 import { selectAppStateCurrentOwnerDeltaReadModel } from './app-state-current-owner-delta.ts';
 import { buildAgentLabDomainFeedbackSelfEvolutionReadModel } from '../foundry-lab/index.ts';
 import { buildFeedbackOpsReadModel } from '../foundry-lab/index.ts';
+import { readCodexUserInstructions } from './codex-personalization.ts';
 
 export { parseAppActionExecuteArgs, runOplAppActionExecute } from './app-state-parts/action-execute.ts';
 
@@ -609,6 +610,16 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
         shell_must_not_use_full_drilldown_as_normal_state: true,
       },
       core,
+      codex_personalization: {
+        surface_kind: 'opl_codex_personalization.v1',
+        user_agents: readCodexUserInstructions(),
+        authority_boundary: {
+          user_agents_owner: 'user_codex_home',
+          app_edit_action: 'codex_user_instructions_set',
+          opl_flow_role: 'install_and_semantically_merge_user_profile_only',
+          opl_app_session_context_owner: 'one-person-lab-app',
+        },
+      },
       developer_profile: developerProfile,
       developer_mode: developerMode,
       modules: modulesState,
