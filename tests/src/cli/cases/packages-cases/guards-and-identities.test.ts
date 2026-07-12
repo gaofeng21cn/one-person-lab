@@ -25,6 +25,7 @@ import {
 import { defaultHomeShortcutPreferences } from '../../../../../src/modules/connect/agent-package-registry-parts/home-shortcuts.ts';
 import { assertManifestMatchesRegistrySelection } from '../../../../../src/modules/connect/agent-package-registry-parts/selection.ts';
 import { canonicalAgentPackageId } from '../../../../../src/modules/connect/index.ts';
+import { resolveFirstPartyPackageManifest } from '../../../../../src/modules/connect/agent-package-first-party.ts';
 import { writeManagedRuntimeSourceFixture } from './managed-runtime-source-fixture.ts';
 
 test('default Home shortcut visibility follows registry starter_default', () => {
@@ -159,6 +160,16 @@ test('OPL Flow manifest resolves its package-owned 0.1.16 carrier and managed po
     source_path: 'contracts/workflow-policy.json',
     schema_path: 'contracts/workflow-policy.schema.json',
   });
+});
+
+test('first-party package refresh resolves the current Base manifest instead of an immutable bundle lock path', () => {
+  const selection = resolveFirstPartyPackageManifest('opl-flow');
+
+  assert.deepEqual(selection, {
+    canonicalId: 'opl-flow',
+    manifestUrl: path.join(repoRoot, 'contracts', 'opl-framework', 'packages', 'opl-flow.json'),
+  });
+  assert.equal(resolveFirstPartyPackageManifest('unknown-package'), null);
 });
 
 test('standard Agent manifests declare managed runtime source carriers while capability and policy packages do not', () => {

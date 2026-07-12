@@ -2,6 +2,7 @@ import {
   assert,
   createFamilyContractsFixtureRoot,
   fs,
+  installRuntimePackageFixture,
   os,
   path,
   runCli,
@@ -12,6 +13,7 @@ import {
 test('runtime action execute records and verifies domain dispatch evidence receipts through OPL ledger only', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-action-execute-domain-dispatch-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  installRuntimePackageFixture(stateRoot, 'mas');
   try {
     const created = runCli([
       'family-runtime',
@@ -122,11 +124,17 @@ test('runtime action execute records and verifies domain dispatch evidence recei
     assert.equal(recordRoute.request_id, `domain_dispatch:medautoscience:${attemptId}`);
     assert.equal(recordRoute.request_pack_id, 'medautoscience.domain_dispatch_evidence');
     assert.equal(recordRoute.workspace_root, '/tmp/mas');
-    assert.deepEqual(recordRoute.workspace_locator, {
-      workspace_root: '/tmp/mas',
-      artifact_root: '/tmp/mas/artifacts',
-      dispatch_ref: 'mas-domain-dispatch:dm-cvd:domain-dispatch-evidence',
-    });
+    assert.equal(recordRoute.workspace_locator.workspace_root, '/tmp/mas');
+    assert.equal(recordRoute.workspace_locator.artifact_root, '/tmp/mas/artifacts');
+    assert.equal(
+      recordRoute.workspace_locator.dispatch_ref,
+      'mas-domain-dispatch:dm-cvd:domain-dispatch-evidence',
+    );
+    assert.equal(recordRoute.workspace_locator.package_use_binding.root_package.package_id, 'mas');
+    assert.equal(
+      recordRoute.workspace_locator.package_use_binding.use_receipt_ref.startsWith('opl://agent-package/use/mas/'),
+      true,
+    );
     assert.equal(recordRoute.route_requires_domain_or_app_payload, true);
     assert.equal(recordRoute.can_close_without_domain_or_app_payload, false);
     assert.equal(recordRoute.creates_domain_action, false);

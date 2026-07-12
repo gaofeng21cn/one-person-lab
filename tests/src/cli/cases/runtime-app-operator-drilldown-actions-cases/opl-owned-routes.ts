@@ -3,6 +3,7 @@ import {
   buildManifestCommand,
   createFamilyContractsFixtureRoot,
   fs,
+  installRuntimePackageFixture,
   loadFamilyManifestFixtures,
   os,
   path,
@@ -18,6 +19,7 @@ import { createAdmittedStagePackFixture } from '../workspace-domain-test-helper.
 test('runtime action execute can execute OPL-owned attempt query routes', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-action-execute-query-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  installRuntimePackageFixture(stateRoot, 'mag');
   try {
     const attempt = runCli([
       'family-runtime',
@@ -65,6 +67,7 @@ test('runtime action execute can execute OPL-owned attempt query routes', () => 
 test('runtime action execute can create OPL-owned stage production attempt requests', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-action-execute-stage-production-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  installRuntimePackageFixture(stateRoot, 'mas');
   const masManifest = structuredClone(loadFamilyManifestFixtures().medautoscience);
   masManifest.family_stage_control_plane = {
     surface_kind: 'family_stage_control_plane',

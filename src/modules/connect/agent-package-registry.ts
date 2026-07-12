@@ -6,6 +6,7 @@ import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { stringValue } from '../../kernel/json-record.ts';
 import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 import { canonicalAgentPackageId, publicAgentPackageSelector } from './agent-package-identity.ts';
+import { resolveFirstPartyPackageManifest } from './agent-package-first-party.ts';
 import { materializeStandardAgentFrameworkLink } from './standard-agent-framework-link.ts';
 import { FORBIDDEN_AGENT_PACKAGE_FIELDS, MANIFEST_REQUIRED_FIELDS } from './agent-package-registry-parts/constants.ts';
 import {
@@ -174,7 +175,21 @@ async function applyManifestPackageLock(
   const existingLock = packageId
     ? index.packages.find((entry) => entry.package_id === packageId)
     : null;
-  const selection = action !== 'install'
+  const bundledFirstPartyRefresh = action !== 'install'
+    && existingLock?.source_kind === 'bundled_full_runtime_modules'
+    && !stringValue(input.manifestUrl)
+    && !stringValue(input.registryUrl)
+    ? resolveFirstPartyPackageManifest(packageId)
+    : null;
+  const selection = bundledFirstPartyRefresh
+    ? {
+        registryUrl: null,
+        packageId: bundledFirstPartyRefresh.canonicalId,
+        manifestUrl: bundledFirstPartyRefresh.manifestUrl,
+        trustTier: existingLock!.trust_tier,
+        registryEntry: null,
+      }
+    : action !== 'install'
     && !stringValue(input.manifestUrl)
     && !stringValue(input.registryUrl)
     && existingLock
@@ -374,6 +389,10 @@ async function applyManifestPackageLock(
         action,
         dryRun: input.dryRun === true,
         packageId: prepared.manifest.package_id,
+        sourceKind: prepared.sourceKind,
+        checkoutPath: prepared.manifest.package_id === root.manifest.package_id
+          ? input.agentRoot
+          : null,
         transactionId: sha256Text([
           'runtime-source',
           action,

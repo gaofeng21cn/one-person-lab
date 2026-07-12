@@ -3,6 +3,7 @@ import {
   buildManifestCommand,
   createFamilyContractsFixtureRoot,
   fs,
+  installRuntimePackageFixture,
   loadFamilyManifestFixtures,
   os,
   path,
@@ -157,6 +158,7 @@ test('runtime action execute can apply and verify legacy cleanup plans from App 
 test('runtime action execute records MAS paper-line owner-chain results as refs-only domain dispatch evidence', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-action-execute-mas-owner-chain-result-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  installRuntimePackageFixture(stateRoot, 'mas');
   try {
     const created = runCli([
       'family-runtime',

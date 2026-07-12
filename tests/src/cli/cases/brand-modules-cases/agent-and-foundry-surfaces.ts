@@ -168,7 +168,7 @@ test('Foundry Agent series exposes a shared CLI spine instead of copying OPL bra
     );
     assert.deepEqual(
       output.peers.map((entry: { series_membership: string }) => entry.series_membership),
-      ['standard_domain_agent', 'standard_domain_agent', 'standard_domain_agent', 'standard_domain_agent', 'standard_domain_agent', 'framework_capability_package'],
+      expectedStandardAgentIds.map(() => 'standard_domain_agent'),
     );
     for (const peer of output.peers) {
       assert.deepEqual(Object.keys(peer).sort(), [

@@ -4,6 +4,7 @@ import {
   assert,
   fs,
   insertFamilyRuntimeTaskProjectionFixture,
+  installRuntimePackageFixture,
   os,
   path,
   runCli,
@@ -15,6 +16,7 @@ const FULL_DETAIL_COMMAND = [...SUMMARY_COMMAND, '--detail', 'full'];
 
 test('runtime operator summary exposes running provider attempts as liveness refs only', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-operator-live-control-'));
+  installRuntimePackageFixture(stateRoot, 'mas');
   try {
     const taskId = insertFamilyRuntimeTaskProjectionFixture({
       stateRoot,
@@ -139,6 +141,7 @@ test('runtime operator summary exposes running provider attempts as liveness ref
 
 test('runtime operator projection does not count stale MAS work-unit live attempt as current running', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-operator-stale-workunit-'));
+  installRuntimePackageFixture(stateRoot, 'mas');
   try {
     const staleTaskId = insertFamilyRuntimeTaskProjectionFixture({
       stateRoot,
@@ -251,6 +254,7 @@ test('runtime operator projection does not count stale MAS work-unit live attemp
 
 test('runtime operator projection exposes stall lineage for repeated typed blockers', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-operator-stall-lineage-'));
+  installRuntimePackageFixture(stateRoot, 'mas');
   try {
     const attemptIds: string[] = [];
     for (const index of [0, 1]) {
@@ -338,6 +342,7 @@ test('runtime operator projection exposes stall lineage for repeated typed block
 
 test('runtime operator summary bounds running provider attempt liveness samples', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-operator-live-control-bounded-'));
+  installRuntimePackageFixture(stateRoot, 'mas');
   try {
     const attemptIds: string[] = [];
     for (let index = 0; index < 7; index += 1) {
