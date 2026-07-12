@@ -36,7 +36,7 @@ export function sha256Fixture(value: string) {
   return `sha256:${crypto.createHash('sha256').update(value).digest('hex')}`;
 }
 
-export function remotePayloadManifest() {
+export function remotePayloadManifest(baseUrl?: string) {
   const pluginJson = formatJsonPayload({
     name: 'third-party-research',
     version: '1.2.3',
@@ -54,7 +54,9 @@ export function remotePayloadManifest() {
       },
       {
         path: 'skills/third-party-research/SKILL.md',
-        content_utf8: skillMarkdown,
+        ...(baseUrl
+          ? { source_url: `${baseUrl}/skills/third-party-research/SKILL.md` }
+          : { content_utf8: skillMarkdown }),
         sha256: sha256Fixture(skillMarkdown),
       },
     ],
@@ -220,7 +222,7 @@ export async function withRemotePayloadAgentPackageServer(run: (baseUrl: string)
     if (url.pathname === '/manifest.json') {
       response.writeHead(200, { 'content-type': 'application/json' });
       response.end(formatJsonPayload(agentPackageManifest({
-        pluginPayloadManifestUrl: `${baseUrl}/payload.json`,
+        pluginPayloadManifestUrl: 'payload.json',
       })));
       return;
     }
@@ -231,7 +233,12 @@ export async function withRemotePayloadAgentPackageServer(run: (baseUrl: string)
     }
     if (url.pathname === '/payload.json') {
       response.writeHead(200, { 'content-type': 'application/json' });
-      response.end(formatJsonPayload(remotePayloadManifest()));
+      response.end(formatJsonPayload(remotePayloadManifest(baseUrl)));
+      return;
+    }
+    if (url.pathname === '/skills/third-party-research/SKILL.md') {
+      response.writeHead(200, { 'content-type': 'text/markdown' });
+      response.end('# Third Party Research\n\nUse for fixture package materialization tests.\n');
       return;
     }
     response.writeHead(404, { 'content-type': 'application/json' });

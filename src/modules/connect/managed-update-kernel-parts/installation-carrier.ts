@@ -166,17 +166,18 @@ export function buildInstallationCarrierComponent(channel: string): ManagedUpdat
     readback_ref: 'contracts/opl-framework/managed-update-kernel-contract.json#providers/installation_carrier',
     apply_owner: 'host_carrier_owner',
     forbidden_claims: [
-      'opl_update_apply_updates_app_binary',
+      'opl_base_update_updates_opl_app_binary',
       'opl_update_apply_replaces_docker_webui_image',
       'managed_update_kernel_is_package_manager',
     ],
   });
 
   return managedUpdateComponent({
-    component_id: 'installation_carrier',
+    lifecycle_owner: 'opl_app',
+    component_id: 'opl_app',
     provider_id: 'installation_carrier',
     adapter_id: 'installation_carrier_status_adapter',
-    component_class: 'installation_carrier',
+    component_class: 'opl_app',
     coordination_role: 'owner_handoff',
     policy_id: 'carrier_specific_status_with_host_update_route',
     owner_route: route,
@@ -191,7 +192,7 @@ export function buildInstallationCarrierComponent(channel: string): ManagedUpdat
         'Framework status may project carrier routes, but host/App owner executes and reads back carrier replacement.',
       ],
     }),
-    label: 'Installation carrier',
+    label: 'OPL App',
     state: 'skipped_manual_required',
     channel,
     current: {
@@ -202,6 +203,7 @@ export function buildInstallationCarrierComponent(channel: string): ManagedUpdat
       managed_kernel_apply_allowed: false,
       opl_update_apply_must_not_claim_carrier_update_complete: true,
       host_update_route: 'carrier_specific_host_update_route_required',
+      host_executor_required: true,
       host_update_route_examples: [
         ...DOCKER_WEBUI_HOST_UPDATE_ROUTE_EXAMPLES,
         ...LINUX_PACKAGE_HOST_UPDATE_ROUTE_EXAMPLES,
@@ -291,7 +293,7 @@ export function buildInstallationCarrierComponent(channel: string): ManagedUpdat
       ],
     },
     receipt: componentReceipt({
-      component_id: 'installation_carrier',
+      component_id: 'opl_app',
       sourceManifestRef: 'one-person-lab-app://contracts/app-release-channel.json#managed_update_plane.planes.installation_carrier',
       postApplyHooks: ['carrier_specific_host_route_readback'],
       apply_mode: 'projection_only',

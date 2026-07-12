@@ -29,8 +29,9 @@ export function readHomeShortcutPreferenceFile(): AgentPackageHomeShortcutPrefer
     updated_at: stringValue(parsed.updated_at) ?? nowIso(),
     preferences: recordList(parsed.preferences).flatMap((entry) => {
       const shortcutId = stringValue(entry.shortcut_id);
-      const packageId = canonicalAgentPackageId(entry.package_id);
-      if (!shortcutId || !packageId) return [];
+      const declaredPackageId = stringValue(entry.package_id)?.toLowerCase() ?? null;
+      const packageId = canonicalAgentPackageId(declaredPackageId);
+      if (!shortcutId || !packageId || packageId !== declaredPackageId) return [];
       const sortOrder = typeof entry.sort_order === 'number' && Number.isFinite(entry.sort_order)
         ? entry.sort_order
         : null;

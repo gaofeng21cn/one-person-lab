@@ -6,7 +6,6 @@ import {
   runOplModuleAction,
 } from './system-installation/modules.ts';
 import { rollbackManagedModulePackageChannel } from './system-installation/module-package-channel.ts';
-import { runOplSystemAction } from './system-installation/system-actions.ts';
 import { runOplStartupMaintenance } from './system-installation/startup-maintenance.ts';
 import { isRecord } from '../../kernel/contract-validation.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
@@ -138,7 +137,7 @@ async function runRuntimeSubstrateAdapter(
     });
     const status = systemActionStatus(frameworkRollback);
     return {
-      component_id: 'runtime_substrate',
+      component_id: 'opl_base',
       adapter_id: 'runtime_substrate_adapter',
       status,
       reason: 'startup_maintenance_runtime_substrate_adapter',
@@ -164,7 +163,7 @@ async function runRuntimeSubstrateAdapter(
   const result = await runOplStartupMaintenance(contracts, { scope: 'runtime_substrate' });
   const systemAction = result.system_action as Record<string, unknown>;
   return {
-    component_id: 'runtime_substrate',
+    component_id: 'opl_base',
     adapter_id: 'runtime_substrate_adapter',
     status: systemActionStatus(systemAction),
     reason: 'startup_maintenance_runtime_substrate_adapter',
@@ -194,7 +193,7 @@ function buildAgentPackagePostApplyActions(
     return [
       {
         action_id: 'rollback_package_channel',
-        command_ref: managedUpdateCommand(MANAGED_UPDATE_OWNER_ACTIONS.revert, 'capability_packages'),
+        command_ref: managedUpdateCommand(MANAGED_UPDATE_OWNER_ACTIONS.revert, 'opl_packages'),
         status: nestedRecord(reconcileResult, 'summary') ? 'completed' : 'manual_required',
         result_ref: adapterResultRef('capability_packages', operation, reconcileResult),
         result: reconcileResult,
@@ -229,14 +228,14 @@ function buildAgentPackagePostApplyActions(
       action_id: 'sync_skills',
       command_ref: 'opl connect sync-skills --json',
       status: skillSyncStatus,
-      result_ref: adapterResultRef('codex_surface', operation, skillSyncPayload),
+      result_ref: adapterResultRef('opl_packages', operation, skillSyncPayload),
       result: skillSyncPayload,
     },
     {
-      action_id: 'codex_surface',
-      command_ref: 'opl update status --component codex_surface --json',
+      action_id: 'sync_codex_skill_plugin_projection',
+      command_ref: 'opl packages status --json',
       status: skillSyncStatus,
-      result_ref: adapterResultRef('codex_surface', operation, skillSyncPayload),
+      result_ref: adapterResultRef('opl_packages', operation, skillSyncPayload),
       result: {
         source: 'capability_packages_post_apply',
         scholarskills_source: {
@@ -360,7 +359,7 @@ function runAgentPackageAdapter(operation: ManagedUpdateKernelInput['operation']
     };
     const postApplyActions = buildAgentPackagePostApplyActions(operation, result);
     return {
-      component_id: 'capability_packages',
+      component_id: 'opl_packages',
       adapter_id: 'capability_packages_adapter',
       status,
       reason: completedCount > 0 && manualCount === 0
@@ -463,7 +462,7 @@ function runAgentPackageAdapter(operation: ManagedUpdateKernelInput['operation']
     status_detail: statusDetail,
     reload_guidance: reloadGuidance,
     read_model_guidance: {
-      status_plane: 'opl update status --component capability_packages --json',
+      status_plane: 'opl packages status --json',
       component_receipt_ledger: managedUpdateComponentReceiptLedgerFilePath(),
       app_consumer: 'App may call this apply path only when auto_apply.eligible is true and manual_required_targets_count is 0.',
     },
@@ -475,7 +474,7 @@ function runAgentPackageAdapter(operation: ManagedUpdateKernelInput['operation']
     },
   };
   return {
-    component_id: 'capability_packages',
+    component_id: 'opl_packages',
     adapter_id: 'capability_packages_adapter',
     status,
     reason: manualCount > 0 ? 'manual_review_required' : 'managed_modules_reconciled_and_codex_surface_synced',
@@ -489,97 +488,21 @@ function runAgentPackageAdapter(operation: ManagedUpdateKernelInput['operation']
   };
 }
 
-async function runCapabilityExposureAdapter(
-  contracts: FrameworkContracts,
-  operation: ManagedUpdateKernelInput['operation'],
-): Promise<AdapterExecutionResult> {
-  if (operation === MANAGED_UPDATE_OWNER_ACTIONS.revert) {
-    return {
-      component_id: 'codex_surface',
-      adapter_id: 'codex_surface_status_adapter',
-      status: 'skipped',
-      reason: 'codex_surface_is_derived_projection',
-      result_ref: null,
-      result: null,
-      error: null,
-    };
-  }
-
-  const result = await runOplSystemAction(contracts, 'reconcile_modules');
-  return {
-    component_id: 'codex_surface',
-    adapter_id: 'codex_surface_status_adapter',
-    status: result.system_action.status === 'completed' ? 'completed' : 'manual_required',
-    reason: 'reconcile_modules_refreshes_codex_codex_surface',
-    result_ref: adapterResultRef('codex_surface', operation, result.system_action as Record<string, unknown>),
-    result: result.system_action as Record<string, unknown>,
-    error: null,
-  };
-}
-
-function runCompanionToolsAdapter(): AdapterExecutionResult {
-  return {
-    component_id: 'companion_tools',
-    adapter_id: 'companion_tools_status_adapter',
-    status: 'manual_required',
-    reason: 'companion_tools_are_managed_by_companion_skill_route',
-    result_ref: null,
-    result: {
-      surface_kind: 'companion_tools_status_adapter_result',
-      action: 'inspect_or_apply_companion_tools',
-      status: 'manual_required',
-      command_refs: [
-        'opl skill companion status --json',
-        'opl skill companion apply --mode managed --json',
-      ],
-      authority_boundary: {
-        can_mutate_runtime_substrate: false,
-        can_write_domain_truth: false,
-        can_create_owner_receipt: false,
-      },
-    },
-    error: null,
-    apply_mode: 'manual_required',
-  };
-}
-
-function runWorkflowProfileAdapter(): AdapterExecutionResult {
-  return {
-    component_id: 'workflow_profile',
-    adapter_id: 'workflow_profile_adapter',
-    status: 'skipped',
-    reason: 'workflow_profile_requires_codex_semantic_merge',
-    result_ref: null,
-    result: null,
-    error: null,
-    apply_mode: 'projection_only',
-  };
-}
-
 async function runAdapter(
   contracts: FrameworkContracts,
   operation: ManagedUpdateKernelInput['operation'],
   componentId: string,
 ): Promise<AdapterExecutionResult> {
   try {
-    if (componentId === 'runtime_substrate') {
+    if (componentId === 'opl_base') {
       return await runRuntimeSubstrateAdapter(contracts, operation);
     }
-    if (componentId === 'capability_packages') {
+    if (componentId === 'opl_packages') {
       return runAgentPackageAdapter(operation);
-    }
-    if (componentId === 'codex_surface') {
-      return await runCapabilityExposureAdapter(contracts, operation);
-    }
-    if (componentId === 'companion_tools') {
-      return runCompanionToolsAdapter();
-    }
-    if (componentId === 'workflow_profile') {
-      return runWorkflowProfileAdapter();
     }
     return {
       component_id: componentId,
-      adapter_id: 'codex_surface_status_adapter',
+      adapter_id: 'installation_carrier_status_adapter',
       status: 'manual_required',
       reason: 'unknown_managed_update_component',
       result_ref: null,
@@ -590,17 +513,11 @@ async function runAdapter(
     };
   } catch (error) {
     const adapterId: ManagedUpdateProviderAdapterId =
-      componentId === 'runtime_substrate'
+      componentId === 'opl_base'
         ? 'runtime_substrate_adapter'
-        : componentId === 'capability_packages'
+        : componentId === 'opl_packages'
           ? 'capability_packages_adapter'
-          : componentId === 'codex_surface'
-            ? 'codex_surface_status_adapter'
-            : componentId === 'companion_tools'
-              ? 'companion_tools_status_adapter'
-              : componentId === 'workflow_profile'
-                ? 'workflow_profile_adapter'
-                : 'codex_surface_status_adapter';
+          : 'installation_carrier_status_adapter';
     return {
       component_id: componentId,
       adapter_id: adapterId,
@@ -701,12 +618,11 @@ function applyExecutionToProjection(
       },
       authority_boundary: {
         ...projection.managed_update.authority_boundary,
-        can_mutate_app_owned_runtime_root: results.some((entry) => entry.component_id === 'runtime_substrate'),
-        can_silently_update_clean_managed_modules: results.some((entry) => entry.component_id === 'capability_packages'),
+        can_mutate_app_owned_runtime_root: results.some((entry) => entry.component_id === 'opl_base'),
+        can_silently_update_clean_managed_modules: results.some((entry) => entry.component_id === 'opl_packages'),
         can_sync_codex_plugin_skill_projection: results.some((entry) =>
-          entry.component_id === 'capability_packages' || entry.component_id === 'codex_surface'
+          entry.component_id === 'opl_packages'
         ),
-        can_install_companion_tools: results.some((entry) => entry.component_id === 'companion_tools'),
       },
     },
   };

@@ -593,7 +593,6 @@ export function bootstrapLocalCodexDefaults(input: BootstrapLocalCodexDefaultsIn
   const selectedProviderApiKey = oplProviderActive
     ? explicitProviderApiKey ?? oplEnvironmentProviderApiKey ?? existing?.provider_api_key ?? null
     : providerApiKey;
-
   if (existing && !oplProviderActive && !providerApiKey) {
     return {
       status: 'skipped_existing_config' as const,
@@ -801,8 +800,6 @@ function readLocalCodexDefaults(): LocalCodexDefaults {
     isOplGatewayBaseUrl(entry.get('base_url'))
     && Boolean(normalizeOptionalString(entry.get('experimental_bearer_token')))
   ));
-  const oplGatewayConfigured = directOplGatewayConfigured;
-
   return {
     config_path: configPath,
     model_provider: providerId,
@@ -811,7 +808,7 @@ function readLocalCodexDefaults(): LocalCodexDefaults {
     provider_name: normalizeOptionalString(providerEntry?.get('name')),
     provider_base_url: providerBaseUrl,
     provider_api_key: providerApiKey,
-    opl_gateway_configured: oplGatewayConfigured,
+    opl_gateway_configured: directOplGatewayConfigured,
     selected_provider_api_key_present: Boolean(providerApiKey),
   };
 }

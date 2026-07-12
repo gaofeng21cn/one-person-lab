@@ -492,8 +492,8 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
   const agentPackagesProjection = {
     surface_kind: 'opl_app_agent_packages_projection',
     source: {
-      list_surface: 'opl connect agent-packages list --json',
-      status_surface: 'opl connect agent-packages status --package-id <package_id> --json',
+      list_surface: 'opl packages list --json',
+      status_surface: 'opl packages status --package-id <package_id> --json',
     },
     directory: agentPackagesReadback,
     status_index: {

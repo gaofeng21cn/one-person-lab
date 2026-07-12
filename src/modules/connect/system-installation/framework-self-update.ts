@@ -824,7 +824,7 @@ export function readOplFrameworkRuntimeUpdateStatus(
       ? ownerBoundaryRef('opl://managed-update', 'runtime_substrate', 'framework', MANAGED_UPDATE_OWNER_ACTIONS.revert, previousRoot)
       : null,
     metadata_ref: fs.existsSync(metadataPath) ? metadataPath : null,
-    command_ref: 'opl update apply --component runtime_substrate --json',
+    command_ref: 'opl update apply --json',
     rollback_command_ref: managedUpdateCommand(MANAGED_UPDATE_OWNER_ACTIONS.revert, 'runtime_substrate'),
   };
 }

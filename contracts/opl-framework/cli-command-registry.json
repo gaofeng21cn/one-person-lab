@@ -10,13 +10,13 @@
     "connect references",
     "connect external-skills",
     "connect foundation-skills",
-    "connect agent-packages",
     "update",
     "status",
     "stages",
     "runtime manager",
     "runtime app-operator-drilldown",
-    "runtime observability"
+    "runtime observability",
+    "packages"
   ],
   "commands": {
     "install": {
@@ -24,24 +24,88 @@
       "owner": "OPL Framework",
       "parser_adapter": "node_util_parse_args",
       "options": [
-        { "name": "headless", "flag": "--headless", "value_kind": "boolean", "required": false, "summary": "Explicitly select the default headless OPL base installation contract." },
-        { "name": "with-app", "flag": "--with-app", "value_kind": "boolean", "required": false, "summary": "Also install or open the optional One Person Lab desktop App." },
-        { "name": "modules", "flag": "--modules", "value_kind": "string", "required": false, "summary": "Comma-separated family modules to install." },
-        { "name": "module", "flag": "--module", "value_kind": "string", "required": false, "summary": "One family module to install; may be repeated." },
-        { "name": "skip-modules", "flag": "--skip-modules", "value_kind": "boolean", "required": false, "summary": "Skip family module installation." },
-        { "name": "skip-engines", "flag": "--skip-engines", "value_kind": "boolean", "required": false, "summary": "Skip execution engine installation." },
-        { "name": "skip-native-helper-repair", "flag": "--skip-native-helper-repair", "value_kind": "boolean", "required": false, "summary": "Skip native helper repair." },
-        { "name": "no-online-runtime", "flag": "--no-online-runtime", "value_kind": "boolean", "required": false, "summary": "Use the development/offline runtime diagnostic mode." }
+        {
+          "name": "headless",
+          "flag": "--headless",
+          "value_kind": "boolean",
+          "required": false,
+          "summary": "Explicitly select the default headless OPL base installation contract."
+        },
+        {
+          "name": "with-app",
+          "flag": "--with-app",
+          "value_kind": "boolean",
+          "required": false,
+          "summary": "Also install or open the optional One Person Lab desktop App."
+        },
+        {
+          "name": "modules",
+          "flag": "--modules",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Comma-separated family modules to install."
+        },
+        {
+          "name": "module",
+          "flag": "--module",
+          "value_kind": "string",
+          "required": false,
+          "summary": "One family module to install; may be repeated."
+        },
+        {
+          "name": "skip-modules",
+          "flag": "--skip-modules",
+          "value_kind": "boolean",
+          "required": false,
+          "summary": "Skip family module installation."
+        },
+        {
+          "name": "skip-engines",
+          "flag": "--skip-engines",
+          "value_kind": "boolean",
+          "required": false,
+          "summary": "Skip execution engine installation."
+        },
+        {
+          "name": "skip-native-helper-repair",
+          "flag": "--skip-native-helper-repair",
+          "value_kind": "boolean",
+          "required": false,
+          "summary": "Skip native helper repair."
+        },
+        {
+          "name": "no-online-runtime",
+          "flag": "--no-online-runtime",
+          "value_kind": "boolean",
+          "required": false,
+          "summary": "Use the development/offline runtime diagnostic mode."
+        }
       ],
       "output_schema": {
         "type": "object",
-        "required": ["version", "install"],
+        "required": [
+          "version",
+          "install"
+        ],
         "additionalProperties": true,
         "properties": {
-          "version": { "const": "g2" },
+          "version": {
+            "const": "g2"
+          },
           "install": {
             "type": "object",
-            "required": ["surface_id", "status", "install_mode", "selected_engines", "selected_modules", "module_actions", "runtime_manager_action", "native_helper_action", "companion_skill_sync", "gui_open_action"],
+            "required": [
+              "surface_id",
+              "status",
+              "install_mode",
+              "selected_engines",
+              "selected_modules",
+              "module_actions",
+              "runtime_manager_action",
+              "native_helper_action",
+              "companion_skill_sync",
+              "gui_open_action"
+            ],
             "additionalProperties": true
           }
         }
@@ -1796,286 +1860,15 @@
         "surface": "foundation_support_skill_connector"
       }
     },
-    "connect_agent_packages_registry_refresh": {
-      "command_id": "connect agent-packages registry refresh",
-      "owner": "OPL Connect",
-      "parser_adapter": "node_util_parse_args",
-      "options": [
-        {
-          "name": "registry-url",
-          "flag": "--registry-url",
-          "value_kind": "string",
-          "required": true,
-          "summary": "HTTP(S), file://, or absolute path to an OPL Agent Package registry JSON document."
-        }
-      ],
-      "output_schema": {
-        "type": "object",
-        "required": [
-          "version",
-          "opl_agent_package_registry"
-        ],
-        "additionalProperties": true,
-        "properties": {
-          "version": {
-            "const": "g2"
-          },
-          "opl_agent_package_registry": {
-            "type": "object",
-            "required": [
-              "surface_kind",
-              "status",
-              "registry_url",
-              "entry_count",
-              "entries",
-              "lifecycle_receipt",
-              "authority_boundary"
-            ],
-            "additionalProperties": true
-          }
-        }
-      },
-      "authority_boundary": {
-        "can_write_domain_truth": false,
-        "can_create_owner_receipt": false,
-        "can_create_typed_blocker": false,
-        "can_claim_domain_ready": false,
-        "can_claim_production_ready": false,
-        "owner": "OPL Connect",
-        "surface": "agent_package_registry_and_manifest_lifecycle"
-      }
-    },
-    "connect_agent_packages_validate_manifest": {
-      "command_id": "connect agent-packages validate-manifest",
-      "owner": "OPL Connect",
-      "parser_adapter": "node_util_parse_args",
-      "options": [
-        {
-          "name": "manifest-url",
-          "flag": "--manifest-url",
-          "value_kind": "string",
-          "required": false,
-          "summary": "Direct OPL Agent Package manifest URL or local file path."
-        },
-        {
-          "name": "registry-url",
-          "flag": "--registry-url",
-          "value_kind": "string",
-          "required": false,
-          "summary": "Registry URL used to select a package manifest."
-        },
-        {
-          "name": "package-id",
-          "flag": "--package-id",
-          "value_kind": "string",
-          "required": false,
-          "summary": "Package id to select from --registry-url."
-        },
-        {
-          "name": "trust-tier",
-          "flag": "--trust-tier",
-          "value_kind": "string",
-          "required": false,
-          "summary": "Explicit user/organization trust tier assigned before install."
-        },
-        {
-          "name": "source-kind",
-          "flag": "--source-kind",
-          "value_kind": "string",
-          "required": false,
-          "summary": "Package source kind for the package lock receipt."
-        }
-      ],
-      "output_schema": {
-        "type": "object",
-        "required": [
-          "version",
-          "opl_agent_package_manifest"
-        ],
-        "additionalProperties": true,
-        "properties": {
-          "version": {
-            "const": "g2"
-          },
-          "opl_agent_package_manifest": {
-            "type": "object",
-            "required": [
-              "surface_kind",
-              "status",
-              "package_id",
-              "manifest_url",
-              "manifest_sha256",
-              "codex_visible_entry",
-              "bundled_required_skill_ids",
-              "rollback_ref",
-              "lifecycle_receipt",
-              "owner_route_readback",
-              "authority_boundary"
-            ],
-            "additionalProperties": true
-          }
-        }
-      },
-      "authority_boundary": {
-        "can_write_domain_truth": false,
-        "can_create_owner_receipt": false,
-        "can_create_typed_blocker": false,
-        "can_claim_domain_ready": false,
-        "can_claim_production_ready": false,
-        "owner": "OPL Connect",
-        "surface": "agent_package_registry_and_manifest_lifecycle"
-      }
-    },
-    "connect_agent_packages_install": {
-      "command_id": "connect agent-packages install",
-      "owner": "OPL Connect",
-      "parser_adapter": "node_util_parse_args",
-      "options": [
-        {
-          "name": "manifest-url",
-          "flag": "--manifest-url",
-          "value_kind": "string",
-          "required": false,
-          "summary": "Direct OPL Agent Package manifest URL or local file path."
-        },
-        {
-          "name": "registry-url",
-          "flag": "--registry-url",
-          "value_kind": "string",
-          "required": false,
-          "summary": "Registry URL used to select a package manifest."
-        },
-        {
-          "name": "package-id",
-          "flag": "--package-id",
-          "value_kind": "string",
-          "required": false,
-          "summary": "Package id to select from --registry-url."
-        },
-        {
-          "name": "trust-tier",
-          "flag": "--trust-tier",
-          "value_kind": "string",
-          "required": false,
-          "summary": "Explicit user/organization trust tier assigned before install."
-        },
-        {
-          "name": "source-kind",
-          "flag": "--source-kind",
-          "value_kind": "string",
-          "required": false,
-          "summary": "Package source kind for the package lock receipt."
-        },
-        {
-          "name": "agent-root",
-          "flag": "--agent-root",
-          "value_kind": "string",
-          "required": false,
-          "summary": "Standard Agent checkout to link to the resolved OPL Framework installation."
-        },
-        {
-          "name": "dry-run",
-          "flag": "--dry-run",
-          "value_kind": "boolean",
-          "required": false,
-          "summary": "Validate and preview lock/receipt output without writing state."
-        }
-      ],
-      "output_schema": {
-        "type": "object",
-        "required": [
-          "version",
-          "opl_agent_package_install"
-        ],
-        "additionalProperties": true,
-        "properties": {
-          "version": {
-            "const": "g2"
-          },
-          "opl_agent_package_install": {
-            "type": "object",
-            "required": [
-              "surface_kind",
-              "status",
-              "dry_run",
-              "package_lock",
-              "physical_surface",
-              "lifecycle_receipt",
-              "owner_route_readback",
-              "authority_boundary"
-            ],
-            "additionalProperties": true
-          }
-        }
-      },
-      "authority_boundary": {
-        "can_write_domain_truth": false,
-        "can_create_owner_receipt": false,
-        "can_create_typed_blocker": false,
-        "can_claim_domain_ready": false,
-        "can_claim_production_ready": false,
-        "owner": "OPL Connect",
-        "surface": "agent_package_registry_and_manifest_lifecycle"
-      }
-    },
-    "connect_agent_packages_list": {
-      "command_id": "connect agent-packages list",
-      "owner": "OPL Connect",
+    "update_status": {
+      "command_id": "update status",
+      "owner": "OPL Base",
       "parser_adapter": "node_util_parse_args",
       "options": [],
       "output_schema": {
         "type": "object",
         "required": [
           "version",
-          "opl_agent_packages"
-        ],
-        "additionalProperties": true,
-        "properties": {
-          "version": {
-            "const": "g2"
-          },
-          "opl_agent_packages": {
-            "type": "object",
-            "required": [
-              "surface_kind",
-              "status",
-              "installed_package_count",
-              "installed_packages",
-              "lifecycle_receipts",
-              "owner_route_readback",
-              "authority_boundary"
-            ],
-            "additionalProperties": true
-          }
-        }
-      },
-      "authority_boundary": {
-        "can_write_domain_truth": false,
-        "can_create_owner_receipt": false,
-        "can_create_typed_blocker": false,
-        "can_claim_domain_ready": false,
-        "can_claim_production_ready": false,
-        "owner": "OPL Connect",
-        "surface": "agent_package_registry_and_manifest_lifecycle"
-      }
-    },
-    "update_status": {
-      "command_id": "update status",
-      "owner": "OPL Managed Update / Pack owners",
-      "parser_adapter": "node_util_parse_args",
-      "options": [
-        {
-          "name": "component",
-          "flag": "--component",
-          "value_kind": "string",
-          "required": false,
-          "summary": "Managed update component id to project."
-        }
-      ],
-      "output_schema": {
-        "type": "object",
-        "required": [
-          "version",
           "managed_update"
         ],
         "additionalProperties": true,
@@ -2095,23 +1888,15 @@
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
         "can_claim_production_ready": false,
-        "owner": "OPL Managed Update / Pack owners",
-        "surface": "managed_update_command_projection"
+        "owner": "OPL Base",
+        "surface": "opl_base_update_lifecycle"
       }
     },
     "update_check": {
       "command_id": "update check",
-      "owner": "OPL Managed Update / Pack owners",
+      "owner": "OPL Base",
       "parser_adapter": "node_util_parse_args",
-      "options": [
-        {
-          "name": "component",
-          "flag": "--component",
-          "value_kind": "string",
-          "required": false,
-          "summary": "Managed update component id to project."
-        }
-      ],
+      "options": [],
       "output_schema": {
         "type": "object",
         "required": [
@@ -2135,23 +1920,15 @@
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
         "can_claim_production_ready": false,
-        "owner": "OPL Managed Update / Pack owners",
-        "surface": "managed_update_command_projection"
+        "owner": "OPL Base",
+        "surface": "opl_base_update_lifecycle"
       }
     },
     "update_plan": {
       "command_id": "update plan",
-      "owner": "OPL Managed Update / Pack owners",
+      "owner": "OPL Base",
       "parser_adapter": "node_util_parse_args",
-      "options": [
-        {
-          "name": "component",
-          "flag": "--component",
-          "value_kind": "string",
-          "required": false,
-          "summary": "Managed update component id to project."
-        }
-      ],
+      "options": [],
       "output_schema": {
         "type": "object",
         "required": [
@@ -2175,23 +1952,15 @@
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
         "can_claim_production_ready": false,
-        "owner": "OPL Managed Update / Pack owners",
-        "surface": "managed_update_command_projection"
+        "owner": "OPL Base",
+        "surface": "opl_base_update_lifecycle"
       }
     },
     "update_apply": {
       "command_id": "update apply",
-      "owner": "OPL Managed Update / Pack owners",
+      "owner": "OPL Base",
       "parser_adapter": "node_util_parse_args",
-      "options": [
-        {
-          "name": "component",
-          "flag": "--component",
-          "value_kind": "string",
-          "required": false,
-          "summary": "Managed update component id to project."
-        }
-      ],
+      "options": [],
       "output_schema": {
         "type": "object",
         "required": [
@@ -2215,22 +1984,15 @@
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
         "can_claim_production_ready": false,
-        "owner": "OPL Managed Update / Pack owners",
-        "surface": "managed_update_command_projection"
+        "owner": "OPL Base",
+        "surface": "opl_base_update_lifecycle"
       }
     },
     "update_repair": {
       "command_id": "update repair",
-      "owner": "OPL Managed Update / Pack owners",
+      "owner": "OPL Base",
       "parser_adapter": "node_util_parse_args",
       "options": [
-        {
-          "name": "component",
-          "flag": "--component",
-          "value_kind": "string",
-          "required": false,
-          "summary": "Managed update component id to project."
-        },
         {
           "name": "receipt",
           "flag": "--receipt",
@@ -2262,23 +2024,15 @@
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
         "can_claim_production_ready": false,
-        "owner": "OPL Managed Update / Pack owners",
-        "surface": "managed_update_command_projection"
+        "owner": "OPL Base",
+        "surface": "opl_base_update_lifecycle"
       }
     },
     "update_rollback": {
       "command_id": "update rollback",
-      "owner": "OPL Managed Update / Pack owners",
+      "owner": "OPL Base",
       "parser_adapter": "node_util_parse_args",
-      "options": [
-        {
-          "name": "component",
-          "flag": "--component",
-          "value_kind": "string",
-          "required": false,
-          "summary": "Managed update component id to project."
-        }
-      ],
+      "options": [],
       "output_schema": {
         "type": "object",
         "required": [
@@ -2302,8 +2056,8 @@
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
         "can_claim_production_ready": false,
-        "owner": "OPL Managed Update / Pack owners",
-        "surface": "managed_update_command_projection"
+        "owner": "OPL Base",
+        "surface": "opl_base_update_lifecycle"
       }
     },
     "status_workspace": {
@@ -2931,9 +2685,393 @@
         "surface": "runtime_observability_collector_smoke"
       }
     },
-    "connect_agent_packages_update": {
-      "command_id": "connect agent-packages update",
-      "owner": "OPL Connect",
+    "packages_list": {
+      "command_id": "packages list",
+      "owner": "OPL Packages",
+      "parser_adapter": "node_util_parse_args",
+      "options": [],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "opl_agent_packages"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "opl_agent_packages": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "installed_package_count",
+              "installed_packages",
+              "lifecycle_receipts",
+              "owner_route_readback",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Packages",
+        "surface": "opl_packages_lifecycle"
+      }
+    },
+    "packages_status": {
+      "command_id": "packages status",
+      "owner": "OPL Packages",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "package-id",
+          "flag": "--package-id",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Optional installed OPL Agent Package id to inspect."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "opl_agent_package_status"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "opl_agent_package_status": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "installed_package_count",
+              "installed_packages",
+              "lifecycle_receipts",
+              "owner_route_readback",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Packages",
+        "surface": "opl_packages_lifecycle"
+      }
+    },
+    "packages_registry_refresh": {
+      "command_id": "packages registry refresh",
+      "owner": "OPL Packages",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "registry-url",
+          "flag": "--registry-url",
+          "value_kind": "string",
+          "required": true,
+          "summary": "HTTP(S), file://, or absolute path to an OPL Agent Package registry JSON document."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "opl_agent_package_registry"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "opl_agent_package_registry": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "registry_url",
+              "entry_count",
+              "entries",
+              "lifecycle_receipt",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Packages",
+        "surface": "opl_packages_lifecycle"
+      }
+    },
+    "packages_validate_manifest": {
+      "command_id": "packages validate-manifest",
+      "owner": "OPL Packages",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "manifest-url",
+          "flag": "--manifest-url",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Direct OPL Agent Package manifest URL or local file path."
+        },
+        {
+          "name": "registry-url",
+          "flag": "--registry-url",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Registry URL used to select a package manifest."
+        },
+        {
+          "name": "package-id",
+          "flag": "--package-id",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Package id to select from --registry-url."
+        },
+        {
+          "name": "trust-tier",
+          "flag": "--trust-tier",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Explicit user/organization trust tier assigned before install."
+        },
+        {
+          "name": "source-kind",
+          "flag": "--source-kind",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Package source kind for the package lock receipt."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "opl_agent_package_manifest"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "opl_agent_package_manifest": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "package_id",
+              "manifest_url",
+              "manifest_sha256",
+              "codex_visible_entry",
+              "bundled_required_skill_ids",
+              "rollback_ref",
+              "lifecycle_receipt",
+              "owner_route_readback",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Packages",
+        "surface": "opl_packages_lifecycle"
+      }
+    },
+    "packages_link_framework": {
+      "command_id": "packages link-framework",
+      "owner": "OPL Packages",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "agent-root",
+          "flag": "--agent-root",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Standard Agent checkout to link to the resolved OPL Framework installation."
+        },
+        {
+          "name": "check",
+          "flag": "--check",
+          "value_kind": "boolean",
+          "required": false,
+          "summary": "Fail closed when the Framework link is missing or points to another installation."
+        },
+        {
+          "name": "dry-run",
+          "flag": "--dry-run",
+          "value_kind": "boolean",
+          "required": false,
+          "summary": "Validate and preview the Framework link without writing the agent checkout."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "opl_agent_package_framework_link"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "opl_agent_package_framework_link": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "reason",
+              "agent_root",
+              "link_path",
+              "target_root",
+              "import_specifier",
+              "writes_performed",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Packages",
+        "surface": "opl_packages_lifecycle"
+      }
+    },
+    "packages_install": {
+      "command_id": "packages install",
+      "owner": "OPL Packages",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "manifest-url",
+          "flag": "--manifest-url",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Direct OPL Agent Package manifest URL or local file path."
+        },
+        {
+          "name": "registry-url",
+          "flag": "--registry-url",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Registry URL used to select a package manifest."
+        },
+        {
+          "name": "package-id",
+          "flag": "--package-id",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Package id to select from --registry-url."
+        },
+        {
+          "name": "trust-tier",
+          "flag": "--trust-tier",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Explicit user/organization trust tier assigned before install."
+        },
+        {
+          "name": "source-kind",
+          "flag": "--source-kind",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Package source kind for the package lock receipt."
+        },
+        {
+          "name": "agent-root",
+          "flag": "--agent-root",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Standard Agent checkout to link to the resolved OPL Framework installation."
+        },
+        {
+          "name": "dry-run",
+          "flag": "--dry-run",
+          "value_kind": "boolean",
+          "required": false,
+          "summary": "Validate and preview lock/receipt output without writing state."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "opl_agent_package_install"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "opl_agent_package_install": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "dry_run",
+              "package_lock",
+              "physical_surface",
+              "lifecycle_receipt",
+              "owner_route_readback",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Packages",
+        "surface": "opl_packages_lifecycle"
+      },
+      "positional_args": [
+        {
+          "name": "package_id",
+          "required": true,
+          "summary": "First-party OPL Package id or alias."
+        }
+      ]
+    },
+    "packages_update": {
+      "command_id": "packages update",
+      "owner": "OPL Packages",
       "parser_adapter": "node_util_parse_args",
       "options": [
         {
@@ -3019,20 +3157,27 @@
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
         "can_claim_production_ready": false,
-        "owner": "OPL Connect",
-        "surface": "agent_package_registry_and_manifest_lifecycle"
-      }
+        "owner": "OPL Packages",
+        "surface": "opl_packages_lifecycle"
+      },
+      "positional_args": [
+        {
+          "name": "package_id",
+          "required": false,
+          "summary": "First-party OPL Package id or alias."
+        }
+      ]
     },
-    "connect_agent_packages_repair": {
-      "command_id": "connect agent-packages repair",
-      "owner": "OPL Connect",
+    "packages_repair": {
+      "command_id": "packages repair",
+      "owner": "OPL Packages",
       "parser_adapter": "node_util_parse_args",
       "options": [
         {
           "name": "package-id",
           "flag": "--package-id",
           "value_kind": "string",
-          "required": true,
+          "required": false,
           "summary": "Installed OPL Agent Package id to repair."
         },
         {
@@ -3083,85 +3228,27 @@
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
         "can_claim_production_ready": false,
-        "owner": "OPL Connect",
-        "surface": "agent_package_registry_and_manifest_lifecycle"
-      }
-    },
-    "connect_agent_packages_link_framework": {
-      "command_id": "connect agent-packages link-framework",
-      "owner": "OPL Connect",
-      "parser_adapter": "node_util_parse_args",
-      "options": [
-        {
-          "name": "agent-root",
-          "flag": "--agent-root",
-          "value_kind": "string",
-          "required": true,
-          "summary": "Standard Agent checkout to link to the resolved OPL Framework installation."
-        },
-        {
-          "name": "check",
-          "flag": "--check",
-          "value_kind": "boolean",
-          "required": false,
-          "summary": "Fail closed when the Framework link is missing or points to another installation."
-        },
-        {
-          "name": "dry-run",
-          "flag": "--dry-run",
-          "value_kind": "boolean",
-          "required": false,
-          "summary": "Validate and preview the Framework link without writing the agent checkout."
-        }
-      ],
-      "output_schema": {
-        "type": "object",
-        "required": [
-          "version",
-          "opl_agent_package_framework_link"
-        ],
-        "additionalProperties": true,
-        "properties": {
-          "version": {
-            "const": "g2"
-          },
-          "opl_agent_package_framework_link": {
-            "type": "object",
-            "required": [
-              "surface_kind",
-              "status",
-              "reason",
-              "agent_root",
-              "link_path",
-              "target_root",
-              "import_specifier",
-              "writes_performed",
-              "authority_boundary"
-            ],
-            "additionalProperties": true
-          }
-        }
+        "owner": "OPL Packages",
+        "surface": "opl_packages_lifecycle"
       },
-      "authority_boundary": {
-        "can_write_domain_truth": false,
-        "can_create_owner_receipt": false,
-        "can_create_typed_blocker": false,
-        "can_claim_domain_ready": false,
-        "can_claim_production_ready": false,
-        "owner": "OPL Connect",
-        "surface": "standard_agent_framework_link_lifecycle"
-      }
+      "positional_args": [
+        {
+          "name": "package_id",
+          "required": true,
+          "summary": "First-party OPL Package id or alias."
+        }
+      ]
     },
-    "connect_agent_packages_uninstall": {
-      "command_id": "connect agent-packages uninstall",
-      "owner": "OPL Connect",
+    "packages_uninstall": {
+      "command_id": "packages uninstall",
+      "owner": "OPL Packages",
       "parser_adapter": "node_util_parse_args",
       "options": [
         {
           "name": "package-id",
           "flag": "--package-id",
           "value_kind": "string",
-          "required": true,
+          "required": false,
           "summary": "Installed OPL Agent Package id to uninstall."
         },
         {
@@ -3205,128 +3292,27 @@
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
         "can_claim_production_ready": false,
-        "owner": "OPL Connect",
-        "surface": "agent_package_registry_and_manifest_lifecycle"
-      }
-    },
-    "connect_agent_packages_hide": {
-      "command_id": "connect agent-packages hide",
-      "owner": "OPL Connect",
-      "parser_adapter": "node_util_parse_args",
-      "options": [
-        {
-          "name": "package-id",
-          "flag": "--package-id",
-          "value_kind": "string",
-          "required": true,
-          "summary": "Installed OPL Agent Package id to hide."
-        },
-        {
-          "name": "dry-run",
-          "flag": "--dry-run",
-          "value_kind": "boolean",
-          "required": false,
-          "summary": "Validate and preview receipt output without writing state."
-        }
-      ],
-      "output_schema": {
-        "type": "object",
-        "required": [
-          "version",
-          "opl_agent_package_exposure"
-        ],
-        "additionalProperties": true,
-        "properties": {
-          "version": {
-            "const": "g2"
-          },
-          "opl_agent_package_exposure": {
-            "type": "object",
-            "required": [
-              "surface_kind",
-              "status",
-              "dry_run",
-              "lifecycle_receipt",
-              "authority_boundary"
-            ],
-            "additionalProperties": true
-          }
-        }
+        "owner": "OPL Packages",
+        "surface": "opl_packages_lifecycle"
       },
-      "authority_boundary": {
-        "can_write_domain_truth": false,
-        "can_create_owner_receipt": false,
-        "can_create_typed_blocker": false,
-        "can_claim_domain_ready": false,
-        "can_claim_production_ready": false,
-        "owner": "OPL Connect",
-        "surface": "agent_package_registry_and_manifest_lifecycle"
-      }
+      "positional_args": [
+        {
+          "name": "package_id",
+          "required": true,
+          "summary": "First-party OPL Package id or alias."
+        }
+      ]
     },
-    "connect_agent_packages_unhide": {
-      "command_id": "connect agent-packages unhide",
-      "owner": "OPL Connect",
+    "packages_enable": {
+      "command_id": "packages enable",
+      "owner": "OPL Packages",
       "parser_adapter": "node_util_parse_args",
       "options": [
         {
           "name": "package-id",
           "flag": "--package-id",
           "value_kind": "string",
-          "required": true,
-          "summary": "Installed OPL Agent Package id to unhide."
-        },
-        {
-          "name": "dry-run",
-          "flag": "--dry-run",
-          "value_kind": "boolean",
           "required": false,
-          "summary": "Validate and preview receipt output without writing state."
-        }
-      ],
-      "output_schema": {
-        "type": "object",
-        "required": [
-          "version",
-          "opl_agent_package_exposure"
-        ],
-        "additionalProperties": true,
-        "properties": {
-          "version": {
-            "const": "g2"
-          },
-          "opl_agent_package_exposure": {
-            "type": "object",
-            "required": [
-              "surface_kind",
-              "status",
-              "dry_run",
-              "lifecycle_receipt",
-              "authority_boundary"
-            ],
-            "additionalProperties": true
-          }
-        }
-      },
-      "authority_boundary": {
-        "can_write_domain_truth": false,
-        "can_create_owner_receipt": false,
-        "can_create_typed_blocker": false,
-        "can_claim_domain_ready": false,
-        "can_claim_production_ready": false,
-        "owner": "OPL Connect",
-        "surface": "agent_package_registry_and_manifest_lifecycle"
-      }
-    },
-    "connect_agent_packages_enable": {
-      "command_id": "connect agent-packages enable",
-      "owner": "OPL Connect",
-      "parser_adapter": "node_util_parse_args",
-      "options": [
-        {
-          "name": "package-id",
-          "flag": "--package-id",
-          "value_kind": "string",
-          "required": true,
           "summary": "Installed OPL Agent Package id to enable."
         },
         {
@@ -3367,20 +3353,27 @@
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
         "can_claim_production_ready": false,
-        "owner": "OPL Connect",
-        "surface": "agent_package_registry_and_manifest_lifecycle"
-      }
+        "owner": "OPL Packages",
+        "surface": "opl_packages_lifecycle"
+      },
+      "positional_args": [
+        {
+          "name": "package_id",
+          "required": true,
+          "summary": "First-party OPL Package id or alias."
+        }
+      ]
     },
-    "connect_agent_packages_disable": {
-      "command_id": "connect agent-packages disable",
-      "owner": "OPL Connect",
+    "packages_disable": {
+      "command_id": "packages disable",
+      "owner": "OPL Packages",
       "parser_adapter": "node_util_parse_args",
       "options": [
         {
           "name": "package-id",
           "flag": "--package-id",
           "value_kind": "string",
-          "required": true,
+          "required": false,
           "summary": "Installed OPL Agent Package id to disable."
         },
         {
@@ -3421,13 +3414,142 @@
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
         "can_claim_production_ready": false,
-        "owner": "OPL Connect",
-        "surface": "agent_package_registry_and_manifest_lifecycle"
-      }
+        "owner": "OPL Packages",
+        "surface": "opl_packages_lifecycle"
+      },
+      "positional_args": [
+        {
+          "name": "package_id",
+          "required": true,
+          "summary": "First-party OPL Package id or alias."
+        }
+      ]
     },
-    "connect_agent_packages_home_shortcut_preferences_set": {
-      "command_id": "connect agent-packages home-shortcut-preferences set",
-      "owner": "OPL Connect",
+    "packages_hide": {
+      "command_id": "packages hide",
+      "owner": "OPL Packages",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "package-id",
+          "flag": "--package-id",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Installed OPL Agent Package id to hide."
+        },
+        {
+          "name": "dry-run",
+          "flag": "--dry-run",
+          "value_kind": "boolean",
+          "required": false,
+          "summary": "Validate and preview receipt output without writing state."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "opl_agent_package_exposure"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "opl_agent_package_exposure": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "dry_run",
+              "lifecycle_receipt",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Packages",
+        "surface": "opl_packages_preferences"
+      },
+      "positional_args": [
+        {
+          "name": "package_id",
+          "required": true,
+          "summary": "First-party OPL Package id or alias."
+        }
+      ]
+    },
+    "packages_unhide": {
+      "command_id": "packages unhide",
+      "owner": "OPL Packages",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "package-id",
+          "flag": "--package-id",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Installed OPL Agent Package id to unhide."
+        },
+        {
+          "name": "dry-run",
+          "flag": "--dry-run",
+          "value_kind": "boolean",
+          "required": false,
+          "summary": "Validate and preview receipt output without writing state."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "opl_agent_package_exposure"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "opl_agent_package_exposure": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "dry_run",
+              "lifecycle_receipt",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Packages",
+        "surface": "opl_packages_preferences"
+      },
+      "positional_args": [
+        {
+          "name": "package_id",
+          "required": true,
+          "summary": "First-party OPL Package id or alias."
+        }
+      ]
+    },
+    "packages_preferences_set": {
+      "command_id": "packages preferences set",
+      "owner": "OPL Packages",
       "parser_adapter": "node_util_parse_args",
       "options": [
         {
@@ -3498,57 +3620,8 @@
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
         "can_claim_production_ready": false,
-        "owner": "OPL Connect",
-        "surface": "agent_package_registry_and_manifest_lifecycle"
-      }
-    },
-    "connect_agent_packages_status": {
-      "command_id": "connect agent-packages status",
-      "owner": "OPL Connect",
-      "parser_adapter": "node_util_parse_args",
-      "options": [
-        {
-          "name": "package-id",
-          "flag": "--package-id",
-          "value_kind": "string",
-          "required": false,
-          "summary": "Optional installed OPL Agent Package id to inspect."
-        }
-      ],
-      "output_schema": {
-        "type": "object",
-        "required": [
-          "version",
-          "opl_agent_package_status"
-        ],
-        "additionalProperties": true,
-        "properties": {
-          "version": {
-            "const": "g2"
-          },
-          "opl_agent_package_status": {
-            "type": "object",
-            "required": [
-              "surface_kind",
-              "status",
-              "installed_package_count",
-              "installed_packages",
-              "lifecycle_receipts",
-              "owner_route_readback",
-              "authority_boundary"
-            ],
-            "additionalProperties": true
-          }
-        }
-      },
-      "authority_boundary": {
-        "can_write_domain_truth": false,
-        "can_create_owner_receipt": false,
-        "can_create_typed_blocker": false,
-        "can_claim_domain_ready": false,
-        "can_claim_production_ready": false,
-        "owner": "OPL Connect",
-        "surface": "agent_package_registry_and_manifest_lifecycle"
+        "owner": "OPL Packages",
+        "surface": "opl_packages_preferences"
       }
     }
   }

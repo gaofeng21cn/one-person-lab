@@ -241,13 +241,13 @@ async function executeDirectAppAction(
 
   if (options.actionId === 'module_sync') {
     return {
-      delegatedSurface: managedUpdateCommand('apply', 'capability_packages', { json: false }),
+      delegatedSurface: managedUpdateCommand('apply', 'opl_packages', { json: false }),
       result: options.dryRun
         ? await buildManagedUpdateKernelProjection(contracts, {
             operation: 'plan',
-            componentId: 'capability_packages',
+            componentId: 'opl_packages',
           })
-        : await runManagedUpdateApply(contracts, 'capability_packages'),
+        : await runManagedUpdateApply(contracts, 'opl_packages'),
     };
   }
 
@@ -386,19 +386,19 @@ async function executeDirectAppAction(
 
   if (options.actionId === 'settings_sync_capabilities') {
     return {
-      delegatedSurface: managedUpdateCommand('apply', 'capability_packages', { json: false }),
+      delegatedSurface: managedUpdateCommand('apply', 'opl_packages', { json: false }),
       result: options.dryRun
-        ? await buildManagedUpdateControlCenterDryRun(contracts, options, 'capability_packages')
-        : await runManagedUpdateApply(contracts, 'capability_packages'),
+        ? await buildManagedUpdateControlCenterDryRun(contracts, options, 'opl_packages')
+        : await runManagedUpdateApply(contracts, 'opl_packages'),
     };
   }
 
   if (options.actionId === 'settings_apply_opl_packages') {
     return {
-      delegatedSurface: managedUpdateCommand('apply', 'capability_packages', { json: false }),
+      delegatedSurface: managedUpdateCommand('apply', 'opl_packages', { json: false }),
       result: options.dryRun
-        ? await buildManagedUpdateControlCenterDryRun(contracts, options, 'capability_packages')
-        : await runManagedUpdateApply(contracts, 'capability_packages'),
+        ? await buildManagedUpdateControlCenterDryRun(contracts, options, 'opl_packages')
+        : await runManagedUpdateApply(contracts, 'opl_packages'),
     };
   }
 
@@ -461,7 +461,7 @@ async function executeDirectAppAction(
     const preferencesPayload = agentPackagePreferencesPayload(options.payload);
     if (preferencesPayload.exposureAction) {
       return {
-        delegatedSurface: `opl connect agent-packages ${preferencesPayload.exposureAction} --package-id <package_id>`,
+        delegatedSurface: `opl packages ${preferencesPayload.exposureAction} --package-id <package_id>`,
         result: runOplAgentPackageExposureAction(preferencesPayload.exposureAction, {
           packageId: preferencesPayload.packageId,
           dryRun: options.dryRun,
@@ -469,7 +469,7 @@ async function executeDirectAppAction(
       };
     }
     return {
-      delegatedSurface: 'opl connect agent-packages home-shortcut-preferences set --package-id <package_id> --shortcut-id <shortcut_id>',
+      delegatedSurface: 'opl packages preferences set --package-id <package_id> --shortcut-id <shortcut_id>',
       result: runOplAgentPackageHomeShortcutPreferencesSet({
         packageId: preferencesPayload.packageId,
         shortcutId: preferencesPayload.shortcutId,
@@ -501,10 +501,10 @@ async function executeDirectAppAction(
     const dryRun = buildSettingsControlCenterDryRun(options.actionId, options.payload);
     const projection = await buildManagedUpdateKernelProjection(contracts, {
       operation: 'status',
-      componentId: 'installation_carrier',
+      componentId: 'opl_app',
     });
     return {
-      delegatedSurface: managedUpdateCommand('status', 'installation_carrier', { json: false }),
+      delegatedSurface: managedUpdateCommand('status', 'opl_app', { json: false }),
       result: {
         settings_control_center_action: dryRun.settings_control_center_action,
         managed_update: projection.managed_update,
@@ -521,7 +521,7 @@ async function executeDirectAppAction(
 
   if (options.actionId === 'settings_rollback_runtime_substrate') {
     return {
-      delegatedSurface: managedUpdateCommand(MANAGED_UPDATE_OWNER_ACTIONS.revert, 'runtime_substrate', { json: false }),
+      delegatedSurface: managedUpdateCommand(MANAGED_UPDATE_OWNER_ACTIONS.revert, 'opl_base', { json: false }),
       result: buildSettingsControlCenterDryRun(options.actionId, options.payload),
     };
   }

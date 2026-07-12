@@ -58,6 +58,21 @@ function requiredString(value: unknown, field: string) {
   });
 }
 
+function requireCanonicalPackageIdentity(value: unknown, field: string) {
+  const declared = requiredString(value, field).toLowerCase();
+  const canonical = canonicalAgentPackageId(declared);
+  if (canonical !== declared) {
+    throw new FrameworkContractError('contract_shape_invalid', `Agent package manifest ${field} must use its canonical id.`, {
+      contract_ref: 'contracts/opl-framework/agent-package-manifest.schema.json',
+      field,
+      declared_id: declared,
+      canonical_id: canonical,
+      failure_code: 'agent_package_identity_not_canonical',
+    });
+  }
+  return declared;
+}
+
 function requireStringList(value: unknown, field: string) {
   const values = stringList(value);
   if (values.length > 0) {
@@ -218,8 +233,8 @@ export function normalizeFirstPartyAgentPackageManifest(payload: unknown): First
     });
   }
   return {
-    agent_id: canonicalAgentPackageId(requiredString(payload.agent_id, 'agent_id'))!,
-    package_id: canonicalAgentPackageId(requiredString(payload.package_id, 'package_id'))!,
+    agent_id: requireCanonicalPackageIdentity(payload.agent_id, 'agent_id'),
+    package_id: requireCanonicalPackageIdentity(payload.package_id, 'package_id'),
     version: requiredString(payload.version, 'version'),
     source: requiredString(payload.source, 'source'),
     carrier_source_role: requireLiteral(

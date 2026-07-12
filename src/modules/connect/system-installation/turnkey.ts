@@ -4,7 +4,6 @@ import path from 'node:path';
 
 import { buildOplGuiArtifactName, buildOplReleaseTag, getOplReleaseRepo, getOplReleaseVersion } from '../opl-release.ts';
 import { buildOplGuiShellSurface, syncOplCompanionSkills } from '../install-companions.ts';
-import { runWorkflowPackageAction } from '../workflow-package-lifecycle.ts';
 import { bootstrapLocalCodexDefaults } from '../../../kernel/local-codex-defaults.ts';
 import { runFamilyRuntime, runNativeHelperRepairAction, runRuntimeManagerAction } from '../../runway/index.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
@@ -355,9 +354,6 @@ export async function runOplTurnkeyInstall(
         }
         return runOplEngineAction(contracts, 'install', engineId);
       }));
-    const oplFlowPackage = input.withApp
-      ? runWorkflowPackageAction('install', { packageId: 'opl-flow' })
-      : null;
     const codexConfigBootstrap = bootstrapLocalCodexDefaults();
     const moduleActions = skipModules
       ? []
@@ -459,7 +455,6 @@ export async function runOplTurnkeyInstall(
         gui_shell: buildOplGuiShellSurface(resolveProjectRoot()),
         native_helper_action: nativeHelperAction,
         companion_skill_sync: companionSkillSync,
-        opl_flow_package: oplFlowPackage?.workflow_package ?? null,
         system_initialize: initialize.system_initialize,
         first_run_log: firstRunLog,
         first_run_log_events: firstRunLogEvents,

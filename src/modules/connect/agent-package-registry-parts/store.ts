@@ -43,11 +43,13 @@ export function readLockIndex(): AgentPackageLockIndex {
   return {
     ...emptyLockIndex(),
     packages: recordList(parsed.packages).flatMap((entry) => {
-      const packageId = canonicalAgentPackageId(entry.package_id);
+      const declaredPackageId = stringValue(entry.package_id)?.toLowerCase() ?? null;
+      const packageId = canonicalAgentPackageId(declaredPackageId);
       const lockRef = stringValue(entry.lock_ref);
-      const agentId = canonicalAgentPackageId(entry.agent_id);
-      return packageId && lockRef
-        ? [{ ...entry, package_id: packageId, ...(agentId ? { agent_id: agentId } : {}) } as AgentPackageLock]
+      const declaredAgentId = stringValue(entry.agent_id)?.toLowerCase() ?? null;
+      const agentId = canonicalAgentPackageId(declaredAgentId);
+      return packageId === declaredPackageId && agentId === declaredAgentId && packageId && agentId && lockRef
+        ? [{ ...entry, package_id: packageId, agent_id: agentId } as AgentPackageLock]
         : [];
     }),
   };
@@ -106,15 +108,16 @@ function normalizeLifecycleReceipt(value: unknown): AgentPackageLifecycleReceipt
     return null;
   }
   const receiptRef = stringValue(value.receipt_ref);
-  const packageId = canonicalAgentPackageId(value.package_id);
+  const declaredPackageId = stringValue(value.package_id)?.toLowerCase() ?? null;
+  const packageId = canonicalAgentPackageId(declaredPackageId);
+  if (declaredPackageId && packageId !== declaredPackageId) return null;
   const physicalSurface = isRecord(value.physical_surface)
-    ? {
-        ...value.physical_surface,
-        ...(canonicalAgentPackageId(value.physical_surface.package_id)
-          ? { package_id: canonicalAgentPackageId(value.physical_surface.package_id)! }
-          : {}),
-      }
+    ? value.physical_surface
     : value.physical_surface;
+  const physicalPackageId = isRecord(physicalSurface)
+    ? stringValue(physicalSurface.package_id)?.toLowerCase() ?? null
+    : null;
+  if (physicalPackageId && canonicalAgentPackageId(physicalPackageId) !== physicalPackageId) return null;
   return receiptRef
     ? {
         ...value,

@@ -75,8 +75,8 @@
         "opl connect reinstall --module <module-id>",
         "opl system startup-maintenance --json"
       ],
-      "repair_command_ref": "opl connect agent-packages link-framework --agent-root <repo> --json",
-      "check_command_ref": "opl connect agent-packages link-framework --agent-root <repo> --check --json",
+      "repair_command_ref": "opl packages link-framework --agent-root <repo> --json",
+      "check_command_ref": "opl packages link-framework --agent-root <repo> --check --json",
       "agent_manifest_framework_dependency_forbidden": true,
       "copies_framework_package": false,
       "installs_second_temporal_tree": false

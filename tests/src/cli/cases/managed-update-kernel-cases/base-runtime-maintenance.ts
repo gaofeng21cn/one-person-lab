@@ -62,7 +62,7 @@ exit 2
 
   try {
     for (const operation of ['apply', 'repair', 'rollback'] as const) {
-      const output = runCli(['update', operation, '--component', 'runtime_substrate'], {
+      const output = runCli(['update', operation], {
         HOME: homeRoot,
         CODEX_HOME: path.join(homeRoot, 'codex-home'),
         OPL_STATE_DIR: path.join(homeRoot, 'state'),
@@ -103,7 +103,7 @@ exit 2
 
       assert.equal(output.managed_update.operation, operation);
       assert.equal(output.managed_update.operation_mode, `controlled_${operation}`);
-      assert.equal(output.managed_update.execution.adapter_results[0].component_id, 'runtime_substrate');
+      assert.equal(output.managed_update.execution.adapter_results[0].component_id, 'opl_base');
       assert.equal(output.managed_update.execution.adapter_results[0].reason, 'startup_maintenance_runtime_substrate_adapter');
       assert.equal(output.managed_update.execution.adapter_results[0].result.action, operation);
       assert.match(output.managed_update.execution.adapter_results[0].result_ref ?? '', /^opl:\/\/managed-update-adapter\/runtime_substrate\//);
@@ -125,7 +125,7 @@ exit 2
       assert.equal(output.managed_update.authority_boundary.can_mutate_user_global_npm, false);
       assert.equal(output.managed_update.receipts.write_policy, 'recorded_component_receipt');
       assert.equal(output.managed_update.components.length, 1);
-      assert.equal(output.managed_update.components[0].component_id, 'runtime_substrate');
+      assert.equal(output.managed_update.components[0].component_id, 'opl_base');
       assert.equal(output.managed_update.components[0].authority_boundary.can_mutate_app_owned_runtime_root, true);
       assert.equal(
         output.managed_update.components[0].plan.command_refs.every((entry) => entry.destructive === false),

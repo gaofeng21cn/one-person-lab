@@ -1,6 +1,5 @@
 import {
   assert,
-  canonicalAgentPackageId,
   createGitModuleRemoteFixture,
   execFileSync,
   fs,
@@ -247,7 +246,7 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
   assert.equal(manifest.carrier_adapters[0].carrier, 'codex_plugin');
   assert.equal(manifest.carrier_adapters[0].owns_package_core, false);
   assert.equal(schema.properties.capability_dependencies.items.properties.codex_distribution.const, 'bundled');
-  assert.equal(schema.properties.codex_surface.properties.standalone_distribution.const, 'repo_carrier_source');
+  assert.equal(schema.properties.codex_surface.properties.plugin_payload_manifest_url.type, 'string');
   assert.equal(schema.properties.package_core.properties.core_kind.const, 'opl_agent_package_core');
   assert.equal(schema.properties.carrier_adapters.items.properties.carrier.const, 'codex_plugin');
   assert.deepEqual(manifest.codex_surface.required_skill_ids, ['med-autoscience', 'mas-scholar-skills']);
@@ -289,10 +288,10 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
   );
 });
 
-test('first-party agent package manifest canonicalizes legacy package and assistant ids without changing plugin or skill ids', () => {
-  const normalized = normalizeFirstPartyAgentPackageManifest({
+test('first-party agent package manifest rejects non-canonical identity fields', () => {
+  const legacyManifest = {
     agent_id: 'mas',
-    package_id: 'medautoscience',
+    package_id: 'med-autoscience',
     version: '0.1.0a4',
     source: 'first_party',
     carrier_source_role: 'codex_plugin_default_carrier_not_package_truth',
@@ -321,16 +320,20 @@ test('first-party agent package manifest canonicalizes legacy package and assist
         },
       },
     ],
-  });
+  };
 
-  assert.equal(normalized.package_id, 'med-autoscience');
-  assert.equal(normalized.agent_id, 'med-autoscience');
-  assert.equal(normalized.codex_surface.plugin_id, 'med-autoscience');
-  assert.deepEqual(normalized.codex_surface.required_skill_ids, ['med-autoscience', 'mas-scholar-skills']);
-  assert.equal(normalized.package_core, null);
-  assert.equal(normalized.distribution_payload, null);
-  assert.deepEqual(normalized.carrier_adapters, []);
-  assert.equal(canonicalAgentPackageId('obf'), 'opl-bookforge');
+  assert.throws(
+    () => normalizeFirstPartyAgentPackageManifest(legacyManifest),
+    /agent_id must use its canonical id/,
+  );
+  assert.throws(
+    () => normalizeFirstPartyAgentPackageManifest({
+      ...legacyManifest,
+      agent_id: 'med-autoscience',
+      package_id: 'medautoscience',
+    }),
+    /package_id must use its canonical id/,
+  );
 });
 
 test('MAS first-party agent package manifest fails closed for unsafe dependency declarations', () => {

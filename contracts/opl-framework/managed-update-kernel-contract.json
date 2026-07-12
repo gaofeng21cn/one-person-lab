@@ -8,9 +8,16 @@
     "opl update status --json",
     "opl update check --json",
     "opl update plan --json",
-    "opl update apply --component <component_id> --json",
+    "opl update apply --json",
     "opl update repair --receipt <receipt_id> --json",
-    "opl update rollback --component <component_id> --json"
+    "opl update rollback --json",
+    "opl packages list --json",
+    "opl packages install --manifest-url <url> --trust-tier <tier> --json",
+    "opl packages update --json",
+    "opl packages enable --package-id <id> --json",
+    "opl packages disable --package-id <id> --json",
+    "opl packages repair --package-id <id> --json",
+    "opl packages uninstall --package-id <id> --json"
   ],
   "kernel_lifecycle": [
     "read_manifest",
@@ -38,8 +45,40 @@
     "derived_projection",
     "owner_handoff"
   ],
+  "lifecycle_owners": [
+    {
+      "lifecycle_owner": "opl_base",
+      "label": "OPL Base",
+      "public_surface": "opl update",
+      "provider_id": "runtime_substrate",
+      "nested_status_fields": [
+        "dependency_status",
+        "integration_status"
+      ]
+    },
+    {
+      "lifecycle_owner": "opl_app",
+      "label": "OPL App",
+      "public_surface": "One Person Lab App updater and App state",
+      "provider_id": "installation_carrier",
+      "required_status_fields": [
+        "host_update_route",
+        "host_executor_required"
+      ]
+    },
+    {
+      "lifecycle_owner": "opl_packages",
+      "label": "OPL Packages",
+      "public_surface": "opl packages",
+      "provider_id": "capability_packages",
+      "nested_status_fields": [
+        "projection_status",
+        "profile_migration_status"
+      ]
+    }
+  ],
   "update_plane_state_machine": {
-    "purpose": "single_coordination_plane_for_update_status_plan_and_safe_execution_without_turning_every_component_into_the_same_package_manager_target",
+    "purpose": "three_owner_coordination_plane_for_opl_base_opl_app_and_opl_packages",
     "state_axis": [
       "auto_apply",
       "controlled_apply",
@@ -51,7 +90,7 @@
         "state_id": "auto_apply",
         "meaning": "Framework may fetch, verify, stage, activate, run post-apply hooks, and write a component receipt without asking when the managed target is clean.",
         "allowed_component_classes": [
-          "capability_packages"
+          "opl_packages"
         ],
         "required_identity": [
           "digest",
@@ -72,7 +111,7 @@
         "state_id": "controlled_apply",
         "meaning": "Framework may mutate only an OPL/App-owned runtime root through an explicit controlled command and receipt.",
         "allowed_component_classes": [
-          "runtime_substrate"
+          "opl_base"
         ],
         "required_identity": [
           "current_pointer",
@@ -92,9 +131,7 @@
         "state_id": "prompt_only",
         "meaning": "Framework may show owner-specific route guidance, but the actual update belongs to the host, App release, package manager, or Codex semantic merge owner.",
         "allowed_component_classes": [
-          "installation_carrier",
-          "workflow_profile",
-          "companion_tools"
+          "opl_app"
         ],
         "required_identity": [
           "route_owner",
@@ -111,9 +148,7 @@
         "state_id": "projection_only",
         "meaning": "Framework may expose status, reload guidance, refs, and safe action labels derived from another owner; it is not an apply target.",
         "allowed_component_classes": [
-          "codex_surface",
-          "installation_carrier",
-          "workflow_profile"
+          "opl_app"
         ],
         "required_identity": [
           "source_projection_ref",
@@ -129,7 +164,7 @@
     ],
     "component_routes": [
       {
-        "component_class": "installation_carrier",
+        "component_class": "opl_app",
         "coordination_role": "owner_handoff",
         "canonical_route_state": "prompt_only",
         "readback_state": "projection_only",
@@ -143,7 +178,7 @@
         "not_opl_update_apply_target": true
       },
       {
-        "component_class": "runtime_substrate",
+        "component_class": "opl_base",
         "coordination_role": "executable_target",
         "canonical_route_state": "controlled_apply",
         "readback_state": "controlled_apply",
@@ -157,7 +192,7 @@
         "not_global_toolchain": true
       },
       {
-        "component_class": "capability_packages",
+        "component_class": "opl_packages",
         "coordination_role": "executable_target",
         "canonical_route_state": "auto_apply",
         "readback_state": "auto_apply",
@@ -168,47 +203,6 @@
         ],
         "not_installation_carrier": true,
         "not_domain_truth": true
-      },
-      {
-        "component_class": "codex_surface",
-        "coordination_role": "derived_projection",
-        "canonical_route_state": "projection_only",
-        "readback_state": "projection_only",
-        "owner": "one-person-lab-connect",
-        "examples": [
-          "plugin_registry_projection",
-          "skill_reload_guidance",
-          "generated_oma_plugin_surface"
-        ],
-        "not_apply_target": true,
-        "not_domain_truth": true
-      },
-      {
-        "component_class": "companion_tools",
-        "coordination_role": "owner_handoff",
-        "canonical_route_state": "prompt_only",
-        "readback_state": "prompt_only",
-        "owner": "one-person-lab-companion-tools",
-        "examples": [
-          "officecli",
-          "mineru_open_api"
-        ],
-        "not_runtime_substrate": true,
-        "not_domain_truth": true
-      },
-      {
-        "component_class": "workflow_profile",
-        "coordination_role": "owner_handoff",
-        "canonical_route_state": "prompt_only",
-        "readback_state": "projection_only",
-        "owner": "opl-flow",
-        "examples": [
-          "human_doc:repo_agent_instructions",
-          "human_doc:user_taste_profile",
-          "human_doc:codex_role_prompts"
-        ],
-        "not_opl_update_apply_target": true,
-        "semantic_merge_required": true
       }
     ]
   },
@@ -272,14 +266,15 @@
       "external_owner_receipt_required"
     ],
     "runner_can_execute_only_for": [
-      "runtime_substrate",
-      "capability_packages"
+      "opl_base",
+      "opl_packages"
     ],
     "package_manager_claim_must_be_false": true,
     "purpose": "reuse-first: allow owner-routed managed update boundary. The runner must name the owner executor and readback boundary per component before apply/repair/rollback, so prompt-only and projection-only components remain receipt/readback projections instead of generic package-manager targets."
   },
   "providers": [
     {
+      "lifecycle_owner": "opl_app",
       "provider_id": "installation_carrier",
       "adapter_id": "installation_carrier_status_adapter",
       "owner": "one-person-lab-app",
@@ -362,6 +357,7 @@
       "repair_action_scope": "carrier_specific_check_download_host_route_or_manual_recovery_only"
     },
     {
+      "lifecycle_owner": "opl_base",
       "provider_id": "runtime_substrate",
       "adapter_id": "runtime_substrate_adapter",
       "owner": "one-person-lab-app-and-opl-framework",
@@ -380,6 +376,7 @@
       ]
     },
     {
+      "lifecycle_owner": "opl_packages",
       "provider_id": "capability_packages",
       "adapter_id": "capability_packages_adapter",
       "owner": "one-person-lab-managed-modules",
@@ -390,7 +387,7 @@
       "auto_apply": {
         "mode": "auto_apply",
         "app_background_safe": true,
-        "command_ref": "opl update apply --component capability_packages --json",
+        "command_ref": "opl packages update --json",
         "eligible_scope": "clean_opl_managed_module_roots_only",
         "eligible_when": [
           "default managed module root is missing and can be installed into the managed root",
@@ -407,105 +404,54 @@
           "missing digest, sha256, source fingerprint, or git head identity after apply"
         ]
       },
+      "transaction_status_fields": [
+        "projection_status",
+        "profile_migration_status"
+      ],
+      "transaction_guards": {
+        "installed_digest_required": true,
+        "dirty_checkout_policy": "fail_closed_no_overwrite",
+        "developer_checkout_policy": "fail_closed_no_auto_update",
+        "codex_skill_plugin_sync": "same_transaction_post_apply",
+        "receipt_policy": "single_package_transaction_receipt"
+      },
+      "profile_migration_policy": {
+        "semantic_merge_required": true,
+        "silent_overwrite_allowed": false,
+        "failure_policy": "fail_closed_owner_handoff"
+      },
       "post_apply_actions": [
         "reconcile_modules",
         "sync_skills",
-        "codex_surface"
+        "sync_codex_skill_plugin_projection"
       ]
-    },
-    {
-      "provider_id": "codex_surface",
-      "adapter_id": "codex_surface_status_adapter",
-      "owner": "one-person-lab-connect",
-      "role": "Codex plugin registry, plugin-packaged skills, and generated OMA plugin surface projection",
-      "authority": "Derived exposure from managed module state, not a second domain truth source.",
-      "default_policy": "post_apply_projection_then_reload_prompt_when_cache_changes",
-      "mutation_scope": "projection_only_no_opl_update_apply_component_target",
-      "apply_allowed": false
-    },
-    {
-      "provider_id": "companion_tools",
-      "adapter_id": "companion_tools_status_adapter",
-      "owner": "one-person-lab-companion-tools",
-      "role": "recommended Office and document extraction tool status class",
-      "authority": "Companion tools such as officecli and mineru_open_api are tool availability, not runtime substrate or domain truth.",
-      "default_policy": "manual_companion_status_or_explicit_companion_apply",
-      "mutation_scope": "recommended_companion_tools_only"
-    },
-    {
-      "provider_id": "workflow_profile",
-      "adapter_id": "workflow_profile_adapter",
-      "owner": "opl-flow",
-      "role": "OPL Flow workflow profile status and semantic merge guidance",
-      "authority": "User Codex profile surfaces require semantic merge and must not be silently overwritten.",
-      "default_policy": "semantic_merge_required_no_silent_overwrite",
-      "mutation_scope": "projection_only_no_opl_update_apply_component_target",
-      "apply_allowed": false
     }
   ],
   "components": [
-    "installation_carrier",
-    "runtime_substrate",
-    "capability_packages",
-    "codex_surface",
-    "companion_tools",
-    "workflow_profile"
+    "opl_base",
+    "opl_app",
+    "opl_packages"
   ],
   "component_classes": [
-    "installation_carrier",
-    "runtime_substrate",
-    "capability_packages",
-    "codex_surface",
-    "companion_tools",
-    "workflow_profile"
+    "opl_base",
+    "opl_app",
+    "opl_packages"
   ],
   "app_action_consumer_policy": {
     "purpose": "App and Settings update actions consume this managed update coordinator instead of hand-writing package, carrier, or runtime update shells.",
     "canonical_delegated_surfaces": {
-      "module_sync": "opl update apply --component capability_packages",
-      "settings_sync_capabilities": "opl update apply --component capability_packages",
-      "settings_apply_opl_packages": "opl update apply --component capability_packages",
-      "settings_check_app_update": "opl update status --component installation_carrier",
-      "settings_rollback_runtime_substrate": "opl update rollback --component runtime_substrate"
+      "module_sync": "opl packages update",
+      "settings_sync_capabilities": "opl packages update",
+      "settings_apply_opl_packages": "opl packages update",
+      "settings_check_app_update": "opl app state --profile fast",
+      "settings_rollback_runtime_substrate": "opl update rollback"
     },
     "non_goals": [
       "does_not_replace_target_bound_workspace_or_quest_skill_sync",
       "does_not_claim_app_release_currentness",
-      "does_not_turn_codex_surface_or_workflow_profile_into_apply_targets"
+      "does_not_turn_projection_status_or_profile_migration_status_into_lifecycle_owners"
     ]
   },
-  "legacy_component_aliases": [
-    {
-      "legacy_component_id": "app_binary",
-      "component_id": "installation_carrier",
-      "scope": "transition_cli_selector_only"
-    },
-    {
-      "legacy_component_id": "runtime_toolchain",
-      "component_id": "runtime_substrate",
-      "scope": "transition_cli_selector_only"
-    },
-    {
-      "legacy_component_id": "codex_cli_fallback",
-      "component_id": "runtime_substrate",
-      "scope": "transition_cli_selector_only"
-    },
-    {
-      "legacy_component_id": "agent_packages",
-      "component_id": "capability_packages",
-      "scope": "transition_cli_selector_only"
-    },
-    {
-      "legacy_component_id": "agent_package_channel",
-      "component_id": "capability_packages",
-      "scope": "transition_cli_selector_only"
-    },
-    {
-      "legacy_component_id": "capability_exposure",
-      "component_id": "codex_surface",
-      "scope": "transition_cli_selector_only"
-    }
-  ],
   "runtime_substrate_required_projection_fields": [
     "current_pointer",
     "staged_root",
@@ -553,8 +499,8 @@
         "owner_execution_boundary"
       ],
       "runner_can_execute_only_for": [
-        "runtime_substrate",
-        "capability_packages"
+        "opl_base",
+        "opl_packages"
       ]
     },
     "adapter_post_apply_action_shape": {

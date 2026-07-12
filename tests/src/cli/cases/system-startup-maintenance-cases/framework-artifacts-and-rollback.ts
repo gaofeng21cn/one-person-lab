@@ -316,7 +316,7 @@ exit 1
   }
 });
 
-test('update rollback for runtime_substrate restores previous OPL Framework runtime root', () => { // reuse-first: allow owner-routed runtime materializer assertion.
+test('OPL Base rollback restores the previous OPL Framework runtime root', () => { // reuse-first: allow owner-routed runtime materializer assertion.
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-substrate-framework-rollback-')); // reuse-first: allow owner-routed runtime materializer fixture.
   const targetRoot = path.join(homeRoot, 'data', 'opl', 'framework-current');
   const previousRoot = `${targetRoot}.previous`;
@@ -333,7 +333,7 @@ exit 1
     writeMinimalFrameworkRoot(targetRoot, 'new-framework');
     writeMinimalFrameworkRoot(previousRoot, 'old-framework');
 
-    const output = withCliTimeout('120000', () => runCli(['update', 'rollback', '--component', 'runtime_substrate'], { // reuse-first: allow owner-routed runtime materializer assertion.
+    const output = withCliTimeout('120000', () => runCli(['update', 'rollback'], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       OPL_DATA_DIR: path.join(homeRoot, 'data'),
@@ -372,7 +372,7 @@ exit 1
     assert.equal(output.managed_update.execution.adapter_results[0].result.framework_rollback.result.target_root, targetRoot);
     assert.equal(output.managed_update.execution.adapter_results[0].result.framework_rollback.result.rollback_root, `${targetRoot}.rolled-back`);
     assert.equal(output.managed_update.components[0].receipt.verify_result, 'passed');
-    assert.match(output.managed_update.components[0].receipt.rollback_ref ?? '', /^opl:\/\/managed-update\/runtime_substrate\/rollback\//); // reuse-first: allow owner-routed runtime materializer assertion.
+    assert.match(output.managed_update.components[0].receipt.rollback_ref ?? '', /^opl:\/\/managed-update\/opl_base\/rollback\//); // reuse-first: allow owner-routed runtime materializer assertion.
     assert.equal(fs.readFileSync(path.join(targetRoot, 'MARKER.txt'), 'utf8'), 'old-framework\n');
     assert.equal(fs.readFileSync(path.join(`${targetRoot}.rolled-back`, 'MARKER.txt'), 'utf8'), 'new-framework\n');
   } finally {

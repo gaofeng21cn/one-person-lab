@@ -5,6 +5,20 @@ Purpose: `decisions`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+## 2026-07-12
+
+### 决策：安装、管理与更新统一为 OPL Base、OPL App、OPL Packages 三层生命周期
+
+原因：旧 `opl update --component <internal_id>` 把 runtime adapter、App carrier、package channel、Codex projection、companion tools 和 workflow profile 都暴露成同级用户 component，迫使普通用户理解内部路由，并让 projection 看起来像独立 mutation owner。公共生命周期应与用户实际管理对象一致，内部 provider id 只服务 adapter dispatch。
+
+影响：
+
+- `opl update status|check|plan|apply|repair|rollback` 只管理 `OPL Base`，不再接受 `--component`。
+- `opl packages list|install|update|enable|disable|repair|uninstall` 是 `OPL Packages` canonical lifecycle；registry validation、status、Framework link 和 shortcut preference 诊断也迁到同一 namespace。旧公共 package namespace 和 legacy component alias 直接退役。
+- `managed_update.components[].component_id` 只允许 `opl_base`、`opl_app`、`opl_packages`。`runtime_substrate`、`installation_carrier`、`capability_packages` 只作为内部 `provider_id`；不能作为 selector 或 lifecycle owner。
+- companion tools 归入 Base 的 `dependency_status` / `integration_status`。Codex skill/plugin sync 归入 Packages 的 `projection_status`，OPL Flow profile semantic merge 归入 `profile_migration_status`；profile 变更必须 fail closed，禁止静默覆盖用户 profile。
+- package transaction 继续要求 immutable digest/content identity、dirty/developer checkout 保护、同 transaction 的 Codex skill/plugin sync 和单一 lifecycle receipt；Framework 复用现有 Agent Package lock/materializer 与 managed module reconciler，不创建第二套 package manager。
+
 ## 2026-07-11
 
 ### 决策：Headless 基座安装是独立公开合同，Homebrew 版本真相来自 Framework manifest
@@ -57,7 +71,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - 不创建或保留第二个静态 package、Python distribution、build copy、独立 lock、alias、tombstone 或兼容 wrapper。
 - `opl-framework` 保持现有六个同名公开 exports、`opl` CLI、Temporal dependencies 与 E2B optional dependency。
 - 标准 Foundry Agent 的 manifest / lock 不再声明或安装 `opl-framework`；OPL module workflow 在 agent checkout 中维护到当前 resolved OPL root 的 package link，避免复制 package 或安装第二份 Temporal tree。
-- `opl connect agent-packages link-framework --agent-root <repo> [--check|--dry-run] --json` 复用同一 OPL-owned link helper，同时托管 JavaScript package link 与 Python source carrier；它不创建第二个 package、publication channel 或 runtime authority。
+- `opl packages link-framework --agent-root <repo> [--check|--dry-run] --json` 复用同一 OPL-owned link helper，同时托管 JavaScript package link 与 Python source carrier；它不创建第二个 package、publication channel 或 runtime authority。
 
 ### 决策：Stage attempt domain output 只运输 domain-owned ref
 
@@ -200,11 +214,11 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ### 决策：Agent Package Manager 保留为 OPL package core，不扩成私有通用 package manager
 
-原因：OPL App 需要管理智能体 package，且 OPL Agent Package 不等于 Codex Plugin。Codex Plugin 只是其中一种 carrier；同一个 Agent Package 还可能被 OPL App、workspace / quest Skill sync、Capability Pack、未来 MCP/Web/native surface 消费。正确边界不是删除 `connect agent-packages`，而是把它收薄为 Framework package core 与 carrier adapters，避免重做通用 package manager 或 domain runtime。
+原因：OPL App 需要管理智能体 package，且 OPL Agent Package 不等于 Codex Plugin。Codex Plugin 只是其中一种 carrier；同一个 Agent Package 还可能被 OPL App、workspace / quest Skill sync、Capability Pack、未来 MCP/Web/native surface 消费。该阶段曾把 package core 收薄在 Connect；2026-07-12 三层生命周期决策已进一步把公共入口迁至 `opl packages`，Connect 不再持有 package lifecycle namespace。
 
 影响：
 
-- `OPL Connect` 保留 Agent Package registry / manifest / lock / lifecycle receipt；package core 只管理 package id、version、digest、dependency、trust tier、lock、lifecycle receipt、exposure 和 shortcut refs。
+- `OPL Packages` 持有 Agent Package registry / manifest / lock / lifecycle receipt，并通过 `opl packages` 暴露公共生命周期；package core 只管理 package id、version、digest、dependency、trust tier、lock、lifecycle receipt、exposure 和 shortcut refs。
 - Carrier adapters 负责 Codex Plugin、OPL App、Capability Pack、MCP/Web/native 等物理投影；adapter 不能写入 domain workflow、prompt body、artifact schema、quality verdict、owner receipt、typed blocker、human gate 或 runtime authority。
 - `OPL App` 是 package cockpit 和操作入口，只消费 Framework 输出的 package refs、install/update/repair/uninstall/exposure/shortcut action refs 和 receipt refs；App 不 hard-code MAS/MAG/RCA 语义，也不成为 package truth owner。Agent Package rollback 不再作为 Framework/App lifecycle 动词暴露；真实回滚归 Managed Update / runtime substrate / package-channel owner route。
 - Package manager 的优化路线写入 [OPL 过度设计退役与收薄计划](./active/overengineering-retirement-plan.md)：先迁移/删除无语义 wrapper，再收薄 local scheduler/observability/test tail。该计划只授权功能/结构清理，不声明 App release-ready、domain-ready、Brand L5 或 production-ready。
@@ -253,9 +267,9 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 影响：
 
-- `opl connect agent-packages registry refresh --registry-url <url> --json` 是 registry URL 的真实拉取与缓存入口；registry 只做 discovery，不能成为安装 authority。
-- `opl connect agent-packages validate-manifest (--manifest-url <url>|--registry-url <url> --package-id <id>) --json` 校验单个 OPL Agent Package manifest 并写 validation receipt，显式拒绝 `session_contract_ref`、domain workflow schema、prompt body、artifact schema、readiness/quality verdict rule 和 owner receipt authority。标准 Agent Package manifest 的机器 SSOT 留在 OPL contracts / Connect validator；OMA / new-agent generator 只能生成候选 sidecar 后调用该 CLI 校验，不能复制一套 package manifest 标准。
-- `opl connect agent-packages install ... --json` 在 Framework `OPL_STATE_DIR` 写 `agent-package-locks.json` 和 `agent-package-lifecycle-ledger.json`；lock/receipt 只记录 package id、version/source digest、Codex visible entry、required skill ids、optional skill refs、source kind、trust tier、manifest-provided rollback ref provenance 和 no-authority boundary。
+- `opl packages registry refresh --registry-url <url> --json` 是 registry URL 的真实拉取与缓存入口；registry 只做 discovery，不能成为安装 authority。
+- `opl packages validate-manifest (--manifest-url <url>|--registry-url <url> --package-id <id>) --json` 校验单个 OPL Agent Package manifest 并写 validation receipt，显式拒绝 `session_contract_ref`、domain workflow schema、prompt body、artifact schema、readiness/quality verdict rule 和 owner receipt authority。标准 Agent Package manifest 的机器 SSOT 留在 OPL contracts / Connect validator；OMA / new-agent generator 只能生成候选 sidecar 后调用该 CLI 校验，不能复制一套 package manifest 标准。
+- `opl packages install ... --json` 在 Framework `OPL_STATE_DIR` 写 `agent-package-locks.json` 和 `agent-package-lifecycle-ledger.json`；lock/receipt 只记录 package id、version/source digest、Codex visible entry、required skill ids、optional skill refs、source kind、trust tier、manifest-provided rollback ref provenance 和 no-authority boundary。
 - `opl app action execute --action install_from_manifest_url --payload <json>` 只路由到上述 Framework package lock writer；App shell 仍只展示 package / shortcut / receipt refs，不拥有 agent 语义。
 - 该能力不接管 Pack OS generic capability-pack descriptor，也不替代 first-party GHCR package channel；第三方 agent package lifecycle 是 Connect 的 external descriptor / distribution surface，Pack OS 继续持有通用 capability pack descriptor / content-addressed cache / refs-only distribution lock。
 - 该 landing 不声明 domain ready、publication ready、visual/export ready、App release ready、Brand L5 或 production ready；真实安装后的 Codex plugin/materialized package health、uninstall physical mutation、Managed Update/package-channel rollback 和 live user path 仍需要后续 owner evidence。
@@ -446,11 +460,11 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ### 决策：Linux/Docker WebUI 的 OPL 本体更新走 runtime_substrate Framework artifact，不更新 Docker image
 
-原因：Docker WebUI 内部运行的 OPL 本体本质上是 Linux runtime root，普通用户需要的是在 WebUI/CLI 里更新 OPL Framework runtime，而不是让容器内进程控制宿主 Docker daemon 去拉取和替换镜像。Docker image、entrypoint、base OS、compose 和端口/volume 映射仍是 Installation Carrier；容器内 `opl update apply --component runtime_substrate --json` 只能维护挂载数据卷中的 OPL Runtime Fabric。
+原因：Docker WebUI 内部运行的 OPL 本体本质上是 Linux runtime root，普通用户需要的是在 WebUI/CLI 里更新 OPL Framework runtime，而不是让容器内进程控制宿主 Docker daemon 去拉取和替换镜像。Docker image、entrypoint、base OS、compose 和端口/volume 映射仍是 Installation Carrier；容器内 `opl update apply --json` 只能维护挂载数据卷中的 OPL Runtime Fabric。
 
 影响：
 
-- Docker/WebUI 和裸 Linux 共用 `runtime_substrate` 更新语义；`opl update apply --component runtime_substrate --json` 通过 Framework artifact channel 下载、校验、stage、依赖安装、激活 OPL Framework runtime，并写 `.opl-framework-source.json` metadata。
+- Docker/WebUI 和裸 Linux 共用 `runtime_substrate` 更新语义；`opl update apply --json` 通过 Framework artifact channel 下载、校验、stage、依赖安装、激活 OPL Framework runtime，并写 `.opl-framework-source.json` metadata。
 - Docker/WebUI 默认 target root 是 `${OPL_DATA_DIR}/opl/framework` 或 `${AIONUI_DATA_DIR}/opl/framework`，即通常的 `/data/opl/framework`。这让 OPL 本体更新留在 mounted data volume 中，避免写回 image seed，也避免旧 image seed 在后续启动时覆盖 newer managed root。
 - 首次 artifact apply 可以从当前 image seed / project root 生成 `/data/opl/framework.previous` 作为 rollback root；后续 apply 用 previous/current pointer 语义回滚。
 - Framework artifact staging 允许跨文件系统：临时目录可能在 `/tmp`，目标可能在 Docker Desktop bind mount `/data`。实现必须先把 stage materialize 到 target parent 下的 incoming root，再在同一文件系统内切换 current/previous，避免 `EXDEV` 跨设备 rename 失败。
@@ -520,7 +534,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 - `MAS Scholar Skills` 作为 `framework_capability_package` 纳入 `src/package-distribution.ts` 和 GHCR `one-person-lab-manifest` / `one-person-lab-modules/mas-scholar-skills:<version>` package channel。普通 App 用户路径只从 package channel 安装 / 更新 / 回滚，不使用 MAS Scholar Skills 专属 git clone / pull manager。
 - `.github/workflows/daily-package-channel.yml` 继续通过 `packages.yml` 发布统一 package channel；change detector 比较 package source fingerprint，覆盖 domain module、Foundry module 与 framework capability package。新增 capability package 必须复用这条 channel，而不是新建 daily job 或 source manager。
-- `opl update status/apply/rollback --component capability_packages --json` 与 `opl system startup-maintenance --json` 把 MAS Scholar Skills 作为 package-channel target 处理；dirty package root、Developer Mode checkout、显式 `OPL_MAS_SCHOLAR_SKILLS_REPO_ROOT` / `OPL_MODULE_PATH_SCHOLARSKILLS` 只进入开发者观察或 manual-required 语义，不被普通 App silent update 覆盖。
+- `opl packages list/update/repair --json` 与 `opl system startup-maintenance --json` 把 MAS Scholar Skills 作为 package-channel target 处理；dirty package root、Developer Mode checkout、显式 `OPL_MAS_SCHOLAR_SKILLS_REPO_ROOT` / `OPL_MODULE_PATH_SCHOLARSKILLS` 只进入开发者观察或 manual-required 语义，不被普通 App silent update 覆盖。
 - `opl connect sync-skills --domain mas-scholar-skills --scope workspace|quest ... --json` 仍是论文工作目录的 Codex discovery skill 同步入口。同步来源是当前 managed package，落点是目标 workspace / quest 的 `.codex/skills/mas-scholar-skills/`，不是系统 Codex skill registry，也不是 MAS 程序仓默认 mirror。
 - 新增 framework capability package 的统一步骤是：声明通用 module/package spec、archive / manifest / checksum、release discipline gate、managed update/startup/workspace sync 测试和人读 owner route；专业 skill IDs、schema 与内容合同留在 package owner 仓，不复制进 OPL contract catalog。
 - 该决策不改变 domain authority。MAS Scholar Skills package channel readiness 不授权 MAS/MAG/RCA/OMA domain truth、quality verdict、artifact authority、owner receipt、typed blocker、runtime queue 或 publication/export readiness。
@@ -1297,7 +1311,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 - `contracts/opl-framework/settings-control-center-action-read-model-contract.json` 冻结 Settings Control Center v2 的 IA、issue status code、action sections、allowed action ids、action taxonomy、action metadata、dry-run / apply / verify 边界和 authority false flags。
 - `opl app state --profile fast|full --json` 输出 `settings_control_center`，并在 operator workbench 中引用同一对象；它是 GUI-ready projection，不写 domain truth、不读取 artifact/memory body、不签 owner receipt、不创建 typed blocker，也不声明 App release ready 或 production ready。v2 增加 `settings_ia`、`app_settings_read_model`、`issue_catalog`、`issue_queue` 和 `action_catalog`，并在 `settings_ia` 中显式列出 ordinary routes 与 Workspace、Local Services、About、Update、Theme secondary/deep-link routes；`app_settings_read_model` 从既有 `core.codex`、`developer_mode`、`modules`、`provider`、`paths`、`release`、IA 和 action catalog 派生页面结构、Codex model/reasoning policy、Access/API key、workspace services 和 local environment 状态，避免 App/Aion shell 维护第二套策略解释。这些字段只从现有 App state / update 状态语言投影用户可读问题，不模拟 domain owner truth。
-- `settings_repair_model_access`、`settings_verify_workspace`、`settings_sync_capabilities`、`settings_apply_opl_packages`、`settings_reload_codex_surface`、`settings_check_app_update`、`settings_prune_runtime_roots_dry_run` 和 `settings_rollback_runtime_substrate` 只通过既有 `opl app action execute` envelope 暴露；更新类动作默认消费 Managed Update coordinator：capability/package apply 走 `opl update apply --component capability_packages`，App carrier check 走 `opl update status --component installation_carrier`，runtime restore route 走 `opl update rollback --component runtime_substrate`。workspace / quest target-bound Codex surface reload 仍走显式 `opl connect sync-skills`，因为它需要用户目标路径，不是后台包更新 shell。cleanup 只提供 dry-run plan，不删除 runtime roots。
+- `settings_repair_model_access`、`settings_verify_workspace`、`settings_sync_capabilities`、`settings_apply_opl_packages`、`settings_reload_codex_surface`、`settings_check_app_update`、`settings_prune_runtime_roots_dry_run` 和 `settings_rollback_runtime_substrate` 只通过既有 `opl app action execute` envelope 暴露；更新类动作默认消费 Managed Update coordinator：capability/package apply 走 `opl packages update`，App carrier check 走 `opl app state --profile fast`，runtime restore route 走 `opl update rollback`。workspace / quest target-bound Codex surface reload 仍走显式 `opl connect sync-skills`，因为它需要用户目标路径，不是后台包更新 shell。cleanup 只提供 dry-run plan，不删除 runtime roots。
 - App repo 继续持有 GUI product truth、page-state contract、release artifact 和 shell validation；Aion shell 只实现渲染与 IPC adapter，不能把 Settings Control Center 的 domain/runtime truth 搬到 shell。
 
 ### 决策：generic workspace / source / artifact / memory substrate 由 OPL 持有 locator / index / lifecycle / projection，domain agent 持有 truth / body / verdict / authority

@@ -18,6 +18,7 @@ import {
   resolveCodexConfigPath,
   resolveCodexHome,
   safePathSegment,
+  validateUrlLike,
 } from './shared.ts';
 import type {
   AgentPackageLock,
@@ -47,7 +48,41 @@ function safeRelativePayloadPath(value: string) {
   return normalized;
 }
 
-function normalizePayloadFiles(payload: unknown, payloadManifestUrl: string): AgentPackagePayloadFile[] {
+async function readPayloadFileContent(entry: Record<string, unknown>, payloadManifestUrl: string, index: number) {
+  const contentUtf8 = typeof entry.content_utf8 === 'string' ? entry.content_utf8 : null;
+  const contentBase64 = typeof entry.content_base64 === 'string' && entry.content_base64.trim()
+    ? entry.content_base64.trim()
+    : null;
+  const sourceUrl = stringValue(entry.source_url);
+  const sourceCount = [contentUtf8 !== null, contentBase64 !== null, sourceUrl !== null]
+    .filter(Boolean).length;
+  if (sourceCount !== 1) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package payload files require exactly one content source.', {
+      payload_manifest_url: payloadManifestUrl,
+      file_index: index,
+      required: ['exactly one of content_utf8, content_base64, or source_url'],
+      failure_code: 'agent_package_payload_manifest_invalid',
+    });
+  }
+  if (contentBase64 !== null) return Buffer.from(contentBase64, 'base64');
+  if (contentUtf8 !== null) return Buffer.from(contentUtf8, 'utf8');
+
+  validateUrlLike(sourceUrl!, 'payload.files[].source_url');
+  if (sourceUrl!.startsWith('http://') || sourceUrl!.startsWith('https://')) {
+    const response = await fetch(sourceUrl!);
+    if (!response.ok) {
+      throw new FrameworkContractError('codex_command_failed', 'Agent package payload file fetch failed.', {
+        source_url: sourceUrl,
+        status: response.status,
+        status_text: response.statusText,
+      });
+    }
+    return Buffer.from(await response.arrayBuffer());
+  }
+  return fs.readFileSync(resolveLocalPath(sourceUrl!));
+}
+
+async function normalizePayloadFiles(payload: unknown, payloadManifestUrl: string): Promise<AgentPackagePayloadFile[]> {
   if (!isRecord(payload) || !Array.isArray(payload.files)) {
     throw new FrameworkContractError('contract_shape_invalid', 'Agent package payload manifest must contain a files array.', {
       payload_manifest_url: payloadManifestUrl,
@@ -62,21 +97,17 @@ function normalizePayloadFiles(payload: unknown, payloadManifestUrl: string): Ag
       failure_code: 'agent_package_payload_manifest_invalid',
     });
   }
-  return fileRecords.map((entry, index) => {
+  return Promise.all(fileRecords.map(async (entry, index) => {
     const relativePath = stringValue(entry.path);
-    const contentUtf8 = typeof entry.content_utf8 === 'string' ? entry.content_utf8 : null;
-    const contentBase64 = typeof entry.content_base64 === 'string' && entry.content_base64.trim()
-      ? entry.content_base64.trim()
-      : null;
-    if (!relativePath || (contentUtf8 === null && contentBase64 === null)) {
-      throw new FrameworkContractError('contract_shape_invalid', 'Agent package payload files require path and content.', {
+    if (!relativePath) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Agent package payload files require a path.', {
         payload_manifest_url: payloadManifestUrl,
         file_index: index,
-        required: ['path', 'content_utf8 or content_base64'],
+        required: ['path'],
         failure_code: 'agent_package_payload_manifest_invalid',
       });
     }
-    const content = contentBase64 !== null ? Buffer.from(contentBase64, 'base64') : Buffer.from(contentUtf8!, 'utf8');
+    const content = await readPayloadFileContent(entry, payloadManifestUrl, index);
     const sha256 = stringValue(entry.sha256);
     if (sha256) {
       const expected = sha256.startsWith('sha256:') ? sha256.slice('sha256:'.length) : sha256;
@@ -96,7 +127,7 @@ function normalizePayloadFiles(payload: unknown, payloadManifestUrl: string): Ag
       content,
       sha256,
     };
-  });
+  }));
 }
 
 async function materializePayloadManifestSource(input: {
@@ -105,7 +136,7 @@ async function materializePayloadManifestSource(input: {
   dryRun: boolean;
 }) {
   const fetched = await fetchJsonSource(input.payloadManifestUrl);
-  const files = normalizePayloadFiles(fetched.payload, input.payloadManifestUrl);
+  const files = await normalizePayloadFiles(fetched.payload, input.payloadManifestUrl);
   const payloadRoot = input.dryRun
     ? fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-payload-'))
     : path.join(

@@ -12,10 +12,10 @@ export const MANAGED_UPDATE_OWNER_FIELDS = {
 } as const;
 export const CAPABILITY_PACKAGE_OWNER = 'one-person-lab-managed-modules';
 export const CAPABILITY_PACKAGE_APPLY_OWNER = 'opl_connect_managed_module_reconciler';
-export const CAPABILITY_PACKAGE_READBACK_REF = 'opl connect agent-packages list --json';
-export const CAPABILITY_PACKAGE_STATUS_READBACK_REF = 'opl connect agent-packages status --package-id <package_id> --json';
-export const CAPABILITY_PACKAGE_APPLY_COMMAND = 'opl update apply --component capability_packages --json';
-export const CAPABILITY_PACKAGE_REPAIR_COMMAND = 'opl connect agent-packages repair --package-id <package_id> --json';
+export const CAPABILITY_PACKAGE_READBACK_REF = 'opl packages list --json';
+export const CAPABILITY_PACKAGE_STATUS_READBACK_REF = 'opl packages list --json';
+export const CAPABILITY_PACKAGE_APPLY_COMMAND = 'opl packages update --json';
+export const CAPABILITY_PACKAGE_REPAIR_COMMAND = 'opl packages repair --package-id <package_id> --json';
 export const CAPABILITY_PACKAGE_OWNER_FORBIDDEN_CLAIMS = [
   'capability_package_channel_signs_owner_receipt',
   'capability_package_channel_writes_domain_truth',
@@ -25,17 +25,11 @@ export const CAPABILITY_PACKAGE_OWNER_FORBIDDEN_CLAIMS = [
 export type ManagedUpdateProviderId =
   | 'installation_carrier'
   | 'runtime_substrate'
-  | 'capability_packages'
-  | 'codex_surface'
-  | 'companion_tools'
-  | 'workflow_profile';
+  | 'capability_packages';
 export type ManagedUpdateProviderAdapterId =
   | 'installation_carrier_status_adapter'
   | 'runtime_substrate_adapter'
-  | 'capability_packages_adapter'
-  | 'codex_surface_status_adapter'
-  | 'companion_tools_status_adapter'
-  | 'workflow_profile_adapter';
+  | 'capability_packages_adapter';
 
 export type ManagedUpdateReceiptApplyMode =
   | 'projection_only'

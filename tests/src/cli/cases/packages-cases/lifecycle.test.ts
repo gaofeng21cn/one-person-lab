@@ -15,7 +15,7 @@ import {
   withRemotePayloadAgentPackageServer,
 } from './helpers.ts';
 
-test('connect agent-packages fetches registry URL, validates manifest, and writes lock receipt', async () => {
+test('packages fetches registry URL, validates manifest, and writes lock receipt', async () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-packages-state-'));
   const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-packages-home-'));
   const codexHome = path.join(homeDir, '.codex');
@@ -29,8 +29,7 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
     await withAgentPackageServer(async (baseUrl) => {
       const registryUrl = `${baseUrl}/registry.json`;
       const refresh = await runCliAsync([
-        'connect',
-        'agent-packages',
+        'packages',
         'registry',
         'refresh',
         '--registry-url',
@@ -65,8 +64,7 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
       assert.equal(fs.existsSync(refresh.opl_agent_package_registry.cache_file), true);
 
       const validated = await runCliAsync([
-        'connect',
-        'agent-packages',
+        'packages',
         'validate-manifest',
         '--registry-url',
         registryUrl,
@@ -96,7 +94,7 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
       assert.equal(validated.opl_agent_package_manifest.package_id, 'third.party.research');
       assert.equal(validated.opl_agent_package_manifest.lifecycle_receipt.action, 'manifest_validate');
       assert.equal(validated.opl_agent_package_manifest.lifecycle_receipt.writes_performed, true);
-      assert.equal(validated.opl_agent_package_manifest.owner_route_readback.owner_route.readback_ref, 'opl connect agent-packages list --json');
+      assert.equal(validated.opl_agent_package_manifest.owner_route_readback.owner_route.readback_ref, 'opl packages list --json');
       assert.equal(validated.opl_agent_package_manifest.owner_route_readback.packages[0].descriptor.manifest_url, `${baseUrl}/manifest.json`);
       assert.equal(validated.opl_agent_package_manifest.owner_route_readback.packages[0].descriptor.registry_url, registryUrl);
       assert.equal(validated.opl_agent_package_manifest.owner_route_readback.packages[0].package_core.core_kind, 'opl_agent_package_core');
@@ -106,8 +104,7 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
       assert.equal(validated.opl_agent_package_manifest.owner_route_readback.no_package_manager_boundary.package_manager_claim, false);
 
       const install = await runCliAsync([
-        'connect',
-        'agent-packages',
+        'packages',
         'install',
         '--registry-url',
         registryUrl,
@@ -220,7 +217,7 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
       assert.equal(install.opl_agent_package_install.package_lock.physical_surface.failure_reason, null);
       assert.equal(install.opl_agent_package_install.lifecycle_receipt.physical_surface.status, 'materialized');
       assert.equal(install.opl_agent_package_install.owner_route_readback.selected_package_id, 'third.party.research');
-      assert.equal(install.opl_agent_package_install.owner_route_readback.owner_route.readback_ref, 'opl connect agent-packages list --json');
+      assert.equal(install.opl_agent_package_install.owner_route_readback.owner_route.readback_ref, 'opl packages list --json');
       assert.equal(
         install.opl_agent_package_install.owner_route_readback.packages[0].digest.version_or_source_digest,
         install.opl_agent_package_install.package_lock.version_or_source_digest,
@@ -319,8 +316,7 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
       const installedConfigPath = install.opl_agent_package_install.physical_surface.codex_config_path;
 
       const list = runCli([
-        'connect',
-        'agent-packages',
+        'packages',
         'list',
       ], env) as {
         opl_agent_packages: {
@@ -378,8 +374,7 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
       );
 
       const update = await runCliAsync([
-        'connect',
-        'agent-packages',
+        'packages',
         'update',
         '--registry-url',
         registryUrl,
@@ -402,8 +397,7 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
       assert.equal(update.opl_agent_package_update.lifecycle_receipt.writes_performed, true);
 
       const repair = runCli([
-        'connect',
-        'agent-packages',
+        'packages',
         'repair',
         '--package-id',
         'third.party.research',
@@ -421,8 +415,7 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
       assert.equal(repair.opl_agent_package_repair.lifecycle_receipt.action, 'repair');
 
       const hide = runCli([
-        'connect',
-        'agent-packages',
+        'packages',
         'hide',
         '--package-id',
         'third.party.research',
@@ -440,8 +433,7 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
       assert.equal(hide.opl_agent_package_exposure.lifecycle_receipt.action, 'hide');
 
       const unhide = runCli([
-        'connect',
-        'agent-packages',
+        'packages',
         'unhide',
         '--package-id',
         'third.party.research',
@@ -457,8 +449,7 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
       assert.equal(unhide.opl_agent_package_exposure.package_lock.exposure_state, 'visible');
 
       const disable = runCli([
-        'connect',
-        'agent-packages',
+        'packages',
         'disable',
         '--package-id',
         'third.party.research',
@@ -469,8 +460,7 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
       assert.equal(disable.opl_agent_package_exposure.package_lock.exposure_state, 'disabled');
 
       const enable = runCli([
-        'connect',
-        'agent-packages',
+        'packages',
         'enable',
         '--package-id',
         'third.party.research',
@@ -481,8 +471,7 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
       assert.equal(enable.opl_agent_package_exposure.package_lock.exposure_state, 'enabled');
 
       const status = runCli([
-        'connect',
-        'agent-packages',
+        'packages',
         'status',
         '--package-id',
         'third.party.research',
@@ -528,8 +517,7 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
       );
 
       const uninstall = runCli([
-        'connect',
-        'agent-packages',
+        'packages',
         'uninstall',
         '--package-id',
         'third.party.research',
@@ -556,8 +544,7 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
       );
 
       const afterUninstall = runCli([
-        'connect',
-        'agent-packages',
+        'packages',
         'status',
         '--package-id',
         'third.party.research',

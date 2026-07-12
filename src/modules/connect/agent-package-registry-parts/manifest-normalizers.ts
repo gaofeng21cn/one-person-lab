@@ -1,3 +1,6 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { FrameworkContractError, isRecord } from '../../../kernel/contract-validation.ts';
 import { recordList, stringList, stringValue } from '../../../kernel/json-record.ts';
 import { canonicalAgentPackageId } from '../agent-package-identity.ts';
@@ -133,7 +136,7 @@ export function normalizeRegistryEntry(entry: Record<string, unknown>, index: nu
   const manifestUrl = stringValue(entry.manifest_url)!;
   validateUrlLike(manifestUrl, `entries.${index}.manifest_url`);
   return {
-    package_id: canonicalAgentPackageId(entry.package_id)!,
+    package_id: canonicalManifestIdentity(entry.package_id, `registry.entries.${index}.package_id`),
     display_name: stringValue(entry.display_name)!,
     publisher: stringValue(entry.publisher)!,
     source: stringValue(entry.source)!,
@@ -192,6 +195,36 @@ function normalizeSkillPackRefs(skillPacks: Record<string, unknown>[]) {
     const version = stringValue(pack.version);
     return packId ? [`${packId}${source ? `@${source}` : ''}${version ? `#${version}` : ''}`] : [];
   });
+}
+
+function canonicalManifestIdentity(value: unknown, field: string) {
+  const declared = assertStringValue(value, field).toLowerCase();
+  const canonical = canonicalAgentPackageId(declared);
+  if (canonical !== declared) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package identity fields must use canonical package ids.', {
+      field,
+      declared_id: declared,
+      canonical_id: canonical,
+      failure_code: 'agent_package_identity_not_canonical',
+    });
+  }
+  return declared;
+}
+
+function resolveManifestRelativeSource(value: string, manifestUrl: string) {
+  if (
+    value.startsWith('http://')
+    || value.startsWith('https://')
+    || value.startsWith('file:')
+    || path.isAbsolute(value)
+  ) {
+    return value;
+  }
+  if (manifestUrl.startsWith('http://') || manifestUrl.startsWith('https://')) {
+    return new URL(value, manifestUrl).toString();
+  }
+  const manifestPath = manifestUrl.startsWith('file:') ? fileURLToPath(manifestUrl) : manifestUrl;
+  return path.resolve(path.dirname(manifestPath), value);
 }
 
 export function normalizeManifest(payload: unknown, manifestUrl: string): AgentPackageManifest {
@@ -270,8 +303,11 @@ export function normalizeManifest(payload: unknown, manifestUrl: string): AgentP
   const pluginSourcePath = stringValue(payload.codex_surface.plugin_source_path)
     ?? stringValue(payload.codex_surface.local_plugin_source_path)
     ?? stringValue(payload.codex_surface.plugin_root);
-  const pluginPayloadManifestUrl = stringValue(payload.codex_surface.plugin_payload_manifest_url)
+  const pluginPayloadManifestRef = stringValue(payload.codex_surface.plugin_payload_manifest_url)
     ?? stringValue(payload.codex_surface.remote_payload_manifest_url);
+  const pluginPayloadManifestUrl = pluginPayloadManifestRef
+    ? resolveManifestRelativeSource(pluginPayloadManifestRef, manifestUrl)
+    : null;
   if (pluginPayloadManifestUrl) {
     validateUrlLike(pluginPayloadManifestUrl, 'codex_surface.plugin_payload_manifest_url');
   }
@@ -280,8 +316,8 @@ export function normalizeManifest(payload: unknown, manifestUrl: string): AgentP
     ?? stringValue(payload.codex_surface.codex_visible_entry)
     ?? stringValue(payload.agent_id)!;
   return {
-    package_id: canonicalAgentPackageId(payload.package_id)!,
-    agent_id: canonicalAgentPackageId(payload.agent_id)!,
+    package_id: canonicalManifestIdentity(payload.package_id, 'package_id'),
+    agent_id: canonicalManifestIdentity(payload.agent_id, 'agent_id'),
     display_name: stringValue(payload.display_name)!,
     publisher: stringValue(payload.publisher)!,
     version: stringValue(payload.version)!,
@@ -293,7 +329,7 @@ export function normalizeManifest(payload: unknown, manifestUrl: string): AgentP
     permissions: rawPermissions,
     distribution_payload: distributionPayload,
     update_channel: stringValue(payload.update_channel) ?? 'manifest_url',
-    rollback_ref: stringValue(payload.rollback_ref) ?? `rollback-ref:${canonicalAgentPackageId(payload.package_id)!}/unavailable`, // reuse-first: allow owner-routed package provenance ref, not package-manager rollback.
+    rollback_ref: stringValue(payload.rollback_ref) ?? `rollback-ref:${canonicalManifestIdentity(payload.package_id, 'package_id')}/unavailable`, // reuse-first: allow owner-routed package provenance ref, not package-manager rollback.
     codex_visible_entry: codexVisibleEntry,
     required_skill_ids: requiredSkillIds,
     optional_skill_refs: uniqueStrings([

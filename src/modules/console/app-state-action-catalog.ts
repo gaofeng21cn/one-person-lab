@@ -281,7 +281,7 @@ export function buildActionCatalog(contracts: FrameworkContracts) {
       action_id: 'module_sync',
       label: 'Sync OPL modules',
       surface: 'opl app action execute',
-      delegated_surface: 'opl update apply --component capability_packages',
+      delegated_surface: 'opl packages update',
       payload_fields: [],
       mutates: 'opl_module_checkout',
     },

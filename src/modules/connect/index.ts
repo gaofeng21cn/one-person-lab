@@ -56,6 +56,7 @@ export type {
   AgentPackageManifestValidateInput,
   AgentPackagePackageActionInput,
 } from './agent-package-registry.ts';
+export { canonicalAgentPackageId } from './agent-package-identity.ts';
 export {
   agentPackageDelegatedSurface,
   listAgentPackageSettingsActions,
@@ -80,11 +81,6 @@ export type {
   ScientificConnectorProviderId,
   ScientificConnectorSearchInput,
 } from './opl-connect-scientific.ts';
-export {
-  readOplFlowWorkflowPolicy,
-  resolveOplFlowDependencyClosure,
-  runWorkflowPackageAction,
-} from './workflow-package-lifecycle.ts';
 export { buildOplDeveloperModeSurface } from './system-installation/developer-mode.ts';
 export { buildOplDockerWebuiDoctor } from './system-installation/docker-webui-doctor.ts';
 export { runOplEngineAction } from './system-installation/engine-actions.ts';

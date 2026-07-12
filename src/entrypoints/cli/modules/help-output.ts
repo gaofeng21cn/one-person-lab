@@ -257,7 +257,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl connect skills',
         'opl connect sync-skills',
         'opl update status',
-        'opl update plan --component capability_packages',
+        'opl packages update --dry-run',
         'opl workspace projects',
         'opl workspace ensure --agent rca --project-id deck-001',
         'opl workspace init --agent rca --workspace-id visual-theme-a --project-id deck-001',

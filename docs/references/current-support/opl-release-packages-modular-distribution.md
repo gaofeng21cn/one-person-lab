@@ -62,43 +62,33 @@ Agent package 与 capability dependency 采用双形态单源：MAS、MAS Schola
 - package-channel 模块安装/更新必须先把目标 archive 下载并校验到 managed root 旁的 stage root，再原子激活为 current managed root；旧 current 只在 clean package-channel 或 clean managed git checkout 条件下移动到 previous root，并写入 `opl-runtime-module.json` 的 `package_channel_lifecycle.current/previous/rollback_ref`。rollback helper 只能在 recorded previous root 存在且 current/previous tree hash 均匹配时交换 current/previous；dirty package root、developer checkout、无 lifecycle metadata 的普通目录或本机修改都不得被 silent update 或 rollback 覆盖。
 - 新增 framework capability package 时，不新增专属 clone / pull / update manager。维护者必须把 package 加入 agent package manifest / package distribution spec、让 `scripts/package-module-archives.mjs` 生成 archive / manifest / checksum、在 `scripts/package-release-discipline.mjs` 固化 source / scope / artifact gate，并补齐 managed update / startup-maintenance / workspace sync 测试和对应文档。MAS Scholar Skills 是该规则的当前实例：ordinary App 路径复用 GHCR package channel，Developer Mode/local checkout 只作为显式开发者观察源。
 
-## Managed Update Kernel
+## 三层生命周期与 Managed Update Kernel
 
-`opl update status --json` 是 OPL 基座统一的受管组件更新状态面。它投影 App 内部 managed components：App-owned runtime substrate、GHCR capability packages、companion tools，以及 projection-only 的 Codex surface 可见面/reload guidance。Managed Update 只做 owner route、component receipt、safe action refs 和 readback projection；它不是 OPL 私有 package manager，也不把 Codex Plugin/local marketplace、OPL App shortcuts、workflow profile、runtime/app release 合并成同一 mutation owner。Installation carrier status 由 App 侧投影到统一更新视图，但桌面 App bundle、Docker/WebUI image 与 Linux package carrier 的 host update route 不进入 Framework managed-update kernel，也不能由 `opl update apply` 声称完成。
+用户只管理三个对象，`managed_update.components[].component_id` 也只允许对应的三个 lifecycle owner：
 
-新增更新相关术语只按 `contracts/opl-framework/managed-update-kernel-contract.json#update_plane_state_machine` 读取，不再各自扩成独立概念。稳定状态机只有四类：
+| 用户对象 | Canonical 入口 | Lifecycle owner | 内部 provider | 边界 |
+| --- | --- | --- | --- | --- |
+| OPL Base | `opl update status|check|plan|apply|repair|rollback` | `opl_base` | `runtime_substrate` | 管理 Framework/App-owned runtime root；dependency 与 integration 状态折叠在 Base 内。 |
+| OPL App | `opl app state --profile fast` 与 App/host updater | `opl_app` | `installation_carrier` | Framework 只读回 host route；桌面 bundle、Docker/WebUI image、Linux carrier 由 App/host owner 更新。 |
+| OPL Packages | `opl packages list|status|install|update|enable|disable|repair|uninstall` | `opl_packages` | `capability_packages` | 管理 package lock、digest、物化、projection、profile migration 和单一 lifecycle receipt。 |
 
-| 状态 | 能做什么 | 典型对象 | 不能声称 |
+`runtime_substrate`、`installation_carrier` 与 `capability_packages` 只是 adapter dispatch 的 `provider_id`，不是 selector、公共 component 或独立 lifecycle owner。Codex plugin/skill 可见性属于 Packages 的 `projection_status`；OPL Flow profile semantic merge 属于 `profile_migration_status`；companion dependency/integration 属于 Base。旧 component alias、旧 receipt id 和旧 namespace 不迁移，读取时 fail closed。
+
+Kernel 继续提供统一状态词汇、idempotency lock、受控 runner 和 component receipt ledger，但不再把内部 adapter 暴露成用户选项：
+
+| 执行模式 | 适用 owner | 能做什么 | 不能声称 |
 | --- | --- | --- | --- |
-| `auto_apply` | clean managed target 可以由 Framework 下载、校验、stage、activate、post-apply 并写 receipt。 | `capability_packages`：MAS/MAG/RCA/OMA/MAS Scholar Skills package channel。 | domain truth、owner receipt、quality/export verdict、App release ready。 |
-| `controlled_apply` | 只通过显式受控命令改 OPL/App-owned runtime root，并保留 current / staged / rollback pointer。 | `runtime_substrate`：App-owned runtime root、embedded Codex executor、framework runtime artifact channel。 | Homebrew/global npm/system PATH Codex/system Temporal mutation、installation carrier update。 |
-| `prompt_only` | Framework 只给 owner-specific route、命令提示或 semantic merge packet；实际更新由对应 owner/host 执行。 | `installation_carrier`、`workflow_profile`、`companion_tools`。 | 自动替换 Docker/WebUI host、Linux package carrier、桌面 App bundle，或静默覆盖用户 Codex profile。 |
-| `projection_only` | Framework 只展示派生状态、reload guidance、refs 和 safe action label；不是 apply target。 | `codex_surface`、carrier readback、workflow profile readback。 | domain truth、owner receipt、App release currentness、carrier update complete。 |
+| `controlled_apply` | `opl_base` | 校验并切换 App-owned runtime current/staged/rollback pointer。 | Homebrew/global npm/system PATH/System Temporal mutation，或 App carrier 已更新。 |
+| `auto_apply` | `opl_packages` | 只覆盖 clean managed package target，完成 stage、activate、projection 和 receipt transaction。 | 覆盖 dirty/developer checkout，或写 domain truth/owner receipt/quality verdict。 |
+| `manual_required` | `opl_app` 或任何 owner-gated target | 返回 host/owner route、typed reason 与 readback。 | 由 Framework 代替 host updater 或静默覆盖用户 profile。 |
 
-因此术语归并如下：`Runtime Fabric` / `Environment Materializer` 属于 runtime substrate 或 runtime environment materialization 的受控 runtime root 语义；`framework runtime artifact channel` 是 `runtime_substrate` 的 controlled artifact source；`Linux runtime self-update` 若指 App-owned runtime root，则是 `controlled_apply`，若指 Linux package carrier，则是 `prompt_only` 的 host package route；`carrier route` 和 `WebUI host update` 都是 installation carrier 的 prompt-only host route；`workflow profile projection` 是 OPL Flow profile 的 semantic-merge projection，不是 `opl update apply` target。
+`opl update` 固定选择 `opl_base`，不接受 component selector；`opl packages update` 固定选择 `opl_packages`。两者共享 `managed-update-kernel.lock` 和 `managed-update-component-receipts.json`，receipt 同时记录 lifecycle owner、内部 provider、adapter、content identity、post-apply 与 reload guidance。`opl_app` 只进入读模型和 owner handoff，不进入 Framework apply runner。
 
-当前 Framework 已落地的是 `opl_managed_updater_kernel` 的状态、计划、修复 action refs、idempotency lock、统一状态词汇、受控执行 runner 和 component-level receipt ledger。它是统一更新协调面，不是每个 component 各自对外暴露更新外壳。每个 component 输出 `coordination_role`：`executable_target` 仅限 `runtime_substrate` 与 `capability_packages`，`derived_projection` 用于 `codex_surface`，`owner_handoff` 用于 installation carrier、companion tools 与 workflow profile。`opl update status/check/plan` 只读投影；`opl update apply/repair/rollback` 会获取 `managed-update-kernel.lock` 单写锁，调用对应 provider adapter，写入 `managed-update-component-receipts.json`，再把 latest receipt 投影回 component 状态。锁竞争以结构化 `managed_update_lock_contention` 报告，避免 App 启动维护、后台 daily、手动检查更新同时执行 staging 或 skill/plugin sync。`capability_packages` component 同时覆盖 domain / Foundry module package 和 framework capability package；MAS Scholar Skills 在这里作为 package-channel target 参与 install、update、rollback 和 post-apply skill exposure。
+受控 adapter 边界保持不变：`runtime_substrate_adapter` 只写 App-owned runtime root；`capability_packages_adapter` 只处理 clean managed package roots；`installation_carrier_status_adapter` 只读 App/host route。Package transaction 后可刷新 plugin registry、local marketplace、plugin-packaged skills 与 OMA generated carrier，但这些都不是第二套 package truth。OPL Flow profile 只能 semantic merge，禁止静默覆盖用户 Codex profile。
 
-受控执行仍保留 adapter 边界：
+App / Settings 的 `module_sync`、`settings_sync_capabilities` 与 `settings_apply_opl_packages` 委托 `opl packages update`；`settings_check_app_update` 委托 `opl app state --profile fast`；`settings_rollback_runtime_substrate` 委托 `opl update rollback`。target-bound workspace / quest Skill sync 仍直接走 `opl connect sync-skills --domain mas-scholar-skills --scope workspace|quest ...`，因为它需要显式用户目标路径。
 
-- `runtime_substrate_adapter` 只调用 App/OPL 管理的 Codex runtime substrate action，receipt 记录 runtime 版本、current/staged/rollback pointer 与 smoke/post-apply 结果；它不静默修改 Homebrew、global npm、system PATH Codex 或 system Temporal。
-- `capability_packages_adapter` 对普通用户的 clean managed module root 执行 install/update/sync，并刷新 plugin-packaged skills、plugin registry 与 OMA generated plugin surface；dirty checkout、Developer Mode checkout、ahead/diverged/unknown checkout 会进入 manual/repair 语义，不被静默覆盖。
-- `codex_exposure_status_adapter` 只投影由模块状态派生的 Codex skill/plugin/local marketplace 可见面和 reload guidance，不拥有 package core、domain truth，也不是 `opl update apply --component` 的 mutation target。
-- Installation carrier 不属于 Framework managed-update kernel。桌面 App bundle、Docker/WebUI image、Linux package carrier、标准 updater metadata、签名/公证和用户下载资产继续归 `one-person-lab-app`；Framework 只输出 runtime substrate、capability packages、companion tools 等内部 managed components，并把 Codex surface 作为 post-apply projection/reload guidance 投影出来。
-- OPL App shortcuts 与 workflow profile 只消费 package lock、lifecycle receipt、owner route readback 和 reload / semantic-merge guidance；它们不能成为 package dependency graph、release currentness、domain readiness 或 owner receipt 的第二真相源。
-
-这个入口不替代具体 adapter：
-
-- Installation carrier 仍由 App repo 的 standard updater、Docker/WebUI host route、Linux package carrier 和 release assets 治理。
-- Runtime substrate 仍只允许写 App-owned runtime root、staged root、current pointer 和 rollback pointer，不静默修改 Homebrew、global npm、system PATH Codex 或 system Temporal。
-- MAS/MAG/RCA/OPL Meta Agent/MAS Scholar Skills 的普通用户来源仍是 GHCR `one-person-lab-manifest:latest` 与 `one-person-lab-modules/*` package channel；`latest` 只作为 rolling channel selector，安装真相必须记录 immutable version tag、digest、sha256、source fingerprint 或 git head。
-- Codex plugin registry、local marketplace、plugin-packaged skills、OPL App shortcuts、workflow profile 和 OMA generated plugin surface 是 package update 后的 post-apply projection/reload guidance，不是第二套 package truth 或 domain truth，也不通过单独的 `codex_surface` / shortcut / profile apply 完成。
-
-App / Settings 的更新类 action 默认消费 `opl update` 协调面：`module_sync`、`settings_sync_capabilities` 与 `settings_apply_opl_packages` 委托 `opl update apply --component capability_packages`，`settings_check_app_update` 委托 `opl update status --component installation_carrier`，`settings_rollback_runtime_substrate` 委托 `opl update rollback --component runtime_substrate`。target-bound workspace / quest Skill sync 仍直接走 `opl connect sync-skills --domain mas-scholar-skills --scope workspace|quest ...`，因为它是显式目标投影，不是后台包更新 shell。
-
-`opl update plan --component capability_packages --json` 给出安全 action refs，例如 `opl connect reconcile-modules --json` 和 `opl connect sync-skills --json`。`opl update apply --component capability_packages --json` 会实际运行受控 adapter 并写 component receipt。dirty checkout、Developer Mode checkout、ahead/diverged/no-upstream checkout、domain truth、owner receipt、artifact body、quality/export verdict 都不属于 silent updater 的 mutation scope。
-
-`Packages` 是 App 不变时的机器更新通道，但它不替代 App repo `Releases` 的用户下载入口。新手用户从 `one-person-lab-app` 的 `Releases` 下载桌面安装包；macOS arm64 可选择 App-owned Full 首次安装资产来预置 Full manifest / product profile 声明的 runtime、domain / Foundry module、provider support、companion tool 与 skill payload。MAS/MAG/RCA 等 domain repo 不再提供用户安装型 GitHub Release；MDS 只保留为 MAS 显式声明的可选 companion / provenance / audit / oracle 引用，不作为 provider adapter、默认分发模块或 Full payload。
+Packages 是 App 不变时的机器更新通道，但不替代 App repo `Releases` 的用户下载入口。普通用户仍从 `one-person-lab-app` 的 `Releases` 获取桌面安装包；package 安装真相必须记录 immutable version、digest、SHA-256、source fingerprint 或 Git head。MAS/MAG/RCA 等 domain repo 不提供第二套用户安装型 Release，domain truth、artifact body、quality/export verdict 与 owner receipt 始终留在 domain owner。
 
 Manifest 的本地入口只用于读取 fresh machine output，不作为本文冻结的字段快照：
 

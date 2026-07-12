@@ -77,7 +77,7 @@ import { buildBrandCommandSpecs } from './public-command-specs-parts/brand.ts';
 import { buildConnectCommandSpecs } from './public-command-specs-parts/connect.ts';
 import { buildFoundryCommandSpecs } from './public-command-specs-parts/foundry.ts';
 import { buildOkfCommandSpecs } from './public-command-specs-parts/okf.ts';
-import { buildPackageCommandSpecs } from './public-command-specs-parts/packages.ts';
+import { buildPackagesCommandSpecs } from './public-command-specs-parts/packages.ts';
 import { buildProfileCommandSpecs } from './public-command-specs-parts/profiles.ts';
 import { buildStageCommandSpecs, validateStageDerivedLensCommandSpecs } from './public-command-specs-parts/stages.ts';
 import { buildUpdateCommandSpecs } from './public-command-specs-parts/update.ts';
@@ -176,7 +176,7 @@ export function buildPublicCommandSpecs(
   const connectCommandSpecs = buildConnectCommandSpecs(commandSpecs, systemCommandSpecs);
   const foundryCommandSpecs = buildFoundryCommandSpecs();
   const okfCommandSpecs = buildOkfCommandSpecs();
-  const packageCommandSpecs = buildPackageCommandSpecs();
+  const packagesCommandSpecs = buildPackagesCommandSpecs(getContracts, (command) => publicCommandSpecs[command]);
   const profileCommandSpecs = buildProfileCommandSpecs();
   const stageCommandSpecs = buildStageCommandSpecs(getContracts);
   const updateCommandSpecs = buildUpdateCommandSpecs(getContracts);
@@ -278,6 +278,7 @@ export function buildPublicCommandSpecs(
     ...foundryCommandSpecs,
     ...profileCommandSpecs,
     ...connectCommandSpecs,
+    ...packagesCommandSpecs,
     ...updateCommandSpecs,
     ...workOrderCommandSpecs,
     ...feedbackOpsCommandSpecs,
@@ -869,7 +870,6 @@ export function buildPublicCommandSpecs(
       group: 'contract',
     }),
     ...systemCommandSpecs,
-    ...packageCommandSpecs,
     'engine install': engineInstallSpec,
     'engine update': engineUpdateSpec,
     'engine reinstall': engineReinstallSpec,

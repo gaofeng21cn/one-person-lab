@@ -1,0 +1,59 @@
+{
+  "surface_kind": "opl_agent_package_payload_manifest",
+  "package_id": "opl-flow",
+  "package_version": "0.1.14",
+  "source_repo": "https://github.com/gaofeng21cn/opl-flow.git",
+  "source_commit": "ad924449f8db69a4d68362288a5d9833347d6928",
+  "files": [
+    {
+      "path": ".agents/plugins/marketplace.json",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/ad924449f8db69a4d68362288a5d9833347d6928/.agents/plugins/marketplace.json",
+      "sha256": "sha256:96d94f97bae9830f0d2c117930241cd52ab78fa7ad45b4601a72f56f93e6bae4"
+    },
+    {
+      "path": ".codex-plugin/plugin.json",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/ad924449f8db69a4d68362288a5d9833347d6928/.codex-plugin/plugin.json",
+      "sha256": "sha256:c3c58c1e22707fc006f2f6a0149283504081dd4be9dc59546f8acd7339a45f8b"
+    },
+    {
+      "path": "skills/codex-ops-kit/SKILL.md",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/ad924449f8db69a4d68362288a5d9833347d6928/skills/codex-ops-kit/SKILL.md",
+      "sha256": "sha256:92aa91a203d9a15830d4be9f9cf3de0a4819d5c8ce0d7a17a461c19efa97e45f"
+    },
+    {
+      "path": "skills/codex-ops-kit/agents/openai.yaml",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/ad924449f8db69a4d68362288a5d9833347d6928/skills/codex-ops-kit/agents/openai.yaml",
+      "sha256": "sha256:631629cc7628ae9cefb8f7b068580b451acf98faddf8ec8a7df6c7a21c06ef8c"
+    },
+    {
+      "path": "skills/codex-ops-kit/references/lane-closeout.md",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/ad924449f8db69a4d68362288a5d9833347d6928/skills/codex-ops-kit/references/lane-closeout.md",
+      "sha256": "sha256:0ac5bd4494e5d66f9ac7c60108825bc11a8abd3e7d78c5246b57f08d48e1b77c"
+    },
+    {
+      "path": "skills/codex-ops-kit/references/release-currentness.md",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/ad924449f8db69a4d68362288a5d9833347d6928/skills/codex-ops-kit/references/release-currentness.md",
+      "sha256": "sha256:4c4b1653f43d78ec1510201550e2091aa2f632e4049222fc23e490ad62c99cf8"
+    },
+    {
+      "path": "skills/codex-ops-kit/scripts/codex_ops_gate.py",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/ad924449f8db69a4d68362288a5d9833347d6928/skills/codex-ops-kit/scripts/codex_ops_gate.py",
+      "sha256": "sha256:a2db40ef3a733955e58a2a518f602f99b0fb4aaab7840f789f8b0a6d32ea505d"
+    },
+    {
+      "path": "skills/codex-ops-kit/scripts/release_url_audit.py",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/ad924449f8db69a4d68362288a5d9833347d6928/skills/codex-ops-kit/scripts/release_url_audit.py",
+      "sha256": "sha256:bcb03491de4b737d1f9a39d6c871141fdefbc818abdf5e2b513b8e7ba1683605"
+    },
+    {
+      "path": "skills/codex-ops-kit/scripts/worktree_absorption_audit.py",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/ad924449f8db69a4d68362288a5d9833347d6928/skills/codex-ops-kit/scripts/worktree_absorption_audit.py",
+      "sha256": "sha256:76510e1401a87cd37c2698a71eb6758b9eca7383516af39b823c76cd38973380"
+    },
+    {
+      "path": "skills/opl-flow/SKILL.md",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/ad924449f8db69a4d68362288a5d9833347d6928/skills/opl-flow/SKILL.md",
+      "sha256": "sha256:30133171b40e01465f3f29a400afd6c8134e7bb4380f5bbdde98334a8396ae9e"
+    }
+  ]
+}

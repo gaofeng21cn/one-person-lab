@@ -16,7 +16,7 @@ import {
   withRemotePayloadAgentPackageServer,
 } from './helpers.ts';
 
-test('connect agent-packages materializes manifest-declared remote plugin payloads', async () => {
+test('packages materializes manifest-declared remote plugin payloads', async () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-remote-payload-state-'));
   const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-remote-payload-home-'));
   const env = {
@@ -27,8 +27,7 @@ test('connect agent-packages materializes manifest-declared remote plugin payloa
   try {
     await withRemotePayloadAgentPackageServer(async (baseUrl) => {
       const install = await runCliAsync([
-        'connect',
-        'agent-packages',
+        'packages',
         'install',
         '--registry-url',
         `${baseUrl}/registry.json`,
@@ -88,8 +87,7 @@ test('connect agent-packages materializes manifest-declared remote plugin payloa
       );
 
       const uninstall = runCli([
-        'connect',
-        'agent-packages',
+        'packages',
         'uninstall',
         '--package-id',
         'third.party.research',
@@ -115,7 +113,7 @@ test('connect agent-packages materializes manifest-declared remote plugin payloa
   }
 });
 
-test('connect agent-packages rejects local package payloads missing bundled required skills', () => {
+test('packages rejects local package payloads missing bundled required skills', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-missing-skill-state-'));
   const pluginSourcePath = createPluginSourceFixture({ includeRequiredSkill: false });
   const fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-missing-skill-'));
@@ -123,8 +121,7 @@ test('connect agent-packages rejects local package payloads missing bundled requ
     const manifestPath = path.join(fixtureDir, 'manifest.json');
     fs.writeFileSync(manifestPath, formatJsonPayload(agentPackageManifest({ pluginSourcePath })), 'utf8');
     const failure = runCliFailure([
-      'connect',
-      'agent-packages',
+      'packages',
       'install',
       '--manifest-url',
       pathToFileURL(manifestPath).href,
@@ -174,7 +171,7 @@ test('app action execute routes install_from_manifest_url to Framework package l
       };
     };
 
-    assert.equal(output.app_action_execution.delegated_surface, 'opl connect agent-packages install --manifest-url <manifest_url>');
+    assert.equal(output.app_action_execution.delegated_surface, 'opl packages install --manifest-url <manifest_url>');
     assert.equal(output.app_action_execution.result.opl_agent_package_install.status, 'installed');
     assert.equal(output.app_action_execution.result.opl_agent_package_install.package_lock.package_id, 'third.party.research');
     assert.equal(output.app_action_execution.result.opl_agent_package_install.package_lock.source_kind, 'local_manifest_file');
@@ -199,7 +196,7 @@ test('app action execute routes install_from_manifest_url to Framework package l
         };
       };
     };
-    assert.equal(repair.app_action_execution.delegated_surface, 'opl connect agent-packages repair --package-id <package_id>');
+    assert.equal(repair.app_action_execution.delegated_surface, 'opl packages repair --package-id <package_id>');
     assert.equal(repair.app_action_execution.result.opl_agent_package_repair.status, 'repaired');
     assert.equal(repair.app_action_execution.result.opl_agent_package_repair.lifecycle_receipt.action, 'repair');
 
@@ -229,7 +226,7 @@ test('app action execute routes install_from_manifest_url to Framework package l
     };
     assert.equal(
       exposurePreference.app_action_execution.delegated_surface,
-      'opl connect agent-packages disable --package-id <package_id>',
+      'opl packages disable --package-id <package_id>',
     );
     assert.equal(exposurePreference.app_action_execution.result.opl_agent_package_exposure.status, 'disabled');
     assert.equal(exposurePreference.app_action_execution.result.opl_agent_package_exposure.action, 'disable');
@@ -263,7 +260,7 @@ test('app action execute routes install_from_manifest_url to Framework package l
     };
     assert.equal(
       shortcutPreference.app_action_execution.delegated_surface,
-      'opl connect agent-packages home-shortcut-preferences set --package-id <package_id> --shortcut-id <shortcut_id>',
+      'opl packages preferences set --package-id <package_id> --shortcut-id <shortcut_id>',
     );
     assert.equal(shortcutPreference.app_action_execution.result.opl_agent_package_home_shortcut_preferences.status, 'preferences_updated');
     assert.equal(shortcutPreference.app_action_execution.result.opl_agent_package_home_shortcut_preferences.preference.shortcut_id, 'research');
@@ -274,7 +271,7 @@ test('app action execute routes install_from_manifest_url to Framework package l
       'home_shortcut_preferences_set',
     );
 
-    const list = runCli(['connect', 'agent-packages', 'list'], { OPL_STATE_DIR: stateDir }) as {
+    const list = runCli(['packages', 'list'], { OPL_STATE_DIR: stateDir }) as {
       opl_agent_packages: {
         home_shortcut_preferences: Array<{ package_id: string; shortcut_id: string; visible: boolean; sort_order: number; source: string }>;
         files: { home_shortcut_preferences_file: string };

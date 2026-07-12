@@ -89,7 +89,7 @@ test('app action catalog exposes representative safe delegated action refs', () 
       );
     }
     assert.deepEqual(actions.get('module_sync')?.payload_fields, []);
-    assert.equal(actions.get('module_sync')?.delegated_surface, 'opl update apply --component capability_packages');
+    assert.equal(actions.get('module_sync')?.delegated_surface, 'opl packages update');
     assert.deepEqual(actions.get('scholarskills_workspace_sync')?.payload_fields, ['workspace_root']);
     assert.equal(
       actions.get('scholarskills_workspace_sync')?.delegated_surface,
@@ -148,19 +148,19 @@ test('app action catalog exposes representative safe delegated action refs', () 
     assert.equal(actions.get('settings_verify_workspace')?.delegated_surface, 'opl workspace health');
     assert.deepEqual(actions.get('settings_verify_workspace')?.payload_fields, ['workspace_path']);
     assert.equal(actions.get('settings_verify_workspace')?.mutates, 'none_read_only');
-    assert.equal(actions.get('settings_sync_capabilities')?.delegated_surface, 'opl update apply --component capability_packages');
+    assert.equal(actions.get('settings_sync_capabilities')?.delegated_surface, 'opl packages update');
     assert.deepEqual(actions.get('settings_sync_capabilities')?.payload_fields, []);
     assert.equal(actions.get('settings_sync_capabilities')?.confirmation_required, false);
     assert.equal(actions.get('settings_sync_capabilities')?.danger_level, 'low');
     assert.equal(actions.get('settings_sync_capabilities')?.can_submit_to_safe_action_shell, true);
     assert.equal(
       actions.get('settings_check_app_update')?.delegated_surface,
-      'opl update status --component installation_carrier',
+      'opl app state --profile fast',
     );
     assert.equal(actions.get('settings_check_app_update')?.mutates, 'none_read_only');
     assert.equal(
       actions.get('settings_rollback_runtime_substrate')?.delegated_surface,
-      'opl update rollback --component runtime_substrate',
+      'opl update rollback',
     );
     assert.deepEqual(actions.get('settings_rollback_runtime_substrate')?.payload_fields, ['receipt_ref']);
     assert.equal(actions.get('settings_rollback_runtime_substrate')?.danger_level, 'high');

@@ -24,6 +24,7 @@ import {
 } from '../../../../../src/modules/connect/agent-package-registry-parts/manifest-normalizers.ts';
 import { defaultHomeShortcutPreferences } from '../../../../../src/modules/connect/agent-package-registry-parts/home-shortcuts.ts';
 import { assertManifestMatchesRegistrySelection } from '../../../../../src/modules/connect/agent-package-registry-parts/selection.ts';
+import { canonicalAgentPackageId } from '../../../../../src/modules/connect/index.ts';
 
 test('default Home shortcut visibility follows registry starter_default', () => {
   const registry = normalizeRegistry({
@@ -47,13 +48,119 @@ test('default Home shortcut visibility follows registry starter_default', () => 
   assert.equal(preferences[0].installed, false);
 });
 
+test('official packages support positional install repair and uninstall without URL or trust flags', () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-positional-state-'));
+  try {
+    const env = { OPL_STATE_DIR: stateDir };
+    const preview = runCli(['packages', 'install', '--dry-run', 'rca'], env) as {
+      opl_agent_package_install: { status: string; dry_run: boolean; package_lock: { package_id: string } };
+    };
+    assert.equal(preview.opl_agent_package_install.status, 'validated_no_write');
+    assert.equal(preview.opl_agent_package_install.dry_run, true);
+    assert.equal(preview.opl_agent_package_install.package_lock.package_id, 'redcube-ai');
+    assert.equal(preview.opl_agent_package_install.package_lock.package_id, canonicalAgentPackageId('rca'));
+
+    const rca = runCli(['packages', 'install', 'rca'], env) as {
+      opl_agent_package_install: { package_lock: { package_id: string; trust_tier: string } };
+    };
+    assert.equal(rca.opl_agent_package_install.package_lock.package_id, 'redcube-ai');
+    assert.equal(rca.opl_agent_package_install.package_lock.trust_tier, 'first_party');
+
+    const repaired = runCli(['packages', 'repair', 'rca'], env) as {
+      opl_agent_package_repair: { package_lock: { package_id: string } };
+    };
+    assert.equal(repaired.opl_agent_package_repair.package_lock.package_id, 'redcube-ai');
+
+    const removed = runCli(['packages', 'uninstall', 'rca'], env) as {
+      opl_agent_package_uninstall: { removed_package_lock: { package_id: string } };
+    };
+    assert.equal(removed.opl_agent_package_uninstall.removed_package_lock.package_id, 'redcube-ai');
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+  }
+});
+
+test('package actions describe both positional and flagged package selection', () => {
+  const failure = runCliFailure(['packages', 'repair']);
+
+  assert.match(
+    failure.payload.error.message,
+    /requires a positional package id or --package-id/,
+  );
+  assert.deepEqual(
+    failure.payload.error.details.required,
+    ['<package_id> or --package-id'],
+  );
+});
+
+test('OPL Flow manifest resolves its package-owned 0.1.14 carrier payload', () => {
+  const manifestPath = path.join(repoRoot, 'contracts', 'opl-framework', 'agent-packages', 'opl-flow.json');
+  const manifest = normalizeManifest(
+    parseJsonText(fs.readFileSync(manifestPath, 'utf8')),
+    pathToFileURL(manifestPath).href,
+  );
+
+  assert.equal(manifest.package_id, 'opl-flow');
+  assert.equal(manifest.version, '0.1.14');
+  assert.deepEqual(manifest.required_skill_ids, ['opl-flow', 'codex-ops-kit']);
+  assert.equal(
+    manifest.plugin_payload_manifest_url,
+    path.join(repoRoot, 'contracts', 'opl-framework', 'agent-packages', 'payloads', 'opl-flow-0.1.14.json'),
+  );
+});
+
+test('MAS package exposes ScholarSkills as a required managed capability dependency', () => {
+  const manifestPath = path.join(repoRoot, 'contracts', 'opl-framework', 'agent-packages', 'mas.json');
+  const manifestPayload = parseJsonText(fs.readFileSync(manifestPath, 'utf8')) as {
+    codex_surface: { bundled_capability_package_ids: string[] };
+    capability_dependencies: Array<{
+      module_id: string;
+      package_id: string;
+      kind: string;
+      required: boolean;
+      opl_distribution: string;
+    }>;
+  };
+  const manifest = normalizeManifest(
+    manifestPayload,
+    pathToFileURL(manifestPath).href,
+  );
+  const dependency = manifestPayload.capability_dependencies.find(
+    (entry) => entry.package_id === 'mas-scholar-skills',
+  );
+
+  assert.equal(manifest.package_id, 'med-autoscience');
+  assert.deepEqual(manifestPayload.codex_surface.bundled_capability_package_ids, ['mas-scholar-skills']);
+  assert.equal(dependency?.module_id, 'scholarskills');
+  assert.equal(dependency?.kind, 'framework_capability_package');
+  assert.equal(dependency?.required, true);
+  assert.equal(dependency?.opl_distribution, 'managed_dependency');
+
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-mas-package-preview-state-'));
+  try {
+    const preview = runCli(['packages', 'install', '--dry-run', 'mas'], {
+      OPL_STATE_DIR: stateDir,
+    }) as {
+      opl_agent_package_install: {
+        status: string;
+        dry_run: boolean;
+        package_lock: { package_id: string };
+      };
+    };
+    assert.equal(preview.opl_agent_package_install.status, 'validated_no_write');
+    assert.equal(preview.opl_agent_package_install.dry_run, true);
+    assert.equal(preview.opl_agent_package_install.package_lock.package_id, 'med-autoscience');
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+  }
+});
+
 test('Home shortcut preferences can be changed before the package is installed', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-home-preference-state-'));
   try {
     const result = runCli([
-      'connect',
-      'agent-packages',
-      'home-shortcut-preferences',
+      'packages',
+      'preferences',
       'set',
       '--package-id',
       'opl-meta-agent',
@@ -108,7 +215,7 @@ test('published registry entry rejects a source-only manifest without distributi
   );
 });
 
-test('connect agent-packages rejects registry manifest identity drift before writing locks', () => {
+test('packages rejects registry manifest identity drift before writing locks', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-drift-state-'));
   const fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-drift-'));
   try {
@@ -136,8 +243,7 @@ test('connect agent-packages rejects registry manifest identity drift before wri
       'utf8',
     );
     const failure = runCliFailure([
-      'connect',
-      'agent-packages',
+      'packages',
       'install',
       '--registry-url',
       pathToFileURL(registryPath).href,
@@ -155,7 +261,7 @@ test('connect agent-packages rejects registry manifest identity drift before wri
   }
 });
 
-test('connect agent-packages fails closed when latest is treated as install truth', () => {
+test('packages fails closed when latest is treated as install truth', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-latest-truth-state-'));
   const fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-latest-truth-'));
   try {
@@ -171,8 +277,7 @@ test('connect agent-packages fails closed when latest is treated as install trut
       'utf8',
     );
     const failure = runCliFailure([
-      'connect',
-      'agent-packages',
+      'packages',
       'install',
       '--manifest-url',
       pathToFileURL(manifestPath).href,
@@ -189,7 +294,7 @@ test('connect agent-packages fails closed when latest is treated as install trut
   }
 });
 
-test('connect agent-packages rejects developer checkout auto-update and permission scope drift', async () => {
+test('packages rejects developer checkout auto-update and permission scope drift', async () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-policy-state-'));
   const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-policy-home-'));
   const fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-policy-fixtures-'));
@@ -209,8 +314,7 @@ test('connect agent-packages rejects developer checkout auto-update and permissi
     );
 
     await runCliAsync([
-      'connect',
-      'agent-packages',
+      'packages',
       'install',
       '--manifest-url',
       pathToFileURL(manifestPath).href,
@@ -219,8 +323,7 @@ test('connect agent-packages rejects developer checkout auto-update and permissi
     ], env);
 
     const developerUpdateFailure = runCliFailure([
-      'connect',
-      'agent-packages',
+      'packages',
       'update',
       '--manifest-url',
       pathToFileURL(manifestPath).href,
@@ -232,8 +335,7 @@ test('connect agent-packages rejects developer checkout auto-update and permissi
     assert.equal(developerUpdateFailure.payload.error.details.failure_code, 'agent_package_developer_checkout_auto_update_forbidden');
 
     const permissionFailure = runCliFailure([
-      'connect',
-      'agent-packages',
+      'packages',
       'update',
       '--manifest-url',
       pathToFileURL(permissionManifestPath).href,
@@ -248,7 +350,7 @@ test('connect agent-packages rejects developer checkout auto-update and permissi
   }
 });
 
-test('connect agent-packages preserves installed lock and receipt trail when update materialization fails', () => {
+test('packages preserves installed lock and receipt trail when update materialization fails', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-update-failure-state-'));
   const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-update-failure-home-'));
   const fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-update-failure-fixtures-'));
@@ -266,8 +368,7 @@ test('connect agent-packages preserves installed lock and receipt trail when upd
     fs.writeFileSync(brokenManifestPath, formatJsonPayload(agentPackageManifest({ pluginSourcePath: brokenPluginSourcePath })), 'utf8');
 
     const install = runCli([
-      'connect',
-      'agent-packages',
+      'packages',
       'install',
       '--manifest-url',
       pathToFileURL(manifestPath).href,
@@ -289,8 +390,7 @@ test('connect agent-packages preserves installed lock and receipt trail when upd
     const installedCachePath = install.opl_agent_package_install.package_lock.physical_surface.codex_plugin_cache_path;
 
     const failure = runCliFailure([
-      'connect',
-      'agent-packages',
+      'packages',
       'update',
       '--manifest-url',
       pathToFileURL(brokenManifestPath).href,
@@ -303,8 +403,7 @@ test('connect agent-packages preserves installed lock and receipt trail when upd
     assert.equal(fs.readFileSync(install.opl_agent_package_install.lifecycle_ledger_file, 'utf8'), ledgerBefore);
 
     const status = runCli([
-      'connect',
-      'agent-packages',
+      'packages',
       'status',
       '--package-id',
       'third.party.research',
@@ -339,7 +438,7 @@ test('connect agent-packages preserves installed lock and receipt trail when upd
   }
 });
 
-test('connect agent-packages rejects invalid manifests before writing locks', () => {
+test('packages rejects invalid manifests before writing locks', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-invalid-state-'));
   const fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-invalid-'));
   try {
@@ -356,8 +455,7 @@ test('connect agent-packages rejects invalid manifests before writing locks', ()
       'utf8',
     );
     const failure = runCliFailure([
-      'connect',
-      'agent-packages',
+      'packages',
       'install',
       '--manifest-url',
       pathToFileURL(manifestPath).href,
@@ -376,13 +474,12 @@ test('connect agent-packages rejects invalid manifests before writing locks', ()
   }
 });
 
-test('connect agent-packages validates first-party agent package manifest shape', () => {
+test('packages validates first-party agent package manifest shape', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-first-party-manifest-state-'));
   try {
     const manifestPath = path.join(repoRoot, 'contracts', 'opl-framework', 'agent-packages', 'oma.json');
     const validation = runCli([
-      'connect',
-      'agent-packages',
+      'packages',
       'validate-manifest',
       '--manifest-url',
       pathToFileURL(manifestPath).href,
@@ -412,7 +509,7 @@ test('connect agent-packages validates first-party agent package manifest shape'
   }
 });
 
-test('connect agent-packages canonicalizes legacy alias input and writes canonical package ids', async () => {
+test('packages resolves public aliases without rewriting manifest identity', async () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-alias-state-'));
   const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-alias-home-'));
   const pluginSourcePath = createPluginSourceFixture();
@@ -424,8 +521,7 @@ test('connect agent-packages canonicalizes legacy alias input and writes canonic
   try {
     await withAgentPackageServer(async (baseUrl) => {
       const refresh = await runCliAsync([
-        'connect',
-        'agent-packages',
+        'packages',
         'registry',
         'refresh',
         '--registry-url',
@@ -438,8 +534,7 @@ test('connect agent-packages canonicalizes legacy alias input and writes canonic
       assert.equal(refresh.opl_agent_package_registry.entries[0].package_id, 'med-autoscience');
 
       const install = await runCliAsync([
-        'connect',
-        'agent-packages',
+        'packages',
         'install',
         '--registry-url',
         `${baseUrl}/registry.json`,
@@ -456,9 +551,8 @@ test('connect agent-packages canonicalizes legacy alias input and writes canonic
       assert.equal(install.opl_agent_package_install.owner_route_readback.selected_package_id, 'med-autoscience');
 
       const shortcut = await runCliAsync([
-        'connect',
-        'agent-packages',
-        'home-shortcut-preferences',
+        'packages',
+        'preferences',
         'set',
         '--package-id',
         'mas',
@@ -471,7 +565,7 @@ test('connect agent-packages canonicalizes legacy alias input and writes canonic
       };
       assert.equal(shortcut.opl_agent_package_home_shortcut_preferences.preference.package_id, 'med-autoscience');
 
-      const status = runCli(['connect', 'agent-packages', 'status', '--package-id', 'mas'], env) as {
+      const status = runCli(['packages', 'status', '--package-id', 'mas'], env) as {
         opl_agent_package_status: {
           package_id: string;
           installed_packages: Array<{ package_id: string; agent_id: string }>;
@@ -489,8 +583,8 @@ test('connect agent-packages canonicalizes legacy alias input and writes canonic
       assert.equal(status.opl_agent_package_status.owner_route_readback.selected_package_id, 'med-autoscience');
       assert.equal(status.opl_agent_package_status.owner_route_readback.packages[0].package_id, 'med-autoscience');
     }, agentPackageManifest({
-      packageId: 'medautoscience',
-      agentId: 'mas',
+      packageId: 'med-autoscience',
+      agentId: 'med-autoscience',
       pluginSourcePath,
     }));
   } finally {
@@ -500,7 +594,7 @@ test('connect agent-packages canonicalizes legacy alias input and writes canonic
   }
 });
 
-test('connect agent-packages canonicalizes legacy registry lock lifecycle and home shortcut state on readback', () => {
+test('packages rejects legacy persisted package identities instead of migrating them on readback', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-legacy-state-'));
   try {
     fs.writeFileSync(path.join(stateDir, 'agent-package-registry-cache.json'), formatJsonPayload({
@@ -630,27 +724,11 @@ test('connect agent-packages canonicalizes legacy registry lock lifecycle and ho
       ],
     }), 'utf8');
 
-    const list = runCli(['connect', 'agent-packages', 'list'], { OPL_STATE_DIR: stateDir }) as {
-      opl_agent_packages: {
-        registry_cache: { entries: Array<{ package_id: string }> } | null;
-        installed_packages: Array<{ package_id: string; agent_id: string }>;
-        lifecycle_receipts: Array<{ package_id: string | null; physical_surface?: { package_id: string } }>;
-        home_shortcut_preferences: Array<{ package_id: string; shortcut_id: string }>;
-      };
-    };
-
-    assert.deepEqual(
-      list.opl_agent_packages.registry_cache?.entries.map((entry) => entry.package_id),
-      ['med-autoscience', 'opl-bookforge'],
-    );
-    assert.equal(list.opl_agent_packages.installed_packages[0].package_id, 'redcube-ai');
-    assert.equal(list.opl_agent_packages.installed_packages[0].agent_id, 'redcube-ai');
-    assert.equal(list.opl_agent_packages.lifecycle_receipts[0].package_id, 'opl-meta-agent');
-    assert.equal(list.opl_agent_packages.lifecycle_receipts[0].physical_surface?.package_id, 'opl-meta-agent');
-    assert.equal(
-      list.opl_agent_packages.home_shortcut_preferences.find((entry) => entry.shortcut_id === 'book')?.package_id,
-      'opl-bookforge',
-    );
+    const failure = runCliFailure(['packages', 'list'], { OPL_STATE_DIR: stateDir });
+    assert.equal(failure.payload.error.code, 'contract_shape_invalid');
+    assert.equal(failure.payload.error.details.failure_code, 'agent_package_identity_not_canonical');
+    assert.equal(failure.payload.error.details.declared_id, 'medautoscience');
+    assert.equal(failure.payload.error.details.canonical_id, 'med-autoscience');
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });
   }

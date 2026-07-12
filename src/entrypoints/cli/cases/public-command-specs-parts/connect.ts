@@ -11,7 +11,6 @@ import {
   runOplConnectFoundationSkillsSync,
   type FoundationSkillsSyncInput,
 } from '../../../../modules/connect/opl-foundation-skills.ts';
-import { buildAgentPackageCommandSpecs } from './connect-agent-packages.ts';
 import {
   scientificConnectorProviderIds,
   runOplConnectScientificSearch,
@@ -510,7 +509,6 @@ export function buildConnectCommandSpecs(
           parseFoundationSkillsSyncArgs(args, connectCommandSpecs['connect foundation-skills sync']),
         ),
     },
-    ...buildAgentPackageCommandSpecs((command) => connectCommandSpecs[command]),
     'connect skills': cloneCommandSpec(commandSpecs['skill-list'], {
       usage: 'opl connect skills [--domain <domain_id>]',
       summary: 'Inspect family domain plugin packs through the canonical Connect command surface.',
