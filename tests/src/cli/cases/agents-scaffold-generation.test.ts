@@ -90,6 +90,18 @@ test('agents scaffold generates and validates a standard domain-agent skeleton',
     const packCompilerInput = readJsonFile(path.join(targetDir, 'contracts/pack_compiler_input.json'));
     assert.equal(packCompilerInput.surface_kind, 'opl_domain_pack_compiler_input');
     assert.equal(packCompilerInput.generated_surface_owner, 'one-person-lab');
+    assert.deepEqual(packCompilerInput.implementation_profile, {
+      profile_id: 'opl.standard_domain_agent.v1',
+      agent_identity: 'declarative_standard_agent_pack',
+      pack_formats: ['markdown', 'json'],
+      helpers: {
+        optional: true,
+        entries: [],
+        language_is_identity: false,
+        rust_policy: 'framework_hot_path_only',
+      },
+      generated_surfaces_owner: 'one-person-lab',
+    });
     assert.equal(packCompilerInput.domain_pack_owner, 'award-foundry');
     assertIncludesAll(
       packCompilerInput.standard_agent_pack_abi.required_repo_layout.map((entry: { path: string }) => entry.path),

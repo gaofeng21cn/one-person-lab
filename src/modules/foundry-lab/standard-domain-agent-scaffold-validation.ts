@@ -23,6 +23,7 @@ import { validateStageRefs } from './standard-domain-agent-scaffold-validation-p
 import { validateUserStageLogContracts } from './standard-domain-agent-scaffold-validation-parts/user-stage-log.ts';
 import { validateFoundryAgentSeriesContract } from './standard-domain-agent-scaffold-validation-parts/foundry-contract.ts';
 import { normalizeStandardAgentCapabilityMapPolicies } from './standard-agent-capability-map.ts';
+import { validateStandardAgentImplementationProfileRefs } from '../pack/standard-agent-implementation-profile.ts';
 
 interface ScaffoldValidateInput {
   repoDir: string;
@@ -224,6 +225,11 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
   const authority = isRecord(descriptorRecord.authority_boundary) ? descriptorRecord.authority_boundary : {};
   const packCompilerInput = readJsonFileOrNull(path.join(repoDir, 'contracts/pack_compiler_input.json'));
   const packCompilerInputRecord = isRecord(packCompilerInput) ? packCompilerInput : {};
+  const implementationProfileValidation = validateStandardAgentImplementationProfileRefs(
+    packCompilerInputRecord.implementation_profile,
+    repoDir,
+    { required: true },
+  );
   const generatedSurfaceHandoff = readJsonFileOrNull(path.join(repoDir, 'contracts/generated_surface_handoff.json'));
   const generatedSurfaceHandoffRecord = isRecord(generatedSurfaceHandoff) ? generatedSurfaceHandoff : {};
   const capabilityMap = readJsonFileOrNull(path.join(repoDir, 'contracts/capability_map.json'));
@@ -250,6 +256,11 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
     packCompilerInputRecord.domain_repo_can_own_generated_surface === false
       ? null
       : 'pack_compiler_domain_repo_generated_surface_owner_must_be_false',
+    ...(implementationProfileValidation.status === 'passed'
+      ? []
+      : implementationProfileValidation.status === 'blocked'
+        ? implementationProfileValidation.blockers
+        : ['implementation_profile_missing']),
     generatedSurfaceHandoffRecord.generated_surface_owner === 'one-person-lab'
       ? null
       : 'generated_surface_handoff_owner_must_be_opl',
@@ -297,6 +308,7 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
       foundry_agent_series_validation: foundryAgentSeriesValidation,
       capability_map_validation: capabilityMapValidation,
       stage_pack_v2_validation: stagePackV2Validation,
+      implementation_profile_validation: implementationProfileValidation,
       functional_privatization_audit_required: true,
       blockers,
       advisory_findings: advisoryFindings,

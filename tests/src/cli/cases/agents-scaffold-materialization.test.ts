@@ -103,6 +103,18 @@ test('agents scaffold materializes only declared files and OPL-signs byte digest
     assert.equal(descriptor.kept, true);
     assert.equal(descriptor.projected, true);
     assert.deepEqual(packInput.required_domain_pack_paths, ['agent/stages/manifest.json', 'agent/prompts/run.md']);
+    assert.deepEqual(packInput.implementation_profile, {
+      profile_id: 'opl.standard_domain_agent.v1',
+      agent_identity: 'declarative_standard_agent_pack',
+      pack_formats: ['markdown', 'json'],
+      helpers: {
+        optional: true,
+        entries: [],
+        language_is_identity: false,
+        rust_policy: 'framework_hot_path_only',
+      },
+      generated_surfaces_owner: 'one-person-lab',
+    });
     assert.equal(fs.readFileSync(path.join(target, 'unrelated.txt'), 'utf8'), 'preserve');
     assert.equal(buildReceipt.surface_kind, 'opl_meta_agent_build_receipt');
     assert.equal(buildReceipt.receipt_timing, 'post_materialization');
@@ -111,6 +123,37 @@ test('agents scaffold materializes only declared files and OPL-signs byte digest
       assert.equal(digest.sha256, sha256(fs.readFileSync(path.join(target, digest.path))));
     }
     assert.equal(receipt.authority_boundary.materialization_receipt_can_claim_domain_ready, false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('agents scaffold applies a validated implementation profile override to pack input', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scaffold-profile-'));
+  const target = path.join(root, 'target');
+  const requestPath = path.join(root, 'request.json');
+  const implementationProfile = {
+    profile_id: 'opl.standard_domain_agent.v1',
+    agent_identity: 'declarative_standard_agent_pack',
+    pack_formats: ['markdown', 'json'],
+    helpers: {
+      optional: true,
+      entries: [{ language: 'python', role: 'domain_helper', source_roots: ['runtime/authority_functions/'] }],
+      language_is_identity: false,
+      rust_policy: 'framework_hot_path_only',
+    },
+    generated_surfaces_owner: 'one-person-lab',
+  };
+  fs.writeFileSync(requestPath, JSON.stringify(request({
+    pack_compiler_input: {
+      required_domain_pack_path_additions: ['agent/prompts/run.md'],
+      implementation_profile: implementationProfile,
+    },
+  })));
+  try {
+    runCli(['agents', 'scaffold', '--materialize-request', requestPath, '--target-dir', target]);
+    const packInput = JSON.parse(fs.readFileSync(path.join(target, 'contracts/pack_compiler_input.json'), 'utf8'));
+    assert.deepEqual(packInput.implementation_profile, implementationProfile);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

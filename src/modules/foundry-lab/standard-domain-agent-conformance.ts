@@ -34,6 +34,7 @@ import { buildStandardAgentSourceBehaviorChecks } from './standard-domain-agent-
 import { buildStageRunDomainAdoptionReadModel } from './standard-domain-agent-conformance-stage-run-adoption.ts';
 import { buildFoundryAgentOsConformance } from './standard-domain-agent-conformance-foundry-agent-os.ts';
 import { validateStandardDomainAgentScaffold } from './standard-domain-agent-scaffold.ts';
+import { validateStandardAgentImplementationProfileRefs } from '../pack/standard-agent-implementation-profile.ts';
 import {
   collectFieldValues,
   isRecord,
@@ -147,6 +148,11 @@ function parseConformanceArgs(args: string[]): RepoInput[] {
 function buildPackCompilerChecks(repoDir: string) {
   const packCompilerInput = readJsonFile(repoDir, 'contracts/pack_compiler_input.json');
   const payload = packCompilerInput.payload;
+  const implementationProfileValidation = validateStandardAgentImplementationProfileRefs(
+    isRecord(payload) ? payload.implementation_profile : undefined,
+    repoDir,
+  );
+  const canonicalAgentId = resolveStandardAgent(readDomainId(repoDir, null))?.agent_id;
   const canonicalPackRoot = isRecord(payload) ? optionalString(payload.canonical_semantic_pack_root) : null;
   const listedPaths = requiredPackPaths(payload);
   const readmeRequiredPaths = listedPaths.filter((entry) => entry === 'README.md' || entry.endsWith('/README.md'));
@@ -162,6 +168,12 @@ function buildPackCompilerChecks(repoDir: string) {
     isRecord(payload) && payload.domain_repo_can_own_generated_surface === false
       ? null
       : 'pack_compiler_domain_repo_generated_surface_owner_must_be_false',
+    ...(implementationProfileValidation.status === 'blocked'
+      ? implementationProfileValidation.blockers
+      : []),
+    canonicalAgentId === 'mas-scholar-skills' && implementationProfileValidation.status !== 'missing'
+      ? 'framework_capability_package_must_not_declare_standard_agent_implementation_profile'
+      : null,
   ].filter((entry): entry is string => Boolean(entry));
   return {
     status: blockers.length === 0 ? 'passed' : 'blocked',
@@ -172,6 +184,9 @@ function buildPackCompilerChecks(repoDir: string) {
     readme_required_paths: readmeRequiredPaths,
     generated_surface_owner: isRecord(payload) ? optionalString(payload.generated_surface_owner) : null,
     domain_repo_can_own_generated_surface: isRecord(payload) ? payload.domain_repo_can_own_generated_surface : null,
+    implementation_profile: isRecord(payload) ? payload.implementation_profile ?? null : null,
+    implementation_profile_status: implementationProfileValidation.status,
+    implementation_profile_blockers: implementationProfileValidation.blockers,
     blockers,
   };
 }

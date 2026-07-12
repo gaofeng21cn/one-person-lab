@@ -25,6 +25,9 @@ import {
   stringList,
 } from '../../kernel/json-record.ts';
 import { optionalString } from '../../kernel/json-file.ts';
+import {
+  validateStandardAgentImplementationProfileRefs,
+} from './standard-agent-implementation-profile.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -456,14 +459,21 @@ function buildPackCompilerProjection(descriptor: JsonRecord) {
   const packCompilerInput = isRecord(descriptor.pack_compiler_input_contract)
     ? descriptor.pack_compiler_input_contract
     : null;
+  const implementationProfileValidation = validateStandardAgentImplementationProfileRefs(
+    packCompilerInput?.implementation_profile,
+    optionalString(descriptor.repo_dir) ?? '',
+  );
   const generatedSurfaces = GENERATED_SURFACES.map((surface) => surfaceProjection(descriptor, surface));
   const missingRequired = generatedSurfaces.flatMap((surface) => surface.missing_descriptor_surfaces);
   const blockerReasons = [
     ...stringList(descriptor.repo_contract_blockers),
     optionalString(descriptor.manifest_status) === 'resolved' ? null : 'domain_manifest_not_resolved',
     genericResidueBlocked(summary) ? 'functional_privatization_audit_has_generic_residue_or_blocker' : null,
+    implementationProfileValidation.status === 'blocked'
+      ? implementationProfileValidation.blockers.map((reason) => `implementation_profile:${reason}`)
+      : null,
     ...missingRequired.map((surface) => `missing_descriptor_surface:${surface}`),
-  ].filter((reason): reason is string => reason !== null);
+  ].flatMap((reason) => Array.isArray(reason) ? reason : reason === null ? [] : [reason]);
   const status = blockerReasons.length === 0 ? 'ready' : 'blocked';
   const generatedInterfaceBundle = buildGeneratedInterfaceBundle(descriptor, status);
 
@@ -500,6 +510,9 @@ function buildPackCompilerProjection(descriptor: JsonRecord) {
         skill_catalog_status: statusOf(descriptor.skill_catalog),
       },
       minimal_authority_function_refs: minimalAuthorityFunctionRefs(descriptor),
+      implementation_profile: packCompilerInput?.implementation_profile ?? null,
+      implementation_profile_status: implementationProfileValidation.status,
+      implementation_profile_blockers: implementationProfileValidation.blockers,
       standard_agent_pack_abi: buildStandardAgentPackAbiProjection(packCompilerInput),
       functional_privatization_summary: summary,
     },

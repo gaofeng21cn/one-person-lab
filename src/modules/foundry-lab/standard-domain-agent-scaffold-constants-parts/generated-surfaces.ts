@@ -8,8 +8,10 @@ import { STANDARD_STAGE_COMPLETION_POLICY } from './stage-completion.ts';
 import { STANDARD_TYPED_BLOCKER_LINEAGE_POLICY } from './typed-blocker.ts';
 import { STANDARD_USER_STAGE_LOG_CONTRACT } from './user-stage-log.ts';
 import { STANDARD_AGENT_PACK_ABI } from '../../pack/public/standard-agent-pack-abi.ts';
+import { STANDARD_AGENT_IMPLEMENTATION_PROFILE } from '../../pack/public/standard-agent-implementation-profile.ts';
 
 export { STANDARD_AGENT_PACK_ABI } from '../../pack/public/standard-agent-pack-abi.ts';
+export { STANDARD_AGENT_IMPLEMENTATION_PROFILE } from '../../pack/public/standard-agent-implementation-profile.ts';
 
 export const OPL_GENERATED_SURFACES = [
   {
@@ -79,6 +81,7 @@ export const PACK_COMPILER_CONTRACT = {
     'no_forbidden_write_assertions',
     'standard_stage_pack_v2_cross_refs',
     'standard_agent_pack_abi',
+    'implementation_profile',
     'capability_map',
   ],
   required_source_refs: [
@@ -121,6 +124,7 @@ export const AGENT_PACK_CONTRACT = {
   ],
   required_domain_pack_paths_field: 'contracts/pack_compiler_input.json#/required_domain_pack_paths',
   standard_agent_pack_abi: STANDARD_AGENT_PACK_ABI,
+  implementation_profile: STANDARD_AGENT_IMPLEMENTATION_PROFILE,
   stage_ref_requirements: [
     'capability_map:contracts/capability_map.json resolver index',
     'prompt_refs:agent/prompts/*',

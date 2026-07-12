@@ -10,6 +10,11 @@ import {
   buildReferenceBuildDigestTargets,
   materializeReferenceBuildFileDigest,
 } from './reference-build-proof.ts';
+import {
+  STANDARD_AGENT_IMPLEMENTATION_PROFILE,
+  validateStandardAgentImplementationProfile,
+  validateStandardAgentImplementationProfileRefs,
+} from '../pack/standard-agent-implementation-profile.ts';
 
 export const AGENT_SCAFFOLD_MATERIALIZATION_REQUEST_SCHEMA_REF =
   'contracts/opl-framework/agent-scaffold-materialization-request.schema.json';
@@ -280,6 +285,17 @@ function preflightMaterializationRequest(request: Record<string, unknown>, targe
   }
 
   const compilerInput = requireObject(request.pack_compiler_input, 'pack_compiler_input');
+  if (compilerInput.implementation_profile !== undefined) {
+    const profileValidation = validateStandardAgentImplementationProfile(
+      compilerInput.implementation_profile,
+      { required: true },
+    );
+    if (profileValidation.status !== 'passed') {
+      fail('pack_compiler_input.implementation_profile is invalid.', {
+        blockers: profileValidation.blockers,
+      });
+    }
+  }
   const additions = compilerInput.required_domain_pack_path_additions;
   if (!Array.isArray(additions) || additions.some((entry) => typeof entry !== 'string')) {
     fail('pack_compiler_input.required_domain_pack_path_additions must be a string array.');
@@ -434,13 +450,22 @@ function parseWrites(request: Record<string, unknown>, root: string) {
     });
   }
   const compilerInput = requireObject(request.pack_compiler_input, 'pack_compiler_input');
+  const implementationProfile = compilerInput.implementation_profile;
+  if (implementationProfile !== undefined) {
+    const profileValidation = validateStandardAgentImplementationProfileRefs(implementationProfile, root, { required: true });
+    if (profileValidation.status !== 'passed') {
+      fail('pack_compiler_input.implementation_profile references are invalid.', {
+        blockers: profileValidation.blockers,
+      });
+    }
+  }
   const additions = compilerInput.required_domain_pack_path_additions;
   if (!Array.isArray(additions) || additions.some((entry) => typeof entry !== 'string')) {
     fail('pack_compiler_input.required_domain_pack_path_additions must be a string array.');
   }
   const packPath = 'contracts/pack_compiler_input.json';
   const pendingPack = writes.get(packPath);
-  if (additions.length > 0 || pendingPack) {
+  if (additions.length > 0 || implementationProfile !== undefined || pendingPack) {
     let pack: Record<string, unknown>;
     if (pendingPack) {
       pack = requireObject(parseJsonText(pendingPack.bytes.toString('utf8')), packPath);
@@ -457,7 +482,11 @@ function parseWrites(request: Record<string, unknown>, root: string) {
     const normalized = additions.map((entry, index) => safeRelativePath(entry, `required_domain_pack_path_additions[${index}]`));
     add({
       relativePath: packPath,
-      bytes: Buffer.from(formatJsonPayload({ ...pack, required_domain_pack_paths: [...new Set([...current, ...normalized])] })),
+      bytes: Buffer.from(formatJsonPayload({
+        ...pack,
+        implementation_profile: implementationProfile ?? pack.implementation_profile ?? STANDARD_AGENT_IMPLEMENTATION_PROFILE,
+        required_domain_pack_paths: [...new Set([...current, ...normalized])],
+      })),
       role: 'opl_pack_compiler_input_projection',
     });
   }

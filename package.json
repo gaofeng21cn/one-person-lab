@@ -35,7 +35,8 @@
     "./reference-design-pattern-packet": "./dist/modules/workspace/reference-design-pattern-packet.js",
     "./runtime-task-companions": "./dist/modules/runway/runtime-task-companions.js",
     "./skill-catalog": "./dist/modules/pack/skill-catalog.js",
-    "./standard-agent-pack-abi": "./dist/modules/pack/public/standard-agent-pack-abi.js"
+    "./standard-agent-pack-abi": "./dist/modules/pack/public/standard-agent-pack-abi.js",
+    "./standard-agent-implementation-profile": "./dist/modules/pack/public/standard-agent-implementation-profile.js"
   },
   "bin": {
     "opl": "./bin/opl"

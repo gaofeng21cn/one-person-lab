@@ -73,8 +73,19 @@
     "family_agent_descriptor.grant_transition_oracle",
     "family_agent_descriptor.runtime_surfaces",
     "family_agent_descriptor.functional_privatization_audit",
-    "family_agent_descriptor.pack_compiler_input_contract.standard_agent_pack_abi"
+    "family_agent_descriptor.pack_compiler_input_contract.standard_agent_pack_abi",
+    "family_agent_descriptor.pack_compiler_input_contract.implementation_profile"
   ],
+  "implementation_profile": {
+    "source_ref": "contracts/pack_compiler_input.json#/implementation_profile",
+    "schema_ref": "contracts/opl-framework/standard-agent-implementation-profile.schema.json",
+    "profile_id": "opl.standard_domain_agent.v1",
+    "agent_identity": "declarative_standard_agent_pack",
+    "pack_formats": ["markdown", "json"],
+    "generated_surfaces_owner": "one-person-lab",
+    "helper_language_policy": "language_is_not_agent_identity; rust_is_framework_hot_path_only",
+    "missing_profile_policy": "advisory_for_legacy_inputs_and_required_for_new_scaffolds"
+  },
   "standard_stage_pack_v2_cross_refs": {
     "source_contract": "contracts/pack_compiler_input.json#source_refs",
     "enforcement_contract": "contracts/pack_compiler_input.json#standard_stage_pack_conformance.required",

@@ -51,4 +51,5 @@ export {
   OPL_GENERATED_SURFACES,
   PACK_COMPILER_CONTRACT,
   STANDARD_AGENT_PACK_ABI,
+  STANDARD_AGENT_IMPLEMENTATION_PROFILE,
 } from './standard-domain-agent-scaffold-constants-parts/generated-surfaces.ts';

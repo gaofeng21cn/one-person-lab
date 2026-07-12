@@ -55,7 +55,10 @@
     "contracts": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/jsonReplacement" } },
     "pack_compiler_input": {
       "type": "object", "required": ["required_domain_pack_path_additions"],
-      "properties": { "required_domain_pack_path_additions": { "type": "array", "items": { "$ref": "#/$defs/safeRelativePath" }, "uniqueItems": true } },
+      "properties": {
+        "required_domain_pack_path_additions": { "type": "array", "items": { "$ref": "#/$defs/safeRelativePath" }, "uniqueItems": true },
+        "implementation_profile": { "$ref": "#/$defs/implementationProfile" }
+      },
       "additionalProperties": false
     },
     "build_receipt_candidate": { "type": "object" },
@@ -96,6 +99,40 @@
     "jsonReplacement": {
       "type": "object", "required": ["path", "value", "write_policy"],
       "properties": { "path": { "$ref": "#/$defs/safeRelativePath" }, "value": { "type": "object" }, "write_policy": { "const": "replace_declared_files_only" } },
+      "additionalProperties": false
+    },
+    "implementationProfile": {
+      "type": "object",
+      "required": ["profile_id", "agent_identity", "pack_formats", "helpers", "generated_surfaces_owner"],
+      "properties": {
+        "profile_id": { "const": "opl.standard_domain_agent.v1" },
+        "agent_identity": { "const": "declarative_standard_agent_pack" },
+        "pack_formats": { "const": ["markdown", "json"] },
+        "helpers": {
+          "type": "object",
+          "required": ["optional", "entries", "language_is_identity", "rust_policy"],
+          "properties": {
+            "optional": { "const": true },
+            "entries": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["language", "role", "source_roots"],
+                "properties": {
+                  "language": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$", "not": { "const": "rust" } },
+                  "role": { "enum": ["authority_function", "domain_helper", "native_helper"] },
+                  "source_roots": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\\\]+/$" }, "uniqueItems": true }
+                },
+                "additionalProperties": false
+              }
+            },
+            "language_is_identity": { "const": false },
+            "rust_policy": { "const": "framework_hot_path_only" }
+          },
+          "additionalProperties": false
+        },
+        "generated_surfaces_owner": { "const": "one-person-lab" }
+      },
       "additionalProperties": false
     }
   },
