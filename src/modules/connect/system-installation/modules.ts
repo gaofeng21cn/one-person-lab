@@ -13,6 +13,10 @@ import { ensureOplStateDir } from '../../../kernel/runtime-state-paths.ts';
 import { resolveDefaultFamilyWorkspaceRoot } from '../opl-skills.ts';
 import { developerModePrefersLocalCheckouts } from '../developer-mode-source-policy.ts';
 import {
+  STANDARD_AGENT_REGISTRY,
+  STANDARD_AGENT_SERIES_MEMBERSHIP,
+} from '../../../kernel/standard-agent-registry.ts';
+import {
   type DomainModuleSpec,
   type ModuleSourcePolicy,
   type OplModuleAction,
@@ -462,9 +466,18 @@ function inspectModule(spec: DomainModuleSpec, profile: ModuleInspectionProfile 
 function findModuleSpecOrThrow(moduleId: string): DomainModuleRuntimeSpec {
   const normalized = moduleId.trim().toLowerCase();
   const aliases = new Map<string, OplModuleId>([
-    ['med-autoscience', 'medautoscience'],
-    ['med_autoscience', 'medautoscience'],
-    ['mas', 'medautoscience'],
+    ...STANDARD_AGENT_REGISTRY
+      .filter((entry) => entry.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP)
+      .flatMap((entry) => [
+        entry.agent_id,
+        entry.domain_id,
+        entry.domain_alias,
+        entry.work_alias,
+        entry.project,
+        entry.plugin_name,
+        entry.canonical_plugin_name,
+        ...entry.aliases,
+      ].map((alias) => [alias.toLowerCase(), entry.domain_id as OplModuleId] as const)),
     ['mds', 'meddeepscientist'],
     ['med-deepscientist', 'meddeepscientist'],
     ['med_deepscientist', 'meddeepscientist'],

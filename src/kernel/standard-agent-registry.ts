@@ -40,6 +40,7 @@ export type StandardAgentFamilyRuntimeProfile = {
 export type StandardAgentRegistryEntry = {
   agent_id: string;
   domain_id: string;
+  target_domain_id: string;
   label: string;
   series_membership: StandardAgentSeriesMembership;
   brand_cli: string;
@@ -68,6 +69,7 @@ export const STANDARD_AGENT_REGISTRY = [
   {
     agent_id: 'mas',
     domain_id: 'medautoscience',
+    target_domain_id: 'medautoscience',
     label: 'Med Auto Science',
     series_membership: STANDARD_AGENT_SERIES_MEMBERSHIP,
     brand_cli: 'mas',
@@ -149,6 +151,7 @@ export const STANDARD_AGENT_REGISTRY = [
   {
     agent_id: 'mag',
     domain_id: 'medautogrant',
+    target_domain_id: 'medautogrant',
     label: 'Med Auto Grant',
     series_membership: STANDARD_AGENT_SERIES_MEMBERSHIP,
     brand_cli: 'mag',
@@ -228,6 +231,7 @@ export const STANDARD_AGENT_REGISTRY = [
   {
     agent_id: 'rca',
     domain_id: 'redcube',
+    target_domain_id: 'redcube',
     label: 'RedCube AI',
     series_membership: STANDARD_AGENT_SERIES_MEMBERSHIP,
     brand_cli: 'rca',
@@ -311,6 +315,7 @@ export const STANDARD_AGENT_REGISTRY = [
   {
     agent_id: 'oma',
     domain_id: 'oplmetaagent',
+    target_domain_id: 'opl-meta-agent',
     label: 'OPL Meta Agent',
     series_membership: STANDARD_AGENT_SERIES_MEMBERSHIP,
     brand_cli: 'oma',
@@ -358,6 +363,7 @@ export const STANDARD_AGENT_REGISTRY = [
   {
     agent_id: 'obf',
     domain_id: 'oplbookforge',
+    target_domain_id: 'opl-bookforge',
     label: 'OPL Book Forge',
     series_membership: STANDARD_AGENT_SERIES_MEMBERSHIP,
     brand_cli: 'obf',
@@ -403,6 +409,7 @@ export const STANDARD_AGENT_REGISTRY = [
   {
     agent_id: 'mas-scholar-skills',
     domain_id: 'scholarskills',
+    target_domain_id: 'scholarskills',
     label: 'MAS Scholar Skills',
     series_membership: FRAMEWORK_CAPABILITY_PACKAGE_MEMBERSHIP,
     brand_cli: 'mas-scholar-skills',
@@ -466,6 +473,17 @@ export function resolveStandardAgentByDomainId(domainId: string) {
 
 export function resolveStandardAgentByCanonicalPluginName(canonicalPluginName: string) {
   return STANDARD_AGENT_REGISTRY.find((entry) => entry.canonical_plugin_name === canonicalPluginName) ?? null;
+}
+
+/**
+ * Normalize a domain selection through the registry. Capability packages are
+ * deliberately left unchanged because they are not standard domain agents.
+ */
+export function normalizeStandardDomainAgentId(value: string) {
+  const entry = resolveStandardAgent(value);
+  return entry?.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP
+    ? entry.target_domain_id
+    : value.trim().toLowerCase();
 }
 
 export function standardAgentDomainAliasEntries() {

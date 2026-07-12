@@ -1,7 +1,24 @@
-import { FrameworkContractError, loadFrameworkContracts } from '../../modules/charter/contracts.ts';
-import { buildCommandHelp, buildRootHelp, buildUsageError, formatHumanCommandHelp, formatHumanRootHelp, looksLikeNaturalLanguage, parseCliInput, printJson, resolveCommandSpec, runCodexPassthroughHandled, CODEX_COMMAND_HELP_PASSTHROUGH, NON_PASSTHROUGH_COMMAND_PREFIXES } from './modules/support.ts';
-import { buildInternalCommandSpecs } from './cases/private-command-specs.ts';
-import { buildPublicCommandSpecs } from './cases/public-command-specs.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import type { FrameworkContracts } from '../../kernel/types.ts';
+import {
+  buildCommandHelp,
+  buildRootHelp,
+  formatHumanCommandHelp,
+  formatHumanRootHelp,
+  looksLikeNaturalLanguage,
+  parseCliInput,
+  resolveCommandSpec,
+  CODEX_COMMAND_HELP_PASSTHROUGH,
+  NON_PASSTHROUGH_COMMAND_PREFIXES,
+} from './modules/help-output.ts';
+import { buildUsageError } from './modules/cli-errors.ts';
+import { printJson } from './modules/cli-output.ts';
+import { buildLazyCommandSpecs } from './modules/lazy-command-registry.ts';
+
+async function runCodexPassthroughHandled(args: string[]) {
+  const runtimeHelpers = await import('./modules/runtime-helpers.ts');
+  return runtimeHelpers.runCodexPassthroughHandled(args);
+}
 
 function unknownCommandDetails(command: string | undefined, commandSpecs: Record<string, unknown>) {
   return {
@@ -111,14 +128,14 @@ function resolveRetiredCommand(tokens: string[]) {
 export async function main() {
   const parsedInput = parseCliInput(process.argv.slice(2));
   const shouldPrintHumanHelp = parsedInput.textOutput || (process.stdout.isTTY && !parsedInput.jsonOutput);
-  let cachedContracts = null;
-  const getContracts = () => {
-    cachedContracts ??= loadFrameworkContracts(parsedInput.loadOptions);
-    return cachedContracts;
+  let contractsPromise: Promise<FrameworkContracts> | undefined;
+  const loadContracts = async () => {
+    contractsPromise ??= import('../../modules/charter/contracts.ts')
+      .then(({ loadFrameworkContracts }) => loadFrameworkContracts(parsedInput.loadOptions));
+    return contractsPromise;
   };
 
-  const commandSpecs = buildInternalCommandSpecs(parsedInput, getContracts);
-  const publicCommandSpecs = buildPublicCommandSpecs(commandSpecs, getContracts);
+  const publicCommandSpecs = buildLazyCommandSpecs(parsedInput, loadContracts);
   const inputTokens = parsedInput.command ? [parsedInput.command, ...parsedInput.args] : [];
 
   if (inputTokens.length === 0) {
@@ -132,7 +149,7 @@ export async function main() {
       return;
     }
 
-    runCodexPassthroughHandled([]);
+    await runCodexPassthroughHandled([]);
     return;
   }
 
@@ -167,7 +184,7 @@ export async function main() {
       && !NON_PASSTHROUGH_COMMAND_PREFIXES.has(command)
       && looksLikeNaturalLanguage(command, args)
     ) {
-      runCodexPassthroughHandled(inputTokens);
+      await runCodexPassthroughHandled(inputTokens);
       return;
     }
 

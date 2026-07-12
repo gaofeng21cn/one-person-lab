@@ -1,21 +1,6 @@
-import { FrameworkContractError } from '../../../modules/charter/contracts.ts';
 import { runCodexPassthrough } from '../../../modules/runway/codex.ts';
-import type { CommandSpec } from './types.ts';
-
-function printJson(payload: unknown, stream: NodeJS.WriteStream = process.stdout) {
-  stream.write(`${JSON.stringify(payload, null, 2)}\n`);
-}
-
-function buildUsageError(
-  message: string,
-  spec?: Pick<CommandSpec, 'usage' | 'examples'>,
-  details: Record<string, unknown> = {},
-): FrameworkContractError {
-  return new FrameworkContractError('cli_usage_error', message, {
-    ...details,
-    ...(spec ? { usage: spec.usage, examples: spec.examples } : {}),
-  });
-}
+export { buildUsageError } from './cli-errors.ts';
+export { printJson } from './cli-output.ts';
 
 function runCodexPassthroughHandled(args: string[]) {
   const result = runCodexPassthrough(args);
@@ -25,8 +10,4 @@ function runCodexPassthroughHandled(args: string[]) {
   };
 }
 
-export {
-  buildUsageError,
-  printJson,
-  runCodexPassthroughHandled,
-};
+export { runCodexPassthroughHandled };

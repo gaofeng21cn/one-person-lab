@@ -7,6 +7,10 @@ import {
   isRecord,
 } from '../../../kernel/contract-validation.ts';
 import {
+  STANDARD_AGENT_REGISTRY,
+  STANDARD_AGENT_SERIES_MEMBERSHIP,
+} from '../../../kernel/standard-agent-registry.ts';
+import {
   readJsonFileOrNull,
   writeJsonPayloadFile,
 } from '../../../kernel/json-file.ts';
@@ -39,6 +43,12 @@ type ScholarSkillsCopyPolicy = {
   copied_roots: string[];
   excluded_roots: string[];
 };
+
+const STANDARD_AGENT_PLUGIN_NAMES = new Set<string>(
+  STANDARD_AGENT_REGISTRY
+    .filter((entry) => entry.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP)
+    .map((entry) => entry.canonical_plugin_name),
+);
 
 const SCHOLARSKILLS_EXCLUDED_ROOTS = [
   '.git',
@@ -79,7 +89,7 @@ function syncCodexSkillMirror(
     inspected.canonical_plugin_name,
   );
 
-  if (['mas', 'mag', 'rca'].includes(inspected.canonical_plugin_name)) {
+  if (STANDARD_AGENT_PLUGIN_NAMES.has(inspected.canonical_plugin_name)) {
     fs.rmSync(codexSkillDir, { recursive: true, force: true });
     return null;
   }

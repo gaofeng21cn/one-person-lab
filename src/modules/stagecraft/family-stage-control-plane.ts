@@ -1,4 +1,5 @@
 import type { FrameworkContracts } from '../../kernel/types.ts';
+import { normalizeStandardDomainAgentId } from '../../kernel/standard-agent-registry.ts';
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { optionalString } from '../../kernel/json-file.ts';
 import type {
@@ -170,24 +171,7 @@ function refsCount(refs: FamilyStageSurfaceRef[] | undefined) {
 }
 
 function normalizeDomainSelection(value: string) {
-  const key = value.trim().toLowerCase();
-  const aliases: Record<string, string> = {
-    mas: 'medautoscience',
-    'med-autoscience': 'medautoscience',
-    medautoscience: 'medautoscience',
-    mag: 'medautogrant',
-    'med-autogrant': 'medautogrant',
-    medautogrant: 'medautogrant',
-    rca: 'redcube',
-    redcube: 'redcube',
-    'redcube-ai': 'redcube',
-    redcube_ai: 'redcube',
-    oma: 'opl-meta-agent',
-    oplmetaagent: 'opl-meta-agent',
-    'opl-meta-agent': 'opl-meta-agent',
-    opl_meta_agent: 'opl-meta-agent',
-  };
-  return aliases[key] ?? key;
+  return normalizeStandardDomainAgentId(value);
 }
 
 function resolvePlaneFromEntry(entry: FamilyStageDomainManifestCatalogEntry) {

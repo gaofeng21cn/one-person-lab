@@ -1,4 +1,5 @@
 export {
+  normalizeStandardDomainAgentId,
   STANDARD_AGENT_REGISTRY,
   STANDARD_AGENT_REGISTRY_REF,
   listStandardDomainAgentIds,

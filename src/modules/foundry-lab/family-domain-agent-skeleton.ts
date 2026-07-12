@@ -21,6 +21,7 @@ import {
 } from '../runway/index.ts';
 import { buildPhysicalSkeletonFollowThroughGate } from './family-domain-agent-skeleton-parts/legacy-cleanup-evidence.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
+import { normalizeStandardDomainAgentId } from '../../kernel/standard-agent-registry.ts';
 
 const REQUIRED_REPO_SOURCE_DIRS = ['agent', 'contracts', 'runtime', 'docs'] as const;
 const ACCEPTED_SKELETON_SURFACE_KINDS = new Set(['standard_domain_agent_skeleton']);
@@ -262,20 +263,7 @@ function inferArtifactBoundary(value: JsonRecord, artifactBoundary: JsonRecord, 
 }
 
 function normalizeDomainSelection(value: string) {
-  const key = value.trim().toLowerCase();
-  const aliases: Record<string, string> = {
-    mas: 'medautoscience',
-    'med-autoscience': 'medautoscience',
-    medautoscience: 'medautoscience',
-    mag: 'medautogrant',
-    'med-autogrant': 'medautogrant',
-    medautogrant: 'medautogrant',
-    rca: 'redcube',
-    redcube: 'redcube',
-    'redcube-ai': 'redcube',
-    redcube_ai: 'redcube',
-  };
-  return aliases[key] ?? key;
+  return normalizeStandardDomainAgentId(value);
 }
 
 function buildDescriptorReadiness(skeletonStatus: string, skeleton: ReturnType<typeof normalizeStandardDomainAgentSkeleton>) {

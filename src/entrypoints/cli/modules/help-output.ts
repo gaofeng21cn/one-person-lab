@@ -1,6 +1,6 @@
 import type { FrameworkContracts, FrameworkContractsLoadOptions } from '../../../kernel/types.ts';
 import type { CommandHandler, CommandSpec, ParsedCliInput } from './types.ts';
-import { buildUsageError } from './runtime-helpers.ts';
+import { buildUsageError } from './cli-errors.ts';
 
 const CODEX_COMMAND_HELP_PASSTHROUGH = new Set([
   'exec',

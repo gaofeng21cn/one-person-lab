@@ -4,6 +4,7 @@ import { recordList, stringValue as optionalString, type JsonRecord } from '../.
 import { buildDomainManifestCatalog } from '../atlas/index.ts';
 import type { DomainManifestCatalogEntry, NormalizedDomainManifest } from '../atlas/index.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
+import { normalizeStandardDomainAgentId } from '../../kernel/standard-agent-registry.ts';
 import {
   runFamilyRuntimeDomainHandlerCommand,
   domainHandlerResultErrorMessage,
@@ -18,20 +19,7 @@ export type {
 } from './generic-substrate-locators.ts';
 
 function normalizeDomainSelection(value: string) {
-  const key = value.trim().toLowerCase();
-  const aliases: Record<string, string> = {
-    mas: 'medautoscience',
-    'med-autoscience': 'medautoscience',
-    medautoscience: 'medautoscience',
-    mag: 'medautogrant',
-    'med-autogrant': 'medautogrant',
-    medautogrant: 'medautogrant',
-    rca: 'redcube',
-    redcube: 'redcube',
-    'redcube-ai': 'redcube',
-    redcube_ai: 'redcube',
-  };
-  return aliases[key] ?? key;
+  return normalizeStandardDomainAgentId(value);
 }
 
 function parseProjectionArgs(args: string[]) {

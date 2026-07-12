@@ -25,8 +25,15 @@
     "domain_truth_owners": [
       "med-autoscience",
       "med-autogrant",
-      "redcube-ai"
-    ]
+      "redcube-ai",
+      "opl-meta-agent",
+      "opl-bookforge"
+    ],
+    "domain_truth_owner_registry": {
+      "source_ref": "src/kernel/standard-agent-registry.ts",
+      "series_membership": "standard_domain_agent",
+      "projection_field": "project"
+    }
   },
   "runtime_manager_consumption": {
     "binary_discovery_order": [
@@ -181,5 +188,5 @@
     "not_a_concrete_executor",
     "not_a_python_domain_logic_replacement"
   ],
-  "source_of_truth_rule": "Rust helpers may index, validate, and accelerate local file surfaces, but they must not replace MAS, MAG, or RCA domain-owned durable truth."
+  "source_of_truth_rule": "Rust helpers may index, validate, and accelerate local file surfaces, but they must not replace standard OPL Agent domain-owned durable truth."
 }

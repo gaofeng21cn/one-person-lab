@@ -60,6 +60,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
+    "cli:surface:generate": "node --experimental-strip-types ./scripts/generate-cli-command-surface.mjs",
     "prepare": "npm run build",
     "native:build": "cargo build --workspace",
     "native:cache": "node ./scripts/native-helper-cache.mjs",

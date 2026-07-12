@@ -18,7 +18,12 @@ export { buildEvidenceGroundedDecisionAgentProfileAtlasCatalog } from './evidenc
 export { validateFamilyDomainEntryContract, validateSharedHandoff, validateSharedHandoffBuilder, validateUserInteractionContract } from './family-entry-contracts.ts';
 export type { FamilySharedHandoffSurface, SharedHandoffBuilderSurface } from './family-entry-contracts.ts';
 export { explainDomainBoundary, selectDomainAgentEntry } from './resolver.ts';
-export { resolveStandardAgent, STANDARD_AGENT_REGISTRY, STANDARD_AGENT_REGISTRY_REF } from '../../kernel/standard-agent-registry.ts';
+export {
+  normalizeStandardDomainAgentId,
+  resolveStandardAgent,
+  STANDARD_AGENT_REGISTRY,
+  STANDARD_AGENT_REGISTRY_REF,
+} from '../../kernel/standard-agent-registry.ts';
 export {
   DEFAULT_FAMILY_REPOS,
   DEFAULT_STANDARD_DOMAIN_AGENT_REPOS,

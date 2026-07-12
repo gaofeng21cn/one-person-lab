@@ -1,4 +1,5 @@
 import type { FrameworkContracts } from '../../kernel/types.ts';
+import { normalizeStandardDomainAgentId } from '../../kernel/standard-agent-registry.ts';
 import { buildDomainManifestCatalog } from '../atlas/index.ts';
 import type { DomainManifestCatalogEntry } from '../atlas/index.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
@@ -124,20 +125,7 @@ export function buildFamilyActionsList(contracts: FrameworkContracts) {
 }
 
 function normalizeDomainSelection(value: string) {
-  const key = value.trim().toLowerCase();
-  const aliases: Record<string, string> = {
-    mas: 'medautoscience',
-    'med-autoscience': 'medautoscience',
-    medautoscience: 'medautoscience',
-    mag: 'medautogrant',
-    'med-autogrant': 'medautogrant',
-    medautogrant: 'medautogrant',
-    rca: 'redcube',
-    redcube: 'redcube',
-    'redcube-ai': 'redcube',
-    redcube_ai: 'redcube',
-  };
-  return aliases[key] ?? key;
+  return normalizeStandardDomainAgentId(value);
 }
 
 function findDomainEntry(contracts: FrameworkContracts, domain: string) {
