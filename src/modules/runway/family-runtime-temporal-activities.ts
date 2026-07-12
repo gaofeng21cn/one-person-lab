@@ -178,7 +178,6 @@ export function compactCloseoutPacketForTemporalResult(value: unknown) {
         'authority_boundary',
       ],
       omitted_body_fields: [
-        'paper_stage_log',
         'user_stage_log',
         'stage_log_summary',
         'human_stage_log',

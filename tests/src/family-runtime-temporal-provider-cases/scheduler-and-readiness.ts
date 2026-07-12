@@ -68,6 +68,38 @@ test('Temporal scheduler cadence resolves explicit, env, and registry domain pro
   const registryProfile = path.join(stateRoot, 'mas-workspace.toml');
   try {
     process.env.OPL_STATE_DIR = stateRoot;
+    fs.mkdirSync(path.join(stateRoot, 'contracts'), { recursive: true });
+    fs.writeFileSync(path.join(stateRoot, 'contracts', 'domain_descriptor.json'), `${JSON.stringify({
+      domain_id: 'medautoscience',
+      standard_agent_interface: {
+        version: 'opl_standard_agent_interface.v1',
+        workspace_binding: {
+          locator_surface_kind: 'fixture_scheduler_workspace',
+          default_profile_id: 'portfolio',
+          workspace_kind: 'fixture_workspace',
+          project_kind: 'fixture_project',
+          project_collection_label: 'projects',
+          default_workspace_id: 'fixture-workspace',
+          default_project_id: 'fixture-project',
+          required_locator_fields: ['profile_ref'],
+          optional_locator_fields: [],
+          entry_command_template: null,
+          manifest_command_template: null,
+        },
+        runtime: {
+          runtime_domain_id: 'medautoscience',
+          dispatch_command: null,
+          registration_ref: null,
+        },
+        progress: { deliverable_delta_aliases: [], platform_delta_aliases: [] },
+        routing: {
+          explicit_aliases: ['mas'],
+          workstream_ids: ['fixture_scheduler'],
+          intent_signals: ['fixture_scheduler'],
+          ambiguity_policy: 'require_explicit_workstream',
+        },
+      },
+    }, null, 2)}\n`);
     fs.writeFileSync(registryProfile, 'workspace_name = "scheduler-test"\n');
     delete process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE;
     process.env.OPL_FAMILY_RUNTIME_MEDAUTOGRANT_PROFILE = '/tmp/env-mag-workspace.json';
@@ -81,7 +113,7 @@ test('Temporal scheduler cadence resolves explicit, env, and registry domain pro
       limit: 7,
       hydrate: true,
       domainProfiles: {
-        redcube: '/tmp/explicit-redcube-workspace.json',
+        redcube_ai: '/tmp/explicit-redcube-workspace.json',
       },
     });
     assert.deepEqual(explicit, {
@@ -93,7 +125,7 @@ test('Temporal scheduler cadence resolves explicit, env, and registry domain pro
       domain_profiles: {
         medautoscience: registryProfile,
         medautogrant: '/tmp/env-mag-workspace.json',
-        redcube: '/tmp/explicit-redcube-workspace.json',
+        redcube_ai: '/tmp/explicit-redcube-workspace.json',
       },
     });
 

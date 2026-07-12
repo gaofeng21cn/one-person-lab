@@ -219,7 +219,6 @@
       "consumed_memory_refs",
       "writeback_receipt_refs",
       "rejected_writes",
-      "paper_stage_log",
       "user_stage_log",
       "human_stage_log",
       "stage_log_summary",
@@ -397,11 +396,9 @@
       "purpose": "user-facing stage progress summary for stage, problem, domain deliverable work, duration, token usage, cost, outcome, blockers, and evidence refs",
       "accounting_policy": "OPL must project duration/token/cost status, source refs, and explicit missing reasons from the stage attempt ledger; duration may use provider or attempt wall-clock fallback for user readability while duration_telemetry_status stays missing until usage telemetry exists",
       "domain_semantic_sources": [
-        "typed_closeout_packet.paper_stage_log",
         "typed_closeout_packet.user_stage_log",
         "typed_closeout_packet.stage_log_summary",
         "typed_closeout_packet.human_stage_log",
-        "route_impact.paper_stage_log",
         "route_impact.user_stage_log",
         "route_impact.stage_log_summary",
         "route_impact.human_stage_log"
@@ -471,27 +468,8 @@
           "next_forced_delta"
         ],
         "platform_only_is_not_deliverable_progress": true,
-        "domain_aliases": {
-          "medautoscience": {
-            "deliverable_progress_delta": [
-              "paper_progress_delta",
-              "paper_work_progress"
-            ]
-          },
-          "medautogrant": {
-            "deliverable_progress_delta": [
-              "grant_work_progress"
-            ],
-            "platform_repair_delta": [
-              "platform_evidence_progress"
-            ]
-          },
-          "redcube": {
-            "deliverable_progress_delta": [
-              "visual_deliverable_progress"
-            ]
-          }
-        }
+        "domain_alias_source": "standard_agent_interface.progress",
+        "missing_descriptor_policy": "canonical_progress_fields_only_no_domain_alias_inference"
       },
       "semantic_missing_policy": "emit_missing_domain_semantic_summary_without_inventing_domain_work",
       "semantic_incomplete_policy": "emit_domain_closeout_provided_incomplete_user_stage_log_with_missing_domain_fields",

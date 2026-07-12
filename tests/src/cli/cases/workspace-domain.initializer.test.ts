@@ -36,7 +36,7 @@ const workspaceIndexSchemaPath = path.join(
 );
 const workspaceIndexSchema = readJsonFile(workspaceIndexSchemaPath);
 
-test('workspace init materializes portfolio topology and appends projects', () => {
+test('workspace init uses generic one-off topology without a current domain descriptor', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-mas-state-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-mas-root-'));
 
@@ -71,14 +71,13 @@ test('workspace init materializes portfolio topology and appends projects', () =
     });
 
     const workspacePath = path.join(workspaceRoot, 'dm-cvd');
-    assert.equal(first.workspace_initialization.profile.workspace_mode, 'portfolio');
+    assert.equal(first.workspace_initialization.profile.workspace_mode, 'one_off');
     assert.equal(first.workspace_initialization.project_root, path.join(workspacePath, 'projects', 'DM002'));
     assert.equal(second.workspace_initialization.metadata_action, 'appended_project');
     for (const relativePath of [
-      'data',
-      'literature',
-      'memory',
       'shared/sources',
+      'shared/memory',
+      'shared/style_system',
       'projects/DM002/artifacts/stage_outputs',
       'projects/DM003/artifacts/stage_outputs',
     ]) {

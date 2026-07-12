@@ -7,6 +7,18 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-07-12
 
+### 决策：标准 Agent 通用接口由 domain descriptor 声明，OPL 按 package currentness 托管消费
+
+原因：workspace profile、domain argv、runtime registration/dispatch、progress alias 和 routing signal 既不能散落在五个 Agent 的私有平台 wrapper 中，也不能复制到 OPL registry 成为第二领域真相。package lock 的 `status=current` 本身也不足以证明实际 checkout bytes/current probe 可消费。
+
+影响：
+
+- MAS/MAG/RCA/OMA/OBF 在各自 `standard_agent_interface.v1` descriptor 中声明上述 domain-owned extension；OPL 只持有 schema、closed parser、generated scaffold、package-current discovery 与 hosted consumers。
+- descriptor discovery 必须消费 canonical package readiness，要求 dependency/scope 闭合、managed runtime source tree digest 一致、health/handler probe current；隐式 sibling/cwd 扫描退役，显式 workspace root 只作开发 fallback。
+- `standard-agent-registry.ts` 只保留 identity、label、package locator、aliases 和 membership；workspace/runtime/installer/golden-path/Pack/authority 示例全部移出。Workspace 缺 descriptor 时使用统一 generic baseline，runtime dispatch 缺失时 fail closed。
+- progress alias 只从 `standard_agent_interface.progress` 读取；缺 descriptor 时只接受两个 canonical delta 字段。OPL attempt/Temporal contract 不再列出 paper/grant/visual alias 或 `paper_stage_log`。
+- Atlas、Workspace、Runway、Stagecraft、Ledger、Console和Foundry Lab只能投影/运输声明内容；不得据此写 domain truth、artifact/memory body、质量/导出裁决、owner receipt、typed blocker、App release verdict或ready声明。
+
 ### 决策：安装、管理与更新统一为 OPL Base、OPL App、OPL Packages 三层生命周期
 
 原因：旧 `opl update --component <internal_id>` 把 runtime adapter、App carrier、package channel、Codex projection、companion tools 和 workflow profile 都暴露成同级用户 component，迫使普通用户理解内部路由，并让 projection 看起来像独立 mutation owner。公共生命周期应与用户实际管理对象一致，内部 provider id 只服务 adapter dispatch。
@@ -673,7 +685,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - 完整事务必须证明 command、event、outbox item 同属一个 append transaction，并且 outbox identity 与 StageRun identity 一致。缺 command/event/outbox、outbox identity 错配、StageRun identity 缺失或错配时，必须 fail closed 为 incomplete / blocked transaction。
 - 完整事务只证明 OPL primitive transaction completeness。它不授权 provider-backed soak、domain owner receipt、typed blocker、human answer、paper progress、publication ready、domain ready、App release ready 或 production ready。
 - current-control provider admission、enqueue 与 terminal-consumed projection 只能消费 canonical command / outbox readback 和同 identity complete transaction；裸 alias、stale read-model、half transaction、旧 transport-only `succeeded` queue row 或 volatile pending replay 不得提升为 provider admission、running proof、owner action 或 paper progress。
-- Projection metadata 只有在完整事务下才能标记为 consumable；不完整或空 readback 必须降权为 fail-closed diagnostic projection。App/operator drilldown 可以显示 complete transaction / NonAdvancingApply / replay audit summary，但 `provider_admission_allowed`、`current_executable_owner_action_allowed` 和 `paper_progress_delta` 必须保持 false，除非对应 owner surface 另有合法 receipt。
+- Projection metadata 只有在完整事务下才能标记为 consumable；不完整或空 readback 必须降权为 fail-closed diagnostic projection。App/operator drilldown 可以显示 complete transaction / NonAdvancingApply / replay audit summary，但 `provider_admission_allowed`、`current_executable_owner_action_allowed` 和 `deliverable_progress_delta` 必须保持 false，除非对应 owner surface 另有合法 receipt。
 - MAS/MAG/RCA/OMA consume-only adapter 必须消费完整 `opl_domain_progress_transition_runtime_live_readback` shape，不能从裸 event id、outbox id、queue row、DHD dry-run 或 projection clean 推断 OPL runtime 可消费状态。dated follow-through 过程只作 history/provenance，当前 truth 回 source、contracts、tests、CLI/read-model 和 git history。
 
 ## 2026-06-16
@@ -792,7 +804,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 影响：
 
 - `codexStageActivity` 返回给 Temporal 的 `closeout_packet` 必须是 refs-only compact packet：只保留 `stage_attempt_id`、idempotency key、closeout refs、consumed refs、memory/writeback refs、rejected writes summary、next owner、domain-ready verdict、route impact 和 authority boundary。
-- `paper_stage_log`、`user_stage_log`、`stage_log_summary`、`human_stage_log`、transcript、paper/artifact/memory body 和大 detail arrays 不得进入 Temporal activity result、workflow state 或 queue metadata；完整正文留在 domain closeout file / OPL ledger，通过 refs 连接。
+- `user_stage_log`、`stage_log_summary`、`human_stage_log`、transcript、domain artifact/memory body 和大 detail arrays 不得进入 Temporal activity result、workflow state 或 queue metadata；完整正文留在 domain closeout file / OPL ledger，通过 refs 连接。
 - `stage_progress_log.user_stage_log` 只投影 domain typed closeout 明确给出的语义摘要、duration/token/cost observed/missing 状态和 refs。OPL 不得从 artifact body、memory body、publication verdict body 或 transcript 自行生成“做了什么 / 论文推进了什么”；缺 domain semantic summary 时只显示 missing-domain-fields / missing semantic summary。
 - `stage_progress_log` / Temporal completion / provider completed 不能被任何 status、tray、workbench、Runway 或 App read model 表述为 domain ready、owner receipt observed、typed blocker created、quality verdict、artifact ready、paper repaired、publication ready 或 production ready。
 - 该规则与成熟工程经验一致：Temporal workflow history 只应承载可重放的小结果和 refs，Airflow XCom 只适合小元数据，Kubernetes controller 对 desired/current/status 做 reconcile，OpenTelemetry / OpenLineage 用 links / lineage refs 关联事实，不把可观测性事件升格为 domain authority。

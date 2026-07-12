@@ -30,9 +30,9 @@ test('Temporal Codex activity compacts typed closeout packets before activity co
       domain_id: 'redcube',
       output_ref: 'file:///tmp/redcube-runtime/artifacts/closeout.json',
     },
-    paper_stage_log: {
+    human_stage_log: {
       stage_work_done: ['x'.repeat(2_000_000)],
-      paper_work_done: ['y'.repeat(2_000_000)],
+      deliverable_work_done: ['y'.repeat(2_000_000)],
     },
     user_stage_log: {
       stage_work_done: ['z'.repeat(2_000_000)],
@@ -61,7 +61,7 @@ test('Temporal Codex activity compacts typed closeout packets before activity co
   });
   assert.equal((compacted.route_impact as Record<string, { stage_work_done: string[] }>).user_stage_log.stage_work_done[0].endsWith('[omitted:2000000 chars]'), true);
   const compactedRecord = compacted as Record<string, unknown>;
-  assert.equal(compactedRecord.paper_stage_log, undefined);
+  assert.equal(compactedRecord.human_stage_log, undefined);
   assert.equal(compactedRecord.user_stage_log, undefined);
   assert.equal(compactedRecord.full_transcript, undefined);
   assert.equal(compacted.temporal_payload_policy.full_closeout_body_omitted, true);
