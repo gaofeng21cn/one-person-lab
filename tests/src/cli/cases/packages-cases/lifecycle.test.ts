@@ -62,6 +62,11 @@ test('packages fetches registry URL, validates manifest, and writes lock receipt
       assert.equal(refresh.opl_agent_package_registry.recommended_action, 'install_from_manifest_url');
       assert.equal(refresh.opl_agent_package_registry.lifecycle_action_refs.includes('install'), true);
       assert.equal(fs.existsSync(refresh.opl_agent_package_registry.cache_file), true);
+      const refreshedCache = parseJsonText(
+        fs.readFileSync(refresh.opl_agent_package_registry.cache_file, 'utf8'),
+      ) as { entries: Array<Record<string, unknown>> };
+      assert.equal(refreshedCache.entries[0].version_source_ref, `${baseUrl}/manifest.json#/version`);
+      assert.equal(Object.hasOwn(refreshedCache.entries[0], 'latest_version'), false);
 
       const validated = await runCliAsync([
         'packages',

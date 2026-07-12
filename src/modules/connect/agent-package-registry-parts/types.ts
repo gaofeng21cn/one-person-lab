@@ -125,7 +125,7 @@ export type AgentPackageRegistryEntry = {
   publisher: string;
   source: string;
   manifest_url: string;
-  latest_version: string;
+  version_source_ref: string;
   trust_tier: string;
   starter_default: boolean;
   codex_visible_entry: string | null;

@@ -367,6 +367,10 @@ function normalizeOrdinaryUserSource(value: unknown, sourceLabel: string): Agent
 }
 
 export function normalizeRegistryEntry(entry: Record<string, unknown>, index: number): AgentPackageRegistryEntry {
+  const declaredPackageId = stringValue(entry.package_id);
+  const packageId = declaredPackageId
+    ? canonicalManifestIdentity(declaredPackageId, `registry.entries.${index}.package_id`)
+    : null;
   const missing = missingFields(entry, REGISTRY_REQUIRED_FIELDS);
   assertNoForbiddenFields(entry, `registry.entries.${index}`);
   if (missing.length > 0) {
@@ -375,15 +379,25 @@ export function normalizeRegistryEntry(entry: Record<string, unknown>, index: nu
       missing_fields: missing,
     });
   }
+  if ('latest_version' in entry) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package registry entries must not duplicate package version truth.', {
+      entry_index: index,
+      forbidden_field: 'latest_version',
+      canonical_field: 'version_source_ref',
+      failure_code: 'agent_package_registry_latest_version_retired',
+    });
+  }
   const manifestUrl = stringValue(entry.manifest_url)!;
+  const versionSourceRef = stringValue(entry.version_source_ref)!;
   validateUrlLike(manifestUrl, `entries.${index}.manifest_url`);
+  validateUrlLike(versionSourceRef, `entries.${index}.version_source_ref`);
   return {
-    package_id: canonicalManifestIdentity(entry.package_id, `registry.entries.${index}.package_id`),
+    package_id: packageId!,
     display_name: stringValue(entry.display_name)!,
     publisher: stringValue(entry.publisher)!,
     source: stringValue(entry.source)!,
     manifest_url: manifestUrl,
-    latest_version: stringValue(entry.latest_version)!,
+    version_source_ref: versionSourceRef,
     trust_tier: stringValue(entry.trust_tier)!,
     starter_default: entry.starter_default === true,
     codex_visible_entry: stringValue(entry.codex_visible_entry),

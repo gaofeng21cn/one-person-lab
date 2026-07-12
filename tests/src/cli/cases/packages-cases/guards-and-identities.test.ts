@@ -51,6 +51,24 @@ test('default Home shortcut visibility follows registry starter_default', () => 
   assert.equal(preferences[0].installed, false);
 });
 
+test('package registry uses version_source_ref and rejects mutable latest_version truth', () => {
+  const payload = registryPayload('https://registry.example');
+  const registry = normalizeRegistry(
+    payload,
+    'https://registry.example/registry.json',
+    'fixture-sha256',
+  );
+  assert.equal(registry.entries[0].version_source_ref, 'https://registry.example/manifest.json#/version');
+
+  assert.throws(
+    () => normalizeRegistry({
+      ...payload,
+      entries: [{ ...payload.entries[0], latest_version: '1.2.3' }],
+    }, 'https://registry.example/registry.json', 'fixture-sha256'),
+    /must not duplicate package version truth/,
+  );
+});
+
 test('official aliases resolve offline and local manifests own runtime source install repair rollback and uninstall', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-positional-state-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-runtime-source-'));

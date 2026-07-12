@@ -200,7 +200,7 @@ function normalizePolicy(payload: unknown, manifest: AgentPackageManifest): OplF
     });
   }
   const expectedMigrationPolicy = {
-    trigger: 'explicit_opl_flow_install_or_update',
+    trigger: 'explicit_opl_flow_install_update_optimize_or_app_post_update_reconcile',
     default_action: 'backup_disable_and_remove_from_discovery',
     physical_delete: false,
     receipt_owner: 'opl-framework',
