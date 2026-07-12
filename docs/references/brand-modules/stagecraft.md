@@ -22,6 +22,7 @@ Fresh readback can support reading `Stagecraft` as Workspace 级 `L4_structural_
 
 - Stage 是专家工作单元，不是脚本节点。
 - Stage 主提示词是 stage strategy ref，不是专业 Skill。标准源头是 domain repo 内的 `agent/stages/` 和 `agent/prompts/`；Codex Skill 物化只是某些 agent 的兼容投影。
+- Stage 主提示词必须以正文、来源层和 SHA-256 进入 effective executor prompt；只投影 `prompt_ref`、让 executor 自行猜测或读取文件，不算 prompt 已消费。
 - Professional specialist skill 承担专业方法、风格、审稿、图件、文献或工具使用 playbook；它可以放在 domain repo，也可以在体量大或需要跨 workspace 复用时拆到外部 specialist pack。
 - Tool catalog / Tool Arsenal 是 affordance catalog，不是 workflow script。
 - AI-first：规划、创作、评审、路线判断和修订由 selected executor 完成。
@@ -136,7 +137,7 @@ App read-model 只投影 Stagecraft refs。它不得把 readiness、schema compl
 
 ## Forbidden Claims
 
-- 不规定工具调用顺序。
+- 不由 Framework 或 tool catalog 规定专业工具流程；domain stage / professional skill 可以声明专业语义、证据、authority、安全和不可逆动作依赖。
 - 不把 Agent Tool Arsenal 或 tool card presence 写成固定 executor strategy。
 - 不把 readiness / scorecard / schema completeness 升级成 domain verdict。
 - 不让同一 executor attempt 在同一上下文中自审并关闭质量门。

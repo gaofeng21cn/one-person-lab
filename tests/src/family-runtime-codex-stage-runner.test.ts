@@ -82,6 +82,53 @@ test('Codex stage activity command preview carries strict terminal closeout cont
   assert.equal(activity.expected_closeout.free_text_closeout_accepted, false);
 });
 
+test('Codex stage activity hydrates the declared domain stage prompt body into the final command preview', () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-effective-stage-prompt-'));
+  const promptBody = [
+    '# Evidence Synthesis',
+    '',
+    'Bind every accepted claim to current source evidence before a quality-ready handoff.',
+    'Planning may iterate, but independent review must inspect the final artifact bytes.',
+    '',
+  ].join('\n');
+  try {
+    fs.mkdirSync(path.join(workspaceRoot, 'agent', 'stages'), { recursive: true });
+    fs.mkdirSync(path.join(workspaceRoot, 'agent', 'prompts'), { recursive: true });
+    fs.writeFileSync(path.join(workspaceRoot, 'agent', 'prompts', 'evidence-synthesis.md'), promptBody);
+    fs.writeFileSync(path.join(workspaceRoot, 'agent', 'stages', 'manifest.json'), `${JSON.stringify({
+      surface_kind: 'opl_standard_agent_declarative_stage_manifest',
+      version: 'opl-standard-agent-declarative-stage-manifest.v1',
+      stages: [{
+        stage_id: 'evidence-synthesis',
+        prompt_ref: 'agent/prompts/evidence-synthesis.md',
+      }],
+    }, null, 2)}\n`);
+
+    const activity = buildCodexStageActivityInput({
+      attempt: {
+        stage_attempt_id: 'sat_effective_stage_prompt_test',
+        stage_id: 'evidence-synthesis',
+        executor_kind: 'codex_cli',
+        workspace_locator: { workspace_root: workspaceRoot },
+        checkpoint_refs: ['packet:effective-stage-prompt'],
+      },
+    });
+
+    const commandPreview = activity.runner_status.command_preview.join('\n');
+    assert.match(commandPreview, /OPL effective domain stage main prompt follows/);
+    assert.match(commandPreview, /Prompt source ref: agent\/prompts\/evidence-synthesis\.md/);
+    assert.match(commandPreview, /Prompt source layer: domain_stage_main_prompt/);
+    assert.match(commandPreview, /Bind every accepted claim to current source evidence/);
+    assert.match(commandPreview, /independent review must inspect the final artifact bytes/);
+    assert.equal(activity.runner_status.effective_prompt.status, 'hydrated');
+    assert.equal(activity.runner_status.effective_prompt.body_hydrated_into_executor_prompt, true);
+    assert.match(activity.runner_status.effective_prompt.sha256 ?? '', /^[a-f0-9]{64}$/);
+    assert.equal(activity.runner_status.effective_prompt.size_bytes, Buffer.byteLength(promptBody, 'utf8'));
+  } finally {
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
 test('Codex stage activity command preview binds explicit Codex executor policy', () => {
   const activity = buildCodexStageActivityInput({
     attempt: {

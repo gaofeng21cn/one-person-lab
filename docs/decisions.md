@@ -26,6 +26,17 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - first-party package canonical ids 固定为 `mas`、`mag`、`rca`、`oma`、`obf`、`mas-scholar-skills`、`opl-flow`。每个对象只有一个 OCI repository：`ghcr.io/<owner>/one-person-lab-packages/<canonical-id>`；旧 `one-person-lab-modules/*`、`one-person-lab-manifest:*` 和 repo-slug OCI 只可作为迁移或历史 locator。moving channel 只允许 `candidate` 与 `latest-stable`，不可变 tag/version 必须绑定唯一 digest；不得恢复普通 `latest`。
 - daily package workflow 只处理 source/content fingerprint 发生变化的 package。package 发生内容变化却未推进 owner manifest SemVer、同一 canonical id/version 漂到不同 digest、channel version 与 manifest version 不一致，或无变化 package 被重发，均应 fail closed；candidate 通过 package gates 后才可逐包提升到 latest-stable。
 
+### 决策：effective Stage prompt 必须绑定正文，专业顺序按依赖而不是工具剧本表达
+
+原因：标准 Agent compiler 过去只投影 `prompt_ref`，Runway 最终交给 Codex CLI 的 prompt 也只有 Stage packet ref，无法证明 domain 主提示词正文真实进入 executor。与此同时，“executor 自主决定顺序”的旧表述没有区分专业因果、证据、authority、安全依赖与普通工具实现顺序，容易在简化 prompt 时误删领域方法。
+
+影响：
+
+- Pack 编译的 `prompt_refs` 同时携带 repo source ref、`domain_stage_main_prompt` layer、SHA-256、字节数和正文；Runway 从同一 manifest/prompt source 解析并注入最终 executor prompt。
+- Codex runner receipt 和 command preview 回读 effective prompt 的 source、digest、size 与 hydration 状态；ref 存在或 interface ready 不再被当成正文已消费证据。
+- domain stage / professional skill 可以固定专业语义、证据、authority、安全和不可逆动作依赖；Framework tool catalog 只声明 affordance，executor 在依赖图内决定工具、迭代、替代和安全并行。
+- OPL terminal closeout contract 在 domain prompt 之后注入，只约束 transport shape，不覆盖 domain truth、质量或 artifact authority。
+
 ## 2026-07-11
 
 ### 决策：Headless 基座安装是独立公开合同，Homebrew 版本真相来自 Framework manifest

@@ -41,7 +41,7 @@ import {
   eventSummary,
   normalizeCodexStageRunnerMode,
   resolvedStagePacketRef,
-  runnerPromptFor,
+  runnerPromptForExecution,
   stageIdFromAttempt,
   workspaceRootFromAttempt,
   checkpointRefsFromAttempt,
@@ -465,7 +465,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
       stagePacketRef,
       workspaceRoot: runInSandbox ? sandboxWorkspaceRoot : workspaceRoot,
     });
-    const args = buildCodexExecArgs(runnerPromptFor({ attempt: executionAttempt, stagePacketRef }), {
+    const args = buildCodexExecArgs(runnerPromptForExecution({ ...input, stagePacketRef }, executionAttempt), {
       cwd: runInSandbox ? sandboxWorkspaceRoot : workspaceRoot,
       json: true,
       ...(runInSandbox
@@ -948,7 +948,7 @@ export async function runAgentStageRunner(input: {
     executor_kind: executorKind,
     stage_attempt_executor_policy: stageAttemptExecutorPolicy,
     mode: 'stage_activity',
-    prompt: runnerPromptFor(input),
+    prompt: runnerPromptForExecution(input, input.attempt),
     cwd: workspaceRootFromAttempt(input.attempt),
     timeout_ms: input.timeoutMs,
     context_refs: [

@@ -61,7 +61,7 @@
     {
       "principle_id": "parallel_executor_autonomy",
       "owner": "one-person-lab",
-      "summary": "Executors may choose order, tools, substitutions, and safe parallelism inside the declared boundary and must stop at authority, permission, human, safety, or irreversible-write gates."
+      "summary": "Domain stages and professional skills may require semantic, evidence, authority, safety, and irreversible-action dependencies. Inside that dependency graph, executors choose tools, iteration, substitutions, and safe parallelism; framework tool catalogs do not prescribe the professional workflow."
     },
     {
       "principle_id": "module_organization",
