@@ -7,14 +7,17 @@ function parsePackageArgs(
   spec: CommandSpec,
   options: { receipt?: boolean; packet?: boolean } = {},
 ) {
-  const packageId = args[0];
+  const packageOption = args[0] === '--package-id' && args[1] && !args[1].startsWith('--')
+    ? args[1]
+    : undefined;
+  const packageId = packageOption ?? args[0];
   if (!packageId || packageId.startsWith('--')) {
     throw buildUsageError('A package id is required.', spec, { required: ['package_id'] });
   }
   const keep: string[] = [];
   let receiptPath: string | undefined;
   let mergePacketPath: string | undefined;
-  for (let index = 1; index < args.length; index += 1) {
+  for (let index = packageOption ? 2 : 1; index < args.length; index += 1) {
     const token = args[index];
     const value = args[index + 1];
     if (token === '--keep' && value && !value.startsWith('--')) {
@@ -52,6 +55,13 @@ export function buildPackageCommandSpecs(): Record<string, CommandSpec> {
     group: 'package',
     handler: (args) => runWorkflowPackageAction('update', parsePackageArgs(args, updateSpec)),
   };
+  const optimizeSpec: CommandSpec = {
+    usage: 'opl packages optimize opl-flow [--keep <migration-id> ...]',
+    summary: 'Reconcile the installed OPL Flow environment, retire declared conflicts, and optimize the user profile without pulling package source.',
+    examples: ['opl packages optimize opl-flow'],
+    group: 'package',
+    handler: (args) => runWorkflowPackageAction('optimize', parsePackageArgs(args, optimizeSpec)),
+  };
   const rollbackSpec: CommandSpec = {
     usage: 'opl packages rollback opl-flow --receipt <path>',
     summary: 'Restore archived workflow conflicts from one OPL Flow package migration receipt.',
@@ -69,6 +79,7 @@ export function buildPackageCommandSpecs(): Record<string, CommandSpec> {
   return {
     'packages install': installSpec,
     'packages update': updateSpec,
+    'packages optimize': optimizeSpec,
     'packages rollback': rollbackSpec,
     'packages profile-apply': profileApplySpec,
   };

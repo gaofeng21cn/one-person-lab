@@ -257,13 +257,14 @@ test('managed update kernel contract keeps runtime and agent post-apply executio
 
   const workflowProfile = contract.providers.find((entry) => entry.provider_id === 'workflow_profile');
   assert.ok(workflowProfile);
-  assert.equal(workflowProfile.default_policy, 'semantic_merge_required_no_silent_overwrite');
-  assert.equal(workflowProfile.mutation_scope, 'projection_only_no_opl_update_apply_component_target');
+  assert.equal(workflowProfile.default_policy, 'codex_semantic_merge_with_packet_fallback');
+  assert.equal(workflowProfile.mutation_scope, 'explicit_opl_flow_package_lifecycle_not_generic_opl_update_component');
   assert.equal(workflowProfile.apply_allowed, false);
   assert.deepEqual(contract.app_action_consumer_policy.canonical_delegated_surfaces, {
     module_sync: 'opl update apply --component capability_packages',
     settings_sync_capabilities: 'opl update apply --component capability_packages',
     settings_apply_opl_packages: 'opl update apply --component capability_packages',
+    workflow_profile_optimize: 'opl packages optimize opl-flow --json',
     settings_check_app_update: 'opl update status --component installation_carrier',
     settings_rollback_runtime_substrate: 'opl update rollback --component runtime_substrate',
   });
@@ -629,19 +630,19 @@ exit 2
     assert.ok(workflowProfile);
     assert.equal(workflowProfile.adapter_id, 'workflow_profile_adapter');
     assert.equal(workflowProfile.coordination_role, 'owner_handoff');
-    assert.equal(workflowProfile.policy_id, 'semantic_merge_required_no_silent_overwrite');
-    assert.equal(workflowProfile.owner_execution_boundary.owner_executor_id, 'codex_semantic_merge_owner');
+    assert.equal(workflowProfile.policy_id, 'codex_semantic_merge_with_packet_fallback');
+    assert.equal(workflowProfile.owner_execution_boundary.owner_executor_id, 'opl_flow_package_lifecycle');
     assert.equal(workflowProfile.owner_execution_boundary.runner_can_execute, false);
     assert.equal(workflowProfile.state, 'current');
-    assert.equal(workflowProfile.auto_apply.mode, 'projection_only');
+    assert.equal(workflowProfile.auto_apply.mode, 'controlled_apply');
     assert.equal(workflowProfile.auto_apply.eligible, false);
     assert.equal(workflowProfile.auto_apply.app_background_safe, false);
-    assert.equal(workflowProfile.auto_apply.command_ref, null);
+    assert.equal(workflowProfile.auto_apply.command_ref, 'opl packages optimize opl-flow --json');
     assert.equal(
-      workflowProfile.auto_apply.blocked_reasons.includes('workflow_profile_requires_codex_semantic_merge'),
+      workflowProfile.auto_apply.blocked_reasons.includes('explicit_opl_flow_or_app_update_required'),
       true,
     );
-    assert.equal(workflowProfile.current.semantic_merge_required, true);
+    assert.equal(workflowProfile.current.semantic_merge_mode, 'codex_auto_with_reviewable_packet_fallback');
     assert.equal(workflowProfile.current.silent_overwrite_allowed, false);
     assert.deepEqual(workflowProfile.current.managed_profile_parts, [
       'codex_profile_agents',
@@ -649,13 +650,13 @@ exit 2
       'codex_profile_prompts',
     ]);
     assert.equal(workflowProfile.receipt.source_manifest_ref, 'opl-flow://workflow-profile');
-    assert.equal(workflowProfile.receipt.apply_mode, 'projection_only');
+    assert.equal(workflowProfile.receipt.apply_mode, 'controlled_apply');
     assert.equal(workflowProfile.authority_boundary.can_write_user_codex_profile, false);
     assert.equal(workflowProfile.authority_boundary.can_silently_overwrite_agents_md, false);
     assert.equal(workflowProfile.authority_boundary.can_silently_overwrite_taste_md, false);
     assert.equal(workflowProfile.authority_boundary.can_silently_overwrite_prompts, false);
     assert.equal(
-      workflowProfile.conditions.some((entry) => entry.type === 'SemanticMergeRequired' && entry.status === 'True'),
+      workflowProfile.conditions.some((entry) => entry.type === 'SemanticMergeAvailable' && entry.status === 'True'),
       true,
     );
   } finally {

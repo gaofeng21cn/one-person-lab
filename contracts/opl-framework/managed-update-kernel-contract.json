@@ -436,10 +436,10 @@
       "provider_id": "workflow_profile",
       "adapter_id": "workflow_profile_adapter",
       "owner": "opl-flow",
-      "role": "OPL Flow workflow profile status and semantic merge guidance",
-      "authority": "User Codex profile surfaces require semantic merge and must not be silently overwritten.",
-      "default_policy": "semantic_merge_required_no_silent_overwrite",
-      "mutation_scope": "projection_only_no_opl_update_apply_component_target",
+      "role": "OPL Flow workflow profile status and Framework package-lifecycle optimization route",
+      "authority": "User Codex profile surfaces use Codex semantic merge with target-hash, backup, receipt, rollback, and reviewable packet fallback; they are never silently overwritten.",
+      "default_policy": "codex_semantic_merge_with_packet_fallback",
+      "mutation_scope": "explicit_opl_flow_package_lifecycle_not_generic_opl_update_component",
       "apply_allowed": false
     }
   ],
@@ -465,6 +465,7 @@
       "module_sync": "opl update apply --component capability_packages",
       "settings_sync_capabilities": "opl update apply --component capability_packages",
       "settings_apply_opl_packages": "opl update apply --component capability_packages",
+      "workflow_profile_optimize": "opl packages optimize opl-flow --json",
       "settings_check_app_update": "opl update status --component installation_carrier",
       "settings_rollback_runtime_substrate": "opl update rollback --component runtime_substrate"
     },

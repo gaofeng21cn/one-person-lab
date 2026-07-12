@@ -1,6 +1,6 @@
 import { assert, createFakeCodexFixture, fs, os, path, runCli, test } from '../../helpers.ts';
 
-test('update apply does not execute the projection-only Workflow Profile component', () => {
+test('update apply delegates Workflow Profile optimization to the OPL Flow package lifecycle', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-managed-update-workflow-profile-apply-'));
   const codexFixture = createFakeCodexFixture(`
 if [ "$1" = "--version" ]; then
@@ -49,13 +49,13 @@ exit 2
     assert.equal(output.managed_update.summary.execution_status, 'skipped');
     assert.equal(output.managed_update.components.length, 1);
     assert.equal(output.managed_update.components[0].component_id, 'workflow_profile');
-    assert.equal(output.managed_update.components[0].auto_apply.mode, 'projection_only');
+    assert.equal(output.managed_update.components[0].auto_apply.mode, 'controlled_apply');
     assert.equal(output.managed_update.components[0].auto_apply.eligible, false);
     assert.equal(output.managed_update.components[0].auto_apply.app_background_safe, false);
-    assert.equal(output.managed_update.components[0].auto_apply.command_ref, null);
+    assert.equal(output.managed_update.components[0].auto_apply.command_ref, 'opl packages optimize opl-flow --json');
     assert.equal(
       output.managed_update.components[0].auto_apply.blocked_reasons.includes(
-        'workflow_profile_requires_codex_semantic_merge',
+        'explicit_opl_flow_or_app_update_required',
       ),
       true,
     );

@@ -548,9 +548,12 @@ function runWorkflowProfileAdapter(): AdapterExecutionResult {
     component_id: 'workflow_profile',
     adapter_id: 'workflow_profile_adapter',
     status: 'skipped',
-    reason: 'workflow_profile_requires_codex_semantic_merge',
+    reason: 'workflow_profile_owned_by_opl_flow_package_lifecycle',
     result_ref: null,
-    result: null,
+    result: {
+      command_ref: 'opl packages optimize opl-flow --json',
+      profile_merge_mode: 'codex_auto_with_reviewable_packet_fallback',
+    },
     error: null,
     apply_mode: 'projection_only',
   };
