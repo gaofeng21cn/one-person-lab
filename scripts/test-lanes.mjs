@@ -78,6 +78,7 @@ const fastTestFiles = [
   'tests/src/cli/cases/cli-command-lazy-registry.test.ts',
   'tests/src/standard-agent-registry-contract-boundaries.test.ts',
   'tests/src/standard-agent-implementation-profile.test.ts',
+  'tests/src/source-derived-agent-design-abi.test.ts',
   'tests/src/mas-mag-cognitive-kernel-stage-pack-fixtures.test.ts',
   ...expandTestFiles(['tests/src/stage-artifact-runtime.test.ts', 'tests/src/stage-artifact-contract.test.ts']),
   'tests/src/schema-registry.test.ts',
