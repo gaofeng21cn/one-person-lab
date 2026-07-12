@@ -211,7 +211,7 @@ test('domain launch blocks a canonical package that is not installed', () => {
   }
 });
 
-test('MAS launch activates a new workspace scope, blocks drift, and resumes after package repair', async () => {
+test('MAS launch activates a new workspace scope and automatically recovers managed Skill drift', async () => {
   const root = fs.mkdtempSync(`${os.tmpdir()}/opl-domain-launch-mas-scope-`);
   const stateRoot = path.join(root, 'state');
   const codexHome = path.join(root, 'codex-home');
@@ -238,22 +238,13 @@ test('MAS launch activates a new workspace scope, blocks drift, and resumes afte
 
     const skillsRoot = path.join(workspace, '.codex', 'skills');
     const lifecycleLedger = path.join(stateRoot, 'agent-package-lifecycle-ledger.json');
-    const skillsBeforeDryRun = scholarSkillsCoreSkillIds.map((skillId) => ({
-      skillId,
-      bytes: fs.readFileSync(path.join(skillsRoot, skillId, 'SKILL.md'), 'utf8'),
-      mtimeMs: fs.statSync(path.join(skillsRoot, skillId, 'SKILL.md')).mtimeMs,
-    }));
+    assert.equal(fs.existsSync(skillsRoot), false);
     const ledgerBeforeDryRun = fs.readFileSync(lifecycleLedger, 'utf8');
-    const dryRun = runCli([
+    const dryRun = runCliFailure([
       'domain', 'launch', '--project', 'medautoscience', '--dry-run',
-    ], env).domain_entry_launch;
-    assert.equal(dryRun.dry_run, true);
-    assert.equal(dryRun.launch_status, 'preview_only');
-    assert.deepEqual(scholarSkillsCoreSkillIds.map((skillId) => ({
-      skillId,
-      bytes: fs.readFileSync(path.join(skillsRoot, skillId, 'SKILL.md'), 'utf8'),
-      mtimeMs: fs.statSync(path.join(skillsRoot, skillId, 'SKILL.md')).mtimeMs,
-    })), skillsBeforeDryRun);
+    ], env);
+    assert.equal(dryRun.payload.error.details.launch_blocked_reason, 'scope_materialization_missing');
+    assert.equal(fs.existsSync(skillsRoot), false);
     assert.equal(fs.readFileSync(lifecycleLedger, 'utf8'), ledgerBeforeDryRun);
 
     const firstLaunch = runCli([
@@ -271,15 +262,6 @@ test('MAS launch activates a new workspace scope, blocks drift, and resumes afte
     assert.match(current.materialization_readiness.lifecycle_receipt_ref, /^opl:\/\/agent-package\/activate\//);
 
     fs.rmSync(path.join(skillsRoot, 'medical-manuscript-writing'), { recursive: true, force: true });
-    const blocked = runCliFailure([
-      'domain', 'launch', '--project', 'medautoscience',
-    ], env);
-    assert.equal(blocked.payload.error.details.failure_code, 'agent_package_operational_readiness_blocked');
-    assert.equal(blocked.payload.error.details.materialization_readiness.status, 'missing');
-
-    await runCliAsync([
-      'packages', 'repair', 'mas', '--scope', 'workspace', '--target-workspace', workspace,
-    ], env);
     const resumed = runCli([
       'domain', 'launch', '--project', 'medautoscience',
     ], env).domain_entry_launch;
@@ -292,7 +274,7 @@ test('MAS launch activates a new workspace scope, blocks drift, and resumes afte
   }
 });
 
-test('quest activation materializes core skills, blocks drift, and repair restores readiness', async () => {
+test('quest activation materializes core skills and automatically recovers managed Skill drift', async () => {
   const root = fs.mkdtempSync(`${os.tmpdir()}/opl-quest-package-activation-`);
   const stateRoot = path.join(root, 'state');
   const codexHome = path.join(root, 'codex-home');
@@ -316,7 +298,7 @@ test('quest activation materializes core skills, blocks drift, and repair restor
       'packages', 'activate', 'mas', '--scope', 'quest', '--target-quest', quest,
     ], env).opl_agent_package_activation;
     assert.equal(activation.status, 'activated');
-    assert.equal(activation.package_id, 'med-autoscience');
+    assert.equal(activation.package_id, 'mas');
     assert.match(activation.lifecycle_receipt_ref, /^opl:\/\/agent-package\/activate\//);
     const skillsRoot = path.join(quest, '.codex', 'skills');
     assert.deepEqual(fs.readdirSync(skillsRoot).sort(), [...scholarSkillsCoreSkillIds].sort());
@@ -328,14 +310,11 @@ test('quest activation materializes core skills, blocks drift, and repair restor
     assert.equal(current.operational_ready, true);
 
     fs.rmSync(path.join(skillsRoot, 'medical-manuscript-writing'), { recursive: true, force: true });
-    const blocked = runCliFailure([
+    const recovered = runCli([
       'packages', 'activate', 'mas', '--scope', 'quest', '--target-quest', quest,
-    ], env);
-    assert.equal(blocked.payload.error.details.failure_code, 'agent_package_scope_activation_blocked');
-    assert.equal(blocked.payload.error.details.materialization_readiness.status, 'missing');
-    await runCliAsync([
-      'packages', 'repair', 'mas', '--scope', 'quest', '--target-quest', quest,
-    ], env);
+    ], env).opl_agent_package_activation;
+    assert.equal(recovered.operational_ready, true);
+    assert.equal(fs.existsSync(path.join(skillsRoot, 'medical-manuscript-writing', 'SKILL.md')), true);
     const repaired = runCli([
       'packages', 'status', '--package-id', 'mas', '--scope', 'quest', '--target-quest', quest,
     ], env).opl_agent_package_status;
@@ -371,10 +350,8 @@ test('workspace activation automatically ensures the installed MAS package scope
       'packages', 'install', '--manifest-url', consumerManifest, '--trust-tier', 'first_party',
     ], env);
 
-    assert.deepEqual(
-      fs.readdirSync(path.join(workspaceB, '.codex', 'skills')).sort(),
-      [...scholarSkillsCoreSkillIds].sort(),
-    );
+    assert.equal(fs.existsSync(path.join(workspaceA, '.codex', 'skills')), false);
+    assert.equal(fs.existsSync(path.join(workspaceB, '.codex', 'skills')), false);
     runCli([
       'workspace', 'bind', '--project', 'medautoscience', '--path', workspaceC,
       '--entry-command', 'printf launched',
@@ -405,11 +382,19 @@ test('workspace activation automatically ensures the installed MAS package scope
       force: true,
     });
     runCli(['workspace', 'activate', '--project', 'medautoscience', '--path', workspaceB], env);
-    const blocked = runCliFailure([
+    runCli([
       'workspace', 'activate', '--project', 'medautoscience', '--path', workspaceA,
     ], env);
-    assert.equal(blocked.payload.error.details.failure_code, 'agent_package_scope_activation_blocked');
-    assert.equal(blocked.payload.error.details.materialization_readiness.status, 'missing');
+    assert.equal(
+      fs.existsSync(path.join(workspaceA, '.codex', 'skills', 'medical-manuscript-writing', 'SKILL.md')),
+      true,
+    );
+    const recovered = runCli([
+      'packages', 'status', '--package-id', 'mas',
+      '--scope', 'workspace', '--target-workspace', workspaceA,
+    ], env).opl_agent_package_status;
+    assert.equal(recovered.materialization_readiness.status, 'current');
+    assert.equal(recovered.operational_ready, true);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

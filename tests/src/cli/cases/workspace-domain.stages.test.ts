@@ -2,6 +2,7 @@ import {
   assert,
   createFamilyContractsFixtureRoot,
   fs,
+  installRuntimePackageFixture,
   loadFamilyManifestFixtures,
   os,
   path,
@@ -35,6 +36,7 @@ test('family stage parity detects an allowed action ref missing from the action 
   fs.writeFileSync(stageManifestPath, `${JSON.stringify(stageManifest, null, 2)}\n`, 'utf8');
 
   try {
+    installRuntimePackageFixture(stateRoot, 'mas');
     bindManifest(
       'medautoscience',
       stagePack.manifest,
