@@ -166,18 +166,24 @@ test('agent-lab cost-estimate consumes a generic workload profile without a buil
   }
 });
 
-function rcaCostProfilePath() {
+function rcaCostProfilePath(): string | undefined {
   const rca = STANDARD_AGENT_REGISTRY.find((entry) => entry.agent_id === 'rca');
   assert.ok(rca, 'standard-agent registry must expose RCA');
   const discoveredRca = defaultStandardDomainAgentRepoInputs().find(
     (entry) => entry.requested_agent_id === rca.agent_id,
   );
-  const rcaRepoRoot = process.env.OPL_RCA_REPO_ROOT?.trim()
+  const explicitRcaRepoRoot = process.env.OPL_RCA_REPO_ROOT?.trim();
+  const explicitFamilyWorkspaceRoot = process.env.OPL_FAMILY_WORKSPACE_ROOT?.trim();
+  const rcaRepoRoot = explicitRcaRepoRoot
     || discoveredRca?.repo_dir;
-  assert.ok(
-    rcaRepoRoot,
-    'standard-agent registry must discover the RCA repository; set OPL_RCA_REPO_ROOT for a non-default family layout.',
-  );
+  if (!rcaRepoRoot) {
+    if (explicitRcaRepoRoot || explicitFamilyWorkspaceRoot) {
+      assert.fail(
+        'explicit family layout must expose the RCA repository; check OPL_RCA_REPO_ROOT or OPL_FAMILY_WORKSPACE_ROOT.',
+      );
+    }
+    return undefined;
+  }
   const profilePath = path.join(rcaRepoRoot, 'contracts', 'agent_lab_cost_profile.json');
   assert.equal(
     fs.existsSync(profilePath),
@@ -187,8 +193,14 @@ function rcaCostProfilePath() {
   return profilePath;
 }
 
-test('agent-lab cost-estimate consumes the real RCA owner profile through the standard registry', () => {
+test('agent-lab cost-estimate consumes the real RCA owner profile through the standard registry', (t) => {
   const profilePath = rcaCostProfilePath();
+  if (!profilePath) {
+    t.skip(
+      'RCA owner profile is unavailable in the default family layout; set OPL_RCA_REPO_ROOT for a strict family-profile check.',
+    );
+    return;
+  }
   const profile = JSON.parse(fs.readFileSync(profilePath, 'utf8')) as Record<string, unknown>;
   const output = runCli(['agent-lab', 'cost-estimate', '--profile', profilePath, '--json']);
   const estimate = output.agent_lab_cost_estimate.cost_estimate;

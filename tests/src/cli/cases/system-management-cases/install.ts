@@ -1,4 +1,5 @@
 import { assert, createCodexConfigFixture, createFakeCodexFixture, fs, os, path, runCli, runCliAsync, test } from './shared.ts';
+import { writeNativeHelperFixtureScripts } from '../native-helper-fixtures.ts';
 import { createFakeOplFlowInstallEnv } from '../system-install-fixtures.ts';
 
 test('opl install keeps retired gateway repair out of the default Codex install path', async () => {
@@ -7,6 +8,8 @@ test('opl install keeps retired gateway repair out of the default Codex install 
   const codexConfigFixture = createCodexConfigFixture({
     apiKey: 'codex-opl-key',
   });
+  const nativeHelperBinDir = path.join(homeRoot, 'native-bin');
+  writeNativeHelperFixtureScripts(nativeHelperBinDir, { includeVersionFields: true });
   const retiredGatewayState = path.join(homeRoot, 'retired-gateway-ready');
   const codexFixture = createFakeCodexFixture(`
 if [[ "$1" == "--version" ]]; then
@@ -30,6 +33,7 @@ exit 1
         OPL_TEMPORAL_ADDRESS: '',
         TEMPORAL_ADDRESS: '',
         PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
+        OPL_NATIVE_HELPER_BIN_DIR: nativeHelperBinDir,
         OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
         ...createFakeOplFlowInstallEnv(homeRoot),
       },
