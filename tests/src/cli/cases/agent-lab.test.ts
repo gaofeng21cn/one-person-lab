@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { after } from 'node:test';
 
-import { assert, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, fs, os, path, repoRoot, runCli, runCliInCwd, test } from '../helpers.ts';
 import './agent-lab-cases/export-and-cost.ts';
 import './agent-lab-loop-risk.test.ts';
 import {
@@ -145,6 +145,19 @@ test('agent-lab sample and generic longline expose refs-only read models', () =>
   assert.equal(longline.suite_result.longline_summary.ready_to_reduce_domain_longline_tests, false);
   assert.deepEqual(longline.suite_result.longline_summary.domain_ids, ['example-domain']);
   assertBlockedAuthority(longline.authority_boundary);
+});
+
+test('agent-lab longline resolves its default suite from the framework root', () => {
+  const externalCwd = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-external-cwd-'));
+  try {
+    const longline = runCliInCwd(['agent-lab', 'longline', '--json'], externalCwd).agent_lab_longline;
+
+    assert.equal(longline.surface_id, 'opl_agent_lab_longline_suite');
+    assert.equal(longline.suite_result.status, 'blocked');
+    assert.deepEqual(longline.suite_result.longline_summary.domain_ids, ['example-domain']);
+  } finally {
+    fs.rmSync(externalCwd, { recursive: true, force: true });
+  }
 });
 
 test('agent-lab complete workbench efficiency and policy surfaces keep automatic authority closed', () => {

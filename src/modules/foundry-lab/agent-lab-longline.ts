@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { runAgentLabSuite, type AgentLabSuite } from './agent-lab.ts';
@@ -7,8 +8,12 @@ import { runAgentLabSuite, type AgentLabSuite } from './agent-lab.ts';
 export const DEFAULT_AGENT_LAB_LONG_LINE_SUITE_REF =
   'contracts/opl-framework/external-suites/example-domain-longline-suite.json';
 
+const OPL_REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+
 function readSuiteFile(suitePath: string): AgentLabSuite {
-  const absolutePath = path.resolve(suitePath);
+  const absolutePath = suitePath === DEFAULT_AGENT_LAB_LONG_LINE_SUITE_REF
+    ? path.resolve(OPL_REPO_ROOT, suitePath)
+    : path.resolve(suitePath);
   if (!fs.existsSync(absolutePath)) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
