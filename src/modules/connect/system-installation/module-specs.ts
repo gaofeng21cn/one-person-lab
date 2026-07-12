@@ -178,7 +178,7 @@ export const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
     description: 'Book Foundry agent for storyline architecture, chapter drafting, figures, tables, style control, and export handoff.',
     bootstrap_command: (checkoutPath) => (
       resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-bootstrap.sh'))
-      ?? { command: 'npm', args: ['install'] }
+      ?? { command: 'npm', args: ['install', '--no-package-lock'] }
     ),
     health_check_command: (checkoutPath) => buildHealthCheckCommand(checkoutPath),
     exec_command: (_checkoutPath, args) => ({

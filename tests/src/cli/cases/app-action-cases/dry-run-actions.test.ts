@@ -269,6 +269,8 @@ test('app action execute dry-runs Codex, module, scheduler, and worker actions f
 
     assert.equal(settingsSync.delegated_surface, 'opl update apply --component capability_packages');
     assert.equal(settingsSync.result.settings_control_center_action.task_kind, 'sync');
+    assert.equal(settingsSync.result.settings_control_center_action.confirmation_required, false);
+    assert.equal(settingsSync.result.settings_control_center_action.danger_level, 'low');
     assert.equal(settingsSync.result.managed_update.components[0].component_id, 'capability_packages');
 
     const settingsVerify = runCli([

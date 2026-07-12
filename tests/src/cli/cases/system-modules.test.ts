@@ -12,6 +12,7 @@ import {
 import { runGitFixtureCommand } from '../helpers-parts/family-fixtures.ts';
 import { writeFakeOmaGeneratedSurfacePack } from '../../cli-codex-default-shell-helpers.ts';
 import { parseGitStatusPorcelainV2 } from '../../../../src/modules/connect/system-installation/module-git.ts';
+import { DOMAIN_MODULE_SPECS } from '../../../../src/modules/connect/system-installation/module-specs.ts';
 import './system-modules-cases/mds-skill-boundary.ts';
 
 test('git status porcelain v2 parser preserves sync and dirty state', () => {
@@ -51,6 +52,19 @@ test('git status porcelain v2 parser preserves sync and dirty state', () => {
       dirty: false,
     },
   );
+});
+
+test('Book Forge fallback bootstrap does not create an untracked package lock', () => {
+  const checkoutPath = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-bookforge-bootstrap-'));
+  try {
+    const bookForge = DOMAIN_MODULE_SPECS.find((module) => module.module_id === 'oplbookforge');
+    assert.deepEqual(bookForge?.bootstrap_command?.(checkoutPath), {
+      command: 'npm',
+      args: ['install', '--no-package-lock'],
+    });
+  } finally {
+    fs.rmSync(checkoutPath, { recursive: true, force: true });
+  }
 });
 
 function createBasicMasModuleRemoteFixture(turnkeyLogPath: string) {

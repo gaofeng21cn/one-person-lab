@@ -229,6 +229,8 @@ test('app action catalog exposes representative safe delegated action refs', () 
     assert.equal(actions.get('settings_verify_workspace')?.mutates, 'none_read_only');
     assert.equal(actions.get('settings_sync_capabilities')?.delegated_surface, 'opl update apply --component capability_packages');
     assert.deepEqual(actions.get('settings_sync_capabilities')?.payload_fields, []);
+    assert.equal(actions.get('settings_sync_capabilities')?.confirmation_required, false);
+    assert.equal(actions.get('settings_sync_capabilities')?.danger_level, 'low');
     assert.equal(actions.get('settings_sync_capabilities')?.can_submit_to_safe_action_shell, true);
     assert.equal(
       actions.get('settings_check_app_update')?.delegated_surface,
