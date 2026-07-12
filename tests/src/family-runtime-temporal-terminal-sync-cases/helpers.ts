@@ -9,18 +9,71 @@ import {
 } from '../../../src/modules/runway/family-runtime-stage-attempts.ts';
 import { createFamilyRuntimeQueueTables } from '../../../src/modules/runway/family-runtime-store.ts';
 
+function materializeMasOwnerAnswerProfile(familyRoot: string) {
+  const contractsRoot = path.join(familyRoot, 'med-autoscience', 'contracts');
+  fs.mkdirSync(contractsRoot, { recursive: true });
+  fs.writeFileSync(
+    path.join(contractsRoot, 'domain_descriptor.json'),
+    `${JSON.stringify({
+      standard_contract_refs: {
+        domain_owner_answer_projection_profile: 'contracts/domain_owner_answer_projection_profile.json',
+      },
+    }, null, 2)}\n`,
+  );
+  fs.writeFileSync(
+    path.join(contractsRoot, 'domain_owner_answer_projection_profile.json'),
+    `${JSON.stringify({
+      surface_kind: 'opl_domain_owner_answer_projection_profile',
+      version: 'domain-owner-answer-projection-profile.v1',
+      profile_id: 'medautoscience.publication_handoff.owner_answer_projection.v1',
+      profile_role: 'registry',
+      domain_id: 'medautoscience',
+      binding_project_id: 'medautoscience',
+      source_owner: 'med-autoscience',
+      studies_dir_name: 'studies',
+      projection_relative_path: ['artifacts', 'publication_handoff', 'owner_receipt.json'],
+      stage_native_owner_answer: {
+        canonical_projection: 'domain_stage_native_owner_answer',
+        dispatch_task_kind: 'domain_owner/default-executor-dispatch',
+        action_type: 'complete_medical_paper_readiness_surface',
+        work_unit_id: 'complete_medical_paper_readiness_surface',
+        next_executable_owner: 'medautoscience',
+        closeout_surface_kind: 'medical_paper_readiness_stage_native_closeout',
+        stage_id: '08-publication_package_handoff',
+        owner_receipt_ref: 'artifacts/medical_paper/readiness_owner_receipt.json',
+        typed_blocker_ref: 'artifacts/medical_paper/readiness_typed_blocker.json',
+        relative_owner_receipt_ref: 'artifacts/medical_paper/readiness_owner_receipt.json',
+        relative_typed_blocker_ref: 'artifacts/medical_paper/readiness_typed_blocker.json',
+      },
+      authority_boundary: {
+        refs_only: true,
+        can_write_domain_truth: false,
+        can_create_owner_receipt: false,
+        can_create_typed_blocker: false,
+        can_claim_domain_ready: false,
+        can_claim_production_ready: false,
+      },
+    }, null, 2)}\n`,
+  );
+}
+
 export function withStageAttemptDb(fn: (db: DatabaseSync) => void) {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-terminal-sync-state-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
+  const previousFamilyWorkspaceRoot = process.env.OPL_FAMILY_WORKSPACE_ROOT;
   const db = new DatabaseSync(':memory:');
   try {
     process.env.OPL_STATE_DIR = stateRoot;
+    process.env.OPL_FAMILY_WORKSPACE_ROOT = stateRoot;
+    materializeMasOwnerAnswerProfile(stateRoot);
     createStageAttemptTable(db);
     fn(db);
   } finally {
     db.close();
     if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
     else process.env.OPL_STATE_DIR = previousStateDir;
+    if (previousFamilyWorkspaceRoot === undefined) delete process.env.OPL_FAMILY_WORKSPACE_ROOT;
+    else process.env.OPL_FAMILY_WORKSPACE_ROOT = previousFamilyWorkspaceRoot;
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 }
