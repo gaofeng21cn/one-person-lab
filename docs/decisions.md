@@ -5,6 +5,19 @@ Purpose: `decisions`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+## 2026-07-12
+
+### 决策：effective Stage prompt 必须绑定正文，专业顺序按依赖而不是工具剧本表达
+
+原因：标准 Agent compiler 过去只投影 `prompt_ref`，Runway 最终交给 Codex CLI 的 prompt 也只有 Stage packet ref，无法证明 domain 主提示词正文真实进入 executor。与此同时，“executor 自主决定顺序”的旧表述没有区分专业因果、证据、authority、安全依赖与普通工具实现顺序，容易在简化 prompt 时误删领域方法。
+
+影响：
+
+- Pack 编译的 `prompt_refs` 同时携带 repo source ref、`domain_stage_main_prompt` layer、SHA-256、字节数和正文；Runway 从同一 manifest/prompt source 解析并注入最终 executor prompt。
+- Codex runner receipt 和 command preview 回读 effective prompt 的 source、digest、size 与 hydration 状态；ref 存在或 interface ready 不再被当成正文已消费证据。
+- domain stage / professional skill 可以固定专业语义、证据、authority、安全和不可逆动作依赖；Framework tool catalog 只声明 affordance，executor 在依赖图内决定工具、迭代、替代和安全并行。
+- OPL terminal closeout contract 在 domain prompt 之后注入，只约束 transport shape，不覆盖 domain truth、质量或 artifact authority。
+
 ## 2026-07-11
 
 ### 决策：Headless 基座安装是独立公开合同，Homebrew 版本真相来自 Framework manifest

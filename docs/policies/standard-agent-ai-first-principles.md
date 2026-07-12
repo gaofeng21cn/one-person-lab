@@ -31,7 +31,7 @@ OPL 标准智能体采用 AI-first 原则包：AI 负责阶段内的开放式理
 6. `workspace_source_intake_shell`：OPL 持有通用 workspace/source intake transport 和 locator shell；领域 source semantics、readiness、provenance 和 task truth 留在 domain 仓。
 7. `owner_delta_progress`：有效推进必须是 deliverable delta、owner receipt、typed blocker、human gate、route-back 或 handoff packet。
 8. `quality_budget_progress_first`：stage 已有可读、可消费 artifact 时，retry、review、repair 和普通质量门只是质量预算；预算耗尽记录 `completed_with_quality_debt` 并推进，债务只阻止 quality/export/publication/submission/production-ready 声明。零 artifact、artifact 损坏、permission/credential、显式 human decision、authority violation、identity/currentness mismatch 才硬停。
-9. `parallel_executor_autonomy`：executor 可在边界内选择顺序、工具、替代和并行；遇到 authority、permission、human、safety 或 irreversible write gate 必须停止。
+9. `parallel_executor_autonomy`：domain stage 与 professional skill 可以固定专业语义、证据、authority、安全和不可逆动作的前后依赖；executor 在依赖图内自主选择工具、迭代、替代和安全并行，Framework tool catalog 不替领域编排专业流程。
 10. `module_organization`：OPL brand modules 持有 framework primitives；标准智能体是 Declarative Domain Pack + minimal authority functions；capability pack 不承担 domain intake。
 
 ## 模块定位

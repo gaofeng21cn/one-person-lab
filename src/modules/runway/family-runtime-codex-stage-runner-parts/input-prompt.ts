@@ -2,6 +2,10 @@ import type { CodexExecEvent } from '../codex.ts';
 import { stringValue as optionalString } from '../../../kernel/json-record.ts';
 import { codexStageAttemptEnv } from './provider-env.ts';
 import {
+  resolveStandardAgentStagePrompt,
+  type StandardAgentStagePromptResolution,
+} from '../../pack/standard-agent-stage-prompt.ts';
+import {
   isRecord,
   readStringList,
   type JsonRecord,
@@ -18,6 +22,7 @@ export type RunnerEventSummary = {
 export type CodexStageRunnerInput = {
   attempt: JsonRecord;
   stagePacketRef?: string | null;
+  effectiveStagePrompt?: StandardAgentStagePromptResolution | null;
   runnerMode?: string | null;
   observedAt?: string | null;
   timeoutMs?: number | null;
@@ -60,6 +65,55 @@ function workspaceLocatorFromAttempt(attempt: JsonRecord) {
   return isRecord(attempt.workspace_locator) ? attempt.workspace_locator : {};
 }
 
+export function effectiveStagePromptFor(input: {
+  attempt: JsonRecord;
+  effectiveStagePrompt?: StandardAgentStagePromptResolution | null;
+}) {
+  if (input.effectiveStagePrompt !== undefined) {
+    return input.effectiveStagePrompt;
+  }
+  return resolveStandardAgentStagePrompt(
+    workspaceRootFromAttempt(input.attempt),
+    stageIdFromAttempt(input.attempt),
+  );
+}
+
+export function effectiveStagePromptReadbackFor(input: {
+  attempt: JsonRecord;
+  effectiveStagePrompt?: StandardAgentStagePromptResolution | null;
+}) {
+  const prompt = effectiveStagePromptFor(input);
+  return {
+    status: prompt?.status ?? 'manifest_unavailable',
+    source_manifest_ref: prompt?.source_manifest_ref ?? null,
+    source_ref: prompt?.source_ref ?? null,
+    layer: prompt?.layer ?? null,
+    sha256: prompt?.sha256 ?? null,
+    size_bytes: prompt?.size_bytes ?? 0,
+    body_hydrated_into_executor_prompt: prompt?.status === 'hydrated',
+  };
+}
+
+function effectiveStagePromptLines(input: {
+  attempt: JsonRecord;
+  effectiveStagePrompt?: StandardAgentStagePromptResolution | null;
+}) {
+  const prompt = effectiveStagePromptFor(input);
+  if (!prompt || prompt.status !== 'hydrated' || !prompt.content) {
+    return [];
+  }
+  return [
+    'OPL effective domain stage main prompt follows.',
+    `Prompt source ref: ${prompt.source_ref}`,
+    `Prompt source layer: ${prompt.layer}`,
+    `Prompt SHA-256: ${prompt.sha256}`,
+    'Apply its professional dependencies and quality bar. Tool implementation order remains open unless that prompt or its professional skill declares a domain, evidence, authority, or safety dependency.',
+    '<opl_effective_stage_prompt>',
+    prompt.content,
+    '</opl_effective_stage_prompt>',
+  ];
+}
+
 function providerAuthorizationPromptLines(input: { attempt: JsonRecord; stagePacketRef?: string | null }) {
   const workspaceRoot = workspaceRootFromAttempt(input.attempt);
   if (!workspaceRoot) {
@@ -82,7 +136,11 @@ function providerAuthorizationPromptLines(input: { attempt: JsonRecord; stagePac
   ];
 }
 
-export function runnerPromptFor(input: { attempt: JsonRecord; stagePacketRef?: string | null }) {
+export function runnerPromptFor(input: {
+  attempt: JsonRecord;
+  stagePacketRef?: string | null;
+  effectiveStagePrompt?: StandardAgentStagePromptResolution | null;
+}) {
   const stageId = stageIdFromAttempt(input.attempt);
   const attemptId = optionalString(input.attempt.stage_attempt_id) ?? 'unknown-attempt';
   const stagePacketRef = resolvedStagePacketRef(input);
@@ -93,18 +151,28 @@ export function runnerPromptFor(input: { attempt: JsonRecord; stagePacketRef?: s
     stagePacketRef ? `Stage packet ref: ${stagePacketRef}` : 'Stage packet ref: unavailable',
     'Execute only within the domain-owned stage packet and skill boundary.',
     'Return progress through structured events when available.',
-    'Do not claim provider completion without a typed closeout packet from the domain handler.',
-    'Final output contract: the last non-empty assistant message MUST be exactly one JSON object and nothing else.',
-    'That JSON object MUST have surface_kind stage_attempt_closeout_packet, stage_memory_closeout_packet, or domain_stage_closeout_packet, and at least one closeout ref.',
-    'Do not wrap the JSON in Markdown. Do not add prose, code fences, prefixes, suffixes, explanations, or status text before or after the JSON.',
-    'If the stage is blocked and no typed closeout packet exists, make the final assistant message a pure JSON typed blocker/closeout packet emitted by the domain-owned path, not free text.',
+    ...effectiveStagePromptLines(input),
     ...providerAuthorizationPromptLines(input),
     ...domainStageRoutePromptLines({
       attempt: input.attempt,
       workspaceLocator: workspaceLocatorFromAttempt(input.attempt),
       workspaceRoot: workspaceRootFromAttempt(input.attempt),
     }),
+    'OPL terminal transport contract follows and applies after the domain work above.',
+    'Do not claim provider completion without a typed closeout packet from the domain handler.',
+    'Final output contract: the last non-empty assistant message MUST be exactly one JSON object and nothing else.',
+    'That JSON object MUST have surface_kind stage_attempt_closeout_packet, stage_memory_closeout_packet, or domain_stage_closeout_packet, and at least one closeout ref.',
+    'Do not wrap the JSON in Markdown. Do not add prose, code fences, prefixes, suffixes, explanations, or status text before or after the JSON.',
+    'If the stage is blocked and no typed closeout packet exists, make the final assistant message a pure JSON typed blocker/closeout packet emitted by the domain-owned path, not free text.',
   ].join('\n');
+}
+
+export function runnerPromptForExecution(input: CodexStageRunnerInput, executionAttempt: JsonRecord) {
+  return runnerPromptFor({
+    ...input,
+    attempt: executionAttempt,
+    effectiveStagePrompt: effectiveStagePromptFor(input),
+  });
 }
 
 export function eventSummary(event: CodexExecEvent): RunnerEventSummary {

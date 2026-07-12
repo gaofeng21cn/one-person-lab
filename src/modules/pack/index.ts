@@ -28,9 +28,15 @@ export type {
 export {
   compileStandardAgentStageManifest,
   STANDARD_AGENT_DESCRIPTOR_REF,
-  STANDARD_AGENT_STAGE_MANIFEST_REF,
 } from './standard-agent-stage-manifest.ts';
 export type { StandardAgentStageManifestCompilation } from './standard-agent-stage-manifest.ts';
+export {
+  readStandardAgentStagePromptFile,
+  resolveStandardAgentStagePrompt,
+  STANDARD_AGENT_STAGE_MANIFEST_REF,
+  STANDARD_AGENT_STAGE_PROMPT_LAYER,
+} from './standard-agent-stage-prompt.ts';
+export type { StandardAgentStagePromptResolution } from './standard-agent-stage-prompt.ts';
 export {
   buildFunctionalPrivatizationAudit,
   FUNCTIONAL_PRIVATIZATION_AUDIT_CONTRACT,
