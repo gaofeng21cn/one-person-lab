@@ -14,7 +14,8 @@ import {
   STANDARD_AGENT_IMPLEMENTATION_PROFILE,
   validateStandardAgentImplementationProfile,
   validateStandardAgentImplementationProfileRefs,
-} from '../pack/standard-agent-implementation-profile.ts';
+} from '../pack/public/standard-agent-implementation-profile.ts';
+import { SOURCE_DERIVED_AGENT_DESIGN_TYPED_OBJECTS } from './source-derived-agent-design-abi.ts';
 
 export const AGENT_SCAFFOLD_MATERIALIZATION_REQUEST_SCHEMA_REF =
   'contracts/opl-framework/agent-scaffold-materialization-request.schema.json';
@@ -534,9 +535,9 @@ export function materializeAgentScaffold(input: { requestPath: string; targetDir
     }));
   const finalBuildReceipt = {
     ...candidate,
-    surface_kind: 'opl_meta_agent_build_receipt',
+    surface_kind: SOURCE_DERIVED_AGENT_DESIGN_TYPED_OBJECTS.build_receipt.surface_kind,
     receipt_kind: 'AgentBuildReceipt',
-    version: candidate.version ?? 'opl-meta-agent.agent-build-receipt.v1',
+    version: SOURCE_DERIVED_AGENT_DESIGN_TYPED_OBJECTS.build_receipt.version,
     receipt_ref: expectedReceiptRef,
     candidate_surface_kind: candidate.surface_kind ?? null,
     candidate_sha256: sha256(formatJsonPayload(candidate)),

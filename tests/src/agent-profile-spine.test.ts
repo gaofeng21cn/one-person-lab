@@ -435,7 +435,7 @@ function makeSourceDerivedAgentFixture() {
     const buildReceipt = {
       surface_kind: 'opl_foundry_agent_build_receipt',
       receipt_kind: 'AgentBuildReceipt',
-      version: 'opl-meta-agent.agent-build-receipt.v1',
+      version: 'opl.foundry.agent-build-receipt.v1',
       receipt_ref: buildReceiptRefs[0],
       build_receipt_ref: buildReceiptRefs[0],
       build_source_kind: 'source_derived_design',

@@ -13,6 +13,7 @@ import {
   validateReferenceSourcePacketPolicy,
 } from './agent-profile-spine-conformance.ts';
 import { validateReferenceBuildReceiptMaterialization } from './reference-build-proof.ts';
+import { SOURCE_DERIVED_AGENT_DESIGN_TYPED_OBJECTS } from './source-derived-agent-design-abi.ts';
 import { buildProfileCapabilityPlanInputProjection } from './profile-capability-plan.ts';
 import {
   matchedProfileTriggerSignals,
@@ -790,9 +791,9 @@ function buildSourceDerivedTypedObjectFloor(
   const packetRef = machineString(packet?.packet_ref);
   if (packet && !hasTypedObjectIdentity(
     packet,
-    'opl_foundry_reference_design_packet',
-    'opl.foundry.reference-design-packet.v1',
-    'packet_ref',
+    SOURCE_DERIVED_AGENT_DESIGN_TYPED_OBJECTS.reference_design_packet.surface_kind,
+    SOURCE_DERIVED_AGENT_DESIGN_TYPED_OBJECTS.reference_design_packet.version,
+    SOURCE_DERIVED_AGENT_DESIGN_TYPED_OBJECTS.reference_design_packet.identity_ref_field,
   )) {
     blockers.push('source_derived_design_typed_object_identity_invalid:ReferenceDesignPacket');
   }
@@ -836,9 +837,9 @@ function buildSourceDerivedTypedObjectFloor(
   if (transferMap && (
     !hasTypedObjectIdentity(
       transferMap,
-      'opl_foundry_transfer_map',
-      'opl.foundry.transfer-map.v1',
-      'transfer_map_ref',
+      SOURCE_DERIVED_AGENT_DESIGN_TYPED_OBJECTS.transfer_map.surface_kind,
+      SOURCE_DERIVED_AGENT_DESIGN_TYPED_OBJECTS.transfer_map.version,
+      SOURCE_DERIVED_AGENT_DESIGN_TYPED_OBJECTS.transfer_map.identity_ref_field,
     )
     || !packetRef
     || transferMap.reference_design_packet_ref !== packetRef
@@ -896,9 +897,9 @@ function buildSourceDerivedTypedObjectFloor(
   if (agentPackPlan && (
     !hasTypedObjectIdentity(
       agentPackPlan,
-      'opl_foundry_agent_pack_plan',
-      'opl.foundry.agent-pack-plan.v1',
-      'plan_ref',
+      SOURCE_DERIVED_AGENT_DESIGN_TYPED_OBJECTS.agent_pack_plan.surface_kind,
+      SOURCE_DERIVED_AGENT_DESIGN_TYPED_OBJECTS.agent_pack_plan.version,
+      SOURCE_DERIVED_AGENT_DESIGN_TYPED_OBJECTS.agent_pack_plan.identity_ref_field,
     )
     || !packetRef
     || agentPackPlan.reference_design_packet_ref !== packetRef
@@ -1029,9 +1030,9 @@ function buildSourceDerivedTypedObjectFloor(
   if (admissionReceipt && (
     !hasTypedObjectIdentity(
       admissionReceipt,
-      'opl_foundry_design_admission_receipt',
-      'opl.foundry.design-admission-receipt.v1',
-      'receipt_ref',
+      SOURCE_DERIVED_AGENT_DESIGN_TYPED_OBJECTS.design_admission_receipt.surface_kind,
+      SOURCE_DERIVED_AGENT_DESIGN_TYPED_OBJECTS.design_admission_receipt.version,
+      SOURCE_DERIVED_AGENT_DESIGN_TYPED_OBJECTS.design_admission_receipt.identity_ref_field,
     )
     || !packetRef
     || admissionReceipt.reference_design_packet_ref !== packetRef
@@ -1065,7 +1066,8 @@ function buildSourceDerivedTypedObjectFloor(
   const materializedReceiptStageIds = uniqueStrings(materialization?.materialized_stage_ids);
   const materializedFileDigests = recordArray(materialization?.materialized_file_digests);
   if (!buildReceipt || (
-    buildReceipt.surface_kind !== 'opl_foundry_agent_build_receipt'
+    buildReceipt.surface_kind !== SOURCE_DERIVED_AGENT_DESIGN_TYPED_OBJECTS.build_receipt.surface_kind
+    || buildReceipt.version !== SOURCE_DERIVED_AGENT_DESIGN_TYPED_OBJECTS.build_receipt.version
     || buildReceipt.receipt_kind !== 'AgentBuildReceipt'
     || !buildReceiptRef
     || buildReceipt.receipt_timing !== 'post_materialization'

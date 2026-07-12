@@ -23,7 +23,7 @@ import { validateStageRefs } from './standard-domain-agent-scaffold-validation-p
 import { validateUserStageLogContracts } from './standard-domain-agent-scaffold-validation-parts/user-stage-log.ts';
 import { validateFoundryAgentSeriesContract } from './standard-domain-agent-scaffold-validation-parts/foundry-contract.ts';
 import { normalizeStandardAgentCapabilityMapPolicies } from './standard-agent-capability-map.ts';
-import { validateStandardAgentImplementationProfileRefs } from '../pack/standard-agent-implementation-profile.ts';
+import { validateStandardAgentImplementationProfileRefs } from '../pack/public/standard-agent-implementation-profile.ts';
 
 interface ScaffoldValidateInput {
   repoDir: string;

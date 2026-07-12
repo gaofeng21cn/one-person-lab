@@ -32,6 +32,7 @@
     "./product-entry-companions": "./dist/modules/console/product-entry-companions.js",
     "./product-entry-program-companions": "./dist/modules/console/product-entry-program-companions.js",
     "./reference-build-proof": "./dist/modules/foundry-lab/reference-build-proof.js",
+    "./source-derived-agent-design-abi": "./dist/modules/foundry-lab/public/source-derived-agent-design-abi.js",
     "./reference-design-pattern-packet": "./dist/modules/workspace/reference-design-pattern-packet.js",
     "./runtime-task-companions": "./dist/modules/runway/runtime-task-companions.js",
     "./skill-catalog": "./dist/modules/pack/skill-catalog.js",

@@ -116,7 +116,8 @@ test('agents scaffold materializes only declared files and OPL-signs byte digest
       generated_surfaces_owner: 'one-person-lab',
     });
     assert.equal(fs.readFileSync(path.join(target, 'unrelated.txt'), 'utf8'), 'preserve');
-    assert.equal(buildReceipt.surface_kind, 'opl_meta_agent_build_receipt');
+    assert.equal(buildReceipt.surface_kind, 'opl_foundry_agent_build_receipt');
+    assert.equal(buildReceipt.version, 'opl.foundry.agent-build-receipt.v1');
     assert.equal(buildReceipt.receipt_timing, 'post_materialization');
     assert.equal(buildReceipt.receipt_ref, receipt.build_receipt_ref);
     for (const digest of receipt.materialized_file_digests) {
