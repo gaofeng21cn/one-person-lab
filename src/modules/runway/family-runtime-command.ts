@@ -132,6 +132,7 @@ export type FamilyRuntimeCommandInput =
   | { mode: 'attempt_start'; stageAttemptId: string }
   | { mode: 'attempt_query'; stageAttemptId: string }
   | { mode: 'attempt_cancel'; stageAttemptId: string; reason: string; source?: string }
+  | { mode: 'attempt_archive' | 'attempt_restore'; stageAttemptId: string; reason: string; source?: string }
   | {
     mode: 'attempt_signal';
     stageAttemptId: string;

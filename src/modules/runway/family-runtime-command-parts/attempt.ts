@@ -41,6 +41,9 @@ export function parseAttemptArgs(rest: string[]): FamilyRuntimeCommandInput | un
   if (rest[0] === 'cancel') {
     return parseAttemptCancelArgs(rest);
   }
+  if (rest[0] === 'archive' || rest[0] === 'restore') {
+    return parseAttemptArchiveArgs(rest);
+  }
   if (rest[0] === 'signal') {
     return parseAttemptSignalArgs(rest);
   }
@@ -51,6 +54,37 @@ export function parseAttemptArgs(rest: string[]): FamilyRuntimeCommandInput | un
     return parseAttemptCreateArgs(rest);
   }
   return undefined;
+}
+
+function parseAttemptArchiveArgs(rest: string[]): FamilyRuntimeCommandInput {
+  const action = rest[0] as 'archive' | 'restore';
+  const stageAttemptId = rest[1];
+  if (!stageAttemptId) {
+    throw new FrameworkContractError('cli_usage_error', `family-runtime attempt ${action} requires one attempt id.`, {
+      usage: `opl family-runtime attempt ${action} <stage_attempt_id> [--reason <operator_reason>] [--source <source>]`,
+    });
+  }
+  let reason = action === 'archive' ? 'operator_archived' : 'operator_restored';
+  let source: string | undefined;
+  parseCliOptions(rest, 2, (token, value) => {
+    if (token === '--reason' && value) {
+      reason = value;
+      return true;
+    }
+    if (token === '--source' && value) {
+      source = value;
+      return true;
+    }
+    throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime attempt ${action} option: ${token}.`, {
+      option: token,
+    });
+  });
+  return {
+    mode: action === 'archive' ? 'attempt_archive' : 'attempt_restore',
+    stageAttemptId,
+    reason,
+    source,
+  };
 }
 
 function parseAttemptListArgs(rest: string[]): FamilyRuntimeCommandInput {

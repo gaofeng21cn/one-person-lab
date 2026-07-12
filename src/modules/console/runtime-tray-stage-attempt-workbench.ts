@@ -780,6 +780,7 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       availability: 'missing_ledger',
       provider_completion_is_domain_ready: false,
       attempts: [],
+      archived_attempts: [],
       ...EMPTY_WORKBENCH_METADATA,
       artifact_gallery: EMPTY_WORKBENCH_METADATA.summary.artifact_gallery,
       route_decision_graph: EMPTY_WORKBENCH_METADATA.summary.route_decision_graph,
@@ -812,6 +813,7 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
   const db = openFamilyRuntimeSqlite(queueDb, { readOnly: true });
   try {
     const allRows = listStageAttemptRows(db) as StageAttemptWorkbenchRow[];
+    const archivedRows = listStageAttemptRows(db, 25, 'only') as StageAttemptWorkbenchRow[];
     const rows = allRows.slice(0, 25);
     const attemptIds = allRows.map((row) => row.stage_attempt_id);
     const taskPayloads = taskPayloadsById(
@@ -872,6 +874,17 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       effective_current_context: effectiveCurrentContext,
       family_stall_lineage: familyStallLineage,
       attempts,
+      archived_attempts: archivedRows.map((row) => ({
+        stage_attempt_id: row.stage_attempt_id,
+        domain_id: row.domain_id,
+        stage_id: row.stage_id,
+        status: row.status,
+        archived_at: row.archived_at,
+        archived_reason: row.archived_reason,
+        archived_source: row.archived_source,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+      })),
       evidence_attempts: projectedEvidenceAttempts,
       evidence_attempt_count: evidenceAttemptsWithControlState.length,
       attempt_list_limit: 25,
@@ -887,6 +900,7 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       availability: 'unavailable',
       provider_completion_is_domain_ready: false,
       attempts: [],
+      archived_attempts: [],
       ...EMPTY_WORKBENCH_METADATA,
       artifact_gallery: EMPTY_WORKBENCH_METADATA.summary.artifact_gallery,
       route_decision_graph: EMPTY_WORKBENCH_METADATA.summary.route_decision_graph,

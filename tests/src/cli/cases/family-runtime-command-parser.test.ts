@@ -91,6 +91,19 @@ test('family-runtime scheduler rejects runtime-only domains without a scheduler 
 test('family-runtime registry parser reuses shared option walking without changing command payloads', () => {
   assert.deepEqual(parseRegisteredFamilyRuntimeCommand([
     'attempt',
+    'archive',
+    'sat_example',
+    '--reason',
+    'no longer needed',
+  ]), {
+    mode: 'attempt_archive',
+    stageAttemptId: 'sat_example',
+    reason: 'no longer needed',
+    source: undefined,
+  });
+
+  assert.deepEqual(parseRegisteredFamilyRuntimeCommand([
+    'attempt',
     'list',
     '--domain',
     'medautoscience',

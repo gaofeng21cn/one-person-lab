@@ -186,6 +186,39 @@ async function executeDirectAppAction(
   const connectionAction = await executeConnectionAppAction(options);
   if (connectionAction) return connectionAction;
 
+  if (options.actionId === 'runtime_archive_attempt' || options.actionId === 'runtime_restore_attempt') {
+    const stageAttemptId = stringPayloadField(options.payload, 'stage_attempt_id');
+    if (!stageAttemptId) {
+      throw new FrameworkContractError('cli_usage_error', `${options.actionId} requires stage_attempt_id.`, {
+        action_id: options.actionId,
+        required_payload_fields: ['stage_attempt_id'],
+      });
+    }
+    const archive = options.actionId === 'runtime_archive_attempt';
+    const reason = stringPayloadField(options.payload, 'reason') ?? (archive ? 'user_archived' : 'user_restored');
+    const args = [
+      'attempt',
+      archive ? 'archive' : 'restore',
+      stageAttemptId,
+      '--reason',
+      reason,
+      '--source',
+      'opl-app',
+    ];
+    return {
+      delegatedSurface: `opl family-runtime ${args.join(' ')}`,
+      result: options.dryRun
+        ? {
+            surface_kind: 'opl_runtime_attempt_archive_preflight',
+            action: archive ? 'archive' : 'restore',
+            stage_attempt_id: stageAttemptId,
+            reason,
+            status: 'dry_run',
+          }
+        : await runFamilyRuntime(args),
+    };
+  }
+
   const codexAction = parseCodexAction(options.actionId);
   if (codexAction) {
     return {

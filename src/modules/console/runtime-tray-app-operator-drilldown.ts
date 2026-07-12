@@ -655,6 +655,7 @@ export function buildAppOperatorDrilldown(input: {
     domain_current_work_unit_projection: domainCurrentWorkUnitProjection,
     runtime_workbench: {
       ...record(runtimeVisualizationProjection.runtime_workbench),
+      archived_attempts: recordList(input.stageAttemptWorkbench.archived_attempts),
       memory_trace_projection: memoryTrace,
       workstream_operating_loop: workstreamOperatingLoop,
       current_work_unit_first_read_model: currentWorkUnitFirstReadModel,

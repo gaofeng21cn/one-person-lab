@@ -11,6 +11,7 @@ import {
 } from './family-runtime-stage-attempt-usage.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
 import { record } from '../../kernel/json-record.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 
 export type StageAttemptStatus =
   | 'queued'
@@ -46,6 +47,9 @@ export type StageAttemptRow = {
   activity_events_json: string;
   route_impact_json: string;
   closeout_receipt_status: string | null;
+  archived_at: string | null;
+  archived_reason: string | null;
+  archived_source: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -114,6 +118,9 @@ export function createStageAttemptTable(db: DatabaseSync) {
       activity_events_json TEXT NOT NULL,
       route_impact_json TEXT NOT NULL,
       closeout_receipt_status TEXT,
+      archived_at TEXT,
+      archived_reason TEXT,
+      archived_source TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
@@ -145,7 +152,11 @@ export function createStageAttemptTable(db: DatabaseSync) {
   addColumnIfMissing(db, 'stage_attempts', columns, 'route_impact_json', "route_impact_json TEXT NOT NULL DEFAULT '{}'");
   addColumnIfMissing(db, 'stage_attempts', columns, 'closeout_receipt_status', 'closeout_receipt_status TEXT');
   addColumnIfMissing(db, 'stage_attempts', columns, 'stage_attempt_executor_policy_json', 'stage_attempt_executor_policy_json TEXT');
+  addColumnIfMissing(db, 'stage_attempts', columns, 'archived_at', 'archived_at TEXT');
+  addColumnIfMissing(db, 'stage_attempts', columns, 'archived_reason', 'archived_reason TEXT');
+  addColumnIfMissing(db, 'stage_attempts', columns, 'archived_source', 'archived_source TEXT');
   db.exec('CREATE INDEX IF NOT EXISTS idx_stage_attempts_idempotency ON stage_attempts(idempotency_key)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_stage_attempts_archived ON stage_attempts(archived_at, updated_at)');
 }
 
 export function stageAttemptToPayload(row: StageAttemptRow) {
@@ -206,6 +217,10 @@ export function stageAttemptToPayload(row: StageAttemptRow) {
     usage_projection: usageProjection,
     model_route_cost_projection: modelRouteCostProjection,
     closeout_receipt_status: row.closeout_receipt_status,
+    archived: row.archived_at !== null,
+    archived_at: row.archived_at,
+    archived_reason: row.archived_reason,
+    archived_source: row.archived_source,
     authority_boundary: {
       opl: 'attempt_control_metadata_and_projection_only',
       domain: 'truth_quality_artifact_gate_owner',
@@ -239,6 +254,7 @@ function stageAttemptCloseoutToPayload(row: StageAttemptCloseoutRow) {
 export function listStageAttempts(db: DatabaseSync, options: {
   workUnitLimitPerLane?: number;
   attemptLimitPerWorkUnit?: number;
+  archived?: 'exclude' | 'only' | 'include';
 } = {}) {
   const workUnitLimitPerLane = options.workUnitLimitPerLane;
   const attemptLimitPerWorkUnit = options.attemptLimitPerWorkUnit;
@@ -262,6 +278,7 @@ export function listStageAttempts(db: DatabaseSync, options: {
             stage_attempt_id
           ) AS work_unit_key
         FROM stage_attempts
+        WHERE ${options.archived === 'only' ? 'archived_at IS NOT NULL' : options.archived === 'include' ? '1 = 1' : 'archived_at IS NULL'}
       ), ranked AS (
         SELECT
           normalized.*,
@@ -306,18 +323,62 @@ export function listStageAttempts(db: DatabaseSync, options: {
       .map(stageAttemptToPayload);
   }
   return (db.prepare(`
-    SELECT * FROM stage_attempts ORDER BY updated_at DESC, created_at DESC
+    SELECT * FROM stage_attempts
+    WHERE ${options.archived === 'only' ? 'archived_at IS NOT NULL' : options.archived === 'include' ? '1 = 1' : 'archived_at IS NULL'}
+    ORDER BY updated_at DESC, created_at DESC
   `).all() as StageAttemptRow[]).map(stageAttemptToPayload);
 }
 
-export function listStageAttemptRows(db: DatabaseSync, limit?: number) {
+const ARCHIVABLE_STAGE_ATTEMPT_STATUSES = new Set<StageAttemptStatus>([
+  'completed',
+  'failed',
+  'dead_lettered',
+]);
+
+export function setStageAttemptArchived(
+  db: DatabaseSync,
+  input: { stageAttemptId: string; archived: boolean; reason: string; source: string },
+) {
+  const row = getStageAttemptRow(db, input.stageAttemptId);
+  if (!row) {
+    throw new FrameworkContractError('cli_usage_error', 'Stage attempt not found.', {
+      stage_attempt_id: input.stageAttemptId,
+    });
+  }
+  if (input.archived && !ARCHIVABLE_STAGE_ATTEMPT_STATUSES.has(row.status)) {
+    throw new FrameworkContractError('cli_usage_error', 'Only terminal stage attempts can be archived.', {
+      stage_attempt_id: input.stageAttemptId,
+      status: row.status,
+      archivable_statuses: [...ARCHIVABLE_STAGE_ATTEMPT_STATUSES],
+    });
+  }
+  const archivedAt = input.archived ? new Date().toISOString() : null;
+  db.prepare(`
+    UPDATE stage_attempts
+    SET archived_at = ?, archived_reason = ?, archived_source = ?
+    WHERE stage_attempt_id = ?
+  `).run(
+    archivedAt,
+    input.archived ? input.reason : null,
+    input.archived ? input.source : null,
+    input.stageAttemptId,
+  );
+  return stageAttemptToPayload(getStageAttemptRow(db, input.stageAttemptId)!);
+}
+
+export function listStageAttemptRows(
+  db: DatabaseSync,
+  limit?: number,
+  archived: 'exclude' | 'only' | 'include' = 'exclude',
+) {
+  const archiveWhere = archived === 'only' ? 'archived_at IS NOT NULL' : archived === 'include' ? '1 = 1' : 'archived_at IS NULL';
   if (typeof limit === 'number' && Number.isInteger(limit) && limit > 0) {
     return db.prepare(`
-      SELECT * FROM stage_attempts ORDER BY updated_at DESC, created_at DESC LIMIT ?
+      SELECT * FROM stage_attempts WHERE ${archiveWhere} ORDER BY updated_at DESC, created_at DESC LIMIT ?
     `).all(limit) as StageAttemptRow[];
   }
   return db.prepare(`
-    SELECT * FROM stage_attempts ORDER BY updated_at DESC, created_at DESC
+    SELECT * FROM stage_attempts WHERE ${archiveWhere} ORDER BY updated_at DESC, created_at DESC
   `).all() as StageAttemptRow[];
 }
 

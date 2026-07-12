@@ -29,6 +29,7 @@ import {
 } from './family-runtime-stage-attempts.ts';
 import { listStageAttemptsWithMonitoringProjection } from './family-runtime-stage-attempt-monitoring.ts';
 import { markStageAttemptCancelRequested } from './family-runtime-stage-attempt-control.ts';
+import { setStageAttemptArchived } from './family-runtime-stage-attempt-ledger.ts';
 import { queryStageAttemptWithCurrentProviderReadiness } from './family-runtime-stage-attempt-current-query.ts';
 import { residencyProofReceipt } from './family-runtime-residency-proof-events.ts';
 import {
@@ -573,6 +574,34 @@ export async function runFamilyRuntime(
           attempt: projectedAttempt,
           temporal_cancel,
           temporal_query,
+        },
+      };
+    }
+    if (parsed.mode === 'attempt_archive' || parsed.mode === 'attempt_restore') {
+      const archived = parsed.mode === 'attempt_archive';
+      const attempt = setStageAttemptArchived(db, {
+        stageAttemptId: parsed.stageAttemptId,
+        archived,
+        reason: parsed.reason,
+        source: parsed.source ?? 'opl-cli',
+      });
+      insertEvent(db, {
+        taskId: attempt.task_id,
+        domainId: attempt.domain_id,
+        eventType: archived ? 'stage_attempt_archived' : 'stage_attempt_restored',
+        source: parsed.source ?? 'opl-cli',
+        payload: {
+          stage_attempt_id: parsed.stageAttemptId,
+          reason: parsed.reason,
+          archived,
+        },
+      });
+      return {
+        version: 'g2',
+        family_runtime_stage_attempt_archive: {
+          surface_id: 'opl_family_runtime_stage_attempt_archive',
+          action: archived ? 'archive' : 'restore',
+          attempt,
         },
       };
     }

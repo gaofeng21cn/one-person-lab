@@ -9,9 +9,11 @@ import {
   createStageAttemptTable,
   ingestStageAttemptCloseout,
   inspectStageAttempt,
+  listStageAttempts,
   listStageAttemptCloseouts,
   queryStageAttempt,
 } from '../../src/modules/runway/family-runtime-stage-attempts.ts';
+import { setStageAttemptArchived } from '../../src/modules/runway/family-runtime-stage-attempt-ledger.ts';
 
 function withAttempt(fn: (db: DatabaseSync, attemptId: string) => void) {
   const db = new DatabaseSync(':memory:');
@@ -52,6 +54,34 @@ test('stage attempt closeout replay is idempotent and conflicting receipts fail 
         && (error.details.receipt_conflict as Record<string, unknown>).fail_closed === true,
     );
     assert.deepEqual(inspectStageAttempt(db, attemptId).closeout_refs, ['receipt:artifact-handoff']);
+  });
+});
+
+test('terminal stage attempts can be archived without deleting their audit record', () => {
+  withAttempt((db, attemptId) => {
+    db.prepare("UPDATE stage_attempts SET status = 'failed' WHERE stage_attempt_id = ?").run(attemptId);
+
+    const archived = setStageAttemptArchived(db, {
+      stageAttemptId: attemptId,
+      archived: true,
+      reason: 'no longer needed',
+      source: 'test',
+    });
+
+    assert.equal(archived.archived, true);
+    assert.equal(archived.archived_reason, 'no longer needed');
+    assert.equal(listStageAttempts(db).length, 0);
+    assert.equal(listStageAttempts(db, { archived: 'only' })[0]?.stage_attempt_id, attemptId);
+    assert.equal(inspectStageAttempt(db, attemptId).stage_attempt_id, attemptId);
+
+    const restored = setStageAttemptArchived(db, {
+      stageAttemptId: attemptId,
+      archived: false,
+      reason: 'restore',
+      source: 'test',
+    });
+    assert.equal(restored.archived, false);
+    assert.equal(listStageAttempts(db)[0]?.stage_attempt_id, attemptId);
   });
 });
 
