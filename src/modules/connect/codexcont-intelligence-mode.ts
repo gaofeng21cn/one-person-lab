@@ -6,6 +6,7 @@ import path from 'node:path';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
 import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
+import { resolveCodexBinary } from '../runway/index.ts';
 
 type JsonRecord = Record<string, unknown>;
 type ModeAction = 'status' | 'enable' | 'disable' | 'repair' | 'uninstall';
@@ -47,7 +48,7 @@ function resolveOplFlowInstaller() {
   return candidateInstallers().find((candidate) => fs.existsSync(candidate) && fs.statSync(candidate).isFile()) ?? null;
 }
 
-export function installOplFlowPluginIfAvailable() {
+export function requireOplFlowPluginInstaller() {
   const installerPath = resolveOplFlowInstaller();
   if (!installerPath) {
     throw new FrameworkContractError(
@@ -62,16 +63,21 @@ export function installOplFlowPluginIfAvailable() {
       },
     );
   }
+  return installerPath;
+}
 
+export function installOplFlowPluginIfAvailable(installerPath = requireOplFlowPluginInstaller()) {
   const command = normalizeOptionalString(process.env.OPL_FLOW_PYTHON) ?? 'python3';
-  const result = spawnSync(command, [installerPath], {
+  const codexBinary = resolveCodexBinary();
+  const args = [installerPath, ...(codexBinary ? ['--codex-bin', codexBinary.path] : [])];
+  const result = spawnSync(command, args, {
     encoding: 'utf8',
     timeout: 240_000,
     env: process.env,
   });
   if (result.status !== 0) {
     throw new FrameworkContractError('codex_command_failed', 'OPL Flow plugin payload preflight failed.', {
-      command: [command, installerPath],
+      command: [command, ...args],
       exit_code: result.status,
       stdout: result.stdout?.trim() ?? '',
       stderr: result.stderr?.trim() ?? '',
@@ -86,7 +92,7 @@ export function installOplFlowPluginIfAvailable() {
   const payload = parseJsonText(result.stdout?.trim() ?? '');
   if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {
     throw new FrameworkContractError('codex_command_failed', 'OPL Flow installer returned invalid JSON.', {
-      command: [command, installerPath],
+      command: [command, ...args],
       stdout: result.stdout?.trim() ?? '',
     });
   }

@@ -4,7 +4,10 @@ import path from 'node:path';
 
 import { buildOplGuiArtifactName, buildOplReleaseTag, getOplReleaseRepo, getOplReleaseVersion } from '../opl-release.ts';
 import { buildOplGuiShellSurface, syncOplCompanionSkills } from '../install-companions.ts';
-import { installOplFlowPluginIfAvailable } from '../codexcont-intelligence-mode.ts';
+import {
+  installOplFlowPluginIfAvailable,
+  requireOplFlowPluginInstaller,
+} from '../codexcont-intelligence-mode.ts';
 import { bootstrapLocalCodexDefaults } from '../../../kernel/local-codex-defaults.ts';
 import { runFamilyRuntime, runNativeHelperRepairAction, runRuntimeManagerAction } from '../../runway/index.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
@@ -315,7 +318,7 @@ export async function runOplTurnkeyInstall(
   input: OplTurnkeyInstallInput = {},
 ) {
   const installMode = input.withApp ? 'desktop' : 'headless';
-  const oplFlowPlugin = installOplFlowPluginIfAvailable();
+  const oplFlowInstaller = requireOplFlowPluginInstaller();
   const skipModules = input.skipModules ?? !input.modules?.length;
   const modules = skipModules ? [] : normalizeModuleSelection(input.modules);
   const selectedEngines: OplEngineId[] = input.noOnlineRuntime ? ['codex'] : [...DEFAULT_ENGINES];
@@ -331,7 +334,6 @@ export async function runOplTurnkeyInstall(
   ];
 
   try {
-    const codexConfigBootstrap = bootstrapLocalCodexDefaults();
     const environment = (await buildOplEnvironment(contracts)).system_environment;
     const engineActions = input.skipEngines
       ? []
@@ -357,6 +359,8 @@ export async function runOplTurnkeyInstall(
         }
         return runOplEngineAction(contracts, 'install', engineId);
       }));
+    const oplFlowPlugin = installOplFlowPluginIfAvailable(oplFlowInstaller);
+    const codexConfigBootstrap = bootstrapLocalCodexDefaults();
     const moduleActions = skipModules
       ? []
       : modules.map((moduleId) => runOplModuleAction('install', moduleId));

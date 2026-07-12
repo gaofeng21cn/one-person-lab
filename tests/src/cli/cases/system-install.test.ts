@@ -1225,3 +1225,72 @@ test('install command reuses only the default Codex engine and reports Temporal 
     fs.rmSync(codexFixtureRoot, { recursive: true, force: true });
   }
 });
+
+test('install syncs the mandatory OPL Flow plugin only after installing Codex on a clean machine', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-codex-before-flow-'));
+  const fixtureRoot = path.join(homeRoot, 'fixture');
+  const runtimeRoot = path.join(fixtureRoot, 'runtime');
+  const codexPath = path.join(runtimeRoot, 'current', 'bin', 'codex');
+  const installScript = path.join(fixtureRoot, 'install-codex.sh');
+  const flowInstaller = path.join(fixtureRoot, 'install-flow.py');
+  const orderLog = path.join(fixtureRoot, 'order.log');
+  fs.mkdirSync(fixtureRoot, { recursive: true });
+  fs.writeFileSync(
+    installScript,
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      `mkdir -p ${JSON.stringify(path.dirname(codexPath))}`,
+      `cat > ${JSON.stringify(codexPath)} <<'EOF'`,
+      '#!/usr/bin/env bash',
+      'if [ "${1:-}" = "--version" ]; then echo "codex-cli 0.125.0"; exit 0; fi',
+      'exit 0',
+      'EOF',
+      `chmod +x ${JSON.stringify(codexPath)}`,
+      `printf 'codex\n' >> ${JSON.stringify(orderLog)}`,
+      '',
+    ].join('\n'),
+    { mode: 0o755 },
+  );
+  fs.writeFileSync(
+    flowInstaller,
+    [
+      'import json',
+      'from pathlib import Path',
+      `codex_path = Path(${JSON.stringify(codexPath)})`,
+      `order_log = Path(${JSON.stringify(orderLog)})`,
+      'if not codex_path.is_file():',
+      '    raise SystemExit("Codex must be installed before OPL Flow plugin sync")',
+      'order_log.open("a", encoding="utf-8").write("flow\\n")',
+      'print(json.dumps({"surface_kind": "opl_flow_plugin_install_receipt.v1", "status": "installed"}))',
+      '',
+    ].join('\n'),
+    'utf8',
+  );
+
+  try {
+    const output = runCli(
+      ['install', '--skip-modules', '--headless', '--skip-native-helper-repair', '--no-online-runtime'],
+      {
+        HOME: homeRoot,
+        CODEX_HOME: path.join(homeRoot, 'codex-home'),
+        OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+        OPL_CODEX_INSTALL_COMMAND: installScript,
+        OPL_FLOW_INSTALLER_SCRIPT: flowInstaller,
+        OPL_RUNTIME_ROOT: runtimeRoot,
+        PATH: '/usr/bin:/bin',
+        ...disableRemoteCompanionInstall(),
+      },
+    ) as any;
+
+    assert.equal(output.install.status, 'completed');
+    assert.deepEqual(
+      output.install.engine_actions.map((entry: any) => [entry.engine_id, entry.status]),
+      [['codex', 'completed']],
+    );
+    assert.equal(output.install.opl_flow_plugin.status, 'installed');
+    assert.deepEqual(fs.readFileSync(orderLog, 'utf8').trim().split('\n'), ['codex', 'flow']);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
