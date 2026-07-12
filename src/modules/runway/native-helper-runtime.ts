@@ -229,31 +229,44 @@ export function buildNativeHelperProjection(
     sourceOfTruthRule: SOURCE_OF_TRUTH_RULE,
   });
   const cacheCanBeReused = mode !== 'refresh' && existing.freshness.status === 'fresh';
-  const cachedIndexes = cacheCanBeReused
+  const cachedIndexCandidates = cacheCanBeReused
     ? readCachedNativeIndexInvocations(statePaths.state_dir)
     : {};
+  const cachedIndexes = Object.fromEntries(
+    Object.entries(cachedIndexCandidates).filter(([, invocation]) => (
+      invocation.crate_version === lifecycle.cache.crate_version
+    )),
+  );
   const runtime = inspectNativeHelperRuntime(helpers, {
     cachedIndexes: cacheCanBeReused ? cachedIndexes : {},
   });
+  const expectedIndexKeys = RUNTIME_MANAGER_HELPER_SEQUENCE
+    .filter((spec) => spec.helper_id !== 'opl-doctor-native')
+    .map((spec) => spec.index_key);
   const reusedIndexKeys = Object.keys(cachedIndexes).filter((indexKey) => {
     const spec = RUNTIME_MANAGER_HELPER_SEQUENCE.find((candidate) => candidate.index_key === indexKey);
     const invocation = runtime.invocations.find((candidate) => candidate.request_id === spec?.request_id);
     return Boolean(spec && invocation?.status === 'ok' && cachedIndexes[indexKey]);
   });
+  const completeCacheHit = expectedIndexKeys.every((indexKey) => reusedIndexKeys.includes(indexKey));
   const execution: NativeIndexExecution = {
     mode,
-    helper_execution: reusedIndexKeys.length > 0 ? 'reused' : mode === 'read_only' ? 'skipped' : 'executed',
-    cache_hit: reusedIndexKeys.length > 0,
+    helper_execution: completeCacheHit ? 'reused' : 'executed',
+    cache_hit: completeCacheHit,
     cache_reason: mode === 'refresh'
       ? 'refresh_requested'
+      : mode === 'read_only'
+        ? 'read_only'
       : existing.freshness.status === 'fresh'
-        ? 'fresh_cache'
+        ? completeCacheHit
+          ? 'fresh_cache'
+          : 'cache_incomplete'
         : existing.freshness.status === 'unavailable_no_success'
           ? 'cache_missing'
           : 'cache_expired',
     reused_index_keys: reusedIndexKeys,
   };
-  const persistence = mode === 'read_only' || (mode === 'auto' && reusedIndexKeys.length > 0)
+  const persistence = mode === 'read_only' || (mode === 'auto' && completeCacheHit)
     ? {
       ...existing,
       execution,

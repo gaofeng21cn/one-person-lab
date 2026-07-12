@@ -139,11 +139,18 @@ export function buildPrivateRuntimeCommandSpecs({
       usage: 'opl runtime manager',
       summary:
         'Show the OPL Runtime Manager boundary for the configured provider-backed family runtime.',
-      examples: ['opl runtime manager'],
+      examples: ['opl runtime manager', 'opl runtime manager --refresh-native-indexes'],
       registry: {
         command_id: 'runtime manager',
         parser_adapter: 'node_util_parse_args',
-        options: [],
+        options: [
+          {
+            name: 'refresh-native-indexes',
+            flag: '--refresh-native-indexes',
+            value_kind: 'boolean',
+            summary: 'Explicitly execute every native state-index helper instead of reusing a fresh cache.',
+          },
+        ],
         json_output_schema_ref:
           'contracts/opl-framework/cli-command-registry.json#/commands/runtime_manager/output_schema',
         authority_boundary: {
@@ -156,8 +163,12 @@ export function buildPrivateRuntimeCommandSpecs({
         },
       },
       handler: async (args) => {
-        parseRegisteredCommandOptions('runtime manager', args, getCommandSpecs()['runtime manager']);
-        return await buildRuntimeManager({}, { buildStandardDomainAgentScaffold });
+        const spec = getCommandSpecs()['runtime manager'];
+        const parsed = parseRegisteredCommandOptions('runtime manager', args, spec);
+        return await buildRuntimeManager(
+          { refreshNativeIndexes: parsed['refresh-native-indexes'] === true },
+          { buildStandardDomainAgentScaffold },
+        );
       },
     },
     'runtime manager action': {

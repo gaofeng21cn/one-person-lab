@@ -86,6 +86,7 @@ export type NativeIndexExecution = {
     | 'fresh_cache'
     | 'refresh_requested'
     | 'cache_missing'
+    | 'cache_incomplete'
     | 'cache_expired'
     | 'read_only';
   reused_index_keys: string[];

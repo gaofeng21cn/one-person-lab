@@ -33,7 +33,7 @@ const registryCases = [
   ['status workspace', 'status_workspace', ['path'], 'OPL Console'],
   ['status runtime', 'status_runtime', ['limit'], 'OPL Runway'],
   ['status dashboard', 'status_dashboard', ['path', 'sessions-limit'], 'OPL Console'],
-  ['runtime manager', 'runtime_manager', [], 'OPL Runway'],
+  ['runtime manager', 'runtime_manager', ['refresh-native-indexes'], 'OPL Runway'],
   ['runtime manager action', 'runtime_manager_action', ['dry-run', 'apply'], 'OPL Runway'],
   ['stages list', 'stages_list', [], undefined],
   ['stages inspect', 'stages_inspect', ['domain', 'stage'], undefined],

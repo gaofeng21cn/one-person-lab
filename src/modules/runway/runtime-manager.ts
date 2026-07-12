@@ -250,7 +250,7 @@ function filterActionableRuntimeManagerActions(
 }
 
 export async function buildRuntimeManager(
-  input: { persistNativeIndexes?: boolean } = {},
+  input: { persistNativeIndexes?: boolean; refreshNativeIndexes?: boolean } = {},
   dependencies: RuntimeManagerDependencies = {},
 ) {
   const { selectedProvider, providerRuntime: providers, provider } =
@@ -263,6 +263,7 @@ export async function buildRuntimeManager(
     });
   const nativeHelperProjection = buildNativeHelperProjection(DEFAULT_NATIVE_HELPERS, {
     persistIndexes: input.persistNativeIndexes,
+    refreshIndexes: input.refreshNativeIndexes,
   });
   const reconcile = buildRuntimeManagerReconcile(provider, nativeHelperProjection);
 

@@ -180,6 +180,58 @@ test('runtime manager reuses a fresh native index without refreshing it', (t) =>
   assert.equal(second.runtime_manager.state_index_target.persistence.freshness.status, 'fresh');
 });
 
+test('runtime manager explicitly refreshes every native index helper on request', (t) => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-explicit-refresh-state-'));
+  const helperBinDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-native-helper-explicit-refresh-bin-'));
+  writeNativeHelperFixtureScripts(helperBinDir, { includeVersionFields: true });
+  t.after(() => removeTempRoots(stateRoot, helperBinDir));
+
+  const env = {
+    OPL_STATE_DIR: stateRoot,
+    OPL_NATIVE_HELPER_BIN_DIR: helperBinDir,
+    OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+  };
+  runCli(['runtime', 'manager'], env);
+  const warm = runCli(['runtime', 'manager'], env);
+  assert.equal(warm.runtime_manager.state_index_target.persistence.execution.cache_hit, true);
+
+  const refreshed = runCli(['runtime', 'manager', '--refresh-native-indexes'], env);
+  const execution = refreshed.runtime_manager.state_index_target.persistence.execution;
+  assert.equal(execution.mode, 'refresh');
+  assert.equal(execution.cache_hit, false);
+  assert.equal(execution.helper_execution, 'executed');
+  assert.deepEqual(execution.reused_index_keys, []);
+  assert.equal(refreshed.runtime_manager.state_index_target.persistence.status, 'written');
+});
+
+test('runtime manager rebuilds an incomplete or version-incompatible fresh cache', (t) => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-incomplete-cache-state-'));
+  const helperBinDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-native-helper-incomplete-cache-bin-'));
+  writeNativeHelperFixtureScripts(helperBinDir, { includeVersionFields: true });
+  t.after(() => removeTempRoots(stateRoot, helperBinDir));
+
+  const env = {
+    OPL_STATE_DIR: stateRoot,
+    OPL_NATIVE_HELPER_BIN_DIR: helperBinDir,
+    OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+  };
+  const first = runCli(['runtime', 'manager'], env);
+  const indexFile = first.runtime_manager.state_index_target.persistence.index_file;
+  const persisted = parseJsonText(fs.readFileSync(indexFile, 'utf8')) as any;
+  delete persisted.native_indexes.artifact_manifest;
+  persisted.native_indexes.state_index.crate_version = '0.0.0';
+  writeJsonFile(indexFile, persisted);
+
+  const rebuilt = runCli(['runtime', 'manager'], env);
+  const execution = rebuilt.runtime_manager.state_index_target.persistence.execution;
+  assert.equal(execution.mode, 'auto');
+  assert.equal(execution.cache_hit, false);
+  assert.equal(execution.cache_reason, 'cache_incomplete');
+  assert.equal(execution.helper_execution, 'executed');
+  assert.deepEqual(execution.reused_index_keys, ['runtime_health']);
+  assert.equal(rebuilt.runtime_manager.state_index_target.persistence.status, 'written');
+});
+
 test('runtime manager records structured native index diff and history GC reporting', (t) => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-index-gc-state-'));
   const helperBinDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-native-helper-index-gc-bin-'));

@@ -2475,7 +2475,15 @@
       "command_id": "runtime manager",
       "owner": "OPL Runway",
       "parser_adapter": "node_util_parse_args",
-      "options": [],
+      "options": [
+        {
+          "name": "refresh-native-indexes",
+          "flag": "--refresh-native-indexes",
+          "value_kind": "boolean",
+          "required": false,
+          "summary": "Explicitly execute every native state-index helper instead of reusing a fresh cache."
+        }
+      ],
       "output_schema": {
         "type": "object",
         "required": [
