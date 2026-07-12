@@ -60,7 +60,12 @@ function safeRelativePayloadPath(value: string) {
   return normalized;
 }
 
-async function readPayloadFileContent(entry: Record<string, unknown>, payloadManifestUrl: string, index: number) {
+async function readPayloadFileContent(
+  entry: Record<string, unknown>,
+  payloadManifestUrl: string,
+  index: number,
+  dryRun: boolean,
+) {
   const contentUtf8 = typeof entry.content_utf8 === 'string' ? entry.content_utf8 : null;
   const contentBase64 = typeof entry.content_base64 === 'string' && entry.content_base64.trim()
     ? entry.content_base64.trim()
@@ -76,11 +81,12 @@ async function readPayloadFileContent(entry: Record<string, unknown>, payloadMan
       failure_code: 'agent_package_payload_manifest_invalid',
     });
   }
-  if (contentBase64 !== null) return Buffer.from(contentBase64, 'base64');
-  if (contentUtf8 !== null) return Buffer.from(contentUtf8, 'utf8');
+  if (contentBase64 !== null) return { content: Buffer.from(contentBase64, 'base64'), digestVerified: true };
+  if (contentUtf8 !== null) return { content: Buffer.from(contentUtf8, 'utf8'), digestVerified: true };
 
   validateUrlLike(sourceUrl!, 'payload.files[].source_url');
   if (sourceUrl!.startsWith('http://') || sourceUrl!.startsWith('https://')) {
+    if (dryRun) return { content: Buffer.alloc(0), digestVerified: false };
     const response = await fetch(sourceUrl!);
     if (!response.ok) {
       throw new FrameworkContractError('codex_command_failed', 'Agent package payload file fetch failed.', {
@@ -89,12 +95,16 @@ async function readPayloadFileContent(entry: Record<string, unknown>, payloadMan
         status_text: response.statusText,
       });
     }
-    return Buffer.from(await response.arrayBuffer());
+    return { content: Buffer.from(await response.arrayBuffer()), digestVerified: true };
   }
-  return fs.readFileSync(resolveLocalPath(sourceUrl!));
+  return { content: fs.readFileSync(resolveLocalPath(sourceUrl!)), digestVerified: true };
 }
 
-async function normalizePayloadFiles(payload: unknown, payloadManifestUrl: string): Promise<AgentPackagePayloadFile[]> {
+async function normalizePayloadFiles(
+  payload: unknown,
+  payloadManifestUrl: string,
+  dryRun: boolean,
+): Promise<AgentPackagePayloadFile[]> {
   if (!isRecord(payload) || !Array.isArray(payload.files)) {
     throw new FrameworkContractError('contract_shape_invalid', 'Agent package payload manifest must contain a files array.', {
       payload_manifest_url: payloadManifestUrl,
@@ -119,9 +129,14 @@ async function normalizePayloadFiles(payload: unknown, payloadManifestUrl: strin
         failure_code: 'agent_package_payload_manifest_invalid',
       });
     }
-    const content = await readPayloadFileContent(entry, payloadManifestUrl, index);
+    const { content, digestVerified } = await readPayloadFileContent(
+      entry,
+      payloadManifestUrl,
+      index,
+      dryRun,
+    );
     const sha256 = stringValue(entry.sha256);
-    if (sha256) {
+    if (sha256 && digestVerified) {
       const expected = sha256.startsWith('sha256:') ? sha256.slice('sha256:'.length) : sha256;
       const actual = crypto.createHash('sha256').update(content).digest('hex');
       if (actual !== expected) {
@@ -148,7 +163,7 @@ async function materializePayloadManifestSource(input: {
   dryRun: boolean;
 }) {
   const fetched = await fetchJsonSource(input.payloadManifestUrl);
-  const files = await normalizePayloadFiles(fetched.payload, input.payloadManifestUrl);
+  const files = await normalizePayloadFiles(fetched.payload, input.payloadManifestUrl, input.dryRun);
   const payloadRoot = input.dryRun
     ? fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-payload-'))
     : path.join(
