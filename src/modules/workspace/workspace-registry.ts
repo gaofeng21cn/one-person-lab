@@ -15,7 +15,7 @@ import {
   type StandardAgentInterface,
   type StandardAgentLocatorField,
 } from '../../kernel/standard-agent-interface.ts';
-import { readPackageManagedStandardAgentDescriptor } from '../connect/standard-agent-interface-discovery.ts';
+import { readPackageManagedStandardAgentDescriptor } from '../connect/index.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import { OPL_WORKSPACE_AGENT_PROFILES } from './workspace-agent-defaults.ts';
 

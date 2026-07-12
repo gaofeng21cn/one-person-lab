@@ -17,7 +17,7 @@ import {
 } from '../ledger/index.ts';
 import { buildStageAttemptRuntimeCurrentness } from './family-runtime-stage-attempt-runtime-currentness.ts';
 import { isRecord } from '../../kernel/contract-validation.ts';
-import { standardAgentProgressDeltaKeys } from '../connect/standard-agent-interface-discovery.ts';
+import { standardAgentProgressDeltaKeys } from '../connect/index.ts';
 import {
   recordList as sharedRecordList,
   stringList as sharedStringList,

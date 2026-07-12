@@ -62,6 +62,11 @@ export type {
   AgentPackagePackageActionInput,
   AgentPackageProfileApplyInput,
 } from './agent-package-registry.ts';
+export {
+  readPackageManagedStandardAgentDescriptor,
+  readStandardAgentDescriptorForDomain,
+  standardAgentProgressDeltaKeys,
+} from './standard-agent-interface-discovery.ts';
 export { canonicalAgentPackageId } from './agent-package-identity.ts';
 export {
   agentPackageDelegatedSurface,

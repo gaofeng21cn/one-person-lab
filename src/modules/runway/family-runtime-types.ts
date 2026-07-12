@@ -4,7 +4,7 @@ import {
   STANDARD_AGENT_SERIES_MEMBERSHIP,
   type StandardAgentRegistryEntry,
 } from '../../kernel/standard-agent-registry.ts';
-import { readStandardAgentDescriptorForDomain } from '../connect/standard-agent-interface-discovery.ts';
+import { readStandardAgentDescriptorForDomain } from '../connect/index.ts';
 
 type RuntimeAgent = StandardAgentRegistryEntry & {
   series_membership: typeof STANDARD_AGENT_SERIES_MEMBERSHIP;

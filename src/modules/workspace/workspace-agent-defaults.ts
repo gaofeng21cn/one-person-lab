@@ -5,7 +5,7 @@ import {
   STANDARD_AGENT_SERIES_MEMBERSHIP,
 } from '../../kernel/standard-agent-registry.ts';
 import { assertStandardAgentDescriptorIdentity } from '../../kernel/standard-agent-interface.ts';
-import { readStandardAgentDescriptorForDomain } from '../connect/standard-agent-interface-discovery.ts';
+import { readStandardAgentDescriptorForDomain } from '../connect/index.ts';
 
 type WorkspaceAgentRegistryEntry = Extract<
   typeof STANDARD_AGENT_REGISTRY[number],
