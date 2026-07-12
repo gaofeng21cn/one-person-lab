@@ -9,6 +9,7 @@ import {
   normalizeVisualTransitionAdapterProfileRegistry,
   normalizeVisualTransitionSpec,
   resolveVisualTransitionAdapterProfile,
+  type VisualTransitionSpec,
 } from '../../stagecraft/index.ts';
 import { stringValue as optionalString } from '../../../kernel/json-record.ts';
 import type { NormalizedFamilyTransitionProjection } from './types.ts';
@@ -101,11 +102,20 @@ function nonAuthorityFlags(): NormalizedFamilyTransitionProjection['non_authorit
   };
 }
 
-function transitionBoundary(spec: FamilyTransitionSpec | null, descriptor: JsonRecord | null) {
+function transitionBoundary(
+  spec: FamilyTransitionSpec | null,
+  descriptor: JsonRecord | null,
+  visualSpec: VisualTransitionSpec | null,
+  adapterProfileRegistryRef: string | null,
+) {
   const descriptorBoundary = normalizeAuthorityBoundary(descriptor?.authority_boundary);
   return {
     runner_owner: 'OPL Framework',
-    domain_transition_owner: optionalString(descriptorBoundary.domain_transition_owner) ?? 'domain_agent',
+    domain_transition_owner:
+      optionalString(descriptorBoundary.domain_transition_owner)
+      ?? visualSpec?.owner
+      ?? 'domain_agent',
+    adapter_profile_registry_ref: adapterProfileRegistryRef,
     ...descriptorBoundary,
     ...(spec?.authority_boundary ?? {}),
     opl_interprets_domain_quality: false,
@@ -131,21 +141,46 @@ function normalizeFamilyTransitionProjection(input: {
   spec: FamilyTransitionSpec | null;
   cases: FamilyTransitionMatrixCase[];
   descriptor: JsonRecord | null;
+  visualSpec: VisualTransitionSpec | null;
+  adapterProfileRegistryRef: string | null;
+  blockedReason: string | null;
 }): NormalizedFamilyTransitionProjection {
-  const { manifestTargetDomainId, spec, cases, descriptor } = input;
-  const boundary = transitionBoundary(spec, descriptor);
+  const {
+    manifestTargetDomainId,
+    spec,
+    cases,
+    descriptor,
+    visualSpec,
+    adapterProfileRegistryRef,
+    blockedReason,
+  } = input;
+  const boundary = transitionBoundary(spec, descriptor, visualSpec, adapterProfileRegistryRef);
   const base = {
     surface_kind: 'family_transition_manifest_projection' as const,
-    spec_id: spec?.spec_id ?? optionalString(descriptor?.spec_id) ?? null,
-    target_domain_id: spec?.target_domain_id ?? optionalString(descriptor?.target_domain_id) ?? null,
-    owner: spec?.owner ?? null,
-    transition_count: spec?.transitions.length ?? 0,
+    spec_id: spec?.spec_id ?? visualSpec?.spec_id ?? optionalString(descriptor?.spec_id) ?? null,
+    target_domain_id:
+      spec?.target_domain_id
+      ?? (visualSpec ? manifestTargetDomainId : optionalString(descriptor?.target_domain_id))
+      ?? null,
+    owner: spec?.owner ?? visualSpec?.owner ?? null,
+    transition_count: spec?.transitions.length ?? visualSpec?.transition_table.length ?? 0,
     case_count: cases.length,
+    adapter_profile_registry_ref: adapterProfileRegistryRef,
     descriptor,
     locator_refs: descriptorLocatorRefs(descriptor),
     authority_boundary: boundary,
     non_authority_flags: nonAuthorityFlags(),
   };
+
+  if (blockedReason) {
+    return {
+      ...base,
+      status: 'blocked',
+      refresh_required: true,
+      blocked_reason: blockedReason,
+      matrix_result: null,
+    };
+  }
 
   if (!spec) {
     return {
@@ -192,19 +227,41 @@ export function normalizeFamilyTransitionSurfaces(
 ) {
   const descriptor = normalizeDescriptor(manifest.family_transition_spec_descriptor);
   const visualTransitionSpec = normalizeVisualSpec(manifest.visual_transition_spec);
-  const visualTransitionAdapterRegistry = manifest.visual_transition_adapter_profile_registry
+  const visualTransitionAdapterRegistryRef = optionalString(
+    manifest.visual_transition_adapter_profile_registry_ref,
+  ) ?? null;
+  const hasVisualTransitionAdapterRegistry =
+    manifest.visual_transition_adapter_profile_registry !== undefined
+    && manifest.visual_transition_adapter_profile_registry !== null;
+  const visualTransitionAdapterRegistry = hasVisualTransitionAdapterRegistry
     ? normalizeVisualTransitionAdapterProfileRegistry(manifest.visual_transition_adapter_profile_registry)
     : null;
   const explicitSpec = normalizeFamilyTransitionSpec(manifest.family_transition_spec);
   const explicitCases = normalizeFamilyTransitionMatrixCases(manifest.family_transition_matrix_cases);
+  const needsVisualTransitionAdapter = Boolean(
+    visualTransitionSpec && (!explicitSpec || explicitCases.length === 0),
+  );
+  const hasMatchingVisualTransitionAdapter = Boolean(
+    visualTransitionAdapterRegistry?.registry_entries.some((entry) =>
+      entry.target_domain_ids.some((domainId) =>
+        canonicalDomainId(domainId) === canonicalDomainId(manifestTargetDomainId)
+      )
+    ),
+  );
+  const visualTransitionAdapterBlockedReason = !needsVisualTransitionAdapter
+    ? null
+    : !visualTransitionAdapterRegistry
+      ? visualTransitionAdapterRegistryRef
+        ? 'visual_transition_adapter_profile_registry_unmaterialized'
+        : 'visual_transition_adapter_profile_registry_missing'
+      : !hasMatchingVisualTransitionAdapter
+        ? 'visual_transition_adapter_profile_not_registered_for_domain'
+        : null;
   let visualTransitionAdapterProfile = null;
-  if (visualTransitionSpec && (!explicitSpec || explicitCases.length === 0)) {
-    if (!visualTransitionAdapterRegistry) {
-      throw new Error(`No visual transition adapter profile registry is declared for domain: ${manifestTargetDomainId}`);
-    }
+  if (visualTransitionSpec && needsVisualTransitionAdapter && !visualTransitionAdapterBlockedReason) {
     visualTransitionAdapterProfile = resolveVisualTransitionAdapterProfile(
       manifestTargetDomainId,
-      visualTransitionAdapterRegistry,
+      visualTransitionAdapterRegistry!,
       visualTransitionSpec.owner,
     );
   }
@@ -230,12 +287,16 @@ export function normalizeFamilyTransitionSurfaces(
     family_transition_spec: spec,
     family_transition_matrix_cases: cases,
     visual_transition_adapter_profile_registry: visualTransitionAdapterRegistry,
+    visual_transition_adapter_profile_registry_ref: visualTransitionAdapterRegistryRef,
     visual_transition_spec: visualTransitionSpec,
     family_transition: normalizeFamilyTransitionProjection({
       manifestTargetDomainId,
       spec,
       cases,
       descriptor,
+      visualSpec: visualTransitionSpec,
+      adapterProfileRegistryRef: visualTransitionAdapterRegistryRef,
+      blockedReason: visualTransitionAdapterBlockedReason,
     }),
   };
 }

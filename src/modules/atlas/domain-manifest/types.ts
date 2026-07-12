@@ -220,6 +220,7 @@ export interface NormalizedFamilyTransitionProjection {
   case_count: number;
   refresh_required: boolean;
   blocked_reason: string | null;
+  adapter_profile_registry_ref: string | null;
   descriptor: JsonRecord | null;
   locator_refs: JsonRecord;
   matrix_result: FamilyTransitionMatrixResult | null;
@@ -509,6 +510,7 @@ export interface NormalizedDomainManifest {
   family_transition: NormalizedFamilyTransitionProjection;
   domain_transition_oracle: DomainTransitionOracle | null;
   visual_transition_adapter_profile_registry: VisualTransitionAdapterProfileRegistry | null;
+  visual_transition_adapter_profile_registry_ref: string | null;
   visual_transition_spec: VisualTransitionSpec | null;
   domain_memory_descriptor: FamilyDomainMemoryRef | null;
   standard_domain_agent_skeleton: JsonRecord | null;

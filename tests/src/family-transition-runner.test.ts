@@ -5,6 +5,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { parseJsonText } from '../../src/kernel/json-file.ts';
+import { normalizeFamilyTransitionSurfaces } from '../../src/modules/atlas/domain-manifest/family-transition-normalizer.ts';
 import {
   adaptDomainTransitionOracleToFamilyTransitionSpec,
   buildDomainTransitionOracleMatrixCases,
@@ -313,6 +314,63 @@ function visualAdapterRegistryFixture(input: {
     },
   });
 }
+
+test('visual transition adapter registry refs stay blocked until materialized', () => {
+  const surfaces = normalizeFamilyTransitionSurfaces({
+    visual_transition_spec: visualTransitionSpec,
+    visual_transition_adapter_profile_registry_ref: 'contracts/visual-transition-adapter-profile.json',
+  }, 'example-visual-domain');
+
+  assert.equal(
+    surfaces.visual_transition_adapter_profile_registry_ref,
+    'contracts/visual-transition-adapter-profile.json',
+  );
+  assert.equal(
+    surfaces.family_transition.adapter_profile_registry_ref,
+    'contracts/visual-transition-adapter-profile.json',
+  );
+  assert.equal(surfaces.family_transition.status, 'blocked');
+  assert.equal(
+    surfaces.family_transition.blocked_reason,
+    'visual_transition_adapter_profile_registry_unmaterialized',
+  );
+  assert.equal(surfaces.family_transition.matrix_result, null);
+});
+
+test('visual transition specs stay blocked when their adapter registry is missing', () => {
+  const surfaces = normalizeFamilyTransitionSurfaces({
+    visual_transition_spec: visualTransitionSpec,
+  }, 'example-visual-domain');
+
+  assert.equal(surfaces.family_transition.status, 'blocked');
+  assert.equal(
+    surfaces.family_transition.blocked_reason,
+    'visual_transition_adapter_profile_registry_missing',
+  );
+  assert.equal(surfaces.family_transition.owner, 'example-visual-domain');
+  assert.equal(surfaces.family_transition.transition_count, 1);
+});
+
+test('visual transition specs stay blocked when no adapter profile matches the domain', () => {
+  const registry = visualAdapterRegistryFixture({
+    profileId: 'other-visual-domain.visual-transition.v1',
+    targetDomainId: 'other-visual-domain',
+    targetDomainIds: ['other-visual-domain'],
+    profileRole: 'domain_transition_profile_extension',
+    guardOwnerLabel: 'other-visual-domain',
+    refPrefix: 'other-visual-domain',
+  });
+  const surfaces = normalizeFamilyTransitionSurfaces({
+    visual_transition_spec: visualTransitionSpec,
+    visual_transition_adapter_profile_registry: registry,
+  }, 'example-visual-domain');
+
+  assert.equal(surfaces.family_transition.status, 'blocked');
+  assert.equal(
+    surfaces.family_transition.blocked_reason,
+    'visual_transition_adapter_profile_not_registered_for_domain',
+  );
+});
 
 test('family transition runner advances bundle_stage_ready through domain-declared owner route without domain verdict ownership', () => {
   const result = runFamilyTransition({
