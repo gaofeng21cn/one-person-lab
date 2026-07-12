@@ -593,6 +593,30 @@ export async function runCodexCommandStreaming(
       );
     });
 
+    child.stdin.once('error', (error: NodeJS.ErrnoException) => {
+      if (error.code === 'EPIPE' || completed) {
+        return;
+      }
+      completed = true;
+      options.signal?.removeEventListener('abort', abortCommand);
+      clearProcessTimeout();
+      clearNoOutputTimeout();
+      clearCommandNoProgressTimeout();
+      terminateChildProcessGroup(child.pid);
+      reject(
+        new FrameworkContractError(
+          'codex_command_failed',
+          `Failed to write Codex stdin for: codex ${args.join(' ')}`,
+          {
+            codex_binary: codexBinary.path,
+            args,
+            cause: error.message,
+            failure_code: 'codex_stdin_write_failed',
+          },
+        ),
+      );
+    });
+
     child.once('close', (code) => {
       if (completed) {
         return;
