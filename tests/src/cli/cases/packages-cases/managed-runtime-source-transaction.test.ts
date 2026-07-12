@@ -68,8 +68,9 @@ test('bundled Full runtime source requires an immutable marker and remains diges
       installed.opl_agent_package_install.package_lock.managed_runtime_source.ownership,
       'preexisting_adopted',
     );
+    const current = runCli(['packages', 'status', '--package-id', 'rca'], env) as any;
     assert.equal(
-      installed.opl_agent_package_install.owner_route_readback.package_runtime_source_readiness.operational_ready,
+      current.opl_agent_package_status.runtime_source_readiness.operational_ready,
       true,
     );
 

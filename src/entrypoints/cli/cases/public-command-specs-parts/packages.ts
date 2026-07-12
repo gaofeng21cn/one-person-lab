@@ -338,9 +338,7 @@ export function buildPackagesCommandSpecs(
       group: 'packages',
       help_surface: 'default',
       handler: (args) => {
-        const input = parsePackageSelection('packages update', args, getCommandSpec('packages update'), {
-          resolveFirstPartyManifest: true,
-        });
+        const input = parsePackageSelection('packages update', args, getCommandSpec('packages update'));
         if (hasExplicitPackageSelection(input)) {
           return runOplAgentPackageUpdate(input);
         }
