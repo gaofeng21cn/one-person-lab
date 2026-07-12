@@ -346,9 +346,11 @@ test('profile installation compensates earlier writes when a later profile mutat
 
 test('app action execute routes install_from_manifest_url to Framework package lock receipt writer', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-app-action-state-'));
-  const codexHome = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-app-action-home-'));
+  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-app-action-home-'));
+  const codexHome = path.join(homeDir, '.codex');
   const fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-manifest-'));
   const pluginSourcePath = createPluginSourceFixture();
+  const env = { OPL_STATE_DIR: stateDir, HOME: homeDir, CODEX_HOME: codexHome };
   try {
     const manifestPath = path.join(fixtureDir, 'manifest.json');
     fs.writeFileSync(manifestPath, formatJsonPayload(agentPackageManifest({ pluginSourcePath })), 'utf8');
@@ -364,7 +366,7 @@ test('app action execute routes install_from_manifest_url to Framework package l
         manifest_url: manifestUrl,
         trust_tier: 'third_party_verified',
       }),
-    ], { OPL_STATE_DIR: stateDir, CODEX_HOME: codexHome }) as {
+    ], env) as {
       app_action_execution: {
         delegated_surface: string;
         result: {
@@ -391,7 +393,7 @@ test('app action execute routes install_from_manifest_url to Framework package l
       'agent_package_repair',
       '--payload',
       JSON.stringify({ package_id: 'third.party.research' }),
-    ], { OPL_STATE_DIR: stateDir }) as {
+    ], env) as {
       app_action_execution: {
         delegated_surface: string;
         result: {
@@ -417,7 +419,7 @@ test('app action execute routes install_from_manifest_url to Framework package l
         package_id: 'third.party.research',
         exposure_action: 'disable',
       }),
-    ], { OPL_STATE_DIR: stateDir }) as {
+    ], env) as {
       app_action_execution: {
         delegated_surface: string;
         result: {
@@ -452,7 +454,7 @@ test('app action execute routes install_from_manifest_url to Framework package l
         visible: false,
         sort_order: 9,
       }),
-    ], { OPL_STATE_DIR: stateDir }) as {
+    ], env) as {
       app_action_execution: {
         delegated_surface: string;
         result: {
@@ -477,7 +479,7 @@ test('app action execute routes install_from_manifest_url to Framework package l
       'home_shortcut_preferences_set',
     );
 
-    const list = runCli(['packages', 'list'], { OPL_STATE_DIR: stateDir }) as {
+    const list = runCli(['packages', 'list'], env) as {
       opl_agent_packages: {
         home_shortcut_preferences: Array<{ package_id: string; shortcut_id: string; visible: boolean; sort_order: number; source: string }>;
         files: { home_shortcut_preferences_file: string };
@@ -500,7 +502,7 @@ test('app action execute routes install_from_manifest_url to Framework package l
 
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });
-    fs.rmSync(codexHome, { recursive: true, force: true });
+    fs.rmSync(homeDir, { recursive: true, force: true });
     fs.rmSync(fixtureDir, { recursive: true, force: true });
     fs.rmSync(pluginSourcePath, { recursive: true, force: true });
   }

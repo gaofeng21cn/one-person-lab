@@ -334,6 +334,18 @@ export function buildActionCatalog(contracts: FrameworkContracts) {
       mutates: 'codex_home_agents_md',
       dry_run_supported: true,
     },
+    {
+      action_id: 'codex_user_instructions_restore_opl_flow_default',
+      label: 'Restore OPL Flow default Codex user instructions',
+      surface: 'opl app action execute',
+      delegated_surface: 'installed opl-flow package templates/AGENTS.md to $CODEX_HOME/AGENTS.md atomic write',
+      payload_fields: ['expected_sha256'],
+      mutates: 'codex_home_agents_md',
+      dry_run_supported: true,
+      confirmation_required: true,
+      danger_level: 'medium',
+      impact: 'replace_user_agents_with_installed_opl_flow_default_and_keep_backup',
+    },
     ...SETTINGS_CONTROL_CENTER_ACTIONS.map((action) => ({
       action_id: action.action_id,
       label: action.label,

@@ -9,6 +9,7 @@ import {
   readLocalCodexAccessState,
   readLocalCodexDefaultsIfAvailable,
   runOplAgentPackageStatus,
+  readOplFlowDefaultUserInstructions,
 } from '../connect/index.ts';
 import { listWorkspaceBindings } from '../workspace/index.ts';
 import {
@@ -631,9 +632,11 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
       codex_personalization: {
         surface_kind: 'opl_codex_personalization.v1',
         user_agents: readCodexUserInstructions(),
+        opl_flow_default_user_agents: readOplFlowDefaultUserInstructions(),
         authority_boundary: {
           user_agents_owner: 'user_codex_home',
           app_edit_action: 'codex_user_instructions_set',
+          app_restore_action: 'codex_user_instructions_restore_opl_flow_default',
           opl_flow_role: 'install_and_semantically_merge_user_profile_only',
           opl_app_session_context_owner: 'one-person-lab-app',
         },

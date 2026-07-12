@@ -53,7 +53,10 @@ import {
   dryRunModuleAction,
 } from './action-execute-previews.ts';
 import { executeConnectionAppAction } from './action-execute-connections.ts';
-import { writeCodexUserInstructions } from '../codex-personalization.ts';
+import {
+  restoreCodexUserInstructionsFromOplFlowDefault,
+  writeCodexUserInstructions,
+} from '../codex-personalization.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -349,6 +352,24 @@ async function executeDirectAppAction(
       delegatedSurface: '$CODEX_HOME/AGENTS.md atomic write',
       result: writeCodexUserInstructions({
         content,
+        expectedSha256,
+        dryRun: options.dryRun,
+      }),
+    };
+  }
+
+  if (options.actionId === 'codex_user_instructions_restore_opl_flow_default') {
+    const expectedSha256 = options.payload.expected_sha256;
+    if (expectedSha256 !== null && typeof expectedSha256 !== 'string') {
+      throw new FrameworkContractError(
+        'cli_usage_error',
+        'codex_user_instructions_restore_opl_flow_default requires string-or-null expected_sha256.',
+        { action_id: options.actionId, required_payload_fields: ['expected_sha256'] },
+      );
+    }
+    return {
+      delegatedSurface: 'installed opl-flow package templates/AGENTS.md to $CODEX_HOME/AGENTS.md atomic write',
+      result: restoreCodexUserInstructionsFromOplFlowDefault({
         expectedSha256,
         dryRun: options.dryRun,
       }),
