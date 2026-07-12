@@ -11,6 +11,7 @@ export { queryStageAttempt } from './family-runtime-stage-attempt-query.ts';
 export { buildStageAttemptCurrentProviderReadinessPayload } from './family-runtime-stage-attempt-provider-readiness-currentness.ts';
 export {
   createStageAttempt,
+  findIdempotentStageAttempt,
   type StageAttemptCreateInput,
 } from './family-runtime-stage-attempts-parts/create.ts';
 export {

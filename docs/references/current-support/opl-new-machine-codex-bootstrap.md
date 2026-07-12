@@ -115,7 +115,7 @@ opl packages update rca --json
 - 智能体和 OPL Flow 都是 Package；不再 clone repo 后运行各自 installer。
 - `opl connect sync-skills` 只保留为 package/materialized module 的内部兼容投影，不是 MAS/ScholarSkills 的用户安装、激活、修复或 currentness 入口。
 - OPL Flow 的 plugin、`AGENTS.md` 和 `TASTE.md` 由同一 package transaction 管理。已有 `AGENTS.md` 时不覆盖，而是返回 merge packet 和 `opl packages profile apply` 路由。
-- `opl packages install mas` 自动安装兼容的 `mas-scholar-skills` closure；已有 active workspace 时直接物化 11 个 core Skill。后续 workspace bind/activate、domain launch 或 MAS quest owner 调用通用 `opl packages activate`，用户不需要为每个论文目录运行 repair。
+- `opl packages install mas` 自动安装兼容的 `mas-scholar-skills` closure。workspace bind/activate、domain launch 或 MAS quest owner 每次进入 use boundary 都对账 MAS latest-stable root 与兼容 provider，并从 provider manifest 动态物化当前发布包声明的全部 35 Skills；11 core + 8 modules 只是 readiness floor。managed projection 缺失或漂移自动恢复，用户不需要为每个论文目录运行 repair。
 - MAS/MAG/RCA 不应同时作为重复裸 skill 出现在 `~/.codex/skills/{mas,mag,rca}`。
 - `opl-doc` 是开发者 support repo，不属于普通用户的 Base/App/Packages 安装清单；源码维护时才使用其 repo-native developer installer。
 

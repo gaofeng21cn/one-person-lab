@@ -13,7 +13,7 @@
     "contracts/opl-framework/target-operating-architecture-contract.json#foundry_agent_os_standard",
     "contracts/opl-framework/stage-route-scheduler-contract.json",
     "contracts/opl-framework/private-platform-residue-owner-decisions.json",
-    "contracts/opl-framework/agent-packages/mas.json#registry_entry"
+    "contracts/opl-framework/packages/mas.json#registry_entry"
   ],
   "standard_agent_definition": {
     "source_shape": "Declarative Domain Pack + OPL generated/hosted surfaces + Domain Minimal Authority Kernel",
@@ -157,7 +157,7 @@
       "gate_id": "oma_target_agent_work_order_guard",
       "base_gate_id": "generated_target_agent_work_order_guard",
       "base_contract_role": "generic_guard_with_legacy_sample_gate_id",
-      "registry_sample_ref": "contracts/opl-framework/agent-packages/oma.json",
+      "registry_sample_ref": "contracts/opl-framework/packages/oma.json",
       "owner": "agent generator / target domain owner",
       "required_status": "evidence_required",
       "requires": [
@@ -247,25 +247,25 @@
     ],
     "representative_domain_kernel_samples": [
       {
-        "sample_ref": "contracts/opl-framework/agent-packages/mas.json",
+        "sample_ref": "contracts/opl-framework/packages/mas.json",
         "domain_kernel_class": "domain_recovery_state",
         "sample_label": "paper_recovery_state",
         "base_contract_invariant": false
       },
       {
-        "sample_ref": "contracts/opl-framework/agent-packages/mag.json",
+        "sample_ref": "contracts/opl-framework/packages/mag.json",
         "domain_kernel_class": "domain_native_submission_or_export_authority",
         "sample_label": "grant-native submission authority",
         "base_contract_invariant": false
       },
       {
-        "sample_ref": "contracts/opl-framework/agent-packages/rca.json",
+        "sample_ref": "contracts/opl-framework/packages/rca.json",
         "domain_kernel_class": "domain_artifact_recovery_authority",
         "sample_label": "visual artifact recovery authority",
         "base_contract_invariant": false
       },
       {
-        "sample_ref": "contracts/opl-framework/agent-packages/oma.json",
+        "sample_ref": "contracts/opl-framework/packages/oma.json",
         "domain_kernel_class": "target_work_order_currentness_and_owner_return_shape",
         "sample_label": "target work-order currentness and target owner return shape",
         "base_contract_invariant": false

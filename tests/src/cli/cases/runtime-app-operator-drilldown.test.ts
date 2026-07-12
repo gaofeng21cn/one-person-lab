@@ -13,6 +13,10 @@ import {
   spawn,
   test,
 } from '../helpers.ts';
+import {
+  writeCapabilityProvider,
+  writeMasConsumer,
+} from './packages-cases/capability-fixtures.ts';
 
 test('runtime snapshot exposes the user-visible summary and stale Temporal worker repair route', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-operator-state-'));
@@ -96,13 +100,22 @@ test('runtime snapshot exposes the user-visible summary and stale Temporal worke
 test('runtime app operator projects completed memory trace refs without body or authority', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-operator-memory-trace-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const workspaceRoot = path.join(stateRoot, 'workspace');
   const env = {
     OPL_STATE_DIR: stateRoot,
     OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    CODEX_HOME: path.join(stateRoot, 'codex-home'),
   };
   const rejectedMemoryBody = 'domain-owned rejected write body';
 
   try {
+    fs.mkdirSync(workspaceRoot, { recursive: true });
+    const providerManifest = writeCapabilityProvider(path.join(stateRoot, 'provider'));
+    const consumerManifest = writeMasConsumer(path.join(stateRoot, 'consumer'), providerManifest);
+    runCli([
+      'packages', 'install', '--manifest-url', consumerManifest, '--trust-tier', 'first_party',
+      '--scope', 'workspace', '--target-workspace', workspaceRoot,
+    ], env);
     const attempt = runCli([
       'family-runtime',
       'attempt',
@@ -115,8 +128,8 @@ test('runtime app operator projects completed memory trace refs without body or 
       'temporal',
       '--workspace-locator',
       JSON.stringify({
-        workspace_root: '/tmp/mas-memory-trace',
-        artifact_root: '/tmp/mas-memory-trace/artifacts',
+        workspace_root: workspaceRoot,
+        artifact_root: path.join(workspaceRoot, 'artifacts'),
         source_refs: ['source:dataset'],
       }),
       '--task',

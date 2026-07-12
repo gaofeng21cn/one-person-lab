@@ -5,7 +5,7 @@
   "state": "seed_contract",
   "contract_ref": "contracts/opl-framework/domain-private-platform-tail-matrix.json",
   "source_phase": "human_doc:reuse-first-platform-risk-audit.phase7-domain-private-platform-retirement",
-  "purpose": "Seed a machine-readable tail matrix for MAS, MAG, RCA, OMA, BookForge, and ScholarSkills private platform retirement without authorizing domain repo deletes or owner acceptance.",
+  "purpose": "Seed a machine-readable tail matrix for MAS, MAG, RCA, OMA, OBF, and ScholarSkills private platform retirement without authorizing domain repo deletes or owner acceptance.",
   "machine_boundary": "This matrix is an OPL readback seed and delete/tombstone planning input. It does not mutate domain repos, write domain truth, sign owner receipts, create typed blockers, authorize physical delete, or claim domain/runtime/production readiness.",
   "source_surfaces": [
     "contracts/opl-framework/private-platform-residue-owner-decisions.json",
@@ -292,7 +292,7 @@
       "domain_id": "opl-bookforge",
       "repo_id": "opl-bookforge",
       "surface_id": "bookforge_publication_helper_materializer_tail",
-      "display_name": "BookForge publication helper/materializer tail",
+      "display_name": "OPL Book Forge publication helper/materializer tail",
       "private_tail_class": [
         "helper_materializer",
         "session_store",
@@ -302,7 +302,7 @@
       "replacement_opl_primitive": [
         "OPL hosted/generated package and workbench surface",
         "Pack/Workspace primitives",
-        "BookForge minimal authority functions"
+        "OPL Book Forge minimal authority functions"
       ],
       "authority_retained": [
         "manuscript_domain_pack",
@@ -313,7 +313,7 @@
       "active_caller_readback": {
         "expected_state": "helper_materializer_classified_as_authority_function_or_delete_gate",
         "readback": "opl agents default-callers --family-defaults --json#reports[domain_id=opl-bookforge]",
-        "domain_repo_surface": "BookForge repo-native helper/materializer readback"
+        "domain_repo_surface": "OPL Book Forge repo-native helper/materializer readback"
       },
       "delete_or_tombstone_gate": {
         "gate_status": "owner_decision_or_tombstone_required_before_physical_delete",

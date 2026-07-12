@@ -312,8 +312,8 @@ console.log(JSON.stringify({ sync: 'ok' }));
     assert.equal(output.system_action.status, 'manual_required');
     assert.deepEqual(output.system_action.details.summary, {
       total_targets_count: 7,
-      completed_targets_count: 5,
-      skipped_targets_count: 1,
+      completed_targets_count: 4,
+      skipped_targets_count: 2,
       manual_required_targets_count: 1,
     });
     assert.equal(targets.get('medautoscience')?.status, 'completed');
@@ -326,8 +326,8 @@ console.log(JSON.stringify({ sync: 'ok' }));
     assert.equal(targets.get('oplmetaagent')?.reason, 'module_missing');
     assert.equal(targets.get('oplbookforge')?.status, 'completed');
     assert.equal(targets.get('oplbookforge')?.reason, 'module_missing');
-    assert.equal(targets.get('scholarskills')?.status, 'completed');
-    assert.equal(targets.get('scholarskills')?.reason, 'module_missing');
+    assert.equal(targets.get('scholarskills')?.status, 'skipped');
+    assert.equal(targets.get('scholarskills')?.reason, 'optional_module_not_in_default_reconcile');
     assert.equal(targets.get('medautogrant')?.status, 'manual_required');
     assert.equal(targets.get('medautogrant')?.reason, 'dirty_checkout');
     const turnkeyLog = fs.readFileSync(turnkeyLogPath, 'utf8');

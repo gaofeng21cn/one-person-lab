@@ -94,9 +94,9 @@ function routeFor(actionId: string) {
   return `opl app action execute --action ${actionId}`;
 }
 
-function moduleRef(entry: JsonRecord) {
-  const moduleId = asString(entry.module_id) ?? 'unknown';
-  return `app_state.modules.items.${moduleId}`;
+function runtimeSourceCarrierRef(entry: JsonRecord) {
+  const packageId = asString(entry.package_id) ?? 'unknown';
+  return `app_state.runtime_source_carriers.items.${packageId}`;
 }
 
 function buildCapabilityTaskAwarenessRefs(input: BuildSettingsControlCenterInput) {
@@ -106,24 +106,24 @@ function buildCapabilityTaskAwarenessRefs(input: BuildSettingsControlCenterInput
   return {
     surface_kind: 'opl_settings_capability_task_awareness_refs.v1',
     source_refs: [
-      'app_state.modules.items',
+      'app_state.runtime_source_carriers.items',
       'app_state.provider.temporal',
       'app_state.actions#task_action_receipt_preview',
       'app_state.actions#task_export_bundle_preview',
       'app_state.operator.workbench.task_drilldowns[].workflow_refs',
     ],
     capability_health_refs: moduleItems.map((entry) => {
-      const moduleId = asString(entry.module_id) ?? 'unknown';
-      const status = asString(entry.health_status) ?? 'unknown';
+      const packageId = asString(entry.package_id) ?? 'unknown';
+      const status = asString(entry.source_health_status) ?? 'unknown';
       return {
-        id: moduleId,
-        title: asString(entry.label) ?? moduleId,
+        id: packageId,
+        title: asString(entry.label) ?? packageId,
         status,
-        ref: moduleRef(entry),
+        ref: runtimeSourceCarrierRef(entry),
         owner: 'one-person-lab',
         next_action: status === 'ready'
           ? 'none'
-          : asString(entry.recommended_action) ?? 'settings_sync_capabilities',
+          : 'settings_sync_capabilities',
       };
     }),
     connector_readiness_refs: [
@@ -141,9 +141,9 @@ function buildCapabilityTaskAwarenessRefs(input: BuildSettingsControlCenterInput
         id: 'codex_surface',
         title: 'Codex-visible capability surface',
         status: 'refs_available',
-        ref: 'app_state.actions#settings_reload_codex_surface',
+        ref: 'app_state.actions#agent_package_activate',
         owner: 'one-person-lab',
-        next_action: 'settings_reload_codex_surface',
+        next_action: 'agent_package_activate',
       },
     ],
     workflow_refs: [
@@ -186,7 +186,7 @@ function actionState(action: SettingsAction, input: BuildSettingsControlCenterIn
   }
   if (action.action_id === 'settings_sync_capabilities' || action.action_id === 'settings_apply_opl_packages') {
     const summary = asRecord(asRecord(input.modules).summary);
-    return summary.healthy_default_modules_count === summary.default_modules_count ? 'ready' : 'attention_needed';
+    return summary.healthy_default_carriers_count === summary.default_carriers_count ? 'ready' : 'attention_needed';
   }
   if (action.action_id === 'settings_prune_runtime_roots_dry_run') {
     return 'plan_only';
@@ -359,7 +359,7 @@ function buildSettingsProjection(
   const workspaceRoot = asRecord(input.paths.workspace_root);
   const codexAccess = resolveSettingsCodexAccess(input.core);
   const temporalStatus = asString(temporal.health_status) ?? asString(temporal.status);
-  const moduleHealth = `${moduleSummary.healthy_default_modules_count ?? 0}/${moduleSummary.default_modules_count ?? 0}`;
+  const moduleHealth = `${moduleSummary.healthy_default_carriers_count ?? 0}/${moduleSummary.default_carriers_count ?? 0}`;
   const firstIssueAction = asString(issueQueue[0]?.recommended_action_id);
   const modelAccessTask = taskByActionId(taskEntries, 'settings_repair_model_access');
   const workspaceTask = taskByActionId(taskEntries, 'settings_verify_workspace');
@@ -421,17 +421,17 @@ function buildSettingsProjection(
       settingsItem({
         item_id: 'managed_agent_packages',
         label: 'Managed agent packages',
-        state: moduleSummary.healthy_default_modules_count === moduleSummary.default_modules_count ? 'ready' : 'attention_needed',
+        state: moduleSummary.healthy_default_carriers_count === moduleSummary.default_carriers_count ? 'ready' : 'attention_needed',
         surface_class: 'status',
         scope: 'local_machine',
         owner: 'one-person-lab',
         risk: riskForTask(syncCapabilitiesTask),
-        normal_summary: `${moduleHealth} default OPL modules are healthy.`,
-        next_action: moduleSummary.healthy_default_modules_count === moduleSummary.default_modules_count
+        normal_summary: `${moduleHealth} default runtime source carriers are healthy. Package installation state comes from OPL Packages.`,
+        next_action: moduleSummary.healthy_default_carriers_count === moduleSummary.default_carriers_count
           ? 'none'
           : 'settings_sync_capabilities',
         details_ref: 'app_state.settings_control_center.capability_task_awareness_refs.capability_health_refs',
-        editable_reason: editableReasonForTask(taskEntries, 'settings_sync_capabilities', 'read_only_projection_from_modules_summary'),
+        editable_reason: editableReasonForTask(taskEntries, 'settings_sync_capabilities', 'read_only_projection_from_runtime_source_carriers'),
       }),
     ]),
     resources: settingsSection('resources', 'Resources', 'resources', 'connect_fabric_cloud_ssh_hpc_and_workspace_resource_directory', [
@@ -510,7 +510,7 @@ function buildSettingsProjection(
       'app_state.settings_control_center.app_settings_read_model',
       'app_state.core.codex',
       'app_state.paths',
-      'app_state.modules',
+      'app_state.runtime_source_carriers',
       'app_state.provider',
       'app_state.release',
     ],
@@ -699,7 +699,7 @@ function buildAppSettingsReadModel(
   const familyWorkspaceRoot = asRecord(input.paths.family_workspace_root);
   const codexAccess = resolveSettingsCodexAccess(input.core);
   const temporalStatus = asString(temporal.health_status) ?? asString(temporal.status);
-  const moduleHealth = `${moduleSummary.healthy_default_modules_count ?? 0}/${moduleSummary.default_modules_count ?? 0}`;
+  const moduleHealth = `${moduleSummary.healthy_default_carriers_count ?? 0}/${moduleSummary.default_carriers_count ?? 0}`;
   const capabilityTaskAwarenessRefs = buildCapabilityTaskAwarenessRefs(input);
 
   return {
@@ -710,7 +710,7 @@ function buildAppSettingsReadModel(
     source_refs: [
       'app_state.core.codex',
       'app_state.developer_mode',
-      'app_state.modules',
+      'app_state.runtime_source_carriers',
       'app_state.provider',
       'app_state.paths',
       'app_state.release',
@@ -811,12 +811,12 @@ function buildAppSettingsReadModel(
         source: asString(familyWorkspaceRoot.source),
         role: asString(familyWorkspaceRoot.role),
       },
-      modules: {
-        source_ref: 'app_state.modules.summary',
+      runtime_source_carriers: {
+        source_ref: 'app_state.runtime_source_carriers.summary',
         source_mode: asString(moduleSource.mode),
-        modules_root: asString(input.paths.modules_root),
-        default_modules_count: moduleSummary.default_modules_count ?? 0,
-        healthy_default_modules_count: moduleSummary.healthy_default_modules_count ?? 0,
+        runtime_sources_root: asString(input.paths.runtime_sources_root),
+        default_carriers_count: moduleSummary.default_carriers_count ?? 0,
+        healthy_default_carriers_count: moduleSummary.healthy_default_carriers_count ?? 0,
         health: moduleHealth,
         sync_action_id: 'settings_sync_capabilities',
         apply_action_id: 'settings_apply_opl_packages',
@@ -833,7 +833,7 @@ function buildAppSettingsReadModel(
         service_action_ids: [
           'settings_sync_capabilities',
           'settings_apply_opl_packages',
-          'settings_reload_codex_surface',
+          'agent_package_activate',
         ],
       },
     },
@@ -841,7 +841,7 @@ function buildAppSettingsReadModel(
     local_environment: {
       source_ref: 'app_state.paths + app_state.release + app_state.provider',
       state_dir: asString(input.paths.state_dir),
-      modules_root: asString(input.paths.modules_root),
+      runtime_sources_root: asString(input.paths.runtime_sources_root),
       logs_dir: asString(input.paths.logs_dir),
       update_channel_file: asString(input.paths.update_channel_file),
       developer_supervisor_config_file: asString(input.paths.developer_supervisor_config_file),
@@ -896,33 +896,33 @@ function buildIssueQueue(input: BuildSettingsControlCenterInput) {
     });
   }
 
-  const dirtyModules = moduleItems.filter((entry) => asString(entry.health_status) === 'dirty');
+  const dirtyModules = moduleItems.filter((entry) => asString(entry.source_health_status) === 'dirty');
   if (dirtyModules.length > 0) {
     issues.push({
-      issue_id: 'module_dirty_checkout',
+      issue_id: 'runtime_source_carrier_dirty_checkout',
       status_code: 'dirty_checkout',
-      label: 'Local module checkout has uncommitted changes',
-      user_message: 'One or more module checkouts are dirty. Settings will not overwrite them; review or commit those changes first.',
+      label: 'Local runtime source checkout has uncommitted changes',
+      user_message: 'One or more developer runtime source carriers are dirty. Settings will not overwrite them; review or commit those changes first.',
       severity: 'warning',
-      source_ref: 'app_state.modules.items[].health_status',
-      affected_ids: dirtyModules.map((entry) => asString(entry.module_id)).filter(Boolean),
+      source_ref: 'app_state.runtime_source_carriers.items[].source_health_status',
+      affected_ids: dirtyModules.map((entry) => asString(entry.package_id)).filter(Boolean),
       recommended_action_id: 'settings_sync_capabilities',
       route: issueRoute('settings_sync_capabilities'),
     });
   }
 
   const manualModules = moduleItems.filter((entry) =>
-    ['missing', 'invalid_checkout'].includes(asString(entry.health_status) ?? '')
+    ['missing', 'invalid_checkout'].includes(asString(entry.source_health_status) ?? '')
   );
   if (manualModules.length > 0) {
     issues.push({
-      issue_id: 'module_install_manual_required',
+      issue_id: 'runtime_source_carrier_attention_required',
       status_code: 'manual_required',
       label: 'OPL package attention required',
-      user_message: 'One or more default OPL packages are missing or invalid. Use the package actions only through OPL-owned routes.',
+      user_message: 'One or more package runtime source carriers are missing or invalid. Use the package actions only through OPL-owned routes.',
       severity: 'warning',
-      source_ref: 'app_state.modules.items[].health_status',
-      affected_ids: manualModules.map((entry) => asString(entry.module_id)).filter(Boolean),
+      source_ref: 'app_state.runtime_source_carriers.items[].source_health_status',
+      affected_ids: manualModules.map((entry) => asString(entry.package_id)).filter(Boolean),
       recommended_action_id: 'settings_apply_opl_packages',
       route: issueRoute('settings_apply_opl_packages'),
     });
@@ -1021,7 +1021,7 @@ export function buildSettingsControlCenter(input: BuildSettingsControlCenterInpu
     status_summary: {
       model_access: codexAccess.model_access_status,
       codex_version: asString(codex.parsed_version) ?? asString(codex.version) ?? 'missing',
-      module_health: `${moduleSummary.healthy_default_modules_count ?? 0}/${moduleSummary.default_modules_count ?? 0}`,
+      runtime_source_carrier_health: `${moduleSummary.healthy_default_carriers_count ?? 0}/${moduleSummary.default_carriers_count ?? 0}`,
       temporal_provider: statusTone(asString(temporal.status) ?? asString(temporal.health_status)),
       release_channel: releaseChannel,
       issue_count: issueQueue.length,

@@ -1,14 +1,14 @@
 {
   "surface_kind": "opl_agent_package_manifest.v1",
-  "agent_id": "opl-bookforge",
-  "package_id": "opl-bookforge",
+  "agent_id": "obf",
+  "package_id": "obf",
   "display_name": "OPL Book Forge",
   "publisher": "one-person-lab",
   "version": "0.1.0",
   "source": "first_party",
   "registry_entry": {
     "registry_kind": "first_party_agent_package_registry_entry",
-    "registry_source_ref": "contracts/opl-framework/agent-packages/bookforge.json",
+    "registry_source_ref": "contracts/opl-framework/packages/obf.json",
     "base_contract_role": "registry_data_not_base_invariant",
     "base_contract_invariant": false,
     "identity_fields": [
@@ -42,12 +42,17 @@
   },
   "codex_surface": {
     "plugin_id": "opl-bookforge",
+    "plugin_payload_manifest_url": "payloads/obf-0.1.0.json",
     "standalone_distribution": "repo_carrier_source",
     "required_skill_ids": [
       "opl-bookforge"
     ],
     "bundled_capability_package_ids": [],
     "user_install_action_count": 1
+  },
+  "runtime_source_carrier": {
+    "carrier_kind": "opl_managed_module_source",
+    "module_id": "oplbookforge"
   },
   "carrier_adapters": [
     {

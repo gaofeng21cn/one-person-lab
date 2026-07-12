@@ -187,7 +187,7 @@ function buildCapabilityPackagesComponent(modules: Record<string, unknown>[], ch
     state,
     channel,
     current: {
-      channel_manifest: 'ghcr.io/gaofeng21cn/one-person-lab-manifest:latest',
+      channel_manifest: 'ghcr.io/gaofeng21cn/one-person-lab-manifest:latest-stable',
       tag_role: 'selector_only',
       transaction_guards: {
         installed_digest_required: true,
@@ -200,7 +200,7 @@ function buildCapabilityPackagesComponent(modules: Record<string, unknown>[], ch
       },
       oci_distribution: {
         descriptor_media_type: 'application/vnd.opl.capability-package.channel.v1+json',
-        channel_ref: 'ghcr.io/gaofeng21cn/one-person-lab-manifest:latest',
+        channel_ref: 'ghcr.io/gaofeng21cn/one-person-lab-manifest:latest-stable',
         tag_role: 'selector_only',
         installed_receipt_must_record_digest: true,
         digest_field: MANAGED_UPDATE_OWNER_FIELDS.toDigest,
@@ -232,7 +232,7 @@ function buildCapabilityPackagesComponent(modules: Record<string, unknown>[], ch
         'DigestPinned',
         'Unknown',
         'ChannelTagSelectorOnly',
-        'GHCR latest is a rolling channel selector; installed receipts must record digest, sha256, source fingerprint, or git head.',
+        'GHCR latest-stable is a rolling channel selector; installed receipts must record digest, sha256, source fingerprint, or git head.',
       ),
       condition(
         'DeveloperCheckoutProtected',
@@ -296,7 +296,7 @@ function buildCapabilityPackagesComponent(modules: Record<string, unknown>[], ch
     },
     receipt: componentReceipt({
       component_id: 'opl_packages',
-      sourceManifestRef: 'ghcr.io/gaofeng21cn/one-person-lab-manifest:latest',
+      sourceManifestRef: 'ghcr.io/gaofeng21cn/one-person-lab-manifest:latest-stable',
       postApplyHooks,
       apply_mode: cleanManagedScopeSafe ? 'auto_apply' : 'manual_required',
       status_detail: detail,

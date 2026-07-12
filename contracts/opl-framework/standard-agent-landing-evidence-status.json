@@ -81,7 +81,7 @@
         "production generated-surface consumption tail for generated target-agent routes",
         "real target owner accepted-answer or typed-blocker return-shape evidence"
       ],
-      "registry_sample_ref": "contracts/opl-framework/agent-packages/oma.json",
+      "registry_sample_ref": "contracts/opl-framework/packages/oma.json",
       "can_claim_complete": false
     },
     {
@@ -111,7 +111,7 @@
       "can_claim_complete": false,
       "base_tail_id": "generated_target_agent_work_order_guard",
       "base_contract_role": "generic_guard_with_legacy_sample_key",
-      "registry_sample_ref": "contracts/opl-framework/agent-packages/oma.json",
+      "registry_sample_ref": "contracts/opl-framework/packages/oma.json",
       "reason": "Guard-missing machine samples are executable; real target owner closeout and production consumption tails still require owner evidence."
     },
     "cross_agent_negative_conformance": {
@@ -233,7 +233,7 @@
   "oma_target_agent_work_order_guard": {
     "base_guard_id": "generated_target_agent_work_order_guard",
     "base_contract_role": "generic_guard_with_legacy_sample_key",
-    "registry_sample_ref": "contracts/opl-framework/agent-packages/oma.json",
+    "registry_sample_ref": "contracts/opl-framework/packages/oma.json",
     "required_fields": [
       "target_owner_route",
       "source_morphology",

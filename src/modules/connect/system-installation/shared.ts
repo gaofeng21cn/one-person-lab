@@ -96,6 +96,7 @@ export type CommandResult = {
 export type RunCommandOptions = {
   maxBuffer?: number;
   timeoutMs?: number;
+  env?: NodeJS.ProcessEnv;
 };
 
 type SpawnCommand = {
@@ -332,7 +333,6 @@ export type OplSystemActionInput = Partial<{
 }>;
 
 export type OplTurnkeyInstallInput = Partial<{
-  modules: string[];
   headless: boolean;
   withApp: boolean;
   host: string;
@@ -340,7 +340,7 @@ export type OplTurnkeyInstallInput = Partial<{
   workspacePath: string;
   sessionsLimit: number;
   basePath: string;
-  skipModules: boolean;
+  skipPackages: boolean;
   skipEngines: boolean;
   noOnlineRuntime: boolean;
   skipNativeHelperRepair: boolean;
@@ -427,7 +427,7 @@ export function runCommand(
   const result = spawnSync(spawnCommand.command, spawnCommand.args, {
     cwd,
     encoding: 'utf8',
-    env: process.env,
+    env: options.env ?? process.env,
     ...(options.maxBuffer ? { maxBuffer: options.maxBuffer } : {}),
     ...(options.timeoutMs ? { timeout: options.timeoutMs } : {}),
   });

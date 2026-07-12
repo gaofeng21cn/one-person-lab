@@ -2,6 +2,7 @@ import {
   assert,
   fs,
   insertFamilyRuntimeTaskProjectionFixture,
+  installRuntimePackageFixture,
   os,
   path,
   runCli,
@@ -16,6 +17,7 @@ test('family-runtime compact timeline exposes filtered public currentness', () =
     TEMPORAL_ADDRESS: '',
   };
   try {
+    installRuntimePackageFixture(stateRoot, 'redcube-ai');
     const task = insertFamilyRuntimeTaskProjectionFixture({
       stateRoot,
       domainId: 'redcube',

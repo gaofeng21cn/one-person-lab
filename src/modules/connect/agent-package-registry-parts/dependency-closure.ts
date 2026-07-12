@@ -157,7 +157,7 @@ export function requiredDependents(index: AgentPackageLockIndex, packageId: stri
 export function assertNoRequiredInstalledDependents(
   index: AgentPackageLockIndex,
   packageId: string,
-  action: 'uninstall' | 'disable' | 'update' | 'repair' | 'rollback',
+  action: 'install' | 'uninstall' | 'disable' | 'update' | 'repair' | 'rollback',
 ) {
   const dependentPackageIds = requiredDependents(index, packageId);
   if (dependentPackageIds.length === 0) return;

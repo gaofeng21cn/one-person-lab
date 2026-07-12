@@ -40,26 +40,17 @@ function readJson(filePath) {
 }
 
 function packageFingerprint(manifest) {
-  const modules = manifest.packages?.modules ?? {};
-  const fingerprints = Object.fromEntries(
-    Object.entries(modules)
-      .map(([moduleId, entry]) => [
-        moduleId,
-        {
-          source_git_head_sha: entry?.source_git?.head_sha ?? null,
-          source_archive_sha256: entry?.source_archive?.sha256 ?? null,
-        },
-      ])
-      .sort(([left], [right]) => left.localeCompare(right)),
-  );
-  const frameworkCore = manifest.packages?.framework_core;
-  if (frameworkCore) {
-    fingerprints.framework_core = {
-      source_git_head_sha: frameworkCore?.source_git?.head_sha ?? null,
-      source_archive_sha256: frameworkCore?.source_archive?.sha256 ?? null,
-    };
-  }
-  return Object.fromEntries(Object.entries(fingerprints).sort(([left], [right]) => left.localeCompare(right)));
+  const catalog = manifest.packages?.package_catalog ?? {};
+  return Object.fromEntries(Object.entries(catalog)
+    .map(([packageId, entry]) => {
+      const promoted = entry?.versions?.find((version) => version?.promotion_status === 'promoted') ?? null;
+      return [packageId, {
+        package_version: promoted?.package_version ?? entry?.latest_version ?? null,
+        package_content_digest: promoted?.package_content_digest ?? null,
+        owner_source_commit: promoted?.owner_source_commit ?? null,
+      }];
+    })
+    .sort(([left], [right]) => left.localeCompare(right)));
 }
 
 function changedPackages(candidateFingerprint, currentFingerprint) {
@@ -82,6 +73,15 @@ function buildSummary(options) {
 
   const currentFingerprint = packageFingerprint(current);
   const changed = changedPackages(candidateFingerprint, currentFingerprint);
+  const unversionedChanges = changed.filter((packageId) => (
+    currentFingerprint[packageId]
+    && candidateFingerprint[packageId]
+    && currentFingerprint[packageId].package_version === candidateFingerprint[packageId].package_version
+    && currentFingerprint[packageId].package_content_digest !== candidateFingerprint[packageId].package_content_digest
+  ));
+  if (unversionedChanges.length > 0) {
+    throw new Error(`package content changed without a package version bump: ${unversionedChanges.join(', ')}`);
+  }
   return {
     status: changed.length > 0 ? 'publish_required' : 'skipped',
     reason: changed.length > 0 ? 'package_channel_changed' : 'package_channel_unchanged',
@@ -90,6 +90,7 @@ function buildSummary(options) {
     candidate_manifest: options.candidateManifest,
     current_manifest: options.currentManifest,
     changed_packages: changed,
+    changed_packages_json: JSON.stringify(changed),
     candidate_fingerprint: candidateFingerprint,
     current_fingerprint: currentFingerprint,
   };

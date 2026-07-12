@@ -37,6 +37,7 @@ import {
   combineStageAdmissionGateWithCheckoutCurrentness,
   providerHostedCheckoutCurrentnessPreflight,
 } from './family-runtime-provider-hosted-attempts-parts/admission-currentness.ts';
+import { ensureFamilyRuntimePackageLaunchReady } from './family-runtime-package-readiness.ts';
 export {
   DEFAULT_EXECUTOR_DISPATCH_TASK_KIND,
   DEFAULT_EXECUTOR_TRANSPORT_ONLY_ADMISSION_SUPERSEDED_REASON,
@@ -723,7 +724,10 @@ function workspaceLocatorForProviderHostedTask(row: FamilyRuntimeTaskRow, payloa
     'profile_name',
     'domain_truth_owner',
     'profile_ref',
+    'scope',
     'quest_id',
+    'quest_root',
+    'quest_path',
     'action_type',
     'dispatch_authority',
     'dispatch_ref',
@@ -866,7 +870,7 @@ function sourceFingerprintForProviderHostedTask(row: FamilyRuntimeTaskRow, paylo
   return stableId('task_source', [row.domain_id, row.task_kind, row.task_id]);
 }
 
-export function ensureProviderHostedStageAttempt(
+export async function ensureProviderHostedStageAttempt(
   db: DatabaseSync,
   row: FamilyRuntimeTaskRow,
   payload: Record<string, unknown>,
@@ -927,6 +931,14 @@ export function ensureProviderHostedStageAttempt(
   if (!stageId) {
     return null;
   }
+  const packageReadiness = await ensureFamilyRuntimePackageLaunchReady({
+    domainId: row.domain_id,
+    workspaceLocator,
+    useBoundaryId: stableId('package-use', [row.task_id, expectedSourceFingerprint]),
+  });
+  const useBoundWorkspaceLocator = packageReadiness?.package_use_binding
+    ? { ...workspaceLocator, package_use_binding: packageReadiness.package_use_binding }
+    : workspaceLocator;
   const admissionGate = buildStageAdmissionLaunchGate({
     domainId: row.domain_id,
     stageId,
@@ -943,13 +955,13 @@ export function ensureProviderHostedStageAttempt(
   });
   const stageLaunchAdmissionGate = combineStageAdmissionGateWithCheckoutCurrentness(
     admissionGate,
-    providerHostedCheckoutCurrentnessPreflight(row, workspaceLocator),
+    providerHostedCheckoutCurrentnessPreflight(row, useBoundWorkspaceLocator),
   );
   const result = createStageAttempt(db, {
     domainId: row.domain_id,
     stageId,
     providerKind,
-    workspaceLocator,
+    workspaceLocator: useBoundWorkspaceLocator,
     sourceFingerprint: expectedSourceFingerprint,
     executorKind: isDefaultExecutorDispatchTask(row, payload) ? 'codex_cli' : 'domain_handler',
     taskId: row.task_id,

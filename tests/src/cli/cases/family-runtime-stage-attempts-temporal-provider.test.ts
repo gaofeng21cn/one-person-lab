@@ -1,4 +1,4 @@
-import { assert, fs, os, path, runCli, test } from '../helpers.ts';
+import { assert, fs, installRuntimePackageFixture, os, path, runCli, test } from '../helpers.ts';
 import { buildTemporalStageAttemptWorkflowInput } from '../../../../src/modules/runway/family-runtime-temporal.ts';
 import type {
   TemporalStageAttemptCreateOutput,
@@ -14,6 +14,7 @@ function familyRuntimeEnv(stateRoot: string) {
 test('family-runtime maps a Temporal attempt to provider launch input without domain authority', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-temporal-attempt-input-'));
   try {
+    installRuntimePackageFixture(stateRoot, 'redcube-ai');
     const created = runCli([
       'family-runtime',
       'attempt',
@@ -48,6 +49,7 @@ test('family-runtime maps a Temporal attempt to provider launch input without do
 test('family-runtime does not authorize Temporal launch without source fingerprint', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-temporal-attempt-no-auth-'));
   try {
+    installRuntimePackageFixture(stateRoot, 'redcube-ai');
     const created = runCli([
       'family-runtime',
       'attempt',

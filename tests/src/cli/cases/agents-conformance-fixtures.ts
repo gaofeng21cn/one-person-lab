@@ -646,6 +646,33 @@ export function retargetReadyRepo(repoDir: string, domainId: string, domainLabel
   syncStandardAgentConformanceProfile(repoDir);
 }
 
+export function configureReadyCapabilityPackage(repoDir: string) {
+  const packCompilerInputPath = contractPath(repoDir, 'pack_compiler_input.json');
+  const packCompilerInput = readJson(packCompilerInputPath);
+  delete packCompilerInput.implementation_profile;
+  writeJson(packCompilerInputPath, packCompilerInput);
+  writeJson(contractPath(repoDir, 'scholar-skills-capability-modules.json'), {
+    contract_id: 'opl_scholarskills_capability_modules',
+    authority_boundary: {
+      can_claim_domain_ready: false,
+      can_claim_runtime_ready: false,
+      can_write_domain_truth: false,
+      can_sign_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_schedule_runtime: false,
+    },
+  });
+  const pluginManifestPath = path.join(repoDir, '.codex-plugin', 'plugin.json');
+  fs.mkdirSync(path.dirname(pluginManifestPath), { recursive: true });
+  writeJson(pluginManifestPath, {
+    name: 'mas-scholar-skills',
+    version: '0.1.0',
+  });
+  const skillPath = path.join(repoDir, 'skills', 'mas-scholar-skills', 'SKILL.md');
+  fs.mkdirSync(path.dirname(skillPath), { recursive: true });
+  fs.writeFileSync(skillPath, '# MAS Scholar Skills\n', 'utf8');
+}
+
 function setStagePlaneTarget(repoDir: string, domainId: string, owner: string) {
   const stageControlPlane = structuredClone(
     compileStandardAgentStageManifest(repoDir).stage_control_plane,

@@ -1,4 +1,4 @@
-import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, runCli, test } from '../helpers.ts';
+import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, installRuntimePackageFixture, loadFamilyManifestFixtures, os, runCli, test } from '../helpers.ts';
 import { createMasScoutStage, createMedAutoScienceStageManifest } from './family-runtime-stage-fixtures.ts';
 import { createAdmittedStagePackFixture } from './workspace-domain-test-helper.ts';
 
@@ -13,6 +13,7 @@ test('family-runtime required admission warns but does not block launch without 
     const env = {
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
       OPL_STATE_DIR: stateRoot,
+      CODEX_HOME: `${stateRoot}/codex-home`,
     };
     runCli([
       'workspace',
@@ -24,6 +25,9 @@ test('family-runtime required admission warns but does not block launch without 
       '--manifest-command',
       buildManifestCommand(masPack.manifest),
     ], env);
+    installRuntimePackageFixture(stateRoot, 'med-autoscience');
+    const workspaceRoot = `${stateRoot}/workspace`;
+    fs.mkdirSync(workspaceRoot, { recursive: true });
 
     const created = runCli([
       'family-runtime',
@@ -36,7 +40,7 @@ test('family-runtime required admission warns but does not block launch without 
       '--provider',
       'temporal',
       '--workspace-locator',
-      '{"workspace_root":"/tmp/mas"}',
+      JSON.stringify({ workspace_root: workspaceRoot }),
       '--source-fingerprint',
       'sha256:scout-cohort-loop',
       '--require-stage-admission',

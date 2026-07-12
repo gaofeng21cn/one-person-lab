@@ -252,7 +252,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl connect install --module medautoscience',
         'opl connect sync-skills',
         'opl connect packages manifest',
-        'opl install --modules mas,mag,rca',
+        'opl packages install mas',
         'opl doctor',
         'opl connect skills',
         'opl connect sync-skills',

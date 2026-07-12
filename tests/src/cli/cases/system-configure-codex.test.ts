@@ -71,8 +71,8 @@ test('system configure-codex writes the product endpoint and App-owned install f
       codexDefaultProfile.model_reasoning_effort,
     );
     assert.equal(output.codex_config.default_profile.base_url, 'https://gflabtoken.cn/v1');
-    assert.equal(output.codex_config.default_profile.base_url_role, 'product_default_provider_endpoint');
-    assert.equal(output.codex_config.default_profile.model_profile_role, 'app_catalog_unavailable_fallback_projection');
+    assert.equal(output.codex_config.default_profile.base_url_role, codexDefaultProfile.base_url_role);
+    assert.equal(output.codex_config.default_profile.model_profile_role, codexDefaultProfile.model_profile_role);
     assert.equal(output.codex_config.bootstrap.api_key_present, true);
     assert.equal(output.codex_config.bootstrap.management_receipt.selection_mode, 'auto');
     assert.equal(output.codex_config.bootstrap.management_receipt.provider_route, 'direct_gateway');

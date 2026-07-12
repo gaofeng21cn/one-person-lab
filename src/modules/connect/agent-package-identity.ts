@@ -19,7 +19,7 @@ const CANONICAL_PACKAGE_IDS = new Map<string, string>([
       entry.plugin_name,
       entry.canonical_plugin_name,
       ...entry.aliases,
-    ].map((alias) => [normalizeAgentPackageAliasKey(alias), entry.project] as const)),
+    ].map((alias) => [normalizeAgentPackageAliasKey(alias), entry.agent_id] as const)),
   ['oplflow', 'opl-flow'],
 ]);
 
@@ -29,4 +29,10 @@ export function canonicalAgentPackageId(value: unknown) {
   }
   const trimmed = value.trim().toLowerCase();
   return CANONICAL_PACKAGE_IDS.get(normalizeAgentPackageAliasKey(trimmed)) ?? trimmed;
+}
+
+export function publicAgentPackageSelector(packageId: string) {
+  return STANDARD_AGENT_REGISTRY.find((entry) =>
+    entry.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP
+    && entry.agent_id === packageId)?.agent_id ?? packageId;
 }

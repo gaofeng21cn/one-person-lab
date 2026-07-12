@@ -1,8 +1,8 @@
-import bookForgeAgentPackageManifest from '../../../contracts/opl-framework/agent-packages/bookforge.json' with { type: 'json' };
-import magAgentPackageManifest from '../../../contracts/opl-framework/agent-packages/mag.json' with { type: 'json' };
-import masAgentPackageManifest from '../../../contracts/opl-framework/agent-packages/mas.json' with { type: 'json' };
-import omaAgentPackageManifest from '../../../contracts/opl-framework/agent-packages/oma.json' with { type: 'json' };
-import rcaAgentPackageManifest from '../../../contracts/opl-framework/agent-packages/rca.json' with { type: 'json' };
+import bookForgeAgentPackageManifest from '../../../contracts/opl-framework/packages/obf.json' with { type: 'json' };
+import magAgentPackageManifest from '../../../contracts/opl-framework/packages/mag.json' with { type: 'json' };
+import masAgentPackageManifest from '../../../contracts/opl-framework/packages/mas.json' with { type: 'json' };
+import omaAgentPackageManifest from '../../../contracts/opl-framework/packages/oma.json' with { type: 'json' };
+import rcaAgentPackageManifest from '../../../contracts/opl-framework/packages/rca.json' with { type: 'json' };
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { canonicalAgentPackageId } from './agent-package-identity.ts';
 import type { ModuleCapabilityDependency, OplModuleId } from './system-installation/shared.ts';

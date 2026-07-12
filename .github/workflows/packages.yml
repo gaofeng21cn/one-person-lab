@@ -12,6 +12,17 @@ on:
         required: false
         type: string
         default: manual_dispatch
+      changed_packages_json:
+        description: Optional JSON array of canonical package ids to publish; empty publishes all.
+        required: false
+        type: string
+        default: ''
+      promotion_target:
+        description: Moving channel to update after verification.
+        required: false
+        type: choice
+        options: [candidate, latest-stable]
+        default: candidate
   workflow_call:
     inputs:
       opl_version:
@@ -22,6 +33,16 @@ on:
         description: Release gate or workflow that authorized package publication
         required: true
         type: string
+      changed_packages_json:
+        description: Optional JSON array of canonical package ids to publish; empty publishes all.
+        required: false
+        type: string
+        default: ''
+      promotion_target:
+        description: Moving channel to update after verification.
+        required: false
+        type: string
+        default: candidate
 
 permissions:
   contents: read
@@ -32,7 +53,7 @@ env:
 
 jobs:
   module-packages:
-    name: Prepare package source archives
+    name: Prepare package archives
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -52,6 +73,9 @@ jobs:
           echo "OPL_RELEASE_VERSION=$version" >> "$GITHUB_ENV"
           echo "OPL_PACKAGES_OWNER=${{ github.repository_owner }}" >> "$GITHUB_ENV"
           echo "OPL_PACKAGE_RELEASE_GATE=${{ inputs.release_gate }}" >> "$GITHUB_ENV"
+          promotion_target="${{ inputs.promotion_target }}"
+          case "$promotion_target" in candidate|latest-stable) ;; *) exit 2 ;; esac
+          echo "OPL_PACKAGE_PROMOTION_TARGET=$promotion_target" >> "$GITHUB_ENV"
 
       - name: Record package publication gate
         shell: bash
@@ -69,38 +93,109 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build module archives and release manifest
-        run: npm run packages:manifest -- --version "$OPL_RELEASE_VERSION" --owner "$OPL_PACKAGES_OWNER" --out-dir dist/opl-packages
+      - name: Setup ORAS
+        uses: oras-project/setup-oras@v1
+
+      - name: Fetch previous package channel manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          previous_root="$RUNNER_TEMP/opl-previous-channel"
+          rm -rf "$previous_root"
+          mkdir -p "$previous_root"
+          echo "${{ github.token }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
+          if oras pull "ghcr.io/${OPL_PACKAGES_OWNER}/one-person-lab-manifest:latest-stable" --output "$previous_root"; then
+            previous="$(find "$previous_root" -name opl-channel-manifest.json -print -quit)"
+            if [ -n "$previous" ]; then
+              echo "OPL_PREVIOUS_PACKAGE_MANIFEST=$previous" >> "$GITHUB_ENV"
+            fi
+          else
+            echo "::notice::No previous package channel manifest is available; continuing as an initial publication."
+          fi
+
+      - name: Build package archives and release manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(--version "$OPL_RELEASE_VERSION" --owner "$OPL_PACKAGES_OWNER" --out-dir dist/opl-packages)
+          if [ -n "${OPL_PREVIOUS_PACKAGE_MANIFEST:-}" ]; then
+            args+=(--previous-manifest "$OPL_PREVIOUS_PACKAGE_MANIFEST")
+          fi
+          npm run packages:manifest -- "${args[@]}"
+
+      - name: Resolve changed package publication plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          requested='${{ inputs.changed_packages_json }}'
+          if [ -n "$requested" ]; then
+            changed_packages_json="$requested"
+          elif [ -n "${OPL_PREVIOUS_PACKAGE_MANIFEST:-}" ]; then
+            npm run packages:daily-check -- \
+              --candidate-manifest dist/opl-packages/opl-channel-manifest.json \
+              --current-manifest "$OPL_PREVIOUS_PACKAGE_MANIFEST" \
+              --version "$OPL_RELEASE_VERSION" \
+              --summary-path dist/opl-packages/package-publication-plan.json
+            changed_packages_json="$(jq -c '.changed_packages' dist/opl-packages/package-publication-plan.json)"
+          else
+            changed_packages_json="$(jq -c '.packages.package_catalog | keys' dist/opl-packages/opl-channel-manifest.json)"
+          fi
+          jq -e 'type == "array" and all(.[]; type == "string")' <<<"$changed_packages_json" >/dev/null
+          echo "OPL_CHANGED_PACKAGES_JSON=$changed_packages_json" >> "$GITHUB_ENV"
 
       - name: Check package release discipline
         run: npm run packages:release-discipline -- --manifest dist/opl-packages/opl-release-manifest.json
 
-      - name: Setup ORAS
-        uses: oras-project/setup-oras@v1
-
-      - name: Publish module package channel to GHCR
+      - name: Publish package channel to GHCR
         shell: bash
         run: |
           set -euo pipefail
-          echo "${{ github.token }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
-          for archive in dist/opl-packages/modules/*.tar.gz; do
-            module_name="$(basename "$archive" "-${OPL_RELEASE_VERSION}.tar.gz")"
-            image="ghcr.io/${OPL_PACKAGES_OWNER}/one-person-lab-modules/${module_name}"
-            oras push "${image}:${OPL_RELEASE_VERSION}" \
-              --artifact-type application/vnd.onepersonlab.module.source.v1 \
-              "${archive}:application/vnd.onepersonlab.module.source.v1+gzip"
+          changed_packages_json="$OPL_CHANGED_PACKAGES_JSON"
+          for package_root in dist/opl-packages/packages/*; do
+            package_id="$(basename "$package_root")"
+            if ! jq -e --arg id "$package_id" 'index($id) != null' <<<"$changed_packages_json" >/dev/null; then
+              continue
+            fi
+            package_version="$(jq -r --arg id "$package_id" '.packages.package_artifacts[] | select(.package_id == $id) | .package_version' dist/opl-packages/opl-release-manifest.json)"
+            archive="$package_root/${package_id}-${package_version}.tar.gz"
+            image="ghcr.io/${OPL_PACKAGES_OWNER}/one-person-lab-packages/${package_id}"
+            push_result="$(oras push --format json "${image}:${package_version}" \
+              --artifact-type application/vnd.onepersonlab.package.v1 \
+              "${archive}:application/vnd.onepersonlab.package.source.v1+gzip" \
+              "${package_root}/agent-package-manifest.json:application/vnd.onepersonlab.package.manifest.v1+json" \
+              "${package_root}/payload-manifest.json:application/vnd.onepersonlab.package.payload.v1+json")"
+            digest="$(jq -r '.digest' <<<"$push_result")"
+            test "$digest" != null
+            oras tag "${image}:${package_version}" candidate
+            if [ "$OPL_PACKAGE_PROMOTION_TARGET" = latest-stable ]; then
+              oras tag "${image}:${package_version}" latest-stable
+            fi
+            node scripts/finalize-package-channel-digests.mjs \
+              --release-manifest dist/opl-packages/opl-release-manifest.json \
+              --channel-manifest dist/opl-packages/opl-channel-manifest.json \
+              --package-id "$package_id" \
+              --digest "$digest"
           done
-          framework_archive="dist/opl-packages/framework/one-person-lab-framework-${OPL_RELEASE_VERSION}.tar.gz"
-          test -f "$framework_archive"
-          oras push "ghcr.io/${OPL_PACKAGES_OWNER}/one-person-lab-framework:${OPL_RELEASE_VERSION}" \
-            --artifact-type application/vnd.onepersonlab.framework.source.v1 \
-            "${framework_archive}:application/vnd.onepersonlab.framework.source.v1+gzip"
+          node scripts/finalize-package-channel-digests.mjs \
+            --release-manifest dist/opl-packages/opl-release-manifest.json \
+            --channel-manifest dist/opl-packages/opl-channel-manifest.json \
+            --check
+          if [[ "$OPL_PACKAGE_RELEASE_GATE" = github_release_published || "$OPL_PACKAGE_RELEASE_GATE" = base_* ]]; then
+            framework_archive="dist/opl-packages/framework/one-person-lab-framework-${OPL_RELEASE_VERSION}.tar.gz"
+            test -f "$framework_archive"
+            oras push "ghcr.io/${OPL_PACKAGES_OWNER}/one-person-lab-framework:${OPL_RELEASE_VERSION}" \
+              --artifact-type application/vnd.onepersonlab.framework.source.v1 \
+              "${framework_archive}:application/vnd.onepersonlab.framework.source.v1+gzip"
+          fi
           oras push "ghcr.io/${OPL_PACKAGES_OWNER}/one-person-lab-manifest:${OPL_RELEASE_VERSION}" \
             --artifact-type application/vnd.onepersonlab.release.manifest.v1 \
             "dist/opl-packages/opl-release-manifest.json:application/vnd.onepersonlab.release.manifest.v1+json" \
             "dist/opl-packages/opl-channel-manifest.json:application/vnd.onepersonlab.release.channel-manifest.v1+json" \
             "dist/opl-packages/SHA256SUMS:text/plain"
-          oras tag "ghcr.io/${OPL_PACKAGES_OWNER}/one-person-lab-manifest:${OPL_RELEASE_VERSION}" latest
+          oras tag "ghcr.io/${OPL_PACKAGES_OWNER}/one-person-lab-manifest:${OPL_RELEASE_VERSION}" candidate
+          if [ "$OPL_PACKAGE_PROMOTION_TARGET" = latest-stable ]; then
+            oras tag "ghcr.io/${OPL_PACKAGES_OWNER}/one-person-lab-manifest:${OPL_RELEASE_VERSION}" latest-stable
+          fi
 
       - name: Upload prepared package artifacts
         uses: actions/upload-artifact@v7

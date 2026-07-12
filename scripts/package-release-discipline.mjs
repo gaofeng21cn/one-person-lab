@@ -43,13 +43,14 @@ const PACKAGE_WORKFLOW_PATH = '.github/workflows/packages.yml';
 const PACKAGE_RELEASE_CALLER_WORKFLOW_PATH = '.github/workflows/release-package-channel.yml';
 const PACKAGE_DAILY_WORKFLOW_PATH = '.github/workflows/daily-package-channel.yml';
 
-function validateModule(moduleId, entry, failures) {
+function validatePackageArtifact(moduleId, entry, failures) {
   assertCondition(entry.current_install_update_source === 'package_channel', `${moduleId}: current source must be package_channel for managed GHCR capability packages`, failures);
   assertCondition(entry.package_consumption_status === 'consumed_by_package_channel_installs', `${moduleId}: package consumption status drifted`, failures);
   assertCondition(entry.package_channel_status === 'active_release_channel', `${moduleId}: module package channel must be active`, failures);
   assertCondition(entry.package_lifecycle_status === 'active_release_channel', `${moduleId}: module package lifecycle must be active`, failures);
   assertCondition(typeof entry.package_lifecycle_reason === 'string' && entry.package_lifecycle_reason.includes('GHCR capability packages channel'), `${moduleId}: module package lifecycle reason must point to the GHCR capability packages channel`, failures);
   assertCondition(entry.remote_publish_status === 'published_to_ghcr_by_packages_workflow', `${moduleId}: remote publish status must claim workflow GHCR publication`, failures);
+  assertCondition(typeof entry.artifact === 'string' && entry.artifact.includes(`one-person-lab-packages/${entry.package_id}:`), `${moduleId}: artifact must use canonical GHCR package namespace`, failures);
   assertCondition(entry.developer_git_checkout_override?.repo_url, `${moduleId}: missing developer git checkout override`, failures);
   assertCondition(entry.release_discipline?.package_channel_status === 'active_release_channel', `${moduleId}: release discipline must mark package channel active`, failures);
   assertCondition(entry.release_discipline?.package_lifecycle_status === 'active_release_channel', `${moduleId}: release discipline must mark package lifecycle active`, failures);
@@ -97,12 +98,17 @@ function validateFrameworkCore(entry, failures) {
   assertCondition(entry?.checksum?.algorithm === 'sha256', 'framework_core: checksum algorithm must be sha256', failures);
   assertCondition(isSha256(entry?.checksum?.value), 'framework_core: checksum value is invalid', failures);
   assertCondition(isGitSha(entry?.source_git?.head_sha), 'framework_core: source git head sha is invalid', failures);
-  assertCondition(entry?.homebrew_formula?.package_name === 'opl-framework', 'framework_core: Homebrew projection package name must be opl-framework', failures);
+  assertCondition(entry?.homebrew_formula?.surface_kind === 'opl_homebrew_formula_projection.v1', 'framework_core: Homebrew projection surface kind is invalid', failures);
+  assertCondition(entry?.homebrew_formula?.formula_name === 'opl', 'framework_core: Homebrew Formula name must be opl', failures);
+  assertCondition(entry?.homebrew_formula?.package_name === 'opl', 'framework_core: Homebrew package name must be opl', failures);
+  assertCondition(entry?.homebrew_formula?.approval_status === 'owner_approved', 'framework_core: Homebrew projection must be owner approved', failures);
+  assertCondition(entry?.homebrew_formula?.carrier_scope === 'framework_core_only', 'framework_core: Homebrew projection must be Base-only', failures);
   assertCondition(entry?.homebrew_formula?.version === entry?.version, 'framework_core: Homebrew projection version must come from framework core version', failures);
   assertCondition(entry?.homebrew_formula?.source_head === entry?.source_git?.head_sha, 'framework_core: Homebrew projection source head must come from source_git', failures);
   assertCondition(entry?.homebrew_formula?.archive_url === `https://github.com/gaofeng21cn/one-person-lab/archive/${entry?.source_git?.head_sha}.tar.gz`, 'framework_core: Homebrew projection archive URL must be the immutable GitHub commit archive', failures);
   assertCondition(entry?.homebrew_formula?.archive_kind === 'immutable_github_commit_archive', 'framework_core: Homebrew projection archive kind is invalid', failures);
   assertCondition(entry?.homebrew_formula?.sha256_source === 'tap_sync_download_and_hash', 'framework_core: Homebrew projection sha256 ownership must stay with tap sync', failures);
+  assertCondition(entry?.homebrew_formula?.tap_generator_role === 'consume_projection_without_inference', 'framework_core: Homebrew tap generator role is invalid', failures);
 }
 
 function validateManifest(manifest) {
@@ -124,9 +130,7 @@ function validateManifest(manifest) {
   assertCondition(automation?.release_manifest_package?.current_install_update_source === 'opl_release_channel_manifest', 'release manifest current source must be package channel', failures);
   assertCondition(automation?.channel_manifest?.manifest_kind === 'opl_release_channel_manifest.v1', 'missing channel manifest automation contract', failures);
   assertCondition(typeof automation?.channel_manifest?.ghcr_ref === 'string' && automation.channel_manifest.ghcr_ref.includes('one-person-lab-manifest'), 'missing channel manifest GHCR ref', failures);
-  assertCondition(automation?.channel_manifest?.moving_tags?.includes('latest'), 'channel manifest must declare latest moving tag', failures);
-  assertCondition(!automation?.channel_manifest?.moving_tags?.includes('stable'), 'channel manifest must not declare stable as an agent package user channel', failures);
-  assertCondition(!automation?.channel_manifest?.moving_tags?.includes('nightly'), 'channel manifest must not declare nightly as an agent package user channel', failures);
+  assertCondition(JSON.stringify(automation?.channel_manifest?.moving_tags) === JSON.stringify(['candidate', 'latest-stable']), 'channel manifest moving tags must be candidate and latest-stable only', failures);
   assertCondition(automation?.channel_manifest?.outputs?.channel_manifest === 'opl-channel-manifest.json', 'missing channel manifest output', failures);
   assertCondition(automation?.channel_manifest?.outputs?.checksums === 'SHA256SUMS', 'missing checksum output', failures);
   assertCondition(automation?.artifact_build?.workflow === PACKAGE_WORKFLOW_PATH, 'missing artifact build workflow contract', failures);
@@ -136,7 +140,7 @@ function validateManifest(manifest) {
   assertCondition(automation?.rollback?.strategy === 'previous_channel_manifest_target', 'rollback strategy must use previous channel manifest target', failures); // reuse-first: allow package-channel contract verifier, not package manager logic.
   assertCondition(automation?.cleanup?.strategy === 'retain_latest_n_versions_and_declared_rollbacks', 'cleanup strategy must retain latest versions and rollbacks', failures);
   assertCondition(Number.isFinite(automation?.cleanup?.retain_versions) && automation.cleanup.retain_versions >= 2, 'cleanup retain_versions must be >= 2', failures);
-  assertCondition(automation?.cleanup?.protected_tags?.includes('latest'), 'cleanup must protect moving latest tag', failures);
+  assertCondition(automation?.cleanup?.protected_tags?.includes('latest-stable'), 'cleanup must protect moving latest-stable tag', failures);
   assertCondition(automation?.cleanup?.execution_mode === 'dry_run_first_explicit_execute_required', 'cleanup must be dry-run first with explicit execute', failures);
   assertCondition(automation?.cleanup?.destructive_action_requires === 'package_admin_with_delete_packages_scope', 'cleanup destructive action requirements drifted', failures);
   assertCondition(automation?.daily_package_channel?.status === 'active_change_detected_daily_publish', 'daily package channel must be active and change-detected', failures);
@@ -149,14 +153,18 @@ function validateManifest(manifest) {
   assertCondition(automation?.daily_package_channel?.manual_repair_trigger === 'workflow_dispatch', 'daily package channel manual repair trigger drifted', failures);
   assertCondition(automation?.daily_package_channel?.force_publish_input === 'force_publish', 'daily package channel force publish input drifted', failures);
 
-  const modules = manifest.packages?.modules ?? {};
-  for (const [moduleId, entry] of Object.entries(modules)) {
-    validateModule(moduleId, entry, failures);
+  const packageArtifacts = manifest.packages?.package_artifacts ?? {};
+  for (const packageEntry of Object.values(packageArtifacts)) {
+    assertCondition(packageEntry?.homebrew_formula === undefined, 'Agent, capability, and workflow packages must not declare Homebrew Formulae', failures);
+    assertCondition(packageEntry?.homebrew_cask === undefined, 'Agent, capability, and workflow packages must not declare Homebrew Casks', failures);
   }
-  assertCondition(Object.hasOwn(modules, 'scholarskills'), 'package channel must include MAS Scholar Skills as a managed capability package', failures);
-  assertCondition(modules.scholarskills?.repo_name === 'mas-scholar-skills', 'scholarskills package repo name drifted', failures);
-  assertCondition(modules.scholarskills?.scope === 'framework_capability_package', 'scholarskills must remain a framework capability package, not a domain module', failures);
-  assertCondition(modules.scholarskills?.current_install_update_source === 'package_channel', 'scholarskills must use package channel for ordinary installs and updates', failures);
+  for (const [moduleId, entry] of Object.entries(packageArtifacts)) {
+    validatePackageArtifact(moduleId, entry, failures);
+  }
+  assertCondition(Object.hasOwn(packageArtifacts, 'mas-scholar-skills'), 'package channel must include MAS Scholar Skills as a managed capability package', failures);
+  assertCondition(packageArtifacts['mas-scholar-skills']?.repo_name === 'mas-scholar-skills', 'mas-scholar-skills package repo name drifted', failures);
+  assertCondition(packageArtifacts['mas-scholar-skills']?.scope === 'framework_capability_package', 'mas-scholar-skills must remain a framework capability package, not a domain package', failures);
+  assertCondition(packageArtifacts['mas-scholar-skills']?.current_install_update_source === 'package_channel', 'mas-scholar-skills must use package channel for ordinary installs and updates', failures);
   validateFrameworkCore(manifest.packages?.framework_core, failures);
 
   assertCondition(!Object.hasOwn(manifest.packages ?? {}, 'webui_docker_image'), 'Framework package manifest must not carry App-owned WebUI image coordinates', failures);
@@ -207,15 +215,33 @@ function validateWorkflow(manifest, manifestPath, failures) {
   assertCondition(/release:\s*\n\s*types:\s*\n\s*-\s*published/.test(releaseCallerSource), 'package release caller must publish from GitHub Release published events', failures);
   assertCondition(/uses:\s+\.\/\.github\/workflows\/packages\.yml/.test(releaseCallerSource), 'package release caller must invoke the reusable packages workflow', failures);
   assertCondition(/release_gate:\s*github_release_published/.test(releaseCallerSource), 'package release caller must record the GitHub Release gate', failures);
+  assertCondition(/promotion_target:\s*latest-stable/.test(releaseCallerSource), 'GitHub Release must explicitly promote latest-stable', failures);
   assertCondition(!/\n\s*push:\n/.test(source), 'package workflow must not restore tag-push publishing', failures);
-  assertCondition(/oras\s+push/.test(source), 'package workflow must push module archives and release manifest to GHCR', failures);
-  assertCondition(/one-person-lab-modules/.test(source), 'package workflow must publish module packages', failures);
+  assertCondition(/oras\s+push/.test(source), 'package workflow must push package archives and release manifest to GHCR', failures);
+  assertCondition(/one-person-lab-packages/.test(source), 'package workflow must publish canonical packages', failures);
+  assertCondition(!/one-person-lab-modules/.test(source), 'package workflow must not publish retired module packages', failures);
   assertCondition(/one-person-lab-framework/.test(source), 'package workflow must publish OPL Framework runtime artifact', failures);
   assertCondition(/one-person-lab-manifest/.test(source), 'package workflow must publish release manifest package', failures);
   assertCondition(!/docker\/build-push-action/.test(source), 'package workflow must not publish WebUI image from Framework repo', failures);
   assertCondition(!/webui-image:/.test(source), 'package workflow must not restore Framework-owned WebUI image job', failures);
   assertCondition(!/one-person-lab-webui/.test(source), 'package workflow must not publish one-person-lab-webui', failures);
   assertCondition(/one-person-lab-manifest:\$\{OPL_RELEASE_VERSION\}/.test(source), 'package workflow must publish versioned release manifest GHCR channel', failures);
+  assertCondition(/Fetch previous package channel manifest/.test(source), 'package workflow must fetch the previous package channel before building', failures);
+  assertCondition(/one-person-lab-manifest:latest-stable/.test(source), 'package workflow must read the latest-stable package channel for retained versions', failures);
+  assertCondition(/OPL_PREVIOUS_PACKAGE_MANIFEST/.test(source), 'package workflow must expose the previous channel manifest to the archive builder', failures);
+  assertCondition(/args\+=\(--previous-manifest "\$OPL_PREVIOUS_PACKAGE_MANIFEST"\)/.test(source), 'package workflow must pass the previous channel manifest into the archive builder', failures);
+  assertCondition(
+    source.indexOf('Fetch previous package channel manifest') < source.indexOf('Build package archives and release manifest'),
+    'package workflow must fetch the previous channel before building',
+    failures,
+  );
+  assertCondition(/oras push --format json/.test(source), 'package workflow must capture immutable package OCI digests', failures);
+  assertCondition(/finalize-package-channel-digests\.mjs/.test(source), 'package workflow must finalize package OCI digests before channel publication', failures);
+  assertCondition(/Resolve changed package publication plan/.test(source) && /OPL_CHANGED_PACKAGES_JSON/.test(source), 'package workflow must publish only the computed changed package plan', failures);
+  assertCondition(/OPL_PACKAGE_RELEASE_GATE" = github_release_published/.test(source), 'Framework artifact publication must remain behind the Base release gate', failures);
+  assertCondition(/OPL_PACKAGE_PROMOTION_TARGET/.test(source), 'package workflow must require an explicit promotion target', failures);
+  assertCondition(/oras tag .* candidate/.test(source), 'package workflow must always publish candidate after verification', failures);
+  assertCondition(/if \[ "\$OPL_PACKAGE_PROMOTION_TARGET" = latest-stable \]/.test(source), 'package workflow must gate latest-stable promotion', failures);
   assertCondition(dailyWorkflowSource.length > 0, 'daily package channel workflow must exist', failures);
   assertCondition(/schedule:\s*\n\s*-\s*cron:/.test(dailyWorkflowSource), 'daily package channel workflow must run on schedule', failures);
   assertCondition(/base="\$\(date -u \+'%y\.%-m\.%-d'\)"/.test(dailyWorkflowSource), 'daily package channel workflow must default to current UTC date package tag', failures);
@@ -225,19 +251,27 @@ function validateWorkflow(manifest, manifestPath, failures) {
   assertCondition(/force_publish:/.test(dailyWorkflowSource), 'daily package channel workflow must keep force_publish repair input', failures);
   assertCondition(/npm run packages:manifest/.test(dailyWorkflowSource), 'daily package channel workflow must build a candidate package manifest', failures);
   assertCondition(/npm run packages:daily-check/.test(dailyWorkflowSource), 'daily package channel workflow must run package daily change detection', failures);
-  assertCondition(/one-person-lab-manifest:latest/.test(dailyWorkflowSource), 'daily package channel workflow must compare against latest channel manifest', failures);
+  assertCondition(/one-person-lab-manifest:latest-stable/.test(dailyWorkflowSource), 'daily package channel workflow must compare against latest-stable channel manifest', failures);
   assertCondition(/test -n "\$current"/.test(dailyWorkflowSource), 'daily package channel workflow must fail closed when latest channel manifest is missing', failures);
+  assertCondition(/--previous-manifest "\$\{\{ steps\.current\.outputs\.current_manifest \}\}"/.test(dailyWorkflowSource), 'daily package channel workflow must retain catalog versions from the current channel', failures);
+  assertCondition(
+    dailyWorkflowSource.indexOf('Fetch current latest package channel manifest') < dailyWorkflowSource.indexOf('Build candidate package archives and manifest'),
+    'daily package channel workflow must fetch the current channel before building the candidate',
+    failures,
+  );
   assertCondition(/args\+=\(--current-manifest "\$\{\{ steps\.current\.outputs\.current_manifest \}\}"\)/.test(dailyWorkflowSource), 'daily package channel workflow must pass the current latest manifest into change detection', failures);
   assertCondition(/uses:\s+\.\/\.github\/workflows\/packages\.yml/.test(dailyWorkflowSource), 'daily package channel workflow must invoke reusable packages workflow', failures);
   assertCondition(/release_gate:\s*daily_package_channel_changed/.test(dailyWorkflowSource), 'daily package channel workflow must record daily package publish gate', failures);
   assertCondition(/publish_required == 'true'/.test(dailyWorkflowSource), 'daily package channel workflow must skip publish when unchanged', failures);
-  assertCondition(/publish_required="true"/.test(dailyWorkflowSource), 'daily package channel workflow must allow explicit force_publish repair', failures);
+  assertCondition(!/publish_required="true"/.test(dailyWorkflowSource), 'daily package channel workflow must not publish unchanged packages', failures);
+  assertCondition(/changed_packages_json/.test(dailyWorkflowSource), 'daily package channel workflow must pass only changed package ids', failures);
+  assertCondition(/promotion_target:\s*candidate/.test(dailyWorkflowSource), 'daily package channel workflow must only promote candidate', failures);
   assertCondition(!/\n\s*push:\n/.test(dailyWorkflowSource), 'daily package channel workflow must not restore push-trigger publishing', failures);
   assertCondition(!/one-person-lab-webui/.test(dailyWorkflowSource), 'daily package channel workflow must not publish WebUI', failures);
 }
 
 function main() {
-const options = parseCliOptions(process.argv.slice(2));
+  const options = parseCliOptions(process.argv.slice(2));
   const manifest = readJsonFile(options.manifest);
   const failures = validateManifest(manifest);
   validateWorkflow(manifest, options.manifest, failures);

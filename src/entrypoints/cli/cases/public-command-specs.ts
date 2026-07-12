@@ -117,12 +117,11 @@ export function buildPublicCommandSpecs(
 
   const installSpec: CommandSpec = {
     usage:
-      'opl install [--headless | --with-app] [--modules <mas,mag,rca>] [--module <module_id>] [--skip-modules] [--skip-engines] [--skip-native-helper-repair] [--no-online-runtime]',
-    summary: 'Install the headless OPL base by default; add explicit agent modules or the optional desktop App only when requested.',
+      'opl install [--headless | --with-app] [--skip-packages] [--skip-engines] [--skip-native-helper-repair] [--no-online-runtime]',
+    summary: 'Install the headless OPL Base by default, or add the optional desktop App; Agent packages use opl packages install.',
     examples: [
       'opl install',
-      'opl install --headless --modules rca',
-      'opl install --modules mas,mag,rca',
+      'opl install --headless --skip-packages',
       'opl install --with-app',
     ],
     group: 'top_level',

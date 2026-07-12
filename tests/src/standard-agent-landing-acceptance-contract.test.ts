@@ -11,7 +11,7 @@ const repoRoot = path.resolve(__dirname, '..', '..');
 const contractPath = 'contracts/opl-framework/standard-agent-landing-acceptance-contract.json';
 const evidenceStatusPath = 'contracts/opl-framework/standard-agent-landing-evidence-status.json';
 const negativeSamplesPath = 'contracts/opl-framework/standard-agent-negative-conformance-samples.json';
-const firstPartyAgentPackageIds = ['mas', 'mag', 'rca', 'oma', 'bookforge'];
+const firstPartyAgentPackageIds = ['mas', 'mag', 'rca', 'oma', 'obf'];
 const absoluteLocalPathPattern = /(?<!workspace:)\/Users\/[^ "]+/;
 
 function readJson<T>(relativePath: string): T {
@@ -266,7 +266,7 @@ test('standard agent landing negative conformance has repo-backed cross-agent sa
     assert.equal(sample.domain_specific_kernel_written_as_opl_generic_kernel_allowed, false, sample.sample_id);
     if (sample.target_dimension === 'registry-sample') {
       assert.equal(sample.base_contract_invariant, false, sample.sample_id);
-      assert.match(sample.registry_sample_ref, /^contracts\/opl-framework\/agent-packages\/.+\.json$/);
+      assert.match(sample.registry_sample_ref, /^contracts\/opl-framework\/packages\/.+\.json$/);
     }
   }
 });
@@ -309,7 +309,7 @@ test('standard agent landing acceptance forbids false completion claims and doma
 
 test('first-party agent package manifests mark registry entries as data not base invariants', () => {
   for (const packageId of firstPartyAgentPackageIds) {
-    const manifestPath = `contracts/opl-framework/agent-packages/${packageId}.json`;
+    const manifestPath = `contracts/opl-framework/packages/${packageId}.json`;
     const manifest = readJson<Record<string, any>>(manifestPath);
 
     assert.equal(

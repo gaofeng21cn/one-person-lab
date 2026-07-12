@@ -39,25 +39,11 @@
           "summary": "Also install or open the optional One Person Lab desktop App."
         },
         {
-          "name": "modules",
-          "flag": "--modules",
-          "value_kind": "string",
-          "required": false,
-          "summary": "Comma-separated family modules to install."
-        },
-        {
-          "name": "module",
-          "flag": "--module",
-          "value_kind": "string",
-          "required": false,
-          "summary": "One family module to install; may be repeated."
-        },
-        {
-          "name": "skip-modules",
-          "flag": "--skip-modules",
+          "name": "skip-packages",
+          "flag": "--skip-packages",
           "value_kind": "boolean",
           "required": false,
-          "summary": "Skip family module installation."
+          "summary": "Skip OPL Agent and capability package installation."
         },
         {
           "name": "skip-engines",
@@ -99,8 +85,8 @@
               "status",
               "install_mode",
               "selected_engines",
-              "selected_modules",
-              "module_actions",
+              "selected_packages",
+              "package_installation",
               "runtime_manager_action",
               "native_helper_action",
               "companion_skill_sync",
@@ -3108,6 +3094,13 @@
           "summary": "Standard Agent checkout to link to the resolved OPL Framework installation."
         },
         {
+          "name": "keep-migration",
+          "flag": "--keep-migration",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Comma-separated managed policy migration ids to preserve in discovery for this transaction."
+        },
+        {
           "name": "scope",
           "flag": "--scope",
           "value_kind": "string",
@@ -3226,6 +3219,13 @@
           "value_kind": "string",
           "required": false,
           "summary": "Standard Agent checkout to link to the resolved OPL Framework installation."
+        },
+        {
+          "name": "keep-migration",
+          "flag": "--keep-migration",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Comma-separated managed policy migration ids to preserve in discovery for this transaction."
         },
         {
           "name": "scope",

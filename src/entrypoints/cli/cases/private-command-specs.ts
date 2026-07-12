@@ -24,14 +24,18 @@ import { buildPrivateRuntimeCommandSpecs } from './private-command-specs-parts/r
 import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, parseExecutorExecArgs, parseExecutorOption, parseExecutorRequestPath, parseKeyValueArgs, parseLaunchDomainArgs, parseProductEntryArgs, parseRegisteredCommandOptions, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSkillPackArgs, parseStartArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, runCodexPassthroughHandled, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec, ParsedCliInput } from '../modules/support.ts';
 
-function ensureDomainPackageLaunchReady(projectId: string, workspacePath?: string) {
+async function ensureDomainPackageLaunchReady(
+  projectId: string,
+  workspacePath?: string,
+  options: { activateMissingScope?: boolean } = {},
+) {
   const workspaceLocator = resolveWorkspaceLocator(projectId, workspacePath);
   if (!workspaceLocator.binding) return;
   const packageId = canonicalAgentPackageId(projectId);
   if (!packageId) return;
   const initialStatus = runOplAgentPackageStatus({ packageId }).opl_agent_package_status;
-  if (initialStatus.installed_package_count > 0) {
-    ensureOplAgentPackageScopeActivation({
+  if (options.activateMissingScope !== false && initialStatus.installed_package_count > 0) {
+    await ensureOplAgentPackageScopeActivation({
       packageId,
       scope: 'workspace',
       targetWorkspace: workspaceLocator.absolute_path,
@@ -353,7 +357,7 @@ export function buildInternalCommandSpecs(
         'opl domain launch --project redcube --strategy open_url',
         'opl domain launch --project med-autogrant --path /Users/gaofeng/workspace/med-autogrant --strategy spawn_command',
       ],
-      handler: (args) => {
+      handler: async (args) => {
         const parsed = parseLaunchDomainArgs(args, commandSpecs['domain launch']);
         if (!parsed.projectId) {
           throw buildUsageError(
@@ -363,7 +367,9 @@ export function buildInternalCommandSpecs(
           );
         }
 
-        ensureDomainPackageLaunchReady(parsed.projectId, parsed.workspacePath);
+        await ensureDomainPackageLaunchReady(parsed.projectId, parsed.workspacePath, {
+          activateMissingScope: !parsed.dryRun,
+        });
         return launchDomainEntry(getContracts(), {
           projectId: parsed.projectId,
           workspacePath: parsed.workspacePath,
@@ -526,7 +532,7 @@ resume: {
         'opl workspace bind --project medautoscience --path /Users/gaofeng/workspace/med-autoscience --profile /Users/gaofeng/workspace/med-autoscience/profiles/local.toml',
         'opl workspace bind --project medautogrant --path /Users/gaofeng/workspace/med-autogrant --input /Users/gaofeng/workspace/med-autogrant/examples/nsfc_workspace_p2c_critique.json',
       ],
-      handler: (args) => {
+      handler: async (args) => {
         const parsed = parseWorkspaceRegistryArgs(args, commandSpecs['workspace-bind']);
         if (!parsed.projectId || !parsed.workspacePath) {
           throw buildUsageError(
@@ -552,7 +558,7 @@ resume: {
           ? runOplAgentPackageStatus({ packageId }).opl_agent_package_status
           : null;
         const packageScopeActivation = packageId && initialStatus && initialStatus.installed_package_count > 0
-          ? ensureOplAgentPackageScopeActivation({
+          ? await ensureOplAgentPackageScopeActivation({
               packageId,
               scope: 'workspace',
               targetWorkspace: parsed.workspacePath,
@@ -568,7 +574,7 @@ resume: {
       usage: 'opl workspace activate --project <project_id> --path <workspace_path>',
       summary: 'Switch the active workspace binding for an admitted project.',
       examples: ['opl workspace activate --project redcube --path /Users/gaofeng/workspace/redcube-ai'],
-      handler: (args) => {
+      handler: async (args) => {
         const parsed = parseWorkspaceRegistryArgs(args, commandSpecs['workspace-activate']);
         if (!parsed.projectId || !parsed.workspacePath) {
           throw buildUsageError(
@@ -581,7 +587,7 @@ resume: {
         const locator = resolveWorkspaceLocator(parsed.projectId, parsed.workspacePath);
         const packageId = canonicalAgentPackageId(parsed.projectId);
         if (locator.binding && locator.binding.status !== 'archived' && packageId) {
-          ensureOplAgentPackageScopeActivation({
+          await ensureOplAgentPackageScopeActivation({
             packageId,
             scope: 'workspace',
             targetWorkspace: locator.absolute_path,

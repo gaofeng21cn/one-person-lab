@@ -16,8 +16,10 @@ import {
 import type {
   AgentPackageCapabilityDependency,
   AgentPackageCapabilityProvider,
+  AgentPackageManagedVersionCatalogSource,
   AgentPackageDistributionPayload,
   AgentPackageManifest,
+  AgentPackageManagedPolicySurfaceConfig,
   AgentPackageOrdinaryUserSource,
   AgentPackageProfileSurfaceConfig,
   AgentPackageRegistryCache,
@@ -62,7 +64,8 @@ function normalizeCapabilityDependencies(
         failure_code: 'agent_package_capability_dependency_invalid',
       });
     }
-    const manifestRef = stringValue(entry.manifest_url);
+    const bootstrapManifestRef = stringValue(entry.bootstrap_manifest_url)
+      ?? stringValue(entry.manifest_url);
     return {
       package_id: packageId,
       required,
@@ -70,7 +73,10 @@ function normalizeCapabilityDependencies(
       capability_abi: capabilityAbi,
       required_export_ids: requiredExportIds,
       required_module_ids: requiredModuleIds,
-      manifest_url: manifestRef ? resolveManifestRelativeSource(manifestRef, manifestUrl) : null,
+      bootstrap_manifest_url: bootstrapManifestRef
+        ? resolveManifestRelativeSource(bootstrapManifestRef, manifestUrl)
+        : null,
+      dependency_source: normalizeManagedVersionCatalogSource(entry.dependency_source, manifestUrl),
     };
   });
   const duplicatePackageIds = dependencies
@@ -84,6 +90,32 @@ function normalizeCapabilityDependencies(
     });
   }
   return dependencies;
+}
+
+function normalizeManagedVersionCatalogSource(
+  value: unknown,
+  manifestUrl: string,
+): AgentPackageManagedVersionCatalogSource | null {
+  if (value === undefined || value === null) return null;
+  if (!isRecord(value)
+    || value.kind !== 'managed_version_catalog'
+    || (value.transport !== 'json_url' && value.transport !== 'opl_oci_channel')
+    || (value.selection_policy !== 'highest_stable' && value.selection_policy !== 'highest_compatible')
+    || value.digest_authority !== 'manifest_and_content_digest') {
+    throw new FrameworkContractError('contract_shape_invalid', 'Managed package update source must declare a digest-authoritative version catalog.', {
+      failure_code: 'agent_package_managed_version_catalog_invalid',
+    });
+  }
+  const catalogRef = assertStringValue(value.catalog_ref, 'managed_version_catalog.catalog_ref');
+  return {
+    kind: 'managed_version_catalog' as const,
+    transport: value.transport as AgentPackageManagedVersionCatalogSource['transport'],
+    catalog_ref: value.transport === 'json_url'
+      ? resolveManifestRelativeSource(catalogRef, manifestUrl)
+      : catalogRef,
+    selection_policy: value.selection_policy as AgentPackageManagedVersionCatalogSource['selection_policy'],
+    digest_authority: 'manifest_and_content_digest' as const,
+  };
 }
 
 function normalizeCapabilityProvider(value: unknown): AgentPackageCapabilityProvider | null {
@@ -193,6 +225,20 @@ function normalizeProfileSurface(value: unknown): AgentPackageProfileSurfaceConf
     merge_context_paths: stringList(value.merge_context_paths).map((entry, index) =>
       normalizedRelativePath(entry, `profile_surface.merge_context_paths[${index}]`)),
     existing_profile_policy: 'semantic_merge_required',
+  };
+}
+
+function normalizeManagedPolicySurface(value: unknown): AgentPackageManagedPolicySurfaceConfig | null {
+  if (value === undefined || value === null) return null;
+  if (!isRecord(value) || value.policy_kind !== 'opl_flow_workflow_policy') {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package managed_policy_surface must declare a supported policy kind.', {
+      failure_code: 'agent_package_managed_policy_surface_invalid',
+    });
+  }
+  return {
+    policy_kind: 'opl_flow_workflow_policy',
+    source_path: normalizedRelativePath(value.source_path, 'managed_policy_surface.source_path'),
+    schema_path: normalizedRelativePath(value.schema_path, 'managed_policy_surface.schema_path'),
   };
 }
 
@@ -402,6 +448,43 @@ function resolveManifestRelativeSource(value: string, manifestUrl: string) {
   return path.resolve(path.dirname(manifestPath), value);
 }
 
+function normalizeManagedRuntimeSourceCarrier(value: unknown) {
+  if (value === undefined || value === null) return null;
+  if (!isRecord(value)
+    || value.carrier_kind !== 'opl_managed_module_source'
+    || !stringValue(value.module_id)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package runtime_source_carrier must declare an OPL managed module id.', {
+      failure_code: 'agent_package_runtime_source_carrier_invalid',
+      required: ['carrier_kind=opl_managed_module_source', 'module_id'],
+    });
+  }
+  return {
+    carrier_kind: 'opl_managed_module_source' as const,
+    module_id: stringValue(value.module_id)!,
+  };
+}
+
+function normalizePackageVersion(value: unknown) {
+  const version = assertStringValue(value, 'version');
+  if (!/^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/.test(version)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package version must use SemVer.', {
+      version,
+      failure_code: 'agent_package_semver_required',
+    });
+  }
+  return version;
+}
+
+function normalizeOwnerLanguageVersion(value: unknown) {
+  if (value === undefined || value === null) return null;
+  if (!isRecord(value) || value.scheme !== 'pep440' || !stringValue(value.value)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package owner_language_version must declare a supported scheme and value.', {
+      failure_code: 'agent_package_owner_language_version_invalid',
+    });
+  }
+  return { scheme: 'pep440' as const, value: stringValue(value.value)! };
+}
+
 export function normalizeManifest(payload: unknown, manifestUrl: string): AgentPackageManifest {
   if (!isRecord(payload)) {
     throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest must be a JSON object.', {
@@ -507,7 +590,8 @@ export function normalizeManifest(payload: unknown, manifestUrl: string): AgentP
     agent_id: canonicalManifestIdentity(payload.agent_id, 'agent_id'),
     display_name: stringValue(payload.display_name)!,
     publisher: stringValue(payload.publisher)!,
-    version: stringValue(payload.version)!,
+    version: normalizePackageVersion(payload.version),
+    owner_language_version: normalizeOwnerLanguageVersion(payload.owner_language_version),
     source: stringValue(payload.source)!,
     codex_surface: payload.codex_surface,
     skill_packs: skillPacks,
@@ -529,6 +613,9 @@ export function normalizeManifest(payload: unknown, manifestUrl: string): AgentP
     plugin_payload_manifest_sha256: null,
     plugin_payload_cache_path: null,
     profile_surface: normalizeProfileSurface(payload.profile_surface),
+    managed_policy_surface: normalizeManagedPolicySurface(payload.managed_policy_surface),
+    runtime_source_carrier: normalizeManagedRuntimeSourceCarrier(payload.runtime_source_carrier),
+    managed_update_source: normalizeManagedVersionCatalogSource(payload.managed_update_source, manifestUrl),
     capability_dependencies: capabilityDependencies,
     capability_provider: capabilityProvider,
     content_digest: distributionPayload?.payload_digest_ref ?? null,
@@ -549,14 +636,23 @@ export function normalizeCapabilityPackageManifest(payload: unknown, manifestUrl
       failure_code: 'invalid_capability_package_manifest',
     });
   }
-  if (payload.exports.optional_skills_installed_by_default !== false) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Capability package optional skills must not be installed by default.', {
+  if (payload.exports.optional_skills_installed_by_default !== true
+    || payload.exports.default_materialization_policy !== 'all_exported_skills') {
+    throw new FrameworkContractError('contract_shape_invalid', 'Capability package must materialize every declared Skill while keeping specialty readiness non-blocking.', {
       manifest_url: manifestUrl,
-      failure_code: 'capability_package_optional_default_forbidden',
+      failure_code: 'capability_package_default_materialization_invalid',
     });
   }
   const packageId = canonicalManifestIdentity(payload.package_id, 'package_id');
   const coreSkillIds = uniqueStrings(stringList(payload.exports.core_skill_ids));
+  const specialtySkillIds = uniqueStrings(stringList(payload.exports.specialty_skill_ids));
+  const allSkillIds = [...coreSkillIds, ...specialtySkillIds];
+  if (new Set(allSkillIds).size !== allSkillIds.length) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Capability package core and specialty skill ids must not overlap.', {
+      manifest_url: manifestUrl,
+      failure_code: 'capability_package_export_overlap',
+    });
+  }
   if (coreSkillIds.length === 0) {
     throw new FrameworkContractError('contract_shape_invalid', 'Capability package must export at least one core skill.', {
       manifest_url: manifestUrl,
@@ -586,12 +682,13 @@ export function normalizeCapabilityPackageManifest(payload: unknown, manifestUrl
     return match ? [match[1]] : [];
   });
   if (
-    contentSkillIds.length !== coreSkillIds.length
-    || contentSkillIds.some((skillId) => !coreSkillIds.includes(skillId))
+    contentSkillIds.length !== allSkillIds.length
+    || contentSkillIds.some((skillId) => !allSkillIds.includes(skillId))
   ) {
     throw new FrameworkContractError('contract_shape_invalid', 'Capability package content lock must contain exactly the declared core skills.', {
       manifest_url: manifestUrl,
       core_skill_ids: coreSkillIds,
+      specialty_skill_ids: specialtySkillIds,
       content_skill_ids: contentSkillIds,
       failure_code: 'capability_package_core_content_mismatch',
     });
@@ -602,12 +699,20 @@ export function normalizeCapabilityPackageManifest(payload: unknown, manifestUrl
   const pluginSourcePath = pluginSourceRef
     ? resolveManifestRelativeSource(pluginSourceRef, manifestUrl)
     : null;
+  const pluginPayloadManifestRef = stringValue(codexSurface.plugin_payload_manifest_url);
+  const pluginPayloadManifestUrl = pluginPayloadManifestRef
+    ? resolveManifestRelativeSource(pluginPayloadManifestRef, manifestUrl)
+    : null;
+  if (pluginPayloadManifestUrl) {
+    validateUrlLike(pluginPayloadManifestUrl, 'codex_surface.plugin_payload_manifest_url');
+  }
   return {
     package_id: packageId,
     agent_id: packageId,
     display_name: assertStringValue(payload.display_name, 'display_name'),
     publisher: assertStringValue(payload.publisher, 'publisher'),
-    version: assertStringValue(payload.version, 'version'),
+    version: normalizePackageVersion(payload.version),
+    owner_language_version: null,
     source: assertStringValue(payload.source, 'source'),
     codex_surface: codexSurface,
     skill_packs: [],
@@ -618,22 +723,29 @@ export function normalizeCapabilityPackageManifest(payload: unknown, manifestUrl
     update_channel: 'manifest_url',
     rollback_ref: `rollback-ref:${packageId}/dependency-closure-lkg`,
     codex_visible_entry: pluginId,
-    required_skill_ids: coreSkillIds,
+    required_skill_ids: allSkillIds,
     optional_skill_refs: [assertStringValue(payload.exports.optional_skill_policy_ref, 'exports.optional_skill_policy_ref')],
     plugin_id: pluginId,
     plugin_source_path: pluginSourcePath,
-    plugin_payload_manifest_url: null,
+    plugin_payload_manifest_url: pluginPayloadManifestUrl,
     plugin_payload_manifest_sha256: null,
     plugin_payload_cache_path: null,
     profile_surface: null,
+    managed_policy_surface: null,
+    runtime_source_carrier: null,
+    managed_update_source: null,
     capability_dependencies: [],
     capability_provider: {
       capability_abi: capabilityAbi,
-      exports: coreSkillIds.map((skillId) => ({
+      exports: [...coreSkillIds.map((skillId) => ({
         export_id: skillId,
         skill_id: skillId,
         install_mode: 'core_required' as const,
-      })),
+      })), ...specialtySkillIds.map((skillId) => ({
+        export_id: skillId,
+        skill_id: skillId,
+        install_mode: 'optional_named_specialty' as const,
+      }))],
       module_export_ids: coreModuleIds,
     },
     content_digest: contentDigest,

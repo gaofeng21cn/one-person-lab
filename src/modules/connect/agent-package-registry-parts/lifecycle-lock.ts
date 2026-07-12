@@ -13,6 +13,7 @@ import type {
   AgentPackageManifest,
   AgentPackagePhysicalSurface,
   AgentPackageResolvedDependency,
+  AgentPackageManagedRuntimeSourceState,
   AgentPackageScopeMaterialization,
   AgentPackageSourceKind,
 } from './types.ts';
@@ -47,6 +48,7 @@ export function packageActionStatus(action: AgentPackageLifecycleAction) {
     update: 'updated',
     repair: 'repaired',
     activate: 'activated',
+    use: 'used',
     rollback: 'rolled_back',
     profile_apply: 'profile_applied',
     uninstall: 'uninstalled',
@@ -102,6 +104,11 @@ export function lifecycleReceipt(input: {
   dependencyClosureDigest?: string;
   dependencyPackages?: AgentPackageLifecycleReceipt['dependency_packages'];
   scopeMaterialization?: AgentPackageScopeMaterialization;
+  scopeMaterializations?: AgentPackageScopeMaterialization[];
+  managedRuntimeSource?: AgentPackageManagedRuntimeSourceState | null;
+  sourceArtifactRef?: string | null;
+  artifactDigest?: string | null;
+  useBinding?: AgentPackageLifecycleReceipt['use_binding'];
 }): AgentPackageLifecycleReceipt {
   const receipt: AgentPackageLifecycleReceipt = {
     surface_kind: 'opl_agent_package_lifecycle_receipt',
@@ -118,6 +125,8 @@ export function lifecycleReceipt(input: {
     registry_url: input.registryUrl ?? null,
     manifest_url: input.manifestUrl ?? null,
     manifest_sha256: input.manifestSha256 ?? null,
+    source_artifact_ref: input.sourceArtifactRef ?? null,
+    artifact_digest: input.artifactDigest ?? null,
     package_lock_ref: input.packageLockRef ?? null,
     rollback_ref: input.rollbackRef ?? null,
     source_kind: input.sourceKind,
@@ -133,21 +142,26 @@ export function lifecycleReceipt(input: {
   if (input.dependencyClosureDigest) receipt.dependency_closure_digest = input.dependencyClosureDigest;
   if (input.dependencyPackages) receipt.dependency_packages = input.dependencyPackages;
   if (input.scopeMaterialization) receipt.scope_materialization = input.scopeMaterialization;
+  if (input.scopeMaterializations) receipt.scope_materializations = input.scopeMaterializations;
+  if (input.managedRuntimeSource !== undefined) receipt.managed_runtime_source = input.managedRuntimeSource;
+  if (input.useBinding) receipt.use_binding = input.useBinding;
   return receipt;
 }
 
 export function permissionScopeSha256(manifest: AgentPackageManifest) {
   return sha256Text(JSON.stringify({
     codex_visible_entry: manifest.codex_visible_entry,
-    bundled_required_skill_ids: manifest.required_skill_ids,
-    optional_skill_refs: manifest.optional_skill_refs,
     entrypoints: manifest.entrypoints,
     permissions: manifest.permissions,
+    runtime_source_carrier: manifest.runtime_source_carrier,
   }));
 }
 
 export function assertPermissionScopeUnchanged(previousLock: AgentPackageLock | null, manifest: AgentPackageManifest, action: 'install' | 'update') {
   if (!previousLock || action === 'install') {
+    return;
+  }
+  if (previousLock.capability_provider && manifest.capability_provider) {
     return;
   }
   const nextSha256 = permissionScopeSha256(manifest);
@@ -176,6 +190,9 @@ export function buildLock(input: {
   dependencyClosureDigest?: string;
   dependencyTransactionId?: string;
   scopeMaterialization?: AgentPackageScopeMaterialization | null;
+  managedRuntimeSource?: AgentPackageManagedRuntimeSourceState | null;
+  sourceArtifactRef?: string | null;
+  artifactDigest?: string | null;
 }): AgentPackageLock {
   const timestamp = nowIso();
   const distributionPayload = input.manifest.distribution_payload;
@@ -189,6 +206,7 @@ export function buildLock(input: {
       ? `${distributionPayload.immutable_tag}@${distributionPayload.payload_digest_ref}`
       : `${input.manifest.version}+sha256:${input.manifestSha256}`,
     package_version: input.manifest.version,
+    owner_language_version: input.manifest.owner_language_version,
     installed_at: input.previousLock?.installed_at ?? timestamp,
     updated_at: timestamp,
     codex_visible_entry: input.manifest.codex_visible_entry,
@@ -200,6 +218,8 @@ export function buildLock(input: {
     rollback_ref: input.manifest.rollback_ref,
     manifest_url: input.manifestUrl,
     manifest_sha256: input.manifestSha256,
+    source_artifact_ref: input.sourceArtifactRef ?? null,
+    artifact_digest: input.artifactDigest ?? null,
     ...(distributionPayload
       ? {
           oci_ref: distributionPayload.oci_ref,
@@ -231,12 +251,16 @@ export function buildLock(input: {
             || entry.target_root !== input.scopeMaterialization!.target_root),
         ]
       : input.previousLock?.scope_materializations ?? [],
+    runtime_source_carrier: input.manifest.runtime_source_carrier,
+    managed_runtime_source: input.managedRuntimeSource ?? null,
+    managed_update_source: input.manifest.managed_update_source,
   };
 }
 
 export function cleanupPreviousPhysicalSurface(
   previous: AgentPackagePhysicalSurface | undefined,
   current: AgentPackagePhysicalSurface,
+  options: { retainPayloadSource?: boolean } = {},
 ) {
   if (!previous || previous.status === 'not_requested') {
     return;
@@ -250,7 +274,11 @@ export function cleanupPreviousPhysicalSurface(
     unregisterLocalCodexPlugin(previous.codex_config_path, previous.marketplace_id, previous.plugin_id);
   }
 
-  for (const oldPath of [previous.codex_plugin_cache_path, previous.marketplace_plugin_path, previous.plugin_payload_cache_path]) {
+  for (const oldPath of [
+    previous.codex_plugin_cache_path,
+    previous.marketplace_plugin_path,
+    options.retainPayloadSource ? null : previous.plugin_payload_cache_path,
+  ]) {
     if (
       oldPath
       && oldPath !== current.codex_plugin_cache_path

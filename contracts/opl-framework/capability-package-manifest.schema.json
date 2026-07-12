@@ -55,8 +55,14 @@
           "minItems": 1,
           "uniqueItems": true
         },
+        "specialty_skill_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
         "optional_skill_policy_ref": { "type": "string", "minLength": 1 },
-        "optional_skills_installed_by_default": { "const": false }
+        "optional_skills_installed_by_default": { "const": true },
+        "default_materialization_policy": { "const": "all_exported_skills" }
       },
       "additionalProperties": true
     },
@@ -82,8 +88,9 @@
       "properties": {
         "plugin_id": { "type": "string", "minLength": 1 },
         "plugin_source_path": { "type": "string", "minLength": 1 },
+        "plugin_payload_manifest_url": { "type": "string", "minLength": 1 },
         "codex_default_exposure": { "const": false },
-        "optional_install_policy": { "const": "named_specialty_only" }
+        "optional_install_policy": { "const": "all_exported_skills" }
       },
       "additionalProperties": true
     }

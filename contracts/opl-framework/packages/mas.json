@@ -1,14 +1,18 @@
 {
   "surface_kind": "opl_agent_package_manifest.v1",
-  "agent_id": "med-autoscience",
-  "package_id": "med-autoscience",
+  "agent_id": "mas",
+  "package_id": "mas",
   "display_name": "Med Auto Science",
   "publisher": "one-person-lab",
-  "version": "0.1.0a4",
+  "version": "0.1.0-alpha.4",
+  "owner_language_version": {
+    "scheme": "pep440",
+    "value": "0.1.0a4"
+  },
   "source": "first_party",
   "registry_entry": {
     "registry_kind": "first_party_agent_package_registry_entry",
-    "registry_source_ref": "contracts/opl-framework/agent-packages/mas.json",
+    "registry_source_ref": "contracts/opl-framework/packages/mas.json",
     "base_contract_role": "registry_data_not_base_invariant",
     "base_contract_invariant": false,
     "identity_fields": [
@@ -42,15 +46,19 @@
   },
   "codex_surface": {
     "plugin_id": "med-autoscience",
+    "plugin_payload_manifest_url": "payloads/mas-0.1.0-alpha.4.json",
     "standalone_distribution": "repo_carrier_source",
     "required_skill_ids": [
-      "med-autoscience",
-      "mas-scholar-skills"
+      "med-autoscience"
     ],
     "bundled_capability_package_ids": [
       "mas-scholar-skills"
     ],
     "user_install_action_count": 1
+  },
+  "runtime_source_carrier": {
+    "carrier_kind": "opl_managed_module_source",
+    "module_id": "medautoscience"
   },
   "carrier_adapters": [
     {

@@ -49,8 +49,8 @@ export function buildSections(input: BuildViewModelSectionsInput) {
     {
       section_id: 'settings_runtime',
       label: 'Runtime settings',
-      state: asNumber(moduleSummary.default_modules_count) === null ? 'unknown' : 'ready',
-      source_ref: 'app_state.modules + app_state.provider',
+      state: asNumber(moduleSummary.default_carriers_count) === null ? 'unknown' : 'ready',
+      source_ref: 'app_state.runtime_source_carriers + app_state.provider',
       lazy: false,
     },
     {

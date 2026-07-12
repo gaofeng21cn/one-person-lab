@@ -25,13 +25,14 @@ import {
 import { defaultHomeShortcutPreferences } from '../../../../../src/modules/connect/agent-package-registry-parts/home-shortcuts.ts';
 import { assertManifestMatchesRegistrySelection } from '../../../../../src/modules/connect/agent-package-registry-parts/selection.ts';
 import { canonicalAgentPackageId } from '../../../../../src/modules/connect/index.ts';
+import { writeManagedRuntimeSourceFixture } from './managed-runtime-source-fixture.ts';
 
 test('default Home shortcut visibility follows registry starter_default', () => {
   const registry = normalizeRegistry({
     ...registryPayload('https://registry.example'),
     entries: [{
       ...registryPayload('https://registry.example').entries[0],
-      package_id: 'opl-meta-agent',
+      package_id: 'oma',
       starter_default: false,
       home_shortcut_ids: ['oma'],
     }],
@@ -48,35 +49,81 @@ test('default Home shortcut visibility follows registry starter_default', () => 
   assert.equal(preferences[0].installed, false);
 });
 
-test('official packages support positional install repair and uninstall without URL or trust flags', () => {
+test('official aliases resolve offline and local manifests own runtime source install repair rollback and uninstall', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-positional-state-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-runtime-source-'));
+  const modulesRoot = path.join(fixtureRoot, 'modules');
+  const pluginSourcePath = createPluginSourceFixture();
   try {
-    const env = { OPL_STATE_DIR: stateDir };
+    const fixtureEnv = writeManagedRuntimeSourceFixture({
+      root: fixtureRoot,
+      moduleId: 'redcube',
+      repoName: 'redcube-ai',
+      version: '0.1.0',
+      sourceHeadSha: 'runtime-source-v1',
+    });
+    const env = { OPL_STATE_DIR: stateDir, OPL_MODULES_ROOT: modulesRoot, ...fixtureEnv };
     const preview = runCli(['packages', 'install', '--dry-run', 'rca'], env) as {
       opl_agent_package_install: { status: string; dry_run: boolean; package_lock: { package_id: string } };
     };
     assert.equal(preview.opl_agent_package_install.status, 'validated_no_write');
     assert.equal(preview.opl_agent_package_install.dry_run, true);
-    assert.equal(preview.opl_agent_package_install.package_lock.package_id, 'redcube-ai');
+    assert.equal(preview.opl_agent_package_install.package_lock.package_id, 'rca');
     assert.equal(preview.opl_agent_package_install.package_lock.package_id, canonicalAgentPackageId('rca'));
 
-    const rca = runCli(['packages', 'install', 'rca'], env) as {
-      opl_agent_package_install: { package_lock: { package_id: string; trust_tier: string } };
-    };
-    assert.equal(rca.opl_agent_package_install.package_lock.package_id, 'redcube-ai');
-    assert.equal(rca.opl_agent_package_install.package_lock.trust_tier, 'first_party');
+    const manifestPath = path.join(fixtureRoot, 'rca-local-manifest.json');
+    fs.writeFileSync(manifestPath, formatJsonPayload({
+      ...agentPackageManifest({
+        packageId: 'rca',
+        agentId: 'rca',
+        pluginSourcePath,
+      }),
+      runtime_source_carrier: {
+        carrier_kind: 'opl_managed_module_source',
+        module_id: 'redcube',
+      },
+    }));
 
-    const repaired = runCli(['packages', 'repair', 'rca'], env) as {
+    const rca = runCli([
+      'packages', 'install', '--manifest-url', manifestPath, '--trust-tier', 'first_party',
+    ], env) as {
+      opl_agent_package_install: { package_lock: { package_id: string; trust_tier: string; managed_runtime_source: any } };
+    };
+    assert.equal(rca.opl_agent_package_install.package_lock.package_id, 'rca');
+    assert.equal(rca.opl_agent_package_install.package_lock.trust_tier, 'first_party');
+    assert.equal(rca.opl_agent_package_install.package_lock.managed_runtime_source.preparation_status, 'completed');
+    assert.match(rca.opl_agent_package_install.package_lock.managed_runtime_source.handler_probe_output_sha256, /^sha256:/);
+    assert.equal(fs.readFileSync(path.join(modulesRoot, 'redcube-ai', '.runtime-prepared'), 'utf8').trim(), '0.1.0');
+
+    const repaired = runCli(['packages', 'repair', '--package-id', 'redcube-ai'], env) as {
       opl_agent_package_repair: { package_lock: { package_id: string } };
     };
-    assert.equal(repaired.opl_agent_package_repair.package_lock.package_id, 'redcube-ai');
+    assert.equal(repaired.opl_agent_package_repair.package_lock.package_id, 'rca');
 
-    const removed = runCli(['packages', 'uninstall', 'rca'], env) as {
+    Object.assign(env, writeManagedRuntimeSourceFixture({
+      root: fixtureRoot,
+      moduleId: 'redcube',
+      repoName: 'redcube-ai',
+      version: '0.1.1',
+      sourceHeadSha: 'runtime-source-v2',
+    }));
+    const updated = runCli(['packages', 'update', '--package-id', 'redcube-ai'], env) as any;
+    assert.equal(updated.opl_agent_package_update.package_lock.managed_runtime_source.source_git_head_sha, 'runtime-source-v2');
+    assert.equal(fs.readFileSync(path.join(modulesRoot, 'redcube-ai', '.runtime-prepared'), 'utf8').trim(), '0.1.1');
+
+    const rolledBack = runCli(['packages', 'rollback', '--package-id', 'redcube-ai'], env) as any;
+    assert.equal(rolledBack.opl_agent_package_rollback.package_lock.managed_runtime_source.source_git_head_sha, 'runtime-source-v1');
+    assert.equal(fs.readFileSync(path.join(modulesRoot, 'redcube-ai', '.runtime-prepared'), 'utf8').trim(), '0.1.0');
+
+    const removed = runCli(['packages', 'uninstall', '--package-id', 'redcube-ai'], env) as {
       opl_agent_package_uninstall: { removed_package_lock: { package_id: string } };
     };
-    assert.equal(removed.opl_agent_package_uninstall.removed_package_lock.package_id, 'redcube-ai');
+    assert.equal(removed.opl_agent_package_uninstall.removed_package_lock.package_id, 'rca');
+    assert.equal(fs.existsSync(path.join(modulesRoot, 'redcube-ai')), false);
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(pluginSourcePath, { recursive: true, force: true });
   }
 });
 
@@ -93,24 +140,53 @@ test('package actions describe both positional and flagged package selection', (
   );
 });
 
-test('OPL Flow manifest resolves its package-owned 0.1.14 carrier payload', () => {
-  const manifestPath = path.join(repoRoot, 'contracts', 'opl-framework', 'agent-packages', 'opl-flow.json');
+test('OPL Flow manifest resolves its package-owned 0.1.16 carrier and managed policy payload', () => {
+  const manifestPath = path.join(repoRoot, 'contracts', 'opl-framework', 'packages', 'opl-flow.json');
   const manifest = normalizeManifest(
     parseJsonText(fs.readFileSync(manifestPath, 'utf8')),
     pathToFileURL(manifestPath).href,
   );
 
   assert.equal(manifest.package_id, 'opl-flow');
-  assert.equal(manifest.version, '0.1.14');
+  assert.equal(manifest.version, '0.1.16');
   assert.deepEqual(manifest.required_skill_ids, ['opl-flow', 'codex-ops-kit']);
   assert.equal(
     manifest.plugin_payload_manifest_url,
-    path.join(repoRoot, 'contracts', 'opl-framework', 'agent-packages', 'payloads', 'opl-flow-0.1.14.json'),
+    path.join(repoRoot, 'contracts', 'opl-framework', 'packages', 'payloads', 'opl-flow-0.1.16.json'),
   );
+  assert.deepEqual(manifest.managed_policy_surface, {
+    policy_kind: 'opl_flow_workflow_policy',
+    source_path: 'contracts/workflow-policy.json',
+    schema_path: 'contracts/workflow-policy.schema.json',
+  });
+});
+
+test('standard Agent manifests declare managed runtime source carriers while capability and policy packages do not', () => {
+  const expected = new Map([
+    ['mas.json', 'medautoscience'],
+    ['mag.json', 'medautogrant'],
+    ['rca.json', 'redcube'],
+    ['oma.json', 'oplmetaagent'],
+    ['obf.json', 'oplbookforge'],
+  ]);
+  const manifestRoot = path.join(repoRoot, 'contracts', 'opl-framework', 'packages');
+  for (const [file, moduleId] of expected) {
+    const manifestPath = path.join(manifestRoot, file);
+    const manifest = normalizeManifest(parseJsonText(fs.readFileSync(manifestPath, 'utf8')), pathToFileURL(manifestPath).href);
+    assert.deepEqual(manifest.runtime_source_carrier, {
+      carrier_kind: 'opl_managed_module_source',
+      module_id: moduleId,
+    });
+  }
+  for (const file of ['opl-flow.json', 'mas-scholar-skills.json']) {
+    const manifestPath = path.join(manifestRoot, file);
+    const payload = parseJsonText(fs.readFileSync(manifestPath, 'utf8'));
+    assert.equal((payload as any).runtime_source_carrier, undefined);
+  }
 });
 
 test('MAS package exposes ScholarSkills as a required managed capability dependency', () => {
-  const manifestPath = path.join(repoRoot, 'contracts', 'opl-framework', 'agent-packages', 'mas.json');
+  const manifestPath = path.join(repoRoot, 'contracts', 'opl-framework', 'packages', 'mas.json');
   const manifestPayload = parseJsonText(fs.readFileSync(manifestPath, 'utf8')) as {
     codex_surface: { bundled_capability_package_ids: string[] };
     capability_dependencies: Array<{
@@ -129,7 +205,7 @@ test('MAS package exposes ScholarSkills as a required managed capability depende
     (entry) => entry.package_id === 'mas-scholar-skills',
   );
 
-  assert.equal(manifest.package_id, 'med-autoscience');
+  assert.equal(manifest.package_id, 'mas');
   assert.deepEqual(manifestPayload.codex_surface.bundled_capability_package_ids, ['mas-scholar-skills']);
   assert.equal(dependency?.module_id, 'scholarskills');
   assert.equal(dependency?.kind, 'framework_capability_package');
@@ -149,7 +225,7 @@ test('MAS package exposes ScholarSkills as a required managed capability depende
     };
     assert.equal(preview.opl_agent_package_install.status, 'validated_no_write');
     assert.equal(preview.opl_agent_package_install.dry_run, true);
-    assert.equal(preview.opl_agent_package_install.package_lock.package_id, 'med-autoscience');
+    assert.equal(preview.opl_agent_package_install.package_lock.package_id, 'mas');
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });
   }
@@ -182,7 +258,7 @@ test('Home shortcut preferences can be changed before the package is installed',
     };
 
     assert.deepEqual(result.opl_agent_package_home_shortcut_preferences.preference, {
-      package_id: 'opl-meta-agent',
+      package_id: 'oma',
       shortcut_id: 'oma',
       visible: true,
       sort_order: null,
@@ -298,6 +374,7 @@ test('packages rejects developer checkout auto-update and permission scope drift
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-policy-state-'));
   const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-policy-home-'));
   const fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-policy-fixtures-'));
+  const pluginSourcePath = createPluginSourceFixture();
   const env = {
     OPL_STATE_DIR: stateDir,
     HOME: homeDir,
@@ -306,10 +383,10 @@ test('packages rejects developer checkout auto-update and permission scope drift
   try {
     const manifestPath = path.join(fixtureDir, 'manifest.json');
     const permissionManifestPath = path.join(fixtureDir, 'manifest-permission-change.json');
-    fs.writeFileSync(manifestPath, formatJsonPayload(agentPackageManifest()), 'utf8');
+    fs.writeFileSync(manifestPath, formatJsonPayload(agentPackageManifest({ pluginSourcePath })), 'utf8');
     fs.writeFileSync(
       permissionManifestPath,
-      formatJsonPayload(agentPackageManifest({ permissions: [{ id: 'filesystem.write' }] })),
+      formatJsonPayload(agentPackageManifest({ pluginSourcePath, permissions: [{ id: 'filesystem.write' }] })),
       'utf8',
     );
 
@@ -347,6 +424,7 @@ test('packages rejects developer checkout auto-update and permission scope drift
     fs.rmSync(stateDir, { recursive: true, force: true });
     fs.rmSync(homeDir, { recursive: true, force: true });
     fs.rmSync(fixtureDir, { recursive: true, force: true });
+    fs.rmSync(pluginSourcePath, { recursive: true, force: true });
   }
 });
 
@@ -477,7 +555,7 @@ test('packages rejects invalid manifests before writing locks', () => {
 test('packages validates first-party agent package manifest shape', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-first-party-manifest-state-'));
   try {
-    const manifestPath = path.join(repoRoot, 'contracts', 'opl-framework', 'agent-packages', 'oma.json');
+    const manifestPath = path.join(repoRoot, 'contracts', 'opl-framework', 'packages', 'oma.json');
     const validation = runCli([
       'packages',
       'validate-manifest',
@@ -499,11 +577,11 @@ test('packages validates first-party agent package manifest shape', () => {
     };
 
     assert.equal(validation.opl_agent_package_manifest.status, 'valid');
-    assert.equal(validation.opl_agent_package_manifest.package_id, 'opl-meta-agent');
+    assert.equal(validation.opl_agent_package_manifest.package_id, 'oma');
     assert.equal(validation.opl_agent_package_manifest.codex_visible_entry, 'opl-meta-agent');
     assert.deepEqual(validation.opl_agent_package_manifest.bundled_required_skill_ids, ['opl-meta-agent']);
     assert.equal(validation.opl_agent_package_manifest.distribution_payload, null);
-    assert.equal(validation.opl_agent_package_manifest.rollback_ref, 'rollback-ref:opl-meta-agent/unavailable'); // reuse-first: allow owner-routed package provenance assertion.
+    assert.equal(validation.opl_agent_package_manifest.rollback_ref, 'rollback-ref:oma/unavailable'); // reuse-first: allow owner-routed package provenance assertion.
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });
   }
@@ -513,10 +591,20 @@ test('packages resolves public aliases without rewriting manifest identity', asy
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-alias-state-'));
   const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-alias-home-'));
   const pluginSourcePath = createPluginSourceFixture();
+  const runtimeFixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-alias-runtime-'));
+  const runtimeEnv = writeManagedRuntimeSourceFixture({
+    root: runtimeFixtureRoot,
+    moduleId: 'medautoscience',
+    repoName: 'med-autoscience',
+    version: '0.1.0a4',
+    sourceHeadSha: 'alias-runtime-source-v1',
+  });
   const env = {
     OPL_STATE_DIR: stateDir,
     HOME: homeDir,
     CODEX_HOME: path.join(homeDir, '.codex'),
+    OPL_MODULES_ROOT: path.join(runtimeFixtureRoot, 'modules'),
+    ...runtimeEnv,
   };
   try {
     await withAgentPackageServer(async (baseUrl) => {
@@ -531,7 +619,7 @@ test('packages resolves public aliases without rewriting manifest identity', asy
           entries: Array<{ package_id: string }>;
         };
       };
-      assert.equal(refresh.opl_agent_package_registry.entries[0].package_id, 'med-autoscience');
+      assert.equal(refresh.opl_agent_package_registry.entries[0].package_id, 'mas');
 
       const install = await runCliAsync([
         'packages',
@@ -546,9 +634,9 @@ test('packages resolves public aliases without rewriting manifest identity', asy
           owner_route_readback: { selected_package_id: string };
         };
       };
-      assert.equal(install.opl_agent_package_install.package_lock.package_id, 'med-autoscience');
-      assert.equal(install.opl_agent_package_install.package_lock.agent_id, 'med-autoscience');
-      assert.equal(install.opl_agent_package_install.owner_route_readback.selected_package_id, 'med-autoscience');
+      assert.equal(install.opl_agent_package_install.package_lock.package_id, 'mas');
+      assert.equal(install.opl_agent_package_install.package_lock.agent_id, 'mas');
+      assert.equal(install.opl_agent_package_install.owner_route_readback.selected_package_id, 'mas');
 
       const shortcut = await runCliAsync([
         'packages',
@@ -563,7 +651,7 @@ test('packages resolves public aliases without rewriting manifest identity', asy
           preference: { package_id: string };
         };
       };
-      assert.equal(shortcut.opl_agent_package_home_shortcut_preferences.preference.package_id, 'med-autoscience');
+      assert.equal(shortcut.opl_agent_package_home_shortcut_preferences.preference.package_id, 'mas');
 
       const status = runCli(['packages', 'status', '--package-id', 'mas'], env) as {
         opl_agent_package_status: {
@@ -576,21 +664,22 @@ test('packages resolves public aliases without rewriting manifest identity', asy
           };
         };
       };
-      assert.equal(status.opl_agent_package_status.package_id, 'med-autoscience');
-      assert.equal(status.opl_agent_package_status.installed_packages[0].package_id, 'med-autoscience');
-      assert.equal(status.opl_agent_package_status.installed_packages[0].agent_id, 'med-autoscience');
-      assert.equal(status.opl_agent_package_status.home_shortcut_preferences[0].package_id, 'med-autoscience');
-      assert.equal(status.opl_agent_package_status.owner_route_readback.selected_package_id, 'med-autoscience');
-      assert.equal(status.opl_agent_package_status.owner_route_readback.packages[0].package_id, 'med-autoscience');
+      assert.equal(status.opl_agent_package_status.package_id, 'mas');
+      assert.equal(status.opl_agent_package_status.installed_packages[0].package_id, 'mas');
+      assert.equal(status.opl_agent_package_status.installed_packages[0].agent_id, 'mas');
+      assert.equal(status.opl_agent_package_status.home_shortcut_preferences[0].package_id, 'mas');
+      assert.equal(status.opl_agent_package_status.owner_route_readback.selected_package_id, 'mas');
+      assert.equal(status.opl_agent_package_status.owner_route_readback.packages[0].package_id, 'mas');
     }, agentPackageManifest({
-      packageId: 'med-autoscience',
-      agentId: 'med-autoscience',
+      packageId: 'mas',
+      agentId: 'mas',
       pluginSourcePath,
     }));
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });
     fs.rmSync(homeDir, { recursive: true, force: true });
     fs.rmSync(pluginSourcePath, { recursive: true, force: true });
+    fs.rmSync(runtimeFixtureRoot, { recursive: true, force: true });
   }
 });
 
@@ -728,7 +817,7 @@ test('packages rejects legacy persisted package identities instead of migrating 
     assert.equal(failure.payload.error.code, 'contract_shape_invalid');
     assert.equal(failure.payload.error.details.failure_code, 'agent_package_identity_not_canonical');
     assert.equal(failure.payload.error.details.declared_id, 'medautoscience');
-    assert.equal(failure.payload.error.details.canonical_id, 'med-autoscience');
+    assert.equal(failure.payload.error.details.canonical_id, 'mas');
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });
   }

@@ -8,11 +8,22 @@ import {
   writeFakeOmaGeneratedSurfacePack,
 } from '../../../cli-codex-default-shell-helpers.ts';
 
-const MODULE_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.module.source.v1+gzip';
+const PACKAGE_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.package.source.v1+gzip';
 const CHANNEL_MANIFEST_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.release.channel-manifest.v1+json';
 
 function sha256(filePath: string) {
   return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+}
+
+function packageIdForModule(moduleId: string) {
+  return ({
+    medautoscience: 'mas',
+    medautogrant: 'mag',
+    redcube: 'rca',
+    oplmetaagent: 'oma',
+    oplbookforge: 'obf',
+    scholarskills: 'mas-scholar-skills',
+  } as Record<string, string>)[moduleId] ?? moduleId;
 }
 
 export function readPackageChannelMarker(checkoutPath: string) {
@@ -338,7 +349,7 @@ export function writeStartupPackageChannelFixture(input: {
   const blobRoot = path.join(input.root, 'blobs');
   const fakeBin = path.join(input.root, 'bin');
   const sourceRoot = path.join(input.root, 'source');
-  const moduleEntries: Record<string, Record<string, unknown>> = {};
+  const packageEntries: Record<string, Record<string, unknown>> = {};
   const manifests: Record<string, Record<string, unknown>> = {};
   const blobsByDigest: Record<string, string> = {};
   const curlLogPath = path.join(input.root, 'curl.jsonl');
@@ -362,26 +373,30 @@ export function writeStartupPackageChannelFixture(input: {
       cwd: sourceRoot,
     });
     const archiveDigest = sha256(archivePath);
-    moduleEntries[module.moduleId] = {
-      module_id: module.moduleId,
-      repo_name: module.repoName,
-      artifact: `ghcr.io/owner/one-person-lab-modules/${module.repoName}:${input.version}`,
-      source_archive: {
-        sha256: archiveDigest,
-      },
-      source_git: {
-        head_sha: module.sourceHeadSha,
-      },
+    const packageId = packageIdForModule(module.moduleId);
+    packageEntries[packageId] = {
+      package_id: packageId,
+      latest_version: input.version,
+      versions: [{
+        package_version: input.version,
+        module_id: module.moduleId,
+        promotion_status: 'promoted',
+        source_artifact_ref: `ghcr.io/owner/one-person-lab-packages/${packageId}:${input.version}`,
+        artifact_digest: `sha256:${'a'.repeat(64)}`,
+        artifact_status: 'published_immutable',
+        package_content_digest: `sha256:${archiveDigest}`,
+        owner_source_commit: module.sourceHeadSha,
+      }],
     };
-    manifests[`owner/one-person-lab-modules/${module.repoName}`] = {
+    manifests[`owner/one-person-lab-packages/${packageId}`] = {
       schemaVersion: 2,
       mediaType: 'application/vnd.oci.image.manifest.v1+json',
       layers: [
         {
-          mediaType: MODULE_LAYER_MEDIA_TYPE,
+          mediaType: PACKAGE_LAYER_MEDIA_TYPE,
           digest: `sha256:${archiveDigest}`,
           annotations: {
-            'org.opencontainers.image.title': `dist/opl-packages/modules/${module.repoName}-${input.version}.tar.gz`,
+            'org.opencontainers.image.title': `dist/opl-packages/packages/${packageId}/${packageId}-${input.version}.tar.gz`,
           },
         },
       ],
@@ -395,8 +410,9 @@ export function writeStartupPackageChannelFixture(input: {
     JSON.stringify({
       manifest_version: 1,
       opl_version: input.version,
+      package_catalog_surface_kind: 'opl_package_catalog.v1',
       packages: {
-        modules: moduleEntries,
+        package_catalog: packageEntries,
       },
     }),
     'utf8',

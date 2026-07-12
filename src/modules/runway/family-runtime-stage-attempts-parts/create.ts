@@ -33,6 +33,7 @@ export type StageAttemptCreateInput = {
   actionId?: string;
   providerKind?: FamilyRuntimeProviderKind;
   workspaceLocator: Record<string, unknown>;
+  idempotencyWorkspaceLocator?: Record<string, unknown>;
   sourceFingerprint?: string;
   executorKind?: string;
   stageAttemptExecutorPolicy?: Record<string, unknown> | null;
@@ -51,6 +52,28 @@ export type StageAttemptCreateInput = {
   newAttempt?: boolean;
   start?: boolean;
 };
+
+function stageAttemptBaseIdempotencyKey(input: StageAttemptCreateInput) {
+  return stableId('idem', [
+    input.domainId,
+    normalizedStageId(input.stageId),
+    input.actionId?.trim() || null,
+    resolveFamilyRuntimeProviderKind(input.providerKind),
+    input.idempotencyWorkspaceLocator ?? input.workspaceLocator,
+    input.sourceFingerprint?.trim() || null,
+    input.stageAttemptExecutorPolicy ?? null,
+    input.taskId?.trim() || null,
+  ]);
+}
+
+export function findIdempotentStageAttempt(db: DatabaseSync, input: StageAttemptCreateInput) {
+  if (input.newAttempt) return null;
+  const idempotencyKey = stageAttemptBaseIdempotencyKey(input);
+  const existing = db.prepare(`
+    SELECT * FROM stage_attempts WHERE idempotency_key = ? ORDER BY created_at ASC LIMIT 1
+  `).get(idempotencyKey) as StageAttemptRow | undefined;
+  return existing ? stageAttemptToPayload(existing) : null;
+}
 
 function normalizedStageId(stageId: string) {
   try {
@@ -89,16 +112,7 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
   const stageAttemptExecutorPolicy = input.stageAttemptExecutorPolicy ?? null;
   const retryBudget = input.retryBudget ?? taskRetryBudgetProjection(3);
   const taskId = input.taskId?.trim() || null;
-  const baseIdempotencyKey = stableId('idem', [
-    input.domainId,
-    stageId,
-    input.actionId?.trim() || null,
-    providerKind,
-    input.workspaceLocator,
-    sourceFingerprint,
-    stageAttemptExecutorPolicy,
-    taskId,
-  ]);
+  const baseIdempotencyKey = stageAttemptBaseIdempotencyKey(input);
   const newAttemptOrdinal = input.newAttempt
     ? stageAttemptOrdinalForNewAttempt(db, {
         domainId: input.domainId,

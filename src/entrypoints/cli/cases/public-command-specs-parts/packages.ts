@@ -35,11 +35,11 @@ import {
 } from '../../modules/support.ts';
 
 const FIRST_PARTY_PACKAGE_MANIFESTS = new Map([
-  ['med-autoscience', 'mas.json'],
-  ['med-autogrant', 'mag.json'],
-  ['redcube-ai', 'rca.json'],
-  ['opl-meta-agent', 'oma.json'],
-  ['opl-bookforge', 'bookforge.json'],
+  ['mas', 'mas.json'],
+  ['mag', 'mag.json'],
+  ['rca', 'rca.json'],
+  ['oma', 'oma.json'],
+  ['obf', 'obf.json'],
   ['opl-flow', 'opl-flow.json'],
   ['mas-scholar-skills', 'mas-scholar-skills.json'],
 ]);
@@ -79,7 +79,7 @@ function firstPartyManifestUrl(packageId: string) {
   return {
     canonicalId,
     manifestUrl: fileURLToPath(
-      new URL(`../../../../../contracts/opl-framework/agent-packages/${fileName}`, import.meta.url),
+      new URL(`../../../../../contracts/opl-framework/packages/${fileName}`, import.meta.url),
     ),
   };
 }
@@ -113,6 +113,10 @@ function parsePackageSelection(
     scope: readOptionalString(parsed.scope) as AgentPackageInstallInput['scope'],
     targetWorkspace: readOptionalString(parsed['target-workspace']),
     targetQuest: readOptionalString(parsed['target-quest']),
+    keepMigrationIds: readOptionalString(parsed['keep-migration'])
+      ?.split(',')
+      .map((entry) => entry.trim())
+      .filter(Boolean),
   };
 }
 
@@ -156,11 +160,11 @@ async function installPackageWithActiveWorkspace(input: AgentPackageInstallInput
   const agent = STANDARD_AGENT_REGISTRY.find((entry) => entry.project === packageId);
   const binding = agent ? getActiveWorkspaceBinding(agent.domain_id) : null;
   if (!binding) return result;
-  const defaultScopeActivation = runOplAgentPackageActivate({
+  const defaultScopeActivation = (await runOplAgentPackageActivate({
     packageId,
     scope: 'workspace',
     targetWorkspace: binding.workspace_path,
-  }).opl_agent_package_activation;
+  })).opl_agent_package_activation;
   return {
     ...result,
     opl_agent_package_install: {
@@ -322,7 +326,7 @@ export function buildPackagesCommandSpecs(
       ),
     },
     'packages install': {
-      usage: 'opl packages install <package_id> [--scope workspace|quest --target-workspace <path>|--target-quest <path>] [--dry-run] [--manifest-url <url>|--registry-url <url> --trust-tier <tier>] [--source-kind <kind>] [--agent-root <repo>]',
+      usage: 'opl packages install <package_id> [--scope workspace|quest --target-workspace <path>|--target-quest <path>] [--keep-migration <id,...>] [--dry-run] [--manifest-url <url>|--registry-url <url> --trust-tier <tier>] [--source-kind <kind>] [--agent-root <repo>]',
       summary: 'Install one OPL Package through the existing manifest, lock, materializer, projection, and receipt transaction.',
       examples: [
         'opl packages install rca --json',
@@ -350,7 +354,7 @@ export function buildPackagesCommandSpecs(
       ),
     },
     'packages update': {
-      usage: 'opl packages update [<package_id>] [--scope workspace|quest --target-workspace <path>|--target-quest <path>] [--manifest-url <url>|--registry-url <url>] [--trust-tier <tier>] [--source-kind <kind>] [--agent-root <repo>] [--dry-run]',
+      usage: 'opl packages update [<package_id>] [--scope workspace|quest --target-workspace <path>|--target-quest <path>] [--keep-migration <id,...>] [--manifest-url <url>|--registry-url <url>] [--trust-tier <tier>] [--source-kind <kind>] [--agent-root <repo>] [--dry-run]',
       summary: 'Update one installed OPL Package, or reconcile all clean managed packages when no package is selected.',
       examples: [
         'opl packages update rca --json',

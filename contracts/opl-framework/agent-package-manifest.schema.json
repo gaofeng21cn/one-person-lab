@@ -27,7 +27,16 @@
     },
     "version": {
       "type": "string",
-      "minLength": 1
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$"
+    },
+    "owner_language_version": {
+      "type": "object",
+      "required": ["scheme", "value"],
+      "properties": {
+        "scheme": { "const": "pep440" },
+        "value": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
     },
     "source": {
       "type": "string",
@@ -274,6 +283,57 @@
       },
       "additionalProperties": false
     },
+    "managed_policy_surface": {
+      "type": "object",
+      "required": [
+        "policy_kind",
+        "source_path",
+        "schema_path"
+      ],
+      "properties": {
+        "policy_kind": {
+          "const": "opl_flow_workflow_policy"
+        },
+        "source_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "schema_path": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "runtime_source_carrier": {
+      "type": "object",
+      "required": [
+        "carrier_kind",
+        "module_id"
+      ],
+      "properties": {
+        "carrier_kind": {
+          "const": "opl_managed_module_source"
+        },
+        "module_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "managed_update_source": {
+      "type": "object",
+      "required": ["kind", "transport", "catalog_ref", "selection_policy", "digest_authority"],
+      "properties": {
+        "kind": { "const": "managed_version_catalog" },
+        "transport": { "enum": ["json_url", "opl_oci_channel"] },
+        "catalog_ref": { "type": "string", "minLength": 1 },
+        "selection_policy": { "enum": ["highest_stable", "highest_compatible"] },
+        "digest_authority": { "const": "manifest_and_content_digest" }
+      },
+      "additionalProperties": false
+    },
     "carrier_adapters": {
       "type": "array",
       "items": {
@@ -512,9 +572,21 @@
             "minItems": 1,
             "uniqueItems": true
           },
-          "manifest_url": {
+          "bootstrap_manifest_url": {
             "type": "string",
             "minLength": 1
+          },
+          "dependency_source": {
+            "type": "object",
+            "required": ["kind", "transport", "catalog_ref", "selection_policy", "digest_authority"],
+            "properties": {
+              "kind": { "const": "managed_version_catalog" },
+              "transport": { "enum": ["json_url", "opl_oci_channel"] },
+              "catalog_ref": { "type": "string", "minLength": 1 },
+              "selection_policy": { "const": "highest_compatible" },
+              "digest_authority": { "const": "manifest_and_content_digest" }
+            },
+            "additionalProperties": false
           },
           "codex_distribution": {
             "const": "bundled"

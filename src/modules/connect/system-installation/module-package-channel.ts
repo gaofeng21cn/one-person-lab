@@ -13,6 +13,7 @@ import {
   readJsonPayloadFile,
 } from '../../../kernel/json-file.ts';
 import { stringValue } from '../../../kernel/json-record.ts';
+import { canonicalAgentPackageId } from '../agent-package-identity.ts';
 import { PACKAGED_MODULE_MARKER_FILE } from '../packaged-module-marker.ts';
 import {
   MANAGED_UPDATE_OWNER_ACTIONS,
@@ -24,7 +25,7 @@ import {
   runCommand,
 } from './shared.ts';
 
-const MODULE_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.module.source.v1+gzip';
+const PACKAGE_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.package.source.v1+gzip';
 const CHANNEL_MANIFEST_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.release.channel-manifest.v1+json';
 
 type OciImageRef = {
@@ -44,24 +45,32 @@ type OciLayer = {
 type OplChannelManifest = {
   opl_version?: string;
   packages?: {
-    modules?: Record<string, OplChannelModuleEntry>;
+    package_catalog?: Record<string, OplChannelPackageCatalogEntry>;
   };
 };
 
-type OplChannelModuleEntry = {
+type OplChannelPackageCatalogEntry = {
+  package_id?: string;
+  latest_version?: string;
+  versions?: OplChannelPackageCatalogVersion[];
+};
+
+type OplChannelPackageCatalogVersion = {
+  package_version?: string;
   module_id?: string;
-  repo_name?: string;
-  artifact?: string;
-  source_archive?: {
-    sha256?: string;
-  };
-  source_git?: {
-    head_sha?: string;
-  };
+  promotion_status?: string;
+  source_artifact_ref?: string;
+  artifact_digest?: string;
+  artifact_status?: string;
+  package_content_digest?: string;
+  owner_source_commit?: string;
 };
 
-type OplChannelModuleEntryWithArtifact = OplChannelModuleEntry & {
-  artifact: string;
+type OplChannelPackageVersionSelection = OplChannelPackageCatalogVersion & {
+  package_id: string;
+  package_version: string;
+  immutable_artifact_ref: string;
+  package_content_digest: string;
 };
 
 export type PackageChannelActivationSnapshot = {
@@ -103,7 +112,7 @@ function resolvePackageOwner() {
 
 function resolvePackageChannelTag() {
   return normalizeOptionalString(process.env.OPL_PACKAGE_CHANNEL_VERSION)
-    ?? 'latest';
+    ?? 'latest-stable';
 }
 
 function parseImageRef(raw: string): OciImageRef {
@@ -112,10 +121,15 @@ function parseImageRef(raw: string): OciImageRef {
     throw new FrameworkContractError('contract_shape_invalid', 'Invalid OCI image reference.', { image: raw });
   }
   let repository = repositoryParts.join('/');
-  let tag = 'latest';
+  let tag = 'latest-stable';
+  const digestSeparator = repository.lastIndexOf('@');
+  if (digestSeparator > repository.lastIndexOf('/')) {
+    tag = repository.slice(digestSeparator + 1);
+    repository = repository.slice(0, digestSeparator);
+  }
   const separator = repository.lastIndexOf(':');
   if (separator > repository.lastIndexOf('/')) {
-    tag = repository.slice(separator + 1);
+    if (digestSeparator < 0) tag = repository.slice(separator + 1);
     repository = repository.slice(0, separator);
   }
   return {
@@ -126,11 +140,12 @@ function parseImageRef(raw: string): OciImageRef {
   };
 }
 
-function resolveChannelManifestRef() {
+function resolveChannelManifestRef(declaredRef?: string) {
   const explicit = normalizeOptionalString(process.env.OPL_PACKAGE_CHANNEL_MANIFEST_REF);
   if (explicit) {
     return parseImageRef(explicit);
   }
+  if (declaredRef) return parseImageRef(declaredRef);
   const owner = resolvePackageOwner();
   const tag = normalizeOptionalString(process.env.OPL_PACKAGE_CHANNEL_TAG) ?? resolvePackageChannelTag();
   return parseImageRef(`ghcr.io/${owner}/one-person-lab-manifest:${tag}`);
@@ -342,6 +357,25 @@ export function readPackageChannelLifecycle(repoPath: string, spec: DomainModule
   };
 }
 
+export function refreshPackageChannelCurrentSnapshot(repoPath: string, spec: DomainModuleSpec) {
+  const lifecycle = readPackageChannelLifecycle(repoPath, spec);
+  if (!lifecycle) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Cannot refresh package-channel snapshot without lifecycle metadata.', {
+      module_id: spec.module_id,
+      checkout_path: repoPath,
+    });
+  }
+  const refreshed = {
+    ...lifecycle,
+    current: {
+      ...lifecycle.current,
+      tree_sha256: computePackageChannelTreeSha256(repoPath),
+    },
+  } satisfies PackageChannelLifecycle;
+  writePackageChannelMarker(repoPath, spec, refreshed);
+  return refreshed.current;
+}
+
 function readPackageChannelActivation(repoPath: string, spec: DomainModuleSpec) {
   return readPackageChannelLifecycle(repoPath, spec)?.current ?? null;
 }
@@ -480,8 +514,8 @@ function selectLayer(manifest: { layers?: OciLayer[] }, mediaType: string, title
     ?? null;
 }
 
-function readChannelManifest() {
-  const imageRef = resolveChannelManifestRef();
+export function readOplPackageChannelManifestWithMetadata(declaredRef?: string) {
+  const imageRef = resolveChannelManifestRef(declaredRef);
   const token = fetchGhcrToken(imageRef);
   const manifest = fetchOciManifest(imageRef, token);
   const layer = selectLayer(manifest, CHANNEL_MANIFEST_LAYER_MEDIA_TYPE, 'opl-channel-manifest.json');
@@ -495,23 +529,57 @@ function readChannelManifest() {
   try {
     const manifestPath = path.join(tempRoot, 'opl-channel-manifest.json');
     fetchOciBlob(imageRef, token, layer.digest, manifestPath);
+    const raw = fs.readFileSync(manifestPath);
     const parsed = readJsonPayloadFile(manifestPath);
-    return isRecord(parsed) ? parsed as OplChannelManifest : {};
+    return {
+      payload: isRecord(parsed) ? parsed as OplChannelManifest : {},
+      channel_ref: `${imageRef.image}:${imageRef.tag}`,
+      layer_digest: layer.digest,
+      source_sha256: `sha256:${crypto.createHash('sha256').update(raw).digest('hex')}`,
+      checked_at: nowIso(),
+    };
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
 }
 
-function moduleEntry(channelManifest: OplChannelManifest, spec: DomainModuleSpec): OplChannelModuleEntryWithArtifact {
-  const entry = channelManifest.packages?.modules?.[spec.module_id];
-  const artifact = normalizeOptionalString(entry?.artifact);
-  if (!entry || !artifact) {
-    throw new FrameworkContractError('contract_shape_invalid', 'OPL package-channel module entry is missing.', {
+export function readOplPackageChannelManifest(declaredRef?: string) {
+  return readOplPackageChannelManifestWithMetadata(declaredRef).payload;
+}
+
+function packageEntry(
+  channelManifest: OplChannelManifest,
+  spec: DomainModuleSpec,
+): OplChannelPackageVersionSelection {
+  const packageId = canonicalAgentPackageId(spec.module_id);
+  const entry = packageId ? channelManifest.packages?.package_catalog?.[packageId] : null;
+  const versions = Array.isArray(entry?.versions) ? entry.versions : [];
+  const version = versions.find((candidate) => (
+    candidate.promotion_status === 'promoted'
+    && candidate.package_version === entry?.latest_version
+  )) ?? versions.find((candidate) => candidate.promotion_status === 'promoted') ?? null;
+  const packageVersion = normalizeOptionalString(version?.package_version);
+  const sourceArtifactRef = normalizeOptionalString(version?.source_artifact_ref);
+  const artifactDigest = normalizeOptionalString(version?.artifact_digest);
+  const packageContentDigest = normalizeOptionalString(version?.package_content_digest);
+  if (!packageId || !entry || !version || !packageVersion || !sourceArtifactRef
+    || !artifactDigest?.match(/^sha256:[0-9a-f]{64}$/)
+    || version.artifact_status !== 'published_immutable'
+    || !packageContentDigest?.match(/^sha256:[0-9a-f]{64}$/)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'OPL package catalog has no published immutable package selection.', {
       module_id: spec.module_id,
+      package_id: packageId,
       channel_version: channelManifest.opl_version ?? null,
+      failure_code: 'opl_package_catalog_selection_invalid',
     });
   }
-  return { ...entry, artifact };
+  return {
+    ...version,
+    package_id: packageId,
+    package_version: packageVersion,
+    immutable_artifact_ref: `${sourceArtifactRef.replace(/@sha256:[0-9a-f]{64}$/, '')}@${artifactDigest}`,
+    package_content_digest: packageContentDigest,
+  };
 }
 
 function extractArchiveToStage(archivePath: string, stagePath: string, spec: DomainModuleSpec) {
@@ -549,12 +617,21 @@ function activateStagedPackageChannel(input: {
   layerDigest: string;
   sourceArchiveSha256: string | null;
   sourceGitHeadSha: string | null;
+  repairTransactionId?: string | null;
 }) {
   const previousPath = packageChannelPreviousRoot(input.targetPath);
-  const activatedAt = nowIso();
-  const previous = fs.existsSync(input.targetPath)
-    ? previousSnapshotForExistingRoot(input.targetPath, previousPath, input.spec)
+  const repairDisplacedPath = input.repairTransactionId
+    ? `${input.targetPath}.repair-displaced-${input.repairTransactionId}`
     : null;
+  const activatedAt = nowIso();
+  const preservedPrevious = input.repairTransactionId && fs.existsSync(previousPath)
+    ? readPackageChannelActivation(previousPath, input.spec)
+    : null;
+  const previous = input.repairTransactionId
+    ? (preservedPrevious ? { ...preservedPrevious, root: previousPath } : null)
+    : fs.existsSync(input.targetPath)
+      ? previousSnapshotForExistingRoot(input.targetPath, previousPath, input.spec)
+      : null;
   const current = {
     root: input.targetPath,
     channel_version: input.channelVersion,
@@ -579,27 +656,37 @@ function activateStagedPackageChannel(input: {
 
   writePackageChannelMarker(input.stagePath, input.spec, lifecycle);
   fs.mkdirSync(path.dirname(input.targetPath), { recursive: true });
-  fs.rmSync(previousPath, { recursive: true, force: true });
+  if (!input.repairTransactionId) fs.rmSync(previousPath, { recursive: true, force: true });
+  if (repairDisplacedPath) fs.rmSync(repairDisplacedPath, { recursive: true, force: true });
   try {
-    if (fs.existsSync(input.targetPath)) {
+    if (repairDisplacedPath && fs.existsSync(input.targetPath)) {
+      fs.renameSync(input.targetPath, repairDisplacedPath);
+    } else if (fs.existsSync(input.targetPath)) {
       fs.renameSync(input.targetPath, previousPath);
     }
     fs.renameSync(input.stagePath, input.targetPath);
   } catch (error) {
-    if (!fs.existsSync(input.targetPath) && fs.existsSync(previousPath)) {
+    if (!fs.existsSync(input.targetPath) && repairDisplacedPath && fs.existsSync(repairDisplacedPath)) {
+      fs.renameSync(repairDisplacedPath, input.targetPath);
+    } else if (!fs.existsSync(input.targetPath) && fs.existsSync(previousPath)) {
       fs.renameSync(previousPath, input.targetPath);
     }
     throw error;
   }
+  return { repair_displaced_path: repairDisplacedPath && fs.existsSync(repairDisplacedPath) ? repairDisplacedPath : null };
 }
 
-export function installManagedModuleFromPackageChannel(spec: DomainModuleSpec, targetPath: string) {
-  const channelManifest = readChannelManifest();
-  const entry = moduleEntry(channelManifest, spec);
-  const imageRef = parseImageRef(entry.artifact);
+export function installManagedModuleFromPackageChannel(
+  spec: DomainModuleSpec,
+  targetPath: string,
+  options: { repairTransactionId?: string | null } = {},
+) {
+  const channelManifest = readOplPackageChannelManifest();
+  const entry = packageEntry(channelManifest, spec);
+  const imageRef = parseImageRef(entry.immutable_artifact_ref);
   const token = fetchGhcrToken(imageRef);
   const manifest = fetchOciManifest(imageRef, token);
-  const layer = selectLayer(manifest, MODULE_LAYER_MEDIA_TYPE, `${spec.repo_name}-${channelManifest.opl_version}.tar.gz`);
+  const layer = selectLayer(manifest, PACKAGE_LAYER_MEDIA_TYPE, `${entry.package_id}-${entry.package_version}.tar.gz`);
   if (!layer?.digest) {
     throw new FrameworkContractError('contract_shape_invalid', 'OPL module package source layer is missing.', {
       module_id: spec.module_id,
@@ -613,26 +700,26 @@ export function installManagedModuleFromPackageChannel(spec: DomainModuleSpec, t
   try {
     const archivePath = path.join(tempRoot, `${spec.repo_name}.tar.gz`);
     fetchOciBlob(imageRef, token, layer.digest, archivePath);
-    if (entry.source_archive?.sha256) {
-      verifySha256(archivePath, entry.source_archive.sha256, {
-        module_id: spec.module_id,
-        image: imageRef.image,
-        tag: imageRef.tag,
-      });
-    }
-    if (fs.existsSync(targetPath)) {
+    verifySha256(archivePath, entry.package_content_digest.replace(/^sha256:/, ''), {
+      module_id: spec.module_id,
+      package_id: entry.package_id,
+      image: imageRef.image,
+      reference: imageRef.tag,
+    });
+    if (fs.existsSync(targetPath) && !options.repairTransactionId) {
       assertCleanPackageChannelRoot(targetPath, spec);
     }
     extractArchiveToStage(archivePath, stagePath, spec);
-    activateStagedPackageChannel({
+    return activateStagedPackageChannel({
       spec,
       targetPath,
       stagePath,
-      channelVersion: normalizeOptionalString(channelManifest.opl_version),
-      artifactRef: entry.artifact,
+      channelVersion: entry.package_version,
+      artifactRef: entry.immutable_artifact_ref,
       layerDigest: layer.digest,
-      sourceArchiveSha256: normalizeOptionalString(entry.source_archive?.sha256),
-      sourceGitHeadSha: normalizeOptionalString(entry.source_git?.head_sha),
+      sourceArchiveSha256: entry.package_content_digest.replace(/^sha256:/, ''),
+      sourceGitHeadSha: normalizeOptionalString(entry.owner_source_commit),
+      repairTransactionId: options.repairTransactionId,
     });
   } finally {
     fs.rmSync(stagePath, { recursive: true, force: true });
@@ -644,6 +731,7 @@ export function installManagedModuleFromPackageChannel(spec: DomainModuleSpec, t
 export function rollbackManagedModulePackageChannel(
   spec: DomainModuleSpec,
   targetPath: string,
+  operations: { renameSync?: typeof fs.renameSync } = {},
 ): PackageChannelRollbackResult {
   const previousPath = packageChannelPreviousRoot(targetPath);
   const stagePath = packageChannelStageRoot(targetPath);
@@ -689,14 +777,22 @@ export function rollbackManagedModulePackageChannel(
   assertCleanPackageChannelRoot(previousPath, spec);
 
   const swapPath = `${targetPath}.revert-${process.pid}`;
+  const renameSync = operations.renameSync ?? fs.renameSync;
   fs.rmSync(swapPath, { recursive: true, force: true });
+  let completedRenameCount = 0;
   try {
-    fs.renameSync(targetPath, swapPath);
-    fs.renameSync(previousPath, targetPath);
-    fs.renameSync(swapPath, previousPath);
+    renameSync(targetPath, swapPath);
+    completedRenameCount = 1;
+    renameSync(previousPath, targetPath);
+    completedRenameCount = 2;
+    renameSync(swapPath, previousPath);
+    completedRenameCount = 3;
   } catch (error) {
-    if (!fs.existsSync(targetPath) && fs.existsSync(swapPath)) {
-      fs.renameSync(swapPath, targetPath);
+    if (completedRenameCount === 2) {
+      renameSync(targetPath, previousPath);
+      renameSync(swapPath, targetPath);
+    } else if (completedRenameCount === 1 && !fs.existsSync(targetPath) && fs.existsSync(swapPath)) {
+      renameSync(swapPath, targetPath);
     }
     throw error;
   }

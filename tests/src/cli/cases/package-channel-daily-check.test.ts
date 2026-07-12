@@ -7,6 +7,7 @@ function writeManifest(filePath: string, input: {
   generatedAt: string;
   moduleHead: string;
   moduleSha: string;
+  packageVersion?: string;
   frameworkHead?: string;
   frameworkSha?: string;
 }) {
@@ -23,12 +24,16 @@ function writeManifest(filePath: string, input: {
           source_archive: { sha256: input.frameworkSha ?? 'f'.repeat(64) },
           source_git: { head_sha: input.frameworkHead ?? 'e'.repeat(40) },
         },
-        modules: {
-          medautoscience: {
-            module_id: 'medautoscience',
-            artifact: `ghcr.io/owner/one-person-lab-modules/med-autoscience:${input.version}`,
-            source_archive: { sha256: input.moduleSha },
-            source_git: { head_sha: input.moduleHead },
+        package_catalog: {
+          mas: {
+            package_id: 'mas',
+            latest_version: input.packageVersion ?? '0.1.0',
+            versions: [{
+              package_version: input.packageVersion ?? '0.1.0',
+              promotion_status: 'promoted',
+              package_content_digest: `sha256:${input.moduleSha}`,
+              owner_source_commit: input.moduleHead,
+            }],
           },
         },
       },
@@ -91,12 +96,14 @@ test('daily package channel check publishes when a package source fingerprint ch
     generatedAt: '2026-06-03T00:00:00.000Z',
     moduleHead: 'c'.repeat(40),
     moduleSha: 'd'.repeat(64),
+    packageVersion: '0.1.1',
   });
   writeManifest(current, {
     version: '26.6.3',
     generatedAt: '2026-06-02T00:00:00.000Z',
     moduleHead: 'a'.repeat(40),
     moduleSha: 'b'.repeat(64),
+    packageVersion: '0.1.0',
   });
 
   const summary = runDailyCheck([
@@ -111,10 +118,10 @@ test('daily package channel check publishes when a package source fingerprint ch
   assert.equal(summary.status, 'publish_required');
   assert.equal(summary.reason, 'package_channel_changed');
   assert.equal(summary.publish_required, true);
-  assert.deepEqual(summary.changed_packages, ['medautoscience']);
+  assert.deepEqual(summary.changed_packages, ['mas']);
 });
 
-test('daily package channel check publishes when framework core fingerprint changes', () => {
+test('daily package channel check does not republish Framework Base for package-unchanged framework drift', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-daily-check-'));
   const candidate = path.join(tempRoot, 'candidate.json');
   const current = path.join(tempRoot, 'current.json');
@@ -145,8 +152,9 @@ test('daily package channel check publishes when framework core fingerprint chan
     '26.6.3',
   ]);
 
-  assert.equal(summary.status, 'publish_required');
-  assert.deepEqual(summary.changed_packages, ['framework_core']);
+  assert.equal(summary.status, 'skipped');
+  assert.equal(summary.publish_required, false);
+  assert.deepEqual(summary.changed_packages, []);
 });
 
 test('daily package channel check fails closed when no current channel manifest is available', () => {

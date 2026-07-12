@@ -1,7 +1,7 @@
 # OPL 标准智能体边界收敛计划
 
 - Owner: OPL Framework
-- Purpose: 关闭 MAS、MAG、RCA、OMA、BookForge 与 OPL 基座之间的通用 mechanics / domain authority 双向泄漏。
+- Purpose: 关闭 MAS/MAG/RCA/OMA/OBF 与 OPL Base 之间的通用 mechanics / domain authority 双向泄漏。
 - State: completed_structural_2026-07-12
 - Machine boundary: 本文是跨仓实施与验收入口；machine truth 仍由各仓 source、contracts、tests 与 `opl agents * --json` readback 持有。
 
@@ -25,8 +25,8 @@
 | A8 | RCA | 通用 runtimeWatch/product status shell 上收并关闭 product_status 退休门 | Console + Runway + Ledger | status/attempt transport 由 OPL 提供；RCA 只保留 visual review refs |
 | A9 | OMA | 目标 Agent 文件物化由 OPL scaffold/pack compiler 承担 | Foundry Lab + Pack + Workspace | OMA 产出 semantic draft，不直接拥有通用 physical materializer |
 | A10 | OMA | work-order IO/lifecycle/receipt mechanics 上收 | Foundry Lab + Ledger | OMA 保留 agent-building judgment 与 candidate semantics |
-| A11 | BookForge | child Codex/imagegen transport 上收 | Connect + Runway | BookForge 只保留 book prompt、figure manifest 与 image receipt |
-| A12 | BookForge | helper probe/dependency/byproduct mechanics 上收 | Connect + Workspace | PDF/publication/hygiene domain rules 保留，通用 helper lifecycle 不重复实现 |
+| A11 | OBF | child Codex/imagegen transport 上收 | Connect + Runway | OPL Book Forge 只保留 book prompt、figure manifest 与 image receipt |
+| A12 | OBF | helper probe/dependency/byproduct mechanics 上收 | Connect + Workspace | PDF/publication/hygiene domain rules 保留，通用 helper lifecycle 不重复实现 |
 
 ## B. OPL 基座侧迁出或参数化
 
@@ -50,7 +50,7 @@
 - MAG `main=43f8676`：A4-A6 与 conformance profile 已吸收；本轮 worktree/branch 已清理。
 - RCA `main=bfd0e020`：A7-A8 与 conformance profile 已吸收；本轮 worktree/branch 已清理。
 - OMA `main=99cdfb6`：A9-A10 与 conformance profile 已吸收；本轮 worktree/branch 已清理。
-- BookForge `main=9c8fa2a`：A11-A12 与 conformance profile 已吸收；本轮 worktree/branch 已清理。
+- OBF `main=9c8fa2a`：A11-A12 与 conformance profile 已吸收；本轮 worktree/branch 已清理。
 
 ## Plan Completion Audit
 

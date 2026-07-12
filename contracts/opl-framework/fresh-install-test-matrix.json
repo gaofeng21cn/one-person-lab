@@ -26,8 +26,8 @@
   },
   "cli_first_run_commands": [
     "opl system initialize --json",
-    "opl install --headless --modules rca --json",
-    "opl install --headless --skip-modules --json",
+    "opl packages install rca --json",
+    "opl install --headless --skip-packages --json",
     "opl system configure-codex --api-key-stdin --json",
     "opl system startup-maintenance --json",
     "opl system reconcile-modules --json"
@@ -67,19 +67,19 @@
   },
   "scenarios": [
     {
-      "scenario_id": "headless_rca_base_install",
+      "scenario_id": "headless_base_install",
       "layer": "local_cli",
-      "command": "opl install --headless --modules rca --json",
-      "setup": "temporary HOME and OPL_STATE_DIR with a git-backed RCA module fixture and forbidden GUI tool fixtures",
+      "command": "opl install --headless --skip-packages --json",
+      "setup": "temporary HOME and OPL_STATE_DIR with forbidden GUI tool fixtures",
       "expected_install_mode": "headless",
-      "expected_selected_modules": ["redcube"],
+      "expected_selected_packages": [],
       "required_install_surfaces": [
         "framework runtime provider",
-        "RCA module and Codex plugin carrier",
         "recommended skills",
         "native helpers"
       ],
       "forbidden_actions": [
+        "install or update an Agent package",
         "download desktop App release asset",
         "mount or copy an App bundle",
         "open desktop App"

@@ -581,6 +581,7 @@ export function buildLaunchExecutionAuthorization(input: {
     workspaceLocator: input.workspaceLocator,
     stageId: input.stageId,
   });
+  const packageUseBinding = optionalRecord(input.workspaceLocator.package_use_binding);
   return {
     owner: 'one-person-lab' as const,
     executor_kind: input.executorKind,
@@ -611,6 +612,10 @@ export function buildLaunchExecutionAuthorization(input: {
     artifact_scope_ref: artifactScope,
     source_fingerprint: input.sourceFingerprint,
     idempotency_key: input.idempotencyKey,
+    package_use_receipt_ref: optionalText(packageUseBinding?.use_receipt_ref),
+    package_dependency_closure_digest: optionalText(packageUseBinding?.dependency_closure_digest),
+    package_scope_skill_tree_digest: optionalText(packageUseBinding?.skill_tree_digest),
+    package_scope_core_skill_tree_digest: optionalText(packageUseBinding?.core_skill_tree_digest),
     current_pointer_ref: `opl://stage-runs/${encodeURIComponent(stageRunId)}/current`,
     stage_manifest_ref: stageManifestRef({
       workspaceLocator: input.workspaceLocator,

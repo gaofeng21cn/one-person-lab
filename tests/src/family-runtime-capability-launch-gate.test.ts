@@ -10,6 +10,11 @@ import {
   type CapabilityRegistryCatalog,
   type CurrentOwnerDeltaCapabilityBinding,
 } from '../../src/modules/connect/capability-registry-resolver.ts';
+import { runOplAgentPackageInstall } from '../../src/modules/connect/agent-package-registry.ts';
+import {
+  writeCapabilityProvider,
+  writeMasConsumer,
+} from './cli/cases/packages-cases/capability-fixtures.ts';
 import { ensureProviderHostedStageAttempt } from '../../src/modules/runway/family-runtime-provider-hosted-attempts.ts';
 import {
   buildCapabilityRegistryLaunchGateReceipt,
@@ -535,14 +540,80 @@ test('malformed current-owner-delta with optional-only requirements remains fail
   );
 });
 
-test('provider-hosted attempt launch consumes typed capability readout and records blocking gate receipt', (t) => {
+test('provider-hosted attempt launch fails closed before queueing when its canonical package is absent', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-hosted-package-gate-'));
+  const previousStateRoot = process.env.OPL_STATE_DIR;
+  const previousCodexHome = process.env.CODEX_HOME;
+  process.env.OPL_STATE_DIR = path.join(root, 'state');
+  process.env.CODEX_HOME = path.join(root, 'codex-home');
+  const db = new DatabaseSync(':memory:');
+  createFamilyRuntimeQueueTables(db);
+  const now = new Date().toISOString();
+  try {
+    await assert.rejects(() => ensureProviderHostedStageAttempt(db, {
+      task_id: 'task:package-not-installed',
+      domain_id: 'medautoscience',
+      task_kind: 'test/provider-hosted-package-gate',
+      payload_json: '{}',
+      dedupe_key: null,
+      priority: 0,
+      status: 'queued',
+      attempts: 0,
+      max_attempts: 3,
+      source: 'test',
+      requires_approval: 0,
+      approved_at: null,
+      lease_owner: null,
+      lease_expires_at: null,
+      last_error: null,
+      dead_letter_reason: null,
+      created_at: now,
+      updated_at: now,
+    }, {
+      opl_provider_hosted_stage_attempt: true,
+      stage_id: 'review',
+      workspace_root: path.join(root, 'workspace'),
+    }), (error: any) => {
+      assert.equal(error.details?.failure_code, 'agent_package_operational_readiness_blocked');
+      assert.equal(error.details?.launch_blocked_reason, 'package_not_installed');
+      assert.deepEqual(error.details?.allowed_when_blocked, ['status', 'doctor', 'repair']);
+      return true;
+    });
+    assert.equal((db.prepare('SELECT COUNT(*) AS count FROM stage_attempts').get() as { count: number }).count, 0);
+  } finally {
+    db.close();
+    if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateRoot;
+    if (previousCodexHome === undefined) delete process.env.CODEX_HOME;
+    else process.env.CODEX_HOME = previousCodexHome;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('provider-hosted attempt launch consumes typed capability readout and records blocking gate receipt', async (t) => {
   const familyRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-capability-launch-family-'));
   const previousFamilyRoot = process.env.OPL_FAMILY_WORKSPACE_ROOT;
+  const previousStateRoot = process.env.OPL_STATE_DIR;
+  const previousCodexHome = process.env.CODEX_HOME;
   process.env.OPL_FAMILY_WORKSPACE_ROOT = familyRoot;
+  process.env.OPL_STATE_DIR = path.join(familyRoot, 'state');
+  process.env.CODEX_HOME = path.join(familyRoot, 'codex-home');
   t.after(() => {
     if (previousFamilyRoot === undefined) delete process.env.OPL_FAMILY_WORKSPACE_ROOT;
     else process.env.OPL_FAMILY_WORKSPACE_ROOT = previousFamilyRoot;
+    if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateRoot;
+    if (previousCodexHome === undefined) delete process.env.CODEX_HOME;
+    else process.env.CODEX_HOME = previousCodexHome;
     fs.rmSync(familyRoot, { recursive: true, force: true });
+  });
+  const providerManifest = writeCapabilityProvider(path.join(familyRoot, 'provider'));
+  const consumerManifest = writeMasConsumer(path.join(familyRoot, 'consumer'), providerManifest);
+  await runOplAgentPackageInstall({
+    manifestUrl: consumerManifest,
+    trustTier: 'first_party',
+    scope: 'workspace',
+    targetWorkspace: familyRoot,
   });
   const db = new DatabaseSync(':memory:');
   createFamilyRuntimeQueueTables(db);
@@ -570,9 +641,10 @@ test('provider-hosted attempt launch consumes typed capability readout and recor
 
   try {
     const readout = missingRouteReadout();
-    const attempt = ensureProviderHostedStageAttempt(db, row, {
+    const attempt = await ensureProviderHostedStageAttempt(db, row, {
       opl_provider_hosted_stage_attempt: true,
       stage_id: 'review',
+      workspace_root: familyRoot,
       current_owner_delta: routeRequiredDelta,
       capability_registry_readout: readout,
       capability_registry_readout_ref: 'opl://capability-readouts/review-source-route',
@@ -606,12 +678,13 @@ test('provider-hosted attempt launch consumes typed capability readout and recor
       false,
     );
 
-    const resolutionOnlyAttempt = ensureProviderHostedStageAttempt(db, {
+    const resolutionOnlyAttempt = await ensureProviderHostedStageAttempt(db, {
       ...row,
       task_id: 'task:resolved-route-without-current-delta',
     }, {
       opl_provider_hosted_stage_attempt: true,
       stage_id: 'review',
+      workspace_root: familyRoot,
       capability_registry_resolution: resolvedRouteReadout().resolutions[0],
       capability_registry_resolution_receipt_ref: 'opl://capability-resolutions/resolved-review-source-route',
     });
@@ -641,12 +714,13 @@ test('provider-hosted attempt launch consumes typed capability readout and recor
         bindingKind: 'route_required',
       }],
     }).resolutions[0];
-    const crossStageAttempt = ensureProviderHostedStageAttempt(db, {
+    const crossStageAttempt = await ensureProviderHostedStageAttempt(db, {
       ...row,
       task_id: 'runtime-task:cross-stage-replay',
     }, {
       opl_provider_hosted_stage_attempt: true,
       stage_id: 'review',
+      workspace_root: familyRoot,
       current_owner_delta: stageADelta,
       capability_registry_resolution: stageAResolution,
       capability_registry_resolution_receipt_ref: 'opl://capability-resolutions/stage-a',

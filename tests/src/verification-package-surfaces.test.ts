@@ -106,7 +106,7 @@ test('package.json exposes native helper gate scripts and package dry-run check'
 });
 
 test('package.json exposes package channel maintenance scripts', () => {
-  assert.equal(packageJson.scripts?.['packages:manifest'], 'node --experimental-strip-types ./scripts/package-module-archives.mjs');
+  assert.equal(packageJson.scripts?.['packages:manifest'], 'node --experimental-strip-types ./scripts/package-archives.mjs');
   assert.equal(packageJson.scripts?.['packages:release-discipline'], 'node ./scripts/package-release-discipline.mjs');
   assert.equal(packageJson.scripts?.['packages:daily-check'], 'node ./scripts/package-channel-daily-check.mjs');
   assert.equal(packageJson.scripts?.['packages:cleanup-ghcr'], 'node --experimental-strip-types ./scripts/cleanup-ghcr-package-versions.mjs');

@@ -18,6 +18,7 @@ import { runTemporalSchedulerCadenceCommand } from './family-runtime-scheduler.t
 import { buildFamilyRuntimeStatusPayload } from './family-runtime-status.ts';
 import {
   createStageAttempt,
+  findIdempotentStageAttempt,
   inspectStageAttempt,
   inspectStageAttemptWithCurrentProviderReadiness,
   listStageAttemptsForTask,
@@ -69,6 +70,7 @@ import {
   combineLaunchGateWithCheckoutCurrentness,
   recordTemporalStartOnAttempt,
 } from './family-runtime-parts/stage-attempt-launch.ts';
+import { ensureFamilyRuntimePackageLaunchReady } from './family-runtime-package-readiness.ts';
 
 async function temporalProviderModule() {
   return await import('./family-runtime-temporal-provider.ts');
@@ -340,6 +342,39 @@ export async function runFamilyRuntime(
       return runFamilyRuntimeStageArtifactCommand(parsed.input);
     }
     if (parsed.mode === 'attempt_create') {
+      const existingAttempt = findIdempotentStageAttempt(db, parsed.input);
+      if (existingAttempt) {
+        return {
+          version: 'g2',
+          family_runtime_stage_attempt: {
+            surface_id: 'opl_family_runtime_stage_attempt',
+            created: false,
+            idempotent_noop: true,
+            attempt: existingAttempt,
+            stage_launch_admission_gate: null,
+            launch_invocation: null,
+          },
+        };
+      }
+      const useBoundaryId = stableId('package-use', [
+        parsed.input.domainId,
+        parsed.input.stageId,
+        parsed.input.actionId ?? null,
+        parsed.input.workspaceLocator,
+        parsed.input.sourceFingerprint ?? null,
+        parsed.input.newAttempt ? Date.now() : null,
+      ]);
+      const packageReadiness = await ensureFamilyRuntimePackageLaunchReady({
+        domainId: parsed.input.domainId,
+        workspaceLocator: parsed.input.workspaceLocator,
+        useBoundaryId,
+      });
+      const useBoundWorkspaceLocator = packageReadiness?.package_use_binding
+        ? {
+            ...parsed.input.workspaceLocator,
+            package_use_binding: packageReadiness.package_use_binding,
+          }
+        : parsed.input.workspaceLocator;
       const providerKind = resolveFamilyRuntimeProviderKind(parsed.input.providerKind);
       const sourceFingerprint = parsed.input.sourceFingerprint?.trim() || null;
       const taskId = parsed.input.taskId?.trim() || null;
@@ -408,6 +443,8 @@ export async function runFamilyRuntime(
         ?? undefined;
       const result = createStageAttempt(db, {
         ...parsed.input,
+        workspaceLocator: useBoundWorkspaceLocator,
+        idempotencyWorkspaceLocator: parsed.input.workspaceLocator,
         blockedReason,
         routeImpact: defaultStageLaunchAdmissionGate.selected_action_id
           ? {
@@ -475,6 +512,17 @@ export async function runFamilyRuntime(
     }
     if (parsed.mode === 'attempt_start') {
       const attempt = inspectStageAttempt(db, parsed.stageAttemptId);
+      const pinnedUseBinding = attempt.workspace_locator.package_use_binding;
+      await ensureFamilyRuntimePackageLaunchReady({
+        domainId: attempt.domain_id,
+        workspaceLocator: attempt.workspace_locator,
+        useBoundaryId: typeof pinnedUseBinding === 'object' && pinnedUseBinding
+          ? String((pinnedUseBinding as Record<string, unknown>).use_boundary_id ?? '')
+          : undefined,
+        pinnedUseBinding: typeof pinnedUseBinding === 'object' && pinnedUseBinding
+          ? pinnedUseBinding
+          : undefined,
+      });
       const checkoutCurrentnessPreflight = preflightDomainWorkspaceCheckoutCurrentness({
         domainId: attempt.domain_id,
         workspaceLocator: attempt.workspace_locator,

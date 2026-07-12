@@ -4,11 +4,11 @@
   "package_id": "opl-flow",
   "display_name": "OPL Flow",
   "publisher": "one-person-lab",
-  "version": "0.1.14",
+  "version": "0.1.16",
   "source": "first_party",
   "registry_entry": {
     "registry_kind": "first_party_agent_package_registry_entry",
-    "registry_source_ref": "contracts/opl-framework/agent-packages/opl-flow.json",
+    "registry_source_ref": "contracts/opl-framework/packages/opl-flow.json",
     "base_contract_role": "registry_data_not_base_invariant",
     "base_contract_invariant": false,
     "identity_fields": [
@@ -21,7 +21,7 @@
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
   "source_repo": "https://github.com/gaofeng21cn/opl-flow.git",
   "schema_ref": "contracts/opl-framework/agent-package-manifest.schema.json",
-  "machine_boundary": "This first-party workflow package records OPL Flow package identity and profile migration ownership. It cannot silently overwrite user Codex profiles or claim project, runtime, domain, artifact, or owner-receipt truth.",
+  "machine_boundary": "This first-party OPL Package records OPL Flow package identity and profile migration ownership. It cannot silently overwrite user Codex profiles or claim project, runtime, domain, artifact, or owner-receipt truth.",
   "package_core": {
     "core_kind": "opl_agent_package_core",
     "identity_fields": [
@@ -42,8 +42,8 @@
   },
   "codex_surface": {
     "plugin_id": "opl-flow",
-    "plugin_payload_manifest_url": "payloads/opl-flow-0.1.14.json",
-    "carrier_source_commit": "ad924449f8db69a4d68362288a5d9833347d6928",
+    "plugin_payload_manifest_url": "payloads/opl-flow-0.1.16.json",
+    "carrier_source_commit": "06cb8e15490e6a98b1196bfc6d526bd50471ecbc",
     "required_skill_ids": [
       "opl-flow",
       "codex-ops-kit"
@@ -53,21 +53,26 @@
   },
   "profile_surface": {
     "runtime_profile": {
-      "source_path": "profile/runtime-profile",
+      "source_path": "templates/AGENTS.md",
       "target_id": "user_agents_profile"
     },
     "authoring_sources": [
       {
-        "source_path": "profile/authoring-source",
+        "source_path": "templates/TASTE.md",
         "target_id": "user_taste_source"
       }
     ],
     "merge_context_paths": [
       "profile/manifest.json",
-      "profile/modules/user-preferences",
-      "profile/authoring-source"
+      "profile/modules/01-user-preferences.md",
+      "templates/TASTE.md"
     ],
     "existing_profile_policy": "semantic_merge_required"
+  },
+  "managed_policy_surface": {
+    "policy_kind": "opl_flow_workflow_policy",
+    "source_path": "contracts/workflow-policy.json",
+    "schema_path": "contracts/workflow-policy.schema.json"
   },
   "carrier_adapters": [
     {

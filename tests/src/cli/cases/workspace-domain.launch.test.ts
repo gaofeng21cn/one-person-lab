@@ -4,6 +4,7 @@ import {
   createFakeOpenFixture,
   createFakeShellCommandFixture,
   fs,
+  installRuntimePackageFixture,
   loadFamilyManifestFixtures,
   os,
   path,
@@ -166,7 +167,7 @@ test('domain launch exposes honest direct-entry launcher preview without running
       '--entry-url',
       'http://127.0.0.1:3310/redcube',
     ], { OPL_STATE_DIR: stateRoot });
-    runCli(['packages', 'install', 'rca'], { OPL_STATE_DIR: stateRoot });
+    installRuntimePackageFixture(stateRoot, 'redcube-ai');
 
     const preview = runCli([
       'domain',
@@ -217,23 +218,50 @@ test('MAS launch activates a new workspace scope, blocks drift, and resumes afte
   const workspace = path.join(root, 'workspace');
   const providerManifest = writeCapabilityProvider(path.join(root, 'provider'));
   const consumerManifest = writeMasConsumer(root, providerManifest);
-  const env = { OPL_STATE_DIR: stateRoot, CODEX_HOME: codexHome };
+  const openFixture = createFakeOpenFixture();
+  const entryUrl = 'http://127.0.0.1:3310/mas';
+  const env = {
+    OPL_STATE_DIR: stateRoot,
+    CODEX_HOME: codexHome,
+    OPL_OPEN_BIN: openFixture.openPath,
+  };
   fs.mkdirSync(workspace, { recursive: true });
   try {
     runCli([
       'workspace', 'bind', '--project', 'medautoscience', '--path', workspace,
-      '--entry-command', 'printf launched',
+      '--entry-url', entryUrl,
       '--manifest-command', buildManifestCommand(loadFamilyManifestFixtures().medautoscience),
     ], env);
     await runCliAsync([
       'packages', 'install', '--manifest-url', consumerManifest, '--trust-tier', 'first_party',
     ], env);
 
-    const firstLaunch = runCli([
+    const skillsRoot = path.join(workspace, '.codex', 'skills');
+    const lifecycleLedger = path.join(stateRoot, 'agent-package-lifecycle-ledger.json');
+    const skillsBeforeDryRun = scholarSkillsCoreSkillIds.map((skillId) => ({
+      skillId,
+      bytes: fs.readFileSync(path.join(skillsRoot, skillId, 'SKILL.md'), 'utf8'),
+      mtimeMs: fs.statSync(path.join(skillsRoot, skillId, 'SKILL.md')).mtimeMs,
+    }));
+    const ledgerBeforeDryRun = fs.readFileSync(lifecycleLedger, 'utf8');
+    const dryRun = runCli([
       'domain', 'launch', '--project', 'medautoscience', '--dry-run',
     ], env).domain_entry_launch;
-    assert.equal(firstLaunch.dry_run, true);
-    const skillsRoot = path.join(workspace, '.codex', 'skills');
+    assert.equal(dryRun.dry_run, true);
+    assert.equal(dryRun.launch_status, 'preview_only');
+    assert.deepEqual(scholarSkillsCoreSkillIds.map((skillId) => ({
+      skillId,
+      bytes: fs.readFileSync(path.join(skillsRoot, skillId, 'SKILL.md'), 'utf8'),
+      mtimeMs: fs.statSync(path.join(skillsRoot, skillId, 'SKILL.md')).mtimeMs,
+    })), skillsBeforeDryRun);
+    assert.equal(fs.readFileSync(lifecycleLedger, 'utf8'), ledgerBeforeDryRun);
+
+    const firstLaunch = runCli([
+      'domain', 'launch', '--project', 'medautoscience',
+    ], env).domain_entry_launch;
+    assert.equal(firstLaunch.dry_run, false);
+    assert.equal(firstLaunch.launch_status, 'launched');
+    assert.equal(fs.readFileSync(openFixture.capturePath, 'utf8').trim(), entryUrl);
     assert.deepEqual(fs.readdirSync(skillsRoot).sort(), [...scholarSkillsCoreSkillIds].sort());
     assert.equal(fs.existsSync(path.join(skillsRoot, 'medical-optional-specialty')), false);
     const current = runCli([
@@ -244,7 +272,7 @@ test('MAS launch activates a new workspace scope, blocks drift, and resumes afte
 
     fs.rmSync(path.join(skillsRoot, 'medical-manuscript-writing'), { recursive: true, force: true });
     const blocked = runCliFailure([
-      'domain', 'launch', '--project', 'medautoscience', '--dry-run',
+      'domain', 'launch', '--project', 'medautoscience',
     ], env);
     assert.equal(blocked.payload.error.details.failure_code, 'agent_package_operational_readiness_blocked');
     assert.equal(blocked.payload.error.details.materialization_readiness.status, 'missing');
@@ -253,12 +281,14 @@ test('MAS launch activates a new workspace scope, blocks drift, and resumes afte
       'packages', 'repair', 'mas', '--scope', 'workspace', '--target-workspace', workspace,
     ], env);
     const resumed = runCli([
-      'domain', 'launch', '--project', 'medautoscience', '--dry-run',
+      'domain', 'launch', '--project', 'medautoscience',
     ], env).domain_entry_launch;
-    assert.equal(resumed.dry_run, true);
+    assert.equal(resumed.launch_status, 'launched');
+    assert.equal(fs.readFileSync(openFixture.capturePath, 'utf8').trim(), entryUrl);
     assert.equal(fs.existsSync(path.join(skillsRoot, 'medical-manuscript-writing', 'SKILL.md')), true);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(openFixture.fixtureRoot, { recursive: true, force: true });
   }
 });
 
@@ -367,8 +397,8 @@ test('workspace activation automatically ensures the installed MAS package scope
     assert.equal(current.materialization_readiness.status, 'current');
     assert.equal(current.launch_allowed, true);
     const appState = runCli(['app', 'state', '--profile', 'fast'], env).app_state;
-    assert.equal(appState.agent_packages.status_index.packages['med-autoscience'].operational_ready, true);
-    assert.equal(appState.agent_packages.status_index.packages['med-autoscience'].launch_allowed, true);
+    assert.equal(appState.agent_packages.status_index.packages.mas.operational_ready, true);
+    assert.equal(appState.agent_packages.status_index.packages.mas.launch_allowed, true);
 
     fs.rmSync(path.join(workspaceA, '.codex', 'skills', 'medical-manuscript-writing'), {
       recursive: true,

@@ -3,6 +3,7 @@ export type AgentPackageAppActionId =
   | 'install_from_manifest_url'
   | 'agent_package_update'
   | 'agent_package_repair'
+  | 'agent_package_activate'
   | 'agent_package_uninstall'
   | 'agent_package_preferences_set';
 
@@ -66,8 +67,8 @@ const AGENT_PACKAGE_ACTION_CATALOG = [
     confirmation_required: true,
     danger_level: 'medium',
     impact: 'Validates one manifest and records package lock/receipt refs without owning agent domain semantics.',
-    follow_up_action_ids: ['settings_reload_codex_surface'],
-    verify_action_id: 'settings_reload_codex_surface',
+    follow_up_action_ids: ['agent_package_activate'],
+    verify_action_id: 'agent_package_activate',
   },
   {
     action_id: 'agent_package_update',
@@ -84,8 +85,8 @@ const AGENT_PACKAGE_ACTION_CATALOG = [
     confirmation_required: true,
     danger_level: 'medium',
     impact: 'Replaces an installed package lock through the package core lifecycle without owning carrier-specific release truth.',
-    follow_up_action_ids: ['settings_reload_codex_surface'],
-    verify_action_id: 'settings_reload_codex_surface',
+    follow_up_action_ids: ['agent_package_activate'],
+    verify_action_id: 'agent_package_activate',
   },
   {
     action_id: 'agent_package_repair',
@@ -102,8 +103,26 @@ const AGENT_PACKAGE_ACTION_CATALOG = [
     confirmation_required: true,
     danger_level: 'medium',
     impact: 'Re-materializes the package carrier surface from the existing lock and records a lifecycle receipt.',
-    follow_up_action_ids: ['settings_reload_codex_surface'],
-    verify_action_id: 'settings_reload_codex_surface',
+    follow_up_action_ids: ['agent_package_activate'],
+    verify_action_id: 'agent_package_activate',
+  },
+  {
+    action_id: 'agent_package_activate',
+    aliases: [],
+    stable_id: 'activate_agent_package_for_use',
+    label: 'Activate agent package',
+    section_id: 'capabilities',
+    task_kind: 'configure',
+    taxonomy: 'settings.capabilities.agent_package.activate',
+    delegated_surface: 'opl packages activate --package-id <package_id> --scope <workspace|quest>',
+    payload_fields: ['package_id', 'scope', 'target_workspace', 'target_quest', 'use_boundary_id'],
+    mutates: 'opl_agent_package_closure_scope_and_use_receipt',
+    dry_run_supported: true,
+    confirmation_required: false,
+    danger_level: 'low',
+    impact: 'Reconciles one package closure and scope at the launch boundary, then returns the immutable use binding.',
+    follow_up_action_ids: [],
+    verify_action_id: 'agent_package_activate',
   },
   {
     action_id: 'agent_package_uninstall',
@@ -120,8 +139,7 @@ const AGENT_PACKAGE_ACTION_CATALOG = [
     confirmation_required: true,
     danger_level: 'medium',
     impact: 'Removes the package lock and materialized carrier refs without deleting domain truth.',
-    follow_up_action_ids: ['settings_reload_codex_surface'],
-    verify_action_id: 'settings_reload_codex_surface',
+    follow_up_action_ids: [],
   },
   {
     action_id: 'agent_package_preferences_set',

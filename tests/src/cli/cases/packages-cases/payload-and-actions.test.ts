@@ -15,6 +15,11 @@ import {
   withAgentPackageServer,
   withRemotePayloadAgentPackageServer,
 } from './helpers.ts';
+import {
+  assertPackageProfileRollbackReady,
+  finalizePackageProfileRollback,
+  rollbackPackageProfileMigration,
+} from '../../../../../src/modules/connect/agent-package-registry-parts/profile-surface.ts';
 
 test('packages materializes manifest-declared remote plugin payloads', async () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-remote-payload-state-'));
@@ -85,6 +90,24 @@ test('packages materializes manifest-declared remote plugin payloads', async () 
         install.opl_agent_package_install.lifecycle_receipt.physical_surface.plugin_payload_cache_path,
         physicalSurface.plugin_payload_cache_path,
       );
+
+      await runCliAsync([
+        'packages',
+        'update',
+        '--registry-url',
+        `${baseUrl}/registry.json`,
+        '--package-id',
+        'third.party.research',
+      ], env);
+      assert.equal(fs.existsSync(physicalSurface.plugin_payload_cache_path), true);
+      const rolledBack = runCli([
+        'packages',
+        'rollback',
+        '--package-id',
+        'third.party.research',
+      ], env) as any;
+      assert.equal(rolledBack.opl_agent_package_rollback.status, 'rolled_back');
+      assert.equal(fs.existsSync(physicalSurface.plugin_payload_cache_path), true);
 
       const uninstall = runCli([
         'packages',
@@ -206,6 +229,30 @@ test('packages owns profile install, semantic merge apply, and non-destructive u
     assert.equal(uninstall.opl_agent_package_uninstall.physical_surface.profile_migration.status, 'retained_on_uninstall');
     assert.equal(fs.readFileSync(path.join(codexHome, 'AGENTS.md'), 'utf8'), mergedProfile);
     assert.equal(fs.readFileSync(path.join(codexHome, 'TASTE.md'), 'utf8'), authoringSource);
+
+    const appliedMigration = applied.opl_agent_package_profile_apply.profile_migration;
+    assert.doesNotThrow(() => assertPackageProfileRollbackReady(appliedMigration));
+    const rolledBack = rollbackPackageProfileMigration(
+      appliedMigration,
+      { retainBackups: true },
+    );
+    assert.equal(rolledBack.status, 'rolled_back');
+    assert.equal(rolledBack.rollback_backups_retained, true);
+    assert.equal(
+      rolledBack.mutation_actions.filter((entry: any) => entry.backup_ref)
+        .every((entry: any) => fs.existsSync(entry.backup_ref)),
+      true,
+    );
+    assert.equal(fs.readFileSync(path.join(codexHome, 'AGENTS.md'), 'utf8'), existingProfile);
+    assert.equal(fs.existsSync(path.join(codexHome, 'TASTE.md')), false);
+    assert.equal(fs.existsSync(applied.opl_agent_package_profile_apply.profile_migration.receipt_path), false);
+    const finalized = finalizePackageProfileRollback(rolledBack);
+    assert.equal(finalized.rollback_backups_retained, false);
+    assert.equal(
+      rolledBack.mutation_actions.filter((entry: any) => entry.backup_ref)
+        .every((entry: any) => !fs.existsSync(entry.backup_ref)),
+      true,
+    );
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });
     fs.rmSync(homeDir, { recursive: true, force: true });
@@ -243,9 +290,19 @@ test('packages installs a declared profile directly on an empty Codex home', () 
       '--trust-tier',
       'third_party_verified',
     ], { OPL_STATE_DIR: stateDir, HOME: homeDir, CODEX_HOME: codexHome }) as any;
-    assert.equal(install.opl_agent_package_install.physical_surface.profile_migration.status, 'installed');
+    const migration = install.opl_agent_package_install.physical_surface.profile_migration;
+    assert.equal(migration.status, 'installed');
     assert.equal(fs.readFileSync(path.join(codexHome, 'AGENTS.md'), 'utf8'), candidateProfile);
     assert.equal(fs.existsSync(path.join(codexHome, 'state', 'third.party.research', 'profile-install-receipt.json')), true);
+
+    const editedAuthoringSource = '# User edited authoring source\n';
+    fs.writeFileSync(path.join(codexHome, 'TASTE.md'), editedAuthoringSource, 'utf8');
+    assert.throws(
+      () => rollbackPackageProfileMigration(migration),
+      /target changed after the package write/,
+    );
+    assert.equal(fs.readFileSync(path.join(codexHome, 'TASTE.md'), 'utf8'), editedAuthoringSource);
+    assert.equal(fs.readFileSync(path.join(codexHome, 'AGENTS.md'), 'utf8'), candidateProfile);
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });
     fs.rmSync(homeDir, { recursive: true, force: true });
@@ -254,12 +311,47 @@ test('packages installs a declared profile directly on an empty Codex home', () 
   }
 });
 
+test('profile installation compensates earlier writes when a later profile mutation fails', async () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-profile-failure-state-'));
+  const codexHome = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-profile-failure-home-'));
+  const pluginSourcePath = createPluginSourceFixture();
+  const manifestPath = path.join(stateDir, 'profile-failure-manifest.json');
+  try {
+    fs.mkdirSync(path.join(pluginSourcePath, 'templates'), { recursive: true });
+    fs.writeFileSync(path.join(pluginSourcePath, 'templates', 'AGENTS.md'), '# runtime profile\n');
+    fs.writeFileSync(path.join(pluginSourcePath, 'templates', 'TASTE.md'), '# authoring source\n');
+    fs.mkdirSync(path.join(codexHome, 'state', 'third.party.research', 'profile-install-receipt.json'), { recursive: true });
+    fs.writeFileSync(manifestPath, formatJsonPayload(agentPackageManifest({
+      pluginSourcePath,
+      profileSurface: {
+        runtime_profile: { source_path: 'templates/AGENTS.md', target_id: 'user_agents_profile' },
+        authoring_sources: [{ source_path: 'templates/TASTE.md', target_id: 'user_taste_source' }],
+        merge_context_paths: [],
+        existing_profile_policy: 'semantic_merge_required',
+      },
+    })));
+
+    const failure = await runCliFailure([
+      'packages', 'install', '--manifest-url', manifestPath, '--trust-tier', 'third_party',
+    ], { OPL_STATE_DIR: stateDir, CODEX_HOME: codexHome });
+    assert.equal(failure.payload.error.code, 'unexpected_error');
+    assert.equal(fs.existsSync(path.join(codexHome, 'AGENTS.md')), false);
+    assert.equal(fs.existsSync(path.join(codexHome, 'TASTE.md')), false);
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+    fs.rmSync(codexHome, { recursive: true, force: true });
+    fs.rmSync(pluginSourcePath, { recursive: true, force: true });
+  }
+});
+
 test('app action execute routes install_from_manifest_url to Framework package lock receipt writer', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-app-action-state-'));
+  const codexHome = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-app-action-home-'));
   const fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-manifest-'));
+  const pluginSourcePath = createPluginSourceFixture();
   try {
     const manifestPath = path.join(fixtureDir, 'manifest.json');
-    fs.writeFileSync(manifestPath, formatJsonPayload(agentPackageManifest()), 'utf8');
+    fs.writeFileSync(manifestPath, formatJsonPayload(agentPackageManifest({ pluginSourcePath })), 'utf8');
     const manifestUrl = pathToFileURL(manifestPath).href;
     const output = runCli([
       'app',
@@ -272,7 +364,7 @@ test('app action execute routes install_from_manifest_url to Framework package l
         manifest_url: manifestUrl,
         trust_tier: 'third_party_verified',
       }),
-    ], { OPL_STATE_DIR: stateDir }) as {
+    ], { OPL_STATE_DIR: stateDir, CODEX_HOME: codexHome }) as {
       app_action_execution: {
         delegated_surface: string;
         result: {
@@ -408,6 +500,8 @@ test('app action execute routes install_from_manifest_url to Framework package l
 
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });
+    fs.rmSync(codexHome, { recursive: true, force: true });
     fs.rmSync(fixtureDir, { recursive: true, force: true });
+    fs.rmSync(pluginSourcePath, { recursive: true, force: true });
   }
 });

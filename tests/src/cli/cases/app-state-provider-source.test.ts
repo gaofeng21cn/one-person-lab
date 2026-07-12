@@ -255,12 +255,12 @@ test('app state fast shows developer checkout source when Developer Mode prefers
             };
           };
         };
-        modules: {
+        runtime_source_carriers: {
           source: { mode: string; reason: string };
           items: Array<{
-            module_id: string;
-            checkout_path: string;
-            install_origin: string;
+            package_id: string;
+            source_path: string;
+            source_origin: string;
             capabilities: {
               source_channel: {
                 status: string;
@@ -274,7 +274,7 @@ test('app state fast shows developer checkout source when Developer Mode prefers
       };
     };
 
-    const mas = output.app_state.modules.items.find((entry) => entry.module_id === 'medautoscience');
+    const mas = output.app_state.runtime_source_carriers.items.find((entry) => entry.package_id === 'mas');
     assert.ok(mas);
     assert.equal(output.app_state.developer_profile.profile_id, 'runtime_maintainer');
     assert.equal(Object.hasOwn(output.app_state.developer_profile, 'legacy_developer_mode'), false);
@@ -292,10 +292,10 @@ test('app state fast shows developer checkout source when Developer Mode prefers
       source: 'developer_mode_git_checkout_source',
       impact: 'Module source may use local developer checkouts for App and CLI read-models.',
     });
-    assert.equal(output.app_state.modules.source.mode, 'developer_workspace');
-    assert.equal(output.app_state.modules.source.reason, 'developer_mode_prefers_local_sibling_checkouts');
-    assert.equal(mas.checkout_path, medAutoSciencePath);
-    assert.equal(mas.install_origin, 'sibling_workspace');
+    assert.equal(output.app_state.runtime_source_carriers.source.mode, 'developer_workspace');
+    assert.equal(output.app_state.runtime_source_carriers.source.reason, 'developer_mode_prefers_local_sibling_checkouts');
+    assert.equal(mas.source_path, medAutoSciencePath);
+    assert.equal(mas.source_origin, 'sibling_workspace');
     assert.deepEqual(mas.capabilities.source_channel, {
       status: 'ready',
       level: 'local_checkout',

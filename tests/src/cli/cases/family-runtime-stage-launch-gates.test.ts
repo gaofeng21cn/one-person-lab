@@ -1,4 +1,4 @@
-import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, runCli, test } from '../helpers.ts';
+import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, installRuntimePackageFixture, loadFamilyManifestFixtures, os, path, runCli, test } from '../helpers.ts';
 import {
   createMasScoutStage,
   createMedAutoScienceStageManifest,
@@ -24,9 +24,16 @@ function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {})
   const contractsDir = extra.OPL_CONTRACTS_DIR;
   return {
     OPL_STATE_DIR: stateRoot,
+    CODEX_HOME: path.join(stateRoot, 'codex-home'),
     ...(contractsDir ? { OPL_FAMILY_WORKSPACE_ROOT: path.resolve(contractsDir, '../..') } : {}),
     ...extra,
   };
+}
+
+function workspaceLocatorArg(stateRoot: string, name = 'workspace') {
+  const workspaceRoot = path.join(stateRoot, name);
+  fs.mkdirSync(workspaceRoot, { recursive: true });
+  return JSON.stringify({ workspace_root: workspaceRoot });
 }
 
 function bindMedAutoScienceManifest(
@@ -48,6 +55,7 @@ function bindMedAutoScienceManifest(
     OPL_CONTRACTS_DIR: fixtureContractsRoot,
     OPL_STATE_DIR: stateRoot,
   });
+  installRuntimePackageFixture(stateRoot, 'med-autoscience');
   return masPack.repoDir;
 }
 
@@ -138,7 +146,7 @@ test('family-runtime attempt create projects launch invocation and gates non-def
     '--provider',
     'temporal',
     '--workspace-locator',
-    '{"workspace_root":"/tmp/mas"}',
+    workspaceLocatorArg(stateRoot, 'mas-workspace'),
     '--source-fingerprint',
     'sha256:scout-launch',
     '--require-stage-admission',
@@ -248,7 +256,7 @@ test('family-runtime launch gate selects one declared action route without treat
   const createArgs = (actionId?: string, stageId = 'intent-intake') => [
     'family-runtime', 'attempt', 'create', '--domain', 'medautoscience', '--stage', stageId,
     ...(actionId ? ['--action', actionId] : []),
-    '--provider', 'temporal', '--workspace-locator', '{"workspace_root":"/tmp/oma"}',
+    '--provider', 'temporal', '--workspace-locator', workspaceLocatorArg(stateRoot, 'oma-workspace'),
     '--source-fingerprint', 'sha256:oma-selected-route',
   ];
   const repoDirs: string[] = [];
@@ -347,7 +355,7 @@ test('family-runtime attempt create blocks undeclared stage launches without leg
       '--provider',
       'temporal',
       '--workspace-locator',
-      '{"workspace_root":"/tmp/mas"}',
+      workspaceLocatorArg(stateRoot, 'mas-workspace'),
       '--source-fingerprint',
       'sha256:undeclared-stage',
     ], env);
@@ -386,7 +394,7 @@ test('family-runtime required admission warns without blocking when cohort loop 
       '--provider',
       'temporal',
       '--workspace-locator',
-      '{"workspace_root":"/tmp/mas"}',
+      workspaceLocatorArg(stateRoot, 'mas-workspace'),
       '--source-fingerprint',
       'sha256:scout-cohort-loop',
       '--require-stage-admission',
@@ -429,7 +437,7 @@ test('family-runtime required admission only blocks Stage Kernel launch evidence
     '--provider',
     'temporal',
     '--workspace-locator',
-    '{"workspace_root":"/tmp/mas"}',
+    workspaceLocatorArg(stateRoot, 'mas-workspace'),
     '--require-stage-admission',
   ];
   const env = familyRuntimeEnv(stateRoot, {
@@ -555,7 +563,7 @@ test('family-runtime required admission keeps assumption cohort and runtime-budg
       '--provider',
       'temporal',
       '--workspace-locator',
-      '{"workspace_root":"/tmp/mas"}',
+      workspaceLocatorArg(stateRoot, 'mas-workspace'),
       '--source-fingerprint',
       'sha256:scout-advisory',
       '--require-stage-admission',

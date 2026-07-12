@@ -9,7 +9,8 @@ import { parseRequiredValueOptions } from './required-value-options.mjs';
 import {
   buildOplPackageManifest,
   buildOplPackageChannelManifest,
-  getOplPackageModuleSpecs,
+  getOplPackageSpecs,
+  normalizeDistributionVersion,
   sha256File,
   writeOplPackageManifest,
 } from '../src/modules/connect/package-distribution.ts';
@@ -73,11 +74,11 @@ function run(command, args, options = {}) {
   return result;
 }
 
-function modulePathEnvKey(moduleId) {
-  return `OPL_MODULE_PATH_${moduleId.toUpperCase()}`;
+function packageSourcePathEnvKey(packageId) {
+  return `OPL_PACKAGE_SOURCE_PATH_${packageId.toUpperCase().replaceAll('-', '_')}`;
 }
 
-function readPreviousManifestVersion(manifestPath) {
+function readPreviousManifest(manifestPath) {
   if (!manifestPath) {
     return null;
   }
@@ -86,7 +87,7 @@ function readPreviousManifestVersion(manifestPath) {
   if (!version) {
     throw new Error(`Previous manifest has no opl_version: ${manifestPath}`);
   }
-  return version;
+  return parsed;
 }
 
 function normalizeRetainVersions(raw) {
@@ -101,7 +102,7 @@ function normalizeRetainVersions(raw) {
 }
 
 function resolveModuleRepo(spec, cloneRoot) {
-  const explicit = process.env[modulePathEnvKey(spec.module_id)]?.trim();
+  const explicit = process.env[packageSourcePathEnvKey(spec.package_id)]?.trim();
   if (explicit) {
     return path.resolve(explicit);
   }
@@ -123,10 +124,11 @@ function readGitValue(repoPath, args) {
   return run('git', args, { cwd: repoPath, capture: true }).stdout.trim();
 }
 
-function archiveModule(spec, repoPath, modulesOutDir, version) {
-  fs.mkdirSync(modulesOutDir, { recursive: true });
-  const archiveName = `${spec.repo_name}-${version}.tar.gz`;
-  const archivePath = path.join(modulesOutDir, archiveName);
+function archiveModule(spec, repoPath, packagesOutDir, version) {
+  const packageOutDir = path.join(packagesOutDir, spec.package_id);
+  fs.mkdirSync(packageOutDir, { recursive: true });
+  const archiveName = `${spec.package_id}-${version}.tar.gz`;
+  const archivePath = path.join(packageOutDir, archiveName);
   fs.rmSync(archivePath, { force: true });
   run('git', ['archive', '--format=tar.gz', `--prefix=${spec.repo_name}/`, '-o', archivePath, 'HEAD'], {
     cwd: repoPath,
@@ -139,6 +141,65 @@ function archiveModule(spec, repoPath, modulesOutDir, version) {
     sha256: sha256File(archivePath),
     head_sha: readGitValue(repoPath, ['rev-parse', 'HEAD']),
     branch: readGitValue(repoPath, ['branch', '--show-current']) || null,
+  };
+}
+
+function readJsonObject(filePath) {
+  return readJsonFile(filePath);
+}
+
+function readPyprojectVersion(filePath) {
+  const source = fs.readFileSync(filePath, 'utf8');
+  const project = source.match(/\[project\]([\s\S]*?)(?:\n\[|$)/)?.[1] ?? '';
+  const version = project.match(/^version\s*=\s*["']([^"']+)["']/m)?.[1]?.trim();
+  if (!version) throw new Error(`Owner pyproject has no [project].version: ${filePath}`);
+  return version;
+}
+
+function readOwnerPackageMetadata(spec, repoPath, releaseGate) {
+  const manifestPath = path.join(repoPath, spec.owner_package_manifest_ref);
+  const ownerManifestJson = fs.readFileSync(manifestPath, 'utf8');
+  const ownerManifest = JSON.parse(ownerManifestJson);
+  const ownerPackage = spec.owner_manifest_kind === 'workflow_profile'
+    ? ownerManifest.package
+    : ownerManifest;
+  const ownerPackageId = String(ownerPackage?.package_id ?? ownerPackage?.id ?? '').trim();
+  const ownerAgentId = String(ownerPackage?.agent_id ?? ownerPackageId).trim();
+  const ownerLanguageVersion = String(ownerPackage?.version ?? '').trim();
+  if (ownerPackageId !== spec.package_id || (spec.owner_manifest_kind === 'standard_agent' && ownerAgentId !== spec.package_id)) {
+    throw new Error(`${spec.module_id}: owner package identity must be canonical ${spec.package_id}; got package_id=${ownerPackageId} agent_id=${ownerAgentId}`);
+  }
+  if (!ownerLanguageVersion) throw new Error(`${spec.module_id}: owner package manifest has no version`);
+  const packageVersion = normalizeDistributionVersion(ownerLanguageVersion);
+  const plugin = readJsonObject(path.join(repoPath, spec.owner_plugin_manifest_ref));
+  if (String(plugin.version ?? '').trim() !== ownerLanguageVersion) {
+    throw new Error(`${spec.module_id}: owner plugin version does not match owner package manifest`);
+  }
+  if (spec.owner_language_version_ref) {
+    const languagePath = path.join(repoPath, spec.owner_language_version_ref);
+    const languageVersion = spec.owner_language_version_ref.endsWith('.toml')
+      ? readPyprojectVersion(languagePath)
+      : String(readJsonObject(languagePath).version ?? '').trim();
+    if (languageVersion !== ownerLanguageVersion) {
+      throw new Error(`${spec.module_id}: owner language package version does not match owner package manifest`);
+    }
+  }
+  const headSha = readGitValue(repoPath, ['rev-parse', 'HEAD']);
+  const matchingTag = readGitValue(repoPath, ['tag', '--points-at', 'HEAD'])
+    .split(/\r?\n/)
+    .find((tag) => tag === packageVersion || tag === `v${packageVersion}`) ?? null;
+  if (!matchingTag && !releaseGate) {
+    throw new Error(`${spec.module_id}: owner HEAD has no ${packageVersion} tag and no release gate`);
+  }
+  return {
+    package_id: spec.package_id,
+    package_version: packageVersion,
+    owner_language_version: ownerLanguageVersion,
+    owner_source_commit: headSha,
+    owner_version_tag: matchingTag,
+    owner_package_manifest_json: ownerManifestJson,
+    owner_package_manifest_sha256: `sha256:${sha256File(manifestPath)}`,
+    release_gate: matchingTag ? `owner_version_tag:${matchingTag}` : releaseGate,
   };
 }
 
@@ -189,8 +250,9 @@ function copyReleaseDisciplineWorkflows(outDir) {
 }
 
 function main() {
-const options = parseCliOptions(process.argv.slice(2));
-  const rollbackVersion = readPreviousManifestVersion(options.previousManifest);
+  const options = parseCliOptions(process.argv.slice(2));
+  const previousManifest = readPreviousManifest(options.previousManifest);
+  const rollbackVersion = previousManifest?.opl_version ?? null;
   const retainVersions = normalizeRetainVersions(options.retainVersions);
   const manifest = buildOplPackageManifest({
     version: options.version,
@@ -199,7 +261,7 @@ const options = parseCliOptions(process.argv.slice(2));
     retainVersions,
   });
   const version = manifest.opl_version;
-  const modulesOutDir = path.join(options.outDir, 'modules');
+  const packagesOutDir = path.join(options.outDir, 'packages');
   const frameworkOutDir = path.join(options.outDir, 'framework');
   const archives = [];
   const frameworkArchive = archiveFramework(repoRoot, frameworkOutDir, version);
@@ -223,32 +285,55 @@ const options = parseCliOptions(process.argv.slice(2));
     head_sha: frameworkArchive.head_sha,
   };
   manifest.packages.framework_core.homebrew_formula = {
-    package_name: 'opl-framework',
+    surface_kind: 'opl_homebrew_formula_projection.v1',
+    formula_name: 'opl',
+    package_name: 'opl',
+    approval_status: 'owner_approved',
+    carrier_scope: 'framework_core_only',
     version: manifest.packages.framework_core.version,
     source_head: frameworkArchive.head_sha,
     archive_url: `https://github.com/gaofeng21cn/one-person-lab/archive/${frameworkArchive.head_sha}.tar.gz`,
     archive_kind: 'immutable_github_commit_archive',
     sha256_source: 'tap_sync_download_and_hash',
+    tap_generator_role: 'consume_projection_without_inference',
   };
 
-  for (const spec of getOplPackageModuleSpecs()) {
+  for (const spec of getOplPackageSpecs()) {
     const repoPath = resolveModuleRepo(spec, options.cloneRoot);
-    const archive = archiveModule(spec, repoPath, modulesOutDir, version);
+    const ownerMetadata = readOwnerPackageMetadata(
+      spec,
+      repoPath,
+      process.env.OPL_PACKAGE_RELEASE_GATE?.trim() || null,
+    );
+    const archive = archiveModule(spec, repoPath, packagesOutDir, ownerMetadata.package_version);
     archives.push({
       ...archive,
-      relative_path: `modules/${archive.file_name}`,
+      relative_path: `packages/${spec.package_id}/${archive.file_name}`,
     });
-    manifest.packages.modules[spec.module_id].source_archive = {
+    const packageEntry = manifest.packages.package_artifacts[spec.package_id];
+    const registryRoot = packageEntry.artifact.split('/one-person-lab-packages/')[0];
+    packageEntry.package_id = ownerMetadata.package_id;
+    packageEntry.package_version = ownerMetadata.package_version;
+    packageEntry.version = ownerMetadata.package_version;
+    packageEntry.artifact = `${registryRoot}/one-person-lab-packages/${spec.package_id}:${ownerMetadata.package_version}`;
+    packageEntry.owner_language_version = ownerMetadata.owner_language_version;
+    packageEntry.owner_source_commit = ownerMetadata.owner_source_commit;
+    packageEntry.owner_version_tag = ownerMetadata.owner_version_tag;
+    packageEntry.owner_package_manifest_json = ownerMetadata.owner_package_manifest_json;
+    packageEntry.owner_package_manifest_sha256 = ownerMetadata.owner_package_manifest_sha256;
+    packageEntry.release_gate = ownerMetadata.release_gate;
+    packageEntry.package_content_digest = `sha256:${archive.sha256}`;
+    manifest.packages.package_artifacts[spec.package_id].source_archive = {
       file_name: archive.file_name,
       size: archive.size,
       sha256: archive.sha256,
     };
-    manifest.packages.modules[spec.module_id].checksum = {
+    manifest.packages.package_artifacts[spec.package_id].checksum = {
       algorithm: 'sha256',
       value: archive.sha256,
       file: 'SHA256SUMS',
     };
-    manifest.packages.modules[spec.module_id].source_git = {
+    manifest.packages.package_artifacts[spec.package_id].source_git = {
       repo_url: spec.repo_url,
       branch: archive.branch,
       head_sha: archive.head_sha,
@@ -260,15 +345,23 @@ const options = parseCliOptions(process.argv.slice(2));
   const manifestPath = writeOplPackageManifest(path.join(options.outDir, 'opl-release-manifest.json'), manifest);
   const channelManifestPath = writeOplPackageManifest(
     path.join(options.outDir, 'opl-channel-manifest.json'),
-    buildOplPackageChannelManifest(manifest),
+    buildOplPackageChannelManifest(manifest, previousManifest),
   );
+  const channelManifest = readJsonFile(channelManifestPath);
+  for (const [packageId, entry] of Object.entries(channelManifest.packages.package_catalog)) {
+    const version = entry.versions.find((candidate) => candidate.promotion_status === 'promoted');
+    const metadataRoot = path.join(packagesOutDir, packageId);
+    fs.mkdirSync(metadataRoot, { recursive: true });
+    fs.writeFileSync(path.join(metadataRoot, 'agent-package-manifest.json'), version.manifest_json, 'utf8');
+    fs.writeFileSync(path.join(metadataRoot, 'payload-manifest.json'), version.payload_manifest_json, 'utf8');
+  }
   console.log(JSON.stringify({
     status: 'completed',
     manifest: manifestPath,
     channel_manifest: channelManifestPath,
     checksums: checksumPath,
     release_discipline_workflows: releaseDisciplineWorkflows,
-    modules_dir: modulesOutDir,
+    packages_dir: packagesOutDir,
     framework_dir: frameworkOutDir,
     clone_root: options.cloneRoot,
     framework_core: {
@@ -276,7 +369,7 @@ const options = parseCliOptions(process.argv.slice(2));
       source_archive: manifest.packages.framework_core.source_archive,
       source_git: manifest.packages.framework_core.source_git,
     },
-    modules: Object.values(manifest.packages.modules).map((entry) => ({
+    packages: Object.values(manifest.packages.package_artifacts).map((entry) => ({
       module_id: entry.module_id,
       artifact: entry.artifact,
       source_archive: entry.source_archive,

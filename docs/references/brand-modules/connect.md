@@ -100,7 +100,7 @@ Connect 暴露外部资源连接器时，必须保持“平台接入”和“领
 MAS Scholar Skills 兼容 projection 边界：
 
 - `opl packages` 是唯一 lifecycle owner；Connect 的旧 sync primitive 仅可作为内部兼容迁移输入，不进入 App catalog、MAS manifest、正常 activation/launch 或用户 repair 路由。
-- MAS Scholar Skills 的 11 core Skill 与 8 module contract ids 由 provider manifest 持有。Packages 校验 consumer/provider ABI、version 和 digest，只有 11 core Skill 物化到 `<target>/.codex/skills/`；module ids 与 optional named specialties不作为默认目录。
+- MAS Scholar Skills 的完整 export catalog 与 8 module contract ids 由 provider manifest 持有。Packages 校验 consumer/provider ABI、version 和 digest，并把当前发布包声明的全部 35 个 Skills 物化到 `<target>/.codex/skills/`；11 core Skill 与 8 module ids 只是 hard readiness floor，module ids 不物化为 Skill 目录，named specialties 缺失只降级并在下一 use boundary 自动恢复。
 - workspace/quest 首次 activation 或 domain launch 自动写 scope lifecycle receipt；已有 scope 缺失、漂移、不兼容或 receipt 缺失时普通 launch fail closed，公开恢复入口是 `opl packages repair mas --scope ...`。
 - Connect 不判断 MAS 质量、paper truth、owner receipt、typed blocker、runtime queue、artifact authority 或 publication/export readiness。
 

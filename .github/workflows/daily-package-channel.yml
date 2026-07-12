@@ -30,6 +30,7 @@ jobs:
     outputs:
       publish_required: ${{ steps.decide.outputs.publish_required }}
       opl_version: ${{ steps.version.outputs.opl_version }}
+      changed_packages_json: ${{ steps.decide.outputs.changed_packages_json }}
     steps:
       - name: Checkout OPL
         uses: actions/checkout@v6
@@ -65,9 +66,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build candidate module archives and manifest
-        run: npm run packages:manifest -- --version "$OPL_RELEASE_VERSION" --owner "$OPL_PACKAGES_OWNER" --out-dir dist/opl-daily-packages
-
       - name: Setup ORAS
         uses: oras-project/setup-oras@v1
 
@@ -78,7 +76,7 @@ jobs:
           set -euo pipefail
           mkdir -p dist/opl-current-channel
           echo "${{ github.token }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
-          oras pull "ghcr.io/${OPL_PACKAGES_OWNER}/one-person-lab-manifest:latest" \
+          oras pull "ghcr.io/${OPL_PACKAGES_OWNER}/one-person-lab-manifest:latest-stable" \
             --output dist/opl-current-channel
           current="$(find dist/opl-current-channel -name opl-channel-manifest.json -print -quit)"
           test -n "$current"
@@ -86,6 +84,9 @@ jobs:
             cp "$current" dist/opl-current-channel/opl-channel-manifest.json
           fi
           echo "current_manifest=dist/opl-current-channel/opl-channel-manifest.json" >> "$GITHUB_OUTPUT"
+
+      - name: Build candidate package archives and manifest
+        run: npm run packages:manifest -- --version "$OPL_RELEASE_VERSION" --owner "$OPL_PACKAGES_OWNER" --out-dir dist/opl-daily-packages --previous-manifest "${{ steps.current.outputs.current_manifest }}"
 
       - name: Compare package channel fingerprints
         id: decide
@@ -100,10 +101,9 @@ jobs:
           args+=(--current-manifest "${{ steps.current.outputs.current_manifest }}")
           npm run packages:daily-check -- "${args[@]}"
           publish_required="$(node -e "console.log(JSON.parse(require('fs').readFileSync('dist/opl-daily-packages/daily-package-channel-summary.json', 'utf8')).publish_required ? 'true' : 'false')")"
-          if [ "${{ github.event.inputs.force_publish || 'false' }}" = "true" ]; then
-            publish_required="true"
-          fi
           echo "publish_required=$publish_required" >> "$GITHUB_OUTPUT"
+          changed_packages_json="$(node -e "console.log(JSON.stringify(JSON.parse(require('fs').readFileSync('dist/opl-daily-packages/daily-package-channel-summary.json', 'utf8')).changed_packages))")"
+          echo "changed_packages_json=$changed_packages_json" >> "$GITHUB_OUTPUT"
 
       - name: Upload daily package-channel candidate evidence
         uses: actions/upload-artifact@v7
@@ -120,3 +120,5 @@ jobs:
     with:
       opl_version: ${{ needs.detect-package-channel-change.outputs.opl_version }}
       release_gate: daily_package_channel_changed
+      changed_packages_json: ${{ needs.detect-package-channel-change.outputs.changed_packages_json }}
+      promotion_target: candidate

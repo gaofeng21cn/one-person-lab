@@ -17,6 +17,7 @@
     "opl packages enable --package-id <id> --json",
     "opl packages disable --package-id <id> --json",
     "opl packages repair --package-id <id> --json",
+    "opl packages rollback --package-id <id> --json",
     "opl packages uninstall --package-id <id> --json"
   ],
   "kernel_lifecycle": [

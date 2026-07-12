@@ -1,14 +1,14 @@
 {
   "surface_kind": "opl_agent_package_manifest.v1",
-  "agent_id": "opl-meta-agent",
-  "package_id": "opl-meta-agent",
-  "display_name": "OPL Meta Agent",
+  "agent_id": "rca",
+  "package_id": "rca",
+  "display_name": "RedCube AI",
   "publisher": "one-person-lab",
   "version": "0.1.0",
   "source": "first_party",
   "registry_entry": {
     "registry_kind": "first_party_agent_package_registry_entry",
-    "registry_source_ref": "contracts/opl-framework/agent-packages/oma.json",
+    "registry_source_ref": "contracts/opl-framework/packages/rca.json",
     "base_contract_role": "registry_data_not_base_invariant",
     "base_contract_invariant": false,
     "identity_fields": [
@@ -16,12 +16,12 @@
       "agent_id",
       "version"
     ],
-    "admitted_domain_ref": null
+    "admitted_domain_ref": "contracts/opl-framework/domains.json#redcube"
   },
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
-  "source_repo": "https://github.com/gaofeng21cn/opl-meta-agent.git",
+  "source_repo": "https://github.com/gaofeng21cn/redcube-ai.git",
   "schema_ref": "contracts/opl-framework/agent-package-manifest.schema.json",
-  "machine_boundary": "This manifest declares first-party package distribution and repo-local materialized Codex carrier projection. It does not write domain truth, sign owner receipts, create typed blockers, write runtime queues, or claim runtime/release readiness.",
+  "machine_boundary": "This manifest declares first-party package distribution and Codex carrier projection. It does not write domain truth, sign owner receipts, create typed blockers, write runtime queues, or claim runtime/release readiness.",
   "package_core": {
     "core_kind": "opl_agent_package_core",
     "identity_fields": [
@@ -41,13 +41,18 @@
     "exposure_owner": "opl_connect_agent_package_registry"
   },
   "codex_surface": {
-    "plugin_id": "opl-meta-agent",
+    "plugin_id": "redcube-ai",
+    "plugin_payload_manifest_url": "payloads/rca-0.1.0.json",
     "standalone_distribution": "repo_carrier_source",
     "required_skill_ids": [
-      "opl-meta-agent"
+      "redcube-ai"
     ],
     "bundled_capability_package_ids": [],
     "user_install_action_count": 1
+  },
+  "runtime_source_carrier": {
+    "carrier_kind": "opl_managed_module_source",
+    "module_id": "redcube"
   },
   "carrier_adapters": [
     {
@@ -61,25 +66,20 @@
   ],
   "opl_managed_surface": {
     "package_shape": "thin_agent_package",
-    "dependency_resolution": "opl_owned_framework_link",
-    "dependency_update_policy": "opl_managed_framework_installation_target",
-    "developer_mode_dependency_policy": "source_checkout_when_authorized_else_pull_request",
-    "framework_link": {
-      "install_owner": "opl_module_action_workflow",
-      "link_path_pattern": "<agent-root>/node_modules/opl-framework",
-      "target_owner": "resolved_opl_framework_installation_root",
-      "automatic_action_refs": [
-        "opl install --module <module-id>",
-        "opl connect install --module <module-id>",
-        "opl connect update --module <module-id>",
-        "opl connect reinstall --module <module-id>",
-        "opl system startup-maintenance --json"
+    "dependency_resolution": "managed_dependency_graph",
+    "dependency_update_policy": "independent_package_target",
+    "developer_mode_dependency_policy": "source_checkout_when_authorized_else_pull_request"
+  },
+  "managed_shell": {
+    "clean_runner_profile": {
+      "profile_role": "domain_compatibility_clean_runner",
+      "legacy_env_roots": [
+        {
+          "env_name": "RCA_CLEAN_RUNNER_TMP_ROOT",
+          "fallback_subdir": "rca"
+        }
       ],
-      "repair_command_ref": "opl packages link-framework --agent-root <repo> --json",
-      "check_command_ref": "opl packages link-framework --agent-root <repo> --check --json",
-      "agent_manifest_framework_dependency_forbidden": true,
-      "copies_framework_package": false,
-      "installs_second_temporal_tree": false
+      "read_only_command_patterns": []
     }
   },
   "capability_dependencies": []

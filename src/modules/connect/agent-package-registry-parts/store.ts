@@ -56,10 +56,10 @@ export function readLockIndex(): AgentPackageLockIndex {
         : [];
     }),
     last_known_good_transactions: recordList(parsed.last_known_good_transactions ?? [])
-      .filter((entry) => typeof entry.transaction_id === 'string'
+      .filter((entry) => typeof entry.root_package_id === 'string'
+        && typeof entry.transaction_id === 'string'
         && typeof entry.closure_digest === 'string'
-        && Array.isArray(entry.package_locks))
-      .slice(0, 4) as AgentPackageLockIndex['last_known_good_transactions'],
+        && Array.isArray(entry.package_locks)) as AgentPackageLockIndex['last_known_good_transactions'],
   };
 }
 

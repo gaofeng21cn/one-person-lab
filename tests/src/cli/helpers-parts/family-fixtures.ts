@@ -14,6 +14,35 @@ import {
 
 import { repoRoot } from './constants.ts';
 import { createContractsFixtureRoot, readJsonFixture, shellSingleQuote } from './fixtures.ts';
+import { runCli } from './runner.ts';
+
+export function installRuntimePackageFixture(stateRoot: string, packageId: string) {
+  const env = {
+    OPL_STATE_DIR: stateRoot,
+    CODEX_HOME: path.join(stateRoot, 'codex-home'),
+  };
+  const current = runCli(['packages', 'status', '--package-id', packageId], env)
+    .opl_agent_package_status;
+  if (current.installed_package_count > 0) return;
+  const fixtureRoot = path.join(stateRoot, 'test-package-fixtures');
+  const manifestPath = path.join(fixtureRoot, `${packageId}.json`);
+  fs.mkdirSync(fixtureRoot, { recursive: true });
+  fs.writeFileSync(manifestPath, `${JSON.stringify({
+    surface_kind: 'opl_agent_package_manifest.v1',
+    agent_id: packageId,
+    package_id: packageId,
+    display_name: packageId,
+    publisher: 'opl-test',
+    version: '0.0.0-test',
+    source: 'local_contract_fixture',
+    carrier_source_role: 'codex_plugin_default_carrier_not_package_truth',
+    codex_surface: { required_skill_ids: [packageId] },
+    capability_dependencies: [],
+  }, null, 2)}\n`);
+  runCli([
+    'packages', 'install', '--manifest-url', manifestPath, '--trust-tier', 'first_party',
+  ], env);
+}
 
 export function loadFamilyManifestFixtures() {
   const medautogrant = readJsonFixture<Record<string, unknown>>('med-autogrant-product-entry-manifest.json');

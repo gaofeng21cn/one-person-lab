@@ -139,13 +139,21 @@ function packageTargets(manifest) {
       execution_mode: nativePolicy.execution_mode,
       protected_tags: nativePolicy.protected_tags ?? [],
     },
-    ...Object.values(manifest.packages.modules).map((entry) => ({
-      package_name: `one-person-lab-modules/${entry.repo_name}`,
-      package_kind: 'active_module_package',
+    ...Object.values(manifest.packages.package_artifacts).map((entry) => ({
+      package_name: `one-person-lab-packages/${entry.package_id}`,
+      package_kind: 'active_package',
       lifecycle_status: entry.package_lifecycle_status,
       retain_versions: cleanupPolicy.retain_versions,
       execution_mode: cleanupPolicy.execution_mode,
       protected_tags: cleanupPolicy.protected_tags ?? [],
+    })),
+    ...Object.values(manifest.packages.package_artifacts).map((entry) => ({
+      package_name: `one-person-lab-modules/${entry.repo_name}`,
+      package_kind: 'legacy_module_namespace_tombstone',
+      lifecycle_status: 'retired_migration_detection_only',
+      retain_versions: 0,
+      execution_mode: 'read_only_migration_detection',
+      protected_tags: [],
     })),
     {
       package_name: manifest.packages.framework_core.package_name,
@@ -173,7 +181,7 @@ function cleanup(options) {
   const deletedVersions = [];
 
   for (const target of targets) {
-    if (target.execution_mode !== 'dry_run_first_explicit_execute_required') {
+    if (!['dry_run_first_explicit_execute_required', 'read_only_migration_detection'].includes(target.execution_mode)) {
       throw new Error(`${target.package_name}: cleanup policy must remain dry-run first`);
     }
 
@@ -186,6 +194,17 @@ function cleanup(options) {
         status: 'not_found_or_unreadable',
         error: error instanceof Error ? error.message : String(error),
         version_count: 0,
+        candidate_count: 0,
+        candidates: [],
+      });
+      continue;
+    }
+
+    if (target.execution_mode === 'read_only_migration_detection') {
+      packages.push({
+        ...target,
+        status: versions.length > 0 ? 'legacy_namespace_detected' : 'legacy_namespace_absent',
+        version_count: versions.length,
         candidate_count: 0,
         candidates: [],
       });

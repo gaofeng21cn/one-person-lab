@@ -67,6 +67,32 @@ test('Book Forge fallback bootstrap does not create an untracked package lock', 
   }
 });
 
+test('MAS runtime preparation uses only its repo-owned bootstrap health and probe scripts', () => {
+  const checkoutPath = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-mas-runtime-spec-'));
+  const scriptsPath = path.join(checkoutPath, 'scripts');
+  fs.mkdirSync(scriptsPath, { recursive: true });
+  fs.writeFileSync(path.join(scriptsPath, 'opl-module-bootstrap.sh'), '#!/usr/bin/env bash\n');
+  fs.writeFileSync(path.join(scriptsPath, 'opl-module-healthcheck.sh'), '#!/usr/bin/env bash\n');
+  try {
+    const mas = DOMAIN_MODULE_SPECS.find((module) => module.module_id === 'medautoscience');
+    assert.deepEqual(mas?.bootstrap_command?.(checkoutPath), {
+      command: 'bash',
+      args: [path.join(scriptsPath, 'opl-module-bootstrap.sh')],
+    });
+    assert.deepEqual(mas?.health_check_command?.(checkoutPath), {
+      command: 'bash',
+      args: [path.join(scriptsPath, 'opl-module-healthcheck.sh')],
+    });
+    assert.deepEqual(mas?.runtime_probe_command?.(checkoutPath), {
+      command: 'bash',
+      args: [path.join(scriptsPath, 'opl-module-healthcheck.sh'), '--probe'],
+    });
+    assert.equal(mas?.exec_command, undefined);
+  } finally {
+    fs.rmSync(checkoutPath, { recursive: true, force: true });
+  }
+});
+
 function createBasicMasModuleRemoteFixture(turnkeyLogPath: string) {
   return createGitModuleRemoteFixture('med-autoscience', {
     extraFiles: {
@@ -608,8 +634,9 @@ test('modules projection treats Full runtime packaged overrides as launch source
 
     const output = runCli(['connect', 'modules'], env) as any;
 
-    assert.equal(output.modules.summary.installed_default_modules_count, packagedModules.length);
-    assert.equal(output.modules.summary.healthy_default_modules_count, packagedModules.length);
+    const defaultPackagedModuleCount = packagedModules.filter(([moduleId]) => moduleId !== 'scholarskills').length;
+    assert.equal(output.modules.summary.installed_default_modules_count, defaultPackagedModuleCount);
+    assert.equal(output.modules.summary.healthy_default_modules_count, defaultPackagedModuleCount);
     const modulesById = new Map<string, any>(output.modules.items.map((entry: any) => [entry.module_id, entry]));
     for (const [moduleId] of packagedModules) {
       const module = modulesById.get(moduleId);
@@ -629,8 +656,6 @@ test('modules projection treats Full runtime packaged overrides as launch source
 test('module exec runs domain CLIs from the current module checkout instead of PATH tools', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-module-exec-home-'));
   const fakeBinRoot = path.join(homeRoot, 'fake-bin');
-  const masRunnerArgvPath = path.join(homeRoot, 'mas-runner.argv');
-  const masRunnerCwdPath = path.join(homeRoot, 'mas-runner.cwd');
   const magRunnerArgvPath = path.join(homeRoot, 'mag-runner.argv');
   const magRunnerCwdPath = path.join(homeRoot, 'mag-runner.cwd');
   const uvArgvPath = path.join(homeRoot, 'uv.argv');
@@ -678,10 +703,8 @@ printf '{"ok":true,"runner":"npm"}\\n'
       'scripts/run-python-clean.sh': [
         '#!/usr/bin/env bash',
         'set -euo pipefail',
-        `printf '%s\\n' "$PWD" > ${JSON.stringify(masRunnerCwdPath)}`,
-        `: > ${JSON.stringify(masRunnerArgvPath)}`,
-        `for arg in "$@"; do printf '%s\\n' "$arg" >> ${JSON.stringify(masRunnerArgvPath)}; done`,
-        `printf '{"ok":true,"runner":"mas-clean-runner"}\\n'`,
+        `printf 'retired MAS CLI entry must not run\\n' >&2`,
+        'exit 43',
         '',
       ].join('\n'),
     },
@@ -718,24 +741,13 @@ printf '{"ok":true,"runner":"npm"}\\n'
   const realpath = (filePath: string) => fs.realpathSync(filePath);
 
   try {
-    const masExec = runCli(
+    const masFailure = runCliFailure(
       ['connect', 'exec', '--module', 'medautoscience', '--', 'doctor', 'entry-modes', '--json'],
       env,
-    ) as any;
-    assert.equal(masExec.module_exec.module_id, 'medautoscience');
-    assert.equal(masExec.module_exec.working_directory, masFixture.sourceRoot);
-    assert.equal(masExec.module_exec.exit_code, 0);
-    assert.deepEqual(masExec.module_exec.result, { ok: true, runner: 'mas-clean-runner' });
-    assert.deepEqual(masExec.module_exec.command_preview, [
-      path.join(masFixture.sourceRoot, 'scripts', 'run-python-clean.sh'),
-      '-m',
-      'med_autoscience.cli',
-      'doctor',
-      'entry-modes',
-      '--json',
-    ]);
-    assert.equal(realpath(fs.readFileSync(masRunnerCwdPath, 'utf8').trim()), realpath(masFixture.sourceRoot));
-    assert.deepEqual(readLines(masRunnerArgvPath), masExec.module_exec.command_preview.slice(1));
+    );
+    assert.equal(masFailure.status, 2);
+    assert.equal(masFailure.payload.error.code, 'cli_usage_error');
+    assert.match(masFailure.payload.error.message, /does not expose an OPL module exec entry/);
     assert.equal(fs.existsSync(uvCwdPath), false);
 
     const magExec = runCli(
@@ -796,7 +808,7 @@ printf '{"ok":true,"runner":"npm"}\\n'
 
 test('module exec captures large domain CLI stdout without default spawnSync ENOBUFS', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-module-exec-buffer-home-'));
-  const masFixture = createGitModuleRemoteFixture('med-autoscience', {
+  const magFixture = createGitModuleRemoteFixture('med-autogrant', {
     extraFiles: {
       'scripts/run-python-clean.sh': [
         '#!/usr/bin/env bash',
@@ -813,23 +825,23 @@ test('module exec captures large domain CLI stdout without default spawnSync ENO
     HOME: homeRoot,
     PATH: `${fakeBinRoot}:${process.env.PATH ?? ''}`,
     OPL_MODULES_ROOT: path.join(homeRoot, 'managed-modules'),
-    OPL_MODULE_PATH_MEDAUTOSCIENCE: masFixture.sourceRoot,
+    OPL_MODULE_PATH_MEDAUTOGRANT: magFixture.sourceRoot,
     OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
   };
 
   try {
-    const masExec = runCli(
-      ['connect', 'exec', '--module', 'medautoscience', '--', 'sidecar', 'export', '--format', 'json'],
+    const magExec = runCli(
+      ['connect', 'exec', '--module', 'medautogrant', '--', 'sidecar', 'export', '--format', 'json'],
       env,
     ) as any;
 
-    assert.equal(masExec.module_exec.module_id, 'medautoscience');
-    assert.equal(masExec.module_exec.exit_code, 0);
-    assert.equal(masExec.module_exec.stdout.length, 2 * 1024 * 1024);
-    assert.equal(masExec.module_exec.result, null);
-    assert.equal(masExec.module_exec.max_buffer_bytes >= 2 * 1024 * 1024, true);
+    assert.equal(magExec.module_exec.module_id, 'medautogrant');
+    assert.equal(magExec.module_exec.exit_code, 0);
+    assert.equal(magExec.module_exec.stdout.length, 2 * 1024 * 1024);
+    assert.equal(magExec.module_exec.result, null);
+    assert.equal(magExec.module_exec.max_buffer_bytes >= 2 * 1024 * 1024, true);
   } finally {
-    fs.rmSync(masFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(magFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
 });

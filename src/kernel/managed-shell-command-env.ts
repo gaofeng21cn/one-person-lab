@@ -14,7 +14,7 @@ const MANAGED_SHELL_RECOVERY_TRIGGERS = new Set<string>([
 ]);
 const DOMAIN_CLEAN_RUNNER_PROFILE_ROLE = 'domain_compatibility_clean_runner' as const;
 const AGENT_PACKAGE_DESCRIPTOR_DIR = fileURLToPath(
-  new URL('../../contracts/opl-framework/agent-packages/', import.meta.url),
+  new URL('../../contracts/opl-framework/packages/', import.meta.url),
 );
 
 export type DomainCleanRunnerProfile = {
@@ -132,7 +132,7 @@ export function loadDomainCleanRunnerProfilesFromAgentPackageDescriptors(
     .filter((fileName) => fileName.endsWith('.json'))
     .sort()
     .flatMap((fileName) => {
-      const sourceRef = `contracts/opl-framework/agent-packages/${fileName}`;
+      const sourceRef = `contracts/opl-framework/packages/${fileName}`;
       const descriptor = readJsonPayloadFile(path.join(descriptorDir, fileName));
       if (!isRecord(descriptor)) {
         throw cleanRunnerDescriptorError(sourceRef, '<root>', 'Agent package descriptor must be a JSON object.');

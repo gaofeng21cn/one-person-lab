@@ -4,6 +4,7 @@ import {
   assert,
   cliPath,
   fs,
+  installRuntimePackageFixture,
   os,
   parseJsonText,
   path,
@@ -22,6 +23,7 @@ function familyRuntimeEnv(stateRoot: string) {
 test('family-runtime Temporal start fails closed without a stage packet', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-temporal-missing-packet-'));
   try {
+    installRuntimePackageFixture(stateRoot, 'redcube-ai');
     const created = runCli([
       'family-runtime',
       'attempt',
@@ -68,6 +70,7 @@ test('family-runtime Temporal start fails closed without a stage packet', () => 
 test('family-runtime Temporal query keeps the local public envelope when provider is unavailable', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-temporal-query-missing-'));
   try {
+    installRuntimePackageFixture(stateRoot, 'redcube-ai');
     const created = runCli([
       'family-runtime',
       'attempt',

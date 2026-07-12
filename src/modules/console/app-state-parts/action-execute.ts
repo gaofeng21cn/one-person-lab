@@ -9,7 +9,7 @@ import {
   runOplAgentPackageRepair,
   runOplAgentPackageUninstall,
   runOplAgentPackageUpdate,
-  ensureOplAgentPackageScopeActivation,
+  runOplAgentPackageActivate,
   runOplModuleAction,
   agentPackageDelegatedSurface,
   buildManagedUpdateKernelProjection,
@@ -35,9 +35,7 @@ import {
   parseCodexAction,
   parseModuleAction,
   releaseChannelPayload,
-  scholarskillsQuestRootPayload,
-  scholarskillsWorkspaceRootPayload,
-  settingsReloadCodexSurfacePayload,
+  agentPackageActivationPayload,
   settingsVerifyWorkspacePayload,
   stringPayloadField,
   workspaceRootPayload,
@@ -480,20 +478,14 @@ async function executeDirectAppAction(
     };
   }
 
-  if (options.actionId === 'settings_reload_codex_surface') {
-    const reload = settingsReloadCodexSurfacePayload(options.payload);
+  if (options.actionId === 'agent_package_activate') {
+    const activation = agentPackageActivationPayload(options.payload);
     return {
-      delegatedSurface: reload.scope === 'workspace'
-        ? 'opl packages#scope_activation_transaction(workspace)'
-        : 'opl packages#scope_activation_transaction(quest)',
-      result: options.dryRun
-        ? buildSettingsControlCenterDryRun(options.actionId, options.payload)
-        : ensureOplAgentPackageScopeActivation({
-            packageId: 'med-autoscience',
-            scope: reload.scope,
-            targetWorkspace: reload.scope === 'workspace' ? reload.targetPath : undefined,
-            targetQuest: reload.scope === 'quest' ? reload.targetPath : undefined,
-          }),
+      delegatedSurface: requireAgentPackageDelegatedSurface(options.actionId),
+      result: await runOplAgentPackageActivate({
+        ...activation,
+        dryRun: options.dryRun,
+      }),
     };
   }
 
@@ -595,74 +587,6 @@ async function executeDirectAppAction(
     return {
       delegatedSurface: 'opl system docker-webui doctor',
       result: buildOplDockerWebuiDoctor(),
-    };
-  }
-
-  if (options.actionId === 'scholarskills_workspace_sync') {
-    const workspaceRoot = scholarskillsWorkspaceRootPayload(options.payload);
-    return {
-      delegatedSurface: 'opl packages#scope_activation_transaction(workspace)',
-      result: options.dryRun
-        ? {
-            package_scope_activation: {
-              surface_id: 'opl_package_scope_activation',
-              status: 'compatibility_migration_preview',
-              package_id: 'med-autoscience',
-              scope: 'workspace',
-              target_root: workspaceRoot,
-              lifecycle_owner: 'opl_packages',
-              automatic_on: ['workspace_activation', 'domain_launch'],
-              authority_boundary: {
-                can_write_domain_truth: false,
-                can_sign_owner_receipt: false,
-                can_create_typed_blocker: false,
-                can_write_runtime_queue: false,
-                can_write_owner_receipt: false,
-                can_write_paper_body: false,
-                can_write_artifact_authority: false,
-                can_authorize_publication_readiness: false,
-              },
-            },
-          }
-        : ensureOplAgentPackageScopeActivation({
-            packageId: 'med-autoscience',
-            scope: 'workspace',
-            targetWorkspace: workspaceRoot,
-          }),
-    };
-  }
-
-  if (options.actionId === 'scholarskills_quest_sync') {
-    const questRoot = scholarskillsQuestRootPayload(options.payload);
-    return {
-      delegatedSurface: 'opl packages#scope_activation_transaction(quest)',
-      result: options.dryRun
-        ? {
-            package_scope_activation: {
-              surface_id: 'opl_package_scope_activation',
-              status: 'compatibility_migration_preview',
-              package_id: 'med-autoscience',
-              scope: 'quest',
-              target_root: questRoot,
-              lifecycle_owner: 'opl_packages',
-              automatic_on: ['quest_activation', 'domain_launch'],
-              authority_boundary: {
-                can_write_domain_truth: false,
-                can_sign_owner_receipt: false,
-                can_create_typed_blocker: false,
-                can_write_runtime_queue: false,
-                can_write_owner_receipt: false,
-                can_write_paper_body: false,
-                can_write_artifact_authority: false,
-                can_authorize_publication_readiness: false,
-              },
-            },
-          }
-        : ensureOplAgentPackageScopeActivation({
-            packageId: 'med-autoscience',
-            scope: 'quest',
-            targetQuest: questRoot,
-          }),
     };
   }
 

@@ -57,8 +57,8 @@ export function buildSummaryCards(input: OplAppOperatorViewModelInput, runtimeSu
     .filter(Boolean)
     .join(' ');
   const temporalStatus = asString(temporal.status) ?? asString(temporal.health_status) ?? 'unknown';
-  const defaultModuleCount = asNumber(moduleSummary.default_modules_count);
-  const healthyModuleCount = asNumber(moduleSummary.healthy_default_modules_count);
+  const defaultModuleCount = asNumber(moduleSummary.default_carriers_count);
+  const healthyModuleCount = asNumber(moduleSummary.healthy_default_carriers_count);
   const moduleValue = defaultModuleCount === null || healthyModuleCount === null
     ? 'unknown'
     : `${healthyModuleCount}/${defaultModuleCount}`;
@@ -135,11 +135,11 @@ export function buildSummaryCards(input: OplAppOperatorViewModelInput, runtimeSu
       source_ref: 'app_state.provider.temporal',
     },
     {
-      card_id: 'runtime_modules',
-      label: 'Runtime modules',
+      card_id: 'runtime_source_carriers',
+      label: 'Runtime source carriers',
       value: moduleValue,
       tone: defaultModuleCount !== null && healthyModuleCount === defaultModuleCount ? 'ready' : 'attention',
-      source_ref: 'app_state.modules.summary',
+      source_ref: 'app_state.runtime_source_carriers.summary',
     },
     {
       card_id: 'release_channel',

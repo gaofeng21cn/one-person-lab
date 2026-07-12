@@ -24,9 +24,16 @@ import {
   materializePackageProfile,
   noPackageProfileMigration,
   retainedPackageProfile,
+  rollbackPackageProfileMigration,
 } from './profile-surface.ts';
+import {
+  materializeManagedPolicySurface,
+  noManagedPolicyMigration,
+  rollbackManagedPolicyMigration,
+} from './managed-policy-surface.ts';
 import type {
   AgentPackageLock,
+  AgentPackageLockIndex,
   AgentPackageManifest,
   AgentPackagePayloadFile,
   AgentPackagePhysicalSurface,
@@ -214,6 +221,13 @@ function buildPhysicalSurfacePaths(manifest: AgentPackageManifest) {
   };
 }
 
+function removeCreatedEmptyCodexConfig(configPath: string, preexisting: boolean) {
+  if (preexisting || !fs.existsSync(configPath) || !fs.statSync(configPath).isFile()) return;
+  if (fs.readFileSync(configPath, 'utf8').trim().length === 0) {
+    fs.rmSync(configPath, { force: true });
+  }
+}
+
 function copyDirectory(source: string, target: string) {
   fs.rmSync(target, { recursive: true, force: true });
   fs.mkdirSync(path.dirname(target), { recursive: true });
@@ -270,10 +284,12 @@ function validateMaterializedRequiredSkills(manifest: AgentPackageManifest, plug
 export function materializePhysicalCodexSurface(
   manifest: AgentPackageManifest,
   dryRun: boolean,
+  options: { keepMigrationIds?: string[] } = {},
 ): AgentPackagePhysicalSurface {
   const paths = buildPhysicalSurfacePaths(manifest);
+  const codexConfigPreexisting = fs.existsSync(paths.codexConfigPath);
   const pluginSourceInput = manifest.plugin_source_path;
-  if (!pluginSourceInput || !manifest.plugin_id) {
+  if (!pluginSourceInput && !manifest.plugin_id) {
     return {
       surface_kind: 'opl_agent_package_physical_codex_surface',
       status: 'not_requested',
@@ -282,6 +298,7 @@ export function materializePhysicalCodexSurface(
       marketplace_id: null,
       codex_home: paths.codexHome,
       codex_config_path: paths.codexConfigPath,
+      codex_config_preexisting: codexConfigPreexisting,
       plugin_source_path: pluginSourceInput,
       plugin_manifest_path: null,
       codex_plugin_cache_path: null,
@@ -300,8 +317,19 @@ export function materializePhysicalCodexSurface(
       note: 'Manifest did not request Codex plugin materialization with codex_surface.plugin_source_path and codex_surface.plugin_ids.',
       profile_config: null,
       profile_migration: noPackageProfileMigration('Package did not request a physical Codex surface.'),
+      managed_policy_config: null,
+      workflow_policy_migration: noManagedPolicyMigration('Package did not request a physical Codex surface.'),
       authority_boundary: refsOnlyAuthorityBoundary(),
     };
+  }
+  if (!pluginSourceInput || !manifest.plugin_id) {
+    throw new FrameworkContractError('contract_shape_invalid', 'A Codex package surface requires both plugin identity and a materializable source.', {
+      package_id: manifest.package_id,
+      plugin_id: manifest.plugin_id,
+      plugin_source_path: pluginSourceInput,
+      plugin_payload_manifest_url: manifest.plugin_payload_manifest_url,
+      failure_code: 'agent_package_plugin_source_missing',
+    });
   }
 
   const pluginSourcePath = resolveLocalPath(pluginSourceInput);
@@ -317,29 +345,52 @@ export function materializePhysicalCodexSurface(
   }
   const materializedRequiredSkills = validateMaterializedRequiredSkills(manifest, pluginSourcePath);
 
-  if (!dryRun) {
-    if (manifest.content_lock_paths.length > 0) {
-      copyContentLockPaths(pluginSourcePath, paths.codexPluginCachePath!, manifest.content_lock_paths);
-    } else {
-      copyDirectory(pluginSourcePath, paths.codexPluginCachePath!);
+  let profileMigration = noPackageProfileMigration('Package profile materialization has not run.');
+  let managedPolicyMigration = noManagedPolicyMigration('Managed policy materialization has not run.');
+  try {
+    if (!dryRun) {
+      if (manifest.content_lock_paths.length > 0) {
+        copyContentLockPaths(pluginSourcePath, paths.codexPluginCachePath!, manifest.content_lock_paths);
+      } else {
+        copyDirectory(pluginSourcePath, paths.codexPluginCachePath!);
+      }
     }
-    materializeLocalCodexPluginMarketplace({
-      marketplace_id: paths.marketplaceId,
-      plugin_id: manifest.plugin_id,
-      display_name: manifest.display_name,
-      category: 'Productivity',
-    }, paths.codexPluginCachePath!, paths.marketplaceRoot);
-    registerLocalCodexPlugin(paths.codexConfigPath, {
-      marketplace_id: paths.marketplaceId,
-      plugin_id: manifest.plugin_id,
-    }, paths.marketplaceRoot);
+    const materializedSourceRoot = dryRun ? pluginSourcePath : paths.codexPluginCachePath!;
+    managedPolicyMigration = materializeManagedPolicySurface({
+      manifest,
+      sourceRoot: materializedSourceRoot,
+      dryRun,
+      keepMigrationIds: options.keepMigrationIds,
+    });
+    if (!dryRun) {
+      materializeLocalCodexPluginMarketplace({
+        marketplace_id: paths.marketplaceId,
+        plugin_id: manifest.plugin_id,
+        display_name: manifest.display_name,
+        category: 'Productivity',
+      }, paths.codexPluginCachePath!, paths.marketplaceRoot);
+      registerLocalCodexPlugin(paths.codexConfigPath, {
+        marketplace_id: paths.marketplaceId,
+        plugin_id: manifest.plugin_id,
+      }, paths.marketplaceRoot);
+    }
+    profileMigration = materializePackageProfile({
+      manifest,
+      sourceRoot: materializedSourceRoot,
+      codexHome: paths.codexHome,
+      dryRun,
+    });
+  } catch (error) {
+    if (!dryRun) {
+      rollbackPackageProfileMigration(profileMigration);
+      unregisterLocalCodexPlugin(paths.codexConfigPath, paths.marketplaceId, manifest.plugin_id);
+      removeCreatedEmptyCodexConfig(paths.codexConfigPath, codexConfigPreexisting);
+      fs.rmSync(paths.marketplaceRoot, { recursive: true, force: true });
+      fs.rmSync(paths.codexPluginCachePath!, { recursive: true, force: true });
+      rollbackManagedPolicyMigration(managedPolicyMigration);
+    }
+    throw error;
   }
-  const profileMigration = materializePackageProfile({
-    manifest,
-    sourceRoot: dryRun ? pluginSourcePath : paths.codexPluginCachePath!,
-    codexHome: paths.codexHome,
-    dryRun,
-  });
 
   return {
     surface_kind: 'opl_agent_package_physical_codex_surface',
@@ -349,6 +400,7 @@ export function materializePhysicalCodexSurface(
     marketplace_id: paths.marketplaceId,
     codex_home: paths.codexHome,
     codex_config_path: paths.codexConfigPath,
+    codex_config_preexisting: codexConfigPreexisting,
     plugin_source_path: pluginSourcePath,
     plugin_manifest_path: dryRun ? pluginManifestPath : path.join(paths.codexPluginCachePath!, '.codex-plugin', 'plugin.json'),
     codex_plugin_cache_path: paths.codexPluginCachePath,
@@ -369,6 +421,8 @@ export function materializePhysicalCodexSurface(
     note: null,
     profile_config: manifest.profile_surface,
     profile_migration: profileMigration,
+    managed_policy_config: manifest.managed_policy_surface,
+    workflow_policy_migration: managedPolicyMigration,
     authority_boundary: refsOnlyAuthorityBoundary(),
   };
 }
@@ -377,17 +431,19 @@ export function removePhysicalCodexSurface(
   surface: AgentPackagePhysicalSurface | undefined,
   dryRun: boolean,
   packageId?: string,
+  options: { retainPayloadSource?: boolean } = {},
 ): AgentPackagePhysicalSurface {
   const codexHome = resolveCodexHome();
   const codexConfigPath = surface?.codex_config_path ?? resolveCodexConfigPath(codexHome);
   const removedPaths = [
     surface?.marketplace_root,
     surface?.codex_plugin_cache_path,
-    surface?.plugin_payload_cache_path,
+    options.retainPayloadSource ? null : surface?.plugin_payload_cache_path,
   ].flatMap((value) => value ? [value] : []);
 
   if (!dryRun) {
     unregisterLocalCodexPlugin(codexConfigPath, surface?.marketplace_id ?? null, surface?.plugin_id ?? null);
+    removeCreatedEmptyCodexConfig(codexConfigPath, surface?.codex_config_preexisting ?? true);
     for (const pathToRemove of removedPaths) {
       fs.rmSync(pathToRemove, { recursive: true, force: true });
     }
@@ -401,6 +457,7 @@ export function removePhysicalCodexSurface(
     marketplace_id: surface?.marketplace_id ?? null,
     codex_home: surface?.codex_home ?? codexHome,
     codex_config_path: codexConfigPath,
+    codex_config_preexisting: surface?.codex_config_preexisting ?? true,
     plugin_source_path: surface?.plugin_source_path ?? null,
     plugin_manifest_path: surface?.plugin_manifest_path ?? null,
     codex_plugin_cache_path: surface?.codex_plugin_cache_path ?? null,
@@ -419,8 +476,38 @@ export function removePhysicalCodexSurface(
     note: surface ? null : 'Installed package lock did not contain a physical Codex surface.',
     profile_config: surface?.profile_config ?? null,
     profile_migration: retainedPackageProfile(surface?.profile_migration),
+    managed_policy_config: surface?.managed_policy_config ?? null,
+    workflow_policy_migration: surface?.workflow_policy_migration
+      ?? noManagedPolicyMigration('Installed package did not request a managed policy surface.'),
     authority_boundary: refsOnlyAuthorityBoundary(),
   };
+}
+
+function payloadSourceRefs(index: AgentPackageLockIndex) {
+  return new Set([
+    ...index.packages,
+    ...(index.last_known_good_transactions ?? []).flatMap((entry) => entry.package_locks),
+  ].flatMap((lock) => lock.physical_surface?.plugin_payload_cache_path
+    ? [lock.physical_surface.plugin_payload_cache_path]
+    : []));
+}
+
+export function cleanupUnreferencedPackagePayloadSources(
+  previous: AgentPackageLockIndex,
+  current: AgentPackageLockIndex,
+) {
+  const retained = payloadSourceRefs(current);
+  for (const payloadPath of payloadSourceRefs(previous)) {
+    if (!retained.has(payloadPath)) fs.rmSync(payloadPath, { recursive: true, force: true });
+  }
+}
+
+export function rollbackManagedPolicySurface(surface: AgentPackagePhysicalSurface | undefined) {
+  return rollbackManagedPolicyMigration(surface?.workflow_policy_migration);
+}
+
+export function rollbackNewPackageProfileSurface(surface: AgentPackagePhysicalSurface | undefined) {
+  return rollbackPackageProfileMigration(surface?.profile_migration);
 }
 
 export function rematerializePhysicalCodexSurfaceFromLock(
@@ -436,6 +523,7 @@ export function rematerializePhysicalCodexSurfaceFromLock(
       marketplace_id: lock.physical_surface?.marketplace_id ?? null,
       codex_home: lock.physical_surface?.codex_home ?? resolveCodexHome(),
       codex_config_path: lock.physical_surface?.codex_config_path ?? resolveCodexConfigPath(),
+      codex_config_preexisting: lock.physical_surface?.codex_config_preexisting ?? true,
       plugin_source_path: lock.physical_surface?.plugin_source_path ?? null,
       plugin_manifest_path: lock.physical_surface?.plugin_manifest_path ?? null,
       codex_plugin_cache_path: lock.physical_surface?.codex_plugin_cache_path ?? null,
@@ -454,6 +542,8 @@ export function rematerializePhysicalCodexSurfaceFromLock(
       note: 'Installed package lock did not request physical Codex surface repair.',
       profile_config: null,
       profile_migration: noPackageProfileMigration('Installed package did not request a profile surface.'),
+      managed_policy_config: null,
+      workflow_policy_migration: noManagedPolicyMigration('Installed package did not request a managed policy surface.'),
       authority_boundary: refsOnlyAuthorityBoundary(),
     };
   }
@@ -464,6 +554,7 @@ export function rematerializePhysicalCodexSurfaceFromLock(
     display_name: lock.display_name,
     publisher: lock.publisher,
     version: lock.package_version,
+    owner_language_version: lock.owner_language_version,
     source: '',
     codex_surface: {},
     skill_packs: [],
@@ -482,6 +573,9 @@ export function rematerializePhysicalCodexSurfaceFromLock(
     plugin_payload_manifest_sha256: lock.physical_surface.plugin_payload_manifest_sha256,
     plugin_payload_cache_path: lock.physical_surface.plugin_payload_cache_path,
     profile_surface: lock.physical_surface.profile_config,
+      managed_policy_surface: lock.physical_surface.managed_policy_config,
+      runtime_source_carrier: null,
+      managed_update_source: lock.managed_update_source,
     capability_dependencies: lock.capability_dependencies ?? [],
     capability_provider: lock.capability_provider ?? null,
     content_digest: lock.content_digest ?? null,

@@ -64,6 +64,16 @@ function coreSkillIds(provider: AgentPackageManifest) {
     .map((entry) => entry.skill_id) ?? [];
 }
 
+function specialtySkillIds(provider: AgentPackageManifest) {
+  return provider.capability_provider?.exports
+    .filter((entry) => entry.install_mode === 'optional_named_specialty')
+    .map((entry) => entry.skill_id) ?? [];
+}
+
+function skillDigest(root: string, skillId: string) {
+  return skillTreeDigest(root, [skillId]);
+}
+
 export function materializeCapabilityScope(input: {
   provider: AgentPackageManifest;
   scope: 'workspace' | 'quest';
@@ -72,9 +82,12 @@ export function materializeCapabilityScope(input: {
   providerLockRef: string;
   dryRun: boolean;
   retainTransactionBackup?: boolean;
+  previousMaterialization?: AgentPackageScopeMaterialization | null;
 }): AgentPackageScopeMaterialization {
   const sourceRoot = input.provider.plugin_source_path;
   const requiredSkillIds = coreSkillIds(input.provider);
+  const specialtyIds = specialtySkillIds(input.provider);
+  const managedSkillIds = [...requiredSkillIds, ...specialtyIds];
   if (!sourceRoot || requiredSkillIds.length === 0) {
     throw new FrameworkContractError('contract_shape_invalid', 'Capability provider cannot materialize a scope without a physical core-skill source.', {
       provider_package_id: input.provider.package_id,
@@ -83,7 +96,7 @@ export function materializeCapabilityScope(input: {
       failure_code: 'agent_package_scope_provider_source_missing',
     });
   }
-  for (const skillId of requiredSkillIds) {
+  for (const skillId of managedSkillIds) {
     const sourceSkillRoot = path.join(sourceRoot, 'skills', skillId);
     if (!fs.existsSync(path.join(sourceSkillRoot, 'SKILL.md'))) {
       throw new FrameworkContractError('contract_shape_invalid', 'Capability provider core skill is missing from the package source.', {
@@ -95,7 +108,29 @@ export function materializeCapabilityScope(input: {
     }
   }
   const sourceSkillsRoot = path.join(sourceRoot, 'skills');
-  const contentDigest = skillTreeDigest(sourceSkillsRoot, requiredSkillIds);
+  const coreDigest = skillTreeDigest(sourceSkillsRoot, requiredSkillIds);
+  const contentDigest = skillTreeDigest(sourceSkillsRoot, managedSkillIds);
+  const retiredSkillIds = (input.previousMaterialization?.managed_skill_ids ?? [])
+    .filter((skillId) => !managedSkillIds.includes(skillId))
+    .filter((skillId) => {
+      const previousDigest = input.previousMaterialization?.skill_digests?.[skillId];
+      const targetSkill = path.join(input.targetRoot, '.codex', 'skills', skillId);
+      return Boolean(previousDigest && fs.existsSync(targetSkill)
+        && skillDigest(path.dirname(targetSkill), skillId) === previousDigest);
+    });
+  const transactionSkillIds = [...managedSkillIds, ...retiredSkillIds];
+  if (!input.previousMaterialization) {
+    const targetSkillsRoot = path.join(input.targetRoot, '.codex', 'skills');
+    const collisions = managedSkillIds.filter((skillId) => fs.existsSync(path.join(targetSkillsRoot, skillId)));
+    if (collisions.length > 0) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Package scope activation refuses to overwrite unowned local Skills.', {
+        provider_package_id: input.provider.package_id,
+        target_root: input.targetRoot,
+        collision_skill_ids: collisions,
+        failure_code: 'agent_package_scope_unowned_skill_collision',
+      });
+    }
+  }
   if (!input.dryRun) {
     const codexRoot = path.join(input.targetRoot, '.codex');
     const targetSkillsRoot = path.join(codexRoot, 'skills');
@@ -104,31 +139,31 @@ export function materializeCapabilityScope(input: {
     const backupRoot = path.join(transactionRoot, 'backup');
     fs.rmSync(transactionRoot, { recursive: true, force: true });
     try {
-      for (const skillId of requiredSkillIds) {
+      for (const skillId of managedSkillIds) {
         fs.mkdirSync(stageRoot, { recursive: true });
         fs.cpSync(path.join(sourceSkillsRoot, skillId), path.join(stageRoot, skillId), { recursive: true });
       }
-      if (skillTreeDigest(stageRoot, requiredSkillIds) !== contentDigest) {
+      if (skillTreeDigest(stageRoot, managedSkillIds) !== contentDigest) {
         throw new Error('staged scope skill digest mismatch');
       }
       fs.mkdirSync(targetSkillsRoot, { recursive: true });
-      for (const skillId of requiredSkillIds) {
+      for (const skillId of transactionSkillIds) {
         const targetSkill = path.join(targetSkillsRoot, skillId);
         const backupSkill = path.join(backupRoot, skillId);
         if (fs.existsSync(targetSkill)) {
           fs.mkdirSync(path.dirname(backupSkill), { recursive: true });
           fs.renameSync(targetSkill, backupSkill);
         }
-        fs.renameSync(path.join(stageRoot, skillId), targetSkill);
+        if (managedSkillIds.includes(skillId)) fs.renameSync(path.join(stageRoot, skillId), targetSkill);
       }
-      if (skillTreeDigest(targetSkillsRoot, requiredSkillIds) !== contentDigest) {
+      if (skillTreeDigest(targetSkillsRoot, managedSkillIds) !== contentDigest) {
         throw new Error('activated scope skill digest mismatch');
       }
       if (!input.retainTransactionBackup) {
         fs.rmSync(transactionRoot, { recursive: true, force: true });
       }
     } catch (error) {
-      for (const skillId of requiredSkillIds) {
+      for (const skillId of transactionSkillIds) {
         const targetSkill = path.join(targetSkillsRoot, skillId);
         const backupSkill = path.join(backupRoot, skillId);
         fs.rmSync(targetSkill, { recursive: true, force: true });
@@ -148,7 +183,16 @@ export function materializeCapabilityScope(input: {
     provider_lock_ref: input.providerLockRef,
     transaction_id: input.transactionId,
     required_skill_ids: requiredSkillIds,
+    managed_skill_ids: managedSkillIds,
+    specialty_skill_ids: specialtyIds,
+    retired_skill_ids: retiredSkillIds,
+    skill_digests: Object.fromEntries(managedSkillIds.map((skillId) => [
+      skillId,
+      skillDigest(sourceSkillsRoot, skillId),
+    ])),
     content_digest: contentDigest,
+    core_digest: coreDigest,
+    full_export_digest: contentDigest,
     materialized_at: nowIso(),
     lifecycle_receipt_ref: 'pending_dependency_transaction',
   };
@@ -168,7 +212,7 @@ export function rollbackCapabilityScopeTransaction(
   const transactionRoot = scopeTransactionRoot(materialization.target_root, materialization.transaction_id);
   const backupRoot = path.join(transactionRoot, 'backup');
   const targetSkillsRoot = path.join(materialization.target_root, '.codex', 'skills');
-  for (const skillId of materialization.required_skill_ids) {
+  for (const skillId of [...materialization.managed_skill_ids, ...materialization.retired_skill_ids]) {
     const targetSkill = path.join(targetSkillsRoot, skillId);
     const backupSkill = path.join(backupRoot, skillId);
     fs.rmSync(targetSkill, { recursive: true, force: true });
@@ -187,6 +231,7 @@ export function materializeCapabilityScopeFromLock(input: {
   transactionId: string;
   dryRun: boolean;
   retainTransactionBackup?: boolean;
+  previousMaterialization?: AgentPackageScopeMaterialization | null;
 }) {
   return materializeCapabilityScope({
     ...input,
@@ -197,6 +242,7 @@ export function materializeCapabilityScopeFromLock(input: {
       display_name: input.provider.display_name,
       publisher: input.provider.publisher,
       version: input.provider.package_version,
+      owner_language_version: input.provider.owner_language_version,
       source: '',
       codex_surface: {},
       skill_packs: [],
@@ -215,6 +261,9 @@ export function materializeCapabilityScopeFromLock(input: {
       plugin_payload_manifest_sha256: input.provider.physical_surface?.plugin_payload_manifest_sha256 ?? null,
       plugin_payload_cache_path: input.provider.physical_surface?.plugin_payload_cache_path ?? null,
       profile_surface: null,
+    managed_policy_surface: null,
+      runtime_source_carrier: null,
+      managed_update_source: input.provider.managed_update_source,
       capability_dependencies: input.provider.capability_dependencies,
       capability_provider: input.provider.capability_provider,
       content_digest: input.provider.content_digest,
@@ -239,6 +288,8 @@ export function scopeMaterializationReadiness(
       actual_digest: null,
       repair_command: null,
       lifecycle_receipt_ref: null,
+      core_readiness: { status: 'not_required', required_skill_ids: [], materialized_skill_ids: [] },
+      specialty_exposure: { status: 'not_required', declared_skill_ids: [], materialized_skill_ids: [], missing_skill_ids: [] },
     };
   }
   const scope = input.scope ?? null;
@@ -256,31 +307,81 @@ export function scopeMaterializationReadiness(
       actual_digest: null,
       repair_command: `opl packages repair --package-id ${lock.package_id} --scope workspace --target-workspace <path>`,
       lifecycle_receipt_ref: null,
+      core_readiness: { status: 'missing', required_skill_ids: [], materialized_skill_ids: [] },
+      specialty_exposure: { status: 'not_required', declared_skill_ids: [], materialized_skill_ids: [], missing_skill_ids: [] },
     };
   }
-  const record = (lock.scope_materializations ?? []).find((entry) =>
+  const records = (lock.scope_materializations ?? []).filter((entry) =>
     entry.scope === scope && entry.target_root === targetRoot);
-  const provider = record
-    ? index.packages.find((entry) => entry.package_id === record.provider_package_id)
-    : null;
-  const requiredSkillIds = record?.required_skill_ids
-    ?? provider?.capability_provider?.exports.filter((entry) => entry.install_mode === 'core_required').map((entry) => entry.skill_id)
-    ?? [];
   const targetSkillsRoot = path.join(targetRoot, '.codex', 'skills');
+  const providerReadiness = lock.capability_dependencies.map((dependency) => {
+    const record = records.find((entry) => entry.provider_package_id === dependency.package_id) ?? null;
+    const provider = index.packages.find((entry) => entry.package_id === dependency.package_id) ?? null;
+    const requiredSkillIds = record?.required_skill_ids
+      ?? provider?.capability_provider?.exports
+        .filter((entry) => entry.install_mode === 'core_required')
+        .map((entry) => entry.skill_id)
+      ?? [];
+    const specialtyIds = record?.specialty_skill_ids
+      ?? provider?.capability_provider?.exports
+        .filter((entry) => entry.install_mode === 'optional_named_specialty')
+        .map((entry) => entry.skill_id)
+      ?? [];
+    const managedSkillIds = [...requiredSkillIds, ...specialtyIds];
+    const materializedSkillIds = requiredSkillIds.filter((skillId) =>
+      fs.existsSync(path.join(targetSkillsRoot, skillId, 'SKILL.md')));
+    const materializedSpecialtyIds = specialtyIds.filter((skillId) =>
+      fs.existsSync(path.join(targetSkillsRoot, skillId, 'SKILL.md')));
+    const coreActualDigest = materializedSkillIds.length === requiredSkillIds.length
+      ? skillTreeDigest(targetSkillsRoot, requiredSkillIds)
+      : null;
+    const fullActualDigest = materializedSkillIds.length === requiredSkillIds.length
+      && materializedSpecialtyIds.length === specialtyIds.length
+      ? skillTreeDigest(targetSkillsRoot, managedSkillIds)
+      : null;
+    const status = !record || materializedSkillIds.length !== requiredSkillIds.length
+      ? 'missing'
+      : coreActualDigest !== (record.core_digest ?? record.content_digest)
+        || !record.lifecycle_receipt_ref
+        || record.lifecycle_receipt_ref === 'pending_dependency_transaction'
+        || !provider
+        || record.provider_lock_ref !== provider.lock_ref
+        ? 'incompatible'
+        : 'current';
+    return {
+      record,
+      requiredSkillIds,
+      specialtyIds,
+      materializedSkillIds,
+      materializedSpecialtyIds,
+      actualDigest: coreActualDigest,
+      fullActualDigest,
+      status,
+    };
+  });
+  const requiredSkillIds = [...new Set(providerReadiness.flatMap((entry) => entry.requiredSkillIds))];
   const materializedSkillIds = requiredSkillIds.filter((skillId) =>
     fs.existsSync(path.join(targetSkillsRoot, skillId, 'SKILL.md')));
-  const actualDigest = materializedSkillIds.length === requiredSkillIds.length
-    ? skillTreeDigest(targetSkillsRoot, requiredSkillIds)
-    : null;
-  const status = !record || materializedSkillIds.length !== requiredSkillIds.length
+  const status = providerReadiness.some((entry) => entry.status === 'missing')
     ? 'missing'
-    : actualDigest !== record.content_digest
-      || !record.lifecycle_receipt_ref
-      || record.lifecycle_receipt_ref === 'pending_dependency_transaction'
-      || !provider
-      || record.provider_lock_ref !== provider.lock_ref
+    : providerReadiness.some((entry) => entry.status === 'incompatible')
       ? 'incompatible'
       : 'current';
+  const expectedDigest = providerReadiness.length === 1
+    ? providerReadiness[0].record?.core_digest ?? providerReadiness[0].record?.content_digest ?? null
+    : `sha256:${sha256Text(JSON.stringify(providerReadiness.map((entry) => ({
+        provider_package_id: entry.record?.provider_package_id ?? null,
+        content_digest: entry.record?.content_digest ?? null,
+      }))))}`;
+  const actualDigest = providerReadiness.some((entry) => entry.actualDigest === null)
+    ? null
+    : providerReadiness.length === 1
+      ? providerReadiness[0].actualDigest
+      : `sha256:${sha256Text(JSON.stringify(providerReadiness.map((entry) => entry.actualDigest)))}`;
+  const lifecycleReceiptRefs = [...new Set(records.map((entry) => entry.lifecycle_receipt_ref))];
+  const specialtyIds = [...new Set(providerReadiness.flatMap((entry) => entry.specialtyIds))];
+  const materializedSpecialtyIds = specialtyIds.filter((skillId) =>
+    fs.existsSync(path.join(targetSkillsRoot, skillId, 'SKILL.md')));
   const targetFlag = scope === 'workspace' ? '--target-workspace' : '--target-quest';
   return {
     status,
@@ -288,9 +389,24 @@ export function scopeMaterializationReadiness(
     target_root: targetRoot,
     required_skill_ids: requiredSkillIds,
     materialized_skill_ids: materializedSkillIds,
-    expected_digest: record?.content_digest ?? null,
+    expected_digest: expectedDigest,
     actual_digest: actualDigest,
     repair_command: `opl packages repair --package-id ${lock.package_id} --scope ${scope} ${targetFlag} ${targetRoot}`,
-    lifecycle_receipt_ref: record?.lifecycle_receipt_ref ?? null,
+    lifecycle_receipt_ref: lifecycleReceiptRefs.length === 1 ? lifecycleReceiptRefs[0] : null,
+    core_readiness: {
+      status: status === 'current' ? 'current' : status,
+      required_skill_ids: requiredSkillIds,
+      materialized_skill_ids: materializedSkillIds,
+    },
+    specialty_exposure: {
+      status: specialtyIds.length === 0
+        ? 'not_required'
+        : materializedSpecialtyIds.length === specialtyIds.length
+          ? 'current'
+          : 'degraded',
+      declared_skill_ids: specialtyIds,
+      materialized_skill_ids: materializedSpecialtyIds,
+      missing_skill_ids: specialtyIds.filter((skillId) => !materializedSpecialtyIds.includes(skillId)),
+    },
   };
 }

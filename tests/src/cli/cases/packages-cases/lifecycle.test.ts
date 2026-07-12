@@ -248,12 +248,12 @@ test('packages fetches registry URL, validates manifest, and writes lock receipt
       );
       assert.equal(
         install.opl_agent_package_install.owner_route_readback.packages[0].lifecycle_ux.recommended_action,
-        'settings_reload_codex_surface',
+        'agent_package_activate',
       );
       assert.equal(
         install.opl_agent_package_install.owner_route_readback.packages[0].lifecycle_ux.conditions.some((condition) =>
           condition.condition_id === 'codex_reload_required'
-            && condition.action_ref === 'settings_reload_codex_surface'
+            && condition.action_ref === 'agent_package_activate'
         ),
         true,
       );
@@ -263,7 +263,7 @@ test('packages fetches registry URL, validates manifest, and writes lock receipt
       );
       assert.equal(
         install.opl_agent_package_install.owner_route_readback.packages[0].package_core.lifecycle.recommended_action,
-        'settings_reload_codex_surface',
+        'agent_package_activate',
       );
       assert.equal(
         install.opl_agent_package_install.owner_route_readback.packages[0].package_core.lifecycle.action_refs.includes('repair'),
@@ -345,7 +345,7 @@ test('packages fetches registry URL, validates manifest, and writes lock receipt
       assert.equal(list.opl_agent_packages.installed_package_count, 1);
       assert.equal(list.opl_agent_packages.installed_packages[0].package_id, 'third.party.research');
       assert.equal(list.opl_agent_packages.installed_packages[0].physical_surface.status, 'materialized');
-      assert.equal(list.opl_agent_packages.recommended_action, 'settings_reload_codex_surface');
+      assert.equal(list.opl_agent_packages.recommended_action, 'agent_package_activate');
       assert.equal(list.opl_agent_packages.lifecycle_ux.status, 'attention_needed');
       assert.equal(
         list.opl_agent_packages.conditions.some((condition) => condition.condition_id === 'codex_reload_required'),
@@ -370,7 +370,7 @@ test('packages fetches registry URL, validates manifest, and writes lock receipt
       assert.equal(list.opl_agent_packages.owner_route_readback.packages[0].materializer.status, 'materialized');
       assert.equal(
         list.opl_agent_packages.owner_route_readback.packages[0].lifecycle_ux.recommended_action,
-        'settings_reload_codex_surface',
+        'agent_package_activate',
       );
 
       const update = await runCliAsync([
@@ -495,7 +495,7 @@ test('packages fetches registry URL, validates manifest, and writes lock receipt
       };
       assert.equal(status.opl_agent_package_status.status, 'available');
       assert.equal(status.opl_agent_package_status.installed_package_count, 1);
-      assert.equal(status.opl_agent_package_status.recommended_action, 'settings_reload_codex_surface');
+      assert.equal(status.opl_agent_package_status.recommended_action, 'agent_package_activate');
       assert.equal(status.opl_agent_package_status.lifecycle_ux.status, 'attention_needed');
       assert.equal(
         status.opl_agent_package_status.conditions.some((condition) => condition.condition_id === 'codex_reload_required'),
@@ -509,7 +509,7 @@ test('packages fetches registry URL, validates manifest, and writes lock receipt
       );
       assert.equal(
         status.opl_agent_package_status.owner_route_readback.packages[0].package_core.lifecycle.recommended_action,
-        'settings_reload_codex_surface',
+        'agent_package_activate',
       );
       assert.deepEqual(
         status.opl_agent_package_status.lifecycle_receipts.map((receipt) => receipt.action),

@@ -1,6 +1,7 @@
 import { assert, runCli, test } from '../helpers.ts';
 import {
   buildReadyAgentRepo,
+  configureReadyCapabilityPackage,
   configureReadyMagMorphology,
   configureReadyMetaMorphology,
   configureReadyRcaMorphology,
@@ -31,6 +32,7 @@ function readyFoundryRepos() {
 
   const scholarSkillsRepo = buildReadyAgentRepo();
   retargetReadyRepo(scholarSkillsRepo, 'mas-scholar-skills', 'MAS Scholar Skills');
+  configureReadyCapabilityPackage(scholarSkillsRepo);
 
   return { masRepo, magRepo, rcaRepo, omaRepo, bookForgeRepo, scholarSkillsRepo };
 }

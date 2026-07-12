@@ -15,6 +15,12 @@ on:
         required: false
         type: string
         default: manual_release_gate
+      promotion_target:
+        description: Promote only candidate by default; choose latest-stable explicitly.
+        required: false
+        type: choice
+        options: [candidate, latest-stable]
+        default: candidate
 
 permissions:
   contents: read
@@ -28,6 +34,7 @@ jobs:
     with:
       opl_version: ${{ github.event.release.tag_name }}
       release_gate: github_release_published
+      promotion_target: latest-stable
 
   publish-from-manual-release-gate:
     name: Publish package channel from manual release gate
@@ -36,3 +43,4 @@ jobs:
     with:
       opl_version: ${{ inputs.opl_version }}
       release_gate: ${{ inputs.release_gate }}
+      promotion_target: ${{ inputs.promotion_target }}

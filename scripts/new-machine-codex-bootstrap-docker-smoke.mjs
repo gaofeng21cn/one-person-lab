@@ -120,7 +120,7 @@ for (const filePath of [
 
 console.log(JSON.stringify({
   status: 'ok',
-  surface: 'opl_flow_package_bootstrap',
+  surface: 'opl_packages_bootstrap',
   package_status: packageInstall.status,
   profile_status: profile.status,
   plugin_path: packageInstall.physical_surface.codex_plugin_cache_path,
