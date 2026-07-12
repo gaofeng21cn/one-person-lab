@@ -1,9 +1,6 @@
-import { fileURLToPath } from 'node:url';
-
 import {
   listOplAgentPackages,
   buildManagedUpdateKernelProjection,
-  canonicalAgentPackageId,
   runManagedUpdateKernelOperation,
   runOplAgentPackageExposureAction,
   runOplAgentPackageFrameworkLink,
@@ -24,6 +21,7 @@ import {
   type AgentPackagePackageActionInput,
   type AgentPackageProfileApplyInput,
 } from '../../../../modules/connect/index.ts';
+import { resolveFirstPartyPackageManifest } from '../../../../modules/connect/agent-package-first-party.ts';
 import type { FrameworkContracts } from '../../../../kernel/types.ts';
 import { STANDARD_AGENT_REGISTRY } from '../../../../kernel/standard-agent-registry.ts';
 import { getActiveWorkspaceBinding } from '../../../../modules/workspace/index.ts';
@@ -33,16 +31,6 @@ import {
   parseRegisteredCommandOptions,
   type CommandSpec,
 } from '../../modules/support.ts';
-
-const FIRST_PARTY_PACKAGE_MANIFESTS = new Map([
-  ['mas', 'mas.json'],
-  ['mag', 'mag.json'],
-  ['rca', 'rca.json'],
-  ['oma', 'oma.json'],
-  ['obf', 'obf.json'],
-  ['opl-flow', 'opl-flow.json'],
-  ['mas-scholar-skills', 'mas-scholar-skills.json'],
-]);
 
 function takePositionalPackageId(args: string[], command: string, spec: CommandSpec) {
   const optionValues = new Set<number>();
@@ -71,19 +59,6 @@ function takePositionalPackageId(args: string[], command: string, spec: CommandS
   };
 }
 
-function firstPartyManifestUrl(packageId: string) {
-  const canonicalId = canonicalAgentPackageId(packageId);
-  if (!canonicalId) return null;
-  const fileName = FIRST_PARTY_PACKAGE_MANIFESTS.get(canonicalId);
-  if (!fileName) return null;
-  return {
-    canonicalId,
-    manifestUrl: fileURLToPath(
-      new URL(`../../../../../contracts/opl-framework/packages/${fileName}`, import.meta.url),
-    ),
-  };
-}
-
 function parsePackageSelection(
   command: string,
   args: string[],
@@ -100,7 +75,7 @@ function parsePackageSelection(
   }
   const selectedPackageId = positional.packageId ?? optionPackageId;
   const firstParty = selectedPackageId && options.resolveFirstPartyManifest
-    ? firstPartyManifestUrl(selectedPackageId)
+    ? resolveFirstPartyPackageManifest(selectedPackageId)
     : null;
   return {
     manifestUrl: readOptionalString(parsed['manifest-url']) ?? firstParty?.manifestUrl,

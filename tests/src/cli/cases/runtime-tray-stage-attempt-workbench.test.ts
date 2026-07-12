@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 
 import { buildFamilyRuntimeControlledApplyContract } from '../../../../src/modules/runway/index.ts';
-import { assert, createFamilyContractsFixtureRoot, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, createFamilyContractsFixtureRoot, fs, installRuntimePackageFixture, os, path, repoRoot, runCli, test } from '../helpers.ts';
 
 test('controlled apply projects one generic return contract across domains', () => {
   const expectedReturnShapes = [
@@ -36,6 +36,7 @@ test('controlled apply projects one generic return contract across domains', () 
 test('runtime snapshot projects stage attempt workbench without owning domain verdicts', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-attempt-workbench-state-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  installRuntimePackageFixture(stateRoot, 'mas');
   try {
     const attempt = runCli([
       'family-runtime',
@@ -163,6 +164,9 @@ test('runtime snapshot projects stage attempt workbench without owning domain ve
 test('runtime snapshot groups multi-attempt workbench attention and counters', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-attempt-workbench-ledger-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  installRuntimePackageFixture(stateRoot, 'mas');
+  installRuntimePackageFixture(stateRoot, 'rca');
+  installRuntimePackageFixture(stateRoot, 'mag');
   try {
     const attemptIds = [
       ['medautoscience', 'analysis-campaign'],

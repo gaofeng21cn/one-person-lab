@@ -19,6 +19,75 @@ import { writeManagedRuntimeSourceFixture } from './managed-runtime-source-fixtu
 import { rollbackManagedModulePackageChannel } from '../../../../../src/modules/connect/system-installation/module-package-channel.ts';
 import { resolveOplDomainModuleSpec } from '../../../../../src/modules/connect/system-installation/modules.ts';
 
+test('bundled Full runtime source requires an immutable marker and remains digest-checked', () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-bundled-source-state-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-bundled-source-fixture-'));
+  const pluginSourcePath = createPluginSourceFixture();
+  const bundledRoot = path.join(fixtureRoot, 'full-runtime', 'modules', 'redcube-ai');
+  const unmanagedRoot = path.join(fixtureRoot, 'unmarked-redcube-ai');
+  const manifestPath = path.join(fixtureRoot, 'manifest.json');
+  fs.mkdirSync(bundledRoot, { recursive: true });
+  fs.mkdirSync(unmanagedRoot, { recursive: true });
+  fs.writeFileSync(path.join(bundledRoot, 'runtime.txt'), 'immutable bundled source\n');
+  fs.writeFileSync(path.join(unmanagedRoot, 'runtime.txt'), 'unmarked source\n');
+  fs.writeFileSync(path.join(bundledRoot, 'opl-runtime-module.json'), formatJsonPayload({
+    marker_version: 1,
+    module_id: 'redcube',
+    repo_name: 'redcube-ai',
+    packaged_runtime: true,
+    source_git: { head_sha: 'bundled-redcube-v1' },
+  }));
+  fs.writeFileSync(manifestPath, formatJsonPayload({
+    ...agentPackageManifest({ packageId: 'rca', agentId: 'rca', pluginSourcePath }),
+    runtime_source_carrier: {
+      carrier_kind: 'opl_managed_module_source',
+      module_id: 'redcube',
+    },
+  }));
+  const env = {
+    OPL_STATE_DIR: stateDir,
+    OPL_MODULES_ROOT: path.join(stateDir, 'managed-modules'),
+  };
+
+  try {
+    const invalid = runCliFailure([
+      'packages', 'install', '--manifest-url', manifestPath, '--trust-tier', 'first_party',
+      '--source-kind', 'bundled_full_runtime_modules', '--agent-root', unmanagedRoot,
+    ], env);
+    assert.equal(invalid.payload.error.code, 'contract_shape_invalid');
+    assert.equal(
+      invalid.payload.error.details.failure_code,
+      'agent_package_runtime_source_carrier_invalid',
+    );
+
+    const installed = runCli([
+      'packages', 'install', '--manifest-url', manifestPath, '--trust-tier', 'first_party',
+      '--source-kind', 'bundled_full_runtime_modules', '--agent-root', bundledRoot,
+    ], env) as any;
+    assert.equal(
+      installed.opl_agent_package_install.package_lock.managed_runtime_source.ownership,
+      'preexisting_adopted',
+    );
+    const current = runCli(['packages', 'status', '--package-id', 'rca'], env) as any;
+    assert.equal(
+      current.opl_agent_package_status.runtime_source_readiness.operational_ready,
+      true,
+    );
+
+    fs.writeFileSync(path.join(bundledRoot, 'runtime.txt'), 'drifted bundled source\n');
+    const drifted = runCli(['packages', 'status', '--package-id', 'rca'], env) as any;
+    assert.equal(drifted.opl_agent_package_status.runtime_source_readiness.status, 'incompatible');
+    assert.equal(
+      drifted.opl_agent_package_status.runtime_source_readiness.reason,
+      'managed_runtime_source_lock_mismatch',
+    );
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(pluginSourcePath, { recursive: true, force: true });
+  }
+});
+
 test('Packages compensates managed runtime source across downstream failure update rollback and uninstall', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-source-transaction-state-'));
   const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-source-transaction-home-'));

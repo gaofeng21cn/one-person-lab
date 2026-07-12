@@ -409,6 +409,25 @@ test('system configure-codex syncs Full runtime family Codex plugins after API k
   const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-configure-codex-family-plugins-capture-'));
   const familyWorkspace = createFakeFamilySkillWorkspace(captureDir);
   const codexHome = path.join(homeRoot, 'codex-home');
+  for (const [repoName, moduleId] of [
+    ['med-autoscience', 'medautoscience'],
+    ['med-autogrant', 'medautogrant'],
+    ['redcube-ai', 'redcube'],
+    ['opl-meta-agent', 'oplmetaagent'],
+    ['opl-bookforge', 'oplbookforge'],
+  ]) {
+    fs.writeFileSync(
+      path.join(familyWorkspace.workspaceRoot, repoName, 'opl-runtime-module.json'),
+      `${JSON.stringify({
+        marker_version: 1,
+        module_id: moduleId,
+        repo_name: repoName,
+        packaged_runtime: true,
+        source_git: { head_sha: `full-runtime-${moduleId}` },
+      }, null, 2)}\n`,
+      'utf8',
+    );
+  }
 
   try {
     const output = runCliWithStdin(
@@ -452,7 +471,7 @@ test('system configure-codex syncs Full runtime family Codex plugins after API k
     });
     assert.deepEqual(
       output.codex_config.agent_package_sync.items.map((item) => item.package_id),
-      ['med-autoscience', 'med-autogrant', 'redcube-ai', 'opl-meta-agent', 'opl-bookforge'],
+      ['mas', 'mag', 'rca', 'oma', 'obf'],
     );
     assert.equal(
       output.codex_config.agent_package_sync.items.every((item) => item.package_lock_ref?.startsWith('opl://agent-package-lock/')),

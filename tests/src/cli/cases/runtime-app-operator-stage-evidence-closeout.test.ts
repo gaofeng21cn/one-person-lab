@@ -260,7 +260,7 @@ test('stage production evidence verify route reuses recorded receipt ref', () =>
         receipt_ref: 'mas-stage-review-current-receipt',
         evidence_refs: ['metric:review/declared-freshness'],
         domain_receipt_refs: [
-          'domain_owner_receipt_or_typed_blocker_ref',
+          'domain_progress_receipt_or_owner_receipt_or_typed_hard_blocker_ref',
           'mas://receipts/review-owner-instance.json',
         ],
         runtime_event_refs: ['runtime_event:review.owner_receipt_recorded'],

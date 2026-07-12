@@ -2,6 +2,7 @@ import {
   assert,
   createFamilyContractsFixtureRoot,
   fs,
+  installRuntimePackageFixture,
   os,
   path,
   runCli,
@@ -12,6 +13,7 @@ import {
 test('runtime action execute blocks domain dispatch evidence payloads bound to a different attempt identity', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-action-execute-domain-dispatch-conflict-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  installRuntimePackageFixture(stateRoot, 'mas');
   try {
     const created = runCli([
       'family-runtime',
@@ -149,6 +151,7 @@ test('runtime action execute blocks stale local typed blocker refs bound to anot
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-action-execute-local-blocker-conflict-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-action-execute-local-blocker-workspace-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  installRuntimePackageFixture(stateRoot, 'mas');
   try {
     const blockerRef = 'studies/002-dm-china-us-mortality-attribution/artifacts/stage_outputs/08-publication_package_handoff/receipts/typed_blocker.json';
     const blockerPath = path.join(workspaceRoot, blockerRef);
