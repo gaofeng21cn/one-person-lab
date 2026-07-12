@@ -136,7 +136,7 @@ test('package archive builder writes channel manifest checksums git source and r
   }), 'utf8');
 
   const fixtures = {
-    medautoscience: createOwnerPackageFixture('med-autoscience', 'mas', '0.1.0a4'),
+    medautoscience: createOwnerPackageFixture('med-autoscience', 'mas', '0.1.0a5'),
     medautogrant: createOwnerPackageFixture('med-autogrant', 'mag', '0.1.0'),
     redcube: createOwnerPackageFixture('redcube-ai', 'rca', '0.1.0'),
     oplmetaagent: createOwnerPackageFixture('opl-meta-agent', 'oma', '0.1.0'),
@@ -287,13 +287,13 @@ test('package archive builder writes channel manifest checksums git source and r
   }
   const masCatalog = packageCatalog.mas;
   assert.equal(masCatalog.package_role, 'standard_agent');
-  assert.equal(masCatalog.selected_version, '0.1.0-alpha.4');
+  assert.equal(masCatalog.selected_version, '0.1.0-alpha.5');
   assert.deepEqual(masCatalog.dependency_package_ids, ['mas-scholar-skills']);
   assert.equal(masCatalog.versions.length, 1);
   assert.equal(masCatalog.versions[0].selection_status, 'selected_for_release_set');
   assert.deepEqual(masCatalog.versions[0].dependency_package_ids, ['mas-scholar-skills']);
   assert.equal(masCatalog.versions[0].capability_abi, null);
-  assert.match(masCatalog.versions[0].manifest_url, /^opl\+oci:\/\/ghcr\.io\/gaofeng21cn\/one-person-lab-packages\/mas:0\.1\.0-alpha\.4#\//);
+  assert.match(masCatalog.versions[0].manifest_url, /^opl\+oci:\/\/ghcr\.io\/gaofeng21cn\/one-person-lab-packages\/mas:0\.1\.0-alpha\.5#\//);
   assert.match(masCatalog.versions[0].manifest_sha256, /^sha256:[0-9a-f]{64}$/);
   const embeddedMasManifest = JSON.parse(masCatalog.versions[0].manifest_json);
   assert.equal(embeddedMasManifest.package_id, 'mas');
@@ -311,9 +311,9 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.match(masCatalog.versions[0].payload_digest, /^sha256:[0-9a-f]{64}$/);
   assert.equal(
     masCatalog.versions[0].source_artifact_ref,
-    'ghcr.io/gaofeng21cn/one-person-lab-packages/mas:0.1.0-alpha.4',
+    'ghcr.io/gaofeng21cn/one-person-lab-packages/mas:0.1.0-alpha.5',
   );
-  assert.equal(masCatalog.versions[0].owner_language_version, '0.1.0a4');
+  assert.equal(masCatalog.versions[0].owner_language_version, '0.1.0a5');
   assert.equal(masCatalog.versions[0].owner_source_commit, fixtures.medautoscience.getHeadSha());
   assert.equal(masCatalog.versions[0].release_gate, 'test_owner_sha_release_gate');
   assert.match(masCatalog.versions[0].package_content_digest, /^sha256:[0-9a-f]{64}$/);
@@ -435,7 +435,7 @@ test('package archive builder writes channel manifest checksums git source and r
   );
   assert.deepEqual(manifest.packages.package_artifacts['mas-scholar-skills'].dependency_of, ['mas']);
   assert.match(manifest.packages.package_artifacts['mas-scholar-skills'].source_archive.sha256, /^[0-9a-f]{64}$/);
-  assert.match(checksums, /mas-0\.1\.0-alpha\.4\.tar\.gz/);
+  assert.match(checksums, /mas-0\.1\.0-alpha\.5\.tar\.gz/);
   assert.match(checksums, /oma-0\.1\.0\.tar\.gz/);
   assert.match(checksums, /obf-0\.1\.0\.tar\.gz/);
   assert.match(checksums, /mas-scholar-skills-0\.1\.1\.tar\.gz/);
@@ -470,7 +470,7 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
   assert.equal(manifest.schema_ref, 'contracts/opl-framework/agent-package-manifest.schema.json');
   assert.equal(manifest.package_id, 'mas');
   assert.equal(manifest.agent_id, 'mas');
-  assert.equal(manifest.version, '0.1.0-alpha.4');
+  assert.equal(manifest.version, '0.1.0-alpha.5');
   assert.equal(manifest.carrier_source_role, 'codex_plugin_default_carrier_not_package_truth');
   assert.equal(schema.required.includes('distribution_payload'), false);
   assert.equal(schema.properties.distribution_payload.properties.install_truth.const, 'resolved_digest_lock');
@@ -706,7 +706,7 @@ test('package archive builder refreshes reused managed clones before archiving s
   const gitConfigPath = path.join(os.tmpdir(), `opl-package-refresh-git-${Date.now()}.config`);
 
   const fixtures = {
-    medautoscience: createOwnerPackageFixture('med-autoscience', 'mas', '0.1.0a4'),
+    medautoscience: createOwnerPackageFixture('med-autoscience', 'mas', '0.1.0a5'),
     medautogrant: createOwnerPackageFixture('med-autogrant', 'mag', '0.1.0'),
     redcube: createOwnerPackageFixture('redcube-ai', 'rca', '0.1.0'),
     oplmetaagent: createOwnerPackageFixture('opl-meta-agent', 'oma', '0.1.0'),
