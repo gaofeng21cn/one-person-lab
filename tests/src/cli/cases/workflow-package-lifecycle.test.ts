@@ -1,3 +1,5 @@
+import { spawnSync } from 'node:child_process';
+
 import { assert, fs, os, path, runCli, test } from '../helpers.ts';
 import {
   resolveOplFlowDependencyClosure,
@@ -12,6 +14,11 @@ function writeFile(filePath: string, content: string) {
 function writeExecutable(filePath: string, content: string) {
   writeFile(filePath, content);
   fs.chmodSync(filePath, 0o755);
+}
+
+function runGitFixture(args: string[], cwd: string) {
+  const result = spawnSync('git', args, { cwd, encoding: 'utf8' });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
 }
 
 function writeWorkflowFixture(root: string) {
@@ -167,6 +174,41 @@ test('OPL Flow dependency closure separates online defaults from the Full offlin
     resolveOplFlowDependencyClosure(policy, 'full').map((entry) => entry.id),
     ['opl-base', 'officecli', 'offline-only'],
   );
+});
+
+test('OPL Flow update replaces an immutable Full bundle with a managed current checkout', () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-flow-full-update-'));
+  const sourceRoot = path.join(home, 'source');
+  const runtimeRoot = path.join(home, 'runtime');
+  const bundledRoot = path.join(runtimeRoot, 'modules', 'opl-flow');
+  const stateDir = path.join(home, 'state');
+  const codexHome = path.join(home, '.codex');
+  writeWorkflowFixture(sourceRoot);
+  runGitFixture(['init', '--initial-branch=main'], sourceRoot);
+  runGitFixture(['add', '.'], sourceRoot);
+  runGitFixture(['-c', 'user.name=OPL Test', '-c', 'user.email=opl-test@example.com', 'commit', '-m', 'fixture'], sourceRoot);
+  writeFile(path.join(bundledRoot, 'contracts', 'workflow-policy.json'), '{"schema":"legacy"}\n');
+  writeFile(path.join(bundledRoot, 'opl-runtime-module.json'), '{}\n');
+
+  try {
+    const updated = runCli(['packages', 'update', 'opl-flow'], {
+      HOME: home,
+      CODEX_HOME: codexHome,
+      OPL_STATE_DIR: stateDir,
+      OPL_FULL_RUNTIME_HOME: runtimeRoot,
+      OPL_FLOW_REPO_URL: sourceRoot,
+      OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
+    }).workflow_package;
+
+    assert.equal(updated.status, 'completed');
+    assert.equal(updated.action, 'update');
+    assert.equal(updated.source_action, 'cloned');
+    assert.equal(updated.source_root, path.join(stateDir, 'modules', 'opl-flow'));
+    assert.equal(updated.package_version, 'test');
+    assert.equal(fs.existsSync(path.join(updated.source_root, '.git')), true);
+  } finally {
+    fs.rmSync(home, { recursive: true, force: true });
+  }
 });
 
 test('OPL Flow install archives declared conflicts and rollback restores exact config and services', () => {
