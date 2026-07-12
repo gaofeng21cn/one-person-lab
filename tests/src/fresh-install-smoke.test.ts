@@ -215,6 +215,76 @@ test('install carrier-only can use an explicit source archive even when git is u
   }
 });
 
+test('install carrier-only restores Full prefilled dependencies without an npm network install', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-prefilled-deps-'));
+  const fakeBin = path.join(homeRoot, 'bin');
+  const installDir = path.join(homeRoot, '.opl', 'one-person-lab');
+  const prefilledNodeModules = path.join(homeRoot, 'prefilled-node-modules');
+  const npmLog = path.join(homeRoot, 'npm.log');
+  fs.mkdirSync(fakeBin, { recursive: true });
+  fs.mkdirSync(path.join(prefilledNodeModules, '@temporalio', 'common'), { recursive: true });
+  fs.writeFileSync(path.join(prefilledNodeModules, '@temporalio', 'common', 'package.json'), '{}\n');
+
+  fs.writeFileSync(path.join(fakeBin, 'git'), '#!/usr/bin/env bash\nexit 0\n');
+  fs.writeFileSync(path.join(fakeBin, 'node'), '#!/usr/bin/env bash\nexit 0\n');
+  fs.writeFileSync(
+    path.join(fakeBin, 'npm'),
+    ['#!/usr/bin/env bash', `printf '%s\\n' "$*" >> ${JSON.stringify(npmLog)}`, 'exit 0'].join('\n'),
+  );
+  fs.writeFileSync(
+    path.join(fakeBin, 'curl'),
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      'while [ "$#" -gt 0 ]; do',
+      '  if [ "$1" = "-o" ]; then printf "fixture archive\\n" > "$2"; exit 0; fi',
+      '  shift',
+      'done',
+    ].join('\n'),
+  );
+  fs.writeFileSync(
+    path.join(fakeBin, 'tar'),
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      'dest=""',
+      'while [ "$#" -gt 0 ]; do',
+      '  if [ "$1" = "-C" ]; then dest="$2"; shift 2; else shift; fi',
+      'done',
+      'mkdir -p "$dest/current-source-framework"',
+      'printf "{}\\n" > "$dest/current-source-framework/package.json"',
+    ].join('\n'),
+  );
+  for (const command of ['git', 'node', 'npm', 'curl', 'tar']) {
+    fs.chmodSync(path.join(fakeBin, command), 0o755);
+  }
+
+  try {
+    const result = spawnSync('/bin/bash', [installScript, '--carrier-only'], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        HOME: homeRoot,
+        OPL_INSTALL_DIR: installDir,
+        OPL_INSTALL_SOURCE_MODE: 'archive',
+        OPL_SOURCE_ARCHIVE_URL: 'file:///tmp/current-source-framework.tar.gz',
+        OPL_PREFILLED_NODE_MODULES_DIR: prefilledNodeModules,
+        PATH: `${fakeBin}:/usr/bin:/bin`,
+      },
+    });
+
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    assert.match(result.stdout, /Restoring prefilled OPL dependencies/);
+    assert.equal(
+      fs.existsSync(path.join(installDir, 'node_modules', '@temporalio', 'common', 'package.json')),
+      true,
+    );
+    assert.deepEqual(fs.readFileSync(npmLog, 'utf8').trim().split('\n'), ['link --ignore-scripts']);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
 test('install carrier-only on macOS prepares managed Node and uses a source archive when git is unavailable', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-managed-node-'));
   const fakeBin = path.join(homeRoot, 'bin');
