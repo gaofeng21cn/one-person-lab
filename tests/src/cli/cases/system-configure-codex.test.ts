@@ -385,7 +385,6 @@ test('system configure-codex syncs packaged Full companion skills after API key 
 
   try {
     for (const skillId of [
-      'superpowers',
       'officecli',
       'officecli-docx',
       'officecli-pptx',
@@ -398,29 +397,11 @@ test('system configure-codex syncs packaged Full companion skills after API key 
       'mineru-document-extractor',
     ]) {
       fs.mkdirSync(path.join(packagedSkillsRoot, skillId), { recursive: true });
-      if (skillId === 'superpowers') {
-        fs.mkdirSync(path.join(packagedSkillsRoot, skillId, 'skills', 'using-superpowers'), { recursive: true });
-        fs.mkdirSync(
-          path.join(packagedSkillsRoot, skillId, 'skills', 'verification-before-completion'),
-          { recursive: true },
-        );
-        fs.writeFileSync(
-          path.join(packagedSkillsRoot, skillId, 'skills', 'using-superpowers', 'SKILL.md'),
-          '# using-superpowers\n',
-          'utf8',
-        );
-        fs.writeFileSync(
-          path.join(packagedSkillsRoot, skillId, 'skills', 'verification-before-completion', 'SKILL.md'),
-          '# verification-before-completion\n',
-          'utf8',
-        );
-      } else {
-        fs.writeFileSync(
-          path.join(packagedSkillsRoot, skillId, 'SKILL.md'),
-          `---\nname: ${skillId}\ndescription: packaged ${skillId}\n---\n\n# ${skillId}\n`,
-          'utf8',
-        );
-      }
+      fs.writeFileSync(
+        path.join(packagedSkillsRoot, skillId, 'SKILL.md'),
+        `---\nname: ${skillId}\ndescription: packaged ${skillId}\n---\n\n# ${skillId}\n`,
+        'utf8',
+      );
     }
     fs.mkdirSync(toolBin, { recursive: true });
     fs.writeFileSync(
@@ -458,14 +439,9 @@ test('system configure-codex syncs packaged Full companion skills after API key 
     };
 
     assert.equal(output.codex_config.companion_skill_sync.mode, 'managed');
-    assert.equal(output.codex_config.companion_skill_sync.superpowers_profile, 'full');
+    assert.equal(output.codex_config.companion_skill_sync.superpowers_profile, 'keep');
     const itemById = new Map(output.codex_config.companion_skill_sync.items.map((item) => [item.skill_id, item]));
-    assert.equal(itemById.get('superpowers')?.status, 'synced');
-    assert.equal(itemById.get('superpowers')?.action, 'symlink');
-    assert.equal(
-      fs.realpathSync(path.join(homeRoot, '.agents', 'skills', 'superpowers')),
-      fs.realpathSync(path.join(packagedSkillsRoot, 'superpowers', 'skills')),
-    );
+    assert.equal(fs.existsSync(path.join(homeRoot, '.agents', 'skills', 'superpowers')), false);
     for (const skillId of [
       'officecli',
       'officecli-docx',
