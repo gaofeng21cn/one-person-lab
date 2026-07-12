@@ -118,33 +118,64 @@ function codexHome(home: string) {
   return process.env.CODEX_HOME?.trim() || path.join(home, '.codex');
 }
 
+function managedWorkflowPackageRoot() {
+  return path.join(resolveOplStatePaths().state_dir, 'modules', PACKAGE_ID);
+}
+
+function isBundledWorkflowRoot(root: string) {
+  const fullRuntime = process.env.OPL_FULL_RUNTIME_HOME?.trim();
+  const fullRuntimeRoot = fullRuntime ? path.join(fullRuntime, 'modules', PACKAGE_ID) : null;
+  return fs.existsSync(path.join(root, 'opl-runtime-module.json'))
+    || Boolean(fullRuntimeRoot && path.resolve(root) === path.resolve(fullRuntimeRoot));
+}
+
 function workflowPackageRoot() {
-  const paths = resolveOplStatePaths();
   const explicit = process.env.OPL_FLOW_REPO_ROOT?.trim();
   const fullRuntime = process.env.OPL_FULL_RUNTIME_HOME?.trim();
+  const managed = managedWorkflowPackageRoot();
+  const packagedExplicit = explicit && (
+    fs.existsSync(path.join(explicit, 'opl-runtime-module.json'))
+    || Boolean(fullRuntime && path.resolve(explicit) === path.resolve(path.join(fullRuntime, 'modules', PACKAGE_ID)))
+  );
   const candidates = [
-    explicit || null,
+    packagedExplicit ? null : explicit || null,
+    managed,
+    packagedExplicit ? explicit : null,
     fullRuntime ? path.join(fullRuntime, 'modules', PACKAGE_ID) : null,
-    path.join(paths.state_dir, 'modules', PACKAGE_ID),
     path.resolve(process.cwd(), '..', PACKAGE_ID),
   ].filter((candidate): candidate is string => Boolean(candidate));
   return candidates.find((candidate) => fs.existsSync(path.join(candidate, 'contracts', 'workflow-policy.json')))
-    ?? path.join(paths.state_dir, 'modules', PACKAGE_ID);
+    ?? managed;
+}
+
+function cloneWorkflowCheckout(root: string) {
+  fs.mkdirSync(path.dirname(root), { recursive: true });
+  const clone = runGit(['clone', '--depth', '1', process.env.OPL_FLOW_REPO_URL?.trim() || REPO_URL, root]);
+  if (clone.exitCode !== 0) {
+    throw new FrameworkContractError('codex_command_failed', 'OPL Flow package checkout could not be installed.', {
+      package_id: PACKAGE_ID,
+      checkout_path: root,
+      stderr: clone.stderr,
+    });
+  }
+  return { root, source_action: 'cloned' as const };
 }
 
 function ensureWorkflowCheckout(action: 'install' | 'update' | 'optimize') {
   const root = workflowPackageRoot();
   if (!fs.existsSync(path.join(root, 'contracts', 'workflow-policy.json'))) {
-    fs.mkdirSync(path.dirname(root), { recursive: true });
-    const clone = runGit(['clone', '--depth', '1', process.env.OPL_FLOW_REPO_URL?.trim() || REPO_URL, root]);
-    if (clone.exitCode !== 0) {
-      throw new FrameworkContractError('codex_command_failed', 'OPL Flow package checkout could not be installed.', {
-        package_id: PACKAGE_ID,
-        checkout_path: root,
-        stderr: clone.stderr,
-      });
+    return cloneWorkflowCheckout(root);
+  }
+  if (action === 'update' && !fs.existsSync(path.join(root, '.git')) && isBundledWorkflowRoot(root)) {
+    const managedRoot = managedWorkflowPackageRoot();
+    if (fs.existsSync(managedRoot)) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Managed OPL Flow package root exists but is not an updateable Git checkout.',
+        { package_id: PACKAGE_ID, checkout_path: managedRoot, bundled_source_path: root },
+      );
     }
-    return { root, source_action: 'cloned' as const };
+    return cloneWorkflowCheckout(managedRoot);
   }
   if (action === 'update' && fs.existsSync(path.join(root, '.git'))) {
     const dirty = runGit(['status', '--porcelain'], root);
