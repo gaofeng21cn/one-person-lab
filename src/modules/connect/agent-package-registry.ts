@@ -237,7 +237,9 @@ async function applyManifestPackageLock(
     } finally {
       if (inlinePayloadRoot) fs.rmSync(inlinePayloadRoot, { recursive: true, force: true });
     }
-    verifyManifestContentLock(manifest);
+    if (!(input.dryRun === true && manifest.plugin_payload_manifest_url)) {
+      verifyManifestContentLock(manifest);
+    }
     assertManifestMatchesRegistrySelection(manifest, nextSelection);
     const trustTier = stringValue(input.trustTier) ?? nextSelection.trustTier ?? inheritedTrustTier ?? null;
     assertTrustTierAssigned(trustTier, nextSelection.manifestUrl);
