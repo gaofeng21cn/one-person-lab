@@ -7,7 +7,7 @@ import {
   withCliTimeout,
 } from './shared.ts';
 
-test('system startup-maintenance uses auto Developer Mode sibling checkouts for domain plugin sync', () => {
+test('system startup-maintenance uses Developer Mode domain checkouts without globally syncing capability dependencies', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-startup-maintenance-devmode-home-'));
   const workspaceRoot = path.join(homeRoot, 'workspace');
   const onePersonLabRoot = path.join(workspaceRoot, 'one-person-lab');
@@ -112,21 +112,7 @@ test('system startup-maintenance uses auto Developer Mode sibling checkouts for 
     assert.equal(output.system_action.details.managed_install_update_receipts.recorded_receipt_count, 0);
     assert.equal(output.system_action.details.plugin_cache_freshness.status, 'freshened');
     assert.equal(output.system_action.details.plugin_cache_freshness.synced_domain_packs_count, 5);
-    assert.deepEqual(output.system_action.details.capability_targets.map((target) => [
-      target.target_id,
-      target.status,
-      target.reason,
-      target.action,
-      target.install_origin_before,
-    ]), [
-      [
-        'scholarskills',
-        'completed',
-        'developer_checkout_visible_not_app_managed',
-        'sync',
-        'sibling_workspace',
-      ],
-    ]);
+    assert.deepEqual(output.system_action.details.capability_targets, []);
     assert.equal(output.system_action.details.restart_reload_prompt.required, true);
 
     for (const target of output.system_action.details.module_targets) {
@@ -169,6 +155,7 @@ test('system startup-maintenance uses auto Developer Mode sibling checkouts for 
     assert.match(codexConfig, /codex-plugin-marketplaces\/opl-meta-agent-local/);
     assert.match(codexConfig, /\[plugins\."opl-bookforge@opl-bookforge-local"\]/);
     assert.match(codexConfig, /codex-plugin-marketplaces\/opl-bookforge-local/);
+    assert.doesNotMatch(codexConfig, /mas-scholar-skills|scholarskills/);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     removeStartupDomainModuleRemotes(remotes);
