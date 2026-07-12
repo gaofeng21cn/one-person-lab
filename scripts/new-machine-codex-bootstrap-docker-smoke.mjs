@@ -98,8 +98,8 @@ export CODEX_HOME=$HOME/.codex
 mkdir -p "$HOME" "$CODEX_HOME"
 git clone https://github.com/gaofeng21cn/opl-flow.git /tmp/opl-flow
 cd /tmp/opl-flow
-python3 scripts/install_local_plugin.py >/tmp/opl-flow-install.json
-python3 scripts/install_local_plugin.py --verify-only >/tmp/opl-flow-verify.json
+export OPL_FLOW_REPO_ROOT=/tmp/opl-flow
+opl packages install opl-flow --json >/tmp/opl-flow-install.json
 python3 scripts/verify.py >/tmp/opl-flow-repo-verify.txt
 
 node <<'NODE'
@@ -108,21 +108,14 @@ const path = require('path');
 const home = '/tmp/opl-flow-home';
 const readJson = (file) => JSON.parse(fs.readFileSync(file, 'utf8')); // reuse-first: allow Docker inline smoke JSON boundary.
 const install = readJson('/tmp/opl-flow-install.json');
-const verify = readJson('/tmp/opl-flow-verify.json');
-if (!verify.ok) {
-  throw new Error('opl-flow verify failed: ' + JSON.stringify(verify));
+const workflowPackage = install.workflow_package;
+if (workflowPackage?.status !== 'completed') {
+  throw new Error('opl-flow package install failed: ' + JSON.stringify(workflowPackage));
 }
 
 const required = [
-  'plugins/opl-flow/.codex-plugin/plugin.json',
-  'plugins/opl-flow/skills/opl-flow/SKILL.md',
   '.codex/AGENTS.md',
   '.codex/TASTE.md',
-  '.codex/prompts/planner.md',
-  '.codex/prompts/executor.md',
-  '.codex/prompts/debugger.md',
-  '.codex/prompts/verifier.md',
-  '.agents/plugins/marketplace.json',
 ];
 const missing = required
   .map((rel) => path.join(home, rel))
@@ -131,16 +124,34 @@ if (missing.length) {
   throw new Error('missing opl-flow installed files: ' + missing.join(', '));
 }
 
-const marketplace = readJson(path.join(home, '.agents/plugins/marketplace.json'));
-if (!(marketplace.plugins ?? []).some((entry) => entry.name === 'opl-flow')) {
-  throw new Error('marketplace missing opl-flow');
+for (const filePath of [
+  workflowPackage.plugin?.plugin_manifest_path,
+  workflowPackage.policy_path,
+  workflowPackage.profile?.receipt_path,
+  workflowPackage.receipt_path,
+]) {
+  if (!filePath || !fs.existsSync(filePath)) {
+    throw new Error('missing opl-flow package receipt surface: ' + String(filePath));
+  }
+}
+
+const config = fs.readFileSync(path.join(home, '.codex/config.toml'), 'utf8');
+if (!config.includes('[plugins."opl-flow@opl-agent-opl-flow-local"]')) {
+  throw new Error('Codex config missing Framework-managed OPL Flow plugin');
+}
+const closureIds = new Set((workflowPackage.dependency_closure ?? []).map((entry) => entry.id));
+for (const dependencyId of ['opl-base', 'officecli', 'mineru-document-extractor', 'ui-ux-pro-max']) {
+  if (!closureIds.has(dependencyId)) {
+    throw new Error('OPL Flow dependency closure missing ' + dependencyId);
+  }
 }
 
 console.log(JSON.stringify({
   status: 'ok',
   surface: 'opl_flow_bootstrap',
-  plugin_path: install.plugin_path,
-  marketplace_ok: verify.marketplace_ok,
+  package_version: workflowPackage.package_version,
+  package_receipt_path: workflowPackage.receipt_path,
+  plugin_manifest_path: workflowPackage.plugin.plugin_manifest_path,
   profile_file_count: required.length,
   repo_verify: fs.readFileSync('/tmp/opl-flow-repo-verify.txt', 'utf8').trim(),
 }, null, 2));
