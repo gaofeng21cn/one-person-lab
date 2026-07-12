@@ -329,7 +329,11 @@ test('OPL Foundry Agent index exposes all standard agents as one standard series
   assert.equal(mas.status, 'standard_domain_agent');
   assert.equal(mas.standard_agent_registry_ref, 'src/kernel/standard-agent-registry.ts');
   assert.equal(mas.series_membership, 'standard_domain_agent');
-  assert.equal(mas.work_object.natural_alias, 'study');
+  assert.deepEqual(mas.work_object, {
+    canonical_object: 'work',
+    natural_alias: 'work',
+    alias_rule: 'work is the standard Foundry Agent work object.',
+  });
   assert.equal(mas.brand_cli, 'mas');
   assert.equal(mas.cli_smoke.executable_brand_cli_command_surface, null);
   assert.equal(mas.foundry_command_surface, 'opl foundry agents inspect mas');
@@ -391,7 +395,11 @@ test('OPL Foundry Agent index exposes all standard agents as one standard series
   assert.equal(bookforge.agent_id, 'obf');
   assert.equal(bookforge.standard_agent_registry_ref, 'src/kernel/standard-agent-registry.ts');
   assert.equal(bookforge.series_membership, 'standard_domain_agent');
-  assert.equal(bookforge.work_object.natural_alias, 'book');
+  assert.deepEqual(bookforge.work_object, {
+    canonical_object: 'work',
+    natural_alias: 'work',
+    alias_rule: 'work is the standard Foundry Agent work object.',
+  });
   assert.equal(bookforge.brand_cli, 'obf');
   assert.equal(bookforge.foundry_command_surface, 'opl foundry agents inspect obf');
   assertOnlyAllowedFoundryProjectionFields(bookforge, allowedFoundryAgentInspectFields);
