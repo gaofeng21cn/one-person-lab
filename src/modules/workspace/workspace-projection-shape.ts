@@ -38,7 +38,9 @@ export function validateStageOutputsIndexShape(input: {
       ? null
       : 'current_stage_pointer_ref',
     sameJson(input.actual.stage_lifecycle_model, STAGE_LIFECYCLE_STATUSES) ? null : 'stage_lifecycle_model',
-    protocol.closeout_answer_unit === 'owner_receipt_or_typed_blocker' ? null : 'closeout_answer_unit',
+    protocol.closeout_answer_unit === 'progress_receipt_or_owner_answer_or_hard_stop'
+      ? null
+      : 'closeout_answer_unit',
     authority.index_is_projection_only === true ? null : 'index_is_projection_only',
     authority.index_can_claim_stage_complete === false ? null : 'index_can_claim_stage_complete',
     authority.index_can_replace_owner_receipt === false ? null : 'index_can_replace_owner_receipt',

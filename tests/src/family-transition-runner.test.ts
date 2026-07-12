@@ -417,6 +417,54 @@ test('family transition runner advances bundle_stage_ready through domain-declar
   );
 });
 
+test('family transition runner treats missing quality-budget guards as debt when a consumable artifact exists', () => {
+  const spec = structuredClone(masLikeTransitionSpec) as FamilyTransitionSpec;
+  spec.guards.owner_receipt_observed = {
+    ...spec.guards.owner_receipt_observed,
+    gate_kind: 'quality_budget',
+    quality_debt_code: 'owner_review_pending',
+  };
+
+  const result = runFamilyTransition({
+    spec,
+    domain_id: 'medautoscience',
+    current_state: 'bundle_stage_ready',
+    event: 'domain_tick',
+    guards: { owner_receipt_observed: false },
+    context: {
+      attempt_id: 'sat_bundle_debt',
+      consumable_artifact_refs: ['artifact:manuscript-draft'],
+      quality_debt_refs: ['quality-debt:owner-review-pending'],
+    },
+  });
+
+  assert.equal(result.status, 'transition_applied');
+  assert.equal(result.next_state, 'publication_gate_check');
+  assert.equal(result.completion_status, 'completed_with_quality_debt');
+  assert.equal(result.projection.completion_status, 'completed_with_quality_debt');
+  assert.equal(result.projection.quality_debt_blocks_stage_transition, false);
+  assert.equal(result.projection.quality_debt_blocks_quality_or_ready_claims, true);
+  assert.deepEqual(result.projection.missing_quality_budget_guard_ids, ['owner_receipt_observed']);
+  assert.equal(result.typed_blocker, null);
+  assert.equal(result.projection.domain_ready_claimed, false);
+  assert.equal(result.projection.production_ready_claimed, false);
+});
+
+test('family transition runner keeps missing hard guards fail-closed even with an artifact', () => {
+  const result = runFamilyTransition({
+    spec: masLikeTransitionSpec,
+    domain_id: 'medautoscience',
+    current_state: 'bundle_stage_ready',
+    event: 'domain_tick',
+    guards: { owner_receipt_observed: false },
+    context: { consumable_artifact_refs: ['artifact:manuscript-draft'] },
+  });
+
+  assert.equal(result.status, 'blocked');
+  assert.equal(result.completion_status, 'blocked');
+  assert.equal(result.typed_blocker?.blocker_code, 'transition_guard_unsatisfied');
+});
+
 test('family transition runner records MAS transition refs without interpreting publication or artifact authority', () => {
   const spec = {
     ...masLikeTransitionSpec,

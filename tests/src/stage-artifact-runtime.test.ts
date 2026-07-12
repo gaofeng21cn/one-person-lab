@@ -235,6 +235,44 @@ test('stage artifact commit refuses success without matching owner receipt evide
   });
 });
 
+test('stage artifact quality debt completion advances a consumable artifact without owner acceptance', () => {
+  withTempState(() => {
+    const locator = {
+      domain_id: 'med-autogrant',
+      program_id: 'program-a',
+      topic_id: 'topic-a',
+      deliverable_id: 'grant-a',
+      stage_id: 'proposal_authoring',
+      stage_order: 4,
+      attempt_id: 'attempt-quality-debt',
+    };
+    const opened = openStageArtifactAttemptRuntime(locator);
+    fs.writeFileSync(path.join(opened.attempt_workspace.outputs_dir, 'proposal.md'), '# usable draft\n');
+    writeJson(path.join(opened.attempt_workspace.evidence_dir, 'quality-debt.json'), {
+      quality_debt_refs: ['quality-debt:grant-a:proposal-authoring'],
+      debt_codes: ['review_budget_exhausted'],
+      blocks_stage_transition: false,
+      blocks_quality_or_ready_claims: true,
+    });
+
+    const committed = commitStageArtifactAttemptRuntime({
+      ...locator,
+      terminal_status: 'completed_with_quality_debt',
+      required_outputs: ['proposal.md'],
+      quality_debt_refs: ['quality-debt:grant-a:proposal-authoring'],
+    });
+
+    assert.equal(committed.manifest.terminal_status, 'completed_with_quality_debt');
+    assert.equal(committed.status.stages[0].status, 'completed_with_quality_debt');
+    assert.equal(committed.status.summary.completed_with_quality_debt_stage_count, 1);
+    assert.deepEqual(committed.status.stages[0].next_required_owner_delta, [
+      'quality_debt_repair_or_owner_acceptance_without_stage_transition_block',
+    ]);
+    assert.equal(committed.current_pointer.current.current_stage?.status, 'completed_with_quality_debt');
+    assert.equal(committed.opl_created_owner_receipt, false);
+  });
+});
+
 test('stage artifact status treats files without receipt-backed manifest as orphan evidence', () => {
   withTempState(() => {
     const paths = stageArtifactAttemptPaths({

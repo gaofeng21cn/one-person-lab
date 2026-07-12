@@ -128,7 +128,15 @@ export function assertCurrentOwnerDeltaProjection(
     'current_owner_delta',
   );
   assert.equal(
-    currentOwnerDelta.progress_delta_receipt.stage_transition_requires_owner_receipt_or_typed_blocker,
+    currentOwnerDelta.progress_delta_receipt.stage_transition_accepts_consumable_artifact_progress,
+    true,
+  );
+  assert.equal(
+    currentOwnerDelta.progress_delta_receipt.quality_debt_transition_status,
+    'completed_with_quality_debt',
+  );
+  assert.equal(
+    currentOwnerDelta.progress_delta_receipt.owner_receipt_required_for_quality_or_ready_claim,
     true,
   );
   assert.equal(

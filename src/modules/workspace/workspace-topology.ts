@@ -82,7 +82,7 @@ export type WorkspaceCanonicalTopology = {
   project_unit_kind: string;
   stage_artifact_unit: 'stage_artifact_unit';
   stage_outputs_root: string;
-  owner_answer_unit: 'owner_receipt_or_typed_blocker';
+  owner_answer_unit: 'progress_receipt_or_owner_answer_or_hard_stop';
 };
 
 export type WorkspaceDisplayLabels = {
@@ -117,7 +117,7 @@ export const WORKSPACE_TOPOLOGY_PROFILE_CONTRACT = {
     'workspace_group',
     'project_unit',
     'stage_artifact_unit',
-    'owner_receipt_or_typed_blocker',
+    'progress_receipt_or_owner_answer_or_hard_stop',
   ],
   workspace_modes: ['one_off', 'series', 'portfolio'],
   default_project_stage_outputs_root: 'artifacts/stage_outputs',
@@ -391,7 +391,7 @@ export function buildCanonicalTopology(
     project_unit_kind: agent.project_kind,
     stage_artifact_unit: 'stage_artifact_unit',
     stage_outputs_root: profile.project_stage_outputs_root,
-    owner_answer_unit: 'owner_receipt_or_typed_blocker',
+    owner_answer_unit: 'progress_receipt_or_owner_answer_or_hard_stop',
   };
 }
 

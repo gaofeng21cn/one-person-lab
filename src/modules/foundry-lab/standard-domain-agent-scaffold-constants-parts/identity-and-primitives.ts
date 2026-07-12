@@ -30,7 +30,7 @@ export const OPL_OWNED_GENERIC_PRIMITIVES = [
     primitive_id: 'provider_slo_and_wakeup_transport',
     owner: 'one-person-lab',
     replacement_surface: 'provider_backed_family_runtime',
-    domain_policy: 'return_owner_receipt_or_typed_blocker',
+    domain_policy: 'return_progress_receipt_or_owner_answer_or_hard_stop',
   },
   {
     primitive_id: 'stage_attempt_projection_ledger',

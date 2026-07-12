@@ -56,6 +56,7 @@ function recordHasRef(record: JsonRecord, ref: string) {
     || safeText(record.decision_receipt_ref) === ref
     || stringList(record.receipt_refs).includes(ref)
     || stringList(record.owner_receipt_refs).includes(ref)
+    || stringList(record.quality_debt_refs).includes(ref)
     || stringList(record.typed_blocker_refs).includes(ref)
     || stringList(record.decision_receipt_refs).includes(ref);
 }
@@ -74,7 +75,7 @@ function refsBackedByFiles(dir: string, refs: string[]) {
 
 function terminalStatusFromManifest(manifest: JsonRecord | null): StageAttemptTerminalStatus | null {
   const status = safeText(manifest?.terminal_status);
-  return ['success', 'blocked', 'skipped', 'deferred'].includes(status)
+  return ['success', 'completed_with_quality_debt', 'blocked', 'skipped', 'deferred'].includes(status)
     ? status as StageAttemptTerminalStatus
     : null;
 }
@@ -97,6 +98,7 @@ function inspectAttempt(stageId: string, attemptDir: string) {
   const requiredOutputs = relativePathList(manifest?.required_outputs);
   const missingOutputs = requiredOutputs.filter((output) => !presentOutputs.includes(output));
   const ownerReceiptRefs = stringList(manifest?.owner_receipt_refs);
+  const qualityDebtRefs = stringList(manifest?.quality_debt_refs);
   const typedBlockerRefs = stringList(manifest?.typed_blocker_refs);
   const decisionReceiptRefs = stringList(manifest?.decision_receipt_refs);
   const terminalStatus = terminalStatusFromManifest(manifest);
@@ -105,6 +107,7 @@ function inspectAttempt(stageId: string, attemptDir: string) {
     && safeText(manifest?.attempt_id, attemptId) === attemptId;
   const brokenReasons: string[] = [];
   const ownerReceiptMatch = refsBackedByFiles(receiptsDir, ownerReceiptRefs);
+  const qualityDebtMatch = refsBackedByFiles(evidenceDir, qualityDebtRefs);
   const typedBlockerMatch = refsBackedByFiles(evidenceDir, typedBlockerRefs);
   const decisionReceiptMatch = refsBackedByFiles(receiptsDir, decisionReceiptRefs);
 
@@ -153,6 +156,25 @@ function inspectAttempt(stageId: string, attemptDir: string) {
     } else {
       status = 'success';
     }
+  } else if (terminalStatus === 'completed_with_quality_debt') {
+    if (requiredOutputs.length === 0) {
+      status = 'broken';
+      brokenReasons.push('quality_debt_manifest_missing_required_outputs');
+    } else if (missingOutputs.length > 0) {
+      status = 'broken';
+      brokenReasons.push('required_outputs_missing_for_quality_debt_completion');
+    } else if (hashMismatches.length > 0) {
+      status = 'broken';
+      brokenReasons.push('manifest_content_hash_mismatch');
+    } else if (qualityDebtRefs.length === 0) {
+      status = 'broken';
+      brokenReasons.push('quality_debt_completion_missing_quality_debt_ref');
+    } else if (qualityDebtMatch.missing_refs.length > 0) {
+      status = 'broken';
+      brokenReasons.push('quality_debt_ref_without_matching_evidence_file');
+    } else {
+      status = 'completed_with_quality_debt';
+    }
   } else if (presentOutputs.length > 0) {
     status = 'orphan';
   }
@@ -166,6 +188,7 @@ function inspectAttempt(stageId: string, attemptDir: string) {
     present_outputs: presentOutputs,
     missing_outputs: missingOutputs,
     owner_receipt_refs: ownerReceiptRefs,
+    quality_debt_refs: qualityDebtRefs,
     typed_blocker_refs: typedBlockerRefs,
     decision_receipt_refs: decisionReceiptRefs,
     orphan_outputs: status === 'orphan' ? presentOutputs : [],
@@ -188,6 +211,8 @@ function summarizeStage(stage: ReturnType<typeof resolveStageDirs>[number]): Sta
   const status = selected?.status ?? 'broken';
   const nextRequiredOwnerDelta = status === 'success'
     ? []
+    : status === 'completed_with_quality_debt'
+      ? ['quality_debt_repair_or_owner_acceptance_without_stage_transition_block']
     : status === 'blocked'
       ? ['domain_owner_typed_blocker_resolution']
       : status === 'skipped' || status === 'deferred'
@@ -205,6 +230,7 @@ function summarizeStage(stage: ReturnType<typeof resolveStageDirs>[number]): Sta
     required_outputs: selected?.required_outputs ?? [],
     missing_outputs: selected?.missing_outputs ?? [],
     owner_receipt_refs: selected?.owner_receipt_refs ?? [],
+    quality_debt_refs: selected?.quality_debt_refs ?? [],
     typed_blocker_refs: selected?.typed_blocker_refs ?? [],
     decision_receipt_refs: selected?.decision_receipt_refs ?? [],
     orphan_outputs: selected?.orphan_outputs ?? [],
@@ -225,6 +251,9 @@ export function statusStageArtifactRuntime(locator: StageArtifactLocator) {
     summary: {
       stage_count: stages.length,
       success_stage_count: stages.filter((stage) => stage.status === 'success').length,
+      completed_with_quality_debt_stage_count: stages.filter(
+        (stage) => stage.status === 'completed_with_quality_debt',
+      ).length,
       blocked_stage_count: stages.filter((stage) => stage.status === 'blocked').length,
       skipped_stage_count: stages.filter((stage) => stage.status === 'skipped').length,
       deferred_stage_count: stages.filter((stage) => stage.status === 'deferred').length,
@@ -239,13 +268,14 @@ function assertTerminalRefs(input: {
   terminal_status: StageAttemptTerminalStatus;
   required_outputs: string[];
   owner_receipt_refs: string[];
+  quality_debt_refs: string[];
   typed_blocker_refs: string[];
   decision_receipt_refs: string[];
   outputs_dir: string;
   evidence_dir: string;
   receipts_dir: string;
 }) {
-  if (input.terminal_status === 'success') {
+  if (input.terminal_status === 'success' || input.terminal_status === 'completed_with_quality_debt') {
     const presentOutputs = listRelativeFiles(input.outputs_dir);
     const missingOutputs = input.required_outputs.filter((output) => !presentOutputs.includes(output));
     if (input.required_outputs.length === 0 || missingOutputs.length > 0) {
@@ -256,11 +286,24 @@ function assertTerminalRefs(input: {
       });
     }
     const ownerReceiptMatch = refsBackedByFiles(input.receipts_dir, input.owner_receipt_refs);
-    if (input.owner_receipt_refs.length === 0 || ownerReceiptMatch.missing_refs.length > 0) {
+    if (input.terminal_status === 'success'
+      && (input.owner_receipt_refs.length === 0 || ownerReceiptMatch.missing_refs.length > 0)) {
       throw new FrameworkContractError('contract_shape_invalid', 'Stage success requires owner receipt refs backed by receipt files.', {
         owner_receipt_refs: input.owner_receipt_refs,
         missing_owner_receipt_refs: ownerReceiptMatch.missing_refs,
       });
+    }
+    const qualityDebtMatch = refsBackedByFiles(input.evidence_dir, input.quality_debt_refs);
+    if (input.terminal_status === 'completed_with_quality_debt'
+      && (input.quality_debt_refs.length === 0 || qualityDebtMatch.missing_refs.length > 0)) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Quality-debt completion requires quality debt refs backed by evidence files.',
+        {
+          quality_debt_refs: input.quality_debt_refs,
+          missing_quality_debt_refs: qualityDebtMatch.missing_refs,
+        },
+      );
     }
   } else if (input.terminal_status === 'blocked') {
     const typedBlockerMatch = refsBackedByFiles(input.evidence_dir, input.typed_blocker_refs);
@@ -288,7 +331,9 @@ function writeLatestPointer(pointer: string, attemptId: string) {
 }
 
 function writeCurrentPointer(locator: StageArtifactLocator, status: ReturnType<typeof statusStageArtifactRuntime>) {
-  const currentStage = status.stages.find((stage) => stage.status !== 'success')
+  const currentStage = status.stages.find(
+    (stage) => !['success', 'completed_with_quality_debt'].includes(stage.status),
+  )
     ?? status.stages.at(-1)
     ?? null;
   const currentFile = path.join(status.deliverable_root, 'current.json');
@@ -308,6 +353,7 @@ function writeCurrentPointer(locator: StageArtifactLocator, status: ReturnType<t
       : null,
     stage_count: status.summary.stage_count,
     success_stage_count: status.summary.success_stage_count,
+    completed_with_quality_debt_stage_count: status.summary.completed_with_quality_debt_stage_count,
     stage_transition_authority_required_for_stage_run_current: true,
     authority_boundary: AUTHORITY_BOUNDARY,
   };
@@ -322,6 +368,7 @@ export function commitStageArtifactAttemptRuntime(input: StageArtifactAttemptLoc
   terminal_status: StageAttemptTerminalStatus;
   required_outputs?: string[];
   owner_receipt_refs?: string[];
+  quality_debt_refs?: string[];
   typed_blocker_refs?: string[];
   decision_receipt_refs?: string[];
 }) {
@@ -329,6 +376,7 @@ export function commitStageArtifactAttemptRuntime(input: StageArtifactAttemptLoc
   const paths = ensureStageArtifactAttempt(input);
   const requiredOutputs = [...new Set((input.required_outputs ?? []).map((entry) => safeRelativePath(entry, 'required_outputs')))];
   const ownerReceiptRefs = stringList(input.owner_receipt_refs ?? []);
+  const qualityDebtRefs = stringList(input.quality_debt_refs ?? []);
   const typedBlockerRefs = stringList(input.typed_blocker_refs ?? []);
   const decisionReceiptRefs = stringList(input.decision_receipt_refs ?? []);
 
@@ -336,6 +384,7 @@ export function commitStageArtifactAttemptRuntime(input: StageArtifactAttemptLoc
     terminal_status: terminalStatus,
     required_outputs: requiredOutputs,
     owner_receipt_refs: ownerReceiptRefs,
+    quality_debt_refs: qualityDebtRefs,
     typed_blocker_refs: typedBlockerRefs,
     decision_receipt_refs: decisionReceiptRefs,
     outputs_dir: paths.outputs_dir,
@@ -368,6 +417,7 @@ export function commitStageArtifactAttemptRuntime(input: StageArtifactAttemptLoc
     evidence_hashes: hashFiles(paths.evidence_dir, 'evidence'),
     receipt_hashes: hashFiles(paths.receipts_dir, 'receipt'),
     owner_receipt_refs: ownerReceiptRefs,
+    quality_debt_refs: qualityDebtRefs,
     typed_blocker_refs: typedBlockerRefs,
     decision_receipt_refs: decisionReceiptRefs,
     committed_at: new Date().toISOString(),
@@ -412,7 +462,9 @@ export function commitStageArtifactAttemptRuntime(input: StageArtifactAttemptLoc
 
 export function explainStageArtifactRuntime(locator: StageArtifactLocator) {
   const status = statusStageArtifactRuntime(locator);
-  const currentStage = status.stages.find((stage) => stage.status !== 'success')
+  const currentStage = status.stages.find(
+    (stage) => !['success', 'completed_with_quality_debt'].includes(stage.status),
+  )
     ?? status.stages.at(-1)
     ?? null;
   return {
@@ -436,6 +488,7 @@ export function rebuildStageArtifactRuntime(locator: StageArtifactLocator) {
       status: stage.status,
       latest_attempt_id: stage.latest_attempt_id,
       owner_receipt_refs: stage.owner_receipt_refs,
+      quality_debt_refs: stage.quality_debt_refs,
       typed_blocker_refs: stage.typed_blocker_refs,
       decision_receipt_refs: stage.decision_receipt_refs,
       output_hashes: stage.attempts.find((attempt) => attempt.attempt_id === stage.latest_attempt_id)?.output_hashes ?? [],

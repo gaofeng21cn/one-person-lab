@@ -210,8 +210,11 @@ test('StageRun Kernel contract separates launch, closeout, advisory, and forbidd
   assertIncludesAll(writingRules.required_for_closeout, [
     'current_generation_role_artifacts',
     'stage_manifest_validity',
-    'owner_receipt_or_typed_blocker',
+    'consumable_artifact_progress_or_owner_answer',
     'current_pointer',
+  ]);
+  assertIncludesAll(writingRules.required_for_quality_or_ready_closeout, [
+    'owner_receipt_or_quality_gate_receipt',
     'closeout_receipt_ref',
     'closeout_receipt_stage_run_binding',
     'closeout_receipt_stage_manifest_binding',
@@ -246,6 +249,8 @@ test('StageRun Kernel contract separates launch, closeout, advisory, and forbidd
     'closeout_blockers',
     'execution_authorization',
     'closeout_binding_blockers',
+    'transition_outcome',
+    'quality_debt_reasons',
     'advisory_warnings',
     'forbidden_authority_flags',
   ]);
@@ -256,6 +261,7 @@ test('StageRun Kernel contract separates launch, closeout, advisory, and forbidd
     'closeout_binding_blockers',
   ]);
   assertIncludesAll(conformance.non_blocking_default_sections, [
+    'quality_debt_reasons',
     'advisory_warnings',
     'route_back_recommendations',
     'audit_drilldown_refs',
@@ -286,7 +292,7 @@ test('StageRun Kernel contract freezes launch closeout and advisory conformance 
   assertIncludesAll(contract.admission_policy.closeout_hard_blockers, [
     'required_role_artifacts',
     'manifest_validity',
-    'owner_receipt_or_typed_blocker',
+    'zero_consumable_artifact_without_owner_answer_or_hard_stop',
     'current_pointer',
     'content_hash',
     'generation',
@@ -298,6 +304,8 @@ test('StageRun Kernel contract freezes launch closeout and advisory conformance 
     'closeout_blockers',
     'execution_authorization',
     'closeout_binding_blockers',
+    'transition_outcome',
+    'quality_debt_reasons',
     'advisory_warnings',
     'route_back_recommendations',
     'audit_drilldown_refs',
@@ -524,7 +532,7 @@ test('StageRun closeout admission keeps advisory route-back refs out of closeout
   assert.equal(report.default_blocked, false);
 });
 
-test('StageRun closeout admission rejects provider completion without owner receipt or typed blocker', async () => {
+test('StageRun closeout admission advances consumable artifacts without owner receipt as quality debt', async () => {
   const module = await import(pathToFileURL(path.join(repoRoot, modulePath)).href);
   const report = module.evaluateStageRunAdmission({
     phase: 'closeout',
@@ -538,21 +546,23 @@ test('StageRun closeout admission rejects provider completion without owner rece
     produced_role_artifacts: ['ai_reviewer_record'],
     content_hashes: ['sha256:abc'],
     lineage_refs: ['opl://lineage/stage-run-1'],
+    consumable_artifact_refs: ['mas://artifacts/ai-reviewer-record'],
     provider_completed: true,
     read_model_refreshed: true,
     owner_receipt_refs: [],
     typed_blocker_refs: [],
   });
 
-  assert.equal(report.status, 'blocked');
+  assert.equal(report.status, 'passed_with_advisory');
   assert.deepEqual(report.launch_blockers, []);
-  assert.deepEqual(report.closeout_blockers, ['owner_receipt_or_typed_blocker_missing']);
-  assert.equal(report.forbidden_authority_flags.includes('provider_completed_cannot_close_stage'), true);
-  assert.equal(report.forbidden_authority_flags.includes('read_model_refreshed_cannot_close_stage'), true);
-  assert.equal(report.default_blocked, true);
+  assert.deepEqual(report.closeout_blockers, []);
+  assert.deepEqual(report.forbidden_authority_flags, []);
+  assert.equal(report.transition_outcome, 'completed_with_quality_debt');
+  assert.deepEqual(report.quality_debt_reasons, ['owner_answer_missing_for_quality_or_ready_claim']);
+  assert.equal(report.default_blocked, false);
 });
 
-test('StageRun closeout admission blocks forbidden authority signals even with owner receipt', async () => {
+test('StageRun closeout admission treats provider and conformance signals as non-authoritative advisory context', async () => {
   const module = await import(pathToFileURL(path.join(repoRoot, modulePath)).href);
   const report = module.evaluateStageRunAdmission({
     phase: 'closeout',
@@ -572,13 +582,11 @@ test('StageRun closeout admission blocks forbidden authority signals even with o
     conformance_passed: true,
   });
 
-  assert.equal(report.status, 'blocked');
+  assert.equal(report.status, 'passed_with_advisory');
   assert.deepEqual(report.closeout_blockers, []);
-  assert.deepEqual(report.forbidden_authority_flags, [
-    'provider_completed_cannot_close_stage',
-    'conformance_passed_cannot_close_stage',
-  ]);
-  assert.equal(report.default_blocked, true);
+  assert.deepEqual(report.forbidden_authority_flags, []);
+  assert.equal(report.transition_outcome, 'completed');
+  assert.equal(report.default_blocked, false);
 });
 
 test('StageRun execution authorization blocks launch without provider attempt lease and decision', async () => {
@@ -627,6 +635,26 @@ test('StageRun execution authorization binds closeout receipt to current manifes
 
   assertExecutionAuthorized(report);
   assert.deepEqual(report.launch_blockers, []);
+});
+
+test('StageRun execution authorization advances a consumable artifact without owner answer as quality debt', async () => {
+  const module = await import(pathToFileURL(path.join(repoRoot, modulePath)).href);
+  const stageRunId = 'stage-run-progress-first';
+  const generation = 2;
+  const report = module.evaluateStageRunExecutionAuthorization(stageRunExecutionAuthorizationInput({
+    phase: 'closeout',
+    stage_run_id: stageRunId,
+    generation,
+    ...activeAttemptRefs(stageRunId, generation),
+    consumable_artifact_refs: ['mas://artifacts/current-stage-draft'],
+  }));
+
+  assert.equal(report.status, 'authorized');
+  assert.equal(report.execution_authorized, true);
+  assert.deepEqual(report.closeout_binding_blockers, []);
+  assert.deepEqual(report.quality_debt_reasons, ['owner_answer_missing_for_quality_or_ready_claim']);
+  assert.equal(report.transition_authorized_with_quality_debt, true);
+  assert.equal(report.opl_runtime_blocker, null);
 });
 
 test('StageRun execution authorization binds typed blocker answer to StageRun manifest pointer source and idempotency', async () => {
@@ -783,5 +811,48 @@ test('App StageRun cockpit consumes typed blocker owner answer binding refs', as
     'mas://typed-blockers/dm002/publication-handoff',
   );
   assert.equal(cockpit.execution_authorization.closeout_binding.owner_answer_kind, 'typed_blocker');
+  assert.equal(cockpit.next_required_owner_action, null);
+});
+
+test('App StageRun cockpit advances validated consumable artifact progress without owner answer', async () => {
+  const module = await import(pathToFileURL(path.join(repoRoot, cockpitModulePath)).href);
+  const cockpit = module.buildAppStageRunCockpit({
+    domain: 'redcube-ai',
+    current_owner: 'redcube_ai',
+    stage_ref: 'author_image_pages',
+    desired_delta_description: 'advance_best_available_visual_artifact',
+    accepted_answer_shape: ['progress_delta_receipt_ref', 'typed_blocker_ref'],
+    consumable_artifact_refs: ['rca://artifacts/slide-001.png'],
+    progress_delta_receipt_ref: 'opl://progress-delta/rca/slide-001',
+    task_or_study_ref: 'rca://deliverables/deck-001',
+    lineage_ref: 'rca://stage-artifact-unit/deck-001/author-image-pages',
+    source_fingerprint: 'sha256:deck-001-author-image-pages',
+    delta_id: 'deck-001-author-image-pages:g0',
+    live_attempt_ref: 'opl://attempts/deck-001-author-image-pages',
+    hard_gate: {
+      attempt_lease_ref: 'opl://leases/deck-001-author-image-pages:g0',
+      attempt_lease_status: 'active',
+      execution_authorization_decision_ref:
+        'opl://execution-authorizations/deck-001-author-image-pages:g0',
+    },
+    audit_refs: {
+      app_operator_drilldown_ref: 'opl://drilldown/deck-001-author-image-pages',
+      workspace_scope_ref: 'rca://workspace/deck-001',
+      artifact_scope_ref: 'rca://stage-artifact-unit/deck-001/author-image-pages',
+    },
+  });
+
+  assert.equal(cockpit.closeout_admission.status, 'passed_with_advisory');
+  assert.equal(cockpit.closeout_admission.transition_outcome, 'completed_with_quality_debt');
+  assert.equal(cockpit.execution_authorization.status, 'authorized');
+  assert.equal(cockpit.execution_authorization.execution_authorized, true);
+  assert.deepEqual(cockpit.execution_authorization.closeout_binding_blockers, []);
+  assert.equal(cockpit.execution_authorization.closeout_binding.owner_answer_ref, null);
+  assert.equal(cockpit.execution_authorization.transition_authorized_with_quality_debt, true);
+  assert.equal(
+    cockpit.stage_run_current_owner_delta.missing_role_or_answer_summary
+      .progress_receipt_or_owner_answer_or_hard_stop_missing,
+    false,
+  );
   assert.equal(cockpit.next_required_owner_action, null);
 });

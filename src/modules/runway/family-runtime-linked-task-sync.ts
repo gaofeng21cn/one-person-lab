@@ -15,9 +15,9 @@ import {
 } from './family-runtime-queue-projection-boundary.ts';
 import type { StageAttemptRow } from './family-runtime-stage-attempt-ledger.ts';
 import {
-  STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON,
+  STAGE_NATIVE_PROGRESS_OR_OWNER_ANSWER_MISSING_REASON,
   isStageNativeOwnerActionFromDomainProfile,
-  stageAttemptRowHasStageNativeOwnerAnswerFromDomainProfile,
+  stageAttemptRowHasStageNativeProgressOrOwnerAnswerFromDomainProfile,
 } from './family-runtime-stage-native-owner-answer.ts';
 
 type LinkedTask = Pick<
@@ -136,16 +136,16 @@ function parseTaskPayload(task: LinkedTask) {
   }
 }
 
-function shouldBlockMissingStageNativeOwnerAnswer(task: LinkedTask, row: StageAttemptRow) {
+function shouldBlockMissingStageNativeProgressOrOwnerAnswer(task: LinkedTask, row: StageAttemptRow) {
   const payload = parseTaskPayload(task);
   return isStageNativeOwnerActionFromDomainProfile({ row: task, payload })
-    && !stageAttemptRowHasStageNativeOwnerAnswerFromDomainProfile({
+    && !stageAttemptRowHasStageNativeProgressOrOwnerAnswerFromDomainProfile({
       row,
       currentPayload: payload,
     });
 }
 
-function blockMissingStageNativeOwnerAnswer(
+function blockMissingStageNativeProgressOrOwnerAnswer(
   db: DatabaseSync,
   input: {
     task: LinkedTask;
@@ -159,20 +159,20 @@ function blockMissingStageNativeOwnerAnswer(
     WHERE task_id = ?
   `).run(
     FAMILY_RUNTIME_TASK_STATUS.blocked,
-    STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON,
-    STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON,
+    STAGE_NATIVE_PROGRESS_OR_OWNER_ANSWER_MISSING_REASON,
+    STAGE_NATIVE_PROGRESS_OR_OWNER_ANSWER_MISSING_REASON,
     input.observedAt,
     input.task.task_id,
   );
   insertEvent(db, {
     taskId: input.task.task_id,
     domainId: input.task.domain_id,
-    eventType: 'stage_attempt_terminal_missing_stage_native_owner_answer_task',
+    eventType: 'stage_attempt_terminal_missing_stage_native_progress_or_owner_answer_task',
     source: 'opl-family-runtime',
     payload: {
       stage_attempt_id: input.row.stage_attempt_id,
       workflow_id: input.row.workflow_id,
-      reason: STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON,
+      reason: STAGE_NATIVE_PROGRESS_OR_OWNER_ANSWER_MISSING_REASON,
       previous_status: input.task.status,
       cleared_dead_letter_reason: input.task.dead_letter_reason,
       authority_boundary: {
@@ -189,11 +189,11 @@ function blockMissingStageNativeOwnerAnswer(
   insertNotification(db, {
     taskId: input.task.task_id,
     severity: 'warning',
-    title: 'Family runtime default executor owner answer missing',
+    title: 'Family runtime default executor consumable progress or owner answer missing',
     body: input.row.stage_attempt_id,
     payload: {
       stage_attempt_id: input.row.stage_attempt_id,
-      reason: STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON,
+      reason: STAGE_NATIVE_PROGRESS_OR_OWNER_ANSWER_MISSING_REASON,
     },
   });
 }
@@ -215,8 +215,8 @@ export function markLinkedDefaultExecutorTaskCompleted(
   if (alreadySucceeded || !canSucceedFromTypedCloseout(task)) {
     return;
   }
-  if (shouldBlockMissingStageNativeOwnerAnswer(task, input.row)) {
-    blockMissingStageNativeOwnerAnswer(db, {
+  if (shouldBlockMissingStageNativeProgressOrOwnerAnswer(task, input.row)) {
+    blockMissingStageNativeProgressOrOwnerAnswer(db, {
       task,
       row: input.row,
       observedAt: input.observedAt,

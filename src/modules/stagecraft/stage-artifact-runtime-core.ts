@@ -24,6 +24,7 @@ export type StageArtifactAttemptLocator = StageArtifactLocator & {
 
 export type StageAttemptStatus =
   | 'success'
+  | 'completed_with_quality_debt'
   | 'blocked'
   | 'skipped'
   | 'deferred'
@@ -31,7 +32,12 @@ export type StageAttemptStatus =
   | 'orphan'
   | 'in_progress';
 
-export type StageAttemptTerminalStatus = 'success' | 'blocked' | 'skipped' | 'deferred';
+export type StageAttemptTerminalStatus =
+  | 'success'
+  | 'completed_with_quality_debt'
+  | 'blocked'
+  | 'skipped'
+  | 'deferred';
 
 export type StageArtifactFileHash = {
   path: string;
@@ -55,6 +61,7 @@ export type StageStatus = {
     present_outputs: string[];
     missing_outputs: string[];
     owner_receipt_refs: string[];
+    quality_debt_refs: string[];
     typed_blocker_refs: string[];
     decision_receipt_refs: string[];
     orphan_outputs: string[];
@@ -67,6 +74,7 @@ export type StageStatus = {
   required_outputs: string[];
   missing_outputs: string[];
   owner_receipt_refs: string[];
+  quality_debt_refs: string[];
   typed_blocker_refs: string[];
   decision_receipt_refs: string[];
   orphan_outputs: string[];

@@ -316,18 +316,29 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
   const effectiveOwnerAnswerRef = effectiveOwnerAnswerKind ? rawOwnerAnswerRef : null;
   const hasOwnerAnswer =
     Boolean(effectiveOwnerAnswerRef);
+  const consumableArtifactProgressRefs = stringRefs(
+    currentOwnerDelta.consumable_artifact_refs,
+    currentOwnerDelta.consumable_artifact_ref,
+    currentOwnerDelta.progress_delta_receipt_refs,
+    currentOwnerDelta.progress_delta_receipt_ref,
+  );
+  const hasConsumableArtifactProgress = consumableArtifactProgressRefs.length > 0;
   const acceptedReturnShapes = strings(currentOwnerDelta.accepted_answer_shape);
-  const requiredRoleArtifacts = ['owner_delta', 'role_artifacts', 'owner_receipt_or_typed_blocker'];
+  const terminalProgressRole = 'progress_receipt_or_owner_answer_or_hard_stop';
+  const requiredRoleArtifacts = ['owner_delta', 'role_artifacts', terminalProgressRole];
   const producedRoleArtifacts = [
-    ...(acceptedReturnShapes.some((entry) =>
-    entry.includes('owner_receipt')
+    ...(hasConsumableArtifactProgress || acceptedReturnShapes.some((entry) =>
+      entry.includes('progress_delta')
+      || entry.includes('consumable_artifact')
+      || entry.includes('deliverable_delta')
+      || entry.includes('owner_receipt')
       || entry.includes('quality_gate')
       || entry.includes('typed_blocker')
       || entry.includes('human_gate')
       || entry.includes('route_back'))
       ? ['owner_delta', 'role_artifacts']
       : ['owner_delta']),
-    ...(hasOwnerAnswer ? ['owner_receipt_or_typed_blocker'] : []),
+    ...(hasOwnerAnswer || hasConsumableArtifactProgress ? [terminalProgressRole] : []),
   ];
   const common = {
     stage_run_id: runId,
@@ -353,7 +364,7 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
       stringValue(currentOwnerDelta.source_fingerprint),
     ),
     selected_executor: 'codex_cli',
-    expected_receipt_or_blocker_shape: 'owner_receipt_or_typed_blocker',
+    expected_receipt_or_blocker_shape: 'progress_receipt_or_owner_answer_or_hard_stop',
     input_refs: stringRefs(
       stringValue(currentOwnerDelta.task_or_study_ref),
       stringValue(currentOwnerDelta.lineage_ref),
@@ -388,9 +399,11 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
     quality_gate_receipt_refs: effectiveOwnerAnswerKind === 'quality_gate_receipt'
       ? stringRefs(effectiveOwnerAnswerRef)
       : [],
+    consumable_artifact_refs: consumableArtifactProgressRefs,
     content_hashes: stringRefs(
       stringValue(ownerAnswerProjection.source_fingerprint),
       stringValue(ownerAnswerProjectionCloseoutBinding.source_fingerprint),
+      hasConsumableArtifactProgress ? stringValue(currentOwnerDelta.source_fingerprint) : null,
     ),
     lineage_refs: stringRefs(
       stringValue(currentOwnerDelta.lineage_ref),
@@ -427,6 +440,7 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
       ?? stringValue(record(currentOwnerDelta.audit_refs).artifact_scope_ref)
       ?? stringValue(currentOwnerDelta.lineage_ref),
     forbidden_write_required: false,
+    consumable_artifact_refs: consumableArtifactProgressRefs,
     owner_answer_ref: effectiveOwnerAnswerRef,
     owner_answer_kind: effectiveOwnerAnswerKind,
     owner_answer_stage_run_id: stringValue(record(currentOwnerDelta.hard_gate).owner_answer_stage_run_id)
@@ -503,7 +517,9 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
       current_owner_delta_owner: currentOwnerDeltaOwner,
       required_delta: stringValue(currentOwnerDelta.desired_delta_description)
         ?? 'no_opl_operator_actionable_delta_required',
-      accepted_return_shapes: acceptedReturnShapes.length > 0 ? acceptedReturnShapes : ['typed_blocker_ref'],
+      accepted_return_shapes: acceptedReturnShapes.length > 0
+        ? acceptedReturnShapes
+        : ['progress_delta_receipt_ref', 'typed_blocker_ref'],
       hard_gate: record(currentOwnerDelta.hard_gate),
       execution_authorization_receipt_ref: latestExecutionAuthorization?.receipt_ref ?? null,
       execution_authorization_decision_ref:
@@ -514,6 +530,8 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
         required_role_artifacts: requiredRoleArtifacts,
         produced_role_artifacts: producedRoleArtifacts,
         owner_receipt_or_typed_blocker_missing: !hasOwnerAnswer,
+        progress_receipt_or_owner_answer_or_hard_stop_missing:
+          !hasOwnerAnswer && !hasConsumableArtifactProgress,
       },
       owner_answer_binding_projection: ownerAnswerProjectionMatch
         ? {

@@ -408,7 +408,7 @@
           "const": "artifacts/stage_outputs"
         },
         "owner_answer_unit": {
-          "const": "owner_receipt_or_typed_blocker"
+          "const": "progress_receipt_or_owner_answer_or_hard_stop"
         }
       }
     },
@@ -528,7 +528,7 @@
           "const": "stage_artifact_unit"
         },
         "owner_answer_unit": {
-          "const": "owner_receipt_or_typed_blocker"
+          "const": "progress_receipt_or_owner_answer_or_hard_stop"
         }
       }
     },
@@ -1160,7 +1160,7 @@
           ],
           "properties": {
             "closeout_answer_unit": {
-              "const": "owner_receipt_or_typed_blocker"
+              "const": "progress_receipt_or_owner_answer_or_hard_stop"
             }
           }
         },

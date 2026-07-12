@@ -21,6 +21,7 @@ export function parseStageArtifactArgs(rest: string[]): FamilyRuntimeCommandInpu
   };
   const requiredOutputs: string[] = [];
   const ownerReceiptRefs: string[] = [];
+  const qualityDebtRefs: string[] = [];
   const typedBlockerRefs: string[] = [];
   const decisionReceiptRefs: string[] = [];
   parseCliOptions(rest, 1, (token, value) => {
@@ -53,6 +54,9 @@ export function parseStageArtifactArgs(rest: string[]): FamilyRuntimeCommandInpu
       return true;
     } else if (token === '--owner-receipt-ref') {
       ownerReceiptRefs.push(requireValue(token, value));
+      return true;
+    } else if (token === '--quality-debt-ref') {
+      qualityDebtRefs.push(requireValue(token, value));
       return true;
     } else if (token === '--typed-blocker-ref') {
       typedBlockerRefs.push(requireValue(token, value));
@@ -123,16 +127,18 @@ export function parseStageArtifactArgs(rest: string[]): FamilyRuntimeCommandInpu
     }
     input.required_outputs = requiredOutputs;
     input.owner_receipt_refs = ownerReceiptRefs;
+    input.quality_debt_refs = qualityDebtRefs;
     input.typed_blocker_refs = typedBlockerRefs;
     input.decision_receipt_refs = decisionReceiptRefs;
   }
   if (action !== 'commit') {
-    if (requiredOutputs.length || ownerReceiptRefs.length || typedBlockerRefs.length || decisionReceiptRefs.length) {
+    if (requiredOutputs.length || ownerReceiptRefs.length || qualityDebtRefs.length || typedBlockerRefs.length || decisionReceiptRefs.length) {
       throw new FrameworkContractError('cli_usage_error', 'Manifest refs are only accepted by stage-artifact commit.', {
         action,
         manifest_options: [
           '--required-output',
           '--owner-receipt-ref',
+          '--quality-debt-ref',
           '--typed-blocker-ref',
           '--decision-receipt-ref',
         ],

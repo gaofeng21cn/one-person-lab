@@ -207,6 +207,7 @@ test('family-runtime registry parser reuses shared option walking without changi
       terminal_status: 'success',
       required_outputs: ['artifact:paper'],
       owner_receipt_refs: ['receipt:owner'],
+      quality_debt_refs: [],
       typed_blocker_refs: [],
       decision_receipt_refs: [],
       dry_run: false,

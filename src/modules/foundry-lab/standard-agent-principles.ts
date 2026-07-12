@@ -13,6 +13,7 @@ const REQUIRED_STANDARD_AGENT_PRINCIPLES = [
   'domain_intake_mapping',
   'workspace_source_intake_shell',
   'owner_delta_progress',
+  'quality_budget_progress_first',
   'parallel_executor_autonomy',
   'module_organization',
 ] as const;
@@ -79,6 +80,12 @@ export const STANDARD_AGENT_PRINCIPLES_POLICY = {
       owner: 'one-person-lab',
       summary:
         'A stage moves by deliverable delta, owner receipt, typed blocker, human gate, route-back, or handoff packet; structural conformance cannot claim domain ready or production ready.',
+    },
+    {
+      principle_id: 'quality_budget_progress_first',
+      owner: 'one-person-lab',
+      summary:
+        'When a readable consumable artifact exists, retry, review, repair, and ordinary quality gates are bounded quality budgets; exhaustion advances with completed_with_quality_debt while quality and readiness claims remain closed.',
     },
     {
       principle_id: 'parallel_executor_autonomy',
@@ -150,7 +157,8 @@ export function buildStandardAgentPrinciplesAdoption(domainId: string, domainLab
         stage_id: 'domain_intake',
         prompt_ref: 'agent/prompts/domain_intake.md',
         is_standalone_skill: false,
-        owner_receipt_or_typed_blocker_required: true,
+        owner_receipt_or_typed_blocker_required: false,
+        consumable_artifact_progress_receipt_allowed: true,
       },
       workspace_source_intake_shell: {
         principle_id: 'workspace_source_intake_shell',
@@ -235,9 +243,12 @@ export function buildStandardAgentPrincipleAdoptionChecks(repoDir: string) {
     domainIntake.is_standalone_skill === false
       ? null
       : 'standard_agent_domain_intake_must_not_be_standalone_skill',
-    domainIntake.owner_receipt_or_typed_blocker_required === true
+    domainIntake.owner_receipt_or_typed_blocker_required === false
       ? null
-      : 'standard_agent_domain_intake_owner_receipt_or_blocker_required',
+      : 'standard_agent_domain_intake_owner_receipt_or_blocker_must_not_block_progress',
+    domainIntake.consumable_artifact_progress_receipt_allowed === true
+      ? null
+      : 'standard_agent_domain_intake_consumable_artifact_progress_receipt_required',
     optionalString(workspaceSourceIntakeShell.principle_id) === 'workspace_source_intake_shell'
       ? null
       : 'standard_agent_workspace_source_intake_shell_mapping_missing',
@@ -273,6 +284,8 @@ export function buildStandardAgentPrincipleAdoptionChecks(repoDir: string) {
       domain_intake_is_standalone_skill: domainIntake.is_standalone_skill ?? null,
       owner_receipt_or_typed_blocker_required:
         domainIntake.owner_receipt_or_typed_blocker_required ?? null,
+      consumable_artifact_progress_receipt_allowed:
+        domainIntake.consumable_artifact_progress_receipt_allowed ?? null,
       workspace_source_intake_shell_principle_id:
         optionalString(workspaceSourceIntakeShell.principle_id),
     },

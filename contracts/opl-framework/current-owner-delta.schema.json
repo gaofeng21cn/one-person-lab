@@ -96,7 +96,10 @@
         "required_refs",
         "authority_boundary",
         "cannot_authorize",
-        "stage_transition_requires_owner_receipt_or_typed_blocker"
+        "stage_transition_accepts_consumable_artifact_progress",
+        "quality_debt_transition_status",
+        "owner_receipt_required_for_quality_or_ready_claim",
+        "hard_stop_requires_typed_blocker_or_human_gate"
       ],
       "properties": {
         "surface_kind": {
@@ -150,7 +153,16 @@
             }
           }
         },
-        "stage_transition_requires_owner_receipt_or_typed_blocker": {
+        "stage_transition_accepts_consumable_artifact_progress": {
+          "const": true
+        },
+        "quality_debt_transition_status": {
+          "const": "completed_with_quality_debt"
+        },
+        "owner_receipt_required_for_quality_or_ready_claim": {
+          "const": true
+        },
+        "hard_stop_requires_typed_blocker_or_human_gate": {
           "const": true
         }
       }

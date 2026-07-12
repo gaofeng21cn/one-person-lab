@@ -13,6 +13,7 @@
     "domain_intake_mapping",
     "workspace_source_intake_shell",
     "owner_delta_progress",
+    "quality_budget_progress_first",
     "parallel_executor_autonomy",
     "module_organization"
   ],
@@ -51,6 +52,11 @@
       "principle_id": "owner_delta_progress",
       "owner": "one-person-lab",
       "summary": "A stage moves by deliverable delta, owner receipt, typed blocker, human gate, route-back, or handoff packet; structural conformance cannot claim domain ready or production ready."
+    },
+    {
+      "principle_id": "quality_budget_progress_first",
+      "owner": "one-person-lab",
+      "summary": "When a stage has a readable consumable artifact, retry, review, repair, and quality gates are bounded quality budgets: exhaustion records completed_with_quality_debt and advances while keeping quality, export, publication, submission, and production-ready claims closed."
     },
     {
       "principle_id": "parallel_executor_autonomy",
@@ -92,6 +98,7 @@
       "domain_intake_mapping",
       "workspace_source_intake_shell",
       "owner_delta_progress",
+      "quality_budget_progress_first",
       "parallel_executor_autonomy",
       "module_organization"
     ],

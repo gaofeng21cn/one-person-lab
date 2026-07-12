@@ -1,4 +1,5 @@
 import { FrameworkContractError, isRecord } from '../../../kernel/contract-validation.ts';
+import fs from 'node:fs';
 import { parseJsonText } from '../../../kernel/json-file.ts';
 import { runRuntimeOperatorActionExecute } from '../../runway/index.ts';
 import {
@@ -52,6 +53,7 @@ import {
   dryRunModuleAction,
 } from './action-execute-previews.ts';
 import { executeConnectionAppAction } from './action-execute-connections.ts';
+import { writeCodexUserInstructions } from '../codex-personalization.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -132,6 +134,17 @@ export function parseAppActionExecuteArgs(args: string[]): AppActionExecuteOptio
       continue;
     }
 
+    if (token === '--payload-stdin') {
+      if (payloadSet) {
+        throw new FrameworkContractError('cli_usage_error', 'Use only one payload source.', {
+          option: '--payload-stdin',
+        });
+      }
+      payload = parseJsonObject(fs.readFileSync(0, 'utf8'), '--payload-stdin');
+      payloadSet = true;
+      continue;
+    }
+
     if (token === '--dry-run') {
       dryRun = true;
       continue;
@@ -139,7 +152,7 @@ export function parseAppActionExecuteArgs(args: string[]): AppActionExecuteOptio
 
     throw new FrameworkContractError('cli_usage_error', `Unknown app action execute option: ${token}.`, {
       option: token,
-      usage: 'opl app action execute --action <action_id> [--payload <json>] [--dry-run]',
+      usage: 'opl app action execute --action <action_id> [--payload <json>|--payload-stdin] [--dry-run]',
     });
   }
 
@@ -319,6 +332,26 @@ async function executeDirectAppAction(
             },
           }
         : writeOplWorkspaceRootSurface(workspaceRoot),
+    };
+  }
+
+  if (options.actionId === 'codex_user_instructions_set') {
+    const content = options.payload.content;
+    const expectedSha256 = options.payload.expected_sha256;
+    if (typeof content !== 'string' || (expectedSha256 !== null && typeof expectedSha256 !== 'string')) {
+      throw new FrameworkContractError(
+        'cli_usage_error',
+        'codex_user_instructions_set requires string content and string-or-null expected_sha256.',
+        { action_id: options.actionId, required_payload_fields: ['content', 'expected_sha256'] },
+      );
+    }
+    return {
+      delegatedSurface: '$CODEX_HOME/AGENTS.md atomic write',
+      result: writeCodexUserInstructions({
+        content,
+        expectedSha256,
+        dryRun: options.dryRun,
+      }),
     };
   }
 

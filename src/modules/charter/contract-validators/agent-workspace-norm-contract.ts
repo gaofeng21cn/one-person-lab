@@ -235,7 +235,7 @@ function validateAgentWorkspaceNormSemantics(
   assertExactString(topology.profile_id, 'opl.workspace_topology_profile.v1', 'topology_contract.profile_id', filePath);
   assertExactStringArray(
     topology.topology_model,
-    ['workspace_group', 'project_unit', 'stage_artifact_unit', 'owner_receipt_or_typed_blocker'],
+    ['workspace_group', 'project_unit', 'stage_artifact_unit', 'progress_receipt_or_owner_answer_or_hard_stop'],
     'topology_contract.topology_model',
     filePath,
   );
@@ -244,7 +244,12 @@ function validateAgentWorkspaceNormSemantics(
   assertExactString(topology.canonical_project_unit_semantics.project_collection_role, 'project_units', 'topology_contract.canonical_project_unit_semantics.project_collection_role', filePath);
   assertExactString(topology.canonical_project_unit_semantics.project_unit_kind, 'project_unit', 'topology_contract.canonical_project_unit_semantics.project_unit_kind', filePath);
   assertExactString(topology.canonical_project_unit_semantics.stage_artifact_unit, 'stage_artifact_unit', 'topology_contract.canonical_project_unit_semantics.stage_artifact_unit', filePath);
-  assertExactString(topology.canonical_project_unit_semantics.owner_answer_unit, 'owner_receipt_or_typed_blocker', 'topology_contract.canonical_project_unit_semantics.owner_answer_unit', filePath);
+  assertExactString(
+    topology.canonical_project_unit_semantics.owner_answer_unit,
+    'progress_receipt_or_owner_answer_or_hard_stop',
+    'topology_contract.canonical_project_unit_semantics.owner_answer_unit',
+    filePath,
+  );
   assertExactString(topology.project_stage_outputs_root, 'artifacts/stage_outputs', 'topology_contract.project_stage_outputs_root', filePath);
   assertExactString(topology.stage_output_root_protocol.root, 'artifacts/stage_outputs', 'topology_contract.stage_output_root_protocol.root', filePath);
   assertExactString(topology.stage_output_root_protocol.stage_folder_unit, 'stage_artifact_unit', 'topology_contract.stage_output_root_protocol.stage_folder_unit', filePath);

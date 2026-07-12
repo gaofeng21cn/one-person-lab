@@ -10,7 +10,7 @@ const REQUIRED_STAGE_OPERATING_BOUNDARY_CONTROLS = [
   'input_refs',
   'current_owner',
   'accepted_answer_shape',
-  'owner_receipt_or_typed_blocker',
+  'progress_receipt_or_owner_answer_or_hard_stop',
   'handoff_packet',
   'current_pointer',
   'authority_boundary',
@@ -27,6 +27,9 @@ const REQUIRED_STAGE_OPERATING_DEMOTED_DEFAULT_SURFACES = [
 
 const REQUIRED_STAGE_OPERATING_NEXT_DELTA_SHAPES = [
   'deliverable_delta_ref',
+  'consumable_artifact_ref',
+  'progress_delta_receipt_ref',
+  'quality_debt_ref',
   'owner_receipt_ref',
   'typed_blocker_ref',
   'human_gate_ref',
@@ -37,12 +40,13 @@ const REQUIRED_STAGE_OPERATING_NEXT_DELTA_SHAPES = [
 ];
 
 const REQUIRED_STAGE_OPERATING_HARD_STOP_GATES = [
+  'zero_consumable_artifact',
+  'artifact_corrupt_or_unreadable',
   'safety_or_compliance',
   'permission_or_credential_boundary',
   'human_decision_required',
   'irreversible_write_or_delete',
   'authority_boundary_violation',
-  'missing_owner_answer_shape',
   'stale_or_mismatched_stage_identity',
 ];
 
@@ -64,7 +68,7 @@ export const STAGE_OPERATING_PRINCIPLES_POLICY = {
   purpose: 'Keep OPL stages easy to manage while preserving fast owner-delta progression.',
   principle_summary: {
     management_logic:
-      'Manage only the stage boundary: goal, inputs, owner, accepted answer shape, receipt or typed blocker, handoff, pointer, and authority boundary.',
+      'Manage only the stage boundary: goal, inputs, owner, accepted answer shape, progress receipt or legal hard stop, handoff, pointer, and authority boundary.',
     speed_logic:
       'Let the selected executor do open-ended work inside the stage; route quality gaps into scoped next deltas unless a hard authority, safety, permission, human, or irreversible-change gate applies.',
   },
@@ -82,6 +86,11 @@ export const STAGE_OPERATING_PRINCIPLES_POLICY = {
     tool_catalog_can_prescribe_workflow_sequence: false,
     preflight_or_quality_review_can_loop_without_deliverable_delta: false,
     quality_gaps_block_ordinary_progress_by_default: false,
+    consumable_artifact_advances_stage: true,
+    retry_review_and_repair_limits_are_quality_budgets: true,
+    quality_budget_exhaustion_status: 'completed_with_quality_debt',
+    quality_debt_blocks_stage_transition: false,
+    quality_debt_blocks_quality_export_or_ready_claims: true,
     safe_action_before_diagnostic_reconcile: true,
     next_delta_must_be_deliverable_receipt_blocker_or_handoff: true,
   },
@@ -164,6 +173,21 @@ export function buildStageOperatingPrincipleChecks(repoDir: string) {
     speedPolicy.quality_gaps_block_ordinary_progress_by_default === false
       ? null
       : 'stage_operating_principles_quality_gaps_must_not_block_ordinary_progress_by_default',
+    speedPolicy.consumable_artifact_advances_stage === true
+      ? null
+      : 'stage_operating_principles_consumable_artifact_must_advance_stage',
+    speedPolicy.retry_review_and_repair_limits_are_quality_budgets === true
+      ? null
+      : 'stage_operating_principles_retry_limits_must_be_quality_budgets',
+    optionalString(speedPolicy.quality_budget_exhaustion_status) === 'completed_with_quality_debt'
+      ? null
+      : 'stage_operating_principles_quality_budget_exhaustion_status_invalid',
+    speedPolicy.quality_debt_blocks_stage_transition === false
+      ? null
+      : 'stage_operating_principles_quality_debt_must_not_block_stage_transition',
+    speedPolicy.quality_debt_blocks_quality_export_or_ready_claims === true
+      ? null
+      : 'stage_operating_principles_quality_debt_must_block_ready_claims',
     speedPolicy.safe_action_before_diagnostic_reconcile === true
       ? null
       : 'stage_operating_principles_safe_action_before_diagnostic_reconcile_missing',
@@ -226,6 +250,16 @@ export function buildStageOperatingPrincipleChecks(repoDir: string) {
         speedPolicy.preflight_or_quality_review_can_loop_without_deliverable_delta ?? null,
       quality_gaps_block_ordinary_progress_by_default:
         speedPolicy.quality_gaps_block_ordinary_progress_by_default ?? null,
+      consumable_artifact_advances_stage:
+        speedPolicy.consumable_artifact_advances_stage ?? null,
+      retry_review_and_repair_limits_are_quality_budgets:
+        speedPolicy.retry_review_and_repair_limits_are_quality_budgets ?? null,
+      quality_budget_exhaustion_status:
+        optionalString(speedPolicy.quality_budget_exhaustion_status),
+      quality_debt_blocks_stage_transition:
+        speedPolicy.quality_debt_blocks_stage_transition ?? null,
+      quality_debt_blocks_quality_export_or_ready_claims:
+        speedPolicy.quality_debt_blocks_quality_export_or_ready_claims ?? null,
       safe_action_before_diagnostic_reconcile:
         speedPolicy.safe_action_before_diagnostic_reconcile ?? null,
       next_delta_must_be_deliverable_receipt_blocker_or_handoff:

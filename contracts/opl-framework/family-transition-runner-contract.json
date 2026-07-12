@@ -45,6 +45,7 @@
     "outcome_path",
     "terminal_input_kind",
     "requires_owner_answer",
+    "completion_status",
     "authority_boundary"
   ],
   "outcome_path_guard": {
@@ -69,6 +70,7 @@
       "terminal_input_kind",
       "requires_owner_answer",
       "success_claimed",
+      "completion_status",
       "domain_ready_claimed",
       "production_ready_claimed"
     ],
@@ -121,6 +123,24 @@
     "transition_guard_forbidden",
     "ambiguous_transition"
   ],
+  "progress_first_guard_policy": {
+    "guard_kinds": [
+      "hard",
+      "quality_budget"
+    ],
+    "default_guard_kind": "hard",
+    "quality_budget_guard_missing_with_consumable_artifact": "transition_applied_completed_with_quality_debt",
+    "quality_budget_guard_missing_without_consumable_artifact": "blocked",
+    "hard_guard_missing": "blocked",
+    "required_context_for_quality_debt_transition": [
+      "consumable_artifact_refs"
+    ],
+    "recommended_context": [
+      "quality_debt_refs"
+    ],
+    "quality_debt_blocks_stage_transition": false,
+    "quality_debt_blocks_domain_quality_export_or_ready_claims": true
+  },
   "matrix_runner": {
     "surface_kind": "family_transition_matrix_result",
     "purpose": "table-driven evaluation of domain transition specs, including adjacent-state and guard-boundary cases",

@@ -7,6 +7,8 @@ export type FamilyTransitionGuardDefinition = {
   description?: string;
   owner?: string;
   source_ref?: string;
+  gate_kind?: 'hard' | 'quality_budget';
+  quality_debt_code?: string;
   authority_boundary?: JsonRecord;
 };
 
@@ -132,6 +134,7 @@ export type FamilyTransitionProjection = {
   terminal_input_kind: FamilyTransitionOutcomePath;
   requires_owner_answer: boolean;
   success_claimed: boolean;
+  completion_status: 'completed' | 'completed_with_quality_debt' | 'blocked' | 'dead_letter';
   domain_ready_claimed: false;
   production_ready_claimed: false;
   authority_boundary: JsonRecord;
@@ -155,6 +158,7 @@ export type FamilyTransitionResult = {
   outcome_path: FamilyTransitionOutcomePath;
   terminal_input_kind: FamilyTransitionOutcomePath;
   requires_owner_answer: boolean;
+  completion_status: FamilyTransitionProjection['completion_status'];
   authority_boundary: JsonRecord;
 };
 
@@ -224,6 +228,8 @@ function contextRefs(context: JsonRecord | undefined) {
     optionalString(context.task_id) ? `family_runtime_task:${optionalString(context.task_id)}` : null,
     optionalString(context.source_ref),
     optionalString(context.receipt_ref),
+    ...stringList(context.consumable_artifact_refs),
+    ...stringList(context.quality_debt_refs),
   ].filter((entry): entry is string => Boolean(entry));
 }
 
@@ -313,6 +319,13 @@ function buildProjection(input: {
     terminal_input_kind: input.outcomePath,
     requires_owner_answer: input.outcomePath !== 'success_refs_path',
     success_claimed: input.outcomePath === 'success_refs_path',
+    completion_status: input.status === 'transition_applied'
+      ? input.extra?.completion_status === 'completed_with_quality_debt'
+        ? 'completed_with_quality_debt'
+        : 'completed'
+      : input.status === 'dead_letter_intended'
+        ? 'dead_letter'
+        : 'blocked',
     domain_ready_claimed: false,
     production_ready_claimed: false,
     authority_boundary: input.authorityBoundary,
@@ -342,6 +355,13 @@ function buildResult(input: {
     typedBlocker: input.typedBlocker,
     deadLetterIntent: input.deadLetterIntent,
   });
+  const completionStatus = input.status === 'transition_applied'
+    ? input.projectionExtra?.completion_status === 'completed_with_quality_debt'
+      ? 'completed_with_quality_debt'
+      : 'completed'
+    : input.status === 'dead_letter_intended'
+      ? 'dead_letter'
+      : 'blocked';
   return {
     surface_kind: 'family_transition_result',
     status: input.status,
@@ -373,6 +393,7 @@ function buildResult(input: {
     outcome_path: outcomePath,
     terminal_input_kind: outcomePath,
     requires_owner_answer: outcomePath !== 'success_refs_path',
+    completion_status: completionStatus,
     authority_boundary: input.authorityBoundary,
   };
 }
@@ -406,6 +427,69 @@ function presentForbiddenGuards(rule: FamilyTransitionRule, activeGuards: Set<st
 function transitionMatches(rule: FamilyTransitionRule, activeGuards: Set<string>) {
   return missingRequiredGuards(rule, activeGuards).length === 0
     && presentForbiddenGuards(rule, activeGuards).length === 0;
+}
+
+function qualityBudgetGuardIds(spec: FamilyTransitionSpec, guardIds: string[]) {
+  return guardIds.filter((guardId) => spec.guards[guardId]?.gate_kind === 'quality_budget');
+}
+
+function consumableArtifactRefs(context: JsonRecord | undefined) {
+  return stringList(context?.consumable_artifact_refs);
+}
+
+function qualityDebtTransitionResult(
+  input: FamilyTransitionInput,
+  transition: FamilyTransitionRule,
+  guardIds: string[],
+  activeGuards: Set<string>,
+  missingQualityGuardIds: string[],
+) {
+  const boundary = authorityBoundary(input.spec, transition);
+  const qualityDebtRefs = stringList(input.context?.quality_debt_refs);
+  const artifactRefs = consumableArtifactRefs(input.context);
+  const receipt = buildReceipt({
+    spec: input.spec,
+    domainId: input.domain_id,
+    currentState: input.current_state,
+    event: input.event,
+    transitionId: transition.transition_id,
+    receiptStatus: 'transition_applied',
+    guardIds,
+    satisfiedGuardIds: [...activeGuards],
+    missingGuardIds: missingQualityGuardIds,
+    unknownGuardIds: [],
+    forbiddenGuardIds: [],
+    receiptRefs: [
+      ...stringList(transition.receipt?.receipt_refs),
+      ...artifactRefs,
+      ...qualityDebtRefs,
+    ],
+    context: input.context,
+  });
+  return buildResult({
+    spec: input.spec,
+    domainId: input.domain_id,
+    currentState: input.current_state,
+    event: input.event,
+    nextState: transition.next_state,
+    status: 'transition_applied',
+    transition,
+    nextWorkUnit: transition.next_work_unit ?? null,
+    ownerRoute: transition.owner_route,
+    humanGate: null,
+    typedBlocker: null,
+    deadLetterIntent: null,
+    receipt,
+    authorityBoundary: boundary,
+    projectionExtra: {
+      completion_status: 'completed_with_quality_debt',
+      quality_debt_blocks_stage_transition: false,
+      quality_debt_blocks_quality_or_ready_claims: true,
+      missing_quality_budget_guard_ids: missingQualityGuardIds,
+      quality_debt_refs: qualityDebtRefs,
+      consumable_artifact_refs: artifactRefs,
+    },
+  });
 }
 
 function unknownGuardResult(input: FamilyTransitionInput, unknownGuardIds: string[], guardIds: string[]) {
@@ -663,6 +747,23 @@ export function runFamilyTransition(input: FamilyTransitionInput): FamilyTransit
   const activeGuards = new Set(activeGuardIds(guards));
   const matches = candidates.filter((rule) => transitionMatches(rule, activeGuards));
   if (matches.length === 0) {
+    const debtCandidates = candidates.filter((rule) => {
+      const missing = missingRequiredGuards(rule, activeGuards);
+      return presentForbiddenGuards(rule, activeGuards).length === 0
+        && missing.length > 0
+        && qualityBudgetGuardIds(input.spec, missing).length === missing.length;
+    });
+    const artifactRefs = consumableArtifactRefs(input.context);
+    if (debtCandidates.length === 1 && artifactRefs.length > 0) {
+      const transition = debtCandidates[0];
+      return qualityDebtTransitionResult(
+        input,
+        transition,
+        guardIds,
+        activeGuards,
+        missingRequiredGuards(transition, activeGuards),
+      );
+    }
     return unsatisfiedGuardResult(input, candidates, guardIds, activeGuards);
   }
   if (matches.length > 1) {

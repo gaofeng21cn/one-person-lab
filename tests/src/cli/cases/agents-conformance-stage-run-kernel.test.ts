@@ -173,6 +173,38 @@ test('agents conformance blocks StageRun profile that turns strategy refs or raw
   );
 });
 
+test('agents conformance requires quality budgets to advance while owner receipts still guard ready claims', () => {
+  const repoDir = buildReadyAgentRepo();
+  const profilePath = path.join(repoDir, 'contracts', 'stage_run_kernel_profile.json');
+  const profile = parseJsonText(fs.readFileSync(profilePath, 'utf8')) as Record<string, any>;
+  profile.transition_authority.quality_budget_exhaustion_blocks_transition = true;
+  profile.transition_authority.owner_receipt_required_for_quality_or_ready_claim = false;
+  writeJson(profilePath, profile);
+
+  const report = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `sample=${repoDir}`,
+  ]).standard_domain_agent_conformance;
+  const checks = report.reports[0].stage_run_kernel_profile_checks;
+
+  assert.equal(report.status, 'blocked');
+  assert.equal(checks.status, 'blocked');
+  assert.equal(
+    checks.blockers.includes(
+      'stage_run_kernel_profile_quality_budget_exhaustion_must_not_block_transition',
+    ),
+    true,
+  );
+  assert.equal(
+    checks.blockers.includes(
+      'stage_run_kernel_profile_owner_receipt_required_for_quality_or_ready_claim',
+    ),
+    true,
+  );
+});
+
 test('agents conformance blocks controlled StageRun canary evidence missing strategy layers', () => {
   const repoDir = buildReadyAgentRepo();
   const evidencePath = path.join(repoDir, 'contracts', 'stage_run_canary_evidence.json');

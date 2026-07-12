@@ -208,7 +208,10 @@ function progressDeltaReceiptPolicy() {
       'owner_receipt_signature',
       'typed_blocker_creation',
     ],
-    stage_transition_requires_owner_receipt_or_typed_blocker: true,
+    stage_transition_accepts_consumable_artifact_progress: true,
+    quality_debt_transition_status: 'completed_with_quality_debt',
+    owner_receipt_required_for_quality_or_ready_claim: true,
+    hard_stop_requires_typed_blocker_or_human_gate: true,
   };
 }
 
@@ -231,7 +234,12 @@ function artifactTierPolicy() {
         cannot_claim_publication_or_package_ready: true,
       },
       T1_stage_transition: {
-        requires: ['stage_manifest', 'role_artifacts', 'OwnerReceipt_or_TypedBlocker', 'current_pointer_or_StageRun_binding'],
+        requires: [
+          'stage_manifest',
+          'consumable_role_artifact',
+          'ProgressDeltaReceipt_or_OwnerReceipt_or_TypedHardBlocker',
+          'current_pointer_or_StageRun_binding',
+        ],
         cannot_claim_domain_or_production_ready: true,
       },
       T2_delivery_artifact: {
