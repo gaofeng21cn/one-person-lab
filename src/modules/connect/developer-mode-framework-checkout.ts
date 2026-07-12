@@ -159,15 +159,12 @@ export function buildFrameworkCheckoutProjection(
   context: Pick<DeveloperModeContext, 'enabled' | 'status' | 'mode'>,
 ): OplDeveloperModeFrameworkCheckoutProjection {
   const shouldUseLocalCheckout =
-    context.mode === 'developer_apply_safe'
-    && (
-      context.enabled === 'on'
-      || (
-        context.enabled === 'auto'
-        && context.status !== 'disabled'
-        && context.status !== 'inactive'
-        && context.status !== 'blocked'
-      )
+    context.enabled === 'on'
+    || (
+      context.enabled === 'auto'
+      && context.status !== 'disabled'
+      && context.status !== 'inactive'
+      && context.status !== 'blocked'
     );
   const selectedSourceKind = shouldUseLocalCheckout ? 'local_checkout' : 'managed_runtime';
 

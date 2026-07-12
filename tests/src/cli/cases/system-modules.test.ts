@@ -432,6 +432,16 @@ test('modules projection prefers local developer checkouts when Developer Mode i
     assert.equal(output.modules.summary.managed_default_modules_count, 0);
 
     runCliInCwd(
+      ['system', 'developer-supervisor', '--mode', 'external_observe'],
+      onePersonLabRoot,
+      env,
+    );
+    const observeOnlyOutput = runCliInCwd(['connect', 'modules'], onePersonLabRoot, env) as any;
+    const observeOnlyMas = observeOnlyOutput.modules.items.find((entry: any) => entry.module_id === 'medautoscience');
+    assert.equal(observeOnlyMas?.install_origin, 'sibling_workspace');
+    assert.equal(observeOnlyMas?.source_policy.configured_by, 'developer_mode');
+
+    runCliInCwd(
       ['system', 'developer-supervisor', '--module', 'medautoscience', '--module-source', 'managed'],
       onePersonLabRoot,
       env,

@@ -605,7 +605,7 @@ export function buildOplModules(input: { profile?: ModuleInspectionProfile } = {
         'MDS remains available only as an explicit MAS-declared diagnostic, intake, or parity-oracle companion; it is not installed during the default OPL first-run path.',
         'OPL Meta Agent is a managed default ecosystem module so the App can install and maintain the Foundry Agent used to create new OPL-compatible agents.',
         'Managed module installs and updates use the OPL GHCR capability packages channel by default.',
-        'When Developer Mode is explicitly on in developer_apply_safe mode, module install/update source switches to Git checkout and local sibling checkouts are preferred over OPL-managed module roots so the App uses the same repositories the developer is editing.',
+        'When the source selector activates Developer Mode, module install/update source switches to Git checkout and local sibling checkouts are preferred over OPL-managed module roots. Safe maintenance permission is configured independently.',
         'OPL_MODULE_SOURCE_MODE and module-specific path/repo environment overrides remain low-level developer and CI controls, not the ordinary user update path.',
         'External sibling checkouts are still recognized on developer machines without forcing a reinstall.',
       ],

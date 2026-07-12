@@ -281,7 +281,7 @@ export function permissionAllowsDeveloperModeDirectWrite(permission: string | nu
 export function developerModePrefersLocalCheckouts(
   config: OplDeveloperSupervisorConfigFile = readOplDeveloperSupervisorConfig(),
 ) {
-  if (config.mode !== 'developer_apply_safe' || config.enabled === 'off') {
+  if (config.enabled === 'off') {
     return false;
   }
   if (config.enabled === 'on') {

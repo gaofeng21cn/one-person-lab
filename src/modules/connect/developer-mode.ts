@@ -383,6 +383,10 @@ function resolveDeveloperCapabilities(input: {
   const explicitlyTrusted = developerApplySafe && input.configSource === 'user_config';
   const disabled = input.status === 'disabled';
   const blocked = input.status === 'blocked' || input.status === 'inactive';
+  const developerSourceSelected =
+    input.enabled === 'on'
+    || (input.enabled === 'auto' && !disabled && !blocked);
+  const developerWorkspaceSelected = developerSourceSelected && input.configSource === 'user_config';
 
   const githubAuthority = (() => {
     if (disabled) {
@@ -443,7 +447,7 @@ function resolveDeveloperCapabilities(input: {
     );
   })();
 
-  const sourceChannel = developerApplySafe
+  const sourceChannel = developerSourceSelected
     ? developerCapability(
       'ready',
       'local_checkout',
@@ -454,15 +458,15 @@ function resolveDeveloperCapabilities(input: {
       disabled ? 'disabled' : 'limited',
       'managed_package_channel',
       disabled ? 'developer_mode_disabled' : 'agent_latest_package_channel',
-      'Module source remains on the managed package channel unless Developer Mode explicitly selects developer_apply_safe.',
+      'Module source remains on the managed package channel unless the source selector activates Developer Mode.',
     );
 
-  const workspaceTrust = explicitlyTrusted
+  const workspaceTrust = developerWorkspaceSelected
     ? developerCapability(
       'ready',
       'trusted_developer_workspace',
       'user_config_developer_supervisor',
-      'Developer workspace can be used for supervised Agent Lab and module checkout discovery.',
+      'Developer workspace can be used for module checkout discovery; maintenance permission remains separately gated.',
     )
     : developerCapability(
       disabled ? 'disabled' : 'limited',
