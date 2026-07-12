@@ -228,7 +228,7 @@ exit 1
       'opl install --headless --skip-packages --json',
       'opl system configure-codex --api-key-stdin --json',
       'opl system startup-maintenance --json',
-      'opl system reconcile-modules --json',
+      'opl packages update --json',
     ]);
     assert.equal(
       output.system_initialize.gui_first_run_automation.vm_artifacts.includes('opl connect modules --json'),

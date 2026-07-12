@@ -531,12 +531,6 @@ export function buildConnectCommandSpecs(
       help_surface: 'default',
     }),
     'connect packages manifest': connectPackagesManifestSpec,
-    'connect reconcile-modules': cloneCommandSpec(systemCommandSpecs['system reconcile-modules'], {
-      usage: 'opl connect reconcile-modules',
-      summary: 'Install missing modules and update clean domain modules through the canonical Connect command surface.',
-      examples: ['opl connect reconcile-modules --json'],
-      group: 'connect',
-    }),
   };
 
   return connectCommandSpecs;

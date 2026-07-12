@@ -317,7 +317,8 @@ test('machine-readable framework contracts do not pin human docs paths outside t
     if (payload.profile_surface) {
       payload.profile_surface = '<typed-package-profile-payload>';
     }
-    if (payload.surface_kind === 'opl_agent_package_payload_manifest' && Array.isArray(payload.files)) {
+    if (['opl_agent_package_payload_manifest', 'opl_package_payload_manifest.v1'].includes(payload.surface_kind)
+      && Array.isArray(payload.files)) {
       payload.files = payload.files.map((entry: Record<string, unknown>) => ({
         ...entry,
         path: '<typed-package-payload-path>',

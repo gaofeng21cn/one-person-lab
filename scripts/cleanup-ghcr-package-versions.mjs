@@ -148,7 +148,7 @@ function packageTargets(manifest) {
       protected_tags: cleanupPolicy.protected_tags ?? [],
     })),
     ...Object.values(manifest.packages.package_artifacts).map((entry) => ({
-      package_name: `one-person-lab-modules/${entry.repo_name}`,
+      package_name: `one-person-lab-modules/${entry.carrier_locator.repo_name}`,
       package_kind: 'legacy_module_namespace_tombstone',
       lifecycle_status: 'retired_migration_detection_only',
       retain_versions: 0,

@@ -119,7 +119,7 @@ test('packages fetches registry URL, validates manifest, and writes lock receipt
             source_kind: string;
             version_or_source_digest: string;
             resolved_digest: string;
-            rolling_tag: string;
+            moving_tag: string;
             install_truth: string;
             permission_scope_sha256: string;
             action_receipt_id: string;
@@ -197,7 +197,7 @@ test('packages fetches registry URL, validates manifest, and writes lock receipt
         install.opl_agent_package_install.package_lock.resolved_digest,
         'sha256:2222222222222222222222222222222222222222222222222222222222222222',
       );
-      assert.equal(install.opl_agent_package_install.package_lock.rolling_tag, 'latest');
+      assert.equal(install.opl_agent_package_install.package_lock.moving_tag, 'latest-stable');
       assert.equal(install.opl_agent_package_install.package_lock.install_truth, 'resolved_digest_lock');
       assert.match(install.opl_agent_package_install.package_lock.permission_scope_sha256, /^[a-f0-9]{64}$/);
       assert.equal(

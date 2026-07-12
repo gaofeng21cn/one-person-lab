@@ -42,7 +42,8 @@ test('public and internal command specs no longer carry removed UI adapter comma
   assert.equal(typeof publicSpecs['connect install'].handler, 'function');
   assert.equal(typeof publicSpecs['connect sync-skills'].handler, 'function');
   assert.equal(typeof publicSpecs['connect packages manifest'].handler, 'function');
-  assert.equal(typeof publicSpecs['connect reconcile-modules'].handler, 'function');
+  assert.equal(publicSpecs['connect reconcile-modules'], undefined);
+  assert.equal(publicSpecs['system reconcile-modules'], undefined);
   assert.equal(typeof publicSpecs['connect scientific search'].handler, 'function');
   assert.equal(typeof publicSpecs['update status'].handler, 'function');
   assert.equal(typeof publicSpecs['update plan'].handler, 'function');
@@ -220,7 +221,7 @@ test('default help advertises Connect canonical installation surfaces while reti
   assert.equal(commands.includes('connect sync-skills'), true);
   assert.equal(commands.includes('connect scientific search'), true);
   assert.equal(commands.includes('connect packages manifest'), true);
-  assert.equal(commands.includes('connect reconcile-modules'), true);
+  assert.equal(commands.includes('connect reconcile-modules'), false);
   assert.equal(commands.includes('agents foundry status'), true);
   assert.equal(commands.includes('agents foundry interfaces'), true);
   assert.equal(commands.includes('agents foundry peers'), true);
@@ -296,13 +297,26 @@ test('default help advertises Connect canonical installation surfaces while reti
     'connect install',
     'connect sync-skills',
     'connect packages manifest',
-    'connect reconcile-modules',
   ]) {
     assert.equal(connectSubcommands.includes(command), true);
   }
   assert.equal(connectSubcommands.includes('modules'), false);
   assert.equal(connectSubcommands.includes('skill sync'), false);
   assert.equal(connectSubcommands.includes('packages manifest'), false);
+  assert.equal(connectSubcommands.includes('connect reconcile-modules'), false);
+
+  for (const retired of [
+    { args: ['system', 'reconcile-modules'], errorCode: 'cli_usage_error', command: undefined },
+    { args: ['connect', 'reconcile-modules'], errorCode: 'unknown_command', command: 'connect' },
+    { args: ['module', 'sync'], errorCode: 'unknown_command', command: 'module' },
+    { args: ['module', 'reconcile'], errorCode: 'unknown_command', command: 'module' },
+  ]) {
+    const failure = runCliFailure(retired.args);
+    assert.equal(failure.status, 2);
+    assert.equal(failure.payload.error.code, retired.errorCode);
+    assert.equal(failure.payload.error.details.command, retired.command);
+    assert.equal(failure.payload.error.details.replacement, undefined);
+  }
 });
 
 test('help keeps JSON output available through explicit flag for machine readers', () => {

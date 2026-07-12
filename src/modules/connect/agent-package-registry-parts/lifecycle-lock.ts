@@ -225,7 +225,7 @@ export function buildLock(input: {
           oci_ref: distributionPayload.oci_ref,
           resolved_digest: distributionPayload.payload_digest_ref,
           immutable_tag: distributionPayload.immutable_tag,
-          rolling_tag: distributionPayload.rolling_tag,
+          moving_tag: distributionPayload.moving_tag,
           install_truth: distributionPayload.install_truth,
         }
       : {}),

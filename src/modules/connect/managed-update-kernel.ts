@@ -123,7 +123,7 @@ function buildCapabilityPackagesComponent(modules: Record<string, unknown>[], ch
         ? 'update'
         : 'none';
   const postApplyHooks = [
-    'reconcile_modules',
+    'reconcile_packages',
     'sync_skills',
     'sync_plugin_registry',
     'sync_plugin_packaged_skills',

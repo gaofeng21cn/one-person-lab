@@ -901,7 +901,7 @@
         "opl connect doctor --json",
         "opl system semantic-hygiene --json",
         "opl connect packages manifest --json",
-        "opl connect reconcile-modules --json",
+        "opl packages update --json",
         "opl contract validate --json"
       ],
       "status_doc_refs": [

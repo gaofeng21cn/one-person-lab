@@ -422,7 +422,7 @@
         "failure_policy": "fail_closed_owner_handoff"
       },
       "post_apply_actions": [
-        "reconcile_modules",
+        "reconcile_packages",
         "sync_skills",
         "sync_codex_skill_plugin_projection"
       ]

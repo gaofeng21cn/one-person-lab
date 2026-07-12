@@ -1,5 +1,6 @@
 {
-  "surface_kind": "opl_agent_package_payload_manifest",
+  "surface_kind": "opl_package_payload_manifest.v1",
+  "schema_ref": "contracts/opl-framework/package-payload-manifest.schema.json",
   "package_id": "opl-flow",
   "package_version": "0.1.16",
   "source_repo": "https://github.com/gaofeng21cn/opl-flow.git",

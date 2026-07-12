@@ -137,13 +137,17 @@ export type AgentPackageRegistryEntry = {
 };
 
 export type AgentPackageOrdinaryUserSource = {
-  kind: 'ghcr_oci_artifact_rolling_latest';
+  kind: 'ghcr_oci_artifact_latest_stable';
+  registry: 'ghcr.io';
   artifact_ref: string;
   ordinary_user_ref: string;
-  immutable_version_ref: string;
-  latest_is_only_ordinary_user_channel: true;
+  immutable_version_ref_pattern: string;
+  candidate_ref: string;
+  latest_stable_role: 'ordinary_user_latest_stable_pointer_after_candidate_gates';
+  latest_stable_is_only_ordinary_user_channel: true;
+  daily_candidate_build_gate: 'daily_candidate_build_must_pass_before_promote_latest_stable';
   install_truth: string[];
-  latest_is_install_truth: false;
+  latest_stable_is_install_truth: false;
   developer_checkout_auto_apply_allowed: false;
 };
 
@@ -158,14 +162,14 @@ export type AgentPackageDistributionPayload = {
   oci_ref: string;
   oci_media_type: string;
   immutable_tag: string;
-  rolling_tag: 'latest';
-  promotion_policy: 'daily_candidate_gates_then_promote_latest';
+  moving_tag: 'latest-stable';
+  promotion_policy: 'daily_candidate_gates_then_promote_latest_stable';
   install_truth: 'resolved_digest_lock';
 };
 
 export type AgentPackageManifest = {
   package_id: string;
-  agent_id: string;
+  agent_id: string | null;
   display_name: string;
   publisher: string;
   version: string;
@@ -539,7 +543,7 @@ export type AgentPackageCarrierAdapterReadback = {
 export type AgentPackageLock = {
   surface_kind: 'opl_agent_package_lock';
   package_id: string;
-  agent_id: string;
+  agent_id: string | null;
   display_name: string;
   publisher: string;
   version_or_source_digest: string;
@@ -561,7 +565,7 @@ export type AgentPackageLock = {
   oci_ref?: string;
   resolved_digest?: string;
   immutable_tag?: string;
-  rolling_tag?: 'latest';
+  moving_tag?: 'latest-stable';
   install_truth?: 'resolved_digest_lock';
   permission_scope_sha256: string;
   lock_ref: string;

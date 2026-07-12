@@ -1,32 +1,30 @@
 {
-  "surface_kind": "opl_agent_package_manifest.v1",
-  "agent_id": "opl-flow",
+  "surface_kind": "opl_workflow_profile_package_manifest.v1",
   "package_id": "opl-flow",
   "display_name": "OPL Flow",
   "publisher": "one-person-lab",
   "version": "0.1.16",
   "source": "first_party",
+  "package_role": "workflow_profile",
   "registry_entry": {
-    "registry_kind": "first_party_agent_package_registry_entry",
+    "registry_kind": "first_party_package_registry_entry",
     "registry_source_ref": "contracts/opl-framework/packages/opl-flow.json",
     "base_contract_role": "registry_data_not_base_invariant",
     "base_contract_invariant": false,
     "identity_fields": [
       "package_id",
-      "agent_id",
       "version"
     ],
     "admitted_domain_ref": null
   },
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
   "source_repo": "https://github.com/gaofeng21cn/opl-flow.git",
-  "schema_ref": "contracts/opl-framework/agent-package-manifest.schema.json",
+  "schema_ref": "contracts/opl-framework/workflow-profile-package-manifest.schema.json",
   "machine_boundary": "This first-party OPL Package records OPL Flow package identity and profile migration ownership. It cannot silently overwrite user Codex profiles or claim project, runtime, domain, artifact, or owner-receipt truth.",
   "package_core": {
-    "core_kind": "opl_agent_package_core",
+    "core_kind": "opl_package_core",
     "identity_fields": [
       "package_id",
-      "agent_id",
       "version"
     ],
     "content_identity_fields": [

@@ -75,17 +75,16 @@ function writePackageChannelFixture(input: {
 
   const channelManifest = {
     manifest_version: 1,
-    opl_version: input.version,
+    release_set_generation: input.version,
     package_catalog_surface_kind: 'opl_package_catalog.v1',
     packages: {
       package_catalog: {
         mas: {
           package_id: 'mas',
-          latest_version: input.version,
+          selected_version: input.version,
           versions: [{
             package_version: input.version,
-            module_id: input.moduleId,
-            promotion_status: 'promoted',
+            selection_status: 'selected_for_release_set',
             source_artifact_ref: `ghcr.io/owner/one-person-lab-packages/mas:${input.version}`,
             artifact_digest: `sha256:${'a'.repeat(64)}`,
             artifact_status: 'published_immutable',

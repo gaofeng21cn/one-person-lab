@@ -177,8 +177,8 @@ EOF
   }
 });
 
-test('system reconcile-modules installs missing modules updates clean modules and reports dirty modules as manual', () => {
-  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-system-reconcile-home-'));
+test('packages update installs missing managed carriers updates clean carriers and reports dirty or developer carriers as manual', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-packages-update-home-'));
   const modulesRoot = path.join(homeRoot, 'managed-modules');
   const turnkeyLogPath = path.join(homeRoot, 'turnkey.log');
   const buildModuleFiles = (skill: 'mas' | 'mag' | 'rca' | 'oma' | 'bookforge' | null) => {
@@ -301,35 +301,33 @@ console.log(JSON.stringify({ sync: 'ok' }));
     fs.writeFileSync(path.join(grantInstall.module_action.module.checkout_path, 'LOCAL-CHANGE.md'), '# Local change\n');
     const nextMasSha = remotes.medautoscience.advance(
       'CHANGELOG.md',
-      '# Changelog\n\n- Available through reconcile\n',
-      'Advance MAS for reconcile',
+      '# Changelog\n\n- Available through package update\n',
+      'Advance MAS for package update',
     );
     fs.writeFileSync(turnkeyLogPath, '', 'utf8');
 
-    const output = runCli(['system', 'reconcile-modules'], env) as any;
-    const targets = new Map<string, any>(output.system_action.details.targets.map((entry: any) => [entry.target_id, entry]));
-    assert.equal(output.system_action.action, 'reconcile_modules');
-    assert.equal(output.system_action.status, 'manual_required');
-    assert.deepEqual(output.system_action.details.summary, {
-      total_targets_count: 7,
-      completed_targets_count: 4,
-      skipped_targets_count: 2,
-      manual_required_targets_count: 1,
+    const output = runCli(['packages', 'update'], env) as any;
+    const adapter = output.managed_update.execution.adapter_results[0];
+    const targets = new Map<string, any>(adapter.result.targets.map((entry: any) => [entry.target_id, entry]));
+    assert.equal(adapter.component_id, 'opl_packages');
+    assert.equal(adapter.status, 'manual_required');
+    assert.deepEqual(adapter.result.summary, {
+      total_targets_count: 5,
+      completed_targets_count: 3,
+      manual_required_targets_count: 2,
     });
     assert.equal(targets.get('medautoscience')?.status, 'completed');
-    assert.equal(targets.get('medautoscience')?.reason, 'module_update_available');
-    assert.equal(targets.get('meddeepscientist')?.status, 'skipped');
-    assert.equal(targets.get('meddeepscientist')?.reason, 'optional_module_not_in_default_reconcile');
-    assert.equal(targets.get('redcube')?.status, 'completed');
-    assert.equal(targets.get('redcube')?.reason, 'module_reconcile_refresh');
+    assert.equal(targets.get('medautoscience')?.reason, 'capability_packages_refresh');
+    assert.equal(targets.has('meddeepscientist'), false);
+    assert.equal(targets.get('redcube')?.status, 'manual_required');
+    assert.equal(targets.get('redcube')?.reason, 'developer_or_dirty_checkout_visible');
     assert.equal(targets.get('oplmetaagent')?.status, 'completed');
     assert.equal(targets.get('oplmetaagent')?.reason, 'module_missing');
     assert.equal(targets.get('oplbookforge')?.status, 'completed');
     assert.equal(targets.get('oplbookforge')?.reason, 'module_missing');
-    assert.equal(targets.get('scholarskills')?.status, 'skipped');
-    assert.equal(targets.get('scholarskills')?.reason, 'optional_module_not_in_default_reconcile');
+    assert.equal(targets.has('scholarskills'), false);
     assert.equal(targets.get('medautogrant')?.status, 'manual_required');
-    assert.equal(targets.get('medautogrant')?.reason, 'dirty_checkout');
+    assert.equal(targets.get('medautogrant')?.reason, 'developer_or_dirty_checkout_visible');
     const turnkeyLog = fs.readFileSync(turnkeyLogPath, 'utf8');
     assert.match(turnkeyLog, /bootstrap:med-autoscience/);
     assert.doesNotMatch(turnkeyLog, /skill:med-autoscience/);
@@ -337,7 +335,7 @@ console.log(JSON.stringify({ sync: 'ok' }));
     assert.doesNotMatch(turnkeyLog, /med-deepscientist/);
     assert.doesNotMatch(turnkeyLog, /bootstrap:external-redcube-ai/);
     assert.doesNotMatch(turnkeyLog, /skill:external-redcube-ai/);
-    assert.match(turnkeyLog, /health:external-redcube-ai/);
+    assert.doesNotMatch(turnkeyLog, /health:external-redcube-ai/);
     assert.match(turnkeyLog, /bootstrap:opl-meta-agent/);
     assert.match(turnkeyLog, /health:opl-meta-agent:smoke/);
     assert.match(turnkeyLog, /bootstrap:opl-bookforge/);

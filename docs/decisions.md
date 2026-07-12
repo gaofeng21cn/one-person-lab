@@ -23,8 +23,21 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - MAS 的 `mas-scholar-skills` 是 required capability dependency，不是用户单独选择的扩展。`opl packages install mas` 必须解析并安装整个 digest-locked closure；update、repair、rollback 同进同退，provider 被 MAS 引用时不能单独 disable/uninstall。
 - MAS workspace/quest 每次 activation 或 hosted launch 都在 session/use boundary 由 Packages transaction 对账 MAS latest-stable root 与兼容的 `mas-scholar-skills` closure，并从 provider manifest 动态物化当前发布包声明的全部 35 个 exported Skills 到 `<target>/.codex/skills/`。11 个 core Skill exports 加 8 个 module contract ids 是 MAS ABI/readiness floor，不是安装上限；module ids 只校验、不物化为 Skill 目录。缺失或漂移的 managed Skill projection 自动恢复，ABI/SemVer/trust/content-lock 不兼容则 fail closed；运行中不热切换，本次 session 绑定 use receipt 与实际 versions/digests。
 - App/Shell 只消费 `package_dependency_readiness`、`materialization_readiness`、`operational_ready` 和 `launch_allowed`。未安装 package 也是明确的 launch blocker；不能用 `installed_package_count=0`、shortcut、deep link 或 stale selection 绕过。
-- first-party package canonical ids 固定为 `mas`、`mag`、`rca`、`oma`、`obf`、`mas-scholar-skills`、`opl-flow`。每个对象只有一个 OCI repository：`ghcr.io/<owner>/one-person-lab-packages/<canonical-id>`；旧 `one-person-lab-modules/*`、`one-person-lab-manifest:*` 和 repo-slug OCI 只可作为迁移或历史 locator。moving channel 只允许 `candidate` 与 `latest-stable`，不可变 tag/version 必须绑定唯一 digest；不得恢复普通 `latest`。
+- first-party package canonical ids 固定为 `mas`、`mag`、`rca`、`oma`、`obf`、`mas-scholar-skills`、`opl-flow`。每个对象只有一个 OCI repository：`ghcr.io/<owner>/one-person-lab-packages/<canonical-id>`；旧 `one-person-lab-modules/*` 和 repo-slug OCI 只可作为迁移或历史 locator。`one-person-lab-manifest` 仅是 Release Set catalog carrier，不是第八个 Package identity。moving channel 只允许 `candidate` 与 `latest-stable`，不可变 tag/version 必须绑定唯一 digest；不得恢复普通 `latest`。
 - daily package workflow 只处理 source/content fingerprint 发生变化的 package。package 发生内容变化却未推进 owner manifest SemVer、同一 canonical id/version 漂到不同 digest、channel version 与 manifest version 不一致，或无变化 package 被重发，均应 fail closed；candidate 通过 package gates 后才可逐包提升到 latest-stable。
+
+### 决策：Package 使用 owner SemVer，Release Set 使用独立 CalVer generation
+
+原因：单个 Package 的版本需要表达兼容性与依赖范围，而生态级 catalog 需要表达某次可复现选择。把日期当 Package version 无法可靠表达 breaking change；把所有 Package 绑成 App 版本又会让未变化对象被迫重发。
+
+影响：
+
+- 七个 Package 各自以 canonical owner manifest 的 SemVer 为唯一版本。`major` 表示不兼容的 package contract、ABI 或依赖边界变化；`minor` 表示向后兼容的新能力；`patch` 表示向后兼容的修复或内容更新；尚未稳定的 owner 可使用 `alpha`、`beta`、`rc` prerelease。owner language version 只作 carrier projection，例如 MAS 的 PEP 440 `0.1.0a4` 对应 canonical Package SemVer `0.1.0-alpha.4`。
+- capability、workflow-profile 与通用 payload schema 都必须在 owner manifest 入口接受合法 SemVer；release discipline 再对七个 artifact、Release Set BOM 与 OCI immutable tag 做同一版本校验。内容发生变化但 SemVer 未推进时 fail closed。
+- Release Set generation 使用 UTC `YY.M.D`；同日需要新的不可变选择时使用 `YY.M.D-rN`。它记录七个 Package 的精确 SemVer、owner source commit、OCI ref 与 digest，是 install/update/rollback 可复现 BOM，不等于 App 版本，也不表示七个 Package 同时发生变化。
+- `ghcr.io/<owner>/one-person-lab-manifest:<release-set-generation>` 是 Release Set catalog carrier。它可使用 `candidate` 与 `latest-stable` moving tag，但 `catalog_carrier_is_package_identity=false`，不能进入 Package dependency graph、普通 Package 安装列表或独立用户 lifecycle。
+- daily workflow 在尚无 `latest-stable` 时把 canonical 七成员作为 initial candidate bootstrap；已有 stable baseline 后只在 Package source/content fingerprint 变化或显式 Release Set repair 时生成 candidate。未变化成员复用上一 Release Set 的精确 digest。GitHub Release `published` gate 才把验证后的 Package 与完整 Release Set 提升到 `latest-stable`。
+- Homebrew 只提供 OPL Base 的唯一 Formula `opl`。七个 Package 不创建 Formula/Cask；普通安装、更新、repair、rollback 与卸载继续统一走 `opl packages`。
 
 ### 决策：effective Stage prompt 必须绑定正文，专业顺序按依赖而不是工具剧本表达
 
@@ -254,7 +267,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ### 决策：Agent Package moving channel 收敛为 candidate 与 latest-stable
 
-原因：普通用户需要一个稳定可解释的安装目标，release gate 又需要在提升前验证候选。裸 `latest` 把候选与稳定混为一谈，也无法阻止同一 SemVer 漂到不同 digest。每个 package 应独立晋级，不再通过中央 moving manifest 把所有 package 绑成同一批次。
+原因：普通用户需要一个稳定可解释的安装目标，release gate 又需要在提升前验证候选。裸 `latest` 把候选与稳定混为一谈，也无法阻止同一 SemVer 漂到不同 digest。每个 package 应独立晋级；Release Set catalog 只记录精确 BOM，不把所有 package 绑成同一版本或强制未变化对象重发。
 
 影响：
 

@@ -6,8 +6,8 @@ on:
       - published
   workflow_dispatch:
     inputs:
-      opl_version:
-        description: OPL version to publish, for example 26.4.27
+      release_set_generation:
+        description: Release Set generation to publish, for example 26.7.12
         required: true
         type: string
       release_gate:
@@ -32,7 +32,7 @@ jobs:
     if: github.event_name == 'release'
     uses: ./.github/workflows/packages.yml
     with:
-      opl_version: ${{ github.event.release.tag_name }}
+      release_set_generation: ${{ github.event.release.tag_name }}
       release_gate: github_release_published
       promotion_target: latest-stable
 
@@ -41,6 +41,6 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
     uses: ./.github/workflows/packages.yml
     with:
-      opl_version: ${{ inputs.opl_version }}
+      release_set_generation: ${{ inputs.release_set_generation }}
       release_gate: ${{ inputs.release_gate }}
       promotion_target: ${{ inputs.promotion_target }}

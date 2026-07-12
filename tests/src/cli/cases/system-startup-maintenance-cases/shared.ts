@@ -376,11 +376,10 @@ export function writeStartupPackageChannelFixture(input: {
     const packageId = packageIdForModule(module.moduleId);
     packageEntries[packageId] = {
       package_id: packageId,
-      latest_version: input.version,
+      selected_version: input.version,
       versions: [{
         package_version: input.version,
-        module_id: module.moduleId,
-        promotion_status: 'promoted',
+        selection_status: 'selected_for_release_set',
         source_artifact_ref: `ghcr.io/owner/one-person-lab-packages/${packageId}:${input.version}`,
         artifact_digest: `sha256:${'a'.repeat(64)}`,
         artifact_status: 'published_immutable',
@@ -409,7 +408,7 @@ export function writeStartupPackageChannelFixture(input: {
     channelManifestPath,
     JSON.stringify({
       manifest_version: 1,
-      opl_version: input.version,
+      release_set_generation: input.version,
       package_catalog_surface_kind: 'opl_package_catalog.v1',
       packages: {
         package_catalog: packageEntries,

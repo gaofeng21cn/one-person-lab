@@ -16,7 +16,7 @@ function writeManifest(filePath: string, input: {
     filePath,
     `${JSON.stringify({
       manifest_version: 1,
-      opl_version: input.version,
+      release_set_generation: input.version,
       generated_at: input.generatedAt,
       packages: {
         framework_core: {
@@ -27,10 +27,10 @@ function writeManifest(filePath: string, input: {
         package_catalog: {
           mas: {
             package_id: 'mas',
-            latest_version: input.packageVersion ?? '0.1.0',
+            selected_version: input.packageVersion ?? '0.1.0',
             versions: [{
               package_version: input.packageVersion ?? '0.1.0',
-              promotion_status: 'promoted',
+              selection_status: 'selected_for_release_set',
               package_content_digest: `sha256:${input.moduleSha}`,
               owner_source_commit: input.moduleHead,
             }],
@@ -75,14 +75,14 @@ test('daily package channel check skips when package source fingerprints are unc
     candidate,
     '--current-manifest',
     current,
-    '--version',
+    '--release-set-generation',
     '26.6.3',
   ]);
 
   assert.equal(summary.status, 'skipped');
   assert.equal(summary.reason, 'package_channel_unchanged');
   assert.equal(summary.publish_required, false);
-  assert.equal(summary.version, '26.6.3');
+  assert.equal(summary.release_set_generation, '26.6.3');
   assert.deepEqual(summary.changed_packages, []);
 });
 
@@ -111,13 +111,37 @@ test('daily package channel check publishes when a package source fingerprint ch
     candidate,
     '--current-manifest',
     current,
-    '--version',
+    '--release-set-generation',
     '26.6.3',
   ]);
 
   assert.equal(summary.status, 'publish_required');
   assert.equal(summary.reason, 'package_channel_changed');
   assert.equal(summary.publish_required, true);
+  assert.deepEqual(summary.changed_packages, ['mas']);
+});
+
+test('daily package channel check bootstraps all Packages when latest-stable does not exist yet', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-daily-check-'));
+  const candidate = path.join(tempRoot, 'candidate.json');
+
+  writeManifest(candidate, {
+    version: '26.6.3',
+    generatedAt: '2026-06-03T00:00:00.000Z',
+    moduleHead: 'a'.repeat(40),
+    moduleSha: 'b'.repeat(64),
+  });
+
+  const summary = runDailyCheck([
+    '--candidate-manifest',
+    candidate,
+    '--release-set-generation',
+    '26.6.3',
+  ]);
+
+  assert.equal(summary.status, 'publish_required');
+  assert.equal(summary.reason, 'package_channel_bootstrap');
+  assert.equal(summary.current_manifest, null);
   assert.deepEqual(summary.changed_packages, ['mas']);
 });
 
@@ -148,7 +172,7 @@ test('daily package channel check does not republish Framework Base for package-
     candidate,
     '--current-manifest',
     current,
-    '--version',
+    '--release-set-generation',
     '26.6.3',
   ]);
 
@@ -178,7 +202,7 @@ test('daily package channel check fails closed when no current channel manifest 
         candidate,
         '--current-manifest',
         missingCurrent,
-        '--version',
+        '--release-set-generation',
         '26.6.3',
       ], {
         cwd: repoRoot,

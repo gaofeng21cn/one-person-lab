@@ -28,7 +28,7 @@ type PackageSpec = {
   repo_url: string;
   scope: 'domain_module' | 'runtime_dependency' | 'framework_capability_package';
   package_id: 'mas' | 'mag' | 'rca' | 'oma' | 'obf' | 'mas-scholar-skills' | 'opl-flow';
-  agent_package_manifest_ref?: string;
+  package_manifest_ref: string;
   owner_package_manifest_ref: string;
   owner_manifest_kind: 'standard_agent' | 'capability_package' | 'workflow_profile';
   owner_plugin_manifest_ref: string;
@@ -37,7 +37,7 @@ type PackageSpec = {
 };
 
 type BuildPackageManifestInput = Partial<{
-  version: string;
+  releaseSetGeneration: string;
   generatedAt: string;
   owner: string;
   rollbackVersion: string | null;
@@ -47,7 +47,8 @@ type BuildPackageManifestInput = Partial<{
 export type OplPackageManifest = ReturnType<typeof buildOplPackageManifest>;
 
 const PACKAGE_WORKFLOW_TRIGGER_POLICY = 'release_gate_workflow_call_or_manual_dispatch';
-const PACKAGE_REMOTE_PUBLISH_STATUS = 'release_gate_or_manual_dispatch_publishes_ghcr_packages';
+const PACKAGE_REMOTE_PUBLISH_STATUS = 'publication_workflow_configured_pending_remote_verification';
+const RELEASE_SET_GENERATION_PATTERN = /^\d{2}\.\d{1,2}\.\d{1,2}(?:-r[1-9]\d*)?$/;
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 
 const PACKAGE_SPECS: PackageSpec[] = [
@@ -58,7 +59,7 @@ const PACKAGE_SPECS: PackageSpec[] = [
     repo_url: 'https://github.com/gaofeng21cn/med-autoscience.git',
     scope: 'domain_module',
     package_id: 'mas',
-    agent_package_manifest_ref: 'contracts/opl-framework/packages/mas.json',
+    package_manifest_ref: 'contracts/opl-framework/packages/mas.json',
     owner_package_manifest_ref: 'contracts/opl_agent_package_manifest.json',
     owner_manifest_kind: 'standard_agent',
     owner_plugin_manifest_ref: 'plugins/med-autoscience/.codex-plugin/plugin.json',
@@ -72,7 +73,7 @@ const PACKAGE_SPECS: PackageSpec[] = [
     repo_url: 'https://github.com/gaofeng21cn/med-autogrant.git',
     scope: 'domain_module',
     package_id: 'mag',
-    agent_package_manifest_ref: 'contracts/opl-framework/packages/mag.json',
+    package_manifest_ref: 'contracts/opl-framework/packages/mag.json',
     owner_package_manifest_ref: 'contracts/opl_agent_package_manifest.json',
     owner_manifest_kind: 'standard_agent',
     owner_plugin_manifest_ref: 'plugins/med-autogrant/.codex-plugin/plugin.json',
@@ -85,7 +86,7 @@ const PACKAGE_SPECS: PackageSpec[] = [
     repo_url: 'https://github.com/gaofeng21cn/redcube-ai.git',
     scope: 'domain_module',
     package_id: 'rca',
-    agent_package_manifest_ref: 'contracts/opl-framework/packages/rca.json',
+    package_manifest_ref: 'contracts/opl-framework/packages/rca.json',
     owner_package_manifest_ref: 'contracts/opl_agent_package_manifest.json',
     owner_manifest_kind: 'standard_agent',
     owner_plugin_manifest_ref: 'plugins/redcube-ai/.codex-plugin/plugin.json',
@@ -98,7 +99,7 @@ const PACKAGE_SPECS: PackageSpec[] = [
     repo_url: 'https://github.com/gaofeng21cn/opl-meta-agent.git',
     scope: 'domain_module',
     package_id: 'oma',
-    agent_package_manifest_ref: 'contracts/opl-framework/packages/oma.json',
+    package_manifest_ref: 'contracts/opl-framework/packages/oma.json',
     owner_package_manifest_ref: 'contracts/opl_agent_package_manifest.json',
     owner_manifest_kind: 'standard_agent',
     owner_plugin_manifest_ref: 'plugins/opl-meta-agent/.codex-plugin/plugin.json',
@@ -111,7 +112,7 @@ const PACKAGE_SPECS: PackageSpec[] = [
     repo_url: 'https://github.com/gaofeng21cn/opl-bookforge.git',
     scope: 'domain_module',
     package_id: 'obf',
-    agent_package_manifest_ref: 'contracts/opl-framework/packages/obf.json',
+    package_manifest_ref: 'contracts/opl-framework/packages/obf.json',
     owner_package_manifest_ref: 'contracts/opl_agent_package_manifest.json',
     owner_manifest_kind: 'standard_agent',
     owner_plugin_manifest_ref: 'plugins/opl-bookforge/.codex-plugin/plugin.json',
@@ -124,7 +125,7 @@ const PACKAGE_SPECS: PackageSpec[] = [
     repo_url: 'https://github.com/gaofeng21cn/mas-scholar-skills.git',
     scope: 'framework_capability_package',
     package_id: 'mas-scholar-skills',
-    agent_package_manifest_ref: 'contracts/opl-framework/packages/mas-scholar-skills.json',
+    package_manifest_ref: 'contracts/opl-framework/packages/mas-scholar-skills.json',
     owner_package_manifest_ref: 'contracts/opl_capability_package_manifest.json',
     owner_manifest_kind: 'capability_package',
     owner_plugin_manifest_ref: '.codex-plugin/plugin.json',
@@ -136,7 +137,7 @@ const PACKAGE_SPECS: PackageSpec[] = [
     repo_url: 'https://github.com/gaofeng21cn/opl-flow.git',
     scope: 'runtime_dependency',
     package_id: 'opl-flow',
-    agent_package_manifest_ref: 'contracts/opl-framework/packages/opl-flow.json',
+    package_manifest_ref: 'contracts/opl-framework/packages/opl-flow.json',
     owner_package_manifest_ref: 'contracts/workflow-policy.json',
     owner_manifest_kind: 'workflow_profile',
     owner_plugin_manifest_ref: '.codex-plugin/plugin.json',
@@ -159,8 +160,7 @@ export function normalizeDistributionVersion(value: string) {
 }
 
 function projectedPackageVersion(spec: PackageSpec) {
-  if (!spec.agent_package_manifest_ref) return '0.0.0';
-  const source = JSON.parse(fs.readFileSync(path.join(repoRoot, spec.agent_package_manifest_ref), 'utf8')) as Record<string, unknown>;
+  const source = JSON.parse(fs.readFileSync(path.join(repoRoot, spec.package_manifest_ref), 'utf8')) as Record<string, unknown>;
   return normalizeDistributionVersion(stringValue(source.version) ?? '0.0.0');
 }
 
@@ -170,6 +170,22 @@ function buildPackageRef(owner: string, packageId: string, version: string) {
 
 function buildFrameworkRef(owner: string, version: string) {
   return `ghcr.io/${owner}/one-person-lab-framework:${version}`;
+}
+
+export function normalizeReleaseSetGeneration(value: string) {
+  const generation = value.trim().replace(/^v/, '');
+  if (!RELEASE_SET_GENERATION_PATTERN.test(generation)) {
+    throw new Error(`Release Set generation must use YY.M.D or YY.M.D-rN, got: ${value}`);
+  }
+  return generation;
+}
+
+function packageRole(spec: PackageSpec) {
+  return spec.owner_manifest_kind === 'workflow_profile'
+    ? 'workflow_profile'
+    : spec.scope === 'framework_capability_package'
+      ? 'framework_capability_package'
+      : 'standard_agent';
 }
 
 function normalizeRetainVersions(value?: number) {
@@ -185,18 +201,18 @@ function buildReleaseAutomation(retainVersions: number, rollbackVersion: string 
     package_lifecycle_status: 'active_release_channel',
     workflow_trigger_policy: PACKAGE_WORKFLOW_TRIGGER_POLICY,
     remote_publish_status: PACKAGE_REMOTE_PUBLISH_STATUS,
-    release_manifest_publication_status: 'active_ghcr_channel_manifest',
+    release_manifest_publication_status: 'configured_pending_remote_verification',
     release_manifest_package: {
       package_name: 'one-person-lab-manifest',
       package_channel_status: 'active_release_channel',
-      publication_status: 'published_to_ghcr_by_packages_workflow',
+      publication_status: 'publication_workflow_configured',
       current_install_update_source: 'opl_release_channel_manifest',
       developer_override_source: 'git_checkout',
     },
     channel_manifest: {
       manifest_kind: 'opl_release_channel_manifest.v1',
       generated_by: 'scripts/package-archives.mjs',
-      ghcr_ref: 'ghcr.io/<owner>/one-person-lab-manifest:<opl_version>',
+      ghcr_ref: 'ghcr.io/<owner>/one-person-lab-manifest:<release_set_generation>',
       moving_tags: ['candidate', 'latest-stable'],
       outputs: {
         release_manifest: 'opl-release-manifest.json',
@@ -207,12 +223,12 @@ function buildReleaseAutomation(retainVersions: number, rollbackVersion: string 
     },
     artifact_build: {
       workflow: '.github/workflows/packages.yml',
-      command: 'npm run packages:manifest -- --version <opl_version>',
+      command: 'npm run packages:manifest -- --release-set-generation <yy.m.d[-rN]>',
       artifact_kind: 'git_archive_source_tarball',
       publication_mode: 'ghcr_package_channel_and_workflow_artifact',
       automatic_trigger: 'workflow_call_from_release_gate',
       manual_repair_trigger: 'workflow_dispatch',
-      required_input: 'opl_version',
+      required_input: 'release_set_generation',
     },
     checksum: {
       algorithm: 'sha256',
@@ -238,10 +254,10 @@ function buildReleaseAutomation(retainVersions: number, rollbackVersion: string 
       status: 'active_change_detected_daily_publish',
       workflow: '.github/workflows/daily-package-channel.yml',
       schedule: 'daily',
-      version_template: '<utc_yy.m.d>',
+      generation_template: '<utc_yy.m.d>',
       change_detector: 'scripts/package-channel-daily-check.mjs',
       comparison: 'package_source_fingerprint',
-      ignored_fields: ['opl_version', 'generated_at', 'artifact tag'],
+      ignored_fields: ['release_set_generation', 'generated_at', 'artifact tag'],
       no_change_behavior: 'skip_without_publish',
       publish_gate: 'daily_package_channel_changed',
       manual_repair_trigger: 'workflow_dispatch',
@@ -252,13 +268,13 @@ function buildReleaseAutomation(retainVersions: number, rollbackVersion: string 
 
 function buildPackageReleaseDiscipline(spec: PackageSpec, rollbackVersion: string | null) {
   return {
-    module_truth_owner: spec.repo_name,
+    package_truth_owner: spec.repo_name,
     package_publish_owner: 'framework_packages_workflow',
     package_channel_status: 'active_release_channel',
     package_lifecycle_status: 'active_release_channel',
     workflow_trigger_policy: PACKAGE_WORKFLOW_TRIGGER_POLICY,
-    remote_publish_status: 'published_to_ghcr_by_packages_workflow',
-    current_latest_source: 'opl_release_channel_manifest',
+    remote_publish_status: PACKAGE_REMOTE_PUBLISH_STATUS,
+    current_stable_source: 'opl_release_channel_manifest',
     developer_override_source: 'git_checkout',
     required_gates: [
       'upstream_default_branch_reachable',
@@ -266,7 +282,10 @@ function buildPackageReleaseDiscipline(spec: PackageSpec, rollbackVersion: strin
       'source_archive_built_from_head',
       'sha256_recorded',
       'channel_manifest_written',
-      'ghcr_module_artifact_published',
+      'ghcr_package_artifact_published',
+      'immutable_version_remote_digest_preflight',
+      'repository_source_association_verified',
+      'anonymous_digest_pull_verified',
       'release_manifest_published',
       'developer_git_checkout_override_declared',
       'rollback_target_declared_when_previous_manifest_exists',
@@ -283,7 +302,7 @@ function buildPackageReleaseDiscipline(spec: PackageSpec, rollbackVersion: strin
 function dependencyOf(moduleId: PackageSourceId) {
   return PACKAGE_SPECS
     .filter((spec) => spec.capability_dependencies?.some((dependency) => dependency.module_id === moduleId))
-    .map((spec) => spec.module_id);
+    .map((spec) => spec.package_id);
 }
 
 function buildCodexStandaloneDistribution(spec: PackageSpec) {
@@ -300,7 +319,7 @@ function buildCodexStandaloneDistribution(spec: PackageSpec) {
     required_skill_ids: agentPackageManifest.codex_surface.required_skill_ids,
     bundled_capability_package_ids: agentPackageManifest.codex_surface.bundled_capability_package_ids ?? [],
     carrier_source_role: agentPackageManifest.carrier_source_role,
-    package_manifest_ref: spec.agent_package_manifest_ref,
+    package_manifest_ref: spec.package_manifest_ref,
     ...(agentPackageManifest.distribution_payload
       ? { distribution_payload: agentPackageManifest.distribution_payload }
       : {}),
@@ -309,7 +328,11 @@ function buildCodexStandaloneDistribution(spec: PackageSpec) {
 }
 
 export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
-  const version = input.version?.trim() || getOplReleaseVersion();
+  const releaseSetGeneration = normalizeReleaseSetGeneration(
+    input.releaseSetGeneration
+      ?? process.env.OPL_RELEASE_SET_GENERATION
+      ?? getOplReleaseVersion(),
+  );
   const owner = resolveOwner(input.owner);
   const generatedAt = input.generatedAt ?? new Date().toISOString();
   const retainVersions = normalizeRetainVersions(input.retainVersions);
@@ -321,17 +344,42 @@ export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
 
   return {
     manifest_version: 1,
-    opl_version: version,
+    release_set_generation: releaseSetGeneration,
+    release_set: {
+      surface_kind: 'opl_release_set.v1',
+      generation: releaseSetGeneration,
+      generation_scheme: 'calver_yy.m.d_optional_revision',
+      target_channel: releaseChannel,
+      selection_status: 'selected_package_versions',
+      promotion_evidence_status: 'requires_remote_tag_readback',
+      catalog_carrier: `ghcr.io/${owner}/one-person-lab-manifest:${releaseSetGeneration}`,
+      catalog_carrier_is_package_identity: false,
+      package_count: PACKAGE_SPECS.length,
+      package_ids: PACKAGE_SPECS.map((spec) => spec.package_id),
+      bom_status: 'planned',
+      members: Object.fromEntries(PACKAGE_SPECS.map((spec) => {
+        const packageVersion = projectedPackageVersion(spec);
+        return [spec.package_id, {
+          package_id: spec.package_id,
+          package_role: packageRole(spec),
+          package_version: packageVersion,
+          owner_source_commit: null as string | null,
+          oci_artifact_ref: buildPackageRef(owner, spec.package_id, packageVersion),
+          oci_artifact_digest: null as string | null,
+          artifact_status: 'pending_remote_verification',
+        }];
+      })),
+    },
     gui_version: process.env.OPL_GUI_VERSION?.trim() || null,
     release_channel: releaseChannel,
     generated_at: generatedAt,
-    module_install_update_source: 'package_channel',
-    package_consumption_status: 'ordinary_app_users_consume_managed_ghcr_capability_packages',
-    developer_module_source_override: {
-      env: 'OPL_MODULE_SOURCE_MODE=git_checkout',
+    package_install_update_source: 'package_channel',
+    package_consumption_status: 'ordinary_app_users_consume_managed_ghcr_packages',
+    developer_package_source_override: {
+      carrier_env: 'OPL_MODULE_SOURCE_MODE=git_checkout',
       scope: 'developer_mode_checkout',
       app_setting_surface: 'Developer Mode',
-      rule: 'Developer Mode is the App/system settings surface for repo checkout module sources; ordinary App users consume the GHCR capability packages channel as the non-development install/update source.',
+      rule: 'Developer Mode selects explicit repo checkout carriers; ordinary App users consume the GHCR OPL Packages latest-stable Release Set.',
       low_level_env_role: 'diagnostic_ci_override',
     },
     release_automation: buildReleaseAutomation(retainVersions, rollbackVersion),
@@ -370,12 +418,12 @@ export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
       framework_core: {
         package_name: 'one-person-lab-framework',
         label: 'OPL Framework Core',
-        version,
+        version: releaseSetGeneration,
         artifact_kind: 'framework_source_archive',
-        artifact: buildFrameworkRef(owner, version),
+        artifact: buildFrameworkRef(owner, releaseSetGeneration),
         package_channel_status: 'active_release_channel',
         package_lifecycle_status: 'active_release_channel',
-        remote_publish_status: 'published_to_ghcr_by_packages_workflow',
+        remote_publish_status: PACKAGE_REMOTE_PUBLISH_STATUS,
         package_consumption_status: 'consumed_by_runtime_substrate_updates',
         current_install_update_source: 'opl_release_channel_manifest',
         developer_git_checkout_override: {
@@ -389,7 +437,7 @@ export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
           package_channel_status: 'active_release_channel',
           package_lifecycle_status: 'active_release_channel',
           workflow_trigger_policy: PACKAGE_WORKFLOW_TRIGGER_POLICY,
-          current_latest_source: 'opl_release_channel_manifest',
+          current_stable_source: 'opl_release_channel_manifest',
           developer_override_source: 'git_checkout',
           required_gates: [
             'source_archive_built_from_head',
@@ -413,14 +461,17 @@ export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
           (() => {
             const packageVersion = projectedPackageVersion(spec);
             return {
-            module_id: spec.module_id,
             package_id: spec.package_id,
             package_version: packageVersion,
             label: spec.label,
-            repo_name: spec.repo_name,
-            repo_url: spec.repo_url,
+            carrier_locator: {
+              carrier_kind: 'opl_managed_module_source',
+              module_id: spec.module_id,
+              repo_name: spec.repo_name,
+              repo_url: spec.repo_url,
+            },
             scope: spec.scope,
-            agent_package_manifest_ref: spec.agent_package_manifest_ref,
+            package_manifest_ref: spec.package_manifest_ref,
             version: packageVersion,
             artifact_kind: 'source_archive',
             artifact: buildPackageRef(owner, spec.package_id, packageVersion),
@@ -432,11 +483,11 @@ export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
             release_gate: null as string | null,
             package_content_digest: null as string | null,
             oci_artifact_digest: null as string | null,
-            oci_artifact_status: 'pending_publish',
+            oci_artifact_status: 'pending_remote_verification',
             package_channel_status: 'active_release_channel',
             package_lifecycle_status: 'active_release_channel',
             package_lifecycle_reason: 'ordinary App users and package-channel installs consume the GHCR capability packages channel; domain truth remains repo-owned',
-            remote_publish_status: 'published_to_ghcr_by_packages_workflow',
+            remote_publish_status: PACKAGE_REMOTE_PUBLISH_STATUS,
             package_consumption_status: 'consumed_by_package_channel_installs',
             current_install_update_source: 'package_channel',
             developer_git_checkout_override: {
@@ -447,7 +498,7 @@ export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
               env_role: 'low_level_diagnostic_ci_override',
             },
             release_discipline: buildPackageReleaseDiscipline(spec, rollbackVersion),
-            install_strategy: 'extract_to_managed_modules_root',
+            install_strategy: 'extract_to_managed_package_root',
             codex_standalone_distribution: buildCodexStandaloneDistribution(spec),
             capability_dependencies: spec.capability_dependencies ?? [],
             dependency_of: dependencyOf(spec.module_id),
@@ -498,10 +549,7 @@ function dependencyRequirements(source: Record<string, unknown>) {
 
 function buildCurrentPackageCatalog(manifest: OplPackageManifest) {
   return Object.fromEntries(PACKAGE_SPECS.map((spec) => {
-    if (!spec.agent_package_manifest_ref) {
-      throw new Error(`Package module ${spec.module_id} has no agent package manifest ref.`);
-    }
-    const manifestPath = path.join(repoRoot, spec.agent_package_manifest_ref);
+    const manifestPath = path.join(repoRoot, spec.package_manifest_ref);
     const projectedManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as Record<string, unknown>;
     const packageEntry = manifest.packages.package_artifacts[spec.package_id];
     const ownerManifest = packageEntry.owner_package_manifest_json
@@ -520,12 +568,12 @@ function buildCurrentPackageCatalog(manifest: OplPackageManifest) {
     const packageId = spec.package_id;
     const packageVersion = packageEntry.package_version;
     if (!packageVersion) {
-      throw new Error(`Package manifest ${spec.agent_package_manifest_ref} has no package_id or version.`);
+      throw new Error(`Package manifest ${spec.package_manifest_ref} has no package_id or version.`);
     }
     const codexSurface = stringRecord(packageManifest.codex_surface);
     const payloadRef = codexSurface ? stringValue(codexSurface.plugin_payload_manifest_url) : null;
     if (!payloadRef) {
-      throw new Error(`Package manifest ${spec.agent_package_manifest_ref} has no payload manifest ref.`);
+      throw new Error(`Package manifest ${spec.package_manifest_ref} has no payload manifest ref.`);
     }
     const payloadPath = path.join(path.dirname(manifestPath), payloadRef);
     const payload = JSON.parse(fs.readFileSync(payloadPath, 'utf8')) as Record<string, unknown>;
@@ -571,18 +619,16 @@ function buildCurrentPackageCatalog(manifest: OplPackageManifest) {
     const distributionPayload = stringRecord(packageManifest.distribution_payload);
     const capabilityAbi = stringRecord(packageManifest.capability_abi);
     const dependencies = dependencyRequirements(packageManifest);
-    const manifestUrl = `opl+oci://${sourceArtifactRef}#/agent-package-manifest.json`;
+    const manifestUrl = `opl+oci://${sourceArtifactRef}#/package-manifest.json`;
     const manifestSha256 = sha256Payload(manifestSource);
     const versionEntry = {
       package_version: packageVersion,
-      module_id: spec.module_id,
       capability_abi: capabilityAbi ? stringValue(capabilityAbi.id) : null,
-      channel: 'stable',
-      promotion_status: 'promoted',
+      selection_status: 'selected_for_release_set',
       manifest_url: manifestUrl,
       manifest_sha256: manifestSha256,
       manifest_json: manifestSource,
-      agent_package_manifest: {
+      package_manifest: {
         ref: manifestUrl,
         sha256: manifestSha256,
       },
@@ -606,14 +652,8 @@ function buildCurrentPackageCatalog(manifest: OplPackageManifest) {
     };
     return [packageId, {
       package_id: packageId,
-      module_id: spec.module_id,
-      package_role: spec.owner_manifest_kind === 'workflow_profile'
-        ? 'workflow_profile'
-        : spec.scope === 'framework_capability_package'
-          ? 'framework_capability_package'
-          : 'standard_agent',
-      channel: 'stable',
-      latest_version: packageVersion,
+      package_role: packageRole(spec),
+      selected_version: packageVersion,
       dependency_package_ids: versionEntry.dependency_package_ids,
       versions: [versionEntry],
     }];
@@ -631,12 +671,11 @@ function retainedVersions(previousManifest: unknown, packageId: string) {
 }
 
 function isRetainableCatalogVersion(candidate: Record<string, unknown>) {
-  const manifest = stringRecord(candidate.agent_package_manifest);
+  const manifest = stringRecord(candidate.package_manifest);
   const manifestJson = typeof candidate.manifest_json === 'string' ? candidate.manifest_json : null;
   const manifestSha256 = stringValue(candidate.manifest_sha256);
   return Boolean(
     stringValue(candidate.package_version)
-    && stringValue(candidate.module_id)
     && stringValue(candidate.manifest_url)
     && manifestSha256?.match(/^sha256:[0-9a-f]{64}$/)
     && manifestJson
@@ -653,10 +692,10 @@ function isRetainableCatalogVersion(candidate: Record<string, unknown>) {
 }
 
 function comparePackageVersions(left: Record<string, unknown>, right: Record<string, unknown>) {
-  const leftPromoted = left.promotion_status === 'promoted' ? 1 : 0;
-  const rightPromoted = right.promotion_status === 'promoted' ? 1 : 0;
-  if (leftPromoted !== rightPromoted) {
-    return rightPromoted - leftPromoted;
+  const leftSelected = left.selection_status === 'selected_for_release_set' ? 1 : 0;
+  const rightSelected = right.selection_status === 'selected_for_release_set' ? 1 : 0;
+  if (leftSelected !== rightSelected) {
+    return rightSelected - leftSelected;
   }
   const versionOrder = stringValue(right.package_version)?.localeCompare(
     stringValue(left.package_version) ?? '',
@@ -698,8 +737,7 @@ function mergePackageCatalog(
       ))
       .map((candidate): Record<string, unknown> => ({
         ...candidate,
-        channel: 'stable',
-        promotion_status: 'retained',
+        selection_status: 'retained_history',
       }));
     const byVersion = new Map<string, Record<string, unknown>>();
     byVersion.set(currentVersion.package_version, currentVersion);
@@ -716,6 +754,51 @@ function mergePackageCatalog(
   }));
 }
 
+function synchronizeReleaseSetBom(
+  manifest: OplPackageManifest,
+  packageCatalog: ReturnType<typeof mergePackageCatalog>,
+) {
+  const packageArtifacts = manifest.packages.package_artifacts as Record<string, {
+    oci_artifact_digest: string | null;
+    oci_artifact_status: string;
+    remote_publish_status: string;
+  }>;
+  const members = manifest.release_set.members as Record<string, {
+    owner_source_commit: string | null;
+    oci_artifact_digest: string | null;
+    artifact_status: string;
+  }>;
+  let complete = true;
+  for (const [packageId, catalogEntry] of Object.entries(packageCatalog)) {
+    const selected = catalogEntry.versions.find((candidate) => (
+      candidate.selection_status === 'selected_for_release_set'
+    ));
+    const artifact = packageArtifacts[packageId];
+    const member = members[packageId];
+    if (!selected || !artifact || !member) {
+      complete = false;
+      continue;
+    }
+    const digest = stringValue(selected.artifact_digest);
+    const status = stringValue(selected.artifact_status) ?? 'pending_remote_verification';
+    const ownerSourceCommit = stringValue(selected.owner_source_commit);
+    artifact.oci_artifact_digest = digest;
+    artifact.oci_artifact_status = status;
+    artifact.remote_publish_status = status === 'published_immutable'
+      ? 'verified_reused_immutable_artifact'
+      : PACKAGE_REMOTE_PUBLISH_STATUS;
+    member.owner_source_commit = ownerSourceCommit;
+    member.oci_artifact_digest = digest;
+    member.artifact_status = status;
+    if (status !== 'published_immutable'
+      || !/^sha256:[0-9a-f]{64}$/.test(digest ?? '')
+      || !/^[0-9a-f]{40}$/.test(ownerSourceCommit ?? '')) {
+      complete = false;
+    }
+  }
+  manifest.release_set.bom_status = complete ? 'complete' : 'pending_remote_verification';
+}
+
 export function buildOplPackageChannelManifest(manifest: OplPackageManifest, previousManifest: unknown = null) {
   const retainVersions = manifest.release_automation.cleanup.retain_versions;
   const packageCatalog = mergePackageCatalog(
@@ -723,6 +806,7 @@ export function buildOplPackageChannelManifest(manifest: OplPackageManifest, pre
     previousManifest,
     retainVersions,
   );
+  synchronizeReleaseSetBom(manifest, packageCatalog);
   return {
     ...manifest,
     manifest_role: 'opl_release_channel_manifest',

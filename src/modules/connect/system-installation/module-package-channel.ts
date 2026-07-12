@@ -43,7 +43,7 @@ type OciLayer = {
 };
 
 type OplChannelManifest = {
-  opl_version?: string;
+  release_set_generation?: string;
   packages?: {
     package_catalog?: Record<string, OplChannelPackageCatalogEntry>;
   };
@@ -51,14 +51,13 @@ type OplChannelManifest = {
 
 type OplChannelPackageCatalogEntry = {
   package_id?: string;
-  latest_version?: string;
+  selected_version?: string;
   versions?: OplChannelPackageCatalogVersion[];
 };
 
 type OplChannelPackageCatalogVersion = {
   package_version?: string;
-  module_id?: string;
-  promotion_status?: string;
+  selection_status?: string;
   source_artifact_ref?: string;
   artifact_digest?: string;
   artifact_status?: string;
@@ -555,9 +554,9 @@ function packageEntry(
   const entry = packageId ? channelManifest.packages?.package_catalog?.[packageId] : null;
   const versions = Array.isArray(entry?.versions) ? entry.versions : [];
   const version = versions.find((candidate) => (
-    candidate.promotion_status === 'promoted'
-    && candidate.package_version === entry?.latest_version
-  )) ?? versions.find((candidate) => candidate.promotion_status === 'promoted') ?? null;
+    candidate.selection_status === 'selected_for_release_set'
+    && candidate.package_version === entry?.selected_version
+  )) ?? versions.find((candidate) => candidate.selection_status === 'selected_for_release_set') ?? null;
   const packageVersion = normalizeOptionalString(version?.package_version);
   const sourceArtifactRef = normalizeOptionalString(version?.source_artifact_ref);
   const artifactDigest = normalizeOptionalString(version?.artifact_digest);
@@ -569,7 +568,7 @@ function packageEntry(
     throw new FrameworkContractError('contract_shape_invalid', 'OPL package catalog has no published immutable package selection.', {
       module_id: spec.module_id,
       package_id: packageId,
-      channel_version: channelManifest.opl_version ?? null,
+      channel_version: channelManifest.release_set_generation ?? null,
       failure_code: 'opl_package_catalog_selection_invalid',
     });
   }

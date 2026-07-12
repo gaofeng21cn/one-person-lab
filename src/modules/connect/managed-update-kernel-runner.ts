@@ -218,8 +218,8 @@ function buildAgentPackagePostApplyActions(
 
   return [
     {
-      action_id: 'reconcile_modules',
-      command_ref: 'opl connect reconcile-modules --json',
+      action_id: 'reconcile_packages',
+      command_ref: 'opl packages update --json',
       status: 'completed',
       result_ref: adapterResultRef('capability_packages', operation, reconcileResult),
       result: reconcileResult,
@@ -240,7 +240,7 @@ function buildAgentPackagePostApplyActions(
         source: 'capability_packages_post_apply',
         scholarskills_source: {
           source: 'capability_packages_target',
-          status: 'maintained_by_reconcile_modules',
+          status: 'maintained_by_package_update',
           package_channel_auto_update: true,
         },
         skill_sync_summary: skillSyncSummary,

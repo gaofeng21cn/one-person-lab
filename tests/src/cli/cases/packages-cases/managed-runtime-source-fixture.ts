@@ -75,17 +75,16 @@ export function writeManagedRuntimeSourceFixture(input: {
   };
   const packageId = packageIdByModule[input.moduleId] ?? input.moduleId;
   const channelManifest = {
-    opl_version: input.version,
+    release_set_generation: input.version,
     package_catalog_surface_kind: 'opl_package_catalog.v1',
     packages: {
       package_catalog: {
         [packageId]: {
           package_id: packageId,
-          latest_version: input.version,
+          selected_version: input.version,
           versions: [{
             package_version: input.version,
-            module_id: input.moduleId,
-            promotion_status: 'promoted',
+            selection_status: 'selected_for_release_set',
             source_artifact_ref: `ghcr.io/fixture/one-person-lab-packages/${packageId}:${input.version}`,
             artifact_digest: `sha256:${'a'.repeat(64)}`,
             artifact_status: 'published_immutable',

@@ -20,6 +20,7 @@ import {
 } from './helpers.ts';
 import {
   normalizeManifest,
+  normalizePackageManifest,
   normalizeRegistry,
 } from '../../../../../src/modules/connect/agent-package-registry-parts/manifest-normalizers.ts';
 import { defaultHomeShortcutPreferences } from '../../../../../src/modules/connect/agent-package-registry-parts/home-shortcuts.ts';
@@ -143,7 +144,7 @@ test('package actions describe both positional and flagged package selection', (
 
 test('OPL Flow manifest resolves its package-owned 0.1.16 carrier and managed policy payload', () => {
   const manifestPath = path.join(repoRoot, 'contracts', 'opl-framework', 'packages', 'opl-flow.json');
-  const manifest = normalizeManifest(
+  const manifest = normalizePackageManifest(
     parseJsonText(fs.readFileSync(manifestPath, 'utf8')),
     pathToFileURL(manifestPath).href,
   );

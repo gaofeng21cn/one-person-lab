@@ -168,20 +168,6 @@ function writeJsonLine(payload: unknown) {
 export function buildPublicSystemCommandSpecs(
   getContracts: () => FrameworkContracts,
 ): Record<string, CommandSpec> {
-  const buildSystemActionSpec = (
-    command: string,
-    summary: string,
-    action: 'reconcile_modules' | 'seed_apply',
-  ) => buildNoArgSpec(
-    {
-      usage: `opl system ${command}`,
-      summary,
-      examples: [`opl system ${command}`],
-      group: 'system',
-    },
-    async () => buildPublicSystemActionPayload(await runOplSystemAction(getContracts(), action)),
-  );
-
   const systemStartupMaintenanceSpec: CommandSpec = {
     usage: 'opl system startup-maintenance [--scope <all|runtime_substrate>]',
     summary: 'Run App startup maintenance for clean managed modules, image seed state, plugin cache freshness, and reload guidance.',
@@ -397,11 +383,6 @@ export function buildPublicSystemCommandSpecs(
         group: 'system',
       },
       async () => buildPublicSystemActionPayload(await runOplSystemAction(getContracts(), 'update')),
-    ),
-    'system reconcile-modules': buildSystemActionSpec(
-      'reconcile-modules',
-      'Install missing modules and update clean domain modules to the latest git upstream.',
-      'reconcile_modules',
     ),
     'system startup-maintenance': systemStartupMaintenanceSpec,
     'system docker-webui doctor': buildNoArgSpec(

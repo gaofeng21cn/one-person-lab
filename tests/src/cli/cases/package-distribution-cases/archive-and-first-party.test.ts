@@ -14,11 +14,14 @@ import {
   test,
 } from './helpers.ts';
 import { assertJsonSchemaPayload } from '../../../../../src/kernel/schema-registry.ts';
-import { normalizeCapabilityPackageManifest } from '../../../../../src/modules/connect/agent-package-registry-parts/manifest-normalizers.ts';
+import {
+  normalizeCapabilityPackageManifest,
+  normalizeWorkflowProfilePackageManifest,
+} from '../../../../../src/modules/connect/agent-package-registry-parts/manifest-normalizers.ts';
 
 const publishedDistributionPayload = {
-  payload_kind: 'ghcr_oci_agent_package',
-  payload_ref: 'ghcr.io/gaofeng21cn/opl-agent-med-autoscience:latest',
+  payload_kind: 'ghcr_oci_opl_package',
+  payload_ref: 'ghcr.io/gaofeng21cn/one-person-lab-packages/mas:0.1.0-alpha.4',
   payload_digest_ref: `sha256:${'a'.repeat(64)}`,
   required_skill_pack_lock_refs: [
     'opl://agent-package-lock/mas-scholar-skills/0.1.0a4/managed-ghcr-capability-package',
@@ -26,11 +29,11 @@ const publishedDistributionPayload = {
   proof_status: 'published_release_receipt_bound',
   live_download_proof: false,
   installed_reload_proof: false,
-  oci_ref: 'ghcr.io/gaofeng21cn/opl-agent-med-autoscience:latest',
+  oci_ref: 'ghcr.io/gaofeng21cn/one-person-lab-packages/mas:latest-stable',
   oci_media_type: 'application/vnd.oci.image.manifest.v1+json',
-  immutable_tag: '0.1.0a4',
-  rolling_tag: 'latest',
-  promotion_policy: 'daily_candidate_gates_then_promote_latest',
+  immutable_tag: '0.1.0-alpha.4',
+  moving_tag: 'latest-stable',
+  promotion_policy: 'daily_candidate_gates_then_promote_latest_stable',
   install_truth: 'resolved_digest_lock',
 };
 
@@ -93,15 +96,13 @@ test('package archive builder writes channel manifest checksums git source and r
   const previousScholarSkillsPayloadSha256 = `sha256:${crypto.createHash('sha256').update(previousScholarSkillsPayloadJson).digest('hex')}`;
   const previousScholarSkillsVersion = {
     package_version: '0.0.9',
-    module_id: 'scholarskills',
     capability_abi: 'mas-scholar-skills.v1',
-    channel: 'stable',
-    promotion_status: 'retained',
-    manifest_url: 'opl+oci://ghcr.io/gaofeng21cn/one-person-lab-packages/mas-scholar-skills:0.0.9#/agent-package-manifest.json',
+    selection_status: 'retained_history',
+    manifest_url: 'opl+oci://ghcr.io/gaofeng21cn/one-person-lab-packages/mas-scholar-skills:0.0.9#/package-manifest.json',
     manifest_sha256: previousScholarSkillsManifestSha256,
     manifest_json: previousScholarSkillsManifestJson,
-    agent_package_manifest: {
-      ref: 'opl+oci://ghcr.io/gaofeng21cn/one-person-lab-packages/mas-scholar-skills:0.0.9#/agent-package-manifest.json',
+    package_manifest: {
+      ref: 'opl+oci://ghcr.io/gaofeng21cn/one-person-lab-packages/mas-scholar-skills:0.0.9#/package-manifest.json',
       sha256: previousScholarSkillsManifestSha256,
     },
     content_digest: `sha256:${'2'.repeat(64)}`,
@@ -112,15 +113,13 @@ test('package archive builder writes channel manifest checksums git source and r
     dependency_package_ids: [],
   };
   fs.writeFileSync(previousManifest, JSON.stringify({
-    opl_version: '26.4.30',
+    release_set_generation: '26.4.30',
     packages: {
       package_catalog: {
         'mas-scholar-skills': {
           package_id: 'mas-scholar-skills',
-          module_id: 'scholarskills',
           package_role: 'framework_capability_package',
-          channel: 'stable',
-          latest_version: '0.0.9',
+          selected_version: '0.0.9',
           dependency_package_ids: [],
           versions: [
             previousScholarSkillsVersion,
@@ -149,7 +148,7 @@ test('package archive builder writes channel manifest checksums git source and r
   const archiveBuilderOutput = execFileSync(process.execPath, [
     '--experimental-strip-types',
     path.join(repoRoot, 'scripts/package-archives.mjs'),
-    '--version',
+    '--release-set-generation',
     '26.4.31',
     '--owner',
     'gaofeng21cn',
@@ -205,7 +204,9 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(fs.existsSync(path.join(outDir, '.github/workflows/daily-package-channel.yml')), true);
   assert.equal(relativeCloneRootFromOutDir === '' || !relativeCloneRootFromOutDir.startsWith('..'), false);
   assert.equal(path.relative(repoRoot, archiveBuilderResult.clone_root).startsWith('..'), true);
-  assert.equal(channelManifest.opl_version, manifest.opl_version);
+  assert.equal(channelManifest.release_set_generation, manifest.release_set_generation);
+  assert.equal(manifest.release_set.generation, '26.4.31');
+  assert.equal(manifest.release_set.package_count, 7);
   assert.equal(channelManifest.manifest_role, 'opl_release_channel_manifest');
   assert.notEqual(channelManifestSource, releaseManifestSource);
   assert.equal(channelManifest.packages.codex_default_profile.model_provider, 'gflab');
@@ -219,7 +220,7 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(manifest.release_automation.status, 'active_managed_ghcr_capability_packages');
   assert.equal(manifest.release_automation.package_lifecycle_status, 'active_release_channel');
   assert.equal(manifest.release_automation.workflow_trigger_policy, 'release_gate_workflow_call_or_manual_dispatch');
-  assert.equal(manifest.release_automation.remote_publish_status, 'release_gate_or_manual_dispatch_publishes_ghcr_packages');
+  assert.equal(manifest.release_automation.remote_publish_status, 'publication_workflow_configured_pending_remote_verification');
   assert.equal(manifest.packages.framework_core.homebrew_formula.surface_kind, 'opl_homebrew_formula_projection.v1');
   assert.equal(manifest.packages.framework_core.homebrew_formula.formula_name, 'opl');
   assert.equal(manifest.packages.framework_core.homebrew_formula.package_name, 'opl');
@@ -241,11 +242,11 @@ test('package archive builder writes channel manifest checksums git source and r
     channelManifest.packages.framework_core.homebrew_formula,
     manifest.packages.framework_core.homebrew_formula,
   );
-  assert.equal(manifest.release_automation.release_manifest_publication_status, 'active_ghcr_channel_manifest');
+  assert.equal(manifest.release_automation.release_manifest_publication_status, 'configured_pending_remote_verification');
   assert.equal(manifest.release_automation.release_manifest_package.package_channel_status, 'active_release_channel');
   assert.equal(manifest.release_automation.daily_package_channel.status, 'active_change_detected_daily_publish');
   assert.equal(manifest.release_automation.daily_package_channel.no_change_behavior, 'skip_without_publish');
-  assert.equal(manifest.release_automation.daily_package_channel.version_template, '<utc_yy.m.d>');
+  assert.equal(manifest.release_automation.daily_package_channel.generation_template, '<utc_yy.m.d>');
   assert.equal(manifest.release_automation.daily_package_channel.force_publish_input, 'force_publish');
   assert.equal(Object.hasOwn(manifest.packages, 'webui_docker_image'), false);
   assert.equal(manifest.packages.framework_core.artifact, 'ghcr.io/gaofeng21cn/one-person-lab-framework:26.4.31');
@@ -258,8 +259,7 @@ test('package archive builder writes channel manifest checksums git source and r
   for (const entry of Object.values(packageCatalog) as Array<Record<string, any>>) {
     assert.equal(entry.homebrew_formula, undefined);
     assert.equal(entry.homebrew_cask, undefined);
-    assert.equal(entry.channel, 'stable');
-    assert.equal(entry.versions.filter((version: Record<string, unknown>) => version.promotion_status === 'promoted').length, 1);
+    assert.equal(entry.versions.filter((version: Record<string, unknown>) => version.selection_status === 'selected_for_release_set').length, 1);
     for (const version of entry.versions) {
       assert.match(version.manifest_sha256, /^sha256:[0-9a-f]{64}$/);
       assert.match(version.content_digest, /^sha256:[0-9a-f]{64}$/);
@@ -272,7 +272,7 @@ test('package archive builder writes channel manifest checksums git source and r
       );
       assert.doesNotThrow(() => JSON.parse(version.payload_manifest_json));
       const normalizedPayload = JSON.parse(version.payload_manifest_json);
-      if (version.promotion_status === 'promoted') {
+      if (version.selection_status === 'selected_for_release_set') {
         assert.equal(normalizedPayload.source_commit, version.owner_source_commit);
       }
       if (normalizedPayload.migration_source_commit) {
@@ -287,11 +287,10 @@ test('package archive builder writes channel manifest checksums git source and r
   }
   const masCatalog = packageCatalog.mas;
   assert.equal(masCatalog.package_role, 'standard_agent');
-  assert.equal(masCatalog.channel, 'stable');
-  assert.equal(masCatalog.latest_version, '0.1.0-alpha.4');
+  assert.equal(masCatalog.selected_version, '0.1.0-alpha.4');
   assert.deepEqual(masCatalog.dependency_package_ids, ['mas-scholar-skills']);
   assert.equal(masCatalog.versions.length, 1);
-  assert.equal(masCatalog.versions[0].promotion_status, 'promoted');
+  assert.equal(masCatalog.versions[0].selection_status, 'selected_for_release_set');
   assert.deepEqual(masCatalog.versions[0].dependency_package_ids, ['mas-scholar-skills']);
   assert.equal(masCatalog.versions[0].capability_abi, null);
   assert.match(masCatalog.versions[0].manifest_url, /^opl\+oci:\/\/ghcr\.io\/gaofeng21cn\/one-person-lab-packages\/mas:0\.1\.0-alpha\.4#\//);
@@ -302,8 +301,8 @@ test('package archive builder writes channel manifest checksums git source and r
     masCatalog.versions[0].manifest_sha256,
     `sha256:${crypto.createHash('sha256').update(masCatalog.versions[0].manifest_json).digest('hex')}`,
   );
-  assert.equal(masCatalog.versions[0].agent_package_manifest.ref, masCatalog.versions[0].manifest_url);
-  assert.equal(masCatalog.versions[0].agent_package_manifest.sha256, masCatalog.versions[0].manifest_sha256);
+  assert.equal(masCatalog.versions[0].package_manifest.ref, masCatalog.versions[0].manifest_url);
+  assert.equal(masCatalog.versions[0].package_manifest.sha256, masCatalog.versions[0].manifest_sha256);
   assert.match(masCatalog.versions[0].content_digest, /^sha256:[0-9a-f]{64}$/);
   assert.equal(
     masCatalog.versions[0].content_digest,
@@ -319,12 +318,12 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(masCatalog.versions[0].release_gate, 'test_owner_sha_release_gate');
   assert.match(masCatalog.versions[0].package_content_digest, /^sha256:[0-9a-f]{64}$/);
   assert.equal(packageCatalog['opl-flow'].package_role, 'workflow_profile');
-  assert.equal(packageCatalog['opl-flow'].latest_version, '0.1.16');
+  assert.equal(packageCatalog['opl-flow'].selected_version, '0.1.16');
   assert.equal(packageCatalog['opl-flow'].homebrew_formula, undefined);
   assert.match(channelManifest.package_catalog_digest, /^sha256:[0-9a-f]{64}$/);
   const scholarSkillsCatalog = packageCatalog['mas-scholar-skills'];
   assert.equal(scholarSkillsCatalog.package_role, 'framework_capability_package');
-  assert.equal(scholarSkillsCatalog.latest_version, '0.1.1');
+  assert.equal(scholarSkillsCatalog.selected_version, '0.1.1');
   assert.deepEqual(
     scholarSkillsCatalog.versions.map((entry: Record<string, unknown>) => entry.package_version),
     ['0.1.1', '0.0.9'],
@@ -358,7 +357,7 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.match(finalizedChannelManifest.package_catalog_digest, /^sha256:[0-9a-f]{64}$/);
   assert.equal(
     Object.values(finalizedChannelManifest.packages.package_catalog).every((entry: any) => (
-      entry.versions.find((version: any) => version.promotion_status === 'promoted').artifact_status === 'published_immutable'
+      entry.versions.find((version: any) => version.selection_status === 'selected_for_release_set').artifact_status === 'published_immutable'
     )),
     true,
   );
@@ -399,7 +398,7 @@ test('package archive builder writes channel manifest checksums git source and r
   );
   assert.equal(
     manifest.packages.package_artifacts.oma.remote_publish_status,
-    'published_to_ghcr_by_packages_workflow',
+    'publication_workflow_configured_pending_remote_verification',
   );
   assert.match(manifest.packages.package_artifacts.oma.source_archive.sha256, /^[0-9a-f]{64}$/);
   assert.equal(
@@ -417,10 +416,10 @@ test('package archive builder writes channel manifest checksums git source and r
   );
   assert.equal(manifest.packages.package_artifacts['mas-scholar-skills'].scope, 'framework_capability_package');
   assert.equal(
-    manifest.packages.package_artifacts['mas-scholar-skills'].agent_package_manifest_ref,
+    manifest.packages.package_artifacts['mas-scholar-skills'].package_manifest_ref,
     'contracts/opl-framework/packages/mas-scholar-skills.json',
   );
-  assert.deepEqual(manifest.packages.package_artifacts['mas-scholar-skills'].dependency_of, ['medautoscience']);
+  assert.deepEqual(manifest.packages.package_artifacts['mas-scholar-skills'].dependency_of, ['mas']);
   assert.match(manifest.packages.package_artifacts['mas-scholar-skills'].source_archive.sha256, /^[0-9a-f]{64}$/);
   assert.match(checksums, /mas-0\.1\.0-alpha\.4\.tar\.gz/);
   assert.match(checksums, /oma-0\.1\.0\.tar\.gz/);
@@ -547,6 +546,31 @@ test('MAS Scholar Skills provider manifest separates core Skill exports from mod
     manifest.content_lock.paths.slice().sort(),
   );
   assert.equal(payload.files.every((entry: Record<string, any>) => /^sha256:[0-9a-f]{64}$/.test(entry.sha256)), true);
+  assert.equal(payload.surface_kind, 'opl_package_payload_manifest.v1');
+  assert.equal(Object.hasOwn(payload, 'agent_id'), false);
+});
+
+test('OPL Flow is a workflow-profile Package without Agent identity', () => {
+  const schemaPath = path.join(repoRoot, 'contracts/opl-framework/workflow-profile-package-manifest.schema.json');
+  const manifestPath = path.join(repoRoot, 'contracts/opl-framework/packages/opl-flow.json');
+  const schema = parseJsonText(fs.readFileSync(schemaPath, 'utf8')) as Record<string, any>;
+  const manifest = parseJsonText(fs.readFileSync(manifestPath, 'utf8')) as Record<string, any>;
+  assert.doesNotThrow(() => assertJsonSchemaPayload({
+    schemaId: schema.$id,
+    schema,
+    sourceRef: 'contracts/opl-framework/workflow-profile-package-manifest.schema.json',
+  }, manifest));
+  const normalized = normalizeWorkflowProfilePackageManifest(manifest, manifestPath);
+  const payload = parseJsonText(fs.readFileSync(
+    path.join(path.dirname(manifestPath), manifest.codex_surface.plugin_payload_manifest_url),
+    'utf8',
+  )) as Record<string, any>;
+  assert.equal(manifest.surface_kind, 'opl_workflow_profile_package_manifest.v1');
+  assert.equal(Object.hasOwn(manifest, 'agent_id'), false);
+  assert.equal(normalized.agent_id, null);
+  assert.equal(normalized.profile_surface?.existing_profile_policy, 'semantic_merge_required');
+  assert.equal(payload.surface_kind, 'opl_package_payload_manifest.v1');
+  assert.equal(Object.hasOwn(payload, 'agent_id'), false);
 });
 
 test('first-party agent package manifest rejects non-canonical identity fields', () => {
@@ -701,7 +725,7 @@ test('package archive builder refreshes reused managed clones before archiving s
   execFileSync(process.execPath, [
     '--experimental-strip-types',
     path.join(repoRoot, 'scripts/package-archives.mjs'),
-    '--version',
+    '--release-set-generation',
     '26.4.32',
     '--owner',
     'gaofeng21cn',
@@ -719,7 +743,7 @@ test('package archive builder refreshes reused managed clones before archiving s
   execFileSync(process.execPath, [
     '--experimental-strip-types',
     path.join(repoRoot, 'scripts/package-archives.mjs'),
-    '--version',
+    '--release-set-generation',
     '26.4.32',
     '--owner',
     'gaofeng21cn',

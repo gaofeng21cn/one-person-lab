@@ -1797,7 +1797,7 @@
           "opl connect sync-skills --json",
           "opl connect modules --json",
           "opl connect packages manifest --json",
-          "opl connect reconcile-modules --json"
+          "opl packages update --json"
         ]
       },
       "app_read_model": {

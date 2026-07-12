@@ -50,8 +50,9 @@ export function readLockIndex(): AgentPackageLockIndex {
       const packageId = canonicalAgentPackageId(declaredPackageId);
       const lockRef = stringValue(entry.lock_ref);
       const declaredAgentId = stringValue(entry.agent_id)?.toLowerCase() ?? null;
-      const agentId = canonicalAgentPackageId(declaredAgentId);
-      return packageId === declaredPackageId && agentId === declaredAgentId && packageId && agentId && lockRef
+      const agentId = declaredAgentId === null ? null : canonicalAgentPackageId(declaredAgentId);
+      const agentIdentityValid = declaredAgentId === null || agentId === declaredAgentId;
+      return packageId === declaredPackageId && agentIdentityValid && packageId && lockRef
         ? [{ ...entry, package_id: packageId, agent_id: agentId } as AgentPackageLock]
         : [];
     }),

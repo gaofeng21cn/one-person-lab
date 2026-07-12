@@ -156,7 +156,7 @@
         "oci_ref",
         "oci_media_type",
         "immutable_tag",
-        "rolling_tag",
+        "moving_tag",
         "promotion_policy",
         "install_truth"
       ],
@@ -203,11 +203,11 @@
           "type": "string",
           "minLength": 1
         },
-        "rolling_tag": {
-          "const": "latest"
+        "moving_tag": {
+          "const": "latest-stable"
         },
         "promotion_policy": {
-          "const": "daily_candidate_gates_then_promote_latest"
+          "const": "daily_candidate_gates_then_promote_latest_stable"
         },
         "install_truth": {
           "const": "resolved_digest_lock"

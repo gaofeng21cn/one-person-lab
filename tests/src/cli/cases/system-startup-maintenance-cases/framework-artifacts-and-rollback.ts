@@ -30,7 +30,7 @@ function writeFakeFrameworkChannel(input: { root: string; version: string; archi
   const channelManifestPath = path.join(blobRoot, 'opl-channel-manifest.json');
   fs.writeFileSync(channelManifestPath, JSON.stringify({
     manifest_version: 1,
-    opl_version: input.version,
+    release_set_generation: input.version,
     packages: {
       framework_core: {
         artifact: `ghcr.io/owner/one-person-lab-framework:${input.version}`,

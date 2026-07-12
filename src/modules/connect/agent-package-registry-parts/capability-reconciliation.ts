@@ -15,7 +15,6 @@ import type {
 
 export type ManagedCatalogVersion = {
   package_version: string;
-  module_id: string | null;
   capability_abi: string | null;
   manifest_url: string;
   manifest_sha256: string;
@@ -27,13 +26,13 @@ export type ManagedCatalogVersion = {
   source_artifact_ref: string | null;
   artifact_digest: string | null;
   dependency_package_ids: string[];
-  promotion_status: 'promoted' | 'retained';
+  selection_status: 'selected_for_release_set' | 'retained_history';
 };
 
 type ManagedCatalogEntry = {
   package_id: string;
-  package_role: 'standard_agent' | 'framework_capability_package';
-  latest_version: string | null;
+  package_role: 'standard_agent' | 'framework_capability_package' | 'workflow_profile';
+  selected_version: string | null;
   versions: ManagedCatalogVersion[];
 };
 
@@ -68,7 +67,7 @@ function comparePackageVersions(left: string, right: string) {
 function normalizeCatalogVersion(value: unknown, entry: Record<string, unknown>): ManagedCatalogVersion | null {
   if (!isRecord(value)) return null;
   const packageVersion = stringValue(value.package_version);
-  const manifest = isRecord(value.agent_package_manifest) ? value.agent_package_manifest : {};
+  const manifest = isRecord(value.package_manifest) ? value.package_manifest : {};
   const manifestUrl = stringValue(value.manifest_url) ?? stringValue(manifest.ref);
   const manifestSha256 = normalizedSha256(value.manifest_sha256 ?? manifest.sha256);
   if (!packageVersion || !manifestUrl || !manifestSha256) return null;
@@ -101,7 +100,6 @@ function normalizeCatalogVersion(value: unknown, entry: Record<string, unknown>)
   }
   return {
     package_version: packageVersion,
-    module_id: stringValue(value.module_id),
     capability_abi: stringValue(value.capability_abi),
     manifest_url: manifestUrl,
     manifest_sha256: manifestSha256,
@@ -115,7 +113,9 @@ function normalizeCatalogVersion(value: unknown, entry: Record<string, unknown>)
     dependency_package_ids: Array.isArray(value.dependency_package_ids)
       ? value.dependency_package_ids.filter((item): item is string => typeof item === 'string' && item.length > 0)
       : [],
-    promotion_status: value.promotion_status === 'retained' ? 'retained' : 'promoted',
+    selection_status: value.selection_status === 'retained_history'
+      ? 'retained_history'
+      : 'selected_for_release_set',
   };
 }
 
@@ -142,8 +142,10 @@ export function normalizeManagedPackageCatalog(payload: unknown): ManagedPackage
       package_id: packageId,
       package_role: rawEntry.package_role === 'framework_capability_package'
         ? 'framework_capability_package'
-        : 'standard_agent',
-      latest_version: stringValue(rawEntry.latest_version),
+        : rawEntry.package_role === 'workflow_profile'
+          ? 'workflow_profile'
+          : 'standard_agent',
+      selected_version: stringValue(rawEntry.selected_version),
       versions,
     });
   }
@@ -186,12 +188,12 @@ export function selectRootCatalogVersion(catalog: ManagedPackageCatalog, lock: A
       update_action: `opl packages update ${publicAgentPackageSelector(lock.package_id)}`,
     });
   }
-  const promoted = entry.versions.filter((candidate) => candidate.promotion_status === 'promoted');
-  const selected = promoted.find((candidate) => candidate.package_version === entry.latest_version)
-    ?? promoted[0]
+  const selectedVersions = entry.versions.filter((candidate) => candidate.selection_status === 'selected_for_release_set');
+  const selected = selectedVersions.find((candidate) => candidate.package_version === entry.selected_version)
+    ?? selectedVersions[0]
     ?? null;
   if (!selected) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Managed package catalog has no promoted stable root package version.', {
+    throw new FrameworkContractError('contract_shape_invalid', 'Managed package catalog has no selected Release Set root package version.', {
       package_id: lock.package_id,
       failure_code: 'agent_package_catalog_stable_version_missing',
       update_action: `opl packages update ${publicAgentPackageSelector(lock.package_id)}`,
