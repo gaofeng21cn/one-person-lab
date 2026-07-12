@@ -119,9 +119,18 @@ function readContract(file) {
 }
 
 function scanDiffAddedLines() {
+  const mergeBase = spawnSync(
+    'git',
+    ['merge-base', args.diffRef, 'HEAD'],
+    { cwd: root, encoding: 'utf8' },
+  );
+  if (mergeBase.status !== 0 || !mergeBase.stdout.trim()) {
+    fail(mergeBase.stderr || `reuse-first scan: git merge-base ${args.diffRef} HEAD failed`);
+  }
+  const diffBase = mergeBase.stdout.trim();
   const diff = spawnSync(
     'git',
-    ['diff', '--unified=0', args.diffRef, '--', ...contract.scan.roots],
+    ['diff', '--unified=0', diffBase, '--', ...contract.scan.roots],
     { cwd: root, encoding: 'utf8' },
   );
   if (diff.status !== 0) {

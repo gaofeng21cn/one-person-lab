@@ -77,6 +77,28 @@ test('reuse-first strict diff scans added lines in tracked files', (t) => {
   assert.equal(output.findings[0].line, 2);
 });
 
+test('reuse-first strict diff compares a feature branch with its merge base', (t) => {
+  const fixture = makeFixture(t);
+  writeFixtureFile(fixture, 'src/existing.ts', 'const parsed = JSON.parse("{}");\n');
+  runGit(fixture, ['add', 'src/existing.ts']);
+  runGit(fixture, ['commit', '-m', 'shared baseline']);
+  const sharedBase = runGit(fixture, ['rev-parse', 'HEAD']).stdout.trim();
+
+  runGit(fixture, ['switch', '-c', 'target']);
+  writeFixtureFile(fixture, 'src/existing.ts', 'export const targetOnlyCleanup = true;\n');
+  runGit(fixture, ['add', 'src/existing.ts']);
+  runGit(fixture, ['commit', '-m', 'target cleanup']);
+
+  runGit(fixture, ['switch', '-c', 'feature', sharedBase]);
+  writeFixtureFile(fixture, 'src/feature.ts', 'export const featureChange = true;\n');
+
+  const result = runScan(fixture, 'target');
+  const output = parseJsonText(result.stdout) as any;
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(output.finding_count, 0);
+});
+
 test('reuse-first strict diff keeps advisory categories non-blocking', (t) => {
   const fixture = makeFixture(t);
   writeFixtureFile(fixture, 'src/new-observability.ts', 'const ledgerName = "evidence_ledger";\n');
@@ -114,7 +136,7 @@ function makeFixture(t: TestContext) {
   return fixture;
 }
 
-function runScan(fixture: string) {
+function runScan(fixture: string, diffRef = 'HEAD') {
   return spawnSync(process.execPath, [
     script,
     '--root',
@@ -122,7 +144,7 @@ function runScan(fixture: string) {
     '--contract',
     path.join(fixture, 'contracts', 'opl-framework', 'reuse-first-governance.json'),
     '--diff-ref',
-    'HEAD',
+    diffRef,
   ], { encoding: 'utf8' });
 }
 
@@ -135,4 +157,5 @@ function writeFixtureFile(fixture: string, relativePath: string, body: string) {
 function runGit(cwd: string, args: string[]) {
   const result = spawnSync('git', args, { cwd, encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
+  return result;
 }
