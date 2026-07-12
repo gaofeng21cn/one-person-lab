@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
+import { readOplFlowDefaultUserInstructions } from '../connect/index.ts';
 
 const MAX_USER_INSTRUCTIONS_BYTES = 256 * 1024;
 
@@ -163,6 +164,38 @@ export function writeCodexUserInstructions(input: {
       next_sha256: nextSha256,
       backup_path: backupPath,
       readback: readCodexUserInstructions(),
+    },
+  };
+}
+
+export function restoreCodexUserInstructionsFromOplFlowDefault(input: {
+  expectedSha256: string | null;
+  dryRun?: boolean;
+}) {
+  const defaultInstructions = readOplFlowDefaultUserInstructions();
+  if (defaultInstructions.status !== 'available' || typeof defaultInstructions.content !== 'string') {
+    throw new FrameworkContractError(
+      'surface_not_found',
+      'The installed OPL Flow package does not provide a valid default AGENTS.md.',
+      {
+        status: defaultInstructions.status,
+        reason: defaultInstructions.reason,
+        source_path: defaultInstructions.source_path,
+        package_lock_ref: defaultInstructions.package_lock_ref,
+      },
+    );
+  }
+  const write = writeCodexUserInstructions({
+    content: defaultInstructions.content,
+    expectedSha256: input.expectedSha256,
+    dryRun: input.dryRun,
+  });
+  return {
+    codex_user_instructions_restore: {
+      surface_kind: 'opl_codex_user_instructions_restore.v1',
+      status: input.dryRun ? 'dry_run' : 'restored',
+      default_source: defaultInstructions,
+      write: write.codex_user_instructions_write,
     },
   };
 }
