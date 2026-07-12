@@ -198,9 +198,7 @@ export function writeMasConsumer(
     display_name: 'Med Auto Science',
     publisher: 'one-person-lab',
     version: packageVersion,
-    ...(packageVersion !== version ? {
-      owner_language_version: { scheme: 'pep440', value: version },
-    } : {}),
+    owner_language_version: { scheme: 'pep440', value: version },
     source: 'test_consumer',
     ...((options.packageCatalogRef ?? options.capabilityCatalogRef) ? {
       managed_update_source: {

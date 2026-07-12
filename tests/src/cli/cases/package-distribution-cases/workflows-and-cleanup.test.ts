@@ -72,8 +72,12 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.match(workflow, /Upload prepared Package artifacts/);
   assert.match(dailyPackageWorkflow, /schedule:/);
   assert.match(dailyPackageWorkflow, /cron:/);
+  assert.match(dailyPackageWorkflow, /group: opl-daily-package-channel-\$\{\{ github\.repository_owner \}\}/);
+  assert.match(dailyPackageWorkflow, /cancel-in-progress: false/);
   assert.match(dailyPackageWorkflow, /base="\$\(date -u \+'%y\.%-m\.%-d'\)"/);
-  assert.match(dailyPackageWorkflow, /generation="\$\{base#v\}"/);
+  assert.match(dailyPackageWorkflow, /oras repo tags/);
+  assert.doesNotMatch(dailyPackageWorkflow, /if ! oras repo tags/);
+  assert.match(dailyPackageWorkflow, /release-set-generation\.mjs/);
   assert.match(dailyPackageWorkflow, /workflow_dispatch:/);
   assert.match(dailyPackageWorkflow, /force_publish:/);
   assert.match(dailyPackageWorkflow, /force_publish[\s\S]*publish_required=true/);
@@ -93,6 +97,26 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.match(dailyPackageWorkflow, /promotion_target:\s*candidate/);
   assert.doesNotMatch(dailyPackageWorkflow, /\n\s*push:\n/);
   assert.doesNotMatch(dailyPackageWorkflow, /one-person-lab-webui/);
+});
+
+test('daily Release Set generation allocates the next immutable same-day revision', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-release-set-generation-'));
+  const tags = path.join(root, 'tags.txt');
+  fs.writeFileSync(tags, ['26.7.12', '26.7.12-r2', 'candidate', '26.7.12-r4', '26.7.11'].join('\n'));
+  const next = execFileSync(process.execPath, [
+    path.join(repoRoot, 'scripts/release-set-generation.mjs'),
+    '--base', '26.7.12',
+    '--existing-tags-file', tags,
+  ], { encoding: 'utf8' }).trim();
+  assert.equal(next, '26.7.12-r5');
+
+  fs.writeFileSync(tags, 'candidate\nlatest-stable\n');
+  const first = execFileSync(process.execPath, [
+    path.join(repoRoot, 'scripts/release-set-generation.mjs'),
+    '--base', '26.7.13',
+    '--existing-tags-file', tags,
+  ], { encoding: 'utf8' }).trim();
+  assert.equal(first, '26.7.13');
 });
 
 function writeDailyCatalogFixture(root: string, name: string, packages: Record<string, { version: string; digest: string }>) {
@@ -130,7 +154,7 @@ test('daily package detector publishes only version-bumped changed packages and 
   assert.deepEqual(unchangedOutput.changed_packages, []);
 
   const bumped = writeDailyCatalogFixture(root, 'bumped.json', {
-    mas: { version: '0.1.0-alpha.5', digest: `sha256:${'3'.repeat(64)}` },
+    mas: { version: '0.1.0', digest: `sha256:${'3'.repeat(64)}` },
     mag: { version: '0.1.0', digest: `sha256:${'2'.repeat(64)}` },
   });
   const bumpedOutput = parseJsonText(execFileSync(process.execPath, [

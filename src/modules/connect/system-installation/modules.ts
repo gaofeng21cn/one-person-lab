@@ -54,7 +54,10 @@ import {
   readPackagedModuleGitSnapshot,
   readPackagedModuleMarker,
 } from './module-packaged.ts';
-import { installManagedModuleFromPackageChannel } from './module-package-channel.ts';
+import {
+  installManagedModuleFromPackageChannel,
+  readManagedModulePackageChannelUpdateStatus,
+} from './module-package-channel.ts';
 import { DOMAIN_MODULE_SPECS } from './module-specs.ts';
 
 const MODULE_WORKFLOW_DEPS = {
@@ -415,6 +418,22 @@ function inspectModule(spec: DomainModuleSpec, profile: ModuleInspectionProfile 
         continue;
       }
 
+      const packageUpdateAvailable = (() => {
+        if (
+          profile !== 'full'
+          || packagedModule.marker.source_kind !== 'package_channel'
+          || candidate.origin !== 'managed_root'
+          || packagedModule.dirty
+          || sourcePolicy.effective_install_update_source !== 'package_channel'
+        ) {
+          return false;
+        }
+        try {
+          return readManagedModulePackageChannelUpdateStatus(candidate.path, spec).status === 'update_available';
+        } catch {
+          return false;
+        }
+      })();
       return {
         module_id: spec.module_id,
         label: spec.label,
@@ -432,9 +451,9 @@ function inspectModule(spec: DomainModuleSpec, profile: ModuleInspectionProfile 
         source_policy: sourcePolicyForOrigin(sourcePolicy, candidate.origin),
         capabilities: buildModuleCapabilities(sourcePolicy, candidate.origin, true),
         available_actions: candidate.origin === 'managed_root'
-          ? [...(!packagedModule.dirty ? (['update'] as const) : []), 'reinstall', 'remove']
+          ? [...(packageUpdateAvailable ? (['update'] as const) : []), 'reinstall', 'remove']
           : [],
-        recommended_action: candidate.origin === 'managed_root' && !packagedModule.dirty ? 'update' : null,
+        recommended_action: packageUpdateAvailable ? 'update' : null,
       };
     }
 

@@ -149,7 +149,7 @@ test('MAS dependency closure update and rollback atomically rematerialize known 
   const providerV1 = writeCapabilityProvider(path.join(root, 'provider-v1'), '0.1.0');
   const consumerV1 = writeMasConsumer(path.join(root, 'consumer-v1'), providerV1, '0.1.0a4');
   const providerV2 = writeCapabilityProvider(path.join(root, 'provider-v2'), '0.1.1');
-  const consumerV2 = writeMasConsumer(path.join(root, 'consumer-v2'), providerV2, '0.1.0a5');
+  const consumerV2 = writeMasConsumer(path.join(root, 'consumer-v2'), providerV2, '0.1.0');
   const env = { OPL_STATE_DIR: stateDir, CODEX_HOME: codexHome };
   const helperPath = path.join(workspace, '.codex', 'skills', 'medical-manuscript-writing', 'helper.txt');
   try {
@@ -169,7 +169,7 @@ test('MAS dependency closure update and rollback atomically rematerialize known 
     assert.deepEqual(
       updated.opl_agent_package_update.dependency_package_locks
         .map((entry: any) => `${entry.package_id}@${entry.package_version}`).sort(),
-      ['mas-scholar-skills@0.1.1', 'mas@0.1.0-alpha.5'],
+      ['mas-scholar-skills@0.1.1', 'mas@0.1.0'],
     );
     assert.match(fs.readFileSync(helperPath, 'utf8'), /0\.1\.1/);
     const updatedStatus = runCli([
@@ -425,7 +425,7 @@ test('failed MAS closure update and rollback restore package state and scope fil
   const providerV1 = writeCapabilityProvider(path.join(root, 'provider-v1'), '0.1.0');
   const consumerV1 = writeMasConsumer(path.join(root, 'consumer-v1'), providerV1, '0.1.0a4');
   const providerV2 = writeCapabilityProvider(path.join(root, 'provider-v2'), '0.1.1');
-  const consumerV2 = writeMasConsumer(path.join(root, 'consumer-v2'), providerV2, '0.1.0a5');
+  const consumerV2 = writeMasConsumer(path.join(root, 'consumer-v2'), providerV2, '0.1.0');
   const env = { OPL_STATE_DIR: stateDir, CODEX_HOME: codexHome };
   const helperPath = path.join(workspace, '.codex', 'skills', 'medical-manuscript-writing', 'helper.txt');
   const status = () => runCli([
@@ -478,7 +478,7 @@ test('failed MAS closure update and rollback restore package state and scope fil
     });
     assert.match(fs.readFileSync(helperPath, 'utf8'), /0\.1\.1/);
     assert.equal(status().materialization_readiness.status, 'current');
-    assert.equal(status().installed_packages[0].package_version, '0.1.0-alpha.5');
+    assert.equal(status().installed_packages[0].package_version, '0.1.0');
   } finally {
     if (fs.existsSync(stateDir)) fs.chmodSync(stateDir, 0o755);
     fs.rmSync(root, { recursive: true, force: true });

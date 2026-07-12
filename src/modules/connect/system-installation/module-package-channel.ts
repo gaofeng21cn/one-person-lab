@@ -72,6 +72,17 @@ type OplChannelPackageVersionSelection = OplChannelPackageCatalogVersion & {
   package_content_digest: string;
 };
 
+export type PackageChannelUpdateStatus = {
+  status: 'current' | 'update_available';
+  package_id: string;
+  current_version: string | null;
+  target_version: string;
+  current_artifact_ref: string | null;
+  target_artifact_ref: string;
+  current_content_digest: string | null;
+  target_content_digest: string;
+};
+
 export type PackageChannelActivationSnapshot = {
   root: string;
   channel_version: string | null;
@@ -581,6 +592,48 @@ function packageEntry(
   };
 }
 
+function normalizePackageContentDigest(value: string | null | undefined) {
+  const normalized = normalizeOptionalString(value);
+  return normalized ? `sha256:${normalized.replace(/^sha256:/, '')}` : null;
+}
+
+function packageChannelUpdateStatus(
+  lifecycle: PackageChannelLifecycle,
+  entry: OplChannelPackageVersionSelection,
+): PackageChannelUpdateStatus {
+  const currentContentDigest = normalizePackageContentDigest(lifecycle.current.source_archive_sha256);
+  const targetContentDigest = normalizePackageContentDigest(entry.package_content_digest);
+  const current = lifecycle.current.channel_version === entry.package_version
+    && lifecycle.current.artifact_ref === entry.immutable_artifact_ref
+    && currentContentDigest === targetContentDigest;
+  return {
+    status: current ? 'current' : 'update_available',
+    package_id: entry.package_id,
+    current_version: lifecycle.current.channel_version,
+    target_version: entry.package_version,
+    current_artifact_ref: lifecycle.current.artifact_ref,
+    target_artifact_ref: entry.immutable_artifact_ref,
+    current_content_digest: currentContentDigest,
+    target_content_digest: targetContentDigest ?? entry.package_content_digest,
+  };
+}
+
+export function readManagedModulePackageChannelUpdateStatus(
+  repoPath: string,
+  spec: DomainModuleSpec,
+  declaredRef?: string,
+) {
+  const lifecycle = readPackageChannelLifecycle(repoPath, spec);
+  if (!lifecycle) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Managed Package update status requires lifecycle metadata.', {
+      module_id: spec.module_id,
+      checkout_path: repoPath,
+    });
+  }
+  const entry = packageEntry(readOplPackageChannelManifest(declaredRef), spec);
+  return packageChannelUpdateStatus(lifecycle, entry);
+}
+
 function extractArchiveToStage(archivePath: string, stagePath: string, spec: DomainModuleSpec) {
   const unpackPath = `${stagePath}.unpack-${process.pid}`;
   fs.rmSync(stagePath, { recursive: true, force: true });
@@ -682,6 +735,16 @@ export function installManagedModuleFromPackageChannel(
 ) {
   const channelManifest = readOplPackageChannelManifest();
   const entry = packageEntry(channelManifest, spec);
+  if (fs.existsSync(targetPath) && !options.repairTransactionId) {
+    assertCleanPackageChannelRoot(targetPath, spec);
+    const lifecycle = readPackageChannelLifecycle(targetPath, spec);
+    if (lifecycle && packageChannelUpdateStatus(lifecycle, entry).status === 'current') {
+      return {
+        status: 'current' as const,
+        repair_displaced_path: null,
+      };
+    }
+  }
   const imageRef = parseImageRef(entry.immutable_artifact_ref);
   const token = fetchGhcrToken(imageRef);
   const manifest = fetchOciManifest(imageRef, token);
@@ -705,21 +768,21 @@ export function installManagedModuleFromPackageChannel(
       image: imageRef.image,
       reference: imageRef.tag,
     });
-    if (fs.existsSync(targetPath) && !options.repairTransactionId) {
-      assertCleanPackageChannelRoot(targetPath, spec);
-    }
     extractArchiveToStage(archivePath, stagePath, spec);
-    return activateStagedPackageChannel({
-      spec,
-      targetPath,
-      stagePath,
-      channelVersion: entry.package_version,
-      artifactRef: entry.immutable_artifact_ref,
-      layerDigest: layer.digest,
-      sourceArchiveSha256: entry.package_content_digest.replace(/^sha256:/, ''),
-      sourceGitHeadSha: normalizeOptionalString(entry.owner_source_commit),
-      repairTransactionId: options.repairTransactionId,
-    });
+    return {
+      status: 'updated' as const,
+      ...activateStagedPackageChannel({
+        spec,
+        targetPath,
+        stagePath,
+        channelVersion: entry.package_version,
+        artifactRef: entry.immutable_artifact_ref,
+        layerDigest: layer.digest,
+        sourceArchiveSha256: entry.package_content_digest.replace(/^sha256:/, ''),
+        sourceGitHeadSha: normalizeOptionalString(entry.owner_source_commit),
+        repairTransactionId: options.repairTransactionId,
+      }),
+    };
   } finally {
     fs.rmSync(stagePath, { recursive: true, force: true });
     fs.rmSync(`${stagePath}.unpack-${process.pid}`, { recursive: true, force: true });
