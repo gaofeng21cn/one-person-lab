@@ -1,7 +1,7 @@
 import { spawn, spawnSync } from 'node:child_process';
 import net from 'node:net';
 
-import { assert, createFamilyContractsFixtureRoot, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, createFamilyContractsFixtureRoot, fs, installRuntimePackageFixture, os, path, repoRoot, runCli, test } from '../helpers.ts';
 import { resolveTemporalWorkerTaskQueue } from '../../../../src/modules/runway/family-runtime-temporal-provider-parts/worker-task-queue.ts';
 
 type RuntimeEventRow = {
@@ -192,6 +192,7 @@ test('runtime snapshot workbench shows current managed Temporal readiness withou
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-attempt-workbench-current-provider-'));
   const runtimeRoot = path.join(stateRoot, 'family-runtime');
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  installRuntimePackageFixture(stateRoot, 'mas');
   const server = net.createServer((socket) => socket.end());
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   const address = `127.0.0.1:${(server.address() as net.AddressInfo).port}`;
