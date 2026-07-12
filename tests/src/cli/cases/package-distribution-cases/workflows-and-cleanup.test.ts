@@ -34,6 +34,15 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.match(workflow, /oci-publication-preflight\.mjs/);
   assert.match(workflow, /org\.opencontainers\.image\.source/);
   assert.match(workflow, /visibility=public/);
+  const publicPackageGates = [...workflow.matchAll(/ensure_public_package\(\) \{([\s\S]*?)\n          \}/g)]
+    .map((match) => match[1]);
+  assert.equal(publicPackageGates.length, 2);
+  for (const gate of publicPackageGates) {
+    assert.match(gate, /for attempt in \{1\.\.24\}/);
+    assert.ok(gate.indexOf('readback="$(gh api') < gate.indexOf('gh api --method PATCH'));
+    assert.doesNotMatch(gate, /visibility=public[^\n]*\n\s*&& readback=/);
+    assert.match(gate, /visibility=public >\/dev\/null 2>&1 \|\| true/);
+  }
   assert.match(workflow, /--anonymous/);
   assert.match(workflow, /--expected-digest/);
   assert.match(workflow, /one-person-lab-manifest:latest-stable/);

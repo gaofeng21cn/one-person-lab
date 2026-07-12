@@ -177,15 +177,15 @@ jobs:
             local package_name="$1"
             local encoded readback attempt
             encoded="$(jq -rn --arg value "$package_name" '$value|@uri')"
-            for attempt in {1..12}; do
-              if gh api --method PATCH "/user/packages/container/${encoded}/visibility" \
-                -f visibility=public >/dev/null 2>&1 \
-                && readback="$(gh api "/users/${OPL_PACKAGES_OWNER}/packages/container/${encoded}" 2>/dev/null)" \
+            for attempt in {1..24}; do
+              if readback="$(gh api "/users/${OPL_PACKAGES_OWNER}/packages/container/${encoded}" 2>/dev/null)" \
                 && jq -e --arg repo "$GITHUB_REPOSITORY" \
                   '.visibility == "public" and .repository.full_name == $repo' <<<"$readback" >/dev/null; then
                 return 0
               fi
-              if [ "$attempt" -eq 12 ]; then
+              gh api --method PATCH "/user/packages/container/${encoded}/visibility" \
+                -f visibility=public >/dev/null 2>&1 || true
+              if [ "$attempt" -eq 24 ]; then
                 echo "::error::GHCR package is not public or is not associated with ${GITHUB_REPOSITORY}: ${package_name}"
                 return 1
               fi
@@ -302,15 +302,15 @@ jobs:
             local package_name="$1"
             local encoded readback attempt
             encoded="$(jq -rn --arg value "$package_name" '$value|@uri')"
-            for attempt in {1..12}; do
-              if gh api --method PATCH "/user/packages/container/${encoded}/visibility" \
-                -f visibility=public >/dev/null 2>&1 \
-                && readback="$(gh api "/users/${OPL_PACKAGES_OWNER}/packages/container/${encoded}" 2>/dev/null)" \
+            for attempt in {1..24}; do
+              if readback="$(gh api "/users/${OPL_PACKAGES_OWNER}/packages/container/${encoded}" 2>/dev/null)" \
                 && jq -e --arg repo "$GITHUB_REPOSITORY" \
                   '.visibility == "public" and .repository.full_name == $repo' <<<"$readback" >/dev/null; then
                 return 0
               fi
-              if [ "$attempt" -eq 12 ]; then
+              gh api --method PATCH "/user/packages/container/${encoded}/visibility" \
+                -f visibility=public >/dev/null 2>&1 || true
+              if [ "$attempt" -eq 24 ]; then
                 echo "::error::GHCR package is not public or is not associated with ${GITHUB_REPOSITORY}: ${package_name}"
                 return 1
               fi
