@@ -21,7 +21,7 @@ import {
   type CodexStageRunnerMode,
   type RunnerEventSummary,
 } from './input-prompt.ts';
-import type { StandardAgentStagePromptResolution } from '../../pack/standard-agent-stage-prompt.ts';
+import type { StandardAgentStagePromptResolution } from '../../pack/index.ts';
 import type { TypedStageCloseoutPacket } from './closeout-normalization.ts';
 import type { JsonRecord } from './shared.ts';
 

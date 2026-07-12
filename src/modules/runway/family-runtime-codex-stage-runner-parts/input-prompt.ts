@@ -4,7 +4,7 @@ import { codexStageAttemptEnv } from './provider-env.ts';
 import {
   resolveStandardAgentStagePrompt,
   type StandardAgentStagePromptResolution,
-} from '../../pack/standard-agent-stage-prompt.ts';
+} from '../../pack/index.ts';
 import {
   isRecord,
   readStringList,
