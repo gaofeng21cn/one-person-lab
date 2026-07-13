@@ -535,6 +535,7 @@ export function createFamilyLocatorResolverFixture(options: {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-locator-fixture-'));
   const uvPath = path.join(fixtureRoot, 'uv');
   const redcubePath = path.join(fixtureRoot, 'redcube');
+  const domainEntryPath = path.join(fixtureRoot, 'opl-test-domain-entry');
   const masManifestPath = path.join(fixtureRoot, 'mas-manifest.json');
   const magManifestPath = path.join(fixtureRoot, 'mag-manifest.json');
   const redcubeManifestPath = path.join(fixtureRoot, 'redcube-manifest.json');
@@ -542,6 +543,21 @@ export function createFamilyLocatorResolverFixture(options: {
   fs.writeFileSync(masManifestPath, `${JSON.stringify(options.masManifest, null, 2)}\n`, 'utf8');
   fs.writeFileSync(magManifestPath, `${JSON.stringify(options.magManifest, null, 2)}\n`, 'utf8');
   fs.writeFileSync(redcubeManifestPath, `${JSON.stringify(options.redcubeManifest, null, 2)}\n`, 'utf8');
+
+  fs.writeFileSync(
+    domainEntryPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+
+case "\${1:-}" in
+  mas) cat ${shellSingleQuote(masManifestPath)} ;;
+  mag) cat ${shellSingleQuote(magManifestPath)} ;;
+  rca) cat ${shellSingleQuote(redcubeManifestPath)} ;;
+  *) echo "unexpected domain entry fixture agent: \${1:-}" >&2; exit 1 ;;
+esac
+`,
+    { mode: 0o755 },
+  );
 
   fs.writeFileSync(
     uvPath,
@@ -589,5 +605,6 @@ exit 1
     fixtureRoot,
     uvPath,
     redcubePath,
+    domainEntryPath,
   };
 }

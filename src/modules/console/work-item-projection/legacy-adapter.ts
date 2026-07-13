@@ -7,15 +7,17 @@ import {
 import type { RuntimeTrayItem } from '../runtime-tray-snapshot-types.ts';
 import type { WorkItemProjectionItem, WorkItemProjectionV2 } from './types.ts';
 
-function primaryState(item: WorkItemProjectionItem) {
-  if (item.execution.state === 'running') return 'in_progress';
-  if (item.attention.kind === 'system') return 'system_attention_required';
-  if (item.attention.kind === 'user') return 'owner_decision_required';
-  if (item.lifecycle.business_state === 'delivered_paused') return 'delivered_auto_paused';
-  if (['paused', 'stopped', 'archived'].includes(item.lifecycle.business_state)) {
-    return 'paused_waiting_for_direction';
+function legacyPrimaryState(item: WorkItemProjectionItem) {
+  switch (item.lifecycle.primary_state) {
+    case 'automatically_advancing': return 'in_progress';
+    case 'awaiting_user_decision': return 'owner_decision_required';
+    case 'system_attention': return 'system_attention_required';
+    case 'delivered_auto_paused': return 'delivered_auto_paused';
+    case 'paused':
+    case 'stopped':
+    case 'sync_pending':
+      return 'paused_waiting_for_direction';
   }
-  return item.lifecycle.business_state === 'active' ? 'in_progress' : 'paused_waiting_for_direction';
 }
 
 function actionFor(item: WorkItemProjectionItem, summary: string) {
@@ -56,7 +58,6 @@ export function projectWorkItemRuntimeActivityItems(projection: WorkItemProjecti
   return projection.items.map((item): RuntimeTrayItem & JsonRecord => {
     const summary = nextStep(item);
     const action = actionFor(item, summary);
-    const state = primaryState(item);
     const lane = item.execution.state === 'running'
       ? 'running'
       : item.attention.kind === 'none'
@@ -125,7 +126,7 @@ export function projectWorkItemRuntimeActivityItems(projection: WorkItemProjecti
       runtime_closeout_refs: [],
       provider_kind: item.execution.provider_kind,
       workflow_id: item.execution.workflow_id,
-      business_primary_state: state,
+      business_primary_state: legacyPrimaryState(item),
       business_status: item.lifecycle.raw_business_status,
       business_state: item.lifecycle.business_state,
       authority_boundary: projection.authority_boundary,

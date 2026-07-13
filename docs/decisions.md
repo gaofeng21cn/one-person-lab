@@ -7,6 +7,17 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-07-13
 
+### 决策：Workspace registry 测试状态与真实用户状态强隔离，缺失 binding 通过显式归档治理
+
+原因：Runtime V2 inventory 曾出现大量 `opl-workspace-*-root-*` 测试 binding。标准 test lane 已有临时 `OPL_STATE_DIR`，但直接运行 focused `node --test` 时，CLI helper 仍继承 shell 中的用户 state；workspace initializer 会把临时 RCA/MAG workspace 写进真实 registry，并因同 project 只允许一个 active binding 而把真实 binding 降为 inactive。与此同时，`workspace archive` 要求目录仍存在，导致已删除临时目录的 active binding 无法经公开 CLI 归档，进而阻塞安全 prune。RCA inventory 因真实 binding 被测试 binding 降级而消失；OBF 的真实 Book workspace 从未显式绑定；MAG 当前没有 canonical workspace，这三类缺失不能靠目录扫描或 Runtime 投影猜测修复。
+
+影响：
+
+- CLI 测试 helper 与 test lane 都默认使用 runner-owned 临时 state；同步 subprocess、async subprocess 和 in-process read-only invocation 采用同一隔离规则。调用点显式传入 `OPL_STATE_DIR` 时仍优先，用于 fixture state；调用者 shell/live state 不再是测试默认值。
+- `workspace bind` 与 `workspace activate` 继续只接受当前 admitted project 和当前存在的目录。`workspace archive` 改为按 registry 中精确 `project_id + absolute path` 归档，因此可以处理已经消失的 active binding，以及仍留在 registry 中但 project id 已退役或改名的 legacy binding；它不重新 admission 旧 project、不删除文件、不按路径名识别测试数据、不自动激活其他 binding。
+- `workspace maintenance prune` 继续默认 dry-run、apply 前 byte-exact backup，只清理 missing + non-active binding。active missing binding 必须先显式 archive；真正的 RCA/OBF workspace 需要显式 activate/bind，MAG 在用户选择并初始化 canonical grant workspace 前保持未绑定。
+- Runtime V2 inventory 只消费 canonical registry/workspace projection。domain source repo、已删除 worktree、test temp root、autopush binding 和历史 attempt 不能自动成为用户项目；本决策不修改 live registry，也不声明任何 domain/runtime/production readiness。
+
 ### 决策：Stage Review 由真正的 StageRun 父级工作流编排
 
 原因：旧实现把一次 Stage 主提示词执行和一次 `StageAttemptWorkflow` 混称为 StageRun，同线程自检又容易被误读为独立 Review。这既污染 reviewer 上下文，也会诱导 domain 用自定义 Attempt role 把一个 Stage 扩张成隐藏的小 Stage graph。

@@ -12,6 +12,7 @@ import {
   readProjectInventory,
   type InventoryDescriptorResolver,
 } from './inventory.ts';
+import { withProjectedWorkItemPrimaryState } from './primary-state.ts';
 import type {
   WorkItemCondition,
   WorkItemProjectionItem,
@@ -107,7 +108,10 @@ export function buildWorkItemProjectionV2(
   });
   diagnostics.push(...joined.diagnostics);
   const items = joined.items
-    .map((item) => ({ ...item, conditions: [...lifecycleConditions(item), ...item.conditions] }))
+    .map((item) => withProjectedWorkItemPrimaryState({
+      ...item,
+      conditions: [...lifecycleConditions(item), ...item.conditions],
+    }))
     .sort((left, right) =>
       left.identity.agent_id.localeCompare(right.identity.agent_id)
         || left.identity.project_display_name.localeCompare(right.identity.project_display_name)
@@ -115,6 +119,8 @@ export function buildWorkItemProjectionV2(
     );
   const exposedDiagnostics = profile === 'full' ? diagnostics : [];
   const { agents, availability } = buildAgentCatalog({
+    profile,
+    checkedAt: generatedAt,
     packageItems: options.packageProjectionItems,
     packageStatusById: options.packageStatusById,
     descriptorByAgent: descriptorCache,
@@ -135,8 +141,8 @@ export function buildWorkItemProjectionV2(
       running_count: items.filter((item) => item.execution.state === 'running').length,
       user_attention_count: items.filter((item) => item.attention.kind === 'user').length,
       system_attention_count: items.filter((item) => item.attention.kind === 'system').length,
-      telemetry_observed_count: items.filter((item) => item.telemetry.state === 'observed').length,
-      telemetry_missing_count: items.filter((item) => item.telemetry.state === 'missing').length,
+      telemetry_observed_count: items.filter((item) => item.telemetry.cumulative.state === 'observed').length,
+      telemetry_missing_count: items.filter((item) => item.telemetry.cumulative.state === 'missing').length,
     },
     items,
     diagnostics: {

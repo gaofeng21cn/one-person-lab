@@ -2,7 +2,14 @@ import * as fs from 'fs';
 import type { DatabaseSync } from 'node:sqlite';
 
 import { isRecord } from '../../kernel/contract-validation.ts';
-import { resolveDomainOwnerAnswerProjectionProfile } from '../../kernel/domain-owner-answer-projection-profile.ts';
+import {
+  resolveDomainOwnerAnswerProjectionProfiles,
+  type DomainOwnerAnswerProjectionProfile,
+} from '../../kernel/domain-owner-answer-projection-profile.ts';
+import {
+  standardAgentProgressDeltaKeySet,
+  type StandardAgentProgressDeltaKeySet,
+} from '../connect/index.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
 import { OBSERVABILITY_ATTEMPT_LEDGER_LABEL } from '../../kernel/observability-projection-vocabulary.ts';
 import { QUEUE_PROJECTION_VOCABULARY } from '../../kernel/queue-projection-vocabulary.ts';
@@ -51,6 +58,13 @@ import {
   controlLoopAuthorityBoundary,
   transitionBridgeFilterKeys,
 } from './runtime-tray-stage-attempt-workbench-parts/metadata.ts';
+import {
+  WORKBENCH_ATTEMPT_LIST_LIMIT,
+  WORKBENCH_DISTINCT_EVIDENCE_ATTEMPT_LIMIT,
+  WORKBENCH_EVIDENCE_SCAN_LIMIT,
+  attemptHistoryReadProjection,
+  nonArchivedStageAttemptCount,
+} from './runtime-tray-stage-attempt-workbench-parts/history-read.ts';
 
 type ProviderReadinessOptions = {
   managedProviderProjection?: {
@@ -66,8 +80,6 @@ type StageAttemptProjection = ReturnType<typeof attemptProjection>;
 
 const EMPTY_EFFECTIVE_CURRENT_CONTEXT = buildEffectiveCurrentContextPacket([]);
 const EMPTY_FAMILY_STALL_LINEAGE = buildFamilyStallLineage([]);
-const WORKBENCH_EVIDENCE_ATTEMPT_LIMIT = 25;
-const WORKBENCH_DISTINCT_EVIDENCE_ATTEMPT_LIMIT = 50;
 
 function parseRecord(value: string): JsonRecord {
   try {
@@ -126,7 +138,7 @@ function evidenceAttemptKey(attempt: StageAttemptProjection) {
 }
 
 function selectEvidenceAttempts(attempts: StageAttemptProjection[]) {
-  if (attempts.length <= WORKBENCH_EVIDENCE_ATTEMPT_LIMIT) {
+  if (attempts.length <= WORKBENCH_ATTEMPT_LIST_LIMIT) {
     return attempts;
   }
   const selected: StageAttemptProjection[] = [];
@@ -419,6 +431,8 @@ function attemptProjection(
   signals: JsonRecord[],
   providerReadiness: Awaited<ReturnType<typeof inspectFamilyRuntimeProviderWithLifecycle>> | null,
   taskPayload: JsonRecord | null = null,
+  ownerAnswerProfile: DomainOwnerAnswerProjectionProfile | null = null,
+  progressDeltaKeys: StandardAgentProgressDeltaKeySet | null = null,
 ) {
   const providerRun = parseRecord(row.provider_run_json);
   const activityEvents = recordList(parseList(row.activity_events_json));
@@ -427,7 +441,12 @@ function attemptProjection(
     ? launchInvocationEvent.invocation as JsonRecord
     : null;
   const routeImpact = parseRecord(row.route_impact_json);
-  const workspaceLocator = normalizedWorkspaceLocator(row, parseRecord(row.workspace_locator_json), taskPayload);
+  const workspaceLocator = normalizedWorkspaceLocator(
+    row,
+    parseRecord(row.workspace_locator_json),
+    taskPayload,
+    ownerAnswerProfile,
+  );
   const activity = latestActivity(activityEvents);
   const checkpointRefs = stringList(parseList(row.checkpoint_refs_json));
   const closeoutRefs = stringList(parseList(row.closeout_refs_json));
@@ -563,6 +582,7 @@ function attemptProjection(
     modelRouteCostProjection,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    ...(progressDeltaKeys ? { progressDeltaKeys } : {}),
   });
   const memoryTraceProjection = stageProgressLog.memory_trace_projection;
   const attemptTruePathProof = buildStageAttemptTruePathProof({
@@ -738,8 +758,8 @@ function normalizedWorkspaceLocator(
   row: StageAttemptWorkbenchRow,
   workspaceLocator: JsonRecord,
   taskPayload: JsonRecord | null,
+  profile: DomainOwnerAnswerProjectionProfile | null,
 ) {
-  const profile = resolveDomainOwnerAnswerProjectionProfile(row.domain_id);
   if (
     !profile?.stageNativeOwnerAnswer
     || row.stage_id !== profile.stageNativeOwnerAnswer.dispatchTaskKind
@@ -812,22 +832,42 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
 
   const db = openFamilyRuntimeSqlite(queueDb, { readOnly: true });
   try {
-    const allRows = listStageAttemptRows(db) as StageAttemptWorkbenchRow[];
-    const archivedRows = listStageAttemptRows(db, 25, 'only') as StageAttemptWorkbenchRow[];
-    const rows = allRows.slice(0, 25);
-    const attemptIds = allRows.map((row) => row.stage_attempt_id);
+    const totalAttemptCount = nonArchivedStageAttemptCount(db);
+    const evidenceRows = listStageAttemptRows(
+      db,
+      WORKBENCH_EVIDENCE_SCAN_LIMIT,
+    ) as StageAttemptWorkbenchRow[];
+    const archivedRows = listStageAttemptRows(
+      db,
+      WORKBENCH_ATTEMPT_LIST_LIMIT,
+      'only',
+    ) as StageAttemptWorkbenchRow[];
+    const rows = evidenceRows.slice(0, WORKBENCH_ATTEMPT_LIST_LIMIT);
+    const attemptIds = evidenceRows.map((row) => row.stage_attempt_id);
     const taskPayloads = taskPayloadsById(
       db,
-      allRows.map((row) => row.task_id).filter((taskId): taskId is string => Boolean(taskId)),
+      evidenceRows.map((row) => row.task_id).filter((taskId): taskId is string => Boolean(taskId)),
     );
     const currentControlStates = currentControlStatesByTaskId(
       db,
-      allRows.map((row) => row.task_id).filter((taskId): taskId is string => Boolean(taskId)),
+      evidenceRows.map((row) => row.task_id).filter((taskId): taskId is string => Boolean(taskId)),
     );
     const latestCloseouts = latestStageAttemptCloseoutPacketsByAttempt(db, attemptIds);
     const signals = stageAttemptSignalsByAttempt(db, attemptIds);
-    const providerReadiness = await currentProviderReadinessByKind(allRows, paths, options);
-    const evidenceAttempts = allRows.map((row) => {
+    const providerReadiness = await currentProviderReadinessByKind(evidenceRows, paths, options);
+    const ownerAnswerProfiles = evidenceRows.length > 0
+      ? resolveDomainOwnerAnswerProjectionProfiles()
+      : [];
+    const ownerAnswerProfilesByDomainId = new Map(
+      ownerAnswerProfiles.map((profile) => [profile.domainId, profile]),
+    );
+    const progressDeltaKeysByDomainId = new Map(
+      [...new Set(evidenceRows.map((row) => row.domain_id))].map((domainId) => [
+        domainId,
+        standardAgentProgressDeltaKeySet(domainId),
+      ]),
+    );
+    const evidenceAttempts = evidenceRows.map((row) => {
       const providerKind = providerKindForRow(row);
       return attemptProjection(
         row,
@@ -835,6 +875,8 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
         signals.get(row.stage_attempt_id) ?? [],
         providerKind ? providerReadiness.get(providerKind) ?? null : null,
         row.task_id ? taskPayloads.get(row.task_id) ?? null : null,
+        ownerAnswerProfilesByDomainId.get(row.domain_id) ?? null,
+        progressDeltaKeysByDomainId.get(row.domain_id) ?? null,
       );
     });
     const evidenceAttemptsWithControlState = evidenceAttempts.map((attempt) => ({
@@ -843,8 +885,12 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
         ? currentControlStates.get(attempt.task_id) ?? null
         : deriveCurrentControlStateForAttempt(db, attempt.stage_attempt_id),
     }));
-    const attempts = evidenceAttemptsWithControlState.slice(0, 25);
+    const attempts = evidenceAttemptsWithControlState.slice(0, WORKBENCH_ATTEMPT_LIST_LIMIT);
     const projectedEvidenceAttempts = selectEvidenceAttempts(evidenceAttemptsWithControlState);
+    const attemptHistoryRead = attemptHistoryReadProjection(
+      totalAttemptCount,
+      evidenceAttemptsWithControlState.length,
+    );
     const metadata = buildWorkbenchMetadata(attempts);
     const effectiveCurrentContext = buildEffectiveCurrentContextPacket(projectedEvidenceAttempts);
     const familyStallLineage = buildFamilyStallLineage(projectedEvidenceAttempts);
@@ -886,8 +932,11 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
         updated_at: row.updated_at,
       })),
       evidence_attempts: projectedEvidenceAttempts,
-      evidence_attempt_count: evidenceAttemptsWithControlState.length,
-      attempt_list_limit: 25,
+      evidence_attempt_count: totalAttemptCount,
+      projected_evidence_attempt_count: evidenceAttemptsWithControlState.length,
+      selected_evidence_attempt_count: projectedEvidenceAttempts.length,
+      attempt_history_read: attemptHistoryRead,
+      attempt_list_limit: WORKBENCH_ATTEMPT_LIST_LIMIT,
       source_refs: sourceRefs(queueDb),
       authority_boundary: {
         opl: 'attempt_control_metadata_projection_only',

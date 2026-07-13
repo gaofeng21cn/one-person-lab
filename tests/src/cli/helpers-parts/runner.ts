@@ -5,6 +5,9 @@ import {
   type SpawnSyncOptionsWithStringEncoding,
   type SpawnSyncReturns,
 } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 import { parseJsonText } from '../../../../src/kernel/json-file.ts';
 
@@ -19,16 +22,36 @@ type InProcessCliResponse = {
 };
 
 let readOnlyInvocationQueue = Promise.resolve();
+let isolatedStateDir: string | null = null;
 
 type DetachedSpawnSyncOptions = SpawnSyncOptionsWithStringEncoding & {
   detached: true;
 };
 
+function cliTestStateDir() {
+  if (!isolatedStateDir) {
+    isolatedStateDir = fs.mkdtempSync(path.join(os.tmpdir(), `opl-cli-test-state-${process.pid}-`));
+    process.once('exit', () => {
+      if (isolatedStateDir) {
+        fs.rmSync(isolatedStateDir, { recursive: true, force: true });
+      }
+    });
+  }
+  return isolatedStateDir;
+}
+
+function cliTestEnvOverrides(envOverrides: Record<string, string> = {}) {
+  return {
+    NODE_NO_WARNINGS: '1',
+    OPL_STATE_DIR: cliTestStateDir(),
+    ...envOverrides,
+  };
+}
+
 function cliTestEnv(envOverrides: Record<string, string> = {}) {
   return {
     ...process.env,
-    NODE_NO_WARNINGS: '1',
-    ...envOverrides,
+    ...cliTestEnvOverrides(envOverrides),
   };
 }
 
@@ -259,7 +282,7 @@ async function runCliReadOnlyRequest(
 
     try {
       process.chdir(cwd);
-      for (const [name, value] of Object.entries(envOverrides)) {
+      for (const [name, value] of Object.entries(cliTestEnvOverrides(envOverrides))) {
         originalEnv.set(name, process.env[name]);
         process.env[name] = value;
       }

@@ -88,8 +88,10 @@ export type {
 export {
   readPackageManagedStandardAgentDescriptor,
   readStandardAgentDescriptorForDomain,
+  standardAgentProgressDeltaKeySet,
   standardAgentProgressDeltaKeys,
 } from './standard-agent-interface-discovery.ts';
+export type { StandardAgentProgressDeltaKeySet } from './standard-agent-interface-discovery.ts';
 export { canonicalAgentPackageId } from './agent-package-identity.ts';
 export {
   agentPackageDelegatedSurface,

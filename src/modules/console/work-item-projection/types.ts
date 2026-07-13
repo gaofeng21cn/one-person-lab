@@ -19,6 +19,31 @@ export type WorkItemExecutionState =
 export type WorkItemAttentionKind = 'none' | 'user' | 'system';
 export type WorkItemTelemetryState = 'observed' | 'partial' | 'missing' | 'stale';
 export type WorkItemFreshnessState = 'current' | 'stale' | 'unknown';
+export type WorkItemPrimaryState =
+  | 'automatically_advancing'
+  | 'awaiting_user_decision'
+  | 'system_attention'
+  | 'delivered_auto_paused'
+  | 'paused'
+  | 'stopped'
+  | 'sync_pending';
+
+export type WorkItemActionKind =
+  | 'user_action'
+  | 'system_action'
+  | 'agent_action'
+  | 'safe_action'
+  | 'blocked_no_action';
+
+export type WorkItemStageState =
+  | 'completed'
+  | 'current'
+  | 'next'
+  | 'pending'
+  | 'waiting_user'
+  | 'system_attention'
+  | 'stopped'
+  | 'failed';
 
 export type WorkItemSourceRef = {
   ref_kind: 'file' | 'sqlite' | 'projection';
@@ -42,8 +67,11 @@ export type AgentAvailability = {
   agent_id: string;
   domain_id: string;
   display_name: string;
-  availability: 'available' | 'attention' | 'unavailable' | 'unknown';
+  availability: 'available' | 'attention_required' | 'unavailable';
   reason: string;
+  last_checked_at: string;
+  source: 'package_directory' | 'package_status';
+  independent_from_work_item_state: true;
   package_id: string;
   source_ref: string | null;
   inventory_descriptor: {
@@ -113,8 +141,14 @@ export type WorkItemProjectionItem = {
     business_state: WorkItemBusinessState;
     domain_business_state: WorkItemBusinessState;
     control_state: Exclude<WorkItemBusinessState, 'unknown'> | null;
+    primary_state: WorkItemPrimaryState;
+    primary_state_label: string;
+    primary_state_reason: string;
+    reason: string;
+    last_transition_at: string;
     raw_business_status: string | null;
     current_stage_id: string | null;
+    current_stage_display_name: string | null;
     current_stage_status: string | null;
     package_status: string | null;
     lifecycle_ref: string | null;
@@ -127,6 +161,10 @@ export type WorkItemProjectionItem = {
     state: WorkItemExecutionState;
     stage_id: string | null;
     stage_status: string | null;
+    current_stage_id: string | null;
+    current_stage_display_name: string | null;
+    next_stage_id: string | null;
+    next_stage_display_name: string | null;
     attempt_id: string | null;
     attempt_ids: string[];
     workflow_id: string | null;
@@ -153,6 +191,25 @@ export type WorkItemProjectionItem = {
     cumulative: TokenObservation;
     missing_reason: string | null;
   };
+  action: {
+    kind: WorkItemActionKind;
+    title: string;
+    summary: string;
+    owner: string;
+    owner_display_name: string;
+    action_ref: string;
+    dry_run_required: boolean;
+  };
+  stage_map: Array<{
+    stage_id: string;
+    display_name: string;
+    state: WorkItemStageState;
+    owner: string | null;
+    owner_display_name: string | null;
+    elapsed_seconds: number | null;
+    usage: TokenObservation | null;
+    next_action: string | null;
+  }>;
   conditions: WorkItemCondition[];
   freshness: {
     state: WorkItemFreshnessState;

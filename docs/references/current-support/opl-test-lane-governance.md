@@ -51,6 +51,10 @@ npm test
 
 CLI 测试中的 `runCliReadOnly*` 只用于显式确认无 mutation、无 passthrough、无 child-process 合同的只读命令。它复用当前测试进程已经加载的 CLI invocation，并串行保护临时 cwd/env；成功 stdout JSON、失败 stderr/exit code 和父进程状态恢复由 focused governance test 固定。每个被迁移的命令族仍须保留少量真实 subprocess 用例覆盖 argv、进程退出和 stderr 合同。写命令、raw passthrough、安装/启动、worker/provider lifecycle 与 child-process 行为继续使用 `runCli*` subprocess helper。
 
+CLI helper 的 state 隔离不依赖 test lane：`runCli*`、`runCliAsync` 与 `runCliReadOnly*` 默认共同使用当前测试进程专属的临时 `OPL_STATE_DIR`，并在进程退出时清理。调用点显式传入的 `OPL_STATE_DIR` 仍优先，以便测试 fixture 自己管理 state；但 shell、Codex task 或用户环境里继承的 `OPL_STATE_DIR` 永远不能成为测试默认 state。因此直接运行 `node --experimental-strip-types --test <focused-file>` 与通过 `scripts/test-lanes.mjs` 运行具有相同的 live-registry 隔离边界。
+
+Workspace 测试若调用 `workspace init` / `ensure`，不应依赖真实 registry 或 sibling repo discovery。测试临时 workspace 可以被 initializer 绑定到隔离 state；删除 workspace fixture 后，隔离 state 随测试进程或 fixture 一并清理。若维护者需要治理历史 registry 污染，先用 `workspace maintenance prune` dry-run 检查；active missing binding 必须按精确 project/path 显式 `workspace archive`，再执行 prune dry-run 和 apply。该流程不按 `tmp`、测试前缀或目录名猜测，也不创建缺失的 MAG/OBF/MAS 项目。
+
 ## 归属规则
 
 - 所有 active `tests/src/**/*.test.ts` 与 `tests/built/**/*.test.mjs` 必须被 `scripts/test-lanes.mjs assert-coverage` 覆盖。

@@ -411,8 +411,12 @@ function findAllowedProject(contracts: FrameworkContracts, projectId: string) {
   return project;
 }
 
+function normalizeWorkspaceBindingPath(workspacePath: string) {
+  return path.resolve(workspacePath);
+}
+
 function normalizeWorkspacePath(workspacePath: string) {
-  const absolutePath = path.resolve(workspacePath);
+  const absolutePath = normalizeWorkspaceBindingPath(workspacePath);
   if (!fs.existsSync(absolutePath) || !fs.statSync(absolutePath).isDirectory()) {
     throw new FrameworkContractError(
       'cli_usage_error',
@@ -870,8 +874,7 @@ export function archiveWorkspaceBinding(
   options: WorkspaceRegistryOptions,
 ) {
   const registry = readWorkspaceRegistryFile();
-  findAllowedProject(contracts, options.projectId);
-  const absolutePath = normalizeWorkspacePath(options.workspacePath);
+  const absolutePath = normalizeWorkspaceBindingPath(options.workspacePath);
   const binding = findBindingOrThrow(registry, options.projectId, absolutePath);
 
   binding.status = 'archived';

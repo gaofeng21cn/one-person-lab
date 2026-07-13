@@ -14,6 +14,7 @@ import {
 import {
   readPackageManagedStandardAgentDescriptor,
   readStandardAgentDescriptorForDomain,
+  standardAgentProgressDeltaKeySet,
   standardAgentProgressDeltaKeys,
 } from '../../src/modules/connect/standard-agent-interface-discovery.ts';
 
@@ -72,7 +73,7 @@ test('standard Agent interface parses command-free descriptors with nullable reg
   assert.equal(parsed.runtime.registration_ref, null);
 });
 
-test('standard Agent interface accepts an optional JSON inventory projection and display name field', () => {
+test('standard Agent interface accepts optional inventory presentation fields', () => {
   const value = {
     ...fixture(),
     inventory_projection: {
@@ -81,6 +82,8 @@ test('standard Agent interface accepts an optional JSON inventory projection and
       items_pointer: '/studies',
       field_map: {
         display_name: 'display_name',
+        next_action: 'next_action',
+        stage_index_ref: 'stage_index_ref',
         work_item_id: 'study_id',
         work_item_root: 'canonical_study_root',
         business_status: 'status',
@@ -94,6 +97,8 @@ test('standard Agent interface accepts an optional JSON inventory projection and
   const descriptor = parseStandardAgentInterface(value, 'fixture.json#/standard_agent_interface');
   assert.equal(descriptor.inventory_projection?.relative_path, 'workspace_index.json');
   assert.equal(descriptor.inventory_projection?.field_map.display_name, 'display_name');
+  assert.equal(descriptor.inventory_projection?.field_map.next_action, 'next_action');
+  assert.equal(descriptor.inventory_projection?.field_map.stage_index_ref, 'stage_index_ref');
 
   const invalid = structuredClone(value);
   invalid.inventory_projection.relative_path = '../workspace_index.json';
@@ -224,6 +229,12 @@ test('package dependency and runtime source readiness gate descriptor discovery 
       'deliverable_progress_delta',
       'fixture_deliverable_delta',
     ]);
+    const statusReadCountBeforeKeySet = statusReads.length;
+    assert.deepEqual(standardAgentProgressDeltaKeySet('fixture-agent', statusReader), {
+      deliverable: ['deliverable_progress_delta', 'fixture_deliverable_delta'],
+      platform: ['platform_repair_delta', 'fixture_platform_delta'],
+    });
+    assert.equal(statusReads.length, statusReadCountBeforeKeySet + 1);
     const staleStatusReader = ((input: { packageId?: string | null }) => {
       const readback = statusReader(input);
       if (input.packageId === 'mas') {

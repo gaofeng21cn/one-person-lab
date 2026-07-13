@@ -202,6 +202,7 @@ const readModelGateTestFiles = [
   'tests/src/work-item-control-ledger.test.ts',
   'tests/src/cli/cases/packages-cases/workflow-policy-transaction.test.ts',
   ...expandTestFiles(['tests/src/cli/cases/app-state-runtime-workbench.test.ts', 'tests/src/cli/cases/app-state-provider-source.test.ts', 'tests/src/cli/cases/app-state-developer-mode-closeout.test.ts']),
+  'tests/src/cli/cases/runtime-tray-stage-attempt-workbench-bounded-history.test.ts',
   ...expandTestFiles(['tests/src/cli/cases/framework-readiness-binding-cases.test.ts', 'tests/src/cli/cases/framework-readiness.test.ts', 'tests/src/cli/cases/framework-readiness-stage-run-adoption.test.ts', 'tests/src/cli/cases/framework-readiness-stage-replay-guidance.test.ts']),
   'tests/src/cli/cases/runtime-manifest-cache-timeout.test.ts',
   ...expandTestFiles(['tests/src/cli/cases/framework-readiness-attention-semantics.test.ts', 'tests/src/cli/cases/framework-readiness-app-release-user-path-ledger.test.ts']),

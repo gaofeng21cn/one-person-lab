@@ -17,7 +17,10 @@ import {
 } from '../ledger/index.ts';
 import { buildStageAttemptRuntimeCurrentness } from './family-runtime-stage-attempt-runtime-currentness.ts';
 import { isRecord } from '../../kernel/contract-validation.ts';
-import { standardAgentProgressDeltaKeys } from '../connect/index.ts';
+import {
+  standardAgentProgressDeltaKeySet,
+  type StandardAgentProgressDeltaKeySet,
+} from '../connect/index.ts';
 import {
   recordList as sharedRecordList,
   stringList as sharedStringList,
@@ -65,6 +68,7 @@ export type StageProgressLogInput = {
   modelRouteCostProjection: ModelRouteCostProjection;
   createdAt?: string | null;
   updatedAt?: string | null;
+  progressDeltaKeys?: StandardAgentProgressDeltaKeySet;
 };
 
 export type StageProgressLogProjection = ReturnType<typeof buildStageProgressLog>;
@@ -413,13 +417,13 @@ function invalidProgressDeltaClassification(value: string | null) {
 }
 
 function userStageLogProgressDeltas(
-  domainId: string,
   semanticSummary: JsonRecord | null,
   routeImpact: JsonRecord,
   semanticStatus: string,
+  progressDeltaKeys: StandardAgentProgressDeltaKeySet,
 ) {
-  const deliverableKeys = standardAgentProgressDeltaKeys(domainId, 'deliverable');
-  const platformKeys = standardAgentProgressDeltaKeys(domainId, 'platform');
+  const deliverableKeys = progressDeltaKeys.deliverable;
+  const platformKeys = progressDeltaKeys.platform;
   const deliverableDelta = progressDeltaFromRecord(semanticSummary, deliverableKeys, null);
   const platformDelta = progressDeltaFromRecord(semanticSummary, platformKeys, null);
   const routeDeliverableDelta = progressDeltaFromRecord(routeImpact, deliverableKeys, null);
@@ -516,9 +520,9 @@ function domainStageSummary(input: StageProgressLogInput) {
 }
 
 function hasDomainStageLogField(
-  domainId: string,
   summary: JsonRecord,
   field: typeof REQUIRED_DOMAIN_STAGE_LOG_FIELDS[number],
+  progressDeltaKeys: StandardAgentProgressDeltaKeySet,
 ) {
   switch (field) {
     case 'stage_name':
@@ -530,9 +534,9 @@ function hasDomainStageLogField(
     case 'progress_delta_classification':
       return Boolean(semanticText(summary, ['progress_delta_classification']));
     case 'deliverable_progress_delta':
-      return semanticRecord(summary, standardAgentProgressDeltaKeys(domainId, 'deliverable')) !== null;
+      return semanticRecord(summary, progressDeltaKeys.deliverable) !== null;
     case 'platform_repair_delta':
-      return semanticRecord(summary, standardAgentProgressDeltaKeys(domainId, 'platform')) !== null;
+      return semanticRecord(summary, progressDeltaKeys.platform) !== null;
     case 'next_forced_delta':
       return Boolean(semanticText(summary, ['next_forced_delta']));
     case 'stage_work_done':
@@ -562,11 +566,15 @@ function hasDomainStageLogField(
   }
 }
 
-function missingDomainStageLogFields(domainId: string, summary: JsonRecord | null) {
+function missingDomainStageLogFields(
+  summary: JsonRecord | null,
+  progressDeltaKeys: StandardAgentProgressDeltaKeySet,
+) {
   if (!summary) {
     return [...REQUIRED_DOMAIN_STAGE_LOG_FIELDS];
   }
-  return REQUIRED_DOMAIN_STAGE_LOG_FIELDS.filter((field) => !hasDomainStageLogField(domainId, summary, field));
+  return REQUIRED_DOMAIN_STAGE_LOG_FIELDS.filter((field) =>
+    !hasDomainStageLogField(summary, field, progressDeltaKeys));
 }
 
 function buildUserStageLog(input: StageProgressLogInput, durationMsObserved: number | null) {
@@ -584,7 +592,8 @@ function buildUserStageLog(input: StageProgressLogInput, durationMsObserved: num
   const duration = durationForUserStageLog(input, durationMsObserved);
   const tokens = tokenUsageForUserStageLog(input);
   const cost = costForUserStageLog(input);
-  const missingDomainFields = missingDomainStageLogFields(input.domainId, semanticSummary);
+  const progressDeltaKeys = input.progressDeltaKeys ?? standardAgentProgressDeltaKeySet(input.domainId);
+  const missingDomainFields = missingDomainStageLogFields(semanticSummary, progressDeltaKeys);
   const stageName = semanticText(semanticSummary, ['stage_name', 'stage_label', 'name'])
     ?? `${input.domainId}/${input.stageId}`;
   const problemSummary = semanticText(semanticSummary, ['problem_summary', 'problem', 'issue_summary']);
@@ -641,10 +650,10 @@ function buildUserStageLog(input: StageProgressLogInput, durationMsObserved: num
   ]);
   const semanticStatus = semanticSummary ? 'provided_by_domain' : 'missing_domain_semantic_summary';
   const progressDeltas = userStageLogProgressDeltas(
-    input.domainId,
     semanticSummary,
     input.routeImpact,
     semanticStatus,
+    progressDeltaKeys,
   );
   const observability = observabilityForUserStageLog(duration, tokens, cost);
   return {

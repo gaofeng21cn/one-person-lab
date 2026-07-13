@@ -10,6 +10,7 @@ import {
 
 import './workspace-domain.descriptor.test.ts';
 import './workspace-domain.progress.test.ts';
+import { createRcaWorkspaceDescriptorFixture } from './workspace-domain-test-helper.ts';
 
 function readJsonFile(filePath: string) {
   return parseJsonText(fs.readFileSync(filePath, 'utf8')) as any;
@@ -92,6 +93,11 @@ test('workspace ensure refreshes generated refs when reusing an active binding',
 test('workspace validate and doctor inspect generated workspace topology semantics', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-validate-state-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-validate-root-'));
+  const descriptorFixture = createRcaWorkspaceDescriptorFixture();
+  const env = {
+    OPL_STATE_DIR: stateRoot,
+    OPL_FAMILY_WORKSPACE_ROOT: descriptorFixture.familyRoot,
+  };
 
   try {
     runCli([
@@ -105,14 +111,10 @@ test('workspace validate and doctor inspect generated workspace topology semanti
       'visual-theme-a',
       '--project-id',
       'deck-001',
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    });
+    ], env);
 
     const workspacePath = path.join(workspaceRoot, 'visual-theme-a');
-    const validation = runCli(['workspace', 'validate', '--workspace', workspacePath], {
-      OPL_STATE_DIR: stateRoot,
-    });
+    const validation = runCli(['workspace', 'validate', '--workspace', workspacePath], env);
     assert.equal(validation.workspace_validation.status, 'passed');
     assert.equal(validation.workspace_validation.canonical_topology.project_unit_kind, 'slide_deck');
     assert.equal(validation.workspace_validation.display_labels.project_collection, 'deliverables');
@@ -124,9 +126,7 @@ test('workspace validate and doctor inspect generated workspace topology semanti
     const resourceInventory = readJsonFile(path.join(workspacePath, 'workspace_resource_inventory.json'));
     assert.equal(resourceInventory.resources[0].content_addressing_policy.body_storage_allowed, false);
 
-    const doctor = runCli(['workspace', 'doctor', '--workspace', workspacePath], {
-      OPL_STATE_DIR: stateRoot,
-    });
+    const doctor = runCli(['workspace', 'doctor', '--workspace', workspacePath], env);
     assert.equal(doctor.workspace_doctor.status, 'passed');
     assert.deepEqual(doctor.workspace_doctor.blockers, []);
     assert.equal(doctor.workspace_doctor.indexed_projects[0].project_id, 'deck-001');
@@ -147,9 +147,7 @@ test('workspace validate and doctor inspect generated workspace topology semanti
       'stage_outputs',
       'current_stage.json',
     ));
-    const repairable = runCli(['workspace', 'doctor', '--workspace', workspacePath], {
-      OPL_STATE_DIR: stateRoot,
-    });
+    const repairable = runCli(['workspace', 'doctor', '--workspace', workspacePath], env);
     assert.equal(repairable.workspace_doctor.status, 'repairable');
     assert.deepEqual(repairable.workspace_doctor.blockers, []);
     assert.equal(
@@ -164,17 +162,25 @@ test('workspace validate and doctor inspect generated workspace topology semanti
       )),
       true,
     );
-    assert.equal(runCli(['workspace', 'validate', '--workspace', workspacePath], {
-      OPL_STATE_DIR: stateRoot,
-    }).workspace_validation.status, 'passed_with_repairable_findings');
+    assert.equal(
+      runCli(['workspace', 'validate', '--workspace', workspacePath], env).workspace_validation.status,
+      'passed_with_repairable_findings',
+    );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    descriptorFixture.cleanup();
   }
 });
 
 test('workspace adopt apply materializes OPL metadata and generated inspection refs', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-adopt-state-'));
   const workspacePath = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-adopt-apply-'));
+  const descriptorFixture = createRcaWorkspaceDescriptorFixture();
+  const env = {
+    OPL_STATE_DIR: stateRoot,
+    OPL_FAMILY_WORKSPACE_ROOT: descriptorFixture.familyRoot,
+  };
 
   try {
     const output = runCli([
@@ -187,7 +193,7 @@ test('workspace adopt apply materializes OPL metadata and generated inspection r
       '--project-id',
       'deck-001',
       '--apply',
-    ]);
+    ], env);
 
     assert.equal(output.workspace_adoption.status, 'applied');
     assert.equal(output.workspace_adoption.write_allowed, true);
@@ -207,10 +213,12 @@ test('workspace adopt apply materializes OPL metadata and generated inspection r
       'stage_outputs',
       'opl_stage_outputs_manifest.json',
     )).isFile(), true);
-    const validation = runCli(['workspace', 'validate', '--workspace', workspacePath]);
+    const validation = runCli(['workspace', 'validate', '--workspace', workspacePath], env);
     assert.equal(validation.workspace_validation.status, 'passed');
   } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(workspacePath, { recursive: true, force: true });
+    descriptorFixture.cleanup();
   }
 });
 

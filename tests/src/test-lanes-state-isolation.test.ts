@@ -5,6 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 
 import { runNodeTestStep } from '../../scripts/test-lanes.mjs';
+import { runCli, runCliAsync, runCliReadOnly } from './cli/helpers.ts';
 
 const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..');
 
@@ -49,5 +50,51 @@ test('every Node test batch receives a distinct runner-owned OPL_STATE_DIR', () 
     assert.equal(process.cwd(), repoRoot);
   } finally {
     fs.rmSync(captureRoot, { recursive: true, force: true });
+  }
+});
+
+test('direct CLI test helpers never inherit the caller workspace registry', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-cli-helper-state-isolation-'));
+  const callerStateDir = path.join(root, 'caller-state');
+  const callerRegistryFile = path.join(callerStateDir, 'workspace-registry.json');
+  const workspaceRoot = path.join(root, 'workspaces');
+  const callerRegistryBytes = Buffer.from('{"version":"g2","bindings":[],"sentinel":"caller-registry"}\n');
+  const previousStateDir = process.env.OPL_STATE_DIR;
+
+  try {
+    fs.mkdirSync(callerStateDir, { recursive: true });
+    fs.mkdirSync(workspaceRoot, { recursive: true });
+    fs.writeFileSync(callerRegistryFile, callerRegistryBytes);
+    process.env.OPL_STATE_DIR = callerStateDir;
+
+    const initialized = runCli([
+      'workspace',
+      'init',
+      '--agent',
+      'rca',
+      '--workspace-root',
+      workspaceRoot,
+      '--workspace-id',
+      'state-isolation-probe',
+      '--project-id',
+      'deck-probe',
+    ]).workspace_initialization;
+    const asyncCatalog = (await runCliAsync(['workspace', 'list'])).workspace_catalog as {
+      state_dir: string;
+    };
+    const readOnlyCatalog = (await runCliReadOnly(['workspace', 'list'])).workspace_catalog;
+
+    assert.equal(initialized.workspace_id, 'state-isolation-probe');
+    assert.notEqual(asyncCatalog.state_dir, callerStateDir);
+    assert.notEqual(readOnlyCatalog.state_dir, callerStateDir);
+    assert.equal(process.env.OPL_STATE_DIR, callerStateDir);
+    assert.deepEqual(fs.readFileSync(callerRegistryFile), callerRegistryBytes);
+  } finally {
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    fs.rmSync(root, { recursive: true, force: true });
   }
 });

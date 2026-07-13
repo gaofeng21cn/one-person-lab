@@ -295,7 +295,7 @@ test('workspace registry prune backs up before apply, is idempotent, and can be 
   }
 });
 
-test('workspace registry currentness keeps active missing bindings visible and fails closed on apply', () => {
+test('workspace registry archives an exact active missing binding before prune', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-active-missing-registry-'));
   const activeMissingPath = path.join(stateRoot, 'missing-active-workspace');
   const inactiveMissingPath = path.join(stateRoot, 'missing-inactive-workspace');
@@ -346,6 +346,80 @@ test('workspace registry currentness keeps active missing bindings visible and f
       launchFailure.payload.error.details.failure_code,
       'active_workspace_binding_not_current',
     );
+
+    for (const action of ['bind', 'activate']) {
+      const currentPathRequired = runCliFailure([
+        'workspace', action, '--project', 'medautoscience', '--path', activeMissingPath,
+      ], { OPL_STATE_DIR: stateRoot });
+      assert.equal(currentPathRequired.payload.error.code, 'cli_usage_error', action);
+    }
+    const unknownArchive = runCliFailure([
+      'workspace', 'archive', '--project', 'medautoscience', '--path', path.join(stateRoot, 'unknown'),
+    ], { OPL_STATE_DIR: stateRoot });
+    assert.equal(unknownArchive.payload.error.code, 'surface_not_found');
+
+    const archived = runCli([
+      'workspace', 'archive', '--project', 'medautoscience', '--path', activeMissingPath,
+    ], { OPL_STATE_DIR: stateRoot }).workspace_catalog;
+    assert.equal(archived.binding.binding_id, 'active-missing');
+    assert.equal(archived.binding.status, 'archived');
+    assert.equal(archived.binding.workspace_path, activeMissingPath);
+
+    const afterArchive = runCli(['workspace', 'maintenance', 'prune'], {
+      OPL_STATE_DIR: stateRoot,
+    }).workspace_registry_maintenance;
+    assert.equal(afterArchive.status, 'stale_bindings_detected');
+    assert.equal(afterArchive.summary.active_binding_blockers, 0);
+    assert.deepEqual(
+      afterArchive.candidates.map((entry: { binding_id: string }) => entry.binding_id).sort(),
+      ['active-missing', 'inactive-missing'],
+    );
+
+    const applied = runCli(['workspace', 'maintenance', 'prune', '--apply'], {
+      OPL_STATE_DIR: stateRoot,
+    }).workspace_registry_maintenance;
+    assert.equal(applied.mutation_applied, true);
+    assert.equal(applied.summary.pruned_bindings, 2);
+    assert.equal(applied.summary.bindings_after, 0);
+    assert.equal(fs.existsSync(applied.backup.path), true);
+    assert.deepEqual(
+      (parseJsonText(fs.readFileSync(registryFile, 'utf8')) as { bindings: unknown[] }).bindings,
+      [],
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('workspace registry archives an exact retired project binding without reopening admission', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-retired-workspace-binding-'));
+  const retiredWorkspacePath = path.join(stateRoot, 'missing-bookforge-workspace');
+  try {
+    writeRegistry(stateRoot, [
+      registryBinding('retired-bookforge', retiredWorkspacePath, {
+        projectId: 'opl-bookforge',
+        project: 'opl-bookforge',
+        status: 'active',
+      }),
+    ]);
+
+    const archived = runCli([
+      'workspace', 'archive', '--project', 'opl-bookforge', '--path', retiredWorkspacePath,
+    ], { OPL_STATE_DIR: stateRoot }).workspace_catalog;
+    assert.equal(archived.binding.binding_id, 'retired-bookforge');
+    assert.equal(archived.binding.status, 'archived');
+
+    const retiredBind = runCliFailure([
+      'workspace', 'bind', '--project', 'opl-bookforge', '--path', stateRoot,
+    ], { OPL_STATE_DIR: stateRoot });
+    assert.equal(retiredBind.payload.error.code, 'domain_not_found');
+
+    const applied = runCli(['workspace', 'maintenance', 'prune', '--apply'], {
+      OPL_STATE_DIR: stateRoot,
+    }).workspace_registry_maintenance;
+    assert.equal(applied.summary.active_binding_blockers, 0);
+    assert.equal(applied.summary.pruned_bindings, 1);
+    assert.equal(applied.summary.bindings_after, 0);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
