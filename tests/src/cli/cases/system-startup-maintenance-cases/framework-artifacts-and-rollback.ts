@@ -155,17 +155,19 @@ exit 1
     assert.equal(output.system_action.details.framework_summary.manual_required_targets_count, 0);
     assert.equal(output.system_action.details.framework_targets[0].target_id, 'opl-framework');
     assert.equal(output.system_action.details.framework_targets[0].status, 'completed');
-    assert.equal(output.system_action.details.framework_targets[0].reason, 'framework_runtime_artifact_applied');
-    assert.equal(fs.readFileSync(path.join(targetRoot, 'MARKER.txt'), 'utf8'), 'new-framework\n');
-    assert.equal(fs.readFileSync(path.join(`${targetRoot}.previous`, 'MARKER.txt'), 'utf8'), 'old-framework\n');
+    assert.equal(output.system_action.details.framework_targets[0].reason, 'framework_runtime_artifact_staged_for_restart');
+    assert.equal(fs.readFileSync(path.join(targetRoot, 'MARKER.txt'), 'utf8'), 'old-framework\n');
+    assert.equal(fs.readFileSync(path.join(`${targetRoot}.pending`, 'MARKER.txt'), 'utf8'), 'new-framework\n');
     assert.equal(output.system_action.details.framework_targets[0].result.target_root, targetRoot);
     assert.equal(output.system_action.details.framework_targets[0].result.source_archive, archivePath);
-    assert.equal(output.system_action.details.framework_targets[0].result.previous_root, `${targetRoot}.previous`);
-    assert.match(output.system_action.details.framework_targets[0].result.rollback_ref, /^opl:\/\/managed-update\/runtime_substrate\/framework\/rollback\//); // reuse-first: allow owner-routed runtime materializer assertion.
+    assert.equal(output.system_action.details.framework_targets[0].result.previous_root, null);
+    assert.equal(output.system_action.details.framework_targets[0].result.rollback_ref, null);
     const metadata = JSON.parse(fs.readFileSync(output.system_action.details.framework_targets[0].result.metadata_ref, 'utf8')); // reuse-first: allow local test fixture metadata parser.
-    assert.equal(metadata.surface_kind, 'opl_framework_runtime_source');
+    assert.equal(metadata.surface_kind, 'opl_framework_pending_generation.v1');
+    assert.equal(metadata.target_root, targetRoot);
+    assert.equal(metadata.pending_root, `${targetRoot}.pending`);
     assert.equal(metadata.source_archive, archivePath);
-    assert.equal(metadata.previous_root, `${targetRoot}.previous`);
+    assert.match(metadata.staging_process_instance_id, /^(headless-cli|app):/);
   } finally {
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
@@ -217,8 +219,10 @@ exit 1
             status: string;
             reason: string;
             result: {
+              target_root: string;
               source_archive_sha256: string;
               source_head_sha: string;
+              metadata_ref: string;
             };
           }>;
         };
@@ -227,9 +231,15 @@ exit 1
 
     assert.equal(output.system_action.status, 'completed');
     assert.equal(output.system_action.details.framework_targets[0].status, 'completed');
-    assert.equal(output.system_action.details.framework_targets[0].reason, 'framework_runtime_artifact_applied');
+    assert.equal(output.system_action.details.framework_targets[0].reason, 'framework_runtime_artifact_staged_for_restart');
     assert.equal(output.system_action.details.framework_targets[0].result.source_head_sha, 'f'.repeat(40));
-    assert.equal(fs.readFileSync(path.join(targetRoot, 'MARKER.txt'), 'utf8'), 'new-channel-framework\n');
+    assert.equal(fs.readFileSync(path.join(targetRoot, 'MARKER.txt'), 'utf8'), 'old-framework\n');
+    assert.equal(fs.readFileSync(path.join(`${targetRoot}.pending`, 'MARKER.txt'), 'utf8'), 'new-channel-framework\n');
+    const metadata = JSON.parse(fs.readFileSync(output.system_action.details.framework_targets[0].result.metadata_ref, 'utf8'));
+    assert.equal(metadata.surface_kind, 'opl_framework_pending_generation.v1');
+    assert.equal(metadata.target_root, targetRoot);
+    assert.equal(metadata.pending_root, `${targetRoot}.pending`);
+    assert.equal(metadata.source_head_sha, 'f'.repeat(40));
     const curlLog = fs.readFileSync(channel.curlLogPath, 'utf8');
     assert.match(curlLog, /one-person-lab-manifest/);
     assert.match(curlLog, /one-person-lab-framework/);
