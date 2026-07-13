@@ -111,6 +111,7 @@ export function recordStageAttemptActivityHeartbeat(
     stageAttemptId: string;
     heartbeatKind: string;
     runnerEventKind?: string | null;
+    executionSessionRef?: string | null;
     checkpointRefs?: string[];
     observedAt?: string | null;
   },
@@ -122,12 +123,23 @@ export function recordStageAttemptActivityHeartbeat(
     return null;
   }
   const observedAt = input.observedAt ?? nowIso();
+  const executionSessionRef = input.executionSessionRef?.trim() || null;
+  if (
+    row.execution_session_ref
+    && executionSessionRef
+    && row.execution_session_ref !== executionSessionRef
+  ) {
+    throw new Error(
+      `StageAttempt execution session drift: ${row.execution_session_ref} != ${executionSessionRef}`,
+    );
+  }
   const providerRun = {
     ...parseStageAttemptJsonObject(row.provider_run_json),
     last_heartbeat_at: observedAt,
     liveness_source: 'provider_activity_event',
     last_activity_heartbeat_kind: input.heartbeatKind,
     last_runner_event_kind: input.runnerEventKind ?? null,
+    execution_session_ref: row.execution_session_ref ?? executionSessionRef,
   };
   const activityEvents = appendActivityEventToRow(row, {
     event_time: observedAt,
@@ -135,6 +147,7 @@ export function recordStageAttemptActivityHeartbeat(
     activity_status: 'running',
     heartbeat_kind: input.heartbeatKind,
     runner_event_kind: input.runnerEventKind ?? null,
+    execution_session_ref: row.execution_session_ref ?? executionSessionRef,
     checkpoint_refs: normalizeJsonList(input.checkpointRefs),
     authority_boundary: {
       opl: 'provider_activity_liveness_projection_only',
@@ -144,9 +157,11 @@ export function recordStageAttemptActivityHeartbeat(
   });
   db.prepare(`
     UPDATE stage_attempts
-    SET provider_run_json = ?, activity_events_json = ?, updated_at = ?
+    SET execution_session_ref = COALESCE(execution_session_ref, ?),
+      provider_run_json = ?, activity_events_json = ?, updated_at = ?
     WHERE stage_attempt_id = ?
   `).run(
+    executionSessionRef,
     JSON.stringify(providerRun),
     JSON.stringify(activityEvents),
     observedAt,

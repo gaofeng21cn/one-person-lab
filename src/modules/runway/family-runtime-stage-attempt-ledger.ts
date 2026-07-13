@@ -51,6 +51,7 @@ export type StageAttemptRow = {
   repair_map_refs_json?: string | null;
   quality_role_prompt_ref?: string | null;
   execution_session_ref?: string | null;
+  usage_observation_json?: string | null;
   context_manifest_ref?: string | null;
   context_manifest_json?: string | null;
   no_context_inheritance?: number | null;
@@ -138,6 +139,7 @@ export function createStageAttemptTable(db: DatabaseSync) {
       repair_map_refs_json TEXT NOT NULL DEFAULT '[]',
       quality_role_prompt_ref TEXT,
       execution_session_ref TEXT,
+      usage_observation_json TEXT,
       context_manifest_ref TEXT,
       context_manifest_json TEXT,
       no_context_inheritance INTEGER,
@@ -214,6 +216,7 @@ export function createStageAttemptTable(db: DatabaseSync) {
   addColumnIfMissing(db, 'stage_attempts', columns, 'repair_map_refs_json', "repair_map_refs_json TEXT NOT NULL DEFAULT '[]'");
   addColumnIfMissing(db, 'stage_attempts', columns, 'quality_role_prompt_ref', 'quality_role_prompt_ref TEXT');
   addColumnIfMissing(db, 'stage_attempts', columns, 'execution_session_ref', 'execution_session_ref TEXT');
+  addColumnIfMissing(db, 'stage_attempts', columns, 'usage_observation_json', 'usage_observation_json TEXT');
   addColumnIfMissing(db, 'stage_attempts', columns, 'context_manifest_ref', 'context_manifest_ref TEXT');
   addColumnIfMissing(db, 'stage_attempts', columns, 'context_manifest_json', 'context_manifest_json TEXT');
   addColumnIfMissing(db, 'stage_attempts', columns, 'no_context_inheritance', 'no_context_inheritance INTEGER');
@@ -234,6 +237,9 @@ export function stageAttemptToPayload(row: StageAttemptRow) {
     ? parseJsonObject(row.stage_attempt_executor_policy_json)
     : {};
   const hasStageAttemptExecutorPolicy = Object.keys(stageAttemptExecutorPolicy).length > 0;
+  const usageObservation = row.usage_observation_json
+    ? parseJsonObject(row.usage_observation_json)
+    : null;
   const usageProjection = buildStageAttemptUsageProjection({
     stageAttemptId: row.stage_attempt_id,
     status: row.status,
@@ -244,6 +250,7 @@ export function stageAttemptToPayload(row: StageAttemptRow) {
     providerRun,
     activityEvents,
     routeImpact,
+    usageObservation,
   });
   const modelRouteCostProjection = buildModelRouteCostProjection({
     stageAttemptId: row.stage_attempt_id,
@@ -281,6 +288,7 @@ export function stageAttemptToPayload(row: StageAttemptRow) {
     repair_map_refs: row.repair_map_refs_json ? parseJsonList(row.repair_map_refs_json) : [],
     quality_role_prompt_ref: row.quality_role_prompt_ref ?? null,
     execution_session_ref: row.execution_session_ref ?? null,
+    usage_observation: usageObservation,
     context_manifest_ref: row.context_manifest_ref ?? null,
     context_manifest: row.context_manifest_json ? parseJsonObject(row.context_manifest_json) : null,
     no_context_inheritance: row.no_context_inheritance === null || row.no_context_inheritance === undefined

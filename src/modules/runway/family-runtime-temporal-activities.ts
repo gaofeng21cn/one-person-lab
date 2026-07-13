@@ -439,6 +439,7 @@ function recordActivityHeartbeat(input: {
   stageAttemptId: string;
   heartbeatKind: string;
   runnerEventKind?: string | null;
+  executionSessionRef?: string | null;
   checkpointRefs?: string[];
 }) {
   try {
@@ -576,6 +577,9 @@ export async function codexStageActivity(input: TemporalStageAttemptWorkflowInpu
         ?? DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS,
       signal: Context.current().cancellationSignal,
       onRunnerProgress(event) {
+        const executionSessionRef = event.event_kind === 'thread.started' && event.value
+          ? `codex://threads/${event.value}`
+          : null;
         heartbeat({
           stage_attempt_id: input.stage_attempt_id,
           stage_id: input.stage_id,
@@ -587,6 +591,7 @@ export async function codexStageActivity(input: TemporalStageAttemptWorkflowInpu
           stageAttemptId: input.stage_attempt_id,
           heartbeatKind: 'codex_stage_activity_runner_progress',
           runnerEventKind: event.event_kind,
+          executionSessionRef,
           checkpointRefs: input.checkpoint_refs ?? [],
         });
       },

@@ -38,6 +38,7 @@ import {
   reconcileDomainRouteTerminalTaskForAttempt,
 } from '../family-runtime-domain-route-terminal-sync.ts';
 import { isRuntimeHardStopReason } from '../../../kernel/progress-hard-stop-policy.ts';
+import { persistStageAttemptUsageObservation } from '../family-runtime-stage-attempt-usage-observation.ts';
 
 type TemporalStageAttemptTerminalObservation = {
   surface_kind: 'temporal_stage_attempt_query_receipt';
@@ -408,6 +409,19 @@ export function syncStageAttemptFromTemporalTerminalObservation(
     return null;
   }
   persistExecutionSessionRef(db, row, observation);
+  const observedCostSummary = latestActivityCostSummaryFromTemporalObservation(observation);
+  const executionSessionRef = executionSessionRefFromObservation(observation)
+    ?? row.execution_session_ref
+    ?? null;
+  if (row.executor_kind === 'codex_cli') {
+    persistStageAttemptUsageObservation(db, {
+      stageAttemptId: observation.stage_attempt_id,
+      costSummary: observedCostSummary,
+      observedAt: nowIso(),
+      executionSessionRef,
+      sourceFallbackRef: `stage_attempt:${observation.stage_attempt_id}#usage_observation`,
+    });
+  }
   const completedCloseoutPacket = closeoutPacketFromTemporalCompletedObservation(observation);
   if (row.status === 'completed' && row.closeout_receipt_status) {
     const existingCloseoutRefs = parseStageAttemptJsonList(row.closeout_refs_json)
@@ -420,7 +434,7 @@ export function syncStageAttemptFromTemporalTerminalObservation(
       const synced = ingestStageAttemptCloseout(db, {
         stageAttemptId: observation.stage_attempt_id,
         packet: completedCloseoutPacket,
-        costSummary: latestActivityCostSummaryFromTemporalObservation(observation),
+        costSummary: observedCostSummary,
       }).attempt;
       const syncedRow = getStageAttemptRow(db, observation.stage_attempt_id);
       if (syncedRow) {
@@ -432,7 +446,7 @@ export function syncStageAttemptFromTemporalTerminalObservation(
       reconcileDomainRouteTerminalObservation(db, observation.stage_attempt_id);
       return synced;
     }
-    const costSummary = latestActivityCostSummaryFromTemporalObservation(observation);
+    const costSummary = observedCostSummary;
     const existingProviderRun = parseStageAttemptJsonObject(row.provider_run_json);
     if (rowHasCompletedTerminalObservation(row) && (!costSummary || recordOrNull(existingProviderRun.cost_summary))) {
       markLinkedDefaultExecutorTaskCompleted(db, { row, observedAt: nowIso() });
@@ -457,7 +471,7 @@ export function syncStageAttemptFromTemporalTerminalObservation(
     const synced = ingestStageAttemptCloseout(db, {
       stageAttemptId: observation.stage_attempt_id,
       packet: completedCloseoutPacket,
-      costSummary: latestActivityCostSummaryFromTemporalObservation(observation),
+      costSummary: observedCostSummary,
     }).attempt;
     const syncedRow = getStageAttemptRow(db, observation.stage_attempt_id);
     if (syncedRow) {
@@ -478,7 +492,7 @@ export function syncStageAttemptFromTemporalTerminalObservation(
         row,
         blocker: nonCompletionBlocker,
       }),
-      costSummary: latestActivityCostSummaryFromTemporalObservation(observation),
+      costSummary: observedCostSummary,
     }).attempt;
     const syncedRow = getStageAttemptRow(db, observation.stage_attempt_id);
     if (syncedRow) {
@@ -579,7 +593,7 @@ export function syncStageAttemptFromTemporalTerminalObservation(
           domain: 'truth_quality_artifact_gate_owner',
         },
       },
-      costSummary: latestActivityCostSummaryFromTemporalObservation(observation),
+      costSummary: observedCostSummary,
     });
     const providerRun = {
       ...parseStageAttemptJsonObject(row.provider_run_json),

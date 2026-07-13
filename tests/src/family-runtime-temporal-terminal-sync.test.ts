@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
@@ -15,6 +17,8 @@ import {
   syncStageAttemptFromTemporalTerminalObservation,
 } from '../../src/modules/runway/family-runtime-stage-attempts.ts';
 import * as activities from '../../src/modules/runway/family-runtime-temporal-activities.ts';
+import { codexStageRunnerCostSummaryFrom } from '../../src/modules/runway/family-runtime-codex-session-usage.ts';
+import { openQueueDb } from '../../src/modules/runway/family-runtime-store.ts';
 import { StageAttemptWorkflow } from '../../src/modules/runway/family-runtime-temporal-workflows.ts';
 import {
   blockedTemporalObservation,
@@ -97,8 +101,70 @@ for (const [name, observation, expectedStatus, expectedTaskReason] of [
   });
 }
 
+test('Temporal terminal sync persists Codex session identity and usage idempotently', () => {
+  withStageAttemptDb((db) => {
+    const createdAt = '2026-07-13T00:00:02.000Z';
+    const attempt = createStageAttempt(db, {
+      domainId: 'redcube',
+      stageId: 'telemetry-stage',
+      providerKind: 'temporal',
+      workspaceLocator: { workspace_root: '/tmp/redcube-runtime' },
+      sourceFingerprint: 'sha256:temporal-token-telemetry',
+      executorKind: 'codex_cli',
+      checkpointRefs: ['checkpoint:telemetry-stage'],
+    }).attempt;
+    const costSummary = codexStageRunnerCostSummaryFrom([
+      JSON.stringify({ type: 'thread.started', thread_id: 'thread-temporal-telemetry' }),
+      JSON.stringify({
+        type: 'turn.completed',
+        usage: {
+          input_tokens: 120,
+          cached_input_tokens: 40,
+          output_tokens: 30,
+          reasoning_output_tokens: 10,
+          total_tokens: 150,
+        },
+      }),
+    ].join('\n'), 'codex_cli', null, createdAt);
+    const terminal = completedTemporalObservation({
+      stageAttemptId: attempt.stage_attempt_id,
+      workflowId: attempt.workflow_id,
+      createdAt,
+      domainId: 'redcube',
+      stageId: 'telemetry-stage',
+      checkpointRef: 'checkpoint:telemetry-stage',
+      nextOwner: 'redcube',
+    });
+    const observation = {
+      ...terminal,
+      query: {
+        ...terminal.query,
+        activity_events: [{
+          activity_kind: 'codex_stage_activity',
+          progress_summary: {
+            execution_session_ref: 'codex://threads/thread-temporal-telemetry',
+          },
+          cost_summary: costSummary,
+        }],
+      },
+    };
+
+    syncStageAttemptFromTemporalTerminalObservation(db, observation);
+    syncStageAttemptFromTemporalTerminalObservation(db, observation);
+    const inspected = inspectStageAttempt(db, attempt.stage_attempt_id);
+
+    assert.equal(inspected.execution_session_ref, 'codex://threads/thread-temporal-telemetry');
+    assert.equal(inspected.usage_observation?.telemetry_status, 'observed');
+    assert.equal(inspected.usage_projection.token.observed_count, 1);
+    assert.equal(inspected.usage_projection.token.total_tokens_observed, 150);
+  });
+});
+
 test('Temporal activity terminal sync preserves refs-only domain output through query', async () => {
-  const db = new DatabaseSync(':memory:');
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-temporal-terminal-sync-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = stateRoot;
+  const { db } = openQueueDb();
   const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
   const taskQueue = `opl-temporal-domain-output-${Date.now()}`;
   try {
@@ -170,6 +236,9 @@ test('Temporal activity terminal sync preserves refs-only domain output through 
   } finally {
     db.close();
     await testEnv.teardown();
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
 test('Temporal cancellation remains provider-only for a generic domain route', () => {

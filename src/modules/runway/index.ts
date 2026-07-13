@@ -9,6 +9,11 @@ export { buildEvidenceGroundedRunwayProfilePolicyReadback } from './evidence-gro
 export { buildFamilyRuntimeControlledApplyContract } from './family-runtime-controlled-apply.ts';
 export { buildFamilyRuntimeLifecyclePrimitives } from './family-runtime-lifecycle.ts';
 export { buildModelRouteCostProjection, buildStageAttemptUsageProjection } from './family-runtime-stage-attempt-usage.ts';
+export {
+  executorUsageObservationFromCostSummary,
+  persistStageAttemptUsageObservation,
+} from './family-runtime-stage-attempt-usage-observation.ts';
+export type { ExecutorUsageObservation, TokenUsageTotals } from './family-runtime-codex-session-usage.ts';
 export { buildStageProgressLog } from './family-runtime-stage-progress-log.ts';
 export { buildStageAttemptTruePathProof } from './family-runtime-stage-attempt-true-path-proof.ts';
 export { buildStageAttemptRuntimeCurrentness } from './family-runtime-stage-attempt-runtime-currentness.ts';

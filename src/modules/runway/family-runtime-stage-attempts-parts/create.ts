@@ -376,6 +376,7 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
     repair_map_refs_json: JSON.stringify(normalizeJsonList(input.repairMapRefs)),
     quality_role_prompt_ref: input.qualityRolePromptRef?.trim() || null,
     execution_session_ref: input.executionSessionRef?.trim() || null,
+    usage_observation_json: null,
     context_manifest_ref: input.contextManifestRef?.trim() || null,
     context_manifest_json: input.contextManifest ? JSON.stringify(input.contextManifest) : null,
     no_context_inheritance: input.noContextInheritance === undefined
@@ -404,7 +405,7 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
       attempt_role, quality_round_index, parent_attempt_ref, input_artifact_refs_json, reviewed_artifact_hashes_json,
       quality_source_refs_json, quality_rubric_refs_json, prior_finding_refs_json, repair_map_refs_json,
       quality_role_prompt_ref,
-      execution_session_ref, context_manifest_ref, context_manifest_json, no_context_inheritance, status, checkpoint_refs_json, closeout_refs_json,
+      execution_session_ref, usage_observation_json, context_manifest_ref, context_manifest_json, no_context_inheritance, status, checkpoint_refs_json, closeout_refs_json,
       human_gate_refs_json, retry_budget_json, attempt_count, task_id, blocked_reason,
       provider_receipt_json, provider_run_json, activity_events_json, route_impact_json,
       closeout_receipt_status, created_at, updated_at
@@ -415,7 +416,7 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
       @attempt_role, @quality_round_index, @parent_attempt_ref, @input_artifact_refs_json, @reviewed_artifact_hashes_json,
       @quality_source_refs_json, @quality_rubric_refs_json, @prior_finding_refs_json, @repair_map_refs_json,
       @quality_role_prompt_ref,
-      @execution_session_ref, @context_manifest_ref, @context_manifest_json, @no_context_inheritance, @status, @checkpoint_refs_json, @closeout_refs_json,
+      @execution_session_ref, @usage_observation_json, @context_manifest_ref, @context_manifest_json, @no_context_inheritance, @status, @checkpoint_refs_json, @closeout_refs_json,
       @human_gate_refs_json, @retry_budget_json, @attempt_count, @task_id, @blocked_reason,
       @provider_receipt_json, @provider_run_json, @activity_events_json, @route_impact_json,
       @closeout_receipt_status, @created_at, @updated_at

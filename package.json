@@ -77,6 +77,7 @@
     "packages:daily-check": "node ./scripts/package-channel-daily-check.mjs",
     "packages:cleanup-ghcr": "node --experimental-strip-types ./scripts/cleanup-ghcr-package-versions.mjs",
     "codex:export-default-profile": "node --experimental-strip-types ./scripts/export-codex-default-profile.mjs --workflow-policy ../opl-flow/contracts/workflow-policy.json",
+    "runtime:token-telemetry:canary": "node --experimental-strip-types ./scripts/family-runtime-token-telemetry-canary.ts",
     "capability-map:audit": "node ./scripts/capability-map-audit.mjs",
     "docs:whitepaper": "node --experimental-strip-types ./scripts/run-domain-whitepaper.ts --repo-root . --profile contracts/whitepaper_profile.json",
     "docs:whitepapers:family": "node --experimental-strip-types ./scripts/build-opl-family-whitepapers.ts",

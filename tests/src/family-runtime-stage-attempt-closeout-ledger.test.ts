@@ -116,6 +116,8 @@ test('stage attempt closeout replay backfills token usage projection', () => {
 
     assert.equal(replay.closeout.idempotent_noop, true);
     assert.equal((replay.attempt.provider_run.cost_summary as { token_usage: { total_tokens: number } }).token_usage.total_tokens, 390);
+    assert.ok(replay.attempt.usage_observation);
+    assert.equal(replay.attempt.usage_observation.telemetry_status, 'observed');
     assert.equal(replay.attempt.usage_projection.telemetry_status, 'observed');
     assert.equal(replay.attempt.usage_projection.token.total_tokens_observed, 390);
   });

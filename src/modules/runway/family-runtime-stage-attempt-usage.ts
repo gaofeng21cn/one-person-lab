@@ -26,6 +26,7 @@ type StageAttemptUsageInput = {
   providerRun: JsonRecord;
   activityEvents: unknown[];
   routeImpact: JsonRecord;
+  usageObservation?: JsonRecord | null;
 };
 
 type ModelRouteCostProjectionInput = StageAttemptUsageInput & {
@@ -51,6 +52,7 @@ function refsFromUnknown(value: unknown): string[] {
     return [
       stringValue(value.session_ref),
       stringValue(value.usage_ref),
+      stringValue(value.source_ref),
       stringValue(value.ref),
       stringValue(value.ref_id),
     ].filter((ref): ref is string => Boolean(ref));
@@ -61,17 +63,20 @@ function refsFromUnknown(value: unknown): string[] {
 function usageRefs(usage: JsonRecord) {
   const nestedCost = usageRecord(usage.cost_summary);
   return uniqueStrings([
+    ...refsFromUnknown(usage.source_ref),
     ...refsFromUnknown(usage.usage_ref),
     ...refsFromUnknown(usage.usage_refs),
     ...refsFromUnknown(usage.session_usage_refs),
     ...refsFromUnknown(nestedCost.usage_ref),
+    ...refsFromUnknown(nestedCost.source_ref),
     ...refsFromUnknown(nestedCost.usage_refs),
     ...refsFromUnknown(nestedCost.session_usage_refs),
   ]);
 }
 
-function add(sourceRefs: string[], ref: string, value: number | null) {
-  return value === null ? 0 : (sourceRefs.push(ref), value);
+function addNullableTokenField(current: number | null, value: number | null, observedCount: number) {
+  if (value === null || (observedCount > 0 && current === null)) return null;
+  return (observedCount === 0 ? 0 : current!) + value;
 }
 
 function msBetween(startedAt: unknown, completedAt: unknown) {
@@ -90,7 +95,9 @@ function tokenUsage(value: unknown) {
   }
   return {
     input_tokens: numberValue(value.input_tokens),
+    cached_input_tokens: numberValue(value.cached_input_tokens),
     output_tokens: numberValue(value.output_tokens),
+    reasoning_output_tokens: numberValue(value.reasoning_output_tokens),
     total_tokens: numberValue(value.total_tokens),
   };
 }
@@ -323,7 +330,9 @@ export function buildModelRouteCostProjection(input: ModelRouteCostProjectionInp
       token: {
         observed_count: input.usageProjection.token.observed_count,
         input_tokens_observed: input.usageProjection.token.input_tokens_observed,
+        cached_input_tokens_observed: input.usageProjection.token.cached_input_tokens_observed,
         output_tokens_observed: input.usageProjection.token.output_tokens_observed,
+        reasoning_output_tokens_observed: input.usageProjection.token.reasoning_output_tokens_observed,
         total_tokens_observed: input.usageProjection.token.total_tokens_observed,
         source_refs: input.usageProjection.token.source_refs,
       },
@@ -339,17 +348,33 @@ export function buildModelRouteCostProjection(input: ModelRouteCostProjectionInp
 }
 
 function usageInputs(input: StageAttemptUsageInput) {
+  const authoritativeUsage = usageRecord(input.usageObservation);
+  if (Object.keys(authoritativeUsage).length > 0) {
+    return [
+      {
+        ref: `stage_attempt:${input.stageAttemptId}#usage_observation`,
+        usage: authoritativeUsage,
+        token_authority: true,
+      },
+      {
+        ref: `stage_attempt:${input.stageAttemptId}#provider_run`,
+        usage: input.providerRun,
+        token_authority: false,
+      },
+    ].filter((entry) => hasUsageFields(entry.usage));
+  }
   const providerUsage = usageRecord(input.providerRun.usage_projection);
   const activityEvents = input.activityEvents.filter(isRecord);
   const routeUsage = usageRecord(input.routeImpact.usage_projection);
   return [
-    { ref: `stage_attempt:${input.stageAttemptId}#provider_run`, usage: input.providerRun },
-    { ref: `stage_attempt:${input.stageAttemptId}#provider_run.usage_projection`, usage: providerUsage },
+    { ref: `stage_attempt:${input.stageAttemptId}#provider_run`, usage: input.providerRun, token_authority: true },
+    { ref: `stage_attempt:${input.stageAttemptId}#provider_run.usage_projection`, usage: providerUsage, token_authority: true },
     ...activityEvents.map((event, index) => ({
       ref: `stage_attempt:${input.stageAttemptId}#activity_events[${index}]`,
       usage: event,
+      token_authority: true,
     })),
-    { ref: `stage_attempt:${input.stageAttemptId}#route_impact.usage_projection`, usage: routeUsage },
+    { ref: `stage_attempt:${input.stageAttemptId}#route_impact.usage_projection`, usage: routeUsage, token_authority: true },
   ].filter((entry) => hasUsageFields(entry.usage));
 }
 
@@ -362,9 +387,11 @@ export function buildStageAttemptUsageProjection(input: StageAttemptUsageInput) 
   const durationSourceRefs: string[] = [];
   const cadenceRefs = stringValue(input.retryBudget.cadence_ref) ? [stringValue(input.retryBudget.cadence_ref)!] : [];
   const cadenceSourceRefs = cadenceRefs.length > 0 ? [`stage_attempt:${input.stageAttemptId}#retry_budget`] : [];
-  let inputTokens = 0;
-  let outputTokens = 0;
-  let totalTokens = 0;
+  let inputTokens: number | null = null;
+  let cachedInputTokens: number | null = null;
+  let outputTokens: number | null = null;
+  let reasoningOutputTokens: number | null = null;
+  let totalTokens: number | null = null;
   let tokenObservedCount = 0;
   let estimatedCostUsd = 0;
   let costObservedCount = 0;
@@ -399,15 +426,23 @@ export function buildStageAttemptUsageProjection(input: StageAttemptUsageInput) 
     const unreportedZeroUsage = isUnreportedUsageStatus(status) && isZeroTokenUsage(tokens);
     const entryUsageRefs = usageRefs(usage);
     sourceRefs.push(...entryUsageRefs);
-    if (tokens && !unreportedZeroUsage) {
+    const hasObservedTokens = Boolean(
+      tokens
+      && (tokens.input_tokens !== null || tokens.output_tokens !== null || tokens.total_tokens !== null),
+    );
+    if (entry.token_authority && tokens && hasObservedTokens && !unreportedZeroUsage) {
       const tokenRefs = entryUsageRefs.length > 0 ? entryUsageRefs : [entry.ref];
-      inputTokens += add(tokenSourceRefs, tokenRefs[0]!, tokens.input_tokens);
-      outputTokens += add(tokenSourceRefs, tokenRefs[0]!, tokens.output_tokens);
-      totalTokens += add(tokenSourceRefs, tokenRefs[0]!, tokens.total_tokens);
-      tokenSourceRefs.push(...tokenRefs.slice(1));
-      if (tokens.input_tokens !== null || tokens.output_tokens !== null || tokens.total_tokens !== null) {
-        tokenObservedCount += 1;
-      }
+      inputTokens = addNullableTokenField(inputTokens, tokens.input_tokens, tokenObservedCount);
+      cachedInputTokens = addNullableTokenField(cachedInputTokens, tokens.cached_input_tokens, tokenObservedCount);
+      outputTokens = addNullableTokenField(outputTokens, tokens.output_tokens, tokenObservedCount);
+      reasoningOutputTokens = addNullableTokenField(
+        reasoningOutputTokens,
+        tokens.reasoning_output_tokens,
+        tokenObservedCount,
+      );
+      totalTokens = addNullableTokenField(totalTokens, tokens.total_tokens, tokenObservedCount);
+      tokenSourceRefs.push(...tokenRefs);
+      tokenObservedCount += 1;
     }
     const cost = numberValue(usage.estimated_cost_usd) ?? numberValue(nestedCost.estimated_cost_usd);
     if (cost !== null && !(isUnreportedUsageStatus(status) && cost === 0)) {
@@ -440,7 +475,16 @@ export function buildStageAttemptUsageProjection(input: StageAttemptUsageInput) 
   const hasObservedResourceUsage =
     tokenObservedCount + costObservedCount + apiCallObservedCount + durationObservedCount > 0;
   const retryBudgetObserved = Object.keys(input.retryBudget).length > 0;
-  const telemetryStatus = hasObservedResourceUsage ? 'observed' : 'missing';
+  const observationStatus = stringValue(input.usageObservation?.telemetry_status);
+  const telemetryStatus = observationStatus === 'observed'
+    || observationStatus === 'partial'
+    || observationStatus === 'missing'
+    || observationStatus === 'stale'
+    ? observationStatus
+    : hasObservedResourceUsage ? 'observed' : 'missing';
+  const authoritativeMissingReason = stringValue(input.usageObservation?.missing_reason);
+  const authoritativeSourceRef = stringValue(input.usageObservation?.source_ref);
+  const authoritativeObservedAt = stringValue(input.usageObservation?.observed_at);
 
   return {
     surface_kind: 'opl_stage_attempt_usage_projection',
@@ -451,13 +495,19 @@ export function buildStageAttemptUsageProjection(input: StageAttemptUsageInput) 
         ? 'retry_budget_observed'
         : 'usage_unavailable',
     telemetry_status: telemetryStatus,
-    missing_usage_telemetry_reason: hasObservedResourceUsage
+    source_ref: authoritativeSourceRef,
+    observed_at: authoritativeObservedAt,
+    missing_usage_telemetry_reason: telemetryStatus === 'observed'
       ? null
-      : uniqueStrings(missingUsageReasons)[0] ?? 'no_stage_attempt_usage_telemetry_observed',
+      : authoritativeMissingReason
+        ?? uniqueStrings(missingUsageReasons)[0]
+        ?? 'no_stage_attempt_usage_telemetry_observed',
     token: {
       observed_count: tokenObservedCount,
       input_tokens_observed: tokenObservedCount > 0 ? inputTokens : null,
+      cached_input_tokens_observed: tokenObservedCount > 0 ? cachedInputTokens : null,
       output_tokens_observed: tokenObservedCount > 0 ? outputTokens : null,
+      reasoning_output_tokens_observed: tokenObservedCount > 0 ? reasoningOutputTokens : null,
       total_tokens_observed: tokenObservedCount > 0 ? totalTokens : null,
       source_refs: uniqueStrings(tokenSourceRefs),
     },
@@ -499,7 +549,18 @@ export function summarizeStageAttemptUsageProjections(
   projectionScope = 'stage_attempt_workbench',
 ) {
   const sourceRefs = uniqueStrings(projections.flatMap((projection) => projection.source_refs));
-  const tokenObservedCount = projections.reduce((count, projection) => count + projection.token.observed_count, 0);
+  const tokenProjectionBySource = new Map<string, StageAttemptUsageProjection>();
+  projections.forEach((projection, index) => {
+    const key = projection.source_ref
+      ? `authoritative:${projection.source_ref}`
+      : `stage_attempt_projection:${index}`;
+    if (!tokenProjectionBySource.has(key)) tokenProjectionBySource.set(key, projection);
+  });
+  const tokenProjections = [...tokenProjectionBySource.values()];
+  const tokenObservedCount = tokenProjections.reduce(
+    (count, projection) => count + projection.token.observed_count,
+    0,
+  );
   const costObservedCount = projections.reduce((count, projection) => count + projection.cost.observed_count, 0);
   const apiCallObservedCount = projections.reduce((count, projection) => count + projection.api_calls.observed_count, 0);
   const durationObservedCount = projections.reduce((count, projection) => count + projection.duration.observed_count, 0);
@@ -511,9 +572,43 @@ export function summarizeStageAttemptUsageProjections(
   const retryPressure = projections.filter((projection) =>
     ['retry_budget_pressure', 'retry_budget_exhausted'].includes(projection.retry_budget.pressure_status)
   );
+  const telemetryStatuses = projections.map((projection) => projection.telemetry_status);
+  const telemetryStatus = projections.length === 0
+    ? 'missing'
+    : telemetryStatuses.every((status) => status === 'observed')
+      ? 'observed'
+      : telemetryStatuses.every((status) => status === 'stale')
+        ? 'stale'
+        : telemetryStatuses.every((status) => status === 'missing')
+          ? 'missing'
+          : 'partial';
+  const missingReasons = uniqueStrings(
+    projections
+      .map((projection) => projection.missing_usage_telemetry_reason)
+      .filter((reason): reason is string => Boolean(reason)),
+  );
+  const observedAt = projections
+    .map((projection) => projection.observed_at)
+    .filter((value): value is string => Boolean(value))
+    .sort()
+    .at(-1) ?? null;
+  const summedTokenField = (field: keyof StageAttemptUsageProjection['token']) => {
+    const observed = tokenProjections.filter((projection) => projection.token.observed_count > 0);
+    if (observed.length === 0) return null;
+    const values = observed.map((projection) => projection.token[field]);
+    if (values.some((value) => typeof value !== 'number')) return null;
+    return (values as number[]).reduce((total, value) => total + value, 0);
+  };
   return {
     surface_kind: 'opl_stage_attempt_usage_projection_summary',
     projection_scope: projectionScope,
+    telemetry_status: telemetryStatus,
+    source_ref: projections.length === 1 ? projections[0]?.source_ref ?? null : null,
+    observed_at: observedAt,
+    missing_usage_telemetry_reason: telemetryStatus === 'observed'
+      ? null
+      : missingReasons[0] ?? 'no_stage_attempt_usage_telemetry_observed',
+    missing_usage_telemetry_reasons: missingReasons,
     attempt_count: projections.length,
     observed_attempt_count: projections.filter((projection) => projection.source_refs.length > 0).length,
     resource_usage_observed_attempt_count: resourceObserved.length,
@@ -527,9 +622,11 @@ export function summarizeStageAttemptUsageProjections(
     source_ref_count: sourceRefs.length,
     token: {
       observed_count: tokenObservedCount,
-      total_tokens_observed: tokenObservedCount > 0
-        ? projections.reduce((count, projection) => count + (projection.token.total_tokens_observed ?? 0), 0)
-        : null,
+      input_tokens_observed: summedTokenField('input_tokens_observed'),
+      cached_input_tokens_observed: summedTokenField('cached_input_tokens_observed'),
+      output_tokens_observed: summedTokenField('output_tokens_observed'),
+      reasoning_output_tokens_observed: summedTokenField('reasoning_output_tokens_observed'),
+      total_tokens_observed: summedTokenField('total_tokens_observed'),
     },
     cost: {
       observed_count: costObservedCount,

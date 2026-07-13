@@ -22,6 +22,7 @@ import { inspectStageAttempt } from './inspect.ts';
 import {
   reconcileDomainRouteTerminalTaskForAttempt,
 } from '../family-runtime-domain-route-terminal-sync.ts';
+import { persistStageAttemptUsageObservation } from '../family-runtime-stage-attempt-usage-observation.ts';
 
 function normalizeRouteImpact(
   packet: TypedStageCloseoutPacket,
@@ -209,6 +210,15 @@ export function ingestStageAttemptCloseout(
         },
       );
     }
+    if (attempt.executor_kind === 'codex_cli') {
+      persistStageAttemptUsageObservation(db, {
+        stageAttemptId: input.stageAttemptId,
+        costSummary,
+        observedAt: createdAt,
+        executionSessionRef: attempt.execution_session_ref,
+        sourceFallbackRef: `stage_attempt:${input.stageAttemptId}#usage_observation`,
+      });
+    }
     const syncedAttempt = syncAttemptRowFromAcceptedCloseout(db, {
       stageAttemptId: input.stageAttemptId,
       attempt,
@@ -228,6 +238,15 @@ export function ingestStageAttemptCloseout(
         idempotent_noop: true,
       },
     };
+  }
+  if (attempt.executor_kind === 'codex_cli') {
+    persistStageAttemptUsageObservation(db, {
+      stageAttemptId: input.stageAttemptId,
+      costSummary,
+      observedAt: createdAt,
+      executionSessionRef: attempt.execution_session_ref,
+      sourceFallbackRef: `stage_attempt:${input.stageAttemptId}#usage_observation`,
+    });
   }
   db.prepare(`
     INSERT OR IGNORE INTO stage_attempt_closeouts(closeout_id, stage_attempt_id, packet_json, created_at)

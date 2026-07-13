@@ -31,6 +31,10 @@ export { recordStageAttemptActivityHeartbeat } from './family-runtime-stage-atte
 export { ingestStageAttemptCloseout } from './family-runtime-stage-attempts-parts/closeout-ingest.ts';
 export { runStageAttemptFixtureActivity } from './family-runtime-stage-attempts-parts/fixture-activity.ts';
 export {
+  executorUsageObservationFromCostSummary,
+  persistStageAttemptUsageObservation,
+} from './family-runtime-stage-attempt-usage-observation.ts';
+export {
   stageAttemptSummary,
   updateStageAttemptsForTask,
 } from './family-runtime-stage-attempts-parts/task-sync-summary.ts';
