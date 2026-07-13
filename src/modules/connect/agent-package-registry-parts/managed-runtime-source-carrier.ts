@@ -410,6 +410,14 @@ function probeCurrentRuntimeSource(
   );
 }
 
+function managedRuntimeCheckoutIsDirectory(checkoutPath: string) {
+  try {
+    return fs.statSync(checkoutPath).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
 export function managedRuntimeSourceReadiness(
   state: AgentPackageManagedRuntimeSourceState | null | undefined,
   declaration: AgentPackageManagedRuntimeSourceCarrier | null | undefined = null,
@@ -437,7 +445,7 @@ export function managedRuntimeSourceReadiness(
       reason: null,
     };
   }
-  if (!fs.existsSync(state.checkout_path)) {
+  if (!managedRuntimeCheckoutIsDirectory(state.checkout_path)) {
     return {
       status: 'missing' as const,
       operational_ready: false,
@@ -535,7 +543,7 @@ export function managedRuntimeSourceLockReadiness(
           reason: null,
         };
   }
-  if (!fs.existsSync(state.checkout_path)) {
+  if (!managedRuntimeCheckoutIsDirectory(state.checkout_path)) {
     return {
       status: 'missing' as const,
       operational_ready: false,
