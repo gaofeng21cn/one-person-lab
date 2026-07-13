@@ -60,6 +60,12 @@ function writeOplFlowPackage(root: string) {
         auto_retire_on_optimize: true,
         reason: 'fixture',
       },
+      {
+        id: 'legacy-opl-flow-local-plugin',
+        discovery_ids: ['opl-flow-local'],
+        auto_retire_on_optimize: true,
+        reason: 'fixture',
+      },
     ],
     codex_model_policy: {
       authority: 'opl-flow',
@@ -217,9 +223,20 @@ test('generic OPL package transaction owns OPL Flow policy migration without inv
       'codexcont-intelligence-enhancement',
       'superpowers-local-method-profile',
       'legacy-development-role-prompts',
+      'legacy-opl-flow-local-plugin',
     ]);
     assert.equal(migration.backup_active, true);
     assert.equal(fs.existsSync(migration.backup_root), true);
+    const managedCachePath = installed.opl_agent_package_install.physical_surface.codex_plugin_cache_path;
+    assert.equal(
+      fs.existsSync(path.join(managedCachePath, '.codex-plugin', 'plugin.json')),
+      true,
+    );
+    assert.equal(
+      migration.actions.some((action: { source_ref: string }) =>
+        action.source_ref === managedCachePath || action.source_ref.startsWith(`${managedCachePath}${path.sep}`)),
+      false,
+    );
     for (const legacyPath of legacyPaths) assert.equal(fs.existsSync(legacyPath), false, legacyPath);
     assert.doesNotMatch(fs.readFileSync(configPath, 'utf8'), /superpowers|ponytail|codexcont/i);
 

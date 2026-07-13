@@ -494,6 +494,15 @@ export function materializeManagedPolicySurface(input: {
   const home = resolveOplStatePaths().home_dir;
   const codexHome = resolveCodexHome(home);
   const configPath = resolveCodexConfigPath(codexHome);
+  const managedMarketplaceRoots = [
+    path.join(codexHome, 'plugins', 'cache', managedMarketplaceId),
+    path.join(codexHome, 'plugins', 'data', managedMarketplaceId),
+    path.join(codexHome, '.tmp', 'plugins', 'plugins', managedMarketplaceId),
+  ];
+  const isCurrentManagedCarrier = (physicalRef: string) => managedMarketplaceRoots.some((root) => {
+    const relative = path.relative(root, physicalRef);
+    return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+  });
   const inventory = [
     ...filesystemInventory(home, codexHome),
     ...configTableInventory(configPath),
@@ -502,10 +511,10 @@ export function materializeManagedPolicySurface(input: {
     .map((entry) => ({ ...entry, aliases: [...entry.aliases].sort() }))
     .sort((left, right) => left.physicalRef.localeCompare(right.physicalRef))));
   const classified = inventory.flatMap((item) => {
+    if (isCurrentManagedCarrier(item.physicalRef)) return [];
     const group = item.aliases.map((alias) => groupByAlias.get(alias)).find(Boolean);
     if (group && enabledGroups.has(group.id)) return [{ item, migrationId: group.id }];
     const selfCarrier = item.surfaceKind === 'plugin'
-      && !item.physicalRef.includes(`${path.sep}${managedMarketplaceId}${path.sep}`)
       && selfCarrierFingerprints.some((fingerprint) =>
         idAliases(fingerprint).some((alias) => item.aliases.includes(alias)));
     return selfCarrier ? [{ item: { ...item, surfaceKind: 'historical_self_carrier' as const }, migrationId: 'historical-self-carrier' }] : [];
