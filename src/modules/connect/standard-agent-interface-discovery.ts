@@ -47,9 +47,11 @@ function currentDescriptorFromStatus(
   } catch {
     return null;
   }
+  const dependencies = status.package_dependency_readiness;
   const source = status.runtime_source_readiness;
   if (
-    status.operational_ready !== true
+    status.installed_package_count < 1
+    || dependencies?.operational_ready !== true
     || source?.status !== 'current'
     || source.operational_ready !== true
     || typeof source.checkout_path !== 'string'
