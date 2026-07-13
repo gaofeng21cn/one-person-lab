@@ -9,6 +9,10 @@ import { isRecord } from '../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
 import { ensureOplStateDir } from '../../kernel/runtime-state-paths.ts';
 import {
+  resolveStandardAgent,
+  STANDARD_AGENT_SERIES_MEMBERSHIP,
+} from '../../kernel/standard-agent-registry.ts';
+import {
   assertStandardAgentDescriptorIdentity,
   materializeStandardAgentCommand,
   readStandardAgentDescriptorInterface,
@@ -180,13 +184,18 @@ function writeWorkspaceRegistryFile(payload: WorkspaceRegistryFile) {
 }
 
 function allowedProjects(contracts: FrameworkContracts) {
+  const agentProfiles = listWorkspaceAgentProfiles();
+  const declaredAgentIds = new Set(contracts.domains.domains.flatMap((domain) => {
+    const agent = resolveStandardAgent(domain.domain_id) ?? resolveStandardAgent(domain.project);
+    return agent?.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP ? [agent.agent_id] : [];
+  }));
   const domainProjects = contracts.domains.domains.map((domain) => ({
     project_id: domain.domain_id,
     project: domain.project,
   }));
   const projectIds = new Set(['opl', ...domainProjects.map((entry) => entry.project_id)]);
-  const generatedAgentProjects = listWorkspaceAgentProfiles()
-    .filter((entry) => !projectIds.has(entry.project_id))
+  const generatedAgentProjects = agentProfiles
+    .filter((entry) => !projectIds.has(entry.project_id) && !declaredAgentIds.has(entry.agent_id))
     .map((entry) => ({
       project_id: entry.project_id,
       project: entry.project,

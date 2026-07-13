@@ -70,6 +70,10 @@ test('current readiness projection is derived from current OPL surfaces', () => 
     assert.equal(readiness.summary.total_projects_count, 3);
     assert.equal(readiness.projects.length, 3);
     assert.equal(readiness.domain_binding_parity.summary.total_projects_count, 5);
+    assert.deepEqual(
+      readiness.domain_binding_parity.projects.map((entry) => entry.project_id).sort(),
+      ['medautogrant', 'medautoscience', 'opl-bookforge', 'opl-meta-agent', 'redcube'],
+    );
     assert.equal(refs.entry_guide_surface.command, 'opl start --project <project_id>');
     assert.equal(refs.readiness_surface.command, 'opl status dashboard');
   } finally {
