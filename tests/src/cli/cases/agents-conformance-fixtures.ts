@@ -226,6 +226,46 @@ export function buildReadyAgentRepo() {
     'Sample Brief Agent',
   ]);
 
+  writeJson(path.join(targetDir, 'package.json'), {
+    name: 'sample-brief-agent',
+    version: '0.0.0',
+    type: 'module',
+    bin: {
+      'sample-brief-agent': './src/cli.ts',
+    },
+  });
+  fs.mkdirSync(path.join(targetDir, 'src', 'handlers'), { recursive: true });
+  fs.writeFileSync(path.join(targetDir, 'src', 'cli.ts'), [
+    "import { draftBrief } from './handlers/draft-brief.ts';",
+    '',
+    'export function main() {',
+    '  return draftBrief();',
+    '}',
+    '',
+    'main();',
+    '',
+  ].join('\n'), 'utf8');
+  fs.writeFileSync(path.join(targetDir, 'src', 'handlers', 'draft-brief.ts'), [
+    'export function draftBrief() {',
+    "  return { status: 'owner_receipt_candidate' };",
+    '}',
+    '',
+  ].join('\n'), 'utf8');
+  writeJson(contractPath(targetDir, 'domain_handler_registry.json'), {
+    surface_kind: 'domain_handler_registry',
+    version: 'domain-handler-registry.v1',
+    handlers: [
+      {
+        handler_id: 'draft_brief',
+        binding: {
+          kind: 'typescript_export',
+          file: 'src/handlers/draft-brief.ts',
+          export: 'draftBrief',
+        },
+      },
+    ],
+  });
+
   writeJson(contractPath(targetDir, 'action_catalog.json'), {
     surface_kind: 'family_action_catalog',
     version: 'family-action-catalog.v1',
@@ -245,8 +285,9 @@ export function buildReadyAgentRepo() {
         summary: 'Draft a source-grounded brief.',
         owner: 'SampleBriefAgent',
         effect: 'mutating',
+        handler_id: 'draft_brief',
         source_command: {
-          command: 'sample-brief-agent draft --workspace-root <workspace_root>',
+          command: 'node ./src/cli.ts draft --workspace-root <workspace_root>',
           surface_kind: 'domain_cli',
         },
         input_schema_ref: 'contracts/draft-brief.input.schema.json',
@@ -257,7 +298,7 @@ export function buildReadyAgentRepo() {
         human_gate_ids: ['brief_owner_review'],
         supported_surfaces: {
           cli: {
-            command: 'sample-brief-agent draft --workspace-root <workspace_root>',
+            command: 'node ./src/cli.ts draft --workspace-root <workspace_root>',
             surface_kind: 'domain_cli',
           },
           mcp: {
@@ -272,7 +313,7 @@ export function buildReadyAgentRepo() {
           },
           product_entry: {
             action_key: 'draft_brief',
-            command: 'sample-brief-agent product draft --workspace-root <workspace_root>',
+            command: 'node ./src/cli.ts product draft --workspace-root <workspace_root>',
             surface_kind: 'domain_product_entry',
           },
           openai: { tool_name: 'sample_brief_agent_draft_brief' },

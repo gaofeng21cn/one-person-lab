@@ -175,15 +175,28 @@ export function buildPrivatePlatformResidueOwnerDecisionLedger(args: string[]) {
   const defaultCallers = record(defaultCallerReport.agent_default_caller_readiness);
   const reports = recordList(defaultCallers.reports).map((repo) => {
     const cleanupLane = record(repo.private_platform_residue_deletion_gate);
+    const sourceClosure = record(repo.source_closure);
     const items = recordList(cleanupLane.items).map((item, index) =>
       buildDecisionItem(repo, item, index)
     );
+    const sourceClosurePassed = optionalString(sourceClosure.status) === 'passed'
+      && sourceClosure.scan_complete === true
+      && recordList(sourceClosure.unresolved_edges).length === 0
+      && recordList(sourceClosure.audit_mismatches).length === 0
+      && recordList(sourceClosure.unreachable_sensitive_residue).length === 0;
     return {
       repo_id: optionalString(repo.domain_id) ?? optionalString(repo.repo_id) ?? 'unknown_domain',
       domain_id: optionalString(repo.domain_id),
       requested_agent_id: optionalString(repo.requested_agent_id),
       repo_dir: optionalString(repo.repo_dir),
-      status: items.length > 0 ? 'owner_decisions_required_or_observed' : 'no_private_platform_residue_decisions',
+      status: items.length > 0
+        ? 'owner_decisions_required_or_observed'
+        : sourceClosurePassed
+          ? 'verified_zero'
+          : 'source_closure_blocked',
+      source_closure_status: optionalString(sourceClosure.status) ?? 'missing',
+      source_closure_verified_zero: sourceClosurePassed,
+      source_closure_digest: optionalString(sourceClosure.closure_digest),
       lane_id: DEFAULT_CALLER_PRIVATE_PLATFORM_CLEANUP_LANE_ID,
       decision_item_count: items.length,
       physical_delete_authorized: items.some((item) => item.physical_delete_authorized),
@@ -201,12 +214,18 @@ export function buildPrivatePlatformResidueOwnerDecisionLedger(args: string[]) {
     item.owner_decision_ref_status === 'missing_owner_receipt_or_typed_blocker_ref'
   ).length;
   const physicalDeleteAuthorizedCount = items.filter((item) => item.physical_delete_authorized).length;
+  const sourceClosureVerifiedRepoCount = reports.filter((report) => (
+    report.source_closure_verified_zero
+  )).length;
+  const verifiedZero = items.length === 0
+    && reports.length > 0
+    && sourceClosureVerifiedRepoCount === reports.length;
 
   return {
     surface_kind: 'opl_private_platform_residue_owner_decision_ledger',
     version: 'private-platform-residue-owner-decisions.v1',
     owner: 'one-person-lab',
-    state: 'refs_only_owner_decision_ledger',
+    state: verifiedZero ? 'verified_zero' : 'refs_only_owner_decision_ledger',
     contract_ref: PRIVATE_PLATFORM_RESIDUE_OWNER_DECISION_CONTRACT_REF,
     source_command: `opl agents residue-decisions ${args.join(' ')}`.trim(),
     source_default_caller_command: `opl agents default-callers ${args.join(' ')}`.trim(),
@@ -238,6 +257,9 @@ export function buildPrivatePlatformResidueOwnerDecisionLedger(args: string[]) {
       missing_owner_receipt_or_typed_blocker_ref_count: missingOwnerRefCount,
       observed_owner_receipt_or_typed_blocker_ref_count: items.length - missingOwnerRefCount,
       physical_delete_authorized_count: physicalDeleteAuthorizedCount,
+      source_closure_verified_repo_count: sourceClosureVerifiedRepoCount,
+      source_closure_blocked_repo_count: reports.length - sourceClosureVerifiedRepoCount,
+      residue_verification_status: verifiedZero ? 'verified_zero' : 'not_verified_zero',
       by_owner_decision: byAllowedOutcome(items),
       by_residue_kind: byResidueKind(items),
     },

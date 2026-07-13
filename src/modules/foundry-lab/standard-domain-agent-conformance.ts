@@ -31,6 +31,7 @@ import { buildStandardAgentRepoContractReadout, type StandardAgentRepoContractRe
 import { buildGoldenPathDefaultSurfaceBudgetChecks } from './standard-domain-agent-conformance-golden-path.ts';
 import { buildPhysicalMorphologyChecks } from './standard-domain-agent-conformance-physical-morphology.ts';
 import { buildStandardAgentSourceBehaviorChecks } from './standard-domain-agent-source-behavior.ts';
+import { buildStandardAgentSourceClosureForRepo } from './standard-agent-source-closure.ts';
 import { buildStageRunDomainAdoptionReadModel } from './standard-domain-agent-conformance-stage-run-adoption.ts';
 import { buildFoundryAgentOsConformance } from './standard-domain-agent-conformance-foundry-agent-os.ts';
 import { validateStandardDomainAgentScaffold } from './standard-domain-agent-scaffold.ts';
@@ -267,6 +268,10 @@ function buildRepoConformance(
   const platformSurfaceOwnershipChecks = buildAgentPlatformSurfaceOwnershipForRepo(repoDir, input.requested_agent_id);
   const physicalMorphologyChecks = buildPhysicalMorphologyChecks(repoDir, domainId);
   const sourceBehaviorChecks = buildStandardAgentSourceBehaviorChecks(repoDir);
+  const sourceClosureChecks = buildStandardAgentSourceClosureForRepo(
+    repoDir,
+    input.requested_agent_id,
+  );
   const workspaceFileLifecycleChecks = buildWorkspaceFileLifecycleChecks(repoDir);
   const stageArtifactKernelAdoptionChecks = buildStageArtifactKernelAdoptionChecks(repoDir);
   const stageRunKernelProfileChecks = buildStageRunKernelProfileChecks(repoDir);
@@ -294,6 +299,7 @@ function buildRepoConformance(
     ...platformSurfaceOwnershipChecks.blockers,
     ...physicalMorphologyChecks.blockers,
     ...sourceBehaviorChecks.blockers,
+    ...sourceClosureChecks.blockers.map((blocker) => `source_closure:${blocker}`),
     ...workspaceFileLifecycleChecks.blockers,
     ...stageArtifactKernelAdoptionChecks.blockers,
     ...stageRunKernelProfileChecks.blockers,
@@ -325,6 +331,7 @@ function buildRepoConformance(
     platform_surface_ownership_checks: platformSurfaceOwnershipChecks,
     physical_morphology_checks: physicalMorphologyChecks,
     source_behavior_checks: sourceBehaviorChecks,
+    source_closure_checks: sourceClosureChecks,
     workspace_file_lifecycle_checks: workspaceFileLifecycleChecks,
     stage_artifact_kernel_adoption_checks: stageArtifactKernelAdoptionChecks,
     stage_run_kernel_profile_checks: stageRunKernelProfileChecks,

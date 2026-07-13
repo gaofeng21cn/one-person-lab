@@ -108,6 +108,9 @@ test('agents default-callers waits for structural prerequisites before delete or
   const readModel = readout.physical_delete_authority_read_model;
 
   assert.equal(readout.status, 'ready_domain_evidence_required');
+  assert.equal(readout.source_closure_verified_repo_count, 1);
+  assert.equal(readout.source_closure_blocked_repo_count, 0);
+  assert.equal(readout.reports[0].source_closure.status, 'passed');
   assert.equal(readout.missing_no_active_caller_proof_count, 0);
   assert.equal(readout.missing_no_forbidden_write_proof_count, 8);
   assert.equal(readout.missing_tombstone_or_provenance_ref_count, 8);

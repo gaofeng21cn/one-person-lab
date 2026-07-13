@@ -1,0 +1,143 @@
+{
+  "surface_kind": "standard_agent_source_closure_effect_contract",
+  "version": "standard-agent-source-closure-effect-contract.v1",
+  "owner": "one-person-lab",
+  "purpose": "Define the fail-closed source and sensitive-effect vocabulary used to prove standard Agent entrypoint, call, and effect closure.",
+  "state": "active_contract",
+  "machine_boundary": "This contract classifies source effects. It does not authorize a domain repository to own generic runtime, persist OPL lifecycle state, invoke an executor, or claim domain, artifact, quality, release, or production readiness.",
+  "audit_contract_path": "contracts/source_closure_audit.json",
+  "active_source": {
+    "extensions": [
+      ".ts",
+      ".tsx",
+      ".js",
+      ".jsx",
+      ".mjs",
+      ".cjs",
+      ".py"
+    ],
+    "excluded_path_segments": [
+      ".git",
+      ".venv",
+      "__pycache__",
+      "build",
+      "coverage",
+      "dist",
+      "docs",
+      "fixtures",
+      "node_modules",
+      "test",
+      "tests"
+    ],
+    "excluded_file_patterns": [
+      "(?:^|/)test_[^/]+\\.py$",
+      "(?:^|/)[^/]+_test\\.py$",
+      "\\.(?:spec|test)\\.[cm]?[jt]sx?$"
+    ]
+  },
+  "effect_kinds": {
+    "process_spawn": {
+      "callee_patterns": [
+        "^exec(?:Sync)?$",
+        "(?:^|\\.)(?:execFile|execFileSync|fork|spawn|spawnSync)$",
+        "(?:^|\\.)(?:child_process|childProcess|cp)\\.(?:exec|execSync)$",
+        "(?:^|\\.)Popen$",
+        "(?:^|\\.)subprocess\\.run$",
+        "(?:^|\\.)subprocess\\.check_(?:call|output)$",
+        "(?:^|\\.)os\\.system$"
+      ],
+      "private_generic_by_default": true
+    },
+    "executor_invoke": {
+      "callee_patterns": [],
+      "private_generic_by_default": true
+    },
+    "filesystem_write": {
+      "callee_patterns": [
+        "(?:^|\\.)(?:appendFile|appendFileSync|copyFile|copyFileSync|createWriteStream|mkdir|mkdirSync|rename|renameSync|rm|rmSync|rmdir|rmdirSync|truncate|truncateSync|unlink|unlinkSync|writeFile|writeFileSync)$",
+        "(?:^|\\.)os\\.(?:makedirs|mkdir|rename|remove|replace|rmdir|unlink)$",
+        "(?:^|\\.)shutil\\.(?:copy|copy2|copyfile|copytree|move|rmtree)$",
+        "(?:^|\\.)(?:write_text|write_bytes|touch|unlink|mkdir|rename|rmdir)$",
+        "(?:^|\\.)open$"
+      ],
+      "private_generic_by_default": true
+    },
+    "database_write": {
+      "callee_patterns": [
+        "(?:^|\\.)(?:db|database|sqlite|sql|cursor|connection|conn|session)[A-Za-z0-9_]*\\.(?:execute|executemany|executescript|insert|update|delete|commit|rollback)$"
+      ],
+      "private_generic_by_default": true
+    },
+    "network_access": {
+      "callee_patterns": [
+        "(?:^|\\.)fetch$",
+        "(?:^|\\.)(?:axios|requests)\\.(?:get|post|put|patch|delete)$",
+        "(?:^|\\.)(?:http|https)\\.request$",
+        "(?:^|\\.)urllib\\.request\\.urlopen$"
+      ],
+      "private_generic_by_default": true
+    },
+    "runtime_state_mutation": {
+      "callee_patterns": [
+        "(?:^|\\.)(?:create|enqueue|persist|record|save|schedule|store|submit|upsert)(?:Attempt|Job|Lifecycle|Queue|Run|Session|Task|Workflow|_attempt|_job|_lifecycle|_queue|_run|_session|_task|_workflow)$",
+        "(?:^|\\.)(?:attempt|job|lifecycle|queue|run|session|task|workflow)(?:Store|Ledger|Registry|_store|_ledger|_registry)?\\.(?:create|enqueue|persist|record|save|schedule|store|submit|upsert)$"
+      ],
+      "private_generic_by_default": true
+    }
+  },
+  "audit_contract": {
+    "surface_kind": "standard_agent_source_closure_audit",
+    "version": "standard-agent-source-closure-audit.v1",
+    "entry_required_fields": [
+      "file",
+      "symbol",
+      "source_digest",
+      "allowed_effects",
+      "role"
+    ],
+    "exact_binding_policy": "Each authorization binds one repository-relative file, one symbol, the exact source digest, allowed effect kinds, and an explicit literal target allowlist when required by the effect kind. Directory paths, globs, digest-free authorizations, and wildcard target authorization are invalid.",
+    "allowed_roles": [
+      "minimal_authority_function",
+      "developer_tool"
+    ],
+    "globally_forbidden_effects": [
+      "executor_invoke"
+    ],
+    "minimal_authority_function_policy": "Exact audit may admit domain-owned effects, but it cannot convert executor invocation or private lifecycle/session/queue mutation into a minimal authority function.",
+    "minimal_authority_forbidden_effects": [
+      "executor_invoke",
+      "runtime_state_mutation"
+    ],
+    "target_allowlist_required_effects": [
+      "process_spawn",
+      "executor_invoke",
+      "network_access"
+    ],
+    "allowed_unresolved_edge_reasons": [
+      "dynamic_dispatch",
+      "dynamic_dispatch_or_import",
+      "dynamic_import",
+      "dynamic_require"
+    ],
+    "native_helper_carrier_allowed_effects": [
+      "process_spawn",
+      "filesystem_write"
+    ],
+    "native_helper_carrier_target_policies": [
+      "literal_allowlist",
+      "declared_command_set",
+      "declared_artifact_write_slot"
+    ],
+    "native_helper_carrier_policy": "A native-helper effect slot is accepted only from an exact *.native-helper-probe.json source_closure block bound to one file, symbol, source digest, effect kind, and target policy. Process commands must stay inside required_commands; filesystem writes require an explicit declared_artifact_write_slot. Native-helper slots cannot authorize executor, database, network, lifecycle, session, queue, truth, verdict, receipt, or readiness authority.",
+    "developer_tool_dynamic_edge_policy": "A dynamic edge may be excluded only when its exact reason is listed by an exact-digest developer_tool entry and the symbol is unreachable from every package, action, handler, generated, or pyproject entry.",
+    "developer_tool_policy": "A developer tool authorization is valid only for an unreachable symbol that is not a package bin, pyproject script, action, handler, or generated default entry."
+  },
+  "authority_boundary": {
+    "source_closure_can_write_domain_truth": false,
+    "source_closure_can_sign_owner_receipt": false,
+    "source_closure_can_create_typed_blocker": false,
+    "source_closure_can_authorize_private_generic_runtime": false,
+    "source_closure_can_claim_domain_ready": false,
+    "source_closure_can_claim_production_ready": false
+  }
+}

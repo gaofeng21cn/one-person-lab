@@ -23,6 +23,7 @@ import { buildDefaultCallerPhysicalDeleteAuthorityReadModel } from './agent-defa
 import { buildFunctionalPrivatizationAudit } from './functional-privatization-audit.ts';
 import { buildPrivatePlatformResidueDeletionGate } from './private-platform-residue-deletion-gate.ts';
 import { buildStandardAgentSourceBehaviorChecks } from './standard-domain-agent-source-behavior.ts';
+import { buildStandardAgentSourceClosureForRepo } from './standard-agent-source-closure.ts';
 import {
   DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES,
   DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION,
@@ -506,6 +507,10 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
   );
   const privatePlatformResidueDeletionGate =
     buildPrivatePlatformResidueDeletionGate(normalizedFunctionalAudit.modules);
+  const sourceClosure = buildStandardAgentSourceClosureForRepo(
+    resolvedRepoDir,
+    requestedAgentId ?? null,
+  );
   try {
     const bundle = generatedInterfaceBundleForRepo(resolvedRepoDir);
     const cutoverProof = isRecord(bundle.active_caller_cutover_proof) ? bundle.active_caller_cutover_proof : {};
@@ -550,6 +555,9 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
       defaultSurfaceRetirementSourceBehaviorBlocked
         ? 'default_surface_retirement_source_behavior_not_passed'
         : null,
+      sourceClosure.status === 'passed'
+        ? null
+        : `source_closure_not_passed:${sourceClosure.blockers.join(',')}`,
       ...surfaceBlockers,
     ].filter((entry): entry is string => Boolean(entry));
     const replacementReady = blockers.length === 0;
@@ -636,6 +644,12 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
         ready_surface_count: surfaceGates.length - surfaceBlockers.length,
         blocked_surface_count: surfaceBlockers.length,
         blocker_count: blockers.length,
+        source_closure_status: sourceClosure.status,
+        source_closure_scan_complete: sourceClosure.scan_complete,
+        source_closure_unresolved_edge_count: sourceClosure.unresolved_edges.length,
+        source_closure_audit_mismatch_count: sourceClosure.audit_mismatches.length,
+        source_closure_unreachable_sensitive_residue_count:
+          sourceClosure.unreachable_sensitive_residue.length,
         deletion_evidence_worklist_count: deletionEvidenceWorklists.length,
         surface_retirement_gate_count: surfaceRetirementGates.length,
         closed_surface_retirement_gate_count:
@@ -667,7 +681,9 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
       source_commands: {
         generated_interfaces: `opl agents interfaces --repo-dir ${resolvedRepoDir} --json`,
         platform_surfaces: `opl agents platform-surfaces --repo-dir ${resolvedRepoDir} --json`,
+        source_closure: `opl agents source-closure --repo-dir ${resolvedRepoDir} --json`,
       },
+      source_closure: sourceClosure,
       generated_interface_status: optionalString(bundle.status),
       generated_wrapper_bundle_status: optionalString(wrapperBundle.status),
       active_caller_target_proof_status: optionalString(targetProof.status),
@@ -759,6 +775,7 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
       ],
       error: error instanceof Error ? error.message : String(error),
       private_platform_residue_deletion_gate: privatePlatformResidueDeletionGate,
+      source_closure: sourceClosure,
       deletion_gate: {
         replacement_parity: 'blocked',
         active_caller_cutover: 'blocked',
@@ -837,6 +854,17 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
     (total, report) => total + Number(record(report.summary).missing_tombstone_or_provenance_ref_count || 0),
     0,
   );
+  const sourceClosureVerifiedRepoCount = reports.filter((report) => (
+    optionalString(record(report.source_closure).status) === 'passed'
+  )).length;
+  const sourceClosureUnresolvedEdgeCount = reports.reduce(
+    (total, report) => total + recordList(record(report.source_closure).unresolved_edges).length,
+    0,
+  );
+  const sourceClosureAuditMismatchCount = reports.reduce(
+    (total, report) => total + recordList(record(report.source_closure).audit_mismatches).length,
+    0,
+  );
   const physicalDeleteAuthorityReadModel =
     buildDefaultCallerPhysicalDeleteAuthorityReadModel(reports, {
       physical_delete_blocked_by: [...DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS],
@@ -880,6 +908,10 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
     missing_no_active_caller_proof_count: missingNoActiveCallerProofCount,
     missing_no_forbidden_write_proof_count: missingNoForbiddenWriteProofCount,
     missing_tombstone_or_provenance_ref_count: missingTombstoneOrProvenanceRefCount,
+    source_closure_verified_repo_count: sourceClosureVerifiedRepoCount,
+    source_closure_blocked_repo_count: reports.length - sourceClosureVerifiedRepoCount,
+    source_closure_unresolved_edge_count: sourceClosureUnresolvedEdgeCount,
+    source_closure_audit_mismatch_count: sourceClosureAuditMismatchCount,
     retirement_guard_target_classes: [...DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES],
     retirement_guard_mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],
     retirement_guard_readout: {
@@ -931,6 +963,10 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
       missing_no_active_caller_proof_count: missingNoActiveCallerProofCount,
       missing_no_forbidden_write_proof_count: missingNoForbiddenWriteProofCount,
       missing_tombstone_or_provenance_ref_count: missingTombstoneOrProvenanceRefCount,
+      source_closure_verified_repo_count: sourceClosureVerifiedRepoCount,
+      source_closure_blocked_repo_count: reports.length - sourceClosureVerifiedRepoCount,
+      source_closure_unresolved_edge_count: sourceClosureUnresolvedEdgeCount,
+      source_closure_audit_mismatch_count: sourceClosureAuditMismatchCount,
       retirement_guard_target_classes: [...DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES],
       retirement_guard_mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],
       retirement_guard_readout: {
@@ -981,6 +1017,10 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
         missing_no_active_caller_proof_count: missingNoActiveCallerProofCount,
         missing_no_forbidden_write_proof_count: missingNoForbiddenWriteProofCount,
         missing_tombstone_or_provenance_ref_count: missingTombstoneOrProvenanceRefCount,
+        source_closure_verified_repo_count: sourceClosureVerifiedRepoCount,
+        source_closure_blocked_repo_count: reports.length - sourceClosureVerifiedRepoCount,
+        source_closure_unresolved_edge_count: sourceClosureUnresolvedEdgeCount,
+        source_closure_audit_mismatch_count: sourceClosureAuditMismatchCount,
         retirement_guard_mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],
         static_retirement_prerequisite_gate_ids: [
           ...DEFAULT_CALLER_STATIC_RETIREMENT_PREREQUISITE_GATE_IDS,
@@ -1002,6 +1042,8 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
       },
       migration_gate_policy: {
         opl_generated_default_caller_readiness_is_structural_replacement_evidence: true,
+        source_closure_pass_is_required_for_default_caller_replacement: true,
+        declared_absent_or_contract_only_cutover_cannot_close_source_closure: true,
         domain_owner_receipt_or_typed_blocker_still_required: true,
         no_active_caller_proof_still_required: true,
         no_forbidden_write_proof_still_required: true,

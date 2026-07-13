@@ -242,6 +242,7 @@ const readModelGateTestFiles = [
     'tests/src/cli/cases/agents-conformance-private-surface.test.ts', 'tests/src/cli/cases/agents-conformance-stage-run-kernel.test.ts',
     'tests/src/cli/cases/agents-conformance-rca-oma-mvp.test.ts', 'tests/src/cli/cases/agents-conformance-state-index-adoption.test.ts',
     'tests/src/cli/cases/agents-conformance-platform-surfaces.test.ts',
+    'tests/src/cli/cases/agents-source-closure.test.ts',
   ]),
   'tests/src/cli/cases/golden-path-single-default.test.ts',
   ...expandTestFiles([
@@ -382,6 +383,7 @@ const lanes = {
       'tests/src/framework-readiness-attention-actions.test.ts',
       'tests/src/cli/cases/agents-conformance-stage-pack-v2.test.ts',
       'tests/src/cli/cases/agents-conformance-mas-tombstones.test.ts',
+      'tests/src/cli/cases/agents-source-closure.test.ts',
       'tests/src/cli/cases/agents-default-callers.test.ts',
       'tests/src/cli/cases/agents-residue-decisions.test.ts',
       'tests/src/cli/cases/domain-pack-compiler-canonical-targets.test.ts',

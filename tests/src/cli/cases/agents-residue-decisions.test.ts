@@ -1,6 +1,22 @@
 import { assert, fs, parseJsonText, path, runCli, test } from '../helpers.ts';
 import { buildReadyAgentRepo, writeJson } from './agents-conformance-fixtures.ts';
 
+test('agents residue-decisions verifies zero only after source closure passes', () => {
+  const repoDir = buildReadyAgentRepo();
+  const ledger = runCli([
+    'agents',
+    'residue-decisions',
+    '--agent',
+    `sample=${repoDir}`,
+  ]).private_platform_residue_owner_decisions;
+
+  assert.equal(ledger.state, 'verified_zero');
+  assert.equal(ledger.summary.residue_verification_status, 'verified_zero');
+  assert.equal(ledger.summary.source_closure_verified_repo_count, 1);
+  assert.equal(ledger.reports[0].status, 'verified_zero');
+  assert.equal(ledger.reports[0].source_closure_verified_zero, true);
+});
+
 test('agents residue-decisions projects private platform owner-decision ledger', () => {
   const repoDir = buildReadyAgentRepo();
   const functionalAuditPath = path.join(repoDir, 'contracts', 'functional_privatization_audit.json');

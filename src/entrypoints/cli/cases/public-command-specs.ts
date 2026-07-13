@@ -40,6 +40,7 @@ import {
 } from '../../../modules/foundry-lab/private-platform-residue-owner-decisions.ts';
 import { buildAgentReadinessSummary } from '../../../modules/foundry-lab/agent-readiness.ts';
 import { buildStandardDomainAgentConformanceReport } from '../../../modules/foundry-lab/standard-domain-agent-conformance.ts';
+import { buildStandardAgentSourceClosureReport } from '../../../modules/foundry-lab/standard-agent-source-closure.ts';
 import { buildStandardAgentCheck } from '../../../modules/foundry-lab/standard-agent-check.ts';
 import { agentsEvidenceApplySpec } from './agent-evidence-command-spec.ts';
 import {
@@ -680,6 +681,17 @@ export function buildPublicCommandSpecs(
       ],
       group: 'domain',
       handler: (args) => buildAgentDefaultCallerReadinessReport(args),
+    },
+    'agents source-closure': {
+      usage: 'opl agents source-closure [--repo-dir <path> ...] [--agent <id>=<path> ...] [--family-defaults]',
+      summary:
+        'Prove standard Agent package, action, handler, call, and sensitive-effect closure from executable source instead of audit path declarations.',
+      examples: [
+        'opl agents source-closure --family-defaults',
+        'opl agents source-closure --agent mas=/path/to/med-autoscience',
+      ],
+      group: 'domain',
+      handler: (args) => buildStandardAgentSourceClosureReport(args),
     },
     'agents residue-decisions': {
       usage: 'opl agents residue-decisions [--repo-dir <path> ...] [--agent <id>=<path> ...] [--family-defaults]',
