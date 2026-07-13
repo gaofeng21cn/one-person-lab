@@ -62,6 +62,7 @@ import {
   restoreCodexUserInstructionsFromOplFlowDefault,
   writeCodexUserInstructions,
 } from '../codex-personalization.ts';
+import { setWorkItemControlState, type WorkItemUserLifecycleState } from '../../ledger/index.ts';
 
 import type { AppActionExecuteOptions } from './action-execute-parser.ts';
 export { parseAppActionExecuteArgs } from './action-execute-parser.ts';
@@ -160,6 +161,31 @@ async function executeDirectAppAction(
             status: 'dry_run',
           }
         : await runFamilyRuntime(args),
+    };
+  }
+
+  if (options.actionId === 'work_item_lifecycle_set') {
+    const expectedGeneration = options.payload.expected_generation;
+    if (
+      expectedGeneration !== undefined
+      && expectedGeneration !== null
+      && (!Number.isInteger(expectedGeneration) || (expectedGeneration as number) < 0)
+    ) {
+      throw new FrameworkContractError('cli_usage_error', 'work_item_lifecycle_set expected_generation must be a non-negative integer.', {
+        action_id: options.actionId,
+      });
+    }
+    return {
+      delegatedSurface: 'OPL Ledger work-item control transition',
+      result: setWorkItemControlState({
+        agent_id: stringPayloadField(options.payload, 'agent_id') ?? '',
+        project_id: stringPayloadField(options.payload, 'project_id') ?? '',
+        work_item_id: stringPayloadField(options.payload, 'work_item_id') ?? '',
+        lifecycle_state: stringPayloadField(options.payload, 'lifecycle_state') as WorkItemUserLifecycleState,
+        reason: stringPayloadField(options.payload, 'reason'),
+        source: 'opl_app',
+        expected_generation: expectedGeneration as number | null | undefined,
+      }, { dryRun: options.dryRun }),
     };
   }
 

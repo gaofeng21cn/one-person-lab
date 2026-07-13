@@ -17,6 +17,7 @@ import '../../connection-registry.test.ts';
 import './app-action-cases/dry-run-actions.test.ts';
 import './app-action-cases/connection-actions.test.ts';
 import './app-action-cases/settings-and-workspace-actions.test.ts';
+import './app-action-cases/work-item-control.test.ts';
 
 test('app action execute wraps runtime action dry-run as the App mutating boundary', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-action-state-'));
@@ -132,6 +133,17 @@ test('app action catalog exposes representative safe delegated action refs', () 
     assert.deepEqual(actions.get('task_action_receipt_preview')?.payload_fields, ['task_id', 'action_ref']);
     assert.equal(actions.get('task_action_receipt_preview')?.mutates, 'none_read_only');
     assert.equal(actions.get('task_action_receipt_preview')?.dry_run_supported, true);
+    assert.equal(actions.has('work_item_lifecycle_set'), true);
+    assert.deepEqual(actions.get('work_item_lifecycle_set')?.payload_fields, [
+      'agent_id',
+      'project_id',
+      'work_item_id',
+      'lifecycle_state',
+      'reason',
+      'expected_generation',
+    ]);
+    assert.equal(actions.get('work_item_lifecycle_set')?.mutates, 'opl_work_item_control_ledger');
+    assert.equal(actions.get('work_item_lifecycle_set')?.dry_run_supported, true);
     assert.equal(
       actions.get('task_export_bundle_preview')?.delegated_surface,
       'opl app action execute --action task_export_bundle_preview --dry-run',
