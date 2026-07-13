@@ -7,7 +7,10 @@ import path from 'node:path';
 import { appendDomainRunEvent, createDomainRunRecord, dispatchDomainAction, readDomainRunEvents } from '../../src/modules/runway/domain-task-runtime.ts';
 import { resolveDomainPythonCommand } from '../../src/modules/runway/domain-helper-runtime.ts';
 import { buildDirectoryArtifactIndex, buildDomainArtifactIndex, readDomainArtifact, writeDomainArtifact } from '../../src/modules/stagecraft/domain-artifact-runtime.ts';
-import { materializeDomainSources } from '../../src/modules/workspace/domain-source-runtime.ts';
+import {
+  ensureDomainWorkspaceGitBoundary,
+  materializeDomainSources,
+} from '../../src/modules/workspace/domain-source-runtime.ts';
 
 const identity = {
   domain_id: 'rca',
@@ -93,6 +96,28 @@ test('domain source runtime materializes refs without deciding source readiness'
     assert.equal(result.entries.length, 1);
     assert.equal(fs.readFileSync(result.entries[0]!.path, 'utf8'), 'brief body');
     assert.equal(result.authority_boundary.framework_can_decide_source_readiness, false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('domain source runtime owns generic workspace Git bootstrap', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-workspace-'));
+  try {
+    const result = ensureDomainWorkspaceGitBoundary({
+      workspace_root: root,
+      gitignore_entries: ['runtime/', '.domain-cache/'],
+      gitignore_header: '# Domain workspace.',
+    });
+    assert.equal(result.initialized, true);
+    assert.equal(fs.existsSync(path.join(root, '.git')), true);
+    assert.equal(fs.readFileSync(path.join(root, '.gitignore'), 'utf8'), [
+      '# Domain workspace.',
+      'runtime/',
+      '.domain-cache/',
+      '',
+    ].join('\n'));
+    assert.equal(result.authority_boundary.framework_owns_domain_truth, false);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

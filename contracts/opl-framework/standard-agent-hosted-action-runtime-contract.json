@@ -193,6 +193,7 @@
   "verification_refs": [
     "src/modules/runway/standard-agent-managed-checkout.ts",
     "src/modules/runway/standard-agent-action-runtime.ts",
+    "src/modules/runway/standard-agent-action-run-recorder.ts",
     "src/modules/runway/standard-agent-handler-sandbox.ts",
     "src/modules/workspace/standard-agent-action-output.ts",
     "src/modules/ledger/standard-agent-action-run-ledger.ts",

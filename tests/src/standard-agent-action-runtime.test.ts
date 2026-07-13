@@ -38,7 +38,6 @@ function action(input: {
     output_schema_ref: 'contracts/output.schema.json',
     required_fields: ['workspace_root', 'value'],
     optional_fields: [],
-    parameter_fields_explicit: true,
     workspace_locator_fields: ['workspace_root'],
     human_gate_ids: [],
     ...(input.stageRoute ? { stage_route: input.stageRoute } : {}),
@@ -55,7 +54,16 @@ function writeContracts(checkoutRoot: string, actions: Record<string, unknown>[]
     catalog_id: 'fixture-actions',
     target_domain_id: 'medautoscience',
     owner: 'fixture-owner',
-    authority_boundary: {},
+    authority_boundary: {
+      domain_truth_owner: 'fixture-owner',
+      opl_role: 'projection_consumer_only',
+      write_policy: 'no_domain_truth_writes',
+      opl_can_write_domain_truth: false,
+      opl_can_write_memory_body: false,
+      opl_can_mutate_domain_artifact_body: false,
+      opl_can_authorize_quality_or_export: false,
+      provider_completion_is_domain_completion: false,
+    },
     actions,
     notes: [],
   })}\n`);
@@ -205,7 +213,9 @@ test('Hosted Stage action passes a SHA-bound request ref into Temporal StageRun 
     const checkpointIndex = calls[0].indexOf('--checkpoint-ref');
     assert.match(calls[0][checkpointIndex + 1], /^file:/);
     assert.equal(fs.existsSync(new URL(calls[0][checkpointIndex + 1])), true);
-    assert.equal(run.temporal_stage_run_query.family_runtime_stage_run_query.status, 'running');
+    assert.deepEqual(run.temporal_stage_run_query, {
+      family_runtime_stage_run_query: { status: 'running' },
+    });
     assert.equal(run.temporal_stage_run_query_error, null);
   } finally {
     fs.rmSync(checkoutRoot, { recursive: true, force: true });

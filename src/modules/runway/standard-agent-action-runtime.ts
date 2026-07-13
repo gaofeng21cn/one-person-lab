@@ -15,14 +15,14 @@ import { parseJsonText } from '../../kernel/json-file.ts';
 import { assertRepoJsonSchemaPayload } from '../../kernel/repo-json-schema.ts';
 import { resolveContainedRepoJsonFile } from '../../kernel/repo-contained-json-file.ts';
 import { resolveStandardAgent } from '../../kernel/standard-agent-registry.ts';
-import { recordStandardAgentActionRunEvent } from '../ledger/standard-agent-action-run-ledger.ts';
-import { compileStandardAgentStageManifest } from '../pack/standard-agent-stage-manifest.ts';
+import { compileStandardAgentStageManifest } from '../pack/public/standard-agent-action-runtime.ts';
 import {
   commitStandardAgentActionOutput,
   prepareStandardAgentActionRunRequest,
-} from '../workspace/standard-agent-action-output.ts';
+} from '../workspace/public/standard-agent-action-runtime.ts';
 import { runFamilyRuntime } from './family-runtime.ts';
 import { openQueueDb } from './family-runtime-store.ts';
+import { recordStandardAgentActionRunEvent } from './standard-agent-action-run-recorder.ts';
 import { runStandardAgentHandlerSandbox } from './standard-agent-handler-sandbox.ts';
 import { resolveStandardAgentManagedCheckout } from './standard-agent-managed-checkout.ts';
 
@@ -330,7 +330,9 @@ async function runStageAction(input: {
   runStageRuntime: typeof runFamilyRuntime;
   recordLedger: typeof actionLedger;
 }) {
-  if (input.action.execution_binding.kind !== 'stage_binding' || !input.action.stage_route) {
+  const executionBinding = input.action.execution_binding;
+  const stageRoute = input.action.stage_route;
+  if (executionBinding.kind !== 'stage_binding' || !stageRoute) {
     fail('Stage action has an invalid execution binding.', { action_id: input.action.action_id });
   }
   const prepared = prepareStandardAgentActionRunRequest({
@@ -346,7 +348,7 @@ async function runStageAction(input: {
     action_request_ref: prepared.request.ref,
     action_request_sha256: prepared.request.sha256,
   });
-  const bindingRef = `stage:${input.action.execution_binding.stage_manifest_ref}#${input.action.stage_route.entry_stage_ref}`;
+  const bindingRef = `stage:${executionBinding.stage_manifest_ref}#${stageRoute.entry_stage_ref}`;
 
   const output = await (async () => {
     try {
@@ -356,7 +358,7 @@ async function runStageAction(input: {
         '--domain',
         input.runtimeDomainId,
         '--stage',
-        input.action.stage_route.entry_stage_ref,
+        stageRoute.entry_stage_ref,
         '--action',
         input.action.action_id,
         '--provider',
@@ -405,7 +407,7 @@ async function runStageAction(input: {
         domain_id: input.domainId,
         action_id: input.action.action_id,
         binding_ref: bindingRef,
-        stage_route: input.action.stage_route,
+        stage_route: stageRoute,
         request_ref: prepared.request.ref,
         expected_domain_output_schema_ref: input.action.output_schema_ref,
         temporal_stage_run: created,

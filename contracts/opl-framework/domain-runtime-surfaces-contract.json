@@ -10,10 +10,10 @@
     "domain_source_runtime": "opl-framework/domain-source-runtime"
   },
   "responsibilities": {
-    "domain_task_runtime": ["generic run record and event lifecycle", "agent executor invocation", "action handler dispatch"],
+    "domain_task_runtime": ["generic run record and event lifecycle", "agent executor invocation", "Codex prompt transport with stdin, timeout, event, and exact final-message recovery", "action handler dispatch"],
     "domain_artifact_runtime": ["Stage Artifact Unit byte read and write", "refs-only artifact indexing"],
     "domain_helper_runtime": ["OPL-managed Python resolution", "native helper process execution"],
-    "domain_source_runtime": ["source byte materialization", "content fingerprint and material refs"]
+    "domain_source_runtime": ["source byte materialization", "content fingerprint and material refs", "generic domain workspace Git bootstrap and gitignore merge"]
   },
   "authority_boundary": {
     "framework_can_define_domain_workflow": false,

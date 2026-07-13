@@ -48,8 +48,8 @@ export type { MemoryTraceProjection } from './stage-attempt-projections/memory-l
 
 // Public cross-module surface generated from existing module consumers.
 export { runAgentExecutor } from './agent-executor.ts';
-export { appendDomainRunEvent, createDomainRunRecord, dispatchDomainAction, executeDomainTask, readDomainRunEvents } from './domain-task-runtime.ts';
-export type { DomainActionHandler, DomainRunIdentity } from './domain-task-runtime.ts';
+export { appendDomainRunEvent, createDomainRunRecord, dispatchDomainAction, executeDomainTask, readDomainRunEvents, runDomainCodexPrompt } from './domain-task-runtime.ts';
+export type { DomainActionHandler, DomainCodexPromptRunner, DomainRunIdentity } from './domain-task-runtime.ts';
 export { resolveDomainPythonCommand, runDomainPythonHelper } from './domain-helper-runtime.ts';
 export {
   PACK_NATIVE_HELPER_EXECUTION_CONTRACT_REF,
@@ -62,6 +62,8 @@ export type { CodexExecEvent } from './codex.ts';
 export { listCodexAppRuntimeEvidenceReceipts } from './codex-app-runtime-evidence-ledger.ts';
 export { runFamilyRuntime } from './family-runtime.ts';
 export { runStandardAgentAction } from './standard-agent-action-runtime.ts';
+export { recordStandardAgentActionRunEvent } from './standard-agent-action-run-recorder.ts';
+export type { StandardAgentActionRunEventInput } from './standard-agent-action-run-recorder.ts';
 export { readFamilyRuntimeLifecycleApplyReceipts, readFamilyRuntimeLifecycleRefs, reconcileFamilyRuntimeLifecycleRefs } from './family-runtime-lifecycle-index.ts';
 export { providerProofStatusIsCurrentlyProven } from './family-runtime-provider-continuous-proof.ts';
 export { inspectFamilyRuntimeProvider, inspectSelectedFamilyRuntimeProvidersWithLifecycle } from './family-runtime-providers.ts';

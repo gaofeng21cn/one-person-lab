@@ -1,7 +1,4 @@
-import type { DatabaseSync } from 'node:sqlite';
-
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
-import { insertEvent } from '../runway/family-runtime-store.ts';
 
 export type StandardAgentActionRunStatus = 'started' | 'completed' | 'failed' | 'blocked';
 
@@ -21,10 +18,6 @@ export type StandardAgentActionRunLedgerInput = {
   recordedAt: string;
   input: StandardAgentActionRunBytesRef;
   output: StandardAgentActionRunBytesRef;
-};
-
-export type StandardAgentActionRunEventInput = StandardAgentActionRunLedgerInput & {
-  db: DatabaseSync;
 };
 
 export type StandardAgentActionRunLedgerEntry = {
@@ -67,7 +60,6 @@ const LEDGER_INPUT_KEYS = [
   'input',
   'output',
 ] as const;
-const EVENT_INPUT_KEYS = ['db', ...LEDGER_INPUT_KEYS] as const;
 const BYTES_REF_KEYS = ['ref', 'sha256', 'byte_size'] as const;
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 
@@ -183,25 +175,5 @@ export function buildStandardAgentActionRunLedgerEvent(
     eventType: 'standard_agent_action_run_recorded',
     source: 'opl_hosted_standard_agent_action',
     payload: entry,
-  };
-}
-
-export function recordStandardAgentActionRunEvent(input: StandardAgentActionRunEventInput) {
-  if (!isRecord(input)) fail('Standard Agent action run event input must be an object.');
-  exactKeys(input, EVENT_INPUT_KEYS, 'event input');
-  const event = buildStandardAgentActionRunLedgerEvent({
-    runId: input.runId,
-    domainId: input.domainId,
-    actionId: input.actionId,
-    bindingRef: input.bindingRef,
-    status: input.status,
-    startedAt: input.startedAt,
-    recordedAt: input.recordedAt,
-    input: input.input,
-    output: input.output,
-  });
-  return {
-    ledger_entry: event.payload,
-    recorded_event: insertEvent(input.db, event),
   };
 }

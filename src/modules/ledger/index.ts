@@ -44,11 +44,9 @@ export { appReleaseUserPathPayloadRefHints, appReleaseUserPathPayloadTemplate, a
 export {
   buildStandardAgentActionRunLedgerEntry,
   buildStandardAgentActionRunLedgerEvent,
-  recordStandardAgentActionRunEvent,
 } from './standard-agent-action-run-ledger.ts';
 export type {
   StandardAgentActionRunBytesRef,
-  StandardAgentActionRunEventInput,
   StandardAgentActionRunLedgerEntry,
   StandardAgentActionRunLedgerEvent,
   StandardAgentActionRunLedgerInput,

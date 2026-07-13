@@ -203,6 +203,8 @@ test('active framework contracts carry executor semantics through stage selectio
     'descriptor_refs',
     'sidecar_refs',
     'quality_gate_refs',
+    'stage_quality_cycle_policy_refs',
+    'pack_bound_stage_quality_runtime_binding',
     'workspace_artifact_locator_refs',
     'runtime_artifact_locator_refs',
     'authority_boundary',

@@ -109,10 +109,10 @@ Re-review 采用 finding closure，不得用普通新建议无限重开循环。
 
 影响：
 
-- `opl-framework/domain-task-runtime` 统一 run/event、executor invocation 与 action dispatch。
+- `opl-framework/domain-task-runtime` 统一 run/event、executor invocation、Codex stdin/timeout/event/final-message transport 与 action dispatch；domain prompt 和输出语义仍归 domain owner。
 - `opl-framework/domain-artifact-runtime` 统一 Stage Artifact Unit 字节读写和 refs-only index。
 - `opl-framework/domain-helper-runtime` 只解析 OPL-managed Python 并执行 helper；domain repo 不再自行安装 uv/venv/browser runtime。
-- `opl-framework/domain-source-runtime` 只复制、哈希和索引材料，不解释材料语义，也不裁决 source readiness。
+- `opl-framework/domain-source-runtime` 负责复制、哈希、索引材料以及通用 workspace Git bootstrap / gitignore merge；不解释材料语义，也不裁决 source readiness。
 - 四个入口的机器边界由 `contracts/opl-framework/domain-runtime-surfaces-contract.json` 固定；它们不能生成 domain verdict、owner receipt、typed blocker 或未经 domain 授权的 artifact mutation。
 
 ### 决策：Foundry Agent 系列 policy body 只由 OPL canonical contracts 持有

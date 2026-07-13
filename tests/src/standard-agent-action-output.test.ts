@@ -12,11 +12,11 @@ import {
 } from '../../src/modules/workspace/standard-agent-action-output.ts';
 import {
   buildStandardAgentActionRunLedgerEvent,
-  recordStandardAgentActionRunEvent,
 } from '../../src/modules/ledger/standard-agent-action-run-ledger.ts';
 import {
   createFamilyRuntimeQueueTables,
 } from '../../src/modules/runway/family-runtime-store.ts';
+import { recordStandardAgentActionRunEvent } from '../../src/modules/runway/standard-agent-action-run-recorder.ts';
 
 function sha256(bytes: Uint8Array) {
   return crypto.createHash('sha256').update(bytes).digest('hex');
