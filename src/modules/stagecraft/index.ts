@@ -16,11 +16,6 @@ export type { FamilyStageDomainManifest, FamilyStageDomainManifestCatalog, Famil
 export { buildFamilyStageCohortLoopProjection } from './family-stage-cohort-loop.ts';
 export type { FamilyStageCohortLoopStage } from './family-stage-cohort-loop.ts';
 export { buildFamilyActionStageRouteParity } from './family-action-stage-route.ts';
-export { evaluateStandardAgentActionStageRun } from './standard-agent-action-stage-run.ts';
-export type {
-  StandardAgentActionStageRunCloseout,
-  StandardAgentActionStageRunProgress,
-} from './standard-agent-action-stage-run.ts';
 export { buildFamilyStageContextObservation, buildFamilyStageControlPlaneParity, buildFamilyStageReadinessInspect, buildFamilyStagesList } from './family-stage-control-plane.ts';
 export { normalizeFamilyStageControlPlane } from './family-stage-control-plane-contract.ts';
 export type { FamilyStageControlPlane, FamilyStageDescriptor, FamilyStageSurfaceRef } from './family-stage-control-plane-contract.ts';

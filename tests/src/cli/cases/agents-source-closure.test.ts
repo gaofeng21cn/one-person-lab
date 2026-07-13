@@ -38,14 +38,15 @@ function installTypescriptEntry(repoDir: string, source: string) {
   });
   writeJson(path.join(repoDir, 'contracts', 'action_catalog.json'), {
     surface_kind: 'family_action_catalog',
+    version: 'family-action-catalog.v2',
     actions: [{
       action_id: 'run',
-      handler_id: 'run',
-      source_command: { command: 'node ./src/cli.ts' },
+      execution_binding: { kind: 'handler_ref', handler_ref: 'handler:run' },
     }],
   });
   writeJson(path.join(repoDir, 'contracts', 'domain_handler_registry.json'), {
     surface_kind: 'domain_handler_registry',
+    version: 'domain-handler-registry.v1',
     handlers: [{
       handler_id: 'run',
       binding: { kind: 'typescript_export', file: 'src/cli.ts', export: 'main' },
@@ -309,30 +310,47 @@ test('agents source-closure reports unreachable sensitive residue', () => {
   assert.equal(report.unreachable_sensitive_residue[0].file, 'src/legacy.ts');
 });
 
-test('agents source-closure blocks hosted declarations and missing action handlers', () => {
-  const repoDir = buildRepo();
-  writeJson(path.join(repoDir, 'contracts', 'action_catalog.json'), {
+test('agents source-closure blocks missing handler refs and accepts exact OPL-hosted stage bindings', () => {
+  const missingHandlerRepo = buildRepo();
+  writeJson(path.join(missingHandlerRepo, 'contracts', 'action_catalog.json'), {
     surface_kind: 'family_action_catalog',
+    version: 'family-action-catalog.v2',
     actions: [{
-      action_id: 'hosted',
-      handler_id: 'missing_handler',
-      source_command: { command: 'opl://agents/sample/hosted' },
+      action_id: 'missing',
+      execution_binding: { kind: 'handler_ref', handler_ref: 'handler:missing_handler' },
     }],
   });
 
-  const report = runSourceClosure(repoDir).reports[0];
+  const missingHandler = runSourceClosure(missingHandlerRepo).reports[0];
 
-  assert.equal(report.status, 'blocked');
+  assert.equal(missingHandler.status, 'blocked');
   assert.equal(
-    report.entrypoints.some((entry: { entrypoint_id: string; resolution_status: string }) =>
-      entry.entrypoint_id === 'action_handler:hosted' && entry.resolution_status === 'unresolved'
+    missingHandler.entrypoints.some((entry: { entrypoint_id: string; resolution_status: string }) =>
+      entry.entrypoint_id === 'action_handler:missing' && entry.resolution_status === 'unresolved'
     ),
     true,
   );
+
+  const stageRepo = buildRepo();
+  writeJson(path.join(stageRepo, 'contracts', 'action_catalog.json'), {
+    surface_kind: 'family_action_catalog',
+    version: 'family-action-catalog.v2',
+    actions: [{
+      action_id: 'hosted',
+      execution_binding: {
+        kind: 'stage_binding',
+        stage_manifest_ref: 'agent/stages/manifest.json',
+      },
+    }],
+  });
+
+  const stageBinding = runSourceClosure(stageRepo).reports[0];
+
+  assert.equal(stageBinding.status, 'passed');
   assert.equal(
-    report.entrypoints.some((entry: { entrypoint_id: string; resolution_status: string }) =>
-      entry.entrypoint_id === 'action_catalog:hosted'
-      && entry.resolution_status === 'hosted_declaration_unverified'
+    stageBinding.entrypoints.some((entry: { entrypoint_id: string; resolution_status: string }) =>
+      entry.entrypoint_id === 'action_stage_binding:hosted'
+      && entry.resolution_status === 'resolved'
     ),
     true,
   );
@@ -350,6 +368,7 @@ test('agents source-closure scans current dirty workspace bytes including untrac
   writeSource(repoDir, 'src/old-handler.ts', "export function handle() { return 'old'; }\n");
   writeJson(path.join(repoDir, 'contracts', 'domain_handler_registry.json'), {
     surface_kind: 'domain_handler_registry',
+    version: 'domain-handler-registry.v1',
     handlers: [{
       handler_id: 'run',
       binding: { kind: 'typescript_export', file: 'src/old-handler.ts', export: 'handle' },
@@ -376,6 +395,7 @@ test('agents source-closure scans current dirty workspace bytes including untrac
   );
   writeJson(path.join(repoDir, 'contracts', 'domain_handler_registry.json'), {
     surface_kind: 'domain_handler_registry',
+    version: 'domain-handler-registry.v1',
     handlers: [{
       handler_id: 'run',
       binding: {

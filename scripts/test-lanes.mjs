@@ -149,7 +149,6 @@ const fastTestFiles = [
   'tests/src/substrate-provenance-surface.test.ts',
   ...expandTestFiles(['tests/src/family-stage-pack-registry.test.ts', 'tests/src/family-stage-integrity-metadata-contract.test.ts', 'tests/src/family-stage-conformance.test.ts']),
   'tests/src/family-action-stage-route.test.ts',
-  'tests/src/standard-agent-action-stage-run.test.ts',
   'tests/src/cli/cases/system-semantic-hygiene.test.ts',
   'tests/src/cli/cases/domain-pack-compiler-active-caller-targets.test.ts',
   'tests/src/cli/cases/domain-pack-compiler-generated-interfaces.test.ts',

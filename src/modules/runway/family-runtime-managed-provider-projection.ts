@@ -1,10 +1,7 @@
-import { parseJsonText } from '../../kernel/json-file.ts';
 import { record, stringList, stringValue, type JsonRecord } from '../../kernel/json-record.ts';
 import { buildDomainManifestCatalog, type DomainManifestCatalog, type DomainManifestCatalogEntry } from '../atlas/index.ts';
 import { loadFrameworkContracts } from '../charter/index.ts';
 import { listWorkspaceBindings } from '../workspace/index.ts';
-import { runReadOnlyFamilyRuntimeDomainHandlerCommand } from './family-runtime-domain-handler-process.ts';
-import { domainHandlerExportEnvNames } from './generic-substrate-projection.ts';
 import { resolveTemporalNamespace, resolveTemporalTaskQueue } from './family-runtime-temporal.ts';
 
 export type ManagedDomainProviderProjection = {
@@ -57,11 +54,6 @@ function statusIsReady(value: unknown) {
     || status === 'provider_ready'
     || status === 'managed_temporal_ready'
     || status === 'production_residency_proven';
-}
-
-function commandFromEnv(name: string) {
-  const override = process.env[name]?.trim();
-  return override ? override.split(/\s+/) : null;
 }
 
 function nestedRecord(value: unknown, path: string[]) {
@@ -194,36 +186,6 @@ export function projectionFromDomainManifestEntry(entry: DomainManifestCatalogEn
   }, entry.project_id, entry.project);
 }
 
-function projectionFromDomainHandler(entry: DomainManifestCatalogEntry) {
-  for (const envName of domainHandlerExportEnvNames(entry)) {
-    const command = commandFromEnv(envName);
-    if (!command) {
-      continue;
-    }
-    const result = runReadOnlyFamilyRuntimeDomainHandlerCommand(command, {
-      cwd: entry.workspace_path ?? process.cwd(),
-      env: process.env,
-      maxBuffer: 10 * 1024 * 1024,
-    });
-    if (result.exit_code !== 0) {
-      return null;
-    }
-    try {
-      return projectionFromPayload(parseJsonText(result.stdout), {
-        surface_kind: 'domain_handler_export_projection_ref',
-        project_id: entry.project_id,
-        project: entry.project,
-        env_name: envName,
-        command_preview: command,
-        projection_ref: '/',
-      }, entry.project_id, entry.project);
-    } catch {
-      return null;
-    }
-  }
-  return null;
-}
-
 function temporalIdentity(projection: ManagedDomainProviderProjection) {
   const temporal = projection.managed_temporal_state_consistency;
   return JSON.stringify([
@@ -255,14 +217,12 @@ function entriesFromRegistry(): DomainManifestCatalogEntry[] {
 
 export function buildManagedProviderProjectionSummary(
   entries: DomainManifestCatalogEntry[],
-  options: { includeManifest?: boolean; includeDomainHandlers?: boolean } = {},
+  options: { includeManifest?: boolean } = {},
 ): ManagedProviderProjectionSummary | null {
   const candidates = entries.flatMap((entry) => {
     const manifest = options.includeManifest === false ? null : projectionFromDomainManifestEntry(entry);
-    const handler = options.includeDomainHandlers === false ? null : projectionFromDomainHandler(entry);
     return [
       ...(manifest ? [{ domainId: entry.project_id, sourceKind: 'domain_manifest', projection: manifest }] : []),
-      ...(handler ? [{ domainId: entry.project_id, sourceKind: 'domain_handler_export', projection: handler }] : []),
     ] satisfies ProjectionCandidate[];
   });
   if (candidates.length === 0) {
@@ -331,7 +291,7 @@ export function buildManagedProviderProjectionSummary(
 }
 
 export function projectionSummaryFromDomainManifestCatalog(catalog: DomainManifestCatalog) {
-  return buildManagedProviderProjectionSummary(catalog.projects, { includeDomainHandlers: false });
+  return buildManagedProviderProjectionSummary(catalog.projects);
 }
 
 export function readManagedProviderProjectionSummary(options: {

@@ -6,7 +6,10 @@ import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
 
-import { commitStandardAgentActionOutput } from '../../src/modules/workspace/standard-agent-action-output.ts';
+import {
+  commitStandardAgentActionOutput,
+  prepareStandardAgentActionRunRequest,
+} from '../../src/modules/workspace/standard-agent-action-output.ts';
 import {
   buildStandardAgentActionRunLedgerEvent,
   recordStandardAgentActionRunEvent,
@@ -53,6 +56,28 @@ test('Workspace atomically preserves canonical request bytes and exact handler s
       path.relative(fs.realpathSync.native(root), persisted.action_run_dir),
       path.join('control', 'opl', 'action_runs', 'run-001'),
     );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('Workspace exposes a SHA-bound request before a StageRun output is available', () => {
+  const root = workspace();
+  try {
+    const input = actionInput(root, 'stage-run-input');
+    const prepared = prepareStandardAgentActionRunRequest(input);
+    assert.equal(prepared.status, 'prepared');
+    assert.equal(fs.existsSync(path.join(prepared.action_run_dir, 'output.json')), false);
+    assert.deepEqual(fs.readFileSync(prepared.request.file_path), input.requestBytes);
+    assert.equal(
+      prepareStandardAgentActionRunRequest(input).status,
+      'already_prepared',
+    );
+
+    const completed = commitStandardAgentActionOutput(input);
+    assert.equal(completed.status, 'materialized');
+    assert.equal(completed.request.sha256, prepared.request.sha256);
+    assert.deepEqual(fs.readFileSync(completed.output.file_path), input.outputBytes);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

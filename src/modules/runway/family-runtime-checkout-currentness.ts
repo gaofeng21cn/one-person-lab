@@ -5,7 +5,7 @@ import {
 } from '../../kernel/domain-owner-answer-projection-profile.ts';
 import { stringValue as optionalString, type JsonRecord } from '../../kernel/json-record.ts';
 import type { StandardDomainAgentRepoInput } from '../../kernel/standard-domain-agent-family-repos.ts';
-import { preflightGitCheckoutCurrentness } from './family-runtime-domain-handler-process.ts';
+import { preflightGitCheckoutCurrentness } from './family-runtime-checkout-currentness-preflight.ts';
 
 export function preflightDomainWorkspaceCheckoutCurrentness(input: {
   domainId?: unknown;

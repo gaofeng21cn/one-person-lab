@@ -22,6 +22,8 @@ OPL Framework 只持有 StageRun transport、attempt ledger、queue/provider、c
 ## 当前机器入口
 
 - `contracts/opl-framework/family-runtime-attempt-contract.json`
-- `src/modules/stagecraft/standard-agent-action-stage-run.ts`
+- `src/modules/runway/standard-agent-action-runtime.ts`
+- `src/modules/stagecraft/stage-run-kernel.ts`
 - `src/modules/runway/progress-closeout-projection.ts`
-- `tests/src/standard-agent-action-stage-run.test.ts`
+- `tests/src/standard-agent-action-runtime.test.ts`
+- `tests/src/cli/cases/agents-conformance-stage-run-kernel.test.ts`

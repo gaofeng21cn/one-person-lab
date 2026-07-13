@@ -3,7 +3,6 @@ import {
 } from './family-runtime-command-parts/registry.ts';
 import {
   FAMILY_RUNTIME_DOMAIN_IDS,
-  runtimeDomainAdapterProfiles,
   type FamilyRuntimeDomainId,
   type FamilyRuntimeProviderKind,
   type TemporalStageAttemptSignalKind,
@@ -169,22 +168,6 @@ export type FamilyRuntimeCommandInput =
       start?: boolean;
     };
   };
-
-export type FamilyRuntimeDomainAdapter = {
-  repo_id: string;
-  truth_owner: string;
-  dispatch_command: string[];
-};
-
-export const DOMAIN_ADAPTERS: Partial<Record<FamilyRuntimeDomainId, FamilyRuntimeDomainAdapter>> =
-  Object.fromEntries(runtimeDomainAdapterProfiles().map((profile) => [
-    profile.domain_id,
-    {
-      repo_id: profile.repo_id,
-      truth_owner: profile.truth_owner,
-      dispatch_command: profile.dispatch_command,
-    },
-  ]));
 
 export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandInput {
   return parseRegisteredFamilyRuntimeCommand(args);

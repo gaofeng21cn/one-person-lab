@@ -70,6 +70,18 @@ function entrypoint(input: Omit<SourceClosureEntrypoint, 'language' | 'resolutio
   };
 }
 
+function verifiedHostedEntrypoint(
+  input: Omit<SourceClosureEntrypoint, 'language' | 'resolution_status' | 'resolved_symbol_id' | 'hosted_by_opl'>,
+): SourceClosureEntrypoint {
+  return {
+    ...input,
+    language: null,
+    hosted_by_opl: true,
+    resolution_status: 'resolved',
+    resolved_symbol_id: null,
+  };
+}
+
 function commandBinding(
   command: string,
   packageScripts: JsonRecord,
@@ -114,7 +126,6 @@ function commandBinding(
 function referencedHandlerRegistryPaths(...documents: JsonRecord[]) {
   const refs = new Set<string>([
     'contracts/domain_handler_registry.json',
-    'contracts/handler_registry.json',
   ]);
   const visit = (value: unknown, key = '') => {
     if (typeof value === 'string' && key.includes('handler') && key.includes('registry')) {
@@ -135,13 +146,7 @@ function referencedHandlerRegistryPaths(...documents: JsonRecord[]) {
 
 function registryHandlers(registry: JsonRecord): JsonRecord[] {
   const handlers = registry.handlers;
-  if (Array.isArray(handlers)) {
-    return handlers.map(record);
-  }
-  return Object.entries(record(handlers)).map(([handlerId, value]) => ({
-    handler_id: handlerId,
-    ...record(value),
-  } as JsonRecord));
+  return Array.isArray(handlers) ? handlers.map(record) : [];
 }
 
 export function discoverSourceClosureEntrypoints(
@@ -189,30 +194,14 @@ export function discoverSourceClosureEntrypoints(
     .flatMap((registryPath) => registryHandlers(readJson(repoDir, registryPath)).map((handler) => {
       const handlerId = typeof handler.handler_id === 'string' ? handler.handler_id : '<missing-handler-id>';
       const binding = record(handler.binding);
-      const kind = typeof binding.kind === 'string'
-        ? binding.kind
-        : typeof handler.kind === 'string'
-          ? handler.kind
-          : null;
-      const fileValue = typeof binding.file === 'string'
-        ? binding.file
-        : typeof handler.file === 'string'
-          ? handler.file
-          : null;
-      const moduleName = typeof binding.module === 'string'
-        ? binding.module
-        : typeof handler.module === 'string'
-          ? handler.module
-          : null;
+      const kind = typeof binding.kind === 'string' ? binding.kind : null;
+      const fileValue = typeof binding.file === 'string' ? binding.file : null;
+      const moduleName = typeof binding.module === 'string' ? binding.module : null;
       const symbol = typeof binding.export === 'string'
         ? binding.export
         : typeof binding.callable === 'string'
           ? binding.callable
-          : typeof handler.export === 'string'
-            ? handler.export
-            : typeof handler.callable === 'string'
-              ? handler.callable
-              : null;
+          : null;
       return {
         handler_id: handlerId,
         registry_path: registryPath,
@@ -226,32 +215,38 @@ export function discoverSourceClosureEntrypoints(
   const actions = Array.isArray(actionCatalog.actions) ? actionCatalog.actions.map(record) : [];
   for (const action of actions) {
     const actionId = typeof action.action_id === 'string' ? action.action_id : '<missing-action-id>';
-    const handlerId = typeof action.handler_id === 'string' ? action.handler_id : null;
-    const sourceCommand = record(action.source_command);
-    const command = typeof sourceCommand.command === 'string' ? sourceCommand.command : null;
+    const executionBinding = record(action.execution_binding);
+    const bindingKind = typeof executionBinding.kind === 'string' ? executionBinding.kind : null;
+    const handlerRef = bindingKind === 'handler_ref' && typeof executionBinding.handler_ref === 'string'
+      ? executionBinding.handler_ref
+      : null;
+    const handlerId = handlerRef?.startsWith('handler:') ? handlerRef.slice('handler:'.length) : null;
     if (handlerId) {
       const registered = registeredHandlers.find((handler) => handler.handler_id === handlerId);
       entries.push(entrypoint({
         entrypoint_id: `action_handler:${actionId}`,
         source_kind: 'action_catalog',
-        declared_ref: `contracts/action_catalog.json#/actions/${actionId}/handler_id`,
+        declared_ref: `contracts/action_catalog.json#/actions/${actionId}/execution_binding/handler_ref`,
         file: registered?.file ?? null,
         module_name: registered?.module_name ?? null,
         symbol: registered?.symbol ?? null,
         hosted_by_opl: false,
         action_id: actionId,
       }));
-    }
-    if (command) {
-      const binding = commandBinding(command, packageScripts, activeFiles);
-      entries.push(entrypoint({
-        entrypoint_id: `action_catalog:${actionId}`,
+    } else if (
+      bindingKind === 'stage_binding'
+      && executionBinding.stage_manifest_ref === 'agent/stages/manifest.json'
+    ) {
+      entries.push(verifiedHostedEntrypoint({
+        entrypoint_id: `action_stage_binding:${actionId}`,
         source_kind: 'action_catalog',
-        declared_ref: `contracts/action_catalog.json#/actions/${actionId}/source_command`,
-        ...binding,
+        declared_ref: `contracts/action_catalog.json#/actions/${actionId}/execution_binding/stage_manifest_ref`,
+        file: null,
+        module_name: null,
+        symbol: null,
         action_id: actionId,
       }));
-    } else if (!handlerId) {
+    } else {
       entries.push(entrypoint({
         entrypoint_id: `action_catalog:${actionId}`,
         source_kind: 'action_catalog',

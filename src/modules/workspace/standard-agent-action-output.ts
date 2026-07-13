@@ -28,6 +28,19 @@ export type StandardAgentActionRunOutput = {
   output: StandardAgentActionRunStoredBytes;
 };
 
+export type StandardAgentActionRunRequest = {
+  surface_kind: 'opl_standard_agent_action_run_request';
+  version: 'opl-standard-agent-action-run-request.v1';
+  status: 'prepared' | 'already_prepared';
+  run_id: string;
+  domain_id: string;
+  action_id: string;
+  workspace_root: string;
+  action_run_dir: string;
+  action_run_ref: string;
+  request: StandardAgentActionRunStoredBytes;
+};
+
 type CommitStandardAgentActionOutputInput = {
   workspaceRoot: string;
   runId: string;
@@ -207,9 +220,50 @@ function readPublishedRun(
   };
 }
 
-export function commitStandardAgentActionOutput(
-  input: CommitStandardAgentActionOutputInput,
-): StandardAgentActionRunOutput {
+function readPreparedRun(
+  workspaceRootPath: string,
+  runId: string,
+  domainId: string,
+  actionId: string,
+  runDirectory: string,
+  identityBytes: Buffer,
+  requestBytes: Buffer,
+  status: StandardAgentActionRunRequest['status'],
+): StandardAgentActionRunRequest {
+  const stat = fs.lstatSync(runDirectory);
+  if (stat.isSymbolicLink() || !stat.isDirectory()) {
+    fail('Standard Agent action run identity resolves to a non-directory or symbolic link.', {
+      run_id: runId,
+      action_run_dir: runDirectory,
+    });
+  }
+  const realRunDirectory = fs.realpathSync.native(runDirectory);
+  assertContained(workspaceRootPath, realRunDirectory, 'action_run_dir');
+  const identityPath = path.join(realRunDirectory, 'identity.json');
+  const requestPath = path.join(realRunDirectory, 'request.json');
+  if (!fs.existsSync(identityPath) || !fs.existsSync(requestPath)) {
+    fail('Standard Agent action run request is partially materialized.', {
+      run_id: runId,
+      identity_exists: fs.existsSync(identityPath),
+      request_exists: fs.existsSync(requestPath),
+    });
+  }
+  storedBytes(identityPath, identityBytes, 'identity');
+  return {
+    surface_kind: 'opl_standard_agent_action_run_request',
+    version: 'opl-standard-agent-action-run-request.v1',
+    status,
+    run_id: runId,
+    domain_id: domainId,
+    action_id: actionId,
+    workspace_root: workspaceRootPath,
+    action_run_dir: realRunDirectory,
+    action_run_ref: pathToFileURL(realRunDirectory).href,
+    request: storedBytes(requestPath, requestBytes, 'request'),
+  };
+}
+
+function normalizedRunInput(input: Omit<CommitStandardAgentActionOutputInput, 'outputBytes'>) {
   const root = workspaceRoot(input.workspaceRoot);
   if (!RUN_ID_PATTERN.test(input.runId)) {
     fail('Standard Agent action run_id must be a single safe path segment.', { run_id: input.runId });
@@ -221,12 +275,6 @@ export function commitStandardAgentActionOutput(
       run_id: input.runId,
     });
   }
-  if (!(input.outputBytes instanceof Uint8Array) || input.outputBytes.byteLength === 0) {
-    fail('Standard Agent action handler stdout bytes must be non-empty.', {
-      run_id: input.runId,
-    });
-  }
-
   const identityBytes = Buffer.from(`${JSON.stringify({
     surface_kind: 'opl_standard_agent_action_run_identity',
     version: 'opl-standard-agent-action-run-identity.v1',
@@ -234,64 +282,135 @@ export function commitStandardAgentActionOutput(
     domain_id: domainId,
     action_id: actionId,
   })}\n`, 'utf8');
-  const requestBytes = Buffer.from(input.requestBytes);
-  const outputBytes = Buffer.from(input.outputBytes);
-  const parent = ensureContainedDirectory(root, STANDARD_AGENT_ACTION_RUNS_RELATIVE_ROOT.split('/'));
+  return {
+    root,
+    domainId,
+    actionId,
+    identityBytes,
+    requestBytes: Buffer.from(input.requestBytes),
+  };
+}
+
+export function prepareStandardAgentActionRunRequest(
+  input: Omit<CommitStandardAgentActionOutputInput, 'outputBytes'>,
+): StandardAgentActionRunRequest {
+  const normalized = normalizedRunInput(input);
+  const parent = ensureContainedDirectory(normalized.root, STANDARD_AGENT_ACTION_RUNS_RELATIVE_ROOT.split('/'));
   const runDirectory = path.join(parent, input.runId);
-  assertContained(root, runDirectory, 'action_run_dir');
+  assertContained(normalized.root, runDirectory, 'action_run_dir');
   if (fs.existsSync(runDirectory)) {
-    return readPublishedRun(
-      root,
+    return readPreparedRun(
+      normalized.root,
       input.runId,
-      domainId,
-      actionId,
+      normalized.domainId,
+      normalized.actionId,
       runDirectory,
-      identityBytes,
-      requestBytes,
-      outputBytes,
-      'already_materialized',
+      normalized.identityBytes,
+      normalized.requestBytes,
+      'already_prepared',
     );
   }
 
   const staging = path.join(parent, `.${input.runId}.${process.pid}.${crypto.randomUUID()}.tmp`);
   try {
     fs.mkdirSync(staging, { mode: 0o700 });
-    writeExactFile(path.join(staging, 'identity.json'), identityBytes);
-    writeExactFile(path.join(staging, 'request.json'), requestBytes);
-    writeExactFile(path.join(staging, 'output.json'), outputBytes);
+    writeExactFile(path.join(staging, 'identity.json'), normalized.identityBytes);
+    writeExactFile(path.join(staging, 'request.json'), normalized.requestBytes);
     fsyncDirectory(staging);
     try {
       fs.renameSync(staging, runDirectory);
       fsyncDirectory(parent);
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code;
-      if (!['EEXIST', 'ENOTEMPTY'].includes(code ?? '') || !fs.existsSync(runDirectory)) {
+      if (!['EEXIST', 'ENOTEMPTY'].includes(code ?? '') || !fs.existsSync(runDirectory)) throw error;
+      return readPreparedRun(
+        normalized.root,
+        input.runId,
+        normalized.domainId,
+        normalized.actionId,
+        runDirectory,
+        normalized.identityBytes,
+        normalized.requestBytes,
+        'already_prepared',
+      );
+    }
+    return readPreparedRun(
+      normalized.root,
+      input.runId,
+      normalized.domainId,
+      normalized.actionId,
+      runDirectory,
+      normalized.identityBytes,
+      normalized.requestBytes,
+      'prepared',
+    );
+  } finally {
+    fs.rmSync(staging, { recursive: true, force: true });
+  }
+}
+
+export function commitStandardAgentActionOutput(
+  input: CommitStandardAgentActionOutputInput,
+): StandardAgentActionRunOutput {
+  const normalized = normalizedRunInput(input);
+  if (!(input.outputBytes instanceof Uint8Array) || input.outputBytes.byteLength === 0) {
+    fail('Standard Agent action handler stdout bytes must be non-empty.', {
+      run_id: input.runId,
+    });
+  }
+  const outputBytes = Buffer.from(input.outputBytes);
+  const prepared = prepareStandardAgentActionRunRequest(input);
+  const runDirectory = prepared.action_run_dir;
+  const outputPath = path.join(runDirectory, 'output.json');
+  if (fs.existsSync(outputPath)) {
+    return readPublishedRun(
+      normalized.root,
+      input.runId,
+      normalized.domainId,
+      normalized.actionId,
+      runDirectory,
+      normalized.identityBytes,
+      normalized.requestBytes,
+      outputBytes,
+      'already_materialized',
+    );
+  }
+
+  const staging = path.join(runDirectory, `.output.${process.pid}.${crypto.randomUUID()}.tmp`);
+  try {
+    writeExactFile(staging, outputBytes);
+    try {
+      fs.linkSync(staging, outputPath);
+      fsyncDirectory(runDirectory);
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code !== 'EEXIST' || !fs.existsSync(outputPath)) {
         throw error;
       }
       return readPublishedRun(
-        root,
+        normalized.root,
         input.runId,
-        domainId,
-        actionId,
+        normalized.domainId,
+        normalized.actionId,
         runDirectory,
-        identityBytes,
-        requestBytes,
+        normalized.identityBytes,
+        normalized.requestBytes,
         outputBytes,
         'already_materialized',
       );
     }
     return readPublishedRun(
-      root,
+      normalized.root,
       input.runId,
-      domainId,
-      actionId,
+      normalized.domainId,
+      normalized.actionId,
       runDirectory,
-      identityBytes,
-      requestBytes,
+      normalized.identityBytes,
+      normalized.requestBytes,
       outputBytes,
       'materialized',
     );
   } finally {
-    fs.rmSync(staging, { recursive: true, force: true });
+    fs.rmSync(staging, { force: true });
   }
 }
