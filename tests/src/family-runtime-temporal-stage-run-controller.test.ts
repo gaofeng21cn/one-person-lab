@@ -11,7 +11,10 @@ import type {
   TemporalStageRunWorkflowInput,
 } from '../../src/modules/runway/family-runtime-temporal.ts';
 import { StageRunWorkflow } from '../../src/modules/runway/family-runtime-temporal-workflows.ts';
-import { normalizeStageQualityCyclePolicy } from '../../src/modules/stagecraft/stage-quality-cycle.ts';
+import {
+  normalizeStageQualityCyclePolicy,
+  type StageQualityOutcome,
+} from '../../src/modules/stagecraft/stage-quality-cycle.ts';
 
 const repoRoot = path.resolve(import.meta.dirname, '../..');
 
@@ -80,14 +83,26 @@ async function runController(input: {
   id: string;
   closeFindingAfterRound: number | null;
   formalReviewRequired?: boolean;
+  maxRepairRounds?: number;
   failRole?: TemporalStageQualityAttemptMaterializationInput['attempt_role'];
+  preflightHardBlockRole?: TemporalStageQualityAttemptMaterializationInput['attempt_role'];
   softBlockRole?: TemporalStageQualityAttemptMaterializationInput['attempt_role'];
+  omitArtifactForRole?: 'producer' | 'repairer';
   omitIdentityReceiptForRole?: TemporalStageQualityAttemptMaterializationInput['attempt_role'];
   reviewerIdentityDrift?: boolean;
   repairerAttemptsTerminalDecision?: boolean;
   terminalRouteTarget?: string;
   invalidReReviewClosure?: boolean;
-  initialReviewerOutcome?: 'pass' | 'repair_required' | 'quality_debt';
+  initialReviewerOutcome?: StageQualityOutcome;
+  initialReviewerFindings?: 'required' | 'none';
+  reReviewerOutcome?: StageQualityOutcome;
+  reReviewerOptionalObservation?: boolean;
+  reReviewerHardStopClass?: string;
+  invalidReReviewerHardStopEvidence?: boolean;
+  legacyVerdictRole?: TemporalStageQualityAttemptMaterializationInput['attempt_role'];
+  nonReviewOutcomeRole?: 'producer' | 'repairer';
+  failReceiptForReviewerRole?: 'reviewer' | 're_reviewer';
+  rawArtifactProgressRole?: 'producer';
 }) {
   const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
   const taskQueue = `opl-stage-run-controller-${input.id}-${Date.now()}`;
@@ -163,6 +178,12 @@ async function runController(input: {
         return { synced: true };
       },
       async stageQualityReviewReceiptActivity(receiptInput: any) {
+        const reviewerRole = String(receiptInput.reviewer_attempt_ref).includes('_re_reviewer_')
+          ? 're_reviewer'
+          : 'reviewer';
+        if (reviewerRole === input.failReceiptForReviewerRole) {
+          throw new Error(`contract_shape_invalid:simulated-${reviewerRole}-receipt-validation-failure`);
+        }
         return {
           surface_kind: 'opl_stage_review_receipt',
           version: 'stage-review-receipt.v1',
@@ -203,6 +224,15 @@ async function runController(input: {
         };
       },
       async codexStageActivity(attempt: TemporalStageAttemptWorkflowInput) {
+        if (attempt.attempt_role === input.preflightHardBlockRole) {
+          return {
+            stage_attempt_id: attempt.stage_attempt_id,
+            checkpoint_refs: [],
+            progress_summary: {},
+            process_output_summary: { blocked_reason: 'dirty_checkout' },
+            closeout_packet: null,
+          };
+        }
         return {
           stage_attempt_id: attempt.stage_attempt_id,
           checkpoint_refs: [],
@@ -221,6 +251,20 @@ async function runController(input: {
       async domainHandlerDispatchActivity(attempt: TemporalStageAttemptWorkflowInput) {
         const role = attempt.attempt_role;
         const round = attempt.quality_round_index ?? 0;
+        if (role === input.preflightHardBlockRole && attempt.provider_blocker) {
+          const blockedReason = attempt.provider_blocker.blocked_reason ?? 'dirty_checkout';
+          return {
+            activity_status: 'blocked',
+            closeout_refs: [`opl://stage-attempts/${attempt.stage_attempt_id}/runtime-blocker/${blockedReason}`],
+            rejected_writes: [{
+              surface_kind: 'opl_provider_runtime_typed_blocker_ref',
+              blocker_id: blockedReason,
+            }],
+            route_impact: attempt.provider_blocker.route_impact ?? {},
+            blocked_reason: blockedReason,
+            authority_boundary: { provider_runtime_blocker_ref_only: true },
+          };
+        }
         if (role === input.failRole) {
           throw new Error(`simulated-${role}-protocol-failure`);
         }
@@ -234,13 +278,48 @@ async function runController(input: {
         const artifactVersion = role === 'reviewer' && input.reviewerIdentityDrift
           ? 99
           : role === 'producer' || role === 'reviewer' ? 1 : round + 1;
-        const stageQualityCycle: Record<string, unknown> = {
-          outcome: role === 'reviewer' ? (input.initialReviewerOutcome ?? 'repair_required') : 'pass',
-          artifact_refs: [`artifact:deck-v${artifactVersion}`],
-          artifact_hashes: [`sha256:deck-v${artifactVersion}`],
-        };
+        const reReviewClosed = role === 're_reviewer'
+          && input.closeFindingAfterRound !== null
+          && round >= input.closeFindingAfterRound;
+        const attemptOutcome: StageQualityOutcome = role === 'reviewer'
+          ? (input.initialReviewerOutcome ?? 'repair_required')
+          : role === 're_reviewer'
+            ? (input.reReviewerOutcome ?? (reReviewClosed ? 'pass' : 'repair_required'))
+            : 'pass';
+        const stageQualityCycle: Record<string, unknown> = role === input.omitArtifactForRole
+          ? {}
+          : {
+              artifact_refs: [`artifact:deck-v${artifactVersion}`],
+              artifact_hashes: [`sha256:deck-v${artifactVersion}`],
+            };
+        if (role === input.nonReviewOutcomeRole) {
+          stageQualityCycle.outcome = 'pass';
+        }
+        if (role === 'reviewer' || role === 're_reviewer') {
+          stageQualityCycle.outcome = attemptOutcome;
+        }
+        if (
+          (role === 'reviewer' || role === 're_reviewer')
+          && (attemptOutcome === 'blocked' || attemptOutcome === 'human_gate')
+        ) {
+          stageQualityCycle.blocked_reason = role === 're_reviewer'
+            ? `re-review-${attemptOutcome}`
+            : `reviewer-${attemptOutcome}`;
+          if (!input.invalidReReviewerHardStopEvidence) {
+            stageQualityCycle.hard_stop_class = attemptOutcome === 'human_gate'
+              ? 'human_decision_required'
+              : (input.reReviewerHardStopClass ?? 'safety_or_compliance');
+            if (attemptOutcome === 'human_gate') {
+              stageQualityCycle.human_gate_refs = [`human-gate:${input.id}`];
+            } else {
+              stageQualityCycle.typed_blocker_refs = [`typed-blocker:${input.id}`];
+            }
+          }
+        }
         if (role === 'reviewer') {
-          stageQualityCycle.findings = [finding];
+          const findingMode = input.initialReviewerFindings
+            ?? (['pass', 'quality_debt'].includes(attemptOutcome) ? 'none' : 'required');
+          stageQualityCycle.findings = findingMode === 'none' ? [] : [finding];
         }
         if (role === 'repairer') {
           stageQualityCycle.repair_map = [{
@@ -251,23 +330,33 @@ async function runController(input: {
           }];
         }
         if (role === 're_reviewer') {
-          const closed = input.closeFindingAfterRound !== null && round >= input.closeFindingAfterRound;
-          stageQualityCycle.finding_closures = input.invalidReReviewClosure
-            ? []
-            : [{
-                finding_id: finding.finding_id,
-                status: closed ? 'closed' : 'still_open',
-                evidence_refs: [`screenshot:deck-v${artifactVersion}`],
-              }];
-          stageQualityCycle.repair_regressions = [];
-          stageQualityCycle.critical_new_findings = [];
-          stageQualityCycle.optional_observations = [{
-            observation_id: `observation:editorial-${round}`,
-            evidence_refs: [`artifact:deck-v${artifactVersion}`],
-            summary: 'Optional editorial polish only.',
-          }];
+          if (attemptOutcome !== 'blocked' && attemptOutcome !== 'human_gate') {
+            stageQualityCycle.finding_closures = input.invalidReReviewClosure
+              ? []
+              : [{
+                  finding_id: finding.finding_id,
+                  status: reReviewClosed ? 'closed' : 'still_open',
+                  evidence_refs: [`screenshot:deck-v${artifactVersion}`],
+                }];
+            stageQualityCycle.repair_regressions = [];
+            stageQualityCycle.critical_new_findings = [];
+            stageQualityCycle.optional_observations = input.reReviewerOptionalObservation
+              ? [{
+                  observation_id: `observation:editorial-${round}`,
+                  evidence_refs: [`artifact:deck-v${artifactVersion}`],
+                  summary: 'Optional editorial polish only.',
+                }]
+              : [];
+          }
         }
-        const routeImpact: Record<string, unknown> = { stage_quality_cycle: stageQualityCycle };
+        if (role === input.legacyVerdictRole) {
+          delete stageQualityCycle.outcome;
+          stageQualityCycle.verdict = attemptOutcome;
+        }
+        const rawArtifactProgress = role === input.rawArtifactProgressRole;
+        const routeImpact: Record<string, unknown> = rawArtifactProgress
+          ? {}
+          : { stage_quality_cycle: stageQualityCycle };
         if (role === 'producer' && input.formalReviewRequired === false) {
           routeImpact.stage_route_decision = {
             decision_kind: 'advance',
@@ -277,7 +366,10 @@ async function runController(input: {
         }
         if (
           role === 'reviewer'
-          && ['pass', 'quality_debt'].includes(input.initialReviewerOutcome ?? '')
+          && (
+            ['pass', 'quality_debt'].includes(attemptOutcome)
+            || (attemptOutcome === 'repair_required' && (input.maxRepairRounds ?? 3) === 0)
+          )
         ) {
           routeImpact.stage_route_decision = {
             decision_kind: 'advance',
@@ -293,18 +385,27 @@ async function runController(input: {
           };
         }
         if (role === 're_reviewer') {
-          const closed = input.closeFindingAfterRound !== null && round >= input.closeFindingAfterRound;
-          if (closed || round === 3) {
+          const budgetExhausted = round === (input.maxRepairRounds ?? 3);
+          if (
+            (reReviewClosed && ['pass', 'quality_debt'].includes(attemptOutcome))
+            || (!reReviewClosed && attemptOutcome === 'repair_required' && budgetExhausted)
+          ) {
             routeImpact.stage_route_decision = {
-              decision_kind: closed ? 'advance' : 'repeat',
-              target_stage_id: closed ? (input.terminalRouteTarget ?? 'review_and_revision') : 'artifact_creation',
+              decision_kind: 'advance',
+              target_stage_id: input.terminalRouteTarget ?? 'review_and_revision',
               evidence_refs: [`screenshot:deck-v${artifactVersion}`],
             };
           }
         }
         return {
           closeout_refs: [`closeout:${attempt.stage_attempt_id}`],
-          closeout_ref_metadata: (
+          closeout_ref_metadata: rawArtifactProgress
+            ? [{
+                ref: `artifact:deck-v${artifactVersion}`,
+                sha256: `sha256:deck-v${artifactVersion}`,
+                ref_kind: 'raw_executor_output',
+              }]
+            : (
             (role === 'producer' || role === 'repairer')
             && role !== input.omitIdentityReceiptForRole
           )
@@ -316,6 +417,9 @@ async function runController(input: {
           route_impact: routeImpact,
           ...(role === input.softBlockRole ? { blocked_reason: `soft-${role}-quality-debt` } : {}),
           domain_ready_verdict: 'domain_gate_pending',
+          ...(rawArtifactProgress
+            ? { authority_boundary: { opl: 'raw_executor_output_progress_envelope_only' } }
+            : {}),
         };
       },
     };
@@ -329,16 +433,16 @@ async function runController(input: {
     const state = await worker.runUntil(async () => {
       const workflowInput = stageRunInput(input.id);
       workflowInput.quality_policy = normalizeStageQualityCyclePolicy({
-        formal_review: {
-          required: input.formalReviewRequired ?? true,
-          risk_tier: 'high',
-          max_repair_rounds: 3,
+          formal_review: {
+            required: input.formalReviewRequired ?? true,
+            risk_tier: 'high',
+            max_repair_rounds: input.maxRepairRounds ?? 3,
         },
       });
       const handle = await testEnv.client.workflow.start(StageRunWorkflow, {
         args: [workflowInput],
         taskQueue,
-        workflowId: `stage-run-controller:${input.id}:${Date.now()}`,
+        workflowId: workflowInput.workflow_id,
       });
       return await handle.result();
     });
@@ -380,8 +484,40 @@ test('StageRun controller caps quality work at three repair rounds and carries c
   assert.ok(state.quality_debt_refs.includes('quality-debt:finding:visual-clipping'));
   assert.equal(state.sqlite_projection.status, 'synced');
   assert.equal(state.review_receipts.length, 4);
+  assert.equal(state.review_receipts[3]?.verdict, 'repair_required');
   assert.equal(state.decisive_attempt_role, 're_reviewer');
-  assert.equal(state.selected_stage_route?.decision_kind, 'repeat');
+  assert.equal(state.selected_stage_route?.target_stage_id, 'review_and_revision');
+  assert.equal(state.route_quality_debt_refs.some((ref) => ref.includes('decisive_attempt_route_decision_missing')), false);
+});
+
+test('max=0 initial reviewer repair_required is the decisive terminal quality-debt route owner', async () => {
+  const { state, attempts } = await runController({
+    id: 'zero-repair-budget',
+    closeFindingAfterRound: null,
+    maxRepairRounds: 0,
+    initialReviewerOutcome: 'repair_required',
+  });
+  assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), ['producer', 'reviewer']);
+  assert.equal(state.status, 'completed_with_quality_debt');
+  assert.equal(state.repair_rounds_used, 0);
+  assert.equal(state.review_receipts[0]?.verdict, 'repair_required');
+  assert.equal(state.decisive_attempt_role, 'reviewer');
+  assert.equal(state.selected_stage_route?.target_stage_id, 'review_and_revision');
+  assert.ok(state.quality_debt_refs.includes('quality-debt:finding:visual-clipping'));
+});
+
+test('pre-Codex typed preflight blocker may omit a session and remains a hard stop', async () => {
+  const { state, attempts } = await runController({
+    id: 'preflight-hard-blocker',
+    closeFindingAfterRound: null,
+    preflightHardBlockRole: 'reviewer',
+  });
+  assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), ['producer', 'reviewer']);
+  assert.equal(state.status, 'blocked');
+  assert.equal(state.blocked_reason, 'dirty_checkout');
+  assert.equal(state.attempts[1]?.execution_session_ref, null);
+  assert.equal(state.review_receipts.length, 0);
+  assert.equal(state.quality_debt_refs.length, 0);
 });
 
 test('primary-only StageRun makes the producer the sole decisive route owner', async () => {
@@ -396,6 +532,22 @@ test('primary-only StageRun makes the producer the sole decisive route owner', a
   assert.equal(state.selected_stage_route?.decision_kind, 'advance');
   assert.equal(state.selected_stage_route?.target_stage_id, 'review_and_revision');
   assert.equal(state.next_stage_run_launch?.target_stage_run_id, 'target:review_and_revision');
+  assert.equal(state.workflow_id, `stage-run-workflow:primary-route-owner`);
+});
+
+test('raw producer output uses its persisted ref-hash receipt as formal Review input', async () => {
+  const { state, attempts } = await runController({
+    id: 'raw-producer-review',
+    closeFindingAfterRound: null,
+    rawArtifactProgressRole: 'producer',
+    initialReviewerOutcome: 'pass',
+    initialReviewerFindings: 'none',
+  });
+  assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), ['producer', 'reviewer']);
+  assert.deepEqual(attempts[1]?.artifact_refs, ['artifact:deck-v1']);
+  assert.deepEqual(attempts[1]?.artifact_hashes, ['sha256:deck-v1']);
+  assert.equal(state.status, 'completed');
+  assert.equal(state.review_receipts.length, 1);
 });
 
 test('reviewer quality-debt verdict terminalizes the StageRun and retains reviewer route authority', async () => {
@@ -409,6 +561,221 @@ test('reviewer quality-debt verdict terminalizes the StageRun and retains review
   assert.equal(state.decisive_attempt_role, 'reviewer');
   assert.equal(state.selected_stage_route?.target_stage_id, 'review_and_revision');
   assert.equal(state.review_receipts[0]?.verdict, 'quality_debt');
+});
+
+test('initial reviewer blocked and human_gate outcomes map to hard-stop status and receipts', async () => {
+  const blocked = await runController({
+    id: 'initial-review-blocked',
+    closeFindingAfterRound: null,
+    initialReviewerOutcome: 'blocked',
+  });
+  assert.equal(blocked.state.status, 'blocked');
+  assert.equal(blocked.state.blocked_reason, 'reviewer-blocked');
+  assert.equal(blocked.state.review_receipts[0]?.verdict, 'hard_stop');
+  assert.equal(blocked.state.selected_stage_route, null);
+
+  const humanGate = await runController({
+    id: 'initial-review-human-gate',
+    closeFindingAfterRound: null,
+    initialReviewerOutcome: 'human_gate',
+  });
+  assert.equal(humanGate.state.status, 'human_gate');
+  assert.equal(humanGate.state.blocked_reason, 'reviewer-human_gate');
+  assert.equal(humanGate.state.review_receipts[0]?.verdict, 'hard_stop');
+  assert.equal(humanGate.state.selected_stage_route, null);
+});
+
+test('initial repair_required outcome requires at least one required finding', async () => {
+  const { state, attempts } = await runController({
+    id: 'initial-repair-empty-findings',
+    closeFindingAfterRound: null,
+    initialReviewerOutcome: 'repair_required',
+    initialReviewerFindings: 'none',
+  });
+  assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), ['producer', 'reviewer']);
+  assert.equal(state.status, 'completed_with_quality_debt');
+  assert.equal(state.review_receipts.length, 0);
+  assert.equal(state.selected_stage_route, null);
+  assert.ok(state.quality_debt_refs.some((ref) => ref.includes('repair_required')));
+});
+
+test('initial pass outcome cannot carry an open required finding', async () => {
+  const { state, attempts } = await runController({
+    id: 'initial-pass-required-finding',
+    closeFindingAfterRound: null,
+    initialReviewerOutcome: 'pass',
+    initialReviewerFindings: 'required',
+  });
+  assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), ['producer', 'reviewer']);
+  assert.equal(state.status, 'completed_with_quality_debt');
+  assert.equal(state.review_receipts.length, 0);
+  assert.equal(state.selected_stage_route, null);
+  assert.ok(state.quality_debt_refs.some((ref) => ref.includes('open%20required%20finding')));
+});
+
+test('initial quality_debt outcome cannot carry an open required finding', async () => {
+  const { state, attempts } = await runController({
+    id: 'initial-quality-debt-required-finding',
+    closeFindingAfterRound: null,
+    initialReviewerOutcome: 'quality_debt',
+    initialReviewerFindings: 'required',
+  });
+  assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), ['producer', 'reviewer']);
+  assert.equal(state.status, 'completed_with_quality_debt');
+  assert.equal(state.review_receipts.length, 0);
+  assert.equal(state.selected_stage_route, null);
+  assert.ok(state.quality_debt_refs.some((ref) => ref.includes('open%20required%20finding')));
+});
+
+test('closed re-review quality_debt outcome terminalizes with debt and controller receipt mapping', async () => {
+  const { state, attempts } = await runController({
+    id: 're-review-quality-debt',
+    closeFindingAfterRound: 1,
+    reReviewerOutcome: 'quality_debt',
+    reReviewerOptionalObservation: true,
+  });
+  assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), [
+    'producer', 'reviewer', 'repairer', 're_reviewer',
+  ]);
+  assert.equal(state.status, 'completed_with_quality_debt');
+  assert.equal(state.review_receipts[1]?.verdict, 'quality_debt');
+  assert.equal(state.decisive_attempt_role, 're_reviewer');
+  assert.equal(state.selected_stage_route?.target_stage_id, 'review_and_revision');
+  assert.ok(state.quality_debt_refs.some((ref) => ref.includes('re-review-quality-debt')));
+});
+
+test('closed re-review pass may retain optional observations without reopening repair', async () => {
+  const { state, attempts } = await runController({
+    id: 're-review-pass-optional-observation',
+    closeFindingAfterRound: 1,
+    reReviewerOutcome: 'pass',
+    reReviewerOptionalObservation: true,
+  });
+  assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), [
+    'producer', 'reviewer', 'repairer', 're_reviewer',
+  ]);
+  assert.equal(state.status, 'completed');
+  assert.equal(state.review_receipts[1]?.verdict, 'pass');
+  assert.equal(state.repair_rounds_used, 1);
+  assert.equal(state.decisive_attempt_role, 're_reviewer');
+});
+
+test('re-review blocked and human_gate outcomes map to hard-stop receipts and do not route', async () => {
+  const blocked = await runController({
+    id: 're-review-blocked',
+    closeFindingAfterRound: 1,
+    reReviewerOutcome: 'blocked',
+    reReviewerHardStopClass: 'safety_or_compliance',
+  });
+  assert.equal(blocked.state.status, 'blocked');
+  assert.equal(blocked.state.blocked_reason, 're-review-blocked');
+  assert.equal(blocked.state.review_receipts[1]?.verdict, 'hard_stop');
+  assert.equal(blocked.state.selected_stage_route, null);
+
+  const humanGate = await runController({
+    id: 're-review-human-gate',
+    closeFindingAfterRound: 1,
+    reReviewerOutcome: 'human_gate',
+  });
+  assert.equal(humanGate.state.status, 'human_gate');
+  assert.equal(humanGate.state.blocked_reason, 're-review-human_gate');
+  assert.equal(humanGate.state.review_receipts[1]?.verdict, 'hard_stop');
+  assert.equal(humanGate.state.selected_stage_route, null);
+});
+
+test('invalid re-review hard-stop evidence is rejected before receipt and recorded as protocol debt', async () => {
+  const { state } = await runController({
+    id: 'invalid-re-review-hard-stop',
+    closeFindingAfterRound: 1,
+    reReviewerOutcome: 'blocked',
+    invalidReReviewerHardStopEvidence: true,
+  });
+  assert.equal(state.status, 'completed_with_quality_debt');
+  assert.equal(state.review_receipts.length, 1);
+  assert.equal(state.blocked_reason, null);
+  assert.ok(state.quality_debt_refs.some((ref) => ref.includes('hard_stop_class')));
+});
+
+test('validated re-review hard stop is not downgraded when receipt persistence fails', async () => {
+  const { state } = await runController({
+    id: 'hard-stop-receipt-persistence-failure',
+    closeFindingAfterRound: 1,
+    reReviewerOutcome: 'blocked',
+    failReceiptForReviewerRole: 're_reviewer',
+  });
+  assert.equal(state.status, 'blocked');
+  assert.equal(state.blocked_reason, 're-review-blocked');
+  assert.equal(state.review_receipts.length, 1);
+  assert.equal(state.review_receipts[0]?.verdict, 'repair_required');
+  assert.equal(state.selected_stage_route, null);
+});
+
+test('re-review outcome and finding closure must agree in both directions', async () => {
+  const closedButRepairRequired = await runController({
+    id: 'closed-but-repair-required',
+    closeFindingAfterRound: 1,
+    reReviewerOutcome: 'repair_required',
+  });
+  assert.equal(closedButRepairRequired.state.status, 'completed_with_quality_debt');
+  assert.equal(closedButRepairRequired.state.review_receipts.length, 1);
+  assert.equal(closedButRepairRequired.state.selected_stage_route, null);
+  assert.ok(closedButRepairRequired.state.quality_debt_refs.some((ref) => ref.includes('repair_required')));
+
+  const openButPass = await runController({
+    id: 'open-but-pass',
+    closeFindingAfterRound: null,
+    reReviewerOutcome: 'pass',
+  });
+  assert.equal(openButPass.state.status, 'completed_with_quality_debt');
+  assert.equal(openButPass.state.repair_rounds_used, 1);
+  assert.equal(openButPass.state.review_receipts.length, 1);
+  assert.equal(openButPass.state.selected_stage_route, null);
+  assert.ok(openButPass.state.quality_debt_refs.some((ref) => ref.includes('must%20return%20outcome%20repair_required')));
+});
+
+test('legacy Attempt verdict is rejected before controller receipt materialization', async () => {
+  const { state, attempts } = await runController({
+    id: 'legacy-review-verdict',
+    closeFindingAfterRound: null,
+    legacyVerdictRole: 'reviewer',
+  });
+  assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), ['producer', 'reviewer']);
+  assert.equal(state.status, 'completed_with_quality_debt');
+  assert.equal(state.review_receipts.length, 0);
+  assert.ok(state.quality_debt_refs.some((ref) => ref.includes('verdict%20is%20reserved')));
+});
+
+test('reviewer-only outcome is rejected when a producer or repairer returns it', async () => {
+  const producer = await runController({
+    id: 'producer-forbidden-outcome',
+    closeFindingAfterRound: null,
+    nonReviewOutcomeRole: 'producer',
+  });
+  assert.equal(producer.state.status, 'blocked');
+  assert.equal(producer.state.review_receipts.length, 0);
+
+  const repairer = await runController({
+    id: 'repairer-forbidden-outcome',
+    closeFindingAfterRound: null,
+    nonReviewOutcomeRole: 'repairer',
+  });
+  assert.equal(repairer.state.status, 'completed_with_quality_debt');
+  assert.equal(repairer.state.review_receipts.length, 1);
+  assert.ok(repairer.state.quality_debt_refs.some((ref) => ref.includes(
+    'must%20not%20return%20outcome%20or%20verdict',
+  )));
+});
+
+test('receipt activity validation failure cannot forge a review receipt', async () => {
+  const { state } = await runController({
+    id: 'receipt-validation-failure',
+    closeFindingAfterRound: null,
+    failReceiptForReviewerRole: 'reviewer',
+  });
+  assert.equal(state.status, 'completed_with_quality_debt');
+  assert.equal(state.review_receipts.length, 0);
+  assert.equal(state.selected_stage_route, null);
+  assert.ok(state.quality_debt_refs.some((ref) => ref.includes('receipt-validation-failure')));
 });
 
 test('recoverable producer and repairer quality debt still reaches fresh formal Review', async () => {
@@ -511,6 +878,29 @@ test('producer failure without a consumable artifact hard-stops the StageRun', a
   assert.equal(state.attempts[0]?.status, 'failed');
   assert.equal(state.artifact_refs.length, 0);
   assert.equal(state.review_receipts.length, 0);
+});
+
+test('literal zero artifact hard-stops, while a failed repair preserves prior consumable progress as debt', async () => {
+  const zeroArtifact = await runController({
+    id: 'producer-zero-artifact',
+    closeFindingAfterRound: null,
+    omitArtifactForRole: 'producer',
+  });
+  assert.equal(zeroArtifact.state.status, 'blocked');
+  assert.equal(zeroArtifact.state.blocked_reason, 'stage_quality_attempt_without_consumable_artifact');
+  assert.equal(zeroArtifact.state.artifact_refs.length, 0);
+
+  const failedRepair = await runController({
+    id: 'repairer-zero-new-artifact',
+    closeFindingAfterRound: null,
+    omitArtifactForRole: 'repairer',
+  });
+  assert.equal(failedRepair.state.status, 'completed_with_quality_debt');
+  assert.deepEqual(failedRepair.state.artifact_refs, ['artifact:deck-v1']);
+  assert.equal(failedRepair.state.review_receipts.length, 1);
+  assert.ok(failedRepair.state.quality_debt_refs.some((ref) => ref.includes(
+    'did%20not%20return%20a%20consumable%20artifact%20identity',
+  )));
 });
 
 test('producer artifact without a domain SHA receipt cannot enter formal Review', async () => {

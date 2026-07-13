@@ -91,6 +91,7 @@ export type TemporalStageQualityAttemptMaterializationInput = {
   artifact_identity_receipt_refs: string[];
   findings?: StageQualityFinding[];
   repair_map?: StageQualityRepairMapEntry[];
+  route_recommendations?: StageQualityRouteRecommendationRecord[];
 };
 
 export type TemporalStageQualityCycleProjectionInput = {

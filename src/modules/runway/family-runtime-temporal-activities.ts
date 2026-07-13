@@ -1,6 +1,6 @@
 import { Context, heartbeat } from '@temporalio/activity';
 
-import { isRecord } from '../../kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import {
   buildTemporalStageAttemptWorkflowInput,
   type TemporalStageAttemptWorkflowInput,
@@ -19,9 +19,9 @@ import {
 import { runTemporalProviderCadenceReadback } from './family-runtime-scheduler.ts';
 import { openQueueDb, stableId } from './family-runtime-store.ts';
 import {
-  buildPersistedStageReviewReceipt,
   createStageAttempt,
   createStageAttemptTable,
+  materializePersistedStageReviewReceipt,
   recordStageAttemptActivityHeartbeat,
   syncStageAttemptFromTemporalTerminalObservation,
 } from './family-runtime-stage-attempts.ts';
@@ -620,6 +620,39 @@ export async function codexStageActivity(input: TemporalStageAttemptWorkflowInpu
       ...codexActivityEventForTemporalHistory(activityReceipt),
       closeout_packet: compactCloseoutPacketForTemporalResult(closeoutPacketFromRunnerReceipt(runnerReceipt)),
     };
+  } catch (error) {
+    const blockedReason = error instanceof FrameworkContractError
+      && typeof error.details?.blocked_reason === 'string'
+      && error.details.blocked_reason.trim()
+      ? error.details.blocked_reason.trim()
+      : null;
+    if (!blockedReason) throw error;
+    return {
+      ...codexActivityEventForTemporalHistory({
+        surface_kind: 'temporal_codex_stage_activity_receipt',
+        activity_kind: 'codex_stage_activity',
+        activity_status: 'blocked',
+        stage_attempt_id: input.stage_attempt_id,
+        stage_id: input.stage_id,
+        executor_kind: input.executor_kind,
+        checkpoint_refs: input.checkpoint_refs ?? [],
+        stage_packet_ref: input.stage_packet_ref ?? null,
+        runner_status: {
+          runner_kind: 'codex_cli',
+          runner_mode: input.codex_stage_runner?.runner_mode ?? 'codex_cli',
+          live_process_started: false,
+        },
+        progress_summary: {
+          progress_status: 'blocked_before_executor_session',
+          execution_session_ref: null,
+        },
+        process_output_summary: {
+          blocked_reason: blockedReason,
+          pre_codex_typed_preflight_blocker: true,
+        },
+      }),
+      closeout_packet: null,
+    };
   } finally {
     clearInterval(heartbeatInterval);
   }
@@ -834,6 +867,7 @@ export async function stageQualityAttemptMaterializeActivity(
         .filter((finding) => finding.required)
         .map((finding) => finding.finding_id),
       non_decisive_output: 'route_impact.stage_route_recommendation',
+      prior_route_recommendations: input.route_recommendations ?? [],
     };
     const contextManifest = input.attempt_role === 'reviewer' || input.attempt_role === 're_reviewer'
       ? {
@@ -851,6 +885,7 @@ export async function stageQualityAttemptMaterializeActivity(
             ...input.artifact_identity_receipt_refs,
           ],
           priorFindingRefs: (input.findings ?? []).map((finding) => finding.finding_id),
+          repairMapRefs: (input.repair_map ?? []).map((entry) => `repair-map:${entry.finding_id}`),
           }),
           cross_stage_route_selection: crossStageRouteSelection,
         }
@@ -863,7 +898,14 @@ export async function stageQualityAttemptMaterializeActivity(
           stage_goal_refs: input.stage_run.stage_goal_refs ?? [],
           source_refs: input.stage_run.source_refs ?? [],
           quality_rubric_refs: input.stage_run.quality_rubric_refs,
-          lineage_refs: input.stage_run.lineage_refs ?? [],
+          lineage_refs: [
+            ...(input.stage_run.lineage_refs ?? []),
+            ...input.artifact_identity_receipt_refs,
+          ],
+          artifact_refs: input.artifact_refs,
+          artifact_hashes: input.artifact_hashes,
+          prior_finding_refs: (input.findings ?? []).map((finding) => finding.finding_id),
+          repair_map_refs: (input.repair_map ?? []).map((entry) => `repair-map:${entry.finding_id}`),
           no_context_inheritance: true,
           cross_stage_route_selection: crossStageRouteSelection,
         };
@@ -885,9 +927,19 @@ export async function stageQualityAttemptMaterializeActivity(
       inputArtifactRefs: input.artifact_refs,
       reviewedArtifactHashes: input.artifact_hashes,
       qualitySourceRefs: input.stage_run.source_refs,
+      qualityStageGoalRefs: input.stage_run.stage_goal_refs,
+      qualityLineageRefs: [
+        ...(input.stage_run.lineage_refs ?? []),
+        ...input.artifact_identity_receipt_refs,
+      ],
       qualityRubricRefs: input.stage_run.quality_rubric_refs,
       priorFindingRefs: (input.findings ?? []).map((finding) => finding.finding_id),
       repairMapRefs: (input.repair_map ?? []).map((entry) => `repair-map:${entry.finding_id}`),
+      qualityContext: {
+        findings: input.findings ?? [],
+        repair_map: input.repair_map ?? [],
+        route_recommendations: input.route_recommendations ?? [],
+      },
       qualityRolePromptRef: rolePromptRef,
       contextManifestRef,
       contextManifest,
@@ -912,6 +964,7 @@ export async function stageQualityAttemptMaterializeActivity(
           context_manifest: contextManifest,
           findings: input.findings ?? [],
           repair_map: input.repair_map ?? [],
+          route_recommendations: input.route_recommendations ?? [],
         },
       },
       authority_boundary: {
@@ -927,7 +980,9 @@ export async function stageQualityAttemptMaterializeActivity(
 function stageAttemptIdFromRef(ref: string) {
   const prefix = 'opl://stage_attempts/';
   if (!ref.startsWith(prefix) || !ref.slice(prefix.length)) {
-    throw new Error(`Invalid StageAttempt ref: ${ref}`);
+    throw new FrameworkContractError('contract_shape_invalid', 'Invalid StageAttempt ref.', {
+      stage_attempt_ref: ref,
+    });
   }
   return ref.slice(prefix.length);
 }
@@ -954,7 +1009,7 @@ export async function stageQualityReviewReceiptActivity(input: TemporalStageQual
   const { db } = openQueueDb();
   try {
     createStageAttemptTable(db);
-    return buildPersistedStageReviewReceipt(db, {
+    return materializePersistedStageReviewReceipt(db, {
       producerAttemptId: stageAttemptIdFromRef(input.producer_attempt_ref),
       reviewerAttemptId: stageAttemptIdFromRef(input.reviewer_attempt_ref),
       rubricRefs: input.rubric_refs,

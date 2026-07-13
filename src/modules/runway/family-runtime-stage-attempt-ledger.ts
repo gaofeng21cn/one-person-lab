@@ -1,4 +1,5 @@
 import { DatabaseSync } from 'node:sqlite';
+import crypto from 'node:crypto';
 
 import {
   type FamilyRuntimeDomainId,
@@ -10,12 +11,27 @@ import {
   buildStageAttemptUsageProjection,
 } from './family-runtime-stage-attempt-usage.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
+import { canonicalJsonText } from '../../kernel/canonical-json.ts';
 import { record } from '../../kernel/json-record.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import {
+  evaluateStageQualityFindingClosure,
+  normalizeStageQualityAttemptRole,
+  stageQualityAttemptOutcomeFromEnvelope,
+  stageQualityOutcomeFromEnvelope,
+  stageReviewVerdictForOutcome,
   validateIndependentStageReviewReceipt,
+  validateInitialStageQualityReviewOutcome,
+  validateStageQualityFindings,
+  validateStageQualityRepairMap,
+  validateStageQualityReReviewOutcome,
+  validateStageQualityReviewHardStopOutcome,
+  type StageQualityFinding,
+  type StageQualityRepairMapEntry,
+  type StageQualityReReviewResult,
   type StageReviewReceipt,
 } from '../stagecraft/index.ts';
+import { validateStageQualityAttemptContextManifest } from './family-runtime-stage-quality-context-manifest.ts';
 
 export type StageAttemptStatus =
   | 'queued'
@@ -46,9 +62,12 @@ export type StageAttemptRow = {
   input_artifact_refs_json?: string | null;
   reviewed_artifact_hashes_json?: string | null;
   quality_source_refs_json?: string | null;
+  quality_stage_goal_refs_json?: string | null;
+  quality_lineage_refs_json?: string | null;
   quality_rubric_refs_json?: string | null;
   prior_finding_refs_json?: string | null;
   repair_map_refs_json?: string | null;
+  quality_context_json?: string | null;
   quality_role_prompt_ref?: string | null;
   execution_session_ref?: string | null;
   usage_observation_json?: string | null;
@@ -134,9 +153,12 @@ export function createStageAttemptTable(db: DatabaseSync) {
       input_artifact_refs_json TEXT NOT NULL DEFAULT '[]',
       reviewed_artifact_hashes_json TEXT NOT NULL DEFAULT '[]',
       quality_source_refs_json TEXT NOT NULL DEFAULT '[]',
+      quality_stage_goal_refs_json TEXT NOT NULL DEFAULT '[]',
+      quality_lineage_refs_json TEXT NOT NULL DEFAULT '[]',
       quality_rubric_refs_json TEXT NOT NULL DEFAULT '[]',
       prior_finding_refs_json TEXT NOT NULL DEFAULT '[]',
       repair_map_refs_json TEXT NOT NULL DEFAULT '[]',
+      quality_context_json TEXT NOT NULL DEFAULT '{}',
       quality_role_prompt_ref TEXT,
       execution_session_ref TEXT,
       usage_observation_json TEXT,
@@ -211,9 +233,12 @@ export function createStageAttemptTable(db: DatabaseSync) {
   addColumnIfMissing(db, 'stage_attempts', columns, 'input_artifact_refs_json', "input_artifact_refs_json TEXT NOT NULL DEFAULT '[]'");
   addColumnIfMissing(db, 'stage_attempts', columns, 'reviewed_artifact_hashes_json', "reviewed_artifact_hashes_json TEXT NOT NULL DEFAULT '[]'");
   addColumnIfMissing(db, 'stage_attempts', columns, 'quality_source_refs_json', "quality_source_refs_json TEXT NOT NULL DEFAULT '[]'");
+  addColumnIfMissing(db, 'stage_attempts', columns, 'quality_stage_goal_refs_json', "quality_stage_goal_refs_json TEXT NOT NULL DEFAULT '[]'");
+  addColumnIfMissing(db, 'stage_attempts', columns, 'quality_lineage_refs_json', "quality_lineage_refs_json TEXT NOT NULL DEFAULT '[]'");
   addColumnIfMissing(db, 'stage_attempts', columns, 'quality_rubric_refs_json', "quality_rubric_refs_json TEXT NOT NULL DEFAULT '[]'");
   addColumnIfMissing(db, 'stage_attempts', columns, 'prior_finding_refs_json', "prior_finding_refs_json TEXT NOT NULL DEFAULT '[]'");
   addColumnIfMissing(db, 'stage_attempts', columns, 'repair_map_refs_json', "repair_map_refs_json TEXT NOT NULL DEFAULT '[]'");
+  addColumnIfMissing(db, 'stage_attempts', columns, 'quality_context_json', "quality_context_json TEXT NOT NULL DEFAULT '{}'");
   addColumnIfMissing(db, 'stage_attempts', columns, 'quality_role_prompt_ref', 'quality_role_prompt_ref TEXT');
   addColumnIfMissing(db, 'stage_attempts', columns, 'execution_session_ref', 'execution_session_ref TEXT');
   addColumnIfMissing(db, 'stage_attempts', columns, 'usage_observation_json', 'usage_observation_json TEXT');
@@ -283,9 +308,12 @@ export function stageAttemptToPayload(row: StageAttemptRow) {
     input_artifact_refs: row.input_artifact_refs_json ? parseJsonList(row.input_artifact_refs_json) : [],
     reviewed_artifact_hashes: row.reviewed_artifact_hashes_json ? parseJsonList(row.reviewed_artifact_hashes_json) : [],
     quality_source_refs: row.quality_source_refs_json ? parseJsonList(row.quality_source_refs_json) : [],
+    quality_stage_goal_refs: row.quality_stage_goal_refs_json ? parseJsonList(row.quality_stage_goal_refs_json) : [],
+    quality_lineage_refs: row.quality_lineage_refs_json ? parseJsonList(row.quality_lineage_refs_json) : [],
     quality_rubric_refs: row.quality_rubric_refs_json ? parseJsonList(row.quality_rubric_refs_json) : [],
     prior_finding_refs: row.prior_finding_refs_json ? parseJsonList(row.prior_finding_refs_json) : [],
     repair_map_refs: row.repair_map_refs_json ? parseJsonList(row.repair_map_refs_json) : [],
+    quality_context: row.quality_context_json ? parseJsonObject(row.quality_context_json) : {},
     quality_role_prompt_ref: row.quality_role_prompt_ref ?? null,
     execution_session_ref: row.execution_session_ref ?? null,
     usage_observation: usageObservation,
@@ -355,40 +383,250 @@ export function bindStageAttemptExecutionSession(db: DatabaseSync, input: {
   return stageAttemptToPayload(updated);
 }
 
-export function validatePersistedStageReviewIsolation(db: DatabaseSync, input: {
+type PersistedStageReviewReceiptInput = {
   producerAttemptId: string;
   reviewerAttemptId: string;
   rubricRefs: string[];
   verdict: 'pass' | 'repair_required' | 'quality_debt' | 'hard_stop';
-}) {
-  const producer = db.prepare('SELECT * FROM stage_attempts WHERE stage_attempt_id = ?').get(
-    input.producerAttemptId,
-  ) as StageAttemptRow | undefined;
-  const reviewer = db.prepare('SELECT * FROM stage_attempts WHERE stage_attempt_id = ?').get(
-    input.reviewerAttemptId,
-  ) as StageAttemptRow | undefined;
-  if (!producer || !reviewer) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Review isolation validation requires both attempts.');
+};
+
+function persistedStringList(value: string | null | undefined, field: string) {
+  const parsed = value ? parseJsonList(value) : [];
+  if (parsed.some((entry) => typeof entry !== 'string' || !entry.trim())) {
+    throw new FrameworkContractError('contract_shape_invalid', `${field} must contain only non-empty strings.`, {
+      field,
+    });
   }
-  if (!producer.execution_session_ref || !reviewer.execution_session_ref) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Review isolation validation requires observed execution sessions.');
-  }
-  if (reviewer.no_context_inheritance !== 1) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Reviewer attempt did not prove no context inheritance.');
-  }
-  const artifactRefs = reviewer.input_artifact_refs_json ? parseJsonList(reviewer.input_artifact_refs_json) : [];
-  const artifactHashes = reviewer.reviewed_artifact_hashes_json
-    ? parseJsonList(reviewer.reviewed_artifact_hashes_json)
-    : [];
-  return validateIndependentStageReviewReceipt(buildPersistedStageReviewReceipt(db, input));
+  return parsed.map((entry) => String(entry).trim());
 }
 
-export function buildPersistedStageReviewReceipt(db: DatabaseSync, input: {
-  producerAttemptId: string;
-  reviewerAttemptId: string;
-  rubricRefs: string[];
-  verdict: 'pass' | 'repair_required' | 'quality_debt' | 'hard_stop';
-}): StageReviewReceipt {
+function exactStringList(left: string[], right: string[]) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function exactCanonicalValue(left: unknown, right: unknown) {
+  return canonicalJsonText(left) === canonicalJsonText(right);
+}
+
+function canonicalSha256(value: unknown) {
+  return `sha256:${crypto.createHash('sha256').update(canonicalJsonText(value)).digest('hex')}`;
+}
+
+function persistedQualityEnvelope(row: StageAttemptRow) {
+  return record(parseJsonObject(row.route_impact_json).stage_quality_cycle);
+}
+
+function persistedEnvelopeRecordList(
+  envelope: Record<string, unknown>,
+  field: string,
+) {
+  const value = envelope[field];
+  if (
+    !Array.isArray(value)
+    || value.some((entry) => !entry || typeof entry !== 'object' || Array.isArray(entry))
+  ) {
+    throw new FrameworkContractError('contract_shape_invalid', `${field} must be an array of objects.`, { field });
+  }
+  return value as Array<Record<string, unknown>>;
+}
+
+function requireSameReviewIdentity(producer: StageAttemptRow, reviewer: StageAttemptRow) {
+  const identityFields = ['domain_id', 'stage_id', 'stage_run_id', 'quality_cycle_id'] as const;
+  const mismatches = identityFields.filter((field) =>
+    !producer[field]
+    || !reviewer[field]
+    || producer[field] !== reviewer[field]
+  );
+  if (mismatches.length > 0) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Review receipt Attempts must share exact domain, Stage, StageRun, and quality-cycle identity.',
+      { mismatched_fields: mismatches },
+    );
+  }
+}
+
+function requirePersistedQualityContextManifest(row: StageAttemptRow) {
+  const attemptRole = normalizeStageQualityAttemptRole(row.attempt_role);
+  if (!row.stage_run_id || !row.quality_cycle_id || !row.context_manifest_ref || !row.context_manifest_json) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Review receipt requires the exact persisted context manifest for both Attempts.',
+      { stage_attempt_id: row.stage_attempt_id },
+    );
+  }
+  return validateStageQualityAttemptContextManifest({
+    attemptRole,
+    stageRunId: row.stage_run_id,
+    qualityCycleId: row.quality_cycle_id,
+    artifactRefs: persistedStringList(row.input_artifact_refs_json, 'attempt.input_artifact_refs'),
+    artifactHashes: persistedStringList(row.reviewed_artifact_hashes_json, 'attempt.reviewed_artifact_hashes'),
+    stageGoalRefs: persistedStringList(row.quality_stage_goal_refs_json, 'attempt.quality_stage_goal_refs'),
+    sourceRefs: persistedStringList(row.quality_source_refs_json, 'attempt.quality_source_refs'),
+    lineageRefs: persistedStringList(row.quality_lineage_refs_json, 'attempt.quality_lineage_refs'),
+    priorFindingRefs: persistedStringList(row.prior_finding_refs_json, 'attempt.prior_finding_refs'),
+    repairMapRefs: persistedStringList(row.repair_map_refs_json, 'attempt.repair_map_refs'),
+    rubricRefs: persistedStringList(row.quality_rubric_refs_json, 'attempt.quality_rubric_refs'),
+    contextManifestRef: row.context_manifest_ref,
+    contextManifest: parseJsonObject(row.context_manifest_json),
+  });
+}
+
+function requireReviewRolePair(producer: StageAttemptRow, reviewer: StageAttemptRow) {
+  const producerRole = normalizeStageQualityAttemptRole(producer.attempt_role);
+  const reviewerRole = normalizeStageQualityAttemptRole(reviewer.attempt_role);
+  const producerRound = producer.quality_round_index;
+  const reviewerRound = reviewer.quality_round_index;
+  const initialPair = producerRole === 'producer'
+    && reviewerRole === 'reviewer'
+    && producerRound === 0
+    && reviewerRound === 0;
+  const reReviewPair = producerRole === 'repairer'
+    && reviewerRole === 're_reviewer'
+    && typeof producerRound === 'number'
+    && producerRound >= 1
+    && producerRound === reviewerRound;
+  if (!initialPair && !reReviewPair) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Review receipt role pair must be producer(round 0) -> reviewer(round 0) or repairer(round n) -> re_reviewer(round n).',
+      {
+        producer_role: producerRole,
+        producer_round: producerRound,
+        reviewer_role: reviewerRole,
+        reviewer_round: reviewerRound,
+      },
+    );
+  }
+  const expectedParentRef = `opl://stage_attempts/${producer.stage_attempt_id}`;
+  if (reviewer.parent_attempt_ref !== expectedParentRef) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Review receipt reviewer must reference the exact producer or repairer Attempt as parent.',
+      {
+        expected_parent_attempt_ref: expectedParentRef,
+        reviewer_parent_attempt_ref: reviewer.parent_attempt_ref,
+      },
+    );
+  }
+  return { reviewerRole: reviewerRole as 'reviewer' | 're_reviewer' };
+}
+
+function persistedQualityContext(row: StageAttemptRow) {
+  return row.quality_context_json ? parseJsonObject(row.quality_context_json) : {};
+}
+
+function persistedReviewerOutcome(
+  producer: StageAttemptRow,
+  row: StageAttemptRow,
+  reviewerRole: 'reviewer' | 're_reviewer',
+) {
+  const envelope = persistedQualityEnvelope(row);
+  const outcome = stageQualityOutcomeFromEnvelope({ attemptRole: reviewerRole, envelope });
+  if (outcome === 'blocked' || outcome === 'human_gate') {
+    validateStageQualityReviewHardStopOutcome({ outcome, envelope });
+    if (reviewerRole === 'reviewer') {
+      return {
+        outcome,
+        findings: [] as StageQualityFinding[],
+        repairMap: [],
+        reReview: null,
+      };
+    }
+  }
+  if (reviewerRole === 'reviewer') {
+    const findings = validateInitialStageQualityReviewOutcome({
+      outcome,
+      findings: persistedEnvelopeRecordList(envelope, 'findings') as StageQualityFinding[],
+    });
+    return { outcome, findings, repairMap: [], reReview: null };
+  }
+
+  const qualityContext = persistedQualityContext(row);
+  const findings = validateStageQualityFindings(
+    persistedEnvelopeRecordList(qualityContext, 'findings') as StageQualityFinding[],
+  );
+  const repairMap = validateStageQualityRepairMap({
+    findings,
+    repairMap: persistedEnvelopeRecordList(qualityContext, 'repair_map') as StageQualityRepairMapEntry[],
+  });
+  const priorFindingIds = persistedStringList(row.prior_finding_refs_json, 're_reviewer.prior_finding_refs');
+  const repairMapFindingIds = persistedStringList(row.repair_map_refs_json, 're_reviewer.repair_map_refs')
+    .map((ref) => {
+      const prefix = 'repair-map:';
+      if (!ref.startsWith(prefix) || !ref.slice(prefix.length)) {
+        throw new FrameworkContractError(
+          'contract_shape_invalid',
+          'Re-review repair_map_refs must identify a stable finding id.',
+          { repair_map_ref: ref },
+        );
+      }
+      return ref.slice(prefix.length);
+    });
+  if (repairMapFindingIds.length === 0) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Re-review receipt requires persisted repair_map_refs for prior required findings.',
+    );
+  }
+  const findingIds = findings.map((finding) => finding.finding_id);
+  const repairMapIds = repairMap.map((entry) => entry.finding_id);
+  if (!exactStringList(priorFindingIds, findingIds)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Re-review prior_finding_refs must exactly identify the persisted finding bodies.',
+      { prior_finding_refs: priorFindingIds, persisted_finding_ids: findingIds },
+    );
+  }
+  if (!exactStringList(repairMapFindingIds, repairMapIds)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Re-review repair_map_refs must exactly identify the persisted repair-map bodies.',
+      { repair_map_refs: repairMapFindingIds, persisted_repair_map_ids: repairMapIds },
+    );
+  }
+  const producerContext = persistedQualityContext(producer);
+  const producerFindings = persistedEnvelopeRecordList(producerContext, 'findings');
+  const producerRepairMap = persistedEnvelopeRecordList(persistedQualityEnvelope(producer), 'repair_map');
+  if (!exactCanonicalValue(producerFindings, findings)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Repairer and Re-reviewer must share the exact persisted finding bodies.',
+    );
+  }
+  if (!exactCanonicalValue(producerRepairMap, repairMap)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Re-review repair_map must exactly match the persisted repairer output.',
+    );
+  }
+  if (outcome === 'blocked' || outcome === 'human_gate') {
+    return { outcome, findings, repairMap, reReview: null };
+  }
+  const reReview: StageQualityReReviewResult = {
+    finding_closures: persistedEnvelopeRecordList(
+      envelope,
+      'finding_closures',
+    ) as StageQualityReReviewResult['finding_closures'],
+    repair_regressions: persistedEnvelopeRecordList(
+      envelope,
+      'repair_regressions',
+    ) as StageQualityReReviewResult['repair_regressions'],
+    critical_new_findings: persistedEnvelopeRecordList(
+      envelope,
+      'critical_new_findings',
+    ) as StageQualityReReviewResult['critical_new_findings'],
+    optional_observations: persistedEnvelopeRecordList(
+      envelope,
+      'optional_observations',
+    ) as StageQualityReReviewResult['optional_observations'],
+  };
+  const closure = evaluateStageQualityFindingClosure({ findings, repairMap, reReview });
+  validateStageQualityReReviewOutcome({ outcome, closure });
+  return { outcome, findings, repairMap, reReview };
+}
+
+function persistedStageReviewReceiptInputs(db: DatabaseSync, input: PersistedStageReviewReceiptInput) {
   const producer = db.prepare('SELECT * FROM stage_attempts WHERE stage_attempt_id = ?').get(
     input.producerAttemptId,
   ) as StageAttemptRow | undefined;
@@ -396,32 +634,151 @@ export function buildPersistedStageReviewReceipt(db: DatabaseSync, input: {
     input.reviewerAttemptId,
   ) as StageAttemptRow | undefined;
   if (!producer || !reviewer) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Review receipt requires both persisted attempts.');
+    throw new FrameworkContractError('contract_shape_invalid', 'Review receipt requires both persisted Attempts.');
+  }
+  requireSameReviewIdentity(producer, reviewer);
+  const { reviewerRole } = requireReviewRolePair(producer, reviewer);
+  requirePersistedQualityContextManifest(producer);
+  requirePersistedQualityContextManifest(reviewer);
+  if (producer.status !== 'completed' || reviewer.status !== 'completed') {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Review receipt requires both persisted Attempts to be completed.',
+      { producer_status: producer.status, reviewer_status: reviewer.status },
+    );
   }
   if (!producer.execution_session_ref || !reviewer.execution_session_ref) {
     throw new FrameworkContractError('contract_shape_invalid', 'Review receipt requires observed execution sessions.');
   }
-  const artifactRefs = reviewer.input_artifact_refs_json ? parseJsonList(reviewer.input_artifact_refs_json) : [];
-  const artifactHashes = reviewer.reviewed_artifact_hashes_json
-    ? parseJsonList(reviewer.reviewed_artifact_hashes_json)
-    : [];
+  if (producer.no_context_inheritance !== 1 || reviewer.no_context_inheritance !== 1) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Review receipt requires both persisted Attempts to prove no context inheritance.',
+      {
+        producer_no_context_inheritance: producer.no_context_inheritance,
+        reviewer_no_context_inheritance: reviewer.no_context_inheritance,
+      },
+    );
+  }
+  if (producer.execution_session_ref === reviewer.execution_session_ref) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Formal Stage Review must use a new provider session.', {
+      producer_session_ref: producer.execution_session_ref,
+      reviewer_session_ref: reviewer.execution_session_ref,
+    });
+  }
+  const producerEnvelope = persistedQualityEnvelope(producer);
+  stageQualityAttemptOutcomeFromEnvelope({
+    attemptRole: normalizeStageQualityAttemptRole(producer.attempt_role),
+    envelope: producerEnvelope,
+  });
+  const reviewerEvidence = persistedReviewerOutcome(producer, reviewer, reviewerRole);
+  const expectedVerdict = stageReviewVerdictForOutcome(reviewerEvidence.outcome);
+  if (input.verdict !== expectedVerdict) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Requested review receipt verdict does not match the persisted reviewer outcome.',
+      { reviewer_outcome: reviewerEvidence.outcome, expected_verdict: expectedVerdict, requested_verdict: input.verdict },
+    );
+  }
+  const producerArtifactRefs = persistedStringList(
+    JSON.stringify(producerEnvelope.artifact_refs ?? []),
+    'producer.route_impact.stage_quality_cycle.artifact_refs',
+  );
+  const producerArtifactHashes = persistedStringList(
+    JSON.stringify(producerEnvelope.artifact_hashes ?? []),
+    'producer.route_impact.stage_quality_cycle.artifact_hashes',
+  );
+  const reviewedArtifactRefs = persistedStringList(
+    reviewer.input_artifact_refs_json,
+    'reviewer.input_artifact_refs',
+  );
+  const reviewedArtifactHashes = persistedStringList(
+    reviewer.reviewed_artifact_hashes_json,
+    'reviewer.reviewed_artifact_hashes',
+  );
+  if (
+    producerArtifactRefs.length === 0
+    || producerArtifactRefs.length !== producerArtifactHashes.length
+    || !exactStringList(producerArtifactRefs, reviewedArtifactRefs)
+    || !exactStringList(producerArtifactHashes, reviewedArtifactHashes)
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Review receipt artifact refs and hashes must exactly match the persisted producer output and reviewer input.',
+      {
+        producer_artifact_refs: producerArtifactRefs,
+        producer_artifact_hashes: producerArtifactHashes,
+        reviewer_artifact_refs: reviewedArtifactRefs,
+        reviewer_artifact_hashes: reviewedArtifactHashes,
+      },
+    );
+  }
+  const producerRubricRefs = persistedStringList(producer.quality_rubric_refs_json, 'producer.quality_rubric_refs');
+  const reviewerRubricRefs = persistedStringList(reviewer.quality_rubric_refs_json, 'reviewer.quality_rubric_refs');
+  const requestedRubricRefs = input.rubricRefs.map((ref) => ref.trim());
+  if (
+    producerRubricRefs.length === 0
+    || !exactStringList(producerRubricRefs, reviewerRubricRefs)
+    || !exactStringList(producerRubricRefs, requestedRubricRefs)
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Review receipt rubric refs must exactly match producer, reviewer, and controller request.',
+      {
+        producer_rubric_refs: producerRubricRefs,
+        reviewer_rubric_refs: reviewerRubricRefs,
+        requested_rubric_refs: requestedRubricRefs,
+      },
+    );
+  }
+  return {
+    producer,
+    reviewer,
+    reviewedArtifactRefs,
+    reviewedArtifactHashes,
+    requestedRubricRefs,
+    reviewerRole,
+    reviewerEvidence,
+  };
+}
+
+export function materializePersistedStageReviewReceipt(
+  db: DatabaseSync,
+  input: PersistedStageReviewReceiptInput,
+): StageReviewReceipt {
+  const persisted = persistedStageReviewReceiptInputs(db, input);
   const receipt: StageReviewReceipt = {
     surface_kind: 'opl_stage_review_receipt',
     version: 'stage-review-receipt.v1',
-    stage_run_id: reviewer.stage_run_id ?? producer.stage_run_id ?? 'unknown-stage-run',
-    quality_cycle_id: reviewer.quality_cycle_id ?? producer.quality_cycle_id ?? 'unknown-quality-cycle',
-    producer_attempt_ref: `opl://stage_attempts/${producer.stage_attempt_id}`,
-    reviewer_attempt_ref: `opl://stage_attempts/${reviewer.stage_attempt_id}`,
-    producer_session_ref: producer.execution_session_ref,
-    reviewer_session_ref: reviewer.execution_session_ref,
+    stage_run_id: persisted.reviewer.stage_run_id!,
+    quality_cycle_id: persisted.reviewer.quality_cycle_id!,
+    producer_attempt_ref: `opl://stage_attempts/${persisted.producer.stage_attempt_id}`,
+    reviewer_attempt_ref: `opl://stage_attempts/${persisted.reviewer.stage_attempt_id}`,
+    producer_session_ref: persisted.producer.execution_session_ref!,
+    reviewer_session_ref: persisted.reviewer.execution_session_ref!,
     no_context_inheritance: true,
-    reviewed_artifact_refs: artifactRefs.filter((entry): entry is string => typeof entry === 'string'),
-    reviewed_artifact_hashes: artifactHashes.filter((entry): entry is string => typeof entry === 'string'),
-    rubric_refs: input.rubricRefs,
+    reviewed_artifact_refs: persisted.reviewedArtifactRefs,
+    reviewed_artifact_hashes: persisted.reviewedArtifactHashes,
+    rubric_refs: persisted.requestedRubricRefs,
     verdict: input.verdict,
+    finding_lineage: {
+      review_kind: persisted.reviewerRole === 'reviewer' ? 'initial_review' : 'finding_closure_review',
+      finding_ids: persisted.reviewerEvidence.findings.map((finding) => finding.finding_id),
+      findings_sha256: canonicalSha256(persisted.reviewerEvidence.findings),
+      repair_map_sha256: persisted.reviewerRole === 're_reviewer'
+        ? canonicalSha256(persisted.reviewerEvidence.repairMap)
+        : null,
+      re_review_result_sha256: persisted.reviewerEvidence.reReview
+        ? canonicalSha256(persisted.reviewerEvidence.reReview)
+        : null,
+    },
   };
   validateIndependentStageReviewReceipt(receipt);
   return receipt;
+}
+
+export function validatePersistedStageReviewIsolation(db: DatabaseSync, input: PersistedStageReviewReceiptInput) {
+  return validateIndependentStageReviewReceipt(materializePersistedStageReviewReceipt(db, input));
 }
 
 export function stageAttemptSignalToPayload(row: StageAttemptSignalRow) {

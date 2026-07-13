@@ -24,7 +24,8 @@
         "completion_judgment_owner": "domain_stage",
         "closeout_packet_required": false,
         "raw_artifact_sufficient_for_progress": true,
-        "next_stage_transition_owner": "codex_cli",
+        "semantic_route_decision_owner": "decisive_codex_attempt",
+        "stage_transition_materialization_owner": "opl_stage_run_controller",
         "required_closeout_outcomes": [
           "completed_and_continue",
           "completed_with_quality_debt",

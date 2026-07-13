@@ -1051,7 +1051,8 @@ test('stage manifest compiler honors an explicit v2 version with canonical Frame
   assert.equal(completionPolicy.owner, 'one-person-lab');
   assert.equal(completionPolicy.closeout_packet_required, false);
   assert.equal(completionPolicy.raw_artifact_sufficient_for_progress, true);
-  assert.equal(completionPolicy.next_stage_transition_owner, 'codex_cli');
+  assert.equal(completionPolicy.semantic_route_decision_owner, 'decisive_codex_attempt');
+  assert.equal(completionPolicy.stage_transition_materialization_owner, 'opl_stage_run_controller');
   assert.equal(userStageLogContract.surface_kind, 'opl_standard_agent_user_stage_log_contract');
   assert.equal(userStageLogContract.owner, 'one-person-lab');
   assert.deepEqual(stage.stage_contract?.receipt_schema_refs, [{

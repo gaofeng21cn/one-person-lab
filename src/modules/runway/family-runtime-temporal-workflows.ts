@@ -10,6 +10,7 @@ import {
   upsertSearchAttributes,
 } from '@temporalio/workflow';
 
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import type {
   TemporalStageAttemptOperatorUpdateReceipt,
   TemporalStageAttemptSignalPayload,
@@ -27,12 +28,20 @@ import type {
   TemporalSchedulerTickWorkflowState,
 } from './family-runtime-temporal.ts';
 import {
+  classifyStageQualityReReviewBudget,
   evaluateStageQualityFindingClosure,
+  normalizeStageQualityArtifactIdentity,
+  stageQualityAttemptOutcomeFromEnvelope,
+  stageReviewVerdictForOutcome,
+  validateInitialStageQualityReviewOutcome,
   validateStageQualityFindings,
   validateStageQualityRepairMap,
+  validateStageQualityReReviewOutcome,
+  validateStageQualityReviewHardStopOutcome,
   type StageQualityAttemptRole,
   type StageQualityFinding,
   type StageQualityFindingClosure,
+  type StageQualityOutcome,
   type StageQualityRepairMapEntry,
   type StageQualityReReviewResult,
   type StageReviewReceipt,
@@ -136,6 +145,13 @@ function asRecordList(value: unknown) {
   return Array.isArray(value)
     ? value.filter((entry): entry is Record<string, unknown> => typeof entry === 'object' && entry !== null && !Array.isArray(entry))
     : [];
+}
+
+function requiredRecordList(value: unknown, field: string) {
+  if (!Array.isArray(value)) {
+    throw new FrameworkContractError('contract_shape_invalid', `${field} must be an array.`, { field });
+  }
+  return asRecordList(value);
 }
 
 function asRecord(value: unknown) {
@@ -564,11 +580,44 @@ function qualityArtifactIdentity(
     artifactIdentityReceiptRefs: string[];
   },
 ) {
-  const artifactRefs = asStringList(value.artifact_refs);
-  const artifactHashes = asStringList(value.artifact_hashes);
-  if (artifactRefs.length === 0 && inputIdentity) return inputIdentity;
-  if (artifactRefs.length === 0 || artifactRefs.length !== artifactHashes.length) {
-    throw new Error('Stage quality attempt must return equal non-empty artifact_refs and artifact_hashes.');
+  const declaredArtifactRefs = Array.isArray(value.artifact_refs) ? value.artifact_refs : [];
+  const declaredArtifactHashes = Array.isArray(value.artifact_hashes) ? value.artifact_hashes : [];
+  if (declaredArtifactRefs.length === 0 && declaredArtifactHashes.length === 0 && inputIdentity) {
+    return inputIdentity;
+  }
+  const closeout = asRecord(state.closeout_packet);
+  const closeoutAuthority = asRecord(closeout.authority_boundary);
+  const rawArtifactIdentity = closeoutAuthority.opl === 'raw_executor_output_progress_envelope_only'
+    ? asRecordList(closeout.closeout_ref_metadata)
+      .filter((entry) => entry.ref_kind === 'raw_executor_output')
+      .map((entry) => ({
+        ref: typeof entry.ref === 'string' ? entry.ref : typeof entry.uri === 'string' ? entry.uri : null,
+        hash: typeof entry.sha256 === 'string' ? entry.sha256 : null,
+      }))
+      .filter((entry): entry is { ref: string; hash: string } => Boolean(entry.ref && entry.hash))
+    : [];
+  const artifactIdentity = normalizeStageQualityArtifactIdentity({
+    artifactRefs: declaredArtifactRefs.length > 0
+      ? declaredArtifactRefs
+      : rawArtifactIdentity.map((entry) => entry.ref),
+    artifactHashes: declaredArtifactHashes.length > 0
+      ? declaredArtifactHashes
+      : rawArtifactIdentity.map((entry) => entry.hash),
+    allowEmpty: true,
+  });
+  const artifactRefs = artifactIdentity.artifact_refs;
+  const artifactHashes = artifactIdentity.artifact_hashes;
+  if (artifactRefs.length === 0) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Stage quality producer or repairer did not return a consumable artifact identity.',
+      {
+        hard_stop_class: 'zero_consumable_artifact',
+        blocked_reason: 'stage_quality_attempt_without_consumable_artifact',
+        artifact_ref_count: artifactRefs.length,
+        artifact_hash_count: artifactHashes.length,
+      },
+    );
   }
   if (
     inputIdentity
@@ -581,7 +630,6 @@ function qualityArtifactIdentity(
   }
   if (inputIdentity) return inputIdentity;
 
-  const closeout = asRecord(state.closeout_packet);
   const metadata = asRecordList(closeout.closeout_ref_metadata);
   const receiptRefs = artifactRefs.map((artifactRef, index) => {
     const entry = metadata.find((candidate) => candidate.ref === artifactRef || candidate.uri === artifactRef);
@@ -599,8 +647,8 @@ function qualityArtifactIdentity(
   };
 }
 
-function findingList(value: unknown) {
-  return validateStageQualityFindings(asRecordList(value) as StageQualityFinding[]);
+function findingList(value: unknown, field = 'findings') {
+  return validateStageQualityFindings(requiredRecordList(value, field) as StageQualityFinding[]);
 }
 
 function repairMapList(value: unknown, findings: StageQualityFinding[]) {
@@ -611,21 +659,7 @@ function repairMapList(value: unknown, findings: StageQualityFinding[]) {
 }
 
 function findingClosureList(value: unknown) {
-  return asRecordList(value) as StageQualityFindingClosure[];
-}
-
-function qualityOutcome(value: Record<string, unknown>) {
-  const outcome = typeof value.outcome === 'string' ? value.outcome : null;
-  if (
-    outcome === 'pass'
-    || outcome === 'repair_required'
-    || outcome === 'quality_debt'
-    || outcome === 'blocked'
-    || outcome === 'human_gate'
-  ) {
-    return outcome;
-  }
-  throw new Error('Stage quality attempt returned an invalid outcome.');
+  return requiredRecordList(value, 'finding_closures') as StageQualityFindingClosure[];
 }
 
 function stageRunQualityCycleId(input: TemporalStageRunWorkflowInput) {
@@ -676,29 +710,27 @@ function hasConsumableArtifact(state: TemporalStageRunWorkflowState) {
     && state.artifact_refs.length === state.artifact_hashes.length;
 }
 
-const HARD_STAGE_QUALITY_STOP_CLASSES = new Set([
-  'zero_consumable_artifact',
-  'safety_or_compliance',
-  'permission_or_credential_boundary',
-  'human_decision_required',
-  'authority_boundary_violation',
-  'stale_or_mismatched_stage_identity',
-]);
-
 function qualityFailureRef(input: TemporalStageRunWorkflowInput, reason: string) {
   return `opl://stage-runs/${encodeURIComponent(input.stage_run_id)}/quality-debt/${encodeURIComponent(reason)}`;
 }
 
-function declaredHardStop(envelope: Record<string, unknown>) {
-  return typeof envelope.hard_stop_class === 'string'
-    && HARD_STAGE_QUALITY_STOP_CLASSES.has(envelope.hard_stop_class);
+function providerRuntimeHardStop(state: TemporalStageAttemptWorkflowState) {
+  const closeout = asRecord(state.closeout_packet);
+  const authorityBoundary = asRecord(closeout.authority_boundary);
+  return closeout.activity_status === 'blocked'
+    && authorityBoundary.provider_runtime_blocker_ref_only === true
+    && asRecordList(closeout.rejected_writes).some(
+      (entry) => entry.surface_kind === 'opl_provider_runtime_typed_blocker_ref',
+    );
 }
 
-function reviewVerdictForOutcome(outcome: ReturnType<typeof qualityOutcome>): StageReviewReceipt['verdict'] {
-  if (outcome === 'pass') return 'pass';
-  if (outcome === 'repair_required') return 'repair_required';
-  if (outcome === 'quality_debt') return 'quality_debt';
-  return 'hard_stop';
+function controllerHardStopFromError(error: unknown) {
+  if (!(error instanceof FrameworkContractError)) return null;
+  const hardStopClass = error.details?.hard_stop_class;
+  const blockedReason = error.details?.blocked_reason;
+  return hardStopClass === 'zero_consumable_artifact' && typeof blockedReason === 'string'
+    ? { hardStopClass, blockedReason }
+    : null;
 }
 
 export async function StageRunWorkflow(
@@ -706,6 +738,11 @@ export async function StageRunWorkflow(
 ): Promise<TemporalStageRunWorkflowState> {
   validateWorkflowStageRunInput(input);
   const qualityCycleId = stageRunQualityCycleId(input);
+  const initialArtifactIdentity = normalizeStageQualityArtifactIdentity({
+    artifactRefs: input.artifact_refs ?? [],
+    artifactHashes: input.artifact_hashes ?? [],
+    allowEmpty: true,
+  });
   let state: TemporalStageRunWorkflowState = {
     surface_kind: 'temporal_stage_run_query',
     provider_kind: 'temporal',
@@ -723,8 +760,8 @@ export async function StageRunWorkflow(
     repair_map: [],
     finding_closures: [],
     review_receipts: [],
-    artifact_refs: asStringList(input.artifact_refs),
-    artifact_hashes: asStringList(input.artifact_hashes),
+    artifact_refs: initialArtifactIdentity.artifact_refs,
+    artifact_hashes: initialArtifactIdentity.artifact_hashes,
     artifact_identity_receipt_refs: [],
     quality_debt_refs: [],
     route_quality_debt_refs: [],
@@ -792,6 +829,18 @@ export async function StageRunWorkflow(
     return state;
   };
 
+  const applyReviewStop = (
+    hardStop: ReturnType<typeof validateStageQualityReviewHardStopOutcome>,
+  ) => {
+    state = {
+      ...state,
+      status: hardStop.outcome,
+      current_role: null,
+      blocked_reason: hardStop.blocked_reason,
+      updated_at: nowIso(),
+    };
+  };
+
   const runAttempt = async (attemptInput: {
     role: StageQualityAttemptRole;
     round: number;
@@ -814,6 +863,7 @@ export async function StageRunWorkflow(
       artifact_identity_receipt_refs: attemptInput.artifactIdentityReceiptRefs,
       findings: attemptInput.findings,
       repair_map: attemptInput.repairMap,
+      route_recommendations: state.route_recommendations,
     });
     const childInput = materialized.workflow_input;
     const result = await executeChild(StageAttemptWorkflow, {
@@ -825,15 +875,20 @@ export async function StageRunWorkflow(
       workflow_state: result,
     });
     const executionSessionRef = executionSessionRefFromAttemptState(result);
-    if (!executionSessionRef) {
-      throw new Error(`Stage quality ${attemptInput.role} Attempt did not expose an execution session identity.`);
+    if (result.status === 'completed') {
+      if (!executionSessionRef) {
+        throw new Error(`Completed Stage quality ${attemptInput.role} Attempt did not expose an execution session identity.`);
+      }
+      if (observedSessions.has(executionSessionRef)) {
+        throw new Error(`Completed Stage quality Attempt reused provider session ${executionSessionRef}.`);
+      }
+      observedSessions.add(executionSessionRef);
     }
-    if (observedSessions.has(executionSessionRef)) {
-      throw new Error(`Stage quality Attempt reused provider session ${executionSessionRef}.`);
-    }
-    observedSessions.add(executionSessionRef);
     const envelope = qualityEnvelopeFromAttempt(result);
     const reviewRole = attemptInput.role === 'reviewer' || attemptInput.role === 're_reviewer';
+    const outcome = result.status === 'completed'
+      ? stageQualityAttemptOutcomeFromEnvelope({ attemptRole: attemptInput.role, envelope })
+      : null;
     const attemptReturnedArtifactIdentity = asStringList(envelope.artifact_refs).length > 0;
     const artifactIdentity = result.status === 'completed' || (!reviewRole && attemptReturnedArtifactIdentity)
       ? qualityArtifactIdentity(
@@ -874,9 +929,11 @@ export async function StageRunWorkflow(
         artifact_hashes: artifactIdentity.artifactHashes,
         artifact_identity_receipt_refs: artifactIdentity.artifactIdentityReceiptRefs,
       }],
-      artifact_refs: artifactIdentity.artifactRefs,
-      artifact_hashes: artifactIdentity.artifactHashes,
-      artifact_identity_receipt_refs: artifactIdentity.artifactIdentityReceiptRefs,
+      artifact_refs: attemptInput.role === 'repairer' ? state.artifact_refs : artifactIdentity.artifactRefs,
+      artifact_hashes: attemptInput.role === 'repairer' ? state.artifact_hashes : artifactIdentity.artifactHashes,
+      artifact_identity_receipt_refs: attemptInput.role === 'repairer'
+        ? state.artifact_identity_receipt_refs
+        : artifactIdentity.artifactIdentityReceiptRefs,
       route_quality_debt_refs: [
         ...new Set([
           ...state.route_quality_debt_refs,
@@ -896,11 +953,15 @@ export async function StageRunWorkflow(
     if (result.status === 'human_gate') {
       state = { ...state, status: 'human_gate', current_role: null, blocked_reason: 'human_gate' };
     } else if (result.status === 'blocked' || result.status === 'failed') {
+      const closeout = asRecord(result.closeout_packet);
       const reason = typeof envelope.blocked_reason === 'string'
         ? envelope.blocked_reason
+        : typeof closeout.blocked_reason === 'string'
+          ? closeout.blocked_reason
         : `stage_quality_${attemptInput.role}_not_completed`;
+      const runtimeHardStop = providerRuntimeHardStop(result);
       const recoverableAttemptCanContinue = hasConsumableArtifact(state)
-        && !declaredHardStop(envelope)
+        && !runtimeHardStop
         && (
           (attemptInput.role === 'producer' && input.quality_policy.formal_review.required)
           || attemptInput.role === 'repairer'
@@ -912,7 +973,7 @@ export async function StageRunWorkflow(
             current_role: null,
             blocked_reason: null,
           }
-        : hasConsumableArtifact(state) && !declaredHardStop(envelope)
+        : hasConsumableArtifact(state) && !runtimeHardStop
           ? {
             ...state,
             status: 'completed_with_quality_debt',
@@ -930,12 +991,14 @@ export async function StageRunWorkflow(
     return {
       result,
       envelope,
+      outcome,
       attemptRole: attemptInput.role,
       attemptRef: materialized.attempt_ref,
       executionSessionRef,
       routeEvaluation,
       reviewedArtifactRefs: attemptInput.artifactRefs,
       reviewedArtifactHashes: attemptInput.artifactHashes,
+      artifactIdentity,
     };
   };
 
@@ -982,14 +1045,35 @@ export async function StageRunWorkflow(
     });
     parentAttemptRef = review.attemptRef;
     if (stageRunStopped(state)) return terminalize(state);
-    const initialOutcome = qualityOutcome(review.envelope);
+    const initialOutcome = review.outcome;
+    if (!initialOutcome) {
+      throw new Error('Completed initial Review Attempt did not expose a canonical quality outcome.');
+    }
+    if (initialOutcome === 'blocked' || initialOutcome === 'human_gate') {
+      const hardStop = validateStageQualityReviewHardStopOutcome({
+        outcome: initialOutcome,
+        envelope: review.envelope,
+      });
+      applyReviewStop(hardStop);
+      const hardStopReceipt = await stageQualityReviewReceiptActivity({
+        producer_attempt_ref: producer.attemptRef,
+        reviewer_attempt_ref: review.attemptRef,
+        rubric_refs: input.quality_rubric_refs,
+        verdict: stageReviewVerdictForOutcome(initialOutcome),
+      });
+      state = { ...state, review_receipts: [...state.review_receipts, hardStopReceipt] };
+      return terminalize(state);
+    }
+    let findings = validateInitialStageQualityReviewOutcome({
+      outcome: initialOutcome,
+      findings: findingList(review.envelope.findings),
+    });
     const initialReviewReceipt = await stageQualityReviewReceiptActivity({
       producer_attempt_ref: producer.attemptRef,
       reviewer_attempt_ref: review.attemptRef,
       rubric_refs: input.quality_rubric_refs,
-      verdict: reviewVerdictForOutcome(initialOutcome),
+      verdict: stageReviewVerdictForOutcome(initialOutcome),
     });
-    let findings = findingList(review.envelope.findings);
     state = { ...state, findings, review_receipts: [...state.review_receipts, initialReviewReceipt] };
     if (initialOutcome === 'pass') {
       commitTerminalRouteDecision(review);
@@ -1001,30 +1085,29 @@ export async function StageRunWorkflow(
         ...state,
         status: 'completed_with_quality_debt',
         current_role: null,
-        quality_debt_refs: asStringList(review.envelope.quality_debt_refs),
+        quality_debt_refs: [...new Set([
+          ...state.quality_debt_refs,
+          ...asStringList(review.envelope.quality_debt_refs),
+          qualityFailureRef(input, 'initial-review-quality-debt'),
+        ])],
         updated_at: nowIso(),
       });
     }
-    if (initialOutcome === 'blocked' || initialOutcome === 'human_gate') {
-      const reason = typeof review.envelope.blocked_reason === 'string'
-        ? review.envelope.blocked_reason
-        : initialOutcome;
-      const hardStop = initialOutcome === 'human_gate'
-        || declaredHardStop(review.envelope)
-        || !hasConsumableArtifact(state);
+    if (state.max_repair_rounds === 0) {
+      commitTerminalRouteDecision(review);
       return terminalize({
         ...state,
-        status: hardStop ? initialOutcome : 'completed_with_quality_debt',
+        status: 'completed_with_quality_debt',
         current_role: null,
-        blocked_reason: hardStop ? reason : null,
-        quality_debt_refs: hardStop
-          ? state.quality_debt_refs
-          : [...new Set([...state.quality_debt_refs, qualityFailureRef(input, reason)])],
+        quality_debt_refs: [...new Set([
+          ...state.quality_debt_refs,
+          ...findings.map((finding) => `quality-debt:${finding.finding_id}`),
+          qualityFailureRef(input, 'initial-review-repair-budget-exhausted'),
+        ])],
         updated_at: nowIso(),
       });
     }
 
-    let lastReReview: Awaited<ReturnType<typeof runAttempt>> | null = null;
     for (let round = 1; round <= state.max_repair_rounds; round += 1) {
       const repair = await runAttempt({
         role: 'repairer',
@@ -1038,7 +1121,13 @@ export async function StageRunWorkflow(
       parentAttemptRef = repair.attemptRef;
       if (stageRunStopped(state)) return terminalize(state);
       const repairMap = repairMapList(repair.envelope.repair_map, findings);
-      state = { ...state, repair_map: repairMap };
+      state = {
+        ...state,
+        repair_map: repairMap,
+        artifact_refs: repair.artifactIdentity.artifactRefs,
+        artifact_hashes: repair.artifactIdentity.artifactHashes,
+        artifact_identity_receipt_refs: repair.artifactIdentity.artifactIdentityReceiptRefs,
+      };
       const reReview = await runAttempt({
         role: 're_reviewer',
         round,
@@ -1049,31 +1138,72 @@ export async function StageRunWorkflow(
         findings,
         repairMap,
       });
-      lastReReview = reReview;
       parentAttemptRef = reReview.attemptRef;
       state = { ...state, repair_rounds_used: round };
       if (stageRunStopped(state)) return terminalize(state);
+      const reReviewOutcome = reReview.outcome;
+      if (!reReviewOutcome) {
+        throw new Error('Completed Re-review Attempt did not expose a canonical quality outcome.');
+      }
+      if (reReviewOutcome === 'blocked' || reReviewOutcome === 'human_gate') {
+        const hardStop = validateStageQualityReviewHardStopOutcome({
+          outcome: reReviewOutcome,
+          envelope: reReview.envelope,
+        });
+        applyReviewStop(hardStop);
+        const hardStopReceipt = await stageQualityReviewReceiptActivity({
+          producer_attempt_ref: repair.attemptRef,
+          reviewer_attempt_ref: reReview.attemptRef,
+          rubric_refs: input.quality_rubric_refs,
+          verdict: stageReviewVerdictForOutcome(reReviewOutcome),
+        });
+        state = { ...state, review_receipts: [...state.review_receipts, hardStopReceipt] };
+        return terminalize(state);
+      }
       const reReviewResult: StageQualityReReviewResult = {
         finding_closures: findingClosureList(reReview.envelope.finding_closures),
-        repair_regressions: findingList(reReview.envelope.repair_regressions),
-        critical_new_findings: findingList(reReview.envelope.critical_new_findings),
-        optional_observations: asRecordList(reReview.envelope.optional_observations) as StageQualityReReviewResult['optional_observations'],
+        repair_regressions: findingList(reReview.envelope.repair_regressions, 'repair_regressions'),
+        critical_new_findings: findingList(reReview.envelope.critical_new_findings, 'critical_new_findings'),
+        optional_observations: requiredRecordList(
+          reReview.envelope.optional_observations,
+          'optional_observations',
+        ) as StageQualityReReviewResult['optional_observations'],
       };
       const closure = evaluateStageQualityFindingClosure({ findings, repairMap, reReview: reReviewResult });
+      validateStageQualityReReviewOutcome({ outcome: reReviewOutcome, closure });
+      const budgetDisposition = classifyStageQualityReReviewBudget({
+        closure,
+        qualityRoundIndex: round,
+        maxRepairRounds: state.max_repair_rounds,
+      });
       const reReviewReceipt = await stageQualityReviewReceiptActivity({
         producer_attempt_ref: repair.attemptRef,
         reviewer_attempt_ref: reReview.attemptRef,
         rubric_refs: input.quality_rubric_refs,
-        verdict: closure.trigger_repair ? 'repair_required' : 'pass',
+        verdict: stageReviewVerdictForOutcome(reReviewOutcome),
       });
       state = {
         ...state,
         finding_closures: reReviewResult.finding_closures,
         review_receipts: [...state.review_receipts, reReviewReceipt],
       };
-      if (!closure.trigger_repair) {
+      if (reReviewOutcome === 'pass') {
         commitTerminalRouteDecision(reReview);
         return terminalize({ ...state, status: 'completed', current_role: null, updated_at: nowIso() });
+      }
+      if (reReviewOutcome === 'quality_debt') {
+        commitTerminalRouteDecision(reReview);
+        return terminalize({
+          ...state,
+          status: 'completed_with_quality_debt',
+          current_role: null,
+          quality_debt_refs: [...new Set([
+            ...state.quality_debt_refs,
+            ...asStringList(reReview.envelope.quality_debt_refs),
+            qualityFailureRef(input, 're-review-quality-debt'),
+          ])],
+          updated_at: nowIso(),
+        });
       }
       const openIds = new Set(closure.open_required_finding_ids);
       findings = [
@@ -1082,9 +1212,31 @@ export async function StageRunWorkflow(
         ...reReviewResult.critical_new_findings,
       ];
       state = { ...state, findings };
+      if (budgetDisposition === 'terminal_quality_debt') {
+        if (!hasConsumableArtifact(state)) {
+          throw new FrameworkContractError(
+            'contract_shape_invalid',
+            'Stage quality repair budget exhausted without a consumable artifact.',
+            {
+              hard_stop_class: 'zero_consumable_artifact',
+              blocked_reason: 'stage_quality_budget_exhausted_without_consumable_artifact',
+            },
+          );
+        }
+        commitTerminalRouteDecision(reReview);
+        return terminalize({
+          ...state,
+          status: 'completed_with_quality_debt',
+          current_role: null,
+          quality_debt_refs: [...new Set([
+            ...state.quality_debt_refs,
+            ...findings.map((finding) => `quality-debt:${finding.finding_id}`),
+            qualityFailureRef(input, 're-review-repair-budget-exhausted'),
+          ])],
+          updated_at: nowIso(),
+        });
+      }
     }
-
-    if (lastReReview) commitTerminalRouteDecision(lastReReview);
 
     if (state.artifact_refs.length === 0 || state.artifact_hashes.length === 0) {
       return terminalize({
@@ -1108,6 +1260,17 @@ export async function StageRunWorkflow(
       updated_at: nowIso(),
     });
   } catch (error) {
+    if (stageRunStopped(state)) return terminalize(state);
+    const hardStop = controllerHardStopFromError(error);
+    if (hardStop && !hasConsumableArtifact(state)) {
+      return terminalize({
+        ...state,
+        status: 'blocked',
+        current_role: null,
+        blocked_reason: hardStop.blockedReason,
+        updated_at: nowIso(),
+      });
+    }
     const reason = error instanceof Error ? error.message : String(error);
     return terminalize(hasConsumableArtifact(state)
       ? {

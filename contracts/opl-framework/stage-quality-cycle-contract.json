@@ -39,6 +39,48 @@
     "repairer",
     "re_reviewer"
   ],
+  "attempt_outcome_contract": {
+    "surface": "route_impact.stage_quality_cycle.outcome",
+    "outcome_required_for_completed_roles": [
+      "reviewer",
+      "re_reviewer"
+    ],
+    "outcome_forbidden_for_roles": [
+      "producer",
+      "repairer"
+    ],
+    "canonical_values": [
+      "pass",
+      "repair_required",
+      "quality_debt",
+      "blocked",
+      "human_gate"
+    ],
+    "attempt_verdict_field_forbidden": true,
+    "receipt_verdict_is_controller_generated": true,
+    "role_required_fields": {
+      "producer": [
+        "artifact_refs",
+        "artifact_hashes"
+      ],
+      "reviewer": [
+        "outcome",
+        "findings"
+      ],
+      "repairer": [
+        "repair_map",
+        "artifact_refs",
+        "artifact_hashes"
+      ],
+      "re_reviewer": [
+        "outcome",
+        "finding_closures",
+        "repair_regressions",
+        "critical_new_findings",
+        "optional_observations"
+      ]
+    }
+  },
   "terminology": {
     "in_thread_refinement": "Non-authoritative self-check and revision inside one provider thread. It is not Stage Review and cannot create a review receipt.",
     "stage_review": "A new reviewer StageAttempt and provider thread under the same StageRun, consuming only declared refs and hashes.",
@@ -56,6 +98,8 @@
     "protocol_closeout_resume_consumes_quality_budget": false,
     "budget_exhaustion_with_consumable_artifact": "completed_with_quality_debt",
     "budget_exhaustion_without_consumable_artifact": "hard_stop",
+    "repair_failure_with_prior_consumable_artifact": "completed_with_quality_debt",
+    "literal_zero_consumable_artifact": "hard_stop",
     "same_thread_refinement_can_close_review": false
   },
   "stage_run_controller": {
@@ -75,6 +119,10 @@
   },
   "cross_stage_route_selection": {
     "stage_run_controller_owns_child_attempt_topology_only": true,
+    "semantic_route_decision_owner": "decisive_codex_attempt",
+    "stage_transition_materialization_owner": "opl_stage_run_controller",
+    "decisive_codex_attempt_can_write_stage_current_pointer": false,
+    "decisive_codex_attempt_can_materialize_stage_transition": false,
     "opl_transition_approval_or_rejection_authority": false,
     "opl_domain_semantic_route_judgment_authority": false,
     "opl_route_output_abi_validation_required": true,
@@ -117,11 +165,13 @@
       "route_output_shape_invalid",
       "legacy_terminal_route_field_present",
       "target_stage_not_declared",
+      "producer_or_repairer_writes_reviewer_only_outcome",
       "hard_stop_attempt_writes_terminal_decision",
       "review_or_re_review_not_terminal"
     ],
     "invalid_route_output_is_rejected_without_discarding_consumable_progress": true,
     "repair_required_review_may_select_terminal_route": false,
+    "repair_required_review_or_re_review_may_select_terminal_route_after_budget_exhaustion": true,
     "hard_stop_attempt_may_select_terminal_route": false,
     "declared_default_progression_resolution": [
       "action_stage_route.required_stage_refs_order",
@@ -186,7 +236,7 @@
     "codex_subagent_role": "attempt_internal_optional_helper_not_opl_stage_or_attempt"
   },
   "context_isolation": {
-    "fresh_session_required_for_roles": [
+    "fresh_session_required_for_completed_roles": [
       "producer",
       "reviewer",
       "repairer",
@@ -214,7 +264,8 @@
       "source_refs_and_fingerprint",
       "quality_rubric_refs",
       "necessary_artifact_lineage_refs",
-      "prior_finding_refs_and_acceptance_criteria_for_re_review"
+      "prior_finding_refs_and_acceptance_criteria_for_re_review",
+      "validated_prior_route_recommendations_with_attempt_and_evidence_lineage"
     ],
     "forbidden_context": [
       "producer_conversation_history",
@@ -243,16 +294,59 @@
       "reviewed_artifact_refs",
       "reviewed_artifact_hashes",
       "rubric_refs",
-      "verdict"
+      "verdict",
+      "finding_lineage"
     ],
     "reviewed_hash_must_match_current_artifact": true,
     "producer_and_repairer_identity_source": "typed_closeout_ref_metadata_sha256_owned_by_domain",
     "producer_and_repairer_artifact_identity_receipt_refs_required_before_formal_review": true,
     "reviewed_artifact_ref_hash_cardinality_must_match": true,
     "no_context_inheritance_required": true,
-    "same_model_different_session_allowed": true
+    "same_model_different_session_allowed": true,
+    "controller_outcome_to_receipt_verdict": {
+      "pass": "pass",
+      "repair_required": "repair_required",
+      "quality_debt": "quality_debt",
+      "blocked": "hard_stop",
+      "human_gate": "hard_stop"
+    },
+    "allowed_attempt_pairs": [
+      "producer(round_0)->reviewer(round_0)",
+      "repairer(round_n)->re_reviewer(round_n)"
+    ],
+    "persisted_truth_validation_required": [
+      "same_domain_stage_stage_run_and_quality_cycle",
+      "exact_parent_attempt_ref_role_and_round",
+      "both_attempts_completed",
+      "both_attempts_no_context_inheritance_true",
+      "distinct_nonempty_execution_sessions",
+      "producer_output_artifact_refs_and_hashes_equal_reviewer_inputs",
+      "producer_reviewer_and_controller_rubric_refs_equal",
+      "requested_receipt_verdict_matches_reviewer_canonical_outcome"
+    ],
+    "finding_lineage_binding": {
+      "canonicalization": "canonical_json_sorted_object_keys",
+      "digest": "sha256",
+      "initial_review_binds": [
+        "full_findings_body"
+      ],
+      "finding_closure_review_binds": [
+        "full_prior_findings_body",
+        "full_repair_map_body",
+        "full_re_review_result_body"
+      ],
+      "repair_map_must_equal_persisted_repairer_output": true,
+      "finding_body_must_equal_repairer_and_re_reviewer_inputs": true,
+      "id_only_synthetic_finding_or_repair_map_forbidden": true
+    }
   },
   "finding_closure_contract": {
+    "initial_outcome_consistency": {
+      "repair_required_requires_at_least_one_required_finding": true,
+      "pass_forbids_open_required_findings": true,
+      "quality_debt_forbids_open_required_findings": true,
+      "blocked_or_human_gate_requires_validated_hard_stop_before_receipt": true
+    },
     "initial_finding_required_fields": [
       "finding_id",
       "severity",
@@ -283,7 +377,22 @@
       "repair_regression",
       "critical_new_finding"
     ],
-    "ordinary_new_suggestion_policy": "optional_observation_or_quality_debt_only_cannot_reopen_loop",
+    "ordinary_new_suggestion_policy": "optional_observations_do_not_trigger_repair_and_are_compatible_with_pass_or_quality_debt",
+    "repair_trigger_finding_rules": {
+      "repair_regressions_require_required_true": true,
+      "critical_new_findings_require_required_true": true,
+      "finding_ids_are_unique_across_prior_regression_and_critical_new_collections": true
+    },
+    "re_review_outcome_consistency": {
+      "open_required_finding_regression_or_critical_new_finding_requires": "repair_required",
+      "repair_required_requires_a_repair_trigger": true,
+      "pass_requires_closed_required_findings": true,
+      "optional_observations_do_not_trigger_repair": true,
+      "quality_debt_requires_closed_findings": true,
+      "blocked_and_human_gate_require_canonical_hard_stop_class_and_owner_ref_before_receipt": true,
+      "repair_required_continues_only_while_budget_remains": true,
+      "repair_required_at_budget_exhaustion_terminalizes_consumable_artifact_with_quality_debt": true
+    },
     "re_reviewer_must_use_fresh_attempt_and_session": true
   },
   "risk_tiers": {

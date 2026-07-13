@@ -137,6 +137,7 @@ Close prior findings against the repaired artifact.
         openai: { tool_name: 'mas_draft' },
         ai_sdk: { tool_name: 'mas_draft' },
       },
+      authority_boundary: {},
     }],
     notes: [],
   });
@@ -298,9 +299,9 @@ test('pack-bound CLI launch persists isolated review attempts and terminal quali
         domain_ready_verdict: 'domain_gate_pending',
         route_impact: {
           stage_quality_cycle: {
-            outcome: 'pass',
             artifact_refs: [artifactRef],
             artifact_hashes: [artifactHash],
+            ...(role === 'reviewer' ? { outcome: 'pass', findings: [] } : {}),
           },
         },
         closeout_packet_surface_kind: 'domain_stage_closeout_packet',

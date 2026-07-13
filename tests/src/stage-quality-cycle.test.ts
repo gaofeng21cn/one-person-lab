@@ -10,8 +10,12 @@ import {
   classifyCodexSessionContinuation,
   evaluateStageQualityFindingClosure,
   initialStageQualityCycleState,
+  normalizeStageQualityArtifactIdentity,
   normalizeStageQualityCyclePolicy,
   reduceStageQualityCycleState,
+  stageQualityAttemptOutcomeFromEnvelope,
+  STAGE_QUALITY_OUTCOMES,
+  validateInitialStageQualityReviewOutcome,
   validateIndependentStageReviewReceipt,
 } from '../../src/modules/stagecraft/stage-quality-cycle.ts';
 import { buildFamilyStageConformanceReview } from '../../src/modules/stagecraft/family-stage-conformance.ts';
@@ -38,12 +42,59 @@ import {
   stageRunSpecSha256,
   type StageRunImmutableSpec,
 } from '../../src/modules/runway/family-runtime-stage-run-identity.ts';
+import { buildStageQualityContextManifestRef } from '../../src/modules/runway/family-runtime-stage-quality-context-manifest.ts';
 import { OFFICIAL_KNOWLEDGE_DELIVERABLE_QUALITY_PROFILE } from '../../src/modules/pack/standard-agent-stage-manifest.ts';
 import {
   STANDARD_AGENT_REGISTRY,
 } from '../../src/kernel/standard-agent-registry.ts';
 
 const repoRoot = path.resolve(import.meta.dirname, '../..');
+
+function qualityContextBinding(input: {
+  role: 'producer' | 'reviewer' | 'repairer' | 're_reviewer';
+  stageRunId: string;
+  qualityCycleId: string;
+  rubricRefs: string[];
+  artifactRefs?: string[];
+  artifactHashes?: string[];
+  priorFindingRefs?: string[];
+  repairMapRefs?: string[];
+}) {
+  const artifactIdentity = {
+    artifact_refs: input.artifactRefs ?? [],
+    artifact_hashes: input.artifactHashes ?? [],
+  };
+  const contextManifest = input.role === 'reviewer' || input.role === 're_reviewer'
+    ? buildStageReviewContextManifest({
+        stageRunId: input.stageRunId,
+        qualityCycleId: input.qualityCycleId,
+        reviewerAttemptRole: input.role,
+        artifactRefs: artifactIdentity.artifact_refs,
+        artifactHashes: artifactIdentity.artifact_hashes,
+        qualityRubricRefs: input.rubricRefs,
+        priorFindingRefs: input.priorFindingRefs,
+        repairMapRefs: input.repairMapRefs,
+      })
+    : {
+        surface_kind: 'opl_stage_quality_attempt_context_manifest',
+        version: 'stage-quality-attempt-context-manifest.v1',
+        stage_run_id: input.stageRunId,
+        quality_cycle_id: input.qualityCycleId,
+        attempt_role: input.role,
+        stage_goal_refs: [],
+        source_refs: [],
+        lineage_refs: [],
+        quality_rubric_refs: input.rubricRefs,
+        prior_finding_refs: input.priorFindingRefs ?? [],
+        repair_map_refs: input.repairMapRefs ?? [],
+        ...artifactIdentity,
+        no_context_inheritance: true,
+      };
+  return {
+    contextManifest,
+    contextManifestRef: buildStageQualityContextManifestRef(contextManifest),
+  };
+}
 
 test('official quality profile is explicit without adding per-agent registry policy', () => {
   const bound = STANDARD_AGENT_REGISTRY
@@ -58,7 +109,11 @@ test('official quality profile is explicit without adding per-agent registry pol
   ), 'utf8'));
   assert.equal(contract.terminology.in_thread_refinement.includes('not Stage Review'), true);
   assert.equal(contract.policy.protocol_closeout_resume_consumes_quality_budget, false);
+  assert.equal(contract.policy.repair_failure_with_prior_consumable_artifact, 'completed_with_quality_debt');
+  assert.equal(contract.policy.literal_zero_consumable_artifact, 'hard_stop');
   assert.deepEqual(contract.stage_attempt_roles, ['producer', 'reviewer', 'repairer', 're_reviewer']);
+  assert.deepEqual(contract.attempt_outcome_contract.canonical_values, STAGE_QUALITY_OUTCOMES);
+  assert.equal(contract.attempt_outcome_contract.attempt_verdict_field_forbidden, true);
   assert.equal(contract.stage_run_controller.maximum_attempt_instances, 8);
   assert.equal(contract.cross_stage_route_selection.primary_only_decisive_attempt_role, 'producer');
   assert.deepEqual(
@@ -78,6 +133,7 @@ test('official quality profile is explicit without adding per-agent registry pol
     'route_output_shape_invalid',
     'legacy_terminal_route_field_present',
     'target_stage_not_declared',
+    'producer_or_repairer_writes_reviewer_only_outcome',
     'hard_stop_attempt_writes_terminal_decision',
     'review_or_re_review_not_terminal',
   ]);
@@ -133,6 +189,29 @@ test('review context manifest permits exact refs and forbids conversation inheri
   assert.deepEqual(manifest.artifact_refs, ['artifact:deck-v1']);
 });
 
+test('artifact identity preserves distinct refs that share the same content hash', () => {
+  const identity = normalizeStageQualityArtifactIdentity({
+    artifactRefs: ['artifact:copy-a', 'artifact:copy-b'],
+    artifactHashes: ['sha256:shared', 'sha256:shared'],
+  });
+  assert.deepEqual(identity, {
+    artifact_refs: ['artifact:copy-a', 'artifact:copy-b'],
+    artifact_hashes: ['sha256:shared', 'sha256:shared'],
+  });
+  assert.doesNotThrow(() => buildStageReviewContextManifest({
+    stageRunId: 'stage-run:shared-hash',
+    qualityCycleId: 'quality-cycle:shared-hash',
+    reviewerAttemptRole: 'reviewer',
+    artifactRefs: identity.artifact_refs,
+    artifactHashes: identity.artifact_hashes,
+    qualityRubricRefs: ['rubric:quality'],
+  }));
+  assert.throws(() => normalizeStageQualityArtifactIdentity({
+    artifactRefs: ['artifact:duplicate', 'artifact:duplicate'],
+    artifactHashes: ['sha256:v1', 'sha256:v2'],
+  }), /artifact_refs contains a duplicate id/);
+});
+
 test('formal review rejects shared provider sessions even when the same model is allowed', () => {
   assert.throws(() => validateIndependentStageReviewReceipt({
     surface_kind: 'opl_stage_review_receipt',
@@ -148,6 +227,13 @@ test('formal review rejects shared provider sessions even when the same model is
     reviewed_artifact_hashes: ['sha256:v1'],
     rubric_refs: ['rubric:quality'],
     verdict: 'pass',
+    finding_lineage: {
+      review_kind: 'initial_review',
+      finding_ids: [],
+      findings_sha256: `sha256:${'0'.repeat(64)}`,
+      repair_map_sha256: null,
+      re_review_result_sha256: null,
+    },
   }), (error) => error instanceof FrameworkContractError
     && /new provider session/.test(error.message));
 });
@@ -211,7 +297,104 @@ test('re-review closes stable findings and does not reopen the loop for optional
     },
   });
   assert.equal(closure.trigger_repair, false);
-  assert.equal(closure.optional_observations_are_quality_debt_only, true);
+  assert.equal(closure.optional_observations_do_not_trigger_repair, true);
+  assert.deepEqual(closure.optional_observation_ids, ['observation:wording']);
+});
+
+test('initial reviewer outcome agrees with required finding state', () => {
+  const requiredFinding = {
+    finding_id: 'finding:required',
+    severity: 'major' as const,
+    required: true,
+    evidence_refs: ['evidence:required'],
+    repair_expectation: 'Repair the required finding.',
+  };
+  assert.throws(() => validateInitialStageQualityReviewOutcome({
+    outcome: 'repair_required',
+    findings: [],
+  }), /requires at least one required finding/);
+  for (const outcome of ['pass', 'quality_debt'] as const) {
+    assert.throws(() => validateInitialStageQualityReviewOutcome({
+      outcome,
+      findings: [requiredFinding],
+    }), /cannot carry an open required finding/);
+  }
+  assert.deepEqual(validateInitialStageQualityReviewOutcome({
+    outcome: 'quality_debt',
+    findings: [{ ...requiredFinding, finding_id: 'finding:optional', required: false }],
+  }).map((finding) => finding.finding_id), ['finding:optional']);
+});
+
+test('producer and repairer cannot return reviewer outcome or receipt verdict fields', () => {
+  for (const attemptRole of ['producer', 'repairer'] as const) {
+    assert.equal(stageQualityAttemptOutcomeFromEnvelope({ attemptRole, envelope: {} }), null);
+    for (const forbiddenField of ['outcome', 'verdict'] as const) {
+      assert.throws(() => stageQualityAttemptOutcomeFromEnvelope({
+        attemptRole,
+        envelope: { [forbiddenField]: 'pass' },
+      }), /must not return outcome or verdict/);
+    }
+  }
+});
+
+test('repair-trigger findings are required and unique across closure collections', () => {
+  const finding = {
+    finding_id: 'finding:prior',
+    severity: 'major' as const,
+    required: true,
+    evidence_refs: ['evidence:prior'],
+    repair_expectation: 'Close the prior finding.',
+  };
+  const base = {
+    findings: [finding],
+    repairMap: [{
+      finding_id: finding.finding_id,
+      repair_status: 'repaired' as const,
+      changed_artifact_refs: ['artifact:v2'],
+      repair_evidence_refs: ['diff:v2'],
+    }],
+  };
+  const closed = [{
+    finding_id: finding.finding_id,
+    status: 'closed' as const,
+    evidence_refs: ['evidence:closed'],
+  }];
+  const regression = {
+    ...finding,
+    finding_id: 'finding:regression',
+    required: false,
+  };
+  assert.throws(() => evaluateStageQualityFindingClosure({
+    ...base,
+    reReview: {
+      finding_closures: closed,
+      repair_regressions: [regression],
+      critical_new_findings: [],
+      optional_observations: [],
+    },
+  }), /repair_regressions.*required=true/);
+  assert.throws(() => evaluateStageQualityFindingClosure({
+    ...base,
+    reReview: {
+      finding_closures: closed,
+      repair_regressions: [],
+      critical_new_findings: [{
+        ...regression,
+        finding_id: 'finding:critical-new',
+        severity: 'critical',
+      }],
+      optional_observations: [],
+    },
+  }), /critical_new_findings.*required=true/);
+  assert.throws(() => evaluateStageQualityFindingClosure({
+    ...base,
+    reReview: {
+      finding_closures: closed,
+      repair_regressions: [{ ...finding }],
+      critical_new_findings: [],
+      optional_observations: [],
+    },
+  }), /finding_ids_across_prior_regression_and_critical_new_collections contains a duplicate id/);
 });
 
 test('re-review triggers another repair only for open required findings, regressions, or critical findings', () => {
@@ -283,8 +466,12 @@ test('formal reviewer prompt binds isolated context and exact artifact identity'
   assert.match(prompt, /terminal reviewer or re-reviewer/);
   assert.match(prompt, /decisive Codex Attempt for cross-Stage semantic route selection/);
   assert.match(prompt, /progress-terminal decisive Attempt/);
-  assert.match(prompt, /A hard stop returns the applicable typed blocker or human-gate closeout/);
+  assert.match(prompt, /blocked or human_gate reviewer outcome must return blocked_reason, a canonical hard_stop_class/);
   assert.match(prompt, /stage_route_contract is controller-owned validation metadata/);
+  assert.match(prompt, /stage_quality_cycle\.outcome, with exactly one of: pass, repair_required, quality_debt, blocked, human_gate/);
+  assert.match(prompt, /Required route_impact\.stage_quality_cycle fields for reviewer: outcome, findings/);
+  assert.match(prompt, /Review receipt verdict is generated by the OPL StageRun controller/);
+  assert.match(prompt, /cannot write a Stage current pointer or materialize a Stage transition/);
 });
 
 test('every quality-cycle role launches through a fresh codex exec command', () => {
@@ -337,7 +524,6 @@ test('persisted reviewer attempt proves separate session and isolated context', 
       qualityCycleId: 'quality-cycle:rca/artifact-creation',
       qualityRolePromptRef: 'prompt:quality-role',
       qualityRubricRefs: ['rubric:visual'],
-      contextManifestRef: 'manifest:quality-context',
       noContextInheritance: true,
     };
     const producer = createStageAttempt(db, {
@@ -345,6 +531,12 @@ test('persisted reviewer attempt proves separate session and isolated context', 
       attemptRole: 'producer',
       qualityRoundIndex: 0,
       newAttempt: true,
+      ...qualityContextBinding({
+        role: 'producer',
+        stageRunId: shared.stageRunId,
+        qualityCycleId: shared.qualityCycleId,
+        rubricRefs: shared.qualityRubricRefs,
+      }),
     }).attempt;
     const reviewer = createStageAttempt(db, {
       ...shared,
@@ -353,9 +545,16 @@ test('persisted reviewer attempt proves separate session and isolated context', 
       parentAttemptRef: `opl://stage_attempts/${producer.stage_attempt_id}`,
       inputArtifactRefs: ['artifact:deck-v1'],
       reviewedArtifactHashes: ['sha256:deck-v1'],
-      contextManifestRef: 'manifest:review-context-v1',
       noContextInheritance: true,
       newAttempt: true,
+      ...qualityContextBinding({
+        role: 'reviewer',
+        stageRunId: shared.stageRunId,
+        qualityCycleId: shared.qualityCycleId,
+        rubricRefs: shared.qualityRubricRefs,
+        artifactRefs: ['artifact:deck-v1'],
+        artifactHashes: ['sha256:deck-v1'],
+      }),
     }).attempt;
     bindStageAttemptExecutionSession(db, {
       stageAttemptId: producer.stage_attempt_id,
@@ -365,6 +564,19 @@ test('persisted reviewer attempt proves separate session and isolated context', 
       stageAttemptId: reviewer.stage_attempt_id,
       executionSessionRef: 'codex://threads/reviewer',
     });
+    db.prepare(`
+      UPDATE stage_attempts SET status = 'completed', route_impact_json = ?
+      WHERE stage_attempt_id = ?
+    `).run(JSON.stringify({
+      stage_quality_cycle: {
+        artifact_refs: ['artifact:deck-v1'],
+        artifact_hashes: ['sha256:deck-v1'],
+      },
+    }), producer.stage_attempt_id);
+    db.prepare(`
+      UPDATE stage_attempts SET status = 'completed', route_impact_json = ?
+      WHERE stage_attempt_id = ?
+    `).run(JSON.stringify({ stage_quality_cycle: { outcome: 'pass', findings: [] } }), reviewer.stage_attempt_id);
     assert.deepEqual(validatePersistedStageReviewIsolation(db, {
       producerAttemptId: producer.stage_attempt_id,
       reviewerAttemptId: reviewer.stage_attempt_id,
@@ -395,12 +607,17 @@ test('persisted reviewer isolation rejects a shared producer session', () => {
       newAttempt: true,
       qualityRolePromptRef: 'prompt:quality-role',
       qualityRubricRefs: ['rubric:visual'],
-      contextManifestRef: 'manifest:quality-context',
       noContextInheritance: true,
     };
     const producer = createStageAttempt(db, {
       ...shared,
       attemptRole: 'producer',
+      ...qualityContextBinding({
+        role: 'producer',
+        stageRunId: shared.stageRunId,
+        qualityCycleId: shared.qualityCycleId,
+        rubricRefs: shared.qualityRubricRefs,
+      }),
     }).attempt;
     const reviewer = createStageAttempt(db, {
       ...shared,
@@ -408,8 +625,15 @@ test('persisted reviewer isolation rejects a shared producer session', () => {
       parentAttemptRef: `opl://stage_attempts/${producer.stage_attempt_id}`,
       inputArtifactRefs: ['artifact:deck-v1'],
       reviewedArtifactHashes: ['sha256:deck-v1'],
-      contextManifestRef: 'manifest:review-context-v1',
       noContextInheritance: true,
+      ...qualityContextBinding({
+        role: 'reviewer',
+        stageRunId: shared.stageRunId,
+        qualityCycleId: shared.qualityCycleId,
+        rubricRefs: shared.qualityRubricRefs,
+        artifactRefs: ['artifact:deck-v1'],
+        artifactHashes: ['sha256:deck-v1'],
+      }),
     }).attempt;
     bindStageAttemptExecutionSession(db, {
       stageAttemptId: producer.stage_attempt_id,
@@ -419,6 +643,19 @@ test('persisted reviewer isolation rejects a shared producer session', () => {
       stageAttemptId: reviewer.stage_attempt_id,
       executionSessionRef: 'codex://threads/shared',
     });
+    db.prepare(`
+      UPDATE stage_attempts SET status = 'completed', route_impact_json = ?
+      WHERE stage_attempt_id = ?
+    `).run(JSON.stringify({
+      stage_quality_cycle: {
+        artifact_refs: ['artifact:deck-v1'],
+        artifact_hashes: ['sha256:deck-v1'],
+      },
+    }), producer.stage_attempt_id);
+    db.prepare(`
+      UPDATE stage_attempts SET status = 'completed', route_impact_json = ?
+      WHERE stage_attempt_id = ?
+    `).run(JSON.stringify({ stage_quality_cycle: { outcome: 'pass', findings: [] } }), reviewer.stage_attempt_id);
     assert.throws(() => validatePersistedStageReviewIsolation(db, {
       producerAttemptId: producer.stage_attempt_id,
       reviewerAttemptId: reviewer.stage_attempt_id,
@@ -445,9 +682,14 @@ test('Temporal terminal sync persists the observed Codex execution session ident
       attemptRole: 'producer',
       qualityRolePromptRef: 'prompt:producer',
       qualityRubricRefs: ['rubric:visual'],
-      contextManifestRef: 'manifest:producer-context',
       noContextInheritance: true,
       newAttempt: true,
+      ...qualityContextBinding({
+        role: 'producer',
+        stageRunId: 'stage-run:rca/artifact-creation',
+        qualityCycleId: 'quality-cycle:rca/artifact-creation',
+        rubricRefs: ['rubric:visual'],
+      }),
     }).attempt;
     syncStageAttemptFromTemporalTerminalObservation(db, {
       surface_kind: 'temporal_stage_attempt_query_receipt',
@@ -508,9 +750,14 @@ test('reviewer StageAttempt cannot launch without context isolation evidence', (
       attemptRole: 'producer',
       qualityRolePromptRef: 'prompt:producer',
       qualityRubricRefs: ['rubric:visual'],
-      contextManifestRef: 'context:producer',
       noContextInheritance: true,
       newAttempt: true,
+      ...qualityContextBinding({
+        role: 'producer',
+        stageRunId: 'stage-run:rca/artifact-creation',
+        qualityCycleId: 'quality-cycle:rca/artifact-creation',
+        rubricRefs: ['rubric:visual'],
+      }),
     }).attempt;
     assert.throws(() => createStageAttempt(db, {
       domainId: 'redcube',

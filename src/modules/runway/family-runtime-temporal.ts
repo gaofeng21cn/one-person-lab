@@ -605,6 +605,7 @@ export function buildTemporalStageAttemptWorkflowInput(
     quality_rubric_refs?: unknown[];
     prior_finding_refs?: unknown[];
     repair_map_refs?: unknown[];
+    quality_context?: Record<string, unknown> | null;
     quality_role_prompt_ref?: string | null;
     context_manifest_ref?: string | null;
     context_manifest?: Record<string, unknown> | null;
@@ -665,8 +666,11 @@ export function buildTemporalStageAttemptWorkflowInput(
     quality_role_prompt_ref: optionalText(attempt.quality_role_prompt_ref),
     context_manifest_ref: optionalText(attempt.context_manifest_ref),
     no_context_inheritance: attempt.no_context_inheritance ?? null,
-    quality_context: attempt.context_manifest
-      ? { context_manifest: attempt.context_manifest }
+    quality_context: attempt.context_manifest || attempt.quality_context
+      ? {
+          ...(attempt.quality_context ?? {}),
+          ...(attempt.context_manifest ? { context_manifest: attempt.context_manifest } : {}),
+        }
       : undefined,
     stage_attempt_executor_policy: optionalRecord(attempt.stage_attempt_executor_policy),
     retry_budget: attempt.retry_budget,

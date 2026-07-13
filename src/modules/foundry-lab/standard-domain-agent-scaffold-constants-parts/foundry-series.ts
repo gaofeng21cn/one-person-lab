@@ -465,7 +465,9 @@ export const FOUNDRY_AGENT_SERIES_POLICY_BUNDLE = {
       completion_judgment_owner: STANDARD_STAGE_COMPLETION_POLICY.completion_judgment_owner,
       closeout_packet_required: STANDARD_STAGE_COMPLETION_POLICY.closeout_packet_required,
       raw_artifact_sufficient_for_progress: STANDARD_STAGE_COMPLETION_POLICY.raw_artifact_sufficient_for_progress,
-      next_stage_transition_owner: STANDARD_STAGE_COMPLETION_POLICY.next_stage_transition_owner,
+      semantic_route_decision_owner: STANDARD_STAGE_COMPLETION_POLICY.semantic_route_decision_owner,
+      stage_transition_materialization_owner:
+        STANDARD_STAGE_COMPLETION_POLICY.stage_transition_materialization_owner,
       required_closeout_outcomes: STANDARD_STAGE_COMPLETION_POLICY.required_closeout_outcomes,
       accepted_closeout_ref_fields: STANDARD_STAGE_COMPLETION_POLICY.accepted_closeout_ref_fields,
     },
