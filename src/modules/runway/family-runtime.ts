@@ -18,6 +18,7 @@ import { runTemporalSchedulerCadenceCommand } from './family-runtime-scheduler.t
 import { buildFamilyRuntimeStatusPayload } from './family-runtime-status.ts';
 import {
   createStageAttempt,
+  findIdempotentStageAttempt,
   inspectStageAttempt,
   inspectStageAttemptWithCurrentProviderReadiness,
   listStageAttemptsForTask,
@@ -339,6 +340,20 @@ export async function runFamilyRuntime(
       return runFamilyRuntimeStageArtifactCommand(parsed.input);
     }
     if (parsed.mode === 'attempt_create') {
+      const existingAttempt = findIdempotentStageAttempt(db, parsed.input);
+      if (existingAttempt) {
+        return {
+          version: 'g2',
+          family_runtime_stage_attempt: {
+            surface_id: 'opl_family_runtime_stage_attempt',
+            created: false,
+            idempotent_noop: true,
+            attempt: existingAttempt,
+            stage_context_observation: null,
+            launch_invocation: null,
+          },
+        };
+      }
       const useBoundaryId = stableId('package-use', [
         parsed.input.domainId,
         parsed.input.stageId,
