@@ -15,7 +15,7 @@ OPL Framework 只持有 StageRun transport、attempt ledger、queue/provider、c
 
 ## 合法硬停
 
-只有以下边界可阻止启动下一 stage：零可读输出或 artifact 损坏不可读；权限、凭据或安全边界；identity/currentness 不匹配；不可逆外部动作；明确 human/owner authority。
+只有以下边界可阻止启动下一 stage：selected executor 不可用；权限、凭据、安全或 authority 边界；wrong-target identity/currentness 不匹配；不可逆外部动作；明确 human/owner decision。零可读输出或 artifact 损坏不可读必须物化为 failure/no-output diagnostic 并继续。
 
 这些硬停保护执行安全与身份一致性，不评价内容质量，也不选择语义路线。
 

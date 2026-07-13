@@ -176,7 +176,7 @@ Re-review 采用 finding closure，不得用普通新建议无限重开循环。
 - `Codex CLI` 的任意可读 final message、部分草稿、负结果或实际文件都构成 stage 进度。Framework 持久化 raw artifact，并派生 refs、hash、lineage、最小 progress envelope 与非阻断质量债务。
 - typed JSON closeout 仍可作为高质量 refs-only 输出，但不是 transition admission 的必要输入。格式、schema、receipt、review 或 normalizer 缺口不能触发自动 repair/redrive，也不能冻结下一 stage。
 - Codex 可选择顺序前进、重复当前 stage，或 route-back 到任一已声明 stage；静态 transition table 只验证目标是否属于声明图，不决定语义路线。
-- 只有零可消费 artifact、artifact 损坏不可读、权限/安全、identity/currentness、不可逆 mutation 或明确 human/owner authority 才能硬停止。质量债务继续阻止 ready、accepted、publication、export 等高阶声明，但不阻止交付推进。
+- 零可消费 artifact、artifact 损坏不可读、free-text、partial、negative、failed 或 no-output 都必须物化为 progress diagnostic，并允许 Codex 启动任一 declared stage。只有 executor unavailable、权限/安全/authority、wrong-target identity/currentness、不可逆 mutation 或明确 human/owner decision 才能硬停止。质量债务继续阻止 ready、accepted、publication、export 等高阶声明，但不阻止交付推进。
 
 ## 2026-07-08
 

@@ -330,7 +330,7 @@ stage_artifact_unit
 progress = any readable physical output
 ```
 
-manifest、owner answer、hash、current pointer、reviewer 或 schema 缺口都作为质量债记录，只限制 accepted/quality/export/publication/ready 声明；零可读输出、损坏不可读或硬 authority/safety/currentness/human gate 才阻止实际执行。
+manifest、owner answer、hash、current pointer、reviewer 或 schema 缺口都作为质量债记录，只限制 accepted/quality/export/publication/ready 声明；零可读输出或损坏不可读同样物化为 progress diagnostic 并继续。只有 selected executor unavailable、硬 authority/safety/permission、wrong-target identity/currentness、不可逆动作或明确 human decision 才阻止实际执行。
 
 ### 7. passive evidence ledger
 
