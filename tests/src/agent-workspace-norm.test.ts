@@ -54,7 +54,7 @@ test('workspace agent identity and supported agents derive from the standard-age
       : null;
     return {
       agent_id: entry.agent_id,
-      project_id: entry.target_domain_id,
+      project_id: entry.domain_id,
       project: entry.project,
       workspace_kind: declared?.workspace_kind ?? 'standard_agent_workspace',
       project_kind: declared?.project_kind ?? 'project',
