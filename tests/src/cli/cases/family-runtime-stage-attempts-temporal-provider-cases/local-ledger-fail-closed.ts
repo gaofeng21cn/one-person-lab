@@ -1,5 +1,7 @@
 import { spawnSync } from 'node:child_process';
 
+import { TestWorkflowEnvironment } from '@temporalio/testing';
+
 import {
   assert,
   cliPath,
@@ -20,8 +22,13 @@ function familyRuntimeEnv(stateRoot: string) {
   return { OPL_STATE_DIR: stateRoot };
 }
 
-test('family-runtime Temporal start treats a missing stage packet as nonblocking context debt', () => {
+test('family-runtime Temporal start treats a missing stage packet as nonblocking context debt', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-temporal-missing-packet-'));
+  const testEnv = await TestWorkflowEnvironment.createLocal({
+    server: {
+      searchAttributes: [],
+    },
+  });
   try {
     installRuntimePackageFixture(stateRoot, 'redcube-ai');
     const created = runCli([
@@ -53,13 +60,14 @@ test('family-runtime Temporal start treats a missing stage packet as nonblocking
         ...process.env,
         NODE_NO_WARNINGS: '1',
         OPL_STATE_DIR: stateRoot,
-        OPL_TEMPORAL_ADDRESS: '127.0.0.1:7233',
+        OPL_TEMPORAL_ADDRESS: testEnv.address,
+        OPL_TEMPORAL_NAMESPACE: testEnv.namespace ?? 'default',
         TEMPORAL_ADDRESS: '',
       },
     });
     const output = parseJsonText(started.stdout || started.stderr) as Record<string, any>;
 
-    assert.equal(started.status, 0);
+    assert.equal(started.status, 0, started.stderr);
     assert.equal(
       output.family_runtime_stage_attempt_start.surface_id,
       'opl_family_runtime_stage_attempt_start',
@@ -70,6 +78,7 @@ test('family-runtime Temporal start treats a missing stage packet as nonblocking
     );
     assert.ok(output.family_runtime_stage_attempt_start.temporal_start);
   } finally {
+    await testEnv.teardown();
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
