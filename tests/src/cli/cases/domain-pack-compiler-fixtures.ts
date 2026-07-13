@@ -81,16 +81,23 @@ function withStandardSkeleton(payload: JsonRecord, agentId: string) {
   });
 }
 
-function withActionCatalog(payload: JsonRecord, targetDomainId: string, owner: string, actionId: string) {
+function withActionCatalog(
+  payload: JsonRecord,
+  targetDomainId: string,
+  owner: string,
+  actionId: string,
+  stageId: string,
+) {
   return attachManifestSurface(payload, 'family_action_catalog', {
     surface_kind: 'family_action_catalog',
-    version: 'family-action-catalog.v1',
+    version: 'family-action-catalog.v2',
     catalog_id: `${targetDomainId.replace(/[^a-z0-9]+/gi, '_')}_action_catalog`,
     target_domain_id: targetDomainId,
     owner,
     authority_boundary: {
-      opl_role: 'descriptor_projection_only',
+      opl_role: 'projection_consumer_only',
       domain_truth_owner: owner,
+      write_policy: 'no_domain_truth_writes',
     },
     actions: [
       {
@@ -99,9 +106,9 @@ function withActionCatalog(payload: JsonRecord, targetDomainId: string, owner: s
         summary: `Run ${actionId}.`,
         owner,
         effect: 'mutating',
-        source_command: {
-          command: `${owner} ${actionId}`,
-          surface_kind: 'domain_cli',
+        execution_binding: {
+          kind: 'stage_binding',
+          stage_manifest_ref: 'agent/stages/manifest.json',
         },
         input_schema_ref: 'contracts/input.schema.json',
         output_schema_ref: 'contracts/output.schema.json',
@@ -109,20 +116,33 @@ function withActionCatalog(payload: JsonRecord, targetDomainId: string, owner: s
         optional_fields: [],
         workspace_locator_fields: ['workspace_root'],
         human_gate_ids: [],
+        stage_route: {
+          entry_stage_ref: stageId,
+          required_stage_refs: [stageId],
+          optional_stage_refs: [],
+          terminal_stage_refs: [stageId],
+          route_policy: 'ai_selected_progress_route',
+        },
         supported_surfaces: {
           cli: {
-            command: `${owner} ${actionId}`,
             surface_kind: 'domain_cli',
           },
-          mcp: { tool_name: actionId, surface_kind: 'domain_mcp' },
-          skill: { command_contract_id: actionId, surface_kind: 'domain_skill' },
+          mcp: {
+            tool_name: actionId,
+            surface_kind: 'domain_mcp_descriptor',
+            descriptor_only: true,
+            public_runtime: false,
+          },
+          skill: { command_contract_id: actionId, surface_kind: 'domain_skill_contract' },
           product_entry: {
             action_key: actionId,
-            command: `${owner} product ${actionId}`,
             surface_kind: 'domain_product_entry',
           },
           openai: { tool_name: actionId },
           ai_sdk: { tool_name: actionId },
+        },
+        authority_boundary: {
+          opl_can_write_domain_truth: false,
         },
       },
     ],
@@ -570,6 +590,7 @@ export function withPackCompilerReadySurfaces(payload: JsonRecord, options: {
             options.targetDomainId,
             options.owner,
             options.actionId,
+            options.stageId,
           ),
           options.targetDomainId,
           options.owner,

@@ -83,12 +83,9 @@ test('Temporal scheduler cadence resolves explicit, env, and registry domain pro
           default_project_id: 'fixture-project',
           required_locator_fields: ['profile_ref'],
           optional_locator_fields: [],
-          entry_command_template: null,
-          manifest_command_template: null,
         },
         runtime: {
           runtime_domain_id: 'medautoscience',
-          dispatch_command: null,
           registration_ref: null,
         },
         progress: { deliverable_delta_aliases: [], platform_delta_aliases: [] },
@@ -107,7 +104,6 @@ test('Temporal scheduler cadence resolves explicit, env, and registry domain pro
       projectId: 'medautoscience',
       workspacePath: stateRoot,
       profileRef: registryProfile,
-      deriveDirectEntry: false,
     });
     const explicit = buildTemporalSchedulerTickWorkflowArgs({
       limit: 7,

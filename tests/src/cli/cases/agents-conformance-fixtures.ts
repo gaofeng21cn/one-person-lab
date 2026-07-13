@@ -1,28 +1,6 @@
 import { fs, os, parseJsonText, path, runCli } from '../helpers.ts';
 import { compileStandardAgentStageManifest } from '../../../../src/modules/pack/index.ts';
-
-const FORBIDDEN_GENERIC_OWNER_ROLES = [
-  'generic_scheduler_owner',
-  'generic_daemon_owner',
-  'generic_lifecycle_owner',
-  'generic_queue_owner',
-  'generic_attempt_ledger_owner',
-  'generic_state_machine_runner_owner',
-  'generic_workspace_source_intake_owner',
-  'generic_memory_transport_owner',
-  'generic_artifact_gallery_owner',
-  'generic_operator_workbench_owner',
-  'generic_observability_slo_owner',
-  'generic_persistence_engine_owner',
-  'generic_sqlite_lifecycle_owner',
-  'generic_native_helper_envelope_owner',
-  'generic_review_repair_transport_owner',
-  'generic_cli_mcp_product_wrapper_owner',
-  'generic_sidecar_owner',
-  'generic_session_store_owner',
-  'generic_status_workbench_owner',
-  'generated_surface_owner_in_domain_repo',
-];
+import { FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES } from '../../../../src/modules/foundry-lab/standard-domain-agent-scaffold-constants.ts';
 
 const OPL_DOMAIN_READONLY_AUTHORITY = {
   opl_can_write_domain_truth: false,
@@ -269,17 +247,20 @@ export function buildReadyAgentRepo() {
     ],
   });
 
+  const stageManifestPath = path.join(targetDir, 'agent', 'stages', 'manifest.json');
+  const stageManifest = readJson(stageManifestPath);
+  const defaultStageId = stageManifest.stages[0].stage_id;
+
   writeJson(contractPath(targetDir, 'action_catalog.json'), {
     surface_kind: 'family_action_catalog',
-    version: 'family-action-catalog.v1',
+    version: 'family-action-catalog.v2',
     catalog_id: 'sample_brief_agent_action_catalog',
     target_domain_id: 'sample-brief-agent',
     owner: 'SampleBriefAgent',
-    domain_id: 'sample-brief-agent',
-    forbidden_generic_owner_roles: FORBIDDEN_GENERIC_OWNER_ROLES,
     authority_boundary: {
       domain_truth_owner: 'SampleBriefAgent',
-      opl_role: 'generated_interface_projection_only',
+      opl_role: 'projection_consumer_only',
+      write_policy: 'no_domain_truth_writes',
     },
     actions: [
       {
@@ -288,10 +269,9 @@ export function buildReadyAgentRepo() {
         summary: 'Draft a source-grounded brief.',
         owner: 'SampleBriefAgent',
         effect: 'mutating',
-        handler_id: 'draft_brief',
-        source_command: {
-          command: 'node ./src/cli.ts draft --workspace-root <workspace_root>',
-          surface_kind: 'domain_cli',
+        execution_binding: {
+          kind: 'stage_binding',
+          stage_manifest_ref: 'agent/stages/manifest.json',
         },
         input_schema_ref: 'contracts/draft-brief.input.schema.json',
         output_schema_ref: 'contracts/draft-brief.output.schema.json',
@@ -299,9 +279,15 @@ export function buildReadyAgentRepo() {
         optional_fields: [],
         workspace_locator_fields: ['workspace_root'],
         human_gate_ids: ['brief_owner_review'],
+        stage_route: {
+          entry_stage_ref: defaultStageId,
+          required_stage_refs: [defaultStageId],
+          optional_stage_refs: [],
+          terminal_stage_refs: [defaultStageId],
+          route_policy: 'ai_selected_progress_route',
+        },
         supported_surfaces: {
           cli: {
-            command: 'node ./src/cli.ts draft --workspace-root <workspace_root>',
             surface_kind: 'domain_cli',
           },
           mcp: {
@@ -316,7 +302,6 @@ export function buildReadyAgentRepo() {
           },
           product_entry: {
             action_key: 'draft_brief',
-            command: 'node ./src/cli.ts product draft --workspace-root <workspace_root>',
             surface_kind: 'domain_product_entry',
           },
           openai: { tool_name: 'sample_brief_agent_draft_brief' },
@@ -329,8 +314,6 @@ export function buildReadyAgentRepo() {
     ],
     notes: [],
   });
-  const stageManifestPath = path.join(targetDir, 'agent', 'stages', 'manifest.json');
-  const stageManifest = readJson(stageManifestPath);
   stageManifest.stages[0].allowed_action_refs = ['draft_brief'];
   writeJson(stageManifestPath, stageManifest);
   writeJson(contractPath(targetDir, 'draft-brief.input.schema.json'), {
@@ -363,6 +346,7 @@ export function buildReadyAgentRepo() {
   writeJson(contractPath(targetDir, 'functional_privatization_audit.json'), {
     surface_kind: 'functional_privatization_audit',
     target_domain_id: 'sample-brief-agent',
+    forbidden_generic_owner_roles: FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES,
     authority_boundary: {
       ...OPL_DOMAIN_READONLY_AUTHORITY,
       ...DOMAIN_GENERATED_SURFACE_READONLY_AUTHORITY,
@@ -916,6 +900,27 @@ export function configureReadyRcaMorphology(repoDir: string) {
       executorBindingRef: 'rca_native_pptx_export_affordance',
     },
   ].map((stage) => stageFromBase(baseStage, { owner: 'redcube-ai', ...stage }));
+  const actionCatalogPath = contractPath(repoDir, 'action_catalog.json');
+  const actionCatalog = readJson(actionCatalogPath);
+  actionCatalog.actions[0].stage_route = {
+    entry_stage_ref: 'source_intake',
+    required_stage_refs: [
+      'source_intake',
+      'communication_strategy',
+      'visual_direction',
+      'artifact_creation',
+      'review_and_revision',
+      'package_and_handoff',
+    ],
+    optional_stage_refs: [
+      'render_preview_lane',
+      'screenshot_review_lane',
+      'native_pptx_export_lane',
+    ],
+    terminal_stage_refs: ['package_and_handoff'],
+    route_policy: 'ai_selected_progress_route',
+  };
+  writeJson(actionCatalogPath, actionCatalog);
   syncStageManifestFromPlane(repoDir, stageControlPlane);
   syncStandardAgentConformanceProfile(repoDir);
 

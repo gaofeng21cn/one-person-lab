@@ -1,14 +1,17 @@
 export {
+  assertFamilyActionHandlerRefsResolve,
+  normalizeDomainHandlerRegistry,
   normalizeFamilyActionCatalog,
-  resolveFamilyActionHandlerBinding,
 } from '../../kernel/family-action-catalog-contract.ts';
 export type {
+  DomainHandlerImplementation,
+  DomainHandlerRegistry,
+  DomainHandlerRegistryEntry,
   FamilyActionCatalog,
   FamilyActionCatalogAction,
   FamilyActionEffect,
+  FamilyActionExecutionBinding,
   FamilyActionExportFormat,
-  FamilyActionHandlerBinding,
-  FamilyActionSourceCommand,
   FamilyActionSourceOfWork,
   FamilyActionSurfaceDescriptor,
 } from '../../kernel/family-action-catalog-contract.ts';

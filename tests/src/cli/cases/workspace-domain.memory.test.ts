@@ -1,6 +1,9 @@
 import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, installRuntimePackageFixture, loadFamilyManifestFixtures, os, path, repoRoot, runCli, test } from '../helpers.ts';
 import { createMasScoutStage } from './family-runtime-stage-fixtures.ts';
-import { createAdmittedStagePackFixture } from './workspace-domain-test-helper.ts';
+import {
+  buildAdmittedActionCatalog,
+  createAdmittedStagePackFixture,
+} from './workspace-domain-test-helper.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -293,6 +296,24 @@ test('domain memory read model projects runtime receipt refs without applying me
     owner: 'MedAutoGrant',
     memory_family: 'grant_strategy_memory',
   });
+  const magActionCatalog = buildAdmittedActionCatalog('med-autogrant', 'MedAutoGrant');
+  magActionCatalog.actions = [
+    {
+      ...magActionCatalog.actions[0],
+      stage_route: {
+        entry_stage_ref: 'review_and_rebuttal',
+        required_stage_refs: ['review_and_rebuttal'],
+        optional_stage_refs: [],
+        terminal_stage_refs: ['review_and_rebuttal'],
+        route_policy: 'ai_selected_progress_route',
+      },
+    },
+  ];
+  ((magManifest as JsonRecord).product_entry_manifest as JsonRecord).family_action_catalog = magActionCatalog;
+  const magReviewStage = createMasScoutStage({
+    stage_id: 'review_and_rebuttal',
+    allowed_action_refs: [magActionCatalog.actions[0].action_id],
+  });
   ((magManifest as JsonRecord).product_entry_manifest as JsonRecord).family_stage_control_plane = {
     surface_kind: 'family_stage_control_plane',
     version: 'family-stage-control-plane.v1',
@@ -300,7 +321,7 @@ test('domain memory read model projects runtime receipt refs without applying me
     target_domain_id: 'med-autogrant',
     owner: 'MedAutoGrant',
     authority_boundary: { opl_role: 'projection_consumer_only' },
-    stages: [createMasScoutStage({ stage_id: 'review_and_rebuttal' })],
+    stages: [magReviewStage],
     notes: [],
   };
   const masPack = createAdmittedStagePackFixture(

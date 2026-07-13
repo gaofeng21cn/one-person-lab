@@ -8,6 +8,8 @@ import {
   type TemporalStageQualityCycleProjectionInput,
   type TemporalStageQualityAttemptMaterializationInput,
   type TemporalStageQualityReviewReceiptInput,
+  type TemporalStageRunRouteLaunchInput,
+  type TemporalStageRunRouteLaunchReceipt,
 } from './family-runtime-temporal.ts';
 import {
   DEFAULT_CODEX_STAGE_ACTIVITY_HEARTBEAT_INTERVAL_MS,
@@ -35,6 +37,9 @@ import {
 import { codexActivityEventForTemporalHistory } from './family-runtime-temporal-history-summary.ts';
 import { isRuntimeHardStopReason } from '../../kernel/progress-hard-stop-policy.ts';
 import { buildStageReviewContextManifest } from '../stagecraft/index.ts';
+import { launchRegisteredStageRun } from './family-runtime-stage-run-launch.ts';
+import { recordStageRunClosed } from './family-runtime-stage-run-launch-registry.ts';
+import { materializeStageRunRoute } from './family-runtime-stage-run-route-launch.ts';
 
 function closeoutPacketFromRunnerReceipt(receipt: Record<string, unknown>) {
   if (isRecord(receipt.closeout_packet)) {
@@ -960,20 +965,49 @@ export async function stageQualityReviewReceiptActivity(input: TemporalStageQual
   }
 }
 
+export async function stageRunRouteLaunchActivity(
+  input: TemporalStageRunRouteLaunchInput,
+): Promise<TemporalStageRunRouteLaunchReceipt> {
+  return materializeStageRunRoute(input, {
+    launchTargetStageRun: async (stageRunInput) => {
+      const { db, paths } = openQueueDb();
+      try {
+        return await launchRegisteredStageRun({
+          db,
+          stageRunInput,
+          start: true,
+          startWorkflow: async (workflowInput) => await (
+            await import('./family-runtime-temporal-provider-parts/attempt-control.ts')
+          ).startTemporalStageRunWorkflow(workflowInput, { paths }),
+        });
+      } finally {
+        db.close();
+      }
+    },
+  });
+}
+
 export async function stageQualityCycleProjectActivity(
   input: TemporalStageQualityCycleProjectionInput,
 ) {
   const { db } = openQueueDb();
   try {
-    createStageAttemptTable(db);
-    createStageQualityCycle(db, {
-      qualityCycleId: input.state.quality_cycle_id,
-      stageRunId: input.stage_run.stage_run_id,
-      domainId: input.stage_run.domain_id,
-      stageId: input.stage_run.stage_id,
-      policy: input.stage_run.quality_policy,
-    });
-    return projectTemporalStageRunQualityCycle(db, input.state);
+    try {
+      createStageAttemptTable(db);
+      createStageQualityCycle(db, {
+        qualityCycleId: input.state.quality_cycle_id,
+        stageRunId: input.stage_run.stage_run_id,
+        domainId: input.stage_run.domain_id,
+        stageId: input.stage_run.stage_id,
+        policy: input.stage_run.quality_policy,
+      });
+      return projectTemporalStageRunQualityCycle(db, input.state);
+    } finally {
+      recordStageRunClosed(db, {
+        stageRunId: input.stage_run.stage_run_id,
+        terminalStatus: input.state.status,
+      });
+    }
   } finally {
     db.close();
   }

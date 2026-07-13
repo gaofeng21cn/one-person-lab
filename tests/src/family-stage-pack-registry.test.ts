@@ -33,7 +33,7 @@ function readJson(relativePath: string): JsonRecord {
 function actionCatalog(): FamilyActionCatalog {
   return {
     surface_kind: 'family_action_catalog',
-    version: 'family-action-catalog.v1',
+    version: 'family-action-catalog.v2',
     catalog_id: 'mas_stage_actions',
     target_domain_id: 'med-autoscience',
     owner: 'med-autoscience',

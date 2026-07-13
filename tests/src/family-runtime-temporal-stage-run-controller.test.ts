@@ -18,6 +18,36 @@ const repoRoot = path.resolve(import.meta.dirname, '../..');
 function stageRunInput(id: string): TemporalStageRunWorkflowInput {
   return {
     stage_run_id: `stage-run:${id}`,
+    stage_run_invocation_id: `stage-run-invocation:${id}`,
+    stage_run_spec_sha256: `stage-run-spec:${id}`,
+    stage_run_spec: {
+      surface_kind: 'opl_stage_run_immutable_spec',
+      version: 'opl-stage-run-immutable-spec.v1',
+      domain_id: 'redcube',
+      stage_id: 'artifact_creation',
+      action_id: null,
+      task_id: null,
+      workspace_identity: { workspace_root: '/tmp/rca-stage-run-controller' },
+      stage_manifest: { ref: 'agent/stages/manifest.json', sha256: 'sha256:manifest' },
+      quality_policy: { ref: 'policy:artifact-creation', body: {} },
+      stage_packet_ref: 'packet:artifact-creation',
+      checkpoint_refs: [],
+      source_fingerprint: 'sha256:source',
+      source_refs: ['source:brief'],
+      input_artifacts: [],
+      role_prompt_refs: {
+        producer: 'prompt:producer', reviewer: 'prompt:reviewer',
+        repairer: 'prompt:repairer', re_reviewer: 'prompt:re-reviewer',
+      },
+      quality_rubric_refs: ['rubric:visual'],
+      stage_goal_refs: ['goal:artifact-creation'],
+      lineage_refs: ['lineage:fixture'],
+      package_closure: null,
+      executor_kind: 'codex_cli',
+      stage_attempt_executor_policy: null,
+      parent_route_decision_ref: null,
+    },
+    parent_route_decision_ref: null,
     workflow_id: `stage-run-workflow:${id}`,
     domain_id: 'redcube',
     stage_id: 'artifact_creation',
@@ -147,6 +177,29 @@ async function runController(input: {
           reviewed_artifact_hashes: ['sha256:deck-v1'],
           rubric_refs: receiptInput.rubric_refs,
           verdict: receiptInput.verdict,
+        };
+      },
+      async stageRunRouteLaunchActivity(routeInput: any) {
+        const complete = routeInput.decision.decision_kind === 'complete';
+        return {
+          surface_kind: 'opl_stage_run_route_launch_receipt',
+          version: 'opl-stage-run-route-launch-receipt.v1',
+          materialization_status: complete ? 'workflow_complete' : 'launched',
+          parent_stage_run_id: routeInput.parent_stage_run.stage_run_id,
+          decisive_attempt_ref: routeInput.decisive_attempt_ref,
+          parent_route_decision_ref: `route:${routeInput.decisive_attempt_ref}`,
+          route_decision_sha256: 'sha256:route',
+          decision: routeInput.decision,
+          target_stage_run_id: complete ? null : `target:${routeInput.decision.target_stage_id}`,
+          target_stage_run_invocation_id: complete ? null : `invocation:${routeInput.decision.target_stage_id}`,
+          target_stage_run_spec_sha256: complete ? null : 'sha256:target-spec',
+          target_workflow_id: complete ? null : `workflow:${routeInput.decision.target_stage_id}`,
+          durable_launch: complete ? null : { start_status: 'started' },
+          authority_boundary: {
+            semantic_route_decision_owner: 'decisive_codex_attempt',
+            stage_transition_materialization_owner: 'opl_stage_run_controller',
+            opl_can_select_semantic_stage_route: false,
+          },
         };
       },
       async codexStageActivity(attempt: TemporalStageAttemptWorkflowInput) {
@@ -308,6 +361,8 @@ test('StageRun controller materializes isolated producer-review-repair-re-review
   assert.equal(state.review_receipts.length, 2);
   assert.equal(state.decisive_attempt_role, 're_reviewer');
   assert.equal(state.selected_stage_route?.target_stage_id, 'review_and_revision');
+  assert.equal(state.next_stage_run_launch?.materialization_status, 'launched');
+  assert.equal(state.next_stage_run_launch?.target_stage_run_id, 'target:review_and_revision');
   assert.equal(state.route_quality_debt_refs.length, 0);
 });
 
@@ -340,6 +395,7 @@ test('primary-only StageRun makes the producer the sole decisive route owner', a
   assert.equal(state.decisive_attempt_role, 'producer');
   assert.equal(state.selected_stage_route?.decision_kind, 'advance');
   assert.equal(state.selected_stage_route?.target_stage_id, 'review_and_revision');
+  assert.equal(state.next_stage_run_launch?.target_stage_run_id, 'target:review_and_revision');
 });
 
 test('reviewer quality-debt verdict terminalizes the StageRun and retains reviewer route authority', async () => {

@@ -977,6 +977,7 @@
           "capability_invocation_hard_gate",
           "runtime_provider",
           "stage_attempt",
+          "standard_agent_action_run",
           "attempt_lease",
           "slo_tick"
         ],
@@ -989,6 +990,7 @@
           "contracts/opl-framework/current-owner-delta.schema.json",
           "contracts/opl-framework/capability-registry-resolver.schema.json#/$defs/capability_invocation_lifecycle_policy",
           "contracts/opl-framework/managed-runtime-three-layer-contract.json",
+          "contracts/opl-framework/standard-agent-hosted-action-runtime-contract.json",
           "contracts/opl-framework/target-operating-architecture-contract.json"
         ],
         "read_model_refs": [
@@ -1103,6 +1105,7 @@
           "contracts/opl-framework/family-runtime-temporal-first-contract.json",
           "contracts/opl-framework/current-owner-delta.schema.json",
           "contracts/opl-framework/capability-registry-resolver.schema.json#/$defs/capability_invocation_lifecycle_policy",
+          "contracts/opl-framework/standard-agent-hosted-action-runtime-contract.json",
           "contracts/opl-framework/brand-module-registry.json#modules.runway",
           "contracts/opl-framework/target-operating-architecture-contract.json#resource_model.resource_kinds.RunwayControlLoop",
           "contracts/opl-framework/target-operating-architecture-contract.json#resource_model.resource_kinds.ProgressReconciler"
@@ -1248,6 +1251,7 @@
           "receipt_ref",
           "typed_blocker_ref",
           "artifact_lineage",
+          "standard_agent_action_run_ref",
           "state_index_ref",
           "restore_proof"
         ],
@@ -1258,6 +1262,7 @@
           "contracts/opl-framework/role-artifact-ref.schema.json",
           "contracts/opl-framework/stage-owner-receipt.schema.json",
           "contracts/opl-framework/stage-typed-blocker.schema.json",
+          "contracts/opl-framework/standard-agent-hosted-action-runtime-contract.json",
           "contracts/opl-framework/target-operating-architecture-contract.json"
         ],
         "read_model_refs": [
@@ -1317,6 +1322,7 @@
           "opl ledger interfaces --json",
           "contracts/opl-framework/evidence-ledger-event.schema.json",
           "contracts/opl-framework/state-index-kernel-contract.json",
+          "contracts/opl-framework/standard-agent-hosted-action-runtime-contract.json",
           "contracts/opl-framework/brand-module-registry.json#modules.ledger"
         ]
       },

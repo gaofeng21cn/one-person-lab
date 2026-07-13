@@ -25,7 +25,8 @@
       "manifest_ref",
       "manifest_sha256"
     ],
-    "stage_run_identity_binds_manifest_sha256": true,
+    "stage_run_id_binds_manifest_sha256": false,
+    "stage_run_spec_sha256_binds_manifest_sha256": true,
     "raw_stage_run_start_cli_retired": true,
     "stage_run_cli_allowed_actions": [
       "query"

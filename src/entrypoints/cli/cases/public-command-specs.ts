@@ -575,6 +575,14 @@ export function buildPublicCommandSpecs(
       handler: (args) => runFamilyAgentLegacyCleanupApply(getContracts(), args),
     },
     'agents evidence apply': agentsEvidenceApplySpec,
+    'agents run': cloneCommandSpec(commandSpecs['agents run'], {
+      usage: 'opl agents run --domain <agent> --action <action_id> --workspace <absolute_path> [--payload <json> | --payload-file <path>] [--run-id <id>] [--timeout-ms <ms>]',
+      examples: [
+        'opl agents run --domain obf --action shape-storyline --workspace /path/to/book --payload \'{"workspace_root":"/path/to/book"}\'',
+        'opl agents run --domain mas --action study-progress --workspace /path/to/workspace --payload-file request.json --json',
+      ],
+      group: 'domain',
+    }),
     'agents scaffold': cloneCommandSpec(commandSpecs['agents scaffold'], {
       usage: 'opl agents scaffold [--target-dir <path>] [--domain-id <id>] [--domain-label <label>] [--force] | [--validate <repo-dir>] | [--consumption-evidence]',
       examples: [

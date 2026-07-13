@@ -98,16 +98,64 @@
     "exact_binding_policy": "Each authorization binds one repository-relative file, one symbol, the exact source digest, allowed effect kinds, and an explicit literal target allowlist when required by the effect kind. Directory paths, globs, digest-free authorizations, and wildcard target authorization are invalid.",
     "allowed_roles": [
       "minimal_authority_function",
-      "developer_tool"
+      "developer_tool",
+      "domain_native_helper"
     ],
     "globally_forbidden_effects": [
       "executor_invoke"
     ],
-    "minimal_authority_function_policy": "Exact audit may admit domain-owned effects, but it cannot convert executor invocation or private lifecycle/session/queue mutation into a minimal authority function.",
+    "minimal_authority_function_policy": "Exact audit may admit domain-owned artifact and truth effects, but it cannot convert process execution, network transport, executor invocation, or private lifecycle/session/queue mutation into a minimal authority function. Process execution routes through an OPL native-helper carrier or Runway; network transport routes through OPL Connect.",
     "minimal_authority_forbidden_effects": [
+      "process_spawn",
       "executor_invoke",
+      "network_access",
       "runtime_state_mutation"
     ],
+    "domain_native_helper_policy": {
+      "exact_binding_required_fields": [
+        "file",
+        "symbol",
+        "source_digest"
+      ],
+      "allowed_reachability": [
+        "reachable",
+        "unreachable"
+      ],
+      "allowed_effects": [
+        "filesystem_write"
+      ],
+      "forbidden_effects": [
+        "process_spawn",
+        "executor_invoke",
+        "network_access",
+        "database_write",
+        "runtime_state_mutation"
+      ],
+      "can_exclude_unresolved_edges": false,
+      "required_effect_owner_routes": {
+        "process_spawn": [
+          "native_helper_carrier",
+          "opl_runway"
+        ],
+        "network_access": [
+          "opl_connect"
+        ]
+      },
+      "authority_boundary": {
+        "can_own_generic_runtime": false,
+        "can_invoke_executor": false,
+        "can_spawn_process": false,
+        "can_access_network": false,
+        "can_mutate_runtime_state": false,
+        "can_write_database": false,
+        "can_write_domain_truth": false,
+        "can_sign_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_authorize_quality_verdict": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
     "target_allowlist_required_effects": [
       "process_spawn",
       "executor_invoke",

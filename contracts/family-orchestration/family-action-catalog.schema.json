@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://opl.onepersonlab/contracts/family-orchestration/family-action-catalog.schema.json",
   "title": "OPL Family Action Catalog",
-  "description": "Shared callable-action catalog used to derive CLI, MCP, Skill, OpenAI, AI SDK, and product-entry descriptors without moving domain truth into OPL.",
+  "description": "Canonical Standard Agent action contract. OPL owns executable command generation; domain packs declare only stage or handler execution bindings.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -15,57 +15,32 @@
     "actions"
   ],
   "properties": {
-    "surface_kind": {
-      "const": "family_action_catalog"
-    },
-    "version": {
-      "const": "family-action-catalog.v1"
-    },
-    "catalog_id": {
-      "type": "string",
-      "minLength": 1
-    },
-    "target_domain_id": {
-      "type": "string",
-      "minLength": 1
-    },
-    "owner": {
-      "type": "string",
-      "minLength": 1
-    },
+    "surface_kind": { "const": "family_action_catalog" },
+    "version": { "const": "family-action-catalog.v2" },
+    "catalog_id": { "type": "string", "minLength": 1 },
+    "target_domain_id": { "type": "string", "minLength": 1 },
+    "owner": { "type": "string", "minLength": 1 },
     "authority_boundary": {
-      "type": "object",
-      "additionalProperties": true,
-      "required": [
-        "domain_truth_owner",
-        "opl_role",
-        "write_policy"
-      ],
-      "properties": {
-        "domain_truth_owner": {
-          "type": "string",
-          "minLength": 1
-        },
-        "opl_role": {
-          "const": "projection_consumer_only"
-        },
-        "write_policy": {
-          "const": "no_domain_truth_writes"
+      "allOf": [
+        { "$ref": "#/$defs/nonOplAuthorityBoundary" },
+        {
+          "required": ["domain_truth_owner", "opl_role", "write_policy"],
+          "properties": {
+            "domain_truth_owner": { "type": "string", "minLength": 1 },
+            "opl_role": { "const": "projection_consumer_only" },
+            "write_policy": { "const": "no_domain_truth_writes" }
+          }
         }
-      }
+      ]
     },
     "actions": {
       "type": "array",
       "minItems": 1,
-      "items": {
-        "$ref": "#/$defs/action"
-      }
+      "items": { "$ref": "#/$defs/action" }
     },
     "notes": {
       "type": "array",
-      "items": {
-        "type": "string"
-      }
+      "items": { "type": "string" }
     }
   },
   "$defs": {
@@ -78,133 +53,105 @@
         "summary",
         "owner",
         "effect",
-        "source_command",
+        "execution_binding",
         "input_schema_ref",
         "output_schema_ref",
+        "required_fields",
+        "optional_fields",
+        "workspace_locator_fields",
+        "human_gate_ids",
         "supported_surfaces"
       ],
       "properties": {
-        "action_id": {
-          "type": "string",
-          "minLength": 1
-        },
-        "title": {
-          "type": "string",
-          "minLength": 1
-        },
-        "summary": {
-          "type": "string",
-          "minLength": 1
-        },
-        "owner": {
-          "type": "string",
-          "minLength": 1
-        },
-        "effect": {
-          "enum": [
-            "read_only",
-            "mutating"
-          ]
-        },
-        "source_command": {
-          "$ref": "#/$defs/sourceCommand"
-        },
-        "source_of_work": {
-          "$ref": "#/$defs/sourceOfWork"
-        },
-        "input_schema_ref": {
-          "type": "string",
-          "minLength": 1
-        },
-        "output_schema_ref": {
-          "type": "string",
-          "minLength": 1
-        },
-        "required_fields": {
-          "type": "array",
-          "uniqueItems": true,
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "optional_fields": {
-          "type": "array",
-          "uniqueItems": true,
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "workspace_locator_fields": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "human_gate_ids": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
+        "action_id": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "summary": { "type": "string", "minLength": 1 },
+        "owner": { "type": "string", "minLength": 1 },
+        "effect": { "enum": ["read_only", "mutating"] },
+        "execution_binding": { "$ref": "#/$defs/executionBinding" },
+        "source_of_work": { "$ref": "#/$defs/sourceOfWork" },
+        "input_schema_ref": { "type": "string", "minLength": 1 },
+        "output_schema_ref": { "type": "string", "minLength": 1 },
+        "required_fields": { "$ref": "#/$defs/stringList" },
+        "optional_fields": { "$ref": "#/$defs/stringList" },
+        "workspace_locator_fields": { "$ref": "#/$defs/stringList" },
+        "human_gate_ids": { "$ref": "#/$defs/stringList" },
+        "stage_route": { "$ref": "#/$defs/stageRoute" },
         "supported_surfaces": {
           "type": "object",
           "additionalProperties": false,
-          "minProperties": 6,
-          "required": [
-            "cli",
-            "mcp",
-            "skill",
-            "product_entry",
-            "openai",
-            "ai_sdk"
-          ],
+          "required": ["cli", "mcp", "skill", "product_entry", "openai", "ai_sdk"],
           "properties": {
-            "cli": {
-              "$ref": "#/$defs/nullableSurfaceDescriptor"
-            },
-            "mcp": {
-              "$ref": "#/$defs/nullableSurfaceDescriptor"
-            },
-            "skill": {
-              "$ref": "#/$defs/nullableSurfaceDescriptor"
-            },
-            "product_entry": {
-              "$ref": "#/$defs/nullableSurfaceDescriptor"
-            },
-            "openai": {
-              "$ref": "#/$defs/nullableSurfaceDescriptor"
-            },
-            "ai_sdk": {
-              "$ref": "#/$defs/nullableSurfaceDescriptor"
+            "cli": { "$ref": "#/$defs/nullableSurfaceDescriptor" },
+            "mcp": { "$ref": "#/$defs/nullableSurfaceDescriptor" },
+            "skill": { "$ref": "#/$defs/nullableSurfaceDescriptor" },
+            "product_entry": { "$ref": "#/$defs/nullableSurfaceDescriptor" },
+            "openai": { "$ref": "#/$defs/nullableSurfaceDescriptor" },
+            "ai_sdk": { "$ref": "#/$defs/nullableSurfaceDescriptor" }
+          }
+        },
+        "authority_boundary": { "$ref": "#/$defs/nonOplAuthorityBoundary" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "execution_binding": {
+                "properties": { "kind": { "const": "stage_binding" } },
+                "required": ["kind"]
+              }
+            }
+          },
+          "then": { "required": ["stage_route"] },
+          "else": { "not": { "required": ["stage_route"] } }
+        }
+      ]
+    },
+    "executionBinding": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "handler_ref"],
+          "properties": {
+            "kind": { "const": "handler_ref" },
+            "handler_ref": {
+              "type": "string",
+              "pattern": "^handler:[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?$"
             }
           }
         },
-        "authority_boundary": {
+        {
           "type": "object",
-          "additionalProperties": true
+          "additionalProperties": false,
+          "required": ["kind", "stage_manifest_ref"],
+          "properties": {
+            "kind": { "const": "stage_binding" },
+            "stage_manifest_ref": { "const": "agent/stages/manifest.json" }
+          }
         }
-      }
+      ]
     },
-    "sourceCommand": {
+    "stageRoute": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "command",
-        "surface_kind"
+        "entry_stage_ref",
+        "required_stage_refs",
+        "optional_stage_refs",
+        "terminal_stage_refs",
+        "route_policy"
       ],
       "properties": {
-        "command": {
-          "type": "string",
-          "minLength": 1
+        "entry_stage_ref": { "type": "string", "minLength": 1 },
+        "required_stage_refs": {
+          "allOf": [{ "$ref": "#/$defs/stringList" }, { "minItems": 1 }]
         },
-        "surface_kind": {
-          "type": "string",
-          "minLength": 1
-        }
+        "optional_stage_refs": { "$ref": "#/$defs/stringList" },
+        "terminal_stage_refs": {
+          "allOf": [{ "$ref": "#/$defs/stringList" }, { "minItems": 1 }]
+        },
+        "route_policy": { "const": "ai_selected_progress_route" }
       }
     },
     "sourceOfWork": {
@@ -218,21 +165,10 @@
         "derived_surface_policy"
       ],
       "properties": {
-        "source_catalog": {
-          "const": "family_action_catalog"
-        },
-        "source_catalog_ref": {
-          "type": "string",
-          "minLength": 1
-        },
-        "source_action_id": {
-          "type": "string",
-          "minLength": 1
-        },
-        "stage_catalog_ref": {
-          "type": "string",
-          "minLength": 1
-        },
+        "source_catalog": { "const": "family_action_catalog" },
+        "source_catalog_ref": { "type": "string", "minLength": 1 },
+        "source_action_id": { "type": "string", "minLength": 1 },
+        "stage_catalog_ref": { "type": "string", "minLength": 1 },
         "derived_surface_policy": {
           "const": "derive_cli_mcp_openai_ai_sdk_skill_app_status_workbench_from_single_catalog"
         },
@@ -245,43 +181,45 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "command": {
+        "surface_kind": { "type": "string", "minLength": 1 },
+        "tool_name": { "type": "string", "minLength": 1 },
+        "command_contract_id": { "type": "string", "minLength": 1 },
+        "action_key": { "type": "string", "minLength": 1 },
+        "public_runtime": { "type": "boolean" },
+        "descriptor_only": { "type": "boolean" }
+      }
+    },
+    "nonOplAuthorityBoundary": {
+      "type": "object",
+      "additionalProperties": true,
+      "patternProperties": {
+        "^opl_can_": { "const": false }
+      },
+      "properties": {
+        "provider_completion_is_domain_completion": { "const": false },
+        "provider_completion_counts_as_domain_completion": { "const": false },
+        "quality_verdict_owner": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "not": { "const": "one-person-lab" }
         },
-        "surface_kind": {
+        "artifact_authority_owner": {
           "type": "string",
-          "minLength": 1
-        },
-        "tool_name": {
-          "type": "string",
-          "minLength": 1
-        },
-        "command_contract_id": {
-          "type": "string",
-          "minLength": 1
-        },
-        "action_key": {
-          "type": "string",
-          "minLength": 1
-        },
-        "public_runtime": {
-          "type": "boolean"
-        },
-        "descriptor_only": {
-          "type": "boolean"
+          "minLength": 1,
+          "not": { "const": "one-person-lab" }
         }
       }
     },
     "nullableSurfaceDescriptor": {
       "anyOf": [
-        {
-          "$ref": "#/$defs/surfaceDescriptor"
-        },
-        {
-          "type": "null"
-        }
+        { "$ref": "#/$defs/surfaceDescriptor" },
+        { "type": "null" }
       ]
+    },
+    "stringList": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
     }
   }
 }

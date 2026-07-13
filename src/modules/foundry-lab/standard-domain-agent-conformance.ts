@@ -287,6 +287,7 @@ function buildRepoConformance(
   const workspaceNormProjection = buildAgentWorkspaceNormProjection({
     contract: contracts.agentWorkspaceNorm,
     agentId: input.requested_agent_id ?? null,
+    agentRepoDir: repoDir,
   });
   const evidenceTailClassification = buildEvidenceTailClassification(repoDir, domainId, generatedInterfaceChecks);
   const blockers = unique([

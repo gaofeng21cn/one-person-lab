@@ -97,27 +97,43 @@ Close prior findings against the repaired artifact.
   });
   writeJson(root, 'contracts/action_catalog.json', {
     surface_kind: 'family_action_catalog',
-    version: 'family-action-catalog.v1',
+    version: 'family-action-catalog.v2',
     catalog_id: 'pack_bound_quality_e2e.actions',
     target_domain_id: 'medautoscience',
     owner: 'medautoscience',
-    authority_boundary: { opl_role: 'projection_consumer_only' },
+    authority_boundary: {
+      domain_truth_owner: 'medautoscience',
+      opl_role: 'projection_consumer_only',
+      write_policy: 'no_domain_truth_writes',
+    },
     actions: [{
       action_id: 'draft',
       title: 'Draft',
       summary: 'Create a draft artifact.',
       owner: 'medautoscience',
       effect: 'mutating',
-      source_command: { command: 'mas draft', surface_kind: 'domain_cli' },
+      execution_binding: {
+        kind: 'stage_binding',
+        stage_manifest_ref: 'agent/stages/manifest.json',
+      },
       input_schema_ref: 'contracts/input.schema.json',
       output_schema_ref: 'contracts/output.schema.json',
+      required_fields: ['workspace_root'],
+      optional_fields: [],
       workspace_locator_fields: ['workspace_root'],
       human_gate_ids: [],
+      stage_route: {
+        entry_stage_ref: 'draft',
+        required_stage_refs: ['draft'],
+        optional_stage_refs: [],
+        terminal_stage_refs: ['draft'],
+        route_policy: 'ai_selected_progress_route',
+      },
       supported_surfaces: {
-        cli: { command: 'mas draft', surface_kind: 'domain_cli' },
+        cli: { surface_kind: 'domain_cli' },
         mcp: { tool_name: 'mas_draft', surface_kind: 'domain_mcp' },
         skill: { command_contract_id: 'mas.draft', surface_kind: 'domain_skill' },
-        product_entry: { action_key: 'draft', command: 'mas product draft', surface_kind: 'domain_product_entry' },
+        product_entry: { action_key: 'draft', surface_kind: 'domain_product_entry' },
         openai: { tool_name: 'mas_draft' },
         ai_sdk: { tool_name: 'mas_draft' },
       },
@@ -304,7 +320,7 @@ test('pack-bound CLI launch persists isolated review attempts and terminal quali
       activities,
     });
     const execution = await worker.runUntil(async () => {
-      const cli = await runFamilyRuntime([
+      const baseArgs = [
         'attempt',
         'create',
         '--domain',
@@ -318,24 +334,35 @@ test('pack-bound CLI launch persists isolated review attempts and terminal quali
         '--source-fingerprint',
         'sha256:pack-bound-source-v1',
         '--start',
-      ]);
-      const launch = cli.family_runtime_stage_run as any;
+      ];
       const connection = await Connection.connect({ address: testEnv.address });
       try {
         const client = new Client({ connection, namespace });
-        const handle = client.workflow.getHandle(
-          launch.stage_run_input.workflow_id,
-          launch.temporal_start.first_execution_run_id,
-        );
-        return { cli, state: await handle.result() };
+        const executeNewStageRun = async (args: string[]) => {
+          const cli = await runFamilyRuntime(args);
+          const launch = cli.family_runtime_stage_run as any;
+          const handle = client.workflow.getHandle(
+            launch.stage_run_input.workflow_id,
+            launch.temporal_start.first_execution_run_id,
+          );
+          return { cli, state: await handle.result() };
+        };
+        const first = await executeNewStageRun(baseArgs);
+        const replay = await runFamilyRuntime(baseArgs);
+        const explicitNew = await executeNewStageRun([...baseArgs, '--new-stage-run']);
+        const compatibilityAlias = await executeNewStageRun([...baseArgs, '--new-attempt']);
+        return { first, replay, explicitNew, compatibilityAlias };
       } finally {
         await connection.close();
       }
     });
 
-    const launch = execution.cli.family_runtime_stage_run as any;
+    const launch = execution.first.cli.family_runtime_stage_run as any;
     const stageRunInput = launch.stage_run_input;
-    const state = execution.state as any;
+    const state = execution.first.state as any;
+    const replayLaunch = execution.replay.family_runtime_stage_run as any;
+    const explicitNewLaunch = execution.explicitNew.cli.family_runtime_stage_run as any;
+    const compatibilityAliasLaunch = execution.compatibilityAlias.cli.family_runtime_stage_run as any;
     const manifestSource = fs.readFileSync(path.join(packRoot, 'agent/stages/manifest.json'), 'utf8');
     const manifestHash = crypto.createHash('sha256').update(manifestSource).digest('hex');
 
@@ -352,6 +379,24 @@ test('pack-bound CLI launch persists isolated review attempts and terminal quali
       re_reviewer: 'agent/prompts/draft.md#re-reviewer',
     });
     assert.deepEqual(stageRunInput.quality_rubric_refs, ['agent/quality_gates/quality.md']);
+    assert.equal(replayLaunch.stage_run_input.stage_run_id, stageRunInput.stage_run_id);
+    assert.equal(replayLaunch.durable_launch.start_status, 'existing');
+    assert.equal(replayLaunch.durable_launch.launch.launch_status, 'closed');
+    assert.equal(
+      replayLaunch.temporal_start.first_execution_run_id,
+      launch.temporal_start.first_execution_run_id,
+    );
+    assert.notEqual(explicitNewLaunch.stage_run_input.stage_run_id, stageRunInput.stage_run_id);
+    assert.notEqual(
+      compatibilityAliasLaunch.stage_run_input.stage_run_id,
+      stageRunInput.stage_run_id,
+    );
+    assert.notEqual(
+      compatibilityAliasLaunch.stage_run_input.stage_run_id,
+      explicitNewLaunch.stage_run_input.stage_run_id,
+    );
+    assert.equal(explicitNewLaunch.durable_launch.start_status, 'started');
+    assert.equal(compatibilityAliasLaunch.durable_launch.start_status, 'started');
 
     assert.equal(state.status, 'completed');
     assert.equal(state.sqlite_projection.status, 'synced');
@@ -413,6 +458,16 @@ test('pack-bound CLI launch persists isolated review attempts and terminal quali
         ['producer', 'reviewer'],
       );
       assert.deepEqual(projected.controller_readback.review_receipts, state.review_receipts);
+
+      const launches = db.prepare(`
+        SELECT stage_run_id, launch_status, terminal_status
+        FROM stage_run_launches
+        ORDER BY created_at ASC
+      `).all() as Array<Record<string, any>>;
+      assert.equal(launches.length, 3);
+      assert.equal(new Set(launches.map((entry) => entry.stage_run_id)).size, 3);
+      assert.equal(launches.every((entry) => entry.launch_status === 'closed'), true);
+      assert.equal(launches.every((entry) => entry.terminal_status === 'completed'), true);
     } finally {
       db.close();
     }

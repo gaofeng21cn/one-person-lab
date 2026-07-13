@@ -20,6 +20,8 @@ import type {
   TemporalStageQualityReviewReceiptInput,
   TemporalStageRunWorkflowInput,
   TemporalStageRunWorkflowState,
+  TemporalStageRunRouteLaunchInput,
+  TemporalStageRunRouteLaunchReceipt,
   TemporalStageQualityAttemptMaterializationInput,
   TemporalSchedulerTickWorkflowInput,
   TemporalSchedulerTickWorkflowState,
@@ -68,6 +70,9 @@ type StageAttemptActivities = {
   stageQualityReviewReceiptActivity(
     input: TemporalStageQualityReviewReceiptInput,
   ): Promise<StageReviewReceipt>;
+  stageRunRouteLaunchActivity(
+    input: TemporalStageRunRouteLaunchInput,
+  ): Promise<TemporalStageRunRouteLaunchReceipt>;
 };
 
 export const stageAttemptQuery = defineQuery<TemporalStageAttemptWorkflowState>('StageAttemptQuery');
@@ -104,12 +109,14 @@ const {
   stageQualityAttemptSyncActivity,
   stageQualityCycleProjectActivity,
   stageQualityReviewReceiptActivity,
+  stageRunRouteLaunchActivity,
 } = proxyActivities<Pick<
   StageAttemptActivities,
   | 'stageQualityAttemptMaterializeActivity'
   | 'stageQualityAttemptSyncActivity'
   | 'stageQualityCycleProjectActivity'
   | 'stageQualityReviewReceiptActivity'
+  | 'stageRunRouteLaunchActivity'
 >>({
   startToCloseTimeout: SHORT_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
   retry: {
@@ -726,6 +733,7 @@ export async function StageRunWorkflow(
     selected_stage_route: null,
     route_evidence_refs: [],
     route_recommendations: [],
+    next_stage_run_launch: null,
     blocked_reason: null,
     sqlite_projection: { status: 'pending', error: null },
     started_at: nowIso(),
@@ -751,6 +759,24 @@ export async function StageRunWorkflow(
           ])],
         }
       : nextState;
+    if (
+      routeDecisionRequired
+      && state.selected_stage_route
+      && state.decisive_attempt_ref
+    ) {
+      const nextStageRunLaunch = await stageRunRouteLaunchActivity({
+        parent_stage_run: input,
+        decisive_attempt_ref: state.decisive_attempt_ref,
+        decision: state.selected_stage_route,
+        artifact_refs: state.artifact_refs,
+        artifact_hashes: state.artifact_hashes,
+      });
+      state = {
+        ...state,
+        next_stage_run_launch: nextStageRunLaunch,
+        updated_at: nowIso(),
+      };
+    }
     try {
       await stageQualityCycleProjectActivity({ stage_run: input, state });
       state = { ...state, sqlite_projection: { status: 'synced', error: null } };

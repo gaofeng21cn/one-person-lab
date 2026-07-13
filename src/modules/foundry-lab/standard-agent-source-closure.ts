@@ -138,7 +138,9 @@ export function buildStandardAgentSourceClosureForRepo(
   ));
   const reachableSymbols = graph.symbols.filter((symbol) => reachable.has(symbol.symbol_id));
   const unreachableSensitiveResidue = effectAnalysis.observed_effects.filter((effect) => (
-    !effect.reachable && effect.audit_status !== 'developer_tool_exact'
+    !effect.reachable
+    && effect.audit_status !== 'developer_tool_exact'
+    && effect.audit_status !== 'domain_native_helper_exact'
   ));
   const privateGenericEffectCount = effectAnalysis.observed_effects.filter((effect) => (
     effect.private_generic_effect

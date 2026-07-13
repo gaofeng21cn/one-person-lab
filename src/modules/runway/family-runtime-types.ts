@@ -15,7 +15,6 @@ export type FamilyRuntimeDomainId = string;
 export type StandardAgentFamilyRuntimeProfile = {
   supported: true;
   runtime_domain_id: string;
-  dispatch_command?: readonly string[];
   registration_ref: string | null;
 };
 
@@ -34,7 +33,6 @@ function runtimeProfile(entry: RuntimeAgent): StandardAgentFamilyRuntimeProfile 
   return {
     supported: true,
     runtime_domain_id: runtime?.runtime_domain_id ?? entry.target_domain_id,
-    ...(runtime?.dispatch_command ? { dispatch_command: runtime.dispatch_command } : {}),
     registration_ref: runtime?.registration_ref ?? null,
   };
 }
@@ -134,19 +132,6 @@ export function runtimeDomainDaemonReplacementSurfaces() {
     profile.domain_id,
     profile.scheduler.daemon_replacement_surface,
   ])) as Partial<Record<FamilyRuntimeDomainId, string>>;
-}
-
-export function runtimeDomainAdapterProfiles() {
-  return runtimeEnabledStandardAgents().flatMap((entry) => {
-    const profile = runtimeProfile(entry);
-    if (!profile.dispatch_command) return [];
-    return [{
-      domain_id: profile.runtime_domain_id,
-      repo_id: entry.project,
-      truth_owner: entry.plugin_name,
-      dispatch_command: [...profile.dispatch_command],
-    }];
-  });
 }
 
 export const FAMILY_RUNTIME_PROVIDER_KINDS = ['temporal', 'external_sandbox'] as const;

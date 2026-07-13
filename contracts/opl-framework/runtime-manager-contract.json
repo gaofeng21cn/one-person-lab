@@ -15,7 +15,27 @@
     "stage_run_cli_allowed_actions": [
       "query"
     ],
-    "manifest_sha256_participates_in_stage_run_identity": true,
+    "required_stage_run_fields": [
+      "stage_run_id",
+      "stage_run_invocation_id",
+      "stage_run_spec_sha256",
+      "stage_run_spec",
+      "parent_route_decision_ref"
+    ],
+    "stage_run_id_derives_only_from": [
+      "domain_id",
+      "stage_id",
+      "stage_run_invocation_id"
+    ],
+    "manifest_sha256_participates_in_stage_run_id": false,
+    "manifest_sha256_participates_in_stage_run_spec_sha256": true,
+    "currentness_observations_participate_in_stage_run_id_or_spec_sha256": false,
+    "durable_launch_registry": "${OPL_STATE_DIR}/family-runtime/queue.sqlite#stage_run_launches",
+    "register_exact_input_before_temporal_start": true,
+    "same_invocation_same_spec_replays_existing_run": true,
+    "same_invocation_different_spec_fails_closed": true,
+    "explicit_new_stage_run_option": "--new-stage-run",
+    "quality_path_new_attempt_compatibility_alias": true,
     "direct_unbound_stage_run_creation_forbidden": true
   },
   "owner_split": {
@@ -55,7 +75,10 @@
     "project_provider_readiness_and_stage_attempt_history",
     "own_stage_attempt_index_and_provider_projection_contracts",
     "create_stage_runs_only_from_pack_bound_stage_quality_runtime_bindings",
+    "persist_exact_stage_run_invocation_and_immutable_spec_before_temporal_start",
+    "recover_pre_start_and_post_start_stage_run_launches_without_duplicate_execution",
     "orchestrate_bounded_stage_quality_attempt_roles_through_temporal_stage_run_controller",
+    "materialize_validated_decisive_attempt_routes_as_target_stage_runs",
     "wire_provider_signal_delivery_transport",
     "project_runtime_status_into_opl_sessions_progress_artifacts",
     "provide_runtime_doctor_repair_resume_entrypoints",
@@ -271,6 +294,7 @@
     "state_path": "${OPL_STATE_DIR}/family-runtime/queue.sqlite",
     "provider_model": "provider_backed_stage_attempt_runtime",
     "stage_attempt_ledger": "${OPL_STATE_DIR}/family-runtime/queue.sqlite#stage_attempts",
+    "stage_run_launch_registry": "${OPL_STATE_DIR}/family-runtime/queue.sqlite#stage_run_launches",
     "stage_quality_cycle_ledger": "${OPL_STATE_DIR}/family-runtime/queue.sqlite#stage_quality_cycles",
     "stage_quality_cycle_contract_ref": "contracts/opl-framework/stage-quality-cycle-contract.json",
     "wakeup_bridge": "Temporal schedule/workflow history -> provider SLO and stage-attempt projection readback",

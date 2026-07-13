@@ -48,6 +48,17 @@ function componentStatus(entry: DomainManifestCatalogEntry, ready: boolean) {
   return ready ? 'resolved' : 'missing';
 }
 
+function actionCatalogWorkspace(entry: DomainManifestCatalogEntry) {
+  if (!entry.workspace_path) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Resolved family action catalogs require an absolute workspace path.',
+      { project_id: entry.project_id, target_domain_id: entry.manifest?.target_domain_id ?? null },
+    );
+  }
+  return entry.workspace_path;
+}
+
 function buildDescriptorRefs(manifest: NormalizedDomainManifest | null) {
   return {
     manifest: {
@@ -276,7 +287,9 @@ function buildActionCatalogProjection(entry: DomainManifestCatalogEntry) {
     mutating_action_count: catalog?.actions.filter((action) => action.effect === 'mutating').length ?? 0,
     action_ids: catalog?.actions.map((action) => action.action_id) ?? [],
     supported_surface_kinds: supportedSurfaceKinds,
-    parity: catalog ? buildFamilyActionCatalogParity(catalog, entry.manifest) : null,
+    parity: catalog
+      ? buildFamilyActionCatalogParity(catalog, actionCatalogWorkspace(entry), entry.manifest)
+      : null,
     authority_boundary: catalog?.authority_boundary ?? null,
     raw_descriptor: catalog,
   };

@@ -13,7 +13,6 @@ import {
 } from '../../kernel/standard-agent-registry.ts';
 import {
   assertStandardAgentDescriptorIdentity,
-  materializeStandardAgentCommand,
   readStandardAgentDescriptorInterface,
   type StandardAgentInterface,
   type StandardAgentLocatorField,
@@ -56,8 +55,6 @@ type ProjectWorkspaceBindingContract = {
   workspace_locator_surface_kind: string | null;
   required_locator_fields: string[];
   optional_locator_fields: string[];
-  derived_entry_command_template: string | null;
-  derived_manifest_command_template: string | null;
   quick_bind_hint: string;
 };
 
@@ -83,7 +80,6 @@ type WorkspaceRegistryOptions = {
   workspaceRoot?: string;
   profileRef?: string;
   inputPath?: string;
-  deriveDirectEntry?: boolean;
 };
 
 type WorkspaceRegistryMaintenanceOptions = {
@@ -476,10 +472,6 @@ function normalizeExistingDirectoryPath(directoryPath: string | undefined, field
   return absolutePath;
 }
 
-function shellSingleQuote(value: string) {
-  return `'${value.replace(/'/g, `'\\''`)}'`;
-}
-
 function resolveStandardAgentInterfaceForWorkspace(
   projectId: string,
   project: string,
@@ -598,43 +590,6 @@ function buildWorkspaceLocator(
   };
 }
 
-function commandString(tokens: string[]) {
-  return tokens.map((token) => /^[A-Za-z0-9_./:@%+=,-]+$/.test(token) ? token : shellSingleQuote(token)).join(' ');
-}
-
-function buildDerivedDirectEntryLocator(
-  standardInterface: StandardAgentInterface | null,
-  workspacePath: string,
-  workspaceLocator: BoundWorkspaceLocator | null,
-) {
-  if (!standardInterface || !workspaceLocator) {
-    return {
-      command: null,
-      manifest_command: null,
-    };
-  }
-  const locator = {
-    workspace_path: workspacePath,
-    workspace_root: workspaceLocator.workspace_root,
-    profile_ref: workspaceLocator.profile_ref,
-    input_path: workspaceLocator.input_path,
-  };
-  return {
-    command: standardInterface.workspace_binding.entry_command_template
-      ? commandString(materializeStandardAgentCommand(
-          standardInterface.workspace_binding.entry_command_template,
-          locator,
-        ))
-      : null,
-    manifest_command: standardInterface.workspace_binding.manifest_command_template
-      ? commandString(materializeStandardAgentCommand(
-          standardInterface.workspace_binding.manifest_command_template,
-          locator,
-        ))
-      : null,
-  };
-}
-
 function setProjectActiveBinding(
   bindings: WorkspaceBinding[],
   projectId: string,
@@ -679,8 +634,6 @@ function buildProjectBindingContract(
       workspace_locator_surface_kind: resolved.descriptor.workspace_binding.locator_surface_kind,
       required_locator_fields: resolved.descriptor.workspace_binding.required_locator_fields,
       optional_locator_fields: resolved.descriptor.workspace_binding.optional_locator_fields,
-      derived_entry_command_template: resolved.descriptor.workspace_binding.entry_command_template?.join(' ') ?? null,
-      derived_manifest_command_template: resolved.descriptor.workspace_binding.manifest_command_template?.join(' ') ?? null,
       quick_bind_hint: 'Use the locator fields declared by the selected Standard Agent descriptor.',
     };
   }
@@ -692,8 +645,6 @@ function buildProjectBindingContract(
     workspace_locator_surface_kind: null,
     required_locator_fields: [],
     optional_locator_fields: [],
-    derived_entry_command_template: null,
-    derived_manifest_command_template: null,
     quick_bind_hint: 'No Standard Agent descriptor is available; provide explicit entry and manifest commands.',
   };
 }
@@ -870,23 +821,13 @@ export function bindWorkspace(
     profileRef: options.profileRef,
     inputPath: options.inputPath,
   });
-  const derivedDirectEntry = options.deriveDirectEntry === false
-    ? {
-        command: null,
-        manifest_command: null,
-      }
-    : buildDerivedDirectEntryLocator(
-        resolvedStandardInterface?.descriptor ?? null,
-        absolutePath,
-        workspaceLocator,
-      );
 
   binding.project = project.project;
   binding.label = normalizeOptionalString(options.label);
   binding.status = 'active';
   binding.direct_entry = {
-    command: normalizeOptionalString(options.entryCommand) ?? derivedDirectEntry.command,
-    manifest_command: normalizeOptionalString(options.manifestCommand) ?? derivedDirectEntry.manifest_command,
+    command: normalizeOptionalString(options.entryCommand),
+    manifest_command: normalizeOptionalString(options.manifestCommand),
     url: normalizeOptionalString(options.entryUrl),
     workspace_locator: workspaceLocator,
   };

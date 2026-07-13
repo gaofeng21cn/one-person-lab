@@ -1,8 +1,9 @@
+import path from 'node:path';
+
 import type {
   FamilyActionCatalog,
   FamilyActionCatalogAction,
   FamilyActionExportFormat,
-  FamilyActionSurfaceDescriptor,
 } from './family-action-catalog-contract.ts';
 import { record, stringValue, type JsonRecord } from './json-record.ts';
 
@@ -14,12 +15,31 @@ type FamilyActionCatalogProjectionManifest = {
   } | null;
 };
 
-function surfaceCommand(action: FamilyActionCatalogAction, surface: FamilyActionSurfaceDescriptor | null) {
-  return stringValue(surface?.command) ?? action.source_command.command;
+function shellArgument(value: string) {
+  return value.includes(' ') || value.includes("'") ? `'${value.replace(/'/g, `'\\''`)}'` : value;
 }
 
-function surfaceKind(action: FamilyActionCatalogAction, surface: FamilyActionSurfaceDescriptor | null) {
-  return stringValue(surface?.surface_kind) ?? action.source_command.surface_kind;
+function absoluteWorkspacePath(workspacePath: string) {
+  const normalized = workspacePath.trim();
+  if (!normalized || !path.isAbsolute(normalized)) {
+    throw new Error('Family action hosted command requires an absolute workspace path.');
+  }
+  return path.normalize(normalized);
+}
+
+export function hostedFamilyActionCommand(targetDomainId: string, actionId: string, workspacePath: string) {
+  return [
+    'opl agents run --domain',
+    shellArgument(targetDomainId),
+    '--action',
+    shellArgument(actionId),
+    '--workspace',
+    shellArgument(absoluteWorkspacePath(workspacePath)),
+  ].join(' ');
+}
+
+function surfaceKind(value: unknown, fallback: string) {
+  return stringValue(value) ?? fallback;
 }
 
 function sourceOfWork(action: FamilyActionCatalogAction) {
@@ -38,25 +58,28 @@ function actionInputContract(action: FamilyActionCatalogAction) {
     required_fields: action.required_fields,
     optional_fields: action.optional_fields,
     workspace_locator_fields: action.workspace_locator_fields,
-    ...(action.handler_binding ?? {}),
+    execution_binding: action.execution_binding,
   };
 }
 
-export function projectFamilyAction(action: FamilyActionCatalogAction) {
+export function projectFamilyAction(
+  action: FamilyActionCatalogAction,
+  targetDomainId: string,
+  workspacePath: string,
+) {
   const cliSurface = action.supported_surfaces.cli;
   const mcpSurface = action.supported_surfaces.mcp;
   const skillSurface = action.supported_surfaces.skill;
   const productEntrySurface = action.supported_surfaces.product_entry;
   const openaiSurface = action.supported_surfaces.openai;
   const aiSdkSurface = action.supported_surfaces.ai_sdk;
-  const command = surfaceCommand(action, cliSurface);
-  const kind = surfaceKind(action, cliSurface);
+  const command = hostedFamilyActionCommand(targetDomainId, action.action_id, workspacePath);
   const lineage = sourceOfWork(action);
 
   return {
     operator_loop_action: {
-      command: surfaceCommand(action, productEntrySurface),
-      surface_kind: surfaceKind(action, productEntrySurface),
+      command,
+      surface_kind: surfaceKind(productEntrySurface?.surface_kind, 'opl_agent_action_product_entry'),
       summary: action.summary,
       requires: action.required_fields,
       ...actionInputContract(action),
@@ -65,7 +88,7 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
     cli: {
       action_id: action.action_id,
       command,
-      surface_kind: kind,
+      surface_kind: surfaceKind(cliSurface?.surface_kind, 'opl_agent_action_cli'),
       summary: action.summary,
       effect: action.effect,
       input_schema_ref: action.input_schema_ref,
@@ -77,8 +100,8 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
     mcp: {
       name: stringValue(mcpSurface?.tool_name) ?? action.action_id,
       description: action.summary,
-      command: surfaceCommand(action, mcpSurface),
-      surface_kind: surfaceKind(action, mcpSurface),
+      command,
+      surface_kind: surfaceKind(mcpSurface?.surface_kind, 'opl_agent_action_mcp'),
       input_schema_ref: action.input_schema_ref,
       output_schema_ref: action.output_schema_ref,
       public_runtime: mcpSurface?.public_runtime !== false,
@@ -91,7 +114,7 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
       command_contract_id: stringValue(skillSurface?.command_contract_id) ?? action.action_id,
       action_id: action.action_id,
       command,
-      surface_kind: kind,
+      surface_kind: surfaceKind(skillSurface?.surface_kind, 'opl_agent_action_skill'),
       summary: action.summary,
       ...actionInputContract(action),
       effect: action.effect,
@@ -102,8 +125,8 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
     },
     product_entry: {
       action_key: stringValue(productEntrySurface?.action_key) ?? action.action_id,
-      command: surfaceCommand(action, productEntrySurface),
-      surface_kind: surfaceKind(action, productEntrySurface),
+      command,
+      surface_kind: surfaceKind(productEntrySurface?.surface_kind, 'opl_agent_action_product_entry'),
       summary: action.summary,
       requires: action.required_fields,
       ...actionInputContract(action),
@@ -125,6 +148,7 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
       },
       output_schema_ref: action.output_schema_ref,
       accepted_answer_shape_ref: action.output_schema_ref,
+      command,
       ...actionInputContract(action),
       source_of_work: lineage,
       ...(action.stage_route ? { stage_route: action.stage_route } : {}),
@@ -135,6 +159,7 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
       inputSchemaRef: action.input_schema_ref,
       outputSchemaRef: action.output_schema_ref,
       command,
+      surface_kind: surfaceKind(aiSdkSurface?.surface_kind, 'opl_agent_action_ai_sdk'),
       ...actionInputContract(action),
       source_of_work: lineage,
       ...(action.stage_route ? { stage_route: action.stage_route } : {}),
@@ -206,11 +231,12 @@ function hasSkillProjectionContract(
 
 export function buildFamilyActionCatalogParity(
   catalog: FamilyActionCatalog,
+  workspacePath: string,
   manifest: FamilyActionCatalogProjectionManifest | null = null,
 ) {
   const issues: string[] = [];
   for (const action of catalog.actions) {
-    const projections = projectFamilyAction(action);
+    const projections = projectFamilyAction(action, catalog.target_domain_id, workspacePath);
     const lineage = sourceOfWork(action);
     if (lineage.source_catalog !== 'family_action_catalog') {
       issues.push(`${action.action_id}: source-of-work must originate in family_action_catalog`);
@@ -235,14 +261,18 @@ export function buildFamilyActionCatalogParity(
     if (!projectedLineages.every((lineage) => lineage.source_action_id === action.action_id)) {
       issues.push(`${action.action_id}: generated surface lineage diverges from source action`);
     }
-    if (projections.cli.command !== action.source_command.command) {
-      issues.push(`${action.action_id}: cli command diverges from source command`);
-    }
-    if (action.supported_surfaces.product_entry?.command) {
-      const expected = action.supported_surfaces.product_entry.command;
-      if (projections.product_entry.command !== expected) {
-        issues.push(`${action.action_id}: product-entry command projection diverges`);
-      }
+    const hostedCommand = hostedFamilyActionCommand(catalog.target_domain_id, action.action_id, workspacePath);
+    const projectedCommands = [
+      projections.operator_loop_action.command,
+      projections.cli.command,
+      projections.mcp.command,
+      projections.skill.command,
+      projections.product_entry.command,
+      projections.openai.command,
+      projections.ai_sdk.command,
+    ];
+    if (!projectedCommands.every((command) => command === hostedCommand)) {
+      issues.push(`${action.action_id}: generated executable command is not the canonical hosted command`);
     }
 
     const manifestAction =
@@ -264,9 +294,22 @@ export function buildFamilyActionCatalogParity(
   };
 }
 
-export function projectFamilyActionCatalog(catalog: FamilyActionCatalog, format: FamilyActionExportFormat) {
-  return catalog.actions.map((action) => {
-    const projections = projectFamilyAction(action);
+export function projectFamilyActionCatalog(
+  catalog: FamilyActionCatalog,
+  format: FamilyActionExportFormat,
+  workspacePath: string,
+) {
+  const surfaceForFormat = {
+    cli: 'cli',
+    mcp: 'mcp',
+    skill: 'skill',
+    openai: 'openai',
+    'ai-sdk': 'ai_sdk',
+  } as const;
+  return catalog.actions
+    .filter((action) => action.supported_surfaces[surfaceForFormat[format]] !== null)
+    .map((action) => {
+    const projections = projectFamilyAction(action, catalog.target_domain_id, workspacePath);
     switch (format) {
       case 'cli':
         return projections.cli;
@@ -279,5 +322,5 @@ export function projectFamilyActionCatalog(catalog: FamilyActionCatalog, format:
       case 'ai-sdk':
         return projections.ai_sdk;
     }
-  });
+    });
 }

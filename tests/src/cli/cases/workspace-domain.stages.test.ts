@@ -2,7 +2,6 @@ import {
   assert,
   createFamilyContractsFixtureRoot,
   fs,
-  installRuntimePackageFixture,
   loadFamilyManifestFixtures,
   os,
   path,
@@ -15,7 +14,7 @@ import {
   type JsonRecord,
 } from './workspace-domain-test-helper.ts';
 
-test('family stage parity detects an allowed action ref missing from the action catalog', () => {
+test('family stage contract fails closed when an allowed action ref is missing from the catalog', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-stage-drift-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const stagePack = createAdmittedStagePackFixture(
@@ -25,60 +24,24 @@ test('family stage parity detects an allowed action ref missing from the action 
   );
   const stageManifestPath = path.join(stagePack.repoDir, 'agent/stages/manifest.json');
   const stageManifest = JSON.parse(fs.readFileSync(stageManifestPath, 'utf8')) as JsonRecord;
-  const actionCatalogPath = path.join(stagePack.repoDir, 'contracts/action_catalog.json');
-  const actionCatalog = JSON.parse(fs.readFileSync(actionCatalogPath, 'utf8')) as JsonRecord;
-  (actionCatalog.actions as JsonRecord[]).push({
-    ...(actionCatalog.actions as JsonRecord[])[0],
-    action_id: 'missing_action',
-  });
-  fs.writeFileSync(actionCatalogPath, `${JSON.stringify(actionCatalog, null, 2)}\n`, 'utf8');
   (stageManifest.stages as JsonRecord[])[0].allowed_action_refs = ['missing_action'];
   fs.writeFileSync(stageManifestPath, `${JSON.stringify(stageManifest, null, 2)}\n`, 'utf8');
 
   try {
-    installRuntimePackageFixture(stateRoot, 'mas');
     bindManifest(
       'medautoscience',
       stagePack.manifest,
       { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot },
       stagePack.repoDir,
     );
-    const parity = runCli([
-      'stages', 'inspect', '--domain', 'mas', '--stage', 'stage_1',
-    ], {
+    const entry = runCli(['domain', 'manifests'], {
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
       OPL_STATE_DIR: stateRoot,
-    }).family_stage.parity;
-
-    assert.equal(parity.status, 'drift_detected');
-    assert.equal(
-      parity.issues.some((issue: unknown) => String(issue).includes('missing_action')),
-      true,
+    }).domain_manifests.projects.find(
+      (candidate: { project_id: string }) => candidate.project_id === 'medautoscience',
     );
-
-    const launchedWithDebt = runCli([
-      'family-runtime',
-      'attempt',
-      'create',
-      '--domain',
-      'medautoscience',
-      '--stage',
-      'stage_1',
-      '--workspace-locator',
-      '{"workspace_root":"/tmp/mas-stage-drift"}',
-    ], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    }).family_runtime_stage_attempt;
-    assert.equal(launchedWithDebt.attempt.status, 'queued');
-    assert.equal(launchedWithDebt.stage_context_observation.progression_effect, 'stage_may_start');
-    assert.equal(launchedWithDebt.attempt.blocked_reason, null);
-    assert.equal(
-      launchedWithDebt.stage_context_observation.warning_findings.some(
-        (finding: { code: string }) => finding.code === 'missing_action_catalog_ref',
-      ),
-      true,
-    );
+    assert.equal(entry.status, 'invalid_manifest');
+    assert.equal(entry.error.message, 'Stage manifest references missing family actions.');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });

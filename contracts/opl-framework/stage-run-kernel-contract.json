@@ -2,7 +2,7 @@
   "contract_kind": "opl_stage_run_kernel_contract.v2",
   "surface_kind": "opl_stage_run_kernel_contract",
   "owner": "one-person-lab",
-  "purpose": "Provide refs-only StageRun transport identity, event history, retry-budget accounting, currentness filtering, decisive-Attempt route ABI validation, and rebuildable read models without creating domain route selection, execution permission, or semantic transition authority.",
+  "purpose": "Provide durable refs-only StageRun invocation identity, exact immutable launch-spec binding, pre-start recovery, event history, retry-budget accounting, currentness filtering, decisive-Attempt route ABI validation, and rebuildable read models without creating domain route selection, execution permission, or semantic transition authority.",
   "state": "active_contract",
   "machine_boundary": {
     "opl_owns": {
@@ -12,7 +12,11 @@
       "currentness_filtering": true,
       "retry_budget_accounting": true,
       "operator_observability": true,
-      "decisive_attempt_route_abi_validation": true
+      "decisive_attempt_route_abi_validation": true,
+      "durable_stage_run_invocation_identity": true,
+      "immutable_stage_run_spec_digest": true,
+      "pre_start_launch_registry": true,
+      "validated_route_transition_materialization": true
     },
     "codex_cli_owns": {
       "semantic_stage_selection": true,
@@ -58,6 +62,84 @@
       "missing_expected_receipt_shape"
     ],
     "framework_semantic_route_role": "validate_attempt_authority_and_route_abi_then_project_declared_target_without_domain_semantic_judgment"
+  },
+  "durable_stage_run_launch": {
+    "required_workflow_input_fields": [
+      "stage_run_id",
+      "stage_run_invocation_id",
+      "stage_run_spec_sha256",
+      "stage_run_spec",
+      "parent_route_decision_ref"
+    ],
+    "stage_run_id_derivation": {
+      "algorithm": "stable_id",
+      "ordered_inputs": [
+        "domain_id",
+        "stage_id",
+        "stage_run_invocation_id"
+      ],
+      "immutable_spec_fields_participate_directly": false,
+      "currentness_observations_participate": false
+    },
+    "stage_run_spec_sha256": {
+      "algorithm": "sha256_canonical_json",
+      "binds": [
+        "stable_workspace_identity",
+        "stage_manifest_ref_and_sha256",
+        "quality_policy_ref_and_body",
+        "stage_packet_and_checkpoint_refs",
+        "source_fingerprint_and_source_refs",
+        "input_artifact_refs_and_hashes",
+        "role_prompt_and_quality_rubric_refs",
+        "stage_goal_and_lineage_refs",
+        "immutable_package_dependency_closure",
+        "executor_binding",
+        "parent_route_decision_ref"
+      ],
+      "excludes": [
+        "checked_at",
+        "use_boundary_id",
+        "use_receipt_ref",
+        "checkout_currentness_observation",
+        "runtime_source_readiness_observation",
+        "materialization_or_checkout_path"
+      ]
+    },
+    "invocation_sources": {
+      "cli_default": "stable_domain_stage_action_workspace_task_idempotency",
+      "hosted_action": "action_run_id_plus_action_run_ref",
+      "validated_route": "parent_stage_run_id_plus_decisive_attempt_ref_plus_route_decision_sha256_plus_target_stage",
+      "explicit_new_run_option": "--new-stage-run",
+      "quality_path_compatibility_alias": "--new-attempt"
+    },
+    "launch_registry": {
+      "database": "${OPL_STATE_DIR}/family-runtime/queue.sqlite",
+      "table": "stage_run_launches",
+      "write_order": "register_exact_input_before_temporal_start",
+      "validate_identity_and_spec_before_registry_write": true,
+      "statuses": [
+        "registered",
+        "start_failed",
+        "started",
+        "closed"
+      ],
+      "same_invocation_same_spec": "return_existing_running_or_closed_stage_run",
+      "same_invocation_different_spec": "typed_fail_closed_stage_run_invocation_spec_conflict",
+      "pre_start_crash_recovery": "restart_from_registered_exact_input",
+      "post_start_crash_recovery": "recover_existing_temporal_execution_without_duplicate_start",
+      "terminal_temporal_readback": "persist_start_receipt_then_mark_launch_closed",
+      "closed_state_is_monotonic_under_late_start_receipt": true,
+      "stores_domain_truth": false,
+      "stores_artifact_or_memory_body": false
+    },
+    "route_materialization": {
+      "semantic_route_decision_owner": "decisive_codex_attempt",
+      "stage_transition_materialization_owner": "opl_stage_run_controller",
+      "validated_non_complete_route_starts_target_stage_run": true,
+      "same_route_replay_is_idempotent": true,
+      "later_route_decision_creates_new_stage_run": true,
+      "route_back_or_repeat_to_prior_stage_creates_new_stage_run": true
+    }
   },
   "route_output_policy": {
     "semantic_route_owner": "decisive_codex_attempt",
@@ -218,6 +300,8 @@
     "opl_can_filter_stale_reuse": true,
     "opl_can_validate_route_output_abi_and_attempt_authority": true,
     "opl_must_reject_non_authoritative_or_malformed_route_output": true,
+    "opl_can_persist_stage_run_transport_launch_identity": true,
+    "opl_can_materialize_validated_decisive_attempt_route": true,
     "opl_can_select_semantic_stage_route": false,
     "opl_can_reject_abi_valid_route_on_domain_semantic_merit": false,
     "opl_can_block_next_stage_for_missing_receipt_or_format": false,

@@ -21,12 +21,14 @@ test('generated interfaces can compile a standard agent repo contract pack witho
     path.join(targetDir, 'contracts', 'action_catalog.json'),
     `${JSON.stringify({
       surface_kind: 'family_action_catalog',
-      version: 'family-action-catalog.v1',
+      version: 'family-action-catalog.v2',
       catalog_id: 'sample_brief_agent_action_catalog',
       target_domain_id: 'sample-brief-agent',
       owner: 'SampleBriefAgent',
       authority_boundary: {
-        opl_role: 'generated_interface_projection_only',
+        domain_truth_owner: 'SampleBriefAgent',
+        opl_role: 'projection_consumer_only',
+        write_policy: 'no_domain_truth_writes',
       },
       actions: [
         {
@@ -35,12 +37,14 @@ test('generated interfaces can compile a standard agent repo contract pack witho
           summary: 'Draft a source-grounded brief.',
           owner: 'SampleBriefAgent',
           effect: 'mutating',
-          source_command: {
-            command: 'sample-brief-agent draft --workspace-root <workspace_root>',
-            surface_kind: 'domain_cli',
+          execution_binding: {
+            kind: 'stage_binding',
+            stage_manifest_ref: 'agent/stages/manifest.json',
           },
           input_schema_ref: 'contracts/draft-brief.input.schema.json',
           output_schema_ref: 'contracts/draft-brief.output.schema.json',
+          required_fields: ['workspace_root'],
+          optional_fields: [],
           workspace_locator_fields: ['workspace_root'],
           human_gate_ids: ['brief_owner_review'],
           stage_route: {
@@ -52,7 +56,6 @@ test('generated interfaces can compile a standard agent repo contract pack witho
           },
           supported_surfaces: {
             cli: {
-              command: 'sample-brief-agent draft --workspace-root <workspace_root>',
               surface_kind: 'domain_cli',
             },
             mcp: {
@@ -67,7 +70,6 @@ test('generated interfaces can compile a standard agent repo contract pack witho
             },
             product_entry: {
               action_key: 'draft_brief',
-              command: 'sample-brief-agent product draft --workspace-root <workspace_root>',
               surface_kind: 'domain_product_entry',
             },
             openai: { tool_name: 'sample_brief_agent_draft_brief' },
@@ -83,13 +85,14 @@ test('generated interfaces can compile a standard agent repo contract pack witho
           summary: 'Route only to a domain handler target without becoming a stage action.',
           owner: 'SampleBriefAgent',
           effect: 'mutating',
-          stage_route_exempt: 'domain_handler_target_only',
-          source_command: {
-            command: 'sample-brief-agent internal-handler --workspace-root <workspace_root>',
-            surface_kind: 'domain_handler_target',
+          execution_binding: {
+            kind: 'handler_ref',
+            handler_ref: 'handler:sample.internal-handler',
           },
           input_schema_ref: 'contracts/draft-brief.input.schema.json',
           output_schema_ref: 'contracts/draft-brief.output.schema.json',
+          required_fields: ['workspace_root'],
+          optional_fields: [],
           workspace_locator_fields: ['workspace_root'],
           human_gate_ids: [],
           supported_surfaces: {
@@ -114,6 +117,21 @@ test('generated interfaces can compile a standard agent repo contract pack witho
         },
       ],
       notes: [],
+    })}\n`,
+  );
+  fs.writeFileSync(
+    path.join(targetDir, 'contracts', 'domain_handler_registry.json'),
+    `${JSON.stringify({
+      surface_kind: 'domain_handler_registry',
+      version: 'domain-handler-registry.v1',
+      handlers: [{
+        handler_id: 'sample.internal-handler',
+        binding: {
+          kind: 'typescript_export',
+          file: 'runtime/authority_functions/internal-handler.ts',
+          export: 'invokeInternalHandler',
+        },
+      }],
     })}\n`,
   );
   fs.writeFileSync(
@@ -148,6 +166,15 @@ test('generated interfaces can compile a standard agent repo contract pack witho
   }
   fs.mkdirSync(path.join(targetDir, 'runtime', 'authority_functions'), { recursive: true });
   fs.writeFileSync(path.join(targetDir, 'runtime', 'authority_functions', 'README.md'), '# Authority functions\n');
+  fs.writeFileSync(
+    path.join(targetDir, 'runtime', 'authority_functions', 'internal-handler.ts'),
+    [
+      'export function invokeInternalHandler() {',
+      "  return { status: 'owner_receipt_candidate' };",
+      '}',
+      '',
+    ].join('\n'),
+  );
   fs.writeFileSync(
     path.join(targetDir, 'contracts', 'owner_receipt_contract.json'),
     `${JSON.stringify({ surface_kind: 'owner_receipt_contract' })}\n`,
@@ -356,7 +383,10 @@ test('generated interfaces can compile a standard agent repo contract pack witho
     bundle.ai_sdk.descriptors.map((descriptor: { name: string }) => descriptor.name),
     ['sample_brief_agent_draft_brief'],
   );
-  assert.equal(bundle.product_entry.descriptors[0].command, 'sample-brief-agent product draft --workspace-root <workspace_root>');
+  assert.equal(
+    bundle.product_entry.descriptors[0].command,
+    `opl agents run --domain sample-brief-agent --action draft_brief --workspace ${targetDir}`,
+  );
   assert.equal(
     bundle.product_entry.descriptors.some((descriptor: { action_key: string }) => descriptor.action_key === 'invoke_internal_handler'),
     true,
@@ -369,6 +399,7 @@ test('generated interfaces can compile a standard agent repo contract pack witho
     handlerParity.generated_surfaces.find((entry: { surface_id: string }) => entry.surface_id === 'cli').status,
     'not_applicable',
   );
+  assert.equal(bundle.domain_handler.descriptors[0].handler_ref, 'handler:sample.internal-handler');
   assert.equal(bundle.stage_routes[0].stage_id, 'brief-draft');
   assert.deepEqual(bundle.stage_routes[0].allowed_action_refs, ['draft_brief']);
   assert.deepEqual(bundle.action_stage_routes, [{
