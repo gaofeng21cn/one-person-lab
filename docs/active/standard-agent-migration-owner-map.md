@@ -90,7 +90,7 @@ Machine boundary: 本文是人读迁移验收源。机器真相继续归 `contra
 | OPL runtime / App shell concrete routing defaults 绑定 first-party agent | `standard_agent_registry`、domain profile、package descriptor、action catalog | default route 来自 registry/profile；MAS/MAG/RCA/OMA/OBF 是 first-party starter / admitted agents，不是框架上限 | 不能把 first-party starter 当用户不可替换的固定身份。 |
 | `paper_mission`、`paper-autonomy`、MAG manifest alias、RCA visual profile、OMA/OBF helper-materializer 等 compatibility carrier | profile / fixture / history，或 owner-gated delete/keep/typed-blocker | active caller 存在时保留；caller cutover 后按 no-active-caller、no-forbidden-write、tombstone/provenance、owner decision 退役 | 空 worklist、closed gate、docs patch 或 default-caller clean 不授权 physical delete。 |
 
-## 2026-07-11 Fresh Readback
+## 2026-07-13 冻结基线 Fresh Readback
 
 排除 Live Evidence 后，本轮功能/结构迁移已经达到 terminal 状态：原始 `26/26` 项均为 `done / 100%`。这里的 `100%` 只表示能力 owner、active caller、generated/hosted surface 和旧实现退役/收薄四项已经有 fresh executable evidence；不表示 production readiness、domain readiness、quality/export ready、owner acceptance、Brand L5、provider long-soak 或真实用户路径完成。
 
@@ -104,12 +104,12 @@ Machine boundary: 本文是人读迁移验收源。机器真相继续归 `contra
 
 `opl agents conformance --family-defaults` 当前返回：
 
-- `passed_count=6`
-- `blocked_count=0`
-- `structural_conformance_status=passed`
-- `structural_contract_status=passed`
-- `ordinary_path_guard_status=passed`
-- 五个 domain report 均为 `passed`；计数中的第六项是 family aggregate。
+- `passed_count=4`
+- `blocked_count=2`
+- `structural_conformance_status=blocked`
+- `structural_contract_status=blocked`
+- `ordinary_path_guard_status=blocked`
+- MAG / RCA / OMA 为 `passed`；MAS 与 OBF 被并行 Stage-quality / stage-operating-principles lane 的新要求阻断。MAS 还缺 `strategy_retrospective` canary evidence；两仓都缺当前 stage operating principles 声明。它们不是本轮 standard interface、generated default caller、private residue 或 policy fingerprint 回归，本轮按 2026-07-13 时间点冻结，不接管该外部写集。
 
 `opl agents default-callers --family-defaults` 当前返回：
 
@@ -119,9 +119,9 @@ Machine boundary: 本文是人读迁移验收源。机器真相继续归 `contra
 - `missing_no_active_caller_proof_count=0`
 - `status=ready_domain_evidence_required`
 
-remaining retirement worklist 只负责 domain owner receipt / typed blocker、no-forbidden-write、tombstone/provenance 和 physical-delete owner decision。它不构成 generated caller 结构 blocker，也不授权 OPL 删除仍被 domain owner保留的最小 authority adapter。
+当前 `surface_retirement_gate_count=40`、`closed_surface_retirement_gate_count=40`、`deletion_evidence_worklist_count=0`、`active_deletion_evidence_worklist_count=0`，并返回 `no_further_opl_default_caller_delete_work=true`。该结构 readback 不授权 OPL 删除 domain repo 文件；`physical_delete_authorized=false` 继续 fail closed。
 
-Live Evidence 继续单列：`live_domain_progress_status=owner_evidence_recorded_not_ready_claim`、`live_stage_run_progress_evidence_status=owner_evidence_recorded_not_ready_claim`。OPL 不能据此声称 domain ready、quality/export ready、production ready 或 owner acceptance。
+Private residue owner-decision ledger 当前 `decision_item_count=0`、`physical_delete_authorized_count=0`。Live Evidence 继续单列：本次 full conformance readback 为 `live_domain_progress_status=blocked`、`live_stage_run_progress_evidence_status=required_from_domain_owner`。OPL 不能据此声称 domain ready、quality/export ready、production ready 或 owner acceptance。
 
 ## 原始 26 项 Plan Completion Audit
 
@@ -159,7 +159,7 @@ Live Evidence 继续单列：`live_domain_progress_status=owner_evidence_recorde
 | 9 | BookForge dependency默认值移除 | done | 100% | dependency doctor使用显式domain/package profile，不再以publication-proof作为基座默认。 |
 | 10 | PubMed provider迁出 | done | 100% | OPL私有PubMed command/client已删除；Connect保provider-neutral metadata/receipt transport，医学client/normalization归MAS。 |
 | 11 | kernel first-party hardcode移除 | done | 100% | workspace root/runtime/evidence/repo discovery从registry/profile派生；Connect局部目录数组由registry映射生成，不是第二份手写family列表。 |
-| 12 | conformance source-behavior hard gate | done | 100% | source behavior与functional audit逐项比对并进入blocking blockers；负向探针覆盖未声明generic surface、audit声明active residue、diagnostic仍有active caller。修复后fresh family conformance为0 blocked。 |
+| 12 | conformance source-behavior hard gate | done | 100% | source behavior与functional audit逐项比对并进入blocking blockers；负向探针覆盖未声明generic surface、audit声明active residue、diagnostic仍有active caller。standard boundary focused tests、interfaces 5/5、default callers 40/40与residue decisions 0均通过；full family conformance另有MAS/OBF Stage-quality外部lane blocker，不回写为本项未完成。 |
 
 ## 明确拒绝与停止条件
 
