@@ -177,6 +177,7 @@ jobs:
     uses: ./.github/workflows/packages.yml
     with:
       release_set_generation: ${{ needs.detect-package-channel-change.outputs.release_set_generation }}
+      expected_framework_source_commit: ${{ github.sha }}
       release_gate: ${{ inputs.force_publish && 'daily_package_channel_forced' || 'daily_package_channel_changed' }}
       changed_packages_json: ${{ needs.detect-package-channel-change.outputs.changed_packages_json }}
       promotion_target: candidate

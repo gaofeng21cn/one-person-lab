@@ -35,6 +35,17 @@ function assertCondition(condition, message, failures) {
   if (!condition) failures.push(message);
 }
 
+function workflowInputBlocks(source, inputName) {
+  const pattern = new RegExp(`^      ${inputName}:\\n((?:^        [^\\n]*\\n?)*)`, 'gm');
+  return [...source.matchAll(pattern)].map((match) => match[1]);
+}
+
+function isRequiredStringInput(block) {
+  return /^        required: true$/m.test(block)
+    && /^        type: string$/m.test(block)
+    && !/^        default:/m.test(block);
+}
+
 function isSha256(value) {
   return typeof value === 'string' && /^[0-9a-f]{64}$/i.test(value);
 }
@@ -183,6 +194,19 @@ function validateWorkflow(manifest, manifestPath, failures) {
   assertCondition(!/docker\/build-push-action|one-person-lab-webui|webui-image:/.test(source), 'Package workflow must not publish App WebUI', failures);
   assertCondition(!/one-person-lab-modules/.test(source), 'Package workflow must not publish retired module namespaces', failures);
   assertCondition(/workflow_dispatch:/.test(source) && /workflow_call:/.test(source), 'Package workflow must keep manual and reusable release-gated triggers', failures);
+  const packageFrameworkCommitInputs = workflowInputBlocks(source, 'expected_framework_source_commit');
+  assertCondition(packageFrameworkCommitInputs.length === 2
+    && packageFrameworkCommitInputs.every(isRequiredStringInput), 'Package workflow must require one non-default Framework source commit for both dispatch and workflow_call', failures);
+  assertCondition(source.includes('EXPECTED_FRAMEWORK_SOURCE_COMMIT: ${{ inputs.expected_framework_source_commit }}')
+    && source.includes('[[ "$expected" =~ ^[0-9a-f]{40}$ ]]')
+    && source.includes('[ "$GITHUB_SHA" != "$expected" ]')
+    && source.includes('[ "$actual_head" != "$expected" ]'), 'Package workflow must fail closed unless expected Framework commit, GITHUB_SHA, and checkout HEAD match exactly', failures);
+  const packageCheckoutIndex = source.indexOf('- name: Checkout OPL');
+  const packageSourceGateIndex = source.indexOf('- name: Verify exact Framework source commit');
+  const packageResolutionIndex = source.indexOf('- name: Resolve Release Set generation');
+  assertCondition(packageCheckoutIndex >= 0
+    && packageCheckoutIndex < packageSourceGateIndex
+    && packageSourceGateIndex < packageResolutionIndex, 'Package Framework source gate must run immediately after checkout and before build or publication work', failures);
   assertCondition(/concurrency:[\s\S]*opl-package-publication-/.test(source) && /cancel-in-progress:\s*false/.test(source), 'Package publication must be serialized without cancellation', failures);
   assertCondition(/release_set_generation:/.test(source) && !/\n\s+opl_version:/.test(source), 'Package workflow input must be Release Set generation', failures);
   assertCondition(/oci-publication-preflight\.mjs/.test(source), 'Package workflow must run OCI immutable preflight', failures);
@@ -207,6 +231,20 @@ function validateWorkflow(manifest, manifestPath, failures) {
 
   assertCondition(!/\n\s*release:\s*\n/.test(releaseSource), 'Stable promotion must not have a second GitHub Release event writer', failures);
   assertCondition(/workflow_dispatch:/.test(releaseSource), 'Stable promotion must retain an explicit dispatch owner surface', failures);
+  const releaseFrameworkCommitInputs = workflowInputBlocks(releaseSource, 'expected_framework_source_commit');
+  assertCondition(releaseFrameworkCommitInputs.length === 1
+    && releaseFrameworkCommitInputs.every(isRequiredStringInput), 'Release promotion must require one non-default Framework source commit', failures);
+  assertCondition(/expected_framework_source_commit:\s*\$\{\{ inputs\.expected_framework_source_commit \}\}/.test(releaseSource), 'Candidate caller must pass the exact Framework source commit into packages.yml', failures);
+  assertCondition(releaseSource.includes('EXPECTED_FRAMEWORK_SOURCE_COMMIT: ${{ inputs.expected_framework_source_commit }}')
+    && releaseSource.includes('[[ "$expected" =~ ^[0-9a-f]{40}$ ]]')
+    && releaseSource.includes('[ "$GITHUB_SHA" != "$expected" ]')
+    && releaseSource.includes('[ "$actual_head" != "$expected" ]'), 'Stable promotion must fail closed unless expected Framework commit, GITHUB_SHA, and checkout HEAD match exactly', failures);
+  const releaseCheckoutIndex = releaseSource.indexOf('- name: Checkout OPL');
+  const releaseSourceGateIndex = releaseSource.indexOf('- name: Verify exact Framework source commit');
+  const releaseSetupIndex = releaseSource.indexOf('- name: Setup Node.js');
+  assertCondition(releaseCheckoutIndex >= 0
+    && releaseCheckoutIndex < releaseSourceGateIndex
+    && releaseSourceGateIndex < releaseSetupIndex, 'Stable Framework source gate must run immediately after checkout and before retag work', failures);
   assertCondition(/release_set_generation:/.test(releaseSource) && /promote-exact-release-set:/.test(releaseSource), 'Release caller must promote an explicit immutable generation', failures);
   assertCondition(/oras pull "\$\{carrier\}@\$\{carrier_digest\}"/.test(releaseSource), 'Stable promotion must pull the exact immutable catalog digest', failures);
   assertCondition(/components\.packages\.members/.test(releaseSource) && /components\.base\.artifact_digest/.test(releaseSource), 'Stable promotion must retag exact Package and Base digests', failures);
@@ -223,6 +261,7 @@ function validateWorkflow(manifest, manifestPath, failures) {
   assertCondition(/publish_required == 'true'/.test(dailySource), 'Daily workflow must skip publication when unchanged', failures);
   assertCondition(/promotion_target:\s*candidate/.test(dailySource), 'Daily workflow may promote candidate only', failures);
   assertCondition(/owner_cohort_artifact_name/.test(dailySource), 'Daily detection must pass the frozen owner cohort into publication', failures);
+  assertCondition(/expected_framework_source_commit:\s*\$\{\{ github\.sha \}\}/.test(dailySource), 'Daily publication must bind packages.yml to its exact Framework workflow commit', failures);
   assertCondition(!/:latest(?:["'\s]|$)/m.test(dailySource), 'Daily Package workflow must not use bare latest', failures);
 }
 
