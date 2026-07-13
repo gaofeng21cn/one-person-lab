@@ -1,5 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import type { SourceClosureGraphScan } from './types.ts';
@@ -16,7 +18,11 @@ function failedScan(diagnostic: string): SourceClosureGraphScan {
   };
 }
 
-export function buildPythonSourceGraph(repoDir: string, relativeFiles: string[]): SourceClosureGraphScan {
+export function buildPythonSourceGraph(
+  repoDir: string,
+  relativeFiles: string[],
+  pythonExecutable?: string,
+): SourceClosureGraphScan {
   const helperPath = fileURLToPath(new URL(
     '../../../../python/opl_framework/source_closure_ast.py',
     import.meta.url,
@@ -24,26 +30,31 @@ export function buildPythonSourceGraph(repoDir: string, relativeFiles: string[])
   if (!fs.existsSync(helperPath)) {
     return failedScan(`python_ast_helper_missing:${helperPath}`);
   }
-  const python = process.env.OPL_PYTHON_BIN ?? process.env.PYTHON ?? 'python3';
-  const result = spawnSync(python, ['-B', helperPath], {
-    cwd: repoDir,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PYTHONDONTWRITEBYTECODE: '1',
-    },
-    input: JSON.stringify({ repo_dir: repoDir, files: relativeFiles }),
-    maxBuffer: 32 * 1024 * 1024,
-    timeout: 120_000,
-  });
-  if (result.error) {
-    return failedScan(`python_ast_helper_error:${result.error.message}`);
-  }
-  if (result.status !== 0) {
-    return failedScan(`python_ast_helper_exit:${result.status}:${result.stderr.trim()}`);
-  }
+  const python = pythonExecutable ?? process.env.OPL_PYTHON_BIN ?? process.env.PYTHON ?? 'python3';
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-source-closure-python-'));
+  const outputPath = path.join(tempDir, 'graph.json');
   try {
-    const parsed = JSON.parse(result.stdout) as SourceClosureGraphScan;
+    const result = spawnSync(python, ['-B', helperPath, outputPath], {
+      cwd: repoDir,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        PYTHONDONTWRITEBYTECODE: '1',
+      },
+      input: JSON.stringify({ repo_dir: repoDir, files: relativeFiles }),
+      stdio: ['pipe', 'ignore', 'pipe'],
+      timeout: 120_000,
+    });
+    if (result.error) {
+      return failedScan(`python_ast_helper_error:${result.error.message}`);
+    }
+    if (result.status !== 0) {
+      return failedScan(`python_ast_helper_exit:${result.status}:${(result.stderr ?? '').trim()}`);
+    }
+    if (!fs.existsSync(outputPath)) {
+      return failedScan('python_ast_helper_output_missing');
+    }
+    const parsed = JSON.parse(fs.readFileSync(outputPath, 'utf8')) as SourceClosureGraphScan;
     if (
       typeof parsed.scan_complete !== 'boolean'
       || !Array.isArray(parsed.symbols)
@@ -57,5 +68,7 @@ export function buildPythonSourceGraph(repoDir: string, relativeFiles: string[])
     return parsed;
   } catch (error) {
     return failedScan(`python_ast_helper_json_invalid:${error instanceof Error ? error.message : String(error)}`);
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
   }
 }

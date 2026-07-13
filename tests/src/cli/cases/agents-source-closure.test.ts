@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 
 import { assert, fs, os, path, runCli, test } from '../helpers.ts';
+import { buildPythonSourceGraph } from '../../../../src/modules/foundry-lab/standard-agent-source-closure-parts/python-graph.ts';
 
 function writeJson(filePath: string, value: unknown) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -125,6 +126,39 @@ test('agents source-closure resolves Python pyproject scripts and relative calls
   assert.equal(report.status, 'passed');
   assert.equal(report.entrypoints[0].source_kind, 'pyproject_script');
   assert.equal(report.reachable_symbols.some((symbol: { symbol: string }) => symbol.symbol === 'handle'), true);
+});
+
+test('Python source closure does not buffer helper stdout', () => {
+  const repoDir = buildRepo();
+  writeSource(repoDir, 'python/sample/cli.py', 'def main():\n    return "ok"\n');
+  const fakePython = path.join(repoDir, 'fake-python');
+  writeSource(repoDir, 'fake-python', [
+    '#!/usr/bin/env node',
+    "const fs = require('node:fs');",
+    'const outputPath = process.argv.at(-1);',
+    "if (!outputPath || outputPath.endsWith('.py')) process.exit(2);",
+    "process.stdin.on('data', () => {});",
+    "process.stdin.on('end', () => {",
+    "  const chunk = 'x'.repeat(1024 * 1024);",
+    '  for (let index = 0; index < 40; index += 1) process.stdout.write(chunk);',
+    '  fs.writeFileSync(outputPath, JSON.stringify({',
+    '    scan_complete: true,',
+    '    symbols: [],',
+    '    call_edges: [],',
+    '    unresolved_edges: [],',
+    '    observed_calls: [],',
+    '    diagnostics: [],',
+    '    pyproject_scripts: {},',
+    '  }));',
+    '});',
+    '',
+  ].join('\n'));
+  fs.chmodSync(fakePython, 0o755);
+
+  const graph = buildPythonSourceGraph(repoDir, ['python/sample/cli.py'], fakePython);
+
+  assert.equal(graph.scan_complete, true);
+  assert.deepEqual(graph.diagnostics, []);
 });
 
 test('agents source-closure fails closed on dynamic import and dispatch', () => {
