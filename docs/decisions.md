@@ -5,6 +5,19 @@ Purpose: `decisions`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+## 2026-07-13
+
+### 决策：白皮书正文归各仓，构建与发布证据归 OPL 唯一工具链
+
+原因：白皮书是面向用户解释设计理念的长期公开材料，不是功能说明书，也不是运行状态或 readiness 证明。正文需要由 OPL Framework、App、Cloud、MAS 各自的 truth owner 维护；renderer、样式、构建验证和发布回读如果分叉，则无法证明线上字节来自哪份正文，也会让工具用必备章节和术语反向塑造叙事。
+
+影响：
+
+- 四仓只持有正文和 `contracts/whitepaper_profile.json`；Framework 持有唯一 renderer、样式、family registry、reusable workflow 与 exact-byte readback。
+- Profile 只约束 owner、输入输出、页数和公开 URL，不断言叙述性章节或固定措辞。
+- 普通 push 只生成可审核 bundle；显式发布消费同一 bundle，经 `whitepaper-production` approval 后更新保留历史的 `gh-pages`，不得本机 orphan force-push。
+- artifact verification 只证明 HTML/PDF 已渲染；只有公开 URL exact-byte 回读 receipt 才证明已发布，两者都不声明产品、runtime、domain 或 production ready。
+
 ## 2026-07-12
 
 ### 决策：安装、管理与更新统一为 OPL Base、OPL App、OPL Packages 三层生命周期

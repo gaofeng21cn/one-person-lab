@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "owner": "OPL Charter + OPL Connect",
+  "purpose": "public_whitepaper_release_set_registry",
+  "state": "active",
+  "machine_boundary": "Pointer-only registry for the four public whitepaper owners, build profiles, watch paths, and public URLs. Each repository keeps its own prose and product truth. This registry does not claim product, runtime, domain, publication, or production readiness.",
+  "renderer": {
+    "owner_repo": "gaofeng21cn/one-person-lab",
+    "entrypoint": "scripts/run-domain-whitepaper.ts",
+    "style_profile": "opl-whitepaper-pandoc-xelatex-v2",
+    "verification_schema": "opl_whitepaper_artifact_verification.v2",
+    "profile_schema": "contracts/opl-framework/public-whitepaper-profile.schema.json"
+  },
+  "whitepapers": [
+    {
+      "id": "opl-framework",
+      "display_name": "One Person Lab",
+      "repo_slug": "gaofeng21cn/one-person-lab",
+      "repo_env": "OPL_FRAMEWORK_REPO",
+      "default_repo_dir": "one-person-lab",
+      "profile": "contracts/whitepaper_profile.json",
+      "source": "docs/whitepapers/opl-whitepaper.md",
+      "watch_paths": [
+        "docs/whitepapers/**",
+        "docs/project.md",
+        "docs/architecture.md",
+        "docs/invariants.md",
+        "docs/decisions.md",
+        "docs/status.md",
+        "contracts/opl-framework/brand-system-profile.json",
+        "contracts/opl-framework/standard-agent-principles.json"
+      ],
+      "public_html_url": "https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-whitepaper.html",
+      "public_pdf_url": "https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-whitepaper.pdf"
+    },
+    {
+      "id": "opl-app",
+      "display_name": "One Person Lab App",
+      "repo_slug": "gaofeng21cn/one-person-lab-app",
+      "repo_env": "OPL_APP_REPO",
+      "default_repo_dir": "one-person-lab-app",
+      "profile": "contracts/whitepaper_profile.json",
+      "source": "docs/whitepapers/opl-app-whitepaper.md",
+      "watch_paths": [
+        "docs/whitepapers/**",
+        "docs/project.md",
+        "docs/architecture.md",
+        "docs/invariants.md",
+        "docs/decisions.md",
+        "docs/status.md",
+        "contracts/app-product-profile.json",
+        "contracts/app-gui-product-contract.json"
+      ],
+      "public_html_url": "https://gaofeng21cn.github.io/one-person-lab-app/latest/whitepapers/opl-app-whitepaper.html",
+      "public_pdf_url": "https://gaofeng21cn.github.io/one-person-lab-app/latest/whitepapers/opl-app-whitepaper.pdf"
+    },
+    {
+      "id": "opl-cloud",
+      "display_name": "OPL Cloud",
+      "repo_slug": "gaofeng21cn/one-person-lab-cloud",
+      "repo_env": "OPL_CLOUD_REPO",
+      "default_repo_dir": "one-person-lab-cloud",
+      "profile": "contracts/whitepaper_profile.json",
+      "source": "docs/whitepapers/opl-cloud-whitepaper.md",
+      "watch_paths": [
+        "docs/whitepapers/**",
+        "README.md",
+        "README.zh-CN.md",
+        "docs/architecture.md",
+        "docs/product-matrix.md"
+      ],
+      "public_html_url": "https://gaofeng21cn.github.io/one-person-lab-cloud/latest/whitepapers/opl-cloud-whitepaper.html",
+      "public_pdf_url": "https://gaofeng21cn.github.io/one-person-lab-cloud/latest/whitepapers/opl-cloud-whitepaper.pdf"
+    },
+    {
+      "id": "mas",
+      "display_name": "Med Auto Science",
+      "repo_slug": "gaofeng21cn/med-autoscience",
+      "repo_env": "MAS_REPO",
+      "default_repo_dir": "med-autoscience",
+      "profile": "contracts/whitepaper_profile.json",
+      "source": "docs/whitepapers/mas-whitepaper.md",
+      "watch_paths": [
+        "docs/whitepapers/**",
+        "docs/project.md",
+        "docs/architecture.md",
+        "docs/invariants.md",
+        "docs/decisions.md",
+        "docs/status.md",
+        "agent/**",
+        "contracts/standard_agent_conformance_profile.json"
+      ],
+      "public_html_url": "https://gaofeng21cn.github.io/med-autoscience/latest/whitepapers/mas-whitepaper.html",
+      "public_pdf_url": "https://gaofeng21cn.github.io/med-autoscience/latest/whitepapers/mas-whitepaper.pdf"
+    }
+  ]
+}

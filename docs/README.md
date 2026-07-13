@@ -106,7 +106,7 @@ OPL 系列项目开发的主参考是 [OPL 系列项目开发主参考](./active
 - [仓库首页](../README.md)
 - [公开文档入口](./public/README.md)
 - [OPL 系列仓库地图](./public/repo-map.md)
-- [OPL 白皮书](https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-whitepaper.html)
+- [OPL 白皮书系列](https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/)：OPL Framework、OPL App、OPL Cloud 与 MAS 的设计理念和信任边界。
 - [路线图](./public/roadmap.md)
 - [任务版图](./public/task-map.md)
 - [运行模型](./public/operating-model.md)

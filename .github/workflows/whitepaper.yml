@@ -1,0 +1,33 @@
+name: OPL Whitepaper
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - docs/whitepapers/**
+      - contracts/whitepaper_profile.json
+      - contracts/opl-framework/public-whitepaper-registry.json
+      - scripts/opl-whitepaper-builder.ts
+      - scripts/run-domain-whitepaper.ts
+      - scripts/whitepaper-style.css
+      - .github/workflows/reusable-whitepaper.yml
+      - .github/workflows/whitepaper.yml
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the approved build to GitHub Pages
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  whitepaper:
+    uses: ./.github/workflows/reusable-whitepaper.yml
+    with:
+      profile: contracts/whitepaper_profile.json
+      output_name: opl-whitepaper
+      publish: ${{ github.event_name == 'workflow_dispatch' && inputs.publish }}
+    secrets: inherit

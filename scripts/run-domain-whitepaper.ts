@@ -34,17 +34,22 @@ function nonEmptyString(profile: Record<string, unknown>, field: string) {
   return value;
 }
 
-function stringList(profile: Record<string, unknown>, field: string) {
-  const value = profile[field];
-  if (!Array.isArray(value) || value.length === 0 || value.some((entry) => typeof entry !== 'string' || !entry.trim())) {
-    fail(`Whitepaper profile requires ${field} as a non-empty string array.`);
+function publicUrl(profile: Record<string, unknown>, field: string) {
+  const value = nonEmptyString(profile, field);
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    fail(`Whitepaper profile requires absolute HTTP(S) URL ${field}.`);
   }
-  return value as string[];
+  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+    fail(`Whitepaper profile requires absolute HTTP(S) URL ${field}.`);
+  }
+  return value;
 }
 
-function positiveInteger(profile: Record<string, unknown>, field: string, optional = false) {
+function positiveInteger(profile: Record<string, unknown>, field: string) {
   const value = profile[field];
-  if (value === undefined && optional) return undefined;
   if (!Number.isInteger(value) || (value as number) < 1) {
     fail(`Whitepaper profile requires positive integer ${field}.`);
   }
@@ -113,6 +118,9 @@ function readProfile(repoRoot: string, resolvedProfile: string): WhitepaperProfi
   if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(outputName)) {
     fail('Whitepaper profile outputName must be a plain file name.');
   }
+  const minPdfPages = positiveInteger(raw, 'minPdfPages');
+  const maxPdfPages = positiveInteger(raw, 'maxPdfPages');
+  if (maxPdfPages < minPdfPages) fail('Whitepaper profile maxPdfPages must be greater than or equal to minPdfPages.');
   return {
     sourceMarkdown: sourceMarkdownPath(repoRoot, nonEmptyString(raw, 'sourceMarkdown')),
     outputName,
@@ -120,10 +128,10 @@ function readProfile(repoRoot: string, resolvedProfile: string): WhitepaperProfi
     owner: nonEmptyString(raw, 'owner'),
     coverLine: nonEmptyString(raw, 'coverLine'),
     headerTitle: nonEmptyString(raw, 'headerTitle'),
-    requiredTerms: stringList(raw, 'requiredTerms'),
-    requiredSections: stringList(raw, 'requiredSections'),
-    minSections: positiveInteger(raw, 'minSections', true),
-    minPdfPages: positiveInteger(raw, 'minPdfPages'),
+    minPdfPages,
+    maxPdfPages,
+    publicHtmlUrl: publicUrl(raw, 'publicHtmlUrl'),
+    publicPdfUrl: publicUrl(raw, 'publicPdfUrl'),
   };
 }
 

@@ -1,17 +1,12 @@
 {
   "sourceMarkdown": "docs/whitepapers/domain-whitepaper.md",
   "outputName": "domain-whitepaper",
-  "status": "domain_whitepaper_ready",
+  "status": "whitepaper_artifact_verified",
   "owner": "Domain Owner",
   "coverLine": "Domain Research / Evidence / Delivery",
   "headerTitle": "Domain Whitepaper",
-  "minSections": 1,
   "minPdfPages": 1,
-  "requiredSections": [
-    "## Summary"
-  ],
-  "requiredTerms": [
-    "Domain Whitepaper",
-    "One Person Lab"
-  ]
+  "maxPdfPages": 2,
+  "publicHtmlUrl": "https://example.test/domain-whitepaper.html",
+  "publicPdfUrl": "https://example.test/domain-whitepaper.pdf"
 }
