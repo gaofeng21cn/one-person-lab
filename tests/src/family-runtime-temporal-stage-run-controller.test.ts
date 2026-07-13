@@ -264,6 +264,8 @@ test('reviewer protocol failure terminalizes a consumable producer artifact as q
   });
   assert.equal(state.status, 'completed_with_quality_debt');
   assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), ['producer', 'reviewer']);
+  assert.deepEqual(state.attempts.map((attempt) => attempt.attempt_role), ['producer', 'reviewer']);
+  assert.equal(state.attempts[1]?.status, 'failed');
   assert.deepEqual(state.artifact_refs, ['artifact:deck-v1']);
   assert.deepEqual(state.artifact_identity_receipt_refs, ['artifact:deck-v1']);
   assert.equal(state.review_receipts.length, 0);
@@ -289,6 +291,8 @@ test('producer failure without a consumable artifact hard-stops the StageRun', a
   });
   assert.equal(state.status, 'blocked');
   assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), ['producer']);
+  assert.deepEqual(state.attempts.map((attempt) => attempt.attempt_role), ['producer']);
+  assert.equal(state.attempts[0]?.status, 'failed');
   assert.equal(state.artifact_refs.length, 0);
   assert.equal(state.review_receipts.length, 0);
 });

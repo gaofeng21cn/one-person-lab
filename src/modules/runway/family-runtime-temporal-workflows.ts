@@ -516,6 +516,9 @@ export async function StageAttemptWorkflow(
       },
     };
     updateVisibility('temporal_stage_attempt_workflow_failed', errorMessage.slice(0, 200));
+    if (input.attempt_role) {
+      return state;
+    }
     throw error;
   }
 
@@ -832,7 +835,7 @@ export async function StageRunWorkflow(
           }
         : {
             ...state,
-            status: result.status === 'failed' ? 'failed' : 'blocked',
+            status: 'blocked',
             current_role: null,
             blocked_reason: reason,
           };
