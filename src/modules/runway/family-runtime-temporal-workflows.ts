@@ -35,7 +35,7 @@ import {
   type StageQualityReReviewResult,
   type StageReviewReceipt,
 } from '../stagecraft/public/stage-quality-cycle.ts';
-import { evaluateStageQualityAttemptRoute } from '../stagecraft/stage-quality-route-selection.ts';
+import { evaluateStageQualityAttemptRoute } from '../stagecraft/public/stage-quality-route-selection.ts';
 import {
   CODEX_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT,
   CODEX_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
