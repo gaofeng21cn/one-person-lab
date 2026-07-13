@@ -235,6 +235,7 @@ export type AgentPackageManagedRuntimeSourceState = {
   rollback_ref: string | null;
   preparation_status: 'validated_no_write' | 'completed';
   bootstrap_command: string[] | null;
+  package_prepare_command?: string[] | null;
   health_check_command: string[];
   handler_probe_command: string[];
   health_output_sha256: string | null;

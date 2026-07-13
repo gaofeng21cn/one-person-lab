@@ -128,6 +128,7 @@ function sourceState(input: {
   preparation: Pick<AgentPackageManagedRuntimeSourceState,
     'preparation_status'
     | 'bootstrap_command'
+    | 'package_prepare_command'
     | 'health_check_command'
     | 'handler_probe_command'
     | 'health_output_sha256'
@@ -200,7 +201,7 @@ function runRequiredCommand(
   moduleId: string,
   checkoutPath: string,
   commandSpec: { command: string; args: string[] } | null,
-  step: 'bootstrap' | 'health_check' | 'handler_probe',
+  step: 'bootstrap' | 'package_prepare' | 'health_check' | 'handler_probe',
   env: NodeJS.ProcessEnv,
 ) {
   if (!commandSpec) {
@@ -270,7 +271,23 @@ function prepareRuntimeSource(moduleId: string, checkoutPath: string, includeBoo
     : process.env;
   if (includeBootstrap) fs.mkdirSync(commandEnv.HOME!, { recursive: true });
   const bootstrap = includeBootstrap
-    ? runRequiredCommand(moduleId, checkoutPath, spec.bootstrap_command?.(checkoutPath) ?? null, 'bootstrap', commandEnv)
+    ? runRequiredCommand(
+      moduleId,
+      checkoutPath,
+      spec.package_bootstrap_command?.(checkoutPath) ?? spec.bootstrap_command?.(checkoutPath) ?? null,
+      'bootstrap',
+      commandEnv,
+    )
+    : null;
+  if (includeBootstrap) materializeStandardAgentFrameworkLink({ agentRoot: checkoutPath });
+  const packagePrepare = includeBootstrap && spec.package_prepare_command
+    ? runRequiredCommand(
+      moduleId,
+      checkoutPath,
+      spec.package_prepare_command(checkoutPath),
+      'package_prepare',
+      commandEnv,
+    )
     : null;
   const health = runRequiredCommand(
     moduleId,
@@ -291,6 +308,7 @@ function prepareRuntimeSource(moduleId: string, checkoutPath: string, includeBoo
   return {
     preparation_status: 'completed' as const,
     bootstrap_command: bootstrap?.command ?? null,
+    package_prepare_command: packagePrepare?.command ?? null,
     health_check_command: health.command,
     handler_probe_command: handler.command,
     health_output_sha256: health.outputSha256,

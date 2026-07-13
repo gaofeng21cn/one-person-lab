@@ -98,6 +98,42 @@ function buildRequiredFilesProbe(checkoutPath: string, relativePaths: string[]) 
   };
 }
 
+function buildBookForgeProbe(checkoutPath: string) {
+  return buildRequiredFilesProbe(checkoutPath, [
+    path.join('contracts', 'domain_descriptor.json'),
+    path.join('agent', 'primary_skill', 'SKILL.md'),
+  ]);
+}
+
+function buildNpmPackageBootstrapCommand(checkoutPath: string) {
+  const repoBootstrap = path.join(checkoutPath, 'scripts', 'opl-module-bootstrap.sh');
+  return {
+    command: getShellBinary(),
+    args: ['-lc', [
+      'set -euo pipefail',
+      `if [[ -f ${shellQuote(repoBootstrap)} ]]; then`,
+      `  bash ${shellQuote(repoBootstrap)}`,
+      'elif [[ -f package-lock.json ]]; then',
+      '  npm ci',
+      'else',
+      '  npm install',
+      'fi',
+    ].join('\n')],
+  };
+}
+
+function buildNpmPackagePrepareCommand() {
+  return {
+    command: getShellBinary(),
+    args: ['-lc', [
+      'set -euo pipefail',
+      'if node -e \'const p=require("./package.json");process.exit(p.scripts?.build?0:1)\'; then',
+      '  npm run --silent build',
+      'fi',
+    ].join('\n')],
+  };
+}
+
 export const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
   {
     module_id: 'medautoscience',
@@ -169,6 +205,8 @@ export const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
       resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-bootstrap.sh'))
       ?? { command: 'npm', args: ['install'] }
     ),
+    package_bootstrap_command: (checkoutPath) => buildNpmPackageBootstrapCommand(checkoutPath),
+    package_prepare_command: () => buildNpmPackagePrepareCommand(),
     health_check_command: (checkoutPath) => buildHealthCheckCommand(checkoutPath),
     exec_command: (_checkoutPath, args) => ({
       command: 'npm',
@@ -212,10 +250,8 @@ export const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
       ?? { command: 'npm', args: ['install', '--no-package-lock'] }
     ),
     health_check_command: (checkoutPath) => buildHealthCheckCommand(checkoutPath),
-    package_health_check_command: (checkoutPath) => buildRequiredFilesProbe(checkoutPath, [
-      path.join('contracts', 'domain_descriptor.json'),
-      path.join('agent', 'primary_skill', 'SKILL.md'),
-    ]),
+    package_health_check_command: (checkoutPath) => buildBookForgeProbe(checkoutPath),
+    runtime_probe_command: (checkoutPath) => buildBookForgeProbe(checkoutPath),
     exec_command: (_checkoutPath, args) => ({
       command: 'npm',
       args: ['test', '--', ...args],
