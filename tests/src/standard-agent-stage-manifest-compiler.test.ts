@@ -1159,10 +1159,18 @@ test('real MAG canonical manifest compiles while the legacy kind remains blocked
     return;
   }
 
+  const actionInputSchemaRefs = Array.isArray(sourceActionCatalog.actions)
+    ? sourceActionCatalog.actions.flatMap((action: unknown) => {
+        if (!action || typeof action !== 'object') return [];
+        const ref = (action as JsonRecord).input_schema_ref;
+        return typeof ref === 'string' && ref.trim() ? [ref.trim()] : [];
+      })
+    : [];
+
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-real-mag-stage-manifest-'));
   fs.cpSync(path.join(magRepo, 'agent'), path.join(root, 'agent'), { recursive: true });
   fs.cpSync(path.join(magRepo, 'schemas'), path.join(root, 'schemas'), { recursive: true });
-  for (const ref of [
+  for (const ref of new Set([
     'contracts/domain_descriptor.json',
     'contracts/action_catalog.json',
     'contracts/pack_compiler_input.json',
@@ -1172,7 +1180,8 @@ test('real MAG canonical manifest compiles while the legacy kind remains blocked
     'contracts/memory_descriptor.json',
     'contracts/owner_receipt_contract.json',
     'contracts/stage_quality_cycle_policy.json',
-  ]) {
+    ...actionInputSchemaRefs,
+  ])) {
     const source = path.join(magRepo, ref);
     if (fs.existsSync(source)) {
       fs.mkdirSync(path.dirname(path.join(root, ref)), { recursive: true });
