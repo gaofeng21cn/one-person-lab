@@ -23,6 +23,8 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.match(workflow, /release_gate:\s*\n\s*description:/);
   assert.match(workflow, /release_set_generation:/);
   assert.match(workflow, /generation="\$\{generation#v\}"/);
+  assert.match(workflow, /id:\s*release/);
+  assert.match(workflow, /release_set_generation:\s*\$\{\{ steps\.release\.outputs\.release_set_generation \}\}/);
   assert.doesNotMatch(releaseCallerWorkflow, /\n\s*release:\s*\n/);
   assert.match(releaseCallerWorkflow, /workflow_dispatch:/);
   assert.match(releaseCallerWorkflow, /uses:\s+\.\/\.github\/workflows\/packages\.yml/);
@@ -79,6 +81,10 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.match(workflow, /actions\/attest@v4/);
   assert.match(workflow, /push-to-registry:\s*true/);
   assert.match(workflow, /write-release-promotion-receipt\.mjs/);
+  assert.match(workflow, /name:\s*opl-release-set-\$\{\{ needs\.package-release-set\.outputs\.release_set_generation \}\}/);
+  assert.match(workflow, /publish-candidate-receipt:[\s\S]*needs:\s*\[package-release-set, attest-oci-components\]/);
+  assert.equal(workflow.match(/Upload candidate promotion receipt/g)?.length, 1);
+  assert.ok(workflow.indexOf('attest-oci-components:') < workflow.indexOf('Upload candidate promotion receipt'));
   assert.ok(workflow.indexOf('finalize-package-channel-digests.mjs') < workflow.indexOf('generation_ref="${carrier}:${OPL_RELEASE_SET_GENERATION}"'));
   assert.doesNotMatch(workflow, /docker\/build-push-action/);
   assert.doesNotMatch(workflow, /one-person-lab-webui/);

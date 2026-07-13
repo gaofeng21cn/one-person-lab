@@ -123,11 +123,15 @@ jobs:
     name: Publish immutable Package Release Set
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    outputs:
+      release_set_generation: ${{ steps.release.outputs.release_set_generation }}
+      promotion_request_id: ${{ steps.release.outputs.promotion_request_id }}
     steps:
       - name: Checkout OPL
         uses: actions/checkout@v6
 
       - name: Resolve Release Set generation
+        id: release
         shell: bash
         run: |
           set -euo pipefail
@@ -153,6 +157,10 @@ jobs:
             echo "OPL_PROMOTION_REQUEST_ID=$request_id"
             echo "OPL_SOURCE_APP_RUN_ID=${{ inputs.source_app_run_id }}"
           } >> "$GITHUB_ENV"
+          {
+            echo "release_set_generation=$generation"
+            echo "promotion_request_id=$request_id"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Record package publication gate
         shell: bash
@@ -542,13 +550,6 @@ jobs:
             --expected-app-artifact-digest "${{ inputs.expected_app_artifact_digest }}" \
             --anonymous-readback true
 
-      - name: Upload candidate promotion receipt
-        uses: actions/upload-artifact@v7
-        with:
-          name: opl-release-promotion-receipt-${{ env.OPL_PROMOTION_REQUEST_ID }}-candidate
-          path: dist/opl-packages/opl-release-promotion-receipt.json
-          if-no-files-found: error
-
       - name: Upload prepared Package artifacts
         uses: actions/upload-artifact@v7
         with:
@@ -586,7 +587,7 @@ jobs:
       - name: Download exact Release Set evidence
         uses: actions/download-artifact@v8
         with:
-          name: opl-release-set-${{ inputs.release_set_generation }}
+          name: opl-release-set-${{ needs.package-release-set.outputs.release_set_generation }}
           path: dist/opl-packages
 
       - name: Resolve exact OCI digest
@@ -621,3 +622,22 @@ jobs:
           subject-digest: ${{ steps.subject.outputs.digest }}
           sbom-path: dist/opl-packages/opl-release-set.spdx.json
           push-to-registry: true
+
+  publish-candidate-receipt:
+    name: Publish attested candidate receipt
+    needs: [package-release-set, attest-oci-components]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Download attested Release Set evidence
+        uses: actions/download-artifact@v8
+        with:
+          name: opl-release-set-${{ needs.package-release-set.outputs.release_set_generation }}
+          path: dist/opl-packages
+
+      - name: Upload candidate promotion receipt
+        uses: actions/upload-artifact@v7
+        with:
+          name: opl-release-promotion-receipt-${{ needs.package-release-set.outputs.promotion_request_id }}-candidate
+          path: dist/opl-packages/opl-release-promotion-receipt.json
+          if-no-files-found: error

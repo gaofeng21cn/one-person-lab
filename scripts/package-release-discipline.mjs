@@ -197,6 +197,9 @@ function validateWorkflow(manifest, manifestPath, failures) {
   assertCondition(/generate-release-supply-chain\.mjs/.test(source) && /actions\/attest@v4/.test(source), 'Package workflow must generate and attest SBOM/provenance', failures);
   assertCondition(/push-to-registry:\s*true/.test(source), 'Package workflow must publish OCI attestation referrers', failures);
   assertCondition(/write-release-promotion-receipt\.mjs/.test(source), 'Candidate publication must emit a machine-readable promotion receipt', failures);
+  assertCondition(/release_set_generation:\s*\$\{\{ steps\.release\.outputs\.release_set_generation \}\}/.test(source)
+    && /opl-release-set-\$\{\{ needs\.package-release-set\.outputs\.release_set_generation \}\}/.test(source), 'Downstream publication jobs must consume the normalized Release Set generation', failures);
+  assertCondition(/publish-candidate-receipt:[\s\S]*needs:\s*\[package-release-set, attest-oci-components\][\s\S]*Upload candidate promotion receipt/.test(source), 'Candidate receipt must remain hidden until every OCI attestation succeeds', failures);
   assertCondition(/package-manifest\.json/.test(source) && !/agent-package-manifest\.json/.test(source), 'OCI Package layers must use the generic package manifest filename', failures);
   assertCondition(/generation_ref="\$\{carrier\}:\$\{OPL_RELEASE_SET_GENERATION\}"/.test(source), 'Catalog carrier must use immutable Release Set generation', failures);
   assertCondition(/oras tag .* candidate/.test(source) && !/oras tag .* latest-stable/.test(source), 'Package build workflow must publish candidate only', failures);
