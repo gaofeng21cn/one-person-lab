@@ -49,11 +49,12 @@ function reasonCode(error: unknown) {
   return 'gateway_operation_failed';
 }
 
-function maskEmail(value: string | null) {
-  if (!value) return null;
-  const [local, domain] = value.split('@');
-  if (!domain) return null;
-  return `${local.slice(0, 1)}***@${domain}`;
+export function selectOplGatewayManagedGroup(
+  groups: Array<{ group_id: string; label: string }>,
+): string | null {
+  const codexGroups = groups.filter((group) => group.label.trim().toLowerCase().startsWith('codex'));
+  if (codexGroups.length === 1) return codexGroups[0].group_id;
+  return groups.length === 1 ? groups[0].group_id : null;
 }
 
 function emptyAccountState(canonicalKeyName: string): GatewayAccountState {
@@ -110,7 +111,7 @@ async function accountSnapshot(accessToken: string) {
     availableGroups,
     snapshot: {
       display_name: profile.display_name,
-      masked_email: maskEmail(profile.email),
+      email: profile.email,
       account_status: profile.status,
       balance_amount: profile.balance_amount,
       balance_currency: profile.balance_currency,
@@ -180,8 +181,7 @@ async function reconcileAndCommit(input: {
   if (current.account_user_id && current.account_user_id !== remote.accountUserId) {
     throw gatewayError('account_switch_requires_disconnect', 'Disconnect the current OPL Gateway account before signing in to another account.');
   }
-  const selectedGroup = input.groupId
-    ?? (remote.availableGroups.length === 1 ? remote.availableGroups[0].group_id : null);
+  const selectedGroup = input.groupId ?? selectOplGatewayManagedGroup(remote.availableGroups);
   if (remote.availableGroups.length > 1 && !selectedGroup) {
     writeGatewayCredentials({
       surface_kind: 'opl_gateway_credentials.v1',
@@ -189,7 +189,10 @@ async function reconcileAndCommit(input: {
       previous_codex_config: input.preserveCredentials?.previous_codex_config ?? null,
       previous_codex_config_existed: input.preserveCredentials?.previous_codex_config_existed ?? false,
     });
-    const pending = stateWithSnapshot(current, remote, null, 'setup_required');
+    const pending = {
+      ...stateWithSnapshot(current, remote, null, 'setup_required'),
+      last_error_code: 'group_selection_required',
+    };
     writeGatewayAccountState(pending);
     upsertGatewayConnection(false);
     return pending;
@@ -420,7 +423,7 @@ export function readOplGatewayAccount(): GatewayAccountReadModel {
     account_card_visible: accountConnected,
     account: state?.snapshot ? {
       display_name: state.snapshot.display_name,
-      masked_email: state.snapshot.masked_email,
+      email: state.snapshot.email,
       status: state.snapshot.account_status,
       balance: { amount: state.snapshot.balance_amount, currency: state.snapshot.balance_currency },
     } : null,

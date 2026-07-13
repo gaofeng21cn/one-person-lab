@@ -17,6 +17,7 @@ import {
   readOplGatewayAccount,
   refreshOplGatewayAccount,
   repairOplGatewayAccount,
+  selectOplGatewayManagedGroup,
 } from '../../src/modules/connect/opl-gateway-account.ts';
 
 function json(response: http.ServerResponse, value: unknown, status = 200) {
@@ -29,6 +30,24 @@ test('gateway identity uses a stable readable name without hardware identity', (
   assert.equal(normalizeGatewayDeviceSlug('高峰 MacBook Pro'), 'MacBook-Pro');
   assert.match(installation.canonical_key_name, /^OPL App · MacBook-Pro · [A-F0-9]{8}$/);
   assert.equal(installation.canonical_key_name.includes('11111111'), false);
+});
+
+test('gateway account selects the unique Codex group without asking the user', () => {
+  assert.equal(
+    selectOplGatewayManagedGroup([
+      { group_id: '1', label: 'AGI' },
+      { group_id: '3', label: 'cOdEx（专用）' },
+      { group_id: '4', label: 'Gemini' },
+    ]),
+    '3',
+  );
+  assert.equal(
+    selectOplGatewayManagedGroup([
+      { group_id: '3', label: 'Codex A' },
+      { group_id: '5', label: 'Codex B' },
+    ]),
+    null,
+  );
 });
 
 test('gateway account login, refresh and disconnect keep secrets private and disable only the managed key', async () => {
@@ -79,7 +98,11 @@ test('gateway account login, refresh and disconnect keep secrets private and dis
       total_actual_cost: 1.2,
       currency: 'USD',
     } });
-    if (route === '/api/v1/groups/available') return json(response, { code: 0, data: [{ id: 7, name: 'Default' }] });
+    if (route === '/api/v1/groups/available') return json(response, { code: 0, data: [
+      { id: 1, name: 'AGI' },
+      { id: 3, name: 'Codex（专用）' },
+      { id: 4, name: 'Gemini' },
+    ] });
     if (route.startsWith('/api/v1/keys?')) return json(response, { code: 0, data: { items: [] } });
     if (route === '/api/v1/keys' && request.method === 'POST') {
       createIdempotency = String(request.headers['idempotency-key'] ?? '');
@@ -88,7 +111,7 @@ test('gateway account login, refresh and disconnect keep secrets private and dis
         name: body.name,
         key: 'managed-api-secret',
         status: keyStatus,
-        group_id: 7,
+        group_id: 3,
         ip_whitelist: ['127.0.0.1'],
         ip_blacklist: [],
       } });
@@ -98,7 +121,7 @@ test('gateway account login, refresh and disconnect keep secrets private and dis
       name: requests.find((entry) => entry.url === '/api/v1/keys' && entry.method === 'POST')?.body.name,
       key: 'managed-api-secret',
       status: keyStatus,
-      group_id: 7,
+      group_id: 3,
       ip_whitelist: ['127.0.0.1'],
       ip_blacklist: [],
     } });
@@ -107,7 +130,7 @@ test('gateway account login, refresh and disconnect keep secrets private and dis
       assert.deepEqual(body.ip_whitelist, ['127.0.0.1']);
       assert.equal('key' in body, false);
       return json(response, { code: 0, data: {
-        id: 99, name: body.name, key: 'managed-api-secret', status: keyStatus, group_id: 7,
+        id: 99, name: body.name, key: 'managed-api-secret', status: keyStatus, group_id: 3,
         ip_whitelist: body.ip_whitelist, ip_blacklist: body.ip_blacklist,
       } });
     }
@@ -137,9 +160,10 @@ test('gateway account login, refresh and disconnect keep secrets private and dis
       device_label: 'Test Device',
     });
     assert.equal(login.gateway_account.status, 'connected');
-    assert.equal(login.gateway_account.account?.masked_email, 'u***@example.test');
+    assert.equal(login.gateway_account.account?.email, 'user@example.test');
     assert.equal(login.gateway_account.usage?.today_actual_cost, 0.12);
     assert.equal(login.gateway_account.managed_key?.ownership, 'opl_app_managed');
+    assert.equal(requests.find((entry) => entry.url === '/api/v1/keys' && entry.method === 'POST')?.body.group_id, '3');
     assert.match(createIdempotency, /^opl-app-key-create:42:/);
 
     const publicJson = JSON.stringify(login);

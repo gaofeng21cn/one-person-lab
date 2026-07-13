@@ -25,7 +25,7 @@ export type GatewayInstallationState = {
 
 export type GatewayAccountSnapshot = {
   display_name: string | null;
-  masked_email: string | null;
+  email: string | null;
   account_status: string;
   balance_amount: number | null;
   balance_currency: string;
@@ -93,7 +93,7 @@ export type GatewayAccountReadModel = {
   account_card_visible: boolean;
   account: {
     display_name: string | null;
-    masked_email: string | null;
+    email: string | null;
     status: string;
     balance: { amount: number | null; currency: string };
   } | null;
