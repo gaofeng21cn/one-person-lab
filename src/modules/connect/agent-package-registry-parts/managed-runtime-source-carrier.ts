@@ -17,7 +17,7 @@ import {
   resolveOplDomainModuleSpec,
 } from '../system-installation/modules.ts';
 import { readPackagedModuleMarker } from '../system-installation/module-packaged.ts';
-import { runCommand } from '../system-installation/shared.ts';
+import { resolveProjectRoot, runCommand } from '../system-installation/shared.ts';
 import type {
   AgentPackageManagedRuntimeSourceCarrier,
   AgentPackageLockIndex,
@@ -195,6 +195,14 @@ function commandDigest(stdout: string, stderr: string) {
   return `sha256:${crypto.createHash('sha256').update(stdout).update('\0').update(stderr).digest('hex')}`;
 }
 
+function frameworkPythonEnvironment(base: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
+  const frameworkPythonRoot = path.join(resolveProjectRoot(), 'python');
+  return {
+    ...base,
+    PYTHONPATH: [frameworkPythonRoot, base.PYTHONPATH].filter(Boolean).join(path.delimiter),
+  };
+}
+
 function runRequiredCommand(
   moduleId: string,
   checkoutPath: string,
@@ -248,9 +256,10 @@ function prepareRuntimeSource(moduleId: string, checkoutPath: string, includeBoo
     moduleId,
     lifecycle.current.tree_sha256,
   );
+  const baseCommandEnv = frameworkPythonEnvironment();
   const commandEnv = includeBootstrap
     ? {
-        ...process.env,
+        ...baseCommandEnv,
         HOME: path.join(preparationRoot, 'home'),
         UV_TOOL_DIR: path.join(preparationRoot, 'uv-tools'),
         UV_TOOL_BIN_DIR: path.join(preparationRoot, 'bin'),
@@ -258,7 +267,7 @@ function prepareRuntimeSource(moduleId: string, checkoutPath: string, includeBoo
         npm_config_cache: path.join(preparationRoot, 'npm-cache'),
         PATH: `${path.join(preparationRoot, 'bin')}${path.delimiter}${process.env.PATH ?? ''}`,
       }
-    : process.env;
+    : baseCommandEnv;
   if (includeBootstrap) fs.mkdirSync(commandEnv.HOME!, { recursive: true });
   const bootstrap = includeBootstrap
     ? runRequiredCommand(moduleId, checkoutPath, spec.bootstrap_command?.(checkoutPath) ?? null, 'bootstrap', commandEnv)
@@ -292,9 +301,10 @@ function prepareRuntimeSource(moduleId: string, checkoutPath: string, includeBoo
 }
 
 function currentProbeEnvironment(state: AgentPackageManagedRuntimeSourceState) {
-  if (!state.preparation_root) return process.env;
+  const baseCommandEnv = frameworkPythonEnvironment();
+  if (!state.preparation_root) return baseCommandEnv;
   return {
-    ...process.env,
+    ...baseCommandEnv,
     HOME: path.join(state.preparation_root, 'home'),
     UV_TOOL_DIR: path.join(state.preparation_root, 'uv-tools'),
     UV_TOOL_BIN_DIR: path.join(state.preparation_root, 'bin'),

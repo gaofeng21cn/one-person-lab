@@ -40,6 +40,7 @@ export function writeManagedRuntimeSourceFixture(input: {
   fs.writeFileSync(path.join(sourceRoot, 'scripts', 'opl-module-healthcheck.sh'), [
     '#!/usr/bin/env bash',
     'set -euo pipefail',
+    'python3 -c "import opl_framework"',
     'external-runtime-tool --check',
     `test "$(cat .runtime-prepared)" = ${JSON.stringify(input.version)}`,
     'if [[ "${1:-}" == "--probe" ]]; then',
