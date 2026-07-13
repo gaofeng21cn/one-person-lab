@@ -13,6 +13,11 @@ import { runOplAgentPackageStatus } from './agent-package-registry.ts';
 
 type PackageStatusReader = typeof runOplAgentPackageStatus;
 
+export type StandardAgentProgressDeltaKeySet = {
+  deliverable: string[];
+  platform: string[];
+};
+
 function normalizedIdentity(value: string) {
   return value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
 }
@@ -108,13 +113,21 @@ export function readStandardAgentDescriptorForDomain(
   ) ?? null;
 }
 
+export function standardAgentProgressDeltaKeySet(
+  domainId: string,
+  readStatus: PackageStatusReader = runOplAgentPackageStatus,
+): StandardAgentProgressDeltaKeySet {
+  const aliases = readStandardAgentDescriptorForDomain(domainId, readStatus)?.interface.progress;
+  return {
+    deliverable: ['deliverable_progress_delta', ...(aliases?.deliverable_delta_aliases ?? [])],
+    platform: ['platform_repair_delta', ...(aliases?.platform_delta_aliases ?? [])],
+  };
+}
+
 export function standardAgentProgressDeltaKeys(
   domainId: string,
   kind: 'deliverable' | 'platform',
   readStatus: PackageStatusReader = runOplAgentPackageStatus,
 ) {
-  const aliases = readStandardAgentDescriptorForDomain(domainId, readStatus)?.interface.progress;
-  return kind === 'deliverable'
-    ? ['deliverable_progress_delta', ...(aliases?.deliverable_delta_aliases ?? [])]
-    : ['platform_repair_delta', ...(aliases?.platform_delta_aliases ?? [])];
+  return standardAgentProgressDeltaKeySet(domainId, readStatus)[kind];
 }

@@ -15,6 +15,7 @@ import {
 import {
   readPackageManagedStandardAgentDescriptor,
   readStandardAgentDescriptorForDomain,
+  standardAgentProgressDeltaKeySet,
   standardAgentProgressDeltaKeys,
 } from '../../src/modules/connect/standard-agent-interface-discovery.ts';
 
@@ -214,6 +215,12 @@ test('package dependency and runtime source readiness gate descriptor discovery 
       'deliverable_progress_delta',
       'fixture_deliverable_delta',
     ]);
+    const statusReadCountBeforeKeySet = statusReads.length;
+    assert.deepEqual(standardAgentProgressDeltaKeySet('fixture-agent', statusReader), {
+      deliverable: ['deliverable_progress_delta', 'fixture_deliverable_delta'],
+      platform: ['platform_repair_delta', 'fixture_platform_delta'],
+    });
+    assert.equal(statusReads.length, statusReadCountBeforeKeySet + 1);
     const staleStatusReader = ((input: { packageId?: string | null }) => {
       const readback = statusReader(input);
       if (input.packageId === 'mas') {
