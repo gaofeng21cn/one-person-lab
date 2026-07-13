@@ -4,6 +4,7 @@
   "package_version": "0.2.1",
   "source_repo": "https://github.com/gaofeng21cn/redcube-ai.git",
   "source_commit": "4569e8433f2a87515128faafa15290f2e9d6122f",
+  "source_root": "plugins/redcube-ai",
   "files": [
     {
       "path": ".codex-plugin/plugin.json",

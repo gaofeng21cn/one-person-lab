@@ -69,6 +69,7 @@ Agent package 与 capability dependency 采用 owner-manifest 单源：MAS、MAS
 - 所有载体共用 OPL managed dependency truth。MAS 与 `mas-scholar-skills` 分开 materialize、同一闭包事务锁定；不存在绕过 OPL Base/Packages 的 standalone dependency manager。
 - App 更新后的首次启动会按当前 package-channel 目标补齐缺失 Package；显式开发 override 由 operator 负责保持可用，不由 Package/App 默认更新强行覆盖。
 - Package runtime-source carrier 安装/更新必须先把目标 archive 下载并校验到 managed root 旁的 stage root，再原子激活为 current managed root；旧 current 只在 clean package-channel 或 clean managed git checkout 条件下移动到 previous root，并写入 carrier marker `opl-runtime-module.json` 的 `package_channel_lifecycle.current/previous/rollback_ref`。该 marker 名是内部 locator，不是 Package identity。rollback helper 只能在 recorded previous root 存在且 current/previous tree hash 均匹配时交换 current/previous；dirty package root、developer checkout、无 lifecycle metadata 的普通目录或本机修改都不得被 silent update 或 rollback 覆盖。
+- 显式 `developer_checkout_override` 不伪装成 package-channel generation：Packages 记录 checkout 的 Git HEAD、tracked diff 与非忽略 untracked 内容摘要，运行 health / handler probe，并把 source mode 投影为 `developer_checkout`。后续 checkout 变化必须由用户复核后再次显式 `packages install --source-kind developer_checkout_override --agent-root ...`；`update`、`repair` 与批量更新不得静默消费变化。
 - 新增 framework capability package 时，不新增专属 clone / pull / update manager。它必须进入 canonical id/OCI、owner manifest、SemVer/digest gate、closure transaction、scope activation 与同一 lifecycle receipt。MAS Scholar Skills 是该规则的当前实例：ordinary App 只从 MAS row/launch 管理其依赖，Developer Mode/local checkout 只作为显式开发者 source。
 
 ## 三层生命周期与 Managed Update Kernel

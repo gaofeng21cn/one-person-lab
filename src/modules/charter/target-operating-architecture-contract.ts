@@ -392,6 +392,11 @@ export function validateTargetOperatingArchitecture(
         return 'codex_cli' as const;
       })(),
       single_semantic_control_plane: expectTrueBoolean(codexRouteOwnerRaw.single_semantic_control_plane, 'codex_stage_route_owner.single_semantic_control_plane', filePath),
+      framework_route_abi_validation: expectString(
+        codexRouteOwnerRaw.framework_route_abi_validation,
+        'codex_stage_route_owner.framework_route_abi_validation',
+        filePath,
+      ),
       progression_policy: expectString(codexRouteOwnerRaw.progression_policy, 'codex_stage_route_owner.progression_policy', filePath),
       route_capabilities: routeCapabilities,
       passive_framework_projections: passiveFrameworkProjections,

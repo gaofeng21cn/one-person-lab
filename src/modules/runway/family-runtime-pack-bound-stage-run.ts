@@ -31,6 +31,7 @@ export function buildPackBoundTemporalStageRunInput(input: {
     workflow_id: stableId('wf_stage_run', [stageRunId]),
     domain_id: input.domainId,
     stage_id: input.stageId,
+    declared_stage_ids: input.binding.declared_stage_ids,
     workspace_locator: {
       ...input.workspaceLocator,
       domain_pack_root: input.domainPackRoot,

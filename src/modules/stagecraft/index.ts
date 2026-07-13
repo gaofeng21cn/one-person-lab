@@ -58,6 +58,20 @@ export type {
   StageReviewContextManifest,
   StageReviewReceipt,
 } from './stage-quality-cycle.ts';
+export {
+  assertQualityAttemptTerminalRouteSelection,
+  evaluateStageQualityAttemptRoute,
+  normalizeDeclaredStageRouteDecision,
+  sanitizeStageQualityAttemptRouteImpact,
+  STAGE_QUALITY_LEGACY_TERMINAL_ROUTE_FIELDS,
+  STAGE_ROUTE_DECISION_KINDS,
+} from './stage-quality-route-selection.ts';
+export type {
+  StageQualityRouteRecommendationRecord,
+  StageRouteDecision,
+  StageRouteDecisionKind,
+  StageRouteRecommendation,
+} from './stage-quality-route-selection.ts';
 export type { OwnerAnswerProjectionProfile } from './domain-owner-answer-projection.ts';
 export { STANDARD_PROGRESS_DELTA_POLICY } from './standard-progress-delta-policy.ts';
 export {

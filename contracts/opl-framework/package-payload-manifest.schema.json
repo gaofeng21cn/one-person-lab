@@ -9,6 +9,7 @@
     "package_version",
     "source_repo",
     "source_commit",
+    "source_root",
     "files"
   ],
   "properties": {
@@ -30,6 +31,10 @@
     "source_commit": {
       "type": "string",
       "pattern": "^[0-9a-f]{40}$"
+    },
+    "source_root": {
+      "type": "string",
+      "pattern": "^(?:\\.|(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\\\]+)$"
     },
     "agent_id": false,
     "files": {

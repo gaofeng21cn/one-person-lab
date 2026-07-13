@@ -20,6 +20,10 @@ import {
 import { readPackagedModuleMarker } from '../system-installation/module-packaged.ts';
 import { runCommand } from '../system-installation/shared.ts';
 import { materializeStandardAgentFrameworkLink } from '../standard-agent-framework-link.ts';
+import {
+  buildDeveloperCheckoutRuntimeSourceState,
+  readDeveloperCheckoutSourceIdentity,
+} from './developer-checkout-runtime-source.ts';
 import type {
   AgentPackageManagedRuntimeSourceCarrier,
   AgentPackageLockIndex,
@@ -161,6 +165,7 @@ function sourceState(input: {
     module_id: input.config.module_id,
     checkout_path: input.checkoutPath,
     ownership: input.ownership,
+    source_mode: 'package_channel',
     channel_version: lifecycle.current.channel_version,
     artifact_ref: lifecycle.current.artifact_ref,
     layer_digest: lifecycle.current.layer_digest,
@@ -172,17 +177,43 @@ function sourceState(input: {
   };
 }
 
+function runtimeSourceMode(
+  state: AgentPackageManagedRuntimeSourceState,
+  spec: ReturnType<typeof resolveOplDomainModuleSpec>,
+) {
+  if (state.source_mode) return state.source_mode;
+  if (readPackageChannelLifecycle(state.checkout_path, spec)) return 'package_channel' as const;
+  if (readPackagedModuleMarker(state.checkout_path, spec)?.source_kind === 'full_runtime') {
+    return 'bundled_full_runtime' as const;
+  }
+  return state.ownership === 'preexisting_adopted'
+    ? 'developer_checkout' as const
+    : 'package_channel' as const;
+}
+
 function validateCurrentState(state: AgentPackageManagedRuntimeSourceState) {
   const spec = resolveOplDomainModuleSpec(state.module_id);
+  const sourceMode = runtimeSourceMode(state, spec);
+  if (sourceMode === 'developer_checkout' && fs.existsSync(state.checkout_path)) {
+    const identity = readDeveloperCheckoutSourceIdentity(state.checkout_path);
+    return {
+      ...state,
+      source_mode: sourceMode,
+      source_git_head_sha: identity.source_git_head_sha,
+      tree_sha256: identity.tree_sha256,
+    };
+  }
   const packaged = readPackagedModuleMarker(state.checkout_path, spec);
   if (
-    state.ownership === 'preexisting_adopted'
+    sourceMode === 'bundled_full_runtime'
+    && state.ownership === 'preexisting_adopted'
     && fs.existsSync(state.checkout_path)
     && !readPackageChannelLifecycle(state.checkout_path, spec)
     && packaged?.source_kind === 'full_runtime'
   ) {
     return {
       ...state,
+      source_mode: sourceMode,
       tree_sha256: computePackageChannelTreeSha256(state.checkout_path),
     };
   }
@@ -420,10 +451,7 @@ export function managedRuntimeSourceReadiness(
   try {
     const current = validateCurrentState(state);
     const spec = resolveOplDomainModuleSpec(state.module_id);
-    const packaged = readPackagedModuleMarker(state.checkout_path, spec);
-    const bundledFullRuntime = state.ownership === 'preexisting_adopted'
-      && state.preparation_scope === 'preexisting_read_only_probe'
-      && packaged?.source_kind === 'full_runtime';
+    const bundledFullRuntime = runtimeSourceMode(state, spec) === 'bundled_full_runtime';
     const matches = bundledFullRuntime
       ? current.tree_sha256 === state.tree_sha256
       : state.preparation_status === 'completed'
@@ -515,6 +543,20 @@ export function applyManagedRuntimeSourceCarrier(input: {
     ? path.resolve(input.checkoutPath)
     : resolveManagedModuleCheckoutPath(spec);
   const existed = fs.existsSync(checkoutPath);
+  const developerCheckout = input.sourceKind === 'developer_checkout_override';
+  if (developerCheckout && !input.checkoutPath) {
+    throw sourceFailure('Developer checkout runtime source requires an explicit agent root.', {
+      module_id: input.config.module_id,
+      source_kind: input.sourceKind,
+    });
+  }
+  if (developerCheckout && (!existed || !fs.statSync(checkoutPath).isDirectory())) {
+    throw sourceFailure('Developer checkout runtime source must reference an existing directory.', {
+      module_id: input.config.module_id,
+      checkout_path: checkoutPath,
+      source_kind: input.sourceKind,
+    });
+  }
   const sameCheckout = input.previous
     ? path.resolve(input.previous.checkout_path) === checkoutPath
     : false;
@@ -531,13 +573,29 @@ export function applyManagedRuntimeSourceCarrier(input: {
     }
   }
   if (input.dryRun) {
-    const preview = before ?? {
+    if (developerCheckout) {
+      return {
+        kind: 'none',
+        module_id: input.config.module_id,
+        checkout_path: checkoutPath,
+        before,
+        after: buildDeveloperCheckoutRuntimeSourceState({
+          config: input.config,
+          checkoutPath,
+          status: 'validated_no_write',
+          dryRun: true,
+        }),
+        staged_removal_paths: [],
+      };
+    }
+    const baseline = sameCheckout && before ? before : {
       surface_kind: 'opl_agent_package_managed_runtime_source' as const,
       status: 'validated_no_write' as const,
       carrier_kind: input.config.carrier_kind,
       module_id: input.config.module_id,
       checkout_path: checkoutPath,
       ownership,
+      source_mode: 'package_channel' as const,
       channel_version: null,
       artifact_ref: null,
       layer_digest: null,
@@ -554,12 +612,39 @@ export function applyManagedRuntimeSourceCarrier(input: {
       preparation_root: null,
       preparation_scope: 'managed_source_root' as const,
     };
+    const preview = input.packageChannelSelection
+      ? {
+          ...baseline,
+          channel_version: input.packageChannelSelection.package_version,
+          artifact_ref: `${input.packageChannelSelection.source_artifact_ref.replace(/@sha256:[0-9a-f]{64}$/, '')}@${input.packageChannelSelection.artifact_digest}`,
+          layer_digest: null,
+          source_archive_sha256: input.packageChannelSelection.package_content_digest.replace(/^sha256:/, ''),
+          source_git_head_sha: input.packageChannelSelection.owner_source_commit ?? null,
+        }
+      : baseline;
     return {
       kind: 'none',
       module_id: input.config.module_id,
       checkout_path: checkoutPath,
       before,
       after: { ...preview, status: 'validated_no_write' },
+      staged_removal_paths: [],
+    };
+  }
+  if (developerCheckout) {
+    materializeStandardAgentFrameworkLink({ agentRoot: checkoutPath });
+    const after = buildDeveloperCheckoutRuntimeSourceState({
+      config: input.config,
+      checkoutPath,
+      status: 'current',
+      dryRun: false,
+    });
+    return {
+      kind: 'none',
+      module_id: input.config.module_id,
+      checkout_path: checkoutPath,
+      before,
+      after,
       staged_removal_paths: [],
     };
   }
@@ -584,6 +669,7 @@ export function applyManagedRuntimeSourceCarrier(input: {
       module_id: input.config.module_id,
       checkout_path: checkoutPath,
       ownership: 'preexisting_adopted',
+      source_mode: 'bundled_full_runtime',
       channel_version: null,
       artifact_ref: null,
       layer_digest: null,
@@ -777,6 +863,17 @@ export function restoreManagedRuntimeSourceCarrier(input: {
     });
   }
   const current = validateCurrentState(input.current);
+  if (path.resolve(current.checkout_path) !== path.resolve(input.restored.checkout_path)) {
+    const restored = validateCurrentState(input.restored);
+    return {
+      kind: 'none',
+      module_id: restored.module_id,
+      checkout_path: restored.checkout_path,
+      before: current,
+      after: { ...restored, status: input.dryRun ? 'validated_no_write' : 'current' },
+      staged_removal_paths: [],
+    };
+  }
   if (current.tree_sha256 === input.restored.tree_sha256) {
     return {
       kind: 'none',

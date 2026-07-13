@@ -55,6 +55,47 @@ test('official quality profile is explicit without adding per-agent registry pol
   assert.equal(contract.policy.protocol_closeout_resume_consumes_quality_budget, false);
   assert.deepEqual(contract.stage_attempt_roles, ['producer', 'reviewer', 'repairer', 're_reviewer']);
   assert.equal(contract.stage_run_controller.maximum_attempt_instances, 8);
+  assert.equal(contract.cross_stage_route_selection.primary_only_decisive_attempt_role, 'producer');
+  assert.deepEqual(
+    contract.cross_stage_route_selection.formal_review_decisive_attempt_roles,
+    ['reviewer', 're_reviewer'],
+  );
+  assert.equal(contract.cross_stage_route_selection.repairer_can_make_terminal_route_selection, false);
+  assert.equal(contract.cross_stage_route_selection.opl_transition_approval_or_rejection_authority, false);
+  assert.equal(contract.cross_stage_route_selection.opl_domain_semantic_route_judgment_authority, false);
+  assert.equal(contract.cross_stage_route_selection.opl_route_output_abi_validation_required, true);
+  assert.equal(contract.cross_stage_route_selection.runtime_closeout_guard_required, true);
+  assert.equal(contract.cross_stage_route_selection.repair_required_review_may_select_terminal_route, false);
+  assert.equal(contract.cross_stage_route_selection.hard_stop_attempt_may_select_terminal_route, false);
+  assert.deepEqual(contract.cross_stage_route_selection.route_abi_rejection_conditions, [
+    'non_decisive_attempt_writes_terminal_decision',
+    'decision_and_recommendation_both_present',
+    'route_output_shape_invalid',
+    'legacy_terminal_route_field_present',
+    'target_stage_not_declared',
+    'hard_stop_attempt_writes_terminal_decision',
+    'review_or_re_review_not_terminal',
+  ]);
+  assert.deepEqual(contract.cross_stage_route_selection.legacy_terminal_route_fields_forbidden, [
+    'route_back_stage_ref',
+    'selected_next_stage_ref',
+    'next_stage_ref',
+    'workflow_complete',
+  ]);
+  assert.deepEqual(contract.cross_stage_route_selection.route_output_contract.decision_kind_values, [
+    'advance', 'skip', 'repeat', 'reverse', 'route_back', 'complete',
+  ]);
+  assert.equal(
+    contract.cross_stage_route_selection.invalid_route_output_is_rejected_without_discarding_consumable_progress,
+    true,
+  );
+  assert.equal(contract.handoff_review_boundary.required_for_stage_kind, 'packaging');
+  assert.deepEqual(contract.handoff_review_boundary.formal_review_required_if_any_true, [
+    'artifact_effect=new_or_transformed_reviewable_bytes',
+    'freezes_canonical_artifact_bytes',
+    'issues_quality_export_publication_or_ready_claim',
+  ]);
+  assert.equal(contract.handoff_review_boundary.formal_review_required_implies_quality_cycle_enabled, true);
   const attemptContract = JSON.parse(fs.readFileSync(path.join(
     repoRoot,
     'contracts/opl-framework/family-runtime-attempt-contract.json',
@@ -233,6 +274,12 @@ test('formal reviewer prompt binds isolated context and exact artifact identity'
   assert.match(prompt, /Context manifest ref: manifest:review-context-v1/);
   assert.match(prompt, /Exact artifact refs: \["artifact:deck-v1"\]/);
   assert.match(prompt, /Expected artifact hashes: \["sha256:deck-v1"\]/);
+  assert.match(prompt, /Do not produce a repair_map/);
+  assert.match(prompt, /terminal reviewer or re-reviewer/);
+  assert.match(prompt, /decisive Codex Attempt for cross-Stage semantic route selection/);
+  assert.match(prompt, /progress-terminal decisive Attempt/);
+  assert.match(prompt, /A hard stop returns the applicable typed blocker or human-gate closeout/);
+  assert.match(prompt, /stage_route_contract is controller-owned validation metadata/);
 });
 
 test('every quality-cycle role launches through a fresh codex exec command', () => {
@@ -261,6 +308,13 @@ test('every quality-cycle role launches through a fresh codex exec command', () 
     assert.deepEqual(activity.runner_status.command_preview.slice(0, 2), ['codex', 'exec']);
     assert.equal(activity.runner_status.command_preview[2], '--skip-git-repo-check');
     assert.equal(activity.runner_status.command_preview.includes('resume'), false);
+    const prompt = activity.runner_status.command_preview.join('\n');
+    if (role === 'producer') {
+      assert.match(prompt, /producer is the decisive cross-Stage semantic route selector only when this StageRun is primary-only/);
+    }
+    if (role === 'repairer') {
+      assert.match(prompt, /Do not make a terminal Stage transition decision/);
+    }
   }
 });
 
@@ -487,6 +541,7 @@ test('StageRun controller input rejects custom Attempt roles and quality budgets
     workflow_id: 'workflow:bounded',
     domain_id: 'redcube' as const,
     stage_id: 'artifact_creation',
+    declared_stage_ids: ['artifact_creation', 'review_and_revision'],
     workspace_locator: { workspace_root: '/tmp/rca-quality-cycle' },
     source_fingerprint: 'sha256:source',
     executor_kind: 'codex_cli',
@@ -631,7 +686,18 @@ test('Temporal StageRun terminal state idempotently refreshes the SQLite quality
       repair_map: [], finding_closures: [], review_receipts: [],
       artifact_refs: ['artifact:deck-v4'], artifact_hashes: ['sha256:deck-v4'],
       artifact_identity_receipt_refs: ['artifact:deck-v4'],
-      quality_debt_refs: ['quality-debt:finding:visual-clipping'], blocked_reason: null,
+      quality_debt_refs: ['quality-debt:finding:visual-clipping'],
+      route_quality_debt_refs: [],
+      decisive_attempt_role: 're_reviewer',
+      decisive_attempt_ref: 'opl://stage_attempts/sat-rereview-3',
+      selected_stage_route: {
+        decision_kind: 'repeat',
+        target_stage_id: 'artifact_creation',
+        evidence_refs: ['finding:visual-clipping'],
+      },
+      route_evidence_refs: ['finding:visual-clipping'],
+      route_recommendations: [],
+      blocked_reason: null,
       sqlite_projection: { status: 'pending', error: null },
       started_at: '2026-07-13T00:00:00.000Z', updated_at: '2026-07-13T00:01:00.000Z',
       authority_boundary: {
@@ -645,6 +711,8 @@ test('Temporal StageRun terminal state idempotently refreshes the SQLite quality
     assert.equal(first.state.status, 'quality_debt');
     assert.equal(first.state.repair_rounds_used, 3);
     assert.deepEqual(first.state.selected_artifact_refs, ['artifact:deck-v4']);
+    assert.equal((first.state as any).controller_readback.decisive_attempt_role, 're_reviewer');
+    assert.equal((first.state as any).controller_readback.selected_stage_route.target_stage_id, 'artifact_creation');
     assert.equal(first.current_attempt_ref, null);
     assert.deepEqual(second.state, first.state);
     assert.equal((second.state as any).controller_readback.controller_status, 'completed_with_quality_debt');

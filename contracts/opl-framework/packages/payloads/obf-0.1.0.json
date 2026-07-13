@@ -4,6 +4,7 @@
   "package_version": "0.1.0",
   "source_repo": "https://github.com/gaofeng21cn/opl-bookforge.git",
   "source_commit": "dbd773a6d5fc0b7c2e8c88bf41810eac189915cc",
+  "source_root": "plugins/opl-bookforge",
   "files": [
     {
       "path": ".codex-plugin/plugin.json",

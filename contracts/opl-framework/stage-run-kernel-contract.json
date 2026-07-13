@@ -2,7 +2,7 @@
   "contract_kind": "opl_stage_run_kernel_contract.v2",
   "surface_kind": "opl_stage_run_kernel_contract",
   "owner": "one-person-lab",
-  "purpose": "Provide refs-only StageRun transport identity, event history, retry-budget accounting, currentness filtering, and rebuildable read models without creating route selection, execution permission, closeout-format, or semantic transition authority.",
+  "purpose": "Provide refs-only StageRun transport identity, event history, retry-budget accounting, currentness filtering, decisive-Attempt route ABI validation, and rebuildable read models without creating domain route selection, execution permission, or semantic transition authority.",
   "state": "active_contract",
   "machine_boundary": {
     "opl_owns": {
@@ -11,7 +11,8 @@
       "projection_rebuild": true,
       "currentness_filtering": true,
       "retry_budget_accounting": true,
-      "operator_observability": true
+      "operator_observability": true,
+      "decisive_attempt_route_abi_validation": true
     },
     "codex_cli_owns": {
       "semantic_stage_selection": true,
@@ -56,7 +57,38 @@
       "missing_requires_or_ensures_evidence",
       "missing_expected_receipt_shape"
     ],
-    "framework_semantic_route_role": "none"
+    "framework_semantic_route_role": "validate_attempt_authority_and_route_abi_then_project_declared_target_without_domain_semantic_judgment"
+  },
+  "route_output_policy": {
+    "semantic_route_owner": "decisive_codex_attempt",
+    "primary_only_decisive_role": "producer",
+    "formal_review_decisive_roles": [
+      "reviewer",
+      "re_reviewer"
+    ],
+    "non_decisive_output": "route_impact.stage_route_recommendation",
+    "terminal_output": "route_impact.stage_route_decision",
+    "framework_validates": [
+      "attempt_role_and_terminality",
+      "context_and_lineage_identity",
+      "output_shape_and_mutual_exclusion",
+      "declared_target_identity",
+      "legacy_field_absence",
+      "re_review_finding_closure_before_terminal_route"
+    ],
+    "framework_does_not_validate": [
+      "domain_reasoning_correctness",
+      "scientific_clinical_grant_visual_or_editorial_merit",
+      "whether_an_abi_valid_declared_target_is_the_best_route"
+    ],
+    "invalid_output_effect": "preserve_consumable_progress_record_route_quality_debt_and_leave_attempt_route_unmaterialized",
+    "missing_or_invalid_route_fallback": "domain_pack_declared_default_progression_with_route_quality_debt_only",
+    "declared_default_progression_resolution": [
+      "action_stage_route.required_stage_refs_order",
+      "unique_current_stage.next_stage_refs"
+    ],
+    "manifest_file_order_must_not_select_successor": true,
+    "ambiguous_declared_successors_require_decisive_codex_route": true
   },
   "closeout_policy": {
     "progress_outcomes": [
@@ -84,7 +116,7 @@
     "projection_role": "rebuildable_refs_only_read_model",
     "provider_completion_role": "attempt_transport_completed",
     "provider_completion_is_domain_accepted": false,
-    "next_stage_ready_role": "codex_selected_route_observation_not_framework_authorization"
+    "next_stage_ready_role": "validated_codex_route_or_domain_pack_declared_default_progression_not_framework_domain_judgment"
   },
   "event_policy": {
     "required_event_fields": [
@@ -184,8 +216,10 @@
     "opl_can_rebuild_read_model": true,
     "opl_can_account_retry_budget": true,
     "opl_can_filter_stale_reuse": true,
+    "opl_can_validate_route_output_abi_and_attempt_authority": true,
+    "opl_must_reject_non_authoritative_or_malformed_route_output": true,
     "opl_can_select_semantic_stage_route": false,
-    "opl_can_accept_reject_rank_reconcile_or_override_codex_route": false,
+    "opl_can_reject_abi_valid_route_on_domain_semantic_merit": false,
     "opl_can_block_next_stage_for_missing_receipt_or_format": false,
     "opl_can_write_domain_truth": false,
     "opl_can_mutate_artifact_body": false,

@@ -15,7 +15,10 @@ import {
   resolveCanonicalOplFamilyMarketplaceId,
   unregisterLocalCodexPlugin,
 } from '../system-installation/codex-plugin-registry.ts';
-import { materializeOplPackageSourceArchive } from '../system-installation/module-package-channel.ts';
+import {
+  materializeOplPackageSourceArchive,
+  type ManagedModulePackageChannelSelection,
+} from '../system-installation/module-package-channel.ts';
 import {
   fetchJsonSource,
   refsOnlyAuthorityBoundary,
@@ -69,28 +72,83 @@ async function readPayloadFileContent(
   payloadManifestUrl: string,
   index: number,
   dryRun: boolean,
+  artifactSource: { sourceRoot: string; sourceArtifactRef: string } | null,
 ) {
   const contentUtf8 = typeof entry.content_utf8 === 'string' ? entry.content_utf8 : null;
   const contentBase64 = typeof entry.content_base64 === 'string' && entry.content_base64.trim()
     ? entry.content_base64.trim()
     : null;
   const sourceUrl = stringValue(entry.source_url);
-  const sourceCount = [contentUtf8 !== null, contentBase64 !== null, sourceUrl !== null]
+  const sourcePath = stringValue(entry.source_path);
+  const sourceArtifactRef = stringValue(entry.source_artifact_ref);
+  const artifactSourceDeclared = sourcePath !== null || sourceArtifactRef !== null;
+  if (artifactSourceDeclared && (!sourcePath || !sourceArtifactRef)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Artifact-backed package payload files require source_path and source_artifact_ref together.', {
+      payload_manifest_url: payloadManifestUrl,
+      file_index: index,
+      source_path: sourcePath,
+      source_artifact_ref: sourceArtifactRef,
+      failure_code: 'agent_package_payload_artifact_source_incomplete',
+    });
+  }
+  const sourceCount = [
+    contentUtf8 !== null,
+    contentBase64 !== null,
+    sourceUrl !== null,
+    artifactSourceDeclared,
+  ]
     .filter(Boolean).length;
   if (sourceCount !== 1) {
     throw new FrameworkContractError('contract_shape_invalid', 'Agent package payload files require exactly one content source.', {
       payload_manifest_url: payloadManifestUrl,
       file_index: index,
-      required: ['exactly one of content_utf8, content_base64, or source_url'],
+      required: ['exactly one of content_utf8, content_base64, source_url, or source_path + source_artifact_ref'],
       failure_code: 'agent_package_payload_manifest_invalid',
     });
   }
-  if (contentBase64 !== null) return { content: Buffer.from(contentBase64, 'base64'), digestVerified: true };
-  if (contentUtf8 !== null) return { content: Buffer.from(contentUtf8, 'utf8'), digestVerified: true };
+  if (contentBase64 !== null) return { content: Buffer.from(contentBase64, 'base64'), digestVerified: true, artifactBacked: false };
+  if (contentUtf8 !== null) return { content: Buffer.from(contentUtf8, 'utf8'), digestVerified: true, artifactBacked: false };
+
+  if (artifactSourceDeclared) {
+    if (!artifactSource || sourceArtifactRef !== artifactSource.sourceArtifactRef) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Package payload file artifact source does not match the materialized source archive.', {
+        payload_manifest_url: payloadManifestUrl,
+        file_index: index,
+        source_path: sourcePath,
+        source_artifact_ref: sourceArtifactRef,
+        materialized_source_artifact_ref: artifactSource?.sourceArtifactRef ?? null,
+        failure_code: 'agent_package_payload_artifact_source_mismatch',
+      });
+    }
+    const relativeSourcePath = safeRelativePayloadPath(sourcePath!);
+    const sourceFilePath = path.join(artifactSource.sourceRoot, relativeSourcePath);
+    if (!sourceFilePath.startsWith(`${artifactSource.sourceRoot}${path.sep}`)
+      || !fs.existsSync(sourceFilePath)
+      || !fs.lstatSync(sourceFilePath).isFile()) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Package payload source_path is missing from the selected source archive.', {
+        payload_manifest_url: payloadManifestUrl,
+        file_index: index,
+        source_path: sourcePath,
+        source_artifact_ref: sourceArtifactRef,
+        failure_code: 'agent_package_payload_artifact_source_missing',
+      });
+    }
+    const sourceRootReal = fs.realpathSync(artifactSource.sourceRoot);
+    const sourceFileReal = fs.realpathSync(sourceFilePath);
+    if (!sourceFileReal.startsWith(`${sourceRootReal}${path.sep}`)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Package payload source_path escapes the selected source archive root.', {
+        payload_manifest_url: payloadManifestUrl,
+        file_index: index,
+        source_path: sourcePath,
+        failure_code: 'agent_package_payload_artifact_source_escape',
+      });
+    }
+    return { content: fs.readFileSync(sourceFileReal), digestVerified: true, artifactBacked: true };
+  }
 
   validateUrlLike(sourceUrl!, 'payload.files[].source_url');
   if (sourceUrl!.startsWith('http://') || sourceUrl!.startsWith('https://')) {
-    if (dryRun) return { content: Buffer.alloc(0), digestVerified: false };
+    if (dryRun) return { content: Buffer.alloc(0), digestVerified: false, artifactBacked: false };
     const response = await fetch(sourceUrl!);
     if (!response.ok) {
       throw new FrameworkContractError('codex_command_failed', 'Agent package payload file fetch failed.', {
@@ -99,15 +157,16 @@ async function readPayloadFileContent(
         status_text: response.statusText,
       });
     }
-    return { content: Buffer.from(await response.arrayBuffer()), digestVerified: true };
+    return { content: Buffer.from(await response.arrayBuffer()), digestVerified: true, artifactBacked: false };
   }
-  return { content: fs.readFileSync(resolveLocalPath(sourceUrl!)), digestVerified: true };
+  return { content: fs.readFileSync(resolveLocalPath(sourceUrl!)), digestVerified: true, artifactBacked: false };
 }
 
 async function normalizePayloadFiles(
   payload: unknown,
   payloadManifestUrl: string,
   dryRun: boolean,
+  artifactSource: { sourceRoot: string; sourceArtifactRef: string } | null,
 ): Promise<AgentPackagePayloadFile[]> {
   if (!isRecord(payload) || !Array.isArray(payload.files)) {
     throw new FrameworkContractError('contract_shape_invalid', 'Agent package payload manifest must contain a files array.', {
@@ -133,13 +192,22 @@ async function normalizePayloadFiles(
         failure_code: 'agent_package_payload_manifest_invalid',
       });
     }
-    const { content, digestVerified } = await readPayloadFileContent(
+    const { content, digestVerified, artifactBacked } = await readPayloadFileContent(
       entry,
       payloadManifestUrl,
       index,
       dryRun,
+      artifactSource,
     );
     const sha256 = stringValue(entry.sha256);
+    if (artifactBacked && !sha256) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Artifact-backed package payload files require a sha256 digest.', {
+        payload_manifest_url: payloadManifestUrl,
+        file_index: index,
+        payload_path: relativePath,
+        failure_code: 'agent_package_payload_artifact_file_digest_missing',
+      });
+    }
     if (sha256 && digestVerified) {
       const expected = sha256.startsWith('sha256:') ? sha256.slice('sha256:'.length) : sha256;
       const actual = crypto.createHash('sha256').update(content).digest('hex');
@@ -161,143 +229,118 @@ async function normalizePayloadFiles(
   }));
 }
 
-type ImmutablePackagePayloadSource = {
-  artifactRef: string;
-  archiveSha256: string;
-  ownerSourceCommit: string;
-  packageVersion: string;
-};
-
-function packageArtifactSourcePath(
-  entry: Record<string, unknown>,
-  artifactRoot: string,
-  sourceCommitLocators: string[],
-) {
-  const declared = stringValue(entry.source_path);
-  if (declared) {
-    const candidate = path.join(artifactRoot, safeRelativePayloadPath(declared));
-    if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) return candidate;
-  }
-  const migrationSourceUrl = stringValue(entry.migration_source_url);
-  if (migrationSourceUrl) {
-    const pathname = new URL(migrationSourceUrl).pathname;
-    for (const sourceCommit of sourceCommitLocators) {
-      const marker = `/${sourceCommit}/`;
-      const markerIndex = pathname.indexOf(marker);
-      if (markerIndex >= 0) {
-        const relativePath = decodeURIComponent(pathname.slice(markerIndex + marker.length));
-        const candidate = path.join(artifactRoot, safeRelativePayloadPath(relativePath));
-        if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) return candidate;
-      }
-    }
-  }
-  throw new FrameworkContractError('contract_shape_invalid', 'OPL Package payload source file is missing from its immutable source archive.', {
-    source_path: declared,
-    migration_source_url: migrationSourceUrl,
-    source_commit_locators: sourceCommitLocators,
-    failure_code: 'agent_package_payload_artifact_source_missing',
-  });
+function normalizedSha256(value: string) {
+  return value.startsWith('sha256:') ? value : `sha256:${value}`;
 }
 
-function packageArtifactPayloadFiles(
-  payload: Record<string, unknown>,
-  payloadManifestUrl: string,
-  source: ImmutablePackagePayloadSource,
-) {
-  const packageSource = isRecord(payload.package_source) ? payload.package_source : null;
-  if (packageSource?.transport !== 'same_oci_artifact_source_archive') return null;
-  const declaredArchiveSha256 = stringValue(packageSource.archive_sha256);
-  if (declaredArchiveSha256 !== source.archiveSha256) {
-    throw new FrameworkContractError('contract_shape_invalid', 'OPL Package payload archive digest does not match the selected catalog member.', {
-      payload_manifest_url: payloadManifestUrl,
-      declared_archive_sha256: declaredArchiveSha256,
-      selected_archive_sha256: source.archiveSha256,
-      failure_code: 'agent_package_payload_archive_digest_mismatch',
+function materializeArtifactPayloadSource(input: {
+  payload: Record<string, unknown>;
+  manifest: AgentPackageManifest;
+  payloadManifestUrl: string;
+  selection: ManagedModulePackageChannelSelection | null;
+  targetPath: string;
+}) {
+  const files = recordList(input.payload.files);
+  const artifactFileCount = files.filter((entry) => (
+    stringValue(entry.source_path) !== null || stringValue(entry.source_artifact_ref) !== null
+  )).length;
+  if (!input.selection && artifactFileCount === 0) return null;
+  if (!input.selection) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Artifact-backed package payload requires the immutable catalog selection that supplied it.', {
+      package_id: input.manifest.package_id,
+      package_version: input.manifest.version,
+      payload_manifest_url: input.payloadManifestUrl,
+      failure_code: 'agent_package_payload_artifact_selection_missing',
     });
   }
-  const fileRecords = recordList(payload.files);
-  if (!Array.isArray(payload.files) || fileRecords.length !== payload.files.length) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Agent package payload manifest files must be JSON objects.', {
-      payload_manifest_url: payloadManifestUrl,
-      failure_code: 'agent_package_payload_manifest_invalid',
+  if (files.length === 0 || artifactFileCount !== files.length) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Managed catalog payload files must all come from the selected source archive.', {
+      package_id: input.manifest.package_id,
+      package_version: input.manifest.version,
+      payload_manifest_url: input.payloadManifestUrl,
+      file_count: files.length,
+      artifact_file_count: artifactFileCount,
+      failure_code: 'agent_package_payload_catalog_source_bypass',
     });
   }
-  const artifactRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-artifact-'));
-  const sourceCommitLocators = [
-    source.ownerSourceCommit,
-    stringValue(payload.migration_source_commit),
-  ].filter((value): value is string => Boolean(value));
-  try {
-    materializeOplPackageSourceArchive({
-      artifactRef: source.artifactRef,
-      packageId: stringValue(payload.package_id) ?? 'unknown-package',
-      packageVersion: source.packageVersion,
-      expectedArchiveSha256: source.archiveSha256,
-      targetPath: artifactRoot,
+  const packageSource = isRecord(input.payload.package_source) ? input.payload.package_source : null;
+  const transport = stringValue(packageSource?.transport);
+  const artifactRef = stringValue(packageSource?.artifact_ref);
+  const archiveSha256 = stringValue(packageSource?.archive_sha256);
+  const archiveRoot = stringValue(packageSource?.archive_root);
+  const payloadPackageId = stringValue(input.payload.package_id);
+  const payloadPackageVersion = stringValue(input.payload.package_version);
+  if (transport !== 'same_oci_artifact_source_archive'
+    || !artifactRef
+    || !archiveSha256
+    || !archiveRoot
+    || payloadPackageId !== input.manifest.package_id
+    || payloadPackageVersion !== input.manifest.version
+    || artifactRef !== input.selection.source_artifact_ref
+    || normalizedSha256(archiveSha256) !== normalizedSha256(input.selection.package_content_digest)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Artifact-backed package payload does not match its immutable catalog selection.', {
+      package_id: input.manifest.package_id,
+      package_version: input.manifest.version,
+      payload_manifest_url: input.payloadManifestUrl,
+      payload_package_id: payloadPackageId,
+      payload_package_version: payloadPackageVersion,
+      transport,
+      payload_artifact_ref: artifactRef,
+      selected_artifact_ref: input.selection.source_artifact_ref,
+      payload_archive_sha256: archiveSha256,
+      selected_package_content_digest: input.selection.package_content_digest,
+      archive_root: archiveRoot,
+      failure_code: 'agent_package_payload_artifact_selection_mismatch',
     });
-    return fileRecords.map((entry, index) => {
-      const relativePath = stringValue(entry.path);
-      if (!relativePath) {
-        throw new FrameworkContractError('contract_shape_invalid', 'Agent package payload files require a path.', {
-          payload_manifest_url: payloadManifestUrl,
-          file_index: index,
-          required: ['path'],
-          failure_code: 'agent_package_payload_manifest_invalid',
-        });
-      }
-      const sourcePath = packageArtifactSourcePath(entry, artifactRoot, sourceCommitLocators);
-      const content = fs.readFileSync(sourcePath);
-      const declaredSha256 = stringValue(entry.sha256);
-      if (!declaredSha256) {
-        throw new FrameworkContractError('contract_shape_invalid', 'Immutable OPL Package payload files require sha256.', {
-          payload_manifest_url: payloadManifestUrl,
-          payload_path: relativePath,
-          failure_code: 'agent_package_payload_file_sha256_required',
-        });
-      }
-      const actualSha256 = `sha256:${crypto.createHash('sha256').update(content).digest('hex')}`;
-      if (`sha256:${declaredSha256.replace(/^sha256:/, '')}` !== actualSha256) {
-        throw new FrameworkContractError('contract_shape_invalid', 'Agent package payload file sha256 mismatch.', {
-          payload_manifest_url: payloadManifestUrl,
-          payload_path: relativePath,
-          expected_sha256: declaredSha256,
-          actual_sha256: actualSha256,
-          failure_code: 'agent_package_payload_file_sha256_mismatch',
-        });
-      }
-      return {
-        relativePath: safeRelativePayloadPath(relativePath),
-        content,
-        sha256: declaredSha256,
-      };
-    });
-  } finally {
-    fs.rmSync(artifactRoot, { recursive: true, force: true });
   }
+  materializeOplPackageSourceArchive({
+    selection: input.selection,
+    expectedPackageId: input.manifest.package_id,
+    archiveRoot,
+    targetPath: input.targetPath,
+    details: {
+      payload_manifest_url: input.payloadManifestUrl,
+      surface: 'agent_package_physical_source',
+    },
+  });
+  return {
+    sourceRoot: input.targetPath,
+    sourceArtifactRef: artifactRef,
+  };
 }
 
 async function materializePayloadManifestSource(input: {
   manifest: AgentPackageManifest;
   payloadManifestUrl: string;
   dryRun: boolean;
-  immutablePackageSource?: ImmutablePackagePayloadSource | null;
+  catalogSelection: ManagedModulePackageChannelSelection | null;
 }) {
   const fetched = await fetchJsonSource(input.payloadManifestUrl);
-  const payload = isRecord(fetched.payload) ? fetched.payload : null;
-  const usesPackageArtifact = payload?.package_source
-    && isRecord(payload.package_source)
-    && payload.package_source.transport === 'same_oci_artifact_source_archive';
-  if (usesPackageArtifact && !input.immutablePackageSource) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Immutable OPL Package payload materialization requires the selected catalog artifact identity.', {
-      package_id: input.manifest.package_id,
+  if (!isRecord(fetched.payload)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package payload manifest must be a JSON object.', {
       payload_manifest_url: input.payloadManifestUrl,
-      failure_code: 'agent_package_payload_artifact_identity_missing',
+      failure_code: 'agent_package_payload_manifest_invalid',
     });
   }
-  const files = payload && input.immutablePackageSource
-    ? packageArtifactPayloadFiles(payload, input.payloadManifestUrl, input.immutablePackageSource)
-      ?? await normalizePayloadFiles(fetched.payload, input.payloadManifestUrl, input.dryRun)
-    : await normalizePayloadFiles(fetched.payload, input.payloadManifestUrl, input.dryRun);
+  const artifactStageRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-source-'));
+  let files: AgentPackagePayloadFile[];
+  try {
+    const artifactSource = materializeArtifactPayloadSource({
+      payload: fetched.payload,
+      manifest: input.manifest,
+      payloadManifestUrl: input.payloadManifestUrl,
+      selection: input.catalogSelection,
+      targetPath: path.join(artifactStageRoot, 'source'),
+    });
+    files = await normalizePayloadFiles(
+      fetched.payload,
+      input.payloadManifestUrl,
+      input.dryRun,
+      artifactSource,
+    );
+  } finally {
+    fs.rmSync(artifactStageRoot, { recursive: true, force: true });
+  }
   const payloadRoot = input.dryRun
     ? fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-payload-'))
     : path.join(
@@ -332,7 +375,7 @@ async function materializePayloadManifestSource(input: {
 export async function resolveManifestPhysicalSource(
   manifest: AgentPackageManifest,
   dryRun: boolean,
-  immutablePackageSource?: ImmutablePackagePayloadSource | null,
+  catalogSelection: ManagedModulePackageChannelSelection | null = null,
 ): Promise<AgentPackageManifest> {
   if (manifest.plugin_source_path || !manifest.plugin_payload_manifest_url) {
     return manifest;
@@ -341,7 +384,7 @@ export async function resolveManifestPhysicalSource(
     manifest,
     payloadManifestUrl: manifest.plugin_payload_manifest_url,
     dryRun,
-    immutablePackageSource,
+    catalogSelection,
   });
   return {
     ...manifest,

@@ -158,6 +158,11 @@ function qualityAttemptPromptLines(attempt: JsonRecord) {
   const repairMapRefs = readStringList(attempt.repair_map_refs);
   const rolePromptRef = optionalString(attempt.quality_role_prompt_ref);
   const qualityContext = isRecord(attempt.quality_context) ? attempt.quality_context : {};
+  const contextManifest = isRecord(qualityContext.context_manifest) ? qualityContext.context_manifest : {};
+  const routeSelectionContext = isRecord(contextManifest.cross_stage_route_selection)
+    ? contextManifest.cross_stage_route_selection
+    : {};
+  const declaredStageIds = readStringList(routeSelectionContext.declared_stage_ids);
   const domainPackRoot = domainPackRootFromAttempt(attempt);
   const rolePrompt = rolePromptRef && domainPackRoot
     ? readStandardAgentQualityRolePromptFile(domainPackRoot, rolePromptRef)
@@ -185,18 +190,28 @@ function qualityAttemptPromptLines(attempt: JsonRecord) {
     `Prior finding refs: ${JSON.stringify(priorFindingRefs)}`,
     `Repair map refs: ${JSON.stringify(repairMapRefs)}`,
     `Structured quality context: ${JSON.stringify(qualityContext)}`,
+    `Declared cross-Stage route targets: ${JSON.stringify(declaredStageIds)}`,
+    'A progress-terminal decisive Attempt should return exactly one route_impact.stage_route_decision with decision_kind=advance|skip|repeat|reverse|route_back|complete, a declared target_stage_id except for complete, and evidence_refs.',
+    'A hard stop returns the applicable typed blocker or human-gate closeout and does not select a cross-Stage route.',
+    'A non-decisive Attempt may instead return one route_impact.stage_route_recommendation with the same decision_kind/target/evidence shape plus reason.',
+    'Do not return both. Do not use legacy route_back_stage_ref, selected_next_stage_ref, next_stage_ref, or workflow_complete fields.',
+    'route_impact.stage_route_contract is controller-owned validation metadata. Do not create or modify it.',
   ];
   if (attemptRole === 'repairer') {
     return [
       ...base,
       'This is a fresh repair Attempt. Repair only the declared required findings within the inherited Stage goal, scope, and authority.',
       'Return a repair_map keyed by stable finding_id plus exact changed artifact refs and hashes. The repairer cannot close findings.',
+      'Do not make a terminal Stage transition decision. If the finding belongs elsewhere, return an evidence-backed stage_route_recommendation; the terminal reviewer decides after fresh re-review.',
       'Bind every returned artifact ref to the identical SHA value in typed closeout_ref_metadata; this domain-owned digest receipt is required before re-review.',
     ];
   }
   if (!['reviewer', 're_reviewer'].includes(attemptRole)) {
     return [
       ...base,
+      ...(attemptRole === 'producer'
+        ? ['The producer is the decisive cross-Stage semantic route selector only when this StageRun is primary-only. If formal Review is configured, return at most a stage_route_recommendation and leave the terminal decision to the reviewer or re-reviewer.']
+        : []),
       'Bind every returned artifact ref to the identical SHA value in typed closeout_ref_metadata; model-declared hashes without this domain-owned digest receipt are not reviewable artifacts.',
     ];
   }
@@ -207,6 +222,7 @@ function qualityAttemptPromptLines(attempt: JsonRecord) {
     'Use only the declared context manifest, exact artifact refs and hashes, source refs, rubric refs, and necessary lineage.',
     `Context manifest ref: ${contextManifestRef ?? 'missing'}`,
     'The review closeout must bind reviewed artifact hashes and declare no_context_inheritance=true.',
+    'When this Review terminalizes the StageRun, it is the decisive Codex Attempt for cross-Stage semantic route selection. A repair-required verdict continues the internal quality loop instead of selecting another Stage.',
     ...(attemptRole === 're_reviewer'
       ? [
           'This is finding-closure re-review. Evaluate each prior required finding against the repair_map and exact new artifact.',
@@ -215,6 +231,7 @@ function qualityAttemptPromptLines(attempt: JsonRecord) {
         ]
       : [
           'Initial Review must assign stable finding_id, severity, evidence_refs, required status, and repair_expectation.',
+          'Do not produce a repair_map. The repairer creates that map against the accepted findings in a separate fresh Attempt.',
         ]),
   ];
 }
@@ -247,7 +264,7 @@ export function runnerPromptFor(input: {
     'Write useful stage artifacts as early as possible. Partial drafts, negative findings, failed attempts, review findings, and route-back recommendations are consumable progress.',
     'A typed closeout packet is preferred when naturally available, but it is never required for stage progression.',
     'Your final message may be structured JSON or ordinary readable text. OPL persists it as a raw artifact and derives refs, hashes, lineage, and a minimal progress envelope.',
-    'Choose the next stage or a route-back target by semantic judgment. You may route to any declared stage and must carry forward the evidence that motivated the decision.',
+    'Cross-Stage semantic route selection must come from this StageRun\'s decisive Codex Attempt: the producer for a primary-only StageRun, otherwise the terminal reviewer or re-reviewer. Other Attempts may return evidence-backed stage_route_recommendation only. OPL validates terminal-role eligibility, route shape, field exclusivity, legacy-field absence, finding closure, and declared target identity, then passively projects the Codex decision without judging its domain semantics.',
     'Do not claim domain readiness, quality acceptance, owner receipt creation, typed blocker creation, or irreversible authority unless a real domain-owned ref exists.',
   ].join('\n');
 }

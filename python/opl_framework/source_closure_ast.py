@@ -338,7 +338,12 @@ def main() -> int:
         "diagnostics": diagnostics,
         "pyproject_scripts": pyproject_scripts(repo_dir),
     }
-    json.dump(result, sys.stdout, sort_keys=True, separators=(",", ":"))
+    output_path = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else None
+    if output_path is None:
+        json.dump(result, sys.stdout, sort_keys=True, separators=(",", ":"))
+    else:
+        with output_path.open("w", encoding="utf-8") as output_stream:
+            json.dump(result, output_stream, sort_keys=True, separators=(",", ":"))
     return 0
 
 

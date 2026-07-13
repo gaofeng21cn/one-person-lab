@@ -98,15 +98,43 @@ export type StandardAgentStageQualityPolicy = {
   budget_exhaustion: 'complete_with_quality_debt_if_consumable';
 };
 
+export type StandardAgentHandoffReviewBoundary = {
+  artifact_effect:
+    | 'reviewed_immutable_refs_only'
+    | 'mechanical_repackaging_of_reviewed_bytes'
+    | 'new_or_transformed_reviewable_bytes';
+  freezes_canonical_artifact_bytes: boolean;
+  issues_quality_export_publication_or_ready_claim: boolean;
+  downstream_owner_retains_acceptance: boolean;
+};
+
+function handoffRequiresFormalReview(boundary: StandardAgentHandoffReviewBoundary | null) {
+  return boundary !== null && (
+    boundary.artifact_effect === 'new_or_transformed_reviewable_bytes'
+    || boundary.freezes_canonical_artifact_bytes
+    || boundary.issues_quality_export_publication_or_ready_claim
+  );
+}
+
+function handoffAllowsPrimaryOnly(boundary: StandardAgentHandoffReviewBoundary | null) {
+  return boundary !== null
+    && boundary.artifact_effect !== 'new_or_transformed_reviewable_bytes'
+    && !boundary.freezes_canonical_artifact_bytes
+    && !boundary.issues_quality_export_publication_or_ready_claim
+    && boundary.downstream_owner_retains_acceptance;
+}
+
 export type StandardAgentStageQualityRuntimeBinding = {
   surface_kind: 'opl_pack_bound_stage_quality_runtime_binding';
   version: 'opl-pack-bound-stage-quality-runtime-binding.v1';
   stage_id: string;
+  declared_stage_ids: string[];
   enabled: boolean;
   stage_role: string | null;
   policy_ref: string;
   stage_prompt_ref: string;
   quality_policy: StandardAgentStageQualityPolicy;
+  handoff_review_boundary: StandardAgentHandoffReviewBoundary | null;
   role_prompt_refs: {
     producer: string;
     reviewer: string;
@@ -473,6 +501,7 @@ function validateStageQualityCyclePolicy(input: {
   stageId: string;
   stagePromptRef: string;
   stageRole: string | null;
+  handoffReviewBoundary: StandardAgentHandoffReviewBoundary | null;
 }) {
   const policy = record(
     readJsonPointer(input.repoDir, input.ref, `stage_quality_cycle_policy:${input.stageId}`),
@@ -562,6 +591,31 @@ function validateStageQualityCyclePolicy(input: {
       stage_id: input.stageId,
     });
   }
+  if (formalReview.required === true && !enabled) {
+    fail('Required formal Stage Review cannot be disabled at runtime.', {
+      repo_dir: input.repoDir,
+      stage_id: input.stageId,
+      blocker: 'required_formal_review_runtime_disabled',
+    });
+  }
+  if (handoffRequiresFormalReview(input.handoffReviewBoundary) && formalReview.required !== true) {
+    fail('Handoff that creates reviewable delivery bytes or issues a ready claim requires formal Stage Review.', {
+      repo_dir: input.repoDir,
+      stage_id: input.stageId,
+      blocker: 'handoff_final_bytes_or_ready_claim_requires_formal_review',
+    });
+  }
+  if (
+    input.handoffReviewBoundary !== null
+    && formalReview.required === false
+    && !handoffAllowsPrimaryOnly(input.handoffReviewBoundary)
+  ) {
+    fail('Primary-only Handoff is limited to reviewed refs or mechanical repackaging with downstream owner acceptance.', {
+      repo_dir: input.repoDir,
+      stage_id: input.stageId,
+      blocker: 'handoff_primary_only_boundary_invalid',
+    });
+  }
   if (policy.budget_exhaustion !== 'complete_with_quality_debt_if_consumable') {
     fail('Stage quality-cycle budget exhaustion policy is invalid.', { repo_dir: input.repoDir, stage_id: input.stageId });
   }
@@ -590,6 +644,7 @@ function validateStageQualityCyclePolicy(input: {
     stage_prompt_ref: policyStagePromptRef,
     role_prompt_refs: normalizedRolePrompts,
     quality_rubric_refs: rubricRefs,
+    handoff_review_boundary: input.handoffReviewBoundary,
     quality_policy: {
       surface_kind: 'opl_stage_quality_cycle_policy',
       version: 'stage-quality-cycle-policy.v1',
@@ -612,6 +667,7 @@ function validateStageQualityCyclePolicy(input: {
     | 'surface_kind'
     | 'version'
     | 'stage_id'
+    | 'declared_stage_ids'
     | 'stage_role'
     | 'policy_ref'
     | 'stage_goal_refs'
@@ -620,6 +676,53 @@ function validateStageQualityCyclePolicy(input: {
     | 'manifest_ref'
     | 'manifest_sha256'
   >;
+}
+
+function validateHandoffReviewBoundary(input: {
+  repoDir: string;
+  stageId: string;
+  stageKind: string;
+  value: unknown;
+}): StandardAgentHandoffReviewBoundary | null {
+  if (input.stageKind !== 'packaging') {
+    if (input.value !== undefined) {
+      fail('handoff_review_boundary is only valid for packaging Handoff stages.', {
+        repo_dir: input.repoDir,
+        stage_id: input.stageId,
+      });
+    }
+    return null;
+  }
+  const boundary = record(input.value, 'stage.handoff_review_boundary', input.repoDir);
+  const fields = [
+    'artifact_effect',
+    'freezes_canonical_artifact_bytes',
+    'issues_quality_export_publication_or_ready_claim',
+    'downstream_owner_retains_acceptance',
+  ];
+  exactObjectKeys(boundary, fields, 'stage.handoff_review_boundary', input.repoDir);
+  if (![
+    'reviewed_immutable_refs_only',
+    'mechanical_repackaging_of_reviewed_bytes',
+    'new_or_transformed_reviewable_bytes',
+  ].includes(String(boundary.artifact_effect))) {
+    fail('stage.handoff_review_boundary.artifact_effect is invalid.', {
+      repo_dir: input.repoDir,
+      stage_id: input.stageId,
+    });
+  }
+  if (
+    typeof boundary.freezes_canonical_artifact_bytes !== 'boolean'
+    || typeof boundary.issues_quality_export_publication_or_ready_claim !== 'boolean'
+    || typeof boundary.downstream_owner_retains_acceptance !== 'boolean'
+  ) {
+    fail('stage.handoff_review_boundary flags must be boolean.', {
+      repo_dir: input.repoDir,
+      stage_id: input.stageId,
+    });
+  }
+  const normalized = boundary as StandardAgentHandoffReviewBoundary;
+  return normalized;
 }
 
 function assertNoOplAuthority(boundary: JsonRecord, field: string, repoDir: string) {
@@ -908,6 +1011,13 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
 
   const stages = stageRecords.map((stage, index) => {
     const stageId = stageIds[index]!;
+    const stageKind = text(stage.stage_kind, 'stage.stage_kind', repoDir);
+    const handoffReviewBoundary = validateHandoffReviewBoundary({
+      repoDir,
+      stageId,
+      stageKind,
+      value: stage.handoff_review_boundary,
+    });
     const policyRef = repoFile(repoDir, stage.policy_ref, 'stage.policy_ref').ref;
     const promptSource = readStandardAgentStagePromptFile(
       repoDir,
@@ -924,6 +1034,13 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
       : repoRef(repoDir, stage.stage_quality_cycle_policy_ref, `stage_manifest.stages[${index}].stage_quality_cycle_policy_ref`);
     const trustLane = text(stage.trust_lane, 'stage.trust_lane', repoDir);
     const effectBoundary = EFFECT_BOUNDARY_TRUST_LANES.has(trustLane);
+    if (handoffReviewBoundary && !handoffAllowsPrimaryOnly(handoffReviewBoundary) && !stageQualityCyclePolicyRef) {
+      fail('Handoff outside the primary-only boundary requires a Stage quality-cycle policy.', {
+        repo_dir: repoDir,
+        stage_id: stageId,
+        blocker: 'handoff_review_boundary_requires_quality_policy',
+      });
+    }
     if (declaredQualityProfileRef && trustLane !== 'human_gate' && !stageQualityCyclePolicyRef) {
       fail('Official knowledge-deliverable AI stages require a Stage quality-cycle policy ref.', {
         repo_dir: repoDir,
@@ -937,6 +1054,7 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
         stageId,
         stagePromptRef: promptSource.ref,
         stageRole,
+        handoffReviewBoundary,
       });
       if (declaredQualityProfileRef && trustLane !== 'human_gate' && !qualityBinding.enabled) {
         fail('Official knowledge-deliverable AI stages must enable their Stage quality cycle.', {
@@ -946,7 +1064,7 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
         });
       }
     }
-    if (stageRole === 'cross_stage_meta_review' && text(stage.stage_kind, 'stage.stage_kind', repoDir) !== 'review') {
+    if (stageRole === 'cross_stage_meta_review' && stageKind !== 'review') {
       fail('cross_stage_meta_review role requires stage_kind=review.', { repo_dir: repoDir, stage_id: stageId });
     }
     const runtimeEventRefs = effectBoundary
@@ -1098,7 +1216,7 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
       : declaredStagePatternSourceRefs;
     return {
       stage_id: stageId,
-      stage_kind: text(stage.stage_kind, 'stage.stage_kind', repoDir),
+      stage_kind: stageKind,
       title: text(stage.title, 'stage.title', repoDir),
       summary: optionalString(stage.summary),
       goal: text(stage.goal, 'stage.goal', repoDir),
@@ -1163,6 +1281,7 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
         next_owner: nextStageRefs.length > 0 ? 'one-person-lab' : domainId,
         next_stage_refs: nextStageRefs,
         closeout_ref_policy: 'domain_owner_receipt_typed_blocker_human_gate_or_route_back',
+        ...(handoffReviewBoundary ? { review_boundary: handoffReviewBoundary } : {}),
       },
       source_refs: [surfaceRef(repoDir, policyRef, 'stage.policy_ref', 'declarative_stage_policy')],
       freshness: {
@@ -1315,6 +1434,9 @@ export function resolveStandardAgentStageQualityRuntimeBinding(
     stageId,
     stagePromptRef,
     stageRole: optionalString(stage.stage_role),
+    handoffReviewBoundary: isRecord(stage.handoff?.review_boundary)
+      ? stage.handoff.review_boundary as StandardAgentHandoffReviewBoundary
+      : null,
   });
   const officialAiStage = Boolean(compilation.stage_control_plane.quality_governance_profile_ref)
     && stage.trust_boundary?.lane !== 'human_gate';
@@ -1329,11 +1451,13 @@ export function resolveStandardAgentStageQualityRuntimeBinding(
     surface_kind: 'opl_pack_bound_stage_quality_runtime_binding',
     version: 'opl-pack-bound-stage-quality-runtime-binding.v1',
     stage_id: stage.stage_id,
+    declared_stage_ids: compilation.stage_control_plane.stages.map((entry) => entry.stage_id),
     enabled: policy.enabled,
     stage_role: optionalString(stage.stage_role),
     policy_ref: policyRef,
     stage_prompt_ref: policy.stage_prompt_ref,
     quality_policy: policy.quality_policy,
+    handoff_review_boundary: policy.handoff_review_boundary,
     role_prompt_refs: policy.role_prompt_refs,
     quality_rubric_refs: policy.quality_rubric_refs,
     stage_goal_refs: [`${compilation.source_binding.stage_manifest_ref}#/stages/${stageIndex}/goal`],

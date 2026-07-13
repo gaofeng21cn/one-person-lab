@@ -35,6 +35,7 @@ import {
   type StageQualityReReviewResult,
   type StageReviewReceipt,
 } from '../stagecraft/public/stage-quality-cycle.ts';
+import { evaluateStageQualityAttemptRoute } from '../stagecraft/public/stage-quality-route-selection.ts';
 import {
   CODEX_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT,
   CODEX_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
@@ -611,7 +612,7 @@ function qualityOutcome(value: Record<string, unknown>) {
   if (
     outcome === 'pass'
     || outcome === 'repair_required'
-    || outcome === 'completed_with_quality_debt'
+    || outcome === 'quality_debt'
     || outcome === 'blocked'
     || outcome === 'human_gate'
   ) {
@@ -646,6 +647,13 @@ function validateWorkflowStageRunInput(input: TemporalStageRunWorkflowInput) {
   }
   if (!Array.isArray(input.quality_rubric_refs) || input.quality_rubric_refs.length === 0) {
     throw new Error('StageRun quality rubric refs are required.');
+  }
+  if (
+    !Array.isArray(input.declared_stage_ids)
+    || input.declared_stage_ids.length === 0
+    || !input.declared_stage_ids.includes(input.stage_id)
+  ) {
+    throw new Error('StageRun route transport requires declared Stage ids including the current Stage.');
   }
   if (input.stage_role === 'cross_stage_meta_review' && input.quality_policy.formal_review.required) {
     throw new Error('Cross-stage Meta Review Stage cannot recursively require formal Stage Review.');
@@ -682,7 +690,7 @@ function declaredHardStop(envelope: Record<string, unknown>) {
 function reviewVerdictForOutcome(outcome: ReturnType<typeof qualityOutcome>): StageReviewReceipt['verdict'] {
   if (outcome === 'pass') return 'pass';
   if (outcome === 'repair_required') return 'repair_required';
-  if (outcome === 'completed_with_quality_debt') return 'quality_debt';
+  if (outcome === 'quality_debt') return 'quality_debt';
   return 'hard_stop';
 }
 
@@ -712,6 +720,12 @@ export async function StageRunWorkflow(
     artifact_hashes: asStringList(input.artifact_hashes),
     artifact_identity_receipt_refs: [],
     quality_debt_refs: [],
+    route_quality_debt_refs: [],
+    decisive_attempt_role: null,
+    decisive_attempt_ref: null,
+    selected_stage_route: null,
+    route_evidence_refs: [],
+    route_recommendations: [],
     blocked_reason: null,
     sqlite_projection: { status: 'pending', error: null },
     started_at: nowIso(),
@@ -726,7 +740,17 @@ export async function StageRunWorkflow(
   const observedSessions = new Set<string>();
 
   const terminalize = async (nextState: TemporalStageRunWorkflowState) => {
-    state = nextState;
+    const routeDecisionRequired = nextState.status === 'completed'
+      || nextState.status === 'completed_with_quality_debt';
+    state = routeDecisionRequired && !nextState.selected_stage_route
+      ? {
+          ...nextState,
+          route_quality_debt_refs: [...new Set([
+            ...nextState.route_quality_debt_refs,
+            qualityFailureRef(input, 'decisive_attempt_route_decision_missing'),
+          ])],
+        }
+      : nextState;
     try {
       await stageQualityCycleProjectActivity({ stage_run: input, state });
       state = { ...state, sqlite_projection: { status: 'synced', error: null } };
@@ -784,7 +808,8 @@ export async function StageRunWorkflow(
     observedSessions.add(executionSessionRef);
     const envelope = qualityEnvelopeFromAttempt(result);
     const reviewRole = attemptInput.role === 'reviewer' || attemptInput.role === 're_reviewer';
-    const artifactIdentity = result.status === 'completed'
+    const attemptReturnedArtifactIdentity = asStringList(envelope.artifact_refs).length > 0;
+    const artifactIdentity = result.status === 'completed' || (!reviewRole && attemptReturnedArtifactIdentity)
       ? qualityArtifactIdentity(
           result,
           envelope,
@@ -801,6 +826,15 @@ export async function StageRunWorkflow(
           artifactHashes: attemptInput.artifactHashes,
           artifactIdentityReceiptRefs: attemptInput.artifactIdentityReceiptRefs,
         };
+    const routeImpact = asRecord(asRecord(result.closeout_packet).route_impact);
+    const routeEvaluation = evaluateStageQualityAttemptRoute({
+      attempt: childInput as unknown as Record<string, unknown>,
+      routeImpact,
+    });
+    const routeRejectionReasons = [
+      ...routeEvaluation.decision_rejection_reasons,
+      ...routeEvaluation.recommendation_rejection_reasons,
+    ];
     state = {
       ...state,
       attempts: [...state.attempts, {
@@ -817,6 +851,20 @@ export async function StageRunWorkflow(
       artifact_refs: artifactIdentity.artifactRefs,
       artifact_hashes: artifactIdentity.artifactHashes,
       artifact_identity_receipt_refs: artifactIdentity.artifactIdentityReceiptRefs,
+      route_quality_debt_refs: [
+        ...new Set([
+          ...state.route_quality_debt_refs,
+          ...routeRejectionReasons.map((reason) => qualityFailureRef(input, `route-output:${reason}`)),
+        ]),
+      ],
+      route_recommendations: routeEvaluation.recommendation
+        ? [...state.route_recommendations, {
+            attempt_ref: materialized.attempt_ref,
+            attempt_role: attemptInput.role,
+            quality_round_index: attemptInput.round,
+            recommendation: routeEvaluation.recommendation,
+          }]
+        : state.route_recommendations,
       updated_at: nowIso(),
     };
     if (result.status === 'human_gate') {
@@ -825,15 +873,28 @@ export async function StageRunWorkflow(
       const reason = typeof envelope.blocked_reason === 'string'
         ? envelope.blocked_reason
         : `stage_quality_${attemptInput.role}_not_completed`;
-      state = hasConsumableArtifact(state) && !declaredHardStop(envelope)
+      const recoverableAttemptCanContinue = hasConsumableArtifact(state)
+        && !declaredHardStop(envelope)
+        && (
+          (attemptInput.role === 'producer' && input.quality_policy.formal_review.required)
+          || attemptInput.role === 'repairer'
+        );
+      state = recoverableAttemptCanContinue
         ? {
+            ...state,
+            status: 'running',
+            current_role: null,
+            blocked_reason: null,
+          }
+        : hasConsumableArtifact(state) && !declaredHardStop(envelope)
+          ? {
             ...state,
             status: 'completed_with_quality_debt',
             current_role: null,
             quality_debt_refs: [...new Set([...state.quality_debt_refs, qualityFailureRef(input, reason)])],
             blocked_reason: null,
           }
-        : {
+          : {
             ...state,
             status: 'blocked',
             current_role: null,
@@ -843,10 +904,24 @@ export async function StageRunWorkflow(
     return {
       result,
       envelope,
+      attemptRole: attemptInput.role,
       attemptRef: materialized.attempt_ref,
       executionSessionRef,
+      routeEvaluation,
       reviewedArtifactRefs: attemptInput.artifactRefs,
       reviewedArtifactHashes: attemptInput.artifactHashes,
+    };
+  };
+
+  const commitTerminalRouteDecision = (attempt: Awaited<ReturnType<typeof runAttempt>>) => {
+    if (!attempt.routeEvaluation.decision) return;
+    state = {
+      ...state,
+      decisive_attempt_role: attempt.attemptRole,
+      decisive_attempt_ref: attempt.attemptRef,
+      selected_stage_route: attempt.routeEvaluation.decision,
+      route_evidence_refs: attempt.routeEvaluation.decision.evidence_refs,
+      updated_at: nowIso(),
     };
   };
 
@@ -860,8 +935,14 @@ export async function StageRunWorkflow(
       artifactIdentityReceiptRefs: state.artifact_identity_receipt_refs,
     });
     parentAttemptRef = producer.attemptRef;
-    if (stageRunStopped(state)) return terminalize(state);
+    if (stageRunStopped(state)) {
+      if (!input.quality_policy.formal_review.required && state.status === 'completed_with_quality_debt') {
+        commitTerminalRouteDecision(producer);
+      }
+      return terminalize(state);
+    }
     if (!input.quality_policy.formal_review.required) {
+      commitTerminalRouteDecision(producer);
       return terminalize({ ...state, status: 'completed', current_role: null, updated_at: nowIso() });
     }
 
@@ -885,9 +966,11 @@ export async function StageRunWorkflow(
     let findings = findingList(review.envelope.findings);
     state = { ...state, findings, review_receipts: [...state.review_receipts, initialReviewReceipt] };
     if (initialOutcome === 'pass') {
+      commitTerminalRouteDecision(review);
       return terminalize({ ...state, status: 'completed', current_role: null, updated_at: nowIso() });
     }
-    if (initialOutcome === 'completed_with_quality_debt') {
+    if (initialOutcome === 'quality_debt') {
+      commitTerminalRouteDecision(review);
       return terminalize({
         ...state,
         status: 'completed_with_quality_debt',
@@ -915,6 +998,7 @@ export async function StageRunWorkflow(
       });
     }
 
+    let lastReReview: Awaited<ReturnType<typeof runAttempt>> | null = null;
     for (let round = 1; round <= state.max_repair_rounds; round += 1) {
       const repair = await runAttempt({
         role: 'repairer',
@@ -939,6 +1023,7 @@ export async function StageRunWorkflow(
         findings,
         repairMap,
       });
+      lastReReview = reReview;
       parentAttemptRef = reReview.attemptRef;
       state = { ...state, repair_rounds_used: round };
       if (stageRunStopped(state)) return terminalize(state);
@@ -961,6 +1046,7 @@ export async function StageRunWorkflow(
         review_receipts: [...state.review_receipts, reReviewReceipt],
       };
       if (!closure.trigger_repair) {
+        commitTerminalRouteDecision(reReview);
         return terminalize({ ...state, status: 'completed', current_role: null, updated_at: nowIso() });
       }
       const openIds = new Set(closure.open_required_finding_ids);
@@ -971,6 +1057,8 @@ export async function StageRunWorkflow(
       ];
       state = { ...state, findings };
     }
+
+    if (lastReReview) commitTerminalRouteDecision(lastReReview);
 
     if (state.artifact_refs.length === 0 || state.artifact_hashes.length === 0) {
       return terminalize({

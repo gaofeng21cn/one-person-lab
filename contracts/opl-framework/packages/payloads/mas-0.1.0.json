@@ -8,6 +8,7 @@
   },
   "source_repo": "https://github.com/gaofeng21cn/med-autoscience.git",
   "source_commit": "095b2f0756af8da8d67c47a8ac45eee1e4ff9fb9",
+  "source_root": "plugins/med-autoscience",
   "files": [
     {
       "path": ".codex-plugin/plugin.json",

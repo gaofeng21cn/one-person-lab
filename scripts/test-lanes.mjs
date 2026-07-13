@@ -68,6 +68,7 @@ const fastTestFiles = [
   'tests/src/family-runtime-capability-stage-context.test.ts',
   'tests/src/cognitive-computation-kernel-contract.test.ts',
   'tests/src/stage-quality-cycle.test.ts',
+  'tests/src/stage-quality-route-selection.test.ts',
   'tests/src/stage-quality-attempt-boundary.test.ts',
   'tests/src/family-runtime-temporal-stage-run-controller.test.ts',
   'tests/src/family-runtime-pack-bound-stage-quality-e2e.test.ts',

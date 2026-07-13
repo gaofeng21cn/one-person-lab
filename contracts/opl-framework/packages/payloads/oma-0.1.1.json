@@ -4,6 +4,7 @@
   "package_version": "0.1.1",
   "source_repo": "https://github.com/gaofeng21cn/opl-meta-agent.git",
   "source_commit": "4c120adb8d2e59175d71a4637dc918cc3c7f2e17",
+  "source_root": "plugins/opl-meta-agent",
   "files": [
     {
       "path": ".codex-plugin/plugin.json",

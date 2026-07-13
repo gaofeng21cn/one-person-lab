@@ -5,6 +5,7 @@
   "package_version": "0.1.18",
   "source_repo": "https://github.com/gaofeng21cn/opl-flow.git",
   "source_commit": "b1beed858575af2fb587261a412aaa7a76e60db1",
+  "source_root": ".",
   "files": [
     {
       "path": ".codex-plugin/plugin.json",

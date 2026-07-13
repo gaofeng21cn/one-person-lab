@@ -151,7 +151,7 @@ test('standard Agent interface parser enforces closed objects', () => {
   );
 });
 
-test('package readiness is the canonical managed descriptor discovery gate', () => {
+test('package dependency and runtime source readiness gate descriptor discovery independently of workspace scope', () => {
   const repoDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-standard-interface-managed-'));
   try {
     fs.mkdirSync(path.join(repoDir, 'contracts'), { recursive: true });
@@ -165,7 +165,15 @@ test('package readiness is the canonical managed descriptor discovery gate', () 
       return {
       opl_agent_package_status: input.packageId === 'mas'
         ? {
-            operational_ready: true,
+            installed_package_count: 1,
+            operational_ready: false,
+            package_dependency_readiness: {
+              status: 'current',
+              operational_ready: true,
+            },
+            materialization_readiness: {
+              status: 'scope_required',
+            },
             runtime_source_readiness: {
               status: 'current',
               operational_ready: true,
@@ -175,7 +183,12 @@ test('package readiness is the canonical managed descriptor discovery gate', () 
             },
           }
         : {
+            installed_package_count: 0,
             operational_ready: false,
+            package_dependency_readiness: {
+              status: 'missing',
+              operational_ready: false,
+            },
             runtime_source_readiness: {
               status: 'missing',
               operational_ready: false,
@@ -202,6 +215,14 @@ test('package readiness is the canonical managed descriptor discovery gate', () 
       return readback;
     }) as any;
     assert.equal(readPackageManagedStandardAgentDescriptor(['mas'], staleStatusReader), null);
+    const missingDependencyStatusReader = ((input: { packageId?: string | null }) => {
+      const readback = statusReader(input);
+      if (input.packageId === 'mas') {
+        readback.opl_agent_package_status.package_dependency_readiness.operational_ready = false;
+      }
+      return readback;
+    }) as any;
+    assert.equal(readPackageManagedStandardAgentDescriptor(['mas'], missingDependencyStatusReader), null);
     assert.throws(
       () => assertStandardAgentDescriptorIdentity(descriptor!, {
         project: 'different-agent',

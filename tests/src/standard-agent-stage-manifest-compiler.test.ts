@@ -32,6 +32,55 @@ function writeText(root: string, ref: string) {
   fs.writeFileSync(file, `# ${ref}\n`);
 }
 
+function writePrimaryOnlyDeliverPolicy(root: string) {
+  fs.writeFileSync(path.join(root, 'agent/prompts/deliver.md'), `# Deliver
+
+## Producer
+Produce.
+
+## Reviewer
+Review.
+
+## Repairer
+Repair.
+
+## Re Reviewer
+Re-review.
+`);
+  writeJson(root, 'contracts/stage_quality_cycle_policy.json', {
+    stages: {
+      deliver: {
+        surface_kind: 'opl_stage_quality_cycle_policy',
+        version: 'stage-quality-cycle-policy.v1',
+        enabled: true,
+        stage_prompt_ref: 'agent/prompts/deliver.md',
+        role_prompt_refs: {
+          producer: 'agent/prompts/deliver.md#producer',
+          reviewer: 'agent/prompts/deliver.md#reviewer',
+          repairer: 'agent/prompts/deliver.md#repairer',
+          re_reviewer: 'agent/prompts/deliver.md#re-reviewer',
+        },
+        quality_rubric_refs: ['agent/quality_gates/quality.md'],
+        in_thread_refinement: { allowed: true, authoritative: false },
+        formal_review: {
+          required: false,
+          risk_tier: 'low',
+          review_depth: 'focused',
+          context_isolation_required: true,
+          max_repair_rounds: 0,
+        },
+        budget_exhaustion: 'complete_with_quality_debt_if_consumable',
+        attempt_boundary: {
+          inherits_stage_goal_scope_authority: true,
+          role_overlay_may_only_narrow: true,
+          controller_creates_next_attempt: true,
+          attempt_is_not_sub_stage: true,
+        },
+      },
+    },
+  });
+}
+
 function fixture(domainId: string, canonicalAgentId = domainId) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-manifest-'));
   const packRefs = [
@@ -168,6 +217,12 @@ function fixture(domainId: string, canonicalAgentId = domainId) {
       {
         stage_id: 'deliver',
         stage_kind: 'packaging',
+        handoff_review_boundary: {
+          artifact_effect: 'reviewed_immutable_refs_only',
+          freezes_canonical_artifact_bytes: false,
+          issues_quality_export_publication_or_ready_claim: false,
+          downstream_owner_retains_acceptance: true,
+        },
         title: 'Deliver',
         summary: 'Deliver.',
         goal: 'Route the accepted delivery.',
@@ -216,6 +271,15 @@ test('standard Agent stage manifest compiler keeps stable domain identity and ta
   assert.match(promptRef?.sha256 ?? '', /^[a-f0-9]{64}$/);
   assert.equal(promptRef?.size_bytes, Buffer.byteLength('# agent/prompts/intake.md\n', 'utf8'));
   assert.deepEqual((alpha.stage_control_plane.stages[0]?.handoff as JsonRecord).next_stage_refs, ['deliver']);
+  assert.deepEqual(
+    (alpha.stage_control_plane.stages[1]?.handoff as JsonRecord).review_boundary,
+    {
+      artifact_effect: 'reviewed_immutable_refs_only',
+      freezes_canonical_artifact_bytes: false,
+      issues_quality_export_publication_or_ready_claim: false,
+      downstream_owner_retains_acceptance: true,
+    },
+  );
   assert.equal(alpha.stage_control_plane.authority_boundary.opl_can_sign_owner_receipt, false);
   assert.equal('target_agent_ref' in alpha.stage_control_plane, false);
 
@@ -226,6 +290,93 @@ test('standard Agent stage manifest compiler keeps stable domain identity and ta
   const generated = buildRepoGeneratedInterfaceBundle(alphaRoot, 'product-entry').bundle as JsonRecord;
   assert.equal(generated.agent_id, 'agent-alpha');
   assert.equal(generated.target_domain_id, 'target-alpha');
+});
+
+test('packaging Handoff must classify its final-artifact review boundary', () => {
+  const root = fixture('target-handoff-boundary');
+  const manifest = readManifest(root);
+  delete manifest.stages[1].handoff_review_boundary;
+  writeManifest(root, manifest);
+
+  assert.throws(
+    () => compileStandardAgentStageManifest(root),
+    /stage\.handoff_review_boundary must be a JSON object/,
+  );
+});
+
+test('primary-only Handoff requires downstream owner acceptance', () => {
+  const root = fixture('target-handoff-owner');
+  const manifest = readManifest(root);
+  manifest.stages[1].stage_quality_cycle_policy_ref =
+    'contracts/stage_quality_cycle_policy.json#/stages/deliver';
+  manifest.stages[1].handoff_review_boundary.downstream_owner_retains_acceptance = false;
+  writePrimaryOnlyDeliverPolicy(root);
+  writeManifest(root, manifest);
+
+  assert.throws(
+    () => compileStandardAgentStageManifest(root),
+    /Primary-only Handoff is limited to reviewed refs or mechanical repackaging/,
+  );
+});
+
+test('every high-risk Handoff signal fails closed when formal Stage Review is disabled', async (t) => {
+  for (const [name, reviewBoundary] of [
+    ['new reviewable bytes', {
+      artifact_effect: 'new_or_transformed_reviewable_bytes',
+      freezes_canonical_artifact_bytes: false,
+      issues_quality_export_publication_or_ready_claim: false,
+      downstream_owner_retains_acceptance: true,
+    }],
+    ['canonical byte freeze', {
+      artifact_effect: 'mechanical_repackaging_of_reviewed_bytes',
+      freezes_canonical_artifact_bytes: true,
+      issues_quality_export_publication_or_ready_claim: false,
+      downstream_owner_retains_acceptance: true,
+    }],
+    ['ready claim', {
+      artifact_effect: 'reviewed_immutable_refs_only',
+      freezes_canonical_artifact_bytes: false,
+      issues_quality_export_publication_or_ready_claim: true,
+      downstream_owner_retains_acceptance: true,
+    }],
+  ] as const) {
+    await t.test(name, () => {
+      const root = fixture(`target-handoff-review-${name.replaceAll(' ', '-')}`);
+      writePrimaryOnlyDeliverPolicy(root);
+      const manifest = readManifest(root);
+      manifest.stages[1].stage_quality_cycle_policy_ref =
+        'contracts/stage_quality_cycle_policy.json#/stages/deliver';
+      manifest.stages[1].handoff_review_boundary = reviewBoundary;
+      writeManifest(root, manifest);
+
+      assert.throws(
+        () => compileStandardAgentStageManifest(root),
+        /requires formal Stage Review/,
+      );
+    });
+  }
+});
+
+test('required formal Handoff Review cannot be disabled at runtime', () => {
+  const root = fixture('target-handoff-runtime-disabled');
+  writePrimaryOnlyDeliverPolicy(root);
+  const manifest = readManifest(root);
+  manifest.stages[1].stage_quality_cycle_policy_ref =
+    'contracts/stage_quality_cycle_policy.json#/stages/deliver';
+  manifest.stages[1].handoff_review_boundary.artifact_effect =
+    'new_or_transformed_reviewable_bytes';
+  writeManifest(root, manifest);
+
+  const policyPath = path.join(root, 'contracts/stage_quality_cycle_policy.json');
+  const policy = JSON.parse(fs.readFileSync(policyPath, 'utf8')) as JsonRecord;
+  policy.stages.deliver.enabled = false;
+  policy.stages.deliver.formal_review.required = true;
+  fs.writeFileSync(policyPath, `${JSON.stringify(policy, null, 2)}\n`);
+
+  assert.throws(
+    () => compileStandardAgentStageManifest(root),
+    /Required formal Stage Review cannot be disabled at runtime/,
+  );
 });
 
 test('official knowledge-deliverable profile compiles isolated Stage Review and one Meta Review role', () => {
@@ -306,9 +457,11 @@ Re-review.
   assert.equal(binding?.surface_kind, 'opl_pack_bound_stage_quality_runtime_binding');
   assert.equal(binding?.enabled, true);
   assert.equal(binding?.stage_role, 'cross_stage_meta_review');
+  assert.deepEqual(binding?.declared_stage_ids, ['intake', 'deliver']);
   assert.equal(binding?.policy_ref, 'contracts/stage_quality_cycle_policy.json#/stages/intake');
   assert.equal(binding?.quality_policy.formal_review.required, false);
   assert.equal(binding?.quality_policy.formal_review.max_repair_rounds, 0);
+  assert.equal(binding?.handoff_review_boundary, null);
   assert.equal(binding?.quality_policy.formal_review.attempt_internal_parallel_review_facets_allowed, false);
   assert.deepEqual(binding?.role_prompt_refs, {
     producer: 'agent/prompts/intake.md#producer',
@@ -388,7 +541,7 @@ Re-review.
 
   assert.throws(
     () => resolveStandardAgentStageQualityRuntimeBinding(root, 'intake'),
-    /must enable their Stage quality cycle/,
+    /Required formal Stage Review cannot be disabled at runtime/,
   );
 });
 
@@ -1017,6 +1170,7 @@ test('real MAG canonical manifest compiles while the legacy kind remains blocked
     'contracts/generated_surface_handoff.json',
     'contracts/memory_descriptor.json',
     'contracts/owner_receipt_contract.json',
+    'contracts/stage_quality_cycle_policy.json',
   ]) {
     const source = path.join(magRepo, ref);
     if (fs.existsSync(source)) {

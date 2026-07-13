@@ -45,6 +45,10 @@ test('target operating architecture keeps framework-wide ownership and authority
   assert.equal(contract.codex_stage_route_owner.semantic_owner, 'codex_cli');
   assert.equal(contract.codex_stage_route_owner.single_semantic_control_plane, true);
   assert.equal(
+    contract.codex_stage_route_owner.framework_route_abi_validation,
+    'required_for_attempt_role_terminality_shape_legacy_field_absence_and_declared_target_only',
+  );
+  assert.equal(
     contract.codex_stage_route_owner.progression_policy,
     'any_readable_stage_artifact_allows_next_declared_stage_to_start_quality_debt_restricts_claims_only',
   );
@@ -63,6 +67,12 @@ test('target operating architecture keeps framework-wide ownership and authority
   }
   assert.equal(
     contract.codex_stage_route_owner.forbidden_framework_route_decisions.includes('convert_quality_debt_to_execution_blocker'),
+    true,
+  );
+  assert.equal(
+    contract.codex_stage_route_owner.forbidden_framework_route_decisions.includes(
+      'accept_or_reject_abi_valid_codex_route_on_domain_semantic_merit',
+    ),
     true,
   );
 

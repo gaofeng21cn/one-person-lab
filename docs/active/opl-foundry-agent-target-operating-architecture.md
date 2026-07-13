@@ -259,7 +259,7 @@ OPL 记录实际使用过的工具 refs、证据 refs、artifact refs、owner an
 
 ### 3. Stage Attempt Runtime
 
-Stage 是 OPL 唯一默认执行单元。Attempt Runtime 只负责：
+Stage 是 OPL Stage graph 中唯一默认领域工作单元；StageRun 是一次 durable 工单，StageAttempt 是该工单内一次上下文隔离的 executor 调用。Attempt Runtime 只负责：
 
 - context：运输 stage id、owner、goal、可选 scope / input refs 与 selected executor；
 - launch：生成 attempt request、绑定 provider 与 workspace root；
@@ -308,7 +308,7 @@ actual queue / provider / attempt / artifact / owner-answer / typed-blocker stat
 
 Codex CLI 直接消费当前 stage 的可读 artifact、部分/阴性结果、review finding、owner/human answer 和非权威 route context，并选择下一 declared stage。它可以前进、跳过、重复、逆向或 route-back；retry/review/repair 次数只是质量预算。
 
-OPL 只把 Codex-selected route context 运输成 StageRun request，记录 attempt/currentness/artifact refs，并被动投影 current pointer、terminal metadata 与 `current_owner_delta`。Framework 不接受或拒绝 route recommendation，不排名候选，不要求 typed closeout、owner receipt 或 quality-gate receipt 才允许下一 stage 启动，也不保留 append-only transition authority/event-log 裁决面。
+OPL 只把终局 Codex Attempt 的 route decision 或 domain pack 已声明的默认 progression 运输成 StageRun request，记录 attempt/currentness/artifact refs，并被动投影 current pointer、terminal metadata 与 `current_owner_delta`。Framework 必须拒绝无终局资格、shape 非法、decision/recommendation 并存、legacy field、undeclared target 或无效 finding-closure 的 route output；但不按专业语义接受、拒绝、排名或改写 ABI 合法 route，也不要求 owner receipt 或 quality-gate receipt 才允许普通 stage progression，不保留 append-only transition authority/event-log 裁决面。
 
 ### 6. Stage Artifact Unit
 

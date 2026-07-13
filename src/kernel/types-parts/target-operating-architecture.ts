@@ -38,6 +38,7 @@ export interface TargetOperatingArchitectureContract {
   codex_stage_route_owner: {
     semantic_owner: 'codex_cli';
     single_semantic_control_plane: true;
+    framework_route_abi_validation: string;
     progression_policy: string;
     route_capabilities: string[];
     passive_framework_projections: string[];

@@ -4,6 +4,7 @@
   "package_version": "0.1.0",
   "source_repo": "https://github.com/gaofeng21cn/med-autogrant.git",
   "source_commit": "df4f4f9abb372236836349c2ac5e4bbe8515db03",
+  "source_root": "plugins/med-autogrant",
   "files": [
     {
       "path": ".codex-plugin/plugin.json",

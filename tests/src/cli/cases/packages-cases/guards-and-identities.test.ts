@@ -14,6 +14,7 @@ import {
   runCli,
   runCliAsync,
   runCliFailure,
+  sha256Fixture,
   test,
   withAgentPackageServer,
   withRemotePayloadAgentPackageServer,
@@ -130,6 +131,225 @@ test('official aliases resolve offline and local manifests own runtime source in
     };
     assert.equal(removed.opl_agent_package_uninstall.removed_package_lock.package_id, 'rca');
     assert.equal(fs.existsSync(path.join(modulesRoot, 'redcube-ai')), false);
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(pluginSourcePath, { recursive: true, force: true });
+  }
+});
+
+test('managed catalog payload cannot bypass the selected source archive with inline file content', () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-artifact-bypass-state-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-artifact-bypass-fixture-'));
+  const pluginSourcePath = createPluginSourceFixture({ pluginId: 'redcube-ai' });
+  try {
+    const pluginJson = fs.readFileSync(path.join(pluginSourcePath, '.codex-plugin', 'plugin.json'), 'utf8');
+    const fixtureEnv = writeManagedRuntimeSourceFixture({
+      root: fixtureRoot,
+      moduleId: 'redcube',
+      repoName: 'redcube-ai',
+      version: '0.2.1',
+      sourceHeadSha: '1'.repeat(40),
+      packageManifest: {
+        ...agentPackageManifest({
+          packageId: 'rca',
+          agentId: 'rca',
+          pluginId: 'redcube-ai',
+          distributionPayload: null,
+        }),
+        version: '0.2.1',
+        source: 'first_party',
+      },
+      payloadManifest: {
+        surface_kind: 'opl_agent_package_payload_manifest',
+        files: [{
+          path: '.codex-plugin/plugin.json',
+          content_utf8: pluginJson,
+          sha256: sha256Fixture(pluginJson),
+        }],
+      },
+      artifactBackedPayload: false,
+    });
+    const failure = runCliFailure(['packages', 'install', '--dry-run', 'rca'], {
+      OPL_STATE_DIR: stateDir,
+      OPL_MODULES_ROOT: path.join(fixtureRoot, 'modules'),
+      HOME: path.join(fixtureRoot, 'home'),
+      CODEX_HOME: path.join(fixtureRoot, 'home', '.codex'),
+      ...fixtureEnv,
+    });
+    assert.equal(failure.payload.error.details.failure_code, 'agent_package_payload_catalog_source_bypass');
+    assert.equal(fs.existsSync(path.join(stateDir, 'agent-package-locks.json')), false);
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(pluginSourcePath, { recursive: true, force: true });
+  }
+});
+
+test('managed catalog payload requires the exact declared source_path without archive search fallback', () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-artifact-path-state-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-artifact-path-fixture-'));
+  const pluginSourcePath = createPluginSourceFixture({ pluginId: 'redcube-ai' });
+  try {
+    const pluginJson = fs.readFileSync(path.join(pluginSourcePath, '.codex-plugin', 'plugin.json'), 'utf8');
+    const fixtureEnv = writeManagedRuntimeSourceFixture({
+      root: fixtureRoot,
+      moduleId: 'redcube',
+      repoName: 'redcube-ai',
+      version: '0.2.1',
+      sourceHeadSha: '2'.repeat(40),
+      packageManifest: {
+        ...agentPackageManifest({
+          packageId: 'rca',
+          agentId: 'rca',
+          pluginId: 'redcube-ai',
+          distributionPayload: null,
+        }),
+        version: '0.2.1',
+        source: 'first_party',
+      },
+      payloadManifest: {
+        surface_kind: 'opl_agent_package_payload_manifest',
+        files: [{
+          path: '.codex-plugin/plugin.json',
+          source_path: 'plugins/redcube-ai/missing/plugin.json',
+          sha256: sha256Fixture(pluginJson),
+        }],
+      },
+      sourceFiles: [{
+        sourcePath: 'plugins/redcube-ai/.codex-plugin/plugin.json',
+        content: pluginJson,
+      }],
+    });
+    const failure = runCliFailure(['packages', 'install', '--dry-run', 'rca'], {
+      OPL_STATE_DIR: stateDir,
+      OPL_MODULES_ROOT: path.join(fixtureRoot, 'modules'),
+      HOME: path.join(fixtureRoot, 'home'),
+      CODEX_HOME: path.join(fixtureRoot, 'home', '.codex'),
+      ...fixtureEnv,
+    });
+    assert.equal(failure.payload.error.details.failure_code, 'agent_package_payload_artifact_source_missing');
+    assert.equal(fs.existsSync(path.join(stateDir, 'agent-package-locks.json')), false);
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(pluginSourcePath, { recursive: true, force: true });
+  }
+});
+
+test('repair migrates legacy Framework manifests to one stable catalog selection for plugin and runtime carriers', () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-stable-repair-state-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-stable-repair-fixture-'));
+  const homeDir = path.join(fixtureRoot, 'home');
+  const modulesRoot = path.join(fixtureRoot, 'modules');
+  const pluginSourcePath = createPluginSourceFixture({ pluginId: 'redcube-ai' });
+  const manifestPath = path.join(fixtureRoot, 'contracts', 'opl-framework', 'packages', 'rca.json');
+  const legacySourceHead = '3'.repeat(40);
+  const stableSourceHead = '4'.repeat(40);
+  fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
+  fs.writeFileSync(manifestPath, formatJsonPayload({
+    ...agentPackageManifest({
+      packageId: 'rca',
+      agentId: 'rca',
+      pluginId: 'redcube-ai',
+      pluginSourcePath,
+      distributionPayload: null,
+    }),
+    version: '0.2.0',
+    source: 'first_party',
+    runtime_source_carrier: {
+      carrier_kind: 'opl_managed_module_source',
+      module_id: 'redcube',
+    },
+  }));
+  const env = {
+    OPL_STATE_DIR: stateDir,
+    OPL_MODULES_ROOT: modulesRoot,
+    HOME: homeDir,
+    CODEX_HOME: path.join(homeDir, '.codex'),
+    ...writeManagedRuntimeSourceFixture({
+      root: fixtureRoot,
+      moduleId: 'redcube',
+      repoName: 'redcube-ai',
+      version: '0.2.0',
+      sourceHeadSha: legacySourceHead,
+    }),
+  };
+  try {
+    runCli([
+      'packages', 'install', '--manifest-url', manifestPath, '--trust-tier', 'first_party',
+      '--source-kind', 'local_manifest_file',
+    ], env);
+    const pluginJson = fs.readFileSync(path.join(pluginSourcePath, '.codex-plugin', 'plugin.json'), 'utf8');
+    const skillMarkdown = fs.readFileSync(path.join(pluginSourcePath, 'skills', 'redcube-ai', 'SKILL.md'), 'utf8');
+    const stableFixtureEnv = writeManagedRuntimeSourceFixture({
+      root: fixtureRoot,
+      moduleId: 'redcube',
+      repoName: 'redcube-ai',
+      version: '0.2.1',
+      sourceHeadSha: stableSourceHead,
+      packageManifest: {
+        ...agentPackageManifest({
+          packageId: 'rca',
+          agentId: 'rca',
+          pluginId: 'redcube-ai',
+          distributionPayload: null,
+        }),
+        source: 'first_party',
+        runtime_source_carrier: {
+          carrier_kind: 'opl_managed_module_source',
+          module_id: 'redcube',
+        },
+      },
+      payloadManifest: {
+        surface_kind: 'opl_agent_package_payload_manifest',
+        files: [
+          {
+            path: '.codex-plugin/plugin.json',
+            source_path: 'plugins/redcube-ai/.codex-plugin/plugin.json',
+            sha256: sha256Fixture(pluginJson),
+          },
+          {
+            path: 'skills/redcube-ai/SKILL.md',
+            source_path: 'plugins/redcube-ai/skills/redcube-ai/SKILL.md',
+            sha256: sha256Fixture(skillMarkdown),
+          },
+        ],
+      },
+      sourceFiles: [
+        { sourcePath: 'plugins/redcube-ai/.codex-plugin/plugin.json', content: pluginJson },
+        { sourcePath: 'plugins/redcube-ai/skills/redcube-ai/SKILL.md', content: skillMarkdown },
+      ],
+    });
+    Object.assign(env, stableFixtureEnv);
+
+    const preview = runCli(['packages', 'repair', 'rca', '--dry-run'], env) as any;
+    const previewLock = preview.opl_agent_package_repair.package_lock;
+    assert.equal(previewLock.package_version, '0.2.1');
+    assert.equal(previewLock.source_kind, 'first_party_managed_cohort');
+    assert.equal(previewLock.manifest_url, 'opl+oci://ghcr.io/fixture/one-person-lab-packages/rca:0.2.1#/package-manifest.json');
+    assert.equal(previewLock.source_artifact_ref, 'ghcr.io/fixture/one-person-lab-packages/rca:0.2.1');
+    assert.equal(previewLock.artifact_digest, stableFixtureEnv.OPL_FIXTURE_ARTIFACT_DIGEST);
+    assert.equal(previewLock.managed_update_source.catalog_ref, 'ghcr.io/fixture/one-person-lab-manifest:latest-stable');
+    assert.equal(previewLock.managed_runtime_source.channel_version, '0.2.1');
+    assert.equal(previewLock.managed_runtime_source.source_git_head_sha, stableSourceHead);
+    assert.equal(
+      previewLock.managed_runtime_source.artifact_ref,
+      `ghcr.io/fixture/one-person-lab-packages/rca:0.2.1@${stableFixtureEnv.OPL_FIXTURE_ARTIFACT_DIGEST}`,
+    );
+    assert.equal(fs.readFileSync(path.join(modulesRoot, 'redcube-ai', '.runtime-prepared'), 'utf8').trim(), '0.2.0');
+
+    const repaired = runCli(['packages', 'repair', 'rca'], env) as any;
+    const repairedLock = repaired.opl_agent_package_repair.package_lock;
+    assert.equal(repairedLock.package_version, '0.2.1');
+    assert.equal(repairedLock.managed_runtime_source.source_git_head_sha, stableSourceHead);
+    assert.equal(fs.readFileSync(path.join(modulesRoot, 'redcube-ai', '.runtime-prepared'), 'utf8').trim(), '0.2.1');
+    assert.equal(
+      fs.readFileSync(path.join(repairedLock.physical_surface.codex_plugin_cache_path, 'skills', 'redcube-ai', 'SKILL.md'), 'utf8'),
+      skillMarkdown,
+    );
+    const status = runCli(['packages', 'status', '--package-id', 'rca'], env) as any;
+    assert.equal(status.opl_agent_package_status.launch_allowed, true);
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });

@@ -76,7 +76,10 @@ test('Codex stage activity accepts readable output without a typed closeout cont
   const commandPreview = activity.runner_status.command_preview.join('\n');
   assert.match(commandPreview, /Partial drafts, negative findings, failed attempts/);
   assert.match(commandPreview, /final message may be structured JSON or ordinary readable text/);
-  assert.match(commandPreview, /route to any declared stage/);
+  assert.match(commandPreview, /Cross-Stage semantic route selection must come from this StageRun's decisive Codex Attempt/);
+  assert.match(commandPreview, /validates terminal-role eligibility, route shape, field exclusivity/);
+  assert.match(commandPreview, /then passively projects the Codex decision without judging its domain semantics/);
+  assert.doesNotMatch(commandPreview, /Choose the next stage/);
   assert.equal(activity.expected_closeout.typed_packet_required_for_progress, false);
   assert.equal(activity.expected_closeout.raw_or_free_text_artifact_accepted_for_progress, true);
   assert.equal(activity.expected_closeout.framework_derives_progress_envelope, true);

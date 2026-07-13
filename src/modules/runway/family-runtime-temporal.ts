@@ -717,6 +717,18 @@ export function requireTemporalStageRunWorkflowInputLaunchable(input: TemporalSt
       });
     }
   }
+  if (
+    !Array.isArray(input.declared_stage_ids)
+    || input.declared_stage_ids.length === 0
+    || input.declared_stage_ids.some((stageId) => typeof stageId !== 'string' || !stageId.trim())
+    || !input.declared_stage_ids.includes(input.stage_id)
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'StageRun route transport requires the current Stage and every target to use declared Stage ids.',
+      { stage_id: input.stage_id, declared_stage_ids: input.declared_stage_ids },
+    );
+  }
   const roleKeys = Object.keys(input.role_prompt_refs ?? {}).sort();
   const expectedRoleKeys = ['producer', 're_reviewer', 'repairer', 'reviewer'];
   if (JSON.stringify(roleKeys) !== JSON.stringify(expectedRoleKeys)) {

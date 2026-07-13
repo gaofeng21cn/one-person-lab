@@ -75,6 +75,23 @@ function writePackageChannelFixture(input: {
     cwd: path.dirname(sourceRoot),
   });
   const archiveDigest = sha256(archivePath);
+  const packageArtifactManifest = {
+    schemaVersion: 2,
+    mediaType: 'application/vnd.oci.image.manifest.v1+json',
+    layers: [
+      {
+        mediaType: PACKAGE_LAYER_MEDIA_TYPE,
+        digest: `sha256:${archiveDigest}`,
+        annotations: {
+          'org.opencontainers.image.title': `dist/opl-packages/packages/mas/mas-${input.version}.tar.gz`,
+        },
+      },
+    ],
+  };
+  const packageArtifactDigest = crypto
+    .createHash('sha256')
+    .update(JSON.stringify(packageArtifactManifest))
+    .digest('hex');
 
   const channelManifest = {
     manifest_version: 1,
@@ -89,7 +106,7 @@ function writePackageChannelFixture(input: {
             package_version: input.version,
             selection_status: 'selected_for_release_set',
             source_artifact_ref: `ghcr.io/owner/one-person-lab-packages/mas:${input.version}`,
-            artifact_digest: `sha256:${'a'.repeat(64)}`,
+            artifact_digest: `sha256:${packageArtifactDigest}`,
             artifact_status: 'published_immutable',
             package_content_digest: `sha256:${archiveDigest}`,
             owner_source_commit: input.sourceHeadSha,
@@ -114,19 +131,7 @@ function writePackageChannelFixture(input: {
         },
       ],
     },
-    'owner/one-person-lab-packages/mas': {
-      schemaVersion: 2,
-      mediaType: 'application/vnd.oci.image.manifest.v1+json',
-      layers: [
-        {
-          mediaType: PACKAGE_LAYER_MEDIA_TYPE,
-          digest: `sha256:${archiveDigest}`,
-          annotations: {
-            'org.opencontainers.image.title': `dist/opl-packages/packages/mas/mas-${input.version}.tar.gz`,
-          },
-        },
-      ],
-    },
+    'owner/one-person-lab-packages/mas': packageArtifactManifest,
   };
   const blobsByDigest = {
     [`sha256:${channelDigest}`]: channelManifestPath,

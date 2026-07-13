@@ -14,7 +14,77 @@ const defaultDeveloperModePermissionsFixture = JSON.stringify({
 test('app action execute owns settings, release channel, workspace root, and provider status actions', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-action-settings-home-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-action-workspace-'));
+  const familyWorkspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-action-family-workspace-'));
   const stateDir = path.join(homeRoot, 'opl-state');
+  const previousFamilyWorkspaceRoot = process.env.OPL_FAMILY_WORKSPACE_ROOT;
+
+  const magRepoRoot = path.join(familyWorkspaceRoot, 'med-autogrant');
+  fs.mkdirSync(path.join(magRepoRoot, 'contracts'), { recursive: true });
+  fs.writeFileSync(path.join(magRepoRoot, 'contracts', 'domain_descriptor.json'), `${JSON.stringify({
+    domain_id: 'med-autogrant',
+    standard_agent_interface: {
+      version: 'opl_standard_agent_interface.v1',
+      workspace_binding: {
+        locator_surface_kind: 'med_autogrant_workspace_input',
+        default_profile_id: 'one_off',
+        workspace_kind: 'grant_authoring_workspace',
+        project_kind: 'grant_project',
+        project_collection_label: 'deliverables',
+        default_workspace_id: 'grant-workspace',
+        default_project_id: 'grant-001',
+        required_locator_fields: ['input_path'],
+        optional_locator_fields: [],
+      },
+      runtime: {
+        runtime_domain_id: 'medautogrant',
+        registration_ref: 'contracts/domain_descriptor.json#/runtime',
+      },
+      progress: {
+        deliverable_delta_aliases: ['grant_work_progress'],
+        platform_delta_aliases: ['platform_evidence_progress'],
+      },
+      routing: {
+        explicit_aliases: ['mag', 'medautogrant', 'med-autogrant', 'grant'],
+        workstream_ids: ['grant_ops'],
+        intent_signals: ['grant', 'proposal', 'fundability', 'grant_application'],
+        ambiguity_policy: 'require_explicit_workstream',
+      },
+    },
+  }, null, 2)}\n`);
+  const masRepoRoot = path.join(familyWorkspaceRoot, 'med-autoscience');
+  fs.mkdirSync(path.join(masRepoRoot, 'contracts'), { recursive: true });
+  fs.writeFileSync(path.join(masRepoRoot, 'contracts', 'domain_descriptor.json'), `${JSON.stringify({
+    domain_id: 'med-autoscience',
+    standard_agent_interface: {
+      version: 'opl_standard_agent_interface.v1',
+      workspace_binding: {
+        locator_surface_kind: 'med_autoscience_workspace_profile',
+        default_profile_id: 'portfolio',
+        workspace_kind: 'medical_research_workspace',
+        project_kind: 'study',
+        project_collection_label: 'studies',
+        default_workspace_id: 'research-workspace',
+        default_project_id: 'study-001',
+        required_locator_fields: ['profile_ref'],
+        optional_locator_fields: ['workspace_root'],
+      },
+      runtime: {
+        runtime_domain_id: 'mas',
+        registration_ref: 'contracts/domain_descriptor.json#/runtime',
+      },
+      progress: {
+        deliverable_delta_aliases: ['paper_progress_delta', 'paper_work_progress'],
+        platform_delta_aliases: ['runtime_transport_delta', 'provider_attempt_delta'],
+      },
+      routing: {
+        explicit_aliases: ['mas', 'medautoscience', 'med-autoscience', 'study'],
+        workstream_ids: ['research_ops'],
+        intent_signals: ['medical research', 'clinical study', 'manuscript', 'publication'],
+        ambiguity_policy: 'require_explicit_domain_selection_when_multiple_standard_agents_match',
+      },
+    },
+  }, null, 2)}\n`);
+  process.env.OPL_FAMILY_WORKSPACE_ROOT = familyWorkspaceRoot;
 
   try {
     const developer = runCli([
@@ -494,7 +564,10 @@ test('app action execute owns settings, release channel, workspace root, and pro
     assert.equal(developerRefresh.result.system_action.status, 'ready');
     assert.equal(developerRefresh.result.system_action.developer_supervisor.enabled, 'on');
   } finally {
+    if (previousFamilyWorkspaceRoot === undefined) delete process.env.OPL_FAMILY_WORKSPACE_ROOT;
+    else process.env.OPL_FAMILY_WORKSPACE_ROOT = previousFamilyWorkspaceRoot;
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    fs.rmSync(familyWorkspaceRoot, { recursive: true, force: true });
   }
 });
