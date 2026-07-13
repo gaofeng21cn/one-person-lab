@@ -1,6 +1,7 @@
 import type { AgentWorkspaceNormContract } from '../../kernel/types.ts';
 import {
   listWorkspaceAgentProfiles,
+  workspaceAgentProfileForRepo,
   type WorkspaceAgentId,
 } from './workspace-agent-defaults.ts';
 import {
@@ -14,13 +15,16 @@ export const AGENT_WORKSPACE_NORM_CONTRACT_REF =
 export type WorkspaceNormProjectionInput = {
   contract: AgentWorkspaceNormContract;
   agentId?: WorkspaceAgentId | string | null;
+  agentRepoDir?: string | null;
 };
 
-function domainProfile(agentId: string | null | undefined) {
+function domainProfile(agentId: string | null | undefined, agentRepoDir?: string | null) {
   if (!agentId) {
     return null;
   }
-  const agent = listWorkspaceAgentProfiles().find((entry) => entry.agent_id === agentId);
+  const agent = agentRepoDir
+    ? workspaceAgentProfileForRepo(agentId, agentRepoDir)
+    : listWorkspaceAgentProfiles().find((entry) => entry.agent_id === agentId);
   if (!agent) {
     return null;
   }
@@ -41,7 +45,7 @@ export function buildAgentWorkspaceNormProjection(input: WorkspaceNormProjection
     contract_ref: AGENT_WORKSPACE_NORM_CONTRACT_REF,
     supported_agents: input.contract.supported_agents,
     agent_id: input.agentId ?? null,
-    domain_topology_profile: domainProfile(input.agentId),
+    domain_topology_profile: domainProfile(input.agentId, input.agentRepoDir),
     default_workspace_precondition: input.contract.default_workspace_precondition,
     explicit_initialization: input.contract.explicit_initialization,
     descriptor_delegates: input.contract.descriptor_delegates,

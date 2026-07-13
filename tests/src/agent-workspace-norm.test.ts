@@ -114,3 +114,51 @@ test('agent workspace norm validates registry coverage and generic topology cons
     /agent-workspace-norm-contract\.json/,
   );
 });
+
+test('workspace norm projection binds an explicit agent repo without reading family defaults', () => {
+  const repoDir = fs.mkdtempSync(path.join(process.env.TMPDIR ?? '/tmp', 'opl-scoped-agent-norm-'));
+  try {
+    fs.mkdirSync(path.join(repoDir, 'contracts'), { recursive: true });
+    fs.writeFileSync(path.join(repoDir, 'contracts', 'domain_descriptor.json'), `${JSON.stringify({
+      domain_id: 'medautoscience',
+      standard_agent_interface: {
+        version: 'opl_standard_agent_interface.v1',
+        workspace_binding: {
+          locator_surface_kind: 'scoped_mas_workspace',
+          default_profile_id: 'portfolio',
+          workspace_kind: 'scoped_research_workspace',
+          project_kind: 'scoped_study',
+          project_collection_label: 'studies',
+          default_workspace_id: 'scoped-research',
+          default_project_id: 'scoped-study-001',
+          required_locator_fields: ['workspace_root'],
+          optional_locator_fields: [],
+        },
+        runtime: {
+          runtime_domain_id: 'medautoscience',
+          registration_ref: null,
+        },
+        progress: {
+          deliverable_delta_aliases: [],
+          platform_delta_aliases: [],
+        },
+        routing: {
+          explicit_aliases: ['mas'],
+          workstream_ids: ['research_ops'],
+          intent_signals: ['medical research'],
+          ambiguity_policy: 'require_explicit_workstream',
+        },
+      },
+    }, null, 2)}\n`);
+
+    const projection = buildAgentWorkspaceNormProjection({
+      contract: contractFixture(),
+      agentId: 'mas',
+      agentRepoDir: repoDir,
+    });
+    assert.equal(projection.domain_topology_profile?.project_kind, 'scoped_study');
+    assert.equal(projection.domain_topology_profile?.profile, 'portfolio');
+  } finally {
+    fs.rmSync(repoDir, { recursive: true, force: true });
+  }
+});

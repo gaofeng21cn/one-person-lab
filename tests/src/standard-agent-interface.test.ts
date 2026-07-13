@@ -55,6 +55,23 @@ test('standard Agent interface parses a domain-owned descriptor without domain b
   assert.equal(descriptor.runtime.registration_ref, 'contracts/domain_descriptor.json#/runtime');
 });
 
+test('standard Agent interface parses command-free descriptors with nullable registration', () => {
+  const value = {
+    ...fixture(),
+    runtime: {
+      ...fixture().runtime,
+      registration_ref: null,
+    },
+  };
+
+  const parsed = parseStandardAgentInterface(value, 'fixture.json#/standard_agent_interface');
+
+  assert.equal('entry_command_template' in parsed.workspace_binding, false);
+  assert.equal('manifest_command_template' in parsed.workspace_binding, false);
+  assert.equal('dispatch_command' in parsed.runtime, false);
+  assert.equal(parsed.runtime.registration_ref, null);
+});
+
 test('standard Agent interface accepts an optional JSON inventory projection and display name field', () => {
   const value = {
     ...fixture(),
