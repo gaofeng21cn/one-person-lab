@@ -23,13 +23,17 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.match(workflow, /release_gate:\s*\n\s*description:/);
   assert.match(workflow, /release_set_generation:/);
   assert.match(workflow, /generation="\$\{generation#v\}"/);
-  assert.match(releaseCallerWorkflow, /release:\s*\n\s*types:\s*\n\s*-\s*published/);
+  assert.doesNotMatch(releaseCallerWorkflow, /\n\s*release:\s*\n/);
+  assert.match(releaseCallerWorkflow, /workflow_dispatch:/);
   assert.match(releaseCallerWorkflow, /uses:\s+\.\/\.github\/workflows\/packages\.yml/);
   assert.match(releaseCallerWorkflow, /promote-exact-release-set:/);
   assert.match(releaseCallerWorkflow, /oras pull "\$\{carrier\}@\$\{carrier_digest\}"/);
   assert.match(releaseCallerWorkflow, /OPL_PACKAGE_PROMOTION_TARGET=latest-stable/);
   assert.match(releaseCallerWorkflow, /components\.packages\.members/);
   assert.match(releaseCallerWorkflow, /components\.base\.artifact_digest/);
+  assert.match(releaseCallerWorkflow, /expected_carrier_digest/);
+  assert.match(releaseCallerWorkflow, /promotion_request_id/);
+  assert.match(releaseCallerWorkflow, /write-release-promotion-receipt\.mjs/);
   assert.doesNotMatch(workflow, /\n  push:\n/);
   assert.doesNotMatch(workflow, /webui-image:/);
   assert.match(workflow, /concurrency:[\s\S]*opl-package-publication-/);
@@ -69,6 +73,12 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.match(workflow, /--component-id opl-base/);
   assert.match(workflow, /oras push .*--format json/s);
   assert.match(workflow, /finalize-package-channel-digests\.mjs/);
+  assert.match(workflow, /owner-cohort-lock\.json/);
+  assert.match(workflow, /owner_cohort_artifact_name/);
+  assert.match(workflow, /generate-release-supply-chain\.mjs/);
+  assert.match(workflow, /actions\/attest@v4/);
+  assert.match(workflow, /push-to-registry:\s*true/);
+  assert.match(workflow, /write-release-promotion-receipt\.mjs/);
   assert.ok(workflow.indexOf('finalize-package-channel-digests.mjs') < workflow.indexOf('generation_ref="${carrier}:${OPL_RELEASE_SET_GENERATION}"'));
   assert.doesNotMatch(workflow, /docker\/build-push-action/);
   assert.doesNotMatch(workflow, /one-person-lab-webui/);
@@ -97,6 +107,7 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.match(dailyPackageWorkflow, /publish_required == 'true'/);
   assert.doesNotMatch(dailyPackageWorkflow, /publish_required="true"/);
   assert.match(dailyPackageWorkflow, /changed_packages_json:/);
+  assert.match(dailyPackageWorkflow, /owner_cohort_artifact_name:/);
   assert.match(dailyPackageWorkflow, /promotion_target:\s*candidate/);
   assert.doesNotMatch(dailyPackageWorkflow, /\n\s*push:\n/);
   assert.doesNotMatch(dailyPackageWorkflow, /one-person-lab-webui/);
@@ -122,7 +133,7 @@ test('daily Release Set generation allocates the next immutable same-day revisio
   assert.equal(first, '26.7.13');
 });
 
-function writeDailyCatalogFixture(root: string, name: string, packages: Record<string, { version: string; digest: string }>) {
+function writeDailyCatalogFixture(root: string, name: string, packages: Record<string, { version: string; digest: string; commit?: string }>) {
   const target = path.join(root, name);
   const packageCatalog = Object.fromEntries(Object.entries(packages).map(([packageId, entry]) => [packageId, {
     package_id: packageId,
@@ -131,6 +142,7 @@ function writeDailyCatalogFixture(root: string, name: string, packages: Record<s
       package_version: entry.version,
       selection_status: 'selected_for_release_set',
       package_content_digest: entry.digest,
+      owner_source_commit: entry.commit ?? null,
     }],
   }]));
   fs.writeFileSync(target, `${JSON.stringify({ packages: { package_catalog: packageCatalog } }, null, 2)}\n`);
@@ -155,6 +167,51 @@ test('daily package detector publishes only version-bumped changed packages and 
   ], { encoding: 'utf8' })) as Record<string, any>;
   assert.equal(unchangedOutput.publish_required, false);
   assert.deepEqual(unchangedOutput.changed_packages, []);
+
+  const commitOnlyCurrent = writeDailyCatalogFixture(root, 'commit-only-current.json', {
+    mas: { version: '0.1.0', digest: `sha256:${'1'.repeat(64)}`, commit: 'a'.repeat(40) },
+  });
+  const commitOnlyCandidate = writeDailyCatalogFixture(root, 'commit-only-candidate.json', {
+    mas: { version: '0.1.0', digest: `sha256:${'1'.repeat(64)}`, commit: 'b'.repeat(40) },
+  });
+  const commitOnlyOutput = parseJsonText(execFileSync(process.execPath, [
+    path.join(repoRoot, 'scripts/package-channel-daily-check.mjs'),
+    '--candidate-manifest', commitOnlyCandidate,
+    '--current-manifest', commitOnlyCurrent,
+    '--release-set-generation', '26.7.12-r2',
+  ], { encoding: 'utf8' })) as Record<string, any>;
+  assert.equal(commitOnlyOutput.publish_required, false);
+  assert.deepEqual(commitOnlyOutput.changed_packages, []);
+
+  const baseCommitCurrent = writeDailyCatalogFixture(root, 'base-commit-current.json', {
+    mas: { version: '0.1.0', digest: `sha256:${'1'.repeat(64)}` },
+  });
+  const baseCommitCandidate = writeDailyCatalogFixture(root, 'base-commit-candidate.json', {
+    mas: { version: '0.1.0', digest: `sha256:${'1'.repeat(64)}` },
+  });
+  for (const [filePath, sourceCommit] of [[baseCommitCurrent, 'c'.repeat(40)], [baseCommitCandidate, 'd'.repeat(40)]]) {
+    const payload = parseJsonText(fs.readFileSync(filePath, 'utf8')) as Record<string, any>;
+    payload.release_set = {
+      components: {
+        base: { version: '0.2.2', source_commit: sourceCommit },
+        app: { version: '26.7.13', source_commit: 'e'.repeat(40), artifact_digest: `sha256:${'4'.repeat(64)}` },
+      },
+    };
+    payload.packages.framework_core = {
+      version: '0.2.2',
+      source_git: { head_sha: sourceCommit },
+      source_archive: { sha256: '5'.repeat(64) },
+    };
+    fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+  }
+  const baseCommitOnlyOutput = parseJsonText(execFileSync(process.execPath, [
+    path.join(repoRoot, 'scripts/package-channel-daily-check.mjs'),
+    '--candidate-manifest', baseCommitCandidate,
+    '--current-manifest', baseCommitCurrent,
+    '--release-set-generation', '26.7.12-r3',
+  ], { encoding: 'utf8' })) as Record<string, any>;
+  assert.equal(baseCommitOnlyOutput.publish_required, false);
+  assert.deepEqual(baseCommitOnlyOutput.changed_components, []);
 
   const bumped = writeDailyCatalogFixture(root, 'bumped.json', {
     mas: { version: '0.1.0', digest: `sha256:${'3'.repeat(64)}` },

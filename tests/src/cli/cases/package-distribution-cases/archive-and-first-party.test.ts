@@ -171,6 +171,17 @@ test('package archive builder writes channel manifest checksums git source and r
     scholarskills: createOwnerPackageFixture('mas-scholar-skills', 'mas-scholar-skills', '0.1.1', 'capability_package'),
     oplflow: createOwnerPackageFixture('opl-flow', 'opl-flow', '0.1.18', 'workflow_profile'),
   };
+  const ownerSourceEnv = {
+    ...process.env,
+    OPL_PACKAGE_SOURCE_PATH_MAS: fixtures.medautoscience.sourceRoot,
+    OPL_PACKAGE_SOURCE_PATH_MAG: fixtures.medautogrant.sourceRoot,
+    OPL_PACKAGE_SOURCE_PATH_RCA: fixtures.redcube.sourceRoot,
+    OPL_PACKAGE_SOURCE_PATH_OMA: fixtures.oplmetaagent.sourceRoot,
+    OPL_PACKAGE_SOURCE_PATH_OBF: fixtures.oplbookforge.sourceRoot,
+    OPL_PACKAGE_SOURCE_PATH_MAS_SCHOLAR_SKILLS: fixtures.scholarskills.sourceRoot,
+    OPL_PACKAGE_SOURCE_PATH_OPL_FLOW: fixtures.oplflow.sourceRoot,
+    OPL_PACKAGE_RELEASE_GATE: 'test_owner_sha_release_gate',
+  };
 
   const archiveBuilderOutput = execFileSync(process.execPath, [
     '--experimental-strip-types',
@@ -190,28 +201,21 @@ test('package archive builder writes channel manifest checksums git source and r
   ], {
     cwd: repoRoot,
     encoding: 'utf8',
-    env: {
-      ...process.env,
-      OPL_PACKAGE_SOURCE_PATH_MAS: fixtures.medautoscience.sourceRoot,
-      OPL_PACKAGE_SOURCE_PATH_MAG: fixtures.medautogrant.sourceRoot,
-      OPL_PACKAGE_SOURCE_PATH_RCA: fixtures.redcube.sourceRoot,
-      OPL_PACKAGE_SOURCE_PATH_OMA: fixtures.oplmetaagent.sourceRoot,
-      OPL_PACKAGE_SOURCE_PATH_OBF: fixtures.oplbookforge.sourceRoot,
-      OPL_PACKAGE_SOURCE_PATH_MAS_SCHOLAR_SKILLS: fixtures.scholarskills.sourceRoot,
-      OPL_PACKAGE_SOURCE_PATH_OPL_FLOW: fixtures.oplflow.sourceRoot,
-      OPL_PACKAGE_RELEASE_GATE: 'test_owner_sha_release_gate',
-    },
+    env: ownerSourceEnv,
   });
   const archiveBuilderResult = parseJsonText(archiveBuilderOutput) as {
     clone_root: string;
     packages_dir: string;
     framework_dir: string;
+    owner_cohort_lock: string;
+    owner_cohort_lock_digest: string;
     release_discipline_workflows: string[];
   };
 
   const releaseManifestPath = path.join(outDir, 'opl-release-manifest.json');
   const channelManifestPath = path.join(outDir, 'opl-channel-manifest.json');
   const checksumsPath = path.join(outDir, 'SHA256SUMS');
+  const frameworkArchivePath = path.join(outDir, 'framework', 'one-person-lab-framework-0.2.2.tar.gz');
   const defaultCloneRoot = path.join(path.dirname(outDir), `${path.basename(outDir)}-package-sources`);
   const manifest = parseJsonText(fs.readFileSync(releaseManifestPath, 'utf8')) as any;
   const channelManifest = parseJsonText(fs.readFileSync(channelManifestPath, 'utf8')) as any;
@@ -223,6 +227,8 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(archiveBuilderResult.clone_root, defaultCloneRoot);
   assert.equal(archiveBuilderResult.packages_dir, path.join(outDir, 'packages'));
   assert.equal(archiveBuilderResult.framework_dir, path.join(outDir, 'framework'));
+  assert.equal(archiveBuilderResult.owner_cohort_lock, path.join(outDir, 'owner-cohort-lock.json'));
+  assert.match(archiveBuilderResult.owner_cohort_lock_digest, /^sha256:[0-9a-f]{64}$/);
   assert.deepEqual(archiveBuilderResult.release_discipline_workflows, [
     '.github/workflows/packages.yml',
     '.github/workflows/release-package-channel.yml',
@@ -233,6 +239,39 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(fs.existsSync(path.join(outDir, '.github/workflows/daily-package-channel.yml')), true);
   assert.equal(relativeCloneRootFromOutDir === '' || !relativeCloneRootFromOutDir.startsWith('..'), false);
   assert.equal(path.relative(repoRoot, archiveBuilderResult.clone_root).startsWith('..'), true);
+  const ownerCohortLockSource = fs.readFileSync(archiveBuilderResult.owner_cohort_lock, 'utf8');
+  const ownerCohortLock = parseJsonText(ownerCohortLockSource) as Record<string, any>;
+  assert.equal(ownerCohortLock.surface_kind, 'opl_package_owner_cohort_lock.v1');
+  assert.deepEqual(Object.keys(ownerCohortLock.packages).sort(), [
+    'mag', 'mas', 'mas-scholar-skills', 'obf', 'oma', 'opl-flow', 'rca',
+  ]);
+  assert.equal(ownerCohortLock.packages.mas.source_commit, fixtures.medautoscience.getHeadSha());
+  assert.equal(
+    archiveBuilderResult.owner_cohort_lock_digest,
+    `sha256:${crypto.createHash('sha256').update(ownerCohortLockSource).digest('hex')}`,
+  );
+  assert.deepEqual(manifest.release_set.owner_cohort_lock, {
+    surface_kind: 'opl_package_owner_cohort_lock.v1',
+    ref: 'owner-cohort-lock.json',
+    digest: archiveBuilderResult.owner_cohort_lock_digest,
+    package_ids: Object.keys(ownerCohortLock.packages).sort(),
+  });
+  const frameworkArchiveEntries = execFileSync('tar', ['-tzf', frameworkArchivePath], { encoding: 'utf8' })
+    .trim().split(/\r?\n/);
+  assert.equal(frameworkArchiveEntries.includes('one-person-lab/bin/opl'), true);
+  assert.equal(frameworkArchiveEntries.includes('one-person-lab/dist/entrypoints/cli.js'), true);
+  assert.equal(frameworkArchiveEntries.includes('one-person-lab/package.json'), true);
+  assert.equal(frameworkArchiveEntries.includes('one-person-lab/package-lock.json'), true);
+  assert.equal(frameworkArchiveEntries.some((entry) => entry.startsWith('one-person-lab/contracts/opl-framework/')), true);
+  for (const excludedRoot of ['docs', 'tests', '.github', 'src']) {
+    assert.equal(frameworkArchiveEntries.some((entry) => entry.startsWith(`one-person-lab/${excludedRoot}/`)), false);
+  }
+  const runtimePackageJson = parseJsonText(execFileSync(
+    'tar', ['-xOf', frameworkArchivePath, 'one-person-lab/package.json'], { encoding: 'utf8' },
+  )) as Record<string, any>;
+  assert.equal(runtimePackageJson.version, '0.2.2');
+  assert.equal(runtimePackageJson.scripts.prepare, undefined);
+  assert.equal(runtimePackageJson.scripts.build, undefined);
   assert.equal(channelManifest.release_set_generation, manifest.release_set_generation);
   assert.equal(manifest.release_set.generation, '26.4.31');
   assert.equal(manifest.release_set.surface_kind, 'opl_release_set.v2');
@@ -264,7 +303,7 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(manifest.packages.framework_core.homebrew_formula.package_name, 'opl');
   assert.equal(manifest.packages.framework_core.homebrew_formula.approval_status, 'owner_approved');
   assert.equal(manifest.packages.framework_core.homebrew_formula.carrier_scope, 'framework_core_only');
-  assert.equal(manifest.packages.framework_core.homebrew_formula.version, '0.2.1');
+  assert.equal(manifest.packages.framework_core.homebrew_formula.version, '0.2.2');
   assert.equal(
     manifest.packages.framework_core.homebrew_formula.source_head,
     manifest.packages.framework_core.source_git.head_sha,
@@ -287,7 +326,7 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(manifest.release_automation.daily_package_channel.generation_template, '<utc_yy.m.d[-rN_auto]>');
   assert.equal(manifest.release_automation.daily_package_channel.force_publish_input, 'force_publish');
   assert.equal(Object.hasOwn(manifest.packages, 'webui_docker_image'), false);
-  assert.equal(manifest.packages.framework_core.artifact, 'ghcr.io/gaofeng21cn/one-person-lab-framework:0.2.1');
+  assert.equal(manifest.packages.framework_core.artifact, 'ghcr.io/gaofeng21cn/one-person-lab-framework:0.2.2');
   assert.match(manifest.packages.framework_core.source_archive.sha256, /^[0-9a-f]{64}$/);
   assert.match(manifest.packages.framework_core.source_git.head_sha, /^[0-9a-f]{40}$/);
   assert.equal(channelManifest.packages.framework_core.artifact, manifest.packages.framework_core.artifact);
@@ -421,7 +460,54 @@ test('package archive builder writes channel manifest checksums git source and r
     )),
     true,
   );
-  assert.match(checksums, /one-person-lab-framework-0\.2\.1\.tar\.gz/);
+  execFileSync(process.execPath, [
+    path.join(repoRoot, 'scripts/generate-release-supply-chain.mjs'),
+    '--release-manifest', releaseManifestPath,
+    '--output-dir', outDir,
+  ], { encoding: 'utf8' });
+  const releaseSbom = parseJsonText(fs.readFileSync(path.join(outDir, 'opl-release-set.spdx.json'), 'utf8')) as Record<string, any>;
+  const releaseProvenance = parseJsonText(fs.readFileSync(path.join(outDir, 'opl-release-provenance.json'), 'utf8')) as Record<string, any>;
+  assert.equal(releaseSbom.spdxVersion, 'SPDX-2.3');
+  assert.equal(releaseSbom.packages.length, 9);
+  assert.equal(releaseSbom.packages.some((entry: Record<string, unknown>) => entry.name === 'opl-base'), true);
+  assert.equal(releaseProvenance.buildDefinition.resolvedDependencies.length, 9);
+  assert.equal(
+    releaseProvenance.buildDefinition.externalParameters.owner_cohort_lock.digest,
+    archiveBuilderResult.owner_cohort_lock_digest,
+  );
+  const promotionReceiptPath = path.join(outDir, 'opl-release-promotion-receipt.json');
+  execFileSync(process.execPath, [
+    path.join(repoRoot, 'scripts/write-release-promotion-receipt.mjs'),
+    '--release-manifest', releaseManifestPath,
+    '--output', promotionReceiptPath,
+    '--target', 'candidate',
+    '--carrier-ref', 'ghcr.io/gaofeng21cn/one-person-lab-manifest:26.4.31',
+    '--carrier-digest', `sha256:${'b'.repeat(64)}`,
+    '--promotion-request-id', 'test-release-saga',
+    '--release-gate', 'test_owner_sha_release_gate',
+    '--source-app-run-id', '12345',
+    '--framework-repository', 'gaofeng21cn/one-person-lab',
+    '--framework-run-id', '67890',
+    '--framework-run-attempt', '1',
+    '--expected-app-version', '26.7.12',
+    '--expected-app-source-commit', '9'.repeat(40),
+    '--expected-app-artifact-digest', `sha256:${'2'.repeat(64)}`,
+    '--anonymous-readback', 'true',
+  ], { encoding: 'utf8' });
+  const promotionReceiptSchema = parseJsonText(fs.readFileSync(
+    path.join(repoRoot, 'contracts/opl-framework/release-promotion-receipt.schema.json'),
+    'utf8',
+  )) as Record<string, any>;
+  const promotionReceipt = parseJsonText(fs.readFileSync(promotionReceiptPath, 'utf8')) as Record<string, any>;
+  assert.doesNotThrow(() => assertJsonSchemaPayload({
+    schemaId: promotionReceiptSchema.$id,
+    schema: promotionReceiptSchema,
+    sourceRef: 'contracts/opl-framework/release-promotion-receipt.schema.json',
+  }, promotionReceipt));
+  assert.equal(promotionReceipt.surface_kind, 'opl_release_set_promotion_receipt.v1');
+  assert.equal(promotionReceipt.carrier.digest, `sha256:${'b'.repeat(64)}`);
+  assert.equal(promotionReceipt.anonymous_readback.verified_refs.length, 9);
+  assert.match(checksums, /one-person-lab-framework-0\.2\.2\.tar\.gz/);
   assert.match(checksums, new RegExp(manifest.packages.framework_core.source_archive.sha256));
   assert.equal(manifest.packages.native_helper.channel_status, 'active_ghcr_oci_prebuild');
   assert.equal(manifest.packages.native_helper.retention_policy.retain_versions, 4);
@@ -515,6 +601,54 @@ test('package archive builder writes channel manifest checksums git source and r
     '--manifest', prereleaseManifestPath,
     '--promotion-target', 'latest-stable',
   ], { cwd: os.tmpdir(), encoding: 'utf8' }), /latest-stable cannot select a prerelease Package/);
+
+  const docsOnlyFixturePath = path.join(repoRoot, 'docs', `.runtime-archive-exclusion-${process.pid}.md`);
+  const repeatOutDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-repeat-out-'));
+  try {
+    fs.writeFileSync(docsOnlyFixturePath, 'This file must not affect OPL Base runtime archive bytes.\n', 'utf8');
+    execFileSync(process.execPath, [
+      '--experimental-strip-types',
+      path.join(repoRoot, 'scripts/package-archives.mjs'),
+      '--release-set-generation', '26.4.32',
+      '--owner', 'gaofeng21cn',
+      '--out-dir', repeatOutDir,
+      '--owner-cohort-lock', archiveBuilderResult.owner_cohort_lock,
+      '--previous-manifest', previousManifest,
+      '--app-component-manifest', appComponentManifest,
+    ], { cwd: repoRoot, encoding: 'utf8', env: ownerSourceEnv });
+    const repeatedManifest = parseJsonText(fs.readFileSync(
+      path.join(repeatOutDir, 'opl-release-manifest.json'),
+      'utf8',
+    )) as Record<string, any>;
+    assert.equal(
+      repeatedManifest.packages.framework_core.source_archive.sha256,
+      manifest.packages.framework_core.source_archive.sha256,
+    );
+  } finally {
+    fs.rmSync(docsOnlyFixturePath, { force: true });
+    fs.rmSync(repeatOutDir, { recursive: true, force: true });
+  }
+
+  fs.writeFileSync(path.join(fixtures.medautoscience.sourceRoot, 'OWNER-HEAD-MOVED.txt'), 'new owner head\n', 'utf8');
+  execFileSync('git', ['add', 'OWNER-HEAD-MOVED.txt'], { cwd: fixtures.medautoscience.sourceRoot, encoding: 'utf8' });
+  execFileSync('git', ['commit', '-m', 'move owner head after cohort freeze'], {
+    cwd: fixtures.medautoscience.sourceRoot,
+    encoding: 'utf8',
+  });
+  const staleLockOutDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-stale-lock-out-'));
+  try {
+    assert.throws(() => execFileSync(process.execPath, [
+      '--experimental-strip-types',
+      path.join(repoRoot, 'scripts/package-archives.mjs'),
+      '--release-set-generation', '26.4.33',
+      '--owner', 'gaofeng21cn',
+      '--out-dir', staleLockOutDir,
+      '--owner-cohort-lock', archiveBuilderResult.owner_cohort_lock,
+      '--app-component-manifest', appComponentManifest,
+    ], { cwd: repoRoot, encoding: 'utf8', env: ownerSourceEnv }), /does not match cohort lock/);
+  } finally {
+    fs.rmSync(staleLockOutDir, { recursive: true, force: true });
+  }
 });
 
 test('first-party agent package manifests declare Codex carrier and OPL package core from one source', () => {

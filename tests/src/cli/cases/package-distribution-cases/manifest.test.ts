@@ -243,7 +243,7 @@ test('packages manifest exposes canonical Release Set coordinates for Package in
   assert.deepEqual(output.packages_manifest.release_automation.cleanup.protected_tags, ['candidate', 'latest-stable']);
   assert.equal(Object.hasOwn(output.packages_manifest.packages, 'webui_docker_image'), false);
   assert.equal(output.packages_manifest.packages.framework_core.package_name, 'one-person-lab-framework');
-  assert.equal(output.packages_manifest.packages.framework_core.artifact, 'ghcr.io/gaofeng21cn/one-person-lab-framework:0.2.1');
+  assert.equal(output.packages_manifest.packages.framework_core.artifact, 'ghcr.io/gaofeng21cn/one-person-lab-framework:0.2.2');
   assert.equal(output.packages_manifest.packages.framework_core.package_consumption_status, 'consumed_by_runtime_substrate_updates');
   assert.equal(output.packages_manifest.packages.framework_core.current_install_update_source, 'opl_release_channel_manifest');
   assert.equal(

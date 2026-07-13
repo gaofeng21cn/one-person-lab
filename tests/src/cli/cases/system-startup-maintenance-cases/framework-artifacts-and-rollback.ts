@@ -18,6 +18,25 @@ function writeMinimalFrameworkRoot(root: string, marker: string) {
   fs.writeFileSync(path.join(root, 'MARKER.txt'), `${marker}\n`, 'utf8');
 }
 
+function writeRuntimeOnlyFrameworkRoot(root: string, marker: string) {
+  fs.mkdirSync(path.join(root, 'dist', 'entrypoints'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'bin'), { recursive: true });
+  fs.writeFileSync(
+    path.join(root, 'package.json'),
+    JSON.stringify({ name: 'opl-framework-fixture', version: '0.0.0-fixture', dependencies: {} }, null, 2),
+    'utf8',
+  );
+  fs.writeFileSync(path.join(root, 'package-lock.json'), JSON.stringify({
+    name: 'opl-framework-fixture',
+    version: '0.0.0-fixture',
+    lockfileVersion: 3,
+    packages: { '': { name: 'opl-framework-fixture', version: '0.0.0-fixture', dependencies: {} } },
+  }, null, 2), 'utf8');
+  fs.writeFileSync(path.join(root, 'dist', 'entrypoints', 'cli.js'), `export const marker = ${JSON.stringify(marker)};\n`, 'utf8');
+  fs.writeFileSync(path.join(root, 'bin', 'opl'), '#!/usr/bin/env node\nconsole.log("opl fixture");\n', { mode: 0o755 });
+  fs.writeFileSync(path.join(root, 'MARKER.txt'), `${marker}\n`, 'utf8');
+}
+
 function sha256(filePath: string) {
   return execFileSync('shasum', ['-a', '256', filePath], { encoding: 'utf8' }).trim().split(/\s+/)[0];
 }
@@ -117,7 +136,7 @@ test('Framework currentness ignores Release Set revision when Base content diges
   const archivePath = path.join(homeRoot, 'one-person-lab-framework.tar.gz');
   try {
     writeMinimalFrameworkRoot(targetRoot, 'current-framework');
-    writeMinimalFrameworkRoot(sourceRoot, 'current-framework');
+    writeRuntimeOnlyFrameworkRoot(sourceRoot, 'current-framework');
     execFileSync('tar', ['-czf', archivePath, '-C', sourceParent, 'one-person-lab']);
     const archiveSha256 = sha256(archivePath);
     fs.writeFileSync(path.join(targetRoot, '.opl-framework-source.json'), JSON.stringify({
@@ -172,7 +191,7 @@ exit 1
 
   try {
     writeMinimalFrameworkRoot(targetRoot, 'old-framework');
-    writeMinimalFrameworkRoot(sourceRoot, 'new-framework');
+    writeRuntimeOnlyFrameworkRoot(sourceRoot, 'new-framework');
     execFileSync('tar', ['-czf', archivePath, '-C', sourceParent, 'one-person-lab']);
 
     const output = withCliTimeout('120000', () => runCli(['system', 'startup-maintenance', '--scope', 'runtime_substrate'], {
@@ -251,7 +270,7 @@ exit 1
 
   try {
     writeMinimalFrameworkRoot(targetRoot, 'old-framework');
-    writeMinimalFrameworkRoot(sourceRoot, 'new-channel-framework');
+    writeRuntimeOnlyFrameworkRoot(sourceRoot, 'new-channel-framework');
     execFileSync('tar', ['-czf', archivePath, '-C', sourceParent, 'one-person-lab']);
     const channel = writeFakeFrameworkChannel({
       root: path.join(homeRoot, 'channel'),
@@ -326,7 +345,7 @@ exit 1
 `);
 
   try {
-    writeMinimalFrameworkRoot(sourceRoot, 'new-docker-data-framework');
+    writeRuntimeOnlyFrameworkRoot(sourceRoot, 'new-docker-data-framework');
     execFileSync('tar', ['-czf', archivePath, '-C', sourceParent, 'one-person-lab']);
     const channel = writeFakeFrameworkChannel({
       root: path.join(homeRoot, 'channel'),
