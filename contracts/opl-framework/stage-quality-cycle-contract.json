@@ -5,6 +5,31 @@
   "state": "active_contract",
   "purpose": "Define context-isolated Stage Review as independent StageAttempts under one StageRun, without turning attempts into top-level stages or moving domain quality authority into OPL.",
   "framework_contract_ref": "contracts/opl-framework/stage-quality-cycle-contract.json",
+  "pack_bound_creation": {
+    "canonical_request_surface": "opl family-runtime attempt create",
+    "runtime_binding_surface_kind": "opl_pack_bound_stage_quality_runtime_binding",
+    "runtime_binding_source": "compiled_standard_agent_stage_manifest_plus_stage_quality_cycle_policy",
+    "stage_run_input_builder": "buildPackBoundTemporalStageRunInput",
+    "required_binding_fields": [
+      "stage_id",
+      "policy_ref",
+      "stage_prompt_ref",
+      "quality_policy",
+      "role_prompt_refs",
+      "quality_rubric_refs",
+      "stage_goal_refs",
+      "source_refs",
+      "lineage_refs",
+      "manifest_ref",
+      "manifest_sha256"
+    ],
+    "stage_run_identity_binds_manifest_sha256": true,
+    "raw_stage_run_start_cli_retired": true,
+    "stage_run_cli_allowed_actions": [
+      "query"
+    ],
+    "direct_unbound_stage_run_creation_forbidden": true
+  },
   "stage_attempt_roles": [
     "producer",
     "reviewer",
@@ -65,6 +90,19 @@
       "execution_session_ref",
       "artifact_revision"
     ],
+    "role_round_contract": {
+      "producer": [0],
+      "reviewer": [0],
+      "repairer": [1, 2, 3],
+      "re_reviewer": [1, 2, 3]
+    },
+    "non_producer_parent_attempt_ref_required": true,
+    "non_producer_parent_lineage_fields": [
+      "parent_attempt_lineage.stage_run_id",
+      "parent_attempt_lineage.quality_cycle_id"
+    ],
+    "parent_lineage_must_match_current_stage_run_and_quality_cycle": true,
+    "forbidden_attempt_fields_rejected_recursively": true,
     "forbidden_attempt_fields": [
       "next_stage_refs",
       "requires",
@@ -134,8 +172,23 @@
       "quality_debt",
       "hard_stop"
     ],
+    "required_fields": [
+      "stage_run_id",
+      "quality_cycle_id",
+      "producer_attempt_ref",
+      "reviewer_attempt_ref",
+      "producer_session_ref",
+      "reviewer_session_ref",
+      "no_context_inheritance",
+      "reviewed_artifact_refs",
+      "reviewed_artifact_hashes",
+      "rubric_refs",
+      "verdict"
+    ],
     "reviewed_hash_must_match_current_artifact": true,
     "producer_and_repairer_identity_source": "typed_closeout_ref_metadata_sha256_owned_by_domain",
+    "producer_and_repairer_artifact_identity_receipt_refs_required_before_formal_review": true,
+    "reviewed_artifact_ref_hash_cardinality_must_match": true,
     "no_context_inheritance_required": true,
     "same_model_different_session_allowed": true
   },

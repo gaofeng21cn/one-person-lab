@@ -13,6 +13,8 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 决策：`StageRunWorkflow` 是非模型、durable Temporal 父级 controller；`StageAttemptWorkflow` 是独立 executor child workflow。Framework 只允许 `producer/reviewer/repairer/re_reviewer` 四种 role，按 domain 声明的 quality policy 动态物化，最大形状为 `1 + 1 + 3 x 2 = 8` 个 Attempt。每个 Attempt 使用 fresh Codex session，只通过 exact refs、hashes、rubric、finding、repair map 和 lineage 通信；same-thread self-check 记为 `in_thread_refinement`，same-thread typed-closeout 补全记为 `protocol_closeout_resume`，两者都不产生 review receipt。
 
+创建边界：StageRun 不接受 raw CLI payload。唯一创建路径是 `opl family-runtime attempt create` 从已编译 domain pack 解析 `opl_pack_bound_stage_quality_runtime_binding`，并把 Stage manifest SHA、quality policy、role prompts、rubric 和 lineage 绑定到 StageRun identity；raw `family-runtime stage-run start` 退役，`stage-run` 只保留 query。producer / repairer 输出的 domain-owned artifact identity receipt 提供 exact ref/SHA，正式 review receipt 必须绑定该 identity 和 fresh reviewer session。
+
 Re-review 采用 finding closure，不得用普通新建议无限重开循环。预算耗尽但产物可消费时写 `completed_with_quality_debt` 并继续下一 Stage，同时禁止高质量、导出、发表、提交和 ready 声明；零可消费产物或硬 authority/safety/human/currentness gate 才阻断。Meta Review 始终是独立 StageRun，主 role 为 `producer`，不递归套正式 Stage Review。
 
 边界：domain Agent 继续拥有专业 Review 方法、必要认知顺序、findings、repair 和 quality verdict；OPL 只拥有 Attempt identity、上下文隔离、预算、lineage、durable orchestration 和 refs-only projection。普通用户只看 Stage 级状态，Attempt 细节只在 operator drilldown。涉及不同主要开放判断、owner、source/knowledge authority、独立 quality gate、正式 handoff、下游 route、不可逆权限或 human decision 时必须 split / route-back 到新 Stage，不能增加 Attempt role。

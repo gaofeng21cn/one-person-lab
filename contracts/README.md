@@ -7,7 +7,7 @@ Machine boundary: 本文是人读合同目录说明和边界索引。机器 trut
 
 这个目录只保留 `OPL` 的 machine-readable contract surface 与其目录说明。
 
-Stage 内质量循环的 canonical machine surface 是 `contracts/opl-framework/stage-quality-cycle-contract.json`、`stage-quality-cycle.schema.json` 和 `official-knowledge-deliverable-quality-profile.json`。`StageRunWorkflow` 是非模型 Temporal 父级 controller，`StageAttemptWorkflow` 是独立 executor child；Attempt 不得被产品面投影成小 Stage，也不得持有 Stage transition authority。
+Stage 内质量循环的 canonical machine surface 是 `contracts/opl-framework/stage-quality-cycle-contract.json`、`stage-quality-cycle.schema.json` 和 `official-knowledge-deliverable-quality-profile.json`。`StageRunWorkflow` 是非模型 Temporal 父级 controller，`StageAttemptWorkflow` 是独立 executor child；Attempt 不得被产品面投影成小 Stage，也不得持有 Stage transition authority。StageRun 只能由 `opl family-runtime attempt create` 消费已编译的 pack-bound quality binding 创建；raw `stage-run start` 已退役，`stage-run` CLI 只保留 query。
 
 - narrative 协作规则看仓库根 `AGENTS.md`
 - 默认人类/AI 入口看 `README*` 与 `docs/README*`

@@ -2,6 +2,24 @@
   "contract_kind": "opl_standard_domain_agent_skeleton_contract.v1",
   "owner": "one-person-lab",
   "scope": "repo-source skeleton and locator-only artifact boundary for OPL-hosted domain agents",
+  "stage_quality_runtime": {
+    "contract_ref": "contracts/opl-framework/stage-quality-cycle-contract.json",
+    "quality_profile_ref_field": "agent/stages/manifest.json#/quality_governance_profile_ref",
+    "meta_review_policy_ref_field": "agent/stages/manifest.json#/meta_review_policy_ref",
+    "per_stage_policy_ref_field": "agent/stages/manifest.json#/stages/*/stage_quality_cycle_policy_ref",
+    "runtime_binding_surface_kind": "opl_pack_bound_stage_quality_runtime_binding",
+    "runtime_creation_surface": "opl family-runtime attempt create",
+    "raw_stage_run_start_cli_retired": true,
+    "attempt_roles": [
+      "producer",
+      "reviewer",
+      "repairer",
+      "re_reviewer"
+    ],
+    "domain_pack_declares_policy_not_attempt_instances": true,
+    "opl_stage_run_controller_materializes_attempts": true,
+    "attempt_is_not_sub_stage": true
+  },
   "required_repo_source_dirs": [
     "agent",
     "contracts",
@@ -42,6 +60,8 @@
     "descriptor_refs",
     "sidecar_refs",
     "quality_gate_refs",
+    "stage_quality_cycle_policy_refs",
+    "pack_bound_stage_quality_runtime_binding",
     "workspace_artifact_locator_refs",
     "runtime_artifact_locator_refs",
     "authority_boundary"

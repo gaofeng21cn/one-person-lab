@@ -41,7 +41,8 @@ test('family product projection keeps quality Attempts in drilldown instead of p
   ]);
   assert.deepEqual(visibility.developer_operator_drilldown_only, [
     'attempt_role', 'quality_round_index', 'execution_session_ref',
-    'finding_lineage', 'repair_lineage', 'token_and_cost',
+    'artifact_identity_receipt_refs', 'review_receipts',
+    'finding_lineage', 'repair_lineage', 'quality_debt_refs', 'token_and_cost',
   ]);
   assert.equal(visibility.attempt_must_not_be_presented_as_sub_stage, true);
   assert.equal(

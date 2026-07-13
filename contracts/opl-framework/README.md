@@ -115,6 +115,8 @@ These schema files are the machine-readable OPL target architecture surface. The
 - `stage-quality-cycle.schema.json` validates per-Stage domain policy without enumerating runtime Attempt instances or granting Stage topology and transition authority to an Attempt overlay.
 - `official-knowledge-deliverable-quality-profile.json` enables isolated Stage Review and one independent top-level Meta Review for MAS, MAG, RCA, OMA, and OBF. It does not force Meta Review on every OPL Agent.
 - Formal Review always uses a fresh child workflow and provider session. `in_thread_refinement` and `protocol_closeout_resume` are non-review operations. Three repair rounds are separate from provider, activity, structured-output, and runtime retry budgets.
+- StageRun creation is pack-bound: `opl family-runtime attempt create` resolves the compiled Stage manifest and quality policy into `opl_pack_bound_stage_quality_runtime_binding`, and the manifest SHA participates in StageRun identity. Raw `family-runtime stage-run start` is retired; `stage-run` exposes query only.
+- Before formal Review, producer and repairer outputs expose domain-owned artifact identity refs with SHA-256 metadata. A formal review receipt binds those exact artifact refs/hashes, fresh producer/reviewer sessions, the rubric, and the review verdict; file presence or provider completion cannot synthesize the receipt.
 
 ## How To Read This Directory
 

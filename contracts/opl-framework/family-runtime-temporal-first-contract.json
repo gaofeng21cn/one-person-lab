@@ -13,6 +13,15 @@
       "current_workflow_type": "StageRunWorkflow",
       "child_workflow_type": "StageAttemptWorkflow",
       "role": "non_model_durable_stage_run_controller_for_bounded_quality_attempts",
+      "creation_entry": "pack_bound_family_runtime_attempt_create_only",
+      "raw_stage_run_start_cli_retired": true,
+      "required_pack_binding_surface_kind": "opl_pack_bound_stage_quality_runtime_binding",
+      "required_pack_binding_identity_fields": [
+        "stage_manifest_ref",
+        "stage_manifest_sha256",
+        "quality_policy_ref",
+        "domain_pack_root"
+      ],
       "task_queue": "domain_runtime_lane_task_queue",
       "event_history_role": "durable_quality_loop_attempt_lineage_budget_and_terminalization_history",
       "sqlite_role": "projection_audit_cache_not_durable_lifecycle_truth"
@@ -69,6 +78,15 @@
     "priority_and_rate_policy": "temporal_or_worker_level_policy_only_not_sqlite_queue_truth"
   },
   "retry_mapping": {
+    "stage_quality_revision_budget": {
+      "default_max_repair_rounds": 3,
+      "round_unit": "one_repairer_child_workflow_plus_one_fresh_re_reviewer_child_workflow",
+      "initial_review_consumes_repair_round": false,
+      "separate_from_provider_retry": true,
+      "separate_from_temporal_activity_retry": true,
+      "separate_from_structured_output_retry": true,
+      "separate_from_stage_run_runtime_retry": true
+    },
     "codex_stage_activity": {
       "maximum_attempts": 1,
       "reason": "codex_cli_subprocess_must_not_be_duplicated_by_temporal_retry"
