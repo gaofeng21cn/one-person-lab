@@ -228,6 +228,7 @@ export type AgentPackageManagedRuntimeSourceState = {
   module_id: string;
   checkout_path: string;
   ownership: 'package_created' | 'preexisting_adopted';
+  source_mode?: 'package_channel' | 'developer_checkout' | 'bundled_full_runtime';
   channel_version: string | null;
   artifact_ref: string | null;
   layer_digest: string | null;
@@ -243,7 +244,7 @@ export type AgentPackageManagedRuntimeSourceState = {
   health_output_sha256: string | null;
   handler_probe_output_sha256: string | null;
   preparation_root: string | null;
-  preparation_scope: 'managed_source_root' | 'preexisting_read_only_probe';
+  preparation_scope: 'managed_source_root' | 'developer_checkout_root' | 'preexisting_read_only_probe';
 };
 
 export type AgentPackageManagedRuntimeSourceReadiness = {

@@ -185,6 +185,15 @@ async function applyManifestPackageLock(
   const existingLock = packageId
     ? index.packages.find((entry) => entry.package_id === packageId)
     : null;
+  if (action !== 'install' && existingLock?.source_kind === 'developer_checkout_override') {
+    throw new FrameworkContractError('contract_shape_invalid', 'Developer checkout agent package sources require an explicit install after checkout review.', {
+      package_id: existingLock.package_id,
+      action,
+      source_kind: existingLock.source_kind,
+      failure_code: 'agent_package_developer_checkout_auto_update_forbidden',
+      manual_confirmation_path: 'review the checkout and run an explicit install with --source-kind developer_checkout_override and --agent-root',
+    });
+  }
   const hasExplicitSource = Boolean(stringValue(input.manifestUrl) || stringValue(input.registryUrl));
   const hasResolvedCatalogSelection = Boolean(
     options.catalog
