@@ -17,12 +17,12 @@ import {
 } from '../../../modules/connect/index.ts';
 import { buildSessionLedger } from '../../../modules/runway/session-ledger.ts';
 import { explainDomainBoundary, selectDomainAgentEntry } from '../../../modules/atlas/resolver.ts';
-import { activateWorkspaceBinding, archiveWorkspaceBinding, bindWorkspace, buildWorkspaceCatalog, resolveWorkspaceLocator } from '../../../modules/workspace/workspace-registry.ts';
+import { activateWorkspaceBinding, archiveWorkspaceBinding, bindWorkspace, buildWorkspaceCatalog, pruneWorkspaceRegistry, resolveWorkspaceLocator } from '../../../modules/workspace/workspace-registry.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
 import { buildWorkspaceInitializeCommandSpecs } from './workspace-initialize-command-spec.ts';
 import { buildPrivateAgentCommandSpecs } from './private-command-specs-parts/agents.ts';
 import { buildPrivateRuntimeCommandSpecs } from './private-command-specs-parts/runtime.ts';
-import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, parseExecutorExecArgs, parseExecutorOption, parseExecutorRequestPath, parseKeyValueArgs, parseLaunchDomainArgs, parseProductEntryArgs, parseRegisteredCommandOptions, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSkillPackArgs, parseStartArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, runCodexPassthroughHandled, withContractsContext } from '../modules/support.ts';
+import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, parseCommandOptions, parseExecutorExecArgs, parseExecutorOption, parseExecutorRequestPath, parseKeyValueArgs, parseLaunchDomainArgs, parseProductEntryArgs, parseRegisteredCommandOptions, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSkillPackArgs, parseStartArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, runCodexPassthroughHandled, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec, ParsedCliInput } from '../modules/support.ts';
 
 async function ensureDomainPackageLaunchReady(
@@ -642,6 +642,30 @@ resume: {
           projectId: parsed.projectId,
           workspacePath: parsed.workspacePath,
         });
+      },
+    },
+    'workspace-maintenance-prune': {
+      usage: 'opl workspace maintenance prune [--dry-run|--apply]',
+      summary:
+        'Prune only missing OPL test-temporary workspace bindings; default to dry-run and back up the registry before apply.',
+      examples: [
+        'opl workspace maintenance prune --dry-run',
+        'opl workspace maintenance prune --apply',
+      ],
+      handler: (args) => {
+        const spec = commandSpecs['workspace-maintenance-prune'];
+        const parsed = parseCommandOptions(args, spec, {
+          apply: { type: 'boolean' },
+          'dry-run': { type: 'boolean' },
+        });
+        if (parsed.apply === true && parsed['dry-run'] === true) {
+          throw buildUsageError(
+            'workspace maintenance prune accepts either --dry-run or --apply, not both.',
+            spec,
+            { mutually_exclusive: ['--dry-run', '--apply'] },
+          );
+        }
+        return pruneWorkspaceRegistry({ apply: parsed.apply === true });
       },
     },
     'session ledger': {

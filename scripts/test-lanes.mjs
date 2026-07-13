@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import os from 'node:os';
+import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const defaultStepTimeoutMs = 20 * 60 * 1000;
@@ -15,6 +16,7 @@ const pythonCacheRoot = process.env.OPL_REPO_TEMP_ROOT
 fs.mkdirSync(pythonCacheRoot, { recursive: true });
 const toolTempDir = path.join(pythonCacheRoot, 'tmp');
 fs.mkdirSync(toolTempDir, { recursive: true });
+let nodeTestStateRoot = null;
 if (ownsPythonCacheRoot) {
   process.on('exit', () => {
     fs.rmSync(pythonCacheRoot, { recursive: true, force: true });
@@ -73,6 +75,7 @@ const fastTestFiles = [
   'tests/src/opl-flow-completion-audit-contract.test.ts',
   'tests/src/operator-compact-readback-contract.test.ts',
   'tests/src/verification-test-governance.test.ts',
+  'tests/src/test-lanes-state-isolation.test.ts',
   'tests/src/line-budget.test.ts',
   'tests/src/source-structure-operator-readback.test.ts',
   'tests/src/active-path-residue-scan.test.ts',
@@ -326,6 +329,7 @@ const lanes = {
       'tests/src/advisory-knowledge-boundary-contract.test.ts',
       'tests/src/opl-flow-completion-audit-contract.test.ts',
       'tests/src/verification-test-governance.test.ts',
+      'tests/src/test-lanes-state-isolation.test.ts',
       'tests/src/reuse-first-scan.test.ts',
       'tests/src/source-module-boundary.test.ts',
       'tests/src/source-module-public-imports.test.ts',
@@ -618,13 +622,13 @@ const stepRunners = {
   'node-test': runNodeTestStep,
 };
 
-function runNodeTestStep(step, context) {
+export function runNodeTestStep(step, context) {
   if (!Number.isInteger(step.batchSize) || step.batchSize <= 0 || step.files.length <= step.batchSize) {
     return spawnStep(process.execPath, nodeTestArgs(step), {
       ...context,
       stepKind: step.kind,
       batchFiles: step.files,
-    }, { env: step.env });
+    }, { env: createNodeTestBatchEnv(step.env) });
   }
   const chunks = chunkFiles(step.files, step.batchSize);
   for (const [batchIndex, files] of chunks.entries()) {
@@ -634,12 +638,26 @@ function runNodeTestStep(step, context) {
       batchIndex,
       batchCount: chunks.length,
       batchFiles: files,
-    }, { env: step.env });
+    }, { env: createNodeTestBatchEnv(step.env) });
     if (result.status !== 0) {
       return result;
     }
   }
   return { status: 0 };
+}
+
+function createNodeTestBatchEnv(stepEnv) {
+  if (!nodeTestStateRoot) {
+    nodeTestStateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-node-test-state-'));
+    process.on('exit', () => {
+      fs.rmSync(nodeTestStateRoot, { recursive: true, force: true });
+    });
+  }
+  const stateDir = fs.mkdtempSync(path.join(nodeTestStateRoot, 'batch-'));
+  return {
+    ...stepEnv,
+    OPL_STATE_DIR: stateDir,
+  };
 }
 
 function chunkFiles(files, size) {
@@ -969,8 +987,14 @@ function fail(message) {
   process.exit(1);
 }
 
-const commandHandler = commandHandlers[command];
-if (!commandHandler) {
-  fail(`Unknown command: ${command}`);
+function main() {
+  const commandHandler = commandHandlers[command];
+  if (!commandHandler) {
+    fail(`Unknown command: ${command}`);
+  }
+  commandHandler();
 }
-commandHandler();
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main();
+}

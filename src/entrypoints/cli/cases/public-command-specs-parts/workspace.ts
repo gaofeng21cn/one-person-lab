@@ -13,7 +13,7 @@ export function buildWorkspaceCommandSpecs(
   const workspaceCommandSpecs: Record<string, CommandSpec> = {
     workspace: {
       usage:
-        'opl workspace projects|list|fleet report|root|init|ensure|validate|doctor|source-hygiene|adopt|upgrade|artifact-lifecycle|source ingest|project lifecycle|project archive|project delete|export-map|health|inspect|inventory|report|interfaces|bind|activate|archive [options]',
+        'opl workspace projects|list|fleet report|maintenance prune|root|init|ensure|validate|doctor|source-hygiene|adopt|upgrade|artifact-lifecycle|source ingest|project lifecycle|project archive|project delete|export-map|health|inspect|inventory|report|interfaces|bind|activate|archive [options]',
       summary:
         'Manage OPL workspace bindings, standard family-agent workspace initialization, generated inspection refs, and workspace-local project lifecycle projections.',
       examples: [
@@ -40,6 +40,11 @@ export function buildWorkspaceCommandSpecs(
           command: 'workspace fleet report',
           usage: 'opl workspace fleet report',
           summary: 'Read registry-wide workspace fleet status without executing direct-entry or manifest commands.',
+        },
+        {
+          command: 'workspace maintenance prune',
+          usage: 'opl workspace maintenance prune [--dry-run|--apply]',
+          summary: 'Prune missing OPL test-temporary bindings with dry-run default and pre-apply backup.',
         },
         {
           command: 'workspace init',
@@ -285,6 +290,14 @@ export function buildWorkspaceCommandSpecs(
     'workspace archive': cloneCommandSpec(commandSpecs['workspace-archive'], {
       usage: 'opl workspace archive --project <project_id> --path <workspace_path>',
       examples: ['opl workspace archive --project redcube --path /Users/gaofeng/workspace/redcube-ai'],
+      group: 'workspace',
+    }),
+    'workspace maintenance prune': cloneCommandSpec(commandSpecs['workspace-maintenance-prune'], {
+      usage: 'opl workspace maintenance prune [--dry-run|--apply]',
+      examples: [
+        'opl workspace maintenance prune --dry-run',
+        'opl workspace maintenance prune --apply',
+      ],
       group: 'workspace',
     }),
   };

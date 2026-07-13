@@ -1,8 +1,8 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
-import {
-  randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { isRecord } from '../../kernel/contract-validation.ts';
@@ -86,6 +86,12 @@ type WorkspaceRegistryOptions = {
   inputPath?: string;
   deriveDirectEntry?: boolean;
 };
+
+type WorkspaceRegistryMaintenanceOptions = {
+  apply?: boolean;
+};
+
+const OPL_TEST_TEMP_ENTRY_PATTERN = /^opl-[a-z0-9][a-z0-9-]*(?:-|\.)[A-Za-z0-9]{6}$/;
 
 function nowIso() {
   return new Date().toISOString();
@@ -181,6 +187,160 @@ function normalizeWorkspaceBinding(binding: Partial<WorkspaceBinding>): Workspac
 function writeWorkspaceRegistryFile(payload: WorkspaceRegistryFile) {
   const paths = ensureOplStateDir();
   fs.writeFileSync(paths.workspace_registry_file, `${JSON.stringify(payload, null, 2)}\n`);
+}
+
+function sha256(value: Buffer | string) {
+  return createHash('sha256').update(value).digest('hex');
+}
+
+function systemTemporaryRoots() {
+  const candidates = [
+    os.tmpdir(),
+    ...(process.platform === 'win32' ? [] : ['/tmp']),
+  ];
+  const roots = new Set<string>();
+  for (const candidate of candidates) {
+    roots.add(path.resolve(candidate));
+    if (fs.existsSync(candidate)) {
+      roots.add(fs.realpathSync(candidate));
+    }
+  }
+  return [...roots].sort((left, right) => right.length - left.length);
+}
+
+function recognizedTestTemporaryPath(workspacePath: string, temporaryRoots: string[]) {
+  const absolutePath = path.resolve(workspacePath);
+  for (const temporaryRoot of temporaryRoots) {
+    const relativePath = path.relative(temporaryRoot, absolutePath);
+    if (
+      !relativePath
+      || relativePath === '..'
+      || relativePath.startsWith(`..${path.sep}`)
+      || path.isAbsolute(relativePath)
+    ) {
+      continue;
+    }
+    const temporaryEntry = relativePath.split(path.sep)[0];
+    if (OPL_TEST_TEMP_ENTRY_PATTERN.test(temporaryEntry)) {
+      return {
+        temporary_root: temporaryRoot,
+        temporary_entry: temporaryEntry,
+      };
+    }
+  }
+  return null;
+}
+
+function createWorkspaceRegistryBackup(registryFile: string, sourceBytes: Buffer) {
+  const backupRoot = path.join(path.dirname(registryFile), 'backups', 'workspace-registry');
+  fs.mkdirSync(backupRoot, { recursive: true });
+  const timestamp = nowIso().replace(/[-:.]/g, '');
+  const backupFile = path.join(
+    backupRoot,
+    `workspace-registry.${timestamp}.${randomUUID()}.json`,
+  );
+  fs.copyFileSync(registryFile, backupFile, fs.constants.COPYFILE_EXCL);
+  return {
+    path: backupFile,
+    sha256: sha256(fs.readFileSync(backupFile)),
+    source_registry_sha256: sha256(sourceBytes),
+  };
+}
+
+export function pruneWorkspaceRegistry(options: WorkspaceRegistryMaintenanceOptions = {}) {
+  const paths = resolveOplStatePaths();
+  const registry = readWorkspaceRegistryFile();
+  const registryExists = fs.existsSync(paths.workspace_registry_file);
+  const sourceBytes = registryExists ? fs.readFileSync(paths.workspace_registry_file) : null;
+  const temporaryRoots = systemTemporaryRoots();
+  const assessments = registry.bindings.map((binding) => {
+    const pathExists = fs.existsSync(binding.workspace_path);
+    const temporaryPath = recognizedTestTemporaryPath(binding.workspace_path, temporaryRoots);
+    return {
+      binding,
+      pathExists,
+      temporaryPath,
+      candidate: !pathExists && temporaryPath !== null,
+    };
+  });
+  const candidates = assessments.filter((assessment) => assessment.candidate);
+  const protectedBindings = assessments.filter((assessment) => !assessment.candidate);
+  const apply = options.apply === true;
+  const mutationApplied = apply && candidates.length > 0;
+  let backup = null;
+
+  if (mutationApplied) {
+    if (!sourceBytes) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Workspace registry prune cannot apply without an existing registry file to back up.',
+        { file: paths.workspace_registry_file },
+      );
+    }
+    backup = createWorkspaceRegistryBackup(paths.workspace_registry_file, sourceBytes);
+    writeWorkspaceRegistryFile({
+      version: 'g2',
+      bindings: protectedBindings.map((assessment) => assessment.binding),
+    });
+  }
+
+  const finalBytes = fs.existsSync(paths.workspace_registry_file)
+    ? fs.readFileSync(paths.workspace_registry_file)
+    : null;
+  return {
+    version: 'g2',
+    workspace_registry_maintenance: {
+      action: 'prune',
+      mode: apply ? 'apply' : 'dry_run',
+      mutation_applied: mutationApplied,
+      no_changes_required: candidates.length === 0,
+      state_dir: paths.state_dir,
+      registry_file: paths.workspace_registry_file,
+      registry_sha256_before: sourceBytes ? sha256(sourceBytes) : null,
+      registry_sha256_after: finalBytes ? sha256(finalBytes) : null,
+      backup,
+      criteria: {
+        workspace_path_must_be_missing: true,
+        path_must_be_under_system_temporary_root: true,
+        temporary_root_entry_pattern: OPL_TEST_TEMP_ENTRY_PATTERN.source,
+        system_temporary_roots: temporaryRoots,
+      },
+      summary: {
+        bindings_before: registry.bindings.length,
+        prune_candidates: candidates.length,
+        pruned_bindings: mutationApplied ? candidates.length : 0,
+        bindings_after: mutationApplied ? protectedBindings.length : registry.bindings.length,
+        protected_bindings: protectedBindings.length,
+      },
+      candidates: candidates.map(({ binding, temporaryPath }) => ({
+        binding_id: binding.binding_id,
+        project_id: binding.project_id,
+        project: binding.project,
+        status: binding.status,
+        workspace_path: binding.workspace_path,
+        reasons: ['workspace_path_missing', 'recognized_opl_test_temporary_path'],
+        ...temporaryPath,
+      })),
+      protected_bindings: protectedBindings.map(({ binding, pathExists, temporaryPath }) => ({
+        binding_id: binding.binding_id,
+        project_id: binding.project_id,
+        project: binding.project,
+        status: binding.status,
+        workspace_path: binding.workspace_path,
+        path_exists: pathExists,
+        retention_reason: pathExists
+          ? 'workspace_path_exists'
+          : 'not_recognized_as_opl_test_temporary_path',
+        recognized_test_temporary_path: temporaryPath !== null,
+      })),
+      authority_boundary: {
+        deletes_existing_workspace_paths: false,
+        deletes_missing_non_test_bindings: false,
+        default_mode: 'dry_run',
+        apply_requires_prewrite_backup: true,
+      },
+    },
+  };
 }
 
 function allowedProjects(contracts: FrameworkContracts) {

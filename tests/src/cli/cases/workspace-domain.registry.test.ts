@@ -11,12 +11,61 @@ import {
 } from '../helpers.ts';
 import { createWorkspaceFixture } from './workspace-domain-test-helper.ts';
 
-function writeRegistry(stateRoot: string, binding: Record<string, unknown>) {
+function writeRegistry(
+  stateRoot: string,
+  binding: Record<string, unknown> | Array<Record<string, unknown>>,
+) {
   fs.mkdirSync(stateRoot, { recursive: true });
   fs.writeFileSync(path.join(stateRoot, 'workspace-registry.json'), `${JSON.stringify({
     version: 'g2',
-    bindings: [binding],
+    bindings: Array.isArray(binding) ? binding : [binding],
   }, null, 2)}\n`);
+}
+
+function registryBinding(bindingId: string, workspacePath: string) {
+  return {
+    binding_id: bindingId,
+    project_id: 'redcube',
+    project: 'redcube-ai',
+    workspace_path: workspacePath,
+    label: bindingId,
+    status: 'inactive',
+    direct_entry: {
+      command: null,
+      manifest_command: null,
+      url: null,
+      workspace_locator: null,
+    },
+    created_at: '2026-07-13T00:00:00.000Z',
+    updated_at: '2026-07-13T00:00:00.000Z',
+    archived_at: null,
+  };
+}
+
+function createRegistryPruneFixture() {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-prune-state-'));
+  const staleNodeTempPath = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-prune-node-'));
+  const staleShellTempPath = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-prune-shell.'));
+  const existingTestTempPath = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-prune-existing-'));
+  const missingNonTestPath = path.join(repoRoot, '.missing-opl-workspace-registry-fixture');
+  assert.equal(fs.existsSync(missingNonTestPath), false);
+  fs.rmSync(staleNodeTempPath, { recursive: true, force: true });
+  fs.rmSync(staleShellTempPath, { recursive: true, force: true });
+  writeRegistry(stateRoot, [
+    registryBinding('stale-node-temp', staleNodeTempPath),
+    registryBinding('stale-shell-temp', staleShellTempPath),
+    registryBinding('existing-test-temp', existingTestTempPath),
+    registryBinding('existing-real-workspace', repoRoot),
+    registryBinding('missing-non-test-workspace', missingNonTestPath),
+  ]);
+  return {
+    stateRoot,
+    existingTestTempPath,
+    cleanup: () => {
+      fs.rmSync(stateRoot, { recursive: true, force: true });
+      fs.rmSync(existingTestTempPath, { recursive: true, force: true });
+    },
+  };
 }
 
 test('workspace registry owns bind, list, and archive lifecycle only', () => {
@@ -49,6 +98,97 @@ test('workspace registry owns bind, list, and archive lifecycle only', () => {
     assert.equal(archived.binding.status, 'archived');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('workspace registry prune defaults to dry-run and protects real or unrecognized paths', () => {
+  const fixture = createRegistryPruneFixture();
+  try {
+    const registryFile = path.join(fixture.stateRoot, 'workspace-registry.json');
+    const originalRegistry = fs.readFileSync(registryFile, 'utf8');
+    const maintenance = runCli(
+      ['workspace', 'maintenance', 'prune'],
+      { OPL_STATE_DIR: fixture.stateRoot },
+    ).workspace_registry_maintenance;
+
+    assert.equal(maintenance.mode, 'dry_run');
+    assert.equal(maintenance.mutation_applied, false);
+    assert.equal(maintenance.backup, null);
+    assert.deepEqual(maintenance.summary, {
+      bindings_before: 5,
+      prune_candidates: 2,
+      pruned_bindings: 0,
+      bindings_after: 5,
+      protected_bindings: 3,
+    });
+    assert.deepEqual(
+      maintenance.candidates.map((entry: { binding_id: string }) => entry.binding_id).sort(),
+      ['stale-node-temp', 'stale-shell-temp'],
+    );
+    assert.deepEqual(
+      maintenance.protected_bindings.map((entry: {
+        binding_id: string;
+        retention_reason: string;
+      }) => [entry.binding_id, entry.retention_reason]).sort(),
+      [
+        ['existing-real-workspace', 'workspace_path_exists'],
+        ['existing-test-temp', 'workspace_path_exists'],
+        ['missing-non-test-workspace', 'not_recognized_as_opl_test_temporary_path'],
+      ],
+    );
+    assert.equal(fs.readFileSync(registryFile, 'utf8'), originalRegistry);
+
+    const conflict = runCliFailure(
+      ['workspace', 'maintenance', 'prune', '--dry-run', '--apply'],
+      { OPL_STATE_DIR: fixture.stateRoot },
+    );
+    assert.equal(conflict.payload.error.code, 'cli_usage_error');
+  } finally {
+    fixture.cleanup();
+  }
+});
+
+test('workspace registry prune backs up before apply and is idempotent', () => {
+  const fixture = createRegistryPruneFixture();
+  try {
+    const registryFile = path.join(fixture.stateRoot, 'workspace-registry.json');
+    const originalRegistry = fs.readFileSync(registryFile, 'utf8');
+    const applied = runCli(
+      ['workspace', 'maintenance', 'prune', '--apply'],
+      { OPL_STATE_DIR: fixture.stateRoot },
+    ).workspace_registry_maintenance;
+
+    assert.equal(applied.mode, 'apply');
+    assert.equal(applied.mutation_applied, true);
+    assert.equal(applied.summary.pruned_bindings, 2);
+    assert.equal(applied.summary.bindings_after, 3);
+    assert.equal(fs.existsSync(applied.backup.path), true);
+    assert.equal(fs.readFileSync(applied.backup.path, 'utf8'), originalRegistry);
+    assert.equal(applied.backup.sha256, applied.backup.source_registry_sha256);
+    const registryAfterApply = fs.readFileSync(registryFile, 'utf8');
+    const remaining = parseJsonText(registryAfterApply) as {
+      bindings: Array<{ binding_id: string; workspace_path: string }>;
+    };
+    assert.deepEqual(
+      remaining.bindings.map((entry) => entry.binding_id).sort(),
+      ['existing-real-workspace', 'existing-test-temp', 'missing-non-test-workspace'],
+    );
+    assert.equal(
+      remaining.bindings.some((entry) => entry.workspace_path === fixture.existingTestTempPath),
+      true,
+    );
+
+    const idempotent = runCli(
+      ['workspace', 'maintenance', 'prune', '--apply'],
+      { OPL_STATE_DIR: fixture.stateRoot },
+    ).workspace_registry_maintenance;
+    assert.equal(idempotent.mutation_applied, false);
+    assert.equal(idempotent.no_changes_required, true);
+    assert.equal(idempotent.summary.pruned_bindings, 0);
+    assert.equal(idempotent.backup, null);
+    assert.equal(fs.readFileSync(registryFile, 'utf8'), registryAfterApply);
+  } finally {
+    fixture.cleanup();
   }
 });
 

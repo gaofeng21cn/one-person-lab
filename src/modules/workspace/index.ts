@@ -22,6 +22,6 @@ export { ingestWorkspaceSourceMaterial } from './workspace-source-material.ts';
 export { fingerprintDomainSource, materializeDomainSources } from './domain-source-runtime.ts';
 export type { DomainSourceInput } from './domain-source-runtime.ts';
 export { assertRepoSourceByproductsClean, inspectRepoSourceByproducts } from './repo-source-byproduct-guard.ts';
-export { buildWorkspaceCatalog, getActiveWorkspaceBinding, listWorkspaceBindings, resolveWorkspaceLocator } from './workspace-registry.ts';
+export { buildWorkspaceCatalog, getActiveWorkspaceBinding, listWorkspaceBindings, pruneWorkspaceRegistry, resolveWorkspaceLocator } from './workspace-registry.ts';
 export type { WorkspaceBinding } from './workspace-registry.ts';
 export { WORKSPACE_TOPOLOGY_PROFILE_CONTRACT } from './workspace-topology.ts';
