@@ -176,6 +176,9 @@ function syncStageManifestFromPlane(repoDir: string, stageControlPlane: Record<s
       ensures: stageContract.ensures ?? [`${stageId}_owner_receipt_or_typed_blocker_ref`],
       next_stage_refs: stage.handoff?.next_stage_refs ?? [],
       trust_lane: index === 0 ? 'codex_executor' : 'domain_agent',
+      ...(stage.handoff?.review_boundary
+        ? { handoff_review_boundary: stage.handoff.review_boundary }
+        : {}),
       ...(laneKind ? { lane_kind: laneKind } : {}),
     };
   });
@@ -743,6 +746,7 @@ function stageFromBase(baseStage: Record<string, any>, input: {
   laneKind?: string;
   executorKind?: string;
   executorBindingRef?: string;
+  handoffReviewBoundary?: Record<string, unknown>;
 }) {
   const defaultExecutor = input.defaultExecutor === true;
   return {
@@ -781,6 +785,9 @@ function stageFromBase(baseStage: Record<string, any>, input: {
     handoff: {
       next_owner: input.owner,
       next_stage_refs: [],
+      ...(input.handoffReviewBoundary
+        ? { review_boundary: input.handoffReviewBoundary }
+        : {}),
     },
   };
 }
@@ -871,6 +878,12 @@ export function configureReadyRcaMorphology(repoDir: string) {
       title: 'Package And Handoff',
       summary: 'Package the final visual artifact for handoff.',
       goal: 'Produce package refs, export refs, and owner receipt refs.',
+      handoffReviewBoundary: {
+        artifact_effect: 'reviewed_immutable_refs_only',
+        freezes_canonical_artifact_bytes: false,
+        issues_quality_export_publication_or_ready_claim: false,
+        downstream_owner_retains_acceptance: true,
+      },
     },
     {
       stageId: 'render_preview_lane',

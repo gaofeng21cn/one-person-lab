@@ -55,6 +55,7 @@ test('agents scaffold generates and validates a standard domain-agent skeleton',
       'agent/knowledge/domain_boundary.md',
       'agent/quality_gates/domain_acceptance.md',
       'runtime/authority_functions/README.md',
+      'runtime/authority_functions/domain-intake-owner-handoff.ts',
       'runtime/native_helpers/README.md',
     ]);
     assert.equal(fs.existsSync(path.join(targetDir, 'runtime/sidecar/README.md')), false);
