@@ -65,6 +65,14 @@ function numeric(value: unknown) {
   return null;
 }
 
+function gatewayIntegerId(value: string, field: string) {
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    throw gatewayError('gateway_response_invalid', `OPL Gateway returned an invalid ${field}.`);
+  }
+  return parsed;
+}
+
 function errorCode(status: number) {
   if (status === 401) return 'auth_expired';
   if (status === 403) return 'account_disabled';
@@ -259,22 +267,24 @@ export async function createGatewayKey(
   accessToken: string,
   input: { name: string; group_id?: string | null; idempotency_key: string },
 ) {
+  const groupId = input.group_id ? gatewayIntegerId(input.group_id, 'group ID') : null;
   return normalizeManagedKey(await request('/keys', {
     method: 'POST',
     accessToken,
     idempotencyKey: input.idempotency_key,
-    body: { name: input.name, ...(input.group_id ? { group_id: input.group_id } : {}) },
+    body: { name: input.name, ...(groupId ? { group_id: groupId } : {}) },
   }));
 }
 
 export async function updateGatewayKeyStatus(accessToken: string, key: GatewayManagedKey, status: string) {
   const preserved = key.raw;
+  const groupId = key.group_id ? gatewayIntegerId(key.group_id, 'managed key group ID') : null;
   const body = {
     name: key.name,
     status,
     ip_whitelist: key.ip_whitelist,
     ip_blacklist: key.ip_blacklist,
-    ...(key.group_id ? { group_id: key.group_id } : {}),
+    ...(groupId ? { group_id: groupId } : {}),
     ...(preserved.expires_at !== undefined ? { expires_at: preserved.expires_at } : {}),
     ...(preserved.quota !== undefined ? { quota: preserved.quota } : {}),
     ...(preserved.rate_limit !== undefined ? { rate_limit: preserved.rate_limit } : {}),
