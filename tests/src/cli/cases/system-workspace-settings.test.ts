@@ -1,4 +1,4 @@
-import { assert, fs, os, parseJsonText, path, runCli, test } from '../helpers.ts';
+import { assert, fs, os, parseJsonText, path, repoRoot, runCli, test } from '../helpers.ts';
 import {
   resolveOplDeveloperModeFrameworkCheckout,
 } from '../../../../src/modules/connect/developer-mode.ts';
@@ -106,18 +106,27 @@ test('developer supervisor persists direct-route developer mode only from explic
 });
 
 test('developer mode framework checkout resolves explicit local route', () => {
-  const checkout = resolveOplDeveloperModeFrameworkCheckout({
-    enabled: 'on',
-    mode: 'developer_apply_safe',
-    source: 'user_config',
-    auto_enable_github_login: 'gaofeng21cn',
-    version: 'g1',
-    updated_at: '2026-07-05T00:00:00.000Z',
-  });
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-developer-framework-checkout-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  try {
+    process.env.OPL_STATE_DIR = stateDir;
+    const checkout = resolveOplDeveloperModeFrameworkCheckout({
+      enabled: 'on',
+      mode: 'developer_apply_safe',
+      source: 'user_config',
+      auto_enable_github_login: 'gaofeng21cn',
+      version: 'g1',
+      updated_at: '2026-07-05T00:00:00.000Z',
+    });
 
-  assert.equal(checkout.status, 'resolved');
-  assert.equal(path.basename(checkout.checkout_root ?? ''), 'one-person-lab');
-  assert.equal(checkout.checkout_bin, path.join(checkout.checkout_root ?? '', 'bin', 'opl'));
+    assert.equal(checkout.status, 'resolved');
+    assert.equal(checkout.checkout_root, fs.realpathSync.native(repoRoot));
+    assert.equal(checkout.checkout_bin, path.join(checkout.checkout_root ?? '', 'bin', 'opl'));
+  } finally {
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(stateDir, { recursive: true, force: true });
+  }
 });
 
 test('developer supervisor fail-closes when github identity is unavailable', () => {

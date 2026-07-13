@@ -2,6 +2,7 @@ import { assert, assertBlockedDeveloperModeSurface, createCodexConfigFixture, cr
 
 test('system exposes user-facing engine and managed-path status from OPL defaults', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-environment-home-'));
+  const stateRoot = path.join(homeRoot, 'opl-state');
   const codexConfigFixture = createCodexConfigFixture({
     model: 'gpt-5.4-opl',
     reasoningEffort: 'high',
@@ -23,6 +24,7 @@ exit 1
       {
         HOME: homeRoot,
         CODEX_HOME: codexConfigFixture.codexHome,
+        OPL_STATE_DIR: stateRoot,
         OPL_DEVELOPER_MODE_GH_BINARY: path.join(homeRoot, 'missing-gh'),
         OPL_CODEX_CLI_LATEST_VERSION: '0.125.0',
         OPL_FAMILY_RUNTIME_PROVIDER: '',
@@ -156,21 +158,12 @@ exit 1
     assert.equal(output.system.gui_shell.service_dependency, 'none');
     assert.equal(output.system.gui_shell.local_product_api_retired, true);
     assertBlockedDeveloperModeSurface(output.system.developer_mode);
-    assert.match(
-      output.system.managed_paths.state_dir,
-      /Library\/Application Support\/OPL\/state$/,
-    );
-    assert.match(
-      output.system.managed_paths.modules_root,
-      /Library\/Application Support\/OPL\/state\/modules$/,
-    );
-    assert.match(
-      output.system.managed_paths.runtime_modes_file,
-      /runtime-modes\.json$/,
-    );
-    assert.match(
+    assert.equal(output.system.managed_paths.state_dir, stateRoot);
+    assert.equal(output.system.managed_paths.modules_root, path.join(stateRoot, 'modules'));
+    assert.equal(output.system.managed_paths.runtime_modes_file, path.join(stateRoot, 'runtime-modes.json'));
+    assert.equal(
       output.system.managed_paths.workspace_registry_file,
-      /workspace-registry\.json$/,
+      path.join(stateRoot, 'workspace-registry.json'),
     );
   } finally {
     fs.rmSync(codexConfigFixture.codexHome, { recursive: true, force: true });

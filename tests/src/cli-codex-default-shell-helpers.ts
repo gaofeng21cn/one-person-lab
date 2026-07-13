@@ -428,14 +428,12 @@ type GeneratedSurfaceActionFixture = {
   actionId: string;
   title: string;
   summary: string;
-  command: string;
   inputSchemaRef: string;
   outputSchemaRef: string;
   workspaceLocatorFields: string[];
   humanGateIds: string[];
   toolName: string;
   commandContractId: string;
-  intentMapping?: string;
 };
 
 type GeneratedSurfaceStageFixture = {
@@ -516,18 +514,15 @@ function toGeneratedSurfaceAction(pack: GeneratedSurfacePackFixture, action: Gen
     command_contract_id: action.commandContractId,
     surface_kind: 'opl_generated_skill_contract',
   };
-  if (action.intentMapping) {
-    skillSurface.intent_mapping = action.intentMapping;
-  }
   return {
     action_id: action.actionId,
     title: action.title,
     summary: action.summary,
     owner: pack.domainId,
     effect: 'mutating',
-    source_command: {
-      command: action.command,
-      surface_kind: 'domain_smoke_cli',
+    execution_binding: {
+      kind: 'stage_binding',
+      stage_manifest_ref: 'agent/stages/manifest.json',
     },
     input_schema_ref: action.inputSchemaRef,
     output_schema_ref: action.outputSchemaRef,
@@ -535,10 +530,16 @@ function toGeneratedSurfaceAction(pack: GeneratedSurfacePackFixture, action: Gen
     optional_fields: [],
     workspace_locator_fields: action.workspaceLocatorFields,
     human_gate_ids: action.humanGateIds,
+    stage_route: {
+      entry_stage_ref: pack.stage.stageId,
+      required_stage_refs: [pack.stage.stageId],
+      optional_stage_refs: [],
+      terminal_stage_refs: [pack.stage.stageId],
+      route_policy: 'ai_selected_progress_route',
+    },
     supported_surfaces: {
       cli: {
-        command: action.command,
-        surface_kind: 'domain_smoke_cli',
+        surface_kind: 'opl_generated_action_cli',
       },
       mcp: {
         tool_name: action.toolName,
@@ -549,7 +550,6 @@ function toGeneratedSurfaceAction(pack: GeneratedSurfacePackFixture, action: Gen
       skill: skillSurface,
       product_entry: {
         action_key: action.actionId,
-        command: action.command,
         surface_kind: 'domain_product_entry_action',
       },
       openai: { tool_name: action.toolName },
@@ -581,13 +581,14 @@ function writeGeneratedSurfacePackFixture(repoRoot: string, pack: GeneratedSurfa
   });
   writeJsonFixture(path.join(repoRoot, 'contracts', 'action_catalog.json'), {
     surface_kind: 'family_action_catalog',
-    version: 'family-action-catalog.v1',
+    version: 'family-action-catalog.v2',
     catalog_id: pack.catalogId,
     target_domain_id: pack.domainId,
     owner: pack.domainId,
     authority_boundary: {
-      opl_role: 'generated_interface_projection_only',
+      opl_role: 'projection_consumer_only',
       domain_truth_owner: pack.domainId,
+      write_policy: 'no_domain_truth_writes',
     },
     actions: pack.actions.map((action) => toGeneratedSurfaceAction(pack, action)),
     notes: [],
@@ -735,9 +736,6 @@ function writeGeneratedSurfacePackFixture(repoRoot: string, pack: GeneratedSurfa
 }
 
 export function writeFakeOmaGeneratedSurfacePack(repoRoot: string) {
-  const command =
-    'npm run build-agent-baseline -- --output-dir <output_dir> --opl-bin <opl_bin> --ai-reviewer-evaluation <ai_reviewer_evaluation> --domain-id <domain_id> --domain-label <domain_label> --delivery-domain <delivery_domain> --target-brief <target_brief>';
-
   writeGeneratedSurfacePackFixture(repoRoot, {
     canonicalAgentId: 'oma',
     domainId: 'opl-meta-agent',
@@ -753,7 +751,6 @@ export function writeFakeOmaGeneratedSurfacePack(repoRoot: string) {
         actionId: 'build-agent-baseline',
         title: 'Build Agent Baseline',
         summary: 'Generate an OPL-compatible candidate agent package from a user natural-language target-agent request, validate its standard scaffold, run an Agent Lab baseline suite, consume a structured AI reviewer evaluation, and emit baseline delivery and learning refs.',
-        command,
         inputSchemaRef: 'contracts/schemas/build-agent-baseline.input.schema.json',
         outputSchemaRef: 'contracts/schemas/build-agent-baseline.output.schema.json',
         workspaceLocatorFields: [
@@ -768,7 +765,6 @@ export function writeFakeOmaGeneratedSurfacePack(repoRoot: string) {
         humanGateIds: ['baseline_delivery_owner_review'],
         toolName: 'opl_meta_agent_build_agent_baseline',
         commandContractId: 'opl-meta-agent.build-agent-baseline',
-        intentMapping: 'Codex extracts domain_id, domain_label, delivery_domain, target_brief, output_dir, opl_bin, and ai_reviewer_evaluation from the user natural-language request before invoking this action.',
       },
     ],
     stage: {
@@ -825,7 +821,6 @@ export function writeFakeBookForgeGeneratedSurfacePack(repoRoot: string) {
         actionId: 'shape-storyline',
         title: 'Shape Storyline',
         summary: 'Shape a book premise, reader promise, argument arc, source map, chapter thesis chain, style contract, and owner handoff.',
-        command: 'npm run shape-storyline -- --book-brief <book_brief> --source-corpus <source_corpus>',
         inputSchemaRef: 'contracts/schemas/shape-storyline.input.schema.json',
         outputSchemaRef: 'contracts/schemas/shape-storyline.output.schema.json',
         workspaceLocatorFields: ['book_brief', 'source_corpus'],
@@ -837,7 +832,6 @@ export function writeFakeBookForgeGeneratedSurfacePack(repoRoot: string) {
         actionId: 'materialize-book',
         title: 'Materialize Book',
         summary: 'Materialize chapters, manuscript body, figure and table plans, style checks, layout QC, exports, and owner-gated handoff refs.',
-        command: 'npm run materialize-book -- --storyline <storyline> --output-dir <output_dir>',
         inputSchemaRef: 'contracts/schemas/materialize-book.input.schema.json',
         outputSchemaRef: 'contracts/schemas/materialize-book.output.schema.json',
         workspaceLocatorFields: ['storyline', 'output_dir'],
@@ -847,13 +841,13 @@ export function writeFakeBookForgeGeneratedSurfacePack(repoRoot: string) {
       },
     ],
     stage: {
-      stageId: 'storyline-architecture',
+      stageId: 'book-production',
       stageKind: 'creation',
-      title: 'Storyline Architecture',
-      summary: 'Shape a book storyline.',
-      goal: 'Create a reader promise, argument arc, chapter thesis chain, and style contract.',
-      domainStageRefs: ['storyline-architecture'],
-      allowedActionRefs: ['shape-storyline'],
+      title: 'Book Production',
+      summary: 'Shape and materialize a book deliverable.',
+      goal: 'Create a coherent storyline and materialize its owner-gated book deliverable.',
+      domainStageRefs: ['book-production'],
+      allowedActionRefs: ['shape-storyline', 'materialize-book'],
     },
     modules: [
       {
