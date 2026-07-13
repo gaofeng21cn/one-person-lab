@@ -1,3 +1,5 @@
+import { execFileSync } from 'node:child_process';
+
 import {
   assert,
   assertContractsContext,
@@ -300,9 +302,11 @@ test('domain selection routes representative admitted boundary and candidate-lan
 test('domain selection uses package-locked domain routing signals for natural-language goals', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-atlas-package-lock-'));
   const domainRepo = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-atlas-domain-'));
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-atlas-package-home-'));
   const previousStateRoot = process.env.OPL_STATE_DIR;
   try {
     fs.mkdirSync(path.join(domainRepo, 'contracts'), { recursive: true });
+    fs.mkdirSync(path.join(domainRepo, 'scripts'), { recursive: true });
     fs.writeFileSync(path.join(domainRepo, 'contracts', 'domain_descriptor.json'), `${JSON.stringify({
       domain_id: 'redcube-ai',
       standard_agent_interface: {
@@ -330,13 +334,60 @@ test('domain selection uses package-locked domain routing signals for natural-la
         },
       },
     })}\n`);
-    fs.writeFileSync(path.join(stateRoot, 'agent-package-locks.json'), `${JSON.stringify({
-      packages: [{
-        package_id: 'rca',
-        agent_id: 'rca',
-        managed_runtime_source: { status: 'current', checkout_path: domainRepo },
-      }],
-    })}\n`);
+    fs.writeFileSync(path.join(domainRepo, 'package.json'), `${JSON.stringify({
+      name: 'redcube-ai-fixture',
+      scripts: { redcube: 'node scripts/handler.mjs' },
+    }, null, 2)}\n`);
+    fs.writeFileSync(path.join(domainRepo, 'scripts', 'handler.mjs'), [
+      "if (!process.argv.includes('--help')) process.exit(2);",
+      "process.stdout.write('redcube-handler-ready\\n');",
+    ].join('\n'));
+    fs.writeFileSync(path.join(domainRepo, 'scripts', 'opl-module-healthcheck.sh'), [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      "printf 'redcube-health-ready\\n'",
+    ].join('\n'), { mode: 0o755 });
+    execFileSync('git', ['init', '-q'], { cwd: domainRepo });
+    execFileSync('git', ['add', '.'], { cwd: domainRepo });
+    execFileSync('git', [
+      '-c', 'user.email=fixture@example.com',
+      '-c', 'user.name=Fixture',
+      'commit', '-qm', 'package-managed descriptor fixture',
+    ], { cwd: domainRepo });
+
+    const manifestPath = path.join(stateRoot, 'rca-package-manifest.json');
+    fs.mkdirSync(stateRoot, { recursive: true });
+    fs.writeFileSync(manifestPath, `${JSON.stringify({
+      surface_kind: 'opl_agent_package_manifest.v1',
+      package_id: 'rca',
+      agent_id: 'rca',
+      display_name: 'RedCube AI fixture',
+      publisher: 'opl-test',
+      version: '0.0.0-test',
+      source: 'local_contract_fixture',
+      carrier_source_role: 'codex_plugin_default_carrier_not_package_truth',
+      codex_surface: { required_skill_ids: ['rca'] },
+      capability_dependencies: [],
+      runtime_source_carrier: {
+        carrier_kind: 'opl_managed_module_source',
+        module_id: 'redcube',
+      },
+    }, null, 2)}\n`);
+    const packageEnv = {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, '.codex'),
+      OPL_STATE_DIR: stateRoot,
+      OPL_MODULES_ROOT: path.join(stateRoot, 'managed-modules'),
+    };
+    runCli([
+      'packages', 'install', '--manifest-url', manifestPath, '--trust-tier', 'first_party',
+      '--source-kind', 'developer_checkout_override', '--agent-root', domainRepo,
+    ], packageEnv);
+    const status = runCli(['packages', 'status', '--package-id', 'rca'], packageEnv)
+      .opl_agent_package_status;
+    assert.equal(status.package_dependency_readiness.operational_ready, true);
+    assert.equal(status.runtime_source_readiness.status, 'current');
+    assert.equal(status.runtime_source_readiness.operational_ready, true);
     process.env.OPL_STATE_DIR = stateRoot;
     const resolution = selectDomainAgentEntry({
       intent: 'create',
@@ -351,6 +402,7 @@ test('domain selection uses package-locked domain routing signals for natural-la
     else process.env.OPL_STATE_DIR = previousStateRoot;
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(domainRepo, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
   }
 });
 
