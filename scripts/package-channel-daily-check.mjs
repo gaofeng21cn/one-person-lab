@@ -78,7 +78,13 @@ function ecosystemFingerprint(manifest) {
 function changedComponents(candidateFingerprint, currentFingerprint) {
   const componentIds = new Set([...Object.keys(candidateFingerprint), ...Object.keys(currentFingerprint)]);
   return [...componentIds]
-    .filter((componentId) => JSON.stringify(candidateFingerprint[componentId] ?? null) !== JSON.stringify(currentFingerprint[componentId] ?? null))
+    .filter((componentId) => {
+      const candidate = candidateFingerprint[componentId] ?? null;
+      const current = currentFingerprint[componentId] ?? null;
+      const candidateIdentity = candidate && { version: candidate.version, content_digest: candidate.content_digest };
+      const currentIdentity = current && { version: current.version, content_digest: current.content_digest };
+      return JSON.stringify(candidateIdentity) !== JSON.stringify(currentIdentity);
+    })
     .sort();
 }
 
@@ -88,7 +94,19 @@ function changedPackages(candidateFingerprint, currentFingerprint) {
     ...Object.keys(currentFingerprint),
   ]);
   return [...packageIds]
-    .filter((packageId) => JSON.stringify(candidateFingerprint[packageId] ?? null) !== JSON.stringify(currentFingerprint[packageId] ?? null))
+    .filter((packageId) => {
+      const candidate = candidateFingerprint[packageId] ?? null;
+      const current = currentFingerprint[packageId] ?? null;
+      const candidateIdentity = candidate && {
+        package_version: candidate.package_version,
+        package_content_digest: candidate.package_content_digest,
+      };
+      const currentIdentity = current && {
+        package_version: current.package_version,
+        package_content_digest: current.package_content_digest,
+      };
+      return JSON.stringify(candidateIdentity) !== JSON.stringify(currentIdentity);
+    })
     .sort();
 }
 

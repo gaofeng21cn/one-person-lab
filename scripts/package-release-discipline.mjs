@@ -118,6 +118,10 @@ function validateManifest(manifest, promotionTarget = 'candidate') {
   assertCondition(releaseSet?.generation === generation, 'Release Set generation fields disagree', failures);
   assertCondition(releaseSet?.generation_scheme === 'calver_yy.m.d_optional_revision', 'Release Set generation scheme drifted', failures);
   assertCondition(releaseSet?.catalog_carrier_is_package_identity === false, 'Catalog carrier must not become an eighth Package identity', failures);
+  assertCondition(releaseSet?.owner_cohort_lock?.surface_kind === 'opl_package_owner_cohort_lock.v1', 'Release Set must bind an owner cohort lock', failures);
+  assertCondition(releaseSet?.owner_cohort_lock?.ref === 'owner-cohort-lock.json', 'Owner cohort lock ref drifted', failures);
+  assertCondition(isDigest(releaseSet?.owner_cohort_lock?.digest), 'Owner cohort lock digest is invalid', failures);
+  assertCondition(JSON.stringify([...(releaseSet?.owner_cohort_lock?.package_ids ?? [])].sort()) === JSON.stringify([...CANONICAL_PACKAGE_IDS].sort()), 'Owner cohort lock must bind the canonical seven', failures);
   assertCondition(typeof releaseSet?.catalog_carrier === 'string' && releaseSet.catalog_carrier.includes(`one-person-lab-manifest:${generation}`), 'Release Set catalog carrier ref drifted', failures);
   assertCondition(releaseSet?.promotion_evidence_status === 'requires_remote_tag_readback', 'Release Set must not pre-claim channel promotion', failures);
   assertCondition(JSON.stringify(packageIds) === JSON.stringify([...CANONICAL_PACKAGE_IDS].sort()), 'Package artifact ids must be the canonical seven', failures);
@@ -189,15 +193,22 @@ function validateWorkflow(manifest, manifestPath, failures) {
   assertCondition(/--anonymous/.test(source), 'Package workflow must verify anonymous pull access', failures);
   assertCondition(/--expected-digest/.test(source), 'Package workflow must verify exact digest readback', failures);
   assertCondition(/finalize-package-channel-digests\.mjs[\s\S]*--check/.test(source), 'Package workflow must verify a complete Release Set BOM', failures);
+  assertCondition(/owner-cohort-lock\.json/.test(source) && /owner_cohort_artifact_name/.test(source), 'Package workflow must consume a frozen owner cohort lock', failures);
+  assertCondition(/generate-release-supply-chain\.mjs/.test(source) && /actions\/attest@v4/.test(source), 'Package workflow must generate and attest SBOM/provenance', failures);
+  assertCondition(/push-to-registry:\s*true/.test(source), 'Package workflow must publish OCI attestation referrers', failures);
+  assertCondition(/write-release-promotion-receipt\.mjs/.test(source), 'Candidate publication must emit a machine-readable promotion receipt', failures);
   assertCondition(/package-manifest\.json/.test(source) && !/agent-package-manifest\.json/.test(source), 'OCI Package layers must use the generic package manifest filename', failures);
   assertCondition(/generation_ref="\$\{carrier\}:\$\{OPL_RELEASE_SET_GENERATION\}"/.test(source), 'Catalog carrier must use immutable Release Set generation', failures);
   assertCondition(/oras tag .* candidate/.test(source) && !/oras tag .* latest-stable/.test(source), 'Package build workflow must publish candidate only', failures);
   assertCondition(!/:latest(?:["'\s]|$)/m.test(source), 'Package workflow must not publish or consume bare latest', failures);
 
-  assertCondition(/release:[\s\S]*types:[\s\S]*-\s*published/.test(releaseSource), 'Release caller must be gated by published GitHub Release', failures);
+  assertCondition(!/\n\s*release:\s*\n/.test(releaseSource), 'Stable promotion must not have a second GitHub Release event writer', failures);
+  assertCondition(/workflow_dispatch:/.test(releaseSource), 'Stable promotion must retain an explicit dispatch owner surface', failures);
   assertCondition(/release_set_generation:/.test(releaseSource) && /promote-exact-release-set:/.test(releaseSource), 'Release caller must promote an explicit immutable generation', failures);
   assertCondition(/oras pull "\$\{carrier\}@\$\{carrier_digest\}"/.test(releaseSource), 'Stable promotion must pull the exact immutable catalog digest', failures);
   assertCondition(/components\.packages\.members/.test(releaseSource) && /components\.base\.artifact_digest/.test(releaseSource), 'Stable promotion must retag exact Package and Base digests', failures);
+  assertCondition(/expected_carrier_digest/.test(releaseSource) && /promotion_request_id/.test(releaseSource), 'Stable promotion must bind the App saga request and candidate digest', failures);
+  assertCondition(/write-release-promotion-receipt\.mjs/.test(releaseSource), 'Stable promotion must publish a machine-readable receipt', failures);
   assertCondition(/schedule:[\s\S]*cron:/.test(dailySource), 'Daily Package workflow must remain scheduled', failures);
   assertCondition(/concurrency:[\s\S]*group:\s*opl-daily-package-channel-\$\{\{ github\.repository_owner \}\}[\s\S]*cancel-in-progress:\s*false/.test(dailySource), 'Daily Package workflow must serialize Release Set generation allocation', failures);
   assertCondition(/release_set_generation:/.test(dailySource) && /--release-set-generation/.test(dailySource), 'Daily workflow must use Release Set generation vocabulary', failures);
@@ -208,6 +219,7 @@ function validateWorkflow(manifest, manifestPath, failures) {
   assertCondition(/force_publish[\s\S]*publish_required=true/.test(dailySource), 'force_publish must be consumed as an explicit Release Set repair', failures);
   assertCondition(/publish_required == 'true'/.test(dailySource), 'Daily workflow must skip publication when unchanged', failures);
   assertCondition(/promotion_target:\s*candidate/.test(dailySource), 'Daily workflow may promote candidate only', failures);
+  assertCondition(/owner_cohort_artifact_name/.test(dailySource), 'Daily detection must pass the frozen owner cohort into publication', failures);
   assertCondition(!/:latest(?:["'\s]|$)/m.test(dailySource), 'Daily Package workflow must not use bare latest', failures);
 }
 

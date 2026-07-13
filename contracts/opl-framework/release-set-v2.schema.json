@@ -27,6 +27,23 @@
     },
     "bom_status": { "enum": ["planned", "pending_remote_verification", "complete"] },
     "bom_digest": { "type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$" },
+    "owner_cohort_lock": {
+      "type": "object",
+      "required": ["surface_kind", "ref", "digest", "package_ids"],
+      "properties": {
+        "surface_kind": { "const": "opl_package_owner_cohort_lock.v1" },
+        "ref": { "const": "owner-cohort-lock.json" },
+        "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "package_ids": {
+          "type": "array",
+          "minItems": 7,
+          "maxItems": 7,
+          "uniqueItems": true,
+          "items": { "enum": ["mas", "mag", "rca", "oma", "obf", "mas-scholar-skills", "opl-flow"] }
+        }
+      },
+      "additionalProperties": false
+    },
     "update_decision": {
       "type": "object",
       "required": ["comparison_key", "release_set_revision_affects_component_update", "unchanged_component_behavior"],

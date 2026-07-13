@@ -1,9 +1,7 @@
 name: Promote OPL Release Set
+run-name: OPL ${{ inputs.promotion_target }} ${{ inputs.release_set_generation }} / ${{ inputs.promotion_request_id || github.run_id }}
 
 on:
-  release:
-    types:
-      - published
   workflow_dispatch:
     inputs:
       release_set_generation:
@@ -26,10 +24,37 @@ on:
         required: false
         type: string
         default: ''
+      promotion_request_id:
+        description: Cross-repository saga correlation id
+        required: false
+        type: string
+        default: ''
+      source_app_run_id:
+        description: App workflow run that owns the release saga
+        required: false
+        type: string
+        default: ''
+      expected_app_source_commit:
+        description: Exact App source commit expected by the caller
+        required: false
+        type: string
+        default: ''
+      expected_app_artifact_digest:
+        description: Exact primary App artifact digest expected by the caller
+        required: false
+        type: string
+        default: ''
+      expected_carrier_digest:
+        description: Candidate catalog digest required for latest-stable promotion
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
   packages: write
+  id-token: write
+  attestations: write
 
 concurrency:
   group: opl-package-publication-${{ github.repository_owner }}
@@ -48,10 +73,14 @@ jobs:
       release_gate: ${{ inputs.release_gate }}
       promotion_target: candidate
       app_version: ${{ inputs.app_version }}
+      promotion_request_id: ${{ inputs.promotion_request_id }}
+      source_app_run_id: ${{ inputs.source_app_run_id }}
+      expected_app_source_commit: ${{ inputs.expected_app_source_commit }}
+      expected_app_artifact_digest: ${{ inputs.expected_app_artifact_digest }}
 
   promote-exact-release-set:
     name: Promote exact immutable BOM to latest-stable
-    if: github.event_name == 'release' || inputs.promotion_target == 'latest-stable'
+    if: inputs.promotion_target == 'latest-stable'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -72,9 +101,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          generation="${{ github.event_name == 'release' && github.event.release.tag_name || inputs.release_set_generation }}"
+          generation="${{ inputs.release_set_generation }}"
           generation="${generation#v}"
           [[ "$generation" =~ ^[0-9]{2}\.[0-9]{1,2}\.[0-9]{1,2}(-r[1-9][0-9]*)?$ ]]
+          request_id="${{ inputs.promotion_request_id }}"
+          if [ -z "$request_id" ]; then request_id="run-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"; fi
+          [[ "$request_id" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$ ]]
           owner="${{ github.repository_owner }}"
           carrier="ghcr.io/${owner}/one-person-lab-manifest"
           root="$RUNNER_TEMP/opl-release-set"
@@ -83,11 +115,21 @@ jobs:
           descriptor="$(oras manifest fetch --descriptor "${carrier}:${generation}")"
           carrier_digest="$(jq -r .digest <<<"$descriptor")"
           [[ "$carrier_digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          expected_carrier_digest="${{ inputs.expected_carrier_digest }}"
+          [ -z "$expected_carrier_digest" ] || [ "$carrier_digest" = "$expected_carrier_digest" ]
           oras pull "${carrier}@${carrier_digest}" --output "$root"
           release_manifest="$(find "$root" -name opl-release-manifest.json -print -quit)"
           channel_manifest="$(find "$root" -name opl-channel-manifest.json -print -quit)"
           test -n "$release_manifest" && test -n "$channel_manifest"
           test "$(jq -r .release_set_generation "$release_manifest")" = "$generation"
+          app_version="$(jq -r '.release_set.components.app.version' "$release_manifest")"
+          app_commit="$(jq -r '.release_set.components.app.source_commit' "$release_manifest")"
+          app_digest="$(jq -r '.release_set.components.app.artifact_digest' "$release_manifest")"
+          expected_app_version="${{ inputs.app_version }}"
+          expected_app_version="${expected_app_version#v}"
+          [ -z "$expected_app_version" ] || [ "$app_version" = "$expected_app_version" ]
+          [ -z "${{ inputs.expected_app_source_commit }}" ] || [ "$app_commit" = "${{ inputs.expected_app_source_commit }}" ]
+          [ -z "${{ inputs.expected_app_artifact_digest }}" ] || [ "$app_digest" = "${{ inputs.expected_app_artifact_digest }}" ]
           OPL_PACKAGE_PROMOTION_TARGET=latest-stable node scripts/finalize-package-channel-digests.mjs \
             --release-manifest "$release_manifest" \
             --channel-manifest "$channel_manifest" \
@@ -122,3 +164,30 @@ jobs:
           done < <(jq -r '.release_set.components.packages.members | to_entries[] | [.key, .value.artifact_digest] | @tsv' "$release_manifest")
           verify_public_digest "${base_image}:latest-stable" "$base_digest"
           verify_public_digest "${carrier}:latest-stable" "$carrier_digest"
+          receipt_root="$RUNNER_TEMP/opl-release-promotion-receipt"
+          mkdir -p "$receipt_root"
+          node scripts/write-release-promotion-receipt.mjs \
+            --release-manifest "$release_manifest" \
+            --output "$receipt_root/opl-release-promotion-receipt.json" \
+            --target latest-stable \
+            --carrier-ref "${carrier}:${generation}" \
+            --carrier-digest "$carrier_digest" \
+            --promotion-request-id "$request_id" \
+            --release-gate "${{ inputs.release_gate }}" \
+            --source-app-run-id "${{ inputs.source_app_run_id }}" \
+            --framework-repository "$GITHUB_REPOSITORY" \
+            --framework-run-id "$GITHUB_RUN_ID" \
+            --framework-run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --expected-app-version "${{ inputs.app_version }}" \
+            --expected-app-source-commit "${{ inputs.expected_app_source_commit }}" \
+            --expected-app-artifact-digest "${{ inputs.expected_app_artifact_digest }}" \
+            --anonymous-readback true
+          echo "OPL_PROMOTION_REQUEST_ID=$request_id" >> "$GITHUB_ENV"
+          echo "OPL_PROMOTION_RECEIPT_PATH=$receipt_root/opl-release-promotion-receipt.json" >> "$GITHUB_ENV"
+
+      - name: Upload latest-stable promotion receipt
+        uses: actions/upload-artifact@v7
+        with:
+          name: opl-release-promotion-receipt-${{ env.OPL_PROMOTION_REQUEST_ID }}-latest-stable
+          path: ${{ env.OPL_PROMOTION_RECEIPT_PATH }}
+          if-no-files-found: error

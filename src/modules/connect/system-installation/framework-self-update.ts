@@ -126,6 +126,7 @@ function isOplFrameworkRoot(repoPath: string) {
     && (
       fs.existsSync(path.join(repoPath, 'src', 'entrypoints', 'cli.ts'))
       || fs.existsSync(path.join(repoPath, 'src', 'cli.ts'))
+      || fs.existsSync(path.join(repoPath, 'dist', 'entrypoints', 'cli.js'))
     )
     && fs.existsSync(path.join(repoPath, 'bin', 'opl'));
 }
@@ -269,7 +270,11 @@ function resolveFallbackPreviousFrameworkRoot(targetRoot: string) {
 
 function runDependencyInstall(targetRoot: string): FrameworkDependencyInstall {
   const command = 'npm';
-  const args = ['install', '--include=dev', '--include=optional', '--ignore-scripts=false'];
+  const runtimePayload = fs.existsSync(path.join(targetRoot, 'dist', 'entrypoints', 'cli.js'))
+    && !fs.existsSync(path.join(targetRoot, 'src'));
+  const args = runtimePayload
+    ? ['ci', '--omit=dev', '--include=optional', '--ignore-scripts=false']
+    : ['install', '--include=dev', '--include=optional', '--ignore-scripts=false'];
   const result: CommandResult = runCommand(command, args, targetRoot, {
     maxBuffer: 16 * 1024 * 1024,
     timeoutMs: 180_000,

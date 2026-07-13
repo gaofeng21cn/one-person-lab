@@ -18,6 +18,8 @@ on:
 permissions:
   contents: read
   packages: write
+  id-token: write
+  attestations: write
 
 concurrency:
   group: opl-daily-package-channel-${{ github.repository_owner }}
@@ -35,6 +37,7 @@ jobs:
       publish_required: ${{ steps.decide.outputs.publish_required }}
       release_set_generation: ${{ steps.generation.outputs.release_set_generation }}
       changed_packages_json: ${{ steps.decide.outputs.changed_packages_json }}
+      owner_cohort_artifact_name: ${{ steps.generation.outputs.owner_cohort_artifact_name }}
     steps:
       - name: Checkout OPL
         uses: actions/checkout@v6
@@ -73,6 +76,7 @@ jobs:
             exit 1
           fi
           echo "release_set_generation=$generation" >> "$GITHUB_OUTPUT"
+          echo "owner_cohort_artifact_name=opl-daily-package-channel-candidate-$generation" >> "$GITHUB_OUTPUT"
           echo "OPL_RELEASE_SET_GENERATION=$generation" >> "$GITHUB_ENV"
           echo "OPL_PACKAGES_OWNER=${{ github.repository_owner }}" >> "$GITHUB_ENV"
 
@@ -176,3 +180,5 @@ jobs:
       release_gate: ${{ inputs.force_publish && 'daily_package_channel_forced' || 'daily_package_channel_changed' }}
       changed_packages_json: ${{ needs.detect-package-channel-change.outputs.changed_packages_json }}
       promotion_target: candidate
+      promotion_request_id: daily-${{ needs.detect-package-channel-change.outputs.release_set_generation }}
+      owner_cohort_artifact_name: ${{ needs.detect-package-channel-change.outputs.owner_cohort_artifact_name }}

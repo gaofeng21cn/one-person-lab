@@ -290,7 +290,11 @@ function copyDirectoryContents(source: string, target: string) {
 
 function isOplFrameworkRoot(root: string) {
   return fs.existsSync(path.join(root, 'package.json'))
-    && fs.existsSync(path.join(root, 'src', 'cli.ts'))
+    && (
+      fs.existsSync(path.join(root, 'src', 'entrypoints', 'cli.ts'))
+      || fs.existsSync(path.join(root, 'src', 'cli.ts'))
+      || fs.existsSync(path.join(root, 'dist', 'entrypoints', 'cli.js'))
+    )
     && fs.existsSync(path.join(root, 'bin', 'opl'));
 }
 

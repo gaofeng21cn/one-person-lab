@@ -65,6 +65,13 @@ function assertFinalized(release, channel) {
     || release.release_set?.surface_kind !== 'opl_release_set.v2') {
     failures.push('release_set_generation');
   }
+  const cohortLock = release.release_set?.owner_cohort_lock;
+  if (cohortLock?.surface_kind !== 'opl_package_owner_cohort_lock.v1'
+    || cohortLock?.ref !== 'owner-cohort-lock.json'
+    || !/^sha256:[0-9a-f]{64}$/.test(cohortLock?.digest ?? '')
+    || JSON.stringify([...(cohortLock?.package_ids ?? [])].sort()) !== JSON.stringify([...CANONICAL_PACKAGE_IDS].sort())) {
+    failures.push('owner_cohort_lock');
+  }
   if (release.release_channel !== undefined
     || channel.release_channel !== undefined
     || release.release_set?.target_channel !== undefined

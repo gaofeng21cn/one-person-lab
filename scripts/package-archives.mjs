@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -27,6 +28,7 @@ function parseCliOptions(argv) {
     previousManifest: process.env.OPL_PREVIOUS_PACKAGE_MANIFEST || undefined,
     retainVersions: process.env.OPL_PACKAGE_RETAIN_VERSIONS || undefined,
     appComponentManifest: process.env.OPL_APP_COMPONENT_MANIFEST || undefined,
+    ownerCohortLock: process.env.OPL_PACKAGE_OWNER_COHORT_LOCK || undefined,
   };
 
   parseRequiredValueOptions(argv, {
@@ -54,6 +56,9 @@ function parseCliOptions(argv) {
     '--app-component-manifest': (value) => {
       parsed.appComponentManifest = path.resolve(value);
     },
+    '--owner-cohort-lock': (value) => {
+      parsed.ownerCohortLock = path.resolve(value);
+    },
   });
 
   if (!parsed.cloneRoot) {
@@ -68,7 +73,7 @@ function run(command, args, options = {}) {
     cwd: options.cwd,
     encoding: 'utf8',
     stdio: options.capture ? 'pipe' : 'inherit',
-    env: process.env,
+    env: { ...process.env, ...options.env },
   });
   if (result.status !== 0) {
     throw new Error(
@@ -126,22 +131,32 @@ function normalizeRetainVersions(raw) {
   return Math.floor(parsed);
 }
 
-function resolveModuleRepo(spec, cloneRoot) {
+function resolveModuleRepo(spec, cloneRoot, lockedCommit = null) {
   const explicit = process.env[packageSourcePathEnvKey(spec.package_id)]?.trim();
   if (explicit) {
-    return path.resolve(explicit);
+    const explicitPath = path.resolve(explicit);
+    const head = readGitValue(explicitPath, ['rev-parse', 'HEAD']);
+    if (lockedCommit && head !== lockedCommit) {
+      throw new Error(`${spec.package_id}: explicit owner source HEAD ${head} does not match cohort lock ${lockedCommit}`);
+    }
+    return explicitPath;
   }
 
   const checkoutPath = path.join(cloneRoot, spec.repo_name);
   if (!fs.existsSync(path.join(checkoutPath, '.git'))) {
     fs.rmSync(checkoutPath, { recursive: true, force: true });
     fs.mkdirSync(path.dirname(checkoutPath), { recursive: true });
-    run('git', ['clone', '--depth', '1', spec.repo_url, checkoutPath]);
+    run('git', ['clone', '--filter=blob:none', '--no-checkout', spec.repo_url, checkoutPath]);
   } else {
     run('git', ['remote', 'set-url', 'origin', spec.repo_url], { cwd: checkoutPath });
-    run('git', ['fetch', '--depth', '1', 'origin', 'main'], { cwd: checkoutPath });
-    run('git', ['checkout', '--detach', 'FETCH_HEAD'], { cwd: checkoutPath });
   }
+  const fetchTarget = lockedCommit || 'main';
+  run('git', ['fetch', '--depth', '1', 'origin', fetchTarget], { cwd: checkoutPath });
+  const fetchedCommit = readGitValue(checkoutPath, ['rev-parse', 'FETCH_HEAD']);
+  if (lockedCommit && fetchedCommit !== lockedCommit) {
+    throw new Error(`${spec.package_id}: fetched owner commit ${fetchedCommit} does not match cohort lock ${lockedCommit}`);
+  }
+  run('git', ['checkout', '--detach', fetchedCommit], { cwd: checkoutPath });
   return checkoutPath;
 }
 
@@ -231,14 +246,60 @@ function readOwnerPackageMetadata(spec, repoPath, releaseGate) {
   };
 }
 
+function copyRuntimePayload(repoPath, payloadRoot) {
+  const packageJson = readJsonObject(path.join(repoPath, 'package.json'));
+  if (!Array.isArray(packageJson.files)) {
+    throw new Error('OPL Base package.json files must define the runtime payload allowlist');
+  }
+  const entries = ['package.json', 'package-lock.json', ...packageJson.files];
+  for (const relativePath of entries) {
+    const sourcePath = path.join(repoPath, relativePath);
+    if (!fs.existsSync(sourcePath)) continue;
+    const targetPath = path.join(payloadRoot, relativePath);
+    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+    fs.cpSync(sourcePath, targetPath, { recursive: true, preserveTimestamps: true });
+  }
+  const runtimePackageJson = structuredClone(packageJson);
+  if (runtimePackageJson.scripts && typeof runtimePackageJson.scripts === 'object') {
+    delete runtimePackageJson.scripts.prepare;
+    delete runtimePackageJson.scripts.build;
+    delete runtimePackageJson.scripts.typecheck;
+  }
+  fs.writeFileSync(path.join(payloadRoot, 'package.json'), `${JSON.stringify(runtimePackageJson, null, 2)}\n`, 'utf8');
+  for (const requiredPath of ['package.json', 'package-lock.json', 'bin/opl', 'dist/entrypoints/cli.js', 'contracts/opl-framework']) {
+    if (!fs.existsSync(path.join(payloadRoot, requiredPath))) {
+      throw new Error(`OPL Base runtime payload is missing ${requiredPath}`);
+    }
+  }
+}
+
 function archiveFramework(repoPath, frameworkOutDir, version) {
   fs.mkdirSync(frameworkOutDir, { recursive: true });
   const archiveName = `one-person-lab-framework-${version}.tar.gz`;
   const archivePath = path.join(frameworkOutDir, archiveName);
   fs.rmSync(archivePath, { force: true });
-  run('git', ['archive', '--format=tar.gz', '--prefix=one-person-lab/', '-o', archivePath, 'HEAD'], {
-    cwd: repoPath,
-  });
+  run('npm', ['run', 'build'], { cwd: repoPath, capture: true });
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-base-runtime-'));
+  try {
+    const payloadRoot = path.join(tempRoot, 'payload');
+    copyRuntimePayload(repoPath, payloadRoot);
+    run('git', ['init', '--quiet'], { cwd: payloadRoot });
+    run('git', ['config', 'user.name', 'OPL Release'], { cwd: payloadRoot });
+    run('git', ['config', 'user.email', 'release@one-person-lab.invalid'], { cwd: payloadRoot });
+    run('git', ['add', '--all'], { cwd: payloadRoot });
+    run('git', ['commit', '--quiet', '-m', 'OPL Base runtime payload'], {
+      cwd: payloadRoot,
+      env: {
+        GIT_AUTHOR_DATE: '2000-01-01T00:00:00Z',
+        GIT_COMMITTER_DATE: '2000-01-01T00:00:00Z',
+      },
+    });
+    run('git', ['archive', '--format=tar.gz', '--prefix=one-person-lab/', '-o', archivePath, 'HEAD'], {
+      cwd: payloadRoot,
+    });
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
   const stat = fs.statSync(archivePath);
   return {
     file_name: archiveName,
@@ -247,6 +308,55 @@ function archiveFramework(repoPath, frameworkOutDir, version) {
     sha256: sha256File(archivePath),
     head_sha: readGitValue(repoPath, ['rev-parse', 'HEAD']),
     branch: readGitValue(repoPath, ['branch', '--show-current']) || null,
+  };
+}
+
+function validateOwnerCohortLock(lock) {
+  if (lock?.surface_kind !== 'opl_package_owner_cohort_lock.v1') {
+    throw new Error('Owner cohort lock must use opl_package_owner_cohort_lock.v1');
+  }
+  const expectedIds = getOplPackageSpecs().map((spec) => spec.package_id).sort();
+  const actualIds = Object.keys(lock.packages ?? {}).sort();
+  if (JSON.stringify(actualIds) !== JSON.stringify(expectedIds)) {
+    throw new Error(`Owner cohort lock ids must be exactly: ${expectedIds.join(', ')}`);
+  }
+  for (const spec of getOplPackageSpecs()) {
+    const entry = lock.packages[spec.package_id];
+    if (entry.package_id !== spec.package_id
+      || entry.repo_name !== spec.repo_name
+      || entry.repo_url !== spec.repo_url
+      || !/^[0-9a-f]{40}$/.test(entry.source_commit ?? '')) {
+      throw new Error(`${spec.package_id}: invalid owner cohort lock entry`);
+    }
+  }
+  return lock;
+}
+
+function resolveOwnerCohort(options) {
+  const supplied = options.ownerCohortLock
+    ? validateOwnerCohortLock(readJsonFile(options.ownerCohortLock))
+    : null;
+  const resolved = new Map();
+  const packages = {};
+  for (const spec of getOplPackageSpecs()) {
+    const lockedCommit = supplied?.packages?.[spec.package_id]?.source_commit ?? null;
+    const repoPath = resolveModuleRepo(spec, options.cloneRoot, lockedCommit);
+    const sourceCommit = readGitValue(repoPath, ['rev-parse', 'HEAD']);
+    resolved.set(spec.package_id, repoPath);
+    packages[spec.package_id] = {
+      package_id: spec.package_id,
+      repo_name: spec.repo_name,
+      repo_url: spec.repo_url,
+      source_commit: sourceCommit,
+    };
+  }
+  return {
+    lock: supplied ?? {
+      surface_kind: 'opl_package_owner_cohort_lock.v1',
+      generated_at: options.generatedAt ?? new Date().toISOString(),
+      packages,
+    },
+    resolved,
   };
 }
 
@@ -281,6 +391,7 @@ function main() {
   const options = parseCliOptions(process.argv.slice(2));
   const previousManifest = readPreviousManifest(options.previousManifest);
   const appComponent = readAppComponentManifest(options.appComponentManifest);
+  const ownerCohort = resolveOwnerCohort(options);
   const rollbackVersion = previousManifest?.release_set_generation ?? null;
   const retainVersions = normalizeRetainVersions(options.retainVersions);
   const manifest = buildOplPackageManifest({
@@ -295,6 +406,20 @@ function main() {
   const packagesOutDir = path.join(options.outDir, 'packages');
   const frameworkOutDir = path.join(options.outDir, 'framework');
   const archives = [];
+  fs.mkdirSync(options.outDir, { recursive: true });
+  const ownerCohortLockPath = path.join(options.outDir, 'owner-cohort-lock.json');
+  fs.writeFileSync(ownerCohortLockPath, `${JSON.stringify(ownerCohort.lock, null, 2)}\n`, 'utf8');
+  const ownerCohortLockDigest = `sha256:${sha256File(ownerCohortLockPath)}`;
+  manifest.release_set.owner_cohort_lock = {
+    surface_kind: ownerCohort.lock.surface_kind,
+    ref: 'owner-cohort-lock.json',
+    digest: ownerCohortLockDigest,
+    package_ids: Object.keys(ownerCohort.lock.packages).sort(),
+  };
+  archives.push({
+    relative_path: 'owner-cohort-lock.json',
+    sha256: ownerCohortLockDigest.replace(/^sha256:/, ''),
+  });
   const frameworkVersion = manifest.packages.framework_core.version;
   const frameworkArchive = archiveFramework(repoRoot, frameworkOutDir, frameworkVersion);
   archives.push({
@@ -333,7 +458,7 @@ function main() {
   };
 
   for (const spec of getOplPackageSpecs()) {
-    const repoPath = resolveModuleRepo(spec, options.cloneRoot);
+    const repoPath = ownerCohort.resolved.get(spec.package_id);
     const ownerMetadata = readOwnerPackageMetadata(
       spec,
       repoPath,
@@ -401,6 +526,8 @@ function main() {
     manifest: manifestPath,
     channel_manifest: channelManifestPath,
     checksums: checksumPath,
+    owner_cohort_lock: ownerCohortLockPath,
+    owner_cohort_lock_digest: ownerCohortLockDigest,
     release_discipline_workflows: releaseDisciplineWorkflows,
     packages_dir: packagesOutDir,
     framework_dir: frameworkOutDir,

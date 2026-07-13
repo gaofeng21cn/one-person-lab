@@ -1,4 +1,5 @@
 name: Publish OPL Package Release Set
+run-name: OPL candidate ${{ inputs.release_set_generation }} / ${{ inputs.promotion_request_id || github.run_id }}
 
 on:
   workflow_dispatch:
@@ -28,6 +29,31 @@ on:
         required: false
         type: string
         default: ''
+      promotion_request_id:
+        description: Cross-repository saga correlation id
+        required: false
+        type: string
+        default: ''
+      source_app_run_id:
+        description: App workflow run that owns the release saga
+        required: false
+        type: string
+        default: ''
+      expected_app_source_commit:
+        description: Exact App source commit expected by the caller
+        required: false
+        type: string
+        default: ''
+      expected_app_artifact_digest:
+        description: Exact primary App artifact digest expected by the caller
+        required: false
+        type: string
+        default: ''
+      owner_cohort_artifact_name:
+        description: Same-run artifact containing owner-cohort-lock.json from detection
+        required: false
+        type: string
+        default: ''
   workflow_call:
     inputs:
       release_set_generation:
@@ -53,10 +79,37 @@ on:
         required: false
         type: string
         default: ''
+      promotion_request_id:
+        description: Cross-repository saga correlation id
+        required: false
+        type: string
+        default: ''
+      source_app_run_id:
+        description: App workflow run that owns the release saga
+        required: false
+        type: string
+        default: ''
+      expected_app_source_commit:
+        description: Exact App source commit expected by the caller
+        required: false
+        type: string
+        default: ''
+      expected_app_artifact_digest:
+        description: Exact primary App artifact digest expected by the caller
+        required: false
+        type: string
+        default: ''
+      owner_cohort_artifact_name:
+        description: Same-run artifact containing owner-cohort-lock.json from detection
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
   packages: write
+  id-token: write
+  attestations: write
 
 concurrency:
   group: opl-package-publication-${{ github.repository_owner }}
@@ -87,12 +140,19 @@ jobs:
           promotion_target="${{ inputs.promotion_target }}"
           [ "$promotion_target" = candidate ] || { echo "::error::Use release-package-channel.yml to promote an existing immutable BOM to latest-stable."; exit 2; }
           generated_at="$(git show -s --format=%cI HEAD)"
-          echo "OPL_RELEASE_SET_GENERATION=$generation" >> "$GITHUB_ENV"
-          echo "OPL_RELEASE_SET_GENERATED_AT=$generated_at" >> "$GITHUB_ENV"
-          echo "OPL_PACKAGES_OWNER=${{ github.repository_owner }}" >> "$GITHUB_ENV"
-          echo "OPL_PACKAGE_RELEASE_GATE=${{ inputs.release_gate }}" >> "$GITHUB_ENV"
-          echo "OPL_PACKAGE_PROMOTION_TARGET=$promotion_target" >> "$GITHUB_ENV"
-          echo "OPL_OCI_SOURCE_URL=https://github.com/${GITHUB_REPOSITORY}" >> "$GITHUB_ENV"
+          request_id="${{ inputs.promotion_request_id }}"
+          if [ -z "$request_id" ]; then request_id="run-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"; fi
+          [[ "$request_id" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$ ]] || { echo "::error::Invalid promotion request id: $request_id"; exit 1; }
+          {
+            echo "OPL_RELEASE_SET_GENERATION=$generation"
+            echo "OPL_RELEASE_SET_GENERATED_AT=$generated_at"
+            echo "OPL_PACKAGES_OWNER=${{ github.repository_owner }}"
+            echo "OPL_PACKAGE_RELEASE_GATE=${{ inputs.release_gate }}"
+            echo "OPL_PACKAGE_PROMOTION_TARGET=$promotion_target"
+            echo "OPL_OCI_SOURCE_URL=https://github.com/${GITHUB_REPOSITORY}"
+            echo "OPL_PROMOTION_REQUEST_ID=$request_id"
+            echo "OPL_SOURCE_APP_RUN_ID=${{ inputs.source_app_run_id }}"
+          } >> "$GITHUB_ENV"
 
       - name: Record package publication gate
         shell: bash
@@ -113,6 +173,22 @@ jobs:
 
       - name: Setup ORAS
         uses: oras-project/setup-oras@v1
+
+      - name: Download frozen owner cohort
+        if: inputs.owner_cohort_artifact_name != ''
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.owner_cohort_artifact_name }}
+          path: ${{ runner.temp }}/opl-owner-cohort
+
+      - name: Bind frozen owner cohort
+        if: inputs.owner_cohort_artifact_name != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          lock="$(find "$RUNNER_TEMP/opl-owner-cohort" -name owner-cohort-lock.json -print -quit)"
+          test -n "$lock"
+          echo "OPL_PACKAGE_OWNER_COHORT_LOCK=$lock" >> "$GITHUB_ENV"
 
       - name: Fetch previous latest-stable Release Set
         shell: bash
@@ -165,6 +241,16 @@ jobs:
             echo "::notice::Historical App release has no owner component manifest; using exact public release readback projection."
           fi
           node scripts/resolve-opl-app-component.mjs "${component_args[@]}"
+          resolved_version="$(jq -r .version "$RUNNER_TEMP/opl-app-component-manifest.json")"
+          resolved_commit="$(jq -r .source_commit "$RUNNER_TEMP/opl-app-component-manifest.json")"
+          resolved_digest="$(jq -r .primary_artifact.digest "$RUNNER_TEMP/opl-app-component-manifest.json")"
+          expected_version="${{ inputs.app_version }}"
+          expected_version="${expected_version#v}"
+          expected_commit="${{ inputs.expected_app_source_commit }}"
+          expected_digest="${{ inputs.expected_app_artifact_digest }}"
+          [ -z "$expected_version" ] || [ "$resolved_version" = "$expected_version" ]
+          [ -z "$expected_commit" ] || [ "$resolved_commit" = "$expected_commit" ]
+          [ -z "$expected_digest" ] || [ "$resolved_digest" = "$expected_digest" ]
           echo "OPL_APP_COMPONENT_MANIFEST=$RUNNER_TEMP/opl-app-component-manifest.json" >> "$GITHUB_ENV"
 
       - name: Build Package archives and Release Set manifests
@@ -180,6 +266,9 @@ jobs:
           )
           if [ -n "${OPL_PREVIOUS_PACKAGE_MANIFEST:-}" ]; then
             args+=(--previous-manifest "$OPL_PREVIOUS_PACKAGE_MANIFEST")
+          fi
+          if [ -n "${OPL_PACKAGE_OWNER_COHORT_LOCK:-}" ]; then
+            args+=(--owner-cohort-lock "$OPL_PACKAGE_OWNER_COHORT_LOCK")
           fi
           npm run packages:manifest -- "${args[@]}"
 
@@ -304,6 +393,10 @@ jobs:
             node scripts/oci-publication-preflight.mjs \
               --ref "${image}@${digest}" "${preflight_args[@]}" \
               --verify-only --expected-digest "$digest" --anonymous
+            oras tag "${image}@${digest}" candidate
+            node scripts/oci-publication-preflight.mjs \
+              --ref "${image}:candidate" "${preflight_args[@]}" \
+              --verify-only --expected-digest "$digest" --anonymous
           done
 
           framework_version="$(jq -r '.release_set.components.base.version' dist/opl-packages/opl-release-manifest.json)"
@@ -329,6 +422,8 @@ jobs:
             --verify-only --expected-digest "$framework_digest" --anonymous
           framework_image="${framework_ref%:*}"
           oras tag "${framework_image}@${framework_digest}" candidate
+          node scripts/oci-publication-preflight.mjs --ref "${framework_image}:candidate" "${framework_args[@]}" \
+            --verify-only --expected-digest "$framework_digest" --anonymous
           node scripts/finalize-package-channel-digests.mjs \
             --release-manifest dist/opl-packages/opl-release-manifest.json \
             --channel-manifest dist/opl-packages/opl-channel-manifest.json \
@@ -338,6 +433,9 @@ jobs:
             --release-manifest dist/opl-packages/opl-release-manifest.json \
             --channel-manifest dist/opl-packages/opl-channel-manifest.json \
             --check
+
+      - name: Generate Release Set SBOM and provenance
+        run: node scripts/generate-release-supply-chain.mjs --release-manifest dist/opl-packages/opl-release-manifest.json --output-dir dist/opl-packages
 
       - name: Publish immutable Release Set catalog carrier
         shell: bash
@@ -373,6 +471,9 @@ jobs:
             --source-url "$source_url"
             --layer "dist/opl-packages/opl-release-manifest.json=application/vnd.onepersonlab.release.manifest.v1+json"
             --layer "dist/opl-packages/opl-channel-manifest.json=application/vnd.onepersonlab.release.channel-manifest.v1+json"
+            --layer "dist/opl-packages/owner-cohort-lock.json=application/vnd.onepersonlab.owner-cohort-lock.v1+json"
+            --layer "dist/opl-packages/opl-release-set.spdx.json=application/spdx+json"
+            --layer "dist/opl-packages/opl-release-provenance.json=application/vnd.in-toto+json"
             --layer "dist/opl-packages/SHA256SUMS=text/plain"
           )
           preflight="$(node scripts/oci-publication-preflight.mjs --ref "$generation_ref" "${carrier_args[@]}")"
@@ -384,6 +485,9 @@ jobs:
               --annotation "org.opencontainers.image.source=${source_url}" \
               "dist/opl-packages/opl-release-manifest.json:application/vnd.onepersonlab.release.manifest.v1+json" \
               "dist/opl-packages/opl-channel-manifest.json:application/vnd.onepersonlab.release.channel-manifest.v1+json" \
+              "dist/opl-packages/owner-cohort-lock.json:application/vnd.onepersonlab.owner-cohort-lock.v1+json" \
+              "dist/opl-packages/opl-release-set.spdx.json:application/spdx+json" \
+              "dist/opl-packages/opl-release-provenance.json:application/vnd.in-toto+json" \
               "dist/opl-packages/SHA256SUMS:text/plain")"
             digest="$(jq -r '.digest' <<<"$push_result")"
           fi
@@ -393,6 +497,57 @@ jobs:
           oras tag "${carrier}@${digest}" candidate
           node scripts/oci-publication-preflight.mjs --ref "${carrier}:candidate" "${carrier_args[@]}" \
             --verify-only --expected-digest "$digest" --anonymous
+          echo "OPL_RELEASE_SET_CARRIER_REF=$generation_ref" >> "$GITHUB_ENV"
+          echo "OPL_RELEASE_SET_CARRIER_DIGEST=$digest" >> "$GITHUB_ENV"
+
+      - name: Attest exact Release Set files
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            dist/opl-packages/framework/*.tar.gz
+            dist/opl-packages/packages/*/*.tar.gz
+            dist/opl-packages/opl-release-manifest.json
+            dist/opl-packages/opl-channel-manifest.json
+            dist/opl-packages/owner-cohort-lock.json
+          predicate-type: https://slsa.dev/provenance/v1
+          predicate-path: dist/opl-packages/opl-release-provenance.json
+
+      - name: Attest Release Set SBOM
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            dist/opl-packages/framework/*.tar.gz
+            dist/opl-packages/packages/*/*.tar.gz
+            dist/opl-packages/opl-release-manifest.json
+          sbom-path: dist/opl-packages/opl-release-set.spdx.json
+
+      - name: Write candidate promotion receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/write-release-promotion-receipt.mjs \
+            --release-manifest dist/opl-packages/opl-release-manifest.json \
+            --output dist/opl-packages/opl-release-promotion-receipt.json \
+            --target candidate \
+            --carrier-ref "$OPL_RELEASE_SET_CARRIER_REF" \
+            --carrier-digest "$OPL_RELEASE_SET_CARRIER_DIGEST" \
+            --promotion-request-id "$OPL_PROMOTION_REQUEST_ID" \
+            --release-gate "$OPL_PACKAGE_RELEASE_GATE" \
+            --source-app-run-id "${OPL_SOURCE_APP_RUN_ID:-}" \
+            --framework-repository "$GITHUB_REPOSITORY" \
+            --framework-run-id "$GITHUB_RUN_ID" \
+            --framework-run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --expected-app-version "${{ inputs.app_version }}" \
+            --expected-app-source-commit "${{ inputs.expected_app_source_commit }}" \
+            --expected-app-artifact-digest "${{ inputs.expected_app_artifact_digest }}" \
+            --anonymous-readback true
+
+      - name: Upload candidate promotion receipt
+        uses: actions/upload-artifact@v7
+        with:
+          name: opl-release-promotion-receipt-${{ env.OPL_PROMOTION_REQUEST_ID }}-candidate
+          path: dist/opl-packages/opl-release-promotion-receipt.json
+          if-no-files-found: error
 
       - name: Upload prepared Package artifacts
         uses: actions/upload-artifact@v7
@@ -400,3 +555,69 @@ jobs:
           name: opl-release-set-${{ env.OPL_RELEASE_SET_GENERATION }}
           path: dist/opl-packages
           if-no-files-found: error
+
+  attest-oci-components:
+    name: Attest OCI ${{ matrix.component_id }}
+    needs: package-release-set
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        include:
+          - component_id: opl-release-set
+            image_suffix: one-person-lab-manifest
+          - component_id: opl-base
+            image_suffix: one-person-lab-framework
+          - component_id: mas
+            image_suffix: one-person-lab-packages/mas
+          - component_id: mag
+            image_suffix: one-person-lab-packages/mag
+          - component_id: rca
+            image_suffix: one-person-lab-packages/rca
+          - component_id: oma
+            image_suffix: one-person-lab-packages/oma
+          - component_id: obf
+            image_suffix: one-person-lab-packages/obf
+          - component_id: mas-scholar-skills
+            image_suffix: one-person-lab-packages/mas-scholar-skills
+          - component_id: opl-flow
+            image_suffix: one-person-lab-packages/opl-flow
+    steps:
+      - name: Download exact Release Set evidence
+        uses: actions/download-artifact@v8
+        with:
+          name: opl-release-set-${{ inputs.release_set_generation }}
+          path: dist/opl-packages
+
+      - name: Resolve exact OCI digest
+        id: subject
+        shell: bash
+        run: |
+          set -euo pipefail
+          component_id="${{ matrix.component_id }}"
+          if [ "$component_id" = opl-release-set ]; then
+            digest="$(jq -r .carrier.digest dist/opl-packages/opl-release-promotion-receipt.json)"
+          elif [ "$component_id" = opl-base ]; then
+            digest="$(jq -r .release_set.components.base.artifact_digest dist/opl-packages/opl-release-manifest.json)"
+          else
+            digest="$(jq -r --arg id "$component_id" '.release_set.components.packages.members[$id].artifact_digest' dist/opl-packages/opl-release-manifest.json)"
+          fi
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+
+      - name: Publish OCI provenance referrer
+        uses: actions/attest@v4
+        with:
+          subject-name: ghcr.io/${{ github.repository_owner }}/${{ matrix.image_suffix }}
+          subject-digest: ${{ steps.subject.outputs.digest }}
+          predicate-type: https://slsa.dev/provenance/v1
+          predicate-path: dist/opl-packages/opl-release-provenance.json
+          push-to-registry: true
+
+      - name: Publish OCI SBOM referrer
+        uses: actions/attest@v4
+        with:
+          subject-name: ghcr.io/${{ github.repository_owner }}/${{ matrix.image_suffix }}
+          subject-digest: ${{ steps.subject.outputs.digest }}
+          sbom-path: dist/opl-packages/opl-release-set.spdx.json
+          push-to-registry: true
