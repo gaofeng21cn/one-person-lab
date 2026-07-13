@@ -18,11 +18,16 @@ on:
         type: string
         default: ''
       promotion_target:
-        description: Moving channel to update after immutable and anonymous readback
+        description: Immutable publication always updates candidate; stable promotion is a separate exact-digest workflow
         required: false
         type: choice
-        options: [candidate, latest-stable]
+        options: [candidate]
         default: candidate
+      app_version:
+        description: Exact OPL App CalVer to include; empty reuses stable BOM or resolves latest published App
+        required: false
+        type: string
+        default: ''
   workflow_call:
     inputs:
       release_set_generation:
@@ -39,10 +44,15 @@ on:
         type: string
         default: ''
       promotion_target:
-        description: Moving channel to update after immutable and anonymous readback
+        description: Immutable publication target; must be candidate
         required: false
         type: string
         default: candidate
+      app_version:
+        description: Exact OPL App CalVer to include; empty reuses stable BOM or resolves latest published App
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -75,7 +85,7 @@ jobs:
             exit 1
           fi
           promotion_target="${{ inputs.promotion_target }}"
-          case "$promotion_target" in candidate|latest-stable) ;; *) exit 2 ;; esac
+          [ "$promotion_target" = candidate ] || { echo "::error::Use release-package-channel.yml to promote an existing immutable BOM to latest-stable."; exit 2; }
           generated_at="$(git show -s --format=%cI HEAD)"
           echo "OPL_RELEASE_SET_GENERATION=$generation" >> "$GITHUB_ENV"
           echo "OPL_RELEASE_SET_GENERATED_AT=$generated_at" >> "$GITHUB_ENV"
@@ -120,6 +130,43 @@ jobs:
             echo "::notice::No previous latest-stable Release Set is available; this run must publish all seven Packages."
           fi
 
+      - name: Resolve immutable OPL App component
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          requested="${{ inputs.app_version }}"
+          if [ -n "$requested" ]; then
+            app_version="${requested#v}"
+          elif [ -n "${OPL_PREVIOUS_PACKAGE_MANIFEST:-}" ] \
+            && [ "$(jq -r '.release_set.surface_kind // empty' "$OPL_PREVIOUS_PACKAGE_MANIFEST")" = opl_release_set.v2 ]; then
+            app_version="$(jq -r '.release_set.components.app.version' "$OPL_PREVIOUS_PACKAGE_MANIFEST")"
+          else
+            app_version="$(gh release list --repo gaofeng21cn/one-person-lab-app --limit 50 \
+              --json tagName,isDraft,isPrerelease,publishedAt \
+              --jq '[.[] | select(.isDraft == false and .isPrerelease == false and .publishedAt != null)][0].tagName' | sed 's/^v//')"
+          fi
+          [[ "$app_version" =~ ^[0-9]{2}\.[0-9]{1,2}\.[0-9]{1,2}$ ]]
+          gh release view "v$app_version" --repo gaofeng21cn/one-person-lab-app \
+            --json tagName,isDraft,isPrerelease,publishedAt,targetCommitish,assets,url \
+            > "$RUNNER_TEMP/opl-app-release.json"
+          app_commit="$(gh api "repos/gaofeng21cn/one-person-lab-app/commits/v$app_version" --jq .sha)"
+          component_args=(
+            --release-json "$RUNNER_TEMP/opl-app-release.json" \
+            --source-commit "$app_commit" \
+            --output "$RUNNER_TEMP/opl-app-component-manifest.json"
+          )
+          mkdir -p "$RUNNER_TEMP/opl-app-owner-component"
+          if gh release download "v$app_version" --repo gaofeng21cn/one-person-lab-app \
+            --pattern opl-app-component-manifest.json --dir "$RUNNER_TEMP/opl-app-owner-component"; then
+            component_args+=(--owner-manifest "$RUNNER_TEMP/opl-app-owner-component/opl-app-component-manifest.json")
+          else
+            echo "::notice::Historical App release has no owner component manifest; using exact public release readback projection."
+          fi
+          node scripts/resolve-opl-app-component.mjs "${component_args[@]}"
+          echo "OPL_APP_COMPONENT_MANIFEST=$RUNNER_TEMP/opl-app-component-manifest.json" >> "$GITHUB_ENV"
+
       - name: Build Package archives and Release Set manifests
         shell: bash
         run: |
@@ -129,6 +176,7 @@ jobs:
             --generated-at "$OPL_RELEASE_SET_GENERATED_AT"
             --owner "$OPL_PACKAGES_OWNER"
             --out-dir dist/opl-packages
+            --app-component-manifest "$OPL_APP_COMPONENT_MANIFEST"
           )
           if [ -n "${OPL_PREVIOUS_PACKAGE_MANIFEST:-}" ]; then
             args+=(--previous-manifest "$OPL_PREVIOUS_PACKAGE_MANIFEST")
@@ -212,7 +260,7 @@ jobs:
             if ! jq -e --arg id "$package_id" 'index($id) != null' <<<"$changed_packages_json" >/dev/null; then
               continue
             fi
-            package_version="$(jq -r --arg id "$package_id" '.release_set.members[$id].package_version' dist/opl-packages/opl-release-manifest.json)"
+            package_version="$(jq -r --arg id "$package_id" '.release_set.components.packages.members[$id].package_version' dist/opl-packages/opl-release-manifest.json)"
             archive="$package_root/${package_id}-${package_version}.tar.gz"
             image="ghcr.io/${OPL_PACKAGES_OWNER}/one-person-lab-packages/${package_id}"
             mapfile -t preflight_args < <(package_preflight_args "$package_root" "$package_id" "$package_version")
@@ -239,12 +287,6 @@ jobs:
             node scripts/oci-publication-preflight.mjs \
               --ref "${image}:candidate" "${preflight_args[@]}" \
               --verify-only --expected-digest "$digest" --anonymous
-            if [ "$OPL_PACKAGE_PROMOTION_TARGET" = latest-stable ]; then
-              oras tag "${image}@${digest}" latest-stable
-              node scripts/oci-publication-preflight.mjs \
-                --ref "${image}:latest-stable" "${preflight_args[@]}" \
-                --verify-only --expected-digest "$digest" --anonymous
-            fi
             node scripts/finalize-package-channel-digests.mjs \
               --release-manifest dist/opl-packages/opl-release-manifest.json \
               --channel-manifest dist/opl-packages/opl-channel-manifest.json \
@@ -252,15 +294,10 @@ jobs:
               --digest "$digest"
           done
 
-          node scripts/finalize-package-channel-digests.mjs \
-            --release-manifest dist/opl-packages/opl-release-manifest.json \
-            --channel-manifest dist/opl-packages/opl-channel-manifest.json \
-            --check
-
           for package_root in dist/opl-packages/packages/*; do
             package_id="$(basename "$package_root")"
-            package_version="$(jq -r --arg id "$package_id" '.release_set.members[$id].package_version' dist/opl-packages/opl-release-manifest.json)"
-            digest="$(jq -r --arg id "$package_id" '.release_set.members[$id].oci_artifact_digest' dist/opl-packages/opl-release-manifest.json)"
+            package_version="$(jq -r --arg id "$package_id" '.release_set.components.packages.members[$id].package_version' dist/opl-packages/opl-release-manifest.json)"
+            digest="$(jq -r --arg id "$package_id" '.release_set.components.packages.members[$id].oci_artifact_digest' dist/opl-packages/opl-release-manifest.json)"
             image="ghcr.io/${OPL_PACKAGES_OWNER}/one-person-lab-packages/${package_id}"
             ensure_public_package "one-person-lab-packages/${package_id}"
             mapfile -t preflight_args < <(package_preflight_args "$package_root" "$package_id" "$package_version")
@@ -269,28 +306,38 @@ jobs:
               --verify-only --expected-digest "$digest" --anonymous
           done
 
-          if [[ "$OPL_PACKAGE_RELEASE_GATE" = github_release_published || "$OPL_PACKAGE_RELEASE_GATE" = base_* ]]; then
-            framework_archive="dist/opl-packages/framework/one-person-lab-framework-${OPL_RELEASE_SET_GENERATION}.tar.gz"
-            framework_ref="ghcr.io/${OPL_PACKAGES_OWNER}/one-person-lab-framework:${OPL_RELEASE_SET_GENERATION}"
-            framework_args=(
-              --artifact-type application/vnd.onepersonlab.framework.source.v1
-              --source-url "$OPL_OCI_SOURCE_URL"
-              --layer "${framework_archive}=application/vnd.onepersonlab.framework.source.v1+gzip"
-            )
-            preflight="$(node scripts/oci-publication-preflight.mjs --ref "$framework_ref" "${framework_args[@]}")"
-            if [ "$(jq -r '.action' <<<"$preflight")" = reuse ]; then
-              framework_digest="$(jq -r '.digest' <<<"$preflight")"
-            else
-              framework_push="$(oras push --format json "$framework_ref" \
-                --artifact-type application/vnd.onepersonlab.framework.source.v1 \
-                --annotation "org.opencontainers.image.source=${OPL_OCI_SOURCE_URL}" \
-                "${framework_archive}:application/vnd.onepersonlab.framework.source.v1+gzip")"
-              framework_digest="$(jq -r '.digest' <<<"$framework_push")"
-            fi
-            ensure_public_package one-person-lab-framework
-            node scripts/oci-publication-preflight.mjs --ref "$framework_ref" "${framework_args[@]}" \
-              --verify-only --expected-digest "$framework_digest" --anonymous
+          framework_version="$(jq -r '.release_set.components.base.version' dist/opl-packages/opl-release-manifest.json)"
+          framework_archive="dist/opl-packages/framework/one-person-lab-framework-${framework_version}.tar.gz"
+          framework_ref="$(jq -r '.release_set.components.base.artifact_ref' dist/opl-packages/opl-release-manifest.json)"
+          framework_args=(
+            --artifact-type application/vnd.onepersonlab.framework.source.v1
+            --source-url "$OPL_OCI_SOURCE_URL"
+            --layer "${framework_archive}=application/vnd.onepersonlab.framework.source.v1+gzip"
+          )
+          preflight="$(node scripts/oci-publication-preflight.mjs --ref "$framework_ref" "${framework_args[@]}")"
+          if [ "$(jq -r '.action' <<<"$preflight")" = reuse ]; then
+            framework_digest="$(jq -r '.digest' <<<"$preflight")"
+          else
+            framework_push="$(oras push --format json "$framework_ref" \
+              --artifact-type application/vnd.onepersonlab.framework.source.v1 \
+              --annotation "org.opencontainers.image.source=${OPL_OCI_SOURCE_URL}" \
+              "${framework_archive}:application/vnd.onepersonlab.framework.source.v1+gzip")"
+            framework_digest="$(jq -r '.digest' <<<"$framework_push")"
           fi
+          ensure_public_package one-person-lab-framework
+          node scripts/oci-publication-preflight.mjs --ref "$framework_ref" "${framework_args[@]}" \
+            --verify-only --expected-digest "$framework_digest" --anonymous
+          framework_image="${framework_ref%:*}"
+          oras tag "${framework_image}@${framework_digest}" candidate
+          node scripts/finalize-package-channel-digests.mjs \
+            --release-manifest dist/opl-packages/opl-release-manifest.json \
+            --channel-manifest dist/opl-packages/opl-channel-manifest.json \
+            --component-id opl-base \
+            --digest "$framework_digest"
+          node scripts/finalize-package-channel-digests.mjs \
+            --release-manifest dist/opl-packages/opl-release-manifest.json \
+            --channel-manifest dist/opl-packages/opl-channel-manifest.json \
+            --check
 
       - name: Publish immutable Release Set catalog carrier
         shell: bash
@@ -346,11 +393,6 @@ jobs:
           oras tag "${carrier}@${digest}" candidate
           node scripts/oci-publication-preflight.mjs --ref "${carrier}:candidate" "${carrier_args[@]}" \
             --verify-only --expected-digest "$digest" --anonymous
-          if [ "$OPL_PACKAGE_PROMOTION_TARGET" = latest-stable ]; then
-            oras tag "${carrier}@${digest}" latest-stable
-            node scripts/oci-publication-preflight.mjs --ref "${carrier}:latest-stable" "${carrier_args[@]}" \
-              --verify-only --expected-digest "$digest" --anonymous
-          fi
 
       - name: Upload prepared Package artifacts
         uses: actions/upload-artifact@v7

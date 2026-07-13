@@ -26,6 +26,7 @@ function parseCliOptions(argv) {
     owner: process.env.OPL_PACKAGES_OWNER || undefined,
     previousManifest: process.env.OPL_PREVIOUS_PACKAGE_MANIFEST || undefined,
     retainVersions: process.env.OPL_PACKAGE_RETAIN_VERSIONS || undefined,
+    appComponentManifest: process.env.OPL_APP_COMPONENT_MANIFEST || undefined,
   };
 
   parseRequiredValueOptions(argv, {
@@ -49,6 +50,9 @@ function parseCliOptions(argv) {
     },
     '--retain-versions': (value) => {
       parsed.retainVersions = value;
+    },
+    '--app-component-manifest': (value) => {
+      parsed.appComponentManifest = path.resolve(value);
     },
   });
 
@@ -94,6 +98,21 @@ function readPreviousManifest(manifestPath) {
     throw new Error(`Previous manifest has no release_set_generation: ${manifestPath}`);
   }
   return parsed;
+}
+
+function readAppComponentManifest(manifestPath) {
+  if (!manifestPath) return null;
+  const component = readJsonFile(manifestPath);
+  if (component.surface_kind !== 'opl_app_component_manifest.v1'
+    || component.component_id !== 'opl-app'
+    || !/^\d{2}\.\d{1,2}\.\d{1,2}$/.test(component.version ?? '')
+    || !/^[0-9a-f]{40}$/.test(component.source_commit ?? '')
+    || !/^sha256:[0-9a-f]{64}$/.test(component.primary_artifact?.digest ?? '')
+    || !Array.isArray(component.artifacts)
+    || component.artifacts.length === 0) {
+    throw new Error(`Invalid OPL App component manifest: ${manifestPath}`);
+  }
+  return component;
 }
 
 function normalizeRetainVersions(raw) {
@@ -261,6 +280,7 @@ function copyReleaseDisciplineWorkflows(outDir) {
 function main() {
   const options = parseCliOptions(process.argv.slice(2));
   const previousManifest = readPreviousManifest(options.previousManifest);
+  const appComponent = readAppComponentManifest(options.appComponentManifest);
   const rollbackVersion = previousManifest?.release_set_generation ?? null;
   const retainVersions = normalizeRetainVersions(options.retainVersions);
   const manifest = buildOplPackageManifest({
@@ -269,12 +289,14 @@ function main() {
     owner: options.owner,
     rollbackVersion,
     retainVersions,
+    appComponent,
   });
   const releaseSetGeneration = manifest.release_set_generation;
   const packagesOutDir = path.join(options.outDir, 'packages');
   const frameworkOutDir = path.join(options.outDir, 'framework');
   const archives = [];
-  const frameworkArchive = archiveFramework(repoRoot, frameworkOutDir, releaseSetGeneration);
+  const frameworkVersion = manifest.packages.framework_core.version;
+  const frameworkArchive = archiveFramework(repoRoot, frameworkOutDir, frameworkVersion);
   archives.push({
     ...frameworkArchive,
     relative_path: `framework/${frameworkArchive.file_name}`,
@@ -294,6 +316,8 @@ function main() {
     branch: frameworkArchive.branch,
     head_sha: frameworkArchive.head_sha,
   };
+  manifest.release_set.components.base.source_commit = frameworkArchive.head_sha;
+  manifest.release_set.components.base.artifact_ref = manifest.packages.framework_core.artifact;
   manifest.packages.framework_core.homebrew_formula = {
     surface_kind: 'opl_homebrew_formula_projection.v1',
     formula_name: 'opl',
@@ -333,6 +357,13 @@ function main() {
     packageEntry.owner_package_manifest_sha256 = ownerMetadata.owner_package_manifest_sha256;
     packageEntry.release_gate = ownerMetadata.release_gate;
     packageEntry.package_content_digest = `sha256:${archive.sha256}`;
+    const releaseSetMember = manifest.release_set.components.packages.members[spec.package_id];
+    releaseSetMember.package_version = ownerMetadata.package_version;
+    releaseSetMember.version = ownerMetadata.package_version;
+    releaseSetMember.owner_source_commit = ownerMetadata.owner_source_commit;
+    releaseSetMember.source_commit = ownerMetadata.owner_source_commit;
+    releaseSetMember.oci_artifact_ref = packageEntry.artifact;
+    releaseSetMember.artifact_ref = packageEntry.artifact;
     manifest.packages.package_artifacts[spec.package_id].source_archive = {
       file_name: archive.file_name,
       size: archive.size,

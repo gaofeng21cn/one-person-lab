@@ -78,6 +78,33 @@ function createOwnerPackageFixture(
 test('package archive builder writes channel manifest checksums git source and release discipline gate', () => {
   const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-out-'));
   const previousManifest = path.join(outDir, 'previous-manifest.json');
+  const appComponentManifest = path.join(outDir, 'opl-app-component-manifest.json');
+  const appArtifacts = [
+    ['latest-arm64-mac.yml', '1'],
+    ['One-Person-Lab-26.7.12-mac-arm64.dmg', '2'],
+    ['One-Person-Lab-26.7.12-mac-arm64.zip', '3'],
+    ['One-Person-Lab-26.7.12-mac-arm64.zip.blockmap', '4'],
+    ['standard-local-authorization-policy.json', '5'],
+  ].map(([name, digit]) => ({
+    name,
+    ref: `https://github.com/gaofeng21cn/one-person-lab-app/releases/download/v26.7.12/${name}`,
+    digest: `sha256:${digit.repeat(64)}`,
+    size: 10,
+    content_type: 'application/octet-stream',
+  }));
+  fs.writeFileSync(appComponentManifest, `${JSON.stringify({
+    surface_kind: 'opl_app_component_manifest.v1',
+    component_id: 'opl-app',
+    version: '26.7.12',
+    source_commit: '9'.repeat(40),
+    release_tag: 'v26.7.12',
+    release_url: 'https://github.com/gaofeng21cn/one-person-lab-app/releases/tag/v26.7.12',
+    release_status: 'published',
+    primary_artifact: appArtifacts[1],
+    artifacts: appArtifacts,
+    component_manifest_ref: 'opl+github-release://gaofeng21cn/one-person-lab-app/v26.7.12',
+    component_manifest_digest: `sha256:${'6'.repeat(64)}`,
+  }, null, 2)}\n`, 'utf8');
   const previousScholarSkillsManifestJson = `${JSON.stringify({
     ...parseJsonText(fs.readFileSync(
       path.join(repoRoot, 'contracts/opl-framework/packages/mas-scholar-skills.json'),
@@ -137,7 +164,7 @@ test('package archive builder writes channel manifest checksums git source and r
 
   const fixtures = {
     medautoscience: createOwnerPackageFixture('med-autoscience', 'mas', '0.1.0'),
-    medautogrant: createOwnerPackageFixture('med-autogrant', 'mag', '0.1.0'),
+    medautogrant: createOwnerPackageFixture('med-autogrant', 'mag', '0.2.0'),
     redcube: createOwnerPackageFixture('redcube-ai', 'rca', '0.1.1'),
     oplmetaagent: createOwnerPackageFixture('opl-meta-agent', 'oma', '0.1.1'),
     oplbookforge: createOwnerPackageFixture('opl-bookforge', 'obf', '0.1.0'),
@@ -158,6 +185,8 @@ test('package archive builder writes channel manifest checksums git source and r
     previousManifest,
     '--retain-versions',
     '4',
+    '--app-component-manifest',
+    appComponentManifest,
   ], {
     cwd: repoRoot,
     encoding: 'utf8',
@@ -206,7 +235,16 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(path.relative(repoRoot, archiveBuilderResult.clone_root).startsWith('..'), true);
   assert.equal(channelManifest.release_set_generation, manifest.release_set_generation);
   assert.equal(manifest.release_set.generation, '26.4.31');
-  assert.equal(manifest.release_set.package_count, 7);
+  assert.equal(manifest.release_set.surface_kind, 'opl_release_set.v2');
+  assert.equal(manifest.release_set.component_count, 9);
+  assert.equal(manifest.release_set.components.packages.package_count, 7);
+  assert.equal(manifest.release_set.components.app.version, '26.7.12');
+  assert.equal(manifest.packages.package_artifacts.mag.package_version, '0.2.0');
+  assert.equal(manifest.release_set.components.packages.members.mag.version, '0.2.0');
+  assert.equal(
+    manifest.release_set.components.packages.members.mag.artifact_ref,
+    'ghcr.io/gaofeng21cn/one-person-lab-packages/mag:0.2.0',
+  );
   assert.equal(channelManifest.manifest_role, 'opl_release_channel_manifest');
   assert.notEqual(channelManifestSource, releaseManifestSource);
   assert.equal(channelManifest.packages.codex_default_profile.model_provider, 'gflab');
@@ -226,7 +264,7 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(manifest.packages.framework_core.homebrew_formula.package_name, 'opl');
   assert.equal(manifest.packages.framework_core.homebrew_formula.approval_status, 'owner_approved');
   assert.equal(manifest.packages.framework_core.homebrew_formula.carrier_scope, 'framework_core_only');
-  assert.equal(manifest.packages.framework_core.homebrew_formula.version, '26.4.31');
+  assert.equal(manifest.packages.framework_core.homebrew_formula.version, '0.2.0');
   assert.equal(
     manifest.packages.framework_core.homebrew_formula.source_head,
     manifest.packages.framework_core.source_git.head_sha,
@@ -249,7 +287,7 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(manifest.release_automation.daily_package_channel.generation_template, '<utc_yy.m.d[-rN_auto]>');
   assert.equal(manifest.release_automation.daily_package_channel.force_publish_input, 'force_publish');
   assert.equal(Object.hasOwn(manifest.packages, 'webui_docker_image'), false);
-  assert.equal(manifest.packages.framework_core.artifact, 'ghcr.io/gaofeng21cn/one-person-lab-framework:26.4.31');
+  assert.equal(manifest.packages.framework_core.artifact, 'ghcr.io/gaofeng21cn/one-person-lab-framework:0.2.0');
   assert.match(manifest.packages.framework_core.source_archive.sha256, /^[0-9a-f]{64}$/);
   assert.match(manifest.packages.framework_core.source_git.head_sha, /^[0-9a-f]{40}$/);
   assert.equal(channelManifest.packages.framework_core.artifact, manifest.packages.framework_core.artifact);
@@ -355,15 +393,23 @@ test('package archive builder writes channel manifest checksums git source and r
     path.join(repoRoot, 'scripts/finalize-package-channel-digests.mjs'),
     '--release-manifest', releaseManifestPath,
     '--channel-manifest', channelManifestPath,
+    '--component-id', 'opl-base',
+    '--digest', `sha256:${'9'.repeat(64)}`,
+  ], { encoding: 'utf8', env: finalizeEnv });
+  execFileSync(process.execPath, [
+    path.join(repoRoot, 'scripts/finalize-package-channel-digests.mjs'),
+    '--release-manifest', releaseManifestPath,
+    '--channel-manifest', channelManifestPath,
     '--check',
   ], { encoding: 'utf8', env: finalizeEnv });
   const finalizedReleaseManifest = parseJsonText(fs.readFileSync(releaseManifestPath, 'utf8')) as Record<string, any>;
   const finalizedChannelManifest = parseJsonText(fs.readFileSync(channelManifestPath, 'utf8')) as Record<string, any>;
   assert.match(finalizedChannelManifest.package_catalog_digest, /^sha256:[0-9a-f]{64}$/);
-  assert.equal(finalizedReleaseManifest.release_channel, 'latest-stable');
-  assert.equal(finalizedReleaseManifest.release_set.target_channel, 'latest-stable');
+  assert.equal(finalizedReleaseManifest.release_channel, undefined);
+  assert.equal(finalizedReleaseManifest.release_set.target_channel, undefined);
   assert.equal(finalizedReleaseManifest.release_set.bom_status, 'complete');
-  assert.equal(finalizedChannelManifest.release_channel, 'latest-stable');
+  assert.match(finalizedReleaseManifest.release_set.bom_digest, /^sha256:[0-9a-f]{64}$/);
+  assert.equal(finalizedChannelManifest.release_channel, undefined);
   assert.deepEqual(finalizedChannelManifest.release_set, finalizedReleaseManifest.release_set);
   assert.deepEqual(
     finalizedChannelManifest.packages.package_artifacts,
@@ -375,7 +421,7 @@ test('package archive builder writes channel manifest checksums git source and r
     )),
     true,
   );
-  assert.match(checksums, /one-person-lab-framework-26\.4\.31\.tar\.gz/);
+  assert.match(checksums, /one-person-lab-framework-0\.2\.0\.tar\.gz/);
   assert.match(checksums, new RegExp(manifest.packages.framework_core.source_archive.sha256));
   assert.equal(manifest.packages.native_helper.channel_status, 'active_ghcr_oci_prebuild');
   assert.equal(manifest.packages.native_helper.retention_policy.retain_versions, 4);
@@ -455,8 +501,8 @@ test('package archive builder writes channel manifest checksums git source and r
   const prereleaseArtifact = prereleaseManifest.packages.package_artifacts.mas;
   prereleaseArtifact.package_version = '0.1.0-alpha.1';
   prereleaseArtifact.artifact = prereleaseArtifact.artifact.replace(':0.1.0', ':0.1.0-alpha.1');
-  prereleaseManifest.release_set.members.mas.package_version = '0.1.0-alpha.1';
-  prereleaseManifest.release_set.members.mas.oci_artifact_ref = prereleaseArtifact.artifact;
+  prereleaseManifest.release_set.components.packages.members.mas.package_version = '0.1.0-alpha.1';
+  prereleaseManifest.release_set.components.packages.members.mas.oci_artifact_ref = prereleaseArtifact.artifact;
   const prereleaseManifestPath = path.join(outDir, 'opl-release-manifest-prerelease.json');
   fs.writeFileSync(prereleaseManifestPath, `${JSON.stringify(prereleaseManifest, null, 2)}\n`);
   execFileSync(process.execPath, [

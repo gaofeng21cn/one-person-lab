@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.dev/contracts/opl-framework/release-set-v2.schema.json",
+  "title": "OPL Release Set v2",
+  "type": "object",
+  "required": [
+    "surface_kind",
+    "generation",
+    "component_count",
+    "component_ids",
+    "bom_status",
+    "update_decision",
+    "channel_pointer_policy",
+    "components"
+  ],
+  "properties": {
+    "surface_kind": { "const": "opl_release_set.v2" },
+    "schema_ref": { "const": "contracts/opl-framework/release-set-v2.schema.json" },
+    "generation": { "type": "string", "pattern": "^[0-9]{2}\\.[0-9]{1,2}\\.[0-9]{1,2}(?:-r[1-9][0-9]*)?$" },
+    "component_count": { "const": 9 },
+    "component_ids": {
+      "type": "array",
+      "minItems": 9,
+      "maxItems": 9,
+      "uniqueItems": true,
+      "items": { "type": "string" }
+    },
+    "bom_status": { "enum": ["planned", "pending_remote_verification", "complete"] },
+    "bom_digest": { "type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$" },
+    "update_decision": {
+      "type": "object",
+      "required": ["comparison_key", "release_set_revision_affects_component_update", "unchanged_component_behavior"],
+      "properties": {
+        "comparison_key": { "const": "component_id+version+artifact_digest" },
+        "release_set_revision_affects_component_update": { "const": false },
+        "unchanged_component_behavior": { "const": "reuse_existing_artifact_digest_without_rebuild_or_reinstall" }
+      },
+      "additionalProperties": false
+    },
+    "channel_pointer_policy": {
+      "type": "object",
+      "required": ["mutable_tags", "promotion_mode", "channel_is_not_bom_content"],
+      "properties": {
+        "mutable_tags": { "const": ["candidate", "latest-stable"] },
+        "promotion_mode": { "const": "retag_exact_immutable_release_set_digest" },
+        "channel_is_not_bom_content": { "const": true }
+      },
+      "additionalProperties": false
+    },
+    "components": {
+      "type": "object",
+      "required": ["base", "app", "packages"],
+      "properties": {
+        "base": { "$ref": "#/$defs/component" },
+        "app": { "$ref": "#/$defs/component" },
+        "packages": {
+          "type": "object",
+          "required": ["component_kind", "package_count", "package_ids", "members"],
+          "properties": {
+            "component_kind": { "const": "package_collection" },
+            "package_count": { "const": 7 },
+            "package_ids": { "type": "array", "minItems": 7, "maxItems": 7, "uniqueItems": true },
+            "members": {
+              "type": "object",
+              "minProperties": 7,
+              "maxProperties": 7,
+              "additionalProperties": { "$ref": "#/$defs/component" }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "component": {
+      "type": "object",
+      "required": ["component_id", "component_kind", "version", "artifact_ref", "artifact_digest", "artifact_status"],
+      "properties": {
+        "component_id": { "type": "string", "minLength": 1 },
+        "component_kind": { "enum": ["base", "app", "package"] },
+        "version": { "type": ["string", "null"] },
+        "source_commit": { "type": ["string", "null"], "pattern": "^[0-9a-f]{40}$" },
+        "artifact_ref": { "type": ["string", "null"] },
+        "artifact_digest": { "type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$" },
+        "artifact_status": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

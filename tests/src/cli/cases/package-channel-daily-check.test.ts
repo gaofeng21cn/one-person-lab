@@ -10,6 +10,7 @@ function writeManifest(filePath: string, input: {
   packageVersion?: string;
   frameworkHead?: string;
   frameworkSha?: string;
+  frameworkVersion?: string;
 }) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(
@@ -17,10 +18,27 @@ function writeManifest(filePath: string, input: {
     `${JSON.stringify({
       manifest_version: 1,
       release_set_generation: input.version,
+      release_set: {
+        surface_kind: 'opl_release_set.v2',
+        components: {
+          base: {
+            component_id: 'opl-base',
+            version: input.frameworkVersion ?? '0.2.0',
+            source_commit: input.frameworkHead ?? 'e'.repeat(40),
+          },
+          app: {
+            component_id: 'opl-app',
+            version: '26.7.12',
+            source_commit: '9'.repeat(40),
+            artifact_digest: `sha256:${'8'.repeat(64)}`,
+          },
+        },
+      },
       generated_at: input.generatedAt,
       packages: {
         framework_core: {
-          artifact: `ghcr.io/owner/one-person-lab-framework:${input.version}`,
+          version: input.frameworkVersion ?? '0.2.0',
+          artifact: `ghcr.io/owner/one-person-lab-framework:${input.frameworkVersion ?? '0.2.0'}`,
           source_archive: { sha256: input.frameworkSha ?? 'f'.repeat(64) },
           source_git: { head_sha: input.frameworkHead ?? 'e'.repeat(40) },
         },
@@ -80,7 +98,7 @@ test('daily package channel check skips when package source fingerprints are unc
   ]);
 
   assert.equal(summary.status, 'skipped');
-  assert.equal(summary.reason, 'package_channel_unchanged');
+  assert.equal(summary.reason, 'release_set_components_unchanged');
   assert.equal(summary.publish_required, false);
   assert.equal(summary.release_set_generation, '26.6.3');
   assert.deepEqual(summary.changed_packages, []);
@@ -116,7 +134,7 @@ test('daily package channel check publishes when a package source fingerprint ch
   ]);
 
   assert.equal(summary.status, 'publish_required');
-  assert.equal(summary.reason, 'package_channel_changed');
+  assert.equal(summary.reason, 'release_set_component_changed');
   assert.equal(summary.publish_required, true);
   assert.deepEqual(summary.changed_packages, ['mas']);
 });
@@ -145,7 +163,7 @@ test('daily package channel check bootstraps all Packages when latest-stable doe
   assert.deepEqual(summary.changed_packages, ['mas']);
 });
 
-test('daily package channel check does not republish Framework Base for package-unchanged framework drift', () => {
+test('daily Release Set check fails closed when Base content changes without a version bump', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-daily-check-'));
   const candidate = path.join(tempRoot, 'candidate.json');
   const current = path.join(tempRoot, 'current.json');
@@ -167,18 +185,35 @@ test('daily package channel check does not republish Framework Base for package-
     frameworkSha: 'f'.repeat(64),
   });
 
-  const summary = runDailyCheck([
-    '--candidate-manifest',
-    candidate,
-    '--current-manifest',
-    current,
-    '--release-set-generation',
-    '26.6.3',
-  ]);
+  assert.throws(() => runDailyCheck([
+    '--candidate-manifest', candidate,
+    '--current-manifest', current,
+    '--release-set-generation', '26.6.3',
+  ]), /component content changed without a version bump: opl-base/);
+});
 
-  assert.equal(summary.status, 'skipped');
-  assert.equal(summary.publish_required, false);
+test('daily Release Set check publishes versioned Base changes without rebuilding Packages', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-daily-check-'));
+  const candidate = path.join(tempRoot, 'candidate.json');
+  const current = path.join(tempRoot, 'current.json');
+  writeManifest(candidate, {
+    version: '26.6.3-r2', generatedAt: '2026-06-03T00:00:00.000Z',
+    moduleHead: 'a'.repeat(40), moduleSha: 'b'.repeat(64),
+    frameworkVersion: '0.2.0', frameworkHead: 'c'.repeat(40), frameworkSha: 'd'.repeat(64),
+  });
+  writeManifest(current, {
+    version: '26.6.3', generatedAt: '2026-06-02T00:00:00.000Z',
+    moduleHead: 'a'.repeat(40), moduleSha: 'b'.repeat(64),
+    frameworkVersion: '0.1.0', frameworkHead: 'e'.repeat(40), frameworkSha: 'f'.repeat(64),
+  });
+  const summary = runDailyCheck([
+    '--candidate-manifest', candidate,
+    '--current-manifest', current,
+    '--release-set-generation', '26.6.3-r2',
+  ]);
+  assert.equal(summary.publish_required, true);
   assert.deepEqual(summary.changed_packages, []);
+  assert.deepEqual(summary.changed_components, ['opl-base']);
 });
 
 test('daily package channel check fails closed when no current channel manifest is available', () => {

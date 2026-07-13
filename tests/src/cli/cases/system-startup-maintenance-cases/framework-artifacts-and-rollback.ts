@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 
 import { assert, createFakeCodexFixture, fs, os, path, runCli, test } from '../../helpers.ts';
 import { withCliTimeout } from './shared.ts';
+import { readOplFrameworkRuntimeUpdateStatus } from '../../../../../src/modules/connect/system-installation/framework-self-update.ts';
 
 function writeMinimalFrameworkRoot(root: string, marker: string) {
   fs.mkdirSync(path.join(root, 'src'), { recursive: true });
@@ -31,9 +32,22 @@ function writeFakeFrameworkChannel(input: { root: string; version: string; archi
   fs.writeFileSync(channelManifestPath, JSON.stringify({
     manifest_version: 1,
     release_set_generation: input.version,
+    release_set: {
+      surface_kind: 'opl_release_set.v2',
+      components: {
+        base: {
+          component_id: 'opl-base',
+          version: '0.2.0',
+          source_commit: 'f'.repeat(40),
+          artifact_ref: 'ghcr.io/owner/one-person-lab-framework:0.2.0',
+          artifact_digest: `sha256:${'a'.repeat(64)}`,
+        },
+      },
+    },
     packages: {
       framework_core: {
-        artifact: `ghcr.io/owner/one-person-lab-framework:${input.version}`,
+        version: '0.2.0',
+        artifact: 'ghcr.io/owner/one-person-lab-framework:0.2.0',
         source_archive: { sha256: input.archiveSha256 },
         source_git: { head_sha: 'f'.repeat(40) },
       },
@@ -58,7 +72,7 @@ function writeFakeFrameworkChannel(input: { root: string; version: string; archi
       layers: [{
         mediaType: 'application/vnd.onepersonlab.framework.source.v1+gzip',
         digest: archiveDigest,
-        annotations: { 'org.opencontainers.image.title': `dist/opl-packages/framework/one-person-lab-framework-${input.version}.tar.gz` },
+        annotations: { 'org.opencontainers.image.title': 'dist/opl-packages/framework/one-person-lab-framework-0.2.0.tar.gz' },
       }],
     },
   };
@@ -94,6 +108,52 @@ function writeFakeFrameworkChannel(input: { root: string; version: string; archi
   ].join('\n'), { mode: 0o755 });
   return { fakeBin, curlLogPath };
 }
+
+test('Framework currentness ignores Release Set revision when Base content digest is unchanged', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-currentness-'));
+  const targetRoot = path.join(homeRoot, 'framework');
+  const sourceParent = path.join(homeRoot, 'artifact-source');
+  const sourceRoot = path.join(sourceParent, 'one-person-lab');
+  const archivePath = path.join(homeRoot, 'one-person-lab-framework.tar.gz');
+  try {
+    writeMinimalFrameworkRoot(targetRoot, 'current-framework');
+    writeMinimalFrameworkRoot(sourceRoot, 'current-framework');
+    execFileSync('tar', ['-czf', archivePath, '-C', sourceParent, 'one-person-lab']);
+    const archiveSha256 = sha256(archivePath);
+    fs.writeFileSync(path.join(targetRoot, '.opl-framework-source.json'), JSON.stringify({
+      source_head_sha: 'f'.repeat(40),
+      source_archive_sha256: archiveSha256,
+    }));
+    const channel = writeFakeFrameworkChannel({
+      root: path.join(homeRoot, 'channel'),
+      version: '26.7.13-r4',
+      archivePath,
+      archiveSha256,
+    });
+    const previous = {
+      OPL_CURL_BIN: process.env.OPL_CURL_BIN,
+      OPL_PACKAGE_CHANNEL_MANIFEST_REF: process.env.OPL_PACKAGE_CHANNEL_MANIFEST_REF,
+      OPL_FRAMEWORK_UPDATE_TARGET_ROOT: process.env.OPL_FRAMEWORK_UPDATE_TARGET_ROOT,
+    };
+    process.env.OPL_CURL_BIN = path.join(channel.fakeBin, 'curl');
+    process.env.OPL_PACKAGE_CHANNEL_MANIFEST_REF = 'ghcr.io/owner/one-person-lab-manifest:latest-stable';
+    process.env.OPL_FRAMEWORK_UPDATE_TARGET_ROOT = targetRoot;
+    try {
+      const status = readOplFrameworkRuntimeUpdateStatus(targetRoot);
+      assert.equal(status.channel_version, '0.2.0');
+      assert.equal(status.channel_release_set_generation, '26.7.13-r4');
+      assert.equal(status.channel_artifact_current, true);
+      assert.equal(status.update_available, false);
+    } finally {
+      for (const [key, value] of Object.entries(previous)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+    }
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
 
 test('system startup-maintenance applies OPL Framework runtime archive to a managed Linux Docker root', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-startup-maintenance-framework-archive-'));

@@ -100,12 +100,37 @@ jobs:
         shell: bash
         env:
           OPL_PACKAGE_RELEASE_GATE: daily_package_channel_detection
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          if [ -n "${{ steps.current.outputs.current_manifest }}" ] \
+            && [ "$(jq -r '.release_set.surface_kind // empty' '${{ steps.current.outputs.current_manifest }}')" = opl_release_set.v2 ]; then
+            app_version="$(jq -r '.release_set.components.app.version' '${{ steps.current.outputs.current_manifest }}')"
+          else
+            app_version="$(gh release list --repo gaofeng21cn/one-person-lab-app --limit 50 \
+              --json tagName,isDraft,isPrerelease,publishedAt \
+              --jq '[.[] | select(.isDraft == false and .isPrerelease == false and .publishedAt != null)][0].tagName' | sed 's/^v//')"
+          fi
+          gh release view "v$app_version" --repo gaofeng21cn/one-person-lab-app \
+            --json tagName,isDraft,isPrerelease,publishedAt,targetCommitish,assets,url \
+            > "$RUNNER_TEMP/opl-app-release.json"
+          app_commit="$(gh api "repos/gaofeng21cn/one-person-lab-app/commits/v$app_version" --jq .sha)"
+          component_args=(
+            --release-json "$RUNNER_TEMP/opl-app-release.json" \
+            --source-commit "$app_commit" \
+            --output "$RUNNER_TEMP/opl-app-component-manifest.json"
+          )
+          mkdir -p "$RUNNER_TEMP/opl-app-owner-component"
+          if gh release download "v$app_version" --repo gaofeng21cn/one-person-lab-app \
+            --pattern opl-app-component-manifest.json --dir "$RUNNER_TEMP/opl-app-owner-component"; then
+            component_args+=(--owner-manifest "$RUNNER_TEMP/opl-app-owner-component/opl-app-component-manifest.json")
+          fi
+          node scripts/resolve-opl-app-component.mjs "${component_args[@]}"
           args=(
             --release-set-generation "$OPL_RELEASE_SET_GENERATION"
             --owner "$OPL_PACKAGES_OWNER"
             --out-dir dist/opl-daily-packages
+            --app-component-manifest "$RUNNER_TEMP/opl-app-component-manifest.json"
           )
           if [ -n "${{ steps.current.outputs.current_manifest }}" ]; then
             args+=(--previous-manifest "${{ steps.current.outputs.current_manifest }}")

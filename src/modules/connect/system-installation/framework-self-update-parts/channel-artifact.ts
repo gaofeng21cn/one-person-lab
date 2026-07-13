@@ -152,8 +152,20 @@ export function readFrameworkChannelEntry() {
     const parsedChannelManifest = readJsonPayloadFile(manifestPath);
     const channelManifest = (isRecord(parsedChannelManifest) ? parsedChannelManifest : {}) as {
       release_set_generation?: string;
+      release_set?: {
+        surface_kind?: string;
+        components?: {
+          base?: {
+            version?: string;
+            source_commit?: string;
+            artifact_ref?: string;
+            artifact_digest?: string;
+          };
+        };
+      };
       packages?: {
         framework_core?: {
+          version?: string;
           artifact?: string;
           source_archive?: { sha256?: string };
           source_git?: { head_sha?: string };
@@ -161,17 +173,22 @@ export function readFrameworkChannelEntry() {
       };
     };
     const framework = channelManifest.packages?.framework_core;
-    const artifact = normalizeOptionalString(framework?.artifact);
+    const base = channelManifest.release_set?.surface_kind === 'opl_release_set.v2'
+      ? channelManifest.release_set.components?.base
+      : null;
+    const artifact = normalizeOptionalString(base?.artifact_ref ?? framework?.artifact);
     if (!artifact) {
       throw new FrameworkContractError('contract_shape_invalid', 'OPL channel manifest is missing packages.framework_core.artifact.', {
         channel_version: channelManifest.release_set_generation ?? null,
       });
     }
     return {
-      channel_version: normalizeOptionalString(channelManifest.release_set_generation),
+      channel_version: normalizeOptionalString(base?.version ?? framework?.version ?? channelManifest.release_set_generation),
+      release_set_generation: normalizeOptionalString(channelManifest.release_set_generation),
       artifact,
+      artifact_digest: normalizeOptionalString(base?.artifact_digest),
       source_archive_sha256: normalizeOptionalString(framework?.source_archive?.sha256),
-      source_git_head_sha: normalizeOptionalString(framework?.source_git?.head_sha),
+      source_git_head_sha: normalizeOptionalString(base?.source_commit ?? framework?.source_git?.head_sha),
     };
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });

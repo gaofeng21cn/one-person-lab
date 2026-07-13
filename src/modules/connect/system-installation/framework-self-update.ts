@@ -984,6 +984,10 @@ export function readOplFrameworkRuntimeUpdateStatus(
   const previousRoot = `${targetRoot}${FRAMEWORK_PREVIOUS_ROOT_SUFFIX}`;
   const metadataPath = path.join(targetRoot, FRAMEWORK_SOURCE_METADATA_FILE);
   const channelArtifactAvailable = Boolean(channelEntry?.artifact);
+  const channelArtifactCurrent = Boolean(channelEntry && fs.existsSync(targetRoot) && frameworkSourceAlreadyCurrent(targetRoot, {
+    sourceHeadSha: channelEntry.source_git_head_sha,
+    sourceArchiveSha256: channelEntry.source_archive_sha256,
+  }));
   return {
     target_root: targetRoot,
     target_valid: fs.existsSync(targetRoot) && fs.statSync(targetRoot).isDirectory() && isOplFrameworkRoot(targetRoot),
@@ -998,12 +1002,15 @@ export function readOplFrameworkRuntimeUpdateStatus(
     channel_lookup_skipped: channelLookupSkipped,
     channel_artifact: channelEntry?.artifact ?? null,
     channel_version: channelEntry?.channel_version ?? null,
+    channel_release_set_generation: channelEntry?.release_set_generation ?? null,
+    channel_artifact_digest: channelEntry?.artifact_digest ?? null,
+    channel_artifact_current: channelArtifactCurrent,
     channel_source_archive_sha256: channelEntry?.source_archive_sha256 ?? null,
     update_configured: Boolean(sourceArchive || sourceRoot || channelEntry),
     update_available: Boolean(
       (sourceArchive && fs.existsSync(sourceArchive) && fs.statSync(sourceArchive).isFile())
       || (sourceRoot && fs.existsSync(sourceRoot) && fs.statSync(sourceRoot).isDirectory())
-      || channelArtifactAvailable,
+      || (channelArtifactAvailable && !channelArtifactCurrent),
     ),
     previous_root: previousRoot,
     previous_root_available: fs.existsSync(previousRoot) && fs.statSync(previousRoot).isDirectory() && isOplFrameworkRoot(previousRoot),

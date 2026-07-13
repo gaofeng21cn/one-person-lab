@@ -12,7 +12,7 @@ function sha256Payload(value) {
 }
 
 function parseOptions(argv) {
-  const options = { releaseManifest: '', channelManifest: '', packageId: '', digest: '', check: false };
+  const options = { releaseManifest: '', channelManifest: '', packageId: '', componentId: '', digest: '', check: false };
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
     if (token === '--check') {
@@ -25,14 +25,15 @@ function parseOptions(argv) {
     if (token === '--release-manifest') options.releaseManifest = path.resolve(value);
     else if (token === '--channel-manifest') options.channelManifest = path.resolve(value);
     else if (token === '--package-id') options.packageId = value;
+    else if (token === '--component-id') options.componentId = value;
     else if (token === '--digest') options.digest = value;
     else throw new Error(`Unknown argument: ${token}`);
   }
   if (!options.releaseManifest || !options.channelManifest) {
     throw new Error('--release-manifest and --channel-manifest are required');
   }
-  if (!options.check && (!options.packageId || !options.digest)) {
-    throw new Error('--package-id and --digest are required unless --check is used');
+  if (!options.check && ((!options.packageId && !options.componentId) || (options.packageId && options.componentId) || !options.digest)) {
+    throw new Error('Exactly one of --package-id or --component-id plus --digest is required unless --check is used');
   }
   return options;
 }
@@ -46,8 +47,6 @@ function selectedVersion(channel, packageId) {
 
 function resolvePromotionTarget(release) {
   const target = process.env.OPL_PACKAGE_PROMOTION_TARGET?.trim()
-    || release.release_channel
-    || release.release_set?.target_channel
     || 'candidate';
   if (!['candidate', 'latest-stable'].includes(target)) {
     throw new Error(`Invalid Package promotion target: ${target}`);
@@ -63,12 +62,12 @@ function assertFinalized(release, channel) {
     failures.push(`catalog ids=${catalogIds.join(',')}`);
   }
   if (release.release_set_generation !== release.release_set?.generation
-    || release.release_set?.surface_kind !== 'opl_release_set.v1') {
+    || release.release_set?.surface_kind !== 'opl_release_set.v2') {
     failures.push('release_set_generation');
   }
-  if (release.release_channel !== release.release_set?.target_channel
-    || channel.release_channel !== release.release_channel
-    || channel.release_set?.target_channel !== release.release_channel
+  if (release.release_channel !== undefined
+    || channel.release_channel !== undefined
+    || release.release_set?.target_channel !== undefined
     || release.release_set?.bom_status !== 'complete'
     || channel.release_set?.bom_status !== 'complete') {
     failures.push('release_set_channel_state');
@@ -81,7 +80,7 @@ function assertFinalized(release, channel) {
     const version = entry?.versions?.find((candidate) => candidate?.selection_status === 'selected_for_release_set');
     const packageEntry = release.packages?.package_artifacts?.[packageId];
     const channelPackageEntry = channel.packages?.package_artifacts?.[packageId];
-    const member = release.release_set?.members?.[packageId];
+    const member = release.release_set?.components?.packages?.members?.[packageId];
     const digest = version?.artifact_digest ?? '';
     if (!version
       || version.artifact_status !== 'published_immutable'
@@ -97,14 +96,36 @@ function assertFinalized(release, channel) {
       || member?.package_version !== version.package_version
       || member?.owner_source_commit !== version.owner_source_commit
       || member?.oci_artifact_digest !== digest
+      || member?.artifact_digest !== digest
       || member?.artifact_status !== 'published_immutable') {
       failures.push(packageId);
     }
   }
-  if (release.release_set?.package_count !== CANONICAL_PACKAGE_IDS.length
-    || Object.keys(release.release_set?.members ?? {}).length !== CANONICAL_PACKAGE_IDS.length) {
+  if (release.release_set?.component_count !== CANONICAL_PACKAGE_IDS.length + 2
+    || release.release_set?.components?.packages?.package_count !== CANONICAL_PACKAGE_IDS.length
+    || Object.keys(release.release_set?.components?.packages?.members ?? {}).length !== CANONICAL_PACKAGE_IDS.length) {
     failures.push('release_set_member_count');
   }
+  const base = release.release_set?.components?.base;
+  if (base?.component_id !== 'opl-base'
+    || base?.version !== release.packages?.framework_core?.version
+    || base?.source_commit !== release.packages?.framework_core?.source_git?.head_sha
+    || base?.artifact_ref !== release.packages?.framework_core?.artifact
+    || base?.artifact_status !== 'published_immutable'
+    || !/^sha256:[0-9a-f]{64}$/.test(base?.artifact_digest ?? '')) {
+    failures.push('opl-base');
+  }
+  const app = release.release_set?.components?.app;
+  if (app?.component_id !== 'opl-app'
+    || !/^\d{2}\.\d{1,2}\.\d{1,2}$/.test(app?.version ?? '')
+    || !/^[0-9a-f]{40}$/.test(app?.source_commit ?? '')
+    || app?.artifact_status !== 'published_immutable'
+    || !/^sha256:[0-9a-f]{64}$/.test(app?.artifact_digest ?? '')
+    || (resolvePromotionTarget(release) === 'latest-stable' && app?.release_status !== 'published')) {
+    failures.push('opl-app');
+  }
+  const expectedBomDigest = sha256Payload(JSON.stringify(release.release_set?.components));
+  if (release.release_set?.bom_digest !== expectedBomDigest) failures.push('bom_digest');
   if (failures.length > 0) throw new Error(`Release Set BOM is incomplete or inconsistent: ${failures.join(', ')}`);
 }
 
@@ -116,8 +137,7 @@ function main() {
   const options = parseOptions(process.argv.slice(2));
   const release = readJsonFile(options.releaseManifest);
   const channel = readJsonFile(options.channelManifest);
-  const promotionTarget = resolvePromotionTarget(release);
-  if (!options.check) {
+  if (!options.check && options.packageId) {
     if (!/^sha256:[0-9a-f]{64}$/.test(options.digest)) throw new Error(`Invalid OCI digest: ${options.digest}`);
     const packageEntry = Object.values(release.packages?.package_artifacts ?? {})
       .find((entry) => entry?.package_id === options.packageId);
@@ -132,22 +152,41 @@ function main() {
     packageEntry.remote_publish_status = 'verified_published_immutable';
     version.artifact_digest = options.digest;
     version.artifact_status = 'published_immutable';
-    const member = release.release_set?.members?.[options.packageId];
+    const member = release.release_set?.components?.packages?.members?.[options.packageId];
     if (!member) throw new Error(`Release Set has no member: ${options.packageId}`);
     member.oci_artifact_digest = options.digest;
+    member.artifact_digest = options.digest;
     member.artifact_status = 'published_immutable';
+  } else if (!options.check && options.componentId) {
+    if (options.componentId !== 'opl-base') throw new Error(`Unsupported component id: ${options.componentId}`);
+    const base = release.release_set?.components?.base;
+    if (!base) throw new Error('Release Set has no OPL Base component');
+    base.artifact_digest = options.digest;
+    base.artifact_status = 'published_immutable';
+    release.packages.framework_core.artifact_digest = options.digest;
+    release.packages.framework_core.artifact_status = 'published_immutable';
   }
-  const complete = Object.values(release.release_set?.members ?? {}).every((member) => (
+  const packageComplete = Object.values(release.release_set?.components?.packages?.members ?? {}).every((member) => (
     member?.artifact_status === 'published_immutable'
-    && /^sha256:[0-9a-f]{64}$/.test(member?.oci_artifact_digest ?? '')
+    && /^sha256:[0-9a-f]{64}$/.test(member?.artifact_digest ?? '')
     && /^[0-9a-f]{40}$/.test(member?.owner_source_commit ?? '')
   ));
-  release.release_channel = promotionTarget;
-  release.release_set.target_channel = promotionTarget;
+  const base = release.release_set?.components?.base;
+  const app = release.release_set?.components?.app;
+  const complete = packageComplete
+    && base?.artifact_status === 'published_immutable'
+    && /^sha256:[0-9a-f]{64}$/.test(base?.artifact_digest ?? '')
+    && /^[0-9a-f]{40}$/.test(base?.source_commit ?? '')
+    && app?.artifact_status === 'published_immutable'
+    && /^sha256:[0-9a-f]{64}$/.test(app?.artifact_digest ?? '')
+    && /^[0-9a-f]{40}$/.test(app?.source_commit ?? '');
   release.release_set.bom_status = complete ? 'complete' : 'pending_remote_verification';
-  channel.release_channel = promotionTarget;
+  release.release_set.bom_digest = complete
+    ? sha256Payload(JSON.stringify(release.release_set.components))
+    : null;
   channel.release_set = structuredClone(release.release_set);
   channel.packages.package_artifacts = structuredClone(release.packages.package_artifacts);
+  channel.packages.framework_core = structuredClone(release.packages.framework_core);
   if (options.check) assertFinalized(release, channel);
   channel.package_catalog_digest = sha256Payload(JSON.stringify(channel.packages.package_catalog));
   writeJson(options.releaseManifest, release);
@@ -155,6 +194,7 @@ function main() {
   console.log(JSON.stringify({
     status: options.check ? 'verified' : 'finalized',
     package_id: options.packageId || null,
+    component_id: options.componentId || null,
     package_catalog_digest: channel.package_catalog_digest,
   }));
 }

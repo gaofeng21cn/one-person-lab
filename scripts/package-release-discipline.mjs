@@ -91,7 +91,10 @@ function validatePackageArtifact(packageId, entry, member, failures) {
   }
 }
 
-function validateFrameworkCore(entry, failures) {
+function validateFrameworkCore(entry, base, failures) {
+  assertCondition(isSemVer(entry?.version) && !String(entry?.version).includes('-'), 'framework_core: Base version must be stable SemVer', failures);
+  assertCondition(base?.component_id === 'opl-base' && base?.version === entry?.version, 'framework_core: Base BOM identity/version drifted', failures);
+  assertCondition(base?.artifact_ref === entry?.artifact, 'framework_core: Base BOM artifact ref drifted', failures);
   assertCondition(entry?.homebrew_formula?.surface_kind === 'opl_homebrew_formula_projection.v1', 'framework_core: Homebrew projection surface kind is invalid', failures);
   assertCondition(entry?.homebrew_formula?.formula_name === 'opl', 'framework_core: Homebrew Formula name must be opl', failures);
   assertCondition(entry?.homebrew_formula?.package_name === 'opl', 'framework_core: Homebrew package name must be opl', failures);
@@ -111,15 +114,23 @@ function validateManifest(manifest, promotionTarget = 'candidate') {
 
   assertCondition(/^\d{2}\.\d{1,2}\.\d{1,2}(?:-r[1-9]\d*)?$/.test(generation ?? ''), 'Release Set generation must use YY.M.D or YY.M.D-rN', failures);
   assertCondition(manifest.opl_version === undefined, 'Release Set generation must not be exposed as opl_version', failures);
-  assertCondition(releaseSet?.surface_kind === 'opl_release_set.v1', 'Release Set surface kind is missing', failures);
+  assertCondition(releaseSet?.surface_kind === 'opl_release_set.v2', 'Release Set v2 surface kind is missing', failures);
   assertCondition(releaseSet?.generation === generation, 'Release Set generation fields disagree', failures);
   assertCondition(releaseSet?.generation_scheme === 'calver_yy.m.d_optional_revision', 'Release Set generation scheme drifted', failures);
   assertCondition(releaseSet?.catalog_carrier_is_package_identity === false, 'Catalog carrier must not become an eighth Package identity', failures);
   assertCondition(typeof releaseSet?.catalog_carrier === 'string' && releaseSet.catalog_carrier.includes(`one-person-lab-manifest:${generation}`), 'Release Set catalog carrier ref drifted', failures);
   assertCondition(releaseSet?.promotion_evidence_status === 'requires_remote_tag_readback', 'Release Set must not pre-claim channel promotion', failures);
   assertCondition(JSON.stringify(packageIds) === JSON.stringify([...CANONICAL_PACKAGE_IDS].sort()), 'Package artifact ids must be the canonical seven', failures);
-  assertCondition(JSON.stringify(Object.keys(releaseSet?.members ?? {}).sort()) === JSON.stringify([...CANONICAL_PACKAGE_IDS].sort()), 'Release Set BOM must contain the canonical seven', failures);
-  assertCondition(releaseSet?.package_count === CANONICAL_PACKAGE_IDS.length, 'Release Set package count must be seven', failures);
+  assertCondition(releaseSet?.component_count === CANONICAL_PACKAGE_IDS.length + 2, 'Release Set BOM must contain Base, App, and seven Packages', failures);
+  assertCondition(JSON.stringify(Object.keys(releaseSet?.components?.packages?.members ?? {}).sort()) === JSON.stringify([...CANONICAL_PACKAGE_IDS].sort()), 'Release Set Package collection must contain the canonical seven', failures);
+  assertCondition(releaseSet?.components?.packages?.package_count === CANONICAL_PACKAGE_IDS.length, 'Release Set Package count must be seven', failures);
+  assertCondition(releaseSet?.components?.app?.component_id === 'opl-app', 'Release Set App component is missing', failures);
+  assertCondition(/^\d{2}\.\d{1,2}\.\d{1,2}$/.test(releaseSet?.components?.app?.version ?? ''), 'Release Set App version must be CalVer', failures);
+  assertCondition(isGitSha(releaseSet?.components?.app?.source_commit), 'Release Set App source commit is invalid', failures);
+  assertCondition(isDigest(releaseSet?.components?.app?.artifact_digest), 'Release Set App artifact digest is invalid', failures);
+  assertCondition(promotionTarget !== 'latest-stable' || releaseSet?.components?.app?.release_status === 'published', 'Stable Release Set requires a published App release', failures);
+  assertCondition(releaseSet?.update_decision?.release_set_revision_affects_component_update === false, 'Release Set revision must not force component updates', failures);
+  assertCondition(releaseSet?.channel_pointer_policy?.promotion_mode === 'retag_exact_immutable_release_set_digest', 'Stable promotion must reuse the immutable BOM digest', failures);
   assertCondition(manifest.package_install_update_source === 'package_channel', 'Package install/update source must be package_channel', failures);
   assertCondition(manifest.module_install_update_source === undefined, 'module_install_update_source is retired', failures);
   assertCondition(manifest.developer_module_source_override === undefined, 'developer_module_source_override is retired', failures);
@@ -137,7 +148,7 @@ function validateManifest(manifest, promotionTarget = 'candidate') {
   assertCondition(automation?.cleanup?.protected_tags?.includes('candidate') && automation?.cleanup?.protected_tags?.includes('latest-stable'), 'Cleanup must protect both moving tags', failures);
 
   for (const packageId of CANONICAL_PACKAGE_IDS) {
-    validatePackageArtifact(packageId, packageArtifacts[packageId], releaseSet?.members?.[packageId], failures);
+    validatePackageArtifact(packageId, packageArtifacts[packageId], releaseSet?.components?.packages?.members?.[packageId], failures);
     if (promotionTarget === 'latest-stable') {
       assertCondition(!String(packageArtifacts[packageId]?.package_version ?? '').includes('-'), `${packageId}: latest-stable cannot select a prerelease Package`, failures);
     }
@@ -145,7 +156,7 @@ function validateManifest(manifest, promotionTarget = 'candidate') {
   assertCondition(packageArtifacts['mas-scholar-skills']?.scope === 'framework_capability_package', 'MAS Scholar Skills role drifted', failures);
   assertCondition(packageArtifacts['opl-flow']?.scope === 'runtime_dependency', 'OPL Flow workflow-profile role drifted', failures);
   assertCondition(packageArtifacts['opl-flow']?.codex_standalone_distribution === null, 'OPL Flow must not be projected as a standalone Agent package', failures);
-  validateFrameworkCore(manifest.packages?.framework_core, failures);
+  validateFrameworkCore(manifest.packages?.framework_core, releaseSet?.components?.base, failures);
 
   const nativeHelper = manifest.packages?.native_helper;
   assertCondition(nativeHelper?.channel_status === 'active_ghcr_oci_prebuild', 'native helper channel status drifted', failures);
@@ -180,11 +191,13 @@ function validateWorkflow(manifest, manifestPath, failures) {
   assertCondition(/finalize-package-channel-digests\.mjs[\s\S]*--check/.test(source), 'Package workflow must verify a complete Release Set BOM', failures);
   assertCondition(/package-manifest\.json/.test(source) && !/agent-package-manifest\.json/.test(source), 'OCI Package layers must use the generic package manifest filename', failures);
   assertCondition(/generation_ref="\$\{carrier\}:\$\{OPL_RELEASE_SET_GENERATION\}"/.test(source), 'Catalog carrier must use immutable Release Set generation', failures);
-  assertCondition(/oras tag .* candidate/.test(source) && /oras tag .* latest-stable/.test(source), 'Package workflow must expose only candidate/latest-stable promotion', failures);
+  assertCondition(/oras tag .* candidate/.test(source) && !/oras tag .* latest-stable/.test(source), 'Package build workflow must publish candidate only', failures);
   assertCondition(!/:latest(?:["'\s]|$)/m.test(source), 'Package workflow must not publish or consume bare latest', failures);
 
   assertCondition(/release:[\s\S]*types:[\s\S]*-\s*published/.test(releaseSource), 'Release caller must be gated by published GitHub Release', failures);
-  assertCondition(/release_set_generation:/.test(releaseSource) && /promotion_target:\s*latest-stable/.test(releaseSource), 'Release caller must promote an explicit generation to latest-stable', failures);
+  assertCondition(/release_set_generation:/.test(releaseSource) && /promote-exact-release-set:/.test(releaseSource), 'Release caller must promote an explicit immutable generation', failures);
+  assertCondition(/oras pull "\$\{carrier\}@\$\{carrier_digest\}"/.test(releaseSource), 'Stable promotion must pull the exact immutable catalog digest', failures);
+  assertCondition(/components\.packages\.members/.test(releaseSource) && /components\.base\.artifact_digest/.test(releaseSource), 'Stable promotion must retag exact Package and Base digests', failures);
   assertCondition(/schedule:[\s\S]*cron:/.test(dailySource), 'Daily Package workflow must remain scheduled', failures);
   assertCondition(/concurrency:[\s\S]*group:\s*opl-daily-package-channel-\$\{\{ github\.repository_owner \}\}[\s\S]*cancel-in-progress:\s*false/.test(dailySource), 'Daily Package workflow must serialize Release Set generation allocation', failures);
   assertCondition(/release_set_generation:/.test(dailySource) && /--release-set-generation/.test(dailySource), 'Daily workflow must use Release Set generation vocabulary', failures);

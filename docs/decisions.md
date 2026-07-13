@@ -71,9 +71,9 @@ Re-review 采用 finding closure，不得用普通新建议无限重开循环。
 
 - 七个 Package 各自以 canonical owner manifest 的 SemVer 为唯一版本。`major` 表示不兼容的 package contract、ABI 或依赖边界变化；`minor` 表示向后兼容的新能力；`patch` 表示向后兼容的修复或内容更新；尚未稳定的 owner 可使用 `alpha`、`beta`、`rc` prerelease。owner language version 只作 carrier projection，例如 MAS 的 PEP 440 `0.1.0a4` 对应 canonical Package SemVer `0.1.0-alpha.4`。
 - capability、workflow-profile 与通用 payload schema 都必须在 owner manifest 入口接受合法 SemVer；release discipline 再对七个 artifact、Release Set BOM 与 OCI immutable tag 做同一版本校验。内容发生变化但 SemVer 未推进时 fail closed。
-- Release Set generation 使用 UTC `YY.M.D`；同日需要新的不可变选择时使用 `YY.M.D-rN`。它记录七个 Package 的精确 SemVer、owner source commit、OCI ref 与 digest，是 install/update/rollback 可复现 BOM，不等于 App 版本，也不表示七个 Package 同时发生变化。
+- Release Set generation 使用 UTC `YY.M.D`；同日需要新的不可变选择时使用 `YY.M.D-rN`。`opl_release_set.v2` 同时记录 OPL Base、OPL App 与七个 Package 的精确独立版本、source commit、artifact ref 与 digest，是 install/update/rollback 可复现的九组件生态 BOM。Base 与 Package 使用各自 SemVer，App 使用用户可见 CalVer；Release Set revision 不参与组件更新判断。
 - `ghcr.io/<owner>/one-person-lab-manifest:<release-set-generation>` 是 Release Set catalog carrier。它可使用 `candidate` 与 `latest-stable` moving tag，但 `catalog_carrier_is_package_identity=false`，不能进入 Package dependency graph、普通 Package 安装列表或独立用户 lifecycle。
-- daily workflow 在尚无 `latest-stable` 时把 canonical 七成员作为 initial candidate bootstrap；已有 stable baseline 后只在 Package source/content fingerprint 变化或显式 Release Set repair 时生成 candidate。未变化成员复用上一 Release Set 的精确 digest。GitHub Release `published` gate 才把验证后的 Package 与完整 Release Set 提升到 `latest-stable`。
+- daily workflow 在尚无 `latest-stable` 时生成完整九组件 candidate；已有 stable baseline 后只在 Base、App 或 Package 的 versioned source/content fingerprint 变化，或显式 Release Set repair 时生成 candidate。未变化组件复用上一 Release Set 的精确 digest。稳定推广只 retag 已存在的 immutable generation digest，不重新抓取 owner HEAD 或重建 BOM。
 - Homebrew 只提供 OPL Base 的唯一 Formula `opl`。七个 Package 不创建 Formula/Cask；普通安装、更新、repair、rollback 与卸载继续统一走 `opl packages`。
 
 ### 决策：effective Stage prompt 必须绑定正文，专业顺序按依赖而不是工具剧本表达

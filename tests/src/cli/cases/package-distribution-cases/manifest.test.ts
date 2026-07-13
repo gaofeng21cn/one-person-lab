@@ -24,8 +24,18 @@ test('packages manifest exposes canonical Release Set coordinates for Package in
   }) as {
     packages_manifest: {
       release_set_generation: string;
-      release_set: { generation: string; package_count: number; package_ids: string[]; catalog_carrier_is_package_identity: boolean };
-      release_channel: string;
+      release_set: {
+        surface_kind: string;
+        generation: string;
+        component_count: number;
+        component_ids: string[];
+        catalog_carrier_is_package_identity: boolean;
+        components: {
+          base: { component_id: string; version: string; artifact_ref: string };
+          app: { component_id: string; version: string | null; artifact_status: string };
+          packages: { package_count: number; package_ids: string[]; members: Record<string, unknown> };
+        };
+      };
       package_install_update_source: string;
       package_consumption_status: string;
       developer_package_source_override: {
@@ -147,9 +157,12 @@ test('packages manifest exposes canonical Release Set coordinates for Package in
 
   assert.equal(output.packages_manifest.release_set_generation, '26.4.27');
   assert.equal(output.packages_manifest.release_set.generation, '26.4.27');
-  assert.equal(output.packages_manifest.release_set.package_count, 7);
+  assert.equal(output.packages_manifest.release_set.surface_kind, 'opl_release_set.v2');
+  assert.equal(output.packages_manifest.release_set.component_count, 9);
+  assert.equal(output.packages_manifest.release_set.components.packages.package_count, 7);
+  assert.equal(output.packages_manifest.release_set.components.base.component_id, 'opl-base');
+  assert.equal(output.packages_manifest.release_set.components.app.component_id, 'opl-app');
   assert.equal(output.packages_manifest.release_set.catalog_carrier_is_package_identity, false);
-  assert.equal(output.packages_manifest.release_channel, 'candidate');
   assert.equal(output.packages_manifest.package_install_update_source, 'package_channel');
   assert.equal(
     output.packages_manifest.package_consumption_status,
@@ -230,7 +243,7 @@ test('packages manifest exposes canonical Release Set coordinates for Package in
   assert.deepEqual(output.packages_manifest.release_automation.cleanup.protected_tags, ['candidate', 'latest-stable']);
   assert.equal(Object.hasOwn(output.packages_manifest.packages, 'webui_docker_image'), false);
   assert.equal(output.packages_manifest.packages.framework_core.package_name, 'one-person-lab-framework');
-  assert.equal(output.packages_manifest.packages.framework_core.artifact, 'ghcr.io/gaofeng21cn/one-person-lab-framework:26.4.27');
+  assert.equal(output.packages_manifest.packages.framework_core.artifact, 'ghcr.io/gaofeng21cn/one-person-lab-framework:0.2.0');
   assert.equal(output.packages_manifest.packages.framework_core.package_consumption_status, 'consumed_by_runtime_substrate_updates');
   assert.equal(output.packages_manifest.packages.framework_core.current_install_update_source, 'opl_release_channel_manifest');
   assert.equal(

@@ -53,6 +53,35 @@ function packageFingerprint(manifest) {
     .sort(([left], [right]) => left.localeCompare(right)));
 }
 
+function ecosystemFingerprint(manifest) {
+  const base = manifest.release_set?.components?.base ?? {};
+  const app = manifest.release_set?.components?.app ?? {};
+  return {
+    'opl-base': {
+      version: base.version ?? manifest.packages?.framework_core?.version ?? null,
+      source_commit: base.source_commit ?? manifest.packages?.framework_core?.source_git?.head_sha ?? null,
+      content_digest: manifest.packages?.framework_core?.source_archive?.sha256 ?? null,
+    },
+    'opl-app': {
+      version: app.version ?? null,
+      source_commit: app.source_commit ?? null,
+      content_digest: app.artifact_digest ?? null,
+    },
+    ...Object.fromEntries(Object.entries(packageFingerprint(manifest)).map(([packageId, value]) => [packageId, {
+      version: value.package_version,
+      source_commit: value.owner_source_commit,
+      content_digest: value.package_content_digest,
+    }])),
+  };
+}
+
+function changedComponents(candidateFingerprint, currentFingerprint) {
+  const componentIds = new Set([...Object.keys(candidateFingerprint), ...Object.keys(currentFingerprint)]);
+  return [...componentIds]
+    .filter((componentId) => JSON.stringify(candidateFingerprint[componentId] ?? null) !== JSON.stringify(currentFingerprint[componentId] ?? null))
+    .sort();
+}
+
 function changedPackages(candidateFingerprint, currentFingerprint) {
   const packageIds = new Set([
     ...Object.keys(candidateFingerprint),
@@ -73,6 +102,11 @@ function buildSummary(options) {
     ? packageFingerprint(readJson(options.currentManifest))
     : {};
   const changed = changedPackages(candidateFingerprint, currentFingerprint);
+  const candidateEcosystemFingerprint = ecosystemFingerprint(candidate);
+  const currentEcosystemFingerprint = options.currentManifest
+    ? ecosystemFingerprint(readJson(options.currentManifest))
+    : {};
+  const changedEcosystemComponents = changedComponents(candidateEcosystemFingerprint, currentEcosystemFingerprint);
   const unversionedChanges = changed.filter((packageId) => (
     currentFingerprint[packageId]
     && candidateFingerprint[packageId]
@@ -82,14 +116,23 @@ function buildSummary(options) {
   if (unversionedChanges.length > 0) {
     throw new Error(`package content changed without a package version bump: ${unversionedChanges.join(', ')}`);
   }
+  const unversionedComponents = changedEcosystemComponents.filter((componentId) => (
+    currentEcosystemFingerprint[componentId]
+    && candidateEcosystemFingerprint[componentId]
+    && currentEcosystemFingerprint[componentId].version === candidateEcosystemFingerprint[componentId].version
+    && currentEcosystemFingerprint[componentId].content_digest !== candidateEcosystemFingerprint[componentId].content_digest
+  ));
+  if (unversionedComponents.length > 0) {
+    throw new Error(`component content changed without a version bump: ${unversionedComponents.join(', ')}`);
+  }
   return {
-    status: changed.length > 0 ? 'publish_required' : 'skipped',
+    status: changedEcosystemComponents.length > 0 ? 'publish_required' : 'skipped',
     reason: !options.currentManifest
       ? 'package_channel_bootstrap'
-      : changed.length > 0
-        ? 'package_channel_changed'
-        : 'package_channel_unchanged',
-    publish_required: changed.length > 0,
+      : changedEcosystemComponents.length > 0
+        ? 'release_set_component_changed'
+        : 'release_set_components_unchanged',
+    publish_required: changedEcosystemComponents.length > 0,
     release_set_generation: options.releaseSetGeneration,
     candidate_manifest: options.candidateManifest,
     current_manifest: options.currentManifest ?? null,
@@ -97,6 +140,9 @@ function buildSummary(options) {
     changed_packages_json: JSON.stringify(changed),
     candidate_fingerprint: candidateFingerprint,
     current_fingerprint: currentFingerprint,
+    changed_components: changedEcosystemComponents,
+    candidate_ecosystem_fingerprint: candidateEcosystemFingerprint,
+    current_ecosystem_fingerprint: currentEcosystemFingerprint,
   };
 }
 
