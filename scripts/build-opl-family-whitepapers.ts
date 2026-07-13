@@ -12,7 +12,6 @@ type WhitepaperEntry = {
   repo_env: string;
   default_repo_dir: string;
   profile: string;
-  source: string;
   public_html_url: string;
   public_pdf_url: string;
 };

@@ -40,7 +40,7 @@ Machine boundary: 本文是人读合同目录说明和边界索引。机器 trut
 
 - `contracts/opl-framework/*.json`：当前 stage-led OPL framework、App consumer surface、Foundry package/domain-agent catalog、runtime 与 supporting-surface contract
 - `contracts/opl-framework/brand-module-registry.json`：当前 OPL 品牌模块的机器注册表；`opl brand-modules list|inspect|maturity|validate|interfaces --json` 从这里派生，作为聚合目录与成熟度总览。
-- `contracts/opl-framework/public-whitepaper-registry.json`：OPL Framework、App、Cloud、MAS 四份公开白皮书的 pointer-only release-set registry；它记录 owner repo、Profile、watch paths 与公开 URL，不接管各仓正文，也不声明任何 ready。
+- `contracts/opl-framework/public-whitepaper-registry.json`：OPL Framework、App、Cloud、MAS 四份公开白皮书的 pointer-only release-set registry；它记录 owner repo、Profile 与公开 URL。正文来源由各仓 Profile 持有，监听路径由各仓 workflow 持有；registry 不接管正文，也不声明任何 ready。
 - `contracts/opl-framework/public-whitepaper-profile.schema.json`：四仓白皮书 Profile 的统一输入 schema；只固定 owner、source/output、版式页数和公开 URL，不把章节或措辞变成机器接口。
 - `contracts/opl-framework/brand-cli-governance.json`：品牌模块 command surface 与 domain-agent internal module spine 治理；它约束 `opl agents modules * --json` 和 Workspace validate/doctor/interfaces 的碰撞边界。
 - `contracts/opl-framework/brand-module-surfaces.json`：当前 OPL 品牌模块的自身 executable surface 合同；`opl charter|atlas|workspace|pack|stagecraft|runway|ledger|console|foundry-lab|connect status|inspect|interfaces|validate|doctor --json` 从这里派生，证明模块级 Workspace-level `L4_structural_baseline`，但不声明 domain ready、quality verdict、artifact authority、production ready、owner receipt、typed blocker 或 App release truth。

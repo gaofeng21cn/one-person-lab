@@ -3,7 +3,7 @@
   "owner": "OPL Charter + OPL Connect",
   "purpose": "public_whitepaper_release_set_registry",
   "state": "active",
-  "machine_boundary": "Pointer-only registry for the four public whitepaper owners, build profiles, watch paths, and public URLs. Each repository keeps its own prose and product truth. This registry does not claim product, runtime, domain, publication, or production readiness.",
+  "machine_boundary": "Pointer-only registry for the four public whitepaper owners, build profiles, and public URLs. Each repository profile owns its source pointer, and each repository workflow owns its watch paths. This registry does not claim product, runtime, domain, publication, or production readiness.",
   "renderer": {
     "owner_repo": "gaofeng21cn/one-person-lab",
     "entrypoint": "scripts/run-domain-whitepaper.ts",
@@ -19,17 +19,6 @@
       "repo_env": "OPL_FRAMEWORK_REPO",
       "default_repo_dir": "one-person-lab",
       "profile": "contracts/whitepaper_profile.json",
-      "source": "docs/whitepapers/opl-whitepaper.md",
-      "watch_paths": [
-        "docs/whitepapers/**",
-        "docs/project.md",
-        "docs/architecture.md",
-        "docs/invariants.md",
-        "docs/decisions.md",
-        "docs/status.md",
-        "contracts/opl-framework/brand-system-profile.json",
-        "contracts/opl-framework/standard-agent-principles.json"
-      ],
       "public_html_url": "https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-whitepaper.html",
       "public_pdf_url": "https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-whitepaper.pdf"
     },
@@ -40,17 +29,6 @@
       "repo_env": "OPL_APP_REPO",
       "default_repo_dir": "one-person-lab-app",
       "profile": "contracts/whitepaper_profile.json",
-      "source": "docs/whitepapers/opl-app-whitepaper.md",
-      "watch_paths": [
-        "docs/whitepapers/**",
-        "docs/project.md",
-        "docs/architecture.md",
-        "docs/invariants.md",
-        "docs/decisions.md",
-        "docs/status.md",
-        "contracts/app-product-profile.json",
-        "contracts/app-gui-product-contract.json"
-      ],
       "public_html_url": "https://gaofeng21cn.github.io/one-person-lab-app/latest/whitepapers/opl-app-whitepaper.html",
       "public_pdf_url": "https://gaofeng21cn.github.io/one-person-lab-app/latest/whitepapers/opl-app-whitepaper.pdf"
     },
@@ -61,14 +39,6 @@
       "repo_env": "OPL_CLOUD_REPO",
       "default_repo_dir": "one-person-lab-cloud",
       "profile": "contracts/whitepaper_profile.json",
-      "source": "docs/whitepapers/opl-cloud-whitepaper.md",
-      "watch_paths": [
-        "docs/whitepapers/**",
-        "README.md",
-        "README.zh-CN.md",
-        "docs/architecture.md",
-        "docs/product-matrix.md"
-      ],
       "public_html_url": "https://gaofeng21cn.github.io/one-person-lab-cloud/latest/whitepapers/opl-cloud-whitepaper.html",
       "public_pdf_url": "https://gaofeng21cn.github.io/one-person-lab-cloud/latest/whitepapers/opl-cloud-whitepaper.pdf"
     },
@@ -79,17 +49,6 @@
       "repo_env": "MAS_REPO",
       "default_repo_dir": "med-autoscience",
       "profile": "contracts/whitepaper_profile.json",
-      "source": "docs/whitepapers/mas-whitepaper.md",
-      "watch_paths": [
-        "docs/whitepapers/**",
-        "docs/project.md",
-        "docs/architecture.md",
-        "docs/invariants.md",
-        "docs/decisions.md",
-        "docs/status.md",
-        "agent/**",
-        "contracts/standard_agent_conformance_profile.json"
-      ],
       "public_html_url": "https://gaofeng21cn.github.io/med-autoscience/latest/whitepapers/mas-whitepaper.html",
       "public_pdf_url": "https://gaofeng21cn.github.io/med-autoscience/latest/whitepapers/mas-whitepaper.pdf"
     }

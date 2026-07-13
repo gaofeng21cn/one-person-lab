@@ -17,4 +17,5 @@ test('family whitepaper registry exposes the complete four-document release set'
   assert.deepEqual(output.whitepapers.map(({ id }) => id), ['opl-framework', 'opl-app', 'opl-cloud', 'mas']);
   assert.equal(new Set(output.whitepapers.map(({ repo_root }) => repo_root)).size, 4);
   assert.ok(output.whitepapers.every(({ profile }) => profile === 'contracts/whitepaper_profile.json'));
+  assert.ok(output.whitepapers.every((entry) => !('source' in entry) && !('watch_paths' in entry)));
 });
