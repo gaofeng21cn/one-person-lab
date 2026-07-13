@@ -13,7 +13,7 @@ export const STAGE_RUN_CANARY_EVIDENCE = {
     grounded_reflection: ['reflection-review-ref:sample-domain/controlled-canary'],
     comparative_selection: ['ranking-selection-ref:sample-domain/controlled-canary'],
     evolution_and_revision: ['revision-lineage-ref:sample-domain/controlled-canary'],
-    meta_review_learning: ['meta-review-ref:sample-domain/controlled-canary'],
+    strategy_retrospective: ['strategy-retrospective-ref:sample-domain/controlled-canary'],
     independent_quality_gate: ['independent-gate-ref:sample-domain/controlled-canary'],
   },
   role_artifact_refs: {
@@ -21,7 +21,7 @@ export const STAGE_RUN_CANARY_EVIDENCE = {
     reflection_review_ref: 'reflection-review-ref:sample-domain/controlled-canary',
     ranking_selection_ref: 'ranking-selection-ref:sample-domain/controlled-canary',
     revision_lineage_ref: 'revision-lineage-ref:sample-domain/controlled-canary',
-    meta_review_ref: 'meta-review-ref:sample-domain/controlled-canary',
+    strategy_retrospective_ref: 'strategy-retrospective-ref:sample-domain/controlled-canary',
     independent_gate_ref: 'independent-gate-ref:sample-domain/controlled-canary',
   },
   closeout: {
@@ -59,7 +59,7 @@ export function buildStageRunCanaryEvidence(domainId: string, stageId: string) {
       grounded_reflection: [`reflection-review-ref:${domainId}/controlled-canary`],
       comparative_selection: [`ranking-selection-ref:${domainId}/controlled-canary`],
       evolution_and_revision: [`revision-lineage-ref:${domainId}/controlled-canary`],
-      meta_review_learning: [`meta-review-ref:${domainId}/controlled-canary`],
+      strategy_retrospective: [`strategy-retrospective-ref:${domainId}/controlled-canary`],
       independent_quality_gate: [`independent-gate-ref:${domainId}/controlled-canary`],
     },
     role_artifact_refs: {
@@ -67,7 +67,7 @@ export function buildStageRunCanaryEvidence(domainId: string, stageId: string) {
       reflection_review_ref: `reflection-review-ref:${domainId}/controlled-canary`,
       ranking_selection_ref: `ranking-selection-ref:${domainId}/controlled-canary`,
       revision_lineage_ref: `revision-lineage-ref:${domainId}/controlled-canary`,
-      meta_review_ref: `meta-review-ref:${domainId}/controlled-canary`,
+      strategy_retrospective_ref: `strategy-retrospective-ref:${domainId}/controlled-canary`,
       independent_gate_ref: `independent-gate-ref:${domainId}/controlled-canary`,
     },
     closeout: {

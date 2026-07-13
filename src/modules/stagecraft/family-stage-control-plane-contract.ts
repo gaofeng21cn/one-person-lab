@@ -104,6 +104,8 @@ export interface FamilyStageDescriptor {
   summary: string | null;
   goal: string;
   owner: string;
+  stage_role?: string | null;
+  stage_quality_cycle_policy_ref?: string | null;
   stage_origin?: string | null;
   pattern_id?: string | null;
   step_id?: string | null;
@@ -141,6 +143,8 @@ export interface FamilyStageControlPlane {
   target_domain_id: string;
   owner: string;
   authority_boundary: JsonRecord;
+  quality_governance_profile_ref?: string | null;
+  meta_review_policy_ref?: string | null;
   replay_evidence_refs?: FamilyStageSurfaceRef[];
   stage_pack_conformance_version?: string | null;
   stages: FamilyStageDescriptor[];
@@ -364,6 +368,8 @@ function normalizeFamilyStageDescriptor(value: unknown, field: string): FamilySt
     summary: optionalString(value.summary),
     goal: requireString(value.goal, `${field}.goal`),
     owner: requireString(value.owner, `${field}.owner`),
+    stage_role: optionalString(value.stage_role),
+    stage_quality_cycle_policy_ref: optionalString(value.stage_quality_cycle_policy_ref),
     ...(stageOrigin ? { stage_origin: stageOrigin } : {}),
     ...(patternId ? { pattern_id: patternId } : {}),
     ...(stepId ? { step_id: stepId } : {}),
@@ -435,6 +441,8 @@ export function normalizeFamilyStageControlPlane(
     target_domain_id: requireString(value.target_domain_id, `${field}.target_domain_id`),
     owner: requireString(value.owner, `${field}.owner`),
     authority_boundary: isRecord(value.authority_boundary) ? value.authority_boundary : {},
+    quality_governance_profile_ref: optionalString(value.quality_governance_profile_ref),
+    meta_review_policy_ref: optionalString(value.meta_review_policy_ref),
     replay_evidence_refs: normalizeSurfaceRefs(value.replay_evidence_refs, `${field}.replay_evidence_refs`),
     stage_pack_conformance_version: optionalString(value.stage_pack_conformance_version),
     stages,

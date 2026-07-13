@@ -41,6 +41,75 @@
     "failed_with_repair",
     "skipped_manual_required"
   ],
+  "base_dependency_catalog_contract": {
+    "surface_kind": "opl_base_managed_dependency_catalog.v1",
+    "required_dependency_fields": [
+      "dependency_id",
+      "dependency_kind",
+      "installed",
+      "version",
+      "latest_version",
+      "currentness",
+      "ownership",
+      "update_mode",
+      "update_action"
+    ],
+    "currentness_values": [
+      "current",
+      "update_available",
+      "unknown",
+      "missing"
+    ],
+    "update_mode_values": [
+      "silent_managed",
+      "explicit_owner_delegated",
+      "detect_only_guidance"
+    ],
+    "silent_managed_scope": [
+      "opl_managed_codex_cli",
+      "opl_framework_temporal_sdk_generation",
+      "opl_managed_officecli",
+      "opl_managed_mineru_open_api"
+    ],
+    "external_dependency_policy": {
+      "recognized_owner_kinds": [
+        "homebrew_formula",
+        "homebrew_cask",
+        "global_npm"
+      ],
+      "update_action_required_fields": [
+        "action_id",
+        "label",
+        "surface",
+        "delegated_surface",
+        "payload_fields",
+        "confirmation_required",
+        "danger_level",
+        "owner_kind",
+        "auto_apply_allowed"
+      ],
+      "confirmation_required": true,
+      "auto_apply_allowed": false,
+      "unverified_owner_action": null,
+      "system_path_overwrite_allowed": false,
+      "temporal_server_currentness_inference_allowed": false
+    },
+    "flow_dependencies_projection": {
+      "field": "flow_dependencies",
+      "source": "installed_opl_flow_package_lock_workflow_policy_migration_dependencies",
+      "required_fields": [
+        "dependency_id",
+        "dependency_kind",
+        "activation",
+        "lifecycle_owner",
+        "update_mode",
+        "installed",
+        "currentness"
+      ],
+      "legacy_ids_field": "flow_dependency_ids",
+      "app_hardcoded_dependency_classification_allowed": false
+    }
+  },
   "coordination_roles": [
     "executable_target",
     "derived_projection",
@@ -380,7 +449,14 @@
         "opl_framework_runtime",
         "dependency_catalog",
         "pending_runtime_activation"
-      ]
+      ],
+      "dependency_currentness_refresh_policy": {
+        "status": "receipt_or_process_cache_only",
+        "check": "bounded_upstream_lookup",
+        "plan": "bounded_upstream_lookup",
+        "apply": "bounded_upstream_lookup_then_owner_scoped_reconcile",
+        "fast_app_state_network_lookup_allowed": false
+      }
     },
     {
       "lifecycle_owner": "opl_packages",

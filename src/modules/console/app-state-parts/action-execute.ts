@@ -15,6 +15,8 @@ import {
   agentPackageDelegatedSurface,
   buildManagedUpdateKernelProjection,
   runManagedUpdateKernelOperation,
+  listExternalOwnerDelegatedUpdateActions,
+  runExternalOwnerDelegatedUpdate,
 } from '../../connect/index.ts';
 import { runOplSystemAction } from '../../connect/index.ts';
 import { writeOplWorkspaceRootSurface } from '../../connect/index.ts';
@@ -239,6 +241,15 @@ async function executeDirectAppAction(
       result: options.dryRun
         ? dryRunEngineAction(codexAction)
         : await runOplEngineAction(contracts, codexAction, 'codex'),
+    };
+  }
+
+  if (options.actionId.startsWith('external_codex_update_') || options.actionId === 'external_temporal_update_homebrew') {
+    const externalAction = listExternalOwnerDelegatedUpdateActions()
+      .find((candidate) => candidate.action_id === options.actionId);
+    return {
+      delegatedSurface: externalAction?.delegated_surface ?? 'verified external package-manager owner route',
+      result: runExternalOwnerDelegatedUpdate(options.actionId, options.dryRun),
     };
   }
 

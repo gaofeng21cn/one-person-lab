@@ -243,7 +243,12 @@ function packageHealthCommand(moduleId: string, checkoutPath: string) {
     ?? null;
 }
 
-function prepareRuntimeSource(moduleId: string, checkoutPath: string, includeBootstrap: boolean) {
+function prepareRuntimeSource(
+  moduleId: string,
+  checkoutPath: string,
+  includeBootstrap: boolean,
+  packageProbeOnly = false,
+) {
   const spec = resolveOplDomainModuleSpec(moduleId);
   const lifecycle = readPackageChannelLifecycle(checkoutPath, spec);
   if (!lifecycle) {
@@ -258,7 +263,8 @@ function prepareRuntimeSource(moduleId: string, checkoutPath: string, includeBoo
     moduleId,
     lifecycle.current.tree_sha256,
   );
-  const commandEnv = includeBootstrap
+  const managedPackageScope = includeBootstrap || packageProbeOnly;
+  const commandEnv = managedPackageScope
     ? {
         ...process.env,
         HOME: path.join(preparationRoot, 'home'),
@@ -269,7 +275,7 @@ function prepareRuntimeSource(moduleId: string, checkoutPath: string, includeBoo
         PATH: `${path.join(preparationRoot, 'bin')}${path.delimiter}${process.env.PATH ?? ''}`,
       }
     : process.env;
-  if (includeBootstrap) fs.mkdirSync(commandEnv.HOME!, { recursive: true });
+  if (managedPackageScope) fs.mkdirSync(commandEnv.HOME!, { recursive: true });
   const bootstrap = includeBootstrap
     ? runRequiredCommand(
       moduleId,
@@ -292,7 +298,7 @@ function prepareRuntimeSource(moduleId: string, checkoutPath: string, includeBoo
   const health = runRequiredCommand(
     moduleId,
     checkoutPath,
-    includeBootstrap ? packageHealthCommand(moduleId, checkoutPath) : spec.health_check_command?.(checkoutPath) ?? null,
+    managedPackageScope ? packageHealthCommand(moduleId, checkoutPath) : spec.health_check_command?.(checkoutPath) ?? null,
     'health_check',
     commandEnv,
   );
@@ -313,8 +319,8 @@ function prepareRuntimeSource(moduleId: string, checkoutPath: string, includeBoo
     handler_probe_command: handler.command,
     health_output_sha256: health.outputSha256,
     handler_probe_output_sha256: handler.outputSha256,
-    preparation_root: includeBootstrap ? preparationRoot : null,
-    preparation_scope: includeBootstrap ? 'managed_source_root' as const : 'preexisting_read_only_probe' as const,
+    preparation_root: managedPackageScope ? preparationRoot : null,
+    preparation_scope: managedPackageScope ? 'managed_source_root' as const : 'preexisting_read_only_probe' as const,
   };
 }
 
@@ -642,10 +648,18 @@ export function applyManagedRuntimeSourceCarrier(input: {
     const activation = installManagedModuleFromPackageChannel(spec, checkoutPath, {
       repairTransactionId: input.action === 'repair' ? transactionId : null,
     });
-    activated = true;
+    activated = activation.status === 'updated';
     mutation.repair_displaced_path = activation?.repair_displaced_path ?? null;
     materializeStandardAgentFrameworkLink({ agentRoot: checkoutPath });
-    const preparation = prepareRuntimeSource(input.config.module_id, checkoutPath, true);
+    const preparation = prepareRuntimeSource(input.config.module_id, checkoutPath, activated, !activated);
+    if (!activated) {
+      clearTransactionMarker(mutation);
+      return {
+        ...mutation,
+        kind: 'none',
+        after: sourceState({ config: input.config, checkoutPath, ownership, preparation }),
+      };
+    }
     refreshPackageChannelCurrentSnapshot(checkoutPath, spec);
     const after = sourceState({ config: input.config, checkoutPath, ownership, preparation });
     mutation.after = after;
@@ -930,6 +944,24 @@ function preparedMutationChangedPhysicalState(mutation: ManagedRuntimeSourceMuta
   }
 }
 
+function preparedMutationDidNotActivateChannel(mutation: ManagedRuntimeSourceMutation) {
+  if (mutation.kind !== 'activated_with_previous' || !mutation.before) return false;
+  try {
+    const spec = resolveOplDomainModuleSpec(mutation.module_id);
+    const current = readPackageChannelLifecycle(mutation.checkout_path, spec)?.current;
+    return Boolean(
+      current
+      && current.channel_version === mutation.before.channel_version
+      && current.artifact_ref === mutation.before.artifact_ref
+      && current.layer_digest === mutation.before.layer_digest
+      && current.source_archive_sha256 === mutation.before.source_archive_sha256
+      && current.source_git_head_sha === mutation.before.source_git_head_sha,
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function recoverManagedRuntimeSourceTransactions(index: AgentPackageLockIndex) {
   const markerDir = transactionMarkerDirectory();
   if (!fs.existsSync(markerDir)) {
@@ -948,6 +980,13 @@ export function recoverManagedRuntimeSourceTransactions(index: AgentPackageLockI
   for (const fileName of fs.readdirSync(markerDir).filter((entry) => entry.endsWith('.json')).sort()) {
     const marker = parseTransactionMarker(path.join(markerDir, fileName));
     const mutation = marker.mutation;
+    if (marker.phase === 'prepared' && preparedMutationDidNotActivateChannel(mutation)) {
+      fs.rmSync(`${mutation.checkout_path}.stage`, { recursive: true, force: true });
+      clearTransactionMarker(mutation);
+      clearedPreparedCount += 1;
+      recoveredIds.push(mutation.transaction_id ?? fileName);
+      continue;
+    }
     if (marker.phase === 'prepared' && !preparedMutationChangedPhysicalState(mutation)) {
       if (mutation.action === 'install' || mutation.action === 'update' || mutation.action === 'repair') {
         fs.rmSync(`${mutation.checkout_path}.stage`, { recursive: true, force: true });

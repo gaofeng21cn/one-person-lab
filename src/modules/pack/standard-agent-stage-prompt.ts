@@ -69,6 +69,100 @@ export function readStandardAgentStagePromptFile(repoDir: string, promptRef: str
   };
 }
 
+function markdownHeadingSlug(value: string) {
+  return value
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/<[^>]*>/g, '')
+    .replace(/[`*_~]/g, '')
+    .replace(/[^\p{Letter}\p{Number}\s_-]/gu, '')
+    .trim()
+    .replace(/\s+/g, '-');
+}
+
+function markdownHeadings(content: string) {
+  const lines = content.split(/\r?\n/);
+  const headings: Array<{ line: number; level: number; slug: string }> = [];
+  let fence: { marker: '`' | '~'; length: number } | null = null;
+  for (let line = 0; line < lines.length; line += 1) {
+    const source = lines[line] ?? '';
+    const fenceMatch = /^ {0,3}(`{3,}|~{3,})/.exec(source);
+    if (fenceMatch) {
+      const run = fenceMatch[1]!;
+      const marker = run[0] as '`' | '~';
+      if (!fence) {
+        fence = { marker, length: run.length };
+      } else if (fence.marker === marker && run.length >= fence.length) {
+        fence = null;
+      }
+      continue;
+    }
+    if (fence) continue;
+    const heading = /^ {0,3}(#{1,6})[ \t]+(.+?)[ \t]*#*[ \t]*$/.exec(source);
+    if (!heading) continue;
+    headings.push({
+      line,
+      level: heading[1]!.length,
+      slug: markdownHeadingSlug(heading[2]!),
+    });
+  }
+  return { lines, headings };
+}
+
+function qualityRolePromptSection(content: string, promptRef: string, repoDir: string, fragment: string) {
+  let decodedFragment: string;
+  try {
+    decodedFragment = decodeURIComponent(fragment).replace(/^#/, '').trim().toLowerCase();
+  } catch {
+    invalid('quality role prompt fragment is not valid URL encoding.', {
+      repo_dir: repoDir,
+      prompt_ref: promptRef,
+      fragment,
+    });
+  }
+  if (!decodedFragment) {
+    invalid('quality role prompt fragment must be non-empty.', { repo_dir: repoDir, prompt_ref: promptRef });
+  }
+  const { lines, headings } = markdownHeadings(content);
+  const matches = headings.filter((heading) => heading.slug === decodedFragment);
+  if (matches.length !== 1) {
+    invalid(
+      matches.length === 0
+        ? 'quality role prompt fragment does not resolve to a Markdown section.'
+        : 'quality role prompt fragment resolves to multiple Markdown sections.',
+      {
+        repo_dir: repoDir,
+        prompt_ref: promptRef,
+        fragment: decodedFragment,
+        matching_section_count: matches.length,
+      },
+    );
+  }
+  const selected = matches[0]!;
+  const next = headings.find((heading) =>
+    heading.line > selected.line && heading.level <= selected.level
+  );
+  return lines.slice(selected.line, next?.line ?? lines.length).join('\n').trim();
+}
+
+export function readStandardAgentQualityRolePromptFile(repoDir: string, promptRef: string) {
+  const fragmentIndex = promptRef.indexOf('#');
+  const fileRef = fragmentIndex === -1 ? promptRef : promptRef.slice(0, fragmentIndex);
+  const fragment = fragmentIndex === -1 ? null : promptRef.slice(fragmentIndex + 1);
+  const prompt = readStandardAgentStagePromptFile(repoDir, fileRef);
+  const content = fragment === null
+    ? prompt.content
+    : qualityRolePromptSection(prompt.content, promptRef, repoDir, fragment);
+  return {
+    ...prompt,
+    ref: promptRef,
+    layer: 'domain_stage_quality_role_prompt' as const,
+    sha256: crypto.createHash('sha256').update(content).digest('hex'),
+    size_bytes: Buffer.byteLength(content, 'utf8'),
+    content,
+  };
+}
+
 export function resolveStandardAgentStagePrompt(
   repoDir: string | null | undefined,
   stageId: string,

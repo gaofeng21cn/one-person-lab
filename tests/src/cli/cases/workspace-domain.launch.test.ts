@@ -240,11 +240,13 @@ test('MAS launch activates a new workspace scope and automatically recovers mana
     const lifecycleLedger = path.join(stateRoot, 'agent-package-lifecycle-ledger.json');
     assert.equal(fs.existsSync(skillsRoot), false);
     const ledgerBeforeDryRun = fs.readFileSync(lifecycleLedger, 'utf8');
-    const dryRun = runCliFailure([
+    const dryRun = runCli([
       'domain', 'launch', '--project', 'medautoscience', '--dry-run',
-    ], env);
-    assert.equal(dryRun.payload.error.details.launch_blocked_reason, 'scope_materialization_missing');
+    ], env).domain_entry_launch;
+    assert.equal(dryRun.dry_run, true);
+    assert.equal(dryRun.launch_status, 'preview_only');
     assert.equal(fs.existsSync(skillsRoot), false);
+    assert.equal(fs.existsSync(openFixture.capturePath), false);
     assert.equal(fs.readFileSync(lifecycleLedger, 'utf8'), ledgerBeforeDryRun);
 
     const firstLaunch = runCli([

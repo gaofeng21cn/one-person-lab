@@ -5,6 +5,9 @@ export {
   listStageAttemptsForTask,
   listStageAttemptSignals,
   stageAttemptToPayload,
+  bindStageAttemptExecutionSession,
+  buildPersistedStageReviewReceipt,
+  validatePersistedStageReviewIsolation,
   type StageAttemptStatus,
 } from './family-runtime-stage-attempt-ledger.ts';
 export { queryStageAttempt } from './family-runtime-stage-attempt-query.ts';

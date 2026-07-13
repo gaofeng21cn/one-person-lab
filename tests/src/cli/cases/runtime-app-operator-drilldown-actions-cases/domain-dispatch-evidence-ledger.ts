@@ -127,7 +127,13 @@ test('runtime action records readable domain progress without a launch authoriza
       'progress_refs_path',
     );
     assert.equal(
-      dryRun.execution.result.domain_dispatch_evidence_payload_preflight.next_declared_stage_may_start,
+      dryRun.execution.result.domain_dispatch_evidence_payload_preflight
+        .accepted_payload_paths.progress_refs_path.next_declared_stage_may_start,
+      true,
+    );
+    assert.equal(
+      dryRun.execution.result.domain_dispatch_evidence_payload_preflight
+        .accepted_payload_paths.progress_refs_path.records_quality_debt,
       true,
     );
 

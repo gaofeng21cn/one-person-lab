@@ -2,6 +2,24 @@
   "contract_kind": "opl_standard_domain_agent_skeleton_contract.v1",
   "owner": "one-person-lab",
   "scope": "repo-source skeleton and locator-only artifact boundary for OPL-hosted domain agents",
+  "stage_quality_runtime": {
+    "contract_ref": "contracts/opl-framework/stage-quality-cycle-contract.json",
+    "quality_profile_ref_field": "agent/stages/manifest.json#/quality_governance_profile_ref",
+    "meta_review_policy_ref_field": "agent/stages/manifest.json#/meta_review_policy_ref",
+    "per_stage_policy_ref_field": "agent/stages/manifest.json#/stages/*/stage_quality_cycle_policy_ref",
+    "runtime_binding_surface_kind": "opl_pack_bound_stage_quality_runtime_binding",
+    "runtime_creation_surface": "opl family-runtime attempt create",
+    "raw_stage_run_start_cli_retired": true,
+    "attempt_roles": [
+      "producer",
+      "reviewer",
+      "repairer",
+      "re_reviewer"
+    ],
+    "domain_pack_declares_policy_not_attempt_instances": true,
+    "opl_stage_run_controller_materializes_attempts": true,
+    "attempt_is_not_sub_stage": true
+  },
   "required_repo_source_dirs": [
     "agent",
     "contracts",
@@ -42,6 +60,8 @@
     "descriptor_refs",
     "sidecar_refs",
     "quality_gate_refs",
+    "stage_quality_cycle_policy_refs",
+    "pack_bound_stage_quality_runtime_binding",
     "workspace_artifact_locator_refs",
     "runtime_artifact_locator_refs",
     "authority_boundary"
@@ -1455,6 +1475,11 @@
         "default_operator_question": "what_does_current_owner_need_to_answer_next"
       },
       "speed_policy": {
+        "route_selection_owner": "codex_cli",
+        "codex_may_advance_skip_repeat_reverse_or_route_back": true,
+        "any_declared_stage_may_start_from_any_prior_stage_result": true,
+        "declared_requires_are_quality_context_not_launch_gates": true,
+        "next_stage_refs_are_recommendations_not_constraints": true,
         "executor_autonomy_inside_stage": true,
         "executor_can_choose_order_and_parallelism": true,
         "strategy_refs_are_advisory_or_route_back": true,
@@ -2684,8 +2709,8 @@
         "evolution_and_revision": [
           "revision-lineage-ref:new-domain-agent/controlled-canary"
         ],
-        "meta_review_learning": [
-          "meta-review-ref:new-domain-agent/controlled-canary"
+        "strategy_retrospective": [
+          "strategy-retrospective-ref:new-domain-agent/controlled-canary"
         ],
         "independent_quality_gate": [
           "independent-gate-ref:new-domain-agent/controlled-canary"
@@ -2696,7 +2721,7 @@
         "reflection_review_ref": "reflection-review-ref:new-domain-agent/controlled-canary",
         "ranking_selection_ref": "ranking-selection-ref:new-domain-agent/controlled-canary",
         "revision_lineage_ref": "revision-lineage-ref:new-domain-agent/controlled-canary",
-        "meta_review_ref": "meta-review-ref:new-domain-agent/controlled-canary",
+        "strategy_retrospective_ref": "strategy-retrospective-ref:new-domain-agent/controlled-canary",
         "independent_gate_ref": "independent-gate-ref:new-domain-agent/controlled-canary"
       },
       "closeout": {

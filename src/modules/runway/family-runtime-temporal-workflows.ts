@@ -3,6 +3,7 @@ import {
   defineQuery,
   defineSignal,
   defineUpdate,
+  executeChild,
   patched,
   proxyActivities,
   setHandler,
@@ -14,9 +15,26 @@ import type {
   TemporalStageAttemptSignalPayload,
   TemporalStageAttemptWorkflowInput,
   TemporalStageAttemptWorkflowState,
+  TemporalStageQualityCycleProjectionInput,
+  TemporalStageQualityAttemptSyncInput,
+  TemporalStageQualityReviewReceiptInput,
+  TemporalStageRunWorkflowInput,
+  TemporalStageRunWorkflowState,
+  TemporalStageQualityAttemptMaterializationInput,
   TemporalSchedulerTickWorkflowInput,
   TemporalSchedulerTickWorkflowState,
 } from './family-runtime-temporal.ts';
+import {
+  evaluateStageQualityFindingClosure,
+  validateStageQualityFindings,
+  validateStageQualityRepairMap,
+  type StageQualityAttemptRole,
+  type StageQualityFinding,
+  type StageQualityFindingClosure,
+  type StageQualityRepairMapEntry,
+  type StageQualityReReviewResult,
+  type StageReviewReceipt,
+} from '../stagecraft/public/stage-quality-cycle.ts';
 import {
   CODEX_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT,
   CODEX_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
@@ -28,14 +46,31 @@ import {
   codexActivityEventForTemporalHistory,
   providerBlockerFromCodexResult,
 } from './family-runtime-temporal-history-summary.ts';
+import { requireStageQualityAttemptBoundary } from './family-runtime-stage-quality-attempt-boundary.ts';
 
 type StageAttemptActivities = {
   codexStageActivity(input: TemporalStageAttemptWorkflowInput): Promise<Record<string, unknown>>;
   domainHandlerDispatchActivity(input: TemporalStageAttemptWorkflowInput): Promise<Record<string, unknown>>;
   schedulerTickActivity(input: TemporalSchedulerTickWorkflowInput): Promise<Record<string, unknown>>;
+  stageQualityAttemptMaterializeActivity(
+    input: TemporalStageQualityAttemptMaterializationInput,
+  ): Promise<{
+    attempt_ref: string;
+    workflow_input: TemporalStageAttemptWorkflowInput;
+  }>;
+  stageQualityCycleProjectActivity(
+    input: TemporalStageQualityCycleProjectionInput,
+  ): Promise<Record<string, unknown>>;
+  stageQualityAttemptSyncActivity(
+    input: TemporalStageQualityAttemptSyncInput,
+  ): Promise<Record<string, unknown> | null>;
+  stageQualityReviewReceiptActivity(
+    input: TemporalStageQualityReviewReceiptInput,
+  ): Promise<StageReviewReceipt>;
 };
 
 export const stageAttemptQuery = defineQuery<TemporalStageAttemptWorkflowState>('StageAttemptQuery');
+export const stageRunQuery = defineQuery<TemporalStageRunWorkflowState>('StageRunQuery');
 export const schedulerTickQuery = defineQuery<TemporalSchedulerTickWorkflowState>('SchedulerTickQuery');
 export const humanGateSignal = defineSignal<[TemporalStageAttemptSignalPayload]>('HumanGateSignal');
 export const ownerReceiptSignal = defineSignal<[TemporalStageAttemptSignalPayload]>('OwnerReceiptSignal');
@@ -58,6 +93,24 @@ const { domainHandlerDispatchActivity, schedulerTickActivity } = proxyActivities
   scheduleToCloseTimeout: SHORT_STAGE_ACTIVITY_SCHEDULE_TO_CLOSE_TIMEOUT,
   startToCloseTimeout: SHORT_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
   heartbeatTimeout: SHORT_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT,
+  retry: {
+    maximumAttempts: 3,
+  },
+});
+
+const {
+  stageQualityAttemptMaterializeActivity,
+  stageQualityAttemptSyncActivity,
+  stageQualityCycleProjectActivity,
+  stageQualityReviewReceiptActivity,
+} = proxyActivities<Pick<
+  StageAttemptActivities,
+  | 'stageQualityAttemptMaterializeActivity'
+  | 'stageQualityAttemptSyncActivity'
+  | 'stageQualityCycleProjectActivity'
+  | 'stageQualityReviewReceiptActivity'
+>>({
+  startToCloseTimeout: SHORT_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
   retry: {
     maximumAttempts: 3,
   },
@@ -181,6 +234,7 @@ function validateOperatorActionPayload(signal: TemporalStageAttemptSignalPayload
 export async function StageAttemptWorkflow(
   input: TemporalStageAttemptWorkflowInput,
 ): Promise<TemporalStageAttemptWorkflowState> {
+  requireStageQualityAttemptBoundary(input as unknown as Record<string, unknown>);
   let state: TemporalStageAttemptWorkflowState = {
     surface_kind: 'temporal_stage_attempt_query',
     provider_kind: 'temporal',
@@ -462,11 +516,502 @@ export async function StageAttemptWorkflow(
       },
     };
     updateVisibility('temporal_stage_attempt_workflow_failed', errorMessage.slice(0, 200));
+    if (input.attempt_role) {
+      return state;
+    }
     throw error;
   }
 
   await condition(() => false, '1 second');
   return state;
+}
+
+function qualityEnvelopeFromAttempt(state: TemporalStageAttemptWorkflowState) {
+  const closeout = asRecord(state.closeout_packet);
+  const routeImpact = asRecord(closeout.route_impact);
+  return asRecord(routeImpact.stage_quality_cycle);
+}
+
+function executionSessionRefFromAttemptState(state: TemporalStageAttemptWorkflowState) {
+  for (let index = state.activity_events.length - 1; index >= 0; index -= 1) {
+    const event = asRecord(state.activity_events[index]);
+    if (event.activity_kind !== 'codex_stage_activity') continue;
+    const progress = asRecord(event.progress_summary);
+    if (typeof progress.execution_session_ref === 'string' && progress.execution_session_ref) {
+      return progress.execution_session_ref;
+    }
+    if (typeof progress.thread_id === 'string' && progress.thread_id) {
+      return `codex://threads/${progress.thread_id}`;
+    }
+  }
+  return null;
+}
+
+function qualityArtifactIdentity(
+  state: TemporalStageAttemptWorkflowState,
+  value: Record<string, unknown>,
+  inputIdentity?: {
+    artifactRefs: string[];
+    artifactHashes: string[];
+    artifactIdentityReceiptRefs: string[];
+  },
+) {
+  const artifactRefs = asStringList(value.artifact_refs);
+  const artifactHashes = asStringList(value.artifact_hashes);
+  if (artifactRefs.length === 0 && inputIdentity) return inputIdentity;
+  if (artifactRefs.length === 0 || artifactRefs.length !== artifactHashes.length) {
+    throw new Error('Stage quality attempt must return equal non-empty artifact_refs and artifact_hashes.');
+  }
+  if (
+    inputIdentity
+    && (
+      JSON.stringify(artifactRefs) !== JSON.stringify(inputIdentity.artifactRefs)
+      || JSON.stringify(artifactHashes) !== JSON.stringify(inputIdentity.artifactHashes)
+    )
+  ) {
+    throw new Error('Reviewer Attempt cannot replace the exact artifact identity it was asked to review.');
+  }
+  if (inputIdentity) return inputIdentity;
+
+  const closeout = asRecord(state.closeout_packet);
+  const metadata = asRecordList(closeout.closeout_ref_metadata);
+  const receiptRefs = artifactRefs.map((artifactRef, index) => {
+    const entry = metadata.find((candidate) => candidate.ref === artifactRef || candidate.uri === artifactRef);
+    if (!entry || typeof entry.sha256 !== 'string' || entry.sha256 !== artifactHashes[index]) {
+      throw new Error(
+        'Producer and repairer artifact identity must match domain-owned closeout_ref_metadata SHA receipts.',
+      );
+    }
+    return artifactRef;
+  });
+  return {
+    artifactRefs,
+    artifactHashes,
+    artifactIdentityReceiptRefs: receiptRefs,
+  };
+}
+
+function findingList(value: unknown) {
+  return validateStageQualityFindings(asRecordList(value) as StageQualityFinding[]);
+}
+
+function repairMapList(value: unknown, findings: StageQualityFinding[]) {
+  return validateStageQualityRepairMap({
+    findings,
+    repairMap: asRecordList(value) as StageQualityRepairMapEntry[],
+  });
+}
+
+function findingClosureList(value: unknown) {
+  return asRecordList(value) as StageQualityFindingClosure[];
+}
+
+function qualityOutcome(value: Record<string, unknown>) {
+  const outcome = typeof value.outcome === 'string' ? value.outcome : null;
+  if (
+    outcome === 'pass'
+    || outcome === 'repair_required'
+    || outcome === 'completed_with_quality_debt'
+    || outcome === 'blocked'
+    || outcome === 'human_gate'
+  ) {
+    return outcome;
+  }
+  throw new Error('Stage quality attempt returned an invalid outcome.');
+}
+
+function stageRunQualityCycleId(input: TemporalStageRunWorkflowInput) {
+  return `quality-cycle:${input.stage_run_id}`;
+}
+
+function validateWorkflowStageRunInput(input: TemporalStageRunWorkflowInput) {
+  for (const [field, value] of Object.entries({
+    stage_run_id: input.stage_run_id,
+    quality_policy_ref: input.quality_policy_ref,
+    domain_pack_root: input.domain_pack_root,
+    stage_manifest_ref: input.stage_manifest_ref,
+    stage_manifest_sha256: input.stage_manifest_sha256,
+  })) {
+    if (typeof value !== 'string' || !value.trim()) {
+      throw new Error(`StageRun pack binding requires ${field}.`);
+    }
+  }
+  const roleKeys = Object.keys(input.role_prompt_refs ?? {}).sort();
+  if (JSON.stringify(roleKeys) !== JSON.stringify(['producer', 're_reviewer', 'repairer', 'reviewer'])) {
+    throw new Error('StageRun role_prompt_refs must use only producer, reviewer, repairer, and re_reviewer.');
+  }
+  const maxRepairRounds = input.quality_policy?.formal_review?.max_repair_rounds;
+  if (!Number.isInteger(maxRepairRounds) || maxRepairRounds < 0 || maxRepairRounds > 3) {
+    throw new Error('StageRun quality repair budget must be between zero and three.');
+  }
+  if (!Array.isArray(input.quality_rubric_refs) || input.quality_rubric_refs.length === 0) {
+    throw new Error('StageRun quality rubric refs are required.');
+  }
+  if (input.stage_role === 'cross_stage_meta_review' && input.quality_policy.formal_review.required) {
+    throw new Error('Cross-stage Meta Review Stage cannot recursively require formal Stage Review.');
+  }
+}
+
+function stageRunStopped(state: TemporalStageRunWorkflowState) {
+  return ['completed_with_quality_debt', 'blocked', 'human_gate', 'failed'].includes(state.status);
+}
+
+function hasConsumableArtifact(state: TemporalStageRunWorkflowState) {
+  return state.artifact_refs.length > 0
+    && state.artifact_refs.length === state.artifact_hashes.length;
+}
+
+const HARD_STAGE_QUALITY_STOP_CLASSES = new Set([
+  'zero_consumable_artifact',
+  'safety_or_compliance',
+  'permission_or_credential_boundary',
+  'human_decision_required',
+  'authority_boundary_violation',
+  'stale_or_mismatched_stage_identity',
+]);
+
+function qualityFailureRef(input: TemporalStageRunWorkflowInput, reason: string) {
+  return `opl://stage-runs/${encodeURIComponent(input.stage_run_id)}/quality-debt/${encodeURIComponent(reason)}`;
+}
+
+function declaredHardStop(envelope: Record<string, unknown>) {
+  return typeof envelope.hard_stop_class === 'string'
+    && HARD_STAGE_QUALITY_STOP_CLASSES.has(envelope.hard_stop_class);
+}
+
+function reviewVerdictForOutcome(outcome: ReturnType<typeof qualityOutcome>): StageReviewReceipt['verdict'] {
+  if (outcome === 'pass') return 'pass';
+  if (outcome === 'repair_required') return 'repair_required';
+  if (outcome === 'completed_with_quality_debt') return 'quality_debt';
+  return 'hard_stop';
+}
+
+export async function StageRunWorkflow(
+  input: TemporalStageRunWorkflowInput,
+): Promise<TemporalStageRunWorkflowState> {
+  validateWorkflowStageRunInput(input);
+  const qualityCycleId = stageRunQualityCycleId(input);
+  let state: TemporalStageRunWorkflowState = {
+    surface_kind: 'temporal_stage_run_query',
+    provider_kind: 'temporal',
+    stage_run_id: input.stage_run_id,
+    workflow_id: input.workflow_id,
+    quality_cycle_id: qualityCycleId,
+    domain_id: input.domain_id,
+    stage_id: input.stage_id,
+    status: 'registered',
+    current_role: null,
+    repair_rounds_used: 0,
+    max_repair_rounds: input.quality_policy.formal_review.max_repair_rounds,
+    attempts: [],
+    findings: [],
+    repair_map: [],
+    finding_closures: [],
+    review_receipts: [],
+    artifact_refs: asStringList(input.artifact_refs),
+    artifact_hashes: asStringList(input.artifact_hashes),
+    artifact_identity_receipt_refs: [],
+    quality_debt_refs: [],
+    blocked_reason: null,
+    sqlite_projection: { status: 'pending', error: null },
+    started_at: nowIso(),
+    updated_at: nowIso(),
+    authority_boundary: {
+      opl: 'durable_quality_loop_orchestration_and_refs_transport_only',
+      domain: 'review_findings_repair_artifact_and_quality_verdict_owner',
+      provider_completion_is_domain_ready: false,
+    },
+  };
+  setHandler(stageRunQuery, () => state);
+  const observedSessions = new Set<string>();
+
+  const terminalize = async (nextState: TemporalStageRunWorkflowState) => {
+    state = nextState;
+    try {
+      await stageQualityCycleProjectActivity({ stage_run: input, state });
+      state = { ...state, sqlite_projection: { status: 'synced', error: null } };
+    } catch (error) {
+      state = {
+        ...state,
+        sqlite_projection: {
+          status: 'failed',
+          error: error instanceof Error ? error.message : String(error),
+        },
+      };
+    }
+    return state;
+  };
+
+  const runAttempt = async (attemptInput: {
+    role: StageQualityAttemptRole;
+    round: number;
+    parentAttemptRef?: string | null;
+    artifactRefs: string[];
+    artifactHashes: string[];
+    artifactIdentityReceiptRefs: string[];
+    findings?: StageQualityFinding[];
+    repairMap?: StageQualityRepairMapEntry[];
+  }) => {
+    state = { ...state, status: 'running', current_role: attemptInput.role, updated_at: nowIso() };
+    const materialized = await stageQualityAttemptMaterializeActivity({
+      stage_run: input,
+      quality_cycle_id: qualityCycleId,
+      attempt_role: attemptInput.role,
+      quality_round_index: attemptInput.round,
+      parent_attempt_ref: attemptInput.parentAttemptRef,
+      artifact_refs: attemptInput.artifactRefs,
+      artifact_hashes: attemptInput.artifactHashes,
+      artifact_identity_receipt_refs: attemptInput.artifactIdentityReceiptRefs,
+      findings: attemptInput.findings,
+      repair_map: attemptInput.repairMap,
+    });
+    const childInput = materialized.workflow_input;
+    const result = await executeChild(StageAttemptWorkflow, {
+      args: [childInput],
+      workflowId: childInput.workflow_id,
+    });
+    await stageQualityAttemptSyncActivity({
+      attempt_ref: materialized.attempt_ref,
+      workflow_state: result,
+    });
+    const executionSessionRef = executionSessionRefFromAttemptState(result);
+    if (!executionSessionRef) {
+      throw new Error(`Stage quality ${attemptInput.role} Attempt did not expose an execution session identity.`);
+    }
+    if (observedSessions.has(executionSessionRef)) {
+      throw new Error(`Stage quality Attempt reused provider session ${executionSessionRef}.`);
+    }
+    observedSessions.add(executionSessionRef);
+    const envelope = qualityEnvelopeFromAttempt(result);
+    const reviewRole = attemptInput.role === 'reviewer' || attemptInput.role === 're_reviewer';
+    const artifactIdentity = result.status === 'completed'
+      ? qualityArtifactIdentity(
+          result,
+          envelope,
+          reviewRole
+            ? {
+                artifactRefs: attemptInput.artifactRefs,
+                artifactHashes: attemptInput.artifactHashes,
+                artifactIdentityReceiptRefs: attemptInput.artifactIdentityReceiptRefs,
+              }
+            : undefined,
+        )
+      : {
+          artifactRefs: attemptInput.artifactRefs,
+          artifactHashes: attemptInput.artifactHashes,
+          artifactIdentityReceiptRefs: attemptInput.artifactIdentityReceiptRefs,
+        };
+    state = {
+      ...state,
+      attempts: [...state.attempts, {
+        attempt_role: attemptInput.role,
+        quality_round_index: attemptInput.round,
+        stage_attempt_id: childInput.stage_attempt_id,
+        workflow_id: childInput.workflow_id,
+        execution_session_ref: executionSessionRef,
+        status: result.status,
+        artifact_refs: artifactIdentity.artifactRefs,
+        artifact_hashes: artifactIdentity.artifactHashes,
+        artifact_identity_receipt_refs: artifactIdentity.artifactIdentityReceiptRefs,
+      }],
+      artifact_refs: artifactIdentity.artifactRefs,
+      artifact_hashes: artifactIdentity.artifactHashes,
+      artifact_identity_receipt_refs: artifactIdentity.artifactIdentityReceiptRefs,
+      updated_at: nowIso(),
+    };
+    if (result.status === 'human_gate') {
+      state = { ...state, status: 'human_gate', current_role: null, blocked_reason: 'human_gate' };
+    } else if (result.status === 'blocked' || result.status === 'failed') {
+      const reason = typeof envelope.blocked_reason === 'string'
+        ? envelope.blocked_reason
+        : `stage_quality_${attemptInput.role}_not_completed`;
+      state = hasConsumableArtifact(state) && !declaredHardStop(envelope)
+        ? {
+            ...state,
+            status: 'completed_with_quality_debt',
+            current_role: null,
+            quality_debt_refs: [...new Set([...state.quality_debt_refs, qualityFailureRef(input, reason)])],
+            blocked_reason: null,
+          }
+        : {
+            ...state,
+            status: 'blocked',
+            current_role: null,
+            blocked_reason: reason,
+          };
+    }
+    return {
+      result,
+      envelope,
+      attemptRef: materialized.attempt_ref,
+      executionSessionRef,
+      reviewedArtifactRefs: attemptInput.artifactRefs,
+      reviewedArtifactHashes: attemptInput.artifactHashes,
+    };
+  };
+
+  try {
+    let parentAttemptRef: string | null = null;
+    const producer = await runAttempt({
+      role: 'producer',
+      round: 0,
+      artifactRefs: state.artifact_refs,
+      artifactHashes: state.artifact_hashes,
+      artifactIdentityReceiptRefs: state.artifact_identity_receipt_refs,
+    });
+    parentAttemptRef = producer.attemptRef;
+    if (stageRunStopped(state)) return terminalize(state);
+    if (!input.quality_policy.formal_review.required) {
+      return terminalize({ ...state, status: 'completed', current_role: null, updated_at: nowIso() });
+    }
+
+    const review = await runAttempt({
+      role: 'reviewer',
+      round: 0,
+      parentAttemptRef,
+      artifactRefs: state.artifact_refs,
+      artifactHashes: state.artifact_hashes,
+      artifactIdentityReceiptRefs: state.artifact_identity_receipt_refs,
+    });
+    parentAttemptRef = review.attemptRef;
+    if (stageRunStopped(state)) return terminalize(state);
+    const initialOutcome = qualityOutcome(review.envelope);
+    const initialReviewReceipt = await stageQualityReviewReceiptActivity({
+      producer_attempt_ref: producer.attemptRef,
+      reviewer_attempt_ref: review.attemptRef,
+      rubric_refs: input.quality_rubric_refs,
+      verdict: reviewVerdictForOutcome(initialOutcome),
+    });
+    let findings = findingList(review.envelope.findings);
+    state = { ...state, findings, review_receipts: [...state.review_receipts, initialReviewReceipt] };
+    if (initialOutcome === 'pass') {
+      return terminalize({ ...state, status: 'completed', current_role: null, updated_at: nowIso() });
+    }
+    if (initialOutcome === 'completed_with_quality_debt') {
+      return terminalize({
+        ...state,
+        status: 'completed_with_quality_debt',
+        current_role: null,
+        quality_debt_refs: asStringList(review.envelope.quality_debt_refs),
+        updated_at: nowIso(),
+      });
+    }
+    if (initialOutcome === 'blocked' || initialOutcome === 'human_gate') {
+      const reason = typeof review.envelope.blocked_reason === 'string'
+        ? review.envelope.blocked_reason
+        : initialOutcome;
+      const hardStop = initialOutcome === 'human_gate'
+        || declaredHardStop(review.envelope)
+        || !hasConsumableArtifact(state);
+      return terminalize({
+        ...state,
+        status: hardStop ? initialOutcome : 'completed_with_quality_debt',
+        current_role: null,
+        blocked_reason: hardStop ? reason : null,
+        quality_debt_refs: hardStop
+          ? state.quality_debt_refs
+          : [...new Set([...state.quality_debt_refs, qualityFailureRef(input, reason)])],
+        updated_at: nowIso(),
+      });
+    }
+
+    for (let round = 1; round <= state.max_repair_rounds; round += 1) {
+      const repair = await runAttempt({
+        role: 'repairer',
+        round,
+        parentAttemptRef,
+        artifactRefs: state.artifact_refs,
+        artifactHashes: state.artifact_hashes,
+        artifactIdentityReceiptRefs: state.artifact_identity_receipt_refs,
+        findings,
+      });
+      parentAttemptRef = repair.attemptRef;
+      if (stageRunStopped(state)) return terminalize(state);
+      const repairMap = repairMapList(repair.envelope.repair_map, findings);
+      state = { ...state, repair_map: repairMap };
+      const reReview = await runAttempt({
+        role: 're_reviewer',
+        round,
+        parentAttemptRef,
+        artifactRefs: state.artifact_refs,
+        artifactHashes: state.artifact_hashes,
+        artifactIdentityReceiptRefs: state.artifact_identity_receipt_refs,
+        findings,
+        repairMap,
+      });
+      parentAttemptRef = reReview.attemptRef;
+      state = { ...state, repair_rounds_used: round };
+      if (stageRunStopped(state)) return terminalize(state);
+      const reReviewResult: StageQualityReReviewResult = {
+        finding_closures: findingClosureList(reReview.envelope.finding_closures),
+        repair_regressions: findingList(reReview.envelope.repair_regressions),
+        critical_new_findings: findingList(reReview.envelope.critical_new_findings),
+        optional_observations: asRecordList(reReview.envelope.optional_observations) as StageQualityReReviewResult['optional_observations'],
+      };
+      const closure = evaluateStageQualityFindingClosure({ findings, repairMap, reReview: reReviewResult });
+      const reReviewReceipt = await stageQualityReviewReceiptActivity({
+        producer_attempt_ref: repair.attemptRef,
+        reviewer_attempt_ref: reReview.attemptRef,
+        rubric_refs: input.quality_rubric_refs,
+        verdict: closure.trigger_repair ? 'repair_required' : 'pass',
+      });
+      state = {
+        ...state,
+        finding_closures: reReviewResult.finding_closures,
+        review_receipts: [...state.review_receipts, reReviewReceipt],
+      };
+      if (!closure.trigger_repair) {
+        return terminalize({ ...state, status: 'completed', current_role: null, updated_at: nowIso() });
+      }
+      const openIds = new Set(closure.open_required_finding_ids);
+      findings = [
+        ...findings.filter((finding) => openIds.has(finding.finding_id)),
+        ...reReviewResult.repair_regressions,
+        ...reReviewResult.critical_new_findings,
+      ];
+      state = { ...state, findings };
+    }
+
+    if (state.artifact_refs.length === 0 || state.artifact_hashes.length === 0) {
+      return terminalize({
+        ...state,
+        status: 'blocked',
+        current_role: null,
+        blocked_reason: 'stage_quality_budget_exhausted_without_consumable_artifact',
+        updated_at: nowIso(),
+      });
+    }
+    return terminalize({
+      ...state,
+      status: 'completed_with_quality_debt',
+      current_role: null,
+      quality_debt_refs: [
+        ...new Set([
+          ...state.quality_debt_refs,
+          ...state.findings.map((finding) => `quality-debt:${finding.finding_id}`),
+        ]),
+      ],
+      updated_at: nowIso(),
+    });
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    return terminalize(hasConsumableArtifact(state)
+      ? {
+          ...state,
+          status: 'completed_with_quality_debt',
+          current_role: null,
+          quality_debt_refs: [...new Set([...state.quality_debt_refs, qualityFailureRef(input, reason)])],
+          blocked_reason: null,
+          updated_at: nowIso(),
+        }
+      : {
+          ...state,
+          status: 'blocked',
+          current_role: null,
+          blocked_reason: 'stage_quality_failed_without_consumable_artifact',
+          updated_at: nowIso(),
+        });
+  }
 }
 
 export async function SchedulerTickWorkflow(
@@ -514,5 +1059,4 @@ export async function SchedulerTickWorkflow(
   return state;
 }
 
-export const StageRunWorkflow = StageAttemptWorkflow;
 export const ReconcileWorkflow = SchedulerTickWorkflow;

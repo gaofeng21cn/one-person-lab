@@ -35,6 +35,16 @@
       "type": "object",
       "additionalProperties": true
     },
+    "quality_governance_profile_ref": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional registry-bound quality governance profile. Its absence is valid for generic OPL Agents."
+    },
+    "meta_review_policy_ref": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional domain-owned cross-stage Meta Review policy ref."
+    },
     "replay_evidence_refs": {
       "type": "array",
       "items": {
@@ -125,6 +135,19 @@
           "minLength": 1
         },
         "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stage_role": {
+          "type": "string",
+          "enum": [
+            "producer",
+            "cross_stage_meta_review",
+            "operator_gate",
+            "domain_specific"
+          ]
+        },
+        "stage_quality_cycle_policy_ref": {
           "type": "string",
           "minLength": 1
         },

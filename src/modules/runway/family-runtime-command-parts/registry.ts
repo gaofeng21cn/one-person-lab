@@ -16,6 +16,7 @@ import { parseEvidenceWorklistArgs } from './evidence-worklist.ts';
 import { parseSchedulerLifecycleArgs } from './scheduler.ts';
 import { parseRuntimeProcessArgs } from './service-worker.ts';
 import { parseStageArtifactArgs } from './stage-artifact.ts';
+import { parseStageRunArgs } from './stage-run.ts';
 
 type FamilyRuntimeCommandParser = {
   command_path: string;
@@ -38,7 +39,7 @@ function staticCommand(
   };
 }
 
-const FAMILY_RUNTIME_COMMAND_USAGE = 'opl family-runtime status|doctor|install|repair|provider repair|provider-slo tick|provider-worker supervisor|control-loop status|service start|service status|service stop|worker start|worker status|worker stop|scheduler status|scheduler install|scheduler remove|scheduler trigger|evidence-worklist|lifecycle apply|stage-artifact open|stage-artifact commit|stage-artifact status|stage-artifact explain|stage-artifact rebuild|stage-artifact promote|stage-artifact gc|stage-artifact restore|stage-artifact validate|stage-artifact conformance|stage-artifact workbench|attempt create|attempt start|attempt cancel|attempt archive|attempt restore|attempt list|attempt inspect|attempt query|attempt signal|attempt fixture-run|notify list|events export';
+const FAMILY_RUNTIME_COMMAND_USAGE = 'opl family-runtime status|doctor|install|repair|provider repair|provider-slo tick|provider-worker supervisor|control-loop status|service start|service status|service stop|worker start|worker status|worker stop|scheduler status|scheduler install|scheduler remove|scheduler trigger|evidence-worklist|lifecycle apply|stage-run query|stage-artifact open|stage-artifact commit|stage-artifact status|stage-artifact explain|stage-artifact rebuild|stage-artifact promote|stage-artifact gc|stage-artifact restore|stage-artifact validate|stage-artifact conformance|stage-artifact workbench|attempt create|attempt start|attempt cancel|attempt archive|attempt restore|attempt list|attempt inspect|attempt query|attempt signal|attempt fixture-run|notify list|events export';
 
 const FAMILY_RUNTIME_COMMAND_REGISTRY: FamilyRuntimeCommandParser[] = [
   {
@@ -108,6 +109,10 @@ const FAMILY_RUNTIME_COMMAND_REGISTRY: FamilyRuntimeCommandParser[] = [
   {
     command_path: 'evidence-worklist',
     parse: (mode, rest) => mode === 'evidence-worklist' ? parseEvidenceWorklistArgs([mode, ...rest]) : null,
+  },
+  {
+    command_path: 'stage-run',
+    parse: (mode, rest) => mode === 'stage-run' ? parseStageRunArgs(rest) : null,
   },
   {
     command_path: 'stage-artifact',

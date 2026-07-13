@@ -33,6 +33,7 @@ test('family-runtime command parser keeps a thin public entrypoint and semantic 
     'service-worker.ts',
     'shared.ts',
     'stage-artifact.ts',
+    'stage-run.ts',
   ];
 
   assert.equal(fs.existsSync(partsRoot), true);

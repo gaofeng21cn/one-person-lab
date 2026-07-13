@@ -42,11 +42,11 @@ Temporal-backed attempt 必须把 durable history、activity heartbeat、workflo
 
 ## Typed Closeout 与 User Stage Log
 
-当前 contract 要求 completed attempt 必须有 typed closeout；free-text closeout 不能被接受为完成证据。OPL 只记录 closeout refs、consumed refs、memory/writeback refs、rejected writes、route impact、next owner 和 domain-provided user-stage-log fields；它不从 artifact body、memory body、publication verdict body 或 quality verdict body 推断语义。
+当前 contract 接受 typed closeout、free-text、raw/partial artifact、阴性/零结果和 no-output/failure diagnostic 作为不同质量等级的 progress input。typed closeout 才能授权其明确绑定的 owner/quality/ready claim evidence；free-text 或 diagnostic 以 `completed_with_quality_debt` 推进，不能升级这些强声明。OPL 只记录 closeout refs、consumed refs、memory/writeback refs、rejected writes、route impact、next owner 和 domain-provided user-stage-log fields；它不从 artifact body、memory body、publication verdict body 或 quality verdict body 推断语义。
 
 `user_stage_log` 是用户透明度投影，不是 domain truth。OPL 负责时间、usage、refs、observed/missing/null 和 authority boundary；domain closeout 负责 `stage_name`、`problem_summary`、`stage_goal`、`stage_work_done`、`changed_stage_surfaces`、`outcome`、`remaining_blockers` 和 evidence refs。标准 OPL Agent 使用 `stage_work_done` / `changed_stage_surfaces`；缺少 domain 人话语义时必须显示 `missing_domain_semantic_summary`，不得补写或猜测。
 
-`current_control_state` 是 OPL-only reconciled projection。它只从 family queue、stage attempt ledger、provider run projection 和 typed stage closeout ledger 派生；不得从 `domain_latest`、`domain_dispatch_latest`、domain-ready verdict 或 artifact-ready verdict 派生。missing identity、stale route/source/truth epoch、provider completed without typed closeout 等状态必须 fail-closed。若存在新 queue / stage attempt 或更新 closeout，旧 terminal attempt 不能覆盖 task-level currentness。没有 canonical admission consumer 的 no-progress 观察只能进入 advisory/readback，不能冻结默认 redrive、耗尽 StageRun 或伪造 typed blocker。
+`current_control_state` 是 OPL-only reconciled projection。它只从 family queue、stage attempt ledger、provider run projection 和 stage progress/closeout ledger 派生；不得从 `domain_latest`、`domain_dispatch_latest`、domain-ready verdict 或 artifact-ready verdict 派生。missing identity、stale route/source/truth epoch 或 provider completed without any readable artifact/diagnostic 只能关闭 currentness/claim 读取；缺 typed closeout 本身形成质量债并继续 stage progression。若存在新 queue / stage attempt 或更新 closeout，旧 terminal attempt 不能覆盖 task-level currentness。没有 canonical admission consumer 的 no-progress 观察只能进入 advisory/readback，不能冻结默认 redrive、耗尽 StageRun 或伪造 typed blocker。
 
 ## State Semantics
 

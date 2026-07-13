@@ -17,6 +17,8 @@ import { stableId } from '../../../kernel/stable-id.ts';
 import {
   buildDuplicateTaskEnvelope,
   buildFamilyConflictSubject,
+  normalizeStageQualityAttemptRole,
+  type StageQualityAttemptRole,
 } from '../../stagecraft/index.ts';
 import {
   normalizeJsonList,
@@ -24,7 +26,7 @@ import {
   nowIso,
 } from './shared.ts';
 import { taskRetryBudgetProjection } from '../family-runtime-queue-projection-boundary.ts';
-
+import { requireStageQualityAttemptBoundary } from '../family-runtime-stage-quality-attempt-boundary.ts';
 export type StageAttemptCreateInput = {
   domainId: FamilyRuntimeDomainId;
   stageId: string;
@@ -49,6 +51,22 @@ export type StageAttemptCreateInput = {
   launchInvocation?: object;
   newAttempt?: boolean;
   start?: boolean;
+  stageRunId?: string;
+  qualityCycleId?: string;
+  attemptRole?: StageQualityAttemptRole;
+  qualityRoundIndex?: number;
+  parentAttemptRef?: string;
+  inputArtifactRefs?: string[];
+  reviewedArtifactHashes?: string[];
+  qualitySourceRefs?: string[];
+  qualityRubricRefs?: string[];
+  priorFindingRefs?: string[];
+  repairMapRefs?: string[];
+  qualityRolePromptRef?: string;
+  executionSessionRef?: string;
+  contextManifestRef?: string;
+  contextManifest?: Record<string, unknown>;
+  noContextInheritance?: boolean;
 };
 
 function stageAttemptBaseIdempotencyKey(input: StageAttemptCreateInput) {
@@ -61,6 +79,21 @@ function stageAttemptBaseIdempotencyKey(input: StageAttemptCreateInput) {
     input.sourceFingerprint?.trim() || null,
     input.stageAttemptExecutorPolicy ?? null,
     input.taskId?.trim() || null,
+    input.stageRunId?.trim() || null,
+    input.qualityCycleId?.trim() || null,
+    input.attemptRole ?? null,
+    input.qualityRoundIndex ?? null,
+    input.parentAttemptRef?.trim() || null,
+    normalizeJsonList(input.inputArtifactRefs),
+    normalizeJsonList(input.reviewedArtifactHashes),
+    normalizeJsonList(input.qualitySourceRefs),
+    normalizeJsonList(input.qualityRubricRefs),
+    normalizeJsonList(input.priorFindingRefs),
+    normalizeJsonList(input.repairMapRefs),
+    input.qualityRolePromptRef?.trim() || null,
+    input.contextManifestRef?.trim() || null,
+    input.contextManifest ?? null,
+    input.noContextInheritance ?? null,
   ]);
 }
 
@@ -102,6 +135,17 @@ function stageAttemptOrdinalForNewAttempt(
 }
 
 export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateInput) {
+  const forbiddenAttemptSemantics = [
+    'next_stage_refs', 'requires', 'ensures', 'stage_route', 'sub_stage_graph',
+    'independent_owner', 'stage_current_pointer', 'stage_transition_authority',
+  ].filter((field) => Object.hasOwn(input, field));
+  if (forbiddenAttemptSemantics.length > 0) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'StageAttempt cannot own Stage semantics or transition authority.',
+      { forbidden_fields: forbiddenAttemptSemantics },
+    );
+  }
   const stageId = normalizedStageId(input.stageId);
   const providerKind = resolveFamilyRuntimeProviderKind(input.providerKind);
   const createdAt = nowIso();
@@ -110,6 +154,116 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
   const stageAttemptExecutorPolicy = input.stageAttemptExecutorPolicy ?? null;
   const retryBudget = input.retryBudget ?? taskRetryBudgetProjection(3);
   const taskId = input.taskId?.trim() || null;
+  const attemptRole = input.attemptRole ? normalizeStageQualityAttemptRole(input.attemptRole) : null;
+  const qualityRoundIndex = input.qualityRoundIndex ?? (attemptRole ? 0 : null);
+  if (qualityRoundIndex !== null && (!Number.isInteger(qualityRoundIndex) || qualityRoundIndex < 0)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'qualityRoundIndex must be a non-negative integer.');
+  }
+  const isolatedReviewRoles: StageQualityAttemptRole[] = [
+    'reviewer', 're_reviewer',
+  ];
+  if (attemptRole && !input.stageRunId?.trim()) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Quality-cycle StageAttempt requires stageRunId.');
+  }
+  if (attemptRole && !input.qualityCycleId?.trim()) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Quality-cycle StageAttempt requires qualityCycleId.');
+  }
+  let parentAttemptLineage: { stage_run_id: string; quality_cycle_id: string } | null = null;
+  if (attemptRole === 'producer') {
+    if (qualityRoundIndex !== 0 || input.parentAttemptRef) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Producer StageAttempt must be round zero without a parent Attempt.',
+      );
+    }
+  } else if (attemptRole) {
+    const expectedRound = attemptRole === 'reviewer'
+      ? qualityRoundIndex === 0
+      : Number(qualityRoundIndex) >= 1 && Number(qualityRoundIndex) <= 3;
+    if (!expectedRound || !input.parentAttemptRef?.trim()) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Quality-cycle child Attempt role, round, and parent lineage are inconsistent.',
+        { attempt_role: attemptRole, quality_round_index: qualityRoundIndex },
+      );
+    }
+    const parentAttemptId = input.parentAttemptRef.startsWith('opl://stage_attempts/')
+      ? input.parentAttemptRef.slice('opl://stage_attempts/'.length)
+      : '';
+    const parent = parentAttemptId
+      ? db.prepare('SELECT * FROM stage_attempts WHERE stage_attempt_id = ?').get(parentAttemptId) as StageAttemptRow | undefined
+      : undefined;
+    if (
+      !parent
+      || parent.stage_run_id !== input.stageRunId?.trim()
+      || parent.quality_cycle_id !== input.qualityCycleId?.trim()
+    ) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Parent StageAttempt must be persisted under the same StageRun and quality cycle.',
+        { parent_attempt_ref: input.parentAttemptRef },
+      );
+    }
+    parentAttemptLineage = {
+      stage_run_id: parent.stage_run_id!,
+      quality_cycle_id: parent.quality_cycle_id!,
+    };
+  }
+  if (attemptRole) {
+    if (
+      input.noContextInheritance !== true
+      || !input.contextManifestRef?.trim()
+      || !input.qualityRolePromptRef?.trim()
+      || normalizeJsonList(input.qualityRubricRefs).length === 0
+    ) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Quality-cycle StageAttempt requires a fresh isolated context, role prompt, and quality rubric.',
+        { attempt_role: attemptRole },
+      );
+    }
+  }
+  if (attemptRole && isolatedReviewRoles.includes(attemptRole)) {
+    if (normalizeJsonList(input.inputArtifactRefs).length === 0 || normalizeJsonList(input.reviewedArtifactHashes).length === 0) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Formal review StageAttempt requires exact artifact refs and hashes.');
+    }
+  }
+  if (attemptRole === 'repairer' && normalizeJsonList(input.priorFindingRefs).length === 0) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Repairer StageAttempt requires prior finding refs.');
+  }
+  if (
+    attemptRole === 're_reviewer'
+    && (
+      normalizeJsonList(input.priorFindingRefs).length === 0
+      || normalizeJsonList(input.repairMapRefs).length === 0
+    )
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Re-reviewer StageAttempt requires prior finding and repair map refs.',
+    );
+  }
+  if (attemptRole) {
+    requireStageQualityAttemptBoundary({
+      attempt_role: attemptRole,
+      quality_round_index: qualityRoundIndex,
+      stage_run_id: input.stageRunId,
+      quality_cycle_id: input.qualityCycleId,
+      parent_attempt_ref: input.parentAttemptRef ?? null,
+      parent_attempt_lineage: parentAttemptLineage,
+      input_artifact_refs: input.inputArtifactRefs ?? [],
+      reviewed_artifact_hashes: input.reviewedArtifactHashes ?? [],
+      quality_source_refs: input.qualitySourceRefs ?? [],
+      quality_rubric_refs: input.qualityRubricRefs ?? [],
+      prior_finding_refs: input.priorFindingRefs ?? [],
+      repair_map_refs: input.repairMapRefs ?? [],
+      quality_role_prompt_ref: input.qualityRolePromptRef,
+      context_manifest_ref: input.contextManifestRef,
+      no_context_inheritance: input.noContextInheritance,
+      role_overlay: input.stageAttemptExecutorPolicy ?? {},
+      quality_context: input.contextManifest ?? {},
+    });
+  }
   const baseIdempotencyKey = stageAttemptBaseIdempotencyKey(input);
   const newAttemptOrdinal = input.newAttempt
     ? stageAttemptOrdinalForNewAttempt(db, {
@@ -158,6 +312,11 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
     sourceFingerprint,
     stageAttemptExecutorPolicy,
     input.taskId ?? null,
+    input.stageRunId?.trim() || null,
+    input.qualityCycleId?.trim() || null,
+    attemptRole,
+    qualityRoundIndex,
+    input.parentAttemptRef?.trim() || null,
     input.newAttempt ? newAttemptOrdinal : createdAt,
   ]);
   const workflowId = stableId('wf', [input.domainId, stageId, stageAttemptId]);
@@ -204,6 +363,24 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
     stage_attempt_executor_policy_json: stageAttemptExecutorPolicy
       ? JSON.stringify(stageAttemptExecutorPolicy)
       : null,
+    stage_run_id: input.stageRunId?.trim() || null,
+    quality_cycle_id: input.qualityCycleId?.trim() || null,
+    attempt_role: attemptRole,
+    quality_round_index: qualityRoundIndex,
+    parent_attempt_ref: input.parentAttemptRef?.trim() || null,
+    input_artifact_refs_json: JSON.stringify(normalizeJsonList(input.inputArtifactRefs)),
+    reviewed_artifact_hashes_json: JSON.stringify(normalizeJsonList(input.reviewedArtifactHashes)),
+    quality_source_refs_json: JSON.stringify(normalizeJsonList(input.qualitySourceRefs)),
+    quality_rubric_refs_json: JSON.stringify(normalizeJsonList(input.qualityRubricRefs)),
+    prior_finding_refs_json: JSON.stringify(normalizeJsonList(input.priorFindingRefs)),
+    repair_map_refs_json: JSON.stringify(normalizeJsonList(input.repairMapRefs)),
+    quality_role_prompt_ref: input.qualityRolePromptRef?.trim() || null,
+    execution_session_ref: input.executionSessionRef?.trim() || null,
+    context_manifest_ref: input.contextManifestRef?.trim() || null,
+    context_manifest_json: input.contextManifest ? JSON.stringify(input.contextManifest) : null,
+    no_context_inheritance: input.noContextInheritance === undefined
+      ? null
+      : input.noContextInheritance ? 1 : 0,
     status: input.blockedReason ? 'blocked' : 'queued',
     checkpoint_refs_json: JSON.stringify(normalizeJsonList(input.checkpointRefs)),
     closeout_refs_json: JSON.stringify(normalizeJsonList(input.closeoutRefs)),
@@ -223,14 +400,22 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
   db.prepare(`
     INSERT INTO stage_attempts(
       stage_attempt_id, idempotency_key, provider_kind, workflow_id, domain_id, stage_id, workspace_locator_json,
-      source_fingerprint, executor_kind, stage_attempt_executor_policy_json, status, checkpoint_refs_json, closeout_refs_json,
+      source_fingerprint, executor_kind, stage_attempt_executor_policy_json, stage_run_id, quality_cycle_id,
+      attempt_role, quality_round_index, parent_attempt_ref, input_artifact_refs_json, reviewed_artifact_hashes_json,
+      quality_source_refs_json, quality_rubric_refs_json, prior_finding_refs_json, repair_map_refs_json,
+      quality_role_prompt_ref,
+      execution_session_ref, context_manifest_ref, context_manifest_json, no_context_inheritance, status, checkpoint_refs_json, closeout_refs_json,
       human_gate_refs_json, retry_budget_json, attempt_count, task_id, blocked_reason,
       provider_receipt_json, provider_run_json, activity_events_json, route_impact_json,
       closeout_receipt_status, created_at, updated_at
     )
     VALUES (
       @stage_attempt_id, @idempotency_key, @provider_kind, @workflow_id, @domain_id, @stage_id, @workspace_locator_json,
-      @source_fingerprint, @executor_kind, @stage_attempt_executor_policy_json, @status, @checkpoint_refs_json, @closeout_refs_json,
+      @source_fingerprint, @executor_kind, @stage_attempt_executor_policy_json, @stage_run_id, @quality_cycle_id,
+      @attempt_role, @quality_round_index, @parent_attempt_ref, @input_artifact_refs_json, @reviewed_artifact_hashes_json,
+      @quality_source_refs_json, @quality_rubric_refs_json, @prior_finding_refs_json, @repair_map_refs_json,
+      @quality_role_prompt_ref,
+      @execution_session_ref, @context_manifest_ref, @context_manifest_json, @no_context_inheritance, @status, @checkpoint_refs_json, @closeout_refs_json,
       @human_gate_refs_json, @retry_budget_json, @attempt_count, @task_id, @blocked_reason,
       @provider_receipt_json, @provider_run_json, @activity_events_json, @route_impact_json,
       @closeout_receipt_status, @created_at, @updated_at

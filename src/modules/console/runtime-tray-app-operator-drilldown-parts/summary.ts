@@ -177,7 +177,8 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
     provider_slo_capability_status: input.providerCapabilitySlo.status,
     provider_slo_capability_restart_requery_ready: input.providerCapabilitySlo.restart_requery_ready,
     provider_slo_capability_signal_history_ready: input.providerCapabilitySlo.signal_history_ready,
-    provider_slo_capability_typed_closeout_ready: input.providerCapabilitySlo.typed_closeout_required_ready,
+    provider_slo_capability_typed_closeout_claim_evidence_ready:
+      input.providerCapabilitySlo.typed_closeout_claim_evidence_ready,
     provider_slo_capability_missing_closeout_diagnostic_ready: input.providerCapabilitySlo.missing_closeout_diagnostic_ready,
     provider_slo_capability_no_output_diagnostic_ready: input.providerCapabilitySlo.no_output_diagnostic_boundary_ready,
     provider_slo_capability_domain_truth_boundary_preserved: input.providerCapabilitySlo.domain_truth_boundary_preserved,
@@ -221,7 +222,8 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
     provider_capability_slo_status: input.providerCapabilitySlo.status,
     provider_capability_restart_requery_ready: input.providerCapabilitySlo.restart_requery_ready,
     provider_capability_signal_history_ready: input.providerCapabilitySlo.signal_history_ready,
-    provider_capability_typed_closeout_ready: input.providerCapabilitySlo.typed_closeout_required_ready,
+    provider_capability_typed_closeout_claim_evidence_ready:
+      input.providerCapabilitySlo.typed_closeout_claim_evidence_ready,
     provider_capability_missing_closeout_diagnostic_ready: input.providerCapabilitySlo.missing_closeout_diagnostic_ready,
     provider_capability_no_output_diagnostic_ready: input.providerCapabilitySlo.no_output_diagnostic_boundary_ready,
     provider_capability_domain_truth_boundary_preserved: input.providerCapabilitySlo.domain_truth_boundary_preserved,

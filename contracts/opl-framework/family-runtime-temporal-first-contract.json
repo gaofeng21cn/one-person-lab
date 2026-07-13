@@ -10,11 +10,29 @@
     "stage_run_workflow": {
       "contract_name": "StageRunWorkflow",
       "temporal_kind": "workflow",
-      "current_workflow_type": "StageAttemptWorkflow",
-      "role": "durable_stage_run_and_stage_attempt_lifecycle_envelope",
+      "current_workflow_type": "StageRunWorkflow",
+      "child_workflow_type": "StageAttemptWorkflow",
+      "role": "non_model_durable_stage_run_controller_for_bounded_quality_attempts",
+      "creation_entry": "pack_bound_family_runtime_attempt_create_only",
+      "raw_stage_run_start_cli_retired": true,
+      "required_pack_binding_surface_kind": "opl_pack_bound_stage_quality_runtime_binding",
+      "required_pack_binding_identity_fields": [
+        "stage_manifest_ref",
+        "stage_manifest_sha256",
+        "quality_policy_ref",
+        "domain_pack_root"
+      ],
       "task_queue": "domain_runtime_lane_task_queue",
-      "event_history_role": "durable_lifecycle_attempt_retry_signal_and_closeout_transport_history",
+      "event_history_role": "durable_quality_loop_attempt_lineage_budget_and_terminalization_history",
       "sqlite_role": "projection_audit_cache_not_durable_lifecycle_truth"
+    },
+    "stage_attempt_workflow": {
+      "contract_name": "StageAttemptWorkflow",
+      "temporal_kind": "child_workflow",
+      "parent_workflow_type": "StageRunWorkflow",
+      "role": "one_context_isolated_executor_invocation_for_a_framework_bounded_attempt_role",
+      "may_create_authoritative_attempts": false,
+      "may_transition_stage": false
     },
     "stage_attempt_activity": {
       "contract_name": "StageAttemptActivity",
@@ -60,6 +78,15 @@
     "priority_and_rate_policy": "temporal_or_worker_level_policy_only_not_sqlite_queue_truth"
   },
   "retry_mapping": {
+    "stage_quality_revision_budget": {
+      "default_max_repair_rounds": 3,
+      "round_unit": "one_repairer_child_workflow_plus_one_fresh_re_reviewer_child_workflow",
+      "initial_review_consumes_repair_round": false,
+      "separate_from_provider_retry": true,
+      "separate_from_temporal_activity_retry": true,
+      "separate_from_structured_output_retry": true,
+      "separate_from_stage_run_runtime_retry": true
+    },
     "codex_stage_activity": {
       "maximum_attempts": 1,
       "reason": "codex_cli_subprocess_must_not_be_duplicated_by_temporal_retry"

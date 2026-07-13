@@ -109,7 +109,7 @@ const REQUIRED_STAGE_RUN_CANARY_STRATEGY_LAYERS = [
   'grounded_reflection',
   'comparative_selection',
   'evolution_and_revision',
-  'meta_review_learning',
+  'strategy_retrospective',
   'independent_quality_gate',
 ];
 
@@ -118,7 +118,7 @@ const REQUIRED_STAGE_RUN_CANARY_ROLE_ARTIFACT_REFS = [
   'reflection_review_ref',
   'ranking_selection_ref',
   'revision_lineage_ref',
-  'meta_review_ref',
+  'strategy_retrospective_ref',
   'independent_gate_ref',
 ];
 

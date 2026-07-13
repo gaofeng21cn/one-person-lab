@@ -1,23 +1,40 @@
 import { Context, heartbeat } from '@temporalio/activity';
 
 import { isRecord } from '../../kernel/contract-validation.ts';
-import type { TemporalStageAttemptWorkflowInput } from './family-runtime-temporal.ts';
+import {
+  buildTemporalStageAttemptWorkflowInput,
+  type TemporalStageAttemptWorkflowInput,
+  type TemporalStageQualityAttemptSyncInput,
+  type TemporalStageQualityCycleProjectionInput,
+  type TemporalStageQualityAttemptMaterializationInput,
+  type TemporalStageQualityReviewReceiptInput,
+} from './family-runtime-temporal.ts';
 import {
   DEFAULT_CODEX_STAGE_ACTIVITY_HEARTBEAT_INTERVAL_MS,
   DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS,
   DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS,
 } from './family-runtime-temporal-constants.ts';
 import { runTemporalProviderCadenceReadback } from './family-runtime-scheduler.ts';
-import { openQueueDb } from './family-runtime-store.ts';
+import { openQueueDb, stableId } from './family-runtime-store.ts';
 import {
+  buildPersistedStageReviewReceipt,
+  createStageAttempt,
+  createStageAttemptTable,
   recordStageAttemptActivityHeartbeat,
+  syncStageAttemptFromTemporalTerminalObservation,
 } from './family-runtime-stage-attempts.ts';
+import {
+  createStageQualityCycle,
+  markStageQualityCycleCurrentAttempt,
+  projectTemporalStageRunQualityCycle,
+} from './family-runtime-stage-quality-cycle.ts';
 import {
   normalizeTypedStageCloseoutPacket,
   runAgentStageRunner,
 } from './family-runtime-codex-stage-runner.ts';
 import { codexActivityEventForTemporalHistory } from './family-runtime-temporal-history-summary.ts';
 import { isRuntimeHardStopReason } from '../../kernel/progress-hard-stop-policy.ts';
+import { buildStageReviewContextManifest } from '../stagecraft/index.ts';
 
 function closeoutPacketFromRunnerReceipt(receipt: Record<string, unknown>) {
   if (isRecord(receipt.closeout_packet)) {
@@ -774,6 +791,168 @@ export async function schedulerTickActivity(input: {
     version: 'g2',
     temporal_provider_cadence_readback: compactSchedulerTickForTemporalResult(tick),
   };
+}
+
+export async function stageQualityAttemptMaterializeActivity(
+  input: TemporalStageQualityAttemptMaterializationInput,
+) {
+  const { db } = openQueueDb();
+  try {
+    createStageAttemptTable(db);
+    createStageQualityCycle(db, {
+      qualityCycleId: input.quality_cycle_id,
+      stageRunId: input.stage_run.stage_run_id,
+      domainId: input.stage_run.domain_id,
+      stageId: input.stage_run.stage_id,
+      policy: input.stage_run.quality_policy,
+    });
+    const rolePromptRef = input.stage_run.role_prompt_refs[input.attempt_role as keyof typeof input.stage_run.role_prompt_refs];
+    if (!rolePromptRef) {
+      throw new Error(`Stage quality role prompt ref missing for ${input.attempt_role}`);
+    }
+    const contextManifest = input.attempt_role === 'reviewer' || input.attempt_role === 're_reviewer'
+      ? buildStageReviewContextManifest({
+          stageRunId: input.stage_run.stage_run_id,
+          qualityCycleId: input.quality_cycle_id,
+          reviewerAttemptRole: input.attempt_role,
+          stageGoalRefs: input.stage_run.stage_goal_refs,
+          artifactRefs: input.artifact_refs,
+          artifactHashes: input.artifact_hashes,
+          sourceRefs: input.stage_run.source_refs,
+          qualityRubricRefs: input.stage_run.quality_rubric_refs,
+          lineageRefs: [
+            ...(input.stage_run.lineage_refs ?? []),
+            ...input.artifact_identity_receipt_refs,
+          ],
+          priorFindingRefs: (input.findings ?? []).map((finding) => finding.finding_id),
+        })
+      : {
+          surface_kind: 'opl_stage_quality_attempt_context_manifest',
+          version: 'stage-quality-attempt-context-manifest.v1',
+          stage_run_id: input.stage_run.stage_run_id,
+          quality_cycle_id: input.quality_cycle_id,
+          attempt_role: input.attempt_role,
+          stage_goal_refs: input.stage_run.stage_goal_refs ?? [],
+          source_refs: input.stage_run.source_refs ?? [],
+          quality_rubric_refs: input.stage_run.quality_rubric_refs,
+          lineage_refs: input.stage_run.lineage_refs ?? [],
+          no_context_inheritance: true,
+        };
+    const contextManifestRef = `opl://stage-quality-context/${stableId('ctx', [contextManifest])}`;
+    const attempt = createStageAttempt(db, {
+      domainId: input.stage_run.domain_id,
+      stageId: input.stage_run.stage_id,
+      providerKind: 'temporal',
+      workspaceLocator: input.stage_run.workspace_locator,
+      sourceFingerprint: input.stage_run.source_fingerprint ?? undefined,
+      executorKind: input.stage_run.executor_kind,
+      stageAttemptExecutorPolicy: input.stage_run.stage_attempt_executor_policy,
+      checkpointRefs: [input.stage_run.stage_packet_ref, ...(input.stage_run.checkpoint_refs ?? [])],
+      stageRunId: input.stage_run.stage_run_id,
+      qualityCycleId: input.quality_cycle_id,
+      attemptRole: input.attempt_role,
+      qualityRoundIndex: input.quality_round_index,
+      parentAttemptRef: input.parent_attempt_ref ?? undefined,
+      inputArtifactRefs: input.artifact_refs,
+      reviewedArtifactHashes: input.artifact_hashes,
+      qualitySourceRefs: input.stage_run.source_refs,
+      qualityRubricRefs: input.stage_run.quality_rubric_refs,
+      priorFindingRefs: (input.findings ?? []).map((finding) => finding.finding_id),
+      repairMapRefs: (input.repair_map ?? []).map((entry) => `repair-map:${entry.finding_id}`),
+      qualityRolePromptRef: rolePromptRef,
+      contextManifestRef,
+      contextManifest,
+      noContextInheritance: true,
+      newAttempt: false,
+    }).attempt;
+    const attemptRef = `opl://stage_attempts/${attempt.stage_attempt_id}`;
+    markStageQualityCycleCurrentAttempt(db, {
+      qualityCycleId: input.quality_cycle_id,
+      attemptRef,
+    });
+    return {
+      surface_kind: 'temporal_stage_quality_attempt_materialization_receipt',
+      stage_run_id: input.stage_run.stage_run_id,
+      quality_cycle_id: input.quality_cycle_id,
+      attempt_role: input.attempt_role,
+      quality_round_index: input.quality_round_index,
+      attempt_ref: attemptRef,
+      workflow_input: {
+        ...buildTemporalStageAttemptWorkflowInput(attempt),
+        quality_context: {
+          context_manifest: contextManifest,
+          findings: input.findings ?? [],
+          repair_map: input.repair_map ?? [],
+        },
+      },
+      authority_boundary: {
+        opl: 'stage_attempt_identity_and_refs_projection_only',
+        domain: 'review_findings_repair_artifact_and_quality_verdict_owner',
+      },
+    };
+  } finally {
+    db.close();
+  }
+}
+
+function stageAttemptIdFromRef(ref: string) {
+  const prefix = 'opl://stage_attempts/';
+  if (!ref.startsWith(prefix) || !ref.slice(prefix.length)) {
+    throw new Error(`Invalid StageAttempt ref: ${ref}`);
+  }
+  return ref.slice(prefix.length);
+}
+
+export async function stageQualityAttemptSyncActivity(input: TemporalStageQualityAttemptSyncInput) {
+  const { db } = openQueueDb();
+  try {
+    createStageAttemptTable(db);
+    const stageAttemptId = stageAttemptIdFromRef(input.attempt_ref);
+    return syncStageAttemptFromTemporalTerminalObservation(db, {
+      surface_kind: 'temporal_stage_attempt_query_receipt',
+      provider_kind: 'temporal',
+      stage_attempt_id: stageAttemptId,
+      workflow_id: input.workflow_state.workflow_id,
+      workflow_status: 'COMPLETED',
+      query: input.workflow_state,
+    });
+  } finally {
+    db.close();
+  }
+}
+
+export async function stageQualityReviewReceiptActivity(input: TemporalStageQualityReviewReceiptInput) {
+  const { db } = openQueueDb();
+  try {
+    createStageAttemptTable(db);
+    return buildPersistedStageReviewReceipt(db, {
+      producerAttemptId: stageAttemptIdFromRef(input.producer_attempt_ref),
+      reviewerAttemptId: stageAttemptIdFromRef(input.reviewer_attempt_ref),
+      rubricRefs: input.rubric_refs,
+      verdict: input.verdict,
+    });
+  } finally {
+    db.close();
+  }
+}
+
+export async function stageQualityCycleProjectActivity(
+  input: TemporalStageQualityCycleProjectionInput,
+) {
+  const { db } = openQueueDb();
+  try {
+    createStageAttemptTable(db);
+    createStageQualityCycle(db, {
+      qualityCycleId: input.state.quality_cycle_id,
+      stageRunId: input.stage_run.stage_run_id,
+      domainId: input.stage_run.domain_id,
+      stageId: input.stage_run.stage_id,
+      policy: input.stage_run.quality_policy,
+    });
+    return projectTemporalStageRunQualityCycle(db, input.state);
+  } finally {
+    db.close();
+  }
 }
 
 export const StageAttemptActivity = codexStageActivity;

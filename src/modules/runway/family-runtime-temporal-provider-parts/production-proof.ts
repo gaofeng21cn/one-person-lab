@@ -147,7 +147,7 @@ function blockedTemporalProductionResidencyProof(input: {
       worker_completed_attempt: false,
       worker_restart_requery: false,
       signal_history_preserved: false,
-      typed_closeout_required_for_completed: false,
+      typed_closeout_claim_evidence_supported: false,
       missing_closeout_advances_with_diagnostic: false,
       no_output_diagnostic_boundary_observed: false,
       domain_truth_boundary_preserved: true,
@@ -318,7 +318,7 @@ export async function runTemporalProductionResidencyProofForWorker(
         signal_history_preserved:
           completedState.signals.length === 3
           && queriedWhileResident.signals.length === 3,
-        typed_closeout_required_for_completed:
+        typed_closeout_claim_evidence_supported:
           completedState.completion_boundary.provider_completion === 'completed'
           && completedState.closeout_refs.length > 0,
         missing_closeout_advances_with_diagnostic:

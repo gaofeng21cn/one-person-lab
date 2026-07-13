@@ -201,6 +201,11 @@ export function codexActivityEventForTemporalHistory(codexResult: JsonRecord) {
       progress_requires_typed_closeout: progressSummary.progress_requires_typed_closeout === true,
       raw_artifact_sufficient_for_progress: progressSummary.raw_artifact_sufficient_for_progress === true,
       thread_id: typeof progressSummary.thread_id === 'string' ? progressSummary.thread_id : null,
+      execution_session_ref: typeof progressSummary.execution_session_ref === 'string'
+        ? progressSummary.execution_session_ref
+        : typeof progressSummary.thread_id === 'string'
+          ? `codex://threads/${progressSummary.thread_id}`
+          : null,
       runner_events: historyRunnerEventSummary(progressSummary.runner_events),
     },
     ...(processOutputSummary ? { process_output_summary: processOutputSummary } : {}),

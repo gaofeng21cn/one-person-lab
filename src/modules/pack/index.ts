@@ -27,12 +27,18 @@ export type {
 } from './domain-pack-compiler/repo-contract-descriptor.ts';
 export {
   compileStandardAgentStageManifest,
+  resolveStandardAgentStageQualityRuntimeBinding,
   STANDARD_AGENT_DESCRIPTOR_REF,
 } from './standard-agent-stage-manifest.ts';
-export type { StandardAgentStageManifestCompilation } from './standard-agent-stage-manifest.ts';
+export type {
+  StandardAgentStageManifestCompilation,
+  StandardAgentStageQualityPolicy,
+  StandardAgentStageQualityRuntimeBinding,
+} from './standard-agent-stage-manifest.ts';
 export {
   readStandardAgentStagePromptFile,
   resolveStandardAgentStagePrompt,
+  readStandardAgentQualityRolePromptFile,
   STANDARD_AGENT_STAGE_MANIFEST_REF,
   STANDARD_AGENT_STAGE_PROMPT_LAYER,
 } from './standard-agent-stage-prompt.ts';

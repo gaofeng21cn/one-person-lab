@@ -39,6 +39,18 @@ test('Temporal-first runtime contract keeps false-ready and lifecycle boundaries
 
   assert.deepEqual(parsed, { mode: 'control_loop_status', providerKind: 'temporal' });
   assert.equal(contract.event_history_mapping.temporal_history_is_durable_lifecycle_truth, true);
+  assert.equal(
+    contract.workflow_activity_signal_mapping.stage_run_workflow.current_workflow_type,
+    'StageRunWorkflow',
+  );
+  assert.equal(
+    contract.workflow_activity_signal_mapping.stage_attempt_workflow.parent_workflow_type,
+    'StageRunWorkflow',
+  );
+  assert.equal(
+    contract.workflow_activity_signal_mapping.stage_attempt_workflow.may_create_authoritative_attempts,
+    false,
+  );
   assert.equal(contract.event_history_mapping.sqlite_sidecar_role, 'projection_and_readback_index_only_not_runtime_provider');
   assert.equal(contract.false_ready_boundary.not_proven_by.includes('focused_tests_pass'), true);
   assert.equal(contract.authority_boundary.can_sign_owner_receipt, false);

@@ -4,9 +4,31 @@
   "scope": "operator-facing aggregation of family runtime, quality, and incident source refs",
   "source_contracts": [
     "contracts/opl-framework/family-runtime-attempt-contract.json",
+    "contracts/opl-framework/stage-quality-cycle-contract.json",
     "contracts/opl-framework/family-domain-quality-projection-contract.json",
     "contracts/opl-framework/family-incident-learning-loop.json"
   ],
+  "stage_quality_cycle_visibility": {
+    "default_user_fields": [
+      "current_stage",
+      "stage_artifact",
+      "completed_or_quality_debt",
+      "next_stage"
+    ],
+    "developer_operator_drilldown_only": [
+      "attempt_role",
+      "quality_round_index",
+      "execution_session_ref",
+      "artifact_identity_receipt_refs",
+      "review_receipts",
+      "finding_lineage",
+      "repair_lineage",
+      "quality_debt_refs",
+      "token_and_cost"
+    ],
+    "attempt_must_not_be_presented_as_sub_stage": true,
+    "completed_with_quality_debt_blocks_quality_export_publication_submission_ready_claims": true
+  },
   "required_projection_fields": [
     "domain_id",
     "active_item",

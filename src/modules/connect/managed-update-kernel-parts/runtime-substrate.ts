@@ -20,6 +20,7 @@ import { asRecord, booleanValue, stringValue } from './shared.ts';
 
 type RuntimeSubstrateComponentOptions = {
   allowFrameworkChannelLookup?: boolean;
+  refreshManagedDependencyLatest?: boolean;
 };
 
 export function buildRuntimeSubstrateComponent(
@@ -33,9 +34,17 @@ export function buildRuntimeSubstrateComponent(
   const frameworkRuntime = readOplFrameworkRuntimeUpdateStatus(resolveProjectRoot(), {
     allowChannelLookup: options.allowFrameworkChannelLookup,
   });
-  const dependencyCatalog = inspectBaseManagedDependencies(process.env.HOME?.trim() || process.cwd());
+  const dependencyCatalog = inspectBaseManagedDependencies(process.env.HOME?.trim() || process.cwd(), {
+    refreshManagedLatest: options.refreshManagedDependencyLatest,
+  });
+  const dependencyRecords = dependencyCatalog.dependencies as Array<Record<string, unknown>>;
+  const managedDependencyUpdateAvailable = dependencyRecords.some((entry) => (
+    entry.update_mode === 'silent_managed' && entry.currentness === 'update_available'
+  ));
+  const codexDependency = dependencyRecords.find((entry) => entry.dependency_id === 'codex-cli');
   const installed = booleanValue(codex, 'installed') === true;
-  const updateAvailable = booleanValue(codex, 'update_available') === true;
+  const updateAvailable = booleanValue(codex, 'update_available') === true
+    && codexDependency?.update_mode === 'silent_managed';
   const frameworkUpdateAvailable = frameworkRuntime.update_available && !frameworkRuntime.target_is_developer_checkout;
   const developerSourceOverride = frameworkRuntime.source_root_configured === true;
   const runtimeLatestStatus = stringValue(runtimeSubstrate, 'latest_version_status');
@@ -46,7 +55,10 @@ export function buildRuntimeSubstrateComponent(
   const state: ManagedUpdateComponentState =
     !installed
       ? 'failed_with_repair'
-      : updateAvailable || runtimeLatestStatus === 'outdated' || frameworkUpdateAvailable
+      : updateAvailable
+        || (runtimeLatestStatus === 'outdated' && codexDependency?.update_mode === 'silent_managed')
+        || frameworkUpdateAvailable
+        || managedDependencyUpdateAvailable
         ? 'update_available'
         : 'current';
   const action = state === 'current' ? 'none' : state === 'failed_with_repair' ? 'install' : 'update';
@@ -228,6 +240,7 @@ export function buildRuntimeSubstrateComponent(
     notes: [
       'Runtime substrate updates share the managed update kernel lifecycle but keep an App-owned runtime authority boundary.',
       'Compatible newer system tools may be selected at runtime after checks; they are not silently upgraded by OPL.',
+      'Verified Homebrew or global npm dependencies may expose explicit owner-delegated App actions, but they never enter Base auto-apply.',
     ],
   });
 }

@@ -36,6 +36,33 @@ export type { StageReplayMissingReceiptReceipt } from './stage-replay-missing-re
 export { buildStageReplayMissingReceiptWorkorderPacket, compactStageReplayMissingReceiptWorkorderAttentionItems, compactStageReplayMissingReceiptWorkorderAttentionSummary } from './stage-replay-missing-receipt-workorders.ts';
 export { buildAppStageRunCockpit } from './stage-run-cockpit.ts';
 export { buildOwnerAnswerProjectionProfileRegistryReadback } from './domain-owner-answer-projection.ts';
+export {
+  buildStageReviewContextManifest,
+  classifyCodexSessionContinuation,
+  evaluateStageQualityFindingClosure,
+  initialStageQualityCycleState,
+  normalizeStageQualityAttemptRole,
+  normalizeStageQualityCyclePolicy,
+  reduceStageQualityCycleState,
+  STAGE_QUALITY_ATTEMPT_ROLES,
+  validateIndependentStageReviewReceipt,
+  validateStageQualityFindings,
+  validateStageQualityRepairMap,
+} from './stage-quality-cycle.ts';
+export type {
+  StageQualityAttemptRole,
+  StageQualityCyclePolicy,
+  StageQualityCycleState,
+  StageQualityFinding,
+  StageQualityFindingClosure,
+  StageQualityRepairMapEntry,
+  StageQualityReReviewResult,
+  StageQualityReviewDepth,
+  StageQualityReviewVerdict,
+  StageQualityRiskTier,
+  StageReviewContextManifest,
+  StageReviewReceipt,
+} from './stage-quality-cycle.ts';
 export type { OwnerAnswerProjectionProfile } from './domain-owner-answer-projection.ts';
 export { STANDARD_PROGRESS_DELTA_POLICY } from './standard-progress-delta-policy.ts';
 export {

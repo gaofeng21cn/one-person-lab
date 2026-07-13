@@ -40,7 +40,7 @@ test('cognitive computation kernel keeps stage cognition executor-first and tool
     'grounded_reflection',
     'comparative_selection',
     'evolution_and_revision',
-    'meta_review_learning',
+    'strategy_retrospective',
     'independent_quality_gate',
   ]);
 

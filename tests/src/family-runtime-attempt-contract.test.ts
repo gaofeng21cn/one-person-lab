@@ -165,3 +165,82 @@ test('foundry agent series policy release fingerprint stays tied to the skeleton
   );
   assert.equal(release.policy_bundle.authority_boundary.policy_release_can_claim_domain_ready, false);
 });
+
+test('StageRun creation contracts expose one pack-bound write entry and a query-only StageRun CLI', () => {
+  const quality = readJson('contracts/opl-framework/stage-quality-cycle-contract.json');
+  const attempts = readJson('contracts/opl-framework/family-runtime-attempt-contract.json');
+  const temporal = readJson('contracts/opl-framework/family-runtime-temporal-first-contract.json');
+  const manager = readJson('contracts/opl-framework/runtime-manager-contract.json');
+  const compiler = readJson('contracts/opl-framework/domain-pack-compiler-contract.json');
+  const skeleton = readJson('contracts/opl-framework/standard-domain-agent-skeleton-contract.json');
+
+  assert.equal(quality.pack_bound_creation.canonical_request_surface,
+    'opl family-runtime attempt create');
+  assert.equal(quality.pack_bound_creation.raw_stage_run_start_cli_retired, true);
+  assert.deepEqual(quality.pack_bound_creation.stage_run_cli_allowed_actions, ['query']);
+  assert.equal(quality.pack_bound_creation.stage_run_identity_binds_manifest_sha256, true);
+  assert.ok(quality.pack_bound_creation.required_binding_fields.includes('manifest_sha256'));
+  assert.equal(attempts.stage_quality_cycle_contract.pack_bound_runtime_binding_required, true);
+  assert.equal(temporal.workflow_activity_signal_mapping.stage_run_workflow.creation_entry,
+    'pack_bound_family_runtime_attempt_create_only');
+  assert.equal(temporal.workflow_activity_signal_mapping.stage_run_workflow.raw_stage_run_start_cli_retired, true);
+  assert.equal(manager.pack_bound_stage_run.direct_unbound_stage_run_creation_forbidden, true);
+  assert.deepEqual(manager.pack_bound_stage_run.stage_run_cli_allowed_actions, ['query']);
+  assert.equal(compiler.standard_agent_stage_quality_runtime_binding.surface_kind,
+    'opl_pack_bound_stage_quality_runtime_binding');
+  assert.equal(compiler.standard_agent_stage_quality_runtime_binding.manifest_sha256_is_exact_compiled_manifest_identity, true);
+  assert.deepEqual(compiler.standard_agent_stage_quality_runtime_binding.role_prompt_keys,
+    ['producer', 'reviewer', 'repairer', 're_reviewer']);
+  assert.equal(skeleton.stage_quality_runtime.runtime_creation_surface,
+    'opl family-runtime attempt create');
+  assert.equal(skeleton.stage_quality_runtime.raw_stage_run_start_cli_retired, true);
+});
+
+test('Stage quality contracts bind bounded Attempts, exact artifact identity, receipts, and retry budgets', () => {
+  const quality = readJson('contracts/opl-framework/stage-quality-cycle-contract.json');
+  const attempts = readJson('contracts/opl-framework/family-runtime-attempt-contract.json');
+  const temporal = readJson('contracts/opl-framework/family-runtime-temporal-first-contract.json');
+  const operator = readJson('contracts/opl-framework/family-product-operator-projection.json');
+
+  assert.deepEqual(quality.stage_attempt_roles,
+    ['producer', 'reviewer', 'repairer', 're_reviewer']);
+  assert.deepEqual(quality.multi_attempt_stage_boundary.role_round_contract, {
+    producer: [0], reviewer: [0], repairer: [1, 2, 3], re_reviewer: [1, 2, 3],
+  });
+  assert.equal(quality.multi_attempt_stage_boundary.forbidden_attempt_fields_rejected_recursively, true);
+  assert.equal(quality.multi_attempt_stage_boundary.parent_lineage_must_match_current_stage_run_and_quality_cycle, true);
+  assert.equal(quality.stage_run_controller.maximum_attempt_instances, 8);
+  assert.deepEqual(quality.review_receipt.required_fields, [
+    'stage_run_id', 'quality_cycle_id', 'producer_attempt_ref', 'reviewer_attempt_ref',
+    'producer_session_ref', 'reviewer_session_ref', 'no_context_inheritance',
+    'reviewed_artifact_refs', 'reviewed_artifact_hashes', 'rubric_refs', 'verdict',
+  ]);
+  assert.equal(
+    quality.review_receipt.producer_and_repairer_artifact_identity_receipt_refs_required_before_formal_review,
+    true,
+  );
+  assert.equal(quality.review_receipt.reviewed_artifact_ref_hash_cardinality_must_match, true);
+  assert.equal(attempts.stage_quality_cycle_contract.review_receipt_surface_kind,
+    'opl_stage_review_receipt');
+
+  const retry = temporal.retry_mapping.stage_quality_revision_budget;
+  assert.equal(retry.default_max_repair_rounds, 3);
+  assert.equal(retry.initial_review_consumes_repair_round, false);
+  for (const field of [
+    'separate_from_provider_retry',
+    'separate_from_temporal_activity_retry',
+    'separate_from_structured_output_retry',
+    'separate_from_stage_run_runtime_retry',
+  ]) assert.equal(retry[field], true, field);
+
+  for (const field of [
+    'attempt_role', 'quality_round_index', 'execution_session_ref',
+    'artifact_identity_receipt_refs', 'review_receipts', 'finding_lineage',
+    'repair_lineage', 'quality_debt_refs',
+  ]) {
+    assert.ok(operator.stage_quality_cycle_visibility.developer_operator_drilldown_only.includes(field), field);
+    assert.ok(attempts.operator_visibility_fields.includes(field), field);
+  }
+  assert.equal(operator.stage_quality_cycle_visibility.attempt_must_not_be_presented_as_sub_stage, true);
+  assert.equal(operator.stage_quality_cycle_visibility.completed_with_quality_debt_blocks_quality_export_publication_submission_ready_claims, true);
+});

@@ -23,12 +23,32 @@ test('family product operator projection consumes runtime, quality, and incident
 
   for (const source of [
     'contracts/opl-framework/family-runtime-attempt-contract.json',
+    'contracts/opl-framework/stage-quality-cycle-contract.json',
     'contracts/opl-framework/family-domain-quality-projection-contract.json',
     'contracts/opl-framework/family-incident-learning-loop.json',
   ]) {
     assert.ok((contract.source_contracts as string[]).includes(source));
     assert.equal(fs.existsSync(path.join(repoRoot, source)), true);
   }
+});
+
+test('family product projection keeps quality Attempts in drilldown instead of presenting sub-Stages', () => {
+  const contract = readJson('contracts/opl-framework/family-product-operator-projection.json');
+  const visibility = contract.stage_quality_cycle_visibility as Record<string, any>;
+
+  assert.deepEqual(visibility.default_user_fields, [
+    'current_stage', 'stage_artifact', 'completed_or_quality_debt', 'next_stage',
+  ]);
+  assert.deepEqual(visibility.developer_operator_drilldown_only, [
+    'attempt_role', 'quality_round_index', 'execution_session_ref',
+    'artifact_identity_receipt_refs', 'review_receipts',
+    'finding_lineage', 'repair_lineage', 'quality_debt_refs', 'token_and_cost',
+  ]);
+  assert.equal(visibility.attempt_must_not_be_presented_as_sub_stage, true);
+  assert.equal(
+    visibility.completed_with_quality_debt_blocks_quality_export_publication_submission_ready_claims,
+    true,
+  );
 });
 
 test('family product operator projection answers operator status questions with source refs and owner split', () => {

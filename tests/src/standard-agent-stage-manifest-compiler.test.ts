@@ -11,6 +11,7 @@ import {
   buildRepoGeneratedInterfaceBundle,
   buildStandardAgentRepoContractReadout,
   compileStandardAgentStageManifest,
+  resolveStandardAgentStageQualityRuntimeBinding,
 } from '../../src/modules/pack/index.ts';
 import { FrameworkContractError } from '../../src/kernel/contract-validation.ts';
 import { buildReadyAgentRepo, retargetReadyRepo } from './cli/cases/agents-conformance-fixtures.ts';
@@ -207,6 +208,170 @@ test('standard Agent stage manifest compiler keeps stable domain identity and ta
   const generated = buildRepoGeneratedInterfaceBundle(alphaRoot, 'product-entry').bundle as JsonRecord;
   assert.equal(generated.agent_id, 'agent-alpha');
   assert.equal(generated.target_domain_id, 'target-alpha');
+});
+
+test('official knowledge-deliverable profile compiles isolated Stage Review and one Meta Review role', () => {
+  const root = fixture('medautoscience', 'mas');
+  fs.writeFileSync(path.join(root, 'agent/prompts/intake.md'), `# Intake
+
+## Producer
+Produce.
+
+## Reviewer
+Review.
+
+## Repairer
+Repair.
+
+## Re Reviewer
+Re-review.
+`);
+  writeJson(root, 'contracts/stage_quality_cycle_policy.json', {
+    surface_kind: 'opl_domain_stage_quality_cycle_profile',
+    version: 'domain-stage-quality-cycle-profile.v1',
+    framework_contract_ref: 'contracts/opl-framework/stage-quality-cycle-contract.json',
+    stages: {
+      intake: {
+        surface_kind: 'opl_stage_quality_cycle_policy',
+        version: 'stage-quality-cycle-policy.v1',
+        enabled: true,
+        stage_prompt_ref: 'agent/prompts/intake.md',
+        role_prompt_refs: {
+          producer: 'agent/prompts/intake.md#producer',
+          reviewer: 'agent/prompts/intake.md#reviewer',
+          repairer: 'agent/prompts/intake.md#repairer',
+          re_reviewer: 'agent/prompts/intake.md#re-reviewer',
+        },
+        quality_rubric_refs: ['agent/quality_gates/quality.md'],
+        in_thread_refinement: { allowed: true, authoritative: false },
+        formal_review: {
+          required: false,
+          risk_tier: 'medium',
+          review_depth: 'full',
+          context_isolation_required: true,
+          max_repair_rounds: 0,
+        },
+        budget_exhaustion: 'complete_with_quality_debt_if_consumable',
+        attempt_boundary: {
+          inherits_stage_goal_scope_authority: true,
+          role_overlay_may_only_narrow: true,
+          controller_creates_next_attempt: true,
+          attempt_is_not_sub_stage: true,
+        },
+      },
+    },
+    meta_review_policy: { stage_ref: 'intake', independent_stage_run_required: true },
+  });
+  const manifest = readManifest(root);
+  manifest.quality_governance_profile_ref =
+    'contracts/opl-framework/official-knowledge-deliverable-quality-profile.json';
+  manifest.meta_review_policy_ref =
+    'contracts/stage_quality_cycle_policy.json#/meta_review_policy';
+  manifest.stages[0] = {
+    ...manifest.stages[0],
+    stage_kind: 'review',
+    stage_role: 'cross_stage_meta_review',
+    stage_quality_cycle_policy_ref: 'contracts/stage_quality_cycle_policy.json#/stages/intake',
+  };
+  writeManifest(root, manifest);
+
+  const compiled = compileStandardAgentStageManifest(root).stage_control_plane;
+  assert.equal(compiled.quality_governance_profile_ref,
+    'contracts/opl-framework/official-knowledge-deliverable-quality-profile.json');
+  assert.equal(compiled.meta_review_policy_ref,
+    'contracts/stage_quality_cycle_policy.json#/meta_review_policy');
+  assert.equal(compiled.stages[0]?.stage_role, 'cross_stage_meta_review');
+  assert.equal(compiled.stages[0]?.stage_quality_cycle_policy_ref,
+    'contracts/stage_quality_cycle_policy.json#/stages/intake');
+
+  const binding = resolveStandardAgentStageQualityRuntimeBinding(root, 'intake');
+  assert.equal(binding?.surface_kind, 'opl_pack_bound_stage_quality_runtime_binding');
+  assert.equal(binding?.enabled, true);
+  assert.equal(binding?.stage_role, 'cross_stage_meta_review');
+  assert.equal(binding?.policy_ref, 'contracts/stage_quality_cycle_policy.json#/stages/intake');
+  assert.equal(binding?.quality_policy.formal_review.required, false);
+  assert.equal(binding?.quality_policy.formal_review.max_repair_rounds, 0);
+  assert.equal(binding?.quality_policy.formal_review.attempt_internal_parallel_review_facets_allowed, false);
+  assert.deepEqual(binding?.role_prompt_refs, {
+    producer: 'agent/prompts/intake.md#producer',
+    reviewer: 'agent/prompts/intake.md#reviewer',
+    repairer: 'agent/prompts/intake.md#repairer',
+    re_reviewer: 'agent/prompts/intake.md#re-reviewer',
+  });
+  assert.deepEqual(binding?.quality_rubric_refs, ['agent/quality_gates/quality.md']);
+  assert.deepEqual(binding?.stage_goal_refs, ['agent/stages/manifest.json#/stages/0/goal']);
+  assert.deepEqual(binding?.source_refs, ['agent/stages/intake.md']);
+  assert.deepEqual(binding?.lineage_refs, ['agent/stages/manifest.json#/stages/0']);
+  assert.equal(binding?.manifest_ref, 'agent/stages/manifest.json');
+  assert.equal(binding?.manifest_sha256, compileStandardAgentStageManifest(root).source_binding.stage_manifest_sha256);
+  assert.equal(resolveStandardAgentStageQualityRuntimeBinding(root, 'deliver'), null);
+});
+
+test('official knowledge-deliverable AI stage fails closed when its quality cycle is disabled', () => {
+  const root = fixture('medautoscience', 'mas');
+  fs.writeFileSync(path.join(root, 'agent/prompts/intake.md'), `# Intake
+
+## Producer
+Produce.
+
+## Reviewer
+Review.
+
+## Repairer
+Repair.
+
+## Re Reviewer
+Re-review.
+`);
+  writeJson(root, 'contracts/stage_quality_cycle_policy.json', {
+    surface_kind: 'opl_domain_stage_quality_cycle_profile',
+    version: 'domain-stage-quality-cycle-profile.v1',
+    stages: {
+      intake: {
+        surface_kind: 'opl_stage_quality_cycle_policy',
+        version: 'stage-quality-cycle-policy.v1',
+        enabled: false,
+        stage_prompt_ref: 'agent/prompts/intake.md',
+        role_prompt_refs: {
+          producer: 'agent/prompts/intake.md#producer',
+          reviewer: 'agent/prompts/intake.md#reviewer',
+          repairer: 'agent/prompts/intake.md#repairer',
+          re_reviewer: 'agent/prompts/intake.md#re-reviewer',
+        },
+        quality_rubric_refs: ['agent/quality_gates/quality.md'],
+        in_thread_refinement: { allowed: true, authoritative: false },
+        formal_review: {
+          required: true,
+          risk_tier: 'medium',
+          review_depth: 'full',
+          context_isolation_required: true,
+          max_repair_rounds: 3,
+        },
+        budget_exhaustion: 'complete_with_quality_debt_if_consumable',
+        attempt_boundary: {
+          inherits_stage_goal_scope_authority: true,
+          role_overlay_may_only_narrow: true,
+          controller_creates_next_attempt: true,
+          attempt_is_not_sub_stage: true,
+        },
+      },
+    },
+    meta_review_policy: { stage_ref: 'intake', independent_stage_run_required: true },
+  });
+  const manifest = readManifest(root);
+  manifest.quality_governance_profile_ref =
+    'contracts/opl-framework/official-knowledge-deliverable-quality-profile.json';
+  manifest.meta_review_policy_ref = 'contracts/stage_quality_cycle_policy.json#/meta_review_policy';
+  manifest.stages[0].stage_quality_cycle_policy_ref =
+    'contracts/stage_quality_cycle_policy.json#/stages/intake';
+  manifest.stages[0].next_stage_refs = [];
+  manifest.stages = [manifest.stages[0]];
+  writeManifest(root, manifest);
+
+  assert.throws(
+    () => resolveStandardAgentStageQualityRuntimeBinding(root, 'intake'),
+    /must enable their Stage quality cycle/,
+  );
 });
 
 test('standard Agent stage manifest compiler preserves exclusive source-derived provenance', () => {

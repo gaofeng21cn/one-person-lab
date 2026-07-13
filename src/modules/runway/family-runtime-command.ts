@@ -92,6 +92,7 @@ export type FamilyRuntimeCommandInput =
       max_age_ms?: number | null;
     };
   }
+  | { mode: 'stage_run_query'; workflowId: string }
   | {
     mode: 'stage_artifact';
     input: {

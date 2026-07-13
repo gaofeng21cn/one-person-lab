@@ -15,6 +15,6 @@ export function domainDispatchExternalEvidenceApplyArgs(
     typed_blocker_refs: refs.typedBlockerRefs,
     no_regression_refs: refs.noRegressionRefs,
     owner_chain_refs: refs.ownerChainRefs,
-    evidence_refs: refs.evidenceRefs,
+    evidence_refs: [...new Set([...refs.evidenceRefs, ...refs.progressArtifactRefs])],
   }, commandOrSurfaceRef, options);
 }

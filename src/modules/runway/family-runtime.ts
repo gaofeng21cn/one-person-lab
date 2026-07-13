@@ -18,7 +18,6 @@ import { runTemporalSchedulerCadenceCommand } from './family-runtime-scheduler.t
 import { buildFamilyRuntimeStatusPayload } from './family-runtime-status.ts';
 import {
   createStageAttempt,
-  findIdempotentStageAttempt,
   inspectStageAttempt,
   inspectStageAttemptWithCurrentProviderReadiness,
   listStageAttemptsForTask,
@@ -66,6 +65,8 @@ import {
   recordTemporalStartOnAttempt,
 } from './family-runtime-parts/stage-attempt-launch.ts';
 import { ensureFamilyRuntimePackageLaunchReady } from './family-runtime-package-readiness.ts';
+import { resolveStandardAgentStageQualityRuntimeBinding } from '../pack/index.ts';
+import { buildPackBoundTemporalStageRunInput } from './family-runtime-pack-bound-stage-run.ts';
 
 async function temporalProviderModule() {
   return await import('./family-runtime-temporal-provider.ts');
@@ -98,6 +99,13 @@ export async function runFamilyRuntime(
   const parsed = parseFamilyRuntimeCommand(args);
   const { db, paths } = openQueueDb();
   try {
+    if (parsed.mode === 'stage_run_query') {
+      const stage_run_query = await (await temporalProviderModule()).queryTemporalStageRunWorkflow({
+        workflowId: parsed.workflowId,
+        paths,
+      });
+      return { version: 'g2', family_runtime_stage_run_query: stage_run_query };
+    }
     if (parsed.mode === 'status') {
       return await buildFamilyRuntimeStatusPayload(db, paths, resolveFamilyRuntimeProviderKind(parsed.providerKind));
     }
@@ -331,20 +339,6 @@ export async function runFamilyRuntime(
       return runFamilyRuntimeStageArtifactCommand(parsed.input);
     }
     if (parsed.mode === 'attempt_create') {
-      const existingAttempt = findIdempotentStageAttempt(db, parsed.input);
-      if (existingAttempt) {
-        return {
-          version: 'g2',
-          family_runtime_stage_attempt: {
-            surface_id: 'opl_family_runtime_stage_attempt',
-            created: false,
-            idempotent_noop: true,
-            attempt: existingAttempt,
-            stage_context_observation: null,
-            launch_invocation: null,
-          },
-        };
-      }
       const useBoundaryId = stableId('package-use', [
         parsed.input.domainId,
         parsed.input.stageId,
@@ -358,12 +352,26 @@ export async function runFamilyRuntime(
         workspaceLocator: parsed.input.workspaceLocator,
         useBoundaryId,
       });
+      const explicitDomainPackRoot = typeof parsed.input.workspaceLocator.domain_pack_root === 'string'
+        ? parsed.input.workspaceLocator.domain_pack_root.trim()
+        : '';
+      const managedDomainPackRoot = typeof packageReadiness?.runtime_source_readiness?.checkout_path === 'string'
+        ? packageReadiness.runtime_source_readiness.checkout_path.trim()
+        : '';
+      const domainPackRoot = managedDomainPackRoot || explicitDomainPackRoot || null;
+      const stageQualityBinding = domainPackRoot
+        ? resolveStandardAgentStageQualityRuntimeBinding(domainPackRoot, parsed.input.stageId)
+        : null;
       const useBoundWorkspaceLocator = packageReadiness?.package_use_binding
         ? {
             ...parsed.input.workspaceLocator,
+            ...(domainPackRoot ? { domain_pack_root: domainPackRoot } : {}),
             package_use_binding: packageReadiness.package_use_binding,
           }
-        : parsed.input.workspaceLocator;
+        : {
+            ...parsed.input.workspaceLocator,
+            ...(domainPackRoot ? { domain_pack_root: domainPackRoot } : {}),
+          };
       const providerKind = resolveFamilyRuntimeProviderKind(parsed.input.providerKind);
       const sourceFingerprint = parsed.input.sourceFingerprint?.trim() || null;
       const taskId = parsed.input.taskId?.trim() || null;
@@ -417,6 +425,56 @@ export async function runFamilyRuntime(
         launchInvocation.blocker_reason
         ?? parsed.input.blockedReason
         ?? undefined;
+      if (stageQualityBinding?.enabled) {
+        const stageRunInput = buildPackBoundTemporalStageRunInput({
+          binding: stageQualityBinding,
+          domainPackRoot: domainPackRoot!,
+          domainId: parsed.input.domainId,
+          stageId: parsed.input.stageId,
+          workspaceLocator: useBoundWorkspaceLocator,
+          sourceFingerprint,
+          executorKind: parsed.input.executorKind,
+          stageAttemptExecutorPolicy: {
+            ...(parsed.input.executorBindingRef ? { executor_binding_ref: parsed.input.executorBindingRef } : {}),
+            ...(parsed.input.invocationMode ? { invocation_mode: parsed.input.invocationMode } : {}),
+            ...(parsed.input.boundedEditRef ? { bounded_edit_ref: parsed.input.boundedEditRef } : {}),
+          },
+          checkpointRefs: parsed.input.checkpointRefs,
+          taskId,
+        });
+        const temporal_start = parsed.input.start && !blockedReason
+          ? await (await temporalProviderModule()).startTemporalStageRunWorkflow(stageRunInput, { paths })
+          : null;
+        insertEvent(db, {
+          taskId,
+          domainId: parsed.input.domainId,
+          eventType: blockedReason
+            ? 'stage_run_launch_hard_stopped'
+            : temporal_start
+              ? 'stage_run_temporal_started'
+              : 'stage_run_launch_planned',
+          source: 'opl-cli',
+          payload: {
+            stage_run_id: stageRunInput.stage_run_id,
+            workflow_id: stageRunInput.workflow_id,
+            stage_id: stageRunInput.stage_id,
+            quality_policy_ref: stageRunInput.quality_policy_ref,
+            blocked_reason: blockedReason ?? null,
+            temporal_start,
+          },
+        });
+        return {
+          version: 'g2',
+          family_runtime_stage_run: {
+            surface_id: 'opl_family_runtime_stage_run',
+            stage_run_input: stageRunInput,
+            stage_context_observation: stageLaunchContextObservation,
+            launch_invocation: launchInvocation,
+            blocked_reason: blockedReason ?? null,
+            temporal_start,
+          },
+        };
+      }
       const result = createStageAttempt(db, {
         ...parsed.input,
         workspaceLocator: useBoundWorkspaceLocator,
@@ -482,6 +540,17 @@ export async function runFamilyRuntime(
     }
     if (parsed.mode === 'attempt_start') {
       const attempt = inspectStageAttempt(db, parsed.stageAttemptId);
+      if (attempt.attempt_role) {
+        throw new FrameworkContractError(
+          'cli_usage_error',
+          'Quality-cycle StageAttempts can be started only by their StageRunController.',
+          {
+            stage_attempt_id: attempt.stage_attempt_id,
+            stage_run_id: attempt.stage_run_id,
+            attempt_role: attempt.attempt_role,
+          },
+        );
+      }
       const pinnedUseBinding = attempt.workspace_locator.package_use_binding;
       await ensureFamilyRuntimePackageLaunchReady({
         domainId: attempt.domain_id,

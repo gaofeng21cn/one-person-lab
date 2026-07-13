@@ -64,6 +64,41 @@
     "provenance_exclusivity_policy": "source_pattern_ref_and_target_only_requirement_are_mutually_exclusive_stage_origins",
     "source_pattern_binding_policy": "generated stage source_pattern_ref must exactly match the planned primary source_pattern_ref; when stage_pattern_source_refs is declared its first entry is that same primary ref and later aliases cannot substitute for it"
   },
+  "standard_agent_stage_quality_runtime_binding": {
+    "surface_kind": "opl_pack_bound_stage_quality_runtime_binding",
+    "version": "opl-pack-bound-stage-quality-runtime-binding.v1",
+    "source_refs": [
+      "agent/stages/manifest.json#/quality_governance_profile_ref",
+      "agent/stages/manifest.json#/meta_review_policy_ref",
+      "agent/stages/manifest.json#/stages/*/stage_quality_cycle_policy_ref",
+      "domain_stage_quality_cycle_policy_ref"
+    ],
+    "required_fields": [
+      "stage_id",
+      "enabled",
+      "stage_role",
+      "policy_ref",
+      "stage_prompt_ref",
+      "quality_policy",
+      "role_prompt_refs",
+      "quality_rubric_refs",
+      "stage_goal_refs",
+      "source_refs",
+      "lineage_refs",
+      "manifest_ref",
+      "manifest_sha256"
+    ],
+    "role_prompt_keys": [
+      "producer",
+      "reviewer",
+      "repairer",
+      "re_reviewer"
+    ],
+    "manifest_sha256_is_exact_compiled_manifest_identity": true,
+    "binding_is_only_stage_run_creation_input": true,
+    "raw_stage_run_start_cli_retired": true,
+    "binding_does_not_authorize_domain_quality_verdict": true
+  },
   "input_surfaces": [
     "family_agent_descriptor.entry",
     "family_agent_descriptor.family_action_catalog",
@@ -73,7 +108,10 @@
     "family_agent_descriptor.runtime_surfaces",
     "family_agent_descriptor.functional_privatization_audit",
     "family_agent_descriptor.pack_compiler_input_contract.standard_agent_pack_abi",
-    "family_agent_descriptor.pack_compiler_input_contract.implementation_profile"
+    "family_agent_descriptor.pack_compiler_input_contract.implementation_profile",
+    "standard_agent_stage_manifest.quality_governance_profile_ref",
+    "standard_agent_stage_manifest.stages[].stage_quality_cycle_policy_ref",
+    "domain_stage_quality_cycle_policy"
   ],
   "implementation_profile": {
     "source_ref": "contracts/pack_compiler_input.json#/implementation_profile",
@@ -622,6 +660,7 @@
   "ready_conditions": [
     "domain_manifest_resolved",
     "required_descriptor_surfaces_resolved",
+    "enabled_stage_quality_policy_resolves_to_pack_bound_runtime_binding_with_current_manifest_sha256",
     "functional_privatization_summary.opl_owned_replacement_count == 0",
     "functional_privatization_summary.temporary_migration_bridge_count == 0",
     "functional_privatization_summary.retire_tombstone_count == 0",
@@ -631,6 +670,7 @@
   "blocked_conditions": [
     "domain_manifest_not_resolved",
     "missing_descriptor_surface",
+    "enabled_stage_quality_policy_binding_missing_or_manifest_sha256_drifted",
     "functional_privatization_audit_has_generic_residue_or_blocker"
   ],
   "framework_owns": [

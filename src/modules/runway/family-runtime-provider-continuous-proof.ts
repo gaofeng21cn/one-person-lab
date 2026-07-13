@@ -206,7 +206,7 @@ function providerCapabilitySlo(input: {
     failed_check_ids: failedCheckIds,
     restart_requery_ready: checkReady('worker_restart_requery'),
     signal_history_ready: checkReady('signal_history_preserved'),
-    typed_closeout_required_ready: checkReady('typed_closeout_required_for_completed'),
+    typed_closeout_claim_evidence_ready: checkReady('typed_closeout_claim_evidence_supported'),
     missing_closeout_diagnostic_ready: checkReady('missing_closeout_advances_with_diagnostic'),
     no_output_diagnostic_boundary_ready: checkReady('no_output_diagnostic_boundary_observed'),
     worker_completed_attempt_ready: checkReady('worker_completed_attempt'),

@@ -271,7 +271,7 @@ export async function runTemporalResidencyProof() {
       worker_completed_attempt: completedState.status === 'completed',
       worker_restart_requery: requeryMatchedAttempt,
       signal_history_preserved: completedState.signals.length === 3,
-      typed_closeout_required_for_completed:
+      typed_closeout_claim_evidence_supported:
         completedState.completion_boundary.provider_completion === 'completed'
         && completedState.closeout_refs.length > 0,
       missing_closeout_advances_with_diagnostic:

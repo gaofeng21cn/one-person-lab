@@ -4,6 +4,20 @@
   "contract_ref": "contracts/opl-framework/runtime-manager-contract.json",
   "scope": "opl_product_control_plane_over_provider_backed_family_runtime",
   "description": "Freezes the OPL Runtime Manager boundary. OPL owns Temporal provider selection, stage attempt ledger/index, diagnostics, status projection, optional native helper catalog, and high-frequency state indexes while domain repositories keep truth and quality authority.",
+  "pack_bound_stage_run": {
+    "surface_kind": "opl_pack_bound_stage_run_runtime_contract",
+    "canonical_request_surface": "opl family-runtime attempt create",
+    "binding_surface_kind": "opl_pack_bound_stage_quality_runtime_binding",
+    "binding_owner": "opl_pack_compiler",
+    "controller_workflow": "StageRunWorkflow",
+    "child_workflow": "StageAttemptWorkflow",
+    "raw_stage_run_start_cli_retired": true,
+    "stage_run_cli_allowed_actions": [
+      "query"
+    ],
+    "manifest_sha256_participates_in_stage_run_identity": true,
+    "direct_unbound_stage_run_creation_forbidden": true
+  },
   "owner_split": {
     "product_control_plane_owner": "one-person-lab",
     "online_runtime_substrate_owner": "provider_backed_family_runtime",
@@ -40,6 +54,8 @@
     "select_supported_family_runtime_provider",
     "project_provider_readiness_and_stage_attempt_history",
     "own_stage_attempt_index_and_provider_projection_contracts",
+    "create_stage_runs_only_from_pack_bound_stage_quality_runtime_bindings",
+    "orchestrate_bounded_stage_quality_attempt_roles_through_temporal_stage_run_controller",
     "wire_provider_signal_delivery_transport",
     "project_runtime_status_into_opl_sessions_progress_artifacts",
     "provide_runtime_doctor_repair_resume_entrypoints",
@@ -255,6 +271,8 @@
     "state_path": "${OPL_STATE_DIR}/family-runtime/queue.sqlite",
     "provider_model": "provider_backed_stage_attempt_runtime",
     "stage_attempt_ledger": "${OPL_STATE_DIR}/family-runtime/queue.sqlite#stage_attempts",
+    "stage_quality_cycle_ledger": "${OPL_STATE_DIR}/family-runtime/queue.sqlite#stage_quality_cycles",
+    "stage_quality_cycle_contract_ref": "contracts/opl-framework/stage-quality-cycle-contract.json",
     "wakeup_bridge": "Temporal schedule/workflow history -> provider SLO and stage-attempt projection readback",
     "webhook_bridge": "provider signal/webhook -> Temporal signal/update",
     "domain_route_projection": {

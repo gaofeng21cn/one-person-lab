@@ -12,7 +12,7 @@ const TEMPORAL_PRODUCTION_CAPABILITY_CHECK_IDS = [
   'worker_completed_attempt',
   'worker_restart_requery',
   'signal_history_preserved',
-  'typed_closeout_required_for_completed',
+  'typed_closeout_claim_evidence_supported',
   'missing_closeout_advances_with_diagnostic',
   'no_output_diagnostic_boundary_observed',
   'domain_truth_boundary_preserved',
@@ -86,7 +86,7 @@ function temporalProductionCapabilityReceipt(proof: TemporalResidencyProof) {
         ? restartedWorkerRequery.requery_status
         : null,
     evidence_policy:
-      'production_capability_receipt_requires_restart_requery_signal_history_typed_closeout_and_boundary_checks',
+      'production_capability_receipt_requires_restart_requery_signal_history_typed_closeout_claim_evidence_and_boundary_checks',
     authority_boundary: {
       can_authorize_domain_ready: false,
       can_authorize_quality_verdict: false,

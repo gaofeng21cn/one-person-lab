@@ -2326,3 +2326,40 @@ export function readOplFlowManagedDependencyIds() {
   const lock = readLockIndex().packages.find((entry) => entry.package_id === 'opl-flow') ?? null;
   return [...new Set(lock?.physical_surface?.workflow_policy_migration?.dependency_ids ?? [])];
 }
+
+export function readOplFlowManagedDependencies() {
+  const lock = readLockIndex().packages.find((entry) => entry.package_id === 'opl-flow') ?? null;
+  const migration = lock?.physical_surface?.workflow_policy_migration;
+  const dependencies = migration?.dependencies ?? [];
+  const sync = migration?.dependency_sync && typeof migration.dependency_sync === 'object'
+    ? migration.dependency_sync as Record<string, unknown>
+    : null;
+  const items = Array.isArray(sync?.items) ? sync.items.filter((entry): entry is Record<string, unknown> => (
+    Boolean(entry) && typeof entry === 'object'
+  )) : [];
+  const tools = Array.isArray(sync?.tools) ? sync.tools.filter((entry): entry is Record<string, unknown> => (
+    Boolean(entry) && typeof entry === 'object'
+  )) : [];
+  return dependencies.map((dependency) => {
+    const observed = dependency.kind === 'codex_skill'
+      ? items.find((entry) => entry.skill_id === dependency.id)
+      : dependency.kind === 'cli'
+        ? tools.find((entry) => entry.tool_id === dependency.id)
+        : null;
+    const observedStatus = typeof observed?.status === 'string' ? observed.status : null;
+    return {
+      dependency_id: dependency.id,
+      dependency_kind: dependency.kind,
+      activation: dependency.activation,
+      offline_bundle: dependency.offline_bundle,
+      online_install_default: dependency.online_install_default,
+      source: dependency.source,
+      lifecycle_owner: dependency.kind === 'codex_skill' ? 'opl_packages' : 'opl_base',
+      update_mode: dependency.online_install_default ? 'silent_managed' : 'detect_only_guidance',
+      observed_status: observedStatus,
+      installed: dependency.kind === 'base'
+        ? true
+        : observedStatus ? !['missing', 'missing_source', 'failed'].includes(observedStatus) : null,
+    };
+  });
+}

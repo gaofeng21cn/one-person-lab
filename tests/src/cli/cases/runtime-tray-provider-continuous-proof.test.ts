@@ -364,7 +364,7 @@ test('runtime snapshot and App drilldown project Temporal restart requery signal
       worker_completed_attempt: true,
       worker_restart_requery: true,
       signal_history_preserved: true,
-      typed_closeout_required_for_completed: true,
+      typed_closeout_claim_evidence_supported: true,
       missing_closeout_advances_with_diagnostic: true,
       no_output_diagnostic_boundary_observed: true,
       domain_truth_boundary_preserved: true,
@@ -420,7 +420,7 @@ test('runtime snapshot and App drilldown project Temporal restart requery signal
     assert.equal(capability.status, 'capability_slo_satisfied');
     assert.equal(capability.restart_requery_ready, true);
     assert.equal(capability.signal_history_ready, true);
-    assert.equal(capability.typed_closeout_required_ready, true);
+    assert.equal(capability.typed_closeout_claim_evidence_ready, true);
     assert.equal(capability.missing_closeout_diagnostic_ready, true);
     assert.equal(capability.no_output_diagnostic_boundary_ready, true);
     assert.equal(capability.domain_truth_boundary_preserved, true);
@@ -436,7 +436,7 @@ test('runtime snapshot and App drilldown project Temporal restart requery signal
     assert.equal(summary.provider_capability_slo_status, 'capability_slo_satisfied');
     assert.equal(summary.provider_capability_restart_requery_ready, true);
     assert.equal(summary.provider_capability_signal_history_ready, true);
-    assert.equal(summary.provider_capability_typed_closeout_ready, true);
+    assert.equal(summary.provider_capability_typed_closeout_claim_evidence_ready, true);
     assert.equal(summary.provider_capability_missing_closeout_diagnostic_ready, true);
     assert.equal(summary.provider_capability_no_output_diagnostic_ready, true);
   } finally {

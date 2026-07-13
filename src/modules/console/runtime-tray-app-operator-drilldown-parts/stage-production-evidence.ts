@@ -364,14 +364,14 @@ function obligationSummary(obligations: ReturnType<typeof evidenceObligation>[])
 }
 
 function productionEvidenceStatus(input: {
-  admissionStatus: string;
+  conformanceStatus: string;
   hasAttempt: boolean;
   observedRefCount: number;
 }): StageProductionEvidenceStatus {
   if (input.hasAttempt && input.observedRefCount > 0) {
     return 'production_caller_evidence_observed';
   }
-  return input.admissionStatus === 'admitted'
+  return input.conformanceStatus === 'conformant'
     ? 'stage_pack_ready_waiting_for_production_caller'
     : 'stage_pack_blocked';
 }
@@ -567,7 +567,7 @@ function stageProductionEvidence(
         : null,
     ].filter((entry): entry is string => Boolean(entry));
     const status = productionEvidenceStatus({
-      admissionStatus: conformanceByStage.get(stage.stage_id)?.status ?? conformance.status,
+      conformanceStatus: conformanceByStage.get(stage.stage_id)?.status ?? conformance.status,
       hasAttempt: stageAttempts.length > 0,
       observedRefCount: observedRefs.length,
     });

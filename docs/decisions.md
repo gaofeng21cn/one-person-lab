@@ -7,6 +7,18 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-07-13
 
+### 决策：Stage Review 由真正的 StageRun 父级工作流编排
+
+原因：旧实现把一次 Stage 主提示词执行和一次 `StageAttemptWorkflow` 混称为 StageRun，同线程自检又容易被误读为独立 Review。这既污染 reviewer 上下文，也会诱导 domain 用自定义 Attempt role 把一个 Stage 扩张成隐藏的小 Stage graph。
+
+决策：`StageRunWorkflow` 是非模型、durable Temporal 父级 controller；`StageAttemptWorkflow` 是独立 executor child workflow。Framework 只允许 `producer/reviewer/repairer/re_reviewer` 四种 role，按 domain 声明的 quality policy 动态物化，最大形状为 `1 + 1 + 3 x 2 = 8` 个 Attempt。每个 Attempt 使用 fresh Codex session，只通过 exact refs、hashes、rubric、finding、repair map 和 lineage 通信；same-thread self-check 记为 `in_thread_refinement`，same-thread typed-closeout 补全记为 `protocol_closeout_resume`，两者都不产生 review receipt。
+
+创建边界：StageRun 不接受 raw CLI payload。唯一创建路径是 `opl family-runtime attempt create` 从已编译 domain pack 解析 `opl_pack_bound_stage_quality_runtime_binding`，并把 Stage manifest SHA、quality policy、role prompts、rubric 和 lineage 绑定到 StageRun identity；raw `family-runtime stage-run start` 退役，`stage-run` 只保留 query。producer / repairer 输出的 domain-owned artifact identity receipt 提供 exact ref/SHA，正式 review receipt 必须绑定该 identity 和 fresh reviewer session。
+
+Re-review 采用 finding closure，不得用普通新建议无限重开循环。预算耗尽但产物可消费时写 `completed_with_quality_debt` 并继续下一 Stage，同时禁止高质量、导出、发表、提交和 ready 声明；零可消费产物或硬 authority/safety/human/currentness gate 才阻断。Meta Review 始终是独立 StageRun，主 role 为 `producer`，不递归套正式 Stage Review。
+
+边界：domain Agent 继续拥有专业 Review 方法、必要认知顺序、findings、repair 和 quality verdict；OPL 只拥有 Attempt identity、上下文隔离、预算、lineage、durable orchestration 和 refs-only projection。普通用户只看 Stage 级状态，Attempt 细节只在 operator drilldown。涉及不同主要开放判断、owner、source/knowledge authority、独立 quality gate、正式 handoff、下游 route、不可逆权限或 human decision 时必须 split / route-back 到新 Stage，不能增加 Attempt role。
+
 ### 决策：白皮书正文归各仓，构建与发布证据归 OPL 唯一工具链
 
 原因：白皮书是面向用户解释设计理念的长期公开材料，不是功能说明书，也不是运行状态或 readiness 证明。正文需要由 OPL Framework、App、Cloud、MAS 各自的 truth owner 维护；renderer、样式、构建验证和发布回读如果分叉，则无法证明线上字节来自哪份正文，也会让工具用必备章节和术语反向塑造叙事。
@@ -176,7 +188,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - `Codex CLI` 的任意可读 final message、部分草稿、负结果或实际文件都构成 stage 进度。Framework 持久化 raw artifact，并派生 refs、hash、lineage、最小 progress envelope 与非阻断质量债务。
 - typed JSON closeout 仍可作为高质量 refs-only 输出，但不是 transition admission 的必要输入。格式、schema、receipt、review 或 normalizer 缺口不能触发自动 repair/redrive，也不能冻结下一 stage。
 - Codex 可选择顺序前进、重复当前 stage，或 route-back 到任一已声明 stage；静态 transition table 只验证目标是否属于声明图，不决定语义路线。
-- 只有零可消费 artifact、artifact 损坏不可读、权限/安全、identity/currentness、不可逆 mutation 或明确 human/owner authority 才能硬停止。质量债务继续阻止 ready、accepted、publication、export 等高阶声明，但不阻止交付推进。
+- 零可消费 artifact、artifact 损坏不可读、free-text、partial、negative、failed 或 no-output 都必须物化为 progress diagnostic，并允许 Codex 启动任一 declared stage。只有 executor unavailable、权限/安全/authority、wrong-target identity/currentness、不可逆 mutation 或明确 human/owner decision 才能硬停止。质量债务继续阻止 ready、accepted、publication、export 等高阶声明，但不阻止交付推进。
 
 ## 2026-07-08
 
