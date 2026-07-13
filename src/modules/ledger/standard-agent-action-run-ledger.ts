@@ -3,7 +3,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { insertEvent } from '../runway/family-runtime-store.ts';
 
-export type StandardAgentActionRunStatus = 'completed' | 'failed' | 'blocked';
+export type StandardAgentActionRunStatus = 'started' | 'completed' | 'failed' | 'blocked';
 
 export type StandardAgentActionRunBytesRef = {
   ref: string;
@@ -18,7 +18,7 @@ export type StandardAgentActionRunLedgerInput = {
   bindingRef: string;
   status: StandardAgentActionRunStatus;
   startedAt: string;
-  completedAt: string;
+  recordedAt: string;
   input: StandardAgentActionRunBytesRef;
   output: StandardAgentActionRunBytesRef;
 };
@@ -36,7 +36,7 @@ export type StandardAgentActionRunLedgerEntry = {
   binding_ref: string;
   status: StandardAgentActionRunStatus;
   started_at: string;
-  completed_at: string;
+  recorded_at: string;
   input: StandardAgentActionRunBytesRef;
   output: StandardAgentActionRunBytesRef;
   authority_boundary: {
@@ -63,7 +63,7 @@ const LEDGER_INPUT_KEYS = [
   'bindingRef',
   'status',
   'startedAt',
-  'completedAt',
+  'recordedAt',
   'input',
   'output',
 ] as const;
@@ -146,15 +146,15 @@ export function buildStandardAgentActionRunLedgerEntry(
 ): StandardAgentActionRunLedgerEntry {
   if (!isRecord(input)) fail('Standard Agent action run ledger input must be an object.');
   exactKeys(input, LEDGER_INPUT_KEYS, 'input');
-  if (!['completed', 'failed', 'blocked'].includes(String(input.status))) {
+  if (!['started', 'completed', 'failed', 'blocked'].includes(String(input.status))) {
     fail('Standard Agent action run ledger status is unsupported.', { status: input.status });
   }
   const startedAt = timestamp(input.startedAt, 'startedAt');
-  const completedAt = timestamp(input.completedAt, 'completedAt');
-  if (Date.parse(completedAt) < Date.parse(startedAt)) {
-    fail('Standard Agent action run ledger completedAt precedes startedAt.', {
+  const recordedAt = timestamp(input.recordedAt, 'recordedAt');
+  if (Date.parse(recordedAt) < Date.parse(startedAt)) {
+    fail('Standard Agent action run ledger recordedAt precedes startedAt.', {
       started_at: startedAt,
-      completed_at: completedAt,
+      recorded_at: recordedAt,
     });
   }
   return {
@@ -166,7 +166,7 @@ export function buildStandardAgentActionRunLedgerEntry(
     binding_ref: text(input.bindingRef, 'bindingRef'),
     status: input.status,
     started_at: startedAt,
-    completed_at: completedAt,
+    recorded_at: recordedAt,
     input: bytesRef(input.input, 'input'),
     output: bytesRef(input.output, 'output'),
     authority_boundary: authorityBoundary(),
@@ -196,7 +196,7 @@ export function recordStandardAgentActionRunEvent(input: StandardAgentActionRunE
     bindingRef: input.bindingRef,
     status: input.status,
     startedAt: input.startedAt,
-    completedAt: input.completedAt,
+    recordedAt: input.recordedAt,
     input: input.input,
     output: input.output,
   });

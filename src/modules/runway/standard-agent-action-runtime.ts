@@ -116,9 +116,9 @@ function actionLedger(input: {
   domainId: string;
   actionId: string;
   bindingRef: string;
-  status: 'completed' | 'failed' | 'blocked';
+  status: 'started' | 'completed' | 'failed' | 'blocked';
   startedAt: string;
-  completedAt: string;
+  recordedAt: string;
   stored: ReturnType<typeof commitStandardAgentActionOutput>;
 }) {
   const { db } = openQueueDb();
@@ -131,7 +131,7 @@ function actionLedger(input: {
       bindingRef: input.bindingRef,
       status: input.status,
       startedAt: input.startedAt,
-      completedAt: input.completedAt,
+      recordedAt: input.recordedAt,
       input: storedBytesRef(input.stored.request),
       output: storedBytesRef(input.stored.output),
     });
@@ -148,6 +148,13 @@ function failureBytes(error: unknown) {
     message: error instanceof Error ? error.message : String(error),
     details: error instanceof FrameworkContractError ? error.details : {},
   });
+}
+
+function observationFailure(error: unknown) {
+  return {
+    error_code: error instanceof FrameworkContractError ? error.code : 'standard_agent_action_observation_failed',
+    message: error instanceof Error ? error.message : String(error),
+  };
 }
 
 function wrapFailure(error: unknown, stored: ReturnType<typeof commitStandardAgentActionOutput>): never {
@@ -213,7 +220,7 @@ async function runHandlerAction(input: {
       timeoutMs: input.runtimeInput.timeoutMs,
     });
   } catch (error) {
-    const completedAt = new Date().toISOString();
+    const recordedAt = new Date().toISOString();
     const stored = commitStandardAgentActionOutput({
       workspaceRoot: input.workspaceRoot,
       runId: input.runId,
@@ -229,7 +236,7 @@ async function runHandlerAction(input: {
       bindingRef: handlerRef,
       status: 'failed',
       startedAt: input.startedAt,
-      completedAt,
+      recordedAt,
       stored,
     });
     wrapFailure(error, stored);
@@ -244,7 +251,7 @@ async function runHandlerAction(input: {
       label: `Standard Agent action ${input.action.action_id} output`,
     });
   } catch (error) {
-    const completedAt = new Date().toISOString();
+    const recordedAt = new Date().toISOString();
     const stored = commitStandardAgentActionOutput({
       workspaceRoot: input.workspaceRoot,
       runId: input.runId,
@@ -260,13 +267,13 @@ async function runHandlerAction(input: {
       bindingRef: handlerRef,
       status: 'failed',
       startedAt: input.startedAt,
-      completedAt,
+      recordedAt,
       stored,
     });
     wrapFailure(error, stored);
   }
 
-  const completedAt = new Date().toISOString();
+  const recordedAt = new Date().toISOString();
   const stored = commitStandardAgentActionOutput({
     workspaceRoot: input.workspaceRoot,
     runId: input.runId,
@@ -282,14 +289,14 @@ async function runHandlerAction(input: {
     bindingRef: handlerRef,
     status: 'completed',
     startedAt: input.startedAt,
-    completedAt,
+    recordedAt,
     stored,
   });
   return {
     surface_kind: 'opl_standard_agent_action_run',
     version: 'opl-standard-agent-action-run.v1',
     status: 'completed',
-    execution_kind: 'handler_ref',
+    execution_kind: 'handler_ref' as const,
     run_id: input.runId,
     domain_id: input.domainId,
     action_id: input.action.action_id,
@@ -341,109 +348,122 @@ async function runStageAction(input: {
   });
   const bindingRef = `stage:${input.action.execution_binding.stage_manifest_ref}#${input.action.stage_route.entry_stage_ref}`;
 
-  try {
-    const created = await input.runStageRuntime([
-      'attempt',
-      'create',
-      '--domain',
-      input.runtimeDomainId,
-      '--stage',
-      input.action.stage_route.entry_stage_ref,
-      '--action',
-      input.action.action_id,
-      '--provider',
-      'temporal',
-      '--workspace-locator',
-      workspaceLocator,
-      '--source-fingerprint',
-      prepared.request.sha256,
-      '--invocation-mode',
-      'invocation',
-      '--checkpoint-ref',
-      prepared.request.ref,
-      '--start',
-    ]);
-    const stageRun = isRecord(created.family_runtime_stage_run)
-      ? created.family_runtime_stage_run
-      : null;
-    if (!stageRun) {
-      fail('Stage-bound Standard Agent actions require the Temporal StageRun controller.', {
+  const output = await (async () => {
+    try {
+      const created = await input.runStageRuntime([
+        'attempt',
+        'create',
+        '--domain',
+        input.runtimeDomainId,
+        '--stage',
+        input.action.stage_route.entry_stage_ref,
+        '--action',
+        input.action.action_id,
+        '--provider',
+        'temporal',
+        '--workspace-locator',
+        workspaceLocator,
+        '--source-fingerprint',
+        prepared.request.sha256,
+        '--invocation-mode',
+        'invocation',
+        '--checkpoint-ref',
+        prepared.request.ref,
+        '--start',
+      ]);
+      const stageRun = isRecord(created.family_runtime_stage_run)
+        ? created.family_runtime_stage_run
+        : null;
+      if (!stageRun) {
+        fail('Stage-bound Standard Agent actions require the Temporal StageRun controller.', {
+          action_id: input.action.action_id,
+          returned_surface: Object.keys(created),
+          failure_code: 'standard_agent_stage_action_requires_temporal_stage_run',
+        });
+      }
+      const stageRunInput = isRecord(stageRun.stage_run_input) ? stageRun.stage_run_input : {};
+      const workflowId = typeof stageRunInput.workflow_id === 'string' ? stageRunInput.workflow_id : '';
+      const blockedReason = typeof stageRun.blocked_reason === 'string' && stageRun.blocked_reason.trim()
+        ? stageRun.blocked_reason.trim()
+        : null;
+      if (!workflowId) fail('Temporal StageRun launch did not return a workflow id.');
+      let query: Awaited<ReturnType<typeof input.runStageRuntime>> | null = null;
+      let queryError: ReturnType<typeof observationFailure> | null = null;
+      if (!blockedReason) {
+        try {
+          query = await input.runStageRuntime(['stage-run', 'query', workflowId]);
+        } catch (error) {
+          queryError = observationFailure(error);
+        }
+      }
+      return {
+        surface_kind: 'opl_standard_agent_stage_action_launch',
+        version: 'opl-standard-agent-stage-action-launch.v1',
+        status: blockedReason ? 'blocked' as const : 'started' as const,
+        execution_kind: 'stage_binding' as const,
+        run_id: input.runId,
+        domain_id: input.domainId,
         action_id: input.action.action_id,
-        returned_surface: Object.keys(created),
-        failure_code: 'standard_agent_stage_action_requires_temporal_stage_run',
+        binding_ref: bindingRef,
+        stage_route: input.action.stage_route,
+        request_ref: prepared.request.ref,
+        expected_domain_output_schema_ref: input.action.output_schema_ref,
+        temporal_stage_run: created,
+        temporal_stage_run_query: query,
+        temporal_stage_run_query_error: queryError,
+        blocked_reason: blockedReason,
+        authority_boundary: actionAuthorityBoundary(),
+      };
+    } catch (error) {
+      const recordedAt = new Date().toISOString();
+      const stored = commitStandardAgentActionOutput({
+        workspaceRoot: input.workspaceRoot,
+        runId: input.runId,
+        domainId: input.domainId,
+        actionId: input.action.action_id,
+        requestBytes: input.requestBytes,
+        outputBytes: failureBytes(error),
       });
+      input.recordLedger({
+        runId: input.runId,
+        domainId: input.domainId,
+        actionId: input.action.action_id,
+        bindingRef,
+        status: 'failed',
+        startedAt: input.startedAt,
+        recordedAt,
+        stored,
+      });
+      wrapFailure(error, stored);
     }
-    const stageRunInput = isRecord(stageRun.stage_run_input) ? stageRun.stage_run_input : {};
-    const workflowId = typeof stageRunInput.workflow_id === 'string' ? stageRunInput.workflow_id : '';
-    const blockedReason = typeof stageRun.blocked_reason === 'string' && stageRun.blocked_reason.trim()
-      ? stageRun.blocked_reason.trim()
-      : null;
-    if (!workflowId) fail('Temporal StageRun launch did not return a workflow id.');
-    const query = blockedReason ? null : await input.runStageRuntime(['stage-run', 'query', workflowId]);
-    const output = {
-      surface_kind: 'opl_standard_agent_stage_action_launch',
-      version: 'opl-standard-agent-stage-action-launch.v1',
-      status: blockedReason ? 'blocked' : 'started',
-      run_id: input.runId,
-      domain_id: input.domainId,
-      action_id: input.action.action_id,
-      binding_ref: bindingRef,
-      stage_route: input.action.stage_route,
-      request_ref: prepared.request.ref,
-      expected_domain_output_schema_ref: input.action.output_schema_ref,
-      temporal_stage_run: created,
-      temporal_stage_run_query: query,
-      blocked_reason: blockedReason,
-      authority_boundary: actionAuthorityBoundary(),
-    };
-    const completedAt = new Date().toISOString();
-    const stored = commitStandardAgentActionOutput({
-      workspaceRoot: input.workspaceRoot,
-      runId: input.runId,
-      domainId: input.domainId,
-      actionId: input.action.action_id,
-      requestBytes: input.requestBytes,
-      outputBytes: canonicalJsonBytes(output),
-    });
-    const ledger = input.recordLedger({
-      runId: input.runId,
-      domainId: input.domainId,
-      actionId: input.action.action_id,
-      bindingRef,
-      status: blockedReason ? 'blocked' : 'completed',
-      startedAt: input.startedAt,
-      completedAt,
-      stored,
-    });
-    return {
-      ...output,
-      package_use_binding: input.packageUseBinding,
-      request: stored.request,
-      output: stored.output,
-      ledger: ledger.ledger_entry,
-    };
-  } catch (error) {
-    const completedAt = new Date().toISOString();
-    const stored = commitStandardAgentActionOutput({
-      workspaceRoot: input.workspaceRoot,
-      runId: input.runId,
-      domainId: input.domainId,
-      actionId: input.action.action_id,
-      requestBytes: input.requestBytes,
-      outputBytes: failureBytes(error),
-    });
-    input.recordLedger({
-      runId: input.runId,
-      domainId: input.domainId,
-      actionId: input.action.action_id,
-      bindingRef,
-      status: 'failed',
-      startedAt: input.startedAt,
-      completedAt,
-      stored,
-    });
-    wrapFailure(error, stored);
-  }
+  })();
+
+  const recordedAt = new Date().toISOString();
+  const stored = commitStandardAgentActionOutput({
+    workspaceRoot: input.workspaceRoot,
+    runId: input.runId,
+    domainId: input.domainId,
+    actionId: input.action.action_id,
+    requestBytes: input.requestBytes,
+    outputBytes: canonicalJsonBytes(output),
+  });
+  const ledger = input.recordLedger({
+    runId: input.runId,
+    domainId: input.domainId,
+    actionId: input.action.action_id,
+    bindingRef,
+    status: output.status,
+    startedAt: input.startedAt,
+    recordedAt,
+    stored,
+  });
+  return {
+    ...output,
+    package_use_binding: input.packageUseBinding,
+    request: stored.request,
+    output: stored.output,
+    ledger: ledger.ledger_entry,
+  };
 }
 
 export async function runStandardAgentAction(

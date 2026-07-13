@@ -182,7 +182,7 @@ test('Ledger writes refs-only action metadata into family-runtime SQLite', () =>
       bindingRef: 'handler:mas.authority-evaluate',
       status: 'completed' as const,
       startedAt: '2026-07-13T03:00:00.000Z',
-      completedAt: '2026-07-13T03:00:01.000Z',
+      recordedAt: '2026-07-13T03:00:01.000Z',
       input: {
         ref: persisted.request.ref,
         sha256: persisted.request.sha256,
@@ -246,7 +246,7 @@ test('Ledger rejects body fields and malformed byte identities before SQLite mut
       bindingRef: 'handler:mas.authority-evaluate',
       status: 'completed' as const,
       startedAt: '2026-07-13T03:00:00.000Z',
-      completedAt: '2026-07-13T03:00:01.000Z',
+      recordedAt: '2026-07-13T03:00:01.000Z',
       input: { ref: 'file:///tmp/request.json', sha256: 'a'.repeat(64), byte_size: 2 },
       output: { ref: 'file:///tmp/output.json', sha256: 'b'.repeat(64), byte_size: 2 },
     };

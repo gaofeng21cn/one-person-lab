@@ -157,15 +157,15 @@ Re-review 采用 finding closure，不得用普通新建议无限重开循环。
 
 ## 2026-07-10
 
-### 决策：family action 参数与 domain handler binding 必须结构化
+### 决策：family action v2 只允许 hosted handler 或 StageRun binding
 
-原因：`workspace_locator_fields` 只描述 workspace 定位身份，不能继续被 generated surface 暗中当成完整请求参数；`module.path:Class.method#action_id` 也不能只作为看似可执行的 command 字符串透传。
+原因：`workspace_locator_fields` 只描述 workspace 定位身份，不能继续被 generated surface 暗中当成完整请求参数；私有 `source_command`、command template 与 module target 字符串会把每个 domain repo 重新变成一套命令控制面，无法由 OPL 统一校验 package currentness、schema、sandbox、StageRun、exact-byte persistence 和 refs-only Ledger。
 
 影响：
 
-- 新 action 显式声明 `required_fields` 与 `optional_fields`；旧 action 仅保留 locator-to-required 的迁移兼容，standard scaffold 不再生成这种旧形态。
-- CLI、MCP、Skill、product-entry、OpenAI 与 AI SDK descriptor 保留 required/optional/locator 三组字段；合法 Python callable target 统一投影为 `callable_ref` 和 `{command: action_id}`，suffix 不一致时 fail closed。
-- repo compiler 从目标 repo root 解析本地 `input_schema_ref`，缺失、越界或非法 JSON 会阻断；带 URI scheme 的外部 ref 明确标为 external resolution。该 binding 只路由 domain handler，不把 handler implementation 或 domain authority 移入 OPL。
+- action catalog 固定为 `family-action-catalog.v2`，显式声明 `required_fields`、`optional_fields`、`workspace_locator_fields`、input/output schema refs，并只允许 exact `{kind:"handler_ref",handler_ref:"handler:<id>"}` 或 `{kind:"stage_binding",stage_manifest_ref:"agent/stages/manifest.json"}`。
+- handler registry 固定为 closed `domain-handler-registry.v1`，entry 只保留 `handler_id` 与 TypeScript export / Python callable binding；generated CLI、MCP、Skill、product-entry、OpenAI 与 AI SDK surface 只投影同一 action metadata，不再保存私有 executable command。
+- `opl agents run` 从 exact managed package checkout 解析本地 schema、catalog、registry 与 stage manifest。Handler input/output schema validation、sandbox、exact-byte persistence、refs-only Ledger 和 StageRun SHA-bound launch 由 OPL 统一提供；domain implementation 与 truth/quality/artifact/memory/receipt/blocker/human-gate authority仍归 domain repo。
 
 ### 决策：Profile capability planning 只组合显式 exact refs 与 owner catalogs
 
@@ -560,16 +560,16 @@ Re-review 采用 finding closure，不得用普通新建议无限重开循环。
 
 ## 2026-06-28
 
-### 决策：MAS domain-handler / provider-hosted stage 使用启动前 clean checkout currentness preflight，不做热加载
+### 决策：Standard Agent hosted action 只从 exact managed package source 启动，不做热加载
 
-原因：MAS 作为标准 OPL Agent 在 OPL 基座运行时，OPL 必须在 domain-handler export/dispatch、provider attempt start 和 Codex runner launch 前确认将要调用的 MAS checkout 与目标 ref 一致，避免向错误 checkout 写入。这个机制不是 stage 语义准入，也不是热加载；它只防止 wrong-target mutation。
+原因：Standard Agent 在 OPL 基座运行时，action handler、StageRun 与 Codex runner 必须消费 package lifecycle 已解析的同一 exact source。直接把开发 checkout、`origin/main` 或 `latest-stable` moving tag 当作启动真相，会绕过 Release Set、digest lock、workspace activation、runtime source tree identity 与 package use receipt，重新制造每仓私有 currentness 控制面。
 
 影响：
 
-- MAS domain-handler / provider attempt / Codex runner launch 的 target ref 必须来自 OPL 声明的 domain checkout policy，普通路径默认读 `origin/main` 或同等 release/pinned target。
-- clean checkout 落后 target ref 时，OPL 可自动 `fetch` 并 `ff-only` 到 target ref；dirty、diverged 或无法证明 target ref 的 checkout 只硬停当前 wrong-target mutation。Codex 仍可选择其他 declared stage 或正确 workspace 继续。
-- attempt/readback 必须记录 `workspace_path`、`head_sha`、`target_ref` 和 `currentness_status`；evidence 进入 `stage_context_observation.checkout_currentness_preflight`。它不产生 stage admission、execution authorization 或 quality blocker。
-- 该 gate 只证明 OPL 将调用或启动的 MAS checkout current；它不写 MAS domain truth、不签 MAS owner receipt、不创建 MAS typed blocker / human gate、不写 publication eval / controller decision / current package / paper body，也不声明 MAS paper progress、domain-ready、runtime-ready、publication-ready 或 production-ready。
+- 普通用户以 `latest-stable` 选择已过 gate 的 Release Set，但 installed digest lock、package status `launch_allowed=true`、runtime source `current/operational_ready` 与 expected/actual tree SHA-256 相等才是启动真相；`latest-stable` 自身不是 install truth。
+- Developer Mode 可使用显式 source carrier，但它也必须进入同一 managed package status 与 exact tree identity；hosted action runtime 不直接修复 dirty/diverged 开发 checkout，也不隐式追 `origin/main`。
+- `opl agents run` 在 handler 或 StageRun 前读取 workspace-scoped package activation/use binding、package id、exact checkout 与 source identity；不满足条件时 fail closed，不执行 handler、不创建虚假成功 Ledger。
+- 该 gate 只证明 OPL 调用的是 package manager 已确认的 exact source；它不写 domain truth、不签 owner receipt、不创建 typed blocker / human gate、不修改 artifact/memory body，也不声明 domain/runtime/quality/export/publication/production ready。
 
 ### 决策：标准 Agent 不默认暴露 standalone MCP，MCP 由 OPL Connect 统一精选投影
 

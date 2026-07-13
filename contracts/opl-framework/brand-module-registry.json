@@ -481,6 +481,7 @@
         "contracts/opl-framework/family-runtime-online-substrate-contract.json",
         "contracts/opl-framework/stage-route-transport-contract.json",
         "contracts/opl-framework/managed-runtime-three-layer-contract.json",
+        "contracts/opl-framework/standard-agent-hosted-action-runtime-contract.json",
         "contracts/opl-framework/target-operating-architecture-contract.json"
       ],
       "cli_surfaces": [
@@ -519,6 +520,7 @@
         "contracts/opl-framework/brand-module-surfaces.json#modules.runway",
         "contracts/opl-framework/runtime-manager-contract.json",
         "contracts/opl-framework/family-runtime-attempt-contract.json",
+        "contracts/opl-framework/standard-agent-hosted-action-runtime-contract.json",
         "contracts/opl-framework/brand-module-registry.json#modules.runway",
         "contracts/opl-framework/target-operating-architecture-contract.json#resource_model.resource_kinds.RunwayControlLoop",
         "contracts/opl-framework/target-operating-architecture-contract.json#resource_model.resource_kinds.ProgressReconciler"
@@ -599,6 +601,7 @@
         "contracts/opl-framework/role-artifact-ref.schema.json",
         "contracts/opl-framework/stage-owner-receipt.schema.json",
         "contracts/opl-framework/stage-typed-blocker.schema.json",
+        "contracts/opl-framework/standard-agent-hosted-action-runtime-contract.json",
         "contracts/opl-framework/target-operating-architecture-contract.json"
       ],
       "cli_surfaces": [

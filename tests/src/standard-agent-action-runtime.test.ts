@@ -139,6 +139,8 @@ test('Hosted Handler action validates schemas, runs the callable, and persists e
       recordLedger,
     });
     const run = result.standard_agent_action_run;
+    assert.equal(run.execution_kind, 'handler_ref');
+    if (run.execution_kind !== 'handler_ref') assert.fail('expected handler action result');
     assert.equal(run.status, 'completed');
     assert.deepEqual(run.result, { accepted: true, value: 7 });
     assert.equal(fs.readFileSync(run.output.file_path, 'utf8'), '{"accepted":true,"value":7}\n');
@@ -195,12 +197,75 @@ test('Hosted Stage action passes a SHA-bound request ref into Temporal StageRun 
       },
     });
     const run = result.standard_agent_action_run;
+    assert.equal(run.execution_kind, 'stage_binding');
+    if (run.execution_kind !== 'stage_binding') assert.fail('expected stage action result');
     assert.equal(run.status, 'started');
+    assert.equal(run.ledger.status, 'started');
     assert.deepEqual(calls[1], ['stage-run', 'query', 'wf-stage-run']);
     const checkpointIndex = calls[0].indexOf('--checkpoint-ref');
     assert.match(calls[0][checkpointIndex + 1], /^file:/);
     assert.equal(fs.existsSync(new URL(calls[0][checkpointIndex + 1])), true);
     assert.equal(run.temporal_stage_run_query.family_runtime_stage_run_query.status, 'running');
+    assert.equal(run.temporal_stage_run_query_error, null);
+  } finally {
+    fs.rmSync(checkoutRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('Hosted Stage action keeps started truth when post-launch query is unavailable', async () => {
+  const checkoutRoot = root('opl-stage-action-query-failure-checkout-');
+  const workspaceRoot = root('opl-stage-action-query-failure-workspace-');
+  const ledgerStatuses: string[] = [];
+  try {
+    writeContracts(checkoutRoot, [action({
+      actionId: 'launch',
+      executionBinding: { kind: 'stage_binding', stage_manifest_ref: 'agent/stages/manifest.json' },
+      stageRoute: {
+        entry_stage_ref: 'intake',
+        required_stage_refs: ['intake'],
+        optional_stage_refs: [],
+        terminal_stage_refs: ['intake'],
+        route_policy: 'ai_selected_progress_route',
+      },
+    })]);
+
+    const result = await runStandardAgentAction({
+      domainId: 'mas',
+      actionId: 'launch',
+      workspaceRoot,
+      payload: { value: 3 },
+      runId: 'stage-query-unavailable',
+    }, {
+      resolveManagedCheckout: managed(checkoutRoot, workspaceRoot) as never,
+      compileStageManifest: (() => ({})) as never,
+      recordLedger: ((input: Record<string, unknown>) => {
+        ledgerStatuses.push(String(input.status));
+        return recordLedger(input);
+      }) as never,
+      runStageRuntime: async (args) => {
+        if (args[0] === 'attempt') {
+          return {
+            family_runtime_stage_run: {
+              stage_run_input: { workflow_id: 'wf-stage-query-unavailable' },
+              blocked_reason: null,
+              temporal_start: { start_status: 'started' },
+            },
+          };
+        }
+        throw new Error('temporal query temporarily unavailable');
+      },
+    });
+    const run = result.standard_agent_action_run;
+    assert.equal(run.execution_kind, 'stage_binding');
+    if (run.execution_kind !== 'stage_binding') assert.fail('expected stage action result');
+    assert.equal(run.status, 'started');
+    assert.deepEqual(ledgerStatuses, ['started']);
+    assert.equal(run.temporal_stage_run_query, null);
+    assert.deepEqual(run.temporal_stage_run_query_error, {
+      error_code: 'standard_agent_action_observation_failed',
+      message: 'temporal query temporarily unavailable',
+    });
   } finally {
     fs.rmSync(checkoutRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
