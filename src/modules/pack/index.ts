@@ -31,6 +31,7 @@ export {
   STANDARD_AGENT_DESCRIPTOR_REF,
 } from './standard-agent-stage-manifest.ts';
 export type {
+  StandardAgentHandoffReviewBoundary,
   StandardAgentStageManifestCompilation,
   StandardAgentStageQualityPolicy,
   StandardAgentStageQualityRuntimeBinding,

@@ -7,6 +7,13 @@
     "quality_profile_ref_field": "agent/stages/manifest.json#/quality_governance_profile_ref",
     "meta_review_policy_ref_field": "agent/stages/manifest.json#/meta_review_policy_ref",
     "per_stage_policy_ref_field": "agent/stages/manifest.json#/stages/*/stage_quality_cycle_policy_ref",
+    "handoff_review_boundary_field": "agent/stages/manifest.json#/stages/*/handoff_review_boundary",
+    "handoff_review_policy": {
+      "packaging_stage_must_classify_final_artifact_risk": true,
+      "new_reviewable_bytes_or_ready_claim_requires_formal_review": true,
+      "reviewed_immutable_refs_or_mechanical_repackaging_may_use_primary_attempt_only": true,
+      "human_gate_does_not_replace_or_imply_formal_review": true
+    },
     "runtime_binding_surface_kind": "opl_pack_bound_stage_quality_runtime_binding",
     "runtime_creation_surface": "opl family-runtime attempt create",
     "raw_stage_run_start_cli_retired": true,
@@ -62,6 +69,7 @@
     "quality_gate_refs",
     "stage_quality_cycle_policy_refs",
     "pack_bound_stage_quality_runtime_binding",
+    "handoff_review_boundary",
     "workspace_artifact_locator_refs",
     "runtime_artifact_locator_refs",
     "authority_boundary"

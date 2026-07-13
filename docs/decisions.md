@@ -19,6 +19,14 @@ Re-review 采用 finding closure，不得用普通新建议无限重开循环。
 
 边界：domain Agent 继续拥有专业 Review 方法、必要认知顺序、findings、repair 和 quality verdict；OPL 只拥有 Attempt identity、上下文隔离、预算、lineage、durable orchestration 和 refs-only projection。普通用户只看 Stage 级状态，Attempt 细节只在 operator drilldown。涉及不同主要开放判断、owner、source/knowledge authority、独立 quality gate、正式 handoff、下游 route、不可逆权限或 human decision 时必须 split / route-back 到新 Stage，不能增加 Attempt role。
 
+### 决策：Handoff Review 统一风险判据，不统一执行形状
+
+原因：Handoff Stage 的名称不能决定是否需要再审。运输已审 immutable refs 与在 Handoff 内新生成最终 PDF/PPTX/投稿包的风险不同；把五个 Agent 全部强制成相同 Review loop 会制造无意义递归，把它们全部设为 primary-only 又会让 Meta Review 之后生成的新 bytes 和 ready claim 绕过 fresh Review。
+
+决策：packaging Handoff 必须声明 `handoff_review_boundary`。只要 Handoff 生成或转换新的可审交付 bytes、冻结 canonical artifact bytes，或签发 quality/export/publication/ready claim，任一成立就必须启用上下文独立的正式 Stage Review。只有运输已审 immutable refs，或对已审 bytes 做确定性机械封装，同时不冻结 canonical bytes、不签 ready claim且下游 owner 保留 acceptance 时，才允许 primary-only。Human gate 与 formal Review 正交；上游 Meta Review 不覆盖它之后生成的新 bytes。
+
+当前五个官方 Agent 按实际职责分类：MAS `finalize_and_publication_handoff` 与 OMA `baseline-delivery` 是 primary-only；MAG `package_and_submit_ready`、RCA `package_and_handoff`、OBF `publication-proof-handoff` 运行完整 Review loop。这不是按 Agent ID 写死的永久豁免：任一 Stage 的 artifact effect、freeze 或 claim 行为变化时，domain manifest 必须重新分类，Framework compiler 按上述风险信号 fail closed。
+
 ### 决策：白皮书正文归各仓，构建与发布证据归 OPL 唯一工具链
 
 原因：白皮书是面向用户解释设计理念的长期公开材料，不是功能说明书，也不是运行状态或 readiness 证明。正文需要由 OPL Framework、App、Cloud、MAS 各自的 truth owner 维护；renderer、样式、构建验证和发布回读如果分叉，则无法证明线上字节来自哪份正文，也会让工具用必备章节和术语反向塑造叙事。

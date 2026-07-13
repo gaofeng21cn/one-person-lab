@@ -15,6 +15,7 @@
       "policy_ref",
       "stage_prompt_ref",
       "quality_policy",
+      "handoff_review_boundary",
       "role_prompt_refs",
       "quality_rubric_refs",
       "stage_goal_refs",
@@ -69,6 +70,18 @@
     "temporal_activity_retry_budget_is_separate": true,
     "structured_output_retry_budget_is_separate": true,
     "stage_run_runtime_retry_budget_is_separate": true
+  },
+  "cross_stage_route_selection": {
+    "stage_run_controller_owns_child_attempt_topology_only": true,
+    "opl_transition_approval_or_rejection_authority": false,
+    "primary_only_decisive_attempt_role": "producer",
+    "formal_review_decisive_attempt_roles": [
+      "reviewer",
+      "re_reviewer"
+    ],
+    "repairer_can_make_terminal_route_selection": false,
+    "non_decisive_attempt_output": "evidence_backed_route_recommendation_only",
+    "passive_transport_materializes_codex_selected_declared_stage": true
   },
   "multi_attempt_stage_boundary": {
     "decision_rule": "Repeated generation, review, and repair toward the same goal are Attempts; a changed goal, owner, quality gate, or delivery relationship requires a new Stage.",
@@ -230,6 +243,29 @@
     "low": "one isolated reviewer with a focused rubric",
     "medium": "one isolated reviewer with the full domain rubric",
     "high": "one isolated reviewer Attempt with a multi-axis rubric; optional parallel Codex subagents remain internal to that Attempt and the final receipt stays bound to it"
+  },
+  "handoff_review_boundary": {
+    "source_field": "agent/stages/manifest.json#/stages/*/handoff_review_boundary",
+    "required_for_stage_kind": "packaging",
+    "required_fields": [
+      "artifact_effect",
+      "freezes_canonical_artifact_bytes",
+      "issues_quality_export_publication_or_ready_claim",
+      "downstream_owner_retains_acceptance"
+    ],
+    "artifact_effect_values": [
+      "reviewed_immutable_refs_only",
+      "mechanical_repackaging_of_reviewed_bytes",
+      "new_or_transformed_reviewable_bytes"
+    ],
+    "formal_review_required_if_any_true": [
+      "artifact_effect=new_or_transformed_reviewable_bytes",
+      "freezes_canonical_artifact_bytes",
+      "issues_quality_export_publication_or_ready_claim"
+    ],
+    "primary_only_allowed_when": "artifact_effect is reviewed_immutable_refs_only or mechanical_repackaging_of_reviewed_bytes, no canonical freeze or ready claim occurs, and downstream_owner_retains_acceptance=true",
+    "human_gate_is_orthogonal_to_formal_review": true,
+    "meta_review_before_handoff_does_not_cover_later_generated_bytes": true
   },
   "operator_projection": {
     "default_user_fields": [

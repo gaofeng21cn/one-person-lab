@@ -163,6 +163,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 - 同一目标的多次生成、审阅和修复是 Attempt；目标、owner、质量门或交付关系发生变化，就是新的 Stage。
 - Attempt role 只能是 `producer | reviewer | repairer | re_reviewer`。Attempt 不得拥有 `requires`、`ensures`、next-stage refs、route、sub-stage graph、独立 owner、Stage current pointer 或 Stage transition authority。
+- 跨 Stage 语义路由只能来自 StageRun 的终局 Codex Attempt：primary-only Stage 是 producer；启用正式 Review 的 Stage 是 terminal reviewer / re-reviewer。repairer 不得做终局 route selection，其他非终局 Attempt 只能返回有证据的 route recommendation。StageRun controller 只编排 child Attempt；OPL transport 只物化 Codex-selected declared Stage，不批准、否决或替换 semantic route。
 - 只有非模型 Temporal `StageRunWorkflow` controller 可以创建下一权威 Attempt；Codex executor 和 Codex subagent 都不得扩张质量循环拓扑。
 - StageRun 只能由 `opl family-runtime attempt create` 消费已编译的 `opl_pack_bound_stage_quality_runtime_binding` 创建；binding 必须绑定 Stage manifest ref/SHA、quality policy、四类 role prompt、rubric、goal/source/lineage refs。raw `family-runtime stage-run start` 永久退役，`stage-run` CLI 只允许 query；不得恢复 unbound StageRun 创建入口。
 - 正式 Stage Review、Repair 和 Re-review 必须各自使用新的 `StageAttemptWorkflow`、新的 `codex exec` 与不同 thread/session，不继承 producer/reviewer conversation history。same-thread refinement 与 typed-closeout resume 都不算 Review。
@@ -171,6 +172,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - Re-review 必须按稳定 finding id 关闭 initial findings；只有 required finding 未关闭、repair regression 或 critical new finding可以继续修复。普通新建议只能形成 optional observation / quality debt。
 - 三轮耗尽且仍有可消费产物时必须终止为 `completed_with_quality_debt` 并继续 Stage 图，但阻止 quality/export/publication/submission/ready claim；无可消费产物或真实 authority/safety/human/currentness 硬门才可 blocked / human gate。
 - Meta Review 是独立 StageRun，必须上下文隔离；它的主 Attempt role仍为 `producer`，不得新增 `meta_reviewer` 等自定义 Attempt role，也不得递归启动 Stage 内正式 Review。
+- Packaging/Handoff Stage 必须在 manifest 声明最终产物风险。若它在上游 Review 后生成或转换需要专业判断的新交付 bytes、冻结 canonical bytes，或首次签发 quality/export/publication/ready claim，必须启动 fresh formal Review；若只运输已经审阅的 immutable refs，或仅对已审 bytes 做确定性机械封装，且 acceptance 明确保留给下游 owner，则可以只有 primary Attempt。human gate 与 formal Review 正交，不能互相替代或互相推导。
 - 普通产品投影不得把 Attempt 展示为 Stage。Attempt、thread/session、artifact identity receipt、review receipt、finding/repair lineage与成本只属于 developer/operator drilldown。
 
 ## 目标优先级

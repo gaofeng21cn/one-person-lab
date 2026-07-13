@@ -12,7 +12,17 @@
     "obf"
   ],
   "stage_review": {
-    "required_for_ai_producer_stages": true,
+    "quality_cycle_policy_required_for_ai_stages": true,
+    "formal_review_decided_per_stage_risk": true,
+    "formal_review_required_when": [
+      "stage_generates_or_transforms_reviewable_delivery_bytes_after_upstream_review",
+      "stage_freezes_canonical_artifact_bytes",
+      "stage_issues_quality_export_publication_or_ready_claim"
+    ],
+    "formal_review_may_be_false_when": [
+      "stage_transports_reviewed_immutable_refs_or_mechanically_repackages_reviewed_bytes_and_downstream_owner_retains_acceptance",
+      "stage_is_cross_stage_meta_review_and_must_not_recursively_review_itself"
+    ],
     "minimum_risk_tier": "low",
     "context_isolation_required": true,
     "default_max_repair_rounds": 3,

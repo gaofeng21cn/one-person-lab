@@ -191,6 +191,10 @@ test('StageRun creation contracts expose one pack-bound write entry and a query-
   assert.equal(compiler.standard_agent_stage_quality_runtime_binding.manifest_sha256_is_exact_compiled_manifest_identity, true);
   assert.deepEqual(compiler.standard_agent_stage_quality_runtime_binding.role_prompt_keys,
     ['producer', 'reviewer', 'repairer', 're_reviewer']);
+  assert.equal(
+    compiler.standard_agent_stage_quality_runtime_binding.required_fields.includes('handoff_review_boundary'),
+    true,
+  );
   assert.equal(skeleton.stage_quality_runtime.runtime_creation_surface,
     'opl family-runtime attempt create');
   assert.equal(skeleton.stage_quality_runtime.raw_stage_run_start_cli_retired, true);

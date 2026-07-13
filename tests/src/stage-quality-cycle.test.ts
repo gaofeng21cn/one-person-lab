@@ -55,6 +55,19 @@ test('official quality profile is explicit without adding per-agent registry pol
   assert.equal(contract.policy.protocol_closeout_resume_consumes_quality_budget, false);
   assert.deepEqual(contract.stage_attempt_roles, ['producer', 'reviewer', 'repairer', 're_reviewer']);
   assert.equal(contract.stage_run_controller.maximum_attempt_instances, 8);
+  assert.equal(contract.cross_stage_route_selection.primary_only_decisive_attempt_role, 'producer');
+  assert.deepEqual(
+    contract.cross_stage_route_selection.formal_review_decisive_attempt_roles,
+    ['reviewer', 're_reviewer'],
+  );
+  assert.equal(contract.cross_stage_route_selection.repairer_can_make_terminal_route_selection, false);
+  assert.equal(contract.cross_stage_route_selection.opl_transition_approval_or_rejection_authority, false);
+  assert.equal(contract.handoff_review_boundary.required_for_stage_kind, 'packaging');
+  assert.deepEqual(contract.handoff_review_boundary.formal_review_required_if_any_true, [
+    'artifact_effect=new_or_transformed_reviewable_bytes',
+    'freezes_canonical_artifact_bytes',
+    'issues_quality_export_publication_or_ready_claim',
+  ]);
   const attemptContract = JSON.parse(fs.readFileSync(path.join(
     repoRoot,
     'contracts/opl-framework/family-runtime-attempt-contract.json',
@@ -233,6 +246,9 @@ test('formal reviewer prompt binds isolated context and exact artifact identity'
   assert.match(prompt, /Context manifest ref: manifest:review-context-v1/);
   assert.match(prompt, /Exact artifact refs: \["artifact:deck-v1"\]/);
   assert.match(prompt, /Expected artifact hashes: \["sha256:deck-v1"\]/);
+  assert.match(prompt, /Do not produce a repair_map/);
+  assert.match(prompt, /terminal reviewer or re-reviewer/);
+  assert.match(prompt, /decisive Codex Attempt for cross-Stage semantic route selection/);
 });
 
 test('every quality-cycle role launches through a fresh codex exec command', () => {
@@ -261,6 +277,13 @@ test('every quality-cycle role launches through a fresh codex exec command', () 
     assert.deepEqual(activity.runner_status.command_preview.slice(0, 2), ['codex', 'exec']);
     assert.equal(activity.runner_status.command_preview[2], '--skip-git-repo-check');
     assert.equal(activity.runner_status.command_preview.includes('resume'), false);
+    const prompt = activity.runner_status.command_preview.join('\n');
+    if (role === 'producer') {
+      assert.match(prompt, /producer is the decisive cross-Stage semantic route selector only when this StageRun is primary-only/);
+    }
+    if (role === 'repairer') {
+      assert.match(prompt, /Do not make a terminal Stage transition decision/);
+    }
   }
 });
 
