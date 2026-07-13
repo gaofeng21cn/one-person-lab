@@ -65,7 +65,7 @@ function attemptIdFromRef(ref: string | null) {
 export function buildStageProductionAttemptRoutes(stageProductionEvidence: JsonRecord) {
   return uniqueRefs(recordList(stageProductionEvidence.stages)
     .filter((stage) => (
-      stringValue(stage.conformance_status) === 'admitted'
+      stringValue(stage.conformance_status) === 'conformant'
       && stringList(stage.missing_production_evidence).includes('production_caller_attempt_not_observed')
     ))
     .map((stage) => {
@@ -188,7 +188,7 @@ export function buildStageProductionAttemptStartRoutes(stageProductionEvidence: 
       const hasMissingCaller = stringList(stage.missing_production_evidence)
         .includes('production_caller_attempt_not_observed');
       const hasExistingAttempt = stringList(stage.stage_attempt_refs).length > 0;
-      return stringValue(stage.conformance_status) === 'admitted'
+      return stringValue(stage.conformance_status) === 'conformant'
         && (hasMissingCaller || hasExistingAttempt);
     })
     .map((stage) => {
@@ -672,7 +672,7 @@ export function buildStageProductionEvidenceReceiptRoutes(input: {
 }) {
   return uniqueRefs(recordList(input.stageProductionEvidence.stages)
     .filter((stage) => (
-      stringValue(stage.conformance_status) === 'admitted'
+      stringValue(stage.conformance_status) === 'conformant'
       && hasRecordableStageEvidenceObligation(stage)
       && (
         stringList(stage.unobserved_expected_receipt_refs).length > 0
