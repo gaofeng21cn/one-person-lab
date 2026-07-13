@@ -6,7 +6,10 @@ import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { stringValue } from '../../kernel/json-record.ts';
 import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 import { canonicalAgentPackageId, publicAgentPackageSelector } from './agent-package-identity.ts';
-import { resolveFirstPartyPackageManifest } from './agent-package-first-party.ts';
+import {
+  assertFirstPartyPackageCatalogVersion,
+  resolveFirstPartyPackageCatalog,
+} from './agent-package-first-party.ts';
 import { materializeStandardAgentFrameworkLink } from './standard-agent-framework-link.ts';
 import { FORBIDDEN_AGENT_PACKAGE_FIELDS, MANIFEST_REQUIRED_FIELDS } from './agent-package-registry-parts/constants.ts';
 import {
@@ -45,6 +48,7 @@ import {
   catalogManifestPayload,
   fetchManagedPackageCatalog,
   selectCapabilityCatalogVersion,
+  selectManagedCatalogPackageVersion,
   selectRootCatalogVersion,
   type ManagedCatalogVersion,
   type ManagedPackageCatalog,
@@ -116,6 +120,7 @@ import type {
   AgentPackageLock,
   AgentPackageManifestValidateInput,
   AgentPackageManifest,
+  AgentPackageManagedVersionCatalogSource,
   AgentPackagePackageActionInput,
   AgentPackagePhysicalSurface,
   AgentPackageScopeMaterialization,
@@ -170,6 +175,9 @@ async function applyManifestPackageLock(
   options: {
     catalog?: ManagedPackageCatalog | null;
     rootVersion?: ManagedCatalogVersion | null;
+    catalogSource?: AgentPackageManagedVersionCatalogSource | null;
+    channelRef?: string | null;
+    channelDigest?: string | null;
   } = {},
 ) {
   const packageId = canonicalAgentPackageId(stringValue(input.packageId));
@@ -177,18 +185,50 @@ async function applyManifestPackageLock(
   const existingLock = packageId
     ? index.packages.find((entry) => entry.package_id === packageId)
     : null;
-  const bundledFirstPartyRefresh = action !== 'install'
-    && existingLock?.source_kind === 'bundled_full_runtime_modules'
-    && !stringValue(input.manifestUrl)
-    && !stringValue(input.registryUrl)
-    ? resolveFirstPartyPackageManifest(packageId)
+  const hasExplicitSource = Boolean(stringValue(input.manifestUrl) || stringValue(input.registryUrl));
+  const hasResolvedCatalogSelection = Boolean(
+    options.catalog
+    && options.rootVersion
+    && options.catalogSource,
+  );
+  const shouldUseFirstPartyCatalog = (!hasExplicitSource || hasResolvedCatalogSelection)
+    && Boolean(packageId)
+    && (
+      action === 'install'
+      || existingLock?.source_kind === 'first_party_managed_cohort'
+      || existingLock?.source_kind === 'bundled_full_runtime_modules'
+      || (
+        existingLock?.source_kind === 'local_manifest_file'
+        && existingLock.manifest_url.replaceAll('\\', '/').endsWith(
+          `/contracts/opl-framework/packages/${packageId}.json`,
+        )
+      )
+    );
+  const firstParty = shouldUseFirstPartyCatalog
+    ? resolveFirstPartyPackageCatalog(packageId)
     : null;
-  const selection = bundledFirstPartyRefresh
+  let catalog = options.catalog ?? null;
+  let rootVersion = options.rootVersion ?? null;
+  let catalogSource = options.catalogSource ?? firstParty?.catalogSource ?? null;
+  let channelRef = options.channelRef ?? null;
+  let channelDigest = options.channelDigest ?? null;
+  if (firstParty && (!catalog || !rootVersion)) {
+    const fetched = await fetchManagedPackageCatalog(firstParty.catalogSource);
+    catalog = fetched.catalog;
+    rootVersion = selectManagedCatalogPackageVersion(catalog, firstParty.canonicalId);
+    catalogSource = firstParty.catalogSource;
+    channelRef = fetched.channel_ref;
+    channelDigest = fetched.channel_digest;
+  }
+  if (firstParty && rootVersion) {
+    assertFirstPartyPackageCatalogVersion(firstParty.canonicalId, rootVersion);
+  }
+  const selection = firstParty && rootVersion
     ? {
         registryUrl: null,
-        packageId: bundledFirstPartyRefresh.canonicalId,
-        manifestUrl: bundledFirstPartyRefresh.manifestUrl,
-        trustTier: existingLock!.trust_tier,
+        packageId: firstParty.canonicalId,
+        manifestUrl: rootVersion.manifest_url,
+        trustTier: firstParty.trustTier,
         registryEntry: null,
       }
     : action !== 'install'
@@ -212,6 +252,9 @@ async function applyManifestPackageLock(
     inheritedTrustTier?: string,
     catalogVersion?: ManagedCatalogVersion | null,
   ): Promise<PreparedPackage> {
+    if (firstParty && catalogVersion) {
+      assertFirstPartyPackageCatalogVersion(nextSelection.packageId ?? firstParty.canonicalId, catalogVersion);
+    }
     const inlinePayload = catalogVersion ? catalogManifestPayload(catalogVersion) : null;
     const fetched = inlinePayload
       ? {
@@ -222,11 +265,42 @@ async function applyManifestPackageLock(
     if (catalogVersion
       && `sha256:${fetched.source_sha256.replace(/^sha256:/, '')}` !== catalogVersion.manifest_sha256) {
       throw new FrameworkContractError('contract_shape_invalid', 'Managed catalog manifest bytes do not match the selected digest.', {
-        package_id: catalogVersion.package_version,
+        package_id: nextSelection.packageId,
+        package_version: catalogVersion.package_version,
         failure_code: 'agent_package_catalog_manifest_digest_mismatch',
       });
     }
     let manifest = normalizePackageManifest(fetched.payload, nextSelection.manifestUrl);
+    if (!nextSelection.registryEntry
+      && nextSelection.packageId
+      && manifest.package_id !== nextSelection.packageId) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Managed catalog selection and package manifest identity must match.', {
+        selected_package_id: nextSelection.packageId,
+        manifest_package_id: manifest.package_id,
+        failure_code: 'agent_package_catalog_package_id_mismatch',
+      });
+    }
+    if (catalogVersion && manifest.version !== catalogVersion.package_version) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Managed catalog selection and package manifest version must match.', {
+        package_id: manifest.package_id,
+        catalog_package_version: catalogVersion.package_version,
+        manifest_package_version: manifest.version,
+        failure_code: 'agent_package_catalog_version_mismatch',
+      });
+    }
+    if (catalogVersion?.content_digest
+      && manifestContentDigest(manifest, fetched.source_sha256) !== catalogVersion.content_digest) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Managed catalog content digest does not match the selected package manifest.', {
+        package_id: manifest.package_id,
+        package_version: manifest.version,
+        catalog_content_digest: catalogVersion.content_digest,
+        manifest_content_digest: manifestContentDigest(manifest, fetched.source_sha256),
+        failure_code: 'agent_package_catalog_content_digest_mismatch',
+      });
+    }
+    if (catalogVersion && catalogSource) {
+      manifest = { ...manifest, managed_update_source: catalogSource };
+    }
     let inlinePayloadRoot: string | null = null;
     if (catalogVersion?.payload_manifest_json) {
       inlinePayloadRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-inline-package-payload-'));
@@ -234,8 +308,23 @@ async function applyManifestPackageLock(
       fs.writeFileSync(payloadPath, catalogVersion.payload_manifest_json, 'utf8');
       manifest = { ...manifest, plugin_source_path: null, plugin_payload_manifest_url: payloadPath };
     }
+    const immutablePackageSource = catalogVersion?.source_artifact_ref
+      && catalogVersion.artifact_digest
+      && catalogVersion.package_content_digest
+      && catalogVersion.owner_source_commit
+      ? {
+          artifactRef: `${catalogVersion.source_artifact_ref.replace(/@sha256:[0-9a-f]{64}$/, '')}@${catalogVersion.artifact_digest}`,
+          archiveSha256: catalogVersion.package_content_digest,
+          ownerSourceCommit: catalogVersion.owner_source_commit,
+          packageVersion: catalogVersion.package_version,
+        }
+      : null;
     try {
-      manifest = await resolveManifestPhysicalSource(manifest, input.dryRun === true);
+      manifest = await resolveManifestPhysicalSource(
+        manifest,
+        input.dryRun === true,
+        immutablePackageSource,
+      );
     } finally {
       if (inlinePayloadRoot) fs.rmSync(inlinePayloadRoot, { recursive: true, force: true });
     }
@@ -243,9 +332,31 @@ async function applyManifestPackageLock(
       verifyManifestContentLock(manifest);
     }
     assertManifestMatchesRegistrySelection(manifest, nextSelection);
-    const trustTier = stringValue(input.trustTier) ?? nextSelection.trustTier ?? inheritedTrustTier ?? null;
+    const requestedTrustTier = stringValue(input.trustTier);
+    if (firstParty && requestedTrustTier && requestedTrustTier !== firstParty.trustTier) {
+      throw new FrameworkContractError('contract_shape_invalid', 'First-party catalog packages use the fixed first_party trust tier.', {
+        package_id: manifest.package_id,
+        requested_trust_tier: requestedTrustTier,
+        required_trust_tier: firstParty.trustTier,
+        failure_code: 'first_party_package_trust_tier_override_forbidden',
+      });
+    }
+    const trustTier = firstParty
+      ? firstParty.trustTier
+      : requestedTrustTier ?? nextSelection.trustTier ?? inheritedTrustTier ?? null;
     assertTrustTierAssigned(trustTier, nextSelection.manifestUrl);
-    const sourceKind = normalizeSourceKind(input.sourceKind, nextSelection.manifestUrl);
+    if (firstParty && input.sourceKind && input.sourceKind !== firstParty.sourceKind) {
+      throw new FrameworkContractError('contract_shape_invalid', 'First-party catalog packages use the managed cohort source kind.', {
+        package_id: manifest.package_id,
+        requested_source_kind: input.sourceKind,
+        required_source_kind: firstParty.sourceKind,
+        failure_code: 'first_party_package_source_kind_override_forbidden',
+      });
+    }
+    const sourceKind = normalizeSourceKind(
+      firstParty && catalogVersion ? firstParty.sourceKind : input.sourceKind,
+      nextSelection.manifestUrl,
+    );
     return {
       selection: nextSelection,
       manifest,
@@ -257,7 +368,7 @@ async function applyManifestPackageLock(
     };
   }
 
-  const root = await preparePackage(selection, undefined, options.rootVersion);
+  const root = await preparePackage(selection, undefined, rootVersion);
   if (root.previousLock && action === 'install') {
     assertNoRequiredInstalledDependents(index, root.manifest.package_id, 'install');
   }
@@ -293,8 +404,8 @@ async function applyManifestPackageLock(
     for (const dependency of prepared.manifest.capability_dependencies) {
       let dependencySelection: Awaited<ReturnType<typeof resolveManifestSelection>>;
       let catalogVersion: ManagedCatalogVersion | null = null;
-      if (options.catalog) {
-        catalogVersion = selectCapabilityCatalogVersion(options.catalog, dependency);
+      if (catalog) {
+        catalogVersion = selectCapabilityCatalogVersion(catalog, dependency);
         dependencySelection = {
           registryUrl: prepared.selection.registryUrl,
           packageId: dependency.package_id,
@@ -387,6 +498,20 @@ async function applyManifestPackageLock(
   const runtimeSourceMutations = new Map<string, ReturnType<typeof applyManagedRuntimeSourceCarrier>>();
   try {
     for (const prepared of ordered) {
+      const packageChannelSelection = prepared.catalogVersion?.source_artifact_ref
+        && prepared.catalogVersion.artifact_digest
+        && prepared.catalogVersion.artifact_status === 'published_immutable'
+        && prepared.catalogVersion.package_content_digest
+        ? {
+            package_id: prepared.manifest.package_id,
+            package_version: prepared.catalogVersion.package_version,
+            source_artifact_ref: prepared.catalogVersion.source_artifact_ref,
+            artifact_digest: prepared.catalogVersion.artifact_digest,
+            artifact_status: 'published_immutable' as const,
+            package_content_digest: prepared.catalogVersion.package_content_digest,
+            owner_source_commit: prepared.catalogVersion.owner_source_commit,
+          }
+        : null;
       runtimeSourceMutations.set(prepared.manifest.package_id, applyManagedRuntimeSourceCarrier({
         config: prepared.manifest.runtime_source_carrier,
         previous: prepared.previousLock?.managed_runtime_source,
@@ -397,6 +522,7 @@ async function applyManifestPackageLock(
         checkoutPath: prepared.manifest.package_id === root.manifest.package_id
           ? input.agentRoot
           : null,
+        packageChannelSelection,
         transactionId: sha256Text([
           'runtime-source',
           action,
@@ -455,6 +581,7 @@ async function applyManifestPackageLock(
         manifest_sha256: providerLock.manifest_sha256,
         source_artifact_ref: providerLock.source_artifact_ref ?? null,
         artifact_digest: providerLock.artifact_digest ?? null,
+        owner_source_commit: providerLock.owner_source_commit ?? null,
         content_digest: providerLock.content_digest,
         package_lock_ref: providerLock.lock_ref,
       };
@@ -472,6 +599,9 @@ async function applyManifestPackageLock(
       managedRuntimeSource: runtimeSourceMutations.get(prepared.manifest.package_id)?.after ?? null,
       sourceArtifactRef: prepared.catalogVersion?.source_artifact_ref ?? prepared.previousLock?.source_artifact_ref ?? null,
       artifactDigest: prepared.catalogVersion?.artifact_digest ?? prepared.previousLock?.artifact_digest ?? null,
+      ownerSourceCommit: prepared.catalogVersion?.owner_source_commit ?? prepared.previousLock?.owner_source_commit ?? null,
+      releaseChannelRef: prepared.catalogVersion ? channelRef : prepared.previousLock?.release_channel_ref ?? null,
+      releaseChannelDigest: prepared.catalogVersion ? channelDigest : prepared.previousLock?.release_channel_digest ?? null,
     }));
   }
   const locks = [...builtLocks.values()];
@@ -564,6 +694,7 @@ async function applyManifestPackageLock(
     package_lock_ref: entry.lock_ref,
     source_artifact_ref: entry.source_artifact_ref ?? null,
     artifact_digest: entry.artifact_digest ?? null,
+    owner_source_commit: entry.owner_source_commit ?? null,
   }));
   const receipts = ordered.map((prepared) => {
     const lock = builtLocks.get(prepared.manifest.package_id)!;
@@ -593,6 +724,9 @@ async function applyManifestPackageLock(
       managedRuntimeSource: lock.managed_runtime_source,
       sourceArtifactRef: prepared.catalogVersion?.source_artifact_ref ?? prepared.previousLock?.source_artifact_ref ?? null,
       artifactDigest: prepared.catalogVersion?.artifact_digest ?? prepared.previousLock?.artifact_digest ?? null,
+      ownerSourceCommit: prepared.catalogVersion?.owner_source_commit ?? prepared.previousLock?.owner_source_commit ?? null,
+      releaseChannelRef: prepared.catalogVersion ? channelRef : prepared.previousLock?.release_channel_ref ?? null,
+      releaseChannelDigest: prepared.catalogVersion ? channelDigest : prepared.previousLock?.release_channel_digest ?? null,
     });
     Object.assign(lock, {
       action_receipt_id: receipt.receipt_ref,
@@ -1534,6 +1668,9 @@ async function reconcilePackageClosureForUse(
     }, 'update', {
       catalog: fetched.catalog,
       rootVersion,
+      catalogSource: source,
+      channelRef: fetched.channel_ref,
+      channelDigest: fetched.channel_digest,
     });
   }
   return {

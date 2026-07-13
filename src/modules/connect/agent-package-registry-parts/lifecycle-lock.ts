@@ -108,6 +108,9 @@ export function lifecycleReceipt(input: {
   managedRuntimeSource?: AgentPackageManagedRuntimeSourceState | null;
   sourceArtifactRef?: string | null;
   artifactDigest?: string | null;
+  ownerSourceCommit?: string | null;
+  releaseChannelRef?: string | null;
+  releaseChannelDigest?: string | null;
   useBinding?: AgentPackageLifecycleReceipt['use_binding'];
 }): AgentPackageLifecycleReceipt {
   const receipt: AgentPackageLifecycleReceipt = {
@@ -127,6 +130,9 @@ export function lifecycleReceipt(input: {
     manifest_sha256: input.manifestSha256 ?? null,
     source_artifact_ref: input.sourceArtifactRef ?? null,
     artifact_digest: input.artifactDigest ?? null,
+    owner_source_commit: input.ownerSourceCommit ?? null,
+    release_channel_ref: input.releaseChannelRef ?? null,
+    release_channel_digest: input.releaseChannelDigest ?? null,
     package_lock_ref: input.packageLockRef ?? null,
     rollback_ref: input.rollbackRef ?? null,
     source_kind: input.sourceKind,
@@ -193,6 +199,9 @@ export function buildLock(input: {
   managedRuntimeSource?: AgentPackageManagedRuntimeSourceState | null;
   sourceArtifactRef?: string | null;
   artifactDigest?: string | null;
+  ownerSourceCommit?: string | null;
+  releaseChannelRef?: string | null;
+  releaseChannelDigest?: string | null;
 }): AgentPackageLock {
   const timestamp = nowIso();
   const distributionPayload = input.manifest.distribution_payload;
@@ -220,6 +229,9 @@ export function buildLock(input: {
     manifest_sha256: input.manifestSha256,
     source_artifact_ref: input.sourceArtifactRef ?? null,
     artifact_digest: input.artifactDigest ?? null,
+    owner_source_commit: input.ownerSourceCommit ?? null,
+    release_channel_ref: input.releaseChannelRef ?? null,
+    release_channel_digest: input.releaseChannelDigest ?? null,
     ...(distributionPayload
       ? {
           oci_ref: distributionPayload.oci_ref,

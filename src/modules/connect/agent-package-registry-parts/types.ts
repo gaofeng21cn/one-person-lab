@@ -345,6 +345,7 @@ export type AgentPackageResolvedDependency = {
   manifest_sha256: string;
   source_artifact_ref?: string | null;
   artifact_digest?: string | null;
+  owner_source_commit?: string | null;
   content_digest: string;
   package_lock_ref: string;
 };
@@ -566,6 +567,9 @@ export type AgentPackageLock = {
   manifest_sha256: string;
   source_artifact_ref?: string | null;
   artifact_digest?: string | null;
+  owner_source_commit?: string | null;
+  release_channel_ref?: string | null;
+  release_channel_digest?: string | null;
   oci_ref?: string;
   resolved_digest?: string;
   immutable_tag?: string;
@@ -638,6 +642,9 @@ export type AgentPackageLifecycleReceipt = {
   manifest_sha256: string | null;
   source_artifact_ref?: string | null;
   artifact_digest?: string | null;
+  owner_source_commit?: string | null;
+  release_channel_ref?: string | null;
+  release_channel_digest?: string | null;
   package_lock_ref: string | null;
   rollback_ref: string | null;
   source_kind: AgentPackageSourceKind | 'registry_url';
@@ -656,6 +663,7 @@ export type AgentPackageLifecycleReceipt = {
     package_lock_ref: string;
     source_artifact_ref?: string | null;
     artifact_digest?: string | null;
+    owner_source_commit?: string | null;
   }>;
   scope_materialization?: AgentPackageScopeMaterialization;
   scope_materializations?: AgentPackageScopeMaterialization[];

@@ -24,6 +24,7 @@ import {
   normalizeOptionalString,
   runCommand,
 } from './shared.ts';
+import { resolveOplReleaseManifestRef } from './release-channel.ts';
 
 const PACKAGE_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.package.source.v1+gzip';
 const CHANNEL_MANIFEST_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.release.channel-manifest.v1+json';
@@ -62,7 +63,7 @@ type OplChannelPackageCatalogVersion = {
   artifact_digest?: string;
   artifact_status?: string;
   package_content_digest?: string;
-  owner_source_commit?: string;
+  owner_source_commit?: string | null;
 };
 
 type OplChannelPackageVersionSelection = OplChannelPackageCatalogVersion & {
@@ -70,6 +71,16 @@ type OplChannelPackageVersionSelection = OplChannelPackageCatalogVersion & {
   package_version: string;
   immutable_artifact_ref: string;
   package_content_digest: string;
+};
+
+export type ManagedModulePackageChannelSelection = {
+  package_id: string;
+  package_version: string;
+  source_artifact_ref: string;
+  artifact_digest: string;
+  artifact_status: 'published_immutable';
+  package_content_digest: string;
+  owner_source_commit: string | null;
 };
 
 export type PackageChannelUpdateStatus = {
@@ -116,15 +127,6 @@ export type PackageChannelRollbackResult = {
   rollback_ref: string | null;
 };
 
-function resolvePackageOwner() {
-  return normalizeOptionalString(process.env.OPL_PACKAGES_OWNER) ?? 'gaofeng21cn';
-}
-
-function resolvePackageChannelTag() {
-  return normalizeOptionalString(process.env.OPL_PACKAGE_CHANNEL_VERSION)
-    ?? 'latest-stable';
-}
-
 function parseImageRef(raw: string): OciImageRef {
   const [registry, ...repositoryParts] = raw.split('/');
   if (!registry || repositoryParts.length === 0) {
@@ -151,14 +153,7 @@ function parseImageRef(raw: string): OciImageRef {
 }
 
 function resolveChannelManifestRef(declaredRef?: string) {
-  const explicit = normalizeOptionalString(process.env.OPL_PACKAGE_CHANNEL_MANIFEST_REF);
-  if (explicit) {
-    return parseImageRef(explicit);
-  }
-  if (declaredRef) return parseImageRef(declaredRef);
-  const owner = resolvePackageOwner();
-  const tag = normalizeOptionalString(process.env.OPL_PACKAGE_CHANNEL_TAG) ?? resolvePackageChannelTag();
-  return parseImageRef(`ghcr.io/${owner}/one-person-lab-manifest:${tag}`);
+  return parseImageRef(resolveOplReleaseManifestRef(declaredRef));
 }
 
 function runCurl(args: string[], errorKind: string, details: Record<string, unknown>, capture = true) {
@@ -557,6 +552,36 @@ export function readOplPackageChannelManifest(declaredRef?: string) {
   return readOplPackageChannelManifestWithMetadata(declaredRef).payload;
 }
 
+function normalizePackageSelection(
+  spec: DomainModuleSpec,
+  packageId: string | null,
+  version: OplChannelPackageCatalogVersion | ManagedModulePackageChannelSelection | null,
+  channelVersion: string | null,
+): OplChannelPackageVersionSelection {
+  const packageVersion = normalizeOptionalString(version?.package_version);
+  const sourceArtifactRef = normalizeOptionalString(version?.source_artifact_ref);
+  const artifactDigest = normalizeOptionalString(version?.artifact_digest);
+  const packageContentDigest = normalizeOptionalString(version?.package_content_digest);
+  if (!packageId || !version || !packageVersion || !sourceArtifactRef
+    || !artifactDigest?.match(/^sha256:[0-9a-f]{64}$/)
+    || version.artifact_status !== 'published_immutable'
+    || !packageContentDigest?.match(/^sha256:[0-9a-f]{64}$/)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'OPL package catalog has no published immutable package selection.', {
+      module_id: spec.module_id,
+      package_id: packageId,
+      channel_version: channelVersion,
+      failure_code: 'opl_package_catalog_selection_invalid',
+    });
+  }
+  return {
+    ...version,
+    package_id: packageId,
+    package_version: packageVersion,
+    immutable_artifact_ref: `${sourceArtifactRef.replace(/@sha256:[0-9a-f]{64}$/, '')}@${artifactDigest}`,
+    package_content_digest: packageContentDigest,
+  };
+}
+
 function packageEntry(
   channelManifest: OplChannelManifest,
   spec: DomainModuleSpec,
@@ -568,28 +593,12 @@ function packageEntry(
     candidate.selection_status === 'selected_for_release_set'
     && candidate.package_version === entry?.selected_version
   )) ?? versions.find((candidate) => candidate.selection_status === 'selected_for_release_set') ?? null;
-  const packageVersion = normalizeOptionalString(version?.package_version);
-  const sourceArtifactRef = normalizeOptionalString(version?.source_artifact_ref);
-  const artifactDigest = normalizeOptionalString(version?.artifact_digest);
-  const packageContentDigest = normalizeOptionalString(version?.package_content_digest);
-  if (!packageId || !entry || !version || !packageVersion || !sourceArtifactRef
-    || !artifactDigest?.match(/^sha256:[0-9a-f]{64}$/)
-    || version.artifact_status !== 'published_immutable'
-    || !packageContentDigest?.match(/^sha256:[0-9a-f]{64}$/)) {
-    throw new FrameworkContractError('contract_shape_invalid', 'OPL package catalog has no published immutable package selection.', {
-      module_id: spec.module_id,
-      package_id: packageId,
-      channel_version: channelManifest.release_set_generation ?? null,
-      failure_code: 'opl_package_catalog_selection_invalid',
-    });
-  }
-  return {
-    ...version,
-    package_id: packageId,
-    package_version: packageVersion,
-    immutable_artifact_ref: `${sourceArtifactRef.replace(/@sha256:[0-9a-f]{64}$/, '')}@${artifactDigest}`,
-    package_content_digest: packageContentDigest,
-  };
+  return normalizePackageSelection(
+    spec,
+    entry ? packageId : null,
+    version,
+    channelManifest.release_set_generation ?? null,
+  );
 }
 
 function normalizePackageContentDigest(value: string | null | undefined) {
@@ -634,7 +643,7 @@ export function readManagedModulePackageChannelUpdateStatus(
   return packageChannelUpdateStatus(lifecycle, entry);
 }
 
-function extractArchiveToStage(archivePath: string, stagePath: string, spec: DomainModuleSpec) {
+function extractArchiveToStage(archivePath: string, stagePath: string, expectedRootName?: string) {
   const unpackPath = `${stagePath}.unpack-${process.pid}`;
   fs.rmSync(stagePath, { recursive: true, force: true });
   fs.rmSync(unpackPath, { recursive: true, force: true });
@@ -643,20 +652,70 @@ function extractArchiveToStage(archivePath: string, stagePath: string, spec: Dom
   if (extract.exitCode !== 0) {
     fs.rmSync(unpackPath, { recursive: true, force: true });
     throw new FrameworkContractError('build_command_failed', 'Failed to extract OPL module package archive.', {
-      module_id: spec.module_id,
+      expected_root_name: expectedRootName ?? null,
       archive_path: archivePath,
       stdout: extract.stdout,
       stderr: extract.stderr,
     });
   }
 
-  const extractedRoot = path.join(unpackPath, spec.repo_name);
-  const sourcePath = fs.existsSync(extractedRoot) ? extractedRoot : unpackPath;
+  const extractedRoot = expectedRootName ? path.join(unpackPath, expectedRootName) : null;
+  const unpackEntries = fs.readdirSync(unpackPath, { withFileTypes: true });
+  const singleDirectory = unpackEntries.length === 1 && unpackEntries[0].isDirectory()
+    ? path.join(unpackPath, unpackEntries[0].name)
+    : null;
+  const sourcePath = extractedRoot && fs.existsSync(extractedRoot)
+    ? extractedRoot
+    : singleDirectory ?? unpackPath;
 
   fs.mkdirSync(path.dirname(stagePath), { recursive: true });
   fs.renameSync(sourcePath, stagePath);
   if (sourcePath !== unpackPath) {
     fs.rmSync(unpackPath, { recursive: true, force: true });
+  }
+}
+
+export function materializeOplPackageSourceArchive(input: {
+  artifactRef: string;
+  packageId: string;
+  packageVersion: string;
+  expectedArchiveSha256: string;
+  targetPath: string;
+  expectedRootName?: string;
+}) {
+  const imageRef = parseImageRef(input.artifactRef);
+  const token = fetchGhcrToken(imageRef);
+  const manifest = fetchOciManifest(imageRef, token);
+  const layer = selectLayer(
+    manifest,
+    PACKAGE_LAYER_MEDIA_TYPE,
+    `${input.packageId}-${input.packageVersion}.tar.gz`,
+  );
+  if (!layer?.digest) {
+    throw new FrameworkContractError('contract_shape_invalid', 'OPL Package source layer is missing.', {
+      package_id: input.packageId,
+      package_version: input.packageVersion,
+      image: imageRef.image,
+      reference: imageRef.tag,
+    });
+  }
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-source-'));
+  try {
+    const archivePath = path.join(tempRoot, `${input.packageId}-${input.packageVersion}.tar.gz`);
+    fetchOciBlob(imageRef, token, layer.digest, archivePath);
+    verifySha256(archivePath, input.expectedArchiveSha256.replace(/^sha256:/, ''), {
+      package_id: input.packageId,
+      package_version: input.packageVersion,
+      image: imageRef.image,
+      reference: imageRef.tag,
+    });
+    extractArchiveToStage(archivePath, input.targetPath, input.expectedRootName);
+    return {
+      layer_digest: layer.digest,
+      source_archive_sha256: input.expectedArchiveSha256.replace(/^sha256:/, ''),
+    };
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
   }
 }
 
@@ -731,10 +790,22 @@ function activateStagedPackageChannel(input: {
 export function installManagedModuleFromPackageChannel(
   spec: DomainModuleSpec,
   targetPath: string,
-  options: { repairTransactionId?: string | null } = {},
+  options: {
+    repairTransactionId?: string | null;
+    selection?: ManagedModulePackageChannelSelection | null;
+  } = {},
 ) {
-  const channelManifest = readOplPackageChannelManifest();
-  const entry = packageEntry(channelManifest, spec);
+  const channelManifest = options.selection ? null : readOplPackageChannelManifest();
+  const entry = options.selection
+    ? normalizePackageSelection(
+        spec,
+        canonicalAgentPackageId(spec.module_id) === options.selection.package_id
+          ? options.selection.package_id
+          : null,
+        options.selection,
+        options.selection.package_version,
+      )
+    : packageEntry(channelManifest!, spec);
   if (fs.existsSync(targetPath) && !options.repairTransactionId) {
     assertCleanPackageChannelRoot(targetPath, spec);
     const lifecycle = readPackageChannelLifecycle(targetPath, spec);
@@ -745,30 +816,16 @@ export function installManagedModuleFromPackageChannel(
       };
     }
   }
-  const imageRef = parseImageRef(entry.immutable_artifact_ref);
-  const token = fetchGhcrToken(imageRef);
-  const manifest = fetchOciManifest(imageRef, token);
-  const layer = selectLayer(manifest, PACKAGE_LAYER_MEDIA_TYPE, `${entry.package_id}-${entry.package_version}.tar.gz`);
-  if (!layer?.digest) {
-    throw new FrameworkContractError('contract_shape_invalid', 'OPL module package source layer is missing.', {
-      module_id: spec.module_id,
-      image: imageRef.image,
-      tag: imageRef.tag,
-    });
-  }
-
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-module-package-'));
   const stagePath = packageChannelStageRoot(targetPath);
   try {
-    const archivePath = path.join(tempRoot, `${spec.repo_name}.tar.gz`);
-    fetchOciBlob(imageRef, token, layer.digest, archivePath);
-    verifySha256(archivePath, entry.package_content_digest.replace(/^sha256:/, ''), {
-      module_id: spec.module_id,
-      package_id: entry.package_id,
-      image: imageRef.image,
-      reference: imageRef.tag,
+    const source = materializeOplPackageSourceArchive({
+      artifactRef: entry.immutable_artifact_ref,
+      packageId: entry.package_id,
+      packageVersion: entry.package_version,
+      expectedArchiveSha256: entry.package_content_digest,
+      targetPath: stagePath,
+      expectedRootName: spec.repo_name,
     });
-    extractArchiveToStage(archivePath, stagePath, spec);
     return {
       status: 'updated' as const,
       ...activateStagedPackageChannel({
@@ -777,8 +834,8 @@ export function installManagedModuleFromPackageChannel(
         stagePath,
         channelVersion: entry.package_version,
         artifactRef: entry.immutable_artifact_ref,
-        layerDigest: layer.digest,
-        sourceArchiveSha256: entry.package_content_digest.replace(/^sha256:/, ''),
+        layerDigest: source.layer_digest,
+        sourceArchiveSha256: source.source_archive_sha256,
         sourceGitHeadSha: normalizeOptionalString(entry.owner_source_commit),
         repairTransactionId: options.repairTransactionId,
       }),
@@ -786,7 +843,6 @@ export function installManagedModuleFromPackageChannel(
   } finally {
     fs.rmSync(stagePath, { recursive: true, force: true });
     fs.rmSync(`${stagePath}.unpack-${process.pid}`, { recursive: true, force: true });
-    fs.rmSync(tempRoot, { recursive: true, force: true });
   }
 }
 

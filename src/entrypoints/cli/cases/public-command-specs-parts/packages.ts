@@ -22,7 +22,6 @@ import {
   type AgentPackageProfileApplyInput,
   type AgentPackageRepairInput,
 } from '../../../../modules/connect/index.ts';
-import { resolveFirstPartyPackageManifest } from '../../../../modules/connect/agent-package-first-party.ts';
 import type { FrameworkContracts } from '../../../../kernel/types.ts';
 import { STANDARD_AGENT_REGISTRY } from '../../../../kernel/standard-agent-registry.ts';
 import { getActiveWorkspaceBinding } from '../../../../modules/workspace/index.ts';
@@ -64,7 +63,6 @@ function parsePackageSelection(
   command: string,
   args: string[],
   spec: CommandSpec,
-  options: { resolveFirstPartyManifest?: boolean } = {},
 ): AgentPackageInstallInput {
   const positional = takePositionalPackageId(args, command, spec);
   const parsed = parseRegisteredCommandOptions(command, positional.args, spec);
@@ -75,15 +73,12 @@ function parsePackageSelection(
     });
   }
   const selectedPackageId = positional.packageId ?? optionPackageId;
-  const firstParty = selectedPackageId && options.resolveFirstPartyManifest
-    ? resolveFirstPartyPackageManifest(selectedPackageId)
-    : null;
   return {
-    manifestUrl: readOptionalString(parsed['manifest-url']) ?? firstParty?.manifestUrl,
+    manifestUrl: readOptionalString(parsed['manifest-url']),
     registryUrl: readOptionalString(parsed['registry-url']),
-    packageId: firstParty?.canonicalId ?? selectedPackageId,
-    trustTier: readOptionalString(parsed['trust-tier']) ?? (firstParty ? 'first_party' : undefined),
-    sourceKind: (readOptionalString(parsed['source-kind']) ?? (firstParty ? 'local_manifest_file' : undefined)) as AgentPackageInstallInput['sourceKind'],
+    packageId: selectedPackageId,
+    trustTier: readOptionalString(parsed['trust-tier']),
+    sourceKind: readOptionalString(parsed['source-kind']) as AgentPackageInstallInput['sourceKind'],
     dryRun: parsed['dry-run'] === true,
     agentRoot: readOptionalString(parsed['agent-root']),
     scope: readOptionalString(parsed.scope) as AgentPackageInstallInput['scope'],
@@ -313,7 +308,7 @@ export function buildPackagesCommandSpecs(
     },
     'packages install': {
       usage: 'opl packages install <package_id> [--scope workspace|quest --target-workspace <path>|--target-quest <path>] [--keep-migration <id,...>] [--dry-run] [--manifest-url <url>|--registry-url <url> --trust-tier <tier>] [--source-kind <kind>] [--agent-root <repo>]',
-      summary: 'Install one OPL Package through the existing manifest, lock, materializer, projection, and receipt transaction.',
+      summary: 'Install a first-party OPL Package from the Release Set catalog, or use an explicitly selected manifest or registry.',
       examples: [
         'opl packages install rca --json',
         'opl packages install opl-flow --json',
@@ -321,9 +316,7 @@ export function buildPackagesCommandSpecs(
       group: 'packages',
       help_surface: 'default',
       handler: (args) => installPackageWithActiveWorkspace(
-        parsePackageSelection('packages install', args, getCommandSpec('packages install'), {
-          resolveFirstPartyManifest: true,
-        }),
+        parsePackageSelection('packages install', args, getCommandSpec('packages install')),
       ),
     },
     'packages activate': {
@@ -341,7 +334,7 @@ export function buildPackagesCommandSpecs(
     },
     'packages update': {
       usage: 'opl packages update [<package_id>] [--scope workspace|quest --target-workspace <path>|--target-quest <path>] [--keep-migration <id,...>] [--manifest-url <url>|--registry-url <url>] [--trust-tier <tier>] [--source-kind <kind>] [--agent-root <repo>] [--dry-run]',
-      summary: 'Update one installed OPL Package, or reconcile all clean managed packages when no package is selected.',
+      summary: 'Update one installed first-party Package from its Release Set catalog, or reconcile all clean managed packages.',
       examples: [
         'opl packages update rca --json',
         'opl packages update --json',

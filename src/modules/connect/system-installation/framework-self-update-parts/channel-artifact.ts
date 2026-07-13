@@ -11,6 +11,7 @@ import {
   readJsonPayloadFile,
 } from '../../../../kernel/json-file.ts';
 import { stringValue } from '../../../../kernel/json-record.ts';
+import { resolveOplReleaseManifestRef } from '../release-channel.ts';
 import { normalizeOptionalString, runCommand } from '../shared.ts';
 
 const FRAMEWORK_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.framework.source.v1+gzip';
@@ -29,26 +30,21 @@ type OciLayer = {
   annotations?: Record<string, string>;
 };
 
-function resolvePackageOwner() {
-  return normalizeOptionalString(process.env.OPL_PACKAGES_OWNER) ?? 'gaofeng21cn';
-}
-
-function resolvePackageChannelTag() {
-  return normalizeOptionalString(process.env.OPL_PACKAGE_CHANNEL_TAG)
-    ?? normalizeOptionalString(process.env.OPL_PACKAGE_CHANNEL_VERSION)
-    ?? 'latest';
-}
-
 function parseImageRef(raw: string): OciImageRef {
   const [registry, ...repositoryParts] = raw.split('/');
   if (!registry || repositoryParts.length === 0) {
     throw new FrameworkContractError('contract_shape_invalid', 'Invalid OCI image reference.', { image: raw });
   }
   let repository = repositoryParts.join('/');
-  let tag = 'latest';
+  let tag = 'latest-stable';
+  const digestSeparator = repository.lastIndexOf('@');
+  if (digestSeparator > repository.lastIndexOf('/')) {
+    tag = repository.slice(digestSeparator + 1);
+    repository = repository.slice(0, digestSeparator);
+  }
   const separator = repository.lastIndexOf(':');
   if (separator > repository.lastIndexOf('/')) {
-    tag = repository.slice(separator + 1);
+    if (digestSeparator < 0) tag = repository.slice(separator + 1);
     repository = repository.slice(0, separator);
   }
   return {
@@ -60,9 +56,7 @@ function parseImageRef(raw: string): OciImageRef {
 }
 
 function resolveChannelManifestRef() {
-  const explicit = normalizeOptionalString(process.env.OPL_PACKAGE_CHANNEL_MANIFEST_REF);
-  if (explicit) return parseImageRef(explicit);
-  return parseImageRef(`ghcr.io/${resolvePackageOwner()}/one-person-lab-manifest:${resolvePackageChannelTag()}`);
+  return parseImageRef(resolveOplReleaseManifestRef());
 }
 
 function runCurl(args: string[], errorKind: string, details: Record<string, unknown>, capture = true) {

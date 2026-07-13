@@ -25,8 +25,6 @@ import {
 } from '../../../../../src/modules/connect/agent-package-registry-parts/manifest-normalizers.ts';
 import { defaultHomeShortcutPreferences } from '../../../../../src/modules/connect/agent-package-registry-parts/home-shortcuts.ts';
 import { assertManifestMatchesRegistrySelection } from '../../../../../src/modules/connect/agent-package-registry-parts/selection.ts';
-import { canonicalAgentPackageId } from '../../../../../src/modules/connect/index.ts';
-import { resolveFirstPartyPackageManifest } from '../../../../../src/modules/connect/agent-package-first-party.ts';
 import { writeManagedRuntimeSourceFixture } from './managed-runtime-source-fixture.ts';
 
 test('default Home shortcut visibility follows registry starter_default', () => {
@@ -83,14 +81,6 @@ test('official aliases resolve offline and local manifests own runtime source in
       sourceHeadSha: 'runtime-source-v1',
     });
     const env = { OPL_STATE_DIR: stateDir, OPL_MODULES_ROOT: modulesRoot, ...fixtureEnv };
-    const preview = runCli(['packages', 'install', '--dry-run', 'rca'], env) as {
-      opl_agent_package_install: { status: string; dry_run: boolean; package_lock: { package_id: string } };
-    };
-    assert.equal(preview.opl_agent_package_install.status, 'validated_no_write');
-    assert.equal(preview.opl_agent_package_install.dry_run, true);
-    assert.equal(preview.opl_agent_package_install.package_lock.package_id, 'rca');
-    assert.equal(preview.opl_agent_package_install.package_lock.package_id, canonicalAgentPackageId('rca'));
-
     const manifestPath = path.join(fixtureRoot, 'rca-local-manifest.json');
     fs.writeFileSync(manifestPath, formatJsonPayload({
       ...agentPackageManifest({
@@ -197,16 +187,6 @@ test('RCA first-party manifest resolves the released 0.2.1 carrier payload', () 
   );
 });
 
-test('first-party package refresh resolves the current Base manifest instead of an immutable bundle lock path', () => {
-  const selection = resolveFirstPartyPackageManifest('opl-flow');
-
-  assert.deepEqual(selection, {
-    canonicalId: 'opl-flow',
-    manifestUrl: path.join(repoRoot, 'contracts', 'opl-framework', 'packages', 'opl-flow.json'),
-  });
-  assert.equal(resolveFirstPartyPackageManifest('unknown-package'), null);
-});
-
 test('standard Agent manifests declare managed runtime source carriers while capability and policy packages do not', () => {
   const expected = new Map([
     ['mas.json', 'medautoscience'],
@@ -258,23 +238,6 @@ test('MAS package exposes ScholarSkills as a required managed capability depende
   assert.equal(dependency?.required, true);
   assert.equal(dependency?.opl_distribution, 'managed_dependency');
 
-  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-mas-package-preview-state-'));
-  try {
-    const preview = runCli(['packages', 'install', '--dry-run', 'mas'], {
-      OPL_STATE_DIR: stateDir,
-    }) as {
-      opl_agent_package_install: {
-        status: string;
-        dry_run: boolean;
-        package_lock: { package_id: string };
-      };
-    };
-    assert.equal(preview.opl_agent_package_install.status, 'validated_no_write');
-    assert.equal(preview.opl_agent_package_install.dry_run, true);
-    assert.equal(preview.opl_agent_package_install.package_lock.package_id, 'mas');
-  } finally {
-    fs.rmSync(stateDir, { recursive: true, force: true });
-  }
 });
 
 test('Home shortcut preferences can be changed before the package is installed', () => {

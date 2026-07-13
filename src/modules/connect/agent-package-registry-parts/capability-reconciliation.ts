@@ -25,6 +25,9 @@ export type ManagedCatalogVersion = {
   payload_digest: string | null;
   source_artifact_ref: string | null;
   artifact_digest: string | null;
+  artifact_status: string | null;
+  package_content_digest: string | null;
+  owner_source_commit: string | null;
   dependency_package_ids: string[];
   selection_status: 'selected_for_release_set' | 'retained_history';
 };
@@ -110,6 +113,9 @@ function normalizeCatalogVersion(value: unknown, entry: Record<string, unknown>)
     payload_digest: stringValue(value.payload_digest),
     source_artifact_ref: stringValue(value.source_artifact_ref),
     artifact_digest: normalizedSha256(value.artifact_digest),
+    artifact_status: stringValue(value.artifact_status),
+    package_content_digest: normalizedSha256(value.package_content_digest),
+    owner_source_commit: stringValue(value.owner_source_commit),
     dependency_package_ids: Array.isArray(value.dependency_package_ids)
       ? value.dependency_package_ids.filter((item): item is string => typeof item === 'string' && item.length > 0)
       : [],
@@ -179,13 +185,13 @@ export async function fetchManagedPackageCatalog(source: AgentPackageManagedVers
   };
 }
 
-export function selectRootCatalogVersion(catalog: ManagedPackageCatalog, lock: AgentPackageLock) {
-  const entry = catalog.get(lock.package_id);
+export function selectManagedCatalogPackageVersion(catalog: ManagedPackageCatalog, packageId: string) {
+  const entry = catalog.get(packageId);
   if (!entry) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Managed package catalog does not contain the installed root package.', {
-      package_id: lock.package_id,
+    throw new FrameworkContractError('contract_shape_invalid', 'Managed package catalog does not contain the requested root package.', {
+      package_id: packageId,
       failure_code: 'agent_package_catalog_root_missing',
-      update_action: `opl packages update ${publicAgentPackageSelector(lock.package_id)}`,
+      update_action: `opl packages update ${publicAgentPackageSelector(packageId)}`,
     });
   }
   const selectedVersions = entry.versions.filter((candidate) => candidate.selection_status === 'selected_for_release_set');
@@ -194,12 +200,16 @@ export function selectRootCatalogVersion(catalog: ManagedPackageCatalog, lock: A
     ?? null;
   if (!selected) {
     throw new FrameworkContractError('contract_shape_invalid', 'Managed package catalog has no selected Release Set root package version.', {
-      package_id: lock.package_id,
+      package_id: packageId,
       failure_code: 'agent_package_catalog_stable_version_missing',
-      update_action: `opl packages update ${publicAgentPackageSelector(lock.package_id)}`,
+      update_action: `opl packages update ${publicAgentPackageSelector(packageId)}`,
     });
   }
   return selected;
+}
+
+export function selectRootCatalogVersion(catalog: ManagedPackageCatalog, lock: AgentPackageLock) {
+  return selectManagedCatalogPackageVersion(catalog, lock.package_id);
 }
 
 export function selectCapabilityCatalogVersion(

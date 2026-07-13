@@ -11,6 +11,7 @@ import {
   readPackageChannelLifecycle,
   refreshPackageChannelCurrentSnapshot,
   rollbackManagedModulePackageChannel,
+  type ManagedModulePackageChannelSelection,
 } from '../system-installation/module-package-channel.ts';
 import {
   resolveManagedModuleCheckoutPath,
@@ -490,6 +491,7 @@ export function applyManagedRuntimeSourceCarrier(input: {
   transactionId?: string;
   sourceKind?: AgentPackageSourceKind;
   checkoutPath?: string | null;
+  packageChannelSelection?: ManagedModulePackageChannelSelection | null;
 }): ManagedRuntimeSourceMutation {
   if (!input.config) {
     return {
@@ -648,6 +650,7 @@ export function applyManagedRuntimeSourceCarrier(input: {
   try {
     const activation = installManagedModuleFromPackageChannel(spec, checkoutPath, {
       repairTransactionId: input.action === 'repair' ? transactionId : null,
+      selection: input.packageChannelSelection,
     });
     activated = activation.status === 'updated';
     mutation.repair_displaced_path = activation?.repair_displaced_path ?? null;
