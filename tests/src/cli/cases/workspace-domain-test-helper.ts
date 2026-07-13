@@ -205,8 +205,10 @@ export function standardProgressFirstPolicies() {
 export function buildAdmittedActionCatalog(
   targetDomainId: string,
   owner: string,
-  options: { stage2HumanGate?: boolean } = {},
+  options: { stage2HumanGate?: boolean; stageCount?: number; stageIds?: string[] } = {},
 ) {
+  const routeStageIds = options.stageIds
+    ?? Array.from({ length: options.stageCount ?? 6 }, (_entry, index) => `stage_${index + 1}`);
   return {
     surface_kind: 'family_action_catalog',
     version: 'family-action-catalog.v2',
@@ -218,8 +220,7 @@ export function buildAdmittedActionCatalog(
       opl_role: 'projection_consumer_only',
       write_policy: 'no_domain_truth_writes',
     },
-    actions: Array.from({ length: 6 }, (_entry, index) => {
-      const stageId = `stage_${index + 1}`;
+    actions: routeStageIds.map((stageId, index) => {
       return {
         action_id: `${stageId}_action`,
         title: `Stage ${index + 1} action`,
@@ -326,20 +327,23 @@ export function createAdmittedStagePackFixture(
   const inlineStagePlane = (
     productEntryManifest?.family_stage_control_plane ?? payload.family_stage_control_plane
   ) as JsonRecord | undefined;
+  const sourceStages = inlineStagePlane
+    ? inlineStagePlane.stages as JsonRecord[]
+    : buildAdmittedStagePlane(targetDomainId, owner).stages as JsonRecord[];
+  const selectedSourceStages = sourceStages.slice(0, options.stageCount ?? sourceStages.length);
   const actionCatalog = (
     productEntryManifest?.family_action_catalog ?? payload.family_action_catalog
-  ) as JsonRecord | undefined ?? buildAdmittedActionCatalog(targetDomainId, owner, options);
+  ) as JsonRecord | undefined ?? buildAdmittedActionCatalog(targetDomainId, owner, {
+    ...options,
+    stageIds: selectedSourceStages.map((stage) => String(stage.stage_id)),
+  });
   const actionIds = (actionCatalog.actions as JsonRecord[]).map((action) => String(action.action_id));
   writeJson(path.join(repoDir, 'contracts/action_catalog.json'), actionCatalog);
 
   const stageManifestPath = path.join(repoDir, 'agent/stages/manifest.json');
   const stageManifest = JSON.parse(fs.readFileSync(stageManifestPath, 'utf8')) as JsonRecord;
   const baseStage = (stageManifest.stages as JsonRecord[])[0];
-  const sourceStages = inlineStagePlane
-    ? inlineStagePlane.stages as JsonRecord[]
-    : buildAdmittedStagePlane(targetDomainId, owner).stages as JsonRecord[];
-  stageManifest.stages = sourceStages
-    .slice(0, options.stageCount ?? sourceStages.length)
+  stageManifest.stages = selectedSourceStages
     .map((stage, index) => {
       const contract = stage.stage_contract as JsonRecord;
       const trustBoundary = stage.trust_boundary as JsonRecord | undefined;
