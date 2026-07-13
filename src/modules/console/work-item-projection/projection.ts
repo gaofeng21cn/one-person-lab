@@ -1,6 +1,6 @@
 import type { JsonRecord } from '../../../kernel/json-record.ts';
-import { buildWorkItemControlResolver } from '../../ledger/work-item-control-ledger.ts';
-import { readStandardAgentDescriptorForDomain } from '../../connect/standard-agent-interface-discovery.ts';
+import { readStandardAgentDescriptorForDomain } from '../../connect/index.ts';
+import { buildWorkItemControlResolver } from '../../ledger/index.ts';
 import { listWorkspaceBindings, type WorkspaceBinding } from '../../workspace/public/app-state.ts';
 import { buildAgentCatalog, buildProjectCatalog } from './catalog.ts';
 import {

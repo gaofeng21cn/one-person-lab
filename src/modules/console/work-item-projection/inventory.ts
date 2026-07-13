@@ -6,7 +6,7 @@ import { isRecord } from '../../../kernel/contract-validation.ts';
 import { readJsonFileOrNull } from '../../../kernel/json-file.ts';
 import { stringValue, type JsonRecord } from '../../../kernel/json-record.ts';
 import type { StandardAgentDescriptorInterface } from '../../../kernel/standard-agent-interface.ts';
-import { readStandardAgentDescriptorForDomain } from '../../connect/standard-agent-interface-discovery.ts';
+import { readStandardAgentDescriptorForDomain } from '../../connect/index.ts';
 import type {
   ProjectCatalogEntry,
   WorkItemBusinessState,
