@@ -43,12 +43,19 @@ function makeDomainRepo(t: TestContext) {
   writeCommand(binDir, 'pandoc', [
     '#!/bin/sh',
     'output=""',
+    'title_block=""',
     'while [ "$#" -gt 0 ]; do',
     '  if [ "$1" = "-o" ]; then output="$2"; shift; fi',
+    '  if [ "$1" = "--metadata" ] && [ "${2#title=}" != "$2" ]; then title_block="yes"; fi',
     '  shift',
     'done',
     'mkdir -p "$(dirname "$output")"',
-    'printf "rendered\\n" > "$output"',
+    'if [ "${output##*.}" = "html" ]; then',
+    '  if [ -n "$title_block" ]; then printf "<header id=\\"title-block-header\\"><h1>Domain Whitepaper</h1></header>" > "$output"; fi',
+    '  printf "<h1>Domain Whitepaper</h1>\\n" >> "$output"',
+    'else',
+    '  printf "rendered\\n" > "$output"',
+    'fi',
   ].join('\n'));
   writeCommand(binDir, 'pdfinfo', '#!/bin/sh\nprintf "Pages: 1\\nPage size: 595 x 842 pts\\n"\n');
   writeCommand(binDir, 'pdftoppm', [
@@ -112,6 +119,9 @@ test('domain whitepaper runner renders a generic domain profile through the shar
   );
   const verificationPath = path.join(domainRepo, 'docs', 'site', 'latest', 'whitepapers', 'domain-whitepaper.verification.json');
   assert.deepEqual(JSON.parse(fs.readFileSync(verificationPath, 'utf8')), verification);
+  const html = fs.readFileSync(path.join(domainRepo, verification.generated_html as string), 'utf8');
+  assert.doesNotMatch(html, /title-block-header/);
+  assert.equal(html.match(/<h1/g)?.length, 1);
 });
 
 test('domain whitepaper runner binds verification to profile bytes', (t) => {
