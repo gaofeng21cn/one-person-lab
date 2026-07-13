@@ -317,10 +317,8 @@ test('domain selection uses package-locked domain routing signals for natural-la
           default_project_id: 'deck-001',
           required_locator_fields: ['workspace_root'],
           optional_locator_fields: [],
-          entry_command_template: null,
-          manifest_command_template: null,
         },
-        runtime: { runtime_domain_id: 'redcube', dispatch_command: null, registration_ref: null },
+        runtime: { runtime_domain_id: 'redcube', registration_ref: null },
         progress: { deliverable_delta_aliases: [], platform_delta_aliases: [] },
         routing: {
           explicit_aliases: ['rca'],

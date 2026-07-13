@@ -46,12 +46,9 @@ export type StandardAgentInterface = {
     default_project_id: string;
     required_locator_fields: StandardAgentLocatorField[];
     optional_locator_fields: StandardAgentLocatorField[];
-    entry_command_template: string[] | null;
-    manifest_command_template: string[] | null;
   };
   runtime: {
     runtime_domain_id: string;
-    dispatch_command: string[] | null;
     registration_ref: string | null;
   };
   progress: {
@@ -78,7 +75,6 @@ const LOCATOR_FIELDS = new Set<StandardAgentLocatorField>([
   'profile_ref',
   'input_path',
 ]);
-const TEMPLATE_PLACEHOLDER = /^\{(workspace_root|workspace_path|profile_ref|input_path)\}$/;
 const INVENTORY_FIELD_KEYS = [
   'work_item_id',
   'work_item_root',
@@ -123,36 +119,6 @@ function locatorFields(value: unknown, field: string, sourceRef: string) {
     }
   }
   return fields as StandardAgentLocatorField[];
-}
-
-function commandTemplate(value: unknown, field: string, sourceRef: string) {
-  if (!Array.isArray(value) || value.some((entry) => typeof entry !== 'string' || !entry.trim())) {
-    invalid(`Standard Agent interface field ${field} must be an array of non-empty command tokens.`, sourceRef, { field });
-  }
-  const tokens = value.map((entry) => String(entry).trim());
-  if (tokens.length === 0) {
-    invalid(`Standard Agent interface field ${field} must contain at least one command token.`, sourceRef, { field });
-  }
-  for (const token of tokens) {
-    if (token.includes('{') || token.includes('}')) {
-      if (!TEMPLATE_PLACEHOLDER.test(token)) {
-        invalid(`Standard Agent interface field ${field} contains an unsupported placeholder.`, sourceRef, {
-          field,
-          token,
-        });
-      }
-    } else if (!/^[A-Za-z0-9_./:@%+=,-]+$/.test(token)) {
-      invalid(`Standard Agent interface field ${field} contains an unsafe literal command token.`, sourceRef, {
-        field,
-        token,
-      });
-    }
-  }
-  return tokens;
-}
-
-function optionalCommandTemplate(value: unknown, field: string, sourceRef: string) {
-  return value === null ? null : commandTemplate(value, field, sourceRef);
 }
 
 function inventoryProjection(value: unknown, sourceRef: string): StandardAgentInventoryProjection | null {
@@ -268,10 +234,8 @@ export function parseStandardAgentInterface(value: unknown, sourceRef: string): 
     'default_project_id',
     'required_locator_fields',
     'optional_locator_fields',
-    'entry_command_template',
-    'manifest_command_template',
   ], 'workspace_binding', sourceRef);
-  assertKnownKeys(runtime, ['runtime_domain_id', 'dispatch_command', 'registration_ref'], 'runtime', sourceRef);
+  assertKnownKeys(runtime, ['runtime_domain_id', 'registration_ref'], 'runtime', sourceRef);
   assertKnownKeys(progress, ['deliverable_delta_aliases', 'platform_delta_aliases'], 'progress', sourceRef);
   assertKnownKeys(routing, [
     'explicit_aliases',
@@ -295,9 +259,6 @@ export function parseStandardAgentInterface(value: unknown, sourceRef: string): 
     invalid('Standard Agent interface locator fields cannot be both required and optional.', sourceRef, { overlap });
   }
 
-  const dispatchCommand = runtime.dispatch_command === null
-    ? null
-    : commandTemplate(runtime.dispatch_command, 'runtime.dispatch_command', sourceRef);
   const registrationRef = runtime.registration_ref === null
     ? null
     : stringValue(runtime.registration_ref, 'runtime.registration_ref', sourceRef);
@@ -311,27 +272,6 @@ export function parseStandardAgentInterface(value: unknown, sourceRef: string): 
       default_profile_id: defaultProfileId,
     });
   }
-  const declaredLocatorFields = new Set([
-    ...requiredLocatorFields,
-    ...optionalLocatorFields,
-    'workspace_path' as const,
-  ]);
-  for (const [field, template] of [
-    ['workspace_binding.entry_command_template', workspaceBinding.entry_command_template],
-    ['workspace_binding.manifest_command_template', workspaceBinding.manifest_command_template],
-  ] as const) {
-    if (!Array.isArray(template)) continue;
-    for (const token of template) {
-      const match = TEMPLATE_PLACEHOLDER.exec(String(token));
-      if (match && !declaredLocatorFields.has(match[1] as StandardAgentLocatorField)) {
-        invalid(`Standard Agent interface field ${field} references an undeclared locator field.`, sourceRef, {
-          field,
-          locator_field: match[1],
-        });
-      }
-    }
-  }
-
   const workstreamIds = stringArray(routing.workstream_ids, 'routing.workstream_ids', sourceRef);
   if (workstreamIds.length > 1) {
     invalid('Standard Agent interface v1 supports at most one admitted workstream per Agent.', sourceRef, {
@@ -367,20 +307,9 @@ export function parseStandardAgentInterface(value: unknown, sourceRef: string): 
       ),
       required_locator_fields: requiredLocatorFields,
       optional_locator_fields: optionalLocatorFields,
-      entry_command_template: optionalCommandTemplate(
-        workspaceBinding.entry_command_template,
-        'workspace_binding.entry_command_template',
-        sourceRef,
-      ),
-      manifest_command_template: optionalCommandTemplate(
-        workspaceBinding.manifest_command_template,
-        'workspace_binding.manifest_command_template',
-        sourceRef,
-      ),
     },
     runtime: {
       runtime_domain_id: stringValue(runtime.runtime_domain_id, 'runtime.runtime_domain_id', sourceRef),
-      dispatch_command: dispatchCommand,
       registration_ref: registrationRef,
     },
     progress: {
@@ -516,24 +445,4 @@ export function assertStandardAgentDescriptorIdentity(
     );
   }
   return descriptor;
-}
-
-export function materializeStandardAgentCommand(
-  template: readonly string[],
-  locator: Partial<Record<StandardAgentLocatorField, string | null>>,
-) {
-  return template.map((token) => {
-    const match = TEMPLATE_PLACEHOLDER.exec(token);
-    if (!match) return token;
-    const field = match[1] as StandardAgentLocatorField;
-    const value = locator[field]?.trim();
-    if (!value) {
-      throw new FrameworkContractError(
-        'contract_shape_invalid',
-        'Standard Agent command template requires a missing workspace locator field.',
-        { field, template },
-      );
-    }
-    return value;
-  });
 }

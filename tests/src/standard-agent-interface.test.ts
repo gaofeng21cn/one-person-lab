@@ -6,7 +6,6 @@ import test from 'node:test';
 
 import {
   assertStandardAgentDescriptorIdentity,
-  materializeStandardAgentCommand,
   parseStandardAgentInterface,
   readStandardAgentDescriptorInterface,
   readStandardAgentInterface,
@@ -31,12 +30,9 @@ function fixture() {
       default_project_id: 'fixture-001',
       required_locator_fields: ['profile_ref'],
       optional_locator_fields: ['workspace_root'],
-      entry_command_template: ['fixture', 'status', '--profile-ref', '{profile_ref}'],
-      manifest_command_template: ['fixture', 'manifest', '--profile-ref', '{profile_ref}'],
     },
     runtime: {
       runtime_domain_id: 'fixture',
-      dispatch_command: ['fixture', 'dispatch'],
       registration_ref: 'contracts/domain_descriptor.json#/runtime',
     },
     progress: {
@@ -56,12 +52,7 @@ test('standard Agent interface parses a domain-owned descriptor without domain b
   const descriptor = parseStandardAgentInterface(fixture(), 'fixture.json#/standard_agent_interface');
   assert.equal(descriptor.workspace_binding.locator_surface_kind, 'fixture_workspace_locator');
   assert.equal(descriptor.inventory_projection, null);
-  assert.deepEqual(
-    materializeStandardAgentCommand(descriptor.workspace_binding.entry_command_template!, {
-      profile_ref: '/tmp/profile.toml',
-    }),
-    ['fixture', 'status', '--profile-ref', '/tmp/profile.toml'],
-  );
+  assert.equal(descriptor.runtime.registration_ref, 'contracts/domain_descriptor.json#/runtime');
 });
 
 test('standard Agent interface accepts an optional JSON inventory projection and display name field', () => {
@@ -95,12 +86,24 @@ test('standard Agent interface accepts an optional JSON inventory projection and
   );
 });
 
-test('standard Agent interface rejects unknown command placeholders', () => {
-  const value = fixture();
-  value.workspace_binding.entry_command_template = ['fixture', '{domain_private_value}'];
+test('standard Agent interface rejects retired private command templates', () => {
+  const workspaceCommand = fixture() as ReturnType<typeof fixture> & {
+    workspace_binding: ReturnType<typeof fixture>['workspace_binding'] & {
+      entry_command_template: string[];
+    };
+  };
+  workspaceCommand.workspace_binding.entry_command_template = ['fixture', 'status'];
   assert.throws(
-    () => parseStandardAgentInterface(value, 'fixture.json#/standard_agent_interface'),
-    /unsupported placeholder/,
+    () => parseStandardAgentInterface(workspaceCommand, 'fixture.json#/standard_agent_interface'),
+    /unknown properties/,
+  );
+  const runtimeCommand = fixture() as ReturnType<typeof fixture> & {
+    runtime: ReturnType<typeof fixture>['runtime'] & { dispatch_command: string[] };
+  };
+  runtimeCommand.runtime.dispatch_command = ['fixture', 'dispatch'];
+  assert.throws(
+    () => parseStandardAgentInterface(runtimeCommand, 'fixture.json#/standard_agent_interface'),
+    /unknown properties/,
   );
 });
 
@@ -133,18 +136,12 @@ test('standard Agent interface follows a repo-local canonical JSON pointer', () 
   }
 });
 
-test('standard Agent interface parser enforces closed objects and declared placeholders', () => {
+test('standard Agent interface parser enforces closed objects', () => {
   const unknown = fixture() as ReturnType<typeof fixture> & { private_runtime: boolean };
   unknown.private_runtime = true;
   assert.throws(
     () => parseStandardAgentInterface(unknown, 'fixture.json#/standard_agent_interface'),
     /unknown properties/,
-  );
-  const undeclared = fixture();
-  undeclared.workspace_binding.required_locator_fields = [];
-  assert.throws(
-    () => parseStandardAgentInterface(undeclared, 'fixture.json#/standard_agent_interface'),
-    /undeclared locator field/,
   );
   const multipleWorkstreams = fixture();
   multipleWorkstreams.routing.workstream_ids = ['fixture_ops', 'other_ops'];

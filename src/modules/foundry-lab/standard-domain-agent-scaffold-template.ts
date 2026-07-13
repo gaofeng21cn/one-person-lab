@@ -472,12 +472,9 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
             default_project_id: `${domainId}-001`,
             required_locator_fields: ['workspace_root'],
             optional_locator_fields: [],
-            entry_command_template: null,
-            manifest_command_template: null,
           },
           runtime: {
             runtime_domain_id: domainId,
-            dispatch_command: null,
             registration_ref: 'contracts/domain_descriptor.json',
           },
           progress: {

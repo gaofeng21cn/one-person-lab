@@ -440,12 +440,9 @@ test('workspace bind replaces an active stale MAS locator binding', () => {
           default_project_id: 'study-001',
           required_locator_fields: ['profile_ref'],
           optional_locator_fields: ['workspace_root'],
-          entry_command_template: ['medautosci', 'product-entry-status', '--profile-ref', '{profile_ref}'],
-          manifest_command_template: ['medautosci', 'product-entry-manifest', '--profile-ref', '{profile_ref}'],
         },
         runtime: {
           runtime_domain_id: 'medautoscience',
-          dispatch_command: ['medautosci', 'domain-handler', 'dispatch'],
           registration_ref: 'contracts/domain_descriptor.json#/runtime',
         },
         progress: {
@@ -491,10 +488,8 @@ test('workspace bind replaces an active stale MAS locator binding', () => {
       '--profile', profilePath,
     ], { OPL_STATE_DIR: stateRoot }).workspace_catalog;
     assert.equal(catalog.binding.workspace_path, currentRoot);
-    assert.equal(
-      catalog.binding.direct_entry.command,
-      `medautosci product-entry-status --profile-ref ${profilePath}`,
-    );
+    assert.equal(catalog.binding.direct_entry.command, null);
+    assert.equal(catalog.binding.direct_entry.manifest_command, null);
     assert.equal(
       catalog.bindings.find((entry: { binding_id: string }) => entry.binding_id === 'stale-mas-binding').status,
       'inactive',
@@ -525,10 +520,8 @@ test('workspace bind rejects a descriptor owned by another project', () => {
           default_project_id: 'study-001',
           required_locator_fields: ['workspace_root'],
           optional_locator_fields: [],
-          entry_command_template: ['medautosci', 'status', '{workspace_root}'],
-          manifest_command_template: ['medautosci', 'manifest', '{workspace_root}'],
         },
-        runtime: { runtime_domain_id: 'medautoscience', dispatch_command: null, registration_ref: null },
+        runtime: { runtime_domain_id: 'medautoscience', registration_ref: null },
         progress: { deliverable_delta_aliases: [], platform_delta_aliases: [] },
         routing: {
           explicit_aliases: ['mas'],
