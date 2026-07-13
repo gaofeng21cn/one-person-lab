@@ -1,8 +1,12 @@
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import {
+  classifyStageQualityReReviewBudget,
   evaluateStageQualityFindingClosure,
   STAGE_QUALITY_ATTEMPT_ROLES,
+  STAGE_QUALITY_OUTCOMES,
+  validateStageQualityReReviewOutcome,
   type StageQualityFinding,
+  type StageQualityOutcome,
   type StageQualityRepairMapEntry,
   type StageQualityReReviewResult,
 } from './stage-quality-cycle.ts';
@@ -202,25 +206,10 @@ function reReviewClosureState(input: {
           : [],
       },
     });
-    return { valid: true as const, trigger_repair: closure.trigger_repair };
+    return { valid: true as const, closure };
   } catch {
-    return { valid: false as const, trigger_repair: true };
+    return { valid: false as const, closure: null };
   }
-}
-
-function reReviewStillRequiresRepair(input: {
-  attempt: JsonRecord;
-  routeImpact: JsonRecord;
-  qualityRoundIndex: unknown;
-  maxRepairRounds: unknown;
-}) {
-  const closure = reReviewClosureState(input);
-  const round = Number(input.qualityRoundIndex);
-  const maxRounds = Number(input.maxRepairRounds);
-  return closure.trigger_repair
-    && Number.isInteger(round)
-    && Number.isInteger(maxRounds)
-    && round < maxRounds;
 }
 
 function terminalDecisionRejectionReasons(input: {
@@ -234,31 +223,68 @@ function terminalDecisionRejectionReasons(input: {
   const reasons: string[] = [];
   if (!decisiveRoles.includes(role)) reasons.push('attempt_role_is_not_configured_decisive_role');
   const envelope = record(input.routeImpact.stage_quality_cycle);
+  const outcome = text(envelope.outcome);
+  const reviewRole = role === 'reviewer' || role === 're_reviewer';
+  const hardStopOutcome = outcome === 'blocked' || outcome === 'human_gate';
+  if (Object.hasOwn(envelope, 'verdict')) {
+    reasons.push('attempt_verdict_field_is_reserved_for_controller_receipt');
+  }
+  if (!reviewRole && Object.hasOwn(envelope, 'outcome')) {
+    reasons.push('stage_quality_outcome_is_forbidden_for_attempt_role');
+  }
+  if (reviewRole && (!outcome || !(STAGE_QUALITY_OUTCOMES as readonly string[]).includes(outcome))) {
+    reasons.push('stage_quality_outcome_invalid_or_missing');
+  }
   if (
-    ['blocked', 'human_gate'].includes(String(envelope.outcome))
+    hardStopOutcome
     || Boolean(text(envelope.hard_stop_class))
   ) {
     reasons.push('hard_stop_attempt_cannot_select_terminal_route');
   }
-  if (role === 'reviewer' && envelope.outcome === 'repair_required') {
-    reasons.push('review_requires_internal_repair_continuation');
+  if (role === 'reviewer' && !hardStopOutcome) {
+    const maxRepairRounds = Number(context.max_repair_rounds);
+    const budgetExhaustedWithoutRepair = Number.isInteger(maxRepairRounds) && maxRepairRounds === 0;
+    if (outcome === 'repair_required' && !budgetExhaustedWithoutRepair) {
+      reasons.push('review_requires_internal_repair_continuation');
+    }
+    if (
+      !['pass', 'quality_debt'].includes(String(outcome))
+      && !(outcome === 'repair_required' && budgetExhaustedWithoutRepair)
+    ) {
+      reasons.push('review_outcome_does_not_terminalize_stage_run');
+    }
   }
-  if (role === 'reviewer' && ![
-    'pass',
-    'quality_debt',
-  ].includes(String(envelope.outcome))) {
-    reasons.push('review_outcome_does_not_terminalize_stage_run');
-  }
-  if (role === 're_reviewer') {
+  if (role === 're_reviewer' && !hardStopOutcome) {
     const closure = reReviewClosureState({ attempt: input.attempt, routeImpact: input.routeImpact });
     if (!closure.valid) reasons.push('re_review_closure_contract_invalid');
-    if (closure.valid && reReviewStillRequiresRepair({
-      attempt: input.attempt,
-      routeImpact: input.routeImpact,
-      qualityRoundIndex: input.attempt.quality_round_index,
-      maxRepairRounds: context.max_repair_rounds,
-    })) {
+    let budgetDisposition: ReturnType<typeof classifyStageQualityReReviewBudget> | null = null;
+    if (closure.valid && outcome && (STAGE_QUALITY_OUTCOMES as readonly string[]).includes(outcome)) {
+      try {
+        validateStageQualityReReviewOutcome({
+          outcome: outcome as StageQualityOutcome,
+          closure: closure.closure,
+        });
+      } catch {
+        reasons.push('re_review_outcome_closure_mismatch');
+      }
+      try {
+        budgetDisposition = classifyStageQualityReReviewBudget({
+          closure: closure.closure,
+          qualityRoundIndex: input.attempt.quality_round_index,
+          maxRepairRounds: context.max_repair_rounds,
+        });
+      } catch {
+        reasons.push('re_review_budget_identity_invalid');
+      }
+    }
+    if (budgetDisposition === 'continue_repair') {
       reasons.push('re_review_requires_another_repair_round');
+    }
+    if (
+      !['pass', 'quality_debt'].includes(String(outcome))
+      && !(outcome === 'repair_required' && budgetDisposition === 'terminal_quality_debt')
+    ) {
+      reasons.push('re_review_outcome_does_not_terminalize_stage_run');
     }
   }
   return reasons;

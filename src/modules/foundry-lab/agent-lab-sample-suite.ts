@@ -16,7 +16,8 @@ function stageCompletionPolicy(policyRef: string) {
     raw_artifact_sufficient_for_progress: true,
     provider_completion_is_domain_completion: false,
     opl_content_judgment_allowed: false,
-    next_stage_transition_owner: 'codex_cli',
+    semantic_route_decision_owner: 'decisive_codex_attempt',
+    stage_transition_materialization_owner: 'opl_stage_run_controller',
     required_closeout_outcomes: [
       'completed_and_continue',
       'completed_and_wait_owner',

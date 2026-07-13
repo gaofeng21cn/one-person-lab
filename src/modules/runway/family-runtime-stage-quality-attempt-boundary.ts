@@ -15,6 +15,64 @@ const FORBIDDEN_STAGE_FIELDS = [
   'stage_transition_authority',
 ] as const;
 
+export const STAGE_RUN_ATTEMPT_CONTENT_BINDING_VERSION =
+  'opl-stage-run-attempt-content-binding.v1' as const;
+
+export function isStageRunQualityAttempt(input: Record<string, unknown>) {
+  return Boolean(input.stage_run_id || input.quality_cycle_id || input.attempt_role);
+}
+
+export function requireStageRunAttemptContentBindingVersion(
+  input: Record<string, unknown>,
+  options: { allowLegacyUnbound: boolean },
+) {
+  if (!isStageRunQualityAttempt(input)) return input;
+  const version = input.stage_run_content_binding_version;
+  if (version === undefined || version === null) {
+    if (options.allowLegacyUnbound) return input;
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'StageRun child Attempt requires an immutable content binding version.',
+      {
+        failure_code: 'stage_run_child_content_binding_version_missing',
+        stage_attempt_id: input.stage_attempt_id ?? null,
+        stage_run_id: input.stage_run_id ?? null,
+        attempt_role: input.attempt_role ?? null,
+      },
+    );
+  }
+  if (version !== STAGE_RUN_ATTEMPT_CONTENT_BINDING_VERSION) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'StageRun child Attempt content binding version is unsupported.',
+      {
+        failure_code: 'stage_run_child_content_binding_version_unsupported',
+        stage_attempt_id: input.stage_attempt_id ?? null,
+        stage_run_id: input.stage_run_id ?? null,
+        received_version: version,
+      },
+    );
+  }
+  return input;
+}
+
+export function requireGenericResumeAllowed(
+  input: Record<string, unknown>,
+  signalKind: unknown,
+) {
+  if (signalKind !== 'resume' || !isStageRunQualityAttempt(input)) return;
+  throw new FrameworkContractError(
+    'contract_shape_invalid',
+    'A StageRun quality Attempt cannot resume in place; the StageRun controller must create a new Attempt.',
+    {
+      failure_code: 'stage_run_quality_attempt_generic_resume_forbidden',
+      stage_attempt_id: input.stage_attempt_id ?? null,
+      stage_run_id: input.stage_run_id ?? null,
+      attempt_role: input.attempt_role ?? null,
+    },
+  );
+}
+
 type ParentAttemptLineage = {
   stage_run_id: string;
   quality_cycle_id: string;

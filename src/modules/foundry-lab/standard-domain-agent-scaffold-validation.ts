@@ -215,10 +215,14 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
     'contracts/workspace_lifecycle_policy.json',
   ];
   const missingContractFiles = requiredContractFiles.filter((file) => !fs.existsSync(path.join(repoDir, file)));
-  const actionCatalog = readJsonFileOrNull(path.join(repoDir, 'contracts/action_catalog.json'));
-  const actionCatalogRecord = isRecord(actionCatalog) ? actionCatalog : {};
-  const forbiddenRoles = Array.isArray(actionCatalogRecord.forbidden_generic_owner_roles)
-    ? actionCatalogRecord.forbidden_generic_owner_roles
+  const functionalPrivatizationAudit = readJsonFileOrNull(
+    path.join(repoDir, 'contracts/functional_privatization_audit.json'),
+  );
+  const functionalPrivatizationAuditRecord = isRecord(functionalPrivatizationAudit)
+    ? functionalPrivatizationAudit
+    : {};
+  const forbiddenRoles = Array.isArray(functionalPrivatizationAuditRecord.forbidden_generic_owner_roles)
+    ? functionalPrivatizationAuditRecord.forbidden_generic_owner_roles
     : [];
   const missingForbiddenRoleGuards = FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES.filter((role) => !forbiddenRoles.includes(role));
   const descriptor = readJsonFileOrNull(path.join(repoDir, 'contracts/domain_descriptor.json'));

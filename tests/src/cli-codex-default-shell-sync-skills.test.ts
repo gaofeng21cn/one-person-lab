@@ -140,10 +140,16 @@ test('opl connect skills discovers the family plugin packs through the configure
       OPL_STATE_DIR: stateDir,
     });
     assert.equal(previewOutput.generated_agent_interfaces.status, 'ready');
+    const generatedSkillDescriptor = previewOutput.generated_agent_interfaces.skill.descriptors[0];
     assert.match(
-      JSON.stringify(previewOutput.generated_agent_interfaces),
-      /npm run build-agent-baseline -- --output-dir <output_dir> --opl-bin <opl_bin> --ai-reviewer-evaluation <ai_reviewer_evaluation> --domain-id <domain_id> --domain-label <domain_label> --delivery-domain <delivery_domain> --target-brief <target_brief>/,
+      generatedSkillDescriptor.command,
+      /^opl agents run --domain opl-meta-agent --action build-agent-baseline --workspace /,
     );
+    assert.deepEqual(generatedSkillDescriptor.execution_binding, {
+      kind: 'stage_binding',
+      stage_manifest_ref: 'agent/stages/manifest.json',
+    });
+    assert.doesNotMatch(JSON.stringify(previewOutput.generated_agent_interfaces), /npm run build-agent-baseline/);
     assert.doesNotMatch(JSON.stringify(previewOutput.generated_agent_interfaces), /bootstrap:sample/);
     assert.equal(fs.existsSync(syncLogPath), false);
   } finally {

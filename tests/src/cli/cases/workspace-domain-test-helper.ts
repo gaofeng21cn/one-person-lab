@@ -17,37 +17,11 @@ export type JsonRecord = Record<string, unknown>;
 
 type WorkspaceDescriptorFixtureAgent = 'mas' | 'mag' | 'rca';
 
-function executableWorkspaceCommandTemplates(agent: WorkspaceDescriptorFixtureAgent) {
-  if (agent === 'mas') {
-    return {
-      entry_command_template: ['opl-test-domain-entry', 'mas', 'status', '{workspace_root}', '{profile_ref}'],
-      manifest_command_template: ['opl-test-domain-entry', 'mas', 'manifest', '{workspace_root}', '{profile_ref}'],
-    };
-  }
-  if (agent === 'mag') {
-    return {
-      entry_command_template: ['opl-test-domain-entry', 'mag', 'status', '{workspace_path}', '{input_path}'],
-      manifest_command_template: ['opl-test-domain-entry', 'mag', 'manifest', '{workspace_path}', '{input_path}'],
-    };
-  }
-  return {
-    entry_command_template: ['opl-test-domain-entry', 'rca', 'status', '{workspace_root}'],
-    manifest_command_template: ['opl-test-domain-entry', 'rca', 'manifest', '{workspace_root}'],
-  };
-}
-
-function workspaceDescriptorFixture(
-  agent: WorkspaceDescriptorFixtureAgent,
-  includeExecutableCommands: boolean,
-) {
-  const commands = includeExecutableCommands
-    ? executableWorkspaceCommandTemplates(agent)
-    : { entry_command_template: null, manifest_command_template: null };
+function workspaceDescriptorFixture(agent: WorkspaceDescriptorFixtureAgent) {
   const common = {
     version: 'opl_standard_agent_interface.v1',
     runtime: {
       runtime_domain_id: agent === 'mas' ? 'medautoscience' : agent === 'mag' ? 'medautogrant' : 'redcube_ai',
-      dispatch_command: null,
       registration_ref: null,
     },
     progress: {
@@ -78,7 +52,6 @@ function workspaceDescriptorFixture(
             default_project_id: 'study-001',
             required_locator_fields: ['profile_ref'],
             optional_locator_fields: ['workspace_root'],
-            ...commands,
           },
         },
       },
@@ -101,7 +74,6 @@ function workspaceDescriptorFixture(
             default_project_id: 'grant-001',
             required_locator_fields: ['input_path'],
             optional_locator_fields: [],
-            ...commands,
           },
         },
       },
@@ -123,7 +95,6 @@ function workspaceDescriptorFixture(
           default_project_id: 'deck-001',
           required_locator_fields: ['workspace_root'],
           optional_locator_fields: [],
-          ...commands,
         },
       },
     },
@@ -132,11 +103,10 @@ function workspaceDescriptorFixture(
 
 export function createWorkspaceDescriptorFamilyFixture(
   agents: WorkspaceDescriptorFixtureAgent[] = ['mas', 'mag', 'rca'],
-  options: { includeExecutableCommands?: boolean } = {},
 ) {
   const familyRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-descriptor-family-'));
   for (const agent of agents) {
-    const descriptor = workspaceDescriptorFixture(agent, options.includeExecutableCommands === true);
+    const descriptor = workspaceDescriptorFixture(agent);
     const contractsDir = path.join(familyRoot, descriptor.repoName, 'contracts');
     fs.mkdirSync(contractsDir, { recursive: true });
     fs.writeFileSync(
@@ -239,25 +209,44 @@ export function buildAdmittedActionCatalog(
 ) {
   return {
     surface_kind: 'family_action_catalog',
-    version: 'family-action-catalog.v1',
+    version: 'family-action-catalog.v2',
     catalog_id: `${targetDomainId.replace(/[^a-z0-9]+/gi, '_')}_action_catalog`,
     target_domain_id: targetDomainId,
     owner,
-    authority_boundary: { opl_role: 'projection_consumer_only' },
-    actions: Array.from({ length: 6 }, (_entry, index) => ({
-      action_id: `stage_${index + 1}_action`,
-      title: `Stage ${index + 1} action`,
-      summary: `Project stage ${index + 1} action metadata.`,
-      owner,
-      effect: 'read_only',
-      source_command: { command: `${owner} stage-${index + 1}`, surface_kind: 'domain_cli' },
-      input_schema_ref: `contracts/stage-${index + 1}.input.schema.json`,
-      output_schema_ref: `contracts/stage-${index + 1}.output.schema.json`,
-      workspace_locator_fields: ['workspace_root'],
-      human_gate_ids: options.stage2HumanGate && index === 1 ? ['publication_quality_gate'] : [],
-      supported_surfaces: { cli: null, mcp: null, skill: null, product_entry: null, openai: null, ai_sdk: null },
-      authority_boundary: { opl_role: 'projection_consumer_only' },
-    })),
+    authority_boundary: {
+      domain_truth_owner: targetDomainId,
+      opl_role: 'projection_consumer_only',
+      write_policy: 'no_domain_truth_writes',
+    },
+    actions: Array.from({ length: 6 }, (_entry, index) => {
+      const stageId = `stage_${index + 1}`;
+      return {
+        action_id: `${stageId}_action`,
+        title: `Stage ${index + 1} action`,
+        summary: `Project stage ${index + 1} action metadata.`,
+        owner,
+        effect: 'read_only',
+        execution_binding: {
+          kind: 'stage_binding',
+          stage_manifest_ref: 'agent/stages/manifest.json',
+        },
+        input_schema_ref: `contracts/stage-${index + 1}.input.schema.json`,
+        output_schema_ref: `contracts/stage-${index + 1}.output.schema.json`,
+        required_fields: [],
+        optional_fields: ['workspace_root'],
+        workspace_locator_fields: ['workspace_root'],
+        human_gate_ids: options.stage2HumanGate && index === 1 ? ['publication_quality_gate'] : [],
+        stage_route: {
+          entry_stage_ref: stageId,
+          required_stage_refs: [stageId],
+          optional_stage_refs: [],
+          terminal_stage_refs: [stageId],
+          route_policy: 'ai_selected_progress_route',
+        },
+        supported_surfaces: { cli: null, mcp: null, skill: null, product_entry: null, openai: null, ai_sdk: null },
+        authority_boundary: { opl_role: 'projection_consumer_only' },
+      };
+    }),
     notes: [],
   };
 }

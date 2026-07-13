@@ -66,9 +66,13 @@ export function validateUserStageLogContracts(stageControlPlane: unknown) {
       stageCompletionPolicy?.opl_content_judgment_allowed === false
         ? null
         : `stage_completion_policy_opl_content_judgment_allowed:${stageId}`,
-      readOptionalString(stageCompletionPolicy?.next_stage_transition_owner) === 'codex_cli'
+      readOptionalString(stageCompletionPolicy?.semantic_route_decision_owner) === 'decisive_codex_attempt'
         ? null
-        : `stage_completion_policy_next_transition_owner_invalid:${stageId}`,
+        : `stage_completion_policy_semantic_route_decision_owner_invalid:${stageId}`,
+      readOptionalString(stageCompletionPolicy?.stage_transition_materialization_owner)
+        === 'opl_stage_run_controller'
+        ? null
+        : `stage_completion_policy_transition_materialization_owner_invalid:${stageId}`,
       closeoutOutcomes.includes('completed_and_continue')
         ? null
         : `stage_completion_policy_missing_completed_and_continue:${stageId}`,

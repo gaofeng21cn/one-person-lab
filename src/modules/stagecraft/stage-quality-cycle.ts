@@ -7,7 +7,27 @@ export const STAGE_QUALITY_ATTEMPT_ROLES = [
   're_reviewer',
 ] as const;
 
+export const STAGE_QUALITY_OUTCOMES = [
+  'pass',
+  'repair_required',
+  'quality_debt',
+  'blocked',
+  'human_gate',
+] as const;
+
+export const STAGE_QUALITY_HARD_STOP_CLASSES = [
+  'zero_consumable_artifact',
+  'safety_or_compliance',
+  'permission_or_credential_boundary',
+  'human_decision_required',
+  'authority_boundary_violation',
+  'stale_or_mismatched_stage_identity',
+] as const;
+
 export type StageQualityAttemptRole = typeof STAGE_QUALITY_ATTEMPT_ROLES[number];
+export type StageQualityReviewAttemptRole = Extract<StageQualityAttemptRole, 'reviewer' | 're_reviewer'>;
+export type StageQualityOutcome = typeof STAGE_QUALITY_OUTCOMES[number];
+export type StageQualityHardStopClass = typeof STAGE_QUALITY_HARD_STOP_CLASSES[number];
 export type StageQualityReviewVerdict = 'pass' | 'repair_required' | 'quality_debt' | 'hard_stop';
 export type StageQualityRiskTier = 'low' | 'medium' | 'high';
 export type StageQualityReviewDepth = 'focused' | 'full' | 'multi_axis';
@@ -43,6 +63,7 @@ export type StageReviewContextManifest = {
   quality_rubric_refs: string[];
   lineage_refs: string[];
   prior_finding_refs: string[];
+  repair_map_refs: string[];
   no_context_inheritance: true;
   forbidden_context_kinds: string[];
 };
@@ -61,6 +82,13 @@ export type StageReviewReceipt = {
   reviewed_artifact_hashes: string[];
   rubric_refs: string[];
   verdict: StageQualityReviewVerdict;
+  finding_lineage: {
+    review_kind: 'initial_review' | 'finding_closure_review';
+    finding_ids: string[];
+    findings_sha256: string;
+    repair_map_sha256: string | null;
+    re_review_result_sha256: string | null;
+  };
 };
 
 export type StageQualityCycleState = {
@@ -117,11 +145,52 @@ function nonEmptyStrings(value: unknown, field: string) {
   return [...new Set(value.map((entry) => entry.trim()))];
 }
 
+function nonEmptyStringSequence(value: unknown, field: string) {
+  if (!Array.isArray(value) || value.some((entry) => typeof entry !== 'string' || !entry.trim())) {
+    throw new FrameworkContractError('contract_shape_invalid', `${field} must contain non-empty strings.`, {
+      field,
+    });
+  }
+  return value.map((entry) => entry.trim());
+}
+
+export function normalizeStageQualityArtifactIdentity(input: {
+  artifactRefs: unknown;
+  artifactHashes: unknown;
+  allowEmpty?: boolean;
+}) {
+  const artifactRefs = nonEmptyStringSequence(input.artifactRefs, 'artifact_refs');
+  const artifactHashes = nonEmptyStringSequence(input.artifactHashes, 'artifact_hashes');
+  if (artifactRefs.length !== artifactHashes.length) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Artifact refs and hashes must have equal cardinality.',
+      { artifact_ref_count: artifactRefs.length, artifact_hash_count: artifactHashes.length },
+    );
+  }
+  if (!input.allowEmpty && artifactRefs.length === 0) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Artifact identity requires at least one exact ref and hash pair.',
+    );
+  }
+  uniqueIds(artifactRefs, 'artifact_refs');
+  return { artifact_refs: artifactRefs, artifact_hashes: artifactHashes } as const;
+}
+
 function requiredText(value: unknown, field: string) {
   if (typeof value !== 'string' || !value.trim()) {
     throw new FrameworkContractError('contract_shape_invalid', `${field} must be a non-empty string.`, { field });
   }
   return value.trim();
+}
+
+function requiredRefs(value: unknown, field: string) {
+  const normalized = nonEmptyStrings(value, field);
+  if (normalized.length === 0) {
+    throw new FrameworkContractError('contract_shape_invalid', `${field} requires at least one ref.`, { field });
+  }
+  return normalized;
 }
 
 export function normalizeStageQualityAttemptRole(value: unknown): StageQualityAttemptRole {
@@ -132,6 +201,134 @@ export function normalizeStageQualityAttemptRole(value: unknown): StageQualityAt
     attempt_role: value ?? null,
     allowed: STAGE_QUALITY_ATTEMPT_ROLES,
   });
+}
+
+export function normalizeStageQualityOutcome(value: unknown): StageQualityOutcome {
+  if (typeof value === 'string' && STAGE_QUALITY_OUTCOMES.includes(value as StageQualityOutcome)) {
+    return value as StageQualityOutcome;
+  }
+  throw new FrameworkContractError('contract_shape_invalid', 'Unknown Stage quality outcome.', {
+    outcome: value ?? null,
+    allowed: STAGE_QUALITY_OUTCOMES,
+  });
+}
+
+export function stageQualityOutcomeFromEnvelope(input: {
+  attemptRole: StageQualityReviewAttemptRole;
+  envelope: Record<string, unknown>;
+}) {
+  if (Object.hasOwn(input.envelope, 'verdict')) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Stage quality Attempt must return outcome; verdict is reserved for controller-generated review receipts.',
+      {
+        attempt_role: input.attemptRole,
+        forbidden_field: 'verdict',
+        required_field: 'outcome',
+      },
+    );
+  }
+  return normalizeStageQualityOutcome(input.envelope.outcome);
+}
+
+export function stageQualityAttemptOutcomeFromEnvelope(input: {
+  attemptRole: StageQualityAttemptRole;
+  envelope: Record<string, unknown>;
+}) {
+  if (input.attemptRole === 'reviewer' || input.attemptRole === 're_reviewer') {
+    return stageQualityOutcomeFromEnvelope({
+      attemptRole: input.attemptRole,
+      envelope: input.envelope,
+    });
+  }
+  const forbiddenFields = ['outcome', 'verdict'].filter((field) => Object.hasOwn(input.envelope, field));
+  if (forbiddenFields.length > 0) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Producer and repairer Stage quality Attempts must not return outcome or verdict.',
+      {
+        attempt_role: input.attemptRole,
+        forbidden_fields: forbiddenFields,
+        controller_owned_receipt_field: 'verdict',
+      },
+    );
+  }
+  return null;
+}
+
+function optionalEnvelopeRefs(
+  envelope: Record<string, unknown>,
+  singularField: string,
+  pluralField: string,
+) {
+  const singularValue = envelope[singularField];
+  const singular = typeof singularValue === 'string' && singularValue.trim()
+    ? [singularValue.trim()]
+    : [];
+  const plural = Array.isArray(envelope[pluralField])
+    ? envelope[pluralField].filter((entry): entry is string => typeof entry === 'string' && Boolean(entry.trim()))
+      .map((entry) => entry.trim())
+    : [];
+  return [...new Set([...singular, ...plural])];
+}
+
+export function validateStageQualityReviewHardStopOutcome(input: {
+  outcome: Extract<StageQualityOutcome, 'blocked' | 'human_gate'>;
+  envelope: Record<string, unknown>;
+}) {
+  const hardStopClass = input.envelope.hard_stop_class;
+  if (
+    typeof hardStopClass !== 'string'
+    || !STAGE_QUALITY_HARD_STOP_CLASSES.includes(hardStopClass as StageQualityHardStopClass)
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Stage Review hard-stop outcome requires a declared canonical hard_stop_class.',
+      {
+        outcome: input.outcome,
+        hard_stop_class: hardStopClass ?? null,
+        allowed: STAGE_QUALITY_HARD_STOP_CLASSES,
+      },
+    );
+  }
+  const blockedReason = requiredText(input.envelope.blocked_reason, 'blocked_reason');
+  const typedBlockerRefs = optionalEnvelopeRefs(input.envelope, 'typed_blocker_ref', 'typed_blocker_refs');
+  const humanGateRefs = optionalEnvelopeRefs(input.envelope, 'human_gate_ref', 'human_gate_refs');
+  if (input.outcome === 'blocked' && typedBlockerRefs.length === 0) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Stage Review blocked outcome requires a domain-owned typed blocker ref.',
+      { outcome: input.outcome, hard_stop_class: hardStopClass },
+    );
+  }
+  if (
+    input.outcome === 'human_gate'
+    && (hardStopClass !== 'human_decision_required' || humanGateRefs.length === 0)
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Stage Review human_gate outcome requires hard_stop_class=human_decision_required and a human-gate ref.',
+      {
+        outcome: input.outcome,
+        hard_stop_class: hardStopClass,
+        human_gate_refs: humanGateRefs,
+      },
+    );
+  }
+  return {
+    outcome: input.outcome,
+    hard_stop_class: hardStopClass as StageQualityHardStopClass,
+    blocked_reason: blockedReason,
+    typed_blocker_refs: typedBlockerRefs,
+    human_gate_refs: humanGateRefs,
+  } as const;
+}
+
+export function stageReviewVerdictForOutcome(outcome: StageQualityOutcome): StageQualityReviewVerdict {
+  if (outcome === 'pass' || outcome === 'repair_required' || outcome === 'quality_debt') {
+    return outcome;
+  }
+  return 'hard_stop';
 }
 
 export function normalizeStageQualityCyclePolicy(value: unknown): StageQualityCyclePolicy {
@@ -186,12 +383,12 @@ export function buildStageReviewContextManifest(input: {
   qualityRubricRefs: string[];
   lineageRefs?: string[];
   priorFindingRefs?: string[];
+  repairMapRefs?: string[];
 }): StageReviewContextManifest {
-  const artifactRefs = nonEmptyStrings(input.artifactRefs, 'artifact_refs');
-  const artifactHashes = nonEmptyStrings(input.artifactHashes, 'artifact_hashes');
-  if (artifactRefs.length !== artifactHashes.length) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Review artifact refs and hashes must have equal cardinality.');
-  }
+  const artifactIdentity = normalizeStageQualityArtifactIdentity({
+    artifactRefs: input.artifactRefs,
+    artifactHashes: input.artifactHashes,
+  });
   return {
     surface_kind: 'opl_stage_review_context_manifest',
     version: 'stage-review-context-manifest.v1',
@@ -199,12 +396,13 @@ export function buildStageReviewContextManifest(input: {
     quality_cycle_id: requiredText(input.qualityCycleId, 'quality_cycle_id'),
     reviewer_attempt_role: input.reviewerAttemptRole,
     stage_goal_refs: nonEmptyStrings(input.stageGoalRefs ?? [], 'stage_goal_refs'),
-    artifact_refs: artifactRefs,
-    artifact_hashes: artifactHashes,
+    artifact_refs: artifactIdentity.artifact_refs,
+    artifact_hashes: artifactIdentity.artifact_hashes,
     source_refs: nonEmptyStrings(input.sourceRefs ?? [], 'source_refs'),
-    quality_rubric_refs: nonEmptyStrings(input.qualityRubricRefs, 'quality_rubric_refs'),
+    quality_rubric_refs: requiredRefs(input.qualityRubricRefs, 'quality_rubric_refs'),
     lineage_refs: nonEmptyStrings(input.lineageRefs ?? [], 'lineage_refs'),
     prior_finding_refs: nonEmptyStrings(input.priorFindingRefs ?? [], 'prior_finding_refs'),
+    repair_map_refs: nonEmptyStrings(input.repairMapRefs ?? [], 'repair_map_refs'),
     no_context_inheritance: true,
     forbidden_context_kinds: [
       'producer_conversation_history',
@@ -217,8 +415,24 @@ export function buildStageReviewContextManifest(input: {
 }
 
 export function validateIndependentStageReviewReceipt(receipt: StageReviewReceipt) {
-  requiredText(receipt.producer_attempt_ref, 'producer_attempt_ref');
-  requiredText(receipt.reviewer_attempt_ref, 'reviewer_attempt_ref');
+  if (receipt.surface_kind !== 'opl_stage_review_receipt' || receipt.version !== 'stage-review-receipt.v1') {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Stage Review receipt surface kind and version are invalid.',
+      { surface_kind: receipt.surface_kind, version: receipt.version },
+    );
+  }
+  requiredText(receipt.stage_run_id, 'stage_run_id');
+  requiredText(receipt.quality_cycle_id, 'quality_cycle_id');
+  const producerAttemptRef = requiredText(receipt.producer_attempt_ref, 'producer_attempt_ref');
+  const reviewerAttemptRef = requiredText(receipt.reviewer_attempt_ref, 'reviewer_attempt_ref');
+  if (producerAttemptRef === reviewerAttemptRef) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Formal Stage Review receipt must bind distinct producer and reviewer Attempts.',
+      { producer_attempt_ref: producerAttemptRef, reviewer_attempt_ref: reviewerAttemptRef },
+    );
+  }
   const producerSessionRef = requiredText(receipt.producer_session_ref, 'producer_session_ref');
   const reviewerSessionRef = requiredText(receipt.reviewer_session_ref, 'reviewer_session_ref');
   if (receipt.no_context_inheritance !== true) {
@@ -230,12 +444,68 @@ export function validateIndependentStageReviewReceipt(receipt: StageReviewReceip
       reviewer_session_ref: reviewerSessionRef,
     });
   }
-  const refs = nonEmptyStrings(receipt.reviewed_artifact_refs, 'reviewed_artifact_refs');
-  const hashes = nonEmptyStrings(receipt.reviewed_artifact_hashes, 'reviewed_artifact_hashes');
-  if (refs.length !== hashes.length) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Review receipt artifact refs and hashes must have equal cardinality.');
+  normalizeStageQualityArtifactIdentity({
+    artifactRefs: receipt.reviewed_artifact_refs,
+    artifactHashes: receipt.reviewed_artifact_hashes,
+  });
+  requiredRefs(receipt.rubric_refs, 'rubric_refs');
+  if (!['pass', 'repair_required', 'quality_debt', 'hard_stop'].includes(receipt.verdict)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Stage Review receipt verdict is invalid.', {
+      verdict: receipt.verdict,
+    });
   }
-  nonEmptyStrings(receipt.rubric_refs, 'rubric_refs');
+  if (!receipt.finding_lineage || typeof receipt.finding_lineage !== 'object') {
+    throw new FrameworkContractError('contract_shape_invalid', 'Review receipt finding_lineage must be an object.');
+  }
+  if (!['initial_review', 'finding_closure_review'].includes(receipt.finding_lineage.review_kind)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Review receipt finding_lineage review_kind is invalid.');
+  }
+  uniqueIds(nonEmptyStringSequence(receipt.finding_lineage.finding_ids, 'finding_lineage.finding_ids'), 'finding_lineage.finding_ids');
+  if (!/^sha256:[a-f0-9]{64}$/.test(receipt.finding_lineage.findings_sha256)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Review receipt findings_sha256 must be a canonical SHA-256 digest.',
+      { value: receipt.finding_lineage.findings_sha256 },
+    );
+  }
+  for (const [field, value] of Object.entries({
+    repair_map_sha256: receipt.finding_lineage.repair_map_sha256,
+    re_review_result_sha256: receipt.finding_lineage.re_review_result_sha256,
+  })) {
+    if (value !== null && !/^sha256:[a-f0-9]{64}$/.test(value)) {
+      throw new FrameworkContractError('contract_shape_invalid', `Review receipt ${field} must be a canonical SHA-256 digest.`, {
+        field,
+        value,
+      });
+    }
+  }
+  if (receipt.finding_lineage.review_kind === 'initial_review') {
+    if (receipt.finding_lineage.repair_map_sha256 !== null || receipt.finding_lineage.re_review_result_sha256 !== null) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Initial Review receipt cannot bind repair-map or Re-review result digests.',
+      );
+    }
+  } else {
+    if (!receipt.finding_lineage.repair_map_sha256) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Finding-closure Review receipt requires an exact repair-map digest.',
+      );
+    }
+    if (receipt.verdict === 'hard_stop' && receipt.finding_lineage.re_review_result_sha256 !== null) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Hard-stop Re-review receipt cannot bind a finding-closure result digest.',
+      );
+    }
+    if (receipt.verdict !== 'hard_stop' && !receipt.finding_lineage.re_review_result_sha256) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Non-hard-stop finding-closure Review receipt requires an exact Re-review result digest.',
+      );
+    }
+  }
   return {
     valid: true,
     context_isolation_verified: true,
@@ -282,6 +552,31 @@ export function validateStageQualityFindings(findings: StageQualityFinding[]) {
   });
   uniqueIds(normalized.map((finding) => finding.finding_id), 'findings');
   return normalized;
+}
+
+export function validateInitialStageQualityReviewOutcome(input: {
+  outcome: StageQualityOutcome;
+  findings: StageQualityFinding[];
+}) {
+  const findings = validateStageQualityFindings(input.findings);
+  const requiredFindingIds = findings
+    .filter((finding) => finding.required)
+    .map((finding) => finding.finding_id);
+  if (input.outcome === 'repair_required' && requiredFindingIds.length === 0) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Initial Review outcome repair_required requires at least one required finding.',
+      { outcome: input.outcome },
+    );
+  }
+  if (['pass', 'quality_debt'].includes(input.outcome) && requiredFindingIds.length > 0) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      `Initial Review outcome ${input.outcome} cannot carry an open required finding.`,
+      { outcome: input.outcome, open_required_finding_ids: requiredFindingIds },
+    );
+  }
+  return findings;
 }
 
 export function validateStageQualityRepairMap(input: {
@@ -375,12 +670,42 @@ export function evaluateStageQualityFindingClosure(input: {
   }
   const regressions = validateStageQualityFindings(input.reReview.repair_regressions);
   const criticalNewFindings = validateStageQualityFindings(input.reReview.critical_new_findings);
+  if (regressions.some((finding) => !finding.required)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'repair_regressions that trigger another repair round must declare required=true.',
+    );
+  }
   if (criticalNewFindings.some((finding) => finding.severity !== 'critical')) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
       'critical_new_findings may contain only critical findings.',
     );
   }
+  if (criticalNewFindings.some((finding) => !finding.required)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'critical_new_findings that trigger another repair round must declare required=true.',
+    );
+  }
+  uniqueIds([
+    ...findings.map((finding) => finding.finding_id),
+    ...regressions.map((finding) => finding.finding_id),
+    ...criticalNewFindings.map((finding) => finding.finding_id),
+  ], 'finding_ids_across_prior_regression_and_critical_new_collections');
+  if (!Array.isArray(input.reReview.optional_observations)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Re-review optional_observations must be an array.');
+  }
+  const optionalObservations = input.reReview.optional_observations.map((observation) => ({
+    ...observation,
+    observation_id: requiredText(observation.observation_id, 'optional_observations.observation_id'),
+    evidence_refs: nonEmptyStrings(
+      observation.evidence_refs,
+      `optional_observations.${observation.observation_id}.evidence_refs`,
+    ),
+    summary: requiredText(observation.summary, `optional_observations.${observation.observation_id}.summary`),
+  }));
+  uniqueIds(optionalObservations.map((observation) => observation.observation_id), 'optional_observations');
   const openFindingIds = closures
     .filter((closure) => closure.status !== 'closed')
     .map((closure) => closure.finding_id);
@@ -389,8 +714,62 @@ export function evaluateStageQualityFindingClosure(input: {
     open_required_finding_ids: openFindingIds,
     repair_regression_ids: regressions.map((finding) => finding.finding_id),
     critical_new_finding_ids: criticalNewFindings.map((finding) => finding.finding_id),
-    optional_observations_are_quality_debt_only: true,
+    optional_observation_ids: optionalObservations.map((observation) => observation.observation_id),
+    optional_observations_do_not_trigger_repair: true,
   } as const;
+}
+
+export function validateStageQualityReReviewOutcome(input: {
+  outcome: StageQualityOutcome;
+  closure: ReturnType<typeof evaluateStageQualityFindingClosure>;
+}) {
+  if (input.outcome === 'blocked' || input.outcome === 'human_gate') {
+    return input.outcome;
+  }
+  if (input.closure.trigger_repair && input.outcome !== 'repair_required') {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Re-review with open required findings or repair regressions must return outcome repair_required.',
+      {
+        outcome: input.outcome,
+        open_required_finding_ids: input.closure.open_required_finding_ids,
+        repair_regression_ids: input.closure.repair_regression_ids,
+        critical_new_finding_ids: input.closure.critical_new_finding_ids,
+      },
+    );
+  }
+  if (!input.closure.trigger_repair && input.outcome === 'repair_required') {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Re-review outcome repair_required requires an open required finding, repair regression, or critical new finding.',
+      { outcome: input.outcome },
+    );
+  }
+  return input.outcome;
+}
+
+export function classifyStageQualityReReviewBudget(input: {
+  closure: ReturnType<typeof evaluateStageQualityFindingClosure>;
+  qualityRoundIndex: unknown;
+  maxRepairRounds: unknown;
+}) {
+  const round = Number(input.qualityRoundIndex);
+  const maxRounds = Number(input.maxRepairRounds);
+  if (
+    !Number.isInteger(round)
+    || !Number.isInteger(maxRounds)
+    || round < 1
+    || maxRounds < 1
+    || round > maxRounds
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Re-review repair-budget identity requires 1 <= quality_round_index <= max_repair_rounds.',
+      { quality_round_index: input.qualityRoundIndex, max_repair_rounds: input.maxRepairRounds },
+    );
+  }
+  if (!input.closure.trigger_repair) return 'terminal_normal' as const;
+  return round < maxRounds ? 'continue_repair' as const : 'terminal_quality_debt' as const;
 }
 
 export function initialStageQualityCycleState(input: {

@@ -24,7 +24,8 @@
         "completion_judgment_owner": "domain_stage",
         "closeout_packet_required": false,
         "raw_artifact_sufficient_for_progress": true,
-        "next_stage_transition_owner": "codex_cli",
+        "semantic_route_decision_owner": "decisive_codex_attempt",
+        "stage_transition_materialization_owner": "opl_stage_run_controller",
         "required_closeout_outcomes": [
           "completed_and_continue",
           "completed_with_quality_debt",
@@ -148,7 +149,7 @@
       "policy_release_can_claim_domain_ready": false
     }
   },
-  "policy_bundle_fingerprint": "sha256:30a1d0034eeafbf5ea042fc33c64af585c3e68276328eb97d20903105087bb5d",
+  "policy_bundle_fingerprint": "sha256:11dae4f01d2647ba77b5bee332ceda0004be62984daab26903abe85f61e36722",
   "fingerprint_algorithm": "sha256:stable-json",
   "domain_pin_contract_ref": "contracts/foundry_agent_series.json#/shared_policy_release",
   "domain_pin_requirements": {

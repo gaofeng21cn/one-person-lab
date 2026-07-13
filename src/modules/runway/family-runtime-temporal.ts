@@ -26,6 +26,14 @@ import {
 } from './family-runtime-temporal-visibility.ts';
 import { requireStageQualityAttemptBoundary } from './family-runtime-stage-quality-attempt-boundary.ts';
 import type { TemporalStageRunWorkflowInput } from './family-runtime-temporal-stage-run.ts';
+import {
+  deriveStageRunId,
+  deriveStageRunWorkflowId,
+  revalidateStageRunImmutableSpecContent,
+  stageRunSpecSha256,
+  type StageRunImmutableSpec,
+  validateStageRunImmutableSpecEnvelope,
+} from './family-runtime-stage-run-identity.ts';
 
 export type {
   TemporalStageQualityAttemptMaterializationInput,
@@ -34,6 +42,8 @@ export type {
   TemporalStageQualityReviewReceiptInput,
   TemporalStageRunAttemptSummary,
   TemporalStageRunQualityRolePromptRefs,
+  TemporalStageRunRouteLaunchInput,
+  TemporalStageRunRouteLaunchReceipt,
   TemporalStageRunWorkflowInput,
   TemporalStageRunWorkflowState,
 } from './family-runtime-temporal-stage-run.ts';
@@ -118,6 +128,10 @@ export type TemporalStageAttemptWorkflowInput = {
   source_fingerprint: string | null;
   executor_kind: string;
   stage_run_id?: string | null;
+  stage_run_content_binding_version?: 'opl-stage-run-attempt-content-binding.v1' | null;
+  stage_run_spec_sha256?: string | null;
+  stage_run_spec?: StageRunImmutableSpec | null;
+  domain_pack_root?: string | null;
   quality_cycle_id?: string | null;
   attempt_role?: StageQualityAttemptRole | null;
   quality_round_index?: number | null;
@@ -598,6 +612,7 @@ export function buildTemporalStageAttemptWorkflowInput(
     quality_rubric_refs?: unknown[];
     prior_finding_refs?: unknown[];
     repair_map_refs?: unknown[];
+    quality_context?: Record<string, unknown> | null;
     quality_role_prompt_ref?: string | null;
     context_manifest_ref?: string | null;
     context_manifest?: Record<string, unknown> | null;
@@ -658,8 +673,11 @@ export function buildTemporalStageAttemptWorkflowInput(
     quality_role_prompt_ref: optionalText(attempt.quality_role_prompt_ref),
     context_manifest_ref: optionalText(attempt.context_manifest_ref),
     no_context_inheritance: attempt.no_context_inheritance ?? null,
-    quality_context: attempt.context_manifest
-      ? { context_manifest: attempt.context_manifest }
+    quality_context: attempt.context_manifest || attempt.quality_context
+      ? {
+          ...(attempt.quality_context ?? {}),
+          ...(attempt.context_manifest ? { context_manifest: attempt.context_manifest } : {}),
+        }
       : undefined,
     stage_attempt_executor_policy: optionalRecord(attempt.stage_attempt_executor_policy),
     retry_budget: attempt.retry_budget,
@@ -703,6 +721,8 @@ export function requireTemporalStageAttemptWorkflowInputLaunchable(input: Tempor
 export function requireTemporalStageRunWorkflowInputLaunchable(input: TemporalStageRunWorkflowInput) {
   for (const [field, value] of Object.entries({
     stage_run_id: input.stage_run_id,
+    stage_run_invocation_id: input.stage_run_invocation_id,
+    stage_run_spec_sha256: input.stage_run_spec_sha256,
     workflow_id: input.workflow_id,
     stage_id: input.stage_id,
     stage_packet_ref: input.stage_packet_ref,
@@ -716,6 +736,52 @@ export function requireTemporalStageRunWorkflowInputLaunchable(input: TemporalSt
         field,
       });
     }
+  }
+  const expectedStageRunId = deriveStageRunId({
+    domainId: input.domain_id,
+    stageId: input.stage_id,
+    stageRunInvocationId: input.stage_run_invocation_id,
+  });
+  if (input.stage_run_id !== expectedStageRunId) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'StageRun id must derive only from domain, Stage, and durable invocation identity.',
+      {
+        failure_code: 'stage_run_identity_mismatch',
+        stage_run_id: input.stage_run_id,
+        expected_stage_run_id: expectedStageRunId,
+      },
+    );
+  }
+  const expectedWorkflowId = deriveStageRunWorkflowId(expectedStageRunId);
+  if (input.workflow_id !== expectedWorkflowId) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'StageRun workflow id must derive only from the canonical StageRun id.',
+      {
+        failure_code: 'stage_run_workflow_identity_mismatch',
+        stage_run_id: input.stage_run_id,
+        workflow_id: input.workflow_id,
+        expected_workflow_id: expectedWorkflowId,
+      },
+    );
+  }
+  const spec = input.stage_run_spec;
+  if (
+    spec?.surface_kind !== 'opl_stage_run_immutable_spec'
+    || spec.version !== 'opl-stage-run-immutable-spec.v1'
+    || spec.domain_id !== input.domain_id
+    || spec.stage_id !== input.stage_id
+    || spec.parent_route_decision_ref !== input.parent_route_decision_ref
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'StageRun immutable spec lineage must match its launch envelope.',
+      {
+        failure_code: 'stage_run_spec_lineage_mismatch',
+        stage_run_id: input.stage_run_id,
+      },
+    );
   }
   if (
     !Array.isArray(input.declared_stage_ids)
@@ -758,6 +824,60 @@ export function requireTemporalStageRunWorkflowInputLaunchable(input: TemporalSt
       { max_repair_rounds: maxRepairRounds },
     );
   }
+  validateStageRunImmutableSpecEnvelope({
+    spec,
+    domainId: input.domain_id,
+    stageId: input.stage_id,
+    actionId: input.action_id,
+    taskId: input.task_id,
+    workspaceLocator: input.workspace_locator,
+    stageManifestRef: input.stage_manifest_ref,
+    stageManifestSha256: input.stage_manifest_sha256,
+    qualityPolicyRef: input.quality_policy_ref,
+    qualityPolicy: input.quality_policy as unknown as Record<string, unknown>,
+    stagePacketRef: input.stage_packet_ref,
+    checkpointRefs: input.checkpoint_refs,
+    sourceFingerprint: input.source_fingerprint,
+    sourceRefs: input.source_refs,
+    artifactRefs: input.artifact_refs,
+    artifactHashes: input.artifact_hashes,
+    artifactIdentityReceiptRefs: input.artifact_identity_receipt_refs,
+    rolePromptRefs: input.role_prompt_refs,
+    qualityRubricRefs: input.quality_rubric_refs,
+    stageGoalRefs: input.stage_goal_refs,
+    lineageRefs: input.lineage_refs,
+    executorKind: input.executor_kind,
+    stageAttemptExecutorPolicy: input.stage_attempt_executor_policy,
+    parentRouteDecisionRef: input.parent_route_decision_ref,
+  });
+  const expectedSpecSha256 = stageRunSpecSha256(spec);
+  if (input.stage_run_spec_sha256 !== expectedSpecSha256) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'StageRun immutable spec digest does not match the exact canonical spec.',
+      {
+        failure_code: 'stage_run_spec_digest_mismatch',
+        stage_run_id: input.stage_run_id,
+        expected_stage_run_spec_sha256: expectedSpecSha256,
+        received_stage_run_spec_sha256: input.stage_run_spec_sha256,
+      },
+    );
+  }
+  if (!spec.package_closure) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Pack-bound StageRun launch requires an immutable package dependency closure.',
+      {
+        failure_code: 'stage_run_package_closure_missing',
+        stage_run_id: input.stage_run_id,
+      },
+    );
+  }
+  revalidateStageRunImmutableSpecContent({
+    spec,
+    domainPackRoot: input.domain_pack_root,
+    workspaceLocator: input.workspace_locator,
+  });
   return input;
 }
 

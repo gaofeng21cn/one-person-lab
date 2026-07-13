@@ -45,10 +45,6 @@ function request(overrides: Record<string, unknown> = {}) {
         path: 'contracts/action_catalog.json', value: { actions: [] },
         write_policy: 'replace_declared_files_only',
       },
-      {
-        path: 'contracts/stage_control_plane.json', value: { stages: [] },
-        write_policy: 'replace_declared_files_only',
-      },
     ],
     pack_compiler_input: { required_domain_pack_path_additions: ['agent/prompts/run.md'] },
     build_receipt_candidate: {
@@ -58,7 +54,7 @@ function request(overrides: Record<string, unknown> = {}) {
     build_receipt_installation: {
       expected_build_receipt_ref: 'build-receipt-ref:opl-meta-agent/fixture-agent',
       receipt_path: 'contracts/agent_build_receipt.json',
-      projection_paths: ['contracts/domain_descriptor.json', 'contracts/capability_map.json', 'contracts/stage_control_plane.json'],
+      projection_paths: ['contracts/domain_descriptor.json', 'contracts/capability_map.json'],
     },
     validation_requests: ['standard_domain_agent_scaffold', 'domain_pack_compiler', 'agent_profile_conformance'],
     authority_boundary: AUTHORITY,
@@ -168,6 +164,7 @@ test('agents scaffold rejects traversal, duplicate paths, and OMA final-receipt 
     for (const invalid of [
       request({ files: [{ path: '../escape', body: 'x', role: 'invalid' }] }),
       request({ contracts: [{ path: 'agent/stages/manifest.json', value: {}, write_policy: 'replace_declared_files_only' }] }),
+      request({ contracts: [{ path: 'contracts/stage_control_plane.json', value: {}, write_policy: 'replace_declared_files_only' }] }),
       request({ build_receipt_candidate: { surface_kind: 'opl_agent_build_receipt', receipt_ref: 'build-receipt-ref:opl-meta-agent/fixture-agent' } }),
     ]) {
       fs.writeFileSync(requestPath, JSON.stringify(invalid));

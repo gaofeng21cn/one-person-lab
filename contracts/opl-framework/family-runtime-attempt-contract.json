@@ -16,6 +16,10 @@
     "domain_closeout_can_override_selected_action_route": false,
     "entry_stage_context_scope": "selected_route_applicability_and_current_stage_intrinsic_findings_only",
     "route_order_execution_owner": "codex_cli",
+    "semantic_route_decision_owner": "decisive_codex_attempt",
+    "stage_transition_materialization_owner": "opl_stage_run_controller",
+    "decisive_codex_attempt_can_write_stage_current_pointer": false,
+    "decisive_codex_attempt_can_materialize_stage_transition": false,
     "entry_context_is_full_route_no_skip_proof": false,
     "codex_selected_route_transported_into_stage_attempt_by_opl": true,
     "route_completion_is_stage_completion": false,
@@ -158,7 +162,42 @@
       "repairer",
       "re_reviewer"
     ],
-    "fresh_execution_session_required_for_each_attempt": true,
+    "canonical_attempt_outcome_surface": "route_impact.stage_quality_cycle.outcome",
+    "canonical_attempt_outcome_required_for_completed_formal_review_roles": [
+      "reviewer",
+      "re_reviewer"
+    ],
+    "canonical_attempt_outcome_forbidden_for_roles": [
+      "producer",
+      "repairer"
+    ],
+    "canonical_attempt_outcomes": [
+      "pass",
+      "repair_required",
+      "quality_debt",
+      "blocked",
+      "human_gate"
+    ],
+    "non_hard_stop_review_required_fields": {
+      "reviewer": [
+        "findings"
+      ],
+      "re_reviewer": [
+        "finding_closures",
+        "repair_regressions",
+        "critical_new_findings",
+        "optional_observations"
+      ]
+    },
+    "hard_stop_review_required_fields": [
+      "blocked_reason",
+      "hard_stop_class",
+      "typed_blocker_ref_or_human_gate_ref"
+    ],
+    "hard_stop_re_review_closure_result_required": false,
+    "attempt_verdict_field_forbidden": true,
+    "review_receipt_verdict_generated_by_stage_run_controller": true,
+    "fresh_execution_session_required_for_each_completed_attempt": true,
     "same_thread_refinement_counts_as_review": false,
     "protocol_closeout_resume_counts_as_review": false,
     "protocol_closeout_resume_consumes_quality_budget": false,
@@ -168,7 +207,16 @@
     "raw_stage_run_start_cli_retired": true,
     "stage_run_query_remains_read_only": true,
     "artifact_identity_receipt_refs_required_for_reviewable_producer_and_repairer_outputs": true,
+    "non_producer_materialization_requires_artifact_producer_attempt_ref": true,
+    "artifact_producer_attempt_ref_is_distinct_from_parent_attempt_ref": true,
+    "artifact_identity_revalidated_before_child_workflow_start": true,
+    "trusted_identity_receipt_filename_is_exact_receipt_bytes_sha256": true,
     "review_receipt_surface_kind": "opl_stage_review_receipt",
+    "review_receipt_materialization_requires_persisted_pair_validation": true,
+    "review_receipt_allowed_attempt_pairs": [
+      "producer(round_0)->reviewer(round_0)",
+      "repairer(round_n)->re_reviewer(round_n)"
+    ],
     "terminal_route_output": "route_impact.stage_route_decision",
     "non_terminal_route_output": "route_impact.stage_route_recommendation",
     "stage_run_projects_decisive_attempt_and_declared_target": true,
@@ -308,7 +356,8 @@
         "uri",
         "sha256",
         "ref",
-        "size_bytes"
+        "size_bytes",
+        "artifact_identity_receipt_ref"
       ],
       "unknown_fields_allowed": false,
       "string_fields_require_nonempty_values": true,

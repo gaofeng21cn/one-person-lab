@@ -205,7 +205,7 @@ function normalizeRepoActionCatalog(repoDir: string, value: unknown) {
   try {
     return normalizeFamilyActionCatalog(value);
   } catch (error) {
-    throw new FrameworkContractError('contract_shape_invalid', 'contracts/action_catalog.json is not a valid family-action-catalog.v1 contract.', {
+    throw new FrameworkContractError('contract_shape_invalid', 'contracts/action_catalog.json is not a valid family-action-catalog.v2 contract.', {
       repo_dir: repoDir,
       relative_path: 'contracts/action_catalog.json',
       error: error instanceof Error ? error.message : String(error),

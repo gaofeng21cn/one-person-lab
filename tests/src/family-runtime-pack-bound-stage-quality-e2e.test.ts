@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
+import { pathToFileURL } from 'node:url';
 
 import { Client, Connection } from '@temporalio/client';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
@@ -22,11 +23,10 @@ import {
   stageQualityCycleProjectActivity,
   stageQualityReviewReceiptActivity,
 } from '../../src/modules/runway/family-runtime-temporal-activities.ts';
+import { verifyStageQualityCloseoutArtifactIdentity } from '../../src/modules/runway/family-runtime-codex-stage-runner-parts/artifact-identity-verification.ts';
 import type { TemporalStageAttemptWorkflowInput } from '../../src/modules/runway/family-runtime-temporal.ts';
 
 const repoRoot = path.resolve(import.meta.dirname, '../..');
-const artifactRef = 'artifact://pack-bound-draft/v1';
-const artifactHash = `sha256:${crypto.createHash('sha256').update('pack-bound-draft-v1').digest('hex')}`;
 
 function writeJson(root: string, ref: string, value: unknown) {
   const file = path.join(root, ref);
@@ -97,30 +97,47 @@ Close prior findings against the repaired artifact.
   });
   writeJson(root, 'contracts/action_catalog.json', {
     surface_kind: 'family_action_catalog',
-    version: 'family-action-catalog.v1',
+    version: 'family-action-catalog.v2',
     catalog_id: 'pack_bound_quality_e2e.actions',
     target_domain_id: 'medautoscience',
     owner: 'medautoscience',
-    authority_boundary: { opl_role: 'projection_consumer_only' },
+    authority_boundary: {
+      domain_truth_owner: 'medautoscience',
+      opl_role: 'projection_consumer_only',
+      write_policy: 'no_domain_truth_writes',
+    },
     actions: [{
       action_id: 'draft',
       title: 'Draft',
       summary: 'Create a draft artifact.',
       owner: 'medautoscience',
       effect: 'mutating',
-      source_command: { command: 'mas draft', surface_kind: 'domain_cli' },
+      execution_binding: {
+        kind: 'stage_binding',
+        stage_manifest_ref: 'agent/stages/manifest.json',
+      },
       input_schema_ref: 'contracts/input.schema.json',
       output_schema_ref: 'contracts/output.schema.json',
+      required_fields: ['workspace_root'],
+      optional_fields: [],
       workspace_locator_fields: ['workspace_root'],
       human_gate_ids: [],
+      stage_route: {
+        entry_stage_ref: 'draft',
+        required_stage_refs: ['draft'],
+        optional_stage_refs: [],
+        terminal_stage_refs: ['draft'],
+        route_policy: 'ai_selected_progress_route',
+      },
       supported_surfaces: {
-        cli: { command: 'mas draft', surface_kind: 'domain_cli' },
+        cli: { surface_kind: 'domain_cli' },
         mcp: { tool_name: 'mas_draft', surface_kind: 'domain_mcp' },
         skill: { command_contract_id: 'mas.draft', surface_kind: 'domain_skill' },
-        product_entry: { action_key: 'draft', command: 'mas product draft', surface_kind: 'domain_product_entry' },
+        product_entry: { action_key: 'draft', surface_kind: 'domain_product_entry' },
         openai: { tool_name: 'mas_draft' },
         ai_sdk: { tool_name: 'mas_draft' },
       },
+      authority_boundary: {},
     }],
     notes: [],
   });
@@ -203,6 +220,34 @@ Close prior findings against the repaired artifact.
   return root;
 }
 
+function packageUseBinding(packRoot: string) {
+  const manifestBytes = fs.readFileSync(path.join(packRoot, 'agent/stages/manifest.json'));
+  const manifestSha256 = crypto.createHash('sha256').update(manifestBytes).digest('hex');
+  const rootContentDigest = crypto.createHash('sha256')
+    .update('pack-bound-quality-e2e-root-package-v1')
+    .digest('hex');
+  const closureDigest = crypto.createHash('sha256')
+    .update(`medautoscience\0${manifestSha256}\0${rootContentDigest}`)
+    .digest('hex');
+  return {
+    surface_kind: 'opl_agent_package_use_binding.v1',
+    use_boundary_id: 'package-use:pack-bound-quality-e2e',
+    use_receipt_ref: 'opl://agent-package/use/pack-bound-quality-e2e',
+    root_package: {
+      package_id: 'medautoscience',
+      package_version: '0.0.0-test',
+      owner_language_version: { scheme: 'pep440', value: '0.0.0-test' },
+      package_lock_ref: 'opl://agent-package-lock/medautoscience/0.0.0-test',
+      manifest_sha256: manifestSha256,
+      content_digest: `sha256:${rootContentDigest}`,
+      source_artifact_ref: null,
+      artifact_digest: null,
+    },
+    provider_packages: [],
+    dependency_closure_digest: closureDigest,
+  };
+}
+
 function restoreEnv(previous: Map<string, string | undefined>) {
   for (const [key, value] of previous) {
     if (value === undefined) delete process.env[key];
@@ -215,6 +260,12 @@ test('pack-bound CLI launch persists isolated review attempts and terminal quali
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-bound-quality-workspace-'));
   const familyWorkspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-bound-family-workspace-'));
   const packRoot = createPackFixture();
+  const useBinding = packageUseBinding(packRoot);
+  const artifactBytes = Buffer.from('pack-bound-draft-v1');
+  const artifactPath = path.join(workspaceRoot, 'draft.txt');
+  fs.writeFileSync(artifactPath, artifactBytes);
+  const artifactRef = pathToFileURL(artifactPath).href;
+  const artifactHash = crypto.createHash('sha256').update(artifactBytes).digest('hex');
   const testEnv = await TestWorkflowEnvironment.createLocal({
     server: { searchAttributes: [] },
   });
@@ -242,7 +293,7 @@ test('pack-bound CLI launch persists isolated review attempts and terminal quali
         launch_allowed: true,
       },
     }),
-    ensureScopeActivation: async () => ({ package_use_binding: null }),
+    ensureScopeActivation: async () => ({ package_use_binding: useBinding }),
   });
 
   const activities = {
@@ -252,6 +303,38 @@ test('pack-bound CLI launch persists isolated review attempts and terminal quali
     stageQualityReviewReceiptActivity,
     async codexStageActivity(attempt: TemporalStageAttemptWorkflowInput) {
       const threadId = `thread-${attempt.attempt_role}-${attempt.stage_attempt_id}`;
+      const closeoutPacket = attempt.attempt_role === 'producer'
+        ? verifyStageQualityCloseoutArtifactIdentity({
+            closeoutPacket: {
+              surface_kind: 'stage_attempt_closeout_packet',
+              stage_attempt_id: attempt.stage_attempt_id,
+              closeout_refs: [artifactRef],
+              closeout_ref_metadata: [{ ref: artifactRef, sha256: artifactHash }],
+              consumed_refs: [],
+              consumed_memory_refs: [],
+              writeback_receipt_refs: [],
+              rejected_writes: [],
+              next_owner: null,
+              domain_ready_verdict: null,
+              route_impact: {
+                stage_quality_cycle: {
+                  artifact_refs: [artifactRef],
+                  artifact_hashes: [artifactHash],
+                },
+              },
+              authority_boundary: {
+                opl: 'closeout_transport_only',
+                domain: 'truth_quality_artifact_gate_owner',
+              },
+            },
+            attempt: attempt as unknown as Record<string, unknown>,
+            workspaceRoot,
+          })
+        : {
+            surface_kind: 'stage_attempt_closeout_packet' as const,
+            stage_attempt_id: attempt.stage_attempt_id,
+            closeout_refs: [`codex-closeout:${attempt.stage_attempt_id}`],
+          };
       return {
         surface_kind: 'temporal_codex_stage_activity_receipt',
         stage_attempt_id: attempt.stage_attempt_id,
@@ -262,11 +345,7 @@ test('pack-bound CLI launch persists isolated review attempts and terminal quali
           thread_id: threadId,
           execution_session_ref: `codex://threads/${threadId}`,
         },
-        closeout_packet: {
-          surface_kind: 'stage_attempt_closeout_packet',
-          stage_attempt_id: attempt.stage_attempt_id,
-          closeout_refs: [`codex-closeout:${attempt.stage_attempt_id}`],
-        },
+        closeout_packet: closeoutPacket,
       };
     },
     async domainHandlerDispatchActivity(attempt: TemporalStageAttemptWorkflowInput) {
@@ -282,14 +361,14 @@ test('pack-bound CLI launch persists isolated review attempts and terminal quali
         domain_ready_verdict: 'domain_gate_pending',
         route_impact: {
           stage_quality_cycle: {
-            outcome: 'pass',
             artifact_refs: [artifactRef],
             artifact_hashes: [artifactHash],
+            ...(role === 'reviewer' ? { outcome: 'pass', findings: [] } : {}),
           },
         },
         closeout_packet_surface_kind: 'domain_stage_closeout_packet',
         closeout_ref_metadata: role === 'producer'
-          ? [{ ref: artifactRef, sha256: artifactHash }]
+          ? attempt.closeout_packet?.closeout_ref_metadata ?? []
           : [],
       };
     },
@@ -304,7 +383,7 @@ test('pack-bound CLI launch persists isolated review attempts and terminal quali
       activities,
     });
     const execution = await worker.runUntil(async () => {
-      const cli = await runFamilyRuntime([
+      const baseArgs = [
         'attempt',
         'create',
         '--domain',
@@ -316,26 +395,37 @@ test('pack-bound CLI launch persists isolated review attempts and terminal quali
         '--workspace-locator',
         JSON.stringify({ workspace_root: workspaceRoot, domain_pack_root: packRoot }),
         '--source-fingerprint',
-        'sha256:pack-bound-source-v1',
+        'sha256:e69550085779bc9bd1bf36c55d7f3bf244254c3c8c8a8799ae97e55b86786289',
         '--start',
-      ]);
-      const launch = cli.family_runtime_stage_run as any;
+      ];
       const connection = await Connection.connect({ address: testEnv.address });
       try {
         const client = new Client({ connection, namespace });
-        const handle = client.workflow.getHandle(
-          launch.stage_run_input.workflow_id,
-          launch.temporal_start.first_execution_run_id,
-        );
-        return { cli, state: await handle.result() };
+        const executeNewStageRun = async (args: string[]) => {
+          const cli = await runFamilyRuntime(args);
+          const launch = cli.family_runtime_stage_run as any;
+          const handle = client.workflow.getHandle(
+            launch.stage_run_input.workflow_id,
+            launch.temporal_start.first_execution_run_id,
+          );
+          return { cli, state: await handle.result() };
+        };
+        const first = await executeNewStageRun(baseArgs);
+        const replay = await runFamilyRuntime(baseArgs);
+        const explicitNew = await executeNewStageRun([...baseArgs, '--new-stage-run']);
+        const compatibilityAlias = await executeNewStageRun([...baseArgs, '--new-attempt']);
+        return { first, replay, explicitNew, compatibilityAlias };
       } finally {
         await connection.close();
       }
     });
 
-    const launch = execution.cli.family_runtime_stage_run as any;
+    const launch = execution.first.cli.family_runtime_stage_run as any;
     const stageRunInput = launch.stage_run_input;
-    const state = execution.state as any;
+    const state = execution.first.state as any;
+    const replayLaunch = execution.replay.family_runtime_stage_run as any;
+    const explicitNewLaunch = execution.explicitNew.cli.family_runtime_stage_run as any;
+    const compatibilityAliasLaunch = execution.compatibilityAlias.cli.family_runtime_stage_run as any;
     const manifestSource = fs.readFileSync(path.join(packRoot, 'agent/stages/manifest.json'), 'utf8');
     const manifestHash = crypto.createHash('sha256').update(manifestSource).digest('hex');
 
@@ -352,13 +442,42 @@ test('pack-bound CLI launch persists isolated review attempts and terminal quali
       re_reviewer: 'agent/prompts/draft.md#re-reviewer',
     });
     assert.deepEqual(stageRunInput.quality_rubric_refs, ['agent/quality_gates/quality.md']);
+    assert.equal(replayLaunch.stage_run_input.stage_run_id, stageRunInput.stage_run_id);
+    assert.equal(replayLaunch.durable_launch.start_status, 'existing');
+    assert.equal(replayLaunch.durable_launch.launch.launch_status, 'closed');
+    assert.equal(
+      replayLaunch.temporal_start.first_execution_run_id,
+      launch.temporal_start.first_execution_run_id,
+    );
+    assert.notEqual(explicitNewLaunch.stage_run_input.stage_run_id, stageRunInput.stage_run_id);
+    assert.notEqual(
+      compatibilityAliasLaunch.stage_run_input.stage_run_id,
+      stageRunInput.stage_run_id,
+    );
+    assert.notEqual(
+      compatibilityAliasLaunch.stage_run_input.stage_run_id,
+      explicitNewLaunch.stage_run_input.stage_run_id,
+    );
+    assert.equal(explicitNewLaunch.durable_launch.start_status, 'started');
+    assert.equal(compatibilityAliasLaunch.durable_launch.start_status, 'started');
 
-    assert.equal(state.status, 'completed');
+    assert.equal(state.status, 'completed', JSON.stringify(state, null, 2));
     assert.equal(state.sqlite_projection.status, 'synced');
     assert.equal(state.repair_rounds_used, 0);
     assert.deepEqual(state.attempts.map((attempt: any) => attempt.attempt_role), ['producer', 'reviewer']);
     assert.deepEqual(state.artifact_refs, [artifactRef]);
     assert.deepEqual(state.artifact_hashes, [artifactHash]);
+    assert.equal(state.artifact_identity_receipt_refs.length, 1);
+    assert.match(state.artifact_identity_receipt_refs[0], /^file:\/\//);
+    const identityReceiptPath = new URL(state.artifact_identity_receipt_refs[0]);
+    const identityReceiptBytes = fs.readFileSync(identityReceiptPath);
+    assert.equal(
+      path.basename(identityReceiptPath.pathname),
+      `${crypto.createHash('sha256').update(identityReceiptBytes).digest('hex')}.json`,
+    );
+    const identityReceipt = JSON.parse(identityReceiptBytes.toString('utf8'));
+    assert.equal(identityReceipt.artifact_ref, artifactRef);
+    assert.equal(identityReceipt.sha256, artifactHash);
     assert.equal(state.review_receipts.length, 1);
 
     const db = new DatabaseSync(path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
@@ -384,6 +503,7 @@ test('pack-bound CLI launch persists isolated review attempts and terminal quali
 
       const producer = attempts[0]!;
       const reviewer = attempts[1]!;
+      assert.equal(identityReceipt.stage_attempt_id, producer.stage_attempt_id);
       assert.deepEqual(JSON.parse(reviewer.input_artifact_refs_json), [artifactRef]);
       assert.deepEqual(JSON.parse(reviewer.reviewed_artifact_hashes_json), [artifactHash]);
       const receipt = state.review_receipts[0];
@@ -413,6 +533,16 @@ test('pack-bound CLI launch persists isolated review attempts and terminal quali
         ['producer', 'reviewer'],
       );
       assert.deepEqual(projected.controller_readback.review_receipts, state.review_receipts);
+
+      const launches = db.prepare(`
+        SELECT stage_run_id, launch_status, terminal_status
+        FROM stage_run_launches
+        ORDER BY created_at ASC
+      `).all() as Array<Record<string, any>>;
+      assert.equal(launches.length, 3);
+      assert.equal(new Set(launches.map((entry) => entry.stage_run_id)).size, 3);
+      assert.equal(launches.every((entry) => entry.launch_status === 'closed'), true);
+      assert.equal(launches.every((entry) => entry.terminal_status === 'completed'), true);
     } finally {
       db.close();
     }

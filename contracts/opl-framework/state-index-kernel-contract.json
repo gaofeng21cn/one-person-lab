@@ -2,7 +2,7 @@
   "contract_kind": "opl_state_index_kernel_contract.v1",
   "surface_kind": "opl_state_index_kernel_contract",
   "owner": "one-person-lab",
-  "purpose": "Freeze OPL-owned SQLite sidecar index boundaries for stage-attempt projection, lifecycle refs, artifact locators, lineage, outbox, retention, restore, and operator read-model projections.",
+  "purpose": "Freeze OPL-owned SQLite boundaries for the durable pre-start StageRun transport registry plus rebuildable stage-attempt projection, lifecycle refs, artifact locators, lineage, outbox, retention, restore, and operator read-model projections.",
   "state": "active_contract",
   "truth_split": {
     "file_truth": {
@@ -31,6 +31,23 @@
         "Temporal/provider visibility refs"
       ]
     },
+    "durable_runtime_transport_registry": {
+      "role": "pre_start_write_ahead_stage_run_identity_and_transport_recovery",
+      "source_of_domain_truth": false,
+      "durability_required": true,
+      "rebuildable_before_temporal_start": false,
+      "reconcile_after_temporal_start_from": [
+        "registered_exact_stage_run_input",
+        "Temporal_workflow_identity_and_status",
+        "provider_start_receipt"
+      ],
+      "must_not_store": [
+        "domain_truth_body",
+        "artifact_body",
+        "memory_body",
+        "quality_or_export_verdict_authority"
+      ]
+    },
     "temporal_provider": {
       "role": "production_durable_execution",
       "production_required": true,
@@ -49,9 +66,11 @@
           "events",
           "notifications",
           "queue_holds",
-          "stage_attempts"
+          "stage_attempts",
+          "stage_quality_cycles",
+          "stage_run_launches"
         ],
-        "storage_role": "sqlite_sidecar_index"
+        "storage_role": "runtime_transport_registry_and_sqlite_sidecar_index"
       },
       {
         "database_id": "lifecycle_index",
@@ -94,6 +113,50 @@
         "implementation_status": "landed_rebuildable_stage_folder_read_model"
       }
     ]
+  },
+  "stage_run_launch_registry": {
+    "database_id": "stage_attempt_index",
+    "table": "stage_run_launches",
+    "required_fields": [
+      "stage_run_id",
+      "stage_run_invocation_id",
+      "stage_run_spec_sha256",
+      "domain_id",
+      "stage_id",
+      "workflow_id",
+      "parent_route_decision_ref",
+      "stage_run_input_json",
+      "launch_status",
+      "temporal_start_receipt_json",
+      "terminal_status",
+      "last_start_error",
+      "start_claim_token",
+      "start_claimed_at",
+      "start_lease_expires_at",
+      "start_attempt_count",
+      "created_at",
+      "updated_at"
+    ],
+    "allowed_payload": "bounded_exact_stage_run_launch_envelope_refs_hashes_policies_and_transport_receipts_only",
+    "validate_identity_and_spec_before_write": true,
+    "register_before_provider_start": true,
+    "launch_statuses": [
+      "registered",
+      "starting",
+      "start_failed",
+      "started",
+      "closed"
+    ],
+    "provider_start_claim": "sqlite_begin_immediate_lease_compare_and_swap_with_expired_starting_takeover",
+    "provider_start_rpc_delivery": "at_least_once_under_unknown_success_recovery",
+    "temporal_executions_per_stage_run": 1,
+    "started_to_start_failed_allowed": false,
+    "invocation_spec_conflict_effect": "typed_fail_closed",
+    "closed_replay_returns_existing_stage_run": true,
+    "late_provider_start_receipt_cannot_reopen_closed_stage_run": true,
+    "late_provider_start_failure_cannot_downgrade_started_or_closed_stage_run": true,
+    "registry_is_stage_current_pointer": false,
+    "registry_is_domain_truth": false
   },
   "paper_autonomy_supervisor_index_policy": {
     "surface_kind": "opl_paper_autonomy_supervisor_index_policy",
@@ -219,6 +282,7 @@
     "opl_can_cache_projection": true,
     "opl_can_rebuild_from_file_truth": true,
     "opl_can_compact_observability_payloads": true,
+    "opl_can_persist_pre_start_stage_run_transport_identity": true,
     "opl_can_write_domain_truth": false,
     "opl_can_write_memory_body": false,
     "opl_can_write_artifact_body": false,

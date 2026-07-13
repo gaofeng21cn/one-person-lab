@@ -1,6 +1,5 @@
 import { DatabaseSync } from 'node:sqlite';
 
-import { DOMAIN_ADAPTERS } from './family-runtime-command.ts';
 import { runtimeDomainDaemonReplacementSurfaces } from './family-runtime-types.ts';
 import {
   inspectSelectedFamilyRuntimeProvidersWithLifecycle,
@@ -126,7 +125,7 @@ export async function buildFamilyRuntimeStatusPayload(
       opl_owner: {
         sqlite_sidecar: 'stage_attempt_projection_and_readback_index',
         stage_attempt_ledger: 'provider_attempt_control_metadata_only',
-        dispatch: 'domain_adapter_dispatch',
+        action_execution: 'package_managed_hosted_action_runtime',
         notification_policy: 'all_delivery_events_are_written_to_local_inbox_first',
         forbidden_authority: [
           'domain_truth',
@@ -134,7 +133,6 @@ export async function buildFamilyRuntimeStatusPayload(
           'domain_artifact_or_publication_gate',
         ],
       },
-      domain_adapters: DOMAIN_ADAPTERS,
       queue_lifecycle_boundary: queueLifecycleBoundary,
       retired_task_projection: queueSummary(db),
       stage_attempts: stageAttemptSummary(db),

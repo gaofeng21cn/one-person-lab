@@ -1,0 +1,52 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import test from 'node:test';
+
+import { assertRepoJsonSchemaPayload } from '../../src/kernel/repo-json-schema.ts';
+
+function fixture() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-repo-json-schema-'));
+  fs.mkdirSync(path.join(root, 'contracts'));
+  fs.writeFileSync(path.join(root, 'contracts', 'action.schema.json'), `${JSON.stringify({
+    $id: 'https://fixture.local/action.schema.json',
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
+    $defs: {
+      request: {
+        type: 'object',
+        required: ['value'],
+        properties: { value: { type: 'integer', minimum: 1 } },
+        additionalProperties: false,
+      },
+    },
+  })}\n`);
+  return root;
+}
+
+test('repo JSON Schema validation resolves a contained fragment and rejects invalid payloads', () => {
+  const root = fixture();
+  try {
+    const valid = assertRepoJsonSchemaPayload({
+      repoRoot: root,
+      schemaRef: 'contracts/action.schema.json#/$defs/request',
+      payload: { value: 2 },
+      label: 'fixture input',
+    });
+    assert.equal(valid.status, 'valid');
+    assert.throws(() => assertRepoJsonSchemaPayload({
+      repoRoot: root,
+      schemaRef: 'contracts/action.schema.json#/$defs/request',
+      payload: { value: 0 },
+      label: 'fixture input',
+    }), /failed JSON Schema validation/);
+    assert.throws(() => assertRepoJsonSchemaPayload({
+      repoRoot: root,
+      schemaRef: 'https://example.invalid/action.schema.json',
+      payload: {},
+      label: 'fixture input',
+    }), /managed package checkout/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

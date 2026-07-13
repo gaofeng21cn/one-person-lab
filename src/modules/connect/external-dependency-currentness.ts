@@ -34,6 +34,7 @@ export type ExternalDependencyInstallation = {
 };
 
 type ParsedVersion = { version: string; parts: [number, number, number] };
+const OWNER_PROBE_TIMEOUT_MS = 3_000;
 let delegatedActionCache: { key: string; expiresAt: number; actions: ExternalDependencyUpdateAction[] } | null = null;
 
 function parseVersion(value: string | null | undefined): ParsedVersion | null {
@@ -112,7 +113,7 @@ function isHomebrewFormulaOwner(binaryPath: string, formula: string) {
   const pathMatches = resolved.includes(`${path.sep}Cellar${path.sep}${formula}${path.sep}`)
     || resolved.includes(`${path.sep}homebrew${path.sep}opt${path.sep}${formula}${path.sep}`);
   if (!pathMatches) return false;
-  return Boolean(output(brew, ['list', '--formula', '--versions', formula], 1_000)?.split(/\s+/).includes(formula));
+  return Boolean(output(brew, ['list', '--formula', '--versions', formula], OWNER_PROBE_TIMEOUT_MS)?.split(/\s+/).includes(formula));
 }
 
 function isHomebrewCaskOwner(binaryPath: string, cask: string) {
@@ -122,7 +123,7 @@ function isHomebrewCaskOwner(binaryPath: string, cask: string) {
   const pathMatches = resolved.includes(`${path.sep}Caskroom${path.sep}${cask}${path.sep}`)
     || resolved.includes(`${path.sep}${cask[0].toUpperCase()}${cask.slice(1)}.app${path.sep}`);
   if (!pathMatches) return false;
-  return Boolean(output(brew, ['list', '--cask', '--versions', cask], 1_000)?.split(/\s+/).includes(cask));
+  return Boolean(output(brew, ['list', '--cask', '--versions', cask], OWNER_PROBE_TIMEOUT_MS)?.split(/\s+/).includes(cask));
 }
 
 function isGlobalNpmCodexOwner(binaryPath: string) {

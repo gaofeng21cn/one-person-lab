@@ -69,12 +69,9 @@ function masDescriptor(): StandardAgentDescriptorInterface {
         default_project_id: 'study-001',
         required_locator_fields: ['workspace_root'],
         optional_locator_fields: [],
-        entry_command_template: null,
-        manifest_command_template: null,
       },
       runtime: {
         runtime_domain_id: 'mas',
-        dispatch_command: null,
         registration_ref: 'contracts/domain_route_profile.json',
       },
       progress: { deliverable_delta_aliases: [], platform_delta_aliases: [] },

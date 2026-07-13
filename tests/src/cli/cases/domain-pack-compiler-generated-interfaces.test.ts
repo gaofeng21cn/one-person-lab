@@ -249,16 +249,52 @@ test('generated interfaces reject action catalogs missing generated default surf
   assert.ok(failure.payload.error.details.error.includes('family_action_catalog.actions[0].supported_surfaces.openai'));
 });
 
-test('generated interfaces preserve action fields and expose executable callable bindings', () => {
+test('generated interfaces emit descriptors only for declared non-null surface slots', () => {
+  const repoDir = buildReadyAgentRepo();
+  const actionCatalogPath = path.join(repoDir, 'contracts', 'action_catalog.json');
+  const actionCatalog = parseJsonText(fs.readFileSync(actionCatalogPath, 'utf8')) as Record<string, any>;
+  actionCatalog.actions[0].supported_surfaces = {
+    cli: null,
+    mcp: { tool_name: 'sample_brief_agent_draft_brief' },
+    skill: null,
+    product_entry: null,
+    openai: null,
+    ai_sdk: null,
+  };
+  writeJson(actionCatalogPath, actionCatalog);
+
+  const bundle = runCli(['agents', 'interfaces', '--repo-dir', repoDir]).generated_agent_interfaces;
+  assert.equal(bundle.cli.descriptors.length, 0);
+  assert.equal(bundle.mcp.descriptors.length, 1);
+  assert.equal(bundle.skill.descriptors.length, 0);
+  assert.equal(bundle.product_entry.descriptors.length, 0);
+  assert.equal(bundle.openai_tool.descriptors.length, 0);
+  assert.equal(bundle.ai_sdk.descriptors.length, 0);
+  assert.equal(bundle.product_status.descriptors.length, 0);
+  assert.deepEqual(
+    bundle.generated_direct_parity.action_parity[0].expected_generated_surface_ids,
+    ['mcp'],
+  );
+});
+
+test('generated interfaces preserve action fields and expose canonical handler refs', () => {
   const repoDir = buildReadyAgentRepo();
   const actionCatalogPath = path.join(repoDir, 'contracts', 'action_catalog.json');
   const actionCatalog = parseJsonText(fs.readFileSync(actionCatalogPath, 'utf8')) as Record<string, any>;
   const action = actionCatalog.actions[0];
-  action.source_command.command = 'sample_brief.domain_entry:SampleBriefDomainEntry.dispatch#draft_brief';
-  action.supported_surfaces.cli.command = action.source_command.command;
-  action.supported_surfaces.product_entry.command = action.source_command.command;
   action.required_fields = ['workspace_root', 'brief'];
   action.optional_fields = ['audience'];
+  const handlerAction = structuredClone(action);
+  handlerAction.action_id = 'authority_check';
+  handlerAction.title = 'Authority check';
+  handlerAction.execution_binding = { kind: 'handler_ref', handler_ref: 'handler:draft_brief' };
+  delete handlerAction.stage_route;
+  handlerAction.supported_surfaces.mcp.tool_name = 'sample_brief_agent_authority_check';
+  handlerAction.supported_surfaces.skill.command_contract_id = 'sample-brief-agent.authority_check';
+  handlerAction.supported_surfaces.product_entry.action_key = 'authority_check';
+  handlerAction.supported_surfaces.openai.tool_name = 'sample_brief_agent_authority_check';
+  handlerAction.supported_surfaces.ai_sdk.tool_name = 'sample_brief_agent_authority_check';
+  actionCatalog.actions.push(handlerAction);
   writeJson(actionCatalogPath, actionCatalog);
   writeJson(path.join(repoDir, 'contracts', 'draft-brief.input.schema.json'), {
     $schema: 'https://json-schema.org/draft/2020-12/schema',
@@ -273,37 +309,146 @@ test('generated interfaces preserve action fields and expose executable callable
 
   const bundle = runCli(['agents', 'interfaces', '--repo-dir', repoDir]).generated_agent_interfaces;
   const descriptors = [
-    bundle.cli.descriptors[0],
-    bundle.mcp.descriptors[0],
-    bundle.skill.descriptors[0],
-    bundle.product_entry.descriptors[0],
-    bundle.openai_tool.descriptors[0],
-    bundle.ai_sdk.descriptors[0],
+    bundle.cli.descriptors[1],
+    bundle.mcp.descriptors[1],
+    bundle.skill.descriptors[1],
+    bundle.product_entry.descriptors[1],
+    bundle.openai_tool.descriptors[1],
+    bundle.ai_sdk.descriptors[1],
   ];
 
   assert.equal(bundle.status, 'ready');
   for (const descriptor of descriptors) {
     assert.deepEqual(descriptor.required_fields, ['workspace_root', 'brief']);
     assert.deepEqual(descriptor.optional_fields, ['audience']);
-    assert.equal(descriptor.callable_ref, 'sample_brief.domain_entry:SampleBriefDomainEntry.dispatch');
-    assert.deepEqual(descriptor.request, { command: 'draft_brief' });
+    assert.deepEqual(descriptor.execution_binding, {
+      kind: 'handler_ref',
+      handler_ref: 'handler:draft_brief',
+    });
+    assert.equal(
+      descriptor.command,
+      `opl agents run --domain sample-brief-agent --action authority_check --workspace ${repoDir}`,
+    );
   }
-  assert.equal(bundle.domain_handler.descriptors[0].callable_ref,
-    'sample_brief.domain_entry:SampleBriefDomainEntry.dispatch');
-  assert.deepEqual(bundle.domain_handler.descriptors[0].request, { command: 'draft_brief' });
+  assert.equal(bundle.domain_handler.descriptors[0].handler_ref, 'handler:draft_brief');
 });
 
-test('generated interfaces reject Python handler targets missing an action id', () => {
+test('generated interfaces reject non-canonical domain handler implementations', () => {
   const repoDir = buildReadyAgentRepo();
+  const registryPath = path.join(repoDir, 'contracts', 'domain_handler_registry.json');
+  const registry = parseJsonText(fs.readFileSync(registryPath, 'utf8')) as Record<string, any>;
+  registry.handlers[0].binding = { kind: 'shell_command', command: 'node ./src/cli.ts' };
+  writeJson(registryPath, registry);
+
   const actionCatalogPath = path.join(repoDir, 'contracts', 'action_catalog.json');
   const actionCatalog = parseJsonText(fs.readFileSync(actionCatalogPath, 'utf8')) as Record<string, any>;
-  actionCatalog.actions[0].source_command.command =
-    'sample_brief.domain_entry:SampleBriefDomainEntry.dispatch';
+  actionCatalog.actions[0].execution_binding = {
+    kind: 'handler_ref',
+    handler_ref: 'handler:draft_brief',
+  };
+  delete actionCatalog.actions[0].stage_route;
   writeJson(actionCatalogPath, actionCatalog);
 
   const failure = runCliFailure(['agents', 'interfaces', '--repo-dir', repoDir]);
   assert.equal(failure.payload.error.code, 'contract_shape_invalid');
-  assert.ok(failure.payload.error.details.error.includes('Invalid domain handler target'));
+  assert.ok(failure.payload.error.details.error.includes(
+    'binding.kind must be typescript_export or python_callable',
+  ));
+});
+
+test('generated interfaces require repo-contained callable handler implementations', () => {
+  const registryFor = (repoDir: string) => {
+    const registryPath = path.join(repoDir, 'contracts', 'domain_handler_registry.json');
+    return {
+      registryPath,
+      registry: parseJsonText(fs.readFileSync(registryPath, 'utf8')) as Record<string, any>,
+    };
+  };
+
+  const missingFileRepo = buildReadyAgentRepo();
+  const missingFile = registryFor(missingFileRepo);
+  missingFile.registry.handlers[0].binding.file = 'src/handlers/missing.ts';
+  writeJson(missingFile.registryPath, missingFile.registry);
+  const missingFileFailure = runCliFailure(['agents', 'interfaces', '--repo-dir', missingFileRepo]);
+  assert.ok(missingFileFailure.payload.error.details.error.includes(
+    'binding.file does not resolve inside the standard Agent root',
+  ));
+
+  const missingExportRepo = buildReadyAgentRepo();
+  const missingExport = registryFor(missingExportRepo);
+  missingExport.registry.handlers[0].binding.export = 'missingExport';
+  writeJson(missingExport.registryPath, missingExport.registry);
+  const missingExportFailure = runCliFailure(['agents', 'interfaces', '--repo-dir', missingExportRepo]);
+  assert.ok(missingExportFailure.payload.error.details.error.includes(
+    'binding.export does not resolve to a callable export',
+  ));
+
+  const declarationOnlyRepo = buildReadyAgentRepo();
+  fs.writeFileSync(
+    path.join(declarationOnlyRepo, 'src', 'handlers', 'draft-brief.ts'),
+    'export declare function draftBrief(): void;\n',
+  );
+  const declarationOnlyFailure = runCliFailure([
+    'agents',
+    'interfaces',
+    '--repo-dir',
+    declarationOnlyRepo,
+  ]);
+  assert.ok(declarationOnlyFailure.payload.error.details.error.includes(
+    'binding.export does not resolve to a callable export',
+  ));
+
+  const declarationFileRepo = buildReadyAgentRepo();
+  const declarationFile = registryFor(declarationFileRepo);
+  const declarationPath = path.join(declarationFileRepo, 'src', 'handlers', 'draft-brief.d.ts');
+  fs.writeFileSync(declarationPath, 'export declare function draftBrief(): void;\n');
+  declarationFile.registry.handlers[0].binding.file = 'src/handlers/draft-brief.d.ts';
+  writeJson(declarationFile.registryPath, declarationFile.registry);
+  const declarationFileFailure = runCliFailure(['agents', 'interfaces', '--repo-dir', declarationFileRepo]);
+  assert.ok(declarationFileFailure.payload.error.details.error.includes(
+    'binding.file must be a TypeScript or JavaScript module',
+  ));
+
+  const escapingRepo = buildReadyAgentRepo();
+  const escapingHandlerPath = path.join(escapingRepo, 'src', 'handlers', 'draft-brief.ts');
+  const outsideDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-handler-outside-'));
+  const outsideHandlerPath = path.join(outsideDir, 'draft-brief.ts');
+  fs.writeFileSync(outsideHandlerPath, 'export function draftBrief() {}\n');
+  fs.rmSync(escapingHandlerPath);
+  fs.symlinkSync(outsideHandlerPath, escapingHandlerPath);
+  const escapingFailure = runCliFailure(['agents', 'interfaces', '--repo-dir', escapingRepo]);
+  assert.ok(escapingFailure.payload.error.details.error.includes(
+    'binding.file does not resolve inside the standard Agent root',
+  ));
+
+  const pythonRepo = buildReadyAgentRepo();
+  const python = registryFor(pythonRepo);
+  python.registry.handlers[0].binding = {
+    kind: 'python_callable',
+    module: 'sample.handlers',
+    callable: 'DraftHandler.invoke',
+  };
+  writeJson(python.registryPath, python.registry);
+  const pythonModulePath = path.join(pythonRepo, 'src', 'sample', 'handlers.py');
+  fs.mkdirSync(path.dirname(pythonModulePath), { recursive: true });
+  fs.writeFileSync(pythonModulePath, [
+    'class DraftHandler:',
+    '    @staticmethod',
+    '    def invoke():',
+    "        return {'status': 'owner_receipt_candidate'}",
+    '',
+  ].join('\n'));
+  assert.equal(
+    runCli(['agents', 'interfaces', '--repo-dir', pythonRepo]).generated_agent_interfaces.status,
+    'ready',
+  );
+
+  python.registry.handlers[0].binding.callable = 'DraftHandler.missing';
+  writeJson(python.registryPath, python.registry);
+  const missingCallableFailure = runCliFailure(['agents', 'interfaces', '--repo-dir', pythonRepo]);
+  assert.ok(missingCallableFailure.payload.error.details.error.includes(
+    'binding.callable does not resolve to a callable Python symbol',
+  ));
 });
 
 test('action catalog parameter lists reject non-arrays and non-string entries', () => {
@@ -419,18 +564,21 @@ test('repo compiler blocks missing repo-relative action input schemas', () => {
   ));
 });
 
-test('repo compiler rejects mismatched handler actions and labels external schema resolution', () => {
+test('repo compiler rejects unresolved handler refs and labels external schema resolution', () => {
   const invalidRepoDir = buildReadyAgentRepo();
   const invalidCatalogPath = path.join(invalidRepoDir, 'contracts', 'action_catalog.json');
   const invalidCatalog = parseJsonText(fs.readFileSync(invalidCatalogPath, 'utf8')) as Record<string, any>;
-  invalidCatalog.actions[0].source_command.command =
-    'sample_brief.domain_entry:SampleBriefDomainEntry.dispatch#another_action';
+  invalidCatalog.actions[0].execution_binding = {
+    kind: 'handler_ref',
+    handler_ref: 'handler:missing-handler',
+  };
+  delete invalidCatalog.actions[0].stage_route;
   writeJson(invalidCatalogPath, invalidCatalog);
 
   const failure = runCliFailure(['agents', 'interfaces', '--repo-dir', invalidRepoDir]);
   assert.equal(failure.payload.error.code, 'contract_shape_invalid');
   assert.ok(failure.payload.error.details.error.includes(
-    'Domain handler target action another_action does not match draft_brief',
+    'Unresolved domain handler refs: missing-handler',
   ));
 
   const externalRepoDir = buildReadyAgentRepo();

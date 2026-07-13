@@ -281,6 +281,9 @@ function preflightMaterializationRequest(request: Record<string, unknown>, targe
     const replacement = requireObject(value, field);
     if (replacement.write_policy !== 'replace_declared_files_only') fail(`${field}.write_policy is invalid.`);
     const relativePath = safeRelativePath(replacement.path, `${field}.path`);
+    if (relativePath === 'contracts/stage_control_plane.json') {
+      fail('Scaffold materialization cannot write the OPL-owned hosted stage control plane.', { path: relativePath });
+    }
     requireObject(replacement.value, `${field}.value`);
     addDeclaredPath(relativePath, `${field}.path`);
   }
@@ -337,7 +340,6 @@ function preflightMaterializationRequest(request: Record<string, unknown>, targe
   const expectedProjectionPaths = [
     'contracts/domain_descriptor.json',
     'contracts/capability_map.json',
-    'contracts/stage_control_plane.json',
   ];
   if (!Array.isArray(projectionPaths)
     || projectionPaths.some((entry) => typeof entry !== 'string')

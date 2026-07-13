@@ -1,9 +1,24 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
+import { randomUUID } from 'node:crypto';
 
-import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { runAgentExecutor } from './agent-executor.ts';
 import type { AgentExecutionRequest, AgentExecutionReceipt } from './agent-executor.ts';
+import {
+  buildCodexExecArgs,
+  parseCodexExecOutput,
+  resolveCodexBinary,
+  runCodexCommand,
+  runCodexCommandStreaming,
+} from './codex.ts';
+import type {
+  CodexCommandResult,
+  CodexExecEvent,
+  CodexExecOptions,
+  CodexStreamingCommandOptions,
+} from './codex.ts';
 
 export {
   buildCodexExecArgs,
@@ -11,8 +26,8 @@ export {
   resolveCodexBinary,
   runCodexCommand,
   runCodexCommandStreaming,
-} from './codex.ts';
-export type { CodexCommandResult, CodexExecEvent, CodexExecOptions, CodexStreamingCommandOptions } from './codex.ts';
+};
+export type { CodexCommandResult, CodexExecEvent, CodexExecOptions, CodexStreamingCommandOptions };
 
 type JsonRecord = Record<string, unknown>;
 
@@ -27,6 +42,146 @@ export type DomainRunIdentity = {
 export type DomainActionHandler<TOptions extends JsonRecord = JsonRecord> = (
   options: TOptions,
 ) => unknown | Promise<unknown>;
+
+export type DomainCodexPromptRunner = (
+  binary: string,
+  args: string[],
+  options: {
+    cwd: string;
+    encoding: 'utf8';
+    maxBuffer: number;
+    timeout: number;
+    input: string;
+    env: NodeJS.ProcessEnv;
+  },
+) => CodexCommandResult | {
+  status?: number | null;
+  exitCode?: number;
+  stdout?: string;
+  stderr?: string;
+  error?: Error;
+} | Promise<CodexCommandResult | {
+  status?: number | null;
+  exitCode?: number;
+  stdout?: string;
+  stderr?: string;
+  error?: Error;
+}>;
+
+function commandParts(value: readonly string[] | undefined) {
+  if (value === undefined) return null;
+  if (value.length === 0 || value.some((entry) => !entry.trim())) {
+    throw new FrameworkContractError('cli_usage_error', 'Codex command must be a non-empty string array.');
+  }
+  return [...value];
+}
+
+function codexEvents(stdout: string) {
+  return stdout.split(/\r?\n/).filter(Boolean).flatMap((line) => {
+    try {
+      const parsed = JSON.parse(line);
+      return isRecord(parsed) ? [parsed] : [];
+    } catch {
+      return [];
+    }
+  });
+}
+
+export async function runDomainCodexPrompt(input: {
+  prompt: string;
+  cwd?: string;
+  timeout_ms?: number;
+  command?: readonly string[];
+  model?: string | null;
+  provider?: string | null;
+  reasoning_effort?: string | null;
+  enable_image_generation?: boolean;
+  env?: NodeJS.ProcessEnv;
+  runner?: DomainCodexPromptRunner;
+  run_id?: string;
+}) {
+  const prompt = input.prompt;
+  if (!prompt.trim()) {
+    throw new FrameworkContractError('cli_usage_error', 'Domain Codex prompt must be non-empty.');
+  }
+  const cwd = path.resolve(input.cwd ?? process.cwd());
+  const timeoutMs = Math.trunc(input.timeout_ms ?? 120_000);
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+    throw new FrameworkContractError('cli_usage_error', 'Domain Codex timeout must be greater than zero.');
+  }
+  const command = commandParts(input.command);
+  const runId = input.run_id?.trim() || `run_codex_${randomUUID()}`;
+  if (!/^[A-Za-z0-9._-]+$/.test(runId) || runId.length > 120) {
+    throw new FrameworkContractError('cli_usage_error', 'Domain Codex run_id is not path-safe.');
+  }
+  const tempRoot = process.env.OPL_REPO_TEMP_ROOT?.trim() || os.tmpdir();
+  const outputDir = path.join(tempRoot, 'opl-domain-task-runtime');
+  fs.mkdirSync(outputDir, { recursive: true });
+  const outputLastMessagePath = path.join(outputDir, `${runId}-${randomUUID()}.last-message.txt`);
+  const args = [
+    ...(command?.slice(1) ?? []),
+    ...buildCodexExecArgs(prompt, {
+      cwd,
+      json: true,
+      ephemeral: true,
+      enableImageGeneration: input.enable_image_generation === true,
+      model: input.model?.trim() || undefined,
+      provider: input.provider?.trim() || undefined,
+      reasoningEffort: input.reasoning_effort?.trim() || undefined,
+      outputLastMessagePath,
+      promptViaStdin: true,
+    }),
+  ];
+  try {
+    const raw = input.runner
+      ? await input.runner(command?.[0] ?? 'codex', args, {
+          cwd,
+          encoding: 'utf8',
+          maxBuffer: 20 * 1024 * 1024,
+          timeout: timeoutMs,
+          input: prompt,
+          env: input.env ?? process.env,
+        })
+      : await runCodexCommandStreaming(args, {
+          binaryPath: command?.[0],
+          cwd,
+          env: input.env,
+          timeoutMs,
+          stdin: prompt,
+        });
+    if ('error' in raw && raw.error) throw raw.error;
+    const stdout = String(raw.stdout ?? '');
+    const stderr = String(raw.stderr ?? '');
+    const exitCode = 'exitCode' in raw && typeof raw.exitCode === 'number'
+      ? raw.exitCode
+      : ('status' in raw && typeof raw.status === 'number' ? raw.status : 1);
+    const parsed = parseCodexExecOutput(stdout);
+    const output = fs.existsSync(outputLastMessagePath)
+      ? fs.readFileSync(outputLastMessagePath, 'utf8')
+      : parsed.finalMessage;
+    return {
+      surface_kind: 'opl_domain_codex_prompt_execution',
+      version: 'domain-codex-prompt-execution.v1',
+      run_id: runId,
+      session_id: parsed.threadId ?? runId,
+      terminal_event: exitCode === 0 ? 'run.completed' : 'run.failed',
+      events: codexEvents(stdout),
+      output,
+      stdout,
+      stderr,
+      error: exitCode === 0 ? null : (stderr.trim() || stdout.trim() || 'Codex CLI execution failed'),
+      exit_code: exitCode,
+      authority_boundary: {
+        framework_owns_executor_transport: true,
+        framework_owns_domain_prompt_semantics: false,
+        framework_owns_domain_output_semantics: false,
+        framework_can_claim_domain_completion: false,
+      },
+    };
+  } finally {
+    fs.rmSync(outputLastMessagePath, { force: true });
+  }
+}
 
 function requiredIdentity(field: keyof DomainRunIdentity, value: string) {
   const normalized = value.trim();

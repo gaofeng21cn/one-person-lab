@@ -285,8 +285,11 @@ function buildStageCompletionPolicyAssessment(task: AgentLabTaskManifest) {
   if (policy && policy.opl_content_judgment_allowed !== false) {
     blockers.push('opl_content_judgment_must_be_forbidden');
   }
-  if (policy && policy.next_stage_transition_owner !== 'codex_cli') {
-    blockers.push('next_stage_transition_owner_must_be_codex_cli');
+  if (policy && policy.semantic_route_decision_owner !== 'decisive_codex_attempt') {
+    blockers.push('semantic_route_decision_owner_must_be_decisive_codex_attempt');
+  }
+  if (policy && policy.stage_transition_materialization_owner !== 'opl_stage_run_controller') {
+    blockers.push('stage_transition_materialization_owner_must_be_opl_stage_run_controller');
   }
   if (policy && !includesAll(requiredOutcomes, REQUIRED_STAGE_CLOSEOUT_OUTCOMES)) {
     blockers.push('stage_closeout_outcomes_incomplete');
@@ -310,8 +313,12 @@ function buildStageCompletionPolicyAssessment(task: AgentLabTaskManifest) {
     completion_judgment_owner: typeof policy?.completion_judgment_owner === 'string'
       ? policy.completion_judgment_owner
       : null,
-    next_stage_transition_owner: typeof policy?.next_stage_transition_owner === 'string'
-      ? policy.next_stage_transition_owner
+    semantic_route_decision_owner: typeof policy?.semantic_route_decision_owner === 'string'
+      ? policy.semantic_route_decision_owner
+      : null,
+    stage_transition_materialization_owner:
+      typeof policy?.stage_transition_materialization_owner === 'string'
+      ? policy.stage_transition_materialization_owner
       : null,
     required_closeout_outcomes: requiredOutcomes,
     accepted_closeout_ref_fields: acceptedRefFields,

@@ -33,6 +33,11 @@ test('OPL State Index Kernel freezes File Truth plus SQLite sidecar plus Tempora
     contract.truth_split.temporal_provider.sqlite_sidecar_role,
     'projection_and_readback_index_only',
   );
+  assert.equal(
+    contract.truth_split.durable_runtime_transport_registry.role,
+    'pre_start_write_ahead_stage_run_identity_and_transport_recovery',
+  );
+  assert.equal(contract.truth_split.durable_runtime_transport_registry.source_of_domain_truth, false);
   assert.match(contract.status_rule, /physical outputs \+ manifest validity \+ receipt authority \+ current pointer/);
 });
 
@@ -48,6 +53,26 @@ test('OPL State Index Kernel declares bounded refs-only SQLite databases and req
   assert.equal(databases.get('stage_attempt_index')?.path, '${OPL_STATE_DIR}/family-runtime/queue.sqlite');
   assert.equal(databases.get('stage_attempt_index')?.path_status, 'legacy_filename_retained_for_migration_compat');
   assert.ok(databases.get('stage_attempt_index')?.owned_tables.includes('stage_attempts'));
+  assert.ok(databases.get('stage_attempt_index')?.owned_tables.includes('stage_run_launches'));
+  assert.equal(contract.stage_run_launch_registry.register_before_provider_start, true);
+  assert.equal(contract.stage_run_launch_registry.validate_identity_and_spec_before_write, true);
+  assert.equal(contract.stage_run_launch_registry.late_provider_start_receipt_cannot_reopen_closed_stage_run, true);
+  assert.equal(
+    contract.stage_run_launch_registry.late_provider_start_failure_cannot_downgrade_started_or_closed_stage_run,
+    true,
+  );
+  assert.deepEqual(contract.stage_run_launch_registry.launch_statuses, [
+    'registered',
+    'starting',
+    'start_failed',
+    'started',
+    'closed',
+  ]);
+  assert.match(contract.stage_run_launch_registry.provider_start_claim, /expired_starting_takeover/);
+  assert.equal(contract.stage_run_launch_registry.temporal_executions_per_stage_run, 1);
+  assert.equal(contract.stage_run_launch_registry.started_to_start_failed_allowed, false);
+  assert.equal(contract.stage_run_launch_registry.invocation_spec_conflict_effect, 'typed_fail_closed');
+  assert.equal(contract.stage_run_launch_registry.registry_is_domain_truth, false);
   assert.equal(databases.get('lifecycle_index')?.path, '${OPL_STATE_DIR}/family-runtime/lifecycle-index.sqlite');
   assert.ok(databases.get('artifact_index')?.owned_tables.includes('artifact_refs'));
   assert.ok(databases.get('operator_read_model')?.owned_tables.includes('owner_route_index'));

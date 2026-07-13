@@ -18,7 +18,6 @@
     "./family-runtime-lifecycle-index": "./dist/modules/runway/family-runtime-lifecycle-index.js",
     "./generic-substrate-projection": "./dist/modules/runway/generic-substrate-projection.js",
     "./json-schema-registry": "./dist/kernel/schema-registry.js",
-    "./standard-agent-action-stage-run": "./dist/modules/stagecraft/standard-agent-action-stage-run.js",
     "./family-domain-catalog": "./dist/modules/atlas/family-domain-catalog.js",
     "./family-entry-contracts": "./dist/modules/atlas/family-entry-contracts.js",
     "./foundry-agent-series-policy": "./dist/modules/foundry-lab/public/foundry-agent-series-policy.js",

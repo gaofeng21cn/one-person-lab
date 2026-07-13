@@ -1,0 +1,1241 @@
+import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
+import test from 'node:test';
+import { pathToFileURL } from 'node:url';
+import { Worker } from 'node:worker_threads';
+
+import type { StandardAgentStageQualityRuntimeBinding } from '../../src/modules/pack/index.ts';
+import { parseFamilyRuntimeCommand } from '../../src/modules/runway/family-runtime-command.ts';
+import { buildPackBoundTemporalStageRunInput } from '../../src/modules/runway/family-runtime-pack-bound-stage-run.ts';
+import { resolveStageRunAttemptExecutorContent } from '../../src/modules/runway/family-runtime-stage-run-attempt-content.ts';
+import {
+  buildCliStageRunInvocationId,
+  buildHostedActionStageRunInvocationId,
+  buildRouteStageRunInvocation,
+  deriveStageRunId,
+  stageRunSpecSha256,
+} from '../../src/modules/runway/family-runtime-stage-run-identity.ts';
+import { launchRegisteredStageRun } from '../../src/modules/runway/family-runtime-stage-run-launch.ts';
+import { materializeStageRunRoute } from '../../src/modules/runway/family-runtime-stage-run-route-launch.ts';
+import {
+  claimStageRunStart,
+  inspectStageRunLaunch,
+  recordStageRunClosed,
+  recordStageRunStartFailure,
+  recordStageRunTemporalStart,
+  registerStageRunLaunch,
+} from '../../src/modules/runway/family-runtime-stage-run-launch-registry.ts';
+import { requireTemporalStageRunWorkflowInputLaunchable } from '../../src/modules/runway/family-runtime-temporal.ts';
+import { stageQualityAttemptMaterializeActivity } from '../../src/modules/runway/family-runtime-temporal-activities.ts';
+import { normalizeStageQualityCyclePolicy } from '../../src/modules/stagecraft/stage-quality-cycle.ts';
+
+const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-launch-fixture-'));
+const domainPackRoot = path.join(fixtureRoot, 'domain-pack');
+const workspaceRoot = path.join(fixtureRoot, 'workspace');
+
+function sha256(bytes: string | Buffer) {
+  return `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
+}
+
+function writeFixture(root: string, ref: string, bytes: string) {
+  const filePath = path.join(root, ref);
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, bytes);
+  return { ref, sha256: sha256(bytes), filePath };
+}
+
+const manifestFixture = writeFixture(
+  domainPackRoot,
+  'agent/stages/manifest.json',
+  `${JSON.stringify({ stages: ['intake', 'draft', 'review'] })}\n`,
+);
+writeFixture(domainPackRoot, 'contracts/stage_quality_cycle_policy.json', '{"stages":{}}\n');
+writeFixture(
+  domainPackRoot,
+  'agent/prompts/stage-quality.md',
+  '# Stage quality roles\n\n## Producer\nProduce the artifact.\n\n## Reviewer\nReview the artifact.\n\n## Repairer\nRepair required findings.\n\n## Re-reviewer\nClose prior findings.\n',
+);
+writeFixture(domainPackRoot, 'agent/quality_gates/stage.md', '# Stage rubric\n');
+writeFixture(domainPackRoot, 'agent/sources/request.md', '# Request source\n');
+for (const stageId of ['intake', 'draft', 'review']) {
+  writeFixture(domainPackRoot, `agent/prompts/${stageId}.md`, `# ${stageId} prompt\n`);
+  writeFixture(domainPackRoot, `agent/goals/${stageId}.md`, `# ${stageId} goal\n`);
+  writeFixture(domainPackRoot, `agent/lineage/${stageId}.json`, `${JSON.stringify({ stage_id: stageId })}\n`);
+}
+const artifactFixtures = Object.fromEntries(['request', 'a', 'b'].map((artifactId) => {
+  const fixture = writeFixture(
+    workspaceRoot,
+    `artifacts/${artifactId}.json`,
+    `${JSON.stringify({ artifact_id: artifactId })}\n`,
+  );
+  return [artifactId, fixture];
+})) as Record<string, ReturnType<typeof writeFixture>>;
+
+test.after(() => fs.rmSync(fixtureRoot, { recursive: true, force: true }));
+
+function binding(
+  stageId = 'intake',
+  sourceRefs: string[] = ['agent/sources/request.md'],
+): StandardAgentStageQualityRuntimeBinding {
+  return {
+    surface_kind: 'opl_pack_bound_stage_quality_runtime_binding',
+    version: 'opl-pack-bound-stage-quality-runtime-binding.v1',
+    stage_id: stageId,
+    declared_stage_ids: ['intake', 'draft', 'review'],
+    enabled: true,
+    stage_role: null,
+    policy_ref: `contracts/stage_quality_cycle_policy.json#/stages/${stageId}`,
+    stage_prompt_ref: `agent/prompts/${stageId}.md`,
+    quality_policy: normalizeStageQualityCyclePolicy({
+      formal_review: { required: true, risk_tier: 'high', max_repair_rounds: 3 },
+    }),
+    handoff_review_boundary: null,
+    role_prompt_refs: {
+      producer: 'agent/prompts/stage-quality.md#producer',
+      reviewer: 'agent/prompts/stage-quality.md#reviewer',
+      repairer: 'agent/prompts/stage-quality.md#repairer',
+      re_reviewer: 'agent/prompts/stage-quality.md#re-reviewer',
+    },
+    quality_rubric_refs: ['agent/quality_gates/stage.md'],
+    stage_goal_refs: [`agent/goals/${stageId}.md`],
+    source_refs: sourceRefs,
+    lineage_refs: [`agent/lineage/${stageId}.json`],
+    manifest_ref: 'agent/stages/manifest.json',
+    manifest_sha256: manifestFixture.sha256.slice('sha256:'.length),
+  };
+}
+
+function packageUseBinding(input: {
+  checkedAt?: string;
+  useReceiptRef?: string;
+  targetRoot?: string;
+  packageVersion?: string;
+} = {}) {
+  return {
+    surface_kind: 'opl_agent_package_use_binding.v1',
+    use_boundary_id: 'package-use:fixture',
+    use_receipt_ref: input.useReceiptRef ?? 'opl://agent-package/use/fixture/one',
+    root_package: {
+      package_id: 'mas',
+      package_version: input.packageVersion ?? '0.2.1',
+      owner_language_version: { scheme: 'pep440', value: input.packageVersion ?? '0.2.1' },
+      package_lock_ref: 'opl://agent-package-lock/mas/0.2.1',
+      manifest_sha256: 'b'.repeat(64),
+      content_digest: `sha256:${'3'.repeat(64)}`,
+      source_artifact_ref: 'oci://opl/mas@sha256:fixture',
+      artifact_digest: `sha256:${'4'.repeat(64)}`,
+    },
+    provider_packages: [{
+      package_id: 'mas-scholar-skills',
+      package_version: '0.1.1',
+      owner_language_version: { scheme: 'semver', value: '0.1.1' },
+      package_lock_ref: 'opl://agent-package-lock/mas-scholar-skills/0.1.1',
+      manifest_sha256: 'c'.repeat(64),
+      content_digest: `sha256:${'d'.repeat(64)}`,
+      source_artifact_ref: 'oci://opl/mas-scholar-skills@sha256:fixture',
+      artifact_digest: `sha256:${'e'.repeat(64)}`,
+    }],
+    dependency_closure_digest: 'f'.repeat(64),
+    freshness_mode: 'channel_verified',
+    latest_verified: true,
+    checked_at: input.checkedAt ?? '2026-07-14T00:00:00.000Z',
+    refresh_outcome: 'current',
+    channel_ref: 'channel:stable',
+    channel_digest: 'channel-digest:one',
+    scope: 'workspace',
+    target_root: input.targetRoot ?? workspaceRoot,
+    core_skill_tree_digest: '1'.repeat(64),
+    skill_tree_digest: '2'.repeat(64),
+    core_readiness: { status: 'current' },
+    specialty_exposure: { status: 'current' },
+  };
+}
+
+function workspaceLocator(useBinding = packageUseBinding()) {
+  return {
+    workspace_root: workspaceRoot,
+    domain_pack_root: domainPackRoot,
+    package_use_binding: useBinding,
+    checkout_currentness: { status: 'current', checked_at: '2026-07-14T00:00:00.000Z' },
+    runtime_source_readiness: {
+      checkout_path: domainPackRoot,
+      checked_at: '2026-07-14T00:00:00.000Z',
+    },
+  };
+}
+
+function stageRunInput(input: {
+  invocationId?: string;
+  stageId?: string;
+  sourceFingerprint?: string;
+  locator?: Record<string, unknown>;
+  artifactId?: 'request' | 'a' | 'b';
+  sourceRefs?: string[];
+  artifact?: {
+    ref: string;
+    sha256: string;
+    identityReceiptRef?: string;
+  };
+} = {}) {
+  const stageId = input.stageId ?? 'intake';
+  const fixtureArtifact = artifactFixtures[input.artifactId ?? 'request']!;
+  const artifact = input.artifact ?? fixtureArtifact;
+  return buildPackBoundTemporalStageRunInput({
+    binding: binding(stageId, input.sourceRefs),
+    domainPackRoot,
+    domainId: 'medautoscience',
+    stageId,
+    stageRunInvocationId: input.invocationId ?? 'sri_fixture',
+    workspaceLocator: input.locator ?? workspaceLocator(),
+    sourceFingerprint: input.sourceFingerprint ?? artifact.sha256,
+    actionId: 'draft-paper',
+    taskId: 'task:one',
+    artifactRefs: [artifact.ref],
+    artifactHashes: [artifact.sha256],
+    artifactIdentityReceiptRefs: input.artifact?.identityReceiptRef
+      ? [input.artifact.identityReceiptRef]
+      : undefined,
+  });
+}
+
+function writeTrustedIdentityReceipt(input: {
+  stateRoot: string;
+  domainId: string;
+  stageAttemptId: string;
+  artifactRef: string;
+  artifactSha256: string;
+  sizeBytes: number;
+}) {
+  const receipt = {
+    surface_kind: 'domain_artifact_identity_receipt',
+    version: 'domain-artifact-identity-receipt.v1',
+    domain_id: input.domainId,
+    stage_attempt_id: input.stageAttemptId,
+    artifact_ref: input.artifactRef,
+    sha256: input.artifactSha256,
+    size_bytes: input.sizeBytes,
+  };
+  const bytes = Buffer.from(`${JSON.stringify(receipt, null, 2)}\n`, 'utf8');
+  const receiptRoot = path.join(input.stateRoot, 'runtime-state', 'stage-artifact-identities');
+  fs.mkdirSync(receiptRoot, { recursive: true });
+  const receiptPath = path.join(receiptRoot, `${sha256(bytes).slice('sha256:'.length)}.json`);
+  fs.writeFileSync(receiptPath, bytes);
+  return { ref: pathToFileURL(receiptPath).href, filePath: receiptPath, bytes };
+}
+
+function temporalStartReceipt(
+  input: ReturnType<typeof stageRunInput>,
+  workflowStatus = 'RUNNING',
+  extra: Record<string, unknown> = {},
+) {
+  return {
+    workflow_id: input.workflow_id,
+    first_execution_run_id: `run-${input.stage_run_id}`,
+    workflow_status: workflowStatus,
+    ...extra,
+  };
+}
+
+function workerClaim(input: {
+  dbPath: string;
+  stageRunId: string;
+  barrier: SharedArrayBuffer;
+  claimToken: string;
+}) {
+  const registryModuleUrl = pathToFileURL(path.resolve(
+    'src/modules/runway/family-runtime-stage-run-launch-registry.ts',
+  )).href;
+  const source = [
+    "import { parentPort, workerData } from 'node:worker_threads';",
+    "import { DatabaseSync } from 'node:sqlite';",
+    `import { claimStageRunStart } from ${JSON.stringify(registryModuleUrl)};`,
+    'const barrier = new Int32Array(workerData.barrier);',
+    'Atomics.add(barrier, 0, 1);',
+    'Atomics.notify(barrier, 0);',
+    'Atomics.wait(barrier, 1, 0);',
+    'const db = new DatabaseSync(workerData.dbPath);',
+    'try {',
+    '  const result = claimStageRunStart(db, {',
+    '    stageRunId: workerData.stageRunId,',
+    '    claimToken: workerData.claimToken,',
+    '    now: new Date("2026-07-14T00:00:00.000Z"),',
+    '    leaseMs: 30000,',
+    '  });',
+    '  parentPort.postMessage({ ok: true, result });',
+    '} catch (error) {',
+    '  parentPort.postMessage({',
+    '    ok: false,',
+    '    error: error instanceof Error ? error.message : String(error),',
+    '    details: error && typeof error === "object" ? error.details : null,',
+    '  });',
+    '} finally {',
+    '  db.close();',
+    '}',
+  ].join('\n');
+  const worker = new Worker(new URL(`data:text/javascript,${encodeURIComponent(source)}`), {
+    workerData: input,
+  });
+  const exited = new Promise<void>((resolve, reject) => {
+    worker.once('exit', (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(`StageRun claim worker exited with ${code}.`));
+    });
+  });
+  return {
+    worker,
+    result: new Promise<Record<string, any>>((resolve, reject) => {
+      worker.once('message', resolve);
+      worker.once('error', reject);
+    }),
+    exited,
+  };
+}
+
+function workerClose(input: {
+  dbPath: string;
+  stageRunId: string;
+  barrier: SharedArrayBuffer;
+  terminalStatus: string;
+}) {
+  const registryModuleUrl = pathToFileURL(path.resolve(
+    'src/modules/runway/family-runtime-stage-run-launch-registry.ts',
+  )).href;
+  const source = [
+    "import { parentPort, workerData } from 'node:worker_threads';",
+    "import { DatabaseSync } from 'node:sqlite';",
+    `import { recordStageRunClosed } from ${JSON.stringify(registryModuleUrl)};`,
+    'const barrier = new Int32Array(workerData.barrier);',
+    'Atomics.add(barrier, 0, 1);',
+    'Atomics.notify(barrier, 0);',
+    'Atomics.wait(barrier, 1, 0);',
+    'const db = new DatabaseSync(workerData.dbPath);',
+    'try {',
+    '  const result = recordStageRunClosed(db, {',
+    '    stageRunId: workerData.stageRunId,',
+    '    terminalStatus: workerData.terminalStatus,',
+    '    now: new Date("2026-07-14T00:00:00.000Z"),',
+    '  });',
+    '  parentPort.postMessage({ ok: true, result });',
+    '} catch (error) {',
+    '  parentPort.postMessage({',
+    '    ok: false,',
+    '    error: error instanceof Error ? error.message : String(error),',
+    '    details: error && typeof error === "object" ? error.details : null,',
+    '  });',
+    '} finally {',
+    '  db.close();',
+    '}',
+  ].join('\n');
+  const worker = new Worker(new URL(`data:text/javascript,${encodeURIComponent(source)}`), {
+    workerData: input,
+  });
+  const exited = new Promise<void>((resolve, reject) => {
+    worker.once('exit', (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(`StageRun close worker exited with ${code}.`));
+    });
+  });
+  return {
+    worker,
+    result: new Promise<Record<string, any>>((resolve, reject) => {
+      worker.once('message', resolve);
+      worker.once('error', reject);
+    }),
+    exited,
+  };
+}
+
+async function waitForBarrierCount(barrier: Int32Array, count: number) {
+  const deadline = Date.now() + 5_000;
+  while (Atomics.load(barrier, 0) < count) {
+    if (Date.now() >= deadline) throw new Error('StageRun claim workers did not reach the barrier.');
+    await new Promise<void>((resolve) => setImmediate(resolve));
+  }
+}
+
+test('StageRun identity ignores currentness observations but binds immutable package bytes', () => {
+  const firstLocator = workspaceLocator();
+  const refreshedLocator = {
+    ...workspaceLocator(packageUseBinding({
+      checkedAt: '2026-07-14T01:00:00.000Z',
+      useReceiptRef: 'opl://agent-package/use/fixture/two',
+      targetRoot: '/tmp/other-materialization-path',
+    })),
+    domain_pack_root: '/tmp/managed-checkout-two',
+    checkout_currentness: { status: 'current', checked_at: '2026-07-14T01:00:00.000Z' },
+    runtime_source_readiness: {
+      checkout_path: '/tmp/managed-checkout-two',
+      checked_at: '2026-07-14T01:00:00.000Z',
+    },
+    stage_run_currentness_admission: {
+      status: 'admitted',
+      checked_at: '2026-07-14T01:00:00.000Z',
+      stage_run_id: 'sr:observation-only',
+      child_attempts_inherit_admission: true,
+    },
+  };
+  const firstInvocation = buildCliStageRunInvocationId({
+    domainId: 'medautoscience', stageId: 'intake', actionId: 'draft-paper',
+    workspaceLocator: firstLocator, taskId: 'task:one',
+  });
+  const refreshedInvocation = buildCliStageRunInvocationId({
+    domainId: 'medautoscience', stageId: 'intake', actionId: 'draft-paper',
+    workspaceLocator: refreshedLocator, taskId: 'task:one',
+  });
+  assert.equal(refreshedInvocation, firstInvocation);
+
+  const first = stageRunInput({ invocationId: firstInvocation, locator: firstLocator });
+  const refreshed = stageRunInput({ invocationId: refreshedInvocation, locator: refreshedLocator });
+  assert.equal(refreshed.stage_run_id, first.stage_run_id);
+  assert.equal(refreshed.stage_run_spec_sha256, first.stage_run_spec_sha256);
+
+  const packageDrift = stageRunInput({
+    invocationId: firstInvocation,
+    locator: workspaceLocator(packageUseBinding({ packageVersion: '0.2.2' })),
+  });
+  assert.equal(packageDrift.stage_run_id, first.stage_run_id);
+  assert.notEqual(packageDrift.stage_run_spec_sha256, first.stage_run_spec_sha256);
+});
+
+test('route invocation makes A-B-A a new Run while replaying the same decision idempotently', () => {
+  const initialInvocation = buildCliStageRunInvocationId({
+    domainId: 'medautoscience', stageId: 'intake', actionId: 'draft-paper',
+    workspaceLocator: workspaceLocator(), taskId: 'task:one',
+  });
+  const initialStageRunId = deriveStageRunId({
+    domainId: 'medautoscience', stageId: 'intake', stageRunInvocationId: initialInvocation,
+  });
+  const aToBInput = {
+    parentStageRunId: initialStageRunId,
+    decisiveAttemptRef: 'opl://stage_attempts/reviewer-a',
+    decision: {
+      decision_kind: 'advance',
+      target_stage_id: 'draft',
+      evidence_refs: ['artifact:a'],
+    },
+    targetStageId: 'draft',
+  } as const;
+  const aToB = buildRouteStageRunInvocation(aToBInput);
+  assert.deepEqual(buildRouteStageRunInvocation(aToBInput), aToB);
+  const stageRunB = deriveStageRunId({
+    domainId: 'medautoscience', stageId: 'draft', stageRunInvocationId: aToB.stage_run_invocation_id,
+  });
+  const bToA = buildRouteStageRunInvocation({
+    parentStageRunId: stageRunB,
+    decisiveAttemptRef: 'opl://stage_attempts/reviewer-b',
+    decision: {
+      decision_kind: 'route_back',
+      target_stage_id: 'intake',
+      evidence_refs: ['artifact:b', 'finding:route-back'],
+    },
+    targetStageId: 'intake',
+  });
+  assert.notEqual(bToA.stage_run_invocation_id, initialInvocation);
+  assert.notEqual(bToA.stage_run_invocation_id, aToB.stage_run_invocation_id);
+
+  const laterDecision = buildRouteStageRunInvocation({
+    ...aToBInput,
+    decisiveAttemptRef: 'opl://stage_attempts/reviewer-a-later',
+  });
+  assert.notEqual(laterDecision.stage_run_invocation_id, aToB.stage_run_invocation_id);
+});
+
+test('controller route materialization starts targets, replays idempotently, and creates a new A-B-A Run', async () => {
+  const db = new DatabaseSync(':memory:');
+  const parent = stageRunInput({ invocationId: 'sri_initial_a', stageId: 'intake' });
+  const launchedInputs: ReturnType<typeof stageRunInput>[] = [];
+  let temporalStarts = 0;
+  const dependencies = {
+    ensurePackageLaunchReady: async () => ({
+      launch_allowed: true,
+      runtime_source_readiness: { checkout_path: domainPackRoot },
+      package_use_binding: packageUseBinding(),
+    } as any),
+    resolveStageBinding: (_root: string, stageId: string) => binding(stageId),
+    launchTargetStageRun: async (target: ReturnType<typeof stageRunInput>) => {
+      launchedInputs.push(target);
+      return await launchRegisteredStageRun({
+        db,
+        stageRunInput: target,
+        start: true,
+        startWorkflow: async () => {
+          temporalStarts += 1;
+          return temporalStartReceipt(target);
+        },
+      });
+    },
+  };
+  try {
+    const aToB = {
+      parent_stage_run: parent,
+      decisive_attempt_ref: 'opl://stage_attempts/reviewer-a',
+      decision: {
+        decision_kind: 'advance' as const,
+        target_stage_id: 'draft',
+        evidence_refs: ['artifact:a'],
+      },
+      artifact_refs: [artifactFixtures.a!.ref],
+      artifact_hashes: [artifactFixtures.a!.sha256],
+      artifact_identity_receipt_refs: [],
+    };
+    const first = await materializeStageRunRoute(aToB, dependencies);
+    assert.equal(first.materialization_status, 'launched');
+    assert.equal(first.decision.target_stage_id, 'draft');
+    assert.equal(first.durable_launch?.start_status, 'started');
+    assert.equal(temporalStarts, 1);
+    const stageRunB = launchedInputs.at(-1)!;
+    assert.deepEqual(stageRunB.stage_run_spec.input_artifacts, [{
+      ref: artifactFixtures.a!.ref,
+      sha256: artifactFixtures.a!.sha256,
+      identity_receipt_ref: null,
+    }]);
+    assert.equal(stageRunB.parent_route_decision_ref, first.parent_route_decision_ref);
+
+    const replay = await materializeStageRunRoute(aToB, dependencies);
+    assert.equal(replay.materialization_status, 'existing');
+    assert.equal(replay.target_stage_run_id, first.target_stage_run_id);
+    assert.equal(temporalStarts, 1);
+
+    const bToA = await materializeStageRunRoute({
+      parent_stage_run: stageRunB,
+      decisive_attempt_ref: 'opl://stage_attempts/reviewer-b',
+      decision: {
+        decision_kind: 'route_back',
+        target_stage_id: 'intake',
+        evidence_refs: ['artifact:b', 'finding:route-back'],
+      },
+      artifact_refs: [artifactFixtures.b!.ref],
+      artifact_hashes: [artifactFixtures.b!.sha256],
+      artifact_identity_receipt_refs: [],
+    }, dependencies);
+    assert.equal(bToA.materialization_status, 'launched');
+    assert.notEqual(bToA.target_stage_run_id, parent.stage_run_id);
+    assert.equal(temporalStarts, 2);
+
+    const laterDecision = await materializeStageRunRoute({
+      ...aToB,
+      decisive_attempt_ref: 'opl://stage_attempts/reviewer-a-later',
+      decision: { ...aToB.decision, evidence_refs: ['artifact:a-v2'] },
+    }, dependencies);
+    assert.notEqual(laterDecision.target_stage_run_id, first.target_stage_run_id);
+    assert.equal(temporalStarts, 3);
+
+    const complete = await materializeStageRunRoute({
+      ...aToB,
+      decision: { decision_kind: 'complete', evidence_refs: ['artifact:final'] },
+    }, {
+      launchTargetStageRun: async () => assert.fail('complete must not start another StageRun'),
+      ensurePackageLaunchReady: async () => assert.fail('complete must not refresh a package binding'),
+      resolveStageBinding: () => assert.fail('complete must not resolve a target binding'),
+    });
+    assert.equal(complete.materialization_status, 'workflow_complete');
+    assert.equal(complete.target_stage_run_id, null);
+    assert.equal(temporalStarts, 3);
+
+    await assert.rejects(materializeStageRunRoute({
+      ...aToB,
+      decision: {
+        decision_kind: 'advance',
+        target_stage_id: 'undeclared-stage',
+        evidence_refs: ['artifact:a'],
+      },
+    }, dependencies), (error: any) => {
+      assert.equal(error.details?.failure_code, 'route_target_stage_not_declared');
+      return true;
+    });
+    assert.equal(temporalStarts, 3);
+  } finally {
+    db.close();
+  }
+});
+
+test('Hosted action invocation replays one action run and separates later runs', () => {
+  const input = {
+    domainId: 'mas',
+    stageId: 'intake',
+    actionId: 'draft-paper',
+    runId: 'hosted-run-one',
+    actionRunRef: 'file:///tmp/workspace/.opl/action-runs/hosted-run-one',
+  };
+  const first = buildHostedActionStageRunInvocationId(input);
+  assert.equal(buildHostedActionStageRunInvocationId(input), first);
+  assert.notEqual(buildHostedActionStageRunInvocationId({
+    ...input,
+    runId: 'hosted-run-two',
+    actionRunRef: 'file:///tmp/workspace/.opl/action-runs/hosted-run-two',
+  }), first);
+});
+
+test('launch registry recovers pre-start and post-start crash windows without duplicate starts', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    const workflowInput = stageRunInput();
+    const planned = await launchRegisteredStageRun({
+      db,
+      stageRunInput: workflowInput,
+      start: false,
+      startWorkflow: async () => assert.fail('planning must not start Temporal'),
+    });
+    assert.equal(planned.start_status, 'registered');
+    assert.equal(planned.launch.launch_status, 'registered');
+
+    const plannedReplay = await launchRegisteredStageRun({
+      db,
+      stageRunInput: workflowInput,
+      start: false,
+      startWorkflow: async () => assert.fail('replayed planning must not start Temporal'),
+    });
+    assert.equal(plannedReplay.start_status, 'existing');
+    assert.equal(plannedReplay.launch.launch_status, 'registered');
+
+    let starts = 0;
+    const recoveredPreStart = await launchRegisteredStageRun({
+      db,
+      stageRunInput: workflowInput,
+      start: true,
+      startWorkflow: async () => {
+        starts += 1;
+        return temporalStartReceipt(workflowInput);
+      },
+    });
+    assert.equal(recoveredPreStart.start_status, 'recovered');
+    assert.equal(recoveredPreStart.launch.launch_status, 'started');
+    assert.equal(starts, 1);
+
+    const runningReplay = await launchRegisteredStageRun({
+      db,
+      stageRunInput: workflowInput,
+      start: true,
+      startWorkflow: async () => assert.fail('running replay must not issue another start'),
+    });
+    assert.equal(runningReplay.start_status, 'existing');
+    assert.equal(starts, 1);
+
+    recordStageRunClosed(db, { stageRunId: workflowInput.stage_run_id, terminalStatus: 'completed' });
+    const closedReplay = await launchRegisteredStageRun({
+      db,
+      stageRunInput: workflowInput,
+      start: true,
+      startWorkflow: async () => assert.fail('closed replay must not issue another start'),
+    });
+    assert.equal(closedReplay.start_status, 'existing');
+    assert.equal(closedReplay.launch.launch_status, 'closed');
+
+    const closedPlanReplay = await launchRegisteredStageRun({
+      db,
+      stageRunInput: workflowInput,
+      start: false,
+      startWorkflow: async () => assert.fail('closed planning replay must not start Temporal'),
+    });
+    assert.equal(closedPlanReplay.start_status, 'existing');
+    assert.equal(closedPlanReplay.launch.launch_status, 'closed');
+
+    const postStartCompletedInput = stageRunInput({ invocationId: 'sri_post_start_completed_crash' });
+    registerStageRunLaunch(db, postStartCompletedInput);
+    const recoveredPostStartCompleted = await launchRegisteredStageRun({
+      db,
+      stageRunInput: postStartCompletedInput,
+      start: true,
+      startWorkflow: async () => temporalStartReceipt(postStartCompletedInput, 'COMPLETED', {
+        recovered_existing_execution: true,
+      }),
+    });
+    assert.equal(recoveredPostStartCompleted.start_status, 'recovered');
+    assert.equal(recoveredPostStartCompleted.launch.launch_status, 'closed');
+    assert.equal(recoveredPostStartCompleted.launch.terminal_status, 'completed');
+
+    const postStartFailedInput = stageRunInput({ invocationId: 'sri_post_start_failed_crash' });
+    registerStageRunLaunch(db, postStartFailedInput);
+    const recoveredPostStartFailed = await launchRegisteredStageRun({
+      db,
+      stageRunInput: postStartFailedInput,
+      start: true,
+      startWorkflow: async () => temporalStartReceipt(postStartFailedInput, 'FAILED', {
+        recovered_existing_execution: true,
+      }),
+    });
+    assert.equal(recoveredPostStartFailed.start_status, 'recovered');
+    assert.equal(recoveredPostStartFailed.launch.launch_status, 'closed');
+    assert.equal(recoveredPostStartFailed.launch.terminal_status, 'failed');
+  } finally {
+    db.close();
+  }
+});
+
+test('two SQLite connections atomically claim one StageRun start without a lock error', async () => {
+  const dbPath = path.join(fixtureRoot, `claim-race-${crypto.randomUUID()}.sqlite`);
+  const input = stageRunInput({ invocationId: 'sri_real_sqlite_claim_race' });
+  const setupDb = new DatabaseSync(dbPath);
+  registerStageRunLaunch(setupDb, input);
+  setupDb.close();
+
+  const barrierBuffer = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2);
+  const barrier = new Int32Array(barrierBuffer);
+  const workers = ['claim-a', 'claim-b'].map((claimToken) => workerClaim({
+    dbPath,
+    stageRunId: input.stage_run_id,
+    barrier: barrierBuffer,
+    claimToken,
+  }));
+  await waitForBarrierCount(barrier, workers.length);
+  Atomics.store(barrier, 1, 1);
+  Atomics.notify(barrier, 1, workers.length);
+  const results = await Promise.all(workers.map((entry) => entry.result));
+  await Promise.all(workers.map((entry) => entry.exited));
+
+  assert.equal(results.every((entry) => entry.ok), true, JSON.stringify(results));
+  assert.deepEqual(
+    results.map((entry) => entry.result.claimed).sort(),
+    [false, true],
+  );
+  assert.deepEqual(
+    results.map((entry) => entry.result.claim_status).sort(),
+    ['active_starting', 'claimed'],
+  );
+  const readDb = new DatabaseSync(dbPath);
+  try {
+    const launch = inspectStageRunLaunch(readDb, input.stage_run_id);
+    assert.equal(launch.launch_status, 'starting');
+    assert.equal(launch.start_attempt_count, 1);
+  } finally {
+    readDb.close();
+  }
+});
+
+test('two SQLite connections close one started StageRun atomically and idempotently', async () => {
+  const dbPath = path.join(fixtureRoot, `close-race-${crypto.randomUUID()}.sqlite`);
+  const input = stageRunInput({ invocationId: 'sri_real_sqlite_close_race' });
+  const setupDb = new DatabaseSync(dbPath);
+  registerStageRunLaunch(setupDb, input);
+  recordStageRunTemporalStart(setupDb, {
+    stageRunId: input.stage_run_id,
+    temporalStartReceipt: temporalStartReceipt(input),
+  });
+  setupDb.close();
+
+  const barrierBuffer = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2);
+  const barrier = new Int32Array(barrierBuffer);
+  const workers = Array.from({ length: 2 }, () => workerClose({
+    dbPath,
+    stageRunId: input.stage_run_id,
+    barrier: barrierBuffer,
+    terminalStatus: 'completed',
+  }));
+  await waitForBarrierCount(barrier, workers.length);
+  Atomics.store(barrier, 1, 1);
+  Atomics.notify(barrier, 1, workers.length);
+  const results = await Promise.all(workers.map((entry) => entry.result));
+  await Promise.all(workers.map((entry) => entry.exited));
+
+  assert.equal(results.every((entry) => entry.ok), true, JSON.stringify(results));
+  assert.equal(results.every((entry) => entry.result.launch_status === 'closed'), true);
+  assert.equal(results.every((entry) => entry.result.terminal_status === 'completed'), true);
+  const readDb = new DatabaseSync(dbPath);
+  try {
+    assert.throws(() => recordStageRunClosed(readDb, {
+      stageRunId: input.stage_run_id,
+      terminalStatus: 'failed',
+    }), (error: any) => {
+      assert.equal(error.details?.failure_code, 'stage_run_terminal_status_conflict');
+      return true;
+    });
+  } finally {
+    readDb.close();
+  }
+});
+
+test('concurrent launch callers expose one active starter and one idempotent existing result', async () => {
+  const dbPath = path.join(fixtureRoot, `launch-race-${crypto.randomUUID()}.sqlite`);
+  const firstDb = new DatabaseSync(dbPath);
+  const secondDb = new DatabaseSync(dbPath);
+  const input = stageRunInput({ invocationId: 'sri_launch_race' });
+  let starts = 0;
+  let releaseStart!: () => void;
+  let markStarted!: () => void;
+  const startReleased = new Promise<void>((resolve) => { releaseStart = resolve; });
+  const startEntered = new Promise<void>((resolve) => { markStarted = resolve; });
+  try {
+    const first = launchRegisteredStageRun({
+      db: firstDb,
+      stageRunInput: input,
+      start: true,
+      startWorkflow: async () => {
+        starts += 1;
+        markStarted();
+        await startReleased;
+        return temporalStartReceipt(input);
+      },
+    });
+    await startEntered;
+    const second = await launchRegisteredStageRun({
+      db: secondDb,
+      stageRunInput: input,
+      start: true,
+      startWorkflow: async () => assert.fail('active starting lease must suppress a duplicate start'),
+    });
+    assert.equal(second.start_status, 'starting');
+    assert.equal(second.idempotent_replay, true);
+    assert.equal(starts, 1);
+    releaseStart();
+    const started = await first;
+    assert.equal(started.start_status, 'started');
+    assert.equal(started.launch.launch_status, 'started');
+    assert.equal(starts, 1);
+  } finally {
+    releaseStart?.();
+    firstDb.close();
+    secondDb.close();
+  }
+});
+
+test('stale starting lease is recovered with the same deterministic workflow id', async () => {
+  const db = new DatabaseSync(':memory:');
+  const input = stageRunInput({ invocationId: 'sri_stale_starting_takeover' });
+  try {
+    registerStageRunLaunch(db, input);
+    const firstClaim = claimStageRunStart(db, {
+      stageRunId: input.stage_run_id,
+      claimToken: 'abandoned-claim',
+      now: new Date('2026-07-14T00:00:00.000Z'),
+      leaseMs: 10,
+    });
+    assert.equal(firstClaim.claimed, true);
+    let starts = 0;
+    const recovered = await launchRegisteredStageRun({
+      db,
+      stageRunInput: input,
+      start: true,
+      now: () => new Date('2026-07-14T00:00:00.020Z'),
+      startLeaseMs: 10,
+      describeWorkflow: async () => ({
+        ...temporalStartReceipt(input, 'NOT_FOUND'),
+        workflow_found: false,
+        first_execution_run_id: null,
+      }),
+      startWorkflow: async () => {
+        starts += 1;
+        return temporalStartReceipt(input);
+      },
+    });
+    assert.equal(recovered.start_status, 'recovered');
+    assert.equal(recovered.launch.workflow_id, input.workflow_id);
+    assert.equal(recovered.launch.start_attempt_count, 2);
+    assert.equal(starts, 1);
+  } finally {
+    db.close();
+  }
+});
+
+test('unknown-success start is retried idempotently without materializing a second workflow', async () => {
+  const db = new DatabaseSync(':memory:');
+  const input = stageRunInput({ invocationId: 'sri_unknown_start_success' });
+  let materializedWorkflows = 0;
+  try {
+    await assert.rejects(launchRegisteredStageRun({
+      db,
+      stageRunInput: input,
+      start: true,
+      startWorkflow: async () => {
+        materializedWorkflows += 1;
+        throw new Error('transport lost after Temporal accepted the deterministic workflow id');
+      },
+    }), /transport lost/);
+    assert.equal(inspectStageRunLaunch(db, input.stage_run_id).launch_status, 'start_failed');
+
+    const recovered = await launchRegisteredStageRun({
+      db,
+      stageRunInput: input,
+      start: true,
+      startWorkflow: async () => temporalStartReceipt(input, 'RUNNING', {
+        recovered_existing_execution: true,
+      }),
+    });
+    assert.equal(recovered.start_status, 'recovered');
+    assert.equal(recovered.launch.launch_status, 'started');
+    assert.equal(materializedWorkflows, 1);
+    assert.equal(recovered.temporal_start?.first_execution_run_id, `run-${input.stage_run_id}`);
+  } finally {
+    db.close();
+  }
+});
+
+test('provider observation closes post-start crash and late failures cannot downgrade started or closed', async () => {
+  const db = new DatabaseSync(':memory:');
+  const input = stageRunInput({ invocationId: 'sri_post_start_observation' });
+  try {
+    registerStageRunLaunch(db, input);
+    const claim = claimStageRunStart(db, {
+      stageRunId: input.stage_run_id,
+      claimToken: 'crashed-after-provider-start',
+    });
+    assert.equal(claim.claimed, true);
+    const reconciled = await launchRegisteredStageRun({
+      db,
+      stageRunInput: input,
+      start: true,
+      describeWorkflow: async () => ({
+        ...temporalStartReceipt(input),
+        workflow_found: true,
+      }),
+      startWorkflow: async () => assert.fail('provider observation must prevent a duplicate start'),
+    });
+    assert.equal(reconciled.start_status, 'existing');
+    assert.equal(reconciled.launch.launch_status, 'started');
+
+    await assert.rejects(launchRegisteredStageRun({
+      db,
+      stageRunInput: input,
+      start: true,
+      describeWorkflow: async () => ({
+        ...temporalStartReceipt(input),
+        first_execution_run_id: 'conflicting-first-execution',
+        workflow_found: true,
+      }),
+      startWorkflow: async () => assert.fail('identity conflict must fail before another start'),
+    }), (error: any) => {
+      assert.equal(error.details?.failure_code, 'stage_run_temporal_execution_identity_conflict');
+      return true;
+    });
+
+    const afterLateFailure = recordStageRunStartFailure(db, {
+      stageRunId: input.stage_run_id,
+      claimToken: 'crashed-after-provider-start',
+      error: new Error('late callback failure'),
+    });
+    assert.equal(afterLateFailure.launch_status, 'started');
+    recordStageRunClosed(db, { stageRunId: input.stage_run_id, terminalStatus: 'completed' });
+    const afterClosedLateFailure = recordStageRunStartFailure(db, {
+      stageRunId: input.stage_run_id,
+      claimToken: 'crashed-after-provider-start',
+      error: new Error('even later callback failure'),
+    });
+    assert.equal(afterClosedLateFailure.launch_status, 'closed');
+    assert.equal(afterClosedLateFailure.terminal_status, 'completed');
+    assert.throws(() => recordStageRunTemporalStart(db, {
+      stageRunId: input.stage_run_id,
+      temporalStartReceipt: {
+        ...temporalStartReceipt(input),
+        first_execution_run_id: 'conflicting-closed-first-execution',
+      },
+    }), (error: any) => {
+      assert.equal(error.details?.failure_code, 'stage_run_temporal_execution_identity_conflict');
+      return true;
+    });
+  } finally {
+    db.close();
+  }
+});
+
+test('registry revalidates prompt, rubric, source, checkpoint, and artifact bytes before write', () => {
+  const input = stageRunInput({ invocationId: 'sri_content_revalidation' });
+  const cases = [
+    path.join(domainPackRoot, 'agent/prompts/intake.md'),
+    path.join(domainPackRoot, 'agent/quality_gates/stage.md'),
+    path.join(domainPackRoot, 'agent/sources/request.md'),
+    manifestFixture.filePath,
+    artifactFixtures.request!.filePath,
+  ];
+  for (const filePath of cases) {
+    const original = fs.readFileSync(filePath);
+    const db = new DatabaseSync(':memory:');
+    try {
+      fs.appendFileSync(filePath, 'tampered-after-spec\n');
+      assert.throws(() => registerStageRunLaunch(db, input), (error: any) => {
+        assert.equal(error.details?.failure_code, 'stage_run_content_binding_stale');
+        return true;
+      });
+    } finally {
+      fs.writeFileSync(filePath, original);
+      db.close();
+    }
+  }
+});
+
+test('immutable spec binds both role prompt backing file and effective Markdown section bytes', () => {
+  const input = stageRunInput({ invocationId: 'sri_role_prompt_effective_section' });
+  const producer = input.stage_run_spec.content_bindings.find((entry) => (
+    entry.purpose === 'role_prompt' && entry.ref.endsWith('#producer')
+  ));
+  const reviewer = input.stage_run_spec.content_bindings.find((entry) => (
+    entry.purpose === 'role_prompt' && entry.ref.endsWith('#reviewer')
+  ));
+  const rolePromptBytes = fs.readFileSync(path.join(domainPackRoot, 'agent/prompts/stage-quality.md'));
+  assert.equal(producer?.sha256, sha256(rolePromptBytes));
+  assert.equal(reviewer?.sha256, producer?.sha256);
+  assert.equal(producer?.effective_content_sha256, sha256('## Producer\nProduce the artifact.'));
+  assert.equal(reviewer?.effective_content_sha256, sha256('## Reviewer\nReview the artifact.'));
+  assert.notEqual(producer?.effective_content_sha256, reviewer?.effective_content_sha256);
+  assert.equal(producer?.effective_content_byte_size, Buffer.byteLength('## Producer\nProduce the artifact.'));
+
+  const tamperedSpec = structuredClone(input.stage_run_spec);
+  const tamperedProducer = tamperedSpec.content_bindings.find((entry) => (
+    entry.purpose === 'role_prompt' && entry.ref.endsWith('#producer')
+  ))!;
+  tamperedProducer.effective_content_sha256 = sha256('different extracted section');
+  const tamperedInput = {
+    ...input,
+    stage_run_spec: tamperedSpec,
+    stage_run_spec_sha256: stageRunSpecSha256(tamperedSpec),
+  };
+  const db = new DatabaseSync(':memory:');
+  try {
+    assert.throws(() => registerStageRunLaunch(db, tamperedInput), (error: any) => {
+      assert.equal(error.details?.failure_code, 'stage_run_role_prompt_content_binding_stale');
+      return true;
+    });
+  } finally {
+    db.close();
+  }
+});
+
+test('trusted content-addressed receipt binds an external source through the immutable spec', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-external-source-'));
+  const previousStateRoot = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = stateRoot;
+  try {
+    const sourceRef = 'https://evidence.example.invalid/source/request.json';
+    const sourceBytes = Buffer.from('{"question":"external evidence"}\n', 'utf8');
+    const sourceSha256 = sha256(sourceBytes);
+    const receipt = writeTrustedIdentityReceipt({
+      stateRoot,
+      domainId: 'medautoscience',
+      stageAttemptId: 'sat-external-source-owner',
+      artifactRef: sourceRef,
+      artifactSha256: sourceSha256,
+      sizeBytes: sourceBytes.length,
+    });
+    const input = stageRunInput({
+      invocationId: 'sri_external_source_receipt',
+      sourceFingerprint: sourceSha256,
+      sourceRefs: [sourceRef],
+      artifact: {
+        ref: sourceRef,
+        sha256: sourceSha256,
+        identityReceiptRef: receipt.ref,
+      },
+    });
+    const sourceBinding = input.stage_run_spec.content_bindings.find((entry) => (
+      entry.purpose === 'source' && entry.ref === sourceRef
+    ));
+    assert.equal(sourceBinding?.verification_kind, 'trusted_artifact_identity_receipt');
+    assert.equal(sourceBinding?.identity_receipt_ref, receipt.ref);
+
+    const db = new DatabaseSync(':memory:');
+    try {
+      registerStageRunLaunch(db, input);
+      fs.appendFileSync(receipt.filePath, 'tampered-after-spec\n');
+      assert.throws(() => registerStageRunLaunch(db, input), (error: any) => {
+        assert.equal(error.details?.failure_code, 'stage_run_artifact_identity_receipt_digest_mismatch');
+        return true;
+      });
+    } finally {
+      db.close();
+    }
+  } finally {
+    if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateRoot;
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('every new child Attempt revalidates parent bytes at materialization and immediately before executor use', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-child-content-'));
+  const previousStateRoot = process.env.OPL_STATE_DIR;
+  const stagePromptPath = path.join(domainPackRoot, 'agent/prompts/intake.md');
+  const rubricPath = path.join(domainPackRoot, 'agent/quality_gates/stage.md');
+  const originalStagePrompt = fs.readFileSync(stagePromptPath);
+  const originalRubric = fs.readFileSync(rubricPath);
+  process.env.OPL_STATE_DIR = stateRoot;
+  try {
+    const input = stageRunInput({ invocationId: 'sri_child_executor_content' });
+    const materialized = await stageQualityAttemptMaterializeActivity({
+      stage_run: input,
+      quality_cycle_id: 'sqc_child_executor_content',
+      attempt_role: 'producer',
+      quality_round_index: 0,
+      artifact_refs: input.artifact_refs ?? [],
+      artifact_hashes: input.artifact_hashes ?? [],
+      artifact_identity_receipt_refs: input.artifact_identity_receipt_refs ?? [],
+    });
+    assert.equal(
+      materialized.workflow_input.stage_run_content_binding_version,
+      'opl-stage-run-attempt-content-binding.v1',
+    );
+    const { stage_run_content_binding_version: _bindingVersion, ...unboundChild } = materialized.workflow_input;
+    assert.throws(() => resolveStageRunAttemptExecutorContent(unboundChild), (error: any) => {
+      assert.equal(error.details?.failure_code, 'stage_run_child_content_binding_version_missing');
+      return true;
+    });
+    const resolved = resolveStageRunAttemptExecutorContent(materialized.workflow_input);
+    assert.equal(resolved.effectiveStagePrompt?.content, originalStagePrompt.toString('utf8'));
+    assert.match(resolved.effectiveQualityRolePrompt?.content ?? '', /Producer/);
+
+    fs.appendFileSync(stagePromptPath, 'changed-after-child-materialization\n');
+    assert.throws(() => resolveStageRunAttemptExecutorContent(materialized.workflow_input), (error: any) => {
+      assert.equal(error.details?.failure_code, 'stage_run_content_binding_stale');
+      assert.equal(error.details?.ref, 'agent/prompts/intake.md');
+      assert.ok(['lineage', 'stage_prompt'].includes(error.details?.purpose));
+      return true;
+    });
+    fs.writeFileSync(stagePromptPath, originalStagePrompt);
+
+    const driftBeforeMaterialization = stageRunInput({
+      invocationId: 'sri_child_materialization_content_drift',
+    });
+    fs.appendFileSync(rubricPath, 'changed-before-child-materialization\n');
+    await assert.rejects(
+      stageQualityAttemptMaterializeActivity({
+        stage_run: driftBeforeMaterialization,
+        quality_cycle_id: 'sqc_child_materialization_content_drift',
+        attempt_role: 'producer',
+        quality_round_index: 0,
+        artifact_refs: driftBeforeMaterialization.artifact_refs ?? [],
+        artifact_hashes: driftBeforeMaterialization.artifact_hashes ?? [],
+        artifact_identity_receipt_refs: driftBeforeMaterialization.artifact_identity_receipt_refs ?? [],
+      }),
+      (error: any) => {
+        assert.equal(error.details?.failure_code, 'stage_run_content_binding_stale');
+        assert.equal(error.details?.purpose, 'quality_rubric');
+        return true;
+      },
+    );
+  } finally {
+    fs.writeFileSync(stagePromptPath, originalStagePrompt);
+    fs.writeFileSync(rubricPath, originalRubric);
+    if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateRoot;
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('StageRun creation requires the root package content digest', () => {
+  const useBinding: any = packageUseBinding();
+  delete useBinding.root_package.content_digest;
+  assert.throws(() => stageRunInput({
+    invocationId: 'sri_missing_root_content_digest',
+    locator: workspaceLocator(useBinding),
+  }), (error: any) => {
+    assert.equal(error.details?.failure_code, 'stage_run_root_package_content_digest_missing');
+    return true;
+  });
+});
+
+test('one invocation rejects immutable spec drift and preserves the original registered input', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    const first = stageRunInput();
+    const registered = registerStageRunLaunch(db, first);
+    assert.equal(registered.registered, true);
+    const volatileReplay = {
+      ...first,
+      workspace_locator: {
+        ...first.workspace_locator,
+        checkout_currentness: { status: 'current', checked_at: '2026-07-14T02:00:00.000Z' },
+      },
+    };
+    const replayed = registerStageRunLaunch(db, volatileReplay);
+    assert.equal(replayed.idempotent_replay, true);
+    assert.deepEqual(replayed.launch.stage_run_input, first);
+
+    const drift = stageRunInput({ sourceFingerprint: `sha256:${'8'.repeat(64)}` });
+    assert.throws(() => registerStageRunLaunch(db, drift), (error: any) => {
+      assert.equal(error.details?.failure_code, 'stage_run_invocation_spec_conflict');
+      return true;
+    });
+    assert.equal(inspectStageRunLaunch(db, first.stage_run_id).stage_run_spec_sha256,
+      first.stage_run_spec_sha256);
+  } finally {
+    db.close();
+  }
+});
+
+test('registry validates exact input before write and start receipt cannot reopen a closed Run', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    const input = stageRunInput({ invocationId: 'sri_registry_validation' });
+    assert.throws(() => registerStageRunLaunch(db, {
+      ...input,
+      stage_run_id: 'sr_tampered_before_write',
+    }), (error: any) => {
+      assert.equal(error.details?.failure_code, 'stage_run_identity_mismatch');
+      return true;
+    });
+    const table = db.prepare(`
+      SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'stage_run_launches'
+    `).get();
+    assert.equal(table, undefined);
+
+    registerStageRunLaunch(db, input);
+    recordStageRunTemporalStart(db, {
+      stageRunId: input.stage_run_id,
+      temporalStartReceipt: temporalStartReceipt(input),
+    });
+    recordStageRunClosed(db, { stageRunId: input.stage_run_id, terminalStatus: 'completed' });
+    const afterLateStartReceipt = recordStageRunTemporalStart(db, {
+      stageRunId: input.stage_run_id,
+      temporalStartReceipt: {
+        workflow_id: input.workflow_id,
+        first_execution_run_id: `run-${input.stage_run_id}`,
+        workflow_status: 'RUNNING',
+      },
+    });
+    assert.equal(afterLateStartReceipt.launch_status, 'closed');
+    assert.equal(afterLateStartReceipt.terminal_status, 'completed');
+    assert.equal(afterLateStartReceipt.temporal_start_receipt?.workflow_status, 'RUNNING');
+  } finally {
+    db.close();
+  }
+});
+
+test('StageRun launch validation rejects id and envelope drift', () => {
+  const input = stageRunInput();
+  assert.equal(requireTemporalStageRunWorkflowInputLaunchable(input), input);
+  assert.throws(() => requireTemporalStageRunWorkflowInputLaunchable({
+    ...input,
+    stage_run_id: 'sr_tampered',
+  }), (error: any) => {
+    assert.equal(error.details?.failure_code, 'stage_run_identity_mismatch');
+    return true;
+  });
+  assert.throws(() => requireTemporalStageRunWorkflowInputLaunchable({
+    ...input,
+    workspace_locator: { ...input.workspace_locator, workspace_root: '/tmp/wrong-target' },
+  }), (error: any) => {
+    assert.equal(error.details?.failure_code, 'stage_run_spec_envelope_mismatch');
+    return true;
+  });
+});
+
+test('CLI parser exposes explicit new StageRun and exact input artifact identity', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-parser-state-'));
+  const familyRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-parser-family-'));
+  const previousStateRoot = process.env.OPL_STATE_DIR;
+  const previousFamilyRoot = process.env.OPL_FAMILY_WORKSPACE_ROOT;
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    process.env.OPL_FAMILY_WORKSPACE_ROOT = familyRoot;
+    const parsed = parseFamilyRuntimeCommand([
+      'attempt', 'create', '--domain', 'medautoscience', '--stage', 'intake',
+      '--workspace-locator', JSON.stringify({ workspace_root: '/tmp/workspace' }),
+      '--new-stage-run',
+      '--input-artifact-ref', 'artifact:request',
+      '--input-artifact-sha256', 'sha256:request',
+    ]);
+    assert.equal(parsed.mode, 'attempt_create');
+    if (parsed.mode !== 'attempt_create') assert.fail('expected attempt_create');
+    assert.equal(parsed.input.newStageRun, true);
+    assert.deepEqual(parsed.input.inputArtifactRefs, ['artifact:request']);
+    assert.deepEqual(parsed.input.inputArtifactHashes, ['sha256:request']);
+  } finally {
+    if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateRoot;
+    if (previousFamilyRoot === undefined) delete process.env.OPL_FAMILY_WORKSPACE_ROOT;
+    else process.env.OPL_FAMILY_WORKSPACE_ROOT = previousFamilyRoot;
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(familyRoot, { recursive: true, force: true });
+  }
+});

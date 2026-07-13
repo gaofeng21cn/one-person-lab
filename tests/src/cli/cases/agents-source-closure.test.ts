@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 
 import { assert, fs, os, path, runCli, test } from '../helpers.ts';
+import { loadSourceClosureEffectContract } from '../../../../src/modules/foundry-lab/standard-agent-source-closure-parts/analysis.ts';
 import { buildPythonSourceGraph } from '../../../../src/modules/foundry-lab/standard-agent-source-closure-parts/python-graph.ts';
 
 function writeJson(filePath: string, value: unknown) {
@@ -29,6 +30,48 @@ function buildRepo() {
   return repoDir;
 }
 
+function actionCatalogAction(actionId: string, executionBinding: Record<string, unknown>) {
+  return {
+    action_id: actionId,
+    title: actionId,
+    summary: `${actionId} summary`,
+    owner: 'sample-agent',
+    effect: 'mutating',
+    execution_binding: executionBinding,
+    input_schema_ref: `contracts/schemas/${actionId}.input.schema.json`,
+    output_schema_ref: `contracts/schemas/${actionId}.output.schema.json`,
+    required_fields: [],
+    optional_fields: [],
+    workspace_locator_fields: [],
+    human_gate_ids: [],
+    supported_surfaces: {
+      cli: {},
+      mcp: {},
+      skill: {},
+      product_entry: {},
+      openai: {},
+      ai_sdk: {},
+    },
+  };
+}
+
+function installActionCatalog(repoDir: string, actions: Record<string, unknown>[]) {
+  writeJson(path.join(repoDir, 'contracts', 'action_catalog.json'), {
+    surface_kind: 'family_action_catalog',
+    version: 'family-action-catalog.v2',
+    catalog_id: 'sample_agent_action_catalog',
+    target_domain_id: 'sample-agent',
+    owner: 'sample-agent',
+    authority_boundary: {
+      domain_truth_owner: 'sample-agent',
+      opl_role: 'projection_consumer_only',
+      write_policy: 'no_domain_truth_writes',
+    },
+    actions,
+    notes: [],
+  });
+}
+
 function installTypescriptEntry(repoDir: string, source: string) {
   writeSource(repoDir, 'src/cli.ts', source);
   writeJson(path.join(repoDir, 'package.json'), {
@@ -37,16 +80,12 @@ function installTypescriptEntry(repoDir: string, source: string) {
     type: 'module',
     bin: { 'sample-agent': './src/cli.ts' },
   });
-  writeJson(path.join(repoDir, 'contracts', 'action_catalog.json'), {
-    surface_kind: 'family_action_catalog',
-    actions: [{
-      action_id: 'run',
-      handler_id: 'run',
-      source_command: { command: 'node ./src/cli.ts' },
-    }],
-  });
+  installActionCatalog(repoDir, [
+    actionCatalogAction('run', { kind: 'handler_ref', handler_ref: 'handler:run' }),
+  ]);
   writeJson(path.join(repoDir, 'contracts', 'domain_handler_registry.json'), {
     surface_kind: 'domain_handler_registry',
+    version: 'domain-handler-registry.v1',
     handlers: [{
       handler_id: 'run',
       binding: { kind: 'typescript_export', file: 'src/cli.ts', export: 'main' },
@@ -99,6 +138,75 @@ test('agents source-closure resolves package, action, handler, and TypeScript ca
   assert.equal(report.reachable_symbols.some((symbol: { symbol: string }) => symbol.symbol === 'handle'), true);
 });
 
+test('agents source-closure discovers nested workspace package bins', () => {
+  const repoDir = buildRepo();
+  writeJson(path.join(repoDir, 'package.json'), {
+    name: 'sample-monorepo',
+    version: '0.0.0',
+    private: true,
+    workspaces: ['apps/*'],
+  });
+  writeJson(path.join(repoDir, 'apps', 'sample-cli', 'package.json'), {
+    name: '@sample/cli',
+    version: '0.0.0',
+    type: 'module',
+    bin: { sample: 'dist/cli.js' },
+  });
+  writeSource(repoDir, 'apps/sample-cli/src/cli.ts', [
+    "export function main() { return 'ok'; }",
+    'main();',
+    '',
+  ].join('\n'));
+
+  const report = runSourceClosure(repoDir).reports[0];
+  const nestedBin = report.entrypoints.find((entry: { entrypoint_id: string }) => (
+    entry.entrypoint_id === 'package_bin:apps/sample-cli/package.json#sample'
+  ));
+
+  assert.equal(report.status, 'passed');
+  assert.equal(nestedBin?.declared_ref, 'apps/sample-cli/package.json#/bin/sample');
+  assert.equal(nestedBin?.file, 'apps/sample-cli/src/cli.ts');
+  assert.equal(nestedBin?.resolution_status, 'resolved');
+});
+
+test('agents source-closure discovers nested workspace package exports', () => {
+  const repoDir = buildRepo();
+  writeJson(path.join(repoDir, 'package.json'), {
+    name: 'sample-monorepo',
+    version: '0.0.0',
+    private: true,
+    workspaces: ['packages/*'],
+  });
+  writeJson(path.join(repoDir, 'packages', 'sample-domain', 'package.json'), {
+    name: '@sample/domain',
+    version: '0.0.0',
+    type: 'module',
+    exports: { '.': './dist/index.js' },
+  });
+  writeSource(repoDir, 'packages/sample-domain/src/index.ts', [
+    "export { handle } from './handler.js';",
+    '',
+  ].join('\n'));
+  writeSource(repoDir, 'packages/sample-domain/src/handler.ts', [
+    "export function handle() { return 'ok'; }",
+    '',
+  ].join('\n'));
+
+  const report = runSourceClosure(repoDir).reports[0];
+  const packageExport = report.entrypoints.find((entry: { entrypoint_id: string }) => (
+    entry.entrypoint_id === 'package_export:packages/sample-domain/package.json#.'
+  ));
+
+  assert.equal(report.status, 'passed');
+  assert.equal(packageExport?.declared_ref, 'packages/sample-domain/package.json#/exports/.');
+  assert.equal(packageExport?.file, 'packages/sample-domain/src/index.ts');
+  assert.equal(packageExport?.resolution_status, 'resolved');
+  assert.equal(
+    report.reachable_symbols.some((symbol: { symbol: string }) => symbol.symbol === 'handle'),
+    true,
+  );
+});
+
 test('agents source-closure resolves Python pyproject scripts and relative calls', () => {
   const repoDir = buildRepo();
   writeSource(repoDir, 'pyproject.toml', [
@@ -126,6 +234,150 @@ test('agents source-closure resolves Python pyproject scripts and relative calls
   assert.equal(report.status, 'passed');
   assert.equal(report.entrypoints[0].source_kind, 'pyproject_script');
   assert.equal(report.reachable_symbols.some((symbol: { symbol: string }) => symbol.symbol === 'handle'), true);
+});
+
+test('agents source-closure resolves relative imports from package init modules', () => {
+  const repoDir = buildRepo();
+  writeSource(repoDir, 'pyproject.toml', [
+    '[project]',
+    'name = "sample-agent"',
+    'version = "0.0.0"',
+    '[project.scripts]',
+    'sample-agent = "sample.nested:main"',
+    '',
+  ].join('\n'));
+  writeSource(repoDir, 'python/sample/nested/__init__.py', [
+    'from .handler import handle',
+    'def main():',
+    '    return handle()',
+    '',
+  ].join('\n'));
+  writeSource(repoDir, 'python/sample/nested/handler.py', [
+    'def handle():',
+    '    return "ok"',
+    '',
+  ].join('\n'));
+
+  const report = runSourceClosure(repoDir).reports[0];
+
+  assert.equal(report.status, 'passed');
+  assert.equal(
+    report.unresolved_edges.some((edge: { reason: string }) => edge.reason === 'relative_import_unresolved'),
+    false,
+  );
+  assert.equal(report.reachable_symbols.some((symbol: { symbol: string }) => symbol.symbol === 'handle'), true);
+});
+
+test('agents source-closure resolves relative submodules in namespace packages', () => {
+  const repoDir = buildRepo();
+  writeSource(repoDir, 'pyproject.toml', [
+    '[project]',
+    'name = "sample-agent"',
+    'version = "0.0.0"',
+    '[project.scripts]',
+    'sample-agent = "sample.namespace.entry:main"',
+    '',
+  ].join('\n'));
+  writeSource(repoDir, 'python/sample/namespace/entry.py', [
+    'from . import handler',
+    'def main():',
+    '    return handler.handle()',
+    '',
+  ].join('\n'));
+  writeSource(repoDir, 'python/sample/namespace/handler.py', [
+    'def handle():',
+    '    return "ok"',
+    '',
+  ].join('\n'));
+
+  const report = runSourceClosure(repoDir).reports[0];
+
+  assert.equal(report.status, 'passed');
+  assert.equal(
+    report.unresolved_edges.some((edge: { reason: string }) => edge.reason === 'relative_import_unresolved'),
+    false,
+  );
+  assert.equal(report.reachable_symbols.some((symbol: { symbol: string }) => symbol.symbol === 'handle'), true);
+});
+
+test('agents source-closure treats literal dynamic imports and attribute reads as static context', () => {
+  const repoDir = buildRepo();
+  writeSource(repoDir, 'pyproject.toml', [
+    '[project]',
+    'name = "sample-agent"',
+    'version = "0.0.0"',
+    '[project.scripts]',
+    'sample-agent = "sample.literal_import:main"',
+    '',
+  ].join('\n'));
+  writeSource(repoDir, 'python/sample/literal_import.py', [
+    'from importlib import import_module',
+    'def main(value):',
+    '    import_module("sample.helper")',
+    '    return getattr(value, "name", None)',
+    '',
+  ].join('\n'));
+  writeSource(repoDir, 'python/sample/helper.py', 'VALUE = "ok"\n');
+
+  const report = runSourceClosure(repoDir).reports[0];
+
+  assert.equal(report.status, 'passed');
+  assert.deepEqual(report.unresolved_edges, []);
+  assert.equal(
+    report.reachable_symbols.some(
+      (symbol: { file: string; symbol: string }) =>
+        symbol.file === 'python/sample/helper.py' && symbol.symbol === '<module>',
+    ),
+    true,
+  );
+});
+
+test('agents source-closure distinguishes dynamic attribute reads from executable dispatch', () => {
+  const repoDir = buildRepo();
+  writeSource(repoDir, 'pyproject.toml', [
+    '[project]',
+    'name = "sample-agent"',
+    'version = "0.0.0"',
+    '[project.scripts]',
+    'sample-agent = "sample.attributes:main"',
+    '',
+  ].join('\n'));
+  writeSource(repoDir, 'python/sample/attributes.py', [
+    'def main(value, field_name):',
+    '    return getattr(value, field_name)',
+    '',
+  ].join('\n'));
+
+  const report = runSourceClosure(repoDir).reports[0];
+
+  assert.equal(report.status, 'passed');
+  assert.deepEqual(report.unresolved_edges, []);
+});
+
+test('agents source-closure still blocks module-level dynamic attribute dispatch', () => {
+  const repoDir = buildRepo();
+  writeSource(repoDir, 'pyproject.toml', [
+    '[project]',
+    'name = "sample-agent"',
+    'version = "0.0.0"',
+    '[project.scripts]',
+    'sample-agent = "sample.attributes:main"',
+    '',
+  ].join('\n'));
+  writeSource(repoDir, 'python/sample/attributes.py', [
+    'def __getattr__(name):',
+    '    return getattr(object(), name)',
+    'def main():',
+    '    return "ok"',
+    '',
+  ].join('\n'));
+
+  const report = runSourceClosure(repoDir).reports[0];
+
+  assert.equal(report.status, 'blocked');
+  assert.equal(report.unresolved_edges.some(
+    (edge: { expression: string }) => edge.expression === 'getattr(object(), name)',
+  ), true);
 });
 
 test('Python source closure does not buffer helper stdout', () => {
@@ -180,7 +432,7 @@ test('agents source-closure fails closed on dynamic import and dispatch', () => 
   assert.equal(reasons.includes('dynamic_dispatch'), true);
 });
 
-test('agents source-closure never lets minimal authority audit authorize executor or runtime mutation', () => {
+test('agents source-closure routes process and network effects out of minimal authority functions', () => {
   const repoDir = buildRepo();
   const source = [
     "import fs from 'node:fs';",
@@ -188,7 +440,9 @@ test('agents source-closure never lets minimal authority audit authorize executo
     'function save_session(_id: string) { return true; }',
     'export function main() {',
     "  fs.writeFileSync('state.json', '{}');",
+    "  spawnSync('pandoc', ['input.md']);",
     "  spawnSync('codex', ['exec']);",
+    "  void fetch('https://example.invalid');",
     "  return save_session('session-1');",
     '}',
     'main();',
@@ -199,9 +453,15 @@ test('agents source-closure never lets minimal authority audit authorize executo
     file: 'src/cli.ts',
     symbol: 'main',
     source_digest: digest(source),
-    allowed_effects: ['filesystem_write', 'process_spawn', 'executor_invoke', 'runtime_state_mutation'],
+    allowed_effects: [
+      'filesystem_write',
+      'process_spawn',
+      'executor_invoke',
+      'network_access',
+      'runtime_state_mutation',
+    ],
     role: 'minimal_authority_function',
-    allowed_targets: ['state.json', 'codex'],
+    allowed_targets: ['state.json', 'pandoc', 'codex', 'https://example.invalid'],
   }]);
 
   const report = runSourceClosure(repoDir).reports[0];
@@ -210,6 +470,18 @@ test('agents source-closure never lets minimal authority audit authorize executo
   assert.equal(
     report.audit_mismatches.some((item: { mismatch_kind: string; effect_kind: string }) =>
       item.mismatch_kind === 'audit_role_effect_forbidden' && item.effect_kind === 'executor_invoke'
+    ),
+    true,
+  );
+  assert.equal(
+    report.audit_mismatches.some((item: { mismatch_kind: string; effect_kind: string }) =>
+      item.mismatch_kind === 'audit_role_effect_forbidden' && item.effect_kind === 'process_spawn'
+    ),
+    true,
+  );
+  assert.equal(
+    report.audit_mismatches.some((item: { mismatch_kind: string; effect_kind: string }) =>
+      item.mismatch_kind === 'audit_role_effect_forbidden' && item.effect_kind === 'network_access'
     ),
     true,
   );
@@ -250,6 +522,159 @@ test('agents source-closure binds exact audit to source digest and detects drift
   );
 });
 
+test('agents source-closure publishes a filesystem-only false-authority domain native helper role', () => {
+  const contract = loadSourceClosureEffectContract();
+  const policy = contract.audit_contract.domain_native_helper_policy;
+
+  assert.equal(contract.audit_contract.allowed_roles.includes('domain_native_helper'), true);
+  assert.deepEqual(policy.allowed_effects, ['filesystem_write']);
+  assert.equal(policy.can_exclude_unresolved_edges, false);
+  assert.deepEqual(policy.required_effect_owner_routes, {
+    process_spawn: ['native_helper_carrier', 'opl_runway'],
+    network_access: ['opl_connect'],
+  });
+  assert.equal(Object.values(policy.authority_boundary).every((value) => value === false), true);
+});
+
+test('agents source-closure admits exact reachable and unreachable domain native helper writes and detects drift', () => {
+  const repoDir = buildRepo();
+  const cliSource = "import { writeArtifact } from './helper.ts';\nexport function main() { writeArtifact(); }\nmain();\n";
+  const helperSource = "import fs from 'node:fs';\nexport function writeArtifact() { fs.writeFileSync('artifact.json', '{}'); }\n";
+  const offlineHelperSource = "import fs from 'node:fs';\nexport function writeOfflineArtifact() { fs.writeFileSync('offline.json', '{}'); }\n";
+  installTypescriptEntry(repoDir, cliSource);
+  writeSource(repoDir, 'src/helper.ts', helperSource);
+  writeSource(repoDir, 'src/offline-helper.ts', offlineHelperSource);
+  installAudit(repoDir, [
+    {
+      file: 'src/helper.ts',
+      symbol: 'writeArtifact',
+      source_digest: digest(helperSource),
+      allowed_effects: ['filesystem_write'],
+      role: 'domain_native_helper',
+      allowed_targets: ['artifact.json'],
+    },
+    {
+      file: 'src/offline-helper.ts',
+      symbol: 'writeOfflineArtifact',
+      source_digest: digest(offlineHelperSource),
+      allowed_effects: ['filesystem_write'],
+      role: 'domain_native_helper',
+      allowed_targets: ['offline.json'],
+    },
+  ]);
+
+  const admitted = runSourceClosure(repoDir).reports[0];
+  assert.equal(admitted.status, 'passed');
+  assert.deepEqual(
+    admitted.observed_effects.map((effect: { audit_status: string; reachable: boolean }) => ({
+      audit_status: effect.audit_status,
+      reachable: effect.reachable,
+    })),
+    [
+      { audit_status: 'domain_native_helper_exact', reachable: true },
+      { audit_status: 'domain_native_helper_exact', reachable: false },
+    ],
+  );
+  assert.equal(admitted.observed_effects.every(
+    (effect: { private_generic_effect: boolean }) => effect.private_generic_effect === false,
+  ), true);
+  assert.deepEqual(admitted.unreachable_sensitive_residue, []);
+
+  writeSource(repoDir, 'src/offline-helper.ts', `${offlineHelperSource}\n// digest drift\n`);
+  const drifted = runSourceClosure(repoDir).reports[0];
+  assert.equal(drifted.status, 'blocked');
+  assert.equal(drifted.audit_mismatches.some(
+    (item: { mismatch_kind: string; file: string }) => (
+      item.mismatch_kind === 'audit_digest_mismatch' && item.file === 'src/offline-helper.ts'
+    ),
+  ), true);
+});
+
+test('agents source-closure rejects generic runtime effects from domain native helpers', () => {
+  const repoDir = buildRepo();
+  const source = [
+    "import { spawnSync } from 'node:child_process';",
+    'export function main(db: { execute: (sql: string) => void }, runtime: { recordSession: () => void }) {',
+    "  spawnSync('pandoc');",
+    "  spawnSync('codex');",
+    "  fetch('https://example.invalid');",
+    "  db.execute('INSERT INTO records VALUES (1)');",
+    '  runtime.recordSession();',
+    '}',
+    'main({ execute() {} }, { recordSession() {} });',
+    '',
+  ].join('\n');
+  installTypescriptEntry(repoDir, source);
+  installAudit(repoDir, [{
+    file: 'src/cli.ts',
+    symbol: 'main',
+    source_digest: digest(source),
+    allowed_effects: [
+      'process_spawn',
+      'executor_invoke',
+      'network_access',
+      'database_write',
+      'runtime_state_mutation',
+    ],
+    role: 'domain_native_helper',
+    allowed_targets: ['pandoc', 'codex', 'https://example.invalid'],
+  }]);
+
+  const report = runSourceClosure(repoDir).reports[0];
+  const forbiddenKinds = report.audit_mismatches
+    .filter((item: { mismatch_kind: string }) => item.mismatch_kind === 'audit_role_effect_forbidden')
+    .map((item: { effect_kind: string }) => item.effect_kind);
+
+  assert.equal(report.status, 'blocked');
+  const forbiddenEffectKinds = [
+    'process_spawn', 'executor_invoke', 'network_access', 'database_write', 'runtime_state_mutation',
+  ];
+  assert.deepEqual(new Set(forbiddenKinds), new Set(forbiddenEffectKinds));
+  assert.deepEqual(
+    new Set(report.observed_effects.map((effect: { effect_kind: string }) => effect.effect_kind)),
+    new Set(forbiddenEffectKinds),
+  );
+  assert.equal(report.observed_effects.every(
+    (effect: { audit_status: string; private_generic_effect: boolean }) => (
+      effect.audit_status === 'unapproved' && effect.private_generic_effect
+    ),
+  ), true);
+});
+
+test('agents source-closure does not let domain native helpers exclude dynamic edges', () => {
+  const repoDir = buildRepo();
+  installTypescriptEntry(repoDir, "export function main() { return 'ok'; }\nmain();\n");
+  const source = [
+    "import fs from 'node:fs';",
+    'export async function writeArtifact(moduleName: string) {',
+    "  fs.writeFileSync('artifact.json', '{}');",
+    '  return import(moduleName);',
+    '}',
+    '',
+  ].join('\n');
+  writeSource(repoDir, 'src/helper.ts', source);
+  installAudit(repoDir, [{
+    file: 'src/helper.ts',
+    symbol: 'writeArtifact',
+    source_digest: digest(source),
+    allowed_effects: ['filesystem_write'],
+    allowed_unresolved_edge_reasons: ['dynamic_import'],
+    role: 'domain_native_helper',
+    allowed_targets: ['artifact.json'],
+  }]);
+
+  const report = runSourceClosure(repoDir).reports[0];
+
+  assert.equal(report.status, 'blocked');
+  assert.equal(report.excluded_developer_tool_edges.length, 0);
+  assert.equal(report.unresolved_edges.some(
+    (edge: { reason: string }) => edge.reason === 'dynamic_import',
+  ), true);
+  assert.equal(report.audit_mismatches.some(
+    (item: { mismatch_kind: string }) => item.mismatch_kind === 'audit_role_edge_exclusion_forbidden',
+  ), true);
+});
+
 test('agents source-closure requires literal targets and rejects glob or directory audits', () => {
   const repoDir = buildRepo();
   const source = [
@@ -264,7 +689,7 @@ test('agents source-closure requires literal targets and rejects glob or directo
     symbol: 'main',
     source_digest: digest(source),
     allowed_effects: ['process_spawn'],
-    role: 'minimal_authority_function',
+    role: 'developer_tool',
     allowed_targets: [],
   }]);
   const noTarget = runSourceClosure(repoDir).reports[0];
@@ -279,7 +704,7 @@ test('agents source-closure requires literal targets and rejects glob or directo
     symbol: 'main',
     source_digest: digest(source),
     allowed_effects: ['process_spawn'],
-    role: 'minimal_authority_function',
+    role: 'developer_tool',
     allowed_targets: ['pdftotext'],
   })));
   const broadPath = runSourceClosure(repoDir).reports[0];
@@ -343,30 +768,72 @@ test('agents source-closure reports unreachable sensitive residue', () => {
   assert.equal(report.unreachable_sensitive_residue[0].file, 'src/legacy.ts');
 });
 
-test('agents source-closure blocks hosted declarations and missing action handlers', () => {
+test('agents source-closure accepts canonical OPL-hosted stage bindings', () => {
   const repoDir = buildRepo();
-  writeJson(path.join(repoDir, 'contracts', 'action_catalog.json'), {
-    surface_kind: 'family_action_catalog',
-    actions: [{
-      action_id: 'hosted',
-      handler_id: 'missing_handler',
-      source_command: { command: 'opl://agents/sample/hosted' },
-    }],
+  writeJson(path.join(repoDir, 'agent', 'stages', 'manifest.json'), {
+    surface_kind: 'family_stage_manifest',
   });
+  installActionCatalog(repoDir, [{
+    ...actionCatalogAction('hosted', {
+      kind: 'stage_binding',
+      stage_manifest_ref: 'agent/stages/manifest.json',
+    }),
+    stage_route: {
+      entry_stage_ref: 'sample-stage',
+      required_stage_refs: ['sample-stage'],
+      optional_stage_refs: [],
+      terminal_stage_refs: ['sample-stage'],
+      route_policy: 'ai_selected_progress_route',
+    },
+  }]);
+
+  const report = runSourceClosure(repoDir).reports[0];
+
+  assert.equal(report.status, 'passed');
+  assert.equal(
+    report.entrypoints.some((entry: { entrypoint_id: string; resolution_status: string }) =>
+      entry.entrypoint_id === 'action_catalog:hosted' && entry.resolution_status === 'resolved'
+    ),
+    true,
+  );
+});
+
+test('agents source-closure blocks missing stage manifests and unresolved handler refs', () => {
+  const repoDir = buildRepo();
+  installActionCatalog(repoDir, [
+    {
+      ...actionCatalogAction('hosted', {
+        kind: 'stage_binding',
+        stage_manifest_ref: 'agent/stages/manifest.json',
+      }),
+      stage_route: {
+        entry_stage_ref: 'sample-stage',
+        required_stage_refs: ['sample-stage'],
+        optional_stage_refs: [],
+        terminal_stage_refs: ['sample-stage'],
+        route_policy: 'ai_selected_progress_route',
+      },
+    },
+    actionCatalogAction('missing-handler', {
+      kind: 'handler_ref',
+      handler_ref: 'handler:missing-handler',
+    }),
+  ]);
 
   const report = runSourceClosure(repoDir).reports[0];
 
   assert.equal(report.status, 'blocked');
   assert.equal(
     report.entrypoints.some((entry: { entrypoint_id: string; resolution_status: string }) =>
-      entry.entrypoint_id === 'action_handler:hosted' && entry.resolution_status === 'unresolved'
+      entry.entrypoint_id === 'action_catalog:hosted'
+      && entry.resolution_status === 'hosted_declaration_unverified'
     ),
     true,
   );
   assert.equal(
     report.entrypoints.some((entry: { entrypoint_id: string; resolution_status: string }) =>
-      entry.entrypoint_id === 'action_catalog:hosted'
-      && entry.resolution_status === 'hosted_declaration_unverified'
+      entry.entrypoint_id === 'action_handler:missing-handler'
+      && entry.resolution_status === 'unresolved'
     ),
     true,
   );
@@ -384,6 +851,7 @@ test('agents source-closure scans current dirty workspace bytes including untrac
   writeSource(repoDir, 'src/old-handler.ts', "export function handle() { return 'old'; }\n");
   writeJson(path.join(repoDir, 'contracts', 'domain_handler_registry.json'), {
     surface_kind: 'domain_handler_registry',
+    version: 'domain-handler-registry.v1',
     handlers: [{
       handler_id: 'run',
       binding: { kind: 'typescript_export', file: 'src/old-handler.ts', export: 'handle' },
@@ -410,6 +878,7 @@ test('agents source-closure scans current dirty workspace bytes including untrac
   );
   writeJson(path.join(repoDir, 'contracts', 'domain_handler_registry.json'), {
     surface_kind: 'domain_handler_registry',
+    version: 'domain-handler-registry.v1',
     handlers: [{
       handler_id: 'run',
       binding: {
@@ -458,6 +927,42 @@ test('agents source-closure does not classify readonly os.open or ordinary objec
 
   assert.equal(report.status, 'passed');
   assert.deepEqual(report.observed_effects, []);
+});
+
+test('agents source-closure distinguishes read-only open APIs from explicit Path writes', () => {
+  const repoDir = buildRepo();
+  writeSource(repoDir, 'pyproject.toml', [
+    '[project]',
+    'name = "sample-agent"',
+    'version = "0.0.0"',
+    '[project.scripts]',
+    'sample-agent = "sample.open_modes:main"',
+    '',
+  ].join('\n'));
+  writeSource(repoDir, 'python/sample/open_modes.py', [
+    'import tarfile',
+    'from PIL import Image',
+    'def main(path):',
+    '    path.open(newline="", encoding="utf-8")',
+    '    Image.open(path)',
+    '    tarfile.open(path)',
+    '    path.open("wb")',
+    '    tarfile.open(path, "w")',
+    '',
+  ].join('\n'));
+
+  const report = runSourceClosure(repoDir).reports[0];
+  const openEffects = report.observed_effects.filter(
+    (effect: { effect_kind: string; callee: string }) => effect.effect_kind === 'filesystem_write',
+  );
+
+  assert.equal(report.status, 'blocked');
+  assert.deepEqual(
+    openEffects.map((effect: { callee: string }) => effect.callee),
+    ['path.open', 'tarfile.open'],
+  );
+  assert.equal(openEffects[0].line, 7);
+  assert.equal(openEffects[1].line, 8);
 });
 
 test('agents source-closure admits exact native-helper command and artifact slots without executor authority', () => {

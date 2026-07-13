@@ -31,7 +31,7 @@ test('family runtime support and aliases derive from standard-agent runtime prof
 
   const mas = runtimeDomainProfileFor('medautoscience');
   assert.ok(mas);
-  assert.equal(mas.dispatch_command, undefined);
+  assert.equal('dispatch_command' in mas, false);
   assert.equal(mas.registration_ref, null);
 });
 
@@ -137,10 +137,15 @@ test('family-runtime registry parser reuses shared option walking without changi
       taskId: undefined,
       retryBudget: undefined,
       checkpointRefs: [],
+      inputArtifactRefs: [],
+      inputArtifactHashes: [],
       closeoutRefs: [],
       humanGateRefs: [],
       blockedReason: undefined,
       newAttempt: false,
+      newStageRun: false,
+      stageRunInvocationId: undefined,
+      parentRouteDecisionRef: undefined,
       start: false,
     },
   });

@@ -3,6 +3,7 @@ import {
   recordList,
   type JsonRecord,
 } from '../../kernel/json-record.ts';
+import { runtimeHardStopClassForReason } from '../../kernel/progress-hard-stop-policy.ts';
 
 function recordOrNull(value: unknown): JsonRecord | null {
   const payload = record(value);
@@ -134,11 +135,13 @@ export function providerBlockerFromCodexResult(value: JsonRecord) {
   }
   const closeoutPacket = record(value.closeout_packet);
   const closeoutRouteImpact = record(closeoutPacket.route_impact);
+  const hardStopClass = runtimeHardStopClassForReason(blockedReason);
   return {
     blocked_reason: blockedReason,
     route_impact: {
       ...closeoutRouteImpact,
       provider_blocker_reason: blockedReason,
+      ...(hardStopClass ? { hard_stop_class: hardStopClass } : {}),
       provider_blocker_surface: 'codex_stage_activity.process_output_summary',
       runner_timeout_reason: typeof summary.timeout_reason === 'string' ? summary.timeout_reason : null,
       pending_function_call_count: typeof summary.pending_function_call_count === 'number'

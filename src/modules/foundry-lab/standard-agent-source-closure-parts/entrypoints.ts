@@ -61,11 +61,23 @@ function sourceFileForDeclaredPath(declared: string, activeFiles: Set<string>) {
   return candidates.find((candidate) => activeFiles.has(candidate)) ?? normalized;
 }
 
-function entrypoint(input: Omit<SourceClosureEntrypoint, 'language' | 'resolution_status' | 'resolved_symbol_id'>): SourceClosureEntrypoint {
+type SourceClosureEntrypointInput = Omit<
+  SourceClosureEntrypoint,
+  'language' | 'resolution_status' | 'resolved_symbol_id'
+> & {
+  hosted_binding_verified?: boolean;
+};
+
+function entrypoint(input: SourceClosureEntrypointInput): SourceClosureEntrypoint {
+  const { hosted_binding_verified: hostedBindingVerified = false, ...entry } = input;
   return {
-    ...input,
-    language: sourceLanguage(input.file, input.module_name),
-    resolution_status: input.hosted_by_opl ? 'hosted_declaration_unverified' : 'unresolved',
+    ...entry,
+    language: sourceLanguage(entry.file, entry.module_name),
+    resolution_status: hostedBindingVerified
+      ? 'resolved'
+      : entry.hosted_by_opl
+        ? 'hosted_declaration_unverified'
+        : 'unresolved',
     resolved_symbol_id: null,
   };
 }
@@ -114,7 +126,6 @@ function commandBinding(
 function referencedHandlerRegistryPaths(...documents: JsonRecord[]) {
   const refs = new Set<string>([
     'contracts/domain_handler_registry.json',
-    'contracts/handler_registry.json',
   ]);
   const visit = (value: unknown, key = '') => {
     if (typeof value === 'string' && key.includes('handler') && key.includes('registry')) {
@@ -144,6 +155,21 @@ function registryHandlers(registry: JsonRecord): JsonRecord[] {
   } as JsonRecord));
 }
 
+function packageExportTargets(value: unknown, pointer: string[] = []): Array<{
+  pointer: string[];
+  target: string;
+}> {
+  if (typeof value === 'string') {
+    return value.endsWith('.d.ts') ? [] : [{ pointer, target: value }];
+  }
+  if (Array.isArray(value)) {
+    return value.flatMap((item, index) => packageExportTargets(item, [...pointer, String(index)]));
+  }
+  return Object.entries(record(value)).flatMap(([key, child]) => (
+    key === 'types' ? [] : packageExportTargets(child, [...pointer, key])
+  ));
+}
+
 export function discoverSourceClosureEntrypoints(
   repoDir: string,
   activeSourceFiles: string[],
@@ -157,21 +183,57 @@ export function discoverSourceClosureEntrypoints(
   const domainDescriptor = readJson(repoDir, 'contracts/domain_descriptor.json');
   const entries: SourceClosureEntrypoint[] = [];
 
-  const bins = typeof packageJson.bin === 'string'
-    ? { [typeof packageJson.name === 'string' ? packageJson.name : 'default']: packageJson.bin }
-    : record(packageJson.bin);
-  for (const [name, value] of Object.entries(bins)) {
-    if (typeof value !== 'string') {
-      continue;
+  const packageManifestPaths = repoFilePaths
+    .filter((file) => file === 'package.json' || file.endsWith('/package.json'))
+    .sort((left, right) => left.localeCompare(right));
+  for (const manifestPath of packageManifestPaths) {
+    const manifest = manifestPath === 'package.json'
+      ? packageJson
+      : readJson(repoDir, manifestPath);
+    const bins = typeof manifest.bin === 'string'
+      ? { [typeof manifest.name === 'string' ? manifest.name : 'default']: manifest.bin }
+      : record(manifest.bin);
+    for (const [name, value] of Object.entries(bins)) {
+      if (typeof value !== 'string') {
+        continue;
+      }
+      const manifestDir = path.posix.dirname(manifestPath);
+      const declaredBin = manifestDir === '.'
+        ? value
+        : path.posix.join(manifestDir, value);
+      const binding = commandBinding(`node ${declaredBin}`, packageScripts, activeFiles);
+      entries.push(entrypoint({
+        entrypoint_id: manifestPath === 'package.json'
+          ? `package_bin:${name}`
+          : `package_bin:${manifestPath}#${name}`,
+        source_kind: 'package_bin',
+        declared_ref: `${manifestPath}#/bin/${name}`,
+        ...binding,
+        action_id: null,
+      }));
     }
-    const binding = commandBinding(`node ${value}`, packageScripts, activeFiles);
-    entries.push(entrypoint({
-      entrypoint_id: `package_bin:${name}`,
-      source_kind: 'package_bin',
-      declared_ref: `package.json#/bin/${name}`,
-      ...binding,
-      action_id: null,
-    }));
+
+    for (const exported of packageExportTargets(manifest.exports)) {
+      const manifestDir = path.posix.dirname(manifestPath);
+      const declaredExport = manifestDir === '.'
+        ? exported.target
+        : path.posix.join(manifestDir, exported.target);
+      const file = sourceFileForDeclaredPath(declaredExport, activeFiles);
+      const exportId = exported.pointer.length > 0 ? exported.pointer.join('/') : '.';
+      const exportPointer = exported.pointer.length > 0
+        ? `/exports/${exported.pointer.join('/')}`
+        : '/exports';
+      entries.push(entrypoint({
+        entrypoint_id: `package_export:${manifestPath}#${exportId}`,
+        source_kind: 'package_export',
+        declared_ref: `${manifestPath}#${exportPointer}`,
+        file,
+        module_name: null,
+        symbol: '<module>',
+        hosted_by_opl: false,
+        action_id: null,
+      }));
+    }
   }
 
   for (const [name, callable] of Object.entries(pyprojectScripts)) {
@@ -226,43 +288,57 @@ export function discoverSourceClosureEntrypoints(
   const actions = Array.isArray(actionCatalog.actions) ? actionCatalog.actions.map(record) : [];
   for (const action of actions) {
     const actionId = typeof action.action_id === 'string' ? action.action_id : '<missing-action-id>';
-    const handlerId = typeof action.handler_id === 'string' ? action.handler_id : null;
-    const sourceCommand = record(action.source_command);
-    const command = typeof sourceCommand.command === 'string' ? sourceCommand.command : null;
-    if (handlerId) {
+    const executionBinding = record(action.execution_binding);
+    const bindingKind = typeof executionBinding.kind === 'string' ? executionBinding.kind : null;
+    if (bindingKind === 'handler_ref') {
+      const handlerRef = typeof executionBinding.handler_ref === 'string'
+        ? executionBinding.handler_ref
+        : '';
+      const handlerId = handlerRef.startsWith('handler:')
+        ? handlerRef.slice('handler:'.length)
+        : '';
       const registered = registeredHandlers.find((handler) => handler.handler_id === handlerId);
       entries.push(entrypoint({
         entrypoint_id: `action_handler:${actionId}`,
         source_kind: 'action_catalog',
-        declared_ref: `contracts/action_catalog.json#/actions/${actionId}/handler_id`,
+        declared_ref: `contracts/action_catalog.json#/actions/${actionId}/execution_binding/handler_ref`,
         file: registered?.file ?? null,
         module_name: registered?.module_name ?? null,
         symbol: registered?.symbol ?? null,
         hosted_by_opl: false,
         action_id: actionId,
       }));
+      continue;
     }
-    if (command) {
-      const binding = commandBinding(command, packageScripts, activeFiles);
+    if (bindingKind === 'stage_binding') {
+      const stageManifestRef = typeof executionBinding.stage_manifest_ref === 'string'
+        ? normalizedFile(executionBinding.stage_manifest_ref)
+        : '';
+      const hostedBindingVerified = stageManifestRef === 'agent/stages/manifest.json'
+        && repoFilePaths.includes(stageManifestRef);
       entries.push(entrypoint({
         entrypoint_id: `action_catalog:${actionId}`,
         source_kind: 'action_catalog',
-        declared_ref: `contracts/action_catalog.json#/actions/${actionId}/source_command`,
-        ...binding,
-        action_id: actionId,
-      }));
-    } else if (!handlerId) {
-      entries.push(entrypoint({
-        entrypoint_id: `action_catalog:${actionId}`,
-        source_kind: 'action_catalog',
-        declared_ref: `contracts/action_catalog.json#/actions/${actionId}`,
+        declared_ref: `contracts/action_catalog.json#/actions/${actionId}/execution_binding/stage_manifest_ref`,
         file: null,
         module_name: null,
         symbol: null,
-        hosted_by_opl: false,
+        hosted_by_opl: true,
+        hosted_binding_verified: hostedBindingVerified,
         action_id: actionId,
       }));
+      continue;
     }
+    entries.push(entrypoint({
+      entrypoint_id: `action_catalog:${actionId}`,
+      source_kind: 'action_catalog',
+      declared_ref: `contracts/action_catalog.json#/actions/${actionId}/execution_binding`,
+      file: null,
+      module_name: null,
+      symbol: null,
+      hosted_by_opl: false,
+      action_id: actionId,
+    }));
   }
 
   for (const handler of registeredHandlers) {

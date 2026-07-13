@@ -75,6 +75,7 @@ test('family runtime attempt contract keeps Temporal attempt, progress-first clo
     'sha256',
     'ref',
     'size_bytes',
+    'artifact_identity_receipt_ref',
   ]);
   assert.equal(
     contract.provider_lifecycle_contract.temporal.workflow_name,
@@ -110,7 +111,11 @@ test('family runtime attempt contract keeps Temporal attempt, progress-first clo
 test('stage route transport cannot become a second semantic control plane', () => {
   const contract = readJson('contracts/opl-framework/stage-route-transport-contract.json');
 
-  assert.equal(contract.codex_semantic_route_boundary.semantic_owner, 'codex_cli');
+  assert.equal(contract.codex_semantic_route_boundary.semantic_owner, 'decisive_codex_attempt');
+  assert.equal(
+    contract.codex_semantic_route_boundary.stage_transition_materialization_owner,
+    'opl_stage_run_controller',
+  );
   assert.equal(contract.codex_semantic_route_boundary.framework_can_reject_abi_valid_route_on_domain_semantic_merit, false);
   assert.equal(
     contract.codex_semantic_route_boundary.framework_must_validate_route_output_abi_and_attempt_authority,
@@ -196,7 +201,8 @@ test('StageRun creation contracts expose one pack-bound write entry and a query-
     'opl family-runtime attempt create');
   assert.equal(quality.pack_bound_creation.raw_stage_run_start_cli_retired, true);
   assert.deepEqual(quality.pack_bound_creation.stage_run_cli_allowed_actions, ['query']);
-  assert.equal(quality.pack_bound_creation.stage_run_identity_binds_manifest_sha256, true);
+  assert.equal(quality.pack_bound_creation.stage_run_id_binds_manifest_sha256, false);
+  assert.equal(quality.pack_bound_creation.stage_run_spec_sha256_binds_manifest_sha256, true);
   assert.ok(quality.pack_bound_creation.required_binding_fields.includes('manifest_sha256'));
   assert.ok(quality.pack_bound_creation.required_binding_fields.includes('declared_stage_ids'));
   assert.equal(attempts.stage_quality_cycle_contract.pack_bound_runtime_binding_required, true);
@@ -205,6 +211,23 @@ test('StageRun creation contracts expose one pack-bound write entry and a query-
   assert.equal(temporal.workflow_activity_signal_mapping.stage_run_workflow.raw_stage_run_start_cli_retired, true);
   assert.equal(manager.pack_bound_stage_run.direct_unbound_stage_run_creation_forbidden, true);
   assert.deepEqual(manager.pack_bound_stage_run.stage_run_cli_allowed_actions, ['query']);
+  assert.deepEqual(manager.pack_bound_stage_run.stage_run_id_derives_only_from,
+    ['domain_id', 'stage_id', 'stage_run_invocation_id']);
+  assert.equal(manager.pack_bound_stage_run.manifest_sha256_participates_in_stage_run_id, false);
+  assert.equal(manager.pack_bound_stage_run.manifest_sha256_participates_in_stage_run_spec_sha256, true);
+  assert.equal(
+    manager.pack_bound_stage_run.prompt_rubric_checkpoint_source_and_lineage_bytes_participate_in_stage_run_spec_sha256,
+    true,
+  );
+  assert.equal(manager.pack_bound_stage_run.root_package_content_digest_required, true);
+  assert.equal(
+    manager.pack_bound_stage_run.child_attempt_content_binding_version,
+    'opl-stage-run-attempt-content-binding.v1',
+  );
+  assert.equal(manager.pack_bound_stage_run.fresh_bytes_revalidated_before_child_materialization_and_executor_use, true);
+  assert.match(manager.pack_bound_stage_run.same_run_provider_start_rpc_delivery, /at_least_once/);
+  assert.equal(manager.pack_bound_stage_run.same_run_temporal_execution_count, 1);
+  assert.equal(manager.pack_bound_stage_run.register_exact_input_before_temporal_start, true);
   assert.equal(compiler.standard_agent_stage_quality_runtime_binding.surface_kind,
     'opl_pack_bound_stage_quality_runtime_binding');
   assert.equal(compiler.standard_agent_stage_quality_runtime_binding.manifest_sha256_is_exact_compiled_manifest_identity, true);
@@ -241,9 +264,22 @@ test('Stage quality contracts bind bounded Attempts, exact artifact identity, re
     'stage_run_id', 'quality_cycle_id', 'producer_attempt_ref', 'reviewer_attempt_ref',
     'producer_session_ref', 'reviewer_session_ref', 'no_context_inheritance',
     'reviewed_artifact_refs', 'reviewed_artifact_hashes', 'rubric_refs', 'verdict',
+    'finding_lineage',
   ]);
   assert.equal(
+    quality.review_receipt.local_artifact_identity_receipt_surface_kind,
+    'opl_transport_artifact_identity_receipt',
+  );
+  assert.equal(
     quality.review_receipt.producer_and_repairer_artifact_identity_receipt_refs_required_before_formal_review,
+    true,
+  );
+  assert.equal(quality.review_receipt.trusted_identity_receipt_filename_must_equal_sha256_of_receipt_bytes, true);
+  assert.equal(quality.review_receipt.artifact_bytes_reverified_before_each_non_producer_attempt_materialization, true);
+  assert.equal(quality.review_receipt.artifact_identity_receipt_must_match_artifact_producer_attempt_ref, true);
+  assert.equal(quality.review_receipt.artifact_producer_attempt_ref_is_distinct_from_parent_attempt_ref, true);
+  assert.equal(
+    quality.review_receipt.repair_without_new_artifact_identity_terminalizes_quality_debt_without_re_review,
     true,
   );
   assert.equal(quality.review_receipt.reviewed_artifact_ref_hash_cardinality_must_match, true);
@@ -253,6 +289,15 @@ test('Stage quality contracts bind bounded Attempts, exact artifact identity, re
     'route_impact.stage_route_decision');
   assert.equal(attempts.stage_quality_cycle_contract.non_terminal_route_output,
     'route_impact.stage_route_recommendation');
+  assert.equal(
+    attempts.stage_quality_cycle_contract.non_producer_materialization_requires_artifact_producer_attempt_ref,
+    true,
+  );
+  assert.equal(
+    temporal.workflow_activity_signal_mapping.stage_attempt_workflow.artifact_identity_revalidated_before_child_workflow_start,
+    true,
+  );
+  assert.equal(temporal.event_history_mapping.legacy_history_replay_fixture_required, true);
   assert.equal(
     attempts.stage_route_boundary.missing_or_invalid_route_fallback,
     'domain_pack_declared_default_progression_with_route_quality_debt_only',

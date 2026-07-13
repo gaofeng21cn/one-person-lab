@@ -1,6 +1,5 @@
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
-import { parseJsonText } from '../../kernel/json-file.ts';
-import { recordList, stringValue as optionalString, type JsonRecord } from '../../kernel/json-record.ts';
+import { stringValue as optionalString, type JsonRecord } from '../../kernel/json-record.ts';
 import { buildDomainManifestCatalog } from '../atlas/index.ts';
 import type { DomainManifestCatalogEntry, NormalizedDomainManifest } from '../atlas/index.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
@@ -8,10 +7,6 @@ import {
   matchesStandardDomainAgentCatalogEntry,
   normalizeStandardDomainAgentId,
 } from '../../kernel/standard-agent-registry.ts';
-import {
-  runFamilyRuntimeDomainHandlerCommand,
-  domainHandlerResultErrorMessage,
-} from './family-runtime-domain-handler-process.ts';
 export {
   buildWorkspaceArtifactLocatorProjection,
   buildWorkspaceReceiptInventory,
@@ -112,109 +107,6 @@ function memoryRefEntries(manifest: NormalizedDomainManifest | null) {
   ];
 }
 
-function commandFromEnv(name: string) {
-  const override = process.env[name]?.trim();
-  return override ? override.split(/\s+/) : null;
-}
-
-export function domainHandlerExportEnvNames(entry: DomainManifestCatalogEntry) {
-  const manifestDomain = optionalString(entry.manifest?.target_domain_id);
-  const candidates = [
-    manifestDomain,
-    entry.project_id,
-    entry.project,
-  ].filter((value): value is string => Boolean(value));
-  const normalizedCandidates = candidates.flatMap((value) => {
-    const normalized = normalizeDomainSelection(value);
-    return [
-      value,
-      normalized,
-      normalized.replace(/-/g, ''),
-      normalized.replace(/_/g, ''),
-    ];
-  });
-  const unique = [...new Set(normalizedCandidates)]
-    .map((value) => value.toUpperCase().replace(/[^A-Z0-9]/g, ''))
-    .filter(Boolean);
-  return unique.map((value) => `OPL_FAMILY_RUNTIME_${value}_EXPORT`);
-}
-
-function findSubstrateAdapter(payload: unknown): JsonRecord | null {
-  if (!isRecord(payload)) {
-    return null;
-  }
-  if (isRecord(payload.opl_substrate_adapter)) {
-    return payload.opl_substrate_adapter;
-  }
-  const manifest = payload.product_entry_manifest;
-  if (isRecord(manifest) && isRecord(manifest.opl_substrate_adapter)) {
-    return manifest.opl_substrate_adapter;
-  }
-  return null;
-}
-
-function readDomainHandlerSubstrateAdapter(entry: DomainManifestCatalogEntry) {
-  for (const envName of domainHandlerExportEnvNames(entry)) {
-    const command = commandFromEnv(envName);
-    if (!command) {
-      continue;
-    }
-    const result = runFamilyRuntimeDomainHandlerCommand(command, {
-      cwd: process.cwd(),
-      env: process.env,
-      maxBuffer: 10 * 1024 * 1024,
-    }, 'export');
-    if (result.exit_code !== 0) {
-      return {
-        status: 'blocked',
-        env_name: envName,
-        adapter: null,
-        error: domainHandlerResultErrorMessage(result, 'Substrate domain-handler export'),
-      };
-    }
-    try {
-      const parsed = parseJsonText(result.stdout ?? '');
-      const adapter = findSubstrateAdapter(parsed);
-      return {
-        status: adapter ? 'resolved' : 'missing',
-        env_name: envName,
-        adapter,
-        error: adapter ? null : 'opl_substrate_adapter_missing',
-      };
-    } catch (error) {
-      return {
-        status: 'blocked',
-        env_name: envName,
-        adapter: null,
-        error: error instanceof Error ? error.message : 'invalid_json',
-      };
-    }
-  }
-
-  return {
-    status: 'not_configured',
-    env_name: null,
-    adapter: null,
-    error: null,
-  };
-}
-
-function domainHandlerRefEntries(adapter: JsonRecord | null, field: string) {
-  return recordList(adapter?.[field]).map((entry) => ({
-    ref_id: optionalString(entry.role) ?? optionalString(entry.ref) ?? 'substrate_ref',
-    role: optionalString(entry.role),
-    ref_kind: optionalString(entry.ref_kind) ?? 'opaque_ref',
-    ref: optionalString(entry.ref),
-    exists: typeof entry.exists === 'boolean' ? entry.exists : null,
-    body_included: entry.body_included === true,
-    write_permitted: entry.write_permitted === true,
-    opaque_to_opl: entry.opaque_to_opl !== false,
-    index_only: entry.index_only !== false,
-    study_id: optionalString(entry.study_id),
-    lifecycle_role: 'domain_handler_declared_opaque_substrate_ref',
-  }));
-}
-
 function workspaceProjection(entry: DomainManifestCatalogEntry) {
   const workspaceLocator = entry.manifest?.workspace_locator ?? null;
   return {
@@ -233,9 +125,6 @@ function workspaceProjection(entry: DomainManifestCatalogEntry) {
 }
 
 function lifecycleStatus(statuses: string[]) {
-  if (statuses.some((status) => status === 'blocked_by_domain_handler_export')) {
-    return 'blocked_by_domain_handler_export';
-  }
   if (statuses.some((status) => status === 'blocked_by_manifest_status')) {
     return 'blocked_by_manifest_status';
   }
@@ -262,16 +151,6 @@ function workbenchStatusGroups(projections: Array<ReturnType<typeof buildGeneric
   for (const projection of projections) {
     groups[projection.projection_status] = groups[projection.projection_status] ?? [];
     groups[projection.projection_status].push(projection.project_id);
-  }
-  return groups;
-}
-
-function domainHandlerStatusGroups(projections: Array<ReturnType<typeof buildGenericSubstrateProjection>>) {
-  const groups: Record<string, string[]> = {};
-  for (const projection of projections) {
-    const status = projection.domain_handler_substrate_adapter.status;
-    groups[status] = groups[status] ?? [];
-    groups[status].push(projection.project_id);
   }
   return groups;
 }
@@ -345,8 +224,6 @@ function buildDomainWorkbench(projection: ReturnType<typeof buildGenericSubstrat
     target_domain_id: projection.target_domain_id,
     manifest_status: projection.manifest_status,
     projection_status: projection.projection_status,
-    domain_handler_substrate_adapter_status: projection.domain_handler_substrate_adapter.status,
-    domain_handler_export_env_name: projection.domain_handler_substrate_adapter.env_name,
     ref_counts: counts,
     status_by_ref_family: {
       workspace: projection.workspace.status,
@@ -362,29 +239,14 @@ function buildDomainWorkbench(projection: ReturnType<typeof buildGenericSubstrat
 
 export function buildGenericSubstrateProjection(entry: DomainManifestCatalogEntry) {
   const manifest = entry.manifest;
-  const domainHandlerSubstrate = readDomainHandlerSubstrateAdapter(entry);
-  const domainHandlerAdapter = domainHandlerSubstrate.adapter;
   const workspace = workspaceProjection(entry);
-  const workspaceRefs = domainHandlerRefEntries(domainHandlerAdapter, 'workspace_refs');
-  const domainHandlerSourceRefs = domainHandlerRefEntries(domainHandlerAdapter, 'source_refs');
-  const domainHandlerArtifactRefs = domainHandlerRefEntries(domainHandlerAdapter, 'artifact_refs');
-  const domainHandlerMemoryRefs = domainHandlerRefEntries(domainHandlerAdapter, 'memory_refs');
-  const sourceRefs = [
-    ...sourceRefEntries(manifest),
-    ...domainHandlerSourceRefs,
-  ];
-  const artifactRefs = [
-    ...artifactRefEntries(manifest),
-    ...domainHandlerArtifactRefs,
-  ];
-  const memoryRefs = [
-    ...memoryRefEntries(manifest),
-    ...domainHandlerMemoryRefs,
-  ];
-  const domainHandlerBlocked = domainHandlerSubstrate.status === 'blocked';
-  const sourceStatus = domainHandlerBlocked ? 'blocked_by_domain_handler_export' : componentStatus(entry, sourceRefs.length > 0);
-  const artifactStatus = domainHandlerBlocked ? 'blocked_by_domain_handler_export' : componentStatus(entry, artifactRefs.length > 0);
-  const memoryStatus = domainHandlerBlocked ? 'blocked_by_domain_handler_export' : componentStatus(entry, memoryRefs.length > 0);
+  const workspaceRefs: JsonRecord[] = [];
+  const sourceRefs = sourceRefEntries(manifest);
+  const artifactRefs = artifactRefEntries(manifest);
+  const memoryRefs = memoryRefEntries(manifest);
+  const sourceStatus = componentStatus(entry, sourceRefs.length > 0);
+  const artifactStatus = componentStatus(entry, artifactRefs.length > 0);
+  const memoryStatus = componentStatus(entry, memoryRefs.length > 0);
   const status = lifecycleStatus([
     workspace.status,
     sourceStatus,
@@ -401,21 +263,8 @@ export function buildGenericSubstrateProjection(entry: DomainManifestCatalogEntr
     manifest_status: entry.status,
     target_domain_id: manifest?.target_domain_id ?? null,
     workspace,
-    domain_handler_substrate_adapter: {
-      status: domainHandlerSubstrate.status,
-      env_name: domainHandlerSubstrate.env_name,
-      surface_kind: optionalString(domainHandlerAdapter?.surface_kind),
-      mode: optionalString(domainHandlerAdapter?.mode),
-      refs_indexed_count: workspaceRefs.length + domainHandlerSourceRefs.length
-        + domainHandlerArtifactRefs.length + domainHandlerMemoryRefs.length,
-      projection_policy: isRecord(domainHandlerAdapter?.projection_policy) ? domainHandlerAdapter.projection_policy : null,
-      authority_boundary: isRecord(domainHandlerAdapter?.authority_boundary) ? domainHandlerAdapter.authority_boundary : null,
-      error: domainHandlerSubstrate.error,
-    },
     workspace_refs: {
-      status: domainHandlerBlocked
-        ? 'blocked_by_domain_handler_export'
-        : (workspaceRefs.length > 0 ? 'resolved' : 'not_declared_by_domain_handler'),
+      status: workspace.workspace_locator ? 'resolved_from_manifest' : 'missing',
       refs: workspaceRefs,
     },
     source_refs: {
@@ -447,7 +296,6 @@ export function buildGenericSubstrateProjection(entry: DomainManifestCatalogEntr
       domain_truth_mutation: 'forbidden',
       artifact_mutation: 'forbidden',
       memory_body_observed: false,
-      domain_handler_substrate_adapter_status: domainHandlerSubstrate.status,
     },
     authority_boundary: {
       opl_owns: [
@@ -567,13 +415,6 @@ export function buildGenericSubstrateWorkbench(contracts: FrameworkContracts) {
         ).length,
         blocked_count: projections.filter((projection) =>
           projection.projection_status === 'blocked_by_manifest_status'
-          || projection.projection_status === 'blocked_by_domain_handler_export'
-        ).length,
-        domain_handler_adapter_resolved_count: projections.filter((projection) =>
-          projection.domain_handler_substrate_adapter.status === 'resolved'
-        ).length,
-        domain_handler_adapter_blocked_count: projections.filter((projection) =>
-          projection.domain_handler_substrate_adapter.status === 'blocked'
         ).length,
         workspace_ref_count: refCounts.reduce((sum, count) => sum + count.workspace_ref_count, 0),
         source_ref_count: refCounts.reduce((sum, count) => sum + count.source_ref_count, 0),
@@ -586,7 +427,6 @@ export function buildGenericSubstrateWorkbench(contracts: FrameworkContracts) {
           buildDomainWorkbench(projection),
         ])),
         by_projection_status: workbenchStatusGroups(projections),
-        by_domain_handler_status: domainHandlerStatusGroups(projections),
         by_ref_family: refFamilies,
       },
       authority_boundary: {

@@ -844,9 +844,13 @@ function compileStageCompletionPolicy(
       policy.opl_content_judgment_allowed,
       'observations.tasks[].stage_completion_policy.opl_content_judgment_allowed',
     ),
-    next_stage_transition_owner: requiredString(
-      policy.next_stage_transition_owner,
-      'observations.tasks[].stage_completion_policy.next_stage_transition_owner',
+    semantic_route_decision_owner: requiredString(
+      policy.semantic_route_decision_owner,
+      'observations.tasks[].stage_completion_policy.semantic_route_decision_owner',
+    ),
+    stage_transition_materialization_owner: requiredString(
+      policy.stage_transition_materialization_owner,
+      'observations.tasks[].stage_completion_policy.stage_transition_materialization_owner',
     ),
     required_closeout_outcomes: stringList(policy.required_closeout_outcomes),
     accepted_closeout_ref_fields: stringList(policy.accepted_closeout_ref_fields),

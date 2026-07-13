@@ -20,6 +20,31 @@ test('framework packages workflow is release-gated and manually repairable witho
 
   assert.match(workflow, /workflow_dispatch:/);
   assert.match(workflow, /workflow_call:/);
+  const packageFrameworkCommitInputs = [...workflow.matchAll(/^      expected_framework_source_commit:\n((?:^        [^\n]*\n?)*)/gm)];
+  assert.equal(packageFrameworkCommitInputs.length, 2);
+  for (const [, block] of packageFrameworkCommitInputs) {
+    assert.match(block, /^        required: true$/m);
+    assert.match(block, /^        type: string$/m);
+    assert.doesNotMatch(block, /^        default:/m);
+  }
+  const releaseFrameworkCommitInputs = [...releaseCallerWorkflow.matchAll(/^      expected_framework_source_commit:\n((?:^        [^\n]*\n?)*)/gm)];
+  assert.equal(releaseFrameworkCommitInputs.length, 1);
+  assert.match(releaseFrameworkCommitInputs[0][1], /^        required: true$/m);
+  assert.match(releaseFrameworkCommitInputs[0][1], /^        type: string$/m);
+  assert.doesNotMatch(releaseFrameworkCommitInputs[0][1], /^        default:/m);
+  for (const source of [workflow, releaseCallerWorkflow]) {
+    assert.match(source, /EXPECTED_FRAMEWORK_SOURCE_COMMIT: \$\{\{ inputs\.expected_framework_source_commit \}\}/);
+    assert.match(source, /\[\[ "\$expected" =~ \^\[0-9a-f\]\{40\}\$ \]\]/);
+    assert.match(source, /\[ "\$GITHUB_SHA" != "\$expected" \]/);
+    assert.match(source, /\[ "\$actual_head" != "\$expected" \]/);
+    assert.doesNotMatch(source, /\[ -z "\$expected" \]/);
+  }
+  assert.ok(workflow.indexOf('Checkout OPL') < workflow.indexOf('Verify exact Framework source commit'));
+  assert.ok(workflow.indexOf('Verify exact Framework source commit') < workflow.indexOf('Resolve Release Set generation'));
+  assert.ok(releaseCallerWorkflow.indexOf('Checkout OPL') < releaseCallerWorkflow.indexOf('Verify exact Framework source commit'));
+  assert.ok(releaseCallerWorkflow.indexOf('Verify exact Framework source commit') < releaseCallerWorkflow.indexOf('Setup Node.js'));
+  assert.match(releaseCallerWorkflow, /expected_framework_source_commit:\s*\$\{\{ inputs\.expected_framework_source_commit \}\}/);
+  assert.match(dailyPackageWorkflow, /expected_framework_source_commit:\s*\$\{\{ github\.sha \}\}/);
   assert.match(workflow, /release_gate:\s*\n\s*description:/);
   assert.match(workflow, /release_set_generation:/);
   assert.match(workflow, /generation="\$\{generation#v\}"/);

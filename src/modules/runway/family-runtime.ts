@@ -1,4 +1,5 @@
 import { DatabaseSync } from 'node:sqlite';
+import { randomUUID } from 'node:crypto';
 
 import { loadFrameworkContracts } from '../charter/index.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
@@ -18,6 +19,7 @@ import { runTemporalSchedulerCadenceCommand } from './family-runtime-scheduler.t
 import { buildFamilyRuntimeStatusPayload } from './family-runtime-status.ts';
 import {
   createStageAttempt,
+  findIdempotentStageAttempt,
   inspectStageAttempt,
   inspectStageAttemptWithCurrentProviderReadiness,
   listStageAttemptsForTask,
@@ -67,6 +69,11 @@ import {
 import { ensureFamilyRuntimePackageLaunchReady } from './family-runtime-package-readiness.ts';
 import { resolveStandardAgentStageQualityRuntimeBinding } from '../pack/index.ts';
 import { buildPackBoundTemporalStageRunInput } from './family-runtime-pack-bound-stage-run.ts';
+import {
+  buildCliStageRunInvocationId,
+  explicitStageRunInvocationId,
+} from './family-runtime-stage-run-identity.ts';
+import { launchRegisteredStageRun } from './family-runtime-stage-run-launch.ts';
 
 async function temporalProviderModule() {
   return await import('./family-runtime-temporal-provider.ts');
@@ -94,16 +101,34 @@ export async function runFamilyRuntime(
     stageReplayMissingReceiptExtraReceipts?: Parameters<
       typeof runFamilyRuntimeEvidenceWorklistCommand
     >[0]['stageReplayMissingReceiptExtraReceipts'];
+    stageRunRuntime?: {
+      ensurePackageLaunchReady?: typeof ensureFamilyRuntimePackageLaunchReady;
+      resolveStageBinding?: typeof resolveStandardAgentStageQualityRuntimeBinding;
+      startWorkflow?: (
+        input: Parameters<typeof launchRegisteredStageRun>[0]['stageRunInput'],
+        context: { paths: ReturnType<typeof familyRuntimePaths> },
+      ) => Promise<Record<string, unknown>>;
+      describeWorkflow?: (
+        input: Parameters<typeof launchRegisteredStageRun>[0]['stageRunInput'],
+        context: { paths: ReturnType<typeof familyRuntimePaths> },
+      ) => Promise<Record<string, unknown>>;
+      queryWorkflow?: (
+        input: { workflowId: string },
+        context: { paths: ReturnType<typeof familyRuntimePaths> },
+      ) => Promise<Record<string, unknown>>;
+    };
   } = {},
 ): Promise<Record<string, unknown>> {
   const parsed = parseFamilyRuntimeCommand(args);
   const { db, paths } = openQueueDb();
   try {
     if (parsed.mode === 'stage_run_query') {
-      const stage_run_query = await (await temporalProviderModule()).queryTemporalStageRunWorkflow({
-        workflowId: parsed.workflowId,
-        paths,
-      });
+      const stage_run_query = options.stageRunRuntime?.queryWorkflow
+        ? await options.stageRunRuntime.queryWorkflow({ workflowId: parsed.workflowId }, { paths })
+        : await (await temporalProviderModule()).queryTemporalStageRunWorkflow({
+            workflowId: parsed.workflowId,
+            paths,
+          });
       return { version: 'g2', family_runtime_stage_run_query: stage_run_query };
     }
     if (parsed.mode === 'status') {
@@ -339,15 +364,48 @@ export async function runFamilyRuntime(
       return runFamilyRuntimeStageArtifactCommand(parsed.input);
     }
     if (parsed.mode === 'attempt_create') {
+      const usesExplicitStageRunIdentity = Boolean(
+        parsed.input.newStageRun
+        || parsed.input.stageRunInvocationId
+        || parsed.input.parentRouteDecisionRef
+        || (parsed.input.inputArtifactRefs?.length ?? 0) > 0
+        || (parsed.input.inputArtifactHashes?.length ?? 0) > 0,
+      );
+      const existingAttempt = usesExplicitStageRunIdentity
+        ? null
+        : findIdempotentStageAttempt(db, parsed.input);
+      if (existingAttempt) {
+        return {
+          version: 'g2',
+          family_runtime_stage_attempt: {
+            surface_id: 'opl_family_runtime_stage_attempt',
+            created: false,
+            idempotent_noop: true,
+            attempt: existingAttempt,
+            stage_context_observation: null,
+            launch_invocation: null,
+          },
+        };
+      }
+      const baseStageRunInvocationId = buildCliStageRunInvocationId({
+        domainId: parsed.input.domainId,
+        stageId: parsed.input.stageId,
+        actionId: parsed.input.actionId,
+        workspaceLocator: parsed.input.workspaceLocator,
+        taskId: parsed.input.taskId,
+      });
+      const stageRunInvocationId = parsed.input.stageRunInvocationId
+        ? explicitStageRunInvocationId(parsed.input.stageRunInvocationId)
+        : parsed.input.newStageRun || parsed.input.newAttempt
+          ? stableId('sri', [baseStageRunInvocationId, 'explicit_new_stage_run', randomUUID()])
+          : baseStageRunInvocationId;
       const useBoundaryId = stableId('package-use', [
-        parsed.input.domainId,
-        parsed.input.stageId,
-        parsed.input.actionId ?? null,
-        parsed.input.workspaceLocator,
-        parsed.input.sourceFingerprint ?? null,
-        parsed.input.newAttempt ? Date.now() : null,
+        stageRunInvocationId,
       ]);
-      const packageReadiness = await ensureFamilyRuntimePackageLaunchReady({
+      const packageReadiness = await (
+        options.stageRunRuntime?.ensurePackageLaunchReady
+        ?? ensureFamilyRuntimePackageLaunchReady
+      )({
         domainId: parsed.input.domainId,
         workspaceLocator: parsed.input.workspaceLocator,
         useBoundaryId,
@@ -360,7 +418,8 @@ export async function runFamilyRuntime(
         : '';
       const domainPackRoot = managedDomainPackRoot || explicitDomainPackRoot || null;
       const stageQualityBinding = domainPackRoot
-        ? resolveStandardAgentStageQualityRuntimeBinding(domainPackRoot, parsed.input.stageId)
+        ? (options.stageRunRuntime?.resolveStageBinding
+          ?? resolveStandardAgentStageQualityRuntimeBinding)(domainPackRoot, parsed.input.stageId)
         : null;
       const useBoundWorkspaceLocator = packageReadiness?.package_use_binding
         ? {
@@ -426,11 +485,36 @@ export async function runFamilyRuntime(
         ?? parsed.input.blockedReason
         ?? undefined;
       if (stageQualityBinding?.enabled) {
+        if (parsed.input.newStageRun && parsed.input.newAttempt) {
+          throw new FrameworkContractError(
+            'cli_usage_error',
+            '--new-stage-run cannot be combined with its quality-path --new-attempt compatibility alias.',
+            { mutually_exclusive: ['--new-stage-run', '--new-attempt'] },
+          );
+        }
+        if (
+          parsed.input.stageRunInvocationId
+          && (parsed.input.newStageRun || parsed.input.newAttempt)
+        ) {
+          throw new FrameworkContractError(
+            'cli_usage_error',
+            '--stage-run-invocation-id cannot be combined with --new-stage-run or the quality-path --new-attempt alias.',
+            {
+              mutually_exclusive: [
+                '--stage-run-invocation-id',
+                '--new-stage-run',
+                '--new-attempt',
+              ],
+            },
+          );
+        }
         const stageRunInput = buildPackBoundTemporalStageRunInput({
           binding: stageQualityBinding,
           domainPackRoot: domainPackRoot!,
           domainId: parsed.input.domainId,
           stageId: parsed.input.stageId,
+          stageRunInvocationId,
+          parentRouteDecisionRef: parsed.input.parentRouteDecisionRef,
           workspaceLocator: useBoundWorkspaceLocator,
           sourceFingerprint,
           executorKind: parsed.input.executorKind,
@@ -440,10 +524,27 @@ export async function runFamilyRuntime(
             ...(parsed.input.boundedEditRef ? { bounded_edit_ref: parsed.input.boundedEditRef } : {}),
           },
           checkpointRefs: parsed.input.checkpointRefs,
+          artifactRefs: parsed.input.inputArtifactRefs,
+          artifactHashes: parsed.input.inputArtifactHashes,
+          actionId: parsed.input.actionId,
           taskId,
+          checkoutCurrentnessAdmission: checkoutCurrentnessPreflight,
+        });
+        const durableLaunch = await launchRegisteredStageRun({
+          db,
+          stageRunInput,
+          start: Boolean(parsed.input.start && !blockedReason),
+          startWorkflow: async (workflowInput) =>
+            options.stageRunRuntime?.startWorkflow
+              ? await options.stageRunRuntime.startWorkflow(workflowInput, { paths })
+              : await (await temporalProviderModule()).startTemporalStageRunWorkflow(workflowInput, { paths }),
+          describeWorkflow: async (workflowInput) =>
+            options.stageRunRuntime?.describeWorkflow
+              ? await options.stageRunRuntime.describeWorkflow(workflowInput, { paths })
+              : await (await temporalProviderModule()).describeTemporalStageRunWorkflow(workflowInput, { paths }),
         });
         const temporal_start = parsed.input.start && !blockedReason
-          ? await (await temporalProviderModule()).startTemporalStageRunWorkflow(stageRunInput, { paths })
+          ? durableLaunch.temporal_start
           : null;
         insertEvent(db, {
           taskId,
@@ -456,11 +557,14 @@ export async function runFamilyRuntime(
           source: 'opl-cli',
           payload: {
             stage_run_id: stageRunInput.stage_run_id,
+            stage_run_invocation_id: stageRunInput.stage_run_invocation_id,
+            stage_run_spec_sha256: stageRunInput.stage_run_spec_sha256,
             workflow_id: stageRunInput.workflow_id,
             stage_id: stageRunInput.stage_id,
             quality_policy_ref: stageRunInput.quality_policy_ref,
             blocked_reason: blockedReason ?? null,
             temporal_start,
+            durable_launch: durableLaunch,
           },
         });
         return {
@@ -470,10 +574,27 @@ export async function runFamilyRuntime(
             stage_run_input: stageRunInput,
             stage_context_observation: stageLaunchContextObservation,
             launch_invocation: launchInvocation,
+            durable_launch: durableLaunch,
             blocked_reason: blockedReason ?? null,
             temporal_start,
           },
         };
+      }
+      if (
+        parsed.input.newStageRun
+        || parsed.input.stageRunInvocationId
+        || parsed.input.parentRouteDecisionRef
+        || (parsed.input.inputArtifactRefs?.length ?? 0) > 0
+        || (parsed.input.inputArtifactHashes?.length ?? 0) > 0
+      ) {
+        throw new FrameworkContractError(
+          'cli_usage_error',
+          'StageRun identity and input artifact options require an enabled pack-bound Stage quality runtime.',
+          {
+            stage_id: parsed.input.stageId,
+            stage_quality_runtime_enabled: false,
+          },
+        );
       }
       const result = createStageAttempt(db, {
         ...parsed.input,

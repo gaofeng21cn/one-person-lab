@@ -16,11 +16,6 @@ export type { FamilyStageDomainManifest, FamilyStageDomainManifestCatalog, Famil
 export { buildFamilyStageCohortLoopProjection } from './family-stage-cohort-loop.ts';
 export type { FamilyStageCohortLoopStage } from './family-stage-cohort-loop.ts';
 export { buildFamilyActionStageRouteParity } from './family-action-stage-route.ts';
-export { evaluateStandardAgentActionStageRun } from './standard-agent-action-stage-run.ts';
-export type {
-  StandardAgentActionStageRunCloseout,
-  StandardAgentActionStageRunProgress,
-} from './standard-agent-action-stage-run.ts';
 export { buildFamilyStageContextObservation, buildFamilyStageControlPlaneParity, buildFamilyStageReadinessInspect, buildFamilyStagesList } from './family-stage-control-plane.ts';
 export { normalizeFamilyStageControlPlane } from './family-stage-control-plane-contract.ts';
 export type { FamilyStageControlPlane, FamilyStageDescriptor, FamilyStageSurfaceRef } from './family-stage-control-plane-contract.ts';
@@ -38,16 +33,27 @@ export { buildAppStageRunCockpit } from './stage-run-cockpit.ts';
 export { buildOwnerAnswerProjectionProfileRegistryReadback } from './domain-owner-answer-projection.ts';
 export {
   buildStageReviewContextManifest,
+  classifyStageQualityReReviewBudget,
   classifyCodexSessionContinuation,
   evaluateStageQualityFindingClosure,
   initialStageQualityCycleState,
   normalizeStageQualityAttemptRole,
+  normalizeStageQualityArtifactIdentity,
   normalizeStageQualityCyclePolicy,
+  normalizeStageQualityOutcome,
   reduceStageQualityCycleState,
   STAGE_QUALITY_ATTEMPT_ROLES,
+  STAGE_QUALITY_HARD_STOP_CLASSES,
+  STAGE_QUALITY_OUTCOMES,
+  stageQualityAttemptOutcomeFromEnvelope,
+  stageQualityOutcomeFromEnvelope,
+  stageReviewVerdictForOutcome,
   validateIndependentStageReviewReceipt,
+  validateInitialStageQualityReviewOutcome,
   validateStageQualityFindings,
   validateStageQualityRepairMap,
+  validateStageQualityReReviewOutcome,
+  validateStageQualityReviewHardStopOutcome,
 } from './stage-quality-cycle.ts';
 export type {
   StageQualityAttemptRole,
@@ -55,9 +61,12 @@ export type {
   StageQualityCycleState,
   StageQualityFinding,
   StageQualityFindingClosure,
+  StageQualityHardStopClass,
+  StageQualityOutcome,
   StageQualityRepairMapEntry,
   StageQualityReReviewResult,
   StageQualityReviewDepth,
+  StageQualityReviewAttemptRole,
   StageQualityReviewVerdict,
   StageQualityRiskTier,
   StageReviewContextManifest,

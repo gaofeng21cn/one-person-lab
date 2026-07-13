@@ -43,6 +43,8 @@ export interface ScaffoldFile {
 }
 
 const STARTER_ACTION_ID = 'domain_intake_owner_handoff';
+const STARTER_HANDLER_REF = 'runtime/authority_functions/domain-intake-owner-handoff.ts';
+const STARTER_HANDLER_EXPORT = 'domainIntakeOwnerHandoff';
 
 function toolNamePrefix(domainId: string) {
   return domainId
@@ -85,7 +87,7 @@ function generatedSurfaceHandoffSurfaces() {
     },
     {
       surface_id: 'domain_handler',
-      current_paths: ['runtime/authority_functions/README.md'],
+      current_paths: [STARTER_HANDLER_REF],
       current_role: 'domain_authority_function_target',
       target_role: 'opl_generated_domain_handler_handoff_surface',
     },
@@ -141,9 +143,9 @@ function starterAction(domainId: string) {
     summary: 'Route the scaffolded domain intake stage to the domain owner and return owner receipt or typed blocker refs.',
     owner: domainId,
     effect: 'mutating',
-    source_command: {
-      command: `${domainId} intake --workspace-root <workspace_root>`,
-      surface_kind: 'domain_cli',
+    execution_binding: {
+      kind: 'stage_binding',
+      stage_manifest_ref: 'agent/stages/manifest.json',
     },
     input_schema_ref: 'contracts/domain-intake.input.schema.json',
     output_schema_ref: 'contracts/domain-intake.output.schema.json',
@@ -151,25 +153,25 @@ function starterAction(domainId: string) {
     optional_fields: [],
     workspace_locator_fields: ['workspace_root'],
     human_gate_ids: ['domain_owner_review'],
+    stage_route: {
+      entry_stage_ref: STARTER_STAGE_ID,
+      required_stage_refs: [STARTER_STAGE_ID],
+      optional_stage_refs: [],
+      terminal_stage_refs: [STARTER_STAGE_ID],
+      route_policy: 'ai_selected_progress_route',
+    },
     supported_surfaces: {
-      cli: {
-        command: `${domainId} intake --workspace-root <workspace_root>`,
-        surface_kind: 'domain_cli',
-      },
+      cli: {},
       mcp: {
         tool_name: `${toolPrefix}_domain_intake_owner_handoff`,
-        surface_kind: 'domain_mcp_descriptor',
         descriptor_only: true,
         public_runtime: false,
       },
       skill: {
         command_contract_id: `${domainId}.${STARTER_ACTION_ID}`,
-        surface_kind: 'domain_skill_contract',
       },
       product_entry: {
         action_key: STARTER_ACTION_ID,
-        command: `${domainId} product intake --workspace-root <workspace_root>`,
-        surface_kind: 'domain_product_entry',
       },
       openai: { tool_name: `${toolPrefix}_domain_intake_owner_handoff` },
       ai_sdk: { tool_name: `${toolPrefix}_domain_intake_owner_handoff` },
@@ -203,7 +205,7 @@ function functionalPrivatizationModules(domainId: string) {
       module_id: `${domainId}.domain-handler-target`,
       classification: 'domain_handler_target',
       migration_class: 'domain_handler_target',
-      code_paths: ['runtime/authority_functions/README.md'],
+      code_paths: [STARTER_HANDLER_REF],
       current_surface_refs: ['domain_handler'],
       active_callers: ['OPL generated domain handler dispatch'],
       active_caller_status: 'domain_handler_target_returns_owner_receipt_or_typed_blocker',
@@ -229,7 +231,7 @@ function functionalPrivatizationModules(domainId: string) {
       module_id: `${domainId}.owner-receipt-signer`,
       classification: 'minimal_authority_function',
       migration_class: 'minimal_authority_function',
-      code_paths: ['runtime/authority_functions/README.md'],
+      code_paths: [STARTER_HANDLER_REF],
       active_callers: ['domain owner quality gate', 'OPL generated adapter receipt target'],
       active_caller_status: 'domain_authority_active_minimal_function',
       cannot_absorb_reason: 'OPL cannot sign target domain owner receipts or typed blockers.',
@@ -270,7 +272,12 @@ function physicalSourceMorphologyPolicy(domainId: string) {
       {
         surface_id: 'domain_handler_targets',
         classification: 'domain_handler_target',
-        source_refs: ['contracts/action_catalog.json', 'agent/skills/domain_execution.md'],
+        source_refs: [
+          'contracts/action_catalog.json',
+          'contracts/domain_handler_registry.json',
+          STARTER_HANDLER_REF,
+          'agent/skills/domain_execution.md',
+        ],
       },
       {
         surface_id: 'refs_only_adapters',
@@ -284,7 +291,7 @@ function physicalSourceMorphologyPolicy(domainId: string) {
       {
         surface_id: 'minimal_authority_functions',
         classification: 'minimal_authority_function',
-        source_refs: ['runtime/authority_functions/README.md'],
+        source_refs: [STARTER_HANDLER_REF],
       },
       {
         surface_id: 'fixture_or_provenance_refs',
@@ -472,12 +479,9 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
             default_project_id: `${domainId}-001`,
             required_locator_fields: ['workspace_root'],
             optional_locator_fields: [],
-            entry_command_template: null,
-            manifest_command_template: null,
           },
           runtime: {
             runtime_domain_id: domainId,
-            dispatch_command: null,
             registration_ref: 'contracts/domain_descriptor.json',
           },
           progress: {
@@ -602,20 +606,32 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
       path: 'contracts/action_catalog.json',
       content: json({
         surface_kind: 'family_action_catalog',
-        version: 'family-action-catalog.v1',
-        catalog_id: `${domainId}.action-catalog.v1`,
+        version: 'family-action-catalog.v2',
+        catalog_id: `${domainId}.action-catalog.v2`,
         target_domain_id: domainId,
         owner: domainId,
-        domain_id: domainId,
         authority_boundary: {
           domain_truth_owner: domainId,
           opl_role: 'projection_consumer_only',
           write_policy: 'no_domain_truth_writes',
         },
         actions: [starterAction(domainId)],
-        forbidden_generic_owner_roles: FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES,
         notes: [],
-        marker: SCAFFOLD_MARKER,
+      }),
+    },
+    {
+      path: 'contracts/domain_handler_registry.json',
+      content: json({
+        surface_kind: 'domain_handler_registry',
+        version: 'domain-handler-registry.v1',
+        handlers: [{
+          handler_id: STARTER_ACTION_ID,
+          binding: {
+            kind: 'typescript_export',
+            file: STARTER_HANDLER_REF,
+            export: STARTER_HANDLER_EXPORT,
+          },
+        }],
       }),
     },
     {
@@ -795,6 +811,19 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
     {
       path: 'runtime/authority_functions/README.md',
       content: `# ${domainLabel} Authority Functions\n\nKeep only minimal domain authority functions here: quality/export verdict authorization, artifact mutation authorization, memory accept/reject decisions, source readiness verdicts, owner receipt signing, or domain-specific native helper implementation. Every retained function needs a cannot-absorb reason, receipt schema, active caller list, and no-forbidden-write evidence.\n`,
+    },
+    {
+      path: STARTER_HANDLER_REF,
+      content: `export function ${STARTER_HANDLER_EXPORT}() {
+  throw new Error(
+    'Domain owner implementation is required before this scaffold action can return an owner receipt or typed blocker ref.',
+  );
+}
+
+if (process.argv[1]?.endsWith('domain-intake-owner-handoff.ts')) {
+  ${STARTER_HANDLER_EXPORT}();
+}
+`,
     },
     {
       path: 'runtime/native_helpers/README.md',

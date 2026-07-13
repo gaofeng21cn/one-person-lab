@@ -55,6 +55,7 @@ test('agents scaffold generates and validates a standard domain-agent skeleton',
       'agent/knowledge/domain_boundary.md',
       'agent/quality_gates/domain_acceptance.md',
       'runtime/authority_functions/README.md',
+      'runtime/authority_functions/domain-intake-owner-handoff.ts',
       'runtime/native_helpers/README.md',
     ]);
     assert.equal(fs.existsSync(path.join(targetDir, 'runtime/sidecar/README.md')), false);
@@ -118,6 +119,25 @@ test('agents scaffold generates and validates a standard domain-agent skeleton',
       false,
     );
     assert.equal(Object.hasOwn(packCompilerInput.source_refs, 'functional_audit'), false);
+
+    const actionCatalog = readJsonFile(path.join(targetDir, 'contracts/action_catalog.json'));
+    assert.equal(actionCatalog.version, 'family-action-catalog.v2');
+    assert.deepEqual(Object.keys(actionCatalog).sort(), [
+      'actions',
+      'authority_boundary',
+      'catalog_id',
+      'notes',
+      'owner',
+      'surface_kind',
+      'target_domain_id',
+      'version',
+    ]);
+    assert.deepEqual(actionCatalog.actions[0].execution_binding, {
+      kind: 'stage_binding',
+      stage_manifest_ref: 'agent/stages/manifest.json',
+    });
+    assert.equal(Object.hasOwn(actionCatalog.actions[0], 'source_command'), false);
+    assert.equal(Object.hasOwn(actionCatalog, 'forbidden_generic_owner_roles'), false);
 
     assert.equal(fs.existsSync(path.join(targetDir, 'contracts/stage_control_plane.json')), false);
     const stageControlPlane = compileStandardAgentStageManifest(targetDir).stage_control_plane;
@@ -187,7 +207,11 @@ test('agents scaffold generates and validates a standard domain-agent skeleton',
     }
 
     assert.equal(readJsonFile(path.join(targetDir, 'contracts/generated_surface_handoff.json')).domain_repo_can_own_generated_surface, false);
-    assert.equal(readJsonFile(path.join(targetDir, 'contracts/functional_privatization_audit.json')).authority_boundary.domain_can_claim_generic_runtime_owner, false);
+    const functionalPrivatizationAudit = readJsonFile(
+      path.join(targetDir, 'contracts/functional_privatization_audit.json'),
+    );
+    assert.equal(functionalPrivatizationAudit.authority_boundary.domain_can_claim_generic_runtime_owner, false);
+    assert.equal(functionalPrivatizationAudit.forbidden_generic_owner_roles.length, 20);
     assert.ok(
       readJsonFile(path.join(targetDir, 'contracts/private_functional_surface_policy.json'))
         .forbidden_private_surface_classes.includes('generic_cli_mcp_product_wrapper'),
@@ -212,6 +236,7 @@ test('agents scaffold generates and validates a standard domain-agent skeleton',
     assert.deepEqual(validated.validation.foundry_agent_series_validation.blockers, []);
     assert.deepEqual(validated.validation.stage_pack_v2_validation.blockers, []);
     assert.equal(validated.validation.capability_map_validation.status, 'passed');
+    assert.deepEqual(validated.validation.missing_forbidden_role_guards, []);
     assert.deepEqual(validated.validation.blockers, []);
   } finally {
     fs.rmSync(targetDir, { recursive: true, force: true });

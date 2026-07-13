@@ -74,9 +74,19 @@ def dotted_name(node: ast.AST) -> str | None:
     return None
 
 
-def resolve_relative_module(current: str, imported: str | None, level: int) -> str:
+def resolve_relative_module(
+    current: str,
+    imported: str | None,
+    level: int,
+    *,
+    is_package: bool,
+) -> str:
+    if level == 0:
+        return imported or ""
     parts = current.split(".")
-    base = parts[:-level] if level > 0 else []
+    package_parts = parts if is_package else parts[:-1]
+    ascend = max(level - 1, 0)
+    base = package_parts[:-ascend] if ascend > 0 else package_parts
     if imported:
         base.extend(imported.split("."))
     return ".".join(part for part in base if part)
@@ -156,22 +166,38 @@ class FileAnalyzer(ast.NodeVisitor):
                 )
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> Any:
-        target_module = resolve_relative_module(self.module, node.module, node.level)
+        target_module = resolve_relative_module(
+            self.module,
+            node.module,
+            node.level,
+            is_package=Path(self.relative_path).name == "__init__.py",
+        )
+        target_file = self.module_files.get(target_module)
+        resolved_import = False
         for alias in node.names:
             local = alias.asname or alias.name
-            self.import_aliases[local] = (target_module, alias.name)
-        target_file = self.module_files.get(target_module)
-        if target_file:
+            target_symbol = f"{target_file}#{alias.name}" if target_file else None
+            submodule = ".".join(part for part in (target_module, alias.name) if part)
+            submodule_file = self.module_files.get(submodule)
+            if submodule_file and target_symbol not in self.known_symbols:
+                self.import_aliases[local] = (submodule, None)
+                imported_file = submodule_file
+            else:
+                self.import_aliases[local] = (target_module, alias.name)
+                imported_file = target_file
+            if not imported_file:
+                continue
+            resolved_import = True
             self.call_edges.append(
                 {
                     "from_symbol": self.current_symbol,
-                    "to_symbol": f"{target_file}#<module>",
+                    "to_symbol": f"{imported_file}#<module>",
                     "file": self.relative_path,
                     "line": node.lineno,
                     "edge_kind": "static_import",
                 }
             )
-        elif node.level > 0:
+        if not resolved_import and node.level > 0:
             self.unresolved_edges.append(
                 {
                     "from_symbol": self.current_symbol,
@@ -243,6 +269,7 @@ class FileAnalyzer(ast.NodeVisitor):
 
     def visit_Call(self, node: ast.Call) -> Any:
         callee = self.canonical_callee(node.func)
+        literal_values = literal_arguments(node)
         self.observed_calls.append(
             {
                 "symbol_id": self.current_symbol,
@@ -250,7 +277,7 @@ class FileAnalyzer(ast.NodeVisitor):
                 "line": node.lineno,
                 "callee": callee,
                 "source_text": expression_text(node),
-                "literal_arguments": literal_arguments(node),
+                "literal_arguments": literal_values,
                 "argument_expressions": argument_expressions(node),
             }
         )
@@ -265,8 +292,38 @@ class FileAnalyzer(ast.NodeVisitor):
                     "edge_kind": "call",
                 }
             )
-        dynamic_names = {"__import__", "eval", "exec", "getattr", "importlib.import_module"}
-        if callee in dynamic_names or isinstance(node.func, ast.Subscript):
+        dynamic_import_names = {"__import__", "importlib.import_module"}
+        literal_dynamic_import = callee in dynamic_import_names and (
+            bool(literal_values) and literal_values[0] != "<dynamic>"
+        )
+        if literal_dynamic_import:
+            imported_file = self.module_files.get(literal_values[0])
+            if imported_file:
+                self.call_edges.append(
+                    {
+                        "from_symbol": self.current_symbol,
+                        "to_symbol": f"{imported_file}#<module>",
+                        "file": self.relative_path,
+                        "line": node.lineno,
+                        "edge_kind": "static_import",
+                    }
+                )
+        dynamic_module_getattr = (
+            callee == "getattr"
+            and (len(literal_values) < 2 or literal_values[1] == "<dynamic>")
+            and self.current_symbol.rsplit("#", 1)[-1].endswith("__getattr__")
+        )
+        called_getattr = (
+            isinstance(node.func, ast.Call)
+            and dotted_name(node.func.func) == "getattr"
+        )
+        if (
+            callee in {"eval", "exec"}
+            or callee in dynamic_import_names and not literal_dynamic_import
+            or dynamic_module_getattr
+            or called_getattr
+            or isinstance(node.func, ast.Subscript)
+        ):
             self.unresolved_edges.append(
                 {
                     "from_symbol": self.current_symbol,

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -6,7 +7,6 @@ import test from 'node:test';
 import { pathToFileURL } from 'node:url';
 
 import { parseJsonText } from '../../src/kernel/json-file.ts';
-import { runFamilyRuntimeDomainHandlerCommand } from '../../src/modules/runway/family-runtime-domain-handler-process.ts';
 import {
   evaluateStageRunProgress,
   rebuildStageRunReadModel,
@@ -49,15 +49,19 @@ function requiredMagHead() {
 }
 
 function runCommand(command: string[], cwd: string, env: NodeJS.ProcessEnv) {
-  const result = runFamilyRuntimeDomainHandlerCommand(command, {
+  const result = spawnSync(command[0], command.slice(1), {
     cwd,
     env,
+    encoding: 'utf8',
+    timeout: 120_000,
     maxBuffer: 64 * 1024 * 1024,
   });
-  const diagnostic = [result.stderr, result.stdout].filter((value) => value.trim()).join('\n');
-  assert.equal(result.timed_out, false, diagnostic);
-  assert.equal(result.exit_code, 0, diagnostic);
-  return result.stdout.trim();
+  const diagnostic = [result.stderr, result.stdout]
+    .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+    .join('\n');
+  assert.equal(result.error?.name === 'TimeoutError', false, diagnostic);
+  assert.equal(result.status, 0, diagnostic);
+  return String(result.stdout ?? '').trim();
 }
 
 function runMagJson(repoDir: string, args: string[], env: NodeJS.ProcessEnv) {
@@ -81,10 +85,7 @@ test('StageRun transports real MAG artifacts without becoming a semantic route o
   const expectedMagHead = requiredMagHead();
   const gitHead = runCommand(['git', 'rev-parse', 'HEAD'], repoDir, process.env);
   assert.equal(gitHead, expectedMagHead, 'MAG_REPO_DIR must point at the reviewed StageRun owner candidate.');
-  const env = {
-    ...process.env,
-    OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_CURRENTNESS_TARGET_REF: gitHead,
-  };
+  const env = process.env;
   const manifestSource = parseJsonText(
     fs.readFileSync(path.join(repoDir, 'agent/stages/manifest.json'), 'utf8'),
   ) as Record<string, any>;

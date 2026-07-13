@@ -35,7 +35,7 @@
     },
     "workspace_binding": {
       "type": "object",
-      "required": ["locator_surface_kind", "default_profile_id", "workspace_kind", "project_kind", "project_collection_label", "default_workspace_id", "default_project_id", "required_locator_fields", "optional_locator_fields", "entry_command_template", "manifest_command_template"],
+      "required": ["locator_surface_kind", "default_profile_id", "workspace_kind", "project_kind", "project_collection_label", "default_workspace_id", "default_project_id", "required_locator_fields", "optional_locator_fields"],
       "properties": {
         "locator_surface_kind": { "type": "string", "minLength": 1 },
         "default_profile_id": { "enum": ["one_off", "series", "portfolio"] },
@@ -45,18 +45,15 @@
         "default_workspace_id": { "type": "string", "minLength": 1 },
         "default_project_id": { "type": "string", "minLength": 1 },
         "required_locator_fields": { "$ref": "#/$defs/locatorFields" },
-        "optional_locator_fields": { "$ref": "#/$defs/locatorFields" },
-        "entry_command_template": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/commandTemplate" }] },
-        "manifest_command_template": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/commandTemplate" }] }
+        "optional_locator_fields": { "$ref": "#/$defs/locatorFields" }
       },
       "additionalProperties": false
     },
     "runtime": {
       "type": "object",
-      "required": ["runtime_domain_id", "dispatch_command", "registration_ref"],
+      "required": ["runtime_domain_id", "registration_ref"],
       "properties": {
         "runtime_domain_id": { "type": "string", "minLength": 1 },
-        "dispatch_command": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/commandTemplate" }] },
         "registration_ref": { "type": ["string", "null"] }
       },
       "additionalProperties": false
@@ -95,11 +92,6 @@
       "type": "array",
       "items": { "enum": ["workspace_root", "workspace_path", "profile_ref", "input_path"] },
       "uniqueItems": true
-    },
-    "commandTemplate": {
-      "type": "array",
-      "minItems": 1,
-      "items": { "type": "string", "minLength": 1 }
     }
   }
 }

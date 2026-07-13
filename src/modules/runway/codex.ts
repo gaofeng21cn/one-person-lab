@@ -98,6 +98,7 @@ export interface CodexExecOptions {
   ephemeral?: boolean;
   enableImageGeneration?: boolean;
   promptViaStdin?: boolean;
+  sandboxMode?: 'read-only' | 'workspace-write' | 'danger-full-access';
 }
 
 export interface ParsedCodexExecOutput {
@@ -228,6 +229,10 @@ export function buildCodexExecArgs(
     args.push('--config', `model_reasoning_effort=${quoteTomlString(options.reasoningEffort)}`);
   }
 
+  if (options.sandboxMode) {
+    args.push('--config', `sandbox_mode=${quoteTomlString(options.sandboxMode)}`);
+  }
+
 
   if (options.outputLastMessagePath) {
     args.push('--output-last-message', options.outputLastMessagePath);
@@ -258,6 +263,10 @@ export function buildCodexExecResumeArgs(
 
   if (options.reasoningEffort) {
     args.push('--config', `model_reasoning_effort=${quoteTomlString(options.reasoningEffort)}`);
+  }
+
+  if (options.sandboxMode) {
+    args.push('--config', `sandbox_mode=${quoteTomlString(options.sandboxMode)}`);
   }
 
 

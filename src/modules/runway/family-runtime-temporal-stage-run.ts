@@ -4,11 +4,13 @@ import type {
   StageQualityCyclePolicy,
   StageQualityFinding,
   StageQualityFindingClosure,
+  StageQualityHardStopClass,
   StageQualityRepairMapEntry,
   StageReviewReceipt,
   StageRouteDecision,
 } from '../stagecraft/index.ts';
 import type { FamilyRuntimeDomainId } from './family-runtime-types.ts';
+import type { StageRunImmutableSpec } from './family-runtime-stage-run-identity.ts';
 
 export type TemporalStageRunQualityRolePromptRefs = {
   producer: string;
@@ -19,9 +21,15 @@ export type TemporalStageRunQualityRolePromptRefs = {
 
 export type TemporalStageRunWorkflowInput = {
   stage_run_id: string;
+  stage_run_invocation_id: string;
+  stage_run_spec_sha256: string;
+  stage_run_spec: StageRunImmutableSpec;
+  parent_route_decision_ref: string | null;
   workflow_id: string;
   domain_id: FamilyRuntimeDomainId;
   stage_id: string;
+  action_id?: string | null;
+  task_id?: string | null;
   declared_stage_ids: string[];
   workspace_locator: Record<string, unknown>;
   source_fingerprint: string | null;
@@ -41,7 +49,38 @@ export type TemporalStageRunWorkflowInput = {
   source_refs?: string[];
   artifact_refs?: string[];
   artifact_hashes?: string[];
+  artifact_identity_receipt_refs?: string[];
   lineage_refs?: string[];
+};
+
+export type TemporalStageRunRouteLaunchInput = {
+  parent_stage_run: TemporalStageRunWorkflowInput;
+  decisive_attempt_ref: string;
+  decision: StageRouteDecision;
+  artifact_refs: string[];
+  artifact_hashes: string[];
+  artifact_identity_receipt_refs: string[];
+};
+
+export type TemporalStageRunRouteLaunchReceipt = {
+  surface_kind: 'opl_stage_run_route_launch_receipt';
+  version: 'opl-stage-run-route-launch-receipt.v1';
+  materialization_status: 'workflow_complete' | 'launched' | 'existing';
+  parent_stage_run_id: string;
+  decisive_attempt_ref: string;
+  parent_route_decision_ref: string;
+  route_decision_sha256: string;
+  decision: StageRouteDecision;
+  target_stage_run_id: string | null;
+  target_stage_run_invocation_id: string | null;
+  target_stage_run_spec_sha256: string | null;
+  target_workflow_id: string | null;
+  durable_launch: Record<string, unknown> | null;
+  authority_boundary: {
+    semantic_route_decision_owner: 'decisive_codex_attempt';
+    stage_transition_materialization_owner: 'opl_stage_run_controller';
+    opl_can_select_semantic_stage_route: false;
+  };
 };
 
 export type TemporalStageQualityAttemptMaterializationInput = {
@@ -50,11 +89,13 @@ export type TemporalStageQualityAttemptMaterializationInput = {
   attempt_role: StageQualityAttemptRole;
   quality_round_index: number;
   parent_attempt_ref?: string | null;
+  artifact_producer_attempt_ref?: string | null;
   artifact_refs: string[];
   artifact_hashes: string[];
   artifact_identity_receipt_refs: string[];
   findings?: StageQualityFinding[];
   repair_map?: StageQualityRepairMapEntry[];
+  route_recommendations?: StageQualityRouteRecommendationRecord[];
 };
 
 export type TemporalStageQualityCycleProjectionInput = {
@@ -80,6 +121,7 @@ export type TemporalStageRunAttemptSummary = {
   stage_attempt_id: string;
   workflow_id: string;
   execution_session_ref: string | null;
+  artifact_producer_attempt_ref: string | null;
   status: 'registered' | 'running' | 'checkpointed' | 'blocked' | 'human_gate' | 'completed' | 'failed';
   artifact_refs: string[];
   artifact_hashes: string[];
@@ -113,7 +155,12 @@ export type TemporalStageRunWorkflowState = {
   selected_stage_route: StageRouteDecision | null;
   route_evidence_refs: string[];
   route_recommendations: StageQualityRouteRecommendationRecord[];
+  next_stage_run_launch: TemporalStageRunRouteLaunchReceipt | null;
   blocked_reason: string | null;
+  hard_stop_class: StageQualityHardStopClass | null;
+  typed_blocker_refs: string[];
+  human_gate_refs: string[];
+  source_attempt_ref: string | null;
   sqlite_projection: {
     status: 'pending' | 'synced' | 'failed';
     error: string | null;

@@ -4,7 +4,11 @@ import {
   STANDARD_AGENT_REGISTRY,
   STANDARD_AGENT_SERIES_MEMBERSHIP,
 } from '../../kernel/standard-agent-registry.ts';
-import { assertStandardAgentDescriptorIdentity } from '../../kernel/standard-agent-interface.ts';
+import {
+  assertStandardAgentDescriptorIdentity,
+  readStandardAgentDescriptorInterface,
+  type StandardAgentDescriptorInterface,
+} from '../../kernel/standard-agent-interface.ts';
 import { readStandardAgentDescriptorForDomain } from '../connect/index.ts';
 
 type WorkspaceAgentRegistryEntry = Extract<
@@ -27,8 +31,10 @@ export type WorkspaceAgentProfile = {
   default_profile_id: 'one_off' | 'series' | 'portfolio';
 };
 
-function workspaceProfile(entry: WorkspaceAgentRegistryEntry): WorkspaceAgentProfile {
-  const descriptor = readStandardAgentDescriptorForDomain(entry.target_domain_id);
+function workspaceProfile(
+  entry: WorkspaceAgentRegistryEntry,
+  descriptor: StandardAgentDescriptorInterface | null = readStandardAgentDescriptorForDomain(entry.target_domain_id),
+): WorkspaceAgentProfile {
   const declared = descriptor
     ? assertStandardAgentDescriptorIdentity(descriptor, {
         project: entry.project,
@@ -49,12 +55,24 @@ function workspaceProfile(entry: WorkspaceAgentRegistryEntry): WorkspaceAgentPro
   };
 }
 
+export function workspaceAgentProfileForRepo(value: string, repoDir: string) {
+  const entry = resolveStandardAgent(value);
+  if (!entry || entry.series_membership !== STANDARD_AGENT_SERIES_MEMBERSHIP) {
+    return null;
+  }
+  try {
+    return workspaceProfile(entry, readStandardAgentDescriptorInterface(repoDir));
+  } catch {
+    return null;
+  }
+}
+
 export function listWorkspaceAgentProfiles(): WorkspaceAgentProfile[] {
   return STANDARD_AGENT_REGISTRY
     .filter((entry): entry is WorkspaceAgentRegistryEntry =>
       entry.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP
     )
-    .map(workspaceProfile);
+    .map((entry) => workspaceProfile(entry));
 }
 
 export function findWorkspaceAgentProfile(value: string | undefined) {

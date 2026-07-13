@@ -7,6 +7,7 @@ import './family-runtime-temporal-provider-cases/closeout-payload-compaction.ts'
 import './family-runtime-temporal-provider-cases/operator-updates.ts';
 import './family-runtime-temporal-provider-cases/scheduler-and-readiness.ts';
 import './family-runtime-temporal-provider-cases/codex-activity-history.ts';
+import './family-runtime-temporal-provider-cases/legacy-workflow-replay.ts';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { Worker } from '@temporalio/worker';
 

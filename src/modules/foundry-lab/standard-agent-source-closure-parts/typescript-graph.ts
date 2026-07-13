@@ -180,6 +180,39 @@ export function buildTypescriptSourceGraph(repoDir: string, relativeFiles: strin
     const relativeFile = relativeByAbsolute.get(path.resolve(sourceFile.fileName))!;
     const moduleId = `${relativeFile}#<module>`;
     const visit = (node: ts.Node) => {
+      if (
+        functionLike(node)
+        && ts.canHaveModifiers(node)
+        && ts.getModifiers(node)?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)
+      ) {
+        const target = nodeSymbols.get(node);
+        if (target) {
+          callEdges.push({
+            from_symbol: moduleId,
+            to_symbol: target,
+            file: relativeFile,
+            line: lineOf(sourceFile, node),
+            edge_kind: 'static_import',
+          });
+        }
+      }
+      if (
+        ts.isVariableStatement(node)
+        && ts.getModifiers(node)?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)
+      ) {
+        for (const declaration of node.declarationList.declarations) {
+          const target = nodeSymbols.get(declaration);
+          if (target) {
+            callEdges.push({
+              from_symbol: moduleId,
+              to_symbol: target,
+              file: relativeFile,
+              line: lineOf(sourceFile, declaration),
+              edge_kind: 'static_import',
+            });
+          }
+        }
+      }
       if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
         const specifier = node.moduleSpecifier;
         if (specifier && ts.isStringLiteralLike(specifier)) {
@@ -209,6 +242,20 @@ export function buildTypescriptSourceGraph(repoDir: string, relativeFiles: strin
               expression: specifier.text,
               sensitive: true,
             });
+          }
+        }
+        if (ts.isExportDeclaration(node) && node.exportClause && ts.isNamedExports(node.exportClause)) {
+          for (const element of node.exportClause.elements) {
+            const target = localSymbolId(checker.getSymbolAtLocation(element.name));
+            if (target) {
+              callEdges.push({
+                from_symbol: moduleId,
+                to_symbol: target,
+                file: relativeFile,
+                line: lineOf(sourceFile, element),
+                edge_kind: 'static_import',
+              });
+            }
           }
         }
       }

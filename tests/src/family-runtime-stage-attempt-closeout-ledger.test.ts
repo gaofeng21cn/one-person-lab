@@ -297,3 +297,39 @@ test('stage attempt closeout rejects inline domain output bodies before ledger w
     assert.deepEqual(query.attempt.closeout_refs, []);
   });
 });
+
+test('stage quality closeout rejects role/outcome ABI before ledger writes', () => {
+  const cases = [
+    { role: 'producer', quality: { outcome: 'pass' }, message: /must not return outcome or verdict/ },
+    { role: 'repairer', quality: { verdict: 'pass' }, message: /must not return outcome or verdict/ },
+    { role: 'reviewer', quality: { verdict: 'pass', findings: [] }, message: /verdict is reserved/ },
+    { role: 're_reviewer', quality: {}, message: /Unknown Stage quality outcome/ },
+  ] as const;
+  for (const [index, invalidCase] of cases.entries()) {
+    withAttempt((db, attemptId) => {
+      db.prepare('UPDATE stage_attempts SET attempt_role = ? WHERE stage_attempt_id = ?')
+        .run(invalidCase.role, attemptId);
+      assert.throws(
+        () => ingestStageAttemptCloseout(db, {
+          stageAttemptId: attemptId,
+          packet: {
+            ...closeoutPacket(`receipt:invalid-quality-abi-${index}`),
+            closeout_id: `closeout:invalid-quality-abi-${index}`,
+            route_impact: { stage_quality_cycle: invalidCase.quality },
+          },
+          costSummary: {
+            cost_status: 'observed',
+            usage_ref: `usage:invalid-quality-abi-${index}`,
+            token_usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 },
+          },
+        }),
+        (error) => error instanceof FrameworkContractError && invalidCase.message.test(error.message),
+      );
+      const query = queryStageAttempt(db, attemptId).stage_attempt_query;
+      assert.deepEqual(query.closeouts, []);
+      assert.deepEqual(query.attempt.closeout_refs, []);
+      assert.equal(query.attempt.closeout_receipt_status, null);
+      assert.equal(query.attempt.usage_observation, null);
+    });
+  }
+});

@@ -114,35 +114,53 @@ function fixture(domainId: string, canonicalAgentId = domainId) {
   });
   writeJson(root, 'contracts/action_catalog.json', {
     surface_kind: 'family_action_catalog',
-    version: 'family-action-catalog.v1',
+    version: 'family-action-catalog.v2',
     catalog_id: `${domainId}.actions`,
     target_domain_id: domainId,
     owner: domainId,
-    authority_boundary: { opl_role: 'projection_consumer_only' },
-    actions: ['inspect', 'deliver'].map((actionId) => ({
+    authority_boundary: {
+      domain_truth_owner: domainId,
+      opl_role: 'projection_consumer_only',
+      write_policy: 'no_domain_truth_writes',
+    },
+    actions: ['inspect', 'deliver'].map((actionId) => {
+      const stageId = actionId === 'inspect' ? 'intake' : 'deliver';
+      return {
         action_id: actionId,
         title: actionId,
         summary: `Run ${actionId}.`,
         owner: domainId,
         effect: 'mutating',
-        source_command: { command: `${domainId} ${actionId}`, surface_kind: 'domain_cli' },
+        execution_binding: {
+          kind: 'stage_binding',
+          stage_manifest_ref: 'agent/stages/manifest.json',
+        },
         input_schema_ref: 'contracts/input.schema.json',
         output_schema_ref: 'contracts/output.schema.json',
+        required_fields: ['workspace_root'],
+        optional_fields: [],
         workspace_locator_fields: ['workspace_root'],
         human_gate_ids: [],
+        stage_route: {
+          entry_stage_ref: stageId,
+          required_stage_refs: [stageId],
+          optional_stage_refs: [],
+          terminal_stage_refs: [stageId],
+          route_policy: 'ai_selected_progress_route',
+        },
         supported_surfaces: {
-          cli: { command: `${domainId} ${actionId}`, surface_kind: 'domain_cli' },
+          cli: { surface_kind: 'domain_cli' },
           mcp: { tool_name: actionId, surface_kind: 'domain_mcp' },
           skill: { command_contract_id: actionId, surface_kind: 'domain_skill' },
           product_entry: {
             action_key: actionId,
-            command: `${domainId} product ${actionId}`,
             surface_kind: 'domain_product_entry',
           },
           openai: { tool_name: actionId },
           ai_sdk: { tool_name: actionId },
         },
-      })),
+      };
+    }),
     notes: [],
   });
   writeJson(root, 'contracts/input.schema.json', {
@@ -1033,7 +1051,8 @@ test('stage manifest compiler honors an explicit v2 version with canonical Frame
   assert.equal(completionPolicy.owner, 'one-person-lab');
   assert.equal(completionPolicy.closeout_packet_required, false);
   assert.equal(completionPolicy.raw_artifact_sufficient_for_progress, true);
-  assert.equal(completionPolicy.next_stage_transition_owner, 'codex_cli');
+  assert.equal(completionPolicy.semantic_route_decision_owner, 'decisive_codex_attempt');
+  assert.equal(completionPolicy.stage_transition_materialization_owner, 'opl_stage_run_controller');
   assert.equal(userStageLogContract.surface_kind, 'opl_standard_agent_user_stage_log_contract');
   assert.equal(userStageLogContract.owner, 'one-person-lab');
   assert.deepEqual(stage.stage_contract?.receipt_schema_refs, [{
@@ -1056,21 +1075,14 @@ test('stage manifest compiler requires every mutating action route after route a
   const root = fixture('target-partial-action-route');
   const catalogRef = path.join(root, 'contracts/action_catalog.json');
   const catalog = JSON.parse(fs.readFileSync(catalogRef, 'utf8')) as JsonRecord;
-  catalog.actions[0].stage_route = {
-    entry_stage_ref: 'intake',
-    required_stage_refs: ['intake'],
-    optional_stage_refs: [],
-    terminal_stage_refs: ['intake'],
-    route_policy: 'ai_selected_progress_route',
-  };
+  delete catalog.actions[1].stage_route;
   writeJson(root, 'contracts/action_catalog.json', catalog);
 
   assert.throws(
     () => compileStandardAgentStageManifest(root),
     (error: unknown) => error instanceof FrameworkContractError
-      && error.details?.blocker === 'standard_agent_action_stage_route_contract_drift'
-      && Array.isArray(error.details.issues)
-      && error.details.issues.includes('deliver: missing required stage_route'),
+      && typeof error.details?.error === 'string'
+      && error.details.error.includes('execution_binding.kind=stage_binding requires stage_route'),
   );
 });
 
@@ -1134,11 +1146,31 @@ test('real MAG canonical manifest compiles while the legacy kind remains blocked
   const sourceManifest = readManifest(magRepo);
   assert.equal(sourceManifest.surface_kind, 'opl_standard_agent_declarative_stage_manifest');
   assert.equal(sourceManifest.version, 'opl-standard-agent-declarative-stage-manifest.v1');
+  const sourceActionCatalog = JSON.parse(
+    fs.readFileSync(path.join(magRepo, 'contracts/action_catalog.json'), 'utf8'),
+  ) as JsonRecord;
+  if (sourceActionCatalog.version !== 'family-action-catalog.v2') {
+    assert.throws(
+      () => compileStandardAgentStageManifest(magRepo),
+      (error: unknown) => error instanceof FrameworkContractError
+        && error.message === 'contracts/action_catalog.json is not a valid family-action-catalog.v2 contract.'
+        && typeof error.details?.error === 'string',
+    );
+    return;
+  }
+
+  const actionInputSchemaRefs = Array.isArray(sourceActionCatalog.actions)
+    ? sourceActionCatalog.actions.flatMap((action: unknown) => {
+        if (!action || typeof action !== 'object') return [];
+        const ref = (action as JsonRecord).input_schema_ref;
+        return typeof ref === 'string' && ref.trim() ? [ref.trim()] : [];
+      })
+    : [];
 
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-real-mag-stage-manifest-'));
   fs.cpSync(path.join(magRepo, 'agent'), path.join(root, 'agent'), { recursive: true });
   fs.cpSync(path.join(magRepo, 'schemas'), path.join(root, 'schemas'), { recursive: true });
-  for (const ref of [
+  for (const ref of new Set([
     'contracts/domain_descriptor.json',
     'contracts/action_catalog.json',
     'contracts/pack_compiler_input.json',
@@ -1148,7 +1180,8 @@ test('real MAG canonical manifest compiles while the legacy kind remains blocked
     'contracts/memory_descriptor.json',
     'contracts/owner_receipt_contract.json',
     'contracts/stage_quality_cycle_policy.json',
-  ]) {
+    ...actionInputSchemaRefs,
+  ])) {
     const source = path.join(magRepo, ref);
     if (fs.existsSync(source)) {
       fs.mkdirSync(path.dirname(path.join(root, ref)), { recursive: true });
