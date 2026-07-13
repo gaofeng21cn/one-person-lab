@@ -161,10 +161,15 @@ export type FamilyRuntimeCommandInput =
       taskId?: string;
       retryBudget?: Record<string, unknown>;
       checkpointRefs?: string[];
+      inputArtifactRefs?: string[];
+      inputArtifactHashes?: string[];
       closeoutRefs?: string[];
       humanGateRefs?: string[];
       blockedReason?: string;
       newAttempt?: boolean;
+      newStageRun?: boolean;
+      stageRunInvocationId?: string;
+      parentRouteDecisionRef?: string;
       start?: boolean;
     };
   };

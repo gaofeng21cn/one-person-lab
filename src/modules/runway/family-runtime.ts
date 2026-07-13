@@ -1,4 +1,5 @@
 import { DatabaseSync } from 'node:sqlite';
+import { randomUUID } from 'node:crypto';
 
 import { loadFrameworkContracts } from '../charter/index.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
@@ -68,6 +69,11 @@ import {
 import { ensureFamilyRuntimePackageLaunchReady } from './family-runtime-package-readiness.ts';
 import { resolveStandardAgentStageQualityRuntimeBinding } from '../pack/index.ts';
 import { buildPackBoundTemporalStageRunInput } from './family-runtime-pack-bound-stage-run.ts';
+import {
+  buildCliStageRunInvocationId,
+  explicitStageRunInvocationId,
+} from './family-runtime-stage-run-identity.ts';
+import { launchRegisteredStageRun } from './family-runtime-stage-run-launch.ts';
 
 async function temporalProviderModule() {
   return await import('./family-runtime-temporal-provider.ts');
@@ -340,7 +346,16 @@ export async function runFamilyRuntime(
       return runFamilyRuntimeStageArtifactCommand(parsed.input);
     }
     if (parsed.mode === 'attempt_create') {
-      const existingAttempt = findIdempotentStageAttempt(db, parsed.input);
+      const usesExplicitStageRunIdentity = Boolean(
+        parsed.input.newStageRun
+        || parsed.input.stageRunInvocationId
+        || parsed.input.parentRouteDecisionRef
+        || (parsed.input.inputArtifactRefs?.length ?? 0) > 0
+        || (parsed.input.inputArtifactHashes?.length ?? 0) > 0,
+      );
+      const existingAttempt = usesExplicitStageRunIdentity
+        ? null
+        : findIdempotentStageAttempt(db, parsed.input);
       if (existingAttempt) {
         return {
           version: 'g2',
@@ -354,13 +369,20 @@ export async function runFamilyRuntime(
           },
         };
       }
+      const baseStageRunInvocationId = buildCliStageRunInvocationId({
+        domainId: parsed.input.domainId,
+        stageId: parsed.input.stageId,
+        actionId: parsed.input.actionId,
+        workspaceLocator: parsed.input.workspaceLocator,
+        taskId: parsed.input.taskId,
+      });
+      const stageRunInvocationId = parsed.input.stageRunInvocationId
+        ? explicitStageRunInvocationId(parsed.input.stageRunInvocationId)
+        : parsed.input.newStageRun || parsed.input.newAttempt
+          ? stableId('sri', [baseStageRunInvocationId, 'explicit_new_stage_run', randomUUID()])
+          : baseStageRunInvocationId;
       const useBoundaryId = stableId('package-use', [
-        parsed.input.domainId,
-        parsed.input.stageId,
-        parsed.input.actionId ?? null,
-        parsed.input.workspaceLocator,
-        parsed.input.sourceFingerprint ?? null,
-        parsed.input.newAttempt ? Date.now() : null,
+        stageRunInvocationId,
       ]);
       const packageReadiness = await ensureFamilyRuntimePackageLaunchReady({
         domainId: parsed.input.domainId,
@@ -441,11 +463,36 @@ export async function runFamilyRuntime(
         ?? parsed.input.blockedReason
         ?? undefined;
       if (stageQualityBinding?.enabled) {
+        if (parsed.input.newStageRun && parsed.input.newAttempt) {
+          throw new FrameworkContractError(
+            'cli_usage_error',
+            '--new-stage-run cannot be combined with its quality-path --new-attempt compatibility alias.',
+            { mutually_exclusive: ['--new-stage-run', '--new-attempt'] },
+          );
+        }
+        if (
+          parsed.input.stageRunInvocationId
+          && (parsed.input.newStageRun || parsed.input.newAttempt)
+        ) {
+          throw new FrameworkContractError(
+            'cli_usage_error',
+            '--stage-run-invocation-id cannot be combined with --new-stage-run or the quality-path --new-attempt alias.',
+            {
+              mutually_exclusive: [
+                '--stage-run-invocation-id',
+                '--new-stage-run',
+                '--new-attempt',
+              ],
+            },
+          );
+        }
         const stageRunInput = buildPackBoundTemporalStageRunInput({
           binding: stageQualityBinding,
           domainPackRoot: domainPackRoot!,
           domainId: parsed.input.domainId,
           stageId: parsed.input.stageId,
+          stageRunInvocationId,
+          parentRouteDecisionRef: parsed.input.parentRouteDecisionRef,
           workspaceLocator: useBoundWorkspaceLocator,
           sourceFingerprint,
           executorKind: parsed.input.executorKind,
@@ -455,10 +502,20 @@ export async function runFamilyRuntime(
             ...(parsed.input.boundedEditRef ? { bounded_edit_ref: parsed.input.boundedEditRef } : {}),
           },
           checkpointRefs: parsed.input.checkpointRefs,
+          artifactRefs: parsed.input.inputArtifactRefs,
+          artifactHashes: parsed.input.inputArtifactHashes,
+          actionId: parsed.input.actionId,
           taskId,
         });
+        const durableLaunch = await launchRegisteredStageRun({
+          db,
+          stageRunInput,
+          start: Boolean(parsed.input.start && !blockedReason),
+          startWorkflow: async (workflowInput) =>
+            await (await temporalProviderModule()).startTemporalStageRunWorkflow(workflowInput, { paths }),
+        });
         const temporal_start = parsed.input.start && !blockedReason
-          ? await (await temporalProviderModule()).startTemporalStageRunWorkflow(stageRunInput, { paths })
+          ? durableLaunch.temporal_start
           : null;
         insertEvent(db, {
           taskId,
@@ -471,11 +528,14 @@ export async function runFamilyRuntime(
           source: 'opl-cli',
           payload: {
             stage_run_id: stageRunInput.stage_run_id,
+            stage_run_invocation_id: stageRunInput.stage_run_invocation_id,
+            stage_run_spec_sha256: stageRunInput.stage_run_spec_sha256,
             workflow_id: stageRunInput.workflow_id,
             stage_id: stageRunInput.stage_id,
             quality_policy_ref: stageRunInput.quality_policy_ref,
             blocked_reason: blockedReason ?? null,
             temporal_start,
+            durable_launch: durableLaunch,
           },
         });
         return {
@@ -485,10 +545,27 @@ export async function runFamilyRuntime(
             stage_run_input: stageRunInput,
             stage_context_observation: stageLaunchContextObservation,
             launch_invocation: launchInvocation,
+            durable_launch: durableLaunch,
             blocked_reason: blockedReason ?? null,
             temporal_start,
           },
         };
+      }
+      if (
+        parsed.input.newStageRun
+        || parsed.input.stageRunInvocationId
+        || parsed.input.parentRouteDecisionRef
+        || (parsed.input.inputArtifactRefs?.length ?? 0) > 0
+        || (parsed.input.inputArtifactHashes?.length ?? 0) > 0
+      ) {
+        throw new FrameworkContractError(
+          'cli_usage_error',
+          'StageRun identity and input artifact options require an enabled pack-bound Stage quality runtime.',
+          {
+            stage_id: parsed.input.stageId,
+            stage_quality_runtime_enabled: false,
+          },
+        );
       }
       const result = createStageAttempt(db, {
         ...parsed.input,

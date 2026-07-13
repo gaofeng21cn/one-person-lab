@@ -283,14 +283,28 @@ function parseAttemptCreateArgs(rest: string[]): FamilyRuntimeCommandInput {
   let taskId: string | undefined;
   let blockedReason: string | undefined;
   let newAttempt = false;
+  let newStageRun = false;
+  let stageRunInvocationId: string | undefined;
+  let parentRouteDecisionRef: string | undefined;
   let start = false;
   const checkpointRefs: string[] = [];
+  const inputArtifactRefs: string[] = [];
+  const inputArtifactHashes: string[] = [];
   const closeoutRefs: string[] = [];
   const humanGateRefs: string[] = [];
   parseCliOptions(rest, 1, (token, value) => {
     if (token === '--new-attempt') {
       newAttempt = true;
       return false;
+    } else if (token === '--new-stage-run') {
+      newStageRun = true;
+      return false;
+    } else if (token === '--stage-run-invocation-id' && value) {
+      stageRunInvocationId = value;
+      return true;
+    } else if (token === '--parent-route-decision-ref' && value) {
+      parentRouteDecisionRef = value;
+      return true;
     } else if (token === '--start') {
       start = true;
       return false;
@@ -344,6 +358,12 @@ function parseAttemptCreateArgs(rest: string[]): FamilyRuntimeCommandInput {
     } else if (token === '--checkpoint-ref' && value) {
       checkpointRefs.push(value);
       return true;
+    } else if (token === '--input-artifact-ref' && value) {
+      inputArtifactRefs.push(value);
+      return true;
+    } else if (token === '--input-artifact-sha256' && value) {
+      inputArtifactHashes.push(value);
+      return true;
     } else if (token === '--closeout-ref' && value) {
       closeoutRefs.push(value);
       return true;
@@ -389,10 +409,15 @@ function parseAttemptCreateArgs(rest: string[]): FamilyRuntimeCommandInput {
       taskId,
       retryBudget: retryBudget || retryBudgetFile ? parsePayloadArg(retryBudget, retryBudgetFile) : undefined,
       checkpointRefs,
+      inputArtifactRefs,
+      inputArtifactHashes,
       closeoutRefs,
       humanGateRefs,
       blockedReason,
       newAttempt,
+      newStageRun,
+      stageRunInvocationId,
+      parentRouteDecisionRef,
       start,
     },
   };

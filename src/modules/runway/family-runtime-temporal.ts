@@ -26,6 +26,11 @@ import {
 } from './family-runtime-temporal-visibility.ts';
 import { requireStageQualityAttemptBoundary } from './family-runtime-stage-quality-attempt-boundary.ts';
 import type { TemporalStageRunWorkflowInput } from './family-runtime-temporal-stage-run.ts';
+import {
+  deriveStageRunId,
+  stageRunSpecSha256,
+  validateStageRunImmutableSpecEnvelope,
+} from './family-runtime-stage-run-identity.ts';
 
 export type {
   TemporalStageQualityAttemptMaterializationInput,
@@ -34,6 +39,8 @@ export type {
   TemporalStageQualityReviewReceiptInput,
   TemporalStageRunAttemptSummary,
   TemporalStageRunQualityRolePromptRefs,
+  TemporalStageRunRouteLaunchInput,
+  TemporalStageRunRouteLaunchReceipt,
   TemporalStageRunWorkflowInput,
   TemporalStageRunWorkflowState,
 } from './family-runtime-temporal-stage-run.ts';
@@ -703,6 +710,8 @@ export function requireTemporalStageAttemptWorkflowInputLaunchable(input: Tempor
 export function requireTemporalStageRunWorkflowInputLaunchable(input: TemporalStageRunWorkflowInput) {
   for (const [field, value] of Object.entries({
     stage_run_id: input.stage_run_id,
+    stage_run_invocation_id: input.stage_run_invocation_id,
+    stage_run_spec_sha256: input.stage_run_spec_sha256,
     workflow_id: input.workflow_id,
     stage_id: input.stage_id,
     stage_packet_ref: input.stage_packet_ref,
@@ -716,6 +725,39 @@ export function requireTemporalStageRunWorkflowInputLaunchable(input: TemporalSt
         field,
       });
     }
+  }
+  const expectedStageRunId = deriveStageRunId({
+    domainId: input.domain_id,
+    stageId: input.stage_id,
+    stageRunInvocationId: input.stage_run_invocation_id,
+  });
+  if (input.stage_run_id !== expectedStageRunId) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'StageRun id must derive only from domain, Stage, and durable invocation identity.',
+      {
+        failure_code: 'stage_run_identity_mismatch',
+        stage_run_id: input.stage_run_id,
+        expected_stage_run_id: expectedStageRunId,
+      },
+    );
+  }
+  const spec = input.stage_run_spec;
+  if (
+    spec?.surface_kind !== 'opl_stage_run_immutable_spec'
+    || spec.version !== 'opl-stage-run-immutable-spec.v1'
+    || spec.domain_id !== input.domain_id
+    || spec.stage_id !== input.stage_id
+    || spec.parent_route_decision_ref !== input.parent_route_decision_ref
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'StageRun immutable spec lineage must match its launch envelope.',
+      {
+        failure_code: 'stage_run_spec_lineage_mismatch',
+        stage_run_id: input.stage_run_id,
+      },
+    );
   }
   if (
     !Array.isArray(input.declared_stage_ids)
@@ -756,6 +798,44 @@ export function requireTemporalStageRunWorkflowInputLaunchable(input: TemporalSt
       'contract_shape_invalid',
       'StageRun quality repair budget must be an integer between zero and three.',
       { max_repair_rounds: maxRepairRounds },
+    );
+  }
+  validateStageRunImmutableSpecEnvelope({
+    spec,
+    domainId: input.domain_id,
+    stageId: input.stage_id,
+    actionId: input.action_id,
+    taskId: input.task_id,
+    workspaceLocator: input.workspace_locator,
+    stageManifestRef: input.stage_manifest_ref,
+    stageManifestSha256: input.stage_manifest_sha256,
+    qualityPolicyRef: input.quality_policy_ref,
+    qualityPolicy: input.quality_policy as unknown as Record<string, unknown>,
+    stagePacketRef: input.stage_packet_ref,
+    checkpointRefs: input.checkpoint_refs,
+    sourceFingerprint: input.source_fingerprint,
+    sourceRefs: input.source_refs,
+    artifactRefs: input.artifact_refs,
+    artifactHashes: input.artifact_hashes,
+    rolePromptRefs: input.role_prompt_refs,
+    qualityRubricRefs: input.quality_rubric_refs,
+    stageGoalRefs: input.stage_goal_refs,
+    lineageRefs: input.lineage_refs,
+    executorKind: input.executor_kind,
+    stageAttemptExecutorPolicy: input.stage_attempt_executor_policy,
+    parentRouteDecisionRef: input.parent_route_decision_ref,
+  });
+  const expectedSpecSha256 = stageRunSpecSha256(spec);
+  if (input.stage_run_spec_sha256 !== expectedSpecSha256) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'StageRun immutable spec digest does not match the exact canonical spec.',
+      {
+        failure_code: 'stage_run_spec_digest_mismatch',
+        stage_run_id: input.stage_run_id,
+        expected_stage_run_spec_sha256: expectedSpecSha256,
+        received_stage_run_spec_sha256: input.stage_run_spec_sha256,
+      },
     );
   }
   return input;

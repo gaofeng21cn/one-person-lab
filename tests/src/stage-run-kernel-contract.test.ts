@@ -34,6 +34,37 @@ test('StageRun contract is passive transport and Codex owns semantic routing', (
     'validate_attempt_authority_and_route_abi_then_project_declared_target_without_domain_semantic_judgment',
   );
   assert.equal(value.machine_boundary.opl_owns.decisive_attempt_route_abi_validation, true);
+  assert.equal(value.machine_boundary.opl_owns.durable_stage_run_invocation_identity, true);
+  assert.deepEqual(value.durable_stage_run_launch.stage_run_id_derivation.ordered_inputs, [
+    'domain_id',
+    'stage_id',
+    'stage_run_invocation_id',
+  ]);
+  assert.equal(
+    value.durable_stage_run_launch.stage_run_id_derivation.immutable_spec_fields_participate_directly,
+    false,
+  );
+  assert.ok(value.durable_stage_run_launch.stage_run_spec_sha256.binds.includes(
+    'immutable_package_dependency_closure',
+  ));
+  assert.ok(value.durable_stage_run_launch.stage_run_spec_sha256.excludes.includes('checked_at'));
+  assert.equal(value.durable_stage_run_launch.launch_registry.table, 'stage_run_launches');
+  assert.equal(
+    value.durable_stage_run_launch.launch_registry.validate_identity_and_spec_before_registry_write,
+    true,
+  );
+  assert.equal(
+    value.durable_stage_run_launch.launch_registry.closed_state_is_monotonic_under_late_start_receipt,
+    true,
+  );
+  assert.equal(
+    value.durable_stage_run_launch.launch_registry.same_invocation_different_spec,
+    'typed_fail_closed_stage_run_invocation_spec_conflict',
+  );
+  assert.equal(
+    value.durable_stage_run_launch.route_materialization.stage_transition_materialization_owner,
+    'opl_stage_run_controller',
+  );
   assert.equal(value.route_output_policy.semantic_route_owner, 'decisive_codex_attempt');
   assert.deepEqual(value.route_output_policy.formal_review_decisive_roles, ['reviewer', 're_reviewer']);
   assert.equal(

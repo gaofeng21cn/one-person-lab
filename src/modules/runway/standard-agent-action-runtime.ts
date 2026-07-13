@@ -21,6 +21,7 @@ import {
   prepareStandardAgentActionRunRequest,
 } from '../workspace/public/standard-agent-action-runtime.ts';
 import { runFamilyRuntime } from './family-runtime.ts';
+import { buildHostedActionStageRunInvocationId } from './family-runtime-stage-run-identity.ts';
 import { openQueueDb } from './family-runtime-store.ts';
 import { recordStandardAgentActionRunEvent } from './standard-agent-action-run-recorder.ts';
 import { runStandardAgentHandlerSandbox } from './standard-agent-handler-sandbox.ts';
@@ -349,6 +350,13 @@ async function runStageAction(input: {
     action_request_sha256: prepared.request.sha256,
   });
   const bindingRef = `stage:${executionBinding.stage_manifest_ref}#${stageRoute.entry_stage_ref}`;
+  const stageRunInvocationId = buildHostedActionStageRunInvocationId({
+    domainId: input.domainId,
+    stageId: stageRoute.entry_stage_ref,
+    actionId: input.action.action_id,
+    runId: input.runId,
+    actionRunRef: prepared.action_run_ref,
+  });
 
   const output = await (async () => {
     try {
@@ -371,6 +379,12 @@ async function runStageAction(input: {
         'invocation',
         '--checkpoint-ref',
         prepared.request.ref,
+        '--input-artifact-ref',
+        prepared.request.ref,
+        '--input-artifact-sha256',
+        prepared.request.sha256,
+        '--stage-run-invocation-id',
+        stageRunInvocationId,
         '--start',
       ]);
       const stageRun = isRecord(created.family_runtime_stage_run)
@@ -409,6 +423,7 @@ async function runStageAction(input: {
         binding_ref: bindingRef,
         stage_route: stageRoute,
         request_ref: prepared.request.ref,
+        stage_run_invocation_id: stageRunInvocationId,
         expected_domain_output_schema_ref: input.action.output_schema_ref,
         temporal_stage_run: created,
         temporal_stage_run_query: query,

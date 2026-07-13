@@ -13,6 +13,7 @@ import {
 } from './family-runtime-current-control-state.ts';
 import { queryStageAttempt } from './family-runtime-stage-attempt-query.ts';
 import { createStageAttemptTable, listStageAttemptsForTask } from './family-runtime-stage-attempt-ledger.ts';
+import { createStageRunLaunchTable } from './family-runtime-stage-run-launch-registry.ts';
 import { openFamilyRuntimeSqlite } from './family-runtime-sqlite.ts';
 import type { FamilyRuntimeDomainId, FamilyRuntimeProviderKind } from './family-runtime-types.ts';
 import { resolveOplStatePaths } from './runtime-state-paths.ts';
@@ -26,7 +27,7 @@ import {
 
 export { stableId } from '../../kernel/stable-id.ts';
 
-export const QUEUE_SCHEMA_VERSION = 2;
+export const QUEUE_SCHEMA_VERSION = 3;
 export const DEFAULT_MAX_ATTEMPTS = 3;
 const RUNTIME_LEDGER_MAX_STRING_LENGTH = 4_096;
 const RUNTIME_LEDGER_MAX_ARRAY_ITEMS = 20;
@@ -230,6 +231,7 @@ export function createFamilyRuntimeQueueTables(db: DatabaseSync) {
     CREATE INDEX IF NOT EXISTS idx_queue_holds_status ON queue_holds(status, updated_at);
   `);
   createStageAttemptTable(db);
+  createStageRunLaunchTable(db);
 }
 
 export function openQueueDb() {

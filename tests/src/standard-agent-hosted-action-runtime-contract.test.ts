@@ -42,6 +42,17 @@ test('hosted action persistence and ledger distinguish Stage launch from complet
   assert.equal(contract.handler_execution.completed_status_is_domain_ready, false);
   assert.equal(contract.stage_execution.request_persisted_before_launch, true);
   assert.equal(contract.stage_execution.request_sha256_bound_as_source_fingerprint, true);
+  assert.equal(contract.stage_execution.request_ref_and_sha256_bound_as_input_artifact, true);
+  assert.equal(
+    contract.stage_execution.stage_run_invocation_id_source,
+    'domain_id_plus_entry_stage_plus_action_id_plus_run_id_plus_action_run_ref',
+  );
+  assert.equal(contract.stage_execution.same_action_run_replay_returns_same_stage_run, true);
+  assert.equal(contract.stage_execution.later_action_run_creates_new_stage_run, true);
+  assert.equal(contract.stage_execution.stage_run_spec_sha256_binds_managed_package_closure_and_exact_request, true);
+  assert.equal(contract.stage_execution.exact_stage_run_input_registered_before_temporal_start, true);
+  assert.equal(contract.stage_execution.same_invocation_different_spec_fails_closed, true);
+  assert.equal(contract.stage_execution.pre_and_post_start_crash_recovery_required, true);
   assert.equal(contract.stage_execution.started_is_domain_completion, false);
   assert.equal(contract.stage_execution.post_launch_query_is_observation_only, true);
   assert.equal(contract.stage_execution.post_launch_query_failure_changes_started_to_failed, false);
