@@ -31,7 +31,7 @@ Machine boundary: 本文是人读迁移验收源。机器真相继续归 `contra
 ### List 1：Agent 仓内应上收到 OPL 的通用能力
 
 1. `MAS workspace cockpit`：并发、health、attention queue、operator brief 与 commands 由 Console 托管；MAS 只保留 paper / study progress truth。
-2. `MAS execution admission`：developer supervisor、GitHub identity、repo-write policy 与 provider admission 由 Runway 托管；MAS 保留 domain action 与 human / owner gate。
+2. `MAS provider transport`：developer supervisor、GitHub identity、repo-write policy 与 provider attempt currentness 由 Runway 托管；MAS 保留 domain action 与 human / owner gate。
 3. `MAS artifact lifecycle`：递归扫描、restore / cleanup readiness 与 lifecycle registry 由 Workspace / Ledger 托管；artifact body、package / export authority 与删除决定留 MAS。
 4. `MAS source / memory transport`：文献 registry、BibTeX、coverage、文件物化与 publication-memory locator / writeback 由 Connect / Workspace / Ledger 承担；医学相关性、证据评价和 memory accept / reject 留 MAS。
 5. `MAG receipt observability`：receipt 校验、计数、SLO / operator projection 由 Ledger / Console 托管；fundability、quality / export verdict 与 receipt body 留 MAG。
@@ -64,7 +64,7 @@ Machine boundary: 本文是人读迁移验收源。机器真相继续归 `contra
 
 | 通用功能面 | OPL owner surface | Domain repo 保留 | 迁移 / 退役 gate |
 | --- | --- | --- | --- |
-| runtime wrapper、session shell、queue、provider heartbeat、currentness、retry/dead-letter | `Runway` stage-attempt runtime、Temporal-backed provider、StageRun identity、attempt ledger、execution authorization、provider repair readback | domain stage policy、owner answer、typed blocker、human gate、domain retry语义 | OPL replacement parity、same StageRun binding、no-forbidden-write proof、domain owner receipt / typed blocker 或 keep decision |
+| runtime wrapper、session shell、queue、provider heartbeat、currentness、retry/dead-letter | `Runway` stage-attempt transport、Temporal-backed provider、attempt ledger、failure diagnostic、provider repair readback | domain stage policy、owner answer、typed blocker、human gate、domain retry语义 | OPL replacement parity、no-forbidden-write proof与 owner decision；不作为 stage progress gate |
 | progress / owner-delta / workbench / operator projection / delegation | `Console` current owner delta、App/operator drilldown、`Stagecraft` owner-answer projection、`Ledger` refs-only evidence | domain progress truth、artifact delta、quality/export/review verdict、owner receipt | generated surface cutover、active caller proof、route-back / owner receipt roundtrip、no second truth |
 | tool affordance、skill inventory、professional Skill carrier、capability registry | `Pack` ABI、`Atlas` registry、`Connect` skill/package sync、generated Codex carrier | professional Skill source truth、domain rubric、domain knowledge、tool-use judgment | pack/compiler conformance、canonical skill source pointer、carrier provenance、no-authority flags |
 | artifact lifecycle、delivery export、workspace/source locator、memory locator | `Workspace` project / stage artifact units、`Pack` descriptor / lifecycle refs、`Ledger` evidence refs、delivery/source shell docs | artifact body、package/export authority、memory body、accept/reject decision、domain source semantics | same-ref parity、owner receipt or typed blocker binding、no body migration by OPL、domain delete/keep/typed-blocker decision |
@@ -130,7 +130,7 @@ Live Evidence 继续单列：`live_domain_progress_status=owner_evidence_recorde
 | # | 验收项 | 状态 | 完成度 | Fresh evidence / 缺口 / 后续动作 |
 | ---: | --- | --- | ---: | --- |
 | 1 | MAS workspace cockpit | done | 100% | MAS私有cockpit/current-work-unit/portal已物理退役；Console从registry、runtime activity与current-owner-delta构建domain-neutral refs-only projection。MAS generated default-caller 8/8 closed、worklist=0。 |
-| 2 | MAS execution admission | done | 100% | Runway 持有 StageRun、provider admission、currentness与no-forbidden-write；MAS保留owner/human gate。此项只声明功能结构完成，不声明live paper/runtime ready。 |
+| 2 | MAS provider transport | done | 100% | Runway 持有 StageRun transport、provider attempt currentness与no-forbidden-write；MAS保留owner/human gate。不存在 stage admission。 |
 | 3 | MAS artifact lifecycle | done | 100% | OPL Stagecraft/Workspace/Ledger持有artifact write/index/lifecycle primitive；MAS只输出opaque artifact refs并保留artifact body/删除授权。无production caller的`workspace_target_state_cleanup`私有递归扫描/archive/move shell及专用测试已物理删除。 |
 | 4 | MAS source / memory transport | done | 100% | Connect/Workspace/Ledger只传source/memory refs与receipt；医学相关性、evidence judgment、memory accept/reject仍归MAS。 |
 | 5 | MAG receipt observability | done | 100% | Generic owner-evidence ledger与Console projection已替代MAG专用shell；fundability/export verdict留MAG。 |

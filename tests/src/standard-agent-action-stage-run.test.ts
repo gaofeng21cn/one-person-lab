@@ -141,7 +141,31 @@ function stageRunFixture() {
     return readbackPath;
   };
 
-  return { repoDir, readback, rawReadback };
+  const noOutputReadback = (stageId: string) => {
+    const attemptId = `${stageId}-no-output-attempt`;
+    const readbackPath = path.join(repoDir, `${stageId}-no-output-readback.json`);
+    writeJson(readbackPath, {
+      family_runtime_stage_attempt_query: {
+        attempt_ref: `opl://stage_attempts/${attemptId}`,
+        stage_attempt_query: {
+          attempt: {
+            stage_id: stageId,
+            stage_attempt_id: attemptId,
+            domain_id: 'sample',
+            status: 'failed',
+            closeout_receipt_status: null,
+            workspace_locator: { workspace_root: workspaceRoot },
+          },
+          canonical_outcome: 'blocked',
+          conflict_or_blocker_envelopes: [{ reason: 'zero_readable_artifact' }],
+          closeouts: [],
+        },
+      },
+    });
+    return readbackPath;
+  };
+
+  return { repoDir, readback, rawReadback, noOutputReadback };
 }
 
 test('standard Agent StageRun consumer returns canonical route progress and domain output', (t) => {
@@ -218,6 +242,40 @@ test('standard Agent StageRun advances readable raw output without typed closeou
     (progress.stage_closeouts[0]?.canonical_closeout_packet.route_impact as Record<string, unknown>)?.next_stage_may_start,
     true,
   );
+});
+
+test('standard Agent StageRun advances a no-output diagnostic without typed closeout', (t) => {
+  const fixture = stageRunFixture();
+  t.after(() => fs.rmSync(fixture.repoDir, { recursive: true, force: true }));
+  const progress = evaluateStandardAgentActionStageRun({
+    repoDir: fixture.repoDir,
+    actionId: 'build',
+    stageRunReadbackPaths: [fixture.noOutputReadback('build')],
+  });
+
+  assert.deepEqual(progress.completed_stage_refs, ['build']);
+  assert.equal(progress.next_stage_ref, 'review');
+  assert.equal(progress.stage_closeouts[0]?.domain_output_packet.next_stage_may_start, true);
+  assert.ok(progress.quality_debt_refs.some((ref) => ref.includes('quality-debt-diagnostics')));
+});
+
+test('standard Agent StageRun uses the declared stage graph when action route metadata is missing', (t) => {
+  const fixture = stageRunFixture();
+  t.after(() => fs.rmSync(fixture.repoDir, { recursive: true, force: true }));
+  writeJson(path.join(fixture.repoDir, 'contracts', 'action_catalog.json'), {
+    target_domain_id: 'sample',
+    actions: [{ action_id: 'build' }],
+  });
+
+  const progress = evaluateStandardAgentActionStageRun({
+    repoDir: fixture.repoDir,
+    actionId: 'build',
+    stageRunReadbackPaths: [],
+  });
+
+  assert.equal(progress.next_stage_ref, 'intake');
+  assert.equal(progress.route.route_policy, 'ai_selected_progress_route');
+  assert.ok(progress.quality_debt_refs.some((ref) => ref.includes('route-declaration-quality-debt')));
 });
 
 test('standard Agent StageRun consumer rejects canonical manifest refs that escape the domain repo', (t) => {

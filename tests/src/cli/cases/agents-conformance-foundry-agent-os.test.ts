@@ -1,7 +1,7 @@
 import { assert, runCli, test } from '../helpers.ts';
 import {
   buildReadyAgentRepo,
-  configureReadyFrameworkCapabilityPackage,
+  configureReadyCapabilityPackage,
   configureReadyMagMorphology,
   configureReadyMetaMorphology,
   configureReadyRcaMorphology,
@@ -32,7 +32,7 @@ function readyFoundryRepos() {
 
   const scholarSkillsRepo = buildReadyAgentRepo();
   retargetReadyRepo(scholarSkillsRepo, 'mas-scholar-skills', 'MAS Scholar Skills');
-  configureReadyFrameworkCapabilityPackage(scholarSkillsRepo);
+  configureReadyCapabilityPackage(scholarSkillsRepo);
 
   return { masRepo, magRepo, rcaRepo, omaRepo, bookForgeRepo, scholarSkillsRepo };
 }
@@ -72,7 +72,7 @@ test('agents conformance exposes Foundry Agent OS membership without readiness a
   );
 
   assert.deepEqual(payload.foundry_agent_os_conformance, foundry);
-  assert.equal(foundry.status, 'passed', JSON.stringify(foundry, null, 2));
+  assert.equal(foundry.status, 'passed');
   assert.deepEqual(foundry.observed_domain_agent_ids, [...STANDARD_FOUNDRY_DOMAIN_AGENT_IDS]);
   assert.deepEqual(foundry.observed_framework_capability_package_ids, ['mas-scholar-skills']);
   assert.deepEqual(foundry.unknown_non_standard_agent_ids, []);
@@ -107,7 +107,7 @@ test('foundry agents inspect exposes stage profile and owner-answer shape withou
     assert.equal(inspect.stage_profile.provider_completion_is_closeout, false);
     assert.equal(
       inspect.stage_profile.stage_delivery_progress_marker,
-      'validated_consumable_artifact_progress_ref_or_domain_owner_receipt_ref',
+      'domain_owner_receipt_ref_or_domain_owned_typed_blocker_ref',
     );
     assert.equal(inspect.owner_answer_shape.applies_to_agent_id, agentId);
     assert.equal(

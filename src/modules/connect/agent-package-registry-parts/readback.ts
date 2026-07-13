@@ -7,6 +7,10 @@ import {
   CAPABILITY_PACKAGE_STATUS_READBACK_REF,
   capabilityPackageOwnerRoute,
 } from '../managed-update-owner-boundary.ts';
+import { dependencyReadiness } from './dependency-closure.ts';
+import { noManagedPolicyMigration } from './managed-policy-surface.ts';
+import { scopeMaterializationReadiness } from './scope-materialization.ts';
+import { managedRuntimeSourceReadiness } from './managed-runtime-source-carrier.ts';
 import { refsOnlyAuthorityBoundary, uniqueStrings } from './shared.ts';
 import type {
   AgentPackageLifecycleAction,
@@ -21,8 +25,11 @@ import type {
 
 const PACKAGE_LIFECYCLE_ACTION_REFS: AgentPackageLifecycleAction[] = [
   'install',
+  'activate',
   'update',
   'repair',
+  'rollback',
+  'profile_apply',
   'uninstall',
   'hide',
   'unhide',
@@ -103,13 +110,31 @@ export function agentPackageLifecycleUxReadback(input: {
     }));
   }
 
+  if (surface?.profile_migration.status === 'semantic_merge_required') {
+    conditions.push(lifecycleCondition({
+      condition_id: 'profile_semantic_merge_required',
+      package_id: input.lock.package_id,
+      status: 'attention_needed',
+      reason: surface.profile_migration.note,
+      action_ref: 'profile_apply',
+    }));
+  } else if (surface?.profile_migration.status && surface.profile_migration.status !== 'not_requested') {
+    conditions.push(lifecycleCondition({
+      condition_id: 'profile_current',
+      package_id: input.lock.package_id,
+      status: 'ok',
+      reason: surface.profile_migration.note,
+      action_ref: null,
+    }));
+  }
+
   if (surface?.reload_required) {
     conditions.push(lifecycleCondition({
       condition_id: 'codex_reload_required',
       package_id: input.lock.package_id,
       status: 'attention_needed',
       reason: 'Codex must reload before the materialized plugin surface is active.',
-      action_ref: 'settings_reload_codex_surface',
+      action_ref: 'agent_package_activate',
     }));
   }
 
@@ -167,6 +192,10 @@ function ownerRouteReadbackItem(input: {
   rollbackRef?: string | null;
   sourceKind?: AgentPackageLifecycleReceipt['source_kind'] | AgentPackageSourceKind | null;
   trustTier?: string | null;
+  allLocks?: AgentPackageLock[];
+  scope?: 'workspace' | 'quest' | null;
+  targetWorkspace?: string | null;
+  targetQuest?: string | null;
 }): AgentPackageOwnerRouteReadbackItem {
   const paths = resolveOplStatePaths();
   const surface = input.lock?.physical_surface ?? input.receipt?.physical_surface;
@@ -175,6 +204,7 @@ function ownerRouteReadbackItem(input: {
     manifest_sha256: input.lock?.manifest_sha256 ?? input.receipt?.manifest_sha256 ?? input.manifestSha256 ?? null,
     registry_url: input.receipt?.registry_url ?? input.registryUrl ?? null,
     package_version: input.lock?.package_version ?? null,
+    owner_language_version: input.lock?.owner_language_version ?? null,
     rollback_ref: input.lock?.rollback_ref ?? input.receipt?.rollback_ref ?? input.rollbackRef ?? null,
     source_kind: input.lock?.source_kind ?? input.receipt?.source_kind ?? input.sourceKind ?? null,
     trust_tier: input.lock?.trust_tier ?? input.receipt?.trust_tier ?? input.trustTier ?? null,
@@ -213,14 +243,94 @@ function ownerRouteReadbackItem(input: {
     writes_performed: surface?.writes_performed ?? false,
     reload_required: surface?.reload_required ?? false,
     failure_reason: surface?.failure_reason ?? null,
+    profile_migration: surface?.profile_migration ?? {
+      surface_kind: 'opl_package_profile_migration',
+      status: 'not_requested',
+      source_path: null,
+      target_path: null,
+      source_sha256: null,
+      target_sha256: null,
+      receipt_path: null,
+      merge_packet_path: null,
+      apply_command: null,
+      authoring_source_paths: [],
+      mutation_actions: [],
+      rollback_backups_retained: false,
+      writes_performed: false,
+      note: 'Package does not request a profile surface.',
+    },
+    managed_policy_migration: surface?.workflow_policy_migration
+      ?? noManagedPolicyMigration('Package does not request a managed policy surface.'),
   };
   const lifecycleUx = agentPackageLifecycleUxReadback({
     packageId: input.packageId,
     lock: input.lock,
     receipt: input.receipt,
   });
+  const readiness = input.lock
+    ? dependencyReadiness(input.lock, {
+        surface_kind: 'opl_agent_package_lock_index',
+        version: 'opl-agent-package-lock-index.v1',
+        packages: input.allLocks ?? [input.lock],
+      })
+    : {
+        status: 'missing' as const,
+        operational_ready: false,
+        repair_command: `opl packages repair --package-id ${input.packageId}`,
+        dependencies: [],
+      };
+  const materializationReadiness = input.lock
+    ? scopeMaterializationReadiness(input.lock, {
+        surface_kind: 'opl_agent_package_lock_index',
+        version: 'opl-agent-package-lock-index.v1',
+        packages: input.allLocks ?? [input.lock],
+      }, {
+        scope: input.scope,
+        targetWorkspace: input.targetWorkspace,
+        targetQuest: input.targetQuest,
+      })
+    : {
+        status: 'missing' as const,
+        scope: input.scope ?? null,
+        target_root: null,
+        required_skill_ids: [],
+        materialized_skill_ids: [],
+        expected_digest: null,
+        actual_digest: null,
+        repair_command: `opl packages repair --package-id ${input.packageId}`,
+        lifecycle_receipt_ref: null,
+        core_readiness: { status: 'missing' as const, required_skill_ids: [], materialized_skill_ids: [] },
+        specialty_exposure: {
+          status: 'not_required' as const,
+          declared_skill_ids: [],
+          materialized_skill_ids: [],
+          missing_skill_ids: [],
+        },
+      };
+  const runtimeSourceReadiness = managedRuntimeSourceReadiness(
+    input.lock?.managed_runtime_source,
+    input.lock?.runtime_source_carrier,
+  );
+  const operationalReady = readiness.operational_ready
+    && (materializationReadiness.status === 'current' || materializationReadiness.status === 'not_required')
+    && runtimeSourceReadiness.operational_ready;
+  const runtimeSource = input.lock?.managed_runtime_source ?? input.receipt?.managed_runtime_source ?? null;
   return {
     package_id: input.packageId,
+    package_dependency_readiness: readiness,
+    materialization_readiness: materializationReadiness,
+    runtime_source_readiness: runtimeSourceReadiness,
+    operational_ready: operationalReady,
+    operational_ready_scope: 'package_dependency_scope_and_runtime_source',
+    launch_allowed: operationalReady,
+    launch_blocked_reason: !readiness.operational_ready
+      ? `package_dependency_${readiness.status}`
+      : materializationReadiness.status !== 'current' && materializationReadiness.status !== 'not_required'
+        ? `scope_materialization_${materializationReadiness.status}`
+        : !runtimeSourceReadiness.operational_ready
+          ? `runtime_source_${runtimeSourceReadiness.status}`
+        : null,
+    allowed_when_blocked: ['status', 'doctor', 'repair'],
     descriptor,
     digest,
     lock,
@@ -234,6 +344,9 @@ function ownerRouteReadbackItem(input: {
       dependencies: {
         required_skill_ids: input.lock?.bundled_required_skill_ids ?? surface?.materialized_required_skill_ids ?? [],
         optional_skill_refs: input.lock?.optional_skill_refs ?? [],
+        capability_dependencies: input.lock?.capability_dependencies ?? [],
+        resolved_dependencies: input.lock?.resolved_dependencies ?? [],
+        dependency_readiness: readiness,
       },
       trust: {
         trust_tier: descriptor.trust_tier,
@@ -259,13 +372,40 @@ function ownerRouteReadbackItem(input: {
       owns_package_core: false,
       owns_domain_truth: false,
       ...materializer,
-    }],
+    }, ...(runtimeSource ? [{
+      adapter_kind: 'managed_runtime_source_carrier' as const,
+      carrier: 'opl_managed_module_source' as const,
+      source_surface: 'runtime_source_carrier' as const,
+      projection_role: 'package_carrier_adapter' as const,
+      owns_package_core: false as const,
+      owns_domain_truth: false as const,
+      status: runtimeSource.status === 'removed' ? 'removed' as const : 'materialized' as const,
+      plugin_id: null,
+      plugin_source_path: null,
+      plugin_manifest_path: null,
+      codex_plugin_cache_path: null,
+      plugin_payload_manifest_url: null,
+      plugin_payload_manifest_sha256: null,
+      plugin_payload_cache_path: null,
+      materialized_required_skill_ids: [],
+      materialized_required_skill_paths: [],
+      writes_performed: runtimeSource.status !== 'validated_no_write',
+      reload_required: false,
+      failure_reason: runtimeSourceReadiness.reason,
+      module_id: runtimeSource.module_id,
+      checkout_path: runtimeSource.checkout_path,
+      ownership: runtimeSource.ownership,
+      tree_sha256: runtimeSource.tree_sha256,
+    }] : [])],
     authority_boundary: refsOnlyAuthorityBoundary(),
   };
 }
 
 export function ownerRouteReadback(input: {
   selectedPackageId?: string | null;
+  scope?: 'workspace' | 'quest' | null;
+  targetWorkspace?: string | null;
+  targetQuest?: string | null;
   packages: Array<{
     packageId: string;
     lock?: AgentPackageLock | null;
@@ -284,7 +424,13 @@ export function ownerRouteReadback(input: {
     command_refs: ownerRouteReadbackCommands(),
     selected_package_id: input.selectedPackageId ?? null,
     package_count: input.packages.length,
-    packages: input.packages.map((entry) => ownerRouteReadbackItem(entry)),
+    packages: input.packages.map((entry) => ownerRouteReadbackItem({
+      ...entry,
+      allLocks: input.packages.flatMap((candidate) => candidate.lock ? [candidate.lock] : []),
+      scope: input.scope,
+      targetWorkspace: input.targetWorkspace,
+      targetQuest: input.targetQuest,
+    })),
     no_package_manager_boundary: {
       package_manager_claim: false,
       clean_managed_scope: 'clean_opl_managed_module_roots_only',

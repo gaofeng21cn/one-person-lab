@@ -143,3 +143,27 @@ test('agents scaffold validation blocks invalid canonical refs and authority cla
     fs.rmSync(targetDir, { recursive: true, force: true });
   }
 });
+
+test('agents scaffold generates progress-first stages without a receipt admission gate', () => {
+  const targetDir = generateTarget('opl-progress-first-scaffold-');
+  try {
+    const manifest = readJson(path.join(targetDir, 'agent/stages/manifest.json'));
+    const policy = manifest.progress_first_policy;
+    assert.equal(policy.no_output_or_failure_diagnostic_advances_stage, true);
+    assert.equal(policy.quality_debt_blocks_stage_transition, false);
+    assert.equal(policy.hard_stop_classes.includes('zero_consumable_artifact'), false);
+    assert.equal(policy.hard_stop_classes.includes('artifact_corrupt_or_unreadable'), false);
+    assert.ok(policy.hard_stop_classes.includes('executor_unavailable'));
+
+    const stage = fs.readFileSync(path.join(targetDir, 'agent/stages/domain_intake.md'), 'utf8');
+    const gate = fs.readFileSync(
+      path.join(targetDir, 'agent/quality_gates/domain_acceptance.md'),
+      'utf8',
+    );
+    assert.match(stage, /no-output\/failure diagnostic/i);
+    assert.match(gate, /Quality debt and diagnostics close .* claims, not stage transition/i);
+    assert.doesNotMatch(gate, /may close only with/i);
+  } finally {
+    fs.rmSync(targetDir, { recursive: true, force: true });
+  }
+});

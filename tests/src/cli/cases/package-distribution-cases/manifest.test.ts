@@ -16,19 +16,20 @@ import { readBundledCodexDefaultProfile } from '../../../../../src/kernel/local-
 
 const codexDefaultProfile = readBundledCodexDefaultProfile();
 
-test('packages manifest exposes active package-channel coordinates for module install updates', () => {
+test('packages manifest exposes canonical Release Set coordinates for Package install updates', () => {
   const output = runCli(['connect', 'packages', 'manifest'], {
-    OPL_RELEASE_VERSION: '26.4.27',
+    OPL_RELEASE_SET_GENERATION: '26.4.27',
     OPL_PACKAGES_OWNER: 'gaofeng21cn',
-    OPL_RELEASE_CHANNEL: 'latest',
+    OPL_RELEASE_CHANNEL: 'candidate',
   }) as {
     packages_manifest: {
-      opl_version: string;
+      release_set_generation: string;
+      release_set: { generation: string; package_count: number; package_ids: string[]; catalog_carrier_is_package_identity: boolean };
       release_channel: string;
-      module_install_update_source: string;
+      package_install_update_source: string;
       package_consumption_status: string;
-      developer_module_source_override: {
-        env: string;
+      developer_package_source_override: {
+        carrier_env: string;
         scope: string;
         app_setting_surface: string;
       };
@@ -55,7 +56,7 @@ test('packages manifest exposes active package-channel coordinates for module in
         daily_package_channel: {
           status: string;
           workflow: string;
-          version_template: string;
+          generation_template: string;
           change_detector: string;
           comparison: string;
           no_change_behavior: string;
@@ -98,9 +99,13 @@ test('packages manifest exposes active package-channel coordinates for module in
           current_install_update_source: string;
           release_discipline: { required_gates: string[] };
         };
-        modules: Record<string, {
+        package_artifacts: Record<string, {
           artifact: string;
+          package_id: string;
+          package_version: string;
           scope: string;
+          package_manifest_ref: string;
+          carrier_locator: { carrier_kind: string; module_id: string; repo_name: string; repo_url: string };
           codex_standalone_distribution: null | {
             distribution_shape: string;
             plugin_id: string;
@@ -111,7 +116,7 @@ test('packages manifest exposes active package-channel coordinates for module in
             distribution_payload?: {
               oci_ref: string;
               payload_digest_ref: string;
-              rolling_tag: string;
+              moving_tag: string;
               install_truth: string;
               live_download_proof: boolean;
               installed_reload_proof: boolean;
@@ -129,7 +134,7 @@ test('packages manifest exposes active package-channel coordinates for module in
           release_discipline: {
             package_lifecycle_status: string;
             workflow_trigger_policy: string;
-            current_latest_source: string;
+            current_stable_source: string;
             developer_override_source: string;
             required_gates: string[];
           };
@@ -140,16 +145,19 @@ test('packages manifest exposes active package-channel coordinates for module in
     };
   };
 
-  assert.equal(output.packages_manifest.opl_version, '26.4.27');
-  assert.equal(output.packages_manifest.release_channel, 'latest');
-  assert.equal(output.packages_manifest.module_install_update_source, 'package_channel');
+  assert.equal(output.packages_manifest.release_set_generation, '26.4.27');
+  assert.equal(output.packages_manifest.release_set.generation, '26.4.27');
+  assert.equal(output.packages_manifest.release_set.package_count, 7);
+  assert.equal(output.packages_manifest.release_set.catalog_carrier_is_package_identity, false);
+  assert.equal(output.packages_manifest.release_channel, 'candidate');
+  assert.equal(output.packages_manifest.package_install_update_source, 'package_channel');
   assert.equal(
     output.packages_manifest.package_consumption_status,
-    'ordinary_app_users_consume_managed_ghcr_capability_packages',
+    'ordinary_app_users_consume_managed_ghcr_packages',
   );
-  assert.equal(output.packages_manifest.developer_module_source_override.env, 'OPL_MODULE_SOURCE_MODE=git_checkout');
-  assert.equal(output.packages_manifest.developer_module_source_override.scope, 'developer_mode_checkout');
-  assert.equal(output.packages_manifest.developer_module_source_override.app_setting_surface, 'Developer Mode');
+  assert.equal(output.packages_manifest.developer_package_source_override.carrier_env, 'OPL_MODULE_SOURCE_MODE=git_checkout');
+  assert.equal(output.packages_manifest.developer_package_source_override.scope, 'developer_mode_checkout');
+  assert.equal(output.packages_manifest.developer_package_source_override.app_setting_surface, 'Developer Mode');
   assert.equal(output.packages_manifest.release_automation.channel_manifest.outputs.channel_manifest, 'opl-channel-manifest.json');
   assert.equal(output.packages_manifest.release_automation.channel_manifest.outputs.checksums, 'SHA256SUMS');
   assert.equal(output.packages_manifest.release_automation.rollback.strategy, 'previous_channel_manifest_target');
@@ -161,15 +169,15 @@ test('packages manifest exposes active package-channel coordinates for module in
   assert.equal(output.packages_manifest.release_automation.status, 'active_managed_ghcr_capability_packages');
   assert.equal(output.packages_manifest.release_automation.package_lifecycle_status, 'active_release_channel');
   assert.equal(output.packages_manifest.release_automation.workflow_trigger_policy, 'release_gate_workflow_call_or_manual_dispatch');
-  assert.equal(output.packages_manifest.release_automation.remote_publish_status, 'release_gate_or_manual_dispatch_publishes_ghcr_packages');
-  assert.equal(output.packages_manifest.release_automation.release_manifest_publication_status, 'active_ghcr_channel_manifest');
+  assert.equal(output.packages_manifest.release_automation.remote_publish_status, 'publication_workflow_configured_pending_remote_verification');
+  assert.equal(output.packages_manifest.release_automation.release_manifest_publication_status, 'configured_pending_remote_verification');
   assert.equal(
     output.packages_manifest.release_automation.release_manifest_package.package_channel_status,
     'active_release_channel',
   );
   assert.equal(
     output.packages_manifest.release_automation.release_manifest_package.publication_status,
-    'published_to_ghcr_by_packages_workflow',
+    'publication_workflow_configured',
   );
   assert.equal(
     output.packages_manifest.release_automation.release_manifest_package.current_install_update_source,
@@ -192,7 +200,7 @@ test('packages manifest exposes active package-channel coordinates for module in
     '.github/workflows/daily-package-channel.yml',
   );
   assert.equal(
-    output.packages_manifest.release_automation.daily_package_channel.version_template,
+    output.packages_manifest.release_automation.daily_package_channel.generation_template,
     '<utc_yy.m.d>',
   );
   assert.equal(
@@ -219,7 +227,7 @@ test('packages manifest exposes active package-channel coordinates for module in
     output.packages_manifest.release_automation.daily_package_channel.force_publish_input,
     'force_publish',
   );
-  assert.ok(output.packages_manifest.release_automation.cleanup.protected_tags.includes('latest'));
+  assert.deepEqual(output.packages_manifest.release_automation.cleanup.protected_tags, ['candidate', 'latest-stable']);
   assert.equal(Object.hasOwn(output.packages_manifest.packages, 'webui_docker_image'), false);
   assert.equal(output.packages_manifest.packages.framework_core.package_name, 'one-person-lab-framework');
   assert.equal(output.packages_manifest.packages.framework_core.artifact, 'ghcr.io/gaofeng21cn/one-person-lab-framework:26.4.27');
@@ -285,73 +293,78 @@ test('packages manifest exposes active package-channel coordinates for module in
     'opl_flow_recommendation_projection',
   );
   assert.equal(
-    output.packages_manifest.packages.modules.medautoscience.artifact,
-    'ghcr.io/gaofeng21cn/one-person-lab-modules/med-autoscience:26.4.27',
+    output.packages_manifest.packages.package_artifacts.mas.artifact,
+    'ghcr.io/gaofeng21cn/one-person-lab-packages/mas:0.1.0-alpha.4',
   );
+  assert.equal(output.packages_manifest.packages.package_artifacts.mas.package_id, 'mas');
+  assert.equal(output.packages_manifest.packages.package_artifacts.mas.package_version, '0.1.0-alpha.4');
+  assert.equal(output.packages_manifest.packages.package_artifacts.mas.carrier_locator.module_id, 'medautoscience');
+  assert.equal(output.packages_manifest.packages.package_artifacts.mas.carrier_locator.repo_name, 'med-autoscience');
+  assert.equal(Object.hasOwn(output.packages_manifest.packages.package_artifacts.mas, 'module_id'), false);
   assert.equal(
-    output.packages_manifest.packages.modules.medautoscience.package_channel_status,
+    output.packages_manifest.packages.package_artifacts.mas.package_channel_status,
     'active_release_channel',
   );
   assert.equal(
-    output.packages_manifest.packages.modules.medautoscience.package_lifecycle_status,
+    output.packages_manifest.packages.package_artifacts.mas.package_lifecycle_status,
     'active_release_channel',
   );
   assert.match(
-    output.packages_manifest.packages.modules.medautoscience.package_lifecycle_reason,
+    output.packages_manifest.packages.package_artifacts.mas.package_lifecycle_reason,
     /package-channel/,
   );
   assert.equal(
-    output.packages_manifest.packages.modules.medautoscience.remote_publish_status,
-    'published_to_ghcr_by_packages_workflow',
+    output.packages_manifest.packages.package_artifacts.mas.remote_publish_status,
+    'publication_workflow_configured_pending_remote_verification',
   );
   assert.equal(
-    output.packages_manifest.packages.modules.medautoscience.package_consumption_status,
+    output.packages_manifest.packages.package_artifacts.mas.package_consumption_status,
     'consumed_by_package_channel_installs',
   );
   assert.equal(
-    output.packages_manifest.packages.modules.medautoscience.current_install_update_source,
+    output.packages_manifest.packages.package_artifacts.mas.current_install_update_source,
     'package_channel',
   );
   assert.equal(
-    output.packages_manifest.packages.modules.medautoscience.release_discipline.current_latest_source,
+    output.packages_manifest.packages.package_artifacts.mas.release_discipline.current_stable_source,
     'opl_release_channel_manifest',
   );
   assert.equal(
-    output.packages_manifest.packages.modules.medautoscience.release_discipline.developer_override_source,
+    output.packages_manifest.packages.package_artifacts.mas.release_discipline.developer_override_source,
     'git_checkout',
   );
   assert.equal(
-    output.packages_manifest.packages.modules.medautoscience.release_discipline.workflow_trigger_policy,
+    output.packages_manifest.packages.package_artifacts.mas.release_discipline.workflow_trigger_policy,
     'release_gate_workflow_call_or_manual_dispatch',
   );
   assert.equal(
-    output.packages_manifest.packages.modules.medautoscience.release_discipline.package_lifecycle_status,
+    output.packages_manifest.packages.package_artifacts.mas.release_discipline.package_lifecycle_status,
     'active_release_channel',
   );
   assert.equal(
-    output.packages_manifest.packages.modules.medautoscience.release_discipline.required_gates.includes(
+    output.packages_manifest.packages.package_artifacts.mas.release_discipline.required_gates.includes(
       'sha256_recorded',
     ),
     true,
   );
   assert.equal(
-    output.packages_manifest.packages.modules.medautoscience.release_discipline.required_gates.includes(
-      'ghcr_module_artifact_published',
+    output.packages_manifest.packages.package_artifacts.mas.release_discipline.required_gates.includes(
+      'ghcr_package_artifact_published',
     ),
     true,
   );
   assert.equal(
-    output.packages_manifest.packages.modules.medautoscience.release_discipline.required_gates.includes(
+    output.packages_manifest.packages.package_artifacts.mas.release_discipline.required_gates.includes(
       'developer_git_checkout_override_declared',
     ),
     true,
   );
   assert.equal(
-    output.packages_manifest.packages.modules.medautoscience.developer_git_checkout_override.repo_url,
+    output.packages_manifest.packages.package_artifacts.mas.developer_git_checkout_override.repo_url,
     'https://github.com/gaofeng21cn/med-autoscience.git',
   );
   assert.deepEqual(
-    output.packages_manifest.packages.modules.medautoscience.capability_dependencies.map((dependency) => ({
+    output.packages_manifest.packages.package_artifacts.mas.capability_dependencies.map((dependency) => ({
       module_id: dependency.module_id,
       package_id: dependency.package_id,
       kind: dependency.kind,
@@ -384,65 +397,76 @@ test('packages manifest exposes active package-channel coordinates for module in
     ],
   );
   assert.deepEqual(
-    output.packages_manifest.packages.modules.medautoscience.codex_standalone_distribution,
+    output.packages_manifest.packages.package_artifacts.mas.codex_standalone_distribution,
     {
       distribution_shape: 'repo_carrier_source',
       plugin_id: 'med-autoscience',
-      required_skill_ids: ['med-autoscience', 'mas-scholar-skills'],
+      required_skill_ids: ['med-autoscience'],
       bundled_capability_package_ids: ['mas-scholar-skills'],
       carrier_source_role: 'codex_plugin_default_carrier_not_package_truth',
-      package_manifest_ref: 'contracts/opl-framework/agent-packages/mas.json',
+      package_manifest_ref: 'contracts/opl-framework/packages/mas.json',
       user_install_action_count: 1,
     },
   );
-  assert.equal(Object.hasOwn(output.packages_manifest.packages.modules, 'meddeepscientist'), false);
+  assert.equal(Object.hasOwn(output.packages_manifest.packages.package_artifacts, 'meddeepscientist'), false);
   assert.equal(
-    output.packages_manifest.packages.modules.redcube.install_strategy,
-    'extract_to_managed_modules_root',
+    output.packages_manifest.packages.package_artifacts.rca.install_strategy,
+    'extract_to_managed_package_root',
   );
   assert.deepEqual(
-    output.packages_manifest.packages.modules.redcube.codex_standalone_distribution,
+    output.packages_manifest.packages.package_artifacts.rca.codex_standalone_distribution,
     {
       distribution_shape: 'repo_carrier_source',
       plugin_id: 'redcube-ai',
       required_skill_ids: ['redcube-ai'],
       bundled_capability_package_ids: [],
       carrier_source_role: 'codex_plugin_default_carrier_not_package_truth',
-      package_manifest_ref: 'contracts/opl-framework/agent-packages/rca.json',
+      package_manifest_ref: 'contracts/opl-framework/packages/rca.json',
       user_install_action_count: 1,
     },
   );
   assert.equal(
-    output.packages_manifest.packages.modules.oplmetaagent.artifact,
-    'ghcr.io/gaofeng21cn/one-person-lab-modules/opl-meta-agent:26.4.27',
+    output.packages_manifest.packages.package_artifacts.oma.artifact,
+    'ghcr.io/gaofeng21cn/one-person-lab-packages/oma:0.1.0',
   );
   assert.equal(
-    output.packages_manifest.packages.modules.oplmetaagent.remote_publish_status,
-    'published_to_ghcr_by_packages_workflow',
+    output.packages_manifest.packages.package_artifacts.oma.remote_publish_status,
+    'publication_workflow_configured_pending_remote_verification',
   );
   assert.equal(
-    output.packages_manifest.packages.modules.oplmetaagent.developer_git_checkout_override.repo_url,
+    output.packages_manifest.packages.package_artifacts.oma.developer_git_checkout_override.repo_url,
     'https://github.com/gaofeng21cn/opl-meta-agent.git',
   );
-  const omaCodexStandaloneDistribution = output.packages_manifest.packages.modules.oplmetaagent.codex_standalone_distribution;
+  const omaCodexStandaloneDistribution = output.packages_manifest.packages.package_artifacts.oma.codex_standalone_distribution;
   assert.ok(omaCodexStandaloneDistribution);
   assert.equal(omaCodexStandaloneDistribution.distribution_shape, 'repo_carrier_source');
-  assert.equal(omaCodexStandaloneDistribution.package_manifest_ref, 'contracts/opl-framework/agent-packages/oma.json');
+  assert.equal(omaCodexStandaloneDistribution.package_manifest_ref, 'contracts/opl-framework/packages/oma.json');
   assert.equal(
-    output.packages_manifest.packages.modules.scholarskills.artifact,
-    'ghcr.io/gaofeng21cn/one-person-lab-modules/mas-scholar-skills:26.4.27',
+    output.packages_manifest.packages.package_artifacts['mas-scholar-skills'].artifact,
+    'ghcr.io/gaofeng21cn/one-person-lab-packages/mas-scholar-skills:0.1.1',
+  );
+  assert.equal(output.packages_manifest.packages.package_artifacts['opl-flow'].package_id, 'opl-flow');
+  assert.equal(output.packages_manifest.packages.package_artifacts['opl-flow'].package_version, '0.1.16');
+  assert.equal(output.packages_manifest.packages.package_artifacts['opl-flow'].codex_standalone_distribution, null);
+  assert.equal(
+    output.packages_manifest.packages.package_artifacts['opl-flow'].artifact,
+    'ghcr.io/gaofeng21cn/one-person-lab-packages/opl-flow:0.1.16',
   );
   assert.equal(
-    output.packages_manifest.packages.modules.scholarskills.scope,
+    output.packages_manifest.packages.package_artifacts['mas-scholar-skills'].scope,
     'framework_capability_package',
   );
   assert.equal(
-    output.packages_manifest.packages.modules.scholarskills.current_install_update_source,
+    output.packages_manifest.packages.package_artifacts['mas-scholar-skills'].package_manifest_ref,
+    'contracts/opl-framework/packages/mas-scholar-skills.json',
+  );
+  assert.equal(
+    output.packages_manifest.packages.package_artifacts['mas-scholar-skills'].current_install_update_source,
     'package_channel',
   );
   assert.equal(
-    output.packages_manifest.packages.modules.scholarskills.developer_git_checkout_override.repo_url,
+    output.packages_manifest.packages.package_artifacts['mas-scholar-skills'].developer_git_checkout_override.repo_url,
     'https://github.com/gaofeng21cn/mas-scholar-skills.git',
   );
-  assert.deepEqual(output.packages_manifest.packages.modules.scholarskills.dependency_of, ['medautoscience']);
+  assert.deepEqual(output.packages_manifest.packages.package_artifacts['mas-scholar-skills'].dependency_of, ['mas']);
 });

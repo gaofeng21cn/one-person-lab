@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+
 import { FrameworkContractError, isRecord } from '../../../kernel/contract-validation.ts';
 import {
   readJsonFileOrNull,
@@ -24,6 +26,7 @@ function emptyLockIndex(): AgentPackageLockIndex {
     surface_kind: 'opl_agent_package_lock_index',
     version: 'opl-agent-package-lock-index.v1',
     packages: [],
+    last_known_good_transactions: [],
   };
 }
 
@@ -43,13 +46,21 @@ export function readLockIndex(): AgentPackageLockIndex {
   return {
     ...emptyLockIndex(),
     packages: recordList(parsed.packages).flatMap((entry) => {
-      const packageId = canonicalAgentPackageId(entry.package_id);
+      const declaredPackageId = stringValue(entry.package_id)?.toLowerCase() ?? null;
+      const packageId = canonicalAgentPackageId(declaredPackageId);
       const lockRef = stringValue(entry.lock_ref);
-      const agentId = canonicalAgentPackageId(entry.agent_id);
-      return packageId && lockRef
-        ? [{ ...entry, package_id: packageId, ...(agentId ? { agent_id: agentId } : {}) } as AgentPackageLock]
+      const declaredAgentId = stringValue(entry.agent_id)?.toLowerCase() ?? null;
+      const agentId = declaredAgentId === null ? null : canonicalAgentPackageId(declaredAgentId);
+      const agentIdentityValid = declaredAgentId === null || agentId === declaredAgentId;
+      return packageId === declaredPackageId && agentIdentityValid && packageId && lockRef
+        ? [{ ...entry, package_id: packageId, agent_id: agentId } as AgentPackageLock]
         : [];
     }),
+    last_known_good_transactions: recordList(parsed.last_known_good_transactions ?? [])
+      .filter((entry) => typeof entry.root_package_id === 'string'
+        && typeof entry.transaction_id === 'string'
+        && typeof entry.closure_digest === 'string'
+        && Array.isArray(entry.package_locks)) as AgentPackageLockIndex['last_known_good_transactions'],
   };
 }
 
@@ -101,20 +112,48 @@ export function appendReceipt(receipt: AgentPackageLifecycleReceipt) {
   writeLifecycleLedger(ledger);
 }
 
+export function writePackageTransaction(
+  index: AgentPackageLockIndex,
+  receipts: AgentPackageLifecycleReceipt[],
+) {
+  const paths = ensureOplStateDir();
+  const previousLock = fs.existsSync(paths.agent_package_lock_file)
+    ? fs.readFileSync(paths.agent_package_lock_file)
+    : null;
+  const previousLedger = fs.existsSync(paths.agent_package_lifecycle_ledger_file)
+    ? fs.readFileSync(paths.agent_package_lifecycle_ledger_file)
+    : null;
+  const ledger = readLifecycleLedger();
+  upsertJsonReceipts(ledger.receipts, receipts, (entry, next) =>
+    entry.receipt_ref === next.receipt_ref
+  );
+  try {
+    writeJsonPayloadFile(paths.agent_package_lock_file, index);
+    writeJsonReceiptLedger(paths.agent_package_lifecycle_ledger_file, ledger);
+  } catch (error) {
+    if (previousLock) fs.writeFileSync(paths.agent_package_lock_file, previousLock);
+    else fs.rmSync(paths.agent_package_lock_file, { force: true });
+    if (previousLedger) fs.writeFileSync(paths.agent_package_lifecycle_ledger_file, previousLedger);
+    else fs.rmSync(paths.agent_package_lifecycle_ledger_file, { force: true });
+    throw error;
+  }
+}
+
 function normalizeLifecycleReceipt(value: unknown): AgentPackageLifecycleReceipt | null {
   if (!isRecord(value)) {
     return null;
   }
   const receiptRef = stringValue(value.receipt_ref);
-  const packageId = canonicalAgentPackageId(value.package_id);
+  const declaredPackageId = stringValue(value.package_id)?.toLowerCase() ?? null;
+  const packageId = canonicalAgentPackageId(declaredPackageId);
+  if (declaredPackageId && packageId !== declaredPackageId) return null;
   const physicalSurface = isRecord(value.physical_surface)
-    ? {
-        ...value.physical_surface,
-        ...(canonicalAgentPackageId(value.physical_surface.package_id)
-          ? { package_id: canonicalAgentPackageId(value.physical_surface.package_id)! }
-          : {}),
-      }
+    ? value.physical_surface
     : value.physical_surface;
+  const physicalPackageId = isRecord(physicalSurface)
+    ? stringValue(physicalSurface.package_id)?.toLowerCase() ?? null
+    : null;
+  if (physicalPackageId && canonicalAgentPackageId(physicalPackageId) !== physicalPackageId) return null;
   return receiptRef
     ? {
         ...value,

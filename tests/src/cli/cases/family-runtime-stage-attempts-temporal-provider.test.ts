@@ -1,4 +1,4 @@
-import { assert, fs, os, path, runCli, test } from '../helpers.ts';
+import { assert, fs, installRuntimePackageFixture, os, path, runCli, test } from '../helpers.ts';
 import { buildTemporalStageAttemptWorkflowInput } from '../../../../src/modules/runway/family-runtime-temporal.ts';
 import type {
   TemporalStageAttemptCreateOutput,
@@ -14,6 +14,7 @@ function familyRuntimeEnv(stateRoot: string) {
 test('family-runtime maps a Temporal attempt to provider launch input without domain authority', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-temporal-attempt-input-'));
   try {
+    installRuntimePackageFixture(stateRoot, 'redcube-ai');
     const created = runCli([
       'family-runtime',
       'attempt',
@@ -39,15 +40,16 @@ test('family-runtime maps a Temporal attempt to provider launch input without do
     assert.equal(input.stage_packet_ref, 'packets/artifact-owner.json');
     assert.equal(input.codex_stage_runner?.runner_mode, 'codex_cli');
     assert.equal(input.workspace_locator.workspace_root, '/tmp/redcube-runtime');
-    assert.equal(input.opl_execution_authorization?.authority_boundary.opl_can_create_owner_receipt, false);
+    assert.equal(Object.hasOwn(input, 'opl_execution_authorization'), false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
 
-test('family-runtime does not authorize Temporal launch without source fingerprint', () => {
+test('family-runtime may transport a declared stage without source fingerprint format metadata', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-temporal-attempt-no-auth-'));
   try {
+    installRuntimePackageFixture(stateRoot, 'redcube-ai');
     const created = runCli([
       'family-runtime',
       'attempt',
@@ -66,11 +68,10 @@ test('family-runtime does not authorize Temporal launch without source fingerpri
       'packets/artifact-owner.json',
     ], familyRuntimeEnv(stateRoot)) as TemporalStageAttemptCreateOutput;
 
-    assert.equal(
-      buildTemporalStageAttemptWorkflowInput(created.family_runtime_stage_attempt.attempt)
-        .opl_execution_authorization,
-      undefined,
-    );
+    const input = buildTemporalStageAttemptWorkflowInput(created.family_runtime_stage_attempt.attempt);
+    assert.equal(input.source_fingerprint, null);
+    assert.equal(input.stage_packet_ref, 'packets/artifact-owner.json');
+    assert.equal(Object.hasOwn(input, 'opl_execution_authorization'), false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

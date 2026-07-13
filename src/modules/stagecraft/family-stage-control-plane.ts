@@ -14,7 +14,7 @@ import type {
   FamilyStageKind,
   FamilyStageSurfaceRef,
 } from './family-stage-control-plane-contract.ts';
-import { buildFamilyStageAdmissionReview } from './family-stage-admission.ts';
+import { buildFamilyStageConformanceReview } from './family-stage-conformance.ts';
 import { buildFamilyStageAssumptionLifecycleProjection } from './family-stage-assumption-lifecycle.ts';
 import { buildFamilyStageCohortLoopProjection } from './family-stage-cohort-loop.ts';
 import { buildFamilyStageRuntimeBudgetProjection } from './family-stage-runtime-budget.ts';
@@ -54,17 +54,17 @@ import {
   type FamilyStageGuaranteeMode,
 } from './family-stage-guarantee-projection.ts';
 import type {
-  FamilyStageAdmissionReview,
-  FamilyStageAdmissionFinding,
-  FamilyStageAdmissionStageResult,
-} from './family-stage-admission.ts';
+  FamilyStageConformanceReview,
+  FamilyStageConformanceFinding,
+  FamilyStageConformanceStageResult,
+} from './family-stage-conformance.ts';
 import type { FamilyActionStageRoute } from '../../kernel/family-action-catalog-contract.ts';
 import {
   buildFamilyStageModeTags,
-} from './family-stage-admission.ts';
+} from './family-stage-conformance.ts';
 import type {
   FamilyStageModeTags,
-} from './family-stage-admission.ts';
+} from './family-stage-conformance.ts';
 export {
   normalizeFamilyStageControlPlane,
 } from './family-stage-control-plane-contract.ts';
@@ -137,12 +137,12 @@ export interface FamilyStageListEntry {
   mode_tags: FamilyStageModeTags;
   freshness: JsonRecord | null;
   trust_lane: string | null;
-  admission_status: string | null;
+  conformance_status: string | null;
 }
 
-export interface FamilyStageLaunchAdmissionGate {
-  surface_kind: 'opl_family_stage_launch_admission_gate';
-  version: 'family-stage-launch-admission-gate.v1';
+export interface FamilyStageContextObservation {
+  surface_kind: 'opl_family_stage_context_observation';
+  version: 'family-stage-context-observation.v1';
   domain_id: string;
   normalized_domain_id: string;
   stage_id: string;
@@ -150,15 +150,14 @@ export interface FamilyStageLaunchAdmissionGate {
   selected_stage_route: FamilyActionStageRoute | null;
   plane_id: string | null;
   target_domain_id: string | null;
-  status: 'admitted' | 'needs_contracts' | 'blocked' | 'not_in_declared_control_plane' | 'missing_control_plane';
-  gate_action: 'allow_stage_launch' | 'block_stage_launch';
-  block_reason: string | null;
-  inspected_stage: FamilyStageAdmissionStageResult | null;
-  blocker_findings: FamilyStageAdmissionReview['findings'];
-  warning_findings: FamilyStageAdmissionReview['findings'];
+  status: 'declared' | 'declaration_debt';
+  progression_effect: 'stage_may_start';
+  inspected_stage: FamilyStageConformanceStageResult | null;
+  quality_debt_findings: FamilyStageConformanceReview['findings'];
+  warning_findings: FamilyStageConformanceReview['findings'];
   allowed_stage_ids: string[];
   authority_boundary: {
-    opl: 'launch_admission_gate_and_blocker_projection_only';
+    opl: 'passive_declared_stage_context_observation_only';
     domain: 'truth_quality_artifact_gate_owner';
     can_write_domain_truth: false;
     can_authorize_quality_verdict: false;
@@ -214,7 +213,7 @@ function buildFamilyStageListEntry(
   entry: FamilyStageDomainManifestCatalogEntry,
   plane: FamilyStageControlPlane,
   stage: FamilyStageDescriptor,
-  admissionStage: FamilyStageAdmissionStageResult | null = null,
+  conformanceStage: FamilyStageConformanceStageResult | null = null,
 ): FamilyStageListEntry {
   return {
     project_id: entry.project_id,
@@ -235,10 +234,10 @@ function buildFamilyStageListEntry(
     runtime_assumption_count: stage.stage_contract?.runtime_assumptions.length ?? 0,
     monitor_ref_count: stage.stage_contract?.monitor_refs.length ?? 0,
     guarantee_mode: buildFamilyStageGuaranteeProjection(stage).primary_mode,
-    mode_tags: admissionStage?.mode_tags ?? buildFamilyStageModeTags(stage),
+    mode_tags: conformanceStage?.mode_tags ?? buildFamilyStageModeTags(stage),
     freshness: stage.freshness,
-    trust_lane: stage.trust_boundary?.lane ?? admissionStage?.trust_lane ?? null,
-    admission_status: admissionStage?.status ?? null,
+    trust_lane: stage.trust_boundary?.lane ?? conformanceStage?.trust_lane ?? null,
+    conformance_status: conformanceStage?.status ?? null,
   };
 }
 
@@ -296,25 +295,25 @@ function buildStageIndex(contracts: FrameworkContracts, options: ManifestCatalog
     if (!plane) {
       return [];
     }
-    const admission = buildFamilyStageAdmissionReview(plane, entry.manifest);
-    const admissionByStage = new Map(admission.stage_results.map((stage) => [stage.stage_id, stage]));
+    const conformance = buildFamilyStageConformanceReview(plane, entry.manifest);
+    const conformanceByStage = new Map(conformance.stage_results.map((stage) => [stage.stage_id, stage]));
     return plane.stages.map((stage) => buildFamilyStageListEntry(
       entry,
       plane,
       stage,
-      admissionByStage.get(stage.stage_id) ?? null,
+      conformanceByStage.get(stage.stage_id) ?? null,
     ));
   });
-  const admissions = catalog.projects.flatMap((entry) => {
+  const conformances = catalog.projects.flatMap((entry) => {
     const plane = resolvePlaneFromEntry(entry);
-    return plane ? [buildFamilyStageAdmissionReview(plane, entry.manifest)] : [];
+    return plane ? [buildFamilyStageConformanceReview(plane, entry.manifest)] : [];
   });
 
   return {
     domain_manifests: catalog,
     domains,
     stages,
-    admissions,
+    conformances,
   };
 }
 
@@ -328,16 +327,16 @@ export function buildFamilyStagesList(contracts: FrameworkContracts, options: Ma
         total_projects_count: index.domains.length,
         resolved_planes_count: index.domains.filter((entry) => entry.ready).length,
         stages_count: index.stages.length,
-        admitted_stages_count: index.admissions.reduce(
-          (total, admission) => total + admission.summary.admitted_stages_count,
+        conformant_stages_count: index.conformances.reduce(
+          (total, conformance) => total + conformance.summary.conformant_stages_count,
           0,
         ),
-        blocked_stages_count: index.admissions.reduce(
-          (total, admission) => total + admission.summary.blocked_stages_count,
+        nonconformant_stages_count: index.conformances.reduce(
+          (total, conformance) => total + conformance.summary.nonconformant_stages_count,
           0,
         ),
-        needs_contracts_stages_count: index.admissions.reduce(
-          (total, admission) => total + admission.summary.needs_contracts_stages_count,
+        quality_debt_stages_count: index.conformances.reduce(
+          (total, conformance) => total + conformance.summary.quality_debt_stages_count,
           0,
         ),
       },
@@ -386,19 +385,19 @@ function findStage(plane: FamilyStageControlPlane, stageId: string) {
 }
 
 function findingsForStage(
-  admission: FamilyStageAdmissionReview,
+  conformance: FamilyStageConformanceReview,
   stageId: string,
-  severity: 'blocker' | 'warning',
+  severity: FamilyStageConformanceFinding['severity'],
   selectedRoute: FamilyActionStageRoute | null = null,
 ) {
-  return admission.findings.filter((finding) => (
+  return conformance.findings.filter((finding) => (
     finding.severity === severity
     && findingAppliesToLaunch(finding, stageId, selectedRoute)
   ));
 }
 
 function findingAppliesToLaunch(
-  finding: FamilyStageAdmissionFinding,
+  finding: FamilyStageConformanceFinding,
   stageId: string,
   selectedRoute: FamilyActionStageRoute | null,
 ) {
@@ -435,11 +434,11 @@ function stageRouteSelection(
     return {
       actionId: null,
       route: null,
-      blockReason: 'stage_route_action_required',
+      blockReason: null,
       finding: {
-        severity: 'blocker' as const,
-        code: 'stage_route_action_required',
-        message: 'Stage participates in declared action routes; launch requires an explicit selected action.',
+        severity: 'warning' as const,
+        code: 'stage_route_action_missing_advisory',
+        message: 'No action route was selected; Codex may still launch this declared stage and choose the semantic route.',
         stage_id: stageId,
       },
     };
@@ -449,11 +448,11 @@ function stageRouteSelection(
     return {
       actionId,
       route: null,
-      blockReason: 'stage_route_action_unknown',
+      blockReason: null,
       finding: {
-        severity: 'blocker' as const,
-        code: 'stage_route_action_unknown',
-        message: 'Selected action is not declared in the family action catalog.',
+        severity: 'warning' as const,
+        code: 'stage_route_action_unknown_advisory',
+        message: 'Selected action is not declared; Codex may still launch the declared stage without treating the action hint as authority.',
         stage_id: stageId,
         action_id: actionId,
       },
@@ -463,11 +462,11 @@ function stageRouteSelection(
     return {
       actionId,
       route: null,
-      blockReason: 'stage_route_action_has_no_route',
+      blockReason: null,
       finding: {
-        severity: 'blocker' as const,
-        code: 'stage_route_action_has_no_route',
-        message: 'Selected action does not declare a stage route for a route-controlled stage.',
+        severity: 'warning' as const,
+        code: 'stage_route_action_has_no_route_advisory',
+        message: 'Selected action has no declared stage route; Codex may still launch this declared stage.',
         stage_id: stageId,
         action_id: actionId,
       },
@@ -481,11 +480,11 @@ function stageRouteSelection(
     return {
       actionId,
       route: action.stage_route,
-      blockReason: 'stage_route_stage_not_selected',
+      blockReason: null,
       finding: {
-        severity: 'blocker' as const,
-        code: 'stage_route_stage_not_selected',
-        message: 'Stage is not part of the selected action route.',
+        severity: 'warning' as const,
+        code: 'stage_route_stage_outside_action_advisory',
+        message: 'Stage is outside the action hint, but Codex may skip, repeat, reverse, or route back to any declared stage.',
         stage_id: stageId,
         action_id: actionId,
       },
@@ -494,11 +493,31 @@ function stageRouteSelection(
   return { actionId, route: action.stage_route, blockReason: null, finding: null };
 }
 
-export function buildFamilyStageLaunchAdmissionGate(
+function stageScopeQualityDebtFindings(stage: FamilyStageDescriptor): FamilyStageConformanceReview['findings'] {
+  const contract = stage.stage_contract;
+  if (!contract || contract.source_scope_refs.length + contract.artifact_scope_refs.length
+    + contract.workspace_scope_refs.length > 0) {
+    return [];
+  }
+  return [{
+    severity: 'warning',
+    code: 'missing_scope_refs',
+    message: 'Stage has no declared source, artifact, or workspace scope ref; Codex may infer scope from the requested workspace and record quality debt.',
+    stage_id: stage.stage_id,
+    failure_lane: 'source',
+    source_ref: `family_stage:${stage.stage_id}`,
+    minimal_counterexample: {
+      stage_id: stage.stage_id,
+      missing_field: 'source_scope_refs_or_artifact_scope_refs_or_workspace_scope_refs',
+    },
+  }];
+}
+
+export function buildFamilyStageContextObservation(
   contracts: FrameworkContracts,
   input: { domainId: string; stageId: string; actionId?: string },
   options: ManifestCatalogOptions = {},
-): FamilyStageLaunchAdmissionGate {
+): FamilyStageContextObservation {
   const normalized = normalizeDomainSelection(input.domainId);
   const index = buildStageIndex(contracts, options);
   const entry = index.domain_manifests.projects.find((candidate) => {
@@ -512,7 +531,7 @@ export function buildFamilyStageLaunchAdmissionGate(
   const plane = entry ? resolvePlaneFromEntry(entry) : null;
   const allowedStageIds = plane?.stages.map((stage) => stage.stage_id) ?? [];
   const authorityBoundary = {
-    opl: 'launch_admission_gate_and_blocker_projection_only' as const,
+    opl: 'passive_declared_stage_context_observation_only' as const,
     domain: 'truth_quality_artifact_gate_owner' as const,
     can_write_domain_truth: false as const,
     can_authorize_quality_verdict: false as const,
@@ -521,8 +540,8 @@ export function buildFamilyStageLaunchAdmissionGate(
 
   if (!entry || !plane) {
     return {
-      surface_kind: 'opl_family_stage_launch_admission_gate',
-      version: 'family-stage-launch-admission-gate.v1',
+      surface_kind: 'opl_family_stage_context_observation',
+      version: 'family-stage-context-observation.v1',
       domain_id: input.domainId,
       normalized_domain_id: normalized,
       stage_id: input.stageId,
@@ -530,17 +549,21 @@ export function buildFamilyStageLaunchAdmissionGate(
       selected_stage_route: null,
       plane_id: plane?.plane_id ?? null,
       target_domain_id: plane?.target_domain_id ?? null,
-      status: 'missing_control_plane',
-      gate_action: 'block_stage_launch',
-      block_reason: 'family_stage_control_plane_missing',
+      status: 'declaration_debt',
+      progression_effect: 'stage_may_start',
       inspected_stage: null,
-      blocker_findings: [{
-        severity: 'blocker',
+      quality_debt_findings: [{
+        severity: 'warning',
         code: 'family_stage_control_plane_missing',
-        message: 'Domain does not expose a family_stage_control_plane; OPL blocks stage launch instead of recording a legacy unregistered attempt.',
+        message: 'Domain does not expose a family_stage_control_plane; Codex may still start from the declared stage id and workspace context, with the missing declaration recorded as quality debt.',
         stage_id: input.stageId,
       }],
-      warning_findings: [],
+      warning_findings: [{
+        severity: 'warning',
+        code: 'family_stage_control_plane_missing',
+        message: 'Domain does not expose a family_stage_control_plane; Codex may still start from the declared stage id and workspace context, with the missing declaration recorded as quality debt.',
+        stage_id: input.stageId,
+      }],
       allowed_stage_ids: allowedStageIds,
       authority_boundary: authorityBoundary,
     };
@@ -549,8 +572,8 @@ export function buildFamilyStageLaunchAdmissionGate(
   const stage = plane.stages.find((candidate) => candidate.stage_id === input.stageId) ?? null;
   if (!stage) {
     return {
-      surface_kind: 'opl_family_stage_launch_admission_gate',
-      version: 'family-stage-launch-admission-gate.v1',
+      surface_kind: 'opl_family_stage_context_observation',
+      version: 'family-stage-context-observation.v1',
       domain_id: input.domainId,
       normalized_domain_id: normalized,
       stage_id: input.stageId,
@@ -558,35 +581,42 @@ export function buildFamilyStageLaunchAdmissionGate(
       selected_stage_route: null,
       plane_id: plane.plane_id,
       target_domain_id: plane.target_domain_id,
-      status: 'not_in_declared_control_plane',
-      gate_action: 'block_stage_launch',
-      block_reason: 'stage_not_in_declared_control_plane',
+      status: 'declaration_debt',
+      progression_effect: 'stage_may_start',
       inspected_stage: null,
-      blocker_findings: [{
-        severity: 'blocker',
+      quality_debt_findings: [{
+        severity: 'warning',
         code: 'stage_not_in_declared_control_plane',
-        message: 'Stage attempt is not part of the declared family stage pack; OPL blocks launch until the stage is declared in the control plane.',
+        message: 'Stage is not present in the machine-readable pack; Codex may still start it from the requested stage id and record declaration debt.',
         stage_id: input.stageId,
       }],
-      warning_findings: [],
+      warning_findings: [{
+        severity: 'warning',
+        code: 'stage_not_in_declared_control_plane',
+        message: 'Stage is not present in the machine-readable pack; Codex may still start it from the requested stage id and record declaration debt.',
+        stage_id: input.stageId,
+      }],
       allowed_stage_ids: allowedStageIds,
       authority_boundary: authorityBoundary,
     };
   }
 
-  const admission = buildFamilyStageAdmissionReview(plane, entry.manifest);
+  const conformance = buildFamilyStageConformanceReview(plane, entry.manifest);
   const selection = stageRouteSelection(entry.manifest!, stage.stage_id, input.actionId);
   const inspectedStage =
-    admission.stage_results.find((result) => result.stage_id === stage.stage_id) ?? null;
-  const blockerFindings = selection.finding
-    ? [selection.finding]
-    : findingsForStage(admission, stage.stage_id, 'blocker', selection.route);
-  const warningFindings = findingsForStage(admission, stage.stage_id, 'warning', selection.route);
-  const blocked = selection.blockReason !== null || blockerFindings.length > 0;
+    conformance.stage_results.find((result) => result.stage_id === stage.stage_id) ?? null;
+  const conformanceFindings = findingsForStage(conformance, stage.stage_id, 'nonconformance', selection.route);
+  const warningFindings = [
+    ...findingsForStage(conformance, stage.stage_id, 'warning', selection.route),
+    ...conformanceFindings
+      .map((finding) => ({ ...finding, severity: 'warning' as const })),
+    ...stageScopeQualityDebtFindings(stage),
+    ...(selection.finding ? [selection.finding] : []),
+  ];
 
   return {
-    surface_kind: 'opl_family_stage_launch_admission_gate',
-    version: 'family-stage-launch-admission-gate.v1',
+    surface_kind: 'opl_family_stage_context_observation',
+    version: 'family-stage-context-observation.v1',
     domain_id: input.domainId,
     normalized_domain_id: normalized,
     stage_id: input.stageId,
@@ -594,13 +624,21 @@ export function buildFamilyStageLaunchAdmissionGate(
     selected_stage_route: selection.route,
     plane_id: plane.plane_id,
     target_domain_id: plane.target_domain_id,
-    status: blocked ? 'blocked' : warningFindings.length > 0 ? 'needs_contracts' : 'admitted',
-    gate_action: blocked ? 'block_stage_launch' : 'allow_stage_launch',
-    block_reason: selection.blockReason
-      ?? (blocked ? `stage_launch_admission_blocked:${blockerFindings[0]?.code ?? 'blocked'}` : null),
+    status: warningFindings.length > 0 || selection.blockReason !== null ? 'declaration_debt' : 'declared',
+    progression_effect: 'stage_may_start',
     inspected_stage: inspectedStage,
-    blocker_findings: blockerFindings,
-    warning_findings: warningFindings,
+    quality_debt_findings: warningFindings,
+    warning_findings: selection.blockReason
+      ? [
+          ...warningFindings,
+          {
+            severity: 'warning' as const,
+            code: selection.blockReason,
+            message: 'Action-route metadata could not prove this stage selection; Codex remains the semantic route owner and may continue.',
+            stage_id: stage.stage_id,
+          },
+        ]
+      : warningFindings,
     allowed_stage_ids: allowedStageIds,
     authority_boundary: authorityBoundary,
   };
@@ -655,10 +693,10 @@ export function buildFamilyStageInspect(contracts: FrameworkContracts, args: str
   const { parsed } = parseOptionArgs(args, ['domain', 'stage']);
   const { entry, plane } = findDomainEntry(contracts, parsed.domain, options);
   const stage = findStage(plane, parsed.stage);
-  const admission: FamilyStageAdmissionReview = buildFamilyStageAdmissionReview(plane, entry.manifest);
+  const conformance: FamilyStageConformanceReview = buildFamilyStageConformanceReview(plane, entry.manifest);
   const assumptionLifecycle = buildFamilyStageAssumptionLifecycleProjection(plane);
-  const inspectedStageAdmission =
-    admission.stage_results.find((result) => result.stage_id === stage.stage_id) ?? null;
+  const inspectedStageConformance =
+    conformance.stage_results.find((result) => result.stage_id === stage.stage_id) ?? null;
   return {
     version: 'g2',
     family_stage: {
@@ -706,9 +744,9 @@ export function buildFamilyStageInspect(contracts: FrameworkContracts, args: str
         authority_boundary: stage.authority_boundary,
       },
       parity: buildFamilyStageControlPlaneParity(plane, entry.manifest),
-      admission: {
-        ...admission,
-        inspected_stage: inspectedStageAdmission,
+      conformance: {
+        ...conformance,
+        inspected_stage: inspectedStageConformance,
       },
     },
   };
@@ -717,7 +755,7 @@ export function buildFamilyStageInspect(contracts: FrameworkContracts, args: str
 export function buildFamilyStageProofBundleInspect(contracts: FrameworkContracts, args: string[], options: ManifestCatalogOptions = {}) {
   const { parsed } = parseOptionArgs(args, ['domain']);
   const { entry, plane } = findDomainEntry(contracts, parsed.domain, options);
-  const admission = buildFamilyStageAdmissionReview(plane, entry.manifest);
+  const conformance = buildFamilyStageConformanceReview(plane, entry.manifest);
   return {
     version: 'g2',
     family_stage_proof_bundle: {
@@ -725,7 +763,7 @@ export function buildFamilyStageProofBundleInspect(contracts: FrameworkContracts
       project: entry.project,
       proof_bundle: buildFamilyStageProofBundle(plane, {
         actionCatalog: entry.manifest?.family_action_catalog ?? null,
-        admissionReview: admission,
+        conformanceReview: conformance,
       }),
     },
   };
@@ -810,10 +848,10 @@ export function buildFamilyStageRuntimeBudgetInspect(contracts: FrameworkContrac
 export function buildFamilyStagePackRegistryInspect(contracts: FrameworkContracts, args: string[], options: ManifestCatalogOptions = {}) {
   const { parsed, repeated } = parseRepeatedOptionArgs(args, ['domain'], ['reused-by-ref']);
   const { entry, plane } = findDomainEntry(contracts, parsed.domain, options);
-  const admission = buildFamilyStageAdmissionReview(plane, entry.manifest);
+  const conformance = buildFamilyStageConformanceReview(plane, entry.manifest);
   const proofBundle = buildFamilyStageProofBundle(plane, {
     actionCatalog: entry.manifest?.family_action_catalog ?? null,
-    admissionReview: admission,
+    conformanceReview: conformance,
   });
   const migrationPolicy = normalizeMigrationPolicy(parsed['migration-policy']);
   const attemptBinding = parsed['attempt-id']
@@ -855,10 +893,10 @@ export function buildFamilyStagePackSourceSpecInspect(contracts: FrameworkContra
     'reused-by-ref',
   ]);
   const { entry, plane } = findDomainEntry(contracts, parsed.domain, options);
-  const admission = buildFamilyStageAdmissionReview(plane, entry.manifest);
+  const conformance = buildFamilyStageConformanceReview(plane, entry.manifest);
   const proofBundle = buildFamilyStageProofBundle(plane, {
     actionCatalog: entry.manifest?.family_action_catalog ?? null,
-    admissionReview: admission,
+    conformanceReview: conformance,
   });
   const graphProjection = buildFamilyStageGraphProjection(entry, plane);
   const registryEntry = buildFamilyStagePackRegistryEntry(proofBundle, {
@@ -903,10 +941,10 @@ export function buildFamilyStageReplayCertificationInspect(contracts: FrameworkC
     'closeout-receipt-ref',
   ]);
   const { entry, plane } = findDomainEntry(contracts, parsed.domain, options);
-  const admission = buildFamilyStageAdmissionReview(plane, entry.manifest);
+  const conformance = buildFamilyStageConformanceReview(plane, entry.manifest);
   const proofBundle = buildFamilyStageProofBundle(plane, {
     actionCatalog: entry.manifest?.family_action_catalog ?? null,
-    admissionReview: admission,
+    conformanceReview: conformance,
   });
   const replayEvidence = replayEvidenceWithCliRefs(
     buildFamilyStageReplayEvidenceFromControlPlane(plane),

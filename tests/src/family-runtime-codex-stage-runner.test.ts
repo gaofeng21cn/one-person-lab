@@ -81,6 +81,53 @@ test('Codex stage activity accepts readable output without a typed closeout cont
   assert.equal(activity.expected_closeout.framework_derives_progress_envelope, true);
 });
 
+test('Codex stage activity hydrates the declared domain stage prompt body into the final command preview', () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-effective-stage-prompt-'));
+  const promptBody = [
+    '# Evidence Synthesis',
+    '',
+    'Bind every accepted claim to current source evidence before a quality-ready handoff.',
+    'Planning may iterate, but independent review must inspect the final artifact bytes.',
+    '',
+  ].join('\n');
+  try {
+    fs.mkdirSync(path.join(workspaceRoot, 'agent', 'stages'), { recursive: true });
+    fs.mkdirSync(path.join(workspaceRoot, 'agent', 'prompts'), { recursive: true });
+    fs.writeFileSync(path.join(workspaceRoot, 'agent', 'prompts', 'evidence-synthesis.md'), promptBody);
+    fs.writeFileSync(path.join(workspaceRoot, 'agent', 'stages', 'manifest.json'), `${JSON.stringify({
+      surface_kind: 'opl_standard_agent_declarative_stage_manifest',
+      version: 'opl-standard-agent-declarative-stage-manifest.v1',
+      stages: [{
+        stage_id: 'evidence-synthesis',
+        prompt_ref: 'agent/prompts/evidence-synthesis.md',
+      }],
+    }, null, 2)}\n`);
+
+    const activity = buildCodexStageActivityInput({
+      attempt: {
+        stage_attempt_id: 'sat_effective_stage_prompt_test',
+        stage_id: 'evidence-synthesis',
+        executor_kind: 'codex_cli',
+        workspace_locator: { workspace_root: workspaceRoot },
+        checkpoint_refs: ['packet:effective-stage-prompt'],
+      },
+    });
+
+    const commandPreview = activity.runner_status.command_preview.join('\n');
+    assert.match(commandPreview, /OPL effective domain stage main prompt follows/);
+    assert.match(commandPreview, /Prompt source ref: agent\/prompts\/evidence-synthesis\.md/);
+    assert.match(commandPreview, /Prompt source layer: domain_stage_main_prompt/);
+    assert.match(commandPreview, /Bind every accepted claim to current source evidence/);
+    assert.match(commandPreview, /independent review must inspect the final artifact bytes/);
+    assert.equal(activity.runner_status.effective_prompt.status, 'hydrated');
+    assert.equal(activity.runner_status.effective_prompt.body_hydrated_into_executor_prompt, true);
+    assert.match(activity.runner_status.effective_prompt.sha256 ?? '', /^[a-f0-9]{64}$/);
+    assert.equal(activity.runner_status.effective_prompt.size_bytes, Buffer.byteLength(promptBody, 'utf8'));
+  } finally {
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
 test('Codex stage activity command preview binds explicit Codex executor policy', () => {
   const activity = buildCodexStageActivityInput({
     attempt: {
@@ -117,7 +164,7 @@ test('Codex stage activity command preview binds explicit Codex executor policy'
   ]);
 });
 
-test('Codex stage activity prompt carries refs-only OPL execution authorization context', () => {
+test('Codex stage activity prompt carries refs-only transport identity without an authorization control plane', () => {
   const activity = buildCodexStageActivityInput({
     attempt: {
       stage_attempt_id: 'sat_codex_auth_prompt_test',
@@ -142,19 +189,6 @@ test('Codex stage activity prompt carries refs-only OPL execution authorization 
         command_source: 'env_override',
         source_ref: 'domain://example/route-handoffs/current',
       },
-      opl_execution_authorization: {
-        provider_attempt_ref: 'temporal://attempt/sat_codex_auth_prompt_test',
-        attempt_lease_ref: 'opl://stage-attempts/sat_codex_auth_prompt_test/leases/frt_codex_auth_prompt_test/active',
-        attempt_lease_status: 'active',
-        execution_authorization_decision_ref:
-          'opl://stage-attempts/sat_codex_auth_prompt_test/execution-authorizations/frt_codex_auth_prompt_test/wf_codex_auth_prompt_test',
-        source_fingerprint: 'default_executor_source_codex_auth_prompt_test',
-        idempotency_key: 'idem_codex_auth_prompt_test',
-        stage_run_id: 'app-stage-run:medautoscience:domain-owner-default-executor-dispatch',
-        stage_manifest_ref: 'opl://stage-manifests/domain_owner%2Fdefault-executor-dispatch',
-        current_pointer_ref:
-          'opl://stage-runs/app-stage-run%3Amedautoscience%3Adomain-owner-default-executor-dispatch/current',
-      },
       checkpoint_refs: ['studies/002/artifacts/supervision/consumer/default_executor_dispatches/immutable/packet.json'],
     },
   });
@@ -162,12 +196,9 @@ test('Codex stage activity prompt carries refs-only OPL execution authorization 
   const commandPreview = activity.runner_status.command_preview.join('\n');
   assert.match(commandPreview, /explicitly pass these OPL_\* bindings to the child command environment/);
   assert.match(commandPreview, /"OPL_PROVIDER_ATTEMPT_REF":"temporal:\/\/attempt\/sat_codex_auth_prompt_test"/);
-  assert.match(commandPreview, /"OPL_ATTEMPT_LEASE_STATUS":"active"/);
-  assert.match(commandPreview, /"OPL_EXECUTION_AUTHORIZATION_DECISION_REF":"opl:\/\/stage-attempts\/sat_codex_auth_prompt_test\/execution-authorizations\/frt_codex_auth_prompt_test\/wf_codex_auth_prompt_test"/);
-  assert.match(commandPreview, /"OPL_STAGE_RUN_ID":"app-stage-run:medautoscience:domain-owner-default-executor-dispatch"/);
-  assert.match(commandPreview, /"OPL_STAGE_MANIFEST_REF":"opl:\/\/stage-manifests\/domain_owner%2Fdefault-executor-dispatch"/);
-  assert.match(commandPreview, /"OPL_CURRENT_POINTER_REF":"opl:\/\/stage-runs\/app-stage-run%3Amedautoscience%3Adomain-owner-default-executor-dispatch\/current"/);
-  assert.match(commandPreview, /"OPL_CLOSEOUT_BINDING_JSON":/);
+  assert.doesNotMatch(commandPreview, /OPL_ATTEMPT_LEASE_STATUS/);
+  assert.doesNotMatch(commandPreview, /OPL_EXECUTION_AUTHORIZATION_DECISION_REF/);
+  assert.doesNotMatch(commandPreview, /OPL_CLOSEOUT_BINDING_JSON/);
   assert.match(commandPreview, /"OPL_STAGE_PACKET_REF":"studies\/002\/artifacts\/supervision\/consumer\/default_executor_dispatches\/immutable\/packet.json"/);
   assert.match(commandPreview, /"OPL_DOMAIN_ID":"example-domain"/);
   assert.match(commandPreview, /"OPL_DOMAIN_TRUTH_OWNER":"example-domain-owner"/);
@@ -181,7 +212,7 @@ test('Codex stage activity prompt carries refs-only OPL execution authorization 
   assert.match(commandPreview, /"OPL_DOMAIN_COMMAND_CWD":"\/tmp\/one-person-lab"/);
   assert.match(commandPreview, /"OPL_DOMAIN_COMMAND_SOURCE":"env_override"/);
   assert.match(commandPreview, /"OPL_ROUTE_HANDOFF_SOURCE_REF":"domain-route-handoff:\/\/example\/gate-clearing"/);
-  assert.match(commandPreview, /do not grant domain truth, artifact, quality, or readiness authority/);
+  assert.match(commandPreview, /do not authorize semantic routing, domain truth, artifact, quality, or readiness claims/);
 });
 
 test('Codex stage activity prompt enforces generic domain-route boundaries', () => {
@@ -228,22 +259,18 @@ test('Codex stage activity prompt enforces generic domain-route boundaries', () 
   assert.match(commandPreview, /do not report provider liveness or platform repair as domain progress/);
 });
 
-test('Codex stage runner fails closed when live runner lacks packet or workspace binding', async () => {
-  await assert.rejects(
-    () => runPublicCodexStageRunner({
-      attempt: {
-        stage_attempt_id: 'sat_missing_packet_binding_test',
-        stage_id: 'domain_owner/default-executor-dispatch',
-        workspace_locator: {
-          workspace_root: '/tmp/mas',
-        },
+test('Codex stage runner treats a missing packet as advisory but still requires an execution workspace', async () => {
+  const activity = buildCodexStageActivityInput({
+    attempt: {
+      stage_attempt_id: 'sat_missing_packet_binding_test',
+      stage_id: 'domain_owner/default-executor-dispatch',
+      workspace_locator: {
+        workspace_root: '/tmp/mas',
       },
-      runnerMode: 'codex_cli',
-    }),
-    (error) => error instanceof FrameworkContractError
-      && error.code === 'contract_shape_invalid'
-      && error.details?.blocked_reason === 'codex_cli_stage_packet_ref_missing',
-  );
+    },
+  });
+  assert.equal(activity.stage_packet_binding.binding_status, 'advisory_missing_stage_packet_ref');
+  assert.equal(activity.stage_packet_binding.stage_may_start_from_declared_context, true);
 
   await assert.rejects(
     () => runPublicCodexStageRunner({

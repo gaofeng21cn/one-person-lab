@@ -24,7 +24,7 @@ export function buildProgressCloseoutProjection(input: {
   );
   const infrastructureBlocked = Boolean(input.blockedReason && !input.rawArtifactRef);
   const projectionStatus = infrastructureBlocked
-    ? 'infrastructure_blocked' as const
+    ? 'infrastructure_diagnostic' as const
     : derivedFromRawArtifact
       ? 'derived_progress_envelope' as const
       : input.closeoutPacket
@@ -59,9 +59,11 @@ export function buildProgressCloseoutProjection(input: {
       session_recovery_attempts: input.sessionRecoveryAttempts,
       domain_receipt_recovery_status: input.domainReceiptRecoveryStatus,
     },
-    quality_debt: input.closeoutRejection
+    quality_debt: input.closeoutRejection || infrastructureBlocked
       ? {
-          finding: `typed_closeout_${input.closeoutRejection.reason}`,
+          finding: input.closeoutRejection
+            ? `typed_closeout_${input.closeoutRejection.reason}`
+            : 'infrastructure_failure_forwarded_as_progress_diagnostic',
           blocks_next_stage: false as const,
           route_back_selection_owner: 'codex_cli' as const,
         }
@@ -71,6 +73,8 @@ export function buildProgressCloseoutProjection(input: {
           reason: input.blockedReason,
           raw_artifact_observed: false as const,
           blocks_runtime_execution: true as const,
+          blocks_next_stage: false as const,
+          diagnostic_may_feed_any_declared_stage: true as const,
         }
       : null,
     authority_boundary: {

@@ -65,7 +65,7 @@ function attemptIdFromRef(ref: string | null) {
 export function buildStageProductionAttemptRoutes(stageProductionEvidence: JsonRecord) {
   return uniqueRefs(recordList(stageProductionEvidence.stages)
     .filter((stage) => (
-      stringValue(stage.admission_status) === 'admitted'
+      stringValue(stage.conformance_status) === 'admitted'
       && stringList(stage.missing_production_evidence).includes('production_caller_attempt_not_observed')
     ))
     .map((stage) => {
@@ -100,7 +100,6 @@ export function buildStageProductionAttemptRoutes(stageProductionEvidence: JsonR
         'codex_cli',
         '--executor-binding-ref',
         'opl://executors/codex-cli/default',
-        '--require-stage-admission',
       ];
       const startOplCliArgs = [
         'attempt',
@@ -132,7 +131,6 @@ export function buildStageProductionAttemptRoutes(stageProductionEvidence: JsonR
           `--workspace-locator ${JSON.stringify(workspaceLocator)}`,
           '--executor-kind codex_cli',
           '--executor-binding-ref opl://executors/codex-cli/default',
-          '--require-stage-admission',
         ].join(' '),
         opl_cli_args: oplCliArgs,
         role: 'operator_action_route',
@@ -190,7 +188,7 @@ export function buildStageProductionAttemptStartRoutes(stageProductionEvidence: 
       const hasMissingCaller = stringList(stage.missing_production_evidence)
         .includes('production_caller_attempt_not_observed');
       const hasExistingAttempt = stringList(stage.stage_attempt_refs).length > 0;
-      return stringValue(stage.admission_status) === 'admitted'
+      return stringValue(stage.conformance_status) === 'admitted'
         && (hasMissingCaller || hasExistingAttempt);
     })
     .map((stage) => {
@@ -229,7 +227,6 @@ export function buildStageProductionAttemptStartRoutes(stageProductionEvidence: 
             'codex_cli',
             '--executor-binding-ref',
             'opl://executors/codex-cli/default',
-            '--require-stage-admission',
             '--start',
           ];
       return {
@@ -243,7 +240,6 @@ export function buildStageProductionAttemptStartRoutes(stageProductionEvidence: 
               `--workspace-locator ${JSON.stringify(workspaceLocator)}`,
               '--executor-kind codex_cli',
               '--executor-binding-ref opl://executors/codex-cli/default',
-              '--require-stage-admission',
               '--start',
             ].join(' '),
         opl_cli_args: oplCliArgs,
@@ -676,7 +672,7 @@ export function buildStageProductionEvidenceReceiptRoutes(input: {
 }) {
   return uniqueRefs(recordList(input.stageProductionEvidence.stages)
     .filter((stage) => (
-      stringValue(stage.admission_status) === 'admitted'
+      stringValue(stage.conformance_status) === 'admitted'
       && hasRecordableStageEvidenceObligation(stage)
       && (
         stringList(stage.unobserved_expected_receipt_refs).length > 0

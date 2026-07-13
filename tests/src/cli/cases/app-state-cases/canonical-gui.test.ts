@@ -45,7 +45,16 @@ exit 1
     assert.equal(output.app_state.core.codex.parsed_version, '0.125.0');
     assert.equal(output.app_state.provider.temporal.required_for, 'full_opl_family_runtime_readiness');
     assert.equal(output.app_state.release.repo, 'gaofeng21cn/one-person-lab-app');
-    assert.equal(output.app_state.modules.items.some((entry: any) => entry.module_id === 'meddeepscientist'), false);
+    assert.equal(Object.hasOwn(output.app_state, 'modules'), false);
+    assert.equal(output.app_state.runtime_source_carriers.authority_boundary.package_installation_truth, 'app_state.agent_packages.status_index');
+    assert.equal(output.app_state.runtime_source_carriers.authority_boundary.source_carrier_presence_is_package_installed, false);
+    for (const carrier of output.app_state.runtime_source_carriers.items) {
+      assert.equal(Object.hasOwn(carrier, 'installed'), false);
+      assert.equal(Object.hasOwn(carrier, 'install_origin'), false);
+      assert.equal(typeof carrier.source_present, 'boolean');
+    }
+    assert.equal(output.app_state.agent_packages.status_index.installed_package_count, 0);
+    assert.equal(output.app_state.runtime_source_carriers.items.some((entry: any) => entry.carrier_id === 'meddeepscientist'), false);
 
     assert.equal(output.app_state.settings_control_center.surface_kind, 'opl_settings_control_center.v2');
     assert.equal(
@@ -251,7 +260,7 @@ exit 1
       true,
     );
     assert.equal(output.app_state.paths.state_dir, stateDir);
-    assert.equal(output.app_state.paths.modules_root, path.join(stateDir, 'modules'));
+    assert.equal(output.app_state.paths.runtime_sources_root, path.join(stateDir, 'modules'));
   } finally {
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });

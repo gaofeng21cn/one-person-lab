@@ -5,7 +5,6 @@ import {
   buildStageAttemptProviderReceipt,
   resolveFamilyRuntimeProviderKind,
 } from '../family-runtime-providers.ts';
-import { buildLaunchExecutionAuthorization } from '../family-runtime-temporal.ts';
 import type {
   FamilyRuntimeDomainId,
   FamilyRuntimeProviderKind,
@@ -24,7 +23,6 @@ import {
   normalizeStageId,
   nowIso,
 } from './shared.ts';
-import { recordStageRunExecutionAuthorizationReceipts } from '../../stagecraft/index.ts';
 import { taskRetryBudgetProjection } from '../family-runtime-queue-projection-boundary.ts';
 
 export type StageAttemptCreateInput = {
@@ -33,6 +31,7 @@ export type StageAttemptCreateInput = {
   actionId?: string;
   providerKind?: FamilyRuntimeProviderKind;
   workspaceLocator: Record<string, unknown>;
+  idempotencyWorkspaceLocator?: Record<string, unknown>;
   sourceFingerprint?: string;
   executorKind?: string;
   stageAttemptExecutorPolicy?: Record<string, unknown> | null;
@@ -46,11 +45,33 @@ export type StageAttemptCreateInput = {
   humanGateRefs?: string[];
   routeImpact?: Record<string, unknown>;
   blockedReason?: string;
-  launchAdmissionGate?: object;
+  launchContextObservation?: object;
   launchInvocation?: object;
   newAttempt?: boolean;
   start?: boolean;
 };
+
+function stageAttemptBaseIdempotencyKey(input: StageAttemptCreateInput) {
+  return stableId('idem', [
+    input.domainId,
+    normalizedStageId(input.stageId),
+    input.actionId?.trim() || null,
+    resolveFamilyRuntimeProviderKind(input.providerKind),
+    input.idempotencyWorkspaceLocator ?? input.workspaceLocator,
+    input.sourceFingerprint?.trim() || null,
+    input.stageAttemptExecutorPolicy ?? null,
+    input.taskId?.trim() || null,
+  ]);
+}
+
+export function findIdempotentStageAttempt(db: DatabaseSync, input: StageAttemptCreateInput) {
+  if (input.newAttempt) return null;
+  const idempotencyKey = stageAttemptBaseIdempotencyKey(input);
+  const existing = db.prepare(`
+    SELECT * FROM stage_attempts WHERE idempotency_key = ? ORDER BY created_at ASC LIMIT 1
+  `).get(idempotencyKey) as StageAttemptRow | undefined;
+  return existing ? stageAttemptToPayload(existing) : null;
+}
 
 function normalizedStageId(stageId: string) {
   try {
@@ -89,16 +110,7 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
   const stageAttemptExecutorPolicy = input.stageAttemptExecutorPolicy ?? null;
   const retryBudget = input.retryBudget ?? taskRetryBudgetProjection(3);
   const taskId = input.taskId?.trim() || null;
-  const baseIdempotencyKey = stableId('idem', [
-    input.domainId,
-    stageId,
-    input.actionId?.trim() || null,
-    providerKind,
-    input.workspaceLocator,
-    sourceFingerprint,
-    stageAttemptExecutorPolicy,
-    taskId,
-  ]);
+  const baseIdempotencyKey = stageAttemptBaseIdempotencyKey(input);
   const newAttemptOrdinal = input.newAttempt
     ? stageAttemptOrdinalForNewAttempt(db, {
         domainId: input.domainId,
@@ -149,40 +161,7 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
     input.newAttempt ? newAttemptOrdinal : createdAt,
   ]);
   const workflowId = stableId('wf', [input.domainId, stageId, stageAttemptId]);
-  const launchAuthorization = buildLaunchExecutionAuthorization({
-    stageAttemptId,
-    workflowId,
-    domainId: input.domainId,
-    stageId,
-    executorKind,
-    taskId,
-    workspaceLocator: input.workspaceLocator,
-    stagePacketRef: normalizeJsonList(input.checkpointRefs)[0] ?? null,
-    sourceFingerprint,
-    idempotencyKey,
-  });
-  const launchAuthorizationLedgerRecord = launchAuthorization
-    ? recordStageRunExecutionAuthorizationReceipts([launchAuthorization])
-    : null;
-  const launchAuthorizationReceipt =
-    launchAuthorizationLedgerRecord?.status === 'recorded'
-      && Array.isArray(launchAuthorizationLedgerRecord.receipts)
-      ? launchAuthorizationLedgerRecord.receipts[0]
-      : null;
-  const workspaceLocator = launchAuthorizationReceipt
-    ? {
-        ...input.workspaceLocator,
-        stage_run_id: launchAuthorizationReceipt.stage_run_id,
-        current_pointer_ref: launchAuthorizationReceipt.current_pointer_ref,
-        stage_manifest_ref: launchAuthorizationReceipt.stage_manifest_ref,
-        provider_attempt_ref: launchAuthorizationReceipt.provider_attempt_ref,
-        attempt_lease_ref: launchAuthorizationReceipt.attempt_lease_ref,
-        attempt_lease_status: launchAuthorizationReceipt.attempt_lease_status,
-        execution_authorization_decision_ref:
-          launchAuthorizationReceipt.execution_authorization_decision_ref,
-        execution_authorization_receipt_ref: launchAuthorizationReceipt.receipt_ref,
-      }
-    : input.workspaceLocator;
+  const workspaceLocator = input.workspaceLocator;
   const providerReceipt = buildStageAttemptProviderReceipt({
     providerKind,
     stageAttemptId,
@@ -198,11 +177,11 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
     completed_at: null,
     last_heartbeat_at: null,
   };
-  const initialActivityEvents: Record<string, unknown>[] = input.launchAdmissionGate
+  const initialActivityEvents: Record<string, unknown>[] = input.launchContextObservation
     ? [{
-        event_kind: 'stage_launch_admission_gate',
+        event_kind: 'stage_context_observed',
         event_time: createdAt,
-        gate: input.launchAdmissionGate,
+        observation: input.launchContextObservation,
       }]
     : [];
   if (input.launchInvocation) {
@@ -261,6 +240,5 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
     created: true,
     idempotent_noop: false,
     attempt: stageAttemptToPayload(row as StageAttemptRow),
-    execution_authorization_ledger_record: launchAuthorizationLedgerRecord,
   };
 }

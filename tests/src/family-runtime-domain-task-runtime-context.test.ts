@@ -33,7 +33,7 @@ const identity = {
   dispatch_ref: 'packets/dm002-current.json',
   stage_packet_ref: 'packets/dm002-current.json',
   stage_packet_refs: ['packets/dm002-current.json'],
-  provider_admission_identity: { body: 'provider admission body must not cross' },
+  provider_attempt_identity: { body: 'provider admission body must not cross' },
   owner_route_currentness_basis: { body: 'currentness basis body must not cross' },
   provider_attempt_ref: 'opl://stage-attempts/sat-dm002-current',
   active_lease_ref: 'opl://stage-attempts/sat-dm002-current/leases/current/active',
@@ -90,8 +90,6 @@ test('domain task runtime context is a current body-free refs-only envelope', ()
     'running_provider_attempt',
     'reconciliation_status',
     'provider_attempt_ref',
-    'attempt_lease_ref',
-    'execution_authorization_decision_ref',
     'owner_receipt_refs',
     'typed_blocker_refs',
     'human_gate_refs',
@@ -101,11 +99,6 @@ test('domain task runtime context is a current body-free refs-only envelope', ()
     'authority_boundary',
   ]);
   assert.equal(context.provider_attempt_ref, identity.provider_attempt_ref);
-  assert.equal(context.attempt_lease_ref, identity.active_lease_ref);
-  assert.equal(
-    context.execution_authorization_decision_ref,
-    identity.execution_authorization_ref,
-  );
   assert.deepEqual(context.resume_refs, [
     'opl://stage-attempts/sat-dm002-current/signals/sig-resume-current',
   ]);

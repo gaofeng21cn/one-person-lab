@@ -105,14 +105,12 @@
     "big_boundaries_fail_closed": [
       "owner_boundary",
       "authority_boundary",
-      "stage_lifecycle",
       "workspace_topology",
       "selected_executor_binding",
       "single_ordinary_route",
-      "launch_admission",
-      "execution_authorization",
-      "closeout_admission",
-      "accepted_owner_answer_shape",
+      "wrong_target_identity_conflict",
+      "irreversible_action_authority",
+      "explicit_human_decision",
       "app_release_verdict",
       "physical_delete_authority",
       "no_second_truth"

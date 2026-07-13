@@ -28,7 +28,7 @@ export function buildRuntimeSubstrateComponent(
 ): ManagedUpdateComponent {
   const coreEngines = asRecord(systemEnvironment.core_engines);
   const codex = asRecord(coreEngines?.codex);
-  const runtimeSubstrate = asRecord(codex?.runtime_substrate_updater) ?? asRecord(codex?.runtime_toolchain_updater);
+  const runtimeSubstrate = asRecord(codex?.runtime_substrate_updater);
   const frameworkRuntime = readOplFrameworkRuntimeUpdateStatus(resolveProjectRoot(), {
     allowChannelLookup: options.allowFrameworkChannelLookup,
   });
@@ -60,17 +60,18 @@ export function buildRuntimeSubstrateComponent(
     readback_ref: 'opl system startup-maintenance --json',
     apply_owner: 'opl_runtime_substrate_materializer',
     forbidden_claims: [
-      'runtime_substrate_update_is_app_binary_update',
+      'opl_base_update_is_opl_app_update',
       'runtime_substrate_update_mutates_global_toolchain',
       'managed_update_kernel_is_package_manager',
     ],
   });
 
   return managedUpdateComponent({
-    component_id: 'runtime_substrate',
+    lifecycle_owner: 'opl_base',
+    component_id: 'opl_base',
     provider_id: 'runtime_substrate',
     adapter_id: 'runtime_substrate_adapter',
-    component_class: 'runtime_substrate',
+    component_class: 'opl_base',
     coordination_role: 'executable_target',
     policy_id: 'silent_background_verified_stage_apply_on_next_restart',
     owner_route: route,
@@ -85,7 +86,7 @@ export function buildRuntimeSubstrateComponent(
         'Runner may only mutate App-owned runtime roots and must keep system package managers and global toolchains read-only.',
       ],
     }),
-    label: 'App-owned runtime substrate',
+    label: 'OPL Base',
     state,
     channel,
     current: {
@@ -162,7 +163,7 @@ export function buildRuntimeSubstrateComponent(
       eligible: state !== 'current',
       app_background_safe: false,
       scope: 'app_owned_runtime_root_only',
-      command_ref: state === 'current' ? null : 'opl update apply --component runtime_substrate --json',
+      command_ref: state === 'current' ? null : 'opl update apply --json',
       blocked_reasons: [],
     },
     status_detail: detail,
@@ -198,7 +199,7 @@ export function buildRuntimeSubstrateComponent(
         ],
     },
     receipt: componentReceipt({
-      component_id: 'runtime_substrate',
+      component_id: 'opl_base',
       sourceManifestRef: 'app-runtime-update-channel.json',
       from_version: typeof codex?.version === 'string' ? codex.version : null,
       to_version: typeof codex?.latest_version === 'string' ? codex.latest_version : null,

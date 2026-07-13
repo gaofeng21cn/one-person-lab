@@ -1,10 +1,10 @@
-import { assert, runCli, test } from '../../helpers.ts';
+import { assert, runCli, runCliFailure, test } from '../../helpers.ts';
 
 import { canonicalOwnerId } from '../../../../../src/kernel/owner-id.ts';
 import { expectedModuleIds } from './shared.ts';
 
 const expectedStandardDomainAgentIds = ['mas', 'mag', 'rca', 'oma', 'obf'];
-const expectedStandardAgentIds = [...expectedStandardDomainAgentIds, 'mas-scholar-skills'];
+const expectedStandardAgentIds = expectedStandardDomainAgentIds;
 
 const allowedFoundryAgentListFields = [
   'agent_id',
@@ -168,7 +168,7 @@ test('Foundry Agent series exposes a shared CLI spine instead of copying OPL bra
     );
     assert.deepEqual(
       output.peers.map((entry: { series_membership: string }) => entry.series_membership),
-      ['standard_domain_agent', 'standard_domain_agent', 'standard_domain_agent', 'standard_domain_agent', 'standard_domain_agent', 'framework_capability_package'],
+      expectedStandardAgentIds.map(() => 'standard_domain_agent'),
     );
     for (const peer of output.peers) {
       assert.deepEqual(Object.keys(peer).sort(), [
@@ -208,7 +208,7 @@ test('OPL Foundry Agent index exposes all standard agents as one standard series
   );
   assert.deepEqual(
     list.agents.map((entry: { series_membership: string }) => entry.series_membership),
-    ['standard_domain_agent', 'standard_domain_agent', 'standard_domain_agent', 'standard_domain_agent', 'standard_domain_agent', 'framework_capability_package'],
+    expectedStandardAgentIds.map(() => 'standard_domain_agent'),
   );
   assert.deepEqual(
     list.agents.map((entry: { foundry_command_surface: string }) => entry.foundry_command_surface),
@@ -409,14 +409,10 @@ test('OPL Foundry Agent index exposes all standard agents as one standard series
   assert.equal(bookforgeRepoAlias.agent_id, 'obf');
   assert.equal(bookforgeRepoAlias.foundry_command_surface, 'opl foundry agents inspect obf');
 
-  const scholarSkills = runCli(['foundry', 'agents', 'inspect', 'mas-scholar-skills']).foundry_agent;
-  assert.equal(scholarSkills.status, 'framework_capability_package');
-  assert.equal(scholarSkills.series_membership, 'framework_capability_package');
-  assert.equal(scholarSkills.work_object.natural_alias, 'capability');
-  assert.equal(scholarSkills.foundry_command_surface, 'opl foundry agents inspect mas-scholar-skills');
-  assertOnlyAllowedFoundryProjectionFields(scholarSkills, allowedFoundryAgentInspectFields);
-  assertSelfEvolutionTrigger(scholarSkills, 'framework_capability_feedback_adapter');
-  assertDeveloperModeTargetHint(scholarSkills, 'framework_capability_package');
+  const scholarSkillsFailure = runCliFailure(['foundry', 'agents', 'inspect', 'mas-scholar-skills']);
+  assert.equal(scholarSkillsFailure.status, 2);
+  assert.equal(scholarSkillsFailure.payload.error.code, 'cli_usage_error');
+  assert.match(scholarSkillsFailure.payload.error.message, /Unknown Foundry Agent id/);
 });
 
 test('standard owner aliases normalize to the repo owner ids used by evidence surfaces', () => {

@@ -6,8 +6,8 @@ on:
       - published
   workflow_dispatch:
     inputs:
-      opl_version:
-        description: OPL version to publish, for example 26.4.27
+      release_set_generation:
+        description: Release Set generation to publish, for example 26.7.12
         required: true
         type: string
       release_gate:
@@ -15,6 +15,12 @@ on:
         required: false
         type: string
         default: manual_release_gate
+      promotion_target:
+        description: Promote only candidate by default; choose latest-stable explicitly.
+        required: false
+        type: choice
+        options: [candidate, latest-stable]
+        default: candidate
 
 permissions:
   contents: read
@@ -26,13 +32,15 @@ jobs:
     if: github.event_name == 'release'
     uses: ./.github/workflows/packages.yml
     with:
-      opl_version: ${{ github.event.release.tag_name }}
+      release_set_generation: ${{ github.event.release.tag_name }}
       release_gate: github_release_published
+      promotion_target: latest-stable
 
   publish-from-manual-release-gate:
     name: Publish package channel from manual release gate
     if: github.event_name == 'workflow_dispatch'
     uses: ./.github/workflows/packages.yml
     with:
-      opl_version: ${{ inputs.opl_version }}
+      release_set_generation: ${{ inputs.release_set_generation }}
       release_gate: ${{ inputs.release_gate }}
+      promotion_target: ${{ inputs.promotion_target }}

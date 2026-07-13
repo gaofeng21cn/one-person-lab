@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import net from 'node:net';
 
-import { assert, fs, os, path, runCli, test } from '../../helpers.ts';
+import { assert, fs, installRuntimePackageFixture, os, path, runCli, test } from '../../helpers.ts';
 import {
   resolveTemporalWorkerTaskQueue,
 } from '../../../../../src/modules/runway/family-runtime-temporal-provider-parts/worker-task-queue.ts';
@@ -24,6 +24,7 @@ test('family-runtime attempt inspect uses current readiness instead of its creat
   worker.unref();
 
   try {
+    installRuntimePackageFixture(stateRoot, 'redcube-ai');
     fs.mkdirSync(runtimeRoot, { recursive: true });
     const taskQueue = resolveTemporalWorkerTaskQueue({ root: runtimeRoot });
     fs.writeFileSync(path.join(runtimeRoot, 'temporal-service.json'), `${JSON.stringify({

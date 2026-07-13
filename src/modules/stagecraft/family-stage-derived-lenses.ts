@@ -152,29 +152,17 @@ export const FAMILY_STAGE_DERIVED_LENSES: FamilyStageDerivedLens[] = [
 export const FAMILY_STAGE_KERNEL_BLOCKER_SOURCES = [
   'stage_identity',
   'stage_owner',
-  'stage_goal',
   'selected_executor_binding',
   'authority_boundary',
-  'requires_ensures_composition',
-  'scope_refs',
-  'runtime_event_refs',
-  'receipt_replay_audit_refs',
+  'explicit_human_gate',
 ] as const;
 
 export const FAMILY_STAGE_KERNEL_REQUIRED_REFS = [
   'stage_id',
   'owner',
-  'goal',
-  'requires',
-  'ensures',
   'authority_boundary',
-  'trust_lane',
   'selected_executor_binding',
-  'source_scope_refs_or_artifact_scope_refs_or_workspace_scope_refs',
-  'runtime_event_refs_for_effect_or_runtime_guard_boundaries',
-  'expected_receipt_refs',
-  'replay_audit_refs',
-  'route_back_refs',
+  'explicit_human_gate_ref_when_required',
 ] as const;
 
 export const FAMILY_STAGE_AI_STRATEGY_ADVISORY_REFS = [

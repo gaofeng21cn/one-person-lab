@@ -37,11 +37,11 @@ const REQUIRED_STAGE_OPERATING_NEXT_DELTA_SHAPES = [
   'no_regression_ref',
   'route_back_ref',
   'handoff_packet_ref',
+  'no_output_or_failure_diagnostic_ref',
 ];
 
 const REQUIRED_STAGE_OPERATING_HARD_STOP_GATES = [
-  'zero_consumable_artifact',
-  'artifact_corrupt_or_unreadable',
+  'executor_unavailable',
   'safety_or_compliance',
   'permission_or_credential_boundary',
   'human_decision_required',
@@ -87,12 +87,15 @@ export const STAGE_OPERATING_PRINCIPLES_POLICY = {
     preflight_or_quality_review_can_loop_without_deliverable_delta: false,
     quality_gaps_block_ordinary_progress_by_default: false,
     consumable_artifact_advances_stage: true,
+    no_output_or_failure_diagnostic_advances_stage: true,
     retry_review_and_repair_limits_are_quality_budgets: true,
     quality_budget_exhaustion_status: 'completed_with_quality_debt',
     quality_debt_blocks_stage_transition: false,
     quality_debt_blocks_quality_export_or_ready_claims: true,
+    zero_output_becomes_progress_diagnostic: true,
+    corrupt_or_unreadable_output_becomes_progress_diagnostic: true,
     safe_action_before_diagnostic_reconcile: true,
-    next_delta_must_be_deliverable_receipt_blocker_or_handoff: true,
+    next_delta_may_be_deliverable_receipt_diagnostic_hard_blocker_or_handoff: true,
   },
   default_read_surface: {
     root: 'current_owner_delta',
@@ -176,6 +179,9 @@ export function buildStageOperatingPrincipleChecks(repoDir: string) {
     speedPolicy.consumable_artifact_advances_stage === true
       ? null
       : 'stage_operating_principles_consumable_artifact_must_advance_stage',
+    speedPolicy.no_output_or_failure_diagnostic_advances_stage === true
+      ? null
+      : 'stage_operating_principles_no_output_diagnostic_must_advance_stage',
     speedPolicy.retry_review_and_repair_limits_are_quality_budgets === true
       ? null
       : 'stage_operating_principles_retry_limits_must_be_quality_budgets',
@@ -191,9 +197,9 @@ export function buildStageOperatingPrincipleChecks(repoDir: string) {
     speedPolicy.safe_action_before_diagnostic_reconcile === true
       ? null
       : 'stage_operating_principles_safe_action_before_diagnostic_reconcile_missing',
-    speedPolicy.next_delta_must_be_deliverable_receipt_blocker_or_handoff === true
+    speedPolicy.next_delta_may_be_deliverable_receipt_diagnostic_hard_blocker_or_handoff === true
       ? null
-      : 'stage_operating_principles_next_delta_shape_guard_missing',
+      : 'stage_operating_principles_next_delta_progress_shape_guard_missing',
     optionalString(defaultReadSurface.root) === 'current_owner_delta'
       ? null
       : 'stage_operating_principles_default_read_surface_must_be_current_owner_delta',
@@ -252,6 +258,8 @@ export function buildStageOperatingPrincipleChecks(repoDir: string) {
         speedPolicy.quality_gaps_block_ordinary_progress_by_default ?? null,
       consumable_artifact_advances_stage:
         speedPolicy.consumable_artifact_advances_stage ?? null,
+      no_output_or_failure_diagnostic_advances_stage:
+        speedPolicy.no_output_or_failure_diagnostic_advances_stage ?? null,
       retry_review_and_repair_limits_are_quality_budgets:
         speedPolicy.retry_review_and_repair_limits_are_quality_budgets ?? null,
       quality_budget_exhaustion_status:
@@ -262,8 +270,8 @@ export function buildStageOperatingPrincipleChecks(repoDir: string) {
         speedPolicy.quality_debt_blocks_quality_export_or_ready_claims ?? null,
       safe_action_before_diagnostic_reconcile:
         speedPolicy.safe_action_before_diagnostic_reconcile ?? null,
-      next_delta_must_be_deliverable_receipt_blocker_or_handoff:
-        speedPolicy.next_delta_must_be_deliverable_receipt_blocker_or_handoff ?? null,
+      next_delta_may_be_deliverable_receipt_diagnostic_hard_blocker_or_handoff:
+        speedPolicy.next_delta_may_be_deliverable_receipt_diagnostic_hard_blocker_or_handoff ?? null,
     },
     default_read_surface: {
       root: optionalString(defaultReadSurface.root),

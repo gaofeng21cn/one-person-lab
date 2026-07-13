@@ -23,7 +23,6 @@ export const DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS = [
 export const DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE = {
   gate_id: 'same_work_unit_live_evidence',
   applies_to: 'current_owner_answer_compensation_chain',
-  stage_run_closeout_binding_gate_applies_to: 'current_owner_answer_compensation_chain',
   blocks_static_no_active_caller_retirement: false,
   static_retired_surface_classes: [
     'retired_wrapper',

@@ -23,8 +23,6 @@ export type QualityGateRuntimeBinding = {
   idempotency_key: string;
   provider_attempt_ref: string;
   quality_gate_attempt_ref: string;
-  attempt_lease_ref: string;
-  execution_authorization_decision_ref: string;
   receipt_ref: string;
   receipt_kind: QualityGateRuntimeReceiptKind;
   receipt_owner: string;
@@ -94,8 +92,6 @@ export function buildQualityGateRuntimeBinding(
     idempotency_key: input.idempotency_key,
     provider_attempt_ref: input.provider_attempt_ref,
     quality_gate_attempt_ref: input.quality_gate_attempt_ref,
-    attempt_lease_ref: input.attempt_lease_ref,
-    execution_authorization_decision_ref: input.execution_authorization_decision_ref,
     receipt_ref: input.receipt_ref,
     receipt_kind: input.receipt_kind,
     receipt_owner: input.receipt_owner,
@@ -166,11 +162,6 @@ export function validateQualityGateRuntimeBinding(value: unknown): QualityGateRu
     idempotency_key: nonEmptyString(value.idempotency_key, 'idempotency_key'),
     provider_attempt_ref: providerAttemptRef,
     quality_gate_attempt_ref: qualityGateAttemptRef,
-    attempt_lease_ref: nonEmptyString(value.attempt_lease_ref, 'attempt_lease_ref'),
-    execution_authorization_decision_ref: nonEmptyString(
-      value.execution_authorization_decision_ref,
-      'execution_authorization_decision_ref',
-    ),
     receipt_ref: nonEmptyString(value.receipt_ref, 'receipt_ref'),
     receipt_kind: kind,
     receipt_owner: nonEmptyString(value.receipt_owner, 'receipt_owner'),

@@ -9,7 +9,7 @@ function parseCliOptions(argv) {
   const parsed = {
     candidateManifest: null,
     currentManifest: null,
-    version: null,
+    releaseSetGeneration: null,
     summaryPath: null,
   };
 
@@ -20,16 +20,16 @@ function parseCliOptions(argv) {
     '--current-manifest': (value) => {
       parsed.currentManifest = path.resolve(value);
     },
-    '--version': (value) => {
-      parsed.version = value.trim();
+    '--release-set-generation': (value) => {
+      parsed.releaseSetGeneration = value.trim();
     },
     '--summary-path': (value) => {
       parsed.summaryPath = path.resolve(value);
     },
   });
 
-  if (!parsed.candidateManifest || !parsed.currentManifest || !parsed.version) {
-    throw new Error('Usage: package-channel-daily-check.mjs --candidate-manifest <path> --current-manifest <path> --version <version> [--summary-path <path>]');
+  if (!parsed.candidateManifest || !parsed.releaseSetGeneration) {
+    throw new Error('Usage: package-channel-daily-check.mjs --candidate-manifest <path> [--current-manifest <path>] --release-set-generation <yy.m.d[-rN]> [--summary-path <path>]');
   }
 
   return parsed;
@@ -40,26 +40,17 @@ function readJson(filePath) {
 }
 
 function packageFingerprint(manifest) {
-  const modules = manifest.packages?.modules ?? {};
-  const fingerprints = Object.fromEntries(
-    Object.entries(modules)
-      .map(([moduleId, entry]) => [
-        moduleId,
-        {
-          source_git_head_sha: entry?.source_git?.head_sha ?? null,
-          source_archive_sha256: entry?.source_archive?.sha256 ?? null,
-        },
-      ])
-      .sort(([left], [right]) => left.localeCompare(right)),
-  );
-  const frameworkCore = manifest.packages?.framework_core;
-  if (frameworkCore) {
-    fingerprints.framework_core = {
-      source_git_head_sha: frameworkCore?.source_git?.head_sha ?? null,
-      source_archive_sha256: frameworkCore?.source_archive?.sha256 ?? null,
-    };
-  }
-  return Object.fromEntries(Object.entries(fingerprints).sort(([left], [right]) => left.localeCompare(right)));
+  const catalog = manifest.packages?.package_catalog ?? {};
+  return Object.fromEntries(Object.entries(catalog)
+    .map(([packageId, entry]) => {
+      const selected = entry?.versions?.find((version) => version?.selection_status === 'selected_for_release_set') ?? null;
+      return [packageId, {
+        package_version: selected?.package_version ?? entry?.selected_version ?? null,
+        package_content_digest: selected?.package_content_digest ?? null,
+        owner_source_commit: selected?.owner_source_commit ?? null,
+      }];
+    })
+    .sort(([left], [right]) => left.localeCompare(right)));
 }
 
 function changedPackages(candidateFingerprint, currentFingerprint) {
@@ -74,22 +65,36 @@ function changedPackages(candidateFingerprint, currentFingerprint) {
 
 function buildSummary(options) {
   const candidate = readJson(options.candidateManifest);
-  if (!options.currentManifest || !fs.existsSync(options.currentManifest)) {
-    throw new Error(`Current channel manifest does not exist: ${options.currentManifest ?? '<missing>'}`);
+  if (options.currentManifest && !fs.existsSync(options.currentManifest)) {
+    throw new Error(`Current channel manifest does not exist: ${options.currentManifest}`);
   }
-  const current = readJson(options.currentManifest);
   const candidateFingerprint = packageFingerprint(candidate);
-
-  const currentFingerprint = packageFingerprint(current);
+  const currentFingerprint = options.currentManifest
+    ? packageFingerprint(readJson(options.currentManifest))
+    : {};
   const changed = changedPackages(candidateFingerprint, currentFingerprint);
+  const unversionedChanges = changed.filter((packageId) => (
+    currentFingerprint[packageId]
+    && candidateFingerprint[packageId]
+    && currentFingerprint[packageId].package_version === candidateFingerprint[packageId].package_version
+    && currentFingerprint[packageId].package_content_digest !== candidateFingerprint[packageId].package_content_digest
+  ));
+  if (unversionedChanges.length > 0) {
+    throw new Error(`package content changed without a package version bump: ${unversionedChanges.join(', ')}`);
+  }
   return {
     status: changed.length > 0 ? 'publish_required' : 'skipped',
-    reason: changed.length > 0 ? 'package_channel_changed' : 'package_channel_unchanged',
+    reason: !options.currentManifest
+      ? 'package_channel_bootstrap'
+      : changed.length > 0
+        ? 'package_channel_changed'
+        : 'package_channel_unchanged',
     publish_required: changed.length > 0,
-    version: options.version,
+    release_set_generation: options.releaseSetGeneration,
     candidate_manifest: options.candidateManifest,
-    current_manifest: options.currentManifest,
+    current_manifest: options.currentManifest ?? null,
     changed_packages: changed,
+    changed_packages_json: JSON.stringify(changed),
     candidate_fingerprint: candidateFingerprint,
     current_fingerprint: currentFingerprint,
   };

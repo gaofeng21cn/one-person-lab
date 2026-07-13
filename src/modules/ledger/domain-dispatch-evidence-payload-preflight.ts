@@ -1,6 +1,5 @@
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { domainDispatchEvidencePayloadRefs } from './domain-dispatch-evidence-payload-refs.ts';
-import { listStageRunExecutionAuthorizationReceipts } from '../stagecraft/index.ts';
 import {
   record,
   recordList,
@@ -46,6 +45,14 @@ const SUPPLEMENTAL_PAYLOAD_REF_FIELDS = [
 
 const TYPED_BLOCKER_PAYLOAD_REF_FIELDS = [
   'typed_blocker_refs',
+] as const;
+
+const PROGRESS_PAYLOAD_REF_FIELDS = [
+  'artifact_refs',
+  'output_refs',
+  'progress_delta_refs',
+  'diagnostic_refs',
+  'negative_result_refs',
 ] as const;
 
 function payloadSourceFingerprint(payload: JsonRecord) {
@@ -139,10 +146,6 @@ function localJsonRefContent(ref: string, route: JsonRecord) {
 
 function identityFromOwnerAnswerContent(content: JsonRecord) {
   const surfaceKind = stringValue(content.surface_kind);
-  const hasCloseoutBinding =
-    content.closeout_binding !== null
-    && typeof content.closeout_binding === 'object'
-    && !Array.isArray(content.closeout_binding);
   const hasOwnerAnswerShape = [
     'receipt_kind',
     'domain_blocker',
@@ -150,8 +153,7 @@ function identityFromOwnerAnswerContent(content: JsonRecord) {
     'owner_receipt_ref',
   ].some((field) => content[field] !== undefined);
   if (
-    !hasCloseoutBinding
-    && !hasOwnerAnswerShape
+    !hasOwnerAnswerShape
     && surfaceKind !== 'stage_attempt_closeout_packet'
     && surfaceKind !== 'mas_domain_typed_blocker'
     && surfaceKind !== 'mas_stage_owner_receipt'
@@ -159,22 +161,14 @@ function identityFromOwnerAnswerContent(content: JsonRecord) {
   ) {
     return {};
   }
-  const closeoutBinding = record(content.closeout_binding);
   return {
-    study_id: firstString(content.study_id, closeoutBinding.study_id),
-    stage_id: firstString(content.stage_id, closeoutBinding.stage_id),
-    stage_attempt_id: firstString(content.stage_attempt_id, closeoutBinding.stage_attempt_id),
-    stage_run_id: firstString(content.stage_run_id, closeoutBinding.stage_run_id),
-    stage_manifest_ref: firstString(content.stage_manifest_ref, closeoutBinding.stage_manifest_ref),
-    current_pointer_ref: firstString(content.current_pointer_ref, closeoutBinding.current_pointer_ref),
-    source_fingerprint: firstString(closeoutBinding.source_fingerprint, content.source_fingerprint),
-    idempotency_key: firstString(closeoutBinding.idempotency_key, content.idempotency_key),
-    provider_attempt_ref: firstString(closeoutBinding.provider_attempt_ref, content.provider_attempt_ref),
-    attempt_lease_ref: firstString(closeoutBinding.attempt_lease_ref, content.attempt_lease_ref),
-    execution_authorization_decision_ref: firstString(
-      closeoutBinding.execution_authorization_decision_ref,
-      content.execution_authorization_decision_ref,
-    ),
+    study_id: stringValue(content.study_id),
+    stage_id: stringValue(content.stage_id),
+    stage_attempt_id: stringValue(content.stage_attempt_id),
+    stage_run_id: stringValue(content.stage_run_id),
+    source_fingerprint: stringValue(content.source_fingerprint),
+    idempotency_key: stringValue(content.idempotency_key),
+    provider_attempt_ref: stringValue(content.provider_attempt_ref),
   };
 }
 
@@ -198,13 +192,9 @@ function identityFromLocalRefContents(route: JsonRecord, refs: string[]) {
     'stage_id',
     'stage_attempt_id',
     'stage_run_id',
-    'stage_manifest_ref',
-    'current_pointer_ref',
     'source_fingerprint',
     'idempotency_key',
     'provider_attempt_ref',
-    'attempt_lease_ref',
-    'execution_authorization_decision_ref',
   ] as const;
   return {
     sources,
@@ -217,30 +207,17 @@ function identityFromLocalRefContents(route: JsonRecord, refs: string[]) {
   };
 }
 
-function routeAuthorizationReceiptIdentity(route: JsonRecord) {
+function routeTransportIdentity(route: JsonRecord) {
   const targetIdentity = record(route.target_identity);
-  const targetStageAttemptId = stringValue(targetIdentity.stage_attempt_id)
-    ?? stringValue(route.stage_attempt_id);
-  if (!targetStageAttemptId) {
-    return {};
-  }
-  const receipt = listStageRunExecutionAuthorizationReceipts().find((candidate) =>
-    candidate.phase === 'launch' && candidate.stage_attempt_id === targetStageAttemptId
-  );
-  if (!receipt) {
-    return {};
-  }
   return {
-    stage_run_id: receipt.stage_run_id,
-    stage_attempt_id: receipt.stage_attempt_id,
-    stage_id: receipt.stage_id,
-    source_fingerprint: receipt.source_fingerprint,
-    idempotency_key: receipt.idempotency_key,
-    stage_manifest_ref: receipt.stage_manifest_ref,
-    current_pointer_ref: receipt.current_pointer_ref,
-    provider_attempt_ref: receipt.provider_attempt_ref,
-    attempt_lease_ref: receipt.attempt_lease_ref,
-    execution_authorization_decision_ref: receipt.execution_authorization_decision_ref,
+    stage_run_id: stringValue(targetIdentity.stage_run_id) ?? stringValue(route.stage_run_id),
+    stage_attempt_id: stringValue(targetIdentity.stage_attempt_id) ?? stringValue(route.stage_attempt_id),
+    stage_id: stringValue(targetIdentity.stage_id) ?? stringValue(route.stage_id),
+    source_fingerprint:
+      stringValue(targetIdentity.source_fingerprint) ?? stringValue(route.source_fingerprint),
+    idempotency_key: stringValue(targetIdentity.idempotency_key) ?? stringValue(route.idempotency_key),
+    provider_attempt_ref:
+      stringValue(targetIdentity.provider_attempt_ref) ?? stringValue(route.provider_attempt_ref),
   };
 }
 
@@ -274,48 +251,31 @@ function forbiddenPaperLineOwnerChainPayloadClaims(payload: JsonRecord) {
   });
 }
 
-function ownerDeltaResultCloseoutBindingIdentity(payload: JsonRecord) {
-  const ownerDeltaResult = payload.owner_delta_result;
-  const results =
-    ownerDeltaResult !== null && typeof ownerDeltaResult === 'object' && !Array.isArray(ownerDeltaResult)
-      ? [record(ownerDeltaResult)]
-      : recordList(ownerDeltaResult);
+function payloadTransportIdentity(payload: JsonRecord) {
+  const transportIdentity = record(payload.transport_identity);
   const fields = [
     'stage_run_id',
-    'stage_manifest_ref',
-    'current_pointer_ref',
     'source_fingerprint',
     'idempotency_key',
     'provider_attempt_ref',
-    'attempt_lease_ref',
-    'execution_authorization_decision_ref',
   ] as const;
   return Object.fromEntries(fields.flatMap((field) => {
-    const values = uniqueList(results
-      .map((result) => {
-        const closeoutBinding = record(result.closeout_binding);
-        return stringValue(result[field]) ?? stringValue(closeoutBinding[field]);
-      })
-      .filter((value): value is string => Boolean(value)));
-    return values.length === 1 ? [[field, values[0]]] : [];
+    const value = stringValue(transportIdentity[field]);
+    return value ? [[field, value]] : [];
   })) as JsonRecord;
 }
 
-const STAGE_RUN_CLOSEOUT_IDENTITY_FIELDS = [
+const TRANSPORT_CURRENTNESS_IDENTITY_FIELDS = [
   'stage_run_id',
   'source_fingerprint',
   'idempotency_key',
-  'stage_manifest_ref',
-  'current_pointer_ref',
   'provider_attempt_ref',
-  'attempt_lease_ref',
-  'execution_authorization_decision_ref',
 ] as const;
 
 function identityBindingPreflight(route: JsonRecord, payload: JsonRecord, refIdentity: JsonRecord = {}) {
   const targetIdentity = record(route.target_identity);
-  const authorizationReceiptIdentity = routeAuthorizationReceiptIdentity(route);
-  const ownerDeltaBindingIdentity = ownerDeltaResultCloseoutBindingIdentity(payload);
+  const authorizationReceiptIdentity = routeTransportIdentity(route);
+  const transportIdentity = payloadTransportIdentity(payload);
   const targetDomainSourceFingerprint = stringValue(targetIdentity.domain_source_fingerprint)
     ?? stringValue(route.domain_source_fingerprint);
   const payloadDomainSourceFingerprint = stringValue(payload.domain_source_fingerprint)
@@ -346,34 +306,10 @@ function identityBindingPreflight(route: JsonRecord, payload: JsonRecord, refIde
         ?? stringValue(authorizationReceiptIdentity.idempotency_key),
     ],
     [
-      'stage_manifest_ref',
-      stringValue(targetIdentity.stage_manifest_ref)
-        ?? stringValue(route.stage_manifest_ref)
-        ?? stringValue(authorizationReceiptIdentity.stage_manifest_ref),
-    ],
-    [
-      'current_pointer_ref',
-      stringValue(targetIdentity.current_pointer_ref)
-        ?? stringValue(route.current_pointer_ref)
-        ?? stringValue(authorizationReceiptIdentity.current_pointer_ref),
-    ],
-    [
       'provider_attempt_ref',
       stringValue(targetIdentity.provider_attempt_ref)
         ?? stringValue(route.provider_attempt_ref)
         ?? stringValue(authorizationReceiptIdentity.provider_attempt_ref),
-    ],
-    [
-      'attempt_lease_ref',
-      stringValue(targetIdentity.attempt_lease_ref)
-        ?? stringValue(route.attempt_lease_ref)
-        ?? stringValue(authorizationReceiptIdentity.attempt_lease_ref),
-    ],
-    [
-      'execution_authorization_decision_ref',
-      stringValue(targetIdentity.execution_authorization_decision_ref)
-        ?? stringValue(route.execution_authorization_decision_ref)
-        ?? stringValue(authorizationReceiptIdentity.execution_authorization_decision_ref),
     ],
     ['profile', stringValue(targetIdentity.profile)],
     ['profile_name', stringValue(targetIdentity.profile_name)],
@@ -382,28 +318,13 @@ function identityBindingPreflight(route: JsonRecord, payload: JsonRecord, refIde
     ['domain_id', stringValue(payload.domain_id)],
     ['stage_id', stringValue(payload.stage_id) ?? stringValue(refIdentity.stage_id)],
     ['stage_attempt_id', stringValue(payload.stage_attempt_id) ?? stringValue(refIdentity.stage_attempt_id)],
-    ['stage_run_id', stringValue(payload.stage_run_id) ?? stringValue(ownerDeltaBindingIdentity.stage_run_id) ?? stringValue(refIdentity.stage_run_id)],
+    ['stage_run_id', stringValue(payload.stage_run_id) ?? stringValue(transportIdentity.stage_run_id) ?? stringValue(refIdentity.stage_run_id)],
     ['task_kind', stringValue(payload.task_kind) ?? stringValue(payload.recommended_task_kind)],
     ['study_id', stringValue(payload.study_id) ?? stringValue(refIdentity.study_id)],
-    ['source_fingerprint', payloadAttemptSourceFingerprint ?? stringValue(ownerDeltaBindingIdentity.source_fingerprint) ?? stringValue(refIdentity.source_fingerprint)],
+    ['source_fingerprint', payloadAttemptSourceFingerprint ?? stringValue(transportIdentity.source_fingerprint) ?? stringValue(refIdentity.source_fingerprint)],
     ['domain_source_fingerprint', payloadDomainSourceFingerprint],
-    ['idempotency_key', stringValue(payload.idempotency_key) ?? stringValue(ownerDeltaBindingIdentity.idempotency_key) ?? stringValue(refIdentity.idempotency_key)],
-    [
-      'stage_manifest_ref',
-      stringValue(payload.stage_manifest_ref) ?? stringValue(ownerDeltaBindingIdentity.stage_manifest_ref) ?? stringValue(refIdentity.stage_manifest_ref),
-    ],
-    [
-      'current_pointer_ref',
-      stringValue(payload.current_pointer_ref) ?? stringValue(ownerDeltaBindingIdentity.current_pointer_ref) ?? stringValue(refIdentity.current_pointer_ref),
-    ],
-    ['provider_attempt_ref', stringValue(payload.provider_attempt_ref) ?? stringValue(ownerDeltaBindingIdentity.provider_attempt_ref) ?? stringValue(refIdentity.provider_attempt_ref)],
-    ['attempt_lease_ref', stringValue(payload.attempt_lease_ref) ?? stringValue(ownerDeltaBindingIdentity.attempt_lease_ref) ?? stringValue(refIdentity.attempt_lease_ref)],
-    [
-      'execution_authorization_decision_ref',
-      stringValue(payload.execution_authorization_decision_ref)
-        ?? stringValue(ownerDeltaBindingIdentity.execution_authorization_decision_ref)
-        ?? stringValue(refIdentity.execution_authorization_decision_ref),
-    ],
+    ['idempotency_key', stringValue(payload.idempotency_key) ?? stringValue(transportIdentity.idempotency_key) ?? stringValue(refIdentity.idempotency_key)],
+    ['provider_attempt_ref', stringValue(payload.provider_attempt_ref) ?? stringValue(transportIdentity.provider_attempt_ref) ?? stringValue(refIdentity.provider_attempt_ref)],
     ['profile', stringValue(payload.profile)],
     ['profile_name', stringValue(payload.profile_name)],
   ] as const;
@@ -424,28 +345,17 @@ function identityBindingPreflight(route: JsonRecord, payload: JsonRecord, refIde
   const targetIdentityPresent = targetEntries.some(([, value]) => Boolean(value));
   const payloadIdentity = Object.fromEntries(payloadEntries.filter(([, value]) => Boolean(value)));
   const targetIdentityPayload = Object.fromEntries(targetEntries.filter(([, value]) => Boolean(value)));
-  const stageRunCloseoutIdentityRequired = [
-    'stage_run_id',
-    'idempotency_key',
-    'stage_manifest_ref',
-    'current_pointer_ref',
-    'provider_attempt_ref',
-    'attempt_lease_ref',
-    'execution_authorization_decision_ref',
-  ].some((field) => Boolean(targetIdentityPayload[field]));
+  const stageRunCloseoutIdentityRequired = TRANSPORT_CURRENTNESS_IDENTITY_FIELDS
+    .some((field) => Boolean(targetIdentityPayload[field]));
   const missingRequiredCloseoutBindingFields = stageRunCloseoutIdentityRequired
-    ? STAGE_RUN_CLOSEOUT_IDENTITY_FIELDS.filter((field) =>
+    ? TRANSPORT_CURRENTNESS_IDENTITY_FIELDS.filter((field) =>
         Boolean(targetIdentityPayload[field]) && !Boolean(payloadIdentity[field])
       )
     : [];
-  const missingRequiredCloseoutIdentity =
-    stageRunCloseoutIdentityRequired && missingRequiredCloseoutBindingFields.length > 0;
   return {
     surface_kind: 'opl_domain_dispatch_evidence_identity_binding_preflight',
     status: identityConflicts.length > 0
       ? 'conflict'
-      : missingRequiredCloseoutIdentity
-        ? 'payload_identity_not_provided'
       : comparable.length > 0
         ? 'matched'
         : targetIdentityPresent
@@ -456,15 +366,16 @@ function identityBindingPreflight(route: JsonRecord, payload: JsonRecord, refIde
     identity_conflicts: identityConflicts,
     target_identity: targetIdentityPayload,
     payload_identity: payloadIdentity,
-    stage_run_closeout_identity_required: stageRunCloseoutIdentityRequired,
-    missing_required_closeout_binding_fields: missingRequiredCloseoutBindingFields,
+    transport_identity_observed: stageRunCloseoutIdentityRequired,
+    missing_transport_identity_fields: missingRequiredCloseoutBindingFields,
     policy:
-      'record_fails_closed_when_stage_run_closeout_identity_is_missing_or_conflicts_with_target_attempt',
+      'identity_conflict_blocks_wrong_target_mutation_missing_transport_identity_is_advisory_only',
   };
 }
 
 export function preflightDomainDispatchEvidencePayload(payload: JsonRecord, route: JsonRecord = {}) {
   const {
+    progressArtifactRefs,
     domainReceiptRefs,
     typedBlockerRefs,
     noRegressionRefs,
@@ -472,6 +383,7 @@ export function preflightDomainDispatchEvidencePayload(payload: JsonRecord, rout
     evidenceRefs,
   } = domainDispatchEvidencePayloadRefs(payload);
   const allRefs = [
+    ...progressArtifactRefs,
     ...domainReceiptRefs,
     ...typedBlockerRefs,
     ...noRegressionRefs,
@@ -500,22 +412,21 @@ export function preflightDomainDispatchEvidencePayload(payload: JsonRecord, rout
     || noRegressionRefs.length > 0
   ) && typedBlockerRefs.length === 0;
   const typedBlockerPathReady = typedBlockerRefs.length > 0;
+  const progressPathReady = progressArtifactRefs.length > 0;
   const selectedPayloadPath = typedBlockerPathReady
     ? 'typed_blocker_path'
     : successPathReady
       ? 'success_refs_path'
+      : progressPathReady
+        ? 'progress_refs_path'
       : 'blocked';
   const identityBinding = identityBindingPreflight(route, payload, localOwnerAnswerRefIdentity.identity);
   const identityConflicts = identityBinding.identity_conflicts;
-  const missingRequiredCloseoutBindingFields = stringList(
-    identityBinding.missing_required_closeout_binding_fields,
-  );
   const canRecordRefsOnlyReceipt = allRefs.length > 0
     && forbiddenPlaceholderRefs.length === 0
     && forbiddenPayloadAuthorityClaims.length === 0
-    && (successPathReady || typedBlockerPathReady)
-    && identityConflicts.length === 0
-    && missingRequiredCloseoutBindingFields.length === 0;
+    && (successPathReady || typedBlockerPathReady || progressPathReady)
+    && identityConflicts.length === 0;
   return {
     surface_kind: 'opl_domain_dispatch_evidence_payload_preflight',
     status: canRecordRefsOnlyReceipt ? 'ready_to_record' : 'blocked',
@@ -540,10 +451,11 @@ export function preflightDomainDispatchEvidencePayload(payload: JsonRecord, rout
       'typed_blocker_refs',
       'owner_chain_refs',
       'no_regression_refs',
+      ...PROGRESS_PAYLOAD_REF_FIELDS,
     ],
     supplemental_operator_payload_refs: [...SUPPLEMENTAL_PAYLOAD_REF_FIELDS],
     payload_path_policy:
-      'choose_success_closeout_refs_path_or_domain_owned_typed_blocker_path_evidence_refs_are_supplemental',
+      'choose_progress_refs_success_quality_refs_or_domain_owned_typed_blocker_path',
     selected_payload_path: selectedPayloadPath,
     accepted_payload_paths: {
       success_refs_path: {
@@ -562,9 +474,18 @@ export function preflightDomainDispatchEvidencePayload(payload: JsonRecord, rout
         can_claim_domain_ready: false,
         can_claim_production_ready: false,
       },
+      progress_refs_path: {
+        status: progressPathReady ? 'ready' : 'not_ready',
+        required_any_operator_payload_refs: [...PROGRESS_PAYLOAD_REF_FIELDS],
+        records_quality_debt: !successPathReady,
+        next_declared_stage_may_start: true,
+        can_claim_domain_ready: false,
+        can_claim_production_ready: false,
+      },
     },
     success_path_ready: successPathReady && forbiddenPlaceholderRefs.length === 0,
     typed_blocker_path_ready: typedBlockerPathReady && forbiddenPlaceholderRefs.length === 0,
+    progress_path_ready: progressPathReady && forbiddenPlaceholderRefs.length === 0,
     can_record_refs_only_receipt: canRecordRefsOnlyReceipt,
     required_evidence_refs: requiredEvidenceRefs,
     enforced_required_evidence_refs: enforcedRequiredEvidenceRefs,
@@ -573,11 +494,12 @@ export function preflightDomainDispatchEvidencePayload(payload: JsonRecord, rout
     forbidden_placeholder_refs: forbiddenPlaceholderRefs,
     forbidden_payload_authority_claims: forbiddenPayloadAuthorityClaims,
     missing_payload_fields: allRefs.length === 0
-      ? ['domain_receipt_refs_or_typed_blocker_refs_or_owner_chain_refs_or_no_regression_refs']
-      : successCloseoutRefCount === 0 && typedBlockerRefs.length === 0
-        ? ['domain_receipt_refs_or_typed_blocker_refs_or_owner_chain_refs_or_no_regression_refs']
+      ? ['progress_artifact_ref_or_quality_receipt_ref_or_typed_blocker_ref']
+      : successCloseoutRefCount === 0 && typedBlockerRefs.length === 0 && progressArtifactRefs.length === 0
+        ? ['progress_artifact_ref_or_quality_receipt_ref_or_typed_blocker_ref']
       : [],
     accepted_ref_counts: {
+      progress_artifact_refs: progressArtifactRefs.length,
       domain_receipt_refs: domainReceiptRefs.length,
       typed_blocker_refs: typedBlockerRefs.length,
       no_regression_refs: noRegressionRefs.length,
@@ -585,7 +507,7 @@ export function preflightDomainDispatchEvidencePayload(payload: JsonRecord, rout
       evidence_refs: evidenceRefs.length,
     },
     policy:
-      'record_requires_real_domain_app_or_live_owner_receipt_typed_blocker_owner_chain_or_no_regression_refs_evidence_refs_are_supplemental',
+      'readable_progress_artifact_records_progress_quality_receipts_only_authorize_quality_claims',
   };
 }
 

@@ -5,8 +5,7 @@ import type { FamilyRuntimeDomainId, FamilyRuntimeProviderKind } from './family-
 type JsonRecord = Record<string, unknown>;
 type InvocationMode = 'invocation' | 'authoring';
 type LaunchInvocationBlockerReason =
-  | 'non_default_executor_binding_ref_missing'
-  | 'agent_authoring_requires_bounded_edit_ref';
+  | 'non_default_executor_binding_ref_missing';
 
 const invocationAgentActions = ['retrieve', 'select', 'bind', 'launch', 'deploy'] as const;
 const authoringAgentActions = ['retrieve', 'select', 'bind', 'author_bounded_edit'] as const;
@@ -20,9 +19,9 @@ export interface StageLaunchInvocationProjection {
   allowed_agent_actions: Array<typeof invocationAgentActions[number] | typeof authoringAgentActions[number]>;
   bounded_edit_ref: string | null;
   policy: {
-    stage_pack_launch_scope: 'approved_or_admitted_only';
-    authoring_output: 'bounded_edit_ref_only';
-    unadmitted_agent_generated_stage_pack: 'fail_closed';
+    stage_pack_launch_scope: 'codex_selected_declared_or_requested_stage';
+    authoring_output: 'readable_artifact_preferred_bounded_edit_optional';
+    unadmitted_agent_generated_stage_pack: 'advisory_quality_debt_no_ready_claim';
     graphflow_runtime_dependency: false;
     runtime_equivalence_claim: false;
   };
@@ -40,7 +39,7 @@ export interface StageLaunchInvocationProjection {
   task_id: string | null;
   launch_refs: {
     stage_pack_ref: string | null;
-    stage_admission_ref: string | null;
+    stage_context_ref: string | null;
     source_binding_ref: string | null;
     workspace_binding_ref: string;
     executor_binding_ref: string | null;
@@ -79,9 +78,8 @@ export function buildStageLaunchInvocationProjection(input: {
   boundedEditRef?: string | null;
   taskId?: string | null;
   idempotencyKey: string;
-  requireStageAdmission?: boolean;
   planeId?: string | null;
-  admissionPlaneId?: string | null;
+  contextPlaneId?: string | null;
 }): StageLaunchInvocationProjection {
   const selectedExecutorKind = text(input.executorKind) ?? 'codex_cli';
   const executorBindingRef = text(input.executorBindingRef);
@@ -96,13 +94,10 @@ export function buildStageLaunchInvocationProjection(input: {
     : executorBindingRef
       ? 'explicit_executor_binding_declared' as const
       : 'missing_non_default_executor_binding' as const;
-  const blockerReason: LaunchInvocationBlockerReason | null = input.requireStageAdmission === true
-    ? mode === 'authoring' && !boundedEditRef
-      ? 'agent_authoring_requires_bounded_edit_ref'
-      : executorBindingStatus === 'missing_non_default_executor_binding'
-        ? 'non_default_executor_binding_ref_missing'
-        : null
-    : null;
+  const blockerReason: LaunchInvocationBlockerReason | null =
+    executorBindingStatus === 'missing_non_default_executor_binding'
+      ? 'non_default_executor_binding_ref_missing'
+      : null;
   const subject = buildFamilyConflictSubject({
     domain: input.domainId,
     stageId: input.stageId,
@@ -112,7 +107,7 @@ export function buildStageLaunchInvocationProjection(input: {
     taskId: input.taskId,
     sourceRefs: [
       ...(input.planeId ? [`opl://family_stage_control_planes/${input.planeId}`] : []),
-      ...(input.admissionPlaneId ? [`opl://family_stage_admission/${input.admissionPlaneId}`] : []),
+      ...(input.contextPlaneId ? [`opl://family_stage_context/${input.contextPlaneId}`] : []),
       ...(executorBindingRef ? [executorBindingRef] : []),
       ...(boundedEditRef ? [boundedEditRef] : []),
     ],
@@ -129,9 +124,9 @@ export function buildStageLaunchInvocationProjection(input: {
     allowed_agent_actions: allowedAgentActions,
     bounded_edit_ref: boundedEditRef,
     policy: {
-      stage_pack_launch_scope: 'approved_or_admitted_only',
-      authoring_output: 'bounded_edit_ref_only',
-      unadmitted_agent_generated_stage_pack: 'fail_closed',
+      stage_pack_launch_scope: 'codex_selected_declared_or_requested_stage',
+      authoring_output: 'readable_artifact_preferred_bounded_edit_optional',
+      unadmitted_agent_generated_stage_pack: 'advisory_quality_debt_no_ready_claim',
       graphflow_runtime_dependency: false,
       runtime_equivalence_claim: false,
     },
@@ -146,7 +141,7 @@ export function buildStageLaunchInvocationProjection(input: {
     task_id: text(input.taskId),
     launch_refs: {
       stage_pack_ref: input.planeId ? `opl://stage-packs/${input.domainId}/${input.planeId}` : null,
-      stage_admission_ref: input.admissionPlaneId ? `opl://family_stage_admission/${input.admissionPlaneId}` : null,
+      stage_context_ref: input.contextPlaneId ? `opl://family_stage_context/${input.contextPlaneId}` : null,
       source_binding_ref: sourceBindingRef,
       workspace_binding_ref: workspaceLocatorRef,
       executor_binding_ref: executorBindingRef,
@@ -164,16 +159,11 @@ export function buildStageLaunchInvocationProjection(input: {
             reason: blockerReason,
             evidenceRefs: [
               `invocation_mode:${mode}`,
-              ...(blockerReason === 'non_default_executor_binding_ref_missing'
-                ? [`executor_kind:${selectedExecutorKind}`, 'missing:executor_binding_ref']
-                : ['missing:bounded_edit_ref']),
+              `executor_kind:${selectedExecutorKind}`,
+              'missing:executor_binding_ref',
             ],
-            allowedNextActions: blockerReason === 'non_default_executor_binding_ref_missing'
-              ? ['declare_executor_binding_ref', 'retry_after_admission']
-              : ['return_bounded_edit_ref', 'submit_stage_pack_for_admission'],
-            forbiddenActions: blockerReason === 'non_default_executor_binding_ref_missing'
-              ? ['start_non_default_executor_without_binding_ref', 'fallback_complete']
-              : ['launch_unadmitted_agent_generated_stage_pack', 'fallback_complete'],
+            allowedNextActions: ['declare_executor_binding_ref', 'use_default_codex_cli'],
+            forbiddenActions: ['start_non_default_executor_without_binding_ref', 'claim_executor_equivalence'],
             failClosed: true,
           }),
         ]

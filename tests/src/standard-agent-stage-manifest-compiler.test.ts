@@ -191,6 +191,11 @@ test('standard Agent stage manifest compiler keeps stable domain identity and ta
   assert.deepEqual(alpha.stage_control_plane.stages[0]?.skills.map((entry) => entry.ref), ['agent/skills/domain.md']);
   assert.deepEqual(alpha.stage_control_plane.stages[0]?.tool_refs?.map((entry) => entry.ref), ['agent/tools/domain.md']);
   assert.deepEqual(alpha.stage_control_plane.stages[0]?.allowed_action_refs, ['inspect']);
+  const promptRef = alpha.stage_control_plane.stages[0]?.prompt_refs[0];
+  assert.equal(promptRef?.layer, 'domain_stage_main_prompt');
+  assert.equal(promptRef?.content, '# agent/prompts/intake.md\n');
+  assert.match(promptRef?.sha256 ?? '', /^[a-f0-9]{64}$/);
+  assert.equal(promptRef?.size_bytes, Buffer.byteLength('# agent/prompts/intake.md\n', 'utf8'));
   assert.deepEqual((alpha.stage_control_plane.stages[0]?.handoff as JsonRecord).next_stage_refs, ['deliver']);
   assert.equal(alpha.stage_control_plane.authority_boundary.opl_can_sign_owner_receipt, false);
   assert.equal('target_agent_ref' in alpha.stage_control_plane, false);

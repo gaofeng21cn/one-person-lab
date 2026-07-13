@@ -28,7 +28,7 @@ function defaultExecutorStageRefs(payload: Record<string, unknown>) {
 function preservesCurrentControlStagePacketIdentity(payload: Record<string, unknown>) {
   const basis = defaultExecutorCurrentnessBasis(payload);
   return optionalString(payload.dispatch_authority) === 'opl_current_control_state_handoff'
-    || optionalString(payload.provider_admission_schema_source) === 'action_queue'
+    || optionalString(payload.provider_attempt_schema_source) === 'action_queue'
     || optionalString(basis?.surface) === 'opl_current_control_state_handoff';
 }
 

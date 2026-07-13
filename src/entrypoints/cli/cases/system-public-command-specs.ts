@@ -5,6 +5,10 @@ import { bootstrapLocalCodexDefaults, readBundledCodexDefaultProfile } from '../
 import { buildOplFrameworkSemanticHygieneAudit } from '../../../modules/foundry-lab/framework-semantic-hygiene.ts';
 import { syncOplCompanionSkills } from '../../../modules/connect/install-companions.ts';
 import { syncFamilySkillPacks } from '../../../modules/connect/opl-skills.ts';
+import {
+  runOplAgentPackageInstall,
+  runOplAgentPackageStatus,
+} from '../../../modules/connect/agent-package-registry.ts';
 import { buildOplSystemDependencyDoctor } from '../../../modules/connect/system-installation/dependency-doctor.ts';
 import { buildOplDockerWebuiDoctor } from '../../../modules/connect/system-installation/docker-webui-doctor.ts';
 import { buildOplEnvironment } from '../../../modules/connect/system-installation/environment.ts';
@@ -78,6 +82,14 @@ const FULL_RUNTIME_FAMILY_MODULE_ENV = [
   { domain: 'oplmetaagent', env: 'OPL_MODULE_PATH_OPLMETAAGENT' },
 ] as const;
 
+const FULL_RUNTIME_AGENT_PACKAGE_MANIFESTS = [
+  { packageId: 'mas', env: 'OPL_MODULE_PATH_MEDAUTOSCIENCE', manifest: 'mas.json' },
+  { packageId: 'mag', env: 'OPL_MODULE_PATH_MEDAUTOGRANT', manifest: 'mag.json' },
+  { packageId: 'rca', env: 'OPL_MODULE_PATH_REDCUBE', manifest: 'rca.json' },
+  { packageId: 'oma', env: 'OPL_MODULE_PATH_OPLMETAAGENT', manifest: 'oma.json' },
+  { packageId: 'obf', env: 'OPL_MODULE_PATH_OPLBOOKFORGE', manifest: 'obf.json' },
+] as const;
+
 function syncFullRuntimeFamilyCodexPluginsIfAvailable() {
   const domains = FULL_RUNTIME_FAMILY_MODULE_ENV
     .filter((entry) => process.env[entry.env]?.trim())
@@ -91,6 +103,48 @@ function syncFullRuntimeFamilyCodexPluginsIfAvailable() {
     domains,
     companionMode: 'observe',
   });
+}
+
+async function syncFullRuntimeAgentPackageLocksIfAvailable() {
+  const targets = FULL_RUNTIME_AGENT_PACKAGE_MANIFESTS.filter((entry) => process.env[entry.env]?.trim());
+  if (targets.length === 0) {
+    return null;
+  }
+
+  const installed = new Set(
+    runOplAgentPackageStatus().opl_agent_package_status.installed_packages.map((entry) => entry.package_id),
+  );
+  const items = [];
+  for (const target of targets) {
+    if (installed.has(target.packageId)) {
+      items.push({ package_id: target.packageId, status: 'already_installed' });
+      continue;
+    }
+    const runtimeSourceRoot = path.resolve(process.env[target.env]!.trim());
+    const result = await runOplAgentPackageInstall({
+      manifestUrl: new URL(`../../../../contracts/opl-framework/packages/${target.manifest}`, import.meta.url).href,
+      trustTier: 'first_party',
+      sourceKind: 'bundled_full_runtime_modules',
+      agentRoot: runtimeSourceRoot,
+    });
+    items.push({
+      package_id: target.packageId,
+      status: result.opl_agent_package_install.status,
+      package_lock_ref: result.opl_agent_package_install.package_lock.lock_ref,
+    });
+    installed.add(target.packageId);
+  }
+
+  return {
+    surface_id: 'opl_full_runtime_agent_package_lock_sync',
+    status: 'completed',
+    summary: {
+      total: items.length,
+      installed: items.filter((item) => item.status === 'installed').length,
+      already_installed: items.filter((item) => item.status === 'already_installed').length,
+    },
+    items,
+  };
 }
 
 function buildNoArgSpec(
@@ -114,20 +168,6 @@ function writeJsonLine(payload: unknown) {
 export function buildPublicSystemCommandSpecs(
   getContracts: () => FrameworkContracts,
 ): Record<string, CommandSpec> {
-  const buildSystemActionSpec = (
-    command: string,
-    summary: string,
-    action: 'reconcile_modules' | 'seed_apply',
-  ) => buildNoArgSpec(
-    {
-      usage: `opl system ${command}`,
-      summary,
-      examples: [`opl system ${command}`],
-      group: 'system',
-    },
-    async () => buildPublicSystemActionPayload(await runOplSystemAction(getContracts(), action)),
-  );
-
   const systemStartupMaintenanceSpec: CommandSpec = {
     usage: 'opl system startup-maintenance [--scope <all|runtime_substrate>]',
     summary: 'Run App startup maintenance for clean managed modules, image seed state, plugin cache freshness, and reload guidance.',
@@ -198,6 +238,7 @@ export function buildPublicSystemCommandSpecs(
       });
       const familySkillSync = syncFullRuntimeFamilyCodexPluginsIfAvailable();
       const companionSkillSync = syncPackagedFullCompanionSkillsIfAvailable();
+      const agentPackageSync = await syncFullRuntimeAgentPackageLocksIfAvailable();
       return {
         version: 'g2',
         codex_config: {
@@ -219,6 +260,7 @@ export function buildPublicSystemCommandSpecs(
           },
           ...(familySkillSync ? { skill_sync: familySkillSync.skill_sync } : {}),
           ...(companionSkillSync ? { companion_skill_sync: companionSkillSync } : {}),
+          ...(agentPackageSync ? { agent_package_sync: agentPackageSync } : {}),
         },
       };
     },
@@ -341,11 +383,6 @@ export function buildPublicSystemCommandSpecs(
         group: 'system',
       },
       async () => buildPublicSystemActionPayload(await runOplSystemAction(getContracts(), 'update')),
-    ),
-    'system reconcile-modules': buildSystemActionSpec(
-      'reconcile-modules',
-      'Install missing modules and update clean domain modules to the latest git upstream.',
-      'reconcile_modules',
     ),
     'system startup-maintenance': systemStartupMaintenanceSpec,
     'system docker-webui doctor': buildNoArgSpec(

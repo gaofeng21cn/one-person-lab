@@ -7,7 +7,7 @@ import {
   test,
 } from '../../helpers.ts';
 
-test('update apply reports lock contention without running a parallel writer', () => {
+test('packages update reports lock contention without running a parallel writer', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-managed-update-lock-'));
   const stateRoot = path.join(homeRoot, 'state');
   fs.mkdirSync(stateRoot, { recursive: true });
@@ -23,7 +23,7 @@ test('update apply reports lock contention without running a parallel writer', (
   );
 
   try {
-    const failure = runCliFailure(['update', 'apply', '--component', 'capability_packages'], {
+    const failure = runCliFailure(['packages', 'update'], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       OPL_STATE_DIR: stateRoot,

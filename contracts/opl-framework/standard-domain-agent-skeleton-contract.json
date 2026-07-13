@@ -489,7 +489,9 @@
           "owner_receipt_ref",
           "typed_blocker_ref",
           "human_gate_ref",
-          "route_back_ref"
+          "route_back_ref",
+          "negative_result_ref",
+          "no_output_or_failure_diagnostic_ref"
         ],
         "authority_boundary": {
           "opl_can_decide_domain_completion": false,
@@ -504,7 +506,7 @@
         "surface_kind": "opl_standard_agent_user_stage_log_contract",
         "version": "standard-user-stage-log.v1",
         "owner": "one-person-lab",
-        "standard_agent_requirement": "domain_stage_closeout_must_return_user_readable_stage_semantics_or_typed_blocker",
+        "standard_agent_requirement": "domain_stage_attempt_returns_user_readable_semantics_or_progress_diagnostic",
         "opl_projection_surface": "stage_progress_log.user_stage_log",
         "domain_semantic_sources": [
           "typed_closeout_packet.user_stage_log",
@@ -532,7 +534,7 @@
           "cost"
         ],
         "accounting_policy": "OPL projects duration/token/cost status, source refs, and explicit missing reasons; duration may use provider or attempt wall-clock fallback for user readability while duration_telemetry_status stays missing until usage telemetry exists",
-        "missing_semantics_policy": "typed_blocker_or_missing_domain_semantic_summary_no_opl_inference",
+        "missing_semantics_policy": "progress_diagnostic_and_quality_debt_no_opl_domain_inference",
         "incomplete_semantics_policy": "emit_missing_domain_fields_without_opl_domain_inference",
         "token_policy": "observed_or_explicit_missing_null_no_zero_fill",
         "authority_boundary": {
@@ -547,7 +549,7 @@
         "surface_kind": "opl_stage_progress_delta_policy",
         "version": "progress-delta-policy.v1",
         "owner": "one-person-lab",
-        "standard_agent_requirement": "stage_closeout_must_classify_deliverable_progress_vs_platform_repair_or_return_typed_blocker",
+        "standard_agent_requirement": "stage_attempt_classifies_progress_or_emits_progress_diagnostic",
         "projection_surface": "stage_progress_log.user_stage_log",
         "required_fields": [
           "progress_delta_classification",
@@ -557,8 +559,11 @@
         ],
         "classification_values": [
           "deliverable_progress",
+          "negative_result",
+          "progress_diagnostic",
           "platform_repair",
           "mixed",
+          "quality_debt",
           "typed_blocker",
           "human_gate",
           "stop_loss"
@@ -594,7 +599,7 @@
           ]
         },
         "platform_only_is_not_deliverable_progress": true,
-        "missing_delta_policy": "emit_zero_deliverable_delta_and_next_forced_delta_without_inventing_domain_work",
+        "missing_delta_policy": "materialize_no_output_or_failure_diagnostic_and_next_forced_delta_without_inventing_domain_work",
         "authority_boundary": {
           "opl_can_infer_domain_work": false,
           "opl_can_read_artifact_body": false,
@@ -988,7 +993,7 @@
         },
         "shared_policy_release": {
           "policy_release_contract_ref": "contracts/opl-framework/foundry-agent-series-policy-release.json",
-          "policy_bundle_fingerprint": "sha256:7e50ce27f04c5fe801d4da0b385265def3c7e6df1d32b8f3b8ec29410ba5545c",
+    "policy_bundle_fingerprint": "sha256:2abdcbe6e7c238dfc0bcbff2251fb0eda505647927446a6fbf47ae8b28253415",
           "fingerprint_algorithm": "sha256:stable-json",
           "domain_contract_policy_release_pin_required": true,
           "domain_adapter_must_not_copy_policy_body_as_authority": true,
@@ -1082,7 +1087,9 @@
                 "owner_receipt_ref",
                 "typed_blocker_ref",
                 "human_gate_ref",
-                "route_back_ref"
+          "route_back_ref",
+          "negative_result_ref",
+          "no_output_or_failure_diagnostic_ref"
               ]
             },
             {
@@ -1115,10 +1122,13 @@
                 "next_forced_delta"
               ],
               "classification_values": [
-                "deliverable_progress",
-                "platform_repair",
-                "mixed",
-                "typed_blocker",
+          "deliverable_progress",
+          "negative_result",
+          "progress_diagnostic",
+          "platform_repair",
+          "mixed",
+          "quality_debt",
+          "typed_blocker",
                 "human_gate",
                 "stop_loss"
               ]
@@ -1212,7 +1222,7 @@
             "policy_release_can_claim_domain_ready": false
           }
         },
-        "policy_bundle_fingerprint": "sha256:7e50ce27f04c5fe801d4da0b385265def3c7e6df1d32b8f3b8ec29410ba5545c",
+        "policy_bundle_fingerprint": "sha256:2abdcbe6e7c238dfc0bcbff2251fb0eda505647927446a6fbf47ae8b28253415",
         "fingerprint_algorithm": "sha256:stable-json",
         "domain_pin_contract_ref": "contracts/foundry_agent_series.json#/shared_policy_release",
         "domain_pin_requirements": {
@@ -1352,7 +1362,9 @@
         "owner_receipt_ref",
         "typed_blocker_ref",
         "human_gate_ref",
-        "route_back_ref"
+          "route_back_ref",
+          "negative_result_ref",
+          "no_output_or_failure_diagnostic_ref"
       ],
       "authority_boundary": {
         "opl_can_decide_domain_completion": false,
@@ -1367,7 +1379,7 @@
       "surface_kind": "opl_standard_agent_user_stage_log_contract",
       "version": "standard-user-stage-log.v1",
       "owner": "one-person-lab",
-      "standard_agent_requirement": "domain_stage_closeout_must_return_user_readable_stage_semantics_or_typed_blocker",
+      "standard_agent_requirement": "domain_stage_attempt_returns_user_readable_semantics_or_progress_diagnostic",
       "opl_projection_surface": "stage_progress_log.user_stage_log",
       "domain_semantic_sources": [
         "typed_closeout_packet.user_stage_log",
@@ -1395,7 +1407,7 @@
         "cost"
       ],
       "accounting_policy": "OPL projects duration/token/cost status, source refs, and explicit missing reasons; duration may use provider or attempt wall-clock fallback for user readability while duration_telemetry_status stays missing until usage telemetry exists",
-      "missing_semantics_policy": "typed_blocker_or_missing_domain_semantic_summary_no_opl_inference",
+      "missing_semantics_policy": "progress_diagnostic_and_quality_debt_no_opl_domain_inference",
       "incomplete_semantics_policy": "emit_missing_domain_fields_without_opl_domain_inference",
       "token_policy": "observed_or_explicit_missing_null_no_zero_fill",
       "authority_boundary": {
@@ -1410,7 +1422,7 @@
       "surface_kind": "opl_stage_progress_delta_policy",
       "version": "progress-delta-policy.v1",
       "owner": "one-person-lab",
-      "standard_agent_requirement": "stage_closeout_must_classify_deliverable_progress_vs_platform_repair_or_return_typed_blocker",
+      "standard_agent_requirement": "stage_attempt_classifies_progress_or_emits_progress_diagnostic",
       "projection_surface": "stage_progress_log.user_stage_log",
       "required_fields": [
         "progress_delta_classification",
@@ -1419,10 +1431,13 @@
         "next_forced_delta"
       ],
       "classification_values": [
-        "deliverable_progress",
-        "platform_repair",
-        "mixed",
-        "typed_blocker",
+          "deliverable_progress",
+          "negative_result",
+          "progress_diagnostic",
+          "platform_repair",
+          "mixed",
+          "quality_debt",
+          "typed_blocker",
         "human_gate",
         "stop_loss"
       ],
@@ -1457,7 +1472,7 @@
         ]
       },
       "platform_only_is_not_deliverable_progress": true,
-      "missing_delta_policy": "emit_zero_deliverable_delta_and_next_forced_delta_without_inventing_domain_work",
+      "missing_delta_policy": "materialize_no_output_or_failure_diagnostic_and_next_forced_delta_without_inventing_domain_work",
       "authority_boundary": {
         "opl_can_infer_domain_work": false,
         "opl_can_read_artifact_body": false,
@@ -1529,12 +1544,15 @@
         "preflight_or_quality_review_can_loop_without_deliverable_delta": false,
         "quality_gaps_block_ordinary_progress_by_default": false,
         "consumable_artifact_advances_stage": true,
+        "no_output_or_failure_diagnostic_advances_stage": true,
         "retry_review_and_repair_limits_are_quality_budgets": true,
         "quality_budget_exhaustion_status": "completed_with_quality_debt",
         "quality_debt_blocks_stage_transition": false,
         "quality_debt_blocks_quality_export_or_ready_claims": true,
+        "zero_output_becomes_progress_diagnostic": true,
+        "corrupt_or_unreadable_output_becomes_progress_diagnostic": true,
         "safe_action_before_diagnostic_reconcile": true,
-        "next_delta_must_be_deliverable_receipt_blocker_or_handoff": true
+        "next_delta_may_be_deliverable_receipt_diagnostic_hard_blocker_or_handoff": true
       },
       "default_read_surface": {
         "root": "current_owner_delta",
@@ -1553,8 +1571,7 @@
         "cleanup_delete_gate"
       ],
       "hard_stop_gates": [
-        "zero_consumable_artifact",
-        "artifact_corrupt_or_unreadable",
+        "executor_unavailable",
         "safety_or_compliance",
         "permission_or_credential_boundary",
         "human_decision_required",
@@ -1573,7 +1590,8 @@
         "quality_gate_receipt_ref",
         "no_regression_ref",
         "route_back_ref",
-        "handoff_packet_ref"
+        "handoff_packet_ref",
+        "no_output_or_failure_diagnostic_ref"
       ],
       "authority_boundary": {
         "policy_can_claim_domain_ready": false,
@@ -1941,7 +1959,7 @@
       },
       "shared_policy_release": {
         "policy_release_contract_ref": "contracts/opl-framework/foundry-agent-series-policy-release.json",
-        "policy_bundle_fingerprint": "sha256:7e50ce27f04c5fe801d4da0b385265def3c7e6df1d32b8f3b8ec29410ba5545c",
+        "policy_bundle_fingerprint": "sha256:2abdcbe6e7c238dfc0bcbff2251fb0eda505647927446a6fbf47ae8b28253415",
         "fingerprint_algorithm": "sha256:stable-json",
         "domain_contract_policy_release_pin_required": true,
         "domain_adapter_must_not_copy_policy_body_as_authority": true,
@@ -2035,7 +2053,9 @@
               "owner_receipt_ref",
               "typed_blocker_ref",
               "human_gate_ref",
-              "route_back_ref"
+          "route_back_ref",
+          "negative_result_ref",
+          "no_output_or_failure_diagnostic_ref"
             ]
           },
           {
@@ -2068,10 +2088,13 @@
               "next_forced_delta"
             ],
             "classification_values": [
-              "deliverable_progress",
-              "platform_repair",
-              "mixed",
-              "typed_blocker",
+          "deliverable_progress",
+          "negative_result",
+          "progress_diagnostic",
+          "platform_repair",
+          "mixed",
+          "quality_debt",
+          "typed_blocker",
               "human_gate",
               "stop_loss"
             ]
@@ -2165,7 +2188,7 @@
           "policy_release_can_claim_domain_ready": false
         }
       },
-      "policy_bundle_fingerprint": "sha256:7e50ce27f04c5fe801d4da0b385265def3c7e6df1d32b8f3b8ec29410ba5545c",
+      "policy_bundle_fingerprint": "sha256:2abdcbe6e7c238dfc0bcbff2251fb0eda505647927446a6fbf47ae8b28253415",
       "fingerprint_algorithm": "sha256:stable-json",
       "domain_pin_contract_ref": "contracts/foundry_agent_series.json#/shared_policy_release",
       "domain_pin_requirements": {
@@ -2699,15 +2722,14 @@
         "codex_can_route_to_any_declared_stage": true,
         "quality_debt_counts_as_quality_acceptance": false
       },
-      "launch_admission_policy": {
+      "stage_context_policy": {
         "hard_blockers": [
-          "identity",
-          "owner",
-          "scope",
-          "selected_executor",
+          "wrong_target_identity_or_owner_conflict",
+          "scope_conflict_that_would_mutate_wrong_target",
+          "selected_executor_unavailable",
           "authority_boundary",
           "forbidden_write",
-          "currentness",
+          "currentness_identity_conflict",
           "permission_or_credential",
           "irreversible_action",
           "explicit_human_gate"
@@ -2834,7 +2856,7 @@
       "no_active_generic_owner_caller",
       "replacement_or_no_regression_evidence",
       "receipt_ref_reconciliation",
-      "user_stage_log_semantics_or_typed_blocker",
+      "user_stage_log_semantics_or_progress_diagnostic",
       "git_diff_check",
       "agent_pack_required_paths_resolve",
       "capability_map_refs_resolve",

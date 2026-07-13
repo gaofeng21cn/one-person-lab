@@ -31,7 +31,6 @@ def test_submit_stage_attempt_request_builds_temporal_command_and_returns_canoni
             "action_id": "paper-mission",
             "workspace_locator": {"workspace_root": "/tmp/mas"},
             "source_fingerprint": "sha256:test",
-            "require_stage_admission": True,
             "start": True,
         },
         opl_bin=["/opt/opl/bin/opl"],
@@ -42,7 +41,7 @@ def test_submit_stage_attempt_request_builds_temporal_command_and_returns_canoni
     assert seen["timeout_seconds"] == 120
     assert seen["command"][:4] == ["/opt/opl/bin/opl", "family-runtime", "attempt", "create"]
     assert "--provider" in seen["command"]
-    assert seen["command"][-3:] == ["--require-stage-admission", "--start", "--json"]
+    assert seen["command"][-2:] == ["--start", "--json"]
 
 
 def test_query_family_runtime_readback_supports_query_and_filtered_list() -> None:
@@ -77,7 +76,7 @@ def test_query_family_runtime_readback_supports_query_and_filtered_list() -> Non
 
 
 def test_family_runtime_client_fails_closed_for_invalid_requests_and_envelopes() -> None:
-    with pytest.raises(ValueError, match="must both be true"):
+    with pytest.raises(ValueError, match="request.start must be true"):
         submit_stage_attempt_request(
             {"domain_id": "mas", "stage_id": "analysis", "workspace_locator": {"workspace_root": "/tmp"}},
             opl_bin="opl",

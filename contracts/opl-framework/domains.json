@@ -16,7 +16,7 @@
           "independent_domain_agent.agent_id",
           "single_app_skill.skill_id"
         ],
-        "agent_package_manifest_ref": "contracts/opl-framework/agent-packages/mag.json"
+        "agent_package_manifest_ref": "contracts/opl-framework/packages/mag.json"
       },
       "product_layer": "foundry_agent",
       "foundry_agent_package": {
@@ -79,7 +79,7 @@
           "independent_domain_agent.agent_id",
           "single_app_skill.skill_id"
         ],
-        "agent_package_manifest_ref": "contracts/opl-framework/agent-packages/mas.json"
+        "agent_package_manifest_ref": "contracts/opl-framework/packages/mas.json"
       },
       "product_layer": "foundry_agent",
       "foundry_agent_package": {
@@ -150,7 +150,7 @@
           "independent_domain_agent.agent_id",
           "single_app_skill.skill_id"
         ],
-        "agent_package_manifest_ref": "contracts/opl-framework/agent-packages/rca.json"
+        "agent_package_manifest_ref": "contracts/opl-framework/packages/rca.json"
       },
       "product_layer": "foundry_agent",
       "foundry_agent_package": {

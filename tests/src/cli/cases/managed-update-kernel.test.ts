@@ -6,9 +6,9 @@ import { computePackageChannelTreeSha256 } from '../../../../src/modules/connect
 import { writeFakeBookForgeGeneratedSurfacePack } from '../../cli-codex-default-shell-helpers.ts';
 
 import './managed-update-kernel-cases/lock-contention.ts';
-import './managed-update-kernel-cases/runtime-toolchain-maintenance.ts';
+import './managed-update-kernel-cases/base-runtime-maintenance.ts';
 
-const MODULE_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.module.source.v1+gzip';
+const PACKAGE_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.package.source.v1+gzip';
 const CHANNEL_MANIFEST_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.release.channel-manifest.v1+json';
 
 function sha256(filePath: string) {
@@ -21,6 +21,17 @@ function readJsonFile(filePath: string) {
 
 function readModuleHeadSha(filePath: string) {
   return (readJsonFile(filePath) as { source_git: { head_sha: string } }).source_git.head_sha;
+}
+
+function packageIdForModule(moduleId: string) {
+  return ({
+    medautoscience: 'mas',
+    medautogrant: 'mag',
+    redcube: 'rca',
+    oplmetaagent: 'oma',
+    oplbookforge: 'obf',
+    scholarskills: 'mas-scholar-skills',
+  } as Record<string, string>)[moduleId] ?? moduleId;
 }
 
 function writePackagedModuleFixture(input: {
@@ -98,7 +109,7 @@ function writePackagedModuleFixture(input: {
     ? {
       root: previousRoot,
       channel_version: 'previous-fixture',
-      artifact_ref: `ghcr.io/owner/one-person-lab-modules/${input.repoName}:previous-fixture`,
+      artifact_ref: `ghcr.io/owner/one-person-lab-packages/${packageIdForModule(input.moduleId)}:previous-fixture`,
       layer_digest: `sha256:${input.previousHeadSha}`,
       source_archive_sha256: input.previousHeadSha,
       source_git_head_sha: input.previousHeadSha,
@@ -126,7 +137,7 @@ function writePackagedModuleFixture(input: {
         current: {
           root: input.root,
           channel_version: 'fixture',
-          artifact_ref: `ghcr.io/owner/one-person-lab-modules/${input.repoName}:fixture`,
+          artifact_ref: `ghcr.io/owner/one-person-lab-packages/${packageIdForModule(input.moduleId)}:fixture`,
           layer_digest: `sha256:${input.headSha}`,
           source_archive_sha256: input.headSha,
           source_git_head_sha: input.headSha,
@@ -342,7 +353,7 @@ function writeManagedUpdatePackageChannelFixture(input: {
   const curlLogPath = path.join(input.root, 'curl.jsonl');
   const manifests: Record<string, Record<string, unknown>> = {};
   const blobsByDigest: Record<string, string> = {};
-  const moduleEntries: Record<string, Record<string, unknown>> = {};
+  const packageEntries: Record<string, Record<string, unknown>> = {};
   fs.mkdirSync(blobRoot, { recursive: true });
   fs.mkdirSync(fakeBin, { recursive: true });
 
@@ -352,26 +363,29 @@ function writeManagedUpdatePackageChannelFixture(input: {
     const archivePath = path.join(input.root, `${module.repoName}-${input.version}.tar.gz`);
     execFileSync('tar', ['-czf', archivePath, module.repoName], { cwd: sourceRoot });
     const archiveDigest = sha256(archivePath);
-    moduleEntries[module.moduleId] = {
-      module_id: module.moduleId,
-      repo_name: module.repoName,
-      artifact: `ghcr.io/owner/one-person-lab-modules/${module.repoName}:${input.version}`,
-      source_archive: {
-        sha256: archiveDigest,
-      },
-      source_git: {
-        head_sha: module.sourceHeadSha,
-      },
+    const packageId = packageIdForModule(module.moduleId);
+    packageEntries[packageId] = {
+      package_id: packageId,
+      selected_version: input.version,
+      versions: [{
+        package_version: input.version,
+        selection_status: 'selected_for_release_set',
+        source_artifact_ref: `ghcr.io/owner/one-person-lab-packages/${packageId}:${input.version}`,
+        artifact_digest: `sha256:${'a'.repeat(64)}`,
+        artifact_status: 'published_immutable',
+        package_content_digest: `sha256:${archiveDigest}`,
+        owner_source_commit: module.sourceHeadSha,
+      }],
     };
-    manifests[`owner/one-person-lab-modules/${module.repoName}`] = {
+    manifests[`owner/one-person-lab-packages/${packageId}`] = {
       schemaVersion: 2,
       mediaType: 'application/vnd.oci.image.manifest.v1+json',
       layers: [
         {
-          mediaType: MODULE_LAYER_MEDIA_TYPE,
+          mediaType: PACKAGE_LAYER_MEDIA_TYPE,
           digest: `sha256:${archiveDigest}`,
           annotations: {
-            'org.opencontainers.image.title': `dist/opl-packages/modules/${module.repoName}-${input.version}.tar.gz`,
+            'org.opencontainers.image.title': `dist/opl-packages/packages/${packageId}/${packageId}-${input.version}.tar.gz`,
           },
         },
       ],
@@ -384,9 +398,10 @@ function writeManagedUpdatePackageChannelFixture(input: {
     channelManifestPath,
     JSON.stringify({
       manifest_version: 1,
-      opl_version: input.version,
+      release_set_generation: input.version,
+      package_catalog_surface_kind: 'opl_package_catalog.v1',
       packages: {
-        modules: moduleEntries,
+        package_catalog: packageEntries,
       },
     }),
     'utf8',
@@ -458,7 +473,7 @@ function withCliTimeout<T>(timeoutMs: string, fn: () => T): T {
   }
 }
 
-test('update apply for capability packages executes the managed adapter and records component receipts', () => {
+test('packages update executes the existing managed adapter and records one package transaction receipt', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-managed-update-apply-agent-'));
   const stateRoot = path.join(homeRoot, 'state');
   const moduleEnv = writeManagedUpdateModuleFixtures(homeRoot);
@@ -477,7 +492,7 @@ exit 2
 `);
 
   try {
-    const output = withCliTimeout('120000', () => runCli(['update', 'apply', '--component', 'capability_packages'], {
+    const output = withCliTimeout('120000', () => runCli(['packages', 'update'], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       OPL_STATE_DIR: stateRoot,
@@ -510,7 +525,7 @@ exit 2
     assert.equal(output.managed_update.execution.adapter_results[0].apply_mode, 'auto_apply');
     assert.equal(output.managed_update.execution.adapter_results[0].status_detail.auto_apply_eligible, true);
     assert.equal(output.managed_update.execution.adapter_results[0].status_detail.app_background_safe, true);
-    assert.equal(output.managed_update.execution.adapter_results[0].status_detail.clean_managed_targets_count, 6);
+    assert.equal(output.managed_update.execution.adapter_results[0].status_detail.clean_managed_targets_count, 5);
     assert.equal(output.managed_update.execution.adapter_results[0].status_detail.manual_required_targets_count, 0);
     assert.equal(output.managed_update.execution.adapter_results[0].status_detail.post_apply_status, 'completed');
     assert.equal(output.managed_update.execution.adapter_results[0].status_detail.reload_status, 'recommended');
@@ -522,37 +537,38 @@ exit 2
     assert.equal(output.managed_update.execution.adapter_results[0].result.apply_mode, 'auto_apply');
     assert.equal(output.managed_update.execution.adapter_results[0].result.app_background_safe, true);
     assert.equal(output.managed_update.execution.adapter_results[0].result.auto_apply_scope, 'clean_opl_managed_module_roots_only');
-    assert.equal(output.managed_update.execution.adapter_results[0].result.read_model_guidance.status_plane, 'opl update status --component capability_packages --json');
+    assert.equal(output.managed_update.execution.adapter_results[0].result.read_model_guidance.status_plane, 'opl packages status --json');
     assert.equal(
       output.managed_update.execution.adapter_results[0].result.read_model_guidance.component_receipt_ledger,
       path.join(stateRoot, 'managed-update-component-receipts.json'),
     );
     assert.deepEqual(
       output.managed_update.execution.adapter_results[0].post_apply_actions.map((entry: any) => entry.action_id),
-      ['reconcile_modules', 'sync_skills', 'codex_surface'],
+      ['reconcile_packages', 'sync_skills', 'sync_codex_skill_plugin_projection'],
     );
     assert.deepEqual(
       output.managed_update.execution.adapter_results[0].post_apply_actions.map((entry: any) => entry.status),
       ['completed', 'completed', 'completed'],
     );
     const capabilityExposure = output.managed_update.execution.adapter_results[0].post_apply_actions.find((entry: any) => (
-      entry.action_id === 'codex_surface'
+      entry.action_id === 'sync_codex_skill_plugin_projection'
     ));
     assert.deepEqual(
-      (capabilityExposure?.result?.target_bound_scholarskills_sync as Record<string, unknown> | undefined),
+      (capabilityExposure?.result?.target_bound_package_scope_activation as Record<string, unknown> | undefined),
       {
-        status: 'awaiting_workspace_or_quest_target',
-        workspace_command_ref: 'opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace <workspace-root> --json',
-        quest_command_ref: 'opl connect sync-skills --domain mas-scholar-skills --scope quest --target-quest <quest-root> --json',
+        status: 'not_applicable',
+        lifecycle_owner: 'opl_packages',
+        status_command_ref: 'opl packages status --package-id mas --scope <workspace|quest> --json',
+        repair_command_ref: 'opl packages repair mas --scope <workspace|quest> --json',
       },
     );
     assert.equal(output.managed_update.execution.receipt_record.status, 'recorded');
     assert.equal(output.managed_update.execution.receipt_record.recorded_receipt_count, 1);
-    assert.equal(output.managed_update.execution.receipt_record.receipt_refs[0].startsWith('opl://managed-update/capability_packages/apply/'), true);
+    assert.equal(output.managed_update.execution.receipt_record.receipt_refs[0].startsWith('opl://managed-update/opl_packages/apply/'), true);
     assert.equal(fs.existsSync(path.join(stateRoot, 'managed-update-kernel.lock')), false);
     const receiptLedger = readJsonFile(path.join(stateRoot, 'managed-update-component-receipts.json')) as any;
     assert.equal(receiptLedger.receipts.length, 1);
-    assert.equal(receiptLedger.receipts[0].component_id, 'capability_packages');
+    assert.equal(receiptLedger.receipts[0].component_id, 'opl_packages');
     assert.equal(receiptLedger.receipts[0].operation, 'apply');
     assert.equal(receiptLedger.receipts[0].verify_result, 'passed');
     assert.equal(typeof receiptLedger.receipts[0].activated_at, 'string');
@@ -563,13 +579,13 @@ exit 2
     assert.equal(receiptLedger.receipts[0].owner_projection.package_manager_claim, false);
     assert.equal(receiptLedger.receipts[0].status_detail.auto_apply_eligible, true);
     assert.equal(receiptLedger.receipts[0].status_detail.app_background_safe, true);
-    assert.equal(receiptLedger.receipts[0].status_detail.clean_managed_targets_count, 6);
+    assert.equal(receiptLedger.receipts[0].status_detail.clean_managed_targets_count, 5);
     assert.equal(receiptLedger.receipts[0].status_detail.manual_required_targets_count, 0);
     assert.equal(receiptLedger.receipts[0].status_detail.post_apply_status, 'completed');
     assert.equal(receiptLedger.receipts[0].status_detail.reload_status, 'recommended');
     assert.deepEqual(
       receiptLedger.receipts[0].post_apply_action_statuses.map((entry: any) => entry.action_id),
-      ['reconcile_modules', 'sync_skills', 'codex_surface'],
+      ['reconcile_packages', 'sync_skills', 'sync_codex_skill_plugin_projection'],
     );
     assert.equal(receiptLedger.receipts[0].reload_guidance.reload_recommended, true);
     assert.deepEqual(receiptLedger.receipts[0].reload_guidance.reload_targets, [
@@ -579,7 +595,11 @@ exit 2
     assert.equal(receiptLedger.receipts[0].authority_boundary.can_write_domain_truth, false);
     assert.equal(typeof receiptLedger.receipts[0].adapter_result_ref, 'string');
     const agents = output.managed_update.components[0];
-    assert.equal(agents.component_id, 'capability_packages');
+    assert.equal(agents.component_id, 'opl_packages');
+    assert.equal(agents.current.channel_manifest, 'ghcr.io/gaofeng21cn/one-person-lab-manifest:latest-stable');
+    assert.equal(agents.current.oci_distribution.channel_ref, 'ghcr.io/gaofeng21cn/one-person-lab-manifest:latest-stable');
+    assert.equal(agents.receipt.source_manifest_ref, 'ghcr.io/gaofeng21cn/one-person-lab-manifest:latest-stable');
+    assert.doesNotMatch(JSON.stringify(agents), /one-person-lab-manifest:latest(?:"|\/)/);
     assert.equal(agents.auto_apply.eligible, true);
     assert.equal(agents.auto_apply.app_background_safe, true);
     assert.equal(agents.receipt.last_receipt_ref, receiptLedger.receipts[0].receipt_ref);
@@ -600,14 +620,14 @@ exit 2
     );
     assert.equal(
       readModuleHeadSha(path.join(moduleEnv.OPL_MODULES_ROOT, 'mas-scholar-skills', 'opl-runtime-module.json')),
-      'scholarskills-updated-head-sha',
+      'scholarskills-head-sha',
     );
     assert.equal(
       readModuleHeadSha(path.join(`${moduleEnv.OPL_MODULES_ROOT}/med-autoscience.previous`, 'opl-runtime-module.json')),
       'mas-head-sha',
     );
 
-    const status = withCliTimeout('120000', () => runCli(['update', 'status', '--component', 'capability_packages'], {
+    const status = withCliTimeout('120000', () => runCli(['packages', 'update', '--dry-run'], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       OPL_STATE_DIR: stateRoot,
@@ -626,74 +646,6 @@ exit 2
     assert.equal(status.managed_update.components[0].receipt.reload_guidance.reload_recommended, true);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
-    fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
-  }
-});
-
-test('update rollback for capability packages restores recorded previous package roots', () => {
-  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-managed-update-rollback-agent-'));
-  const stateRoot = path.join(homeRoot, 'state');
-  const moduleEnv = writeManagedUpdateModuleFixtures(homeRoot);
-  const packageChannel = writeManagedUpdatePackageChannelFixture({
-    root: path.join(homeRoot, 'channel-rollback'),
-    version: '26.6.100-nightly',
-    modules: managedUpdateModules('rollback-current'),
-  });
-  const codexFixture = createFakeCodexFixture(`
-if [ "$1" = "--version" ]; then
-  echo "codex-cli 0.134.0"
-  exit 0
-fi
-echo "Unsupported codex fixture command: $*" >&2
-exit 2
-`);
-  const env = {
-    HOME: homeRoot,
-    CODEX_HOME: path.join(homeRoot, 'codex-home'),
-    OPL_STATE_DIR: stateRoot,
-    ...moduleEnv,
-    OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
-    OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
-    OPL_PACKAGES_OWNER: 'owner',
-    OPL_PACKAGE_CHANNEL_MANIFEST_REF: 'ghcr.io/owner/one-person-lab-manifest:26.6.100-nightly',
-    PATH: `${codexFixture.fixtureRoot}${path.delimiter}${packageChannel.fakeBin}${path.delimiter}${process.env.PATH ?? ''}`,
-  };
-
-  try {
-    withCliTimeout('120000', () => runCli(['update', 'apply', '--component', 'capability_packages'], env));
-    assert.equal(
-      readModuleHeadSha(path.join(moduleEnv.OPL_MODULES_ROOT, 'med-autoscience', 'opl-runtime-module.json')),
-      'mas-rollback-current-sha',
-    );
-
-    const rollback = withCliTimeout('120000', () => runCli(['update', 'rollback', '--component', 'capability_packages'], env)) as any;
-
-    assert.equal(rollback.managed_update.operation, 'rollback');
-    assert.equal(rollback.managed_update.execution.status, 'completed');
-    assert.equal(rollback.managed_update.execution.adapter_results[0].status, 'completed');
-    assert.equal(rollback.managed_update.execution.adapter_results[0].result.summary.completed_targets_count, 6);
-    assert.equal(rollback.managed_update.execution.receipt_record.status, 'recorded');
-    assert.equal(rollback.managed_update.execution.receipt_record.recorded_receipt_count, 1);
-    assert.equal(rollback.managed_update.components[0].receipt.verify_result, 'passed');
-    assert.match(rollback.managed_update.components[0].receipt.rollback_ref ?? '', /^opl:\/\/managed-update\/capability_packages\/rollback\//);
-    assert.equal(
-      readModuleHeadSha(path.join(moduleEnv.OPL_MODULES_ROOT, 'med-autoscience', 'opl-runtime-module.json')),
-      'mas-head-sha',
-    );
-    assert.equal(
-      readModuleHeadSha(path.join(`${moduleEnv.OPL_MODULES_ROOT}/med-autoscience.previous`, 'opl-runtime-module.json')),
-      'mas-rollback-current-sha',
-    );
-    assert.equal(
-      readModuleHeadSha(path.join(moduleEnv.OPL_MODULES_ROOT, 'mas-scholar-skills', 'opl-runtime-module.json')),
-      'scholarskills-head-sha',
-    );
-    assert.equal(
-      readModuleHeadSha(path.join(`${moduleEnv.OPL_MODULES_ROOT}/mas-scholar-skills.previous`, 'opl-runtime-module.json')),
-      'scholarskills-rollback-current-sha',
-    );
-  } finally {
-    fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
   }
 });

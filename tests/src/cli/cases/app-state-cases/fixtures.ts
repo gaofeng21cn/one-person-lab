@@ -52,6 +52,23 @@ export function bindMasWorkspaceForAppState(input: {
   );
 }
 
+export function collectObjectKeys(value: unknown, keys = new Set<string>()) {
+  if (!value || typeof value !== 'object') {
+    return keys;
+  }
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      collectObjectKeys(entry, keys);
+    }
+    return keys;
+  }
+  for (const [key, nested] of Object.entries(value)) {
+    keys.add(key);
+    collectObjectKeys(nested, keys);
+  }
+  return keys;
+}
+
 export function writeMasProgressPortalFixture(workspaceRoot: string, profilePath: string) {
   const portalPayloadPath = path.join(workspaceRoot, 'artifacts', 'runtime', 'progress_portal', 'latest.json');
   fs.mkdirSync(path.dirname(portalPayloadPath), { recursive: true });
@@ -196,262 +213,4 @@ export function writeCurrentOwnerDeltaProjectionCacheFixture(
     }, null, 2)}\n`,
     'utf8',
   );
-}
-
-export function writeStageRunAuthorizationLedgerFixture(input: {
-  stateDir: string;
-  receipt: Record<string, unknown>;
-  receipts?: Array<Record<string, unknown>>;
-}) {
-  fs.mkdirSync(input.stateDir, { recursive: true });
-  fs.writeFileSync(
-    path.join(input.stateDir, 'stage-run-execution-authorization-ledger.json'),
-    `${JSON.stringify({
-      surface_kind: 'opl_stage_run_execution_authorization_ledger',
-      version: 'stage-run-execution-authorization-ledger.v1',
-      receipts: input.receipts ?? [input.receipt],
-    }, null, 2)}\n`,
-    'utf8',
-  );
-}
-
-export function appStateStageRunAuthorizationReceipt(overrides: Record<string, unknown> = {}) {
-  const stageRunId = 'app-stage-run:medautoscience:domain-owner-default-executor-dispatch';
-  const decisionRef = 'opl://stage-attempts/sat_dm003/execution-authorizations/lease_dm003/wf_dm003';
-  const stageManifestRef = 'opl://stage-manifests/domain_owner%2Fdefault-executor-dispatch';
-  const currentPointerRef = `opl://stage-runs/${encodeURIComponent(stageRunId)}/current`;
-  return {
-    surface_kind: 'opl_stage_run_execution_authorization_receipt',
-    version: 'stage-run-execution-authorization-ledger.v1',
-    receipt_ref: `opl://stage-run-execution-authorization/${encodeURIComponent(stageRunId)}/${encodeURIComponent(decisionRef)}`,
-    receipt_status: 'recorded',
-    recorded_at: '2026-06-06T00:00:00.000Z',
-    stage_run_id: stageRunId,
-    domain_id: 'medautoscience',
-    study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
-    domain_context: {
-      domain_id: 'medautoscience',
-      study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
-      stage_id: 'domain_owner/default-executor-dispatch',
-    },
-    stage_id: 'domain_owner/default-executor-dispatch',
-    generation: 0,
-    phase: 'launch',
-    selected_executor: 'codex_cli',
-    provider_attempt_ref: 'temporal://attempt/sat_dm003',
-    stage_attempt_id: 'sat_dm003',
-    attempt_lease_ref: 'opl://stage-attempts/sat_dm003/leases/lease_dm003/active',
-    attempt_lease_status: 'active',
-    execution_authorization_decision_ref: decisionRef,
-    workspace_scope_ref: 'workspace:/fixture/dm-cvd',
-    artifact_scope_ref: 'stage-packet:studies/003-dpcc-primary-care-phenotype-treatment-gap/dispatch.json',
-    action_type: 'domain_owner_default_executor_dispatch',
-    work_unit_id: '003-dpcc-primary-care-phenotype-treatment-gap',
-    work_unit_fingerprint: 'default_executor_work_unit_dm003',
-    decision: 'authorize',
-    reason: 'stage_run_execution_authorized_for_fixture',
-    operator: 'one-person-lab',
-    source_fingerprint: 'default_executor_source_dm003',
-    idempotency_key: 'idem_dm003',
-    current_pointer_ref: currentPointerRef,
-    stage_manifest_ref: stageManifestRef,
-    owner_answer_ref: null,
-    owner_answer_kind: null,
-    closeout_receipt_ref: null,
-    owner_answer_stage_run_id: null,
-    owner_answer_generation: null,
-    owner_answer_manifest_ref: null,
-    owner_answer_current_pointer_ref: null,
-    owner_answer_source_fingerprint: null,
-    owner_answer_idempotency_key: null,
-    closeout_refs: [],
-    execution_authorization_report: {
-      surface_kind: 'opl_stage_run_execution_authorization_report',
-      version: 'stage-run-execution-authorization.v1',
-      phase: 'launch',
-      status: 'authorized',
-      execution_authorized: true,
-      launch_blockers: [],
-      closeout_binding_blockers: [],
-      closeout_binding: {
-        owner_answer_ref: null,
-        owner_answer_kind: null,
-        closeout_receipt_ref: null,
-        bound_to_stage_run: false,
-        bound_to_stage_manifest: false,
-        bound_to_current_pointer: false,
-        bound_to_source_fingerprint: false,
-        bound_to_idempotency_key: false,
-      },
-      opl_runtime_blocker: null,
-      authority_boundary: {
-        opl_can_write_domain_truth: false,
-        opl_can_create_owner_receipt: false,
-        opl_can_create_typed_blocker: false,
-      },
-    },
-    authority_boundary: {
-      refs_only: true,
-      owner: 'one-person-lab',
-      can_write_domain_truth: false,
-      can_read_memory_body: false,
-      can_read_artifact_body: false,
-      can_mutate_artifact_body: false,
-      can_create_owner_receipt: false,
-      can_create_typed_blocker: false,
-      can_authorize_quality_or_export: false,
-      can_close_owner_chain: false,
-      can_close_domain_ready: false,
-      can_claim_domain_ready: false,
-      can_claim_production_ready: false,
-      provider_completion_counts_as_domain_ready: false,
-      authorization_receipt_is_domain_owner_answer: false,
-    },
-    ...overrides,
-  };
-}
-
-export function appStateStageRunCloseoutAuthorizationReceipt(overrides: Record<string, unknown> = {}) {
-  const stageRunId = 'app-stage-run:medautoscience:domain-owner-default-executor-dispatch';
-  const stageManifestRef = 'opl://stage-manifests/domain_owner%2Fdefault-executor-dispatch';
-  const currentPointerRef = `opl://stage-runs/${encodeURIComponent(stageRunId)}/current`;
-  const decisionRef = 'opl://stage-attempts/sat_dm003_closeout/execution-authorizations/lease_dm003_closeout/wf_dm003_closeout';
-  const ownerAnswerRef =
-    'artifacts/stage_outputs/08-publication_package_handoff/receipts/typed_blocker.json';
-  return appStateStageRunAuthorizationReceipt({
-    receipt_ref:
-      `opl://stage-run-execution-authorization/${encodeURIComponent(stageRunId)}/${encodeURIComponent(decisionRef)}`,
-    phase: 'closeout',
-    provider_attempt_ref: 'temporal://attempt/sat_dm003_closeout',
-    stage_attempt_id: 'sat_dm003_closeout',
-    attempt_lease_ref: 'opl://stage-attempts/sat_dm003_closeout/leases/lease_dm003_closeout/active',
-    execution_authorization_decision_ref: decisionRef,
-    source_fingerprint: 'default_executor_source_dm003_closeout',
-    idempotency_key: 'idem_dm003_closeout',
-    current_pointer_ref: currentPointerRef,
-    stage_manifest_ref: stageManifestRef,
-    owner_answer_ref: ownerAnswerRef,
-    owner_answer_kind: 'typed_blocker',
-    closeout_receipt_ref: ownerAnswerRef,
-    owner_answer_stage_run_id: stageRunId,
-    owner_answer_generation: 0,
-    owner_answer_manifest_ref: stageManifestRef,
-    owner_answer_current_pointer_ref: currentPointerRef,
-    owner_answer_source_fingerprint: 'default_executor_source_dm003_closeout',
-    owner_answer_idempotency_key: 'idem_dm003_closeout',
-    closeout_refs: [ownerAnswerRef],
-    execution_authorization_report: {
-      surface_kind: 'opl_stage_run_execution_authorization_report',
-      version: 'stage-run-execution-authorization.v1',
-      phase: 'closeout',
-      status: 'authorized',
-      execution_authorized: true,
-      launch_blockers: [],
-      closeout_binding_blockers: [],
-      closeout_binding: {
-        owner_answer_ref: ownerAnswerRef,
-        owner_answer_kind: 'typed_blocker',
-        closeout_receipt_ref: ownerAnswerRef,
-        bound_to_stage_run: true,
-        bound_to_stage_manifest: true,
-        bound_to_current_pointer: true,
-        bound_to_source_fingerprint: true,
-        bound_to_idempotency_key: true,
-      },
-      opl_runtime_blocker: null,
-      authority_boundary: {
-        opl_can_write_domain_truth: false,
-        opl_can_create_owner_receipt: false,
-        opl_can_create_typed_blocker: false,
-      },
-    },
-    ...overrides,
-  });
-}
-
-export function writeMasPublicationHandoffOwnerAnswerProjectionFixture(input: {
-  workspaceRoot: string;
-  studyId: string;
-  receipt: Record<string, unknown>;
-}) {
-  const stageRoot = path.join(
-    input.workspaceRoot,
-    'studies',
-    input.studyId,
-    'artifacts',
-    'stage_outputs',
-    '08-publication_package_handoff',
-  );
-  const projectionPath = path.join(stageRoot, 'projection', 'current_owner_delta.json');
-  fs.mkdirSync(path.dirname(projectionPath), { recursive: true });
-  const stageRunId = `stage-run::${input.studyId}::08-publication_package_handoff`;
-  const stageManifestRef = 'artifacts/stage_outputs/08-publication_package_handoff/stage_manifest.json';
-  const currentPointerRef = 'artifacts/stage_outputs/08-publication_package_handoff/current.json';
-  fs.writeFileSync(
-    projectionPath,
-    `${JSON.stringify({
-      action: 'complete_medical_paper_readiness_surface',
-      closeout_binding: {
-        surface_kind: 'publication_handoff_closeout_binding',
-        trusted_opl_execution_authorization: true,
-        provider_attempt_ref: input.receipt.provider_attempt_ref,
-        attempt_lease_ref: input.receipt.attempt_lease_ref,
-        attempt_lease_status: input.receipt.attempt_lease_status,
-        execution_authorization_decision_ref: input.receipt.execution_authorization_decision_ref,
-        source_fingerprint: input.receipt.source_fingerprint,
-        idempotency_key: input.receipt.idempotency_key,
-        stage_run_id: stageRunId,
-        stage_run_ref: stageRunId,
-        generation: 0,
-        stage_manifest_ref: stageManifestRef,
-        current_pointer_ref: currentPointerRef,
-        body_included: false,
-        bound_to_stage_run: true,
-        bound_to_stage_manifest: true,
-        bound_to_current_pointer: true,
-        bound_to_source_fingerprint: true,
-      },
-      current_pointer_ref: currentPointerRef,
-      delta_id: input.receipt.idempotency_key,
-      hard_gate: {
-        state: 'domain_owner_answer_recorded',
-        owner_answer_kind: 'typed_blocker',
-        owner_answer_ref: 'artifacts/stage_outputs/08-publication_package_handoff/receipts/typed_blocker.json',
-        owner_answer_stage_run_id: stageRunId,
-        owner_answer_generation: 0,
-        owner_answer_manifest_ref: stageManifestRef,
-        owner_answer_current_pointer_ref: currentPointerRef,
-        owner_answer_source_fingerprint: input.receipt.source_fingerprint,
-        owner_answer_idempotency_key: input.receipt.idempotency_key,
-        stage_manifest_ref: stageManifestRef,
-        current_pointer_ref: currentPointerRef,
-      },
-      latest_owner_answer_kind: 'typed_blocker',
-      latest_owner_answer_ref: 'artifacts/stage_outputs/08-publication_package_handoff/receipts/typed_blocker.json',
-      latest_typed_blocker_ref: 'artifacts/stage_outputs/08-publication_package_handoff/receipts/typed_blocker.json',
-      owner: 'MedAutoScience',
-      reason: 'medical_paper_readiness_not_ready',
-      source_fingerprint: input.receipt.source_fingerprint,
-      stage_manifest_ref: stageManifestRef,
-      stage_run_id: stageRunId,
-    }, null, 2)}\n`,
-    'utf8',
-  );
-}
-
-export function collectObjectKeys(value: unknown, keys = new Set<string>()) {
-  if (!value || typeof value !== 'object') {
-    return keys;
-  }
-  if (Array.isArray(value)) {
-    for (const entry of value) {
-      collectObjectKeys(entry, keys);
-    }
-    return keys;
-  }
-  for (const [key, nested] of Object.entries(value)) {
-    keys.add(key);
-    collectObjectKeys(nested, keys);
-  }
-  return keys;
 }

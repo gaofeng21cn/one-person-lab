@@ -5,10 +5,13 @@ import type { JsonRecord } from '../../kernel/json-record.ts';
 import {
   readBundledCodexDefaultProfile,
   listOplAgentPackages,
+  canonicalAgentPackageId,
   readLocalCodexAccessState,
   readLocalCodexDefaultsIfAvailable,
   runOplAgentPackageStatus,
+  readOplFlowDefaultUserInstructions,
 } from '../connect/index.ts';
+import { listWorkspaceBindings } from '../workspace/index.ts';
 import {
   buildOplEndpoints,
   familyRuntimePaths,
@@ -34,6 +37,7 @@ import { buildRuntimeTraySnapshot } from './runtime-tray-snapshot.ts';
 import { selectAppStateCurrentOwnerDeltaReadModel } from './app-state-current-owner-delta.ts';
 import { buildAgentLabDomainFeedbackSelfEvolutionReadModel } from '../foundry-lab/index.ts';
 import { buildFeedbackOpsReadModel } from '../foundry-lab/index.ts';
+import { readCodexUserInstructions } from './codex-personalization.ts';
 
 export { parseAppActionExecuteArgs, runOplAppActionExecute } from './app-state-parts/action-execute.ts';
 
@@ -66,58 +70,57 @@ export function parseAppStateArgs(args: string[]): { profile: AppStateProfile } 
   return { profile: parseAppStateProfile(profile) };
 }
 
-function publicModuleItems(profile: AppStateProfile) {
+function publicRuntimeSourceCarriers(profile: AppStateProfile) {
   return buildOplModules({ profile })
     .modules
     .modules
     .filter((module) => module.default_install)
     .map((module) => ({
-      module_id: module.module_id,
+      package_id: canonicalAgentPackageId(module.module_id),
+      carrier_id: module.module_id,
       label: module.label,
       scope: module.scope,
       description: module.description,
-      default_install: module.default_install,
-      installed: module.installed,
-      install_origin: module.install_origin,
-      checkout_path: module.checkout_path,
-      managed_checkout_path: module.managed_checkout_path,
+      default_carrier: module.default_install,
+      source_present: module.installed,
+      source_origin: module.install_origin,
+      source_path: module.checkout_path,
+      managed_source_path: module.managed_checkout_path,
       repo_url: module.repo_url,
-      health_status: module.health_status,
+      source_health_status: module.health_status,
       git: module.git,
       source_policy: module.source_policy,
       capabilities: module.capabilities,
-      available_actions: module.available_actions,
-      recommended_action: module.recommended_action,
     }));
 }
 
-function resolveModuleSource(items: ReturnType<typeof publicModuleItems>) {
-  const envOverride = items.find((entry) => entry.install_origin === 'env_override');
+function resolveModuleSource(items: ReturnType<typeof publicRuntimeSourceCarriers>) {
+  const envOverride = items.find((entry) => entry.source_origin === 'env_override');
   if (envOverride) {
     return {
       mode: 'env_override',
       reason: 'module_path_env_override',
-      repo_path: envOverride.checkout_path,
-      modules_root: pathRootFromManagedCheckout(envOverride.managed_checkout_path),
+      repo_path: envOverride.source_path,
+      runtime_sources_root: pathRootFromManagedCheckout(envOverride.managed_source_path),
     };
   }
 
-  const sibling = items.find((entry) => entry.install_origin === 'sibling_workspace');
+  const sibling = items.find((entry) => entry.source_origin === 'sibling_workspace');
   if (sibling) {
     return {
       mode: 'developer_workspace',
       reason: 'developer_mode_prefers_local_sibling_checkouts',
-      repo_path: sibling.checkout_path,
-      modules_root: pathRootFromManagedCheckout(sibling.managed_checkout_path),
+      repo_path: sibling.source_path,
+      runtime_sources_root: pathRootFromManagedCheckout(sibling.managed_source_path),
     };
   }
 
   const first = items[0];
   return {
     mode: 'managed_runtime',
-    reason: 'opl_managed_modules_root',
+    reason: 'opl_managed_runtime_sources_root',
     repo_path: null,
-    modules_root: first ? pathRootFromManagedCheckout(first.managed_checkout_path) : null,
+    runtime_sources_root: first ? pathRootFromManagedCheckout(first.managed_source_path) : null,
   };
 }
 
@@ -125,14 +128,14 @@ function pathRootFromManagedCheckout(checkoutPath: string) {
   return path.dirname(checkoutPath);
 }
 
-function buildAssistants(items: ReturnType<typeof publicModuleItems>) {
-  return items.map((module) => ({
-    assistant_id: module.module_id,
-    label: module.label,
-    description: module.description,
+function buildAssistants(items: ReturnType<typeof publicRuntimeSourceCarriers>) {
+  return items.map((carrier) => ({
+    assistant_id: carrier.package_id,
+    label: carrier.label,
+    description: carrier.description,
     launch_hint: 'direct_click',
     prompt_prefix_required: false,
-    backing_module_id: module.module_id,
+    package_id: carrier.package_id,
   }));
 }
 
@@ -467,8 +470,8 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
   const profile = input.profile ?? 'fast';
   const contracts = loadFrameworkContracts() as FrameworkContracts;
   const statePaths = ensureOplStateDir(resolveOplStatePaths());
-  const modules = publicModuleItems(profile);
-  const moduleSource = resolveModuleSource(modules);
+  const runtimeSourceCarriers = publicRuntimeSourceCarriers(profile);
+  const moduleSource = resolveModuleSource(runtimeSourceCarriers);
   const developerMode = {
     ...buildOplDeveloperModeSurface(buildOplEndpoints(), { detail: profile }),
     live_closeout_evidence: buildDeveloperModeLiveCloseoutEvidenceSummary(),
@@ -483,17 +486,28 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
   const core = buildCoreState(profile);
   const actions = buildActionCatalog(contracts);
   const agentPackagesReadback = listOplAgentPackages().opl_agent_packages;
+  const activeWorkspaceBindings = listWorkspaceBindings().filter((binding) => binding.status === 'active');
   const agentPackageStatuses = Object.fromEntries(
     agentPackagesReadback.installed_packages.map((lock) => [
       lock.package_id,
-      runOplAgentPackageStatus({ packageId: lock.package_id }).opl_agent_package_status,
+      runOplAgentPackageStatus((() => {
+        const binding = activeWorkspaceBindings.find((entry) =>
+          canonicalAgentPackageId(entry.project_id) === lock.package_id);
+        return binding
+          ? {
+              packageId: lock.package_id,
+              scope: 'workspace' as const,
+              targetWorkspace: binding.workspace_path,
+            }
+          : { packageId: lock.package_id };
+      })()).opl_agent_package_status,
     ]),
   );
   const agentPackagesProjection = {
     surface_kind: 'opl_app_agent_packages_projection',
     source: {
-      list_surface: 'opl connect agent-packages list --json',
-      status_surface: 'opl connect agent-packages status --package-id <package_id> --json',
+      list_surface: 'opl packages list --json',
+      status_surface: 'opl packages status --package-id <package_id> --json',
     },
     directory: agentPackagesReadback,
     status_index: {
@@ -527,7 +541,7 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
   const paths = {
     home_dir: statePaths.home_dir,
     state_dir: statePaths.state_dir,
-    modules_root: moduleSource.modules_root,
+    runtime_sources_root: moduleSource.runtime_sources_root,
     family_workspace_root: {
       selected_path: resolveDefaultFamilyWorkspaceRoot(),
       source: process.env.OPL_FAMILY_WORKSPACE_ROOT?.trim()
@@ -543,20 +557,26 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
     developer_supervisor_config_file: statePaths.developer_supervisor_config_file,
     logs_dir: `${statePaths.state_dir}/logs`,
   };
-  const modulesState = {
+  const runtimeSourceCarriersState = {
+    surface_kind: 'opl_runtime_source_carriers_projection',
     source: moduleSource,
     summary: {
-      default_modules_count: modules.length,
-      installed_default_modules_count: modules.filter((entry) => entry.installed).length,
-      healthy_default_modules_count: modules.filter((entry) => entry.health_status === 'ready').length,
+      default_carriers_count: runtimeSourceCarriers.length,
+      present_default_carriers_count: runtimeSourceCarriers.filter((entry) => entry.source_present).length,
+      healthy_default_carriers_count: runtimeSourceCarriers.filter((entry) => entry.source_health_status === 'ready').length,
     },
-    items: modules,
+    items: runtimeSourceCarriers,
+    authority_boundary: {
+      package_installation_truth: 'app_state.agent_packages.status_index',
+      source_carrier_presence_is_package_installed: false,
+      lifecycle_owner: 'opl_packages',
+    },
   };
   const settingsControlCenter = buildSettingsControlCenter({
     profile,
     core,
     developerMode,
-    modules: modulesState,
+    modules: runtimeSourceCarriersState,
     provider,
     release,
     paths,
@@ -565,7 +585,7 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
     profile,
     core,
     developerMode,
-    modules: modulesState,
+    modules: runtimeSourceCarriersState,
     provider,
     release,
     paths,
@@ -609,9 +629,21 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
         shell_must_not_use_full_drilldown_as_normal_state: true,
       },
       core,
+      codex_personalization: {
+        surface_kind: 'opl_codex_personalization.v1',
+        user_agents: readCodexUserInstructions(),
+        opl_flow_default_user_agents: readOplFlowDefaultUserInstructions(),
+        authority_boundary: {
+          user_agents_owner: 'user_codex_home',
+          app_edit_action: 'codex_user_instructions_set',
+          app_restore_action: 'codex_user_instructions_restore_opl_flow_default',
+          opl_flow_role: 'install_and_semantically_merge_user_profile_only',
+          opl_app_session_context_owner: 'one-person-lab-app',
+        },
+      },
       developer_profile: developerProfile,
       developer_mode: developerMode,
-      modules: modulesState,
+      runtime_source_carriers: runtimeSourceCarriersState,
       agent_packages: agentPackagesProjection,
       opl_agent_packages: agentPackagesReadback,
       opl_agent_package_status: agentPackagesProjection.status_index,
@@ -619,7 +651,7 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
       assistants: {
         default_launch: 'direct_click',
         prompt_prefix_required: false,
-        items: buildAssistants(modules),
+        items: buildAssistants(runtimeSourceCarriers),
       },
       release,
       settings_control_center: settingsControlCenter,

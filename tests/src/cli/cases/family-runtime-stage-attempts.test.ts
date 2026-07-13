@@ -1,12 +1,13 @@
 import { pathToFileURL } from 'node:url';
 
-import { assert, fs, os, path, runCli, runCliFailure, test } from '../helpers.ts';
+import { assert, fs, installRuntimePackageFixture, os, path, runCli, runCliFailure, test } from '../helpers.ts';
 
 function familyRuntimeEnv(stateRoot: string) {
   return { OPL_STATE_DIR: stateRoot };
 }
 
 function createFixtureAttempt(stateRoot: string, sourceFingerprint: string) {
+  installRuntimePackageFixture(stateRoot, 'opl-meta-agent');
   return runCli([
     'family-runtime',
     'attempt',
@@ -27,6 +28,7 @@ function createFixtureAttempt(stateRoot: string, sourceFingerprint: string) {
 test('family-runtime attempt query exposes a blocked public envelope', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-attempt-blocked-envelope-'));
   try {
+    installRuntimePackageFixture(stateRoot, 'redcube-ai');
     const created = runCli([
       'family-runtime',
       'attempt',
@@ -67,6 +69,7 @@ test('family-runtime attempt query exposes a blocked public envelope', () => {
 test('family-runtime attempt readback preserves provider lifecycle without domain authority', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-attempt-no-authority-'));
   try {
+    installRuntimePackageFixture(stateRoot, 'redcube-ai');
     const created = runCli([
       'family-runtime',
       'attempt',

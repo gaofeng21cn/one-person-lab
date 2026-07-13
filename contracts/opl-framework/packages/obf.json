@@ -1,0 +1,199 @@
+{
+  "surface_kind": "opl_agent_package_manifest.v1",
+  "agent_id": "obf",
+  "package_id": "obf",
+  "display_name": "OPL Book Forge",
+  "publisher": "one-person-lab",
+  "version": "0.1.0",
+  "source": "first_party",
+  "registry_entry": {
+    "registry_kind": "first_party_agent_package_registry_entry",
+    "registry_source_ref": "contracts/opl-framework/packages/obf.json",
+    "base_contract_role": "registry_data_not_base_invariant",
+    "base_contract_invariant": false,
+    "identity_fields": [
+      "package_id",
+      "agent_id",
+      "version"
+    ],
+    "admitted_domain_ref": null
+  },
+  "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
+  "source_repo": "https://github.com/gaofeng21cn/opl-bookforge.git",
+  "schema_ref": "contracts/opl-framework/agent-package-manifest.schema.json",
+  "machine_boundary": "This manifest declares first-party package distribution and repo-local materialized Codex carrier projection. It does not write domain truth, sign owner receipts, create typed blockers, write runtime queues, or claim runtime/release readiness.",
+  "package_core": {
+    "core_kind": "opl_agent_package_core",
+    "identity_fields": [
+      "package_id",
+      "agent_id",
+      "version"
+    ],
+    "content_identity_fields": [
+      "manifest_sha256",
+      "payload_digest_ref",
+      "required_skill_pack_lock_refs",
+      "package_lock_ref"
+    ],
+    "dependency_source": "manifest_declared_capability_dependencies",
+    "lock_owner": "opl_connect_agent_package_registry",
+    "lifecycle_receipt_owner": "opl_connect_agent_package_registry",
+    "exposure_owner": "opl_connect_agent_package_registry"
+  },
+  "codex_surface": {
+    "plugin_id": "opl-bookforge",
+    "plugin_payload_manifest_url": "payloads/obf-0.1.0.json",
+    "standalone_distribution": "repo_carrier_source",
+    "required_skill_ids": [
+      "opl-bookforge"
+    ],
+    "bundled_capability_package_ids": [],
+    "user_install_action_count": 1
+  },
+  "runtime_source_carrier": {
+    "carrier_kind": "opl_managed_module_source",
+    "module_id": "oplbookforge"
+  },
+  "carrier_adapters": [
+    {
+      "adapter_kind": "codex_plugin_carrier",
+      "carrier": "codex_plugin",
+      "source_surface": "codex_surface",
+      "projection_role": "package_carrier_adapter",
+      "owns_package_core": false,
+      "owns_domain_truth": false
+    }
+  ],
+  "opl_managed_surface": {
+    "package_shape": "thin_agent_package",
+    "dependency_resolution": "managed_dependency_graph",
+    "dependency_update_policy": "independent_package_target",
+    "developer_mode_dependency_policy": "source_checkout_when_authorized_else_pull_request"
+  },
+  "dependency_profiles": [
+    {
+      "profile_id": "bookforge-publication-proof",
+      "profile_kind": "domain_dependency_profile",
+      "profile_owner": "opl-bookforge",
+      "domain_id": "opl-bookforge",
+      "domain_truth_owner": "opl-bookforge",
+      "source": {
+        "source_kind": "domain_profile_ref",
+        "profile_ref": "bookforge-zh-publication-proof",
+        "helper_ref": "runtime/native_helpers/bookforge_pdf_export.py"
+      },
+      "opl_role": "dependency_environment_check",
+      "source_descriptor_ref": "opl-bookforge/contracts/domain_descriptor.json#/dependency_profiles/0",
+      "dependencies": [
+        {
+          "dependency_id": "pandoc",
+          "kind": "executable",
+          "required_level": "required",
+          "purpose": "Markdown to standalone TeX/PDF conversion for Book Forge proof exports."
+        },
+        {
+          "dependency_id": "xelatex",
+          "kind": "executable",
+          "required_level": "required",
+          "purpose": "XeLaTeX engine used by the bundled Chinese publication proof profile."
+        },
+        {
+          "dependency_id": "pdftoppm",
+          "kind": "executable",
+          "required_level": "required",
+          "purpose": "Poppler page rendering for proof page inspection and nonblank checks."
+        },
+        {
+          "dependency_id": "quarto",
+          "kind": "executable",
+          "required_level": "optional",
+          "purpose": "Optional future book-rendering backend for richer projects."
+        },
+        {
+          "dependency_id": "typst",
+          "kind": "executable",
+          "required_level": "optional",
+          "purpose": "Optional future typesetting backend for proof/export experiments."
+        },
+        {
+          "dependency_id": "xcolor.sty",
+          "kind": "latex_package",
+          "required_level": "required",
+          "install_target": "xcolor",
+          "purpose": "Book Forge color palette."
+        },
+        {
+          "dependency_id": "fancyhdr.sty",
+          "kind": "latex_package",
+          "required_level": "required",
+          "install_target": "fancyhdr",
+          "purpose": "Running headers and page numbers."
+        },
+        {
+          "dependency_id": "titlesec.sty",
+          "kind": "latex_package",
+          "required_level": "required",
+          "install_target": "titlesec",
+          "purpose": "Chapter and section hierarchy."
+        },
+        {
+          "dependency_id": "caption.sty",
+          "kind": "latex_package",
+          "required_level": "required",
+          "install_target": "caption",
+          "purpose": "Caption style and spacing."
+        },
+        {
+          "dependency_id": "booktabs.sty",
+          "kind": "latex_package",
+          "required_level": "required",
+          "install_target": "booktabs",
+          "purpose": "Publication-grade table rules."
+        },
+        {
+          "dependency_id": "colortbl.sty",
+          "kind": "latex_package",
+          "required_level": "required",
+          "install_target": "colortbl",
+          "purpose": "Table rule color support."
+        },
+        {
+          "dependency_id": "etoolbox.sty",
+          "kind": "latex_package",
+          "required_level": "required",
+          "install_target": "etoolbox",
+          "purpose": "Environment hooks used by the proof profile."
+        },
+        {
+          "dependency_id": "ctexbook.cls",
+          "kind": "latex_package",
+          "required_level": "required",
+          "install_target": "ctex",
+          "purpose": "Chinese book document class."
+        },
+        {
+          "dependency_id": "titling.sty",
+          "kind": "latex_package",
+          "required_level": "legacy_not_required",
+          "purpose": "Previously used title-page helper; no longer required by the Book Forge proof profile."
+        },
+        {
+          "dependency_id": "tocloft.sty",
+          "kind": "latex_package",
+          "required_level": "legacy_not_required",
+          "purpose": "Previously used TOC style helper; no longer required by the Book Forge proof profile."
+        }
+      ],
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_write_artifact_body": false,
+        "can_authorize_domain_readiness": false,
+        "can_authorize_artifact_or_export_readiness": false,
+        "can_authorize_publication_readiness": false,
+        "can_authorize_final_export": false,
+        "can_issue_owner_receipt": false
+      }
+    }
+  ],
+  "capability_dependencies": []
+}

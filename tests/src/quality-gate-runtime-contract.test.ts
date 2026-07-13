@@ -5,153 +5,66 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { parseJsonText } from '../../src/kernel/json-file.ts';
-
 import {
   buildQualityGateRuntimeBinding,
   QUALITY_GATE_RUNTIME_ALLOWED_RECEIPT_KINDS,
   validateQualityGateRuntimeBinding,
 } from '../../src/modules/stagecraft/quality-gate-runtime.ts';
-import {
-  evaluateStageRunExecutionAuthorization,
-} from '../../src/modules/stagecraft/stage-run-kernel.ts';
-import {
-  currentOwnerDeltaWithClosedStageRunAnswer,
-} from '../../src/modules/ledger/current-owner-delta-stage-run-closeout.ts';
+import { evaluateStageRunProgress } from '../../src/modules/stagecraft/stage-run-kernel.ts';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.resolve(__dirname, '..', '..');
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
-function readJson<T>(relativePath: string): T {
-  return parseJsonText(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as T;
+function readJson(relativePath: string) {
+  return parseJsonText(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as Record<string, any>;
 }
 
-test('quality gate runtime contract is refs-only and cannot authorize quality or export', () => {
-  const contract = readJson<Record<string, any>>('contracts/opl-framework/quality-gate-runtime-contract.json');
+test('quality gate binding is optional evidence for quality claims, never stage progress authorization', () => {
+  const contract = readJson('contracts/opl-framework/quality-gate-runtime-contract.json');
 
-  assert.equal(contract.contract_kind, 'opl_quality_gate_runtime_contract.v1');
-  assert.equal(contract.owner, 'one-person-lab');
-  assert.equal(contract.state, 'active_contract');
-  assert.deepEqual(contract.allowed_receipt_kinds, [
-    'owner_receipt',
-    'quality_gate_receipt',
-    'typed_blocker',
-    'human_gate',
-    'route_back_evidence',
-  ]);
-  for (const field of [
-    'stage_run_ref',
-    'stage_manifest_ref',
-    'current_pointer_ref',
-    'source_fingerprint',
-    'idempotency_key',
-    'provider_attempt_ref',
-    'attempt_lease_ref',
-    'execution_authorization_decision_ref',
-    'quality_gate_attempt_ref',
-    'receipt_ref',
-    'receipt_kind',
-    'receipt_owner',
-  ]) {
-    assert.equal(contract.required_binding_refs.includes(field), true, `contract must require ${field}`);
-  }
+  assert.equal(contract.binding_policy.missing_binding_blocks_next_stage, false);
+  assert.equal(contract.binding_policy.missing_binding_records_quality_debt, true);
+  assert.equal(contract.required_binding_refs.includes('attempt_lease_ref'), false);
+  assert.equal(contract.required_binding_refs.includes('execution_authorization_decision_ref'), false);
   assert.equal(contract.authority_boundary.can_authorize_quality_or_export, false);
-  assert.equal(contract.authority_boundary.can_claim_publication_ready, false);
-  assert.equal(contract.authority_boundary.can_sign_owner_receipt, false);
-  assert.equal(contract.authority_boundary.quality_gate_receipt_is_domain_owned_answer_ref, true);
 });
 
-test('quality gate runtime helper binds domain-owned quality gate receipt without creating OPL verdict', () => {
-  assert.deepEqual([...QUALITY_GATE_RUNTIME_ALLOWED_RECEIPT_KINDS], [
-    'owner_receipt',
-    'quality_gate_receipt',
-    'typed_blocker',
-    'human_gate',
-    'route_back_evidence',
-  ]);
-
+test('quality gate helper binds an independent reviewer receipt without OPL verdict authority', () => {
+  assert.ok(QUALITY_GATE_RUNTIME_ALLOWED_RECEIPT_KINDS.includes('quality_gate_receipt'));
   const binding = buildQualityGateRuntimeBinding({
     stage_run_ref: 'stage-run:mas:paper-review',
     stage_manifest_ref: 'stage-manifest:paper-review',
     current_pointer_ref: 'current-pointer:paper-review',
     source_fingerprint: 'sha256:quality-gate-runtime',
     idempotency_key: 'idem-quality-gate-runtime',
-    provider_attempt_ref: 'temporal://attempt/sat-quality-gate',
-    quality_gate_attempt_ref: 'temporal://attempt/sat-quality-gate-reviewer',
-    attempt_lease_ref: 'lease:sat-quality-gate',
-    execution_authorization_decision_ref: 'exec-auth:sat-quality-gate',
+    provider_attempt_ref: 'temporal://attempt/sat-author',
+    quality_gate_attempt_ref: 'temporal://attempt/sat-reviewer',
     receipt_ref: 'mas://quality-gate/receipt/123',
     receipt_kind: 'quality_gate_receipt',
     receipt_owner: 'med-autoscience',
     next_owner: 'med-autoscience',
   });
 
-  assert.equal(binding.surface_kind, 'opl_quality_gate_runtime_binding');
   assert.equal(binding.binding_status, 'bound');
-  assert.equal(binding.owner_answer_kind, 'quality_gate_receipt');
   assert.equal(binding.authority_boundary.can_authorize_quality_or_export, false);
-  assert.equal(binding.authority_boundary.can_claim_publication_ready, false);
-  assert.equal(binding.authority_boundary.can_sign_owner_receipt, false);
   assert.deepEqual(validateQualityGateRuntimeBinding(binding), binding);
 });
 
-test('StageRun closeout accepts quality gate receipt as owner answer ref but keeps false authority', () => {
-  const report = evaluateStageRunExecutionAuthorization({
+test('StageRun advances a readable artifact without a quality receipt', () => {
+  const report = evaluateStageRunProgress({
     phase: 'closeout',
     stage_run_id: 'stage-run:mas:paper-review',
     domain_id: 'med-autoscience',
     stage_id: 'paper_review',
-    generation: 0,
-    current_pointer: {
-      stage_run_id: 'stage-run:mas:paper-review',
-      generation: 0,
-      current: true,
-    },
-    selected_executor: 'codex_cli',
-    source_fingerprint: 'sha256:quality-gate-runtime',
-    idempotency_key: 'idem-quality-gate-runtime',
-    provider_attempt_ref: 'temporal://attempt/sat-quality-gate',
-    attempt_lease_ref: 'lease:sat-quality-gate',
-    attempt_lease_status: 'active',
-    execution_authorization_decision_ref: 'exec-auth:sat-quality-gate',
-    workspace_scope_ref: 'workspace:mas',
-    artifact_scope_ref: 'artifact:paper-review',
+    consumable_artifact_refs: ['mas://paper/review-draft'],
     authority_boundary: {
       opl_can_write_domain_truth: false,
       opl_can_create_owner_receipt: false,
       opl_can_create_typed_blocker: false,
     },
-    owner_answer_ref: 'mas://quality-gate/receipt/123',
-    owner_answer_kind: 'quality_gate_receipt',
-    owner_answer_stage_run_id: 'stage-run:mas:paper-review',
-    owner_answer_generation: 0,
-    stage_manifest_ref: 'stage-manifest:paper-review',
-    owner_answer_manifest_ref: 'stage-manifest:paper-review',
-    current_pointer_ref: 'current-pointer:paper-review',
-    owner_answer_current_pointer_ref: 'current-pointer:paper-review',
-    owner_answer_source_fingerprint: 'sha256:quality-gate-runtime',
-    owner_answer_idempotency_key: 'idem-quality-gate-runtime',
-    quality_gate_attempt_ref: 'temporal://attempt/sat-quality-gate-reviewer',
   });
 
-  assert.equal(report.status, 'authorized');
-  assert.equal(report.closeout_binding.owner_answer_kind, 'quality_gate_receipt');
-  assert.equal(report.authority_boundary.opl_can_authorize_publication_or_quality_verdict, false);
-
-  const currentOwnerDelta = currentOwnerDeltaWithClosedStageRunAnswer(
-    {
-      hard_gate: {
-        state: 'owner_delta_open',
-        human_or_domain_owner_required: true,
-      },
-    } as Record<string, any>,
-    {
-      execution_authorization: report,
-    },
-  );
-
-  assert.equal(currentOwnerDelta.latest_owner_answer_ref, 'mas://quality-gate/receipt/123');
-  assert.equal(currentOwnerDelta.latest_owner_answer_kind, 'quality_gate_receipt');
-  assert.equal(currentOwnerDelta.hard_gate.owner_answer_kind, 'quality_gate_receipt');
-  assert.equal(currentOwnerDelta.hard_gate.quality_or_export_authorized, false);
-  assert.equal(currentOwnerDelta.hard_gate.domain_ready_authorized, false);
+  assert.equal(report.status, 'progress_ready_with_quality_debt');
+  assert.equal(report.transition_outcome, 'completed_with_quality_debt');
+  assert.deepEqual(report.closeout_hard_stop_reasons, []);
+  assert.ok(report.quality_debt_reasons.includes('owner_answer_missing_for_quality_or_ready_claim'));
 });

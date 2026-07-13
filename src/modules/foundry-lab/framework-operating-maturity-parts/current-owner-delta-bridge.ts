@@ -146,10 +146,6 @@ export function currentOwnerDeltaBridge(appOperatorDrilldown: Record<string, unk
     lineage_ref: lineageRef,
     current_owner_delta_id: deltaId,
     source_fingerprint: sourceFingerprint,
-    stage_run_closeout_binding_ref:
-      stringValue(currentOwnerDelta.stage_run_closeout_binding_ref),
-    stage_run_closeout_binding_policy:
-      stringValue(currentOwnerDelta.stage_run_closeout_binding_policy),
   };
   const recordTargetKey = currentOwnerPayloadTargetKey({
     domainId,
@@ -170,10 +166,6 @@ export function currentOwnerDeltaBridge(appOperatorDrilldown: Record<string, unk
     lineage_ref: lineageRef,
     current_owner_delta_id: deltaId,
     source_fingerprint: sourceFingerprint,
-    stage_run_closeout_binding_ref:
-      stringValue(currentOwnerDelta.stage_run_closeout_binding_ref),
-    stage_run_closeout_binding_policy:
-      stringValue(currentOwnerDelta.stage_run_closeout_binding_policy),
     payload_kind: 'domain_owner_receipt_or_typed_blocker_refs',
     current_owner_delta_ref:
       '/framework_readiness/attention_first_payload/current_owner_delta',
@@ -279,10 +271,6 @@ export function currentOwnerDeltaBridge(appOperatorDrilldown: Record<string, unk
     required_return_shapes: stringListValue(currentOwnerDelta.required_return_shapes),
     missing_input_refs: stringListValue(currentOwnerDelta.missing_input_refs),
     required_ref_shape: record(currentOwnerDelta.required_ref_shape),
-    stage_run_closeout_binding_ref:
-      stringValue(currentOwnerDelta.stage_run_closeout_binding_ref),
-    stage_run_closeout_binding_policy:
-      stringValue(currentOwnerDelta.stage_run_closeout_binding_policy),
     hard_gate: {
       state: stringValue(hardGate.state),
       human_or_domain_owner_required:
@@ -340,7 +328,7 @@ export function currentOwnerDeltaBridge(appOperatorDrilldown: Record<string, unk
         'current_owner_matches_current_owner_delta',
         'stage_or_work_unit_matches_current_owner_delta',
         'source_fingerprint_matches_current_owner_delta',
-        'stage_run_closeout_binding_policy_satisfied_when_present',
+        'transport_identity_conflict_absent',
         'idempotency_key_matches_owner_work_unit_or_stage_run',
       ],
       accepted_return_shape: {

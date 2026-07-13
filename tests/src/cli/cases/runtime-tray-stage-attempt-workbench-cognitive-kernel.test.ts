@@ -1,8 +1,9 @@
-import { assert, createFamilyContractsFixtureRoot, fs, os, path, runCli, test } from '../helpers.ts';
+import { assert, createFamilyContractsFixtureRoot, fs, installRuntimePackageFixture, os, path, runCli, test } from '../helpers.ts';
 
 test('runtime snapshot projects cognitive kernel launch and closeout boundaries into stage attempt workbench', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-attempt-workbench-cognitive-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  installRuntimePackageFixture(stateRoot, 'mas');
   try {
     const attempt = runCli([
       'family-runtime',

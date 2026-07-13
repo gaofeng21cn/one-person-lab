@@ -307,18 +307,6 @@ export const retiredCliCommandMatrix: Array<{
     errorCode: 'cli_usage_error',
     replacements: [/opl connect exec/],
   },
-  {
-    args: ['module', 'sync'],
-    command: 'opl module sync',
-    errorCode: 'cli_usage_error',
-    replacements: [/opl connect reconcile-modules/],
-  },
-  {
-    args: ['module', 'reconcile'],
-    command: 'opl module reconcile',
-    errorCode: 'cli_usage_error',
-    replacements: [/opl connect reconcile-modules/],
-  },
 ];
 
 export function createFakeFamilySkillWorkspace(captureDir: string) {

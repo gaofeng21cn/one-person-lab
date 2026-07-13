@@ -139,34 +139,34 @@ test('modules without JavaScript framework imports remain a safe no-op', () => {
 test('link-framework CLI checks, previews, creates, and rechecks the OPL-owned link', () => {
   withAgent((agentRoot) => {
     const missing = runCliFailure([
-      'connect', 'agent-packages', 'link-framework', '--agent-root', agentRoot, '--check',
+      'packages', 'link-framework', '--agent-root', agentRoot, '--check',
     ]);
     assert.equal(missing.status, 3);
     assert.equal(missing.payload.error.details.failure_code, 'framework_link_missing');
     assert.equal(fs.existsSync(path.join(agentRoot, 'node_modules')), false);
 
     const conflicting = runCliFailure([
-      'connect', 'agent-packages', 'link-framework', '--agent-root', agentRoot, '--check', '--dry-run',
+      'packages', 'link-framework', '--agent-root', agentRoot, '--check', '--dry-run',
     ]);
     assert.equal(conflicting.status, 2);
     assert.deepEqual(conflicting.payload.error.details.conflicting, ['--check', '--dry-run']);
 
     const preview = runCli([
-      'connect', 'agent-packages', 'link-framework', '--agent-root', agentRoot, '--dry-run',
+      'packages', 'link-framework', '--agent-root', agentRoot, '--dry-run',
     ]).opl_agent_package_framework_link;
     assert.equal(preview.status, 'validated_no_write');
     assert.equal(preview.writes_performed, false);
     assert.equal(fs.existsSync(path.join(agentRoot, 'node_modules')), false);
 
     const linked = runCli([
-      'connect', 'agent-packages', 'link-framework', '--agent-root', agentRoot,
+      'packages', 'link-framework', '--agent-root', agentRoot,
     ]).opl_agent_package_framework_link;
     assert.equal(linked.status, 'linked');
     assert.equal(linked.writes_performed, true);
     assert.equal(fs.realpathSync(linked.link_path), fs.realpathSync(linked.target_root));
 
     const checked = runCli([
-      'connect', 'agent-packages', 'link-framework', '--agent-root', agentRoot, '--check',
+      'packages', 'link-framework', '--agent-root', agentRoot, '--check',
     ]).opl_agent_package_framework_link;
     assert.equal(checked.status, 'already_linked');
     assert.equal(checked.writes_performed, false);

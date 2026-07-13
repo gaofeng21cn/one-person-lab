@@ -421,6 +421,7 @@ test('one-click installer defaults to the headless base contract before invoking
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-complete-args-'));
   const fakeBin = path.join(homeRoot, 'bin');
   const installDir = path.join(homeRoot, '.opl', 'one-person-lab');
+  const stateDir = path.join(homeRoot, 'opl-state');
   const gitLog = path.join(homeRoot, 'git.log');
   const npmLog = path.join(homeRoot, 'npm.log');
   const oplLog = path.join(homeRoot, 'opl.log');
@@ -470,6 +471,7 @@ test('one-click installer defaults to the headless base contract before invoking
         HOME: homeRoot,
         OPL_INSTALL_DIR: installDir,
         OPL_REPO_URL: 'https://example.invalid/one-person-lab.git',
+        OPL_STATE_DIR: stateDir,
         PATH: `${fakeBin}:/usr/bin:/bin`,
       },
     });
@@ -482,7 +484,7 @@ test('one-click installer defaults to the headless base contract before invoking
       'install --headless',
       'system initialize',
     ]);
-    assert.doesNotMatch(fs.readFileSync(gitLog, 'utf8'), /opl-flow/);
+    assert.equal(fs.readFileSync(gitLog, 'utf8').includes('opl-flow'), false);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }

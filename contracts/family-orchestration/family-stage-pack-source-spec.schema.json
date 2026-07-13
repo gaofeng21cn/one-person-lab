@@ -47,7 +47,7 @@
         "stage_pack_hash",
         "stage_ids",
         "action_catalog_id",
-        "admission_status",
+        "conformance_status",
         "graph_node_count",
         "graph_edge_count",
         "registry_lifecycle_statuses",
@@ -64,7 +64,7 @@
           "items": { "type": "string", "minLength": 1 }
         },
         "action_catalog_id": { "type": ["string", "null"] },
-        "admission_status": {
+        "conformance_status": {
           "type": "string",
           "enum": ["admitted", "needs_contracts", "blocked"]
         },
@@ -204,7 +204,7 @@
         "stage_pack_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "stage_ids": ["draft_authoring"],
         "action_catalog_id": "domain_stage_actions",
-        "admission_status": "admitted",
+        "conformance_status": "admitted",
         "graph_node_count": 1,
         "graph_edge_count": 0,
         "registry_lifecycle_statuses": ["admitted"],

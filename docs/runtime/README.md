@@ -7,7 +7,7 @@ Machine boundary: 人读索引。机器真相继续归 `contracts/`、源码、C
 
 Currentness policy: 本文只保存 runtime 支撑层的导航、稳定 owner split、动态证据入口和 negative boundary。不要从本文读取当前 attempt id、task id、worklist counter、provider proof snapshot、Search Attribute 安装状态、App/operator drilldown 数值、domain ready 或 production ready；这些必须从 fresh contracts、source、tests、CLI/read-model、runtime ledger、provider receipt 和 domain owner surface 读取。
 
-Wrapper-aware CLI/read-model policy: 当前 runtime CLI 读面优先从 wrapper payload 读取，例如 `.app_operator_drilldown`、`.framework_operating_maturity`、`.brand_module_l5_status`、`.opl_runway_readiness` 和 `.family_runtime_stage_attempts`。旧顶层字段缺失不能作为 owner、ready、currentness 或 repair guard 依据；需要 operator 决策时必须回到 wrapper 内 stable field、runtime ledger、provider receipt 或 domain owner refs。Current-control provider admission 缺 selected stage packet / route identity / attempt identity 时输出 repair/preflight work order 并 fail closed；不得用 `dispatch_ref` fallback 补 stage packet。
+Wrapper-aware CLI/read-model policy: runtime wrappers 只做被动 observation。缺 selected stage packet / route identity / attempt identity 时记录 advisory 并禁用旧 attempt 复用；不得阻止新 stage，也不得用 read model 选择语义 route。identity conflict 才阻止错误目标 mutation。
 
 本目录承接 OPL framework runtime、provider/executor、control plane、projection/read model、resume/wakeup 和 operator repair 语义的人读支撑。
 

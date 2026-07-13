@@ -16,7 +16,7 @@
     "nodes",
     "edges",
     "failure_localization",
-    "admission_status",
+    "conformance_status",
     "integrity",
     "authority_boundary"
   ],
@@ -65,8 +65,8 @@
         "$ref": "#/$defs/failure_localization"
       }
     },
-    "admission_status": {
-      "$ref": "#/$defs/admission_status"
+    "conformance_status": {
+      "$ref": "#/$defs/conformance_status"
     },
     "integrity": {
       "$ref": "family-stage-proof-bundle.schema.json#/$defs/stage_pack_integrity"
@@ -109,7 +109,7 @@
     }
   },
   "$defs": {
-    "admission_status": {
+    "conformance_status": {
       "type": "string",
       "enum": [
         "admitted",
@@ -193,7 +193,7 @@
         "title",
         "owner",
         "trust_lane",
-        "admission_status",
+        "conformance_status",
         "guarantee_modes",
         "mode_tags",
         "static_check_eligible",
@@ -235,10 +235,10 @@
             }
           ]
         },
-        "admission_status": {
+        "conformance_status": {
           "anyOf": [
             {
-              "$ref": "#/$defs/admission_status"
+              "$ref": "#/$defs/conformance_status"
             },
             {
               "type": "null"
@@ -475,7 +475,7 @@
           "title": "Owner review",
           "owner": "example-domain",
           "trust_lane": "human_gate",
-          "admission_status": "admitted",
+          "conformance_status": "admitted",
           "guarantee_modes": [
             "runtime_enforced",
             "domain_owned_judgment",
@@ -518,7 +518,7 @@
         }
       ],
       "failure_localization": [],
-      "admission_status": "admitted",
+      "conformance_status": "admitted",
       "integrity": {
         "surface_kind": "opl_stage_pack_integrity_metadata",
         "version": "opl-stage-pack-integrity-metadata.v1",

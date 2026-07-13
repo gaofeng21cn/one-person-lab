@@ -40,14 +40,14 @@ Machine boundary: 本文是人读审计与治理建议；机器真相仍归各 r
 | --- | --- | --- | --- | --- |
 | Framework support / reviewer / router pack | `plugins/opl-foundation-skills/skills/**/SKILL.md` | `plugins/opl-foundation-skills/exposure.json`；禁止默认 global / codex scope。 | `professional_skill` 风格的 support playbook + exposure manifest；authority 留 OPL/domain owner surface。 | 合理，但数量增长需要准入门控制。 |
 | External specialist routing | `opl-external-specialist-skill-router`；scientific 只是 query / trigger specialization，不再保留单独 compatibility entry | workspace / quest 按 manifest 暴露；真实外部 skill 通过 Connect 单个 sync。 | router 是薄 Skill；下载、索引、sync receipt 属于 OPL Connect。 | 合理。避免把 K-Dense / scientific-agent-skills 全量注册成默认 Codex context，也避免 compatibility alias 污染 metadata。 |
-| MAS Scholar Skills capability package | 外部 `mas-scholar-skills/.codex-plugin/plugin.json` 与 `skills/*/SKILL.md` | package owner 持有清单和正文；OPL 只保留 generic package spec。 | package validation + Connect target-bound sync + provenance receipt；不承接 MAS authority。 | OPL-local plugin pointer 已退役；`opl-scholarskills` 继续 tombstone-only。 |
+| MAS Scholar Skills capability package | 外部 `mas-scholar-skills/.codex-plugin/plugin.json` 与 `skills/*/SKILL.md` | package owner 持有清单和正文；OPL 只保留 generic package dependency spec。 | package closure validation + target-bound activation + provenance receipt；不承接 MAS authority。 | OPL-local plugin pointer 已退役；`opl-scholarskills` 继续 tombstone-only。 |
 
 ### MAS / MAS Scholar Skills
 
 | 能力模块 | 物理位置 | 暴露方式 | 合理性 |
 | --- | --- | --- | --- |
 | MAS stage prompt / runtime / owner authority | `med-autoscience/agent/**`、contracts 与 runtime/controller owner surfaces | MAS plugin entry + OPL Runway/Stagecraft projection | 合理；不在 OPL 或外部 capability package 签 MAS owner truth。 |
-| MAS Scholar Skills professional capability package | 外部 `mas-scholar-skills/.codex-plugin/plugin.json`、`skills/*/SKILL.md` 与 package-owned contracts | generic package channel + explicit workspace/quest Connect sync | OPL 不复制 Skill 清单、profile、validator 或正文；具体专业能力以 package owner 当前 source 为准。 |
+| MAS Scholar Skills professional capability package | 外部 `mas-scholar-skills/.codex-plugin/plugin.json`、`skills/*/SKILL.md` 与 package-owned contracts | generic package channel + workspace/quest Packages activation | OPL 不复制 Skill 清单、profile、validator 或正文；具体专业能力以 package owner 当前 source 为准。 |
 
 ### MAG
 
@@ -117,7 +117,7 @@ Machine boundary: 本文是人读审计与治理建议；机器真相仍归各 r
 | --- | --- | --- |
 | 新需求默认沉淀为新 Skill，导致 Skill 数量膨胀。 | 已处理到 policy。 | `standard-agent-capability-management-policy.md#新能力准入门` 增加 admission record、判定顺序和拒绝条件。 |
 | OPL foundation support Skill 数量增长，metadata 污染日常 Codex。 | 当前受控，需持续治理。 | `exposure.json` 已是 machine guard；新增 foundation Skill 必须登记 `exposure_scope` / `activation_gate` / no-authority。 |
-| Optional MAS Scholar Skills 越积越多，变成默认上下文。 | 当前受控。 | default Codex exposure false；core / optional 分层明确；optional 只 named specialty 或 explicit developer。 |
+| MAS Scholar Skills export catalog 与 OPL/MAS 本地清单漂移。 | 当前受控。 | provider manifest 是完整 export catalog 单源；OPL scope 从发布 payload 动态物化全部 exports，不复制 35 项清单。11 core + 8 modules 只定义 hard readiness floor。 |
 | `agent/skills/*.md` 与 `agent/professional_skills/**` 混淆。 | 当前 RCA/OMA/BookForge/MAG 文档基本清楚。 | 新增能力必须先声明 `selected_layer`；`agent/skills/*.md` 默认按 domain skill declaration / policy ref 读取。 |
 | App `tmp/**`、VM evidence、generated cache 被误扫成当前 Skill source。 | 审计发现并排除。 | 当前 App repo-native skill source 只按 `assets/companion-skills/**` 与 contracts 读取。 |
 
@@ -125,7 +125,7 @@ Machine boundary: 本文是人读审计与治理建议；机器真相仍归各 r
 
 - 新增 repo-local professional Skill：必须同时更新 owning repo `contracts/capability_map.json` 或等价 resolver，并说明为什么不能由现有 Skill 覆盖。
 - 新增 OPL foundation support Skill：必须更新 `plugins/opl-foundation-skills/exposure.json`，默认从最窄 `source_only` / `project_local` / `workspace_local` 开始。
-- 新增 MAS Scholar Skills optional Skill：必须证明不是 core `lit/write/review/figure/stats/tables/submit/data` 的子流程，并保持 optional named specialty sync。
+- 新增 MAS Scholar Skills specialty：必须由 provider owner manifest 声明正式 Skill export、进入发布 payload/content lock，并在下一次 scope use-boundary transaction 中随全部 exports 物化；只有明确提升为 MAS hard dependency floor 时才修改 11 core readiness 集合，module contract 继续单独声明而不物化为 Skill 目录。
 - 新增 connector / helper：优先放 Connect / Fabric / Skill-local helper，不包装成专业 Skill。
 - 新增 authority write：只能落 owner repo authority surface，禁止放进 Skill。
 

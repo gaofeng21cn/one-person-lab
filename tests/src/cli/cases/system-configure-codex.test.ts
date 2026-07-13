@@ -409,6 +409,25 @@ test('system configure-codex syncs Full runtime family Codex plugins after API k
   const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-configure-codex-family-plugins-capture-'));
   const familyWorkspace = createFakeFamilySkillWorkspace(captureDir);
   const codexHome = path.join(homeRoot, 'codex-home');
+  for (const [repoName, moduleId] of [
+    ['med-autoscience', 'medautoscience'],
+    ['med-autogrant', 'medautogrant'],
+    ['redcube-ai', 'redcube'],
+    ['opl-meta-agent', 'oplmetaagent'],
+    ['opl-bookforge', 'oplbookforge'],
+  ]) {
+    fs.writeFileSync(
+      path.join(familyWorkspace.workspaceRoot, repoName, 'opl-runtime-module.json'),
+      `${JSON.stringify({
+        marker_version: 1,
+        module_id: moduleId,
+        repo_name: repoName,
+        packaged_runtime: true,
+        source_git: { head_sha: `full-runtime-${moduleId}` },
+      }, null, 2)}\n`,
+      'utf8',
+    );
+  }
 
   try {
     const output = runCliWithStdin(
@@ -422,6 +441,7 @@ test('system configure-codex syncs Full runtime family Codex plugins after API k
         OPL_MODULE_PATH_MEDAUTOGRANT: path.join(familyWorkspace.workspaceRoot, 'med-autogrant'),
         OPL_MODULE_PATH_REDCUBE: path.join(familyWorkspace.workspaceRoot, 'redcube-ai'),
         OPL_MODULE_PATH_OPLMETAAGENT: path.join(familyWorkspace.workspaceRoot, 'opl-meta-agent'),
+        OPL_MODULE_PATH_OPLBOOKFORGE: path.join(familyWorkspace.workspaceRoot, 'opl-bookforge'),
         OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
         PATH: `${process.execPath ? path.dirname(process.execPath) : '/usr/bin'}:/usr/bin:/bin`,
       },
@@ -434,11 +454,29 @@ test('system configure-codex syncs Full runtime family Codex plugins after API k
             items: Array<{ module_id: string; status: string; repo_path: string }>;
           };
         };
+        agent_package_sync: {
+          status: string;
+          summary: { total: number; installed: number; already_installed: number };
+          items: Array<{ package_id: string; status: string; package_lock_ref?: string }>;
+        };
       };
     };
 
     assert.equal(output.codex_config.skill_sync.codex_plugin_registry.summary.registered, 4);
     assert.equal(output.codex_config.skill_sync.codex_plugin_registry.summary.missing_marketplace, 0);
+    assert.deepEqual(output.codex_config.agent_package_sync.summary, {
+      total: 5,
+      installed: 5,
+      already_installed: 0,
+    });
+    assert.deepEqual(
+      output.codex_config.agent_package_sync.items.map((item) => item.package_id),
+      ['mas', 'mag', 'rca', 'oma', 'obf'],
+    );
+    assert.equal(
+      output.codex_config.agent_package_sync.items.every((item) => item.package_lock_ref?.startsWith('opl://agent-package-lock/')),
+      true,
+    );
     assert.deepEqual(
       output.codex_config.skill_sync.packs.map((pack) => [pack.domain_id, pack.sync_status]),
       [

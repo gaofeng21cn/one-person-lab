@@ -109,8 +109,8 @@ export function providerCapabilitySloSummary(providerContinuousProof: JsonRecord
     restart_requery_ready: capability.restart_requery_ready === true,
     signal_history_ready: capability.signal_history_ready === true,
     typed_closeout_required_ready: capability.typed_closeout_required_ready === true,
-    missing_closeout_block_ready: capability.missing_closeout_block_ready === true,
-    retry_dead_letter_boundary_ready: capability.retry_dead_letter_boundary_ready === true,
+    missing_closeout_diagnostic_ready: capability.missing_closeout_diagnostic_ready === true,
+    no_output_diagnostic_boundary_ready: capability.no_output_diagnostic_boundary_ready === true,
     domain_truth_boundary_preserved: capability.domain_truth_boundary_preserved === true,
   };
 }

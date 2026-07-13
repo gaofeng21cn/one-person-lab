@@ -139,7 +139,7 @@ export function materializeStandardAgentFrameworkLink(input: StandardAgentFramew
         expected_target_root: link.target,
         existing_target_root: readLinkTarget(link.path),
       })),
-      repair_command: `opl connect agent-packages link-framework --agent-root ${agentRoot} --json`,
+      repair_command: `opl packages link-framework --agent-root ${agentRoot} --json`,
     });
   }
   if (input.dryRun) {

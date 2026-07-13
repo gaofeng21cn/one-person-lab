@@ -3,21 +3,69 @@ import { buildOplWorkspaceRootSurface, writeOplWorkspaceRootSurface } from '../.
 import { buildProductEntryHandoffEnvelope } from '../../../modules/console/product-entry-handoff-envelope.ts';
 import { buildProductEntryDoctor } from '../../../modules/console/product-entry-runtime.ts';
 import { runAgentExecutor, runAgentExecutorDoctor, runAgentExecutorRequestFile } from '../../../modules/runway/agent-executor.ts';
+import { packageLaunchHardStopReason } from '../../../modules/runway/family-runtime-package-readiness.ts';
 import { launchDomainEntry } from '../../../modules/atlas/domain-launch.ts';
 import { buildDomainManifestCatalog } from '../../../modules/atlas/domain-manifest/catalog-builder.ts';
 import { buildOplDashboard, buildOplStart, buildProjectsOverview } from '../../../modules/console/management/runtime-dashboard.ts';
 import { runAcpStdioBridge } from '../../../modules/connect/opl-acp-stdio.ts';
 import { syncOplCompanionSkills } from '../../../modules/connect/install-companions.ts';
 import { readFamilySkillPacks, syncFamilySkillPacks } from '../../../modules/connect/opl-skills.ts';
+import {
+  canonicalAgentPackageId,
+  ensureOplAgentPackageScopeActivation,
+  runOplAgentPackageStatus,
+} from '../../../modules/connect/index.ts';
 import { buildSessionLedger } from '../../../modules/runway/session-ledger.ts';
 import { explainDomainBoundary, selectDomainAgentEntry } from '../../../modules/atlas/resolver.ts';
-import { activateWorkspaceBinding, archiveWorkspaceBinding, bindWorkspace, buildWorkspaceCatalog } from '../../../modules/workspace/workspace-registry.ts';
+import { activateWorkspaceBinding, archiveWorkspaceBinding, bindWorkspace, buildWorkspaceCatalog, resolveWorkspaceLocator } from '../../../modules/workspace/workspace-registry.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
 import { buildWorkspaceInitializeCommandSpecs } from './workspace-initialize-command-spec.ts';
 import { buildPrivateAgentCommandSpecs } from './private-command-specs-parts/agents.ts';
 import { buildPrivateRuntimeCommandSpecs } from './private-command-specs-parts/runtime.ts';
 import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, parseExecutorExecArgs, parseExecutorOption, parseExecutorRequestPath, parseKeyValueArgs, parseLaunchDomainArgs, parseProductEntryArgs, parseRegisteredCommandOptions, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSkillPackArgs, parseStartArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, runCodexPassthroughHandled, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec, ParsedCliInput } from '../modules/support.ts';
+
+async function ensureDomainPackageLaunchReady(
+  projectId: string,
+  workspacePath?: string,
+  options: { activateMissingScope?: boolean } = {},
+) {
+  const workspaceLocator = resolveWorkspaceLocator(projectId, workspacePath);
+  if (!workspaceLocator.binding) return;
+  const packageId = canonicalAgentPackageId(projectId);
+  if (!packageId) return;
+  const initialStatus = runOplAgentPackageStatus({ packageId }).opl_agent_package_status;
+  if (options.activateMissingScope !== false && initialStatus.installed_package_count > 0) {
+    await ensureOplAgentPackageScopeActivation({
+      packageId,
+      scope: 'workspace',
+      targetWorkspace: workspaceLocator.absolute_path,
+    });
+  }
+  const packageStatus = runOplAgentPackageStatus({
+    packageId,
+    scope: 'workspace',
+    targetWorkspace: workspaceLocator.absolute_path,
+  }).opl_agent_package_status;
+  if (packageStatus.launch_allowed === true) return;
+  const hardStopReason = packageLaunchHardStopReason(packageStatus);
+  if (!hardStopReason) return;
+  throw new FrameworkContractError(
+    'contract_shape_invalid',
+    'Domain launch is blocked until the installed package dependency closure and workspace materialization are repaired.',
+    {
+      project_id: projectId,
+      package_id: packageId,
+      launch_allowed: false,
+      launch_blocked_reason: hardStopReason,
+      allowed_when_blocked: packageStatus.allowed_when_blocked,
+      package_dependency_readiness: packageStatus.package_dependency_readiness,
+      materialization_readiness: packageStatus.materialization_readiness,
+      repair_action: packageStatus.repair_action,
+      failure_code: 'agent_package_operational_readiness_blocked',
+    },
+  );
+}
 
 export function buildInternalCommandSpecs(
   parsedInput: ParsedCliInput,
@@ -312,7 +360,7 @@ export function buildInternalCommandSpecs(
         'opl domain launch --project redcube --strategy open_url',
         'opl domain launch --project med-autogrant --path /Users/gaofeng/workspace/med-autogrant --strategy spawn_command',
       ],
-      handler: (args) => {
+      handler: async (args) => {
         const parsed = parseLaunchDomainArgs(args, commandSpecs['domain launch']);
         if (!parsed.projectId) {
           throw buildUsageError(
@@ -322,6 +370,9 @@ export function buildInternalCommandSpecs(
           );
         }
 
+        await ensureDomainPackageLaunchReady(parsed.projectId, parsed.workspacePath, {
+          activateMissingScope: !parsed.dryRun,
+        });
         return launchDomainEntry(getContracts(), {
           projectId: parsed.projectId,
           workspacePath: parsed.workspacePath,
@@ -484,7 +535,7 @@ resume: {
         'opl workspace bind --project medautoscience --path /Users/gaofeng/workspace/med-autoscience --profile /Users/gaofeng/workspace/med-autoscience/profiles/local.toml',
         'opl workspace bind --project medautogrant --path /Users/gaofeng/workspace/med-autogrant --input /Users/gaofeng/workspace/med-autogrant/examples/nsfc_workspace_p2c_critique.json',
       ],
-      handler: (args) => {
+      handler: async (args) => {
         const parsed = parseWorkspaceRegistryArgs(args, commandSpecs['workspace-bind']);
         if (!parsed.projectId || !parsed.workspacePath) {
           throw buildUsageError(
@@ -494,7 +545,7 @@ resume: {
           );
         }
 
-        return bindWorkspace(getContracts(), {
+        const workspaceBinding = bindWorkspace(getContracts(), {
           projectId: parsed.projectId,
           workspacePath: parsed.workspacePath,
           label: parsed.label,
@@ -505,13 +556,28 @@ resume: {
           profileRef: parsed.profileRef,
           inputPath: parsed.inputPath,
         });
+        const packageId = canonicalAgentPackageId(parsed.projectId);
+        const initialStatus = packageId
+          ? runOplAgentPackageStatus({ packageId }).opl_agent_package_status
+          : null;
+        const packageScopeActivation = packageId && initialStatus && initialStatus.installed_package_count > 0
+          ? await ensureOplAgentPackageScopeActivation({
+              packageId,
+              scope: 'workspace',
+              targetWorkspace: parsed.workspacePath,
+            })
+          : null;
+        return {
+          ...workspaceBinding,
+          package_scope_activation: packageScopeActivation,
+        };
       },
     },
     'workspace-activate': {
       usage: 'opl workspace activate --project <project_id> --path <workspace_path>',
       summary: 'Switch the active workspace binding for an admitted project.',
       examples: ['opl workspace activate --project redcube --path /Users/gaofeng/workspace/redcube-ai'],
-      handler: (args) => {
+      handler: async (args) => {
         const parsed = parseWorkspaceRegistryArgs(args, commandSpecs['workspace-activate']);
         if (!parsed.projectId || !parsed.workspacePath) {
           throw buildUsageError(
@@ -521,6 +587,37 @@ resume: {
           );
         }
 
+        const locator = resolveWorkspaceLocator(parsed.projectId, parsed.workspacePath);
+        const packageId = canonicalAgentPackageId(parsed.projectId);
+        if (locator.binding && locator.binding.status !== 'archived' && packageId) {
+          await ensureOplAgentPackageScopeActivation({
+            packageId,
+            scope: 'workspace',
+            targetWorkspace: locator.absolute_path,
+          });
+          const packageStatus = runOplAgentPackageStatus({
+            packageId,
+            scope: 'workspace',
+            targetWorkspace: locator.absolute_path,
+          }).opl_agent_package_status;
+          const hardStopReason = packageLaunchHardStopReason(packageStatus);
+          if (packageStatus.launch_allowed !== true && hardStopReason) {
+            throw new FrameworkContractError(
+              'contract_shape_invalid',
+              'Workspace activation is blocked until package dependency and scope readiness are repaired.',
+              {
+                project_id: parsed.projectId,
+                package_id: packageId,
+                launch_blocked_reason: hardStopReason,
+                allowed_when_blocked: packageStatus.allowed_when_blocked,
+                package_dependency_readiness: packageStatus.package_dependency_readiness,
+                materialization_readiness: packageStatus.materialization_readiness,
+                repair_action: packageStatus.repair_action,
+                failure_code: 'agent_package_scope_activation_blocked',
+              },
+            );
+          }
+        }
         return activateWorkspaceBinding(getContracts(), {
           projectId: parsed.projectId,
           workspacePath: parsed.workspacePath,

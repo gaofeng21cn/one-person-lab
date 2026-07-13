@@ -7,7 +7,7 @@ import {
   type JsonRecord,
 } from '../../../kernel/json-record.ts';
 import {
-  buildFamilyStageAdmissionReview,
+  buildFamilyStageConformanceReview,
 } from '../../stagecraft/index.ts';
 import {
   buildFamilyStageCohortLoopProjection,
@@ -385,11 +385,11 @@ function stageProductionEvidence(
   if (!plane) {
     return null;
   }
-  const admission = buildFamilyStageAdmissionReview(plane, manifest);
-  const admissionByStage = new Map(admission.stage_results.map((stage) => [stage.stage_id, stage]));
+  const conformance = buildFamilyStageConformanceReview(plane, manifest);
+  const conformanceByStage = new Map(conformance.stage_results.map((stage) => [stage.stage_id, stage]));
   const proofBundle = buildFamilyStageProofBundle(plane, {
     actionCatalog: manifest?.family_action_catalog ?? null,
-    admissionReview: admission,
+    conformanceReview: conformance,
   });
   const cohortLoop = buildFamilyStageCohortLoopProjection(plane);
   const cohortByStage = new Map(cohortLoop.stages.map((stage) => [stage.stage_id, stage]));
@@ -567,15 +567,15 @@ function stageProductionEvidence(
         : null,
     ].filter((entry): entry is string => Boolean(entry));
     const status = productionEvidenceStatus({
-      admissionStatus: admissionByStage.get(stage.stage_id)?.status ?? admission.status,
+      admissionStatus: conformanceByStage.get(stage.stage_id)?.status ?? conformance.status,
       hasAttempt: stageAttempts.length > 0,
       observedRefCount: observedRefs.length,
     });
-    const admissionStatus = admissionByStage.get(stage.stage_id)?.status ?? admission.status;
+    const admissionStatus = conformanceByStage.get(stage.stage_id)?.status ?? conformance.status;
     const obligations = [
       evidenceObligation({
         obligationId: 'production_caller',
-        required: admissionStatus === 'admitted',
+        required: admissionStatus === 'conformant',
         observedRefs: stageAttemptRefs,
         unobservedRefs: stageAttempts.length === 0 ? ['production_caller_attempt'] : [],
         domainOwnedTypedBlockerRefs,
@@ -583,7 +583,7 @@ function stageProductionEvidence(
       }),
       evidenceObligation({
         obligationId: 'selected_executor_binding',
-        required: admissionStatus === 'admitted',
+        required: admissionStatus === 'conformant',
         observedRefs: uniqueStrings([
           ...selectedExecutorKinds.map((kind) => `executor_kind:${kind}`),
           ...executorBindingRefs,
@@ -631,7 +631,7 @@ function stageProductionEvidence(
       target_domain_id: plane.target_domain_id,
       stage_id: stage.stage_id,
       owner: stage.owner,
-      admission_status: admissionStatus,
+      conformance_status: admissionStatus,
       cohort_loop_status: cohortStage?.closure_status ?? 'missing_scope',
       production_evidence_status: status,
       attempt_count: stageAttempts.length,
@@ -694,7 +694,7 @@ function stageProductionEvidence(
     target_domain_id: plane.target_domain_id,
     plane_id: plane.plane_id,
     stage_count: stages.length,
-    admitted_stage_count: stages.filter((stage) => stage.admission_status === 'admitted').length,
+    conformant_stage_count: stages.filter((stage) => stage.conformance_status === 'conformant').length,
     observed_stage_count: stages.filter((stage) =>
       stage.production_evidence_status === 'production_caller_evidence_observed'
     ).length,
@@ -777,7 +777,7 @@ export function buildStageProductionEvidence(input: {
     summary: {
       domain_count: domains.length,
       stage_count: stages.length,
-      admitted_stage_count: domains.reduce((count, domain) => count + domain.admitted_stage_count, 0),
+      conformant_stage_count: domains.reduce((count, domain) => count + domain.conformant_stage_count, 0),
       observed_stage_count: domains.reduce((count, domain) => count + domain.observed_stage_count, 0),
       missing_production_caller_stage_count:
         domains.reduce((count, domain) => count + domain.missing_production_caller_stage_count, 0),

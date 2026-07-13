@@ -1,3 +1,14 @@
+import { registerAgentPackageReadinessPort } from '../../kernel/agent-package-readiness-port.ts';
+import {
+  ensureOplAgentPackageScopeActivation,
+  runOplAgentPackageStatus,
+} from './agent-package-registry.ts';
+
+registerAgentPackageReadinessPort({
+  readStatus: runOplAgentPackageStatus,
+  ensureScopeActivation: ensureOplAgentPackageScopeActivation,
+});
+
 export const OPL_CONNECT_SOURCE_MODULE = {
   moduleId: 'connect',
   brandName: 'OPL Connect',
@@ -39,14 +50,19 @@ export type {
 } from './capability-registry-resolver.ts';
 export {
   listOplAgentPackages,
+  readOplFlowDefaultUserInstructions,
+  ensureOplAgentPackageScopeActivation,
   runOplAgentPackageExposureAction,
   runOplAgentPackageFrameworkLink,
   runOplAgentPackageHomeShortcutPreferencesSet,
   runOplAgentPackageInstall,
   runOplAgentPackageManifestValidate,
+  runOplAgentPackageProfileApply,
   runOplAgentPackageRegistryRefresh,
   runOplAgentPackageRepair,
+  runOplAgentPackageRollback,
   runOplAgentPackageStatus,
+  runOplAgentPackageActivate,
   runOplAgentPackageUninstall,
   runOplAgentPackageUpdate,
 } from './agent-package-registry.ts';
@@ -55,7 +71,9 @@ export type {
   AgentPackageInstallInput,
   AgentPackageManifestValidateInput,
   AgentPackagePackageActionInput,
+  AgentPackageProfileApplyInput,
 } from './agent-package-registry.ts';
+export { canonicalAgentPackageId } from './agent-package-identity.ts';
 export {
   agentPackageDelegatedSurface,
   listAgentPackageSettingsActions,
@@ -80,11 +98,6 @@ export type {
   ScientificConnectorProviderId,
   ScientificConnectorSearchInput,
 } from './opl-connect-scientific.ts';
-export {
-  readOplFlowWorkflowPolicy,
-  resolveOplFlowDependencyClosure,
-  runWorkflowPackageAction,
-} from './workflow-package-lifecycle.ts';
 export { buildOplDeveloperModeSurface } from './system-installation/developer-mode.ts';
 export { buildOplDockerWebuiDoctor } from './system-installation/docker-webui-doctor.ts';
 export { runOplEngineAction } from './system-installation/engine-actions.ts';

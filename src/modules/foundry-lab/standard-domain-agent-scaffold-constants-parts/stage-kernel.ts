@@ -90,7 +90,7 @@ export const STAGE_RUN_KERNEL_PROFILE = {
     codex_can_route_to_any_declared_stage: true,
     quality_debt_counts_as_quality_acceptance: false,
   },
-  launch_admission_policy: {
+  stage_context_policy: {
     hard_blockers: [
       'identity',
       'owner',

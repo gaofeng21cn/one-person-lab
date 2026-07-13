@@ -8,7 +8,7 @@ import { pathToFileURL } from 'node:url';
 import { parseJsonText } from '../../src/kernel/json-file.ts';
 import { runFamilyRuntimeDomainHandlerCommand } from '../../src/modules/runway/family-runtime-domain-handler-process.ts';
 import {
-  evaluateStageRunAdmission,
+  evaluateStageRunProgress,
   rebuildStageRunReadModel,
 } from '../../src/modules/stagecraft/stage-run-kernel.ts';
 import { compileStandardAgentStageManifest } from '../../src/modules/pack/index.ts';
@@ -148,7 +148,7 @@ test('StageRun transports real MAG artifacts without becoming a semantic route o
 
     const stageRunId = `mag-stage-run-${gitHead}`;
     const artifactRef = pathToFileURL(revisedPath).href;
-    const admission = evaluateStageRunAdmission({
+    const progress = evaluateStageRunProgress({
       phase: 'closeout',
       stage_run_id: stageRunId,
       domain_id: 'mag',
@@ -163,9 +163,9 @@ test('StageRun transports real MAG artifacts without becoming a semantic route o
       typed_blocker_refs: [],
       quality_gate_receipt_refs: [],
     });
-    assert.equal(admission.status, 'passed_with_advisory');
-    assert.equal(admission.transition_outcome, 'completed_with_quality_debt');
-    assert.deepEqual(admission.closeout_blockers, []);
+    assert.equal(progress.status, 'progress_ready_with_quality_debt');
+    assert.equal(progress.transition_outcome, 'completed_with_quality_debt');
+    assert.deepEqual(progress.closeout_hard_stop_reasons, []);
 
     const readModel = rebuildStageRunReadModel([
       {

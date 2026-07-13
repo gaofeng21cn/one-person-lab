@@ -3,11 +3,11 @@ import type {
   FamilyStageControlPlane,
 } from './family-stage-control-plane-contract.ts';
 import {
-  buildFamilyStageAdmissionReview,
-} from './family-stage-admission.ts';
+  buildFamilyStageConformanceReview,
+} from './family-stage-conformance.ts';
 import type {
-  FamilyStageAdmissionReview,
-} from './family-stage-admission.ts';
+  FamilyStageConformanceReview,
+} from './family-stage-conformance.ts';
 import {
   buildFamilyStageAssumptionLifecycleProjection,
 } from './family-stage-assumption-lifecycle.ts';
@@ -28,7 +28,6 @@ import {
 import {
   FAMILY_STAGE_AI_STRATEGY_ADVISORY_REFS,
   FAMILY_STAGE_DERIVED_DIAGNOSTIC_LENSES,
-  FAMILY_STAGE_KERNEL_BLOCKER_SOURCES,
   FAMILY_STAGE_KERNEL_REQUIRED_REFS,
 } from './family-stage-derived-lenses.ts';
 
@@ -40,7 +39,7 @@ type FamilyStageReadinessStatus = 'launch_blocked' | 'launch_warning' | 'launch_
 
 export interface FamilyStageReadinessCheck {
   check_id:
-    | 'stage_admission'
+    | 'stage_conformance'
     | 'proof_bundle'
     | 'cohort_loop'
     | 'runtime_assumptions'
@@ -71,12 +70,12 @@ export interface FamilyStageReadinessSummary {
   launch_readiness_status: FamilyStageReadinessStatus;
   summary: {
     stage_count: number;
-    admitted_stage_count: number;
-    needs_contracts_stage_count: number;
+    conformant_stage_count: number;
+    quality_debt_stage_count: number;
     blocked_stage_count: number;
     hard_blocker_count: number;
     warning_count: number;
-    admission_warning_count: number;
+    conformance_warning_count: number;
     assumption_warning_count: number;
     cohort_loop_warning_count: number;
     runtime_budget_warning_count: number;
@@ -146,9 +145,11 @@ export interface FamilyStageOperatorReadiness {
   full_detail_policy: 'default_payload_is_attention_limited_full_diagnostics_via_detail_full';
   stage_kernel: {
     surface_kind: 'opl_stage_kernel_contract_floor';
-    hard_blocker_sources: typeof FAMILY_STAGE_KERNEL_BLOCKER_SOURCES;
+    hard_blocker_sources: readonly string[];
     kernel_required_refs: typeof FAMILY_STAGE_KERNEL_REQUIRED_REFS;
     derived_lenses_can_block_launch: false;
+    static_conformance_can_block_launch: false;
+    runtime_hard_stops_only: true;
   };
   ai_capability_aperture: {
     surface_kind: 'opl_ai_capability_aperture';
@@ -184,16 +185,16 @@ function readinessIssue(
   };
 }
 
-function issueFromAdmissionFinding(
+function issueFromConformanceFinding(
   severity: FamilyStageReadinessIssue['severity'],
-  finding: FamilyStageAdmissionReview['findings'][number],
+  finding: FamilyStageConformanceReview['findings'][number],
 ): FamilyStageReadinessIssue {
   return readinessIssue(
     severity,
     finding.code,
     finding.message,
     finding.stage_id ?? finding.target_stage_id ?? null,
-    finding.source_ref ?? `family_stage_admission:${finding.stage_id ?? finding.target_stage_id ?? 'stage_pack'}`,
+    finding.source_ref ?? `family_stage_conformance:${finding.stage_id ?? finding.target_stage_id ?? 'stage_pack'}`,
     finding.minimal_counterexample,
   );
 }
@@ -204,10 +205,10 @@ export function buildStageReadinessSummary(
   domain: string,
 ): FamilyStageReadinessSummary {
   const actionCatalog = entry.manifest?.family_action_catalog ?? null;
-  const admission = buildFamilyStageAdmissionReview(plane, entry.manifest);
+  const conformance = buildFamilyStageConformanceReview(plane, entry.manifest);
   const proofBundle = buildFamilyStageProofBundle(plane, {
     actionCatalog,
-    admissionReview: admission,
+    conformanceReview: conformance,
   });
   const cohortLoop = buildFamilyStageCohortLoopProjection(plane);
   const assumptions = buildFamilyStageAssumptionLifecycleProjection(plane);
@@ -225,12 +226,9 @@ export function buildStageReadinessSummary(
     `opl stages replay-certification --domain ${domain}`,
   ];
 
-  const hardBlockers = admission.findings
-    .filter((finding) => finding.severity === 'blocker')
-    .map((finding) => issueFromAdmissionFinding('blocker', finding));
-  const admissionWarnings = admission.findings
-    .filter((finding) => finding.severity === 'warning')
-    .map((finding) => issueFromAdmissionFinding('warning', finding));
+  const hardBlockers: FamilyStageReadinessIssue[] = [];
+  const conformanceWarnings = conformance.findings
+    .map((finding) => issueFromConformanceFinding('warning', finding));
   const assumptionWarnings = assumptions.assumptions
     .filter((assumption) => assumption.status !== 'current')
     .map((assumption) => readinessIssue(
@@ -279,31 +277,31 @@ export function buildStageReadinessSummary(
     blocker.payload_workorder,
   ));
   const warnings = [
-    ...admissionWarnings,
+    ...conformanceWarnings,
     ...assumptionWarnings,
     ...cohortWarnings,
     ...runtimeBudgetWarnings,
     ...replayWarnings,
   ];
-  const launchReadinessStatus: FamilyStageReadinessStatus = hardBlockers.length > 0
-    ? 'launch_blocked'
-    : warnings.length > 0
+  const launchReadinessStatus: FamilyStageReadinessStatus = warnings.length > 0
       ? 'launch_warning'
       : 'launch_observable';
   const checks: FamilyStageReadinessCheck[] = [
     {
-      check_id: 'stage_admission',
-      status: admission.summary.blockers_count > 0 ? 'blocked' : admission.summary.warnings_count > 0 ? 'warning' : 'ok',
-      stage_count: admission.summary.stages_count,
-      blocker_count: admission.summary.blockers_count,
-      warning_count: admission.summary.warnings_count,
+      check_id: 'stage_conformance',
+      status: conformanceWarnings.length > 0 ? 'warning' : 'ok',
+      stage_count: conformance.summary.stages_count,
+      blocker_count: hardBlockers.length,
+      warning_count: conformanceWarnings.length,
       drilldown_ref: 'opl stages list',
     },
     {
       check_id: 'proof_bundle',
-      status: proofBundle.admission_status === 'blocked' ? 'blocked' : proofBundle.admission_status === 'needs_contracts' ? 'warning' : 'ok',
+      status: proofBundle.conformance_status !== 'conformant'
+          ? 'warning'
+          : 'ok',
       stage_count: proofBundle.identity.stage_ids.length,
-      blocker_count: proofBundle.proof_runtime_metrics.blocker_count,
+      blocker_count: hardBlockers.length,
       warning_count: proofBundle.proof_runtime_metrics.warning_count,
       drilldown_ref: `opl stages proof-bundle --domain ${domain}`,
     },
@@ -349,12 +347,12 @@ export function buildStageReadinessSummary(
     launch_readiness_status: launchReadinessStatus,
     summary: {
       stage_count: plane.stages.length,
-      admitted_stage_count: admission.summary.admitted_stages_count,
-      needs_contracts_stage_count: admission.summary.needs_contracts_stages_count,
-      blocked_stage_count: admission.summary.blocked_stages_count,
+      conformant_stage_count: conformance.summary.conformant_stages_count,
+      quality_debt_stage_count: conformance.summary.quality_debt_stages_count,
+      blocked_stage_count: new Set(hardBlockers.map((issue) => issue.stage_id).filter(Boolean)).size,
       hard_blocker_count: hardBlockers.length,
       warning_count: warnings.length,
-      admission_warning_count: admissionWarnings.length,
+      conformance_warning_count: conformanceWarnings.length,
       assumption_warning_count: assumptionWarnings.length,
       cohort_loop_warning_count: cohortWarnings.length,
       runtime_budget_warning_count: runtimeBudgetWarnings.length,
@@ -402,13 +400,6 @@ export function buildStageReadinessSummary(
 }
 
 function nextSafeActions(summary: FamilyStageReadinessSummary) {
-  if (summary.hard_blockers.length > 0) {
-    return [
-      'resolve_stage_kernel_blockers',
-      'record_missing_runtime_boundary_events_or_executor_binding_refs',
-      'rerun_opl_stages_readiness_detail_full',
-    ];
-  }
   if (summary.warnings.length > 0) {
     return [
       'review_advisory_lens_warnings',
@@ -431,13 +422,13 @@ export function buildStageOperatorReadiness(
 ): FamilyStageOperatorReadiness {
   const lensById = new Map(FAMILY_STAGE_DERIVED_DIAGNOSTIC_LENSES.map((lens) => [lens.lens_id, lens]));
   const lensSummary = summary.checks.map((check) => {
-    if (check.check_id === 'stage_admission') {
+    if (check.check_id === 'stage_conformance') {
       return {
         ...check,
-        role: 'stage_kernel_gate' as const,
+        role: 'diagnostic_only' as const,
         author_required: true,
         default_surface: true,
-        can_block_launch: true,
+        can_block_launch: false,
       };
     }
     const lens = lensById.get(check.check_id);
@@ -474,9 +465,11 @@ export function buildStageOperatorReadiness(
     full_detail_policy: 'default_payload_is_attention_limited_full_diagnostics_via_detail_full',
     stage_kernel: {
       surface_kind: 'opl_stage_kernel_contract_floor',
-      hard_blocker_sources: FAMILY_STAGE_KERNEL_BLOCKER_SOURCES,
+      hard_blocker_sources: [],
       kernel_required_refs: FAMILY_STAGE_KERNEL_REQUIRED_REFS,
       derived_lenses_can_block_launch: false,
+      static_conformance_can_block_launch: false,
+      runtime_hard_stops_only: true,
     },
     ai_capability_aperture: {
       surface_kind: 'opl_ai_capability_aperture',

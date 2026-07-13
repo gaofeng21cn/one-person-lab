@@ -130,16 +130,15 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
       assert.equal(pack.distribution_role, 'framework_capability_plugin_pack');
       assert.equal(
         pack.capability_plugin_distribution?.default_sync_scope,
-        'none_without_explicit_workspace_or_quest_target',
+        'package_activation_transaction_only',
       );
       assert.equal('default_target_project' in pack.capability_plugin_distribution, false);
       assert.equal(pack.capability_plugin_distribution?.domain_module, false);
       assert.deepEqual(pack.command_preview, [
         'opl',
-        'connect',
-        'sync-skills',
-        '--domain',
-        'mas-scholar-skills',
+        'packages',
+        'activate',
+        'mas',
         '--scope',
         'workspace',
         '--target-workspace',

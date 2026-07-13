@@ -75,9 +75,9 @@ test('app action execute dry-runs Codex, module, scheduler, and worker actions f
       '--dry-run',
     ], env).app_action_execution;
 
-    assert.equal(moduleSync.delegated_surface, 'opl update apply --component capability_packages');
+    assert.equal(moduleSync.delegated_surface, 'opl packages update');
     assert.equal(moduleSync.result.managed_update.operation, 'plan');
-    assert.equal(moduleSync.result.managed_update.components[0].component_id, 'capability_packages');
+    assert.equal(moduleSync.result.managed_update.components[0].component_id, 'opl_packages');
 
     const actionReceipt = runCli([
       'app',
@@ -214,11 +214,11 @@ test('app action execute dry-runs Codex, module, scheduler, and worker actions f
       '--dry-run',
     ], env).app_action_execution;
 
-    assert.equal(settingsSync.delegated_surface, 'opl update apply --component capability_packages');
+    assert.equal(settingsSync.delegated_surface, 'opl packages update');
     assert.equal(settingsSync.result.settings_control_center_action.task_kind, 'sync');
     assert.equal(settingsSync.result.settings_control_center_action.confirmation_required, false);
     assert.equal(settingsSync.result.settings_control_center_action.danger_level, 'low');
-    assert.equal(settingsSync.result.managed_update.components[0].component_id, 'capability_packages');
+    assert.equal(settingsSync.result.managed_update.components[0].component_id, 'opl_packages');
 
     const settingsVerify = runCli([
       'app',
@@ -240,17 +240,20 @@ test('app action execute dry-runs Codex, module, scheduler, and worker actions f
       'action',
       'execute',
       '--action',
-      'settings_reload_codex_surface',
+      'agent_package_activate',
       '--payload',
-      '{"scope":"workspace","target_path":"/tmp/opl-workspace"}',
+      '{"package_id":"mas","scope":"workspace","target_workspace":"/tmp/opl-workspace","use_boundary_id":"dry-run-boundary"}',
       '--dry-run',
     ], env).app_action_execution;
 
     assert.equal(
       settingsReload.delegated_surface,
-      'opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace <target_path>',
+      'opl packages activate --package-id <package_id> --scope <workspace|quest>',
     );
-    assert.deepEqual(settingsReload.result.settings_control_center_action.payload_fields, ['scope', 'target_path']);
+    assert.equal(settingsReload.result.opl_agent_package_activation.status, 'validated_no_write');
+    assert.equal(settingsReload.result.opl_agent_package_activation.launch_allowed, false);
+    assert.equal(settingsReload.result.opl_agent_package_activation.launch_blocked_reason, 'package_not_installed');
+    assert.equal(settingsReload.result.opl_agent_package_activation.use_boundary_id, 'dry-run-boundary');
 
     const appUpdate = runCli([
       'app',
@@ -261,10 +264,10 @@ test('app action execute dry-runs Codex, module, scheduler, and worker actions f
       '--dry-run',
     ], env).app_action_execution;
 
-    assert.equal(appUpdate.delegated_surface, 'opl update status --component installation_carrier');
+    assert.equal(appUpdate.delegated_surface, 'opl app state --profile fast');
     assert.equal(appUpdate.result.settings_control_center_action.task_kind, 'check');
     assert.equal(appUpdate.result.settings_control_center_action.mutates, 'none_read_only');
-    assert.equal(appUpdate.result.managed_update.components[0].component_id, 'installation_carrier');
+    assert.equal(appUpdate.result.managed_update.components[0].component_id, 'opl_app');
     assert.equal(appUpdate.result.managed_update.components[0].coordination_role, 'owner_handoff');
     assert.equal(appUpdate.result.managed_update.components[0].current.managed_kernel_apply_allowed, false);
 
@@ -287,12 +290,12 @@ test('app action execute dry-runs Codex, module, scheduler, and worker actions f
       '--action',
       'settings_rollback_runtime_substrate',
       '--payload',
-      '{"receipt_ref":"opl://managed-update/runtime_substrate/apply/example"}',
+      '{"receipt_ref":"opl://managed-update/opl_base/apply/example"}',
     ], env).app_action_execution;
 
     assert.equal(
       rollbackPlan.delegated_surface,
-      'opl update rollback --component runtime_substrate', // reuse-first: allow owner-routed update command registry metadata.
+      'opl update rollback',
     );
     assert.equal(
       rollbackPlan.result.settings_control_center_action.task_kind,

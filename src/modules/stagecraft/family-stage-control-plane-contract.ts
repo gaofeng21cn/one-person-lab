@@ -24,6 +24,10 @@ export interface FamilyStageSurfaceRef {
   ref: string | string[];
   role?: string;
   label?: string;
+  layer?: string;
+  sha256?: string;
+  size_bytes?: number;
+  content?: string;
 }
 
 export interface FamilyStageToolAffordanceBoundary extends JsonRecord {
@@ -181,6 +185,12 @@ function normalizeSurfaceRef(value: unknown, field: string): FamilyStageSurfaceR
     ref: normalizeRefValue(value.ref, `${field}.ref`),
     ...(optionalString(value.role) ? { role: optionalString(value.role)! } : {}),
     ...(optionalString(value.label) ? { label: optionalString(value.label)! } : {}),
+    ...(optionalString(value.layer) ? { layer: optionalString(value.layer)! } : {}),
+    ...(optionalString(value.sha256) ? { sha256: optionalString(value.sha256)! } : {}),
+    ...(typeof value.size_bytes === 'number' && Number.isFinite(value.size_bytes)
+      ? { size_bytes: value.size_bytes }
+      : {}),
+    ...(typeof value.content === 'string' ? { content: value.content } : {}),
   };
 }
 

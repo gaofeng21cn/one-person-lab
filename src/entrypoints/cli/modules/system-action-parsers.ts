@@ -446,14 +446,14 @@ function parseTurnkeyInstallArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ): TurnkeyInstallCliInput {
-  const parsed: TurnkeyInstallCliInput = { modules: [] };
+  const parsed: TurnkeyInstallCliInput = {};
   let explicitHeadless = false;
 
   for (let index = 0; index < args.length; index += 1) {
     const token = args[index];
 
-    if (token === '--skip-modules') {
-      parsed.skipModules = true;
+    if (token === '--skip-packages') {
+      parsed.skipPackages = true;
       continue;
     }
     if (token === '--headless') {
@@ -482,31 +482,13 @@ function parseTurnkeyInstallArgs(
       throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, { token });
     }
 
-    const value = args[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw buildUsageError(`Missing value for option: ${token}.`, spec, { option: token });
-    }
-
-    switch (token) {
-      case '--module':
-        parsed.modules.push(value);
-        break;
-      case '--modules':
-        parsed.modules.push(...value.split(',').map((entry) => entry.trim()).filter(Boolean));
-        break;
-      default:
-        throw buildUsageError(`Unknown option for install command: ${token}.`, spec, { option: token });
-    }
-
-    index += 1;
+    throw buildUsageError(`Unknown option for install command: ${token}.`, spec, { option: token });
   }
 
   if (explicitHeadless && parsed.withApp) {
     throw buildUsageError('--headless and --with-app are mutually exclusive.', spec);
   }
   parsed.headless = !parsed.withApp;
-  if (parsed.modules.length === 0) parsed.skipModules = true;
-
   return parsed;
 }
 

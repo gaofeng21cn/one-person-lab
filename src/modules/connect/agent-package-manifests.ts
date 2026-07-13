@@ -1,8 +1,8 @@
-import bookForgeAgentPackageManifest from '../../../contracts/opl-framework/agent-packages/bookforge.json' with { type: 'json' };
-import magAgentPackageManifest from '../../../contracts/opl-framework/agent-packages/mag.json' with { type: 'json' };
-import masAgentPackageManifest from '../../../contracts/opl-framework/agent-packages/mas.json' with { type: 'json' };
-import omaAgentPackageManifest from '../../../contracts/opl-framework/agent-packages/oma.json' with { type: 'json' };
-import rcaAgentPackageManifest from '../../../contracts/opl-framework/agent-packages/rca.json' with { type: 'json' };
+import bookForgeAgentPackageManifest from '../../../contracts/opl-framework/packages/obf.json' with { type: 'json' };
+import magAgentPackageManifest from '../../../contracts/opl-framework/packages/mag.json' with { type: 'json' };
+import masAgentPackageManifest from '../../../contracts/opl-framework/packages/mas.json' with { type: 'json' };
+import omaAgentPackageManifest from '../../../contracts/opl-framework/packages/oma.json' with { type: 'json' };
+import rcaAgentPackageManifest from '../../../contracts/opl-framework/packages/rca.json' with { type: 'json' };
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { canonicalAgentPackageId } from './agent-package-identity.ts';
 import type { ModuleCapabilityDependency, OplModuleId } from './system-installation/shared.ts';
@@ -27,8 +27,8 @@ type FirstPartyAgentPackageManifest = {
     oci_ref: string;
     oci_media_type: string;
     immutable_tag: string;
-    rolling_tag: 'latest';
-    promotion_policy: 'daily_candidate_gates_then_promote_latest';
+    moving_tag: 'latest-stable';
+    promotion_policy: 'daily_candidate_gates_then_promote_latest_stable';
     install_truth: 'resolved_digest_lock';
   };
   codex_surface: {
@@ -56,6 +56,21 @@ function requiredString(value: unknown, field: string) {
     contract_ref: 'contracts/opl-framework/agent-package-manifest.schema.json',
     field,
   });
+}
+
+function requireCanonicalPackageIdentity(value: unknown, field: string) {
+  const declared = requiredString(value, field).toLowerCase();
+  const canonical = canonicalAgentPackageId(declared);
+  if (canonical !== declared) {
+    throw new FrameworkContractError('contract_shape_invalid', `Agent package manifest ${field} must use its canonical id.`, {
+      contract_ref: 'contracts/opl-framework/agent-package-manifest.schema.json',
+      field,
+      declared_id: declared,
+      canonical_id: canonical,
+      failure_code: 'agent_package_identity_not_canonical',
+    });
+  }
+  return declared;
 }
 
 function requireStringList(value: unknown, field: string) {
@@ -101,7 +116,7 @@ function normalizeDistributionPayload(value: unknown) {
       field: 'distribution_payload',
     });
   }
-  const rollingTag = requireLiteral(value.rolling_tag, 'latest', 'distribution_payload.rolling_tag');
+  const movingTag = requireLiteral(value.moving_tag, 'latest-stable', 'distribution_payload.moving_tag');
   const installTruth = requireLiteral(value.install_truth, 'resolved_digest_lock', 'distribution_payload.install_truth');
   const payloadDigestRef = requiredString(value.payload_digest_ref, 'distribution_payload.payload_digest_ref');
   if (!/^sha256:[0-9a-f]{64}$/.test(payloadDigestRef)) {
@@ -130,10 +145,10 @@ function normalizeDistributionPayload(value: unknown) {
     oci_ref: requiredString(value.oci_ref, 'distribution_payload.oci_ref'),
     oci_media_type: requiredString(value.oci_media_type, 'distribution_payload.oci_media_type'),
     immutable_tag: requiredString(value.immutable_tag, 'distribution_payload.immutable_tag'),
-    rolling_tag: rollingTag,
+    moving_tag: movingTag,
     promotion_policy: requireLiteral(
       value.promotion_policy,
-      'daily_candidate_gates_then_promote_latest',
+      'daily_candidate_gates_then_promote_latest_stable',
       'distribution_payload.promotion_policy',
     ),
     install_truth: installTruth,
@@ -170,6 +185,17 @@ function normalizeCapabilityDependency(value: unknown): ModuleCapabilityDependen
     module_id: requiredString(value.module_id, 'capability_dependencies.module_id') as ModuleCapabilityDependency['module_id'],
     package_id: requiredString(value.package_id, 'capability_dependencies.package_id'),
     kind: 'framework_capability_package',
+    required: value.required === true ? true : (() => {
+      throw new FrameworkContractError('contract_shape_invalid', 'Agent package capability dependency must be required.', {
+        contract_ref: 'contracts/opl-framework/agent-package-manifest.schema.json',
+        field: 'capability_dependencies.required',
+      });
+    })(),
+    version_requirement: requiredString(value.version_requirement, 'capability_dependencies.version_requirement'),
+    capability_abi: requiredString(value.capability_abi, 'capability_dependencies.capability_abi'),
+    required_export_ids: requireStringList(value.required_export_ids, 'capability_dependencies.required_export_ids'),
+    required_module_ids: requireStringList(value.required_module_ids, 'capability_dependencies.required_module_ids'),
+    ...(typeof value.manifest_url === 'string' ? { manifest_url: value.manifest_url } : {}),
     required_for: requireStringList(value.required_for, 'capability_dependencies.required_for'),
     install_owner: 'one-person-lab',
     install_update_source: 'ghcr_capability_packages_channel',
@@ -177,7 +203,6 @@ function normalizeCapabilityDependency(value: unknown): ModuleCapabilityDependen
     opl_distribution: requireLiteral(value.opl_distribution, 'managed_dependency', 'capability_dependencies.opl_distribution'),
     developer_distribution: requireLiteral(value.developer_distribution, 'source_checkout', 'capability_dependencies.developer_distribution'),
     sync_scopes: ['workspace', 'quest'],
-    sync_command_refs: requireStringList(value.sync_command_refs, 'capability_dependencies.sync_command_refs'),
     authority_boundary: {
       can_write_domain_truth: false,
       can_sign_owner_receipt: false,
@@ -200,6 +225,8 @@ export function normalizeFirstPartyAgentPackageManifest(payload: unknown): First
     });
   }
   const codexSurface = payload.codex_surface;
+  const agentId = requireCanonicalPackageIdentity(payload.agent_id, 'agent_id');
+  const packageId = requireCanonicalPackageIdentity(payload.package_id, 'package_id');
   const capabilityDependencies = Array.isArray(payload.capability_dependencies)
     ? payload.capability_dependencies.map(normalizeCapabilityDependency)
     : null;
@@ -218,8 +245,8 @@ export function normalizeFirstPartyAgentPackageManifest(payload: unknown): First
     });
   }
   return {
-    agent_id: canonicalAgentPackageId(requiredString(payload.agent_id, 'agent_id'))!,
-    package_id: canonicalAgentPackageId(requiredString(payload.package_id, 'package_id'))!,
+    agent_id: agentId,
+    package_id: packageId,
     version: requiredString(payload.version, 'version'),
     source: requiredString(payload.source, 'source'),
     carrier_source_role: requireLiteral(

@@ -5,7 +5,7 @@ type JsonRecord = Record<string, unknown>;
 export type StageRunEventKind =
   | 'stage_run_declared'
   | 'inputs_ready'
-  | 'admitted'
+  | 'stage_context_observed'
   | 'provider_running'
   | 'provider_completed'
   | 'owner_receipt_observed'
@@ -22,7 +22,7 @@ export type StageRunEventKind =
 export type StageRunStatus =
   | 'declared'
   | 'inputs_ready'
-  | 'admitted'
+  | 'context_observed'
   | 'running'
   | 'terminalizing'
   | 'domain_accepted'
@@ -69,67 +69,22 @@ export type StageRunReadModel = {
   authority_boundary: typeof AUTHORITY_BOUNDARY;
 };
 
-export type StageRunAdmissionReport = {
-  surface_kind: 'opl_stage_run_admission_report';
-  version: 'stage-run-admission.v1';
+export type StageRunProgressReport = {
+  surface_kind: 'opl_stage_run_progress_report';
+  version: 'stage-run-progress.v1';
   phase: 'launch' | 'closeout';
-  status: 'passed' | 'passed_with_advisory' | 'blocked';
-  launch_blockers: string[];
-  closeout_blockers: string[];
+  status: 'progress_ready' | 'progress_ready_with_quality_debt' | 'hard_stopped';
+  launch_hard_stop_reasons: string[];
+  closeout_hard_stop_reasons: string[];
   advisory_warnings: string[];
   route_back_recommendations: string[];
   audit_drilldown_refs: string[];
   forbidden_authority_flags: string[];
   consumable_artifact_refs: string[];
+  progress_diagnostic_refs: string[];
   quality_debt_reasons: string[];
-  transition_outcome: 'blocked' | 'completed' | 'completed_with_quality_debt' | 'hard_stopped';
-  default_blocked: boolean;
-  authority_boundary: typeof AUTHORITY_BOUNDARY;
-};
-
-export type StageRunExecutionAuthorizationBlocker = {
-  surface_kind: 'opl_stage_run_execution_authorization_blocker';
-  version: 'stage-run-execution-authorization-blocker.v1';
-  owner: 'one-person-lab';
-  blocker_code: 'stage_run_execution_authorization_blocked';
-  blocked_authority: Array<'execution_authorization' | 'closeout_receipt_binding'>;
-  blocker_reasons: string[];
-  domain_truth_changed: false;
-  owner_receipt_signed: false;
-  domain_typed_blocker_created: false;
-};
-
-export type StageRunCloseoutBinding = {
-  owner_answer_ref: string | null;
-  owner_answer_kind:
-    | 'owner_receipt'
-    | 'quality_gate_receipt'
-    | 'typed_blocker'
-    | 'human_gate'
-    | 'route_back_evidence'
-    | null;
-  closeout_receipt_ref: string | null;
-  bound_to_stage_run: boolean;
-  bound_to_stage_manifest: boolean;
-  bound_to_current_pointer: boolean;
-  bound_to_source_fingerprint: boolean;
-  bound_to_idempotency_key: boolean;
-  quality_gate_attempt_ref: string | null;
-  quality_gate_independent_attempt: boolean | null;
-};
-
-export type StageRunExecutionAuthorizationReport = {
-  surface_kind: 'opl_stage_run_execution_authorization_report';
-  version: 'stage-run-execution-authorization.v1';
-  phase: 'launch' | 'closeout';
-  status: 'authorized' | 'blocked';
-  execution_authorized: boolean;
-  launch_blockers: string[];
-  closeout_binding_blockers: string[];
-  quality_debt_reasons: string[];
-  transition_authorized_with_quality_debt: boolean;
-  closeout_binding: StageRunCloseoutBinding;
-  opl_runtime_blocker: StageRunExecutionAuthorizationBlocker | null;
+  transition_outcome: 'completed' | 'completed_with_quality_debt' | 'hard_stopped';
+  default_hard_stopped: boolean;
   authority_boundary: typeof AUTHORITY_BOUNDARY;
 };
 
@@ -146,9 +101,7 @@ const AUTHORITY_BOUNDARY = {
   opl_can_store_memory_body: false,
   opl_can_create_owner_receipt: false,
   opl_can_create_typed_blocker: false,
-  opl_can_create_execution_authorization_blocker: true,
-  execution_blocker_is_domain_typed_blocker: false,
-  execution_blocker_can_change_domain_truth: false,
+  opl_can_block_next_declared_stage_for_missing_transport_receipt: false,
   opl_can_authorize_publication_or_quality_verdict: false,
   read_model_can_be_truth_source: false,
   provider_completion_counts_as_domain_accepted: false,
@@ -247,7 +200,7 @@ function currentPointerBindingIsValid(input: JsonRecord) {
 function hasSafeAuthorityBoundary(input: JsonRecord) {
   const boundary = recordField(input.authority_boundary);
   if (!boundary) {
-    return false;
+    return true;
   }
   return boundary.opl_can_write_domain_truth === false
     && boundary.opl_can_create_owner_receipt === false
@@ -259,19 +212,23 @@ function stageRunIdentityBlockers(input: JsonRecord) {
     isNonEmptyString(input.stage_run_id) ? null : 'stage_run_id_missing',
     isNonEmptyString(input.domain_id) ? null : 'domain_id_missing',
     isNonEmptyString(input.stage_id) ? null : 'stage_id_missing',
-    Number.isInteger(input.generation) && Number(input.generation) >= 0 ? null : 'generation_invalid',
-    currentPointerMatches(input) ? null : 'current_pointer_invalid',
+    input.generation === undefined || (Number.isInteger(input.generation) && Number(input.generation) >= 0)
+      ? null
+      : 'generation_invalid',
+    input.current_pointer === undefined || currentPointerMatches(input) ? null : 'current_pointer_invalid',
   ].filter((entry): entry is string => Boolean(entry));
 }
 
-function statusFor(report: Omit<StageRunAdmissionReport, 'status'>): StageRunAdmissionReport['status'] {
-  if (report.launch_blockers.length > 0 || report.closeout_blockers.length > 0 || report.forbidden_authority_flags.length > 0) {
-    return 'blocked';
+function statusFor(report: Omit<StageRunProgressReport, 'status'>): StageRunProgressReport['status'] {
+  if (report.launch_hard_stop_reasons.length > 0
+    || report.closeout_hard_stop_reasons.length > 0
+    || report.forbidden_authority_flags.length > 0) {
+    return 'hard_stopped';
   }
   if (report.advisory_warnings.length > 0 || report.route_back_recommendations.length > 0) {
-    return 'passed_with_advisory';
+    return 'progress_ready_with_quality_debt';
   }
-  return 'passed';
+  return 'progress_ready';
 }
 
 function rejectForbiddenPayloads(event: JsonRecord) {
@@ -307,10 +264,10 @@ export function stageRunEvent(input: JsonRecord): StageRunEvent {
   };
 }
 
-export function evaluateStageRunAdmission(input: JsonRecord): StageRunAdmissionReport {
-  const phase: StageRunAdmissionReport['phase'] = input.phase === 'closeout' ? 'closeout' : 'launch';
-  const launchBlockers: string[] = [];
-  const closeoutBlockers: string[] = [];
+export function evaluateStageRunProgress(input: JsonRecord): StageRunProgressReport {
+  const phase: StageRunProgressReport['phase'] = input.phase === 'closeout' ? 'closeout' : 'launch';
+  const launchHardStopReasons: string[] = [];
+  const closeoutHardStopReasons: string[] = [];
   const advisoryWarnings = stringRefs(input.missing_strategy_refs)
     .map((entry) => `strategy_ref_missing:${entry}`);
   const routeBackRecommendations = stringRefs(input.route_back_missing_refs)
@@ -318,21 +275,24 @@ export function evaluateStageRunAdmission(input: JsonRecord): StageRunAdmissionR
   const auditDrilldownRefs = stringRefs(input.audit_drilldown_refs);
   const forbiddenAuthorityFlags: string[] = [];
   const consumableArtifactRefs = stringRefs(input.consumable_artifact_refs);
+  const progressDiagnosticRefs = stringRefs(input.progress_diagnostic_refs);
   const qualityDebtReasons = stringRefs(input.quality_debt_refs);
 
   if (phase === 'launch') {
-    launchBlockers.push(...stageRunIdentityBlockers(input));
+    launchHardStopReasons.push(...stageRunIdentityBlockers(input));
     if (!isNonEmptyString(input.owner)) {
-      launchBlockers.push('owner_missing');
+      advisoryWarnings.push('owner_missing_domain_context_may_supply_owner');
     }
     if (stringRefs(input.scope_refs).length === 0) {
       advisoryWarnings.push('scope_refs_missing_executor_may_infer_with_quality_debt');
     }
     if (!isNonEmptyString(input.selected_executor)) {
-      launchBlockers.push('selected_executor_missing');
+      advisoryWarnings.push('selected_executor_missing_defaults_to_codex_cli');
     }
-    if (!hasSafeAuthorityBoundary(input)) {
-      launchBlockers.push('authority_boundary_invalid');
+    if (input.authority_boundary === undefined) {
+      advisoryWarnings.push('authority_boundary_missing_framework_uses_no_authority_defaults');
+    } else if (!hasSafeAuthorityBoundary(input)) {
+      launchHardStopReasons.push('authority_boundary_invalid');
     }
     if (stringRefs(input.required_role_artifacts).length === 0) {
       advisoryWarnings.push('required_role_artifacts_missing_executor_may_start_from_available_inputs');
@@ -344,7 +304,7 @@ export function evaluateStageRunAdmission(input: JsonRecord): StageRunAdmissionR
       advisoryWarnings.push('input_refs_missing_stage_may_start_from_declared_context');
     }
     if (input.forbidden_write_required === true) {
-      launchBlockers.push('forbidden_write_required');
+      launchHardStopReasons.push('forbidden_write_required');
     }
     if (stringRefs(input.replay_audit_refs).length === 0) {
       advisoryWarnings.push('replay_audit_lineage_missing_framework_will_derive_lineage');
@@ -352,7 +312,7 @@ export function evaluateStageRunAdmission(input: JsonRecord): StageRunAdmissionR
   } else {
     const requiredRoles = stringRefs(input.required_role_artifacts);
     const producedRoles = stringRefs(input.produced_role_artifacts);
-    closeoutBlockers.push(...stageRunIdentityBlockers(input));
+    closeoutHardStopReasons.push(...stageRunIdentityBlockers(input));
     if (input.manifest_valid !== true) {
       advisoryWarnings.push('manifest_invalid_framework_derives_minimal_manifest');
       qualityDebtReasons.push('manifest_invalid_nonblocking');
@@ -374,7 +334,12 @@ export function evaluateStageRunAdmission(input: JsonRecord): StageRunAdmissionR
       || typedBlockerRefs.length > 0
       || qualityGateReceiptRefs.length > 0;
     if (!ownerAnswerObserved && consumableArtifactRefs.length === 0) {
-      closeoutBlockers.push('consumable_artifact_or_owner_answer_missing');
+      advisoryWarnings.push('no_stage_output_forwarded_as_progress_diagnostic');
+      qualityDebtReasons.push('no_consumable_artifact_or_owner_answer');
+      const stageRunId = typeof input.stage_run_id === 'string' && input.stage_run_id.trim()
+        ? input.stage_run_id.trim()
+        : 'unknown-stage-run';
+      progressDiagnosticRefs.push(`opl://stage-run/${encodeURIComponent(stageRunId)}/no-output-diagnostic`);
     } else if (!ownerAnswerObserved) {
       advisoryWarnings.push('owner_answer_missing_transition_continues_with_quality_debt');
       qualityDebtReasons.push('owner_answer_missing_for_quality_or_ready_claim');
@@ -401,213 +366,50 @@ export function evaluateStageRunAdmission(input: JsonRecord): StageRunAdmissionR
     }
   }
 
-  const defaultBlocked = launchBlockers.length > 0
-    || closeoutBlockers.length > 0
+  const explicitHardStopReasons = [
+    input.permission_or_safety_blocked === true ? 'permission_or_safety_boundary' : null,
+    input.irreversible_action_without_authority === true ? 'irreversible_action_without_authority' : null,
+    input.human_decision_required === true ? 'explicit_human_decision_required' : null,
+    input.executor_unavailable === true ? 'selected_executor_unavailable' : null,
+  ].filter((reason): reason is string => reason !== null);
+  if (phase === 'launch') {
+    launchHardStopReasons.push(...explicitHardStopReasons);
+  } else {
+    closeoutHardStopReasons.push(...explicitHardStopReasons);
+  }
+
+  const defaultHardStopped = launchHardStopReasons.length > 0
+    || closeoutHardStopReasons.length > 0
     || forbiddenAuthorityFlags.length > 0;
   const ownerOrQualityReceiptObserved = phase === 'closeout' && (
     stringRefs(input.owner_receipt_refs).length > 0
     || stringRefs(input.quality_gate_receipt_refs).length > 0
   );
 
-  const base: Omit<StageRunAdmissionReport, 'status'> = {
-    surface_kind: 'opl_stage_run_admission_report' as const,
-    version: 'stage-run-admission.v1' as const,
+  const base: Omit<StageRunProgressReport, 'status'> = {
+    surface_kind: 'opl_stage_run_progress_report' as const,
+    version: 'stage-run-progress.v1' as const,
     phase,
-    launch_blockers: [...new Set(launchBlockers)],
-    closeout_blockers: [...new Set(closeoutBlockers)],
+    launch_hard_stop_reasons: [...new Set(launchHardStopReasons)],
+    closeout_hard_stop_reasons: [...new Set(closeoutHardStopReasons)],
     advisory_warnings: [...new Set(advisoryWarnings)],
     route_back_recommendations: [...new Set(routeBackRecommendations)],
     audit_drilldown_refs: [...new Set(auditDrilldownRefs)],
     forbidden_authority_flags: [...new Set(forbiddenAuthorityFlags)],
     consumable_artifact_refs: [...new Set(consumableArtifactRefs)],
+    progress_diagnostic_refs: [...new Set(progressDiagnosticRefs)],
     quality_debt_reasons: [...new Set(qualityDebtReasons)],
-    transition_outcome: defaultBlocked
-      ? 'blocked'
+    transition_outcome: defaultHardStopped
+      ? 'hard_stopped'
       : ownerOrQualityReceiptObserved || phase === 'launch'
           ? 'completed'
           : 'completed_with_quality_debt',
-    default_blocked: defaultBlocked,
+    default_hard_stopped: defaultHardStopped,
     authority_boundary: AUTHORITY_BOUNDARY,
   };
   return {
     ...base,
     status: statusFor(base),
-  };
-}
-
-function requiredRefBlocker(input: JsonRecord, field: string, blocker: string) {
-  return isNonEmptyString(input[field]) ? null : blocker;
-}
-
-function launchAuthorizationBlockers(input: JsonRecord) {
-  return [
-    ...stageRunIdentityBlockers(input),
-    requiredRefBlocker(input, 'selected_executor', 'selected_executor_missing'),
-    requiredRefBlocker(input, 'source_fingerprint', 'source_fingerprint_missing'),
-    requiredRefBlocker(input, 'idempotency_key', 'idempotency_key_missing'),
-    requiredRefBlocker(input, 'provider_attempt_ref', 'provider_attempt_ref_missing'),
-    requiredRefBlocker(input, 'attempt_lease_ref', 'attempt_lease_ref_missing'),
-    input.attempt_lease_status === undefined || input.attempt_lease_status === 'active'
-      ? null
-      : 'attempt_lease_not_active',
-    requiredRefBlocker(input, 'execution_authorization_decision_ref', 'execution_authorization_decision_ref_missing'),
-    requiredRefBlocker(input, 'workspace_scope_ref', 'workspace_scope_ref_missing'),
-    requiredRefBlocker(input, 'artifact_scope_ref', 'artifact_scope_ref_missing'),
-    hasSafeAuthorityBoundary(input) ? null : 'authority_boundary_invalid',
-    input.forbidden_write_required === true ? 'forbidden_write_required' : null,
-  ].filter((entry): entry is string => Boolean(entry));
-}
-
-function buildCloseoutBinding(input: JsonRecord): StageRunCloseoutBinding {
-  const closeoutReceiptRef = optionalRef(input.closeout_receipt_ref);
-  const ownerAnswerRef = optionalRef(input.owner_answer_ref) ?? closeoutReceiptRef;
-  const explicitOwnerAnswerKind = optionalRef(input.owner_answer_kind);
-  const ownerAnswerKind = ownerAnswerRef === null
-    ? null
-    : explicitOwnerAnswerKind === 'typed_blocker'
-      || explicitOwnerAnswerKind === 'quality_gate_receipt'
-      || explicitOwnerAnswerKind === 'human_gate'
-      || explicitOwnerAnswerKind === 'route_back_evidence'
-        ? explicitOwnerAnswerKind
-        : 'owner_receipt';
-  const ownerAnswerStageRunId = input.owner_answer_stage_run_id ?? input.closeout_receipt_stage_run_id;
-  const ownerAnswerGeneration = input.owner_answer_generation ?? input.closeout_receipt_generation;
-  const stageManifestRef = optionalRef(input.stage_manifest_ref);
-  const ownerAnswerStageManifestRef =
-    optionalRef(input.owner_answer_manifest_ref) ?? optionalRef(input.closeout_receipt_manifest_ref);
-  const currentPointerRef = optionalRef(input.current_pointer_ref);
-  const ownerAnswerCurrentPointerRef =
-    optionalRef(input.owner_answer_current_pointer_ref) ?? optionalRef(input.closeout_receipt_current_pointer_ref);
-  const sourceFingerprint = optionalRef(input.source_fingerprint);
-  const ownerAnswerSourceFingerprint =
-    optionalRef(input.owner_answer_source_fingerprint) ?? optionalRef(input.closeout_receipt_source_fingerprint);
-  const idempotencyKey = optionalRef(input.idempotency_key);
-  const ownerAnswerIdempotencyKey =
-    optionalRef(input.owner_answer_idempotency_key) ?? optionalRef(input.closeout_receipt_idempotency_key);
-  const providerAttemptRef = optionalRef(input.provider_attempt_ref);
-  const qualityGateAttemptRef =
-    optionalRef(input.quality_gate_attempt_ref) ?? optionalRef(input.owner_answer_attempt_ref);
-  const qualityGateIndependentAttempt = ownerAnswerKind === 'quality_gate_receipt'
-    ? qualityGateAttemptRef !== null && qualityGateAttemptRef !== providerAttemptRef
-    : null;
-  return {
-    owner_answer_ref: ownerAnswerRef,
-    owner_answer_kind: ownerAnswerKind,
-    closeout_receipt_ref: closeoutReceiptRef,
-    bound_to_stage_run:
-      ownerAnswerRef !== null
-      && ownerAnswerStageRunId === input.stage_run_id
-      && ownerAnswerGeneration === input.generation,
-    bound_to_stage_manifest:
-      ownerAnswerRef !== null
-      && stageManifestRef !== null
-      && ownerAnswerStageManifestRef === stageManifestRef,
-    bound_to_current_pointer:
-      ownerAnswerRef !== null
-      && currentPointerRef !== null
-      && ownerAnswerCurrentPointerRef === currentPointerRef,
-    bound_to_source_fingerprint:
-      ownerAnswerRef !== null
-      && sourceFingerprint !== null
-      && ownerAnswerSourceFingerprint === sourceFingerprint,
-    bound_to_idempotency_key:
-      ownerAnswerRef !== null
-      && idempotencyKey !== null
-      && ownerAnswerIdempotencyKey === idempotencyKey,
-    quality_gate_attempt_ref: qualityGateAttemptRef,
-    quality_gate_independent_attempt: qualityGateIndependentAttempt,
-  };
-}
-
-function closeoutBindingBlockers(binding: StageRunCloseoutBinding) {
-  return [
-    binding.owner_answer_ref ? null : 'closeout_receipt_ref_missing',
-    binding.bound_to_stage_run ? null : 'closeout_receipt_stage_run_binding_missing',
-    binding.bound_to_stage_manifest ? null : 'closeout_receipt_stage_manifest_binding_missing',
-    binding.bound_to_current_pointer ? null : 'closeout_receipt_current_pointer_binding_missing',
-    binding.bound_to_source_fingerprint ? null : 'closeout_receipt_source_fingerprint_binding_missing',
-    binding.bound_to_idempotency_key ? null : 'closeout_owner_answer_idempotency_binding_missing',
-    binding.owner_answer_kind !== 'quality_gate_receipt' || binding.quality_gate_attempt_ref
-      ? null
-      : 'quality_gate_independent_attempt_binding_missing',
-    binding.owner_answer_kind !== 'quality_gate_receipt'
-      || binding.quality_gate_attempt_ref === null
-      || binding.quality_gate_independent_attempt === true
-      ? null
-      : 'quality_gate_same_attempt_self_review_forbidden',
-  ].filter((entry): entry is string => Boolean(entry));
-}
-
-function executionAuthorizationBlocker(
-  launchBlockers: string[],
-  closeoutBlockers: string[],
-): StageRunExecutionAuthorizationBlocker | null {
-  const blockerReasons = [...new Set([...launchBlockers, ...closeoutBlockers])];
-  if (blockerReasons.length === 0) {
-    return null;
-  }
-  return {
-    surface_kind: 'opl_stage_run_execution_authorization_blocker',
-    version: 'stage-run-execution-authorization-blocker.v1',
-    owner: 'one-person-lab',
-    blocker_code: 'stage_run_execution_authorization_blocked',
-    blocked_authority: [
-      launchBlockers.length > 0 ? 'execution_authorization' : null,
-      closeoutBlockers.length > 0 ? 'closeout_receipt_binding' : null,
-    ].filter((entry): entry is 'execution_authorization' | 'closeout_receipt_binding' => Boolean(entry)),
-    blocker_reasons: blockerReasons,
-    domain_truth_changed: false,
-    owner_receipt_signed: false,
-    domain_typed_blocker_created: false,
-  };
-}
-
-export function evaluateStageRunExecutionAuthorization(input: JsonRecord): StageRunExecutionAuthorizationReport {
-  const phase: StageRunExecutionAuthorizationReport['phase'] = input.phase === 'closeout' ? 'closeout' : 'launch';
-  const launchBlockers = [...new Set(launchAuthorizationBlockers(input))];
-  const closeoutBinding = buildCloseoutBinding(input);
-  const consumableArtifactRefs = stringRefs(input.consumable_artifact_refs);
-  const rawCloseoutBindingBlockers = phase === 'closeout'
-    ? [...new Set(closeoutBindingBlockers(closeoutBinding))]
-    : [];
-  const qualityOnlyBindingBlockers = new Set([
-    'quality_gate_independent_attempt_binding_missing',
-    'quality_gate_same_attempt_self_review_forbidden',
-  ]);
-  const transitionWithoutOwnerAnswer = phase === 'closeout'
-    && closeoutBinding.owner_answer_ref === null
-    && consumableArtifactRefs.length > 0;
-  const qualityGateDebtForward = phase === 'closeout'
-    && consumableArtifactRefs.length > 0
-    && rawCloseoutBindingBlockers.some((reason) => qualityOnlyBindingBlockers.has(reason));
-  const closeoutBindingBlockerList = transitionWithoutOwnerAnswer
-    ? []
-    : rawCloseoutBindingBlockers.filter((reason) => !(
-        qualityGateDebtForward && qualityOnlyBindingBlockers.has(reason)
-      ));
-  const qualityDebtReasons = [
-    ...(transitionWithoutOwnerAnswer ? ['owner_answer_missing_for_quality_or_ready_claim'] : []),
-    ...rawCloseoutBindingBlockers.filter((reason) => (
-      qualityGateDebtForward && qualityOnlyBindingBlockers.has(reason)
-    )),
-    ...stringRefs(input.quality_debt_refs),
-  ];
-  const runtimeBlocker = executionAuthorizationBlocker(launchBlockers, closeoutBindingBlockerList);
-  const executionAuthorized = runtimeBlocker === null;
-  return {
-    surface_kind: 'opl_stage_run_execution_authorization_report',
-    version: 'stage-run-execution-authorization.v1',
-    phase,
-    status: executionAuthorized ? 'authorized' : 'blocked',
-    execution_authorized: executionAuthorized,
-    launch_blockers: launchBlockers,
-    closeout_binding_blockers: closeoutBindingBlockerList,
-    quality_debt_reasons: [...new Set(qualityDebtReasons)],
-    transition_authorized_with_quality_debt:
-      phase === 'closeout' && executionAuthorized && qualityDebtReasons.length > 0,
-    closeout_binding: closeoutBinding,
-    opl_runtime_blocker: runtimeBlocker,
-    authority_boundary: AUTHORITY_BOUNDARY,
   };
 }
 
@@ -641,8 +443,8 @@ function statusAfterEvent(event: StageRunEvent): StageRunStatus {
       return 'declared';
     case 'inputs_ready':
       return 'inputs_ready';
-    case 'admitted':
-      return 'admitted';
+    case 'stage_context_observed':
+      return 'context_observed';
     case 'provider_running':
       return 'running';
     case 'provider_completed':

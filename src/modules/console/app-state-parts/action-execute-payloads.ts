@@ -38,53 +38,38 @@ export function workspaceRootPayload(payload: JsonRecord) {
   return workspaceRoot;
 }
 
-export function scholarskillsWorkspaceRootPayload(payload: JsonRecord) {
-  const workspaceRoot = stringPayloadField(payload, 'workspace_root')
-    ?? stringPayloadField(payload, 'workspaceRoot')
-    ?? stringPayloadField(payload, 'path');
-  if (!workspaceRoot) {
-    throw new FrameworkContractError('cli_usage_error', 'scholarskills_workspace_sync action requires payload.workspace_root.', {
-      action_id: 'scholarskills_workspace_sync',
-      required: ['workspace_root'],
-    });
-  }
-  return workspaceRoot;
-}
-
-export function scholarskillsQuestRootPayload(payload: JsonRecord) {
-  const questRoot = stringPayloadField(payload, 'quest_root')
-    ?? stringPayloadField(payload, 'questRoot')
-    ?? stringPayloadField(payload, 'path');
-  if (!questRoot) {
-    throw new FrameworkContractError('cli_usage_error', 'scholarskills_quest_sync action requires payload.quest_root.', {
-      action_id: 'scholarskills_quest_sync',
-      required: ['quest_root'],
-    });
-  }
-  return questRoot;
-}
-
-export function settingsReloadCodexSurfacePayload(payload: JsonRecord): {
+export function agentPackageActivationPayload(payload: JsonRecord): {
+  packageId: string;
   scope: 'workspace' | 'quest';
-  targetPath: string;
+  targetWorkspace?: string;
+  targetQuest?: string;
+  useBoundaryId: string | null;
 } {
+  const { packageId } = agentPackageIdPayload('agent_package_activate', payload);
   const scope = stringPayloadField(payload, 'scope');
-  const targetPath = stringPayloadField(payload, 'target_path')
-    ?? stringPayloadField(payload, 'targetPath')
-    ?? stringPayloadField(payload, 'path');
+  const targetWorkspace = stringPayloadField(payload, 'target_workspace');
+  const targetQuest = stringPayloadField(payload, 'target_quest');
+  const useBoundaryId = stringPayloadField(payload, 'use_boundary_id');
   if (scope !== 'workspace' && scope !== 'quest') {
-    throw new FrameworkContractError('cli_usage_error', 'settings_reload_codex_surface action requires payload.scope workspace or quest.', {
-      action_id: 'settings_reload_codex_surface',
+    throw new FrameworkContractError('cli_usage_error', 'agent_package_activate action requires payload.scope workspace or quest.', {
+      action_id: 'agent_package_activate',
       allowed_scopes: ['workspace', 'quest'],
     });
   }
-  if (!targetPath) {
-    throw new FrameworkContractError('cli_usage_error', 'settings_reload_codex_surface action requires payload.target_path.', {
-      action_id: 'settings_reload_codex_surface',
-      required: ['target_path'],
+  const target = scope === 'workspace' ? targetWorkspace : targetQuest;
+  if (!target || (scope === 'workspace' ? targetQuest : targetWorkspace)) {
+    throw new FrameworkContractError('cli_usage_error', 'agent_package_activate requires exactly the target matching its scope.', {
+      action_id: 'agent_package_activate',
+      required: [scope === 'workspace' ? 'target_workspace' : 'target_quest'],
     });
   }
-  return { scope, targetPath };
+  return {
+    packageId,
+    scope: scope as 'workspace' | 'quest',
+    targetWorkspace: scope === 'workspace' ? target : undefined,
+    targetQuest: scope === 'quest' ? target : undefined,
+    useBoundaryId,
+  };
 }
 
 export function booleanPayloadField(payload: JsonRecord, field: string, fallback = false) {

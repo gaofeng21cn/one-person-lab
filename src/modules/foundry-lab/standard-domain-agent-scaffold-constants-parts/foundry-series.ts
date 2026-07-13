@@ -12,7 +12,7 @@ export const FOUNDRY_AGENT_SERIES_CONSUMER_KIND =
   'opl_foundry_agent_series_consumer';
 export const FOUNDRY_AGENT_SERIES_CONSUMER_VERSION =
   'foundry-agent-series-consumer.v1';
-export const FOUNDRY_AGENT_SERIES_POLICY_BUNDLE_FINGERPRINT = 'sha256:7e50ce27f04c5fe801d4da0b385265def3c7e6df1d32b8f3b8ec29410ba5545c';
+export const FOUNDRY_AGENT_SERIES_POLICY_BUNDLE_FINGERPRINT = 'sha256:2abdcbe6e7c238dfc0bcbff2251fb0eda505647927446a6fbf47ae8b28253415';
 
 export const STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT = {
   surface_kind: 'opl_foundry_agent_series_contract',

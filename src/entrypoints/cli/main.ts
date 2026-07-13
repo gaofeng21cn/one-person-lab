@@ -94,20 +94,6 @@ const RETIRED_COMMAND_REPLACEMENTS = [
     examples: ['opl connect exec --module medautoscience -- doctor entry-modes'],
   },
   {
-    tokens: ['module', 'sync'],
-    command: 'opl module sync',
-    replacement: 'opl connect reconcile-modules',
-    usage: 'opl connect reconcile-modules',
-    examples: ['opl connect reconcile-modules --json'],
-  },
-  {
-    tokens: ['module', 'reconcile'],
-    command: 'opl module reconcile',
-    replacement: 'opl connect reconcile-modules',
-    usage: 'opl connect reconcile-modules',
-    examples: ['opl connect reconcile-modules --json'],
-  },
-  {
     tokens: ['framework', 'production-closeout'],
     command: 'opl framework production-closeout',
     replacement: 'opl framework operating-maturity --family-defaults --json',

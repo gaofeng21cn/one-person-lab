@@ -1,4 +1,5 @@
 import { FrameworkContractError, isRecord } from '../../../kernel/contract-validation.ts';
+import fs from 'node:fs';
 import { parseJsonText } from '../../../kernel/json-file.ts';
 import { runRuntimeOperatorActionExecute } from '../../runway/index.ts';
 import {
@@ -9,6 +10,7 @@ import {
   runOplAgentPackageRepair,
   runOplAgentPackageUninstall,
   runOplAgentPackageUpdate,
+  runOplAgentPackageActivate,
   runOplModuleAction,
   agentPackageDelegatedSurface,
   buildManagedUpdateKernelProjection,
@@ -20,7 +22,6 @@ import { runFamilyRuntime } from '../../runway/index.ts';
 import { runOplEngineAction } from '../../connect/index.ts';
 import { MANAGED_UPDATE_OWNER_ACTIONS, managedUpdateCommand } from '../../connect/index.ts';
 import { executeWorkspaceAppAction } from '../app-state-workspace-actions.ts';
-import { syncFamilySkillPacks } from '../../connect/index.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
 import { buildOplDockerWebuiDoctor } from '../../connect/index.ts';
 import { runOplTurnkeyInstall } from '../../connect/index.ts';
@@ -35,9 +36,7 @@ import {
   parseCodexAction,
   parseModuleAction,
   releaseChannelPayload,
-  scholarskillsQuestRootPayload,
-  scholarskillsWorkspaceRootPayload,
-  settingsReloadCodexSurfacePayload,
+  agentPackageActivationPayload,
   settingsVerifyWorkspacePayload,
   stringPayloadField,
   workspaceRootPayload,
@@ -54,6 +53,10 @@ import {
   dryRunModuleAction,
 } from './action-execute-previews.ts';
 import { executeConnectionAppAction } from './action-execute-connections.ts';
+import {
+  restoreCodexUserInstructionsFromOplFlowDefault,
+  writeCodexUserInstructions,
+} from '../codex-personalization.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -134,6 +137,17 @@ export function parseAppActionExecuteArgs(args: string[]): AppActionExecuteOptio
       continue;
     }
 
+    if (token === '--payload-stdin') {
+      if (payloadSet) {
+        throw new FrameworkContractError('cli_usage_error', 'Use only one payload source.', {
+          option: '--payload-stdin',
+        });
+      }
+      payload = parseJsonObject(fs.readFileSync(0, 'utf8'), '--payload-stdin');
+      payloadSet = true;
+      continue;
+    }
+
     if (token === '--dry-run') {
       dryRun = true;
       continue;
@@ -141,7 +155,7 @@ export function parseAppActionExecuteArgs(args: string[]): AppActionExecuteOptio
 
     throw new FrameworkContractError('cli_usage_error', `Unknown app action execute option: ${token}.`, {
       option: token,
-      usage: 'opl app action execute --action <action_id> [--payload <json>] [--dry-run]',
+      usage: 'opl app action execute --action <action_id> [--payload <json>|--payload-stdin] [--dry-run]',
     });
   }
 
@@ -241,13 +255,13 @@ async function executeDirectAppAction(
 
   if (options.actionId === 'module_sync') {
     return {
-      delegatedSurface: managedUpdateCommand('apply', 'capability_packages', { json: false }),
+      delegatedSurface: managedUpdateCommand('apply', 'opl_packages', { json: false }),
       result: options.dryRun
         ? await buildManagedUpdateKernelProjection(contracts, {
             operation: 'plan',
-            componentId: 'capability_packages',
+            componentId: 'opl_packages',
           })
-        : await runManagedUpdateApply(contracts, 'capability_packages'),
+        : await runManagedUpdateApply(contracts, 'opl_packages'),
     };
   }
 
@@ -324,6 +338,44 @@ async function executeDirectAppAction(
     };
   }
 
+  if (options.actionId === 'codex_user_instructions_set') {
+    const content = options.payload.content;
+    const expectedSha256 = options.payload.expected_sha256;
+    if (typeof content !== 'string' || (expectedSha256 !== null && typeof expectedSha256 !== 'string')) {
+      throw new FrameworkContractError(
+        'cli_usage_error',
+        'codex_user_instructions_set requires string content and string-or-null expected_sha256.',
+        { action_id: options.actionId, required_payload_fields: ['content', 'expected_sha256'] },
+      );
+    }
+    return {
+      delegatedSurface: '$CODEX_HOME/AGENTS.md atomic write',
+      result: writeCodexUserInstructions({
+        content,
+        expectedSha256,
+        dryRun: options.dryRun,
+      }),
+    };
+  }
+
+  if (options.actionId === 'codex_user_instructions_restore_opl_flow_default') {
+    const expectedSha256 = options.payload.expected_sha256;
+    if (expectedSha256 !== null && typeof expectedSha256 !== 'string') {
+      throw new FrameworkContractError(
+        'cli_usage_error',
+        'codex_user_instructions_restore_opl_flow_default requires string-or-null expected_sha256.',
+        { action_id: options.actionId, required_payload_fields: ['expected_sha256'] },
+      );
+    }
+    return {
+      delegatedSurface: 'installed opl-flow package templates/AGENTS.md to $CODEX_HOME/AGENTS.md atomic write',
+      result: restoreCodexUserInstructionsFromOplFlowDefault({
+        expectedSha256,
+        dryRun: options.dryRun,
+      }),
+    };
+  }
+
   if (options.actionId === 'task_action_receipt_preview') {
     if (!options.dryRun) {
       throw new FrameworkContractError('cli_usage_error', 'task_action_receipt_preview is a dry-run App preview only; execute through the domain owner route.', {
@@ -386,19 +438,19 @@ async function executeDirectAppAction(
 
   if (options.actionId === 'settings_sync_capabilities') {
     return {
-      delegatedSurface: managedUpdateCommand('apply', 'capability_packages', { json: false }),
+      delegatedSurface: managedUpdateCommand('apply', 'opl_packages', { json: false }),
       result: options.dryRun
-        ? await buildManagedUpdateControlCenterDryRun(contracts, options, 'capability_packages')
-        : await runManagedUpdateApply(contracts, 'capability_packages'),
+        ? await buildManagedUpdateControlCenterDryRun(contracts, options, 'opl_packages')
+        : await runManagedUpdateApply(contracts, 'opl_packages'),
     };
   }
 
   if (options.actionId === 'settings_apply_opl_packages') {
     return {
-      delegatedSurface: managedUpdateCommand('apply', 'capability_packages', { json: false }),
+      delegatedSurface: managedUpdateCommand('apply', 'opl_packages', { json: false }),
       result: options.dryRun
-        ? await buildManagedUpdateControlCenterDryRun(contracts, options, 'capability_packages')
-        : await runManagedUpdateApply(contracts, 'capability_packages'),
+        ? await buildManagedUpdateControlCenterDryRun(contracts, options, 'opl_packages')
+        : await runManagedUpdateApply(contracts, 'opl_packages'),
     };
   }
 
@@ -440,7 +492,7 @@ async function executeDirectAppAction(
   if (options.actionId === 'agent_package_repair') {
     return {
       delegatedSurface: requireAgentPackageDelegatedSurface(options.actionId),
-      result: runOplAgentPackageRepair({
+      result: await runOplAgentPackageRepair({
         ...agentPackageIdPayload(options.actionId, options.payload),
         dryRun: options.dryRun,
       }),
@@ -461,7 +513,7 @@ async function executeDirectAppAction(
     const preferencesPayload = agentPackagePreferencesPayload(options.payload);
     if (preferencesPayload.exposureAction) {
       return {
-        delegatedSurface: `opl connect agent-packages ${preferencesPayload.exposureAction} --package-id <package_id>`,
+        delegatedSurface: `opl packages ${preferencesPayload.exposureAction} --package-id <package_id>`,
         result: runOplAgentPackageExposureAction(preferencesPayload.exposureAction, {
           packageId: preferencesPayload.packageId,
           dryRun: options.dryRun,
@@ -469,7 +521,7 @@ async function executeDirectAppAction(
       };
     }
     return {
-      delegatedSurface: 'opl connect agent-packages home-shortcut-preferences set --package-id <package_id> --shortcut-id <shortcut_id>',
+      delegatedSurface: 'opl packages preferences set --package-id <package_id> --shortcut-id <shortcut_id>',
       result: runOplAgentPackageHomeShortcutPreferencesSet({
         packageId: preferencesPayload.packageId,
         shortcutId: preferencesPayload.shortcutId,
@@ -480,20 +532,14 @@ async function executeDirectAppAction(
     };
   }
 
-  if (options.actionId === 'settings_reload_codex_surface') {
-    const reload = settingsReloadCodexSurfacePayload(options.payload);
+  if (options.actionId === 'agent_package_activate') {
+    const activation = agentPackageActivationPayload(options.payload);
     return {
-      delegatedSurface: reload.scope === 'workspace'
-        ? 'opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace <target_path>'
-        : 'opl connect sync-skills --domain mas-scholar-skills --scope quest --target-quest <target_path>',
-      result: options.dryRun
-        ? buildSettingsControlCenterDryRun(options.actionId, options.payload)
-        : syncFamilySkillPacks({
-            domains: ['scholarskills'],
-            scope: reload.scope,
-            targetWorkspace: reload.scope === 'workspace' ? reload.targetPath : undefined,
-            targetQuest: reload.scope === 'quest' ? reload.targetPath : undefined,
-          }),
+      delegatedSurface: requireAgentPackageDelegatedSurface(options.actionId),
+      result: await runOplAgentPackageActivate({
+        ...activation,
+        dryRun: options.dryRun,
+      }),
     };
   }
 
@@ -501,10 +547,10 @@ async function executeDirectAppAction(
     const dryRun = buildSettingsControlCenterDryRun(options.actionId, options.payload);
     const projection = await buildManagedUpdateKernelProjection(contracts, {
       operation: 'status',
-      componentId: 'installation_carrier',
+      componentId: 'opl_app',
     });
     return {
-      delegatedSurface: managedUpdateCommand('status', 'installation_carrier', { json: false }),
+      delegatedSurface: managedUpdateCommand('status', 'opl_app', { json: false }),
       result: {
         settings_control_center_action: dryRun.settings_control_center_action,
         managed_update: projection.managed_update,
@@ -521,7 +567,7 @@ async function executeDirectAppAction(
 
   if (options.actionId === 'settings_rollback_runtime_substrate') {
     return {
-      delegatedSurface: managedUpdateCommand(MANAGED_UPDATE_OWNER_ACTIONS.revert, 'runtime_substrate', { json: false }),
+      delegatedSurface: managedUpdateCommand(MANAGED_UPDATE_OWNER_ACTIONS.revert, 'opl_base', { json: false }),
       result: buildSettingsControlCenterDryRun(options.actionId, options.payload),
     };
   }
@@ -595,74 +641,6 @@ async function executeDirectAppAction(
     return {
       delegatedSurface: 'opl system docker-webui doctor',
       result: buildOplDockerWebuiDoctor(),
-    };
-  }
-
-  if (options.actionId === 'scholarskills_workspace_sync') {
-    const workspaceRoot = scholarskillsWorkspaceRootPayload(options.payload);
-    return {
-      delegatedSurface: 'opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace <workspace_root>',
-      result: options.dryRun
-        ? {
-            skill_sync: {
-              surface_id: 'opl_skill_sync',
-              status: 'dry_run',
-              domain_id: 'scholarskills',
-              scope: 'workspace',
-              target_workspace: workspaceRoot,
-              target_skill_path: `${workspaceRoot}/.codex/skills/mas-scholar-skills`,
-              command: `opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace ${workspaceRoot} --json`,
-              authority_boundary: {
-                can_write_domain_truth: false,
-                can_sign_owner_receipt: false,
-                can_create_typed_blocker: false,
-                can_write_runtime_queue: false,
-                can_write_owner_receipt: false,
-                can_write_paper_body: false,
-                can_write_artifact_authority: false,
-                can_authorize_publication_readiness: false,
-              },
-            },
-          }
-        : syncFamilySkillPacks({
-            domains: ['scholarskills'],
-            scope: 'workspace',
-            targetWorkspace: workspaceRoot,
-          }),
-    };
-  }
-
-  if (options.actionId === 'scholarskills_quest_sync') {
-    const questRoot = scholarskillsQuestRootPayload(options.payload);
-    return {
-      delegatedSurface: 'opl connect sync-skills --domain mas-scholar-skills --scope quest --target-quest <quest_root>',
-      result: options.dryRun
-        ? {
-            skill_sync: {
-              surface_id: 'opl_skill_sync',
-              status: 'dry_run',
-              domain_id: 'scholarskills',
-              scope: 'quest',
-              target_quest: questRoot,
-              target_skill_path: `${questRoot}/.codex/skills/mas-scholar-skills`,
-              command: `opl connect sync-skills --domain mas-scholar-skills --scope quest --target-quest ${questRoot} --json`,
-              authority_boundary: {
-                can_write_domain_truth: false,
-                can_sign_owner_receipt: false,
-                can_create_typed_blocker: false,
-                can_write_runtime_queue: false,
-                can_write_owner_receipt: false,
-                can_write_paper_body: false,
-                can_write_artifact_authority: false,
-                can_authorize_publication_readiness: false,
-              },
-            },
-          }
-        : syncFamilySkillPacks({
-            domains: ['scholarskills'],
-            scope: 'quest',
-            targetQuest: questRoot,
-          }),
     };
   }
 

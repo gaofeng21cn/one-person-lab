@@ -39,7 +39,7 @@ import {
   eventSummary,
   normalizeCodexStageRunnerMode,
   resolvedStagePacketRef,
-  runnerPromptFor,
+  runnerPromptForExecution,
   stageIdFromAttempt,
   workspaceRootFromAttempt,
   checkpointRefsFromAttempt,
@@ -372,18 +372,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
       closeout_packet: null,
     };
   }
-  if (!stagePacketRef || stagePacketRef === 'unavailable') {
-    throw new FrameworkContractError(
-      'contract_shape_invalid',
-      'Live codex_cli stage runner requires a real stage packet ref.',
-      {
-        stage_attempt_id: optionalString(input.attempt.stage_attempt_id),
-        executor_kind: optionalString(input.attempt.executor_kind) ?? 'codex_cli',
-        blocked_reason: 'codex_cli_stage_packet_ref_missing',
-        required: ['stage_packet_ref via checkpoint_refs[0] or explicit stagePacketRef'],
-      },
-    );
-  }
+  const stagePacketTransportRef = stagePacketRef ?? 'unavailable';
   if (!workspaceRoot) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
@@ -429,7 +418,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   );
   const providerEnv = codexStageAttemptEnv({
     attempt: input.attempt,
-    stagePacketRef,
+    stagePacketRef: stagePacketTransportRef,
     workspaceRoot,
   });
   const codexExecOptions = codexExecOptionsFromPolicy(executorPolicyFromAttempt(input.attempt));
@@ -456,10 +445,10 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
       : input.attempt;
     const executionProviderEnv = codexStageAttemptEnv({
       attempt: executionAttempt,
-      stagePacketRef,
+      stagePacketRef: stagePacketTransportRef,
       workspaceRoot: runInSandbox ? sandboxWorkspaceRoot : workspaceRoot,
     });
-    const args = buildCodexExecArgs(runnerPromptFor({ attempt: executionAttempt, stagePacketRef }), {
+    const args = buildCodexExecArgs(runnerPromptForExecution({ ...input, stagePacketRef }, executionAttempt), {
       cwd: runInSandbox ? sandboxWorkspaceRoot : workspaceRoot,
       json: true,
       ...(runInSandbox
@@ -568,7 +557,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   if (!runInSandbox && !closeoutPacket && result.timeoutReason !== 'unsupported_tool_protocol') {
     const domainReceiptRecovery = recoverDefaultExecutorDomainReceiptCloseout({
       workspaceRoot,
-      stagePacketRef,
+      stagePacketRef: stagePacketTransportRef,
       attempt: input.attempt,
     });
     domainReceiptRecoveryStatus = domainReceiptRecovery.status;
@@ -603,9 +592,10 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   if (!closeoutPacket && rawStageArtifact) {
     closeoutPacket = buildRawArtifactProgressCloseoutPacket({
       attempt: input.attempt,
-      stagePacketRef,
+      stagePacketRef: stagePacketTransportRef,
       rawArtifact: rawStageArtifact,
       normalizationFindings: [
+        ...(!stagePacketRef ? ['stage_packet_ref_missing_nonblocking_declared_stage_context_used'] : []),
         ...(closeoutRejection ? [`typed_closeout_${closeoutRejection.reason}`] : []),
         'typed_closeout_not_required_raw_artifact_advanced',
       ],
@@ -613,7 +603,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   } else if (!closeoutPacket && primaryBlockedReason) {
     closeoutPacket = buildProviderRuntimeCloseoutPacket({
       attempt: input.attempt,
-      stagePacketRef,
+      stagePacketRef: stagePacketTransportRef,
       blockedReason: primaryBlockedReason,
       routeImpact: {
         runner_timeout_reason: result.timeoutReason ?? null,
@@ -781,7 +771,7 @@ export async function runAgentStageRunner(input: {
     executor_kind: executorKind,
     stage_attempt_executor_policy: stageAttemptExecutorPolicy,
     mode: 'stage_activity',
-    prompt: runnerPromptFor(input),
+    prompt: runnerPromptForExecution(input, input.attempt),
     cwd: workspaceRootFromAttempt(input.attempt),
     timeout_ms: input.timeoutMs,
     context_refs: [
@@ -819,10 +809,13 @@ export function buildCodexStageActivityInput(input: {
     stage_packet_binding: {
       binding_status: stagePacketRef && stagePacketRef !== 'unavailable' && workspaceRoot
         ? 'bound'
-        : 'missing_required_ref',
+        : workspaceRoot
+          ? 'advisory_missing_stage_packet_ref'
+          : 'missing_workspace_root',
       stage_packet_ref: stagePacketRef,
       workspace_root: workspaceRoot,
       binding_source: stagePacketRef ? 'stage_attempt_checkpoint_refs' : null,
+      stage_may_start_from_declared_context: Boolean(workspaceRoot),
       can_claim_stage_complete: false,
       can_claim_domain_ready: false,
       can_claim_production_ready: false,

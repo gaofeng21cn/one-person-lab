@@ -118,13 +118,13 @@ test('managed shell command env labels built-in domain roots as compatibility ca
 
   assert.deepEqual(
     [...profilesByDomain.keys()].sort(),
-    ['med-autogrant', 'redcube-ai'],
+    ['mag', 'rca'],
   );
   for (const profile of profilesByDomain.values()) {
     assert.equal(profile.profileRole, 'domain_compatibility_clean_runner');
   }
   assert.deepEqual(
-    profilesByDomain.get('med-autogrant')?.legacyEnvRoots,
+    profilesByDomain.get('mag')?.legacyEnvRoots,
     [
       { envName: 'MAG_CLEAN_RUNNER_TMP_ROOT', fallbackSubdir: 'mag' },
       { envName: 'MED_AUTOGRANT_EDITABLE_SHARED_ENV_ROOT', fallbackSubdir: 'mag-editable-shared' },

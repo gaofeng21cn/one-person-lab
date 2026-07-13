@@ -57,7 +57,7 @@ test('family stage list, proof bundle, and readiness stay refs-only without doma
       (stage: { project_id: string }) => stage.project_id !== 'opl-meta-agent',
     );
     const admittedStages = list.stages.filter(
-      (stage: { admission_status: string }) => stage.admission_status === 'admitted',
+      (stage: { conformance_status: string }) => stage.conformance_status === 'conformant',
     );
     const boundReadinessDomains = readiness.domains.filter(
       (domain: { project_id: string }) => domain.project_id !== 'opl-meta-agent',
@@ -66,19 +66,19 @@ test('family stage list, proof bundle, and readiness stay refs-only without doma
     assert.equal(boundStages.length, 18);
     assert.equal(list.summary.admitted_stages_count, admittedStages.length);
     assert.equal(
-      boundStages.filter((stage: { admission_status: string }) => stage.admission_status === 'blocked').length,
+      boundStages.filter((stage: { conformance_status: string }) => stage.conformance_status === 'nonconformant').length,
       0,
     );
     assert.equal(
       boundStages.every(
-        (stage: { admission_status: string; guarantee_mode: string; mode_tags: { verified_core_eligible: boolean } }) =>
-          stage.admission_status === 'admitted'
+        (stage: { conformance_status: string; guarantee_mode: string; mode_tags: { verified_core_eligible: boolean } }) =>
+          stage.conformance_status === 'conformant'
           && stage.guarantee_mode === 'static_admission_only'
           && stage.mode_tags.verified_core_eligible === true,
       ),
       true,
     );
-    assert.equal(proofBundle.admission_status, 'admitted');
+    assert.equal(proofBundle.conformance_status, 'conformant');
     assert.equal(proofBundle.authority_boundary.can_write_domain_truth, false);
     assert.equal(readiness.family_defaults, true);
     assert.equal(

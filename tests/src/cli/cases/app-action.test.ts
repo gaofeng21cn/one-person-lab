@@ -1,4 +1,18 @@
-import { assert, fs, os, path, runCli, runCliFailure, test } from '../helpers.ts';
+import {
+  assert,
+  fs,
+  installRuntimePackageFixture,
+  os,
+  path,
+  runCli,
+  runCliAsync,
+  runCliFailure,
+  test,
+} from '../helpers.ts';
+import {
+  writeCapabilityProvider,
+  writeMasConsumer,
+} from './packages-cases/capability-fixtures.ts';
 import '../../connection-registry.test.ts';
 import './app-action-cases/dry-run-actions.test.ts';
 import './app-action-cases/connection-actions.test.ts';
@@ -69,7 +83,6 @@ test('app action catalog exposes representative safe delegated action refs', () 
     for (const actionId of [
       'codex_update',
       'module_sync',
-      'scholarskills_workspace_sync',
       'provider_scheduler_status',
       'workspace_initialize',
       'workspace_validate',
@@ -89,16 +102,9 @@ test('app action catalog exposes representative safe delegated action refs', () 
       );
     }
     assert.deepEqual(actions.get('module_sync')?.payload_fields, []);
-    assert.equal(actions.get('module_sync')?.delegated_surface, 'opl update apply --component capability_packages');
-    assert.deepEqual(actions.get('scholarskills_workspace_sync')?.payload_fields, ['workspace_root']);
-    assert.equal(
-      actions.get('scholarskills_workspace_sync')?.delegated_surface,
-      'opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace <workspace_root>',
-    );
-    assert.equal(actions.get('scholarskills_workspace_sync')?.mutates, 'workspace_local_codex_skill');
-    assert.equal(actions.get('scholarskills_workspace_sync')?.dry_run_supported, true);
-    assert.equal(actions.get('scholarskills_workspace_sync')?.route_requires_domain_or_app_payload, true);
-    assert.equal(actions.get('scholarskills_workspace_sync')?.can_submit_to_safe_action_shell, false);
+    assert.equal(actions.get('module_sync')?.delegated_surface, 'opl packages update');
+    assert.equal(actions.has('scholarskills_workspace_sync'), false);
+    assert.equal(actions.has('scholarskills_quest_sync'), false);
     assert.equal(actions.get('provider_scheduler_status')?.submit_via, 'opl app action execute');
     assert.equal(actions.get('provider_scheduler_status')?.execution_policy, 'opl_safe_action_shell');
     assert.equal(actions.get('provider_scheduler_status')?.route_requires_domain_or_app_payload, false);
@@ -148,19 +154,19 @@ test('app action catalog exposes representative safe delegated action refs', () 
     assert.equal(actions.get('settings_verify_workspace')?.delegated_surface, 'opl workspace health');
     assert.deepEqual(actions.get('settings_verify_workspace')?.payload_fields, ['workspace_path']);
     assert.equal(actions.get('settings_verify_workspace')?.mutates, 'none_read_only');
-    assert.equal(actions.get('settings_sync_capabilities')?.delegated_surface, 'opl update apply --component capability_packages');
+    assert.equal(actions.get('settings_sync_capabilities')?.delegated_surface, 'opl packages update');
     assert.deepEqual(actions.get('settings_sync_capabilities')?.payload_fields, []);
     assert.equal(actions.get('settings_sync_capabilities')?.confirmation_required, false);
     assert.equal(actions.get('settings_sync_capabilities')?.danger_level, 'low');
     assert.equal(actions.get('settings_sync_capabilities')?.can_submit_to_safe_action_shell, true);
     assert.equal(
       actions.get('settings_check_app_update')?.delegated_surface,
-      'opl update status --component installation_carrier',
+      'opl app state --profile fast',
     );
     assert.equal(actions.get('settings_check_app_update')?.mutates, 'none_read_only');
     assert.equal(
       actions.get('settings_rollback_runtime_substrate')?.delegated_surface,
-      'opl update rollback --component runtime_substrate',
+      'opl update rollback',
     );
     assert.deepEqual(actions.get('settings_rollback_runtime_substrate')?.payload_fields, ['receipt_ref']);
     assert.equal(actions.get('settings_rollback_runtime_substrate')?.danger_level, 'high');
@@ -175,85 +181,100 @@ test('app action catalog exposes representative safe delegated action refs', () 
   }
 });
 
-test('app action execute exposes ScholarSkills workspace sync as dry-run before mutating workspace skill path', () => {
-  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-action-scholarskills-home-'));
-  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-action-scholarskills-workspace-'));
-
+test('retired ScholarSkills App actions cannot execute through the generic action shell', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-action-retired-scholarskills-'));
   try {
-    const output = runCli([
-      'app',
-      'action',
-      'execute',
-      '--action',
-      'scholarskills_workspace_sync',
-      '--payload',
-      JSON.stringify({ workspace_root: workspaceRoot }),
-      '--dry-run',
-    ], {
-      HOME: homeRoot,
-      CODEX_HOME: path.join(homeRoot, 'codex-home'),
-      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
-      OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
-    }) as {
-      app_action_execution: {
-        action_id: string;
-        dry_run: boolean;
-        delegated_surface: string;
-        result: {
-          skill_sync: {
-            status: string;
-            domain_id: string;
-            scope: string;
-            target_workspace: string;
-            target_skill_path: string;
-            command: string;
-            authority_boundary: {
-              can_write_domain_truth: boolean;
-              can_sign_owner_receipt: boolean;
-              can_create_typed_blocker: boolean;
-              can_write_runtime_queue: boolean;
-              can_write_owner_receipt: boolean;
-              can_write_paper_body: boolean;
-              can_write_artifact_authority: boolean;
-              can_authorize_publication_readiness: boolean;
-            };
-          };
-        };
-      };
-    };
-
-    assert.equal(output.app_action_execution.action_id, 'scholarskills_workspace_sync');
-    assert.equal(output.app_action_execution.dry_run, true);
-    assert.equal(
-      output.app_action_execution.delegated_surface,
-      'opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace <workspace_root>',
-    );
-    assert.equal(output.app_action_execution.result.skill_sync.status, 'dry_run');
-    assert.equal(output.app_action_execution.result.skill_sync.domain_id, 'scholarskills');
-    assert.equal(output.app_action_execution.result.skill_sync.scope, 'workspace');
-    assert.equal(output.app_action_execution.result.skill_sync.target_workspace, workspaceRoot);
-    assert.equal(
-      output.app_action_execution.result.skill_sync.target_skill_path,
-      `${workspaceRoot}/.codex/skills/mas-scholar-skills`,
-    );
-    assert.equal(
-      output.app_action_execution.result.skill_sync.command,
-      `opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace ${workspaceRoot} --json`,
-    );
-    assert.deepEqual(output.app_action_execution.result.skill_sync.authority_boundary, {
-      can_write_domain_truth: false,
-      can_sign_owner_receipt: false,
-      can_create_typed_blocker: false,
-      can_write_runtime_queue: false,
-      can_write_owner_receipt: false,
-      can_write_paper_body: false,
-      can_write_artifact_authority: false,
-      can_authorize_publication_readiness: false,
-    });
-    assert.equal(fs.existsSync(path.join(workspaceRoot, '.codex', 'skills', 'mas-scholar-skills')), false);
-    assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'config.toml')), false);
+    for (const actionId of ['scholarskills_workspace_sync', 'scholarskills_quest_sync']) {
+      const failure = runCliFailure([
+        'app', 'action', 'execute', '--action', actionId,
+      ], {
+        OPL_STATE_DIR: stateRoot,
+        OPL_DEVELOPER_MODE_GH_BINARY: path.join(stateRoot, 'missing-gh'),
+      });
+      assert.equal(failure.payload.error.code, 'cli_usage_error');
+    }
   } finally {
-    fs.rmSync(homeRoot, { recursive: true, force: true });
-    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('generic package activation action returns the launch binding at the App boundary', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-action-package-activate-'));
+  const workspace = path.join(root, 'workspace');
+  const providerManifest = writeCapabilityProvider(path.join(root, 'provider'));
+  const consumerManifest = writeMasConsumer(path.join(root, 'consumer'), providerManifest);
+  const env = {
+    OPL_STATE_DIR: path.join(root, 'state'),
+    CODEX_HOME: path.join(root, 'codex-home'),
+  };
+  try {
+    await runCliAsync([
+      'packages', 'install', '--manifest-url', consumerManifest, '--trust-tier', 'first_party',
+    ], env);
+    const output = await runCliAsync([
+      'app', 'action', 'execute', '--action', 'agent_package_activate',
+      '--payload', JSON.stringify({
+        package_id: 'mas',
+        scope: 'workspace',
+        target_workspace: workspace,
+        use_boundary_id: 'app-conversation-create-1',
+      }),
+    ], env) as any;
+    const execution = output.app_action_execution;
+    const activation = execution.result.opl_agent_package_activation;
+
+    assert.equal(execution.action_id, 'agent_package_activate');
+    assert.equal(execution.delegated_surface, 'opl packages activate --package-id <package_id> --scope <workspace|quest>');
+    assert.equal(activation.package_id, 'mas');
+    assert.equal(activation.launch_allowed, true);
+    assert.equal(activation.operational_ready, true);
+    assert.equal(activation.use_boundary_id, 'app-conversation-create-1');
+    assert.equal(activation.package_use_binding.use_boundary_id, activation.use_boundary_id);
+    assert.equal(activation.package_use_binding.use_receipt_ref, activation.use_receipt_ref);
+    assert.match(activation.use_receipt_ref, /^opl:\/\/agent-package\/use\/mas\//);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('dependency-free activation returns only persisted receipt refs', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-action-package-use-receipt-'));
+  const stateRoot = path.join(root, 'state');
+  const workspace = path.join(root, 'workspace');
+  const env = {
+    OPL_STATE_DIR: stateRoot,
+    CODEX_HOME: path.join(root, 'codex-home'),
+  };
+  try {
+    installRuntimePackageFixture(stateRoot, 'rca');
+    const activation = (await runCliAsync([
+      'app', 'action', 'execute', '--action', 'agent_package_activate',
+      '--payload', JSON.stringify({
+        package_id: 'rca',
+        scope: 'workspace',
+        target_workspace: workspace,
+        use_boundary_id: 'dependency-free-use',
+      }),
+    ], env) as any).app_action_execution.result.opl_agent_package_activation;
+    const ledger = JSON.parse(fs.readFileSync(
+      path.join(stateRoot, 'agent-package-lifecycle-ledger.json'),
+      'utf8',
+    ));
+    const persistedRefs = new Set(ledger.receipts.map((receipt: any) => receipt.receipt_ref));
+    const returnedRefs = [
+      activation.lifecycle_receipt?.receipt_ref,
+      activation.lifecycle_receipt_ref,
+      activation.use_receipt?.receipt_ref,
+      activation.use_receipt_ref,
+      activation.package_use_binding?.use_receipt_ref,
+      activation.package_lock?.action_receipt_id,
+    ].filter((receiptRef): receiptRef is string => typeof receiptRef === 'string' && receiptRef.length > 0);
+
+    assert.equal(activation.lifecycle_receipt, null);
+    assert.equal(activation.lifecycle_receipt_ref, null);
+    assert.equal(activation.package_use_binding.use_receipt_ref, activation.use_receipt_ref);
+    assert.equal(returnedRefs.every((receiptRef) => persistedRefs.has(receiptRef)), true);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
   }
 });

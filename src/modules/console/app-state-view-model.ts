@@ -691,9 +691,9 @@ function runtimeActivityDrilldowns(input: OplAppOperatorViewModelInput) {
 
 function moduleTaskDrilldowns(input: OplAppOperatorViewModelInput) {
   return asRecordArray(asRecord(input.modules).items).map((module, index) => {
-    const moduleId = asString(module.module_id) ?? `module-${index + 1}`;
+    const moduleId = asString(module.package_id) ?? `package-${index + 1}`;
     const label = asString(module.label) ?? moduleId;
-    const healthStatus = asString(module.health_status) ?? asString(module.status) ?? 'unknown';
+    const healthStatus = asString(module.source_health_status) ?? asString(module.status) ?? 'unknown';
     const blockerRefCount = statusTone(healthStatus) === 'ready' ? 0 : 1;
     const primaryState = blockerRefCount > 0 ? 'system_attention_required' : 'delivered_auto_paused';
     const primaryStateLabel = blockerRefCount > 0 ? '需要系统处理' : '已交付，自动暂停';
@@ -763,7 +763,7 @@ function moduleTaskDrilldowns(input: OplAppOperatorViewModelInput) {
           label,
           state: healthStatus,
           owner: 'opl_framework',
-          ref: asString(module.checkout_path) ?? asString(module.managed_checkout_path) ?? undefined,
+          ref: asString(module.source_path) ?? asString(module.managed_source_path) ?? undefined,
         },
       ],
     };
@@ -789,9 +789,9 @@ function buildDomainLaneMap(input: OplAppOperatorViewModelInput) {
 
   return {
     lanes: asRecordArray(asRecord(input.modules).items).map((module, index) => {
-      const moduleId = asString(module.module_id) ?? `module-${index + 1}`;
+      const moduleId = asString(module.package_id) ?? `package-${index + 1}`;
       const label = asString(module.label) ?? moduleId;
-      const healthStatus = asString(module.health_status) ?? asString(module.status) ?? 'unknown';
+      const healthStatus = asString(module.source_health_status) ?? asString(module.status) ?? 'unknown';
       const runtimeTasks = runtimeTasksByDomain.get(moduleId) ?? [];
       const moduleTask = {
         task_id: moduleId,
@@ -821,7 +821,7 @@ function buildDomainLaneMap(input: OplAppOperatorViewModelInput) {
         tasks,
       };
     }),
-    source_ref: 'app_state.modules.items + app_state.operator.workbench.activity_center',
+    source_ref: 'app_state.runtime_source_carriers.items + app_state.operator.workbench.activity_center',
   };
 }
 

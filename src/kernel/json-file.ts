@@ -48,7 +48,13 @@ export function formatJsonPayload(payload: unknown): string {
 }
 
 export function writeJsonPayloadFile(filePath: string, payload: unknown) {
-  fs.writeFileSync(filePath, formatJsonPayload(payload), 'utf8');
+  const temporaryPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+  try {
+    fs.writeFileSync(temporaryPath, formatJsonPayload(payload), 'utf8');
+    fs.renameSync(temporaryPath, filePath);
+  } finally {
+    fs.rmSync(temporaryPath, { force: true });
+  }
 }
 
 export function readJsonPayloadFile(filePath: string): unknown {

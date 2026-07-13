@@ -15,27 +15,27 @@ Currentness policy: 本文不冻结 Runway L4 状态、provider/service/worker r
 ## 当前 L4 / L5 口径
 
 - Desired/current reconciliation：domain owner 声明目标、下一步或 typed blocker，Runway 只负责把可执行部分投影成可恢复 attempt，并持续对账 current state。
-- Control-loop runtime：Runway 的目标态是 `desired state -> current state -> Progress Reconciler -> next safe action -> provider / owner / gate observation -> authority event/read-model` 的控制环；该控制环只能产生 OPL runtime safe action、owner route、typed blocker requirement 或 refs-only observation，不产生 domain truth。
+- Reconciliation observation：Runway 比较 requested/current transport state并给出 provider repair 或 wait observation；它不选择 stage、不决定下一 semantic action，也不形成第二控制面。
 - Durable execution：Temporal-backed provider 是 production online substrate；Temporal 负责 workflow history、task queue、signal/query、retry、timeout、timer 和 replay，worker process/service 的启动、保活、重启、版本与依赖 readiness 由 Runway worker lifecycle surface 和部署 substrate 承担。
 - Runtime environment / sandbox execution：Runway 拥有 Runtime Environment Substrate、Fast Local Env doctor / prepare / run-context、selected stage executor 的 sandbox provider selection、create-or-restore、executor run、timeout / retry / blocker 和 receipt projection。默认环境路径是 Fast Local Env；Local Docker / Devcontainer 是显式 local sandbox provider；E2B 是当前已实现的 remote provider，Daytona / Modal 只作参考候选。OPL Connect 只在需要时提供 provider discovery、configuration、package/install 或 connector 分发辅助，不拥有 stage execution sandbox。
 - Workflow history payload boundary：Runway / Temporal activity result 只能向 workflow history 写入 refs-only 或 summary-only receipt；Temporal scheduler cadence activity 这类会读取 provider、stage-attempt projection、dispatch 和 SLO 的动作必须把完整 runtime body 留在 activity 内部或外部 ledger，返回 `temporal_scheduler_tick_activity_receipt` 摘要。`provider_runtime`、`provider_slo`、provider blocker / repair body、task scope payload match body 和 `retired_queue_tick.dispatches` 不能进入 Temporal completion result。
 - Worker lifecycle supervision：Runway 必须投影 service/worker readiness、managed process/crash diagnostic、poll/heartbeat、SLO health 和 repair action；SLO watchdog 只是 health check / repair trigger，不替代 worker supervisor。
 - Progress-first supervision：Runway 读面默认回答“当前是否在跑、卡在哪里、下一 owner 是谁”，不把 provider 运维动作抢成 domain 交付进展。
-- Capability hard gate：Capability Invocation OS 的 hard gate 折回 Runway 的 runtime/control-loop 读面，但授权源仍是 `current_owner_delta`；Runway 只能 fail closed、等待 owner/gate 或生成 OPL runtime blocker，不写 domain truth、owner receipt 或 domain typed blocker。
-- Fail-closed authority：缺 provider attempt、active lease、execution authorization、workspace/artifact scope、source fingerprint 或 closeout binding 时，Runway 只能返回 OPL runtime blocker。
+- Capability context：Capability Invocation OS 只向 Runway 提供 advisory capability context；缺 capability、scope、receipt 或 reviewer 只形成质量债。只有 forbidden write、错误 target identity、不可逆动作或显式 human gate 才硬停当前 mutation。
+- Progress-first boundary：缺 provider attempt、lease、manifest、scope、source fingerprint、receipt 或可读输出时，Runway 生成 transport/failure diagnostic，并允许 Codex 启动任意 declared stage。
 - Module-owned surface：fresh `contracts/opl-framework/brand-module-surfaces.json#modules.runway` 与 `opl runway status|inspect|interfaces|validate|doctor|readiness|reconcile|handoff-gates|recovery-repair|control-loop status --json` readback 可以证明 Runway 达到 Workspace 级 `L4_structural_baseline`；`opl brand-modules ...` 只作为聚合目录。
 - L5 boundary：Runway L4 只覆盖结构完成度。Temporal/provider/worker lifecycle/readiness、SLO repair、attempt refs 或 verified ledger 都不能单独声明 production long-soak、domain ready、quality verdict 或 `L5 production operating maturity`。
 
 ## 已落地读面与未声称边界
 
-Runway 已落地的是可执行读面和 fail-closed control-loop 合同，不是 L5 生产运营声明。
+Runway 已落地的是 provider transport、currentness 和 repair 读面，不是 semantic control loop 或 L5 生产运营声明。
 
 | 已落地读面 | 当前能回答 | 未声称 |
 | --- | --- | --- |
 | `opl runway readiness --json` | provider/service/worker/scheduler 是否可用；缺 Temporal 配置时返回 `provider_not_ready` 与 repair action。 | 不声明 domain ready、production ready 或 Runway L5。 |
-| `opl runway reconcile --json` | desired owner route 与 current queue/attempt/provider/gate/receipt refs 是否一致，以及唯一下一 safe action 或 owner/gate wait。 | 不生成 domain owner receipt、domain typed blocker、quality verdict 或 artifact readiness。 |
-| `app_projection:capability_invocation_hard_gate` | route-required capability ref、current owner delta、Stagecraft policy 和 Runway runtime gate 的 hard-gate 投影。 | 不把 hard gate 通过写成 owner answer、typed blocker、domain ready 或 stage complete。 |
-| `opl runway handoff-gates --json` | handoff、human gate、owner answer shape 与 closeout binding 的 refs-only gate 状态。 | 不把 gate passed 写成 stage complete、domain ready 或 owner receipt。 |
+| `opl runway reconcile --json` | requested transport 与 current queue/attempt/provider refs 是否一致，以及 provider repair / wait observation。 | 不选择 stage 或 semantic action。 |
+| `app_projection:capability_stage_context` | capability ref、current owner delta 和可用性诊断。 | 缺 capability 不阻止 stage progress。 |
+| `opl runway handoff-gates --json` | handoff、human gate、owner answer shape 与 quality-evidence refs。 | 缺质量证据只关闭 ready 声明。 |
 | `opl runway recovery-repair --json` | worker/provider/scheduler/lease/dead-letter 的 OPL repair plan、worker restart guard、blocked/failed attempt operator repair queue 和 refs-only blocker。 | 不把 repair 成功、attempt query 或 queue 清点写成 domain progress、production long-soak complete 或 App release ready。 |
 | `opl runway control-loop status --json` | control-loop 当前 desired/current/action/ref 投影，以及 false-authority flags。 | 不把 chosen action、provider completed、worker healthy 或 queue closed 写成 production-ready 结论。 |
 
@@ -56,11 +56,11 @@ desired owner route / target state
 
 控制环的职责边界：Progress Reconciler 只修复 provider、lease、wakeup、currentness、dead-letter 与不可逆操作边界。它不得依据 receipt、schema、review 或 quality score 选择、接受、拒绝或重写 stage route；可读 artifact 始终可以被 Codex 带入任意 declared stage。
 
-- Desired state 来自 domain owner route、stage pack admission、human gate decision、owner answer shape 或 explicit operator target；Runway 不推断 domain 想要什么，也不把 stale route 当成当前目标。
+- Desired state 来自 Codex 选择、domain owner route、stage pack context、human gate decision 或 explicit operator target；Runway 不选择 semantic route。
 - Current state 来自 stage-attempt projection、stage attempt ledger、Temporal provider refs、worker supervisor status、scheduler cadence refs、human gate refs、dead-letter refs、owner receipt refs 和 typed blocker refs；Runway 只读 refs，不读取或保存 artifact/memory/domain body。
-- Progress Reconciler 比较 desired/current，并输出唯一下一 safe action：launch/resume attempt、signal/update workflow、repair worker/provider、wait for human/domain owner、redrive dead-letter、emit OPL runtime blocker，或要求 domain owner 提供合法 owner answer shape。
-- Capability Invocation hard gate 是 Progress Reconciler 的输入约束之一：route-required capability ref 缺失、current owner delta 缺失、owner route identity 不匹配或 forbidden write / irreversible mutation 时 fail closed；soft discovery 和 scored fit 只进入 advisory，不驱动默认 runtime action。
-- 若同时存在多个候选动作，reconciler 必须按 current owner delta、StageRun identity、source fingerprint、lease、execution authorization、closeout binding 和 accepted answer shape 消歧；无法消歧时 fail closed 为 typed blocker requirement 或 OPL runtime blocker。
+- Progress Reconciler 只比较 requested/current transport state并输出 provider repair、wait 或 currentness observation；launch/resume 哪个 stage 由 Codex 的显式选择驱动。
+- Capability context 只提供 advisory 信息；缺 capability/current owner delta 不阻止 stage。forbidden write、wrong-target identity、不可逆 mutation 或显式 human gate 才硬停当前动作。
+- 若同时存在多个候选 stage，reconciler 不消歧、不排序；Codex CLI 直接选择 advance、skip、repeat、reverse 或 route-back。
 - Reconciler 不执行 stage 内专家策略，不生成 deliverable，不评审结果，不签 owner receipt，不创建 domain typed blocker，不声明 domain ready / quality ready / production ready。
 - App/operator 默认只消费 reconciler 产生的 current owner、next safe action、blocker 和 refs-only drilldown；raw provider trace、scheduler cadence、worker liveness 和 ledger counter 是诊断面，不覆盖默认 owner delta。
 
@@ -84,12 +84,12 @@ desired owner route / target state
 | `runway_profile` | Runway 模块身份、provider policy、默认 scope 和 authority flags。 | `status/inspect/interfaces` 必须可返回 profile、contract refs、forbidden claims。 |
 | `provider_binding` | Temporal production provider 或 local diagnostic provider 的显式绑定。 | `doctor` 必须区分 provider not configured、service down、worker not ready 和 scheduler missing。 |
 | `stage_attempt_projection` | family-level runnable / waiting / blocked / dead-letter attempt projection。 | `inspect` 必须能从 projection refs 追到 linked attempt、owner route refs 和 blocker。 |
-| `stage_attempt` | OPL 可审计执行单元。 | `inspect` 必须能返回 attempt id、domain/stage refs、provider run、lease、closeout binding。 |
-| `attempt_lease` | 执行授权、租约、超时和 ownership。 | `validate` 必须发现缺失或过期 lease，不能把 provider completed 写成 stage complete。 |
+| `stage_attempt` | OPL 可审计执行单元。 | `inspect` 返回 attempt id、domain/stage refs、provider run、diagnostic 与质量债。 |
+| `attempt_lease` | provider ownership、超时和重复执行抑制。 | lease 缺失禁用复用，不授权或阻止 semantic route。 |
 | `heartbeat` | 长跑活动的 liveness / progress signal。 | `status` 必须展示当前 liveness，不得把 heartbeat 当作 deliverable progress。 |
 | `human_gate` | 人类批准、暂停、拒绝或 resume token。 | `doctor` 必须把 waiting approval 投影为 human-owned blocker。 |
 | `retry_dead_letter_policy` | 重试预算、失败分类和 dead-letter closeout。 | `inspect` 必须展示 retry budget、dead-letter reason 和 redrive boundary。 |
-| `progress_reconciler` | desired/current 对账与唯一下一 safe action 选择。 | `status/doctor` 必须展示 chosen action、discarded candidates、owner/gate requirement 和 false-authority flags。 |
+| `progress_reconciler` | requested/current transport 对账。 | `status/doctor` 展示 provider repair / wait observation 和 false-authority flags；不展示或产生 semantic stage choice。 |
 | `runtime_blocker` | provider 层无法进入 domain closeout 的 refs-only blocker。 | `validate/doctor` 必须 fail closed，不能生成 domain typed blocker 或 owner receipt。 |
 
 ## Schema / Contract
@@ -100,14 +100,14 @@ desired owner route / target state
 contracts/opl-framework/runtime-manager-contract.json
 contracts/opl-framework/family-runtime-attempt-contract.json
 contracts/opl-framework/family-runtime-online-substrate-contract.json
-contracts/opl-framework/stage-route-scheduler-contract.json
+contracts/opl-framework/stage-route-transport-contract.json
 contracts/opl-framework/current-owner-delta.schema.json
 contracts/opl-framework/capability-registry-resolver.schema.json#/$defs/capability_invocation_lifecycle_policy
 contracts/opl-framework/managed-runtime-three-layer-contract.json
 contracts/opl-framework/brand-module-registry.json#modules.runway
 ```
 
-Runway contract 的职责是表达 provider、stage-attempt projection、attempt、lease、human gate、retry/dead-letter、authorization、capability invocation hard gate、closeout binding 和 runtime blocker 的 shape。它不表达 domain truth、artifact body、quality verdict、owner receipt body 或 production long-soak 结论。
+Runway contract 的职责是表达 provider、attempt、currentness、human gate、quality budget、progress/failure diagnostic 和 runtime repair 的 shape。它不表达 semantic route、domain truth、artifact body、quality verdict或 owner receipt body。
 
 新增或调整 Runway contract 时必须保持 false-authority boundary：handoff、gate、scheduler、supervisor 和 reconciler 只能传递 refs、typed blocker requirement、owner answer shape、provider/runtime observation 或 repair command；不能伪造 domain truth、owner receipt、quality verdict、artifact readiness、memory accept/reject 或 production-ready verdict。
 
@@ -120,14 +120,14 @@ Runway contract 的职责是表达 provider、stage-attempt projection、attempt
 | 命令 | 验收说明 |
 | --- | --- |
 | `opl runway status --json` | 返回 Runway profile、provider readiness、stage-attempt projection summary、running/blocked attempt summary、human gate count、runtime blocker summary、source commands 和 forbidden claim flags。 |
-| `opl runway inspect --attempt <id> --json` | 返回单个 attempt 的 stage refs、projection refs、provider run、lease、heartbeat、human gate、retry/dead-letter、closeout binding 和 owner boundary。 |
+| `opl runway inspect --attempt <id> --json` | 返回单个 attempt 的 stage refs、provider run、heartbeat、quality budget、diagnostic 和 owner boundary。 |
 | `opl runway inspect --projection <id> --json` | 从 stage-attempt projection 追踪 linked attempts、owner route refs、source fingerprint、dispatch refs、blocker 或 retry eligibility。 |
 | `opl runway interfaces --json` | 返回 CLI command specs、App action ids、read-model keys、descriptor delegates、contract refs、validation commands 和 status docs。 |
-| `opl runway validate --json` | 静态验证 registry refs、contract refs、provider binding shape、queue/attempt schema、closeout binding、authority flags 和 forbidden claims。 |
+| `opl runway validate --json` | 静态验证 registry refs、provider binding shape、queue/attempt schema、authority flags 和 forbidden claims；结果不阻止 stage progress。 |
 | `opl runway doctor --json` | 运行时诊断 provider service/worker/scheduler、stage-attempt projection health、lease staleness、attempt liveness、human gate、dead-letter 和 repair plan。 |
 | `opl runway readiness --json` | 返回 provider/service/worker/scheduler readiness、provider-not-ready reason、repair action 和 false-authority flags。 |
-| `opl runway reconcile --json` | 返回 desired/current diff、唯一下一 safe action、owner/gate wait 或 OPL runtime blocker。 |
-| `opl runway handoff-gates --json` | 返回 handoff、human gate、owner answer shape 和 closeout binding 的 refs-only gate 状态。 |
+| `opl runway reconcile --json` | 返回 requested/current diff、provider repair、wait 或 currentness observation。 |
+| `opl runway handoff-gates --json` | 返回 handoff、human gate、owner answer shape 和 quality-evidence refs。 |
 | `opl runway recovery-repair --json` | 返回 worker/provider/scheduler/lease/dead-letter repair plan，并把 blocked / failed backlog 拆成 `attempt_repair_queue` 只读查询项；repair command 只作用于 OPL runtime/provider，attempt queue command 只帮助 operator/owner review。 |
 | `opl runway control-loop status --json` | 返回 control-loop desired/current/action projection、read-model refs 和 forbidden claim flags。 |
 
@@ -174,8 +174,8 @@ App read-model 只投影 Runway refs。它不得把 `provider completed`、proje
 
 - provider service、worker、scheduler、SLO tick、stage-attempt projection index、attempt ledger 和 active lease 必须有当前状态。
 - Temporal provider 未配置或未启动时，必须投影为 `provider_not_ready`、`temporal_provider_not_configured` / `temporal_service_unavailable` / `worker_not_ready` / `scheduler_missing` 这类 OPL repair reason；不能写成 domain ready、domain blocker 已关闭或 L5 evidence 已满足。
-- Progress Reconciler 必须能解释 desired/current 是否一致、为何选择某个唯一下一 safe action、哪些候选被降为 diagnostic，以及当前等待的是 provider、scheduler、human gate 还是 domain owner。
-- 缺 provider attempt、active lease、execution authorization、workspace/artifact scope、source fingerprint 或 closeout binding 时，必须返回 OPL runtime blocker。
+- Progress Reconciler 必须能解释 requested/current transport 是否一致、当前 provider repair 或 wait 原因；不得比较或选择 stage 候选。
+- 缺 provider attempt、lease、scope、source fingerprint、receipt 或输出时，必须返回非阻断 progress/failure diagnostic；只有安全、权限、错误 target identity、不可逆动作或显式 human gate 返回 hard stop。
 - repair plan 只能指向 OPL runtime/provider/projection 修复命令；blocked / failed attempt worklist 只能给出只读查询与 owner review 入口；domain owner 修复必须保留为 owner route 或 typed blocker requirement。
 
 ## 测试覆盖
@@ -196,7 +196,7 @@ App read-model 只投影 Runway refs。它不得把 `provider completed`、proje
 | --- | --- |
 | 选择和诊断 provider。 | 声明 domain ready、artifact ready、quality ready 或 production ready。 |
 | 建立 stage-attempt projection、stage attempt、lease、heartbeat、retry、dead-letter 和 human gate transport。 | 替 MAS/MAG/RCA/OMA 写 domain truth、质量结论、artifact body 或 memory body。 |
-| 签发 provider / execution authorization / runtime blocker refs。 | 替 domain owner 签 owner receipt、quality gate receipt 或 domain typed blocker。 |
+| 记录 provider attempt / currentness / failure diagnostic refs。 | 替 Codex 选择 stage，或替 domain owner 签 owner receipt、quality gate receipt。 |
 | 用 Progress Reconciler 选择唯一下一 OPL safe action、等待 owner/gate，或生成 OPL runtime blocker。 | 用 handoff/gate/reconciler 伪造 domain truth、owner receipt、quality verdict 或 production ready。 |
 | 投影 Capability Invocation hard gate，并在缺 route-required ref、owner route mismatch 或 forbidden write 时 fail closed。 | 把 hard gate 通过写成 domain ready、owner answer、domain typed blocker 或 stage complete。 |
 | 把 provider state 投影给 CLI、App、descriptor delegate 和 evidence-worklist。 | 把 provider completed、projection clean、scheduler cadence observed 或 read-model closed 写成 stage complete。 |

@@ -11,9 +11,9 @@
     "human_doc:opl_decisions",
     "contracts/opl-framework/standard-agent-landing-evidence-status.json",
     "contracts/opl-framework/target-operating-architecture-contract.json#foundry_agent_os_standard",
-    "contracts/opl-framework/stage-route-scheduler-contract.json",
+    "contracts/opl-framework/stage-route-transport-contract.json",
     "contracts/opl-framework/private-platform-residue-owner-decisions.json",
-    "contracts/opl-framework/agent-packages/mas.json#registry_entry"
+    "contracts/opl-framework/packages/mas.json#registry_entry"
   ],
   "standard_agent_definition": {
     "source_shape": "Declarative Domain Pack + OPL generated/hosted surfaces + Domain Minimal Authority Kernel",
@@ -157,13 +157,13 @@
       "gate_id": "oma_target_agent_work_order_guard",
       "base_gate_id": "generated_target_agent_work_order_guard",
       "base_contract_role": "generic_guard_with_legacy_sample_gate_id",
-      "registry_sample_ref": "contracts/opl-framework/agent-packages/oma.json",
+      "registry_sample_ref": "contracts/opl-framework/packages/oma.json",
       "owner": "agent generator / target domain owner",
       "required_status": "evidence_required",
       "requires": [
         "generated or takeover target-agent work orders include target owner route, editable surface policy, source morphology proof, reviewer evidence where required, executor lease, no-forbidden-write proof, verification refs, rollback/canary refs, and expected target owner receipt or typed blocker return shape",
         "missing target owner route, source shape, generated surface, private residue decision, no-forbidden-write proof, or owner answer shape returns typed blocker or developer work order",
-        "guard-missing typed blockers and error payloads include executor_launch_admission=blocked_before_executor_launch plus no_executor_launch_proof showing no Codex process, no target worktree, no absorption attempt, and no cleanup need",
+        "guard-missing typed blockers and error payloads include executor_launch_preflight=hard_stopped_before_executor_launch plus no_executor_launch_proof showing no Codex process, no target worktree, no absorption attempt, and no cleanup need",
         "agent generator cannot sign target owner receipt, create target typed blocker, write target truth, or promote default agent without target owner evidence"
       ],
       "cannot_be_satisfied_by": [
@@ -247,25 +247,25 @@
     ],
     "representative_domain_kernel_samples": [
       {
-        "sample_ref": "contracts/opl-framework/agent-packages/mas.json",
+        "sample_ref": "contracts/opl-framework/packages/mas.json",
         "domain_kernel_class": "domain_recovery_state",
         "sample_label": "paper_recovery_state",
         "base_contract_invariant": false
       },
       {
-        "sample_ref": "contracts/opl-framework/agent-packages/mag.json",
+        "sample_ref": "contracts/opl-framework/packages/mag.json",
         "domain_kernel_class": "domain_native_submission_or_export_authority",
         "sample_label": "grant-native submission authority",
         "base_contract_invariant": false
       },
       {
-        "sample_ref": "contracts/opl-framework/agent-packages/rca.json",
+        "sample_ref": "contracts/opl-framework/packages/rca.json",
         "domain_kernel_class": "domain_artifact_recovery_authority",
         "sample_label": "visual artifact recovery authority",
         "base_contract_invariant": false
       },
       {
-        "sample_ref": "contracts/opl-framework/agent-packages/oma.json",
+        "sample_ref": "contracts/opl-framework/packages/oma.json",
         "domain_kernel_class": "target_work_order_currentness_and_owner_return_shape",
         "sample_label": "target work-order currentness and target owner return shape",
         "base_contract_invariant": false

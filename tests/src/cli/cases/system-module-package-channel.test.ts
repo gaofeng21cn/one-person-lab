@@ -14,7 +14,7 @@ import {
 } from '../helpers.ts';
 import { rollbackManagedModulePackageChannel } from '../../../../src/modules/connect/system-installation/module-package-channel.ts';
 
-const MODULE_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.module.source.v1+gzip';
+const PACKAGE_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.package.source.v1+gzip';
 const CHANNEL_MANIFEST_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.release.channel-manifest.v1+json';
 
 const MAS_MODULE_SPEC = {
@@ -75,19 +75,22 @@ function writePackageChannelFixture(input: {
 
   const channelManifest = {
     manifest_version: 1,
-    opl_version: input.version,
+    release_set_generation: input.version,
+    package_catalog_surface_kind: 'opl_package_catalog.v1',
     packages: {
-      modules: {
-        [input.moduleId]: {
-          module_id: input.moduleId,
-          repo_name: input.repoName,
-          artifact: `ghcr.io/owner/one-person-lab-modules/${input.repoName}:${input.version}`,
-          source_archive: {
-            sha256: archiveDigest,
-          },
-          source_git: {
-            head_sha: input.sourceHeadSha,
-          },
+      package_catalog: {
+        mas: {
+          package_id: 'mas',
+          selected_version: input.version,
+          versions: [{
+            package_version: input.version,
+            selection_status: 'selected_for_release_set',
+            source_artifact_ref: `ghcr.io/owner/one-person-lab-packages/mas:${input.version}`,
+            artifact_digest: `sha256:${'a'.repeat(64)}`,
+            artifact_status: 'published_immutable',
+            package_content_digest: `sha256:${archiveDigest}`,
+            owner_source_commit: input.sourceHeadSha,
+          }],
         },
       },
     },
@@ -108,15 +111,15 @@ function writePackageChannelFixture(input: {
         },
       ],
     },
-    [`owner/one-person-lab-modules/${input.repoName}`]: {
+    'owner/one-person-lab-packages/mas': {
       schemaVersion: 2,
       mediaType: 'application/vnd.oci.image.manifest.v1+json',
       layers: [
         {
-          mediaType: MODULE_LAYER_MEDIA_TYPE,
+          mediaType: PACKAGE_LAYER_MEDIA_TYPE,
           digest: `sha256:${archiveDigest}`,
           annotations: {
-            'org.opencontainers.image.title': `dist/opl-packages/modules/${input.repoName}-${input.version}.tar.gz`,
+            'org.opencontainers.image.title': `dist/opl-packages/packages/mas/mas-${input.version}.tar.gz`,
           },
         },
       ],
@@ -258,7 +261,8 @@ test('managed module install and update consume the package channel by default',
     assert.equal(installMarker.package_channel_lifecycle.rollback_ref, null);
     assert.equal(fs.existsSync(`${managedCheckout}.stage`), false);
     assert.equal(fs.existsSync(`${managedCheckout}.previous`), false);
-    assert.match(fs.readFileSync(firstChannel.curlLogPath, 'utf8'), /one-person-lab-modules\/med-autoscience/);
+    assert.match(fs.readFileSync(firstChannel.curlLogPath, 'utf8'), /one-person-lab-packages\/mas/);
+    assert.doesNotMatch(fs.readFileSync(firstChannel.curlLogPath, 'utf8'), /one-person-lab-modules/);
 
     const secondChannel = writePackageChannelFixture({
       root: path.join(homeRoot, 'channel-v2'),
@@ -328,7 +332,7 @@ test('managed module install and update consume the package channel by default',
   }
 });
 
-test('managed package channel defaults to the latest GHCR manifest independent of App release version', () => {
+test('managed package channel defaults to the latest-stable GHCR manifest independent of App release version', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-module-package-latest-home-'));
   const modulesRoot = path.join(homeRoot, 'managed-modules');
   const channel = writePackageChannelFixture({
@@ -387,7 +391,7 @@ test('managed package channel defaults to the latest GHCR manifest independent o
     assert.equal(install.module_action.turnkey.health_check.result.package_channel, true);
 
     const curlLog = fs.readFileSync(channel.curlLogPath, 'utf8');
-    assert.match(curlLog, /one-person-lab-manifest\/manifests\/latest/);
+    assert.match(curlLog, /one-person-lab-manifest\/manifests\/latest-stable/);
     assert.doesNotMatch(curlLog, /one-person-lab-manifest\/manifests\/26\.6\.3/);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });

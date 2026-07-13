@@ -1,0 +1,103 @@
+{
+  "surface_kind": "opl_agent_package_manifest.v1",
+  "agent_id": "mag",
+  "package_id": "mag",
+  "display_name": "Med Auto Grant",
+  "publisher": "one-person-lab",
+  "version": "0.1.0",
+  "source": "first_party",
+  "registry_entry": {
+    "registry_kind": "first_party_agent_package_registry_entry",
+    "registry_source_ref": "contracts/opl-framework/packages/mag.json",
+    "base_contract_role": "registry_data_not_base_invariant",
+    "base_contract_invariant": false,
+    "identity_fields": [
+      "package_id",
+      "agent_id",
+      "version"
+    ],
+    "admitted_domain_ref": "contracts/opl-framework/domains.json#medautogrant"
+  },
+  "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
+  "source_repo": "https://github.com/gaofeng21cn/med-autogrant.git",
+  "schema_ref": "contracts/opl-framework/agent-package-manifest.schema.json",
+  "machine_boundary": "This manifest declares first-party package distribution and Codex carrier projection. It does not write domain truth, sign owner receipts, create typed blockers, write runtime queues, or claim runtime/release readiness.",
+  "package_core": {
+    "core_kind": "opl_agent_package_core",
+    "identity_fields": [
+      "package_id",
+      "agent_id",
+      "version"
+    ],
+    "content_identity_fields": [
+      "manifest_sha256",
+      "payload_digest_ref",
+      "required_skill_pack_lock_refs",
+      "package_lock_ref"
+    ],
+    "dependency_source": "manifest_declared_capability_dependencies",
+    "lock_owner": "opl_connect_agent_package_registry",
+    "lifecycle_receipt_owner": "opl_connect_agent_package_registry",
+    "exposure_owner": "opl_connect_agent_package_registry"
+  },
+  "codex_surface": {
+    "plugin_id": "med-autogrant",
+    "plugin_payload_manifest_url": "payloads/mag-0.1.0.json",
+    "standalone_distribution": "repo_carrier_source",
+    "required_skill_ids": [
+      "med-autogrant"
+    ],
+    "bundled_capability_package_ids": [],
+    "user_install_action_count": 1
+  },
+  "runtime_source_carrier": {
+    "carrier_kind": "opl_managed_module_source",
+    "module_id": "medautogrant"
+  },
+  "carrier_adapters": [
+    {
+      "adapter_kind": "codex_plugin_carrier",
+      "carrier": "codex_plugin",
+      "source_surface": "codex_surface",
+      "projection_role": "package_carrier_adapter",
+      "owns_package_core": false,
+      "owns_domain_truth": false
+    }
+  ],
+  "opl_managed_surface": {
+    "package_shape": "thin_agent_package",
+    "dependency_resolution": "managed_dependency_graph",
+    "dependency_update_policy": "independent_package_target",
+    "developer_mode_dependency_policy": "source_checkout_when_authorized_else_pull_request"
+  },
+  "managed_shell": {
+    "clean_runner_profile": {
+      "profile_role": "domain_compatibility_clean_runner",
+      "legacy_env_roots": [
+        {
+          "env_name": "MAG_CLEAN_RUNNER_TMP_ROOT",
+          "fallback_subdir": "mag"
+        },
+        {
+          "env_name": "MED_AUTOGRANT_EDITABLE_SHARED_ENV_ROOT",
+          "fallback_subdir": "mag-editable-shared"
+        }
+      ],
+      "read_only_command_patterns": [
+        {
+          "pattern_id": "python_module_product_manifest_or_status",
+          "regex": "(?:^|(?:&&|\\|\\||[;&|])\\s*)uv\\s+run\\s+(?:python|python3)\\s+-m\\s+med_autogrant\\s+product\\s+(?:manifest|status)\\b"
+        },
+        {
+          "pattern_id": "uv_console_product_manifest_or_status",
+          "regex": "(?:^|(?:&&|\\|\\||[;&|])\\s*)uv\\s+run\\s+med_autogrant\\s+product\\s+(?:manifest|status)\\b"
+        },
+        {
+          "pattern_id": "directory_inline_product_entry",
+          "regex": "(?:^|(?:&&|\\|\\||[;&|])\\s*)uv\\s+run\\s+--directory\\s+\\S+\\s+(?:python|python3)\\s+-c\\s+.*med_autogrant\\.product_entry"
+        }
+      ]
+    }
+  },
+  "capability_dependencies": []
+}

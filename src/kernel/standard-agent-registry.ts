@@ -42,6 +42,8 @@ export type StandardAgentRegistryEntry = {
   domain_id: string;
   target_domain_id: string;
   label: string;
+  short_label: string;
+  display_name: string;
   series_membership: StandardAgentSeriesMembership;
   brand_cli: string;
   plugin_name: string;
@@ -71,6 +73,8 @@ export const STANDARD_AGENT_REGISTRY = [
     domain_id: 'medautoscience',
     target_domain_id: 'medautoscience',
     label: 'Med Auto Science',
+    short_label: 'MAS',
+    display_name: 'Med Auto Science',
     series_membership: STANDARD_AGENT_SERIES_MEMBERSHIP,
     brand_cli: 'mas',
     plugin_name: 'med-autoscience',
@@ -153,6 +157,8 @@ export const STANDARD_AGENT_REGISTRY = [
     domain_id: 'medautogrant',
     target_domain_id: 'medautogrant',
     label: 'Med Auto Grant',
+    short_label: 'MAG',
+    display_name: 'Med Auto Grant',
     series_membership: STANDARD_AGENT_SERIES_MEMBERSHIP,
     brand_cli: 'mag',
     plugin_name: 'med-autogrant',
@@ -233,6 +239,8 @@ export const STANDARD_AGENT_REGISTRY = [
     domain_id: 'redcube',
     target_domain_id: 'redcube',
     label: 'RedCube AI',
+    short_label: 'RCA',
+    display_name: 'RedCube AI',
     series_membership: STANDARD_AGENT_SERIES_MEMBERSHIP,
     brand_cli: 'rca',
     plugin_name: 'redcube-ai',
@@ -317,6 +325,8 @@ export const STANDARD_AGENT_REGISTRY = [
     domain_id: 'oplmetaagent',
     target_domain_id: 'opl-meta-agent',
     label: 'OPL Meta Agent',
+    short_label: 'OMA',
+    display_name: 'OPL Meta Agent',
     series_membership: STANDARD_AGENT_SERIES_MEMBERSHIP,
     brand_cli: 'oma',
     plugin_name: 'opl-meta-agent',
@@ -365,6 +375,8 @@ export const STANDARD_AGENT_REGISTRY = [
     domain_id: 'oplbookforge',
     target_domain_id: 'opl-bookforge',
     label: 'OPL Book Forge',
+    short_label: 'OBF',
+    display_name: 'OPL Book Forge',
     series_membership: STANDARD_AGENT_SERIES_MEMBERSHIP,
     brand_cli: 'obf',
     plugin_name: 'opl-bookforge',
@@ -411,6 +423,8 @@ export const STANDARD_AGENT_REGISTRY = [
     domain_id: 'scholarskills',
     target_domain_id: 'scholarskills',
     label: 'MAS Scholar Skills',
+    short_label: 'ScholarSkills',
+    display_name: 'MAS Scholar Skills',
     series_membership: FRAMEWORK_CAPABILITY_PACKAGE_MEMBERSHIP,
     brand_cli: 'mas-scholar-skills',
     plugin_name: 'mas-scholar-skills',
@@ -457,6 +471,23 @@ export function listStandardDomainAgentIds() {
   return STANDARD_AGENT_REGISTRY
     .filter((entry) => entry.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP)
     .map((entry) => entry.agent_id);
+}
+
+export function standardDomainAgentFamilyProjection(format: 'compact' | 'full') {
+  const agents = STANDARD_AGENT_REGISTRY
+    .filter((entry) => entry.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP)
+    .map((entry) => ({
+      package_id: entry.agent_id,
+      short_label: entry.short_label,
+      display_name: entry.display_name,
+      label: format === 'compact' ? entry.short_label : entry.display_name,
+    }));
+  return {
+    surface_kind: 'opl_standard_agent_family_labels.v1' as const,
+    format,
+    labels: agents.map((entry) => entry.label),
+    agents,
+  };
 }
 
 export function resolveStandardAgent(value: string) {

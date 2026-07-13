@@ -81,7 +81,8 @@ test('family runtime attempt contract keeps Temporal attempt, progress-first clo
     'StageAttemptWorkflow',
   );
   assert.ok(contract.required_ledger_fields.includes('stage_attempt_id'));
-  assert.ok(contract.required_ledger_fields.includes('execution_authorization_decision_ref'));
+  assert.equal(contract.required_ledger_fields.includes('execution_authorization_decision_ref'), false);
+  assert.equal(contract.required_ledger_fields.includes('attempt_lease_ref'), false);
   assert.ok(contract.required_projection_fields.includes('stage_progress_log'));
   assert.ok(contract.required_projection_fields.includes('attempt_true_path_proof'));
   assert.equal(contract.stage_progress_log_contract.surface_kind, 'opl_stage_progress_log');
@@ -106,20 +107,15 @@ test('family runtime attempt contract keeps Temporal attempt, progress-first clo
   assertFalseAuthority(contract.stability_projection_authority_boundary);
 });
 
-test('stage route scheduler contract keeps route hydration separate from domain route execution', () => {
-  const contract = readJson('contracts/opl-framework/stage-route-scheduler-contract.json');
+test('stage route transport cannot become a second semantic control plane', () => {
+  const contract = readJson('contracts/opl-framework/stage-route-transport-contract.json');
 
-  assert.equal(contract.model, 'stage_graph_reconciliation_with_owner_route_hydration');
-  assert.equal(contract.contract_laws.route_not_stage_strategy, true);
-  assert.equal(contract.contract_laws.route_reconciler_role, 'hydrate_reconcile_owner_routes_only');
-  assert.equal(contract.canonical_definitions.stage.owner, 'one-person-lab');
-  assert.equal(contract.canonical_definitions.route.owner, 'domain-agent');
-  assert.equal(contract.canonical_definitions.route.is_executable_stage, false);
-  assert.equal(contract.canonical_definitions.route_hydration.owner, 'one-person-lab');
-  assert.ok(contract.canonical_definitions.route_hydration.must_not.includes('write_domain_truth'));
-  assert.ok(contract.forbidden_semantics.includes('provider_completed_equals_owner_receipt'));
-  assert.equal(contract.authority_boundary.opl_can_schedule_stage_attempts, true);
-  assert.equal(contract.authority_boundary.opl_can_execute_route_as_stage, false);
+  assert.equal(contract.codex_semantic_route_boundary.semantic_owner, 'codex_cli');
+  assert.equal(contract.codex_semantic_route_boundary.framework_can_accept_reject_rank_select_reconcile_or_override_route, false);
+  assert.equal(contract.progress_policy.readable_artifact_counts_as_progress, true);
+  assert.equal(contract.route_back_policy.may_target_any_declared_stage, true);
+  assert.equal(contract.authority_boundary.opl_can_transport_codex_selected_route, true);
+  assert.equal(contract.authority_boundary.opl_can_choose_semantic_stage_route, false);
   assert.equal(contract.authority_boundary.opl_can_sign_domain_owner_receipt, false);
 });
 

@@ -7,7 +7,7 @@ import { formatJsonPayload, parseJsonText } from '../../kernel/json-file.ts';
 import {
   assertExecutableWorkOrder,
   missingOmaTargetAgentWorkOrderGuardFields,
-} from './agent-lab-work-order-execution/admission.ts';
+} from './agent-lab-work-order-execution/execution-preflight.ts';
 
 export const WORK_ORDER_MATERIALIZATION_REQUEST_SCHEMA_REF =
   'contracts/opl-framework/work-order-materialization-request.schema.json';

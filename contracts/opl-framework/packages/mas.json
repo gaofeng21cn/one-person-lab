@@ -1,0 +1,132 @@
+{
+  "surface_kind": "opl_agent_package_manifest.v1",
+  "agent_id": "mas",
+  "package_id": "mas",
+  "display_name": "Med Auto Science",
+  "publisher": "one-person-lab",
+  "version": "0.1.0-alpha.4",
+  "owner_language_version": {
+    "scheme": "pep440",
+    "value": "0.1.0a4"
+  },
+  "source": "first_party",
+  "registry_entry": {
+    "registry_kind": "first_party_agent_package_registry_entry",
+    "registry_source_ref": "contracts/opl-framework/packages/mas.json",
+    "base_contract_role": "registry_data_not_base_invariant",
+    "base_contract_invariant": false,
+    "identity_fields": [
+      "package_id",
+      "agent_id",
+      "version"
+    ],
+    "admitted_domain_ref": "contracts/opl-framework/domains.json#medautoscience"
+  },
+  "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
+  "source_repo": "https://github.com/gaofeng21cn/med-autoscience.git",
+  "schema_ref": "contracts/opl-framework/agent-package-manifest.schema.json",
+  "machine_boundary": "This manifest declares first-party package dependencies and distribution projections. It does not write domain truth, sign owner receipts, create typed blockers, write runtime queues, or claim runtime/release readiness.",
+  "package_core": {
+    "core_kind": "opl_agent_package_core",
+    "identity_fields": [
+      "package_id",
+      "agent_id",
+      "version"
+    ],
+    "content_identity_fields": [
+      "manifest_sha256",
+      "payload_digest_ref",
+      "required_skill_pack_lock_refs",
+      "package_lock_ref"
+    ],
+    "dependency_source": "manifest_declared_capability_dependencies",
+    "lock_owner": "opl_connect_agent_package_registry",
+    "lifecycle_receipt_owner": "opl_connect_agent_package_registry",
+    "exposure_owner": "opl_connect_agent_package_registry"
+  },
+  "codex_surface": {
+    "plugin_id": "med-autoscience",
+    "plugin_payload_manifest_url": "payloads/mas-0.1.0-alpha.4.json",
+    "standalone_distribution": "repo_carrier_source",
+    "required_skill_ids": [
+      "med-autoscience"
+    ],
+    "bundled_capability_package_ids": [
+      "mas-scholar-skills"
+    ],
+    "user_install_action_count": 1
+  },
+  "runtime_source_carrier": {
+    "carrier_kind": "opl_managed_module_source",
+    "module_id": "medautoscience"
+  },
+  "carrier_adapters": [
+    {
+      "adapter_kind": "codex_plugin_carrier",
+      "carrier": "codex_plugin",
+      "source_surface": "codex_surface",
+      "projection_role": "package_carrier_adapter",
+      "owns_package_core": false,
+      "owns_domain_truth": false
+    }
+  ],
+  "opl_managed_surface": {
+    "package_shape": "thin_agent_package",
+    "dependency_resolution": "managed_dependency_graph",
+    "dependency_update_policy": "consumer_dependency_closure_transaction",
+    "developer_mode_dependency_policy": "source_checkout_when_authorized_else_pull_request"
+  },
+  "capability_dependencies": [
+    {
+      "module_id": "scholarskills",
+      "package_id": "mas-scholar-skills",
+      "kind": "framework_capability_package",
+      "required": true,
+      "version_requirement": ">=0.1.0 <0.2.0",
+      "capability_abi": "mas-scholar-skills.v1",
+      "required_export_ids": [
+        "mas-scholar-skills",
+        "medical-manuscript-writing",
+        "medical-manuscript-review",
+        "medical-figure-design",
+        "medical-figure-style",
+        "medical-figure-composer",
+        "medical-research-lit",
+        "medical-statistical-review",
+        "medical-table-design",
+        "medical-submission-prep",
+        "medical-data-governance"
+      ],
+      "required_module_ids": [
+        "mas-scholar-skills.display",
+        "mas-scholar-skills.tables",
+        "mas-scholar-skills.stats",
+        "mas-scholar-skills.lit",
+        "mas-scholar-skills.write",
+        "mas-scholar-skills.review",
+        "mas-scholar-skills.submit",
+        "mas-scholar-skills.data"
+      ],
+      "manifest_url": "mas-scholar-skills.json",
+      "version_policy": "compatible_channel_manifest",
+      "codex_distribution": "bundled",
+      "opl_distribution": "managed_dependency",
+      "developer_distribution": "source_checkout",
+      "required_for": [
+        "workspace_or_quest_codex_discovery"
+      ],
+      "install_owner": "one-person-lab",
+      "install_update_source": "ghcr_capability_packages_channel",
+      "sync_scopes": [
+        "workspace",
+        "quest"
+      ],
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_sign_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_write_runtime_queue": false
+      }
+    }
+  ]
+}

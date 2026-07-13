@@ -212,14 +212,13 @@ export const TARGET_ARCHITECTURE_AUTHORITY_FUNCTIONS = [
 ] as const;
 
 export const TARGET_ARCHITECTURE_RECONCILER_LOOPS = [
-  'runtime_intent_admission',
+  'runtime_intent_transport',
   'progress_reconciliation',
-  'handoff_gate',
+  'human_authority_wait',
   'recovery_repair',
-  'admission',
-  'execution_authorization',
   'provider_attempt',
-  'closeout_binding',
+  'artifact_progress_projection',
+  'currentness_reuse_filter',
   'owner_answer_intake',
   'evidence_verify',
   'cleanup_finalizer',

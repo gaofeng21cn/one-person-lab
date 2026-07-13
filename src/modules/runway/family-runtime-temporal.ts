@@ -117,32 +117,6 @@ export type TemporalStageAttemptWorkflowInput = {
     blocked_reason?: string | null;
     route_impact?: Record<string, unknown>;
   } | null;
-  opl_execution_authorization?: {
-    owner: 'one-person-lab';
-    executor_kind: string;
-    provider_attempt_ref: string;
-    stage_attempt_id: string;
-    attempt_lease_ref: string;
-    attempt_lease_status: 'active';
-    execution_authorization_decision_ref: string;
-    stage_run_id: string;
-    domain_id: FamilyRuntimeDomainId;
-    stage_id: string;
-    generation: 0;
-    phase: 'launch';
-    selected_executor: string;
-    workspace_scope_ref: string;
-    artifact_scope_ref: string;
-    source_fingerprint: string;
-    idempotency_key: string;
-    current_pointer_ref: string;
-    stage_manifest_ref?: string | null;
-    authority_boundary: {
-      opl_can_write_domain_truth: false;
-      opl_can_create_owner_receipt: false;
-      opl_can_create_typed_blocker: false;
-    };
-  };
   visibility_search_attributes_upsert_enabled?: boolean;
   codex_stage_runner?: {
     runner_mode?: 'dry_run' | 'live_dry_run' | 'codex_cli';
@@ -493,137 +467,6 @@ function optionalRecord(value: unknown) {
     : null;
 }
 
-function stageRunIdFor(input: { domain_id: string; stage_id: string }) {
-  return [
-    'app-stage-run',
-    input.domain_id,
-    input.stage_id,
-  ]
-    .map((entry) => entry.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'unknown')
-    .join(':');
-}
-
-function workspaceScopeRef(workspaceLocator: Record<string, unknown>) {
-  return optionalText(workspaceLocator.workspace_scope_ref)
-    ?? optionalText(workspaceLocator.workspace_ref)
-    ?? (optionalText(workspaceLocator.workspace_root)
-      ? `workspace:${optionalText(workspaceLocator.workspace_root)}`
-      : null)
-    ?? (optionalText(workspaceLocator.repo_root)
-      ? `workspace:${optionalText(workspaceLocator.repo_root)}`
-      : null)
-    ?? (optionalText(workspaceLocator.profile)
-      ? `workspace-profile:${optionalText(workspaceLocator.profile)}`
-      : null)
-    ?? (optionalText(workspaceLocator.profile_name)
-      ? `workspace-profile:${optionalText(workspaceLocator.profile_name)}`
-      : null)
-    ?? (optionalText(workspaceLocator.study_id)
-      ? `study:${optionalText(workspaceLocator.study_id)}`
-      : null);
-}
-
-function artifactScopeRef(input: { workspaceLocator: Record<string, unknown>; stagePacketRef: string | null }) {
-  return optionalText(input.workspaceLocator.artifact_scope_ref)
-    ?? optionalText(input.workspaceLocator.stage_artifact_unit_ref)
-    ?? optionalText(input.workspaceLocator.lineage_ref)
-    ?? (input.stagePacketRef ? `stage-packet:${input.stagePacketRef}` : null)
-    ?? optionalText(input.workspaceLocator.route_ref)
-    ?? optionalText(input.workspaceLocator.action_ref)
-    ?? optionalText(input.workspaceLocator.task_kind)
-    ?? optionalText(input.workspaceLocator.study_id);
-}
-
-function stageManifestRef(input: { workspaceLocator: Record<string, unknown>; stageId: string }) {
-  return optionalText(input.workspaceLocator.stage_manifest_ref)
-    ?? optionalText(input.workspaceLocator.manifest_ref)
-    ?? `opl://stage-manifests/${encodeURIComponent(input.stageId)}`;
-}
-
-function studyIdRef(workspaceLocator: Record<string, unknown>, taskId: string | null) {
-  return optionalText(workspaceLocator.study_id)
-    ?? optionalText(workspaceLocator.study_ref)
-    ?? taskId
-    ?? 'study:unspecified';
-}
-
-function actionTypeRef(input: { workspaceLocator: Record<string, unknown>; stageId: string }) {
-  return optionalText(input.workspaceLocator.action_type)
-    ?? optionalText(input.workspaceLocator.action)
-    ?? optionalText(input.workspaceLocator.task_kind)
-    ?? input.stageId;
-}
-
-export function buildLaunchExecutionAuthorization(input: {
-  stageAttemptId: string;
-  workflowId: string;
-  domainId: FamilyRuntimeDomainId;
-  stageId: string;
-  executorKind: string;
-  taskId: string | null;
-  workspaceLocator: Record<string, unknown>;
-  stagePacketRef: string | null;
-  sourceFingerprint: string | null;
-  idempotencyKey: string | null;
-}) {
-  const workspaceScope = workspaceScopeRef(input.workspaceLocator);
-  const artifactScope = artifactScopeRef({
-    workspaceLocator: input.workspaceLocator,
-    stagePacketRef: input.stagePacketRef,
-  });
-  if (!workspaceScope || !artifactScope || !input.sourceFingerprint || !input.idempotencyKey) {
-    return undefined;
-  }
-  const stageRunId = stageRunIdFor({ domain_id: input.domainId, stage_id: input.stageId });
-  const taskOrAttemptId = input.taskId ?? input.stageAttemptId;
-  const studyId = studyIdRef(input.workspaceLocator, input.taskId);
-  const actionType = actionTypeRef({
-    workspaceLocator: input.workspaceLocator,
-    stageId: input.stageId,
-  });
-  return {
-    owner: 'one-person-lab' as const,
-    executor_kind: input.executorKind,
-    provider_attempt_ref: `temporal://attempt/${encodeURIComponent(input.stageAttemptId)}`,
-    stage_attempt_id: input.stageAttemptId,
-    attempt_lease_ref: `opl://stage-attempts/${encodeURIComponent(input.stageAttemptId)}/leases/${encodeURIComponent(taskOrAttemptId)}/active`,
-    attempt_lease_status: 'active' as const,
-    execution_authorization_decision_ref: `opl://stage-attempts/${encodeURIComponent(input.stageAttemptId)}/execution-authorizations/${encodeURIComponent(taskOrAttemptId)}/${encodeURIComponent(input.workflowId)}`,
-    stage_run_id: stageRunId,
-    domain_id: input.domainId,
-    study_id: studyId,
-    domain_context: {
-      domain_id: input.domainId,
-      study_id: studyId,
-      stage_id: input.stageId,
-    },
-    stage_id: input.stageId,
-    generation: 0 as const,
-    phase: 'launch' as const,
-    selected_executor: input.executorKind,
-    action_type: actionType,
-    work_unit_id: artifactScope,
-    work_unit_fingerprint: input.sourceFingerprint,
-    decision: 'authorize' as const,
-    reason: 'provider_stage_attempt_launch_authorized_by_opl_refs_only_gate',
-    operator: 'one-person-lab:runtime',
-    workspace_scope_ref: workspaceScope,
-    artifact_scope_ref: artifactScope,
-    source_fingerprint: input.sourceFingerprint,
-    idempotency_key: input.idempotencyKey,
-    current_pointer_ref: `opl://stage-runs/${encodeURIComponent(stageRunId)}/current`,
-    stage_manifest_ref: stageManifestRef({
-      workspaceLocator: input.workspaceLocator,
-      stageId: input.stageId,
-    }),
-    authority_boundary: {
-      opl_can_write_domain_truth: false as const,
-      opl_can_create_owner_receipt: false as const,
-      opl_can_create_typed_blocker: false as const,
-    },
-  };
-}
-
 function guardInlineString(input: {
   field: string;
   value?: string | null;
@@ -713,18 +556,6 @@ export function buildTemporalStageAttemptWorkflowInput(
     task_id: typeof attempt.task_id === 'string' ? attempt.task_id : null,
     stage_packet_ref: checkpointRefs[0] ?? null,
     checkpoint_refs: checkpointRefs,
-    opl_execution_authorization: buildLaunchExecutionAuthorization({
-      stageAttemptId: attempt.stage_attempt_id,
-      workflowId: attempt.workflow_id,
-      domainId: attempt.domain_id,
-      stageId: attempt.stage_id,
-      executorKind,
-      taskId: typeof attempt.task_id === 'string' ? attempt.task_id : null,
-      workspaceLocator: attempt.workspace_locator,
-      stagePacketRef: checkpointRefs[0] ?? null,
-      sourceFingerprint: attempt.source_fingerprint,
-      idempotencyKey: optionalText(attempt.idempotency_key),
-    }),
     codex_stage_runner: executorKind === 'codex_cli'
       ? {
           runner_mode: 'codex_cli',
@@ -736,19 +567,6 @@ export function buildTemporalStageAttemptWorkflowInput(
 }
 
 export function requireTemporalStageAttemptWorkflowInputLaunchable(input: TemporalStageAttemptWorkflowInput) {
-  if (input.executor_kind === 'codex_cli' && (!input.stage_packet_ref || input.stage_packet_ref === 'unavailable')) {
-    throw new FrameworkContractError(
-      'contract_shape_invalid',
-      'Temporal codex_cli workflow input requires a real stage packet ref.',
-      {
-        stage_attempt_id: input.stage_attempt_id,
-        workflow_id: input.workflow_id,
-        executor_kind: input.executor_kind,
-        blocked_reason: 'codex_cli_stage_packet_ref_missing',
-        required: ['checkpoint_refs[0]'],
-      },
-    );
-  }
   const workspaceRoot = typeof input.workspace_locator.workspace_root === 'string' && input.workspace_locator.workspace_root.trim()
     ? input.workspace_locator.workspace_root.trim()
     : typeof input.workspace_locator.repo_root === 'string' && input.workspace_locator.repo_root.trim()

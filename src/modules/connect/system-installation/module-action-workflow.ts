@@ -17,6 +17,7 @@ export type DomainModuleRuntimeSpec = DomainModuleSpec & {
   default_install: boolean;
   bootstrap_command?: (checkoutPath: string) => { command: string; args: string[] } | null;
   health_check_command?: (checkoutPath: string) => { command: string; args: string[] } | null;
+  runtime_probe_command?: (checkoutPath: string) => { command: string; args: string[] } | null;
   exec_command?: (checkoutPath: string, args: string[]) => { command: string; args: string[] } | null;
   skill_sync_domain?: 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent' | 'oplbookforge' | 'scholarskills';
 };

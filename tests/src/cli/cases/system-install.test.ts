@@ -1,8 +1,9 @@
-import { assert, cliPath, contractsDir, createCodexConfigFixture, createFakeLaunchctlFixture, createGitModuleRemoteFixture, fs, loadFrameworkContracts, os, parseJsonText, path, repoRoot, runCli, runCliFailure, test } from '../helpers.ts';
+import { assert, contractsDir, createCodexConfigFixture, fs, loadFrameworkContracts, os, path, runCli, runCliFailure, test } from '../helpers.ts';
 import { buildInternalCommandSpecs } from '../../../../src/entrypoints/cli/cases/private-command-specs.ts';
 import { buildPublicCommandSpecs } from '../../../../src/entrypoints/cli/cases/public-command-specs.ts';
 import { OPL_GATEWAY_BASE_URL, readBundledCodexDefaultProfile } from '../../../../src/kernel/local-codex-defaults.ts';
-import { createFakeCompanionInstallEnv, createFakeOplFlowInstallEnv, writeFakeCompanionToolBinaries } from './system-install-fixtures.ts';
+import { listDefaultOplDomainModuleSpecs } from '../../../../src/modules/connect/system-installation/modules.ts';
+import { createFakeCompanionInstallEnv, writeFakeCompanionToolBinaries } from './system-install-fixtures.ts';
 
 function disableRemoteCompanionInstall() {
   return {
@@ -72,201 +73,64 @@ test('public command specs expose the one-shot install command', () => {
   assert.equal(typeof publicSpecs.install.handler, 'function');
 });
 
-test('install --headless --modules rca installs the framework payload without installing or opening the App', () => {
-  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-headless-install-home-'));
-  const modulesRoot = path.join(homeRoot, 'managed-modules');
-  const guiToolLogPath = path.join(homeRoot, 'gui-tools.log');
-  const forbiddenGuiTool = path.join(homeRoot, 'forbidden-gui-tool');
-  const redcubeRemote = createGitModuleRemoteFixture('redcube-ai', {
-    extraFiles: {
-      'plugins/redcube-ai/.codex-plugin/plugin.json': JSON.stringify({ name: 'redcube-ai', skills: './skills/' }, null, 2),
-      'plugins/redcube-ai/skills/redcube-ai/SKILL.md': [
-        '---',
-        'name: redcube-ai',
-        'description: Use RCA through its OPL-managed product entry.',
-        '---',
-        '',
-        '# RCA Skill',
-        '',
-      ].join('\n'),
-      'scripts/opl-module-bootstrap.sh': '#!/usr/bin/env bash\nset -euo pipefail\n',
-      'scripts/opl-module-healthcheck.sh': '#!/usr/bin/env bash\nset -euo pipefail\n',
-    },
-  });
-  fs.writeFileSync(
-    forbiddenGuiTool,
-    `#!/usr/bin/env bash\nprintf '%s\\n' "$*" >> ${JSON.stringify(guiToolLogPath)}\nexit 97\n`,
-    { mode: 0o755 },
-  );
+test('install rejects the retired --skip-modules alias', () => {
+  const failure = runCliFailure(['install', '--skip-modules']);
+  assert.equal(failure.payload.error.code, 'cli_usage_error');
+  assert.equal(failure.payload.error.details.option, '--skip-modules');
+});
 
+test('ScholarSkills is dependency-managed and is not a global default module', () => {
+  assert.equal(
+    listDefaultOplDomainModuleSpecs().some((module) => module.module_id === 'scholarskills'),
+    false,
+  );
+});
+
+test('install rejects retired --modules and --module package selection flags', () => {
+  for (const args of [
+    ['install', '--modules', 'rca'],
+    ['install', '--module', 'redcube'],
+  ]) {
+    const failure = runCliFailure(args);
+    assert.equal(failure.payload.error.code, 'cli_usage_error');
+    assert.equal(failure.payload.error.details.option, args[1]);
+  }
+});
+
+test('install defaults to headless Base and delegates Agent installation to opl packages', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-base-install-home-'));
   try {
     const output = runCli([
       'install',
       '--headless',
-      '--modules',
-      'rca',
+      '--skip-packages',
       '--skip-engines',
-      '--no-online-runtime',
+      '--skip-native-helper-repair',
     ], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
-      OPL_MODULES_ROOT: modulesRoot,
-      OPL_MODULE_REPO_URL_REDCUBE: redcubeRemote.remoteRoot,
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
-      OPL_GUI_INSTALL_PLATFORM: 'darwin',
-      OPL_APPLICATIONS_DIR: path.join(homeRoot, 'Applications'),
-      OPL_CURL_BIN: forbiddenGuiTool,
-      OPL_HDIUTIL_BIN: forbiddenGuiTool,
-      OPL_OPEN_BIN: forbiddenGuiTool,
-      PATH: '/usr/bin:/bin',
-      ...createFakeNativeHelperRepairEnv(homeRoot),
-      ...createFakeOplFlowInstallEnv(homeRoot),
+      OPL_MODULES_ROOT: path.join(homeRoot, 'managed-modules'),
+      ...disableRemoteCompanionInstall(),
     }) as any;
 
     assert.equal(output.install.status, 'completed');
     assert.equal(output.install.install_mode, 'headless');
-    assert.deepEqual(output.install.selected_modules, ['redcube']);
-    assert.equal(output.install.module_actions[0].module.module_id, 'redcube');
-    assert.equal(output.install.module_actions[0].module.installed, true);
-    assert.equal(output.install.codex_plugin_registry.summary.registered, 1);
-    assert.equal(output.install.gui_open_action, null);
-    assert.equal(output.install.native_helper_action.action, 'repair_native_helpers');
-    assert.equal(output.install.native_helper_action.status, 'completed');
-    assert.equal(output.install.native_helper_action.after.runtime.status, 'available');
-    assert.equal(output.install.companion_skill_sync.mode, 'observe');
-    assert.equal(output.install.companion_skill_sync.summary.total, 0);
-    assert.equal(fs.existsSync(guiToolLogPath), false);
-    assert.equal(fs.existsSync(path.join(homeRoot, 'Applications')), false);
+    assert.deepEqual(output.install.selected_packages, []);
+    assert.deepEqual(output.install.package_installation, {
+      owner: 'opl_packages',
+      performed_by_turnkey: false,
+      explicit_command: 'opl packages install <package_id>',
+      skip_packages_requested: true,
+    });
+    assert.equal(Object.hasOwn(output.install, 'selected_modules'), false);
+    assert.equal(Object.hasOwn(output.install, 'module_actions'), false);
+    assert.equal(Object.hasOwn(output.install, 'codex_plugin_registry'), false);
+    assert.equal(fs.existsSync(path.join(homeRoot, 'managed-modules')), false);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
-    fs.rmSync(redcubeRemote.fixtureRoot, { recursive: true, force: true });
   }
 });
-
-test('install defaults to headless and installs only explicitly selected modules', () => {
-  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-home-'));
-  const modulesRoot = path.join(homeRoot, 'managed-modules');
-  const turnkeyLogPath = path.join(homeRoot, 'turnkey.log');
-  const medAutoScienceRemote = createGitModuleRemoteFixture('med-autoscience', {
-    extraFiles: {
-      'plugins/med-autoscience/.codex-plugin/plugin.json': JSON.stringify({ name: 'med-autoscience', skills: './skills/' }, null, 2),
-      'plugins/med-autoscience/skills/med-autoscience/SKILL.md': [
-        '---',
-        'name: med-autoscience',
-        'description: Use MAS runtime through its OPL-managed product entry.',
-        '---',
-        '',
-        '# MAS Skill',
-        '',
-      ].join('\n'),
-      'scripts/opl-module-bootstrap.sh': `#!/usr/bin/env bash
-set -euo pipefail
-printf 'bootstrap\n' >> ${JSON.stringify(turnkeyLogPath)}
-`,
-      'scripts/install-codex-plugin.sh': `#!/usr/bin/env bash
-set -euo pipefail
-printf 'skill-sync\n' >> ${JSON.stringify(turnkeyLogPath)}
-cat <<'EOF'
-{"repo":"mas","sync":"ok"}
-EOF
-`,
-      'scripts/opl-module-healthcheck.sh': `#!/usr/bin/env bash
-set -euo pipefail
-printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
-`,
-    },
-  });
-  const env = {
-    HOME: homeRoot,
-    CODEX_HOME: path.join(homeRoot, 'codex-home'),
-    OPL_MODULES_ROOT: modulesRoot,
-    OPL_MODULE_REPO_URL_MEDAUTOSCIENCE: medAutoScienceRemote.remoteRoot,
-    OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
-    PATH: '/usr/bin:/bin',
-  };
-
-  try {
-    const output = runCli(['install', '--modules', 'mas', '--skip-engines', '--skip-native-helper-repair'], env) as any;
-
-    assert.equal(output.install.surface_id, 'opl_install');
-    assert.equal(output.install.status, 'completed');
-    assert.equal(output.install.install_mode, 'headless');
-    assert.deepEqual(output.install.selected_engines, ['codex']);
-    assert.deepEqual(output.install.engine_actions, []);
-    assert.deepEqual(output.install.selected_modules, ['medautoscience']);
-    assert.equal(output.install.codex_plugin_registry.surface_id, 'opl_codex_plugin_registry');
-    assert.equal(output.install.codex_plugin_registry.summary.registered, 1);
-    assert.equal(output.install.module_actions.length, 1);
-    assert.equal(output.install.module_actions[0].action, 'install');
-    assert.equal(output.install.module_actions[0].module.module_id, 'medautoscience');
-    assert.equal(output.install.module_actions[0].module.installed, true);
-    assert.equal(output.install.module_actions[0].turnkey.skill_sync.status, 'completed');
-    assert.equal(Object.prototype.hasOwnProperty.call(output.install.module_actions[0].turnkey.skill_sync.result.installer_result ?? {}, 'codex_skill_mirror'), false);
-    assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', 'mas', 'SKILL.md')), false);
-    assert.equal(fs.existsSync(path.join(homeRoot, '.codex', 'skills', 'mas', 'SKILL.md')), false);
-    assert.equal(output.install.gui_open_action, null);
-    assert.equal(output.install.codex_config_bootstrap.status, 'skipped_missing_input');
-    assert.equal(output.install.codex_config_bootstrap.api_key_present, false);
-    assert.equal(output.install.companion_skill_sync.surface_id, 'opl_companion_skill_sync');
-    assert.equal(output.install.companion_skill_sync.mode, 'observe');
-    assert.equal(output.install.companion_skill_sync.summary.total, 0);
-    assert.deepEqual(output.install.companion_skill_sync.items, []);
-    assert.deepEqual(output.install.companion_skill_sync.tools, []);
-    assert.equal(output.install.opl_flow_package, null);
-    assert.equal(output.install.runtime_manager_action.executed_actions.some((entry: any) => ['install_hermes_online_runtime', 'repair_hermes_legacy_provider'].includes(entry.action_id)), false);
-    assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', 'officecli')), false);
-    assert.equal(fs.existsSync(path.join(homeRoot, '.local', 'bin', 'officecli')), false);
-    assert.equal(fs.existsSync(path.join(homeRoot, '.local', 'bin', 'mineru-open-api')), false);
-    assert.equal(output.install.first_run_log.surface_id, 'opl_first_run_log');
-    assert.equal(output.install.first_run_log.event_schema_version, 'opl_first_run_event.v1');
-    assert.equal(output.install.first_run_log.log_path, path.join(homeRoot, 'Library', 'Logs', 'One Person Lab', 'first-run.jsonl'));
-    assert.deepEqual(
-      output.install.first_run_log_events.map((entry: any) => [entry.event_type, entry.status, entry.log_path]),
-      [
-        ['install_started', 'written', output.install.first_run_log.log_path],
-        ['runtime_manager_repair_started', 'written', output.install.first_run_log.log_path],
-        ['runtime_manager_repair_completed', 'written', output.install.first_run_log.log_path],
-        ['install_completed', 'written', output.install.first_run_log.log_path],
-      ],
-    );
-    const firstRunEvents = fs.readFileSync(output.install.first_run_log.log_path, 'utf8')
-      .trim()
-      .split('\n')
-      .map((line) => parseJsonText(line) as any);
-    assert.deepEqual(firstRunEvents.map((entry: any) => entry.event_type), [
-      'install_started',
-      'runtime_manager_repair_started',
-      'runtime_manager_repair_completed',
-      'install_completed',
-    ]);
-    assert.equal(firstRunEvents[0].payload.install_mode, 'headless');
-    assert.equal(firstRunEvents[3].payload.status, 'completed');
-    assert.equal(output.install.system_initialize.surface_id, 'opl_system_initialize');
-    assert.equal(output.install.system_initialize.recommended_skills.surface_id, 'opl_recommended_skill_bundle');
-    assert.equal(output.install.system_initialize.gui_shell.shell_id, 'opl_aion_shell');
-    assert.equal(
-      fs.readFileSync(path.join(homeRoot, 'codex-home', 'config.toml'), 'utf8').includes(
-        `[marketplaces.med-autoscience-local]\nsource_type = "local"\nsource = "${path.join(homeRoot, 'opl-state', 'codex-plugin-marketplaces', 'med-autoscience-local')}"`,
-      ),
-      true,
-    );
-    assert.equal(
-      fs.readFileSync(path.join(homeRoot, 'codex-home', 'config.toml'), 'utf8').includes(
-        '[plugins."med-autoscience@med-autoscience-local"]\nenabled = true',
-      ),
-      true,
-    );
-    assert.deepEqual(fs.readFileSync(turnkeyLogPath, 'utf8').trim().split('\n'), ['bootstrap', 'health']);
-    assert.equal(
-      fs.existsSync(path.join(modulesRoot, 'med-autoscience', '.agents', 'plugins', 'marketplace.json')),
-      false,
-    );
-  } finally {
-    fs.rmSync(homeRoot, { recursive: true, force: true });
-    fs.rmSync(medAutoScienceRemote.fixtureRoot, { recursive: true, force: true });
-  }
-});
-
 test('managed companion sync writes materialized skills with readable permissions', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-readable-skills-home-'));
   const env = createFakeCompanionInstallEnv(homeRoot);
@@ -579,12 +443,11 @@ printf 'native repair completed\\n'
   );
 
   try {
-    const output = runCli(['install', '--skip-modules', '--skip-engines', '--headless'], {
+    const output = runCli(['install', '--skip-packages', '--skip-engines', '--headless'], {
       HOME: homeRoot,
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       OPL_NATIVE_HELPER_BIN_DIR: helperBinDir,
       OPL_NATIVE_HELPER_REPAIR_COMMAND: repairScript,
-      ...createFakeOplFlowInstallEnv(homeRoot),
       ...disableRemoteCompanionInstall(),
     }) as any;
 
@@ -604,7 +467,7 @@ test('install command can bootstrap Codex defaults from environment without leak
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-codex-defaults-home-'));
 
   try {
-    const output = runCli(['install', '--skip-modules', '--skip-engines', '--headless', '--skip-native-helper-repair'], {
+    const output = runCli(['install', '--skip-packages', '--skip-engines', '--headless', '--skip-native-helper-repair'], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
@@ -612,7 +475,6 @@ test('install command can bootstrap Codex defaults from environment without leak
       OPL_CODEX_REASONING_EFFORT: 'xhigh',
       OPL_CODEX_BASE_URL: 'https://codex-provider.example.test/v1',
       OPL_CODEX_API_KEY: 'secret-test-key',
-      ...createFakeOplFlowInstallEnv(homeRoot),
       ...disableRemoteCompanionInstall(),
     }) as any;
 
@@ -638,7 +500,7 @@ test('install command applies bundled Codex defaults when only the API key is pr
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-bundled-codex-defaults-home-'));
 
   try {
-    const output = runCli(['install', '--skip-modules', '--skip-engines', '--headless', '--skip-native-helper-repair'], {
+    const output = runCli(['install', '--skip-packages', '--skip-engines', '--headless', '--skip-native-helper-repair'], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
@@ -647,7 +509,6 @@ test('install command applies bundled Codex defaults when only the API key is pr
       OPL_CODEX_REASONING_EFFORT: '',
       CODEX_REASONING_EFFORT: '',
       OPL_CODEX_API_KEY: 'secret-test-key',
-      ...createFakeOplFlowInstallEnv(homeRoot),
       ...disableRemoteCompanionInstall(),
     }) as any;
 
@@ -685,12 +546,11 @@ test('install command upgrades an existing OPL Gateway alias while preserving it
       'utf8',
     );
 
-    const output = runCli(['install', '--skip-modules', '--skip-engines', '--headless', '--skip-native-helper-repair'], {
+    const output = runCli(['install', '--skip-packages', '--skip-engines', '--headless', '--skip-native-helper-repair'], {
       HOME: homeRoot,
       CODEX_HOME: codexHome,
       OPENAI_API_KEY: 'ambient-openai-key-must-not-replace-provider-token',
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
-      ...createFakeOplFlowInstallEnv(homeRoot),
       ...disableRemoteCompanionInstall(),
     }) as any;
 
@@ -710,13 +570,12 @@ test('install command upgrades an existing OPL Gateway alias while preserving it
     assert.match(config, /wire_api = "responses"/);
     assert.match(config, /custom_header = "preserve-me"/);
 
-    runCli(['install', '--skip-modules', '--skip-engines', '--headless', '--skip-native-helper-repair'], {
+    runCli(['install', '--skip-packages', '--skip-engines', '--headless', '--skip-native-helper-repair'], {
       HOME: homeRoot,
       CODEX_HOME: codexHome,
       OPENAI_API_KEY: 'ambient-openai-key-must-not-replace-provider-token',
       OPL_CODEX_API_KEY: 'explicit-opl-environment-key',
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
-      ...createFakeOplFlowInstallEnv(homeRoot),
       ...disableRemoteCompanionInstall(),
     });
     const updatedConfig = fs.readFileSync(configPath, 'utf8');
@@ -749,11 +608,10 @@ test('install command does not upgrade a direct OPL Gateway config without a bea
       'utf8',
     );
 
-    const output = runCli(['install', '--skip-modules', '--skip-engines', '--headless', '--skip-native-helper-repair'], {
+    const output = runCli(['install', '--skip-packages', '--skip-engines', '--headless', '--skip-native-helper-repair'], {
       HOME: homeRoot,
       CODEX_HOME: codexHome,
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
-      ...createFakeOplFlowInstallEnv(homeRoot),
       ...disableRemoteCompanionInstall(),
     }) as any;
 
@@ -791,12 +649,11 @@ test('install command does not overwrite a third-party provider using the gflab 
       'utf8',
     );
 
-    const output = runCli(['install', '--skip-modules', '--skip-engines', '--headless', '--skip-native-helper-repair'], {
+    const output = runCli(['install', '--skip-packages', '--skip-engines', '--headless', '--skip-native-helper-repair'], {
       HOME: homeRoot,
       CODEX_HOME: codexHome,
       OPL_CODEX_API_KEY: 'new-opl-key',
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
-      ...createFakeOplFlowInstallEnv(homeRoot),
       ...disableRemoteCompanionInstall(),
     }) as any;
 
@@ -820,6 +677,25 @@ test('install command does not overwrite a third-party provider using the gflab 
   }
 });
 
+test('base install completes without installing optional packages', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-base-only-home-'));
+
+  try {
+    const output = runCli(['install', '--skip-packages', '--skip-engines', '--headless', '--skip-native-helper-repair'], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      OPL_MODULES_ROOT: path.join(homeRoot, 'missing-modules'),
+      OPL_CODEX_API_KEY: 'must-not-be-written-before-flow-preflight',
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      ...disableRemoteCompanionInstall(),
+    }) as any;
+
+    assert.equal(output.install.status, 'completed');
+    assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'config.toml')), true);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
 test('system initialize blocks launch when compatible Codex CLI lacks configured API key', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-initialize-codex-config-home-'));
   const codexFixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-initialize-codex-config-bin-'));
@@ -1009,10 +885,9 @@ test('install command points WebUI users to the AionUI shell instead of a local 
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-webui-note-home-'));
 
   try {
-    const output = runCli(['install', '--skip-modules', '--skip-engines', '--headless', '--skip-native-helper-repair'], {
+    const output = runCli(['install', '--skip-packages', '--skip-engines', '--headless', '--skip-native-helper-repair'], {
       HOME: homeRoot,
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
-      ...createFakeOplFlowInstallEnv(homeRoot),
       ...disableRemoteCompanionInstall(),
     }) as any;
 
@@ -1033,7 +908,7 @@ test('install command reuses only the default Codex engine and reports Temporal 
 
   try {
     const output = runCli(
-      ['install', '--skip-modules', '--headless', '--skip-native-helper-repair'],
+      ['install', '--skip-packages', '--headless', '--skip-native-helper-repair'],
       {
         HOME: homeRoot,
         CODEX_HOME: codexConfigFixture.codexHome,
@@ -1042,7 +917,6 @@ test('install command reuses only the default Codex engine and reports Temporal 
         OPL_TEMPORAL_ADDRESS: '',
         TEMPORAL_ADDRESS: '',
         PATH: `${codexFixtureRoot}:/usr/bin:/bin`,
-        ...createFakeOplFlowInstallEnv(homeRoot),
         ...disableRemoteCompanionInstall(),
       },
     ) as any;
@@ -1062,74 +936,5 @@ test('install command reuses only the default Codex engine and reports Temporal 
     fs.rmSync(codexConfigFixture.codexHome, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(codexFixtureRoot, { recursive: true, force: true });
-  }
-});
-
-test('install syncs the mandatory OPL Flow plugin only after installing Codex on a clean machine', () => {
-  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-codex-before-flow-'));
-  const fixtureRoot = path.join(homeRoot, 'fixture');
-  const runtimeRoot = path.join(fixtureRoot, 'runtime');
-  const codexPath = path.join(runtimeRoot, 'current', 'bin', 'codex');
-  const installScript = path.join(fixtureRoot, 'install-codex.sh');
-  const flowInstaller = path.join(fixtureRoot, 'install-flow.py');
-  const orderLog = path.join(fixtureRoot, 'order.log');
-  fs.mkdirSync(fixtureRoot, { recursive: true });
-  fs.writeFileSync(
-    installScript,
-    [
-      '#!/usr/bin/env bash',
-      'set -euo pipefail',
-      `mkdir -p ${JSON.stringify(path.dirname(codexPath))}`,
-      `cat > ${JSON.stringify(codexPath)} <<'EOF'`,
-      '#!/usr/bin/env bash',
-      'if [ "${1:-}" = "--version" ]; then echo "codex-cli 0.125.0"; exit 0; fi',
-      'exit 0',
-      'EOF',
-      `chmod +x ${JSON.stringify(codexPath)}`,
-      `printf 'codex\n' >> ${JSON.stringify(orderLog)}`,
-      '',
-    ].join('\n'),
-    { mode: 0o755 },
-  );
-  fs.writeFileSync(
-    flowInstaller,
-    [
-      'import json',
-      'from pathlib import Path',
-      `codex_path = Path(${JSON.stringify(codexPath)})`,
-      `order_log = Path(${JSON.stringify(orderLog)})`,
-      'if not codex_path.is_file():',
-      '    raise SystemExit("Codex must be installed before OPL Flow plugin sync")',
-      'order_log.open("a", encoding="utf-8").write("flow\\n")',
-      'print(json.dumps({"surface_kind": "opl_flow_plugin_install_receipt.v1", "status": "installed"}))',
-      '',
-    ].join('\n'),
-    'utf8',
-  );
-
-  try {
-    const output = runCli(
-      ['install', '--skip-modules', '--headless', '--skip-native-helper-repair', '--no-online-runtime'],
-      {
-        HOME: homeRoot,
-        CODEX_HOME: path.join(homeRoot, 'codex-home'),
-        OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
-        OPL_CODEX_INSTALL_COMMAND: installScript,
-        OPL_FLOW_INSTALLER_SCRIPT: flowInstaller,
-        OPL_RUNTIME_ROOT: runtimeRoot,
-        PATH: '/usr/bin:/bin',
-        ...disableRemoteCompanionInstall(),
-      },
-    ) as any;
-
-    assert.equal(output.install.status, 'completed');
-    assert.deepEqual(
-      output.install.engine_actions.map((entry: any) => [entry.engine_id, entry.status]),
-      [['codex', 'completed']],
-    );
-    assert.equal(output.install.opl_flow_plugin.status, 'installed');
-    assert.deepEqual(fs.readFileSync(orderLog, 'utf8').trim().split('\n'), ['codex', 'flow']);
-  } finally {
-    fs.rmSync(homeRoot, { recursive: true, force: true });
   }
 });

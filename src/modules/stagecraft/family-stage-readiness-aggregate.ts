@@ -61,12 +61,12 @@ export function buildFamilyDefaultsStageReadiness(
     summary: {
       domain_count: summaries.length,
       stage_count: summaries.reduce((total, summary) => total + summary.summary.stage_count, 0),
-      admitted_stage_count: summaries.reduce(
-        (total, summary) => total + summary.summary.admitted_stage_count,
+      conformant_stage_count: summaries.reduce(
+        (total, summary) => total + summary.summary.conformant_stage_count,
         0,
       ),
-      needs_contracts_stage_count: summaries.reduce(
-        (total, summary) => total + summary.summary.needs_contracts_stage_count,
+      quality_debt_stage_count: summaries.reduce(
+        (total, summary) => total + summary.summary.quality_debt_stage_count,
         0,
       ),
       blocked_stage_count: summaries.reduce(

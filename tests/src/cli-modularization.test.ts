@@ -25,7 +25,6 @@ test('family-runtime command parser keeps a thin public entrypoint and semantic 
   const entryLines = fs.readFileSync(entryPath, 'utf8').trimEnd().split('\n').length;
   const expectedParserParts = [
     'attempt.ts',
-    'domain-autonomy.ts',
     'evidence-worklist.ts',
     'lifecycle.ts',
     'provider.ts',

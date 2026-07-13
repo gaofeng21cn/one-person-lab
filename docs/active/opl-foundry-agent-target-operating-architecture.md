@@ -171,11 +171,11 @@ Stage Artifact Unit 按四层读取：
 | Tier | 目标 | 进入默认路径的条件 |
 | --- | --- | --- |
 | `T0_progress_delta` | 让 ordinary executor 的写作、分析、证据整理、review 修订或平台修复可接力。 | 当前 owner delta 需要该变化；用 ProgressDeltaReceipt 表达。 |
-| `T1_stage_transition` | 关闭或阻塞一个 Stage。 | required role artifacts、manifest、OwnerReceipt / TypedBlocker、current pointer 和 closeout binding 成立。 |
+| `T1_stage_transition` | Codex 选择下一 declared stage。 | 任意可读 artifact、诊断、阴性结果或真实 hard-stop evidence 可作为输入；格式与 receipt 缺口只形成质量债。 |
 | `T2_delivery_artifact` | 交付 package、export、publication、submission 或 release。 | 对应 domain / App owner authority receipt、independent review 或 human gate 成立。 |
 | `T3_production_evidence` | L5、long-soak、restore proof、cleanup、release cohort 和 no-regression。 | 显式 production evidence lane；只有当前 owner delta 或不可逆操作要求时升级。 |
 
-Audit sidecar 的升级条件必须显式写出。缺 prompt / skill / tool / knowledge / rubric refs、trace 不全、readiness inventory 未补齐、worklist counter 不一致、restore proof 未跑、long-soak 未闭合、cleanup ledger 未完成或 L5 evidence 不足，默认只形成 advisory / diagnostic / production evidence gap。只有它们实际破坏 owner、authority、execution authorization、closeout binding、accepted answer shape、不可逆 mutation、publication / release / physical delete claim、human gate 或恢复审计能力时，才进入 hard blocker。
+Audit sidecar 的升级条件必须显式写出。缺 prompt / skill / tool / knowledge / rubric refs、trace、inventory、worklist、restore proof、long-soak、cleanup 或 L5 evidence 默认只形成 advisory / quality debt。只有错误目标 identity、安全/权限/authority、不可逆 mutation、publication/release/physical-delete action 或明确 human decision 才进入 hard stop。
 
 DeepScientist / 旧 MDS 的流畅经验只能在这一层被吸收为 `single ordinary loop` 和 `few default gates`。它们不得重新成为 MAS 默认 backend、quality owner、artifact authority、OPL provider 或 Foundry Agent 顶层入口。
 
@@ -261,15 +261,15 @@ OPL 记录实际使用过的工具 refs、证据 refs、artifact refs、owner an
 
 Stage 是 OPL 唯一默认执行单元。Attempt Runtime 只负责：
 
-- admission：stage id、owner、goal、scope refs、requires/ensures、selected executor、authority boundary；
-- launch：生成 attempt request、绑定 provider、绑定 workspace/artifact root、签发 execution authorization decision 和 attempt lease；
+- context：运输 stage id、owner、goal、可选 scope / input refs 与 selected executor；
+- launch：生成 attempt request、绑定 provider 与 workspace root；
 - execution envelope：给 Codex executor 清晰目标、材料、权限边界、可用 affordances、知识和质量门；
-- closeout：要求 artifact unit、owner answer、typed blocker 或 decision receipt，并把 closeout receipt 绑定回 StageRun、stage manifest、current pointer 和 source fingerprint；
+- progress：持久化任意可读 artifact、部分草稿、诊断、阴性结果、owner answer 或 route-back ref；
 - replay/audit refs：只进入 audit plane。
 
 Attempt Runtime 不负责生成候选、选择工具、评审、排序、修订或学习，也不负责决定医学结论、基金质量、视觉审美、agent patch 是否好。开放式专家判断继续由 executor + independent gate + domain owner 完成。
 
-`OPL execution authorization gate` 是 StageRun Kernel 的 launch-hard / closeout-binding gate：domain terminal owner action 已存在时，OPL provider 仍必须证明 selected executor、provider attempt、attempt lease、workspace/artifact scope、authority boundary、idempotency/source fingerprint、provider admission `route_identity_key` / `attempt_idempotency_key`、selected dispatch / stage packet identity、execution authorization decision、closeout receipt binding 和 forbidden-write guard 都成立。StageRun Kernel 以 `evaluateStageRunExecutionAuthorization` 输出 `opl_stage_run_execution_authorization_report`；缺任一项时，正确结果是 owner=`one-person-lab` 的 OPL runtime blocker。通用 `idempotency_key` 不能兜底为 provider attempt identity；缺 selected dispatch / stage packet refs 时，StageRun currentness 只能 fail closed。这个 blocker 只阻断 execution authorization 或 closeout receipt binding，不改变 domain truth，不创建 domain typed blocker，也不替 domain owner 签 receipt。
+StageRun Kernel 不拥有语义 route、launch admission 或 closeout 格式授权。Codex 可以从 declared/requested stage、主提示词、workspace context 与任意可读 artifact 启动；packet、manifest、scope、receipt、review、lineage 与 capability binding 缺口只形成质量债。OPL 只在 identity 冲突可能写错目标、权限/安全/authority、不可逆动作或明确 human decision 时硬停。
 
 ### 4. Current Owner Delta Controller
 

@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/capability-package-manifest.schema.json",
+  "title": "OPL Capability Package Manifest",
+  "type": "object",
+  "required": [
+    "surface_kind",
+    "package_id",
+    "display_name",
+    "publisher",
+    "version",
+    "source",
+    "package_role",
+    "capability_abi",
+    "exports",
+    "content_lock",
+    "codex_surface"
+  ],
+  "properties": {
+    "surface_kind": { "const": "opl_capability_package_manifest.v2" },
+    "package_id": { "type": "string", "minLength": 1 },
+    "display_name": { "type": "string", "minLength": 1 },
+    "publisher": { "type": "string", "minLength": 1 },
+    "version": { "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$" },
+    "source": { "type": "string", "minLength": 1 },
+    "package_role": { "const": "required_agent_capability_package" },
+    "capability_abi": {
+      "type": "object",
+      "required": ["id", "version", "compatibility_policy"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 },
+        "compatibility_policy": { "const": "same_major" }
+      },
+      "additionalProperties": true
+    },
+    "exports": {
+      "type": "object",
+      "required": [
+        "core_skill_ids",
+        "core_module_ids",
+        "optional_skill_policy_ref",
+        "optional_skills_installed_by_default"
+      ],
+      "properties": {
+        "core_skill_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "core_module_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "specialty_skill_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "optional_skill_policy_ref": { "type": "string", "minLength": 1 },
+        "optional_skills_installed_by_default": { "const": true },
+        "default_materialization_policy": { "const": "all_exported_skills" }
+      },
+      "additionalProperties": true
+    },
+    "content_lock": {
+      "type": "object",
+      "required": ["algorithm", "canonicalization", "paths", "digest"],
+      "properties": {
+        "algorithm": { "const": "sha256" },
+        "canonicalization": { "const": "ordered_path_nul_file_bytes" },
+        "paths": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+      },
+      "additionalProperties": false
+    },
+    "codex_surface": {
+      "type": "object",
+      "required": ["plugin_id", "codex_default_exposure", "optional_install_policy"],
+      "properties": {
+        "plugin_id": { "type": "string", "minLength": 1 },
+        "plugin_source_path": { "type": "string", "minLength": 1 },
+        "plugin_payload_manifest_url": { "type": "string", "minLength": 1 },
+        "codex_default_exposure": { "const": false },
+        "optional_install_policy": { "const": "all_exported_skills" }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

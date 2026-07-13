@@ -5,14 +5,12 @@
   "state": "active_contract",
   "machine_boundary": "OPL owns progress projection over stage artifact units; domain repositories retain artifact body authority, owner answer authority, quality verdicts, and export readiness.",
   "progress_truth_required_signals": [
-    "readable_physical_output_present"
+    "stage_attempt_or_failure_diagnostic_observed"
   ],
   "counts_as_deliverable_progress_when_all_required_signals_true": true,
   "single_signal_non_progress_reasons": [
     "provider_completion_only",
     "receipt_verified_without_matching_manifest",
-    "zero_readable_output",
-    "corrupted_or_unreadable_output",
     "identity_or_currentness_mismatch",
     "authority_safety_permission_or_human_gate"
   ],
@@ -36,6 +34,8 @@
     "raw_receipt_count_counts_as_progress": false,
     "readable_file_counts_as_progress": true,
     "raw_evidence_envelope_counts_as_progress": true,
+    "no_output_diagnostic_counts_as_progress": true,
+    "corrupt_output_diagnostic_counts_as_progress": true,
     "artifact_attempt_pointer_can_write_stage_current_pointer": false,
     "codex_cli_route_context_is_semantic_owner": true,
     "framework_can_accept_reject_or_override_codex_route": false

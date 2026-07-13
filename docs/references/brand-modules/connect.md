@@ -93,17 +93,16 @@ opl brand-modules inspect --module connect --json
 
 Connect 暴露 Skill/MCP/plugin/install transport 时，必须能指回 Foundry Agent series spine：`opl connect skills` 和 `opl connect sync-skills` 输出 `foundry_agent_series`、`command_surface_spine`、`mcp_projection` 与旧桶退役策略。旧 `opl skill list|sync` 和 `opl module *` 只保留 fail-closed replacement，不再作为普通入口。
 
-Connect 暴露 OPL Agent Packages 时，必须把 Agent Package Core 和 carrier adapters 分开读：`opl connect agent-packages list|status --json` 输出 package core、descriptor/digest/lock/lifecycle/exposure、carrier readback 和 no-package-manager boundary；`install|update|repair|rollback|uninstall` 只写 Framework package lock、lifecycle receipt 与受控 carrier 物理面。Codex Plugin/local marketplace 只是 `codex_plugin_carrier`，OPL App shortcuts 只是 Home / cockpit 可见性 carrier，workflow profile 只是 Codex profile / instruction block carrier，runtime/app release 只是安装与更新 carrier。carrier 可以触发 reload guidance、semantic-merge guidance 或 owner route，但不得成为 package dependency graph、domain truth、runtime authority、release currentness 或 owner receipt 的真相源。
+OPL Packages 暴露 Agent Package Core 时，必须把 package core 和 carrier adapters 分开读：`opl packages list|status --json` 输出 descriptor/digest/lock/lifecycle/exposure、carrier readback 和 no-package-manager boundary；`install|update|repair|uninstall` 只写 Framework package lock、lifecycle receipt 与受控 carrier 物理面。Connect 只持有 Skill/MCP/plugin transport primitive，不再持有 package lifecycle namespace。Codex Plugin/local marketplace 只是 `codex_plugin_carrier`，OPL App shortcuts 只是 Home / cockpit 可见性 carrier，workflow profile 只是 Codex profile / instruction block carrier，runtime/app release 只是安装与更新 carrier。carrier 可以触发 reload guidance、semantic-merge guidance 或 owner route，但不得成为 package dependency graph、domain truth、runtime authority、release currentness 或 owner receipt 的真相源。
 
 Connect 暴露外部资源连接器时，必须保持“平台接入”和“领域判断”分离。`opl connect scientific search --provider crossref|openalex` 是 optional scientific connector profile 的统一只读入口；引用校验另可消费 Semantic Scholar、Crossmark 与 Publisher metadata。它们只返回 source refs、metadata、URL、connector invocation ref 和 ledger receipt candidate ref；不保存全文、不建立第二文献库、不判断引用质量、不写 MAS paper truth，也不签 owner receipt。PubMed client 与医学 normalization 归 MAS adapter；MAS 的 scout/write/review/figure 等 Skill 负责医学检索策略、citation judgment、claim-evidence map、review ledger、论文质量判断和 owner route。
 
-MAS Scholar Skills 同步模型：
+MAS Scholar Skills 兼容 projection 边界：
 
-- `opl connect sync-skills --domain mas-scholar-skills` 是 package owner-facing 入口；无 workspace/quest target 时只输出 skipped/readback，不把 Skill 写入 MAS repo 或系统 Codex。
-- Connect 按外部 plugin manifest 和实际 Skill 目录分发、安装、同步和发现，不维护 required/default profile，也不判断 MAS 质量、paper truth、owner receipt、typed blocker 或 runtime queue。
-- MAS Scholar Skills 的专业 Skill 清单和内容由外部 package 的 `.codex-plugin/plugin.json` 与实际 `skills/*/SKILL.md` 持有；Connect 不维护 required/default 医学列表，也不为未物化名称生成占位状态。MAS stage prompt 不由 Connect 同步；Connect 只校验并同步 package owner 已物化的 Skill，记录 target-bound receipt。临床数据 body、source readiness verdict、不可逆 mutation、owner receipt、typed blocker 和 publication readiness 仍归 MAS / domain owner。
-- workspace/quest scope 的默认落点是 `<target>/.codex/skills/`；project scope 仍是显式、非默认、deprecated-for-paper-execution 的 MAS project-local mirror；codex scope 仍需显式请求。
-- 这些 Skill 包是 MAS 可消费的同步能力源，不是 MAS domain truth、runtime owner gate、owner receipt、typed blocker、artifact authority 或 publication/export readiness。
+- `opl packages` 是唯一 lifecycle owner；Connect 的旧 sync primitive 仅可作为内部兼容迁移输入，不进入 App catalog、MAS manifest、正常 activation/launch 或用户 repair 路由。
+- MAS Scholar Skills 的完整 export catalog 与 8 module contract ids 由 provider manifest 持有。Packages 校验 consumer/provider ABI、version 和 digest，并把当前发布包声明的全部 35 个 Skills 物化到 `<target>/.codex/skills/`；11 core Skill 与 8 module ids 只是 hard readiness floor，module ids 不物化为 Skill 目录，named specialties 缺失只降级并在下一 use boundary 自动恢复。
+- workspace/quest 首次 activation 或 domain launch 自动写 scope lifecycle receipt；已有 scope 缺失、漂移、不兼容或 receipt 缺失时普通 launch fail closed，公开恢复入口是 `opl packages repair mas --scope ...`。
+- Connect 不判断 MAS 质量、paper truth、owner receipt、typed blocker、runtime queue、artifact authority 或 publication/export readiness。
 
 理想文档：
 

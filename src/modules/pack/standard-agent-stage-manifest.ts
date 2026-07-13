@@ -18,11 +18,16 @@ import {
   STANDARD_USER_STAGE_LOG_CONTRACT,
   type FamilyStageControlPlane,
 } from '../stagecraft/index.ts';
+import {
+  readStandardAgentStagePromptFile,
+  STANDARD_AGENT_STAGE_MANIFEST_REF,
+} from './standard-agent-stage-prompt.ts';
+
+export { STANDARD_AGENT_STAGE_MANIFEST_REF } from './standard-agent-stage-prompt.ts';
 
 type JsonRecord = Record<string, unknown>;
 
 export const STANDARD_AGENT_DESCRIPTOR_REF = 'contracts/domain_descriptor.json';
-export const STANDARD_AGENT_STAGE_MANIFEST_REF = 'agent/stages/manifest.json';
 const ACTION_CATALOG_REF = 'contracts/action_catalog.json';
 const PACK_COMPILER_INPUT_REF = 'contracts/pack_compiler_input.json';
 const OWNER_RECEIPT_CONTRACT_REF = 'contracts/owner_receipt_contract.json';
@@ -373,7 +378,10 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
   const stages = stageRecords.map((stage, index) => {
     const stageId = stageIds[index]!;
     const policyRef = repoFile(repoDir, stage.policy_ref, 'stage.policy_ref').ref;
-    const promptRef = repoFile(repoDir, stage.prompt_ref, 'stage.prompt_ref').ref;
+    const promptSource = readStandardAgentStagePromptFile(
+      repoDir,
+      text(stage.prompt_ref, 'stage.prompt_ref', repoDir),
+    );
     const knowledgeRefs = strings(stage.knowledge_refs, 'stage.knowledge_refs', repoDir);
     const qualityGateRefs = strings(stage.quality_gate_refs, 'stage.quality_gate_refs', repoDir);
     const allowedActionRefs = strings(stage.allowed_action_refs, 'stage.allowed_action_refs', repoDir);
@@ -568,7 +576,13 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
       skills: defaultSkillRefs.map((entry, refIndex) =>
         surfaceRef(repoDir, entry, `pack_compiler_input.skill_refs[${refIndex}]`, 'domain_skill_declaration')
       ),
-      prompt_refs: [surfaceRef(repoDir, promptRef, 'stage.prompt_ref', 'stage_prompt')],
+      prompt_refs: [{
+        ...surfaceRef(repoDir, promptSource.ref, 'stage.prompt_ref', 'stage_prompt'),
+        layer: promptSource.layer,
+        sha256: promptSource.sha256,
+        size_bytes: promptSource.size_bytes,
+        content: promptSource.content,
+      }],
       tool_refs: defaultToolRefs.map((entry, refIndex) =>
         surfaceRef(repoDir, entry, `pack_compiler_input.tool_refs[${refIndex}]`, 'stage_tool_affordance_catalog')
       ),

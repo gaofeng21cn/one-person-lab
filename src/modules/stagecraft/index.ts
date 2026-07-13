@@ -10,8 +10,8 @@ export { buildEvidenceGroundedStagecraftProfilePolicyReadback } from './evidence
 export { buildStageAttemptCloseoutRefsOnlyContract, buildStageAttemptLaunchEnvelope, cognitiveKernelBoundary } from './cognitive-kernel-boundary.ts';
 export { buildDuplicateTaskEnvelope, buildFamilyConflictOrBlockerEnvelope, buildFamilyConflictSubject, buildReceiptConflictEnvelope, buildStageAttemptConflictOrBlockerEnvelopes, canonicalOutcomeForStageAttempt } from './family-conflict-envelope.ts';
 export { buildAttemptHumanReviewBurdenBudget, buildFamilyHumanReviewBurdenBudget } from './family-human-review-budget.ts';
-export { buildFamilyStageAdmissionReview } from './family-stage-admission.ts';
-export type { FamilyStageAdmissionReview, FamilyStageAdmissionStageResult } from './family-stage-admission.ts';
+export { buildFamilyStageConformanceReview } from './family-stage-conformance.ts';
+export type { FamilyStageConformanceReview, FamilyStageConformanceStageResult } from './family-stage-conformance.ts';
 export type { FamilyStageDomainManifest, FamilyStageDomainManifestCatalog, FamilyStageDomainManifestCatalogEntry, ManifestCommandTimeoutPolicy } from './family-stage-domain-manifest.ts';
 export { buildFamilyStageCohortLoopProjection } from './family-stage-cohort-loop.ts';
 export type { FamilyStageCohortLoopStage } from './family-stage-cohort-loop.ts';
@@ -21,7 +21,7 @@ export type {
   StandardAgentActionStageRunCloseout,
   StandardAgentActionStageRunProgress,
 } from './standard-agent-action-stage-run.ts';
-export { buildFamilyStageControlPlaneParity, buildFamilyStageLaunchAdmissionGate, buildFamilyStageReadinessInspect, buildFamilyStagesList } from './family-stage-control-plane.ts';
+export { buildFamilyStageContextObservation, buildFamilyStageControlPlaneParity, buildFamilyStageReadinessInspect, buildFamilyStagesList } from './family-stage-control-plane.ts';
 export { normalizeFamilyStageControlPlane } from './family-stage-control-plane-contract.ts';
 export type { FamilyStageControlPlane, FamilyStageDescriptor, FamilyStageSurfaceRef } from './family-stage-control-plane-contract.ts';
 export { buildFamilyStageProofBundle } from './family-stage-proof-bundle.ts';
@@ -34,9 +34,8 @@ export { assertStageProductionEvidencePayloadReady, buildStageProductionEvidence
 export { stageReplayMissingReceiptTargetKey } from './stage-replay-missing-receipt-ledger.ts';
 export type { StageReplayMissingReceiptReceipt } from './stage-replay-missing-receipt-ledger.ts';
 export { buildStageReplayMissingReceiptWorkorderPacket, compactStageReplayMissingReceiptWorkorderAttentionItems, compactStageReplayMissingReceiptWorkorderAttentionSummary } from './stage-replay-missing-receipt-workorders.ts';
-export { listStageRunExecutionAuthorizationReceipts, recordStageRunExecutionAuthorizationReceipts } from './stage-run-execution-authorization-ledger.ts';
 export { buildAppStageRunCockpit } from './stage-run-cockpit.ts';
-export { buildOwnerAnswerProjectionProfileRegistryReadback, findOwnerAnswerProjection } from './domain-owner-answer-projection.ts';
+export { buildOwnerAnswerProjectionProfileRegistryReadback } from './domain-owner-answer-projection.ts';
 export type { OwnerAnswerProjectionProfile } from './domain-owner-answer-projection.ts';
 export { STANDARD_PROGRESS_DELTA_POLICY } from './standard-progress-delta-policy.ts';
 export {

@@ -9,7 +9,7 @@ Machine boundary: 本文是人读参考，不是机器合同、runtime 依赖、
 
 本文只保留 GraphFlow / GFL 对 OPL 有用的治理词汇，不冻结当前 stage readiness、provider proof、App/operator counter 或 production evidence。当前机器入口是：
 
-- `contracts/family-orchestration/family-stage-admission.schema.json`
+- `contracts/family-orchestration/family-stage-conformance.schema.json`
 - `contracts/family-orchestration/family-stage-control-plane.schema.json`
 - `contracts/family-orchestration/family-stage-proof-bundle.schema.json`
 - `contracts/family-orchestration/family-stage-graph-projection.schema.json`
@@ -49,7 +49,7 @@ OPL 不引入 GraphFlow / GFL runtime、graph engine、planner、proof assistant
 
 以下映射只解释既有 machine-readable surface 的读法，不扩展 active narrative：
 
-- `family-stage-admission` 与 `family-stage-control-plane` 共同形成 Stage Kernel admission read model。
+- `family-stage-conformance` 与 `family-stage-control-plane` 共同形成 Stage Kernel admission read model。
 - `family-stage-proof-bundle`、`family-stage-graph-projection`、`family-stage-pack-source-spec` 和 `family-stage-pack-registry` 是只读 support / diagnostic surface，不执行 stage。
 - `family-stage-assumption-lifecycle`、`family-stage-cohort-loop` 和 `family-stage-runtime-budget` 是 Derived Diagnostic Lenses；它们只能被 readiness 折叠消费，不能成为 standalone launch authority。
 - `family-stage-replay-certification` 只读 append-only event log refs、attempt ledger refs、runtime event refs 和 closeout receipt refs；replay 不重新查询 AI、人或外部系统。

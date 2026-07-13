@@ -34,7 +34,7 @@ export interface FamilyStageToolAffordanceBoundaryProjection {
 }
 
 interface ToolAffordanceFinding {
-  severity: 'blocker' | 'warning';
+  severity: 'nonconformance' | 'warning';
   code: string;
   message: string;
   stage_id?: string;
@@ -168,7 +168,7 @@ export function inspectToolAffordanceBoundary(
   if (!enforce && projection.status === 'missing') {
     return;
   }
-  const severity = enforce ? 'blocker' : 'warning';
+  const severity = enforce ? 'nonconformance' : 'warning';
   if (projection.status === 'missing') {
     findings.push({
       severity,

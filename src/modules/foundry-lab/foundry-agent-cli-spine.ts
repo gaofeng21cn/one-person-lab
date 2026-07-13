@@ -39,7 +39,9 @@ const FOUNDRY_AGENT_SERIES_CONTRACT_URL = new URL(
   import.meta.url,
 );
 
-const FOUNDRY_AGENT_PEERS = STANDARD_AGENT_REGISTRY;
+const FOUNDRY_AGENT_PEERS = STANDARD_AGENT_REGISTRY.filter(
+  (entry) => entry.series_membership === 'standard_domain_agent',
+);
 
 type FoundryAgentPeer = typeof STANDARD_AGENT_REGISTRY[number];
 
@@ -476,7 +478,8 @@ function buildPeerProjection(peer: FoundryAgentPeer) {
 }
 
 function resolvePeer(agentId: string) {
-  return resolveStandardAgent(agentId);
+  const peer = resolveStandardAgent(agentId);
+  return peer?.series_membership === 'standard_domain_agent' ? peer : null;
 }
 
 function parseAgentInspectArgs(args: string[]) {
@@ -490,7 +493,7 @@ function parseAgentInspectArgs(args: string[]) {
     'cli_usage_error',
     'foundry agents inspect requires one agent id.',
     {
-      usage: 'opl foundry agents inspect <mas|mag|rca|oma|obf|mas-scholar-skills>',
+      usage: 'opl foundry agents inspect <mas|mag|rca|oma|obf>',
       examples: [
         'opl foundry agents inspect mas --json',
         'opl foundry agents inspect --agent rca --json',

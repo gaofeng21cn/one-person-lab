@@ -309,12 +309,24 @@ test('Settings Control Center contract keeps App and Aion consumer-only', () => 
   }
 });
 
-test('machine-readable framework contracts do not pin human docs paths', () => {
+test('machine-readable framework contracts do not pin human docs paths outside typed package payload fields', () => {
   const pinnedHumanDocPathPattern =
     /\b(?:README(?:\.zh-CN)?\.md|AGENTS\.md|docs\/[A-Za-z0-9_./-]+\.md(?:#[A-Za-z0-9_-]+)?|contracts\/[A-Za-z0-9_./-]+\.md)\b/g;
 
   for (const relativePath of listJsonFiles('contracts/opl-framework')) {
-    const content = read(relativePath);
+    const payload = JSON.parse(read(relativePath)) as Record<string, any>;
+    if (payload.profile_surface) {
+      payload.profile_surface = '<typed-package-profile-payload>';
+    }
+    if (['opl_agent_package_payload_manifest', 'opl_package_payload_manifest.v1'].includes(payload.surface_kind)
+      && Array.isArray(payload.files)) {
+      payload.files = payload.files.map((entry: Record<string, unknown>) => ({
+        ...entry,
+        path: '<typed-package-payload-path>',
+        source_url: entry.source_url ? '<typed-package-payload-source>' : undefined,
+      }));
+    }
+    const content = JSON.stringify(payload);
     const pinnedPaths = content.match(pinnedHumanDocPathPattern) ?? [];
 
     assert.deepEqual(

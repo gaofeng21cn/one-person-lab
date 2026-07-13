@@ -77,7 +77,7 @@ import { buildBrandCommandSpecs } from './public-command-specs-parts/brand.ts';
 import { buildConnectCommandSpecs } from './public-command-specs-parts/connect.ts';
 import { buildFoundryCommandSpecs } from './public-command-specs-parts/foundry.ts';
 import { buildOkfCommandSpecs } from './public-command-specs-parts/okf.ts';
-import { buildPackageCommandSpecs } from './public-command-specs-parts/packages.ts';
+import { buildPackagesCommandSpecs } from './public-command-specs-parts/packages.ts';
 import { buildProfileCommandSpecs } from './public-command-specs-parts/profiles.ts';
 import { buildStageCommandSpecs, validateStageDerivedLensCommandSpecs } from './public-command-specs-parts/stages.ts';
 import { buildUpdateCommandSpecs } from './public-command-specs-parts/update.ts';
@@ -117,12 +117,11 @@ export function buildPublicCommandSpecs(
 
   const installSpec: CommandSpec = {
     usage:
-      'opl install [--headless | --with-app] [--modules <mas,mag,rca>] [--module <module_id>] [--skip-modules] [--skip-engines] [--skip-native-helper-repair] [--no-online-runtime]',
-    summary: 'Install the headless OPL base by default; add explicit agent modules or the optional desktop App only when requested.',
+      'opl install [--headless | --with-app] [--skip-packages] [--skip-engines] [--skip-native-helper-repair] [--no-online-runtime]',
+    summary: 'Install the headless OPL Base by default, or add the optional desktop App; Agent packages use opl packages install.',
     examples: [
       'opl install',
-      'opl install --headless --modules rca',
-      'opl install --modules mas,mag,rca',
+      'opl install --headless --skip-packages',
       'opl install --with-app',
     ],
     group: 'top_level',
@@ -176,7 +175,7 @@ export function buildPublicCommandSpecs(
   const connectCommandSpecs = buildConnectCommandSpecs(commandSpecs, systemCommandSpecs);
   const foundryCommandSpecs = buildFoundryCommandSpecs();
   const okfCommandSpecs = buildOkfCommandSpecs();
-  const packageCommandSpecs = buildPackageCommandSpecs();
+  const packagesCommandSpecs = buildPackagesCommandSpecs(getContracts, (command) => publicCommandSpecs[command]);
   const profileCommandSpecs = buildProfileCommandSpecs();
   const stageCommandSpecs = buildStageCommandSpecs(getContracts);
   const updateCommandSpecs = buildUpdateCommandSpecs(getContracts);
@@ -278,6 +277,7 @@ export function buildPublicCommandSpecs(
     ...foundryCommandSpecs,
     ...profileCommandSpecs,
     ...connectCommandSpecs,
+    ...packagesCommandSpecs,
     ...updateCommandSpecs,
     ...workOrderCommandSpecs,
     ...feedbackOpsCommandSpecs,
@@ -443,7 +443,7 @@ export function buildPublicCommandSpecs(
     }),
     'family-runtime': cloneCommandSpec(commandSpecs['family-runtime'], {
       usage:
-        'opl family-runtime status|doctor|install|repair|provider repair|provider-slo tick|provider-worker supervisor|scheduler status|scheduler install|scheduler trigger|scheduler remove|evidence-worklist|autonomy-supervisor decide|autonomy-supervisor readback|attempt list|attempt inspect|attempt query|attempt cancel|notify list|events export [options]',
+        'opl family-runtime status|doctor|install|repair|provider repair|provider-slo tick|provider-worker supervisor|scheduler status|scheduler install|scheduler trigger|scheduler remove|evidence-worklist|attempt list|attempt inspect|attempt query|attempt cancel|notify list|events export [options]',
       examples: [
         'opl family-runtime status',
         'opl family-runtime repair',
@@ -457,8 +457,6 @@ export function buildPublicCommandSpecs(
         'opl family-runtime scheduler remove --provider temporal',
         'opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --json',
         'opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json',
-        'opl family-runtime autonomy-supervisor decide --obligation-ledger /tmp/obligations.jsonl --decision-ledger /tmp/decisions.jsonl --obligation-id obligation:example --current-identity-file /tmp/current-identity.json --typed-blocker-ref domain://typed-blocker --budget-or-missing-evidence-ref opl://non-advancing',
-        'opl family-runtime autonomy-supervisor readback --obligation-ledger /tmp/obligations.jsonl --decision-ledger /tmp/decisions.jsonl --obligation-id obligation:example --current-identity-file /tmp/current-identity.json',
       ],
       group: 'runtime',
     }),
@@ -869,7 +867,6 @@ export function buildPublicCommandSpecs(
       group: 'contract',
     }),
     ...systemCommandSpecs,
-    ...packageCommandSpecs,
     'engine install': engineInstallSpec,
     'engine update': engineUpdateSpec,
     'engine reinstall': engineReinstallSpec,

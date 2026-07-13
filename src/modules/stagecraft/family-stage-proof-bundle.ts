@@ -3,19 +3,19 @@ import type { FamilyActionCatalog } from '../../kernel/family-action-catalog-con
 import { isRecord } from '../../kernel/contract-validation.ts';
 import { optionalString } from '../../kernel/json-file.ts';
 import {
-  buildFamilyStageAdmissionReview,
-} from './family-stage-admission.ts';
+  buildFamilyStageConformanceReview,
+} from './family-stage-conformance.ts';
 import {
   buildStagePackHumanReviewBurdenBudget,
 } from './family-human-review-budget.ts';
 import type { FamilyHumanReviewBurdenBudget } from './family-human-review-budget.ts';
 import type {
-  FamilyStageAdmissionFinding,
+  FamilyStageConformanceFinding,
   FamilyStageFailureLocalization,
-  FamilyStageAdmissionReview,
-  FamilyStageAdmissionStageResult,
-  FamilyStageAdmissionStatus,
-} from './family-stage-admission.ts';
+  FamilyStageConformanceReview,
+  FamilyStageConformanceStageResult,
+  FamilyStageConformanceStatus,
+} from './family-stage-conformance.ts';
 import type {
   FamilyStageControlPlane,
   FamilyStageDescriptor,
@@ -173,10 +173,10 @@ export interface FamilyStageProofBundle {
     stage_ids: string[];
     action_catalog_id: string | null;
   };
-  admission_status: FamilyStageAdmissionStatus;
-  admission_summary: FamilyStageAdmissionReview['summary'];
-  stage_results: FamilyStageAdmissionStageResult[];
-  blocking_reasons: FamilyStageAdmissionFinding[];
+  conformance_status: FamilyStageConformanceStatus;
+  conformance_summary: FamilyStageConformanceReview['summary'];
+  stage_results: FamilyStageConformanceStageResult[];
+  conformance_findings: FamilyStageConformanceFinding[];
   failure_localization: FamilyStageFailureLocalization[];
   composition_obligations: FamilyStageProofBundleCompositionObligation[];
   boundary_assumptions: FamilyStageProofBundleBoundaryAssumption[];
@@ -203,7 +203,7 @@ export interface FamilyStageProofBundle {
 
 export interface BuildFamilyStageProofBundleOptions {
   actionCatalog?: FamilyActionCatalog | null;
-  admissionReview?: FamilyStageAdmissionReview | null;
+  conformanceReview?: FamilyStageConformanceReview | null;
 }
 
 function readStringList(value: unknown) {
@@ -469,7 +469,7 @@ function buildGeneratedArtifactRef(
 }
 
 function buildProofRuntimeMetrics(
-  admissionReview: FamilyStageAdmissionReview,
+  conformanceReview: FamilyStageConformanceReview,
   compositionObligations: FamilyStageProofBundleCompositionObligation[],
   runtimeEventRequirements: FamilyStageProofBundleRuntimeEventRequirement[],
   expectedReceiptRefs: FamilyStageProofBundleExpectedReceiptRef[],
@@ -487,8 +487,8 @@ function buildProofRuntimeMetrics(
     human_review_gate_count: humanReviewBurdenBudget.summary.gate_count,
     blocked_human_review_gate_count: humanReviewBurdenBudget.summary.blocked_gate_count,
     test_proof_ref_count: testProofRefs.length,
-    blocker_count: admissionReview.summary.blockers_count,
-    warning_count: admissionReview.summary.warnings_count,
+    blocker_count: conformanceReview.summary.nonconformances_count,
+    warning_count: conformanceReview.summary.warnings_count,
     authority_boundary: {
       opl_role: 'scheduling_operator_observability_only',
       domain_role: 'truth_quality_receipt_and_artifact_authority',
@@ -652,11 +652,11 @@ export function buildFamilyStageProofBundle(
   options: BuildFamilyStageProofBundleOptions = {},
 ): FamilyStageProofBundle {
   const actionCatalog = options.actionCatalog ?? null;
-  const admissionReview = options.admissionReview ?? buildFamilyStageAdmissionReview(
+  const conformanceReview = options.conformanceReview ?? buildFamilyStageConformanceReview(
     plane,
     actionCatalog ? { family_action_catalog: actionCatalog } : null,
   );
-  const proofPassed = admissionReview.status === 'admitted';
+  const proofPassed = conformanceReview.status === 'conformant';
   const compositionObligations = buildCompositionObligations(plane);
   const expectedReceiptRefs = buildExpectedReceiptRefs(plane, actionCatalog);
   const humanReviewBurdenBudget = buildStagePackHumanReviewBurdenBudget(plane, actionCatalog);
@@ -676,11 +676,11 @@ export function buildFamilyStageProofBundle(
       stage_ids: plane.stages.map((stage) => stage.stage_id),
       action_catalog_id: actionCatalog?.catalog_id ?? null,
     },
-    admission_status: admissionReview.status,
-    admission_summary: admissionReview.summary,
-    stage_results: admissionReview.stage_results,
-    blocking_reasons: proofPassed ? [] : admissionReview.findings,
-    failure_localization: admissionReview.failure_localization,
+    conformance_status: conformanceReview.status,
+    conformance_summary: conformanceReview.summary,
+    stage_results: conformanceReview.stage_results,
+    conformance_findings: proofPassed ? [] : conformanceReview.findings,
+    failure_localization: conformanceReview.failure_localization,
     composition_obligations: compositionObligations,
     boundary_assumptions: plane.stages.map(readBoundaryAssumptions),
     idempotency_assumptions: plane.stages.map(readIdempotencyAssumptions),
@@ -689,7 +689,7 @@ export function buildFamilyStageProofBundle(
     runtime_event_requirements: runtimeEventRequirements,
     test_proof_refs: testProofRefs,
     proof_runtime_metrics: buildProofRuntimeMetrics(
-      admissionReview,
+      conformanceReview,
       compositionObligations,
       runtimeEventRequirements,
       expectedReceiptRefs,

@@ -259,24 +259,12 @@ export function statusStageArtifactRuntime(locator: StageArtifactLocator) {
 
 function assertTerminalRefs(input: {
   terminal_status: StageAttemptTerminalStatus;
-  required_outputs: string[];
-  owner_receipt_refs: string[];
-  quality_debt_refs: string[];
   typed_blocker_refs: string[];
   decision_receipt_refs: string[];
-  outputs_dir: string;
   evidence_dir: string;
   receipts_dir: string;
 }) {
-  if (input.terminal_status === 'success' || input.terminal_status === 'completed_with_quality_debt') {
-    const presentOutputs = listRelativeFiles(input.outputs_dir);
-    if (presentOutputs.length === 0) {
-      throw new FrameworkContractError('contract_shape_invalid', 'Stage progression requires at least one readable output artifact.', {
-        present_outputs: presentOutputs,
-        hard_boundary: 'zero_consumable_artifact',
-      });
-    }
-  } else if (input.terminal_status === 'blocked') {
+  if (input.terminal_status === 'blocked') {
     const typedBlockerMatch = refsBackedByFiles(input.evidence_dir, input.typed_blocker_refs);
     if (input.typed_blocker_refs.length === 0 || typedBlockerMatch.missing_refs.length > 0) {
       throw new FrameworkContractError('contract_shape_invalid', 'Stage blocked requires typed blocker refs backed by evidence files.', {
@@ -284,7 +272,7 @@ function assertTerminalRefs(input: {
         missing_typed_blocker_refs: typedBlockerMatch.missing_refs,
       });
     }
-  } else {
+  } else if (input.terminal_status === 'skipped' || input.terminal_status === 'deferred') {
     const decisionReceiptMatch = refsBackedByFiles(input.receipts_dir, input.decision_receipt_refs);
     if (input.decision_receipt_refs.length === 0 || decisionReceiptMatch.missing_refs.length > 0) {
       throw new FrameworkContractError('contract_shape_invalid', 'Stage skipped/deferred requires decision receipt refs backed by receipt files.', {
@@ -358,11 +346,15 @@ export function commitStageArtifactAttemptRuntime(input: StageArtifactAttemptLoc
     && missingOutputs.length === 0
     && ownerReceiptRefs.length > 0
     && ownerReceiptMatch.missing_refs.length === 0;
-  const terminalStatus: StageAttemptTerminalStatus = presentOutputs.length > 0 && !successClaimBacked
+  const requestedProgressCompletion = input.terminal_status === 'success'
+    || input.terminal_status === 'completed_with_quality_debt';
+  const terminalStatus: StageAttemptTerminalStatus = requestedProgressCompletion
+    && (presentOutputs.length === 0 || !successClaimBacked)
     ? 'completed_with_quality_debt'
     : input.terminal_status;
   const derivedQualityFindings = [
     ...(requiredOutputs.length === 0 ? ['required_outputs_not_declared'] : []),
+    ...(presentOutputs.length === 0 ? ['no_readable_output_forwarded_as_progress_diagnostic'] : []),
     ...missingOutputs.map((output) => `declared_output_missing:${output}`),
     ...(input.terminal_status === 'success' && ownerReceiptRefs.length === 0
       ? ['owner_receipt_missing_for_success_claim']
@@ -397,12 +389,8 @@ export function commitStageArtifactAttemptRuntime(input: StageArtifactAttemptLoc
 
   assertTerminalRefs({
     terminal_status: terminalStatus,
-    required_outputs: requiredOutputs,
-    owner_receipt_refs: ownerReceiptRefs,
-    quality_debt_refs: qualityDebtRefs,
     typed_blocker_refs: typedBlockerRefs,
     decision_receipt_refs: decisionReceiptRefs,
-    outputs_dir: paths.outputs_dir,
     evidence_dir: paths.evidence_dir,
     receipts_dir: paths.receipts_dir,
   });

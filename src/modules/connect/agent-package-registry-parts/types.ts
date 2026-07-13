@@ -26,6 +26,10 @@ export type AgentPackageLifecycleAction =
   | 'install'
   | 'update'
   | 'repair'
+  | 'activate'
+  | 'use'
+  | 'rollback'
+  | 'profile_apply'
   | 'uninstall'
   | 'hide'
   | 'unhide'
@@ -40,6 +44,8 @@ export type AgentPackageLifecycleCondition = {
     | 'physical_surface_materialized'
     | 'physical_surface_not_requested'
     | 'physical_surface_removed'
+    | 'profile_semantic_merge_required'
+    | 'profile_current'
     | 'codex_reload_required';
   package_id: string | null;
   status: 'ok' | 'attention_needed';
@@ -69,12 +75,27 @@ export type AgentPackageManifestValidateInput = {
 export type AgentPackageInstallInput = AgentPackageManifestValidateInput & {
   dryRun?: boolean;
   agentRoot?: string | null;
+  scope?: 'workspace' | 'quest' | null;
+  targetWorkspace?: string | null;
+  targetQuest?: string | null;
+  keepMigrationIds?: string[];
 };
 
 export type AgentPackagePackageActionInput = {
   packageId: string;
   dryRun?: boolean;
   agentRoot?: string | null;
+  scope?: 'workspace' | 'quest' | null;
+  targetWorkspace?: string | null;
+  targetQuest?: string | null;
+  useBoundaryId?: string | null;
+  pinnedUseBinding?: AgentPackageUseBinding | null;
+};
+
+export type AgentPackageProfileApplyInput = {
+  packageId: string;
+  mergedFile: string;
+  dryRun?: boolean;
 };
 
 export type AgentPackageHomeShortcutPreferencesSetInput = {
@@ -116,13 +137,17 @@ export type AgentPackageRegistryEntry = {
 };
 
 export type AgentPackageOrdinaryUserSource = {
-  kind: 'ghcr_oci_artifact_rolling_latest';
+  kind: 'ghcr_oci_artifact_latest_stable';
+  registry: 'ghcr.io';
   artifact_ref: string;
   ordinary_user_ref: string;
-  immutable_version_ref: string;
-  latest_is_only_ordinary_user_channel: true;
+  immutable_version_ref_pattern: string;
+  candidate_ref: string;
+  latest_stable_role: 'ordinary_user_latest_stable_pointer_after_candidate_gates';
+  latest_stable_is_only_ordinary_user_channel: true;
+  daily_candidate_build_gate: 'daily_candidate_build_must_pass_before_promote_latest_stable';
   install_truth: string[];
-  latest_is_install_truth: false;
+  latest_stable_is_install_truth: false;
   developer_checkout_auto_apply_allowed: false;
 };
 
@@ -137,17 +162,18 @@ export type AgentPackageDistributionPayload = {
   oci_ref: string;
   oci_media_type: string;
   immutable_tag: string;
-  rolling_tag: 'latest';
-  promotion_policy: 'daily_candidate_gates_then_promote_latest';
+  moving_tag: 'latest-stable';
+  promotion_policy: 'daily_candidate_gates_then_promote_latest_stable';
   install_truth: 'resolved_digest_lock';
 };
 
 export type AgentPackageManifest = {
   package_id: string;
-  agent_id: string;
+  agent_id: string | null;
   display_name: string;
   publisher: string;
   version: string;
+  owner_language_version: AgentPackageOwnerLanguageVersion | null;
   source: string;
   codex_surface: Record<string, unknown>;
   skill_packs: Record<string, unknown>[];
@@ -165,6 +191,268 @@ export type AgentPackageManifest = {
   plugin_payload_manifest_url: string | null;
   plugin_payload_manifest_sha256: string | null;
   plugin_payload_cache_path: string | null;
+  profile_surface: AgentPackageProfileSurfaceConfig | null;
+  managed_policy_surface: AgentPackageManagedPolicySurfaceConfig | null;
+  runtime_source_carrier: AgentPackageManagedRuntimeSourceCarrier | null;
+  managed_update_source: AgentPackageManagedVersionCatalogSource | null;
+  capability_dependencies: AgentPackageCapabilityDependency[];
+  capability_provider: AgentPackageCapabilityProvider | null;
+  content_digest: string | null;
+  content_lock_paths: string[];
+};
+
+export type AgentPackageOwnerLanguageVersion = {
+  scheme: 'pep440';
+  value: string;
+};
+
+export type AgentPackageManagedVersionCatalogSource = {
+  kind: 'managed_version_catalog';
+  transport: 'json_url' | 'opl_oci_channel';
+  catalog_ref: string;
+  selection_policy: 'highest_stable' | 'highest_compatible';
+  digest_authority: 'manifest_and_content_digest';
+};
+
+export type AgentPackageManagedRuntimeSourceCarrier = {
+  carrier_kind: 'opl_managed_module_source';
+  module_id: string;
+};
+
+export type AgentPackageManagedRuntimeSourceState = {
+  surface_kind: 'opl_agent_package_managed_runtime_source';
+  status: 'validated_no_write' | 'current' | 'retained_on_uninstall' | 'removed';
+  carrier_kind: 'opl_managed_module_source';
+  module_id: string;
+  checkout_path: string;
+  ownership: 'package_created' | 'preexisting_adopted';
+  channel_version: string | null;
+  artifact_ref: string | null;
+  layer_digest: string | null;
+  source_archive_sha256: string | null;
+  source_git_head_sha: string | null;
+  tree_sha256: string;
+  rollback_ref: string | null;
+  preparation_status: 'validated_no_write' | 'completed';
+  bootstrap_command: string[] | null;
+  health_check_command: string[];
+  handler_probe_command: string[];
+  health_output_sha256: string | null;
+  handler_probe_output_sha256: string | null;
+  preparation_root: string | null;
+  preparation_scope: 'managed_source_root' | 'preexisting_read_only_probe';
+};
+
+export type AgentPackageManagedRuntimeSourceReadiness = {
+  status: 'not_required' | 'missing' | 'current' | 'incompatible';
+  operational_ready: boolean;
+  module_id: string | null;
+  checkout_path: string | null;
+  expected_tree_sha256: string | null;
+  actual_tree_sha256: string | null;
+  reason: string | null;
+};
+
+export type AgentPackageManagedPolicySurfaceConfig = {
+  policy_kind: 'opl_flow_workflow_policy';
+  source_path: string;
+  schema_path: string;
+};
+
+export type AgentPackageManagedPolicyDependency = {
+  id: string;
+  kind: 'base' | 'codex_skill' | 'cli' | 'runtime_capability';
+  offline_bundle: 'none' | 'full';
+  online_install_default: boolean;
+  activation: 'always' | 'task_routed' | 'explicit';
+  source: string;
+};
+
+export type AgentPackageManagedPolicyMigrationAction = {
+  surface_kind: 'plugin' | 'skill' | 'service' | 'config_table' | 'prompt_or_agent' | 'historical_self_carrier';
+  canonical_id: string;
+  migration_id: string;
+  source_ref: string;
+  backup_ref: string;
+  backup_sha256: string;
+  source_preexisting: true;
+  written_sha256: string | null;
+  removed_toml_tables: Array<{
+    header: string;
+    content: string;
+    content_sha256: string;
+  }>;
+  action: 'backed_up_and_removed_from_discovery';
+};
+
+export type AgentPackageManagedPolicyMigration = {
+  surface_kind: 'opl_package_managed_policy_migration';
+  status: 'not_requested' | 'validated_no_write' | 'current' | 'applied' | 'rolled_back';
+  policy_kind: 'opl_flow_workflow_policy' | null;
+  policy_path: string | null;
+  schema_path: string | null;
+  policy_sha256: string | null;
+  inventory_digest: string | null;
+  dependency_ids: string[];
+  optional_dependency_ids: string[];
+  migration_ids: string[];
+  actions: AgentPackageManagedPolicyMigrationAction[];
+  service_actions: Array<Record<string, unknown>>;
+  dependency_sync: Record<string, unknown> | null;
+  model_projection: Record<string, unknown> | null;
+  backup_root: string | null;
+  backup_active: boolean;
+  writes_performed: boolean;
+  note: string;
+};
+
+export type AgentPackageCapabilityDependency = {
+  package_id: string;
+  required: boolean;
+  version_requirement: string;
+  capability_abi: string;
+  required_export_ids: string[];
+  required_module_ids: string[];
+  bootstrap_manifest_url: string | null;
+  dependency_source: AgentPackageManagedVersionCatalogSource | null;
+};
+
+export type AgentPackageCapabilityExport = {
+  export_id: string;
+  skill_id: string;
+  install_mode: 'core_required' | 'optional_named_specialty';
+};
+
+export type AgentPackageCapabilityProvider = {
+  capability_abi: string;
+  exports: AgentPackageCapabilityExport[];
+  module_export_ids: string[];
+};
+
+export type AgentPackageResolvedDependency = {
+  package_id: string;
+  required: boolean;
+  version_requirement: string;
+  capability_abi: string;
+  required_export_ids: string[];
+  required_module_ids: string[];
+  installed_version: string;
+  manifest_url: string;
+  manifest_sha256: string;
+  source_artifact_ref?: string | null;
+  artifact_digest?: string | null;
+  content_digest: string;
+  package_lock_ref: string;
+};
+
+export type AgentPackageDependencyReadinessItem = {
+  package_id: string;
+  required: boolean;
+  version_requirement: string;
+  capability_abi: string;
+  required_export_ids: string[];
+  required_module_ids: string[];
+  installed_version: string | null;
+  manifest_sha256: string | null;
+  content_digest: string | null;
+  status: 'missing' | 'current' | 'incompatible';
+  reasons: string[];
+  missing_required_export_ids: string[];
+  missing_required_module_ids: string[];
+};
+
+export type AgentPackageDependencyReadiness = {
+  status: 'missing' | 'current' | 'incompatible';
+  operational_ready: boolean;
+  repair_command: string;
+  dependencies: AgentPackageDependencyReadinessItem[];
+};
+
+export type AgentPackageMaterializationReadiness = {
+  status: 'not_required' | 'scope_required' | 'missing' | 'current' | 'incompatible';
+  scope: 'workspace' | 'quest' | null;
+  target_root: string | null;
+  required_skill_ids: string[];
+  materialized_skill_ids: string[];
+  expected_digest: string | null;
+  actual_digest: string | null;
+  repair_command: string | null;
+  lifecycle_receipt_ref: string | null;
+  core_readiness: {
+    status: 'not_required' | 'missing' | 'current' | 'incompatible';
+    required_skill_ids: string[];
+    materialized_skill_ids: string[];
+  };
+  specialty_exposure: {
+    status: 'not_required' | 'current' | 'degraded';
+    declared_skill_ids: string[];
+    materialized_skill_ids: string[];
+    missing_skill_ids: string[];
+  };
+};
+
+export type AgentPackageScopeMaterialization = {
+  scope: 'workspace' | 'quest';
+  target_root: string;
+  provider_package_id: string;
+  provider_lock_ref: string;
+  transaction_id: string;
+  required_skill_ids: string[];
+  managed_skill_ids: string[];
+  specialty_skill_ids: string[];
+  retired_skill_ids: string[];
+  skill_digests: Record<string, string>;
+  content_digest: string;
+  core_digest: string;
+  full_export_digest: string;
+  materialized_at: string;
+  lifecycle_receipt_ref: string;
+};
+
+export type AgentPackageProfileSurfaceConfig = {
+  runtime_profile: {
+    source_path: string;
+    target_id: 'user_agents_profile';
+  };
+  authoring_sources: Array<{
+    source_path: string;
+    target_id: 'user_taste_source';
+  }>;
+  merge_context_paths: string[];
+  existing_profile_policy: 'semantic_merge_required';
+};
+
+export type AgentPackageProfileMigration = {
+  surface_kind: 'opl_package_profile_migration';
+  status:
+    | 'not_requested'
+    | 'validated_no_write'
+    | 'installed'
+    | 'updated'
+    | 'current'
+    | 'semantic_merge_required'
+    | 'semantic_merge_applied'
+    | 'rolled_back'
+    | 'retained_on_uninstall';
+  source_path: string | null;
+  target_path: string | null;
+  source_sha256: string | null;
+  target_sha256: string | null;
+  receipt_path: string | null;
+  merge_packet_path: string | null;
+  apply_command: string | null;
+  authoring_source_paths: string[];
+  mutation_actions: Array<{
+    surface_kind: 'runtime_profile' | 'authoring_source' | 'profile_receipt';
+    operation: 'created' | 'overwritten';
+    target_path: string;
+    backup_ref: string | null;
+    backup_sha256: string | null;
+    written_sha256: string;
+  }>;
+  rollback_backups_retained: boolean;
+  writes_performed: boolean;
+  note: string;
 };
 
 export type AgentPackagePhysicalSurface = {
@@ -175,6 +463,7 @@ export type AgentPackagePhysicalSurface = {
   marketplace_id: string | null;
   codex_home: string;
   codex_config_path: string;
+  codex_config_preexisting: boolean;
   plugin_source_path: string | null;
   plugin_manifest_path: string | null;
   codex_plugin_cache_path: string | null;
@@ -191,6 +480,10 @@ export type AgentPackagePhysicalSurface = {
   reload_required: boolean;
   failure_reason: string | null;
   note: string | null;
+  profile_config: AgentPackageProfileSurfaceConfig | null;
+  profile_migration: AgentPackageProfileMigration;
+  managed_policy_config: AgentPackageManagedPolicySurfaceConfig | null;
+  workflow_policy_migration: AgentPackageManagedPolicyMigration;
   authority_boundary: AgentPackageAuthorityBoundary;
 };
 
@@ -199,6 +492,7 @@ export type AgentPackageDescriptorReadback = {
   manifest_sha256: string | null;
   registry_url: string | null;
   package_version: string | null;
+  owner_language_version: AgentPackageOwnerLanguageVersion | null;
   rollback_ref: string | null;
   source_kind: AgentPackageLifecycleReceipt['source_kind'] | AgentPackageSourceKind | null;
   trust_tier: string | null;
@@ -221,9 +515,9 @@ export type AgentPackageLockReadback = {
 };
 
 export type AgentPackageCarrierAdapterReadback = {
-  adapter_kind: 'codex_plugin_carrier';
-  carrier: 'codex_plugin';
-  source_surface: 'codex_surface';
+  adapter_kind: 'codex_plugin_carrier' | 'managed_runtime_source_carrier';
+  carrier: 'codex_plugin' | 'opl_managed_module_source';
+  source_surface: 'codex_surface' | 'runtime_source_carrier';
   projection_role: 'package_carrier_adapter';
   owns_package_core: false;
   owns_domain_truth: false;
@@ -240,16 +534,21 @@ export type AgentPackageCarrierAdapterReadback = {
   writes_performed: boolean;
   reload_required: boolean;
   failure_reason: string | null;
+  module_id?: string | null;
+  checkout_path?: string | null;
+  ownership?: AgentPackageManagedRuntimeSourceState['ownership'] | null;
+  tree_sha256?: string | null;
 };
 
 export type AgentPackageLock = {
   surface_kind: 'opl_agent_package_lock';
   package_id: string;
-  agent_id: string;
+  agent_id: string | null;
   display_name: string;
   publisher: string;
   version_or_source_digest: string;
   package_version: string;
+  owner_language_version: AgentPackageOwnerLanguageVersion | null;
   installed_at: string;
   updated_at: string;
   codex_visible_entry: string;
@@ -261,16 +560,36 @@ export type AgentPackageLock = {
   rollback_ref: string;
   manifest_url: string;
   manifest_sha256: string;
+  source_artifact_ref?: string | null;
+  artifact_digest?: string | null;
   oci_ref?: string;
   resolved_digest?: string;
   immutable_tag?: string;
-  rolling_tag?: 'latest';
+  moving_tag?: 'latest-stable';
   install_truth?: 'resolved_digest_lock';
   permission_scope_sha256: string;
   lock_ref: string;
   physical_surface?: AgentPackagePhysicalSurface;
   exposure_state?: 'visible' | 'hidden' | 'enabled' | 'disabled';
   exposure_updated_at?: string;
+  capability_provider: AgentPackageCapabilityProvider | null;
+  capability_dependencies: AgentPackageCapabilityDependency[];
+  resolved_dependencies: AgentPackageResolvedDependency[];
+  dependency_closure_digest: string;
+  dependency_transaction_id: string;
+  content_digest: string;
+  content_lock_paths: string[];
+  scope_materializations: AgentPackageScopeMaterialization[];
+  runtime_source_carrier: AgentPackageManagedRuntimeSourceCarrier | null;
+  managed_runtime_source: AgentPackageManagedRuntimeSourceState | null;
+  managed_update_source: AgentPackageManagedVersionCatalogSource | null;
+};
+
+export type AgentPackageLastKnownGood = {
+  root_package_id: string;
+  transaction_id: string;
+  closure_digest: string;
+  package_locks: AgentPackageLock[];
 };
 
 export type AgentPackageCoreReadback = {
@@ -281,6 +600,9 @@ export type AgentPackageCoreReadback = {
   dependencies: {
     required_skill_ids: string[];
     optional_skill_refs: string[];
+    capability_dependencies: AgentPackageCapabilityDependency[];
+    resolved_dependencies: AgentPackageResolvedDependency[];
+    dependency_readiness: AgentPackageDependencyReadiness;
   };
   trust: {
     trust_tier: string | null;
@@ -310,6 +632,8 @@ export type AgentPackageLifecycleReceipt = {
   registry_url: string | null;
   manifest_url: string | null;
   manifest_sha256: string | null;
+  source_artifact_ref?: string | null;
+  artifact_digest?: string | null;
   package_lock_ref: string | null;
   rollback_ref: string | null;
   source_kind: AgentPackageSourceKind | 'registry_url';
@@ -318,6 +642,57 @@ export type AgentPackageLifecycleReceipt = {
   source_surface: 'opl_connect_agent_package_registry';
   authority_boundary: AgentPackageAuthorityBoundary;
   physical_surface?: AgentPackagePhysicalSurface;
+  dependency_transaction_id?: string;
+  dependency_closure_digest?: string;
+  dependency_packages?: Array<{
+    package_id: string;
+    package_version: string;
+    manifest_sha256: string;
+    content_digest: string;
+    package_lock_ref: string;
+    source_artifact_ref?: string | null;
+    artifact_digest?: string | null;
+  }>;
+  scope_materialization?: AgentPackageScopeMaterialization;
+  scope_materializations?: AgentPackageScopeMaterialization[];
+  managed_runtime_source?: AgentPackageManagedRuntimeSourceState | null;
+  use_binding?: AgentPackageUseBinding;
+};
+
+export type AgentPackageUseBinding = {
+  surface_kind: 'opl_agent_package_use_binding.v1';
+  use_boundary_id: string;
+  use_receipt_ref: string;
+  root_package: {
+    package_id: string;
+    package_version: string;
+    owner_language_version: AgentPackageOwnerLanguageVersion | null;
+    package_lock_ref: string;
+    manifest_sha256: string;
+  };
+  provider_packages: Array<{
+    package_id: string;
+    package_version: string;
+    owner_language_version: AgentPackageOwnerLanguageVersion | null;
+    package_lock_ref: string;
+    manifest_sha256: string;
+    content_digest: string;
+    source_artifact_ref: string | null;
+    artifact_digest: string | null;
+  }>;
+  dependency_closure_digest: string;
+  freshness_mode: 'channel_verified' | 'offline_lkg';
+  latest_verified: boolean;
+  checked_at: string;
+  refresh_outcome: 'updated' | 'current' | 'recovered_last_known_good';
+  channel_ref: string | null;
+  channel_digest: string | null;
+  scope: 'workspace' | 'quest';
+  target_root: string;
+  core_skill_tree_digest: string | null;
+  skill_tree_digest: string | null;
+  core_readiness: AgentPackageMaterializationReadiness['core_readiness'];
+  specialty_exposure: AgentPackageMaterializationReadiness['specialty_exposure'];
 };
 
 export type AgentPackageHomeShortcutPreference = {
@@ -351,6 +726,7 @@ export type AgentPackageLockIndex = {
   surface_kind: 'opl_agent_package_lock_index';
   version: 'opl-agent-package-lock-index.v1';
   packages: AgentPackageLock[];
+  last_known_good_transactions?: AgentPackageLastKnownGood[];
 };
 
 export type AgentPackageLifecycleLedger = {
@@ -361,6 +737,14 @@ export type AgentPackageLifecycleLedger = {
 
 export type AgentPackageOwnerRouteReadbackItem = {
   package_id: string;
+  package_dependency_readiness: AgentPackageDependencyReadiness;
+  materialization_readiness: AgentPackageMaterializationReadiness;
+  runtime_source_readiness: AgentPackageManagedRuntimeSourceReadiness;
+  operational_ready: boolean;
+  operational_ready_scope: 'package_dependency_scope_and_runtime_source';
+  launch_allowed: boolean;
+  launch_blocked_reason: string | null;
+  allowed_when_blocked: Array<'status' | 'doctor' | 'repair'>;
   descriptor: AgentPackageDescriptorReadback;
   digest: AgentPackageDigestReadback;
   lock: AgentPackageLockReadback;
@@ -378,6 +762,7 @@ export type AgentPackageOwnerRouteReadbackItem = {
     writes_performed: boolean;
     reload_required: boolean;
     failure_reason: string | null;
+    profile_migration: AgentPackageProfileMigration;
   };
   lifecycle_ux: AgentPackageLifecycleUxReadback;
   package_core: AgentPackageCoreReadback;

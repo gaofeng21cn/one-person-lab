@@ -429,18 +429,13 @@ function buildFrameworkReadinessCompactReadbackFromCore(
           operatorNextAction.worklist_item_is_completion_claim === true,
       },
       stage_run_cockpit_summary: {
-        execution_authorized:
-          stageRunCockpitSummary.execution_authorized === true,
-        execution_authorization_status:
-          stringValue(stageRunCockpitSummary.execution_authorization_status),
-        execution_authorization_phase:
-          stringValue(stageRunCockpitSummary.execution_authorization_phase),
-        launch_blocker_count:
-          numberValue(stageRunCockpitSummary.launch_blocker_count),
-        closeout_binding_blocker_count:
-          numberValue(stageRunCockpitSummary.closeout_binding_blocker_count),
-        route_requires_domain_or_app_payload:
-          stageRunCockpitSummary.route_requires_domain_or_app_payload === true,
+        current_stage: stringValue(stageRunCockpitSummary.current_stage),
+        artifact_or_blocker_refs:
+          Array.isArray(stageRunCockpitSummary.artifact_or_blocker_refs)
+            ? stageRunCockpitSummary.artifact_or_blocker_refs
+            : [],
+        semantic_route_owner: 'codex_cli',
+        missing_format_or_receipt_blocks_next_stage: false,
         refs_only: stageRunCockpitSummary.refs_only === true,
       },
       omitted_sections: [

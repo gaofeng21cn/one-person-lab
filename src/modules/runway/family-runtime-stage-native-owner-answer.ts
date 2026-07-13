@@ -171,14 +171,10 @@ function currentFingerprints(payload: Record<string, unknown>) {
 }
 
 function answerFingerprints(record: Record<string, unknown>) {
-  const binding = recordValue(record.closeout_binding);
   return new Set([
     stringValue(record.source_fingerprint),
     stringValue(record.work_unit_fingerprint),
     stringValue(record.idempotency_key),
-    stringValue(binding?.source_fingerprint),
-    stringValue(binding?.work_unit_fingerprint),
-    stringValue(binding?.idempotency_key),
   ].filter((entry): entry is string => Boolean(entry)));
 }
 
@@ -197,7 +193,6 @@ function stageNativeCloseoutRefMatchesCurrentPayload(
   profile: StageNativeOwnerAnswerProfile,
 ) {
   // Scoped to an explicit domain-owned default-executor owner-answer profile.
-  // StageRun closeout admission still requires the separate idempotency-bound owner receipt / typed blocker gate.
   if (!isStageNativeOwnerAnswerRef(ref, true, profile)) {
     return false;
   }

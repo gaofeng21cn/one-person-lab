@@ -81,8 +81,8 @@ export function currentControlStateProjection(input: {
         'refs_only_liveness_projection_no_domain_ready_publication_ready_or_artifact_ready',
       non_advancing_apply_readback_count: nonAdvancingApplyStates.length,
       non_advancing_apply_consumable_count: 0,
-      non_advancing_apply_provider_admission_allowed_count:
-        nonAdvancingApplyStates.filter((state) => state.provider_admission_allowed === true).length,
+      non_advancing_apply_provider_attempt_allowed_count:
+        nonAdvancingApplyStates.filter((state) => state.provider_attempt_allowed === true).length,
       non_advancing_apply_current_executable_owner_action_allowed_count:
         nonAdvancingApplyStates.filter((state) =>
           state.current_executable_owner_action_allowed === true

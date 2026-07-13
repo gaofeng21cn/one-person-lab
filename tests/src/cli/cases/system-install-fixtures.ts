@@ -3,9 +3,6 @@ import { spawnSync } from 'node:child_process';
 import { assert, cliPath, fs, parseJsonText, path, repoRoot } from '../helpers.ts';
 
 export function runCliWithStdin(args: string[], stdin: string, envOverrides: Record<string, string>) {
-  const oplFlowEnv = envOverrides.OPL_FLOW_REPO_ROOT === undefined && envOverrides.HOME
-    ? createFakeOplFlowInstallEnv(envOverrides.HOME)
-    : {};
   const result = spawnSync(
     process.execPath,
     ['--experimental-strip-types', cliPath, ...args],
@@ -16,7 +13,6 @@ export function runCliWithStdin(args: string[], stdin: string, envOverrides: Rec
       env: {
         ...process.env,
         NODE_NO_WARNINGS: '1',
-        ...oplFlowEnv,
         ...envOverrides,
       },
     },
@@ -50,50 +46,6 @@ function createFakeOfficeCliSource(root: string) {
       'utf8',
     );
   }
-}
-
-export function createFakeOplFlowInstallEnv(homeRoot: string) {
-  const flowRoot = path.join(homeRoot, 'opl-flow-fixture');
-  const policy = {
-    schema: 'opl_flow_workflow_policy.v1',
-    package: { id: 'opl-flow', version: 'test', owner: 'opl-flow', kind: 'workflow_profile' },
-    workflow_generation: 'model-native-test',
-    requires: [{
-      id: 'opl-base',
-      kind: 'base',
-      offline_bundle: 'full',
-      online_install_default: true,
-      activation: 'always',
-      source: 'fixture',
-    }],
-    recommends: [],
-    compatible_optional: [],
-    conflicts: [],
-    retires: [],
-    codex_model_policy: {
-      authority: 'opl-flow',
-      mode_default: 'auto',
-      configured_default: { model: 'gpt-5.6-sol', reasoning_effort: 'max' },
-      override_precedence: ['explicit_user_override', 'opl_flow_recommendation'],
-      catalog_policy: {},
-    },
-    migration_policy: {},
-    historical_fingerprints: {},
-  };
-  fs.mkdirSync(path.join(flowRoot, 'contracts'), { recursive: true });
-  fs.mkdirSync(path.join(flowRoot, 'templates'), { recursive: true });
-  fs.mkdirSync(path.join(flowRoot, '.codex-plugin'), { recursive: true });
-  fs.mkdirSync(path.join(flowRoot, 'skills', 'opl-flow'), { recursive: true });
-  fs.writeFileSync(path.join(flowRoot, 'contracts', 'workflow-policy.json'), `${JSON.stringify(policy, null, 2)}\n`, 'utf8');
-  fs.writeFileSync(path.join(flowRoot, 'templates', 'AGENTS.md'), '你始终用中文回复。\n', 'utf8');
-  fs.writeFileSync(path.join(flowRoot, 'templates', 'TASTE.md'), '# TASTE\n', 'utf8');
-  fs.writeFileSync(
-    path.join(flowRoot, '.codex-plugin', 'plugin.json'),
-    `${JSON.stringify({ name: 'opl-flow', version: 'test', skills: './skills/' }, null, 2)}\n`,
-    'utf8',
-  );
-  fs.writeFileSync(path.join(flowRoot, 'skills', 'opl-flow', 'SKILL.md'), '# OPL Flow\n', 'utf8');
-  return { OPL_FLOW_REPO_ROOT: flowRoot };
 }
 
 function createFakeUiUxProMaxSource(root: string) {
@@ -176,7 +128,6 @@ export function createFakeCompanionInstallEnv(homeRoot: string) {
   createFakeUiUxProMaxSource(uiUxRoot);
   createFakeMineruDocumentExtractorSource(mineruRoot);
   return {
-    ...createFakeOplFlowInstallEnv(homeRoot),
     OPL_COMPANION_SOURCES_ROOT: sourceRoot,
     OPL_OFFICECLI_SOURCE_ROOT: officeCliRoot,
     OPL_UI_UX_PRO_MAX_SOURCE_ROOT: uiUxRoot,

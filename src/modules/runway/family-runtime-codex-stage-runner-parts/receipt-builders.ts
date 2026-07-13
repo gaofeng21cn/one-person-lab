@@ -12,6 +12,7 @@ import {
 } from '../family-runtime-codex-session-usage.ts';
 import {
   checkpointRefsFromAttempt,
+  effectiveStagePromptReadbackFor,
   normalizeCodexStageRunnerMode,
   resolvedStagePacketRef,
   runnerPromptFor,
@@ -20,6 +21,7 @@ import {
   type CodexStageRunnerMode,
   type RunnerEventSummary,
 } from './input-prompt.ts';
+import type { StandardAgentStagePromptResolution } from '../../pack/index.ts';
 import type { TypedStageCloseoutPacket } from './closeout-normalization.ts';
 import type { buildProgressCloseoutProjection } from '../progress-closeout-projection.ts';
 import type { JsonRecord } from './shared.ts';
@@ -36,6 +38,15 @@ type CodexStageRunnerStatus = {
   timeout_ms: number | null;
   no_output_timeout_ms: number | null;
   command_preview: string[];
+  effective_prompt: {
+    status: string;
+    source_manifest_ref: string | null;
+    source_ref: string | null;
+    layer: string | null;
+    sha256: string | null;
+    size_bytes: number;
+    body_hydrated_into_executor_prompt: boolean;
+  };
   typed_closeout_required_for_progress: false;
   raw_artifact_sufficient_for_progress: true;
 };
@@ -226,6 +237,7 @@ export function buildAgentStageRunnerReceipt(input: {
 export function buildCodexStageRunnerReceipt(input: {
   attempt: JsonRecord;
   stagePacketRef?: string | null;
+  effectiveStagePrompt?: StandardAgentStagePromptResolution | null;
   runnerMode?: string | null;
   observedAt?: string | null;
   liveProcessStarted?: boolean;
@@ -243,7 +255,11 @@ export function buildCodexStageRunnerReceipt(input: {
   const checkpointRefs = checkpointRefsFromAttempt(input.attempt);
   const stagePacketRef = resolvedStagePacketRef(input);
   const observedAt = input.observedAt ?? null;
-  const args = buildCodexExecArgs(runnerPromptFor({ attempt: input.attempt, stagePacketRef }), {
+  const args = buildCodexExecArgs(runnerPromptFor({
+    attempt: input.attempt,
+    stagePacketRef,
+    effectiveStagePrompt: input.effectiveStagePrompt,
+  }), {
     cwd: workspaceRootFromAttempt(input.attempt) ?? undefined,
     json: true,
     ...input.codexExecOptions,
@@ -261,6 +277,7 @@ export function buildCodexStageRunnerReceipt(input: {
       timeout_ms: input.timeoutMs ?? null,
       no_output_timeout_ms: input.noOutputTimeoutMs ?? null,
       command_preview: buildCodexCliPreview(args),
+      effective_prompt: effectiveStagePromptReadbackFor(input),
       typed_closeout_required_for_progress: false,
       raw_artifact_sufficient_for_progress: true,
     },

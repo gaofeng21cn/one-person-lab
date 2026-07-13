@@ -249,37 +249,27 @@ function normalizeOperation(value: unknown): ManagedUpdateComponentReceipt['oper
 }
 
 function normalizeAdapterId(value: unknown): ManagedUpdateProviderAdapterId | null {
-  if (value === 'runtime_toolchain_adapter') {
-    return 'runtime_substrate_adapter';
-  }
-  if (value === 'agent_package_channel_adapter') {
-    return 'capability_packages_adapter';
-  }
-  if (value === 'codex_exposure_status_adapter') {
-    return 'codex_surface_status_adapter';
-  }
   return value === 'runtime_substrate_adapter'
     || value === 'installation_carrier_status_adapter'
     || value === 'capability_packages_adapter'
-    || value === 'codex_surface_status_adapter'
-    || value === 'companion_tools_status_adapter'
-    || value === 'workflow_profile_adapter'
     ? value
     : null;
 }
 
 function normalizeComponentId(value: unknown) {
   const componentId = optionalString(value);
-  if (componentId === 'runtime_toolchain' || componentId === 'codex_cli_fallback') {
-    return 'runtime_substrate';
-  }
-  if (componentId === 'agent_packages' || componentId === 'agent_package_channel') {
-    return 'capability_packages';
-  }
-  if (componentId === 'capability_exposure') {
-    return 'codex_surface';
-  }
-  return componentId;
+  return componentId === 'opl_base' || componentId === 'opl_app' || componentId === 'opl_packages'
+    ? componentId
+    : null;
+}
+
+function normalizeProviderId(value: unknown) {
+  const providerId = optionalString(value);
+  return providerId === 'runtime_substrate'
+    || providerId === 'installation_carrier'
+    || providerId === 'capability_packages'
+    ? providerId
+    : null;
 }
 
 function normalizeReceipt(value: unknown): ManagedUpdateComponentReceipt | null {
@@ -289,7 +279,7 @@ function normalizeReceipt(value: unknown): ManagedUpdateComponentReceipt | null 
   const receiptRef = optionalString(value.receipt_ref);
   const operation = normalizeOperation(value.operation);
   const componentId = normalizeComponentId(value.component_id);
-  const providerId = normalizeComponentId(value.provider_id);
+  const providerId = normalizeProviderId(value.provider_id);
   const adapterId = normalizeAdapterId(value.adapter_id);
   const activatedAt = optionalString(value.activated_at);
   if (!receiptRef || !operation || !componentId || !providerId || !adapterId || !activatedAt) {

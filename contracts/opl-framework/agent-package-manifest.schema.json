@@ -27,7 +27,16 @@
     },
     "version": {
       "type": "string",
-      "minLength": 1
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$"
+    },
+    "owner_language_version": {
+      "type": "object",
+      "required": ["scheme", "value"],
+      "properties": {
+        "scheme": { "const": "pep440" },
+        "value": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
     },
     "source": {
       "type": "string",
@@ -147,7 +156,7 @@
         "oci_ref",
         "oci_media_type",
         "immutable_tag",
-        "rolling_tag",
+        "moving_tag",
         "promotion_policy",
         "install_truth"
       ],
@@ -194,11 +203,11 @@
           "type": "string",
           "minLength": 1
         },
-        "rolling_tag": {
-          "const": "latest"
+        "moving_tag": {
+          "const": "latest-stable"
         },
         "promotion_policy": {
-          "const": "daily_candidate_gates_then_promote_latest"
+          "const": "daily_candidate_gates_then_promote_latest_stable"
         },
         "install_truth": {
           "const": "resolved_digest_lock"
@@ -210,7 +219,6 @@
       "type": "object",
       "required": [
         "plugin_id",
-        "standalone_distribution",
         "required_skill_ids"
       ],
       "properties": {
@@ -218,8 +226,9 @@
           "type": "string",
           "minLength": 1
         },
-        "standalone_distribution": {
-          "const": "repo_carrier_source"
+        "plugin_payload_manifest_url": {
+          "type": "string",
+          "minLength": 1
         },
         "required_skill_ids": {
           "type": "array",
@@ -232,6 +241,98 @@
         }
       },
       "additionalProperties": true
+    },
+    "profile_surface": {
+      "type": "object",
+      "required": [
+        "runtime_profile",
+        "authoring_sources",
+        "merge_context_paths",
+        "existing_profile_policy"
+      ],
+      "properties": {
+        "runtime_profile": {
+          "type": "object",
+          "required": ["source_path", "target_id"],
+          "properties": {
+            "source_path": { "type": "string", "minLength": 1 },
+            "target_id": { "const": "user_agents_profile" }
+          },
+          "additionalProperties": false
+        },
+        "authoring_sources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["source_path", "target_id"],
+            "properties": {
+              "source_path": { "type": "string", "minLength": 1 },
+              "target_id": { "const": "user_taste_source" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "merge_context_paths": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "existing_profile_policy": {
+          "const": "semantic_merge_required"
+        }
+      },
+      "additionalProperties": false
+    },
+    "managed_policy_surface": {
+      "type": "object",
+      "required": [
+        "policy_kind",
+        "source_path",
+        "schema_path"
+      ],
+      "properties": {
+        "policy_kind": {
+          "const": "opl_flow_workflow_policy"
+        },
+        "source_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "schema_path": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "runtime_source_carrier": {
+      "type": "object",
+      "required": [
+        "carrier_kind",
+        "module_id"
+      ],
+      "properties": {
+        "carrier_kind": {
+          "const": "opl_managed_module_source"
+        },
+        "module_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "managed_update_source": {
+      "type": "object",
+      "required": ["kind", "transport", "catalog_ref", "selection_policy", "digest_authority"],
+      "properties": {
+        "kind": { "const": "managed_version_catalog" },
+        "transport": { "enum": ["json_url", "opl_oci_channel"] },
+        "catalog_ref": { "type": "string", "minLength": 1 },
+        "selection_policy": { "enum": ["highest_stable", "highest_compatible"] },
+        "digest_authority": { "const": "manifest_and_content_digest" }
+      },
+      "additionalProperties": false
     },
     "carrier_adapters": {
       "type": "array",
@@ -416,6 +517,11 @@
           "module_id",
           "package_id",
           "kind",
+          "required",
+          "version_requirement",
+          "capability_abi",
+          "required_export_ids",
+          "required_module_ids",
           "codex_distribution",
           "opl_distribution",
           "developer_distribution",
@@ -423,7 +529,6 @@
           "install_owner",
           "install_update_source",
           "sync_scopes",
-          "sync_command_refs",
           "authority_boundary"
         ],
         "properties": {
@@ -437,6 +542,51 @@
           },
           "kind": {
             "const": "framework_capability_package"
+          },
+          "required": {
+            "const": true
+          },
+          "version_requirement": {
+            "type": "string",
+            "minLength": 1
+          },
+          "capability_abi": {
+            "type": "string",
+            "minLength": 1
+          },
+          "required_export_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "required_module_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "bootstrap_manifest_url": {
+            "type": "string",
+            "minLength": 1
+          },
+          "dependency_source": {
+            "type": "object",
+            "required": ["kind", "transport", "catalog_ref", "selection_policy", "digest_authority"],
+            "properties": {
+              "kind": { "const": "managed_version_catalog" },
+              "transport": { "enum": ["json_url", "opl_oci_channel"] },
+              "catalog_ref": { "type": "string", "minLength": 1 },
+              "selection_policy": { "const": "highest_compatible" },
+              "digest_authority": { "const": "manifest_and_content_digest" }
+            },
+            "additionalProperties": false
           },
           "codex_distribution": {
             "const": "bundled"
@@ -472,14 +622,6 @@
             "minItems": 2,
             "uniqueItems": true
           },
-          "sync_command_refs": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1
-            },
-            "minItems": 1
-          },
           "authority_boundary": {
             "type": "object",
             "required": [
@@ -507,6 +649,59 @@
         },
         "additionalProperties": true
       }
+    },
+    "capability_provider": {
+      "type": "object",
+      "required": [
+        "capability_abi",
+        "exports",
+        "module_export_ids"
+      ],
+      "properties": {
+        "capability_abi": {
+          "type": "string",
+          "minLength": 1
+        },
+        "exports": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "export_id",
+              "skill_id",
+              "install_mode"
+            ],
+            "properties": {
+              "export_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "skill_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "install_mode": {
+                "enum": [
+                  "core_required",
+                  "optional_named_specialty"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "minItems": 1
+        },
+        "module_export_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": true

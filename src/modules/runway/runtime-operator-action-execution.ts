@@ -239,7 +239,7 @@ function stageAttemptCreateArgs(route: JsonRecord, commandOrSurfaceRef: string) 
     throw new FrameworkContractError('contract_shape_invalid', 'Unsupported OPL attempt create action command route.', {
       command_or_surface_ref: commandOrSurfaceRef,
       supported_command:
-        'opl family-runtime attempt create --domain <domain> --stage <stage> --provider <provider> --workspace-locator <json> --executor-kind <kind> --executor-binding-ref <ref> --require-stage-admission',
+        'opl family-runtime attempt create --domain <domain> --stage <stage> --provider <provider> --workspace-locator <json> --executor-kind <kind> --executor-binding-ref <ref>',
     });
   }
   if (args[0] !== 'attempt' || args[1] !== 'create') {

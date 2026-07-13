@@ -41,7 +41,8 @@ export type {
   ManagedUpdateOperation,
 } from './managed-update-owner-primitives.ts';
 
-export type ManagedUpdateComponentClass = ManagedUpdateProviderId;
+export type ManagedUpdateLifecycleOwner = 'opl_base' | 'opl_app' | 'opl_packages';
+export type ManagedUpdateComponentClass = ManagedUpdateLifecycleOwner;
 export type ManagedUpdateCoordinationRole =
   | 'executable_target'
   | 'derived_projection'
@@ -93,6 +94,7 @@ export type ManagedUpdateOwnerExecutionBoundary = {
 };
 
 export type ManagedUpdateComponent = {
+  lifecycle_owner: ManagedUpdateLifecycleOwner;
   component_id: string;
   provider_id: ManagedUpdateProviderId;
   adapter_id: ManagedUpdateProviderAdapterId;
@@ -151,6 +153,10 @@ export type ManagedUpdateComponent = {
   };
   authority_boundary: Record<string, boolean>;
   notes: string[];
+  dependency_status?: Record<string, unknown>;
+  integration_status?: Record<string, unknown>;
+  projection_status?: Record<string, unknown>;
+  profile_migration_status?: Record<string, unknown>;
 };
 
 export type ManagedUpdateKernelInput = {
@@ -180,24 +186,6 @@ export type ManagedUpdateOwnerExecutionReceiptResult = {
   status_detail?: ManagedUpdateReceiptStatusDetail;
   reload_guidance?: ManagedUpdateReloadGuidance;
   post_apply_actions?: ManagedUpdateOwnerPostApplyAction[];
-};
-
-export const COMPONENT_ALIASES: Record<string, string> = {
-  app_binary: 'installation_carrier',
-  installation_carrier: 'installation_carrier',
-  macos_app: 'installation_carrier',
-  docker_webui_image: 'installation_carrier',
-  linux_package_carrier: 'installation_carrier',
-  runtime_toolchain: 'runtime_substrate',
-  runtime_substrate: 'runtime_substrate',
-  codex_cli_fallback: 'runtime_substrate',
-  embedded_codex_executor: 'runtime_substrate',
-  agent_packages: 'capability_packages',
-  agent_package_channel: 'capability_packages',
-  capability_packages: 'capability_packages',
-  capability_exposure: 'codex_surface',
-  codex_surface: 'codex_surface',
-  workflow_profile: 'workflow_profile',
 };
 
 export const MANAGED_UPDATE_KERNEL_ID = 'opl_managed_updater_kernel';
@@ -371,7 +359,9 @@ export function componentReceipt(options: {
 }
 
 export function managedUpdateComponentMatches(component: ManagedUpdateComponent, componentId: string) {
-  return component.component_id === componentId || component.provider_id === componentId;
+  return component.component_id === componentId
+    || component.lifecycle_owner === componentId
+    || component.provider_id === componentId;
 }
 
 export function filterManagedUpdateComponents(
@@ -382,8 +372,7 @@ export function filterManagedUpdateComponents(
     return components;
   }
   const requested = componentId.trim();
-  const normalized = COMPONENT_ALIASES[requested] ?? requested;
-  return components.filter((entry) => managedUpdateComponentMatches(entry, normalized));
+  return components.filter((entry) => managedUpdateComponentMatches(entry, requested));
 }
 
 export function summarizeManagedUpdateComponents(components: ManagedUpdateComponent[]) {
@@ -437,7 +426,7 @@ export function selectedManagedUpdateComponentIds(
   const ids = components
     .filter((component) => managedUpdateComponentCanRunOperation(component, input.operation))
     .map((component) => component.component_id);
-  return input.componentId ? ids : ids.filter((id) => id !== 'companion_tools');
+  return ids;
 }
 
 export function bindOwnerExecutionResult<T extends {
@@ -511,11 +500,18 @@ function componentExecutionRollbackRef(componentId: string, resultRef: string | 
 
 export function managedUpdateCommand(
   operation: ManagedUpdateOperation,
-  componentId: string,
+  lifecycleOwner: string,
   options: { json?: boolean } = {},
 ) {
+  const command = lifecycleOwner === 'opl_packages'
+    ? operation === 'repair'
+      ? 'opl packages repair --package-id <package_id>'
+      : 'opl packages update'
+    : lifecycleOwner === 'opl_app'
+      ? 'opl app state --profile fast'
+      : `opl update ${operation}`;
   return [
-    `opl update ${operation} --component ${componentId}`,
+    command,
     options.json === false ? null : '--json',
   ].filter(Boolean).join(' ');
 }

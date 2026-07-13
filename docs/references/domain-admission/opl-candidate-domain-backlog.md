@@ -68,7 +68,7 @@ Onboarding contract 负责定义正式收录门槛。
 - `label`
 - `task_topology_state`
 - `top_level_signal_refs`
-- `admission_status`
+- `conformance_status`
 - `readiness_flags`
 - `required_onboarding_materials`
 - `missing_boundary_materials`

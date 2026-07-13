@@ -112,7 +112,7 @@ test('profile capability plan resolves a schema-valid exact ref and emits cwd-bo
       'opl runtime env prepare --domain test-agent --profile default --platform <platform> --requirement-profile <path> --artifact-root <path> --json',
     ];
     firstCapability.install_action_refs = [
-      'opl connect agent-packages install --manifest <manifest> --json',
+      'opl packages install --manifest <manifest> --json',
     ];
     firstCapability.pack_os_descriptor_refs = [{
       surface_kind: 'opl_pack_os_descriptor_ref',

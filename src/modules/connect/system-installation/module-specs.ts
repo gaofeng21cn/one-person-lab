@@ -5,7 +5,7 @@ import { getCapabilityDependenciesForModule } from '../agent-package-manifests.t
 import { getShellBinary } from './shared.ts';
 import type { DomainModuleRuntimeSpec } from './module-action-workflow.ts';
 
-function resolveRepoOwnedScriptCommand(checkoutPath: string, relativePath: string) {
+function resolveRepoOwnedScriptCommand(checkoutPath: string, relativePath: string, args: string[] = []) {
   const scriptPath = path.join(checkoutPath, relativePath);
   if (!fs.existsSync(scriptPath) || !fs.statSync(scriptPath).isFile()) {
     return null;
@@ -13,7 +13,7 @@ function resolveRepoOwnedScriptCommand(checkoutPath: string, relativePath: strin
 
   return {
     command: 'bash',
-    args: [scriptPath],
+    args: [scriptPath, ...args],
   };
 }
 
@@ -83,15 +83,18 @@ export const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
     scope: 'domain_module',
     default_install: true,
     description: 'Research Foundry in medicine: study execution, paper drafting, progress narration, and deliverable files.',
-    bootstrap_command: (checkoutPath) => (
-      resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-bootstrap.sh'))
-      ?? buildPythonEditableBootstrapCommand(checkoutPath, '3.12')
-    ),
-    health_check_command: (checkoutPath) => buildHealthCheckCommand(checkoutPath),
-    exec_command: (checkoutPath, args) => buildPythonCleanRunnerExecCommand(
+    bootstrap_command: (checkoutPath) => resolveRepoOwnedScriptCommand(
       checkoutPath,
-      'med_autoscience.cli',
-      args,
+      path.join('scripts', 'opl-module-bootstrap.sh'),
+    ),
+    health_check_command: (checkoutPath) => resolveRepoOwnedScriptCommand(
+      checkoutPath,
+      path.join('scripts', 'opl-module-healthcheck.sh'),
+    ),
+    runtime_probe_command: (checkoutPath) => resolveRepoOwnedScriptCommand(
+      checkoutPath,
+      path.join('scripts', 'opl-module-healthcheck.sh'),
+      ['--probe'],
     ),
     skill_sync_domain: 'medautoscience',
     capability_dependencies: getCapabilityDependenciesForModule('medautoscience'),
@@ -193,7 +196,7 @@ export const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
     repo_name: 'mas-scholar-skills',
     repo_url: 'https://github.com/gaofeng21cn/mas-scholar-skills.git',
     scope: 'framework_capability_package',
-    default_install: true,
+    default_install: false,
     description: 'External professional Codex skill package consumed by MAS workspaces and quests.',
     skill_sync_domain: 'scholarskills',
   },

@@ -207,14 +207,14 @@ function providerCapabilitySlo(input: {
     restart_requery_ready: checkReady('worker_restart_requery'),
     signal_history_ready: checkReady('signal_history_preserved'),
     typed_closeout_required_ready: checkReady('typed_closeout_required_for_completed'),
-    missing_closeout_block_ready: checkReady('missing_closeout_blocks_completion'),
-    retry_dead_letter_boundary_ready: checkReady('retry_or_dead_letter_boundary_observed'),
+    missing_closeout_diagnostic_ready: checkReady('missing_closeout_advances_with_diagnostic'),
+    no_output_diagnostic_boundary_ready: checkReady('no_output_diagnostic_boundary_observed'),
     worker_completed_attempt_ready: checkReady('worker_completed_attempt'),
     service_worker_ready:
       checkReady('external_temporal_server_reachable') && checkReady('managed_worker_ready'),
     domain_truth_boundary_preserved: checkReady('domain_truth_boundary_preserved'),
     completed_workflow_id: optionalString(receipt?.completed_workflow_id),
-    blocked_workflow_id: optionalString(receipt?.blocked_workflow_id),
+    diagnostic_workflow_id: optionalString(receipt?.diagnostic_workflow_id),
     restarted_worker_requery_status: optionalString(receipt?.restarted_worker_requery_status),
     evidence_policy:
       'projection_reads_latest_provider_slo_execution_receipt_capability_checks',

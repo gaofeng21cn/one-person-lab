@@ -26,7 +26,7 @@ export interface FamilyStageReplayEvidence {
 export interface FamilyStageReplayBlocker {
   blocker_kind: 'replay_certification_blocker';
   blocker_id:
-    | 'stage_pack_not_admitted'
+    | 'stage_pack_not_conformant'
     | 'append_only_event_log_ref_missing'
     | 'attempt_ledger_ref_missing'
     | 'stage_manifest_ref_missing'
@@ -42,7 +42,7 @@ export interface FamilyStageReplayBlocker {
     reason: string;
   };
   repair_action:
-    | 'repair_stage_pack_admission'
+    | 'repair_stage_pack_conformance'
     | 'record_append_only_event_log_ref'
     | 'record_attempt_ledger_ref'
     | 'record_stage_manifest_ref'
@@ -180,8 +180,6 @@ const REPLAY_EVIDENCE_BUCKET_BY_ROLE: Record<string, FamilyStageReplayEvidenceBu
   current_pointer_refs: 'current_pointer_refs',
   owner_answer_binding_ref: 'owner_answer_binding_refs',
   owner_answer_binding_refs: 'owner_answer_binding_refs',
-  closeout_binding_ref: 'owner_answer_binding_refs',
-  closeout_binding_refs: 'owner_answer_binding_refs',
   recorded_runtime_event_ref: 'recorded_runtime_event_refs',
   recorded_runtime_event_refs: 'recorded_runtime_event_refs',
   runtime_event_ref: 'recorded_runtime_event_refs',
@@ -202,7 +200,6 @@ const REPLAY_EVIDENCE_BUCKET_BY_REF_KIND: Record<string, FamilyStageReplayEviden
   stage_manifest_ref: 'stage_manifest_refs',
   current_pointer_ref: 'current_pointer_refs',
   owner_answer_binding_ref: 'owner_answer_binding_refs',
-  closeout_binding_ref: 'owner_answer_binding_refs',
   runtime_event_ref: 'recorded_runtime_event_refs',
   recorded_runtime_event_ref: 'recorded_runtime_event_refs',
   closeout_receipt_ref: 'closeout_receipt_refs',
@@ -323,9 +320,7 @@ function ownerAnswerBindingRefsFromPacket(packet: JsonRecord | null | undefined)
   }
   return uniq([
     ...readStringList(packet.owner_answer_binding_refs),
-    ...readStringList(packet.closeout_binding_refs),
     ...(typeof packet.owner_answer_binding_ref === 'string' ? [packet.owner_answer_binding_ref] : []),
-    ...(typeof packet.closeout_binding_ref === 'string' ? [packet.closeout_binding_ref] : []),
   ]);
 }
 
@@ -487,11 +482,11 @@ export function buildFamilyStageReplayCertification(
   });
 
   const blockers: FamilyStageReplayBlocker[] = [];
-  if (proofBundle.admission_status !== 'admitted') {
+  if (proofBundle.conformance_status !== 'conformant') {
     blockers.push(blocker(
-      'stage_pack_not_admitted',
-      'repair_stage_pack_admission',
-      `stage pack admission is ${proofBundle.admission_status}`,
+      'stage_pack_not_conformant',
+      'repair_stage_pack_conformance',
+      `stage pack conformance is ${proofBundle.conformance_status}`,
     ));
   }
   if (appendOnlyEventLogRefs.length === 0) {
@@ -531,7 +526,7 @@ export function buildFamilyStageReplayCertification(
     blockers.push(blocker(
       'owner_answer_binding_ref_missing',
       'record_owner_answer_binding_ref',
-      'replay certification requires at least one owner answer or closeout binding ref',
+      'replay certification requires at least one owner answer binding ref',
     ));
   }
   for (const stage of stageResults) {

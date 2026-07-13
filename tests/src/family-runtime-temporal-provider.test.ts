@@ -185,7 +185,7 @@ test('Temporal StageAttemptWorkflow retries short idempotent activities without 
   }
 });
 
-test('Temporal StageAttemptWorkflow blocks provider completion when typed closeout is missing', async () => {
+test('Temporal StageAttemptWorkflow carries a no-output diagnostic forward when typed closeout is missing', async () => {
   const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
   const taskQueue = `opl-stage-attempt-blocked-test-${Date.now()}`;
   try {
@@ -205,14 +205,19 @@ test('Temporal StageAttemptWorkflow blocks provider completion when typed closeo
       return await handle.result();
     });
 
-    assert.equal(result.status, 'blocked');
-    assert.equal(result.completion_boundary.provider_completion, 'not_completed');
-    assert.deepEqual(result.closeout_refs, []);
+    assert.equal(result.status, 'completed');
+    assert.equal(result.completion_boundary.provider_completion, 'completed');
+    assert.equal(result.closeout_refs.length, 1);
+    assert.match(result.closeout_refs[0], /no-output-diagnostic$/);
     const dispatchEvent = result.activity_events.find(
       (event) => event.activity_kind === 'domain_handler_dispatch_activity',
     );
-    assert.equal(dispatchEvent?.activity_status, 'blocked');
-    assert.equal(dispatchEvent?.blocked_reason, 'zero_readable_artifact');
+    assert.equal(dispatchEvent?.activity_status, 'completed_with_quality_debt');
+    assert.equal(dispatchEvent?.blocked_reason, undefined);
+    assert.equal(
+      (dispatchEvent?.route_impact as Record<string, unknown> | undefined)?.progression_effect,
+      'next_stage_may_start',
+    );
   } finally {
     await testEnv.teardown();
   }

@@ -4,28 +4,20 @@ import path from 'node:path';
 
 import { buildOplGuiArtifactName, buildOplReleaseTag, getOplReleaseRepo, getOplReleaseVersion } from '../opl-release.ts';
 import { buildOplGuiShellSurface, syncOplCompanionSkills } from '../install-companions.ts';
-import { runWorkflowPackageAction } from '../workflow-package-lifecycle.ts';
 import { bootstrapLocalCodexDefaults } from '../../../kernel/local-codex-defaults.ts';
 import { runFamilyRuntime, runNativeHelperRepairAction, runRuntimeManagerAction } from '../../runway/index.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
 
 import { runOplEngineAction } from './engine-actions.ts';
-import { registerOplFamilyCodexPlugins } from './codex-plugin-registry.ts';
 import { buildOplEnvironment } from './environment.ts';
 import {
   appendOplFirstRunLogEvent,
   buildOplFirstRunLogSurface,
 } from './first-run-contract.ts';
 import { buildOplInitialize } from './initialize.ts';
-import {
-  DEFAULT_OPL_MODULE_IDS,
-  resolveOplDomainModuleSpec,
-  runOplModuleAction,
-} from './modules.ts';
 import { resolveProjectRoot, runCommand } from './shared.ts';
-import type { OplEngineId, OplModuleId, OplTurnkeyInstallInput } from './shared.ts';
+import type { OplEngineId, OplTurnkeyInstallInput } from './shared.ts';
 
-const DEFAULT_MODULES: OplModuleId[] = [...DEFAULT_OPL_MODULE_IDS];
 const DEFAULT_ENGINES: OplEngineId[] = ['codex'];
 
 function extractFamilyRuntimeBridge(payload: Awaited<ReturnType<typeof runFamilyRuntime>>) {
@@ -36,11 +28,6 @@ function extractFamilyRuntimeBridge(payload: Awaited<ReturnType<typeof runFamily
     return payload.family_runtime;
   }
   return null;
-}
-
-function normalizeModuleSelection(modules?: string[]) {
-  const selected = modules && modules.length > 0 ? modules : DEFAULT_MODULES;
-  return [...new Set(selected.map((moduleId) => resolveOplDomainModuleSpec(moduleId).module_id))];
 }
 
 function frameworkErrorDetails(error: unknown) {
@@ -315,14 +302,13 @@ export async function runOplTurnkeyInstall(
   input: OplTurnkeyInstallInput = {},
 ) {
   const installMode = input.withApp ? 'desktop' : 'headless';
-  const skipModules = input.skipModules ?? !input.modules?.length;
-  const modules = skipModules ? [] : normalizeModuleSelection(input.modules);
   const selectedEngines: OplEngineId[] = input.noOnlineRuntime ? ['codex'] : [...DEFAULT_ENGINES];
   const firstRunLog = buildOplFirstRunLogSurface();
   const firstRunLogEvents = [
     appendOplFirstRunLogEvent('install_started', {
       install_mode: installMode,
-      selected_modules: modules,
+      package_installation_owner: 'opl_packages',
+      packages_skipped_by_turnkey: true,
       selected_engines: input.skipEngines ? [] : selectedEngines,
       no_online_runtime: Boolean(input.noOnlineRuntime),
       skip_native_helper_repair: Boolean(input.skipNativeHelperRepair),
@@ -355,20 +341,7 @@ export async function runOplTurnkeyInstall(
         }
         return runOplEngineAction(contracts, 'install', engineId);
       }));
-    const oplFlowPackage = input.withApp
-      ? runWorkflowPackageAction('install', { packageId: 'opl-flow' })
-      : null;
     const codexConfigBootstrap = bootstrapLocalCodexDefaults();
-    const moduleActions = skipModules
-      ? []
-      : modules.map((moduleId) => runOplModuleAction('install', moduleId));
-    const moduleRepoPaths = new Map<OplModuleId, string>(
-      moduleActions.map((entry) => [
-        entry.module_action.module.module_id,
-        entry.module_action.module.checkout_path,
-      ]),
-    );
-    const codexPluginRegistry = registerOplFamilyCodexPlugins(modules, moduleRepoPaths);
     const serviceAction: null = null;
     const guiOpenAction = input.withApp ? installOrOpenOplGui() : null;
     const nativeHelperAction = runNativeHelperRepairAction({ skip: input.skipNativeHelperRepair });
@@ -419,19 +392,16 @@ export async function runOplTurnkeyInstall(
         }),
       );
     }
-    const packageDependencySync = oplFlowPackage && 'dependency_sync' in oplFlowPackage.workflow_package
-      ? oplFlowPackage.workflow_package.dependency_sync
-      : null;
-    const companionSkillSync = packageDependencySync
-      ?? syncOplCompanionSkills(undefined, { mode: 'observe', skillIds: [], toolIds: [] });
+    const companionSkillSync = syncOplCompanionSkills(undefined, { mode: 'managed' });
     const initialize = await buildOplInitialize(contracts);
     firstRunLogEvents.push(
       appendOplFirstRunLogEvent('install_completed', {
         status: 'completed',
         install_mode: installMode,
-        selected_modules: modules,
+        selected_packages: [],
+        package_installation_owner: 'opl_packages',
         engine_actions_count: engineActions.length,
-        module_actions_count: moduleActions.length,
+        package_actions_count: 0,
         gui_open_status: guiOpenAction?.status ?? 'skipped',
         setup_phase: initialize.system_initialize.setup_flow.phase,
         blocking_items: initialize.system_initialize.setup_flow.blocking_items,
@@ -445,11 +415,15 @@ export async function runOplTurnkeyInstall(
         status: 'completed',
         install_mode: installMode,
         selected_engines: selectedEngines,
-        selected_modules: modules,
+        selected_packages: [],
+        package_installation: {
+          owner: 'opl_packages',
+          performed_by_turnkey: false,
+          explicit_command: 'opl packages install <package_id>',
+          skip_packages_requested: input.skipPackages === true,
+        },
         codex_config_bootstrap: codexConfigBootstrap,
-        codex_plugin_registry: codexPluginRegistry,
         engine_actions: engineActions.map((entry) => entry.engine_action),
-        module_actions: moduleActions.map((entry) => entry.module_action),
         service_action: serviceAction,
         runtime_manager_action: runtimeManagerAction.runtime_manager_action,
         background_actions: runtimeManagerAction.runtime_manager_action.background_actions,
@@ -459,14 +433,14 @@ export async function runOplTurnkeyInstall(
         gui_shell: buildOplGuiShellSurface(resolveProjectRoot()),
         native_helper_action: nativeHelperAction,
         companion_skill_sync: companionSkillSync,
-        opl_flow_package: oplFlowPackage?.workflow_package ?? null,
         system_initialize: initialize.system_initialize,
         first_run_log: firstRunLog,
         first_run_log_events: firstRunLogEvents,
         notes: [
           installMode === 'headless'
-            ? 'Headless mode installs the OPL Framework runtime, Codex CLI, configured family runtime provider, selected family modules, and native helpers without installing the OPL Flow workflow dependency closure or opening the desktop App.'
-            : 'This command is the user-facing one-shot path for OPL + Codex CLI + configured family runtime provider + family modules + recommended Codex skills + desktop GUI.',
+            ? 'Headless mode installs OPL Base, Codex CLI, the configured family runtime provider, and native helpers without opening the desktop App.'
+            : 'This command installs OPL Base and the desktop App; Agent packages remain owned by opl packages.',
+          'Install official Agents with opl packages install <package_id>; turnkey installation never invokes a second package lifecycle.',
           'Full online family readiness requires the configured family runtime provider. --no-online-runtime is a development/offline diagnostic mode and reports degraded readiness.',
           'Recommended skill sync follows the selected package dependency policy; existing user-managed skill directories are preserved and missing optional sources are reported for Environment Management.',
           installMode === 'headless'
@@ -480,7 +454,8 @@ export async function runOplTurnkeyInstall(
     firstRunLogEvents.push(
       appendOplFirstRunLogEvent('install_failed', {
         status: 'failed',
-        selected_modules: modules,
+        selected_packages: [],
+        package_installation_owner: 'opl_packages',
         message: error instanceof Error ? error.message : String(error),
         ...(details ? { details } : {}),
       }),

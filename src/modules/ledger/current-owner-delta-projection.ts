@@ -1,5 +1,3 @@
-import { buildAppStageRunCockpit } from '../stagecraft/index.ts';
-import { currentOwnerDeltaWithClosedStageRunAnswer } from './current-owner-delta-stage-run-closeout.ts';
 import {
   acceptedReturnShapes,
   guardedApplyAcceptedAnswerShapes,
@@ -134,49 +132,6 @@ function compactNextSafeAction(action: unknown) {
   };
 }
 
-function stageRunOwnerAnswerCloseoutBindingAction(currentOwnerDelta: JsonRecord) {
-  const cockpit = buildAppStageRunCockpit(currentOwnerDelta);
-  const action = record(cockpit.next_required_owner_action);
-  if (
-    stringValue(action.derivation_source) !== 'stage_run_execution_authorization'
-    || action.owner_answer_missing_before_opl_closeout_binding !== true
-  ) {
-    return null;
-  }
-  return action;
-}
-
-function withStageRunClosedOwnerAnswer<T extends JsonRecord>(
-  currentOwnerDelta: T,
-): T {
-  return currentOwnerDeltaWithClosedStageRunAnswer(
-    currentOwnerDelta,
-    buildAppStageRunCockpit(currentOwnerDelta),
-  );
-}
-
-function withStageRunCloseoutBindingDeltaFields<T extends JsonRecord>(
-  currentOwnerDelta: T,
-  stageRunAction: JsonRecord | null,
-): T & {
-  missing_input_refs?: string[];
-  required_ref_shape?: JsonRecord;
-  stage_run_closeout_binding_ref?: string;
-  stage_run_closeout_binding_policy?: string;
-} {
-  if (!stageRunAction) {
-    return currentOwnerDelta;
-  }
-  return {
-    ...currentOwnerDelta,
-    missing_input_refs: stringList(stageRunAction.missing_input_refs),
-    required_ref_shape: record(stageRunAction.required_ref_shape),
-    stage_run_closeout_binding_ref: '/stage_run_cockpit/execution_authorization',
-    stage_run_closeout_binding_policy:
-      'domain_owner_answer_must_bind_stage_run_manifest_current_pointer_source_fingerprint_and_idempotency',
-  };
-}
-
 function buildCompactCountSummary(input: {
   countSummary: {
     openSafeActionCount?: number;
@@ -281,13 +236,7 @@ export function buildCurrentOwnerDeltaReadModel(input: {
     countSummary: auditCountSummary,
     fullDetailRefs,
   });
-  const answeredCurrentOwnerDelta = withStageRunClosedOwnerAnswer(baseCurrentOwnerDelta);
-  const stageRunOwnerAnswerAction =
-    stageRunOwnerAnswerCloseoutBindingAction(answeredCurrentOwnerDelta);
-  const currentOwnerDelta = withStageRunCloseoutBindingDeltaFields(
-    answeredCurrentOwnerDelta,
-    stageRunOwnerAnswerAction,
-  );
+  const currentOwnerDelta = baseCurrentOwnerDelta;
   const defaultNextAction = buildDefaultNextActionFromCurrentOwnerDelta(currentOwnerDelta);
   const defaultSummary = {
     summary_kind: 'owner_delta_only',

@@ -5,6 +5,7 @@ import path from 'node:path';
 
 import {
   normalizeStandardDomainAgentId,
+  standardDomainAgentFamilyProjection,
   STANDARD_AGENT_REGISTRY,
   STANDARD_AGENT_SERIES_MEMBERSHIP,
 } from '../../src/kernel/standard-agent-registry.ts';
@@ -43,6 +44,23 @@ test('native helper owner split derives all standard domain agents from the regi
   });
 });
 
+test('standard Agent family labels never mix compact and full product names', () => {
+  assert.deepEqual(standardDomainAgentFamilyProjection('compact').labels, [
+    'MAS', 'MAG', 'RCA', 'OMA', 'OBF',
+  ]);
+  assert.deepEqual(standardDomainAgentFamilyProjection('full').labels, [
+    'Med Auto Science',
+    'Med Auto Grant',
+    'RedCube AI',
+    'OPL Meta Agent',
+    'OPL Book Forge',
+  ]);
+  assert.equal(
+    new Set<string>(standardDomainAgentFamilyProjection('full').labels).has('BookForge'),
+    false,
+  );
+});
+
 test('package and module aliases derive standard agents without promoting ScholarSkills', () => {
   const standardAgents = STANDARD_AGENT_REGISTRY.filter((entry) =>
     entry.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP
@@ -50,7 +68,7 @@ test('package and module aliases derive standard agents without promoting Schola
 
   for (const agent of standardAgents) {
     for (const alias of [agent.agent_id, agent.domain_id, agent.project, agent.plugin_name, ...agent.aliases]) {
-      assert.equal(canonicalAgentPackageId(alias), agent.project, alias);
+      assert.equal(canonicalAgentPackageId(alias), agent.agent_id, alias);
       assert.equal(normalizeStandardDomainAgentId(alias), agent.target_domain_id, alias);
     }
   }

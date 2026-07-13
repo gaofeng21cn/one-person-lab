@@ -84,7 +84,7 @@ test('agents scaffold exposes the reusable agent scaffold contract without domai
     'state_index_kernel_adoption',
   ]);
   assertIncludesAll(scaffold.required_verification, [
-    'user_stage_log_semantics_or_typed_blocker',
+    'user_stage_log_semantics_or_progress_diagnostic',
     'functional_privatization_audit_no_generic_owner',
     'workspace_file_lifecycle_policy_declared',
     'state_index_kernel_adoption_declared',

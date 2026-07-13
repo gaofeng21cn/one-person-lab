@@ -20,25 +20,25 @@ function payloadValuesAtPath(value: Record<string, unknown>, path: string) {
     aliases.push(
       'attempt_idempotency_key',
       'route_identity_key',
-      'provider_admission_identity.idempotency_key',
-      'provider_admission_identity.attempt_idempotency_key',
-      'provider_admission_identity.route_identity_key',
+      'provider_attempt_identity.idempotency_key',
+      'provider_attempt_identity.attempt_idempotency_key',
+      'provider_attempt_identity.route_identity_key',
     );
   } else if (path === 'attempt_idempotency_key') {
     aliases.push(
       'idempotency_key',
       'route_identity_key',
-      'provider_admission_identity.attempt_idempotency_key',
-      'provider_admission_identity.idempotency_key',
-      'provider_admission_identity.route_identity_key',
+      'provider_attempt_identity.attempt_idempotency_key',
+      'provider_attempt_identity.idempotency_key',
+      'provider_attempt_identity.route_identity_key',
     );
   } else if (path === 'route_identity_key') {
     aliases.push(
       'idempotency_key',
       'attempt_idempotency_key',
-      'provider_admission_identity.route_identity_key',
-      'provider_admission_identity.idempotency_key',
-      'provider_admission_identity.attempt_idempotency_key',
+      'provider_attempt_identity.route_identity_key',
+      'provider_attempt_identity.idempotency_key',
+      'provider_attempt_identity.attempt_idempotency_key',
     );
   }
   return [
@@ -75,7 +75,7 @@ export function taskRowMatchesScope(row: FamilyRuntimeTaskRow, taskScope?: Famil
   }
   if (taskScope.taskKind && row.task_kind !== taskScope.taskKind) {
     const payload = parseJsonText(row.payload_json) as Record<string, unknown>;
-    if (payload.provider_admission_source_task_kind !== taskScope.taskKind) {
+    if (payload.provider_attempt_source_task_kind !== taskScope.taskKind) {
       return false;
     }
     if (!taskScope.payloadMatches?.length) {
@@ -101,7 +101,7 @@ export function taskInputMatchesScope(input: {
     return false;
   }
   if (taskScope.taskKind && input.taskKind !== taskScope.taskKind) {
-    if (input.payload.provider_admission_source_task_kind !== taskScope.taskKind) {
+    if (input.payload.provider_attempt_source_task_kind !== taskScope.taskKind) {
       return false;
     }
   }

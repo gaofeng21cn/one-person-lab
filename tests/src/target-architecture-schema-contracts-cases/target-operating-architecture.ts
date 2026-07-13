@@ -125,13 +125,12 @@ test('target operating architecture keeps framework-wide ownership and authority
 
   assert.deepEqual(contract.reconciler_model.required_loops, [
     'recovery_repair',
-    'handoff_gate',
+    'human_authority_wait',
     'progress_reconciliation',
-    'runtime_intent_admission',
-    'admission',
-    'execution_authorization',
+    'runtime_intent_transport',
     'provider_attempt',
-    'closeout_binding',
+    'artifact_progress_projection',
+    'currentness_reuse_filter',
     'owner_answer_intake',
     'evidence_verify',
     'cleanup_finalizer',

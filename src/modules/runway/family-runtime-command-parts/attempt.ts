@@ -282,7 +282,6 @@ function parseAttemptCreateArgs(rest: string[]): FamilyRuntimeCommandInput {
   let boundedEditRef: string | undefined;
   let taskId: string | undefined;
   let blockedReason: string | undefined;
-  let requireStageAdmission = false;
   let newAttempt = false;
   let start = false;
   const checkpointRefs: string[] = [];
@@ -294,9 +293,6 @@ function parseAttemptCreateArgs(rest: string[]): FamilyRuntimeCommandInput {
       return false;
     } else if (token === '--start') {
       start = true;
-      return false;
-    } else if (token === '--require-stage-admission') {
-      requireStageAdmission = true;
       return false;
     } else if (token === '--domain' && value) {
       domainId = assertDomainId(value);
@@ -396,7 +392,6 @@ function parseAttemptCreateArgs(rest: string[]): FamilyRuntimeCommandInput {
       closeoutRefs,
       humanGateRefs,
       blockedReason,
-      requireStageAdmission,
       newAttempt,
       start,
     },

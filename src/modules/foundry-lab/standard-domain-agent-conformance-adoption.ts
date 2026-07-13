@@ -531,8 +531,8 @@ export function buildStageRunKernelProfileChecks(repoDir: string) {
   const objectModels = isRecord(profile?.object_models) ? profile.object_models : {};
   const stageRunModel = isRecord(objectModels.StageRun) ? objectModels.StageRun : {};
   const stageRunAuthority = isRecord(stageRunModel.authority_boundary) ? stageRunModel.authority_boundary : {};
-  const launchAdmissionPolicy = isRecord(profile?.launch_admission_policy)
-    ? profile.launch_admission_policy
+  const stageContextPolicy = isRecord(profile?.stage_context_policy)
+    ? profile.stage_context_policy
     : {};
   const defaultReadSurface = isRecord(profile?.default_read_surface)
     ? profile.default_read_surface
@@ -542,8 +542,8 @@ export function buildStageRunKernelProfileChecks(repoDir: string) {
   const authority = isRecord(profile?.authority_boundary) ? profile.authority_boundary : {};
   const stageNativeUnit = stringList(profile?.stage_native_unit);
   const requiredObjectModels = stringList(profile?.required_object_models);
-  const launchHardBlockers = stringList(launchAdmissionPolicy.hard_blockers);
-  const launchAdvisoryRefs = stringList(launchAdmissionPolicy.advisory_refs);
+  const launchHardBlockers = stringList(stageContextPolicy.hard_blockers);
+  const launchAdvisoryRefs = stringList(stageContextPolicy.advisory_refs);
   const hasObjectModel = (model: string) => model === 'RoleArtifactRef'
     ? requiredObjectModels.includes('RoleArtifactRef') || requiredObjectModels.includes('ArtifactRef')
     : requiredObjectModels.includes(model);
@@ -644,7 +644,7 @@ export function buildStageRunKernelProfileChecks(repoDir: string) {
     ...STAGE_RUN_STRATEGY_ADVISORY_REFS
       .filter((field) => !launchAdvisoryRefs.includes(field))
       .map((field) => `stage_run_kernel_profile_advisory_ref_missing:${field}`),
-    launchAdmissionPolicy.advisory_refs_can_block_launch === false
+    stageContextPolicy.advisory_refs_can_block_launch === false
       ? null
       : 'stage_run_kernel_profile_advisory_refs_can_block_launch',
     ...STAGE_RUN_STRATEGY_ADVISORY_REFS
@@ -702,11 +702,11 @@ export function buildStageRunKernelProfileChecks(repoDir: string) {
       [...REQUIRED_STAGE_RUN_STATE_FLAGS, ...REQUIRED_STAGE_RUN_STATE_TRUE_FLAGS]
         .map((flag) => [flag, stateFlagValue(flag) ?? null]),
     ),
-    launch_admission_policy: {
+    stage_context_policy: {
       hard_blockers: launchHardBlockers,
       advisory_refs: launchAdvisoryRefs,
       advisory_refs_can_block_launch:
-        launchAdmissionPolicy.advisory_refs_can_block_launch ?? null,
+        stageContextPolicy.advisory_refs_can_block_launch ?? null,
     },
     default_read_surface: {
       root: optionalString(defaultReadSurface.root),

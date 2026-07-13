@@ -11,7 +11,6 @@ import {
   runOplConnectFoundationSkillsSync,
   type FoundationSkillsSyncInput,
 } from '../../../../modules/connect/opl-foundation-skills.ts';
-import { buildAgentPackageCommandSpecs } from './connect-agent-packages.ts';
 import {
   scientificConnectorProviderIds,
   runOplConnectScientificSearch,
@@ -510,7 +509,6 @@ export function buildConnectCommandSpecs(
           parseFoundationSkillsSyncArgs(args, connectCommandSpecs['connect foundation-skills sync']),
         ),
     },
-    ...buildAgentPackageCommandSpecs((command) => connectCommandSpecs[command]),
     'connect skills': cloneCommandSpec(commandSpecs['skill-list'], {
       usage: 'opl connect skills [--domain <domain_id>]',
       summary: 'Inspect family domain plugin packs through the canonical Connect command surface.',
@@ -523,25 +521,16 @@ export function buildConnectCommandSpecs(
     }),
     'connect sync-skills': cloneCommandSpec(commandSpecs['skill-sync'], {
       usage: 'opl connect sync-skills [--domain <domain_id>] [--scope <codex|workspace|quest>] [--target-workspace <path>] [--target-quest <path>] [--target-root <path>] [--home <home_path>] [--quiet]',
-      summary: 'Sync family/domain capability packs to their declared target scope through the canonical Connect command surface.',
+      summary: 'Sync installed family/domain Codex carrier projections through the canonical Connect command surface.',
       examples: [
         'opl connect sync-skills --json',
         'opl connect sync-skills --domain medautoscience --json',
-        'opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace /path/to/workspace --json',
-        'opl connect sync-skills --domain mas-scholar-skills --scope quest --target-quest /path/to/quest --json',
-        'opl connect sync-skills --domain mas-scholar-skills --scope codex --json',
         'opl connect sync-skills --home /tmp/codex-home --json',
       ],
       group: 'connect',
       help_surface: 'default',
     }),
     'connect packages manifest': connectPackagesManifestSpec,
-    'connect reconcile-modules': cloneCommandSpec(systemCommandSpecs['system reconcile-modules'], {
-      usage: 'opl connect reconcile-modules',
-      summary: 'Install missing modules and update clean domain modules through the canonical Connect command surface.',
-      examples: ['opl connect reconcile-modules --json'],
-      group: 'connect',
-    }),
   };
 
   return connectCommandSpecs;

@@ -30,10 +30,9 @@ import {
   taskFailureProjectionSql,
 } from './family-runtime-queue-projection-boundary.ts';
 
-export const DOMAIN_ROUTE_DOMAIN_GATE_PENDING_REASON = 'domain_route_domain_gate_pending';
-export const DOMAIN_ROUTE_TERMINAL_RECONCILED_EVENT = 'domain_route_terminal_task_reconciled';
-export const DOMAIN_ROUTE_TERMINAL_SUCCESSOR_POLICY =
-  'terminal_provider_closeout_cannot_self_admit_successor_external_fresh_handoff_required';
+export const DOMAIN_ROUTE_PROGRESS_OBSERVED_REASON = 'domain_route_consumable_progress_observed';
+export const DOMAIN_ROUTE_NO_CONSUMABLE_ARTIFACT_REASON = 'domain_route_no_consumable_artifact';
+export const DOMAIN_ROUTE_TERMINAL_PROJECTED_EVENT = 'domain_route_terminal_task_projected';
 
 const TERMINAL_STAGE_ATTEMPT_STATUSES = new Set<StageAttemptStatus>([
   'blocked',
@@ -48,9 +47,10 @@ const LIVE_STAGE_ATTEMPT_STATUSES = new Set<StageAttemptStatus>([
   'human_gate',
 ]);
 const RECONCILABLE_BLOCKERS = new Set([
-  DOMAIN_ROUTE_DOMAIN_GATE_PENDING_REASON,
+  DOMAIN_ROUTE_PROGRESS_OBSERVED_REASON,
+  DOMAIN_ROUTE_NO_CONSUMABLE_ARTIFACT_REASON,
   'domain_route_temporal_start_failed',
-  'temporal_stage_attempt_completed_missing_typed_closeout',
+  'temporal_stage_attempt_completed_without_consumable_artifact',
   'typed_closeout_domain_route_user_stage_log_missing',
 ]);
 
@@ -142,11 +142,18 @@ function taskStatusForTerminalAttempt(attempt: StageAttemptPayload) {
       deadLetterReason: reason,
     };
   }
+  if (attempt.status === 'completed' && attempt.closeout_refs.length > 0) {
+    return {
+      status: FAMILY_RUNTIME_TASK_STATUS.succeeded,
+      reason: DOMAIN_ROUTE_PROGRESS_OBSERVED_REASON,
+      deadLetterReason: null,
+    };
+  }
   const routeImpact = recordValue(attempt.route_impact);
   const domainReadyVerdict = optionalString(routeImpact.domain_ready_verdict);
   const reason = attempt.blocked_reason
     ?? (domainReadyVerdict ? `domain_route_${domainReadyVerdict}` : null)
-    ?? DOMAIN_ROUTE_DOMAIN_GATE_PENDING_REASON;
+    ?? DOMAIN_ROUTE_NO_CONSUMABLE_ARTIFACT_REASON;
   return {
     status: 'blocked' as const,
     reason,
@@ -160,22 +167,22 @@ function firstCloseoutRef(terminalAttempt: StageAttemptPayload) {
   ) ?? null;
 }
 
-function transitionReceiptStatus(
+function transportReceiptStatus(
   terminalAttempt: StageAttemptPayload,
   nextTask: ReturnType<typeof taskStatusForTerminalAttempt>,
 ) {
   if (nextTask.status === FAMILY_RUNTIME_TASK_STATUS.deadLetter) {
     return 'provider_terminal_blocked';
   }
-  if (terminalAttempt.closeout_receipt_status === 'accepted_typed_closeout') {
-    return 'terminal_closeout_observed';
+  if (nextTask.status === FAMILY_RUNTIME_TASK_STATUS.succeeded) {
+    return terminalAttempt.closeout_receipt_status === 'accepted_typed_closeout'
+      ? 'typed_closeout_progress_observed'
+      : 'consumable_progress_observed';
   }
-  return nextTask.reason === DOMAIN_ROUTE_DOMAIN_GATE_PENDING_REASON
-    ? 'domain_gate_pending'
-    : 'typed_runtime_blocker_observed';
+  return 'runtime_blocker_observed';
 }
 
-function transitionReceipt(input: {
+function transportReceipt(input: {
   row: FamilyRuntimeTaskRow;
   payload: Record<string, unknown>;
   terminalAttempt: StageAttemptPayload;
@@ -185,11 +192,11 @@ function transitionReceipt(input: {
   const routeImpact = recordValue(input.terminalAttempt.route_impact);
   const stageAttemptId = input.terminalAttempt.stage_attempt_id;
   return {
-    surface_kind: 'opl_domain_route_transition_receipt',
+    surface_kind: 'opl_domain_route_terminal_transport_receipt',
     schema_version: 1,
-    receipt_status: transitionReceiptStatus(input.terminalAttempt, input.nextTask),
+    receipt_status: transportReceiptStatus(input.terminalAttempt, input.nextTask),
     role: 'transport_receipt_only',
-    source_event_type: DOMAIN_ROUTE_TERMINAL_RECONCILED_EVENT,
+    source_event_type: DOMAIN_ROUTE_TERMINAL_PROJECTED_EVENT,
     domain_id: input.row.domain_id,
     task_kind: input.row.task_kind,
     profile_ref: optionalString(runtimeRequest?.profile_ref),
@@ -213,13 +220,20 @@ function transitionReceipt(input: {
       ?? (input.row.task_id
         ? `opl://family-runtime/tasks/${input.row.task_id}/terminal-closeout-readback`
         : null),
-    typed_runtime_blocker_ref: firstCloseoutRef(input.terminalAttempt),
+    typed_runtime_blocker_ref: input.nextTask.status === FAMILY_RUNTIME_TASK_STATUS.succeeded
+      ? null
+      : firstCloseoutRef(input.terminalAttempt),
     closeout_refs: input.terminalAttempt.closeout_refs,
     closeout_receipt_status: input.terminalAttempt.closeout_receipt_status,
-    blocked_reason: input.nextTask.reason,
+    blocked_reason: input.nextTask.status === FAMILY_RUNTIME_TASK_STATUS.succeeded
+      ? null
+      : input.nextTask.reason,
+    progress_reason: input.nextTask.status === FAMILY_RUNTIME_TASK_STATUS.succeeded
+      ? input.nextTask.reason
+      : null,
     route_impact: Object.keys(routeImpact).length > 0 ? routeImpact : null,
-    successor_created: false,
-    terminal_successor_policy: DOMAIN_ROUTE_TERMINAL_SUCCESSOR_POLICY,
+    semantic_route_owner: 'codex_cli',
+    transport_projection_blocks_next_stage: false,
     authority_boundary: {
       role: 'transport_receipt_only',
       writes_domain_truth: false,
@@ -229,11 +243,11 @@ function transitionReceipt(input: {
       writes_domain_human_gate: false,
       writes_domain_current_package: false,
       writes_domain_artifact_body: false,
-      can_select_next_owner: false,
-      can_admit_successor: false,
+      can_select_next_stage: false,
+      can_project_consumable_artifact_progress: true,
       can_claim_provider_running: false,
-      can_claim_domain_progress: false,
       can_claim_domain_ready: false,
+      can_claim_domain_quality: false,
       can_claim_runtime_ready: false,
     },
   };
@@ -250,9 +264,9 @@ function alreadyReconciled(
     WHERE task_id = ?
       AND event_type = ?
       AND json_extract(payload_json, '$.stage_attempt_id') = ?
-      AND json_type(payload_json, '$.opl_transition_receipt') IS NOT NULL
+      AND json_type(payload_json, '$.opl_transport_receipt') IS NOT NULL
     LIMIT 1
-  `).get(row.task_id, DOMAIN_ROUTE_TERMINAL_RECONCILED_EVENT, terminalAttempt.stage_attempt_id));
+  `).get(row.task_id, DOMAIN_ROUTE_TERMINAL_PROJECTED_EVENT, terminalAttempt.stage_attempt_id));
 }
 
 function canReconcileTask(
@@ -286,7 +300,7 @@ function reconcileTaskRowWithAttempt(
     return false;
   }
   const nextTask = taskStatusForTerminalAttempt(terminalAttempt);
-  const oplTransitionReceipt = transitionReceipt({ row, payload, terminalAttempt, nextTask });
+  const oplTransportReceipt = transportReceipt({ row, payload, terminalAttempt, nextTask });
   const reconciledAt = nowIso();
   const result = db.prepare(`
     UPDATE tasks
@@ -294,7 +308,7 @@ function reconcileTaskRowWithAttempt(
     WHERE task_id = ? AND status = ?
   `).run(
     nextTask.status,
-    nextTask.reason,
+    nextTask.status === FAMILY_RUNTIME_TASK_STATUS.succeeded ? null : nextTask.reason,
     nextTask.deadLetterReason,
     reconciledAt,
     row.task_id,
@@ -306,7 +320,7 @@ function reconcileTaskRowWithAttempt(
   insertEvent(db, {
     taskId: row.task_id,
     domainId: row.domain_id,
-    eventType: DOMAIN_ROUTE_TERMINAL_RECONCILED_EVENT,
+    eventType: DOMAIN_ROUTE_TERMINAL_PROJECTED_EVENT,
     source,
     payload: {
       previous_status: row.status,
@@ -316,23 +330,30 @@ function reconcileTaskRowWithAttempt(
       stage_attempt_status: terminalAttempt.status,
       closeout_refs: terminalAttempt.closeout_refs,
       closeout_receipt_status: terminalAttempt.closeout_receipt_status,
-      opl_transition_receipt: oplTransitionReceipt,
-      authority_boundary: oplTransitionReceipt.authority_boundary,
+      opl_transport_receipt: oplTransportReceipt,
+      authority_boundary: oplTransportReceipt.authority_boundary,
     },
   });
   insertNotification(db, {
     taskId: row.task_id,
-    severity: nextTask.status === FAMILY_RUNTIME_TASK_STATUS.deadLetter ? 'error' : 'warning',
+    severity: nextTask.status === FAMILY_RUNTIME_TASK_STATUS.deadLetter
+      ? 'error'
+      : nextTask.status === FAMILY_RUNTIME_TASK_STATUS.succeeded
+        ? 'info'
+        : 'warning',
     title: nextTask.status === FAMILY_RUNTIME_TASK_STATUS.deadLetter
       ? 'Domain route provider terminal failure observed'
-      : 'Domain route waiting for domain authority',
+      : nextTask.status === FAMILY_RUNTIME_TASK_STATUS.succeeded
+        ? 'Domain route consumable progress observed'
+        : 'Domain route blocked by a hard boundary',
     body: `${row.domain_id}:${row.task_kind} ${nextTask.reason}`,
     payload: {
       reason: nextTask.reason,
       stage_attempt_id: terminalAttempt.stage_attempt_id,
       closeout_refs: terminalAttempt.closeout_refs,
       can_claim_provider_running: false,
-      can_claim_domain_progress: false,
+      consumable_progress_observed: nextTask.status === FAMILY_RUNTIME_TASK_STATUS.succeeded,
+      next_stage_may_start: nextTask.status === FAMILY_RUNTIME_TASK_STATUS.succeeded,
       can_claim_domain_ready: false,
     },
   });

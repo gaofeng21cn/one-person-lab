@@ -26,10 +26,10 @@ const registryCases = [
   ['connect update', 'connect_update', ['module'], undefined],
   ['connect reinstall', 'connect_reinstall', ['module'], undefined],
   ['connect remove', 'connect_remove', ['module'], undefined],
-  ['connect agent-packages install', 'connect_agent_packages_install', ['manifest-url', 'registry-url', 'package-id', 'trust-tier', 'source-kind', 'agent-root', 'dry-run'], undefined],
-  ['connect agent-packages update', 'connect_agent_packages_update', ['manifest-url', 'registry-url', 'package-id', 'trust-tier', 'source-kind', 'agent-root', 'dry-run'], undefined],
-  ['connect agent-packages repair', 'connect_agent_packages_repair', ['package-id', 'agent-root', 'dry-run'], undefined],
-  ['connect agent-packages link-framework', 'connect_agent_packages_link_framework', ['agent-root', 'check', 'dry-run'], undefined],
+  ['packages install', 'packages_install', ['manifest-url', 'registry-url', 'package-id', 'trust-tier', 'source-kind', 'agent-root', 'keep-migration', 'scope', 'target-workspace', 'target-quest', 'dry-run'], 'OPL Packages'],
+  ['packages update', 'packages_update', ['manifest-url', 'registry-url', 'package-id', 'trust-tier', 'source-kind', 'agent-root', 'keep-migration', 'scope', 'target-workspace', 'target-quest', 'dry-run'], 'OPL Packages'],
+  ['packages repair', 'packages_repair', ['package-id', 'agent-root', 'scope', 'target-workspace', 'target-quest', 'dry-run'], 'OPL Packages'],
+  ['packages link-framework', 'packages_link_framework', ['agent-root', 'check', 'dry-run'], 'OPL Packages'],
   ['status workspace', 'status_workspace', ['path'], 'OPL Console'],
   ['status runtime', 'status_runtime', ['limit'], 'OPL Runway'],
   ['status dashboard', 'status_dashboard', ['path', 'sessions-limit'], 'OPL Console'],
@@ -85,12 +85,12 @@ const registryCases = [
   ['runtime observability-export', 'runtime_observability_export', ['format'], undefined],
   ['runtime observability-endpoint', 'runtime_observability_endpoint', ['host', 'port', 'metrics-path', 'once', 'ready-file'], undefined],
   ['runtime observability-collector-smoke', 'runtime_observability_collector_smoke', ['collector-command', 'endpoint', 'host', 'port', 'metrics-path', 'timeout-ms'], undefined],
-  ['update status', 'update_status', ['component'], undefined],
-  ['update check', 'update_check', ['component'], undefined],
-  ['update plan', 'update_plan', ['component'], undefined],
-  ['update apply', 'update_apply', ['component'], undefined],
-  ['update repair', 'update_repair', ['component', 'receipt'], undefined],
-  ['update rollback', 'update_rollback', ['component'], undefined],
+  ['update status', 'update_status', [], 'OPL Base'],
+  ['update check', 'update_check', [], 'OPL Base'],
+  ['update plan', 'update_plan', [], 'OPL Base'],
+  ['update apply', 'update_apply', [], 'OPL Base'],
+  ['update repair', 'update_repair', ['receipt'], 'OPL Base'],
+  ['update rollback', 'update_rollback', [], 'OPL Base'],
 ] as const;
 
 function loadCliCommandRegistryContract() {
@@ -105,7 +105,7 @@ function loadCliCommandRegistryContract() {
 test('registered command help mirrors the canonical command registry', () => {
   const contract = loadCliCommandRegistryContract();
 
-  for (const prefix of ['status', 'runtime manager', 'stages', 'runtime observability', 'update']) {
+  for (const prefix of ['status', 'runtime manager', 'stages', 'runtime observability', 'update', 'packages']) {
     assert.equal(contract.protected_command_prefixes.includes(prefix), true, prefix);
   }
   assert.equal(contract.protected_command_prefixes.includes('connect pubmed'), false);
@@ -197,7 +197,8 @@ test('migrated registry entries own their authority metadata', () => {
   const contract = loadCliCommandRegistryContract();
   const owners = new Map([
     ['connect ', 'OPL Connect'],
-    ['update ', 'OPL Managed Update / Pack owners'],
+    ['update ', 'OPL Base'],
+    ['packages ', 'OPL Packages'],
   ]);
   for (const command of Object.values(contract.commands) as Array<Record<string, any>>) {
     const owner = [...owners].find(([prefix]) => String(command.command_id).startsWith(prefix))?.[1];
@@ -267,14 +268,14 @@ test('stage commands reject options outside their registry entry', () => {
 test('update commands parse registered options and reject cross-command options', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-update-registry-'));
   try {
-    const status = runCli(['update', 'status', '--component', 'capability_packages'], { OPL_STATE_DIR: stateRoot });
+    const status = runCli(['update', 'status'], { OPL_STATE_DIR: stateRoot });
     assert.equal(status.managed_update.operation, 'status');
-    assert.equal(status.managed_update.requested_component_id, 'capability_packages');
+    assert.equal(status.managed_update.requested_component_id, 'opl_base');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 
-  const invalid = runCliFailure(['update', 'status', '--receipt', 'receipt-001']);
+  const invalid = runCliFailure(['update', 'status', '--component', 'opl_base']);
   assert.equal(invalid.payload.error.code, 'cli_usage_error');
   assert.match(invalid.payload.error.message, /Unknown option/);
 });

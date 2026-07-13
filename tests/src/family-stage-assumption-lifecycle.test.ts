@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { buildFamilyStageAdmissionReview } from '../../src/modules/stagecraft/family-stage-admission.ts';
+import { buildFamilyStageConformanceReview } from '../../src/modules/stagecraft/family-stage-conformance.ts';
 import { buildFamilyStageAssumptionLifecycleProjection } from '../../src/modules/stagecraft/family-stage-assumption-lifecycle.ts';
 import { normalizeFamilyStageControlPlane } from '../../src/modules/stagecraft/family-stage-control-plane-contract.ts';
 import type { FamilyStageContract, FamilyStageControlPlane } from '../../src/modules/stagecraft/family-stage-control-plane-contract.ts';
@@ -137,8 +137,8 @@ test('family stage assumption lifecycle blocks stale typed assumptions with coun
     reason: 'runtime assumption has invalidation refs',
   });
 
-  const admission = buildFamilyStageAdmissionReview(plane);
-  assert.equal(admission.status, 'needs_contracts');
+  const admission = buildFamilyStageConformanceReview(plane);
+  assert.equal(admission.status, 'quality_debt');
   assert.ok(admission.findings.some((finding) => (
     finding.code === 'runtime_assumption_stale'
     && finding.assumption_id === 'provider_slo_current'
@@ -148,9 +148,9 @@ test('family stage assumption lifecycle blocks stale typed assumptions with coun
 });
 
 test('family stage admission warns on runtime assumptions without monitor refs', () => {
-  const admission = buildFamilyStageAdmissionReview(buildPlane(['artifact_locator_fresh']));
+  const admission = buildFamilyStageConformanceReview(buildPlane(['artifact_locator_fresh']));
 
-  assert.equal(admission.status, 'needs_contracts');
+  assert.equal(admission.status, 'quality_debt');
   assert.ok(admission.findings.some((finding) => (
     finding.code === 'runtime_assumption_missing_monitor_ref'
     && finding.assumption_id === 'artifact_locator_fresh'

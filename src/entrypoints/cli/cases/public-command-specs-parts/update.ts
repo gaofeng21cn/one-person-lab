@@ -22,7 +22,7 @@ function buildUpdateSpec(
       const parsed = parseRegisteredCommandOptions(commandId, args, spec);
       const input = {
         operation,
-        componentId: parsed.component as string | undefined,
+        componentId: 'opl_base',
         receiptId: parsed.receipt as string | undefined,
       };
       if (operation === 'apply' || operation === 'repair' || operation === 'rollback') { // reuse-first: allow owner-routed update command registry metadata.
@@ -40,44 +40,44 @@ export function buildUpdateCommandSpecs(
   return {
     'update status': buildUpdateSpec(
       'status',
-      'opl update status [--component <component_id>]',
-      'Read the unified managed update status projection for installation carrier, runtime substrate, capability packages, companion tools, Codex Surface, workflow profile, and user data.',
-      ['opl update status --json', 'opl update status --component capability_packages --json'],
+      'opl update status',
+      'Read OPL Base update status, including Framework runtime and companion dependency/integration status.',
+      ['opl update status --json'],
       getContracts,
     ),
     'update check': buildUpdateSpec(
       'check',
-      'opl update check [--component <component_id>]',
-      'Check managed update state without applying mutations.',
-      ['opl update check --json', 'opl update check --component runtime_substrate --json'],
+      'opl update check',
+      'Check OPL Base update state without applying mutations.',
+      ['opl update check --json'],
       getContracts,
     ),
     'update plan': buildUpdateSpec(
       'plan',
-      'opl update plan [--component <component_id>]',
-      'Build a safe managed update plan with provider-specific command refs.',
-      ['opl update plan --json', 'opl update plan --component codex_surface --json'],
+      'opl update plan',
+      'Build the safe OPL Base update plan.',
+      ['opl update plan --json'],
       getContracts,
     ),
     'update apply': buildUpdateSpec(
       'apply',
-      'opl update apply [--component <component_id>]',
-      'Project the controlled apply actions for one managed update component.',
-      ['opl update apply --component capability_packages --json'],
+      'opl update apply',
+      'Apply the controlled OPL Base update transaction.',
+      ['opl update apply --json'],
       getContracts,
     ),
     'update repair': buildUpdateSpec(
       'repair',
-      'opl update repair [--component <component_id>] [--receipt <receipt_id>]',
-      'Project repair actions for a failed managed update receipt or component.',
+      'opl update repair [--receipt <receipt_id>]',
+      'Repair a failed OPL Base update transaction.',
       ['opl update repair --receipt receipt-001 --json'],
       getContracts,
     ),
     'update rollback': buildUpdateSpec( // reuse-first: allow owner-routed update command registry metadata.
       'rollback', // reuse-first: allow owner-routed update command registry metadata.
-      'opl update rollback [--component <component_id>]', // reuse-first: allow owner-routed update command registry metadata.
-      'Project rollback actions and authority boundaries for a managed update component.', // reuse-first: allow owner-routed update command registry metadata.
-      ['opl update rollback --component runtime_substrate --json'], // reuse-first: allow owner-routed update command registry metadata.
+      'opl update rollback', // reuse-first: allow owner-routed update command registry metadata.
+      'Roll back the OPL Base runtime through its controlled owner route.', // reuse-first: allow owner-routed update command registry metadata.
+      ['opl update rollback --json'], // reuse-first: allow owner-routed update command registry metadata.
       getContracts,
     ),
   };

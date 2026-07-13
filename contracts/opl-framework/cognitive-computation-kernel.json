@@ -208,6 +208,6 @@
     "contracts/opl-framework/evidence-ledger-event.schema.json",
     "contracts/opl-framework/golden-path-profile.schema.json",
     "contracts/opl-framework/foundry-agent-series-contract.json",
-    "contracts/opl-framework/stage-route-scheduler-contract.json"
+    "contracts/opl-framework/stage-route-transport-contract.json"
   ]
 }

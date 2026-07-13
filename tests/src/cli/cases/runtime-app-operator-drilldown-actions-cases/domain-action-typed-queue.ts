@@ -2,6 +2,7 @@ import {
   assert,
   createFamilyContractsFixtureRoot,
   fs,
+  installRuntimePackageFixture,
   os,
   path,
   runCli,
@@ -11,6 +12,7 @@ import {
 test('runtime action execute blocks domain actions instead of creating a local runtime queue task', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-action-execute-domain-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  installRuntimePackageFixture(stateRoot, 'mas');
   try {
     const attempt = runCli([
       'family-runtime',

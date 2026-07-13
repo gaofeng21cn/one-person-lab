@@ -2,7 +2,6 @@
 import { spawnSync } from 'node:child_process';
 
 const image = process.env.OPL_BOOTSTRAP_SMOKE_IMAGE || 'node:22-bookworm';
-const includeOplDoc = process.argv.includes('--include-opl-doc');
 
 const smokeScript = String.raw`
 set -euo pipefail
@@ -25,6 +24,8 @@ opl help --text >/tmp/opl-help.txt
 opl system initialize --json >/tmp/opl-system.json
 opl connect sync-skills --domain mas --domain rca >/tmp/opl-connect-sync-skills.json
 opl connect skills --json >/tmp/opl-connect-skills.json
+opl packages install opl-flow --json >/tmp/opl-flow-install.json
+opl packages status --package-id opl-flow --json >/tmp/opl-flow-status.json
 
 node <<'NODE'
 const fs = require('fs');
@@ -93,70 +94,39 @@ console.log(JSON.stringify({
 }, null, 2));
 NODE
 
-export HOME=/tmp/opl-flow-home
-export CODEX_HOME=$HOME/.codex
-mkdir -p "$HOME" "$CODEX_HOME"
-git clone https://github.com/gaofeng21cn/opl-flow.git /tmp/opl-flow
-cd /tmp/opl-flow
-python3 scripts/install_local_plugin.py >/tmp/opl-flow-install.json
-python3 scripts/install_local_plugin.py --verify-only >/tmp/opl-flow-verify.json
-python3 scripts/verify.py >/tmp/opl-flow-repo-verify.txt
-
 node <<'NODE'
 const fs = require('fs');
-const path = require('path');
-const home = '/tmp/opl-flow-home';
 const readJson = (file) => JSON.parse(fs.readFileSync(file, 'utf8')); // reuse-first: allow Docker inline smoke JSON boundary.
 const install = readJson('/tmp/opl-flow-install.json');
-const verify = readJson('/tmp/opl-flow-verify.json');
-if (!verify.ok) {
-  throw new Error('opl-flow verify failed: ' + JSON.stringify(verify));
+const status = readJson('/tmp/opl-flow-status.json');
+const packageInstall = install.opl_agent_package_install;
+if (packageInstall?.status !== 'installed') {
+  throw new Error('opl-flow package install failed: ' + JSON.stringify(install));
 }
-
-const required = [
-  'plugins/opl-flow/.codex-plugin/plugin.json',
-  'plugins/opl-flow/skills/opl-flow/SKILL.md',
-  '.codex/AGENTS.md',
-  '.codex/TASTE.md',
-  '.codex/prompts/planner.md',
-  '.codex/prompts/executor.md',
-  '.codex/prompts/debugger.md',
-  '.codex/prompts/verifier.md',
-  '.agents/plugins/marketplace.json',
-];
-const missing = required
-  .map((rel) => path.join(home, rel))
-  .filter((filePath) => !fs.existsSync(filePath));
-if (missing.length) {
-  throw new Error('missing opl-flow installed files: ' + missing.join(', '));
+const profile = packageInstall.physical_surface?.profile_migration;
+if (!['installed', 'current'].includes(profile?.status)) {
+  throw new Error('opl-flow profile was not installed: ' + JSON.stringify(profile));
 }
-
-const marketplace = readJson(path.join(home, '.agents/plugins/marketplace.json'));
-if (!(marketplace.plugins ?? []).some((entry) => entry.name === 'opl-flow')) {
-  throw new Error('marketplace missing opl-flow');
+for (const filePath of [
+  '/root/.codex/AGENTS.md',
+  '/root/.codex/TASTE.md',
+  packageInstall.physical_surface.plugin_manifest_path,
+  ...packageInstall.physical_surface.materialized_required_skill_paths,
+]) {
+  if (!filePath || !fs.existsSync(filePath)) {
+    throw new Error('missing opl-flow package surface: ' + filePath);
+  }
 }
 
 console.log(JSON.stringify({
   status: 'ok',
-  surface: 'opl_flow_bootstrap',
-  plugin_path: install.plugin_path,
-  marketplace_ok: verify.marketplace_ok,
-  profile_file_count: required.length,
-  repo_verify: fs.readFileSync('/tmp/opl-flow-repo-verify.txt', 'utf8').trim(),
+  surface: 'opl_packages_bootstrap',
+  package_status: packageInstall.status,
+  profile_status: profile.status,
+  plugin_path: packageInstall.physical_surface.codex_plugin_cache_path,
+  status_readback: status.opl_agent_package_status?.status,
 }, null, 2));
 NODE
-`;
-
-const docSmoke = String.raw`
-if [ "\${OPL_INCLUDE_OPL_DOC:-0}" = "1" ]; then
-  export HOME=/tmp/opl-doc-home
-  export CODEX_HOME=$HOME/.codex
-  mkdir -p "$HOME" "$CODEX_HOME"
-  git clone https://github.com/gaofeng21cn/opl-doc.git /tmp/opl-doc
-  cd /tmp/opl-doc
-  python3 scripts/install_local_plugin.py >/tmp/opl-doc-install.json
-  python3 scripts/install_local_plugin.py --verify-only >/tmp/opl-doc-verify.json
-fi
 `;
 
 const result = spawnSync(
@@ -165,14 +135,12 @@ const result = spawnSync(
     'run',
     '-i',
     '--rm',
-    '-e',
-    `OPL_INCLUDE_OPL_DOC=${includeOplDoc ? '1' : '0'}`,
     image,
     'bash',
     '-s',
   ],
   {
-    input: smokeScript + docSmoke,
+    input: smokeScript,
     encoding: 'utf8',
     stdio: ['pipe', 'inherit', 'inherit'],
   },

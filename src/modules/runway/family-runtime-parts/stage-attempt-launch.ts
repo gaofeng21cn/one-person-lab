@@ -21,10 +21,6 @@ export function temporalStartProviderRun(
       ? receipt.first_execution_run_id
       : null,
     temporal_start_receipt: receipt,
-    execution_authorization_receipt_refs: Array.isArray(receipt.execution_authorization_receipt_refs)
-      ? receipt.execution_authorization_receipt_refs.filter((entry): entry is string => typeof entry === 'string')
-      : [],
-    execution_authorization_ledger_record: receipt.execution_authorization_ledger_record ?? null,
     temporal_visibility_readiness: receipt.visibility_readiness ?? null,
     started_at: typeof attempt.provider_run.started_at === 'string' ? attempt.provider_run.started_at : nowIso(),
     last_heartbeat_at: nowIso(),
@@ -50,31 +46,27 @@ export function recordTemporalStartOnAttempt(
 
 type CheckoutCurrentnessPreflight = ReturnType<typeof preflightDomainWorkspaceCheckoutCurrentness>;
 
-export function combineLaunchGateWithCheckoutCurrentness<T extends object>(
-  gate: T,
+export function attachCheckoutCurrentnessToStageContext<T extends object>(
+  observation: T,
   checkoutCurrentnessPreflight: CheckoutCurrentnessPreflight,
 ) {
   if (!checkoutCurrentnessPreflight) {
-    return gate;
+    return observation;
   }
   if (checkoutCurrentnessPreflight.status !== 'blocked') {
     return {
-      ...gate,
+      ...observation,
       checkout_currentness_preflight: checkoutCurrentnessPreflight,
     } as T & { checkout_currentness_preflight: typeof checkoutCurrentnessPreflight };
   }
   return {
-    ...gate,
-    status: 'blocked',
-    gate_action: 'block_stage_launch',
-    block_reason: checkoutCurrentnessPreflight.reason ?? 'checkout_currentness_blocked',
-    blocked_reason: checkoutCurrentnessPreflight.reason ?? 'checkout_currentness_blocked',
+    ...observation,
+    progression_effect: 'hard_stop_wrong_checkout',
+    hard_stop_reason: checkoutCurrentnessPreflight.reason ?? 'checkout_currentness_blocked',
     checkout_currentness_preflight: checkoutCurrentnessPreflight,
   } as T & {
-    status: 'blocked';
-    gate_action: 'block_stage_launch';
-    block_reason: string;
-    blocked_reason: string;
+    progression_effect: 'hard_stop_wrong_checkout';
+    hard_stop_reason: string;
     checkout_currentness_preflight: typeof checkoutCurrentnessPreflight;
   };
 }

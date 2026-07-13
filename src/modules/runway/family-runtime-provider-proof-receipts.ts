@@ -13,8 +13,8 @@ const TEMPORAL_PRODUCTION_CAPABILITY_CHECK_IDS = [
   'worker_restart_requery',
   'signal_history_preserved',
   'typed_closeout_required_for_completed',
-  'missing_closeout_blocks_completion',
-  'retry_or_dead_letter_boundary_observed',
+  'missing_closeout_advances_with_diagnostic',
+  'no_output_diagnostic_boundary_observed',
   'domain_truth_boundary_preserved',
 ] as const;
 
@@ -60,7 +60,7 @@ function temporalProductionCapabilityReceipt(proof: TemporalResidencyProof) {
   const checks = booleanRecord(recordOrNull(productionProof?.checks));
   const failedCheckIds = TEMPORAL_PRODUCTION_CAPABILITY_CHECK_IDS.filter((checkId) => checks[checkId] !== true);
   const completedAttempt = recordOrNull(productionProof?.completed_attempt);
-  const blockedAttempt = recordOrNull(productionProof?.blocked_attempt);
+  const diagnosticAttempt = recordOrNull(productionProof?.diagnostic_attempt);
   const restartedWorkerRequery = recordOrNull(productionProof?.restarted_worker_requery);
   const capabilityProven =
     proof.closeout_status === 'production_residency_proven'
@@ -78,8 +78,8 @@ function temporalProductionCapabilityReceipt(proof: TemporalResidencyProof) {
     completed_workflow_id: typeof completedAttempt?.workflow_id === 'string'
       ? completedAttempt.workflow_id
       : null,
-    blocked_workflow_id: typeof blockedAttempt?.workflow_id === 'string'
-      ? blockedAttempt.workflow_id
+    diagnostic_workflow_id: typeof diagnosticAttempt?.workflow_id === 'string'
+      ? diagnosticAttempt.workflow_id
       : null,
     restarted_worker_requery_status:
       typeof restartedWorkerRequery?.requery_status === 'string'

@@ -44,44 +44,27 @@ function refsOnlyAuthorityBoundary() {
   };
 }
 
-function stageRunCloseoutBindingRequirement(targetIdentity: JsonRecord) {
+function stageRunTransportIdentityObservation(targetIdentity: JsonRecord) {
   const fields = {
     stage_run_id: stringValue(targetIdentity.stage_run_id),
-    stage_manifest_ref: stringValue(targetIdentity.stage_manifest_ref),
-    current_pointer_ref: stringValue(targetIdentity.current_pointer_ref),
     source_fingerprint: stringValue(targetIdentity.source_fingerprint),
     idempotency_key: stringValue(targetIdentity.idempotency_key),
     provider_attempt_ref: stringValue(targetIdentity.provider_attempt_ref),
-    attempt_lease_ref: stringValue(targetIdentity.attempt_lease_ref),
-    execution_authorization_decision_ref:
-      stringValue(targetIdentity.execution_authorization_decision_ref),
   };
   const requiredFields = [
     'stage_run_id',
-    'stage_manifest_ref',
-    'current_pointer_ref',
     'source_fingerprint',
     'idempotency_key',
   ] as const;
   const missingRequiredFields = requiredFields.filter((field) => !fields[field]);
   return {
-    surface_kind: 'opl_domain_dispatch_stage_run_closeout_binding_requirement',
-    binding_owner: 'domain_repository_or_app_live_operator',
-    binding_source: 'stage_attempt_target_identity',
-    required_fields: [...requiredFields],
-    missing_required_fields: missingRequiredFields,
-    closeout_binding_ready: missingRequiredFields.length === 0,
-    closeout_binding: Object.fromEntries(Object.entries({
-      surface_kind: 'opl_stage_run_closeout_binding',
-      trusted_opl_execution_authorization: Boolean(
-        fields.provider_attempt_ref
-        && fields.attempt_lease_ref
-        && fields.execution_authorization_decision_ref
-      ),
-      bound_to_stage_run: Boolean(fields.stage_run_id),
-      bound_to_stage_manifest: Boolean(fields.stage_manifest_ref),
-      bound_to_current_pointer: Boolean(fields.current_pointer_ref),
-      bound_to_source_fingerprint: Boolean(fields.source_fingerprint),
+    surface_kind: 'opl_domain_dispatch_stage_run_transport_identity_observation',
+    observation_source: 'stage_attempt_target_identity',
+    observed_fields: [...requiredFields],
+    missing_identity_fields: missingRequiredFields,
+    missing_identity_fields_block_progress: false,
+    transport_identity: Object.fromEntries(Object.entries({
+      surface_kind: 'opl_stage_run_transport_identity',
       ...fields,
     }).filter(([, value]) => value !== null)),
     authority_boundary: {
@@ -89,7 +72,8 @@ function stageRunCloseoutBindingRequirement(targetIdentity: JsonRecord) {
       can_generate_typed_blocker: false,
       can_write_domain_truth: false,
       can_close_domain_ready: false,
-      binding_is_identity_requirement_only: true,
+      identity_is_stale_reuse_and_wrong_target_guard_only: true,
+      can_block_next_stage_for_missing_identity_format: false,
     },
   };
 }
@@ -106,8 +90,8 @@ function domainDispatchRoute(attempt: JsonRecord, mode: 'record' | 'verify') {
   const sourceRef = stringValue(attempt.ref)
     ?? `/stage_attempt_workbench/attempts/${stageAttemptId}/domain_dispatch_evidence`;
   const targetIdentity = record(attempt.target_identity);
-  const closeoutBindingRequirement =
-    stageRunCloseoutBindingRequirement(targetIdentity);
+  const transportIdentityObservation =
+    stageRunTransportIdentityObservation(targetIdentity);
   const workspaceLocator = record(attempt.workspace_locator);
   const stageAttemptSourceFingerprint = stringValue(attempt.source_fingerprint);
   const actionId = `${requestId}:${mode}`;
@@ -125,7 +109,7 @@ function domainDispatchRoute(attempt: JsonRecord, mode: 'record' | 'verify') {
     ? buildDomainDispatchRecordPayloadArtifacts({
         domainId,
         stageAttemptId,
-        closeoutBindingRequirement,
+        transportIdentityObservation,
       })
     : null;
   const payloadTemplate = recordPayloadArtifacts?.payloadTemplate ?? null;
@@ -182,12 +166,12 @@ function domainDispatchRoute(attempt: JsonRecord, mode: 'record' | 'verify') {
           required_any_payload_refs: DOMAIN_DISPATCH_RECORD_REQUIRED_PAYLOAD_REFS,
           supplemental_payload_refs: DOMAIN_DISPATCH_SUPPLEMENTAL_PAYLOAD_REFS,
           evidence_refs_are_supplemental_context_only: true,
-          owner_delta_result_closeout_binding_should_match:
-            closeoutBindingRequirement.closeout_binding,
+          transport_identity_observation:
+            transportIdentityObservation.transport_identity,
         }
       : null,
     payload_workorder: payloadWorkorder,
-    required_closeout_binding: recordMode ? closeoutBindingRequirement : null,
+    transport_identity_observation: recordMode ? transportIdentityObservation : null,
     payload_template_policy: recordMode
       ? 'template_is_empty_by_design_replace_with_real_domain_app_or_live_refs_before_submit'
       : 'verify_route_uses_previously_recorded_opl_refs_only_receipt_no_payload_required',
@@ -227,7 +211,7 @@ function domainDispatchRoute(attempt: JsonRecord, mode: 'record' | 'verify') {
     workspace_locator: workspaceLocator,
     stage_attempt_source_fingerprint: stageAttemptSourceFingerprint,
     target_identity: targetIdentity,
-    target_closeout_binding: closeoutBindingRequirement.closeout_binding,
+    target_transport_identity: transportIdentityObservation.transport_identity,
     dispatch_identity_key: stringValue(attempt.dispatch_identity_key),
     dispatch_supersession_identity_key: stringValue(attempt.dispatch_supersession_identity_key),
     dispatch_identity_fields: record(attempt.dispatch_identity_fields),

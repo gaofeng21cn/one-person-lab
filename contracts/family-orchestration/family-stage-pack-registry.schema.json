@@ -73,7 +73,7 @@
         "stage_pack_hash",
         "stage_ids",
         "action_catalog_id",
-        "admission_status",
+        "conformance_status",
         "reusable_library_entry",
         "refs",
         "library_lifecycle",
@@ -92,7 +92,7 @@
         "action_catalog_id": {
           "type": ["string", "null"]
         },
-        "admission_status": {
+        "conformance_status": {
           "type": "string",
           "enum": ["admitted", "needs_contracts", "blocked"]
         },
@@ -368,7 +368,7 @@
           "stage_pack_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           "stage_ids": ["draft_authoring"],
           "action_catalog_id": "domain_stage_actions",
-          "admission_status": "admitted",
+          "conformance_status": "admitted",
           "reusable_library_entry": true,
           "refs": {
             "proof_bundle_ref": "opl://stage-packs/example-domain:example_stage_control_plane/proof-bundles/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",

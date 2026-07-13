@@ -1,6 +1,7 @@
+import crypto from 'node:crypto';
+
 import {
   assert,
-  canonicalAgentPackageId,
   createGitModuleRemoteFixture,
   execFileSync,
   fs,
@@ -13,10 +14,14 @@ import {
   test,
 } from './helpers.ts';
 import { assertJsonSchemaPayload } from '../../../../../src/kernel/schema-registry.ts';
+import {
+  normalizeCapabilityPackageManifest,
+  normalizeWorkflowProfilePackageManifest,
+} from '../../../../../src/modules/connect/agent-package-registry-parts/manifest-normalizers.ts';
 
 const publishedDistributionPayload = {
-  payload_kind: 'ghcr_oci_agent_package',
-  payload_ref: 'ghcr.io/gaofeng21cn/opl-agent-med-autoscience:latest',
+  payload_kind: 'ghcr_oci_opl_package',
+  payload_ref: 'ghcr.io/gaofeng21cn/one-person-lab-packages/mas:0.1.0-alpha.4',
   payload_digest_ref: `sha256:${'a'.repeat(64)}`,
   required_skill_pack_lock_refs: [
     'opl://agent-package-lock/mas-scholar-skills/0.1.0a4/managed-ghcr-capability-package',
@@ -24,32 +29,126 @@ const publishedDistributionPayload = {
   proof_status: 'published_release_receipt_bound',
   live_download_proof: false,
   installed_reload_proof: false,
-  oci_ref: 'ghcr.io/gaofeng21cn/opl-agent-med-autoscience:latest',
+  oci_ref: 'ghcr.io/gaofeng21cn/one-person-lab-packages/mas:latest-stable',
   oci_media_type: 'application/vnd.oci.image.manifest.v1+json',
-  immutable_tag: '0.1.0a4',
-  rolling_tag: 'latest',
-  promotion_policy: 'daily_candidate_gates_then_promote_latest',
+  immutable_tag: '0.1.0-alpha.4',
+  moving_tag: 'latest-stable',
+  promotion_policy: 'daily_candidate_gates_then_promote_latest_stable',
   install_truth: 'resolved_digest_lock',
 };
+
+function createOwnerPackageFixture(
+  repoName: string,
+  packageId: string,
+  ownerVersion: string,
+  kind: 'standard_agent' | 'capability_package' | 'workflow_profile' = 'standard_agent',
+) {
+  const pluginRoot = kind === 'standard_agent' ? `plugins/${repoName}` : '.';
+  const manifestRef = kind === 'capability_package'
+    ? 'contracts/opl_capability_package_manifest.json'
+    : kind === 'workflow_profile'
+      ? 'contracts/workflow-policy.json'
+      : 'contracts/opl_agent_package_manifest.json';
+  const ownerManifest = kind === 'workflow_profile'
+    ? { package: { id: packageId, version: ownerVersion, owner: packageId, kind: 'workflow_profile' } }
+    : {
+        surface_kind: kind === 'capability_package'
+          ? 'opl_capability_package_manifest.v2'
+          : 'opl_agent_package_manifest.v1',
+        ...(kind === 'standard_agent' ? { agent_id: packageId } : {}),
+        package_id: packageId,
+        version: ownerVersion,
+        ...(kind === 'capability_package' ? {
+          capability_abi: { id: 'mas-scholar-skills.v1' },
+          content_lock: { digest: `sha256:${'8'.repeat(64)}`, paths: [] },
+        } : {}),
+      };
+  const extraFiles: Record<string, string> = {
+    [manifestRef]: `${JSON.stringify(ownerManifest, null, 2)}\n`,
+    [`${pluginRoot}/.codex-plugin/plugin.json`.replace(/^\.\//, '')]: `${JSON.stringify({ name: repoName, version: ownerVersion }, null, 2)}\n`,
+  };
+  if (repoName === 'med-autoscience' || repoName === 'med-autogrant') {
+    extraFiles['pyproject.toml'] = `[project]\nname = "${repoName}"\nversion = "${ownerVersion}"\n`;
+  } else if (kind === 'standard_agent') {
+    extraFiles['package.json'] = `${JSON.stringify({ name: repoName, version: ownerVersion }, null, 2)}\n`;
+  }
+  return createGitModuleRemoteFixture(repoName, { extraFiles });
+}
 
 test('package archive builder writes channel manifest checksums git source and release discipline gate', () => {
   const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-out-'));
   const previousManifest = path.join(outDir, 'previous-manifest.json');
-  fs.writeFileSync(previousManifest, JSON.stringify({ opl_version: '26.4.30' }), 'utf8');
+  const previousScholarSkillsManifestJson = `${JSON.stringify({
+    ...parseJsonText(fs.readFileSync(
+      path.join(repoRoot, 'contracts/opl-framework/packages/mas-scholar-skills.json'),
+      'utf8',
+    )) as Record<string, unknown>,
+    version: '0.0.9',
+  }, null, 2)}\n`;
+  const previousScholarSkillsManifestSha256 = `sha256:${crypto.createHash('sha256').update(previousScholarSkillsManifestJson).digest('hex')}`;
+  const previousScholarSkillsPayloadJson = `${JSON.stringify({
+    ...parseJsonText(fs.readFileSync(
+      path.join(repoRoot, 'contracts/opl-framework/packages/payloads/mas-scholar-skills-0.1.1.json'),
+      'utf8',
+    )) as Record<string, unknown>,
+    package_version: '0.0.9',
+  }, null, 2)}\n`;
+  const previousScholarSkillsPayloadSha256 = `sha256:${crypto.createHash('sha256').update(previousScholarSkillsPayloadJson).digest('hex')}`;
+  const previousScholarSkillsVersion = {
+    package_version: '0.0.9',
+    capability_abi: 'mas-scholar-skills.v1',
+    selection_status: 'retained_history',
+    manifest_url: 'opl+oci://ghcr.io/gaofeng21cn/one-person-lab-packages/mas-scholar-skills:0.0.9#/package-manifest.json',
+    manifest_sha256: previousScholarSkillsManifestSha256,
+    manifest_json: previousScholarSkillsManifestJson,
+    package_manifest: {
+      ref: 'opl+oci://ghcr.io/gaofeng21cn/one-person-lab-packages/mas-scholar-skills:0.0.9#/package-manifest.json',
+      sha256: previousScholarSkillsManifestSha256,
+    },
+    content_digest: `sha256:${'2'.repeat(64)}`,
+    payload_digest: previousScholarSkillsPayloadSha256,
+    payload_manifest_json: previousScholarSkillsPayloadJson,
+    payload_manifest_sha256: previousScholarSkillsPayloadSha256,
+    source_artifact_ref: 'ghcr.io/gaofeng21cn/one-person-lab-packages/mas-scholar-skills:0.0.9',
+    dependency_package_ids: [],
+  };
+  fs.writeFileSync(previousManifest, JSON.stringify({
+    release_set_generation: '26.4.30',
+    packages: {
+      package_catalog: {
+        'mas-scholar-skills': {
+          package_id: 'mas-scholar-skills',
+          package_role: 'framework_capability_package',
+          selected_version: '0.0.9',
+          dependency_package_ids: [],
+          versions: [
+            previousScholarSkillsVersion,
+            previousScholarSkillsVersion,
+            {
+              ...previousScholarSkillsVersion,
+              package_version: '2.0.0',
+              capability_abi: 'mas-scholar-skills.v2',
+            },
+          ],
+        },
+      },
+    },
+  }), 'utf8');
 
   const fixtures = {
-    medautoscience: createGitModuleRemoteFixture('med-autoscience'),
-    medautogrant: createGitModuleRemoteFixture('med-autogrant'),
-    redcube: createGitModuleRemoteFixture('redcube-ai'),
-    oplmetaagent: createGitModuleRemoteFixture('opl-meta-agent'),
-    oplbookforge: createGitModuleRemoteFixture('opl-bookforge'),
-    scholarskills: createGitModuleRemoteFixture('mas-scholar-skills'),
+    medautoscience: createOwnerPackageFixture('med-autoscience', 'mas', '0.1.0a4'),
+    medautogrant: createOwnerPackageFixture('med-autogrant', 'mag', '0.1.0'),
+    redcube: createOwnerPackageFixture('redcube-ai', 'rca', '0.1.0'),
+    oplmetaagent: createOwnerPackageFixture('opl-meta-agent', 'oma', '0.1.0'),
+    oplbookforge: createOwnerPackageFixture('opl-bookforge', 'obf', '0.1.0'),
+    scholarskills: createOwnerPackageFixture('mas-scholar-skills', 'mas-scholar-skills', '0.1.1', 'capability_package'),
+    oplflow: createOwnerPackageFixture('opl-flow', 'opl-flow', '0.1.16', 'workflow_profile'),
   };
 
   const archiveBuilderOutput = execFileSync(process.execPath, [
     '--experimental-strip-types',
-    path.join(repoRoot, 'scripts/package-module-archives.mjs'),
-    '--version',
+    path.join(repoRoot, 'scripts/package-archives.mjs'),
+    '--release-set-generation',
     '26.4.31',
     '--owner',
     'gaofeng21cn',
@@ -64,17 +163,19 @@ test('package archive builder writes channel manifest checksums git source and r
     encoding: 'utf8',
     env: {
       ...process.env,
-      OPL_MODULE_PATH_MEDAUTOSCIENCE: fixtures.medautoscience.sourceRoot,
-      OPL_MODULE_PATH_MEDAUTOGRANT: fixtures.medautogrant.sourceRoot,
-      OPL_MODULE_PATH_REDCUBE: fixtures.redcube.sourceRoot,
-      OPL_MODULE_PATH_OPLMETAAGENT: fixtures.oplmetaagent.sourceRoot,
-      OPL_MODULE_PATH_OPLBOOKFORGE: fixtures.oplbookforge.sourceRoot,
-      OPL_MODULE_PATH_SCHOLARSKILLS: fixtures.scholarskills.sourceRoot,
+      OPL_PACKAGE_SOURCE_PATH_MAS: fixtures.medautoscience.sourceRoot,
+      OPL_PACKAGE_SOURCE_PATH_MAG: fixtures.medautogrant.sourceRoot,
+      OPL_PACKAGE_SOURCE_PATH_RCA: fixtures.redcube.sourceRoot,
+      OPL_PACKAGE_SOURCE_PATH_OMA: fixtures.oplmetaagent.sourceRoot,
+      OPL_PACKAGE_SOURCE_PATH_OBF: fixtures.oplbookforge.sourceRoot,
+      OPL_PACKAGE_SOURCE_PATH_MAS_SCHOLAR_SKILLS: fixtures.scholarskills.sourceRoot,
+      OPL_PACKAGE_SOURCE_PATH_OPL_FLOW: fixtures.oplflow.sourceRoot,
+      OPL_PACKAGE_RELEASE_GATE: 'test_owner_sha_release_gate',
     },
   });
   const archiveBuilderResult = parseJsonText(archiveBuilderOutput) as {
     clone_root: string;
-    modules_dir: string;
+    packages_dir: string;
     framework_dir: string;
     release_discipline_workflows: string[];
   };
@@ -91,7 +192,7 @@ test('package archive builder writes channel manifest checksums git source and r
   const relativeCloneRootFromOutDir = path.relative(outDir, archiveBuilderResult.clone_root);
 
   assert.equal(archiveBuilderResult.clone_root, defaultCloneRoot);
-  assert.equal(archiveBuilderResult.modules_dir, path.join(outDir, 'modules'));
+  assert.equal(archiveBuilderResult.packages_dir, path.join(outDir, 'packages'));
   assert.equal(archiveBuilderResult.framework_dir, path.join(outDir, 'framework'));
   assert.deepEqual(archiveBuilderResult.release_discipline_workflows, [
     '.github/workflows/packages.yml',
@@ -103,7 +204,9 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(fs.existsSync(path.join(outDir, '.github/workflows/daily-package-channel.yml')), true);
   assert.equal(relativeCloneRootFromOutDir === '' || !relativeCloneRootFromOutDir.startsWith('..'), false);
   assert.equal(path.relative(repoRoot, archiveBuilderResult.clone_root).startsWith('..'), true);
-  assert.equal(channelManifest.opl_version, manifest.opl_version);
+  assert.equal(channelManifest.release_set_generation, manifest.release_set_generation);
+  assert.equal(manifest.release_set.generation, '26.4.31');
+  assert.equal(manifest.release_set.package_count, 7);
   assert.equal(channelManifest.manifest_role, 'opl_release_channel_manifest');
   assert.notEqual(channelManifestSource, releaseManifestSource);
   assert.equal(channelManifest.packages.codex_default_profile.model_provider, 'gflab');
@@ -113,12 +216,16 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(JSON.stringify(channelManifest.packages.codex_default_profile).includes('experimental_bearer_token'), false);
   assert.equal(manifest.release_automation.rollback.previous_version, '26.4.30');
   assert.equal(manifest.release_automation.cleanup.retain_versions, 4);
-  assert.ok(manifest.release_automation.cleanup.protected_tags.includes('latest'));
+  assert.deepEqual(manifest.release_automation.cleanup.protected_tags, ['candidate', 'latest-stable']);
   assert.equal(manifest.release_automation.status, 'active_managed_ghcr_capability_packages');
   assert.equal(manifest.release_automation.package_lifecycle_status, 'active_release_channel');
   assert.equal(manifest.release_automation.workflow_trigger_policy, 'release_gate_workflow_call_or_manual_dispatch');
-  assert.equal(manifest.release_automation.remote_publish_status, 'release_gate_or_manual_dispatch_publishes_ghcr_packages');
-  assert.equal(manifest.packages.framework_core.homebrew_formula.package_name, 'opl-framework');
+  assert.equal(manifest.release_automation.remote_publish_status, 'publication_workflow_configured_pending_remote_verification');
+  assert.equal(manifest.packages.framework_core.homebrew_formula.surface_kind, 'opl_homebrew_formula_projection.v1');
+  assert.equal(manifest.packages.framework_core.homebrew_formula.formula_name, 'opl');
+  assert.equal(manifest.packages.framework_core.homebrew_formula.package_name, 'opl');
+  assert.equal(manifest.packages.framework_core.homebrew_formula.approval_status, 'owner_approved');
+  assert.equal(manifest.packages.framework_core.homebrew_formula.carrier_scope, 'framework_core_only');
   assert.equal(manifest.packages.framework_core.homebrew_formula.version, '26.4.31');
   assert.equal(
     manifest.packages.framework_core.homebrew_formula.source_head,
@@ -130,21 +237,144 @@ test('package archive builder writes channel manifest checksums git source and r
   );
   assert.equal(manifest.packages.framework_core.homebrew_formula.archive_kind, 'immutable_github_commit_archive');
   assert.equal(manifest.packages.framework_core.homebrew_formula.sha256_source, 'tap_sync_download_and_hash');
+  assert.equal(manifest.packages.framework_core.homebrew_formula.tap_generator_role, 'consume_projection_without_inference');
   assert.deepEqual(
     channelManifest.packages.framework_core.homebrew_formula,
     manifest.packages.framework_core.homebrew_formula,
   );
-  assert.equal(manifest.release_automation.release_manifest_publication_status, 'active_ghcr_channel_manifest');
+  assert.equal(manifest.release_automation.release_manifest_publication_status, 'configured_pending_remote_verification');
   assert.equal(manifest.release_automation.release_manifest_package.package_channel_status, 'active_release_channel');
   assert.equal(manifest.release_automation.daily_package_channel.status, 'active_change_detected_daily_publish');
   assert.equal(manifest.release_automation.daily_package_channel.no_change_behavior, 'skip_without_publish');
-  assert.equal(manifest.release_automation.daily_package_channel.version_template, '<utc_yy.m.d>');
+  assert.equal(manifest.release_automation.daily_package_channel.generation_template, '<utc_yy.m.d>');
   assert.equal(manifest.release_automation.daily_package_channel.force_publish_input, 'force_publish');
   assert.equal(Object.hasOwn(manifest.packages, 'webui_docker_image'), false);
   assert.equal(manifest.packages.framework_core.artifact, 'ghcr.io/gaofeng21cn/one-person-lab-framework:26.4.31');
   assert.match(manifest.packages.framework_core.source_archive.sha256, /^[0-9a-f]{64}$/);
   assert.match(manifest.packages.framework_core.source_git.head_sha, /^[0-9a-f]{40}$/);
   assert.equal(channelManifest.packages.framework_core.artifact, manifest.packages.framework_core.artifact);
+  assert.equal(channelManifest.package_catalog_surface_kind, 'opl_package_catalog.v1');
+  const packageCatalog = channelManifest.packages.package_catalog;
+  assert.equal(Object.keys(packageCatalog).length, 7);
+  for (const entry of Object.values(packageCatalog) as Array<Record<string, any>>) {
+    assert.equal(entry.homebrew_formula, undefined);
+    assert.equal(entry.homebrew_cask, undefined);
+    assert.equal(entry.versions.filter((version: Record<string, unknown>) => version.selection_status === 'selected_for_release_set').length, 1);
+    for (const version of entry.versions) {
+      assert.match(version.manifest_sha256, /^sha256:[0-9a-f]{64}$/);
+      assert.match(version.content_digest, /^sha256:[0-9a-f]{64}$/);
+      assert.match(version.payload_digest, /^sha256:[0-9a-f]{64}$/);
+      assert.equal(typeof version.source_artifact_ref, 'string');
+      assert.doesNotThrow(() => JSON.parse(version.manifest_json));
+      assert.equal(
+        version.manifest_sha256,
+        `sha256:${crypto.createHash('sha256').update(version.manifest_json).digest('hex')}`,
+      );
+      assert.doesNotThrow(() => JSON.parse(version.payload_manifest_json));
+      const normalizedPayload = JSON.parse(version.payload_manifest_json);
+      if (version.selection_status === 'selected_for_release_set') {
+        assert.equal(normalizedPayload.source_commit, version.owner_source_commit);
+      }
+      if (normalizedPayload.migration_source_commit) {
+        assert.notEqual(normalizedPayload.migration_source_commit, normalizedPayload.source_commit);
+      }
+      assert.equal(
+        version.payload_manifest_sha256,
+        `sha256:${crypto.createHash('sha256').update(version.payload_manifest_json).digest('hex')}`,
+      );
+      assert.equal(version.payload_digest, version.payload_manifest_sha256);
+    }
+  }
+  const masCatalog = packageCatalog.mas;
+  assert.equal(masCatalog.package_role, 'standard_agent');
+  assert.equal(masCatalog.selected_version, '0.1.0-alpha.4');
+  assert.deepEqual(masCatalog.dependency_package_ids, ['mas-scholar-skills']);
+  assert.equal(masCatalog.versions.length, 1);
+  assert.equal(masCatalog.versions[0].selection_status, 'selected_for_release_set');
+  assert.deepEqual(masCatalog.versions[0].dependency_package_ids, ['mas-scholar-skills']);
+  assert.equal(masCatalog.versions[0].capability_abi, null);
+  assert.match(masCatalog.versions[0].manifest_url, /^opl\+oci:\/\/ghcr\.io\/gaofeng21cn\/one-person-lab-packages\/mas:0\.1\.0-alpha\.4#\//);
+  assert.match(masCatalog.versions[0].manifest_sha256, /^sha256:[0-9a-f]{64}$/);
+  const embeddedMasManifest = JSON.parse(masCatalog.versions[0].manifest_json);
+  assert.equal(embeddedMasManifest.package_id, 'mas');
+  assert.equal(
+    masCatalog.versions[0].manifest_sha256,
+    `sha256:${crypto.createHash('sha256').update(masCatalog.versions[0].manifest_json).digest('hex')}`,
+  );
+  assert.equal(masCatalog.versions[0].package_manifest.ref, masCatalog.versions[0].manifest_url);
+  assert.equal(masCatalog.versions[0].package_manifest.sha256, masCatalog.versions[0].manifest_sha256);
+  assert.match(masCatalog.versions[0].content_digest, /^sha256:[0-9a-f]{64}$/);
+  assert.equal(
+    masCatalog.versions[0].content_digest,
+    embeddedMasManifest.distribution_payload?.payload_digest_ref ?? masCatalog.versions[0].manifest_sha256,
+  );
+  assert.match(masCatalog.versions[0].payload_digest, /^sha256:[0-9a-f]{64}$/);
+  assert.equal(
+    masCatalog.versions[0].source_artifact_ref,
+    'ghcr.io/gaofeng21cn/one-person-lab-packages/mas:0.1.0-alpha.4',
+  );
+  assert.equal(masCatalog.versions[0].owner_language_version, '0.1.0a4');
+  assert.equal(masCatalog.versions[0].owner_source_commit, fixtures.medautoscience.getHeadSha());
+  assert.equal(masCatalog.versions[0].release_gate, 'test_owner_sha_release_gate');
+  assert.match(masCatalog.versions[0].package_content_digest, /^sha256:[0-9a-f]{64}$/);
+  assert.equal(packageCatalog['opl-flow'].package_role, 'workflow_profile');
+  assert.equal(packageCatalog['opl-flow'].selected_version, '0.1.16');
+  assert.equal(packageCatalog['opl-flow'].homebrew_formula, undefined);
+  assert.match(channelManifest.package_catalog_digest, /^sha256:[0-9a-f]{64}$/);
+  const scholarSkillsCatalog = packageCatalog['mas-scholar-skills'];
+  assert.equal(scholarSkillsCatalog.package_role, 'framework_capability_package');
+  assert.equal(scholarSkillsCatalog.selected_version, '0.1.1');
+  assert.deepEqual(
+    scholarSkillsCatalog.versions.map((entry: Record<string, unknown>) => entry.package_version),
+    ['0.1.1', '0.0.9'],
+  );
+  assert.equal(
+    scholarSkillsCatalog.versions.some((entry: Record<string, unknown>) => entry.package_version === '2.0.0'),
+    false,
+  );
+  assert.equal(scholarSkillsCatalog.versions[0].capability_abi, 'mas-scholar-skills.v1');
+  assert.equal(
+    scholarSkillsCatalog.versions[0].content_digest,
+    `sha256:${'8'.repeat(64)}`,
+  );
+  assert.deepEqual(scholarSkillsCatalog.versions[1], previousScholarSkillsVersion);
+  const finalizeEnv = {
+    ...process.env,
+    OPL_PACKAGE_PROMOTION_TARGET: 'latest-stable',
+  };
+  for (const [index, packageId] of Object.keys(packageCatalog).entries()) {
+    execFileSync(process.execPath, [
+      path.join(repoRoot, 'scripts/finalize-package-channel-digests.mjs'),
+      '--release-manifest', releaseManifestPath,
+      '--channel-manifest', channelManifestPath,
+      '--package-id', packageId,
+      '--digest', `sha256:${String(index + 1).repeat(64)}`,
+    ], { encoding: 'utf8', env: finalizeEnv });
+  }
+  execFileSync(process.execPath, [
+    path.join(repoRoot, 'scripts/finalize-package-channel-digests.mjs'),
+    '--release-manifest', releaseManifestPath,
+    '--channel-manifest', channelManifestPath,
+    '--check',
+  ], { encoding: 'utf8', env: finalizeEnv });
+  const finalizedReleaseManifest = parseJsonText(fs.readFileSync(releaseManifestPath, 'utf8')) as Record<string, any>;
+  const finalizedChannelManifest = parseJsonText(fs.readFileSync(channelManifestPath, 'utf8')) as Record<string, any>;
+  assert.match(finalizedChannelManifest.package_catalog_digest, /^sha256:[0-9a-f]{64}$/);
+  assert.equal(finalizedReleaseManifest.release_channel, 'latest-stable');
+  assert.equal(finalizedReleaseManifest.release_set.target_channel, 'latest-stable');
+  assert.equal(finalizedReleaseManifest.release_set.bom_status, 'complete');
+  assert.equal(finalizedChannelManifest.release_channel, 'latest-stable');
+  assert.deepEqual(finalizedChannelManifest.release_set, finalizedReleaseManifest.release_set);
+  assert.deepEqual(
+    finalizedChannelManifest.packages.package_artifacts,
+    finalizedReleaseManifest.packages.package_artifacts,
+  );
+  assert.equal(
+    Object.values(finalizedChannelManifest.packages.package_catalog).every((entry: any) => (
+      entry.versions.find((version: any) => version.selection_status === 'selected_for_release_set').artifact_status === 'published_immutable'
+    )),
+    true,
+  );
   assert.match(checksums, /one-person-lab-framework-26\.4\.31\.tar\.gz/);
   assert.match(checksums, new RegExp(manifest.packages.framework_core.source_archive.sha256));
   assert.equal(manifest.packages.native_helper.channel_status, 'active_ghcr_oci_prebuild');
@@ -152,60 +382,64 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.ok(manifest.packages.native_helper.retention_policy.protected_tags.includes('latest'));
   assert.equal(manifest.packages.native_helper.required_gates.includes('ghcr_oci_archive_pushed'), true);
   assert.equal(
-    manifest.packages.modules.medautoscience.release_discipline.rollback.version,
+    manifest.packages.package_artifacts.mas.release_discipline.rollback.version,
     '26.4.30',
   );
   assert.equal(
-    manifest.packages.modules.medautoscience.release_discipline.package_channel_status,
+    manifest.packages.package_artifacts.mas.release_discipline.package_channel_status,
     'active_release_channel',
   );
   assert.equal(
-    manifest.packages.modules.medautoscience.release_discipline.package_lifecycle_status,
+    manifest.packages.package_artifacts.mas.release_discipline.package_lifecycle_status,
     'active_release_channel',
   );
   assert.equal(
-    manifest.packages.modules.medautoscience.release_discipline.workflow_trigger_policy,
+    manifest.packages.package_artifacts.mas.release_discipline.workflow_trigger_policy,
     'release_gate_workflow_call_or_manual_dispatch',
   );
   assert.equal(
-    manifest.packages.modules.medautoscience.source_git.head_sha,
+    manifest.packages.package_artifacts.mas.source_git.head_sha,
     fixtures.medautoscience.getHeadSha(),
   );
   assert.equal(
-    manifest.packages.modules.medautoscience.capability_dependencies[0].package_id,
+    manifest.packages.package_artifacts.mas.capability_dependencies[0].package_id,
     'mas-scholar-skills',
   );
-  assert.match(manifest.packages.modules.medautoscience.source_archive.sha256, /^[0-9a-f]{64}$/);
+  assert.match(manifest.packages.package_artifacts.mas.source_archive.sha256, /^[0-9a-f]{64}$/);
   assert.equal(
-    manifest.packages.modules.oplmetaagent.source_git.head_sha,
+    manifest.packages.package_artifacts.oma.source_git.head_sha,
     fixtures.oplmetaagent.getHeadSha(),
   );
   assert.equal(
-    manifest.packages.modules.oplmetaagent.remote_publish_status,
-    'published_to_ghcr_by_packages_workflow',
+    manifest.packages.package_artifacts.oma.remote_publish_status,
+    'publication_workflow_configured_pending_remote_verification',
   );
-  assert.match(manifest.packages.modules.oplmetaagent.source_archive.sha256, /^[0-9a-f]{64}$/);
+  assert.match(manifest.packages.package_artifacts.oma.source_archive.sha256, /^[0-9a-f]{64}$/);
   assert.equal(
-    manifest.packages.modules.oplbookforge.source_git.head_sha,
+    manifest.packages.package_artifacts.obf.source_git.head_sha,
     fixtures.oplbookforge.getHeadSha(),
   );
   assert.equal(
-    manifest.packages.modules.oplbookforge.codex_standalone_distribution.distribution_shape,
+    manifest.packages.package_artifacts.obf.codex_standalone_distribution.distribution_shape,
     'repo_carrier_source',
   );
-  assert.match(manifest.packages.modules.oplbookforge.source_archive.sha256, /^[0-9a-f]{64}$/);
+  assert.match(manifest.packages.package_artifacts.obf.source_archive.sha256, /^[0-9a-f]{64}$/);
   assert.equal(
-    manifest.packages.modules.scholarskills.source_git.head_sha,
+    manifest.packages.package_artifacts['mas-scholar-skills'].source_git.head_sha,
     fixtures.scholarskills.getHeadSha(),
   );
-  assert.equal(manifest.packages.modules.scholarskills.scope, 'framework_capability_package');
-  assert.deepEqual(manifest.packages.modules.scholarskills.dependency_of, ['medautoscience']);
-  assert.match(manifest.packages.modules.scholarskills.source_archive.sha256, /^[0-9a-f]{64}$/);
-  assert.match(checksums, /med-autoscience-26\.4\.31\.tar\.gz/);
-  assert.match(checksums, /opl-meta-agent-26\.4\.31\.tar\.gz/);
-  assert.match(checksums, /opl-bookforge-26\.4\.31\.tar\.gz/);
-  assert.match(checksums, /mas-scholar-skills-26\.4\.31\.tar\.gz/);
-  assert.match(checksums, new RegExp(manifest.packages.modules.medautoscience.source_archive.sha256));
+  assert.equal(manifest.packages.package_artifacts['mas-scholar-skills'].scope, 'framework_capability_package');
+  assert.equal(
+    manifest.packages.package_artifacts['mas-scholar-skills'].package_manifest_ref,
+    'contracts/opl-framework/packages/mas-scholar-skills.json',
+  );
+  assert.deepEqual(manifest.packages.package_artifacts['mas-scholar-skills'].dependency_of, ['mas']);
+  assert.match(manifest.packages.package_artifacts['mas-scholar-skills'].source_archive.sha256, /^[0-9a-f]{64}$/);
+  assert.match(checksums, /mas-0\.1\.0-alpha\.4\.tar\.gz/);
+  assert.match(checksums, /oma-0\.1\.0\.tar\.gz/);
+  assert.match(checksums, /obf-0\.1\.0\.tar\.gz/);
+  assert.match(checksums, /mas-scholar-skills-0\.1\.1\.tar\.gz/);
+  assert.match(checksums, new RegExp(manifest.packages.package_artifacts.mas.source_archive.sha256));
 
   execFileSync(process.execPath, [
     path.join(repoRoot, 'scripts/package-release-discipline.mjs'),
@@ -223,10 +457,10 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
     'utf8',
   )) as Record<string, any>;
   const manifests = Object.fromEntries(
-    ['mas', 'mag', 'rca', 'oma', 'bookforge'].map((id) => [
+    ['mas', 'mag', 'rca', 'oma', 'obf'].map((id) => [
       id,
       parseJsonText(fs.readFileSync(
-        path.join(repoRoot, `contracts/opl-framework/agent-packages/${id}.json`),
+        path.join(repoRoot, `contracts/opl-framework/packages/${id}.json`),
         'utf8',
       )) as Record<string, any>,
     ]),
@@ -234,12 +468,11 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
   const manifest = manifests.mas;
 
   assert.equal(manifest.schema_ref, 'contracts/opl-framework/agent-package-manifest.schema.json');
-  assert.equal(manifest.package_id, 'med-autoscience');
-  assert.equal(manifest.agent_id, 'med-autoscience');
-  assert.equal(manifest.version, '0.1.0a4');
+  assert.equal(manifest.package_id, 'mas');
+  assert.equal(manifest.agent_id, 'mas');
+  assert.equal(manifest.version, '0.1.0-alpha.4');
   assert.equal(manifest.carrier_source_role, 'codex_plugin_default_carrier_not_package_truth');
   assert.equal(schema.required.includes('distribution_payload'), false);
-  assert.equal(schema.properties.distribution_payload.properties.rolling_tag.const, 'latest');
   assert.equal(schema.properties.distribution_payload.properties.install_truth.const, 'resolved_digest_lock');
   assert.equal(schema.properties.distribution_payload.properties.payload_digest_ref.pattern, '^sha256:[0-9a-f]{64}$');
   assert.equal(manifest.package_core.core_kind, 'opl_agent_package_core');
@@ -247,18 +480,30 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
   assert.equal(manifest.carrier_adapters[0].carrier, 'codex_plugin');
   assert.equal(manifest.carrier_adapters[0].owns_package_core, false);
   assert.equal(schema.properties.capability_dependencies.items.properties.codex_distribution.const, 'bundled');
-  assert.equal(schema.properties.codex_surface.properties.standalone_distribution.const, 'repo_carrier_source');
+  assert.equal(schema.properties.codex_surface.properties.plugin_payload_manifest_url.type, 'string');
   assert.equal(schema.properties.package_core.properties.core_kind.const, 'opl_agent_package_core');
   assert.equal(schema.properties.carrier_adapters.items.properties.carrier.const, 'codex_plugin');
-  assert.deepEqual(manifest.codex_surface.required_skill_ids, ['med-autoscience', 'mas-scholar-skills']);
+  assert.deepEqual(manifest.codex_surface.required_skill_ids, ['med-autoscience']);
   assert.deepEqual(manifest.codex_surface.bundled_capability_package_ids, ['mas-scholar-skills']);
   assert.equal(manifests.mag.codex_surface.standalone_distribution, 'repo_carrier_source');
   assert.equal(manifests.rca.codex_surface.standalone_distribution, 'repo_carrier_source');
   assert.equal(manifests.oma.codex_surface.standalone_distribution, 'repo_carrier_source');
-  assert.equal(manifests.bookforge.codex_surface.standalone_distribution, 'repo_carrier_source');
+  assert.equal(manifests.obf.codex_surface.standalone_distribution, 'repo_carrier_source');
   assert.deepEqual(manifests.mag.capability_dependencies, []);
   assert.deepEqual(manifests.rca.capability_dependencies, []);
   Object.values(manifests).forEach((sourceManifest) => {
+    const payloadRef = sourceManifest.codex_surface.plugin_payload_manifest_url;
+    assert.match(payloadRef, /^payloads\/[a-z0-9.-]+\.json$/);
+    const payload = parseJsonText(fs.readFileSync(
+      path.join(repoRoot, 'contracts/opl-framework/packages', payloadRef),
+      'utf8',
+    )) as Record<string, any>;
+    assert.equal(payload.package_id, sourceManifest.package_id);
+    assert.equal(payload.package_version, sourceManifest.version);
+    assert.match(payload.source_commit, /^[0-9a-f]{40}$/);
+    assert.equal(payload.files.some((entry: Record<string, any>) => entry.path === '.codex-plugin/plugin.json'), true);
+    assert.equal(payload.files.some((entry: Record<string, any>) => entry.path === `skills/${sourceManifest.codex_surface.plugin_id}/SKILL.md`), true);
+    assert.equal(payload.files.every((entry: Record<string, any>) => /^sha256:[0-9a-f]{64}$/.test(entry.sha256)), true);
     assert.equal(Object.hasOwn(sourceManifest, 'distribution_payload'), false);
     assert.doesNotThrow(() => assertJsonSchemaPayload({
       schemaId: schema.$id,
@@ -289,17 +534,70 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
   );
 });
 
-test('first-party agent package manifest canonicalizes legacy package and assistant ids without changing plugin or skill ids', () => {
-  const normalized = normalizeFirstPartyAgentPackageManifest({
+test('MAS Scholar Skills provider manifest separates core Skill exports from module contract ids', () => {
+  const schemaPath = path.join(repoRoot, 'contracts/opl-framework/capability-package-manifest.schema.json');
+  const manifestPath = path.join(repoRoot, 'contracts/opl-framework/packages/mas-scholar-skills.json');
+  const schema = parseJsonText(fs.readFileSync(schemaPath, 'utf8')) as Record<string, any>;
+  const manifest = parseJsonText(fs.readFileSync(manifestPath, 'utf8')) as Record<string, any>;
+  assert.doesNotThrow(() => assertJsonSchemaPayload({
+    schemaId: schema.$id,
+    schema,
+    sourceRef: 'contracts/opl-framework/capability-package-manifest.schema.json',
+  }, manifest));
+  const normalized = normalizeCapabilityPackageManifest(manifest, manifestPath);
+  const payloadPath = path.join(path.dirname(manifestPath), manifest.codex_surface.plugin_payload_manifest_url);
+  const payload = parseJsonText(fs.readFileSync(payloadPath, 'utf8')) as Record<string, any>;
+  assert.equal(normalized.required_skill_ids.length, 35);
+  assert.equal(normalized.capability_provider?.module_export_ids.length, 8);
+  assert.equal(normalized.capability_provider?.exports.filter((entry) => entry.install_mode === 'core_required').length, 11);
+  assert.equal(normalized.capability_provider?.exports.filter((entry) => entry.install_mode !== 'core_required').length, 24);
+  assert.equal(normalized.optional_skill_refs.length, 1);
+  assert.equal(payload.package_id, manifest.package_id);
+  assert.equal(payload.package_version, manifest.version);
+  assert.match(payload.source_commit, /^[0-9a-f]{40}$/);
+  assert.deepEqual(
+    payload.files.map((entry: Record<string, any>) => entry.path).sort(),
+    manifest.content_lock.paths.slice().sort(),
+  );
+  assert.equal(payload.files.every((entry: Record<string, any>) => /^sha256:[0-9a-f]{64}$/.test(entry.sha256)), true);
+  assert.equal(payload.surface_kind, 'opl_package_payload_manifest.v1');
+  assert.equal(Object.hasOwn(payload, 'agent_id'), false);
+});
+
+test('OPL Flow is a workflow-profile Package without Agent identity', () => {
+  const schemaPath = path.join(repoRoot, 'contracts/opl-framework/workflow-profile-package-manifest.schema.json');
+  const manifestPath = path.join(repoRoot, 'contracts/opl-framework/packages/opl-flow.json');
+  const schema = parseJsonText(fs.readFileSync(schemaPath, 'utf8')) as Record<string, any>;
+  const manifest = parseJsonText(fs.readFileSync(manifestPath, 'utf8')) as Record<string, any>;
+  assert.doesNotThrow(() => assertJsonSchemaPayload({
+    schemaId: schema.$id,
+    schema,
+    sourceRef: 'contracts/opl-framework/workflow-profile-package-manifest.schema.json',
+  }, manifest));
+  const normalized = normalizeWorkflowProfilePackageManifest(manifest, manifestPath);
+  const payload = parseJsonText(fs.readFileSync(
+    path.join(path.dirname(manifestPath), manifest.codex_surface.plugin_payload_manifest_url),
+    'utf8',
+  )) as Record<string, any>;
+  assert.equal(manifest.surface_kind, 'opl_workflow_profile_package_manifest.v1');
+  assert.equal(Object.hasOwn(manifest, 'agent_id'), false);
+  assert.equal(normalized.agent_id, null);
+  assert.equal(normalized.profile_surface?.existing_profile_policy, 'semantic_merge_required');
+  assert.equal(payload.surface_kind, 'opl_package_payload_manifest.v1');
+  assert.equal(Object.hasOwn(payload, 'agent_id'), false);
+});
+
+test('first-party agent package manifest rejects non-canonical identity fields', () => {
+  const legacyManifest = {
     agent_id: 'mas',
-    package_id: 'medautoscience',
+    package_id: 'med-autoscience',
     version: '0.1.0a4',
     source: 'first_party',
     carrier_source_role: 'codex_plugin_default_carrier_not_package_truth',
     codex_surface: {
       plugin_id: 'med-autoscience',
       standalone_distribution: 'repo_carrier_source',
-      required_skill_ids: ['med-autoscience', 'mas-scholar-skills'],
+      required_skill_ids: ['med-autoscience'],
       bundled_capability_package_ids: ['mas-scholar-skills'],
     },
     capability_dependencies: [
@@ -312,7 +610,6 @@ test('first-party agent package manifest canonicalizes legacy package and assist
         opl_distribution: 'managed_dependency',
         developer_distribution: 'source_checkout',
         sync_scopes: ['workspace', 'quest'],
-        sync_command_refs: ['opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace <workspace-root> --json'],
         authority_boundary: {
           can_write_domain_truth: false,
           can_sign_owner_receipt: false,
@@ -321,21 +618,25 @@ test('first-party agent package manifest canonicalizes legacy package and assist
         },
       },
     ],
-  });
+  };
 
-  assert.equal(normalized.package_id, 'med-autoscience');
-  assert.equal(normalized.agent_id, 'med-autoscience');
-  assert.equal(normalized.codex_surface.plugin_id, 'med-autoscience');
-  assert.deepEqual(normalized.codex_surface.required_skill_ids, ['med-autoscience', 'mas-scholar-skills']);
-  assert.equal(normalized.package_core, null);
-  assert.equal(normalized.distribution_payload, null);
-  assert.deepEqual(normalized.carrier_adapters, []);
-  assert.equal(canonicalAgentPackageId('obf'), 'opl-bookforge');
+  assert.throws(
+    () => normalizeFirstPartyAgentPackageManifest(legacyManifest),
+    /(agent_id|package_id) must use its canonical id/,
+  );
+  assert.throws(
+    () => normalizeFirstPartyAgentPackageManifest({
+      ...legacyManifest,
+      agent_id: 'med-autoscience',
+      package_id: 'medautoscience',
+    }),
+    /(agent_id|package_id) must use its canonical id/,
+  );
 });
 
 test('MAS first-party agent package manifest fails closed for unsafe dependency declarations', () => {
   const manifest = parseJsonText(fs.readFileSync(
-    path.join(repoRoot, 'contracts/opl-framework/agent-packages/mas.json'),
+    path.join(repoRoot, 'contracts/opl-framework/packages/mas.json'),
     'utf8',
   )) as Record<string, any>;
   assert.deepEqual(normalizeFirstPartyAgentPackageManifest({
@@ -405,12 +706,13 @@ test('package archive builder refreshes reused managed clones before archiving s
   const gitConfigPath = path.join(os.tmpdir(), `opl-package-refresh-git-${Date.now()}.config`);
 
   const fixtures = {
-    medautoscience: createGitModuleRemoteFixture('med-autoscience'),
-    medautogrant: createGitModuleRemoteFixture('med-autogrant'),
-    redcube: createGitModuleRemoteFixture('redcube-ai'),
-    oplmetaagent: createGitModuleRemoteFixture('opl-meta-agent'),
-    oplbookforge: createGitModuleRemoteFixture('opl-bookforge'),
-    scholarskills: createGitModuleRemoteFixture('mas-scholar-skills'),
+    medautoscience: createOwnerPackageFixture('med-autoscience', 'mas', '0.1.0a4'),
+    medautogrant: createOwnerPackageFixture('med-autogrant', 'mag', '0.1.0'),
+    redcube: createOwnerPackageFixture('redcube-ai', 'rca', '0.1.0'),
+    oplmetaagent: createOwnerPackageFixture('opl-meta-agent', 'oma', '0.1.0'),
+    oplbookforge: createOwnerPackageFixture('opl-bookforge', 'obf', '0.1.0'),
+    scholarskills: createOwnerPackageFixture('mas-scholar-skills', 'mas-scholar-skills', '0.1.1', 'capability_package'),
+    oplflow: createOwnerPackageFixture('opl-flow', 'opl-flow', '0.1.16', 'workflow_profile'),
   };
   fs.writeFileSync(
     gitConfigPath,
@@ -425,17 +727,19 @@ test('package archive builder refreshes reused managed clones before archiving s
   const env = {
     ...process.env,
     GIT_CONFIG_GLOBAL: gitConfigPath,
-    OPL_MODULE_PATH_MEDAUTOGRANT: fixtures.medautogrant.sourceRoot,
-    OPL_MODULE_PATH_REDCUBE: fixtures.redcube.sourceRoot,
-    OPL_MODULE_PATH_OPLMETAAGENT: fixtures.oplmetaagent.sourceRoot,
-    OPL_MODULE_PATH_OPLBOOKFORGE: fixtures.oplbookforge.sourceRoot,
-    OPL_MODULE_PATH_SCHOLARSKILLS: fixtures.scholarskills.sourceRoot,
+    OPL_PACKAGE_SOURCE_PATH_MAG: fixtures.medautogrant.sourceRoot,
+    OPL_PACKAGE_SOURCE_PATH_RCA: fixtures.redcube.sourceRoot,
+    OPL_PACKAGE_SOURCE_PATH_OMA: fixtures.oplmetaagent.sourceRoot,
+    OPL_PACKAGE_SOURCE_PATH_OBF: fixtures.oplbookforge.sourceRoot,
+    OPL_PACKAGE_SOURCE_PATH_MAS_SCHOLAR_SKILLS: fixtures.scholarskills.sourceRoot,
+    OPL_PACKAGE_SOURCE_PATH_OPL_FLOW: fixtures.oplflow.sourceRoot,
+    OPL_PACKAGE_RELEASE_GATE: 'test_owner_sha_release_gate',
   };
 
   execFileSync(process.execPath, [
     '--experimental-strip-types',
-    path.join(repoRoot, 'scripts/package-module-archives.mjs'),
-    '--version',
+    path.join(repoRoot, 'scripts/package-archives.mjs'),
+    '--release-set-generation',
     '26.4.32',
     '--owner',
     'gaofeng21cn',
@@ -452,8 +756,8 @@ test('package archive builder refreshes reused managed clones before archiving s
 
   execFileSync(process.execPath, [
     '--experimental-strip-types',
-    path.join(repoRoot, 'scripts/package-module-archives.mjs'),
-    '--version',
+    path.join(repoRoot, 'scripts/package-archives.mjs'),
+    '--release-set-generation',
     '26.4.32',
     '--owner',
     'gaofeng21cn',
@@ -468,5 +772,5 @@ test('package archive builder refreshes reused managed clones before archiving s
   });
 
   const manifest = parseJsonText(fs.readFileSync(path.join(outDir, 'opl-release-manifest.json'), 'utf8')) as any;
-  assert.equal(manifest.packages.modules.medautoscience.source_git.head_sha, advancedHead);
+  assert.equal(manifest.packages.package_artifacts.mas.source_git.head_sha, advancedHead);
 });

@@ -46,7 +46,7 @@ test('agents conformance keeps StageRun strategy refs advisory and current owner
   const repoDir = buildReadyAgentRepo();
   const profilePath = path.join(repoDir, 'contracts', 'stage_run_kernel_profile.json');
   const profile = parseJsonText(fs.readFileSync(profilePath, 'utf8')) as Record<string, any>;
-  profile.launch_admission_policy = {
+  profile.stage_context_policy = {
     hard_blockers: [
       'identity',
       'owner',
@@ -87,8 +87,8 @@ test('agents conformance keeps StageRun strategy refs advisory and current owner
 
   assert.equal(report.status, 'passed');
   assert.equal(checks.status, 'passed');
-  assert.equal(checks.launch_admission_policy.advisory_refs_can_block_launch, false);
-  assert.deepEqual(checks.launch_admission_policy.advisory_refs, [
+  assert.equal(checks.stage_context_policy.advisory_refs_can_block_launch, false);
+  assert.deepEqual(checks.stage_context_policy.advisory_refs, [
     'prompt_refs',
     'skill_refs',
     'tool_affordance_refs',
@@ -106,7 +106,7 @@ test('agents conformance blocks StageRun profile that turns strategy refs or raw
   const repoDir = buildReadyAgentRepo();
   const profilePath = path.join(repoDir, 'contracts', 'stage_run_kernel_profile.json');
   const profile = parseJsonText(fs.readFileSync(profilePath, 'utf8')) as Record<string, any>;
-  profile.launch_admission_policy = {
+  profile.stage_context_policy = {
     hard_blockers: [
       'identity',
       'owner',
