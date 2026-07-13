@@ -22,14 +22,23 @@ function writeRegistry(
   }, null, 2)}\n`);
 }
 
-function registryBinding(bindingId: string, workspacePath: string) {
+function registryBinding(
+  bindingId: string,
+  workspacePath: string,
+  options: {
+    projectId?: string;
+    project?: string;
+    status?: 'active' | 'inactive' | 'archived';
+  } = {},
+) {
+  const status = options.status ?? 'inactive';
   return {
     binding_id: bindingId,
-    project_id: 'redcube',
-    project: 'redcube-ai',
+    project_id: options.projectId ?? 'redcube',
+    project: options.project ?? 'redcube-ai',
     workspace_path: workspacePath,
     label: bindingId,
-    status: 'inactive',
+    status,
     direct_entry: {
       command: null,
       manifest_command: null,
@@ -38,32 +47,30 @@ function registryBinding(bindingId: string, workspacePath: string) {
     },
     created_at: '2026-07-13T00:00:00.000Z',
     updated_at: '2026-07-13T00:00:00.000Z',
-    archived_at: null,
+    archived_at: status === 'archived' ? '2026-07-13T00:00:00.000Z' : null,
   };
 }
 
 function createRegistryPruneFixture() {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-prune-state-'));
-  const staleNodeTempPath = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-prune-node-'));
-  const staleShellTempPath = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-prune-shell.'));
-  const existingTestTempPath = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-prune-existing-'));
-  const missingNonTestPath = path.join(repoRoot, '.missing-opl-workspace-registry-fixture');
-  assert.equal(fs.existsSync(missingNonTestPath), false);
-  fs.rmSync(staleNodeTempPath, { recursive: true, force: true });
-  fs.rmSync(staleShellTempPath, { recursive: true, force: true });
+  const existingWorkspacePath = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-prune-existing-'));
+  const staleInactivePath = path.join(stateRoot, 'missing', 'inactive-workspace');
+  const staleArchivedPath = path.join(stateRoot, 'missing', 'archived-workspace');
+  const nonDirectoryPath = path.join(stateRoot, 'workspace-file');
+  fs.writeFileSync(nonDirectoryPath, 'not a workspace directory\n');
   writeRegistry(stateRoot, [
-    registryBinding('stale-node-temp', staleNodeTempPath),
-    registryBinding('stale-shell-temp', staleShellTempPath),
-    registryBinding('existing-test-temp', existingTestTempPath),
-    registryBinding('existing-real-workspace', repoRoot),
-    registryBinding('missing-non-test-workspace', missingNonTestPath),
+    registryBinding('stale-inactive', staleInactivePath),
+    registryBinding('stale-archived', staleArchivedPath, { status: 'archived' }),
+    registryBinding('existing-inactive', existingWorkspacePath),
+    registryBinding('existing-active', repoRoot, { status: 'active' }),
+    registryBinding('non-directory-inactive', nonDirectoryPath),
   ]);
   return {
     stateRoot,
-    existingTestTempPath,
+    existingWorkspacePath,
     cleanup: () => {
       fs.rmSync(stateRoot, { recursive: true, force: true });
-      fs.rmSync(existingTestTempPath, { recursive: true, force: true });
+      fs.rmSync(existingWorkspacePath, { recursive: true, force: true });
     },
   };
 }
@@ -101,7 +108,97 @@ test('workspace registry owns bind, list, and archive lifecycle only', () => {
   }
 });
 
-test('workspace registry prune defaults to dry-run and protects real or unrecognized paths', () => {
+test('workspace catalog lists all existing MAS workspaces while active remains only the default context', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-mas-multi-workspace-state-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-mas-multi-workspaces-'));
+  const workspaces = ['diabetes', 'pitnet', 'obesity'].map((name) => {
+    const workspacePath = path.join(workspaceRoot, name);
+    fs.mkdirSync(workspacePath);
+    return { name, workspacePath };
+  });
+  try {
+    writeRegistry(stateRoot, workspaces.map(({ name, workspacePath }, index) =>
+      registryBinding(`mas-${name}`, workspacePath, {
+        projectId: 'medautoscience',
+        project: 'med-autoscience',
+        status: index === 0 ? 'active' : 'inactive',
+      })));
+
+    const project = runCli(['workspace', 'list'], { OPL_STATE_DIR: stateRoot })
+      .workspace_catalog.projects.find((entry: { project_id: string }) =>
+        entry.project_id === 'medautoscience');
+    assert.equal(project.active_binding.binding_id, 'mas-diabetes');
+    assert.equal(project.bindings.length, 3);
+    assert.deepEqual(
+      project.bindings.map((entry: {
+        binding_id: string;
+        is_default_context: boolean;
+        workspace_path_currentness: { status: string };
+      }) => [
+        entry.binding_id,
+        entry.is_default_context,
+        entry.workspace_path_currentness.status,
+      ]),
+      [
+        ['mas-diabetes', true, 'current'],
+        ['mas-pitnet', false, 'current'],
+        ['mas-obesity', false, 'current'],
+      ],
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('workspace list, fleet, and report retain invalid-index bindings as catalog entries with separate health diagnostics', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-invalid-index-state-'));
+  const workspacePath = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-invalid-index-workspace-'));
+  try {
+    fs.writeFileSync(path.join(workspacePath, 'workspace_index.json'), '[]\n');
+    writeRegistry(stateRoot, registryBinding('invalid-index-binding', workspacePath, {
+      projectId: 'medautoscience',
+      project: 'med-autoscience',
+      status: 'active',
+    }));
+
+    const listedProject = runCli(['workspace', 'list'], { OPL_STATE_DIR: stateRoot })
+      .workspace_catalog.projects.find((entry: { project_id: string }) =>
+        entry.project_id === 'medautoscience');
+    assert.equal(listedProject.bindings.length, 1);
+    assert.equal(listedProject.bindings[0].status, 'active');
+    assert.equal(listedProject.bindings[0].workspace_path_currentness.status, 'current');
+    assert.equal('workspace_health' in listedProject.bindings[0], false);
+
+    const fleet = runCli(['workspace', 'fleet', 'report'], {
+      OPL_STATE_DIR: stateRoot,
+    }).workspace_fleet_report;
+    const fleetEntry = fleet.bindings.find((entry: { binding_id: string }) =>
+      entry.binding_id === 'invalid-index-binding');
+    assert.equal(fleetEntry.registry_binding.status, 'active');
+    assert.equal(fleetEntry.registry_binding.workspace_path_currentness.status, 'current');
+    assert.equal(fleetEntry.workspace_health.status, 'blocked');
+    assert.equal(
+      fleetEntry.workspace_health.findings.some((finding: { code: string }) =>
+        finding.code === 'workspace_index_shape_invalid'),
+      true,
+    );
+
+    const report = runCli(['workspace', 'report', '--workspace', workspacePath], {
+      OPL_STATE_DIR: stateRoot,
+    }).workspace_report;
+    assert.equal(report.report_status, 'diagnostic_only');
+    assert.equal(report.registry.catalog_status, 'bound');
+    assert.equal(report.registry.bindings[0].registry_status, 'active');
+    assert.equal(report.workspace_health.status, 'blocked');
+    assert.equal(report.current_project, null);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspacePath, { recursive: true, force: true });
+  }
+});
+
+test('workspace registry prune reports filesystem currentness without path-name heuristics', () => {
   const fixture = createRegistryPruneFixture();
   try {
     const registryFile = path.join(fixture.stateRoot, 'workspace-registry.json');
@@ -112,30 +209,33 @@ test('workspace registry prune defaults to dry-run and protects real or unrecogn
     ).workspace_registry_maintenance;
 
     assert.equal(maintenance.mode, 'dry_run');
+    assert.equal(maintenance.status, 'stale_bindings_detected');
     assert.equal(maintenance.mutation_applied, false);
     assert.equal(maintenance.backup, null);
     assert.deepEqual(maintenance.summary, {
       bindings_before: 5,
       prune_candidates: 2,
       pruned_bindings: 0,
+      active_binding_blockers: 0,
       bindings_after: 5,
-      protected_bindings: 3,
+      retained_bindings: 3,
     });
     assert.deepEqual(
       maintenance.candidates.map((entry: { binding_id: string }) => entry.binding_id).sort(),
-      ['stale-node-temp', 'stale-shell-temp'],
+      ['stale-archived', 'stale-inactive'],
     );
     assert.deepEqual(
-      maintenance.protected_bindings.map((entry: {
+      maintenance.retained_bindings.map((entry: {
         binding_id: string;
         retention_reason: string;
       }) => [entry.binding_id, entry.retention_reason]).sort(),
       [
-        ['existing-real-workspace', 'workspace_path_exists'],
-        ['existing-test-temp', 'workspace_path_exists'],
-        ['missing-non-test-workspace', 'not_recognized_as_opl_test_temporary_path'],
+        ['existing-active', 'workspace_path_exists'],
+        ['existing-inactive', 'workspace_path_exists'],
+        ['non-directory-inactive', 'path_exists_but_is_not_a_directory_or_is_unreadable'],
       ],
     );
+    assert.equal(maintenance.criteria.path_classification_uses_filesystem_state_only, true);
     assert.equal(fs.readFileSync(registryFile, 'utf8'), originalRegistry);
 
     const conflict = runCliFailure(
@@ -148,7 +248,7 @@ test('workspace registry prune defaults to dry-run and protects real or unrecogn
   }
 });
 
-test('workspace registry prune backs up before apply and is idempotent', () => {
+test('workspace registry prune backs up before apply, is idempotent, and can be rolled back byte-for-byte', () => {
   const fixture = createRegistryPruneFixture();
   try {
     const registryFile = path.join(fixture.stateRoot, 'workspace-registry.json');
@@ -171,10 +271,10 @@ test('workspace registry prune backs up before apply and is idempotent', () => {
     };
     assert.deepEqual(
       remaining.bindings.map((entry) => entry.binding_id).sort(),
-      ['existing-real-workspace', 'existing-test-temp', 'missing-non-test-workspace'],
+      ['existing-active', 'existing-inactive', 'non-directory-inactive'],
     );
     assert.equal(
-      remaining.bindings.some((entry) => entry.workspace_path === fixture.existingTestTempPath),
+      remaining.bindings.some((entry) => entry.workspace_path === fixture.existingWorkspacePath),
       true,
     );
 
@@ -187,8 +287,67 @@ test('workspace registry prune backs up before apply and is idempotent', () => {
     assert.equal(idempotent.summary.pruned_bindings, 0);
     assert.equal(idempotent.backup, null);
     assert.equal(fs.readFileSync(registryFile, 'utf8'), registryAfterApply);
+
+    fs.copyFileSync(applied.backup.path, registryFile);
+    assert.equal(fs.readFileSync(registryFile, 'utf8'), originalRegistry);
   } finally {
     fixture.cleanup();
+  }
+});
+
+test('workspace registry currentness keeps active missing bindings visible and fails closed on apply', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-active-missing-registry-'));
+  const activeMissingPath = path.join(stateRoot, 'missing-active-workspace');
+  const inactiveMissingPath = path.join(stateRoot, 'missing-inactive-workspace');
+  try {
+    writeRegistry(stateRoot, [
+      registryBinding('active-missing', activeMissingPath, {
+        projectId: 'medautoscience',
+        project: 'med-autoscience',
+        status: 'active',
+      }),
+      registryBinding('inactive-missing', inactiveMissingPath, {
+        projectId: 'medautoscience',
+        project: 'med-autoscience',
+      }),
+    ]);
+    const registryFile = path.join(stateRoot, 'workspace-registry.json');
+    const originalRegistry = fs.readFileSync(registryFile);
+    const dryRun = runCli(['workspace', 'maintenance', 'prune'], {
+      OPL_STATE_DIR: stateRoot,
+    }).workspace_registry_maintenance;
+    assert.equal(dryRun.status, 'blocked_active_binding_not_current');
+    assert.deepEqual(
+      dryRun.active_binding_blockers.map((entry: { binding_id: string }) => entry.binding_id),
+      ['active-missing'],
+    );
+    assert.deepEqual(
+      dryRun.candidates.map((entry: { binding_id: string }) => entry.binding_id),
+      ['inactive-missing'],
+    );
+    assert.deepEqual(fs.readFileSync(registryFile), originalRegistry);
+
+    const applyFailure = runCliFailure(['workspace', 'maintenance', 'prune', '--apply'], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    assert.equal(applyFailure.payload.error.code, 'contract_shape_invalid');
+    assert.equal(
+      applyFailure.payload.error.details.failure_code,
+      'active_workspace_binding_not_current',
+    );
+    assert.deepEqual(fs.readFileSync(registryFile), originalRegistry);
+    assert.equal(fs.existsSync(path.join(stateRoot, 'backups')), false);
+
+    const launchFailure = runCliFailure([
+      'domain', 'launch', '--project', 'medautoscience', '--dry-run',
+    ], { OPL_STATE_DIR: stateRoot });
+    assert.equal(launchFailure.payload.error.code, 'contract_shape_invalid');
+    assert.equal(
+      launchFailure.payload.error.details.failure_code,
+      'active_workspace_binding_not_current',
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
 

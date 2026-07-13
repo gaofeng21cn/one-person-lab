@@ -28,7 +28,11 @@ import {
   WORKSPACE_RESOURCE_INVENTORY_REF,
   writeJsonArtifact,
 } from './workspace-artifacts.ts';
-import { buildWorkspaceCatalog, type WorkspaceBinding } from './workspace-registry.ts';
+import {
+  buildWorkspaceCatalog,
+  inspectWorkspacePathCurrentness,
+  type WorkspaceBinding,
+} from './workspace-registry.ts';
 import {
   isWorkspaceProfileId,
   type TopologyProfile,
@@ -52,6 +56,11 @@ import {
   workspaceFleetReportStatus,
   workspaceFleetReportSummary,
 } from './workspace-lifecycle-parts/fleet-report.ts';
+import {
+  diagnosticOnlyWorkspaceReport,
+  workspaceHealthContext,
+  workspaceRegistryContext,
+} from './workspace-lifecycle-parts/registry-health.ts';
 
 function normalizeOptionalString(value: string | undefined | null) {
   const trimmed = value?.trim();
@@ -832,26 +841,50 @@ export function workspaceReport(
   contracts: FrameworkContracts,
   options: WorkspaceValidationOptions,
 ) {
-  const context = readValidatedWorkspaceIndex(options.workspacePath);
+  const workspacePathInput = normalizeOptionalString(options.workspacePath);
+  if (!workspacePathInput) {
+    throw new FrameworkContractError('cli_usage_error', 'Workspace report requires --workspace.', {
+      required: ['--workspace'],
+    });
+  }
+  const workspacePath = path.resolve(workspacePathInput);
   const doctor = doctorWorkspace(contracts, options).workspace_doctor;
+  const registryContext = workspaceRegistryContext(contracts, workspacePath);
+  if (doctor.blockers.length > 0) {
+    return {
+      version: 'g2',
+      contracts_context: {
+        contracts_dir: contracts.contractsDir,
+        contracts_root_source: contracts.contractsRootSource,
+      },
+      workspace_report: diagnosticOnlyWorkspaceReport(workspacePath, doctor, registryContext),
+    };
+  }
+  const context = readValidatedWorkspaceIndex(workspacePath);
   const updatedAt = doctor.checked_at;
+  const report = buildWorkspaceReport({
+    workspaceId: indexWorkspaceId(context.index, context.workspacePath),
+    title: indexTitle(context.index),
+    workspacePath: context.workspacePath,
+    agent: context.agent,
+    profile: context.profile,
+    projects: context.projects,
+    createdAt: indexCreatedAt(context.index, updatedAt),
+    updatedAt,
+    ...doctorFindingsForArtifacts(doctor),
+  });
   return {
     version: 'g2',
     contracts_context: {
       contracts_dir: contracts.contractsDir,
       contracts_root_source: contracts.contractsRootSource,
     },
-    workspace_report: buildWorkspaceReport({
-      workspaceId: indexWorkspaceId(context.index, context.workspacePath),
-      title: indexTitle(context.index),
-      workspacePath: context.workspacePath,
-      agent: context.agent,
-      profile: context.profile,
-      projects: context.projects,
-      createdAt: indexCreatedAt(context.index, updatedAt),
-      updatedAt,
-      ...doctorFindingsForArtifacts(doctor),
-    }),
+    workspace_report: {
+      ...report,
+      report_status: 'available',
+      registry: registryContext,
+      workspace_health: workspaceHealthContext(doctor),
+    },
   };
 }
 
@@ -861,6 +894,15 @@ function fleetEntryForBinding(
 ) {
   const workspacePath = binding.workspace_path;
   const reportCommand = `opl workspace report --workspace ${JSON.stringify(workspacePath)}`;
+  const registryBinding = {
+    binding_id: binding.binding_id,
+    project_id: binding.project_id,
+    project: binding.project,
+    status: binding.status,
+    is_default_context: binding.status === 'active',
+    workspace_path: workspacePath,
+    workspace_path_currentness: inspectWorkspacePathCurrentness(workspacePath),
+  };
   const base = {
     binding_id: binding.binding_id,
     project_id: binding.project_id,
@@ -871,12 +913,14 @@ function fleetEntryForBinding(
     workspace_report_ref: path.join(workspacePath, WORKSPACE_REPORT_REF),
     direct_entry_configured: Boolean(binding.direct_entry.command || binding.direct_entry.url),
     manifest_command_configured: Boolean(binding.direct_entry.manifest_command),
+    registry_binding: registryBinding,
   };
   if (binding.status === 'archived') {
     return {
       ...base,
       fleet_status: 'archived_binding',
       doctor_status: null,
+      workspace_health: null,
       blockers: [],
       current_project: null,
       project_lifecycle_counts: null,
@@ -884,12 +928,14 @@ function fleetEntryForBinding(
     };
   }
   const doctor = doctorWorkspace(contracts, { workspacePath }).workspace_doctor;
+  const workspaceHealth = workspaceHealthContext(doctor);
   const fleetStatus = fleetStatusForDoctor(doctor);
   if (fleetStatus === 'blocked') {
     return {
       ...base,
       fleet_status: 'blocked',
       doctor_status: doctor.status,
+      workspace_health: workspaceHealth,
       blockers: doctor.blockers,
       hard_blockers: doctor.hard_blockers,
       repairable_findings: doctor.repairable_findings,
@@ -900,10 +946,21 @@ function fleetEntryForBinding(
     };
   }
   const report = workspaceReport(contracts, { workspacePath }).workspace_report;
+  if (typeof report.workspace_id !== 'string' || !report.agent || !report.topology) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Workspace fleet report could not materialize a healthy workspace report after doctor passed.',
+      {
+        workspace_path: workspacePath,
+        doctor_status: doctor.status,
+      },
+    );
+  }
   return {
     ...base,
     fleet_status: fleetStatus,
     doctor_status: doctor.status,
+    workspace_health: workspaceHealth,
     blockers: doctor.blockers,
     hard_blockers: doctor.hard_blockers,
     repairable_findings: doctor.repairable_findings,

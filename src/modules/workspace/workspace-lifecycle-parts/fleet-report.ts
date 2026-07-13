@@ -50,6 +50,8 @@ export function unboundWorkspaceProjectFleetEntry(project: { project_id: string;
     workspace_path: null,
     workspace_report_command: null,
     workspace_report_ref: null,
+    registry_binding: null,
+    workspace_health: null,
     blockers: [],
   };
 }

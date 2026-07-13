@@ -12,8 +12,12 @@ test('every Node test batch receives a distinct runner-owned OPL_STATE_DIR', () 
   const captureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-test-lane-state-capture-'));
   const captureFile = path.join(captureRoot, 'state-dirs.txt');
   const callerStateDir = path.join(captureRoot, 'caller-state-must-not-be-used');
+  const callerRegistryFile = path.join(callerStateDir, 'workspace-registry.json');
+  const callerRegistryBytes = Buffer.from('{"version":"g2","bindings":[{"sentinel":true}]}\n');
 
   try {
+    fs.mkdirSync(callerStateDir, { recursive: true });
+    fs.writeFileSync(callerRegistryFile, callerRegistryBytes);
     const result = runNodeTestStep({
       kind: 'node-test',
       files: [
@@ -41,7 +45,7 @@ test('every Node test batch receives a distinct runner-owned OPL_STATE_DIR', () 
       assert.equal(fs.statSync(stateDir).isDirectory(), true);
       assert.equal(path.relative(os.tmpdir(), stateDir).startsWith('..'), false);
     }
-    assert.equal(fs.existsSync(callerStateDir), false);
+    assert.deepEqual(fs.readFileSync(callerRegistryFile), callerRegistryBytes);
     assert.equal(process.cwd(), repoRoot);
   } finally {
     fs.rmSync(captureRoot, { recursive: true, force: true });

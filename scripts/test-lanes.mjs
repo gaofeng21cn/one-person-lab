@@ -16,7 +16,7 @@ const pythonCacheRoot = process.env.OPL_REPO_TEMP_ROOT
 fs.mkdirSync(pythonCacheRoot, { recursive: true });
 const toolTempDir = path.join(pythonCacheRoot, 'tmp');
 fs.mkdirSync(toolTempDir, { recursive: true });
-let nodeTestStateRoot = null;
+let testLaneStateRoot = null;
 if (ownsPythonCacheRoot) {
   process.on('exit', () => {
     fs.rmSync(pythonCacheRoot, { recursive: true, force: true });
@@ -614,11 +614,11 @@ const stepRunners = {
   command: (step, context) => spawnStep(step.command, step.args, {
     ...context,
     stepKind: step.kind,
-  }),
+  }, { env: createTestStepEnv(step.env) }),
   npm: (step, context) => spawnStep(npmCommand(), step.args, {
     ...context,
     stepKind: step.kind,
-  }),
+  }, { env: createTestStepEnv(step.env) }),
   'node-test': runNodeTestStep,
 };
 
@@ -628,7 +628,7 @@ export function runNodeTestStep(step, context) {
       ...context,
       stepKind: step.kind,
       batchFiles: step.files,
-    }, { env: createNodeTestBatchEnv(step.env) });
+    }, { env: createTestStepEnv(step.env) });
   }
   const chunks = chunkFiles(step.files, step.batchSize);
   for (const [batchIndex, files] of chunks.entries()) {
@@ -638,7 +638,7 @@ export function runNodeTestStep(step, context) {
       batchIndex,
       batchCount: chunks.length,
       batchFiles: files,
-    }, { env: createNodeTestBatchEnv(step.env) });
+    }, { env: createTestStepEnv(step.env) });
     if (result.status !== 0) {
       return result;
     }
@@ -646,14 +646,14 @@ export function runNodeTestStep(step, context) {
   return { status: 0 };
 }
 
-function createNodeTestBatchEnv(stepEnv) {
-  if (!nodeTestStateRoot) {
-    nodeTestStateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-node-test-state-'));
+function createTestStepEnv(stepEnv = {}) {
+  if (!testLaneStateRoot) {
+    testLaneStateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-test-lane-state-'));
     process.on('exit', () => {
-      fs.rmSync(nodeTestStateRoot, { recursive: true, force: true });
+      fs.rmSync(testLaneStateRoot, { recursive: true, force: true });
     });
   }
-  const stateDir = fs.mkdtempSync(path.join(nodeTestStateRoot, 'batch-'));
+  const stateDir = fs.mkdtempSync(path.join(testLaneStateRoot, 'step-'));
   return {
     ...stepEnv,
     OPL_STATE_DIR: stateDir,

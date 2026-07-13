@@ -44,7 +44,7 @@ export function buildWorkspaceCommandSpecs(
         {
           command: 'workspace maintenance prune',
           usage: 'opl workspace maintenance prune [--dry-run|--apply]',
-          summary: 'Prune missing OPL test-temporary bindings with dry-run default and pre-apply backup.',
+          summary: 'Inspect registry currentness and prune missing non-active bindings with dry-run default and pre-apply backup.',
         },
         {
           command: 'workspace init',

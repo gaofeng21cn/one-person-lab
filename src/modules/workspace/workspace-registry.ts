@@ -1,12 +1,11 @@
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 import { createHash, randomUUID } from 'node:crypto';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { isRecord } from '../../kernel/contract-validation.ts';
-import { parseJsonText } from '../../kernel/json-file.ts';
+import { parseJsonText, writeJsonPayloadFile } from '../../kernel/json-file.ts';
 import { ensureOplStateDir } from '../../kernel/runtime-state-paths.ts';
 import {
   resolveStandardAgent,
@@ -91,7 +90,12 @@ type WorkspaceRegistryMaintenanceOptions = {
   apply?: boolean;
 };
 
-const OPL_TEST_TEMP_ENTRY_PATTERN = /^opl-[a-z0-9][a-z0-9-]*(?:-|\.)[A-Za-z0-9]{6}$/;
+export type WorkspacePathCurrentness = {
+  status: 'current' | 'missing' | 'not_directory' | 'unreadable';
+  path_exists: boolean;
+  is_directory: boolean;
+  cause: string | null;
+};
 
 function nowIso() {
   return new Date().toISOString();
@@ -186,49 +190,38 @@ function normalizeWorkspaceBinding(binding: Partial<WorkspaceBinding>): Workspac
 
 function writeWorkspaceRegistryFile(payload: WorkspaceRegistryFile) {
   const paths = ensureOplStateDir();
-  fs.writeFileSync(paths.workspace_registry_file, `${JSON.stringify(payload, null, 2)}\n`);
+  writeJsonPayloadFile(paths.workspace_registry_file, payload);
 }
 
 function sha256(value: Buffer | string) {
   return createHash('sha256').update(value).digest('hex');
 }
 
-function systemTemporaryRoots() {
-  const candidates = [
-    os.tmpdir(),
-    ...(process.platform === 'win32' ? [] : ['/tmp']),
-  ];
-  const roots = new Set<string>();
-  for (const candidate of candidates) {
-    roots.add(path.resolve(candidate));
-    if (fs.existsSync(candidate)) {
-      roots.add(fs.realpathSync(candidate));
-    }
-  }
-  return [...roots].sort((left, right) => right.length - left.length);
-}
-
-function recognizedTestTemporaryPath(workspacePath: string, temporaryRoots: string[]) {
-  const absolutePath = path.resolve(workspacePath);
-  for (const temporaryRoot of temporaryRoots) {
-    const relativePath = path.relative(temporaryRoot, absolutePath);
-    if (
-      !relativePath
-      || relativePath === '..'
-      || relativePath.startsWith(`..${path.sep}`)
-      || path.isAbsolute(relativePath)
-    ) {
-      continue;
-    }
-    const temporaryEntry = relativePath.split(path.sep)[0];
-    if (OPL_TEST_TEMP_ENTRY_PATTERN.test(temporaryEntry)) {
+export function inspectWorkspacePathCurrentness(workspacePath: string): WorkspacePathCurrentness {
+  try {
+    const stat = fs.statSync(workspacePath);
+    return {
+      status: stat.isDirectory() ? 'current' : 'not_directory',
+      path_exists: true,
+      is_directory: stat.isDirectory(),
+      cause: null,
+    };
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       return {
-        temporary_root: temporaryRoot,
-        temporary_entry: temporaryEntry,
+        status: 'missing',
+        path_exists: false,
+        is_directory: false,
+        cause: null,
       };
     }
+    return {
+      status: 'unreadable',
+      path_exists: fs.existsSync(workspacePath),
+      is_directory: false,
+      cause: error instanceof Error ? error.message : String(error),
+    };
   }
-  return null;
 }
 
 function createWorkspaceRegistryBackup(registryFile: string, sourceBytes: Buffer) {
@@ -239,7 +232,7 @@ function createWorkspaceRegistryBackup(registryFile: string, sourceBytes: Buffer
     backupRoot,
     `workspace-registry.${timestamp}.${randomUUID()}.json`,
   );
-  fs.copyFileSync(registryFile, backupFile, fs.constants.COPYFILE_EXCL);
+  fs.writeFileSync(backupFile, sourceBytes, { flag: 'wx' });
   return {
     path: backupFile,
     sha256: sha256(fs.readFileSync(backupFile)),
@@ -252,22 +245,39 @@ export function pruneWorkspaceRegistry(options: WorkspaceRegistryMaintenanceOpti
   const registry = readWorkspaceRegistryFile();
   const registryExists = fs.existsSync(paths.workspace_registry_file);
   const sourceBytes = registryExists ? fs.readFileSync(paths.workspace_registry_file) : null;
-  const temporaryRoots = systemTemporaryRoots();
   const assessments = registry.bindings.map((binding) => {
-    const pathExists = fs.existsSync(binding.workspace_path);
-    const temporaryPath = recognizedTestTemporaryPath(binding.workspace_path, temporaryRoots);
+    const currentness = inspectWorkspacePathCurrentness(binding.workspace_path);
     return {
       binding,
-      pathExists,
-      temporaryPath,
-      candidate: !pathExists && temporaryPath !== null,
+      currentness,
+      candidate: currentness.status === 'missing' && binding.status !== 'active',
+      activeBlocker: currentness.status !== 'current' && binding.status === 'active',
     };
   });
   const candidates = assessments.filter((assessment) => assessment.candidate);
-  const protectedBindings = assessments.filter((assessment) => !assessment.candidate);
+  const activeBlockers = assessments.filter((assessment) => assessment.activeBlocker);
+  const retainedBindings = assessments.filter((assessment) => !assessment.candidate);
   const apply = options.apply === true;
-  const mutationApplied = apply && candidates.length > 0;
+  const mutationApplied = apply && candidates.length > 0 && activeBlockers.length === 0;
   let backup = null;
+
+  if (apply && activeBlockers.length > 0) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Workspace registry prune is blocked because an active binding does not resolve to a live workspace directory.',
+      {
+        failure_code: 'active_workspace_binding_not_current',
+        registry_file: paths.workspace_registry_file,
+        mutation_applied: false,
+        active_binding_blockers: activeBlockers.map(({ binding, currentness }) => ({
+          binding_id: binding.binding_id,
+          project_id: binding.project_id,
+          workspace_path: binding.workspace_path,
+          workspace_path_currentness: currentness,
+        })),
+      },
+    );
+  }
 
   if (mutationApplied) {
     if (!sourceBytes) {
@@ -280,7 +290,7 @@ export function pruneWorkspaceRegistry(options: WorkspaceRegistryMaintenanceOpti
     backup = createWorkspaceRegistryBackup(paths.workspace_registry_file, sourceBytes);
     writeWorkspaceRegistryFile({
       version: 'g2',
-      bindings: protectedBindings.map((assessment) => assessment.binding),
+      bindings: retainedBindings.map((assessment) => assessment.binding),
     });
   }
 
@@ -290,8 +300,14 @@ export function pruneWorkspaceRegistry(options: WorkspaceRegistryMaintenanceOpti
   return {
     version: 'g2',
     workspace_registry_maintenance: {
+      surface_kind: 'opl_workspace_registry_currentness',
       action: 'prune',
       mode: apply ? 'apply' : 'dry_run',
+      status: activeBlockers.length > 0
+        ? 'blocked_active_binding_not_current'
+        : candidates.length > 0
+          ? 'stale_bindings_detected'
+          : 'current',
       mutation_applied: mutationApplied,
       no_changes_required: candidates.length === 0,
       state_dir: paths.state_dir,
@@ -301,43 +317,55 @@ export function pruneWorkspaceRegistry(options: WorkspaceRegistryMaintenanceOpti
       backup,
       criteria: {
         workspace_path_must_be_missing: true,
-        path_must_be_under_system_temporary_root: true,
-        temporary_root_entry_pattern: OPL_TEST_TEMP_ENTRY_PATTERN.source,
-        system_temporary_roots: temporaryRoots,
+        binding_must_not_be_active: true,
+        path_classification_uses_filesystem_state_only: true,
       },
       summary: {
         bindings_before: registry.bindings.length,
         prune_candidates: candidates.length,
         pruned_bindings: mutationApplied ? candidates.length : 0,
-        bindings_after: mutationApplied ? protectedBindings.length : registry.bindings.length,
-        protected_bindings: protectedBindings.length,
+        active_binding_blockers: activeBlockers.length,
+        bindings_after: mutationApplied ? retainedBindings.length : registry.bindings.length,
+        retained_bindings: retainedBindings.length,
       },
-      candidates: candidates.map(({ binding, temporaryPath }) => ({
+      candidates: candidates.map(({ binding, currentness }) => ({
         binding_id: binding.binding_id,
         project_id: binding.project_id,
         project: binding.project,
         status: binding.status,
         workspace_path: binding.workspace_path,
-        reasons: ['workspace_path_missing', 'recognized_opl_test_temporary_path'],
-        ...temporaryPath,
+        reason: 'workspace_path_missing_non_active_binding',
+        workspace_path_currentness: currentness,
       })),
-      protected_bindings: protectedBindings.map(({ binding, pathExists, temporaryPath }) => ({
+      active_binding_blockers: activeBlockers.map(({ binding, currentness }) => ({
         binding_id: binding.binding_id,
         project_id: binding.project_id,
         project: binding.project,
         status: binding.status,
         workspace_path: binding.workspace_path,
-        path_exists: pathExists,
-        retention_reason: pathExists
+        reason: 'active_binding_workspace_path_not_current',
+        workspace_path_currentness: currentness,
+      })),
+      retained_bindings: retainedBindings.map(({ binding, currentness, activeBlocker }) => ({
+        binding_id: binding.binding_id,
+        project_id: binding.project_id,
+        project: binding.project,
+        status: binding.status,
+        workspace_path: binding.workspace_path,
+        workspace_path_currentness: currentness,
+        retention_reason: currentness.status === 'current'
           ? 'workspace_path_exists'
-          : 'not_recognized_as_opl_test_temporary_path',
-        recognized_test_temporary_path: temporaryPath !== null,
+          : activeBlocker
+            ? 'active_binding_fail_closed'
+            : 'path_exists_but_is_not_a_directory_or_is_unreadable',
       })),
       authority_boundary: {
         deletes_existing_workspace_paths: false,
-        deletes_missing_non_test_bindings: false,
+        deletes_active_bindings: false,
+        removes_only_missing_non_active_registry_entries: true,
         default_mode: 'dry_run',
         apply_requires_prewrite_backup: true,
+        backup_is_byte_exact_and_retained_for_rollback: true,
       },
     },
   };
@@ -686,6 +714,11 @@ function buildProjectCatalogEntry(
     project_id: projectId,
     project: projectName,
     active_binding: activeBinding,
+    bindings: projectBindings.map((binding) => ({
+      ...binding,
+      is_default_context: binding.status === 'active',
+      workspace_path_currentness: inspectWorkspacePathCurrentness(binding.workspace_path),
+    })),
     inactive_bindings_count: inactiveCount,
     archived_bindings_count: archivedCount,
     bindings_count: {
@@ -749,6 +782,8 @@ function buildWorkspaceCatalogPayload(
         'A binding may carry direct-entry locators so OPL can hand off into a domain front desk without inventing one.',
         'Structured workspace locators let OPL derive project-specific direct-entry and manifest commands without promoting OPL into a domain runtime owner.',
         'When available, manifest_command points at the domain-owned machine-readable product-entry manifest for that bound workspace.',
+        'Every binding remains visible in its project catalog; active identifies only the default context and never the complete project inventory.',
+        'Registry binding status and workspace path currentness are catalog facts; workspace index health belongs to workspace report diagnostics.',
       ],
     },
   };
@@ -922,9 +957,27 @@ export function resolveWorkspaceBinding(projectId: string, explicitWorkspacePath
     return findBinding(registry, projectId, normalizeWorkspacePath(explicitWorkspacePath));
   }
 
-  return registry.bindings.find((binding) =>
-    binding.project_id === projectId && binding.status === 'active',
+  const binding = registry.bindings.find((entry) =>
+    entry.project_id === projectId && entry.status === 'active',
   ) ?? null;
+  if (!binding) {
+    return null;
+  }
+  const currentness = inspectWorkspacePathCurrentness(binding.workspace_path);
+  if (currentness.status !== 'current') {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Active workspace binding does not resolve to a live workspace directory.',
+      {
+        failure_code: 'active_workspace_binding_not_current',
+        binding_id: binding.binding_id,
+        project_id: binding.project_id,
+        workspace_path: binding.workspace_path,
+        workspace_path_currentness: currentness,
+      },
+    );
+  }
+  return binding;
 }
 
 export function resolveWorkspaceLocator(projectId: string, explicitWorkspacePath?: string) {

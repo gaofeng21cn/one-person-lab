@@ -37,7 +37,7 @@ function workspaceProfile(entry: WorkspaceAgentRegistryEntry): WorkspaceAgentPro
     : null;
   return {
     agent_id: entry.agent_id,
-    project_id: entry.target_domain_id,
+    project_id: entry.domain_id,
     project: entry.project,
     label: entry.label,
     workspace_kind: declared?.workspace_kind ?? 'standard_agent_workspace',

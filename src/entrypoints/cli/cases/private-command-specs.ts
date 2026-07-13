@@ -647,7 +647,7 @@ resume: {
     'workspace-maintenance-prune': {
       usage: 'opl workspace maintenance prune [--dry-run|--apply]',
       summary:
-        'Prune only missing OPL test-temporary workspace bindings; default to dry-run and back up the registry before apply.',
+        'Inspect registry currentness and prune only missing non-active bindings; default to dry-run and back up the registry before apply.',
       examples: [
         'opl workspace maintenance prune --dry-run',
         'opl workspace maintenance prune --apply',
