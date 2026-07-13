@@ -4,6 +4,7 @@ export type SourceClosureEntrypoint = {
   entrypoint_id: string;
   source_kind:
     | 'package_bin'
+    | 'package_export'
     | 'pyproject_script'
     | 'action_catalog'
     | 'handler_registry'

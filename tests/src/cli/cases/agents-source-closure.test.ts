@@ -136,6 +136,75 @@ test('agents source-closure resolves package, action, handler, and TypeScript ca
   assert.equal(report.reachable_symbols.some((symbol: { symbol: string }) => symbol.symbol === 'handle'), true);
 });
 
+test('agents source-closure discovers nested workspace package bins', () => {
+  const repoDir = buildRepo();
+  writeJson(path.join(repoDir, 'package.json'), {
+    name: 'sample-monorepo',
+    version: '0.0.0',
+    private: true,
+    workspaces: ['apps/*'],
+  });
+  writeJson(path.join(repoDir, 'apps', 'sample-cli', 'package.json'), {
+    name: '@sample/cli',
+    version: '0.0.0',
+    type: 'module',
+    bin: { sample: 'dist/cli.js' },
+  });
+  writeSource(repoDir, 'apps/sample-cli/src/cli.ts', [
+    "export function main() { return 'ok'; }",
+    'main();',
+    '',
+  ].join('\n'));
+
+  const report = runSourceClosure(repoDir).reports[0];
+  const nestedBin = report.entrypoints.find((entry: { entrypoint_id: string }) => (
+    entry.entrypoint_id === 'package_bin:apps/sample-cli/package.json#sample'
+  ));
+
+  assert.equal(report.status, 'passed');
+  assert.equal(nestedBin?.declared_ref, 'apps/sample-cli/package.json#/bin/sample');
+  assert.equal(nestedBin?.file, 'apps/sample-cli/src/cli.ts');
+  assert.equal(nestedBin?.resolution_status, 'resolved');
+});
+
+test('agents source-closure discovers nested workspace package exports', () => {
+  const repoDir = buildRepo();
+  writeJson(path.join(repoDir, 'package.json'), {
+    name: 'sample-monorepo',
+    version: '0.0.0',
+    private: true,
+    workspaces: ['packages/*'],
+  });
+  writeJson(path.join(repoDir, 'packages', 'sample-domain', 'package.json'), {
+    name: '@sample/domain',
+    version: '0.0.0',
+    type: 'module',
+    exports: { '.': './dist/index.js' },
+  });
+  writeSource(repoDir, 'packages/sample-domain/src/index.ts', [
+    "export { handle } from './handler.js';",
+    '',
+  ].join('\n'));
+  writeSource(repoDir, 'packages/sample-domain/src/handler.ts', [
+    "export function handle() { return 'ok'; }",
+    '',
+  ].join('\n'));
+
+  const report = runSourceClosure(repoDir).reports[0];
+  const packageExport = report.entrypoints.find((entry: { entrypoint_id: string }) => (
+    entry.entrypoint_id === 'package_export:packages/sample-domain/package.json#.'
+  ));
+
+  assert.equal(report.status, 'passed');
+  assert.equal(packageExport?.declared_ref, 'packages/sample-domain/package.json#/exports/.');
+  assert.equal(packageExport?.file, 'packages/sample-domain/src/index.ts');
+  assert.equal(packageExport?.resolution_status, 'resolved');
+  assert.equal(
+    report.reachable_symbols.some((symbol: { symbol: string }) => symbol.symbol === 'handle'),
+    true,
+  );
+});
+
 test('agents source-closure resolves Python pyproject scripts and relative calls', () => {
   const repoDir = buildRepo();
   writeSource(repoDir, 'pyproject.toml', [

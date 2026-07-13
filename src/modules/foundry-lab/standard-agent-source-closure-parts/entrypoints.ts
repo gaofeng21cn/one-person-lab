@@ -155,6 +155,21 @@ function registryHandlers(registry: JsonRecord): JsonRecord[] {
   } as JsonRecord));
 }
 
+function packageExportTargets(value: unknown, pointer: string[] = []): Array<{
+  pointer: string[];
+  target: string;
+}> {
+  if (typeof value === 'string') {
+    return value.endsWith('.d.ts') ? [] : [{ pointer, target: value }];
+  }
+  if (Array.isArray(value)) {
+    return value.flatMap((item, index) => packageExportTargets(item, [...pointer, String(index)]));
+  }
+  return Object.entries(record(value)).flatMap(([key, child]) => (
+    key === 'types' ? [] : packageExportTargets(child, [...pointer, key])
+  ));
+}
+
 export function discoverSourceClosureEntrypoints(
   repoDir: string,
   activeSourceFiles: string[],
@@ -168,21 +183,57 @@ export function discoverSourceClosureEntrypoints(
   const domainDescriptor = readJson(repoDir, 'contracts/domain_descriptor.json');
   const entries: SourceClosureEntrypoint[] = [];
 
-  const bins = typeof packageJson.bin === 'string'
-    ? { [typeof packageJson.name === 'string' ? packageJson.name : 'default']: packageJson.bin }
-    : record(packageJson.bin);
-  for (const [name, value] of Object.entries(bins)) {
-    if (typeof value !== 'string') {
-      continue;
+  const packageManifestPaths = repoFilePaths
+    .filter((file) => file === 'package.json' || file.endsWith('/package.json'))
+    .sort((left, right) => left.localeCompare(right));
+  for (const manifestPath of packageManifestPaths) {
+    const manifest = manifestPath === 'package.json'
+      ? packageJson
+      : readJson(repoDir, manifestPath);
+    const bins = typeof manifest.bin === 'string'
+      ? { [typeof manifest.name === 'string' ? manifest.name : 'default']: manifest.bin }
+      : record(manifest.bin);
+    for (const [name, value] of Object.entries(bins)) {
+      if (typeof value !== 'string') {
+        continue;
+      }
+      const manifestDir = path.posix.dirname(manifestPath);
+      const declaredBin = manifestDir === '.'
+        ? value
+        : path.posix.join(manifestDir, value);
+      const binding = commandBinding(`node ${declaredBin}`, packageScripts, activeFiles);
+      entries.push(entrypoint({
+        entrypoint_id: manifestPath === 'package.json'
+          ? `package_bin:${name}`
+          : `package_bin:${manifestPath}#${name}`,
+        source_kind: 'package_bin',
+        declared_ref: `${manifestPath}#/bin/${name}`,
+        ...binding,
+        action_id: null,
+      }));
     }
-    const binding = commandBinding(`node ${value}`, packageScripts, activeFiles);
-    entries.push(entrypoint({
-      entrypoint_id: `package_bin:${name}`,
-      source_kind: 'package_bin',
-      declared_ref: `package.json#/bin/${name}`,
-      ...binding,
-      action_id: null,
-    }));
+
+    for (const exported of packageExportTargets(manifest.exports)) {
+      const manifestDir = path.posix.dirname(manifestPath);
+      const declaredExport = manifestDir === '.'
+        ? exported.target
+        : path.posix.join(manifestDir, exported.target);
+      const file = sourceFileForDeclaredPath(declaredExport, activeFiles);
+      const exportId = exported.pointer.length > 0 ? exported.pointer.join('/') : '.';
+      const exportPointer = exported.pointer.length > 0
+        ? `/exports/${exported.pointer.join('/')}`
+        : '/exports';
+      entries.push(entrypoint({
+        entrypoint_id: `package_export:${manifestPath}#${exportId}`,
+        source_kind: 'package_export',
+        declared_ref: `${manifestPath}#${exportPointer}`,
+        file,
+        module_name: null,
+        symbol: '<module>',
+        hosted_by_opl: false,
+        action_id: null,
+      }));
+    }
   }
 
   for (const [name, callable] of Object.entries(pyprojectScripts)) {
