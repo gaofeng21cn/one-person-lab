@@ -432,7 +432,7 @@ test('agents source-closure fails closed on dynamic import and dispatch', () => 
   assert.equal(reasons.includes('dynamic_dispatch'), true);
 });
 
-test('agents source-closure never lets minimal authority audit authorize executor or runtime mutation', () => {
+test('agents source-closure routes process and network effects out of minimal authority functions', () => {
   const repoDir = buildRepo();
   const source = [
     "import fs from 'node:fs';",
@@ -440,7 +440,9 @@ test('agents source-closure never lets minimal authority audit authorize executo
     'function save_session(_id: string) { return true; }',
     'export function main() {',
     "  fs.writeFileSync('state.json', '{}');",
+    "  spawnSync('pandoc', ['input.md']);",
     "  spawnSync('codex', ['exec']);",
+    "  void fetch('https://example.invalid');",
     "  return save_session('session-1');",
     '}',
     'main();',
@@ -451,9 +453,15 @@ test('agents source-closure never lets minimal authority audit authorize executo
     file: 'src/cli.ts',
     symbol: 'main',
     source_digest: digest(source),
-    allowed_effects: ['filesystem_write', 'process_spawn', 'executor_invoke', 'runtime_state_mutation'],
+    allowed_effects: [
+      'filesystem_write',
+      'process_spawn',
+      'executor_invoke',
+      'network_access',
+      'runtime_state_mutation',
+    ],
     role: 'minimal_authority_function',
-    allowed_targets: ['state.json', 'codex'],
+    allowed_targets: ['state.json', 'pandoc', 'codex', 'https://example.invalid'],
   }]);
 
   const report = runSourceClosure(repoDir).reports[0];
@@ -462,6 +470,18 @@ test('agents source-closure never lets minimal authority audit authorize executo
   assert.equal(
     report.audit_mismatches.some((item: { mismatch_kind: string; effect_kind: string }) =>
       item.mismatch_kind === 'audit_role_effect_forbidden' && item.effect_kind === 'executor_invoke'
+    ),
+    true,
+  );
+  assert.equal(
+    report.audit_mismatches.some((item: { mismatch_kind: string; effect_kind: string }) =>
+      item.mismatch_kind === 'audit_role_effect_forbidden' && item.effect_kind === 'process_spawn'
+    ),
+    true,
+  );
+  assert.equal(
+    report.audit_mismatches.some((item: { mismatch_kind: string; effect_kind: string }) =>
+      item.mismatch_kind === 'audit_role_effect_forbidden' && item.effect_kind === 'network_access'
     ),
     true,
   );
@@ -669,7 +689,7 @@ test('agents source-closure requires literal targets and rejects glob or directo
     symbol: 'main',
     source_digest: digest(source),
     allowed_effects: ['process_spawn'],
-    role: 'minimal_authority_function',
+    role: 'developer_tool',
     allowed_targets: [],
   }]);
   const noTarget = runSourceClosure(repoDir).reports[0];
@@ -684,7 +704,7 @@ test('agents source-closure requires literal targets and rejects glob or directo
     symbol: 'main',
     source_digest: digest(source),
     allowed_effects: ['process_spawn'],
-    role: 'minimal_authority_function',
+    role: 'developer_tool',
     allowed_targets: ['pdftotext'],
   })));
   const broadPath = runSourceClosure(repoDir).reports[0];

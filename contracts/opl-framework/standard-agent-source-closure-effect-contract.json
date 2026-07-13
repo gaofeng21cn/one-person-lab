@@ -104,9 +104,11 @@
     "globally_forbidden_effects": [
       "executor_invoke"
     ],
-    "minimal_authority_function_policy": "Exact audit may admit domain-owned effects, but it cannot convert executor invocation or private lifecycle/session/queue mutation into a minimal authority function.",
+    "minimal_authority_function_policy": "Exact audit may admit domain-owned artifact and truth effects, but it cannot convert process execution, network transport, executor invocation, or private lifecycle/session/queue mutation into a minimal authority function. Process execution routes through an OPL native-helper carrier or Runway; network transport routes through OPL Connect.",
     "minimal_authority_forbidden_effects": [
+      "process_spawn",
       "executor_invoke",
+      "network_access",
       "runtime_state_mutation"
     ],
     "domain_native_helper_policy": {
