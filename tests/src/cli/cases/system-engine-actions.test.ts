@@ -170,7 +170,7 @@ exit 1
   }
 });
 
-test('builtin Codex update stages and atomically applies selected OPL runtime binary without global npm', () => {
+test('builtin Codex update stages selected OPL runtime binary for restart activation without global npm', () => {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-engine-runtime-update-'));
   const runtimeHome = path.join(fixtureRoot, 'runtime', 'current');
   const runtimeBin = path.join(runtimeHome, 'bin');
@@ -222,25 +222,32 @@ test('builtin Codex update stages and atomically applies selected OPL runtime bi
     assert.equal(output.engine_action.command_preview.includes('-g'), false);
     assert.match(output.engine_action.command_preview.join(' '), /--prefix/);
     assert.match(output.engine_action.note ?? '', /does not modify global Homebrew, npm, or system Codex/);
-    assert.equal(output.engine_action.system.core_engines.codex.version, 'codex-cli 0.134.0');
-    assert.equal(output.engine_action.system.core_engines.codex.latest_version_status, 'current');
-    assert.equal(output.engine_action.system.core_engines.codex.update_available, false);
+    assert.equal(output.engine_action.system.core_engines.codex.version, 'codex-cli 0.130.0');
+    assert.equal(output.engine_action.system.core_engines.codex.latest_version_status, 'outdated');
+    assert.equal(output.engine_action.system.core_engines.codex.update_available, true);
     assert.equal(
       output.engine_action.system.core_engines.codex.runtime_substrate_updater.global_toolchain_mutation_allowed,
       false,
     );
     assert.equal(
       output.engine_action.system.core_engines.codex.runtime_substrate_updater.latest_version_status,
-      'current',
+      'outdated',
     );
     assert.match(output.engine_action.stdout, /opl_runtime_substrate_update_receipt/);
     assert.match(output.engine_action.stdout, /codex-darwin-arm64/);
     assert.doesNotMatch(fs.readFileSync(npmLog, 'utf8'), / -g( |$)/);
-    assert.match(fs.readFileSync(runtimeCodex, 'utf8'), /0\.134\.0/);
-    assert.match(fs.readFileSync(runtimeRg, 'utf8'), /rg new/);
+    assert.match(fs.readFileSync(runtimeCodex, 'utf8'), /0\.130\.0/);
+    assert.match(fs.readFileSync(runtimeRg, 'utf8'), /rg old/);
     const receipt = parseRuntimeCodexUpdateReceipt(output.engine_action.stdout);
     assert.equal(receipt.surface_kind, 'opl_runtime_substrate_update_receipt');
-    assert.equal(receipt.update_strategy, 'app_owned_stage_verify_atomic_apply');
+    assert.equal(receipt.update_strategy, 'app_owned_stage_verify_restart_activate');
+    assert.equal(receipt.staged, true);
+    assert.equal(receipt.activated, false);
+    assert.equal(receipt.restart_required, true);
+    assert.equal(receipt.activation.status, 'pending_restart');
+    assert.match(fs.readFileSync(receipt.staged_runtime_binary_path, 'utf8'), /0\.134\.0/);
+    assert.match(fs.readFileSync(receipt.staged_runtime_rg_path, 'utf8'), /rg new/);
+    assert.equal(fs.existsSync(receipt.pending_metadata_path), true);
     assert.equal(receipt.global_toolchain_mutation_allowed, false);
     assert.equal(receipt.source_kind, 'platform_vendor_binary');
     assert.equal(
@@ -415,7 +422,9 @@ test('builtin Codex install explicitly materializes missing npm platform package
     );
     const receipt = parseRuntimeCodexUpdateReceipt(output.engine_action.stdout);
     assert.equal(receipt.surface_kind, 'opl_runtime_substrate_update_receipt');
-    assert.equal(receipt.update_strategy, 'app_owned_stage_verify_atomic_apply');
+    assert.equal(receipt.update_strategy, 'app_owned_stage_verify_restart_activate');
+    assert.equal(receipt.activated, true);
+    assert.equal(receipt.restart_required, false);
     assert.equal(receipt.global_toolchain_mutation_allowed, false);
     assert.equal(receipt.source_kind, 'platform_vendor_binary');
     assert.equal(receipt.explicit_platform_install.exit_code, 0);
