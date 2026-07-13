@@ -49,25 +49,27 @@ function workspaceProfile(entry: WorkspaceAgentRegistryEntry): WorkspaceAgentPro
   };
 }
 
-export const OPL_WORKSPACE_AGENT_PROFILES: WorkspaceAgentProfile[] = STANDARD_AGENT_REGISTRY
-  .filter((entry): entry is WorkspaceAgentRegistryEntry =>
-    entry.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP
-  )
-  .map(workspaceProfile);
+export function listWorkspaceAgentProfiles(): WorkspaceAgentProfile[] {
+  return STANDARD_AGENT_REGISTRY
+    .filter((entry): entry is WorkspaceAgentRegistryEntry =>
+      entry.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP
+    )
+    .map(workspaceProfile);
+}
 
 export function findWorkspaceAgentProfile(value: string | undefined) {
   const requested = value?.trim();
   if (!requested) {
     throw new FrameworkContractError('cli_usage_error', 'workspace init requires --agent.', {
       required: ['--agent'],
-      allowed_agents: OPL_WORKSPACE_AGENT_PROFILES.map((entry) => entry.agent_id),
+      allowed_agents: listWorkspaceAgentProfiles().map((entry) => entry.agent_id),
     });
   }
   const entry = resolveStandardAgent(requested);
   if (!entry || entry.series_membership !== STANDARD_AGENT_SERIES_MEMBERSHIP) {
     throw new FrameworkContractError('cli_usage_error', 'workspace init received an unknown OPL family agent.', {
       agent_id: requested,
-      allowed_agents: OPL_WORKSPACE_AGENT_PROFILES.map((entry) => entry.agent_id),
+      allowed_agents: listWorkspaceAgentProfiles().map((entry) => entry.agent_id),
     });
   }
   return workspaceProfile(entry);

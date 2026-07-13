@@ -8,12 +8,14 @@ import {
   STANDARD_AGENT_REGISTRY,
   STANDARD_AGENT_SERIES_MEMBERSHIP,
 } from '../../src/kernel/standard-agent-registry.ts';
+import { assertStandardAgentDescriptorIdentity } from '../../src/kernel/standard-agent-interface.ts';
 import { validateAgentWorkspaceNorm } from '../../src/modules/charter/contract-validators/agent-workspace-norm-contract.ts';
+import { readStandardAgentDescriptorForDomain } from '../../src/modules/connect/index.ts';
 import {
   buildAgentWorkspaceNormChecks,
   buildAgentWorkspaceNormProjection,
 } from '../../src/modules/workspace/agent-workspace-norm.ts';
-import { OPL_WORKSPACE_AGENT_PROFILES } from '../../src/modules/workspace/workspace-agent-defaults.ts';
+import { listWorkspaceAgentProfiles } from '../../src/modules/workspace/workspace-agent-defaults.ts';
 import { profileFromTopologyContract } from '../../src/modules/workspace/workspace-topology.ts';
 import { repoRoot } from './cli/helpers.ts';
 
@@ -41,8 +43,28 @@ test('workspace agent identity and supported agents derive from the standard-age
   });
   assert.equal('domain_topology_profiles' in rawContract, false);
   assert.deepEqual(contract.supported_agents, registryAgents.map((entry) => entry.agent_id));
+  const workspaceAgentProfiles = listWorkspaceAgentProfiles();
+  const expectedProfiles = registryAgents.map((entry) => {
+    const descriptor = readStandardAgentDescriptorForDomain(entry.target_domain_id);
+    const declared = descriptor
+      ? assertStandardAgentDescriptorIdentity(descriptor, {
+          project: entry.project,
+          domain_id: entry.target_domain_id,
+        }).interface.workspace_binding
+      : null;
+    return {
+      agent_id: entry.agent_id,
+      project_id: entry.target_domain_id,
+      project: entry.project,
+      workspace_kind: declared?.workspace_kind ?? 'standard_agent_workspace',
+      project_kind: declared?.project_kind ?? 'project',
+      default_workspace_id: declared?.default_workspace_id ?? `${entry.agent_id}-workspace`,
+      default_project_id: declared?.default_project_id ?? `${entry.agent_id}-001`,
+      default_profile_id: declared?.default_profile_id ?? 'one_off',
+    };
+  });
   assert.deepEqual(
-    OPL_WORKSPACE_AGENT_PROFILES.map((entry) => ({
+    workspaceAgentProfiles.map((entry) => ({
       agent_id: entry.agent_id,
       project_id: entry.project_id,
       project: entry.project,
@@ -52,19 +74,10 @@ test('workspace agent identity and supported agents derive from the standard-age
       default_project_id: entry.default_project_id,
       default_profile_id: entry.default_profile_id,
     })),
-    registryAgents.map((entry) => ({
-      agent_id: entry.agent_id,
-      project_id: entry.target_domain_id,
-      project: entry.project,
-      workspace_kind: 'standard_agent_workspace',
-      project_kind: 'project',
-      default_workspace_id: `${entry.agent_id}-workspace`,
-      default_project_id: `${entry.agent_id}-001`,
-      default_profile_id: 'one_off',
-    })),
+    expectedProfiles,
   );
 
-  for (const agent of OPL_WORKSPACE_AGENT_PROFILES) {
+  for (const agent of workspaceAgentProfiles) {
     const profile = profileFromTopologyContract(agent.default_profile_id);
     assert.deepEqual(
       buildAgentWorkspaceNormProjection({ contract, agentId: agent.agent_id }).domain_topology_profile,

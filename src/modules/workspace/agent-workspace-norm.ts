@@ -1,6 +1,6 @@
 import type { AgentWorkspaceNormContract } from '../../kernel/types.ts';
 import {
-  OPL_WORKSPACE_AGENT_PROFILES,
+  listWorkspaceAgentProfiles,
   type WorkspaceAgentId,
 } from './workspace-agent-defaults.ts';
 import {
@@ -20,7 +20,7 @@ function domainProfile(agentId: string | null | undefined) {
   if (!agentId) {
     return null;
   }
-  const agent = OPL_WORKSPACE_AGENT_PROFILES.find((entry) => entry.agent_id === agentId);
+  const agent = listWorkspaceAgentProfiles().find((entry) => entry.agent_id === agentId);
   if (!agent) {
     return null;
   }

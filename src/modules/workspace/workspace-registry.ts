@@ -17,7 +17,7 @@ import {
 } from '../../kernel/standard-agent-interface.ts';
 import { readPackageManagedStandardAgentDescriptor } from '../connect/index.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
-import { OPL_WORKSPACE_AGENT_PROFILES } from './workspace-agent-defaults.ts';
+import { listWorkspaceAgentProfiles } from './workspace-agent-defaults.ts';
 
 type BoundWorkspaceLocator = {
   surface_kind: string;
@@ -185,7 +185,7 @@ function allowedProjects(contracts: FrameworkContracts) {
     project: domain.project,
   }));
   const projectIds = new Set(['opl', ...domainProjects.map((entry) => entry.project_id)]);
-  const generatedAgentProjects = OPL_WORKSPACE_AGENT_PROFILES
+  const generatedAgentProjects = listWorkspaceAgentProfiles()
     .filter((entry) => !projectIds.has(entry.project_id))
     .map((entry) => ({
       project_id: entry.project_id,
