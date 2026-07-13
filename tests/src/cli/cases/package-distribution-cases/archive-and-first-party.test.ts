@@ -115,7 +115,7 @@ test('package archive builder writes channel manifest checksums git source and r
   const previousScholarSkillsManifestSha256 = `sha256:${crypto.createHash('sha256').update(previousScholarSkillsManifestJson).digest('hex')}`;
   const previousScholarSkillsPayloadJson = `${JSON.stringify({
     ...parseJsonText(fs.readFileSync(
-      path.join(repoRoot, 'contracts/opl-framework/packages/payloads/mas-scholar-skills-0.1.1.json'),
+      path.join(repoRoot, 'contracts/opl-framework/packages/payloads/mas-scholar-skills-0.2.0.json'),
       'utf8',
     )) as Record<string, unknown>,
     package_version: '0.0.9',
@@ -163,12 +163,12 @@ test('package archive builder writes channel manifest checksums git source and r
   }), 'utf8');
 
   const fixtures = {
-    medautoscience: createOwnerPackageFixture('med-autoscience', 'mas', '0.1.0'),
-    medautogrant: createOwnerPackageFixture('med-autogrant', 'mag', '0.2.0'),
-    redcube: createOwnerPackageFixture('redcube-ai', 'rca', '0.1.1'),
-    oplmetaagent: createOwnerPackageFixture('opl-meta-agent', 'oma', '0.1.1'),
-    oplbookforge: createOwnerPackageFixture('opl-bookforge', 'obf', '0.1.0'),
-    scholarskills: createOwnerPackageFixture('mas-scholar-skills', 'mas-scholar-skills', '0.1.1', 'capability_package'),
+    medautoscience: createOwnerPackageFixture('med-autoscience', 'mas', '0.2.1'),
+    medautogrant: createOwnerPackageFixture('med-autogrant', 'mag', '0.2.1'),
+    redcube: createOwnerPackageFixture('redcube-ai', 'rca', '0.2.2'),
+    oplmetaagent: createOwnerPackageFixture('opl-meta-agent', 'oma', '0.2.1'),
+    oplbookforge: createOwnerPackageFixture('opl-bookforge', 'obf', '0.2.1'),
+    scholarskills: createOwnerPackageFixture('mas-scholar-skills', 'mas-scholar-skills', '0.2.0', 'capability_package'),
     oplflow: createOwnerPackageFixture('opl-flow', 'opl-flow', '0.1.18', 'workflow_profile'),
   };
   const ownerSourceEnv = {
@@ -278,11 +278,11 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(manifest.release_set.component_count, 9);
   assert.equal(manifest.release_set.components.packages.package_count, 7);
   assert.equal(manifest.release_set.components.app.version, '26.7.12');
-  assert.equal(manifest.packages.package_artifacts.mag.package_version, '0.2.0');
-  assert.equal(manifest.release_set.components.packages.members.mag.version, '0.2.0');
+  assert.equal(manifest.packages.package_artifacts.mag.package_version, '0.2.1');
+  assert.equal(manifest.release_set.components.packages.members.mag.version, '0.2.1');
   assert.equal(
     manifest.release_set.components.packages.members.mag.artifact_ref,
-    'ghcr.io/gaofeng21cn/one-person-lab-packages/mag:0.2.0',
+    'ghcr.io/gaofeng21cn/one-person-lab-packages/mag:0.2.1',
   );
   assert.equal(channelManifest.manifest_role, 'opl_release_channel_manifest');
   assert.notEqual(channelManifestSource, releaseManifestSource);
@@ -397,13 +397,13 @@ test('package archive builder writes channel manifest checksums git source and r
   }
   const masCatalog = packageCatalog.mas;
   assert.equal(masCatalog.package_role, 'standard_agent');
-  assert.equal(masCatalog.selected_version, '0.1.0');
+  assert.equal(masCatalog.selected_version, '0.2.1');
   assert.deepEqual(masCatalog.dependency_package_ids, ['mas-scholar-skills']);
   assert.equal(masCatalog.versions.length, 1);
   assert.equal(masCatalog.versions[0].selection_status, 'selected_for_release_set');
   assert.deepEqual(masCatalog.versions[0].dependency_package_ids, ['mas-scholar-skills']);
   assert.equal(masCatalog.versions[0].capability_abi, null);
-  assert.match(masCatalog.versions[0].manifest_url, /^opl\+oci:\/\/ghcr\.io\/gaofeng21cn\/one-person-lab-packages\/mas:0\.1\.0#\//);
+  assert.match(masCatalog.versions[0].manifest_url, /^opl\+oci:\/\/ghcr\.io\/gaofeng21cn\/one-person-lab-packages\/mas:0\.2\.1#\//);
   assert.match(masCatalog.versions[0].manifest_sha256, /^sha256:[0-9a-f]{64}$/);
   const embeddedMasManifest = JSON.parse(masCatalog.versions[0].manifest_json);
   assert.equal(embeddedMasManifest.package_id, 'mas');
@@ -421,9 +421,9 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.match(masCatalog.versions[0].payload_digest, /^sha256:[0-9a-f]{64}$/);
   assert.equal(
     masCatalog.versions[0].source_artifact_ref,
-    'ghcr.io/gaofeng21cn/one-person-lab-packages/mas:0.1.0',
+    'ghcr.io/gaofeng21cn/one-person-lab-packages/mas:0.2.1',
   );
-  assert.equal(masCatalog.versions[0].owner_language_version, '0.1.0');
+  assert.equal(masCatalog.versions[0].owner_language_version, '0.2.1');
   assert.equal(masCatalog.versions[0].owner_source_commit, fixtures.medautoscience.getHeadSha());
   assert.equal(masCatalog.versions[0].release_gate, 'test_owner_sha_release_gate');
   assert.match(masCatalog.versions[0].package_content_digest, /^sha256:[0-9a-f]{64}$/);
@@ -433,10 +433,10 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.match(channelManifest.package_catalog_digest, /^sha256:[0-9a-f]{64}$/);
   const scholarSkillsCatalog = packageCatalog['mas-scholar-skills'];
   assert.equal(scholarSkillsCatalog.package_role, 'framework_capability_package');
-  assert.equal(scholarSkillsCatalog.selected_version, '0.1.1');
+  assert.equal(scholarSkillsCatalog.selected_version, '0.2.0');
   assert.deepEqual(
     scholarSkillsCatalog.versions.map((entry: Record<string, unknown>) => entry.package_version),
-    ['0.1.1', '0.0.9'],
+    ['0.2.0', '0.0.9'],
   );
   assert.equal(
     scholarSkillsCatalog.versions.some((entry: Record<string, unknown>) => entry.package_version === '2.0.0'),
@@ -600,11 +600,12 @@ test('package archive builder writes channel manifest checksums git source and r
   );
   assert.deepEqual(manifest.packages.package_artifacts['mas-scholar-skills'].dependency_of, ['mas']);
   assert.match(manifest.packages.package_artifacts['mas-scholar-skills'].source_archive.sha256, /^[0-9a-f]{64}$/);
-  assert.match(checksums, /mas-0\.1\.0\.tar\.gz/);
-  assert.match(checksums, /oma-0\.1\.1\.tar\.gz/);
-  assert.match(checksums, /rca-0\.1\.1\.tar\.gz/);
-  assert.match(checksums, /obf-0\.1\.0\.tar\.gz/);
-  assert.match(checksums, /mas-scholar-skills-0\.1\.1\.tar\.gz/);
+  assert.match(checksums, /mas-0\.2\.1\.tar\.gz/);
+  assert.match(checksums, /mag-0\.2\.1\.tar\.gz/);
+  assert.match(checksums, /oma-0\.2\.1\.tar\.gz/);
+  assert.match(checksums, /rca-0\.2\.2\.tar\.gz/);
+  assert.match(checksums, /obf-0\.2\.1\.tar\.gz/);
+  assert.match(checksums, /mas-scholar-skills-0\.2\.0\.tar\.gz/);
   assert.match(checksums, new RegExp(manifest.packages.package_artifacts.mas.source_archive.sha256));
 
   execFileSync(process.execPath, [
@@ -618,9 +619,9 @@ test('package archive builder writes channel manifest checksums git source and r
 
   const prereleaseManifest = structuredClone(manifest);
   const prereleaseArtifact = prereleaseManifest.packages.package_artifacts.mas;
-  prereleaseArtifact.package_version = '0.1.0-alpha.1';
-  prereleaseArtifact.artifact = prereleaseArtifact.artifact.replace(':0.1.0', ':0.1.0-alpha.1');
-  prereleaseManifest.release_set.components.packages.members.mas.package_version = '0.1.0-alpha.1';
+  prereleaseArtifact.package_version = '0.2.1-alpha.1';
+  prereleaseArtifact.artifact = prereleaseArtifact.artifact.replace(':0.2.1', ':0.2.1-alpha.1');
+  prereleaseManifest.release_set.components.packages.members.mas.package_version = '0.2.1-alpha.1';
   prereleaseManifest.release_set.components.packages.members.mas.oci_artifact_ref = prereleaseArtifact.artifact;
   const prereleaseManifestPath = path.join(outDir, 'opl-release-manifest-prerelease.json');
   fs.writeFileSync(prereleaseManifestPath, `${JSON.stringify(prereleaseManifest, null, 2)}\n`);
@@ -699,11 +700,38 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
     ]),
   );
   const manifest = manifests.mas;
+  const expectedReleases: Record<string, { version: string; sourceCommit: string; payloadRef: string }> = {
+    mas: {
+      version: '0.2.1',
+      sourceCommit: 'b4345d90745cd4e8f94d76686d97d238150f98cb',
+      payloadRef: 'payloads/mas-0.2.1.json',
+    },
+    mag: {
+      version: '0.2.1',
+      sourceCommit: '199e5a52387c61bb5f9202f247d63264a02d1b5f',
+      payloadRef: 'payloads/mag-0.2.1.json',
+    },
+    rca: {
+      version: '0.2.2',
+      sourceCommit: '9d11a424137d737e45e07d8966cded66617b42ef',
+      payloadRef: 'payloads/rca-0.2.2.json',
+    },
+    oma: {
+      version: '0.2.1',
+      sourceCommit: '5f78190417c3e6ee19d1678c928099a6e4104b13',
+      payloadRef: 'payloads/oma-0.2.1.json',
+    },
+    obf: {
+      version: '0.2.1',
+      sourceCommit: 'b43789908fc00d40a9ca33b5c946c81df41a6ed9',
+      payloadRef: 'payloads/obf-0.2.1.json',
+    },
+  };
 
   assert.equal(manifest.schema_ref, 'contracts/opl-framework/agent-package-manifest.schema.json');
   assert.equal(manifest.package_id, 'mas');
   assert.equal(manifest.agent_id, 'mas');
-  assert.equal(manifest.version, '0.1.0');
+  assert.equal(manifest.version, '0.2.1');
   assert.equal(manifest.carrier_source_role, 'codex_plugin_default_carrier_not_package_truth');
   assert.equal(schema.required.includes('distribution_payload'), false);
   assert.equal(schema.properties.distribution_payload.properties.install_truth.const, 'resolved_digest_lock');
@@ -725,6 +753,9 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
   assert.deepEqual(manifests.mag.capability_dependencies, []);
   assert.deepEqual(manifests.rca.capability_dependencies, []);
   Object.values(manifests).forEach((sourceManifest) => {
+    const expectedRelease = expectedReleases[sourceManifest.package_id];
+    assert.equal(sourceManifest.version, expectedRelease.version);
+    assert.equal(sourceManifest.codex_surface.plugin_payload_manifest_url, expectedRelease.payloadRef);
     const payloadRef = sourceManifest.codex_surface.plugin_payload_manifest_url;
     assert.match(payloadRef, /^payloads\/[a-z0-9.-]+\.json$/);
     const payload = parseJsonText(fs.readFileSync(
@@ -733,7 +764,7 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
     )) as Record<string, any>;
     assert.equal(payload.package_id, sourceManifest.package_id);
     assert.equal(payload.package_version, sourceManifest.version);
-    assert.match(payload.source_commit, /^[0-9a-f]{40}$/);
+    assert.equal(payload.source_commit, expectedRelease.sourceCommit);
     assert.equal(payload.files.some((entry: Record<string, any>) => entry.path === '.codex-plugin/plugin.json'), true);
     assert.equal(payload.files.some((entry: Record<string, any>) => entry.path === `skills/${sourceManifest.codex_surface.plugin_id}/SKILL.md`), true);
     assert.equal(payload.files.every((entry: Record<string, any>) => /^sha256:[0-9a-f]{64}$/.test(entry.sha256)), true);
@@ -780,6 +811,9 @@ test('MAS Scholar Skills provider manifest separates core Skill exports from mod
   const normalized = normalizeCapabilityPackageManifest(manifest, manifestPath);
   const payloadPath = path.join(path.dirname(manifestPath), manifest.codex_surface.plugin_payload_manifest_url);
   const payload = parseJsonText(fs.readFileSync(payloadPath, 'utf8')) as Record<string, any>;
+  assert.equal(manifest.version, '0.2.0');
+  assert.equal(manifest.primary_consumer.version_requirement, '>=0.2.0 <0.3.0');
+  assert.equal(manifest.content_lock.digest, 'sha256:972585fa1150c15453fb2f85412142f06ee0be6670ea67e2ab09e2fbdea358ef');
   assert.equal(normalized.required_skill_ids.length, 35);
   assert.equal(normalized.capability_provider?.module_export_ids.length, 8);
   assert.equal(normalized.capability_provider?.exports.filter((entry) => entry.install_mode === 'core_required').length, 11);
@@ -787,7 +821,7 @@ test('MAS Scholar Skills provider manifest separates core Skill exports from mod
   assert.equal(normalized.optional_skill_refs.length, 1);
   assert.equal(payload.package_id, manifest.package_id);
   assert.equal(payload.package_version, manifest.version);
-  assert.match(payload.source_commit, /^[0-9a-f]{40}$/);
+  assert.equal(payload.source_commit, '1076c6d29dbbf306eb3dae4ce5d0186274c37dd1');
   assert.deepEqual(
     payload.files.map((entry: Record<string, any>) => entry.path).sort(),
     manifest.content_lock.paths.slice().sort(),
@@ -813,10 +847,13 @@ test('OPL Flow is a workflow-profile Package without Agent identity', () => {
     'utf8',
   )) as Record<string, any>;
   assert.equal(manifest.surface_kind, 'opl_workflow_profile_package_manifest.v1');
+  assert.equal(manifest.version, '0.1.18');
+  assert.equal(manifest.codex_surface.carrier_source_commit, 'b1beed858575af2fb587261a412aaa7a76e60db1');
   assert.equal(Object.hasOwn(manifest, 'agent_id'), false);
   assert.equal(normalized.agent_id, null);
   assert.equal(normalized.profile_surface?.existing_profile_policy, 'semantic_merge_required');
   assert.equal(payload.surface_kind, 'opl_package_payload_manifest.v1');
+  assert.equal(payload.source_commit, 'b1beed858575af2fb587261a412aaa7a76e60db1');
   assert.equal(Object.hasOwn(payload, 'agent_id'), false);
 });
 
@@ -939,12 +976,12 @@ test('package archive builder refreshes reused managed clones before archiving s
   const gitConfigPath = path.join(os.tmpdir(), `opl-package-refresh-git-${Date.now()}.config`);
 
   const fixtures = {
-    medautoscience: createOwnerPackageFixture('med-autoscience', 'mas', '0.1.0'),
-    medautogrant: createOwnerPackageFixture('med-autogrant', 'mag', '0.1.0'),
-    redcube: createOwnerPackageFixture('redcube-ai', 'rca', '0.1.1'),
-    oplmetaagent: createOwnerPackageFixture('opl-meta-agent', 'oma', '0.1.1'),
-    oplbookforge: createOwnerPackageFixture('opl-bookforge', 'obf', '0.1.0'),
-    scholarskills: createOwnerPackageFixture('mas-scholar-skills', 'mas-scholar-skills', '0.1.1', 'capability_package'),
+    medautoscience: createOwnerPackageFixture('med-autoscience', 'mas', '0.2.1'),
+    medautogrant: createOwnerPackageFixture('med-autogrant', 'mag', '0.2.1'),
+    redcube: createOwnerPackageFixture('redcube-ai', 'rca', '0.2.2'),
+    oplmetaagent: createOwnerPackageFixture('opl-meta-agent', 'oma', '0.2.1'),
+    oplbookforge: createOwnerPackageFixture('opl-bookforge', 'obf', '0.2.1'),
+    scholarskills: createOwnerPackageFixture('mas-scholar-skills', 'mas-scholar-skills', '0.2.0', 'capability_package'),
     oplflow: createOwnerPackageFixture('opl-flow', 'opl-flow', '0.1.18', 'workflow_profile'),
   };
   fs.writeFileSync(

@@ -1,0 +1,39 @@
+{
+  "surface_kind": "opl_agent_package_payload_manifest",
+  "package_id": "mas",
+  "package_version": "0.2.1",
+  "owner_language_version": {
+    "scheme": "pep440",
+    "value": "0.2.1"
+  },
+  "source_repo": "https://github.com/gaofeng21cn/med-autoscience.git",
+  "source_commit": "b4345d90745cd4e8f94d76686d97d238150f98cb",
+  "source_root": "plugins/med-autoscience",
+  "files": [
+    {
+      "path": ".codex-plugin/plugin.json",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/b4345d90745cd4e8f94d76686d97d238150f98cb/plugins/med-autoscience/.codex-plugin/plugin.json",
+      "sha256": "sha256:f90a6e4891e6ce1a5a4cf54080d815c9fd9b5727fc9f3502ce85dd6d5418d53b"
+    },
+    {
+      "path": "assets/icon.png",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/b4345d90745cd4e8f94d76686d97d238150f98cb/plugins/med-autoscience/assets/icon.png",
+      "sha256": "sha256:59b93bed97259c95ce12f370d39ce8f2665682138755a5afff78a85fc86833da"
+    },
+    {
+      "path": "assets/icon.svg",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/b4345d90745cd4e8f94d76686d97d238150f98cb/plugins/med-autoscience/assets/icon.svg",
+      "sha256": "sha256:d0ba689e3ce511fa219a8712acf04c0ca710803f134ea6d15f127547ee8ff293"
+    },
+    {
+      "path": "skills/med-autoscience/SKILL.md",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/b4345d90745cd4e8f94d76686d97d238150f98cb/plugins/med-autoscience/skills/med-autoscience/SKILL.md",
+      "sha256": "sha256:a61e391f37bfd6a1cec8155805016ebc3aeef57e5fbf000edcc10df0434e7a84"
+    },
+    {
+      "path": "skills/med-autoscience/agents/openai.yaml",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/b4345d90745cd4e8f94d76686d97d238150f98cb/plugins/med-autoscience/skills/med-autoscience/agents/openai.yaml",
+      "sha256": "sha256:0e0cc531eb8ff3dd2a4e8f30395d4c199c3c27ab99999469819ca2007c3c4f0c"
+    }
+  ]
+}

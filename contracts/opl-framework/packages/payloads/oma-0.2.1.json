@@ -1,0 +1,25 @@
+{
+  "surface_kind": "opl_agent_package_payload_manifest",
+  "package_id": "oma",
+  "package_version": "0.2.1",
+  "source_repo": "https://github.com/gaofeng21cn/opl-meta-agent.git",
+  "source_commit": "5f78190417c3e6ee19d1678c928099a6e4104b13",
+  "source_root": "plugins/opl-meta-agent",
+  "files": [
+    {
+      "path": ".codex-plugin/plugin.json",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-meta-agent/5f78190417c3e6ee19d1678c928099a6e4104b13/plugins/opl-meta-agent/.codex-plugin/plugin.json",
+      "sha256": "sha256:687af1f587bad9ace3a15c95b12b065165568e3166b3f6f7f74364602b2e38dc"
+    },
+    {
+      "path": "assets/icon.svg",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-meta-agent/5f78190417c3e6ee19d1678c928099a6e4104b13/plugins/opl-meta-agent/assets/icon.svg",
+      "sha256": "sha256:c8513ae10777203b9f9d689f893c9c18944bcf76b68128d89fadef165c2c1a55"
+    },
+    {
+      "path": "skills/opl-meta-agent/SKILL.md",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-meta-agent/5f78190417c3e6ee19d1678c928099a6e4104b13/plugins/opl-meta-agent/skills/opl-meta-agent/SKILL.md",
+      "sha256": "sha256:e190de9dc33449a80eaf07a8214ee32747ddd4505e4556a262d918134f5900e8"
+    }
+  ]
+}

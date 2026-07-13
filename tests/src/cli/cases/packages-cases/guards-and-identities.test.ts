@@ -391,7 +391,7 @@ test('OPL Flow manifest resolves its package-owned 0.1.18 carrier and managed po
   });
 });
 
-test('RCA first-party manifest resolves the released 0.2.1 carrier payload', () => {
+test('RCA first-party manifest resolves the released 0.2.2 carrier payload', () => {
   const manifestPath = path.join(repoRoot, 'contracts', 'opl-framework', 'packages', 'rca.json');
   const manifest = normalizePackageManifest(
     parseJsonText(fs.readFileSync(manifestPath, 'utf8')),
@@ -399,11 +399,11 @@ test('RCA first-party manifest resolves the released 0.2.1 carrier payload', () 
   );
 
   assert.equal(manifest.package_id, 'rca');
-  assert.equal(manifest.version, '0.2.1');
+  assert.equal(manifest.version, '0.2.2');
   assert.deepEqual(manifest.required_skill_ids, ['redcube-ai']);
   assert.equal(
     manifest.plugin_payload_manifest_url,
-    path.join(repoRoot, 'contracts', 'opl-framework', 'packages', 'payloads', 'rca-0.2.1.json'),
+    path.join(repoRoot, 'contracts', 'opl-framework', 'packages', 'payloads', 'rca-0.2.2.json'),
   );
 });
 
@@ -440,6 +440,7 @@ test('MAS package exposes ScholarSkills as a required managed capability depende
       package_id: string;
       kind: string;
       required: boolean;
+      version_requirement: string;
       opl_distribution: string;
     }>;
   };
@@ -456,6 +457,7 @@ test('MAS package exposes ScholarSkills as a required managed capability depende
   assert.equal(dependency?.module_id, 'scholarskills');
   assert.equal(dependency?.kind, 'framework_capability_package');
   assert.equal(dependency?.required, true);
+  assert.equal(dependency?.version_requirement, '>=0.2.0 <0.3.0');
   assert.equal(dependency?.opl_distribution, 'managed_dependency');
 
 });
