@@ -1,4 +1,4 @@
-import { buildCurrentOwnerDeltaTopline } from '../ledger/index.ts';
+import { buildCurrentOwnerDeltaTopline } from '../ledger/public/app-state.ts';
 import { resolveStandardAgent } from '../../kernel/standard-agent-registry.ts';
 import { buildTaskRunProjectionV2 } from './app-state-task-run-projection.ts';
 import {

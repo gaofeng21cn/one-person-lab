@@ -58,6 +58,39 @@ function seedLargeRuntimeActivityFixture(stateDir: string) {
   }
 }
 
+test('app state fast hot path avoids barrel imports and keeps full drilldown lazy', () => {
+  const hotPathFiles = [
+    'app-state.ts',
+    'app-state-action-catalog.ts',
+    'app-state-current-owner-delta.ts',
+    'app-state-developer-mode-closeout.ts',
+    'app-state-release.ts',
+    'app-state-runtime-activity.ts',
+    'app-state-settings-control-center.ts',
+    'app-state-view-model.ts',
+    'codex-personalization.ts',
+  ];
+
+  for (const fileName of hotPathFiles) {
+    const source = fs.readFileSync(
+      path.join(process.cwd(), 'src', 'modules', 'console', fileName),
+      'utf8',
+    );
+    assert.doesNotMatch(source, /from\s+['"][^'"]*\/index\.ts['"]/, `${fileName} must avoid barrel imports`);
+  }
+
+  const appStateSource = fs.readFileSync(
+    path.join(process.cwd(), 'src', 'modules', 'console', 'app-state.ts'),
+    'utf8',
+  );
+  assert.doesNotMatch(
+    appStateSource,
+    /from\s+['"]\.\/runtime-tray-snapshot\.ts['"]/,
+    'full runtime tray must not load on the fast profile import path',
+  );
+  assert.match(appStateSource, /import\(['"]\.\/runtime-tray-snapshot\.ts['"]\)/);
+});
+
 test('app state fast ignores non-framework owner-delta cache as default cockpit source', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-stale-cache-home-'));
   const stateDir = path.join(homeRoot, 'opl-state');

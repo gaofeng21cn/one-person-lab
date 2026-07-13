@@ -1,6 +1,6 @@
 import { buildDockerWebuiSettingsReadModel } from './app-state-settings-control-center-parts/docker-webui-read-model.ts';
 import { resolveSettingsCodexAccess } from './app-state-settings-control-center-parts/codex-access-read-model.ts';
-import { listOplConnections } from '../connect/index.ts';
+import { listOplConnections } from '../connect/public/app-state.ts';
 import {
   actionCatalogEntry,
   buildCapabilityTaskAwarenessRefs,

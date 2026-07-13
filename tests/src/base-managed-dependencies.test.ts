@@ -68,6 +68,33 @@ function writeFlowDependencyLock(stateRoot: string, dependencyIds: string[]) {
   }, null, 2)}\n`, 'utf8');
 }
 
+function writeLegacyFlowDependencyLock(stateRoot: string) {
+  fs.mkdirSync(stateRoot, { recursive: true });
+  fs.writeFileSync(path.join(stateRoot, 'agent-package-locks.json'), `${JSON.stringify({
+    surface_kind: 'opl_agent_package_lock_index',
+    version: 'opl-agent-package-lock-index.v1',
+    packages: [{
+      package_id: 'opl-flow',
+      lock_ref: 'opl://agent-package-lock/opl-flow/legacy',
+      physical_surface: {
+        workflow_policy_migration: {
+          dependency_ids: ['opl-base', 'officecli', 'officecli-docx', 'mineru-open-api'],
+          dependency_sync: {
+            items: [
+              { skill_id: 'officecli', source_path: '/skills/officecli/SKILL.md', status: 'synced' },
+              { skill_id: 'officecli-docx', source_path: '/skills/officecli-docx/SKILL.md', status: 'synced' },
+            ],
+            tools: [
+              { tool_id: 'officecli', binary_path: '/bin/officecli', status: 'ready' },
+              { tool_id: 'mineru-open-api', binary_path: '/bin/mineru-open-api', status: 'ready' },
+            ],
+          },
+        },
+      },
+    }],
+  }, null, 2)}\n`, 'utf8');
+}
+
 function withEnvironment<T>(values: Record<string, string | undefined>, run: () => T): T {
   const previous = new Map(Object.keys(values).map((key) => [key, process.env[key]]));
   try {
@@ -362,6 +389,34 @@ test('managed companion currentness makes OPL Base background apply eligible', (
         ['opl-base', 'base'],
         ['officecli', 'cli'],
       ]);
+    });
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('legacy OPL Flow locks project a typed dependency catalog from recorded sync receipts', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-flow-legacy-dependency-lock-'));
+  const stateRoot = path.join(root, 'state');
+  writeLegacyFlowDependencyLock(stateRoot);
+  try {
+    withEnvironment({
+      HOME: root,
+      OPL_STATE_DIR: stateRoot,
+      OPL_CODEX_BIN: undefined,
+      OPL_OFFICECLI_BIN: undefined,
+      OPL_MINERU_OPEN_API_BIN: undefined,
+      PATH: '/usr/bin:/bin',
+    }, () => {
+      const catalog = inspectBaseManagedDependencies(root);
+      assert.deepEqual(catalog.flow_dependencies.map((entry) => [entry.dependency_id, entry.dependency_kind]), [
+        ['opl-base', 'base'],
+        ['officecli', 'codex_skill'],
+        ['officecli-docx', 'codex_skill'],
+        ['officecli', 'cli'],
+        ['mineru-open-api', 'cli'],
+      ]);
+      assert.equal(catalog.flow_dependencies.every((entry) => typeof entry.status === 'string'), true);
     });
   } finally {
     fs.rmSync(root, { recursive: true, force: true });

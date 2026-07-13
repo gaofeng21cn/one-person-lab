@@ -454,7 +454,11 @@ export function listStageAttempts(db: DatabaseSync, options: {
     return (db.prepare(`
       WITH normalized AS (
         SELECT
-          stage_attempts.*,
+          stage_attempt_id,
+          domain_id,
+          status,
+          created_at,
+          updated_at,
           COALESCE(
             NULLIF(json_extract(workspace_locator_json, '$.work_unit_id'), ''),
             NULLIF(json_extract(workspace_locator_json, '$.task_or_work_unit_ref'), ''),
@@ -491,11 +495,13 @@ export function listStageAttempts(db: DatabaseSync, options: {
           ) AS lane_rank
         FROM latest
       )
-      SELECT ranked.*
+      SELECT stage_attempts.*
       FROM ranked
       JOIN selected
         ON selected.domain_id = ranked.domain_id
         AND selected.work_unit_key = ranked.work_unit_key
+      JOIN stage_attempts
+        ON stage_attempts.stage_attempt_id = ranked.stage_attempt_id
       WHERE selected.lane_rank <= ?
         AND ranked.attempt_rank <= ?
       ORDER BY

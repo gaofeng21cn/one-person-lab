@@ -1,11 +1,11 @@
 import type { OplStatePaths } from '../../kernel/runtime-state-paths.ts';
 import { isRecord } from '../../kernel/contract-validation.ts';
 import { stringList, stringValue, type JsonRecord } from '../../kernel/json-record.ts';
-import { readCurrentOwnerDeltaReadModelProjectionCache } from '../ledger/index.ts';
 import {
   buildCurrentOwnerDeltaCacheRefreshRequiredReadModel,
   buildCurrentOwnerDeltaReadModel,
-} from '../ledger/index.ts';
+  readCurrentOwnerDeltaReadModelProjectionCache,
+} from '../ledger/public/app-state.ts';
 
 const APP_CURRENT_OWNER_DELTA_CACHE_MAX_AGE_MS = 5 * 60 * 1000;
 

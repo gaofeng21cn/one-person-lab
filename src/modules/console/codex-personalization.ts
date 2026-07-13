@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
-import { readOplFlowDefaultUserInstructions } from '../connect/index.ts';
+import { readOplFlowDefaultUserInstructions } from '../connect/public/app-state.ts';
 
 const MAX_USER_INSTRUCTIONS_BYTES = 256 * 1024;
 

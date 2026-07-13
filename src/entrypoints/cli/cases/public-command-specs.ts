@@ -8,7 +8,6 @@ import {
 import { buildFrameworkReadinessCompactReadback } from '../../../modules/foundry-lab/framework-readiness-compact-readback.ts';
 import { buildFrameworkReadinessSummary } from '../../../modules/foundry-lab/framework-readiness.ts';
 import { buildSourceStructureOperatorReadback } from '../../../modules/charter/source-structure-operator-readback.ts';
-import { buildOplAppState, parseAppActionExecuteArgs, parseAppStateArgs, runOplAppActionExecute } from '../../../modules/console/app-state.ts';
 import { buildRuntimeTraySnapshot } from '../../../modules/console/runtime-tray-snapshot.ts';
 import { runOplEngineAction } from '../../../modules/connect/system-installation/engine-actions.ts';
 import { runOplTurnkeyInstall } from '../../../modules/connect/system-installation/turnkey.ts';
@@ -82,6 +81,7 @@ import { buildProfileCommandSpecs } from './public-command-specs-parts/profiles.
 import { buildStageCommandSpecs, validateStageDerivedLensCommandSpecs } from './public-command-specs-parts/stages.ts';
 import { buildUpdateCommandSpecs } from './public-command-specs-parts/update.ts';
 import { buildWorkspaceCommandSpecs } from './public-command-specs-parts/workspace.ts';
+import { buildPublicAppCommandSpecs } from './app-public-command-specs.ts';
 
 export function buildPublicCommandSpecs(
   commandSpecs: Record<string, CommandSpec>,
@@ -180,6 +180,7 @@ export function buildPublicCommandSpecs(
   const stageCommandSpecs = buildStageCommandSpecs(getContracts);
   const updateCommandSpecs = buildUpdateCommandSpecs(getContracts);
   const workspaceCommandSpecs = buildWorkspaceCommandSpecs(commandSpecs);
+  const appCommandSpecs = buildPublicAppCommandSpecs(getContracts);
   const buildAgentDescriptorManifests = (options: Parameters<typeof buildDomainManifestCatalog>[1] = {}) =>
     withStandardDomainAgentSkeletonInspection(
       buildDomainManifestCatalog(getContracts(), options).domain_manifests,
@@ -256,23 +257,7 @@ export function buildPublicCommandSpecs(
       },
     },
     install: installSpec,
-    'app state': {
-      usage: 'opl app state [--profile fast|full]',
-      summary: 'Read the canonical OPL App state projection for GUI pages without page-local probing.',
-      examples: ['opl app state --profile fast', 'opl app state --profile full --json'],
-      group: 'app',
-      handler: (args) => buildOplAppState(parseAppStateArgs(args)),
-    },
-    'app action execute': {
-      usage: 'opl app action execute --action <action_id> [--payload <json>] [--dry-run]',
-      summary: 'Execute App mutations through the OPL-owned action boundary instead of page-local commands.',
-      examples: [
-        'opl app action execute --action developer_supervisor --payload \'{"developerSupervisorEnabled":"on"}\' --dry-run',
-        'opl app action execute --action provider_scheduler_status --dry-run',
-      ],
-      group: 'app',
-      handler: (args) => runOplAppActionExecute(getContracts(), parseAppActionExecuteArgs(args)),
-    },
+    ...appCommandSpecs,
     ...brandCommandSpecs,
     ...foundryCommandSpecs,
     ...profileCommandSpecs,

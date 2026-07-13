@@ -87,11 +87,31 @@ function buildExecutableCommandLoader(
   };
 }
 
+function buildAppCommandLoader(
+  loadContracts: () => Promise<FrameworkContracts>,
+): ExecutableCommandLoader {
+  let loaded: Promise<CommandSpecs> | undefined;
+  return () => {
+    loaded ??= (async () => {
+      const contracts = await loadContracts();
+      const appModule = await import('../cases/app-public-command-specs.ts');
+      return appModule.buildPublicAppCommandSpecs(() => contracts);
+    })();
+    return loaded;
+  };
+}
+
 export function buildLazyCommandSpecs(
   parsedInput: ParsedCliInput,
   loadContracts: () => Promise<FrameworkContracts>,
 ): CommandSpecs {
-  const loadExecutableSpecs = buildExecutableCommandLoader(parsedInput, loadContracts);
+  let contracts: Promise<FrameworkContracts> | undefined;
+  const loadContractsOnce = () => {
+    contracts ??= loadContracts();
+    return contracts;
+  };
+  const loadExecutableSpecs = buildExecutableCommandLoader(parsedInput, loadContractsOnce);
+  const loadAppSpecs = buildAppCommandLoader(loadContractsOnce);
   const commandSpecs: CommandSpecs = {};
 
   for (const [command, entry] of Object.entries(CLI_COMMAND_SURFACE)) {
@@ -103,7 +123,9 @@ export function buildLazyCommandSpecs(
           return buildMetadataHelp(commandSpecs, args);
         }
 
-        const executableSpecs = await loadExecutableSpecs();
+        const executableSpecs = command === 'app state' || command === 'app action execute'
+          ? await loadAppSpecs()
+          : await loadExecutableSpecs();
         const executableSpec = executableSpecs[command];
         if (!executableSpec) {
           throw new FrameworkContractError(

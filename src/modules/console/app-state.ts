@@ -1,45 +1,46 @@
 import { ensureOplStateDir, resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
-import { loadFrameworkContracts } from '../charter/index.ts';
+import { loadFrameworkContracts } from '../charter/public/app-state.ts';
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import type { JsonRecord } from '../../kernel/json-record.ts';
 import {
   readBundledCodexDefaultProfile,
-  listOplAgentPackages,
-  canonicalAgentPackageId,
   readLocalCodexAccessState,
   readLocalCodexDefaultsIfAvailable,
-  runOplAgentPackageStatus,
-  readOplFlowDefaultUserInstructions,
-} from '../connect/index.ts';
-import { listWorkspaceBindings } from '../workspace/index.ts';
+} from '../../kernel/local-codex-defaults.ts';
 import {
-  buildOplEndpoints,
+  buildOplDeveloperModeSurface,
+  buildOplModules,
+  canonicalAgentPackageId,
+  listOplAgentPackages,
+  readOplFlowDefaultUserInstructions,
+  resolveCodexVersion,
+  resolveDefaultFamilyWorkspaceRoot,
+  runOplAgentPackageStatus,
+} from '../connect/public/app-state.ts';
+import { listWorkspaceBindings } from '../workspace/public/app-state.ts';
+import { buildOplEndpoints } from '../../kernel/opl-runtime-endpoints.ts';
+import {
   familyRuntimePaths,
   inspectFamilyRuntimeProviderWithLifecycle,
   readManagedProviderProjectionSummary,
   resolveFamilyRuntimeProviderKind,
-} from '../runway/index.ts';
+} from '../runway/public/app-state.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import { buildDeveloperModeLiveCloseoutEvidenceSummary } from './app-state-developer-mode-closeout.ts';
 import { buildReleaseState } from './app-state-release.ts';
-import { buildOplDeveloperModeSurface } from '../connect/index.ts';
-import { resolveCodexVersion } from '../connect/index.ts';
-import { buildOplModules } from '../connect/index.ts';
 import { readOplWorkspaceRoot } from '../../kernel/system-preferences.ts';
 import path from 'node:path';
-import { resolveDefaultFamilyWorkspaceRoot } from '../connect/index.ts';
 import { buildActionCatalog } from './app-state-action-catalog.ts';
 import { buildSettingsControlCenter } from './app-state-settings-control-center.ts';
 import { parseAppStateProfile, type AppStateProfile } from './app-state-profile.ts';
 import { buildAppStateRuntimeActivityItems } from './app-state-runtime-activity.ts';
 import { buildOplAppOperatorViewModel } from './app-state-view-model.ts';
-import { buildRuntimeTraySnapshot } from './runtime-tray-snapshot.ts';
 import { selectAppStateCurrentOwnerDeltaReadModel } from './app-state-current-owner-delta.ts';
-import { buildAgentLabDomainFeedbackSelfEvolutionReadModel } from '../foundry-lab/index.ts';
-import { buildFeedbackOpsReadModel } from '../foundry-lab/index.ts';
+import {
+  buildAgentLabDomainFeedbackSelfEvolutionReadModel,
+  buildFeedbackOpsReadModel,
+} from '../foundry-lab/public/app-state.ts';
 import { readCodexUserInstructions } from './codex-personalization.ts';
-
-export { parseAppActionExecuteArgs, runOplAppActionExecute } from './app-state-parts/action-execute.ts';
 
 function nowIso() {
   return new Date().toISOString();
@@ -137,6 +138,31 @@ function buildAssistants(items: ReturnType<typeof publicRuntimeSourceCarriers>) 
     prompt_prefix_required: false,
     package_id: carrier.package_id,
   }));
+}
+
+function buildFastAgentPackageStatus(
+  lock: ReturnType<typeof listOplAgentPackages>['opl_agent_packages']['installed_packages'][number],
+) {
+  const codexVisible = lock.exposure_state === 'visible';
+  return {
+    surface_kind: 'opl_agent_package_status_fast_projection',
+    package_id: lock.package_id,
+    status: 'installed',
+    package_version: lock.package_version,
+    installed_version: lock.package_version,
+    version: lock.package_version,
+    source_kind: lock.source_kind,
+    package_lock_ref: lock.lock_ref,
+    lock_ref: lock.lock_ref,
+    physical_surface: lock.physical_surface,
+    codex_visible: codexVisible,
+    capability_exposure: {
+      status: codexVisible ? 'visible' : lock.exposure_state,
+      codex_visible: codexVisible,
+    },
+    currentness_detail_deferred: true,
+    detail_surface: 'opl packages status --package-id <package_id> --json',
+  };
 }
 
 async function buildProviderState(profile: AppStateProfile) {
@@ -485,22 +511,24 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
   const workspaceRoot = readOplWorkspaceRoot();
   const core = buildCoreState(profile);
   const actions = buildActionCatalog(contracts);
-  const agentPackagesReadback = listOplAgentPackages().opl_agent_packages;
+  const agentPackagesReadback = listOplAgentPackages({ detail: profile }).opl_agent_packages;
   const activeWorkspaceBindings = listWorkspaceBindings().filter((binding) => binding.status === 'active');
   const agentPackageStatuses = Object.fromEntries(
     agentPackagesReadback.installed_packages.map((lock) => [
       lock.package_id,
-      runOplAgentPackageStatus((() => {
-        const binding = activeWorkspaceBindings.find((entry) =>
-          canonicalAgentPackageId(entry.project_id) === lock.package_id);
-        return binding
-          ? {
-              packageId: lock.package_id,
-              scope: 'workspace' as const,
-              targetWorkspace: binding.workspace_path,
-            }
-          : { packageId: lock.package_id };
-      })()).opl_agent_package_status,
+      profile === 'fast'
+        ? buildFastAgentPackageStatus(lock)
+        : runOplAgentPackageStatus((() => {
+            const binding = activeWorkspaceBindings.find((entry) =>
+              canonicalAgentPackageId(entry.project_id) === lock.package_id);
+            return binding
+              ? {
+                  packageId: lock.package_id,
+                  scope: 'workspace' as const,
+                  targetWorkspace: binding.workspace_path,
+                }
+              : { packageId: lock.package_id };
+          })()).opl_agent_package_status,
     ]),
   );
   const agentPackagesProjection = {
@@ -525,7 +553,7 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
   const uiDefaults = buildUiDefaults();
   const runtimeActivityItems = buildAppStateRuntimeActivityItems(profile);
   const fullRuntimeDrilldown = profile === 'full'
-    ? (await buildRuntimeTraySnapshot(contracts, {
+    ? (await (await import('./runtime-tray-snapshot.ts')).buildRuntimeTraySnapshot(contracts, {
         appOperatorDrilldownDetailLevel: 'full',
       })).runtime_tray_snapshot.app_operator_drilldown as JsonRecord
     : null;

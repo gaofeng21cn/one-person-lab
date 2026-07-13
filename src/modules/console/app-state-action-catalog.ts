@@ -1,6 +1,6 @@
 import type { AgentWorkspaceNormContract, FrameworkContracts } from '../../kernel/types.ts';
 import { SETTINGS_CONTROL_CENTER_ACTIONS } from './app-state-settings-control-center.ts';
-import { listExternalOwnerDelegatedUpdateActions } from '../connect/index.ts';
+import { listExternalOwnerDelegatedUpdateActions } from '../connect/public/app-state.ts';
 
 type AppActionCatalogEntry = {
   action_id: string;

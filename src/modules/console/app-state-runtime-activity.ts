@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { isRecord } from '../../kernel/contract-validation.ts';
 import { stringValue as optionalString, type JsonRecord } from '../../kernel/json-record.ts';
-import { resolveStandardAgentByDomainId } from '../charter/index.ts';
+import { resolveStandardAgentByDomainId } from '../../kernel/standard-agent-registry.ts';
 import {
   actionContext,
   noActionContext,
@@ -15,10 +15,10 @@ import {
   buildStageAttemptUsageProjection,
   listStageAttempts,
   openFamilyRuntimeSqlite,
-  resolveOplStatePaths,
   summarizeStageAttemptUsageProjections,
-} from '../runway/index.ts';
-import { listWorkspaceBindings, type WorkspaceBinding } from '../workspace/index.ts';
+} from '../runway/public/app-state.ts';
+import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
+import { listWorkspaceBindings, type WorkspaceBinding } from '../workspace/public/app-state.ts';
 
 const RUNNING_STATUSES = new Set(['running']);
 const ATTENTION_STATUSES = new Set(['blocked', 'dead_lettered', 'failed', 'human_gate']);

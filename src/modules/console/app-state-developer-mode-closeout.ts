@@ -1,4 +1,4 @@
-import { buildDeveloperModeAgentLabRepairRouteReadModel } from '../foundry-lab/index.ts';
+import { buildDeveloperModeAgentLabRepairRouteReadModel } from '../foundry-lab/public/app-state.ts';
 
 export function buildDeveloperModeLiveCloseoutEvidenceSummary() {
   const readModel = buildDeveloperModeAgentLabRepairRouteReadModel();

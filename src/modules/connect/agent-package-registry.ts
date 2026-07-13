@@ -2213,7 +2213,7 @@ export function runOplAgentPackageStatus(input: {
   };
 }
 
-export function listOplAgentPackages() {
+export function listOplAgentPackages(input: { detail?: 'fast' | 'full' } = {}) {
   const paths = resolveOplStatePaths();
   const registryCache = readRegistryCache();
   const { index: lockIndex } = readRecoveredLockIndex();
@@ -2241,13 +2241,23 @@ export function listOplAgentPackages() {
       home_shortcut_preferences: homeShortcutPreferences,
       lifecycle_receipt_count: lifecycleLedger.receipts.length,
       lifecycle_receipts: lifecycleLedger.receipts,
-      owner_route_readback: ownerRouteReadback({
-        packages: lockIndex.packages.map((lock) => ({
-          packageId: lock.package_id,
-          lock,
-          receipt: latestReceipts.get(lock.package_id) ?? null,
-        })),
-      }),
+      owner_route_readback: input.detail === 'fast'
+        ? {
+            surface_kind: 'opl_agent_package_owner_route_readback',
+            status: 'deferred_fast_profile',
+            selected_package_id: null,
+            package_count: lockIndex.packages.length,
+            packages: [],
+            detail_surface: 'opl packages status --package-id <package_id> --json',
+            authority_boundary: refsOnlyAuthorityBoundary(),
+          }
+        : ownerRouteReadback({
+            packages: lockIndex.packages.map((lock) => ({
+              packageId: lock.package_id,
+              lock,
+              receipt: latestReceipts.get(lock.package_id) ?? null,
+            })),
+          }),
       files: {
         registry_cache_file: paths.agent_package_registry_cache_file,
         package_lock_file: paths.agent_package_lock_file,
@@ -2330,7 +2340,6 @@ export function readOplFlowManagedDependencyIds() {
 export function readOplFlowManagedDependencies() {
   const lock = readLockIndex().packages.find((entry) => entry.package_id === 'opl-flow') ?? null;
   const migration = lock?.physical_surface?.workflow_policy_migration;
-  const dependencies = migration?.dependencies ?? [];
   const sync = migration?.dependency_sync && typeof migration.dependency_sync === 'object'
     ? migration.dependency_sync as Record<string, unknown>
     : null;
@@ -2340,6 +2349,51 @@ export function readOplFlowManagedDependencies() {
   const tools = Array.isArray(sync?.tools) ? sync.tools.filter((entry): entry is Record<string, unknown> => (
     Boolean(entry) && typeof entry === 'object'
   )) : [];
+  const recordedDependencies = migration?.dependencies ?? [];
+  const dependencies = recordedDependencies.length > 0
+    ? recordedDependencies
+    : [
+        ...((migration?.dependency_ids ?? []).includes('opl-base')
+          ? [{
+              id: 'opl-base',
+              kind: 'base' as const,
+              activation: 'always',
+              offline_bundle: 'full',
+              online_install_default: true,
+              source: 'installed_opl_flow_package_lock',
+            }]
+          : []),
+        ...items.flatMap((entry) => {
+          const id = typeof entry.skill_id === 'string' ? entry.skill_id : null;
+          return id
+            ? [{
+                id,
+                kind: 'codex_skill' as const,
+                activation: 'task_routed',
+                offline_bundle: 'full',
+                online_install_default: true,
+                source: typeof entry.source_path === 'string'
+                  ? entry.source_path
+                  : 'installed_opl_flow_dependency_sync',
+              }]
+            : [];
+        }),
+        ...tools.flatMap((entry) => {
+          const id = typeof entry.tool_id === 'string' ? entry.tool_id : null;
+          return id
+            ? [{
+                id,
+                kind: 'cli' as const,
+                activation: 'task_routed',
+                offline_bundle: 'full',
+                online_install_default: true,
+                source: typeof entry.binary_path === 'string'
+                  ? entry.binary_path
+                  : 'installed_opl_flow_dependency_sync',
+              }]
+            : [];
+        }),
+      ];
   return dependencies.map((dependency) => {
     const observed = dependency.kind === 'codex_skill'
       ? items.find((entry) => entry.skill_id === dependency.id)

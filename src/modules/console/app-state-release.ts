@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { readJsonPayloadFile } from '../../kernel/json-file.ts';
 import { record } from '../../kernel/json-record.ts';
-import { buildOplReleaseTag, getOplReleaseRepo, getOplReleaseVersion } from '../connect/index.ts';
+import { buildOplReleaseTag, getOplReleaseRepo, getOplReleaseVersion } from '../connect/public/app-state.ts';
 import { readOplUpdateChannel } from '../../kernel/system-preferences.ts';
 
 function resolveConsoleProjectRoot() {
