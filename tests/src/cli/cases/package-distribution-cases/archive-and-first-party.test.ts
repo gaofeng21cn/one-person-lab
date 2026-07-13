@@ -138,8 +138,8 @@ test('package archive builder writes channel manifest checksums git source and r
   const fixtures = {
     medautoscience: createOwnerPackageFixture('med-autoscience', 'mas', '0.1.0'),
     medautogrant: createOwnerPackageFixture('med-autogrant', 'mag', '0.1.0'),
-    redcube: createOwnerPackageFixture('redcube-ai', 'rca', '0.1.0'),
-    oplmetaagent: createOwnerPackageFixture('opl-meta-agent', 'oma', '0.1.0'),
+    redcube: createOwnerPackageFixture('redcube-ai', 'rca', '0.1.1'),
+    oplmetaagent: createOwnerPackageFixture('opl-meta-agent', 'oma', '0.1.1'),
     oplbookforge: createOwnerPackageFixture('opl-bookforge', 'obf', '0.1.0'),
     scholarskills: createOwnerPackageFixture('mas-scholar-skills', 'mas-scholar-skills', '0.1.1', 'capability_package'),
     oplflow: createOwnerPackageFixture('opl-flow', 'opl-flow', '0.1.18', 'workflow_profile'),
@@ -436,7 +436,8 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.deepEqual(manifest.packages.package_artifacts['mas-scholar-skills'].dependency_of, ['mas']);
   assert.match(manifest.packages.package_artifacts['mas-scholar-skills'].source_archive.sha256, /^[0-9a-f]{64}$/);
   assert.match(checksums, /mas-0\.1\.0\.tar\.gz/);
-  assert.match(checksums, /oma-0\.1\.0\.tar\.gz/);
+  assert.match(checksums, /oma-0\.1\.1\.tar\.gz/);
+  assert.match(checksums, /rca-0\.1\.1\.tar\.gz/);
   assert.match(checksums, /obf-0\.1\.0\.tar\.gz/);
   assert.match(checksums, /mas-scholar-skills-0\.1\.1\.tar\.gz/);
   assert.match(checksums, new RegExp(manifest.packages.package_artifacts.mas.source_archive.sha256));
@@ -727,8 +728,8 @@ test('package archive builder refreshes reused managed clones before archiving s
   const fixtures = {
     medautoscience: createOwnerPackageFixture('med-autoscience', 'mas', '0.1.0'),
     medautogrant: createOwnerPackageFixture('med-autogrant', 'mag', '0.1.0'),
-    redcube: createOwnerPackageFixture('redcube-ai', 'rca', '0.1.0'),
-    oplmetaagent: createOwnerPackageFixture('opl-meta-agent', 'oma', '0.1.0'),
+    redcube: createOwnerPackageFixture('redcube-ai', 'rca', '0.1.1'),
+    oplmetaagent: createOwnerPackageFixture('opl-meta-agent', 'oma', '0.1.1'),
     oplbookforge: createOwnerPackageFixture('opl-bookforge', 'obf', '0.1.0'),
     scholarskills: createOwnerPackageFixture('mas-scholar-skills', 'mas-scholar-skills', '0.1.1', 'capability_package'),
     oplflow: createOwnerPackageFixture('opl-flow', 'opl-flow', '0.1.18', 'workflow_profile'),
