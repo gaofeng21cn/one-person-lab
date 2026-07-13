@@ -165,7 +165,7 @@ export const TARGET_ARCHITECTURE_STAGE_ROUTE_CAPABILITIES = [
 ] as const;
 
 export const TARGET_ARCHITECTURE_FORBIDDEN_FRAMEWORK_ROUTE_DECISIONS = [
-  'accept_or_reject_codex_route',
+  'accept_or_reject_abi_valid_codex_route_on_domain_semantic_merit',
   'require_typed_closeout_for_progress',
   'require_owner_receipt_for_progress',
   'rank_or_select_stage_candidates',

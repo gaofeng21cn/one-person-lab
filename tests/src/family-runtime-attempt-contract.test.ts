@@ -112,6 +112,18 @@ test('stage route transport cannot become a second semantic control plane', () =
 
   assert.equal(contract.codex_semantic_route_boundary.semantic_owner, 'codex_cli');
   assert.equal(contract.codex_semantic_route_boundary.framework_can_accept_reject_rank_select_reconcile_or_override_route, false);
+  assert.equal(
+    contract.codex_semantic_route_boundary.framework_must_validate_route_output_abi_and_attempt_authority,
+    true,
+  );
+  assert.equal(
+    contract.codex_semantic_route_boundary.framework_can_reject_non_authoritative_or_malformed_route_output,
+    true,
+  );
+  assert.equal(
+    contract.codex_semantic_route_boundary.missing_or_rejected_route_fallback,
+    'domain_pack_declared_default_progression_with_route_quality_debt_only',
+  );
   assert.equal(contract.progress_policy.readable_artifact_counts_as_progress, true);
   assert.equal(contract.route_back_policy.may_target_any_declared_stage, true);
   assert.equal(contract.authority_boundary.opl_can_transport_codex_selected_route, true);
@@ -235,6 +247,14 @@ test('Stage quality contracts bind bounded Attempts, exact artifact identity, re
     'route_impact.stage_route_decision');
   assert.equal(attempts.stage_quality_cycle_contract.non_terminal_route_output,
     'route_impact.stage_route_recommendation');
+  assert.equal(
+    attempts.stage_route_boundary.missing_or_invalid_route_fallback,
+    'domain_pack_declared_default_progression_with_route_quality_debt_only',
+  );
+  assert.equal(
+    attempts.stage_quality_cycle_contract.route_output_abi_validation_required_before_stage_run_projection,
+    true,
+  );
 
   const retry = temporal.retry_mapping.stage_quality_revision_budget;
   assert.equal(retry.default_max_repair_rounds, 3);

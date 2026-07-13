@@ -305,18 +305,21 @@ export function evaluateStageQualityAttemptRoute(input: {
     declaredStageIds,
     recommendation: true,
   });
+  const decisionPresent = Object.hasOwn(routeImpact, 'stage_route_decision');
+  const recommendationPresent = Object.hasOwn(routeImpact, 'stage_route_recommendation');
   const legacyFields = selectedLegacyFields(routeImpact);
   const decisionRejectionReasons = [
     ...decision.rejection_reasons,
-    ...(Object.hasOwn(routeImpact, 'stage_route_decision') ? contextRejectionReasons : []),
+    ...(decisionPresent ? contextRejectionReasons : []),
     ...(decision.selection ? terminalDecisionRejectionReasons({ attempt: input.attempt, routeImpact }) : []),
     ...(legacyFields.length > 0 ? ['legacy_terminal_route_fields_are_not_authoritative'] : []),
   ];
   const recommendationRejectionReasons = [
     ...recommendation.rejection_reasons,
-    ...(Object.hasOwn(routeImpact, 'stage_route_recommendation') ? contextRejectionReasons : []),
+    ...(recommendationPresent ? contextRejectionReasons : []),
+    ...(legacyFields.length > 0 ? ['legacy_terminal_route_fields_are_not_authoritative'] : []),
   ];
-  if (decision.selection && recommendation.selection) {
+  if (decisionPresent && recommendationPresent) {
     decisionRejectionReasons.push('decision_and_recommendation_are_mutually_exclusive');
     recommendationRejectionReasons.push('decision_and_recommendation_are_mutually_exclusive');
   }
@@ -339,6 +342,7 @@ export function sanitizeStageQualityAttemptRouteImpact(input: {
   routeImpact: unknown;
 }) {
   const routeImpact = { ...record(input.routeImpact) };
+  delete routeImpact.stage_route_contract;
   const evaluation = evaluateStageQualityAttemptRoute(input);
   if (!evaluation.applicable) return routeImpact;
   for (const field of LEGACY_TERMINAL_ROUTE_FIELDS) delete routeImpact[field];

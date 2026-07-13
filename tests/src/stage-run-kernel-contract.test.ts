@@ -29,7 +29,19 @@ test('StageRun contract is passive transport and Codex owns semantic routing', (
   assert.equal(value.machine_boundary.codex_cli_owns.semantic_stage_selection, true);
   assert.equal(value.progress_first_policy.readable_artifact_allows_any_declared_stage, true);
   assert.equal(value.progress_first_policy.quality_budget_exhaustion_blocks_route, false);
-  assert.equal(value.launch_policy.framework_semantic_route_role, 'none');
+  assert.equal(
+    value.launch_policy.framework_semantic_route_role,
+    'validate_attempt_authority_and_route_abi_then_project_declared_target_without_domain_semantic_judgment',
+  );
+  assert.equal(value.machine_boundary.opl_owns.decisive_attempt_route_abi_validation, true);
+  assert.equal(value.route_output_policy.semantic_route_owner, 'decisive_codex_attempt');
+  assert.deepEqual(value.route_output_policy.formal_review_decisive_roles, ['reviewer', 're_reviewer']);
+  assert.equal(
+    value.route_output_policy.missing_or_invalid_route_fallback,
+    'domain_pack_declared_default_progression_with_route_quality_debt_only',
+  );
+  assert.equal(value.authority_boundary.opl_can_validate_route_output_abi_and_attempt_authority, true);
+  assert.equal(value.authority_boundary.opl_can_select_semantic_stage_route, false);
   assert.equal(Object.hasOwn(value.authority_boundary, 'opl_can_create_execution_authorization_blocker'), false);
   assert.equal(serialized.includes('stage_run_execution_authorization_ledger'), false);
   assert.equal(serialized.includes('closeout_binding_gate'), false);

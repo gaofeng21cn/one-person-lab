@@ -21,6 +21,9 @@
     "route_completion_is_stage_completion": false,
     "provider_completion_is_owner_receipt": false,
     "framework_can_accept_reject_rank_reconcile_or_override_codex_route": false,
+    "framework_must_validate_decisive_attempt_route_abi_and_declared_target": true,
+    "invalid_route_output_becomes_quality_debt_without_discarding_progress": true,
+    "missing_or_invalid_route_fallback": "domain_pack_declared_default_progression_with_route_quality_debt_only",
     "quality_budget_exhaustion_blocks_route": false
   },
   "allowed_providers": [
@@ -161,6 +164,7 @@
     "terminal_route_output": "route_impact.stage_route_decision",
     "non_terminal_route_output": "route_impact.stage_route_recommendation",
     "stage_run_projects_decisive_attempt_and_declared_target": true,
+    "route_output_abi_validation_required_before_stage_run_projection": true,
     "quality_retry_budget_separate_from_provider_activity_structured_output_and_runtime_retry": true
   },
   "route_transport_contract": {

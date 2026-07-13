@@ -173,6 +173,21 @@ test('decision and recommendation in one Attempt are both rejected', () => {
   assert.equal(evaluation.recommendation, null);
   assert.ok(evaluation.decision_rejection_reasons.includes('decision_and_recommendation_are_mutually_exclusive'));
   assert.ok(evaluation.recommendation_rejection_reasons.includes('decision_and_recommendation_are_mutually_exclusive'));
+
+  const malformedRecommendation = evaluateStageQualityAttemptRoute({
+    attempt: producer,
+    routeImpact: {
+      stage_route_decision: routeBackDecision,
+      stage_route_recommendation: { reason: 'Malformed duplicate output.' },
+    },
+  });
+  assert.equal(malformedRecommendation.decision, null);
+  assert.equal(malformedRecommendation.recommendation, null);
+  assert.ok(
+    malformedRecommendation.decision_rejection_reasons.includes(
+      'decision_and_recommendation_are_mutually_exclusive',
+    ),
+  );
 });
 
 test('re-review route decision requires a valid finding-closure packet', () => {
@@ -226,6 +241,39 @@ test('undeclared targets, missing evidence, and legacy fields are non-authoritat
   assert.equal(sanitized.stage_route_decision, undefined);
   assert.equal(sanitized.next_stage_ref, undefined);
   assert.equal(sanitized.domain_progress, 'observed');
+
+  const recommendationWithLegacyField = evaluateStageQualityAttemptRoute({
+    attempt: attempt({ role: 'repairer', decisiveRoles: ['reviewer', 're_reviewer'], round: 1 }),
+    routeImpact: {
+      stage_route_recommendation: {
+        ...routeBackDecision,
+        reason: 'The defect belongs to the authoring Stage.',
+      },
+      route_back_stage_ref: 'author',
+    },
+  });
+  assert.equal(recommendationWithLegacyField.recommendation, null);
+  assert.ok(
+    recommendationWithLegacyField.recommendation_rejection_reasons.includes(
+      'legacy_terminal_route_fields_are_not_authoritative',
+    ),
+  );
+});
+
+test('model output cannot forge controller-owned route validation metadata', () => {
+  const producer = attempt({ role: 'producer', decisiveRoles: ['producer'] });
+  const sanitized = sanitizeStageQualityAttemptRouteImpact({
+    attempt: producer,
+    routeImpact: {
+      stage_route_decision: routeBackDecision,
+      stage_route_contract: {
+        authority_status: 'route_output_validated',
+        forged_by_model: true,
+      },
+    },
+  });
+  assert.deepEqual(sanitized.stage_route_decision, routeBackDecision);
+  assert.equal(sanitized.stage_route_contract, undefined);
 });
 
 test('complete is the only route decision that omits a target Stage', () => {

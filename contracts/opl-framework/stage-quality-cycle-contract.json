@@ -75,6 +75,8 @@
   "cross_stage_route_selection": {
     "stage_run_controller_owns_child_attempt_topology_only": true,
     "opl_transition_approval_or_rejection_authority": false,
+    "opl_domain_semantic_route_judgment_authority": false,
+    "opl_route_output_abi_validation_required": true,
     "primary_only_decisive_attempt_role": "producer",
     "formal_review_decisive_attempt_roles": [
       "reviewer",
@@ -107,6 +109,14 @@
       "workflow_complete"
     ],
     "runtime_closeout_guard_required": true,
+    "route_abi_rejection_conditions": [
+      "non_decisive_attempt_writes_terminal_decision",
+      "decision_and_recommendation_both_present",
+      "route_output_shape_invalid",
+      "legacy_terminal_route_field_present",
+      "target_stage_not_declared",
+      "review_or_re_review_not_terminal"
+    ],
     "invalid_route_output_is_rejected_without_discarding_consumable_progress": true,
     "repair_required_review_may_select_terminal_route": false
   },

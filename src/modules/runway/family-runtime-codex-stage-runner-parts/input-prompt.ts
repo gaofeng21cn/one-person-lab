@@ -194,6 +194,7 @@ function qualityAttemptPromptLines(attempt: JsonRecord) {
     'A terminal decisive Attempt should return exactly one route_impact.stage_route_decision with decision_kind=advance|skip|repeat|reverse|route_back|complete, a declared target_stage_id except for complete, and evidence_refs.',
     'A non-decisive Attempt may instead return one route_impact.stage_route_recommendation with the same decision_kind/target/evidence shape plus reason.',
     'Do not return both. Do not use legacy route_back_stage_ref, selected_next_stage_ref, next_stage_ref, or workflow_complete fields.',
+    'route_impact.stage_route_contract is controller-owned validation metadata. Do not create or modify it.',
   ];
   if (attemptRole === 'repairer') {
     return [
@@ -262,7 +263,7 @@ export function runnerPromptFor(input: {
     'Write useful stage artifacts as early as possible. Partial drafts, negative findings, failed attempts, review findings, and route-back recommendations are consumable progress.',
     'A typed closeout packet is preferred when naturally available, but it is never required for stage progression.',
     'Your final message may be structured JSON or ordinary readable text. OPL persists it as a raw artifact and derives refs, hashes, lineage, and a minimal progress envelope.',
-    'Cross-Stage semantic route selection must come from this StageRun\'s decisive Codex Attempt: the producer for a primary-only StageRun, otherwise the terminal reviewer or re-reviewer. Other Attempts may return evidence-backed stage_route_recommendation only. OPL validates role eligibility and declared target identity, then passively projects the Codex decision without judging its domain semantics.',
+    'Cross-Stage semantic route selection must come from this StageRun\'s decisive Codex Attempt: the producer for a primary-only StageRun, otherwise the terminal reviewer or re-reviewer. Other Attempts may return evidence-backed stage_route_recommendation only. OPL validates terminal-role eligibility, route shape, field exclusivity, legacy-field absence, finding closure, and declared target identity, then passively projects the Codex decision without judging its domain semantics.',
     'Do not claim domain readiness, quality acceptance, owner receipt creation, typed blocker creation, or irreversible authority unless a real domain-owned ref exists.',
   ].join('\n');
 }

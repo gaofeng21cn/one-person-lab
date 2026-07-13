@@ -77,7 +77,8 @@ test('Codex stage activity accepts readable output without a typed closeout cont
   assert.match(commandPreview, /Partial drafts, negative findings, failed attempts/);
   assert.match(commandPreview, /final message may be structured JSON or ordinary readable text/);
   assert.match(commandPreview, /Cross-Stage semantic route selection must come from this StageRun's decisive Codex Attempt/);
-  assert.match(commandPreview, /OPL passively materializes the selected declared Stage/);
+  assert.match(commandPreview, /validates terminal-role eligibility, route shape, field exclusivity/);
+  assert.match(commandPreview, /then passively projects the Codex decision without judging its domain semantics/);
   assert.doesNotMatch(commandPreview, /Choose the next stage/);
   assert.equal(activity.expected_closeout.typed_packet_required_for_progress, false);
   assert.equal(activity.expected_closeout.raw_or_free_text_artifact_accepted_for_progress, true);

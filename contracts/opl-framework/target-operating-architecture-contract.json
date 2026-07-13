@@ -75,7 +75,7 @@
         "kind": "StageRun",
         "owner": "one-person-lab",
         "default_lane": "ordinary",
-        "truth_boundary": "OPL owns attempt transport, currentness, event-log/read-model, quality-budget accounting, and failure diagnostics; Codex owns semantic route; domain owns receipts, quality, and artifact bodies"
+        "truth_boundary": "OPL owns attempt transport, currentness, event-log/read-model, quality-budget accounting, failure diagnostics, and route-output ABI validation; the decisive Codex Attempt owns semantic route judgment; domain owns receipts, quality, and artifact bodies"
       },
       {
         "kind": "StageArtifactUnit",
@@ -117,13 +117,14 @@
         "kind": "ProgressReconciler",
         "owner": "one-person-lab",
         "default_lane": "ordinary",
-        "truth_boundary": "Progress Reconciler passively projects desired/current execution metadata from Codex-selected route context. It cannot accept, reject, rank, select, or override routes; write domain truth; sign receipts; create typed blockers; or evaluate quality."
+        "truth_boundary": "Progress Reconciler validates decisive-Attempt route authority, output shape, and declared target before passive projection. It cannot judge, accept, reject, rank, select, or override an ABI-valid route on domain semantic merit; write domain truth; sign receipts; create typed blockers; or evaluate quality."
       }
     ]
   },
   "codex_stage_route_owner": {
     "semantic_owner": "codex_cli",
     "single_semantic_control_plane": true,
+    "framework_route_abi_validation": "required_for_attempt_role_terminality_shape_legacy_field_absence_and_declared_target_only",
     "progression_policy": "any_readable_stage_artifact_allows_next_declared_stage_to_start_quality_debt_restricts_claims_only",
     "route_capabilities": [
       "advance_to_next_declared_stage",
@@ -140,7 +141,7 @@
       "progress_reconciler_projection"
     ],
     "forbidden_framework_route_decisions": [
-      "accept_or_reject_codex_route",
+      "accept_or_reject_abi_valid_codex_route_on_domain_semantic_merit",
       "require_typed_closeout_for_progress",
       "require_owner_receipt_for_progress",
       "rank_or_select_stage_candidates",
@@ -1036,7 +1037,7 @@
           "ledger"
         ],
         "ordinary_lane": "ordinary",
-        "authority_boundary": "Runway owns attempt transport, provider currentness, quality-budget accounting, failure diagnostics, retry, dead-letter, and provider state; it cannot select or block semantic stage routes."
+      "authority_boundary": "Runway owns attempt transport, provider currentness, quality-budget accounting, failure diagnostics, retry, dead-letter, provider state, and route-output ABI validation; it cannot select or block an ABI-valid semantic stage route on domain merit."
       },
       {
         "target_capability": "refs_only_evidence_and_lineage",

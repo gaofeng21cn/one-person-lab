@@ -19,6 +19,12 @@ Re-review 采用 finding closure，不得用普通新建议无限重开循环。
 
 边界：domain Agent 继续拥有专业 Review 方法、必要认知顺序、findings、repair 和 quality verdict；OPL 只拥有 Attempt identity、上下文隔离、预算、lineage、durable orchestration 和 refs-only projection。普通用户只看 Stage 级状态，Attempt 细节只在 operator drilldown。涉及不同主要开放判断、owner、source/knowledge authority、独立 quality gate、正式 handoff、下游 route、不可逆权限或 human decision 时必须 split / route-back 到新 Stage，不能增加 Attempt role。
 
+### 决策：终局 Attempt 决定专业路由，Framework 只做 ABI guard
+
+原因：让任意 Attempt 都能写下一 Stage 会使 producer、repairer 与 reviewer 互相覆盖；完全禁止 Framework 拒绝 route 又会让越权 role、undeclared target、legacy field、malformed output 或无效 Re-review closure污染 current pointer。两者都不是“Codex 单一语义路由面”。
+
+决策：primary-only StageRun 的 producer，或正式 Review StageRun 的 terminal reviewer / re-reviewer，是唯一终局 route owner。非终局 Attempt 只能写 `route_impact.stage_route_recommendation`；终局 Attempt 写 `route_impact.stage_route_decision`。Framework 必须校验 role/终局资格、StageRun context/lineage、字段互斥、shape、legacy 字段缺失、finding-closure 和 declared target；不校验医学、科研、基金、视觉、编辑等专业判断是否正确。协议失败时 route output 不物化，artifact 保留并形成 route quality debt；普通顺序推进只能回到 domain pack 已声明的默认路径。
+
 ### 决策：Handoff Review 统一风险判据，不统一执行形状
 
 原因：Handoff Stage 的名称不能决定是否需要再审。运输已审 immutable refs 与在 Handoff 内新生成最终 PDF/PPTX/投稿包的风险不同；把五个 Agent 全部强制成相同 Review loop 会制造无意义递归，把它们全部设为 primary-only 又会让 Meta Review 之后生成的新 bytes 和 ready claim 绕过 fresh Review。
