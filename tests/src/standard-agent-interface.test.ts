@@ -14,6 +14,7 @@ import {
 } from '../../src/kernel/standard-agent-interface.ts';
 import {
   readPackageManagedStandardAgentDescriptor,
+  readStandardAgentDescriptorForDomain,
   standardAgentProgressDeltaKeys,
 } from '../../src/modules/connect/standard-agent-interface-discovery.ts';
 
@@ -179,8 +180,38 @@ test('package readiness is the canonical managed descriptor discovery gate', () 
       }),
       /identity does not match/,
     );
+    assert.equal(assertStandardAgentDescriptorIdentity({
+      ...descriptor!,
+      domain_id: 'mas',
+    }, {
+      project: 'med-autoscience',
+      domain_id: 'medautoscience',
+    }).domain_id, 'mas');
     assert.equal(readStandardAgentDescriptorInterface(repoDir)?.domain_id, 'fixture-agent');
   } finally {
     fs.rmSync(repoDir, { recursive: true, force: true });
   }
+});
+
+test('known domain discovery probes only its matching managed package', () => {
+  const statusReads: Array<string | null | undefined> = [];
+  const statusReader = ((input: { packageId?: string | null }) => {
+    statusReads.push(input.packageId);
+    return {
+      opl_agent_package_status: {
+        operational_ready: false,
+        runtime_source_readiness: {
+          status: 'missing',
+          operational_ready: false,
+          checkout_path: null,
+          expected_tree_sha256: null,
+          actual_tree_sha256: null,
+        },
+      },
+    };
+  }) as any;
+
+  readStandardAgentDescriptorForDomain('medautoscience', statusReader);
+
+  assert.deepEqual(statusReads, ['mas']);
 });

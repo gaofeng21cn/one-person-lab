@@ -17,18 +17,23 @@ function normalizedIdentity(value: string) {
   return value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
+function registryIdentities(entry: typeof STANDARD_AGENT_REGISTRY[number]) {
+  return [
+    entry.agent_id,
+    entry.domain_id,
+    entry.target_domain_id,
+    entry.project,
+    entry.plugin_name,
+    ...entry.aliases,
+  ];
+}
+
 function packageIdsForAliases(packageIds: readonly string[]) {
   const requested = new Set(packageIds.map(normalizedIdentity));
   return STANDARD_AGENT_REGISTRY
     .filter((entry) => entry.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP)
-    .filter((entry) => [
-      entry.agent_id,
-      entry.domain_id,
-      entry.target_domain_id,
-      entry.project,
-      entry.plugin_name,
-      ...entry.aliases,
-    ].some((alias) => requested.has(normalizedIdentity(alias))))
+    .filter((entry) => registryIdentities(entry)
+      .some((alias) => requested.has(normalizedIdentity(alias))))
     .map((entry) => entry.agent_id);
 }
 
@@ -79,8 +84,13 @@ export function readStandardAgentDescriptorForDomain(
   readStatus: PackageStatusReader = runOplAgentPackageStatus,
 ): StandardAgentDescriptorInterface | null {
   const target = normalizedIdentity(domainId);
-  for (const agent of STANDARD_AGENT_REGISTRY) {
-    if (agent.series_membership !== STANDARD_AGENT_SERIES_MEMBERSHIP) continue;
+  const standardAgents = STANDARD_AGENT_REGISTRY.filter((agent) =>
+    agent.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP
+  );
+  const directMatches = standardAgents.filter((agent) =>
+    registryIdentities(agent).some((identity) => normalizedIdentity(identity) === target)
+  );
+  for (const agent of directMatches.length > 0 ? directMatches : standardAgents) {
     const descriptor = currentDescriptorFromStatus(agent.agent_id, readStatus);
     if (
       descriptor

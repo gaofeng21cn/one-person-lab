@@ -6,6 +6,7 @@ import {
   isRecord,
 } from './contract-validation.ts';
 import { parseJsonText } from './json-file.ts';
+import { resolveStandardAgent } from './standard-agent-registry.ts';
 
 export const STANDARD_AGENT_INTERFACE_VERSION = 'opl_standard_agent_interface.v1' as const;
 export const STANDARD_AGENT_DESCRIPTOR_RELATIVE_PATH = 'contracts/domain_descriptor.json' as const;
@@ -370,7 +371,23 @@ export function assertStandardAgentDescriptorIdentity(
   descriptor: StandardAgentDescriptorInterface,
   expected: { project: string; domain_id?: string | null },
 ) {
-  const accepted = [expected.project, expected.domain_id ?? ''].map(normalizedIdentity).filter(Boolean);
+  const registryEntry = resolveStandardAgent(expected.domain_id ?? '')
+    ?? resolveStandardAgent(expected.project);
+  const accepted = [
+    expected.project,
+    expected.domain_id ?? '',
+    ...(registryEntry
+      ? [
+          registryEntry.agent_id,
+          registryEntry.domain_id,
+          registryEntry.target_domain_id,
+          registryEntry.project,
+          registryEntry.plugin_name,
+          registryEntry.canonical_plugin_name,
+          ...registryEntry.aliases,
+        ]
+      : []),
+  ].map(normalizedIdentity).filter(Boolean);
   if (!accepted.includes(normalizedIdentity(descriptor.domain_id))) {
     throw new FrameworkContractError(
       'contract_shape_invalid',

@@ -40,7 +40,7 @@ function runtimeProfile(entry: RuntimeAgent): StandardAgentFamilyRuntimeProfile 
 }
 
 export const FAMILY_RUNTIME_DOMAIN_IDS = runtimeEnabledStandardAgents().map((entry) =>
-  runtimeProfile(entry).runtime_domain_id
+  entry.target_domain_id
 );
 
 export function runtimeDomainProfileFor(domainId: string): StandardAgentFamilyRuntimeProfile | null {
@@ -120,13 +120,13 @@ export function runtimeManagerDomainProfiles() {
   });
 }
 
-export const FAMILY_RUNTIME_SCHEDULER_DOMAIN_IDS = runtimeManagerDomainProfiles().map((profile) =>
-  profile.domain_id
-);
+export const FAMILY_RUNTIME_SCHEDULER_DOMAIN_IDS = [...FAMILY_RUNTIME_DOMAIN_IDS];
 
 export function resolveFamilyRuntimeSchedulerDomainId(value: string) {
   const domainId = resolveFamilyRuntimeDomainId(value);
-  return domainId && FAMILY_RUNTIME_SCHEDULER_DOMAIN_IDS.includes(domainId) ? domainId : null;
+  return domainId && FAMILY_RUNTIME_SCHEDULER_DOMAIN_IDS.some((candidate) => candidate === domainId)
+    ? domainId
+    : null;
 }
 
 export function runtimeDomainDaemonReplacementSurfaces() {
