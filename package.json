@@ -98,6 +98,7 @@
     "test:stage-run-mag-integration": "node ./scripts/test-lanes.mjs run stage-run-mag-integration",
     "test:native": "./scripts/verify.sh native",
     "test:structure": "./scripts/verify.sh structure",
+    "test:full:plan": "node ./scripts/test-lanes.mjs plan full",
     "test:full": "node ./scripts/test-lanes.mjs run full",
     "test": "npm run test:smoke",
     "line-budget": "node ./scripts/line-budget.mjs",

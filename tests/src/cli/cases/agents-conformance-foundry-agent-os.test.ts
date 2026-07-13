@@ -1,4 +1,4 @@
-import { assert, runCli, test } from '../helpers.ts';
+import { assert, runCliReadOnly, test } from '../helpers.ts';
 import {
   buildReadyAgentRepo,
   configureReadyCapabilityPackage,
@@ -37,9 +37,9 @@ function readyFoundryRepos() {
   return { masRepo, magRepo, rcaRepo, omaRepo, bookForgeRepo, scholarSkillsRepo };
 }
 
-test('agents conformance exposes Foundry Agent OS membership without readiness authority', () => {
+test('agents conformance exposes Foundry Agent OS membership without readiness authority', async () => {
   const repos = readyFoundryRepos();
-  const payload = runCli([
+  const payload = await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
@@ -89,14 +89,14 @@ test('agents conformance exposes Foundry Agent OS membership without readiness a
   assert.equal(foundry.authority_boundary.capability_registry_can_create_typed_blocker, false);
 });
 
-test('foundry agents inspect exposes stage profile and owner-answer shape without OPL domain authority', () => {
+test('foundry agents inspect exposes stage profile and owner-answer shape without OPL domain authority', async () => {
   for (const agentId of STANDARD_FOUNDRY_DOMAIN_AGENT_IDS) {
-    const inspect = runCli([
+    const inspect = (await runCliReadOnly([
       'foundry',
       'agents',
       'inspect',
       agentId,
-    ]).foundry_agent;
+    ])).foundry_agent;
 
     assert.equal(inspect.series_membership, 'standard_domain_agent');
     assert.equal(inspect.status, 'standard_domain_agent');
@@ -107,7 +107,7 @@ test('foundry agents inspect exposes stage profile and owner-answer shape withou
     assert.equal(inspect.stage_profile.provider_completion_is_closeout, false);
     assert.equal(
       inspect.stage_profile.stage_delivery_progress_marker,
-      'domain_owner_receipt_ref_or_domain_owned_typed_blocker_ref',
+      'validated_consumable_artifact_progress_ref_or_domain_owner_receipt_ref',
     );
     assert.equal(inspect.owner_answer_shape.applies_to_agent_id, agentId);
     assert.equal(
@@ -129,17 +129,17 @@ test('foundry agents inspect exposes stage profile and owner-answer shape withou
   }
 });
 
-test('Foundry Agent OS canonicalizes OPL Meta Agent as OMA without renaming domain truth', () => {
+test('Foundry Agent OS canonicalizes OPL Meta Agent as OMA without renaming domain truth', async () => {
   const omaRepo = buildReadyAgentRepo();
   retargetReadyRepo(omaRepo, 'opl-meta-agent', 'OPL Meta Agent');
   configureReadyMetaMorphology(omaRepo);
 
-  const foundry = runCli([
+  const foundry = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `opl-meta-agent=${omaRepo}`,
-  ]).standard_domain_agent_conformance.foundry_agent_os_conformance;
+  ])).standard_domain_agent_conformance.foundry_agent_os_conformance;
   const oma = foundry.domains[0];
 
   assert.equal(foundry.status, 'blocked');
@@ -152,16 +152,16 @@ test('Foundry Agent OS canonicalizes OPL Meta Agent as OMA without renaming doma
   assert.equal(oma.blockers.includes('domain_not_in_foundry_agent_os_standard:opl-meta-agent'), false);
 });
 
-test('Foundry Agent OS still blocks unknown non-standard agents', () => {
+test('Foundry Agent OS still blocks unknown non-standard agents', async () => {
   const unknownRepo = buildReadyAgentRepo();
   retargetReadyRepo(unknownRepo, 'custom-domain-agent', 'Custom Domain Agent');
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `custom=${unknownRepo}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
   const foundry = report.foundry_agent_os_conformance;
 
   assert.equal(report.status, 'passed');

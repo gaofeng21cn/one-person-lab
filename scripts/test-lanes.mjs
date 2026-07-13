@@ -81,6 +81,8 @@ const fastTestFiles = [
   'tests/src/native-helper-prebuild.test.ts',
   'tests/src/cli/cases/cli-broken-pipe.test.ts',
   'tests/src/cli/cases/cli-command-lazy-registry.test.ts',
+  'tests/src/cli/cases/family-manifest-fixtures.test.ts',
+  'tests/src/cli/cases/read-only-cli-invocation.test.ts',
   'tests/src/standard-agent-registry-contract-boundaries.test.ts',
   'tests/src/standard-agent-implementation-profile.test.ts',
   'tests/src/source-derived-agent-design-abi.test.ts',
@@ -375,11 +377,11 @@ const lanes = {
   ],
   regression: [
     nodeTest([
+      'tests/src/base-managed-dependencies.test.ts',
       'tests/src/cli.test.ts',
       'tests/src/cli/cases/package-channel-daily-check.test.ts',
       'tests/src/cli-codex-default-shell.test.ts',
       'tests/src/cli-codex-default-shell-sync-skills.test.ts',
-      'tests/src/cli-codex-default-shell-passthrough.test.ts',
       'tests/src/runtime-state-paths.test.ts',
       'tests/src/family-domain-catalog.test.ts',
       'tests/src/family-entry-contracts.test.ts',
@@ -414,31 +416,163 @@ const lanes = {
   'fresh-install': [
     nodeTest(['tests/src/fresh-install-smoke.test.ts']),
   ],
-  full: [
-    { kind: 'npm', args: ['run', 'test:artifact'] },
-    { kind: 'npm', args: ['run', 'test:fast'] },
-    { kind: 'npm', args: ['run', 'test:fresh-install'] },
-    { kind: 'npm', args: ['run', 'test:structure'] },
-    { kind: 'npm', args: ['run', 'typecheck'] },
-    { kind: 'npm', args: ['run', 'lint'] },
-    { kind: 'npm', args: ['run', 'test:read-model-gates'] },
-    { kind: 'npm', args: ['run', 'test:meta'] },
-    { kind: 'npm', args: ['run', 'test:regression'] },
-    { kind: 'npm', args: ['run', 'test:integration'] },
-    { kind: 'npm', args: ['run', 'test:native'] },
-  ],
 };
+
+const fullLaneSource = [
+  ...sourceLaneSteps('artifact'),
+  ...sourceLaneSteps('fast'),
+  ...sourceLaneSteps('fresh-install'),
+  { kind: 'npm', args: ['run', 'test:structure'], sourceLane: 'structure' },
+  { kind: 'npm', args: ['run', 'typecheck'], sourceLane: 'typecheck' },
+  { kind: 'npm', args: ['run', 'lint'], sourceLane: 'lint' },
+  ...sourceLaneSteps('read-model-gates'),
+  ...sourceLaneSteps('meta'),
+  ...sourceLaneSteps('regression'),
+  ...sourceLaneSteps('integration'),
+  { kind: 'npm', args: ['run', 'test:native'], sourceLane: 'native' },
+];
+const fullLanePlan = buildUniqueFullLanePlan(fullLaneSource);
+lanes.full = fullLanePlan.steps;
+
+function sourceLaneSteps(laneName) {
+  return lanes[laneName].map((step) => ({ ...step, sourceLane: laneName }));
+}
+
+function buildUniqueFullLanePlan(sourceSteps) {
+  const expandedSteps = sourceSteps.map((step) => (
+    step.kind === 'node-test'
+      ? { ...step, files: step.files.flatMap((file) => expandPureTestAggregator(file)) }
+      : step
+  ));
+  const candidates = expandedSteps.flatMap((step, stepIndex) => (
+    step.kind === 'node-test'
+      ? step.files.map((file, fileIndex) => ({
+        file,
+        fileIndex,
+        score: nodeTestIsolationScore(step),
+        step,
+        stepIndex,
+      }))
+      : []
+  ));
+  const winnerByFile = new Map();
+  for (const candidate of candidates) {
+    const current = winnerByFile.get(candidate.file);
+    if (!current || candidate.score > current.score) {
+      winnerByFile.set(candidate.file, candidate);
+    }
+  }
+
+  const steps = expandedSteps.flatMap((step, stepIndex) => {
+    if (step.kind !== 'node-test') {
+      return [step];
+    }
+    const files = step.files.filter((file, fileIndex) => {
+      const winner = winnerByFile.get(file);
+      return winner.stepIndex === stepIndex && winner.fileIndex === fileIndex;
+    });
+    return files.length > 0 ? [{ ...step, files }] : [];
+  });
+  const plannedEntries = steps.filter(isNodeTestStep).flatMap(stepFiles);
+  const importClosureDuplicates = duplicateTestImportClosure(plannedEntries);
+  if (importClosureDuplicates.length > 0) {
+    fail(
+      `Full lane import closure still executes test modules more than once: ${importClosureDuplicates
+        .map(({ file, entries }) => `${file} via ${entries.join(', ')}`)
+        .join('; ')}`,
+    );
+  }
+
+  return {
+    steps,
+    summary: {
+      source_node_test_entry_count: sourceSteps.filter(isNodeTestStep).flatMap(stepFiles).length,
+      expanded_node_test_entry_count: candidates.length,
+      planned_node_test_entry_count: plannedEntries.length,
+      deduplicated_entry_count: candidates.length - plannedEntries.length,
+      pure_aggregator_expansion_count: sourceSteps
+        .filter(isNodeTestStep)
+        .flatMap(stepFiles)
+        .filter((file) => expandPureTestAggregator(file).length !== 1
+          || expandPureTestAggregator(file)[0] !== file).length,
+      import_closure_duplicate_count: importClosureDuplicates.length,
+      node_test_groups: steps.filter(isNodeTestStep).map((step) => ({
+        source_lane: step.sourceLane,
+        batch_size: step.batchSize,
+        env: step.env,
+        files: step.files,
+      })),
+    },
+  };
+}
+
+function nodeTestIsolationScore(step) {
+  const envScore = Object.keys(step.env ?? {}).length * 10_000;
+  const batchScore = Number.isInteger(step.batchSize) ? 1_000 - step.batchSize : 0;
+  return envScore + batchScore;
+}
+
+function expandPureTestAggregator(relativePath, seen = new Set()) {
+  if (seen.has(relativePath)) {
+    fail(`Test import cycle detected while expanding ${relativePath}`);
+  }
+  const importedTests = collectImportedTestFiles(relativePath).filter(isTrackedTestPath);
+  if (importedTests.length === 0 || hasOwnTestRegistration(relativePath)) {
+    return [relativePath];
+  }
+  const nextSeen = new Set(seen).add(relativePath);
+  return importedTests.flatMap((file) => expandPureTestAggregator(file, nextSeen));
+}
+
+function hasOwnTestRegistration(relativePath) {
+  const source = fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
+  return /\b(?:test|describe)\s*\(/.test(source);
+}
+
+function isTrackedTestPath(relativePath) {
+  return /\.test\.(?:ts|mjs)$/.test(relativePath);
+}
+
+function duplicateTestImportClosure(entries) {
+  const owners = new Map();
+  for (const entry of entries) {
+    for (const file of testImportClosure(entry)) {
+      if (!owners.has(file)) owners.set(file, []);
+      owners.get(file).push(entry);
+    }
+  }
+  return [...owners.entries()]
+    .filter(([, entryOwners]) => entryOwners.length > 1)
+    .map(([file, entryOwners]) => ({ file, entries: entryOwners }));
+}
+
+function testImportClosure(relativePath, closure = new Set()) {
+  if (closure.has(relativePath)) return closure;
+  closure.add(relativePath);
+  for (const imported of collectImportedTestFiles(relativePath).filter(isTrackedTestPath)) {
+    testImportClosure(imported, closure);
+  }
+  return closure;
+}
 
 const argv = process.argv.slice(2);
 const command = argv[0] ?? 'help';
 const commandHandlers = {
   list: printLaneList,
+  plan: () => printLanePlan(argv[1]),
   run: () => runLane(argv[1]),
   'assert-coverage': assertCoverage,
   help: printHelp,
   '--help': printHelp,
   '-h': printHelp,
 };
+
+function printLanePlan(laneName) {
+  if (laneName !== 'full') {
+    fail(`Execution planning is only available for the composed full lane: ${laneName ?? ''}`);
+  }
+  process.stdout.write(`${JSON.stringify(fullLanePlan.summary, null, 2)}\n`);
+}
 
 function runLane(laneName) {
   requireLane(laneName).forEach((step, index) => runLaneStep(laneName, step, index));
@@ -741,6 +875,7 @@ function printHelp() {
   process.stdout.write(`Usage: scripts/test-lanes.mjs <command>\n\n`);
   process.stdout.write('Commands:\n');
   process.stdout.write('  list\n');
+  process.stdout.write('  plan <full>\n');
   process.stdout.write(`  run <${Object.keys(lanes).join('|')}>\n`);
   process.stdout.write('  assert-coverage\n');
 }

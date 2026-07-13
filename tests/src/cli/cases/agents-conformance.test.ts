@@ -1,4 +1,4 @@
-import { assert, fs, path, runCli, test } from '../helpers.ts';
+import { assert, fs, path, runCliReadOnly, test } from '../helpers.ts';
 import './agents-conformance-cases/production-acceptance-and-morphology.ts';
 import {
   buildReadyAgentRepo,
@@ -10,15 +10,15 @@ import {
 } from './agents-conformance-fixtures.ts';
 import { assertStageOperatingPrincipleChecksPassed } from './agents-conformance-stage-operating-principles-assertions.ts';
 
-test('agents conformance keeps structural pass separate from domain readiness authority', () => {
+test('agents conformance keeps structural pass separate from domain readiness authority', async () => {
   const repoDir = buildReadyAgentRepo();
-  const platformSurfaces = runCli([
+  const platformSurfaces = (await runCliReadOnly([
     'agents',
     'platform-surfaces',
     '--agent',
     `sample=${repoDir}`,
-  ]).agent_platform_surface_ownership;
-  const payload = runCli([
+  ])).agent_platform_surface_ownership;
+  const payload = await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
@@ -57,7 +57,7 @@ test('agents conformance keeps structural pass separate from domain readiness au
   assert.equal(repo.evidence_tail_classification.tail_items.length, 2);
 });
 
-test('agents conformance consumes domain owner live progress refs without ready claim', () => {
+test('agents conformance consumes domain owner live progress refs without ready claim', async () => {
   const magRepo = buildReadyAgentRepo();
   retargetReadyRepoToMag(magRepo);
   configureReadyMagMorphology(magRepo);
@@ -82,12 +82,12 @@ test('agents conformance consumes domain owner live progress refs without ready 
     },
   });
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `mag=${magRepo}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
   const domain = report.stage_run_domain_adoption_read_model.domains[0];
   const worklistDomain = report.stage_run_domain_adoption_read_model
     .live_stage_run_progress_evidence_worklist.domains[0];
@@ -105,7 +105,7 @@ test('agents conformance consumes domain owner live progress refs without ready 
   assert.equal(report.stage_run_domain_adoption_read_model.authority_boundary.can_claim_domain_ready, false);
 });
 
-test('agents conformance rejects non-standard live progress contracts as still owner-open', () => {
+test('agents conformance rejects non-standard live progress contracts as still owner-open', async () => {
   const magRepo = buildReadyAgentRepo();
   retargetReadyRepoToMag(magRepo);
   configureReadyMagMorphology(magRepo);
@@ -120,12 +120,12 @@ test('agents conformance rejects non-standard live progress contracts as still o
     },
   });
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `mag=${magRepo}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
   const domain = report.stage_run_domain_adoption_read_model.domains[0];
 
   assert.equal(report.status, 'passed');
@@ -135,34 +135,34 @@ test('agents conformance rejects non-standard live progress contracts as still o
   assert.equal(domain.next_required_owner_action, 'repair_domain_live_stage_run_progress_evidence_contract');
 });
 
-test('agents conformance live family probe covers pass and blocked admission paths', () => {
+test('agents conformance live family probe covers pass and blocked admission paths', async () => {
   const readyRepo = buildReadyAgentRepo();
-  const readyReport = runCli([
+  const readyReport = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `sample=${readyRepo}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
   assert.equal(readyReport.family_live_conformance_probe.status, 'passed');
   assert.equal(readyReport.family_live_conformance_probe.domains[0].false_authority_boundary.domain_ready_authorized, false);
 
   assert.equal(fs.existsSync(path.join(readyRepo, 'contracts', 'stage_control_plane.json')), false);
-  const legacylessReport = runCli([
+  const legacylessReport = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `sample=${readyRepo}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
   assert.equal(legacylessReport.family_live_conformance_probe.status, 'passed');
 
   const blockedRepo = buildReadyAgentRepo();
   fs.rmSync(path.join(blockedRepo, 'agent', 'stages', 'manifest.json'));
-  const blockedReport = runCli([
+  const blockedReport = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `sample=${blockedRepo}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
   const blockedProbe = blockedReport.family_live_conformance_probe;
 
   assert.equal(blockedProbe.status, 'blocked');
@@ -175,7 +175,7 @@ test('agents conformance live family probe covers pass and blocked admission pat
   );
 });
 
-test('agents platform-surfaces keeps RCA guarded action catalog as metadata only', () => {
+test('agents platform-surfaces keeps RCA guarded action catalog as metadata only', async () => {
   const repoDir = buildReadyAgentRepo();
   retargetReadyRepo(repoDir, 'redcube-ai', 'RedCube AI');
   configureReadyRcaMorphology(repoDir);
@@ -197,12 +197,12 @@ test('agents platform-surfaces keeps RCA guarded action catalog as metadata only
     '',
   ].join('\n'), 'utf8');
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'platform-surfaces',
     '--agent',
     `rca=${repoDir}`,
-  ]).agent_platform_surface_ownership.reports[0];
+  ])).agent_platform_surface_ownership.reports[0];
 
   assert.equal(report.authority_boundary.report_can_claim_domain_ready, false);
   assert.equal(

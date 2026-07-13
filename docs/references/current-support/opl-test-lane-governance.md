@@ -32,14 +32,30 @@ Currentness policy：查看当前 lane 集合时先读 `package.json` 的 `test:
 | family | `./scripts/verify.sh family` | Python shared harness bootstrap 验证；Python cache、pytest cache 和临时 venv 必须走 repo 外 temp env。 |
 | lint | `./scripts/verify.sh lint` | `npm run lint`，只执行 JS lint；行数预算通过 `line-budget` / `line-budget:strict` 或 `structure` / `structure:strict` 查看。 |
 | typecheck | `./scripts/verify.sh typecheck` | `npm run typecheck`。 |
-| full | `npm run test:full` | clean-clone 基线入口；由 `scripts/test-lanes.mjs` 顺序调用 fast、fresh-install、structure、typecheck、lint、read-model-gates、meta、regression、integration、artifact 与 native。 |
+| full | `npm run test:full` | clean-clone / release-style 基线入口；先把 artifact、fast、fresh-install、read-model-gates、meta、regression、integration 与结构/类型/native gate 编译成唯一执行计划，再执行。 |
 
 `npm test` 等同 `npm run test:smoke`，用于普通开发的最低成本入口。`npm run test:fast` 是显式标准本地入口；当改动触及 shared runtime、contract registry、stage pack、Agent Lab 或 quality details 时再运行。`test:meta` 是独立治理 / quality / contract meta lane，不再等价 `test:fast`；共享 SQLite/state 的 framework readiness、App drilldown 和 evidence worklist 相关 read-model gates 通过 `test:read-model-gates` 串行执行，避免并行抢占同一状态面。
+
+## 开发时如何选测试
+
+普通实现循环默认先跑 changed/focused tests，再跑 `npm test`。字面改动可用 `rg` 找到直接测试；源码影响范围优先用 `codegraph affected <changed-files...>` 找候选入口，然后用 Node 原生 focused 入口执行：
+
+```bash
+node --experimental-strip-types --test <test-file...>
+npm test
+```
+
+只有改动触及共享 runtime、contract/schema registry、stage pack、跨模块 read model 或 Agent Lab 时，才补 `npm run test:fast` 或对应的 `read-model-gates` / `meta` / `regression` lane。开发循环不要求每次跑 `full`；CI 按独立 job 运行 standalone lane，发布、clean-clone 基线或跨 lane 治理变更再跑 `npm run test:full`。
+
+`npm run test:full:plan` 输出 full 的 fresh machine-readable 执行计划。组合器会展开只包含 import 的纯测试聚合器，按原 lane 的 env 与 batch isolation 为重复入口选择唯一 owner，并对最终 test import closure 执行零重复硬门。独立 lane 的 standalone 行为保持不变；去重只发生在 full 组合执行中，因此不会改变 focused、CI 分 job 或手工单 lane 的语义。
+
+CLI 测试中的 `runCliReadOnly*` 只用于显式确认无 mutation、无 passthrough、无 child-process 合同的只读命令。它复用当前测试进程已经加载的 CLI invocation，并串行保护临时 cwd/env；成功 stdout JSON、失败 stderr/exit code 和父进程状态恢复由 focused governance test 固定。每个被迁移的命令族仍须保留少量真实 subprocess 用例覆盖 argv、进程退出和 stderr 合同。写命令、raw passthrough、安装/启动、worker/provider lifecycle 与 child-process 行为继续使用 `runCli*` subprocess helper。
 
 ## 归属规则
 
 - 所有 active `tests/src/**/*.test.ts` 与 `tests/built/**/*.test.mjs` 必须被 `scripts/test-lanes.mjs assert-coverage` 覆盖。
 - 聚合测试文件可以作为 lane 入口；被聚合文件通过 import closure 归属到同一 lane。
+- 公共 helper 不得在模块顶层注册测试；helper 合同必须有唯一 `.test.ts` owner，避免每个引用入口重复注册同一断言。
 - active 测试目录不得保留无理由 `test.skip` 或 `describe.skip`。退役 surface 应改为 fail-closed 守护，或迁入历史文档。
 - `web`、`mcp-stdio` 与旧 alias 属于 retired surface；active 测试只保留 retired `cli_usage_error` 或 Codex-default passthrough 防回归断言。
 - 文档不作为机器断言对象；测试只钉 registry、contracts、schemas、CLI/API 行为、workflow 命令和生成产物结构。
@@ -61,4 +77,4 @@ node scripts/test-lanes.mjs assert-coverage
 rg "test\\.skip|describe\\.skip" tests/src tests/built
 ```
 
-根据变更面选择最小充分验证：入口/registry 改动先跑 `npm test` / `npm run test:smoke`，触及 shared runtime、contract registry、stage pack、Agent Lab 或 quality details 时再补 `npm run test:fast`；runtime/install 改动跑 `npm run test:integration`；发布前跑 `npm run test:full` 或 `./scripts/verify.sh full`。
+根据变更面选择最小充分验证：先跑 CodeGraph/字面检索命中的 focused tests，再跑 `npm test` / `npm run test:smoke`；触及 shared runtime、contract registry、stage pack、Agent Lab 或 quality details 时再补 `npm run test:fast`；runtime/install 改动跑 `npm run test:integration`；发布前先用 `npm run test:full:plan` readback 唯一执行计划，再跑 `npm run test:full` 或 `./scripts/verify.sh full`。

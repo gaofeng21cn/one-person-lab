@@ -1,4 +1,4 @@
-import { assert, runCli, test } from '../helpers.ts';
+import { assert, runCliReadOnly, test } from '../helpers.ts';
 import {
   buildReadyAgentRepo,
   configureReadyMetaMorphology,
@@ -6,17 +6,17 @@ import {
   retargetReadyRepo,
 } from './agents-conformance-fixtures.ts';
 
-test('agents conformance projects RCA visual golden path and explicit helper lanes', () => {
+test('agents conformance projects RCA visual golden path and explicit helper lanes', async () => {
   const repoDir = buildReadyAgentRepo();
   retargetReadyRepo(repoDir, 'redcube-ai', 'RedCube AI');
   configureReadyRcaMorphology(repoDir);
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `rca=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
   const goldenPath = report.reports[0].golden_path_default_surface_budget_checks;
   const alignment = goldenPath.mvp_cognitive_kernel_alignment;
 
@@ -48,17 +48,17 @@ test('agents conformance projects RCA visual golden path and explicit helper lan
   assert.deepEqual(alignment.blockers, []);
 });
 
-test('agents conformance keeps OMA at work-order proposal materializer boundary', () => {
+test('agents conformance keeps OMA at work-order proposal materializer boundary', async () => {
   const repoDir = buildReadyAgentRepo();
   retargetReadyRepo(repoDir, 'opl-meta-agent', 'OPL Meta Agent');
   configureReadyMetaMorphology(repoDir);
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `opl-meta-agent=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
   const goldenPath = report.reports[0].golden_path_default_surface_budget_checks;
   const alignment = goldenPath.mvp_cognitive_kernel_alignment;
 

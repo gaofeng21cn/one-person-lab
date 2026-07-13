@@ -1,22 +1,22 @@
-import { assert, fs, parseJsonText, path, runCli, test } from '../helpers.ts';
+import { assert, fs, parseJsonText, path, runCliReadOnly, test } from '../helpers.ts';
 import {
   buildReadyAgentRepo,
   writeJson,
 } from './agents-conformance-fixtures.ts';
 
-test('agents platform-surfaces blocks explicit generic platform owner claims', () => {
+test('agents platform-surfaces blocks explicit generic platform owner claims', async () => {
   const repoDir = buildReadyAgentRepo();
   const functionalAuditPath = path.join(repoDir, 'contracts', 'functional_privatization_audit.json');
   const functionalAudit = parseJsonText(fs.readFileSync(functionalAuditPath, 'utf8')) as any;
   functionalAudit.authority_boundary.domain_can_claim_generic_runtime_owner = true;
   writeJson(functionalAuditPath, functionalAudit);
 
-  const platformSurfaces = runCli([
+  const platformSurfaces = (await runCliReadOnly([
     'agents',
     'platform-surfaces',
     '--agent',
     `sample=${repoDir}`,
-  ]).agent_platform_surface_ownership;
+  ])).agent_platform_surface_ownership;
 
   assert.equal(platformSurfaces.status, 'blocked');
   assert.equal(platformSurfaces.summary.explicit_forbidden_owner_claim_count, 1);
@@ -42,12 +42,12 @@ test('agents platform-surfaces blocks explicit generic platform owner claims', (
   );
   assert.equal(platformSurfaces.reports[0].authority_boundary.report_can_claim_domain_ready, false);
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
 
   assert.equal(report.status, 'blocked');
   assert.equal(report.reports[0].platform_surface_ownership_checks.status, 'blocked');
@@ -59,7 +59,7 @@ test('agents platform-surfaces blocks explicit generic platform owner claims', (
   );
 });
 
-test('agents platform-surfaces reports filename and prose matches as advisory diagnostics only', () => {
+test('agents platform-surfaces reports filename and prose matches as advisory diagnostics only', async () => {
   const repoDir = buildReadyAgentRepo();
   const prosePath = path.join(repoDir, 'docs', 'active', 'status-workbench-notes.md');
   const codePath = path.join(repoDir, 'agent', 'product-entry-status-workbench.ts');
@@ -75,12 +75,12 @@ test('agents platform-surfaces reports filename and prose matches as advisory di
     'utf8',
   );
 
-  const platformSurfaces = runCli([
+  const platformSurfaces = (await runCliReadOnly([
     'agents',
     'platform-surfaces',
     '--agent',
     `sample=${repoDir}`,
-  ]).agent_platform_surface_ownership;
+  ])).agent_platform_surface_ownership;
 
   const statusSurface = platformSurfaces.reports[0].generic_subdomains
     .find((surface: { subdomain_id: string }) => (
@@ -109,12 +109,12 @@ test('agents platform-surfaces reports filename and prose matches as advisory di
   );
   assert.equal(statusSurface.observed_source_refs_role, 'compatibility_alias_for_advisory_diagnostic_refs');
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
 
   assert.equal(report.status, 'passed');
   assert.equal(report.reports[0].platform_surface_ownership_checks.hard_gate.status, 'passed');

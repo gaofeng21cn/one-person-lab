@@ -131,23 +131,17 @@ const expectedTestScripts = {
   'test:fresh-install': 'node ./scripts/test-lanes.mjs run fresh-install',
   'test:native': './scripts/verify.sh native',
   'test:structure': './scripts/verify.sh structure',
+  'test:full:plan': 'node ./scripts/test-lanes.mjs plan full',
   'test:full': 'node ./scripts/test-lanes.mjs run full',
   test: 'npm run test:smoke',
 };
 
 const fullLanePatterns = [
-  /full:/,
-  /'test:fast'/,
-  /'test:fresh-install'/,
-  /'test:structure'/,
-  /'typecheck'/,
-  /'lint'/,
-  /'test:read-model-gates'/,
-  /'test:meta'/,
-  /'test:regression'/,
-  /'test:integration'/,
-  /'test:artifact'/,
-  /'test:native'/,
+  /buildUniqueFullLanePlan/,
+  /expandPureTestAggregator/,
+  /duplicateTestImportClosure/,
+  /nodeTestIsolationScore/,
+  /import_closure_duplicate_count/,
 ];
 
 function read(relativePath: string) {
@@ -260,4 +254,47 @@ test('package.json exposes a single test lane registry for active test ownership
 test('test:full stays in the single test lane registry', () => {
   assert.equal(packageJson.scripts?.['test:full'], 'node ./scripts/test-lanes.mjs run full');
   assertFilePatterns('scripts/test-lanes.mjs', fullLanePatterns);
+
+  const registryPath = path.join(repoRoot, 'scripts/test-lanes.mjs');
+  const plan = spawnSync(process.execPath, [registryPath, 'plan', 'full'], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+  });
+  assert.equal(plan.status, 0, plan.stderr);
+  const payload = parseJsonText(plan.stdout) as {
+    deduplicated_entry_count: number;
+    import_closure_duplicate_count: number;
+    node_test_groups: Array<{
+      source_lane: string;
+      batch_size: number | null;
+      env: Record<string, string>;
+    }>;
+  };
+  assert.ok(payload.deduplicated_entry_count > 0);
+  assert.equal(payload.import_closure_duplicate_count, 0);
+  assert.equal(
+    payload.node_test_groups.some((group) =>
+      group.source_lane === 'read-model-gates'
+        && group.batch_size === 1
+        && group.env.OPL_CLI_TEST_TIMEOUT_MS === '90000'),
+    true,
+  );
+
+  const listed = spawnSync(process.execPath, [registryPath, 'list'], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+  });
+  assert.equal(listed.status, 0, listed.stderr);
+  const fullOutput = listed.stdout.slice(listed.stdout.indexOf('\nfull\n') + 1);
+  for (const nestedLane of [
+    'test:artifact',
+    'test:fast',
+    'test:fresh-install',
+    'test:read-model-gates',
+    'test:meta',
+    'test:regression',
+    'test:integration',
+  ]) {
+    assert.doesNotMatch(fullOutput, new RegExp(`npm run ${nestedLane}`));
+  }
 });

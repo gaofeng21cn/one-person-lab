@@ -12,7 +12,7 @@ import {
   NON_PASSTHROUGH_COMMAND_PREFIXES,
 } from './modules/help-output.ts';
 import { buildUsageError } from './modules/cli-errors.ts';
-import { printJson } from './modules/cli-output.ts';
+import { printJson, type CliOutputStream } from './modules/cli-output.ts';
 import { buildLazyCommandSpecs } from './modules/lazy-command-registry.ts';
 
 async function runCodexPassthroughHandled(args: string[]) {
@@ -111,9 +111,17 @@ function resolveRetiredCommand(tokens: string[]) {
   );
 }
 
-export async function main() {
-  const parsedInput = parseCliInput(process.argv.slice(2));
-  const shouldPrintHumanHelp = parsedInput.textOutput || (process.stdout.isTTY && !parsedInput.jsonOutput);
+export type CliMainOptions = {
+  argv?: string[];
+  stdout?: CliOutputStream;
+  stdoutIsTTY?: boolean;
+};
+
+export async function main(options: CliMainOptions = {}) {
+  const stdout = options.stdout ?? process.stdout;
+  const parsedInput = parseCliInput(options.argv ?? process.argv.slice(2));
+  const shouldPrintHumanHelp = parsedInput.textOutput
+    || ((options.stdoutIsTTY ?? process.stdout.isTTY) && !parsedInput.jsonOutput);
   let contractsPromise: Promise<FrameworkContracts> | undefined;
   const loadContracts = async () => {
     contractsPromise ??= import('../../modules/charter/contracts.ts')
@@ -128,9 +136,9 @@ export async function main() {
     if (parsedInput.helpRequested) {
       const payload = buildRootHelp(publicCommandSpecs);
       if (shouldPrintHumanHelp) {
-        process.stdout.write(formatHumanRootHelp(payload));
+        stdout.write(formatHumanRootHelp(payload));
       } else {
-        printJson(payload);
+        printJson(payload, stdout);
       }
       return;
     }
@@ -208,21 +216,21 @@ export async function main() {
       if (shouldPrintHumanHelp && typeof payload === 'object' && payload !== null && 'help' in payload) {
         const helpPayload = payload as ReturnType<typeof buildRootHelp> | ReturnType<typeof buildCommandHelp>;
         if (helpPayload.help.command) {
-          process.stdout.write(formatHumanCommandHelp(helpPayload as ReturnType<typeof buildCommandHelp>));
+          stdout.write(formatHumanCommandHelp(helpPayload as ReturnType<typeof buildCommandHelp>));
         } else {
-          process.stdout.write(formatHumanRootHelp(helpPayload as ReturnType<typeof buildRootHelp>));
+          stdout.write(formatHumanRootHelp(helpPayload as ReturnType<typeof buildRootHelp>));
         }
       } else {
-        printJson(payload);
+        printJson(payload, stdout);
       }
       return;
     }
 
     const payload = buildCommandHelp(command, spec);
     if (shouldPrintHumanHelp) {
-      process.stdout.write(formatHumanCommandHelp(payload));
+      stdout.write(formatHumanCommandHelp(payload));
     } else {
-      printJson(payload);
+      printJson(payload, stdout);
     }
     return;
   }
@@ -235,20 +243,29 @@ export async function main() {
   if (command === 'help' && shouldPrintHumanHelp && typeof result === 'object' && result !== null && 'help' in result) {
     const helpPayload = result as ReturnType<typeof buildRootHelp> | ReturnType<typeof buildCommandHelp>;
     if (helpPayload.help.command) {
-      process.stdout.write(formatHumanCommandHelp(helpPayload as ReturnType<typeof buildCommandHelp>));
+      stdout.write(formatHumanCommandHelp(helpPayload as ReturnType<typeof buildCommandHelp>));
     } else {
-      process.stdout.write(formatHumanRootHelp(helpPayload as ReturnType<typeof buildRootHelp>));
+      stdout.write(formatHumanRootHelp(helpPayload as ReturnType<typeof buildRootHelp>));
     }
     return;
   }
 
-  printJson(result);
+  printJson(result, stdout);
 }
 
-export function handleCliMainError(error: unknown) {
+export type CliMainErrorOptions = {
+  stderr?: CliOutputStream;
+  setExitCode?: (exitCode: number) => void;
+};
+
+export function handleCliMainError(error: unknown, options: CliMainErrorOptions = {}) {
+  const stderr = options.stderr ?? process.stderr;
+  const setExitCode = options.setExitCode ?? ((exitCode: number) => {
+    process.exitCode = exitCode;
+  });
   if (error instanceof FrameworkContractError) {
-    printJson(error.toJSON(), process.stderr);
-    process.exitCode = error.exitCode;
+    printJson(error.toJSON(), stderr);
+    setExitCode(error.exitCode);
     return;
   }
 
@@ -265,7 +282,7 @@ export function handleCliMainError(error: unknown) {
         exit_code: 1,
       },
     },
-    process.stderr,
+    stderr,
   );
-  process.exitCode = 1;
+  setExitCode(1);
 }

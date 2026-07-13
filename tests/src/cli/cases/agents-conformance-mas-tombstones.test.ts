@@ -1,4 +1,4 @@
-import { assert, fs, parseJsonText, path, runCli, test } from '../helpers.ts';
+import { assert, fs, parseJsonText, path, runCliReadOnly, test } from '../helpers.ts';
 import {
   buildReadyAgentRepo,
   retargetReadyRepo,
@@ -6,7 +6,7 @@ import {
   writeJson,
 } from './agents-conformance-fixtures.ts';
 
-test('agents conformance allows MAS legacy active path tombstone contract markers', () => {
+test('agents conformance allows MAS legacy active path tombstone contract markers', async () => {
   const repoDir = buildReadyAgentRepo();
   retargetReadyRepo(repoDir, 'med-autoscience', 'Med Auto Science');
   fs.mkdirSync(path.join(repoDir, 'contracts', 'runtime'), { recursive: true });
@@ -41,12 +41,12 @@ test('agents conformance allows MAS legacy active path tombstone contract marker
   );
   writeJson(profilePath, profile);
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `mas=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
   const morphologyChecks = report.reports[0].physical_morphology_checks;
 
   assert.equal(report.status, 'passed');
@@ -80,7 +80,7 @@ test('agents conformance allows MAS legacy active path tombstone contract marker
   );
 });
 
-test('agents conformance blocks exact MAG legacy residue tokens', () => {
+test('agents conformance blocks exact MAG legacy residue tokens', async () => {
   const repoDir = buildReadyAgentRepo();
   retargetReadyRepoToMag(repoDir);
   const actionCatalogPath = path.join(repoDir, 'contracts', 'action_catalog.json');
@@ -92,12 +92,12 @@ test('agents conformance blocks exact MAG legacy residue tokens', () => {
   profile.physical_morphology.forbidden_name_tokens = ['attempt_ledger'];
   writeJson(profilePath, profile);
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `mag=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
 
   assert.equal(report.status, 'blocked');
   const morphologyChecks = report.reports[0].physical_morphology_checks;
