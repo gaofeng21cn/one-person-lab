@@ -106,6 +106,8 @@ test('gateway account login, refresh and disconnect keep secrets private and dis
     if (route.startsWith('/api/v1/keys?')) return json(response, { code: 0, data: { items: [] } });
     if (route === '/api/v1/keys' && request.method === 'POST') {
       createIdempotency = String(request.headers['idempotency-key'] ?? '');
+      assert.equal(typeof body.group_id, 'number');
+      assert.equal(body.group_id, 3);
       return json(response, { code: 0, data: {
         id: 99,
         name: body.name,
@@ -129,6 +131,8 @@ test('gateway account login, refresh and disconnect keep secrets private and dis
       keyStatus = String(body.status);
       assert.deepEqual(body.ip_whitelist, ['127.0.0.1']);
       assert.equal('key' in body, false);
+      assert.equal(typeof body.group_id, 'number');
+      assert.equal(body.group_id, 3);
       return json(response, { code: 0, data: {
         id: 99, name: body.name, key: 'managed-api-secret', status: keyStatus, group_id: 3,
         ip_whitelist: body.ip_whitelist, ip_blacklist: body.ip_blacklist,
@@ -163,7 +167,7 @@ test('gateway account login, refresh and disconnect keep secrets private and dis
     assert.equal(login.gateway_account.account?.email, 'user@example.test');
     assert.equal(login.gateway_account.usage?.today_actual_cost, 0.12);
     assert.equal(login.gateway_account.managed_key?.ownership, 'opl_app_managed');
-    assert.equal(requests.find((entry) => entry.url === '/api/v1/keys' && entry.method === 'POST')?.body.group_id, '3');
+    assert.equal(requests.find((entry) => entry.url === '/api/v1/keys' && entry.method === 'POST')?.body.group_id, 3);
     assert.match(createIdempotency, /^opl-app-key-create:42:/);
 
     const publicJson = JSON.stringify(login);
