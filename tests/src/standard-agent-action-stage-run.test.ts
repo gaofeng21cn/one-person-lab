@@ -314,6 +314,74 @@ test('standard Agent StageRun uses the declared stage graph when action route me
   assert.ok(progress.quality_debt_refs.some((ref) => ref.includes('route-declaration-quality-debt')));
 });
 
+test('standard Agent StageRun fallback follows action required-stage order instead of manifest file order', (t) => {
+  const fixture = stageRunFixture();
+  t.after(() => fs.rmSync(fixture.repoDir, { recursive: true, force: true }));
+  writeJson(path.join(fixture.repoDir, 'agent', 'stages', 'manifest.json'), {
+    stages: [
+      { stage_id: 'intake', next_stage_refs: ['optional-research', 'build'] },
+      { stage_id: 'optional-research', next_stage_refs: ['build'] },
+      { stage_id: 'build', next_stage_refs: ['review'] },
+      { stage_id: 'review', next_stage_refs: [] },
+    ],
+  });
+  writeJson(path.join(fixture.repoDir, 'contracts', 'action_catalog.json'), {
+    target_domain_id: 'sample',
+    actions: [{
+      action_id: 'build',
+      stage_route: {
+        entry_stage_ref: 'intake',
+        required_stage_refs: ['intake', 'build', 'review'],
+        optional_stage_refs: ['optional-research'],
+        terminal_stage_refs: ['review'],
+        route_policy: 'ai_selected_progress_route',
+      },
+    }],
+  });
+  const intake = fixture.readback('intake', []);
+
+  const progress = evaluateStandardAgentActionStageRun({
+    repoDir: fixture.repoDir,
+    actionId: 'build',
+    stageRunReadbackPaths: [intake.path],
+  });
+
+  assert.equal(progress.next_stage_ref, 'build');
+  assert.ok(progress.quality_debt_refs.some((ref) => (
+    ref.includes('decisive_attempt_route_decision_missing_used_action_required_stage_order')
+  )));
+});
+
+test('standard Agent StageRun does not guess between multiple declared successors', (t) => {
+  const fixture = stageRunFixture();
+  t.after(() => fs.rmSync(fixture.repoDir, { recursive: true, force: true }));
+  writeJson(path.join(fixture.repoDir, 'agent', 'stages', 'manifest.json'), {
+    stages: [
+      { stage_id: 'intake', next_stage_refs: ['review'] },
+      { stage_id: 'review', next_stage_refs: ['build', 'handoff'] },
+      { stage_id: 'build', next_stage_refs: ['review'] },
+      { stage_id: 'handoff', next_stage_refs: [] },
+    ],
+  });
+  writeJson(path.join(fixture.repoDir, 'contracts', 'action_catalog.json'), {
+    target_domain_id: 'sample',
+    actions: [{ action_id: 'build' }],
+  });
+  const review = fixture.readback('review', []);
+
+  const progress = evaluateStandardAgentActionStageRun({
+    repoDir: fixture.repoDir,
+    actionId: 'build',
+    stageRunReadbackPaths: [review.path],
+  });
+
+  assert.equal(progress.complete, false);
+  assert.equal(progress.next_stage_ref, null);
+  assert.ok(progress.quality_debt_refs.some((ref) => (
+    ref.includes('decisive_attempt_route_decision_required_for_ambiguous_declared_successors')
+  )));
+});
+
 test('standard Agent StageRun consumer rejects canonical manifest refs that escape the domain repo', (t) => {
   const fixture = stageRunFixture();
   t.after(() => fs.rmSync(fixture.repoDir, { recursive: true, force: true }));

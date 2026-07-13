@@ -234,12 +234,18 @@ function terminalDecisionRejectionReasons(input: {
   const reasons: string[] = [];
   if (!decisiveRoles.includes(role)) reasons.push('attempt_role_is_not_configured_decisive_role');
   const envelope = record(input.routeImpact.stage_quality_cycle);
+  if (
+    ['blocked', 'human_gate'].includes(String(envelope.outcome))
+    || Boolean(text(envelope.hard_stop_class))
+  ) {
+    reasons.push('hard_stop_attempt_cannot_select_terminal_route');
+  }
   if (role === 'reviewer' && envelope.outcome === 'repair_required') {
     reasons.push('review_requires_internal_repair_continuation');
   }
   if (role === 'reviewer' && ![
     'pass',
-    'completed_with_quality_debt',
+    'quality_debt',
   ].includes(String(envelope.outcome))) {
     reasons.push('review_outcome_does_not_terminalize_stage_run');
   }

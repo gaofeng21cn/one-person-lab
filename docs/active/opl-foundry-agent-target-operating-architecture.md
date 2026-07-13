@@ -259,7 +259,7 @@ OPL 记录实际使用过的工具 refs、证据 refs、artifact refs、owner an
 
 ### 3. Stage Attempt Runtime
 
-Stage 是 OPL 唯一默认执行单元。Attempt Runtime 只负责：
+Stage 是 OPL Stage graph 中唯一默认领域工作单元；StageRun 是一次 durable 工单，StageAttempt 是该工单内一次上下文隔离的 executor 调用。Attempt Runtime 只负责：
 
 - context：运输 stage id、owner、goal、可选 scope / input refs 与 selected executor；
 - launch：生成 attempt request、绑定 provider 与 workspace root；

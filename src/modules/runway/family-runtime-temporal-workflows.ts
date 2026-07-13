@@ -612,7 +612,7 @@ function qualityOutcome(value: Record<string, unknown>) {
   if (
     outcome === 'pass'
     || outcome === 'repair_required'
-    || outcome === 'completed_with_quality_debt'
+    || outcome === 'quality_debt'
     || outcome === 'blocked'
     || outcome === 'human_gate'
   ) {
@@ -690,7 +690,7 @@ function declaredHardStop(envelope: Record<string, unknown>) {
 function reviewVerdictForOutcome(outcome: ReturnType<typeof qualityOutcome>): StageReviewReceipt['verdict'] {
   if (outcome === 'pass') return 'pass';
   if (outcome === 'repair_required') return 'repair_required';
-  if (outcome === 'completed_with_quality_debt') return 'quality_debt';
+  if (outcome === 'quality_debt') return 'quality_debt';
   return 'hard_stop';
 }
 
@@ -969,7 +969,7 @@ export async function StageRunWorkflow(
       commitTerminalRouteDecision(review);
       return terminalize({ ...state, status: 'completed', current_role: null, updated_at: nowIso() });
     }
-    if (initialOutcome === 'completed_with_quality_debt') {
+    if (initialOutcome === 'quality_debt') {
       commitTerminalRouteDecision(review);
       return terminalize({
         ...state,

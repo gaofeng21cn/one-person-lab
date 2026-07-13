@@ -40,8 +40,20 @@ test('StageRun contract is passive transport and Codex owns semantic routing', (
     value.route_output_policy.missing_or_invalid_route_fallback,
     'domain_pack_declared_default_progression_with_route_quality_debt_only',
   );
+  assert.deepEqual(value.route_output_policy.declared_default_progression_resolution, [
+    'action_stage_route.required_stage_refs_order',
+    'unique_current_stage.next_stage_refs',
+  ]);
+  assert.equal(value.route_output_policy.manifest_file_order_must_not_select_successor, true);
+  assert.equal(value.route_output_policy.ambiguous_declared_successors_require_decisive_codex_route, true);
   assert.equal(value.authority_boundary.opl_can_validate_route_output_abi_and_attempt_authority, true);
+  assert.equal(value.authority_boundary.opl_must_reject_non_authoritative_or_malformed_route_output, true);
+  assert.equal(value.authority_boundary.opl_can_reject_abi_valid_route_on_domain_semantic_merit, false);
   assert.equal(value.authority_boundary.opl_can_select_semantic_stage_route, false);
+  assert.equal(
+    Object.hasOwn(value.authority_boundary, 'opl_can_accept_reject_rank_reconcile_or_override_codex_route'),
+    false,
+  );
   assert.equal(Object.hasOwn(value.authority_boundary, 'opl_can_create_execution_authorization_blocker'), false);
   assert.equal(serialized.includes('stage_run_execution_authorization_ledger'), false);
   assert.equal(serialized.includes('closeout_binding_gate'), false);

@@ -9,7 +9,7 @@ import {
 
 function attempt(input: {
   role: 'producer' | 'reviewer' | 'repairer' | 're_reviewer';
-  decisiveRoles: string[];
+  decisiveRoles: readonly string[];
   round?: number;
   maxRounds?: number;
 }) {
@@ -84,6 +84,56 @@ test('reviewer selects a route only when its verdict terminalizes the StageRun',
       stage_quality_cycle: { outcome: 'pass' },
     },
   }));
+  assert.doesNotThrow(() => assertQualityAttemptTerminalRouteSelection({
+    attempt: reviewer,
+    routeImpact: {
+      stage_route_decision: routeBackDecision,
+      stage_quality_cycle: { outcome: 'quality_debt' },
+    },
+  }));
+  assert.throws(() => assertQualityAttemptTerminalRouteSelection({
+    attempt: reviewer,
+    routeImpact: {
+      stage_route_decision: routeBackDecision,
+      stage_quality_cycle: { outcome: 'completed_with_quality_debt' },
+    },
+  }), /invalid or non-authoritative cross-Stage route output/);
+});
+
+test('hard-stop Attempts cannot select a terminal route regardless of decisive role', () => {
+  for (const [role, decisiveRoles] of [
+    ['producer', ['producer']],
+    ['reviewer', ['reviewer', 're_reviewer']],
+    ['re_reviewer', ['reviewer', 're_reviewer']],
+  ] as const) {
+    const evaluation = evaluateStageQualityAttemptRoute({
+      attempt: attempt({ role, decisiveRoles, round: role === 're_reviewer' ? 3 : 0 }),
+      routeImpact: {
+        stage_route_decision: routeBackDecision,
+        stage_quality_cycle: {
+          outcome: 'blocked',
+          hard_stop_class: 'authority_boundary_violation',
+          ...(role === 're_reviewer'
+            ? {
+                finding_closures: [{
+                  finding_id: 'f1',
+                  status: 'closed',
+                  evidence_refs: ['evidence:f1-closed'],
+                }],
+                repair_regressions: [],
+                critical_new_findings: [],
+              }
+            : {}),
+        },
+      },
+    });
+    assert.equal(evaluation.decision, null);
+    assert.ok(
+      evaluation.decision_rejection_reasons.includes(
+        'hard_stop_attempt_cannot_select_terminal_route',
+      ),
+    );
+  }
 });
 
 test('re-reviewer cannot route before closure but may route on closure or budget exhaustion', () => {

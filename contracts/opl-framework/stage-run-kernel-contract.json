@@ -82,7 +82,13 @@
       "whether_an_abi_valid_declared_target_is_the_best_route"
     ],
     "invalid_output_effect": "preserve_consumable_progress_record_route_quality_debt_and_leave_attempt_route_unmaterialized",
-    "missing_or_invalid_route_fallback": "domain_pack_declared_default_progression_with_route_quality_debt_only"
+    "missing_or_invalid_route_fallback": "domain_pack_declared_default_progression_with_route_quality_debt_only",
+    "declared_default_progression_resolution": [
+      "action_stage_route.required_stage_refs_order",
+      "unique_current_stage.next_stage_refs"
+    ],
+    "manifest_file_order_must_not_select_successor": true,
+    "ambiguous_declared_successors_require_decisive_codex_route": true
   },
   "closeout_policy": {
     "progress_outcomes": [
@@ -211,9 +217,9 @@
     "opl_can_account_retry_budget": true,
     "opl_can_filter_stale_reuse": true,
     "opl_can_validate_route_output_abi_and_attempt_authority": true,
-    "opl_can_reject_non_authoritative_or_malformed_route_output": true,
+    "opl_must_reject_non_authoritative_or_malformed_route_output": true,
     "opl_can_select_semantic_stage_route": false,
-    "opl_can_accept_reject_rank_reconcile_or_override_codex_route": false,
+    "opl_can_reject_abi_valid_route_on_domain_semantic_merit": false,
     "opl_can_block_next_stage_for_missing_receipt_or_format": false,
     "opl_can_write_domain_truth": false,
     "opl_can_mutate_artifact_body": false,

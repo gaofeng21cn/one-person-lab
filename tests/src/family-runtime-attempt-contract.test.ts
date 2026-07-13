@@ -111,19 +111,25 @@ test('stage route transport cannot become a second semantic control plane', () =
   const contract = readJson('contracts/opl-framework/stage-route-transport-contract.json');
 
   assert.equal(contract.codex_semantic_route_boundary.semantic_owner, 'codex_cli');
-  assert.equal(contract.codex_semantic_route_boundary.framework_can_accept_reject_rank_select_reconcile_or_override_route, false);
+  assert.equal(contract.codex_semantic_route_boundary.framework_can_reject_abi_valid_route_on_domain_semantic_merit, false);
   assert.equal(
     contract.codex_semantic_route_boundary.framework_must_validate_route_output_abi_and_attempt_authority,
     true,
   );
   assert.equal(
-    contract.codex_semantic_route_boundary.framework_can_reject_non_authoritative_or_malformed_route_output,
+    contract.codex_semantic_route_boundary.framework_must_reject_non_authoritative_or_malformed_route_output,
     true,
   );
   assert.equal(
     contract.codex_semantic_route_boundary.missing_or_rejected_route_fallback,
     'domain_pack_declared_default_progression_with_route_quality_debt_only',
   );
+  assert.deepEqual(contract.codex_semantic_route_boundary.declared_default_progression_resolution, [
+    'action_stage_route.required_stage_refs_order',
+    'unique_current_stage.next_stage_refs',
+  ]);
+  assert.equal(contract.codex_semantic_route_boundary.manifest_file_order_must_not_select_successor, true);
+  assert.equal(contract.codex_semantic_route_boundary.ambiguous_declared_successors_require_decisive_codex_route, true);
   assert.equal(contract.progress_policy.readable_artifact_counts_as_progress, true);
   assert.equal(contract.route_back_policy.may_target_any_declared_stage, true);
   assert.equal(contract.authority_boundary.opl_can_transport_codex_selected_route, true);
@@ -251,6 +257,29 @@ test('Stage quality contracts bind bounded Attempts, exact artifact identity, re
     attempts.stage_route_boundary.missing_or_invalid_route_fallback,
     'domain_pack_declared_default_progression_with_route_quality_debt_only',
   );
+  assert.equal(
+    attempts.stage_route_boundary.framework_can_reject_abi_valid_route_on_domain_semantic_merit,
+    false,
+  );
+  assert.equal(
+    attempts.stage_route_boundary.framework_must_reject_non_authoritative_or_malformed_route_output,
+    true,
+  );
+  assert.equal(attempts.stage_route_boundary.hard_stop_attempt_may_select_terminal_route, false);
+  assert.equal(
+    Object.hasOwn(
+      attempts.stage_route_boundary,
+      'framework_can_accept_reject_rank_reconcile_or_override_codex_route',
+    ),
+    false,
+  );
+  assert.deepEqual(attempts.stage_route_boundary.declared_default_progression_resolution, [
+    'action_stage_route.required_stage_refs_order',
+    'unique_current_stage.next_stage_refs',
+  ]);
+  assert.equal(quality.cross_stage_route_selection.attempt_route_output_is_closeout_judgment_not_stage_topology_or_transition_authority, true);
+  assert.equal(quality.cross_stage_route_selection.manifest_file_order_must_not_select_successor, true);
+  assert.equal(quality.cross_stage_route_selection.ambiguous_declared_successors_require_decisive_codex_route, true);
   assert.equal(
     attempts.stage_quality_cycle_contract.route_output_abi_validation_required_before_stage_run_projection,
     true,

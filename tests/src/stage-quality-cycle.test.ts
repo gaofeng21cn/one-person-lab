@@ -66,12 +66,14 @@ test('official quality profile is explicit without adding per-agent registry pol
   assert.equal(contract.cross_stage_route_selection.opl_route_output_abi_validation_required, true);
   assert.equal(contract.cross_stage_route_selection.runtime_closeout_guard_required, true);
   assert.equal(contract.cross_stage_route_selection.repair_required_review_may_select_terminal_route, false);
+  assert.equal(contract.cross_stage_route_selection.hard_stop_attempt_may_select_terminal_route, false);
   assert.deepEqual(contract.cross_stage_route_selection.route_abi_rejection_conditions, [
     'non_decisive_attempt_writes_terminal_decision',
     'decision_and_recommendation_both_present',
     'route_output_shape_invalid',
     'legacy_terminal_route_field_present',
     'target_stage_not_declared',
+    'hard_stop_attempt_writes_terminal_decision',
     'review_or_re_review_not_terminal',
   ]);
   assert.deepEqual(contract.cross_stage_route_selection.legacy_terminal_route_fields_forbidden, [
@@ -275,6 +277,8 @@ test('formal reviewer prompt binds isolated context and exact artifact identity'
   assert.match(prompt, /Do not produce a repair_map/);
   assert.match(prompt, /terminal reviewer or re-reviewer/);
   assert.match(prompt, /decisive Codex Attempt for cross-Stage semantic route selection/);
+  assert.match(prompt, /progress-terminal decisive Attempt/);
+  assert.match(prompt, /A hard stop returns the applicable typed blocker or human-gate closeout/);
   assert.match(prompt, /stage_route_contract is controller-owned validation metadata/);
 });
 

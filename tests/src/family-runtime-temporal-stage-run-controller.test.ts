@@ -57,6 +57,7 @@ async function runController(input: {
   repairerAttemptsTerminalDecision?: boolean;
   terminalRouteTarget?: string;
   invalidReReviewClosure?: boolean;
+  initialReviewerOutcome?: 'pass' | 'repair_required' | 'quality_debt';
 }) {
   const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
   const taskQueue = `opl-stage-run-controller-${input.id}-${Date.now()}`;
@@ -181,7 +182,7 @@ async function runController(input: {
           ? 99
           : role === 'producer' || role === 'reviewer' ? 1 : round + 1;
         const stageQualityCycle: Record<string, unknown> = {
-          outcome: role === 'reviewer' ? 'repair_required' : 'pass',
+          outcome: role === 'reviewer' ? (input.initialReviewerOutcome ?? 'repair_required') : 'pass',
           artifact_refs: [`artifact:deck-v${artifactVersion}`],
           artifact_hashes: [`sha256:deck-v${artifactVersion}`],
         };
@@ -215,6 +216,16 @@ async function runController(input: {
         }
         const routeImpact: Record<string, unknown> = { stage_quality_cycle: stageQualityCycle };
         if (role === 'producer' && input.formalReviewRequired === false) {
+          routeImpact.stage_route_decision = {
+            decision_kind: 'advance',
+            target_stage_id: input.terminalRouteTarget ?? 'review_and_revision',
+            evidence_refs: [`artifact:deck-v${artifactVersion}`],
+          };
+        }
+        if (
+          role === 'reviewer'
+          && ['pass', 'quality_debt'].includes(input.initialReviewerOutcome ?? '')
+        ) {
           routeImpact.stage_route_decision = {
             decision_kind: 'advance',
             target_stage_id: input.terminalRouteTarget ?? 'review_and_revision',
@@ -329,6 +340,19 @@ test('primary-only StageRun makes the producer the sole decisive route owner', a
   assert.equal(state.decisive_attempt_role, 'producer');
   assert.equal(state.selected_stage_route?.decision_kind, 'advance');
   assert.equal(state.selected_stage_route?.target_stage_id, 'review_and_revision');
+});
+
+test('reviewer quality-debt verdict terminalizes the StageRun and retains reviewer route authority', async () => {
+  const { state, attempts } = await runController({
+    id: 'reviewer-quality-debt',
+    closeFindingAfterRound: null,
+    initialReviewerOutcome: 'quality_debt',
+  });
+  assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), ['producer', 'reviewer']);
+  assert.equal(state.status, 'completed_with_quality_debt');
+  assert.equal(state.decisive_attempt_role, 'reviewer');
+  assert.equal(state.selected_stage_route?.target_stage_id, 'review_and_revision');
+  assert.equal(state.review_receipts[0]?.verdict, 'quality_debt');
 });
 
 test('recoverable producer and repairer quality debt still reaches fresh formal Review', async () => {

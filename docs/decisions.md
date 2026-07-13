@@ -23,7 +23,7 @@ Re-review 采用 finding closure，不得用普通新建议无限重开循环。
 
 原因：让任意 Attempt 都能写下一 Stage 会使 producer、repairer 与 reviewer 互相覆盖；完全禁止 Framework 拒绝 route 又会让越权 role、undeclared target、legacy field、malformed output 或无效 Re-review closure污染 current pointer。两者都不是“Codex 单一语义路由面”。
 
-决策：primary-only StageRun 的 producer，或正式 Review StageRun 的 terminal reviewer / re-reviewer，是唯一终局 route owner。非终局 Attempt 只能写 `route_impact.stage_route_recommendation`；终局 Attempt 写 `route_impact.stage_route_decision`。Framework 必须校验 role/终局资格、StageRun context/lineage、字段互斥、shape、legacy 字段缺失、finding-closure 和 declared target；不校验医学、科研、基金、视觉、编辑等专业判断是否正确。协议失败时 route output 不物化，artifact 保留并形成 route quality debt；普通顺序推进只能回到 domain pack 已声明的默认路径。
+决策：primary-only StageRun 的 producer，或正式 Review StageRun 的 terminal reviewer / re-reviewer，是唯一终局 route owner。非终局 Attempt 只能写 `route_impact.stage_route_recommendation`；终局 Attempt 写 `route_impact.stage_route_decision`。这只是 closeout 语义判断，不授予 Attempt Stage topology、current pointer 或 transition authority。Framework 必须校验 role/终局资格、StageRun context/lineage、字段互斥、shape、legacy 字段缺失、finding-closure 和 declared target；不校验医学、科研、基金、视觉、编辑等专业判断是否正确。协议失败时 route output 不物化，artifact 保留并形成 route quality debt；fallback 优先沿 action 的 ordered `required_stage_refs`，没有 action route 时仅可沿当前 Stage 唯一的 `next_stage_refs`，分叉点不得按 manifest 文件顺序猜测。
 
 ### 决策：Handoff Review 统一风险判据，不统一执行形状
 
@@ -1181,13 +1181,13 @@ Re-review 采用 finding closure，不得用普通新建议无限重开循环。
 
 ### 决策：OPL stage / route 调度固定为 graph hydration reconciliation attempt-ledger 模型
 
-原因：MAS 这类复杂 domain agent 会输出 owner-route、route-back、typed blocker、owner receipt、source fingerprint、dispatch ref 和推荐 task/stage 语义。如果把 route 当成小 stage，OPL 会重新发明 domain runtime，或者让 domain repo 继续保留私有 scheduler / runner / lifecycle loop。正确的顶层设计是：stage 是 OPL 可执行、可恢复、可审计的 attempt 单元；route 是 domain owner 语义；OPL 只 hydrate route refs into stage-attempt request/projection，并用 stage graph、reconciliation loop、read model 和 attempt ledger 管理可见性与恢复。
+原因：MAS 这类复杂 domain agent 会输出 owner-route、route-back、typed blocker、owner receipt、source fingerprint、dispatch ref 和推荐 task/stage 语义。如果把 route 当成小 Stage，OPL 会重新发明 domain runtime，或者让 domain repo 继续保留私有 scheduler / runner / lifecycle loop。经 2026-07-13 的 Multi-Attempt Stage 收敛后，正确分层是：Stage 表达一个主要开放语义判断，StageRun 是该 Stage 的一次 durable 工单，Attempt 是同一 StageRun 内一次独立 executor 调用。`family-owner-route` 是 domain-owned 输入/建议包；只有 StageRun 的终局 decisive Codex Attempt 将其中可采纳的语义写成 `route_impact.stage_route_decision`，它才成为权威的跨 Stage 路由判断。OPL 只校验 ABI/Attempt authority、运输 refs、物化 declared target，并用 stage graph、reconciliation、read model 和 attempt ledger 管理可见性与恢复。
 
 影响：
 
 - `contracts/opl-framework/stage-route-transport-contract.json` 成为 framework-level stage/route 调度边界合同。它把 MAS 作为 complex-domain reference，固定 stage、route、route hydration、attempt ledger 四个定义，并声明 route 不是小 stage、route hydration 不执行 route、provider completion 不等于 owner receipt。
 - `family-stage-graph-projection` 继续表达 admitted stage pack 的 nodes、requires/ensures edges、integrity digest、launch blockers 与 scheduler/App read model；它不执行 stage、不写 domain truth、不授权 domain readiness。
-- `family-owner-route` 继续表达 domain owner 的下一步、route-back、typed blocker、allowed action、owner receipt 或 handoff refs；它不等于 OPL attempt，不是 stage graph 的隐藏 node。
+- `family-owner-route` 继续表达 domain owner 的下一步建议、route-back 建议、typed blocker、allowed action、owner receipt 或 handoff refs；它不等于 Attempt，不是 stage graph 的隐藏 node，也不能绕过终局 decisive Codex Attempt 直接成为 `stage_route_decision`。
 - `family-runtime-attempt-contract` 负责把 owner-route refs、typed blocker refs、owner receipt refs、source fingerprint 和 dispatch ref 记录为 route hydration input / attempt ledger refs，并输出 stage attempt request/projection、conflict envelope 或 operator projection。
 - OPL reconciliation loop 的读法对齐 Temporal event history、LangGraph checkpoint / conditional edge、Kubernetes desired/current reconciliation 与 Dagster graph/op boundary，但只吸收图、checkpoint、reconciliation、read-model 和 op boundary 模式，不引入这些系统作为新的 OPL core runtime，也不把 domain truth / quality verdict / artifact authority 迁入 OPL。
 - 后续若 MAS/MAG/RCA 或新 Foundry Agent 暴露 route refs，默认先检查 OPL route hydration、stage graph、attempt ledger、dead-letter 和 owner receipt projection；不得让 domain 仓重新补 generic scheduler、local queue、attempt loop、SQLite lifecycle platform 或 App/workbench wrapper。

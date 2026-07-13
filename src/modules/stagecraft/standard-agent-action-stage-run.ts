@@ -98,6 +98,7 @@ function routeFromRepo(repoDir: string, actionId: string, graphOrder: string[]) 
   return {
     targetDomainId,
     route: { ...route, route_policy: 'ai_selected_progress_route' as const },
+    hasDeclaredActionRoute: routeIsConsumable,
     qualityDebtRefs: routeIsConsumable
       ? []
       : [`opl://standard-agent-actions/${encodeURIComponent(actionId)}/route-declaration-quality-debt`],
@@ -111,6 +112,69 @@ function stageGraph(repoDir: string) {
   return {
     order,
     declared: new Set(order),
+    successors: new Map(stages.map((stage) => [
+      requiredString(stage.stage_id, 'agent/stages/manifest.json stages[].stage_id'),
+      stringList(stage.next_stage_refs),
+    ])),
+  };
+}
+
+function declaredRouteFallback(input: {
+  actionId: string;
+  latestStage: string | null;
+  route: StandardAgentActionStageRunProgress['route'];
+  hasDeclaredActionRoute: boolean;
+  successors: Map<string, string[]>;
+}) {
+  if (!input.latestStage) {
+    return { nextStageRef: input.route.entry_stage_ref, complete: false, debtRef: null };
+  }
+  const debtRef = (reason: string) => (
+    `opl://standard-agent-actions/${encodeURIComponent(input.actionId)}`
+    + `/route-quality-debt/${encodeURIComponent(reason)}`
+  );
+  if (
+    input.hasDeclaredActionRoute
+    && input.route.terminal_stage_refs.includes(input.latestStage)
+  ) {
+    return {
+      nextStageRef: null,
+      complete: true,
+      debtRef: debtRef('decisive_attempt_route_decision_missing_used_declared_terminal_boundary'),
+    };
+  }
+  const requiredRouteIndex = input.route.required_stage_refs.indexOf(input.latestStage);
+  if (input.hasDeclaredActionRoute && requiredRouteIndex >= 0) {
+    const nextStageRef = input.route.required_stage_refs[requiredRouteIndex + 1] ?? null;
+    return {
+      nextStageRef,
+      complete: false,
+      debtRef: debtRef(nextStageRef
+        ? 'decisive_attempt_route_decision_missing_used_action_required_stage_order'
+        : 'decisive_attempt_route_decision_missing_without_declared_fallback'),
+    };
+  }
+  const declaredSuccessors = input.successors.get(input.latestStage) ?? [];
+  if (declaredSuccessors.length === 0 && !input.hasDeclaredActionRoute) {
+    return {
+      nextStageRef: null,
+      complete: true,
+      debtRef: debtRef('decisive_attempt_route_decision_missing_used_declared_terminal_boundary'),
+    };
+  }
+  if (declaredSuccessors.length === 1) {
+    return {
+      nextStageRef: declaredSuccessors[0]!,
+      complete: false,
+      debtRef: debtRef('decisive_attempt_route_decision_missing_used_unique_stage_successor'),
+    };
+  }
+  return {
+    nextStageRef: null,
+    complete: false,
+    debtRef: debtRef(declaredSuccessors.length > 1
+      ? 'decisive_attempt_route_decision_required_for_ambiguous_declared_successors'
+      : 'decisive_attempt_route_decision_missing_without_declared_fallback'),
   };
 }
 
@@ -423,7 +487,12 @@ export function evaluateStandardAgentActionStageRun(input: {
 }): StandardAgentActionStageRunProgress {
   const repoDir = path.resolve(input.repoDir);
   const graph = stageGraph(repoDir);
-  const { targetDomainId, route, qualityDebtRefs: routeQualityDebtRefs } = routeFromRepo(
+  const {
+    targetDomainId,
+    route,
+    hasDeclaredActionRoute,
+    qualityDebtRefs: routeQualityDebtRefs,
+  } = routeFromRepo(
     repoDir,
     input.actionId,
     graph.order,
@@ -457,12 +526,16 @@ export function evaluateStandardAgentActionStageRun(input: {
     `opl://standard-agent-actions/${encodeURIComponent(input.actionId)}/route-quality-debt/${encodeURIComponent(reason)}`
   ));
   const latestStage = completed.at(-1) ?? null;
-  const latestIndex = latestStage ? graph.order.indexOf(latestStage) : -1;
-  const defaultNextStage = latestIndex >= 0 ? graph.order[latestIndex + 1] ?? null : route.entry_stage_ref;
-  const terminalStageReached = !aiSelectedNextStage
-    && route.terminal_stage_refs.includes(latestStage ?? '');
-  const complete = routeDecision?.decision_kind === 'complete' || terminalStageReached;
-  const nextStageRef = complete ? null : aiSelectedNextStage ?? defaultNextStage;
+  const fallback = declaredRouteFallback({
+    actionId: input.actionId,
+    latestStage,
+    route,
+    hasDeclaredActionRoute,
+    successors: graph.successors,
+  });
+  const complete = routeDecision?.decision_kind === 'complete' || (!routeDecision && fallback.complete);
+  const nextStageRef = complete ? null : aiSelectedNextStage ?? fallback.nextStageRef;
+  const fallbackRouteDebtRefs = !routeDecision && fallback.debtRef ? [fallback.debtRef] : [];
   const closeoutQualityDebtRefs = stageCloseouts.flatMap((entry) =>
     stringList(record(entry.canonical_closeout_packet.route_impact).quality_debt_refs));
   return {
@@ -475,6 +548,7 @@ export function evaluateStandardAgentActionStageRun(input: {
     quality_debt_refs: [...new Set([
       ...routeQualityDebtRefs,
       ...routeOutputDebtRefs,
+      ...fallbackRouteDebtRefs,
       ...closeoutQualityDebtRefs,
     ])],
   };

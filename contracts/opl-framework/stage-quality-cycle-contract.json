@@ -101,6 +101,7 @@
       "decision_and_recommendation_are_mutually_exclusive": true
     },
     "passive_transport_materializes_codex_selected_declared_stage": true,
+    "attempt_route_output_is_closeout_judgment_not_stage_topology_or_transition_authority": true,
     "attempt_context_surface_kind": "opl_stage_run_route_selection_context",
     "legacy_terminal_route_fields_forbidden": [
       "route_back_stage_ref",
@@ -115,10 +116,18 @@
       "route_output_shape_invalid",
       "legacy_terminal_route_field_present",
       "target_stage_not_declared",
+      "hard_stop_attempt_writes_terminal_decision",
       "review_or_re_review_not_terminal"
     ],
     "invalid_route_output_is_rejected_without_discarding_consumable_progress": true,
-    "repair_required_review_may_select_terminal_route": false
+    "repair_required_review_may_select_terminal_route": false,
+    "hard_stop_attempt_may_select_terminal_route": false,
+    "declared_default_progression_resolution": [
+      "action_stage_route.required_stage_refs_order",
+      "unique_current_stage.next_stage_refs"
+    ],
+    "manifest_file_order_must_not_select_successor": true,
+    "ambiguous_declared_successors_require_decisive_codex_route": true
   },
   "multi_attempt_stage_boundary": {
     "decision_rule": "Repeated generation, review, and repair toward the same goal are Attempts; a changed goal, owner, quality gate, or delivery relationship requires a new Stage.",
