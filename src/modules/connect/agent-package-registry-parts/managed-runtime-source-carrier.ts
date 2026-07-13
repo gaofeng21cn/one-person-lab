@@ -234,6 +234,14 @@ function runRequiredCommand(
   };
 }
 
+function packageHealthCommand(moduleId: string, checkoutPath: string) {
+  const spec = resolveOplDomainModuleSpec(moduleId);
+  return spec.package_health_check_command?.(checkoutPath)
+    ?? spec.runtime_probe_command?.(checkoutPath)
+    ?? spec.exec_command?.(checkoutPath, ['--help'])
+    ?? null;
+}
+
 function prepareRuntimeSource(moduleId: string, checkoutPath: string, includeBootstrap: boolean) {
   const spec = resolveOplDomainModuleSpec(moduleId);
   const lifecycle = readPackageChannelLifecycle(checkoutPath, spec);
@@ -267,7 +275,7 @@ function prepareRuntimeSource(moduleId: string, checkoutPath: string, includeBoo
   const health = runRequiredCommand(
     moduleId,
     checkoutPath,
-    spec.health_check_command?.(checkoutPath) ?? null,
+    includeBootstrap ? packageHealthCommand(moduleId, checkoutPath) : spec.health_check_command?.(checkoutPath) ?? null,
     'health_check',
     commandEnv,
   );
@@ -307,7 +315,9 @@ function currentProbeEnvironment(state: AgentPackageManagedRuntimeSourceState) {
 
 function resolvedCurrentProbeCommands(state: AgentPackageManagedRuntimeSourceState) {
   const spec = resolveOplDomainModuleSpec(state.module_id);
-  const health = spec.health_check_command?.(state.checkout_path) ?? null;
+  const health = state.preparation_scope === 'managed_source_root'
+    ? packageHealthCommand(state.module_id, state.checkout_path)
+    : spec.health_check_command?.(state.checkout_path) ?? null;
   const handler = spec.runtime_probe_command?.(state.checkout_path)
     ?? spec.exec_command?.(state.checkout_path, ['--help'])
     ?? null;
