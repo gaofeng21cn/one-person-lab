@@ -142,7 +142,7 @@ test('package archive builder writes channel manifest checksums git source and r
     oplmetaagent: createOwnerPackageFixture('opl-meta-agent', 'oma', '0.1.0'),
     oplbookforge: createOwnerPackageFixture('opl-bookforge', 'obf', '0.1.0'),
     scholarskills: createOwnerPackageFixture('mas-scholar-skills', 'mas-scholar-skills', '0.1.1', 'capability_package'),
-    oplflow: createOwnerPackageFixture('opl-flow', 'opl-flow', '0.1.16', 'workflow_profile'),
+    oplflow: createOwnerPackageFixture('opl-flow', 'opl-flow', '0.1.18', 'workflow_profile'),
   };
 
   const archiveBuilderOutput = execFileSync(process.execPath, [
@@ -318,7 +318,7 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(masCatalog.versions[0].release_gate, 'test_owner_sha_release_gate');
   assert.match(masCatalog.versions[0].package_content_digest, /^sha256:[0-9a-f]{64}$/);
   assert.equal(packageCatalog['opl-flow'].package_role, 'workflow_profile');
-  assert.equal(packageCatalog['opl-flow'].selected_version, '0.1.16');
+  assert.equal(packageCatalog['opl-flow'].selected_version, '0.1.18');
   assert.equal(packageCatalog['opl-flow'].homebrew_formula, undefined);
   assert.match(channelManifest.package_catalog_digest, /^sha256:[0-9a-f]{64}$/);
   const scholarSkillsCatalog = packageCatalog['mas-scholar-skills'];
@@ -731,7 +731,7 @@ test('package archive builder refreshes reused managed clones before archiving s
     oplmetaagent: createOwnerPackageFixture('opl-meta-agent', 'oma', '0.1.0'),
     oplbookforge: createOwnerPackageFixture('opl-bookforge', 'obf', '0.1.0'),
     scholarskills: createOwnerPackageFixture('mas-scholar-skills', 'mas-scholar-skills', '0.1.1', 'capability_package'),
-    oplflow: createOwnerPackageFixture('opl-flow', 'opl-flow', '0.1.16', 'workflow_profile'),
+    oplflow: createOwnerPackageFixture('opl-flow', 'opl-flow', '0.1.18', 'workflow_profile'),
   };
   fs.writeFileSync(
     gitConfigPath,

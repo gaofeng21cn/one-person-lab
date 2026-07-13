@@ -89,7 +89,7 @@
     "states": [
       {
         "state_id": "auto_apply",
-        "meaning": "Framework may fetch, verify, stage, activate, run post-apply hooks, and write a component receipt without asking when the managed target is clean.",
+        "meaning": "Framework may fetch, verify, stage, activate package content, run post-apply hooks, and write a component receipt without asking when an installed digest-locked Package target is clean.",
         "allowed_component_classes": [
           "opl_packages"
         ],
@@ -125,7 +125,8 @@
           "would mutate global npm",
           "would mutate system PATH Codex",
           "would mutate system Temporal",
-          "target is developer checkout"
+          "target is developer checkout",
+          "framework source is an explicit developer/source override"
         ]
       },
       {
@@ -365,6 +366,9 @@
       "role": "app_owned_runtime_substrate_with_embedded_codex_executor",
       "authority": "App-owned runtime roots, current pointer, staged root, health smoke, and rollback pointer.",
       "default_policy": "silent_stage_apply_on_restart_or_startup_maintenance",
+      "pending_activation_trigger": "OPL_APP_PROCESS_INSTANCE_ID differs from the staging marker",
+      "pending_reconcile_policy": "same version or artifact identity is a no-op that preserves the original staging marker",
+      "daily_background_activation_allowed": false,
       "mutation_scope": "app_owned_runtime_root_only",
       "controlled_execution_path": "opl system startup-maintenance --json",
       "repair_action": "run_startup_maintenance",
@@ -373,7 +377,9 @@
         "current_pointer",
         "staged_root",
         "rollback_pointer",
-        "opl_framework_runtime"
+        "opl_framework_runtime",
+        "dependency_catalog",
+        "pending_runtime_activation"
       ]
     },
     {
@@ -381,28 +387,28 @@
       "provider_id": "capability_packages",
       "adapter_id": "capability_packages_adapter",
       "owner": "one-person-lab-managed-modules",
-      "role": "GHCR module package channel for MAS/MAG/RCA/OMA ordinary users",
-      "authority": "GHCR tag selects a channel target; digest or sha identifies installed content.",
-      "default_policy": "silent_background_for_clean_managed_modules",
-      "mutation_scope": "clean_opl_managed_module_roots_only",
+      "role": "Installed OPL Package lock reconciliation through the canonical package lifecycle",
+      "authority": "Each installed root package lock selects its manifest/channel target; digest and package lifecycle receipt identify installed content.",
+      "default_policy": "silent_background_for_clean_digest_locked_installed_packages",
+      "mutation_scope": "installed_root_package_locks_only",
       "auto_apply": {
         "mode": "auto_apply",
         "app_background_safe": true,
         "command_ref": "opl packages update --json",
-        "eligible_scope": "clean_opl_managed_module_roots_only",
+        "eligible_scope": "clean_digest_locked_installed_root_package_locks_only",
         "eligible_when": [
-          "default managed module root is missing and can be installed into the managed root",
-          "installed module origin is managed_root",
-          "module health status is ready or package-channel updateable",
-          "git dirty is false",
-          "git sync status is not ahead, diverged, no_upstream, or unknown"
+          "installed root package lock exists",
+          "source kind is not developer_checkout_override",
+          "manifest sha256, content digest, and lock ref are present",
+          "physical package surface has no recorded failure"
         ],
         "blocked_when": [
           "dirty checkout",
           "developer checkout",
-          "sibling workspace or env override source",
-          "ahead, diverged, no_upstream, or unknown git state",
-          "missing digest, sha256, source fingerprint, or git head identity after apply"
+          "developer checkout override",
+          "missing manifest sha256, content digest, or lock ref",
+          "physical surface requires repair",
+          "package lifecycle update failed without overwriting the installed lock"
         ]
       },
       "transaction_status_fields": [

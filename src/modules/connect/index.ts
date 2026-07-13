@@ -51,6 +51,7 @@ export type {
 export {
   listOplAgentPackages,
   readOplFlowDefaultUserInstructions,
+  readOplFlowManagedDependencyIds,
   ensureOplAgentPackageScopeActivation,
   runOplAgentPackageExposureAction,
   runOplAgentPackageFrameworkLink,
@@ -64,6 +65,7 @@ export {
   runOplAgentPackageStatus,
   runOplAgentPackageActivate,
   runOplAgentPackageUninstall,
+  runOplAgentPackageBulkUpdate,
   runOplAgentPackageUpdate,
 } from './agent-package-registry.ts';
 export type {

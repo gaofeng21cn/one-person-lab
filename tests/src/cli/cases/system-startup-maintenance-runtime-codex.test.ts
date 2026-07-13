@@ -66,20 +66,22 @@ test('system startup-maintenance applies staged App-owned runtime Codex update w
   ]);
 
   try {
-    const output = withCliTimeout('120000', () => runCli(['system', 'startup-maintenance'], {
+    const env = {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       OPL_MODULES_ROOT: path.join(homeRoot, 'managed-modules'),
       OPL_CODEX_BIN: runtimeCodex,
       OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
+      OPL_APP_PROCESS_INSTANCE_ID: 'app-instance-before-restart',
       OPL_MODULE_PATH_MEDAUTOSCIENCE: developerCheckout,
       OPL_MODULE_PATH_MEDAUTOGRANT: developerCheckout,
       OPL_MODULE_PATH_REDCUBE: developerCheckout,
       OPL_MODULE_PATH_OPLMETAAGENT: developerCheckout,
       PATH: `${fakeBin}:/usr/bin:/bin`,
       ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
-    })) as {
+    };
+    const output = withCliTimeout('120000', () => runCli(['system', 'startup-maintenance'], env)) as {
       system_action: {
         details: {
           engine_targets: Array<{
@@ -98,6 +100,7 @@ test('system startup-maintenance applies staged App-owned runtime Codex update w
             completed_targets_count: number;
             manual_required_targets_count: number;
           };
+          pending_runtime_activation: { status: string };
           refreshed_system_environment: {
             core_engines: {
               codex: {
@@ -127,13 +130,11 @@ test('system startup-maintenance applies staged App-owned runtime Codex update w
     assert.match(engineTarget.result?.stdout ?? '', /codex-darwin-arm64/);
     assert.equal(output.system_action.details.engine_summary.completed_targets_count, 1);
     assert.equal(output.system_action.details.engine_summary.manual_required_targets_count, 0);
-    assert.equal(
-      output.system_action.details.refreshed_system_environment.core_engines.codex.version,
-      'codex-cli 0.134.0',
-    );
+    assert.equal(output.system_action.details.pending_runtime_activation.status, 'no_pending_generation');
+    assert.equal(output.system_action.details.refreshed_system_environment.core_engines.codex.version, 'codex-cli 0.130.0');
     assert.equal(
       output.system_action.details.refreshed_system_environment.core_engines.codex.latest_version_status,
-      'current',
+      'outdated',
     );
     assert.equal(
       output.system_action.details.refreshed_system_environment.core_engines.codex.runtime_substrate_updater
@@ -143,9 +144,31 @@ test('system startup-maintenance applies staged App-owned runtime Codex update w
     assert.equal(
       output.system_action.details.refreshed_system_environment.core_engines.codex.runtime_substrate_updater
         .latest_version_status,
-      'current',
+      'outdated',
     );
     assert.doesNotMatch(fs.readFileSync(npmLog, 'utf8'), / -g( |$)/);
+    assert.match(fs.readFileSync(runtimeCodex, 'utf8'), /0\.130\.0/);
+    const pendingMetadataPath = path.join(homeRoot, 'runtime', 'pending-codex-generation.json');
+    assert.equal(fs.existsSync(pendingMetadataPath), true);
+    const pendingBeforeDaily = fs.readFileSync(pendingMetadataPath, 'utf8');
+    const npmLogBeforeDaily = fs.readFileSync(npmLog, 'utf8');
+
+    const daily = withCliTimeout('120000', () => runCli(['system', 'startup-maintenance'], {
+      ...env,
+      OPL_APP_PROCESS_INSTANCE_ID: 'app-instance-before-restart',
+    })) as { system_action: { details: { pending_runtime_activation: { status: string } } } };
+    assert.equal(daily.system_action.details.pending_runtime_activation.status, 'deferred_same_app_instance');
+    assert.match(fs.readFileSync(runtimeCodex, 'utf8'), /0\.130\.0/);
+    assert.equal(fs.readFileSync(pendingMetadataPath, 'utf8'), pendingBeforeDaily);
+    assert.equal(fs.readFileSync(npmLog, 'utf8'), npmLogBeforeDaily);
+
+    const activated = withCliTimeout('120000', () => runCli(['system', 'startup-maintenance'], {
+      ...env,
+      OPL_APP_PROCESS_INSTANCE_ID: 'app-instance-after-restart',
+    })) as {
+      system_action: { details: { pending_runtime_activation: { status: string } } };
+    };
+    assert.equal(activated.system_action.details.pending_runtime_activation.status, 'activated');
     assert.match(fs.readFileSync(runtimeCodex, 'utf8'), /0\.134\.0/);
     assert.match(fs.readFileSync(runtimeRg, 'utf8'), /rg staged/);
   } finally {
@@ -188,6 +211,7 @@ test('system startup-maintenance installs missing App-owned runtime Codex on cle
       OPL_MODULES_ROOT: path.join(homeRoot, 'managed-modules'),
       OPL_RUNTIME_ROOT: path.join(homeRoot, 'runtime'),
       OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
+      OPL_APP_PROCESS_INSTANCE_ID: 'clean-install-app-instance',
       OPL_MODULE_PATH_MEDAUTOSCIENCE: developerCheckout,
       OPL_MODULE_PATH_MEDAUTOGRANT: developerCheckout,
       OPL_MODULE_PATH_REDCUBE: developerCheckout,

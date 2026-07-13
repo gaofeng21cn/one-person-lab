@@ -1,6 +1,8 @@
 import { assert, fs, parseJsonText, path, repoRoot, runCli, runCliFailure, test } from '../helpers.ts';
+import os from 'node:os';
 import { loadFrameworkContracts } from '../../../../src/modules/charter/contracts.ts';
 import { buildManagedUpdateKernelProjection } from '../../../../src/modules/connect/managed-update-kernel.ts';
+import { selectedManagedUpdateComponentIds } from '../../../../src/modules/connect/managed-update-owner-boundary.ts';
 
 function readManagedUpdateKernelContract() {
   return parseJsonText(
@@ -72,17 +74,17 @@ test('full managed update projection materializes only the three lifecycle owner
   );
 });
 
-test('opl update is the OPL Base lifecycle and rejects internal component selectors', () => {
+test('opl update projects coordinated Base and installed Packages while rejecting internal selectors', () => {
   const output = runCli(['update', 'status']) as Record<string, any>;
   const components = output.managed_update.components;
 
-  assert.equal(output.managed_update.requested_component_id, 'opl_base');
-  assert.equal(output.managed_update.requested_lifecycle_owner, 'opl_base');
-  assert.equal(components.length, 1);
-  assert.equal(components[0].component_id, 'opl_base');
-  assert.equal(components[0].lifecycle_owner, 'opl_base');
-  assert.equal(components[0].provider_id, 'runtime_substrate');
-  assert.equal(components[0].authority_boundary.can_mutate_homebrew, false);
+  assert.equal(output.managed_update.requested_component_id, null);
+  assert.equal(output.managed_update.requested_lifecycle_owner, null);
+  assert.deepEqual(components.map((entry: Record<string, unknown>) => entry.component_id), ['opl_app', 'opl_base', 'opl_packages']);
+  const base = components.find((entry: Record<string, unknown>) => entry.component_id === 'opl_base');
+  assert.equal(base.lifecycle_owner, 'opl_base');
+  assert.equal(base.provider_id, 'runtime_substrate');
+  assert.equal(base.authority_boundary.can_mutate_homebrew, false);
   assert.equal(output.managed_update.authority_boundary.can_write_domain_truth, false);
 
   const failure = runCliFailure(['update', 'status', '--component', 'runtime_substrate']);
@@ -115,6 +117,55 @@ test('OPL Packages folds Codex projection and profile migration into one guarded
   ]);
   assert.equal(components[0].authority_boundary.can_overwrite_dirty_checkout, false);
   assert.equal(components[0].authority_boundary.can_overwrite_developer_checkout, false);
+});
+
+test('generic apply selects only eligible background-safe components while explicit owner actions stay scoped', async () => {
+  const output = await buildManagedUpdateKernelProjection(loadFrameworkContracts(), {
+    operation: 'plan',
+  }) as Record<string, any>;
+  const components = output.managed_update.components.map((component: Record<string, any>) => ({
+    ...component,
+    auto_apply: component.component_id === 'opl_packages'
+      ? { ...component.auto_apply, eligible: true, app_background_safe: true, command_ref: 'opl packages update --json' }
+      : { ...component.auto_apply, eligible: true, app_background_safe: false, command_ref: 'opl update apply --json' },
+  }));
+
+  assert.deepEqual(selectedManagedUpdateComponentIds({ operation: 'apply' }, components), ['opl_packages']);
+  assert.deepEqual(selectedManagedUpdateComponentIds({ operation: 'apply', componentId: 'opl_base' }, components), ['opl_base']);
+});
+
+test('developer Framework source override is visible but excluded from generic background apply', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-source-override-plan-'));
+  const target = path.join(root, 'target');
+  const source = path.join(root, 'source');
+  for (const directory of [target, source]) {
+    fs.mkdirSync(path.join(directory, 'bin'), { recursive: true });
+    fs.mkdirSync(path.join(directory, 'src', 'entrypoints'), { recursive: true });
+    fs.writeFileSync(path.join(directory, 'package.json'), '{}\n', 'utf8');
+    fs.writeFileSync(path.join(directory, 'bin', 'opl'), '#!/bin/sh\n', { mode: 0o755 });
+    fs.writeFileSync(path.join(directory, 'src', 'entrypoints', 'cli.ts'), 'export {};\n', 'utf8');
+  }
+  const previousSource = process.env.OPL_FRAMEWORK_UPDATE_SOURCE;
+  const previousTarget = process.env.OPL_FRAMEWORK_UPDATE_TARGET_ROOT;
+  try {
+    process.env.OPL_FRAMEWORK_UPDATE_SOURCE = source;
+    process.env.OPL_FRAMEWORK_UPDATE_TARGET_ROOT = target;
+    const output = await buildManagedUpdateKernelProjection(loadFrameworkContracts(), {
+      operation: 'plan',
+      componentId: 'opl_base',
+    }) as Record<string, any>;
+    const base = output.managed_update.components[0];
+    assert.equal(base.current.opl_framework_runtime.source_root_configured, true);
+    assert.equal(base.auto_apply.eligible, false);
+    assert.equal(base.auto_apply.app_background_safe, false);
+    assert.deepEqual(base.auto_apply.blocked_reasons, ['developer_framework_source_override_detect_only']);
+  } finally {
+    if (previousSource === undefined) delete process.env.OPL_FRAMEWORK_UPDATE_SOURCE;
+    else process.env.OPL_FRAMEWORK_UPDATE_SOURCE = previousSource;
+    if (previousTarget === undefined) delete process.env.OPL_FRAMEWORK_UPDATE_TARGET_ROOT;
+    else process.env.OPL_FRAMEWORK_UPDATE_TARGET_ROOT = previousTarget;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('OPL App keeps host update routing while remaining outside opl update apply', async () => {

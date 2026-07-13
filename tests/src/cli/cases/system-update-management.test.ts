@@ -292,6 +292,7 @@ console.log(JSON.stringify({ sync: 'ok' }));
     OPL_MODULE_REPO_URL_OPLMETAAGENT: remotes.oplmetaagent.remoteRoot,
     OPL_MODULE_REPO_URL_OPLBOOKFORGE: remotes.oplbookforge.remoteRoot,
     OPL_MODULE_REPO_URL_SCHOLARSKILLS: remotes.scholarskills.remoteRoot,
+    OPL_PACKAGE_CHANNEL_MANIFEST_REF: 'fixture://explicit-legacy-module-channel',
     OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
   };
 

@@ -22,7 +22,7 @@ function buildUpdateSpec(
       const parsed = parseRegisteredCommandOptions(commandId, args, spec);
       const input = {
         operation,
-        componentId: 'opl_base',
+        componentId: operation === 'repair' || operation === 'rollback' ? 'opl_base' : undefined,
         receiptId: parsed.receipt as string | undefined,
       };
       if (operation === 'apply' || operation === 'repair' || operation === 'rollback') { // reuse-first: allow owner-routed update command registry metadata.
@@ -41,42 +41,42 @@ export function buildUpdateCommandSpecs(
     'update status': buildUpdateSpec(
       'status',
       'opl update status',
-      'Read OPL Base update status, including Framework runtime and companion dependency/integration status.',
+      'Read coordinated OPL Base and installed OPL Packages update status.',
       ['opl update status --json'],
       getContracts,
     ),
     'update check': buildUpdateSpec(
       'check',
       'opl update check',
-      'Check OPL Base update state without applying mutations.',
+      'Check OPL Base and installed OPL Packages without applying mutations.',
       ['opl update check --json'],
       getContracts,
     ),
     'update plan': buildUpdateSpec(
       'plan',
       'opl update plan',
-      'Build the safe OPL Base update plan.',
+      'Build the safe coordinated plan for OPL Base and installed OPL Packages.',
       ['opl update plan --json'],
       getContracts,
     ),
     'update apply': buildUpdateSpec(
       'apply',
       'opl update apply',
-      'Apply the controlled OPL Base update transaction.',
+      'Apply eligible OPL Base and clean digest-locked OPL Packages through their existing lifecycle owners.',
       ['opl update apply --json'],
       getContracts,
     ),
     'update repair': buildUpdateSpec(
       'repair',
       'opl update repair [--receipt <receipt_id>]',
-      'Repair a failed OPL Base update transaction.',
+      'Repair a failed OPL Base update transaction; Package repair remains under opl packages repair.',
       ['opl update repair --receipt receipt-001 --json'],
       getContracts,
     ),
     'update rollback': buildUpdateSpec( // reuse-first: allow owner-routed update command registry metadata.
       'rollback', // reuse-first: allow owner-routed update command registry metadata.
       'opl update rollback', // reuse-first: allow owner-routed update command registry metadata.
-      'Roll back the OPL Base runtime through its controlled owner route.', // reuse-first: allow owner-routed update command registry metadata.
+      'Roll back the OPL Base runtime; Package rollback remains under opl packages rollback.', // reuse-first: allow owner-routed update command registry metadata.
       ['opl update rollback --json'], // reuse-first: allow owner-routed update command registry metadata.
       getContracts,
     ),

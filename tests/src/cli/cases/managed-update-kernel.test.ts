@@ -536,7 +536,7 @@ exit 2
     ]);
     assert.equal(output.managed_update.execution.adapter_results[0].result.apply_mode, 'auto_apply');
     assert.equal(output.managed_update.execution.adapter_results[0].result.app_background_safe, true);
-    assert.equal(output.managed_update.execution.adapter_results[0].result.auto_apply_scope, 'clean_opl_managed_module_roots_only');
+    assert.equal(output.managed_update.execution.adapter_results[0].result.auto_apply_scope, 'legacy_explicit_channel_roots_only');
     assert.equal(output.managed_update.execution.adapter_results[0].result.read_model_guidance.status_plane, 'opl packages status --json');
     assert.equal(
       output.managed_update.execution.adapter_results[0].result.read_model_guidance.component_receipt_ledger,
