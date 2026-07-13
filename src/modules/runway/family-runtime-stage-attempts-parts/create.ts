@@ -17,6 +17,8 @@ import { stableId } from '../../../kernel/stable-id.ts';
 import {
   buildDuplicateTaskEnvelope,
   buildFamilyConflictSubject,
+  normalizeStageQualityAttemptRole,
+  type StageQualityAttemptRole,
 } from '../../stagecraft/index.ts';
 import {
   normalizeJsonList,
@@ -24,11 +26,7 @@ import {
   nowIso,
 } from './shared.ts';
 import { taskRetryBudgetProjection } from '../family-runtime-queue-projection-boundary.ts';
-import {
-  normalizeStageQualityAttemptRole,
-  type StageQualityAttemptRole,
-} from '../../stagecraft/stage-quality-cycle.ts';
-
+import { requireStageQualityAttemptBoundary } from '../family-runtime-stage-quality-attempt-boundary.ts';
 export type StageAttemptCreateInput = {
   domainId: FamilyRuntimeDomainId;
   stageId: string;
@@ -67,6 +65,7 @@ export type StageAttemptCreateInput = {
   qualityRolePromptRef?: string;
   executionSessionRef?: string;
   contextManifestRef?: string;
+  contextManifest?: Record<string, unknown>;
   noContextInheritance?: boolean;
 };
 
@@ -93,6 +92,7 @@ function stageAttemptBaseIdempotencyKey(input: StageAttemptCreateInput) {
     normalizeJsonList(input.repairMapRefs),
     input.qualityRolePromptRef?.trim() || null,
     input.contextManifestRef?.trim() || null,
+    input.contextManifest ?? null,
     input.noContextInheritance ?? null,
   ]);
 }
@@ -168,6 +168,47 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
   if (attemptRole && !input.qualityCycleId?.trim()) {
     throw new FrameworkContractError('contract_shape_invalid', 'Quality-cycle StageAttempt requires qualityCycleId.');
   }
+  let parentAttemptLineage: { stage_run_id: string; quality_cycle_id: string } | null = null;
+  if (attemptRole === 'producer') {
+    if (qualityRoundIndex !== 0 || input.parentAttemptRef) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Producer StageAttempt must be round zero without a parent Attempt.',
+      );
+    }
+  } else if (attemptRole) {
+    const expectedRound = attemptRole === 'reviewer'
+      ? qualityRoundIndex === 0
+      : Number(qualityRoundIndex) >= 1 && Number(qualityRoundIndex) <= 3;
+    if (!expectedRound || !input.parentAttemptRef?.trim()) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Quality-cycle child Attempt role, round, and parent lineage are inconsistent.',
+        { attempt_role: attemptRole, quality_round_index: qualityRoundIndex },
+      );
+    }
+    const parentAttemptId = input.parentAttemptRef.startsWith('opl://stage_attempts/')
+      ? input.parentAttemptRef.slice('opl://stage_attempts/'.length)
+      : '';
+    const parent = parentAttemptId
+      ? db.prepare('SELECT * FROM stage_attempts WHERE stage_attempt_id = ?').get(parentAttemptId) as StageAttemptRow | undefined
+      : undefined;
+    if (
+      !parent
+      || parent.stage_run_id !== input.stageRunId?.trim()
+      || parent.quality_cycle_id !== input.qualityCycleId?.trim()
+    ) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Parent StageAttempt must be persisted under the same StageRun and quality cycle.',
+        { parent_attempt_ref: input.parentAttemptRef },
+      );
+    }
+    parentAttemptLineage = {
+      stage_run_id: parent.stage_run_id!,
+      quality_cycle_id: parent.quality_cycle_id!,
+    };
+  }
   if (attemptRole) {
     if (
       input.noContextInheritance !== true
@@ -201,6 +242,27 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
       'contract_shape_invalid',
       'Re-reviewer StageAttempt requires prior finding and repair map refs.',
     );
+  }
+  if (attemptRole) {
+    requireStageQualityAttemptBoundary({
+      attempt_role: attemptRole,
+      quality_round_index: qualityRoundIndex,
+      stage_run_id: input.stageRunId,
+      quality_cycle_id: input.qualityCycleId,
+      parent_attempt_ref: input.parentAttemptRef ?? null,
+      parent_attempt_lineage: parentAttemptLineage,
+      input_artifact_refs: input.inputArtifactRefs ?? [],
+      reviewed_artifact_hashes: input.reviewedArtifactHashes ?? [],
+      quality_source_refs: input.qualitySourceRefs ?? [],
+      quality_rubric_refs: input.qualityRubricRefs ?? [],
+      prior_finding_refs: input.priorFindingRefs ?? [],
+      repair_map_refs: input.repairMapRefs ?? [],
+      quality_role_prompt_ref: input.qualityRolePromptRef,
+      context_manifest_ref: input.contextManifestRef,
+      no_context_inheritance: input.noContextInheritance,
+      role_overlay: input.stageAttemptExecutorPolicy ?? {},
+      quality_context: input.contextManifest ?? {},
+    });
   }
   const baseIdempotencyKey = stageAttemptBaseIdempotencyKey(input);
   const newAttemptOrdinal = input.newAttempt
@@ -315,6 +377,7 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
     quality_role_prompt_ref: input.qualityRolePromptRef?.trim() || null,
     execution_session_ref: input.executionSessionRef?.trim() || null,
     context_manifest_ref: input.contextManifestRef?.trim() || null,
+    context_manifest_json: input.contextManifest ? JSON.stringify(input.contextManifest) : null,
     no_context_inheritance: input.noContextInheritance === undefined
       ? null
       : input.noContextInheritance ? 1 : 0,
@@ -341,7 +404,7 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
       attempt_role, quality_round_index, parent_attempt_ref, input_artifact_refs_json, reviewed_artifact_hashes_json,
       quality_source_refs_json, quality_rubric_refs_json, prior_finding_refs_json, repair_map_refs_json,
       quality_role_prompt_ref,
-      execution_session_ref, context_manifest_ref, no_context_inheritance, status, checkpoint_refs_json, closeout_refs_json,
+      execution_session_ref, context_manifest_ref, context_manifest_json, no_context_inheritance, status, checkpoint_refs_json, closeout_refs_json,
       human_gate_refs_json, retry_budget_json, attempt_count, task_id, blocked_reason,
       provider_receipt_json, provider_run_json, activity_events_json, route_impact_json,
       closeout_receipt_status, created_at, updated_at
@@ -352,7 +415,7 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
       @attempt_role, @quality_round_index, @parent_attempt_ref, @input_artifact_refs_json, @reviewed_artifact_hashes_json,
       @quality_source_refs_json, @quality_rubric_refs_json, @prior_finding_refs_json, @repair_map_refs_json,
       @quality_role_prompt_ref,
-      @execution_session_ref, @context_manifest_ref, @no_context_inheritance, @status, @checkpoint_refs_json, @closeout_refs_json,
+      @execution_session_ref, @context_manifest_ref, @context_manifest_json, @no_context_inheritance, @status, @checkpoint_refs_json, @closeout_refs_json,
       @human_gate_refs_json, @retry_budget_json, @attempt_count, @task_id, @blocked_reason,
       @provider_receipt_json, @provider_run_json, @activity_events_json, @route_impact_json,
       @closeout_receipt_status, @created_at, @updated_at

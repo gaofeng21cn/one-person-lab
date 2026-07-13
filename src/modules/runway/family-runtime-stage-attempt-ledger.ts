@@ -12,7 +12,10 @@ import {
 import { parseJsonText } from '../../kernel/json-file.ts';
 import { record } from '../../kernel/json-record.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
-import { validateIndependentStageReviewReceipt } from '../stagecraft/stage-quality-cycle.ts';
+import {
+  validateIndependentStageReviewReceipt,
+  type StageReviewReceipt,
+} from '../stagecraft/index.ts';
 
 export type StageAttemptStatus =
   | 'queued'
@@ -49,6 +52,7 @@ export type StageAttemptRow = {
   quality_role_prompt_ref?: string | null;
   execution_session_ref?: string | null;
   context_manifest_ref?: string | null;
+  context_manifest_json?: string | null;
   no_context_inheritance?: number | null;
   status: StageAttemptStatus;
   checkpoint_refs_json: string;
@@ -135,6 +139,7 @@ export function createStageAttemptTable(db: DatabaseSync) {
       quality_role_prompt_ref TEXT,
       execution_session_ref TEXT,
       context_manifest_ref TEXT,
+      context_manifest_json TEXT,
       no_context_inheritance INTEGER,
       status TEXT NOT NULL,
       checkpoint_refs_json TEXT NOT NULL,
@@ -210,6 +215,7 @@ export function createStageAttemptTable(db: DatabaseSync) {
   addColumnIfMissing(db, 'stage_attempts', columns, 'quality_role_prompt_ref', 'quality_role_prompt_ref TEXT');
   addColumnIfMissing(db, 'stage_attempts', columns, 'execution_session_ref', 'execution_session_ref TEXT');
   addColumnIfMissing(db, 'stage_attempts', columns, 'context_manifest_ref', 'context_manifest_ref TEXT');
+  addColumnIfMissing(db, 'stage_attempts', columns, 'context_manifest_json', 'context_manifest_json TEXT');
   addColumnIfMissing(db, 'stage_attempts', columns, 'no_context_inheritance', 'no_context_inheritance INTEGER');
   addColumnIfMissing(db, 'stage_attempts', columns, 'archived_at', 'archived_at TEXT');
   addColumnIfMissing(db, 'stage_attempts', columns, 'archived_reason', 'archived_reason TEXT');
@@ -276,6 +282,7 @@ export function stageAttemptToPayload(row: StageAttemptRow) {
     quality_role_prompt_ref: row.quality_role_prompt_ref ?? null,
     execution_session_ref: row.execution_session_ref ?? null,
     context_manifest_ref: row.context_manifest_ref ?? null,
+    context_manifest: row.context_manifest_json ? parseJsonObject(row.context_manifest_json) : null,
     no_context_inheritance: row.no_context_inheritance === null || row.no_context_inheritance === undefined
       ? null
       : row.no_context_inheritance === 1,
@@ -365,7 +372,32 @@ export function validatePersistedStageReviewIsolation(db: DatabaseSync, input: {
   const artifactHashes = reviewer.reviewed_artifact_hashes_json
     ? parseJsonList(reviewer.reviewed_artifact_hashes_json)
     : [];
-  return validateIndependentStageReviewReceipt({
+  return validateIndependentStageReviewReceipt(buildPersistedStageReviewReceipt(db, input));
+}
+
+export function buildPersistedStageReviewReceipt(db: DatabaseSync, input: {
+  producerAttemptId: string;
+  reviewerAttemptId: string;
+  rubricRefs: string[];
+  verdict: 'pass' | 'repair_required' | 'quality_debt' | 'hard_stop';
+}): StageReviewReceipt {
+  const producer = db.prepare('SELECT * FROM stage_attempts WHERE stage_attempt_id = ?').get(
+    input.producerAttemptId,
+  ) as StageAttemptRow | undefined;
+  const reviewer = db.prepare('SELECT * FROM stage_attempts WHERE stage_attempt_id = ?').get(
+    input.reviewerAttemptId,
+  ) as StageAttemptRow | undefined;
+  if (!producer || !reviewer) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Review receipt requires both persisted attempts.');
+  }
+  if (!producer.execution_session_ref || !reviewer.execution_session_ref) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Review receipt requires observed execution sessions.');
+  }
+  const artifactRefs = reviewer.input_artifact_refs_json ? parseJsonList(reviewer.input_artifact_refs_json) : [];
+  const artifactHashes = reviewer.reviewed_artifact_hashes_json
+    ? parseJsonList(reviewer.reviewed_artifact_hashes_json)
+    : [];
+  const receipt: StageReviewReceipt = {
     surface_kind: 'opl_stage_review_receipt',
     version: 'stage-review-receipt.v1',
     stage_run_id: reviewer.stage_run_id ?? producer.stage_run_id ?? 'unknown-stage-run',
@@ -379,7 +411,9 @@ export function validatePersistedStageReviewIsolation(db: DatabaseSync, input: {
     reviewed_artifact_hashes: artifactHashes.filter((entry): entry is string => typeof entry === 'string'),
     rubric_refs: input.rubricRefs,
     verdict: input.verdict,
-  });
+  };
+  validateIndependentStageReviewReceipt(receipt);
+  return receipt;
 }
 
 export function stageAttemptSignalToPayload(row: StageAttemptSignalRow) {

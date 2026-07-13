@@ -6,14 +6,10 @@ import { stableId } from '../../kernel/stable-id.ts';
 import {
   initialStageQualityCycleState,
   normalizeStageQualityCyclePolicy,
-  reduceStageQualityCycleState,
-  type StageQualityAttemptRole,
   type StageQualityCyclePolicy,
   type StageQualityCycleState,
-  type StageQualityReviewVerdict,
-} from '../stagecraft/stage-quality-cycle.ts';
-import { createStageAttempt, type StageAttemptCreateInput } from './family-runtime-stage-attempts-parts/create.ts';
-import type { FamilyRuntimeDomainId, FamilyRuntimeProviderKind } from './family-runtime-types.ts';
+} from '../stagecraft/index.ts';
+import type { FamilyRuntimeDomainId } from './family-runtime-types.ts';
 import type { TemporalStageRunWorkflowState } from './family-runtime-temporal.ts';
 
 type StageQualityCycleRow = {
@@ -184,6 +180,7 @@ export function projectTemporalStageRunQualityCycle(
       workflow_id: state.workflow_id,
       controller_status: state.status,
       artifact_hashes: [...state.artifact_hashes],
+      artifact_identity_receipt_refs: [...state.artifact_identity_receipt_refs],
       attempts: state.attempts.map((attempt) => ({
         attempt_role: attempt.attempt_role,
         quality_round_index: attempt.quality_round_index,
@@ -195,6 +192,7 @@ export function projectTemporalStageRunQualityCycle(
       findings: state.findings,
       repair_map: state.repair_map,
       finding_closures: state.finding_closures,
+      review_receipts: state.review_receipts,
       blocked_reason: state.blocked_reason,
     },
   };
@@ -205,97 +203,4 @@ export function projectTemporalStageRunQualityCycle(
     WHERE quality_cycle_id = ?
   `).run(JSON.stringify(projected), now, state.quality_cycle_id);
   return inspectStageQualityCycle(db, state.quality_cycle_id);
-}
-
-export function createStageQualityCycleAttempt(db: DatabaseSync, input: {
-  qualityCycleId: string;
-  role: StageQualityAttemptRole;
-  providerKind?: FamilyRuntimeProviderKind;
-  workspaceLocator: Record<string, unknown>;
-  sourceFingerprint?: string;
-  parentAttemptRef?: string;
-  inputArtifactRefs?: string[];
-  reviewedArtifactHashes?: string[];
-  qualitySourceRefs?: string[];
-  qualityRubricRefs?: string[];
-  priorFindingRefs?: string[];
-  repairMapRefs?: string[];
-  qualityRolePromptRef?: string;
-  contextManifestRef?: string;
-  noContextInheritance?: boolean;
-  stageAttemptExecutorPolicy?: Record<string, unknown>;
-  checkpointRefs?: string[];
-  taskId?: string;
-}) {
-  const cycle = inspectStageQualityCycle(db, input.qualityCycleId);
-  const state = cycle.state;
-  if (state.current_role !== input.role) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Stage quality attempt role does not match cycle state.', {
-      expected_role: state.current_role,
-      received_role: input.role,
-      quality_cycle_id: input.qualityCycleId,
-    });
-  }
-  const attemptInput: StageAttemptCreateInput = {
-    domainId: cycle.domain_id,
-    stageId: cycle.stage_id,
-    providerKind: input.providerKind,
-    workspaceLocator: input.workspaceLocator,
-    sourceFingerprint: input.sourceFingerprint,
-    stageAttemptExecutorPolicy: input.stageAttemptExecutorPolicy,
-    taskId: input.taskId,
-    checkpointRefs: input.checkpointRefs,
-    stageRunId: cycle.stage_run_id,
-    qualityCycleId: cycle.quality_cycle_id,
-    attemptRole: input.role,
-    qualityRoundIndex: state.repair_rounds_used,
-    parentAttemptRef: input.parentAttemptRef,
-    inputArtifactRefs: input.inputArtifactRefs,
-    reviewedArtifactHashes: input.reviewedArtifactHashes,
-    qualitySourceRefs: input.qualitySourceRefs,
-    qualityRubricRefs: input.qualityRubricRefs,
-    priorFindingRefs: input.priorFindingRefs,
-    repairMapRefs: input.repairMapRefs,
-    qualityRolePromptRef: input.qualityRolePromptRef,
-    contextManifestRef: input.contextManifestRef,
-    noContextInheritance: input.noContextInheritance,
-    newAttempt: true,
-  };
-  const attempt = createStageAttempt(db, attemptInput).attempt;
-  const attemptRef = `opl://stage_attempts/${attempt.stage_attempt_id}`;
-  db.prepare(`
-    UPDATE stage_quality_cycles SET current_attempt_ref = ?, updated_at = ? WHERE quality_cycle_id = ?
-  `).run(attemptRef, new Date().toISOString(), cycle.quality_cycle_id);
-  return {
-    surface_kind: 'opl_stage_quality_cycle_attempt_launch',
-    quality_cycle_id: cycle.quality_cycle_id,
-    stage_run_id: cycle.stage_run_id,
-    attempt_role: input.role,
-    quality_round_index: state.repair_rounds_used,
-    attempt_ref: attemptRef,
-    attempt,
-  };
-}
-
-export function advanceStageQualityCycle(db: DatabaseSync, input: {
-  qualityCycleId: string;
-  event:
-    | { kind: 'producer_completed'; artifact_refs: string[] }
-    | { kind: 'review_completed'; verdict: StageQualityReviewVerdict; quality_debt_refs?: string[] }
-    | { kind: 'repair_completed'; artifact_refs: string[] }
-    | { kind: 'hard_stop' };
-}) {
-  const row = getRow(db, input.qualityCycleId);
-  if (!row) {
-    throw new FrameworkContractError('cli_usage_error', 'Stage quality cycle not found.', {
-      quality_cycle_id: input.qualityCycleId,
-    });
-  }
-  const state = reduceStageQualityCycleState(parseState(row), input.event);
-  const now = new Date().toISOString();
-  db.prepare(`
-    UPDATE stage_quality_cycles SET state_json = ?, current_attempt_ref = NULL, updated_at = ?
-    WHERE quality_cycle_id = ?
-  `).run(JSON.stringify(state), now, input.qualityCycleId);
-  return inspectStageQualityCycle(db, input.qualityCycleId);
 }

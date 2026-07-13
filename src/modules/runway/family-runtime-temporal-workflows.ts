@@ -16,6 +16,8 @@ import type {
   TemporalStageAttemptWorkflowInput,
   TemporalStageAttemptWorkflowState,
   TemporalStageQualityCycleProjectionInput,
+  TemporalStageQualityAttemptSyncInput,
+  TemporalStageQualityReviewReceiptInput,
   TemporalStageRunWorkflowInput,
   TemporalStageRunWorkflowState,
   TemporalStageQualityAttemptMaterializationInput,
@@ -31,7 +33,8 @@ import {
   type StageQualityFindingClosure,
   type StageQualityRepairMapEntry,
   type StageQualityReReviewResult,
-} from '../stagecraft/stage-quality-cycle.ts';
+  type StageReviewReceipt,
+} from '../stagecraft/public/stage-quality-cycle.ts';
 import {
   CODEX_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT,
   CODEX_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
@@ -58,6 +61,12 @@ type StageAttemptActivities = {
   stageQualityCycleProjectActivity(
     input: TemporalStageQualityCycleProjectionInput,
   ): Promise<Record<string, unknown>>;
+  stageQualityAttemptSyncActivity(
+    input: TemporalStageQualityAttemptSyncInput,
+  ): Promise<Record<string, unknown> | null>;
+  stageQualityReviewReceiptActivity(
+    input: TemporalStageQualityReviewReceiptInput,
+  ): Promise<StageReviewReceipt>;
 };
 
 export const stageAttemptQuery = defineQuery<TemporalStageAttemptWorkflowState>('StageAttemptQuery');
@@ -89,9 +98,17 @@ const { domainHandlerDispatchActivity, schedulerTickActivity } = proxyActivities
   },
 });
 
-const { stageQualityAttemptMaterializeActivity, stageQualityCycleProjectActivity } = proxyActivities<Pick<
+const {
+  stageQualityAttemptMaterializeActivity,
+  stageQualityAttemptSyncActivity,
+  stageQualityCycleProjectActivity,
+  stageQualityReviewReceiptActivity,
+} = proxyActivities<Pick<
   StageAttemptActivities,
-  'stageQualityAttemptMaterializeActivity' | 'stageQualityCycleProjectActivity'
+  | 'stageQualityAttemptMaterializeActivity'
+  | 'stageQualityAttemptSyncActivity'
+  | 'stageQualityCycleProjectActivity'
+  | 'stageQualityReviewReceiptActivity'
 >>({
   startToCloseTimeout: SHORT_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
   retry: {
@@ -527,13 +544,48 @@ function executionSessionRefFromAttemptState(state: TemporalStageAttemptWorkflow
   return null;
 }
 
-function qualityArtifactIdentity(value: Record<string, unknown>) {
+function qualityArtifactIdentity(
+  state: TemporalStageAttemptWorkflowState,
+  value: Record<string, unknown>,
+  inputIdentity?: {
+    artifactRefs: string[];
+    artifactHashes: string[];
+    artifactIdentityReceiptRefs: string[];
+  },
+) {
   const artifactRefs = asStringList(value.artifact_refs);
   const artifactHashes = asStringList(value.artifact_hashes);
+  if (artifactRefs.length === 0 && inputIdentity) return inputIdentity;
   if (artifactRefs.length === 0 || artifactRefs.length !== artifactHashes.length) {
     throw new Error('Stage quality attempt must return equal non-empty artifact_refs and artifact_hashes.');
   }
-  return { artifactRefs, artifactHashes };
+  if (
+    inputIdentity
+    && (
+      JSON.stringify(artifactRefs) !== JSON.stringify(inputIdentity.artifactRefs)
+      || JSON.stringify(artifactHashes) !== JSON.stringify(inputIdentity.artifactHashes)
+    )
+  ) {
+    throw new Error('Reviewer Attempt cannot replace the exact artifact identity it was asked to review.');
+  }
+  if (inputIdentity) return inputIdentity;
+
+  const closeout = asRecord(state.closeout_packet);
+  const metadata = asRecordList(closeout.closeout_ref_metadata);
+  const receiptRefs = artifactRefs.map((artifactRef, index) => {
+    const entry = metadata.find((candidate) => candidate.ref === artifactRef || candidate.uri === artifactRef);
+    if (!entry || typeof entry.sha256 !== 'string' || entry.sha256 !== artifactHashes[index]) {
+      throw new Error(
+        'Producer and repairer artifact identity must match domain-owned closeout_ref_metadata SHA receipts.',
+      );
+    }
+    return artifactRef;
+  });
+  return {
+    artifactRefs,
+    artifactHashes,
+    artifactIdentityReceiptRefs: receiptRefs,
+  };
 }
 
 function findingList(value: unknown) {
@@ -570,6 +622,17 @@ function stageRunQualityCycleId(input: TemporalStageRunWorkflowInput) {
 }
 
 function validateWorkflowStageRunInput(input: TemporalStageRunWorkflowInput) {
+  for (const [field, value] of Object.entries({
+    stage_run_id: input.stage_run_id,
+    quality_policy_ref: input.quality_policy_ref,
+    domain_pack_root: input.domain_pack_root,
+    stage_manifest_ref: input.stage_manifest_ref,
+    stage_manifest_sha256: input.stage_manifest_sha256,
+  })) {
+    if (typeof value !== 'string' || !value.trim()) {
+      throw new Error(`StageRun pack binding requires ${field}.`);
+    }
+  }
   const roleKeys = Object.keys(input.role_prompt_refs ?? {}).sort();
   if (JSON.stringify(roleKeys) !== JSON.stringify(['producer', 're_reviewer', 'repairer', 'reviewer'])) {
     throw new Error('StageRun role_prompt_refs must use only producer, reviewer, repairer, and re_reviewer.');
@@ -581,10 +644,43 @@ function validateWorkflowStageRunInput(input: TemporalStageRunWorkflowInput) {
   if (!Array.isArray(input.quality_rubric_refs) || input.quality_rubric_refs.length === 0) {
     throw new Error('StageRun quality rubric refs are required.');
   }
+  if (input.stage_role === 'cross_stage_meta_review' && input.quality_policy.formal_review.required) {
+    throw new Error('Cross-stage Meta Review Stage cannot recursively require formal Stage Review.');
+  }
 }
 
 function stageRunStopped(state: TemporalStageRunWorkflowState) {
-  return ['blocked', 'human_gate', 'failed'].includes(state.status);
+  return ['completed_with_quality_debt', 'blocked', 'human_gate', 'failed'].includes(state.status);
+}
+
+function hasConsumableArtifact(state: TemporalStageRunWorkflowState) {
+  return state.artifact_refs.length > 0
+    && state.artifact_refs.length === state.artifact_hashes.length;
+}
+
+const HARD_STAGE_QUALITY_STOP_CLASSES = new Set([
+  'zero_consumable_artifact',
+  'safety_or_compliance',
+  'permission_or_credential_boundary',
+  'human_decision_required',
+  'authority_boundary_violation',
+  'stale_or_mismatched_stage_identity',
+]);
+
+function qualityFailureRef(input: TemporalStageRunWorkflowInput, reason: string) {
+  return `opl://stage-runs/${encodeURIComponent(input.stage_run_id)}/quality-debt/${encodeURIComponent(reason)}`;
+}
+
+function declaredHardStop(envelope: Record<string, unknown>) {
+  return typeof envelope.hard_stop_class === 'string'
+    && HARD_STAGE_QUALITY_STOP_CLASSES.has(envelope.hard_stop_class);
+}
+
+function reviewVerdictForOutcome(outcome: ReturnType<typeof qualityOutcome>): StageReviewReceipt['verdict'] {
+  if (outcome === 'pass') return 'pass';
+  if (outcome === 'repair_required') return 'repair_required';
+  if (outcome === 'completed_with_quality_debt') return 'quality_debt';
+  return 'hard_stop';
 }
 
 export async function StageRunWorkflow(
@@ -608,8 +704,10 @@ export async function StageRunWorkflow(
     findings: [],
     repair_map: [],
     finding_closures: [],
+    review_receipts: [],
     artifact_refs: asStringList(input.artifact_refs),
     artifact_hashes: asStringList(input.artifact_hashes),
+    artifact_identity_receipt_refs: [],
     quality_debt_refs: [],
     blocked_reason: null,
     sqlite_projection: { status: 'pending', error: null },
@@ -647,6 +745,7 @@ export async function StageRunWorkflow(
     parentAttemptRef?: string | null;
     artifactRefs: string[];
     artifactHashes: string[];
+    artifactIdentityReceiptRefs: string[];
     findings?: StageQualityFinding[];
     repairMap?: StageQualityRepairMapEntry[];
   }) => {
@@ -659,6 +758,7 @@ export async function StageRunWorkflow(
       parent_attempt_ref: attemptInput.parentAttemptRef,
       artifact_refs: attemptInput.artifactRefs,
       artifact_hashes: attemptInput.artifactHashes,
+      artifact_identity_receipt_refs: attemptInput.artifactIdentityReceiptRefs,
       findings: attemptInput.findings,
       repair_map: attemptInput.repairMap,
     });
@@ -666,6 +766,10 @@ export async function StageRunWorkflow(
     const result = await executeChild(StageAttemptWorkflow, {
       args: [childInput],
       workflowId: childInput.workflow_id,
+    });
+    await stageQualityAttemptSyncActivity({
+      attempt_ref: materialized.attempt_ref,
+      workflow_state: result,
     });
     const executionSessionRef = executionSessionRefFromAttemptState(result);
     if (!executionSessionRef) {
@@ -676,7 +780,24 @@ export async function StageRunWorkflow(
     }
     observedSessions.add(executionSessionRef);
     const envelope = qualityEnvelopeFromAttempt(result);
-    const artifactIdentity = qualityArtifactIdentity(envelope);
+    const reviewRole = attemptInput.role === 'reviewer' || attemptInput.role === 're_reviewer';
+    const artifactIdentity = result.status === 'completed'
+      ? qualityArtifactIdentity(
+          result,
+          envelope,
+          reviewRole
+            ? {
+                artifactRefs: attemptInput.artifactRefs,
+                artifactHashes: attemptInput.artifactHashes,
+                artifactIdentityReceiptRefs: attemptInput.artifactIdentityReceiptRefs,
+              }
+            : undefined,
+        )
+      : {
+          artifactRefs: attemptInput.artifactRefs,
+          artifactHashes: attemptInput.artifactHashes,
+          artifactIdentityReceiptRefs: attemptInput.artifactIdentityReceiptRefs,
+        };
     state = {
       ...state,
       attempts: [...state.attempts, {
@@ -688,24 +809,42 @@ export async function StageRunWorkflow(
         status: result.status,
         artifact_refs: artifactIdentity.artifactRefs,
         artifact_hashes: artifactIdentity.artifactHashes,
+        artifact_identity_receipt_refs: artifactIdentity.artifactIdentityReceiptRefs,
       }],
       artifact_refs: artifactIdentity.artifactRefs,
       artifact_hashes: artifactIdentity.artifactHashes,
+      artifact_identity_receipt_refs: artifactIdentity.artifactIdentityReceiptRefs,
       updated_at: nowIso(),
     };
     if (result.status === 'human_gate') {
       state = { ...state, status: 'human_gate', current_role: null, blocked_reason: 'human_gate' };
     } else if (result.status === 'blocked' || result.status === 'failed') {
-      state = {
-        ...state,
-        status: result.status === 'failed' ? 'failed' : 'blocked',
-        current_role: null,
-        blocked_reason: typeof envelope.blocked_reason === 'string'
-          ? envelope.blocked_reason
-          : `stage_quality_${attemptInput.role}_not_completed`,
-      };
+      const reason = typeof envelope.blocked_reason === 'string'
+        ? envelope.blocked_reason
+        : `stage_quality_${attemptInput.role}_not_completed`;
+      state = hasConsumableArtifact(state) && !declaredHardStop(envelope)
+        ? {
+            ...state,
+            status: 'completed_with_quality_debt',
+            current_role: null,
+            quality_debt_refs: [...new Set([...state.quality_debt_refs, qualityFailureRef(input, reason)])],
+            blocked_reason: null,
+          }
+        : {
+            ...state,
+            status: result.status === 'failed' ? 'failed' : 'blocked',
+            current_role: null,
+            blocked_reason: reason,
+          };
     }
-    return { result, envelope, attemptRef: materialized.attempt_ref };
+    return {
+      result,
+      envelope,
+      attemptRef: materialized.attempt_ref,
+      executionSessionRef,
+      reviewedArtifactRefs: attemptInput.artifactRefs,
+      reviewedArtifactHashes: attemptInput.artifactHashes,
+    };
   };
 
   try {
@@ -715,6 +854,7 @@ export async function StageRunWorkflow(
       round: 0,
       artifactRefs: state.artifact_refs,
       artifactHashes: state.artifact_hashes,
+      artifactIdentityReceiptRefs: state.artifact_identity_receipt_refs,
     });
     parentAttemptRef = producer.attemptRef;
     if (stageRunStopped(state)) return terminalize(state);
@@ -728,12 +868,19 @@ export async function StageRunWorkflow(
       parentAttemptRef,
       artifactRefs: state.artifact_refs,
       artifactHashes: state.artifact_hashes,
+      artifactIdentityReceiptRefs: state.artifact_identity_receipt_refs,
     });
     parentAttemptRef = review.attemptRef;
     if (stageRunStopped(state)) return terminalize(state);
     const initialOutcome = qualityOutcome(review.envelope);
+    const initialReviewReceipt = await stageQualityReviewReceiptActivity({
+      producer_attempt_ref: producer.attemptRef,
+      reviewer_attempt_ref: review.attemptRef,
+      rubric_refs: input.quality_rubric_refs,
+      verdict: reviewVerdictForOutcome(initialOutcome),
+    });
     let findings = findingList(review.envelope.findings);
-    state = { ...state, findings };
+    state = { ...state, findings, review_receipts: [...state.review_receipts, initialReviewReceipt] };
     if (initialOutcome === 'pass') {
       return terminalize({ ...state, status: 'completed', current_role: null, updated_at: nowIso() });
     }
@@ -747,13 +894,20 @@ export async function StageRunWorkflow(
       });
     }
     if (initialOutcome === 'blocked' || initialOutcome === 'human_gate') {
+      const reason = typeof review.envelope.blocked_reason === 'string'
+        ? review.envelope.blocked_reason
+        : initialOutcome;
+      const hardStop = initialOutcome === 'human_gate'
+        || declaredHardStop(review.envelope)
+        || !hasConsumableArtifact(state);
       return terminalize({
         ...state,
-        status: initialOutcome,
+        status: hardStop ? initialOutcome : 'completed_with_quality_debt',
         current_role: null,
-        blocked_reason: typeof review.envelope.blocked_reason === 'string'
-          ? review.envelope.blocked_reason
-          : initialOutcome,
+        blocked_reason: hardStop ? reason : null,
+        quality_debt_refs: hardStop
+          ? state.quality_debt_refs
+          : [...new Set([...state.quality_debt_refs, qualityFailureRef(input, reason)])],
         updated_at: nowIso(),
       });
     }
@@ -765,6 +919,7 @@ export async function StageRunWorkflow(
         parentAttemptRef,
         artifactRefs: state.artifact_refs,
         artifactHashes: state.artifact_hashes,
+        artifactIdentityReceiptRefs: state.artifact_identity_receipt_refs,
         findings,
       });
       parentAttemptRef = repair.attemptRef;
@@ -777,6 +932,7 @@ export async function StageRunWorkflow(
         parentAttemptRef,
         artifactRefs: state.artifact_refs,
         artifactHashes: state.artifact_hashes,
+        artifactIdentityReceiptRefs: state.artifact_identity_receipt_refs,
         findings,
         repairMap,
       });
@@ -790,7 +946,17 @@ export async function StageRunWorkflow(
         optional_observations: asRecordList(reReview.envelope.optional_observations) as StageQualityReReviewResult['optional_observations'],
       };
       const closure = evaluateStageQualityFindingClosure({ findings, repairMap, reReview: reReviewResult });
-      state = { ...state, finding_closures: reReviewResult.finding_closures };
+      const reReviewReceipt = await stageQualityReviewReceiptActivity({
+        producer_attempt_ref: repair.attemptRef,
+        reviewer_attempt_ref: reReview.attemptRef,
+        rubric_refs: input.quality_rubric_refs,
+        verdict: closure.trigger_repair ? 'repair_required' : 'pass',
+      });
+      state = {
+        ...state,
+        finding_closures: reReviewResult.finding_closures,
+        review_receipts: [...state.review_receipts, reReviewReceipt],
+      };
       if (!closure.trigger_repair) {
         return terminalize({ ...state, status: 'completed', current_role: null, updated_at: nowIso() });
       }
@@ -825,14 +991,23 @@ export async function StageRunWorkflow(
       updated_at: nowIso(),
     });
   } catch (error) {
-    state = {
-      ...state,
-      status: 'failed',
-      current_role: null,
-      blocked_reason: error instanceof Error ? error.message : String(error),
-      updated_at: nowIso(),
-    };
-    throw error;
+    const reason = error instanceof Error ? error.message : String(error);
+    return terminalize(hasConsumableArtifact(state)
+      ? {
+          ...state,
+          status: 'completed_with_quality_debt',
+          current_role: null,
+          quality_debt_refs: [...new Set([...state.quality_debt_refs, qualityFailureRef(input, reason)])],
+          blocked_reason: null,
+          updated_at: nowIso(),
+        }
+      : {
+          ...state,
+          status: 'blocked',
+          current_role: null,
+          blocked_reason: 'stage_quality_failed_without_consumable_artifact',
+          updated_at: nowIso(),
+        });
   }
 }
 

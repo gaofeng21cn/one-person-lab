@@ -4,7 +4,8 @@ import type {
   StageQualityFinding,
   StageQualityFindingClosure,
   StageQualityRepairMapEntry,
-} from '../stagecraft/stage-quality-cycle.ts';
+  StageReviewReceipt,
+} from '../stagecraft/index.ts';
 import type { FamilyRuntimeDomainId } from './family-runtime-types.ts';
 
 export type TemporalStageRunQualityRolePromptRefs = {
@@ -25,6 +26,11 @@ export type TemporalStageRunWorkflowInput = {
   stage_attempt_executor_policy?: Record<string, unknown> | null;
   stage_packet_ref: string;
   checkpoint_refs?: string[];
+  quality_policy_ref: string;
+  domain_pack_root: string;
+  stage_manifest_ref: string;
+  stage_manifest_sha256: string;
+  stage_role: string | null;
   quality_policy: StageQualityCyclePolicy;
   role_prompt_refs: TemporalStageRunQualityRolePromptRefs;
   quality_rubric_refs: string[];
@@ -43,6 +49,7 @@ export type TemporalStageQualityAttemptMaterializationInput = {
   parent_attempt_ref?: string | null;
   artifact_refs: string[];
   artifact_hashes: string[];
+  artifact_identity_receipt_refs: string[];
   findings?: StageQualityFinding[];
   repair_map?: StageQualityRepairMapEntry[];
 };
@@ -50,6 +57,18 @@ export type TemporalStageQualityAttemptMaterializationInput = {
 export type TemporalStageQualityCycleProjectionInput = {
   stage_run: TemporalStageRunWorkflowInput;
   state: TemporalStageRunWorkflowState;
+};
+
+export type TemporalStageQualityAttemptSyncInput = {
+  attempt_ref: string;
+  workflow_state: import('./family-runtime-temporal.ts').TemporalStageAttemptWorkflowState;
+};
+
+export type TemporalStageQualityReviewReceiptInput = {
+  producer_attempt_ref: string;
+  reviewer_attempt_ref: string;
+  rubric_refs: string[];
+  verdict: StageReviewReceipt['verdict'];
 };
 
 export type TemporalStageRunAttemptSummary = {
@@ -61,6 +80,7 @@ export type TemporalStageRunAttemptSummary = {
   status: 'registered' | 'running' | 'checkpointed' | 'blocked' | 'human_gate' | 'completed' | 'failed';
   artifact_refs: string[];
   artifact_hashes: string[];
+  artifact_identity_receipt_refs: string[];
 };
 
 export type TemporalStageRunWorkflowState = {
@@ -79,8 +99,10 @@ export type TemporalStageRunWorkflowState = {
   findings: StageQualityFinding[];
   repair_map: StageQualityRepairMapEntry[];
   finding_closures: StageQualityFindingClosure[];
+  review_receipts: StageReviewReceipt[];
   artifact_refs: string[];
   artifact_hashes: string[];
+  artifact_identity_receipt_refs: string[];
   quality_debt_refs: string[];
   blocked_reason: string | null;
   sqlite_projection: {

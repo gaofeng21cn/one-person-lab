@@ -63,9 +63,7 @@ export { summarizeModelRouteCostProjections, summarizeStageAttemptUsageProjectio
 export type { ModelRouteCostProjection, StageAttemptUsageProjection } from './family-runtime-stage-attempt-usage.ts';
 export { listStageAttempts } from './family-runtime-stage-attempts.ts';
 export {
-  advanceStageQualityCycle,
   createStageQualityCycle,
-  createStageQualityCycleAttempt,
   inspectStageQualityCycle,
 } from './family-runtime-stage-quality-cycle.ts';
 export { requireStageQualityAttemptBoundary } from './family-runtime-stage-quality-attempt-boundary.ts';

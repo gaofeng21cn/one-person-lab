@@ -29,9 +29,7 @@ import {
   type TemporalStageRunWorkflowState,
 } from '../../src/modules/runway/family-runtime-temporal.ts';
 import {
-  advanceStageQualityCycle,
   createStageQualityCycle,
-  createStageQualityCycleAttempt,
   projectTemporalStageRunQualityCycle,
 } from '../../src/modules/runway/family-runtime-stage-quality-cycle.ts';
 import { requireStageQualityAttemptBoundary } from '../../src/modules/runway/family-runtime-stage-quality-attempt-boundary.ts';
@@ -440,6 +438,21 @@ test('reviewer StageAttempt cannot launch without context isolation evidence', (
   const db = new DatabaseSync(':memory:');
   try {
     createStageAttemptTable(db);
+    const producer = createStageAttempt(db, {
+      domainId: 'redcube',
+      stageId: 'artifact_creation',
+      providerKind: 'temporal',
+      workspaceLocator: { workspace_root: '/tmp/rca-quality-cycle' },
+      sourceFingerprint: 'sha256:source',
+      stageRunId: 'stage-run:rca/artifact-creation',
+      qualityCycleId: 'quality-cycle:rca/artifact-creation',
+      attemptRole: 'producer',
+      qualityRolePromptRef: 'prompt:producer',
+      qualityRubricRefs: ['rubric:visual'],
+      contextManifestRef: 'context:producer',
+      noContextInheritance: true,
+      newAttempt: true,
+    }).attempt;
     assert.throws(() => createStageAttempt(db, {
       domainId: 'redcube',
       stageId: 'artifact_creation',
@@ -449,6 +462,7 @@ test('reviewer StageAttempt cannot launch without context isolation evidence', (
       stageRunId: 'stage-run:rca/artifact-creation',
       qualityCycleId: 'quality-cycle:rca/artifact-creation',
       attemptRole: 'reviewer',
+      parentAttemptRef: `opl://stage_attempts/${producer.stage_attempt_id}`,
       inputArtifactRefs: ['artifact:deck-v1'],
       reviewedArtifactHashes: ['sha256:deck-v1'],
       newAttempt: true,
@@ -477,6 +491,11 @@ test('StageRun controller input rejects custom Attempt roles and quality budgets
     source_fingerprint: 'sha256:source',
     executor_kind: 'codex_cli',
     stage_packet_ref: 'packet:artifact-creation',
+    quality_policy_ref: 'contracts/stage_quality_cycle_policy.json#/stages/artifact_creation',
+    domain_pack_root: '/tmp/rca-domain-pack',
+    stage_manifest_ref: 'agent/stages/manifest.json',
+    stage_manifest_sha256: 'sha256:manifest',
+    stage_role: null,
     quality_policy: normalizeStageQualityCyclePolicy({
       formal_review: { required: true, risk_tier: 'high', max_repair_rounds: 3 },
     }),
@@ -524,6 +543,11 @@ test('Temporal child input independently enforces context isolation and finding 
     quality_cycle_id: 'quality-cycle:rca/artifact-creation',
     attempt_role: 'reviewer',
     quality_round_index: 0,
+    parent_attempt_ref: 'opl://stage_attempts/producer',
+    parent_attempt_lineage: {
+      stage_run_id: 'stage-run:rca/artifact-creation',
+      quality_cycle_id: 'quality-cycle:rca/artifact-creation',
+    },
     quality_role_prompt_ref: 'prompt:reviewer',
     context_manifest_ref: 'context:reviewer',
     no_context_inheritance: true,
@@ -545,55 +569,6 @@ test('Temporal child input independently enforces context isolation and finding 
     ...base,
     next_stage_refs: ['review_and_revision'],
   }), /cannot own Stage semantics/);
-});
-
-test('Stage quality runtime creates separate role attempts under one StageRun', () => {
-  const db = new DatabaseSync(':memory:');
-  try {
-    createStageAttemptTable(db);
-    const cycle = createStageQualityCycle(db, {
-      stageRunId: 'stage-run:rca/artifact-creation',
-      domainId: 'redcube',
-      stageId: 'artifact_creation',
-      policy: { formal_review: { required: true, risk_tier: 'medium' } },
-    }).cycle;
-    const producer = createStageQualityCycleAttempt(db, {
-      qualityCycleId: cycle.quality_cycle_id,
-      role: 'producer',
-      providerKind: 'temporal',
-      workspaceLocator: { workspace_root: '/tmp/rca-quality-cycle' },
-      sourceFingerprint: 'sha256:source',
-      qualityRolePromptRef: 'prompt:producer',
-      qualityRubricRefs: ['rubric:visual'],
-      contextManifestRef: 'manifest:producer-context',
-      noContextInheritance: true,
-    });
-    const awaitingReview = advanceStageQualityCycle(db, {
-      qualityCycleId: cycle.quality_cycle_id,
-      event: { kind: 'producer_completed', artifact_refs: ['artifact:deck-v1'] },
-    });
-    assert.equal(awaitingReview.state.current_role, 'reviewer');
-    const reviewer = createStageQualityCycleAttempt(db, {
-      qualityCycleId: cycle.quality_cycle_id,
-      role: 'reviewer',
-      providerKind: 'temporal',
-      workspaceLocator: { workspace_root: '/tmp/rca-quality-cycle' },
-      sourceFingerprint: 'sha256:source',
-      parentAttemptRef: producer.attempt_ref,
-      inputArtifactRefs: ['artifact:deck-v1'],
-      reviewedArtifactHashes: ['sha256:deck-v1'],
-      contextManifestRef: 'manifest:review-context-v1',
-      noContextInheritance: true,
-      qualityRolePromptRef: 'prompt:reviewer',
-      qualityRubricRefs: ['rubric:visual'],
-    });
-    assert.notEqual(producer.attempt.stage_attempt_id, reviewer.attempt.stage_attempt_id);
-    assert.notEqual(producer.attempt.workflow_id, reviewer.attempt.workflow_id);
-    assert.equal(reviewer.attempt.attempt_role, 'reviewer');
-    assert.equal(reviewer.attempt.no_context_inheritance, true);
-  } finally {
-    db.close();
-  }
 });
 
 test('StageRun controller quality cycle id is preserved by the SQLite projection helper', () => {
@@ -647,13 +622,15 @@ test('Temporal StageRun terminal state idempotently refreshes the SQLite quality
         stage_attempt_id: 'sat-rereview-3', workflow_id: 'wf-rereview-3',
         execution_session_ref: 'codex://threads/rereview-3', status: 'completed',
         artifact_refs: ['artifact:deck-v4'], artifact_hashes: ['sha256:deck-v4'],
+        artifact_identity_receipt_refs: ['artifact:deck-v4'],
       }],
       findings: [{
         finding_id: 'finding:visual-clipping', severity: 'critical', required: true,
         evidence_refs: ['screenshot:slide-7-v4'], repair_expectation: 'Remove clipping.',
       }],
-      repair_map: [], finding_closures: [],
+      repair_map: [], finding_closures: [], review_receipts: [],
       artifact_refs: ['artifact:deck-v4'], artifact_hashes: ['sha256:deck-v4'],
+      artifact_identity_receipt_refs: ['artifact:deck-v4'],
       quality_debt_refs: ['quality-debt:finding:visual-clipping'], blocked_reason: null,
       sqlite_projection: { status: 'pending', error: null },
       started_at: '2026-07-13T00:00:00.000Z', updated_at: '2026-07-13T00:01:00.000Z',

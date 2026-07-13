@@ -56,6 +56,7 @@ export type {
   StageQualityFinding,
   StageQualityFindingClosure,
   StageQualityRepairMapEntry,
+  StageQualityReReviewResult,
   StageQualityReviewDepth,
   StageQualityReviewVerdict,
   StageQualityRiskTier,

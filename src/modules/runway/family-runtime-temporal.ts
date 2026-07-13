@@ -7,8 +7,8 @@ import type {
   StageQualityAttemptRole,
   StageQualityFinding,
   StageQualityRepairMapEntry,
-} from '../stagecraft/stage-quality-cycle.ts';
-import { normalizeStageQualityAttemptRole } from '../stagecraft/stage-quality-cycle.ts';
+} from '../stagecraft/index.ts';
+import { normalizeStageQualityAttemptRole } from '../stagecraft/index.ts';
 import {
   CODEX_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT,
   CODEX_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
@@ -29,7 +29,9 @@ import type { TemporalStageRunWorkflowInput } from './family-runtime-temporal-st
 
 export type {
   TemporalStageQualityAttemptMaterializationInput,
+  TemporalStageQualityAttemptSyncInput,
   TemporalStageQualityCycleProjectionInput,
+  TemporalStageQualityReviewReceiptInput,
   TemporalStageRunAttemptSummary,
   TemporalStageRunQualityRolePromptRefs,
   TemporalStageRunWorkflowInput,
@@ -120,6 +122,10 @@ export type TemporalStageAttemptWorkflowInput = {
   attempt_role?: StageQualityAttemptRole | null;
   quality_round_index?: number | null;
   parent_attempt_ref?: string | null;
+  parent_attempt_lineage?: {
+    stage_run_id: string;
+    quality_cycle_id: string;
+  } | null;
   input_artifact_refs?: string[];
   reviewed_artifact_hashes?: string[];
   quality_source_refs?: string[];
@@ -132,6 +138,7 @@ export type TemporalStageAttemptWorkflowInput = {
   quality_context?: {
     findings?: StageQualityFinding[];
     repair_map?: StageQualityRepairMapEntry[];
+    context_manifest?: Record<string, unknown>;
   };
   stage_attempt_executor_policy?: Record<string, unknown> | null;
   retry_budget: Record<string, unknown>;
@@ -237,7 +244,9 @@ export function buildTemporalStageAttemptWorkflowContract() {
       domain_handler_dispatch_activity: DOMAIN_HANDLER_DISPATCH_ACTIVITY_NAME,
       scheduler_tick_activity: SCHEDULER_TICK_ACTIVITY_NAME,
       stage_quality_attempt_materialize_activity: 'StageQualityAttemptMaterializeActivity',
+      stage_quality_attempt_sync_activity: 'StageQualityAttemptSyncActivity',
       stage_quality_cycle_project_activity: 'StageQualityCycleProjectActivity',
+      stage_quality_review_receipt_activity: 'StageQualityReviewReceiptActivity',
     },
     signals: [...TEMPORAL_STAGE_ATTEMPT_SIGNALS],
     queries: [...TEMPORAL_STAGE_ATTEMPT_QUERIES],
@@ -591,6 +600,7 @@ export function buildTemporalStageAttemptWorkflowInput(
     repair_map_refs?: unknown[];
     quality_role_prompt_ref?: string | null;
     context_manifest_ref?: string | null;
+    context_manifest?: Record<string, unknown> | null;
     no_context_inheritance?: boolean | null;
     stage_attempt_executor_policy?: unknown;
     retry_budget: Record<string, unknown>;
@@ -621,6 +631,12 @@ export function buildTemporalStageAttemptWorkflowInput(
       ? attempt.quality_round_index
       : null,
     parent_attempt_ref: optionalText(attempt.parent_attempt_ref),
+    parent_attempt_lineage: attempt.parent_attempt_ref
+      ? {
+          stage_run_id: optionalText(attempt.stage_run_id) ?? '',
+          quality_cycle_id: optionalText(attempt.quality_cycle_id) ?? '',
+        }
+      : null,
     input_artifact_refs: Array.isArray(attempt.input_artifact_refs)
       ? attempt.input_artifact_refs.filter((entry): entry is string => typeof entry === 'string' && Boolean(entry.trim()))
       : [],
@@ -642,6 +658,9 @@ export function buildTemporalStageAttemptWorkflowInput(
     quality_role_prompt_ref: optionalText(attempt.quality_role_prompt_ref),
     context_manifest_ref: optionalText(attempt.context_manifest_ref),
     no_context_inheritance: attempt.no_context_inheritance ?? null,
+    quality_context: attempt.context_manifest
+      ? { context_manifest: attempt.context_manifest }
+      : undefined,
     stage_attempt_executor_policy: optionalRecord(attempt.stage_attempt_executor_policy),
     retry_budget: attempt.retry_budget,
     route_impact: optionalRecord(attempt.route_impact) ?? {},
@@ -687,6 +706,10 @@ export function requireTemporalStageRunWorkflowInputLaunchable(input: TemporalSt
     workflow_id: input.workflow_id,
     stage_id: input.stage_id,
     stage_packet_ref: input.stage_packet_ref,
+    quality_policy_ref: input.quality_policy_ref,
+    domain_pack_root: input.domain_pack_root,
+    stage_manifest_ref: input.stage_manifest_ref,
+    stage_manifest_sha256: input.stage_manifest_sha256,
   })) {
     if (typeof value !== 'string' || !value.trim()) {
       throw new FrameworkContractError('contract_shape_invalid', `StageRun quality controller requires ${field}.`, {
@@ -708,6 +731,12 @@ export function requireTemporalStageRunWorkflowInputLaunchable(input: TemporalSt
   }
   if (!Array.isArray(input.quality_rubric_refs) || input.quality_rubric_refs.length === 0) {
     throw new FrameworkContractError('contract_shape_invalid', 'StageRun quality controller requires quality rubric refs.');
+  }
+  if (input.stage_role === 'cross_stage_meta_review' && input.quality_policy.formal_review.required) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Cross-stage Meta Review Stage cannot recursively require formal Stage Review.',
+    );
   }
   const maxRepairRounds = input.quality_policy?.formal_review?.max_repair_rounds;
   if (!Number.isInteger(maxRepairRounds) || maxRepairRounds < 0 || maxRepairRounds > 3) {

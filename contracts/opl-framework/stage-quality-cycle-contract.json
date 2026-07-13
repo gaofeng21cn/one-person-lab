@@ -112,6 +112,7 @@
     "review_context_allowlist": [
       "stage_goal_refs",
       "exact_artifact_refs_and_hashes",
+      "domain_owned_artifact_identity_receipt_refs",
       "source_refs_and_fingerprint",
       "quality_rubric_refs",
       "necessary_artifact_lineage_refs",
@@ -134,6 +135,7 @@
       "hard_stop"
     ],
     "reviewed_hash_must_match_current_artifact": true,
+    "producer_and_repairer_identity_source": "typed_closeout_ref_metadata_sha256_owned_by_domain",
     "no_context_inheritance_required": true,
     "same_model_different_session_allowed": true
   },

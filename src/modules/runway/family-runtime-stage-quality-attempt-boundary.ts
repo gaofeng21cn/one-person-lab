@@ -2,7 +2,7 @@ import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import {
   normalizeStageQualityAttemptRole,
   type StageQualityAttemptRole,
-} from '../stagecraft/stage-quality-cycle.ts';
+} from '../stagecraft/public/stage-quality-cycle.ts';
 
 const FORBIDDEN_STAGE_FIELDS = [
   'next_stage_refs',
@@ -14,6 +14,11 @@ const FORBIDDEN_STAGE_FIELDS = [
   'stage_current_pointer',
   'stage_transition_authority',
 ] as const;
+
+type ParentAttemptLineage = {
+  stage_run_id: string;
+  quality_cycle_id: string;
+};
 
 function refs(value: unknown) {
   return Array.isArray(value)
@@ -31,8 +36,102 @@ function requiredText(value: unknown, field: string, role: StageQualityAttemptRo
   }
 }
 
+function forbiddenStageFieldPaths(value: unknown) {
+  const paths: string[] = [];
+  const visited = new WeakSet<object>();
+
+  const visit = (current: unknown, path: string) => {
+    if (current === null || typeof current !== 'object' || visited.has(current)) return;
+    visited.add(current);
+    for (const [key, nested] of Object.entries(current)) {
+      const nestedPath = path ? `${path}.${key}` : key;
+      if ((FORBIDDEN_STAGE_FIELDS as readonly string[]).includes(key)) {
+        paths.push(nestedPath);
+      }
+      visit(nested, nestedPath);
+    }
+  };
+
+  visit(value, '');
+  return paths;
+}
+
+function requireParentAttemptLineage(
+  input: Record<string, unknown>,
+  role: StageQualityAttemptRole,
+  stageRunId: string,
+  qualityCycleId: string,
+) {
+  if (role === 'producer') {
+    if (input.parent_attempt_ref !== undefined && input.parent_attempt_ref !== null) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Producer StageAttempt cannot declare a parent attempt.',
+        { attempt_role: role, field: 'parent_attempt_ref' },
+      );
+    }
+    if (input.parent_attempt_lineage !== undefined && input.parent_attempt_lineage !== null) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Producer StageAttempt cannot declare parent attempt lineage.',
+        { attempt_role: role, field: 'parent_attempt_lineage' },
+      );
+    }
+    return;
+  }
+
+  requiredText(input.parent_attempt_ref, 'parent_attempt_ref', role);
+  const lineage = input.parent_attempt_lineage;
+  if (lineage === null || typeof lineage !== 'object' || Array.isArray(lineage)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Non-producer StageAttempt requires parent_attempt_lineage.',
+      { attempt_role: role, field: 'parent_attempt_lineage' },
+    );
+  }
+  const parentLineage = lineage as Partial<ParentAttemptLineage>;
+  requiredText(parentLineage.stage_run_id, 'parent_attempt_lineage.stage_run_id', role);
+  requiredText(parentLineage.quality_cycle_id, 'parent_attempt_lineage.quality_cycle_id', role);
+  if (
+    parentLineage.stage_run_id !== stageRunId
+    || parentLineage.quality_cycle_id !== qualityCycleId
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Parent StageAttempt must belong to the same stage_run_id and quality_cycle_id lineage.',
+      {
+        attempt_role: role,
+        stage_run_id: stageRunId,
+        quality_cycle_id: qualityCycleId,
+        parent_stage_run_id: parentLineage.stage_run_id,
+        parent_quality_cycle_id: parentLineage.quality_cycle_id,
+      },
+    );
+  }
+}
+
+function requireRoleRound(role: StageQualityAttemptRole, value: unknown) {
+  const round = Number(value);
+  const valid = Number.isInteger(value) && (
+    (role === 'producer' && round === 0)
+    || (role === 'reviewer' && round === 0)
+    || ((role === 'repairer' || role === 're_reviewer') && round >= 1 && round <= 3)
+  );
+  if (!valid) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Quality-cycle StageAttempt role and quality_round_index are inconsistent.',
+      {
+        attempt_role: role,
+        quality_round_index: value,
+        allowed_rounds: role === 'producer' || role === 'reviewer' ? [0] : [1, 2, 3],
+      },
+    );
+  }
+}
+
 export function requireStageQualityAttemptBoundary(input: Record<string, unknown>) {
-  const forbiddenFields = FORBIDDEN_STAGE_FIELDS.filter((field) => Object.hasOwn(input, field));
+  const forbiddenFields = forbiddenStageFieldPaths(input);
   if (forbiddenFields.length > 0) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
@@ -45,6 +144,10 @@ export function requireStageQualityAttemptBoundary(input: Record<string, unknown
   const role = normalizeStageQualityAttemptRole(input.attempt_role);
   requiredText(input.stage_run_id, 'stage_run_id', role);
   requiredText(input.quality_cycle_id, 'quality_cycle_id', role);
+  const stageRunId = String(input.stage_run_id);
+  const qualityCycleId = String(input.quality_cycle_id);
+  requireRoleRound(role, input.quality_round_index);
+  requireParentAttemptLineage(input, role, stageRunId, qualityCycleId);
   requiredText(input.quality_role_prompt_ref, 'quality_role_prompt_ref', role);
   requiredText(input.context_manifest_ref, 'context_manifest_ref', role);
   if (input.no_context_inheritance !== true) {
@@ -58,13 +161,6 @@ export function requireStageQualityAttemptBoundary(input: Record<string, unknown
     throw new FrameworkContractError(
       'contract_shape_invalid',
       'Quality-cycle StageAttempt requires quality rubric refs.',
-      { attempt_role: role },
-    );
-  }
-  if (!Number.isInteger(input.quality_round_index) || Number(input.quality_round_index) < 0) {
-    throw new FrameworkContractError(
-      'contract_shape_invalid',
-      'Quality-cycle StageAttempt requires a non-negative quality_round_index.',
       { attempt_role: role },
     );
   }

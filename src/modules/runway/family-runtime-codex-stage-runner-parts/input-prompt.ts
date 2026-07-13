@@ -62,6 +62,11 @@ export function workspaceRootFromAttempt(attempt: JsonRecord) {
   return optionalString(workspaceLocator.workspace_root) ?? optionalString(workspaceLocator.repo_root);
 }
 
+function domainPackRootFromAttempt(attempt: JsonRecord) {
+  const workspaceLocator = isRecord(attempt.workspace_locator) ? attempt.workspace_locator : {};
+  return optionalString(workspaceLocator.domain_pack_root) ?? workspaceRootFromAttempt(attempt);
+}
+
 function workspaceLocatorFromAttempt(attempt: JsonRecord) {
   return isRecord(attempt.workspace_locator) ? attempt.workspace_locator : {};
 }
@@ -74,7 +79,7 @@ export function effectiveStagePromptFor(input: {
     return input.effectiveStagePrompt;
   }
   return resolveStandardAgentStagePrompt(
-    workspaceRootFromAttempt(input.attempt),
+    domainPackRootFromAttempt(input.attempt),
     stageIdFromAttempt(input.attempt),
   );
 }
@@ -153,9 +158,9 @@ function qualityAttemptPromptLines(attempt: JsonRecord) {
   const repairMapRefs = readStringList(attempt.repair_map_refs);
   const rolePromptRef = optionalString(attempt.quality_role_prompt_ref);
   const qualityContext = isRecord(attempt.quality_context) ? attempt.quality_context : {};
-  const workspaceRoot = workspaceRootFromAttempt(attempt);
-  const rolePrompt = rolePromptRef && workspaceRoot
-    ? readStandardAgentQualityRolePromptFile(workspaceRoot, rolePromptRef)
+  const domainPackRoot = domainPackRootFromAttempt(attempt);
+  const rolePrompt = rolePromptRef && domainPackRoot
+    ? readStandardAgentQualityRolePromptFile(domainPackRoot, rolePromptRef)
     : null;
   const base = [
     'OPL Stage quality-cycle role contract follows.',
@@ -186,10 +191,14 @@ function qualityAttemptPromptLines(attempt: JsonRecord) {
       ...base,
       'This is a fresh repair Attempt. Repair only the declared required findings within the inherited Stage goal, scope, and authority.',
       'Return a repair_map keyed by stable finding_id plus exact changed artifact refs and hashes. The repairer cannot close findings.',
+      'Bind every returned artifact ref to the identical SHA value in typed closeout_ref_metadata; this domain-owned digest receipt is required before re-review.',
     ];
   }
   if (!['reviewer', 're_reviewer'].includes(attemptRole)) {
-    return base;
+    return [
+      ...base,
+      'Bind every returned artifact ref to the identical SHA value in typed closeout_ref_metadata; model-declared hashes without this domain-owned digest receipt are not reviewable artifacts.',
+    ];
   }
   return [
     ...base,

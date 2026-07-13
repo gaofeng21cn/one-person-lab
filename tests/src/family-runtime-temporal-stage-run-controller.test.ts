@@ -25,6 +25,11 @@ function stageRunInput(id: string): TemporalStageRunWorkflowInput {
     source_fingerprint: 'sha256:source',
     executor_kind: 'codex_cli',
     stage_packet_ref: 'packet:artifact-creation',
+    quality_policy_ref: 'contracts/stage_quality_cycle_policy.json#/stages/artifact_creation',
+    domain_pack_root: '/tmp/rca-domain-pack',
+    stage_manifest_ref: 'agent/stages/manifest.json',
+    stage_manifest_sha256: 'sha256:manifest',
+    stage_role: null,
     quality_policy: normalizeStageQualityCyclePolicy({
       formal_review: { required: true, risk_tier: 'high', max_repair_rounds: 3 },
     }),
@@ -43,6 +48,9 @@ function stageRunInput(id: string): TemporalStageRunWorkflowInput {
 async function runController(input: {
   id: string;
   closeFindingAfterRound: number | null;
+  failRole?: TemporalStageQualityAttemptMaterializationInput['attempt_role'];
+  omitIdentityReceiptForRole?: TemporalStageQualityAttemptMaterializationInput['attempt_role'];
+  reviewerIdentityDrift?: boolean;
 }) {
   const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
   const taskQueue = `opl-stage-run-controller-${input.id}-${Date.now()}`;
@@ -69,6 +77,12 @@ async function runController(input: {
           attempt_role: role,
           quality_round_index: round,
           parent_attempt_ref: materialization.parent_attempt_ref,
+          parent_attempt_lineage: materialization.parent_attempt_ref
+            ? {
+                stage_run_id: materialization.stage_run.stage_run_id,
+                quality_cycle_id: materialization.quality_cycle_id,
+              }
+            : null,
           input_artifact_refs: materialization.artifact_refs,
           reviewed_artifact_hashes: materialization.artifact_hashes,
           quality_source_refs: materialization.stage_run.source_refs,
@@ -93,6 +107,26 @@ async function runController(input: {
       async stageQualityCycleProjectActivity() {
         return { projected: true };
       },
+      async stageQualityAttemptSyncActivity() {
+        return { synced: true };
+      },
+      async stageQualityReviewReceiptActivity(receiptInput: any) {
+        return {
+          surface_kind: 'opl_stage_review_receipt',
+          version: 'stage-review-receipt.v1',
+          stage_run_id: `stage-run:${input.id}`,
+          quality_cycle_id: `quality-cycle:stage-run:${input.id}`,
+          producer_attempt_ref: receiptInput.producer_attempt_ref,
+          reviewer_attempt_ref: receiptInput.reviewer_attempt_ref,
+          producer_session_ref: `codex://threads/${receiptInput.producer_attempt_ref}`,
+          reviewer_session_ref: `codex://threads/${receiptInput.reviewer_attempt_ref}`,
+          no_context_inheritance: true,
+          reviewed_artifact_refs: ['artifact:deck-v1'],
+          reviewed_artifact_hashes: ['sha256:deck-v1'],
+          rubric_refs: receiptInput.rubric_refs,
+          verdict: receiptInput.verdict,
+        };
+      },
       async codexStageActivity(attempt: TemporalStageAttemptWorkflowInput) {
         return {
           stage_attempt_id: attempt.stage_attempt_id,
@@ -112,6 +146,9 @@ async function runController(input: {
       async domainHandlerDispatchActivity(attempt: TemporalStageAttemptWorkflowInput) {
         const role = attempt.attempt_role;
         const round = attempt.quality_round_index ?? 0;
+        if (role === input.failRole) {
+          throw new Error(`simulated-${role}-protocol-failure`);
+        }
         const finding = {
           finding_id: 'finding:visual-clipping',
           severity: 'critical',
@@ -119,7 +156,9 @@ async function runController(input: {
           evidence_refs: [`screenshot:v${round + 1}`],
           repair_expectation: 'Remove clipping while preserving the approved claim.',
         };
-        const artifactVersion = role === 'producer' || role === 'reviewer' ? 1 : round + 1;
+        const artifactVersion = role === 'reviewer' && input.reviewerIdentityDrift
+          ? 99
+          : role === 'producer' || role === 'reviewer' ? 1 : round + 1;
         const stageQualityCycle: Record<string, unknown> = {
           outcome: role === 'reviewer' ? 'repair_required' : 'pass',
           artifact_refs: [`artifact:deck-v${artifactVersion}`],
@@ -153,6 +192,15 @@ async function runController(input: {
         }
         return {
           closeout_refs: [`closeout:${attempt.stage_attempt_id}`],
+          closeout_ref_metadata: (
+            (role === 'producer' || role === 'repairer')
+            && role !== input.omitIdentityReceiptForRole
+          )
+            ? [{
+                ref: `artifact:deck-v${artifactVersion}`,
+                sha256: `sha256:deck-v${artifactVersion}`,
+              }]
+            : [],
           route_impact: { stage_quality_cycle: stageQualityCycle },
           domain_ready_verdict: 'domain_gate_pending',
         };
@@ -189,6 +237,7 @@ test('StageRun controller materializes isolated producer-review-repair-re-review
   assert.equal(new Set(state.attempts.map((attempt) => attempt.execution_session_ref)).size, 4);
   assert.deepEqual(state.artifact_refs, ['artifact:deck-v2']);
   assert.equal(state.sqlite_projection.status, 'synced');
+  assert.equal(state.review_receipts.length, 2);
 });
 
 test('StageRun controller caps quality work at three repair rounds and carries consumable debt', async () => {
@@ -204,4 +253,54 @@ test('StageRun controller caps quality work at three repair rounds and carries c
   ]);
   assert.ok(state.quality_debt_refs.includes('quality-debt:finding:visual-clipping'));
   assert.equal(state.sqlite_projection.status, 'synced');
+  assert.equal(state.review_receipts.length, 4);
+});
+
+test('reviewer protocol failure terminalizes a consumable producer artifact as quality debt', async () => {
+  const { state, attempts } = await runController({
+    id: 'reviewer-failure',
+    closeFindingAfterRound: null,
+    failRole: 'reviewer',
+  });
+  assert.equal(state.status, 'completed_with_quality_debt');
+  assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), ['producer', 'reviewer']);
+  assert.deepEqual(state.artifact_refs, ['artifact:deck-v1']);
+  assert.deepEqual(state.artifact_identity_receipt_refs, ['artifact:deck-v1']);
+  assert.equal(state.review_receipts.length, 0);
+});
+
+test('reviewer artifact identity drift is rejected without forging a review receipt', async () => {
+  const { state, attempts } = await runController({
+    id: 'reviewer-drift',
+    closeFindingAfterRound: null,
+    reviewerIdentityDrift: true,
+  });
+  assert.equal(state.status, 'completed_with_quality_debt');
+  assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), ['producer', 'reviewer']);
+  assert.deepEqual(state.artifact_refs, ['artifact:deck-v1']);
+  assert.equal(state.review_receipts.length, 0);
+});
+
+test('producer failure without a consumable artifact hard-stops the StageRun', async () => {
+  const { state, attempts } = await runController({
+    id: 'producer-failure',
+    closeFindingAfterRound: null,
+    failRole: 'producer',
+  });
+  assert.equal(state.status, 'blocked');
+  assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), ['producer']);
+  assert.equal(state.artifact_refs.length, 0);
+  assert.equal(state.review_receipts.length, 0);
+});
+
+test('producer artifact without a domain SHA receipt cannot enter formal Review', async () => {
+  const { state, attempts } = await runController({
+    id: 'producer-missing-identity-receipt',
+    closeFindingAfterRound: null,
+    omitIdentityReceiptForRole: 'producer',
+  });
+  assert.equal(state.status, 'blocked');
+  assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), ['producer']);
+  assert.equal(state.artifact_refs.length, 0);
+  assert.equal(state.review_receipts.length, 0);
 });
