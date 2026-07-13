@@ -58,6 +58,19 @@ function writeDomainRepoContracts(targetDir: string, manifest: Record<string, an
     && !Array.isArray(manifest.product_entry_manifest)
     ? manifest.product_entry_manifest as Record<string, any>
     : manifest;
+  const stageManifestPath = path.join(targetDir, 'agent', 'stages', 'manifest.json');
+  const stageManifest = parseJsonText(fs.readFileSync(stageManifestPath, 'utf8')) as Record<string, any>;
+  const compiledStageId = stageManifest.stages[0].stage_id;
+  for (const action of manifestSurface.family_action_catalog.actions) {
+    if (action.execution_binding?.kind !== 'stage_binding') continue;
+    action.stage_route = {
+      ...action.stage_route,
+      entry_stage_ref: compiledStageId,
+      required_stage_refs: [compiledStageId],
+      optional_stage_refs: [],
+      terminal_stage_refs: [compiledStageId],
+    };
+  }
   for (const [file, payload] of [
     ['domain_descriptor.json', {
       surface_kind: 'domain_agent_descriptor',
@@ -108,8 +121,6 @@ function writeDomainRepoContracts(targetDir: string, manifest: Record<string, an
   ] as const) {
     fs.writeFileSync(path.join(targetDir, 'contracts', file), `${JSON.stringify(payload)}\n`);
   }
-  const stageManifestPath = path.join(targetDir, 'agent', 'stages', 'manifest.json');
-  const stageManifest = parseJsonText(fs.readFileSync(stageManifestPath, 'utf8')) as Record<string, any>;
   stageManifest.stages[0].allowed_action_refs = [manifestSurface.family_action_catalog.actions[0].action_id];
   fs.writeFileSync(stageManifestPath, `${JSON.stringify(stageManifest, null, 2)}\n`);
   for (const action of manifestSurface.family_action_catalog.actions) {
@@ -151,7 +162,11 @@ test('generated interfaces block default cutover without handoff proof but keep 
     'quality_or_export_verdict',
     'artifact_mutation',
   ]);
-  assert.equal(bundle.cli.descriptors[0].command, 'MedAutoScience study_packet');
+  assert.match(
+    bundle.cli.descriptors[0].command,
+    /^opl agents run --domain med-autoscience --action study_packet --workspace /,
+  );
+  assert.equal(bundle.cli.descriptors[0].execution_binding.kind, 'stage_binding');
   assert.equal(bundle.mcp.descriptors[0].name, 'study_packet');
   assert.equal(bundle.generated_direct_parity.status, 'blocked_or_drift_detected');
   assert.ok(bundle.generated_direct_parity.issues.includes('active caller target proof is not ready'));
@@ -712,7 +727,6 @@ test('generated interfaces consume active repo handoff and disambiguate multi-ac
   catalog.actions.push({
     ...firstAction,
     action_id: 'study_packet_route',
-    source_command: { command: 'MedAutoScience study_packet_route', surface_kind: 'domain_cli' },
     source_of_work: {
       source_catalog: 'family_action_catalog',
       source_catalog_ref: `family_action_catalog:${catalog.catalog_id}`,
@@ -725,16 +739,27 @@ test('generated interfaces consume active repo handoff and disambiguate multi-ac
     output_schema_ref: 'contracts/route-output.schema.json',
     supported_surfaces: {
       ...firstAction.supported_surfaces,
-      cli: { command: 'MedAutoScience study_packet_route', surface_kind: 'domain_cli' },
       mcp: {
-        tool_name: firstAction.supported_surfaces.mcp.tool_name,
+        tool_name: 'study_packet_route',
         surface_kind: 'domain_mcp',
+      },
+      skill: {
+        command_contract_id: 'study_packet_route',
+        surface_kind: 'domain_skill_contract',
+      },
+      product_entry: {
+        action_key: 'study_packet_route',
+        surface_kind: 'domain_product_entry',
       },
       openai: { tool_name: 'study_packet_route' },
       ai_sdk: { tool_name: 'study_packet_route' },
     },
   });
   fs.writeFileSync(path.join(targetDir, 'contracts', 'action_catalog.json'), `${JSON.stringify(catalog)}\n`);
+  const stageManifestPath = path.join(targetDir, 'agent', 'stages', 'manifest.json');
+  const stageManifest = parseJsonText(fs.readFileSync(stageManifestPath, 'utf8')) as Record<string, any>;
+  stageManifest.stages[0].allowed_action_refs = ['study_packet', 'study_packet_route'];
+  fs.writeFileSync(stageManifestPath, `${JSON.stringify(stageManifest, null, 2)}\n`);
 
   const lineageBundle = runCli(['agents', 'interfaces', '--repo-dir', targetDir], env).generated_agent_interfaces;
   const routeParity = lineageBundle.generated_direct_parity.action_parity.find(
