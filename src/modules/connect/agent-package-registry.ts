@@ -120,6 +120,7 @@ import type {
   AgentPackagePhysicalSurface,
   AgentPackageScopeMaterialization,
   AgentPackageProfileApplyInput,
+  AgentPackageRepairInput,
   AgentPackageRegistryRefreshInput,
 } from './agent-package-registry-parts/types.ts';
 
@@ -129,6 +130,7 @@ export type {
   AgentPackageManifestValidateInput,
   AgentPackagePackageActionInput,
   AgentPackageProfileApplyInput,
+  AgentPackageRepairInput,
   AgentPackageRegistryRefreshInput,
 } from './agent-package-registry-parts/types.ts';
 
@@ -972,7 +974,7 @@ export async function runOplAgentPackageBulkUpdate(input: { dryRun?: boolean } =
 }
 
 function packageRepairResult(
-  input: AgentPackagePackageActionInput,
+  input: AgentPackageRepairInput,
   result: Awaited<ReturnType<typeof applyManifestPackageLock>>,
 ) {
   return {
@@ -1004,11 +1006,16 @@ function packageRepairResult(
   };
 }
 
-export function runOplAgentPackageRepair(input: AgentPackagePackageActionInput) {
+export function runOplAgentPackageRepair(input: AgentPackageRepairInput) {
   const packageId = requirePackageId(input.packageId, 'repair');
   const { index } = readRecoveredLockIndex();
   const { lockIndex, lock } = requireInstalledPackage(index, packageId, 'repair');
-  if ((lock.capability_dependencies ?? []).length > 0 || lock.runtime_source_carrier) {
+  if (
+    (lock.capability_dependencies ?? []).length > 0
+    || lock.runtime_source_carrier
+    || stringValue(input.manifestUrl)
+    || stringValue(input.registryUrl)
+  ) {
     return applyManifestPackageLock({ ...input, packageId }, 'repair')
       .then((result) => packageRepairResult(input, result));
   }

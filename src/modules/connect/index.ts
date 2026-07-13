@@ -83,6 +83,7 @@ export type {
   AgentPackageManifestValidateInput,
   AgentPackagePackageActionInput,
   AgentPackageProfileApplyInput,
+  AgentPackageRepairInput,
 } from './agent-package-registry.ts';
 export {
   readPackageManagedStandardAgentDescriptor,

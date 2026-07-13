@@ -989,6 +989,7 @@ test('real MAG canonical manifest compiles while the legacy kind remains blocked
     'contracts/domain_descriptor.json',
     'contracts/action_catalog.json',
     'contracts/pack_compiler_input.json',
+    'contracts/stage_quality_cycle_policy.json',
     'contracts/functional_privatization_audit.json',
     'contracts/generated_surface_handoff.json',
     'contracts/memory_descriptor.json',

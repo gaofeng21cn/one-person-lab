@@ -3504,11 +3504,39 @@
       "parser_adapter": "node_util_parse_args",
       "options": [
         {
+          "name": "manifest-url",
+          "flag": "--manifest-url",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Canonical OPL Agent Package manifest URL or local file path used to replace a stale lock source during repair."
+        },
+        {
+          "name": "registry-url",
+          "flag": "--registry-url",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Registry URL used to reselect the package manifest during repair."
+        },
+        {
           "name": "package-id",
           "flag": "--package-id",
           "value_kind": "string",
           "required": false,
           "summary": "Installed OPL Agent Package id to repair."
+        },
+        {
+          "name": "trust-tier",
+          "flag": "--trust-tier",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Explicit trust tier for a replacement repair manifest."
+        },
+        {
+          "name": "source-kind",
+          "flag": "--source-kind",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Package source kind recorded for a replacement repair manifest."
         },
         {
           "name": "agent-root",

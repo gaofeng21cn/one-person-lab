@@ -265,8 +265,20 @@ test('Packages compensates managed runtime source across downstream failure upda
     assert.equal(driftedStatus.opl_agent_package_status.runtime_source_readiness.status, 'incompatible');
     assert.equal(driftedStatus.opl_agent_package_status.launch_allowed, false);
     assert.equal(driftedStatus.opl_agent_package_status.launch_blocked_reason, 'runtime_source_incompatible');
-    const driftRepaired = runCli(['packages', 'repair', '--package-id', 'redcube-ai'], env) as any;
+    const staleManifestIndex = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
+    staleManifestIndex.packages.find((entry: any) => entry.package_id === 'rca').manifest_url = path.join(
+      fixtureRoot,
+      'retired-worktree',
+      'consumer.json',
+    );
+    fs.writeFileSync(lockPath, formatJsonPayload(staleManifestIndex));
+    const driftRepaired = runCli([
+      'packages', 'repair', 'redcube-ai',
+      '--manifest-url', consumerManifest,
+      '--trust-tier', 'first_party',
+    ], env) as any;
     assert.equal(driftRepaired.opl_agent_package_repair.package_lock.managed_runtime_source.preparation_status, 'completed');
+    assert.equal(driftRepaired.opl_agent_package_repair.package_lock.manifest_url, consumerManifest);
     assert.equal(fs.readFileSync(path.join(modulesRoot, 'redcube-ai', '.runtime-prepared'), 'utf8').trim(), '0.1.1');
 
     fs.rmSync(path.join(modulesRoot, 'redcube-ai'), { recursive: true, force: true });

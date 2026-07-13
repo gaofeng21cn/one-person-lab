@@ -20,6 +20,7 @@ import {
   type AgentPackageManifestValidateInput,
   type AgentPackagePackageActionInput,
   type AgentPackageProfileApplyInput,
+  type AgentPackageRepairInput,
 } from '../../../../modules/connect/index.ts';
 import { resolveFirstPartyPackageManifest } from '../../../../modules/connect/agent-package-first-party.ts';
 import type { FrameworkContracts } from '../../../../kernel/types.ts';
@@ -122,6 +123,16 @@ function parsePackageAction(
     targetWorkspace: readOptionalString(parsed['target-workspace']),
     targetQuest: readOptionalString(parsed['target-quest']),
   };
+}
+
+function parsePackageRepair(args: string[], spec: CommandSpec): AgentPackageRepairInput {
+  const input = parsePackageSelection('packages repair', args, spec);
+  if (!input.packageId) {
+    throw buildUsageError('packages repair requires a positional package id or --package-id.', spec, {
+      required: ['<package_id> or --package-id'],
+    });
+  }
+  return { ...input, packageId: input.packageId };
 }
 
 function hasExplicitPackageSelection(input: AgentPackageInstallInput) {
@@ -409,13 +420,13 @@ export function buildPackagesCommandSpecs(
       ),
     },
     'packages repair': {
-      usage: 'opl packages repair <package_id> [--scope workspace|quest --target-workspace <path>|--target-quest <path>] [--agent-root <repo>] [--dry-run]',
+      usage: 'opl packages repair <package_id> [--scope workspace|quest --target-workspace <path>|--target-quest <path>] [--manifest-url <url>|--registry-url <url>] [--trust-tier <tier>] [--source-kind <kind>] [--agent-root <repo>] [--dry-run]',
       summary: 'Repair one installed OPL Package dependency closure and current workspace/quest materialization.',
       examples: ['opl packages repair mas --scope workspace --target-workspace /path/to/study --json'],
       group: 'packages',
       help_surface: 'default',
       handler: (args) => runOplAgentPackageRepair(
-        parsePackageAction('packages repair', args, getCommandSpec('packages repair')),
+        parsePackageRepair(args, getCommandSpec('packages repair')),
       ),
     },
     'packages rollback': {

@@ -92,6 +92,8 @@ export type AgentPackagePackageActionInput = {
   pinnedUseBinding?: AgentPackageUseBinding | null;
 };
 
+export type AgentPackageRepairInput = AgentPackagePackageActionInput & AgentPackageManifestValidateInput;
+
 export type AgentPackageProfileApplyInput = {
   packageId: string;
   mergedFile: string;

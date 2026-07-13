@@ -612,6 +612,7 @@ export function applyManagedRuntimeSourceCarrier(input: {
   if (input.action === 'install' && existed) {
     materializeStandardAgentFrameworkLink({ agentRoot: checkoutPath });
     const preparation = prepareRuntimeSource(input.config.module_id, checkoutPath, false);
+    refreshPackageChannelCurrentSnapshot(checkoutPath, spec);
     const after = sourceState({ config: input.config, checkoutPath, ownership, preparation });
     return {
       kind: 'none',
@@ -653,6 +654,7 @@ export function applyManagedRuntimeSourceCarrier(input: {
     materializeStandardAgentFrameworkLink({ agentRoot: checkoutPath });
     const preparation = prepareRuntimeSource(input.config.module_id, checkoutPath, activated, !activated);
     if (!activated) {
+      refreshPackageChannelCurrentSnapshot(checkoutPath, spec);
       clearTransactionMarker(mutation);
       return {
         ...mutation,
