@@ -182,7 +182,7 @@ function buildHtml(config: WhitepaperConfig, metadata: WhitepaperMetadata, sourc
     '--standalone',
     '--embed-resources',
     '--css', stylePath,
-    '--metadata', `title=${metadata.title}`,
+    '--variable', `pagetitle=${metadata.title}`,
     '--metadata', 'lang=zh-CN',
     '-o', htmlPath,
   ]);
