@@ -109,7 +109,7 @@ function writeStageAttemptFixture(input: {
   }
 }
 
-test('app state projects generic stage-attempt activity without domain progress files', () => {
+test('app state does not turn an unregistered failed attempt into a phantom work item', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-runtime-activity-'));
   const stateDir = path.join(homeRoot, 'opl-state');
   const workspaceRoot = path.join(homeRoot, 'redcube-workspace');
@@ -129,20 +129,15 @@ test('app state projects generic stage-attempt activity without domain progress 
     const task = workbench.task_drilldowns.find((entry: any) =>
       entry.task_id === 'redcube:work-unit:deck-42'
     );
-    assert.ok(task);
-    assert.equal(task.domain_id, 'redcube');
-    assert.equal(task.study_id, null);
-    assert.equal(task.state, 'waiting_for_direction');
-    assert.equal(task.status, 'failed');
-    assert.equal(task.active_stage_id, 'render');
-    assert.equal(task.active_run_id, 'wf_redcube_deck_42');
-    assert.equal(task.runtime_readback_source, 'opl_family_runtime_stage_attempt_projection');
-    assert.deepEqual(task.stage_attempt_ids, ['sat_redcube_deck_42']);
-    assert.equal(task.runtime_blocker_summary, 'renderer_dependency_missing');
-    assert.equal(task.typed_blocker_summary, null);
-    assert.equal(task.runtime_attention_demoted_to_diagnostic, true);
+    assert.equal(task, undefined);
+    assert.equal(workbench.work_item_projection_v2.items.length, 0);
+    assert.equal(workbench.work_item_projection_v2.summary.system_attention_count, 0);
+    assert.equal(workbench.work_item_projection_v2.diagnostics.count, 1);
+    assert.equal(workbench.work_item_projection_v2.diagnostics.detail_policy, 'summary_only');
     assert.equal(
-      workbench.activity_center.needs_attention.some((entry: any) => entry.task_id === task.task_id),
+      workbench.activity_center.needs_attention.some(
+        (entry: any) => entry.task_id === 'redcube:work-unit:deck-42',
+      ),
       false,
     );
   } finally {

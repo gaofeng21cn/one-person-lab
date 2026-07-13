@@ -29,6 +29,7 @@ export type OplAppOperatorViewModelInput = {
   settingsControlCenter: JsonRecord;
   uiDefaults: JsonRecord;
   runtimeActivityItems: ReadonlyArray<JsonRecord>;
+  workItemProjectionV2?: JsonRecord;
   brandSystemProfile: JsonRecord;
   targetOperatingArchitecture: JsonRecord;
   currentOwnerDeltaReadModel?: JsonRecord;
@@ -71,13 +72,6 @@ function lowerText(...values: unknown[]) {
 
 function includesAny(text: string, candidates: readonly string[]) {
   return candidates.some((candidate) => text.includes(candidate));
-}
-
-function statusTone(status: string | null) {
-  if (!status) return 'neutral';
-  return ['ready', 'healthy', 'ok', 'installed', 'enabled', 'stable'].includes(status)
-    ? 'ready'
-    : 'attention';
 }
 
 function actionPayloadFields(action: JsonRecord) {
@@ -154,7 +148,7 @@ function deriveUserFacingTaskState(task: JsonRecord) {
       ? 'runtime_failure_observed'
       : 'no_active_runtime_automation';
 
-  const primaryState = lane === 'running'
+  const inferredPrimaryState = lane === 'running'
     ? 'in_progress'
     : pausedWaiting
       ? 'paused_waiting_for_direction'
@@ -165,6 +159,16 @@ function deriveUserFacingTaskState(task: JsonRecord) {
           : automationFailed || lane === 'attention'
             ? 'system_attention_required'
             : 'paused_waiting_for_direction';
+  const declaredPrimaryState = asString(task.business_primary_state);
+  const primaryState = [
+    'in_progress',
+    'delivered_auto_paused',
+    'paused_waiting_for_direction',
+    'owner_decision_required',
+    'system_attention_required',
+  ].includes(declaredPrimaryState ?? '')
+    ? declaredPrimaryState!
+    : inferredPrimaryState;
   const primaryStateLabel = primaryState === 'in_progress'
     ? '进行中'
     : primaryState === 'delivered_auto_paused'
@@ -689,87 +693,6 @@ function runtimeActivityDrilldowns(input: OplAppOperatorViewModelInput) {
   return dedupeRuntimeActivityDrilldowns(input.runtimeActivityItems.map(normalizeRuntimeActivityItem));
 }
 
-function moduleTaskDrilldowns(input: OplAppOperatorViewModelInput) {
-  return asRecordArray(asRecord(input.modules).items).map((module, index) => {
-    const moduleId = asString(module.package_id) ?? `package-${index + 1}`;
-    const label = asString(module.label) ?? moduleId;
-    const healthStatus = asString(module.source_health_status) ?? asString(module.status) ?? 'unknown';
-    const blockerRefCount = statusTone(healthStatus) === 'ready' ? 0 : 1;
-    const primaryState = blockerRefCount > 0 ? 'system_attention_required' : 'delivered_auto_paused';
-    const primaryStateLabel = blockerRefCount > 0 ? '需要系统处理' : '已交付，自动暂停';
-    const primaryStateReason = blockerRefCount > 0 ? 'module_attention_required' : 'module_ready_idle';
-    const refs = taskUserProjectionRefs({
-      taskId: moduleId,
-      domainId: moduleId,
-      state: healthStatus,
-      stageId: 'module_runtime',
-      stageLabel: null,
-      blockerRefCount,
-    });
-    return {
-      task_id: moduleId,
-      domain_id: moduleId,
-      title: label,
-      state: healthStatus,
-      task_identity: {
-        task_id: moduleId,
-        domain_id: moduleId,
-        domain_label: label,
-        title: label,
-        study_id: null,
-        task_ref: `app_state.operator.workbench.task_drilldowns.${encodeURIComponent(moduleId)}`,
-        agent_display_name: label,
-        project_display_name: label,
-        work_item_display_name: label,
-        execution_run_label: 'module_runtime',
-        agent: {
-          agent_id: moduleId,
-          label,
-          scope_id: `agent:${moduleId}`,
-        },
-        project: {
-          project_id: moduleId,
-          label,
-          scope_id: `project:${moduleId}`,
-        },
-        work_item: {
-          work_item_id: moduleId,
-          label,
-          kind: 'module_runtime',
-          scope_id: `task:${moduleId}`,
-        },
-        execution_run: {
-          run_id: null,
-          label: 'module_runtime',
-          stage_id: 'module_runtime',
-          stage_label: null,
-        },
-      },
-      active_stage_id: 'module_runtime',
-      stage_attempt_ids: [],
-      safe_action_ref_count: 0,
-      blocker_ref_count: blockerRefCount,
-      primary_state: primaryState,
-      primary_state_label: primaryStateLabel,
-      primary_state_reason: primaryStateReason,
-      automation_state: 'automation_idle',
-      automation_state_label: '当前无自动任务',
-      automation_state_reason: 'module_projection_has_no_runtime_automation',
-      ...refs,
-      active_path: [
-        {
-          node_id: `module:${moduleId}`,
-          node_kind: 'stage_attempt',
-          label,
-          state: healthStatus,
-          owner: 'opl_framework',
-          ref: asString(module.source_path) ?? asString(module.managed_source_path) ?? undefined,
-        },
-      ],
-    };
-  });
-}
-
 function buildActivityCenter(input: OplAppOperatorViewModelInput) {
   const activityDrilldowns = runtimeActivityDrilldowns(input);
   return {
@@ -784,52 +707,42 @@ function buildDomainLaneMap(input: OplAppOperatorViewModelInput) {
   const runtimeTasksByDomain = new Map<string, ReturnType<typeof normalizeRuntimeActivityItem>[]>();
   for (const task of runtimeActivityDrilldowns(input)) {
     const domainId = asString(task.domain_id) ?? 'opl';
-    runtimeTasksByDomain.set(domainId, [...(runtimeTasksByDomain.get(domainId) ?? []), task]);
+    const agentId = resolveStandardAgent(domainId)?.agent_id ?? domainId;
+    runtimeTasksByDomain.set(agentId, [...(runtimeTasksByDomain.get(agentId) ?? []), task]);
   }
+  const availability = asRecordArray(asRecord(input.workItemProjectionV2).agent_availability);
 
   return {
-    lanes: asRecordArray(asRecord(input.modules).items).map((module, index) => {
-      const moduleId = asString(module.package_id) ?? `package-${index + 1}`;
-      const label = asString(module.label) ?? moduleId;
-      const healthStatus = asString(module.source_health_status) ?? asString(module.status) ?? 'unknown';
+    lanes: availability.map((agent, index) => {
+      const moduleId = asString(agent.agent_id) ?? `agent-${index + 1}`;
+      const label = asString(agent.display_name) ?? moduleId;
+      const healthStatus = asString(agent.availability) ?? 'unknown';
       const runtimeTasks = runtimeTasksByDomain.get(moduleId) ?? [];
-      const moduleTask = {
-        task_id: moduleId,
-        label,
-        state: healthStatus,
-        active_stage_id: 'module_runtime',
-        active_path_node_ids: [`module:${moduleId}`],
-      };
-      const tasks = runtimeTasks.length > 0
-        ? runtimeTasks.map((task) => ({
-            task_id: task.task_id,
-            label: task.title,
-            state: task.state,
-            active_stage_id: task.active_stage_id,
-            active_path_node_ids: [task.task_id],
-            study_id: task.study_id,
-            active_run_id: task.active_run_id,
-          }))
-        : [moduleTask];
+      const tasks = runtimeTasks.map((task) => ({
+        task_id: task.task_id,
+        label: task.title,
+        state: task.state,
+        active_stage_id: task.active_stage_id,
+        active_path_node_ids: [task.task_id],
+        study_id: task.study_id,
+        active_run_id: task.active_run_id,
+      }));
       return {
         domain_id: moduleId,
         lane_label: label,
+        agent_availability: healthStatus,
+        availability_reason: asString(agent.reason),
         active_task_count: tasks.filter((task) => task.state === 'running').length,
-        blocked_task_count: statusTone(healthStatus) === 'ready'
-          ? tasks.filter((task) => task.state === 'attention_needed').length
-          : 1,
+        blocked_task_count: tasks.filter((task) => task.state === 'attention_needed').length,
         tasks,
       };
     }),
-    source_ref: 'app_state.runtime_source_carriers.items + app_state.operator.workbench.activity_center',
+    source_ref: 'app_state.operator.workbench.work_item_projection_v2.agent_availability + activity_center',
   };
 }
 
 function buildTaskDrilldowns(input: OplAppOperatorViewModelInput) {
-  return [
-    ...runtimeActivityDrilldowns(input),
-    ...moduleTaskDrilldowns(input),
-  ];
+  return runtimeActivityDrilldowns(input);
 }
 
 function buildSafeActionRoutes(input: OplAppOperatorViewModelInput) {
@@ -952,6 +865,8 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
       task_drilldowns: taskDrilldowns,
       task_run_projection_v2: taskRunProjection,
       work_item_projection_v1: taskRunProjection.work_item_projection_v1,
+      work_item_projection_v2: input.workItemProjectionV2,
+      agent_availability: asRecordArray(asRecord(input.workItemProjectionV2).agent_availability),
       safe_action_routes: safeActionRoutes,
       refresh_policy: {
         summary_poll_interval_seconds: 10,

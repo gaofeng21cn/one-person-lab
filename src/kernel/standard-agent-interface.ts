@@ -17,8 +17,25 @@ export type StandardAgentLocatorField =
   | 'profile_ref'
   | 'input_path';
 
+export type StandardAgentInventoryProjection = {
+  source_kind: 'workspace_relative_json';
+  relative_path: string;
+  items_pointer: string;
+  field_map: {
+    display_name?: string;
+    work_item_id: string;
+    work_item_root: string;
+    business_status: string;
+    current_stage_id: string;
+    current_stage_status: string;
+    package_status: string;
+    lifecycle_ref: string;
+  };
+};
+
 export type StandardAgentInterface = {
   version: typeof STANDARD_AGENT_INTERFACE_VERSION;
+  inventory_projection: StandardAgentInventoryProjection | null;
   workspace_binding: {
     locator_surface_kind: string;
     default_profile_id: 'one_off' | 'series' | 'portfolio';
@@ -62,6 +79,16 @@ const LOCATOR_FIELDS = new Set<StandardAgentLocatorField>([
   'input_path',
 ]);
 const TEMPLATE_PLACEHOLDER = /^\{(workspace_root|workspace_path|profile_ref|input_path)\}$/;
+const INVENTORY_FIELD_KEYS = [
+  'work_item_id',
+  'work_item_root',
+  'business_status',
+  'current_stage_id',
+  'current_stage_status',
+  'package_status',
+  'lifecycle_ref',
+] as const;
+const OPTIONAL_INVENTORY_FIELD_KEYS = ['display_name'] as const;
 
 function invalid(message: string, sourceRef: string, details: Record<string, unknown> = {}): never {
   throw new FrameworkContractError('contract_shape_invalid', message, {
@@ -128,6 +155,88 @@ function optionalCommandTemplate(value: unknown, field: string, sourceRef: strin
   return value === null ? null : commandTemplate(value, field, sourceRef);
 }
 
+function inventoryProjection(value: unknown, sourceRef: string): StandardAgentInventoryProjection | null {
+  if (value === undefined || value === null) return null;
+  if (!isRecord(value)) {
+    invalid('Standard Agent interface field inventory_projection must be an object.', sourceRef, {
+      field: 'inventory_projection',
+    });
+  }
+  assertKnownKeys(
+    value,
+    ['source_kind', 'relative_path', 'items_pointer', 'field_map'],
+    'inventory_projection',
+    sourceRef,
+  );
+  if (value.source_kind !== 'workspace_relative_json') {
+    invalid('Standard Agent interface inventory_projection source_kind is unsupported.', sourceRef, {
+      field: 'inventory_projection.source_kind',
+      actual: value.source_kind ?? null,
+    });
+  }
+  const relativePath = stringValue(
+    value.relative_path,
+    'inventory_projection.relative_path',
+    sourceRef,
+  );
+  if (path.isAbsolute(relativePath) || relativePath.split(/[\\/]+/).includes('..')) {
+    invalid('Standard Agent interface inventory_projection relative_path must stay inside the workspace.', sourceRef, {
+      field: 'inventory_projection.relative_path',
+      relative_path: relativePath,
+    });
+  }
+  const itemsPointer = stringValue(
+    value.items_pointer,
+    'inventory_projection.items_pointer',
+    sourceRef,
+  );
+  if (!itemsPointer.startsWith('/')) {
+    invalid('Standard Agent interface inventory_projection items_pointer must be an absolute JSON Pointer.', sourceRef, {
+      field: 'inventory_projection.items_pointer',
+      items_pointer: itemsPointer,
+    });
+  }
+  const fieldMap = value.field_map;
+  if (!isRecord(fieldMap)) {
+    invalid('Standard Agent interface inventory_projection field_map must be an object.', sourceRef, {
+      field: 'inventory_projection.field_map',
+    });
+  }
+  assertKnownKeys(
+    fieldMap,
+    [...INVENTORY_FIELD_KEYS, ...OPTIONAL_INVENTORY_FIELD_KEYS],
+    'inventory_projection.field_map',
+    sourceRef,
+  );
+  const missing = INVENTORY_FIELD_KEYS.filter((field) => !(field in fieldMap));
+  if (missing.length > 0) {
+    invalid('Standard Agent interface inventory_projection field_map is incomplete.', sourceRef, {
+      field: 'inventory_projection.field_map',
+      missing,
+    });
+  }
+  return {
+    source_kind: 'workspace_relative_json',
+    relative_path: relativePath,
+    items_pointer: itemsPointer,
+    field_map: {
+      ...Object.fromEntries(INVENTORY_FIELD_KEYS.map((field) => [
+        field,
+        stringValue(fieldMap[field], `inventory_projection.field_map.${field}`, sourceRef),
+      ])),
+      ...(fieldMap.display_name === undefined
+        ? {}
+        : {
+            display_name: stringValue(
+              fieldMap.display_name,
+              'inventory_projection.field_map.display_name',
+              sourceRef,
+            ),
+          }),
+    } as StandardAgentInventoryProjection['field_map'],
+  };
+}
+
 export function parseStandardAgentInterface(value: unknown, sourceRef: string): StandardAgentInterface {
   if (!isRecord(value)) invalid('Standard Agent interface must be an object.', sourceRef);
   if (value.version !== STANDARD_AGENT_INTERFACE_VERSION) {
@@ -143,7 +252,12 @@ export function parseStandardAgentInterface(value: unknown, sourceRef: string): 
   if (!isRecord(workspaceBinding) || !isRecord(runtime) || !isRecord(progress) || !isRecord(routing)) {
     invalid('Standard Agent interface must declare workspace_binding, runtime, progress, and routing objects.', sourceRef);
   }
-  assertKnownKeys(value, ['version', 'workspace_binding', 'runtime', 'progress', 'routing'], 'root', sourceRef);
+  assertKnownKeys(
+    value,
+    ['version', 'inventory_projection', 'workspace_binding', 'runtime', 'progress', 'routing'],
+    'root',
+    sourceRef,
+  );
   assertKnownKeys(workspaceBinding, [
     'locator_surface_kind',
     'default_profile_id',
@@ -226,6 +340,7 @@ export function parseStandardAgentInterface(value: unknown, sourceRef: string): 
   }
   return {
     version: STANDARD_AGENT_INTERFACE_VERSION,
+    inventory_projection: inventoryProjection(value.inventory_projection, sourceRef),
     workspace_binding: {
       locator_surface_kind: stringValue(
         workspaceBinding.locator_surface_kind,

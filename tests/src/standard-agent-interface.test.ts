@@ -55,11 +55,43 @@ function fixture() {
 test('standard Agent interface parses a domain-owned descriptor without domain branching', () => {
   const descriptor = parseStandardAgentInterface(fixture(), 'fixture.json#/standard_agent_interface');
   assert.equal(descriptor.workspace_binding.locator_surface_kind, 'fixture_workspace_locator');
+  assert.equal(descriptor.inventory_projection, null);
   assert.deepEqual(
     materializeStandardAgentCommand(descriptor.workspace_binding.entry_command_template!, {
       profile_ref: '/tmp/profile.toml',
     }),
     ['fixture', 'status', '--profile-ref', '/tmp/profile.toml'],
+  );
+});
+
+test('standard Agent interface accepts an optional JSON inventory projection and display name field', () => {
+  const value = {
+    ...fixture(),
+    inventory_projection: {
+      source_kind: 'workspace_relative_json',
+      relative_path: 'workspace_index.json',
+      items_pointer: '/studies',
+      field_map: {
+        display_name: 'display_name',
+        work_item_id: 'study_id',
+        work_item_root: 'canonical_study_root',
+        business_status: 'status',
+        current_stage_id: 'current_stage_id',
+        current_stage_status: 'current_stage_status',
+        package_status: 'package_status',
+        lifecycle_ref: 'study_status_ref',
+      },
+    },
+  };
+  const descriptor = parseStandardAgentInterface(value, 'fixture.json#/standard_agent_interface');
+  assert.equal(descriptor.inventory_projection?.relative_path, 'workspace_index.json');
+  assert.equal(descriptor.inventory_projection?.field_map.display_name, 'display_name');
+
+  const invalid = structuredClone(value);
+  invalid.inventory_projection.relative_path = '../workspace_index.json';
+  assert.throws(
+    () => parseStandardAgentInterface(invalid, 'fixture.json#/standard_agent_interface'),
+    /must stay inside the workspace/,
   );
 });
 

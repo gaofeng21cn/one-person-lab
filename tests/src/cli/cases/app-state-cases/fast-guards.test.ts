@@ -206,7 +206,7 @@ test('app state fast stays bounded for GUI rendering', () => {
   }
 });
 
-test('app state fast bounds large runtime history and demotes historical failures without a repair route', () => {
+test('app state fast excludes unregistered runtime history from the work-item inventory', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-large-history-home-'));
   const stateDir = path.join(homeRoot, 'opl-state');
   const previousStateDir = process.env.OPL_STATE_DIR;
@@ -223,48 +223,21 @@ test('app state fast bounds large runtime history and demotes historical failure
     const runtimeTasks = workbench.task_drilldowns.filter(
       (entry: any) => entry.runtime_readback_source === 'opl_family_runtime_stage_attempt_projection',
     );
-    const runtimeTaskIds = new Set(runtimeTasks.map((entry: any) => entry.task_id));
+    const workItemProjectionV2 = workbench.work_item_projection_v2;
 
     assert.equal(Buffer.byteLength(JSON.stringify(output), 'utf8') < 500000, true);
-    assert.equal(runtimeTasks.length <= 3, true);
-    assert.equal(workbench.task_run_projection_v2.tasks.length <= 3, true);
-    assert.equal(runtimeTaskIds.has('medautoscience:work-unit:important-running'), true);
-    assert.equal(runtimeTaskIds.has('medautoscience:work-unit:important-attention'), false);
-    assert.equal(runtimeTaskIds.has('medautoscience:work-unit:important-recent'), true);
-    const importantRunning = runtimeTasks.find(
-      (entry: any) => entry.task_id === 'medautoscience:work-unit:important-running',
-    );
-    for (const field of [
-      'stage',
-      'progress',
-      'next_owner',
-      'artifact_or_blocker',
-      'review_receipt',
-      'action_receipt',
-      'workflow_refs',
-    ]) {
-      assert.equal(typeof importantRunning[field], 'object', `fast task drilldown must retain ${field}`);
-    }
-    const taskRun = workbench.task_run_projection_v2.tasks.find(
-      (entry: any) => entry.task_id === 'medautoscience:work-unit:important-running',
-    );
-    assert.equal(Array.isArray(taskRun.conditions), true);
-    assert.equal(taskRun.conditions.length > 0, true);
-    const workItem = workbench.work_item_projection_v1.items.find(
-      (entry: any) => entry.item_id === 'medautoscience:work-unit:important-running',
-    );
-    for (const field of ['stage', 'attempt', 'action', 'status']) {
-      assert.equal(typeof workItem[field], 'object', `fast work item must retain ${field}`);
-    }
+    assert.equal(runtimeTasks.length, 0);
+    assert.equal(workbench.task_run_projection_v2.tasks.length, 0);
+    assert.equal(workbench.work_item_projection_v1.items.length, 0);
+    assert.equal(workItemProjectionV2.items.length, 0);
+    assert.equal(workItemProjectionV2.summary.work_item_count, 0);
+    assert.equal(workItemProjectionV2.diagnostics.count, 100);
+    assert.equal(workItemProjectionV2.diagnostics.detail_policy, 'summary_only');
+    assert.deepEqual(workItemProjectionV2.diagnostics.items, []);
     assert.equal(Array.isArray(output.app_state.operator.visual_ref_groups.needs_attention_refs), true);
     assert.equal(output.app_state.operator.visual_ref_groups.needs_attention_refs.length, 0);
-    for (const group of ['active_project_refs', 'recent_project_refs']) {
-      assert.equal(
-        typeof output.app_state.operator.visual_ref_groups[group][0],
-        'object',
-        `fast visual group must retain record shape: ${group}`,
-      );
-    }
+    assert.deepEqual(output.app_state.operator.visual_ref_groups.active_project_refs, []);
+    assert.deepEqual(output.app_state.operator.visual_ref_groups.recent_project_refs, []);
     assert.equal(output.app_state.operator.visual_ref_groups.safe_action_refs.length > 0, true);
     assert.equal(
       typeof output.app_state.operator.visual_ref_groups.safe_action_refs[0].action_id,
@@ -276,7 +249,7 @@ test('app state fast bounds large runtime history and demotes historical failure
     );
 
     process.env.OPL_STATE_DIR = stateDir;
-    assert.equal(buildAppStateRuntimeActivityItems().length, 515);
+    assert.equal(buildAppStateRuntimeActivityItems().length, 0);
   } finally {
     if (previousStateDir === undefined) {
       delete process.env.OPL_STATE_DIR;

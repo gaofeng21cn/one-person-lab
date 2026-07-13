@@ -33,8 +33,9 @@ import path from 'node:path';
 import { buildActionCatalog } from './app-state-action-catalog.ts';
 import { buildSettingsControlCenter } from './app-state-settings-control-center.ts';
 import { parseAppStateProfile, type AppStateProfile } from './app-state-profile.ts';
-import { buildAppStateRuntimeActivityItems } from './app-state-runtime-activity.ts';
 import { buildOplAppOperatorViewModel } from './app-state-view-model.ts';
+import { buildWorkItemProjectionV2 } from './work-item-projection/projection.ts';
+import { projectWorkItemRuntimeActivityItems } from './work-item-projection/legacy-adapter.ts';
 import { selectAppStateCurrentOwnerDeltaReadModel } from './app-state-current-owner-delta.ts';
 import {
   buildAgentLabDomainFeedbackSelfEvolutionReadModel,
@@ -439,6 +440,7 @@ function compactFastOperatorRuntimeProjection(operator: JsonRecord) {
   const workbench = isRecord(operator.workbench) ? operator.workbench : {};
   const taskRun = isRecord(workbench.task_run_projection_v2) ? workbench.task_run_projection_v2 : {};
   const workItems = isRecord(workbench.work_item_projection_v1) ? workbench.work_item_projection_v1 : {};
+  const workItemsV2 = isRecord(workbench.work_item_projection_v2) ? workbench.work_item_projection_v2 : {};
   const activityCenter = isRecord(workbench.activity_center) ? workbench.activity_center : {};
   const compactWorkItems = recordArray(workItems.items).map(compactFastWorkItem);
   const compactActivityCenter = {
@@ -486,6 +488,7 @@ function compactFastOperatorRuntimeProjection(operator: JsonRecord) {
         },
       },
       work_item_projection_v1: { ...workItems, items: compactWorkItems },
+      work_item_projection_v2: workItemsV2,
     },
     visual_ref_groups: compactVisualRefGroups,
   };
@@ -551,7 +554,12 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
     },
   };
   const uiDefaults = buildUiDefaults();
-  const runtimeActivityItems = buildAppStateRuntimeActivityItems(profile);
+  const workItemProjectionV2 = buildWorkItemProjectionV2({
+    profile,
+    packageProjectionItems: runtimeSourceCarriers,
+    packageStatusById: agentPackageStatuses,
+  });
+  const runtimeActivityItems = projectWorkItemRuntimeActivityItems(workItemProjectionV2);
   const fullRuntimeDrilldown = profile === 'full'
     ? (await (await import('./runtime-tray-snapshot.ts')).buildRuntimeTraySnapshot(contracts, {
         appOperatorDrilldownDetailLevel: 'full',
@@ -621,6 +629,7 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
     settingsControlCenter,
     uiDefaults,
     runtimeActivityItems,
+    workItemProjectionV2,
     brandSystemProfile: contracts.brandSystemProfile as unknown as JsonRecord,
     targetOperatingArchitecture: contracts.targetOperatingArchitecture as unknown as JsonRecord,
     currentOwnerDeltaReadModel,

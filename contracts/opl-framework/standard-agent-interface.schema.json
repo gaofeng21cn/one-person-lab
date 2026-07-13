@@ -6,6 +6,31 @@
   "required": ["version", "workspace_binding", "runtime", "progress", "routing"],
   "properties": {
     "version": { "const": "opl_standard_agent_interface.v1" },
+    "inventory_projection": {
+      "type": "object",
+      "required": ["source_kind", "relative_path", "items_pointer", "field_map"],
+      "properties": {
+        "source_kind": { "const": "workspace_relative_json" },
+        "relative_path": { "type": "string", "minLength": 1 },
+        "items_pointer": { "type": "string", "pattern": "^/" },
+        "field_map": {
+          "type": "object",
+          "required": ["work_item_id", "work_item_root", "business_status", "current_stage_id", "current_stage_status", "package_status", "lifecycle_ref"],
+          "properties": {
+            "display_name": { "type": "string", "minLength": 1 },
+            "work_item_id": { "type": "string", "minLength": 1 },
+            "work_item_root": { "type": "string", "minLength": 1 },
+            "business_status": { "type": "string", "minLength": 1 },
+            "current_stage_id": { "type": "string", "minLength": 1 },
+            "current_stage_status": { "type": "string", "minLength": 1 },
+            "package_status": { "type": "string", "minLength": 1 },
+            "lifecycle_ref": { "type": "string", "minLength": 1 }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
     "workspace_binding": {
       "type": "object",
       "required": ["locator_surface_kind", "default_profile_id", "workspace_kind", "project_kind", "project_collection_label", "default_workspace_id", "default_project_id", "required_locator_fields", "optional_locator_fields", "entry_command_template", "manifest_command_template"],
