@@ -33,6 +33,11 @@ import {
   projectTemporalStageRunQualityCycle,
 } from '../../src/modules/runway/family-runtime-stage-quality-cycle.ts';
 import { requireStageQualityAttemptBoundary } from '../../src/modules/runway/family-runtime-stage-quality-attempt-boundary.ts';
+import {
+  deriveStageRunId,
+  stageRunSpecSha256,
+  type StageRunImmutableSpec,
+} from '../../src/modules/runway/family-runtime-stage-run-identity.ts';
 import { OFFICIAL_KNOWLEDGE_DELIVERABLE_QUALITY_PROFILE } from '../../src/modules/pack/standard-agent-stage-manifest.ts';
 import {
   STANDARD_AGENT_REGISTRY,
@@ -536,8 +541,37 @@ test('quality policy defaults to three rounds without making in-thread refinemen
 });
 
 test('StageRun controller input rejects custom Attempt roles and quality budgets above three', () => {
+  const invocationId = 'stage-run-invocation:bounded';
+  const policy = normalizeStageQualityCyclePolicy({
+    formal_review: { required: true, risk_tier: 'high', max_repair_rounds: 3 },
+  });
+  const spec: StageRunImmutableSpec = {
+    surface_kind: 'opl_stage_run_immutable_spec', version: 'opl-stage-run-immutable-spec.v1',
+    domain_id: 'redcube', stage_id: 'artifact_creation', action_id: null, task_id: null,
+    workspace_identity: { workspace_root: '/tmp/rca-quality-cycle' },
+    stage_manifest: { ref: 'agent/stages/manifest.json', sha256: 'sha256:manifest' },
+    quality_policy: {
+      ref: 'contracts/stage_quality_cycle_policy.json#/stages/artifact_creation',
+      body: policy as unknown as Record<string, unknown>,
+    },
+    stage_packet_ref: 'packet:artifact-creation', checkpoint_refs: [],
+    source_fingerprint: 'sha256:source', source_refs: [], input_artifacts: [],
+    role_prompt_refs: {
+      producer: 'prompt:producer', reviewer: 'prompt:reviewer',
+      repairer: 'prompt:repairer', re_reviewer: 'prompt:re-reviewer',
+    },
+    quality_rubric_refs: ['rubric:visual'], stage_goal_refs: [], lineage_refs: [],
+    package_closure: null, executor_kind: 'codex_cli', stage_attempt_executor_policy: null,
+    parent_route_decision_ref: null,
+  };
   const base = {
-    stage_run_id: 'stage-run:bounded',
+    stage_run_id: deriveStageRunId({
+      domainId: 'redcube', stageId: 'artifact_creation', stageRunInvocationId: invocationId,
+    }),
+    stage_run_invocation_id: invocationId,
+    stage_run_spec_sha256: stageRunSpecSha256(spec),
+    stage_run_spec: spec,
+    parent_route_decision_ref: null,
     workflow_id: 'workflow:bounded',
     domain_id: 'redcube' as const,
     stage_id: 'artifact_creation',
@@ -551,9 +585,7 @@ test('StageRun controller input rejects custom Attempt roles and quality budgets
     stage_manifest_ref: 'agent/stages/manifest.json',
     stage_manifest_sha256: 'sha256:manifest',
     stage_role: null,
-    quality_policy: normalizeStageQualityCyclePolicy({
-      formal_review: { required: true, risk_tier: 'high', max_repair_rounds: 3 },
-    }),
+    quality_policy: policy,
     role_prompt_refs: {
       producer: 'prompt:producer',
       reviewer: 'prompt:reviewer',
@@ -697,6 +729,7 @@ test('Temporal StageRun terminal state idempotently refreshes the SQLite quality
       },
       route_evidence_refs: ['finding:visual-clipping'],
       route_recommendations: [],
+      next_stage_run_launch: null,
       blocked_reason: null,
       sqlite_projection: { status: 'pending', error: null },
       started_at: '2026-07-13T00:00:00.000Z', updated_at: '2026-07-13T00:01:00.000Z',

@@ -104,6 +104,15 @@
     "request_persisted_before_launch": true,
     "request_sha256_bound_as_source_fingerprint": true,
     "request_ref_bound_as_checkpoint_ref": true,
+    "request_ref_and_sha256_bound_as_input_artifact": true,
+    "stage_run_invocation_id_source": "domain_id_plus_entry_stage_plus_action_id_plus_run_id_plus_action_run_ref",
+    "same_action_run_replay_returns_same_stage_run": true,
+    "later_action_run_creates_new_stage_run": true,
+    "stage_run_spec_sha256_binds_managed_package_closure_and_exact_request": true,
+    "exact_stage_run_input_registered_before_temporal_start": true,
+    "durable_launch_registry": "${OPL_STATE_DIR}/family-runtime/queue.sqlite#stage_run_launches",
+    "same_invocation_different_spec_fails_closed": true,
+    "pre_and_post_start_crash_recovery_required": true,
     "stage_manifest_and_entry_stage_are_domain_declared": true,
     "launch_statuses": [
       "started",
@@ -193,12 +202,16 @@
   "verification_refs": [
     "src/modules/runway/standard-agent-managed-checkout.ts",
     "src/modules/runway/standard-agent-action-runtime.ts",
+    "src/modules/runway/family-runtime-stage-run-identity.ts",
+    "src/modules/runway/family-runtime-stage-run-launch-registry.ts",
+    "src/modules/runway/family-runtime-stage-run-launch.ts",
     "src/modules/runway/standard-agent-action-run-recorder.ts",
     "src/modules/runway/standard-agent-handler-sandbox.ts",
     "src/modules/workspace/standard-agent-action-output.ts",
     "src/modules/ledger/standard-agent-action-run-ledger.ts",
     "tests/src/standard-agent-hosted-action-runtime-contract.test.ts",
     "tests/src/standard-agent-action-runtime.test.ts",
+    "tests/src/family-runtime-stage-run-launch.test.ts",
     "tests/src/standard-agent-action-output.test.ts"
   ]
 }

@@ -17,7 +17,11 @@ test('stage route transport is passive and Codex owns every semantic route decis
   const serialized = JSON.stringify(contract);
 
   assert.equal(contract.contract_kind, 'opl_stage_route_transport_contract.v1');
-  assert.equal(contract.codex_semantic_route_boundary.semantic_owner, 'codex_cli');
+  assert.equal(contract.codex_semantic_route_boundary.semantic_owner, 'decisive_codex_attempt');
+  assert.equal(
+    contract.codex_semantic_route_boundary.stage_transition_materialization_owner,
+    'opl_stage_run_controller',
+  );
   assert.equal(contract.codex_semantic_route_boundary.any_declared_stage_may_start_from_any_readable_prior_artifact, true);
   assert.equal(contract.codex_semantic_route_boundary.quality_budget_exhaustion_blocks_route, false);
   assert.equal(contract.codex_semantic_route_boundary.framework_can_judge_route_domain_semantics, false);
@@ -64,6 +68,9 @@ test('stage route transport is passive and Codex owns every semantic route decis
     false,
   );
   assert.equal(contract.authority_boundary.opl_can_block_next_stage_for_quality_debt, false);
+  assert.equal(contract.durable_route_materialization.same_decision_replay, 'same_target_stage_run');
+  assert.equal(contract.durable_route_materialization.non_complete_validated_decision_starts_target_stage_run, true);
+  assert.equal(contract.durable_route_materialization.complete_decision_starts_target_stage_run, false);
   assert.equal(contract.attempt_transport.typed_closeout_required_for_progress, false);
   assert.equal(contract.attempt_transport.raw_or_free_text_artifact_accepted_for_progress, true);
   for (const forbidden of [

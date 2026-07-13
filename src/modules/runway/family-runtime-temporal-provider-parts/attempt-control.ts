@@ -1,4 +1,9 @@
-import { WorkflowIdConflictPolicy, WorkflowIdReusePolicy, WorkflowNotFoundError } from '@temporalio/common';
+import {
+  WorkflowExecutionAlreadyStartedError,
+  WorkflowIdConflictPolicy,
+  WorkflowIdReusePolicy,
+  WorkflowNotFoundError,
+} from '@temporalio/common';
 
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import {
@@ -52,26 +57,48 @@ export async function startTemporalStageRunWorkflow(
     : resolveTemporalTaskQueue();
   if (!resolveTemporalAddressForPaths(options.paths).address) requireTemporalAddress();
   return withTemporalClient(async (client) => {
-    const handle = await withTemporalRpcDeadline(client, () => client.workflow.start('StageRunWorkflow', {
-      args: [workflowInput],
-      taskQueue,
-      workflowId: workflowInput.workflow_id,
-      staticSummary: `OPL StageRun ${workflowInput.stage_run_id}`,
-      staticDetails: [
-        `StageRun: ${workflowInput.stage_run_id}`,
-        `Domain: ${workflowInput.domain_id}`,
-        `Stage: ${workflowInput.stage_id}`,
-        `Quality rounds: ${workflowInput.quality_policy.formal_review.max_repair_rounds}`,
-      ].join('\n'),
-      workflowIdConflictPolicy: WorkflowIdConflictPolicy.USE_EXISTING,
-      workflowIdReusePolicy: WorkflowIdReusePolicy.REJECT_DUPLICATE,
-    }), options);
+    let workflowId = workflowInput.workflow_id;
+    let firstExecutionRunId: string;
+    let workflowStatus = 'RUNNING';
+    let recoveredExisting = false;
+    try {
+      const handle = await withTemporalRpcDeadline(client, () => client.workflow.start('StageRunWorkflow', {
+        args: [workflowInput],
+        taskQueue,
+        workflowId: workflowInput.workflow_id,
+        staticSummary: `OPL StageRun ${workflowInput.stage_run_id}`,
+        staticDetails: [
+          `StageRun: ${workflowInput.stage_run_id}`,
+          `Invocation: ${workflowInput.stage_run_invocation_id}`,
+          `Spec: ${workflowInput.stage_run_spec_sha256}`,
+          `Domain: ${workflowInput.domain_id}`,
+          `Stage: ${workflowInput.stage_id}`,
+          `Quality rounds: ${workflowInput.quality_policy.formal_review.max_repair_rounds}`,
+        ].join('\n'),
+        workflowIdConflictPolicy: WorkflowIdConflictPolicy.USE_EXISTING,
+        workflowIdReusePolicy: WorkflowIdReusePolicy.REJECT_DUPLICATE,
+      }), options);
+      workflowId = handle.workflowId;
+      firstExecutionRunId = handle.firstExecutionRunId;
+    } catch (error) {
+      if (!(error instanceof WorkflowExecutionAlreadyStartedError)) throw error;
+      const existing = client.workflow.getHandle(workflowInput.workflow_id);
+      const description = await withTemporalRpcDeadline(client, () => existing.describe(), options);
+      workflowId = description.workflowId;
+      firstExecutionRunId = description.runId;
+      workflowStatus = description.status.name;
+      recoveredExisting = true;
+    }
     return {
       surface_kind: 'temporal_stage_run_start_receipt',
       provider_kind: 'temporal',
       stage_run_id: workflowInput.stage_run_id,
-      workflow_id: handle.workflowId,
-      first_execution_run_id: handle.firstExecutionRunId,
+      stage_run_invocation_id: workflowInput.stage_run_invocation_id,
+      stage_run_spec_sha256: workflowInput.stage_run_spec_sha256,
+      workflow_id: workflowId,
+      first_execution_run_id: firstExecutionRunId,
+      workflow_status: workflowStatus,
+      recovered_existing_execution: recoveredExisting,
       task_queue: taskQueue,
       max_repair_rounds: workflowInput.quality_policy.formal_review.max_repair_rounds,
       authority_boundary: {

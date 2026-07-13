@@ -213,6 +213,13 @@ test('Hosted Stage action passes a SHA-bound request ref into Temporal StageRun 
     const checkpointIndex = calls[0].indexOf('--checkpoint-ref');
     assert.match(calls[0][checkpointIndex + 1], /^file:/);
     assert.equal(fs.existsSync(new URL(calls[0][checkpointIndex + 1])), true);
+    const invocationIndex = calls[0].indexOf('--stage-run-invocation-id');
+    assert.equal(calls[0][invocationIndex + 1], run.stage_run_invocation_id);
+    const artifactRefIndex = calls[0].indexOf('--input-artifact-ref');
+    const artifactHashIndex = calls[0].indexOf('--input-artifact-sha256');
+    const sourceFingerprintIndex = calls[0].indexOf('--source-fingerprint');
+    assert.equal(calls[0][artifactRefIndex + 1], calls[0][checkpointIndex + 1]);
+    assert.equal(calls[0][artifactHashIndex + 1], calls[0][sourceFingerprintIndex + 1]);
     assert.deepEqual(run.temporal_stage_run_query, {
       family_runtime_stage_run_query: { status: 'running' },
     });
