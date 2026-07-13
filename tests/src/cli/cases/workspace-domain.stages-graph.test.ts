@@ -56,7 +56,7 @@ test('family stage list, proof bundle, and readiness stay refs-only without doma
     const boundStages = list.stages.filter(
       (stage: { project_id: string }) => stage.project_id !== 'opl-meta-agent',
     );
-    const admittedStages = list.stages.filter(
+    const conformantStages = list.stages.filter(
       (stage: { conformance_status: string }) => stage.conformance_status === 'conformant',
     );
     const boundReadinessDomains = readiness.domains.filter(
@@ -64,7 +64,7 @@ test('family stage list, proof bundle, and readiness stay refs-only without doma
     );
 
     assert.equal(boundStages.length, 18);
-    assert.equal(list.summary.admitted_stages_count, admittedStages.length);
+    assert.equal(list.summary.conformant_stages_count, conformantStages.length);
     assert.equal(
       boundStages.filter((stage: { conformance_status: string }) => stage.conformance_status === 'nonconformant').length,
       0,

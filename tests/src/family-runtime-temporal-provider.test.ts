@@ -223,7 +223,7 @@ test('Temporal StageAttemptWorkflow carries a no-output diagnostic forward when 
   }
 });
 
-test('Temporal StageAttemptWorkflow surfaces Codex runner protocol blockers before domain dispatch', async () => {
+test('Temporal StageAttemptWorkflow carries Codex runner protocol diagnostics as quality debt', async () => {
   const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
   const taskQueue = `opl-stage-attempt-runner-blocker-test-${Date.now()}`;
   try {
@@ -264,10 +264,19 @@ test('Temporal StageAttemptWorkflow surfaces Codex runner protocol blockers befo
     const dispatchEvent = result.activity_events.find(
       (event) => event.activity_kind === 'domain_handler_dispatch_activity',
     );
-    assert.equal(result.status, 'blocked');
-    assert.equal(dispatchEvent?.blocked_reason, 'codex_cli_unsupported_function_call');
+    assert.equal(result.status, 'completed');
+    assert.equal(dispatchEvent?.activity_status, 'completed_with_quality_debt');
+    assert.equal(dispatchEvent?.blocked_reason, undefined);
+    assert.equal(
+      (dispatchEvent?.route_impact as Record<string, unknown> | undefined)?.progression_effect,
+      'next_stage_may_start',
+    );
+    assert.equal(
+      (dispatchEvent?.route_impact as Record<string, unknown> | undefined)?.provider_quality_debt_reason,
+      'codex_cli_unsupported_function_call',
+    );
     assert.deepEqual(result.closeout_refs, [
-      'opl://stage-attempts/sat_temporal_test/runtime-blockers/codex_cli_unsupported_function_call',
+      'opl://stage-attempts/sat_temporal_test/quality-debt-diagnostics/codex_cli_unsupported_function_call',
     ]);
     assert.equal(result.completion_boundary.provider_completion_is_domain_ready, false);
   } finally {
