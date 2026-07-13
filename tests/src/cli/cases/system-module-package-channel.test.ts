@@ -12,7 +12,10 @@ import {
   runCliFailure,
   test,
 } from '../helpers.ts';
-import { rollbackManagedModulePackageChannel } from '../../../../src/modules/connect/system-installation/module-package-channel.ts';
+import {
+  computePackageChannelTreeSha256,
+  rollbackManagedModulePackageChannel,
+} from '../../../../src/modules/connect/system-installation/module-package-channel.ts';
 
 const PACKAGE_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.package.source.v1+gzip';
 const CHANNEL_MANIFEST_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.release.channel-manifest.v1+json';
@@ -35,8 +38,8 @@ function readPackageChannelMarker(checkoutPath: string) {
   return parseJsonText(fs.readFileSync(path.join(checkoutPath, 'opl-runtime-module.json'), 'utf8')) as {
     package_channel_lifecycle: {
       staged: { root: string; status: string };
-      current: { root: string; source_git_head_sha: string | null; activated_at: string };
-      previous: { root: string; source_git_head_sha: string | null } | null;
+      current: { root: string; source_git_head_sha: string | null; tree_sha256: string; activated_at: string };
+      previous: { root: string; source_git_head_sha: string | null; tree_sha256: string } | null;
       rollback_ref: string | null;
     };
   };
@@ -199,6 +202,7 @@ test('managed module install and update consume the package channel by default',
     sourceHeadSha: 'package-channel-sha-v1',
     sourceFiles: {
       'README.md': 'med-autoscience package fixture v1\n',
+      'src/framework-consumer.ts': "import 'opl-framework';\n",
       'plugins/med-autoscience/.codex-plugin/plugin.json': JSON.stringify({ name: 'med-autoscience', skills: './skills/' }, null, 2),
       'plugins/med-autoscience/skills/med-autoscience/SKILL.md': [
         '---',
@@ -257,8 +261,13 @@ test('managed module install and update consume the package channel by default',
     assert.equal(installMarker.package_channel_lifecycle.staged.status, 'activated');
     assert.equal(installMarker.package_channel_lifecycle.current.root, managedCheckout);
     assert.equal(installMarker.package_channel_lifecycle.current.source_git_head_sha, 'package-channel-sha-v1');
+    assert.equal(
+      installMarker.package_channel_lifecycle.current.tree_sha256,
+      computePackageChannelTreeSha256(managedCheckout),
+    );
     assert.equal(installMarker.package_channel_lifecycle.previous, null);
     assert.equal(installMarker.package_channel_lifecycle.rollback_ref, null);
+    assert.equal(fs.lstatSync(path.join(managedCheckout, 'node_modules', 'opl-framework')).isSymbolicLink(), true);
     assert.equal(fs.existsSync(`${managedCheckout}.stage`), false);
     assert.equal(fs.existsSync(`${managedCheckout}.previous`), false);
     assert.match(fs.readFileSync(firstChannel.curlLogPath, 'utf8'), /one-person-lab-packages\/mas/);
@@ -276,6 +285,7 @@ test('managed module install and update consume the package channel by default',
       sourceHeadSha: 'package-channel-sha-v2',
       sourceFiles: {
         'README.md': 'med-autoscience package fixture v2\n',
+        'src/framework-consumer.ts': "import 'opl-framework';\n",
         'plugins/med-autoscience/.codex-plugin/plugin.json': JSON.stringify({ name: 'med-autoscience', skills: './skills/' }, null, 2),
         'plugins/med-autoscience/skills/med-autoscience/SKILL.md': [
           '---',
@@ -322,8 +332,16 @@ test('managed module install and update consume the package channel by default',
     assert.equal(updateMarker.package_channel_lifecycle.staged.status, 'activated');
     assert.equal(updateMarker.package_channel_lifecycle.current.root, managedCheckout);
     assert.equal(updateMarker.package_channel_lifecycle.current.source_git_head_sha, 'package-channel-sha-v2');
+    assert.equal(
+      updateMarker.package_channel_lifecycle.current.tree_sha256,
+      computePackageChannelTreeSha256(managedCheckout),
+    );
     assert.equal(updateMarker.package_channel_lifecycle.previous?.root, `${managedCheckout}.previous`);
     assert.equal(updateMarker.package_channel_lifecycle.previous?.source_git_head_sha, 'package-channel-sha-v1');
+    assert.equal(
+      updateMarker.package_channel_lifecycle.previous?.tree_sha256,
+      computePackageChannelTreeSha256(`${managedCheckout}.previous`),
+    );
     assert.match(updateMarker.package_channel_lifecycle.rollback_ref ?? '', /^opl:\/\/managed-module-package-channel\/medautoscience\/rollback\//);
     assert.equal(fs.existsSync(`${managedCheckout}.stage`), false);
     assert.match(fs.readFileSync(secondChannel.curlLogPath, 'utf8'), /one-person-lab-manifest/);
@@ -335,6 +353,10 @@ test('managed module install and update consume the package channel by default',
       OPL_PACKAGE_CHANNEL_MANIFEST_REF: 'ghcr.io/owner/one-person-lab-manifest:26.6.2',
     });
     const noOpMarkerAfter = readPackageChannelMarker(managedCheckout);
+    assert.equal(
+      noOpMarkerAfter.package_channel_lifecycle.current.tree_sha256,
+      computePackageChannelTreeSha256(managedCheckout),
+    );
     assert.equal(
       noOpMarkerAfter.package_channel_lifecycle.current.activated_at,
       noOpMarkerBefore.package_channel_lifecycle.current.activated_at,
@@ -352,6 +374,14 @@ test('managed module install and update consume the package channel by default',
     const rollbackMarker = readPackageChannelMarker(managedCheckout);
     assert.equal(rollbackMarker.package_channel_lifecycle.current.source_git_head_sha, 'package-channel-sha-v1');
     assert.equal(rollbackMarker.package_channel_lifecycle.previous?.source_git_head_sha, 'package-channel-sha-v2');
+    assert.equal(
+      rollbackMarker.package_channel_lifecycle.current.tree_sha256,
+      computePackageChannelTreeSha256(managedCheckout),
+    );
+    assert.equal(
+      rollbackMarker.package_channel_lifecycle.previous?.tree_sha256,
+      computePackageChannelTreeSha256(`${managedCheckout}.previous`),
+    );
     assert.match(rollbackMarker.package_channel_lifecycle.rollback_ref ?? '', /^opl:\/\/managed-module-package-channel\/medautoscience\/rollback\//);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });

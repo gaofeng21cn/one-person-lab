@@ -56,7 +56,9 @@ import {
 } from './module-packaged.ts';
 import {
   installManagedModuleFromPackageChannel,
+  readPackageChannelLifecycle,
   readManagedModulePackageChannelUpdateStatus,
+  refreshPackageChannelCurrentSnapshot,
 } from './module-package-channel.ts';
 import { DOMAIN_MODULE_SPECS } from './module-specs.ts';
 
@@ -64,6 +66,15 @@ const MODULE_WORKFLOW_DEPS = {
   readPackagedModuleGitSnapshot,
   readPackagedModuleMarker,
 };
+
+function runManagedWorkflow(spec: DomainModuleRuntimeSpec, checkoutPath: string) {
+  const workflow = runManagedModuleWorkflow(spec, checkoutPath, MODULE_WORKFLOW_DEPS);
+  const blocked = Object.values(workflow).some((step) => step.status === 'blocked');
+  if (!blocked && readPackageChannelLifecycle(checkoutPath, spec)) {
+    refreshPackageChannelCurrentSnapshot(checkoutPath, spec);
+  }
+  return workflow;
+}
 
 export const DEFAULT_OPL_MODULE_IDS: readonly OplModuleId[] = DOMAIN_MODULE_SPECS
   .filter((entry) => entry.default_install)
@@ -681,7 +692,7 @@ function runManagedInstallWorkflow(spec: DomainModuleRuntimeSpec) {
   } else {
     installManagedModule(spec, checkoutPath);
   }
-  return runManagedModuleWorkflow(spec, checkoutPath, MODULE_WORKFLOW_DEPS);
+  return runManagedWorkflow(spec, checkoutPath);
 }
 
 function maybeParseJsonRecord(raw: string) {
@@ -714,7 +725,7 @@ export function runOplModuleAction(
       }
       const installed = inspectModule(spec);
       if (installed.install_origin === 'managed_root') {
-        workflow = runManagedModuleWorkflow(spec, installed.checkout_path, MODULE_WORKFLOW_DEPS);
+        workflow = runManagedWorkflow(spec, installed.checkout_path);
       } else if (installed.installed && installed.install_origin !== 'missing' && installed.install_origin !== 'invalid_checkout') {
         workflow = runExternalModuleWorkflow(spec, installed.checkout_path);
       }
@@ -749,7 +760,7 @@ export function runOplModuleAction(
         }
         installManagedModuleFromPackageChannel(spec, current.checkout_path);
         const updated = inspectModule(spec);
-        workflow = runManagedModuleWorkflow(spec, updated.checkout_path, MODULE_WORKFLOW_DEPS);
+        workflow = runManagedWorkflow(spec, updated.checkout_path);
         break;
       }
       if (
@@ -758,7 +769,7 @@ export function runOplModuleAction(
       ) {
         replaceManagedModuleWithFreshClone(spec, current.checkout_path);
         const updated = inspectModule(spec);
-        workflow = runManagedModuleWorkflow(spec, updated.checkout_path, MODULE_WORKFLOW_DEPS);
+        workflow = runManagedWorkflow(spec, updated.checkout_path);
         break;
       }
       if (current.git?.dirty) {
@@ -780,7 +791,7 @@ export function runOplModuleAction(
       });
       const updated = inspectModule(spec);
       if (updated.install_origin === 'managed_root') {
-        workflow = runManagedModuleWorkflow(spec, updated.checkout_path, MODULE_WORKFLOW_DEPS);
+        workflow = runManagedWorkflow(spec, updated.checkout_path);
       } else {
         workflow = runExternalModuleWorkflow(spec, updated.checkout_path);
       }
@@ -810,7 +821,7 @@ export function runOplModuleAction(
         );
       }
       workflow = current.install_origin === 'managed_root'
-        ? runManagedModuleWorkflow(spec, current.checkout_path, MODULE_WORKFLOW_DEPS)
+        ? runManagedWorkflow(spec, current.checkout_path)
         : runExternalModuleWorkflow(spec, current.checkout_path);
       break;
     }
@@ -840,7 +851,7 @@ export function runOplModuleAction(
       }
       fs.rmSync(current.managed_checkout_path, { recursive: true, force: true });
       installManagedModule(spec, current.managed_checkout_path);
-      workflow = runManagedModuleWorkflow(spec, current.managed_checkout_path, MODULE_WORKFLOW_DEPS);
+      workflow = runManagedWorkflow(spec, current.managed_checkout_path);
       break;
     }
     case 'remove': {
