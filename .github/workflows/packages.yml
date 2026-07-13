@@ -8,6 +8,10 @@ on:
         description: Release Set generation, for example 26.7.12 or 26.7.12-r2
         required: true
         type: string
+      expected_framework_source_commit:
+        description: Exact 40-character Framework source commit that this workflow must execute
+        required: true
+        type: string
       release_gate:
         description: Manual repair reason or release gate that authorized publication
         required: false
@@ -58,6 +62,10 @@ on:
     inputs:
       release_set_generation:
         description: Release Set generation, for example 26.7.12 or 26.7.12-r2
+        required: true
+        type: string
+      expected_framework_source_commit:
+        description: Exact 40-character Framework source commit that this workflow must execute
         required: true
         type: string
       release_gate:
@@ -129,6 +137,27 @@ jobs:
     steps:
       - name: Checkout OPL
         uses: actions/checkout@v6
+
+      - name: Verify exact Framework source commit
+        shell: bash
+        env:
+          EXPECTED_FRAMEWORK_SOURCE_COMMIT: ${{ inputs.expected_framework_source_commit }}
+        run: |
+          set -euo pipefail
+          expected="$EXPECTED_FRAMEWORK_SOURCE_COMMIT"
+          if ! [[ "$expected" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::expected_framework_source_commit must be one exact lowercase 40-character Git SHA."
+            exit 1
+          fi
+          actual_head="$(git rev-parse --verify HEAD)"
+          if [ "$GITHUB_SHA" != "$expected" ]; then
+            echo "::error::Workflow source $GITHUB_SHA does not match expected Framework commit $expected."
+            exit 1
+          fi
+          if [ "$actual_head" != "$expected" ]; then
+            echo "::error::Checkout HEAD $actual_head does not match expected Framework commit $expected."
+            exit 1
+          fi
 
       - name: Resolve Release Set generation
         id: release
