@@ -2,7 +2,10 @@ import type { FrameworkContracts } from '../../kernel/types.ts';
 import { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 import type { DomainManifestCatalogEntry } from './domain-manifest/types.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
-import { normalizeStandardDomainAgentId } from '../../kernel/standard-agent-registry.ts';
+import {
+  matchesStandardDomainAgentCatalogEntry,
+  normalizeStandardDomainAgentId,
+} from '../../kernel/standard-agent-registry.ts';
 import type { FamilyDomainMemoryRef } from './family-domain-memory-contract.ts';
 
 function normalizeDomainSelection(value: string) {
@@ -255,6 +258,7 @@ export function buildFamilyDomainMemoryInspect(
     const descriptor = candidate.status === 'resolved' ? candidate.manifest?.domain_memory_descriptor ?? null : null;
     return candidate.project_id === normalized
       || candidate.project === normalized
+      || matchesStandardDomainAgentCatalogEntry(parsed.domain, candidate)
       || candidate.manifest?.target_domain_id === parsed.domain
       || candidate.manifest?.target_domain_id === normalized
       || descriptor?.target_domain_id === parsed.domain

@@ -1,5 +1,8 @@
 import type { FrameworkContracts } from '../../kernel/types.ts';
-import { normalizeStandardDomainAgentId } from '../../kernel/standard-agent-registry.ts';
+import {
+  matchesStandardDomainAgentCatalogEntry,
+  normalizeStandardDomainAgentId,
+} from '../../kernel/standard-agent-registry.ts';
 import { buildDomainManifestCatalog } from '../atlas/index.ts';
 import type { DomainManifestCatalogEntry } from '../atlas/index.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
@@ -135,6 +138,7 @@ function findDomainEntry(contracts: FrameworkContracts, domain: string) {
     const catalog = resolveCatalogFromEntry(candidate);
     return candidate.project_id === normalized
       || candidate.project === normalized
+      || matchesStandardDomainAgentCatalogEntry(domain, candidate)
       || catalog?.target_domain_id === domain
       || catalog?.target_domain_id === normalized
       || candidate.manifest?.domain_entry_contract?.domain_agent_entry_spec?.agent_id === normalized;

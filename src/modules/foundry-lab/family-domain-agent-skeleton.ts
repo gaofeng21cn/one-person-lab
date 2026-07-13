@@ -21,7 +21,10 @@ import {
 } from '../runway/index.ts';
 import { buildPhysicalSkeletonFollowThroughGate } from './family-domain-agent-skeleton-parts/legacy-cleanup-evidence.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
-import { normalizeStandardDomainAgentId } from '../../kernel/standard-agent-registry.ts';
+import {
+  matchesStandardDomainAgentCatalogEntry,
+  normalizeStandardDomainAgentId,
+} from '../../kernel/standard-agent-registry.ts';
 
 const REQUIRED_REPO_SOURCE_DIRS = ['agent', 'contracts', 'runtime', 'docs'] as const;
 const ACCEPTED_SKELETON_SURFACE_KINDS = new Set(['standard_domain_agent_skeleton']);
@@ -560,6 +563,7 @@ function findAgentEntry(contracts: FrameworkContracts, domain: string, options: 
   const entry = catalog.projects.find((candidate) =>
     candidate.project_id === normalized
     || candidate.project === normalized
+    || matchesStandardDomainAgentCatalogEntry(domain, candidate)
     || candidate.manifest?.target_domain_id === normalized
     || candidate.manifest?.domain_entry_contract?.domain_agent_entry_spec?.agent_id === normalized
   );

@@ -201,6 +201,15 @@ export function normalizeStandardDomainAgentId(value: string) {
     : value.trim().toLowerCase();
 }
 
+export function matchesStandardDomainAgentCatalogEntry(
+  value: string,
+  candidate: { project_id: string; project: string },
+) {
+  const entry = resolveStandardAgent(value);
+  return entry?.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP
+    && (candidate.project_id === entry.domain_id || candidate.project === entry.project);
+}
+
 export function standardAgentDomainAliasEntries() {
   return STANDARD_AGENT_REGISTRY.flatMap((entry) =>
     registryAliases(entry).map((alias) => ({ alias, domain_id: entry.domain_id }))

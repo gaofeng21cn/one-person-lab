@@ -1,5 +1,8 @@
 import type { FrameworkContracts } from '../../kernel/types.ts';
-import { normalizeStandardDomainAgentId } from '../../kernel/standard-agent-registry.ts';
+import {
+  matchesStandardDomainAgentCatalogEntry,
+  normalizeStandardDomainAgentId,
+} from '../../kernel/standard-agent-registry.ts';
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { optionalString } from '../../kernel/json-file.ts';
 import type {
@@ -353,6 +356,7 @@ function findDomainEntry(contracts: FrameworkContracts, domain: string, options:
     const plane = resolvePlaneFromEntry(candidate);
     return candidate.project_id === normalized
       || candidate.project === normalized
+      || matchesStandardDomainAgentCatalogEntry(domain, candidate)
       || plane?.target_domain_id === domain
       || plane?.target_domain_id === normalized
       || candidate.manifest?.domain_entry_contract?.domain_agent_entry_spec?.agent_id === normalized;

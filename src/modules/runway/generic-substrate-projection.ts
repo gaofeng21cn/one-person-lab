@@ -4,7 +4,10 @@ import { recordList, stringValue as optionalString, type JsonRecord } from '../.
 import { buildDomainManifestCatalog } from '../atlas/index.ts';
 import type { DomainManifestCatalogEntry, NormalizedDomainManifest } from '../atlas/index.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
-import { normalizeStandardDomainAgentId } from '../../kernel/standard-agent-registry.ts';
+import {
+  matchesStandardDomainAgentCatalogEntry,
+  normalizeStandardDomainAgentId,
+} from '../../kernel/standard-agent-registry.ts';
 import {
   runFamilyRuntimeDomainHandlerCommand,
   domainHandlerResultErrorMessage,
@@ -487,6 +490,7 @@ function findProjectionEntry(contracts: FrameworkContracts, domain: string) {
     const agentSpec = manifest?.domain_entry_contract?.domain_agent_entry_spec;
     return candidate.project_id === normalized
       || candidate.project === normalized
+      || matchesStandardDomainAgentCatalogEntry(domain, candidate)
       || manifest?.target_domain_id === domain
       || manifest?.target_domain_id === normalized
       || agentSpec?.agent_id === domain

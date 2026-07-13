@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import {
+  matchesStandardDomainAgentCatalogEntry,
   normalizeStandardDomainAgentId,
   standardDomainAgentFamilyProjection,
   STANDARD_AGENT_REGISTRY,
@@ -78,6 +79,18 @@ test('package and module aliases derive standard agents without promoting Schola
   assert.equal(normalizeStandardDomainAgentId('mas-scholar-skills'), 'mas-scholar-skills');
   assert.equal(resolveOplDomainModuleSpec('oma').module_id, 'oplmetaagent');
   assert.equal(resolveOplDomainModuleSpec('bookforge').module_id, 'oplbookforge');
+  assert.equal(matchesStandardDomainAgentCatalogEntry('rca', {
+    project_id: 'redcube',
+    project: 'redcube-ai',
+  }), true);
+  assert.equal(matchesStandardDomainAgentCatalogEntry('oma', {
+    project_id: 'oplmetaagent',
+    project: 'opl-meta-agent',
+  }), true);
+  assert.equal(matchesStandardDomainAgentCatalogEntry('mas-scholar-skills', {
+    project_id: 'scholarskills',
+    project: 'mas-scholar-skills',
+  }), false);
 });
 
 test('official quality governance stays outside the identity registry', () => {

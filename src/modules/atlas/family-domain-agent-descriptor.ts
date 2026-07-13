@@ -7,7 +7,10 @@ import { buildFamilyActionCatalogParity } from '../../kernel/family-action-catal
 import { pickSkillActivationProjection } from './family-domain-catalog.ts';
 import { buildFamilyStageControlPlaneParity } from '../stagecraft/index.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
-import { normalizeStandardDomainAgentId } from '../../kernel/standard-agent-registry.ts';
+import {
+  matchesStandardDomainAgentCatalogEntry,
+  normalizeStandardDomainAgentId,
+} from '../../kernel/standard-agent-registry.ts';
 import { record, stringValue, type JsonRecord } from '../../kernel/json-record.ts';
 
 const REQUIRED_REPO_SOURCE_DIRS = ['agent', 'contracts', 'runtime', 'docs'] as const;
@@ -596,6 +599,7 @@ function findDescriptorEntry(
     const domainMemoryDescriptor = record(manifest?.domain_memory_descriptor);
     return candidate.project_id === normalized
       || candidate.project === normalized
+      || matchesStandardDomainAgentCatalogEntry(domain, candidate)
       || manifest?.target_domain_id === domain
       || manifest?.target_domain_id === normalized
       || descriptor.agent_id === domain
