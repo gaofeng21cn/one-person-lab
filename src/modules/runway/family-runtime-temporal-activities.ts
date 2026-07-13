@@ -815,8 +815,24 @@ export async function stageQualityAttemptMaterializeActivity(
     if (!rolePromptRef) {
       throw new Error(`Stage quality role prompt ref missing for ${input.attempt_role}`);
     }
+    const crossStageRouteSelection = {
+      surface_kind: 'opl_stage_run_route_selection_context',
+      version: 'stage-run-route-selection-context.v1',
+      configured_decisive_attempt_roles: input.stage_run.quality_policy.formal_review.required
+        ? ['reviewer', 're_reviewer']
+        : ['producer'],
+      current_attempt_role: input.attempt_role,
+      declared_stage_ids: input.stage_run.declared_stage_ids,
+      max_repair_rounds: input.stage_run.quality_policy.formal_review.max_repair_rounds,
+      terminal_route_selection_requires_stage_run_terminal: true,
+      prior_required_finding_ids: (input.findings ?? [])
+        .filter((finding) => finding.required)
+        .map((finding) => finding.finding_id),
+      non_decisive_output: 'route_impact.stage_route_recommendation',
+    };
     const contextManifest = input.attempt_role === 'reviewer' || input.attempt_role === 're_reviewer'
-      ? buildStageReviewContextManifest({
+      ? {
+          ...buildStageReviewContextManifest({
           stageRunId: input.stage_run.stage_run_id,
           qualityCycleId: input.quality_cycle_id,
           reviewerAttemptRole: input.attempt_role,
@@ -830,7 +846,9 @@ export async function stageQualityAttemptMaterializeActivity(
             ...input.artifact_identity_receipt_refs,
           ],
           priorFindingRefs: (input.findings ?? []).map((finding) => finding.finding_id),
-        })
+          }),
+          cross_stage_route_selection: crossStageRouteSelection,
+        }
       : {
           surface_kind: 'opl_stage_quality_attempt_context_manifest',
           version: 'stage-quality-attempt-context-manifest.v1',
@@ -842,6 +860,7 @@ export async function stageQualityAttemptMaterializeActivity(
           quality_rubric_refs: input.stage_run.quality_rubric_refs,
           lineage_refs: input.stage_run.lineage_refs ?? [],
           no_context_inheritance: true,
+          cross_stage_route_selection: crossStageRouteSelection,
         };
     const contextManifestRef = `opl://stage-quality-context/${stableId('ctx', [contextManifest])}`;
     const attempt = createStageAttempt(db, {

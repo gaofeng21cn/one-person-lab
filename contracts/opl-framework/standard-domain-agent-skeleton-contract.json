@@ -11,8 +11,17 @@
     "handoff_review_policy": {
       "packaging_stage_must_classify_final_artifact_risk": true,
       "new_reviewable_bytes_or_ready_claim_requires_formal_review": true,
+      "required_formal_review_cannot_be_runtime_disabled": true,
       "reviewed_immutable_refs_or_mechanical_repackaging_may_use_primary_attempt_only": true,
       "human_gate_does_not_replace_or_imply_formal_review": true
+    },
+    "route_output_contract": {
+      "non_terminal_attempt_field": "route_impact.stage_route_recommendation",
+      "terminal_attempt_field": "route_impact.stage_route_decision",
+      "decision_kind_values": ["advance", "skip", "repeat", "reverse", "route_back", "complete"],
+      "non_complete_target_must_be_a_declared_stage": true,
+      "invalid_route_output_does_not_discard_consumable_progress": true,
+      "legacy_terminal_route_fields_forbidden": true
     },
     "runtime_binding_surface_kind": "opl_pack_bound_stage_quality_runtime_binding",
     "runtime_creation_surface": "opl family-runtime attempt create",

@@ -1,10 +1,12 @@
 import type {
+  StageQualityRouteRecommendationRecord,
   StageQualityAttemptRole,
   StageQualityCyclePolicy,
   StageQualityFinding,
   StageQualityFindingClosure,
   StageQualityRepairMapEntry,
   StageReviewReceipt,
+  StageRouteDecision,
 } from '../stagecraft/index.ts';
 import type { FamilyRuntimeDomainId } from './family-runtime-types.ts';
 
@@ -20,6 +22,7 @@ export type TemporalStageRunWorkflowInput = {
   workflow_id: string;
   domain_id: FamilyRuntimeDomainId;
   stage_id: string;
+  declared_stage_ids: string[];
   workspace_locator: Record<string, unknown>;
   source_fingerprint: string | null;
   executor_kind: string;
@@ -104,6 +107,12 @@ export type TemporalStageRunWorkflowState = {
   artifact_hashes: string[];
   artifact_identity_receipt_refs: string[];
   quality_debt_refs: string[];
+  route_quality_debt_refs: string[];
+  decisive_attempt_role: StageQualityAttemptRole | null;
+  decisive_attempt_ref: string | null;
+  selected_stage_route: StageRouteDecision | null;
+  route_evidence_refs: string[];
+  route_recommendations: StageQualityRouteRecommendationRecord[];
   blocked_reason: string | null;
   sqlite_projection: {
     status: 'pending' | 'synced' | 'failed';

@@ -62,12 +62,28 @@ test('official quality profile is explicit without adding per-agent registry pol
   );
   assert.equal(contract.cross_stage_route_selection.repairer_can_make_terminal_route_selection, false);
   assert.equal(contract.cross_stage_route_selection.opl_transition_approval_or_rejection_authority, false);
+  assert.equal(contract.cross_stage_route_selection.runtime_closeout_guard_required, true);
+  assert.equal(contract.cross_stage_route_selection.repair_required_review_may_select_terminal_route, false);
+  assert.deepEqual(contract.cross_stage_route_selection.legacy_terminal_route_fields_forbidden, [
+    'route_back_stage_ref',
+    'selected_next_stage_ref',
+    'next_stage_ref',
+    'workflow_complete',
+  ]);
+  assert.deepEqual(contract.cross_stage_route_selection.route_output_contract.decision_kind_values, [
+    'advance', 'skip', 'repeat', 'reverse', 'route_back', 'complete',
+  ]);
+  assert.equal(
+    contract.cross_stage_route_selection.invalid_route_output_is_rejected_without_discarding_consumable_progress,
+    true,
+  );
   assert.equal(contract.handoff_review_boundary.required_for_stage_kind, 'packaging');
   assert.deepEqual(contract.handoff_review_boundary.formal_review_required_if_any_true, [
     'artifact_effect=new_or_transformed_reviewable_bytes',
     'freezes_canonical_artifact_bytes',
     'issues_quality_export_publication_or_ready_claim',
   ]);
+  assert.equal(contract.handoff_review_boundary.formal_review_required_implies_quality_cycle_enabled, true);
   const attemptContract = JSON.parse(fs.readFileSync(path.join(
     repoRoot,
     'contracts/opl-framework/family-runtime-attempt-contract.json',
@@ -510,6 +526,7 @@ test('StageRun controller input rejects custom Attempt roles and quality budgets
     workflow_id: 'workflow:bounded',
     domain_id: 'redcube' as const,
     stage_id: 'artifact_creation',
+    declared_stage_ids: ['artifact_creation', 'review_and_revision'],
     workspace_locator: { workspace_root: '/tmp/rca-quality-cycle' },
     source_fingerprint: 'sha256:source',
     executor_kind: 'codex_cli',
@@ -654,7 +671,18 @@ test('Temporal StageRun terminal state idempotently refreshes the SQLite quality
       repair_map: [], finding_closures: [], review_receipts: [],
       artifact_refs: ['artifact:deck-v4'], artifact_hashes: ['sha256:deck-v4'],
       artifact_identity_receipt_refs: ['artifact:deck-v4'],
-      quality_debt_refs: ['quality-debt:finding:visual-clipping'], blocked_reason: null,
+      quality_debt_refs: ['quality-debt:finding:visual-clipping'],
+      route_quality_debt_refs: [],
+      decisive_attempt_role: 're_reviewer',
+      decisive_attempt_ref: 'opl://stage_attempts/sat-rereview-3',
+      selected_stage_route: {
+        decision_kind: 'repeat',
+        target_stage_id: 'artifact_creation',
+        evidence_refs: ['finding:visual-clipping'],
+      },
+      route_evidence_refs: ['finding:visual-clipping'],
+      route_recommendations: [],
+      blocked_reason: null,
       sqlite_projection: { status: 'pending', error: null },
       started_at: '2026-07-13T00:00:00.000Z', updated_at: '2026-07-13T00:01:00.000Z',
       authority_boundary: {
@@ -668,6 +696,8 @@ test('Temporal StageRun terminal state idempotently refreshes the SQLite quality
     assert.equal(first.state.status, 'quality_debt');
     assert.equal(first.state.repair_rounds_used, 3);
     assert.deepEqual(first.state.selected_artifact_refs, ['artifact:deck-v4']);
+    assert.equal((first.state as any).controller_readback.decisive_attempt_role, 're_reviewer');
+    assert.equal((first.state as any).controller_readback.selected_stage_route.target_stage_id, 'artifact_creation');
     assert.equal(first.current_attempt_ref, null);
     assert.deepEqual(second.state, first.state);
     assert.equal((second.state as any).controller_readback.controller_status, 'completed_with_quality_debt');

@@ -339,6 +339,28 @@ test('every high-risk Handoff signal fails closed when formal Stage Review is di
   }
 });
 
+test('required formal Handoff Review cannot be disabled at runtime', () => {
+  const root = fixture('target-handoff-runtime-disabled');
+  writePrimaryOnlyDeliverPolicy(root);
+  const manifest = readManifest(root);
+  manifest.stages[1].stage_quality_cycle_policy_ref =
+    'contracts/stage_quality_cycle_policy.json#/stages/deliver';
+  manifest.stages[1].handoff_review_boundary.artifact_effect =
+    'new_or_transformed_reviewable_bytes';
+  writeManifest(root, manifest);
+
+  const policyPath = path.join(root, 'contracts/stage_quality_cycle_policy.json');
+  const policy = JSON.parse(fs.readFileSync(policyPath, 'utf8')) as JsonRecord;
+  policy.stages.deliver.enabled = false;
+  policy.stages.deliver.formal_review.required = true;
+  fs.writeFileSync(policyPath, `${JSON.stringify(policy, null, 2)}\n`);
+
+  assert.throws(
+    () => compileStandardAgentStageManifest(root),
+    /Required formal Stage Review cannot be disabled at runtime/,
+  );
+});
+
 test('official knowledge-deliverable profile compiles isolated Stage Review and one Meta Review role', () => {
   const root = fixture('medautoscience', 'mas');
   fs.writeFileSync(path.join(root, 'agent/prompts/intake.md'), `# Intake
@@ -417,6 +439,7 @@ Re-review.
   assert.equal(binding?.surface_kind, 'opl_pack_bound_stage_quality_runtime_binding');
   assert.equal(binding?.enabled, true);
   assert.equal(binding?.stage_role, 'cross_stage_meta_review');
+  assert.deepEqual(binding?.declared_stage_ids, ['intake', 'deliver']);
   assert.equal(binding?.policy_ref, 'contracts/stage_quality_cycle_policy.json#/stages/intake');
   assert.equal(binding?.quality_policy.formal_review.required, false);
   assert.equal(binding?.quality_policy.formal_review.max_repair_rounds, 0);
@@ -500,7 +523,7 @@ Re-review.
 
   assert.throws(
     () => resolveStandardAgentStageQualityRuntimeBinding(root, 'intake'),
-    /must enable their Stage quality cycle/,
+    /Required formal Stage Review cannot be disabled at runtime/,
   );
 });
 

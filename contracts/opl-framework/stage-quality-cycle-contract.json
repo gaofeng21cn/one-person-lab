@@ -12,6 +12,7 @@
     "stage_run_input_builder": "buildPackBoundTemporalStageRunInput",
     "required_binding_fields": [
       "stage_id",
+      "declared_stage_ids",
       "policy_ref",
       "stage_prompt_ref",
       "quality_policy",
@@ -80,8 +81,34 @@
       "re_reviewer"
     ],
     "repairer_can_make_terminal_route_selection": false,
-    "non_decisive_attempt_output": "evidence_backed_route_recommendation_only",
-    "passive_transport_materializes_codex_selected_declared_stage": true
+    "non_decisive_attempt_output": "route_impact.stage_route_recommendation",
+    "terminal_attempt_output": "route_impact.stage_route_decision",
+    "route_output_contract": {
+      "decision_kind_values": [
+        "advance",
+        "skip",
+        "repeat",
+        "reverse",
+        "route_back",
+        "complete"
+      ],
+      "non_complete_decision_requires_declared_target_stage_id": true,
+      "complete_forbids_target_stage_id": true,
+      "recommendation_reason_required": true,
+      "non_empty_evidence_refs_required": true,
+      "decision_and_recommendation_are_mutually_exclusive": true
+    },
+    "passive_transport_materializes_codex_selected_declared_stage": true,
+    "attempt_context_surface_kind": "opl_stage_run_route_selection_context",
+    "legacy_terminal_route_fields_forbidden": [
+      "route_back_stage_ref",
+      "selected_next_stage_ref",
+      "next_stage_ref",
+      "workflow_complete"
+    ],
+    "runtime_closeout_guard_required": true,
+    "invalid_route_output_is_rejected_without_discarding_consumable_progress": true,
+    "repair_required_review_may_select_terminal_route": false
   },
   "multi_attempt_stage_boundary": {
     "decision_rule": "Repeated generation, review, and repair toward the same goal are Attempts; a changed goal, owner, quality gate, or delivery relationship requires a new Stage.",
@@ -263,6 +290,7 @@
       "freezes_canonical_artifact_bytes",
       "issues_quality_export_publication_or_ready_claim"
     ],
+    "formal_review_required_implies_quality_cycle_enabled": true,
     "primary_only_allowed_when": "artifact_effect is reviewed_immutable_refs_only or mechanical_repackaging_of_reviewed_bytes, no canonical freeze or ready claim occurs, and downstream_owner_retains_acceptance=true",
     "human_gate_is_orthogonal_to_formal_review": true,
     "meta_review_before_handoff_does_not_cover_later_generated_bytes": true

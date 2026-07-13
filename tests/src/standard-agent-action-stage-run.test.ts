@@ -68,6 +68,17 @@ function stageRunFixture() {
             status: 'completed',
             closeout_receipt_status: 'accepted_typed_closeout',
             workspace_locator: { workspace_root: workspaceRoot },
+            attempt_role: 'producer',
+            context_manifest: {
+              cross_stage_route_selection: {
+                surface_kind: 'opl_stage_run_route_selection_context',
+                version: 'stage-run-route-selection-context.v1',
+                configured_decisive_attempt_roles: ['producer'],
+                current_attempt_role: 'producer',
+                declared_stage_ids: ['intake', 'build', 'review'],
+                max_repair_rounds: 0,
+              },
+            },
           },
           canonical_outcome: 'completed_with_receipt',
           conflict_or_blocker_envelopes: [],
@@ -192,7 +203,11 @@ test('standard Agent StageRun accepts skips, repeats, reverse routes, and AI-sel
   const intake = fixture.readback('intake', []);
   const build = fixture.readback('build', [intake.closeoutRef]);
   const review = fixture.readback('review', [intake.closeoutRef], {
-    route_back_stage_ref: 'intake',
+    stage_route_decision: {
+      decision_kind: 'route_back',
+      target_stage_id: 'intake',
+      evidence_refs: ['finding:intake-source-defect'],
+    },
   });
 
   const skipped = evaluateStandardAgentActionStageRun({
@@ -224,6 +239,27 @@ test('standard Agent StageRun accepts skips, repeats, reverse routes, and AI-sel
     stageRunReadbackPaths: [build.path, build.path],
   });
   assert.deepEqual(repeated.completed_stage_refs, ['build', 'build']);
+});
+
+test('standard Agent StageRun rejects an undeclared Codex route target without discarding progress', (t) => {
+  const fixture = stageRunFixture();
+  t.after(() => fs.rmSync(fixture.repoDir, { recursive: true, force: true }));
+  const review = fixture.readback('review', [], {
+    stage_route_decision: {
+      decision_kind: 'route_back',
+      target_stage_id: 'missing-stage',
+      evidence_refs: ['finding:missing-owner-stage'],
+    },
+  });
+
+  const progress = evaluateStandardAgentActionStageRun({
+    repoDir: fixture.repoDir,
+    actionId: 'build',
+    stageRunReadbackPaths: [review.path],
+  });
+  assert.equal(progress.complete, true);
+  assert.equal(progress.next_stage_ref, null);
+  assert.ok(progress.quality_debt_refs.some((ref) => ref.includes('quality-debt')));
 });
 
 test('standard Agent StageRun advances readable raw output without typed closeout', (t) => {

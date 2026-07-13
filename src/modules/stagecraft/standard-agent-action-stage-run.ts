@@ -7,6 +7,11 @@ import { FrameworkContractError, isRecord } from '../../kernel/contract-validati
 import { record, recordList, stringList, stringValue, type JsonRecord } from '../../kernel/json-record.ts';
 import { isRuntimeHardStopReason } from '../../kernel/progress-hard-stop-policy.ts';
 import { resolveContainedRepoJsonFile } from '../../kernel/repo-contained-json-file.ts';
+import {
+  normalizeDeclaredStageRouteDecision,
+  sanitizeStageQualityAttemptRouteImpact,
+  STAGE_QUALITY_LEGACY_TERMINAL_ROUTE_FIELDS,
+} from './stage-quality-route-selection.ts';
 
 export type StandardAgentActionStageRunCloseout = {
   stage_id: string;
@@ -383,13 +388,18 @@ function closeoutFromReadback(
       invalid(`OPL StageRun ${stageId} closeout contains rejected writes.`);
     }
     if (!Array.isArray(packet.closeout_refs)) invalid(`OPL StageRun ${stageId} closeout_refs must be an array.`);
-    const domainOutput = domainOutputPacket({ packet, attempt, targetDomainId, readbackPath });
+    const sanitizedRouteImpact = sanitizeStageQualityAttemptRouteImpact({
+      attempt,
+      routeImpact: packet.route_impact,
+    });
+    const canonicalPacket = { ...packet, route_impact: sanitizedRouteImpact };
+    const domainOutput = domainOutputPacket({ packet: canonicalPacket, attempt, targetDomainId, readbackPath });
     return {
       stage_id: stageId,
       stage_attempt_ref: attemptRef,
       closeout_id: closeoutId,
       closeout_packet_ref: `${attemptRef}/closeouts/${encodeURIComponent(closeoutId)}`,
-      canonical_closeout_packet: packet,
+      canonical_closeout_packet: canonicalPacket,
       domain_output_packet: domainOutput.packet,
       domain_output_metadata: domainOutput.metadata,
       readback_path: readbackPath,
@@ -428,22 +438,31 @@ export function evaluateStandardAgentActionStageRun(input: {
   if (unknown.length > 0) invalid(`${input.actionId}: StageRun closeout references undeclared stages: ${unknown.join(', ')}.`);
   const latestPacket = stageCloseouts.at(-1)?.canonical_closeout_packet ?? {};
   const latestRouteImpact = record(latestPacket.route_impact);
-  const aiSelectedNextStage = stringValue(latestRouteImpact.route_back_stage_ref)
-    ?? stringValue(latestRouteImpact.selected_next_stage_ref)
-    ?? stringValue(latestRouteImpact.next_stage_ref);
-  const declaredAiSelectedNextStage = aiSelectedNextStage && graph.declared.has(aiSelectedNextStage)
-    ? aiSelectedNextStage
-    : null;
-  const undeclaredRouteDebtRefs = aiSelectedNextStage && !declaredAiSelectedNextStage
-    ? [`opl://standard-agent-actions/${encodeURIComponent(input.actionId)}/undeclared-route-target-quality-debt`]
-    : [];
+  const routeDecisionResult = normalizeDeclaredStageRouteDecision({
+    value: latestRouteImpact.stage_route_decision,
+    declaredStageIds: [...graph.declared],
+  });
+  const routeDecision = routeDecisionResult.decision;
+  const aiSelectedNextStage = routeDecision?.target_stage_id ?? null;
+  const legacyRouteFields = STAGE_QUALITY_LEGACY_TERMINAL_ROUTE_FIELDS.filter((field) => (
+    field === 'workflow_complete'
+      ? latestRouteImpact[field] === true
+      : Boolean(stringValue(latestRouteImpact[field]))
+  ));
+  const routeOutputDebtRefs = [
+    ...routeDecisionResult.rejection_reasons,
+    ...stringList(record(latestRouteImpact.stage_route_contract).rejection_reasons),
+    ...(legacyRouteFields.length > 0 ? ['legacy_terminal_route_fields_are_not_authoritative'] : []),
+  ].map((reason) => (
+    `opl://standard-agent-actions/${encodeURIComponent(input.actionId)}/route-quality-debt/${encodeURIComponent(reason)}`
+  ));
   const latestStage = completed.at(-1) ?? null;
   const latestIndex = latestStage ? graph.order.indexOf(latestStage) : -1;
   const defaultNextStage = latestIndex >= 0 ? graph.order[latestIndex + 1] ?? null : route.entry_stage_ref;
-  const terminalStageReached = !declaredAiSelectedNextStage
+  const terminalStageReached = !aiSelectedNextStage
     && route.terminal_stage_refs.includes(latestStage ?? '');
-  const complete = latestRouteImpact.workflow_complete === true || terminalStageReached;
-  const nextStageRef = complete ? null : declaredAiSelectedNextStage ?? defaultNextStage;
+  const complete = routeDecision?.decision_kind === 'complete' || terminalStageReached;
+  const nextStageRef = complete ? null : aiSelectedNextStage ?? defaultNextStage;
   const closeoutQualityDebtRefs = stageCloseouts.flatMap((entry) =>
     stringList(record(entry.canonical_closeout_packet.route_impact).quality_debt_refs));
   return {
@@ -455,7 +474,7 @@ export function evaluateStandardAgentActionStageRun(input: {
     stage_closeouts: stageCloseouts,
     quality_debt_refs: [...new Set([
       ...routeQualityDebtRefs,
-      ...undeclaredRouteDebtRefs,
+      ...routeOutputDebtRefs,
       ...closeoutQualityDebtRefs,
     ])],
   };

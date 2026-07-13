@@ -180,6 +180,7 @@ test('StageRun creation contracts expose one pack-bound write entry and a query-
   assert.deepEqual(quality.pack_bound_creation.stage_run_cli_allowed_actions, ['query']);
   assert.equal(quality.pack_bound_creation.stage_run_identity_binds_manifest_sha256, true);
   assert.ok(quality.pack_bound_creation.required_binding_fields.includes('manifest_sha256'));
+  assert.ok(quality.pack_bound_creation.required_binding_fields.includes('declared_stage_ids'));
   assert.equal(attempts.stage_quality_cycle_contract.pack_bound_runtime_binding_required, true);
   assert.equal(temporal.workflow_activity_signal_mapping.stage_run_workflow.creation_entry,
     'pack_bound_family_runtime_attempt_create_only');
@@ -193,6 +194,10 @@ test('StageRun creation contracts expose one pack-bound write entry and a query-
     ['producer', 'reviewer', 'repairer', 're_reviewer']);
   assert.equal(
     compiler.standard_agent_stage_quality_runtime_binding.required_fields.includes('handoff_review_boundary'),
+    true,
+  );
+  assert.equal(
+    compiler.standard_agent_stage_quality_runtime_binding.required_fields.includes('declared_stage_ids'),
     true,
   );
   assert.equal(skeleton.stage_quality_runtime.runtime_creation_surface,
@@ -226,6 +231,10 @@ test('Stage quality contracts bind bounded Attempts, exact artifact identity, re
   assert.equal(quality.review_receipt.reviewed_artifact_ref_hash_cardinality_must_match, true);
   assert.equal(attempts.stage_quality_cycle_contract.review_receipt_surface_kind,
     'opl_stage_review_receipt');
+  assert.equal(attempts.stage_quality_cycle_contract.terminal_route_output,
+    'route_impact.stage_route_decision');
+  assert.equal(attempts.stage_quality_cycle_contract.non_terminal_route_output,
+    'route_impact.stage_route_recommendation');
 
   const retry = temporal.retry_mapping.stage_quality_revision_budget;
   assert.equal(retry.default_max_repair_rounds, 3);

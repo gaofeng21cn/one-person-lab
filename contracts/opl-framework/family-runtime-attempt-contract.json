@@ -158,6 +158,9 @@
     "stage_run_query_remains_read_only": true,
     "artifact_identity_receipt_refs_required_for_reviewable_producer_and_repairer_outputs": true,
     "review_receipt_surface_kind": "opl_stage_review_receipt",
+    "terminal_route_output": "route_impact.stage_route_decision",
+    "non_terminal_route_output": "route_impact.stage_route_recommendation",
+    "stage_run_projects_decisive_attempt_and_declared_target": true,
     "quality_retry_budget_separate_from_provider_activity_structured_output_and_runtime_retry": true
   },
   "route_transport_contract": {

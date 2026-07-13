@@ -119,6 +119,7 @@ export type StandardAgentStageQualityRuntimeBinding = {
   surface_kind: 'opl_pack_bound_stage_quality_runtime_binding';
   version: 'opl-pack-bound-stage-quality-runtime-binding.v1';
   stage_id: string;
+  declared_stage_ids: string[];
   enabled: boolean;
   stage_role: string | null;
   policy_ref: string;
@@ -356,6 +357,13 @@ function validateStageQualityCyclePolicy(input: {
       stage_id: input.stageId,
     });
   }
+  if (formalReview.required === true && !enabled) {
+    fail('Required formal Stage Review cannot be disabled at runtime.', {
+      repo_dir: input.repoDir,
+      stage_id: input.stageId,
+      blocker: 'required_formal_review_runtime_disabled',
+    });
+  }
   if (handoffRequiresFormalReview(input.handoffReviewBoundary) && formalReview.required !== true) {
     fail('Handoff that creates reviewable delivery bytes or issues a ready claim requires formal Stage Review.', {
       repo_dir: input.repoDir,
@@ -425,6 +433,7 @@ function validateStageQualityCyclePolicy(input: {
     | 'surface_kind'
     | 'version'
     | 'stage_id'
+    | 'declared_stage_ids'
     | 'stage_role'
     | 'policy_ref'
     | 'stage_goal_refs'
@@ -1190,6 +1199,7 @@ export function resolveStandardAgentStageQualityRuntimeBinding(
     surface_kind: 'opl_pack_bound_stage_quality_runtime_binding',
     version: 'opl-pack-bound-stage-quality-runtime-binding.v1',
     stage_id: stage.stage_id,
+    declared_stage_ids: compilation.stage_control_plane.stages.map((entry) => entry.stage_id),
     enabled: policy.enabled,
     stage_role: optionalString(stage.stage_role),
     policy_ref: policyRef,

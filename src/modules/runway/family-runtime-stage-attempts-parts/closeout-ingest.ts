@@ -8,6 +8,7 @@ import {
 import {
   buildFamilyConflictSubject,
   buildReceiptConflictEnvelope,
+  sanitizeStageQualityAttemptRouteImpact,
 } from '../../stagecraft/index.ts';
 import {
   type StageAttemptCloseoutRow,
@@ -27,6 +28,7 @@ import { persistStageAttemptUsageObservation } from '../family-runtime-stage-att
 function normalizeRouteImpact(
   packet: TypedStageCloseoutPacket,
   existingRouteImpact: Record<string, unknown>,
+  attempt: ReturnType<typeof inspectStageAttempt>,
 ) {
   const routeImpact = packet.route_impact && typeof packet.route_impact === 'object' && !Array.isArray(packet.route_impact)
     ? packet.route_impact
@@ -41,7 +43,10 @@ function normalizeRouteImpact(
     : null;
   const selectedStageRoute = optionalRecord(existingRouteImpact.selected_stage_route);
   return {
-    ...domainRouteImpact,
+    ...sanitizeStageQualityAttemptRouteImpact({
+      attempt,
+      routeImpact: domainRouteImpact,
+    }),
     next_owner: packet.next_owner,
     domain_ready_verdict: packet.domain_ready_verdict,
     ...(selectedActionId ? { selected_action_id: selectedActionId } : {}),
@@ -139,7 +144,7 @@ function syncAttemptRowFromAcceptedCloseout(
     JSON.stringify(humanGateRefsForAttempt(input.attempt)),
     JSON.stringify(providerRun),
     JSON.stringify(activityEvents),
-    JSON.stringify(normalizeRouteImpact(input.packet, input.attempt.route_impact)),
+    JSON.stringify(normalizeRouteImpact(input.packet, input.attempt.route_impact, input.attempt)),
     'accepted_typed_closeout',
     input.observedAt,
     input.stageAttemptId,

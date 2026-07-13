@@ -193,6 +193,12 @@ export function projectTemporalStageRunQualityCycle(
       repair_map: state.repair_map,
       finding_closures: state.finding_closures,
       review_receipts: state.review_receipts,
+      decisive_attempt_role: state.decisive_attempt_role,
+      decisive_attempt_ref: state.decisive_attempt_ref,
+      selected_stage_route: state.selected_stage_route,
+      route_evidence_refs: state.route_evidence_refs,
+      route_recommendations: state.route_recommendations,
+      route_quality_debt_refs: state.route_quality_debt_refs,
       blocked_reason: state.blocked_reason,
     },
   };

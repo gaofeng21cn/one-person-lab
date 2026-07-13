@@ -21,6 +21,7 @@ function stageRunInput(id: string): TemporalStageRunWorkflowInput {
     workflow_id: `stage-run-workflow:${id}`,
     domain_id: 'redcube',
     stage_id: 'artifact_creation',
+    declared_stage_ids: ['storyline', 'artifact_creation', 'review_and_revision', 'package_and_handoff'],
     workspace_locator: { workspace_root: '/tmp/rca-stage-run-controller' },
     source_fingerprint: 'sha256:source',
     executor_kind: 'codex_cli',
@@ -48,9 +49,14 @@ function stageRunInput(id: string): TemporalStageRunWorkflowInput {
 async function runController(input: {
   id: string;
   closeFindingAfterRound: number | null;
+  formalReviewRequired?: boolean;
   failRole?: TemporalStageQualityAttemptMaterializationInput['attempt_role'];
+  softBlockRole?: TemporalStageQualityAttemptMaterializationInput['attempt_role'];
   omitIdentityReceiptForRole?: TemporalStageQualityAttemptMaterializationInput['attempt_role'];
   reviewerIdentityDrift?: boolean;
+  repairerAttemptsTerminalDecision?: boolean;
+  terminalRouteTarget?: string;
+  invalidReReviewClosure?: boolean;
 }) {
   const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
   const taskQueue = `opl-stage-run-controller-${input.id}-${Date.now()}`;
@@ -61,6 +67,20 @@ async function runController(input: {
         attempts.push(materialization);
         const role = materialization.attempt_role;
         const round = materialization.quality_round_index;
+        const contextManifest = {
+          surface_kind: 'opl_stage_quality_attempt_context_manifest',
+          version: 'stage-quality-attempt-context-manifest.v1',
+          cross_stage_route_selection: {
+            surface_kind: 'opl_stage_run_route_selection_context',
+            version: 'stage-run-route-selection-context.v1',
+            configured_decisive_attempt_roles: materialization.stage_run.quality_policy.formal_review.required
+              ? ['reviewer', 're_reviewer']
+              : ['producer'],
+            current_attempt_role: role,
+            declared_stage_ids: materialization.stage_run.declared_stage_ids,
+            max_repair_rounds: materialization.stage_run.quality_policy.formal_review.max_repair_rounds,
+          },
+        };
         const workflowInput: TemporalStageAttemptWorkflowInput = {
           stage_attempt_id: `sat_${input.id}_${role}_${round}`,
           workflow_id: `wf_${input.id}_${role}_${round}`,
@@ -95,6 +115,7 @@ async function runController(input: {
           context_manifest_ref: `context:${role}:${round}`,
           no_context_inheritance: true,
           quality_context: {
+            context_manifest: contextManifest,
             findings: materialization.findings ?? [],
             repair_map: materialization.repair_map ?? [],
           },
@@ -177,11 +198,13 @@ async function runController(input: {
         }
         if (role === 're_reviewer') {
           const closed = input.closeFindingAfterRound !== null && round >= input.closeFindingAfterRound;
-          stageQualityCycle.finding_closures = [{
-            finding_id: finding.finding_id,
-            status: closed ? 'closed' : 'still_open',
-            evidence_refs: [`screenshot:deck-v${artifactVersion}`],
-          }];
+          stageQualityCycle.finding_closures = input.invalidReReviewClosure
+            ? []
+            : [{
+                finding_id: finding.finding_id,
+                status: closed ? 'closed' : 'still_open',
+                evidence_refs: [`screenshot:deck-v${artifactVersion}`],
+              }];
           stageQualityCycle.repair_regressions = [];
           stageQualityCycle.critical_new_findings = [];
           stageQualityCycle.optional_observations = [{
@@ -189,6 +212,31 @@ async function runController(input: {
             evidence_refs: [`artifact:deck-v${artifactVersion}`],
             summary: 'Optional editorial polish only.',
           }];
+        }
+        const routeImpact: Record<string, unknown> = { stage_quality_cycle: stageQualityCycle };
+        if (role === 'producer' && input.formalReviewRequired === false) {
+          routeImpact.stage_route_decision = {
+            decision_kind: 'advance',
+            target_stage_id: input.terminalRouteTarget ?? 'review_and_revision',
+            evidence_refs: [`artifact:deck-v${artifactVersion}`],
+          };
+        }
+        if (role === 'repairer' && input.repairerAttemptsTerminalDecision) {
+          routeImpact.stage_route_decision = {
+            decision_kind: 'route_back',
+            target_stage_id: 'storyline',
+            evidence_refs: [finding.finding_id],
+          };
+        }
+        if (role === 're_reviewer') {
+          const closed = input.closeFindingAfterRound !== null && round >= input.closeFindingAfterRound;
+          if (closed || round === 3) {
+            routeImpact.stage_route_decision = {
+              decision_kind: closed ? 'advance' : 'repeat',
+              target_stage_id: closed ? (input.terminalRouteTarget ?? 'review_and_revision') : 'artifact_creation',
+              evidence_refs: [`screenshot:deck-v${artifactVersion}`],
+            };
+          }
         }
         return {
           closeout_refs: [`closeout:${attempt.stage_attempt_id}`],
@@ -201,7 +249,8 @@ async function runController(input: {
                 sha256: `sha256:deck-v${artifactVersion}`,
               }]
             : [],
-          route_impact: { stage_quality_cycle: stageQualityCycle },
+          route_impact: routeImpact,
+          ...(role === input.softBlockRole ? { blocked_reason: `soft-${role}-quality-debt` } : {}),
           domain_ready_verdict: 'domain_gate_pending',
         };
       },
@@ -214,8 +263,16 @@ async function runController(input: {
       activities,
     });
     const state = await worker.runUntil(async () => {
+      const workflowInput = stageRunInput(input.id);
+      workflowInput.quality_policy = normalizeStageQualityCyclePolicy({
+        formal_review: {
+          required: input.formalReviewRequired ?? true,
+          risk_tier: 'high',
+          max_repair_rounds: 3,
+        },
+      });
       const handle = await testEnv.client.workflow.start(StageRunWorkflow, {
-        args: [stageRunInput(input.id)],
+        args: [workflowInput],
         taskQueue,
         workflowId: `stage-run-controller:${input.id}:${Date.now()}`,
       });
@@ -238,6 +295,9 @@ test('StageRun controller materializes isolated producer-review-repair-re-review
   assert.deepEqual(state.artifact_refs, ['artifact:deck-v2']);
   assert.equal(state.sqlite_projection.status, 'synced');
   assert.equal(state.review_receipts.length, 2);
+  assert.equal(state.decisive_attempt_role, 're_reviewer');
+  assert.equal(state.selected_stage_route?.target_stage_id, 'review_and_revision');
+  assert.equal(state.route_quality_debt_refs.length, 0);
 });
 
 test('StageRun controller caps quality work at three repair rounds and carries consumable debt', async () => {
@@ -254,6 +314,82 @@ test('StageRun controller caps quality work at three repair rounds and carries c
   assert.ok(state.quality_debt_refs.includes('quality-debt:finding:visual-clipping'));
   assert.equal(state.sqlite_projection.status, 'synced');
   assert.equal(state.review_receipts.length, 4);
+  assert.equal(state.decisive_attempt_role, 're_reviewer');
+  assert.equal(state.selected_stage_route?.decision_kind, 'repeat');
+});
+
+test('primary-only StageRun makes the producer the sole decisive route owner', async () => {
+  const { state, attempts } = await runController({
+    id: 'primary-route-owner',
+    closeFindingAfterRound: null,
+    formalReviewRequired: false,
+  });
+  assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), ['producer']);
+  assert.equal(state.status, 'completed');
+  assert.equal(state.decisive_attempt_role, 'producer');
+  assert.equal(state.selected_stage_route?.decision_kind, 'advance');
+  assert.equal(state.selected_stage_route?.target_stage_id, 'review_and_revision');
+});
+
+test('recoverable producer and repairer quality debt still reaches fresh formal Review', async () => {
+  const producerDebt = await runController({
+    id: 'producer-debt-continues',
+    closeFindingAfterRound: 1,
+    softBlockRole: 'producer',
+  });
+  assert.deepEqual(producerDebt.attempts.map((attempt) => attempt.attempt_role), [
+    'producer', 'reviewer', 'repairer', 're_reviewer',
+  ]);
+  assert.equal(producerDebt.state.status, 'completed');
+
+  const repairDebt = await runController({
+    id: 'repair-debt-continues',
+    closeFindingAfterRound: 1,
+    softBlockRole: 'repairer',
+  });
+  assert.deepEqual(repairDebt.attempts.map((attempt) => attempt.attempt_role), [
+    'producer', 'reviewer', 'repairer', 're_reviewer',
+  ]);
+  assert.equal(repairDebt.state.status, 'completed');
+});
+
+test('repairer terminal route output is rejected and fresh re-review remains decisive', async () => {
+  const { state, attempts } = await runController({
+    id: 'repairer-route-rejected',
+    closeFindingAfterRound: 1,
+    repairerAttemptsTerminalDecision: true,
+  });
+  assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), [
+    'producer', 'reviewer', 'repairer', 're_reviewer',
+  ]);
+  assert.equal(state.decisive_attempt_role, 're_reviewer');
+  assert.equal(state.selected_stage_route?.target_stage_id, 'review_and_revision');
+  assert.ok(state.route_quality_debt_refs.some((ref) => ref.includes('attempt_role_is_not_configured_decisive_role')));
+});
+
+test('undeclared terminal route target is not materialized and does not discard reviewed progress', async () => {
+  const { state } = await runController({
+    id: 'undeclared-route-target',
+    closeFindingAfterRound: 1,
+    terminalRouteTarget: 'missing-stage',
+  });
+  assert.equal(state.status, 'completed');
+  assert.equal(state.selected_stage_route, null);
+  assert.ok(state.route_quality_debt_refs.some((ref) => ref.includes('route_target_is_not_a_declared_stage')));
+  assert.ok(state.route_quality_debt_refs.some((ref) => ref.includes('decisive_attempt_route_decision_missing')));
+});
+
+test('invalid re-review closure cannot leave a route decision behind', async () => {
+  const { state } = await runController({
+    id: 'invalid-re-review-closure',
+    closeFindingAfterRound: 1,
+    invalidReReviewClosure: true,
+  });
+  assert.equal(state.status, 'completed_with_quality_debt');
+  assert.equal(state.selected_stage_route, null);
+  assert.equal(state.decisive_attempt_ref, null);
+  assert.ok(state.route_quality_debt_refs.some((ref) => ref.includes('re_review_closure_contract_invalid')));
+  assert.ok(state.route_quality_debt_refs.some((ref) => ref.includes('decisive_attempt_route_decision_missing')));
 });
 
 test('reviewer protocol failure terminalizes a consumable producer artifact as quality debt', async () => {

@@ -158,6 +158,11 @@ function qualityAttemptPromptLines(attempt: JsonRecord) {
   const repairMapRefs = readStringList(attempt.repair_map_refs);
   const rolePromptRef = optionalString(attempt.quality_role_prompt_ref);
   const qualityContext = isRecord(attempt.quality_context) ? attempt.quality_context : {};
+  const contextManifest = isRecord(qualityContext.context_manifest) ? qualityContext.context_manifest : {};
+  const routeSelectionContext = isRecord(contextManifest.cross_stage_route_selection)
+    ? contextManifest.cross_stage_route_selection
+    : {};
+  const declaredStageIds = readStringList(routeSelectionContext.declared_stage_ids);
   const domainPackRoot = domainPackRootFromAttempt(attempt);
   const rolePrompt = rolePromptRef && domainPackRoot
     ? readStandardAgentQualityRolePromptFile(domainPackRoot, rolePromptRef)
@@ -185,13 +190,17 @@ function qualityAttemptPromptLines(attempt: JsonRecord) {
     `Prior finding refs: ${JSON.stringify(priorFindingRefs)}`,
     `Repair map refs: ${JSON.stringify(repairMapRefs)}`,
     `Structured quality context: ${JSON.stringify(qualityContext)}`,
+    `Declared cross-Stage route targets: ${JSON.stringify(declaredStageIds)}`,
+    'A terminal decisive Attempt should return exactly one route_impact.stage_route_decision with decision_kind=advance|skip|repeat|reverse|route_back|complete, a declared target_stage_id except for complete, and evidence_refs.',
+    'A non-decisive Attempt may instead return one route_impact.stage_route_recommendation with the same decision_kind/target/evidence shape plus reason.',
+    'Do not return both. Do not use legacy route_back_stage_ref, selected_next_stage_ref, next_stage_ref, or workflow_complete fields.',
   ];
   if (attemptRole === 'repairer') {
     return [
       ...base,
       'This is a fresh repair Attempt. Repair only the declared required findings within the inherited Stage goal, scope, and authority.',
       'Return a repair_map keyed by stable finding_id plus exact changed artifact refs and hashes. The repairer cannot close findings.',
-      'Do not make a terminal Stage transition decision. If the finding belongs elsewhere, return an evidence-backed route-back recommendation for the StageRun controller.',
+      'Do not make a terminal Stage transition decision. If the finding belongs elsewhere, return an evidence-backed stage_route_recommendation; the terminal reviewer decides after fresh re-review.',
       'Bind every returned artifact ref to the identical SHA value in typed closeout_ref_metadata; this domain-owned digest receipt is required before re-review.',
     ];
   }
@@ -199,7 +208,7 @@ function qualityAttemptPromptLines(attempt: JsonRecord) {
     return [
       ...base,
       ...(attemptRole === 'producer'
-        ? ['The producer is the decisive cross-Stage semantic route selector only when this StageRun is primary-only. If formal Review is configured, leave the terminal selection to the reviewer or re-reviewer.']
+        ? ['The producer is the decisive cross-Stage semantic route selector only when this StageRun is primary-only. If formal Review is configured, return at most a stage_route_recommendation and leave the terminal decision to the reviewer or re-reviewer.']
         : []),
       'Bind every returned artifact ref to the identical SHA value in typed closeout_ref_metadata; model-declared hashes without this domain-owned digest receipt are not reviewable artifacts.',
     ];
@@ -253,7 +262,7 @@ export function runnerPromptFor(input: {
     'Write useful stage artifacts as early as possible. Partial drafts, negative findings, failed attempts, review findings, and route-back recommendations are consumable progress.',
     'A typed closeout packet is preferred when naturally available, but it is never required for stage progression.',
     'Your final message may be structured JSON or ordinary readable text. OPL persists it as a raw artifact and derives refs, hashes, lineage, and a minimal progress envelope.',
-    'Cross-Stage semantic route selection must come from this StageRun\'s decisive Codex Attempt: the producer for a primary-only StageRun, otherwise the terminal reviewer or re-reviewer. Other Attempts may return evidence-backed route recommendations only. OPL passively materializes the selected declared Stage and does not approve, reject, or replace the semantic route.',
+    'Cross-Stage semantic route selection must come from this StageRun\'s decisive Codex Attempt: the producer for a primary-only StageRun, otherwise the terminal reviewer or re-reviewer. Other Attempts may return evidence-backed stage_route_recommendation only. OPL validates role eligibility and declared target identity, then passively projects the Codex decision without judging its domain semantics.',
     'Do not claim domain readiness, quality acceptance, owner receipt creation, typed blocker creation, or irreversible authority unless a real domain-owned ref exists.',
   ].join('\n');
 }

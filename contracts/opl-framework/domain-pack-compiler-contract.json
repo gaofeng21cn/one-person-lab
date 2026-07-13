@@ -76,6 +76,7 @@
     ],
     "required_fields": [
       "stage_id",
+      "declared_stage_ids",
       "enabled",
       "stage_role",
       "policy_ref",
