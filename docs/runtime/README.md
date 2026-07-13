@@ -104,6 +104,7 @@ Fast Local Env
 2. **Projection**
    - 输出 scope options、current scope、scope source 和 inferred scope hint；默认 scope 只面向用户认知层：全部项目、智能体、项目。单篇论文 / task、workspace binding id、autopush 或 stage-attempt 名称只进任务详情或诊断。
    - 输出用户主状态、自动运行副状态、阶段、时长、token、liveness、next owner 与 blocker route；未观测到 token/cost telemetry 时必须保持 missing / null，不得把未记录写成 0。
+   - `work-item-projection.v2` 的 `delivered_paused` Stage Map 在 canonical `last_recorded_stage_id` 可解析时，只展示 domain stage index 中截至该锚点的已发生历程；锚点缺失或无法解析时保留完整 stage list 与诊断，不从 status 或排列顺序猜测截断边界。
    - 保留 provider/control-plane 术语到 diagnostic refs。
 
 3. **Boundary**

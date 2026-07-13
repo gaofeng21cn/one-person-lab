@@ -289,8 +289,13 @@ export function readStageIndexPresentation(input: {
   const lastRecordedIndex = lastRecordedStageId
     ? stageRecords.findIndex((entry) => entry.stageId === lastRecordedStageId)
     : -1;
-  const firstPendingIndex = stageRecords.findIndex((entry) => !COMPLETED_STAGE_STATUSES.has(entry.status));
-  const stageMap = stageRecords.map(({ stage, stageId, status }, index) => {
+  const projectedStageRecords = input.businessState === 'delivered_paused' && lastRecordedIndex >= 0
+    ? stageRecords.slice(0, lastRecordedIndex + 1)
+    : stageRecords;
+  const firstPendingIndex = projectedStageRecords.findIndex(
+    (entry) => !COMPLETED_STAGE_STATUSES.has(entry.status),
+  );
+  const stageMap = projectedStageRecords.map(({ stage, stageId, status }, index) => {
     const owner = stringValue(stage.owner) ?? input.agentId;
     return {
       stage_id: stageId,
@@ -318,6 +323,26 @@ export function readStageIndexPresentation(input: {
     ? stageMap[currentIndex + 1] ?? null
     : stageMap.find((stage) => stage.state === 'next') ?? null;
   const invalidStageCount = payload.stages.length - stageRecords.length;
+  const stageDiagnostics: WorkItemProjectionDiagnostic[] = [];
+  if (invalidStageCount > 0) {
+    stageDiagnostics.push({
+      reason: 'stage_index_stage_entries_invalid',
+      ref: stageIndexPath,
+      details: { invalid_stage_count: invalidStageCount },
+    });
+  }
+  if (input.businessState === 'delivered_paused' && !lastRecordedStageId) {
+    stageDiagnostics.push({
+      reason: 'stage_index_last_recorded_stage_id_missing',
+      ref: stageIndexPath,
+    });
+  } else if (input.businessState === 'delivered_paused' && lastRecordedIndex < 0) {
+    stageDiagnostics.push({
+      reason: 'stage_index_last_recorded_stage_id_unresolved',
+      ref: stageIndexPath,
+      details: { last_recorded_stage_id: lastRecordedStageId },
+    });
+  }
   return {
     stage_map: stageMap,
     current_stage_id: currentStageId,
@@ -326,13 +351,7 @@ export function readStageIndexPresentation(input: {
     next_stage_id: nextStage?.stage_id ?? null,
     next_stage_display_name: nextStage?.display_name ?? null,
     source_ref: stageIndexPath,
-    diagnostics: invalidStageCount > 0
-      ? [{
-          reason: 'stage_index_stage_entries_invalid',
-          ref: stageIndexPath,
-          details: { invalid_stage_count: invalidStageCount },
-        }]
-      : [],
+    diagnostics: stageDiagnostics,
   };
 }
 

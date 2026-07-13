@@ -12,6 +12,7 @@ import {
 } from '../../src/kernel/standard-agent-interface.ts';
 import { validateJsonSchemaPayload } from '../../src/kernel/schema-registry.ts';
 import { buildAgentCatalog } from '../../src/modules/console/work-item-projection/catalog.ts';
+import { readStageIndexPresentation } from '../../src/modules/console/work-item-projection/inventory-presentation.ts';
 import { buildWorkItemProjectionV2 } from '../../src/modules/console/work-item-projection/projection.ts';
 import { projectWorkItemPrimaryState } from '../../src/modules/console/work-item-projection/primary-state.ts';
 import { setWorkItemControlState } from '../../src/modules/ledger/work-item-control-ledger.ts';
@@ -104,7 +105,11 @@ function writeWorkspace(root: string, label: keyof typeof MAS_STUDIES) {
       ...(active
         ? [{ stage_id: '02-protocol_and_analysis_plan', status: 'pending' }]
         : delivered
-          ? [{ stage_id: '08-publication_package_handoff', status: 'typed_blocked' }]
+          ? [
+              { stage_id: '08-publication_package_handoff', status: 'typed_blocked' },
+              { stage_id: 'manual_foreground_paper_sprint', status: 'missing_manifest' },
+              { stage_id: 'milestone_submission_package', status: 'pending' },
+            ]
           : []),
     ];
     fs.writeFileSync(path.join(controlRoot, 'stage_index.json'), `${JSON.stringify({
@@ -313,7 +318,19 @@ test('WorkItemProjection V2 discovers MAS 3 projects and 9 studies independently
     assert.equal(deliveredItem?.lifecycle.current_stage_id, null);
     assert.equal(deliveredItem?.telemetry.current_stage.state, 'missing');
     assert.equal(deliveredItem?.telemetry.current_stage.missing_reason, 'current_stage_not_applicable');
-    assert.equal(deliveredItem?.stage_map.at(-1)?.state, 'completed');
+    assert.deepEqual(
+      deliveredItem?.stage_map.map((stage) => [stage.stage_id, stage.state]),
+      [
+        ['01-study_intake', 'completed'],
+        ['08-publication_package_handoff', 'completed'],
+      ],
+    );
+    assert.equal(
+      deliveredItem?.stage_map.some((stage) =>
+        ['pending', 'next', 'current', 'stopped', 'failed'].includes(stage.state)
+      ),
+      false,
+    );
     assert.equal(deliveredItem?.action.kind, 'user_action');
     assert.equal(deliveredItem?.action.title, '补齐投稿信息或发起修订');
     assert.equal(
@@ -332,6 +349,95 @@ test('WorkItemProjection V2 discovers MAS 3 projects and 9 studies independently
     assert.equal(projection.items.some((item) => item.identity.source_kind === 'runtime_only'), false);
   } finally {
     fs.rmSync(input.root, { recursive: true, force: true });
+  }
+});
+
+test('delivered Stage Map uses the canonical recorded boundary without inferring a missing one', () => {
+  const workItemRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-terminal-stage-map-'));
+  const stageIndexRef = 'control/stage_index.json';
+  const stageIndexPath = path.join(workItemRoot, stageIndexRef);
+  fs.mkdirSync(path.dirname(stageIndexPath), { recursive: true });
+  const project = (
+    businessState: 'active' | 'delivered_paused' | 'paused' | 'stopped',
+    lastRecordedStageId: string | null = '08-publication_package_handoff',
+  ) => {
+    const payload: Record<string, unknown> = {
+      current_stage_id: businessState === 'active' ? '08-publication_package_handoff' : null,
+      stages: [
+        { stage_id: '01-study_intake', status: 'receipt_recorded' },
+        { stage_id: '08-publication_package_handoff', status: 'in_progress' },
+        { stage_id: 'manual_foreground_paper_sprint', status: 'typed_blocked' },
+        { stage_id: 'milestone_submission_package', status: 'pending' },
+      ],
+    };
+    if (lastRecordedStageId !== null) payload.last_recorded_stage_id = lastRecordedStageId;
+    fs.writeFileSync(stageIndexPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+    return readStageIndexPresentation({
+      workItemRoot,
+      stageIndexRef,
+      businessState,
+      currentStageId: businessState === 'active' ? '08-publication_package_handoff' : null,
+      agentId: 'mas',
+      agentDisplayName: 'Med Auto Science',
+    });
+  };
+
+  try {
+    const delivered = project('delivered_paused');
+    assert.deepEqual(
+      delivered.stage_map.map((stage) => [stage.stage_id, stage.state]),
+      [
+        ['01-study_intake', 'completed'],
+        ['08-publication_package_handoff', 'completed'],
+      ],
+    );
+    assert.deepEqual(project('active').stage_map.map((stage) => stage.state), [
+      'completed',
+      'current',
+      'next',
+      'pending',
+    ]);
+    assert.deepEqual(project('paused').stage_map.map((stage) => stage.state), [
+      'completed',
+      'pending',
+      'stopped',
+      'pending',
+    ]);
+    assert.deepEqual(project('stopped').stage_map.map((stage) => stage.state), [
+      'completed',
+      'stopped',
+      'stopped',
+      'stopped',
+    ]);
+
+    const missingBoundary = project('delivered_paused', null);
+    assert.deepEqual(missingBoundary.stage_map.map((stage) => stage.state), [
+      'completed',
+      'pending',
+      'stopped',
+      'pending',
+    ]);
+    assert.equal(
+      missingBoundary.diagnostics.some((diagnostic) =>
+        diagnostic.reason === 'stage_index_last_recorded_stage_id_missing'
+      ),
+      true,
+    );
+    const unresolvedBoundary = project('delivered_paused', 'missing-stage');
+    assert.deepEqual(unresolvedBoundary.stage_map.map((stage) => stage.state), [
+      'completed',
+      'pending',
+      'stopped',
+      'pending',
+    ]);
+    assert.equal(
+      unresolvedBoundary.diagnostics.some((diagnostic) =>
+        diagnostic.reason === 'stage_index_last_recorded_stage_id_unresolved'
+      ),
+      true,
+    );
+  } finally {
+    fs.rmSync(workItemRoot, { recursive: true, force: true });
   }
 });
 
