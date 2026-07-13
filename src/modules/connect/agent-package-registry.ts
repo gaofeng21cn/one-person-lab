@@ -11,6 +11,7 @@ import {
   resolveFirstPartyPackageCatalog,
 } from './agent-package-first-party.ts';
 import { materializeStandardAgentFrameworkLink } from './standard-agent-framework-link.ts';
+import type { ManagedModulePackageChannelSelection } from './system-installation/module-package-channel.ts';
 import { FORBIDDEN_AGENT_PACKAGE_FIELDS, MANIFEST_REQUIRED_FIELDS } from './agent-package-registry-parts/constants.ts';
 import {
   assertManifestMatchesRegistrySelection,
@@ -147,7 +148,38 @@ type PreparedPackage = {
   trustTier: string;
   previousLock: AgentPackageLock | null;
   catalogVersion: ManagedCatalogVersion | null;
+  packageChannelSelection: ManagedModulePackageChannelSelection | null;
 };
+
+function packageChannelSelection(
+  packageId: string,
+  version: ManagedCatalogVersion | null | undefined,
+): ManagedModulePackageChannelSelection | null {
+  if (!version) return null;
+  if (!version.source_artifact_ref
+    || !version.artifact_digest
+    || version.artifact_status !== 'published_immutable'
+    || !version.package_content_digest) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Managed package catalog immutable selection is incomplete.', {
+      package_id: packageId,
+      package_version: version.package_version,
+      source_artifact_ref: version.source_artifact_ref,
+      artifact_digest: version.artifact_digest,
+      artifact_status: version.artifact_status,
+      package_content_digest: version.package_content_digest,
+      failure_code: 'agent_package_catalog_immutable_selection_incomplete',
+    });
+  }
+  return {
+    package_id: packageId,
+    package_version: version.package_version,
+    source_artifact_ref: version.source_artifact_ref,
+    artifact_digest: version.artifact_digest,
+    artifact_status: 'published_immutable',
+    package_content_digest: version.package_content_digest,
+    owner_source_commit: version.owner_source_commit,
+  };
+}
 
 function readRecoveredLockIndex() {
   const index = readLockIndex();
@@ -317,27 +349,17 @@ async function applyManifestPackageLock(
       fs.writeFileSync(payloadPath, catalogVersion.payload_manifest_json, 'utf8');
       manifest = { ...manifest, plugin_source_path: null, plugin_payload_manifest_url: payloadPath };
     }
-    const immutablePackageSource = catalogVersion?.source_artifact_ref
-      && catalogVersion.artifact_digest
-      && catalogVersion.package_content_digest
-      && catalogVersion.owner_source_commit
-      ? {
-          artifactRef: `${catalogVersion.source_artifact_ref.replace(/@sha256:[0-9a-f]{64}$/, '')}@${catalogVersion.artifact_digest}`,
-          archiveSha256: catalogVersion.package_content_digest,
-          ownerSourceCommit: catalogVersion.owner_source_commit,
-          packageVersion: catalogVersion.package_version,
-        }
-      : null;
+    const immutableSelection = packageChannelSelection(manifest.package_id, catalogVersion);
     try {
       manifest = await resolveManifestPhysicalSource(
         manifest,
         input.dryRun === true,
-        immutablePackageSource,
+        immutableSelection,
       );
     } finally {
       if (inlinePayloadRoot) fs.rmSync(inlinePayloadRoot, { recursive: true, force: true });
     }
-    if (!(input.dryRun === true && manifest.plugin_payload_manifest_url)) {
+    if (!(input.dryRun === true && manifest.plugin_payload_manifest_url && !immutableSelection)) {
       verifyManifestContentLock(manifest);
     }
     assertManifestMatchesRegistrySelection(manifest, nextSelection);
@@ -374,6 +396,7 @@ async function applyManifestPackageLock(
       trustTier,
       previousLock: index.packages.find((entry) => entry.package_id === manifest.package_id) ?? null,
       catalogVersion: catalogVersion ?? null,
+      packageChannelSelection: immutableSelection,
     };
   }
 
@@ -507,20 +530,6 @@ async function applyManifestPackageLock(
   const runtimeSourceMutations = new Map<string, ReturnType<typeof applyManagedRuntimeSourceCarrier>>();
   try {
     for (const prepared of ordered) {
-      const packageChannelSelection = prepared.catalogVersion?.source_artifact_ref
-        && prepared.catalogVersion.artifact_digest
-        && prepared.catalogVersion.artifact_status === 'published_immutable'
-        && prepared.catalogVersion.package_content_digest
-        ? {
-            package_id: prepared.manifest.package_id,
-            package_version: prepared.catalogVersion.package_version,
-            source_artifact_ref: prepared.catalogVersion.source_artifact_ref,
-            artifact_digest: prepared.catalogVersion.artifact_digest,
-            artifact_status: 'published_immutable' as const,
-            package_content_digest: prepared.catalogVersion.package_content_digest,
-            owner_source_commit: prepared.catalogVersion.owner_source_commit,
-          }
-        : null;
       runtimeSourceMutations.set(prepared.manifest.package_id, applyManagedRuntimeSourceCarrier({
         config: prepared.manifest.runtime_source_carrier,
         previous: prepared.previousLock?.managed_runtime_source,
@@ -531,7 +540,7 @@ async function applyManifestPackageLock(
         checkoutPath: prepared.manifest.package_id === root.manifest.package_id
           ? input.agentRoot
           : null,
-        packageChannelSelection,
+        packageChannelSelection: prepared.packageChannelSelection,
         transactionId: sha256Text([
           'runtime-source',
           action,

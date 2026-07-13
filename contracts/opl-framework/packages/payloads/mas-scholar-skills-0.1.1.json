@@ -5,6 +5,7 @@
   "package_version": "0.1.1",
   "source_repo": "https://github.com/gaofeng21cn/mas-scholar-skills.git",
   "source_commit": "203296ed8adf43709d60a7356d32bfbf957be326",
+  "source_root": ".",
   "files": [
     {
       "path": ".codex-plugin/plugin.json",

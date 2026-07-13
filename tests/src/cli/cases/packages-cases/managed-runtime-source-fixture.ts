@@ -16,6 +16,14 @@ export function writeManagedRuntimeSourceFixture(input: {
   repoName: string;
   version: string;
   sourceHeadSha: string;
+  packageManifest?: Record<string, unknown>;
+  payloadManifest?: Record<string, unknown>;
+  sourceFiles?: Array<{
+    sourcePath: string;
+    content: string | Buffer;
+    mode?: number;
+  }>;
+  artifactBackedPayload?: boolean;
 }) {
   const blobRoot = path.join(input.root, 'blobs');
   const fakeBin = path.join(input.root, 'bin');
@@ -66,6 +74,14 @@ export function writeManagedRuntimeSourceFixture(input: {
       'printf "handler-ready:%s\\n" "$(cat .runtime-prepared)"',
     ].join('\n'), { mode: 0o755 });
   }
+  for (const file of input.sourceFiles ?? []) {
+    const targetPath = path.resolve(sourceRoot, file.sourcePath);
+    if (!targetPath.startsWith(`${path.resolve(sourceRoot)}${path.sep}`)) {
+      throw new Error(`Fixture source path escapes source root: ${file.sourcePath}`);
+    }
+    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+    fs.writeFileSync(targetPath, file.content, file.mode ? { mode: file.mode } : undefined);
+  }
   execFileSync('tar', ['-czf', archivePath, input.repoName], { cwd: sourceParent });
   const archiveDigest = sha256(archivePath);
   const packageIdByModule: Record<string, string> = {
@@ -77,6 +93,57 @@ export function writeManagedRuntimeSourceFixture(input: {
     scholarskills: 'mas-scholar-skills',
   };
   const packageId = packageIdByModule[input.moduleId] ?? input.moduleId;
+  const sourceArtifactRef = `ghcr.io/fixture/one-person-lab-packages/${packageId}:${input.version}`;
+  const manifestJson = input.packageManifest
+    ? `${JSON.stringify({
+        ...input.packageManifest,
+        package_id: packageId,
+        version: input.version,
+      }, null, 2)}\n`
+    : null;
+  const manifestDigest = manifestJson
+    ? `sha256:${crypto.createHash('sha256').update(manifestJson).digest('hex')}`
+    : null;
+  const payloadManifestJson = input.payloadManifest
+    ? `${JSON.stringify({
+        ...input.payloadManifest,
+        package_id: packageId,
+        package_version: input.version,
+        package_source: {
+          transport: 'same_oci_artifact_source_archive',
+          artifact_ref: sourceArtifactRef,
+          archive_sha256: `sha256:${archiveDigest}`,
+          archive_root: input.repoName,
+        },
+        files: Array.isArray(input.payloadManifest.files)
+          ? input.payloadManifest.files.map((candidate) => {
+              const file = candidate && typeof candidate === 'object' && !Array.isArray(candidate)
+                ? candidate as Record<string, unknown>
+                : {};
+              return input.artifactBackedPayload === false
+                ? file
+                : {
+                    ...file,
+                    source_artifact_ref: sourceArtifactRef,
+                    content_utf8: undefined,
+                    content_base64: undefined,
+                    source_url: undefined,
+                  };
+            })
+          : [],
+      }, null, 2)}\n`
+    : null;
+  const payloadManifestDigest = payloadManifestJson
+    ? `sha256:${crypto.createHash('sha256').update(payloadManifestJson).digest('hex')}`
+    : null;
+  const packageArtifactManifest = {
+    schemaVersion: 2,
+    layers: [{
+      mediaType: PACKAGE_LAYER_MEDIA_TYPE,
+      digest: `sha256:${archiveDigest}`,
+    }],
+  };
+  const artifactDigest = `sha256:${crypto.createHash('sha256').update(JSON.stringify(packageArtifactManifest)).digest('hex')}`;
   const channelManifest = {
     release_set_generation: input.version,
     package_catalog_surface_kind: 'opl_package_catalog.v1',
@@ -88,8 +155,23 @@ export function writeManagedRuntimeSourceFixture(input: {
           versions: [{
             package_version: input.version,
             selection_status: 'selected_for_release_set',
-            source_artifact_ref: `ghcr.io/fixture/one-person-lab-packages/${packageId}:${input.version}`,
-            artifact_digest: `sha256:${'a'.repeat(64)}`,
+            ...(manifestJson && manifestDigest ? {
+              manifest_url: `opl+oci://${sourceArtifactRef}#/package-manifest.json`,
+              manifest_sha256: manifestDigest,
+              manifest_json: manifestJson,
+              package_manifest: {
+                ref: `opl+oci://${sourceArtifactRef}#/package-manifest.json`,
+                sha256: manifestDigest,
+              },
+              content_digest: manifestDigest,
+            } : {}),
+            ...(payloadManifestJson && payloadManifestDigest ? {
+              payload_digest: payloadManifestDigest,
+              payload_manifest_json: payloadManifestJson,
+              payload_manifest_sha256: payloadManifestDigest,
+            } : {}),
+            source_artifact_ref: sourceArtifactRef,
+            artifact_digest: artifactDigest,
             artifact_status: 'published_immutable',
             package_content_digest: `sha256:${archiveDigest}`,
             owner_source_commit: input.sourceHeadSha,
@@ -107,12 +189,7 @@ export function writeManagedRuntimeSourceFixture(input: {
         digest: `sha256:${channelDigest}`,
       }],
     },
-    [`fixture/one-person-lab-packages/${packageId}`]: {
-      layers: [{
-        mediaType: PACKAGE_LAYER_MEDIA_TYPE,
-        digest: `sha256:${archiveDigest}`,
-      }],
-    },
+    [`fixture/one-person-lab-packages/${packageId}`]: packageArtifactManifest,
   };
   const blobs = {
     [`sha256:${channelDigest}`]: channelManifestPath,
@@ -149,5 +226,7 @@ export function writeManagedRuntimeSourceFixture(input: {
   return {
     PATH: `${fakeBin}:${process.env.PATH ?? ''}`,
     OPL_PACKAGES_OWNER: 'fixture',
+    OPL_FIXTURE_ARTIFACT_DIGEST: artifactDigest,
+    OPL_FIXTURE_ARCHIVE_DIGEST: `sha256:${archiveDigest}`,
   };
 }

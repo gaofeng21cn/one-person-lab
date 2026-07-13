@@ -588,7 +588,7 @@ export function applyManagedRuntimeSourceCarrier(input: {
         staged_removal_paths: [],
       };
     }
-    const preview = sameCheckout && before ? before : {
+    const baseline = sameCheckout && before ? before : {
       surface_kind: 'opl_agent_package_managed_runtime_source' as const,
       status: 'validated_no_write' as const,
       carrier_kind: input.config.carrier_kind,
@@ -612,6 +612,16 @@ export function applyManagedRuntimeSourceCarrier(input: {
       preparation_root: null,
       preparation_scope: 'managed_source_root' as const,
     };
+    const preview = input.packageChannelSelection
+      ? {
+          ...baseline,
+          channel_version: input.packageChannelSelection.package_version,
+          artifact_ref: `${input.packageChannelSelection.source_artifact_ref.replace(/@sha256:[0-9a-f]{64}$/, '')}@${input.packageChannelSelection.artifact_digest}`,
+          layer_digest: null,
+          source_archive_sha256: input.packageChannelSelection.package_content_digest.replace(/^sha256:/, ''),
+          source_git_head_sha: input.packageChannelSelection.owner_source_commit ?? null,
+        }
+      : baseline;
     return {
       kind: 'none',
       module_id: input.config.module_id,

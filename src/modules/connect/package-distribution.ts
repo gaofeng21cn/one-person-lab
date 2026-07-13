@@ -623,6 +623,19 @@ function stringValue(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
+function packageRelativePath(value: string | null, field: string, allowRoot = false) {
+  if (!value || value.includes('\\') || path.posix.isAbsolute(value)) {
+    throw new Error(`${field} must be a relative POSIX package path.`);
+  }
+  const normalized = path.posix.normalize(value);
+  if (normalized === '..'
+    || normalized.startsWith('../')
+    || (!allowRoot && normalized === '.')) {
+    throw new Error(`${field} must stay inside the package source archive root.`);
+  }
+  return normalized;
+}
+
 function dependencyRequirements(source: Record<string, unknown>) {
   const dependencies = Array.isArray(source.capability_dependencies) ? source.capability_dependencies : [];
   return dependencies.map((candidate) => stringRecord(candidate))
@@ -672,6 +685,11 @@ function buildCurrentPackageCatalog(manifest: OplPackageManifest) {
     }
     const payloadPath = path.join(path.dirname(manifestPath), payloadRef);
     const payload = JSON.parse(fs.readFileSync(payloadPath, 'utf8')) as Record<string, unknown>;
+    const payloadSourceRoot = packageRelativePath(
+      stringValue(payload.source_root),
+      `${payloadRef}.source_root`,
+      true,
+    );
     const normalizedManifest = {
       ...packageManifest,
       package_id: packageId,
@@ -685,6 +703,7 @@ function buildCurrentPackageCatalog(manifest: OplPackageManifest) {
       package_id: packageId,
       package_version: packageVersion,
       source_commit: packageEntry.owner_source_commit,
+      source_root: undefined,
       ...(trackedSourceCommit && trackedSourceCommit !== packageEntry.owner_source_commit
         ? { migration_source_commit: trackedSourceCommit }
         : {}),
@@ -692,17 +711,25 @@ function buildCurrentPackageCatalog(manifest: OplPackageManifest) {
         transport: 'same_oci_artifact_source_archive',
         artifact_ref: sourceArtifactRef,
         archive_sha256: packageEntry.package_content_digest,
+        archive_root: spec.repo_name,
       },
       files: Array.isArray(payload.files)
-        ? payload.files.map((candidate) => {
+          ? payload.files.map((candidate) => {
             const file = stringRecord(candidate) ?? {};
-            const sourceUrl = stringValue(file.source_url);
-            const sourcePath = stringValue(file.path);
+            const payloadFilePath = packageRelativePath(
+              stringValue(file.path),
+              `${payloadRef}.files[].path`,
+            );
+            const sourcePath = payloadSourceRoot === '.'
+              ? payloadFilePath
+              : path.posix.join(payloadSourceRoot, payloadFilePath);
             return {
               ...file,
+              path: payloadFilePath,
               source_path: sourcePath,
               source_artifact_ref: sourceArtifactRef,
-              ...(sourceUrl ? { migration_source_url: sourceUrl } : {}),
+              content_utf8: undefined,
+              content_base64: undefined,
               source_url: undefined,
             };
           })

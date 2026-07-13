@@ -44,7 +44,12 @@ function writeFirstPartyCatalogFixture(version: string, ownerSourceCommit: strin
   execFileSync('tar', ['-czf', archivePath, 'opl-flow'], { cwd: sourceParent });
   const archiveSha256 = crypto.createHash('sha256').update(fs.readFileSync(archivePath)).digest('hex');
   const sourceArtifactRef = `ghcr.io/fixture/one-person-lab-packages/opl-flow:${version}`;
-  const artifactDigest = `sha256:${crypto.createHash('sha256').update(`artifact:${version}`).digest('hex')}`;
+  const packageArtifactManifest = {
+    schemaVersion: 2,
+    layers: [{ mediaType: PACKAGE_LAYER_MEDIA_TYPE, digest: `sha256:${archiveSha256}` }],
+  };
+  const packageArtifactManifestJson = JSON.stringify(packageArtifactManifest);
+  const artifactDigest = `sha256:${crypto.createHash('sha256').update(packageArtifactManifestJson).digest('hex')}`;
   const manifest = {
     ...agentPackageManifest({
       packageId: 'opl-flow',
@@ -64,17 +69,20 @@ function writeFirstPartyCatalogFixture(version: string, ownerSourceCommit: strin
       transport: 'same_oci_artifact_source_archive',
       artifact_ref: sourceArtifactRef,
       archive_sha256: `sha256:${archiveSha256}`,
+      archive_root: 'opl-flow',
     },
     files: [
       {
         path: '.codex-plugin/plugin.json',
         source_path: '.codex-plugin/plugin.json',
+        source_artifact_ref: sourceArtifactRef,
         migration_source_url: `https://raw.githubusercontent.com/fixture/opl-flow/${ownerSourceCommit}/.codex-plugin/plugin.json`,
         sha256: `sha256:${crypto.createHash('sha256').update(pluginJson).digest('hex')}`,
       },
       {
         path: 'skills/opl-flow/SKILL.md',
         source_path: 'skills/opl-flow/SKILL.md',
+        source_artifact_ref: sourceArtifactRef,
         migration_source_url: `https://raw.githubusercontent.com/fixture/opl-flow/${ownerSourceCommit}/skills/opl-flow/SKILL.md`,
         sha256: `sha256:${crypto.createHash('sha256').update(skillMarkdown).digest('hex')}`,
       },
@@ -120,9 +128,7 @@ function writeFirstPartyCatalogFixture(version: string, ownerSourceCommit: strin
     'fixture/one-person-lab-manifest': {
       layers: [{ mediaType: CHANNEL_MANIFEST_LAYER_MEDIA_TYPE, digest: channelDigest }],
     },
-    'fixture/one-person-lab-packages/opl-flow': {
-      layers: [{ mediaType: PACKAGE_LAYER_MEDIA_TYPE, digest: `sha256:${archiveSha256}` }],
-    },
+    'fixture/one-person-lab-packages/opl-flow': packageArtifactManifest,
   };
   const blobs = {
     [channelDigest]: channelManifestPath,

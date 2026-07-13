@@ -332,8 +332,26 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(channelManifest.packages.framework_core.artifact, manifest.packages.framework_core.artifact);
   assert.equal(channelManifest.package_catalog_surface_kind, 'opl_package_catalog.v1');
   const packageCatalog = channelManifest.packages.package_catalog;
+  const expectedSourceRoots: Record<string, string> = {
+    mas: 'plugins/med-autoscience',
+    mag: 'plugins/med-autogrant',
+    rca: 'plugins/redcube-ai',
+    oma: 'plugins/opl-meta-agent',
+    obf: 'plugins/opl-bookforge',
+    'mas-scholar-skills': '.',
+    'opl-flow': '.',
+  };
+  const expectedArchiveRoots: Record<string, string> = {
+    mas: 'med-autoscience',
+    mag: 'med-autogrant',
+    rca: 'redcube-ai',
+    oma: 'opl-meta-agent',
+    obf: 'opl-bookforge',
+    'mas-scholar-skills': 'mas-scholar-skills',
+    'opl-flow': 'opl-flow',
+  };
   assert.equal(Object.keys(packageCatalog).length, 7);
-  for (const entry of Object.values(packageCatalog) as Array<Record<string, any>>) {
+  for (const [catalogPackageId, entry] of Object.entries(packageCatalog) as Array<[string, Record<string, any>]>) {
     assert.equal(entry.homebrew_formula, undefined);
     assert.equal(entry.homebrew_cask, undefined);
     assert.equal(entry.versions.filter((version: Record<string, unknown>) => version.selection_status === 'selected_for_release_set').length, 1);
@@ -351,6 +369,21 @@ test('package archive builder writes channel manifest checksums git source and r
       const normalizedPayload = JSON.parse(version.payload_manifest_json);
       if (version.selection_status === 'selected_for_release_set') {
         assert.equal(normalizedPayload.source_commit, version.owner_source_commit);
+        assert.equal(normalizedPayload.package_source.transport, 'same_oci_artifact_source_archive');
+        assert.equal(normalizedPayload.package_source.artifact_ref, version.source_artifact_ref);
+        assert.equal(normalizedPayload.package_source.archive_sha256, version.package_content_digest);
+        assert.equal(normalizedPayload.package_source.archive_root, expectedArchiveRoots[catalogPackageId]);
+        assert.equal(Object.hasOwn(normalizedPayload, 'source_root'), false);
+        for (const file of normalizedPayload.files) {
+          const expectedSourcePath = expectedSourceRoots[catalogPackageId] === '.'
+            ? file.path
+            : `${expectedSourceRoots[catalogPackageId]}/${file.path}`;
+          assert.equal(file.source_path, expectedSourcePath);
+          assert.equal(file.source_artifact_ref, version.source_artifact_ref);
+          assert.equal(Object.hasOwn(file, 'source_url'), false);
+          assert.equal(Object.hasOwn(file, 'content_utf8'), false);
+          assert.equal(Object.hasOwn(file, 'content_base64'), false);
+        }
       }
       if (normalizedPayload.migration_source_commit) {
         assert.notEqual(normalizedPayload.migration_source_commit, normalizedPayload.source_commit);
