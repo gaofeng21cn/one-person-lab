@@ -4,6 +4,11 @@ import path from 'node:path';
 
 import { parseJsonText } from '../../kernel/json-file.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import {
+  normalizePmcid,
+  parseEuropePmcSearch,
+  parsePubmedSummary,
+} from './opl-connect-reference-ncbi.ts';
 
 export type ReferenceVerificationInput = {
   referencesFile: string;
@@ -16,6 +21,8 @@ export type ReferenceVerificationInput = {
 const REFERENCE_VERIFICATION_PROVIDER_IDS = [
   'crossref',
   'openalex',
+  'pubmed',
+  'pmc',
   'semantic-scholar',
   'crossmark',
   'publisher',
@@ -27,6 +34,7 @@ type ReferenceRecord = {
   id: string;
   doi: string | null;
   pmid: string | null;
+  pmcid: string | null;
   title: string | null;
 };
 
@@ -34,7 +42,7 @@ type ProviderId = ReferenceVerificationProviderId;
 type RetryAttempt = { attempt: number; status: string; http_status: number | null };
 type ProviderMatchStatus = 'identifier_matched' | 'metadata_conflict' | 'provider_found' | 'deferred' | 'error';
 type MismatchDetail = {
-  field: 'doi' | 'pmid' | 'title';
+  field: 'doi' | 'pmid' | 'pmcid' | 'title';
   expected: string;
   actual: string;
   normalized_expected: string;
@@ -42,14 +50,14 @@ type MismatchDetail = {
 };
 type ProviderEvidence = {
   reference_id: string;
-  provider: 'crossref' | 'openalex' | 'semantic_scholar' | 'crossmark' | 'publisher';
+  provider: 'crossref' | 'openalex' | 'pubmed' | 'pmc' | 'semantic_scholar' | 'crossmark' | 'publisher';
   provider_id: ProviderId;
   lookup_status: 'found' | 'not_found' | 'deferred' | 'error';
   status: 'matched' | 'deferred';
   match_schema_version: 'strict_provider_match_v1';
   match_status: ProviderMatchStatus;
   deferred_reason?: string;
-  match_basis: 'doi' | 'pmid' | 'title' | 'none';
+  match_basis: 'doi' | 'pmid' | 'pmcid' | 'title' | 'none';
   receipt_ref: string;
   matched_identifiers: Record<string, string>;
   provider_identifiers: Record<string, string>;
@@ -58,6 +66,8 @@ type ProviderEvidence = {
     title?: string;
     year?: string;
     journal?: string;
+    authors?: string[];
+    abstract?: string;
   };
   retraction_or_update_flags: Record<string, unknown>;
   verification_scope: Record<string, unknown>;
@@ -69,6 +79,7 @@ type ProviderEvidence = {
   normalized: {
     doi: string | null;
     pmid: string | null;
+    pmcid: string | null;
     title: string | null;
   };
   cache: {
@@ -83,6 +94,8 @@ type ProviderEvidenceDraft = Omit<ProviderEvidence, 'receipt_ref'>;
 
 const DEFAULT_CROSSREF_API_BASE = 'https://api.crossref.org';
 const DEFAULT_OPENALEX_API_BASE = 'https://api.openalex.org';
+const DEFAULT_PUBMED_EUTILS_BASE = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils';
+const DEFAULT_EUROPE_PMC_API_BASE = 'https://www.ebi.ac.uk/europepmc/webservices/rest';
 const DEFAULT_SEMANTIC_SCHOLAR_API_BASE = 'https://api.semanticscholar.org/graph/v1';
 const DEFAULT_PUBLISHER_DOI_BASE = 'https://doi.org';
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -149,13 +162,17 @@ function loadReferences(filePath: string) {
 function normalizeReference(value: unknown, index: number): ReferenceRecord {
   const record = asRecord(value);
   const doi = normalizeDoi(asString(record.doi) ?? asString(record.DOI));
-  const pmid = asString(record.pmid);
+  const pmid = asString(record.pmid) ?? asString(record.PMID) ?? asString(record.PubMed);
+  const pmcid = normalizePmcid(
+    asString(record.pmcid) ?? asString(record.PMCID) ?? asString(record.PMC),
+  );
   const title = asString(record.title);
-  const fallbackId = crypto.createHash('sha256').update(JSON.stringify({ doi, pmid, title, index })).digest('hex').slice(0, 12);
+  const fallbackId = crypto.createHash('sha256').update(JSON.stringify({ doi, pmid, pmcid, title, index })).digest('hex').slice(0, 12);
   return {
     id: asString(record.id) ?? asString(record.reference_id) ?? fallbackId,
     doi,
     pmid,
+    pmcid,
     title,
   };
 }
@@ -176,6 +193,7 @@ function cacheRef(cacheRoot: string | undefined, providerId: ProviderId, referen
     reference_id: reference.id,
     doi: reference.doi,
     pmid: reference.pmid,
+    pmcid: reference.pmcid,
     title: reference.title,
   })).digest('hex');
   return path.join(path.resolve(cacheRoot), providerId, `${digest}.json`);
@@ -287,6 +305,7 @@ function deferredEvidence(reference: ReferenceRecord, providerId: ProviderId, re
     normalized: {
       doi: reference.doi,
       pmid: reference.pmid,
+      pmcid: reference.pmcid,
       title: reference.title,
     },
     cache: {
@@ -320,6 +339,7 @@ function providerErrorEvidence(reference: ReferenceRecord, providerId: ProviderI
     normalized: {
       doi: reference.doi,
       pmid: reference.pmid,
+      pmcid: reference.pmcid,
       title: reference.title,
     },
     cache: {
@@ -360,7 +380,7 @@ function foundEvidence(
     provider_identifiers: Record<string, string | null | undefined>;
     metadata: ProviderEvidence['metadata'];
     retraction_or_update_flags: Record<string, unknown>;
-    normalized: Pick<ReferenceRecord, 'doi' | 'pmid' | 'title'>;
+    normalized: Pick<ReferenceRecord, 'doi' | 'pmid' | 'pmcid' | 'title'>;
     retry_attempts: RetryAttempt[];
     verification_scope?: Record<string, unknown>;
   },
@@ -380,7 +400,7 @@ function foundEvidence(
   );
   const deferredReason = matchStatus === 'metadata_conflict'
     ? `${input.provider_id} provider metadata conflicts with input reference`
-    : `${input.provider_id} provider returned an item but no DOI/PMID identifier matched the input reference`;
+    : `${input.provider_id} provider returned an item but no DOI/PMID/PMCID identifier matched the input reference`;
   return {
     reference_id: reference.id,
     provider: input.provider,
@@ -425,11 +445,12 @@ function foundEvidence(
 
 function mismatchDetailsForReference(
   reference: ReferenceRecord,
-  actual: Pick<ReferenceRecord, 'doi' | 'pmid' | 'title'>,
+  actual: Pick<ReferenceRecord, 'doi' | 'pmid' | 'pmcid' | 'title'>,
 ): MismatchDetail[] {
   const details: MismatchDetail[] = [];
   addMismatch(details, 'doi', reference.doi, actual.doi, normalizeDoi);
   addMismatch(details, 'pmid', reference.pmid, actual.pmid, normalizePmid);
+  addMismatch(details, 'pmcid', reference.pmcid, actual.pmcid, normalizePmcid);
   addMismatch(details, 'title', reference.title, actual.title, normalizeTitleForCompare);
   return details;
 }
@@ -455,11 +476,12 @@ function addMismatch(
 
 function matchedIdentifiersForReference(
   reference: ReferenceRecord,
-  actual: Pick<ReferenceRecord, 'doi' | 'pmid'>,
+  actual: Pick<ReferenceRecord, 'doi' | 'pmid' | 'pmcid'>,
 ) {
   return compactIdentifiers({
     doi: reference.doi && actual.doi && normalizeDoi(reference.doi) === normalizeDoi(actual.doi) ? normalizeDoi(actual.doi) : null,
     pmid: reference.pmid && actual.pmid && normalizePmid(reference.pmid) === normalizePmid(actual.pmid) ? normalizePmid(actual.pmid) : null,
+    pmcid: reference.pmcid && actual.pmcid && normalizePmcid(reference.pmcid) === normalizePmcid(actual.pmcid) ? normalizePmcid(actual.pmcid) : null,
   });
 }
 
@@ -508,6 +530,7 @@ async function verifyCrossref(reference: ReferenceRecord, maxRetries: number, ti
     normalized: {
       doi,
       pmid: null,
+      pmcid: null,
       title,
     },
     retry_attempts: retryAttempts,
@@ -556,12 +579,13 @@ async function verifyOpenAlex(reference: ReferenceRecord, maxRetries: number, ti
   const pmid = asString(ids.pmid)
     ?.replace(/^https?:\/\/pubmed\.ncbi\.nlm\.nih\.gov\//i, '')
     .replace(/\/$/, '') || null;
+  const pmcid = normalizePmcid(asString(ids.pmcid) ?? asString(ids.pmc));
   const title = asString(item.title) ?? asString(item.display_name);
   return foundEvidence(reference, {
     provider: 'openalex',
     provider_id: 'openalex',
     match_basis: reference.doi ? 'doi' : 'title',
-    provider_identifiers: { doi, pmid, openalex: asString(item.id) },
+    provider_identifiers: { doi, pmid, pmcid, openalex: asString(item.id) },
     metadata: compactMetadata({
       title,
       year: asString(item.publication_year),
@@ -571,9 +595,96 @@ async function verifyOpenAlex(reference: ReferenceRecord, maxRetries: number, ti
     normalized: {
       doi,
       pmid,
+      pmcid,
       title,
     },
     retry_attempts: retryAttempts,
+  });
+}
+
+async function verifyPubmed(reference: ReferenceRecord, maxRetries: number, timeout: number): Promise<ProviderEvidenceDraft> {
+  if (!reference.pmid) {
+    return deferredEvidence(reference, 'pubmed', 'pubmed provider receipt requirement needs a PMID');
+  }
+  const baseUrl = apiBase('OPL_CONNECT_PUBMED_EUTILS_BASE', DEFAULT_PUBMED_EUTILS_BASE);
+  const url = new URL(`${baseUrl}/esummary.fcgi`);
+  url.searchParams.set('db', 'pubmed');
+  url.searchParams.set('id', reference.pmid);
+  url.searchParams.set('retmode', 'json');
+  url.searchParams.set('tool', 'one-person-lab');
+  const { json, retryAttempts } = await fetchJsonWithRetry(url, maxRetries, 'pubmed', timeout);
+  const record = parsePubmedSummary(json, reference.pmid);
+  if (!record) {
+    return deferredEvidence(reference, 'pubmed', 'pubmed provider did not return a matching summary');
+  }
+  return foundEvidence(reference, {
+    provider: 'pubmed',
+    provider_id: 'pubmed',
+    match_basis: 'pmid',
+    provider_identifiers: record.identifiers,
+    metadata: record.metadata,
+    retraction_or_update_flags: {},
+    normalized: record.normalized,
+    retry_attempts: retryAttempts,
+    verification_scope: {
+      evidence_source: 'ncbi_pubmed_esummary',
+      full_text_available: record.fullTextAvailable,
+      full_text_body_verified: false,
+    },
+  });
+}
+
+async function verifyPmc(reference: ReferenceRecord, maxRetries: number, timeout: number): Promise<ProviderEvidenceDraft> {
+  if (!reference.pmcid && !reference.pmid && !reference.doi) {
+    return deferredEvidence(reference, 'pmc', 'pmc provider receipt requirement needs a PMCID, PMID, or DOI');
+  }
+  const baseUrl = apiBase('OPL_CONNECT_EUROPE_PMC_API_BASE', DEFAULT_EUROPE_PMC_API_BASE);
+  const url = new URL(`${baseUrl}/search`);
+  const query = reference.pmcid
+    ? `PMCID:${reference.pmcid}`
+    : reference.pmid
+      ? `EXT_ID:${reference.pmid} AND SRC:MED`
+      : `DOI:\"${reference.doi}\"`;
+  url.searchParams.set('query', query);
+  url.searchParams.set('format', 'json');
+  url.searchParams.set('resultType', 'core');
+  url.searchParams.set('pageSize', '1');
+  const { json, retryAttempts } = await fetchJsonWithRetry(url, maxRetries, 'pmc', timeout);
+  const record = parseEuropePmcSearch(json);
+  if (!record) {
+    return deferredEvidence(reference, 'pmc', 'pmc provider did not return a matching Europe PMC record');
+  }
+
+  let fullTextBodyVerified = false;
+  let fullTextProbeStatus = record.fullTextAvailable ? 'not_attempted' : 'not_available';
+  if (record.fullTextAvailable && record.normalized.pmcid) {
+    const articleUrl = new URL(`${baseUrl}/${encodeURIComponent(record.normalized.pmcid)}/fullTextXML`);
+    try {
+      const probe = await fetchTextWithRetry(articleUrl, maxRetries, 'pmc', timeout, {
+        headers: { accept: 'application/xml,text/xml;q=0.9' },
+      });
+      fullTextBodyVerified = /<article\b/i.test(probe.text);
+      fullTextProbeStatus = fullTextBodyVerified ? 'verified' : 'invalid_payload';
+    } catch {
+      fullTextProbeStatus = 'request_failed';
+    }
+  }
+
+  return foundEvidence(reference, {
+    provider: 'pmc',
+    provider_id: 'pmc',
+    match_basis: reference.pmcid ? 'pmcid' : reference.pmid ? 'pmid' : 'doi',
+    provider_identifiers: record.identifiers,
+    metadata: record.metadata,
+    retraction_or_update_flags: {},
+    normalized: record.normalized,
+    retry_attempts: retryAttempts,
+    verification_scope: {
+      evidence_source: 'europe_pmc_core_metadata',
+      full_text_available: record.fullTextAvailable,
+      full_text_body_verified: fullTextBodyVerified,
+      full_text_probe_status: fullTextProbeStatus,
+    },
   });
 }
 
@@ -601,12 +712,13 @@ async function verifySemanticScholar(reference: ReferenceRecord, maxRetries: num
   const venue = asRecord(item.publicationVenue);
   const doi = normalizeDoi(asString(externalIds.DOI) ?? asString(externalIds.doi));
   const pmid = asString(externalIds.PMID) ?? asString(externalIds.PubMed);
+  const pmcid = normalizePmcid(asString(externalIds.PMCID) ?? asString(externalIds.PMC));
   const title = asString(item.title);
   return foundEvidence(reference, {
     provider: 'semantic_scholar',
     provider_id: 'semantic-scholar',
     match_basis: reference.doi ? 'doi' : 'title',
-    provider_identifiers: { doi, pmid, semantic_scholar: asString(item.paperId) },
+    provider_identifiers: { doi, pmid, pmcid, semantic_scholar: asString(item.paperId) },
     metadata: compactMetadata({
       title,
       year: asString(item.year),
@@ -616,6 +728,7 @@ async function verifySemanticScholar(reference: ReferenceRecord, maxRetries: num
     normalized: {
       doi,
       pmid,
+      pmcid,
       title,
     },
     retry_attempts: retryAttempts,
@@ -661,6 +774,7 @@ async function verifyPublisher(reference: ReferenceRecord, maxRetries: number, t
     normalized: {
       doi: reference.doi,
       pmid: null,
+      pmcid: null,
       title,
     },
     retry_attempts: retryAttempts,
@@ -670,6 +784,8 @@ async function verifyPublisher(reference: ReferenceRecord, maxRetries: number, t
 async function verifyProvider(reference: ReferenceRecord, providerId: ProviderId, maxRetries: number, timeout: number): Promise<ProviderEvidenceDraft> {
   if (providerId === 'crossref') return verifyCrossref(reference, maxRetries, timeout);
   if (providerId === 'openalex') return verifyOpenAlex(reference, maxRetries, timeout);
+  if (providerId === 'pubmed') return verifyPubmed(reference, maxRetries, timeout);
+  if (providerId === 'pmc') return verifyPmc(reference, maxRetries, timeout);
   if (providerId === 'semantic-scholar') return verifySemanticScholar(reference, maxRetries, timeout);
   if (providerId === 'crossmark') return verifyCrossmark(reference, maxRetries, timeout);
   return verifyPublisher(reference, maxRetries, timeout);
@@ -753,7 +869,7 @@ function verificationScope(providerId: ProviderId): Record<string, unknown> {
 }
 
 function identifiersFromReference(reference: ReferenceRecord): Record<string, string> {
-  return compactIdentifiers({ doi: reference.doi, pmid: reference.pmid });
+  return compactIdentifiers({ doi: reference.doi, pmid: reference.pmid, pmcid: reference.pmcid });
 }
 
 function metadataFromReference(reference: ReferenceRecord): ProviderEvidence['metadata'] {
@@ -766,10 +882,18 @@ function compactIdentifiers(input: Record<string, string | null | undefined>): R
   );
 }
 
-function compactMetadata(input: { title?: string | null; year?: string | null; journal?: string | null }): ProviderEvidence['metadata'] {
+function compactMetadata(input: {
+  title?: string | null;
+  year?: string | null;
+  journal?: string | null;
+  authors?: string[];
+  abstract?: string | null;
+}): ProviderEvidence['metadata'] {
   return Object.fromEntries(
-    Object.entries(input).filter((entry): entry is [string, string] => typeof entry[1] === 'string' && entry[1].length > 0),
-  );
+    Object.entries(input).filter(([, value]) =>
+      Array.isArray(value) ? value.length > 0 : typeof value === 'string' && value.length > 0
+    ),
+  ) as ProviderEvidence['metadata'];
 }
 
 function firstString(value: unknown): string | null {

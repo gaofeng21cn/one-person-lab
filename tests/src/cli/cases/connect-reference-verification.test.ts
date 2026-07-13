@@ -3,6 +3,97 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { runOplConnectReferenceVerification } from '../../../../src/modules/connect/opl-connect-reference-verification.ts';
 import { assert, fs, os, path, runCliAsync, test } from '../helpers.ts';
 
+test('reference providers materialize PubMed and PMC receipts without domain authority', async () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-reference-ncbi-'));
+  const referencesFile = path.join(fixtureRoot, 'references.json');
+  fs.writeFileSync(referencesFile, JSON.stringify([{
+    id: 'ref-ncbi',
+    doi: '10.1234/ncbi-example',
+    pmid: '123456',
+    pmcid: 'PMC7654321',
+    title: 'NCBI provider receipt example',
+  }]), 'utf8');
+
+  const originalFetch = globalThis.fetch;
+  const originalPubmedBase = process.env.OPL_CONNECT_PUBMED_EUTILS_BASE;
+  const originalEuropePmcBase = process.env.OPL_CONNECT_EUROPE_PMC_API_BASE;
+  process.env.OPL_CONNECT_PUBMED_EUTILS_BASE = 'https://pubmed.test';
+  process.env.OPL_CONNECT_EUROPE_PMC_API_BASE = 'https://europe-pmc.test';
+  globalThis.fetch = async (input) => {
+    const url = new URL(input instanceof Request ? input.url : input.toString());
+    if (url.hostname === 'pubmed.test') {
+      return new Response(JSON.stringify({
+        result: {
+          uids: ['123456'],
+          '123456': {
+            uid: '123456',
+            title: 'NCBI provider receipt example',
+            pubdate: '2026 Apr',
+            fulljournalname: 'Journal of Provider Receipts',
+            authors: [{ name: 'Ada Researcher' }],
+            articleids: [
+              { idtype: 'doi', value: '10.1234/ncbi-example' },
+              { idtype: 'pmc', value: 'PMC7654321' },
+            ],
+          },
+        },
+      }), { headers: { 'content-type': 'application/json' } });
+    }
+    if (url.hostname === 'europe-pmc.test' && url.pathname.endsWith('/fullTextXML')) {
+      return new Response('<article><front><article-meta /></front></article>', {
+        headers: { 'content-type': 'application/xml' },
+      });
+    }
+    if (url.hostname === 'europe-pmc.test') {
+      return new Response(JSON.stringify({
+        resultList: {
+          result: [{
+            id: '123456',
+            pmid: '123456',
+            pmcid: 'PMC7654321',
+            doi: '10.1234/ncbi-example',
+            title: 'NCBI provider receipt example',
+            pubYear: '2026',
+            journalTitle: 'Journal of Provider Receipts',
+            abstractText: 'Structured provider metadata.',
+            authorList: { author: [{ fullName: 'Ada Researcher' }] },
+            inEPMC: 'Y',
+            isOpenAccess: 'Y',
+          }],
+        },
+      }), { headers: { 'content-type': 'application/json' } });
+    }
+    return new Response(JSON.stringify({ error: 'not_found' }), { status: 404 });
+  };
+
+  try {
+    const result = await runOplConnectReferenceVerification({
+      referencesFile,
+      providers: ['pubmed', 'pmc'],
+      maxRetries: 0,
+    });
+    const report = result.opl_connect_reference_verification;
+    assert.deepEqual(report.provider_evidence.map((entry) => entry.provider_id), ['pubmed', 'pmc']);
+    assert.equal(report.provider_evidence.every((entry) => entry.status === 'matched'), true);
+    assert.equal(report.provider_evidence.every((entry) => entry.normalized.pmcid === 'PMC7654321'), true);
+    assert.deepEqual(report.provider_evidence[0].metadata.authors, ['Ada Researcher']);
+    assert.equal(report.provider_evidence[0].verification_scope.full_text_available, true);
+    assert.equal(report.provider_evidence[0].verification_scope.full_text_body_verified, false);
+    assert.equal(report.provider_evidence[1].metadata.abstract, 'Structured provider metadata.');
+    assert.equal(report.provider_evidence[1].verification_scope.full_text_available, true);
+    assert.equal(report.provider_evidence[1].verification_scope.full_text_body_verified, true);
+    assert.equal(report.provider_receipts.length, 2);
+    assert.equal(report.no_authority_boundary.can_write_domain_truth, false);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalPubmedBase === undefined) delete process.env.OPL_CONNECT_PUBMED_EUTILS_BASE;
+    else process.env.OPL_CONNECT_PUBMED_EUTILS_BASE = originalPubmedBase;
+    if (originalEuropePmcBase === undefined) delete process.env.OPL_CONNECT_EUROPE_PMC_API_BASE;
+    else process.env.OPL_CONNECT_EUROPE_PMC_API_BASE = originalEuropePmcBase;
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('reference providers normalize OpenAlex and both Semantic Scholar PMID fields', async () => {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-reference-pmid-normalization-'));
   const referencesFile = path.join(fixtureRoot, 'references.json');

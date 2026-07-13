@@ -61,17 +61,19 @@ test('reference verification provider registry owns defaults and aliases', () =>
   assert.deepEqual(referenceVerificationProviderIds(), [
     'crossref',
     'openalex',
+    'pubmed',
+    'pmc',
     'semantic-scholar',
     'crossmark',
     'publisher',
   ]);
   assert.deepEqual(normalizeReferenceVerificationProviders([]), referenceVerificationProviderIds());
   assert.deepEqual(
-    normalizeReferenceVerificationProviders(['openalex,semantic_scholar', 'openalex']),
-    ['openalex', 'semantic-scholar'],
+    normalizeReferenceVerificationProviders(['openalex,semantic_scholar,pubmed,pmc', 'openalex']),
+    ['openalex', 'semantic-scholar', 'pubmed', 'pmc'],
   );
   assert.throws(
-    () => normalizeReferenceVerificationProviders(['pubmed']),
+    () => normalizeReferenceVerificationProviders(['unsupported-provider']),
     (error: unknown) => {
       assert.equal((error as { code?: string }).code, 'codex_command_failed');
       assert.deepEqual(
@@ -217,15 +219,4 @@ test('connect scientific search requires provider and query', () => {
   assert.equal(compatibility.status, 2);
   assert.equal(compatibility.payload.error.code, 'unknown_command');
 
-  const retiredVerifier = runCliFailure([
-    'connect',
-    'references',
-    'verify',
-    '--references-file',
-    'unused.json',
-    '--providers',
-    'pubmed',
-  ]);
-  assert.equal(retiredVerifier.status, 2);
-  assert.equal(retiredVerifier.payload.error.code, 'cli_usage_error');
 });
