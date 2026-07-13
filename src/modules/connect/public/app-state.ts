@@ -5,6 +5,7 @@ export {
   runOplAgentPackageStatus,
 } from '../agent-package-registry.ts';
 export { listOplConnections } from '../connection-registry.ts';
+export { readOplGatewayAccount } from '../opl-gateway-account.ts';
 export { listExternalOwnerDelegatedUpdateActions } from '../external-dependency-currentness.ts';
 export { resolveDefaultFamilyWorkspaceRoot } from '../opl-skills.ts';
 export { buildOplReleaseTag, getOplReleaseRepo, getOplReleaseVersion } from '../opl-release.ts';

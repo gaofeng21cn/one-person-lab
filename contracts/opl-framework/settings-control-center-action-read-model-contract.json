@@ -113,6 +113,7 @@
     "required_fields": [
       "page_structure",
       "codex_model_policy",
+      "opl_gateway_account",
       "access_api_key",
       "workspace_services",
       "connections",
@@ -265,6 +266,11 @@
     "developer_profile_active"
   ],
   "allowed_action_ids": [
+    "gateway_account_complete_setup",
+    "gateway_account_refresh",
+    "gateway_account_repair",
+    "gateway_account_use_for_model_access",
+    "gateway_account_disconnect",
     "connection_list",
     "connection_create",
     "connection_update",
@@ -296,6 +302,11 @@
     "developer_supervisor"
   ],
   "action_taxonomy": {
+    "gateway_account_complete_setup": "settings.model_access.gateway_account.complete_setup",
+    "gateway_account_refresh": "settings.model_access.gateway_account.refresh",
+    "gateway_account_repair": "settings.model_access.gateway_account.repair",
+    "gateway_account_use_for_model_access": "settings.model_access.gateway_account.use",
+    "gateway_account_disconnect": "settings.model_access.gateway_account.disconnect",
     "connection_list": "settings.connections.list",
     "connection_create": "settings.connections.create",
     "connection_update": "settings.connections.update",

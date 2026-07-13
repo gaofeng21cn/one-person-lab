@@ -45,7 +45,7 @@ function registryProjection(store: OplConnectionRegistryStore, connection?: OplC
       surface_kind: 'opl_connection_registry.v1',
       owner: 'one-person-lab',
       credential_policy: 'handle_only',
-      allowed_credential_handles: ['env:NAME', 'codex:selected_provider'],
+      allowed_credential_handles: ['env:NAME', 'codex:selected_provider', 'credential-store:opl-gateway-account'],
       allowed_statuses: [...OPL_CONNECTION_STATUSES],
       default_connection_id: store.default_connection_id,
       connections: store.connections,

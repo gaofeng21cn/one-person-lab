@@ -13,6 +13,11 @@ export type OplStatePaths = {
   update_channel_file: string;
   developer_supervisor_config_file: string;
   connection_registry_file: string;
+  gateway_account_dir: string;
+  gateway_installation_file: string;
+  gateway_account_file: string;
+  gateway_credentials_file: string;
+  gateway_account_lock_file: string;
   external_evidence_ledger_file: string;
   agent_package_registry_cache_file: string;
   agent_package_lock_file: string;
@@ -69,6 +74,11 @@ export function resolveOplStatePaths(input: { dataDir?: string | null } = {}): O
     update_channel_file: path.join(stateDir, 'update-channel.json'),
     developer_supervisor_config_file: path.join(stateDir, 'developer-supervisor.json'),
     connection_registry_file: path.join(stateDir, 'connection-registry.json'),
+    gateway_account_dir: path.join(stateDir, 'gateway'),
+    gateway_installation_file: path.join(stateDir, 'gateway', 'installation.json'),
+    gateway_account_file: path.join(stateDir, 'gateway', 'account.json'),
+    gateway_credentials_file: path.join(stateDir, 'gateway', 'credentials.json'),
+    gateway_account_lock_file: path.join(stateDir, 'gateway', 'account.lock'),
     external_evidence_ledger_file: path.join(stateDir, 'external-evidence-ledger.json'),
     agent_package_registry_cache_file: path.join(stateDir, 'agent-package-registry-cache.json'),
     agent_package_lock_file: path.join(stateDir, 'agent-package-locks.json'),

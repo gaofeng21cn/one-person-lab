@@ -2,6 +2,7 @@ import { FrameworkContractError, isRecord } from '../../../kernel/contract-valid
 import { readLocalCodexAccessState } from '../../../kernel/local-codex-defaults.ts';
 
 const ENV_HANDLE = /^env:([A-Z_][A-Z0-9_]*)$/;
+const OPL_GATEWAY_ACCOUNT_HANDLE = 'credential-store:opl-gateway-account';
 const FORBIDDEN_FIELDS = /(?:^|_)(?:api_key|token|secret|password)$/i;
 
 function normalizedFieldName(field: string) {
@@ -36,17 +37,20 @@ export function normalizeCredentialHandle(value: unknown) {
     throw usageError('credential_handle is required.', 'credential_handle_required');
   }
   const handle = value.trim();
-  if (handle === 'codex:selected_provider' || ENV_HANDLE.test(handle)) {
+  if (handle === 'codex:selected_provider' || handle === OPL_GATEWAY_ACCOUNT_HANDLE || ENV_HANDLE.test(handle)) {
     return handle;
   }
   throw usageError(
-    'credential_handle must use env:NAME or codex:selected_provider.',
+    'credential_handle must use env:NAME, codex:selected_provider, or the OPL Gateway account store.',
     'credential_handle_invalid',
-    { allowed_schemes: ['env:NAME', 'codex:selected_provider'] },
+    { allowed_schemes: ['env:NAME', 'codex:selected_provider', OPL_GATEWAY_ACCOUNT_HANDLE] },
   );
 }
 
 export function checkCredentialHandle(handle: string) {
+  if (handle === OPL_GATEWAY_ACCOUNT_HANDLE) {
+    return { status: 'passed' as const, code: 'opl_gateway_account_store_present' };
+  }
   const envMatch = ENV_HANDLE.exec(handle);
   if (envMatch) {
     return process.env[envMatch[1]]

@@ -1,5 +1,14 @@
 import { buildOplPackageManifest } from '../../../../modules/connect/package-distribution.ts';
 import {
+  completeOplGatewaySetup,
+  disconnectOplGatewayAccount,
+  loginOplGatewayAccount,
+  readOplGatewayAccount,
+  refreshOplGatewayAccount,
+  repairOplGatewayAccount,
+  useOplGatewayForModelAccess,
+} from '../../../../modules/connect/opl-gateway-account.ts';
+import {
   runOplConnectExternalSkillsInspect,
   runOplConnectExternalSkillsList,
   runOplConnectExternalSkillsSearch,
@@ -77,6 +86,57 @@ type ExternalSkillsSyncArgs = ExternalSkillsInspectArgs & {
 };
 
 type FoundationSkillsSyncArgs = FoundationSkillsSyncInput;
+
+async function readGatewayCredentialsStdin() {
+  const chunks: Buffer[] = [];
+  let totalBytes = 0;
+  for await (const chunk of process.stdin) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    totalBytes += buffer.length;
+    if (totalBytes > 64 * 1024) {
+      throw new FrameworkContractError('cli_usage_error', 'Gateway credentials stdin is too large.', {
+        reason_code: 'credentials_stdin_too_large',
+      });
+    }
+    chunks.push(buffer);
+  }
+  let value: unknown;
+  try {
+    value = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+  } catch {
+    throw new FrameworkContractError('cli_usage_error', 'Gateway credentials stdin must be a JSON object.', {
+      reason_code: 'credentials_stdin_invalid',
+    });
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new FrameworkContractError('cli_usage_error', 'Gateway credentials stdin must be a JSON object.', {
+      reason_code: 'credentials_stdin_invalid',
+    });
+  }
+  const record = value as Record<string, unknown>;
+  if (typeof record.email !== 'string' || typeof record.password !== 'string') {
+    throw new FrameworkContractError('cli_usage_error', 'Gateway credentials require email and password.', {
+      reason_code: 'credentials_stdin_invalid',
+    });
+  }
+  return {
+    email: record.email,
+    password: record.password,
+    ...(typeof record.device_label === 'string' ? { device_label: record.device_label } : {}),
+  };
+}
+
+function parseGatewayGroupId(args: string[], spec: CommandSpec, required: boolean) {
+  const index = args.indexOf('--group-id');
+  const groupId = index >= 0 ? args[index + 1]?.trim() : undefined;
+  const allowedLength = index >= 0 ? 2 : 0;
+  if (args.length !== allowedLength || (required && !groupId)) {
+    throw buildUsageError(required ? 'connect gateway complete-setup requires --group-id.' : 'Invalid gateway command options.', spec, {
+      required: required ? ['--group-id'] : [],
+    });
+  }
+  return groupId;
+}
 
 function parseScientificSearchArgs(args: string[], spec: CommandSpec): ScientificSearchArgs {
   const parsed = parseRegisteredCommandOptions('connect scientific search', args, spec);
@@ -391,6 +451,74 @@ export function buildConnectCommandSpecs(
         );
       },
     },
+    'connect gateway status': buildNoArgSpec(
+      {
+        usage: 'opl connect gateway status',
+        summary: 'Read the cached OPL Gateway account state without network access.',
+        examples: ['opl connect gateway status --json'],
+        group: 'connect',
+      },
+      () => ({ gateway_account: readOplGatewayAccount() }),
+    ),
+    'connect gateway login': {
+      usage: 'opl connect gateway login --credentials-stdin',
+      summary: 'Sign in to OPL Gateway using a dedicated secret stdin envelope.',
+      examples: ['printf <credentials-json> | opl connect gateway login --credentials-stdin --json'],
+      group: 'connect',
+      handler: async (args) => {
+        if (args.length !== 1 || args[0] !== '--credentials-stdin') {
+          throw buildUsageError('connect gateway login requires --credentials-stdin.', connectCommandSpecs['connect gateway login'], {
+            required: ['--credentials-stdin'],
+          });
+        }
+        return loginOplGatewayAccount(await readGatewayCredentialsStdin());
+      },
+    },
+    'connect gateway complete-setup': {
+      usage: 'opl connect gateway complete-setup --group-id <id>',
+      summary: 'Complete managed key setup with an explicitly selected Gateway group.',
+      examples: ['opl connect gateway complete-setup --group-id 1 --json'],
+      group: 'connect',
+      handler: (args) => completeOplGatewaySetup(
+        parseGatewayGroupId(args, connectCommandSpecs['connect gateway complete-setup'], true)!,
+      ),
+    },
+    'connect gateway refresh': buildNoArgSpec(
+      {
+        usage: 'opl connect gateway refresh',
+        summary: 'Rotate the Gateway session and refresh cached account usage.',
+        examples: ['opl connect gateway refresh --json'],
+        group: 'connect',
+      },
+      () => refreshOplGatewayAccount(),
+    ),
+    'connect gateway repair': {
+      usage: 'opl connect gateway repair [--group-id <id>]',
+      summary: 'Reconcile the OPL App managed key and cached account state.',
+      examples: ['opl connect gateway repair --json'],
+      group: 'connect',
+      handler: (args) => repairOplGatewayAccount(
+        parseGatewayGroupId(args, connectCommandSpecs['connect gateway repair'], false),
+      ),
+    },
+    'connect gateway use-for-model-access': buildNoArgSpec(
+      {
+        usage: 'opl connect gateway use-for-model-access',
+        summary: 'Explicitly select the managed Gateway key as the Codex model source.',
+        examples: ['opl connect gateway use-for-model-access --json'],
+        group: 'connect',
+      },
+      () => useOplGatewayForModelAccess(),
+    ),
+    'connect gateway disconnect': buildNoArgSpec(
+      {
+        usage: 'opl connect gateway disconnect',
+        summary: 'Disable the managed key and disconnect the local Gateway account.',
+        examples: ['opl connect gateway disconnect --json'],
+        group: 'connect',
+      },
+      () => disconnectOplGatewayAccount(),
+    ),
     'connect scientific search': {
       usage: `opl connect scientific search --provider <${scientificConnectorProviderIds().join('|')}> --query <query> [--limit <n>]`,
       summary: 'Search an optional scientific provider profile through OPL Connect and return normalized read-only source refs.',

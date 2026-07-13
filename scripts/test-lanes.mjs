@@ -56,6 +56,7 @@ const fastTestFiles = [
   'tests/src/whitepaper-publication-readback.test.ts',
   'tests/src/whitepaper-workflow-contract.test.ts',
   'tests/src/verification-command-surfaces.test.ts',
+  'tests/src/opl-gateway-account.test.ts',
   'tests/src/verification-package-surfaces.test.ts',
   'tests/src/base-managed-dependencies.test.ts',
   'tests/src/foundry-agent-series-policy.test.ts',

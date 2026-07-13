@@ -10,6 +10,7 @@
     "connect references",
     "connect external-skills",
     "connect foundation-skills",
+    "connect gateway",
     "update",
     "status",
     "stages",
@@ -19,6 +20,124 @@
     "packages"
   ],
   "commands": {
+    "connect_gateway_status": {
+      "command_id": "connect gateway status",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [],
+      "output_schema": { "type": "object", "required": ["gateway_account"], "additionalProperties": true },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "cached_gateway_account_read_model"
+      }
+    },
+    "connect_gateway_login": {
+      "command_id": "connect gateway login",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        { "name": "credentials-stdin", "flag": "--credentials-stdin", "value_kind": "boolean", "required": true, "summary": "Read the email and password from the dedicated bounded stdin JSON envelope." }
+      ],
+      "output_schema": { "type": "object", "required": ["gateway_account"], "additionalProperties": true },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "gateway_account_secret_stdin_login"
+      }
+    },
+    "connect_gateway_complete_setup": {
+      "command_id": "connect gateway complete-setup",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        { "name": "group-id", "flag": "--group-id", "value_kind": "string", "required": true, "summary": "Select one available Gateway group for the managed key." }
+      ],
+      "output_schema": { "type": "object", "required": ["gateway_account"], "additionalProperties": true },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "gateway_managed_key_group_completion"
+      }
+    },
+    "connect_gateway_refresh": {
+      "command_id": "connect gateway refresh",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [],
+      "output_schema": { "type": "object", "required": ["gateway_account"], "additionalProperties": true },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "gateway_account_refresh_rotation"
+      }
+    },
+    "connect_gateway_repair": {
+      "command_id": "connect gateway repair",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        { "name": "group-id", "flag": "--group-id", "value_kind": "string", "required": false, "summary": "Optional available Gateway group for managed key reconciliation." }
+      ],
+      "output_schema": { "type": "object", "required": ["gateway_account"], "additionalProperties": true },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "gateway_managed_key_reconciliation"
+      }
+    },
+    "connect_gateway_use_for_model_access": {
+      "command_id": "connect gateway use-for-model-access",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [],
+      "output_schema": { "type": "object", "required": ["gateway_account"], "additionalProperties": true },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "gateway_managed_key_codex_binding"
+      }
+    },
+    "connect_gateway_disconnect": {
+      "command_id": "connect gateway disconnect",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [],
+      "output_schema": { "type": "object", "required": ["gateway_account"], "additionalProperties": true },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "gateway_managed_key_disable_and_disconnect"
+      }
+    },
     "install": {
       "command_id": "install",
       "owner": "OPL Framework",

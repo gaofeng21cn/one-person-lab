@@ -1,6 +1,6 @@
 import { buildDockerWebuiSettingsReadModel } from './app-state-settings-control-center-parts/docker-webui-read-model.ts';
 import { resolveSettingsCodexAccess } from './app-state-settings-control-center-parts/codex-access-read-model.ts';
-import { listOplConnections } from '../connect/public/app-state.ts';
+import { listOplConnections, readOplGatewayAccount } from '../connect/public/app-state.ts';
 import {
   actionCatalogEntry,
   buildCapabilityTaskAwarenessRefs,
@@ -529,6 +529,7 @@ function buildAppSettingsReadModel(
       repair_action_id: 'settings_repair_model_access',
       shell_must_not_rewrite_policy: true,
     },
+    opl_gateway_account: readOplGatewayAccount(),
     access_api_key: {
       source_ref: 'app_state.core.codex.model_access_ready',
       status: codexAccess.model_access_status,
