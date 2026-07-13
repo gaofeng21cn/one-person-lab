@@ -10,11 +10,20 @@
     "stage_run_workflow": {
       "contract_name": "StageRunWorkflow",
       "temporal_kind": "workflow",
-      "current_workflow_type": "StageAttemptWorkflow",
-      "role": "durable_stage_run_and_stage_attempt_lifecycle_envelope",
+      "current_workflow_type": "StageRunWorkflow",
+      "child_workflow_type": "StageAttemptWorkflow",
+      "role": "non_model_durable_stage_run_controller_for_bounded_quality_attempts",
       "task_queue": "domain_runtime_lane_task_queue",
-      "event_history_role": "durable_lifecycle_attempt_retry_signal_and_closeout_transport_history",
+      "event_history_role": "durable_quality_loop_attempt_lineage_budget_and_terminalization_history",
       "sqlite_role": "projection_audit_cache_not_durable_lifecycle_truth"
+    },
+    "stage_attempt_workflow": {
+      "contract_name": "StageAttemptWorkflow",
+      "temporal_kind": "child_workflow",
+      "parent_workflow_type": "StageRunWorkflow",
+      "role": "one_context_isolated_executor_invocation_for_a_framework_bounded_attempt_role",
+      "may_create_authoritative_attempts": false,
+      "may_transition_stage": false
     },
     "stage_attempt_activity": {
       "contract_name": "StageAttemptActivity",

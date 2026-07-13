@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/stage-quality-cycle.schema.json",
+  "title": "OPL Stage Internal Quality Loop Policy",
+  "type": "object",
+  "required": [
+    "surface_kind",
+    "version",
+    "enabled",
+    "stage_prompt_ref",
+    "role_prompt_refs",
+    "quality_rubric_refs",
+    "in_thread_refinement",
+    "formal_review",
+    "budget_exhaustion",
+    "attempt_boundary"
+  ],
+  "properties": {
+    "surface_kind": { "const": "opl_stage_quality_cycle_policy" },
+    "version": { "const": "stage-quality-cycle-policy.v1" },
+    "enabled": { "type": "boolean" },
+    "stage_prompt_ref": { "type": "string", "minLength": 1 },
+    "role_prompt_refs": {
+      "type": "object",
+      "required": ["producer", "reviewer", "repairer", "re_reviewer"],
+      "properties": {
+        "producer": { "type": "string", "minLength": 1 },
+        "reviewer": { "type": "string", "minLength": 1 },
+        "repairer": { "type": "string", "minLength": 1 },
+        "re_reviewer": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "quality_rubric_refs": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "in_thread_refinement": {
+      "type": "object",
+      "required": ["allowed", "authoritative"],
+      "properties": {
+        "allowed": { "type": "boolean" },
+        "authoritative": { "const": false }
+      },
+      "additionalProperties": false
+    },
+    "formal_review": {
+      "type": "object",
+      "required": [
+        "required",
+        "risk_tier",
+        "review_depth",
+        "context_isolation_required",
+        "max_repair_rounds"
+      ],
+      "properties": {
+        "required": { "type": "boolean" },
+        "risk_tier": { "enum": ["low", "medium", "high"] },
+        "review_depth": { "enum": ["focused", "full", "multi_axis"] },
+        "context_isolation_required": { "const": true },
+        "max_repair_rounds": { "type": "integer", "minimum": 0, "maximum": 3 }
+      },
+      "additionalProperties": false
+    },
+    "budget_exhaustion": {
+      "const": "complete_with_quality_debt_if_consumable"
+    },
+    "attempt_boundary": {
+      "type": "object",
+      "required": [
+        "inherits_stage_goal_scope_authority",
+        "role_overlay_may_only_narrow",
+        "controller_creates_next_attempt",
+        "attempt_is_not_sub_stage"
+      ],
+      "properties": {
+        "inherits_stage_goal_scope_authority": { "const": true },
+        "role_overlay_may_only_narrow": { "const": true },
+        "controller_creates_next_attempt": { "const": true },
+        "attempt_is_not_sub_stage": { "const": true }
+      },
+      "additionalProperties": false
+    }
+  },
+  "allOf": [
+    {
+      "not": {
+        "anyOf": [
+          { "required": ["next_stage_refs"] },
+          { "required": ["requires"] },
+          { "required": ["ensures"] },
+          { "required": ["stage_route"] },
+          { "required": ["sub_stage_graph"] },
+          { "required": ["independent_owner"] },
+          { "required": ["stage_current_pointer"] },
+          { "required": ["stage_transition_authority"] }
+        ]
+      }
+    }
+  ],
+  "additionalProperties": false
+}

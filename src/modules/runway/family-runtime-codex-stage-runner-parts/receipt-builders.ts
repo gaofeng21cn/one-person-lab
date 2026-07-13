@@ -66,6 +66,7 @@ export type CodexStageRunnerBaseReceipt = {
     progress_requires_typed_closeout: false;
     raw_artifact_sufficient_for_progress: true;
     thread_id: string | null;
+    execution_session_ref: string | null;
     runner_events: RunnerEventSummary[];
   };
   cost_summary: ReturnType<typeof codexStageRunnerCostSummaryFrom>;
@@ -218,6 +219,9 @@ export function buildAgentStageRunnerReceipt(input: {
       progress_requires_typed_closeout: false,
       raw_artifact_sufficient_for_progress: true,
       thread_id: input.agentExecutionReceipt.session_id,
+      execution_session_ref: input.agentExecutionReceipt.session_id
+        ? `codex://threads/${input.agentExecutionReceipt.session_id}`
+        : null,
       runner_events: input.agentExecutionReceipt.event_summary,
     },
     cost_summary: {
@@ -294,6 +298,7 @@ export function buildCodexStageRunnerReceipt(input: {
       progress_requires_typed_closeout: false,
       raw_artifact_sufficient_for_progress: true,
       thread_id: input.threadId ?? null,
+      execution_session_ref: input.threadId ? `codex://threads/${input.threadId}` : null,
       runner_events: input.runnerEvents ?? [],
     },
     cost_summary: codexStageRunnerCostSummaryFrom('', runnerMode),

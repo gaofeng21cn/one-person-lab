@@ -13,6 +13,7 @@ import {
 } from './family-runtime-providers.ts';
 import { buildStageLaunchInvocationProjection } from './family-runtime-launch-invocation.ts';
 import type { FamilyRuntimeProviderKind } from './family-runtime-types.ts';
+import type { TemporalStageRunWorkflowInput } from './family-runtime-temporal.ts';
 import { runTemporalServiceCommand } from './family-runtime-temporal-service-command.ts';
 import { runTemporalSchedulerCadenceCommand } from './family-runtime-scheduler.ts';
 import { buildFamilyRuntimeStatusPayload } from './family-runtime-status.ts';
@@ -98,6 +99,26 @@ export async function runFamilyRuntime(
   const parsed = parseFamilyRuntimeCommand(args);
   const { db, paths } = openQueueDb();
   try {
+    if (parsed.mode === 'stage_run_start') {
+      const temporal_start = await (await temporalProviderModule()).startTemporalStageRunWorkflow(
+        parsed.input as TemporalStageRunWorkflowInput,
+        { paths },
+      );
+      insertEvent(db, {
+        domainId: (parsed.input as TemporalStageRunWorkflowInput).domain_id,
+        eventType: 'stage_run_temporal_started',
+        source: 'opl-cli',
+        payload: temporal_start,
+      });
+      return { version: 'g2', family_runtime_stage_run_start: temporal_start };
+    }
+    if (parsed.mode === 'stage_run_query') {
+      const stage_run_query = await (await temporalProviderModule()).queryTemporalStageRunWorkflow({
+        workflowId: parsed.workflowId,
+        paths,
+      });
+      return { version: 'g2', family_runtime_stage_run_query: stage_run_query };
+    }
     if (parsed.mode === 'status') {
       return await buildFamilyRuntimeStatusPayload(db, paths, resolveFamilyRuntimeProviderKind(parsed.providerKind));
     }

@@ -1,0 +1,43 @@
+{
+  "profile_id": "official_high_value_knowledge_deliverable.v1",
+  "surface_kind": "opl_official_knowledge_deliverable_quality_profile",
+  "owner": "one-person-lab",
+  "state": "active_contract",
+  "framework_contract_ref": "contracts/opl-framework/stage-quality-cycle-contract.json",
+  "bound_agent_ids": [
+    "mas",
+    "mag",
+    "rca",
+    "oma",
+    "obf"
+  ],
+  "stage_review": {
+    "required_for_ai_producer_stages": true,
+    "minimum_risk_tier": "low",
+    "context_isolation_required": true,
+    "default_max_repair_rounds": 3,
+    "human_or_operator_gate_may_be_not_applicable": true,
+    "meta_review_stage_does_not_require_recursive_review": true
+  },
+  "cross_stage_meta_review": {
+    "required_before_terminal_knowledge_handoff": true,
+    "independent_stage_run_required": true,
+    "context_isolation_required": true,
+    "route_back_policy_required": true,
+    "default_max_route_back_rounds": 3,
+    "primary_attempt_role": "producer"
+  },
+  "not_inherited_by": [
+    "standard_agent_label_alone",
+    "stage_pack_version_alone",
+    "multi_stage_graph_alone",
+    "evidence_grounded_decision_agent_profile",
+    "clinical_decision_demo"
+  ],
+  "false_authority_guards": {
+    "in_thread_refinement_is_review": false,
+    "protocol_closeout_resume_is_review": false,
+    "same_session_review_can_close_gate": false,
+    "strategy_retrospective_is_cross_stage_meta_review": false
+  }
+}

@@ -8,6 +8,7 @@ import {
   standardDomainAgentFamilyProjection,
   STANDARD_AGENT_REGISTRY,
   STANDARD_AGENT_SERIES_MEMBERSHIP,
+  OFFICIAL_KNOWLEDGE_DELIVERABLE_QUALITY_PROFILE,
 } from '../../src/kernel/standard-agent-registry.ts';
 import { canonicalAgentPackageId } from '../../src/modules/connect/agent-package-identity.ts';
 import { resolveOplDomainModuleSpec } from '../../src/modules/connect/system-installation/modules.ts';
@@ -77,4 +78,15 @@ test('package and module aliases derive standard agents without promoting Schola
   assert.equal(normalizeStandardDomainAgentId('mas-scholar-skills'), 'mas-scholar-skills');
   assert.equal(resolveOplDomainModuleSpec('oma').module_id, 'oplmetaagent');
   assert.equal(resolveOplDomainModuleSpec('bookforge').module_id, 'oplbookforge');
+});
+
+test('official quality governance is explicit rather than inherited from standard Agent membership', () => {
+  const qualityGoverned = STANDARD_AGENT_REGISTRY
+    .filter((entry) => 'quality_governance_profile' in entry)
+    .map((entry) => entry.agent_id);
+  assert.deepEqual(qualityGoverned, ['mas', 'mag', 'rca', 'oma', 'obf']);
+  assert.equal(OFFICIAL_KNOWLEDGE_DELIVERABLE_QUALITY_PROFILE.profile_id,
+    'official_high_value_knowledge_deliverable.v1');
+  const scholarSkills = STANDARD_AGENT_REGISTRY.find((entry) => entry.agent_id === 'mas-scholar-skills');
+  assert.equal(scholarSkills && 'quality_governance_profile' in scholarSkills, false);
 });

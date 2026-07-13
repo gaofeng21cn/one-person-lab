@@ -64,6 +64,8 @@ const fastTestFiles = [
   'tests/src/capability-registry-resolver.test.ts',
   'tests/src/family-runtime-capability-stage-context.test.ts',
   'tests/src/cognitive-computation-kernel-contract.test.ts',
+  'tests/src/stage-quality-cycle.test.ts',
+  'tests/src/family-runtime-temporal-stage-run-controller.test.ts',
   'tests/src/advisory-knowledge-boundary-contract.test.ts',
   'tests/src/opl-flow-completion-audit-contract.test.ts',
   'tests/src/operator-compact-readback-contract.test.ts',

@@ -93,6 +93,35 @@ function isTemporalStageAttemptTerminalObservation(
   );
 }
 
+function executionSessionRefFromObservation(observation: TemporalStageAttemptTerminalObservation) {
+  const events = observation.query?.activity_events ?? [];
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    const event = recordOrNull(events[index]);
+    if (event?.activity_kind !== 'codex_stage_activity') continue;
+    const progress = recordOrNull(event.progress_summary);
+    const explicit = stringValue(progress?.execution_session_ref);
+    if (explicit) return explicit;
+    const threadId = stringValue(progress?.thread_id);
+    if (threadId) return `codex://threads/${threadId}`;
+  }
+  return null;
+}
+
+function persistExecutionSessionRef(
+  db: DatabaseSync,
+  row: StageAttemptRow,
+  observation: TemporalStageAttemptTerminalObservation,
+) {
+  const executionSessionRef = executionSessionRefFromObservation(observation);
+  if (!executionSessionRef) return;
+  if (row.execution_session_ref && row.execution_session_ref !== executionSessionRef) {
+    throw new Error(`StageAttempt execution session drift: ${row.execution_session_ref} != ${executionSessionRef}`);
+  }
+  db.prepare(`
+    UPDATE stage_attempts SET execution_session_ref = ?, updated_at = ? WHERE stage_attempt_id = ?
+  `).run(executionSessionRef, nowIso(), row.stage_attempt_id);
+}
+
 function recordOrNull(value: unknown): Record<string, unknown> | null {
   const payload = record(value);
   return payload === value ? payload : null;
@@ -378,6 +407,7 @@ export function syncStageAttemptFromTemporalTerminalObservation(
   if (!row || row.provider_kind !== 'temporal' || row.workflow_id !== observation.workflow_id) {
     return null;
   }
+  persistExecutionSessionRef(db, row, observation);
   const completedCloseoutPacket = closeoutPacketFromTemporalCompletedObservation(observation);
   if (row.status === 'completed' && row.closeout_receipt_status) {
     const existingCloseoutRefs = parseStageAttemptJsonList(row.closeout_refs_json)

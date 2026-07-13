@@ -33,6 +33,7 @@ export type { StandardAgentStageManifestCompilation } from './standard-agent-sta
 export {
   readStandardAgentStagePromptFile,
   resolveStandardAgentStagePrompt,
+  readStandardAgentQualityRolePromptFile,
   STANDARD_AGENT_STAGE_MANIFEST_REF,
   STANDARD_AGENT_STAGE_PROMPT_LAYER,
 } from './standard-agent-stage-prompt.ts';

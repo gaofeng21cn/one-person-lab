@@ -149,6 +149,9 @@ test('agents scaffold generates progress-first stages without a receipt admissio
   try {
     const manifest = readJson(path.join(targetDir, 'agent/stages/manifest.json'));
     const policy = manifest.progress_first_policy;
+    assert.equal(policy.route_selection_owner, 'codex_cli');
+    assert.equal(policy.codex_may_advance_skip_repeat_reverse_or_route_back, true);
+    assert.equal(policy.any_declared_stage_may_start_from_any_prior_stage_result, true);
     assert.equal(policy.no_output_or_failure_diagnostic_advances_stage, true);
     assert.equal(policy.quality_debt_blocks_stage_transition, false);
     assert.equal(policy.hard_stop_classes.includes('zero_consumable_artifact'), false);

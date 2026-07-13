@@ -6,6 +6,7 @@ import { isDeepStrictEqual } from 'node:util';
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { normalizeFamilyActionCatalog } from '../../kernel/family-action-catalog-contract.ts';
 import { optionalString, parseJsonText } from '../../kernel/json-file.ts';
+import { resolveStandardAgent } from '../../kernel/standard-agent-registry.ts';
 import { STANDARD_AGENT_PACK_ABI } from './standard-agent-pack-abi.ts';
 import {
   DEFAULT_STAGE_EXECUTOR_BINDING_REF,
@@ -120,6 +121,13 @@ function repoFile(repoDir: string, value: unknown, field: string) {
   return { ref, resolved };
 }
 
+function repoRef(repoDir: string, value: unknown, field: string) {
+  const ref = text(value, field, repoDir);
+  const fileRef = ref.split('#', 1)[0]!;
+  repoFile(repoDir, fileRef, field);
+  return ref;
+}
+
 function readJson(repoDir: string, ref: string, field: string) {
   const file = repoFile(repoDir, ref, field);
   const source = fs.readFileSync(file.resolved, 'utf8');
@@ -132,6 +140,165 @@ function readJson(repoDir: string, ref: string, field: string) {
       error: error instanceof Error ? error.message : String(error),
     });
   }
+}
+
+function readJsonPointer(repoDir: string, ref: string, field: string) {
+  const [fileRef, fragment = ''] = ref.split('#', 2);
+  let value = readJson(repoDir, fileRef!, field).payload;
+  if (fragment) {
+    if (!fragment.startsWith('/')) {
+      fail(`${field} must use a JSON Pointer fragment.`, { repo_dir: repoDir, ref });
+    }
+    for (const rawToken of fragment.slice(1).split('/')) {
+      const token = rawToken.replace(/~1/g, '/').replace(/~0/g, '~');
+      if (!isRecord(value) || !Object.hasOwn(value, token)) {
+        fail(`${field} JSON Pointer does not resolve.`, { repo_dir: repoDir, ref, token });
+      }
+      value = value[token];
+    }
+  }
+  return value;
+}
+
+const QUALITY_ATTEMPT_FORBIDDEN_FIELDS = new Set([
+  'next_stage_refs', 'requires', 'ensures', 'stage_route', 'sub_stage_graph',
+  'independent_owner', 'stage_current_pointer', 'stage_transition_authority',
+]);
+
+function forbiddenQualityAttemptFields(value: unknown, prefix = '$'): string[] {
+  if (Array.isArray(value)) {
+    return value.flatMap((entry, index) => forbiddenQualityAttemptFields(entry, `${prefix}[${index}]`));
+  }
+  if (!isRecord(value)) return [];
+  return Object.entries(value).flatMap(([key, entry]) => [
+    ...(QUALITY_ATTEMPT_FORBIDDEN_FIELDS.has(key) ? [`${prefix}.${key}`] : []),
+    ...forbiddenQualityAttemptFields(entry, `${prefix}.${key}`),
+  ]);
+}
+
+function exactObjectKeys(value: JsonRecord, expected: string[], field: string, repoDir: string) {
+  const received = Object.keys(value).sort();
+  const sortedExpected = [...expected].sort();
+  if (!isDeepStrictEqual(received, sortedExpected)) {
+    fail(`${field} fields do not match the Stage quality-cycle schema.`, {
+      repo_dir: repoDir,
+      expected_fields: sortedExpected,
+      received_fields: received,
+    });
+  }
+}
+
+function validateStageQualityCyclePolicy(input: {
+  repoDir: string;
+  ref: string;
+  stageId: string;
+  stagePromptRef: string;
+  stageRole: string | null;
+}) {
+  const policy = record(
+    readJsonPointer(input.repoDir, input.ref, `stage_quality_cycle_policy:${input.stageId}`),
+    `stage_quality_cycle_policy:${input.stageId}`,
+    input.repoDir,
+  );
+  exactObjectKeys(policy, [
+    'surface_kind', 'version', 'enabled', 'stage_prompt_ref', 'role_prompt_refs',
+    'quality_rubric_refs', 'in_thread_refinement', 'formal_review', 'budget_exhaustion',
+    'attempt_boundary',
+  ], `stage_quality_cycle_policy:${input.stageId}`, input.repoDir);
+  if (
+    text(policy.surface_kind, 'stage_quality_cycle_policy.surface_kind', input.repoDir)
+      !== 'opl_stage_quality_cycle_policy'
+    || text(policy.version, 'stage_quality_cycle_policy.version', input.repoDir)
+      !== 'stage-quality-cycle-policy.v1'
+  ) {
+    fail('Stage quality-cycle policy kind or version is invalid.', {
+      repo_dir: input.repoDir,
+      stage_id: input.stageId,
+    });
+  }
+  if (typeof policy.enabled !== 'boolean') {
+    fail('Stage quality-cycle policy enabled must be boolean.', { repo_dir: input.repoDir, stage_id: input.stageId });
+  }
+  const policyStagePromptRef = text(policy.stage_prompt_ref, 'stage_quality_cycle_policy.stage_prompt_ref', input.repoDir);
+  if (policyStagePromptRef !== input.stagePromptRef) {
+    fail('Stage quality-cycle policy must inherit the Stage prompt.', {
+      repo_dir: input.repoDir,
+      stage_id: input.stageId,
+      stage_prompt_ref: input.stagePromptRef,
+      policy_stage_prompt_ref: policyStagePromptRef,
+    });
+  }
+  repoRef(input.repoDir, policyStagePromptRef, 'stage_quality_cycle_policy.stage_prompt_ref');
+  const rolePrompts = record(policy.role_prompt_refs, 'stage_quality_cycle_policy.role_prompt_refs', input.repoDir);
+  exactObjectKeys(rolePrompts, ['producer', 'reviewer', 'repairer', 're_reviewer'],
+    'stage_quality_cycle_policy.role_prompt_refs', input.repoDir);
+  for (const role of ['producer', 'reviewer', 'repairer', 're_reviewer']) {
+    repoRef(input.repoDir, rolePrompts[role], `stage_quality_cycle_policy.role_prompt_refs.${role}`);
+  }
+  const rubricRefs = strings(policy.quality_rubric_refs, 'stage_quality_cycle_policy.quality_rubric_refs', input.repoDir);
+  if (rubricRefs.length === 0) {
+    fail('Stage quality-cycle policy requires at least one quality rubric ref.', {
+      repo_dir: input.repoDir,
+      stage_id: input.stageId,
+    });
+  }
+  for (const rubricRef of rubricRefs) {
+    repoRef(input.repoDir, rubricRef, 'stage_quality_cycle_policy.quality_rubric_refs');
+  }
+  const refinement = record(policy.in_thread_refinement, 'stage_quality_cycle_policy.in_thread_refinement', input.repoDir);
+  exactObjectKeys(refinement, ['allowed', 'authoritative'],
+    'stage_quality_cycle_policy.in_thread_refinement', input.repoDir);
+  if (typeof refinement.allowed !== 'boolean' || refinement.authoritative !== false) {
+    fail('in_thread_refinement must be non-authoritative.', { repo_dir: input.repoDir, stage_id: input.stageId });
+  }
+  const formalReview = record(policy.formal_review, 'stage_quality_cycle_policy.formal_review', input.repoDir);
+  exactObjectKeys(formalReview, [
+    'required', 'risk_tier', 'review_depth', 'context_isolation_required', 'max_repair_rounds',
+  ], 'stage_quality_cycle_policy.formal_review', input.repoDir);
+  const maxRepairRounds = formalReview.max_repair_rounds;
+  if (
+    typeof formalReview.required !== 'boolean'
+    || !['low', 'medium', 'high'].includes(String(formalReview.risk_tier))
+    || !['focused', 'full', 'multi_axis'].includes(String(formalReview.review_depth))
+    || formalReview.context_isolation_required !== true
+    || !Number.isInteger(maxRepairRounds)
+    || Number(maxRepairRounds) < 0
+    || Number(maxRepairRounds) > 3
+  ) {
+    fail('formal_review does not match the bounded Stage quality-cycle contract.', {
+      repo_dir: input.repoDir,
+      stage_id: input.stageId,
+    });
+  }
+  if (input.stageRole === 'cross_stage_meta_review' && formalReview.required !== false) {
+    fail('Cross-stage Meta Review Stage must not recursively require another formal Stage Review.', {
+      repo_dir: input.repoDir,
+      stage_id: input.stageId,
+    });
+  }
+  if (policy.budget_exhaustion !== 'complete_with_quality_debt_if_consumable') {
+    fail('Stage quality-cycle budget exhaustion policy is invalid.', { repo_dir: input.repoDir, stage_id: input.stageId });
+  }
+  const attemptBoundary = record(policy.attempt_boundary, 'stage_quality_cycle_policy.attempt_boundary', input.repoDir);
+  exactObjectKeys(attemptBoundary, [
+    'inherits_stage_goal_scope_authority', 'role_overlay_may_only_narrow',
+    'controller_creates_next_attempt', 'attempt_is_not_sub_stage',
+  ], 'stage_quality_cycle_policy.attempt_boundary', input.repoDir);
+  if (Object.values(attemptBoundary).some((value) => value !== true)) {
+    fail('Stage quality-cycle attempt boundary flags must all be true.', {
+      repo_dir: input.repoDir,
+      stage_id: input.stageId,
+    });
+  }
+  const forbiddenFields = forbiddenQualityAttemptFields(policy);
+  if (forbiddenFields.length > 0) {
+    fail('Stage quality-cycle policy cannot define nested Stage semantics.', {
+      repo_dir: input.repoDir,
+      stage_id: input.stageId,
+      forbidden_fields: forbiddenFields,
+    });
+  }
+  return policy;
 }
 
 function assertNoOplAuthority(boundary: JsonRecord, field: string, repoDir: string) {
@@ -275,6 +442,10 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
     'pack_compiler_input.canonical_agent_id',
     repoDir,
   );
+  const registryAgent = resolveStandardAgent(canonicalAgentId);
+  const registryQualityProfile = registryAgent && 'quality_governance_profile' in registryAgent
+    ? registryAgent.quality_governance_profile
+    : null;
   const requiredPackPaths = strings(
     packCompilerInput.required_domain_pack_paths,
     'pack_compiler_input.required_domain_pack_paths',
@@ -347,6 +518,33 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
     'stage_manifest.authority_boundary',
     repoDir,
   );
+  const declaredQualityProfileRef = manifest.quality_governance_profile_ref === undefined
+    ? null
+    : text(manifest.quality_governance_profile_ref, 'stage_manifest.quality_governance_profile_ref', repoDir);
+  const declaredMetaReviewPolicyRef = manifest.meta_review_policy_ref === undefined
+    ? null
+    : repoRef(repoDir, manifest.meta_review_policy_ref, 'stage_manifest.meta_review_policy_ref');
+  if (declaredQualityProfileRef && !registryQualityProfile) {
+    fail('Domain manifest cannot self-assign a registry-owned quality governance profile.', {
+      repo_dir: repoDir,
+      canonical_agent_id: canonicalAgentId,
+      declared_quality_governance_profile_ref: declaredQualityProfileRef,
+    });
+  }
+  if (declaredQualityProfileRef && registryQualityProfile?.profile_ref !== declaredQualityProfileRef) {
+    fail('Domain quality governance profile must match the registry binding.', {
+      repo_dir: repoDir,
+      canonical_agent_id: canonicalAgentId,
+      registry_profile_ref: registryQualityProfile?.profile_ref ?? null,
+      declared_profile_ref: declaredQualityProfileRef,
+    });
+  }
+  if (declaredQualityProfileRef && !declaredMetaReviewPolicyRef) {
+    fail('Official knowledge-deliverable profile requires a Meta Review policy ref.', {
+      repo_dir: repoDir,
+      canonical_agent_id: canonicalAgentId,
+    });
+  }
   if (text(
     manifestAuthority.domain_truth_owner,
     'stage_manifest.authority_boundary.domain_truth_owner',
@@ -387,8 +585,30 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
     const allowedActionRefs = strings(stage.allowed_action_refs, 'stage.allowed_action_refs', repoDir);
     const nextStageRefs = strings(stage.next_stage_refs, 'stage.next_stage_refs', repoDir);
     const laneKind = optionalString(stage.lane_kind);
+    const stageRole = optionalString(stage.stage_role);
+    const stageQualityCyclePolicyRef = stage.stage_quality_cycle_policy_ref === undefined
+      ? null
+      : repoRef(repoDir, stage.stage_quality_cycle_policy_ref, `stage_manifest.stages[${index}].stage_quality_cycle_policy_ref`);
     const trustLane = text(stage.trust_lane, 'stage.trust_lane', repoDir);
     const effectBoundary = EFFECT_BOUNDARY_TRUST_LANES.has(trustLane);
+    if (declaredQualityProfileRef && trustLane !== 'human_gate' && !stageQualityCyclePolicyRef) {
+      fail('Official knowledge-deliverable AI stages require a Stage quality-cycle policy ref.', {
+        repo_dir: repoDir,
+        stage_id: stageId,
+      });
+    }
+    if (stageQualityCyclePolicyRef) {
+      validateStageQualityCyclePolicy({
+        repoDir,
+        ref: stageQualityCyclePolicyRef,
+        stageId,
+        stagePromptRef: promptSource.ref,
+        stageRole,
+      });
+    }
+    if (stageRole === 'cross_stage_meta_review' && text(stage.stage_kind, 'stage.stage_kind', repoDir) !== 'review') {
+      fail('cross_stage_meta_review role requires stage_kind=review.', { repo_dir: repoDir, stage_id: stageId });
+    }
     const runtimeEventRefs = effectBoundary
       ? [`runtime_event:${stageId}.owner_receipt_recorded`]
       : [];
@@ -543,6 +763,8 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
       summary: optionalString(stage.summary),
       goal: text(stage.goal, 'stage.goal', repoDir),
       owner: domainId,
+      ...(stageRole ? { stage_role: stageRole } : {}),
+      ...(stageQualityCyclePolicyRef ? { stage_quality_cycle_policy_ref: stageQualityCyclePolicyRef } : {}),
       ...(stageOrigin ? { stage_origin: stageOrigin } : {}),
       ...(patternId ? { pattern_id: patternId } : {}),
       ...(stepId ? { step_id: stepId } : {}),
@@ -653,6 +875,8 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
     plane_id: planeId,
     target_domain_id: domainId,
     owner: domainId,
+    ...(declaredQualityProfileRef ? { quality_governance_profile_ref: declaredQualityProfileRef } : {}),
+    ...(declaredMetaReviewPolicyRef ? { meta_review_policy_ref: declaredMetaReviewPolicyRef } : {}),
     stage_pack_conformance_version: stagePackV2Required
       ? STANDARD_STAGE_PACK_CONFORMANCE_VERSION
       : undefined,
@@ -673,6 +897,16 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
     stages,
     notes: [],
   });
+  if (declaredQualityProfileRef) {
+    const metaReviewStages = stages.filter((stage) => stage.stage_role === 'cross_stage_meta_review');
+    if (metaReviewStages.length !== 1) {
+      fail('Official knowledge-deliverable manifest requires exactly one cross-stage Meta Review Stage.', {
+        repo_dir: repoDir,
+        canonical_agent_id: canonicalAgentId,
+        meta_review_stage_ids: metaReviewStages.map((stage) => stage.stage_id),
+      });
+    }
+  }
   if (!stageControlPlane) {
     fail('Stage manifest did not compile to a family stage control plane.', { repo_dir: repoDir });
   }

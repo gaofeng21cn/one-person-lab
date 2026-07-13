@@ -62,6 +62,13 @@ export { inspectFamilyRuntimeProvider, inspectSelectedFamilyRuntimeProvidersWith
 export { summarizeModelRouteCostProjections, summarizeStageAttemptUsageProjections } from './family-runtime-stage-attempt-usage.ts';
 export type { ModelRouteCostProjection, StageAttemptUsageProjection } from './family-runtime-stage-attempt-usage.ts';
 export { listStageAttempts } from './family-runtime-stage-attempts.ts';
+export {
+  advanceStageQualityCycle,
+  createStageQualityCycle,
+  createStageQualityCycleAttempt,
+  inspectStageQualityCycle,
+} from './family-runtime-stage-quality-cycle.ts';
+export { requireStageQualityAttemptBoundary } from './family-runtime-stage-quality-attempt-boundary.ts';
 export { summarizeStageProgressLogs } from './family-runtime-stage-progress-log.ts';
 export type { StageProgressLogProjection } from './family-runtime-stage-progress-log.ts';
 export { buildNativeHelperHealthStatus, runNativeHelperRepairAction } from './native-helper-runtime.ts';

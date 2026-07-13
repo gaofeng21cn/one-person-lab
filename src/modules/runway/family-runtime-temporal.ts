@@ -3,6 +3,12 @@ import crypto from 'node:crypto';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import type { FamilyRuntimeDomainProfiles } from './family-runtime-command.ts';
 import type { FamilyRuntimeDomainId, TemporalStageAttemptSignalKind } from './family-runtime-types.ts';
+import type {
+  StageQualityAttemptRole,
+  StageQualityFinding,
+  StageQualityRepairMapEntry,
+} from '../stagecraft/stage-quality-cycle.ts';
+import { normalizeStageQualityAttemptRole } from '../stagecraft/stage-quality-cycle.ts';
 import {
   CODEX_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT,
   CODEX_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
@@ -18,6 +24,17 @@ import {
   buildTemporalStageAttemptVisibilityReadiness,
   TEMPORAL_STAGE_ATTEMPT_SEARCH_ATTRIBUTES,
 } from './family-runtime-temporal-visibility.ts';
+import { requireStageQualityAttemptBoundary } from './family-runtime-stage-quality-attempt-boundary.ts';
+import type { TemporalStageRunWorkflowInput } from './family-runtime-temporal-stage-run.ts';
+
+export type {
+  TemporalStageQualityAttemptMaterializationInput,
+  TemporalStageQualityCycleProjectionInput,
+  TemporalStageRunAttemptSummary,
+  TemporalStageRunQualityRolePromptRefs,
+  TemporalStageRunWorkflowInput,
+  TemporalStageRunWorkflowState,
+} from './family-runtime-temporal-stage-run.ts';
 
 export const STAGE_ATTEMPT_WORKFLOW_NAME = 'StageAttemptWorkflow';
 export const SCHEDULER_TICK_WORKFLOW_NAME = 'SchedulerTickWorkflow';
@@ -98,6 +115,24 @@ export type TemporalStageAttemptWorkflowInput = {
   workspace_locator: Record<string, unknown>;
   source_fingerprint: string | null;
   executor_kind: string;
+  stage_run_id?: string | null;
+  quality_cycle_id?: string | null;
+  attempt_role?: StageQualityAttemptRole | null;
+  quality_round_index?: number | null;
+  parent_attempt_ref?: string | null;
+  input_artifact_refs?: string[];
+  reviewed_artifact_hashes?: string[];
+  quality_source_refs?: string[];
+  quality_rubric_refs?: string[];
+  prior_finding_refs?: string[];
+  repair_map_refs?: string[];
+  quality_role_prompt_ref?: string | null;
+  context_manifest_ref?: string | null;
+  no_context_inheritance?: boolean | null;
+  quality_context?: {
+    findings?: StageQualityFinding[];
+    repair_map?: StageQualityRepairMapEntry[];
+  };
   stage_attempt_executor_policy?: Record<string, unknown> | null;
   retry_budget: Record<string, unknown>;
   route_impact?: Record<string, unknown>;
@@ -193,12 +228,16 @@ export function buildTemporalStageAttemptWorkflowContract() {
   return {
     provider_kind: 'temporal',
     workflow_name: STAGE_ATTEMPT_WORKFLOW_NAME,
+    stage_run_controller_workflow_name: STAGE_RUN_WORKFLOW_NAME,
+    stage_attempt_child_workflow_name: STAGE_ATTEMPT_WORKFLOW_NAME,
     temporal_first_runtime_contract: buildTemporalFirstRuntimeContract(),
     scheduler_tick_workflow_name: SCHEDULER_TICK_WORKFLOW_NAME,
     activity_names: {
       codex_stage_activity: CODEX_STAGE_ACTIVITY_NAME,
       domain_handler_dispatch_activity: DOMAIN_HANDLER_DISPATCH_ACTIVITY_NAME,
       scheduler_tick_activity: SCHEDULER_TICK_ACTIVITY_NAME,
+      stage_quality_attempt_materialize_activity: 'StageQualityAttemptMaterializeActivity',
+      stage_quality_cycle_project_activity: 'StageQualityCycleProjectActivity',
     },
     signals: [...TEMPORAL_STAGE_ATTEMPT_SIGNALS],
     queries: [...TEMPORAL_STAGE_ATTEMPT_QUERIES],
@@ -267,11 +306,20 @@ export function buildTemporalFirstRuntimeContract() {
       stage_run_workflow: {
         contract_name: STAGE_RUN_WORKFLOW_NAME,
         temporal_kind: 'workflow',
-        current_workflow_type: STAGE_ATTEMPT_WORKFLOW_NAME,
-        role: 'durable_stage_run_and_stage_attempt_lifecycle_envelope',
+        current_workflow_type: STAGE_RUN_WORKFLOW_NAME,
+        child_workflow_type: STAGE_ATTEMPT_WORKFLOW_NAME,
+        role: 'non_model_durable_stage_run_controller_for_bounded_quality_attempts',
         task_queue: 'domain_runtime_lane_task_queue',
-        event_history_role: 'durable_lifecycle_attempt_retry_signal_and_closeout_transport_history',
+        event_history_role: 'durable_quality_loop_attempt_lineage_budget_and_terminalization_history',
         sqlite_role: 'projection_audit_cache_not_durable_lifecycle_truth',
+      },
+      stage_attempt_workflow: {
+        contract_name: STAGE_ATTEMPT_WORKFLOW_NAME,
+        temporal_kind: 'child_workflow',
+        parent_workflow_type: STAGE_RUN_WORKFLOW_NAME,
+        role: 'one_context_isolated_executor_invocation_for_a_framework_bounded_attempt_role',
+        may_create_authoritative_attempts: false,
+        may_transition_stage: false,
       },
       stage_attempt_activity: {
         contract_name: STAGE_ATTEMPT_ACTIVITY_NAME,
@@ -530,6 +578,20 @@ export function buildTemporalStageAttemptWorkflowInput(
     workspace_locator: Record<string, unknown>;
     source_fingerprint: string | null;
     executor_kind: string;
+    stage_run_id?: string | null;
+    quality_cycle_id?: string | null;
+    attempt_role?: unknown;
+    quality_round_index?: number | null;
+    parent_attempt_ref?: string | null;
+    input_artifact_refs?: unknown[];
+    reviewed_artifact_hashes?: unknown[];
+    quality_source_refs?: unknown[];
+    quality_rubric_refs?: unknown[];
+    prior_finding_refs?: unknown[];
+    repair_map_refs?: unknown[];
+    quality_role_prompt_ref?: string | null;
+    context_manifest_ref?: string | null;
+    no_context_inheritance?: boolean | null;
     stage_attempt_executor_policy?: unknown;
     retry_budget: Record<string, unknown>;
     route_impact?: Record<string, unknown>;
@@ -550,6 +612,36 @@ export function buildTemporalStageAttemptWorkflowInput(
     workspace_locator: attempt.workspace_locator,
     source_fingerprint: attempt.source_fingerprint,
     executor_kind: executorKind,
+    stage_run_id: optionalText(attempt.stage_run_id),
+    quality_cycle_id: optionalText(attempt.quality_cycle_id),
+    attempt_role: attempt.attempt_role
+      ? normalizeStageQualityAttemptRole(attempt.attempt_role)
+      : null,
+    quality_round_index: Number.isInteger(attempt.quality_round_index)
+      ? attempt.quality_round_index
+      : null,
+    parent_attempt_ref: optionalText(attempt.parent_attempt_ref),
+    input_artifact_refs: Array.isArray(attempt.input_artifact_refs)
+      ? attempt.input_artifact_refs.filter((entry): entry is string => typeof entry === 'string' && Boolean(entry.trim()))
+      : [],
+    reviewed_artifact_hashes: Array.isArray(attempt.reviewed_artifact_hashes)
+      ? attempt.reviewed_artifact_hashes.filter((entry): entry is string => typeof entry === 'string' && Boolean(entry.trim()))
+      : [],
+    quality_source_refs: Array.isArray(attempt.quality_source_refs)
+      ? attempt.quality_source_refs.filter((entry): entry is string => typeof entry === 'string' && Boolean(entry.trim()))
+      : [],
+    quality_rubric_refs: Array.isArray(attempt.quality_rubric_refs)
+      ? attempt.quality_rubric_refs.filter((entry): entry is string => typeof entry === 'string' && Boolean(entry.trim()))
+      : [],
+    prior_finding_refs: Array.isArray(attempt.prior_finding_refs)
+      ? attempt.prior_finding_refs.filter((entry): entry is string => typeof entry === 'string' && Boolean(entry.trim()))
+      : [],
+    repair_map_refs: Array.isArray(attempt.repair_map_refs)
+      ? attempt.repair_map_refs.filter((entry): entry is string => typeof entry === 'string' && Boolean(entry.trim()))
+      : [],
+    quality_role_prompt_ref: optionalText(attempt.quality_role_prompt_ref),
+    context_manifest_ref: optionalText(attempt.context_manifest_ref),
+    no_context_inheritance: attempt.no_context_inheritance ?? null,
     stage_attempt_executor_policy: optionalRecord(attempt.stage_attempt_executor_policy),
     retry_budget: attempt.retry_budget,
     route_impact: optionalRecord(attempt.route_impact) ?? {},
@@ -567,6 +659,7 @@ export function buildTemporalStageAttemptWorkflowInput(
 }
 
 export function requireTemporalStageAttemptWorkflowInputLaunchable(input: TemporalStageAttemptWorkflowInput) {
+  requireStageQualityAttemptBoundary(input as unknown as Record<string, unknown>);
   const workspaceRoot = typeof input.workspace_locator.workspace_root === 'string' && input.workspace_locator.workspace_root.trim()
     ? input.workspace_locator.workspace_root.trim()
     : typeof input.workspace_locator.repo_root === 'string' && input.workspace_locator.repo_root.trim()
@@ -583,6 +676,45 @@ export function requireTemporalStageAttemptWorkflowInputLaunchable(input: Tempor
         blocked_reason: 'codex_cli_workspace_root_missing',
         required: ['workspace_locator.workspace_root or workspace_locator.repo_root'],
       },
+    );
+  }
+  return input;
+}
+
+export function requireTemporalStageRunWorkflowInputLaunchable(input: TemporalStageRunWorkflowInput) {
+  for (const [field, value] of Object.entries({
+    stage_run_id: input.stage_run_id,
+    workflow_id: input.workflow_id,
+    stage_id: input.stage_id,
+    stage_packet_ref: input.stage_packet_ref,
+  })) {
+    if (typeof value !== 'string' || !value.trim()) {
+      throw new FrameworkContractError('contract_shape_invalid', `StageRun quality controller requires ${field}.`, {
+        field,
+      });
+    }
+  }
+  const roleKeys = Object.keys(input.role_prompt_refs ?? {}).sort();
+  const expectedRoleKeys = ['producer', 're_reviewer', 'repairer', 'reviewer'];
+  if (JSON.stringify(roleKeys) !== JSON.stringify(expectedRoleKeys)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'StageRun role_prompt_refs must use only the bounded Framework Attempt roles.',
+      { expected_roles: expectedRoleKeys, received_roles: roleKeys },
+    );
+  }
+  if (Object.values(input.role_prompt_refs).some((ref) => typeof ref !== 'string' || !ref.trim())) {
+    throw new FrameworkContractError('contract_shape_invalid', 'StageRun role prompt refs must be non-empty.');
+  }
+  if (!Array.isArray(input.quality_rubric_refs) || input.quality_rubric_refs.length === 0) {
+    throw new FrameworkContractError('contract_shape_invalid', 'StageRun quality controller requires quality rubric refs.');
+  }
+  const maxRepairRounds = input.quality_policy?.formal_review?.max_repair_rounds;
+  if (!Number.isInteger(maxRepairRounds) || maxRepairRounds < 0 || maxRepairRounds > 3) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'StageRun quality repair budget must be an integer between zero and three.',
+      { max_repair_rounds: maxRepairRounds },
     );
   }
   return input;

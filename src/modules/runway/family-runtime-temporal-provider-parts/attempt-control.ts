@@ -4,11 +4,13 @@ import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import {
   buildTemporalStageAttemptWorkflowInput,
   requireTemporalStageAttemptWorkflowInputLaunchable,
+  requireTemporalStageRunWorkflowInputLaunchable,
   resolveTemporalNamespace,
   resolveTemporalTaskQueue,
   type TemporalStageAttemptSignalKind,
   type TemporalStageAttemptSignalPayload,
   type TemporalStageAttemptWorkflowInput,
+  type TemporalStageRunWorkflowInput,
 } from '../family-runtime-temporal.ts';
 import {
   requireTemporalAddress,
@@ -25,6 +27,7 @@ import {
 } from '../family-runtime-temporal-visibility.ts';
 import {
   stageAttemptOperatorUpdate,
+  stageRunQuery,
 } from '../family-runtime-temporal-workflows.ts';
 import {
   resolveTemporalAddressForPaths,
@@ -38,6 +41,59 @@ type StageAttemptPayload = Parameters<typeof buildTemporalStageAttemptWorkflowIn
   workflow_id: string;
   provider_kind: string;
 };
+
+export async function startTemporalStageRunWorkflow(
+  input: TemporalStageRunWorkflowInput,
+  options: TemporalClientOptions = {},
+) {
+  const workflowInput = requireTemporalStageRunWorkflowInputLaunchable(input);
+  const taskQueue = options.paths
+    ? resolveTemporalWorkerTaskQueue(options.paths)
+    : resolveTemporalTaskQueue();
+  if (!resolveTemporalAddressForPaths(options.paths).address) requireTemporalAddress();
+  return withTemporalClient(async (client) => {
+    const handle = await withTemporalRpcDeadline(client, () => client.workflow.start('StageRunWorkflow', {
+      args: [workflowInput],
+      taskQueue,
+      workflowId: workflowInput.workflow_id,
+      staticSummary: `OPL StageRun ${workflowInput.stage_run_id}`,
+      staticDetails: [
+        `StageRun: ${workflowInput.stage_run_id}`,
+        `Domain: ${workflowInput.domain_id}`,
+        `Stage: ${workflowInput.stage_id}`,
+        `Quality rounds: ${workflowInput.quality_policy.formal_review.max_repair_rounds}`,
+      ].join('\n'),
+      workflowIdConflictPolicy: WorkflowIdConflictPolicy.USE_EXISTING,
+      workflowIdReusePolicy: WorkflowIdReusePolicy.REJECT_DUPLICATE,
+    }), options);
+    return {
+      surface_kind: 'temporal_stage_run_start_receipt',
+      provider_kind: 'temporal',
+      stage_run_id: workflowInput.stage_run_id,
+      workflow_id: handle.workflowId,
+      first_execution_run_id: handle.firstExecutionRunId,
+      task_queue: taskQueue,
+      max_repair_rounds: workflowInput.quality_policy.formal_review.max_repair_rounds,
+      authority_boundary: {
+        opl: 'durable_quality_loop_orchestration_and_refs_transport_only',
+        domain: 'review_findings_repair_artifact_and_quality_verdict_owner',
+        provider_completion_is_domain_ready: false,
+      },
+    };
+  }, options);
+}
+
+export async function queryTemporalStageRunWorkflow(input: {
+  workflowId: string;
+  paths?: TemporalWorkerPaths;
+}) {
+  return withTemporalClient(async (client) => {
+    const handle = client.workflow.getHandle(input.workflowId);
+    return await withTemporalRpcDeadline(client, () => handle.query(stageRunQuery), {
+      paths: input.paths,
+    });
+  }, { paths: input.paths });
+}
 
 export async function startTemporalStageAttemptWorkflow(
   attempt: StageAttemptPayload,

@@ -1,6 +1,7 @@
 import {
   parseRegisteredFamilyRuntimeCommand,
 } from './family-runtime-command-parts/registry.ts';
+import type { TemporalStageRunWorkflowInput } from './family-runtime-temporal.ts';
 import {
   FAMILY_RUNTIME_DOMAIN_IDS,
   runtimeDomainAdapterProfiles,
@@ -92,6 +93,11 @@ export type FamilyRuntimeCommandInput =
       max_age_ms?: number | null;
     };
   }
+  | {
+    mode: 'stage_run_start';
+    input: TemporalStageRunWorkflowInput | Record<string, unknown>;
+  }
+  | { mode: 'stage_run_query'; workflowId: string }
   | {
     mode: 'stage_artifact';
     input: {

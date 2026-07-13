@@ -4,7 +4,7 @@
   "version": "cognitive-computation-kernel.v1",
   "owner": "one-person-lab",
   "state": "active_contract",
-  "purpose": "Define the Stage-internal cognitive computation kernel that organizes candidate generation, grounded reflection, comparative selection, evolution, meta-review, tool affordances, knowledge, and independent quality gates without turning Route into a small Stage or moving domain truth into OPL.",
+  "purpose": "Define the Stage-internal cognitive computation kernel that organizes candidate generation, grounded reflection, comparative selection, evolution, strategy retrospective, tool affordances, knowledge, and independent quality gates without turning Route into a small Stage or moving domain truth into OPL.",
   "machine_boundary": "This contract defines framework-owned shape, refs, authority boundaries, and required stage-pack declarations. Machine truth remains in source, runtime ledgers, provider receipts, domain-owned manifests, owner receipts, typed blockers, and real workspace/App evidence.",
   "design_summary": "Route selects and reconciles owner deltas; Stage attempts execute recoverable work; the cognitive computation kernel is the optional but standard Stage-internal strategy layer that lets stronger AI executors generate, critique, compare, evolve, and learn while OPL keeps only refs, receipts, blockers, and projection boundaries.",
   "kernel_layers": [
@@ -92,7 +92,7 @@
       ]
     },
     {
-      "layer_id": "meta_review_learning",
+      "layer_id": "strategy_retrospective",
       "owner": "stage_strategy_kernel",
       "purpose": "Summarize recurring review patterns, common failure modes, rubric gaps, tool gaps, and stage strategy improvements as versioned refs for future attempts.",
       "allowed_strategy_refs": [
@@ -103,7 +103,7 @@
         "knowledge_gap_proposal"
       ],
       "output_refs": [
-        "meta_review_refs",
+        "strategy_retrospective_refs",
         "strategy_update_proposal_refs"
       ]
     },
@@ -198,7 +198,7 @@
     "provider_substrate": "temporal_for_production_online_runtime",
     "domain_repos_declare_strategy_not_generic_runtime": true,
     "candidate_pool_is_stage_internal_artifact": true,
-    "meta_review_updates_are_proposals_until_owner_acceptance": true,
+    "strategy_retrospective_updates_are_proposals_until_owner_acceptance": true,
     "evidence_ledger_events_are_audit_only_until_folded_into_owner_delta_or_owner_answer": true
   },
   "contract_refs": [

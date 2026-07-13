@@ -1536,6 +1536,9 @@
         "default_operator_question": "what_does_current_owner_need_to_answer_next"
       },
       "speed_policy": {
+        "route_selection_owner": "codex_cli",
+        "codex_may_advance_skip_repeat_reverse_or_route_back": true,
+        "any_declared_stage_may_start_from_any_prior_stage_result": true,
         "executor_autonomy_inside_stage": true,
         "executor_can_choose_order_and_parallelism": true,
         "strategy_refs_are_advisory_or_route_back": true,
@@ -2792,8 +2795,8 @@
         "evolution_and_revision": [
           "revision-lineage-ref:new-domain-agent/controlled-canary"
         ],
-        "meta_review_learning": [
-          "meta-review-ref:new-domain-agent/controlled-canary"
+        "strategy_retrospective": [
+          "strategy-retrospective-ref:new-domain-agent/controlled-canary"
         ],
         "independent_quality_gate": [
           "independent-gate-ref:new-domain-agent/controlled-canary"
@@ -2804,7 +2807,7 @@
         "reflection_review_ref": "reflection-review-ref:new-domain-agent/controlled-canary",
         "ranking_selection_ref": "ranking-selection-ref:new-domain-agent/controlled-canary",
         "revision_lineage_ref": "revision-lineage-ref:new-domain-agent/controlled-canary",
-        "meta_review_ref": "meta-review-ref:new-domain-agent/controlled-canary",
+        "strategy_retrospective_ref": "strategy-retrospective-ref:new-domain-agent/controlled-canary",
         "independent_gate_ref": "independent-gate-ref:new-domain-agent/controlled-canary"
       },
       "closeout": {

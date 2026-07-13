@@ -7,6 +7,16 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-07-13
 
+### 决策：Stage Review 由真正的 StageRun 父级工作流编排
+
+原因：旧实现把一次 Stage 主提示词执行和一次 `StageAttemptWorkflow` 混称为 StageRun，同线程自检又容易被误读为独立 Review。这既污染 reviewer 上下文，也会诱导 domain 用自定义 Attempt role 把一个 Stage 扩张成隐藏的小 Stage graph。
+
+决策：`StageRunWorkflow` 是非模型、durable Temporal 父级 controller；`StageAttemptWorkflow` 是独立 executor child workflow。Framework 只允许 `producer/reviewer/repairer/re_reviewer` 四种 role，按 domain 声明的 quality policy 动态物化，最大形状为 `1 + 1 + 3 x 2 = 8` 个 Attempt。每个 Attempt 使用 fresh Codex session，只通过 exact refs、hashes、rubric、finding、repair map 和 lineage 通信；same-thread self-check 记为 `in_thread_refinement`，same-thread typed-closeout 补全记为 `protocol_closeout_resume`，两者都不产生 review receipt。
+
+Re-review 采用 finding closure，不得用普通新建议无限重开循环。预算耗尽但产物可消费时写 `completed_with_quality_debt` 并继续下一 Stage，同时禁止高质量、导出、发表、提交和 ready 声明；零可消费产物或硬 authority/safety/human/currentness gate 才阻断。Meta Review 始终是独立 StageRun，主 role 为 `producer`，不递归套正式 Stage Review。
+
+边界：domain Agent 继续拥有专业 Review 方法、必要认知顺序、findings、repair 和 quality verdict；OPL 只拥有 Attempt identity、上下文隔离、预算、lineage、durable orchestration 和 refs-only projection。普通用户只看 Stage 级状态，Attempt 细节只在 operator drilldown。涉及不同主要开放判断、owner、source/knowledge authority、独立 quality gate、正式 handoff、下游 route、不可逆权限或 human decision 时必须 split / route-back 到新 Stage，不能增加 Attempt role。
+
 ### 决策：白皮书正文归各仓，构建与发布证据归 OPL 唯一工具链
 
 原因：白皮书是面向用户解释设计理念的长期公开材料，不是功能说明书，也不是运行状态或 readiness 证明。正文需要由 OPL Framework、App、Cloud、MAS 各自的 truth owner 维护；renderer、样式、构建验证和发布回读如果分叉，则无法证明线上字节来自哪份正文，也会让工具用必备章节和术语反向塑造叙事。

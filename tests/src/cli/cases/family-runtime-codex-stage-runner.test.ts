@@ -57,6 +57,10 @@ exit 64
     assert.equal(codexReceipt.closeout_packet?.domain_ready_verdict, 'completed_with_quality_debt');
     assert.equal(codexReceipt.closeout_packet?.route_impact?.next_stage_may_start, true);
     assert.equal(
+      codexReceipt.progress_summary.execution_session_ref,
+      'codex://threads/thread-progress-first',
+    );
+    assert.equal(
       codexReceipt.process_output_summary?.progress_closeout_projection?.capture_pipeline
         .same_session_closeout_enforcement_enabled,
       false,

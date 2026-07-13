@@ -240,7 +240,7 @@ stage_goal + context + authority_boundary + available_affordances + quality_gate
   -> grounded reflection / review
   -> comparative selection
   -> evolution / revision
-  -> meta-review / learning proposal
+  -> strategy retrospective proposal
   -> closeout packet for independent gate
 ```
 

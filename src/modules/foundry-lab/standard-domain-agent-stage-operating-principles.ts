@@ -79,6 +79,9 @@ export const STAGE_OPERATING_PRINCIPLES_POLICY = {
     default_operator_question: 'what_does_current_owner_need_to_answer_next',
   },
   speed_policy: {
+    route_selection_owner: 'codex_cli',
+    codex_may_advance_skip_repeat_reverse_or_route_back: true,
+    any_declared_stage_may_start_from_any_prior_stage_result: true,
     executor_autonomy_inside_stage: true,
     executor_can_choose_order_and_parallelism: true,
     strategy_refs_are_advisory_or_route_back: true,
@@ -155,6 +158,15 @@ export function buildStageOperatingPrincipleChecks(repoDir: string) {
     optionalString(managementBoundary.default_operator_question) === 'what_does_current_owner_need_to_answer_next'
       ? null
       : 'stage_operating_principles_operator_question_must_be_current_owner_delta',
+    optionalString(speedPolicy.route_selection_owner) === 'codex_cli'
+      ? null
+      : 'stage_operating_principles_route_selection_owner_must_be_codex_cli',
+    speedPolicy.codex_may_advance_skip_repeat_reverse_or_route_back === true
+      ? null
+      : 'stage_operating_principles_codex_route_flexibility_required',
+    speedPolicy.any_declared_stage_may_start_from_any_prior_stage_result === true
+      ? null
+      : 'stage_operating_principles_any_declared_stage_must_accept_prior_result',
     speedPolicy.executor_autonomy_inside_stage === true
       ? null
       : 'stage_operating_principles_executor_autonomy_missing',

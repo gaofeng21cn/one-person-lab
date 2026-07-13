@@ -3,6 +3,7 @@ import {
   defineQuery,
   defineSignal,
   defineUpdate,
+  executeChild,
   patched,
   proxyActivities,
   setHandler,
@@ -14,9 +15,23 @@ import type {
   TemporalStageAttemptSignalPayload,
   TemporalStageAttemptWorkflowInput,
   TemporalStageAttemptWorkflowState,
+  TemporalStageQualityCycleProjectionInput,
+  TemporalStageRunWorkflowInput,
+  TemporalStageRunWorkflowState,
+  TemporalStageQualityAttemptMaterializationInput,
   TemporalSchedulerTickWorkflowInput,
   TemporalSchedulerTickWorkflowState,
 } from './family-runtime-temporal.ts';
+import {
+  evaluateStageQualityFindingClosure,
+  validateStageQualityFindings,
+  validateStageQualityRepairMap,
+  type StageQualityAttemptRole,
+  type StageQualityFinding,
+  type StageQualityFindingClosure,
+  type StageQualityRepairMapEntry,
+  type StageQualityReReviewResult,
+} from '../stagecraft/stage-quality-cycle.ts';
 import {
   CODEX_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT,
   CODEX_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
@@ -28,14 +43,25 @@ import {
   codexActivityEventForTemporalHistory,
   providerBlockerFromCodexResult,
 } from './family-runtime-temporal-history-summary.ts';
+import { requireStageQualityAttemptBoundary } from './family-runtime-stage-quality-attempt-boundary.ts';
 
 type StageAttemptActivities = {
   codexStageActivity(input: TemporalStageAttemptWorkflowInput): Promise<Record<string, unknown>>;
   domainHandlerDispatchActivity(input: TemporalStageAttemptWorkflowInput): Promise<Record<string, unknown>>;
   schedulerTickActivity(input: TemporalSchedulerTickWorkflowInput): Promise<Record<string, unknown>>;
+  stageQualityAttemptMaterializeActivity(
+    input: TemporalStageQualityAttemptMaterializationInput,
+  ): Promise<{
+    attempt_ref: string;
+    workflow_input: TemporalStageAttemptWorkflowInput;
+  }>;
+  stageQualityCycleProjectActivity(
+    input: TemporalStageQualityCycleProjectionInput,
+  ): Promise<Record<string, unknown>>;
 };
 
 export const stageAttemptQuery = defineQuery<TemporalStageAttemptWorkflowState>('StageAttemptQuery');
+export const stageRunQuery = defineQuery<TemporalStageRunWorkflowState>('StageRunQuery');
 export const schedulerTickQuery = defineQuery<TemporalSchedulerTickWorkflowState>('SchedulerTickQuery');
 export const humanGateSignal = defineSignal<[TemporalStageAttemptSignalPayload]>('HumanGateSignal');
 export const ownerReceiptSignal = defineSignal<[TemporalStageAttemptSignalPayload]>('OwnerReceiptSignal');
@@ -58,6 +84,16 @@ const { domainHandlerDispatchActivity, schedulerTickActivity } = proxyActivities
   scheduleToCloseTimeout: SHORT_STAGE_ACTIVITY_SCHEDULE_TO_CLOSE_TIMEOUT,
   startToCloseTimeout: SHORT_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
   heartbeatTimeout: SHORT_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT,
+  retry: {
+    maximumAttempts: 3,
+  },
+});
+
+const { stageQualityAttemptMaterializeActivity, stageQualityCycleProjectActivity } = proxyActivities<Pick<
+  StageAttemptActivities,
+  'stageQualityAttemptMaterializeActivity' | 'stageQualityCycleProjectActivity'
+>>({
+  startToCloseTimeout: SHORT_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
   retry: {
     maximumAttempts: 3,
   },
@@ -181,6 +217,7 @@ function validateOperatorActionPayload(signal: TemporalStageAttemptSignalPayload
 export async function StageAttemptWorkflow(
   input: TemporalStageAttemptWorkflowInput,
 ): Promise<TemporalStageAttemptWorkflowState> {
+  requireStageQualityAttemptBoundary(input as unknown as Record<string, unknown>);
   let state: TemporalStageAttemptWorkflowState = {
     surface_kind: 'temporal_stage_attempt_query',
     provider_kind: 'temporal',
@@ -469,6 +506,336 @@ export async function StageAttemptWorkflow(
   return state;
 }
 
+function qualityEnvelopeFromAttempt(state: TemporalStageAttemptWorkflowState) {
+  const closeout = asRecord(state.closeout_packet);
+  const routeImpact = asRecord(closeout.route_impact);
+  return asRecord(routeImpact.stage_quality_cycle);
+}
+
+function executionSessionRefFromAttemptState(state: TemporalStageAttemptWorkflowState) {
+  for (let index = state.activity_events.length - 1; index >= 0; index -= 1) {
+    const event = asRecord(state.activity_events[index]);
+    if (event.activity_kind !== 'codex_stage_activity') continue;
+    const progress = asRecord(event.progress_summary);
+    if (typeof progress.execution_session_ref === 'string' && progress.execution_session_ref) {
+      return progress.execution_session_ref;
+    }
+    if (typeof progress.thread_id === 'string' && progress.thread_id) {
+      return `codex://threads/${progress.thread_id}`;
+    }
+  }
+  return null;
+}
+
+function qualityArtifactIdentity(value: Record<string, unknown>) {
+  const artifactRefs = asStringList(value.artifact_refs);
+  const artifactHashes = asStringList(value.artifact_hashes);
+  if (artifactRefs.length === 0 || artifactRefs.length !== artifactHashes.length) {
+    throw new Error('Stage quality attempt must return equal non-empty artifact_refs and artifact_hashes.');
+  }
+  return { artifactRefs, artifactHashes };
+}
+
+function findingList(value: unknown) {
+  return validateStageQualityFindings(asRecordList(value) as StageQualityFinding[]);
+}
+
+function repairMapList(value: unknown, findings: StageQualityFinding[]) {
+  return validateStageQualityRepairMap({
+    findings,
+    repairMap: asRecordList(value) as StageQualityRepairMapEntry[],
+  });
+}
+
+function findingClosureList(value: unknown) {
+  return asRecordList(value) as StageQualityFindingClosure[];
+}
+
+function qualityOutcome(value: Record<string, unknown>) {
+  const outcome = typeof value.outcome === 'string' ? value.outcome : null;
+  if (
+    outcome === 'pass'
+    || outcome === 'repair_required'
+    || outcome === 'completed_with_quality_debt'
+    || outcome === 'blocked'
+    || outcome === 'human_gate'
+  ) {
+    return outcome;
+  }
+  throw new Error('Stage quality attempt returned an invalid outcome.');
+}
+
+function stageRunQualityCycleId(input: TemporalStageRunWorkflowInput) {
+  return `quality-cycle:${input.stage_run_id}`;
+}
+
+function validateWorkflowStageRunInput(input: TemporalStageRunWorkflowInput) {
+  const roleKeys = Object.keys(input.role_prompt_refs ?? {}).sort();
+  if (JSON.stringify(roleKeys) !== JSON.stringify(['producer', 're_reviewer', 'repairer', 'reviewer'])) {
+    throw new Error('StageRun role_prompt_refs must use only producer, reviewer, repairer, and re_reviewer.');
+  }
+  const maxRepairRounds = input.quality_policy?.formal_review?.max_repair_rounds;
+  if (!Number.isInteger(maxRepairRounds) || maxRepairRounds < 0 || maxRepairRounds > 3) {
+    throw new Error('StageRun quality repair budget must be between zero and three.');
+  }
+  if (!Array.isArray(input.quality_rubric_refs) || input.quality_rubric_refs.length === 0) {
+    throw new Error('StageRun quality rubric refs are required.');
+  }
+}
+
+function stageRunStopped(state: TemporalStageRunWorkflowState) {
+  return ['blocked', 'human_gate', 'failed'].includes(state.status);
+}
+
+export async function StageRunWorkflow(
+  input: TemporalStageRunWorkflowInput,
+): Promise<TemporalStageRunWorkflowState> {
+  validateWorkflowStageRunInput(input);
+  const qualityCycleId = stageRunQualityCycleId(input);
+  let state: TemporalStageRunWorkflowState = {
+    surface_kind: 'temporal_stage_run_query',
+    provider_kind: 'temporal',
+    stage_run_id: input.stage_run_id,
+    workflow_id: input.workflow_id,
+    quality_cycle_id: qualityCycleId,
+    domain_id: input.domain_id,
+    stage_id: input.stage_id,
+    status: 'registered',
+    current_role: null,
+    repair_rounds_used: 0,
+    max_repair_rounds: input.quality_policy.formal_review.max_repair_rounds,
+    attempts: [],
+    findings: [],
+    repair_map: [],
+    finding_closures: [],
+    artifact_refs: asStringList(input.artifact_refs),
+    artifact_hashes: asStringList(input.artifact_hashes),
+    quality_debt_refs: [],
+    blocked_reason: null,
+    sqlite_projection: { status: 'pending', error: null },
+    started_at: nowIso(),
+    updated_at: nowIso(),
+    authority_boundary: {
+      opl: 'durable_quality_loop_orchestration_and_refs_transport_only',
+      domain: 'review_findings_repair_artifact_and_quality_verdict_owner',
+      provider_completion_is_domain_ready: false,
+    },
+  };
+  setHandler(stageRunQuery, () => state);
+  const observedSessions = new Set<string>();
+
+  const terminalize = async (nextState: TemporalStageRunWorkflowState) => {
+    state = nextState;
+    try {
+      await stageQualityCycleProjectActivity({ stage_run: input, state });
+      state = { ...state, sqlite_projection: { status: 'synced', error: null } };
+    } catch (error) {
+      state = {
+        ...state,
+        sqlite_projection: {
+          status: 'failed',
+          error: error instanceof Error ? error.message : String(error),
+        },
+      };
+    }
+    return state;
+  };
+
+  const runAttempt = async (attemptInput: {
+    role: StageQualityAttemptRole;
+    round: number;
+    parentAttemptRef?: string | null;
+    artifactRefs: string[];
+    artifactHashes: string[];
+    findings?: StageQualityFinding[];
+    repairMap?: StageQualityRepairMapEntry[];
+  }) => {
+    state = { ...state, status: 'running', current_role: attemptInput.role, updated_at: nowIso() };
+    const materialized = await stageQualityAttemptMaterializeActivity({
+      stage_run: input,
+      quality_cycle_id: qualityCycleId,
+      attempt_role: attemptInput.role,
+      quality_round_index: attemptInput.round,
+      parent_attempt_ref: attemptInput.parentAttemptRef,
+      artifact_refs: attemptInput.artifactRefs,
+      artifact_hashes: attemptInput.artifactHashes,
+      findings: attemptInput.findings,
+      repair_map: attemptInput.repairMap,
+    });
+    const childInput = materialized.workflow_input;
+    const result = await executeChild(StageAttemptWorkflow, {
+      args: [childInput],
+      workflowId: childInput.workflow_id,
+    });
+    const executionSessionRef = executionSessionRefFromAttemptState(result);
+    if (!executionSessionRef) {
+      throw new Error(`Stage quality ${attemptInput.role} Attempt did not expose an execution session identity.`);
+    }
+    if (observedSessions.has(executionSessionRef)) {
+      throw new Error(`Stage quality Attempt reused provider session ${executionSessionRef}.`);
+    }
+    observedSessions.add(executionSessionRef);
+    const envelope = qualityEnvelopeFromAttempt(result);
+    const artifactIdentity = qualityArtifactIdentity(envelope);
+    state = {
+      ...state,
+      attempts: [...state.attempts, {
+        attempt_role: attemptInput.role,
+        quality_round_index: attemptInput.round,
+        stage_attempt_id: childInput.stage_attempt_id,
+        workflow_id: childInput.workflow_id,
+        execution_session_ref: executionSessionRef,
+        status: result.status,
+        artifact_refs: artifactIdentity.artifactRefs,
+        artifact_hashes: artifactIdentity.artifactHashes,
+      }],
+      artifact_refs: artifactIdentity.artifactRefs,
+      artifact_hashes: artifactIdentity.artifactHashes,
+      updated_at: nowIso(),
+    };
+    if (result.status === 'human_gate') {
+      state = { ...state, status: 'human_gate', current_role: null, blocked_reason: 'human_gate' };
+    } else if (result.status === 'blocked' || result.status === 'failed') {
+      state = {
+        ...state,
+        status: result.status === 'failed' ? 'failed' : 'blocked',
+        current_role: null,
+        blocked_reason: typeof envelope.blocked_reason === 'string'
+          ? envelope.blocked_reason
+          : `stage_quality_${attemptInput.role}_not_completed`,
+      };
+    }
+    return { result, envelope, attemptRef: materialized.attempt_ref };
+  };
+
+  try {
+    let parentAttemptRef: string | null = null;
+    const producer = await runAttempt({
+      role: 'producer',
+      round: 0,
+      artifactRefs: state.artifact_refs,
+      artifactHashes: state.artifact_hashes,
+    });
+    parentAttemptRef = producer.attemptRef;
+    if (stageRunStopped(state)) return terminalize(state);
+    if (!input.quality_policy.formal_review.required) {
+      return terminalize({ ...state, status: 'completed', current_role: null, updated_at: nowIso() });
+    }
+
+    const review = await runAttempt({
+      role: 'reviewer',
+      round: 0,
+      parentAttemptRef,
+      artifactRefs: state.artifact_refs,
+      artifactHashes: state.artifact_hashes,
+    });
+    parentAttemptRef = review.attemptRef;
+    if (stageRunStopped(state)) return terminalize(state);
+    const initialOutcome = qualityOutcome(review.envelope);
+    let findings = findingList(review.envelope.findings);
+    state = { ...state, findings };
+    if (initialOutcome === 'pass') {
+      return terminalize({ ...state, status: 'completed', current_role: null, updated_at: nowIso() });
+    }
+    if (initialOutcome === 'completed_with_quality_debt') {
+      return terminalize({
+        ...state,
+        status: 'completed_with_quality_debt',
+        current_role: null,
+        quality_debt_refs: asStringList(review.envelope.quality_debt_refs),
+        updated_at: nowIso(),
+      });
+    }
+    if (initialOutcome === 'blocked' || initialOutcome === 'human_gate') {
+      return terminalize({
+        ...state,
+        status: initialOutcome,
+        current_role: null,
+        blocked_reason: typeof review.envelope.blocked_reason === 'string'
+          ? review.envelope.blocked_reason
+          : initialOutcome,
+        updated_at: nowIso(),
+      });
+    }
+
+    for (let round = 1; round <= state.max_repair_rounds; round += 1) {
+      const repair = await runAttempt({
+        role: 'repairer',
+        round,
+        parentAttemptRef,
+        artifactRefs: state.artifact_refs,
+        artifactHashes: state.artifact_hashes,
+        findings,
+      });
+      parentAttemptRef = repair.attemptRef;
+      if (stageRunStopped(state)) return terminalize(state);
+      const repairMap = repairMapList(repair.envelope.repair_map, findings);
+      state = { ...state, repair_map: repairMap };
+      const reReview = await runAttempt({
+        role: 're_reviewer',
+        round,
+        parentAttemptRef,
+        artifactRefs: state.artifact_refs,
+        artifactHashes: state.artifact_hashes,
+        findings,
+        repairMap,
+      });
+      parentAttemptRef = reReview.attemptRef;
+      state = { ...state, repair_rounds_used: round };
+      if (stageRunStopped(state)) return terminalize(state);
+      const reReviewResult: StageQualityReReviewResult = {
+        finding_closures: findingClosureList(reReview.envelope.finding_closures),
+        repair_regressions: findingList(reReview.envelope.repair_regressions),
+        critical_new_findings: findingList(reReview.envelope.critical_new_findings),
+        optional_observations: asRecordList(reReview.envelope.optional_observations) as StageQualityReReviewResult['optional_observations'],
+      };
+      const closure = evaluateStageQualityFindingClosure({ findings, repairMap, reReview: reReviewResult });
+      state = { ...state, finding_closures: reReviewResult.finding_closures };
+      if (!closure.trigger_repair) {
+        return terminalize({ ...state, status: 'completed', current_role: null, updated_at: nowIso() });
+      }
+      const openIds = new Set(closure.open_required_finding_ids);
+      findings = [
+        ...findings.filter((finding) => openIds.has(finding.finding_id)),
+        ...reReviewResult.repair_regressions,
+        ...reReviewResult.critical_new_findings,
+      ];
+      state = { ...state, findings };
+    }
+
+    if (state.artifact_refs.length === 0 || state.artifact_hashes.length === 0) {
+      return terminalize({
+        ...state,
+        status: 'blocked',
+        current_role: null,
+        blocked_reason: 'stage_quality_budget_exhausted_without_consumable_artifact',
+        updated_at: nowIso(),
+      });
+    }
+    return terminalize({
+      ...state,
+      status: 'completed_with_quality_debt',
+      current_role: null,
+      quality_debt_refs: [
+        ...new Set([
+          ...state.quality_debt_refs,
+          ...state.findings.map((finding) => `quality-debt:${finding.finding_id}`),
+        ]),
+      ],
+      updated_at: nowIso(),
+    });
+  } catch (error) {
+    state = {
+      ...state,
+      status: 'failed',
+      current_role: null,
+      blocked_reason: error instanceof Error ? error.message : String(error),
+      updated_at: nowIso(),
+    };
+    throw error;
+  }
+}
+
 export async function SchedulerTickWorkflow(
   input: TemporalSchedulerTickWorkflowInput,
 ): Promise<TemporalSchedulerTickWorkflowState> {
@@ -514,5 +881,4 @@ export async function SchedulerTickWorkflow(
   return state;
 }
 
-export const StageRunWorkflow = StageAttemptWorkflow;
 export const ReconcileWorkflow = SchedulerTickWorkflow;

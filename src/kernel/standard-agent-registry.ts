@@ -37,6 +37,11 @@ export type StandardAgentFamilyRuntimeProfile = {
   runtime_manager_registration?: StandardAgentRuntimeManagerRegistration;
 };
 
+export type StandardAgentQualityGovernanceProfile = {
+  profile_id: 'official_high_value_knowledge_deliverable.v1';
+  profile_ref: 'contracts/opl-framework/official-knowledge-deliverable-quality-profile.json';
+};
+
 export type StandardAgentRegistryEntry = {
   agent_id: string;
   domain_id: string;
@@ -61,11 +66,16 @@ export type StandardAgentRegistryEntry = {
   domain_authority_kernel_examples: string[];
   workspace_profile?: StandardAgentWorkspaceProfile;
   family_runtime_profile?: StandardAgentFamilyRuntimeProfile;
+  quality_governance_profile?: StandardAgentQualityGovernanceProfile;
 };
 
 export const STANDARD_AGENT_REGISTRY_REF = 'src/kernel/standard-agent-registry.ts';
 export const STANDARD_AGENT_SERIES_MEMBERSHIP = 'standard_domain_agent' as const;
 export const FRAMEWORK_CAPABILITY_PACKAGE_MEMBERSHIP = 'framework_capability_package' as const;
+export const OFFICIAL_KNOWLEDGE_DELIVERABLE_QUALITY_PROFILE = {
+  profile_id: 'official_high_value_knowledge_deliverable.v1',
+  profile_ref: 'contracts/opl-framework/official-knowledge-deliverable-quality-profile.json',
+} as const satisfies StandardAgentQualityGovernanceProfile;
 
 export const STANDARD_AGENT_REGISTRY = [
   {
@@ -98,6 +108,7 @@ export const STANDARD_AGENT_REGISTRY = [
       'owner receipt signer',
       'typed blocker signer',
     ],
+    quality_governance_profile: OFFICIAL_KNOWLEDGE_DELIVERABLE_QUALITY_PROFILE,
     workspace_profile: {
       default_profile_id: 'portfolio',
       workspace_kind: 'medical_research_workspace',
@@ -182,6 +193,7 @@ export const STANDARD_AGENT_REGISTRY = [
       'owner receipt signer',
       'typed blocker signer',
     ],
+    quality_governance_profile: OFFICIAL_KNOWLEDGE_DELIVERABLE_QUALITY_PROFILE,
     workspace_profile: {
       default_profile_id: 'one_off',
       workspace_kind: 'grant_authoring_workspace',
@@ -267,6 +279,7 @@ export const STANDARD_AGENT_REGISTRY = [
       'owner receipt signer',
       'typed blocker signer',
     ],
+    quality_governance_profile: OFFICIAL_KNOWLEDGE_DELIVERABLE_QUALITY_PROFILE,
     workspace_profile: {
       default_profile_id: 'series',
       workspace_kind: 'visual_theme_workspace',
@@ -357,6 +370,7 @@ export const STANDARD_AGENT_REGISTRY = [
       'target-agent no-forbidden-write proof',
       'target-agent typed blocker signer',
     ],
+    quality_governance_profile: OFFICIAL_KNOWLEDGE_DELIVERABLE_QUALITY_PROFILE,
     workspace_profile: {
       default_profile_id: 'one_off',
       workspace_kind: 'agent_foundry_workspace',
@@ -409,6 +423,7 @@ export const STANDARD_AGENT_REGISTRY = [
       'owner receipt signer',
       'typed blocker signer',
     ],
+    quality_governance_profile: OFFICIAL_KNOWLEDGE_DELIVERABLE_QUALITY_PROFILE,
     workspace_profile: {
       default_profile_id: 'one_off',
       workspace_kind: 'book_authoring_workspace',

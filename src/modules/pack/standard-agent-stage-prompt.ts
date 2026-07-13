@@ -69,6 +69,16 @@ export function readStandardAgentStagePromptFile(repoDir: string, promptRef: str
   };
 }
 
+export function readStandardAgentQualityRolePromptFile(repoDir: string, promptRef: string) {
+  const fileRef = promptRef.split('#', 1)[0] ?? promptRef;
+  const prompt = readStandardAgentStagePromptFile(repoDir, fileRef);
+  return {
+    ...prompt,
+    ref: promptRef,
+    layer: 'domain_stage_quality_role_prompt' as const,
+  };
+}
+
 export function resolveStandardAgentStagePrompt(
   repoDir: string | null | undefined,
   stageId: string,

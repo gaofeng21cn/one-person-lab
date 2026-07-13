@@ -12,6 +12,7 @@ import {
 import { parseJsonText } from '../../kernel/json-file.ts';
 import { record } from '../../kernel/json-record.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { validateIndependentStageReviewReceipt } from '../stagecraft/stage-quality-cycle.ts';
 
 export type StageAttemptStatus =
   | 'queued'
@@ -34,6 +35,21 @@ export type StageAttemptRow = {
   source_fingerprint: string | null;
   executor_kind: string;
   stage_attempt_executor_policy_json?: string | null;
+  stage_run_id?: string | null;
+  quality_cycle_id?: string | null;
+  attempt_role?: string | null;
+  quality_round_index?: number | null;
+  parent_attempt_ref?: string | null;
+  input_artifact_refs_json?: string | null;
+  reviewed_artifact_hashes_json?: string | null;
+  quality_source_refs_json?: string | null;
+  quality_rubric_refs_json?: string | null;
+  prior_finding_refs_json?: string | null;
+  repair_map_refs_json?: string | null;
+  quality_role_prompt_ref?: string | null;
+  execution_session_ref?: string | null;
+  context_manifest_ref?: string | null;
+  no_context_inheritance?: number | null;
   status: StageAttemptStatus;
   checkpoint_refs_json: string;
   closeout_refs_json: string;
@@ -105,6 +121,21 @@ export function createStageAttemptTable(db: DatabaseSync) {
       source_fingerprint TEXT,
       executor_kind TEXT NOT NULL,
       stage_attempt_executor_policy_json TEXT,
+      stage_run_id TEXT,
+      quality_cycle_id TEXT,
+      attempt_role TEXT,
+      quality_round_index INTEGER,
+      parent_attempt_ref TEXT,
+      input_artifact_refs_json TEXT NOT NULL DEFAULT '[]',
+      reviewed_artifact_hashes_json TEXT NOT NULL DEFAULT '[]',
+      quality_source_refs_json TEXT NOT NULL DEFAULT '[]',
+      quality_rubric_refs_json TEXT NOT NULL DEFAULT '[]',
+      prior_finding_refs_json TEXT NOT NULL DEFAULT '[]',
+      repair_map_refs_json TEXT NOT NULL DEFAULT '[]',
+      quality_role_prompt_ref TEXT,
+      execution_session_ref TEXT,
+      context_manifest_ref TEXT,
+      no_context_inheritance INTEGER,
       status TEXT NOT NULL,
       checkpoint_refs_json TEXT NOT NULL,
       closeout_refs_json TEXT NOT NULL,
@@ -144,6 +175,19 @@ export function createStageAttemptTable(db: DatabaseSync) {
       created_at TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_stage_attempt_closeouts_attempt ON stage_attempt_closeouts(stage_attempt_id, created_at);
+    CREATE TABLE IF NOT EXISTS stage_quality_cycles (
+      quality_cycle_id TEXT PRIMARY KEY,
+      stage_run_id TEXT NOT NULL,
+      domain_id TEXT NOT NULL,
+      stage_id TEXT NOT NULL,
+      policy_json TEXT NOT NULL,
+      state_json TEXT NOT NULL,
+      current_attempt_ref TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_stage_quality_cycles_stage_run
+      ON stage_quality_cycles(stage_run_id, stage_id, updated_at);
   `);
   const columns = readColumnNames(db, 'stage_attempts');
   addColumnIfMissing(db, 'stage_attempts', columns, 'idempotency_key', "idempotency_key TEXT NOT NULL DEFAULT ''");
@@ -152,11 +196,27 @@ export function createStageAttemptTable(db: DatabaseSync) {
   addColumnIfMissing(db, 'stage_attempts', columns, 'route_impact_json', "route_impact_json TEXT NOT NULL DEFAULT '{}'");
   addColumnIfMissing(db, 'stage_attempts', columns, 'closeout_receipt_status', 'closeout_receipt_status TEXT');
   addColumnIfMissing(db, 'stage_attempts', columns, 'stage_attempt_executor_policy_json', 'stage_attempt_executor_policy_json TEXT');
+  addColumnIfMissing(db, 'stage_attempts', columns, 'stage_run_id', 'stage_run_id TEXT');
+  addColumnIfMissing(db, 'stage_attempts', columns, 'quality_cycle_id', 'quality_cycle_id TEXT');
+  addColumnIfMissing(db, 'stage_attempts', columns, 'attempt_role', 'attempt_role TEXT');
+  addColumnIfMissing(db, 'stage_attempts', columns, 'quality_round_index', 'quality_round_index INTEGER');
+  addColumnIfMissing(db, 'stage_attempts', columns, 'parent_attempt_ref', 'parent_attempt_ref TEXT');
+  addColumnIfMissing(db, 'stage_attempts', columns, 'input_artifact_refs_json', "input_artifact_refs_json TEXT NOT NULL DEFAULT '[]'");
+  addColumnIfMissing(db, 'stage_attempts', columns, 'reviewed_artifact_hashes_json', "reviewed_artifact_hashes_json TEXT NOT NULL DEFAULT '[]'");
+  addColumnIfMissing(db, 'stage_attempts', columns, 'quality_source_refs_json', "quality_source_refs_json TEXT NOT NULL DEFAULT '[]'");
+  addColumnIfMissing(db, 'stage_attempts', columns, 'quality_rubric_refs_json', "quality_rubric_refs_json TEXT NOT NULL DEFAULT '[]'");
+  addColumnIfMissing(db, 'stage_attempts', columns, 'prior_finding_refs_json', "prior_finding_refs_json TEXT NOT NULL DEFAULT '[]'");
+  addColumnIfMissing(db, 'stage_attempts', columns, 'repair_map_refs_json', "repair_map_refs_json TEXT NOT NULL DEFAULT '[]'");
+  addColumnIfMissing(db, 'stage_attempts', columns, 'quality_role_prompt_ref', 'quality_role_prompt_ref TEXT');
+  addColumnIfMissing(db, 'stage_attempts', columns, 'execution_session_ref', 'execution_session_ref TEXT');
+  addColumnIfMissing(db, 'stage_attempts', columns, 'context_manifest_ref', 'context_manifest_ref TEXT');
+  addColumnIfMissing(db, 'stage_attempts', columns, 'no_context_inheritance', 'no_context_inheritance INTEGER');
   addColumnIfMissing(db, 'stage_attempts', columns, 'archived_at', 'archived_at TEXT');
   addColumnIfMissing(db, 'stage_attempts', columns, 'archived_reason', 'archived_reason TEXT');
   addColumnIfMissing(db, 'stage_attempts', columns, 'archived_source', 'archived_source TEXT');
   db.exec('CREATE INDEX IF NOT EXISTS idx_stage_attempts_idempotency ON stage_attempts(idempotency_key)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_stage_attempts_archived ON stage_attempts(archived_at, updated_at)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_stage_attempts_quality_cycle ON stage_attempts(stage_run_id, quality_cycle_id, quality_round_index, attempt_role)');
 }
 
 export function stageAttemptToPayload(row: StageAttemptRow) {
@@ -202,6 +262,23 @@ export function stageAttemptToPayload(row: StageAttemptRow) {
     source_fingerprint: row.source_fingerprint,
     executor_kind: row.executor_kind,
     stage_attempt_executor_policy: hasStageAttemptExecutorPolicy ? stageAttemptExecutorPolicy : null,
+    stage_run_id: row.stage_run_id ?? null,
+    quality_cycle_id: row.quality_cycle_id ?? null,
+    attempt_role: row.attempt_role ?? null,
+    quality_round_index: row.quality_round_index ?? null,
+    parent_attempt_ref: row.parent_attempt_ref ?? null,
+    input_artifact_refs: row.input_artifact_refs_json ? parseJsonList(row.input_artifact_refs_json) : [],
+    reviewed_artifact_hashes: row.reviewed_artifact_hashes_json ? parseJsonList(row.reviewed_artifact_hashes_json) : [],
+    quality_source_refs: row.quality_source_refs_json ? parseJsonList(row.quality_source_refs_json) : [],
+    quality_rubric_refs: row.quality_rubric_refs_json ? parseJsonList(row.quality_rubric_refs_json) : [],
+    prior_finding_refs: row.prior_finding_refs_json ? parseJsonList(row.prior_finding_refs_json) : [],
+    repair_map_refs: row.repair_map_refs_json ? parseJsonList(row.repair_map_refs_json) : [],
+    quality_role_prompt_ref: row.quality_role_prompt_ref ?? null,
+    execution_session_ref: row.execution_session_ref ?? null,
+    context_manifest_ref: row.context_manifest_ref ?? null,
+    no_context_inheritance: row.no_context_inheritance === null || row.no_context_inheritance === undefined
+      ? null
+      : row.no_context_inheritance === 1,
     status: row.status,
     checkpoint_refs: parseJsonList(row.checkpoint_refs_json),
     closeout_refs: parseJsonList(row.closeout_refs_json),
@@ -229,6 +306,80 @@ export function stageAttemptToPayload(row: StageAttemptRow) {
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
+}
+
+export function bindStageAttemptExecutionSession(db: DatabaseSync, input: {
+  stageAttemptId: string;
+  executionSessionRef: string;
+}) {
+  const row = db.prepare('SELECT * FROM stage_attempts WHERE stage_attempt_id = ?').get(
+    input.stageAttemptId,
+  ) as StageAttemptRow | undefined;
+  if (!row) {
+    throw new FrameworkContractError('cli_usage_error', 'Stage attempt not found.', {
+      stage_attempt_id: input.stageAttemptId,
+    });
+  }
+  const executionSessionRef = input.executionSessionRef.trim();
+  if (!executionSessionRef) {
+    throw new FrameworkContractError('contract_shape_invalid', 'executionSessionRef must be non-empty.');
+  }
+  if (row.execution_session_ref && row.execution_session_ref !== executionSessionRef) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Stage attempt execution session is immutable.', {
+      stage_attempt_id: row.stage_attempt_id,
+      existing_execution_session_ref: row.execution_session_ref,
+      received_execution_session_ref: executionSessionRef,
+    });
+  }
+  db.prepare(`
+    UPDATE stage_attempts SET execution_session_ref = ?, updated_at = ? WHERE stage_attempt_id = ?
+  `).run(executionSessionRef, new Date().toISOString(), row.stage_attempt_id);
+  const updated = db.prepare('SELECT * FROM stage_attempts WHERE stage_attempt_id = ?').get(
+    row.stage_attempt_id,
+  ) as StageAttemptRow;
+  return stageAttemptToPayload(updated);
+}
+
+export function validatePersistedStageReviewIsolation(db: DatabaseSync, input: {
+  producerAttemptId: string;
+  reviewerAttemptId: string;
+  rubricRefs: string[];
+  verdict: 'pass' | 'repair_required' | 'quality_debt' | 'hard_stop';
+}) {
+  const producer = db.prepare('SELECT * FROM stage_attempts WHERE stage_attempt_id = ?').get(
+    input.producerAttemptId,
+  ) as StageAttemptRow | undefined;
+  const reviewer = db.prepare('SELECT * FROM stage_attempts WHERE stage_attempt_id = ?').get(
+    input.reviewerAttemptId,
+  ) as StageAttemptRow | undefined;
+  if (!producer || !reviewer) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Review isolation validation requires both attempts.');
+  }
+  if (!producer.execution_session_ref || !reviewer.execution_session_ref) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Review isolation validation requires observed execution sessions.');
+  }
+  if (reviewer.no_context_inheritance !== 1) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Reviewer attempt did not prove no context inheritance.');
+  }
+  const artifactRefs = reviewer.input_artifact_refs_json ? parseJsonList(reviewer.input_artifact_refs_json) : [];
+  const artifactHashes = reviewer.reviewed_artifact_hashes_json
+    ? parseJsonList(reviewer.reviewed_artifact_hashes_json)
+    : [];
+  return validateIndependentStageReviewReceipt({
+    surface_kind: 'opl_stage_review_receipt',
+    version: 'stage-review-receipt.v1',
+    stage_run_id: reviewer.stage_run_id ?? producer.stage_run_id ?? 'unknown-stage-run',
+    quality_cycle_id: reviewer.quality_cycle_id ?? producer.quality_cycle_id ?? 'unknown-quality-cycle',
+    producer_attempt_ref: `opl://stage_attempts/${producer.stage_attempt_id}`,
+    reviewer_attempt_ref: `opl://stage_attempts/${reviewer.stage_attempt_id}`,
+    producer_session_ref: producer.execution_session_ref,
+    reviewer_session_ref: reviewer.execution_session_ref,
+    no_context_inheritance: true,
+    reviewed_artifact_refs: artifactRefs.filter((entry): entry is string => typeof entry === 'string'),
+    reviewed_artifact_hashes: artifactHashes.filter((entry): entry is string => typeof entry === 'string'),
+    rubric_refs: input.rubricRefs,
+    verdict: input.verdict,
+  });
 }
 
 export function stageAttemptSignalToPayload(row: StageAttemptSignalRow) {

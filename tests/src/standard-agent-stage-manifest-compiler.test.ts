@@ -209,6 +209,67 @@ test('standard Agent stage manifest compiler keeps stable domain identity and ta
   assert.equal(generated.target_domain_id, 'target-alpha');
 });
 
+test('official knowledge-deliverable profile compiles isolated Stage Review and one Meta Review role', () => {
+  const root = fixture('medautoscience', 'mas');
+  writeJson(root, 'contracts/stage_quality_cycle_policy.json', {
+    surface_kind: 'opl_domain_stage_quality_cycle_profile',
+    version: 'domain-stage-quality-cycle-profile.v1',
+    framework_contract_ref: 'contracts/opl-framework/stage-quality-cycle-contract.json',
+    stages: {
+      intake: {
+        surface_kind: 'opl_stage_quality_cycle_policy',
+        version: 'stage-quality-cycle-policy.v1',
+        enabled: true,
+        stage_prompt_ref: 'agent/prompts/intake.md',
+        role_prompt_refs: {
+          producer: 'agent/prompts/intake.md#producer',
+          reviewer: 'agent/prompts/intake.md#reviewer',
+          repairer: 'agent/prompts/intake.md#repairer',
+          re_reviewer: 'agent/prompts/intake.md#re-reviewer',
+        },
+        quality_rubric_refs: ['agent/quality_gates/quality.md'],
+        in_thread_refinement: { allowed: true, authoritative: false },
+        formal_review: {
+          required: false,
+          risk_tier: 'medium',
+          review_depth: 'full',
+          context_isolation_required: true,
+          max_repair_rounds: 0,
+        },
+        budget_exhaustion: 'complete_with_quality_debt_if_consumable',
+        attempt_boundary: {
+          inherits_stage_goal_scope_authority: true,
+          role_overlay_may_only_narrow: true,
+          controller_creates_next_attempt: true,
+          attempt_is_not_sub_stage: true,
+        },
+      },
+    },
+    meta_review_policy: { stage_ref: 'intake', independent_stage_run_required: true },
+  });
+  const manifest = readManifest(root);
+  manifest.quality_governance_profile_ref =
+    'contracts/opl-framework/official-knowledge-deliverable-quality-profile.json';
+  manifest.meta_review_policy_ref =
+    'contracts/stage_quality_cycle_policy.json#/meta_review_policy';
+  manifest.stages[0] = {
+    ...manifest.stages[0],
+    stage_kind: 'review',
+    stage_role: 'cross_stage_meta_review',
+    stage_quality_cycle_policy_ref: 'contracts/stage_quality_cycle_policy.json#/stages/intake',
+  };
+  writeManifest(root, manifest);
+
+  const compiled = compileStandardAgentStageManifest(root).stage_control_plane;
+  assert.equal(compiled.quality_governance_profile_ref,
+    'contracts/opl-framework/official-knowledge-deliverable-quality-profile.json');
+  assert.equal(compiled.meta_review_policy_ref,
+    'contracts/stage_quality_cycle_policy.json#/meta_review_policy');
+  assert.equal(compiled.stages[0]?.stage_role, 'cross_stage_meta_review');
+  assert.equal(compiled.stages[0]?.stage_quality_cycle_policy_ref,
+    'contracts/stage_quality_cycle_policy.json#/stages/intake');
+});
+
 test('standard Agent stage manifest compiler preserves exclusive source-derived provenance', () => {
   const root = fixture('target-provenance');
   const manifest = readManifest(root);

@@ -93,6 +93,8 @@ export {
   buildTemporalStageAttemptMissingWorkflowCancelReceipt,
   cancelTemporalStageAttemptWorkflow,
   signalTemporalStageAttemptWorkflow,
+  startTemporalStageRunWorkflow,
+  queryTemporalStageRunWorkflow,
   startTemporalStageAttemptWorkflow,
 } from './family-runtime-temporal-provider-parts/attempt-control.ts';
 export { resolveTemporalWorkerForegroundPaths, resolveTemporalWorkerForegroundPathsFromArgv } from './family-runtime-temporal-provider-parts/foreground-paths.ts';

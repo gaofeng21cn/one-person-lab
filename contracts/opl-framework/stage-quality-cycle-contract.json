@@ -1,0 +1,205 @@
+{
+  "contract_kind": "opl_stage_quality_cycle_contract.v1",
+  "surface_kind": "opl_stage_quality_cycle_contract",
+  "owner": "one-person-lab",
+  "state": "active_contract",
+  "purpose": "Define context-isolated Stage Review as independent StageAttempts under one StageRun, without turning attempts into top-level stages or moving domain quality authority into OPL.",
+  "framework_contract_ref": "contracts/opl-framework/stage-quality-cycle-contract.json",
+  "stage_attempt_roles": [
+    "producer",
+    "reviewer",
+    "repairer",
+    "re_reviewer"
+  ],
+  "terminology": {
+    "in_thread_refinement": "Non-authoritative self-check and revision inside one provider thread. It is not Stage Review and cannot create a review receipt.",
+    "stage_review": "A new reviewer StageAttempt and provider thread under the same StageRun, consuming only declared refs and hashes.",
+    "meta_review": "An independent top-level StageRun whose producer-role Attempt performs the cross-stage Meta Review from declared refs without inheriting upstream conversations.",
+    "protocol_closeout_resume": "Same-thread Codex resume used only to materialize a missing typed closeout. It is not review and consumes no quality budget."
+  },
+  "policy": {
+    "surface_kind": "opl_stage_quality_cycle_policy",
+    "version": "stage-quality-cycle-policy.v1",
+    "default_max_repair_rounds": 3,
+    "initial_producer_attempt_counts_as_repair": false,
+    "repair_round_unit": "one_repairer_attempt_followed_by_one_fresh_re_reviewer_attempt",
+    "provider_retry_consumes_quality_budget": false,
+    "domain_helper_retry_consumes_quality_budget": false,
+    "protocol_closeout_resume_consumes_quality_budget": false,
+    "budget_exhaustion_with_consumable_artifact": "completed_with_quality_debt",
+    "budget_exhaustion_without_consumable_artifact": "hard_stop",
+    "same_thread_refinement_can_close_review": false
+  },
+  "stage_run_controller": {
+    "workflow_name": "StageRunWorkflow",
+    "controller_kind": "non_model_durable_temporal_state_machine",
+    "child_workflow_name": "StageAttemptWorkflow",
+    "only_controller_can_create_next_authoritative_attempt": true,
+    "codex_attempt_cannot_expand_quality_loop": true,
+    "attempt_instances_declared_in_manifest": false,
+    "attempt_instances_materialized_dynamically_from_policy": true,
+    "maximum_attempt_instances": 8,
+    "maximum_shape": "one_producer_plus_one_initial_reviewer_plus_three_repairer_re_reviewer_pairs",
+    "provider_retry_budget_is_separate": true,
+    "temporal_activity_retry_budget_is_separate": true,
+    "structured_output_retry_budget_is_separate": true,
+    "stage_run_runtime_retry_budget_is_separate": true
+  },
+  "multi_attempt_stage_boundary": {
+    "decision_rule": "Repeated generation, review, and repair toward the same goal are Attempts; a changed goal, owner, quality gate, or delivery relationship requires a new Stage.",
+    "shared_stage_fields": [
+      "stage_id",
+      "stage_run_id",
+      "goal",
+      "canonical_artifact_family",
+      "owner",
+      "requires",
+      "ensures",
+      "next_stage_boundary",
+      "authority_boundary"
+    ],
+    "attempt_variant_fields": [
+      "stage_attempt_id",
+      "attempt_role",
+      "quality_round_index",
+      "execution_session_ref",
+      "artifact_revision"
+    ],
+    "forbidden_attempt_fields": [
+      "next_stage_refs",
+      "requires",
+      "ensures",
+      "stage_route",
+      "sub_stage_graph",
+      "independent_owner",
+      "stage_current_pointer",
+      "stage_transition_authority"
+    ],
+    "stage_split_or_route_back_when": [
+      "different_primary_open_judgment",
+      "different_owner",
+      "different_source_or_knowledge_authority",
+      "independent_quality_gate",
+      "formal_handoff_artifact",
+      "different_downstream_route",
+      "new_irreversible_permission",
+      "human_decision"
+    ],
+    "codex_subagent_role": "attempt_internal_optional_helper_not_opl_stage_or_attempt"
+  },
+  "context_isolation": {
+    "fresh_session_required_for_roles": [
+      "producer",
+      "reviewer",
+      "repairer",
+      "re_reviewer"
+    ],
+    "required_for_roles": [
+      "reviewer",
+      "re_reviewer"
+    ],
+    "required_fields": [
+      "producer_attempt_ref",
+      "reviewer_attempt_ref",
+      "producer_session_ref",
+      "reviewer_session_ref",
+      "no_context_inheritance",
+      "reviewed_artifact_refs",
+      "reviewed_artifact_hashes",
+      "rubric_refs"
+    ],
+    "session_identity_rule": "reviewer_session_ref_must_differ_from_producer_or_repairer_session_ref",
+    "review_context_allowlist": [
+      "stage_goal_refs",
+      "exact_artifact_refs_and_hashes",
+      "source_refs_and_fingerprint",
+      "quality_rubric_refs",
+      "necessary_artifact_lineage_refs",
+      "prior_finding_refs_and_acceptance_criteria_for_re_review"
+    ],
+    "forbidden_context": [
+      "producer_conversation_history",
+      "producer_or_reviewer_thread_resume",
+      "chain_of_thought",
+      "undeclared_ephemeral_context"
+    ]
+  },
+  "review_receipt": {
+    "surface_kind": "opl_stage_review_receipt",
+    "version": "stage-review-receipt.v1",
+    "verdicts": [
+      "pass",
+      "repair_required",
+      "quality_debt",
+      "hard_stop"
+    ],
+    "reviewed_hash_must_match_current_artifact": true,
+    "no_context_inheritance_required": true,
+    "same_model_different_session_allowed": true
+  },
+  "finding_closure_contract": {
+    "initial_finding_required_fields": [
+      "finding_id",
+      "severity",
+      "required",
+      "evidence_refs",
+      "repair_expectation"
+    ],
+    "repair_map_required_fields": [
+      "finding_id",
+      "repair_status",
+      "changed_artifact_refs",
+      "repair_evidence_refs"
+    ],
+    "re_review_required_inputs": [
+      "prior_findings",
+      "repair_map",
+      "exact_new_artifact_refs_and_hashes",
+      "original_source_refs",
+      "original_rubric_refs"
+    ],
+    "finding_closure_statuses": [
+      "closed",
+      "partially_closed",
+      "still_open"
+    ],
+    "next_repair_triggers": [
+      "required_finding_not_closed",
+      "repair_regression",
+      "critical_new_finding"
+    ],
+    "ordinary_new_suggestion_policy": "optional_observation_or_quality_debt_only_cannot_reopen_loop",
+    "re_reviewer_must_use_fresh_attempt_and_session": true
+  },
+  "risk_tiers": {
+    "low": "one isolated reviewer with a focused rubric",
+    "medium": "one isolated reviewer with the full domain rubric",
+    "high": "one isolated reviewer Attempt with a multi-axis rubric; optional parallel Codex subagents remain internal to that Attempt and the final receipt stays bound to it"
+  },
+  "operator_projection": {
+    "default_user_fields": [
+      "current_stage",
+      "stage_artifact",
+      "completed_or_quality_debt",
+      "next_stage"
+    ],
+    "developer_operator_drilldown_only": [
+      "attempt_role",
+      "quality_round_index",
+      "execution_session_ref",
+      "finding_lineage",
+      "repair_lineage",
+      "token_and_cost"
+    ],
+    "attempt_must_not_be_presented_as_sub_stage": true
+  },
+  "authority_boundary": {
+    "opl_owns_attempt_identity_budget_lineage_and_context_isolation": true,
+    "domain_agent_owns_review_method_findings_repair_and_quality_verdict": true,
+    "opl_can_write_domain_truth": false,
+    "opl_can_mutate_artifact_body": false,
+    "opl_can_create_domain_owner_receipt": false,
+    "opl_can_create_domain_typed_blocker": false,
+    "provider_completion_is_quality_acceptance": false
+  }
+}

@@ -3,6 +3,7 @@ import { stringValue as optionalString } from '../../../kernel/json-record.ts';
 import { codexStageAttemptEnv } from './provider-env.ts';
 import {
   resolveStandardAgentStagePrompt,
+  readStandardAgentQualityRolePromptFile,
   type StandardAgentStagePromptResolution,
 } from '../../pack/index.ts';
 import {
@@ -136,6 +137,79 @@ function providerAuthorizationPromptLines(input: { attempt: JsonRecord; stagePac
   ];
 }
 
+function qualityAttemptPromptLines(attempt: JsonRecord) {
+  const attemptRole = optionalString(attempt.attempt_role);
+  if (!attemptRole) {
+    return [];
+  }
+  const stageRunId = optionalString(attempt.stage_run_id);
+  const qualityCycleId = optionalString(attempt.quality_cycle_id);
+  const inputArtifactRefs = readStringList(attempt.input_artifact_refs);
+  const reviewedArtifactHashes = readStringList(attempt.reviewed_artifact_hashes);
+  const contextManifestRef = optionalString(attempt.context_manifest_ref);
+  const qualitySourceRefs = readStringList(attempt.quality_source_refs);
+  const qualityRubricRefs = readStringList(attempt.quality_rubric_refs);
+  const priorFindingRefs = readStringList(attempt.prior_finding_refs);
+  const repairMapRefs = readStringList(attempt.repair_map_refs);
+  const rolePromptRef = optionalString(attempt.quality_role_prompt_ref);
+  const qualityContext = isRecord(attempt.quality_context) ? attempt.quality_context : {};
+  const workspaceRoot = workspaceRootFromAttempt(attempt);
+  const rolePrompt = rolePromptRef && workspaceRoot
+    ? readStandardAgentQualityRolePromptFile(workspaceRoot, rolePromptRef)
+    : null;
+  const base = [
+    'OPL Stage quality-cycle role contract follows.',
+    `Attempt role: ${attemptRole}`,
+    `StageRun id: ${stageRunId ?? 'unavailable'}`,
+    `Quality cycle id: ${qualityCycleId ?? 'unavailable'}`,
+    `Quality round index: ${typeof attempt.quality_round_index === 'number' ? attempt.quality_round_index : 0}`,
+    'A same-thread write-and-check pass is in_thread_refinement only. It is not formal Stage Review and cannot produce a review receipt.',
+    `Quality role prompt ref: ${rolePromptRef ?? 'missing'}`,
+    `Quality rubric refs: ${JSON.stringify(qualityRubricRefs)}`,
+    ...(rolePrompt
+      ? [
+          `Quality role prompt SHA-256: ${rolePrompt.sha256}`,
+          '<opl_quality_role_prompt>',
+          rolePrompt.content,
+          '</opl_quality_role_prompt>',
+        ]
+      : []),
+    `Exact artifact refs: ${JSON.stringify(inputArtifactRefs)}`,
+    `Expected artifact hashes: ${JSON.stringify(reviewedArtifactHashes)}`,
+    `Source refs: ${JSON.stringify(qualitySourceRefs)}`,
+    `Prior finding refs: ${JSON.stringify(priorFindingRefs)}`,
+    `Repair map refs: ${JSON.stringify(repairMapRefs)}`,
+    `Structured quality context: ${JSON.stringify(qualityContext)}`,
+  ];
+  if (attemptRole === 'repairer') {
+    return [
+      ...base,
+      'This is a fresh repair Attempt. Repair only the declared required findings within the inherited Stage goal, scope, and authority.',
+      'Return a repair_map keyed by stable finding_id plus exact changed artifact refs and hashes. The repairer cannot close findings.',
+    ];
+  }
+  if (!['reviewer', 're_reviewer'].includes(attemptRole)) {
+    return base;
+  }
+  return [
+    ...base,
+    'This is a formal context-isolated review attempt in a new provider thread.',
+    'Do not resume, recover, inspect, or inherit the producer or repairer conversation/session history.',
+    'Use only the declared context manifest, exact artifact refs and hashes, source refs, rubric refs, and necessary lineage.',
+    `Context manifest ref: ${contextManifestRef ?? 'missing'}`,
+    'The review closeout must bind reviewed artifact hashes and declare no_context_inheritance=true.',
+    ...(attemptRole === 're_reviewer'
+      ? [
+          'This is finding-closure re-review. Evaluate each prior required finding against the repair_map and exact new artifact.',
+          'Only still-open required findings, repair regressions, or critical new findings may trigger another repair round.',
+          'Ordinary new suggestions are optional_observations or quality debt and must not reopen the loop.',
+        ]
+      : [
+          'Initial Review must assign stable finding_id, severity, evidence_refs, required status, and repair_expectation.',
+        ]),
+  ];
+}
+
 export function runnerPromptFor(input: {
   attempt: JsonRecord;
   stagePacketRef?: string | null;
@@ -153,6 +227,7 @@ export function runnerPromptFor(input: {
       ? 'Use the domain-owned stage packet as input within the stage skill boundary.'
       : 'No stage packet was supplied. Start from the declared stage id, hydrated stage prompt, workspace context, and any readable prior artifacts; record the missing packet as quality debt rather than stopping.',
     'Return progress through structured events when available.',
+    ...qualityAttemptPromptLines(input.attempt),
     ...effectiveStagePromptLines(input),
     ...providerAuthorizationPromptLines(input),
     ...domainStageRoutePromptLines({

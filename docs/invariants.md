@@ -30,7 +30,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - AgentBuildReceipt 的 digest target 解析、JSON Pointer 选择和 JSON normalization 必须由 OPL `reference-build-proof` primitive 持有并被 OMA 消费。对嵌入 receipt 的 JSON control/capability 文件，canonical digest 必须递归移除 `build_receipt / build_receipt_ref / build_receipt_refs` 后再序列化；不得改成跳过这些文件、信任 receipt 自报 digest、或由 OMA/OPL 分别维护两套算法。
 - `opl profiles capability-plan` 是同一 profile front door 的 refs-only capability planning 子面。它只能消费 canonical selection receipt、Framework-owned 固定 `profile_capability_plan_input`、显式 exact capability refs、显式 owner repo 的 `contracts/capability_map.json` 与既有 Connect exact resolver；不得扫描 HOME、维护 central specialty catalog、复制 OMA object ABI 或 owner module body、激活 legacy id、做 heuristic score / semantic equivalence，或执行 search/sync/install/cache/download。dependency / environment / Pack OS descriptor / Pack lock 只能输出带 owner root 与 source fingerprint 的条件化 action refs；optional miss fail open，只有绑定 canonical current-owner-delta 的 route-required hard-boundary exact miss 可生成 blocker candidate，且 OPL 仍不能创建 typed blocker instance、写 owner receipt 或声明 dependency / environment / target / domain / production ready。
 - StageRun 只运输 Codex 选择的 stage、attempt lifecycle、workspace 与可读 artifact refs，不设 execution authorization、stage-packet 格式门或 closeout-binding 推进门。缺 manifest、packet、role、receipt、review、capability binding、provider attempt 或 lease 只降低可观测性与质量声明，不阻止 Codex 从 declared stage、主提示词、workspace context 和已有可读产物启动下一 stage。Currentness identity 缺失只禁用 stale reuse；只有 identity 冲突可能写错目标、权限/安全/authority、不可逆动作或明确 human decision 才能硬停。
-- Stage Strategy Kernel 是 stage 内的认知计算内核，负责组织 candidate generation、reflection / review、ranking / selection、evolution / revision、meta-review / learning 这类开放式策略循环。它只能以 prompt / skills / tool affordance boundary / knowledge / rubric / quality-gate refs 的形式由 Foundry Agent stage pack 显式声明，并由 selected Agent executor 执行；不得被实现成 OPL 硬编码 workflow engine、工具编排器、机械 checklist、score reducer、domain truth store、artifact authority 或 quality verdict owner。
+- Stage Strategy Kernel 是 stage 内的认知计算内核，负责组织 candidate generation、reflection / review、ranking / selection、evolution / revision、strategy retrospective 这类开放式策略循环。它只能以 prompt / skills / tool affordance boundary / knowledge / rubric / quality-gate refs 的形式由 Foundry Agent stage pack 显式声明，并由 selected Agent executor 执行；不得被实现成 OPL 硬编码 workflow engine、工具编排器、机械 checklist、score reducer、domain truth store、artifact authority 或 quality verdict owner。
 - Stage Attempt Runtime 只负责可恢复 attempt：identity、idempotency、provider binding、workspace/runtime root、heartbeat、checkpoint、resume、retry/dead-letter、human gate、closeout refs、usage/timeline 和 projection。它不得替 Stage Strategy Kernel 生成、评审、排序、修订或学习，也不得把 provider / executor completion 写成 quality gate passed、owner receipt observed 或 stage progression ready。
 - StructuredCloseoutGate 是 OPL Framework / Runway 的 claim-validation primitive，不是 MAS 私有兜底或 stage 外控制层。合法 typed JSON closeout packet / refs 可以授权 owner/quality/ready claim；`Codex CLI` prose、raw output、provider completed、tests green、file presence、docs patch或 read-model refreshed只能关闭为 progress / `completed_with_quality_debt`。格式漂移按 terminal capture、session recovery、same-session enforcement、domain receipt recovery、raw-output/no-output diagnostic 的顺序归一化并继续推进，不得生成 provider-runtime blocker。Repair / redrive 只能作为 Codex query / decision context，不能伪造 domain owner receipt、typed blocker 或 human gate，不能写 domain truth、artifact body、memory body、quality verdict、runtime ready、domain ready 或 production ready。
 - Stage 间的 `requires` / `ensures`、显式 refs、human gate decision 或 owner receipt 只是 Codex 的输入与 claim evidence，不是程序 transition gate。OPL 不得用启发式伪造缺失证据，也不得把 provider / executor 完成状态写成 quality/ready 条件已满足；缺失前置输入必须显式进入 quality debt，下一 stage 仍可启动并自行判断继续、reverse 或 route-back。
@@ -157,6 +157,18 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - `contracts/` 只保留机器可读真相，不承载叙事规则。
 - 修改 machine-readable contracts、公开边界或已收录领域表述时，必须同步更新文档与测试。
 - admitted domain 仓对外应继续暴露本地 CLI、程序/脚本与 repo-tracked contract；`OPL` activation 只消费这些稳定 surface。
+
+## Stage 内正式 Review
+
+- 同一目标的多次生成、审阅和修复是 Attempt；目标、owner、质量门或交付关系发生变化，就是新的 Stage。
+- Attempt role 只能是 `producer | reviewer | repairer | re_reviewer`。Attempt 不得拥有 `requires`、`ensures`、next-stage refs、route、sub-stage graph、独立 owner、Stage current pointer 或 Stage transition authority。
+- 只有非模型 Temporal `StageRunWorkflow` controller 可以创建下一权威 Attempt；Codex executor 和 Codex subagent 都不得扩张质量循环拓扑。
+- 正式 Stage Review、Repair 和 Re-review 必须各自使用新的 `StageAttemptWorkflow`、新的 `codex exec` 与不同 thread/session，不继承 producer/reviewer conversation history。same-thread refinement 与 typed-closeout resume 都不算 Review。
+- 一个质量循环最多包含一个 producer、一个 initial reviewer 和三组 repairer/re-reviewer。initial review 不计修复轮次；provider/activity/structured-output/runtime retry 不得复用质量预算字段或计数。
+- Re-review 必须按稳定 finding id 关闭 initial findings；只有 required finding 未关闭、repair regression 或 critical new finding可以继续修复。普通新建议只能形成 optional observation / quality debt。
+- 三轮耗尽且仍有可消费产物时必须终止为 `completed_with_quality_debt` 并继续 Stage 图，但阻止 quality/export/publication/submission/ready claim；无可消费产物或真实 authority/safety/human/currentness 硬门才可 blocked / human gate。
+- Meta Review 是独立 StageRun，必须上下文隔离；它的主 Attempt role仍为 `producer`，不得新增 `meta_reviewer` 等自定义 Attempt role，也不得递归启动 Stage 内正式 Review。
+- 普通产品投影不得把 Attempt 展示为 Stage。Attempt、thread/session、finding/repair lineage与成本只属于 developer/operator drilldown。
 
 ## 目标优先级
 

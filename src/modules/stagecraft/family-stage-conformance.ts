@@ -777,6 +777,77 @@ function statusFromCounts(blockerCount: number, warningCount: number): FamilySta
   return 'conformant';
 }
 
+function inspectOfficialQualityGovernance(
+  plane: FamilyStageControlPlane,
+  findings: FamilyStageConformanceFinding[],
+) {
+  if (!plane.quality_governance_profile_ref) return;
+  if (!plane.meta_review_policy_ref) {
+    pushFinding(findings, {
+      severity: 'nonconformance',
+      code: 'official_quality_profile_missing_meta_review_policy',
+      message: 'Official knowledge-deliverable profile requires a Meta Review policy ref.',
+    });
+  }
+  const metaReviewStages = plane.stages.filter((stage) => stage.stage_role === 'cross_stage_meta_review');
+  if (metaReviewStages.length !== 1) {
+    pushFinding(findings, {
+      severity: 'nonconformance',
+      code: 'official_quality_profile_meta_review_stage_count_invalid',
+      message: 'Official knowledge-deliverable profile requires exactly one cross-stage Meta Review Stage.',
+    });
+  }
+  for (const stage of plane.stages) {
+    const reviewExempt = stage.stage_kind === 'operator_gate' || stage.trust_boundary?.lane === 'human_gate';
+    if (!reviewExempt && !stage.stage_quality_cycle_policy_ref) {
+      pushFinding(findings, {
+        severity: 'nonconformance',
+        code: 'official_quality_profile_stage_review_policy_missing',
+        message: 'AI-executed official knowledge-deliverable stages require an isolated Stage Review policy.',
+        stage_id: stage.stage_id,
+      });
+    }
+  }
+  const metaReview = metaReviewStages[0];
+  if (!metaReview) return;
+  if (
+    metaReview.stage_kind !== 'review'
+    || metaReview.independent_gate_policy?.execution_review_separation_required !== true
+  ) {
+    pushFinding(findings, {
+      severity: 'nonconformance',
+      code: 'official_quality_profile_meta_review_not_independent',
+      message: 'Cross-stage Meta Review must be an independent review Stage.',
+      stage_id: metaReview.stage_id,
+    });
+  }
+  const inbound = new Set(plane.stages.flatMap((stage) => readNextStageRefs(stage)));
+  const roots = plane.stages.filter((stage) => !inbound.has(stage.stage_id));
+  const byId = stageById(plane);
+  const visited = new Set<string>();
+  const walk = (stageId: string, seenMetaReview: boolean, path: string[]) => {
+    const key = `${stageId}:${seenMetaReview}`;
+    if (visited.has(key)) return;
+    visited.add(key);
+    const stage = byId.get(stageId);
+    if (!stage) return;
+    const nextSeen = seenMetaReview || stage.stage_id === metaReview.stage_id;
+    const next = readNextStageRefs(stage);
+    if (next.length === 0 && !nextSeen) {
+      pushFinding(findings, {
+        severity: 'nonconformance',
+        code: 'official_quality_profile_terminal_path_bypasses_meta_review',
+        message: 'Terminal knowledge handoff path bypasses cross-stage Meta Review.',
+        stage_id: stage.stage_id,
+        minimal_counterexample: { path: [...path, stage.stage_id] },
+      });
+      return;
+    }
+    for (const nextStageId of next) walk(nextStageId, nextSeen, [...path, stage.stage_id]);
+  };
+  for (const root of roots) walk(root.stage_id, false, []);
+}
+
 function stageResult(stage: FamilyStageDescriptor, findings: FamilyStageConformanceFinding[]): FamilyStageConformanceStageResult {
   const stageFindings = findings.filter((finding) => finding.stage_id === stage.stage_id);
   const blockerCount = stageFindings.filter((finding) => finding.severity === 'nonconformance').length;
@@ -821,6 +892,7 @@ export function buildFamilyStageConformanceReview(
   inspectStaticCycles(plane, findings);
   inspectRuntimeAssumptions(plane, findings);
   inspectHumanReviewBurdenBudget(humanReviewBurdenBudget, findings);
+  inspectOfficialQualityGovernance(plane, findings);
 
   const localizedFindings = localizeFindings(findings, stageById(plane));
   const stageResults = plane.stages.map((stage) => stageResult(stage, localizedFindings));

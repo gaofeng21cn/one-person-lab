@@ -255,6 +255,8 @@
     "state_path": "${OPL_STATE_DIR}/family-runtime/queue.sqlite",
     "provider_model": "provider_backed_stage_attempt_runtime",
     "stage_attempt_ledger": "${OPL_STATE_DIR}/family-runtime/queue.sqlite#stage_attempts",
+    "stage_quality_cycle_ledger": "${OPL_STATE_DIR}/family-runtime/queue.sqlite#stage_quality_cycles",
+    "stage_quality_cycle_contract_ref": "contracts/opl-framework/stage-quality-cycle-contract.json",
     "wakeup_bridge": "Temporal schedule/workflow history -> provider SLO and stage-attempt projection readback",
     "webhook_bridge": "provider signal/webhook -> Temporal signal/update",
     "domain_route_projection": {
