@@ -7,6 +7,16 @@ function normalizeAgentPackageAliasKey(value: string) {
   return value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
+export const CANONICAL_OPL_PACKAGE_IDS = [
+  'mas',
+  'mag',
+  'rca',
+  'oma',
+  'obf',
+  'mas-scholar-skills',
+  'opl-flow',
+] as const;
+
 const CANONICAL_PACKAGE_IDS = new Map<string, string>([
   ...STANDARD_AGENT_REGISTRY
     .filter((entry) => entry.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP)

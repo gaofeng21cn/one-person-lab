@@ -1,4 +1,4 @@
-export { canonicalAgentPackageId } from '../agent-package-identity.ts';
+export { CANONICAL_OPL_PACKAGE_IDS, canonicalAgentPackageId } from '../agent-package-identity.ts';
 export {
   listOplAgentPackages,
   readOplFlowDefaultUserInstructions,

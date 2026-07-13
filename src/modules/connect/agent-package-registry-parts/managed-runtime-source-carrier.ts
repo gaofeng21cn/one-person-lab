@@ -510,6 +510,56 @@ export function managedRuntimeSourceReadiness(
   }
 }
 
+export function managedRuntimeSourceLockReadiness(
+  state: AgentPackageManagedRuntimeSourceState | null | undefined,
+  declaration: AgentPackageManagedRuntimeSourceCarrier | null | undefined = null,
+) {
+  if (!state) {
+    return declaration
+      ? {
+          status: 'missing' as const,
+          operational_ready: false,
+          module_id: declaration.module_id,
+          checkout_path: resolveManagedModuleCheckoutPath(resolveOplDomainModuleSpec(declaration.module_id)),
+          expected_tree_sha256: null,
+          actual_tree_sha256: null,
+          reason: 'managed_runtime_source_lock_missing',
+        }
+      : {
+          status: 'not_required' as const,
+          operational_ready: true,
+          module_id: null,
+          checkout_path: null,
+          expected_tree_sha256: null,
+          actual_tree_sha256: null,
+          reason: null,
+        };
+  }
+  if (!fs.existsSync(state.checkout_path)) {
+    return {
+      status: 'missing' as const,
+      operational_ready: false,
+      module_id: state.module_id,
+      checkout_path: state.checkout_path,
+      expected_tree_sha256: state.tree_sha256,
+      actual_tree_sha256: null,
+      reason: 'managed_runtime_source_missing',
+    };
+  }
+  const preparationReady = state.source_mode === 'bundled_full_runtime'
+    || state.preparation_status === 'completed';
+  const operationalReady = state.status === 'current' && preparationReady;
+  return {
+    status: operationalReady ? 'current' as const : 'incompatible' as const,
+    operational_ready: operationalReady,
+    module_id: state.module_id,
+    checkout_path: state.checkout_path,
+    expected_tree_sha256: state.tree_sha256,
+    actual_tree_sha256: null,
+    reason: operationalReady ? null : 'managed_runtime_source_lock_not_current',
+  };
+}
+
 export function applyManagedRuntimeSourceCarrier(input: {
   config: AgentPackageManagedRuntimeSourceCarrier | null;
   previous: AgentPackageManagedRuntimeSourceState | null | undefined;
