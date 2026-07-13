@@ -78,6 +78,15 @@ export type SourceClosureEffectKind =
   | 'network_access'
   | 'runtime_state_mutation';
 
+export type SourceClosureDeclaredAuditRole =
+  | 'minimal_authority_function'
+  | 'developer_tool'
+  | 'domain_native_helper';
+
+export type SourceClosureAuditRole =
+  | SourceClosureDeclaredAuditRole
+  | 'native_helper_carrier';
+
 export type SourceClosureObservedEffect = {
   effect_id: string;
   effect_kind: SourceClosureEffectKind;
@@ -91,6 +100,7 @@ export type SourceClosureObservedEffect = {
   audit_status:
     | 'allowed_exact'
     | 'developer_tool_exact'
+    | 'domain_native_helper_exact'
     | 'native_helper_carrier_exact'
     | 'unapproved';
   private_generic_effect: boolean;
@@ -101,7 +111,7 @@ export type SourceClosureAuditEntry = {
   symbol: string;
   source_digest: string;
   allowed_effects: SourceClosureEffectKind[];
-  role: 'minimal_authority_function' | 'developer_tool' | 'native_helper_carrier';
+  role: SourceClosureAuditRole;
   allowed_targets: string[];
   allowed_unresolved_edge_reasons: string[];
   carrier_descriptor_ref: string | null;
@@ -121,6 +131,7 @@ export type SourceClosureAuditMismatch = {
     | 'audit_symbol_missing'
     | 'audit_digest_mismatch'
     | 'audit_role_effect_forbidden'
+    | 'audit_role_edge_exclusion_forbidden'
     | 'native_helper_source_closure_invalid'
     | 'native_helper_effect_slot_invalid'
     | 'audit_effect_stale'
@@ -148,8 +159,21 @@ export type SourceClosureEffectContract = {
     private_generic_by_default: boolean;
   }>;
   audit_contract: {
+    allowed_roles: SourceClosureDeclaredAuditRole[];
     globally_forbidden_effects: SourceClosureEffectKind[];
     minimal_authority_forbidden_effects: SourceClosureEffectKind[];
+    domain_native_helper_policy: {
+      exact_binding_required_fields: ['file', 'symbol', 'source_digest'];
+      allowed_reachability: ['reachable', 'unreachable'];
+      allowed_effects: SourceClosureEffectKind[];
+      forbidden_effects: SourceClosureEffectKind[];
+      can_exclude_unresolved_edges: false;
+      required_effect_owner_routes: {
+        process_spawn: ['native_helper_carrier', 'opl_runway'];
+        network_access: ['opl_connect'];
+      };
+      authority_boundary: Record<string, false>;
+    };
     target_allowlist_required_effects: SourceClosureEffectKind[];
     allowed_unresolved_edge_reasons: string[];
     native_helper_carrier_allowed_effects: SourceClosureEffectKind[];

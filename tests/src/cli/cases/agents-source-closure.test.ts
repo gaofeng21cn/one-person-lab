@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 
 import { assert, fs, os, path, runCli, test } from '../helpers.ts';
+import { loadSourceClosureEffectContract } from '../../../../src/modules/foundry-lab/standard-agent-source-closure-parts/analysis.ts';
 import { buildPythonSourceGraph } from '../../../../src/modules/foundry-lab/standard-agent-source-closure-parts/python-graph.ts';
 
 function writeJson(filePath: string, value: unknown) {
@@ -451,6 +452,159 @@ test('agents source-closure binds exact audit to source digest and detects drift
     drifted.audit_mismatches.some((item: { mismatch_kind: string }) => item.mismatch_kind === 'audit_digest_mismatch'),
     true,
   );
+});
+
+test('agents source-closure publishes a filesystem-only false-authority domain native helper role', () => {
+  const contract = loadSourceClosureEffectContract();
+  const policy = contract.audit_contract.domain_native_helper_policy;
+
+  assert.equal(contract.audit_contract.allowed_roles.includes('domain_native_helper'), true);
+  assert.deepEqual(policy.allowed_effects, ['filesystem_write']);
+  assert.equal(policy.can_exclude_unresolved_edges, false);
+  assert.deepEqual(policy.required_effect_owner_routes, {
+    process_spawn: ['native_helper_carrier', 'opl_runway'],
+    network_access: ['opl_connect'],
+  });
+  assert.equal(Object.values(policy.authority_boundary).every((value) => value === false), true);
+});
+
+test('agents source-closure admits exact reachable and unreachable domain native helper writes and detects drift', () => {
+  const repoDir = buildRepo();
+  const cliSource = "import { writeArtifact } from './helper.ts';\nexport function main() { writeArtifact(); }\nmain();\n";
+  const helperSource = "import fs from 'node:fs';\nexport function writeArtifact() { fs.writeFileSync('artifact.json', '{}'); }\n";
+  const offlineHelperSource = "import fs from 'node:fs';\nexport function writeOfflineArtifact() { fs.writeFileSync('offline.json', '{}'); }\n";
+  installTypescriptEntry(repoDir, cliSource);
+  writeSource(repoDir, 'src/helper.ts', helperSource);
+  writeSource(repoDir, 'src/offline-helper.ts', offlineHelperSource);
+  installAudit(repoDir, [
+    {
+      file: 'src/helper.ts',
+      symbol: 'writeArtifact',
+      source_digest: digest(helperSource),
+      allowed_effects: ['filesystem_write'],
+      role: 'domain_native_helper',
+      allowed_targets: ['artifact.json'],
+    },
+    {
+      file: 'src/offline-helper.ts',
+      symbol: 'writeOfflineArtifact',
+      source_digest: digest(offlineHelperSource),
+      allowed_effects: ['filesystem_write'],
+      role: 'domain_native_helper',
+      allowed_targets: ['offline.json'],
+    },
+  ]);
+
+  const admitted = runSourceClosure(repoDir).reports[0];
+  assert.equal(admitted.status, 'passed');
+  assert.deepEqual(
+    admitted.observed_effects.map((effect: { audit_status: string; reachable: boolean }) => ({
+      audit_status: effect.audit_status,
+      reachable: effect.reachable,
+    })),
+    [
+      { audit_status: 'domain_native_helper_exact', reachable: true },
+      { audit_status: 'domain_native_helper_exact', reachable: false },
+    ],
+  );
+  assert.equal(admitted.observed_effects.every(
+    (effect: { private_generic_effect: boolean }) => effect.private_generic_effect === false,
+  ), true);
+  assert.deepEqual(admitted.unreachable_sensitive_residue, []);
+
+  writeSource(repoDir, 'src/offline-helper.ts', `${offlineHelperSource}\n// digest drift\n`);
+  const drifted = runSourceClosure(repoDir).reports[0];
+  assert.equal(drifted.status, 'blocked');
+  assert.equal(drifted.audit_mismatches.some(
+    (item: { mismatch_kind: string; file: string }) => (
+      item.mismatch_kind === 'audit_digest_mismatch' && item.file === 'src/offline-helper.ts'
+    ),
+  ), true);
+});
+
+test('agents source-closure rejects generic runtime effects from domain native helpers', () => {
+  const repoDir = buildRepo();
+  const source = [
+    "import { spawnSync } from 'node:child_process';",
+    'export function main(db: { execute: (sql: string) => void }, runtime: { recordSession: () => void }) {',
+    "  spawnSync('pandoc');",
+    "  spawnSync('codex');",
+    "  fetch('https://example.invalid');",
+    "  db.execute('INSERT INTO records VALUES (1)');",
+    '  runtime.recordSession();',
+    '}',
+    'main({ execute() {} }, { recordSession() {} });',
+    '',
+  ].join('\n');
+  installTypescriptEntry(repoDir, source);
+  installAudit(repoDir, [{
+    file: 'src/cli.ts',
+    symbol: 'main',
+    source_digest: digest(source),
+    allowed_effects: [
+      'process_spawn',
+      'executor_invoke',
+      'network_access',
+      'database_write',
+      'runtime_state_mutation',
+    ],
+    role: 'domain_native_helper',
+    allowed_targets: ['pandoc', 'codex', 'https://example.invalid'],
+  }]);
+
+  const report = runSourceClosure(repoDir).reports[0];
+  const forbiddenKinds = report.audit_mismatches
+    .filter((item: { mismatch_kind: string }) => item.mismatch_kind === 'audit_role_effect_forbidden')
+    .map((item: { effect_kind: string }) => item.effect_kind);
+
+  assert.equal(report.status, 'blocked');
+  const forbiddenEffectKinds = [
+    'process_spawn', 'executor_invoke', 'network_access', 'database_write', 'runtime_state_mutation',
+  ];
+  assert.deepEqual(new Set(forbiddenKinds), new Set(forbiddenEffectKinds));
+  assert.deepEqual(
+    new Set(report.observed_effects.map((effect: { effect_kind: string }) => effect.effect_kind)),
+    new Set(forbiddenEffectKinds),
+  );
+  assert.equal(report.observed_effects.every(
+    (effect: { audit_status: string; private_generic_effect: boolean }) => (
+      effect.audit_status === 'unapproved' && effect.private_generic_effect
+    ),
+  ), true);
+});
+
+test('agents source-closure does not let domain native helpers exclude dynamic edges', () => {
+  const repoDir = buildRepo();
+  installTypescriptEntry(repoDir, "export function main() { return 'ok'; }\nmain();\n");
+  const source = [
+    "import fs from 'node:fs';",
+    'export async function writeArtifact(moduleName: string) {',
+    "  fs.writeFileSync('artifact.json', '{}');",
+    '  return import(moduleName);',
+    '}',
+    '',
+  ].join('\n');
+  writeSource(repoDir, 'src/helper.ts', source);
+  installAudit(repoDir, [{
+    file: 'src/helper.ts',
+    symbol: 'writeArtifact',
+    source_digest: digest(source),
+    allowed_effects: ['filesystem_write'],
+    allowed_unresolved_edge_reasons: ['dynamic_import'],
+    role: 'domain_native_helper',
+    allowed_targets: ['artifact.json'],
+  }]);
+
+  const report = runSourceClosure(repoDir).reports[0];
+
+  assert.equal(report.status, 'blocked');
+  assert.equal(report.excluded_developer_tool_edges.length, 0);
+  assert.equal(report.unresolved_edges.some(
+    (edge: { reason: string }) => edge.reason === 'dynamic_import',
+  ), true);
+  assert.equal(report.audit_mismatches.some(
+    (item: { mismatch_kind: string }) => item.mismatch_kind === 'audit_role_edge_exclusion_forbidden',
+  ), true);
 });
 
 test('agents source-closure requires literal targets and rejects glob or directory audits', () => {

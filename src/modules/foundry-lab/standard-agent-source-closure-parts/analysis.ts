@@ -7,6 +7,7 @@ import type {
   SourceClosureAuditEntry,
   SourceClosureAuditMismatch,
   SourceClosureCallEdge,
+  SourceClosureDeclaredAuditRole,
   SourceClosureEffectContract,
   SourceClosureEffectKind,
   SourceClosureEntrypoint,
@@ -380,11 +381,10 @@ function parseAuditEntries(
           typeof item === 'string' && allowedKinds.has(item)
         ))
       : [];
-    const role = candidate.role === 'developer_tool'
-      ? 'developer_tool' as const
-      : candidate.role === 'minimal_authority_function'
-        ? 'minimal_authority_function' as const
-        : null;
+    const role = typeof candidate.role === 'string'
+      && contract.audit_contract.allowed_roles.includes(candidate.role as SourceClosureDeclaredAuditRole)
+      ? candidate.role as SourceClosureDeclaredAuditRole
+      : null;
     const allowedTargets = Array.isArray(candidate.allowed_targets)
       ? candidate.allowed_targets.filter((item): item is string => typeof item === 'string')
       : [];
@@ -418,7 +418,11 @@ function parseAuditEntries(
       ? allowedEffects.filter((effect) => (
           contract.audit_contract.minimal_authority_forbidden_effects.includes(effect)
         ))
-      : [];
+      : role === 'domain_native_helper'
+        ? allowedEffects.filter((effect) => (
+            !contract.audit_contract.domain_native_helper_policy.allowed_effects.includes(effect)
+          ))
+        : [];
     if (globallyForbiddenEffects.length > 0 || forbiddenRoleEffects.length > 0) {
       for (const effectKind of [...new Set([...globallyForbiddenEffects, ...forbiddenRoleEffects])]) {
         mismatches.push({
@@ -428,9 +432,19 @@ function parseAuditEntries(
           effect_kind: effectKind,
           detail: globallyForbiddenEffects.includes(effectKind)
             ? `${pointer}:no_audit_role_can_authorize_${effectKind}`
-            : `${pointer}:minimal_authority_function_cannot_authorize_${effectKind}`,
+            : `${pointer}:${role}_cannot_authorize_${effectKind}`,
         });
       }
+      continue;
+    }
+    if (role === 'domain_native_helper' && allowedUnresolvedEdgeReasons.length > 0) {
+      mismatches.push({
+        mismatch_kind: 'audit_role_edge_exclusion_forbidden',
+        file,
+        symbol,
+        effect_kind: null,
+        detail: `${pointer}:domain_native_helper_cannot_exclude_unresolved_edges`,
+      });
       continue;
     }
     if (/[*?{}[\]]/.test(file) || file.endsWith('/') || path.isAbsolute(file)) {
@@ -558,14 +572,17 @@ export function buildObservedEffects(input: {
         && !entrypointSymbols.has(symbol.symbol_id);
       const nativeHelperCarrierValid = matchingAudit?.role === 'native_helper_carrier'
         && input.reachable.has(symbol.symbol_id);
+      const domainNativeHelperValid = matchingAudit?.role === 'domain_native_helper';
       const auditStatus = matchingAudit && targetAllowed
         ? developerToolValid
           ? 'developer_tool_exact' as const
           : nativeHelperCarrierValid
             ? 'native_helper_carrier_exact' as const
-          : matchingAudit.role === 'minimal_authority_function'
-            ? 'allowed_exact' as const
-            : 'unapproved' as const
+            : domainNativeHelperValid
+              ? 'domain_native_helper_exact' as const
+              : matchingAudit.role === 'minimal_authority_function'
+                ? 'allowed_exact' as const
+                : 'unapproved' as const
         : 'unapproved' as const;
       if (!matchingAudit) {
         mismatches.push({
