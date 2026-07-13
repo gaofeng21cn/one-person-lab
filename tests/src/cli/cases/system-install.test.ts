@@ -155,7 +155,10 @@ test('managed companion sync writes materialized skills with readable permission
     const targetSkillPath = path.join(homeRoot, 'codex-home', 'skills', 'mineru-document-extractor', 'SKILL.md');
     assert.equal((fs.statSync(materializedSkillPath).mode & 0o777), 0o644);
     assert.equal((fs.statSync(path.join(path.dirname(materializedSkillPath), '_meta.json')).mode & 0o777), 0o644);
-    assert.match(fs.readFileSync(targetSkillPath, 'utf8'), /mineru-document-extractor/);
+    assert.equal(
+      fs.readFileSync(targetSkillPath, 'utf8'),
+      fs.readFileSync(materializedSkillPath, 'utf8'),
+    );
   } finally {
     fs.chmodSync(mineruSkillPath, 0o644);
     fs.chmodSync(mineruMetaPath, 0o644);
