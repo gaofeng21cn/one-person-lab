@@ -5,7 +5,6 @@ import os from 'node:os';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
-import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { Worker } from '@temporalio/worker';
 
 import './family-runtime-temporal-terminal-sync-cases/attempt-precedence.ts';
@@ -29,6 +28,7 @@ import {
   missingWorkflowObservation,
   withStageAttemptDb,
 } from './family-runtime-temporal-terminal-sync-cases/helpers.ts';
+import { createTemporalTestWorkflowEnvironment } from './temporal-test-environment.ts';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -165,7 +165,7 @@ test('Temporal activity terminal sync preserves refs-only domain output through 
   const previousStateDir = process.env.OPL_STATE_DIR;
   process.env.OPL_STATE_DIR = stateRoot;
   const { db } = openQueueDb();
-  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
+  const testEnv = await createTemporalTestWorkflowEnvironment();
   const taskQueue = `opl-temporal-domain-output-${Date.now()}`;
   try {
     createStageAttemptTable(db);

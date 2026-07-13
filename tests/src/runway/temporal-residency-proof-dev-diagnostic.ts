@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { TestWorkflowEnvironment } from '@temporalio/testing';
+import type { TestWorkflowEnvironment } from '@temporalio/testing';
 import { Worker } from '@temporalio/worker';
 
 import * as activities from '../../../src/modules/runway/family-runtime-temporal-activities.ts';
@@ -16,6 +16,7 @@ import {
   userInstructionSignal,
 } from '../../../src/modules/runway/family-runtime-temporal-workflows.ts';
 import { taskRetryBudgetProjection } from '../../../src/modules/runway/family-runtime-queue-projection-boundary.ts';
+import { createTemporalTestWorkflowEnvironment } from '../temporal-test-environment.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const moduleExtension = path.extname(fileURLToPath(import.meta.url)) === '.ts' ? '.ts' : '.js';
@@ -248,7 +249,7 @@ async function runBlockedAttempt(
 }
 
 export async function runTemporalResidencyProof() {
-  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
+  const testEnv = await createTemporalTestWorkflowEnvironment();
   const taskQueue = `opl-temporal-residency-proof-${Date.now()}`;
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-temporal-residency-workspace-'));
   const codexFixture = withTemporalResidencyCodexFixture();

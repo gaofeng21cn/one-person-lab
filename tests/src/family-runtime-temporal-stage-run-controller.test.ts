@@ -2,7 +2,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 
-import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { Worker } from '@temporalio/worker';
 
 import type {
@@ -16,6 +15,7 @@ import {
   normalizeStageQualityCyclePolicy,
   type StageQualityOutcome,
 } from '../../src/modules/stagecraft/stage-quality-cycle.ts';
+import { createTemporalTestWorkflowEnvironment } from './temporal-test-environment.ts';
 
 const repoRoot = path.resolve(import.meta.dirname, '../..');
 
@@ -107,7 +107,7 @@ async function runController(input: {
   failReceiptForReviewerRole?: 'reviewer' | 're_reviewer';
   rawArtifactProgressRole?: 'producer';
 }) {
-  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
+  const testEnv = await createTemporalTestWorkflowEnvironment();
   const taskQueue = `opl-stage-run-controller-${input.id}-${Date.now()}`;
   const attempts: TemporalStageQualityAttemptMaterializationInput[] = [];
   try {

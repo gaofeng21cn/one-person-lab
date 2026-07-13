@@ -7,12 +7,12 @@ import {
   defaultPayloadConverter,
   fromPayloadsAtIndex,
 } from '@temporalio/common/lib/converter/payload-converter.js';
-import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { Worker } from '@temporalio/worker';
 
 import * as activities from '../../../src/modules/runway/family-runtime-temporal-activities.ts';
 import type { TemporalStageAttemptWorkflowInput } from '../../../src/modules/runway/family-runtime-temporal.ts';
 import { StageAttemptWorkflow } from '../../../src/modules/runway/family-runtime-temporal-workflows.ts';
+import { createTemporalTestWorkflowEnvironment } from '../temporal-test-environment.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..', '..');
@@ -27,7 +27,7 @@ function firstActivityResult(history: { events?: Array<Record<string, any>> | nu
 }
 
 test('Temporal history stores refs-only Codex activity results', async () => {
-  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
+  const testEnv = await createTemporalTestWorkflowEnvironment();
   const taskQueue = `opl-stage-attempt-history-test-${Date.now()}`;
   try {
     const worker = await Worker.create({

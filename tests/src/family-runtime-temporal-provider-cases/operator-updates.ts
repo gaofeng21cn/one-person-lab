@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { Worker } from '@temporalio/worker';
 
 import * as activities from '../../../src/modules/runway/family-runtime-temporal-activities.ts';
@@ -18,6 +17,7 @@ import {
   stageAttemptOperatorUpdate,
   resumeSignal,
 } from '../../../src/modules/runway/family-runtime-temporal-workflows.ts';
+import { createTemporalTestWorkflowEnvironment } from '../temporal-test-environment.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..', '..');
@@ -63,7 +63,7 @@ function qualityWorkflowInput(): TemporalStageAttemptWorkflowInput {
 }
 
 test('Temporal StageAttemptWorkflow acks operator actions through Updates', async () => {
-  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
+  const testEnv = await createTemporalTestWorkflowEnvironment();
   const taskQueue = `opl-stage-attempt-update-test-${Date.now()}`;
   try {
     const worker = await Worker.create({
@@ -100,7 +100,7 @@ test('Temporal StageAttemptWorkflow acks operator actions through Updates', asyn
 });
 
 test('Temporal StageAttemptWorkflow rejects invalid operator Updates before mutation', async () => {
-  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
+  const testEnv = await createTemporalTestWorkflowEnvironment();
   const taskQueue = `opl-stage-attempt-update-reject-test-${Date.now()}`;
   try {
     const worker = await Worker.create({
@@ -138,7 +138,7 @@ test('Temporal StageAttemptWorkflow rejects invalid operator Updates before muta
 });
 
 test('new quality Attempt without content binding version fails before executor activity', async () => {
-  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
+  const testEnv = await createTemporalTestWorkflowEnvironment();
   const taskQueue = `opl-stage-attempt-binding-reject-test-${Date.now()}`;
   let codexActivities = 0;
   try {
@@ -184,7 +184,7 @@ test('quality Attempt rejects generic resume through public API, Update, and dir
     return true;
   });
 
-  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
+  const testEnv = await createTemporalTestWorkflowEnvironment();
   const taskQueue = `opl-stage-attempt-quality-resume-test-${Date.now()}`;
   let releaseActivity!: () => void;
   let markActivityStarted!: () => void;

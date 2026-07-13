@@ -1,7 +1,5 @@
 import { spawn } from 'node:child_process';
 
-import { TestWorkflowEnvironment } from '@temporalio/testing';
-
 import {
   assert,
   fs,
@@ -18,11 +16,12 @@ import {
 import {
   stopOrphanTemporalForegroundWorkers,
 } from '../../../../../src/modules/runway/family-runtime-temporal-provider-parts/worker-process.ts';
+import { createTemporalTestWorkflowEnvironment } from '../../../temporal-test-environment.ts';
 
 test('Temporal worker stop cleans orphan foreground worker after state file is missing', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-worker-orphan-stop-'));
   const workerRoot = path.join(stateRoot, 'family-runtime');
-  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
+  const testEnv = await createTemporalTestWorkflowEnvironment();
   const taskQueue = `opl-worker-orphan-stop-${Date.now()}`;
   const previousAddress = process.env.OPL_TEMPORAL_ADDRESS;
   const previousNamespace = process.env.OPL_TEMPORAL_NAMESPACE;

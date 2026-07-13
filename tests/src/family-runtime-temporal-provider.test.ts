@@ -8,7 +8,6 @@ import './family-runtime-temporal-provider-cases/operator-updates.ts';
 import './family-runtime-temporal-provider-cases/scheduler-and-readiness.ts';
 import './family-runtime-temporal-provider-cases/codex-activity-history.ts';
 import './family-runtime-temporal-provider-cases/legacy-workflow-replay.ts';
-import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { Worker } from '@temporalio/worker';
 
 import * as activities from '../../src/modules/runway/family-runtime-temporal-activities.ts';
@@ -32,6 +31,7 @@ import {
   buildTemporalStageAttemptSearchAttributes,
   buildTemporalStageAttemptVisibilityReadiness,
 } from '../../src/modules/runway/family-runtime-temporal-visibility.ts';
+import { createTemporalTestWorkflowEnvironment } from './temporal-test-environment.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
@@ -119,7 +119,7 @@ test('Temporal workflow start Search Attributes are array-valued even when optio
 });
 
 test('Temporal StageAttemptWorkflow retries short idempotent activities without retrying Codex activity', async () => {
-  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
+  const testEnv = await createTemporalTestWorkflowEnvironment();
   const taskQueue = `opl-stage-attempt-short-retry-test-${Date.now()}`;
   let codexAttempts = 0;
   let dispatchAttempts = 0;
@@ -187,7 +187,7 @@ test('Temporal StageAttemptWorkflow retries short idempotent activities without 
 });
 
 test('Temporal StageAttemptWorkflow carries a no-output diagnostic forward when typed closeout is missing', async () => {
-  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
+  const testEnv = await createTemporalTestWorkflowEnvironment();
   const taskQueue = `opl-stage-attempt-blocked-test-${Date.now()}`;
   try {
     const worker = await Worker.create({
@@ -225,7 +225,7 @@ test('Temporal StageAttemptWorkflow carries a no-output diagnostic forward when 
 });
 
 test('Temporal StageAttemptWorkflow carries Codex runner protocol diagnostics as quality debt', async () => {
-  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
+  const testEnv = await createTemporalTestWorkflowEnvironment();
   const taskQueue = `opl-stage-attempt-runner-blocker-test-${Date.now()}`;
   try {
     const worker = await Worker.create({
@@ -286,7 +286,7 @@ test('Temporal StageAttemptWorkflow carries Codex runner protocol diagnostics as
 });
 
 test('Temporal StageAttemptWorkflow rejects Codex activity closeout for a different stage attempt', async () => {
-  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
+  const testEnv = await createTemporalTestWorkflowEnvironment();
   const taskQueue = `opl-stage-attempt-stale-closeout-test-${Date.now()}`;
   try {
     const worker = await Worker.create({
@@ -338,7 +338,7 @@ test('Temporal StageAttemptWorkflow rejects Codex activity closeout for a differ
 });
 
 test('Temporal replay gate accepts production workflow history', async () => {
-  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
+  const testEnv = await createTemporalTestWorkflowEnvironment();
   const taskQueue = `opl-stage-attempt-replay-test-${Date.now()}`;
   try {
     const worker = await Worker.create({
