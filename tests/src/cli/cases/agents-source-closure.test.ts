@@ -332,6 +332,54 @@ test('agents source-closure treats literal dynamic imports and attribute reads a
   );
 });
 
+test('agents source-closure distinguishes dynamic attribute reads from executable dispatch', () => {
+  const repoDir = buildRepo();
+  writeSource(repoDir, 'pyproject.toml', [
+    '[project]',
+    'name = "sample-agent"',
+    'version = "0.0.0"',
+    '[project.scripts]',
+    'sample-agent = "sample.attributes:main"',
+    '',
+  ].join('\n'));
+  writeSource(repoDir, 'python/sample/attributes.py', [
+    'def main(value, field_name):',
+    '    return getattr(value, field_name)',
+    '',
+  ].join('\n'));
+
+  const report = runSourceClosure(repoDir).reports[0];
+
+  assert.equal(report.status, 'passed');
+  assert.deepEqual(report.unresolved_edges, []);
+});
+
+test('agents source-closure still blocks module-level dynamic attribute dispatch', () => {
+  const repoDir = buildRepo();
+  writeSource(repoDir, 'pyproject.toml', [
+    '[project]',
+    'name = "sample-agent"',
+    'version = "0.0.0"',
+    '[project.scripts]',
+    'sample-agent = "sample.attributes:main"',
+    '',
+  ].join('\n'));
+  writeSource(repoDir, 'python/sample/attributes.py', [
+    'def __getattr__(name):',
+    '    return getattr(object(), name)',
+    'def main():',
+    '    return "ok"',
+    '',
+  ].join('\n'));
+
+  const report = runSourceClosure(repoDir).reports[0];
+
+  assert.equal(report.status, 'blocked');
+  assert.equal(report.unresolved_edges.some(
+    (edge: { expression: string }) => edge.expression === 'getattr(object(), name)',
+  ), true);
+});
+
 test('Python source closure does not buffer helper stdout', () => {
   const repoDir = buildRepo();
   writeSource(repoDir, 'python/sample/cli.py', 'def main():\n    return "ok"\n');

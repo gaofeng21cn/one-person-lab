@@ -308,8 +308,10 @@ class FileAnalyzer(ast.NodeVisitor):
                         "edge_kind": "static_import",
                     }
                 )
-        dynamic_getattr = callee == "getattr" and (
-            len(literal_values) < 2 or literal_values[1] == "<dynamic>"
+        dynamic_module_getattr = (
+            callee == "getattr"
+            and (len(literal_values) < 2 or literal_values[1] == "<dynamic>")
+            and self.current_symbol.rsplit("#", 1)[-1].endswith("__getattr__")
         )
         called_getattr = (
             isinstance(node.func, ast.Call)
@@ -318,7 +320,7 @@ class FileAnalyzer(ast.NodeVisitor):
         if (
             callee in {"eval", "exec"}
             or callee in dynamic_import_names and not literal_dynamic_import
-            or dynamic_getattr
+            or dynamic_module_getattr
             or called_getattr
             or isinstance(node.func, ast.Subscript)
         ):
