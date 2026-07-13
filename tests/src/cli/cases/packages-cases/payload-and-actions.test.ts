@@ -136,6 +136,78 @@ test('packages materializes manifest-declared remote plugin payloads', async () 
   }
 });
 
+test('first-party package carrier converges on the Connect marketplace and retires legacy aliases', () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-canonical-carrier-state-'));
+  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-canonical-carrier-home-'));
+  const codexHome = path.join(homeDir, '.codex');
+  const pluginSourcePath = createPluginSourceFixture({ pluginId: 'redcube-ai' });
+  const fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-canonical-carrier-manifest-'));
+  const manifestPath = path.join(fixtureDir, 'manifest.json');
+  const configPath = path.join(codexHome, 'config.toml');
+  const legacyMarketplaceIds = ['rca-local', 'opl-agent-rca-local'];
+
+  try {
+    fs.mkdirSync(codexHome, { recursive: true });
+    fs.writeFileSync(configPath, [
+      '[marketplaces.rca-local]',
+      'source_type = "local"',
+      'source = "/legacy/rca"',
+      '',
+      '[plugins."rca@rca-local"]',
+      'enabled = true',
+      '',
+      '[marketplaces.opl-agent-rca-local]',
+      'source_type = "local"',
+      'source = "/legacy/opl-agent-rca"',
+      '',
+      '[plugins."redcube-ai@opl-agent-rca-local"]',
+      'enabled = true',
+      '',
+    ].join('\n'), 'utf8');
+    for (const marketplaceId of legacyMarketplaceIds) {
+      for (const root of [
+        path.join(stateDir, 'codex-plugin-marketplaces', marketplaceId),
+        path.join(codexHome, 'plugins', 'cache', marketplaceId),
+      ]) {
+        fs.mkdirSync(root, { recursive: true });
+        fs.writeFileSync(path.join(root, 'legacy.txt'), 'legacy\n', 'utf8');
+      }
+    }
+    fs.writeFileSync(manifestPath, formatJsonPayload(agentPackageManifest({
+      packageId: 'rca',
+      agentId: 'rca',
+      pluginId: 'redcube-ai',
+      pluginSourcePath,
+      distributionPayload: null,
+    })), 'utf8');
+
+    const install = runCli([
+      'packages', 'install', '--manifest-url', manifestPath, '--trust-tier', 'first_party',
+    ], {
+      OPL_STATE_DIR: stateDir,
+      HOME: homeDir,
+      CODEX_HOME: codexHome,
+    }) as any;
+    const physical = install.opl_agent_package_install.physical_surface;
+    const config = fs.readFileSync(configPath, 'utf8');
+
+    assert.equal(physical.marketplace_id, 'redcube-ai-local');
+    assert.match(physical.codex_plugin_cache_path, /redcube-ai-local\/redcube-ai\/1\.2\.3$/);
+    assert.match(config, /\[plugins\."redcube-ai@redcube-ai-local"\]/);
+    assert.doesNotMatch(config, /rca@rca-local/);
+    assert.doesNotMatch(config, /opl-agent-rca-local/);
+    assert.equal(physical.removed_paths.length, 4);
+    for (const removedPath of physical.removed_paths) {
+      assert.equal(fs.existsSync(removedPath), false);
+    }
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+    fs.rmSync(homeDir, { recursive: true, force: true });
+    fs.rmSync(pluginSourcePath, { recursive: true, force: true });
+    fs.rmSync(fixtureDir, { recursive: true, force: true });
+  }
+});
+
 test('packages rejects local package payloads missing bundled required skills', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-missing-skill-state-'));
   const pluginSourcePath = createPluginSourceFixture({ includeRequiredSkill: false });

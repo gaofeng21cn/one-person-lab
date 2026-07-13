@@ -9,7 +9,10 @@ import { recordList, stringValue } from '../../../kernel/json-record.ts';
 import { resolveOplStatePaths } from '../../../kernel/runtime-state-paths.ts';
 import {
   materializeLocalCodexPluginMarketplace,
+  removeSupersededOplFamilyCodexConfigTables,
+  removeSupersededOplFamilyCodexPluginPaths,
   registerLocalCodexPlugin,
+  resolveCanonicalOplFamilyMarketplaceId,
   unregisterLocalCodexPlugin,
 } from '../system-installation/codex-plugin-registry.ts';
 import {
@@ -217,8 +220,11 @@ export async function resolveManifestPhysicalSource(
 
 function buildPhysicalSurfacePaths(manifest: AgentPackageManifest) {
   const codexHome = resolveCodexHome();
-  const marketplaceId = `opl-agent-${safePathSegment(manifest.package_id)}-local`;
   const pluginId = manifest.plugin_id;
+  const marketplaceId = pluginId
+    ? resolveCanonicalOplFamilyMarketplaceId(manifest.package_id, pluginId)
+      ?? `opl-agent-${safePathSegment(manifest.package_id)}-local`
+    : `opl-agent-${safePathSegment(manifest.package_id)}-local`;
   const marketplaceRoot = path.join(resolveOplStatePaths().state_dir, 'codex-plugin-marketplaces', marketplaceId);
   const marketplacePath = path.join(marketplaceRoot, '.agents', 'plugins', 'marketplace.json');
   const marketplacePluginPath = pluginId ? path.join(marketplaceRoot, 'plugins', pluginId) : null;
@@ -362,6 +368,7 @@ export function materializePhysicalCodexSurface(
 
   let profileMigration = noPackageProfileMigration('Package profile materialization has not run.');
   let managedPolicyMigration = noManagedPolicyMigration('Managed policy materialization has not run.');
+  let removedSupersededPaths: string[] = [];
   try {
     if (!dryRun) {
       if (manifest.content_lock_paths.length > 0) {
@@ -387,7 +394,11 @@ export function materializePhysicalCodexSurface(
       registerLocalCodexPlugin(paths.codexConfigPath, {
         marketplace_id: paths.marketplaceId,
         plugin_id: manifest.plugin_id,
-      }, paths.marketplaceRoot);
+      }, paths.marketplaceRoot, (text) => removeSupersededOplFamilyCodexConfigTables(
+        text,
+        manifest.package_id,
+        manifest.plugin_id!,
+      ));
     }
     profileMigration = materializePackageProfile({
       manifest,
@@ -395,6 +406,12 @@ export function materializePhysicalCodexSurface(
       codexHome: paths.codexHome,
       dryRun,
     });
+    removedSupersededPaths = removeSupersededOplFamilyCodexPluginPaths(
+      manifest.package_id,
+      manifest.plugin_id,
+      path.dirname(paths.codexHome),
+      dryRun,
+    );
   } catch (error) {
     if (!dryRun) {
       rollbackPackageProfileMigration(profileMigration);
@@ -429,7 +446,7 @@ export function materializePhysicalCodexSurface(
     materialized_required_skill_paths: materializedRequiredSkills.map((entry) =>
       dryRun ? entry.skillPath : path.join(paths.codexPluginCachePath!, 'skills', entry.skillId, 'SKILL.md')
     ),
-    removed_paths: [],
+    removed_paths: removedSupersededPaths,
     writes_performed: !dryRun,
     reload_required: !dryRun,
     failure_reason: null,

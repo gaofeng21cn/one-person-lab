@@ -321,6 +321,20 @@ test('OPL Codex plugin registry removes standalone family MCP server blocks', ()
         'command = "python"',
         'args = ["-m", "med_autoscience.mcp_server"]',
         '',
+        '[marketplaces.rca-local]',
+        'source_type = "local"',
+        'source = "/legacy/rca"',
+        '',
+        '[plugins."rca@rca-local"]',
+        'enabled = true',
+        '',
+        '[marketplaces.opl-agent-rca-local]',
+        'source_type = "local"',
+        'source = "/legacy/opl-agent-rca"',
+        '',
+        '[plugins."redcube-ai@opl-agent-rca-local"]',
+        'enabled = true',
+        '',
       ].join('\n'),
       'utf8',
     );
@@ -331,12 +345,15 @@ test('OPL Codex plugin registry removes standalone family MCP server blocks', ()
 
     assert.equal(result.summary.registered, 5);
     assert.equal(result.summary.removed_standalone_mcp_servers, 2);
+    assert.equal(result.summary.removed_superseded_plugin_tables, 4);
     assert.match(config, /\[mcp_servers\.sentrux\]/);
     assert.doesNotMatch(config, /\[mcp_servers\.redcube-ai\]/);
     assert.doesNotMatch(config, /\[mcp_servers\.med-autoscience\]/);
     assert.match(config, /\[plugins\."med-autoscience@med-autoscience-local"\]/);
     assert.match(config, /\[plugins\."med-autogrant@med-autogrant-local"\]/);
     assert.match(config, /\[plugins\."redcube-ai@redcube-ai-local"\]/);
+    assert.doesNotMatch(config, /rca@rca-local/);
+    assert.doesNotMatch(config, /opl-agent-rca-local/);
     assert.match(config, /\[plugins\."opl-meta-agent@opl-meta-agent-local"\]/);
     assert.match(config, /\[plugins\."opl-bookforge@opl-bookforge-local"\]/);
     for (const item of result.items) {

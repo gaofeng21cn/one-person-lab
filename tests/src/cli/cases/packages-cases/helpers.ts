@@ -8,13 +8,14 @@ import { formatJsonPayload, parseJsonText } from '../../../../../src/kernel/json
 
 export { repoRoot };
 
-export function createPluginSourceFixture(input: { includeRequiredSkill?: boolean } = {}) {
+export function createPluginSourceFixture(input: { includeRequiredSkill?: boolean; pluginId?: string } = {}) {
   const pluginSourcePath = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-plugin-source-'));
+  const pluginId = input.pluginId ?? 'third-party-research';
   fs.mkdirSync(path.join(pluginSourcePath, '.codex-plugin'), { recursive: true });
   fs.writeFileSync(
     path.join(pluginSourcePath, '.codex-plugin', 'plugin.json'),
     formatJsonPayload({
-      name: 'third-party-research',
+      name: pluginId,
       version: '1.2.3',
       displayName: 'Third Party Research',
       description: 'Fixture third-party OPL agent package plugin.',
@@ -22,9 +23,9 @@ export function createPluginSourceFixture(input: { includeRequiredSkill?: boolea
     'utf8',
   );
   if (input.includeRequiredSkill !== false) {
-    fs.mkdirSync(path.join(pluginSourcePath, 'skills', 'third-party-research'), { recursive: true });
+    fs.mkdirSync(path.join(pluginSourcePath, 'skills', pluginId), { recursive: true });
     fs.writeFileSync(
-      path.join(pluginSourcePath, 'skills', 'third-party-research', 'SKILL.md'),
+      path.join(pluginSourcePath, 'skills', pluginId, 'SKILL.md'),
       '# Third Party Research\n\nUse for fixture package materialization tests.\n',
       'utf8',
     );
@@ -89,10 +90,12 @@ export function agentPackageManifest(input: {
   pluginPayloadManifestUrl?: string;
   packageId?: string;
   agentId?: string;
+  pluginId?: string;
   permissions?: unknown[];
   distributionPayload?: Record<string, unknown> | null;
   profileSurface?: Record<string, unknown> | null;
 } = {}) {
+  const pluginId = input.pluginId ?? 'third-party-research';
   return {
     surface_kind: 'opl_agent_package_manifest.v1',
     package_id: input.packageId ?? 'third.party.research',
@@ -103,8 +106,8 @@ export function agentPackageManifest(input: {
     source: 'third_party',
     carrier_source_role: 'codex_plugin_default_carrier_not_package_truth',
     codex_surface: {
-      plugin_ids: ['third-party-research'],
-      required_skill_ids: ['third-party-research'],
+      plugin_ids: [pluginId],
+      required_skill_ids: [pluginId],
       optional_skill_ids: ['officecli-docx'],
       ...(input.pluginSourcePath ? { plugin_source_path: input.pluginSourcePath } : {}),
       ...(input.pluginPayloadManifestUrl ? { plugin_payload_manifest_url: input.pluginPayloadManifestUrl } : {}),
@@ -113,7 +116,7 @@ export function agentPackageManifest(input: {
     capability_dependencies: [],
     skill_packs: [
       {
-        id: 'third-party-research-required-skills',
+        id: `${pluginId}-required-skills`,
         source: 'github:example/third-party-research-skills',
         version: '1.2.3',
         lock_sha: 'sha256:fixture',
@@ -124,7 +127,7 @@ export function agentPackageManifest(input: {
       {
         shortcut_id: 'research',
         label: 'Research',
-        required_skill_ids: ['third-party-research'],
+        required_skill_ids: [pluginId],
         shortcut_eligible: true,
       },
     ],

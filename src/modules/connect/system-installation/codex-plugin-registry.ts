@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 import { isRecord } from '../../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../../kernel/json-file.ts';
+import { resolveStandardAgent } from '../../../kernel/standard-agent-registry.ts';
 import type { OplModuleId } from './shared.ts';
 
 export type CodexPluginRegistryPackId = OplModuleId | 'scholarskills';
@@ -76,6 +77,8 @@ export type CodexPluginRegistryResult = {
     missing_marketplace: number;
     missing_plugin_manifest: number;
     removed_standalone_mcp_servers: number;
+    removed_superseded_plugin_tables: number;
+    removed_superseded_plugin_paths: string[];
   };
 };
 
@@ -283,6 +286,85 @@ function removeStandaloneMcpServerTables(text: string, spec: CodexFamilyPluginSp
   return removeTomlTables(text, (header) => prefixes.some((prefix) => header === prefix || header.startsWith(prefix)));
 }
 
+function resolveFamilyPluginSpec(packageId: string, pluginId: string) {
+  const agent = resolveStandardAgent(packageId);
+  if (!agent || agent.plugin_name !== pluginId) {
+    return null;
+  }
+  return FAMILY_PLUGIN_SPECS.find((spec) =>
+    spec.plugin_id === agent.plugin_name && spec.repo_name === agent.project
+  ) ?? null;
+}
+
+function supersededMarketplaceIds(packageId: string, pluginId: string) {
+  const spec = resolveFamilyPluginSpec(packageId, pluginId);
+  const agent = resolveStandardAgent(packageId);
+  if (!spec || !agent) {
+    return [];
+  }
+  return [...new Set([
+    `${agent.agent_id}-local`,
+    `opl-agent-${agent.agent_id}-local`,
+  ])].filter((marketplaceId) => marketplaceId !== spec.marketplace_id);
+}
+
+export function resolveCanonicalOplFamilyMarketplaceId(packageId: string, pluginId: string) {
+  return resolveFamilyPluginSpec(packageId, pluginId)?.marketplace_id ?? null;
+}
+
+export function removeSupersededOplFamilyCodexConfigTables(
+  text: string,
+  packageId: string,
+  pluginId: string,
+) {
+  const spec = resolveFamilyPluginSpec(packageId, pluginId);
+  if (!spec) {
+    return {
+      text,
+      removed: 0,
+      removed_standalone_mcp_servers: 0,
+      removed_superseded_plugin_tables: 0,
+    };
+  }
+  const legacyMarketplaceIds = supersededMarketplaceIds(packageId, pluginId);
+  const retiredPlugins = removeTomlTables(text, (header) =>
+    legacyMarketplaceIds.some((marketplaceId) =>
+      header === `[marketplaces.${marketplaceId}]`
+      || header === `[marketplaces.${quoteTomlTableSegment(marketplaceId)}]`
+      || (header.startsWith('[plugins."') && header.endsWith(`@${marketplaceId}"]`))
+    )
+  );
+  const retiredMcp = removeStandaloneMcpServerTables(retiredPlugins.text, spec);
+  return {
+    text: retiredMcp.text,
+    removed: retiredPlugins.removed + retiredMcp.removed,
+    removed_standalone_mcp_servers: retiredMcp.removed,
+    removed_superseded_plugin_tables: retiredPlugins.removed,
+  };
+}
+
+export function removeSupersededOplFamilyCodexPluginPaths(
+  packageId: string,
+  pluginId: string,
+  home = resolveHomeDir(),
+  dryRun = false,
+) {
+  const codexHome = process.env.CODEX_HOME?.trim() || path.join(home, '.codex');
+  const stateDir = resolveOplStateDir(home);
+  const candidates = supersededMarketplaceIds(packageId, pluginId).flatMap((marketplaceId) => [
+    path.join(stateDir, 'codex-plugin-marketplaces', marketplaceId),
+    path.join(codexHome, 'plugins', 'cache', marketplaceId),
+  ]);
+  const existing = candidates.filter((candidate) => fs.existsSync(candidate));
+  if (dryRun) {
+    return [];
+  }
+  for (const candidate of existing) {
+    fs.rmSync(candidate, { recursive: true, force: true });
+  }
+  return existing;
+}
+
 function writeJsonFile(filePath: string, value: unknown) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
@@ -409,6 +491,8 @@ export function registerOplFamilyCodexPlugins(
   const selected = new Set<string>(selectedPacks);
   const items: CodexPluginRegistryItem[] = [];
   let removedStandaloneMcpServers = 0;
+  let removedSupersededPluginTables = 0;
+  const removedSupersededPluginPaths: string[] = [];
 
   for (const spec of FAMILY_PLUGIN_SPECS) {
     if (!selected.has(spec.pack_id)) {
@@ -445,12 +529,26 @@ export function registerOplFamilyCodexPlugins(
     const pluginSourcePath = path.dirname(path.dirname(pluginManifestPath));
     const marketplaceRoot = path.join(resolveOplStateDir(home), 'codex-plugin-marketplaces', spec.marketplace_id);
     const marketplace = materializeLocalCodexPluginMarketplace(spec, pluginSourcePath, marketplaceRoot);
-    removedStandaloneMcpServers += registerLocalCodexPlugin(
+    registerLocalCodexPlugin(
       codexConfigPath,
       spec,
       marketplace.marketplace_root,
-      (text) => removeStandaloneMcpServerTables(text, spec),
+      (text) => {
+        const removal = removeSupersededOplFamilyCodexConfigTables(
+          text,
+          spec.pack_id,
+          spec.plugin_id,
+        );
+        removedStandaloneMcpServers += removal.removed_standalone_mcp_servers;
+        removedSupersededPluginTables += removal.removed_superseded_plugin_tables;
+        return removal;
+      },
     );
+    removedSupersededPluginPaths.push(...removeSupersededOplFamilyCodexPluginPaths(
+      spec.pack_id,
+      spec.plugin_id,
+      home,
+    ));
     items.push({
       module_id: spec.module_id,
       pack_id: spec.pack_id,
@@ -483,6 +581,8 @@ export function registerOplFamilyCodexPlugins(
       missing_marketplace: items.filter((item) => item.status === 'missing_plugin_manifest').length,
       missing_plugin_manifest: items.filter((item) => item.status === 'missing_plugin_manifest').length,
       removed_standalone_mcp_servers: removedStandaloneMcpServers,
+      removed_superseded_plugin_tables: removedSupersededPluginTables,
+      removed_superseded_plugin_paths: removedSupersededPluginPaths,
     },
   };
 }
