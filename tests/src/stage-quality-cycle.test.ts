@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
@@ -38,10 +40,9 @@ import {
 } from '../../src/modules/runway/family-runtime-stage-quality-cycle.ts';
 import { requireStageQualityAttemptBoundary } from '../../src/modules/runway/family-runtime-stage-quality-attempt-boundary.ts';
 import {
-  deriveStageRunId,
-  stageRunSpecSha256,
-  type StageRunImmutableSpec,
-} from '../../src/modules/runway/family-runtime-stage-run-identity.ts';
+  buildPackBoundTemporalStageRunInput,
+} from '../../src/modules/runway/family-runtime-pack-bound-stage-run.ts';
+import type { StandardAgentStageQualityRuntimeBinding } from '../../src/modules/pack/index.ts';
 import { buildStageQualityContextManifestRef } from '../../src/modules/runway/family-runtime-stage-quality-context-manifest.ts';
 import { OFFICIAL_KNOWLEDGE_DELIVERABLE_QUALITY_PROFILE } from '../../src/modules/pack/standard-agent-stage-manifest.ts';
 import {
@@ -901,60 +902,77 @@ test('quality policy defaults to three rounds without making in-thread refinemen
   assert.equal(policy.in_thread_refinement.authoritative, false);
 });
 
-test('StageRun controller input rejects custom Attempt roles and quality budgets above three', () => {
+test('StageRun controller input rejects custom Attempt roles and quality budgets above three', (t) => {
   const invocationId = 'stage-run-invocation:bounded';
   const policy = normalizeStageQualityCyclePolicy({
     formal_review: { required: true, risk_tier: 'high', max_repair_rounds: 3 },
   });
-  const spec: StageRunImmutableSpec = {
-    surface_kind: 'opl_stage_run_immutable_spec', version: 'opl-stage-run-immutable-spec.v1',
-    domain_id: 'redcube', stage_id: 'artifact_creation', action_id: null, task_id: null,
-    workspace_identity: { workspace_root: '/tmp/rca-quality-cycle' },
-    stage_manifest: { ref: 'agent/stages/manifest.json', sha256: 'sha256:manifest' },
-    quality_policy: {
-      ref: 'contracts/stage_quality_cycle_policy.json#/stages/artifact_creation',
-      body: policy as unknown as Record<string, unknown>,
-    },
-    stage_packet_ref: 'packet:artifact-creation', checkpoint_refs: [],
-    source_fingerprint: 'sha256:source', source_refs: [], input_artifacts: [],
-    role_prompt_refs: {
-      producer: 'prompt:producer', reviewer: 'prompt:reviewer',
-      repairer: 'prompt:repairer', re_reviewer: 'prompt:re-reviewer',
-    },
-    quality_rubric_refs: ['rubric:visual'], stage_goal_refs: [], lineage_refs: [],
-    package_closure: null, executor_kind: 'codex_cli', stage_attempt_executor_policy: null,
-    parent_route_decision_ref: null,
-  };
-  const base = {
-    stage_run_id: deriveStageRunId({
-      domainId: 'redcube', stageId: 'artifact_creation', stageRunInvocationId: invocationId,
-    }),
-    stage_run_invocation_id: invocationId,
-    stage_run_spec_sha256: stageRunSpecSha256(spec),
-    stage_run_spec: spec,
-    parent_route_decision_ref: null,
-    workflow_id: 'workflow:bounded',
-    domain_id: 'redcube' as const,
+  const domainPackRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-boundary-'));
+  t.after(() => fs.rmSync(domainPackRoot, { recursive: true, force: true }));
+  const fixtureRef = 'agent/stages/manifest.json';
+  const fixturePath = path.join(domainPackRoot, fixtureRef);
+  const fixtureBytes = Buffer.from('{"stages":["artifact_creation","review_and_revision"]}\n');
+  fs.mkdirSync(path.dirname(fixturePath), { recursive: true });
+  fs.writeFileSync(fixturePath, fixtureBytes);
+  const rolePromptRef = 'agent/prompts/stage-quality-cycle-roles.md';
+  const rolePromptPath = path.join(domainPackRoot, rolePromptRef);
+  fs.mkdirSync(path.dirname(rolePromptPath), { recursive: true });
+  fs.writeFileSync(rolePromptPath, [
+    '## Producer', 'Produce the artifact.',
+    '## Reviewer', 'Review exact artifact bytes.',
+    '## Repairer', 'Repair required findings.',
+    '## Re Reviewer', 'Close prior findings.',
+    '',
+  ].join('\n'));
+  const fixtureSha256 = crypto.createHash('sha256').update(fixtureBytes).digest('hex');
+  const binding: StandardAgentStageQualityRuntimeBinding = {
+    surface_kind: 'opl_pack_bound_stage_quality_runtime_binding',
+    version: 'opl-pack-bound-stage-quality-runtime-binding.v1',
     stage_id: 'artifact_creation',
     declared_stage_ids: ['artifact_creation', 'review_and_revision'],
-    workspace_locator: { workspace_root: '/tmp/rca-quality-cycle' },
-    source_fingerprint: 'sha256:source',
-    executor_kind: 'codex_cli',
-    stage_packet_ref: 'packet:artifact-creation',
-    quality_policy_ref: 'contracts/stage_quality_cycle_policy.json#/stages/artifact_creation',
-    domain_pack_root: '/tmp/rca-domain-pack',
-    stage_manifest_ref: 'agent/stages/manifest.json',
-    stage_manifest_sha256: 'sha256:manifest',
+    enabled: true,
     stage_role: null,
+    policy_ref: `${fixtureRef}#/policy`,
+    stage_prompt_ref: `${fixtureRef}#/stage-prompt`,
     quality_policy: policy,
+    handoff_review_boundary: null,
     role_prompt_refs: {
-      producer: 'prompt:producer',
-      reviewer: 'prompt:reviewer',
-      repairer: 'prompt:repairer',
-      re_reviewer: 'prompt:re-reviewer',
+      producer: `${rolePromptRef}#producer`,
+      reviewer: `${rolePromptRef}#reviewer`,
+      repairer: `${rolePromptRef}#repairer`,
+      re_reviewer: `${rolePromptRef}#re-reviewer`,
     },
-    quality_rubric_refs: ['rubric:visual'],
+    quality_rubric_refs: [`${fixtureRef}#/rubric`],
+    stage_goal_refs: [`${fixtureRef}#/goal`],
+    source_refs: [`${fixtureRef}#/source`],
+    lineage_refs: [],
+    manifest_ref: fixtureRef,
+    manifest_sha256: fixtureSha256,
   };
+  const base = buildPackBoundTemporalStageRunInput({
+    binding,
+    domainPackRoot,
+    domainId: 'redcube',
+    stageId: 'artifact_creation',
+    stageRunInvocationId: invocationId,
+    workspaceLocator: {
+      workspace_root: '/tmp/rca-quality-cycle',
+      package_use_binding: {
+        root_package: {
+          package_id: 'redcube',
+          package_version: '0.0.0-test',
+          owner_language_version: { scheme: 'semver', value: '0.0.0-test' },
+          package_lock_ref: 'opl://package-lock/redcube/test',
+          manifest_sha256: fixtureSha256,
+          content_digest: 'a'.repeat(64),
+        },
+        provider_packages: [],
+        dependency_closure_digest: 'b'.repeat(64),
+      },
+    },
+    sourceFingerprint: null,
+    executorKind: 'codex_cli',
+  });
   assert.equal(requireTemporalStageRunWorkflowInputLaunchable(base), base);
   assert.throws(() => requireTemporalStageRunWorkflowInputLaunchable({
     ...base,
@@ -1069,6 +1087,7 @@ test('Temporal StageRun terminal state idempotently refreshes the SQLite quality
         attempt_role: 're_reviewer', quality_round_index: 3,
         stage_attempt_id: 'sat-rereview-3', workflow_id: 'wf-rereview-3',
         execution_session_ref: 'codex://threads/rereview-3', status: 'completed',
+        artifact_producer_attempt_ref: 'opl://stage_attempts/sat-repair-3',
         artifact_refs: ['artifact:deck-v4'], artifact_hashes: ['sha256:deck-v4'],
         artifact_identity_receipt_refs: ['artifact:deck-v4'],
       }],

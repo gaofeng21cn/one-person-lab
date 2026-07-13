@@ -45,8 +45,44 @@ test('StageRun contract is passive transport and Codex owns semantic routing', (
     false,
   );
   assert.ok(value.durable_stage_run_launch.stage_run_spec_sha256.binds.includes(
-    'immutable_package_dependency_closure',
+    'immutable_package_dependency_closure_with_root_content_digest',
   ));
+  assert.equal(value.durable_stage_run_launch.content_binding_policy.pack_file_refs_bind_actual_bytes, true);
+  assert.equal(
+    value.durable_stage_run_launch.content_binding_policy
+      .external_source_checkpoint_and_artifact_refs_require_trusted_content_addressed_receipt,
+    true,
+  );
+  assert.equal(
+    value.durable_stage_run_launch.content_binding_policy
+      .fresh_bytes_and_prompt_hydration_verified_before_every_executor_use,
+    true,
+  );
+  assert.equal(
+    value.durable_stage_run_launch.content_binding_policy.child_attempt_binding_version,
+    'opl-stage-run-attempt-content-binding.v1',
+  );
+  assert.equal(
+    value.durable_stage_run_launch.content_binding_policy
+      .role_prompt_backing_file_and_effective_section_digests_required,
+    true,
+  );
+  assert.equal(
+    value.durable_stage_run_launch.content_binding_policy.new_child_attempt_without_binding_version,
+    'typed_fail_closed',
+  );
+  assert.equal(
+    value.durable_stage_run_launch.content_binding_policy.legacy_completed_event_history_policy,
+    'replayable_under_frozen_workflow_branch',
+  );
+  assert.equal(
+    value.durable_stage_run_launch.content_binding_policy.legacy_unbound_activity_reexecution_or_retry,
+    'typed_fail_closed',
+  );
+  assert.equal(
+    value.durable_stage_run_launch.content_binding_policy.legacy_branch_can_admit_new_child_workflow,
+    false,
+  );
   assert.ok(value.durable_stage_run_launch.stage_run_spec_sha256.excludes.includes('checked_at'));
   assert.equal(value.durable_stage_run_launch.launch_registry.table, 'stage_run_launches');
   assert.equal(
@@ -57,6 +93,18 @@ test('StageRun contract is passive transport and Codex owns semantic routing', (
     value.durable_stage_run_launch.launch_registry.closed_state_is_monotonic_under_late_start_receipt,
     true,
   );
+  assert.match(value.durable_stage_run_launch.launch_registry.terminal_close_transaction, /begin_immediate/);
+  assert.ok(value.durable_stage_run_launch.launch_registry.statuses.includes('starting'));
+  assert.ok(value.durable_stage_run_launch.launch_registry.monotonic_transitions.includes('started_to_closed'));
+  assert.equal(
+    value.durable_stage_run_launch.launch_registry.monotonic_transitions.includes('any_non_closed_state_to_closed'),
+    false,
+  );
+  assert.equal(value.durable_stage_run_launch.launch_registry.started_cannot_transition_to_start_failed, true);
+  assert.equal(value.durable_stage_run_launch.launch_registry.closed_is_permanent_terminal_state, true);
+  assert.match(value.durable_stage_run_launch.launch_registry.start_claim, /expired_starting/);
+  assert.match(value.durable_stage_run_launch.launch_registry.provider_start_delivery, /at_least_once/);
+  assert.match(value.durable_stage_run_launch.launch_registry.temporal_execution_deduplication, /exactly_one/);
   assert.equal(
     value.durable_stage_run_launch.launch_registry.same_invocation_different_spec,
     'typed_fail_closed_stage_run_invocation_spec_conflict',
@@ -66,6 +114,9 @@ test('StageRun contract is passive transport and Codex owns semantic routing', (
     'opl_stage_run_controller',
   );
   assert.equal(value.route_output_policy.semantic_route_owner, 'decisive_codex_attempt');
+  assert.equal(value.quality_attempt_resume_policy.generic_resume_allowed, false);
+  assert.equal(value.quality_attempt_resume_policy.next_quality_attempt_owner, 'opl_stage_run_controller');
+  assert.equal(value.quality_attempt_resume_policy.same_thread_protocol_closeout_resume_is_generic_resume, false);
   assert.deepEqual(value.route_output_policy.formal_review_decisive_roles, ['reviewer', 're_reviewer']);
   assert.equal(
     value.route_output_policy.missing_or_invalid_route_fallback,

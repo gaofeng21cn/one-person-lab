@@ -24,6 +24,7 @@ export type CodexStageRunnerInput = {
   attempt: JsonRecord;
   stagePacketRef?: string | null;
   effectiveStagePrompt?: StandardAgentStagePromptResolution | null;
+  effectiveQualityRolePrompt?: ReturnType<typeof readStandardAgentQualityRolePromptFile> | null;
   runnerMode?: string | null;
   observedAt?: string | null;
   timeoutMs?: number | null;
@@ -142,7 +143,10 @@ function providerAuthorizationPromptLines(input: { attempt: JsonRecord; stagePac
   ];
 }
 
-function qualityAttemptPromptLines(attempt: JsonRecord) {
+function qualityAttemptPromptLines(
+  attempt: JsonRecord,
+  effectiveQualityRolePrompt?: ReturnType<typeof readStandardAgentQualityRolePromptFile> | null,
+) {
   const attemptRole = optionalString(attempt.attempt_role);
   if (!attemptRole) {
     return [];
@@ -167,9 +171,11 @@ function qualityAttemptPromptLines(attempt: JsonRecord) {
     ? routeSelectionContext.max_repair_rounds
     : null;
   const domainPackRoot = domainPackRootFromAttempt(attempt);
-  const rolePrompt = rolePromptRef && domainPackRoot
-    ? readStandardAgentQualityRolePromptFile(domainPackRoot, rolePromptRef)
-    : null;
+  const rolePrompt = effectiveQualityRolePrompt !== undefined
+    ? effectiveQualityRolePrompt
+    : rolePromptRef && domainPackRoot
+      ? readStandardAgentQualityRolePromptFile(domainPackRoot, rolePromptRef)
+      : null;
   const base = [
     'OPL Stage quality-cycle role contract follows.',
     `Attempt role: ${attemptRole}`,
@@ -255,6 +261,7 @@ export function runnerPromptFor(input: {
   attempt: JsonRecord;
   stagePacketRef?: string | null;
   effectiveStagePrompt?: StandardAgentStagePromptResolution | null;
+  effectiveQualityRolePrompt?: ReturnType<typeof readStandardAgentQualityRolePromptFile> | null;
 }) {
   const stageId = stageIdFromAttempt(input.attempt);
   const attemptId = optionalString(input.attempt.stage_attempt_id) ?? 'unknown-attempt';
@@ -268,7 +275,7 @@ export function runnerPromptFor(input: {
       ? 'Use the domain-owned stage packet as input within the stage skill boundary.'
       : 'No stage packet was supplied. Start from the declared stage id, hydrated stage prompt, workspace context, and any readable prior artifacts; record the missing packet as quality debt rather than stopping.',
     'Return progress through structured events when available.',
-    ...qualityAttemptPromptLines(input.attempt),
+    ...qualityAttemptPromptLines(input.attempt, input.effectiveQualityRolePrompt),
     ...effectiveStagePromptLines(input),
     ...providerAuthorizationPromptLines(input),
     ...domainStageRoutePromptLines({

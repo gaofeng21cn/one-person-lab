@@ -215,6 +215,18 @@ test('StageRun creation contracts expose one pack-bound write entry and a query-
     ['domain_id', 'stage_id', 'stage_run_invocation_id']);
   assert.equal(manager.pack_bound_stage_run.manifest_sha256_participates_in_stage_run_id, false);
   assert.equal(manager.pack_bound_stage_run.manifest_sha256_participates_in_stage_run_spec_sha256, true);
+  assert.equal(
+    manager.pack_bound_stage_run.prompt_rubric_checkpoint_source_and_lineage_bytes_participate_in_stage_run_spec_sha256,
+    true,
+  );
+  assert.equal(manager.pack_bound_stage_run.root_package_content_digest_required, true);
+  assert.equal(
+    manager.pack_bound_stage_run.child_attempt_content_binding_version,
+    'opl-stage-run-attempt-content-binding.v1',
+  );
+  assert.equal(manager.pack_bound_stage_run.fresh_bytes_revalidated_before_child_materialization_and_executor_use, true);
+  assert.match(manager.pack_bound_stage_run.same_run_provider_start_rpc_delivery, /at_least_once/);
+  assert.equal(manager.pack_bound_stage_run.same_run_temporal_execution_count, 1);
   assert.equal(manager.pack_bound_stage_run.register_exact_input_before_temporal_start, true);
   assert.equal(compiler.standard_agent_stage_quality_runtime_binding.surface_kind,
     'opl_pack_bound_stage_quality_runtime_binding');

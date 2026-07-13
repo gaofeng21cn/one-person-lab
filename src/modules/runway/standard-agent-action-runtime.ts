@@ -18,6 +18,7 @@ import { resolveStandardAgent } from '../../kernel/standard-agent-registry.ts';
 import { compileStandardAgentStageManifest } from '../pack/public/standard-agent-action-runtime.ts';
 import {
   commitStandardAgentActionOutput,
+  inspectStandardAgentActionRunOutput,
   prepareStandardAgentActionRunRequest,
 } from '../workspace/public/standard-agent-action-runtime.ts';
 import { runFamilyRuntime } from './family-runtime.ts';
@@ -42,6 +43,26 @@ type RuntimeDependencies = {
   runStageRuntime?: typeof runFamilyRuntime;
   compileStageManifest?: typeof compileStandardAgentStageManifest;
   recordLedger?: typeof actionLedger;
+};
+
+type StandardAgentStageActionLaunch = {
+  surface_kind: 'opl_standard_agent_stage_action_launch';
+  version: 'opl-standard-agent-stage-action-launch.v1';
+  status: 'started' | 'blocked';
+  execution_kind: 'stage_binding';
+  run_id: string;
+  domain_id: string;
+  action_id: string;
+  binding_ref: string;
+  stage_route: NonNullable<FamilyActionCatalogAction['stage_route']>;
+  request_ref: string;
+  stage_run_invocation_id: string;
+  expected_domain_output_schema_ref: string;
+  temporal_stage_run: Record<string, unknown>;
+  temporal_stage_run_query: Record<string, unknown> | null;
+  temporal_stage_run_query_error: ReturnType<typeof observationFailure> | null;
+  blocked_reason: string | null;
+  authority_boundary: ReturnType<typeof actionAuthorityBoundary>;
 };
 
 function fail(message: string, details: Record<string, unknown> = {}): never {
@@ -156,6 +177,41 @@ function observationFailure(error: unknown) {
     error_code: error instanceof FrameworkContractError ? error.code : 'standard_agent_action_observation_failed',
     message: error instanceof Error ? error.message : String(error),
   };
+}
+
+function persistedStageActionLaunch(input: {
+  stored: NonNullable<ReturnType<typeof inspectStandardAgentActionRunOutput>>;
+  runId: string;
+  domainId: string;
+  actionId: string;
+}): StandardAgentStageActionLaunch {
+  const persisted = parseJsonText(fs.readFileSync(input.stored.output.file_path, 'utf8'));
+  if (
+    !isRecord(persisted)
+    || persisted.surface_kind !== 'opl_standard_agent_stage_action_launch'
+    || persisted.version !== 'opl-standard-agent-stage-action-launch.v1'
+    || persisted.execution_kind !== 'stage_binding'
+    || persisted.run_id !== input.runId
+    || persisted.domain_id !== input.domainId
+    || persisted.action_id !== input.actionId
+    || (persisted.status !== 'started' && persisted.status !== 'blocked')
+    || typeof persisted.binding_ref !== 'string'
+    || !isRecord(persisted.stage_route)
+    || typeof persisted.request_ref !== 'string'
+    || typeof persisted.stage_run_invocation_id !== 'string'
+    || typeof persisted.expected_domain_output_schema_ref !== 'string'
+    || !isRecord(persisted.temporal_stage_run)
+    || (persisted.temporal_stage_run_query !== null && !isRecord(persisted.temporal_stage_run_query))
+    || (persisted.temporal_stage_run_query_error !== null && !isRecord(persisted.temporal_stage_run_query_error))
+    || (persisted.blocked_reason !== null && typeof persisted.blocked_reason !== 'string')
+    || !isRecord(persisted.authority_boundary)
+  ) {
+    fail('Existing Standard Agent action output is not the immutable Stage launch for this run identity.', {
+      run_id: input.runId,
+      output_ref: input.stored.output.ref,
+    });
+  }
+  return persisted as unknown as StandardAgentStageActionLaunch;
 }
 
 function wrapFailure(error: unknown, stored: ReturnType<typeof commitStandardAgentActionOutput>): never {
@@ -358,7 +414,7 @@ async function runStageAction(input: {
     actionRunRef: prepared.action_run_ref,
   });
 
-  const output = await (async () => {
+  const output: StandardAgentStageActionLaunch = await (async () => {
     try {
       const created = await input.runStageRuntime([
         'attempt',
@@ -456,6 +512,38 @@ async function runStageAction(input: {
   })();
 
   const recordedAt = new Date().toISOString();
+  const existing = inspectStandardAgentActionRunOutput({
+    workspaceRoot: input.workspaceRoot,
+    runId: input.runId,
+    domainId: input.domainId,
+    actionId: input.action.action_id,
+    requestBytes: input.requestBytes,
+  });
+  if (existing) {
+    const persisted = persistedStageActionLaunch({
+      stored: existing,
+      runId: input.runId,
+      domainId: input.domainId,
+      actionId: input.action.action_id,
+    });
+    const ledger = input.recordLedger({
+      runId: input.runId,
+      domainId: input.domainId,
+      actionId: input.action.action_id,
+      bindingRef,
+      status: persisted.status,
+      startedAt: input.startedAt,
+      recordedAt,
+      stored: existing,
+    });
+    return {
+      ...persisted,
+      package_use_binding: input.packageUseBinding,
+      request: existing.request,
+      output: existing.output,
+      ledger: ledger.ledger_entry,
+    };
+  }
   const stored = commitStandardAgentActionOutput({
     workspaceRoot: input.workspaceRoot,
     runId: input.runId,

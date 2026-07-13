@@ -34,6 +34,7 @@ import {
   stageAttemptOperatorUpdate,
   stageRunQuery,
 } from '../family-runtime-temporal-workflows.ts';
+import { requireGenericResumeAllowed } from '../family-runtime-stage-quality-attempt-boundary.ts';
 import {
   resolveTemporalAddressForPaths,
 } from '../family-runtime-temporal-service.ts';
@@ -80,6 +81,9 @@ export async function startTemporalStageRunWorkflow(
       }), options);
       workflowId = handle.workflowId;
       firstExecutionRunId = handle.firstExecutionRunId;
+      const description = await withTemporalRpcDeadline(client, () => handle.describe(), options);
+      workflowStatus = description.status.name;
+      firstExecutionRunId = firstExecutionRunId || description.runId;
     } catch (error) {
       if (!(error instanceof WorkflowExecutionAlreadyStartedError)) throw error;
       const existing = client.workflow.getHandle(workflowInput.workflow_id);
@@ -107,6 +111,44 @@ export async function startTemporalStageRunWorkflow(
         provider_completion_is_domain_ready: false,
       },
     };
+  }, options);
+}
+
+export async function describeTemporalStageRunWorkflow(
+  input: TemporalStageRunWorkflowInput,
+  options: TemporalClientOptions = {},
+) {
+  const workflowInput = requireTemporalStageRunWorkflowInputLaunchable(input);
+  if (!resolveTemporalAddressForPaths(options.paths).address) requireTemporalAddress();
+  return withTemporalClient(async (client) => {
+    const handle = client.workflow.getHandle(workflowInput.workflow_id);
+    try {
+      const description = await withTemporalRpcDeadline(client, () => handle.describe(), options);
+      return {
+        surface_kind: 'temporal_stage_run_observation_receipt',
+        provider_kind: 'temporal',
+        workflow_found: true,
+        stage_run_id: workflowInput.stage_run_id,
+        stage_run_invocation_id: workflowInput.stage_run_invocation_id,
+        stage_run_spec_sha256: workflowInput.stage_run_spec_sha256,
+        workflow_id: description.workflowId,
+        first_execution_run_id: description.runId,
+        workflow_status: description.status.name,
+      };
+    } catch (error) {
+      if (!(error instanceof WorkflowNotFoundError)) throw error;
+      return {
+        surface_kind: 'temporal_stage_run_observation_receipt',
+        provider_kind: 'temporal',
+        workflow_found: false,
+        stage_run_id: workflowInput.stage_run_id,
+        stage_run_invocation_id: workflowInput.stage_run_invocation_id,
+        stage_run_spec_sha256: workflowInput.stage_run_spec_sha256,
+        workflow_id: workflowInput.workflow_id,
+        first_execution_run_id: null,
+        workflow_status: 'NOT_FOUND',
+      };
+    }
   }, options);
 }
 
@@ -200,6 +242,10 @@ export async function signalTemporalStageAttemptWorkflow(input: {
   if (input.attempt.provider_kind !== 'temporal') {
     return null;
   }
+  requireGenericResumeAllowed(
+    input.attempt as unknown as Record<string, unknown>,
+    input.signalKind,
+  );
   return withTemporalClient(async (client) => {
     const handle = client.workflow.getHandle(input.attempt.workflow_id);
     const signal: TemporalStageAttemptSignalPayload = {

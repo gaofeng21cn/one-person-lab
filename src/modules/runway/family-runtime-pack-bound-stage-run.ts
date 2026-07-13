@@ -1,10 +1,10 @@
-import { stableId } from '../../kernel/stable-id.ts';
 import type { StandardAgentStageQualityRuntimeBinding } from '../pack/index.ts';
 import type { FamilyRuntimeDomainId } from './family-runtime-types.ts';
 import type { TemporalStageRunWorkflowInput } from './family-runtime-temporal.ts';
 import {
   buildStageRunImmutableSpec,
   deriveStageRunId,
+  deriveStageRunWorkflowId,
   stageRunSpecSha256,
 } from './family-runtime-stage-run-identity.ts';
 
@@ -22,6 +22,7 @@ export function buildPackBoundTemporalStageRunInput(input: {
   checkpointRefs?: string[];
   artifactRefs?: string[];
   artifactHashes?: string[];
+  artifactIdentityReceiptRefs?: string[];
   actionId?: string | null;
   taskId?: string | null;
   checkoutCurrentnessAdmission?: Record<string, unknown> | null;
@@ -36,6 +37,7 @@ export function buildPackBoundTemporalStageRunInput(input: {
   const checkpointRefs = [stagePacketRef, ...(input.checkpointRefs ?? []).filter((ref) => ref !== stagePacketRef)];
   const stageRunSpec = buildStageRunImmutableSpec({
     binding: input.binding,
+    domainPackRoot: input.domainPackRoot,
     domainId: input.domainId,
     stageId: input.stageId,
     workspaceLocator: input.workspaceLocator,
@@ -48,15 +50,19 @@ export function buildPackBoundTemporalStageRunInput(input: {
     checkpointRefs,
     artifactRefs: input.artifactRefs,
     artifactHashes: input.artifactHashes,
+    artifactIdentityReceiptRefs: input.artifactIdentityReceiptRefs,
     parentRouteDecisionRef: input.parentRouteDecisionRef,
   });
+  const artifactIdentityReceiptRefs = stageRunSpec.input_artifacts.map(
+    (artifact) => artifact.identity_receipt_ref,
+  );
   return {
     stage_run_id: stageRunId,
     stage_run_invocation_id: input.stageRunInvocationId,
     stage_run_spec_sha256: stageRunSpecSha256(stageRunSpec),
     stage_run_spec: stageRunSpec,
     parent_route_decision_ref: input.parentRouteDecisionRef ?? null,
-    workflow_id: stableId('wf_stage_run', [stageRunId]),
+    workflow_id: deriveStageRunWorkflowId(stageRunId),
     domain_id: input.domainId,
     stage_id: input.stageId,
     action_id: input.actionId ?? null,
@@ -77,7 +83,7 @@ export function buildPackBoundTemporalStageRunInput(input: {
           }
         : {}),
     },
-    source_fingerprint: input.sourceFingerprint,
+    source_fingerprint: stageRunSpec.source_fingerprint,
     executor_kind: input.executorKind?.trim() || 'codex_cli',
     stage_attempt_executor_policy: input.stageAttemptExecutorPolicy ?? null,
     stage_packet_ref: stagePacketRef,
@@ -92,8 +98,11 @@ export function buildPackBoundTemporalStageRunInput(input: {
     quality_rubric_refs: input.binding.quality_rubric_refs,
     stage_goal_refs: input.binding.stage_goal_refs,
     source_refs: input.binding.source_refs,
-    artifact_refs: input.artifactRefs ?? [],
-    artifact_hashes: input.artifactHashes ?? [],
+    artifact_refs: stageRunSpec.input_artifacts.map((artifact) => artifact.ref),
+    artifact_hashes: stageRunSpec.input_artifacts.map((artifact) => artifact.sha256),
+    artifact_identity_receipt_refs: artifactIdentityReceiptRefs.some((ref) => ref !== null)
+      ? artifactIdentityReceiptRefs.map((ref) => ref ?? '')
+      : [],
     lineage_refs: [
       input.binding.policy_ref,
       `${input.binding.manifest_ref}@sha256:${input.binding.manifest_sha256}`,

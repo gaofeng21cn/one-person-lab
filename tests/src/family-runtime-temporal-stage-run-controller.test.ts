@@ -11,6 +11,7 @@ import type {
   TemporalStageRunWorkflowInput,
 } from '../../src/modules/runway/family-runtime-temporal.ts';
 import { StageRunWorkflow } from '../../src/modules/runway/family-runtime-temporal-workflows.ts';
+import { STAGE_RUN_ATTEMPT_CONTENT_BINDING_VERSION } from '../../src/modules/runway/family-runtime-stage-quality-attempt-boundary.ts';
 import {
   normalizeStageQualityCyclePolicy,
   type StageQualityOutcome,
@@ -38,6 +39,7 @@ function stageRunInput(id: string): TemporalStageRunWorkflowInput {
       source_fingerprint: 'sha256:source',
       source_refs: ['source:brief'],
       input_artifacts: [],
+      content_bindings: [],
       role_prompt_refs: {
         producer: 'prompt:producer', reviewer: 'prompt:reviewer',
         repairer: 'prompt:repairer', re_reviewer: 'prompt:re-reviewer',
@@ -140,6 +142,7 @@ async function runController(input: {
           stage_packet_ref: materialization.stage_run.stage_packet_ref,
           checkpoint_refs: [materialization.stage_run.stage_packet_ref],
           stage_run_id: materialization.stage_run.stage_run_id,
+          stage_run_content_binding_version: STAGE_RUN_ATTEMPT_CONTENT_BINDING_VERSION,
           quality_cycle_id: materialization.quality_cycle_id,
           attempt_role: role,
           quality_round_index: round,

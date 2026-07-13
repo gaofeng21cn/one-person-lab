@@ -140,6 +140,7 @@ export async function materializeStageRunRoute(
     stageAttemptExecutorPolicy: parentStageRun.stage_attempt_executor_policy,
     artifactRefs: input.artifact_refs,
     artifactHashes: input.artifact_hashes,
+    artifactIdentityReceiptRefs: input.artifact_identity_receipt_refs,
     actionId: parentStageRun.action_id,
     taskId: parentStageRun.task_id,
   });

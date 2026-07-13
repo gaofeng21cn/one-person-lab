@@ -682,6 +682,9 @@ export type AgentPackageUseBinding = {
     owner_language_version: AgentPackageOwnerLanguageVersion | null;
     package_lock_ref: string;
     manifest_sha256: string;
+    content_digest: string;
+    source_artifact_ref: string | null;
+    artifact_digest: string | null;
   };
   provider_packages: Array<{
     package_id: string;

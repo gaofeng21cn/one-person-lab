@@ -60,7 +60,7 @@ import {
   codexActivityEventForTemporalHistory,
   providerBlockerFromCodexResult,
 } from './family-runtime-temporal-history-summary.ts';
-import { requireStageQualityAttemptBoundary } from './family-runtime-stage-quality-attempt-boundary.ts';
+import { isStageRunQualityAttempt, requireGenericResumeAllowed, requireStageQualityAttemptBoundary, requireStageRunAttemptContentBindingVersion } from './family-runtime-stage-quality-attempt-boundary.ts';
 
 type StageAttemptActivities = {
   codexStageActivity(input: TemporalStageAttemptWorkflowInput): Promise<Record<string, unknown>>;
@@ -260,7 +260,9 @@ function validateOperatorActionPayload(signal: TemporalStageAttemptSignalPayload
 export async function StageAttemptWorkflow(
   input: TemporalStageAttemptWorkflowInput,
 ): Promise<TemporalStageAttemptWorkflowState> {
-  requireStageQualityAttemptBoundary(input as unknown as Record<string, unknown>);
+  const allowLegacyUnboundContent = !patched('opl-stage-run-attempt-content-binding-v1');
+  const currentStageRunAttemptProtocol = !allowLegacyUnboundContent;
+  const stageRunQualityAttempt = isStageRunQualityAttempt(input as unknown as Record<string, unknown>);
   let state: TemporalStageAttemptWorkflowState = {
     surface_kind: 'temporal_stage_attempt_query',
     provider_kind: 'temporal',
@@ -359,12 +361,30 @@ export async function StageAttemptWorkflow(
     };
     updateVisibility('resume_requested');
   };
-
+  let forbiddenGenericResume: TemporalStageAttemptSignalPayload | null = null;
+  const rejectGenericResume = (signal: TemporalStageAttemptSignalPayload) => {
+    forbiddenGenericResume = signal;
+    state = {
+      ...state,
+      status: 'failed',
+      updated_at: nowIso(),
+      signals: [...state.signals, signal],
+      route_impact: {
+        ...state.route_impact,
+        generic_resume_rejection: { failure_code: 'stage_run_quality_attempt_generic_resume_forbidden',
+          source: signal.source ?? null },
+      },
+    };
+    updateVisibility('generic_resume_rejected', 'stage_run_quality_attempt_generic_resume_forbidden');
+  };
+  const requireNoForbiddenGenericResume = () => forbiddenGenericResume
+    ? requireGenericResumeAllowed(input as unknown as Record<string, unknown>, 'resume')
+    : undefined;
   setHandler(stageAttemptQuery, () => state);
   setHandler(humanGateSignal, recordSignal);
   setHandler(ownerReceiptSignal, recordSignal);
   setHandler(userInstructionSignal, recordSignal);
-  setHandler(resumeSignal, recordResume);
+  setHandler(resumeSignal, stageRunQualityAttempt && currentStageRunAttemptProtocol ? rejectGenericResume : recordResume);
   setHandler(
     stageAttemptOperatorUpdate,
     (signal) => {
@@ -390,11 +410,15 @@ export async function StageAttemptWorkflow(
       };
     },
     {
-      validator: validateOperatorActionPayload,
+      validator: (signal) => {
+        validateOperatorActionPayload(signal);
+        if (currentStageRunAttemptProtocol) requireGenericResumeAllowed(input as unknown as Record<string, unknown>, signal.signal_kind);
+      },
     },
   );
-
   try {
+    requireStageRunAttemptContentBindingVersion(input as unknown as Record<string, unknown>, { allowLegacyUnbound: allowLegacyUnboundContent });
+    requireStageQualityAttemptBoundary(input as unknown as Record<string, unknown>);
     state = {
       ...state,
       status: 'running',
@@ -423,6 +447,7 @@ export async function StageAttemptWorkflow(
     };
     updateVisibility('codex_stage_activity_running');
     const codexResult = await codexStageActivity(input);
+    requireNoForbiddenGenericResume();
     const codexCheckpointRefs = asStringList(codexResult.checkpoint_refs);
     const codexActivityEvent = codexActivityEventForTemporalHistory(codexResult);
     state = {
@@ -461,6 +486,7 @@ export async function StageAttemptWorkflow(
       closeout_packet: codexCloseoutPacket ?? input.closeout_packet ?? null,
       provider_blocker: providerBlocker,
     });
+    requireNoForbiddenGenericResume();
     const closeoutRefs = closeoutRefsFrom(dispatchResult);
     const routeImpact = asRecord(dispatchResult.route_impact);
     const dispatchBlockedReason = typeof dispatchResult.blocked_reason === 'string'
@@ -828,7 +854,7 @@ export async function StageRunWorkflow(
     review_receipts: [],
     artifact_refs: initialArtifactIdentity.artifact_refs,
     artifact_hashes: initialArtifactIdentity.artifact_hashes,
-    artifact_identity_receipt_refs: [],
+    artifact_identity_receipt_refs: asStringList(input.artifact_identity_receipt_refs),
     quality_debt_refs: [],
     route_quality_debt_refs: [],
     decisive_attempt_role: null,
@@ -877,6 +903,7 @@ export async function StageRunWorkflow(
         decision: state.selected_stage_route,
         artifact_refs: state.artifact_refs,
         artifact_hashes: state.artifact_hashes,
+        artifact_identity_receipt_refs: state.artifact_identity_receipt_refs,
       });
       state = {
         ...state,

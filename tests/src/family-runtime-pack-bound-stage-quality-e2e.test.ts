@@ -220,6 +220,34 @@ Close prior findings against the repaired artifact.
   return root;
 }
 
+function packageUseBinding(packRoot: string) {
+  const manifestBytes = fs.readFileSync(path.join(packRoot, 'agent/stages/manifest.json'));
+  const manifestSha256 = crypto.createHash('sha256').update(manifestBytes).digest('hex');
+  const rootContentDigest = crypto.createHash('sha256')
+    .update('pack-bound-quality-e2e-root-package-v1')
+    .digest('hex');
+  const closureDigest = crypto.createHash('sha256')
+    .update(`medautoscience\0${manifestSha256}\0${rootContentDigest}`)
+    .digest('hex');
+  return {
+    surface_kind: 'opl_agent_package_use_binding.v1',
+    use_boundary_id: 'package-use:pack-bound-quality-e2e',
+    use_receipt_ref: 'opl://agent-package/use/pack-bound-quality-e2e',
+    root_package: {
+      package_id: 'medautoscience',
+      package_version: '0.0.0-test',
+      owner_language_version: { scheme: 'pep440', value: '0.0.0-test' },
+      package_lock_ref: 'opl://agent-package-lock/medautoscience/0.0.0-test',
+      manifest_sha256: manifestSha256,
+      content_digest: `sha256:${rootContentDigest}`,
+      source_artifact_ref: null,
+      artifact_digest: null,
+    },
+    provider_packages: [],
+    dependency_closure_digest: closureDigest,
+  };
+}
+
 function restoreEnv(previous: Map<string, string | undefined>) {
   for (const [key, value] of previous) {
     if (value === undefined) delete process.env[key];
@@ -232,6 +260,7 @@ test('pack-bound CLI launch persists isolated review attempts and terminal quali
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-bound-quality-workspace-'));
   const familyWorkspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-bound-family-workspace-'));
   const packRoot = createPackFixture();
+  const useBinding = packageUseBinding(packRoot);
   const artifactBytes = Buffer.from('pack-bound-draft-v1');
   const artifactPath = path.join(workspaceRoot, 'draft.txt');
   fs.writeFileSync(artifactPath, artifactBytes);
@@ -264,7 +293,7 @@ test('pack-bound CLI launch persists isolated review attempts and terminal quali
         launch_allowed: true,
       },
     }),
-    ensureScopeActivation: async () => ({ package_use_binding: null }),
+    ensureScopeActivation: async () => ({ package_use_binding: useBinding }),
   });
 
   const activities = {
@@ -366,7 +395,7 @@ test('pack-bound CLI launch persists isolated review attempts and terminal quali
         '--workspace-locator',
         JSON.stringify({ workspace_root: workspaceRoot, domain_pack_root: packRoot }),
         '--source-fingerprint',
-        'sha256:pack-bound-source-v1',
+        'sha256:e69550085779bc9bd1bf36c55d7f3bf244254c3c8c8a8799ae97e55b86786289',
         '--start',
       ];
       const connection = await Connection.connect({ address: testEnv.address });

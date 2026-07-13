@@ -146,6 +146,21 @@ function fsyncDirectory(directory: string) {
 }
 
 function storedBytes(filePath: string, expected: Buffer, label: string): StandardAgentActionRunStoredBytes {
+  const observed = observedStoredBytes(filePath, label);
+  const expectedSha256 = sha256(expected);
+  if (observed.sha256 !== expectedSha256 || observed.byte_size !== expected.byteLength) {
+    fail(`Standard Agent action ${label} bytes conflict with the existing run identity.`, {
+      file_path: filePath,
+      expected_sha256: expectedSha256,
+      actual_sha256: observed.sha256,
+      expected_byte_size: expected.byteLength,
+      actual_byte_size: observed.byte_size,
+    });
+  }
+  return observed;
+}
+
+function observedStoredBytes(filePath: string, label: string): StandardAgentActionRunStoredBytes {
   const stat = fs.lstatSync(filePath);
   if (stat.isSymbolicLink() || !stat.isFile()) {
     fail(`Standard Agent action ${label} path is not a regular file.`, {
@@ -154,17 +169,7 @@ function storedBytes(filePath: string, expected: Buffer, label: string): Standar
     });
   }
   const actual = fs.readFileSync(filePath);
-  const expectedSha256 = sha256(expected);
   const actualSha256 = sha256(actual);
-  if (!actual.equals(expected) || actualSha256 !== expectedSha256) {
-    fail(`Standard Agent action ${label} bytes conflict with the existing run identity.`, {
-      file_path: filePath,
-      expected_sha256: expectedSha256,
-      actual_sha256: actualSha256,
-      expected_byte_size: expected.byteLength,
-      actual_byte_size: actual.byteLength,
-    });
-  }
   return {
     ref: pathToFileURL(filePath).href,
     file_path: filePath,
@@ -347,6 +352,44 @@ export function prepareStandardAgentActionRunRequest(
   } finally {
     fs.rmSync(staging, { recursive: true, force: true });
   }
+}
+
+export function inspectStandardAgentActionRunOutput(
+  input: Omit<CommitStandardAgentActionOutputInput, 'outputBytes'>,
+): StandardAgentActionRunOutput | null {
+  const normalized = normalizedRunInput(input);
+  const runDirectory = path.join(
+    normalized.root,
+    ...STANDARD_AGENT_ACTION_RUNS_RELATIVE_ROOT.split('/'),
+    input.runId,
+  );
+  assertContained(normalized.root, runDirectory, 'action_run_dir');
+  if (!fs.existsSync(runDirectory)) return null;
+  const prepared = readPreparedRun(
+    normalized.root,
+    input.runId,
+    normalized.domainId,
+    normalized.actionId,
+    runDirectory,
+    normalized.identityBytes,
+    normalized.requestBytes,
+    'already_prepared',
+  );
+  const outputPath = path.join(prepared.action_run_dir, 'output.json');
+  if (!fs.existsSync(outputPath)) return null;
+  return {
+    surface_kind: 'opl_standard_agent_action_run_output',
+    version: 'opl-standard-agent-action-run-output.v1',
+    status: 'already_materialized',
+    run_id: prepared.run_id,
+    domain_id: prepared.domain_id,
+    action_id: prepared.action_id,
+    workspace_root: prepared.workspace_root,
+    action_run_dir: prepared.action_run_dir,
+    action_run_ref: prepared.action_run_ref,
+    request: prepared.request,
+    output: observedStoredBytes(outputPath, 'output'),
+  };
 }
 
 export function commitStandardAgentActionOutput(

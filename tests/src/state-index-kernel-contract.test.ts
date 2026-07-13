@@ -57,6 +57,20 @@ test('OPL State Index Kernel declares bounded refs-only SQLite databases and req
   assert.equal(contract.stage_run_launch_registry.register_before_provider_start, true);
   assert.equal(contract.stage_run_launch_registry.validate_identity_and_spec_before_write, true);
   assert.equal(contract.stage_run_launch_registry.late_provider_start_receipt_cannot_reopen_closed_stage_run, true);
+  assert.equal(
+    contract.stage_run_launch_registry.late_provider_start_failure_cannot_downgrade_started_or_closed_stage_run,
+    true,
+  );
+  assert.deepEqual(contract.stage_run_launch_registry.launch_statuses, [
+    'registered',
+    'starting',
+    'start_failed',
+    'started',
+    'closed',
+  ]);
+  assert.match(contract.stage_run_launch_registry.provider_start_claim, /expired_starting_takeover/);
+  assert.equal(contract.stage_run_launch_registry.temporal_executions_per_stage_run, 1);
+  assert.equal(contract.stage_run_launch_registry.started_to_start_failed_allowed, false);
   assert.equal(contract.stage_run_launch_registry.invocation_spec_conflict_effect, 'typed_fail_closed');
   assert.equal(contract.stage_run_launch_registry.registry_is_domain_truth, false);
   assert.equal(databases.get('lifecycle_index')?.path, '${OPL_STATE_DIR}/family-runtime/lifecycle-index.sqlite');

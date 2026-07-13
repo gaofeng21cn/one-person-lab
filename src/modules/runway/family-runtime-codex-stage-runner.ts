@@ -859,17 +859,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   }
 }
 
-export async function runAgentStageRunner(input: {
-  attempt: JsonRecord;
-  stagePacketRef?: string | null;
-  runnerMode?: string | null;
-  observedAt?: string | null;
-  timeoutMs?: number | null;
-  noOutputTimeoutMs?: number | null;
-  onRunnerProgress?: (event: RunnerEventSummary) => void;
-  signal?: AbortSignal;
-  env?: Record<string, string | undefined>;
-}) {
+export async function runAgentStageRunner(input: CodexStageRunnerInput) {
   const executorKind = normalizeAgentExecutorStageMode(input.runnerMode)
     ?? normalizeAgentExecutorStageMode(optionalString(input.attempt.executor_kind))
     ?? executorKindFromAttemptPolicy(input.attempt);

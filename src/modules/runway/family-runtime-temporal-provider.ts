@@ -92,6 +92,7 @@ export {
 export {
   buildTemporalStageAttemptMissingWorkflowCancelReceipt,
   cancelTemporalStageAttemptWorkflow,
+  describeTemporalStageRunWorkflow,
   signalTemporalStageAttemptWorkflow,
   startTemporalStageRunWorkflow,
   queryTemporalStageRunWorkflow,

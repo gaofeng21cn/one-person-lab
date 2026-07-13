@@ -7,6 +7,8 @@ import test from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { FrameworkContractError } from '../../src/kernel/contract-validation.ts';
+import type { StandardAgentStageQualityRuntimeBinding } from '../../src/modules/pack/index.ts';
+import { buildPackBoundTemporalStageRunInput } from '../../src/modules/runway/family-runtime-pack-bound-stage-run.ts';
 import { stageQualityAttemptMaterializeActivity } from '../../src/modules/runway/family-runtime-temporal-activities.ts';
 import { normalizeStageQualityCyclePolicy } from '../../src/modules/stagecraft/stage-quality-cycle.ts';
 import {
@@ -22,6 +24,77 @@ function sha256(value: Buffer | string) {
 function safeIdentityDirectory(value: string) {
   const readable = value.replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) || 'domain';
   return `${readable}-${sha256(value).slice(0, 12)}`;
+}
+
+function materializationStageRunInput(workspaceRoot: string) {
+  const domainPackRoot = path.join(workspaceRoot, 'domain-pack');
+  const fixtureRef = 'agent/stages/manifest.json';
+  const fixturePath = path.join(domainPackRoot, fixtureRef);
+  const fixtureBytes = Buffer.from('{"stages":["artifact_creation","review_and_revision"]}\n');
+  fs.mkdirSync(path.dirname(fixturePath), { recursive: true });
+  fs.writeFileSync(fixturePath, fixtureBytes);
+  const rolePromptRef = 'agent/prompts/stage-quality-cycle-roles.md';
+  const rolePromptPath = path.join(domainPackRoot, rolePromptRef);
+  fs.mkdirSync(path.dirname(rolePromptPath), { recursive: true });
+  fs.writeFileSync(rolePromptPath, [
+    '## Producer', 'Produce the artifact.',
+    '## Reviewer', 'Review exact artifact bytes.',
+    '## Repairer', 'Repair required findings.',
+    '## Re Reviewer', 'Close prior findings.',
+    '',
+  ].join('\n'));
+  const fixtureSha256 = sha256(fixtureBytes);
+  const qualityPolicy = normalizeStageQualityCyclePolicy({
+    formal_review: { required: true, risk_tier: 'high', max_repair_rounds: 3 },
+  });
+  const binding: StandardAgentStageQualityRuntimeBinding = {
+    surface_kind: 'opl_pack_bound_stage_quality_runtime_binding',
+    version: 'opl-pack-bound-stage-quality-runtime-binding.v1',
+    stage_id: 'artifact_creation',
+    declared_stage_ids: ['artifact_creation', 'review_and_revision'],
+    enabled: true,
+    stage_role: null,
+    policy_ref: `${fixtureRef}#/policy`,
+    stage_prompt_ref: `${fixtureRef}#/stage-prompt`,
+    quality_policy: qualityPolicy,
+    handoff_review_boundary: null,
+    role_prompt_refs: {
+      producer: `${rolePromptRef}#producer`,
+      reviewer: `${rolePromptRef}#reviewer`,
+      repairer: `${rolePromptRef}#repairer`,
+      re_reviewer: `${rolePromptRef}#re-reviewer`,
+    },
+    quality_rubric_refs: [`${fixtureRef}#/rubric`],
+    stage_goal_refs: [`${fixtureRef}#/goal`],
+    source_refs: [`${fixtureRef}#/source`],
+    lineage_refs: [],
+    manifest_ref: fixtureRef,
+    manifest_sha256: fixtureSha256,
+  };
+  return buildPackBoundTemporalStageRunInput({
+    binding,
+    domainPackRoot,
+    domainId: 'redcube',
+    stageId: 'artifact_creation',
+    stageRunInvocationId: 'stage-run-invocation:review-boundary',
+    workspaceLocator: {
+      workspace_root: workspaceRoot,
+      package_use_binding: {
+        root_package: {
+          package_id: 'redcube',
+          package_version: '0.0.0-test',
+          owner_language_version: { scheme: 'semver', value: '0.0.0-test' },
+          package_lock_ref: 'opl://package-lock/redcube/test',
+          manifest_sha256: fixtureSha256,
+          content_digest: 'a'.repeat(64),
+        },
+        provider_packages: [],
+        dependency_closure_digest: 'b'.repeat(64),
+      },
+    },
+    sourceFingerprint: null,
+    executorKind: 'codex_cli',
+  });
 }
 
 function writeAuthorityReceipt(input: {
@@ -336,34 +409,7 @@ test('reviewer materialization revalidates current artifact bytes before creatin
         artifact_refs: [artifactRef],
         artifact_hashes: [sha256(original)],
         artifact_identity_receipt_refs: [receiptRef],
-        stage_run: {
-          stage_run_id: 'stage-run:review-boundary',
-          workflow_id: 'workflow:review-boundary',
-          domain_id: 'redcube',
-          stage_id: 'artifact_creation',
-          declared_stage_ids: ['artifact_creation', 'review_and_revision'],
-          workspace_locator: { workspace_root: root },
-          source_fingerprint: 'sha256:source',
-          executor_kind: 'codex_cli',
-          stage_packet_ref: 'packet:artifact-creation',
-          quality_policy_ref: 'quality-policy:artifact-creation',
-          domain_pack_root: root,
-          stage_manifest_ref: 'agent/stages/manifest.json',
-          stage_manifest_sha256: 'sha256:manifest',
-          stage_role: 'creation',
-          quality_policy: normalizeStageQualityCyclePolicy({
-            formal_review: { required: true, risk_tier: 'high', max_repair_rounds: 3 },
-          }),
-          role_prompt_refs: {
-            producer: 'prompt:producer',
-            reviewer: 'prompt:reviewer',
-            repairer: 'prompt:repairer',
-            re_reviewer: 'prompt:re-reviewer',
-          },
-          quality_rubric_refs: ['rubric:artifact'],
-          stage_goal_refs: ['goal:artifact'],
-          source_refs: ['source:brief'],
-        },
+        stage_run: materializationStageRunInput(root),
       }),
       (error) => error instanceof FrameworkContractError
         && error.details?.blocked_reason === 'artifact_byte_identity_mismatch',

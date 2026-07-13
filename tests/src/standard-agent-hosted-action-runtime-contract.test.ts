@@ -48,8 +48,16 @@ test('hosted action persistence and ledger distinguish Stage launch from complet
     'domain_id_plus_entry_stage_plus_action_id_plus_run_id_plus_action_run_ref',
   );
   assert.equal(contract.stage_execution.same_action_run_replay_returns_same_stage_run, true);
+  assert.equal(contract.stage_execution.same_action_run_replay_uses_durable_launch_registry, true);
+  assert.equal(contract.stage_execution.same_action_run_temporal_execution_count, 1);
+  assert.match(contract.stage_execution.same_action_run_provider_start_rpc_delivery, /at_least_once/);
   assert.equal(contract.stage_execution.later_action_run_creates_new_stage_run, true);
   assert.equal(contract.stage_execution.stage_run_spec_sha256_binds_managed_package_closure_and_exact_request, true);
+  assert.equal(
+    contract.stage_execution.stage_run_spec_sha256_binds_prompt_rubric_policy_source_checkpoint_and_manifest_bytes,
+    true,
+  );
+  assert.equal(contract.stage_execution.root_package_content_digest_required, true);
   assert.equal(contract.stage_execution.exact_stage_run_input_registered_before_temporal_start, true);
   assert.equal(contract.stage_execution.same_invocation_different_spec_fails_closed, true);
   assert.equal(contract.stage_execution.pre_and_post_start_crash_recovery_required, true);

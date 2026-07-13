@@ -3,6 +3,7 @@ import { Context, heartbeat } from '@temporalio/activity';
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import {
   buildTemporalStageAttemptWorkflowInput,
+  requireTemporalStageRunWorkflowInputLaunchable,
   type TemporalStageAttemptWorkflowInput,
   type TemporalStageQualityAttemptSyncInput,
   type TemporalStageQualityCycleProjectionInput,
@@ -44,6 +45,10 @@ import { buildStageReviewContextManifest } from '../stagecraft/index.ts';
 import { launchRegisteredStageRun } from './family-runtime-stage-run-launch.ts';
 import { recordStageRunClosed } from './family-runtime-stage-run-launch-registry.ts';
 import { materializeStageRunRoute } from './family-runtime-stage-run-route-launch.ts';
+import {
+  resolveStageRunAttemptExecutorContent,
+  STAGE_RUN_ATTEMPT_CONTENT_BINDING_VERSION,
+} from './family-runtime-stage-run-attempt-content.ts';
 
 function closeoutPacketFromRunnerReceipt(receipt: Record<string, unknown>) {
   if (isRecord(receipt.closeout_packet)) {
@@ -578,8 +583,10 @@ export async function codexStageActivity(input: TemporalStageAttemptWorkflowInpu
     });
   }, DEFAULT_CODEX_STAGE_ACTIVITY_HEARTBEAT_INTERVAL_MS);
   try {
+    const executorContent = resolveStageRunAttemptExecutorContent(input);
     const runnerReceipt = await runAgentStageRunner({
       attempt: input as unknown as Record<string, unknown>,
+      ...executorContent,
       stagePacketRef: input.stage_packet_ref,
       runnerMode: input.codex_stage_runner?.runner_mode,
       observedAt,
@@ -845,22 +852,24 @@ export async function schedulerTickActivity(input: {
 export async function stageQualityAttemptMaterializeActivity(
   input: TemporalStageQualityAttemptMaterializationInput,
 ) {
+  const stageRun = requireTemporalStageRunWorkflowInputLaunchable(input.stage_run);
   const { db } = openQueueDb();
   try {
     createStageAttemptTable(db);
     createStageQualityCycle(db, {
       qualityCycleId: input.quality_cycle_id,
-      stageRunId: input.stage_run.stage_run_id,
-      domainId: input.stage_run.domain_id,
-      stageId: input.stage_run.stage_id,
-      policy: input.stage_run.quality_policy,
+      stageRunId: stageRun.stage_run_id,
+      domainId: stageRun.domain_id,
+      stageId: stageRun.stage_id,
+      policy: stageRun.quality_policy,
     });
-    const rolePromptRef = input.stage_run.role_prompt_refs[input.attempt_role as keyof typeof input.stage_run.role_prompt_refs];
+    const rolePromptRef = stageRun.role_prompt_refs[input.attempt_role as keyof typeof stageRun.role_prompt_refs];
     if (!rolePromptRef) {
       throw new Error(`Stage quality role prompt ref missing for ${input.attempt_role}`);
     }
-    const workspaceRoot = readString(input.stage_run.workspace_locator.workspace_root)
-      ?? readString(input.stage_run.workspace_locator.repo_root);
+    const workspaceRoot = readString(stageRun.workspace_locator.workspace_root)
+      ?? readString(stageRun.workspace_locator.repo_root)
+      ?? stageRun.domain_pack_root;
     const artifactProducerAttemptRef = input.attempt_role === 'producer'
       ? null
       : input.artifact_producer_attempt_ref?.trim() || null;
@@ -869,7 +878,7 @@ export async function stageQualityAttemptMaterializeActivity(
         'contract_shape_invalid',
         'Every non-producer Stage quality Attempt must identify the Attempt that produced its input artifact.',
         {
-          stage_run_id: input.stage_run.stage_run_id,
+          stage_run_id: stageRun.stage_run_id,
           attempt_role: input.attempt_role,
           blocked_reason: 'artifact_identity_producing_attempt_missing_authority_violation',
         },
@@ -885,24 +894,24 @@ export async function stageQualityAttemptMaterializeActivity(
           artifactRefs: input.artifact_refs,
           artifactHashes: input.artifact_hashes,
           artifactIdentityReceiptRefs: input.artifact_identity_receipt_refs,
-          domainId: input.stage_run.domain_id,
-          workspaceRoot: workspaceRoot ?? input.stage_run.domain_pack_root,
+          domainId: stageRun.domain_id,
+          workspaceRoot,
           expectedProducingAttemptId: stageAttemptIdFromRef(artifactProducerAttemptRef!),
         });
     const qualityLineageRefs = [...new Set([
-      ...(input.stage_run.lineage_refs ?? []),
+      ...(stageRun.lineage_refs ?? []),
       ...(artifactProducerAttemptRef ? [artifactProducerAttemptRef] : []),
       ...inputArtifactIdentity.artifact_identity_receipt_refs,
     ])];
     const crossStageRouteSelection = {
       surface_kind: 'opl_stage_run_route_selection_context',
       version: 'stage-run-route-selection-context.v1',
-      configured_decisive_attempt_roles: input.stage_run.quality_policy.formal_review.required
+      configured_decisive_attempt_roles: stageRun.quality_policy.formal_review.required
         ? ['reviewer', 're_reviewer']
         : ['producer'],
       current_attempt_role: input.attempt_role,
-      declared_stage_ids: input.stage_run.declared_stage_ids,
-      max_repair_rounds: input.stage_run.quality_policy.formal_review.max_repair_rounds,
+      declared_stage_ids: stageRun.declared_stage_ids,
+      max_repair_rounds: stageRun.quality_policy.formal_review.max_repair_rounds,
       terminal_route_selection_requires_stage_run_terminal: true,
       prior_required_finding_ids: (input.findings ?? [])
         .filter((finding) => finding.required)
@@ -913,14 +922,14 @@ export async function stageQualityAttemptMaterializeActivity(
     const contextManifest = input.attempt_role === 'reviewer' || input.attempt_role === 're_reviewer'
       ? {
           ...buildStageReviewContextManifest({
-          stageRunId: input.stage_run.stage_run_id,
+          stageRunId: stageRun.stage_run_id,
           qualityCycleId: input.quality_cycle_id,
           reviewerAttemptRole: input.attempt_role,
-          stageGoalRefs: input.stage_run.stage_goal_refs,
+          stageGoalRefs: stageRun.stage_goal_refs,
           artifactRefs: inputArtifactIdentity.artifact_refs,
           artifactHashes: inputArtifactIdentity.artifact_hashes,
-          sourceRefs: input.stage_run.source_refs,
-          qualityRubricRefs: input.stage_run.quality_rubric_refs,
+          sourceRefs: stageRun.source_refs,
+          qualityRubricRefs: stageRun.quality_rubric_refs,
           lineageRefs: qualityLineageRefs,
           priorFindingRefs: (input.findings ?? []).map((finding) => finding.finding_id),
           repairMapRefs: (input.repair_map ?? []).map((entry) => `repair-map:${entry.finding_id}`),
@@ -931,12 +940,12 @@ export async function stageQualityAttemptMaterializeActivity(
       : {
           surface_kind: 'opl_stage_quality_attempt_context_manifest',
           version: 'stage-quality-attempt-context-manifest.v1',
-          stage_run_id: input.stage_run.stage_run_id,
+          stage_run_id: stageRun.stage_run_id,
           quality_cycle_id: input.quality_cycle_id,
           attempt_role: input.attempt_role,
-          stage_goal_refs: input.stage_run.stage_goal_refs ?? [],
-          source_refs: input.stage_run.source_refs ?? [],
-          quality_rubric_refs: input.stage_run.quality_rubric_refs,
+          stage_goal_refs: stageRun.stage_goal_refs ?? [],
+          source_refs: stageRun.source_refs ?? [],
+          quality_rubric_refs: stageRun.quality_rubric_refs,
           lineage_refs: qualityLineageRefs,
           artifact_producer_attempt_ref: artifactProducerAttemptRef,
           artifact_refs: inputArtifactIdentity.artifact_refs,
@@ -948,25 +957,25 @@ export async function stageQualityAttemptMaterializeActivity(
         };
     const contextManifestRef = `opl://stage-quality-context/${stableId('ctx', [contextManifest])}`;
     const attempt = createStageAttempt(db, {
-      domainId: input.stage_run.domain_id,
-      stageId: input.stage_run.stage_id,
+      domainId: stageRun.domain_id,
+      stageId: stageRun.stage_id,
       providerKind: 'temporal',
-      workspaceLocator: input.stage_run.workspace_locator,
-      sourceFingerprint: input.stage_run.source_fingerprint ?? undefined,
-      executorKind: input.stage_run.executor_kind,
-      stageAttemptExecutorPolicy: input.stage_run.stage_attempt_executor_policy,
-      checkpointRefs: [input.stage_run.stage_packet_ref, ...(input.stage_run.checkpoint_refs ?? [])],
-      stageRunId: input.stage_run.stage_run_id,
+      workspaceLocator: stageRun.workspace_locator,
+      sourceFingerprint: stageRun.source_fingerprint ?? undefined,
+      executorKind: stageRun.executor_kind,
+      stageAttemptExecutorPolicy: stageRun.stage_attempt_executor_policy,
+      checkpointRefs: [stageRun.stage_packet_ref, ...(stageRun.checkpoint_refs ?? [])],
+      stageRunId: stageRun.stage_run_id,
       qualityCycleId: input.quality_cycle_id,
       attemptRole: input.attempt_role,
       qualityRoundIndex: input.quality_round_index,
       parentAttemptRef: input.parent_attempt_ref ?? undefined,
       inputArtifactRefs: inputArtifactIdentity.artifact_refs,
       reviewedArtifactHashes: inputArtifactIdentity.artifact_hashes,
-      qualitySourceRefs: input.stage_run.source_refs,
-      qualityStageGoalRefs: input.stage_run.stage_goal_refs,
+      qualitySourceRefs: stageRun.source_refs,
+      qualityStageGoalRefs: stageRun.stage_goal_refs,
       qualityLineageRefs,
-      qualityRubricRefs: input.stage_run.quality_rubric_refs,
+      qualityRubricRefs: stageRun.quality_rubric_refs,
       priorFindingRefs: (input.findings ?? []).map((finding) => finding.finding_id),
       repairMapRefs: (input.repair_map ?? []).map((entry) => `repair-map:${entry.finding_id}`),
       qualityContext: {
@@ -987,13 +996,17 @@ export async function stageQualityAttemptMaterializeActivity(
     });
     return {
       surface_kind: 'temporal_stage_quality_attempt_materialization_receipt',
-      stage_run_id: input.stage_run.stage_run_id,
+      stage_run_id: stageRun.stage_run_id,
       quality_cycle_id: input.quality_cycle_id,
       attempt_role: input.attempt_role,
       quality_round_index: input.quality_round_index,
       attempt_ref: attemptRef,
       workflow_input: {
         ...buildTemporalStageAttemptWorkflowInput(attempt),
+        stage_run_content_binding_version: STAGE_RUN_ATTEMPT_CONTENT_BINDING_VERSION,
+        stage_run_spec_sha256: stageRun.stage_run_spec_sha256,
+        stage_run_spec: stageRun.stage_run_spec,
+        domain_pack_root: stageRun.domain_pack_root,
         quality_context: {
           context_manifest: contextManifest,
           findings: input.findings ?? [],
@@ -1068,6 +1081,9 @@ export async function stageRunRouteLaunchActivity(
           startWorkflow: async (workflowInput) => await (
             await import('./family-runtime-temporal-provider-parts/attempt-control.ts')
           ).startTemporalStageRunWorkflow(workflowInput, { paths }),
+          describeWorkflow: async (workflowInput) => await (
+            await import('./family-runtime-temporal-provider-parts/attempt-control.ts')
+          ).describeTemporalStageRunWorkflow(workflowInput, { paths }),
         });
       } finally {
         db.close();

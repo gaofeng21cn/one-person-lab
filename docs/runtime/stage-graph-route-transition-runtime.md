@@ -17,9 +17,9 @@ OPL Framework 只持有 StageRun transport、attempt ledger、queue/provider、d
 
 ## Durable invocation 与物化
 
-`stage_run_id` 只由 `domain_id + stage_id + stage_run_invocation_id` 派生。`stage_run_spec_sha256` 单独绑定不可变的 pack closure、Stage manifest、quality policy、source/checkpoint/input artifact hash、rubric、lineage、executor 与 parent route；`checked_at`、`use_receipt_ref`、checkout path、currentness receipt 等波动观察不参与 Run ID 或 spec hash。
+`stage_run_id` 只由 `domain_id + stage_id + stage_run_invocation_id` 派生。`stage_run_spec_sha256` 单独绑定不可变的 pack closure、Stage manifest、quality policy、source/checkpoint/input artifact、prompt/rubric/goal/lineage 的实际 byte digest、executor 与 parent route；root package 必须有 content digest，pack 外 source/checkpoint/artifact 必须带可信 content-addressed identity receipt。launch registration/replay、每次 Attempt materialization 和 executor prompt hydration 前都会 fresh 核对这些 binding；`checked_at`、`use_receipt_ref`、checkout path、currentness receipt 等波动观察不参与 Run ID 或 spec hash。
 
-Runway 在启动 Temporal 前，先把 exact StageRun input 写入 `${OPL_STATE_DIR}/family-runtime/queue.sqlite#stage_run_launches`。同 invocation + 同 spec 的 running 或 closed Run 幂等返回；同 invocation + 不同 spec 以 `stage_run_invocation_spec_conflict` 失败，不得覆盖原输入。注册后未启动、Temporal 已启动但本地未记账、以及 readback 已终局三种窗口都由同一 launch interface 恢复。
+Runway 在启动 Temporal 前，先把 exact StageRun input 写入 `${OPL_STATE_DIR}/family-runtime/queue.sqlite#stage_run_launches`。真正调用 provider 前再用带 lease 的 `BEGIN IMMEDIATE` compare-and-swap 收敛 `registered|start_failed|expired starting`；active `starting` caller 只获得幂等 readback。未知成功恢复允许按同一 deterministic workflow id 重投 RPC，所以 provider delivery 是 at-least-once；Temporal `USE_EXISTING + REJECT_DUPLICATE` 保证 execution exactly one。`started` 不得降级，`closed` 永久终局。同 invocation + 同 spec 的 running/closed Run 幂等返回；同 invocation + 不同 spec 以 `stage_run_invocation_spec_conflict` 失败。
 
 CLI 默认 invocation 是稳定幂等键；`--new-stage-run` 显式创建新 Run，质量路径暂将旧 `--new-attempt` 作为兼容 alias。Hosted action 用 action `run_id + action_run_ref` 建立 invocation。跨 Stage 路由用 parent StageRun、decisive Attempt ref、route decision digest 与 target Stage 建立 invocation，因此同一 route replay 复用目标 Run，后续新决定或 A → B → A route-back 会创建新 Run。
 
