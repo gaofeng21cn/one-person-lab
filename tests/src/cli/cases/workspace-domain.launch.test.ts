@@ -383,6 +383,13 @@ test('workspace activation automatically ensures the installed MAS package scope
       recursive: true,
       force: true,
     });
+    const driftedAppState = runCli(['app', 'state', '--profile', 'fast'], env).app_state;
+    assert.equal(driftedAppState.agent_packages.status_index.packages.mas.operational_ready, false);
+    assert.equal(driftedAppState.agent_packages.status_index.packages.mas.launch_allowed, false);
+    assert.equal(
+      driftedAppState.agent_packages.status_index.packages.mas.launch_blocked_reason,
+      'scope_materialization_missing',
+    );
     runCli(['workspace', 'activate', '--project', 'medautoscience', '--path', workspaceB], env);
     runCli([
       'workspace', 'activate', '--project', 'medautoscience', '--path', workspaceA,

@@ -85,6 +85,7 @@ import {
 import {
   applyManagedRuntimeSourceCarrier,
   finalizeManagedRuntimeSourceMutation,
+  managedRuntimeSourceLockReadiness,
   managedRuntimeSourceReadiness,
   recoverManagedRuntimeSourceTransactions,
   removeManagedRuntimeSourceCarrier,
@@ -2250,6 +2251,7 @@ export function runOplAgentPackageStatus(input: {
   targetWorkspace?: string | null;
   targetQuest?: string | null;
   recoverRuntimeSource?: boolean;
+  detail?: 'fast' | 'full';
 } = {}) {
   const packageId = canonicalAgentPackageId(input.packageId);
   const { index: lockIndex, runtimeSourceRecovery } = input.recoverRuntimeSource === false
@@ -2307,10 +2309,15 @@ export function runOplAgentPackageStatus(input: {
       };
     }
   }
-  const runtimeSourceReadiness = managedRuntimeSourceReadiness(
-    selectedLock?.managed_runtime_source,
-    selectedLock?.runtime_source_carrier,
-  );
+  const runtimeSourceReadiness = input.detail === 'fast'
+    ? managedRuntimeSourceLockReadiness(
+        selectedLock?.managed_runtime_source,
+        selectedLock?.runtime_source_carrier,
+      )
+    : managedRuntimeSourceReadiness(
+        selectedLock?.managed_runtime_source,
+        selectedLock?.runtime_source_carrier,
+      );
   const operationalReady = Boolean(
     packageDependencyReadiness?.operational_ready
     && (materializationReadiness?.status === 'current' || materializationReadiness?.status === 'not_required')
@@ -2356,17 +2363,27 @@ export function runOplAgentPackageStatus(input: {
         : null,
       home_shortcut_preferences: homeShortcutPreferences,
       lifecycle_receipts: lifecycleLedger.receipts.filter((receipt) => !packageId || receipt.package_id === packageId),
-      owner_route_readback: ownerRouteReadback({
-        selectedPackageId: packageId ?? null,
-        scope: input.scope,
-        targetWorkspace: input.targetWorkspace,
-        targetQuest: input.targetQuest,
-        packages: installedPackages.map((lock) => ({
-          packageId: lock.package_id,
-          lock,
-          receipt: latestReceipts.get(lock.package_id) ?? null,
-        })),
-      }),
+      owner_route_readback: input.detail === 'fast'
+        ? {
+            surface_kind: 'opl_agent_package_owner_route_readback',
+            status: 'deferred_fast_profile',
+            selected_package_id: packageId ?? null,
+            package_count: installedPackages.length,
+            packages: [],
+            detail_surface: 'opl packages status --package-id <package_id> --json',
+            authority_boundary: refsOnlyAuthorityBoundary(),
+          }
+        : ownerRouteReadback({
+            selectedPackageId: packageId ?? null,
+            scope: input.scope,
+            targetWorkspace: input.targetWorkspace,
+            targetQuest: input.targetQuest,
+            packages: installedPackages.map((lock) => ({
+              packageId: lock.package_id,
+              lock,
+              receipt: latestReceipts.get(lock.package_id) ?? null,
+            })),
+          }),
       files: {
         home_shortcut_preferences_file: paths.agent_package_home_shortcut_preferences_file,
       },

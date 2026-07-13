@@ -10,6 +10,7 @@ import {
 import {
   buildOplDeveloperModeSurface,
   buildOplModules,
+  CANONICAL_OPL_PACKAGE_IDS,
   canonicalAgentPackageId,
   listOplAgentPackages,
   readOplFlowDefaultUserInstructions,
@@ -142,25 +143,40 @@ function buildAssistants(items: ReturnType<typeof publicRuntimeSourceCarriers>) 
 }
 
 function buildFastAgentPackageStatus(
-  lock: ReturnType<typeof listOplAgentPackages>['opl_agent_packages']['installed_packages'][number],
+  status: ReturnType<typeof runOplAgentPackageStatus>['opl_agent_package_status'],
 ) {
-  const codexVisible = lock.exposure_state === 'visible';
+  const lock = status.installed_packages[0] ?? null;
+  const codexVisible = lock?.exposure_state === 'visible';
   return {
     surface_kind: 'opl_agent_package_status_fast_projection',
-    package_id: lock.package_id,
-    status: 'installed',
-    package_version: lock.package_version,
-    installed_version: lock.package_version,
-    version: lock.package_version,
-    source_kind: lock.source_kind,
-    package_lock_ref: lock.lock_ref,
-    lock_ref: lock.lock_ref,
-    physical_surface: lock.physical_surface,
+    package_id: status.package_id,
+    status: status.status,
+    package_version: lock?.package_version ?? null,
+    installed_version: lock?.package_version ?? null,
+    version: lock?.package_version ?? null,
+    source_kind: lock?.source_kind ?? null,
+    package_lock_ref: lock?.lock_ref ?? null,
+    lock_ref: lock?.lock_ref ?? null,
+    physical_surface: lock?.physical_surface ?? null,
     codex_visible: codexVisible,
     capability_exposure: {
-      status: codexVisible ? 'visible' : lock.exposure_state,
+      status: lock ? (codexVisible ? 'visible' : lock.exposure_state) : 'not_installed',
       codex_visible: codexVisible,
     },
+    package_dependency_readiness: status.package_dependency_readiness,
+    materialization_readiness: status.materialization_readiness,
+    runtime_source_readiness: {
+      ...status.runtime_source_readiness,
+      verification_mode: 'persisted_lock_and_path_fast_projection',
+      live_verification_deferred: true,
+      live_verification_surface: 'opl packages status --package-id <package_id> --json',
+    },
+    operational_ready: status.operational_ready,
+    operational_ready_scope: status.operational_ready_scope,
+    launch_allowed: status.launch_allowed,
+    launch_blocked_reason: status.launch_blocked_reason,
+    allowed_when_blocked: status.allowed_when_blocked,
+    repair_action: status.repair_action,
     currentness_detail_deferred: true,
     detail_surface: 'opl packages status --package-id <package_id> --json',
   };
@@ -516,23 +532,30 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
   const actions = buildActionCatalog(contracts);
   const agentPackagesReadback = listOplAgentPackages({ detail: profile }).opl_agent_packages;
   const activeWorkspaceBindings = listWorkspaceBindings().filter((binding) => binding.status === 'active');
+  const packageIds = [...new Set([
+    ...CANONICAL_OPL_PACKAGE_IDS,
+    ...agentPackagesReadback.installed_packages.map((lock) => lock.package_id),
+  ])];
   const agentPackageStatuses = Object.fromEntries(
-    agentPackagesReadback.installed_packages.map((lock) => [
-      lock.package_id,
-      profile === 'fast'
-        ? buildFastAgentPackageStatus(lock)
-        : runOplAgentPackageStatus((() => {
-            const binding = activeWorkspaceBindings.find((entry) =>
-              canonicalAgentPackageId(entry.project_id) === lock.package_id);
-            return binding
-              ? {
-                  packageId: lock.package_id,
-                  scope: 'workspace' as const,
-                  targetWorkspace: binding.workspace_path,
-                }
-              : { packageId: lock.package_id };
-          })()).opl_agent_package_status,
-    ]),
+    packageIds.map((packageId) => {
+      const binding = activeWorkspaceBindings.find((entry) =>
+        canonicalAgentPackageId(entry.project_id) === packageId);
+      const status = runOplAgentPackageStatus({
+        packageId,
+        ...(binding
+          ? {
+              scope: 'workspace' as const,
+              targetWorkspace: binding.workspace_path,
+            }
+          : {}),
+        recoverRuntimeSource: false,
+        detail: profile,
+      }).opl_agent_package_status;
+      return [
+        packageId,
+        profile === 'fast' ? buildFastAgentPackageStatus(status) : status,
+      ];
+    }),
   );
   const agentPackagesProjection = {
     surface_kind: 'opl_app_agent_packages_projection',

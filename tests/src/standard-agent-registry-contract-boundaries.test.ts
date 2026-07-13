@@ -11,7 +11,11 @@ import {
   STANDARD_AGENT_SERIES_MEMBERSHIP,
 } from '../../src/kernel/standard-agent-registry.ts';
 import { OFFICIAL_KNOWLEDGE_DELIVERABLE_QUALITY_PROFILE } from '../../src/modules/pack/standard-agent-stage-manifest.ts';
-import { canonicalAgentPackageId } from '../../src/modules/connect/agent-package-identity.ts';
+import {
+  CANONICAL_OPL_PACKAGE_IDS,
+  canonicalAgentPackageId,
+} from '../../src/modules/connect/agent-package-identity.ts';
+import { getOplPackageSpecs } from '../../src/modules/connect/package-distribution.ts';
 import { resolveOplDomainModuleSpec } from '../../src/modules/connect/system-installation/modules.ts';
 
 const repoRoot = path.resolve(import.meta.dirname, '../..');
@@ -91,6 +95,13 @@ test('package and module aliases derive standard agents without promoting Schola
     project_id: 'scholarskills',
     project: 'mas-scholar-skills',
   }), false);
+});
+
+test('canonical App-state package identities match the release package specs', () => {
+  assert.deepEqual(
+    getOplPackageSpecs().map((spec) => spec.package_id),
+    [...CANONICAL_OPL_PACKAGE_IDS],
+  );
 });
 
 test('official quality governance stays outside the identity registry', () => {
