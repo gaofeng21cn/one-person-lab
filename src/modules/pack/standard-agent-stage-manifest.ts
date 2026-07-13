@@ -6,7 +6,6 @@ import { isDeepStrictEqual } from 'node:util';
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { normalizeFamilyActionCatalog } from '../../kernel/family-action-catalog-contract.ts';
 import { optionalString, parseJsonText } from '../../kernel/json-file.ts';
-import { resolveStandardAgent } from '../../kernel/standard-agent-registry.ts';
 import { STANDARD_AGENT_PACK_ABI } from './standard-agent-pack-abi.ts';
 import {
   DEFAULT_STAGE_EXECUTOR_BINDING_REF,
@@ -30,6 +29,10 @@ export { STANDARD_AGENT_STAGE_MANIFEST_REF } from './standard-agent-stage-prompt
 type JsonRecord = Record<string, unknown>;
 
 export const STANDARD_AGENT_DESCRIPTOR_REF = 'contracts/domain_descriptor.json';
+export const OFFICIAL_KNOWLEDGE_DELIVERABLE_QUALITY_PROFILE = {
+  profile_id: 'official_high_value_knowledge_deliverable.v1',
+  profile_ref: 'contracts/opl-framework/official-knowledge-deliverable-quality-profile.json',
+} as const;
 const ACTION_CATALOG_REF = 'contracts/action_catalog.json';
 const PACK_COMPILER_INPUT_REF = 'contracts/pack_compiler_input.json';
 const OWNER_RECEIPT_CONTRACT_REF = 'contracts/owner_receipt_contract.json';
@@ -526,10 +529,6 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
     'pack_compiler_input.canonical_agent_id',
     repoDir,
   );
-  const registryAgent = resolveStandardAgent(canonicalAgentId);
-  const registryQualityProfile = registryAgent && 'quality_governance_profile' in registryAgent
-    ? registryAgent.quality_governance_profile
-    : null;
   const requiredPackPaths = strings(
     packCompilerInput.required_domain_pack_paths,
     'pack_compiler_input.required_domain_pack_paths',
@@ -608,18 +607,14 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
   const declaredMetaReviewPolicyRef = manifest.meta_review_policy_ref === undefined
     ? null
     : repoRef(repoDir, manifest.meta_review_policy_ref, 'stage_manifest.meta_review_policy_ref');
-  if (declaredQualityProfileRef && !registryQualityProfile) {
-    fail('Domain manifest cannot self-assign a registry-owned quality governance profile.', {
+  if (
+    declaredQualityProfileRef
+    && declaredQualityProfileRef !== OFFICIAL_KNOWLEDGE_DELIVERABLE_QUALITY_PROFILE.profile_ref
+  ) {
+    fail('Domain quality governance profile must reference the canonical OPL profile.', {
       repo_dir: repoDir,
       canonical_agent_id: canonicalAgentId,
-      declared_quality_governance_profile_ref: declaredQualityProfileRef,
-    });
-  }
-  if (declaredQualityProfileRef && registryQualityProfile?.profile_ref !== declaredQualityProfileRef) {
-    fail('Domain quality governance profile must match the registry binding.', {
-      repo_dir: repoDir,
-      canonical_agent_id: canonicalAgentId,
-      registry_profile_ref: registryQualityProfile?.profile_ref ?? null,
+      canonical_profile_ref: OFFICIAL_KNOWLEDGE_DELIVERABLE_QUALITY_PROFILE.profile_ref,
       declared_profile_ref: declaredQualityProfileRef,
     });
   }

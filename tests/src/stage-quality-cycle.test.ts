@@ -33,18 +33,18 @@ import {
   projectTemporalStageRunQualityCycle,
 } from '../../src/modules/runway/family-runtime-stage-quality-cycle.ts';
 import { requireStageQualityAttemptBoundary } from '../../src/modules/runway/family-runtime-stage-quality-attempt-boundary.ts';
+import { OFFICIAL_KNOWLEDGE_DELIVERABLE_QUALITY_PROFILE } from '../../src/modules/pack/standard-agent-stage-manifest.ts';
 import {
-  OFFICIAL_KNOWLEDGE_DELIVERABLE_QUALITY_PROFILE,
   STANDARD_AGENT_REGISTRY,
 } from '../../src/kernel/standard-agent-registry.ts';
 
 const repoRoot = path.resolve(import.meta.dirname, '../..');
 
-test('official quality profile is explicit and limited to the five knowledge-deliverable agents', () => {
+test('official quality profile is explicit without adding per-agent registry policy', () => {
   const bound = STANDARD_AGENT_REGISTRY
     .filter((entry) => 'quality_governance_profile' in entry)
     .map((entry) => entry.agent_id);
-  assert.deepEqual(bound, ['mas', 'mag', 'rca', 'oma', 'obf']);
+  assert.deepEqual(bound, []);
   assert.equal(OFFICIAL_KNOWLEDGE_DELIVERABLE_QUALITY_PROFILE.profile_id,
     'official_high_value_knowledge_deliverable.v1');
   const contract = JSON.parse(fs.readFileSync(path.join(
