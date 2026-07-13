@@ -27,6 +27,8 @@ export function writeManagedRuntimeSourceFixture(input: {
   fs.mkdirSync(blobRoot, { recursive: true });
   fs.mkdirSync(fakeBin, { recursive: true });
   fs.mkdirSync(path.join(sourceRoot, 'scripts'), { recursive: true });
+  fs.mkdirSync(path.join(sourceRoot, 'src'), { recursive: true });
+  fs.writeFileSync(path.join(sourceRoot, 'src', 'fixture_agent.py'), 'import opl_framework\n');
   fs.writeFileSync(path.join(sourceRoot, 'package.json'), JSON.stringify({
     name: input.repoName,
     version: input.version,
@@ -40,6 +42,7 @@ export function writeManagedRuntimeSourceFixture(input: {
   fs.writeFileSync(path.join(sourceRoot, 'scripts', 'opl-module-healthcheck.sh'), [
     '#!/usr/bin/env bash',
     'set -euo pipefail',
+    'PYTHONPATH=src python3 -c "import opl_framework"',
     'external-runtime-tool --check',
     `test "$(cat .runtime-prepared)" = ${JSON.stringify(input.version)}`,
     'if [[ "${1:-}" == "--probe" ]]; then',
@@ -75,17 +78,16 @@ export function writeManagedRuntimeSourceFixture(input: {
   };
   const packageId = packageIdByModule[input.moduleId] ?? input.moduleId;
   const channelManifest = {
-    opl_version: input.version,
+    release_set_generation: input.version,
     package_catalog_surface_kind: 'opl_package_catalog.v1',
     packages: {
       package_catalog: {
         [packageId]: {
           package_id: packageId,
-          latest_version: input.version,
+          selected_version: input.version,
           versions: [{
             package_version: input.version,
-            module_id: input.moduleId,
-            promotion_status: 'promoted',
+            selection_status: 'selected_for_release_set',
             source_artifact_ref: `ghcr.io/fixture/one-person-lab-packages/${packageId}:${input.version}`,
             artifact_digest: `sha256:${'a'.repeat(64)}`,
             artifact_status: 'published_immutable',

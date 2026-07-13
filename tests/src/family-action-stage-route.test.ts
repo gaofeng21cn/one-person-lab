@@ -93,10 +93,10 @@ const validRoute = {
   required_stage_refs: ['intake', 'plan', 'review'],
   optional_stage_refs: ['research'],
   terminal_stage_refs: ['review'],
-  route_policy: 'ordered_stage_attempts_no_skip',
+  route_policy: 'ai_selected_progress_route',
 };
 
-test('action stage route accepts an ordered route with a reachable optional branch', () => {
+test('action stage route accepts an AI-selected route over declared stages', () => {
   const normalizedCatalog = catalog(validRoute);
   const parity = buildFamilyActionStageRouteParity(normalizedCatalog, plane(['review', 'research']), {
     require_declared_routes: true,
@@ -159,7 +159,7 @@ test('domain-handler target-only exemption rejects non-mutating, routed, and pub
   );
 });
 
-test('action stage route fails closed for missing, unknown, and reordered required stages', () => {
+test('action stage route requires a declared graph and rejects unknown stages without enforcing order', () => {
   const missing = buildFamilyActionStageRouteParity(catalog(undefined), plane(), {
     require_declared_routes: true,
   });
@@ -175,8 +175,8 @@ test('action stage route fails closed for missing, unknown, and reordered requir
   }), plane());
   assert.match(unknown.issues.join('\n'), /unknown stages: missing/);
 
-  const reordered = buildFamilyActionStageRouteParity(catalog(validRoute), plane(['intake']));
-  assert.match(reordered.issues.join('\n'), /required stage order is unreachable: plan -> review/);
+  const nonlinear = buildFamilyActionStageRouteParity(catalog(validRoute), plane(['intake']));
+  assert.equal(nonlinear.status, 'aligned');
 });
 
 test('action stage route and stage allowed_action_refs remain bidirectionally aligned', () => {

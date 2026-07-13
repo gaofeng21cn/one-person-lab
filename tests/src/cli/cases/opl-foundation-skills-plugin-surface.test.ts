@@ -5,7 +5,7 @@ const pluginManifestPath = path.join(pluginRoot, '.codex-plugin', 'plugin.json')
 const exposureManifestPath = path.join(pluginRoot, 'exposure.json');
 const skillsRoot = path.join(pluginRoot, 'skills');
 
-const expectedSkillCount = 26;
+const expectedSkillCount = 25;
 const expectedDeveloperCodexSkills = new Set([
   'opl-agent-package-lifecycle-reviewer',
   'opl-code-quality-remediation-reviewer',
@@ -162,7 +162,7 @@ test('OPL Foundation Skills keep developer Codex exposure intentionally narrow',
     .sort();
 
   assert.deepEqual(developerCodexSkills, [...expectedDeveloperCodexSkills].sort());
-  assert.equal(entries.get('opl-domain-progress-transition-reviewer')?.exposure_scope, 'project_local');
+  assert.equal(entries.has('opl-domain-progress-transition-reviewer'), false);
   assert.equal(entries.has('opl-app-first-run-ux-reviewer'), false);
   assert.equal(entries.has('opl-app-release-evidence-reviewer'), false);
   assert.equal(entries.has('opl-app-settings-ia-reviewer'), false);

@@ -39,7 +39,6 @@ function generatedSurfaceAliases(surfaceId: string) {
     ],
     status_read_model: ['status_read_model'],
     workbench_drilldown: ['workbench_drilldown'],
-    functional_harness_cases: ['functional_harness_cases', 'test_lane_harness', 'harness'],
     product_session: ['product_session'],
   };
   return aliases[surfaceId] ?? [surfaceId];

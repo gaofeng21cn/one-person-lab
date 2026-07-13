@@ -128,7 +128,7 @@ test('stage attempt closeout preserves OPL-selected action route and ignores for
     required_stage_refs: ['intent-intake', 'build'],
     optional_stage_refs: [],
     terminal_stage_refs: ['build'],
-    route_policy: 'ordered_stage_attempts_no_skip',
+    route_policy: 'ai_selected_progress_route',
   };
   try {
     createStageAttemptTable(db);

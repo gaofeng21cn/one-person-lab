@@ -228,7 +228,7 @@ function buildFoundryAgentStageProfile(peer: FoundryAgentPeer, contract: JsonRec
     series_membership: peer.series_membership,
     ordinary_golden_path: 'domain_pack -> stage -> domain_owner_answer -> handoff',
     domain_pack_example: 'Declarative Domain Pack',
-    stage_delivery_progress_marker: 'domain_owner_receipt_ref_or_domain_owned_typed_blocker_ref',
+    stage_delivery_progress_marker: 'validated_consumable_artifact_progress_ref_or_domain_owner_receipt_ref',
     lifecycle_pipeline: readStringList(
       profile.shared_lifecycle_pipeline,
       'series_design_profile.shared_lifecycle_pipeline',

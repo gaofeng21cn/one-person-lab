@@ -151,7 +151,7 @@ export function readFrameworkChannelEntry() {
     fetchOciBlob(imageRef, token, layer.digest, manifestPath);
     const parsedChannelManifest = readJsonPayloadFile(manifestPath);
     const channelManifest = (isRecord(parsedChannelManifest) ? parsedChannelManifest : {}) as {
-      opl_version?: string;
+      release_set_generation?: string;
       packages?: {
         framework_core?: {
           artifact?: string;
@@ -164,11 +164,11 @@ export function readFrameworkChannelEntry() {
     const artifact = normalizeOptionalString(framework?.artifact);
     if (!artifact) {
       throw new FrameworkContractError('contract_shape_invalid', 'OPL channel manifest is missing packages.framework_core.artifact.', {
-        channel_version: channelManifest.opl_version ?? null,
+        channel_version: channelManifest.release_set_generation ?? null,
       });
     }
     return {
-      channel_version: normalizeOptionalString(channelManifest.opl_version),
+      channel_version: normalizeOptionalString(channelManifest.release_set_generation),
       artifact,
       source_archive_sha256: normalizeOptionalString(framework?.source_archive?.sha256),
       source_git_head_sha: normalizeOptionalString(framework?.source_git?.head_sha),
@@ -178,8 +178,10 @@ export function readFrameworkChannelEntry() {
   }
 }
 
-export function fetchFrameworkArtifactFromChannel(tempRoot: string) {
-  const entry = readFrameworkChannelEntry();
+export function fetchFrameworkArtifactFromChannel(
+  tempRoot: string,
+  entry: ReturnType<typeof readFrameworkChannelEntry> = readFrameworkChannelEntry(),
+) {
   const imageRef = parseImageRef(entry.artifact);
   const token = fetchGhcrToken(imageRef);
   const manifest = fetchOciManifest(imageRef, token);

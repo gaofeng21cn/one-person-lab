@@ -284,7 +284,7 @@
         "blocker_id": {
           "type": "string",
           "enum": [
-            "stage_pack_not_admitted",
+            "stage_pack_not_conformant",
             "append_only_event_log_ref_missing",
             "attempt_ledger_ref_missing",
             "stage_manifest_ref_missing",
@@ -311,7 +311,7 @@
         "repair_action": {
           "type": "string",
           "enum": [
-            "repair_stage_pack_admission",
+            "repair_stage_pack_conformance",
             "record_append_only_event_log_ref",
             "record_attempt_ledger_ref",
             "record_stage_manifest_ref",

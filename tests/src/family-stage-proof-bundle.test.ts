@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { parseJsonText } from '../../src/kernel/json-file.ts';
-import { buildFamilyStageAdmissionReview } from '../../src/modules/stagecraft/family-stage-admission.ts';
+import { buildFamilyStageConformanceReview } from '../../src/modules/stagecraft/family-stage-conformance.ts';
 import { buildFamilyStageProofBundle } from '../../src/modules/stagecraft/family-stage-proof-bundle.ts';
 import type { FamilyActionCatalog } from '../../src/kernel/family-action-catalog-contract.ts';
 import type { FamilyStageContract, FamilyStageControlPlane } from '../../src/modules/stagecraft/family-stage-control-plane-contract.ts';
@@ -248,19 +248,19 @@ function buildStagePlane(overrides: {
 test('stage proof bundle projects an admitted stage pack into consumable obligations', () => {
   const plane = buildStagePlane();
   const actionCatalog = buildActionCatalog();
-  const admissionReview = buildFamilyStageAdmissionReview(plane, {
+  const conformanceReview = buildFamilyStageConformanceReview(plane, {
     family_action_catalog: actionCatalog,
   });
   const bundle = buildFamilyStageProofBundle(plane, {
     actionCatalog,
-    admissionReview,
+    conformanceReview,
   });
 
   assert.equal(bundle.surface_kind, 'opl_stage_pack_proof_bundle');
   assert.equal(bundle.version, 'opl-stage-pack-proof-bundle.v1');
   assert.equal(bundle.identity.stage_pack_id, 'med-autoscience:mas_stage_control_plane');
   assert.equal(bundle.identity.action_catalog_id, 'mas_stage_actions');
-  assert.equal(bundle.admission_status, 'admitted');
+  assert.equal(bundle.conformance_status, 'conformant');
   assert.equal(bundle.authority_boundary.proof_passed, true);
   assert.deepEqual(bundle.stage_results.map((result) => [result.stage_id, result.mode_tags]), [
     ['manuscript_authoring', {
@@ -464,9 +464,9 @@ test('stage proof bundle exposes missing composition and does not mark blocked p
     actionCatalog: buildActionCatalog(),
   });
 
-  assert.equal(bundle.admission_status, 'blocked');
+  assert.equal(bundle.conformance_status, 'nonconformant');
   assert.equal(bundle.authority_boundary.proof_passed, false);
-  assert.ok(bundle.blocking_reasons.some((finding) => finding.code === 'composition_obligation_not_satisfied'));
+  assert.ok(bundle.conformance_findings.some((finding) => finding.code === 'composition_obligation_not_satisfied'));
   assert.deepEqual(bundle.failure_localization.map((item) => [item.lane, item.code, item.source_ref]), [
     ['domain', 'composition_obligation_not_satisfied', 'family_stage:publication_review'],
   ]);
@@ -485,13 +485,13 @@ test('stage proof bundle exposes needs-contracts admission without pretending pr
     actionCatalog: buildActionCatalog(),
   });
 
-  assert.equal(bundle.admission_status, 'needs_contracts');
+  assert.equal(bundle.conformance_status, 'quality_debt');
   assert.equal(bundle.authority_boundary.proof_passed, false);
-  assert.ok(bundle.blocking_reasons.some((finding) => finding.code === 'missing_stage_contract'));
+  assert.ok(bundle.conformance_findings.some((finding) => finding.code === 'missing_stage_contract'));
   assert.deepEqual(bundle.failure_localization.map((item) => [item.lane, item.code, item.stage_id]), [
     ['human', 'missing_stage_contract', 'publication_review'],
   ]);
-  assert.ok(bundle.stage_results.some((result) => result.status === 'needs_contracts'));
+  assert.ok(bundle.stage_results.some((result) => result.status === 'quality_debt'));
   assert.equal(bundle.proof_runtime_metrics.blocker_count, 0);
   assert.equal(bundle.proof_runtime_metrics.warning_count, 1);
 });

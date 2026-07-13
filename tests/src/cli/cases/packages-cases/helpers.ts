@@ -66,8 +66,8 @@ export function remotePayloadManifest(baseUrl?: string) {
 export function distributionPayload(input: { digest?: string; immutableTag?: string } = {}) {
   const immutableTag = input.immutableTag ?? '1.2.3';
   return {
-    payload_kind: 'ghcr_oci_agent_package',
-    payload_ref: `ghcr.io/example-org/opl-agent-third-party-research:latest`,
+    payload_kind: 'ghcr_oci_opl_package',
+    payload_ref: `ghcr.io/example-org/opl-agent-third-party-research:${immutableTag}`,
     payload_digest_ref: input.digest ?? 'sha256:2222222222222222222222222222222222222222222222222222222222222222',
     required_skill_pack_lock_refs: [
       'opl://agent-package-lock/third-party-research-required-skills/1.2.3/fixture',
@@ -75,11 +75,11 @@ export function distributionPayload(input: { digest?: string; immutableTag?: str
     proof_status: 'non_live_contract_fixture',
     live_download_proof: false,
     installed_reload_proof: false,
-    oci_ref: `ghcr.io/example-org/opl-agent-third-party-research:latest`,
+    oci_ref: 'ghcr.io/example-org/opl-agent-third-party-research:latest-stable',
     oci_media_type: 'application/vnd.oci.image.manifest.v1+json',
     immutable_tag: immutableTag,
-    rolling_tag: 'latest',
-    promotion_policy: 'daily_candidate_gates_then_promote_latest',
+    moving_tag: 'latest-stable',
+    promotion_policy: 'daily_candidate_gates_then_promote_latest_stable',
     install_truth: 'resolved_digest_lock',
   };
 }
@@ -151,7 +151,7 @@ export function registryPayload(baseUrl: string, input: { packageId?: string } =
         publisher: 'example-org',
         source: 'third_party',
         manifest_url: `${baseUrl}/manifest.json`,
-        latest_version: '1.2.3',
+        version_source_ref: `${baseUrl}/manifest.json#/version`,
         trust_tier: 'third_party_verified',
         codex_visible_entry: 'third-party-research',
         required_skill_ids: ['third-party-research'],
@@ -159,15 +159,17 @@ export function registryPayload(baseUrl: string, input: { packageId?: string } =
         home_shortcut_ids: ['research'],
         display_policy: 'refs_only_no_domain_verdict',
         ordinary_user_source: {
-          kind: 'ghcr_oci_artifact_rolling_latest',
+          kind: 'ghcr_oci_artifact_latest_stable',
           registry: 'ghcr.io',
           artifact_ref: 'ghcr.io/example-org/opl-agent-third-party-research',
-          ordinary_user_ref: 'ghcr.io/example-org/opl-agent-third-party-research:latest',
-          immutable_version_ref: 'ghcr.io/example-org/opl-agent-third-party-research:1.2.3',
-          latest_is_only_ordinary_user_channel: true,
-          latest_role: 'ordinary_user_rolling_pointer_after_daily_candidate_gates',
+          ordinary_user_ref: 'ghcr.io/example-org/opl-agent-third-party-research:latest-stable',
+          immutable_version_ref_pattern: 'ghcr.io/example-org/opl-agent-third-party-research:<semver>',
+          candidate_ref: 'ghcr.io/example-org/opl-agent-third-party-research:candidate',
+          latest_stable_role: 'ordinary_user_latest_stable_pointer_after_candidate_gates',
+          latest_stable_is_only_ordinary_user_channel: true,
+          daily_candidate_build_gate: 'daily_candidate_build_must_pass_before_promote_latest_stable',
           install_truth: ['immutable_version_tag', 'oci_digest', 'package_lock_receipt'],
-          latest_is_install_truth: false,
+          latest_stable_is_install_truth: false,
           developer_checkout_auto_apply_allowed: false,
         },
       },

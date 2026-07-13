@@ -112,8 +112,40 @@ function inspectAttempt(stageId: string, attemptDir: string) {
   const decisionReceiptMatch = refsBackedByFiles(receiptsDir, decisionReceiptRefs);
 
   let status: StageAttemptStatus = 'in_progress';
-  if (!manifestValid && presentOutputs.length > 0) {
-    status = 'orphan';
+  if (presentOutputs.length > 0) {
+    if (!manifestValid) {
+      brokenReasons.push('manifest_missing_or_invalid_quality_debt');
+    }
+    if (missingOutputs.length > 0) {
+      brokenReasons.push('declared_required_outputs_missing_quality_debt');
+    }
+    if (hashMismatches.length > 0) {
+      brokenReasons.push('manifest_content_hash_mismatch_quality_debt');
+    }
+    if ((terminalStatus === 'success' || ownerReceiptRefs.length > 0)
+      && ownerReceiptRefs.length > 0
+      && ownerReceiptMatch.missing_refs.length === 0
+      && missingOutputs.length === 0
+      && hashMismatches.length === 0
+      && manifestValid) {
+      status = 'success';
+    } else {
+      status = 'completed_with_quality_debt';
+      if (terminalStatus === 'success' && ownerReceiptRefs.length === 0) {
+        brokenReasons.push('owner_receipt_missing_for_quality_claim_only');
+      }
+      if (terminalStatus === 'blocked' || typedBlockerRefs.length > 0) {
+        brokenReasons.push('typed_blocker_scopes_authority_claim_not_stage_progress');
+      }
+      if (terminalStatus === 'skipped' || terminalStatus === 'deferred') {
+        brokenReasons.push(`${terminalStatus}_decision_does_not_discard_consumable_artifact`);
+      }
+      if (qualityDebtRefs.length === 0) {
+        brokenReasons.push('quality_debt_ref_missing_framework_can_derive');
+      } else if (qualityDebtMatch.missing_refs.length > 0) {
+        brokenReasons.push('quality_debt_ref_without_matching_evidence_file_framework_can_derive');
+      }
+    }
   } else if (!manifestValid) {
     status = 'broken';
     brokenReasons.push('missing_or_invalid_manifest');
@@ -137,46 +169,9 @@ function inspectAttempt(stageId: string, attemptDir: string) {
     } else {
       status = terminalStatus;
     }
-  } else if (terminalStatus === 'success' || ownerReceiptRefs.length > 0) {
-    if (requiredOutputs.length === 0) {
-      status = 'broken';
-      brokenReasons.push('success_manifest_missing_required_outputs');
-    } else if (missingOutputs.length > 0) {
-      status = 'broken';
-      brokenReasons.push('required_outputs_missing_without_typed_blocker');
-    } else if (hashMismatches.length > 0) {
-      status = 'broken';
-      brokenReasons.push('manifest_content_hash_mismatch');
-    } else if (ownerReceiptRefs.length === 0) {
-      status = 'broken';
-      brokenReasons.push('success_manifest_missing_owner_receipt_ref');
-    } else if (ownerReceiptMatch.missing_refs.length > 0) {
-      status = 'broken';
-      brokenReasons.push('owner_receipt_ref_without_matching_receipt_file');
-    } else {
-      status = 'success';
-    }
-  } else if (terminalStatus === 'completed_with_quality_debt') {
-    if (requiredOutputs.length === 0) {
-      status = 'broken';
-      brokenReasons.push('quality_debt_manifest_missing_required_outputs');
-    } else if (missingOutputs.length > 0) {
-      status = 'broken';
-      brokenReasons.push('required_outputs_missing_for_quality_debt_completion');
-    } else if (hashMismatches.length > 0) {
-      status = 'broken';
-      brokenReasons.push('manifest_content_hash_mismatch');
-    } else if (qualityDebtRefs.length === 0) {
-      status = 'broken';
-      brokenReasons.push('quality_debt_completion_missing_quality_debt_ref');
-    } else if (qualityDebtMatch.missing_refs.length > 0) {
-      status = 'broken';
-      brokenReasons.push('quality_debt_ref_without_matching_evidence_file');
-    } else {
-      status = 'completed_with_quality_debt';
-    }
-  } else if (presentOutputs.length > 0) {
-    status = 'orphan';
+  } else if (terminalStatus === 'success' || terminalStatus === 'completed_with_quality_debt') {
+    status = 'broken';
+    brokenReasons.push('terminal_attempt_has_no_readable_output');
   }
 
   return {
@@ -191,7 +186,7 @@ function inspectAttempt(stageId: string, attemptDir: string) {
     quality_debt_refs: qualityDebtRefs,
     typed_blocker_refs: typedBlockerRefs,
     decision_receipt_refs: decisionReceiptRefs,
-    orphan_outputs: status === 'orphan' ? presentOutputs : [],
+    orphan_outputs: [],
     broken_reasons: brokenReasons,
     output_hashes: outputHashes,
     evidence_hashes: evidenceHashes,
@@ -217,9 +212,7 @@ function summarizeStage(stage: ReturnType<typeof resolveStageDirs>[number]): Sta
       ? ['domain_owner_typed_blocker_resolution']
       : status === 'skipped' || status === 'deferred'
         ? ['domain_owner_resume_or_next_stage_decision']
-      : status === 'orphan'
-        ? ['domain_owner_manifest_and_receipt']
-        : ['domain_owner_stage_artifact_closeout'];
+      : ['domain_owner_stage_artifact_closeout'];
   return {
     stage_id: stage.stage_id,
     stage_dir: stage.stage_dir,
@@ -266,46 +259,12 @@ export function statusStageArtifactRuntime(locator: StageArtifactLocator) {
 
 function assertTerminalRefs(input: {
   terminal_status: StageAttemptTerminalStatus;
-  required_outputs: string[];
-  owner_receipt_refs: string[];
-  quality_debt_refs: string[];
   typed_blocker_refs: string[];
   decision_receipt_refs: string[];
-  outputs_dir: string;
   evidence_dir: string;
   receipts_dir: string;
 }) {
-  if (input.terminal_status === 'success' || input.terminal_status === 'completed_with_quality_debt') {
-    const presentOutputs = listRelativeFiles(input.outputs_dir);
-    const missingOutputs = input.required_outputs.filter((output) => !presentOutputs.includes(output));
-    if (input.required_outputs.length === 0 || missingOutputs.length > 0) {
-      throw new FrameworkContractError('contract_shape_invalid', 'Stage success requires all manifest required outputs.', {
-        required_outputs: input.required_outputs,
-        present_outputs: presentOutputs,
-        missing_outputs: missingOutputs,
-      });
-    }
-    const ownerReceiptMatch = refsBackedByFiles(input.receipts_dir, input.owner_receipt_refs);
-    if (input.terminal_status === 'success'
-      && (input.owner_receipt_refs.length === 0 || ownerReceiptMatch.missing_refs.length > 0)) {
-      throw new FrameworkContractError('contract_shape_invalid', 'Stage success requires owner receipt refs backed by receipt files.', {
-        owner_receipt_refs: input.owner_receipt_refs,
-        missing_owner_receipt_refs: ownerReceiptMatch.missing_refs,
-      });
-    }
-    const qualityDebtMatch = refsBackedByFiles(input.evidence_dir, input.quality_debt_refs);
-    if (input.terminal_status === 'completed_with_quality_debt'
-      && (input.quality_debt_refs.length === 0 || qualityDebtMatch.missing_refs.length > 0)) {
-      throw new FrameworkContractError(
-        'contract_shape_invalid',
-        'Quality-debt completion requires quality debt refs backed by evidence files.',
-        {
-          quality_debt_refs: input.quality_debt_refs,
-          missing_quality_debt_refs: qualityDebtMatch.missing_refs,
-        },
-      );
-    }
-  } else if (input.terminal_status === 'blocked') {
+  if (input.terminal_status === 'blocked') {
     const typedBlockerMatch = refsBackedByFiles(input.evidence_dir, input.typed_blocker_refs);
     if (input.typed_blocker_refs.length === 0 || typedBlockerMatch.missing_refs.length > 0) {
       throw new FrameworkContractError('contract_shape_invalid', 'Stage blocked requires typed blocker refs backed by evidence files.', {
@@ -313,7 +272,7 @@ function assertTerminalRefs(input: {
         missing_typed_blocker_refs: typedBlockerMatch.missing_refs,
       });
     }
-  } else {
+  } else if (input.terminal_status === 'skipped' || input.terminal_status === 'deferred') {
     const decisionReceiptMatch = refsBackedByFiles(input.receipts_dir, input.decision_receipt_refs);
     if (input.decision_receipt_refs.length === 0 || decisionReceiptMatch.missing_refs.length > 0) {
       throw new FrameworkContractError('contract_shape_invalid', 'Stage skipped/deferred requires decision receipt refs backed by receipt files.', {
@@ -354,7 +313,8 @@ function writeCurrentPointer(locator: StageArtifactLocator, status: ReturnType<t
     stage_count: status.summary.stage_count,
     success_stage_count: status.summary.success_stage_count,
     completed_with_quality_debt_stage_count: status.summary.completed_with_quality_debt_stage_count,
-    stage_transition_authority_required_for_stage_run_current: true,
+    stage_run_current_is_passive_projection_of_codex_route_context: true,
+    framework_can_accept_reject_or_override_codex_route: false,
     authority_boundary: AUTHORITY_BOUNDARY,
   };
   writeJsonFile(currentFile, payload);
@@ -372,22 +332,65 @@ export function commitStageArtifactAttemptRuntime(input: StageArtifactAttemptLoc
   typed_blocker_refs?: string[];
   decision_receipt_refs?: string[];
 }) {
-  const terminalStatus = input.terminal_status;
   const paths = ensureStageArtifactAttempt(input);
   const requiredOutputs = [...new Set((input.required_outputs ?? []).map((entry) => safeRelativePath(entry, 'required_outputs')))];
   const ownerReceiptRefs = stringList(input.owner_receipt_refs ?? []);
-  const qualityDebtRefs = stringList(input.quality_debt_refs ?? []);
+  let qualityDebtRefs = stringList(input.quality_debt_refs ?? []);
   const typedBlockerRefs = stringList(input.typed_blocker_refs ?? []);
   const decisionReceiptRefs = stringList(input.decision_receipt_refs ?? []);
+  const presentOutputs = listRelativeFiles(paths.outputs_dir);
+  const missingOutputs = requiredOutputs.filter((output) => !presentOutputs.includes(output));
+  const ownerReceiptMatch = refsBackedByFiles(paths.receipts_dir, ownerReceiptRefs);
+  const successClaimBacked = input.terminal_status === 'success'
+    && presentOutputs.length > 0
+    && missingOutputs.length === 0
+    && ownerReceiptRefs.length > 0
+    && ownerReceiptMatch.missing_refs.length === 0;
+  const requestedProgressCompletion = input.terminal_status === 'success'
+    || input.terminal_status === 'completed_with_quality_debt';
+  const terminalStatus: StageAttemptTerminalStatus = requestedProgressCompletion
+    && (presentOutputs.length === 0 || !successClaimBacked)
+    ? 'completed_with_quality_debt'
+    : input.terminal_status;
+  const derivedQualityFindings = [
+    ...(requiredOutputs.length === 0 ? ['required_outputs_not_declared'] : []),
+    ...(presentOutputs.length === 0 ? ['no_readable_output_forwarded_as_progress_diagnostic'] : []),
+    ...missingOutputs.map((output) => `declared_output_missing:${output}`),
+    ...(input.terminal_status === 'success' && ownerReceiptRefs.length === 0
+      ? ['owner_receipt_missing_for_success_claim']
+      : []),
+    ...ownerReceiptMatch.missing_refs.map((ref) => `owner_receipt_ref_unbacked:${ref}`),
+    ...(input.terminal_status === 'blocked' ? ['typed_blocker_scoped_to_claim_or_authority_not_stage_progress'] : []),
+    ...(['skipped', 'deferred'].includes(input.terminal_status)
+      ? [`${input.terminal_status}_decision_cannot_discard_readable_artifact`]
+      : []),
+  ];
+  if (terminalStatus === 'completed_with_quality_debt' && qualityDebtRefs.length === 0) {
+    const derivedDebtRef = `opl-stage-artifact-quality-debt:${input.domain_id}/${input.program_id}/${input.topic_id}/${input.deliverable_id}/${input.stage_id}/${input.attempt_id}`;
+    writeJsonFile(path.join(paths.evidence_dir, 'opl-derived-quality-debt.json'), {
+      surface_kind: 'opl_derived_stage_quality_debt',
+      receipt_ref: derivedDebtRef,
+      stage_id: input.stage_id,
+      attempt_id: input.attempt_id,
+      requested_terminal_status: input.terminal_status,
+      effective_terminal_status: terminalStatus,
+      findings: derivedQualityFindings.length > 0
+        ? derivedQualityFindings
+        : ['domain_quality_acceptance_not_observed'],
+      blocks_next_stage: false,
+      route_back_selection_owner: 'codex_cli',
+      wrote_domain_truth: false,
+      created_owner_receipt: false,
+      created_domain_typed_blocker: false,
+      authority_boundary: AUTHORITY_BOUNDARY,
+    });
+    qualityDebtRefs = [derivedDebtRef];
+  }
 
   assertTerminalRefs({
     terminal_status: terminalStatus,
-    required_outputs: requiredOutputs,
-    owner_receipt_refs: ownerReceiptRefs,
-    quality_debt_refs: qualityDebtRefs,
     typed_blocker_refs: typedBlockerRefs,
     decision_receipt_refs: decisionReceiptRefs,
-    outputs_dir: paths.outputs_dir,
     evidence_dir: paths.evidence_dir,
     receipts_dir: paths.receipts_dir,
   });
@@ -397,6 +400,7 @@ export function commitStageArtifactAttemptRuntime(input: StageArtifactAttemptLoc
     surface_kind: 'opl_stage_artifact_commit_receipt',
     receipt_ref: `opl-stage-artifact-commit:${input.domain_id}/${input.program_id}/${input.topic_id}/${input.deliverable_id}/${input.stage_id}/${input.attempt_id}`,
     receipt_kind: 'opl_refs_only_stage_artifact_commit',
+    requested_terminal_status: input.terminal_status,
     terminal_status: terminalStatus,
     created_owner_receipt: false,
     wrote_domain_truth: false,
@@ -412,7 +416,7 @@ export function commitStageArtifactAttemptRuntime(input: StageArtifactAttemptLoc
     attempt_id: input.attempt_id,
     terminal_status: terminalStatus,
     required_outputs: requiredOutputs,
-    present_outputs: listRelativeFiles(paths.outputs_dir),
+    present_outputs: presentOutputs,
     output_hashes: hashFiles(paths.outputs_dir, 'output'),
     evidence_hashes: hashFiles(paths.evidence_dir, 'evidence'),
     receipt_hashes: hashFiles(paths.receipts_dir, 'receipt'),

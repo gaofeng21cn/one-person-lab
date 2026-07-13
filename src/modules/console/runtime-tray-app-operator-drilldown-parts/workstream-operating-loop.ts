@@ -212,7 +212,6 @@ function goalOracleRefs(input: {
 }) {
   const stageContract = record(input.attempt.stage_contract);
   const currentOwnerDelta = record(input.attempt.current_owner_delta);
-  const closeoutBinding = record(currentOwnerDelta.closeout_binding);
   const ownerAnswerBinding = record(currentOwnerDelta.owner_answer_binding_projection);
   const closeoutContract = record(input.attempt.closeout_refs_only_contract);
   return uniqueStrings([
@@ -223,7 +222,6 @@ function goalOracleRefs(input: {
       record(input.attempt.route_impact),
       stageContract,
       currentOwnerDelta,
-      closeoutBinding,
       ownerAnswerBinding,
       closeoutContract,
     ], [
@@ -261,8 +259,6 @@ function currentOwnerDeltaRefs(attempt: JsonRecord) {
     'lineage_ref',
     'live_attempt_ref',
     'source_fingerprint',
-    'attempt_lease_ref',
-    'execution_authorization_decision_ref',
   ]);
 }
 

@@ -69,8 +69,8 @@ for (const [name, taskStatus, attemptStatus, providerStatus] of [
 }
 
 for (const [name, observation, expectedStatus, expectedTaskReason] of [
-  ['blocked', blockedTemporalObservation, 'blocked', 'typed_closeout_packet_required'],
-  ['completed', completedTemporalObservation, 'completed', 'domain_route_domain_gate_pending'],
+  ['quality-debt', blockedTemporalObservation, 'completed', 'domain_route_consumable_progress_observed'],
+  ['completed', completedTemporalObservation, 'completed', 'domain_route_consumable_progress_observed'],
 ] as const) {
   test(`Temporal terminal sync owns generic domain-route ${name} transition`, () => {
     withStageAttemptDb((db) => {
@@ -84,7 +84,15 @@ for (const [name, observation, expectedStatus, expectedTaskReason] of [
         createdAt, ...genericObservationIdentity }));
       const inspected = inspectStageAttempt(db, attempt.stage_attempt_id);
       assert.equal(synced?.status, expectedStatus); assert.equal(inspected.provider_run.provider_status, expectedStatus);
-      assert.deepEqual({ ...taskState(db, taskId) }, { status: 'blocked', last_error: expectedTaskReason, dead_letter_reason: expectedTaskReason });
+      assert.deepEqual(
+        { ...taskState(db, taskId) },
+        { status: 'succeeded', last_error: null, dead_letter_reason: null },
+      );
+      if (name === 'quality-debt') {
+        assert.ok(inspected.closeout_refs.some((ref) => ref.includes('quality-debt-diagnostics')));
+      }
+      assert.equal(inspected.blocked_reason, null);
+      assert.equal(expectedTaskReason, 'domain_route_consumable_progress_observed');
     });
   });
 }
@@ -164,7 +172,6 @@ test('Temporal activity terminal sync preserves refs-only domain output through 
     await testEnv.teardown();
   }
 });
-
 test('Temporal cancellation remains provider-only for a generic domain route', () => {
   withStageAttemptDb((db) => {
     const createdAt = new Date().toISOString(), taskId = 'task-generic-canceled';

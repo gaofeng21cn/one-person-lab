@@ -27,8 +27,8 @@ type FirstPartyAgentPackageManifest = {
     oci_ref: string;
     oci_media_type: string;
     immutable_tag: string;
-    rolling_tag: 'latest';
-    promotion_policy: 'daily_candidate_gates_then_promote_latest';
+    moving_tag: 'latest-stable';
+    promotion_policy: 'daily_candidate_gates_then_promote_latest_stable';
     install_truth: 'resolved_digest_lock';
   };
   codex_surface: {
@@ -116,7 +116,7 @@ function normalizeDistributionPayload(value: unknown) {
       field: 'distribution_payload',
     });
   }
-  const rollingTag = requireLiteral(value.rolling_tag, 'latest', 'distribution_payload.rolling_tag');
+  const movingTag = requireLiteral(value.moving_tag, 'latest-stable', 'distribution_payload.moving_tag');
   const installTruth = requireLiteral(value.install_truth, 'resolved_digest_lock', 'distribution_payload.install_truth');
   const payloadDigestRef = requiredString(value.payload_digest_ref, 'distribution_payload.payload_digest_ref');
   if (!/^sha256:[0-9a-f]{64}$/.test(payloadDigestRef)) {
@@ -145,10 +145,10 @@ function normalizeDistributionPayload(value: unknown) {
     oci_ref: requiredString(value.oci_ref, 'distribution_payload.oci_ref'),
     oci_media_type: requiredString(value.oci_media_type, 'distribution_payload.oci_media_type'),
     immutable_tag: requiredString(value.immutable_tag, 'distribution_payload.immutable_tag'),
-    rolling_tag: rollingTag,
+    moving_tag: movingTag,
     promotion_policy: requireLiteral(
       value.promotion_policy,
-      'daily_candidate_gates_then_promote_latest',
+      'daily_candidate_gates_then_promote_latest_stable',
       'distribution_payload.promotion_policy',
     ),
     install_truth: installTruth,

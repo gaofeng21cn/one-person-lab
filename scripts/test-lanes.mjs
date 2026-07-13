@@ -52,13 +52,17 @@ const fastTestFiles = [
   'tests/src/domain-agent-admission-gates.test.ts',
   'tests/src/codex-personalization.test.ts',
   'tests/src/domain-whitepaper-runner.test.ts',
+  'tests/src/family-whitepaper-registry.test.ts',
+  'tests/src/whitepaper-publication-readback.test.ts',
+  'tests/src/whitepaper-workflow-contract.test.ts',
   'tests/src/verification-command-surfaces.test.ts',
   'tests/src/verification-package-surfaces.test.ts',
+  'tests/src/base-managed-dependencies.test.ts',
   'tests/src/foundry-agent-series-policy.test.ts',
   'tests/src/target-architecture-schema-contracts.test.ts',
   'tests/src/evidence-grounded-catalog-eval.test.ts',
   'tests/src/capability-registry-resolver.test.ts',
-  'tests/src/family-runtime-capability-launch-gate.test.ts',
+  'tests/src/family-runtime-capability-stage-context.test.ts',
   'tests/src/cognitive-computation-kernel-contract.test.ts',
   'tests/src/advisory-knowledge-boundary-contract.test.ts',
   'tests/src/opl-flow-completion-audit-contract.test.ts',
@@ -77,6 +81,8 @@ const fastTestFiles = [
   'tests/src/native-helper-prebuild.test.ts',
   'tests/src/cli/cases/cli-broken-pipe.test.ts',
   'tests/src/cli/cases/cli-command-lazy-registry.test.ts',
+  'tests/src/cli/cases/family-manifest-fixtures.test.ts',
+  'tests/src/cli/cases/read-only-cli-invocation.test.ts',
   'tests/src/standard-agent-registry-contract-boundaries.test.ts',
   'tests/src/standard-agent-interface.test.ts',
   'tests/src/standard-agent-implementation-profile.test.ts',
@@ -91,21 +97,18 @@ const fastTestFiles = [
   'tests/src/json-file-boundary.test.ts',
   'tests/src/quality-gate-runtime-contract.test.ts',
   'tests/src/stage-run-transition-authority-read-model.test.ts',
-  ...expandTestFiles(['tests/src/stage-transition-authority-contract.test.ts', 'tests/src/stage-transition-authority.test.ts']),
   ...expandTestFiles(['tests/src/family-runtime-state-index.test.ts', 'tests/src/family-runtime-attempt-contract.test.ts', 'tests/src/family-runtime-stage-run-currentness-identity.test.ts', 'tests/src/family-runtime-effective-current-context.test.ts']),
   'tests/src/cli/cases/family-runtime-command-parser.test.ts',
   'tests/src/current-owner-delta-read-model-cache.test.ts',
-  'tests/src/family-transition-runner.test.ts',
   'tests/src/stagecraft-domain-profile-registry.test.ts',
   'tests/src/family-runtime-opl-attempt-admission-receipt.test.ts',
   'tests/src/family-runtime-stage-native-owner-answer.test.ts',
-  'tests/src/functional-agent-runtime-harness.test.ts',
   'tests/src/functional-privatization-audit-envelope.test.ts',
   'tests/src/domain-dispatch-evidence-payload-preflight.test.ts',
   'tests/src/domain-dispatch-evidence-workorder-packet.test.ts',
   'tests/src/runtime-tray-app-operator-domain-dispatch-action-routes.test.ts',
-  ...expandTestFiles(['tests/src/family-runtime-lifecycle-index.test.ts', 'tests/src/family-runtime-sqlite.test.ts', 'tests/src/family-runtime-domain-autonomy.test.ts']),
-  'tests/src/stage-route-scheduler-arbiter-substrate-contract.test.ts',
+  ...expandTestFiles(['tests/src/family-runtime-lifecycle-index.test.ts', 'tests/src/family-runtime-sqlite.test.ts']),
+  'tests/src/stage-route-transport-contract.test.ts',
   'tests/src/agent-lab.test.ts',
   ...expandTestFiles(['tests/src/agent-lab-mechanism-evolution.test.ts', 'tests/src/agent-lab-developer-mode-contract.test.ts', 'tests/src/agent-lab-executor-aperture.test.ts', 'tests/src/agent-lab-efficiency-nonregression.test.ts', 'tests/src/agent-lab-rho-workflow-contract.test.ts']),
   'tests/src/cli/cases/agent-lab-rho-workflow-run.test.ts',
@@ -136,7 +139,7 @@ const fastTestFiles = [
   'tests/src/cli/cases/runtime-stage-candidate-portfolio-read-model.test.ts',
   'tests/src/cli/cases/artifact-provenance-bundle-ledger.test.ts',
   'tests/src/substrate-provenance-surface.test.ts',
-  ...expandTestFiles(['tests/src/family-stage-pack-registry.test.ts', 'tests/src/family-stage-integrity-metadata-contract.test.ts', 'tests/src/family-stage-admission.test.ts']),
+  ...expandTestFiles(['tests/src/family-stage-pack-registry.test.ts', 'tests/src/family-stage-integrity-metadata-contract.test.ts', 'tests/src/family-stage-conformance.test.ts']),
   'tests/src/family-action-stage-route.test.ts',
   'tests/src/standard-agent-action-stage-run.test.ts',
   'tests/src/cli/cases/system-semantic-hygiene.test.ts',
@@ -178,7 +181,6 @@ const readModelGateTestFiles = [
   'tests/src/cli/cases/managed-update-kernel-projection.test.ts',
   'tests/src/cli/cases/app-state.test.ts',
   'tests/src/app-state-view-model-runtime-scope.test.ts',
-  'tests/src/cli/cases/app-state-stage-run-owner-answer.test.ts',
   'tests/src/cli/cases/app-action.test.ts',
   'tests/src/cli/cases/packages-cases/workflow-policy-transaction.test.ts',
   ...expandTestFiles(['tests/src/cli/cases/app-state-runtime-workbench.test.ts', 'tests/src/cli/cases/app-state-provider-source.test.ts', 'tests/src/cli/cases/app-state-developer-mode-closeout.test.ts']),
@@ -191,7 +193,6 @@ const readModelGateTestFiles = [
   'tests/src/cli/cases/workspace-domain.projections.test.ts',
   'tests/src/cli/cases/workspace-domain.project-protocol.test.ts',
   'tests/src/cli/cases/workspace-domain.binding.test.ts',
-  'tests/src/cli/cases/workspace-domain.transitions.test.ts',
   ...expandTestFiles([
     'tests/src/cli/cases/family-runtime.test.ts', 'tests/src/cli/cases/family-runtime-provider-liveness.test.ts',
     'tests/src/cli/cases/family-runtime-evidence-worklist.test.ts', 'tests/src/cli/cases/family-runtime-evidence-worklist-default-caller-deletion-gates.test.ts',
@@ -200,13 +201,13 @@ const readModelGateTestFiles = [
   ]),
   'tests/src/family-runtime-domain-handler-closeout.test.ts',
   ...expandTestFiles([
-    'tests/src/cli/cases/family-runtime-domain-progress-transition-runtime.test.ts', 'tests/src/cli/cases/family-runtime-provider-repair.test.ts',
+    'tests/src/cli/cases/family-runtime-provider-repair.test.ts',
     'tests/src/cli/cases/family-runtime-provider-slo.test.ts', 'tests/src/cli/cases/family-runtime-provider-slo-worker-repair.test.ts',
     'tests/src/cli/cases/family-runtime-lifecycle-handoff.test.ts', 'tests/src/cli/cases/family-runtime-worker.test.ts',
     'tests/src/cli/cases/family-runtime-worker-lifecycle.test.ts', 'tests/src/cli/cases/family-runtime-stage-attempts.test.ts',
-    'tests/src/cli/cases/family-runtime-stage-attempt-monitoring.test.ts', 'tests/src/cli/cases/family-runtime-stage-launch-gates.test.ts',
+    'tests/src/cli/cases/family-runtime-stage-attempt-monitoring.test.ts', 'tests/src/cli/cases/family-runtime-stage-context.test.ts',
     'tests/src/cli/cases/family-runtime-package-launch-gate.test.ts',
-    'tests/src/cli/cases/family-runtime-stage-admission-contract-light.test.ts',
+    'tests/src/cli/cases/family-runtime-stage-context-contract-light.test.ts',
   ]),
   'tests/src/cli/cases/runtime-stage-attempt-frontier-board-projection.test.ts',
   ...expandTestFiles(['tests/src/cli/cases/family-runtime-stage-attempt-usage-projection.test.ts', 'tests/src/cli/cases/family-runtime-stage-attempts-temporal-provider.test.ts']),
@@ -258,9 +259,7 @@ const readModelGateTestFiles = [
   'tests/src/cli/cases/runtime-app-release-user-path-evidence-ledger.test.ts',
   'tests/src/cli/cases/runtime-app-release-user-path-long-operator.test.ts',
   'tests/src/cli/cases/runtime-codex-app-runtime-evidence-ledger.test.ts',
-  'tests/src/cli/cases/runtime-stage-transition-authority.test.ts',
   ...expandTestFiles([
-    'tests/src/cli/cases/runtime-stage-run-execution-authorization-ledger.test.ts',
     'tests/src/cli/cases/runtime-owner-evidence-sustained-consumption-ledger.test.ts',
     'tests/src/cli/cases/runtime-developer-mode-closeout-ledger.test.ts',
   ]),
@@ -369,7 +368,6 @@ const lanes = {
       'tests/src/cli/cases/framework-readiness-attention-semantics.test.ts',
       'tests/src/cli/cases/framework-readiness-cli-surface.test.ts',
       'tests/src/framework-readiness-attention-actions.test.ts',
-      'tests/src/family-runtime-domain-autonomy.test.ts',
       'tests/src/cli/cases/agents-conformance-stage-pack-v2.test.ts',
       'tests/src/cli/cases/agents-conformance-mas-tombstones.test.ts',
       'tests/src/cli/cases/agents-default-callers.test.ts',
@@ -380,11 +378,11 @@ const lanes = {
   ],
   regression: [
     nodeTest([
+      'tests/src/base-managed-dependencies.test.ts',
       'tests/src/cli.test.ts',
       'tests/src/cli/cases/package-channel-daily-check.test.ts',
       'tests/src/cli-codex-default-shell.test.ts',
       'tests/src/cli-codex-default-shell-sync-skills.test.ts',
-      'tests/src/cli-codex-default-shell-passthrough.test.ts',
       'tests/src/runtime-state-paths.test.ts',
       'tests/src/family-domain-catalog.test.ts',
       'tests/src/family-entry-contracts.test.ts',
@@ -419,31 +417,163 @@ const lanes = {
   'fresh-install': [
     nodeTest(['tests/src/fresh-install-smoke.test.ts']),
   ],
-  full: [
-    { kind: 'npm', args: ['run', 'test:artifact'] },
-    { kind: 'npm', args: ['run', 'test:fast'] },
-    { kind: 'npm', args: ['run', 'test:fresh-install'] },
-    { kind: 'npm', args: ['run', 'test:structure'] },
-    { kind: 'npm', args: ['run', 'typecheck'] },
-    { kind: 'npm', args: ['run', 'lint'] },
-    { kind: 'npm', args: ['run', 'test:read-model-gates'] },
-    { kind: 'npm', args: ['run', 'test:meta'] },
-    { kind: 'npm', args: ['run', 'test:regression'] },
-    { kind: 'npm', args: ['run', 'test:integration'] },
-    { kind: 'npm', args: ['run', 'test:native'] },
-  ],
 };
+
+const fullLaneSource = [
+  ...sourceLaneSteps('artifact'),
+  ...sourceLaneSteps('fast'),
+  ...sourceLaneSteps('fresh-install'),
+  { kind: 'npm', args: ['run', 'test:structure'], sourceLane: 'structure' },
+  { kind: 'npm', args: ['run', 'typecheck'], sourceLane: 'typecheck' },
+  { kind: 'npm', args: ['run', 'lint'], sourceLane: 'lint' },
+  ...sourceLaneSteps('read-model-gates'),
+  ...sourceLaneSteps('meta'),
+  ...sourceLaneSteps('regression'),
+  ...sourceLaneSteps('integration'),
+  { kind: 'npm', args: ['run', 'test:native'], sourceLane: 'native' },
+];
+const fullLanePlan = buildUniqueFullLanePlan(fullLaneSource);
+lanes.full = fullLanePlan.steps;
+
+function sourceLaneSteps(laneName) {
+  return lanes[laneName].map((step) => ({ ...step, sourceLane: laneName }));
+}
+
+function buildUniqueFullLanePlan(sourceSteps) {
+  const expandedSteps = sourceSteps.map((step) => (
+    step.kind === 'node-test'
+      ? { ...step, files: step.files.flatMap((file) => expandPureTestAggregator(file)) }
+      : step
+  ));
+  const candidates = expandedSteps.flatMap((step, stepIndex) => (
+    step.kind === 'node-test'
+      ? step.files.map((file, fileIndex) => ({
+        file,
+        fileIndex,
+        score: nodeTestIsolationScore(step),
+        step,
+        stepIndex,
+      }))
+      : []
+  ));
+  const winnerByFile = new Map();
+  for (const candidate of candidates) {
+    const current = winnerByFile.get(candidate.file);
+    if (!current || candidate.score > current.score) {
+      winnerByFile.set(candidate.file, candidate);
+    }
+  }
+
+  const steps = expandedSteps.flatMap((step, stepIndex) => {
+    if (step.kind !== 'node-test') {
+      return [step];
+    }
+    const files = step.files.filter((file, fileIndex) => {
+      const winner = winnerByFile.get(file);
+      return winner.stepIndex === stepIndex && winner.fileIndex === fileIndex;
+    });
+    return files.length > 0 ? [{ ...step, files }] : [];
+  });
+  const plannedEntries = steps.filter(isNodeTestStep).flatMap(stepFiles);
+  const importClosureDuplicates = duplicateTestImportClosure(plannedEntries);
+  if (importClosureDuplicates.length > 0) {
+    fail(
+      `Full lane import closure still executes test modules more than once: ${importClosureDuplicates
+        .map(({ file, entries }) => `${file} via ${entries.join(', ')}`)
+        .join('; ')}`,
+    );
+  }
+
+  return {
+    steps,
+    summary: {
+      source_node_test_entry_count: sourceSteps.filter(isNodeTestStep).flatMap(stepFiles).length,
+      expanded_node_test_entry_count: candidates.length,
+      planned_node_test_entry_count: plannedEntries.length,
+      deduplicated_entry_count: candidates.length - plannedEntries.length,
+      pure_aggregator_expansion_count: sourceSteps
+        .filter(isNodeTestStep)
+        .flatMap(stepFiles)
+        .filter((file) => expandPureTestAggregator(file).length !== 1
+          || expandPureTestAggregator(file)[0] !== file).length,
+      import_closure_duplicate_count: importClosureDuplicates.length,
+      node_test_groups: steps.filter(isNodeTestStep).map((step) => ({
+        source_lane: step.sourceLane,
+        batch_size: step.batchSize,
+        env: step.env,
+        files: step.files,
+      })),
+    },
+  };
+}
+
+function nodeTestIsolationScore(step) {
+  const envScore = Object.keys(step.env ?? {}).length * 10_000;
+  const batchScore = Number.isInteger(step.batchSize) ? 1_000 - step.batchSize : 0;
+  return envScore + batchScore;
+}
+
+function expandPureTestAggregator(relativePath, seen = new Set()) {
+  if (seen.has(relativePath)) {
+    fail(`Test import cycle detected while expanding ${relativePath}`);
+  }
+  const importedTests = collectImportedTestFiles(relativePath).filter(isTrackedTestPath);
+  if (importedTests.length === 0 || hasOwnTestRegistration(relativePath)) {
+    return [relativePath];
+  }
+  const nextSeen = new Set(seen).add(relativePath);
+  return importedTests.flatMap((file) => expandPureTestAggregator(file, nextSeen));
+}
+
+function hasOwnTestRegistration(relativePath) {
+  const source = fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
+  return /\b(?:test|describe)\s*\(/.test(source);
+}
+
+function isTrackedTestPath(relativePath) {
+  return /\.test\.(?:ts|mjs)$/.test(relativePath);
+}
+
+function duplicateTestImportClosure(entries) {
+  const owners = new Map();
+  for (const entry of entries) {
+    for (const file of testImportClosure(entry)) {
+      if (!owners.has(file)) owners.set(file, []);
+      owners.get(file).push(entry);
+    }
+  }
+  return [...owners.entries()]
+    .filter(([, entryOwners]) => entryOwners.length > 1)
+    .map(([file, entryOwners]) => ({ file, entries: entryOwners }));
+}
+
+function testImportClosure(relativePath, closure = new Set()) {
+  if (closure.has(relativePath)) return closure;
+  closure.add(relativePath);
+  for (const imported of collectImportedTestFiles(relativePath).filter(isTrackedTestPath)) {
+    testImportClosure(imported, closure);
+  }
+  return closure;
+}
 
 const argv = process.argv.slice(2);
 const command = argv[0] ?? 'help';
 const commandHandlers = {
   list: printLaneList,
+  plan: () => printLanePlan(argv[1]),
   run: () => runLane(argv[1]),
   'assert-coverage': assertCoverage,
   help: printHelp,
   '--help': printHelp,
   '-h': printHelp,
 };
+
+function printLanePlan(laneName) {
+  if (laneName !== 'full') {
+    fail(`Execution planning is only available for the composed full lane: ${laneName ?? ''}`);
+  }
+  process.stdout.write(`${JSON.stringify(fullLanePlan.summary, null, 2)}\n`);
+}
 
 function runLane(laneName) {
   requireLane(laneName).forEach((step, index) => runLaneStep(laneName, step, index));
@@ -746,6 +876,7 @@ function printHelp() {
   process.stdout.write(`Usage: scripts/test-lanes.mjs <command>\n\n`);
   process.stdout.write('Commands:\n');
   process.stdout.write('  list\n');
+  process.stdout.write('  plan <full>\n');
   process.stdout.write(`  run <${Object.keys(lanes).join('|')}>\n`);
   process.stdout.write('  assert-coverage\n');
 }

@@ -254,17 +254,17 @@ function normalizeDistributionPayload(value: unknown): AgentPackageDistributionP
   if (
     value.live_download_proof !== false
     || value.installed_reload_proof !== false
-    || value.rolling_tag !== 'latest'
-    || value.promotion_policy !== 'daily_candidate_gates_then_promote_latest'
+    || value.moving_tag !== 'latest-stable'
+    || value.promotion_policy !== 'daily_candidate_gates_then_promote_latest_stable'
     || value.install_truth !== 'resolved_digest_lock'
   ) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Agent package OCI distribution must be latest-only and digest-lock based.', {
+    throw new FrameworkContractError('contract_shape_invalid', 'OPL Package OCI distribution must use candidate/latest-stable and digest-lock install truth.', {
       failure_code: 'agent_package_distribution_policy_invalid',
       required: {
         live_download_proof: false,
         installed_reload_proof: false,
-        rolling_tag: 'latest',
-        promotion_policy: 'daily_candidate_gates_then_promote_latest',
+        moving_tag: 'latest-stable',
+        promotion_policy: 'daily_candidate_gates_then_promote_latest_stable',
         install_truth: 'resolved_digest_lock',
       },
     });
@@ -288,8 +288,8 @@ function normalizeDistributionPayload(value: unknown): AgentPackageDistributionP
     oci_ref: assertStringValue(value.oci_ref, 'distribution_payload.oci_ref'),
     oci_media_type: assertStringValue(value.oci_media_type, 'distribution_payload.oci_media_type'),
     immutable_tag: assertStringValue(value.immutable_tag, 'distribution_payload.immutable_tag'),
-    rolling_tag: 'latest',
-    promotion_policy: 'daily_candidate_gates_then_promote_latest',
+    moving_tag: 'latest-stable',
+    promotion_policy: 'daily_candidate_gates_then_promote_latest_stable',
     install_truth: 'resolved_digest_lock',
   };
 }
@@ -305,12 +305,15 @@ function normalizeOrdinaryUserSource(value: unknown, sourceLabel: string): Agent
     });
   }
   if (
-    value.kind !== 'ghcr_oci_artifact_rolling_latest'
-    || value.latest_is_only_ordinary_user_channel !== true
-    || value.latest_is_install_truth !== false
+    value.kind !== 'ghcr_oci_artifact_latest_stable'
+    || value.registry !== 'ghcr.io'
+    || value.latest_stable_is_only_ordinary_user_channel !== true
+    || value.latest_stable_is_install_truth !== false
+    || value.latest_stable_role !== 'ordinary_user_latest_stable_pointer_after_candidate_gates'
+    || value.daily_candidate_build_gate !== 'daily_candidate_build_must_pass_before_promote_latest_stable'
     || value.developer_checkout_auto_apply_allowed !== false
   ) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Agent package ordinary user source must use GHCR OCI rolling latest without treating latest as install truth.', {
+    throw new FrameworkContractError('contract_shape_invalid', 'OPL Package ordinary user source must use GHCR latest-stable after candidate gates without treating the moving tag as install truth.', {
       source: sourceLabel,
       failure_code: 'agent_package_ordinary_source_policy_invalid',
     });
@@ -326,26 +329,48 @@ function normalizeOrdinaryUserSource(value: unknown, sourceLabel: string): Agent
     }
   }
   const ordinaryUserRef = assertStringValue(value.ordinary_user_ref, `${sourceLabel}.ordinary_user_ref`);
-  if (!ordinaryUserRef.endsWith(':latest')) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Agent package ordinary user ref must be the latest tag.', {
+  if (!ordinaryUserRef.endsWith(':latest-stable')) {
+    throw new FrameworkContractError('contract_shape_invalid', 'OPL Package ordinary user ref must be the latest-stable tag.', {
       source: sourceLabel,
-      failure_code: 'agent_package_ordinary_source_latest_ref_required',
+      failure_code: 'agent_package_ordinary_source_latest_stable_ref_required',
       ordinary_user_ref: ordinaryUserRef,
     });
   }
+  const artifactRef = assertStringValue(value.artifact_ref, `${sourceLabel}.artifact_ref`);
+  const immutableVersionRefPattern = assertStringValue(
+    value.immutable_version_ref_pattern,
+    `${sourceLabel}.immutable_version_ref_pattern`,
+  );
+  const candidateRef = assertStringValue(value.candidate_ref, `${sourceLabel}.candidate_ref`);
+  if (ordinaryUserRef !== `${artifactRef}:latest-stable`
+    || candidateRef !== `${artifactRef}:candidate`
+    || immutableVersionRefPattern !== `${artifactRef}:<semver>`) {
+    throw new FrameworkContractError('contract_shape_invalid', 'OPL Package channel refs must share one canonical OCI artifact repository.', {
+      source: sourceLabel,
+      failure_code: 'agent_package_ordinary_source_repository_mismatch',
+    });
+  }
   return {
-    kind: 'ghcr_oci_artifact_rolling_latest',
-    artifact_ref: assertStringValue(value.artifact_ref, `${sourceLabel}.artifact_ref`),
+    kind: 'ghcr_oci_artifact_latest_stable',
+    registry: 'ghcr.io',
+    artifact_ref: artifactRef,
     ordinary_user_ref: ordinaryUserRef,
-    immutable_version_ref: assertStringValue(value.immutable_version_ref, `${sourceLabel}.immutable_version_ref`),
-    latest_is_only_ordinary_user_channel: true,
+    immutable_version_ref_pattern: immutableVersionRefPattern,
+    candidate_ref: candidateRef,
+    latest_stable_role: 'ordinary_user_latest_stable_pointer_after_candidate_gates',
+    latest_stable_is_only_ordinary_user_channel: true,
+    daily_candidate_build_gate: 'daily_candidate_build_must_pass_before_promote_latest_stable',
     install_truth: installTruth,
-    latest_is_install_truth: false,
+    latest_stable_is_install_truth: false,
     developer_checkout_auto_apply_allowed: false,
   };
 }
 
 export function normalizeRegistryEntry(entry: Record<string, unknown>, index: number): AgentPackageRegistryEntry {
+  const declaredPackageId = stringValue(entry.package_id);
+  const packageId = declaredPackageId
+    ? canonicalManifestIdentity(declaredPackageId, `registry.entries.${index}.package_id`)
+    : null;
   const missing = missingFields(entry, REGISTRY_REQUIRED_FIELDS);
   assertNoForbiddenFields(entry, `registry.entries.${index}`);
   if (missing.length > 0) {
@@ -354,15 +379,25 @@ export function normalizeRegistryEntry(entry: Record<string, unknown>, index: nu
       missing_fields: missing,
     });
   }
+  if ('latest_version' in entry) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package registry entries must not duplicate package version truth.', {
+      entry_index: index,
+      forbidden_field: 'latest_version',
+      canonical_field: 'version_source_ref',
+      failure_code: 'agent_package_registry_latest_version_retired',
+    });
+  }
   const manifestUrl = stringValue(entry.manifest_url)!;
+  const versionSourceRef = stringValue(entry.version_source_ref)!;
   validateUrlLike(manifestUrl, `entries.${index}.manifest_url`);
+  validateUrlLike(versionSourceRef, `entries.${index}.version_source_ref`);
   return {
-    package_id: canonicalManifestIdentity(entry.package_id, `registry.entries.${index}.package_id`),
+    package_id: packageId!,
     display_name: stringValue(entry.display_name)!,
     publisher: stringValue(entry.publisher)!,
     source: stringValue(entry.source)!,
     manifest_url: manifestUrl,
-    latest_version: stringValue(entry.latest_version)!,
+    version_source_ref: versionSourceRef,
     trust_tier: stringValue(entry.trust_tier)!,
     starter_default: entry.starter_default === true,
     codex_visible_entry: stringValue(entry.codex_visible_entry),
@@ -708,7 +743,7 @@ export function normalizeCapabilityPackageManifest(payload: unknown, manifestUrl
   }
   return {
     package_id: packageId,
-    agent_id: packageId,
+    agent_id: null,
     display_name: assertStringValue(payload.display_name, 'display_name'),
     publisher: assertStringValue(payload.publisher, 'publisher'),
     version: normalizePackageVersion(payload.version),
@@ -753,8 +788,97 @@ export function normalizeCapabilityPackageManifest(payload: unknown, manifestUrl
   };
 }
 
+export function normalizeWorkflowProfilePackageManifest(payload: unknown, manifestUrl: string): AgentPackageManifest {
+  if (!isRecord(payload) || payload.surface_kind !== 'opl_workflow_profile_package_manifest.v1') {
+    throw new FrameworkContractError('contract_shape_invalid', 'Workflow profile package manifest must use opl_workflow_profile_package_manifest.v1.', {
+      manifest_url: manifestUrl,
+      failure_code: 'invalid_workflow_profile_package_manifest',
+    });
+  }
+  if (payload.agent_id !== undefined) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Workflow profile packages must not declare an Agent identity.', {
+      manifest_url: manifestUrl,
+      failure_code: 'workflow_profile_package_agent_identity_forbidden',
+    });
+  }
+  if (payload.package_role !== 'workflow_profile'
+    || payload.carrier_source_role !== 'codex_plugin_default_carrier_not_package_truth') {
+    throw new FrameworkContractError('contract_shape_invalid', 'Workflow profile package role or carrier boundary is invalid.', {
+      manifest_url: manifestUrl,
+      failure_code: 'invalid_workflow_profile_package_manifest',
+    });
+  }
+  const packageId = canonicalManifestIdentity(payload.package_id, 'package_id');
+  const codexSurface = isRecord(payload.codex_surface) ? payload.codex_surface : null;
+  if (!codexSurface) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Workflow profile package must declare codex_surface.', {
+      manifest_url: manifestUrl,
+      failure_code: 'invalid_workflow_profile_package_manifest',
+    });
+  }
+  const requiredSkillIds = uniqueStrings(stringList(codexSurface.required_skill_ids));
+  if (requiredSkillIds.length === 0) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Workflow profile package must declare required_skill_ids.', {
+      manifest_url: manifestUrl,
+      failure_code: 'invalid_workflow_profile_package_manifest',
+    });
+  }
+  const pluginId = assertStringValue(codexSurface.plugin_id, 'codex_surface.plugin_id');
+  const pluginPayloadManifestRef = assertStringValue(
+    codexSurface.plugin_payload_manifest_url,
+    'codex_surface.plugin_payload_manifest_url',
+  );
+  const pluginPayloadManifestUrl = resolveManifestRelativeSource(pluginPayloadManifestRef, manifestUrl);
+  validateUrlLike(pluginPayloadManifestUrl, 'codex_surface.plugin_payload_manifest_url');
+  const profileSurface = normalizeProfileSurface(payload.profile_surface);
+  const managedPolicySurface = normalizeManagedPolicySurface(payload.managed_policy_surface);
+  if (!profileSurface || !managedPolicySurface) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Workflow profile package must declare profile and managed policy surfaces.', {
+      manifest_url: manifestUrl,
+      failure_code: 'invalid_workflow_profile_package_manifest',
+    });
+  }
+  return {
+    package_id: packageId,
+    agent_id: null,
+    display_name: assertStringValue(payload.display_name, 'display_name'),
+    publisher: assertStringValue(payload.publisher, 'publisher'),
+    version: normalizePackageVersion(payload.version),
+    owner_language_version: null,
+    source: assertStringValue(payload.source, 'source'),
+    codex_surface: codexSurface,
+    skill_packs: [],
+    entrypoints: [],
+    health_check: {},
+    permissions: [],
+    distribution_payload: normalizeDistributionPayload(payload.distribution_payload),
+    update_channel: 'manifest_url',
+    rollback_ref: `rollback-ref:${packageId}/profile-migration-lkg`,
+    codex_visible_entry: pluginId,
+    required_skill_ids: requiredSkillIds,
+    optional_skill_refs: [],
+    plugin_id: pluginId,
+    plugin_source_path: null,
+    plugin_payload_manifest_url: pluginPayloadManifestUrl,
+    plugin_payload_manifest_sha256: null,
+    plugin_payload_cache_path: null,
+    profile_surface: profileSurface,
+    managed_policy_surface: managedPolicySurface,
+    runtime_source_carrier: null,
+    managed_update_source: null,
+    capability_dependencies: [],
+    capability_provider: null,
+    content_digest: null,
+    content_lock_paths: [],
+  };
+}
+
 export function normalizePackageManifest(payload: unknown, manifestUrl: string): AgentPackageManifest {
-  return isRecord(payload) && payload.surface_kind === 'opl_capability_package_manifest.v2'
-    ? normalizeCapabilityPackageManifest(payload, manifestUrl)
-    : normalizeManifest(payload, manifestUrl);
+  if (isRecord(payload) && payload.surface_kind === 'opl_capability_package_manifest.v2') {
+    return normalizeCapabilityPackageManifest(payload, manifestUrl);
+  }
+  if (isRecord(payload) && payload.surface_kind === 'opl_workflow_profile_package_manifest.v1') {
+    return normalizeWorkflowProfilePackageManifest(payload, manifestUrl);
+  }
+  return normalizeManifest(payload, manifestUrl);
 }

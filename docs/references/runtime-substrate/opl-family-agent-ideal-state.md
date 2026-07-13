@@ -212,7 +212,7 @@ AI-first 的判断必须由独立 stage output 承担。医学 publication quali
 | Agent | 可长期保留的私有 authority functions | AI-first 要求 |
 | --- | --- | --- |
 | `MAS` | publication quality verdict、AI reviewer quality decision、artifact mutation authorization、publication-route memory accept/reject、source readiness verdict、owner receipt signer、medical helper implementation | 前五项必须有独立 reviewer/auditor 或 AI-first record；代码只验证、物化、签 receipt 和阻断越权。 |
-| `MAG` | fundability verdict、authoring quality/export verdict、package authority、grant strategy memory accept/reject、owner receipt signer、grant transition oracle、grant helper implementation | fundability、质量、写作、评审和 export readiness 必须来自 AI-first grant stage artifact；scorecard/schema/controller 只做证据聚合和 guard。 |
+| `MAG` | fundability verdict、authoring quality/export verdict、package authority、grant strategy memory accept/reject、owner receipt signer、grant helper implementation | Codex CLI 独占 semantic route；fundability、质量、写作、评审和 export readiness 必须来自 AI-first grant stage artifact，scorecard/schema/controller 只做证据聚合和 claim guard。 |
 | `RCA` | source readiness verdict、communication / visual direction decision、review/export verdict、artifact mutation authorization、visual memory accept/reject、owner receipt signer、native helper implementation、typed blocker、safe action refs | 故事、视觉方向、页面判断、review verdict 和 repair judgment 由 AI-authored visual stage artifact 持有；机械检查只表达阻断点和 rerun target。 |
 
 目标 skeleton：
@@ -251,7 +251,7 @@ domain-agent-repo/
 | Agent | 长期保留 | 应由 OPL/App 承接 |
 | --- | --- | --- |
 | `MAS` | 医学研究 stage pack、study truth、AI reviewer、publication quality、artifact authority、publication-route memory body、owner receipt | scheduler/supervision、queue/attempt、SQLite lifecycle、workspace/source shell、Portal/workbench、CLI/MCP/product shell、memory/artifact transport |
-| `MAG` | grant truth、fundability/quality/export verdict、specific aims、package authority、grant memory accept/reject、transition oracle、owner receipt | product/status/user-loop/sidecar/grouped CLI、workspace/source shell、package/export lifecycle shell、memory locator、workbench、observability |
+| `MAG` | grant truth、fundability/quality/export verdict、specific aims、package authority、grant memory accept/reject、非权威 route context、owner receipt | product/status/user-loop/sidecar/grouped CLI、workspace/source shell、package/export lifecycle shell、memory locator、workbench、observability、semantic route transport |
 | `RCA` | visual truth、communication strategy、visual direction、review/export verdict、canonical artifact、visual memory body、native helper implementation、owner receipt | session/store/wrapper、artifact gallery/handoff shell、review/repair transport、native-helper generic envelope、workspace/source shell、observability/workbench |
 | future agents | domain pack、quality/export authority、memory/artifact authority、receipt signer | runtime、generated wrapper、App/workbench、lifecycle, SLO, generic transport |
 

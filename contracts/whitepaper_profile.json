@@ -1,0 +1,12 @@
+{
+  "sourceMarkdown": "docs/whitepapers/opl-whitepaper.md",
+  "outputName": "opl-whitepaper",
+  "status": "whitepaper_artifact_verified",
+  "owner": "One Person Lab",
+  "coverLine": "OPL Framework / One Person Lab App / OPL Cloud / Foundry Agents",
+  "headerTitle": "OPL Whitepaper",
+  "minPdfPages": 6,
+  "maxPdfPages": 9,
+  "publicHtmlUrl": "https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-whitepaper.html",
+  "publicPdfUrl": "https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-whitepaper.pdf"
+}

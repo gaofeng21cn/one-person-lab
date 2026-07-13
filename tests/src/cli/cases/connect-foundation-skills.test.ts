@@ -62,8 +62,8 @@ test('connect foundation-skills inspect lists manifest-governed foundation suppo
   assert.equal(output.opl_connect_foundation_skills.status, 'completed');
   assert.equal(output.opl_connect_foundation_skills.manifest_status, 'exposure_manifest');
   assert.equal(output.opl_connect_foundation_skills.manifest_ref, 'plugins/opl-foundation-skills/exposure.json');
-  assert.equal(output.opl_connect_foundation_skills.skill_count, 26);
-  assert.equal(output.opl_connect_foundation_skills.skills.length, 26);
+  assert.equal(output.opl_connect_foundation_skills.skill_count, 25);
+  assert.equal(output.opl_connect_foundation_skills.skills.length, 25);
   const developerCodexSkillIds = output.opl_connect_foundation_skills.skills
     .filter((entry) => entry.exposure_scope === 'developer_codex')
     .map((entry) => entry.skill_id)

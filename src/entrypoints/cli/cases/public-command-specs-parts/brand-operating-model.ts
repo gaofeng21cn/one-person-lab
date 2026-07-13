@@ -88,7 +88,7 @@ const OPERATING_MODEL_PLANE_PROJECTION_METADATA: Record<string, {
     projection_role: 'owner_answer_human_gate_route_back_projection',
     source_contract_fields: [
       'multi_plane_operating_system.planes.authority_decision_plane',
-      'stage_transition_authority.accepted_inputs',
+      'codex_stage_route_owner.route_capabilities',
       'resource_model.resource_kinds.OwnerAnswer',
     ],
     resource_kind_refs: ['OwnerAnswer'],

@@ -31,7 +31,7 @@ Machine boundary: 本文是人读迁移验收源。机器真相继续归 `contra
 ### List 1：Agent 仓内应上收到 OPL 的通用能力
 
 1. `MAS workspace cockpit`：并发、health、attention queue、operator brief 与 commands 由 Console 托管；MAS 只保留 paper / study progress truth。
-2. `MAS execution admission`：developer supervisor、GitHub identity、repo-write policy 与 provider admission 由 Runway 托管；MAS 保留 domain action 与 human / owner gate。
+2. `MAS provider transport`：developer supervisor、GitHub identity、repo-write policy 与 provider attempt currentness 由 Runway 托管；MAS 保留 domain action 与 human / owner gate。
 3. `MAS artifact lifecycle`：递归扫描、restore / cleanup readiness 与 lifecycle registry 由 Workspace / Ledger 托管；artifact body、package / export authority 与删除决定留 MAS。
 4. `MAS source / memory transport`：文献 registry、BibTeX、coverage、文件物化与 publication-memory locator / writeback 由 Connect / Workspace / Ledger 承担；医学相关性、证据评价和 memory accept / reject 留 MAS。
 5. `MAG receipt observability`：receipt 校验、计数、SLO / operator projection 由 Ledger / Console 托管；fundability、quality / export verdict 与 receipt body 留 MAG。
@@ -51,7 +51,7 @@ Machine boundary: 本文是人读迁移验收源。机器真相继续归 `contra
 2. `MAS Console portal / current-work-unit`：改为 registry-driven domain projection；paper display adapter 回 MAS / profile。
 3. `ScholarSkills 医学 catalog`：医学 module IDs、validator 规则、artifact engines 与 profile 内容由 `mas-scholar-skills` 持有；OPL 只保留 capability-pack validation、安装、同步与 provenance。
 4. `MAS Display Pack v2 转换`：迁至 MAS / ScholarSkills display adapter；OPL Pack 只接受通用 descriptor。
-5. `RCA visual transition schema`：visual ontology 与 compatibility registry 归 RCA adapter；Stagecraft 只保留通用 transition runner。
+5. `RCA visual transition schema`：已退役；RCA 只提供 visual artifact、review finding 与非权威 route context，Codex CLI 选择语义路线。
 6. `RCA cost preset`：`rca-ppt-40` 归 RCA / registry-owned profile；Foundry Lab 只保留通用 estimator。
 7. `MAG sustained-consumption shell`：MAG 专用 command / projection 折叠到 generic owner-evidence ledger；grant 语义归 MAG adapter。
 8. `Workspace norm 硬编码`：supported agents 与 topology 全部从 standard-agent registry / profile 派生，不内置 MAS `studies` 语义。
@@ -64,7 +64,7 @@ Machine boundary: 本文是人读迁移验收源。机器真相继续归 `contra
 
 | 通用功能面 | OPL owner surface | Domain repo 保留 | 迁移 / 退役 gate |
 | --- | --- | --- | --- |
-| runtime wrapper、session shell、queue、provider heartbeat、currentness、retry/dead-letter | `Runway` stage-attempt runtime、Temporal-backed provider、StageRun identity、attempt ledger、execution authorization、provider repair readback | domain stage policy、owner answer、typed blocker、human gate、domain retry语义 | OPL replacement parity、same StageRun binding、no-forbidden-write proof、domain owner receipt / typed blocker 或 keep decision |
+| runtime wrapper、session shell、queue、provider heartbeat、currentness、retry/dead-letter | `Runway` stage-attempt transport、Temporal-backed provider、attempt ledger、failure diagnostic、provider repair readback | domain stage policy、owner answer、typed blocker、human gate、domain retry语义 | OPL replacement parity、no-forbidden-write proof与 owner decision；不作为 stage progress gate |
 | progress / owner-delta / workbench / operator projection / delegation | `Console` current owner delta、App/operator drilldown、`Stagecraft` owner-answer projection、`Ledger` refs-only evidence | domain progress truth、artifact delta、quality/export/review verdict、owner receipt | generated surface cutover、active caller proof、route-back / owner receipt roundtrip、no second truth |
 | tool affordance、skill inventory、professional Skill carrier、capability registry | `Pack` ABI、`Atlas` registry、`Connect` skill/package sync、generated Codex carrier | professional Skill source truth、domain rubric、domain knowledge、tool-use judgment | pack/compiler conformance、canonical skill source pointer、carrier provenance、no-authority flags |
 | artifact lifecycle、delivery export、workspace/source locator、memory locator | `Workspace` project / stage artifact units、`Pack` descriptor / lifecycle refs、`Ledger` evidence refs、delivery/source shell docs | artifact body、package/export authority、memory body、accept/reject decision、domain source semantics | same-ref parity、owner receipt or typed blocker binding、no body migration by OPL、domain delete/keep/typed-blocker decision |
@@ -75,7 +75,7 @@ Machine boundary: 本文是人读迁移验收源。机器真相继续归 `contra
 | Agent | 应上收到 OPL 的通用面 | 必须留在 domain 的 authority | 当前计划读法 |
 | --- | --- | --- | --- |
 | `MAS` | paper route wrapper、progress/workbench shell、session/currentness/delegation、workspace/source/artifact lifecycle transport、provider heartbeat、scientific connector receipt transport | study truth、paper mission truth、publication quality、source/evidence judgment、paper package authority、MAS Scholar Skills professional truth、owner receipt、typed blocker、human gate | OPL 只托管 route / attempt / refs / projection；`paper_mission` 等旧名只能作为 compatibility carrier，不能继续做 OPL canonical vocabulary。 |
-| `MAG` | product/status/workbench shell、grant loop session shell、runtime report locator、package/lifecycle/memory projection envelope、default caller | grant truth、fundability verdict、grant strategy memory、grant package/export authority、transition oracle、owner receipt、typed blocker | grant / proposal 词汇可以在 public routing 或 domain profile 中出现，不能作为 OPL base assertion 或 generic lifecycle。 |
+| `MAG` | product/status/workbench shell、grant loop session shell、runtime report locator、package/lifecycle/memory projection envelope、default caller | grant truth、fundability verdict、grant strategy memory、grant package/export authority、AI route context、owner receipt、typed blocker | grant / proposal 词汇可以在 public routing 或 domain profile 中出现，不能作为 OPL base assertion 或 generic lifecycle。 |
 | `RCA` | product/session/status sidecar、domain action wrapper、runtimeWatch/operator evidence shell、artifact gallery/handoff shell、generic native-helper envelope | visual truth、layout/review/export verdict、canonical artifact authority、visual memory accept/reject、native helper implementation、owner receipt、typed blocker | visual / RCA 词汇只保留在 profile、fixture、domain repo 或 history；generated domain action / workbench 走 OPL generic surface。 |
 | `OMA` | Agent Lab runner、promotion gate read model、target-agent work-order execution refs、generic materializer shell、generated interfaces | agent-building semantics、candidate package refs、proposal materialization refs、target-agent typed blocker refs | OMA 是 standard domain agent；`opl-meta-agent` 只是 repo/package/plugin carrier 名。scripts 只能是 authority implementation、smoke/helper、fixture/proof 或 work-order materializer。 |
 | `OBF` | hosted/generated package/workbench、StageRun、Pack / Workspace / Ledger locator、dependency profile / package transport、delivery lifecycle shell | manuscript truth、chapter/source/reference judgment、quality/export verdict、book artifact authority、style/reference memory accept/reject、owner receipt、typed blocker | OBF 是当前 Stage Pack v2 样板；BookForge helper/materializer 的物理删除仍需 owner delete/keep/typed-blocker decision。 |
@@ -130,7 +130,7 @@ Live Evidence 继续单列：`live_domain_progress_status=owner_evidence_recorde
 | # | 验收项 | 状态 | 完成度 | Fresh evidence / 缺口 / 后续动作 |
 | ---: | --- | --- | ---: | --- |
 | 1 | MAS workspace cockpit | done | 100% | MAS私有cockpit/current-work-unit/portal已物理退役；Console从registry、runtime activity与current-owner-delta构建domain-neutral refs-only projection。MAS generated default-caller 8/8 closed、worklist=0。 |
-| 2 | MAS execution admission | done | 100% | Runway 持有 StageRun、provider admission、currentness与no-forbidden-write；MAS保留owner/human gate。此项只声明功能结构完成，不声明live paper/runtime ready。 |
+| 2 | MAS provider transport | done | 100% | Runway 持有 StageRun transport、provider attempt currentness与no-forbidden-write；MAS保留owner/human gate。不存在 stage admission。 |
 | 3 | MAS artifact lifecycle | done | 100% | OPL Stagecraft/Workspace/Ledger持有artifact write/index/lifecycle primitive；MAS只输出opaque artifact refs并保留artifact body/删除授权。无production caller的`workspace_target_state_cleanup`私有递归扫描/archive/move shell及专用测试已物理删除。 |
 | 4 | MAS source / memory transport | done | 100% | Connect/Workspace/Ledger只传source/memory refs与receipt；医学相关性、evidence judgment、memory accept/reject仍归MAS。 |
 | 5 | MAG receipt observability | done | 100% | Generic owner-evidence ledger与Console projection已替代MAG专用shell；fundability/export verdict留MAG。 |

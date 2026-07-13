@@ -96,10 +96,10 @@ const OPL_OWNED_GENERIC_SUBDOMAINS = [
     domain_allowed_role: 'domain_authority_receipt_or_typed_blocker_target',
   },
   {
-    subdomain_id: 'generic_transition_runner',
-    opl_primitive: 'family_transition_runner',
-    surface_aliases: ['transition', 'state_machine', 'runner', 'harness'],
-    domain_allowed_role: 'domain_transition_spec_or_oracle_ref',
+    subdomain_id: 'ai_selected_stage_route_transport',
+    opl_primitive: 'stage_run_ai_route_context_transport',
+    surface_aliases: ['route_context', 'stage_scope', 'route_back_hint'],
+    domain_allowed_role: 'non_authoritative_route_context_provider',
   },
 ] as const;
 

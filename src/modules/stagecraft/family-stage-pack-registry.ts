@@ -54,7 +54,7 @@ export interface FamilyStagePackRegistryEntry {
   stage_pack_hash: string;
   stage_ids: string[];
   action_catalog_id: string | null;
-  admission_status: FamilyStageProofBundle['admission_status'];
+  conformance_status: FamilyStageProofBundle['conformance_status'];
   reusable_library_entry: true;
   refs: {
     proof_bundle_ref: string;
@@ -257,7 +257,7 @@ function lifecycleStatus(
   if ((options.reusedByRefs ?? []).length > 0) {
     return 'reused';
   }
-  return proofBundle.admission_status === 'admitted' ? 'admitted' : 'candidate';
+  return proofBundle.conformance_status === 'conformant' ? 'admitted' : 'candidate';
 }
 
 function buildLibraryLifecycle(
@@ -302,7 +302,7 @@ export function buildFamilyStagePackRegistryEntry(
     stage_pack_hash: currentHash,
     stage_ids: proofBundle.identity.stage_ids,
     action_catalog_id: proofBundle.identity.action_catalog_id,
-    admission_status: proofBundle.admission_status,
+    conformance_status: proofBundle.conformance_status,
     reusable_library_entry: true,
     refs: {
       proof_bundle_ref: `opl://stage-packs/${proofBundle.identity.stage_pack_id}/proof-bundles/${currentHash}`,

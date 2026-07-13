@@ -5,8 +5,8 @@ on:
     - cron: '23 18 * * *'
   workflow_dispatch:
     inputs:
-      opl_version:
-        description: Optional immutable package version override. Empty uses current UTC YY.M.D.
+      release_set_generation:
+        description: Optional Release Set generation override. Empty allocates the next UTC YY.M.D[-rN].
         required: false
         type: string
       force_publish:
@@ -19,6 +19,10 @@ permissions:
   contents: read
   packages: write
 
+concurrency:
+  group: opl-daily-package-channel-${{ github.repository_owner }}
+  cancel-in-progress: false
+
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
@@ -29,7 +33,7 @@ jobs:
     timeout-minutes: 30
     outputs:
       publish_required: ${{ steps.decide.outputs.publish_required }}
-      opl_version: ${{ steps.version.outputs.opl_version }}
+      release_set_generation: ${{ steps.generation.outputs.release_set_generation }}
       changed_packages_json: ${{ steps.decide.outputs.changed_packages_json }}
     steps:
       - name: Checkout OPL
@@ -41,52 +45,72 @@ jobs:
           node-version: '24'
           cache: npm
 
-      - name: Resolve rolling latest package version
-        id: version
-        shell: bash
-        run: |
-          set -euo pipefail
-          base="${{ github.event.inputs.opl_version || '' }}"
-          if [ -z "$base" ]; then
-            base="$(date -u +'%y.%-m.%-d')"
-          fi
-          version="${base#v}"
-          if [[ "$version" == *nightly* ]]; then
-            echo "::error::Daily package versions must not use nightly channel labels: $version"
-            exit 1
-          fi
-          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z][0-9A-Za-z._-]*)?$ ]]; then
-            echo "::error::Invalid daily package version: $version"
-            exit 1
-          fi
-          echo "opl_version=$version" >> "$GITHUB_OUTPUT"
-          echo "OPL_RELEASE_VERSION=$version" >> "$GITHUB_ENV"
-          echo "OPL_PACKAGES_OWNER=${{ github.repository_owner }}" >> "$GITHUB_ENV"
-
       - name: Install dependencies
         run: npm ci
 
       - name: Setup ORAS
         uses: oras-project/setup-oras@v1
 
-      - name: Fetch current latest package channel manifest
+      - name: Resolve Release Set generation
+        id: generation
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          requested="${{ github.event.inputs.release_set_generation || '' }}"
+          if [ -n "$requested" ]; then
+            generation="${requested#v}"
+          else
+            base="$(date -u +'%y.%-m.%-d')"
+            tags_file="$RUNNER_TEMP/opl-release-set-tags.txt"
+            echo "${{ github.token }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
+            oras repo tags "ghcr.io/${{ github.repository_owner }}/one-person-lab-manifest" > "$tags_file"
+            generation="$(node scripts/release-set-generation.mjs --base "$base" --existing-tags-file "$tags_file")"
+          fi
+          if ! [[ "$generation" =~ ^[0-9]{2}\.[0-9]{1,2}\.[0-9]{1,2}(-r[1-9][0-9]*)?$ ]]; then
+            echo "::error::Invalid daily Release Set generation: $generation"
+            exit 1
+          fi
+          echo "release_set_generation=$generation" >> "$GITHUB_OUTPUT"
+          echo "OPL_RELEASE_SET_GENERATION=$generation" >> "$GITHUB_ENV"
+          echo "OPL_PACKAGES_OWNER=${{ github.repository_owner }}" >> "$GITHUB_ENV"
+
+      - name: Fetch current latest-stable Release Set manifest
         id: current
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p dist/opl-current-channel
           echo "${{ github.token }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
-          oras pull "ghcr.io/${OPL_PACKAGES_OWNER}/one-person-lab-manifest:latest-stable" \
-            --output dist/opl-current-channel
-          current="$(find dist/opl-current-channel -name opl-channel-manifest.json -print -quit)"
-          test -n "$current"
-          if [ "$current" != "dist/opl-current-channel/opl-channel-manifest.json" ]; then
-            cp "$current" dist/opl-current-channel/opl-channel-manifest.json
+          if oras pull "ghcr.io/${OPL_PACKAGES_OWNER}/one-person-lab-manifest:latest-stable" \
+            --output dist/opl-current-channel; then
+            current="$(find dist/opl-current-channel -name opl-channel-manifest.json -print -quit)"
+            test -n "$current"
+            if [ "$current" != "dist/opl-current-channel/opl-channel-manifest.json" ]; then
+              cp "$current" dist/opl-current-channel/opl-channel-manifest.json
+            fi
+            echo "current_manifest=dist/opl-current-channel/opl-channel-manifest.json" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::No latest-stable Release Set exists; bootstrapping all seven Packages to candidate."
+            echo "current_manifest=" >> "$GITHUB_OUTPUT"
           fi
-          echo "current_manifest=dist/opl-current-channel/opl-channel-manifest.json" >> "$GITHUB_OUTPUT"
 
-      - name: Build candidate package archives and manifest
-        run: npm run packages:manifest -- --version "$OPL_RELEASE_VERSION" --owner "$OPL_PACKAGES_OWNER" --out-dir dist/opl-daily-packages --previous-manifest "${{ steps.current.outputs.current_manifest }}"
+      - name: Build candidate Package archives and Release Set manifest
+        shell: bash
+        env:
+          OPL_PACKAGE_RELEASE_GATE: daily_package_channel_detection
+        run: |
+          set -euo pipefail
+          args=(
+            --release-set-generation "$OPL_RELEASE_SET_GENERATION"
+            --owner "$OPL_PACKAGES_OWNER"
+            --out-dir dist/opl-daily-packages
+          )
+          if [ -n "${{ steps.current.outputs.current_manifest }}" ]; then
+            args+=(--previous-manifest "${{ steps.current.outputs.current_manifest }}")
+          fi
+          npm run packages:manifest -- "${args[@]}"
 
       - name: Compare package channel fingerprints
         id: decide
@@ -95,12 +119,17 @@ jobs:
           set -euo pipefail
           args=(
             --candidate-manifest dist/opl-daily-packages/opl-channel-manifest.json
-            --version "$OPL_RELEASE_VERSION"
+            --release-set-generation "$OPL_RELEASE_SET_GENERATION"
             --summary-path dist/opl-daily-packages/daily-package-channel-summary.json
           )
-          args+=(--current-manifest "${{ steps.current.outputs.current_manifest }}")
+          if [ -n "${{ steps.current.outputs.current_manifest }}" ]; then
+            args+=(--current-manifest "${{ steps.current.outputs.current_manifest }}")
+          fi
           npm run packages:daily-check -- "${args[@]}"
           publish_required="$(node -e "console.log(JSON.parse(require('fs').readFileSync('dist/opl-daily-packages/daily-package-channel-summary.json', 'utf8')).publish_required ? 'true' : 'false')")"
+          if [ "${{ github.event.inputs.force_publish || 'false' }}" = true ]; then
+            publish_required=true
+          fi
           echo "publish_required=$publish_required" >> "$GITHUB_OUTPUT"
           changed_packages_json="$(node -e "console.log(JSON.stringify(JSON.parse(require('fs').readFileSync('dist/opl-daily-packages/daily-package-channel-summary.json', 'utf8')).changed_packages))")"
           echo "changed_packages_json=$changed_packages_json" >> "$GITHUB_OUTPUT"
@@ -108,7 +137,7 @@ jobs:
       - name: Upload daily package-channel candidate evidence
         uses: actions/upload-artifact@v7
         with:
-          name: opl-daily-package-channel-candidate-${{ steps.version.outputs.opl_version }}
+          name: opl-daily-package-channel-candidate-${{ steps.generation.outputs.release_set_generation }}
           path: dist/opl-daily-packages
           if-no-files-found: error
 
@@ -118,7 +147,7 @@ jobs:
     if: needs.detect-package-channel-change.outputs.publish_required == 'true'
     uses: ./.github/workflows/packages.yml
     with:
-      opl_version: ${{ needs.detect-package-channel-change.outputs.opl_version }}
-      release_gate: daily_package_channel_changed
+      release_set_generation: ${{ needs.detect-package-channel-change.outputs.release_set_generation }}
+      release_gate: ${{ inputs.force_publish && 'daily_package_channel_forced' || 'daily_package_channel_changed' }}
       changed_packages_json: ${{ needs.detect-package-channel-change.outputs.changed_packages_json }}
       promotion_target: candidate

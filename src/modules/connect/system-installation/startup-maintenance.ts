@@ -5,7 +5,8 @@ import { recordManagedInstallUpdateReceipts } from '../managed-install-update-le
 import { buildOplEnvironment } from './environment.ts';
 import { buildDockerWebuiStartupReadback } from './docker-webui-doctor.ts';
 import { runOplEngineAction } from './engine-actions.ts';
-import { resolveFrameworkUpdateTargetRoot, runOplFrameworkSelfUpdate } from './framework-self-update.ts';
+import { activatePendingCodexRuntimeGeneration } from './engine-helpers.ts';
+import { activatePendingOplFrameworkRuntime, resolveFrameworkUpdateTargetRoot, runOplFrameworkSelfUpdate } from './framework-self-update.ts';
 import { buildOplModules, runOplModuleAction } from './modules.ts';
 import { applyOplSeedManifest } from './seed-manifest.ts';
 import { resolveProjectRoot } from './shared.ts';
@@ -408,10 +409,13 @@ export async function runOplStartupMaintenance(
   options: { scope?: StartupMaintenanceScope } = {},
 ) {
   const scope = options.scope ?? 'all';
+  const pendingRuntimeActivation = activatePendingCodexRuntimeGeneration();
+  const frameworkTargetRoot = resolveFrameworkUpdateTargetRoot(resolveProjectRoot());
+  const pendingFrameworkActivation = activatePendingOplFrameworkRuntime(frameworkTargetRoot);
   const initialEnvironment = (await buildOplEnvironment(contracts)).system_environment;
   const frameworkTargets: StartupMaintenanceFrameworkTarget[] = [
     runOplFrameworkSelfUpdate({
-      targetRoot: resolveFrameworkUpdateTargetRoot(resolveProjectRoot()),
+      targetRoot: frameworkTargetRoot,
       allowChannelArtifact: scope === 'runtime_substrate',
     }),
   ];
@@ -460,6 +464,9 @@ export async function runOplStartupMaintenance(
           ? 'runtime_substrate_adapter_startup'
           : 'clean_managed_environment_startup',
         scope,
+        pending_runtime_activation: pendingRuntimeActivation,
+        pending_framework_activation: pendingFrameworkActivation,
+        process_instance_id: process.env.OPL_APP_PROCESS_INSTANCE_ID?.trim() ?? null,
         framework_summary: frameworkSummary,
         engine_summary: engineSummary,
         capability_summary: capabilitySummary,

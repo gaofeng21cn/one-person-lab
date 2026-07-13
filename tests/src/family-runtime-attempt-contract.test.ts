@@ -44,28 +44,31 @@ function assertFalseAuthority(boundary: Record<string, unknown>) {
   }
 }
 
-test('family runtime attempt contract keeps Temporal attempt, typed closeout, and refs-only authority boundaries', () => {
+test('family runtime attempt contract keeps Temporal attempt, progress-first closeout, and refs-only authority boundaries', () => {
   const contract = readJson('contracts/opl-framework/family-runtime-attempt-contract.json');
 
   assert.equal(contract.provider_model, 'provider_backed_stage_attempt_runtime');
   assert.deepEqual(contract.allowed_providers, ['temporal']);
-  assert.equal(contract.typed_closeout_contract.required_for_completed_status, true);
-  assert.equal(contract.typed_closeout_contract.free_text_closeout_accepted, false);
-  assert.ok(contract.typed_closeout_contract.tracked_refs.includes('domain_output.output_ref'));
+  assert.equal(contract.progress_closeout_contract.typed_packet_required_for_progress, false);
+  assert.equal(contract.progress_closeout_contract.raw_or_free_text_artifact_accepted_for_progress, true);
+  assert.equal(contract.progress_closeout_contract.framework_derives_minimal_progress_envelope, true);
+  assert.equal(contract.progress_closeout_contract.output_schema_control_plane_enabled, false);
+  assert.equal(contract.progress_closeout_contract.same_session_closeout_enforcement_enabled, false);
+  assert.ok(contract.progress_closeout_contract.tracked_refs.includes('domain_output.output_ref'));
   assert.equal(
-    contract.typed_closeout_contract.domain_output_contract.transport_policy,
+    contract.progress_closeout_contract.domain_output_contract.transport_policy,
     'refs_only_no_domain_output_body_in_temporal_or_opl_ledger',
   );
-  assert.equal(contract.typed_closeout_contract.domain_output_contract.unknown_fields_allowed, false);
-  assert.deepEqual(contract.typed_closeout_contract.domain_output_contract.allowed_fields, [
+  assert.equal(contract.progress_closeout_contract.domain_output_contract.unknown_fields_allowed, false);
+  assert.deepEqual(contract.progress_closeout_contract.domain_output_contract.allowed_fields, [
     'surface_kind',
     'version',
     'domain_id',
     'output_ref',
   ]);
   assert.ok(contract.operator_visibility_fields.includes('domain_output_ref'));
-  assert.equal(contract.typed_closeout_contract.closeout_ref_metadata_contract.unknown_fields_allowed, false);
-  assert.deepEqual(contract.typed_closeout_contract.closeout_ref_metadata_contract.allowed_fields, [
+  assert.equal(contract.progress_closeout_contract.closeout_ref_metadata_contract.unknown_fields_allowed, false);
+  assert.deepEqual(contract.progress_closeout_contract.closeout_ref_metadata_contract.allowed_fields, [
     'ref_kind',
     'kind',
     'uri',
@@ -78,7 +81,8 @@ test('family runtime attempt contract keeps Temporal attempt, typed closeout, an
     'StageAttemptWorkflow',
   );
   assert.ok(contract.required_ledger_fields.includes('stage_attempt_id'));
-  assert.ok(contract.required_ledger_fields.includes('execution_authorization_decision_ref'));
+  assert.equal(contract.required_ledger_fields.includes('execution_authorization_decision_ref'), false);
+  assert.equal(contract.required_ledger_fields.includes('attempt_lease_ref'), false);
   assert.ok(contract.required_projection_fields.includes('stage_progress_log'));
   assert.ok(contract.required_projection_fields.includes('attempt_true_path_proof'));
   assert.equal(contract.stage_progress_log_contract.surface_kind, 'opl_stage_progress_log');
@@ -103,20 +107,15 @@ test('family runtime attempt contract keeps Temporal attempt, typed closeout, an
   assertFalseAuthority(contract.stability_projection_authority_boundary);
 });
 
-test('stage route scheduler contract keeps route hydration separate from domain route execution', () => {
-  const contract = readJson('contracts/opl-framework/stage-route-scheduler-contract.json');
+test('stage route transport cannot become a second semantic control plane', () => {
+  const contract = readJson('contracts/opl-framework/stage-route-transport-contract.json');
 
-  assert.equal(contract.model, 'stage_graph_reconciliation_with_owner_route_hydration');
-  assert.equal(contract.contract_laws.route_not_stage_strategy, true);
-  assert.equal(contract.contract_laws.route_reconciler_role, 'hydrate_reconcile_owner_routes_only');
-  assert.equal(contract.canonical_definitions.stage.owner, 'one-person-lab');
-  assert.equal(contract.canonical_definitions.route.owner, 'domain-agent');
-  assert.equal(contract.canonical_definitions.route.is_executable_stage, false);
-  assert.equal(contract.canonical_definitions.route_hydration.owner, 'one-person-lab');
-  assert.ok(contract.canonical_definitions.route_hydration.must_not.includes('write_domain_truth'));
-  assert.ok(contract.forbidden_semantics.includes('provider_completed_equals_owner_receipt'));
-  assert.equal(contract.authority_boundary.opl_can_schedule_stage_attempts, true);
-  assert.equal(contract.authority_boundary.opl_can_execute_route_as_stage, false);
+  assert.equal(contract.codex_semantic_route_boundary.semantic_owner, 'codex_cli');
+  assert.equal(contract.codex_semantic_route_boundary.framework_can_accept_reject_rank_select_reconcile_or_override_route, false);
+  assert.equal(contract.progress_policy.readable_artifact_counts_as_progress, true);
+  assert.equal(contract.route_back_policy.may_target_any_declared_stage, true);
+  assert.equal(contract.authority_boundary.opl_can_transport_codex_selected_route, true);
+  assert.equal(contract.authority_boundary.opl_can_choose_semantic_stage_route, false);
   assert.equal(contract.authority_boundary.opl_can_sign_domain_owner_receipt, false);
 });
 

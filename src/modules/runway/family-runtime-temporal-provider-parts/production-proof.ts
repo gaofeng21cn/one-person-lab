@@ -68,7 +68,6 @@ export function temporalProductionProbeInput(
     closeout_packet: closeoutPacket,
   };
 }
-
 export function temporalProductionTypedCloseoutPacket() {
   return {
     surface_kind: 'stage_attempt_closeout_packet',
@@ -149,13 +148,13 @@ function blockedTemporalProductionResidencyProof(input: {
       worker_restart_requery: false,
       signal_history_preserved: false,
       typed_closeout_required_for_completed: false,
-      missing_closeout_blocks_completion: false,
-      retry_or_dead_letter_boundary_observed: false,
+      missing_closeout_advances_with_diagnostic: false,
+      no_output_diagnostic_boundary_observed: false,
       domain_truth_boundary_preserved: true,
     },
     completed_attempt: null,
     restarted_worker_requery: null,
-    blocked_attempt: null,
+    diagnostic_attempt: null,
     proof_receipt: {
       receipt_kind: 'temporal_production_residency_blocker',
       receipt_status: 'blocked',
@@ -220,7 +219,7 @@ export async function runTemporalProductionResidencyProofForWorker(
   const taskQueue = resolveTemporalTaskQueue();
   const suffix = `${Date.now()}_${Math.random().toString(16).slice(2)}`;
   const completedWorkflowId = `wf-temporal-production-complete-${suffix}`;
-  const blockedWorkflowId = `wf-temporal-production-blocked-${suffix}`;
+  const diagnosticWorkflowId = `wf-temporal-production-diagnostic-${suffix}`;
   const temporalClientOptions = { addressOverride: address };
   const temporalProofResultClientOptions: TemporalClientOptions = {
     ...temporalClientOptions,
@@ -293,21 +292,21 @@ export async function runTemporalProductionResidencyProofForWorker(
         };
       }
 
-      const blockedHandle = await withTemporalRpcDeadline(client, () => client.workflow.start('StageAttemptWorkflow', {
+      const diagnosticHandle = await withTemporalRpcDeadline(client, () => client.workflow.start('StageAttemptWorkflow', {
         args: [
           {
             ...temporalProductionProbeInput('blocked', null),
-            workflow_id: blockedWorkflowId,
+            workflow_id: diagnosticWorkflowId,
           },
         ],
         taskQueue,
-        workflowId: blockedWorkflowId,
+        workflowId: diagnosticWorkflowId,
         workflowIdConflictPolicy: WorkflowIdConflictPolicy.FAIL,
         workflowIdReusePolicy: WorkflowIdReusePolicy.REJECT_DUPLICATE,
       }), temporalClientOptions);
-      const blockedState = await withTemporalRpcDeadline(
+      const diagnosticState = await withTemporalRpcDeadline(
         client,
-        () => blockedHandle.result(),
+        () => diagnosticHandle.result(),
         temporalProofResultClientOptions,
       );
       const requeryState = requery.query_available && requery.query ? requery.query : null;
@@ -322,13 +321,15 @@ export async function runTemporalProductionResidencyProofForWorker(
         typed_closeout_required_for_completed:
           completedState.completion_boundary.provider_completion === 'completed'
           && completedState.closeout_refs.length > 0,
-        missing_closeout_blocks_completion:
-          blockedState.status === 'blocked'
-          && blockedState.completion_boundary.provider_completion === 'not_completed',
-        retry_or_dead_letter_boundary_observed:
-          blockedState.activity_events.some(
+        missing_closeout_advances_with_diagnostic:
+          diagnosticState.status === 'completed'
+          && diagnosticState.completion_boundary.provider_completion === 'completed'
+          && diagnosticState.closeout_refs.some((ref: string) => ref.includes('/no-output-diagnostic')),
+        no_output_diagnostic_boundary_observed:
+          diagnosticState.activity_events.some(
             (event: Record<string, unknown>) => event.activity_kind === 'domain_handler_dispatch_activity'
-              && event.blocked_reason === 'typed_closeout_packet_required',
+              && event.activity_status === 'completed_with_quality_debt'
+              && typeof (event.route_impact as Record<string, unknown> | undefined)?.no_output_diagnostic_ref === 'string',
           ),
         domain_truth_boundary_preserved:
           completedState.authority_boundary.domain === 'truth_quality_artifact_gate_owner'
@@ -371,23 +372,23 @@ export async function runTemporalProductionResidencyProofForWorker(
           diagnostic_workflow_status: requery.diagnostic_workflow_status ?? null,
           diagnostic_run_id: requery.diagnostic_run_id ?? null,
         },
-        blocked_attempt: {
-          workflow_id: blockedHandle.workflowId,
-          run_id: blockedHandle.firstExecutionRunId,
-          status: blockedState.status,
-          provider_completion: blockedState.completion_boundary.provider_completion,
-          closeout_refs: blockedState.closeout_refs,
-          blocked_reason:
-            blockedState.activity_events.find(
+        diagnostic_attempt: {
+          workflow_id: diagnosticHandle.workflowId,
+          run_id: diagnosticHandle.firstExecutionRunId,
+          status: diagnosticState.status,
+          provider_completion: diagnosticState.completion_boundary.provider_completion,
+          closeout_refs: diagnosticState.closeout_refs,
+          diagnostic_ref:
+            diagnosticState.activity_events.find(
               (event: Record<string, unknown>) => event.activity_kind === 'domain_handler_dispatch_activity',
-            )?.blocked_reason ?? null,
+            )?.route_impact?.no_output_diagnostic_ref ?? null,
         },
         proof_receipt: {
           receipt_kind: 'temporal_production_residency_proof',
           receipt_status: proven ? 'proven' : 'failed',
           provider_kind: 'temporal',
           completed_workflow_id: completedHandle.workflowId,
-          blocked_workflow_id: blockedHandle.workflowId,
+          diagnostic_workflow_id: diagnosticHandle.workflowId,
           repair_action_id: 'none',
         },
         authority_boundary: {

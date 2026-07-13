@@ -3,28 +3,25 @@
   "owner": "one-person-lab",
   "scope": "family-level provider-backed stage attempt ledger and projection vocabulary for domain-owned runtime attempts",
   "provider_model": "provider_backed_stage_attempt_runtime",
-  "stage_route_scheduler_contract_ref": "contracts/opl-framework/stage-route-scheduler-contract.json",
+  "stage_route_transport_contract_ref": "contracts/opl-framework/stage-route-transport-contract.json",
   "stage_route_boundary": {
     "stage_is_opl_attempt_unit": true,
-    "route_is_domain_owner_semantic": true,
+    "route_is_codex_semantic_judgment": true,
     "route_is_small_stage": false,
     "route_is_stage_internal_strategy": false,
     "selected_action_input": "family-runtime attempt create --action <action_id>",
-    "route_controlled_stage_requires_explicit_action": true,
+    "any_declared_stage_may_start": true,
     "selected_action_participates_in_attempt_identity": true,
     "selected_route_readback": "route_impact.selected_action_id + route_impact.selected_stage_route",
     "domain_closeout_can_override_selected_action_route": false,
-    "entry_launch_admission_scope": "selected_route_applicability_and_current_stage_intrinsic_findings_only",
-    "route_order_execution_owner": "StageRun_attempt_receipt_sequence",
-    "entry_admission_is_full_route_no_skip_proof": false,
-    "route_hydrated_into_stage_attempt_by_opl": true,
+    "entry_stage_context_scope": "selected_route_applicability_and_current_stage_intrinsic_findings_only",
+    "route_order_execution_owner": "codex_cli",
+    "entry_context_is_full_route_no_skip_proof": false,
+    "codex_selected_route_transported_into_stage_attempt_by_opl": true,
     "route_completion_is_stage_completion": false,
     "provider_completion_is_owner_receipt": false,
-    "route_reconciler_role": "hydrate_reconcile_owner_routes_only",
-    "route_reconciler_can_generate_candidates": false,
-    "route_reconciler_can_evaluate_or_rank_candidates": false,
-    "route_reconciler_can_complete_stage": false,
-    "route_reconciler_can_sign_receipts": false
+    "framework_can_accept_reject_rank_reconcile_or_override_codex_route": false,
+    "quality_budget_exhaustion_blocks_route": false
   },
   "allowed_providers": [
     "temporal"
@@ -62,9 +59,6 @@
     "stage_attempt_id",
     "provider_kind",
     "idempotency_key",
-    "attempt_lease_ref",
-    "execution_authorization_decision_ref",
-    "closeout_receipt_binding_ref",
     "workflow_id",
     "domain_id",
     "stage_id",
@@ -92,9 +86,6 @@
     "route_impact",
     "usage_projection",
     "closeout_receipt_status",
-    "execution_authorization_status",
-    "attempt_lease_status",
-    "closeout_receipt_binding_status",
     "authority_boundary"
   ],
   "required_projection_fields": [
@@ -106,14 +97,12 @@
     "failure_reason",
     "reconciliation_status",
     "current_control_state",
-    "route_hydration_status",
+    "route_transport_status",
     "stage_graph_ref",
     "last_observed_projection",
     "operator_visibility",
     "current_provider_readiness",
     "completion_boundary",
-    "execution_authorization_boundary",
-    "closeout_receipt_binding_boundary",
     "owner_route_boundary",
     "control_loop_summary",
     "usage_projection",
@@ -128,7 +117,7 @@
     "effective_current_context",
     "family_stall_lineage"
   ],
-  "route_hydration_contract": {
+  "route_transport_contract": {
     "input_refs": [
       "owner_route_ref",
       "owner_route_refs",
@@ -142,14 +131,12 @@
     "output_records": [
       "stage_attempt_request",
       "stage_attempt_ledger_entry",
-      "conflict_or_blocker_envelope",
+      "identity_conflict_or_transport_warning_envelope",
       "operator_projection"
     ],
     "reconciliation_statuses": [
-      "hydrated_to_stage_attempt",
-      "blocked_by_stage_admission",
-      "blocked_by_identity_incomplete",
-      "waiting_for_domain_owner_receipt",
+      "transported_to_stage_attempt",
+      "identity_warning_projected",
       "route_back_projected",
       "dead_lettered"
     ],
@@ -159,12 +146,11 @@
       "route_generates_candidates",
       "route_evaluates_or_ranks_candidates",
       "route_executes_without_stage_attempt",
-      "route_reconciler_completes_stage_attempt",
       "queue_admission_equals_domain_work_done",
       "provider_completion_equals_owner_receipt",
-      "route_hydration_signs_owner_receipt",
-      "route_hydration_creates_typed_blocker",
-      "route_hydration_writes_domain_truth"
+      "route_transport_signs_owner_receipt",
+      "route_transport_creates_typed_blocker",
+      "route_transport_writes_domain_truth"
     ]
   },
   "provider_lifecycle_contract": {
@@ -205,14 +191,17 @@
       "fixture_mode_allowed_without_temporal_server": true
     }
   },
-  "typed_closeout_contract": {
+  "progress_closeout_contract": {
     "accepted_surface_kinds": [
       "stage_attempt_closeout_packet",
       "stage_memory_closeout_packet",
       "domain_stage_closeout_packet"
     ],
-    "required_for_completed_status": true,
-    "free_text_closeout_accepted": false,
+    "typed_packet_required_for_progress": false,
+    "raw_or_free_text_artifact_accepted_for_progress": true,
+    "framework_derives_minimal_progress_envelope": true,
+    "output_schema_control_plane_enabled": false,
+    "same_session_closeout_enforcement_enabled": false,
     "tracked_refs": [
       "closeout_refs",
       "consumed_refs",
@@ -573,7 +562,7 @@
       "stale_route_epoch",
       "stale_source_fingerprint",
       "stale_truth_epoch",
-      "provider_completed_without_typed_closeout"
+      "provider_completed_without_readable_artifact"
     ],
     "temporal_ordering_policy": "newest_queue_or_stage_attempt_wins_over_older_terminal_attempt",
     "authority_boundary": {
@@ -669,8 +658,8 @@
           "receipt_shape",
           "tool_event_proof",
           "timeout_rule",
-          "typed_closeout_rule",
-          "fail_closed_gate"
+          "raw_artifact_progress_rule",
+          "infrastructure_fail_closed_gate"
         ],
         "forbidden_core_semantics": [
           "subprocess_started_equals_success",

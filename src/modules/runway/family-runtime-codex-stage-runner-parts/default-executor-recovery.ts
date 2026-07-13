@@ -67,62 +67,6 @@ function findMatchingDefaultExecutorExecution(input: {
   }) ?? null;
 }
 
-function explicitOplExecutionAuthorizationFromAttempt(attempt: JsonRecord) {
-  const candidates = [
-    attempt.opl_execution_authorization,
-    attempt.execution_authorization,
-    attempt.execution_authorization_receipt,
-    attempt.stage_run_execution_authorization,
-  ];
-  for (const candidate of candidates) {
-    if (isRecord(candidate)) {
-      return candidate;
-    }
-  }
-  return null;
-}
-
-function oplAuthorizationCandidatesFromExecution(execution: JsonRecord) {
-  const promptContract = isRecord(execution.prompt_contract) ? execution.prompt_contract : {};
-  const ownerRoute = isRecord(execution.owner_route) ? execution.owner_route : {};
-  const currentOwnerRoute = isRecord(execution.current_owner_route) ? execution.current_owner_route : {};
-  const authorityRouteContext = isRecord(execution.authority_route_context) ? execution.authority_route_context : {};
-  return [
-    execution.opl_execution_authorization,
-    execution.execution_authorization,
-    execution.stage_run_execution_authorization,
-    promptContract.opl_execution_authorization,
-    promptContract.execution_authorization,
-    ownerRoute.opl_execution_authorization,
-    ownerRoute.execution_authorization,
-    currentOwnerRoute.opl_execution_authorization,
-    currentOwnerRoute.execution_authorization,
-    authorityRouteContext.opl_execution_authorization,
-  ].filter(isRecord);
-}
-
-function oplExecutionAuthorizationMatchesCurrentAttempt(input: {
-  execution: JsonRecord;
-  attempt: JsonRecord;
-}) {
-  const expected = explicitOplExecutionAuthorizationFromAttempt(input.attempt);
-  if (!expected) {
-    return true;
-  }
-  const expectedStageAttemptId = optionalString(expected.stage_attempt_id)
-    ?? optionalString(input.attempt.stage_attempt_id);
-  const requiredMatches = [
-    ['stage_attempt_id', expectedStageAttemptId],
-    ['provider_attempt_ref', optionalString(expected.provider_attempt_ref)],
-    ['attempt_lease_ref', optionalString(expected.attempt_lease_ref)],
-    ['attempt_lease_status', optionalString(expected.attempt_lease_status)],
-    ['execution_authorization_decision_ref', optionalString(expected.execution_authorization_decision_ref)],
-  ] as const;
-  return oplAuthorizationCandidatesFromExecution(input.execution).some((candidate) => requiredMatches.every(
-    ([key, expectedValue]) => !expectedValue || optionalString(candidate[key]) === expectedValue,
-  ));
-}
-
 function closeoutPacketFromDefaultExecutorExecution(input: {
   execution: JsonRecord;
   receiptRef: string;
@@ -262,12 +206,6 @@ export function recoverDefaultExecutorDomainReceiptCloseout(input: {
   const match = findMatchingDefaultExecutorExecution({ executionIndex, stagePacket });
   if (!match) {
     return { status: 'matching_execution_not_found' as const, closeoutPacket: null, receiptRef };
-  }
-  if (!oplExecutionAuthorizationMatchesCurrentAttempt({
-    execution: match.execution,
-    attempt: input.attempt,
-  })) {
-    return { status: 'authorization_binding_mismatch' as const, closeoutPacket: null, receiptRef };
   }
   const nextOwner = resolveRecoveryOwner({
     execution: match.execution,

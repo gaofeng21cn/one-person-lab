@@ -29,7 +29,7 @@ function readFirstSchemaExample(relativePath: string): Json {
 }
 
 const genericExampleSchemaPaths = [
-  'contracts/family-orchestration/family-stage-admission.schema.json',
+  'contracts/family-orchestration/family-stage-conformance.schema.json',
   'contracts/family-orchestration/family-stage-replay-certification.schema.json',
   'contracts/family-orchestration/family-stage-graph-projection.schema.json',
   'contracts/family-orchestration/family-stage-proof-bundle.schema.json',

@@ -274,9 +274,10 @@ export async function runTemporalResidencyProof() {
       typed_closeout_required_for_completed:
         completedState.completion_boundary.provider_completion === 'completed'
         && completedState.closeout_refs.length > 0,
-      missing_closeout_blocks_completion:
-        blockedState.status === 'blocked'
-        && blockedState.completion_boundary.provider_completion === 'not_completed',
+      missing_closeout_advances_with_diagnostic:
+        blockedState.status === 'completed'
+        && blockedState.completion_boundary.provider_completion === 'completed'
+        && blockedState.closeout_refs.some((ref) => ref.includes('/no-output-diagnostic')),
       domain_truth_boundary_preserved:
         completedState.authority_boundary.domain === 'truth_quality_artifact_gate_owner'
         && completedState.completion_boundary.provider_completion_is_domain_ready === false,
@@ -312,16 +313,17 @@ export async function runTemporalResidencyProof() {
         diagnostic_run_id:
           'diagnostic_run_id' in requery ? requery.diagnostic_run_id : null,
       },
-      blocked_attempt: {
+      diagnostic_attempt: {
         workflow_id: blocked.workflow_id,
         run_id: blocked.run_id,
         status: blockedState.status,
         provider_completion: blockedState.completion_boundary.provider_completion,
         closeout_refs: blockedState.closeout_refs,
-        blocked_reason:
+        diagnostic_ref: (
           blockedState.activity_events.find(
             (event) => event.activity_kind === 'domain_handler_dispatch_activity',
-          )?.blocked_reason ?? null,
+          )?.route_impact as Record<string, unknown> | undefined
+        )?.no_output_diagnostic_ref ?? null,
       },
       authority_boundary: {
         opl: 'temporal_residency_proof_and_transport_metadata_only',

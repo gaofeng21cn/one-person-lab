@@ -232,10 +232,6 @@
         },
         {
           "ref_kind": "machine_contract",
-          "ref": "contracts/opl-framework/functional-agent-runtime-harness-contract.json"
-        },
-        {
-          "ref_kind": "machine_contract",
           "ref": "contracts/opl-framework/domain-pack-compiler-contract.json"
         },
         {

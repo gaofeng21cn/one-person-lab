@@ -215,64 +215,6 @@ function withTransitionDescriptor(payload: JsonRecord, targetDomainId: string, o
   });
 }
 
-function withGrantTransitionOracle(payload: JsonRecord) {
-  return attachManifestSurface(payload, 'grant_transition_oracle', {
-    surface_kind: 'mag_grant_transition_oracle',
-    version: 'mag-grant-transition-oracle.v1',
-    oracle_id: 'mag.grant_transition.oracle.v1',
-    target_domain_id: 'med-autogrant',
-    owner: 'MedAutoGrant',
-    state: 'domain_spec_landed_external_runner_gate',
-    runner_owner: 'one-person-lab',
-    runner_contract_ref: 'contracts/opl-framework/family-transition-runner-contract.json',
-    transition_table_status: 'landed',
-    oracle_fixture_status: 'landed',
-    stage_control_plane_ref: '/product_entry_manifest/family_stage_control_plane',
-    action_catalog_ref: '/product_entry_manifest/family_action_catalog',
-    authority_boundary: {
-      domain_truth_owner: 'MedAutoGrant',
-      fundability_verdict_owner: 'MedAutoGrant',
-      authoring_quality_verdict_owner: 'MedAutoGrant',
-      submission_ready_export_verdict_owner: 'MedAutoGrant',
-      opl_role: 'generic_transition_runner_only',
-      opl_can_infer_fundability_ready: false,
-      opl_can_infer_authoring_quality_ready: false,
-      opl_can_infer_submission_ready_export_ready: false,
-      opl_can_write_grant_truth: false,
-    },
-    transition_table: [
-      {
-        transition_id: 'grant_stage_to_owner_receipt',
-        from_stage_id: 'grant_stage',
-        to_stage_id: 'grant_owner_receipt',
-        guard_id: 'grant_evidence_ready',
-        owner_action: 'open_grant_user_loop',
-        return_shape: 'domain_owner_receipt',
-        receipt_requirement: 'grant_owner_receipt',
-        blocked_shape: 'typed_blocker',
-      },
-    ],
-    oracle_fixtures: [
-      {
-        fixture_id: 'grant_stage_ready_to_owner_receipt',
-        source_stage_id: 'grant_stage',
-        input_state: {
-          grant_evidence_status: 'ready',
-        },
-        expected_transition_id: 'grant_stage_to_owner_receipt',
-      },
-    ],
-    validation: {
-      status: 'ready_for_opl_runner_ingestion',
-      transition_count: 1,
-      oracle_fixture_count: 1,
-      missing_stage_refs: [],
-      missing_action_refs: [],
-      missing_fixture_transition_refs: [],
-    },
-  });
-}
-
 function withFunctionalAudit(payload: JsonRecord, targetDomainId: string, owner: string) {
   return attachManifestSurface(payload, 'functional_privatization_audit', {
     surface_kind: 'functional_privatization_audit',
@@ -409,7 +351,6 @@ function generatedSurfaceHandoff(targetDomainId: string) {
       'domain_handler',
       'status_read_model',
       'workbench_drilldown',
-      'functional_harness_cases',
     ].map((surfaceId) => ({
       surface_id: surfaceId,
       owner: 'one-person-lab',
@@ -457,12 +398,6 @@ function generatedSurfaceHandoff(targetDomainId: string) {
         current_paths: ['agent/workbench.json'],
         current_role: 'refs_only_domain_adapter_target',
         target_role: 'opl_hosted_workbench_shell_consuming_domain_refs',
-      },
-      {
-        surface_id: 'functional_harness_cases',
-        current_paths: ['agent/quality_gates/harness.md'],
-        current_role: 'declarative_pack',
-        target_role: 'opl_generated_functional_harness_cases',
       },
     ],
   };
@@ -618,43 +553,6 @@ export function createFamilyDefaultContractWorkspace() {
   return workspaceRoot;
 }
 
-function withGrantOraclePackCompilerReadySurfaces(payload: JsonRecord, options: {
-  agentId: string;
-  targetDomainId: string;
-  owner: string;
-  actionId: string;
-  stageId: string;
-  memoryRefId: string;
-}) {
-  return withFunctionalAudit(
-    withTransitionDescriptor(
-      withGrantTransitionOracle(
-        withMemoryDescriptor(
-          withStageControlPlane(
-            withActionCatalog(
-              withStandardSkeleton(payload, options.agentId),
-              options.targetDomainId,
-              options.owner,
-              options.actionId,
-            ),
-            options.targetDomainId,
-            options.owner,
-            options.stageId,
-            options.actionId,
-          ),
-          options.targetDomainId,
-          options.owner,
-          options.memoryRefId,
-        ),
-      ),
-      options.targetDomainId,
-      options.owner,
-    ),
-    options.targetDomainId,
-    options.owner,
-  );
-}
-
 export function withPackCompilerReadySurfaces(payload: JsonRecord, options: {
   agentId: string;
   targetDomainId: string;
@@ -708,7 +606,7 @@ export function bindFamilyManifests(
       stageId: 'study_stage',
       memoryRefId: 'mas_publication_route_memory',
     }),
-    medautogrant: withGrantOraclePackCompilerReadySurfaces(fixtures.medautogrant, {
+    medautogrant: withPackCompilerReadySurfaces(fixtures.medautogrant, {
       agentId: 'mag',
       targetDomainId: 'med-autogrant',
       owner: 'MedAutoGrant',

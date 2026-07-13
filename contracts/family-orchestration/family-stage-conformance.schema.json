@@ -1,0 +1,764 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/family-orchestration/family-stage-conformance.schema.json",
+  "title": "OPL Family Stage Admission Review",
+  "description": "OPL-owned static read model for checking stage contracts, trust lanes, composition obligations, failure localization, mode tags, and typed human-review burden. Findings are quality debt or conformance diagnostics and never authorize or block stage execution.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "surface_kind",
+    "version",
+    "plane_id",
+    "target_domain_id",
+    "status",
+    "summary",
+    "stage_results",
+    "findings",
+    "failure_localization",
+    "human_review_burden_budget",
+    "authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "family_stage_conformance_review"
+    },
+    "version": {
+      "const": "family-stage-conformance-review.v1"
+    },
+    "plane_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target_domain_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "$ref": "#/$defs/conformance_status"
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stages_count",
+        "conformant_stages_count",
+        "nonconformant_stages_count",
+        "quality_debt_stages_count",
+        "nonconformances_count",
+        "warnings_count",
+        "verified_core_eligible_count",
+        "durable_runtime_only_count",
+        "runtime_boundary_required_count",
+        "human_review_gate_count",
+        "blocked_human_review_gate_count"
+      ],
+      "properties": {
+        "stages_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "conformant_stages_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "nonconformant_stages_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "quality_debt_stages_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "nonconformances_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "warnings_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "verified_core_eligible_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "durable_runtime_only_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "runtime_boundary_required_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "human_review_gate_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blocked_human_review_gate_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "stage_results": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/stage_result"
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/finding"
+      }
+    },
+    "failure_localization": {
+      "type": "array",
+      "description": "Projection-only failure/blocker localization by trust/source lane for scheduler and operator drilldown. It is not a domain verdict.",
+      "items": {
+        "$ref": "#/$defs/failure_localization"
+      }
+    },
+    "human_review_burden_budget": {
+      "$ref": "#/$defs/human_review_burden_budget"
+    },
+    "authority_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "opl_role",
+        "can_execute_stage",
+        "can_write_domain_truth",
+        "can_authorize_domain_ready",
+        "can_authorize_quality_verdict",
+        "can_mutate_artifact_body"
+      ],
+      "properties": {
+        "opl_role": {
+          "const": "static_conformance_projection_only"
+        },
+        "can_execute_stage": {
+          "const": false
+        },
+        "can_write_domain_truth": {
+          "const": false
+        },
+        "can_authorize_domain_ready": {
+          "const": false
+        },
+        "can_authorize_quality_verdict": {
+          "const": false
+        },
+        "can_mutate_artifact_body": {
+          "const": false
+        }
+      }
+    }
+  },
+  "$defs": {
+    "conformance_status": {
+      "type": "string",
+      "enum": [
+        "conformant",
+        "quality_debt",
+        "nonconformant"
+      ]
+    },
+    "trust_lane": {
+      "type": "string",
+      "enum": [
+        "opl_framework",
+        "domain_agent",
+        "codex_executor",
+        "ai_decision",
+        "human_gate",
+        "external_system",
+        "app_projection"
+      ]
+    },
+    "stage_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stage_id",
+        "status",
+        "trust_lane",
+        "static_check_eligible",
+        "effect_boundary",
+        "mode_tags",
+        "runtime_event_refs",
+        "tool_affordance_boundary",
+        "finding_count",
+        "blocker_count",
+        "warning_count"
+      ],
+      "properties": {
+        "stage_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "$ref": "#/$defs/conformance_status"
+        },
+        "trust_lane": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/trust_lane"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "static_check_eligible": {
+          "type": "boolean"
+        },
+        "effect_boundary": {
+          "type": "boolean"
+        },
+        "mode_tags": {
+          "$ref": "#/$defs/mode_tags"
+        },
+        "runtime_event_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Runtime event declaration refs surfaced for effect-boundary and runtime-guard audit/replay checks; OPL does not emit these events."
+        },
+        "tool_affordance_boundary": {
+          "$ref": "#/$defs/tool_affordance_boundary_projection"
+        },
+        "finding_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blocker_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "warning_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "tool_affordance_boundary_projection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "catalog_role",
+        "tool_ref_count",
+        "capability_ref_count",
+        "permission_scope_ref_count",
+        "credential_boundary_ref_count",
+        "write_scope_ref_count",
+        "side_effect_risk_ref_count",
+        "forbidden_authority_ref_count",
+        "missing_boundary_fields",
+        "executor_autonomy"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "declared",
+            "missing",
+            "invalid"
+          ]
+        },
+        "catalog_role": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tool_ref_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "capability_ref_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "permission_scope_ref_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "credential_boundary_ref_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "write_scope_ref_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "side_effect_risk_ref_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "forbidden_authority_ref_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "missing_boundary_fields": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "executor_autonomy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "executor_can_choose_tools",
+            "executor_can_skip_tools",
+            "executor_can_substitute_tools_within_boundary",
+            "executor_can_choose_order_and_parallelism",
+            "executor_can_request_missing_context_or_human_gate",
+            "tool_catalog_can_prescribe_tool_sequence",
+            "tool_catalog_can_define_cognitive_strategy",
+            "tool_catalog_can_override_stage_goal",
+            "tool_catalog_can_authorize_forbidden_write"
+          ],
+          "properties": {
+            "executor_can_choose_tools": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "executor_can_skip_tools": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "executor_can_substitute_tools_within_boundary": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "executor_can_choose_order_and_parallelism": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "executor_can_request_missing_context_or_human_gate": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "tool_catalog_can_prescribe_tool_sequence": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "tool_catalog_can_define_cognitive_strategy": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "tool_catalog_can_override_stage_goal": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "tool_catalog_can_authorize_forbidden_write": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "severity",
+        "code",
+        "message"
+      ],
+      "properties": {
+        "severity": {
+          "type": "string",
+          "enum": [
+            "nonconformance",
+            "warning"
+          ]
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stage_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "target_stage_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "action_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "assumption_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "failure_lane": {
+          "$ref": "#/$defs/failure_lane"
+        },
+        "source_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "runtime_event_refs_missing_reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "minimal_counterexample": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "mode_tags": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Machine-readable split between verified static core eligibility and durable runtime boundaries while keeping guarantee_mode compatible.",
+      "required": [
+        "verified_core_eligible",
+        "durable_runtime_only",
+        "runtime_boundary_required"
+      ],
+      "properties": {
+        "verified_core_eligible": {
+          "type": "boolean"
+        },
+        "durable_runtime_only": {
+          "type": "boolean"
+        },
+        "runtime_boundary_required": {
+          "type": "boolean"
+        }
+      }
+    },
+    "failure_lane": {
+      "type": "string",
+      "enum": [
+        "ai",
+        "human",
+        "external",
+        "provider",
+        "runtime",
+        "domain",
+        "artifact",
+        "source",
+        "monitor",
+        "executor"
+      ]
+    },
+    "failure_localization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lane",
+        "severity",
+        "code",
+        "stage_id",
+        "target_stage_id",
+        "action_id",
+        "assumption_id",
+        "source_ref",
+        "minimal_counterexample"
+      ],
+      "properties": {
+        "lane": {
+          "$ref": "#/$defs/failure_lane"
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "nonconformance",
+            "warning"
+          ]
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stage_id": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "target_stage_id": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "action_id": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "assumption_id": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "source_ref": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "minimal_counterexample": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "human_review_burden_budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface_kind",
+        "version",
+        "projection_scope",
+        "target_domain_id",
+        "status",
+        "gates",
+        "summary",
+        "authority_boundary"
+      ],
+      "properties": {
+        "surface_kind": { "const": "family_human_review_burden_budget" },
+        "version": { "const": "family-human-review-burden-budget.v1" },
+        "projection_scope": {
+          "type": "string",
+          "enum": ["stage_pack", "stage_attempt", "stage_attempt_workbench"]
+        },
+        "target_domain_id": {
+          "anyOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["ready", "blocked", "no_human_review_required"]
+        },
+        "gates": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/human_review_budget_gate" }
+        },
+        "summary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "gate_count",
+            "ready_gate_count",
+            "blocked_gate_count",
+            "required_ref_count",
+            "missing_ref_count",
+            "by_type",
+            "by_owner"
+          ],
+          "properties": {
+            "gate_count": { "type": "integer", "minimum": 0 },
+            "ready_gate_count": { "type": "integer", "minimum": 0 },
+            "blocked_gate_count": { "type": "integer", "minimum": 0 },
+            "required_ref_count": { "type": "integer", "minimum": 0 },
+            "missing_ref_count": { "type": "integer", "minimum": 0 },
+            "by_type": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } },
+            "by_owner": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } }
+          }
+        },
+        "authority_boundary": { "$ref": "#/$defs/human_review_budget_authority_boundary" }
+      }
+    },
+    "human_review_budget_gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gate_id",
+        "gate_type",
+        "owner",
+        "stage_id",
+        "required_refs",
+        "missing_refs",
+        "reason",
+        "status",
+        "source"
+      ],
+      "properties": {
+        "gate_id": { "type": "string", "minLength": 1 },
+        "gate_type": {
+          "type": "string",
+          "enum": [
+            "intent_review",
+            "scope_review",
+            "boundary_exception_review",
+            "quality_owner_review",
+            "artifact_mutation_review"
+          ]
+        },
+        "owner": { "type": "string", "minLength": 1 },
+        "stage_id": {
+          "anyOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }]
+        },
+        "required_refs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "missing_refs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "reason": { "type": "string", "minLength": 1 },
+        "status": { "type": "string", "enum": ["ready", "blocked"] },
+        "source": {
+          "type": "string",
+          "enum": ["stage_authority_boundary", "trust_boundary", "action_catalog", "signal_payload", "gate_ref"]
+        }
+      }
+    },
+    "human_review_budget_authority_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "opl_role",
+        "domain_role",
+        "can_ask_untyped_human_question",
+        "can_write_domain_truth",
+        "can_authorize_domain_ready",
+        "can_authorize_quality_verdict",
+        "can_mutate_artifact_body"
+      ],
+      "properties": {
+        "opl_role": { "const": "human_review_budget_projection_only" },
+        "domain_role": { "const": "truth_quality_receipt_and_artifact_authority" },
+        "can_ask_untyped_human_question": { "const": false },
+        "can_write_domain_truth": { "const": false },
+        "can_authorize_domain_ready": { "const": false },
+        "can_authorize_quality_verdict": { "const": false },
+        "can_mutate_artifact_body": { "const": false }
+      }
+    }
+  },
+  "examples": [
+    {
+      "surface_kind": "family_stage_conformance_review",
+      "version": "family-stage-conformance-review.v1",
+      "plane_id": "example_stage_control_plane",
+      "target_domain_id": "example-domain",
+      "status": "conformant",
+      "summary": {
+        "stages_count": 1,
+        "conformant_stages_count": 1,
+        "nonconformant_stages_count": 0,
+        "quality_debt_stages_count": 0,
+        "nonconformances_count": 0,
+        "warnings_count": 0,
+        "verified_core_eligible_count": 1,
+        "durable_runtime_only_count": 0,
+        "runtime_boundary_required_count": 0,
+        "human_review_gate_count": 0,
+        "blocked_human_review_gate_count": 0
+      },
+      "stage_results": [
+        {
+          "stage_id": "draft_authoring",
+          "status": "conformant",
+          "trust_lane": "domain_agent",
+          "static_check_eligible": true,
+          "effect_boundary": false,
+          "mode_tags": {
+            "verified_core_eligible": true,
+            "durable_runtime_only": false,
+            "runtime_boundary_required": false
+          },
+          "runtime_event_refs": [],
+          "tool_affordance_boundary": {
+            "status": "missing",
+            "catalog_role": null,
+            "tool_ref_count": 0,
+            "capability_ref_count": 0,
+            "permission_scope_ref_count": 0,
+            "credential_boundary_ref_count": 0,
+            "write_scope_ref_count": 0,
+            "side_effect_risk_ref_count": 0,
+            "forbidden_authority_ref_count": 0,
+            "missing_boundary_fields": [
+              "capability_refs",
+              "permission_scope_refs",
+              "credential_boundary_refs",
+              "write_scope_refs",
+              "side_effect_risk_refs",
+              "forbidden_authority_refs"
+            ],
+            "executor_autonomy": {
+              "executor_can_choose_tools": null,
+              "executor_can_skip_tools": null,
+              "executor_can_substitute_tools_within_boundary": null,
+              "executor_can_choose_order_and_parallelism": null,
+              "executor_can_request_missing_context_or_human_gate": null,
+              "tool_catalog_can_prescribe_tool_sequence": null,
+              "tool_catalog_can_define_cognitive_strategy": null,
+              "tool_catalog_can_override_stage_goal": null,
+              "tool_catalog_can_authorize_forbidden_write": null
+            }
+          },
+          "finding_count": 0,
+          "blocker_count": 0,
+          "warning_count": 0
+        }
+      ],
+      "findings": [],
+      "failure_localization": [],
+      "human_review_burden_budget": {
+        "surface_kind": "family_human_review_burden_budget",
+        "version": "family-human-review-burden-budget.v1",
+        "projection_scope": "stage_pack",
+        "target_domain_id": "example-domain",
+        "status": "no_human_review_required",
+        "gates": [],
+        "summary": {
+          "gate_count": 0,
+          "ready_gate_count": 0,
+          "blocked_gate_count": 0,
+          "required_ref_count": 0,
+          "missing_ref_count": 0,
+          "by_type": {},
+          "by_owner": {}
+        },
+        "authority_boundary": {
+          "opl_role": "human_review_budget_projection_only",
+          "domain_role": "truth_quality_receipt_and_artifact_authority",
+          "can_ask_untyped_human_question": false,
+          "can_write_domain_truth": false,
+          "can_authorize_domain_ready": false,
+          "can_authorize_quality_verdict": false,
+          "can_mutate_artifact_body": false
+        }
+      },
+      "authority_boundary": {
+        "opl_role": "static_conformance_projection_only",
+        "can_execute_stage": false,
+        "can_write_domain_truth": false,
+        "can_authorize_domain_ready": false,
+        "can_authorize_quality_verdict": false,
+        "can_mutate_artifact_body": false
+      }
+    }
+  ]
+}

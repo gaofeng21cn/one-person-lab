@@ -17,7 +17,7 @@ Machine boundary: 人读索引。硬约束仍以核心五件套、contracts、sc
 
 runtime / product 文档入口新增或上提 surface 时，先按下面顺序归位：
 
-1. 是否改变 stage currentness、owner delta、terminal state 或 closeout truth：若是，必须回到 Stage Transition Authority、Stage Folder / manifest / owner receipt / typed blocker 和核心五件套；普通文档、App、Agent Lab、read-model projection 或 telemetry 不能直接持有。
+1. 是否改变 Codex-selected stage route、owner delta、terminal metadata 或 closeout truth：语义选择只归 Codex CLI；OPL 只能从 StageRun、artifact refs 和 route context 被动投影。普通文档、App、Agent Lab、schema、validator、read model 或 telemetry 不能接受、拒绝或覆盖 route。
 2. 是否属于 standard OPL Agent 形态：Domain repo 默认只保留 declarative Domain Pack、authority ABI、domain handler / native helper 和 direct skill path；CLI/MCP/App/status/workbench/default-caller shell 应由 OPL generated/hosted surface 或 App product contract 承担。
 3. 是否应该进入默认 surface：先过 surface budget。只有影响 launch safety、authority boundary、evidence / replay / audit / route-back，或被 App / runtime 反复消费的能力，才允许进入普通 help、默认 docs 入口或 App Console 默认页。
 4. 是否只是 telemetry / diagnostic / history / cleanup：默认进入 Atlas / Ledger refs、full drilldown、diagnostic lane、cleanup lane 或 history/tombstone，不生成默认 next action。

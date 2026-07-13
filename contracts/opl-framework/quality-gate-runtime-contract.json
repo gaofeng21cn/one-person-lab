@@ -1,7 +1,7 @@
 {
   "contract_kind": "opl_quality_gate_runtime_contract.v1",
   "owner": "one-person-lab",
-  "purpose": "Define the OPL-owned refs-only runtime binding for domain-owned quality gate, owner receipt, typed blocker, human gate, and route-back receipts observed at StageRun closeout.",
+  "purpose": "Define optional refs-only evidence binding for quality and ready claims without gating StageRun progress or the next declared stage.",
   "state": "active_contract",
   "machine_boundary": "OPL binds attempt, StageRun, source fingerprint, idempotency, and receipt refs. Domain repositories retain quality/export verdicts, publication readiness, artifact authority, owner receipt signing, and typed blocker creation.",
   "allowed_receipt_kinds": [
@@ -19,19 +19,19 @@
     "idempotency_key",
     "provider_attempt_ref",
     "quality_gate_attempt_ref",
-    "attempt_lease_ref",
-    "execution_authorization_decision_ref",
     "receipt_ref",
     "receipt_kind",
     "receipt_owner"
   ],
   "binding_policy": {
-    "quality_gate_receipt_role": "domain_owned_owner_answer_ref_for_closeout_binding",
-    "human_gate_role": "human_or_domain_owned_gate_ref_for_closeout_binding",
+    "quality_gate_receipt_role": "domain_owned_evidence_for_quality_or_ready_claim_only",
+    "human_gate_role": "human_or_domain_owned_gate_ref_for_irreversible_or_authority_decision",
     "route_back_role": "domain_or_human_route_back_evidence_ref",
     "same_attempt_self_review_can_close_quality_gate": false,
     "provider_completion_counts_as_quality_gate": false,
-    "read_model_counts_as_quality_gate": false
+    "read_model_counts_as_quality_gate": false,
+    "missing_binding_blocks_next_stage": false,
+    "missing_binding_records_quality_debt": true
   },
   "authority_boundary": {
     "refs_only": true,

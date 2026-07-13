@@ -71,8 +71,8 @@ test('default domain pack compiler surface treats admitted generated artifacts a
   assert.equal(mag.domain_pack_compiler.compiler_status, 'ready');
   assert.deepEqual(mag.domain_pack_compiler.blocker_reasons, []);
   assert.equal(
-    mag.domain_pack_compiler.pack_compiler_input_projection.declarative_pack_refs.transition_status,
-    'descriptor_only',
+    'transition_status' in mag.domain_pack_compiler.pack_compiler_input_projection.declarative_pack_refs,
+    false,
   );
   assert.equal(mag.domain_pack_compiler.generated_artifact_drift_manifest.status, 'aligned');
   assert.deepEqual(mag.domain_pack_compiler.generated_artifact_drift_manifest.drift_findings, []);

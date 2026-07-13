@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 
 import { isRecord } from '../../../kernel/contract-validation.ts';
@@ -21,6 +22,11 @@ import {
 const DEFAULT_MINIMUM_CODEX_CLI_VERSION = '0.125.0';
 const DEFAULT_CODEX_LATEST_TIMEOUT_MS = 5000;
 const CODEX_RUNTIME_UPDATER_VERSION = 'opl-runtime-substrate-updater.v1';
+const HEADLESS_PROCESS_INSTANCE_ID = `headless-cli:${process.pid}:${Date.now()}`;
+
+function currentProcessInstanceId() {
+  return normalizeOptionalString(process.env.OPL_APP_PROCESS_INSTANCE_ID) ?? HEADLESS_PROCESS_INSTANCE_ID;
+}
 const CODEX_PLATFORM_TARGETS = {
   'darwin:arm64': {
     packageName: '@openai/codex-darwin-arm64',
@@ -74,6 +80,9 @@ type RuntimeToolchainPaths = {
   current_bin_dir: string;
   current_codex_path: string;
   staging_root: string;
+  generations_root: string;
+  pending_metadata_path: string;
+  previous_root: string;
 };
 
 type InstalledCodexPayload = {
@@ -144,6 +153,9 @@ function resolveOplRuntimeToolchainPaths(): RuntimeToolchainPaths {
     current_bin_dir: currentBinDir,
     current_codex_path: path.join(currentBinDir, 'codex'),
     staging_root: stagingRoot,
+    generations_root: path.join(runtimeRoot, 'generations'),
+    pending_metadata_path: path.join(runtimeRoot, 'pending-codex-generation.json'),
+    previous_root: path.join(runtimeRoot, 'previous'),
   };
 }
 
@@ -270,7 +282,7 @@ function inspectRuntimeCodexToolchain(
     updater_version: CODEX_RUNTIME_UPDATER_VERSION,
     owner: 'opl_app_runtime',
     target_toolchain: 'codex_cli',
-    update_strategy: 'app_owned_stage_verify_atomic_apply',
+    update_strategy: 'app_owned_stage_verify_restart_activate',
     apply_trigger: 'opl engine install/update/reinstall --engine codex or opl system startup-maintenance',
     global_toolchain_mutation_allowed: false,
     system_tool_priority: 'prefer_compatible_system_codex_from_env_or_path',
@@ -290,6 +302,13 @@ function inspectRuntimeCodexToolchain(
     current_root: paths.current_root,
     current_binary_path: paths.current_codex_path,
     staging_root: paths.staging_root,
+    pending_metadata_path: paths.pending_metadata_path,
+    pending_generation: fs.existsSync(paths.pending_metadata_path)
+      ? readJsonFileOrNull(paths.pending_metadata_path)
+      : null,
+    activation_policy: 'next_app_start_generation_switch',
+    previous_root: paths.previous_root,
+    rollback_available: fs.existsSync(paths.previous_root),
     current_binary_installed: binaryExists,
     current_version: version,
     current_parsed_version: currentPolicy.parsed_version,
@@ -759,13 +778,14 @@ function applyCodexVendorToRuntime(
   paths: RuntimeToolchainPaths,
   packageRoot: string,
 ) {
-  fs.mkdirSync(paths.current_bin_dir, { recursive: true });
-
-  const tmpCodex = path.join(paths.current_bin_dir, `.codex-${process.pid}-${Date.now()}.tmp`);
-  copyExecutable(vendor.codex!, tmpCodex);
-  const verification = verifyCodexExecutable(tmpCodex);
+  const generationRoot = path.join(paths.generations_root, `codex-${Date.now()}-${process.pid}`);
+  const generationBinDir = path.join(generationRoot, 'bin');
+  const generationCodexPath = path.join(generationBinDir, 'codex');
+  fs.mkdirSync(generationBinDir, { recursive: true });
+  copyExecutable(vendor.codex!, generationCodexPath);
+  const verification = verifyCodexExecutable(generationCodexPath);
   if (!verification.verified) {
-    fs.rmSync(tmpCodex, { force: true });
+    fs.rmSync(generationRoot, { recursive: true, force: true });
     return {
       applied: false,
       runtime_binary_path: paths.current_codex_path,
@@ -777,26 +797,157 @@ function applyCodexVendorToRuntime(
     };
   }
 
-  fs.renameSync(tmpCodex, paths.current_codex_path);
   let rgPath: string | null = null;
   if (vendor.rg) {
-    const targetRg = path.join(paths.current_bin_dir, 'rg');
-    const tmpRg = path.join(paths.current_bin_dir, `.rg-${process.pid}-${Date.now()}.tmp`);
-    copyExecutable(vendor.rg, tmpRg);
-    fs.renameSync(tmpRg, targetRg);
+    const targetRg = path.join(generationBinDir, 'rg');
+    copyExecutable(vendor.rg, targetRg);
     rgPath = targetRg;
   }
 
+  fs.mkdirSync(paths.runtime_root, { recursive: true });
+  const pending = {
+    surface_kind: 'opl_runtime_pending_generation.v1',
+    dependency_id: 'codex-cli',
+    generation_root: generationRoot,
+    version: verification.parsed_version,
+    codex_sha256: crypto.createHash('sha256').update(fs.readFileSync(generationCodexPath)).digest('hex'),
+    staged_at: new Date().toISOString(),
+    activation: 'next_app_start',
+    rollback_root: paths.previous_root,
+    staging_process_instance_id: currentProcessInstanceId(),
+  };
+  const pendingTmp = `${paths.pending_metadata_path}.${process.pid}.tmp`;
+  fs.writeFileSync(pendingTmp, `${JSON.stringify(pending, null, 2)}\n`, 'utf8');
+  fs.renameSync(pendingTmp, paths.pending_metadata_path);
+  const activation = fs.existsSync(paths.current_codex_path)
+    ? { status: 'pending_restart', current_root: paths.current_root, previous_root: paths.previous_root }
+    : activatePendingCodexRuntimeGeneration();
+
   return {
     applied: true,
+    staged: true,
+    activated: activation.status === 'activated',
+    restart_required: activation.status === 'pending_restart',
     runtime_binary_path: paths.current_codex_path,
-    runtime_rg_path: rgPath,
+    staged_runtime_binary_path: generationCodexPath,
+    staged_runtime_rg_path: rgPath,
+    pending_metadata_path: paths.pending_metadata_path,
+    activation,
     codex_package_root: packageRoot,
     source_kind: 'platform_vendor_binary',
     platform_package_root: vendor.platform_package_root,
     copied_codex_source: vendor.codex,
     copied_rg_source: vendor.rg,
     verification,
+  };
+}
+
+export function activatePendingCodexRuntimeGeneration() {
+  const paths = resolveOplRuntimeToolchainPaths();
+  if (!fs.existsSync(paths.pending_metadata_path)) {
+    return {
+      surface_kind: 'opl_runtime_generation_activation.v1',
+      status: 'no_pending_generation',
+      current_root: paths.current_root,
+      previous_root: paths.previous_root,
+    };
+  }
+  let pending: { generation_root?: unknown; version?: unknown; codex_sha256?: unknown; staging_process_instance_id?: unknown };
+  try {
+    pending = JSON.parse(fs.readFileSync(paths.pending_metadata_path, 'utf8')) as typeof pending;
+  } catch (error) {
+    return {
+      surface_kind: 'opl_runtime_generation_activation.v1',
+      status: 'manual_required',
+      reason: 'pending_generation_metadata_invalid',
+      error: error instanceof Error ? error.message : String(error),
+      current_root: paths.current_root,
+      previous_root: paths.previous_root,
+    };
+  }
+  const generationRoot = typeof pending.generation_root === 'string' ? path.resolve(pending.generation_root) : null;
+  const allowedRoot = path.resolve(paths.generations_root);
+  if (!generationRoot || !generationRoot.startsWith(`${allowedRoot}${path.sep}`)) {
+    return {
+      surface_kind: 'opl_runtime_generation_activation.v1',
+      status: 'manual_required',
+      reason: 'pending_generation_path_invalid',
+      current_root: paths.current_root,
+      previous_root: paths.previous_root,
+    };
+  }
+  if (fs.existsSync(paths.current_codex_path)
+    && pending.staging_process_instance_id === currentProcessInstanceId()) {
+    return {
+      surface_kind: 'opl_runtime_generation_activation.v1',
+      status: 'deferred_same_app_instance',
+      current_root: paths.current_root,
+      previous_root: paths.previous_root,
+      staging_process_instance_id: pending.staging_process_instance_id,
+    };
+  }
+  const stagedCodex = path.join(generationRoot, 'bin', 'codex');
+  const verification = fs.existsSync(stagedCodex) ? verifyCodexExecutable(stagedCodex) : null;
+  const digest = verification?.verified
+    ? crypto.createHash('sha256').update(fs.readFileSync(stagedCodex)).digest('hex')
+    : null;
+  if (!verification?.verified || digest !== pending.codex_sha256) {
+    return {
+      surface_kind: 'opl_runtime_generation_activation.v1',
+      status: 'manual_required',
+      reason: 'pending_generation_verification_failed',
+      verification,
+      current_root: paths.current_root,
+      previous_root: paths.previous_root,
+    };
+  }
+  fs.rmSync(paths.previous_root, { recursive: true, force: true });
+  try {
+    if (fs.existsSync(paths.current_root)) fs.renameSync(paths.current_root, paths.previous_root);
+    fs.renameSync(generationRoot, paths.current_root);
+  } catch (error) {
+    if (!fs.existsSync(paths.current_root) && fs.existsSync(paths.previous_root)) {
+      fs.renameSync(paths.previous_root, paths.current_root);
+    }
+    throw error;
+  }
+  fs.rmSync(paths.pending_metadata_path, { force: true });
+  return {
+    surface_kind: 'opl_runtime_generation_activation.v1',
+    status: 'activated',
+    version: pending.version ?? verification.parsed_version,
+    current_root: paths.current_root,
+    previous_root: fs.existsSync(paths.previous_root) ? paths.previous_root : null,
+    activated_at: new Date().toISOString(),
+    rollback_available: fs.existsSync(paths.previous_root),
+  };
+}
+
+export function rollbackCodexRuntimeGeneration() {
+  const paths = resolveOplRuntimeToolchainPaths();
+  if (!fs.existsSync(paths.previous_root)) {
+    return {
+      surface_kind: 'opl_runtime_generation_rollback.v1',
+      status: 'manual_required',
+      reason: 'previous_generation_missing',
+    };
+  }
+  const swapRoot = path.join(paths.runtime_root, `.rollback-swap-${process.pid}-${Date.now()}`);
+  fs.renameSync(paths.current_root, swapRoot);
+  try {
+    fs.renameSync(paths.previous_root, paths.current_root);
+    fs.renameSync(swapRoot, paths.previous_root);
+  } catch (error) {
+    if (!fs.existsSync(paths.current_root) && fs.existsSync(swapRoot)) fs.renameSync(swapRoot, paths.current_root);
+    throw error;
+  }
+  fs.rmSync(paths.pending_metadata_path, { force: true });
+  return {
+    surface_kind: 'opl_runtime_generation_rollback.v1',
+    status: 'completed',
+    current_root: paths.current_root,
+    previous_root: paths.previous_root,
+    rolled_back_at: new Date().toISOString(),
   };
 }
 
@@ -855,8 +1006,68 @@ function applyStagedCodexRuntimePayload(stageAttemptRoot: string, paths: Runtime
   };
 }
 
+function readLatestPendingCodexGeneration(paths: RuntimeToolchainPaths) {
+  const latestVersion = resolveLatestCodexCliVersion({ preferOffline: true });
+  if (!latestVersion || !fs.existsSync(paths.pending_metadata_path)) return null;
+  try {
+    const payload = JSON.parse(fs.readFileSync(paths.pending_metadata_path, 'utf8')) as {
+      surface_kind?: unknown;
+      dependency_id?: unknown;
+      generation_root?: unknown;
+      version?: unknown;
+      staging_process_instance_id?: unknown;
+    };
+    const pendingVersion = typeof payload.version === 'string'
+      ? parseCliVersion(payload.version)?.version ?? null
+      : null;
+    const generationRoot = typeof payload.generation_root === 'string'
+      ? path.resolve(payload.generation_root)
+      : null;
+    const allowedRoot = path.resolve(paths.generations_root);
+    if (payload.surface_kind !== 'opl_runtime_pending_generation.v1'
+      || payload.dependency_id !== 'codex-cli'
+      || pendingVersion !== latestVersion
+      || !generationRoot
+      || !generationRoot.startsWith(`${allowedRoot}${path.sep}`)
+      || !fs.existsSync(path.join(generationRoot, 'bin', 'codex'))) return null;
+    return {
+      version: pendingVersion,
+      generation_root: generationRoot,
+      staging_process_instance_id: typeof payload.staging_process_instance_id === 'string'
+        ? payload.staging_process_instance_id
+        : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 function runBuiltinCodexRuntimeInstallOrUpdate(cwd?: string) {
   const paths = resolveOplRuntimeToolchainPaths();
+  const pending = readLatestPendingCodexGeneration(paths);
+  if (pending) {
+    return {
+      exitCode: 0,
+      stdout: JSON.stringify({
+        opl_runtime_codex_update: {
+          surface_kind: 'opl_runtime_substrate_update_receipt',
+          updater_version: CODEX_RUNTIME_UPDATER_VERSION,
+          owner: 'opl_app_runtime',
+          target_toolchain: 'codex_cli',
+          update_strategy: 'app_owned_stage_verify_restart_activate',
+          applied: false,
+          staged: true,
+          restart_required: true,
+          reason: 'codex_runtime_latest_already_pending_restart',
+          version: pending.version,
+          generation_root: pending.generation_root,
+          pending_metadata_path: paths.pending_metadata_path,
+          staging_process_instance_id: pending.staging_process_instance_id,
+        },
+      }),
+      stderr: '',
+    };
+  }
   const stageAttemptRoot = makeRuntimeStageAttemptRoot(paths);
   const installArgs = buildCodexRuntimeNpmInstallArgs(stageAttemptRoot);
   const installResult = runCommand('npm', installArgs, cwd);
@@ -917,7 +1128,7 @@ function runBuiltinCodexRuntimeInstallOrUpdate(cwd?: string) {
             updater_version: CODEX_RUNTIME_UPDATER_VERSION,
             owner: 'opl_app_runtime',
             target_toolchain: 'codex_cli',
-            update_strategy: 'app_owned_stage_verify_atomic_apply',
+            update_strategy: 'app_owned_stage_verify_restart_activate',
             global_toolchain_mutation_allowed: false,
             system_tool_priority: 'prefer_compatible_system_codex_from_env_or_path',
             stage_attempt_root: stageAttemptRoot,
@@ -936,7 +1147,7 @@ function buildBuiltinCodexRuntimeActionSpec(): OplShellActionSpec {
   return {
     strategy: 'builtin',
     command_preview: ['npm', ...buildCodexRuntimeNpmInstallArgs(path.join(paths.staging_root, '<attempt>'))],
-    note: 'Uses the OPL App-owned Runtime Substrate stage and atomically applies current/bin/codex; it does not modify global Homebrew, npm, or system Codex installations.',
+    note: 'Stages and verifies Codex in the OPL App-owned Runtime Substrate, then activates it on the next App start; it does not modify global Homebrew, npm, or system Codex installations.',
     executable: (cwd?: string) => runBuiltinCodexRuntimeInstallOrUpdate(cwd),
   };
 }

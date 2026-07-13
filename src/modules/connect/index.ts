@@ -1,3 +1,14 @@
+import { registerAgentPackageReadinessPort } from '../../kernel/agent-package-readiness-port.ts';
+import {
+  ensureOplAgentPackageScopeActivation,
+  runOplAgentPackageStatus,
+} from './agent-package-registry.ts';
+
+registerAgentPackageReadinessPort({
+  readStatus: runOplAgentPackageStatus,
+  ensureScopeActivation: ensureOplAgentPackageScopeActivation,
+});
+
 export const OPL_CONNECT_SOURCE_MODULE = {
   moduleId: 'connect',
   brandName: 'OPL Connect',
@@ -40,6 +51,7 @@ export type {
 export {
   listOplAgentPackages,
   readOplFlowDefaultUserInstructions,
+  readOplFlowManagedDependencyIds,
   ensureOplAgentPackageScopeActivation,
   runOplAgentPackageExposureAction,
   runOplAgentPackageFrameworkLink,
@@ -53,6 +65,7 @@ export {
   runOplAgentPackageStatus,
   runOplAgentPackageActivate,
   runOplAgentPackageUninstall,
+  runOplAgentPackageBulkUpdate,
   runOplAgentPackageUpdate,
 } from './agent-package-registry.ts';
 export type {

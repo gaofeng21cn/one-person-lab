@@ -18,6 +18,7 @@ import {
 } from '../system-installation/modules.ts';
 import { readPackagedModuleMarker } from '../system-installation/module-packaged.ts';
 import { runCommand } from '../system-installation/shared.ts';
+import { materializeStandardAgentFrameworkLink } from '../standard-agent-framework-link.ts';
 import type {
   AgentPackageManagedRuntimeSourceCarrier,
   AgentPackageLockIndex,
@@ -127,6 +128,7 @@ function sourceState(input: {
   preparation: Pick<AgentPackageManagedRuntimeSourceState,
     'preparation_status'
     | 'bootstrap_command'
+    | 'package_prepare_command'
     | 'health_check_command'
     | 'handler_probe_command'
     | 'health_output_sha256'
@@ -199,7 +201,7 @@ function runRequiredCommand(
   moduleId: string,
   checkoutPath: string,
   commandSpec: { command: string; args: string[] } | null,
-  step: 'bootstrap' | 'health_check' | 'handler_probe',
+  step: 'bootstrap' | 'package_prepare' | 'health_check' | 'handler_probe',
   env: NodeJS.ProcessEnv,
 ) {
   if (!commandSpec) {
@@ -233,6 +235,14 @@ function runRequiredCommand(
   };
 }
 
+function packageHealthCommand(moduleId: string, checkoutPath: string) {
+  const spec = resolveOplDomainModuleSpec(moduleId);
+  return spec.package_health_check_command?.(checkoutPath)
+    ?? spec.runtime_probe_command?.(checkoutPath)
+    ?? spec.exec_command?.(checkoutPath, ['--help'])
+    ?? null;
+}
+
 function prepareRuntimeSource(moduleId: string, checkoutPath: string, includeBootstrap: boolean) {
   const spec = resolveOplDomainModuleSpec(moduleId);
   const lifecycle = readPackageChannelLifecycle(checkoutPath, spec);
@@ -261,12 +271,28 @@ function prepareRuntimeSource(moduleId: string, checkoutPath: string, includeBoo
     : process.env;
   if (includeBootstrap) fs.mkdirSync(commandEnv.HOME!, { recursive: true });
   const bootstrap = includeBootstrap
-    ? runRequiredCommand(moduleId, checkoutPath, spec.bootstrap_command?.(checkoutPath) ?? null, 'bootstrap', commandEnv)
+    ? runRequiredCommand(
+      moduleId,
+      checkoutPath,
+      spec.package_bootstrap_command?.(checkoutPath) ?? spec.bootstrap_command?.(checkoutPath) ?? null,
+      'bootstrap',
+      commandEnv,
+    )
+    : null;
+  if (includeBootstrap) materializeStandardAgentFrameworkLink({ agentRoot: checkoutPath });
+  const packagePrepare = includeBootstrap && spec.package_prepare_command
+    ? runRequiredCommand(
+      moduleId,
+      checkoutPath,
+      spec.package_prepare_command(checkoutPath),
+      'package_prepare',
+      commandEnv,
+    )
     : null;
   const health = runRequiredCommand(
     moduleId,
     checkoutPath,
-    spec.health_check_command?.(checkoutPath) ?? null,
+    includeBootstrap ? packageHealthCommand(moduleId, checkoutPath) : spec.health_check_command?.(checkoutPath) ?? null,
     'health_check',
     commandEnv,
   );
@@ -282,6 +308,7 @@ function prepareRuntimeSource(moduleId: string, checkoutPath: string, includeBoo
   return {
     preparation_status: 'completed' as const,
     bootstrap_command: bootstrap?.command ?? null,
+    package_prepare_command: packagePrepare?.command ?? null,
     health_check_command: health.command,
     handler_probe_command: handler.command,
     health_output_sha256: health.outputSha256,
@@ -306,7 +333,9 @@ function currentProbeEnvironment(state: AgentPackageManagedRuntimeSourceState) {
 
 function resolvedCurrentProbeCommands(state: AgentPackageManagedRuntimeSourceState) {
   const spec = resolveOplDomainModuleSpec(state.module_id);
-  const health = spec.health_check_command?.(state.checkout_path) ?? null;
+  const health = state.preparation_scope === 'managed_source_root'
+    ? packageHealthCommand(state.module_id, state.checkout_path)
+    : spec.health_check_command?.(state.checkout_path) ?? null;
   const handler = spec.runtime_probe_command?.(state.checkout_path)
     ?? spec.exec_command?.(state.checkout_path, ['--help'])
     ?? null;
@@ -575,6 +604,7 @@ export function applyManagedRuntimeSourceCarrier(input: {
   const packageId = input.packageId ?? input.config.module_id;
   const transactionId = input.transactionId ?? `${input.action}-${process.pid}`;
   if (input.action === 'install' && existed) {
+    materializeStandardAgentFrameworkLink({ agentRoot: checkoutPath });
     const preparation = prepareRuntimeSource(input.config.module_id, checkoutPath, false);
     const after = sourceState({ config: input.config, checkoutPath, ownership, preparation });
     return {
@@ -614,6 +644,7 @@ export function applyManagedRuntimeSourceCarrier(input: {
     });
     activated = true;
     mutation.repair_displaced_path = activation?.repair_displaced_path ?? null;
+    materializeStandardAgentFrameworkLink({ agentRoot: checkoutPath });
     const preparation = prepareRuntimeSource(input.config.module_id, checkoutPath, true);
     refreshPackageChannelCurrentSnapshot(checkoutPath, spec);
     const after = sourceState({ config: input.config, checkoutPath, ownership, preparation });

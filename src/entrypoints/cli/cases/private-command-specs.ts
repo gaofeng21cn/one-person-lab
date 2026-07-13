@@ -3,6 +3,7 @@ import { buildOplWorkspaceRootSurface, writeOplWorkspaceRootSurface } from '../.
 import { buildProductEntryHandoffEnvelope } from '../../../modules/console/product-entry-handoff-envelope.ts';
 import { buildProductEntryDoctor } from '../../../modules/console/product-entry-runtime.ts';
 import { runAgentExecutor, runAgentExecutorDoctor, runAgentExecutorRequestFile } from '../../../modules/runway/agent-executor.ts';
+import { packageLaunchHardStopReason } from '../../../modules/runway/family-runtime-package-readiness.ts';
 import { launchDomainEntry } from '../../../modules/atlas/domain-launch.ts';
 import { buildDomainManifestCatalog } from '../../../modules/atlas/domain-manifest/catalog-builder.ts';
 import { buildOplDashboard, buildOplStart, buildProjectsOverview } from '../../../modules/console/management/runtime-dashboard.ts';
@@ -47,6 +48,8 @@ async function ensureDomainPackageLaunchReady(
     targetWorkspace: workspaceLocator.absolute_path,
   }).opl_agent_package_status;
   if (packageStatus.launch_allowed === true) return;
+  const hardStopReason = packageLaunchHardStopReason(packageStatus);
+  if (!hardStopReason) return;
   throw new FrameworkContractError(
     'contract_shape_invalid',
     'Domain launch is blocked until the installed package dependency closure and workspace materialization are repaired.',
@@ -54,7 +57,7 @@ async function ensureDomainPackageLaunchReady(
       project_id: projectId,
       package_id: packageId,
       launch_allowed: false,
-      launch_blocked_reason: packageStatus.launch_blocked_reason,
+      launch_blocked_reason: hardStopReason,
       allowed_when_blocked: packageStatus.allowed_when_blocked,
       package_dependency_readiness: packageStatus.package_dependency_readiness,
       materialization_readiness: packageStatus.materialization_readiness,
@@ -597,14 +600,15 @@ resume: {
             scope: 'workspace',
             targetWorkspace: locator.absolute_path,
           }).opl_agent_package_status;
-          if (packageStatus.launch_allowed !== true) {
+          const hardStopReason = packageLaunchHardStopReason(packageStatus);
+          if (packageStatus.launch_allowed !== true && hardStopReason) {
             throw new FrameworkContractError(
               'contract_shape_invalid',
               'Workspace activation is blocked until package dependency and scope readiness are repaired.',
               {
                 project_id: parsed.projectId,
                 package_id: packageId,
-                launch_blocked_reason: packageStatus.launch_blocked_reason,
+                launch_blocked_reason: hardStopReason,
                 allowed_when_blocked: packageStatus.allowed_when_blocked,
                 package_dependency_readiness: packageStatus.package_dependency_readiness,
                 materialization_readiness: packageStatus.materialization_readiness,

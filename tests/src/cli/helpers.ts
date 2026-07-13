@@ -13,7 +13,7 @@ export { buildProjectProgressBrief } from '../../../src/modules/console/manageme
 export { explainDomainBoundary, selectDomainAgentEntry, resolveRequestSurface } from '../../../src/modules/atlas/resolver.ts';
 
 export { cliPath, contractsDir, familyManifestFixtureDir, repoRoot } from './helpers-parts/constants.ts';
-export { runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliRawInCwd, runCliViaEntryPathInCwd } from './helpers-parts/runner.ts';
+export { runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliRawInCwd, runCliReadOnly, runCliReadOnlyFailure, runCliReadOnlyFailureInCwd, runCliReadOnlyInCwd, runCliViaEntryPathInCwd } from './helpers-parts/runner.ts';
 export { buildManifestCommand, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createMasWorkspaceFixture, readJsonFixture, shellSingleQuote } from './helpers-parts/fixtures.ts';
 export { assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph, createFakeLaunchctlFixture, createFakeOpenFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, insertFamilyRuntimeTaskProjectionFixture, installRuntimePackageFixture, loadFamilyManifestFixtures, writeMasCleanRunnerFixture } from './helpers-parts/family-fixtures.ts';
 export { startFakeOplApiServer } from './helpers-parts/fake-api-server.ts';

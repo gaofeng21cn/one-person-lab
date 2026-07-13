@@ -136,7 +136,7 @@ export function writeCapabilityProvider(
 
 export function writePackageCatalog(root: string, manifestPaths: string[]) {
   fs.mkdirSync(root, { recursive: true });
-  const packages: Record<string, { package_id: string; package_role: string; latest_version: string; versions: any[] }> = {};
+  const packages: Record<string, { package_id: string; package_role: string; selected_version: string; versions: any[] }> = {};
   for (const manifestPath of manifestPaths) {
     const raw = fs.readFileSync(manifestPath, 'utf8');
     const manifest = JSON.parse(raw);
@@ -146,12 +146,11 @@ export function writePackageCatalog(root: string, manifestPaths: string[]) {
       : null;
     const version = {
       package_version: manifest.version,
-      module_id: packageId === 'mas-scholar-skills' ? 'scholarskills' : 'medautoscience',
       capability_abi: capabilityAbi,
       manifest_url: manifestPath,
       manifest_sha256: `sha256:${crypto.createHash('sha256').update(raw).digest('hex')}`,
       manifest_json: raw,
-      agent_package_manifest: {
+      package_manifest: {
         ref: manifestPath,
         sha256: `sha256:${crypto.createHash('sha256').update(raw).digest('hex')}`,
       },
@@ -161,16 +160,15 @@ export function writePackageCatalog(root: string, manifestPaths: string[]) {
       artifact_digest: `sha256:${crypto.createHash('sha256').update(`artifact:${packageId}:${manifest.version}`).digest('hex')}`,
       artifact_status: 'published_immutable',
       dependency_package_ids: manifest.capability_dependencies?.map((entry: any) => entry.package_id) ?? [],
-      channel: 'stable',
-      promotion_status: 'promoted',
+      selection_status: 'selected_for_release_set',
     };
     const entry = packages[packageId] ?? {
       package_id: packageId,
       package_role: capabilityAbi ? 'framework_capability_package' : 'standard_agent',
-      latest_version: manifest.version,
+      selected_version: manifest.version,
       versions: [],
     };
-    entry.latest_version = manifest.version;
+    entry.selected_version = manifest.version;
     entry.versions.push(version);
     packages[packageId] = entry;
   }
@@ -200,9 +198,7 @@ export function writeMasConsumer(
     display_name: 'Med Auto Science',
     publisher: 'one-person-lab',
     version: packageVersion,
-    ...(packageVersion !== version ? {
-      owner_language_version: { scheme: 'pep440', value: version },
-    } : {}),
+    owner_language_version: { scheme: 'pep440', value: version },
     source: 'test_consumer',
     ...((options.packageCatalogRef ?? options.capabilityCatalogRef) ? {
       managed_update_source: {

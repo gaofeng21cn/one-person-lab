@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 type WhitepaperMetadata = {
   title: string;
@@ -20,13 +21,16 @@ type WhitepaperConfig = {
   owner: string;
   coverLine: string;
   headerTitle: string;
-  requiredTerms: string[];
-  requiredSections: string[];
-  minSections?: number;
   minPdfPages: number;
+  maxPdfPages: number;
+  publicHtmlUrl: string;
+  publicPdfUrl: string;
 };
 
 const forbiddenPatterns = [/sk-[A-Za-z0-9_-]+/, /OPENAI_API_KEY/, /CODEX_API_KEY/];
+const rendererDir = path.dirname(fileURLToPath(import.meta.url));
+const rendererPath = path.join(rendererDir, 'opl-whitepaper-builder.ts');
+const stylePath = path.join(rendererDir, 'whitepaper-style.css');
 
 function run(repoRoot: string, command: string, args: string[], options: { env?: NodeJS.ProcessEnv } = {}) {
   const result = spawnSync(command, args, {
@@ -46,6 +50,17 @@ function commandPath(command: string) {
   return result.status === 0 ? result.stdout.trim() : null;
 }
 
+function commandVersion(command: string) {
+  const probes = command === 'pandoc' || command === 'xelatex' ? [['--version']] : [['-v']];
+  for (const args of probes) {
+    const result = spawnSync(command, args, { encoding: 'utf8', stdio: 'pipe' });
+    if (result.status === 0) {
+      return `${result.stdout}${result.stderr}`.trim().split('\n')[0] || null;
+    }
+  }
+  return null;
+}
+
 function firstMatch(markdown: string, pattern: RegExp, label: string) {
   const match = pattern.exec(markdown);
   const value = match?.[1]?.trim();
@@ -60,13 +75,6 @@ function parseMarkdownMetadata(markdown: string, config: WhitepaperConfig): Whit
   const thesis = firstMatch(markdown, /^核心判断：(.+)$/m, 'core thesis');
   if (!/^\d{4}-\d{2}-\d{2}$/.test(publicationDate)) {
     throw new Error(`Whitepaper publication date must use YYYY-MM-DD, got ${publicationDate}.`);
-  }
-  for (const section of config.requiredSections) {
-    if (!markdown.includes(section)) throw new Error(`Whitepaper Markdown must include ${section}.`);
-  }
-  const sectionCount = (markdown.match(/^##\s+/gm) ?? []).length;
-  if (config.minSections && sectionCount < config.minSections) {
-    throw new Error(`Whitepaper Markdown must include at least ${config.minSections} second-level sections, got ${sectionCount}.`);
   }
   return { title, subtitle, publicationDate, owner: config.owner, thesis };
 }
@@ -150,13 +158,16 @@ function buildPdfMarkdown(metadata: WhitepaperMetadata, markdown: string, config
 
 function paths(config: WhitepaperConfig) {
   const whitepaperDir = path.join(config.repoRoot, 'docs', 'site', 'latest', 'whitepapers');
+  const catalogSourcePath = path.join(config.repoRoot, 'docs', 'whitepapers', 'index.md');
   const tempDir = path.join(config.repoRoot, 'tmp', 'pdfs', config.outputName);
   return {
     sourceMarkdownPath: path.join(config.repoRoot, config.sourceMarkdown),
+    catalogSourcePath,
+    catalogHtmlPath: path.join(whitepaperDir, 'index.html'),
     generatedMarkdownPath: path.join(whitepaperDir, `${config.outputName}.md`),
     htmlPath: path.join(whitepaperDir, `${config.outputName}.html`),
     pdfPath: path.join(whitepaperDir, `${config.outputName}.pdf`),
-    verificationPath: path.join(config.repoRoot, 'docs', 'delivery', 'whitepapers', `${config.outputName}-verification.json`),
+    verificationPath: path.join(whitepaperDir, `${config.outputName}.verification.json`),
     tempDir,
     tempMarkdownPath: path.join(tempDir, `${config.outputName}.pandoc.md`),
     tempHeaderPath: path.join(tempDir, `${config.outputName}-header.tex`),
@@ -169,10 +180,20 @@ function buildHtml(config: WhitepaperConfig, metadata: WhitepaperMetadata, sourc
   run(config.repoRoot, 'pandoc', [
     sourceMarkdownPath,
     '--standalone',
-    '--metadata', `title=${metadata.title}`,
+    '--embed-resources',
+    '--css', stylePath,
+    '--variable', `pagetitle=${metadata.title}`,
     '--metadata', 'lang=zh-CN',
     '-o', htmlPath,
   ]);
+}
+
+function buildCatalogHtml(config: WhitepaperConfig, sourcePath: string, outputPath: string) {
+  const markdown = fs.readFileSync(sourcePath, 'utf8');
+  scanTextForSecrets(markdown);
+  validatePublicLinks(markdown);
+  const title = firstMatch(markdown, /^#\s+(.+)$/m, 'catalog title');
+  buildHtml(config, { title, subtitle: '', publicationDate: '', owner: config.owner, thesis: '' }, sourcePath, outputPath);
 }
 
 function buildPdf(config: WhitepaperConfig, metadata: WhitepaperMetadata, markdown: string, output: ReturnType<typeof paths>) {
@@ -237,11 +258,40 @@ function fileFingerprint(filePath: string) {
 }
 
 function parseMarkdownLinks(markdown: string) {
-  return [...markdown.matchAll(/- \[([^\]]+)\]\(([^)]+)\)：(.+)/g)].map((match) => ({
-    label: match[1],
-    url: match[2],
-    note: match[3],
-  }));
+  return [...markdown.matchAll(/\[([^\]]+)\]\(([^)]+)\)/g)]
+    .filter((match) => match.index === 0 || markdown[match.index! - 1] !== '!')
+    .map((match) => ({ label: match[1], url: match[2] }));
+}
+
+function validatePublicLinks(markdown: string) {
+  const links = parseMarkdownLinks(markdown);
+  const relative = links.filter(({ url }) => !/^(https?:\/\/|mailto:|#)/.test(url));
+  if (relative.length > 0) {
+    throw new Error(`Public whitepaper links must be absolute URLs or in-page anchors: ${relative.map(({ url }) => url).join(', ')}`);
+  }
+  return links;
+}
+
+function gitRead(repoRoot: string, args: string[]) {
+  const result = spawnSync('git', ['-C', repoRoot, ...args], { encoding: 'utf8', stdio: 'pipe' });
+  return result.status === 0 ? result.stdout.trim() : null;
+}
+
+function gitSource(config: WhitepaperConfig) {
+  return {
+    commit: gitRead(config.repoRoot, ['rev-parse', 'HEAD']),
+    branch: gitRead(config.repoRoot, ['branch', '--show-current']),
+    tracked_dirty: Boolean(gitRead(config.repoRoot, ['status', '--short', '--untracked-files=no'])),
+  };
+}
+
+function rendererSource() {
+  const repoRoot = path.resolve(rendererDir, '..');
+  return {
+    repo_commit: gitRead(repoRoot, ['rev-parse', 'HEAD']),
+    builder: { path: path.relative(repoRoot, rendererPath), ...fileFingerprint(rendererPath) },
+    style: { path: path.relative(repoRoot, stylePath), ...fileFingerprint(stylePath) },
+  };
 }
 
 function relativeToRepo(config: WhitepaperConfig, filePath: string) {
@@ -254,7 +304,11 @@ export function buildOplWhitepaper(config: WhitepaperConfig) {
   const markdown = fs.readFileSync(output.sourceMarkdownPath, 'utf8');
   const metadata = parseMarkdownMetadata(markdown, config);
   scanTextForSecrets(markdown);
+  const references = validatePublicLinks(markdown);
   buildHtml(config, metadata, output.sourceMarkdownPath, output.htmlPath);
+  if (fs.existsSync(output.catalogSourcePath)) {
+    buildCatalogHtml(config, output.catalogSourcePath, output.catalogHtmlPath);
+  }
   buildPdf(config, metadata, markdown, output);
   fs.copyFileSync(output.sourceMarkdownPath, output.generatedMarkdownPath);
 
@@ -263,14 +317,21 @@ export function buildOplWhitepaper(config: WhitepaperConfig) {
   if (info.pages < config.minPdfPages) {
     throw new Error(`Expected whitepaper PDF to have at least ${config.minPdfPages} pages, got ${info.pages}.`);
   }
+  if (info.pages > config.maxPdfPages) {
+    throw new Error(`Expected whitepaper PDF to have at most ${config.maxPdfPages} pages, got ${info.pages}.`);
+  }
   if (info.page_size_pts.height <= info.page_size_pts.width) {
     throw new Error(`Expected portrait PDF, got ${info.page_size_pts.width}x${info.page_size_pts.height} pts.`);
   }
 
   const rawText = extractPdfText(config, output.pdfPath);
   const text = rawText.replace(/[\u2010-\u2015]/g, '-');
-  const missingTerms = config.requiredTerms.filter((term) => !text.includes(term));
-  if (missingTerms.length > 0) throw new Error(`Generated PDF text is missing required terms: ${missingTerms.join(', ')}`);
+  const normalizedText = text.replace(/\s+/g, '');
+  const normalizedTitle = metadata.title.replace(/\s+/g, '');
+  const normalizedThesis = metadata.thesis.replace(/\s+/g, '');
+  if (!normalizedText.includes(normalizedTitle) || !normalizedText.includes(normalizedThesis)) {
+    throw new Error('Generated PDF text must preserve the whitepaper title and core thesis.');
+  }
 
   const sourceProfile = config.sourceProfile ? path.join(config.repoRoot, config.sourceProfile) : null;
   const sourceProfileFingerprint = sourceProfile ? fileFingerprint(sourceProfile) : null;
@@ -278,9 +339,21 @@ export function buildOplWhitepaper(config: WhitepaperConfig) {
   const generatedMarkdownFingerprint = fileFingerprint(output.generatedMarkdownPath);
   const generatedHtmlFingerprint = fileFingerprint(output.htmlPath);
   const generatedPdfFingerprint = fileFingerprint(output.pdfPath);
+  const catalogFingerprint = fs.existsSync(output.catalogHtmlPath) ? fileFingerprint(output.catalogHtmlPath) : null;
+  const catalogPublicUrl = new URL('.', config.publicHtmlUrl).toString();
   const verification = {
+    schema_version: 'opl_whitepaper_artifact_verification.v2',
     status: config.status,
-    generated_at: `${metadata.publicationDate}T00:00:00.000Z`,
+    generated_at: new Date().toISOString(),
+    publication_date: metadata.publicationDate,
+    claim_boundary: {
+      artifact_render_verified: true,
+      published_verified: false,
+      product_ready: false,
+      runtime_ready: false,
+      domain_ready: false,
+    },
+    source_git: gitSource(config),
     source_profile: sourceProfile ? relativeToRepo(config, sourceProfile) : null,
     source_profile_sha256: sourceProfileFingerprint?.sha256 ?? null,
     source_profile_size: sourceProfileFingerprint?.size ?? null,
@@ -302,17 +375,28 @@ export function buildOplWhitepaper(config: WhitepaperConfig) {
     rendered_page_hashes: render.pages.map((page) => ({ page, ...fileFingerprint(path.join(render.renderDir, page)) })),
     pdf_pages: info.pages,
     pdf_page_size_pts: info.page_size_pts,
-    required_terms: config.requiredTerms,
-    required_terms_status: 'present',
-    style_profile: 'opl-whitepaper-pandoc-xelatex-v1',
-    tools: {
-      pandoc: commandPath('pandoc'),
-      xelatex: commandPath('xelatex'),
-      pdfinfo: commandPath('pdfinfo'),
-      pdftoppm: commandPath('pdftoppm'),
-      pdftotext: commandPath('pdftotext'),
+    page_policy: { min: config.minPdfPages, max: config.maxPdfPages },
+    style_profile: 'opl-whitepaper-pandoc-xelatex-v2',
+    renderer: rendererSource(),
+    public_urls: {
+      html: config.publicHtmlUrl,
+      pdf: config.publicPdfUrl,
     },
-    references: parseMarkdownLinks(markdown),
+    additional_public_artifacts: catalogFingerprint ? [{
+      kind: 'html',
+      path: relativeToRepo(config, output.catalogHtmlPath),
+      sha256: catalogFingerprint.sha256,
+      size: catalogFingerprint.size,
+      url: catalogPublicUrl,
+    }] : [],
+    tools: {
+      pandoc: { path: commandPath('pandoc'), version: commandVersion('pandoc') },
+      xelatex: { path: commandPath('xelatex'), version: commandVersion('xelatex') },
+      pdfinfo: { path: commandPath('pdfinfo'), version: commandVersion('pdfinfo') },
+      pdftoppm: { path: commandPath('pdftoppm'), version: commandVersion('pdftoppm') },
+      pdftotext: { path: commandPath('pdftotext'), version: commandVersion('pdftotext') },
+    },
+    references,
   };
 
   fs.mkdirSync(path.dirname(output.verificationPath), { recursive: true });

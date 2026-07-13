@@ -3,7 +3,7 @@ export const STANDARD_PROGRESS_DELTA_POLICY = {
   version: 'progress-delta-policy.v1',
   owner: 'one-person-lab',
   standard_agent_requirement:
-    'stage_closeout_must_classify_consumable_deliverable_progress_quality_debt_or_legal_hard_stop',
+    'stage_closeout_must_classify_raw_partial_negative_diagnostic_deliverable_progress_quality_debt_or_legal_hard_stop',
   projection_surface: 'stage_progress_log.user_stage_log',
   required_fields: [
     'progress_delta_classification',
@@ -13,6 +13,8 @@ export const STANDARD_PROGRESS_DELTA_POLICY = {
   ],
   classification_values: [
     'deliverable_progress',
+    'negative_result',
+    'progress_diagnostic',
     'platform_repair',
     'mixed',
     'quality_debt',
@@ -25,10 +27,12 @@ export const STANDARD_PROGRESS_DELTA_POLICY = {
   deliverable_delta_aliases: {},
   platform_delta_aliases: {},
   platform_only_is_not_deliverable_progress: true,
-  quality_budget_exhaustion_policy: 'completed_with_quality_debt_and_continue_when_consumable_artifact_exists',
+  quality_budget_exhaustion_policy:
+    'completed_with_quality_debt_and_continue_with_best_artifact_or_progress_diagnostic',
   quality_debt_blocks_stage_transition: false,
   quality_debt_blocks_quality_export_or_ready_claims: true,
-  missing_delta_policy: 'emit_zero_deliverable_delta_and_next_forced_delta_without_inventing_domain_work',
+  missing_delta_policy:
+    'materialize_no_output_or_failure_diagnostic_and_next_forced_delta_without_inventing_domain_work',
   authority_boundary: {
     opl_can_infer_domain_work: false,
     opl_can_read_artifact_body: false,

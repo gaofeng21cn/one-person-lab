@@ -1,0 +1,137 @@
+{
+  "contract_kind": "opl_stage_route_transport_contract.v1",
+  "surface_kind": "opl_stage_route_transport_contract",
+  "owner": "one-person-lab",
+  "purpose": "Transport Codex-selected declared stage routes and project refs-only attempt lifecycle/currentness without admitting, rejecting, ranking, selecting, reconciling, or overriding semantic stage routes.",
+  "state": "active_contract",
+  "codex_semantic_route_boundary": {
+    "semantic_owner": "codex_cli",
+    "any_declared_stage_may_start_from_any_readable_prior_artifact": true,
+    "skip_repeat_reverse_and_route_back_supported": true,
+    "quality_budget_exhaustion_blocks_route": false,
+    "framework_can_accept_reject_rank_select_reconcile_or_override_route": false,
+    "framework_can_require_typed_closeout_for_progress": false,
+    "framework_can_require_prior_stage_quality_acceptance_for_next_stage": false
+  },
+  "transport_responsibilities": [
+    "carry_codex_selected_domain_stage_and_action_refs",
+    "create_and_observe_provider_attempt_lifecycle",
+    "record_retry_budget_consumption_without_route_authority",
+    "project_identity_currentness_and_stale_reuse_warnings",
+    "transport_human_authority_and_irreversible_action_gates",
+    "project_artifact_owner_receipt_typed_blocker_and_route_back_refs",
+    "expose_operator_observability_and_recovery_refs"
+  ],
+  "forbidden_responsibilities": [
+    "compile_or_execute_stage_graph",
+    "evaluate_requires_ensures_for_launch_permission",
+    "select_or_reject_declared_stage_route",
+    "select_successor_or_predecessor_stage",
+    "rank_or_reconcile_semantic_route_candidates",
+    "require_structured_closeout_or_receipt_shape_for_progress",
+    "convert_quality_debt_into_execution_blocker",
+    "convert_retry_review_or_repair_budget_exhaustion_into_execution_blocker",
+    "create_domain_owner_receipt_or_domain_typed_blocker",
+    "infer_domain_ready_quality_export_publication_or_submission_ready"
+  ],
+  "ordinary_path": [
+    "codex_selects_any_declared_stage",
+    "opl_transports_attempt_identity_and_available_input_refs",
+    "executor_produces_readable_artifact_or_hard_stop_evidence",
+    "opl_projects_attempt_and_artifact_refs",
+    "codex_selects_any_next_declared_stage_including_skip_repeat_reverse_or_route_back"
+  ],
+  "progress_policy": {
+    "readable_artifact_counts_as_progress": true,
+    "free_text_partial_draft_failed_diagnostic_and_negative_result_count_as_artifact": true,
+    "missing_manifest_schema_role_receipt_lineage_review_or_quality_acceptance_is_quality_debt": true,
+    "quality_debt_blocks": [
+      "quality_ready",
+      "artifact_ready",
+      "visual_ready",
+      "export_ready",
+      "publication_ready",
+      "submission_ready",
+      "production_ready"
+    ],
+    "quality_debt_does_not_block": [
+      "next_declared_stage_start",
+      "skip",
+      "repeat",
+      "reverse",
+      "route_back",
+      "repair",
+      "review"
+    ],
+    "hard_stop_only_when": [
+      "identity_or_currentness_conflict_that_would_mutate_wrong_target",
+      "permission_credential_or_safety_boundary",
+      "authority_boundary_or_forbidden_write",
+      "irreversible_action_without_required_authority",
+      "explicit_human_decision_gate"
+    ],
+    "zero_output_becomes_progress_diagnostic": true,
+    "corrupt_or_unreadable_output_becomes_progress_diagnostic": true
+  },
+  "currentness_policy": {
+    "purpose": "Prevent stale attempt reuse or mutation of the wrong target; currentness mismatch disables reuse and mutation but never forbids Codex from starting another declared stage.",
+    "reuse_identity_fields": [
+      "domain_id",
+      "stage_id",
+      "stage_attempt_id",
+      "work_unit_id",
+      "source_fingerprint",
+      "idempotency_key",
+      "dispatch_ref",
+      "stage_packet_ref"
+    ],
+    "missing_or_mismatched_identity_effect": "disable_reuse_and_terminal_reconciliation_only",
+    "next_declared_stage_may_start": true,
+    "terminal_closeout_precedes_stale_live_projection": true,
+    "terminal_or_canceled_residue_policy": "audit_or_stale_redrive_filter_only"
+  },
+  "attempt_transport": {
+    "provider": "temporal",
+    "attempt_lifecycle_role": "durable_transport_and_observability_only",
+    "retry_budget_role": "quality_and_compute_budget_accounting_only",
+    "provider_completion_role": "attempt_transport_completed",
+    "provider_completion_is_domain_ready": false,
+    "attempt_or_lease_ref_missing_effect": "observability_warning_no_semantic_route_block",
+    "typed_closeout_required_for_progress": false,
+    "raw_or_free_text_artifact_accepted_for_progress": true
+  },
+  "operator_projection": {
+    "bounded_default_attempt_list": true,
+    "default_limit": 25,
+    "heavy_attempt_bodies_omitted_by_default": true,
+    "projection_is_truth_source": false,
+    "projection_can_select_semantic_route": false,
+    "projection_can_create_domain_blocker": false
+  },
+  "route_back_policy": {
+    "route_back_is_codex_domain_judgment": true,
+    "may_target_any_declared_stage": true,
+    "must_carry_available_artifact_diagnostic_negative_result_and_lineage_refs": true,
+    "framework_role": "transport_selected_target_and_refs_only",
+    "framework_must_not": [
+      "approve_route_back",
+      "reject_route_back",
+      "choose_route_back_target",
+      "require_graph_predecessor_relationship"
+    ]
+  },
+  "authority_boundary": {
+    "opl_can_transport_codex_selected_route": true,
+    "opl_can_create_and_observe_provider_attempt": true,
+    "opl_can_filter_stale_attempt_reuse": true,
+    "opl_can_project_operator_read_model": true,
+    "opl_can_choose_semantic_stage_route": false,
+    "opl_can_accept_reject_rank_reconcile_or_override_codex_route": false,
+    "opl_can_block_next_stage_for_quality_debt": false,
+    "opl_can_write_domain_truth": false,
+    "opl_can_sign_domain_owner_receipt": false,
+    "opl_can_create_domain_typed_blocker": false,
+    "opl_can_authorize_quality_export_publication_or_submission_ready": false,
+    "opl_can_mutate_artifact_body": false
+  }
+}

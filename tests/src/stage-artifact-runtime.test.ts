@@ -157,9 +157,10 @@ test('stage artifact open and commit materialize latest and current from verifie
       'artifact_attempt_pointer_not_stage_run_current_pointer',
     );
     assert.equal(
-      committed.current_pointer.current.stage_transition_authority_required_for_stage_run_current,
+      committed.current_pointer.current.stage_run_current_is_passive_projection_of_codex_route_context,
       true,
     );
+    assert.equal(committed.current_pointer.current.framework_can_accept_reject_or_override_codex_route, false);
     assert.equal(committed.authority_boundary.can_write_stage_current_pointer, false);
     assert.equal(committed.authority_boundary.can_write_stage_run_terminal_state, false);
     assert.equal(committed.authority_boundary.can_publish_current_owner_delta, false);
@@ -204,7 +205,7 @@ test('stage artifact CLI status reads the physical OPL_STATE_DIR stage folder', 
   });
 });
 
-test('stage artifact commit refuses success without matching owner receipt evidence', () => {
+test('stage artifact commit downgrades unbacked success claim to nonblocking quality debt', () => {
   withTempState(() => {
     const locator = {
       domain_id: 'redcube_ai',
@@ -221,17 +222,15 @@ test('stage artifact commit refuses success without matching owner receipt evide
       receipt_ref: 'rca-owner-receipt:other',
     });
 
-    assert.throws(
-      () => commitStageArtifactAttemptRuntime({
-        ...locator,
-        terminal_status: 'success',
-        required_outputs: ['deck.png'],
-        owner_receipt_refs: ['rca-owner-receipt:visual-stage:deck-a'],
-      }),
-      (error) => error instanceof FrameworkContractError
-        && error.code === 'contract_shape_invalid'
-        && Array.isArray(error.details?.missing_owner_receipt_refs),
-    );
+    const committed = commitStageArtifactAttemptRuntime({
+      ...locator,
+      terminal_status: 'success',
+      required_outputs: ['deck.png'],
+      owner_receipt_refs: ['rca-owner-receipt:visual-stage:deck-a'],
+    });
+    assert.equal(committed.manifest.terminal_status, 'completed_with_quality_debt');
+    assert.equal(committed.status.stages[0].status, 'completed_with_quality_debt');
+    assert.equal(committed.manifest.quality_debt_refs.length, 1);
   });
 });
 
@@ -273,7 +272,7 @@ test('stage artifact quality debt completion advances a consumable artifact with
   });
 });
 
-test('stage artifact status treats files without receipt-backed manifest as orphan evidence', () => {
+test('stage artifact status treats files without a manifest as consumable quality-debt progress', () => {
   withTempState(() => {
     const paths = stageArtifactAttemptPaths({
       domain_id: 'redcube_ai',
@@ -295,9 +294,10 @@ test('stage artifact status treats files without receipt-backed manifest as orph
     });
 
     assert.equal(status.summary.success_stage_count, 0);
-    assert.equal(status.summary.orphan_artifact_count, 1);
-    assert.equal(status.stages[0].status, 'orphan');
-    assert.deepEqual(status.stages[0].orphan_outputs, ['deck.png']);
+    assert.equal(status.summary.orphan_artifact_count, 0);
+    assert.equal(status.stages[0].status, 'completed_with_quality_debt');
+    assert.deepEqual(status.stages[0].orphan_outputs, []);
+    assert.ok(status.stages[0].broken_reasons.includes('manifest_missing_or_invalid_quality_debt'));
   });
 });
 
@@ -412,7 +412,7 @@ test('stage artifact promote and gc remain refs-only and preserve latest/canonic
   });
 });
 
-test('stage artifact conformance fails closed on post-commit content hash drift', () => {
+test('stage artifact conformance records post-commit content hash drift without blocking progress', () => {
   withTempState(() => {
     const locator = {
       domain_id: 'redcube_ai',
@@ -442,7 +442,7 @@ test('stage artifact conformance fails closed on post-commit content hash drift'
       topic_id: locator.topic_id,
       deliverable_id: locator.deliverable_id,
     });
-    assert.equal(status.stages[0].status, 'broken');
+    assert.equal(status.stages[0].status, 'completed_with_quality_debt');
     assert.deepEqual(status.stages[0].attempts[0].hash_mismatches, [
       'output:deck.png:hash_or_size_mismatch',
     ]);
@@ -703,7 +703,7 @@ test('stage artifact promote refuses attempts that physical status does not deri
       }),
       (error) => error instanceof FrameworkContractError
         && error.code === 'contract_shape_invalid'
-        && error.details?.status === 'broken',
+        && error.details?.status === 'completed_with_quality_debt',
     );
   });
 });

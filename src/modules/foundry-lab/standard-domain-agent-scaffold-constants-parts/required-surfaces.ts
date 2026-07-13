@@ -57,7 +57,7 @@ export const REQUIRED_VERIFICATION = [
   'no_active_generic_owner_caller',
   'replacement_or_no_regression_evidence',
   'receipt_ref_reconciliation',
-  'user_stage_log_semantics_or_typed_blocker',
+  'user_stage_log_semantics_or_progress_diagnostic',
   'git_diff_check',
   'agent_pack_required_paths_resolve',
   'capability_map_refs_resolve',

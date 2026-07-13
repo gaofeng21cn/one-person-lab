@@ -1,4 +1,4 @@
-import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, installRuntimePackageFixture, loadFamilyManifestFixtures, os, path, repoRoot, runCli, test } from '../helpers.ts';
 import { createMasScoutStage } from './family-runtime-stage-fixtures.ts';
 import { createAdmittedStagePackFixture } from './workspace-domain-test-helper.ts';
 
@@ -315,6 +315,7 @@ test('domain memory read model projects runtime receipt refs without applying me
   );
 
   try {
+    installRuntimePackageFixture(stateRoot, 'mag');
     runCli([
       'workspace',
       'bind',

@@ -44,7 +44,7 @@ test('family-runtime attempt query exposes a blocked public envelope', () => {
       '--source-fingerprint',
       'sha256:blocked-closeout',
       '--blocked-reason',
-      'typed_closeout_packet_required',
+      'zero_readable_artifact',
     ], familyRuntimeEnv(stateRoot));
     const attemptId = created.family_runtime_stage_attempt.attempt.stage_attempt_id;
     const query = runCli([
@@ -59,14 +59,13 @@ test('family-runtime attempt query exposes a blocked public envelope', () => {
       query.conflict_or_blocker_envelopes.some(
         (envelope: { classification: string; reason: string }) =>
           envelope.classification === 'evidence_blocker'
-          && envelope.reason === 'typed_closeout_packet_required',
+          && envelope.reason === 'zero_readable_artifact',
       ),
     );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
-
 test('family-runtime attempt readback preserves provider lifecycle without domain authority', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-attempt-no-authority-'));
   try {

@@ -62,6 +62,26 @@ export function domainDispatchEvidencePayloadRefs(payload: JsonRecord) {
   );
 
   return {
+    progressArtifactRefs: uniqueStrings([
+      ...refsFromPayload(payload, [
+        'artifact_refs',
+        'artifact_ref',
+        'output_refs',
+        'output_ref',
+        'progress_delta_refs',
+        'progress_delta_ref',
+        'diagnostic_refs',
+        'diagnostic_ref',
+        'negative_result_refs',
+        'negative_result_ref',
+      ]),
+      ...ownerDeltaResultRefs.flatMap((result) => [
+        ...stringList(result.artifact_refs),
+        ...stringList(result.progress_delta_refs),
+        ...stringList(result.diagnostic_refs),
+        ...stringList(result.negative_result_refs),
+      ]),
+    ]),
     evidenceRefs: refsFromPayload(payload, ['evidence_refs', 'evidence_ref']),
     domainReceiptRefs: uniqueStrings([
       ...refsFromPayload(payload, [

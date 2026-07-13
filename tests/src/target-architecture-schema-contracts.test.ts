@@ -22,7 +22,6 @@ const schemaPaths = [
   'contracts/opl-framework/stage-typed-blocker.schema.json',
   'contracts/opl-framework/stage-artifact-unit.schema.json',
   'contracts/opl-framework/progress-delta-receipt.schema.json',
-  'contracts/opl-framework/domain-progress-transition-runtime-live-readback.schema.json',
   'contracts/opl-framework/owner-answer.schema.json',
   'contracts/opl-framework/evidence-ledger-event.schema.json',
   'contracts/opl-framework/golden-path-profile.schema.json',
@@ -91,7 +90,6 @@ test('target architecture schemas retain sparse identity, required-field, and au
   const typedBlocker = schemas['contracts/opl-framework/stage-typed-blocker.schema.json'];
   const stageArtifact = schemas['contracts/opl-framework/stage-artifact-unit.schema.json'];
   const progressReceipt = schemas['contracts/opl-framework/progress-delta-receipt.schema.json'];
-  const liveReadback = schemas['contracts/opl-framework/domain-progress-transition-runtime-live-readback.schema.json'];
   const ownerAnswer = schemas['contracts/opl-framework/owner-answer.schema.json'];
   const evidenceLedger = schemas['contracts/opl-framework/evidence-ledger-event.schema.json'];
   const goldenPath = schemas['contracts/opl-framework/golden-path-profile.schema.json'];
@@ -127,7 +125,6 @@ test('target architecture schemas retain sparse identity, required-field, and au
     [typedBlocker.$defs.authority_boundary.properties, ['opl_can_create_typed_blocker', 'blocker_counts_as_stage_success']],
     [stageArtifact.$defs.authority_boundary.properties, ['provider_completion_counts_as_progress', 'can_publish_current_owner_delta']],
     [progressReceipt.$defs.authority_boundary.properties, ['can_authorize_stage_complete', 'can_sign_owner_receipt']],
-    [liveReadback.$defs.authority_boundary.properties, ['provider_completion_is_domain_completion', 'read_model_can_execute']],
     [ownerAnswer.$defs.authority_boundary.properties, ['opl_can_sign_domain_owner_answer', 'opl_can_authorize_quality_verdict']],
     [evidenceLedger.$defs.authority_boundary.properties, ['event_can_create_default_action_without_delta', 'opl_can_write_domain_truth']],
     [goldenPath.$defs.authority_boundary.properties, ['variant_can_be_default_without_explicit_selection', 'opl_can_authorize_domain_ready']],

@@ -219,7 +219,7 @@
       "blocked_shape": "domain_owned_typed_hard_blocker_ref",
       "route_back_shape": "quality_debt_repair_recommendation_or_human_gate_ref",
       "provider_completion_is_closeout": false,
-      "quality_budget_exhaustion_blocks_transition": false,
+      "quality_budget_exhaustion_blocks_route": false,
       "owner_receipt_required_for_quality_or_ready_claim": true,
       "completion_judgment_owner": "domain_stage",
       "opl_content_judgment_allowed": false
@@ -498,7 +498,7 @@
   },
   "shared_policy_release": {
     "policy_release_contract_ref": "contracts/opl-framework/foundry-agent-series-policy-release.json",
-    "policy_bundle_fingerprint": "sha256:ca23195a7055670d3d64626ba13c2b079fa17f94c33cc633ff42c6d9d3090b28",
+    "policy_bundle_fingerprint": "sha256:30a1d0034eeafbf5ea042fc33c64af585c3e68276328eb97d20903105087bb5d",
     "fingerprint_algorithm": "sha256:stable-json",
     "domain_contract_policy_release_pin_required": true,
     "domain_adapter_must_not_copy_policy_body_as_authority": true,

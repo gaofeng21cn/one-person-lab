@@ -866,6 +866,111 @@ export async function runOplAgentPackageUpdate(input: AgentPackageInstallInput) 
   };
 }
 
+function packageBulkUpdateSafety(lock: AgentPackageLock) {
+  if (lock.source_kind === 'developer_checkout_override') {
+    return {
+      eligible: false,
+      reason: 'developer_checkout_is_user_managed',
+    } as const;
+  }
+  if (!lock.content_digest || !lock.manifest_sha256 || !lock.lock_ref) {
+    return {
+      eligible: false,
+      reason: 'package_content_identity_incomplete',
+    } as const;
+  }
+  if (lock.physical_surface?.failure_reason) {
+    return {
+      eligible: false,
+      reason: 'package_physical_surface_requires_repair',
+    } as const;
+  }
+  return {
+    eligible: true,
+    reason: 'installed_digest_locked_package',
+  } as const;
+}
+
+export async function runOplAgentPackageBulkUpdate(input: { dryRun?: boolean } = {}) {
+  const { index } = readRecoveredLockIndex();
+  const dependencyIds = new Set(index.packages.flatMap((lock) =>
+    (lock.resolved_dependencies ?? []).map((dependency) => dependency.package_id)));
+  const recordedRootIds = new Set((index.last_known_good_transactions ?? [])
+    .map((entry) => entry.root_package_id));
+  const roots = index.packages.filter((lock) =>
+    recordedRootIds.has(lock.package_id) || !dependencyIds.has(lock.package_id));
+  const targets: Array<Record<string, unknown>> = [];
+
+  for (const lock of roots) {
+    const safety = packageBulkUpdateSafety(lock);
+    if (!safety.eligible) {
+      targets.push({
+        target_type: 'package_lock',
+        target_id: lock.package_id,
+        status: 'manual_required',
+        reason: safety.reason,
+        action: null,
+        installed_lock_ref: lock.lock_ref,
+        installed_content_digest: lock.content_digest,
+        result: null,
+      });
+      continue;
+    }
+    try {
+      const result = await runOplAgentPackageUpdate({
+        packageId: lock.package_id,
+        dryRun: input.dryRun === true,
+      });
+      targets.push({
+        target_type: 'package_lock',
+        target_id: lock.package_id,
+        status: input.dryRun ? 'validated' : 'completed',
+        reason: safety.reason,
+        action: 'update',
+        installed_lock_ref: lock.lock_ref,
+        installed_content_digest: lock.content_digest,
+        result: result.opl_agent_package_update,
+      });
+    } catch (error) {
+      targets.push({
+        target_type: 'package_lock',
+        target_id: lock.package_id,
+        status: 'manual_required',
+        reason: 'package_update_failed_without_overwrite',
+        action: 'update',
+        installed_lock_ref: lock.lock_ref,
+        installed_content_digest: lock.content_digest,
+        result: null,
+        error: error && typeof error === 'object' && 'toJSON' in error && typeof error.toJSON === 'function'
+          ? error.toJSON()
+          : { message: error instanceof Error ? error.message : String(error) },
+      });
+    }
+  }
+
+  const completedCount = targets.filter((entry) =>
+    entry.status === 'completed' || entry.status === 'validated').length;
+  const manualRequiredCount = targets.filter((entry) => entry.status === 'manual_required').length;
+  return {
+    version: 'g2',
+    opl_agent_package_bulk_update: {
+      surface_kind: 'opl_agent_package_bulk_update',
+      status: manualRequiredCount > 0 ? 'attention_needed' : input.dryRun ? 'validated_no_write' : 'completed',
+      dry_run: input.dryRun === true,
+      lifecycle_owner: 'opl_packages',
+      selection: 'installed_root_package_locks',
+      targets,
+      summary: {
+        installed_package_count: index.packages.length,
+        root_package_count: roots.length,
+        completed_targets_count: completedCount,
+        manual_required_targets_count: manualRequiredCount,
+      },
+      authority_boundary: refsOnlyAuthorityBoundary(),
+    },
+  };
+}
+
 function packageRepairResult(
   input: AgentPackagePackageActionInput,
   result: Awaited<ReturnType<typeof applyManifestPackageLock>>,
@@ -2154,6 +2259,10 @@ export function listOplAgentPackages() {
   };
 }
 
+export function readInstalledOplAgentPackageLocks() {
+  return readRecoveredLockIndex().index.packages;
+}
+
 export function readOplFlowDefaultUserInstructions() {
   const lock = readLockIndex().packages.find((entry) => entry.package_id === 'opl-flow') ?? null;
   const sourceRoot = lock?.physical_surface?.plugin_payload_cache_path ?? null;
@@ -2211,4 +2320,9 @@ export function readOplFlowDefaultUserInstructions() {
       sha256: null,
     };
   }
+}
+
+export function readOplFlowManagedDependencyIds() {
+  const lock = readLockIndex().packages.find((entry) => entry.package_id === 'opl-flow') ?? null;
+  return [...new Set(lock?.physical_surface?.workflow_policy_migration?.dependency_ids ?? [])];
 }

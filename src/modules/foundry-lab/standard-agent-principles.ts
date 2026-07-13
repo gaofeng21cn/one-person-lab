@@ -67,7 +67,7 @@ export const STANDARD_AGENT_PRINCIPLES_POLICY = {
       principle_id: 'domain_intake_mapping',
       owner: 'domain_agent',
       summary:
-        'domain_intake is the standard starter-stage and owner-handoff pattern, not a standalone Skill. Each domain maps it to its own intake stage, source refs, receipt, or typed blocker surface.',
+        'domain_intake is the standard starter-stage and owner-handoff pattern, not a standalone Skill. Each domain maps it to its own intake stage, source refs, progress artifact, or diagnostic surface.',
     },
     {
       principle_id: 'workspace_source_intake_shell',
@@ -79,13 +79,13 @@ export const STANDARD_AGENT_PRINCIPLES_POLICY = {
       principle_id: 'owner_delta_progress',
       owner: 'one-person-lab',
       summary:
-        'A stage moves by deliverable delta, owner receipt, typed blocker, human gate, route-back, or handoff packet; structural conformance cannot claim domain ready or production ready.',
+        'Every attempted stage moves by a domain artifact, raw or partial output, negative result, or no-output diagnostic; owner receipts and hard-boundary refs govern claims, not progression.',
     },
     {
       principle_id: 'quality_budget_progress_first',
       owner: 'one-person-lab',
       summary:
-        'When a readable consumable artifact exists, retry, review, repair, and ordinary quality gates are bounded quality budgets; exhaustion advances with completed_with_quality_debt while quality and readiness claims remain closed.',
+        'Retry, review, repair, and ordinary quality gates are bounded quality budgets; exhaustion or zero output materializes a diagnostic and advances with completed_with_quality_debt while quality and readiness claims remain closed.',
     },
     {
       principle_id: 'parallel_executor_autonomy',

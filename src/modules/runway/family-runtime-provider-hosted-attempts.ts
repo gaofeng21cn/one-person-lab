@@ -1,5 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite';
 
+import { loadFrameworkContracts } from '../charter/index.ts';
+import { buildFamilyStageContextObservation } from '../stagecraft/index.ts';
 import type { FamilyRuntimeTaskRow } from './family-runtime-store.ts';
 import { insertEvent, nowIso, stableId } from './family-runtime-store.ts';
 import {
@@ -17,7 +19,6 @@ import {
   isStageNativeOwnerActionFromDomainProfile,
   payloadReferencesStageNativeOwnerAnswerFromDomainProfile,
 } from './family-runtime-stage-native-owner-answer.ts';
-import { DOMAIN_AUTONOMY_TASK_KINDS } from './family-runtime-domain-autonomy.ts';
 import { resolveFamilyRuntimeProviderKind } from './family-runtime-providers.ts';
 import {
   createStageAttempt,
@@ -28,27 +29,27 @@ import {
   buildStageRunCurrentnessIdentity,
   sameStageRunRouteCurrentnessIdentity,
 } from './family-runtime-stage-run-currentness-identity.ts';
-import { providerAdmissionCurrentnessIdentity } from './family-runtime-provider-admission-currentness.ts';
+import { providerAttemptCurrentnessIdentity } from './family-runtime-provider-attempt-currentness.ts';
 import {
-  buildStageAdmissionLaunchGate,
-  capabilityRegistryLaunchGateInputFromPayload,
-} from './family-runtime-stage-admission-gate.ts';
+  attachCapabilityRegistryStageContext,
+  capabilityRegistryStageContextInputFromPayload,
+} from './family-runtime-stage-context-observation.ts';
 import {
-  combineStageAdmissionGateWithCheckoutCurrentness,
+  attachCheckoutCurrentnessToStageContext,
   providerHostedCheckoutCurrentnessPreflight,
-} from './family-runtime-provider-hosted-attempts-parts/admission-currentness.ts';
+} from './family-runtime-provider-hosted-attempts-parts/context-currentness.ts';
 import { ensureFamilyRuntimePackageLaunchReady } from './family-runtime-package-readiness.ts';
 export {
   DEFAULT_EXECUTOR_DISPATCH_TASK_KIND,
-  DEFAULT_EXECUTOR_TRANSPORT_ONLY_ADMISSION_SUPERSEDED_REASON,
-  isAdmittedDefaultExecutorNextOwner,
-  isTransportOnlyDefaultExecutorAdmissionCheckpoint,
-} from './family-runtime-provider-hosted-attempts-parts/default-executor-admission.ts';
+  DEFAULT_EXECUTOR_TRANSPORT_ONLY_CHECKPOINT_SUPERSEDED_REASON,
+  isDefaultExecutorNextOwner,
+  isTransportOnlyDefaultExecutorCheckpoint,
+} from './family-runtime-provider-hosted-attempts-parts/default-executor-context.ts';
 import {
   DEFAULT_EXECUTOR_DISPATCH_TASK_KIND,
-  DEFAULT_EXECUTOR_TRANSPORT_ONLY_ADMISSION_SUPERSEDED_REASON,
-  isAdmittedDefaultExecutorNextOwner,
-} from './family-runtime-provider-hosted-attempts-parts/default-executor-admission.ts';
+  DEFAULT_EXECUTOR_TRANSPORT_ONLY_CHECKPOINT_SUPERSEDED_REASON,
+  isDefaultExecutorNextOwner,
+} from './family-runtime-provider-hosted-attempts-parts/default-executor-context.ts';
 export {
   defaultExecutorDispatchRef,
   defaultExecutorSourceFingerprint,
@@ -354,11 +355,6 @@ function providerHostedTaskDeclared(payload: Record<string, unknown>) {
     || isRecord(payload.controlled_soak_no_regression_attempt);
 }
 
-function stageAdmissionRequired(payload: Record<string, unknown>) {
-  return payload.opl_stage_launch_admission_required === true
-    || payload.require_stage_admission === true;
-}
-
 export function defaultExecutorProviderAttemptOrLeaseRequired(payload: Record<string, unknown>) {
   return payload.provider_attempt_or_lease_required === true;
 }
@@ -378,7 +374,7 @@ export function isDefaultExecutorDispatchTask(
   const nextOwner = optionalString(payload.next_executable_owner);
   return row.task_kind === DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
     && hasDefaultExecutorDispatchIdentity(payload)
-    && isAdmittedDefaultExecutorNextOwner(nextOwner)
+    && isDefaultExecutorNextOwner(nextOwner)
     && ['codex_cli_default', 'codex_cli'].includes(optionalString(payload.executor_kind) ?? '');
 }
 
@@ -616,9 +612,6 @@ export function stageIdForProviderHostedTask(row: FamilyRuntimeTaskRow, payload:
   if (isDefaultExecutorDispatchTask(row, payload)) {
     return row.task_kind;
   }
-  if (DOMAIN_AUTONOMY_TASK_KINDS.has(row.task_kind)) {
-    return row.task_kind;
-  }
   const transition = familyTransitionResult(payload);
   if (transition) {
     return `family_transition:${optionalString(transition.transition_id)}`;
@@ -647,8 +640,8 @@ function workspaceLocatorForProviderHostedTask(row: FamilyRuntimeTaskRow, payloa
     domain_id: row.domain_id,
     task_kind: row.task_kind,
   };
-  const providerAdmissionIdentity = isRecord(payload.provider_admission_identity)
-    ? payload.provider_admission_identity
+  const providerAttemptIdentity = isRecord(payload.provider_attempt_identity)
+    ? payload.provider_attempt_identity
     : null;
   if (isDomainRouteTask(row.domain_id, row.task_kind, payload)) {
     locator.route_ref = row.task_kind;
@@ -700,24 +693,17 @@ function workspaceLocatorForProviderHostedTask(row: FamilyRuntimeTaskRow, payloa
     }
     for (const [targetKey, value] of Object.entries({
       route_identity_key: optionalString(payload.route_identity_key)
-        ?? optionalString(providerAdmissionIdentity?.route_identity_key),
+        ?? optionalString(providerAttemptIdentity?.route_identity_key),
       attempt_idempotency_key: optionalString(payload.attempt_idempotency_key)
-        ?? optionalString(providerAdmissionIdentity?.attempt_idempotency_key)
-        ?? optionalString(providerAdmissionIdentity?.idempotency_key),
+        ?? optionalString(providerAttemptIdentity?.attempt_idempotency_key)
+        ?? optionalString(providerAttemptIdentity?.idempotency_key),
       recovery_obligation_id: optionalString(payload.recovery_obligation_id)
-        ?? optionalString(providerAdmissionIdentity?.recovery_obligation_id),
+        ?? optionalString(providerAttemptIdentity?.recovery_obligation_id),
     })) {
       if (value) {
         locator[targetKey] = value;
       }
     }
-  }
-  if (DOMAIN_AUTONOMY_TASK_KINDS.has(row.task_kind)) {
-    locator.domain_truth_owner = optionalString(payload.domain_truth_owner) ?? row.domain_id;
-    locator.opl_writes_domain_truth = false;
-    locator.opl_writes_domain_quality_verdict = false;
-    locator.opl_writes_domain_artifact_gate = false;
-    locator.opl_writes_domain_current_package = false;
   }
   for (const key of [
     'profile',
@@ -800,13 +786,8 @@ function workspaceLocatorForProviderHostedTask(row: FamilyRuntimeTaskRow, payloa
   for (const key of [
     'owner_route_currentness_basis',
     'owner_route',
-    'provider_admission_identity',
-    'domain_progress_transition_apply',
-    'domain_progress_transition_runtime',
-    'opl_transition_event',
-    'opl_transition_outbox_item',
-    'projection_metadata',
-    'progress_first_closeout_admission',
+    'provider_attempt_identity',
+    'progress_first_closeout_observation',
   ]) {
     if (isRecord(payload[key])) {
       locator[key] = payload[key];
@@ -836,9 +817,9 @@ function sourceFingerprintForProviderHostedTask(row: FamilyRuntimeTaskRow, paylo
     ]);
   }
   if (isDefaultExecutorDispatchTask(row, payload)) {
-    const admissionIdentity = providerAdmissionCurrentnessIdentity(payload);
+    const admissionIdentity = providerAttemptCurrentnessIdentity(payload);
     if (admissionIdentity) {
-      return stableId('default_executor_provider_admission_source', [
+      return stableId('default_executor_provider_attempt_source', [
         row.domain_id,
         row.task_kind,
         defaultExecutorDispatchRef(payload),
@@ -888,13 +869,13 @@ export async function ensureProviderHostedStageAttempt(
     && existingAttempts.some((attempt) => (
       attempt.provider_kind === providerKind
       && attempt.source_fingerprint === expectedSourceFingerprint
-      && attempt.blocked_reason === DEFAULT_EXECUTOR_TRANSPORT_ONLY_ADMISSION_SUPERSEDED_REASON
+      && attempt.blocked_reason === DEFAULT_EXECUTOR_TRANSPORT_ONLY_CHECKPOINT_SUPERSEDED_REASON
     ));
   if (!options.newAttempt && isDefaultExecutorDispatchTask(row, payload) && existingAttempts.some((attempt) => (
     attempt.provider_kind === providerKind
       && DEFAULT_EXECUTOR_LIVE_ATTEMPT_STATUSES.has(attempt.status)
       && attempt.blocked_reason !== DEFAULT_EXECUTOR_SUPERSEDED_REASON
-      && attempt.blocked_reason !== DEFAULT_EXECUTOR_TRANSPORT_ONLY_ADMISSION_SUPERSEDED_REASON
+      && attempt.blocked_reason !== DEFAULT_EXECUTOR_TRANSPORT_ONLY_CHECKPOINT_SUPERSEDED_REASON
   ))) {
     return null;
   }
@@ -924,7 +905,7 @@ export async function ensureProviderHostedStageAttempt(
   }
   if (!options.newAttempt && existingAttempts.some((attempt) => (
     attempt.provider_kind === providerKind && attempt.source_fingerprint === expectedSourceFingerprint
-    && attempt.blocked_reason !== DEFAULT_EXECUTOR_TRANSPORT_ONLY_ADMISSION_SUPERSEDED_REASON
+    && attempt.blocked_reason !== DEFAULT_EXECUTOR_TRANSPORT_ONLY_CHECKPOINT_SUPERSEDED_REASON
   ))) {
     return null;
   }
@@ -939,23 +920,25 @@ export async function ensureProviderHostedStageAttempt(
   const useBoundWorkspaceLocator = packageReadiness?.package_use_binding
     ? { ...workspaceLocator, package_use_binding: packageReadiness.package_use_binding }
     : workspaceLocator;
-  const admissionGate = buildStageAdmissionLaunchGate({
-    domainId: row.domain_id,
-    stageId,
-    taskKind: row.task_kind,
-    taskId: row.task_id,
-    sourceFingerprint: expectedSourceFingerprint,
-    idempotencyKey: expectedSourceFingerprint,
-    requireAdmission: stageAdmissionRequired(payload),
-    capabilityRegistryGate: capabilityRegistryLaunchGateInputFromPayload(payload, {
+  const stageContextObservation = attachCapabilityRegistryStageContext(
+    buildFamilyStageContextObservation(loadFrameworkContracts(), {
+      domainId: row.domain_id,
+      stageId,
+      actionId: domainRouteActionRef(row.task_kind, payload) ?? undefined,
+    }),
+    capabilityRegistryStageContextInputFromPayload(payload, {
       domainId: row.domain_id,
       stageId,
       taskId: row.task_id,
     }),
-  });
-  const stageLaunchAdmissionGate = combineStageAdmissionGateWithCheckoutCurrentness(
-    admissionGate,
-    providerHostedCheckoutCurrentnessPreflight(row, useBoundWorkspaceLocator),
+  );
+  const checkoutCurrentnessPreflight = providerHostedCheckoutCurrentnessPreflight(
+    row,
+    useBoundWorkspaceLocator,
+  );
+  const stageLaunchContextObservation = attachCheckoutCurrentnessToStageContext(
+    stageContextObservation,
+    checkoutCurrentnessPreflight,
   );
   const result = createStageAttempt(db, {
     domainId: row.domain_id,
@@ -969,16 +952,18 @@ export async function ensureProviderHostedStageAttempt(
     checkpointRefs: isDefaultExecutorDispatchTask(row, payload)
       ? defaultExecutorStageCheckpointRefs(payload)
       : undefined,
-    blockedReason: stageLaunchAdmissionGate.blocked_reason ?? undefined,
-    launchAdmissionGate: stageLaunchAdmissionGate,
+    blockedReason: checkoutCurrentnessPreflight?.status === 'blocked'
+      ? checkoutCurrentnessPreflight.reason ?? 'checkout_currentness_blocked'
+      : undefined,
+    launchContextObservation: stageLaunchContextObservation,
   });
   insertEvent(db, {
     taskId: row.task_id,
     domainId: row.domain_id,
     eventType: result.idempotent_noop
       ? 'stage_attempt_idempotent_noop'
-      : stageLaunchAdmissionGate.status === 'blocked'
-        ? 'stage_attempt_blocked_by_admission_gate'
+      : checkoutCurrentnessPreflight?.status === 'blocked'
+        ? 'stage_attempt_blocked_by_checkout_currentness'
       : 'stage_attempt_created_for_provider_hosted_task',
     source: options.eventSource ?? 'opl-family-runtime',
     payload: {
@@ -988,9 +973,9 @@ export async function ensureProviderHostedStageAttempt(
       task_kind: row.task_kind,
       new_attempt: options.newAttempt === true || forceNewAttemptAfterTransportOnlyAdmission,
       new_attempt_reason: forceNewAttemptAfterTransportOnlyAdmission
-        ? DEFAULT_EXECUTOR_TRANSPORT_ONLY_ADMISSION_SUPERSEDED_REASON
+        ? DEFAULT_EXECUTOR_TRANSPORT_ONLY_CHECKPOINT_SUPERSEDED_REASON
         : null,
-      stage_launch_admission_gate: stageLaunchAdmissionGate,
+      stage_context_observation: stageLaunchContextObservation,
     },
   });
   return result.attempt;

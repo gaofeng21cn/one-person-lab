@@ -95,7 +95,6 @@ export interface CodexExecOptions {
   provider?: string;
   reasoningEffort?: string;
   outputLastMessagePath?: string;
-  outputSchemaPath?: string;
   ephemeral?: boolean;
   enableImageGeneration?: boolean;
   promptViaStdin?: boolean;
@@ -229,9 +228,6 @@ export function buildCodexExecArgs(
     args.push('--config', `model_reasoning_effort=${quoteTomlString(options.reasoningEffort)}`);
   }
 
-  if (options.outputSchemaPath) {
-    args.push('--output-schema', options.outputSchemaPath);
-  }
 
   if (options.outputLastMessagePath) {
     args.push('--output-last-message', options.outputLastMessagePath);
@@ -264,9 +260,6 @@ export function buildCodexExecResumeArgs(
     args.push('--config', `model_reasoning_effort=${quoteTomlString(options.reasoningEffort)}`);
   }
 
-  if (options.outputSchemaPath) {
-    args.push('--output-schema', options.outputSchemaPath);
-  }
 
   if (options.outputLastMessagePath) {
     args.push('--output-last-message', options.outputLastMessagePath);

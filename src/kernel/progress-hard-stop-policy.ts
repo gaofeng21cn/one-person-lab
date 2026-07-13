@@ -1,0 +1,35 @@
+const HARD_STOP_REASON_EXACT = new Set([
+  'codex_cli_activity_cancelled',
+  'codex_cli_provider_unavailable',
+  'codex_cli_workspace_root_missing',
+  'local_sandbox_workspace_transport_missing',
+  'operator_cancel_requested',
+  'temporal_workflow_canceled',
+  'typed_closeout_stage_attempt_id_mismatch',
+]);
+
+const HARD_STOP_REASON_PARTS = [
+  'authority_violation',
+  'closure_changed',
+  'credential',
+  'currentness_identity',
+  'executor_unavailable',
+  'forbidden_write',
+  'human_decision',
+  'human_gate',
+  'identity_mismatch',
+  'irreversible',
+  'permission',
+  'pinned_closure',
+  'security',
+  'unsafe',
+  'wrong_checkout',
+  'wrong_target',
+];
+
+export function isRuntimeHardStopReason(reason: string | null | undefined) {
+  const normalized = reason?.trim().toLowerCase();
+  if (!normalized) return false;
+  return HARD_STOP_REASON_EXACT.has(normalized)
+    || HARD_STOP_REASON_PARTS.some((part) => normalized.includes(part));
+}

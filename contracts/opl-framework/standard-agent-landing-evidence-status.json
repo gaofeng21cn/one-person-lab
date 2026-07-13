@@ -58,7 +58,7 @@
       "required_status": "satisfied",
       "status": "satisfied",
       "evidence_refs": [
-        "contracts/opl-framework/stage-route-scheduler-contract.json",
+        "contracts/opl-framework/stage-route-transport-contract.json",
         "contracts/opl-framework/stage-run-kernel-contract.json#cycle_orchestration.no_progress_policy",
         "tests/src/family-runtime-stage-run-currentness-identity.test.ts",
         "tests/src/family-runtime-attempt-contract.test.ts"

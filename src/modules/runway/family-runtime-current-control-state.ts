@@ -68,7 +68,6 @@ function parseRecord(value: unknown) {
     return {};
   }
 }
-
 function parseList(value: string | null | undefined) {
   if (!value) {
     return [];
@@ -269,7 +268,7 @@ function currentStageProgressLog(
     closeoutReceiptStatus: current.closeout_receipt_status,
     nextOwner: stringValue(latestCloseout.next_owner) ?? stringValue(routeImpact.next_owner) ?? current.domain_id,
     domainReadyVerdict: stringValue(latestCloseout.domain_ready_verdict) ?? stringValue(routeImpact.domain_ready_verdict),
-    canonicalOutcome: statusForCurrentAttempt(current),
+    canonicalOutcome: statusForCurrentAttempt(current, providerRun),
     usageProjection,
     modelRouteCostProjection,
     createdAt: current.created_at,
@@ -318,9 +317,20 @@ function staleEpochKinds(taskPayload: Record<string, unknown>, attempt: ControlA
     .map((check) => check.kind);
 }
 
-function statusForCurrentAttempt(attempt: ControlAttemptRow) {
+function rawArtifactRefFromProviderRun(providerRun: Record<string, unknown>) {
+  const processOutput = record(providerRun.process_output_summary);
+  const rawArtifact = record(processOutput.raw_stage_artifact);
+  const progressProjection = record(processOutput.progress_closeout_projection);
+  const acceptedProgress = record(progressProjection.accepted_progress);
+  return stringValue(rawArtifact.output_ref) ?? stringValue(acceptedProgress.raw_artifact_ref);
+}
+
+function statusForCurrentAttempt(attempt: ControlAttemptRow, providerRun: Record<string, unknown>) {
   if (attempt.status === 'completed' && attempt.closeout_receipt_status === 'accepted_typed_closeout') {
     return 'accepted_typed_closeout';
+  }
+  if (attempt.status === 'completed' && rawArtifactRefFromProviderRun(providerRun)) {
+    return 'completed_with_quality_debt';
   }
   return attempt.status;
 }
@@ -330,6 +340,7 @@ function terminalWithoutAcceptedCloseout(attempt: ControlAttemptRow, providerRun
   return (
     (attempt.status === 'completed' || providerStatus === 'completed')
     && attempt.closeout_receipt_status !== 'accepted_typed_closeout'
+    && !rawArtifactRefFromProviderRun(providerRun)
   );
 }
 
@@ -357,31 +368,6 @@ function terminalAttemptRefs(attempts: ControlAttemptRow[], current: ControlAtte
     .map((attempt) => `opl://stage_attempts/${attempt.stage_attempt_id}`);
 }
 
-function missingLaunchAuthorizationFields(attempt: ControlAttemptRow | undefined) {
-  if (!attempt) {
-    return [];
-  }
-  const workspaceLocator = parseRecord(attempt.workspace_locator_json);
-  return [
-    stringValue(workspaceLocator.provider_attempt_ref) ? null : 'provider_attempt_ref',
-    stringValue(workspaceLocator.attempt_lease_ref) ? null : 'attempt_lease_ref',
-    stringValue(workspaceLocator.execution_authorization_decision_ref)
-      ? null
-      : 'execution_authorization_decision_ref',
-    stringValue(workspaceLocator.execution_authorization_receipt_ref)
-      ? null
-      : 'execution_authorization_receipt_ref',
-  ].filter((entry): entry is string => Boolean(entry));
-}
-
-function refsOnlyCheckpointWithoutLaunchAuthorization(attempt: ControlAttemptRow | undefined) {
-  if (!attempt || attempt.status !== 'checkpointed') {
-    return false;
-  }
-  return attempt.closeout_receipt_status === 'domain_handler_receipt_ref_only'
-    && missingLaunchAuthorizationFields(attempt).length > 0;
-}
-
 function refsOnlyDomainHandlerCheckpoint(attempt: ControlAttemptRow | undefined) {
   return Boolean(
     attempt
@@ -391,7 +377,7 @@ function refsOnlyDomainHandlerCheckpoint(attempt: ControlAttemptRow | undefined)
   );
 }
 
-function domainHandlerProviderAdmissionRequested(
+function domainHandlerProviderAttemptRequested(
   task: FamilyRuntimeTaskRow | undefined,
   attempt: ControlAttemptRow | undefined,
 ) {
@@ -701,12 +687,12 @@ function deriveCurrentControlStateFromRows(
     };
   }
   if (
-    domainHandlerProviderAdmissionRequested(task, current)
+    domainHandlerProviderAttemptRequested(task, current)
     || domainRouteAdmissionRequested(task, taskPayload, current)
   ) {
     return {
       ...base,
-      reconciliation_status: 'provider_admission_requested',
+      reconciliation_status: 'provider_attempt_requested',
       current_attempt_state: current ? 'queued' : 'provider_start_pending',
       blocker_reason: OPL_ATTEMPT_ADMISSION_PROVIDER_START_PENDING_REASON,
       authority_boundary: {
@@ -740,20 +726,6 @@ function deriveCurrentControlStateFromRows(
       blocker_reason: STALE_WORK_UNIT_DIAGNOSTIC,
     };
   }
-  if (refsOnlyCheckpointWithoutLaunchAuthorization(current)) {
-    return {
-      ...base,
-      reconciliation_status: 'blocked_missing_launch_execution_authorization',
-      current_attempt_state: 'blocked',
-      blocker_reason: 'launch_execution_authorization_required_for_refs_only_checkpoint',
-      missing_launch_authorization_fields: missingLaunchAuthorizationFields(current),
-      authority_boundary: {
-        ...base.authority_boundary,
-        provider_completion_is_domain_ready: false,
-        refs_only_checkpoint_is_running_proof: false,
-      },
-    };
-  }
   if (refsOnlyDomainHandlerCheckpoint(current)) {
     return {
       ...base,
@@ -770,9 +742,11 @@ function deriveCurrentControlStateFromRows(
   if (terminalWithoutAcceptedCloseout(current, providerRun)) {
     return {
       ...base,
-      reconciliation_status: 'blocked_provider_completed_missing_typed_closeout',
-      current_attempt_state: 'blocked',
-      blocker_reason: 'typed_closeout_packet_required',
+      reconciliation_status: 'completed_with_quality_debt_no_output_diagnostic',
+      current_attempt_state: 'succeeded',
+      blocker_reason: null,
+      progress_diagnostic_ref: `opl://stage-attempts/${current.stage_attempt_id}/no-output-diagnostic`,
+      next_stage_may_start: true,
     };
   }
   const supersededProviderTransportReason = taskSuccessSupersedesProviderTransportObservation(
@@ -791,7 +765,7 @@ function deriveCurrentControlStateFromRows(
       superseded_by_task_status: task.status,
     };
   }
-  const currentState = statusForCurrentAttempt(current);
+  const currentState = statusForCurrentAttempt(current, providerRun);
   return {
     ...base,
     reconciliation_status: currentState,

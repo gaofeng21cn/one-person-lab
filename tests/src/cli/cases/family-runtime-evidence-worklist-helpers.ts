@@ -23,7 +23,6 @@ const defaultCallerSurfaces = [
   ['status_read_model', 'agent/status.ts', 'domain_projection_refs', 'opl_generated_status_read_model_surface'],
   ['domain_handler', 'runtime/domain-handler.ts', 'domain_handler_target', 'opl_generated_domain_handler_handoff_surface'],
   ['workbench_drilldown', 'runtime/workbench.ts', 'projection_refs', 'opl_hosted_workbench_shell_consuming_domain_refs'],
-  ['functional_harness_cases', 'runtime/harness.ts', 'oracle_fixture_refs', 'opl_generated_functional_harness_cases'],
 ] as const;
 
 function evidenceWorklistStage(stageId: string, owner: string) {
@@ -231,16 +230,6 @@ export function withEvidenceWorklistSurfaces(
                 active_caller_status: 'opl_hosted_workbench_surface_consumes_domain_projection_refs',
                 migration_action: 'declare_workbench_projection_inputs_for_opl_app_generated_shell',
                 retained_domain_authority: ['status_projection_refs'],
-              },
-              {
-                module_id: `${targetDomainId}:functional-harness`,
-                migration_class: 'refs_only_domain_adapter',
-                owner,
-                code_paths: ['runtime/harness.ts'],
-                active_callers: ['OPL functional harness'],
-                active_caller_status: 'opl_generated_functional_harness_cases_target_domain_handler',
-                migration_action: 'derive_harness_cases_from_declarative_pack_and_opl_functional_runtime_harness',
-                retained_domain_authority: ['fixture_oracle_refs'],
               },
             ]
           : []),

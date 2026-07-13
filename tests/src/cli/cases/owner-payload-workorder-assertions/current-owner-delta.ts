@@ -23,23 +23,11 @@ export function assertCurrentOwnerDeltaToplineNextAction(surface: JsonRecord) {
   const delta = surface.current_owner_delta;
   const nextAction = surface.current_owner_delta_read_model.next_safe_action_or_none;
   const stageRunAction = surface.stage_run_cockpit?.next_required_owner_action ?? null;
-  const ownerAnswerMissing =
-    stageRunAction?.owner_answer_missing_before_opl_closeout_binding === true;
-  const expectedOperatorNextAction = ownerAnswerMissing && nextAction
-    ? {
-        ...nextAction,
-        missing_input_refs: stageRunAction.missing_input_refs,
-        required_ref_shape: stageRunAction.required_ref_shape,
-        stage_run_closeout_binding_ref: '/stage_run_cockpit/execution_authorization',
-        stage_run_closeout_binding_policy:
-          'domain_owner_answer_must_bind_stage_run_manifest_current_pointer_source_fingerprint_and_idempotency',
-      }
-    : nextAction;
   assert.deepEqual(surface.current_owner_delta_read_model.current_owner_delta, delta);
   assert.equal(surface.operator_current_owner_delta_owner, delta.current_owner);
   assert.equal(surface.operator_next_owner, delta.current_owner);
   assert.deepEqual(surface.current_owner_delta_next_action, nextAction);
-  assert.deepEqual(surface.operator_next_action, expectedOperatorNextAction);
+  assert.deepEqual(surface.operator_next_action, nextAction);
 
   if (nextAction) {
     assert.equal(surface.operator_next_action_source, 'current_owner_delta');
@@ -52,49 +40,7 @@ export function assertCurrentOwnerDeltaToplineNextAction(surface: JsonRecord) {
     'worklist_item_is_completion_claim',
   ]);
 
-  if (stageRunAction) {
-    assertStageRunAuthorizationNextAction(stageRunAction);
-    assert.deepEqual(surface.stage_run_next_required_owner_action, stageRunAction);
-  }
-  if (ownerAnswerMissing) {
-    assert.deepEqual(surface.operator_next_missing_input_refs, stageRunAction.missing_input_refs);
-    assert.deepEqual(surface.operator_next_action.required_ref_shape, stageRunAction.required_ref_shape);
-    assert.equal(
-      surface.operator_next_action.stage_run_closeout_binding_ref,
-      '/stage_run_cockpit/execution_authorization',
-    );
-  }
-}
-
-export function assertStageRunAuthorizationNextAction(action: JsonRecord) {
-  assert.equal(
-    action.surface_kind,
-    'opl_stage_run_execution_authorization_next_required_owner_action',
-  );
-  assert.equal(
-    action.action_kind,
-    'stage_run_execution_authorization_or_closeout_binding_required',
-  );
-  assert.equal(action.current_owner, action.owner);
-  assert.equal(action.next_required_owner, action.owner);
-  assert.equal(Array.isArray(action.missing_input_refs), true);
-  assert.equal(action.missing_input_refs.length > 0, true);
-  assertFalseAuthority(action, [
-    'can_submit_to_safe_action_shell',
-    'can_execute_domain_action',
-    'can_write_domain_truth',
-    'can_create_owner_receipt',
-    'can_create_typed_blocker',
-    'can_close_owner_chain',
-    'can_close_domain_ready',
-    'can_claim_domain_ready',
-    'can_claim_production_ready',
-    'domain_truth_changed',
-    'owner_receipt_signed',
-    'domain_typed_blocker_created',
-    'execution_blocker_is_domain_typed_blocker',
-    'worklist_item_is_completion_claim',
-  ]);
+  assert.equal(stageRunAction, null);
 }
 
 export function assertCurrentOwnerDeltaProjection(

@@ -985,7 +985,7 @@
           "contracts/opl-framework/family-runtime-attempt-contract.json",
           "contracts/opl-framework/family-runtime-temporal-first-contract.json",
           "contracts/opl-framework/family-runtime-online-substrate-contract.json",
-          "contracts/opl-framework/stage-route-scheduler-contract.json",
+          "contracts/opl-framework/stage-route-transport-contract.json",
           "contracts/opl-framework/current-owner-delta.schema.json",
           "contracts/opl-framework/capability-registry-resolver.schema.json#/$defs/capability_invocation_lifecycle_policy",
           "contracts/opl-framework/managed-runtime-three-layer-contract.json",
@@ -1797,7 +1797,7 @@
           "opl connect sync-skills --json",
           "opl connect modules --json",
           "opl connect packages manifest --json",
-          "opl connect reconcile-modules --json"
+          "opl packages update --json"
         ]
       },
       "app_read_model": {

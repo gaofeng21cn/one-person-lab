@@ -224,7 +224,7 @@ test('stage pack source spec bundles only diffable refs and never carries stage 
     nodes: [],
     edges: [],
     failure_localization: [],
-    admission_status: proofBundle.admission_status,
+    conformance_status: proofBundle.conformance_status,
     integrity: proofBundle.integrity,
     authority_boundary: {
       opl_role: 'graph_projection_only' as const,
@@ -285,7 +285,7 @@ test('stage pack source spec hash changes with source-spec refs without changing
     nodes: [],
     edges: [],
     failure_localization: [],
-    admission_status: proofBundle.admission_status,
+    conformance_status: proofBundle.conformance_status,
     integrity: proofBundle.integrity,
     authority_boundary: {
       opl_role: 'graph_projection_only' as const,

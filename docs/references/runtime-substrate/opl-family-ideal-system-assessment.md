@@ -102,7 +102,7 @@ One Person Lab 对外应保持三层产品认知：
 | Primitive | 做什么 | 不做什么 |
 | --- | --- | --- |
 | `owner-delta-controller` | 汇总 desired/current、next owner、accepted answer shape、hard gate、route-back。 | 不生成领域目标，不签 domain receipt。 |
-| `stage-attempt-runtime` | launch admission、execution authorization、provider attempt、lease、retry/dead-letter、closeout binding。 | 不决定 stage 内如何推理、写作、评审或选工具。 |
+| `stage-attempt-runtime` | provider attempt、retry budget、currentness 与 artifact refs transport。 | 不决定 stage route、推理、写作、评审或质量。 |
 | `stage-artifact-kernel` | Stage Folder、manifest、role artifact、hash、current pointer、lineage。 | 不判定 publication/fundability/visual/export quality。 |
 | `agent-pack-compiler` | 从 domain pack 生成 stage/action/tool/skill/App/CLI/MCP metadata。 | 不把领域语义硬编码进 OPL。 |
 | `generated-surface-host` | 托管 CLI、MCP、Skill/product-entry、status、workbench、default caller。 | 不让 domain repo 长期维护重复 wrapper。 |
@@ -154,7 +154,7 @@ Research question / study
 | --- | --- | --- |
 | `study_truth` | MAS | study.yaml、source policy、current_execution_envelope、医学 source/currentness。 |
 | `research_stage_pack` | MAS declares, OPL Pack compiles | analysis、manuscript、review、revision、publication handoff 的 stage/prompt/skill/knowledge/quality refs。 |
-| `stage_attempt_runtime` | OPL Runway | provider-backed attempt、lease、retry/dead-letter、human gate、closeout binding。 |
+| `stage_attempt_runtime` | OPL Runway | provider-backed attempt、retry budget、human/authority wait 与 progress refs。 |
 | `research_artifact_unit` | OPL Workspace shell + MAS artifact authority | analysis output、manuscript draft、review packet、revision delta、package handoff manifest。 |
 | `publication_quality_gate` | MAS | independent AI reviewer、publication criteria、quality gate receipt 或 typed blocker。 |
 | `owner_answer_bridge` | MAS owner answer, OPL projection | MAS owner receipt / typed blocker / human gate / route-back evidence 绑定当前 StageRun identity、source fingerprint 和 idempotency。 |
@@ -170,7 +170,7 @@ MAG 的理想定位是基金策略、撰写、评审和提交包 Agent。
 
 - grant truth、funder/program memory、specific aims、strategy/rationale、fundability verdict。
 - authoring quality/export verdict、package authority、submission human gate。
-- grant transition oracle、owner receipt signer、grant helper implementation。
+- non-authoritative grant route context、owner receipt signer、grant helper implementation；Codex CLI 独占 semantic stage route。
 
 上收或退役：
 

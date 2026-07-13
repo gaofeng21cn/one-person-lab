@@ -10,9 +10,6 @@ import {
   listExternalEvidenceReceipts,
 } from '../../ledger/index.ts';
 import { canonicalOwnerId } from '../../ledger/index.ts';
-import {
-  listStageRunExecutionAuthorizationReceipts,
-} from '../../stagecraft/index.ts';
 
 function uniqueStrings(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
@@ -45,62 +42,15 @@ function attemptWorkspaceLocator(attempt: JsonRecord) {
   return record(attempt.workspace_locator);
 }
 
-function attemptExecutionAuthorization(attempt: JsonRecord) {
-  const events = Array.isArray(attempt.activity_events)
-    ? attempt.activity_events.filter(isRecord)
-    : [];
-  const temporalStart = events
-    .map((event) => record(event.temporal_start))
-    .find((event) => isRecord(event.execution_authorization));
-  const authorization = record(temporalStart?.execution_authorization);
-  const ledgerReceipt = record(recordList(record(temporalStart?.execution_authorization_ledger_record).receipts)[0]);
+function attemptTransportIdentity(attempt: JsonRecord) {
   const stageAttemptId = stringValue(attempt.stage_attempt_id);
-  const sourceFingerprint = stringValue(attempt.source_fingerprint);
-  const domainId = stringValue(attempt.domain_id);
-  const stageId = stringValue(attempt.stage_id);
-  const externalLedgerReceipt = listStageRunExecutionAuthorizationReceipts()
-    .find((receipt) =>
-      stringValue(receipt.stage_attempt_id) === stageAttemptId
-      && (!sourceFingerprint || receipt.source_fingerprint === sourceFingerprint)
-      && (!domainId || receipt.domain_id === domainId)
-      && (!stageId || receipt.stage_id === stageId)
-    );
+  const locator = attemptWorkspaceLocator(attempt);
   return {
-    stage_run_id:
-      stringValue(authorization.stage_run_id)
-      ?? stringValue(ledgerReceipt.stage_run_id)
-      ?? externalLedgerReceipt?.stage_run_id
-      ?? null,
-    current_pointer_ref:
-      stringValue(authorization.current_pointer_ref)
-      ?? stringValue(ledgerReceipt.current_pointer_ref)
-      ?? externalLedgerReceipt?.current_pointer_ref
-      ?? null,
-    stage_manifest_ref:
-      stringValue(authorization.stage_manifest_ref)
-      ?? stringValue(ledgerReceipt.stage_manifest_ref)
-      ?? externalLedgerReceipt?.stage_manifest_ref
-      ?? null,
+    stage_run_id: stringValue(locator.stage_run_id),
     provider_attempt_ref:
-      stringValue(authorization.provider_attempt_ref)
-      ?? stringValue(ledgerReceipt.provider_attempt_ref)
-      ?? externalLedgerReceipt?.provider_attempt_ref
-      ?? null,
-    attempt_lease_ref:
-      stringValue(authorization.attempt_lease_ref)
-      ?? stringValue(ledgerReceipt.attempt_lease_ref)
-      ?? externalLedgerReceipt?.attempt_lease_ref
-      ?? null,
-    execution_authorization_decision_ref:
-      stringValue(authorization.execution_authorization_decision_ref)
-      ?? stringValue(ledgerReceipt.execution_authorization_decision_ref)
-      ?? externalLedgerReceipt?.execution_authorization_decision_ref
-      ?? null,
-    idempotency_key:
-      stringValue(authorization.idempotency_key)
-      ?? stringValue(ledgerReceipt.idempotency_key)
-      ?? externalLedgerReceipt?.idempotency_key
-      ?? null,
+      stringValue(attempt.provider_attempt_ref)
+      ?? (stageAttemptId ? `temporal://attempt/${encodeURIComponent(stageAttemptId)}` : null),
+    idempotency_key: stringValue(attempt.idempotency_key),
   };
 }
 
@@ -171,7 +121,7 @@ function domainDispatchIdentity(attempt: JsonRecord) {
 
 function targetIdentity(attempt: JsonRecord) {
   const locator = attemptWorkspaceLocator(attempt);
-  const executionAuthorization = attemptExecutionAuthorization(attempt);
+  const executionAuthorization = attemptTransportIdentity(attempt);
   return {
     domain_id: stringValue(attempt.domain_id),
     stage_id: stringValue(attempt.stage_id),
@@ -183,11 +133,6 @@ function targetIdentity(attempt: JsonRecord) {
     domain_source_fingerprint: stringValue(locator.domain_source_fingerprint),
     idempotency_key: executionAuthorization.idempotency_key,
     provider_attempt_ref: executionAuthorization.provider_attempt_ref,
-    attempt_lease_ref: executionAuthorization.attempt_lease_ref,
-    execution_authorization_decision_ref:
-      executionAuthorization.execution_authorization_decision_ref,
-    current_pointer_ref: executionAuthorization.current_pointer_ref,
-    stage_manifest_ref: executionAuthorization.stage_manifest_ref,
     profile: stringValue(locator.profile),
     profile_name: stringValue(locator.profile_name),
   };

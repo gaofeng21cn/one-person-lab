@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/workflow-profile-package-manifest.schema.json",
+  "title": "OPL Workflow Profile Package Manifest",
+  "type": "object",
+  "required": [
+    "surface_kind",
+    "package_id",
+    "display_name",
+    "publisher",
+    "version",
+    "source",
+    "package_role",
+    "carrier_source_role",
+    "codex_surface",
+    "profile_surface",
+    "managed_policy_surface",
+    "capability_dependencies"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "opl_workflow_profile_package_manifest.v1"
+    },
+    "package_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "publisher": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1
+    },
+    "package_role": {
+      "const": "workflow_profile"
+    },
+    "carrier_source_role": {
+      "const": "codex_plugin_default_carrier_not_package_truth"
+    },
+    "agent_id": false,
+    "codex_surface": {
+      "type": "object",
+      "required": [
+        "plugin_id",
+        "plugin_payload_manifest_url",
+        "required_skill_ids"
+      ],
+      "properties": {
+        "plugin_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "plugin_payload_manifest_url": {
+          "type": "string",
+          "minLength": 1
+        },
+        "required_skill_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "profile_surface": {
+      "type": "object",
+      "required": [
+        "runtime_profile",
+        "authoring_sources",
+        "merge_context_paths",
+        "existing_profile_policy"
+      ],
+      "properties": {
+        "existing_profile_policy": {
+          "const": "semantic_merge_required"
+        }
+      },
+      "additionalProperties": true
+    },
+    "managed_policy_surface": {
+      "type": "object",
+      "required": [
+        "policy_kind",
+        "source_path",
+        "schema_path"
+      ],
+      "properties": {
+        "policy_kind": {
+          "const": "opl_flow_workflow_policy"
+        }
+      },
+      "additionalProperties": true
+    },
+    "capability_dependencies": {
+      "type": "array"
+    }
+  },
+  "additionalProperties": true
+}

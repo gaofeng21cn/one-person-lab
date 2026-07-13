@@ -128,6 +128,7 @@ export function createFakeCompanionInstallEnv(homeRoot: string) {
   createFakeUiUxProMaxSource(uiUxRoot);
   createFakeMineruDocumentExtractorSource(mineruRoot);
   return {
+    OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
     OPL_COMPANION_SOURCES_ROOT: sourceRoot,
     OPL_OFFICECLI_SOURCE_ROOT: officeCliRoot,
     OPL_UI_UX_PRO_MAX_SOURCE_ROOT: uiUxRoot,

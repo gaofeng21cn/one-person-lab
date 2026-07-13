@@ -2,287 +2,40 @@ import { buildDockerWebuiSettingsReadModel } from './app-state-settings-control-
 import { resolveSettingsCodexAccess } from './app-state-settings-control-center-parts/codex-access-read-model.ts';
 import { listOplConnections } from '../connect/index.ts';
 import {
+  actionCatalogEntry,
+  buildCapabilityTaskAwarenessRefs,
+  buildSettingsIa,
+  buildTaskEntries,
+  groupState,
+  sectionState,
+  SETTINGS_CONFIGURATION_ACTION_IDS,
+} from './app-state-settings-control-center-parts/task-read-model.ts';
+import {
+  asList,
+  asRecord,
+  asString,
+  routeFor,
+  settingsAuthorityFlags,
+  statusTone,
+  type BuildSettingsControlCenterInput,
+} from './app-state-settings-control-center-parts/shared.ts';
+import {
   SETTINGS_CONTROL_CENTER_ACTION_IDS,
   SETTINGS_CONTROL_CENTER_ACTION_SECTIONS,
   SETTINGS_CONTROL_CENTER_ACTIONS,
   SETTINGS_CONTROL_CENTER_CONTRACT_REF,
   SETTINGS_CONTROL_CENTER_GROUPS,
-  SETTINGS_CONTROL_CENTER_SECONDARY_ROUTES,
   SETTINGS_ISSUE_CATALOG,
   buildAppAionConsumerOnlyReadback,
-  type SettingsAction,
-  type SettingsControlCenterGroup,
 } from './app-state-settings-control-center-parts/catalog.ts';
 
 export { SETTINGS_CONTROL_CENTER_ACTIONS };
+export type { BuildSettingsControlCenterInput } from './app-state-settings-control-center-parts/shared.ts';
 
-const SETTINGS_CONFIGURATION_ACTION_IDS = [
-  'workspace_root_set',
-  'update_channel',
-  'developer_supervisor',
-] as const;
 const SETTINGS_ALLOWED_ACTION_IDS = [
   ...SETTINGS_CONTROL_CENTER_ACTION_IDS,
   ...SETTINGS_CONFIGURATION_ACTION_IDS,
 ] as const;
-
-type JsonRecord = Record<string, unknown>;
-function asRecord(value: unknown): JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value) ? value as JsonRecord : {};
-}
-
-function asString(value: unknown): string | null {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function asList(value: unknown): JsonRecord[] {
-  return Array.isArray(value) ? value.filter((entry): entry is JsonRecord => Boolean(entry) && typeof entry === 'object' && !Array.isArray(entry)) : [];
-}
-
-function statusTone(status: string | null) {
-  if (!status) return 'unknown';
-  return ['ready', 'healthy', 'ok', 'installed', 'enabled', 'stable'].includes(status)
-    ? 'ready'
-    : 'attention_needed';
-}
-
-function actionCatalogEntry(action: SettingsAction) {
-  return {
-    stable_id: action.stable_id,
-    surface_class: 'action',
-    owner: 'one-person-lab',
-    lifecycle: 'one_time_action',
-    action_id: action.action_id,
-    label: action.label,
-    section_id: action.section_id,
-    task_kind: action.task_kind,
-    taxonomy: action.taxonomy,
-    route: routeFor(action.action_id),
-    delegated_surface: action.delegated_surface,
-    payload_fields: action.payload_fields,
-    payload_required: action.payload_fields.length > 0,
-    mutates: action.mutates,
-    dry_run_supported: action.dry_run_supported,
-    confirmation_required: action.confirmation_required,
-    danger_level: action.danger_level,
-    impact: action.impact,
-    rollback_action_id: action.rollback_action_id ?? null,
-    follow_up_action_ids: action.follow_up_action_ids,
-    verify_action_id: action.verify_action_id ?? null,
-    verify_route: action.verify_action_id ? routeFor(action.verify_action_id) : null,
-    authority_flags: settingsAuthorityFlags(),
-  };
-}
-
-function settingsAuthorityFlags() {
-  return {
-    can_write_domain_truth: false,
-    can_sign_domain_receipt: false,
-    can_create_owner_receipt: false,
-    can_create_typed_blocker: false,
-    can_write_runtime_queue: false,
-    can_write_provider_queue: false,
-    can_read_memory_body: false,
-    can_read_artifact_body: false,
-    can_authorize_quality_verdict: false,
-    can_claim_app_release_ready: false,
-    can_claim_production_ready: false,
-  };
-}
-
-function routeFor(actionId: string) {
-  return `opl app action execute --action ${actionId}`;
-}
-
-function runtimeSourceCarrierRef(entry: JsonRecord) {
-  const packageId = asString(entry.package_id) ?? 'unknown';
-  return `app_state.runtime_source_carriers.items.${packageId}`;
-}
-
-function buildCapabilityTaskAwarenessRefs(input: BuildSettingsControlCenterInput) {
-  const moduleItems = asList(input.modules.items);
-  const temporal = asRecord(asRecord(input.provider).temporal);
-  const temporalStatus = asString(temporal.health_status) ?? asString(temporal.status) ?? 'unknown';
-  return {
-    surface_kind: 'opl_settings_capability_task_awareness_refs.v1',
-    source_refs: [
-      'app_state.runtime_source_carriers.items',
-      'app_state.provider.temporal',
-      'app_state.actions#task_action_receipt_preview',
-      'app_state.actions#task_export_bundle_preview',
-      'app_state.operator.workbench.task_drilldowns[].workflow_refs',
-    ],
-    capability_health_refs: moduleItems.map((entry) => {
-      const packageId = asString(entry.package_id) ?? 'unknown';
-      const status = asString(entry.source_health_status) ?? 'unknown';
-      return {
-        id: packageId,
-        title: asString(entry.label) ?? packageId,
-        status,
-        ref: runtimeSourceCarrierRef(entry),
-        owner: 'one-person-lab',
-        next_action: status === 'ready'
-          ? 'none'
-          : 'settings_sync_capabilities',
-      };
-    }),
-    connector_readiness_refs: [
-      {
-        id: 'temporal_provider',
-        title: 'Temporal provider',
-        status: statusTone(temporalStatus),
-        ref: 'app_state.provider.temporal',
-        owner: 'one-person-lab',
-        next_action: statusTone(temporalStatus) === 'ready'
-          ? 'provider_scheduler_status'
-          : 'settings_sync_capabilities',
-      },
-      {
-        id: 'codex_surface',
-        title: 'Codex-visible capability surface',
-        status: 'refs_available',
-        ref: 'app_state.actions#agent_package_activate',
-        owner: 'one-person-lab',
-        next_action: 'agent_package_activate',
-      },
-    ],
-    workflow_refs: [
-      {
-        id: 'task_action_receipt_preview',
-        title: 'Plan-approve-run receipt preview',
-        status: 'dry_run_refs_only',
-        ref: 'app_state.actions#task_action_receipt_preview',
-        owner: 'one-person-lab',
-        next_action: 'execute_dry_run_preview',
-      },
-      {
-        id: 'task_export_bundle_preview',
-        title: 'Reproducibility export bundle preview',
-        status: 'dry_run_refs_only',
-        ref: 'app_state.actions#task_export_bundle_preview',
-        owner: 'one-person-lab',
-        next_action: 'execute_dry_run_preview',
-      },
-      {
-        id: 'current_task_workflow_refs',
-        title: 'Current task workflow refs',
-        status: 'refs_available',
-        ref: 'app_state.operator.workbench.task_drilldowns[].workflow_refs',
-        owner: 'domain_owner_projection',
-        next_action: 'list_refs_only_no_workflow_body',
-      },
-    ],
-    content_policy: 'refs_only_no_skill_body_no_workflow_body',
-    authority_boundary: settingsAuthorityFlags(),
-  };
-}
-
-function actionState(action: SettingsAction, input: BuildSettingsControlCenterInput) {
-  if (action.action_id === 'settings_repair_model_access') {
-    return resolveSettingsCodexAccess(input.core).model_access_status;
-  }
-  if (action.action_id === 'settings_configure_webui_api_key') {
-    return resolveSettingsCodexAccess(input.core).opl_gateway_status;
-  }
-  if (action.action_id === 'settings_sync_capabilities' || action.action_id === 'settings_apply_opl_packages') {
-    const summary = asRecord(asRecord(input.modules).summary);
-    return summary.healthy_default_carriers_count === summary.default_carriers_count ? 'ready' : 'attention_needed';
-  }
-  if (action.action_id === 'settings_prune_runtime_roots_dry_run') {
-    return 'plan_only';
-  }
-  if (action.action_id === 'settings_open_docker_webui' || action.action_id === 'settings_diagnose_docker_webui') {
-    return 'ready';
-  }
-  if (action.action_id === 'settings_rollback_runtime_substrate') {
-    return 'manual_required';
-  }
-  return 'ready';
-}
-
-function sectionState(sectionId: string, input: BuildSettingsControlCenterInput) {
-  const relatedActions = SETTINGS_CONTROL_CENTER_ACTIONS.filter((action) => action.section_id === sectionId);
-  if (relatedActions.some((action) => actionState(action, input) === 'attention_needed')) {
-    return 'attention_needed';
-  }
-  return SETTINGS_CONTROL_CENTER_ACTION_SECTIONS.find((section) => section.section_id === sectionId)?.state ?? 'available';
-}
-
-function groupState(group: SettingsControlCenterGroup, input: BuildSettingsControlCenterInput) {
-  if (group.action_section_ids.length === 0) {
-    return 'available';
-  }
-  if (group.action_section_ids.some((sectionId) => sectionState(sectionId, input) === 'attention_needed')) {
-    return 'attention_needed';
-  }
-  return 'available';
-}
-
-function buildTaskEntries(input: BuildSettingsControlCenterInput) {
-  return SETTINGS_CONTROL_CENTER_ACTIONS.map((action) => ({
-    task_id: action.action_id,
-    stable_id: action.stable_id,
-    action_id: action.action_id,
-    section_id: action.section_id,
-    label: action.label,
-    task_kind: action.task_kind,
-    taxonomy: action.taxonomy,
-    state: actionState(action, input),
-    route: routeFor(action.action_id),
-    delegated_surface: action.delegated_surface,
-    dry_run_route: `${routeFor(action.action_id)} --dry-run`,
-    verify_action_id: action.verify_action_id ?? null,
-    verify_route: action.verify_action_id ? routeFor(action.verify_action_id) : null,
-    payload_fields: action.payload_fields,
-    payload_required: action.payload_fields.length > 0,
-    dry_run_supported: action.dry_run_supported,
-    confirmation_required: action.confirmation_required,
-    danger_level: action.danger_level,
-    rollback_action_id: action.rollback_action_id ?? null,
-    mutates: action.mutates,
-    authority_flags: settingsAuthorityFlags(),
-  }));
-}
-
-function buildSettingsIa(taskEntries: ReturnType<typeof buildTaskEntries>) {
-  return {
-    surface_kind: 'opl_settings_control_center_ia.v1',
-    ordinary_entry: 'settings_control_center',
-    entry_policy: 'top_level_control_center_route',
-    ordinary_route_ids: SETTINGS_CONTROL_CENTER_GROUPS.map((group) => group.route_id),
-    secondary_or_deep_link_route_ids: SETTINGS_CONTROL_CENTER_SECONDARY_ROUTES.map((route) => route.route_id),
-    route_groups: SETTINGS_CONTROL_CENTER_GROUPS.map((group) => ({
-      route_id: group.route_id,
-      group_id: group.group_id,
-      label: group.label,
-      role: group.role,
-      action_section_ids: group.action_section_ids,
-      action_ids: taskEntries
-        .filter((entry) => group.action_section_ids.includes(entry.section_id))
-        .map((entry) => entry.action_id),
-    })),
-    secondary_or_deep_link_routes: SETTINGS_CONTROL_CENTER_SECONDARY_ROUTES.map((route) => ({
-      route_id: route.route_id,
-      group_id: route.group_id,
-      parent_route_id: route.parent_route_id,
-      label: route.label,
-      role: route.role,
-      action_section_ids: route.action_section_ids,
-      action_ids: taskEntries
-        .filter((entry) => route.action_section_ids.includes(entry.section_id))
-        .map((entry) => entry.action_id),
-      route_scope: 'secondary_or_deep_link',
-      ordinary_entry_policy: route.ordinary_entry_policy,
-      app_shell_must_not_promote_to_top_level_tab: true,
-    })),
-    app_shell_contract: {
-      app_consumes_read_model_only: true,
-      aion_shell_is_renderer_only: true,
-      shell_must_not_infer_domain_truth: true,
-      shell_must_not_execute_unlisted_actions: true,
-    },
-  };
-}
 
 type SettingsProjectionItem = {
   item_id: string;
@@ -966,16 +719,6 @@ function buildIssueQueue(input: BuildSettingsControlCenterInput) {
     authority_flags: settingsAuthorityFlags(),
   }));
 }
-
-export type BuildSettingsControlCenterInput = {
-  profile: 'fast' | 'full';
-  core: JsonRecord;
-  developerMode: JsonRecord;
-  modules: JsonRecord;
-  provider: JsonRecord;
-  release: JsonRecord;
-  paths: JsonRecord;
-};
 
 export function buildSettingsControlCenter(input: BuildSettingsControlCenterInput) {
   const codex = asRecord(asRecord(input.core).codex);

@@ -1,19 +1,19 @@
-import { assert, fs, parseJsonText, path, runCli, test } from '../helpers.ts';
+import { assert, fs, parseJsonText, path, runCliReadOnly, test } from '../helpers.ts';
 import {
   buildReadyAgentRepo,
   writeJson,
 } from './agents-conformance-fixtures.ts';
 
-test('agents conformance blocks missing StageRun kernel profile', () => {
+test('agents conformance blocks missing StageRun kernel profile', async () => {
   const repoDir = buildReadyAgentRepo();
   fs.rmSync(path.join(repoDir, 'contracts', 'stage_run_kernel_profile.json'));
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
 
   assert.equal(report.status, 'blocked');
   assert.equal(report.reports[0].stage_run_kernel_profile_checks.status, 'blocked');
@@ -23,16 +23,16 @@ test('agents conformance blocks missing StageRun kernel profile', () => {
   );
 });
 
-test('agents conformance blocks missing controlled StageRun canary evidence', () => {
+test('agents conformance blocks missing controlled StageRun canary evidence', async () => {
   const repoDir = buildReadyAgentRepo();
   fs.rmSync(path.join(repoDir, 'contracts', 'stage_run_canary_evidence.json'));
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
 
   assert.equal(report.status, 'blocked');
   assert.equal(report.reports[0].stage_run_canary_evidence_checks.status, 'blocked');
@@ -42,21 +42,22 @@ test('agents conformance blocks missing controlled StageRun canary evidence', ()
   );
 });
 
-test('agents conformance keeps StageRun strategy refs advisory and current owner delta as default surface', () => {
+test('agents conformance keeps StageRun strategy refs advisory and current owner delta as default surface', async () => {
   const repoDir = buildReadyAgentRepo();
   const profilePath = path.join(repoDir, 'contracts', 'stage_run_kernel_profile.json');
   const profile = parseJsonText(fs.readFileSync(profilePath, 'utf8')) as Record<string, any>;
-  profile.launch_admission_policy = {
+  profile.stage_context_policy = {
     hard_blockers: [
       'identity',
       'owner',
       'scope',
       'selected_executor',
       'authority_boundary',
-      'required_role_artifacts',
-      'receipt_or_blocker_shape',
       'forbidden_write',
-      'replay_audit_lineage',
+      'currentness',
+      'permission_or_credential',
+      'irreversible_action',
+      'explicit_human_gate',
     ],
     advisory_refs: [
       'prompt_refs',
@@ -76,18 +77,18 @@ test('agents conformance keeps StageRun strategy refs advisory and current owner
   };
   writeJson(profilePath, profile);
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
   const checks = report.reports[0].stage_run_kernel_profile_checks;
 
   assert.equal(report.status, 'passed');
   assert.equal(checks.status, 'passed');
-  assert.equal(checks.launch_admission_policy.advisory_refs_can_block_launch, false);
-  assert.deepEqual(checks.launch_admission_policy.advisory_refs, [
+  assert.equal(checks.stage_context_policy.advisory_refs_can_block_launch, false);
+  assert.deepEqual(checks.stage_context_policy.advisory_refs, [
     'prompt_refs',
     'skill_refs',
     'tool_affordance_refs',
@@ -101,19 +102,17 @@ test('agents conformance keeps StageRun strategy refs advisory and current owner
   assert.equal(checks.default_read_surface.replay_packet_default, false);
 });
 
-test('agents conformance blocks StageRun profile that turns strategy refs or raw worklist into launch authority', () => {
+test('agents conformance blocks StageRun profile that turns strategy refs or raw worklist into launch authority', async () => {
   const repoDir = buildReadyAgentRepo();
   const profilePath = path.join(repoDir, 'contracts', 'stage_run_kernel_profile.json');
   const profile = parseJsonText(fs.readFileSync(profilePath, 'utf8')) as Record<string, any>;
-  profile.launch_admission_policy = {
+  profile.stage_context_policy = {
     hard_blockers: [
       'identity',
       'owner',
       'scope',
       'selected_executor',
       'authority_boundary',
-      'required_role_artifacts',
-      'receipt_or_blocker_shape',
       'prompt_refs',
       'skill_refs',
       'knowledge_refs',
@@ -129,12 +128,12 @@ test('agents conformance blocks StageRun profile that turns strategy refs or raw
   };
   writeJson(profilePath, profile);
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
   const checks = report.reports[0].stage_run_kernel_profile_checks;
 
   assert.equal(report.status, 'blocked');
@@ -173,27 +172,28 @@ test('agents conformance blocks StageRun profile that turns strategy refs or raw
   );
 });
 
-test('agents conformance requires quality budgets to advance while owner receipts still guard ready claims', () => {
+test('agents conformance rejects a second transition authority plane and keeps quality budgets non-blocking', async () => {
   const repoDir = buildReadyAgentRepo();
   const profilePath = path.join(repoDir, 'contracts', 'stage_run_kernel_profile.json');
   const profile = parseJsonText(fs.readFileSync(profilePath, 'utf8')) as Record<string, any>;
-  profile.transition_authority.quality_budget_exhaustion_blocks_transition = true;
-  profile.transition_authority.owner_receipt_required_for_quality_or_ready_claim = false;
+  profile.codex_semantic_route_policy.quality_budget_exhaustion_blocks_route = true;
+  profile.codex_semantic_route_policy.owner_receipt_required_for_quality_or_ready_claim = false;
+  profile.transition_authority = { terminal_transition_authority: 'program_oracle' };
   writeJson(profilePath, profile);
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
   const checks = report.reports[0].stage_run_kernel_profile_checks;
 
   assert.equal(report.status, 'blocked');
   assert.equal(checks.status, 'blocked');
   assert.equal(
     checks.blockers.includes(
-      'stage_run_kernel_profile_quality_budget_exhaustion_must_not_block_transition',
+      'stage_run_kernel_profile_quality_budget_exhaustion_must_not_block_route',
     ),
     true,
   );
@@ -203,9 +203,13 @@ test('agents conformance requires quality budgets to advance while owner receipt
     ),
     true,
   );
+  assert.equal(
+    checks.blockers.includes('stage_run_kernel_profile_second_transition_authority_plane_forbidden'),
+    true,
+  );
 });
 
-test('agents conformance blocks controlled StageRun canary evidence missing strategy layers', () => {
+test('agents conformance blocks controlled StageRun canary evidence missing strategy layers', async () => {
   const repoDir = buildReadyAgentRepo();
   const evidencePath = path.join(repoDir, 'contracts', 'stage_run_canary_evidence.json');
   const evidence = parseJsonText(fs.readFileSync(evidencePath, 'utf8')) as Record<string, any>;
@@ -214,12 +218,12 @@ test('agents conformance blocks controlled StageRun canary evidence missing stra
   };
   writeJson(evidencePath, evidence);
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
   const checks = report.reports[0].stage_run_canary_evidence_checks;
 
   assert.equal(report.status, 'blocked');
@@ -234,7 +238,7 @@ test('agents conformance blocks controlled StageRun canary evidence missing stra
   );
 });
 
-test('agents conformance blocks controlled StageRun canary evidence that claims authority', () => {
+test('agents conformance blocks controlled StageRun canary evidence that claims authority', async () => {
   const repoDir = buildReadyAgentRepo();
   const evidencePath = path.join(repoDir, 'contracts', 'stage_run_canary_evidence.json');
   const evidence = parseJsonText(fs.readFileSync(evidencePath, 'utf8')) as Record<string, any>;
@@ -243,12 +247,12 @@ test('agents conformance blocks controlled StageRun canary evidence that claims 
   evidence.closeout.same_attempt_self_review = true;
   writeJson(evidencePath, evidence);
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
   const checks = report.reports[0].stage_run_canary_evidence_checks;
 
   assert.equal(report.status, 'blocked');
@@ -267,15 +271,15 @@ test('agents conformance blocks controlled StageRun canary evidence that claims 
   );
 });
 
-test('agents conformance projects controlled StageRun canary evidence for operator reading', () => {
+test('agents conformance projects controlled StageRun canary evidence for operator reading', async () => {
   const repoDir = buildReadyAgentRepo();
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
   const summary = report.reports[0].stage_run_canary_evidence_checks.operator_summary;
 
   assert.equal(summary.surface_kind, 'opl_stage_run_controlled_canary_operator_summary');
@@ -292,7 +296,7 @@ test('agents conformance projects controlled StageRun canary evidence for operat
   assert.equal(summary.authority_boundary.can_claim_production_ready, false);
 });
 
-test('agents conformance blocks controlled StageRun canary evidence overclaim fields', () => {
+test('agents conformance blocks controlled StageRun canary evidence overclaim fields', async () => {
   const repoDir = buildReadyAgentRepo();
   const evidencePath = path.join(repoDir, 'contracts', 'stage_run_canary_evidence.json');
   const evidence = parseJsonText(fs.readFileSync(evidencePath, 'utf8')) as Record<string, any>;
@@ -304,12 +308,12 @@ test('agents conformance blocks controlled StageRun canary evidence overclaim fi
   };
   writeJson(evidencePath, evidence);
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
   const checks = report.reports[0].stage_run_canary_evidence_checks;
 
   assert.equal(report.status, 'blocked');

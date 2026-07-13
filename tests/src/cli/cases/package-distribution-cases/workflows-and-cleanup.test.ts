@@ -21,53 +21,76 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.match(workflow, /workflow_dispatch:/);
   assert.match(workflow, /workflow_call:/);
   assert.match(workflow, /release_gate:\s*\n\s*description:/);
-  assert.match(workflow, /version="\$\{version#v\}"/);
+  assert.match(workflow, /release_set_generation:/);
+  assert.match(workflow, /generation="\$\{generation#v\}"/);
   assert.match(releaseCallerWorkflow, /release:\s*\n\s*types:\s*\n\s*-\s*published/);
   assert.match(releaseCallerWorkflow, /uses:\s+\.\/\.github\/workflows\/packages\.yml/);
   assert.match(releaseCallerWorkflow, /release_gate:\s*github_release_published/);
   assert.match(releaseCallerWorkflow, /promotion_target:\s*latest-stable/);
   assert.doesNotMatch(workflow, /\n  push:\n/);
   assert.doesNotMatch(workflow, /webui-image:/);
-  assert.match(workflow, /oras push/);
+  assert.match(workflow, /concurrency:[\s\S]*opl-package-publication-/);
+  assert.match(workflow, /cancel-in-progress:\s*false/);
+  assert.match(workflow, /oci-publication-preflight\.mjs/);
+  assert.match(workflow, /org\.opencontainers\.image\.source/);
+  assert.match(workflow, /visibility=public/);
+  const publicPackageGates = [...workflow.matchAll(/ensure_public_package\(\) \{([\s\S]*?)\n          \}/g)]
+    .map((match) => match[1]);
+  assert.equal(publicPackageGates.length, 2);
+  for (const gate of publicPackageGates) {
+    assert.match(gate, /for attempt in \{1\.\.24\}/);
+    assert.ok(gate.indexOf('readback="$(gh api') < gate.indexOf('gh api --method PATCH'));
+    assert.doesNotMatch(gate, /visibility=public[^\n]*\n\s*&& readback=/);
+    assert.match(gate, /visibility=public >\/dev\/null 2>&1 \|\| true/);
+  }
+  assert.match(workflow, /--anonymous/);
+  assert.match(workflow, /--expected-digest/);
   assert.match(workflow, /one-person-lab-manifest:latest-stable/);
   assert.match(workflow, /OPL_PREVIOUS_PACKAGE_MANIFEST/);
   assert.match(workflow, /args\+=\(--previous-manifest "\$OPL_PREVIOUS_PACKAGE_MANIFEST"\)/);
-  assert.ok(workflow.indexOf('Fetch previous package channel manifest') < workflow.indexOf('Build package archives and release manifest'));
+  assert.ok(workflow.indexOf('Fetch previous latest-stable Release Set') < workflow.indexOf('Build Package archives and Release Set manifests'));
   assert.match(workflow, /one-person-lab-packages/);
   assert.doesNotMatch(workflow, /one-person-lab-modules/);
   assert.match(workflow, /one-person-lab-framework/);
-  assert.match(workflow, /one-person-lab-manifest:\$\{OPL_RELEASE_VERSION\}/);
-  assert.doesNotMatch(workflow, /one-person-lab-manifest:\$\{OPL_RELEASE_VERSION\}" stable/);
+  assert.match(workflow, /carrier="ghcr\.io\/\$\{OPL_PACKAGES_OWNER\}\/one-person-lab-manifest"/);
+  assert.match(workflow, /generation_ref="\$\{carrier\}:\$\{OPL_RELEASE_SET_GENERATION\}"/);
+  assert.match(workflow, /package-manifest\.json/);
+  assert.doesNotMatch(workflow, /agent-package-manifest\.json/);
   assert.match(workflow, /oras tag .* candidate/);
   assert.match(workflow, /if \[ "\$OPL_PACKAGE_PROMOTION_TARGET" = latest-stable \]/);
   assert.match(workflow, /oras tag .* latest-stable/);
   assert.doesNotMatch(workflow, /oras tag .*\slatest\s*$/m);
   assert.match(workflow, /changed_packages_json/);
-  assert.match(workflow, /Resolve changed package publication plan/);
+  assert.match(workflow, /Resolve changed Package publication plan/);
   assert.match(workflow, /OPL_CHANGED_PACKAGES_JSON/);
   assert.match(workflow, /OPL_PACKAGE_RELEASE_GATE" = github_release_published/);
   assert.match(workflow, /oras push .*--format json/s);
   assert.match(workflow, /finalize-package-channel-digests\.mjs/);
-  assert.ok(workflow.indexOf('finalize-package-channel-digests.mjs') < workflow.indexOf('one-person-lab-manifest:${OPL_RELEASE_VERSION}'));
+  assert.ok(workflow.indexOf('finalize-package-channel-digests.mjs') < workflow.indexOf('generation_ref="${carrier}:${OPL_RELEASE_SET_GENERATION}"'));
   assert.doesNotMatch(workflow, /docker\/build-push-action/);
   assert.doesNotMatch(workflow, /one-person-lab-webui/);
-  assert.match(workflow, /Upload prepared package artifacts/);
+  assert.match(workflow, /Upload prepared Package artifacts/);
   assert.match(dailyPackageWorkflow, /schedule:/);
   assert.match(dailyPackageWorkflow, /cron:/);
+  assert.match(dailyPackageWorkflow, /group: opl-daily-package-channel-\$\{\{ github\.repository_owner \}\}/);
+  assert.match(dailyPackageWorkflow, /cancel-in-progress: false/);
   assert.match(dailyPackageWorkflow, /base="\$\(date -u \+'%y\.%-m\.%-d'\)"/);
-  assert.match(dailyPackageWorkflow, /version="\$\{base#v\}"/);
-  assert.doesNotMatch(dailyPackageWorkflow, /-nightly/);
+  assert.match(dailyPackageWorkflow, /oras repo tags/);
+  assert.doesNotMatch(dailyPackageWorkflow, /if ! oras repo tags/);
+  assert.match(dailyPackageWorkflow, /release-set-generation\.mjs/);
   assert.match(dailyPackageWorkflow, /workflow_dispatch:/);
   assert.match(dailyPackageWorkflow, /force_publish:/);
+  assert.match(dailyPackageWorkflow, /force_publish[\s\S]*publish_required=true/);
   assert.match(dailyPackageWorkflow, /npm run packages:manifest/);
+  assert.match(dailyPackageWorkflow, /OPL_PACKAGE_RELEASE_GATE:\s*daily_package_channel_detection/);
   assert.match(dailyPackageWorkflow, /npm run packages:daily-check/);
   assert.match(dailyPackageWorkflow, /one-person-lab-manifest:latest-stable/);
   assert.match(dailyPackageWorkflow, /test -n "\$current"/);
   assert.match(dailyPackageWorkflow, /--previous-manifest "\$\{\{ steps\.current\.outputs\.current_manifest \}\}"/);
-  assert.ok(dailyPackageWorkflow.indexOf('Fetch current latest package channel manifest') < dailyPackageWorkflow.indexOf('Build candidate package archives and manifest'));
+  assert.ok(dailyPackageWorkflow.indexOf('Fetch current latest-stable Release Set manifest') < dailyPackageWorkflow.indexOf('Build candidate Package archives and Release Set manifest'));
   assert.match(dailyPackageWorkflow, /args\+=\(--current-manifest "\$\{\{ steps\.current\.outputs\.current_manifest \}\}"\)/);
   assert.match(dailyPackageWorkflow, /uses:\s+\.\/\.github\/workflows\/packages\.yml/);
-  assert.match(dailyPackageWorkflow, /release_gate:\s*daily_package_channel_changed/);
+  assert.match(dailyPackageWorkflow, /release_gate:.*daily_package_channel_forced.*daily_package_channel_changed/);
   assert.match(dailyPackageWorkflow, /publish_required == 'true'/);
   assert.doesNotMatch(dailyPackageWorkflow, /publish_required="true"/);
   assert.match(dailyPackageWorkflow, /changed_packages_json:/);
@@ -76,14 +99,34 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.doesNotMatch(dailyPackageWorkflow, /one-person-lab-webui/);
 });
 
+test('daily Release Set generation allocates the next immutable same-day revision', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-release-set-generation-'));
+  const tags = path.join(root, 'tags.txt');
+  fs.writeFileSync(tags, ['26.7.12', '26.7.12-r2', 'candidate', '26.7.12-r4', '26.7.11'].join('\n'));
+  const next = execFileSync(process.execPath, [
+    path.join(repoRoot, 'scripts/release-set-generation.mjs'),
+    '--base', '26.7.12',
+    '--existing-tags-file', tags,
+  ], { encoding: 'utf8' }).trim();
+  assert.equal(next, '26.7.12-r5');
+
+  fs.writeFileSync(tags, 'candidate\nlatest-stable\n');
+  const first = execFileSync(process.execPath, [
+    path.join(repoRoot, 'scripts/release-set-generation.mjs'),
+    '--base', '26.7.13',
+    '--existing-tags-file', tags,
+  ], { encoding: 'utf8' }).trim();
+  assert.equal(first, '26.7.13');
+});
+
 function writeDailyCatalogFixture(root: string, name: string, packages: Record<string, { version: string; digest: string }>) {
   const target = path.join(root, name);
   const packageCatalog = Object.fromEntries(Object.entries(packages).map(([packageId, entry]) => [packageId, {
     package_id: packageId,
-    latest_version: entry.version,
+    selected_version: entry.version,
     versions: [{
       package_version: entry.version,
-      promotion_status: 'promoted',
+      selection_status: 'selected_for_release_set',
       package_content_digest: entry.digest,
     }],
   }]));
@@ -105,20 +148,20 @@ test('daily package detector publishes only version-bumped changed packages and 
     path.join(repoRoot, 'scripts/package-channel-daily-check.mjs'),
     '--candidate-manifest', unchanged,
     '--current-manifest', current,
-    '--version', '26.7.12',
+    '--release-set-generation', '26.7.12',
   ], { encoding: 'utf8' })) as Record<string, any>;
   assert.equal(unchangedOutput.publish_required, false);
   assert.deepEqual(unchangedOutput.changed_packages, []);
 
   const bumped = writeDailyCatalogFixture(root, 'bumped.json', {
-    mas: { version: '0.1.0-alpha.5', digest: `sha256:${'3'.repeat(64)}` },
+    mas: { version: '0.1.0', digest: `sha256:${'3'.repeat(64)}` },
     mag: { version: '0.1.0', digest: `sha256:${'2'.repeat(64)}` },
   });
   const bumpedOutput = parseJsonText(execFileSync(process.execPath, [
     path.join(repoRoot, 'scripts/package-channel-daily-check.mjs'),
     '--candidate-manifest', bumped,
     '--current-manifest', current,
-    '--version', '26.7.12',
+    '--release-set-generation', '26.7.12',
   ], { encoding: 'utf8' })) as Record<string, any>;
   assert.equal(bumpedOutput.publish_required, true);
   assert.deepEqual(bumpedOutput.changed_packages, ['mas']);
@@ -132,7 +175,7 @@ test('daily package detector publishes only version-bumped changed packages and 
     path.join(repoRoot, 'scripts/package-channel-daily-check.mjs'),
     '--candidate-manifest', unbumped,
     '--current-manifest', current,
-    '--version', '26.7.12',
+    '--release-set-generation', '26.7.12',
   ], { encoding: 'utf8' }), /package content changed without a package version bump: mas/);
 });
 
@@ -286,7 +329,7 @@ test('release discipline fails closed when workflow restores tag-push or WebUI p
       '  workflow_dispatch:',
       '  workflow_call:',
       '    inputs:',
-      '      opl_version:',
+      '      release_set_generation:',
       '        required: true',
       '        type: string',
       '      release_gate:',
@@ -298,7 +341,7 @@ test('release discipline fails closed when workflow restores tag-push or WebUI p
       'jobs:',
       '  module-packages:',
       '    steps:',
-      '      - run: oras push "ghcr.io/example/one-person-lab-manifest:${OPL_RELEASE_VERSION}"',
+      '      - run: oras push "ghcr.io/example/one-person-lab-manifest:${OPL_RELEASE_SET_GENERATION}"',
       '  webui-image:',
       '    steps:',
       '      - uses: docker/build-push-action@v6',

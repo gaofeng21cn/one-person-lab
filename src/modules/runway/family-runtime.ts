@@ -52,22 +52,17 @@ import {
 } from './family-runtime-managed-provider-projection.ts';
 import { queryTemporalStageAttemptReadModel } from './family-runtime-temporal-query.ts';
 import { reconcileFamilyRuntimeLifecycleRefs, runFamilyRuntimeLifecycleApply } from './family-runtime-lifecycle-index.ts';
-import { buildStageAdmissionLaunchGate } from './family-runtime-stage-admission-gate.ts';
-import { buildFamilyStageLaunchAdmissionGate } from '../stagecraft/index.ts';
+import { buildFamilyStageContextObservation } from '../stagecraft/index.ts';
 import {
   buildDomainManifestCatalog,
 } from '../atlas/index.ts';
 import { runFamilyRuntimeEvidenceWorklistCommand } from './family-runtime-evidence-worklist-command.ts';
 import { runFamilyRuntimeStageArtifactCommand } from './family-runtime-stage-artifact-command.ts';
 import { buildFamilyRuntimeControlLoopStatus } from './family-runtime-control-loop.ts';
-import {
-  runFamilyRuntimeDomainAutonomySupervisorDecideCommand,
-  runFamilyRuntimeDomainAutonomySupervisorReadbackCommand,
-} from './family-runtime-domain-autonomy-command.ts';
 import type { RuntimeTraySnapshotProvider } from './runtime-tray-snapshot-provider.ts';
 import {
   blockAttemptForCheckoutCurrentness,
-  combineLaunchGateWithCheckoutCurrentness,
+  attachCheckoutCurrentnessToStageContext,
   recordTemporalStartOnAttempt,
 } from './family-runtime-parts/stage-attempt-launch.ts';
 import { ensureFamilyRuntimePackageLaunchReady } from './family-runtime-package-readiness.ts';
@@ -320,12 +315,6 @@ export async function runFamilyRuntime(
         family_runtime_lifecycle_reconcile: reconcileFamilyRuntimeLifecycleRefs(parsed.input),
       };
     }
-    if (parsed.mode === 'domain_autonomy_supervisor_readback') {
-      return runFamilyRuntimeDomainAutonomySupervisorReadbackCommand(parsed);
-    }
-    if (parsed.mode === 'domain_autonomy_supervisor_decide') {
-      return runFamilyRuntimeDomainAutonomySupervisorDecideCommand(parsed);
-    }
     if (parsed.mode === 'evidence_worklist') {
       const evidenceWorklistInput =
         options.stageReplayMissingReceiptExtraReceipts
@@ -351,7 +340,7 @@ export async function runFamilyRuntime(
             created: false,
             idempotent_noop: true,
             attempt: existingAttempt,
-            stage_launch_admission_gate: null,
+            stage_context_observation: null,
             launch_invocation: null,
           },
         };
@@ -390,7 +379,7 @@ export async function runFamilyRuntime(
       const projectedIdempotencyKey = parsed.input.newAttempt
         ? stableId('idem', [baseIdempotencyKey, 'new_attempt_requested'])
         : baseIdempotencyKey;
-      const defaultStageLaunchAdmissionGate = buildFamilyStageLaunchAdmissionGate(loadFrameworkContracts(), {
+      const defaultStageContextObservation = buildFamilyStageContextObservation(loadFrameworkContracts(), {
         domainId: parsed.input.domainId,
         stageId: parsed.input.stageId,
         actionId: parsed.input.actionId,
@@ -398,22 +387,12 @@ export async function runFamilyRuntime(
         loadDomainManifests: (contracts, options) =>
           buildDomainManifestCatalog(contracts, options).domain_manifests,
       });
-      const requiredStageAdmissionGate = parsed.input.requireStageAdmission
-        ? buildStageAdmissionLaunchGate({
-            domainId: parsed.input.domainId,
-            stageId: parsed.input.stageId,
-            taskKind: parsed.input.stageId,
-            taskId: parsed.input.taskId,
-            sourceFingerprint: parsed.input.sourceFingerprint,
-            requireAdmission: true,
-          })
-        : null;
       const checkoutCurrentnessPreflight = preflightDomainWorkspaceCheckoutCurrentness({
         domainId: parsed.input.domainId,
         workspaceLocator: parsed.input.workspaceLocator,
       });
-      const stageLaunchAdmissionGate = combineLaunchGateWithCheckoutCurrentness(
-        requiredStageAdmissionGate ?? defaultStageLaunchAdmissionGate,
+      const stageLaunchContextObservation = attachCheckoutCurrentnessToStageContext(
+        defaultStageContextObservation,
         checkoutCurrentnessPreflight,
       );
       const launchInvocation = buildStageLaunchInvocationProjection({
@@ -428,41 +407,33 @@ export async function runFamilyRuntime(
         boundedEditRef: parsed.input.boundedEditRef,
         taskId,
         idempotencyKey: projectedIdempotencyKey,
-        requireStageAdmission: parsed.input.requireStageAdmission,
-        planeId: stageLaunchAdmissionGate.plane_id,
-        admissionPlaneId: stageLaunchAdmissionGate.plane_id,
+        planeId: stageLaunchContextObservation.plane_id,
+        contextPlaneId: stageLaunchContextObservation.plane_id,
       });
       const blockedReason =
         checkoutCurrentnessPreflight?.status === 'blocked'
           ? checkoutCurrentnessPreflight.reason ?? 'checkout_currentness_blocked'
           :
         launchInvocation.blocker_reason
-        ?? requiredStageAdmissionGate?.blocked_reason
         ?? parsed.input.blockedReason
-        ?? defaultStageLaunchAdmissionGate.block_reason
         ?? undefined;
       const result = createStageAttempt(db, {
         ...parsed.input,
         workspaceLocator: useBoundWorkspaceLocator,
         idempotencyWorkspaceLocator: parsed.input.workspaceLocator,
         blockedReason,
-        routeImpact: defaultStageLaunchAdmissionGate.selected_action_id
+        routeImpact: defaultStageContextObservation.selected_action_id
           ? {
-              selected_action_id: defaultStageLaunchAdmissionGate.selected_action_id,
-              selected_stage_route: defaultStageLaunchAdmissionGate.selected_stage_route,
+              selected_action_id: defaultStageContextObservation.selected_action_id,
+              selected_stage_route: defaultStageContextObservation.selected_stage_route,
             }
           : undefined,
-        launchAdmissionGate: stageLaunchAdmissionGate,
+        launchContextObservation: stageLaunchContextObservation,
         launchInvocation,
       });
       const { attempt } = result;
-      const stageLaunchBlockedByAdmission =
-        checkoutCurrentnessPreflight?.status === 'blocked'
-        ||
-        Boolean(launchInvocation.blocker_reason)
-        ||
-        requiredStageAdmissionGate?.status === 'blocked'
-        || defaultStageLaunchAdmissionGate.gate_action === 'block_stage_launch';
+      const stageLaunchHardStopped = checkoutCurrentnessPreflight?.status === 'blocked'
+        || Boolean(launchInvocation.blocker_reason);
       const temporal_start = parsed.input.start
         && attempt.status !== 'blocked'
           ? await (await temporalProviderModule()).startTemporalStageAttemptWorkflow(attempt, { paths })
@@ -472,8 +443,8 @@ export async function runFamilyRuntime(
       insertEvent(db, {
         taskId: projectedAttempt.task_id,
         domainId: parsed.input.domainId,
-        eventType: stageLaunchBlockedByAdmission
-          ? 'stage_attempt_launch_admission_blocked'
+        eventType: stageLaunchHardStopped
+          ? 'stage_attempt_launch_hard_stopped'
           : parsed.input.start
           ? 'stage_attempt_temporal_started'
           : result.idempotent_noop
@@ -486,7 +457,7 @@ export async function runFamilyRuntime(
           provider_kind: attempt.provider_kind,
           stage_id: attempt.stage_id,
           task_id: attempt.task_id,
-          stage_launch_admission_gate: stageLaunchAdmissionGate,
+          stage_context_observation: stageLaunchContextObservation,
           launch_invocation: launchInvocation,
           temporal_start,
         },
@@ -498,13 +469,12 @@ export async function runFamilyRuntime(
           created: result.created,
           idempotent_noop: result.idempotent_noop,
           attempt: projectedAttempt,
-          stage_launch_admission_gate: stageLaunchAdmissionGate,
+          stage_context_observation: stageLaunchContextObservation,
           launch_invocation: launchInvocation,
           conflict_or_blocker_envelopes: 'conflict_or_blocker_envelopes' in result
             ? result.conflict_or_blocker_envelopes
             : [
                 ...launchInvocation.conflict_or_blocker_envelopes,
-                ...(requiredStageAdmissionGate?.conflict_or_blocker_envelopes ?? []),
               ],
           temporal_start,
         },

@@ -1,0 +1,38 @@
+{
+  "surface_kind": "opl_agent_package_payload_manifest",
+  "package_id": "mas",
+  "package_version": "0.1.0",
+  "owner_language_version": {
+    "scheme": "pep440",
+    "value": "0.1.0"
+  },
+  "source_repo": "https://github.com/gaofeng21cn/med-autoscience.git",
+  "source_commit": "095b2f0756af8da8d67c47a8ac45eee1e4ff9fb9",
+  "files": [
+    {
+      "path": ".codex-plugin/plugin.json",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/095b2f0756af8da8d67c47a8ac45eee1e4ff9fb9/plugins/med-autoscience/.codex-plugin/plugin.json",
+      "sha256": "sha256:45000b9d795e3f38f03dc2d28ea03d46e11d17d89bd9e9678c7ccf85739f357c"
+    },
+    {
+      "path": "assets/icon.png",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/095b2f0756af8da8d67c47a8ac45eee1e4ff9fb9/plugins/med-autoscience/assets/icon.png",
+      "sha256": "sha256:59b93bed97259c95ce12f370d39ce8f2665682138755a5afff78a85fc86833da"
+    },
+    {
+      "path": "assets/icon.svg",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/095b2f0756af8da8d67c47a8ac45eee1e4ff9fb9/plugins/med-autoscience/assets/icon.svg",
+      "sha256": "sha256:d0ba689e3ce511fa219a8712acf04c0ca710803f134ea6d15f127547ee8ff293"
+    },
+    {
+      "path": "skills/med-autoscience/SKILL.md",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/095b2f0756af8da8d67c47a8ac45eee1e4ff9fb9/plugins/med-autoscience/skills/med-autoscience/SKILL.md",
+      "sha256": "sha256:4128e320deb29b574438b636f7a5af6e46ca9a799c59b67efd50439a2a7e487e"
+    },
+    {
+      "path": "skills/med-autoscience/agents/openai.yaml",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/095b2f0756af8da8d67c47a8ac45eee1e4ff9fb9/plugins/med-autoscience/skills/med-autoscience/agents/openai.yaml",
+      "sha256": "sha256:0e0cc531eb8ff3dd2a4e8f30395d4c199c3c27ab99999469819ca2007c3c4f0c"
+    }
+  ]
+}

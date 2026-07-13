@@ -108,7 +108,7 @@ test('runtime action execute blocks domain dispatch evidence payloads bound to a
     );
     assert.equal(attempt.dispatch_evidence_receipt_status, 'missing');
     assert.deepEqual(attempt.dispatch_evidence_receipt_refs, []);
-    assert.equal(recordRoute.required_closeout_binding.closeout_binding_ready, true);
+    assert.equal(recordRoute.transport_identity_observation.missing_identity_fields_block_progress, false);
 
     const matchedExecution = runCli([
       'runtime',
@@ -123,9 +123,7 @@ test('runtime action execute blocks domain dispatch evidence payloads bound to a
         source_fingerprint: '95d9b5310c9c7a8d',
         typed_blocker_refs: ['mas://typed-blockers/dm-cvd/reviewer-refresh-pending'],
         owner_chain_refs: ['mas://owner-chain/dm-cvd/reviewer-refresh.json'],
-        owner_delta_result: {
-          closeout_binding: recordRoute.required_closeout_binding.closeout_binding,
-        },
+        transport_identity: recordRoute.payload_template.transport_identity,
       }),
     ], {
       OPL_STATE_DIR: stateRoot,
@@ -161,20 +159,11 @@ test('runtime action execute blocks stale local typed blocker refs bound to anot
       `${JSON.stringify({
         surface_kind: 'mas_domain_owner_typed_blocker',
         study_id: '002-dm-china-us-mortality-attribution',
+        stage_id: '08-publication_package_handoff',
+        stage_run_id: 'stage-run::002-dm-china-us-mortality-attribution::08-publication_package_handoff',
         source_fingerprint: 'default_executor_source_stale_handoff',
-        closeout_binding: {
-          study_id: '002-dm-china-us-mortality-attribution',
-          stage_id: '08-publication_package_handoff',
-          stage_run_id: 'stage-run::002-dm-china-us-mortality-attribution::08-publication_package_handoff',
-          stage_manifest_ref: 'artifacts/stage_outputs/08-publication_package_handoff/stage_manifest.json',
-          current_pointer_ref: 'artifacts/stage_outputs/08-publication_package_handoff/current.json',
-          source_fingerprint: 'default_executor_source_stale_handoff',
-          idempotency_key: 'idem_stale_publication_handoff',
-          provider_attempt_ref: 'temporal://attempt/sat_stale_publication_handoff',
-          attempt_lease_ref: 'opl://stage-attempts/sat_stale_publication_handoff/leases/frt_stale/active',
-          execution_authorization_decision_ref:
-            'opl://stage-attempts/sat_stale_publication_handoff/execution-authorizations/frt_stale/wf_stale',
-        },
+        idempotency_key: 'idem_stale_publication_handoff',
+        provider_attempt_ref: 'temporal://attempt/sat_stale_publication_handoff',
       }, null, 2)}\n`,
       'utf8',
     );

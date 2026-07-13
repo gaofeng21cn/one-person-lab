@@ -11,7 +11,7 @@
     "human_doc:opl_decisions",
     "contracts/opl-framework/standard-agent-landing-evidence-status.json",
     "contracts/opl-framework/target-operating-architecture-contract.json#foundry_agent_os_standard",
-    "contracts/opl-framework/stage-route-scheduler-contract.json",
+    "contracts/opl-framework/stage-route-transport-contract.json",
     "contracts/opl-framework/private-platform-residue-owner-decisions.json",
     "contracts/opl-framework/packages/mas.json#registry_entry"
   ],
@@ -163,7 +163,7 @@
       "requires": [
         "generated or takeover target-agent work orders include target owner route, editable surface policy, source morphology proof, reviewer evidence where required, executor lease, no-forbidden-write proof, verification refs, rollback/canary refs, and expected target owner receipt or typed blocker return shape",
         "missing target owner route, source shape, generated surface, private residue decision, no-forbidden-write proof, or owner answer shape returns typed blocker or developer work order",
-        "guard-missing typed blockers and error payloads include executor_launch_admission=blocked_before_executor_launch plus no_executor_launch_proof showing no Codex process, no target worktree, no absorption attempt, and no cleanup need",
+        "guard-missing typed blockers and error payloads include executor_launch_preflight=hard_stopped_before_executor_launch plus no_executor_launch_proof showing no Codex process, no target worktree, no absorption attempt, and no cleanup need",
         "agent generator cannot sign target owner receipt, create target typed blocker, write target truth, or promote default agent without target owner evidence"
       ],
       "cannot_be_satisfied_by": [

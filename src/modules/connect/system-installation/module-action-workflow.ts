@@ -16,7 +16,10 @@ import { materializeStandardAgentFrameworkLink } from '../standard-agent-framewo
 export type DomainModuleRuntimeSpec = DomainModuleSpec & {
   default_install: boolean;
   bootstrap_command?: (checkoutPath: string) => { command: string; args: string[] } | null;
+  package_bootstrap_command?: (checkoutPath: string) => { command: string; args: string[] } | null;
+  package_prepare_command?: (checkoutPath: string) => { command: string; args: string[] } | null;
   health_check_command?: (checkoutPath: string) => { command: string; args: string[] } | null;
+  package_health_check_command?: (checkoutPath: string) => { command: string; args: string[] } | null;
   runtime_probe_command?: (checkoutPath: string) => { command: string; args: string[] } | null;
   exec_command?: (checkoutPath: string, args: string[]) => { command: string; args: string[] } | null;
   skill_sync_domain?: 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent' | 'oplbookforge' | 'scholarskills';

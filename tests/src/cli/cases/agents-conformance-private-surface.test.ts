@@ -1,10 +1,10 @@
-import { assert, fs, parseJsonText, path, runCli, test } from '../helpers.ts';
+import { assert, fs, parseJsonText, path, runCliReadOnly, test } from '../helpers.ts';
 import {
   buildReadyAgentRepo,
   writeJson,
 } from './agents-conformance-fixtures.ts';
 
-test('agents conformance blocks active private generic residue before standard-agent thinning passes', () => {
+test('agents conformance blocks active private generic residue before standard-agent thinning passes', async () => {
   const repoDir = buildReadyAgentRepo();
   const functionalAuditPath = path.join(repoDir, 'contracts', 'functional_privatization_audit.json');
   const functionalAudit = parseJsonText(fs.readFileSync(functionalAuditPath, 'utf8')) as Record<string, any>;
@@ -19,12 +19,12 @@ test('agents conformance blocks active private generic residue before standard-a
   });
   writeJson(functionalAuditPath, functionalAudit);
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
   const checks = report.reports[0].private_surface_checks;
 
   assert.equal(report.status, 'blocked');
@@ -41,18 +41,18 @@ test('agents conformance blocks active private generic residue before standard-a
   );
 });
 
-test('agents conformance blocks generic source behavior omitted from the domain audit', () => {
+test('agents conformance blocks generic source behavior omitted from the domain audit', async () => {
   const repoDir = buildReadyAgentRepo();
   const privateSchedulerPath = path.join(repoDir, 'src', 'private-scheduler.ts');
   fs.mkdirSync(path.dirname(privateSchedulerPath), { recursive: true });
   fs.writeFileSync(privateSchedulerPath, 'setInterval(() => runNextTask(), 60_000);\n');
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
   const checks = report.reports[0].source_behavior_checks;
 
   assert.equal(report.status, 'blocked');
@@ -73,7 +73,7 @@ test('agents conformance blocks generic source behavior omitted from the domain 
   );
 });
 
-test('agents conformance source behavior gate blocks audit-declared active private residue', () => {
+test('agents conformance source behavior gate blocks audit-declared active private residue', async () => {
   const repoDir = buildReadyAgentRepo();
   const privateSchedulerPath = path.join(repoDir, 'src', 'private-scheduler.ts');
   fs.mkdirSync(path.dirname(privateSchedulerPath), { recursive: true });
@@ -91,12 +91,12 @@ test('agents conformance source behavior gate blocks audit-declared active priva
   });
   writeJson(functionalAuditPath, functionalAudit);
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
   const checks = report.reports[0].source_behavior_checks;
 
   assert.equal(checks.status, 'blocked');
@@ -110,7 +110,7 @@ test('agents conformance source behavior gate blocks audit-declared active priva
   ]);
 });
 
-test('agents conformance source behavior gate records legal audit declarations as evidence', () => {
+test('agents conformance source behavior gate records legal audit declarations as evidence', async () => {
   const repoDir = buildReadyAgentRepo();
   const adapterPath = path.join(repoDir, 'src', 'product-status-domain-adapter.ts');
   fs.mkdirSync(path.dirname(adapterPath), { recursive: true });
@@ -128,12 +128,12 @@ test('agents conformance source behavior gate records legal audit declarations a
   });
   writeJson(functionalAuditPath, functionalAudit);
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
   const checks = report.reports[0].source_behavior_checks;
 
   assert.equal(report.status, 'passed');
@@ -152,7 +152,7 @@ test('agents conformance source behavior gate records legal audit declarations a
   assert.deepEqual(checks.blockers, []);
 });
 
-test('agents conformance blocks diagnostic cleanup source that still has an active caller', () => {
+test('agents conformance blocks diagnostic cleanup source that still has an active caller', async () => {
   const repoDir = buildReadyAgentRepo();
   const hygienePath = path.join(repoDir, 'src', 'project-hygiene.py');
   fs.mkdirSync(path.dirname(hygienePath), { recursive: true });
@@ -170,12 +170,12 @@ test('agents conformance blocks diagnostic cleanup source that still has an acti
   });
   writeJson(functionalAuditPath, functionalAudit);
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
   const checks = report.reports[0].source_behavior_checks;
 
   assert.equal(report.status, 'blocked');
@@ -185,7 +185,7 @@ test('agents conformance blocks diagnostic cleanup source that still has an acti
   assert.deepEqual(checks.matches[0].audit_coverage[0].active_callers, ['scripts/verify.sh']);
 });
 
-test('agents conformance blocks retired route aliases from re-entering active caller inventory', () => {
+test('agents conformance blocks retired route aliases from re-entering active caller inventory', async () => {
   const repoDir = buildReadyAgentRepo();
   const functionalAuditPath = path.join(repoDir, 'contracts', 'functional_privatization_audit.json');
   const functionalAudit = parseJsonText(fs.readFileSync(functionalAuditPath, 'utf8')) as Record<string, any>;
@@ -201,12 +201,12 @@ test('agents conformance blocks retired route aliases from re-entering active ca
   });
   writeJson(functionalAuditPath, functionalAudit);
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
   const checks = report.reports[0].private_surface_checks;
 
   assert.equal(report.status, 'passed');
@@ -218,7 +218,7 @@ test('agents conformance blocks retired route aliases from re-entering active ca
   assert.equal(checks.source_purity_tail_read_model.private_platform_residue_inventory_counts_as_blocker, false);
 });
 
-test('agents conformance classifies private platform residue deletion gate dispositions', () => {
+test('agents conformance classifies private platform residue deletion gate dispositions', async () => {
   const repoDir = buildReadyAgentRepo();
   const functionalAuditPath = path.join(repoDir, 'contracts', 'functional_privatization_audit.json');
   const functionalAudit = parseJsonText(fs.readFileSync(functionalAuditPath, 'utf8')) as Record<string, any>;
@@ -291,12 +291,12 @@ test('agents conformance classifies private platform residue deletion gate dispo
   );
   writeJson(functionalAuditPath, functionalAudit);
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
   const checks = report.reports[0].private_surface_checks;
   const cleanupGate = checks.private_platform_residue_deletion_gate;
 

@@ -1,14 +1,14 @@
-import { assert, runCli, test } from '../helpers.ts';
+import { assert, runCliReadOnly, test } from '../helpers.ts';
 import { buildReadyAgentRepo } from './agents-conformance-fixtures.ts';
 
-test('agents readiness is an attention summary, not a domain-ready verdict', () => {
+test('agents readiness is an attention summary, not a domain-ready verdict', async () => {
   const repoDir = buildReadyAgentRepo();
-  const readiness = runCli([
+  const readiness = (await runCliReadOnly([
     'agents',
     'readiness',
     '--agent',
     `sample=${repoDir}`,
-  ]).agent_readiness;
+  ])).agent_readiness;
 
   assert.equal(readiness.surface_kind, 'opl_agent_readiness_summary');
   assert.equal(readiness.status, 'passed_with_production_evidence_tail');

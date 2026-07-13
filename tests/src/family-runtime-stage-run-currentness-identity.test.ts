@@ -23,7 +23,7 @@ function baseInput() {
         source_fingerprint: 'source:artifact-owner-current', idempotency_key: 'request::artifact-owner-current',
         route_identity_key: routeIdentity, attempt_idempotency_key: attemptIdentity,
         dispatch_ref: packetRef, stage_packet_ref: packetRef, stage_packet_refs: [packetRef],
-        provider_admission_identity: { status: 'provider_admission_pending', route_identity_key: routeIdentity,
+        provider_attempt_identity: { status: 'provider_attempt_pending', route_identity_key: routeIdentity,
           attempt_idempotency_key: attemptIdentity },
         owner_route: { source_refs: { owner_route_currentness_basis: basis } },
     } },
@@ -31,8 +31,6 @@ function baseInput() {
       domain_id: 'redcube', stage_id: 'domain_owner/default-executor-dispatch',
       stage_attempt_id: 'sat-artifact-owner-current', source_fingerprint: 'source:artifact-owner-current',
       workflow_id: 'wf-artifact-owner-current', task_id: 'frt-artifact-owner-current',
-      attempt_lease_ref: 'opl://stage-attempts/sat-artifact-owner-current/leases/frt-artifact-owner-current/active',
-      execution_authorization_decision_ref: 'opl://stage-attempts/sat-artifact-owner-current/execution-authorizations/current',
       workspace_locator: basis,
     },
   };
@@ -49,15 +47,15 @@ function withBasis(patch: Record<string, unknown>) {
   return { ...input, task: { ...input.task, payload: { ...input.task.payload, owner_route } } };
 }
 
-test('StageRun currentness projects authorization refs and separates route from attempt identity', () => {
+test('StageRun currentness separates route reuse from attempt identity without authorization refs', () => {
   const identity = buildStageRunCurrentnessIdentity(baseInput());
   const input = baseInput();
   const redrive = buildStageRunCurrentnessIdentity({ ...input, stageAttempt: { ...input.stageAttempt,
     stage_attempt_id: 'sat-artifact-owner-redrive', workflow_id: 'wf-artifact-owner-redrive' } });
 
   assert.deepEqual(missingStageRunCurrentnessIdentityFields(identity), []);
-  assert.equal(identity.active_lease_ref, input.stageAttempt.attempt_lease_ref);
-  assert.equal(identity.execution_authorization_ref, input.stageAttempt.execution_authorization_decision_ref);
+  assert.equal(Object.hasOwn(identity, 'active_lease_ref'), false);
+  assert.equal(Object.hasOwn(identity, 'execution_authorization_ref'), false);
   assert.equal(sameStageRunCurrentnessIdentity(identity, redrive), false);
   assert.equal(sameStageRunRouteCurrentnessIdentity(identity, redrive), true);
 });
@@ -90,7 +88,7 @@ for (const scenario of [
     const input = baseInput();
     const identity = buildStageRunCurrentnessIdentity({ ...input,
       task: { ...input.task, payload: { ...input.task.payload, idempotency_key: undefined,
-        provider_admission_identity: { ...input.task.payload.provider_admission_identity,
+        provider_attempt_identity: { ...input.task.payload.provider_attempt_identity,
           ...(scenario.requestId ? { request_idempotency_key: scenario.requestId } : {}) } } },
       stageAttempt: { ...input.stageAttempt, idempotency_key: 'stage-attempt-ledger::internal' },
     });
@@ -103,7 +101,7 @@ for (const scenario of [
 
 test('StageRun currentness fails closed when admission and packet identity are incomplete', () => {
   const identity = buildStageRunCurrentnessIdentity(withPayload({
-    provider_admission_identity: { status: 'provider_admission_pending' }, route_identity_key: undefined,
+    provider_attempt_identity: { status: 'provider_attempt_pending' }, route_identity_key: undefined,
     attempt_idempotency_key: undefined, dispatch_ref: undefined, stage_packet_ref: undefined, stage_packet_refs: [],
   }));
 

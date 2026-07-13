@@ -74,6 +74,30 @@ test('Standard Agent framework link is OPL-owned, checkable, and does not instal
   });
 });
 
+test('Standard Agent framework link detects Framework imports in monorepo app sources', () => {
+  const agentRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-app-link-'));
+  try {
+    const appSource = path.join(agentRoot, 'apps', 'agent-cli', 'src');
+    fs.mkdirSync(appSource, { recursive: true });
+    fs.writeFileSync(path.join(agentRoot, 'package.json'), JSON.stringify({
+      name: 'fixture-monorepo-agent',
+      private: true,
+      type: 'module',
+      dependencies: {},
+    }, null, 2));
+    fs.writeFileSync(
+      path.join(appSource, 'consumer.ts'),
+      "import 'opl-framework/domain-task-runtime';\n",
+    );
+
+    const linked = materializeStandardAgentFrameworkLink({ agentRoot });
+    assert.equal(linked.status, 'linked');
+    assert.equal(fs.realpathSync(linked.link_path), fs.realpathSync(linked.target_root));
+  } finally {
+    fs.rmSync(agentRoot, { recursive: true, force: true });
+  }
+});
+
 test('managed module workflow automatically links JavaScript Standard Agent checkouts after bootstrap', () => {
   withAgent((agentRoot) => {
     const workflow = runManagedModuleWorkflow({

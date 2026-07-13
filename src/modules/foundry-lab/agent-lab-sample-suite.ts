@@ -12,10 +12,11 @@ function stageCompletionPolicy(policyRef: string) {
     surface_kind: 'domain_stage_completion_policy',
     policy_ref: policyRef,
     completion_judgment_owner: 'domain_stage',
-    closeout_packet_required: true,
+    closeout_packet_required: false,
+    raw_artifact_sufficient_for_progress: true,
     provider_completion_is_domain_completion: false,
     opl_content_judgment_allowed: false,
-    next_stage_transition_owner: 'opl_runtime',
+    next_stage_transition_owner: 'codex_cli',
     required_closeout_outcomes: [
       'completed_and_continue',
       'completed_and_wait_owner',

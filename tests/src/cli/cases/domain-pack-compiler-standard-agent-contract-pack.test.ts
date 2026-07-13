@@ -48,7 +48,7 @@ test('generated interfaces can compile a standard agent repo contract pack witho
             required_stage_refs: ['brief-draft'],
             optional_stage_refs: [],
             terminal_stage_refs: ['brief-draft'],
-            route_policy: 'ordered_stage_attempts_no_skip',
+            route_policy: 'ai_selected_progress_route',
           },
           supported_surfaces: {
             cli: {
@@ -239,16 +239,6 @@ test('generated interfaces can compile a standard agent repo contract pack witho
           retained_domain_authority: ['status_projection_refs'],
         },
         {
-          module_id: 'sample_brief_functional_harness',
-          classification: 'declarative_pack_generated_surface',
-          owner: 'SampleBriefAgent',
-          code_paths: ['runtime/harness.ts'],
-          active_callers: ['OPL functional harness'],
-          active_caller_status: 'opl_generated_functional_harness_cases_target_domain_handler',
-          migration_action: 'derive_harness_cases_from_declarative_pack_and_opl_functional_runtime_harness',
-          retained_domain_authority: ['fixture_oracle_refs'],
-        },
-        {
           module_id: 'sample_brief_owner_receipt_signer',
           classification: 'minimal_authority_function',
           owner: 'SampleBriefAgent',
@@ -273,7 +263,6 @@ test('generated interfaces can compile a standard agent repo contract pack witho
         { surface_id: 'domain_handler', owner: 'one-person-lab', status: 'descriptor_source_available' },
         { surface_id: 'status_read_model', owner: 'one-person-lab', status: 'descriptor_source_available' },
         { surface_id: 'workbench_drilldown', owner: 'one-person-lab', status: 'descriptor_source_available' },
-        { surface_id: 'functional_harness_cases', owner: 'one-person-lab', status: 'descriptor_source_available' },
       ],
       handoff_surfaces: [
         {
@@ -317,12 +306,6 @@ test('generated interfaces can compile a standard agent repo contract pack witho
           current_paths: ['runtime/workbench.ts'],
           current_role: 'projection_refs',
           target_role: 'opl_hosted_workbench_shell_consuming_domain_refs',
-        },
-        {
-          surface_id: 'functional_harness_cases',
-          current_paths: ['runtime/harness.ts'],
-          current_role: 'oracle_fixture_refs',
-          target_role: 'opl_generated_functional_harness_cases',
         },
       ],
       required_domain_handoff: [
@@ -394,7 +377,7 @@ test('generated interfaces can compile a standard agent repo contract pack witho
     required_stage_refs: ['brief-draft'],
     optional_stage_refs: [],
     terminal_stage_refs: ['brief-draft'],
-    route_policy: 'ordered_stage_attempts_no_skip',
+    route_policy: 'ai_selected_progress_route',
   }]);
   assert.equal(bundle.stage_routes[0].authority_owner, 'sample-brief-agent');
   assert.deepEqual(bundle.stage_routes[0].prompt_refs.map((entry: { ref: string }) => entry.ref), [

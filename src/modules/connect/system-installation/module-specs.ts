@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import { getCapabilityDependenciesForModule } from '../agent-package-manifests.ts';
 import { getShellBinary } from './shared.ts';
@@ -74,6 +75,65 @@ function buildPythonCleanRunnerExecCommand(checkoutPath: string, moduleName: str
   };
 }
 
+function buildNodeImportProbe(checkoutPath: string, relativePath: string) {
+  return {
+    command: 'node',
+    args: [
+      '--experimental-strip-types',
+      '--input-type=module',
+      '-e',
+      `await import(${JSON.stringify(pathToFileURL(path.join(checkoutPath, relativePath)).href)})`,
+    ],
+  };
+}
+
+function buildRequiredFilesProbe(checkoutPath: string, relativePaths: string[]) {
+  return {
+    command: 'node',
+    args: [
+      '-e',
+      'const fs=require("node:fs");for(const p of process.argv.slice(1)){if(!fs.statSync(p).isFile())process.exit(1)}',
+      ...relativePaths.map((relativePath) => path.join(checkoutPath, relativePath)),
+    ],
+  };
+}
+
+function buildBookForgeProbe(checkoutPath: string) {
+  return buildRequiredFilesProbe(checkoutPath, [
+    path.join('contracts', 'domain_descriptor.json'),
+    path.join('agent', 'primary_skill', 'SKILL.md'),
+  ]);
+}
+
+function buildNpmPackageBootstrapCommand(checkoutPath: string) {
+  const repoBootstrap = path.join(checkoutPath, 'scripts', 'opl-module-bootstrap.sh');
+  return {
+    command: getShellBinary(),
+    args: ['-lc', [
+      'set -euo pipefail',
+      `if [[ -f ${shellQuote(repoBootstrap)} ]]; then`,
+      `  bash ${shellQuote(repoBootstrap)}`,
+      'elif [[ -f package-lock.json ]]; then',
+      '  npm ci',
+      'else',
+      '  npm install',
+      'fi',
+    ].join('\n')],
+  };
+}
+
+function buildNpmPackagePrepareCommand() {
+  return {
+    command: getShellBinary(),
+    args: ['-lc', [
+      'set -euo pipefail',
+      'if node -e \'const p=require("./package.json");process.exit(p.scripts?.build?0:1)\'; then',
+      '  npm run --silent build',
+      'fi',
+    ].join('\n')],
+  };
+}
+
 export const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
   {
     module_id: 'medautoscience',
@@ -145,6 +205,8 @@ export const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
       resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-bootstrap.sh'))
       ?? { command: 'npm', args: ['install'] }
     ),
+    package_bootstrap_command: (checkoutPath) => buildNpmPackageBootstrapCommand(checkoutPath),
+    package_prepare_command: () => buildNpmPackagePrepareCommand(),
     health_check_command: (checkoutPath) => buildHealthCheckCommand(checkoutPath),
     exec_command: (_checkoutPath, args) => ({
       command: 'npm',
@@ -165,6 +227,10 @@ export const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
       ?? { command: 'npm', args: ['install'] }
     ),
     health_check_command: (checkoutPath) => buildHealthCheckCommand(checkoutPath, 'smoke'),
+    package_health_check_command: (checkoutPath) => buildNodeImportProbe(
+      checkoutPath,
+      path.join('scripts', 'lib', 'domain-pack.ts'),
+    ),
     exec_command: (_checkoutPath, args) => ({
       command: 'npm',
       args: ['test', '--', ...args],
@@ -184,6 +250,8 @@ export const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
       ?? { command: 'npm', args: ['install', '--no-package-lock'] }
     ),
     health_check_command: (checkoutPath) => buildHealthCheckCommand(checkoutPath),
+    package_health_check_command: (checkoutPath) => buildBookForgeProbe(checkoutPath),
+    runtime_probe_command: (checkoutPath) => buildBookForgeProbe(checkoutPath),
     exec_command: (_checkoutPath, args) => ({
       command: 'npm',
       args: ['test', '--', ...args],

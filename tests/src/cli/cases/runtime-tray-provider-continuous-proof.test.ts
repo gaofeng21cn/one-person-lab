@@ -365,8 +365,8 @@ test('runtime snapshot and App drilldown project Temporal restart requery signal
       worker_restart_requery: true,
       signal_history_preserved: true,
       typed_closeout_required_for_completed: true,
-      missing_closeout_blocks_completion: true,
-      retry_or_dead_letter_boundary_observed: true,
+      missing_closeout_advances_with_diagnostic: true,
+      no_output_diagnostic_boundary_observed: true,
       domain_truth_boundary_preserved: true,
     };
     insertRuntimeEvents(queueDb, [
@@ -391,7 +391,7 @@ test('runtime snapshot and App drilldown project Temporal restart requery signal
             proven_check_count: Object.keys(checks).length,
             required_check_count: Object.keys(checks).length,
             completed_workflow_id: 'wf-capability-completed',
-            blocked_workflow_id: 'wf-capability-blocked',
+            diagnostic_workflow_id: 'wf-capability-diagnostic',
             restarted_worker_requery_status: 'stage_attempt_query_available_after_worker_restart',
           },
         }),
@@ -421,8 +421,8 @@ test('runtime snapshot and App drilldown project Temporal restart requery signal
     assert.equal(capability.restart_requery_ready, true);
     assert.equal(capability.signal_history_ready, true);
     assert.equal(capability.typed_closeout_required_ready, true);
-    assert.equal(capability.missing_closeout_block_ready, true);
-    assert.equal(capability.retry_dead_letter_boundary_ready, true);
+    assert.equal(capability.missing_closeout_diagnostic_ready, true);
+    assert.equal(capability.no_output_diagnostic_boundary_ready, true);
     assert.equal(capability.domain_truth_boundary_preserved, true);
     assert.equal(capability.latest_capability_event_id, 'evt_provider_capability_slo_execution');
     assert.deepEqual(capability.failed_check_ids, []);
@@ -437,7 +437,8 @@ test('runtime snapshot and App drilldown project Temporal restart requery signal
     assert.equal(summary.provider_capability_restart_requery_ready, true);
     assert.equal(summary.provider_capability_signal_history_ready, true);
     assert.equal(summary.provider_capability_typed_closeout_ready, true);
-    assert.equal(summary.provider_capability_retry_dead_letter_ready, true);
+    assert.equal(summary.provider_capability_missing_closeout_diagnostic_ready, true);
+    assert.equal(summary.provider_capability_no_output_diagnostic_ready, true);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });

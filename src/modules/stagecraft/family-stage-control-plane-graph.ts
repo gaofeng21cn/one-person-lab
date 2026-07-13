@@ -1,11 +1,11 @@
 import type { FamilyStageDomainManifestCatalogEntry } from './family-stage-domain-manifest.ts';
 import {
-  buildFamilyStageAdmissionReview,
+  buildFamilyStageConformanceReview,
   buildFamilyStageModeTags,
-  type FamilyStageAdmissionStageResult,
+  type FamilyStageConformanceStageResult,
   type FamilyStageFailureLocalization,
   type FamilyStageModeTags,
-} from './family-stage-admission.ts';
+} from './family-stage-conformance.ts';
 import type {
   FamilyStageControlPlane,
   FamilyStageDescriptor,
@@ -28,7 +28,7 @@ export interface FamilyStageGraphNode {
   title: string;
   owner: string;
   trust_lane: string | null;
-  admission_status: string | null;
+  conformance_status: string | null;
   guarantee_modes: FamilyStageGuaranteeMode[];
   mode_tags: FamilyStageModeTags;
   static_check_eligible: boolean;
@@ -77,7 +77,7 @@ export interface FamilyStageGraphProjection {
   nodes: FamilyStageGraphNode[];
   edges: FamilyStageGraphEdge[];
   failure_localization: FamilyStageFailureLocalization[];
-  admission_status: string;
+  conformance_status: string;
   integrity: FamilyStageProofBundleIntegrity;
   authority_boundary: {
     opl_role: 'graph_projection_only';
@@ -112,17 +112,17 @@ function runtimeEventRefs(stage: FamilyStageDescriptor) {
 
 function buildGraphNode(
   stage: FamilyStageDescriptor,
-  admissionStage: FamilyStageAdmissionStageResult | null,
+  conformanceStage: FamilyStageConformanceStageResult | null,
 ): FamilyStageGraphNode {
   const guarantee = buildFamilyStageGuaranteeProjection(stage);
-  const modeTags = admissionStage?.mode_tags ?? buildFamilyStageModeTags(stage);
+  const modeTags = conformanceStage?.mode_tags ?? buildFamilyStageModeTags(stage);
   return {
     stage_id: stage.stage_id,
     stage_kind: stage.stage_kind,
     title: stage.title,
     owner: stage.owner,
-    trust_lane: stage.trust_boundary?.lane ?? admissionStage?.trust_lane ?? null,
-    admission_status: admissionStage?.status ?? null,
+    trust_lane: stage.trust_boundary?.lane ?? conformanceStage?.trust_lane ?? null,
+    conformance_status: conformanceStage?.status ?? null,
     guarantee_modes: guarantee.modes,
     mode_tags: modeTags,
     static_check_eligible: stage.trust_boundary?.static_check_eligible === true,
@@ -142,16 +142,16 @@ export function buildFamilyStageGraphProjection(
   entry: FamilyStageDomainManifestCatalogEntry,
   plane: FamilyStageControlPlane,
 ): FamilyStageGraphProjection {
-  const admission = buildFamilyStageAdmissionReview(plane, entry.manifest);
-  const admissionByStage = new Map(admission.stage_results.map((stage) => [stage.stage_id, stage]));
+  const conformance = buildFamilyStageConformanceReview(plane, entry.manifest);
+  const conformanceByStage = new Map(conformance.stage_results.map((stage) => [stage.stage_id, stage]));
   const actionCatalog = entry.manifest?.family_action_catalog ?? null;
   const proofBundle = buildFamilyStageProofBundle(plane, {
     actionCatalog,
-    admissionReview: admission,
+    conformanceReview: conformance,
   });
   const nodes = plane.stages.map((stage) => buildGraphNode(
     stage,
-    admissionByStage.get(stage.stage_id) ?? null,
+    conformanceByStage.get(stage.stage_id) ?? null,
   ));
   const edges = proofBundle.composition_obligations.map((edge) => ({
     ...edge,
@@ -167,8 +167,8 @@ export function buildFamilyStageGraphProjection(
     graph_summary: {
       node_count: nodes.length,
       edge_count: edges.length,
-      blocked_node_count: nodes.filter((node) => node.admission_status === 'blocked').length,
-      needs_contracts_node_count: nodes.filter((node) => node.admission_status === 'needs_contracts').length,
+      blocked_node_count: nodes.filter((node) => node.conformance_status === 'nonconformant').length,
+      needs_contracts_node_count: nodes.filter((node) => node.conformance_status === 'quality_debt').length,
       missing_edge_count: edges.filter((edge) => edge.status === 'missing').length,
       runtime_enforced_node_count: nodes.filter((node) => node.runtime_enforced).length,
       verified_core_eligible_node_count: nodes.filter((node) => node.mode_tags.verified_core_eligible).length,
@@ -178,8 +178,8 @@ export function buildFamilyStageGraphProjection(
     },
     nodes,
     edges,
-    failure_localization: admission.failure_localization,
-    admission_status: admission.status,
+    failure_localization: conformance.failure_localization,
+    conformance_status: conformance.status,
     integrity: buildFamilyStagePackIntegrity(plane, actionCatalog),
     authority_boundary: {
       opl_role: 'graph_projection_only',

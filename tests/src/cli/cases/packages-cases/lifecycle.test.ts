@@ -62,6 +62,11 @@ test('packages fetches registry URL, validates manifest, and writes lock receipt
       assert.equal(refresh.opl_agent_package_registry.recommended_action, 'install_from_manifest_url');
       assert.equal(refresh.opl_agent_package_registry.lifecycle_action_refs.includes('install'), true);
       assert.equal(fs.existsSync(refresh.opl_agent_package_registry.cache_file), true);
+      const refreshedCache = parseJsonText(
+        fs.readFileSync(refresh.opl_agent_package_registry.cache_file, 'utf8'),
+      ) as { entries: Array<Record<string, unknown>> };
+      assert.equal(refreshedCache.entries[0].version_source_ref, `${baseUrl}/manifest.json#/version`);
+      assert.equal(Object.hasOwn(refreshedCache.entries[0], 'latest_version'), false);
 
       const validated = await runCliAsync([
         'packages',
@@ -119,7 +124,7 @@ test('packages fetches registry URL, validates manifest, and writes lock receipt
             source_kind: string;
             version_or_source_digest: string;
             resolved_digest: string;
-            rolling_tag: string;
+            moving_tag: string;
             install_truth: string;
             permission_scope_sha256: string;
             action_receipt_id: string;
@@ -197,7 +202,7 @@ test('packages fetches registry URL, validates manifest, and writes lock receipt
         install.opl_agent_package_install.package_lock.resolved_digest,
         'sha256:2222222222222222222222222222222222222222222222222222222222222222',
       );
-      assert.equal(install.opl_agent_package_install.package_lock.rolling_tag, 'latest');
+      assert.equal(install.opl_agent_package_install.package_lock.moving_tag, 'latest-stable');
       assert.equal(install.opl_agent_package_install.package_lock.install_truth, 'resolved_digest_lock');
       assert.match(install.opl_agent_package_install.package_lock.permission_scope_sha256, /^[a-f0-9]{64}$/);
       assert.equal(
@@ -395,6 +400,35 @@ test('packages fetches registry URL, validates manifest, and writes lock receipt
       assert.equal(update.opl_agent_package_update.lifecycle_receipt.physical_surface.status, 'materialized');
       assert.equal(update.opl_agent_package_update.lifecycle_receipt.action, 'update');
       assert.equal(update.opl_agent_package_update.lifecycle_receipt.writes_performed, true);
+
+      const bulkUpdate = await runCliAsync(['packages', 'update'], env) as any;
+      const bulkAdapter = bulkUpdate.managed_update.execution.adapter_results[0];
+      assert.equal(bulkAdapter.component_id, 'opl_packages');
+      assert.equal(bulkAdapter.result.targets.length, 1);
+      assert.equal(bulkAdapter.result.targets[0].target_type, 'package_lock');
+      assert.equal(bulkAdapter.result.targets[0].target_id, 'third.party.research');
+      assert.equal(bulkAdapter.result.targets[0].status, 'completed');
+      assert.equal(bulkAdapter.result.targets[0].installed_content_digest.length > 0, true);
+
+      const lockIndex = parseJsonText(fs.readFileSync(install.opl_agent_package_install.lock_file, 'utf8')) as any;
+      const cleanLock = lockIndex.packages.find((entry: any) => entry.package_id === 'third.party.research');
+      lockIndex.packages.push({
+        ...cleanLock,
+        package_id: 'developer.package',
+        display_name: 'Developer package',
+        source_kind: 'developer_checkout_override',
+        lock_ref: 'opl://agent-package-lock/developer.package/fixture',
+        dependency_transaction_id: 'developer-package-fixture',
+      });
+      fs.writeFileSync(install.opl_agent_package_install.lock_file, `${JSON.stringify(lockIndex, null, 2)}\n`, 'utf8');
+      const mixed = await runCliAsync(['packages', 'update'], env) as any;
+      const mixedTargets = mixed.managed_update.execution.adapter_results[0].result.targets;
+      assert.equal(mixedTargets.find((entry: any) => entry.target_id === 'third.party.research').status, 'completed');
+      assert.equal(mixedTargets.find((entry: any) => entry.target_id === 'developer.package').status, 'manual_required');
+      assert.equal(mixedTargets.find((entry: any) => entry.target_id === 'developer.package').action, null);
+      const restoredLockIndex = parseJsonText(fs.readFileSync(install.opl_agent_package_install.lock_file, 'utf8')) as any;
+      restoredLockIndex.packages = restoredLockIndex.packages.filter((entry: any) => entry.package_id !== 'developer.package');
+      fs.writeFileSync(install.opl_agent_package_install.lock_file, `${JSON.stringify(restoredLockIndex, null, 2)}\n`, 'utf8');
 
       const repair = runCli([
         'packages',

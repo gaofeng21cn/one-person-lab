@@ -38,7 +38,7 @@ Fresh readback can support reading `Stagecraft` as Workspace 级 `L4_structural_
 | `stage_manifest` | domain stage 的 machine-readable manifest。 | `validate` 必须验证 manifest schema、owner、inputs、outputs、handoff 和 forbidden writes。 |
 | `stage_strategy_refs` | prompt、skill、tool、knowledge、rubric、reviewer refs。 | `inspect` 必须返回 refs，不把 refs 写成固定 workflow script。 |
 | `tool_affordance_boundary` | capability、tool card、permission、credential、write scope、side-effect risk、forbidden authority。 | `doctor` 必须发现缺失 permission/write-scope/credential/result-envelope/current-owner applicability boundary。 |
-| `stage_admission` | launch 前的 static / runtime / domain-owned boundary check。 | `validate` 必须 fail closed，缺 source/artifact/workspace scope 时不能进入 stage。 |
+| `stage_conformance` | stage pack 的静态可读性与 quality/ready 检查。 | 缺 source/artifact/workspace scope 形成质量债，不阻止 Codex 进入 stage。 |
 | `quality_gate_plan` | 独立 reviewer / auditor gate 计划。 | `doctor` 必须发现 self-review、missing reviewer owner 或 missing gate output。 |
 | `handoff_envelope` | 下游 stage 或 owner 所需的显式输入。 | `inspect` 必须展示下游需要的 refs 和 owner acceptance requirement。 |
 | `route_back_ref` | 质量、证据、source 或 artifact 缺口回退到前序 owner。 | `status/doctor` 必须把 route-back 作为 owner route，不写成 stage success。 |

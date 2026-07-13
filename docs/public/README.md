@@ -13,7 +13,7 @@ Machine boundary: 本文是人读索引。公开产品 truth 继续归 README、
 
 | 条目 | 用途 | 边界 |
 | --- | --- | --- |
-| [OPL 白皮书](https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-whitepaper.html) | 面向外部读者分享 OPL 定位、设计哲学、品牌模块和 Foundry Agents；PDF 用于转发和离线阅读。 | 用户可读公开材料。白皮书内容源在 `docs/whitepapers/`，HTML/PDF 由 `npm run docs:latest` 生成到 `docs/site/latest/whitepapers/`，不声明 runtime、release、domain 或 production ready。 |
+| [OPL 白皮书系列](https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/) | 汇总 OPL Framework、OPL App、OPL Cloud 与 MAS 四份设计白皮书；HTML 用于在线阅读，PDF 用于转发和离线阅读。 | 各仓持有自己的正文和产品/领域边界；OPL 只持有目录与统一 renderer。白皮书不声明 runtime、release、domain 或 production ready。 |
 | [OPL 系列仓库地图](./repo-map.md) | 用一句话说明每个公开仓库的角色、owner 边界和默认阅读顺序。 | 人读导航，不替代各仓 contracts、source、runtime/readback、release artifacts 或 owner receipts。 |
 | [产品路线](./roadmap.md) | 解释公开产品方向和 staged roadmap。 | 方向支撑，不替代 active plan、contracts 或 fresh evidence。 |
 | [任务版图](./task-map.md) | 解释 OPL family 面向哪些高价值知识工作任务。 | 用户视角任务地图，不是 domain backlog 或 authority surface。 |

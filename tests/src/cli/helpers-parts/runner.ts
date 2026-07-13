@@ -12,6 +12,13 @@ import { cliPath, repoRoot } from './constants.ts';
 
 const CLI_TEST_MAX_BUFFER = 16 * 1024 * 1024;
 const DEFAULT_CLI_TEST_TIMEOUT_MS = 30_000;
+type InProcessCliResponse = {
+  status: number;
+  stdout: string;
+  stderr: string;
+};
+
+let readOnlyInvocationQueue = Promise.resolve();
 
 type DetachedSpawnSyncOptions = SpawnSyncOptionsWithStringEncoding & {
   detached: true;
@@ -53,7 +60,11 @@ function cleanupTimedOutCli(result: SpawnSyncReturns<string>) {
   }
 }
 
-function cliFailureMessage(args: string[], result: SpawnSyncReturns<string>) {
+function cliFailureMessage(
+  args: string[],
+  result: Pick<SpawnSyncReturns<string>, 'status' | 'stdout' | 'stderr'>
+    & Partial<Pick<SpawnSyncReturns<string>, 'error' | 'signal'>>,
+) {
   return [
     `CLI command failed: opl ${args.join(' ')}`,
     result.error ? `error=${result.error.message}` : null,
@@ -85,6 +96,20 @@ function runCliProcess(args: string[], cwd: string, envOverrides: Record<string,
 
 export function runCli(args: string[], envOverrides: Record<string, string> = {}) {
   return runCliInCwd(args, repoRoot, envOverrides);
+}
+
+export async function runCliReadOnly(args: string[], envOverrides: Record<string, string> = {}) {
+  return runCliReadOnlyInCwd(args, repoRoot, envOverrides);
+}
+
+export async function runCliReadOnlyInCwd(
+  args: string[],
+  cwd: string,
+  envOverrides: Record<string, string> = {},
+) {
+  const result = await runCliReadOnlyRequest(args, cwd, envOverrides);
+  assert.equal(result.status, 0, cliFailureMessage(args, result));
+  return parseJsonText(result.stdout) as any;
 }
 
 export function runCliRaw(args: string[], envOverrides: Record<string, string> = {}) {
@@ -141,6 +166,23 @@ export function runCliViaEntryPathInCwd(
 
 export function runCliFailure(args: string[], envOverrides: Record<string, string> = {}) {
   return runCliFailureInCwd(args, repoRoot, envOverrides);
+}
+
+export async function runCliReadOnlyFailure(args: string[], envOverrides: Record<string, string> = {}) {
+  return runCliReadOnlyFailureInCwd(args, repoRoot, envOverrides);
+}
+
+export async function runCliReadOnlyFailureInCwd(
+  args: string[],
+  cwd: string,
+  envOverrides: Record<string, string> = {},
+) {
+  const result = await runCliReadOnlyRequest(args, cwd, envOverrides);
+  assert.notEqual(result.status, 0);
+  return {
+    status: result.status,
+    payload: parseJsonText(result.stderr) as any,
+  };
 }
 
 export function runCliFailureInCwd(
@@ -201,4 +243,51 @@ export async function runCliAsync(args: string[], envOverrides: Record<string, s
       }
     });
   });
+}
+
+async function runCliReadOnlyRequest(
+  args: string[],
+  cwd: string,
+  envOverrides: Record<string, string>,
+): Promise<InProcessCliResponse> {
+  const invocation = readOnlyInvocationQueue.then(async () => {
+    const originalCwd = process.cwd();
+    const originalEnv = new Map<string, string | undefined>();
+    let stdout = '';
+    let stderr = '';
+    let status = 0;
+
+    try {
+      process.chdir(cwd);
+      for (const [name, value] of Object.entries(envOverrides)) {
+        originalEnv.set(name, process.env[name]);
+        process.env[name] = value;
+      }
+      const { main } = await import('../../../../src/entrypoints/cli/main.ts');
+      await main({
+        argv: args,
+        stdout: { write: (chunk) => { stdout += String(chunk); return true; } },
+        stdoutIsTTY: false,
+      });
+    } catch (error) {
+      const { handleCliMainError } = await import('../../../../src/entrypoints/cli/main.ts');
+      handleCliMainError(error, {
+        stderr: { write: (chunk) => { stderr += String(chunk); return true; } },
+        setExitCode: (exitCode) => { status = exitCode; },
+      });
+    } finally {
+      for (const [name, value] of originalEnv) {
+        if (value === undefined) {
+          delete process.env[name];
+        } else {
+          process.env[name] = value;
+        }
+      }
+      process.chdir(originalCwd);
+    }
+
+    return { status, stdout, stderr };
+  });
+  readOnlyInvocationQueue = invocation.then(() => undefined, () => undefined);
+  return await invocation;
 }

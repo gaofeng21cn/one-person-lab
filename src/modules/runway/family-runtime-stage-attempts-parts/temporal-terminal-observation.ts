@@ -37,6 +37,7 @@ import { ingestStageAttemptCloseout } from './closeout-ingest.ts';
 import {
   reconcileDomainRouteTerminalTaskForAttempt,
 } from '../family-runtime-domain-route-terminal-sync.ts';
+import { isRuntimeHardStopReason } from '../../../kernel/progress-hard-stop-policy.ts';
 
 type TemporalStageAttemptTerminalObservation = {
   surface_kind: 'temporal_stage_attempt_query_receipt';
@@ -214,20 +215,36 @@ function temporalNonCompletionBlocker(observation: TemporalStageAttemptTerminalO
   return 'temporal_stage_attempt_not_completed';
 }
 
-function temporalCompletedMissingCloseoutBlocker(observation: TemporalStageAttemptTerminalObservation) {
-  if (
-    observation.workflow_status !== 'COMPLETED'
-    || observation.query?.status !== 'completed'
-    || observation.query.completion_boundary.provider_completion !== 'completed'
-  ) {
-    return null;
-  }
-  const closeoutRefs = Array.isArray(observation.query.closeout_refs)
-    ? observation.query.closeout_refs.filter((entry) => typeof entry === 'string' && entry.trim())
-    : [];
-  return closeoutRefs.length === 0
-    ? 'temporal_stage_attempt_completed_missing_typed_closeout'
-    : null;
+function progressDiagnosticPacketFromTemporalBlocker(input: {
+  observation: TemporalStageAttemptTerminalObservation;
+  row: StageAttemptRow;
+  blocker: string;
+}) {
+  const projected = blockedCloseoutProjectionFromTemporalObservation(input.observation);
+  const diagnosticRef = `opl://stage-attempts/${
+    input.observation.stage_attempt_id
+  }/quality-debt-diagnostics/${encodeURIComponent(input.blocker)}`;
+  return {
+    surface_kind: 'stage_attempt_closeout_packet',
+    closeout_refs: [...new Set([...(projected?.closeout_refs ?? []), diagnosticRef])],
+    consumed_refs: projected?.consumed_refs ?? [],
+    consumed_memory_refs: projected?.consumed_memory_refs ?? [],
+    writeback_receipt_refs: projected?.writeback_receipt_refs ?? [],
+    rejected_writes: [],
+    next_owner: input.row.domain_id,
+    domain_ready_verdict: null,
+    route_impact: {
+      ...(projected?.route_impact ?? {}),
+      progression_effect: 'next_stage_may_start',
+      quality_debt_refs: [diagnosticRef],
+      provider_quality_debt_reason: input.blocker,
+      provider_quality_debt_diagnostic_ref: diagnosticRef,
+    },
+    authority_boundary: {
+      opl: 'provider_quality_debt_diagnostic_projection_only',
+      domain: 'truth_quality_artifact_gate_owner',
+    },
+  };
 }
 
 function reconcileDomainRouteTerminalObservation(db: DatabaseSync, stageAttemptId: string) {
@@ -306,19 +323,20 @@ function closeoutPacketFromTemporalCompletedObservation(
   ) {
     return null;
   }
-  const closeoutRefs = Array.isArray(observation.query.closeout_refs)
+  const observedCloseoutRefs = Array.isArray(observation.query.closeout_refs)
     ? observation.query.closeout_refs.filter((entry) => typeof entry === 'string' && entry.trim())
     : [];
-  if (closeoutRefs.length === 0) {
-    return null;
-  }
+  const diagnosticRef = `opl://stage-attempts/${observation.stage_attempt_id}/no-output-diagnostic`;
+  const closeoutRefs = observedCloseoutRefs.length > 0 ? observedCloseoutRefs : [diagnosticRef];
   const receipt = observation.query.closeout_packet;
   const receiptRecord = typeof receipt === 'object' && receipt !== null && !Array.isArray(receipt)
     ? receipt
     : null;
   const surfaceKind = typeof receiptRecord?.closeout_packet_surface_kind === 'string'
     ? receiptRecord.closeout_packet_surface_kind
-    : 'domain_stage_closeout_packet';
+    : observedCloseoutRefs.length > 0
+      ? 'domain_stage_closeout_packet'
+      : 'stage_attempt_closeout_packet';
   return normalizeTypedStageCloseoutPacket({
     surface_kind: surfaceKind,
     closeout_refs: closeoutRefs,
@@ -328,7 +346,14 @@ function closeoutPacketFromTemporalCompletedObservation(
     rejected_writes: observation.query.rejected_writes,
     next_owner: observation.query.next_owner,
     domain_ready_verdict: observation.query.completion_boundary.domain_ready_verdict,
-    route_impact: observation.query.route_impact,
+    route_impact: observedCloseoutRefs.length > 0
+      ? observation.query.route_impact
+      : {
+          ...record(observation.query.route_impact),
+          progression_effect: 'next_stage_may_start',
+          quality_debt_refs: [diagnosticRef],
+          no_output_diagnostic_ref: diagnosticRef,
+        },
     closeout_ref_metadata: receiptRecord?.closeout_ref_metadata,
     domain_output: receiptRecord?.domain_output,
     authority_boundary: {
@@ -346,9 +371,7 @@ export function syncStageAttemptFromTemporalTerminalObservation(
     return syncStageAttemptFromTemporalUnavailableObservation(db, observation);
   }
   const failureReason = temporalTerminalFailureReason(observation);
-  const nonCompletionBlocker =
-    temporalNonCompletionBlocker(observation)
-    ?? temporalCompletedMissingCloseoutBlocker(observation);
+  const nonCompletionBlocker = temporalNonCompletionBlocker(observation);
   const row = db.prepare('SELECT * FROM stage_attempts WHERE stage_attempt_id = ?').get(
     observation.stage_attempt_id,
   ) as StageAttemptRow | undefined;
@@ -417,6 +440,23 @@ export function syncStageAttemptFromTemporalTerminalObservation(
     return synced;
   }
   const observedAt = nowIso();
+  if (nonCompletionBlocker && !isRuntimeHardStopReason(nonCompletionBlocker)) {
+    const synced = ingestStageAttemptCloseout(db, {
+      stageAttemptId: observation.stage_attempt_id,
+      packet: progressDiagnosticPacketFromTemporalBlocker({
+        observation,
+        row,
+        blocker: nonCompletionBlocker,
+      }),
+      costSummary: latestActivityCostSummaryFromTemporalObservation(observation),
+    }).attempt;
+    const syncedRow = getStageAttemptRow(db, observation.stage_attempt_id);
+    if (syncedRow) {
+      markLinkedDefaultExecutorTaskCompleted(db, { row: syncedRow, observedAt });
+    }
+    reconcileDomainRouteTerminalObservation(db, observation.stage_attempt_id);
+    return synced;
+  }
   if (nonCompletionBlocker && row.status !== 'completed') {
     const blockedCloseoutProjection = blockedCloseoutProjectionFromTemporalObservation(observation);
     const providerRun = {
@@ -484,6 +524,59 @@ export function syncStageAttemptFromTemporalTerminalObservation(
   }
   if (!failureReason) {
     return null;
+  }
+  if (failureReason !== 'temporal_workflow_canceled') {
+    const diagnosticRef = `opl://stage-attempts/${observation.stage_attempt_id}/failure-diagnostic`;
+    ingestStageAttemptCloseout(db, {
+      stageAttemptId: observation.stage_attempt_id,
+      packet: {
+        surface_kind: 'stage_attempt_closeout_packet',
+        closeout_refs: [diagnosticRef],
+        consumed_refs: [],
+        consumed_memory_refs: [],
+        writeback_receipt_refs: [],
+        rejected_writes: [],
+        next_owner: row.domain_id,
+        domain_ready_verdict: null,
+        route_impact: {
+          progression_effect: 'next_stage_may_start',
+          quality_debt_refs: [diagnosticRef],
+          provider_failure_reason: failureReason,
+          failure_diagnostic_ref: diagnosticRef,
+        },
+        authority_boundary: {
+          opl: 'provider_failure_diagnostic_projection_only',
+          domain: 'truth_quality_artifact_gate_owner',
+        },
+      },
+      costSummary: latestActivityCostSummaryFromTemporalObservation(observation),
+    });
+    const providerRun = {
+      ...parseStageAttemptJsonObject(row.provider_run_json),
+      provider_kind: 'temporal',
+      workflow_id: observation.workflow_id,
+      provider_status: 'failed_with_progress_diagnostic',
+      completed_at: observedAt,
+      last_heartbeat_at: observedAt,
+      terminal_observation: {
+        source: 'temporal_stage_attempt_query',
+        workflow_status: observation.workflow_status ?? null,
+        query_status: observation.query?.status ?? null,
+        reason: failureReason,
+        progress_diagnostic_ref: diagnosticRef,
+      },
+    };
+    db.prepare(`
+      UPDATE stage_attempts
+      SET provider_run_json = ?, updated_at = ?
+      WHERE stage_attempt_id = ?
+    `).run(JSON.stringify(providerRun), observedAt, observation.stage_attempt_id);
+    const syncedRow = getStageAttemptRow(db, observation.stage_attempt_id);
+    if (syncedRow) {
+      markLinkedDefaultExecutorTaskCompleted(db, { row: syncedRow, observedAt });
+    }
+    reconcileDomainRouteTerminalObservation(db, observation.stage_attempt_id);
+    return inspectStageAttempt(db, observation.stage_attempt_id);
   }
   const failureProviderStatus = failureReason === 'temporal_workflow_canceled' ? 'canceled' : 'failed';
   const failureEventStatus = failureReason === 'temporal_workflow_canceled' ? 'canceled' : 'failed';

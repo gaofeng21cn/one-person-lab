@@ -64,7 +64,6 @@ Ponytail cleanup 默认分三步启动：
 | --- | --- | --- | --- | --- |
 | `ponytail-family-readonly-audit-20260627` | 跨 OPL family 做只读 inventory，输出候选矩阵与 owner 初判。 | 无 sibling repo 写入；若需要，只能在该 lane 自身 worktree 写矩阵草案。 | sibling repo source、contracts、runtime/domain authority、root checkout。 | fresh audit 命令输出、repo/worktree 状态、候选矩阵完整性。 |
 | `ponytail-command-docs-20260627` | 在 OPL 主仓落地本 runbook / matrix support，并可做低风险 command/docs 收薄。 | `docs/active/**` 或 `docs/references/operating-governance/**`；只有发现非常低风险行为保持拆分时，才触碰 `src/cli/cases/*command-specs*.ts` 与相关 tests。 | `contracts/**`、runtime DB/provider/domain authority、`src/system-installation/**`、`src/opl-skills-parts/paths.ts`、sibling repos、其他活跃 lane 写集。 | docs-only 时做 markdown links / `rg` sanity；若改 TS，必须 `npm run typecheck` 加相关 focused tests。 |
-| `ponytail-surface-cleanup-20260627` | OPL source surface 的窄 cleanup。 | `src/family-runtime-domain-progress-transition-runtime.ts`、`src/family-runtime-temporal-provider.ts` re-export surface、`src/cli/broken-pipe.ts` 与窄相关 tests。 | `docs/**`、`contracts/**`、runtime DB/provider/domain authority、现有 MAS/ScholarSkills lane 写集。 | focused source tests、`npm run typecheck`，必要时 repo-native verify。 |
 
 第一批明确不做：
 

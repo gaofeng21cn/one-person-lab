@@ -27,7 +27,7 @@ import { stableId } from '../../kernel/stable-id.ts';
 import {
   assertExecutableWorkOrder,
   assertOmaTargetAgentWorkOrderGuard,
-} from './agent-lab-work-order-execution/admission.ts';
+} from './agent-lab-work-order-execution/execution-preflight.ts';
 import {
   assertWorktreeDirIgnored,
   changedFiles,

@@ -172,6 +172,21 @@ test('help text advertises Codex and Connect as default entries without retired 
   assert.equal(commands.some((entry) => entry.command === 'skill sync'), false);
 
   const diagnostics = output.help.diagnostic_command_groups as Array<{ group_id: string }>;
+  const hiddenImplementationBuckets = [
+    'domain manifests',
+    'family-runtime',
+    'index',
+    'stage-artifact',
+    'executor doctor',
+    'executor run',
+    'engine install',
+    'status runtime',
+    'session ledger',
+  ];
+  for (const command of hiddenImplementationBuckets) {
+    assert.equal(commands.some((entry) => entry.command === command), false, command);
+    assert.equal(runCli(['help', ...command.split(' ')]).help.command, command);
+  }
   for (const groupId of ['domain', 'engine', 'runtime', 'session', 'skill', 'status', 'system']) {
     assert.equal(diagnostics.some((entry) => entry.group_id === groupId), true, groupId);
   }

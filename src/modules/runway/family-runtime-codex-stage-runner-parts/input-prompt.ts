@@ -129,9 +129,9 @@ function providerAuthorizationPromptLines(input: { attempt: JsonRecord; stagePac
     return [];
   }
   return [
-    'OPL provider execution authorization context follows as refs-only environment bindings.',
+    'OPL provider transport identity follows as refs-only environment bindings.',
     'When invoking domain/provider-hosted commands from this attempt, explicitly pass these OPL_* bindings to the child command environment; do not rely on implicit shell inheritance.',
-    'These refs authorize only this provider attempt and do not grant domain truth, artifact, quality, or readiness authority.',
+    'These refs identify this provider attempt for transport and observability; they do not authorize semantic routing, domain truth, artifact, quality, or readiness claims.',
     JSON.stringify(Object.fromEntries(entries)),
   ];
 }
@@ -149,7 +149,9 @@ export function runnerPromptFor(input: {
     `Stage attempt id: ${attemptId}`,
     `Stage id: ${stageId}`,
     stagePacketRef ? `Stage packet ref: ${stagePacketRef}` : 'Stage packet ref: unavailable',
-    'Execute only within the domain-owned stage packet and skill boundary.',
+    stagePacketRef
+      ? 'Use the domain-owned stage packet as input within the stage skill boundary.'
+      : 'No stage packet was supplied. Start from the declared stage id, hydrated stage prompt, workspace context, and any readable prior artifacts; record the missing packet as quality debt rather than stopping.',
     'Return progress through structured events when available.',
     ...effectiveStagePromptLines(input),
     ...providerAuthorizationPromptLines(input),
@@ -158,12 +160,11 @@ export function runnerPromptFor(input: {
       workspaceLocator: workspaceLocatorFromAttempt(input.attempt),
       workspaceRoot: workspaceRootFromAttempt(input.attempt),
     }),
-    'OPL terminal transport contract follows and applies after the domain work above.',
-    'Do not claim provider completion without a typed closeout packet from the domain handler.',
-    'Final output contract: the last non-empty assistant message MUST be exactly one JSON object and nothing else.',
-    'That JSON object MUST have surface_kind stage_attempt_closeout_packet, stage_memory_closeout_packet, or domain_stage_closeout_packet, and at least one closeout ref.',
-    'Do not wrap the JSON in Markdown. Do not add prose, code fences, prefixes, suffixes, explanations, or status text before or after the JSON.',
-    'If the stage is blocked and no typed closeout packet exists, make the final assistant message a pure JSON typed blocker/closeout packet emitted by the domain-owned path, not free text.',
+    'Write useful stage artifacts as early as possible. Partial drafts, negative findings, failed attempts, review findings, and route-back recommendations are consumable progress.',
+    'A typed closeout packet is preferred when naturally available, but it is never required for stage progression.',
+    'Your final message may be structured JSON or ordinary readable text. OPL persists it as a raw artifact and derives refs, hashes, lineage, and a minimal progress envelope.',
+    'Choose the next stage or a route-back target by semantic judgment. You may route to any declared stage and must carry forward the evidence that motivated the decision.',
+    'Do not claim domain readiness, quality acceptance, owner receipt creation, typed blocker creation, or irreversible authority unless a real domain-owned ref exists.',
   ].join('\n');
 }
 

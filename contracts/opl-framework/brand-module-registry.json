@@ -479,7 +479,7 @@
         "contracts/opl-framework/runtime-manager-contract.json",
         "contracts/opl-framework/family-runtime-attempt-contract.json",
         "contracts/opl-framework/family-runtime-online-substrate-contract.json",
-        "contracts/opl-framework/stage-route-scheduler-contract.json",
+        "contracts/opl-framework/stage-route-transport-contract.json",
         "contracts/opl-framework/managed-runtime-three-layer-contract.json",
         "contracts/opl-framework/target-operating-architecture-contract.json"
       ],
@@ -901,7 +901,7 @@
         "opl connect doctor --json",
         "opl system semantic-hygiene --json",
         "opl connect packages manifest --json",
-        "opl connect reconcile-modules --json",
+        "opl packages update --json",
         "opl contract validate --json"
       ],
       "status_doc_refs": [

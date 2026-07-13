@@ -101,12 +101,6 @@ function generatedSurfaceHandoffSurfaces() {
       current_role: 'projection_refs',
       target_role: 'opl_hosted_workbench_shell_consuming_domain_refs',
     },
-    {
-      surface_id: 'functional_harness_cases',
-      current_paths: ['runtime/fixtures/README.md'],
-      current_role: 'oracle_fixture_refs',
-      target_role: 'opl_generated_functional_harness_cases',
-    },
   ];
 }
 
@@ -232,19 +226,6 @@ function functionalPrivatizationModules(domainId: string) {
       audit_visibility: 'hidden_by_default',
     },
     {
-      module_id: `${domainId}.functional-harness-fixtures`,
-      classification: 'provenance_or_fixture',
-      migration_class: 'provenance_or_fixture',
-      code_paths: ['runtime/fixtures/README.md'],
-      current_surface_refs: ['functional_harness_cases'],
-      active_callers: ['OPL generated functional harness cases'],
-      active_caller_status: 'fixture_refs_consumed_by_opl_generated_functional_harness',
-      migration_action: 'derive_harness_cases_from_pack_contracts_and_fixture_refs',
-      retained_domain_authority: ['fixture_oracle_refs'],
-      semantic_equivalence_status: 'cleared_by_boundary',
-      audit_visibility: 'hidden_by_default',
-    },
-    {
       module_id: `${domainId}.owner-receipt-signer`,
       classification: 'minimal_authority_function',
       migration_class: 'minimal_authority_function',
@@ -355,7 +336,7 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
     },
     {
       path: 'agent/principles/domain-specialization.md',
-      content: `# ${domainLabel} Domain Specialization\n\nMap OPL standard principles to this domain's actual stage, source, receipt, blocker, quality, memory, and artifact authority surfaces.\n\nThe starter \`domain_intake\` stage captures domain intent, source refs, authority boundary, and next-stage recommendation. It must return a domain owner receipt, typed blocker, human gate, or route-back ref before any generated or hosted OPL surface can present progress.\n`,
+      content: `# ${domainLabel} Domain Specialization\n\nMap OPL standard principles to this domain's actual stage, source, receipt, blocker, quality, memory, and artifact authority surfaces.\n\nThe starter \`domain_intake\` stage captures domain intent, source refs, authority boundary, and next-stage recommendation. Any raw, partial, negative, corrupt-output, or no-output diagnostic is valid progress input for the next declared stage. Owner receipts govern domain/quality/ready claims; typed blockers are reserved for unavailable executors, wrong-target identity/currentness, permission/safety/authority boundaries, irreversible actions, or explicit human decisions.\n`,
     },
     {
       path: 'agent/stages/README.md',
@@ -368,6 +349,22 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
         version: 'opl-standard-agent-declarative-stage-manifest.v1',
         target_domain_id: domainId,
         owner: domainId,
+        progress_first_policy: {
+          consumable_artifact_advances_stage: true,
+          no_output_or_failure_diagnostic_advances_stage: true,
+          retry_review_and_repair_limits_are_quality_budgets: true,
+          quality_budget_exhaustion_status: 'completed_with_quality_debt',
+          quality_debt_blocks_stage_transition: false,
+          quality_debt_blocks_quality_export_or_ready_claims: true,
+          hard_stop_classes: [
+            'executor_unavailable',
+            'permission_or_credential_boundary',
+            'explicit_human_decision',
+            'authority_boundary_violation',
+            'irreversible_action_requires_authorization',
+            'identity_or_currentness_mismatch',
+          ],
+        },
         authority_boundary: {
           domain_truth_owner: domainId,
           opl_can_write_domain_truth: false,
@@ -377,8 +374,8 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
           stage_id: STARTER_STAGE_ID,
           stage_kind: 'intake',
           title: 'Domain intake',
-          summary: 'Capture domain intent, source refs, authority boundary, and next-stage readiness.',
-          goal: 'Produce intake receipt refs and a next-stage recommendation without granting OPL domain truth authority.',
+          summary: 'Capture domain intent, source refs, authority boundary, and next-stage route context.',
+          goal: 'Produce the best intake progress artifact or diagnostic plus a next-stage recommendation without granting OPL domain truth authority.',
           policy_ref: `agent/stages/${STARTER_STAGE_ID}.md`,
           prompt_ref: `agent/prompts/${STARTER_STAGE_ID}.md`,
           knowledge_refs: ['agent/knowledge/domain_boundary.md'],
@@ -392,7 +389,7 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
             `stage-completion-policy-ref:${domainId}/${STARTER_STAGE_ID}`,
           ],
           ensures: [
-            'domain_intake_receipt_or_typed_blocker_ref',
+            'domain_intake_progress_receipt_diagnostic_or_hard_boundary_ref',
             'next_stage_recommendation_ref',
             'authority_boundary_ref',
             'no_forbidden_write_evidence_ref',
@@ -404,7 +401,7 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
     },
     {
       path: `agent/stages/${STARTER_STAGE_ID}.md`,
-      content: `# ${domainLabel} Domain Intake Stage\n\nPurpose: capture the first domain-specific request, source refs, authority boundary, and handoff criteria before any OPL-hosted execution starts.\n\nRequired inputs: user intent, source locator refs, expected deliverable class, domain authority owner, and blocked-scope list.\n\nRequired outputs: intake receipt ref, accepted next-stage ref, typed blocker ref when intent or authority is unclear, and no-forbidden-write evidence ref.\n`,
+      content: `# ${domainLabel} Domain Intake Stage\n\nPurpose: capture the first domain-specific request, source refs, authority boundary, and handoff criteria as an OPL-hosted stage attempt.\n\nAvailable inputs: user intent, source locator refs, expected deliverable class, domain authority owner, and blocked-scope list. Missing or malformed ordinary inputs become quality debt or a no-output/failure diagnostic.\n\nAccepted outputs: raw or partial intake artifact refs, negative-result refs, progress receipt refs, no-output/failure diagnostic refs, next-stage or route-back refs, owner receipt refs, and no-forbidden-write evidence refs. Return a typed blocker or human gate only for an unavailable executor, wrong-target identity/currentness, permission/safety/authority boundary, irreversible action, or explicit human decision.\n`,
     },
     {
       path: 'agent/prompts/README.md',
@@ -412,7 +409,7 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
     },
     {
       path: `agent/prompts/${STARTER_STAGE_ID}.md`,
-      content: `# ${domainLabel} Domain Intake Prompt\n\nRead the user request, source locators, target deliverable, and known constraints. Return only domain-owned intake refs, an explicit authority boundary, and a next-stage recommendation. Do not write domain truth, memory body, artifacts, quality verdicts, or export verdicts from the OPL generated interface.\n`,
+      content: `# ${domainLabel} Domain Intake Prompt\n\nRead the available user request, source locators, target deliverable, and known constraints. Produce the best domain-owned intake artifact or a no-output/failure diagnostic, preserve uncertainty and negative evidence, and recommend any declared next or route-back stage. Missing format, refs, review, or ordinary evidence is quality debt and never blocks the next stage. Do not write domain truth, memory body, artifacts, quality verdicts, or export verdicts from the OPL generated interface.\n`,
     },
     {
       path: 'agent/skills/README.md',
@@ -444,7 +441,7 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
     },
     {
       path: 'agent/quality_gates/domain_acceptance.md',
-      content: `# ${domainLabel} Domain Acceptance Gate\n\nA stage may close only with a domain owner receipt, typed blocker, or explicit route-back ref. Mechanical completion, schema completeness, provider completion, or generated-surface readiness cannot declare domain ready, quality accepted, or export approved.\n`,
+      content: `# ${domainLabel} Domain Acceptance Gate\n\nA stage advances with a domain artifact, raw/partial/negative result, progress receipt, no-output/failure diagnostic, quality debt, owner receipt, human gate, hard-boundary typed blocker, or explicit route-back ref. Quality debt and diagnostics close domain-ready, quality-accepted, and export-approved claims, not stage transition. Mechanical completion, schema completeness, provider completion, or generated-surface readiness cannot declare those claims.\n`,
     },
     {
       path: 'agent/policies/README.md',
@@ -812,7 +809,7 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
     },
     {
       path: 'docs/architecture.md',
-      content: `# ${domainLabel} Architecture\n\nThis repo owns domain truth, quality/export verdicts, artifact authority, memory body, and owner receipts. OPL owns generic runtime, stage-attempt request/projection, ${OBSERVABILITY_ATTEMPT_LEDGER_LABEL}, transition runner, memory locator transport, artifact lifecycle shell, workbench, and observability projection.\n`,
+      content: `# ${domainLabel} Architecture\n\nThis repo owns domain truth, quality/export verdicts, artifact authority, memory body, and owner receipts. Codex CLI owns semantic stage routing. OPL owns StageRun transport, stage-attempt request/projection, ${OBSERVABILITY_ATTEMPT_LEDGER_LABEL}, memory locator transport, artifact lifecycle shell, workbench, and observability projection.\n`,
     },
     {
       path: 'docs/invariants.md',

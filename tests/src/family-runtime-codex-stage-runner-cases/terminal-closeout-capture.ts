@@ -12,8 +12,10 @@ async function runWithFakeCodex(
   input: Parameters<typeof runPublicCodexStageRunner>[0],
 ) {
   const previousCodexBin = process.env.OPL_CODEX_BIN;
+  const previousStateDir = process.env.OPL_STATE_DIR;
   try {
     process.env.OPL_CODEX_BIN = codexPath;
+    process.env.OPL_STATE_DIR = path.join(fixtureRoot, 'opl-state');
     return await runPublicCodexStageRunner(input);
   } finally {
     if (previousCodexBin === undefined) {
@@ -21,11 +23,16 @@ async function runWithFakeCodex(
     } else {
       process.env.OPL_CODEX_BIN = previousCodexBin;
     }
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 }
 
-test('Codex stage runner rejects terminal prose-prefixed closeout JSON', async () => {
+test('Codex stage runner advances prose-prefixed closeout as raw progress', async () => {
   const closeout = {
     surface_kind: 'domain_stage_closeout_packet',
     closeout_refs: ['receipt:codex-prose-prefixed-closeout'],
@@ -66,53 +73,23 @@ exit 64
   });
 
   assert.equal(receipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet');
-  assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
-    'opl://stage-attempts/sat_prose_prefixed_closeout_test/runtime-blockers/codex_cli_typed_closeout_not_materialized',
-  ]);
-  assert.equal(
-    receipt.closeout_packet?.route_impact?.provider_blocker_reason,
-    'codex_cli_typed_closeout_not_materialized',
-  );
-  assert.equal(
-    receipt.process_output_summary?.structured_closeout_gate?.gate_status,
-    'provider_runtime_blocker_materialized',
-  );
-  assert.equal(
-    receipt.process_output_summary?.structured_closeout_gate?.failure?.repair_class,
-    'closeout_materialization',
-  );
-  const capturePipeline = receipt.process_output_summary?.structured_closeout_gate?.capture_pipeline as
-    | Record<string, unknown>
-    | undefined;
-  assert.equal(capturePipeline?.free_text_closeout_accepted, false);
-  assert.equal(capturePipeline?.terminal_json_exact_object_required, true);
-  assert.equal(capturePipeline?.parse_failure_is_stage_progression, false);
-  const failure = receipt.process_output_summary?.structured_closeout_gate?.failure as
-    | Record<string, unknown>
-    | undefined;
-  assert.equal(failure?.output_protocol_drift, true);
-  assert.equal(failure?.materialization_required, 'terminal_typed_closeout_json_object');
-  assert.equal(
-    receipt.process_output_summary?.structured_closeout_gate?.repair_action?.mutation,
-    false,
-  );
-  const repairAction = receipt.process_output_summary?.structured_closeout_gate?.repair_action as
-    | Record<string, unknown>
-    | undefined;
-  assert.equal(repairAction?.repair_kind, 'output_protocol_drift');
-  assert.equal(repairAction?.materialization_required, 'terminal_typed_closeout_json_object');
-  assert.equal(
-    receipt.process_output_summary?.structured_closeout_gate?.authority_boundary.can_write_domain_truth,
-    false,
-  );
-  assert.equal(receipt.runner_status.typed_closeout_required_for_completion, true);
-  assert.equal(receipt.runner_status.free_text_closeout_accepted, false);
+  assert.match(receipt.closeout_packet?.closeout_refs[0] ?? '', /^file:\/\//);
+  assert.equal(receipt.closeout_packet?.domain_ready_verdict, 'completed_with_quality_debt');
+  assert.equal(receipt.closeout_packet?.route_impact?.next_stage_may_start, true);
+  const progress = receipt.process_output_summary?.progress_closeout_projection;
+  assert.equal(progress?.projection_status, 'derived_progress_envelope');
+  assert.equal(progress?.capture_pipeline.free_text_or_partial_output_is_progress, true);
+  assert.equal(progress?.capture_pipeline.terminal_json_exact_object_required, false);
+  assert.equal(progress?.capture_pipeline.output_schema_control_plane_enabled, false);
+  assert.equal(progress?.capture_pipeline.same_session_closeout_enforcement_enabled, false);
+  assert.equal(receipt.runner_status.typed_closeout_required_for_progress, false);
+  assert.equal(receipt.runner_status.raw_artifact_sufficient_for_progress, true);
   const processOutputSummary = receipt.process_output_summary;
   assert.ok(processOutputSummary, 'codex_cli runner receipt must include process_output_summary.');
   assert.equal(processOutputSummary.final_message_chars > JSON.stringify(closeout).length, true);
 });
 
-test('Codex stage runner rejects terminal JSON missing typed closeout contract fields', async () => {
+test('Codex stage runner advances malformed typed closeout as raw progress', async () => {
   const cases = [
     {
       name: 'missing surface_kind',
@@ -168,29 +145,13 @@ exit 64
     });
 
     assert.equal(receipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet', entry.name);
-    assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
-      `opl://stage-attempts/${entry.attemptId}/runtime-blockers/codex_cli_typed_closeout_not_materialized`,
-    ], entry.name);
+    assert.match(receipt.closeout_packet?.closeout_refs[0] ?? '', /^file:\/\//, entry.name);
+    assert.equal(receipt.closeout_packet?.route_impact?.next_stage_may_start, true, entry.name);
     assert.equal(
-      receipt.closeout_packet?.route_impact?.provider_blocker_reason,
-      'codex_cli_typed_closeout_not_materialized',
+      receipt.process_output_summary?.progress_closeout_projection?.projection_status,
+      'derived_progress_envelope',
       entry.name,
     );
-    const gate = receipt.process_output_summary?.structured_closeout_gate;
-    assert.equal(gate?.gate_status, 'provider_runtime_blocker_materialized', entry.name);
-    assert.equal(gate?.accepted_closeout, null, entry.name);
-    const capturePipeline = gate?.capture_pipeline as Record<string, unknown> | undefined;
-    assert.equal(capturePipeline?.free_text_closeout_accepted, false, entry.name);
-    assert.equal(capturePipeline?.terminal_json_exact_object_required, true, entry.name);
-    assert.equal(capturePipeline?.parse_failure_is_stage_progression, false, entry.name);
-    const failure = gate?.failure as Record<string, unknown> | undefined;
-    assert.equal(failure?.output_protocol_drift, true, entry.name);
-    assert.equal(failure?.materialization_required, 'terminal_typed_closeout_json_object', entry.name);
-    assert.equal(failure?.provider_completion_is_domain_ready, false, entry.name);
-    const repairAction = gate?.repair_action as Record<string, unknown> | undefined;
-    assert.equal(repairAction?.repair_kind, 'output_protocol_drift', entry.name);
-    assert.equal(repairAction?.materialization_required, 'terminal_typed_closeout_json_object', entry.name);
-    assert.equal(repairAction?.blocks_domain_progress_claim, true, entry.name);
   }
 });
 
@@ -232,17 +193,16 @@ exit 64
   assert.deepEqual(receipt.closeout_packet?.consumed_refs, ['paper:draft.md']);
   assert.equal(receipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet');
   assert.equal(
-    receipt.process_output_summary?.structured_closeout_gate?.gate_status,
-    'accepted_typed_closeout',
+    receipt.process_output_summary?.progress_closeout_projection?.projection_status,
+    'typed_closeout_observed',
   );
   assert.equal(
-    receipt.process_output_summary?.structured_closeout_gate?.accepted_closeout?.closeout_ref_count,
+    receipt.process_output_summary?.progress_closeout_projection?.accepted_progress?.closeout_ref_count,
     1,
   );
-  assert.equal(receipt.process_output_summary?.structured_closeout_gate?.repair_action, null);
 });
 
-test('Codex stage runner rejects domain-route closeout without user stage log', async () => {
+test('Codex stage runner records missing domain-route stage log as nonblocking quality debt', async () => {
   const closeout = {
     surface_kind: 'stage_attempt_closeout_packet',
     closeout_refs: ['receipt:paper-route-record-only'],
@@ -281,21 +241,13 @@ exit 64
   });
 
   assert.equal(receipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet');
-  assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
-    'opl://stage-attempts/sat_paper_route_record_only_closeout_test/runtime-blockers/typed_closeout_domain_route_user_stage_log_missing',
-  ]);
-  assert.equal(
-    receipt.closeout_packet?.route_impact?.provider_blocker_reason,
-    'typed_closeout_domain_route_user_stage_log_missing',
-  );
+  assert.match(receipt.closeout_packet?.closeout_refs[0] ?? '', /^file:\/\//);
+  assert.equal(receipt.closeout_packet?.route_impact?.next_stage_may_start, true);
   assert.equal(
     receipt.process_output_summary?.closeout_rejection_reason,
     'domain_route_user_stage_log_missing',
   );
-  assert.equal(
-    receipt.process_output_summary?.blocked_reason,
-    'typed_closeout_domain_route_user_stage_log_missing',
-  );
+  assert.equal(receipt.process_output_summary?.blocked_reason, undefined);
 });
 
 test('Codex stage runner accepts domain-route closeout when attempt route impact carries user stage log', async () => {
@@ -505,22 +457,13 @@ exit 64
   });
 
   assert.equal(receipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet');
-  assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
-    'opl://stage-attempts/sat_current_attempt/runtime-blockers/typed_closeout_stage_attempt_id_mismatch',
-  ]);
+  assert.match(receipt.closeout_packet?.closeout_refs[0] ?? '', /^file:\/\//);
   assert.equal(receipt.closeout_packet?.stage_attempt_id, 'sat_current_attempt');
   assert.equal(receipt.process_output_summary?.closeout_rejection_reason, 'stage_attempt_id_mismatch');
+  assert.equal(receipt.closeout_packet?.route_impact?.next_stage_may_start, true);
   assert.equal(
-    receipt.process_output_summary?.structured_closeout_gate?.gate_status,
-    'provider_runtime_blocker_materialized',
-  );
-  assert.equal(
-    receipt.process_output_summary?.structured_closeout_gate?.failure?.repair_class,
-    'closeout_identity_mismatch',
-  );
-  assert.equal(
-    receipt.process_output_summary?.structured_closeout_gate?.failure?.closeout_rejection_reason,
-    'stage_attempt_id_mismatch',
+    receipt.process_output_summary?.progress_closeout_projection?.quality_debt?.blocks_next_stage,
+    false,
   );
 });
 
@@ -694,7 +637,7 @@ exit 64
   assert.equal(receipt.process_output_summary?.final_message_chars, closeoutText.length + 19);
 });
 
-test('Codex stage runner ignores non-terminal typed closeout-shaped progress text', async () => {
+test('Codex stage runner advances final prose after an earlier closeout-shaped message', async () => {
   const earlyCloseout = {
     surface_kind: 'stage_attempt_closeout_packet',
     closeout_refs: ['receipt:not-terminal'],
@@ -726,11 +669,10 @@ exit 64
   });
 
   assert.equal(receipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet');
-  assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
-    'opl://stage-attempts/sat_nonterminal_closeout_test/runtime-blockers/codex_cli_typed_closeout_not_materialized',
-  ]);
+  assert.match(receipt.closeout_packet?.closeout_refs[0] ?? '', /^file:\/\//);
+  assert.equal(receipt.closeout_packet?.route_impact?.next_stage_may_start, true);
   assert.equal(
-    receipt.closeout_packet?.route_impact?.provider_blocker_reason,
-    'codex_cli_typed_closeout_not_materialized',
+    receipt.process_output_summary?.progress_closeout_projection?.projection_status,
+    'derived_progress_envelope',
   );
 });

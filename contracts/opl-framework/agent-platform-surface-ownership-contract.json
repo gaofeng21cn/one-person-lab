@@ -11,8 +11,7 @@
     "generated_action_metadata_command_registration_shell",
     "status_read_model_and_workbench_shell",
     "workspace_source_artifact_memory_locator",
-    "stage_attempt_queue_retry_dead_letter",
-    "generic_transition_runner"
+    "stage_attempt_queue_retry_dead_letter"
   ],
   "hard_gate_sources": {
     "source_policy": "machine_contracts_receipts_and_proofs_only",

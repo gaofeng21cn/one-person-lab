@@ -307,18 +307,6 @@ export const retiredCliCommandMatrix: Array<{
     errorCode: 'cli_usage_error',
     replacements: [/opl connect exec/],
   },
-  {
-    args: ['module', 'sync'],
-    command: 'opl module sync',
-    errorCode: 'cli_usage_error',
-    replacements: [/opl connect reconcile-modules/],
-  },
-  {
-    args: ['module', 'reconcile'],
-    command: 'opl module reconcile',
-    errorCode: 'cli_usage_error',
-    replacements: [/opl connect reconcile-modules/],
-  },
 ];
 
 export function createFakeFamilySkillWorkspace(captureDir: string) {
@@ -500,12 +488,6 @@ const generatedSurfaceRefs = [
     surface_id: 'workbench_drilldown',
     owner: 'one-person-lab',
     target_role: 'opl_hosted_surface',
-    status: 'descriptor_source_available',
-  },
-  {
-    surface_id: 'functional_harness_cases',
-    owner: 'one-person-lab',
-    target_role: 'opl_generated_surface',
     status: 'descriptor_source_available',
   },
 ];

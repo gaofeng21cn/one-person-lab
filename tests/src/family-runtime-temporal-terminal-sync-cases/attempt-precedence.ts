@@ -108,14 +108,15 @@ test('Older terminal failure cannot overwrite newer accepted closeout for the sa
       "SELECT COUNT(*) AS count FROM events WHERE task_id = ? AND event_type = 'stage_attempt_terminal_failed_task'",
     ).get('task-mas-default-newer-closeout-wins') as { count: number };
 
-    assert.equal(olderSynced.status, 'failed');
+    assert.equal(olderSynced.status, 'completed');
+    assert.equal(olderSynced.blocked_reason, null);
+    assert.ok(olderSynced.closeout_refs.some((ref) => ref.endsWith('/failure-diagnostic')));
     assert.equal(task.status, 'succeeded');
     assert.equal(task.last_error, null);
     assert.equal(task.dead_letter_reason, null);
     assert.equal(failureTaskEvents.count, 0);
   });
 });
-
 test('Older terminal blocker cannot overwrite newer live redrive attempt for the same MAS default executor task', () => {
   withStageAttemptDb((db) => {
     const createdAt = new Date().toISOString();
@@ -159,8 +160,9 @@ test('Older terminal blocker cannot overwrite newer live redrive attempt for the
       "SELECT COUNT(*) AS count FROM events WHERE task_id = ? AND event_type = 'stage_attempt_terminal_blocked_task'",
     ).get('task-mas-default-newer-redrive-running') as { count: number };
 
-    assert.equal(olderSynced.status, 'blocked');
-    assert.equal(olderSynced.blocked_reason, 'typed_closeout_packet_required');
+    assert.equal(olderSynced.status, 'completed');
+    assert.equal(olderSynced.blocked_reason, null);
+    assert.ok(olderSynced.closeout_refs.some((ref) => ref.includes('quality-debt-diagnostics')));
     assert.equal(inspectStageAttempt(db, newerAttempt.stage_attempt_id).status, 'running');
     assert.equal(task.status, 'succeeded');
     assert.equal(task.last_error, null);

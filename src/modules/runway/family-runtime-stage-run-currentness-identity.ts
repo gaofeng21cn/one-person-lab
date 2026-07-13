@@ -48,11 +48,9 @@ export type StageRunCurrentnessIdentity = {
   dispatch_ref: string | null;
   stage_packet_ref: string | null;
   stage_packet_refs: string[];
-  provider_admission_identity: JsonRecord | null;
+  provider_attempt_identity: JsonRecord | null;
   owner_route_currentness_basis: JsonRecord | null;
   provider_attempt_ref: string | null;
-  active_lease_ref: string | null;
-  execution_authorization_ref: string | null;
   workflow_id: string | null;
   task_id: string | null;
 };
@@ -70,8 +68,8 @@ export function buildStageRunCurrentnessIdentity(
   const task = input.task ?? {};
   const taskPayload = input.taskPayload ?? recordValue(task.payload) ?? {};
   const stageAttempt = input.stageAttempt ?? {};
-  const providerAdmissionIdentity = recordValue(taskPayload.provider_admission_identity)
-    ?? recordValue(stageAttempt.provider_admission_identity);
+  const providerAttemptIdentity = recordValue(taskPayload.provider_attempt_identity)
+    ?? recordValue(stageAttempt.provider_attempt_identity);
   const stageRunRequest = recordValue(taskPayload.stage_run_request) ?? {};
   const paperMissionRouteIdentity = firstRecord(
     recordValue(taskPayload.opl_runtime_carrier),
@@ -92,14 +90,14 @@ export function buildStageRunCurrentnessIdentity(
     ?? {};
   const dispatchRef = optionalString(taskPayload.dispatch_ref)
     ?? optionalString(workspaceLocator.dispatch_ref)
-    ?? optionalString(providerAdmissionIdentity?.dispatch_ref)
+    ?? optionalString(providerAttemptIdentity?.dispatch_ref)
     ?? optionalString(taskPayload.dispatch_packet_ref)
     ?? optionalString(workspaceLocator.dispatch_packet_ref)
     ?? optionalString(taskPayload.dispatch_request_ref)
     ?? optionalString(workspaceLocator.dispatch_request_ref);
   const stagePacketRef = optionalString(taskPayload.stage_packet_ref)
     ?? optionalString(workspaceLocator.stage_packet_ref)
-    ?? optionalString(providerAdmissionIdentity?.stage_packet_ref);
+    ?? optionalString(providerAttemptIdentity?.stage_packet_ref);
   const stagePacketRefs = uniqueSortedStrings([
     stagePacketRef,
     ...stringList(taskPayload.stage_packet_refs),
@@ -139,42 +137,42 @@ export function buildStageRunCurrentnessIdentity(
       ?? optionalString(workspaceLocator.source_fingerprint)
       ?? optionalString(stageAttempt.source_fingerprint),
     truth_epoch: optionalString(basis.truth_epoch)
-      ?? optionalString(providerAdmissionIdentity?.truth_epoch)
+      ?? optionalString(providerAttemptIdentity?.truth_epoch)
       ?? optionalString(taskPayload.truth_epoch)
       ?? optionalString(workspaceLocator.truth_epoch)
       ?? optionalString(taskPayload.source_fingerprint)
       ?? optionalString(workspaceLocator.domain_source_fingerprint),
     runtime_health_epoch: optionalString(basis.runtime_health_epoch)
-      ?? optionalString(providerAdmissionIdentity?.runtime_health_epoch)
+      ?? optionalString(providerAttemptIdentity?.runtime_health_epoch)
       ?? optionalString(taskPayload.runtime_health_epoch)
       ?? optionalString(workspaceLocator.runtime_health_epoch),
     source_eval_id: optionalString(basis.source_eval_id)
-      ?? optionalString(providerAdmissionIdentity?.source_eval_id)
+      ?? optionalString(providerAttemptIdentity?.source_eval_id)
       ?? optionalString(taskPayload.source_eval_id)
       ?? optionalString(workspaceLocator.source_eval_id),
     idempotency_key: optionalString(taskPayload.next_action_id)
       ?? optionalString(paperMissionRouteIdentity.next_action_id)
-      ?? optionalString(providerAdmissionIdentity?.next_action_id)
+      ?? optionalString(providerAttemptIdentity?.next_action_id)
       ?? optionalString(taskPayload.request_idempotency_key)
       ?? optionalString(paperMissionRouteIdentity.request_idempotency_key)
-      ?? optionalString(providerAdmissionIdentity?.request_idempotency_key)
+      ?? optionalString(providerAttemptIdentity?.request_idempotency_key)
       ?? optionalString(taskPayload.idempotency_key)
       ?? optionalString(paperMissionRouteIdentity.idempotency_key)
-      ?? optionalString(providerAdmissionIdentity?.idempotency_key),
+      ?? optionalString(providerAttemptIdentity?.idempotency_key),
     route_identity_key: optionalString(taskPayload.route_identity_key)
       ?? optionalString(paperMissionRouteIdentity.route_identity_key)
-      ?? optionalString(providerAdmissionIdentity?.route_identity_key),
+      ?? optionalString(providerAttemptIdentity?.route_identity_key),
     attempt_idempotency_key: optionalString(taskPayload.attempt_idempotency_key)
       ?? optionalString(paperMissionRouteIdentity.attempt_idempotency_key)
-      ?? optionalString(providerAdmissionIdentity?.attempt_idempotency_key),
+      ?? optionalString(providerAttemptIdentity?.attempt_idempotency_key),
     recovery_obligation_id: optionalString(taskPayload.recovery_obligation_id)
-      ?? optionalString(providerAdmissionIdentity?.recovery_obligation_id)
-      ?? optionalString(providerAdmissionIdentity?.paper_recovery_obligation_id)
+      ?? optionalString(providerAttemptIdentity?.recovery_obligation_id)
+      ?? optionalString(providerAttemptIdentity?.paper_recovery_obligation_id)
       ?? optionalString(workspaceLocator.recovery_obligation_id),
     dispatch_ref: dispatchRef,
     stage_packet_ref: stagePacketRef,
     stage_packet_refs: stagePacketRefs,
-    provider_admission_identity: providerAdmissionIdentity,
+    provider_attempt_identity: providerAttemptIdentity,
     owner_route_currentness_basis: recordValue(taskPayload.owner_route_currentness_basis)
       ?? recordValue(sourceRefs.owner_route_currentness_basis)
       ?? recordValue(currentnessContract.basis)
@@ -185,10 +183,6 @@ export function buildStageRunCurrentnessIdentity(
           ? `opl://stage-attempts/${optionalString(stageAttempt.stage_attempt_id)}`
           : null
       ),
-    active_lease_ref: optionalString(stageAttempt.attempt_lease_ref)
-      ?? optionalString(stageAttempt.active_lease_ref),
-    execution_authorization_ref: optionalString(stageAttempt.execution_authorization_decision_ref)
-      ?? optionalString(stageAttempt.execution_authorization_ref),
     workflow_id: optionalString(stageAttempt.workflow_id),
     task_id: optionalString(stageAttempt.task_id) ?? optionalString(task.task_id),
   };

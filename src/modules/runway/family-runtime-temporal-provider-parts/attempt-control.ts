@@ -27,9 +27,6 @@ import {
   stageAttemptOperatorUpdate,
 } from '../family-runtime-temporal-workflows.ts';
 import {
-  recordStageRunExecutionAuthorizationReceipts,
-} from '../../stagecraft/index.ts';
-import {
   resolveTemporalAddressForPaths,
 } from '../family-runtime-temporal-service.ts';
 import {
@@ -87,10 +84,6 @@ export async function startTemporalStageAttemptWorkflow(
         ? {}
         : { searchAttributes: buildTemporalStageAttemptSearchAttributes(launchInput) },
     }), options);
-    const authorization = launchInput.opl_execution_authorization;
-    const executionAuthorizationLedgerRecord = authorization
-      ? recordStageRunExecutionAuthorizationReceipts([authorization])
-      : null;
     return {
       surface_kind: 'temporal_stage_attempt_start_receipt',
       provider_kind: 'temporal',
@@ -100,12 +93,11 @@ export async function startTemporalStageAttemptWorkflow(
       eagerly_started: handle.eagerlyStarted,
       namespace: resolveTemporalNamespace(),
       task_queue: taskQueue,
-      execution_authorization: authorization ?? null,
-      execution_authorization_ledger_record: executionAuthorizationLedgerRecord,
-      execution_authorization_receipt_refs:
-        executionAuthorizationLedgerRecord?.status === 'recorded'
-          ? executionAuthorizationLedgerRecord.receipt_refs
-          : [],
+      transport_identity: {
+        stage_attempt_id: attempt.stage_attempt_id,
+        workflow_id: attempt.workflow_id,
+        source_fingerprint: attempt.source_fingerprint,
+      },
       visibility_readiness: visibilityReadiness,
       authority_boundary: {
         opl: 'temporal_workflow_transport_and_control_metadata_only',

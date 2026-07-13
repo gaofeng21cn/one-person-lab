@@ -40,12 +40,6 @@ import {
   buildRuntimeStageReplayMissingReceiptCommandSpecs,
 } from '../runtime-stage-replay-missing-receipt-command-spec.ts';
 import {
-  buildRuntimeStageRunAuthorizationCommandSpecs,
-} from '../runtime-stage-run-authorization-command-spec.ts';
-import {
-  buildRuntimeStageTransitionAuthorityCommandSpecs,
-} from '../runtime-stage-transition-authority-command-spec.ts';
-import {
   buildRuntimeStandardAgentTemplateConsumptionCommandSpecs,
 } from '../runtime-standard-agent-template-consumption-command-spec.ts';
 import { buildRuntimeEnvironmentCommandSpecs } from '../runtime-environment-command-spec.ts';
@@ -326,8 +320,6 @@ export function buildPrivateRuntimeCommandSpecs({
     ...buildRuntimeDomainOwnerPayloadSummaryCommandSpecs(),
     ...buildRuntimeOwnerEvidenceSustainedConsumptionCommandSpecs(),
     ...buildRuntimeStageReplayMissingReceiptCommandSpecs(),
-    ...buildRuntimeStageRunAuthorizationCommandSpecs(),
-    ...buildRuntimeStageTransitionAuthorityCommandSpecs(),
     ...buildRuntimeDeveloperModeCloseoutCommandSpecs(),
     ...buildRuntimeStageRunEvidencePackCommandSpecs(),
     ...buildRuntimeStageCandidatePortfolioCommandSpecs(),
@@ -649,7 +641,7 @@ export function buildPrivateRuntimeCommandSpecs({
     index: buildIndexCommandSpec(),
     'family-runtime': {
       usage:
-        'opl family-runtime status|doctor|install|repair|provider repair|provider-slo tick|provider-worker supervisor|service start|service status|service stop|worker start|worker status|worker stop|scheduler install|scheduler status|scheduler trigger|scheduler remove|evidence-worklist|autonomy-supervisor decide|autonomy-supervisor readback|residency proof|attempt create|attempt list|attempt inspect|attempt start|attempt cancel|attempt query|attempt signal|attempt fixture-run|notify list|events export [options]',
+        'opl family-runtime status|doctor|install|repair|provider repair|provider-slo tick|provider-worker supervisor|service start|service status|service stop|worker start|worker status|worker stop|scheduler install|scheduler status|scheduler trigger|scheduler remove|evidence-worklist|residency proof|attempt create|attempt list|attempt inspect|attempt start|attempt cancel|attempt query|attempt signal|attempt fixture-run|notify list|events export [options]',
       summary:
         'Manage the provider-backed OPL family runtime stage attempts, evidence worklist, notifications, and events.',
       examples: [
@@ -677,8 +669,6 @@ export function buildPrivateRuntimeCommandSpecs({
         'opl family-runtime scheduler remove --provider temporal',
         'opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --json',
         'opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json',
-        'opl family-runtime autonomy-supervisor decide --obligation-ledger /tmp/obligations.jsonl --decision-ledger /tmp/decisions.jsonl --obligation-id obligation:example --current-identity-file /tmp/current-identity.json --typed-blocker-ref domain://typed-blocker --budget-or-missing-evidence-ref opl://non-advancing',
-        'opl family-runtime autonomy-supervisor readback --obligation-ledger /tmp/obligations.jsonl --decision-ledger /tmp/decisions.jsonl --obligation-id obligation:example --current-identity-file /tmp/current-identity.json',
       ],
       handler: (args) => runFamilyRuntime(args, {
         runtimeSnapshotProvider: buildRuntimeTraySnapshot,

@@ -366,7 +366,7 @@ test('work-order execute fails closed when OMA target-agent guard evidence is mi
 
     assert.equal(failure.payload.error.code, 'contract_shape_invalid');
     assert.equal(failure.payload.error.details.blocker_kind, 'oma_target_agent_work_order_guard_missing');
-    assert.equal(failure.payload.error.details.executor_launch_admission, 'blocked_before_executor_launch');
+    assert.equal(failure.payload.error.details.executor_launch_preflight, 'hard_stopped_before_executor_launch');
     assert.deepEqual(failure.payload.error.details.no_executor_launch_proof, {
       codex_process_started: false,
       target_worktree_opened: false,
@@ -388,7 +388,7 @@ test('work-order execute fails closed when OMA target-agent guard evidence is mi
     assert.equal(typedBlocker.surface_kind, 'opl_work_order_typed_blocker');
     assert.equal(typedBlocker.blocker_kind, 'oma_target_agent_work_order_guard_missing');
     assert.equal(typedBlocker.status, 'developer_work_order_required');
-    assert.equal(typedBlocker.executor_launch_admission, 'blocked_before_executor_launch');
+    assert.equal(typedBlocker.executor_launch_preflight, 'hard_stopped_before_executor_launch');
     assert.deepEqual(typedBlocker.no_executor_launch_proof,
       failure.payload.error.details.no_executor_launch_proof);
     assert.equal(typedBlocker.can_sign_target_owner_receipt, false);
@@ -479,7 +479,7 @@ for (const { name, missingField, mutate } of omaTargetAgentGuardMissingCases) {
 
       assert.equal(failure.payload.error.code, 'contract_shape_invalid');
       assert.equal(failure.payload.error.details.blocker_kind, 'oma_target_agent_work_order_guard_missing');
-      assert.equal(failure.payload.error.details.executor_launch_admission, 'blocked_before_executor_launch');
+      assert.equal(failure.payload.error.details.executor_launch_preflight, 'hard_stopped_before_executor_launch');
       assert.deepEqual(failure.payload.error.details.missing_guard_fields, [missingField]);
       assert.deepEqual(failure.payload.error.details.no_executor_launch_proof, {
         codex_process_started: false,
@@ -497,7 +497,7 @@ for (const { name, missingField, mutate } of omaTargetAgentGuardMissingCases) {
       assert.equal(typedBlocker.blocker_kind, 'oma_target_agent_work_order_guard_missing');
       assert.equal(typedBlocker.status, 'developer_work_order_required');
       assert.equal(typedBlocker.required_next_shape, 'developer_work_order');
-      assert.equal(typedBlocker.executor_launch_admission, 'blocked_before_executor_launch');
+      assert.equal(typedBlocker.executor_launch_preflight, 'hard_stopped_before_executor_launch');
       assert.deepEqual(typedBlocker.missing_guard_fields, [missingField]);
       assert.deepEqual(typedBlocker.no_executor_launch_proof,
         failure.payload.error.details.no_executor_launch_proof);

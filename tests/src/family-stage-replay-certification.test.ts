@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { parseJsonText } from '../../src/kernel/json-file.ts';
-import { buildFamilyStageAdmissionReview } from '../../src/modules/stagecraft/family-stage-admission.ts';
+import { buildFamilyStageConformanceReview } from '../../src/modules/stagecraft/family-stage-conformance.ts';
 import type { FamilyActionCatalog } from '../../src/kernel/family-action-catalog-contract.ts';
 import type { FamilyStageContract, FamilyStageControlPlane } from '../../src/modules/stagecraft/family-stage-control-plane-contract.ts';
 import { buildFamilyStageProofBundle } from '../../src/modules/stagecraft/family-stage-proof-bundle.ts';
@@ -196,7 +196,7 @@ function proofBundle(overrides: Parameters<typeof buildStagePlane>[0] = {}) {
   const plane = buildStagePlane(overrides);
   return buildFamilyStageProofBundle(plane, {
     actionCatalog,
-    admissionReview: buildFamilyStageAdmissionReview(plane, { family_action_catalog: actionCatalog }),
+    conformanceReview: buildFamilyStageConformanceReview(plane, { family_action_catalog: actionCatalog }),
   });
 }
 
@@ -259,7 +259,7 @@ test('stage replay certification consumes plane and stage-contract replay eviden
     { ref_kind: 'owner_receipt_ref', ref: 'owner_receipt:publication_review' },
     { role: 'replay_receipt_ref', ref_kind: 'receipt_ref', ref: 'human_gate:publication_quality_gate' },
     { ref_kind: 'current_pointer_ref', ref: 'current-pointer:publication_review' },
-    { role: 'closeout_binding_ref', ref: 'owner-answer-binding:publication_review' },
+    { role: 'owner_answer_binding_ref', ref: 'owner-answer-binding:publication_review' },
     { ref_kind: 'receipt_ref', ref: 'unclassified:receipt' },
   ];
 
@@ -362,12 +362,12 @@ test('stage replay certification refuses non-admitted stage packs and missing re
       receipt_refs: ['human_gate:publication_quality_gate'],
       stage_manifest_ref: 'stage-manifest:publication_review',
       current_pointer_ref: 'current-pointer:publication_review',
-      closeout_binding_ref: 'owner-answer-binding:publication_review',
+      owner_answer_binding_ref: 'owner-answer-binding:publication_review',
     },
   });
 
   assert.equal(certification.replay_status, 'blocked');
-  assert.ok(certification.blockers.some((entry) => entry.blocker_id === 'stage_pack_not_admitted'));
+  assert.ok(certification.blockers.some((entry) => entry.blocker_id === 'stage_pack_not_conformant'));
   assert.ok(certification.blockers.some((entry) => entry.blocker_id === 'append_only_event_log_ref_missing'));
   assert.ok(certification.blockers.some((entry) => entry.blocker_id === 'attempt_ledger_ref_missing'));
   assert.equal(certification.authority_boundary.can_authorize_quality_verdict, false);

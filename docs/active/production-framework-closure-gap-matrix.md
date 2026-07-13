@@ -30,7 +30,7 @@ OPL readiness、provider proof、generated surface proof、stage evidence workor
 | --- | --- | --- |
 | `framework_control_plane` | OPL control plane 已是 current-owner-delta-first 的 framework 主干。 | 默认 summary、App fast state、runtime tray、evidence-worklist summary 和 generated surface 从同一 machine payload 派生；新增 surface 不制造第二 truth。 |
 | `current_owner_delta_default` | `current_owner_delta` 是 ordinary App/CLI/operator root；raw evidence/worklist/replay 只作 audit/detail。 | 默认读面能直接回答当前 owner、缺什么 accepted answer shape、是否 hard gate、下一步可执行 owner action；计数清零不能写成完成。 |
-| `stage_artifact_progress_truth` | Stage Artifact Unit 是 progress root。 | Progress 同时具备 physical output、valid manifest、owner answer 和 current pointer；provider completion、receipt verified、file presence 或 conformance pass 单独不计进度。 |
+| `stage_artifact_progress_truth` | Stage Artifact Unit 是 progress root。 | 任意可读 physical output 可推进；manifest、receipt、pointer、hash 和 reviewer 缺口只形成质量债。provider completion 且零可读输出不计进度。 |
 | `app_cockpit_release_path` | App 只消费 framework/provider 状态与 domain-owned projection。 | App release/user-path cohort 用真实 release package、screenshot、reload/first-run path、provider linkage 和 operator evidence 关闭；不外推 family production ready。 |
 | `domain_owner_chain_scaleout` | OPL 可 refs-only 承载 owner receipt / typed blocker refs，但不生成它们。 | MAS paper、MAG grant、RCA visual、OMA target-agent stage 由 domain-owned owner receipt、typed blocker、human gate、quality/export/review receipt、no-regression 或 long-soak refs 关闭。 |
 | `memory_artifact_lifecycle_apply` | OPL 持 locator/index/ledger/ref transport；domain 持 body、mutation authority、accept/reject 和 final verdict。 | Domain-owned surface 产生真实 memory/artifact/lifecycle receipts；OPL 不保存 body、不判定 verdict。 |

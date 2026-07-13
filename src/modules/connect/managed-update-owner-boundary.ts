@@ -424,7 +424,13 @@ export function selectedManagedUpdateComponentIds(
   components: ManagedUpdateComponent[],
 ) {
   const ids = components
+    .filter((component) => !input.componentId || managedUpdateComponentMatches(component, input.componentId))
     .filter((component) => managedUpdateComponentCanRunOperation(component, input.operation))
+    .filter((component) => input.componentId || input.operation !== 'apply' || (
+      component.auto_apply.eligible
+      && component.auto_apply.app_background_safe
+      && Boolean(component.auto_apply.command_ref)
+    ))
     .map((component) => component.component_id);
   return ids;
 }

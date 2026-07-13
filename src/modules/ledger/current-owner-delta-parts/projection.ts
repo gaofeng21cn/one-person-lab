@@ -273,7 +273,7 @@ function auditSidecarPolicy(input: {
     audit_next_safe_action_can_generate_default_next_action: false,
     hard_gate_upgrade_conditions: [
       'invalid_owner_scope_executor_or_authority_boundary',
-      'execution_authorization_or_forbidden_write_guard_missing',
+      'forbidden_write_guard_missing',
       'accepted_answer_shape_invalid_or_unbound',
       'domain_truth_artifact_memory_package_submission_release_or_delete_write',
       'publication_export_release_production_ready_or_l5_claim',
@@ -343,8 +343,6 @@ export function buildDefaultNextActionFromCurrentOwnerDelta(
     accepted_answer_shape: acceptedAnswerShape,
     missing_input_refs: stringList(delta.missing_input_refs),
     required_ref_shape: record(delta.required_ref_shape),
-    stage_run_closeout_binding_ref: stringValue(delta.stage_run_closeout_binding_ref),
-    stage_run_closeout_binding_policy: stringValue(delta.stage_run_closeout_binding_policy),
     hard_gate: {
       state: hardGateState,
       provider_liveness_required: providerLivenessRequired,

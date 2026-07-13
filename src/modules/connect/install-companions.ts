@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 
 import { buildOplRecommendedSkillSpecs } from './install-companions/catalog.ts';
@@ -26,6 +27,9 @@ export type OplCompanionSkillStatus = 'ready' | 'missing';
 type OplCompanionSkillSourceCandidate = {
   report_path: string;
   link_path: string;
+  refresh_status?: 'current' | 'updated' | 'manual_required';
+  refresh_note?: string | null;
+  source_digest?: string | null;
 };
 export type OplCompanionSkillActionStatus = 'planned' | 'ready' | 'missing_source' | 'synced' | 'available' | 'installed' | 'failed';
 export type OplCompanionSkillApplyMode = 'observe' | 'ask_to_apply' | 'managed';
@@ -290,23 +294,43 @@ function materializeSingleSkillRoot(sourceRoot: string, targetRoot: string) {
 
 function cloneOrUpdateRepo(repoUrl: string, repoDir: string) {
   if (fs.existsSync(path.join(repoDir, '.git'))) {
+    const statusResult = runGit(['status', '--porcelain'], repoDir);
+    if (statusResult.exitCode !== 0 || statusResult.stdout.trim()) {
+      return {
+        ok: false,
+        status: 'manual_required' as const,
+        note: statusResult.exitCode === 0
+          ? `Managed companion source is dirty and was not updated: ${repoDir}`
+          : statusResult.stderr || statusResult.stdout || `git status failed for ${repoDir}`,
+        sourceDigest: null,
+      };
+    }
     const pullResult = runGit(['pull', '--ff-only'], repoDir);
+    const headResult = pullResult.exitCode === 0 ? runGit(['rev-parse', 'HEAD'], repoDir) : null;
     return {
       ok: pullResult.exitCode === 0,
+      status: pullResult.exitCode === 0 ? 'updated' as const : 'manual_required' as const,
       note: pullResult.exitCode === 0 ? null : pullResult.stderr || pullResult.stdout || `git pull failed for ${repoDir}`,
+      sourceDigest: headResult?.exitCode === 0 ? headResult.stdout.trim() : null,
     };
   }
   if (fs.existsSync(repoDir)) {
     return {
       ok: false,
+      status: 'manual_required' as const,
       note: `Companion source path exists but is not a git checkout: ${repoDir}`,
+      sourceDigest: null,
     };
   }
   fs.mkdirSync(path.dirname(repoDir), { recursive: true });
   const cloneResult = runGit(['clone', '--depth', '1', repoUrl, repoDir]);
   return {
     ok: cloneResult.exitCode === 0,
+    status: cloneResult.exitCode === 0 ? 'updated' as const : 'manual_required' as const,
     note: cloneResult.exitCode === 0 ? null : cloneResult.stderr || cloneResult.stdout || `git clone failed for ${repoUrl}`,
+    sourceDigest: cloneResult.exitCode === 0
+      ? runGit(['rev-parse', 'HEAD'], repoDir).stdout.trim() || null
+      : null,
   };
 }
 
@@ -320,7 +344,7 @@ function downloadArchiveToDirectory(archiveUrl: string, targetRoot: string) {
       stdio: 'pipe',
     });
     if (curlResult.status !== 0) {
-      return false;
+      return { ok: false, note: curlResult.stderr || curlResult.stdout || 'archive download failed', sourceDigest: null };
     }
     fs.mkdirSync(unpackRoot, { recursive: true });
     const tarResult = spawnSync('tar', ['-xzf', archivePath, '-C', unpackRoot], {
@@ -328,17 +352,32 @@ function downloadArchiveToDirectory(archiveUrl: string, targetRoot: string) {
       stdio: 'pipe',
     });
     if (tarResult.status !== 0) {
-      return false;
+      return { ok: false, note: tarResult.stderr || tarResult.stdout || 'archive extraction failed', sourceDigest: null };
     }
     const unpackedRoot = fs.readdirSync(unpackRoot)
       .map((entry) => path.join(unpackRoot, entry))
       .find((entryPath) => fs.statSync(entryPath).isDirectory());
     if (!unpackedRoot || !fs.existsSync(path.join(unpackedRoot, 'SKILL.md'))) {
-      return false;
+      return { ok: false, note: 'archive does not contain a Skill root', sourceDigest: null };
     }
-    fs.rmSync(targetRoot, { recursive: true, force: true });
-    copyMaterializedTree(unpackedRoot, targetRoot);
-    return true;
+    const incomingRoot = `${targetRoot}.incoming-${process.pid}-${Date.now()}`;
+    const previousRoot = `${targetRoot}.previous`;
+    fs.rmSync(incomingRoot, { recursive: true, force: true });
+    copyMaterializedTree(unpackedRoot, incomingRoot);
+    fs.rmSync(previousRoot, { recursive: true, force: true });
+    if (fs.existsSync(targetRoot)) fs.renameSync(targetRoot, previousRoot);
+    try {
+      fs.renameSync(incomingRoot, targetRoot);
+    } catch (error) {
+      if (!fs.existsSync(targetRoot) && fs.existsSync(previousRoot)) fs.renameSync(previousRoot, targetRoot);
+      throw error;
+    }
+    fs.rmSync(previousRoot, { recursive: true, force: true });
+    return {
+      ok: true,
+      note: null,
+      sourceDigest: crypto.createHash('sha256').update(fs.readFileSync(archivePath)).digest('hex'),
+    };
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
@@ -359,8 +398,18 @@ function resolveMineruDocumentExtractorSourceRoot(home: string) {
 
 function materializeOfficeCliSkillSource(home: string, skillId: string) {
   const repoDir = resolveOfficeCliSourceRoot(home);
-  if (!fs.existsSync(repoDir) && !remoteCompanionInstallDisabled()) {
-    cloneOrUpdateRepo(getOfficeCliRepoUrl(), repoDir);
+  let refresh: ReturnType<typeof cloneOrUpdateRepo> | null = null;
+  if (isPathWithin(resolveCompanionSourcesRoot(home), repoDir) && !remoteCompanionInstallDisabled()) {
+    refresh = cloneOrUpdateRepo(getOfficeCliRepoUrl(), repoDir);
+    if (!refresh.ok) {
+      return {
+        report_path: repoDir,
+        link_path: repoDir,
+        refresh_status: 'manual_required' as const,
+        refresh_note: refresh.note,
+        source_digest: null,
+      };
+    }
   }
   const materializedRoot = path.join(resolveCompanionSourcesRoot(home), 'materialized', skillId);
   const sourceRoot = skillId === 'officecli'
@@ -375,13 +424,24 @@ function materializeOfficeCliSkillSource(home: string, skillId: string) {
   } else {
     materializeSkillDir(sourceRoot, materializedRoot);
   }
-  return resolveSkillSourceCandidate(materializedRoot);
+  const source = resolveSkillSourceCandidate(materializedRoot);
+  return source ? {
+    ...source,
+    refresh_status: refresh?.status ?? 'current',
+    refresh_note: refresh?.note ?? null,
+    source_digest: refresh?.sourceDigest ?? null,
+  } : null;
 }
 
 function materializeUiUxProMaxSkillSource(home: string) {
   const repoDir = resolveUiUxProMaxSourceRoot(home);
-  if (!fs.existsSync(repoDir) && !remoteCompanionInstallDisabled()) {
-    cloneOrUpdateRepo(getUiUxProMaxRepoUrl(), repoDir);
+  let refresh: ReturnType<typeof cloneOrUpdateRepo> | null = null;
+  if (isPathWithin(resolveCompanionSourcesRoot(home), repoDir) && !remoteCompanionInstallDisabled()) {
+    refresh = cloneOrUpdateRepo(getUiUxProMaxRepoUrl(), repoDir);
+    if (!refresh.ok) return {
+      report_path: repoDir, link_path: repoDir, refresh_status: 'manual_required' as const,
+      refresh_note: refresh.note, source_digest: null,
+    };
   }
   const skillFile = path.join(repoDir, '.claude', 'skills', 'ui-ux-pro-max', 'SKILL.md');
   const sourceRoot = path.join(repoDir, 'src', 'ui-ux-pro-max');
@@ -400,13 +460,19 @@ function materializeUiUxProMaxSkillSource(home: string) {
     }
   }
   normalizeMaterializedSkillPermissions(materializedRoot);
-  return resolveSkillSourceCandidate(materializedRoot);
+  const source = resolveSkillSourceCandidate(materializedRoot);
+  return source ? { ...source, refresh_status: refresh?.status ?? 'current', refresh_note: refresh?.note ?? null, source_digest: refresh?.sourceDigest ?? null } : null;
 }
 
 function materializeMineruDocumentExtractorSkillSource(home: string) {
   const repoDir = resolveMineruDocumentExtractorSourceRoot(home);
-  if (!fs.existsSync(repoDir) && !remoteCompanionInstallDisabled()) {
-    downloadArchiveToDirectory(getMineruDocumentExtractorArchiveUrl(), repoDir);
+  let refresh: ReturnType<typeof downloadArchiveToDirectory> | null = null;
+  if (isPathWithin(resolveCompanionSourcesRoot(home), repoDir) && !remoteCompanionInstallDisabled()) {
+    refresh = downloadArchiveToDirectory(getMineruDocumentExtractorArchiveUrl(), repoDir);
+    if (!refresh.ok) return {
+      report_path: repoDir, link_path: repoDir, refresh_status: 'manual_required' as const,
+      refresh_note: refresh.note, source_digest: null,
+    };
   }
   if (!fs.existsSync(path.join(repoDir, 'SKILL.md'))) {
     return null;
@@ -414,24 +480,24 @@ function materializeMineruDocumentExtractorSkillSource(home: string) {
   normalizeManagedCompanionSourcePermissions(home, repoDir);
   const materializedRoot = path.join(resolveCompanionSourcesRoot(home), 'materialized', 'mineru-document-extractor');
   materializeSingleSkillRoot(repoDir, materializedRoot);
-  return resolveSkillSourceCandidate(materializedRoot);
+  const source = resolveSkillSourceCandidate(materializedRoot);
+  return source ? { ...source, refresh_status: refresh ? 'updated' : 'current', refresh_note: refresh?.note ?? null, source_digest: refresh?.sourceDigest ?? null } : null;
 }
 
 function ensureRecommendedSkillSource(home: string, skill: OplRecommendedSkill) {
-  const existing = pickFirstExistingSkillSource(skill.install_source_paths ?? skill.expected_paths);
-  if (existing) {
-    return existing;
-  }
   if (skill.skill_id === 'ui-ux-pro-max') {
-    return materializeUiUxProMaxSkillSource(home);
+    const managed = materializeUiUxProMaxSkillSource(home);
+    if (managed) return managed;
   }
   if (skill.skill_id === 'officecli' || skill.skill_id.startsWith('officecli-')) {
-    return materializeOfficeCliSkillSource(home, skill.skill_id);
+    const managed = materializeOfficeCliSkillSource(home, skill.skill_id);
+    if (managed) return managed;
   }
   if (skill.skill_id === 'mineru-document-extractor') {
-    return materializeMineruDocumentExtractorSkillSource(home);
+    const managed = materializeMineruDocumentExtractorSkillSource(home);
+    if (managed) return managed;
   }
-  return null;
+  return pickFirstExistingSkillSource(skill.install_source_paths ?? skill.expected_paths);
 }
 
 function buildObservedCompanionItem(
@@ -480,6 +546,8 @@ function buildCompanionResult(
       status: 'missing',
       action: 'none',
       note: 'officecli binary is not available.',
+      ownership: 'missing',
+      content_sha256: null,
     },
     resolveMineruOpenApiTool(home) ?? {
       tool_id: 'mineru-open-api',
@@ -488,6 +556,8 @@ function buildCompanionResult(
       status: 'missing',
       action: 'none',
       note: 'mineru-open-api binary is not available.',
+      ownership: 'missing',
+      content_sha256: null,
     },
   ],
 ): OplCompanionSkillSyncResult {
@@ -562,6 +632,17 @@ export function syncOplCompanionSkills(
     }
 
     try {
+      if (source.refresh_status === 'manual_required') {
+        items.push({
+          skill_id: skill.skill_id,
+          source_path: source.report_path,
+          target_path: targetPath,
+          status: 'failed',
+          action: 'update_and_symlink',
+          note: source.refresh_note ?? 'Managed companion source update requires review.',
+        });
+        continue;
+      }
       if (skill.source === 'codex_builtin') {
         fs.rmSync(targetPath, { recursive: true, force: true });
         items.push({

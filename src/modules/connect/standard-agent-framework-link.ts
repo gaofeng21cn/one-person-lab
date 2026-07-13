@@ -8,7 +8,7 @@ import { buildOplFrameworkLocator } from './opl-framework-locator.ts';
 const FRAMEWORK_PACKAGE_NAME = 'opl-framework';
 const JAVASCRIPT_SOURCE_GLOBS = [
   '*.{js,mjs,cjs,ts,mts,cts}',
-  '{src,scripts,packages}/**/*.{js,mjs,cjs,ts,mts,cts}',
+  '{src,scripts,apps,packages}/**/*.{js,mjs,cjs,ts,mts,cts}',
 ];
 const PYTHON_SOURCE_GLOBS = ['*.py', '{src,scripts}/**/*.py'];
 const PYTHON_IMPORT_NAME = 'opl_framework';

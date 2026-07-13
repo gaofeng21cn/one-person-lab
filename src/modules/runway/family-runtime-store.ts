@@ -8,9 +8,6 @@ import { parseJsonText } from '../../kernel/json-file.ts';
 import { stableId } from '../../kernel/stable-id.ts';
 import { domainRouteProjection } from './family-runtime-domain-route.ts';
 import {
-  domainAutonomyProjection,
-} from './family-runtime-domain-autonomy.ts';
-import {
   deriveCurrentControlStateForTask,
   latestProviderActivityHeartbeat,
 } from './family-runtime-current-control-state.ts';
@@ -261,7 +258,6 @@ export function taskToPayload(row: FamilyRuntimeTaskRow) {
     task_kind: row.task_kind,
     payload,
     domain_route: domainRouteProjection(row, payload),
-    domain_autonomy: domainAutonomyProjection(row, payload),
     dedupe_key: row.dedupe_key,
     priority: row.priority,
     status: row.status,
@@ -457,16 +453,16 @@ function eventToPayload(row: FamilyRuntimeEventRow) {
   };
 }
 
-function latestDomainRouteTransitionReceipt(events: ReturnType<typeof eventToPayload>[]) {
+function latestDomainRouteTransportReceipt(events: ReturnType<typeof eventToPayload>[]) {
   for (const event of [...events].reverse()) {
-    if (event.event_type !== 'domain_route_terminal_task_reconciled') {
+    if (event.event_type !== 'domain_route_terminal_task_projected') {
       continue;
     }
     const payload = isRecord(event.payload) ? event.payload : {};
-    const receipt = payload.opl_transition_receipt;
+    const receipt = payload.opl_transport_receipt;
     if (
       isRecord(receipt)
-      && receipt.surface_kind === 'opl_domain_route_transition_receipt'
+      && receipt.surface_kind === 'opl_domain_route_terminal_transport_receipt'
     ) {
       return receipt;
     }
@@ -841,12 +837,12 @@ export function inspectTask(db: DatabaseSync, taskId: string) {
   const currentAttemptQuery = currentStageAttemptId
     ? queryStageAttempt(db, currentStageAttemptId).stage_attempt_query
     : null;
-  const transitionReceipt = latestDomainRouteTransitionReceipt(events);
-  const receiptProjection = transitionReceipt
+  const transportReceipt = latestDomainRouteTransportReceipt(events);
+  const receiptProjection = transportReceipt
     ? {
-        opl_transition_receipt: transitionReceipt,
-        mas_impact_receipt: isRecord(transitionReceipt.mas_impact_receipt)
-          ? transitionReceipt.mas_impact_receipt
+        opl_transport_receipt: transportReceipt,
+        mas_impact_receipt: isRecord(transportReceipt.mas_impact_receipt)
+          ? transportReceipt.mas_impact_receipt
           : null,
       }
     : {};

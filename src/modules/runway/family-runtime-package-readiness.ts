@@ -1,12 +1,9 @@
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { requireAgentPackageReadinessPort } from '../../kernel/agent-package-readiness-port.ts';
 import {
   resolveStandardAgent,
   STANDARD_AGENT_SERIES_MEMBERSHIP,
 } from '../../kernel/standard-agent-registry.ts';
-import {
-  ensureOplAgentPackageScopeActivation,
-  runOplAgentPackageStatus,
-} from '../connect/index.ts';
 
 type PackageScope = {
   scope: 'workspace' | 'quest';
@@ -44,6 +41,17 @@ function packageScope(locator: Record<string, unknown>): PackageScope | null {
   return workspaceRoot ? { scope: 'workspace', targetWorkspace: workspaceRoot } : null;
 }
 
+export function packageLaunchHardStopReason(packageStatus: any) {
+  if ((packageStatus?.installed_package_count ?? 0) === 0) {
+    return 'package_not_installed';
+  }
+  const runtimeSource = packageStatus?.runtime_source_readiness;
+  if (runtimeSource && runtimeSource.operational_ready !== true) {
+    return runtimeSource.reason ?? `runtime_source_${runtimeSource.status ?? 'unavailable'}`;
+  }
+  return null;
+}
+
 export async function ensureFamilyRuntimePackageLaunchReady(input: {
   domainId: string;
   workspaceLocator: Record<string, unknown>;
@@ -58,21 +66,38 @@ export async function ensureFamilyRuntimePackageLaunchReady(input: {
 
   const packageId = agent.agent_id;
   const scope = packageScope(input.workspaceLocator);
-  const initialStatus = runOplAgentPackageStatus({ packageId }).opl_agent_package_status;
-  const activation = input.activateMissingScope !== false && initialStatus.installed_package_count > 0 && scope
-    ? await ensureOplAgentPackageScopeActivation({
+  const packageReadiness = requireAgentPackageReadinessPort();
+  const initialStatus = packageReadiness.readStatus({ packageId }).opl_agent_package_status;
+  let activation = null;
+  if (input.activateMissingScope !== false && initialStatus.installed_package_count > 0 && scope) {
+    activation = await packageReadiness.ensureScopeActivation({
       packageId,
       ...scope,
       useBoundaryId: input.useBoundaryId,
       pinnedUseBinding: input.pinnedUseBinding,
-    })
-    : null;
-  const packageStatus = runOplAgentPackageStatus({
+    });
+  }
+  const packageStatus = packageReadiness.readStatus({
     packageId,
     ...scope,
   }).opl_agent_package_status;
   if (packageStatus.launch_allowed === true) {
-    return { ...packageStatus, package_use_binding: activation?.package_use_binding ?? null };
+    return {
+      ...packageStatus,
+      package_use_binding: activation?.package_use_binding ?? null,
+      package_quality_debt: null,
+    };
+  }
+
+  const hardStopReason = packageLaunchHardStopReason(packageStatus);
+  if (!hardStopReason) {
+    return {
+      ...packageStatus,
+      package_use_binding: activation?.package_use_binding ?? null,
+      package_quality_debt: packageStatus.launch_blocked_reason,
+      progression_effect: 'stage_launch_allowed_with_package_quality_debt',
+      quality_claims_closed: true,
+    };
   }
 
   throw new FrameworkContractError(
@@ -82,7 +107,7 @@ export async function ensureFamilyRuntimePackageLaunchReady(input: {
       domain_id: input.domainId,
       package_id: packageId,
       launch_allowed: false,
-      launch_blocked_reason: packageStatus.launch_blocked_reason,
+      launch_blocked_reason: hardStopReason,
       allowed_when_blocked: packageStatus.allowed_when_blocked,
       package_dependency_readiness: packageStatus.package_dependency_readiness,
       materialization_readiness: packageStatus.materialization_readiness,

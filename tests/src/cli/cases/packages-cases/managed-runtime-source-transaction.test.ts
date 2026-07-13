@@ -214,7 +214,8 @@ test('Packages compensates managed runtime source across downstream failure upda
     assert.equal(status.opl_agent_package_status.runtime_source_readiness.operational_ready, true);
     assert.equal(status.opl_agent_package_status.launch_allowed, true);
 
-    fs.rmSync(path.join(fixtureRoot, 'bin', 'external-runtime-tool'));
+    const failingNpmPath = path.join(fixtureRoot, 'bin', 'npm');
+    fs.writeFileSync(failingNpmPath, '#!/usr/bin/env bash\nexit 1\n', { mode: 0o755 });
     const missingRuntimeStatus = runCli([
       'packages', 'status', '--package-id', 'redcube-ai',
       '--scope', 'workspace', '--target-workspace', workspaceRoot,
@@ -222,6 +223,7 @@ test('Packages compensates managed runtime source across downstream failure upda
     assert.equal(missingRuntimeStatus.opl_agent_package_status.runtime_source_readiness.status, 'incompatible');
     assert.equal(missingRuntimeStatus.opl_agent_package_status.runtime_source_readiness.reason, 'managed_runtime_source_probe_failed');
     assert.equal(missingRuntimeStatus.opl_agent_package_status.launch_allowed, false);
+    fs.rmSync(failingNpmPath);
     Object.assign(env, writeManagedRuntimeSourceFixture({
       root: fixtureRoot,
       moduleId: 'redcube',

@@ -56,12 +56,6 @@ export const OPL_GENERATED_SURFACES = [
     source_contract: 'contracts/generated_surface_handoff.json',
     domain_policy: 'domain_repo_does_not_own_generic_operator_workbench',
   },
-  {
-    surface_id: 'functional_harness_cases',
-    owner: 'one-person-lab',
-    source_contract: 'contracts/pack_compiler_input.json',
-    domain_policy: 'domain_repo_supplies_fixtures_expected_receipts_and_forbidden_write_assertions',
-  },
 ] as const;
 
 export const PACK_COMPILER_CONTRACT = {

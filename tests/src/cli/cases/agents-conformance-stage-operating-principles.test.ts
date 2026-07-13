@@ -1,19 +1,19 @@
-import { assert, fs, parseJsonText, path, runCli, test } from '../helpers.ts';
+import { assert, fs, parseJsonText, path, runCliReadOnly, test } from '../helpers.ts';
 import {
   buildReadyAgentRepo,
   writeJson,
 } from './agents-conformance-fixtures.ts';
 
-test('agents conformance blocks missing stage operating principle policy', () => {
+test('agents conformance blocks missing stage operating principle policy', async () => {
   const repoDir = buildReadyAgentRepo();
   fs.rmSync(path.join(repoDir, 'contracts', 'stage_operating_principles.json'));
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
 
   assert.equal(report.status, 'blocked');
   assert.equal(report.reports[0].stage_operating_principle_checks.status, 'blocked');
@@ -23,16 +23,16 @@ test('agents conformance blocks missing stage operating principle policy', () =>
   );
 });
 
-test('agents conformance blocks missing standard agent principles adoption', () => {
+test('agents conformance blocks missing standard agent principles adoption', async () => {
   const repoDir = buildReadyAgentRepo();
   fs.rmSync(path.join(repoDir, 'contracts', 'standard-agent-principles-adoption.json'));
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
 
   assert.equal(report.status, 'blocked');
   assert.equal(report.reports[0].standard_agent_principle_checks.status, 'blocked');
@@ -42,19 +42,19 @@ test('agents conformance blocks missing standard agent principles adoption', () 
   );
 });
 
-test('agents conformance blocks domain intake as standalone skill in standard principles adoption', () => {
+test('agents conformance blocks domain intake as standalone skill in standard principles adoption', async () => {
   const repoDir = buildReadyAgentRepo();
   const adoptionPath = path.join(repoDir, 'contracts', 'standard-agent-principles-adoption.json');
   const adoption = parseJsonText(fs.readFileSync(adoptionPath, 'utf8')) as Record<string, any>;
   adoption.domain_mapping.domain_intake.is_standalone_skill = true;
   writeJson(adoptionPath, adoption);
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
 
   const checks = report.reports[0].standard_agent_principle_checks;
   assert.equal(report.status, 'blocked');
@@ -65,7 +65,7 @@ test('agents conformance blocks domain intake as standalone skill in standard pr
   );
 });
 
-test('agents conformance blocks stage policies that slow ordinary owner-delta progress', () => {
+test('agents conformance blocks stage policies that slow ordinary owner-delta progress', async () => {
   const repoDir = buildReadyAgentRepo();
   const policyPath = path.join(repoDir, 'contracts', 'stage_operating_principles.json');
   const policy = parseJsonText(fs.readFileSync(policyPath, 'utf8')) as Record<string, any>;
@@ -79,18 +79,18 @@ test('agents conformance blocks stage policies that slow ordinary owner-delta pr
   policy.speed_policy.preflight_or_quality_review_can_loop_without_deliverable_delta = true;
   policy.speed_policy.quality_gaps_block_ordinary_progress_by_default = true;
   policy.speed_policy.safe_action_before_diagnostic_reconcile = false;
-  policy.speed_policy.next_delta_must_be_deliverable_receipt_blocker_or_handoff = false;
+  policy.speed_policy.next_delta_may_be_deliverable_receipt_diagnostic_hard_blocker_or_handoff = false;
   policy.default_read_surface.root = 'raw_worklist';
   policy.demoted_default_surfaces = ['provider_trace'];
   policy.authority_boundary.policy_can_claim_domain_ready = true;
   writeJson(policyPath, policy);
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
 
   const checks = report.reports[0].stage_operating_principle_checks;
   assert.equal(report.status, 'blocked');
@@ -120,7 +120,7 @@ test('agents conformance blocks stage policies that slow ordinary owner-delta pr
     true,
   );
   assert.equal(
-    checks.blockers.includes('stage_operating_principles_next_delta_shape_guard_missing'),
+    checks.blockers.includes('stage_operating_principles_next_delta_progress_shape_guard_missing'),
     true,
   );
   assert.equal(

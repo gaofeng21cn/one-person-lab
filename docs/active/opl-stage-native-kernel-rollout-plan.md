@@ -42,7 +42,7 @@ StageRun 是最小状态壳，不是第二 controller。OPL 可以回答 StageRu
 | 层级 | Stage Native 读法 | 默认权限 |
 | --- | --- | --- |
 | `T0_progress_delta` | 普通 step 写 `ProgressDeltaReceipt`，记录 changed surfaces、produced refs、consumed refs、next owner 和 next required delta。 | 可驱动下一 ordinary owner delta；不能关闭 Stage。 |
-| `T1_stage_transition` | stage folder 的 `stage_manifest + role artifacts + owner receipt / typed blocker + current pointer / closeout binding` 成立。 | 可关闭或阻塞 Stage。 |
+| `T1_stage_transition` | stage 已运行并留下 artifact、草稿、阴性结果、failure/no-output diagnostic 或 owner answer ref。 | 可推进任意 declared stage；缺格式或 receipt 记质量债。 |
 | `T2_delivery_artifact` | publication / export / submission / release package 带 domain/App authority receipt、independent review 或 human gate。 | 可进入交付 gate；不能声明 production maturity。 |
 | `T3_production_evidence` | restore proof、long-soak、cleanup、release cohort、L5 evidence、no-regression refs。 | 只进入 explicit evidence lane；不抢占 ordinary current owner delta。 |
 
@@ -65,8 +65,8 @@ StageRun Kernel 的目标是让默认路径更短，而不是增加 admission、
 | 检查项 | 必须满足 | 不允许 |
 | --- | --- | --- |
 | `launch_hard_gate` | 只阻断 identity、owner、scope、selected executor、authority boundary、required role artifacts、receipt/blocker shape、forbidden write 和 replay/audit 基础证据。 | 把 prompt、tool、knowledge、rubric completeness 一律变成启动 hard gate。 |
-| `execution_authorization` | provider attempt、attempt lease、execution authorization decision、workspace/artifact scope、source fingerprint、work-unit/idempotency basis、provider admission `route_identity_key` / `attempt_idempotency_key` 和 selected dispatch / stage packet refs 必须在 launch-hard 后单独成立。 | 用 domain read-model hydrate、旧 dispatch tail、通用 idempotency、provider trace 或 stale route redrive 代替 execution authorization。 |
-| `closeout_receipt_binding` | closeout receipt 必须绑定 StageRun、stage manifest、current pointer、source fingerprint 和 idempotency。 | 用 provider completed、read-model refreshed、file presence 或 conformance passed 补 closeout binding。 |
+| `wrong_target_currentness` | 仅在即将写入错误 checkout / target identity 时硬停当前 mutation。 | 用 currentness、lease、receipt 或格式检查选择/拒绝 semantic route。 |
+| `quality_evidence` | receipt、review、manifest、hash 与 lineage 只决定 quality/export/publication/ready 声明。 | 缺任一质量证据时阻止下一 stage 启动。 |
 | `strategy_refs` | prompt/tool/knowledge/evaluation refs 可作为 context、warning、route-back 或 reviewer 输入。 | 用 strategy refs completeness 代替 domain quality gate 或阻塞普通 launch。 |
 | `default_read_surface` | 默认只从 StageRun current owner delta 回答当前 Stage、缺什么 role/receipt/blocker、下一 owner。 | 默认首屏展示 raw worklist、replay packet、provider trace、typed blocker group、evidence ledger browser 或 route variant menu。 |
 | `progress_truth` | progress 从 Stage Folder、manifest、role artifact、owner receipt / typed blocker 和 current pointer 派生。 | 从 SQLite row、Temporal completion、stage_progress_log、readiness clean、verified ledger 或 file presence 推导完成。 |
@@ -85,7 +85,7 @@ closeout admission
   -> 只判断这个 Stage 是否可以被 receipt/blocker 关闭
 ```
 
-`execution authorization` 在 launch admission 之后、实际 provider execution 之前执行。它要求 provider attempt、attempt lease、execution authorization decision、workspace/artifact scope、source fingerprint、work-unit/idempotency basis、provider admission `route_identity_key` / `attempt_idempotency_key`、selected dispatch / stage packet refs 和 forbidden-write guard 都成立；缺任一项时只返回 OPL-owned execution authorization blocker，owner=`one-person-lab`。通用 `idempotency_key` 不能替代 provider attempt identity。这个 blocker 不改变 domain truth，不创建 domain typed blocker，不替 domain owner 签 receipt。
+Stage 启动不经过 execution authorization。provider attempt identity、lease、scope、source fingerprint、idempotency 与 stage packet 只用于 transport/currentness/observability；缺失时记录质量债或禁用 stale reuse。只有 wrong-target mutation、forbidden write、权限/安全、不可逆动作或显式 human decision 才硬停当前动作。
 
 `closeout receipt binding` 在 closeout admission 中单独检查。owner receipt / typed blocker 即使存在，也必须绑定当前 StageRun、stage manifest、current pointer、source fingerprint 和 idempotency；绑定缺失时继续阻断 closeout。
 
@@ -236,8 +236,8 @@ status
 | 缺少 prompt / skill / knowledge refs，但 owner、executor、artifact slots、receipt/blocker shape 完整。 | `launch_blockers=[]`，输出 advisory / route-back，不阻断 launch。 |
 | 缺少 selected executor、authority boundary 或 receipt/blocker shape。 | 进入 `launch_blockers[]`。 |
 | provider completed 且 read-model refreshed，但没有 owner receipt / typed blocker。 | 进入 `closeout_blockers[]`，不得 stage complete。 |
-| provider attempt、attempt lease 或 execution authorization decision 缺失。 | 进入 `execution_authorization` blocker，owner=`one-person-lab`，不得回退到 domain read-model hydrate。 |
-| closeout receipt 没有绑定 StageRun、stage manifest、current pointer 或 source fingerprint。 | 进入 `closeout_binding_blockers[]`，provider completed 或 read-model refreshed 不能补齐。 |
+| provider attempt、lease 或 receipt 缺失。 | 记录 transport/currentness diagnostic；不阻止 Codex 从当前 workspace 启动下一 declared stage。 |
+| closeout 无可读输出。 | 生成 no-output/failure diagnostic 和质量债；下一 stage 可消费原输入、诊断与 lineage 继续。 |
 | gate evidence 存在但没有挂到当前 Stage closeout 或下一 Stage role。 | 进入 `closeout_blockers[]` 或 route-back，不能成为 floating worklist tail。 |
 | route 试图直接写 domain truth、签 receipt、创建 blocker 或执行候选排序。 | 进入 `forbidden_authority_flags[]`。 |
 | App/default CLI 从 raw worklist、readiness 或 replay packet 得出 next action。 | conformance 失败；默认面必须来自 StageRun current owner delta。 |

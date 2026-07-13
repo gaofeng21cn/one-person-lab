@@ -175,8 +175,8 @@
     "route_can_evaluate_or_rank_candidates": false,
     "route_can_sign_receipts": false,
     "route_can_create_typed_blockers": false,
-    "route_owner": "domain_agent",
-    "opl_route_role": "hydrate_owner_route_refs_into_queue_attempt_conflict_or_projection_and_reconcile_actual_status"
+    "route_owner": "codex_cli",
+    "opl_route_role": "transport_codex_selected_declared_stage_refs_and_project_currentness_without_accept_reject_or_override"
   },
   "authority_boundary": {
     "opl_can_read_domain_body": false,
@@ -188,7 +188,8 @@
     "opl_can_claim_quality_verdict": false,
     "opl_can_claim_production_ready": false,
     "strategy_refs_completeness_is_launch_hard_gate": false,
-    "independent_gate_receipt_required_for_quality_progression": true,
+    "independent_gate_receipt_required_for_quality_acceptance_claim": true,
+    "independent_gate_receipt_required_for_stage_progression": false,
     "same_attempt_self_review_can_close_quality_gate": false
   },
   "implementation_policy": {
@@ -207,6 +208,6 @@
     "contracts/opl-framework/evidence-ledger-event.schema.json",
     "contracts/opl-framework/golden-path-profile.schema.json",
     "contracts/opl-framework/foundry-agent-series-contract.json",
-    "contracts/opl-framework/stage-route-scheduler-contract.json"
+    "contracts/opl-framework/stage-route-transport-contract.json"
   ]
 }

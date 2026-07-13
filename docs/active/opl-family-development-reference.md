@@ -20,7 +20,7 @@ OPL family 的最高优先级是目标架构，而不是迁就当前实现分布
 
 文档的基本方法是先设置理想态，再找差距。差距不是为了替现状找妥协理由，而是为了明确哪些现状必须被上收、重构、收薄、删除或归档。为了理想态，可以革命式替换旧结构，不限于渐进式修补；旧东西只要不属于目标形态，就不应以兼容性为理由继续污染 active surface。改革只服务于能直达理想态的路径；不能直达时，优先重构、替换、删除或归档。
 
-标准 OPL Agent 的默认形态是 `Declarative Domain Pack + OPL generated/hosted surfaces + minimal authority functions`。domain repo 默认提交 stage graph、prompt/skill/knowledge refs、policy table、domain schema、transition table、artifact/source/memory policy、receipt schema、fixtures、tests 和必要的 authority function；CLI、MCP、Skill/product-entry metadata、sidecar、status/read model、workbench、harness、queue、attempt ledger、generic transition runner、runtime lifecycle、operator projection 和 App drilldown 默认由 OPL Framework / One Person Lab App 生成、托管或提供通用 primitive。
+标准 OPL Agent 的默认形态是 `Declarative Domain Pack + OPL generated/hosted surfaces + minimal authority functions`。domain repo 默认提交 declared stage set、prompt/skill/knowledge refs、policy table、domain schema、非权威 route context、artifact/source/memory policy、receipt schema、fixtures、tests 和必要的 authority function；CLI、MCP、Skill/product-entry metadata、sidecar、status/read model、workbench、queue、attempt ledger、runtime lifecycle、operator projection 和 App drilldown默认由 OPL Framework / One Person Lab App 生成、托管或提供通用 primitive。Codex CLI 独占 stage 语义路由。
 
 所有新增开发都必须遵循 AI-first、AI 原生专家判断优先、contract-light。智能体能力提升优先来自 `Codex CLI` 等 AI executor、stage pack、prompt、skill、knowledge、rubric 和 quality gate 的迭代；合同只固定 owner boundary、权限、安全、receipt、audit、blocker、recovery、projection 和 fail-closed 条件这些下限。不得把开放式规划、写作、评审、路线判断、诊断或修订逻辑塞进 OPL 机械规则、固定评分器、脚本后处理或越来越厚的 contract，也不得把 contract completeness 当成专家判断上限。
 

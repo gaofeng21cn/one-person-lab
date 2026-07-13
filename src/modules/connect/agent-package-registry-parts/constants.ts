@@ -4,7 +4,7 @@ export const REGISTRY_REQUIRED_FIELDS = [
   'publisher',
   'source',
   'manifest_url',
-  'latest_version',
+  'version_source_ref',
   'trust_tier',
 ] as const;
 

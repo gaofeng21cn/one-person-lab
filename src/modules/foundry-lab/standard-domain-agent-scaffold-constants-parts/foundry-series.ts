@@ -12,7 +12,7 @@ export const FOUNDRY_AGENT_SERIES_CONSUMER_KIND =
   'opl_foundry_agent_series_consumer';
 export const FOUNDRY_AGENT_SERIES_CONSUMER_VERSION =
   'foundry-agent-series-consumer.v1';
-export const FOUNDRY_AGENT_SERIES_POLICY_BUNDLE_FINGERPRINT = 'sha256:ca23195a7055670d3d64626ba13c2b079fa17f94c33cc633ff42c6d9d3090b28';
+export const FOUNDRY_AGENT_SERIES_POLICY_BUNDLE_FINGERPRINT = 'sha256:30a1d0034eeafbf5ea042fc33c64af585c3e68276328eb97d20903105087bb5d';
 
 export const STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT = {
   surface_kind: 'opl_foundry_agent_series_contract',
@@ -165,7 +165,7 @@ export const STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT = {
       blocked_shape: 'domain_owned_typed_hard_blocker_ref',
       route_back_shape: 'quality_debt_repair_recommendation_or_human_gate_ref',
       provider_completion_is_closeout: false,
-      quality_budget_exhaustion_blocks_transition: false,
+      quality_budget_exhaustion_blocks_route: false,
       owner_receipt_required_for_quality_or_ready_claim: true,
       completion_judgment_owner: 'domain_stage',
       opl_content_judgment_allowed: false,
@@ -463,6 +463,9 @@ export const FOUNDRY_AGENT_SERIES_POLICY_BUNDLE = {
       ref: 'contracts/opl-framework/standard-domain-agent-skeleton-contract.json#/new_agent_scaffold/stage_completion_policy',
       version: STANDARD_STAGE_COMPLETION_POLICY.version,
       completion_judgment_owner: STANDARD_STAGE_COMPLETION_POLICY.completion_judgment_owner,
+      closeout_packet_required: STANDARD_STAGE_COMPLETION_POLICY.closeout_packet_required,
+      raw_artifact_sufficient_for_progress: STANDARD_STAGE_COMPLETION_POLICY.raw_artifact_sufficient_for_progress,
+      next_stage_transition_owner: STANDARD_STAGE_COMPLETION_POLICY.next_stage_transition_owner,
       required_closeout_outcomes: STANDARD_STAGE_COMPLETION_POLICY.required_closeout_outcomes,
       accepted_closeout_ref_fields: STANDARD_STAGE_COMPLETION_POLICY.accepted_closeout_ref_fields,
     },

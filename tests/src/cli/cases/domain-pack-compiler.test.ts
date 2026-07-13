@@ -159,7 +159,10 @@ test('domain pack compiler family-defaults consumes standard repo contracts with
     assert.equal(mas.requested_agent_id, 'mas');
     assert.equal(mas.compiler_status, 'ready');
     assert.deepEqual(mas.blocker_reasons, []);
-    assert.equal(mas.generated_surface_handoff.generated_surface_ready_count, 8);
+    assert.equal(
+      mas.generated_surface_handoff.generated_surface_ready_count,
+      PACK_COMPILER_GENERATED_SURFACE_COUNT_PER_DOMAIN,
+    );
     assert.equal(mas.generated_interface_bundle.product_entry.status, 'ready');
     assert.equal(mas.generated_interface_bundle.product_status.status, 'ready_from_family_action_catalog');
     assert.equal(mas.generated_interface_bundle.product_session.status, 'ready_from_session_continuity_or_stage_control_plane');

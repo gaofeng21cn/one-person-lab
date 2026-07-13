@@ -85,14 +85,15 @@ export function assertManifestMatchesRegistrySelection(
       failure_code: 'registry_manifest_package_id_mismatch',
     });
   }
-  if (manifest.version !== selection.registryEntry.latest_version) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Agent package registry entry and manifest version must match.', {
+  const expectedVersionSourceRef = `${selection.manifestUrl}#/version`;
+  if (selection.registryEntry.version_source_ref !== expectedVersionSourceRef) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package registry version source must point to the selected manifest version.', {
       registry_url: selection.registryUrl,
       manifest_url: selection.manifestUrl,
       package_id: manifest.package_id,
-      registry_latest_version: selection.registryEntry.latest_version,
-      manifest_version: manifest.version,
-      failure_code: 'registry_manifest_version_mismatch',
+      registry_version_source_ref: selection.registryEntry.version_source_ref,
+      expected_version_source_ref: expectedVersionSourceRef,
+      failure_code: 'registry_manifest_version_source_mismatch',
     });
   }
   const ordinaryUserSource = selection.registryEntry.ordinary_user_source;
@@ -105,20 +106,24 @@ export function assertManifestMatchesRegistrySelection(
     });
   }
   if (ordinaryUserSource && manifest.distribution_payload) {
-    if (manifest.distribution_payload.rolling_tag !== 'latest' || manifest.distribution_payload.install_truth !== 'resolved_digest_lock') {
-      throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest distribution payload must keep latest as a rolling pointer and digest lock as install truth.', {
+    if (manifest.distribution_payload.moving_tag !== 'latest-stable' || manifest.distribution_payload.install_truth !== 'resolved_digest_lock') {
+      throw new FrameworkContractError('contract_shape_invalid', 'OPL Package manifest distribution payload must keep latest-stable as the gated moving pointer and digest lock as install truth.', {
         registry_url: selection.registryUrl,
         manifest_url: selection.manifestUrl,
         package_id: manifest.package_id,
         failure_code: 'registry_manifest_distribution_policy_mismatch',
       });
     }
-    if (!ordinaryUserSource.immutable_version_ref.endsWith(`:${manifest.distribution_payload.immutable_tag}`)) {
-      throw new FrameworkContractError('contract_shape_invalid', 'Agent package registry immutable version ref must match manifest immutable tag.', {
+    const immutableVersionRef = ordinaryUserSource.immutable_version_ref_pattern.replace(
+      '<semver>',
+      manifest.distribution_payload.immutable_tag,
+    );
+    if (!immutableVersionRef.endsWith(`:${manifest.distribution_payload.immutable_tag}`)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'OPL Package registry immutable version ref pattern must resolve to the manifest immutable tag.', {
         registry_url: selection.registryUrl,
         manifest_url: selection.manifestUrl,
         package_id: manifest.package_id,
-        registry_immutable_version_ref: ordinaryUserSource.immutable_version_ref,
+        registry_immutable_version_ref_pattern: ordinaryUserSource.immutable_version_ref_pattern,
         manifest_immutable_tag: manifest.distribution_payload.immutable_tag,
         failure_code: 'registry_manifest_immutable_tag_mismatch',
       });

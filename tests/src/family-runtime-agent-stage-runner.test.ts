@@ -15,7 +15,8 @@ type AgentStageRunnerReceipt = {
   runner_status: {
     runner_kind: 'agent_executor_stage_runner';
     executor_kind: string;
-    typed_closeout_required_for_completion: boolean;
+    typed_closeout_required_for_progress: false;
+    raw_artifact_sufficient_for_progress: true;
   };
   agent_execution_receipt: AgentExecutionReceipt;
 };
@@ -62,7 +63,8 @@ test('agent stage runner records a selected non-default executor receipt without
     assert.equal(agentReceipt.runner_status.executor_kind, 'claude_code');
     assert.equal(agentReceipt.agent_execution_receipt.executor_kind, 'claude_code');
     assert.equal(requireCloseoutRefs(agentReceipt.agent_execution_receipt)[0], 'receipt:stage-claude');
-    assert.equal(agentReceipt.runner_status.typed_closeout_required_for_completion, true);
+    assert.equal(agentReceipt.runner_status.typed_closeout_required_for_progress, false);
+    assert.equal(agentReceipt.runner_status.raw_artifact_sufficient_for_progress, true);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }

@@ -5,7 +5,6 @@ import {
   buildStageAttemptProviderReceipt,
   resolveFamilyRuntimeProviderKind,
 } from '../family-runtime-providers.ts';
-import { buildLaunchExecutionAuthorization } from '../family-runtime-temporal.ts';
 import type {
   FamilyRuntimeDomainId,
   FamilyRuntimeProviderKind,
@@ -24,7 +23,6 @@ import {
   normalizeStageId,
   nowIso,
 } from './shared.ts';
-import { recordStageRunExecutionAuthorizationReceipts } from '../../stagecraft/index.ts';
 import { taskRetryBudgetProjection } from '../family-runtime-queue-projection-boundary.ts';
 
 export type StageAttemptCreateInput = {
@@ -47,7 +45,7 @@ export type StageAttemptCreateInput = {
   humanGateRefs?: string[];
   routeImpact?: Record<string, unknown>;
   blockedReason?: string;
-  launchAdmissionGate?: object;
+  launchContextObservation?: object;
   launchInvocation?: object;
   newAttempt?: boolean;
   start?: boolean;
@@ -163,40 +161,7 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
     input.newAttempt ? newAttemptOrdinal : createdAt,
   ]);
   const workflowId = stableId('wf', [input.domainId, stageId, stageAttemptId]);
-  const launchAuthorization = buildLaunchExecutionAuthorization({
-    stageAttemptId,
-    workflowId,
-    domainId: input.domainId,
-    stageId,
-    executorKind,
-    taskId,
-    workspaceLocator: input.workspaceLocator,
-    stagePacketRef: normalizeJsonList(input.checkpointRefs)[0] ?? null,
-    sourceFingerprint,
-    idempotencyKey,
-  });
-  const launchAuthorizationLedgerRecord = launchAuthorization
-    ? recordStageRunExecutionAuthorizationReceipts([launchAuthorization])
-    : null;
-  const launchAuthorizationReceipt =
-    launchAuthorizationLedgerRecord?.status === 'recorded'
-      && Array.isArray(launchAuthorizationLedgerRecord.receipts)
-      ? launchAuthorizationLedgerRecord.receipts[0]
-      : null;
-  const workspaceLocator = launchAuthorizationReceipt
-    ? {
-        ...input.workspaceLocator,
-        stage_run_id: launchAuthorizationReceipt.stage_run_id,
-        current_pointer_ref: launchAuthorizationReceipt.current_pointer_ref,
-        stage_manifest_ref: launchAuthorizationReceipt.stage_manifest_ref,
-        provider_attempt_ref: launchAuthorizationReceipt.provider_attempt_ref,
-        attempt_lease_ref: launchAuthorizationReceipt.attempt_lease_ref,
-        attempt_lease_status: launchAuthorizationReceipt.attempt_lease_status,
-        execution_authorization_decision_ref:
-          launchAuthorizationReceipt.execution_authorization_decision_ref,
-        execution_authorization_receipt_ref: launchAuthorizationReceipt.receipt_ref,
-      }
-    : input.workspaceLocator;
+  const workspaceLocator = input.workspaceLocator;
   const providerReceipt = buildStageAttemptProviderReceipt({
     providerKind,
     stageAttemptId,
@@ -212,11 +177,11 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
     completed_at: null,
     last_heartbeat_at: null,
   };
-  const initialActivityEvents: Record<string, unknown>[] = input.launchAdmissionGate
+  const initialActivityEvents: Record<string, unknown>[] = input.launchContextObservation
     ? [{
-        event_kind: 'stage_launch_admission_gate',
+        event_kind: 'stage_context_observed',
         event_time: createdAt,
-        gate: input.launchAdmissionGate,
+        observation: input.launchContextObservation,
       }]
     : [];
   if (input.launchInvocation) {
@@ -275,6 +240,5 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
     created: true,
     idempotent_noop: false,
     attempt: stageAttemptToPayload(row as StageAttemptRow),
-    execution_authorization_ledger_record: launchAuthorizationLedgerRecord,
   };
 }

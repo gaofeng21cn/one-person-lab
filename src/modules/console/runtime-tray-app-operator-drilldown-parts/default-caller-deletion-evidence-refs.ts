@@ -82,7 +82,6 @@ function descriptorForManifest(project: DomainManifestCatalogEntry, manifest: No
       status: descriptorStatus(manifest.domain_memory_descriptor),
       raw_descriptor: manifest.domain_memory_descriptor,
     },
-    family_transition: manifest.family_transition,
     generated_surface_handoff_contract: manifest.generated_surface_handoff,
     functional_privatization_audit: {
       status: stringValue(manifest.functional_privatization_audit?.status) ?? 'resolved',

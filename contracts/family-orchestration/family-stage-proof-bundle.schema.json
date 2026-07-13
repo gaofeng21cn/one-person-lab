@@ -9,10 +9,10 @@
     "surface_kind",
     "version",
     "identity",
-    "admission_status",
-    "admission_summary",
+    "conformance_status",
+    "conformance_summary",
     "stage_results",
-    "blocking_reasons",
+    "conformance_findings",
     "failure_localization",
     "composition_obligations",
     "boundary_assumptions",
@@ -81,11 +81,11 @@
         }
       }
     },
-    "admission_status": {
-      "$ref": "#/$defs/admission_status"
+    "conformance_status": {
+      "$ref": "#/$defs/conformance_status"
     },
-    "admission_summary": {
-      "$ref": "#/$defs/admission_summary"
+    "conformance_summary": {
+      "$ref": "#/$defs/conformance_summary"
     },
     "stage_results": {
       "type": "array",
@@ -93,7 +93,7 @@
         "$ref": "#/$defs/stage_result"
       }
     },
-    "blocking_reasons": {
+    "conformance_findings": {
       "type": "array",
       "items": {
         "$ref": "#/$defs/finding"
@@ -203,7 +203,7 @@
     }
   },
   "$defs": {
-    "admission_status": {
+    "conformance_status": {
       "type": "string",
       "enum": [
         "admitted",
@@ -223,7 +223,7 @@
         "app_projection"
       ]
     },
-    "admission_summary": {
+    "conformance_summary": {
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -282,7 +282,7 @@
           "minLength": 1
         },
         "status": {
-          "$ref": "#/$defs/admission_status"
+          "$ref": "#/$defs/conformance_status"
         },
         "trust_lane": {
           "anyOf": [
@@ -1209,8 +1209,8 @@
         ],
         "action_catalog_id": "domain_stage_actions"
       },
-      "admission_status": "admitted",
-      "admission_summary": {
+      "conformance_status": "admitted",
+      "conformance_summary": {
         "stages_count": 2,
         "admitted_stages_count": 2,
         "blocked_stages_count": 0,
@@ -1230,7 +1230,7 @@
           "warning_count": 0
         }
       ],
-      "blocking_reasons": [],
+      "conformance_findings": [],
       "composition_obligations": [
         {
           "edge_id": "draft_authoring->owner_review",

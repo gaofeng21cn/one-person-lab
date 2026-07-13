@@ -48,7 +48,7 @@
     "required_v2_policy": "standard_stage_pack_conformance.required=true_requires_version_standard-stage-pack.v2_and_invalid_or_missing_version_fails_closed",
     "explicit_v2_version_policy": "version_standard-stage-pack.v2_enables_v2_even_when_required_is_false",
     "stagecraft_policy_ownership": {
-      "stage_completion_policy": "opl_stagecraft_constant_not_domain_overrideable",
+      "stage_completion_policy": "opl_stagecraft_progress_first_floor_not_domain_overrideable",
       "user_stage_log_contract": "opl_stagecraft_constant_not_domain_overrideable"
     },
     "source_derived_stage_provenance_fields": [
@@ -70,7 +70,6 @@
     "family_agent_descriptor.family_stage_control_plane",
     "family_agent_descriptor.domain_memory_descriptor",
     "family_agent_descriptor.family_transition",
-    "family_agent_descriptor.grant_transition_oracle",
     "family_agent_descriptor.runtime_surfaces",
     "family_agent_descriptor.functional_privatization_audit",
     "family_agent_descriptor.pack_compiler_input_contract.standard_agent_pack_abi",
@@ -81,7 +80,10 @@
     "schema_ref": "contracts/opl-framework/standard-agent-implementation-profile.schema.json",
     "profile_id": "opl.standard_domain_agent.v1",
     "agent_identity": "declarative_standard_agent_pack",
-    "pack_formats": ["markdown", "json"],
+    "pack_formats": [
+      "markdown",
+      "json"
+    ],
     "generated_surfaces_owner": "one-person-lab",
     "helper_language_policy": "language_is_not_agent_identity; rust_is_framework_hot_path_only",
     "missing_profile_policy": "advisory_for_legacy_inputs_and_required_for_new_scaffolds"
@@ -121,8 +123,7 @@
       "product_entry_manifest",
       "domain_handler",
       "status_read_model",
-      "workbench_drilldown",
-      "functional_harness_cases"
+      "workbench_drilldown"
     ]
   },
   "generated_interface_bundle": {
@@ -586,7 +587,7 @@
       "product_entry_manifest_descriptor",
       "domain_handler_descriptor"
     ],
-    "drift_detection_policy": "aligned when the current generated bundle is produced from resolved compiler inputs, descriptor-only transition refs, or a domain-declared grant transition oracle evidence gate with matrix_oracle_passed status, and any observed manifest fingerprints match the current fingerprints; drift_detected when compiler blockers exist or observed fingerprints differ",
+    "drift_detection_policy": "aligned when the current generated bundle is produced from resolved compiler inputs and observed manifest fingerprints match the current fingerprints; route context and quality debt never participate in generated-artifact currentness admission",
     "authority_boundary": {
       "opl_owns_generated_surfaces": true,
       "opl_owns_domain_truth": false,
@@ -621,7 +622,6 @@
   "ready_conditions": [
     "domain_manifest_resolved",
     "required_descriptor_surfaces_resolved",
-    "functional_harness_cases may use family_transition matrix/descriptor input or an explicit grant_transition_oracle matrix_oracle_passed evidence gate",
     "functional_privatization_summary.opl_owned_replacement_count == 0",
     "functional_privatization_summary.temporary_migration_bridge_count == 0",
     "functional_privatization_summary.retire_tombstone_count == 0",

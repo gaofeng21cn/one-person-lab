@@ -344,23 +344,6 @@
       ]
     },
     {
-      "skill_id": "opl-domain-progress-transition-reviewer",
-      "exposure_scope": "project_local",
-      "activation_gate": "OPL repo maintenance, domain progress projection review, or explicit project-local review selects this skill",
-      "default_global_user": false,
-      "kernel": false,
-      "authority_boundary": [
-        "no_owner_receipt",
-        "no_typed_blocker",
-        "no_human_gate",
-        "no_artifact_authority",
-        "no_quality_verdict",
-        "no_readiness_claim",
-        "no_runtime_mutation",
-        "no_provider_mutation"
-      ]
-    },
-    {
       "skill_id": "opl-eval-harness-designer",
       "exposure_scope": "project_local",
       "activation_gate": "OPL repo maintenance, agent authoring, or explicit project-local review selects this skill",

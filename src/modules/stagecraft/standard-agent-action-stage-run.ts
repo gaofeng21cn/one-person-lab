@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { record, recordList, stringList, stringValue, type JsonRecord } from '../../kernel/json-record.ts';
+import { isRuntimeHardStopReason } from '../../kernel/progress-hard-stop-policy.ts';
 import { resolveContainedRepoJsonFile } from '../../kernel/repo-contained-json-file.ts';
 
 export type StandardAgentActionStageRunCloseout = {
@@ -25,12 +26,13 @@ export type StandardAgentActionStageRunProgress = {
     required_stage_refs: string[];
     optional_stage_refs: string[];
     terminal_stage_refs: string[];
-    route_policy: 'ordered_stage_attempts_no_skip';
+    route_policy: 'ai_selected_progress_route';
   };
   completed_stage_refs: string[];
   next_stage_ref: string | null;
   complete: boolean;
   stage_closeouts: StandardAgentActionStageRunCloseout[];
+  quality_debt_refs: string[];
 };
 
 function invalid(message: string, details: JsonRecord = {}): never {
@@ -39,14 +41,6 @@ function invalid(message: string, details: JsonRecord = {}): never {
 
 function requiredString(value: unknown, field: string) {
   return stringValue(value) ?? invalid(`${field} must be a non-empty string.`, { field });
-}
-
-function requiredStrings(value: unknown, field: string) {
-  const result = stringList(value);
-  if (!Array.isArray(value) || result.length !== value.length || result.length === 0) {
-    invalid(`${field} must be a non-empty string array.`, { field });
-  }
-  return result;
 }
 
 function readJson(filePath: string) {
@@ -64,59 +58,55 @@ function readRepoJson(repoDir: string, ref: string, label: string) {
   return readJson(resolved.real_path);
 }
 
-function routeFromRepo(repoDir: string, actionId: string) {
+function routeFromRepo(repoDir: string, actionId: string, graphOrder: string[]) {
   const catalog = readRepoJson(repoDir, 'contracts/action_catalog.json', 'family_action_catalog_ref');
   const targetDomainId = requiredString(catalog.target_domain_id, 'action_catalog.target_domain_id');
   const action = recordList(catalog.actions).find((entry) => entry.action_id === actionId);
   const rawRoute = record(action?.stage_route);
-  if (!action || Object.keys(rawRoute).length === 0) {
-    invalid(`Action ${actionId} is missing stage_route.`, { action_id: actionId });
-  }
-  const requiredStageRefs = requiredStrings(rawRoute.required_stage_refs, `${actionId}.stage_route.required_stage_refs`);
+  const requiredStageRefs = stringList(rawRoute.required_stage_refs);
   const optionalStageRefs = stringList(rawRoute.optional_stage_refs);
-  if (!Array.isArray(rawRoute.optional_stage_refs) || optionalStageRefs.length !== rawRoute.optional_stage_refs.length) {
-    invalid(`${actionId}.stage_route.optional_stage_refs must be a string array.`);
-  }
-  const route = {
-    entry_stage_ref: requiredString(rawRoute.entry_stage_ref, `${actionId}.stage_route.entry_stage_ref`),
-    required_stage_refs: requiredStageRefs,
-    optional_stage_refs: optionalStageRefs,
-    terminal_stage_refs: requiredStrings(rawRoute.terminal_stage_refs, `${actionId}.stage_route.terminal_stage_refs`),
-    route_policy: rawRoute.route_policy,
+  const terminalStageRefs = stringList(rawRoute.terminal_stage_refs);
+  const entryStageRef = stringValue(rawRoute.entry_stage_ref);
+  const routeIsConsumable = Boolean(
+    action
+    && entryStageRef
+    && requiredStageRefs.length > 0
+    && entryStageRef === requiredStageRefs[0]
+    && Array.isArray(rawRoute.optional_stage_refs)
+    && optionalStageRefs.length === rawRoute.optional_stage_refs.length
+    && terminalStageRefs.length > 0,
+  );
+  const fallbackRoute = {
+    entry_stage_ref: graphOrder[0] ?? invalid('Standard Agent declares no stages.'),
+    required_stage_refs: graphOrder,
+    optional_stage_refs: [],
+    terminal_stage_refs: graphOrder.length > 0 ? [graphOrder.at(-1)!] : [],
   };
-  if (route.entry_stage_ref !== route.required_stage_refs[0]) {
-    invalid(`${actionId}.stage_route.entry_stage_ref must equal required_stage_refs[0].`);
-  }
-  if (route.route_policy !== 'ordered_stage_attempts_no_skip') {
-    invalid(`${actionId}.stage_route.route_policy must be ordered_stage_attempts_no_skip.`);
-  }
+  const route = routeIsConsumable
+    ? {
+        entry_stage_ref: entryStageRef!,
+        required_stage_refs: requiredStageRefs,
+        optional_stage_refs: optionalStageRefs,
+        terminal_stage_refs: terminalStageRefs,
+      }
+    : fallbackRoute;
   return {
     targetDomainId,
-    route: { ...route, route_policy: 'ordered_stage_attempts_no_skip' as const },
+    route: { ...route, route_policy: 'ai_selected_progress_route' as const },
+    qualityDebtRefs: routeIsConsumable
+      ? []
+      : [`opl://standard-agent-actions/${encodeURIComponent(actionId)}/route-declaration-quality-debt`],
   };
 }
 
 function stageGraph(repoDir: string) {
   const manifest = readRepoJson(repoDir, 'agent/stages/manifest.json', 'family_stage_control_plane_ref.source_ref');
-  return new Map(recordList(manifest.stages).map((stage) => [
-    requiredString(stage.stage_id, 'agent/stages/manifest.json stages[].stage_id'),
-    stringList(stage.next_stage_refs),
-  ]));
-}
-
-function canReach(from: string, to: string, allowed: Set<string>, graph: Map<string, string[]>) {
-  if (from === to) return true;
-  const pending = [from];
-  const seen = new Set(pending);
-  while (pending.length > 0) {
-    for (const next of graph.get(pending.shift()!) ?? []) {
-      if (!allowed.has(next) || seen.has(next)) continue;
-      if (next === to) return true;
-      seen.add(next);
-      pending.push(next);
-    }
-  }
-  return false;
+  const stages = recordList(manifest.stages);
+  const order = stages.map((stage) => requiredString(stage.stage_id, 'agent/stages/manifest.json stages[].stage_id'));
+  return {
+    order,
+    declared: new Set(order),
+  };
 }
 
 function domainOutputPacket(input: {
@@ -173,59 +163,247 @@ function domainOutputPacket(input: {
   return { packet: readJson(realOutput), metadata };
 }
 
+function rawProgressPacket(attempt: JsonRecord, targetDomainId: string) {
+  const providerRun = record(attempt.provider_run);
+  const processOutput = record(providerRun.process_output_summary);
+  const rawArtifact = record(processOutput.raw_stage_artifact);
+  const progressProjection = record(processOutput.progress_closeout_projection);
+  const acceptedProgress = record(progressProjection.accepted_progress);
+  const outputRef = stringValue(rawArtifact.output_ref) ?? stringValue(acceptedProgress.raw_artifact_ref);
+  if (!outputRef) return null;
+  let outputPath: string;
+  try {
+    const outputUrl = new URL(outputRef);
+    if (outputUrl.protocol !== 'file:') return null;
+    outputPath = fileURLToPath(outputUrl);
+  } catch {
+    return null;
+  }
+  const normalizedPath = path.normalize(outputPath);
+  if (
+    path.basename(normalizedPath) !== 'raw-executor-output.txt'
+    || !normalizedPath.split(path.sep).includes('stage-attempt-artifacts')
+  ) {
+    return null;
+  }
+  try {
+    const stat = fs.statSync(normalizedPath);
+    if (!stat.isFile() || stat.size <= 0) return null;
+  } catch {
+    return null;
+  }
+  return {
+    outputRef,
+    packet: {
+      surface_kind: 'opl_raw_stage_output_progress_input',
+      version: 'raw-stage-output-progress-input.v1',
+      domain_id: targetDomainId,
+      stage_id: stringValue(attempt.stage_id),
+      stage_attempt_id: stringValue(attempt.stage_attempt_id),
+      output_ref: outputRef,
+      completed_with_quality_debt: true,
+      next_stage_may_start: true,
+      semantic_route_owner: 'codex_cli',
+    },
+  };
+}
+
+function diagnosticCloseout(input: {
+  readbackPath: string;
+  targetDomainId: string;
+  stageId: string;
+  attemptId?: string | null;
+  reason: string;
+}): StandardAgentActionStageRunCloseout {
+  const attemptId = input.attemptId ?? `diagnostic-${createHash('sha256')
+    .update(`${input.readbackPath}:${input.stageId}`)
+    .digest('hex')
+    .slice(0, 16)}`;
+  const diagnosticRef = `opl://stage-attempts/${encodeURIComponent(attemptId)}`
+    + `/quality-debt-diagnostics/${encodeURIComponent(input.reason)}`;
+  const closeoutId = `${attemptId}-progress-diagnostic`;
+  const packet = {
+    surface_kind: 'stage_attempt_closeout_packet',
+    stage_id: input.stageId,
+    stage_attempt_id: attemptId,
+    closeout_id: closeoutId,
+    closeout_refs: [diagnosticRef],
+    route_impact: {
+      transition_outcome: 'completed_with_quality_debt',
+      next_stage_may_start: true,
+      route_back_selection_owner: 'codex_cli',
+      quality_debt_refs: [diagnosticRef],
+      progress_diagnostic_reason: input.reason,
+      framework_generated_envelope: true,
+    },
+  };
+  return {
+    stage_id: input.stageId,
+    stage_attempt_ref: `opl://stage_attempts/${attemptId}`,
+    closeout_id: closeoutId,
+    closeout_packet_ref: diagnosticRef,
+    canonical_closeout_packet: packet,
+    domain_output_packet: {
+      surface_kind: 'opl_stage_progress_diagnostic_input',
+      version: 'stage-progress-diagnostic-input.v1',
+      domain_id: input.targetDomainId,
+      stage_id: input.stageId,
+      stage_attempt_id: attemptId,
+      diagnostic_ref: diagnosticRef,
+      diagnostic_reason: input.reason,
+      completed_with_quality_debt: true,
+      next_stage_may_start: true,
+      semantic_route_owner: 'codex_cli',
+    },
+    domain_output_metadata: null,
+    readback_path: input.readbackPath,
+  };
+}
+
+function isHardStopCloseoutError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return isRuntimeHardStopReason(message)
+    || /domain mismatch|attempt_ref mismatch|attempt mismatch|stage mismatch|closeout id mismatch|escapes workspace_root|outside workspace_root|sha256 mismatch|rejected writes/i.test(message);
+}
+
 function closeoutFromReadback(
   readbackPath: string,
   targetDomainId: string,
+  fallbackStageId: string,
 ): StandardAgentActionStageRunCloseout {
-  const readback = readJson(readbackPath);
+  let readback: JsonRecord;
+  try {
+    readback = readJson(readbackPath);
+  } catch (error) {
+    if (isHardStopCloseoutError(error)) throw error;
+    return diagnosticCloseout({
+      readbackPath,
+      targetDomainId,
+      stageId: fallbackStageId,
+      reason: 'stage_readback_unreadable_or_malformed',
+    });
+  }
   const envelope = isRecord(readback.family_runtime_stage_attempt_query)
     ? readback.family_runtime_stage_attempt_query
     : readback;
   const query = record(envelope.stage_attempt_query);
   const attempt = record(query.attempt);
   if (Object.keys(query).length === 0 || Object.keys(attempt).length === 0) {
-    invalid('OPL StageRun readback is missing stage_attempt_query.', { readback_path: readbackPath });
+    return diagnosticCloseout({
+      readbackPath,
+      targetDomainId,
+      stageId: fallbackStageId,
+      reason: 'stage_attempt_query_missing',
+    });
   }
-  const stageId = requiredString(attempt.stage_id, 'attempt.stage_id');
-  const attemptId = requiredString(attempt.stage_attempt_id, 'attempt.stage_attempt_id');
-  if (requiredString(attempt.domain_id, 'attempt.domain_id') !== targetDomainId) {
+  const stageId = stringValue(attempt.stage_id) ?? fallbackStageId;
+  const attemptId = stringValue(attempt.stage_attempt_id);
+  const attemptDomainId = stringValue(attempt.domain_id);
+  if (attemptDomainId && attemptDomainId !== targetDomainId) {
     invalid(`OPL StageRun ${stageId} domain mismatch.`);
   }
-  const attemptRef = requiredString(envelope.attempt_ref, 'attempt_ref');
+  if (!attemptId || !attemptDomainId) {
+    return diagnosticCloseout({
+      readbackPath,
+      targetDomainId,
+      stageId,
+      attemptId,
+      reason: 'stage_attempt_identity_incomplete',
+    });
+  }
+  const attemptRef = stringValue(envelope.attempt_ref);
+  if (!attemptRef) {
+    return diagnosticCloseout({
+      readbackPath,
+      targetDomainId,
+      stageId,
+      attemptId,
+      reason: 'stage_attempt_ref_missing',
+    });
+  }
   if (attemptRef !== `opl://stage_attempts/${attemptId}`) invalid(`OPL StageRun ${stageId} attempt_ref mismatch.`);
+  const rawProgress = rawProgressPacket(attempt, targetDomainId);
+  if (rawProgress) {
+    const closeoutId = `${attemptId}-raw-progress`;
+    const packet = {
+      surface_kind: 'stage_attempt_closeout_packet',
+      stage_id: stageId,
+      stage_attempt_id: attemptId,
+      closeout_id: closeoutId,
+      closeout_refs: [rawProgress.outputRef],
+      route_impact: {
+        transition_outcome: 'completed_with_quality_debt',
+        next_stage_may_start: true,
+        route_back_selection_owner: 'codex_cli',
+        framework_generated_envelope: true,
+      },
+    };
+    return {
+      stage_id: stageId,
+      stage_attempt_ref: attemptRef,
+      closeout_id: closeoutId,
+      closeout_packet_ref: `${attemptRef}/raw-progress`,
+      canonical_closeout_packet: packet,
+      domain_output_packet: rawProgress.packet,
+      domain_output_metadata: null,
+      readback_path: readbackPath,
+    };
+  }
   if (attempt.status !== 'completed' || attempt.closeout_receipt_status !== 'accepted_typed_closeout') {
-    invalid(`OPL StageRun ${stageId} closeout is not an accepted completed attempt.`);
+    return diagnosticCloseout({
+      readbackPath,
+      targetDomainId,
+      stageId,
+      attemptId,
+      reason: 'typed_closeout_not_accepted_progressed_with_diagnostic',
+    });
   }
-  if (query.canonical_outcome !== 'completed_with_receipt') {
-    invalid(`OPL StageRun ${stageId} canonical outcome is not completed_with_receipt.`);
+  try {
+    if (query.canonical_outcome !== 'completed_with_receipt') {
+      invalid(`OPL StageRun ${stageId} canonical outcome is not completed_with_receipt.`);
+    }
+    const conflictReasons = recordList(query.conflict_or_blocker_envelopes)
+      .map((entry) => stringValue(entry.reason) ?? stringValue(entry.blocked_reason))
+      .filter((entry): entry is string => Boolean(entry));
+    const hardConflict = conflictReasons.find(isRuntimeHardStopReason);
+    if (hardConflict) invalid(`OPL StageRun ${stageId} hard stop: ${hardConflict}.`);
+    if (!Array.isArray(query.conflict_or_blocker_envelopes)) {
+      invalid(`OPL StageRun ${stageId} query contains a malformed blocker envelope.`);
+    }
+    const latest = recordList(query.closeouts).at(-1);
+    const packet = record(latest?.packet);
+    if (!latest || Object.keys(packet).length === 0) invalid(`OPL StageRun ${stageId} has no typed closeout packet.`);
+    const closeoutId = requiredString(latest.closeout_id, 'closeouts[].closeout_id');
+    if (latest.stage_attempt_id !== attemptId) invalid(`OPL StageRun ${stageId} closeout ledger attempt mismatch.`);
+    if (packet.surface_kind !== 'stage_attempt_closeout_packet') invalid(`OPL StageRun ${stageId} closeout packet kind mismatch.`);
+    if (packet.stage_id !== undefined && packet.stage_id !== stageId) invalid(`OPL StageRun ${stageId} closeout stage mismatch.`);
+    if (packet.stage_attempt_id !== undefined && packet.stage_attempt_id !== attemptId) invalid(`OPL StageRun ${stageId} closeout attempt mismatch.`);
+    if (packet.closeout_id !== undefined && packet.closeout_id !== closeoutId) invalid(`OPL StageRun ${stageId} closeout id mismatch.`);
+    if (Array.isArray(packet.rejected_writes) && packet.rejected_writes.length > 0) {
+      invalid(`OPL StageRun ${stageId} closeout contains rejected writes.`);
+    }
+    if (!Array.isArray(packet.closeout_refs)) invalid(`OPL StageRun ${stageId} closeout_refs must be an array.`);
+    const domainOutput = domainOutputPacket({ packet, attempt, targetDomainId, readbackPath });
+    return {
+      stage_id: stageId,
+      stage_attempt_ref: attemptRef,
+      closeout_id: closeoutId,
+      closeout_packet_ref: `${attemptRef}/closeouts/${encodeURIComponent(closeoutId)}`,
+      canonical_closeout_packet: packet,
+      domain_output_packet: domainOutput.packet,
+      domain_output_metadata: domainOutput.metadata,
+      readback_path: readbackPath,
+    };
+  } catch (error) {
+    if (isHardStopCloseoutError(error)) throw error;
+    return diagnosticCloseout({
+      readbackPath,
+      targetDomainId,
+      stageId,
+      attemptId,
+      reason: 'typed_closeout_format_quality_debt',
+    });
   }
-  if (!Array.isArray(query.conflict_or_blocker_envelopes) || query.conflict_or_blocker_envelopes.length > 0) {
-    invalid(`OPL StageRun ${stageId} query contains a conflict or malformed blocker envelope.`);
-  }
-  const latest = recordList(query.closeouts).at(-1);
-  const packet = record(latest?.packet);
-  if (!latest || Object.keys(packet).length === 0) invalid(`OPL StageRun ${stageId} has no typed closeout packet.`);
-  const closeoutId = requiredString(latest.closeout_id, 'closeouts[].closeout_id');
-  if (latest.stage_attempt_id !== attemptId) invalid(`OPL StageRun ${stageId} closeout ledger attempt mismatch.`);
-  if (packet.surface_kind !== 'stage_attempt_closeout_packet') invalid(`OPL StageRun ${stageId} closeout packet kind mismatch.`);
-  if (packet.stage_id !== undefined && packet.stage_id !== stageId) invalid(`OPL StageRun ${stageId} closeout stage mismatch.`);
-  if (packet.stage_attempt_id !== undefined && packet.stage_attempt_id !== attemptId) invalid(`OPL StageRun ${stageId} closeout attempt mismatch.`);
-  if (packet.closeout_id !== undefined && packet.closeout_id !== closeoutId) invalid(`OPL StageRun ${stageId} closeout id mismatch.`);
-  if (Array.isArray(packet.rejected_writes) && packet.rejected_writes.length > 0) {
-    invalid(`OPL StageRun ${stageId} closeout contains rejected writes.`);
-  }
-  if (!Array.isArray(packet.closeout_refs)) invalid(`OPL StageRun ${stageId} closeout_refs must be an array.`);
-  const domainOutput = domainOutputPacket({ packet, attempt, targetDomainId, readbackPath });
-  return {
-    stage_id: stageId,
-    stage_attempt_ref: attemptRef,
-    closeout_id: closeoutId,
-    closeout_packet_ref: `${attemptRef}/closeouts/${encodeURIComponent(closeoutId)}`,
-    canonical_closeout_packet: packet,
-    domain_output_packet: domainOutput.packet,
-    domain_output_metadata: domainOutput.metadata,
-    readback_path: readbackPath,
-  };
 }
 
 export function evaluateStandardAgentActionStageRun(input: {
@@ -234,40 +412,40 @@ export function evaluateStandardAgentActionStageRun(input: {
   stageRunReadbackPaths: string[];
 }): StandardAgentActionStageRunProgress {
   const repoDir = path.resolve(input.repoDir);
-  const { targetDomainId, route } = routeFromRepo(repoDir, input.actionId);
   const graph = stageGraph(repoDir);
-  const allowed = new Set([...route.required_stage_refs, ...route.optional_stage_refs]);
-  const stageCloseouts = input.stageRunReadbackPaths.map((file) => closeoutFromReadback(path.resolve(file), targetDomainId));
+  const { targetDomainId, route, qualityDebtRefs: routeQualityDebtRefs } = routeFromRepo(
+    repoDir,
+    input.actionId,
+    graph.order,
+  );
+  const stageCloseouts = input.stageRunReadbackPaths.map((file, index) => closeoutFromReadback(
+    path.resolve(file),
+    targetDomainId,
+    graph.order[index] ?? graph.order.at(-1)!,
+  ));
   const completed = stageCloseouts.map((entry) => entry.stage_id);
-  if (new Set(completed).size !== completed.length) invalid(`${input.actionId}: duplicate StageRun closeout in route evidence.`);
-  const unknown = completed.filter((stageId) => !allowed.has(stageId));
-  if (unknown.length > 0) invalid(`${input.actionId}: StageRun closeout is outside stage_route: ${unknown.join(', ')}.`);
-  if (completed.length > 0 && completed[0] !== route.entry_stage_ref) {
-    invalid(`${input.actionId}: route skip rejected; first closeout must be ${route.entry_stage_ref}.`);
-  }
-  for (let index = 1; index < completed.length; index += 1) {
-    if (!canReach(completed[index - 1]!, completed[index]!, allowed, graph)) {
-      invalid(`${input.actionId}: StageRun closeout order is unreachable: ${completed[index - 1]} -> ${completed[index]}.`);
-    }
-  }
-  const completedRequired = completed.filter((stageId) => route.required_stage_refs.includes(stageId));
-  completedRequired.forEach((stageId, index) => {
-    if (stageId !== route.required_stage_refs[index]) {
-      invalid(`${input.actionId}: route skip rejected; expected ${route.required_stage_refs[index]} before ${stageId}.`);
-    }
-  });
-  const nextStageRef = route.required_stage_refs[completedRequired.length] ?? null;
-  const complete = nextStageRef === null;
-  if (complete && !route.terminal_stage_refs.includes(completed.at(-1) ?? '')) {
-    invalid(`${input.actionId}: complete route must end at a declared terminal stage.`);
-  }
-  for (let index = 1; index < stageCloseouts.length; index += 1) {
-    const previous = stageCloseouts[index - 1]!;
-    const current = stageCloseouts[index]!;
-    if (!stringList(current.canonical_closeout_packet.consumed_refs).includes(previous.closeout_packet_ref)) {
-      invalid(`${input.actionId}: StageRun ${current.stage_id} must consume preceding accepted closeout ref ${previous.closeout_packet_ref}.`);
-    }
-  }
+  const unknown = completed.filter((stageId) => !graph.declared.has(stageId));
+  if (unknown.length > 0) invalid(`${input.actionId}: StageRun closeout references undeclared stages: ${unknown.join(', ')}.`);
+  const latestPacket = stageCloseouts.at(-1)?.canonical_closeout_packet ?? {};
+  const latestRouteImpact = record(latestPacket.route_impact);
+  const aiSelectedNextStage = stringValue(latestRouteImpact.route_back_stage_ref)
+    ?? stringValue(latestRouteImpact.selected_next_stage_ref)
+    ?? stringValue(latestRouteImpact.next_stage_ref);
+  const declaredAiSelectedNextStage = aiSelectedNextStage && graph.declared.has(aiSelectedNextStage)
+    ? aiSelectedNextStage
+    : null;
+  const undeclaredRouteDebtRefs = aiSelectedNextStage && !declaredAiSelectedNextStage
+    ? [`opl://standard-agent-actions/${encodeURIComponent(input.actionId)}/undeclared-route-target-quality-debt`]
+    : [];
+  const latestStage = completed.at(-1) ?? null;
+  const latestIndex = latestStage ? graph.order.indexOf(latestStage) : -1;
+  const defaultNextStage = latestIndex >= 0 ? graph.order[latestIndex + 1] ?? null : route.entry_stage_ref;
+  const terminalStageReached = !declaredAiSelectedNextStage
+    && route.terminal_stage_refs.includes(latestStage ?? '');
+  const complete = latestRouteImpact.workflow_complete === true || terminalStageReached;
+  const nextStageRef = complete ? null : declaredAiSelectedNextStage ?? defaultNextStage;
+  const closeoutQualityDebtRefs = stageCloseouts.flatMap((entry) =>
+    stringList(record(entry.canonical_closeout_packet.route_impact).quality_debt_refs));
   return {
     action_id: input.actionId,
     route,
@@ -275,5 +453,10 @@ export function evaluateStandardAgentActionStageRun(input: {
     next_stage_ref: nextStageRef,
     complete,
     stage_closeouts: stageCloseouts,
+    quality_debt_refs: [...new Set([
+      ...routeQualityDebtRefs,
+      ...undeclaredRouteDebtRefs,
+      ...closeoutQualityDebtRefs,
+    ])],
   };
 }

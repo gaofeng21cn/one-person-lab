@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://onepersonlab.dev/contracts/opl-framework/public-whitepaper-profile.schema.json",
+  "title": "OPL Public Whitepaper Profile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "sourceMarkdown",
+    "outputName",
+    "status",
+    "owner",
+    "coverLine",
+    "headerTitle",
+    "minPdfPages",
+    "maxPdfPages",
+    "publicHtmlUrl",
+    "publicPdfUrl"
+  ],
+  "properties": {
+    "sourceMarkdown": { "type": "string", "minLength": 1 },
+    "outputName": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$" },
+    "status": { "const": "whitepaper_artifact_verified" },
+    "owner": { "type": "string", "minLength": 1 },
+    "coverLine": { "type": "string", "minLength": 1 },
+    "headerTitle": { "type": "string", "minLength": 1 },
+    "minPdfPages": { "type": "integer", "minimum": 1 },
+    "maxPdfPages": { "type": "integer", "minimum": 1 },
+    "publicHtmlUrl": { "type": "string", "format": "uri", "pattern": "^https?://" },
+    "publicPdfUrl": { "type": "string", "format": "uri", "pattern": "^https?://" }
+  }
+}

@@ -713,7 +713,9 @@ test('stage manifest compiler honors an explicit v2 version with canonical Frame
   assert.equal(stage.stage_pack_conformance_version, 'standard-stage-pack.v2');
   assert.equal(completionPolicy.surface_kind, 'domain_stage_completion_policy');
   assert.equal(completionPolicy.owner, 'one-person-lab');
-  assert.equal(completionPolicy.closeout_packet_required, true);
+  assert.equal(completionPolicy.closeout_packet_required, false);
+  assert.equal(completionPolicy.raw_artifact_sufficient_for_progress, true);
+  assert.equal(completionPolicy.next_stage_transition_owner, 'codex_cli');
   assert.equal(userStageLogContract.surface_kind, 'opl_standard_agent_user_stage_log_contract');
   assert.equal(userStageLogContract.owner, 'one-person-lab');
   assert.deepEqual(stage.stage_contract?.receipt_schema_refs, [{
@@ -741,7 +743,7 @@ test('stage manifest compiler requires every mutating action route after route a
     required_stage_refs: ['intake'],
     optional_stage_refs: [],
     terminal_stage_refs: ['intake'],
-    route_policy: 'ordered_stage_attempts_no_skip',
+    route_policy: 'ai_selected_progress_route',
   };
   writeJson(root, 'contracts/action_catalog.json', catalog);
 
@@ -863,7 +865,11 @@ test('real MAG canonical manifest compiles while the legacy kind remains blocked
   const readyProjection = readyReport.domain_pack_compiler.domains[0];
 
   assert.equal(readyReport.domain_pack_compiler.summary.total_domain_count, 1);
-  assert.equal(readyReport.domain_pack_compiler.summary.ready_domain_count, 1);
+  assert.equal(
+    readyReport.domain_pack_compiler.summary.ready_domain_count,
+    1,
+    JSON.stringify(readyProjection?.blocker_reasons ?? readyProjection),
+  );
   assert.equal(readyReport.domain_pack_compiler.summary.blocked_domain_count, 0);
   assert.equal(readyProjection?.requested_agent_id, 'mag');
   assert.equal(readyProjection?.compiler_status, 'ready');

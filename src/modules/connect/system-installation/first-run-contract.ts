@@ -72,7 +72,7 @@ export function buildOplGuiFirstRunAutomationContract() {
       'opl install --headless --skip-packages --json',
       'opl system configure-codex --api-key-stdin --json',
       'opl system startup-maintenance --json',
-      'opl system reconcile-modules --json',
+      'opl packages update --json',
     ],
     accessibility_labels: GUI_FIRST_RUN_ACCESSIBILITY_LABELS,
     vm_artifacts: [

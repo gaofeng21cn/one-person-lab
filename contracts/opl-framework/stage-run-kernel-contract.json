@@ -1,570 +1,90 @@
 {
-  "contract_kind": "opl_stage_run_kernel_contract.v1",
+  "contract_kind": "opl_stage_run_kernel_contract.v2",
   "surface_kind": "opl_stage_run_kernel_contract",
   "owner": "one-person-lab",
-  "purpose": "Freeze the OPL-owned refs-only StageRun substrate for spec/status/event-log/projection rebuild, deterministic cycle identity, single-pass dispatch, rollback/exhaustion, output refs, retry-budget keying, hold scope, and domain-agent adoption boundaries.",
+  "purpose": "Provide refs-only StageRun transport identity, event history, retry-budget accounting, currentness filtering, and rebuildable read models without creating route selection, execution permission, closeout-format, or semantic transition authority.",
   "state": "active_contract",
   "machine_boundary": {
     "opl_owns": {
-      "stage_run_spec": true,
-      "stage_run_status": true,
+      "attempt_transport": true,
       "event_log": true,
       "projection_rebuild": true,
-      "observed_generation": true,
+      "currentness_filtering": true,
       "retry_budget_accounting": true,
-      "hold_scope_projection": true
+      "operator_observability": true
     },
-    "mas_owns": {
-      "stage_semantics": true,
-      "owner_receipt_signing": true,
-      "typed_blocker_creation": true,
-      "publication_verdict": true,
-      "artifact_body": true,
-      "memory_body": true
+    "codex_cli_owns": {
+      "semantic_stage_selection": true,
+      "skip_repeat_reverse_and_route_back": true,
+      "interpretation_of_prior_artifacts": true
     },
-    "read_model_role": "rebuildable_refs_only_projection_not_truth_source"
+    "domain_agent_owns": {
+      "domain_truth": true,
+      "quality_and_ready_verdicts": true,
+      "artifact_and_memory_bodies": true,
+      "owner_receipts_and_domain_typed_blockers": true
+    },
+    "read_model_role": "rebuildable_refs_only_projection_not_truth_or_gate"
+  },
+  "progress_first_policy": {
+    "readable_artifact_allows_any_declared_stage": true,
+    "free_text_partial_draft_failed_diagnostic_and_negative_result_are_progress": true,
+    "quality_budget_exhaustion_blocks_route": false,
+    "typed_closeout_required_for_progress": false,
+    "owner_receipt_required_for_next_stage": false,
+    "independent_review_required_for_next_stage": false,
+    "owner_receipt_or_independent_review_required_for_quality_ready_claim": true,
+    "format_manifest_role_receipt_lineage_and_review_gaps_are_quality_debt": true
+  },
+  "launch_policy": {
+    "hard_stops": [
+      "identity_conflict_that_would_mutate_wrong_target",
+      "unsafe_or_overclaiming_authority_boundary",
+      "forbidden_write",
+      "permission_credential_or_safety_boundary",
+      "irreversible_action_without_required_authority",
+      "explicit_human_decision_gate"
+    ],
+    "advisory_only": [
+      "missing_owner_metadata",
+      "missing_selected_executor_metadata_defaults_to_codex_cli",
+      "missing_scope_refs",
+      "missing_provider_attempt_or_lease_ref",
+      "missing_source_fingerprint_or_idempotency_key",
+      "missing_stage_manifest_or_current_pointer",
+      "missing_prompt_skill_tool_knowledge_rubric_or_evaluation_refs",
+      "missing_requires_or_ensures_evidence",
+      "missing_expected_receipt_shape"
+    ],
+    "framework_semantic_route_role": "none"
+  },
+  "closeout_policy": {
+    "progress_outcomes": [
+      "completed",
+      "completed_with_quality_debt"
+    ],
+    "zero_output_is_forwarded_as_no_output_diagnostic": true,
+    "corrupt_or_unreadable_output_is_forwarded_as_failure_diagnostic": true,
+    "hard_stop_only_when": [
+      "identity_conflict_that_would_mutate_wrong_target",
+      "permission_credential_or_safety_boundary",
+      "authority_boundary_or_forbidden_write",
+      "irreversible_action_without_required_authority",
+      "explicit_human_decision_gate"
+    ],
+    "closeout_receipt_binding_is_quality_or_ready_evidence_only": true,
+    "missing_closeout_receipt_binding_blocks_next_stage": false,
+    "missing_independent_review_blocks_next_stage": false,
+    "missing_independent_review_blocks_quality_ready_claim": true
   },
   "stage_run_kernel": {
-    "spec_role": "desired_stage_run_refs_only",
-    "status_role": "opl_owned_current_state_projection",
+    "spec_role": "desired_transport_refs_only",
+    "status_role": "passive_attempt_lifecycle_projection",
     "event_log_role": "append_only_refs_only_stage_run_events",
     "projection_role": "rebuildable_refs_only_read_model",
-    "status_values": [
-      "declared",
-      "inputs_ready",
-      "admitted",
-      "running",
-      "terminalizing",
-      "domain_accepted",
-      "next_stage_ready",
-      "needs_human_decision",
-      "needs_external_resource",
-      "retry_scheduled",
-      "typed_blocked",
-      "infrastructure_crashed",
-      "superseded"
-    ],
-    "terminal_domain_authority_refs": [
-      "owner_receipt_ref",
-      "typed_blocker_ref"
-    ],
-    "provider_completion_status": "terminalizing",
-    "domain_acceptance_status": "domain_accepted"
-  },
-  "cycle_orchestration": {
-    "surface_kind": "opl_stage_run_cycle_orchestration_contract",
-    "version": "stage-run-cycle.v1",
-    "contract_ref": "contracts/opl-framework/stage-run-kernel-contract.json",
-    "module_ref": "src/modules/stagecraft/stage-run-orchestration.ts",
-    "package_export": "opl-framework/stage-run-orchestration",
-    "brand_modules": {
-      "primary": "stagecraft",
-      "collaborating": [
-        "runway"
-      ]
-    },
-    "declarative_manifest": {
-      "required_fields": [
-        "manifest_id",
-        "target_agent_ref",
-      "descriptor_ref",
-      "run_ref",
-      "control_plane_binding",
-      "launch_owner",
-        "input_refs",
-        "stage_bindings",
-        "max_cycles",
-        "max_attempts_per_cycle"
-      ],
-      "stage_binding_fields": [
-        "stage_ref",
-        "runner_ref"
-      ],
-      "domain_body_allowed": false,
-      "generated_control_plane_adapter": {
-        "module_ref": "src/modules/stagecraft/stage-run-orchestration-adapter.ts",
-        "source_surface": "family-stage-control-plane.v1",
-        "stage_binding_source": "stage_control_plane.stages[].stage_id",
-        "manifest_id_source_fields": [
-          "target_agent_ref",
-        "descriptor_ref",
-        "run_ref",
-        "control_plane_binding",
-        "input_refs",
-          "stage_bindings",
-          "max_cycles",
-          "max_attempts_per_cycle"
-        ],
-      "manifest_id_built_from_normalized_control_plane_input": true,
-      "raw_manifest_reducer_input_allowed": false,
-      "target_agent_ref_source": "explicit_canonical_agent_identity",
-      "target_agent_ref_may_be_inferred_from_target_domain_id": false,
-      "target_agent_ref_must_match_canonical_control_plane_owner": true,
-      "control_plane_binding_fields": [
-        "plane_id",
-        "target_domain_id",
-        "owner",
-        "fingerprint"
-      ],
-      "control_plane_fingerprint_covers_normalized_plane": true,
-        "launch_owner_source": "injected_canonical_kernel_constant",
-        "runner_ref_source": "injected_canonical_agent_stage_runner_constant",
-        "caller_runner_or_launch_override_allowed": false
-      }
-    },
-    "execution_model": "pure_refs_only_event_reducer",
-    "identity": {
-      "stage_run_id_fields": [
-        "target_agent_ref",
-        "descriptor_ref",
-        "run_ref"
-      ],
-      "stage_step_id_fields": [
-        "target_agent_ref",
-        "descriptor_ref",
-        "stage_ref",
-        "run_ref",
-        "cycle_index",
-        "attempt_index"
-      ],
-      "cross_target_same_id_allowed": false,
-      "idempotency_key_required": true
-    },
-    "domain_route_oracle": {
-      "owner": "target_domain_agent",
-      "decision_values": [
-        "dispatch",
-        "accepted",
-        "rollback",
-        "blocked"
-      ],
-      "decision_payload_role": "refs_only_route_decision",
-      "decision_specific_fields_required": true,
-      "irrelevant_decision_fields_policy": "reject",
-      "opl_can_choose_domain_route": false,
-      "accepted_requires_observed_checkpoint_ref": true,
-      "rollback_requires_observed_checkpoint_ref": true
-    },
-    "pure_state_reducer": {
-    "event_kinds": [
-      "route_decision",
-      "effect_observation"
-    ],
-    "event_identity_fields": [
-      "manifest_id",
-      "stage_run_id",
-      "cycle_index",
-      "attempt_index"
-    ],
-    "cross_run_or_cycle_event_replay_policy": "reject",
-      "effect_statuses": [
-        "domain_result",
-        "typed_blocker",
-        "runtime_blocker"
-      ],
-      "effect_status_specific_fields_required": true,
-      "irrelevant_effect_fields_policy": "reject",
-      "required_effect_binding": [
-        "pending_stage_ref",
-        "stage_ref",
-        "domain_result_ref_or_blocker_ref"
-      ],
-      "rebuilds_from": [
-        "canonical_control_plane_manifest_input",
-        "ordered_route_and_effect_events"
-      ],
-      "reducer_input_fields": [
-        "manifest_input",
-        "events"
-      ],
-      "caller_mutable_state_accepted": false,
-      "filesystem_writes": false,
-      "process_spawn": false,
-      "callback_execution": false,
-      "receipt_creation": false,
-      "run_closeout_creation": false
-    },
-    "canonical_effect_boundary": {
-      "launch_owner": "one-person-lab",
-      "runner_owner": "one-person-lab",
-      "runner_ref": "src/modules/runway/family-runtime-codex-stage-runner.ts#runAgentStageRunner",
-      "domain_effect_dispatch_ref": "src/modules/runway/family-runtime-domain-handler-process.ts#runFamilyRuntimeDomainHandlerCommand",
-      "untrusted_runner_or_launch_owner_policy": "reject",
-      "execution_authorization_ref": "src/modules/stagecraft/stage-run-execution-authorization-ledger.ts",
-      "domain_effect_owner": "target_domain_agent",
-      "accepted_observations": [
-        "domain_result_ref",
-        "typed_blocker_ref",
-        "runtime_blocker_ref",
-        "checkpoint_ref",
-        "closeout_refs"
-      ],
-      "reducer_accepts_output_root": false,
-      "reducer_accepts_cwd": false,
-      "reducer_accepts_argv_or_env": false,
-      "reducer_writes_receipt_or_manifest": false
-    },
-    "no_progress_policy": {
-      "canonical_admission_consumer": null,
-      "manifest_or_effect_field_admitted": false,
-      "enforcement": "advisory_only_outside_stage_run_reducer",
-      "can_block_or_exhaust_stage_run": false
-    },
-    "real_domain_integration_gate": {
-      "command": "npm run test:stage-run-mag-integration",
-      "required_env": [
-        "MAG_REPO_DIR",
-        "EXPECTED_MAG_HEAD"
-      ],
-      "missing_or_wrong_repo_policy": "fail_closed",
-      "mock_or_skip_allowed": false,
-      "required_surfaces": [
-        "agent/stages/manifest.json",
-        "workspace next-step",
-        "authority owner-receipt-evidence",
-        "pass revision"
-      ],
-      "required_effect_refs": [
-        "typed_blocker_ref",
-        "domain_result_ref"
-      ],
-      "required_behavior": [
-        "p3a_quality_aware_critique_route",
-        "domain_owned_typed_blocker_receipt",
-        "post_revision_forward_route"
-      ]
-    },
-    "termination": {
-      "statuses": [
-        "checkpoint_accepted",
-        "rollback_required",
-        "blocked",
-        "exhausted"
-      ],
-      "exhaustion_reasons": [
-        "max_cycles_exhausted",
-        "max_attempts_exhausted"
-      ],
-      "exhaustion_creates_domain_typed_blocker": false,
-      "effect_observation_closes_domain_stage": false
-    },
-    "refs_only_state": {
-      "records": [
-        "target_agent_ref",
-        "descriptor_ref",
-        "run_ref",
-        "accepted_checkpoint_ref",
-        "rollback_to_checkpoint_ref",
-        "latest_output_refs",
-        "domain_result_refs",
-        "closeout_refs",
-        "route_decision_refs",
-        "typed_blocker_refs",
-        "human_gate_refs",
-        "runtime_blocker_refs"
-      ],
-      "forbidden": [
-        "domain_result_body",
-        "quality_verdict_body",
-        "owner_receipt_body",
-        "typed_blocker_body",
-        "artifact_body"
-      ]
-    },
-    "second_scheduler_created": false,
-    "second_receipt_store_created": false,
-    "second_output_directory_control_plane_created": false,
-    "second_schema_created": false,
-    "authority_boundary": {
-      "opl_can_reduce_refs_only_cycle_state": true,
-      "opl_can_build_stable_cycle_identity": true,
-      "opl_can_dispatch_typed_runner": false,
-      "opl_can_spawn_process": false,
-      "opl_can_manage_output_directories": false,
-      "opl_can_write_execution_receipts": false,
-      "opl_can_write_run_closeout": false,
-      "opl_can_choose_domain_route": false,
-      "opl_can_write_domain_truth": false,
-      "opl_can_mutate_artifact_body": false,
-      "opl_can_create_owner_receipt": false,
-      "opl_can_create_typed_blocker": false,
-      "opl_can_authorize_quality_verdict": false,
-      "opl_can_claim_domain_ready": false
-    }
-  },
-  "contract_writing_rules": {
-    "required_for_launch": [
-      "stage_run_id",
-      "domain_id",
-      "stage_id",
-      "generation",
-      "current_pointer",
-      "stage_manifest",
-      "owner",
-      "selected_executor",
-      "authority_boundary",
-      "required_role_artifacts",
-      "expected_receipt_or_blocker",
-      "input_refs",
-      "replay_audit_lineage_refs",
-      "provider_attempt_ref",
-      "attempt_lease_ref",
-      "execution_authorization_decision_ref",
-      "workspace_scope_ref",
-      "artifact_scope_ref",
-      "source_fingerprint",
-      "idempotency_key"
-    ],
-    "required_for_closeout": [
-      "current_generation_role_artifacts",
-      "stage_manifest_validity",
-      "consumable_artifact_progress_or_owner_answer",
-      "current_pointer",
-      "content_hashes",
-      "lineage_refs"
-    ],
-    "required_for_quality_or_ready_closeout": [
-      "owner_receipt_or_quality_gate_receipt",
-      "closeout_receipt_ref",
-      "closeout_receipt_stage_run_binding",
-      "closeout_receipt_stage_manifest_binding",
-      "closeout_receipt_current_pointer_binding",
-      "closeout_receipt_source_fingerprint_binding",
-      "closeout_owner_answer_idempotency_binding"
-    ],
-    "advisory_for_context": [
-      "prompt_refs",
-      "skill_refs",
-      "tool_affordance_refs",
-      "knowledge_refs",
-      "rubric_refs",
-      "evaluation_refs",
-      "assumption_refs",
-      "monitor_refs"
-    ],
-    "route_back_when_missing": [
-      "prompt_refs",
-      "skill_refs",
-      "tool_affordance_refs",
-      "knowledge_refs",
-      "rubric_refs",
-      "evaluation_refs"
-    ],
-    "forbidden_as_authority": [
-      "State Index",
-      "stage_progress_log",
-      "provider completion",
-      "readiness",
-      "verified ledger",
-      "file presence",
-      "conformance passed"
-    ]
-  },
-  "admission_policy": {
-    "launch_hard_blockers": [
-      "identity",
-      "owner",
-      "scope",
-      "selected_executor",
-      "authority_boundary",
-      "required_role_artifacts",
-      "expected_receipt_or_typed_blocker_shape",
-      "forbidden_write",
-      "replay_audit_lineage",
-      "provider_attempt",
-      "attempt_lease",
-      "execution_authorization_decision",
-      "workspace_artifact_scope",
-      "source_fingerprint",
-      "idempotency_key"
-    ],
-    "strategy_refs_default": "advisory_or_route_back",
-    "prompt_skill_tool_knowledge_missing_blocks_launch_by_default": false,
-    "closeout_hard_blockers": [
-      "required_role_artifacts",
-      "manifest_validity",
-      "zero_consumable_artifact_without_owner_answer_or_hard_stop",
-      "current_pointer",
-      "content_hash",
-      "generation",
-      "lineage_refs",
-      "closeout_receipt_binding"
-    ],
-    "progress_first_closeout": {
-      "consumable_artifact_without_owner_answer_status": "completed_with_quality_debt",
-      "quality_budget_exhaustion_blocks_transition": false,
-      "owner_answer_required_for_quality_or_ready_claim": true,
-      "typed_blocker_reserved_for_hard_stop": true
-    }
-  },
-  "execution_authorization_policy": {
-    "surface_kind": "opl_stage_run_execution_authorization_policy",
-    "ledger_surface": {
-      "surface_kind": "opl_stage_run_execution_authorization_ledger",
-      "receipt_surface_kind": "opl_stage_run_execution_authorization_receipt",
-      "cli_commands": [
-        "opl runtime stage-run-authorization record",
-        "opl runtime stage-run-authorization verify",
-        "opl runtime stage-run-authorization list"
-      ],
-      "authority_boundary": {
-        "refs_only": true,
-        "authorization_receipt_is_domain_owner_answer": false,
-        "queued_attempt_counts_as_active_lease": false,
-        "registered_workflow_counts_as_execution_authorized": false,
-        "provider_attempt_ref_counts_as_closeout_binding": false,
-        "can_write_domain_truth": false,
-        "can_create_owner_receipt": false,
-        "can_create_typed_blocker": false,
-        "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
-      }
-    },
-    "launch_hard_blockers": [
-      "provider_attempt_ref_missing",
-      "attempt_lease_ref_missing",
-      "attempt_lease_not_active",
-      "execution_authorization_decision_ref_missing",
-      "workspace_scope_ref_missing",
-      "artifact_scope_ref_missing",
-      "source_fingerprint_missing",
-      "idempotency_key_missing",
-      "authority_boundary_invalid",
-      "forbidden_write_required"
-    ],
-    "closeout_binding_blockers": [
-      "closeout_receipt_ref_missing",
-      "closeout_receipt_stage_run_binding_missing",
-      "closeout_receipt_stage_manifest_binding_missing",
-      "closeout_receipt_current_pointer_binding_missing",
-      "closeout_receipt_source_fingerprint_binding_missing",
-      "closeout_owner_answer_idempotency_binding_missing",
-      "quality_gate_independent_attempt_binding_missing",
-      "quality_gate_same_attempt_self_review_forbidden"
-    ],
-    "blocked_result": {
-      "surface_kind": "opl_stage_run_execution_authorization_blocker",
-      "owner": "one-person-lab",
-      "blocker_code": "stage_run_execution_authorization_blocked",
-      "domain_truth_changed": false,
-      "owner_receipt_signed": false,
-      "domain_typed_blocker_created": false
-    }
-  },
-  "conformance_output": {
-    "required_sections": [
-      "status",
-      "launch_blockers",
-      "closeout_blockers",
-      "execution_authorization",
-      "closeout_binding_blockers",
-      "transition_outcome",
-      "quality_debt_reasons",
-      "advisory_warnings",
-      "route_back_recommendations",
-      "audit_drilldown_refs",
-      "forbidden_authority_flags"
-    ],
-    "layers": [
-      "launch_blockers",
-      "closeout_blockers",
-      "execution_authorization",
-      "closeout_binding_blockers",
-      "transition_outcome",
-      "quality_debt_reasons",
-      "advisory_warnings",
-      "route_back_recommendations",
-      "audit_drilldown_refs",
-      "forbidden_authority_flags"
-    ],
-    "default_blocking_sections": [
-      "launch_blockers",
-      "closeout_blockers",
-      "execution_authorization",
-      "closeout_binding_blockers"
-    ],
-    "default_blocking_layers_only": [
-      "launch_blockers",
-      "closeout_blockers",
-      "execution_authorization",
-      "closeout_binding_blockers"
-    ],
-    "non_blocking_default_sections": [
-      "quality_debt_reasons",
-      "advisory_warnings",
-      "route_back_recommendations",
-      "audit_drilldown_refs"
-    ]
-  },
-  "forbidden_as_authority": [
-    "State Index",
-    "stage_progress_log",
-    "provider completion",
-    "readiness",
-    "verified ledger",
-    "file presence",
-    "conformance passed"
-  ],
-  "adoption_surface": {
-    "surface_kind": "opl_stage_run_kernel_adoption",
-    "domain_contract_path": "contracts/stage_run_kernel_adoption.json",
-    "domain_agent_required_claims": [
-      "stage_semantics_owner",
-      "owner_receipt_authority",
-      "typed_blocker_authority",
-      "artifact_body_authority",
-      "publication_or_quality_verdict_authority"
-    ],
-    "opl_required_claims": [
-      "stage_run_spec_status_event_log_owner",
-      "read_model_projection_owner",
-      "observed_generation_owner",
-      "retry_budget_owner",
-      "hold_scope_projection_owner"
-    ],
-    "domain_must_not_claim": [
-      "generic_stage_run_kernel_owner",
-      "opl_read_model_truth_source",
-      "sqlite_body_store_owner"
-    ],
-    "opl_must_not_claim": [
-      "domain_stage_semantics_owner",
-      "owner_receipt_signer",
-      "typed_blocker_creator",
-      "publication_or_quality_verdict_authority",
-      "artifact_body_owner",
-      "memory_body_owner"
-    ]
-  },
-  "read_model_projection": {
-    "surface_kind": "opl_stage_run_read_model",
-    "projection_role": "rebuildable_refs_only_projection",
-    "rebuild_from": [
-      "StageRun event log",
-      "StageRun spec refs",
-      "input refs",
-      "owner receipt refs",
-      "typed blocker refs",
-      "provider attempt refs",
-      "hold refs",
-      "retry budget refs"
-    ],
-    "body_access": false,
-    "truth_source": false,
-    "output_fields": [
-      "stage_run_id",
-      "status",
-      "observed_generation",
-      "spec_ref",
-      "consumed_refs",
-      "owner_receipt_refs",
-      "typed_blocker_refs",
-      "provider_attempt_refs",
-      "hold_refs",
-      "retry_budget_ref",
-      "input_fingerprint",
-      "last_event_ref"
-    ]
+    "provider_completion_role": "attempt_transport_completed",
+    "provider_completion_is_domain_accepted": false,
+    "next_stage_ready_role": "codex_selected_route_observation_not_framework_authorization"
   },
   "event_policy": {
     "required_event_fields": [
@@ -574,14 +94,59 @@
       "generation",
       "observed_at"
     ],
-    "generation_rule": "only events matching the highest observed generation participate in current projection; older generations remain audit refs",
+    "generation_rule": "highest matching generation is current; older generations remain audit refs",
+    "currentness_mismatch_effect": "disable_reuse_or_wrong_target_mutation_only",
     "retry_budget_key": [
       "stage_run_id",
       "generation",
       "input_fingerprint",
       "failure_signature"
     ],
-    "hold_scope_rule": "holds must identify exact stage_run_id generation and optional work_unit_ref; study-wide opaque holds cannot silently block a current StageRun"
+    "retry_budget_role": "quality_and_compute_budget_only",
+    "retry_budget_exhaustion_effect": "carry_best_readable_artifact_forward_with_quality_debt"
+  },
+  "read_model_projection": {
+    "surface_kind": "opl_stage_run_read_model",
+    "projection_role": "rebuildable_refs_only_projection",
+    "body_access": false,
+    "truth_source": false,
+    "can_select_route": false,
+    "can_block_route_for_missing_format_or_receipt": false,
+    "output_fields": [
+      "stage_run_id",
+      "status",
+      "observed_generation",
+      "spec_ref",
+      "consumed_refs",
+      "artifact_refs",
+      "owner_receipt_refs",
+      "typed_blocker_refs",
+      "provider_attempt_refs",
+      "retry_budget_ref",
+      "input_fingerprint",
+      "last_event_ref"
+    ]
+  },
+  "quality_claim_boundary": {
+    "quality_debt_blocks": [
+      "domain_ready",
+      "quality_ready",
+      "artifact_ready",
+      "visual_ready",
+      "export_ready",
+      "publication_ready",
+      "submission_ready",
+      "production_ready"
+    ],
+    "quality_debt_never_blocks": [
+      "next_declared_stage_start",
+      "skip",
+      "repeat",
+      "reverse",
+      "route_back",
+      "repair",
+      "review"
+    ]
   },
   "forbidden_payloads": [
     "artifact body",
@@ -596,26 +161,39 @@
     "grant package body",
     "visual package body"
   ],
+  "adoption_surface": {
+    "surface_kind": "opl_stage_run_kernel_adoption",
+    "domain_contract_path": "contracts/stage_run_kernel_adoption.json",
+    "domain_agent_required_claims": [
+      "stage_semantics_owner",
+      "owner_receipt_authority",
+      "typed_blocker_authority",
+      "artifact_body_authority",
+      "publication_or_quality_verdict_authority"
+    ],
+    "opl_required_claims": [
+      "attempt_transport_owner",
+      "read_model_projection_owner",
+      "currentness_filter_owner",
+      "retry_budget_accounting_owner"
+    ]
+  },
   "authority_boundary": {
-    "opl_can_create_stage_run_spec": true,
-    "opl_can_update_stage_run_status": true,
+    "opl_can_create_and_observe_stage_attempt": true,
     "opl_can_append_stage_run_event_refs": true,
     "opl_can_rebuild_read_model": true,
     "opl_can_account_retry_budget": true,
-    "opl_can_project_hold_scope": true,
+    "opl_can_filter_stale_reuse": true,
+    "opl_can_select_semantic_stage_route": false,
+    "opl_can_accept_reject_rank_reconcile_or_override_codex_route": false,
+    "opl_can_block_next_stage_for_missing_receipt_or_format": false,
     "opl_can_write_domain_truth": false,
     "opl_can_mutate_artifact_body": false,
     "opl_can_store_memory_body": false,
     "opl_can_create_owner_receipt": false,
     "opl_can_create_typed_blocker": false,
-    "opl_can_create_execution_authorization_blocker": true,
-    "execution_blocker_is_domain_typed_blocker": false,
-    "execution_blocker_can_change_domain_truth": false,
     "opl_can_authorize_publication_or_quality_verdict": false,
     "read_model_can_be_truth_source": false,
-    "provider_completion_counts_as_domain_accepted": false,
-    "file_presence_counts_as_stage_complete": false,
-    "latest_json_counts_as_owner_receipt": false,
-    "sqlite_record_counts_as_domain_progress": false
+    "provider_completion_counts_as_domain_accepted": false
   }
 }

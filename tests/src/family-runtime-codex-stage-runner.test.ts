@@ -10,8 +10,6 @@ import { createFakeCodexFixture } from './cli/helpers.ts';
 import { runPublicCodexStageRunner } from './family-runtime-codex-stage-runner-helpers.ts';
 import {
   buildCodexStageActivityInput,
-  createCodexCloseoutCaptureForTest,
-  stageCloseoutOutputSchemaForTest,
 } from '../../src/modules/runway/family-runtime-codex-stage-runner.ts';
 import { FrameworkContractError } from '../../src/modules/charter/contracts.ts';
 
@@ -61,7 +59,7 @@ test('Codex stage activity projection keeps Codex CLI attempts live by default',
   }
 });
 
-test('Codex stage activity command preview carries strict terminal closeout contract', () => {
+test('Codex stage activity accepts readable output without a typed closeout contract', () => {
   const activity = buildCodexStageActivityInput({
     attempt: {
       stage_attempt_id: 'sat_codex_prompt_contract_test',
@@ -75,11 +73,12 @@ test('Codex stage activity command preview carries strict terminal closeout cont
   });
 
   const commandPreview = activity.runner_status.command_preview.join('\n');
-  assert.match(commandPreview, /last non-empty assistant message MUST be exactly one JSON object and nothing else/);
-  assert.match(commandPreview, /Do not wrap the JSON in Markdown/);
-  assert.match(commandPreview, /Do not add prose, code fences, prefixes, suffixes/);
-  assert.equal(activity.expected_closeout.typed_packet_required_for_completion, true);
-  assert.equal(activity.expected_closeout.free_text_closeout_accepted, false);
+  assert.match(commandPreview, /Partial drafts, negative findings, failed attempts/);
+  assert.match(commandPreview, /final message may be structured JSON or ordinary readable text/);
+  assert.match(commandPreview, /route to any declared stage/);
+  assert.equal(activity.expected_closeout.typed_packet_required_for_progress, false);
+  assert.equal(activity.expected_closeout.raw_or_free_text_artifact_accepted_for_progress, true);
+  assert.equal(activity.expected_closeout.framework_derives_progress_envelope, true);
 });
 
 test('Codex stage activity hydrates the declared domain stage prompt body into the final command preview', () => {
@@ -165,7 +164,7 @@ test('Codex stage activity command preview binds explicit Codex executor policy'
   ]);
 });
 
-test('Codex stage activity prompt carries refs-only OPL execution authorization context', () => {
+test('Codex stage activity prompt carries refs-only transport identity without an authorization control plane', () => {
   const activity = buildCodexStageActivityInput({
     attempt: {
       stage_attempt_id: 'sat_codex_auth_prompt_test',
@@ -190,19 +189,6 @@ test('Codex stage activity prompt carries refs-only OPL execution authorization 
         command_source: 'env_override',
         source_ref: 'domain://example/route-handoffs/current',
       },
-      opl_execution_authorization: {
-        provider_attempt_ref: 'temporal://attempt/sat_codex_auth_prompt_test',
-        attempt_lease_ref: 'opl://stage-attempts/sat_codex_auth_prompt_test/leases/frt_codex_auth_prompt_test/active',
-        attempt_lease_status: 'active',
-        execution_authorization_decision_ref:
-          'opl://stage-attempts/sat_codex_auth_prompt_test/execution-authorizations/frt_codex_auth_prompt_test/wf_codex_auth_prompt_test',
-        source_fingerprint: 'default_executor_source_codex_auth_prompt_test',
-        idempotency_key: 'idem_codex_auth_prompt_test',
-        stage_run_id: 'app-stage-run:medautoscience:domain-owner-default-executor-dispatch',
-        stage_manifest_ref: 'opl://stage-manifests/domain_owner%2Fdefault-executor-dispatch',
-        current_pointer_ref:
-          'opl://stage-runs/app-stage-run%3Amedautoscience%3Adomain-owner-default-executor-dispatch/current',
-      },
       checkpoint_refs: ['studies/002/artifacts/supervision/consumer/default_executor_dispatches/immutable/packet.json'],
     },
   });
@@ -210,12 +196,9 @@ test('Codex stage activity prompt carries refs-only OPL execution authorization 
   const commandPreview = activity.runner_status.command_preview.join('\n');
   assert.match(commandPreview, /explicitly pass these OPL_\* bindings to the child command environment/);
   assert.match(commandPreview, /"OPL_PROVIDER_ATTEMPT_REF":"temporal:\/\/attempt\/sat_codex_auth_prompt_test"/);
-  assert.match(commandPreview, /"OPL_ATTEMPT_LEASE_STATUS":"active"/);
-  assert.match(commandPreview, /"OPL_EXECUTION_AUTHORIZATION_DECISION_REF":"opl:\/\/stage-attempts\/sat_codex_auth_prompt_test\/execution-authorizations\/frt_codex_auth_prompt_test\/wf_codex_auth_prompt_test"/);
-  assert.match(commandPreview, /"OPL_STAGE_RUN_ID":"app-stage-run:medautoscience:domain-owner-default-executor-dispatch"/);
-  assert.match(commandPreview, /"OPL_STAGE_MANIFEST_REF":"opl:\/\/stage-manifests\/domain_owner%2Fdefault-executor-dispatch"/);
-  assert.match(commandPreview, /"OPL_CURRENT_POINTER_REF":"opl:\/\/stage-runs\/app-stage-run%3Amedautoscience%3Adomain-owner-default-executor-dispatch\/current"/);
-  assert.match(commandPreview, /"OPL_CLOSEOUT_BINDING_JSON":/);
+  assert.doesNotMatch(commandPreview, /OPL_ATTEMPT_LEASE_STATUS/);
+  assert.doesNotMatch(commandPreview, /OPL_EXECUTION_AUTHORIZATION_DECISION_REF/);
+  assert.doesNotMatch(commandPreview, /OPL_CLOSEOUT_BINDING_JSON/);
   assert.match(commandPreview, /"OPL_STAGE_PACKET_REF":"studies\/002\/artifacts\/supervision\/consumer\/default_executor_dispatches\/immutable\/packet.json"/);
   assert.match(commandPreview, /"OPL_DOMAIN_ID":"example-domain"/);
   assert.match(commandPreview, /"OPL_DOMAIN_TRUTH_OWNER":"example-domain-owner"/);
@@ -229,7 +212,7 @@ test('Codex stage activity prompt carries refs-only OPL execution authorization 
   assert.match(commandPreview, /"OPL_DOMAIN_COMMAND_CWD":"\/tmp\/one-person-lab"/);
   assert.match(commandPreview, /"OPL_DOMAIN_COMMAND_SOURCE":"env_override"/);
   assert.match(commandPreview, /"OPL_ROUTE_HANDOFF_SOURCE_REF":"domain-route-handoff:\/\/example\/gate-clearing"/);
-  assert.match(commandPreview, /do not grant domain truth, artifact, quality, or readiness authority/);
+  assert.match(commandPreview, /do not authorize semantic routing, domain truth, artifact, quality, or readiness claims/);
 });
 
 test('Codex stage activity prompt enforces generic domain-route boundaries', () => {
@@ -276,61 +259,18 @@ test('Codex stage activity prompt enforces generic domain-route boundaries', () 
   assert.match(commandPreview, /do not report provider liveness or platform repair as domain progress/);
 });
 
-test('Codex stage closeout output schema accepts refs-only object metadata', () => {
-  const schema = stageCloseoutOutputSchemaForTest() as Record<string, any>;
-  const closeoutRefs = schema.properties.closeout_refs;
-  const objectRefSchema = closeoutRefs.items.anyOf.find((entry: Record<string, unknown>) =>
-    entry.type === 'object'
-  );
-
-  assert.ok(objectRefSchema, 'closeout_refs must allow object refs.');
-  assert.deepEqual(objectRefSchema.anyOf, [
-    { required: ['ref'] },
-    { required: ['uri'] },
-  ]);
-  assert.deepEqual(Object.keys(objectRefSchema.properties).sort(), [
-    'kind',
-    'ref',
-    'ref_kind',
-    'sha256',
-    'size_bytes',
-    'uri',
-  ]);
-  assert.equal(objectRefSchema.additionalProperties, false);
-});
-
-test('Codex stage closeout capture cleans temp directory after construction failure', () => {
-  let leakedRoot: string | null = null;
-
-  assert.throws(() => {
-    createCodexCloseoutCaptureForTest({
-      writeFileSync(filePath) {
-        leakedRoot = path.dirname(String(filePath));
-        throw new Error('schema write failed');
+test('Codex stage runner treats a missing packet as advisory but still requires an execution workspace', async () => {
+  const activity = buildCodexStageActivityInput({
+    attempt: {
+      stage_attempt_id: 'sat_missing_packet_binding_test',
+      stage_id: 'domain_owner/default-executor-dispatch',
+      workspace_locator: {
+        workspace_root: '/tmp/mas',
       },
-    });
-  }, /schema write failed/);
-
-  assert.ok(leakedRoot, 'test must observe the allocated capture root.');
-  assert.equal(fs.existsSync(leakedRoot), false);
-});
-
-test('Codex stage runner fails closed when live runner lacks packet or workspace binding', async () => {
-  await assert.rejects(
-    () => runPublicCodexStageRunner({
-      attempt: {
-        stage_attempt_id: 'sat_missing_packet_binding_test',
-        stage_id: 'domain_owner/default-executor-dispatch',
-        workspace_locator: {
-          workspace_root: '/tmp/mas',
-        },
-      },
-      runnerMode: 'codex_cli',
-    }),
-    (error) => error instanceof FrameworkContractError
-      && error.code === 'contract_shape_invalid'
-      && error.details?.blocked_reason === 'codex_cli_stage_packet_ref_missing',
-  );
+    },
+  });
+  assert.equal(activity.stage_packet_binding.binding_status, 'advisory_missing_stage_packet_ref');
+  assert.equal(activity.stage_packet_binding.stage_may_start_from_declared_context, true);
 
   await assert.rejects(
     () => runPublicCodexStageRunner({
@@ -348,7 +288,7 @@ test('Codex stage runner fails closed when live runner lacks packet or workspace
   );
 });
 
-test('Codex stage runner supervises a live Codex CLI process without accepting free-text completion', async () => {
+test('Codex stage runner turns free-text output into consumable progress', async () => {
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
 if [ "$1" = "exec" ]; then
   printf '{"type":"thread.started","thread_id":"thread-live-runner"}\\n'
@@ -385,8 +325,10 @@ exit 64
     assert.equal(receipt.runner_status.live_process_started, true);
     assert.equal(receipt.runner_status.dry_run_transport, false);
     assert.equal(receipt.runner_status.exit_code, 0);
-    assert.equal(receipt.runner_status.typed_closeout_required_for_completion, true);
-    assert.equal(receipt.runner_status.free_text_closeout_accepted, false);
+    assert.equal(receipt.runner_status.typed_closeout_required_for_progress, false);
+    assert.equal(receipt.runner_status.raw_artifact_sufficient_for_progress, true);
+    assert.equal(receipt.closeout_packet?.domain_ready_verdict, 'completed_with_quality_debt');
+    assert.equal(receipt.closeout_packet?.route_impact?.next_stage_may_start, true);
     assert.equal(receipt.progress_summary.thread_id, 'thread-live-runner');
     assert.deepEqual(receipt.heartbeat_summary.checkpoint_refs, ['checkpoint:seed']);
     const processOutputSummary = receipt.process_output_summary;
@@ -472,7 +414,7 @@ exit 64
       '--config',
       'model_reasoning_effort="high"',
     ]);
-    assert.notEqual(capturedArgs.indexOf('--output-schema'), -1);
+    assert.equal(capturedArgs.indexOf('--output-schema'), -1);
     assert.notEqual(capturedArgs.indexOf('--output-last-message'), -1);
   } finally {
     if (previousCodexBin === undefined) {

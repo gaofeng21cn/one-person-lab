@@ -113,8 +113,11 @@ function historyProcessOutputSummary(value: unknown) {
     ...(typeof summary.session_recovery_attempts === 'number'
       ? { session_recovery_attempts: summary.session_recovery_attempts }
       : {}),
-    ...(recordOrNull(summary.closeout_enforcement)
-      ? { closeout_enforcement: summary.closeout_enforcement }
+    ...(recordOrNull(summary.raw_stage_artifact)
+      ? { raw_stage_artifact: summary.raw_stage_artifact }
+      : {}),
+    ...(recordOrNull(summary.progress_closeout_projection)
+      ? { progress_closeout_projection: summary.progress_closeout_projection }
       : {}),
     ...(sandboxExecution ? { sandbox_execution: sandboxExecution } : {}),
     ...(externalSandboxExecution ? { external_sandbox_execution: externalSandboxExecution } : {}),
@@ -176,8 +179,8 @@ export function codexActivityEventForTemporalHistory(codexResult: JsonRecord) {
       no_output_timeout_ms: typeof runnerStatus.no_output_timeout_ms === 'number'
         ? runnerStatus.no_output_timeout_ms
         : null,
-      typed_closeout_required_for_completion: runnerStatus.typed_closeout_required_for_completion === true,
-      free_text_closeout_accepted: runnerStatus.free_text_closeout_accepted === true,
+      typed_closeout_required_for_progress: runnerStatus.typed_closeout_required_for_progress === true,
+      raw_artifact_sufficient_for_progress: runnerStatus.raw_artifact_sufficient_for_progress === true,
     },
     heartbeat_summary: {
       heartbeat_status: typeof heartbeatSummary.heartbeat_status === 'string'
@@ -195,7 +198,8 @@ export function codexActivityEventForTemporalHistory(codexResult: JsonRecord) {
       progress_status: typeof progressSummary.progress_status === 'string' ? progressSummary.progress_status : null,
       stage_id: typeof progressSummary.stage_id === 'string' ? progressSummary.stage_id : null,
       stage_packet_ref: typeof progressSummary.stage_packet_ref === 'string' ? progressSummary.stage_packet_ref : null,
-      completed_requires_typed_closeout: progressSummary.completed_requires_typed_closeout === true,
+      progress_requires_typed_closeout: progressSummary.progress_requires_typed_closeout === true,
+      raw_artifact_sufficient_for_progress: progressSummary.raw_artifact_sufficient_for_progress === true,
       thread_id: typeof progressSummary.thread_id === 'string' ? progressSummary.thread_id : null,
       runner_events: historyRunnerEventSummary(progressSummary.runner_events),
     },

@@ -20,7 +20,6 @@ const EXPECTED_GATES = [
 
 const EXPECTED_DOMAIN_CARRIERS = [
   'domain_route',
-  'domain_autonomy',
   'visual_transition',
   'publication',
   'fundability',
@@ -305,7 +304,7 @@ test('system semantic hygiene exposes machine gates without production or domain
     };
   };
   assert.equal(domainCarrierGate.status, 'guarded');
-  assert.equal(domainCarrierGate.domain_specific_carrier_boundary?.carrier_string_count, 5);
+  assert.equal(domainCarrierGate.domain_specific_carrier_boundary?.carrier_string_count, 4);
   assert.deepEqual(
     [...(domainCarrierGate.domain_specific_carrier_boundary?.covered_carrier_strings as string[])].sort(),
     [...EXPECTED_DOMAIN_CARRIERS].sort(),
@@ -367,7 +366,6 @@ test('system semantic hygiene exposes machine gates without production or domain
     assert.equal(carrier?.can_write_domain_truth, false);
   }
   assert.equal(carriers.get('domain_route')?.carrier_kind, 'domain_owned_route_profile');
-  assert.equal(carriers.get('domain_autonomy')?.carrier_kind, 'domain_owned_task_profile');
   assert.equal(carriers.get('visual_transition')?.carrier_kind, 'domain_transition_profile_extension');
   assert.equal(carriers.get('publication')?.carrier_kind, 'domain_owned_verdict_ref');
   assert.equal(carriers.get('fundability')?.carrier_kind, 'domain_owned_verdict_ref');

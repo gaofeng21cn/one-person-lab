@@ -2,6 +2,7 @@ import {
   assert,
   createFamilyContractsFixtureRoot,
   fs,
+  installRuntimePackageFixture,
   loadFamilyManifestFixtures,
   os,
   path,
@@ -35,6 +36,7 @@ test('family stage parity detects an allowed action ref missing from the action 
   fs.writeFileSync(stageManifestPath, `${JSON.stringify(stageManifest, null, 2)}\n`, 'utf8');
 
   try {
+    installRuntimePackageFixture(stateRoot, 'mas');
     bindManifest(
       'medautoscience',
       stagePack.manifest,
@@ -54,7 +56,7 @@ test('family stage parity detects an allowed action ref missing from the action 
       true,
     );
 
-    const blocked = runCli([
+    const launchedWithDebt = runCli([
       'family-runtime',
       'attempt',
       'create',
@@ -68,9 +70,15 @@ test('family stage parity detects an allowed action ref missing from the action 
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
       OPL_STATE_DIR: stateRoot,
     }).family_runtime_stage_attempt;
-    assert.equal(blocked.attempt.status, 'blocked');
-    assert.equal(blocked.stage_launch_admission_gate.gate_action, 'block_stage_launch');
-    assert.match(blocked.attempt.blocked_reason, /missing_action_catalog_ref/);
+    assert.equal(launchedWithDebt.attempt.status, 'queued');
+    assert.equal(launchedWithDebt.stage_context_observation.progression_effect, 'stage_may_start');
+    assert.equal(launchedWithDebt.attempt.blocked_reason, null);
+    assert.equal(
+      launchedWithDebt.stage_context_observation.warning_findings.some(
+        (finding: { code: string }) => finding.code === 'missing_action_catalog_ref',
+      ),
+      true,
+    );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });

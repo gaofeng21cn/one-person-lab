@@ -366,11 +366,10 @@ function writeManagedUpdatePackageChannelFixture(input: {
     const packageId = packageIdForModule(module.moduleId);
     packageEntries[packageId] = {
       package_id: packageId,
-      latest_version: input.version,
+      selected_version: input.version,
       versions: [{
         package_version: input.version,
-        module_id: module.moduleId,
-        promotion_status: 'promoted',
+        selection_status: 'selected_for_release_set',
         source_artifact_ref: `ghcr.io/owner/one-person-lab-packages/${packageId}:${input.version}`,
         artifact_digest: `sha256:${'a'.repeat(64)}`,
         artifact_status: 'published_immutable',
@@ -399,7 +398,7 @@ function writeManagedUpdatePackageChannelFixture(input: {
     channelManifestPath,
     JSON.stringify({
       manifest_version: 1,
-      opl_version: input.version,
+      release_set_generation: input.version,
       package_catalog_surface_kind: 'opl_package_catalog.v1',
       packages: {
         package_catalog: packageEntries,
@@ -537,7 +536,7 @@ exit 2
     ]);
     assert.equal(output.managed_update.execution.adapter_results[0].result.apply_mode, 'auto_apply');
     assert.equal(output.managed_update.execution.adapter_results[0].result.app_background_safe, true);
-    assert.equal(output.managed_update.execution.adapter_results[0].result.auto_apply_scope, 'clean_opl_managed_module_roots_only');
+    assert.equal(output.managed_update.execution.adapter_results[0].result.auto_apply_scope, 'legacy_explicit_channel_roots_only');
     assert.equal(output.managed_update.execution.adapter_results[0].result.read_model_guidance.status_plane, 'opl packages status --json');
     assert.equal(
       output.managed_update.execution.adapter_results[0].result.read_model_guidance.component_receipt_ledger,
@@ -545,7 +544,7 @@ exit 2
     );
     assert.deepEqual(
       output.managed_update.execution.adapter_results[0].post_apply_actions.map((entry: any) => entry.action_id),
-      ['reconcile_modules', 'sync_skills', 'sync_codex_skill_plugin_projection'],
+      ['reconcile_packages', 'sync_skills', 'sync_codex_skill_plugin_projection'],
     );
     assert.deepEqual(
       output.managed_update.execution.adapter_results[0].post_apply_actions.map((entry: any) => entry.status),
@@ -586,7 +585,7 @@ exit 2
     assert.equal(receiptLedger.receipts[0].status_detail.reload_status, 'recommended');
     assert.deepEqual(
       receiptLedger.receipts[0].post_apply_action_statuses.map((entry: any) => entry.action_id),
-      ['reconcile_modules', 'sync_skills', 'sync_codex_skill_plugin_projection'],
+      ['reconcile_packages', 'sync_skills', 'sync_codex_skill_plugin_projection'],
     );
     assert.equal(receiptLedger.receipts[0].reload_guidance.reload_recommended, true);
     assert.deepEqual(receiptLedger.receipts[0].reload_guidance.reload_targets, [

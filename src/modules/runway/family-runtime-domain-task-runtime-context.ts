@@ -76,11 +76,9 @@ function refsOnlyCurrentnessIdentity(value: JsonRecord) {
     dispatch_ref: stringValue(value.dispatch_ref),
     stage_packet_ref: stringValue(value.stage_packet_ref),
     stage_packet_refs: refList(value.stage_packet_refs),
-    provider_admission_identity: null,
+    provider_attempt_identity: null,
     owner_route_currentness_basis: null,
     provider_attempt_ref: stringValue(value.provider_attempt_ref),
-    active_lease_ref: stringValue(value.active_lease_ref),
-    execution_authorization_ref: stringValue(value.execution_authorization_ref),
     workflow_id: stringValue(value.workflow_id),
     task_id: stringValue(value.task_id),
   };
@@ -120,11 +118,6 @@ export function buildOplDomainTaskRuntimeContext(input: {
   const identityStageAttemptId = stringValue(identity.stage_attempt_id);
   const reconciliationStatus = stringValue(current.reconciliation_status);
   const missingIdentityFields = refList(current.missing_stage_run_currentness_identity_fields);
-  const missingAuthorizationFields = [
-    ['provider_attempt_ref', stringValue(identity.provider_attempt_ref)],
-    ['attempt_lease_ref', stringValue(identity.active_lease_ref)],
-    ['execution_authorization_decision_ref', stringValue(identity.execution_authorization_ref)],
-  ].filter(([, value]) => !value).map(([field]) => field);
   const identityCurrent = Boolean(
     stageAttemptId
     && currentStageAttemptId === stageAttemptId
@@ -132,7 +125,6 @@ export function buildOplDomainTaskRuntimeContext(input: {
     && reconciliationStatus
     && !STALE_OR_MISSING_RECONCILIATION_STATUSES.has(reconciliationStatus)
     && missingIdentityFields.length === 0
-    && missingAuthorizationFields.length === 0
   );
   if (!identityCurrent) {
     throw new FrameworkContractError(
@@ -144,7 +136,7 @@ export function buildOplDomainTaskRuntimeContext(input: {
         identity_stage_attempt_id: identityStageAttemptId,
         reconciliation_status: reconciliationStatus,
         missing_identity_fields: missingIdentityFields,
-        missing_authorization_fields: missingAuthorizationFields,
+        missing_transport_fields: [],
       },
     );
   }
@@ -159,8 +151,6 @@ export function buildOplDomainTaskRuntimeContext(input: {
     running_provider_attempt: current.running_provider_attempt === true,
     reconciliation_status: reconciliationStatus,
     provider_attempt_ref: stringValue(identity.provider_attempt_ref),
-    attempt_lease_ref: stringValue(identity.active_lease_ref),
-    execution_authorization_decision_ref: stringValue(identity.execution_authorization_ref),
     owner_receipt_refs: refList(current.owner_receipt_refs),
     typed_blocker_refs: refList(current.typed_blocker_refs),
     human_gate_refs: refList(attempt.human_gate_refs),
@@ -198,7 +188,7 @@ export function projectOplDomainTaskRuntimeContext(input: {
       stage_attempt_id: stringValue(attempt.stage_attempt_id),
       reconciliation_status: stringValue(current.reconciliation_status),
       missing_identity_fields: refList(details.missing_identity_fields),
-      missing_authorization_fields: refList(details.missing_authorization_fields),
+      missing_transport_fields: refList(details.missing_transport_fields),
       authority_boundary: {
         opl: 'runtime_control_metadata_and_refs_projection_only',
         domain: 'truth_quality_artifact_gate_owner',

@@ -17,6 +17,7 @@ import {
   runAgentStageRunner,
 } from './family-runtime-codex-stage-runner.ts';
 import { codexActivityEventForTemporalHistory } from './family-runtime-temporal-history-summary.ts';
+import { isRuntimeHardStopReason } from '../../kernel/progress-hard-stop-policy.ts';
 
 function closeoutPacketFromRunnerReceipt(receipt: Record<string, unknown>) {
   if (isRecord(receipt.closeout_packet)) {
@@ -483,6 +484,45 @@ function providerRuntimeBlockerCloseout(input: {
   };
 }
 
+function providerRuntimeQualityDebtCloseout(input: {
+  stageAttemptId: string;
+  domainId: string;
+  providerReason: string;
+  routeImpact: Record<string, unknown>;
+}) {
+  const diagnosticRef = `opl://stage-attempts/${
+    encodeURIComponent(input.stageAttemptId)
+  }/quality-debt-diagnostics/${encodeURIComponent(input.providerReason)}`;
+  return {
+    surface_kind: 'temporal_domain_handler_dispatch_receipt',
+    activity_kind: 'domain_handler_dispatch_activity',
+    activity_status: 'completed_with_quality_debt',
+    stage_attempt_id: input.stageAttemptId,
+    domain_id: input.domainId,
+    closeout_refs: [diagnosticRef],
+    consumed_refs: [],
+    consumed_memory_refs: [],
+    writeback_receipt_refs: [],
+    rejected_writes: [],
+    next_owner: input.domainId,
+    domain_ready_verdict: null,
+    route_impact: {
+      ...input.routeImpact,
+      progression_effect: 'next_stage_may_start',
+      quality_debt_refs: [diagnosticRef],
+      provider_quality_debt_reason: input.providerReason,
+      provider_quality_debt_diagnostic_ref: diagnosticRef,
+    },
+    closeout_packet_surface_kind: 'stage_attempt_closeout_packet',
+    authority_boundary: {
+      opl: 'provider_quality_debt_diagnostic_projection_only',
+      domain: 'truth_quality_artifact_gate_owner',
+      provider_completion_is_domain_ready: false,
+      diagnostic_blocks_next_stage: false,
+    },
+  };
+}
+
 export async function codexStageActivity(input: TemporalStageAttemptWorkflowInput) {
   const observedAt = new Date().toISOString();
   heartbeat({
@@ -566,6 +606,44 @@ export async function domainHandlerDispatchActivity(input: TemporalStageAttemptW
   if (!input.closeout_packet) {
     const providerBlockerReason = input.provider_blocker?.blocked_reason?.trim() || null;
     const routeImpact = input.provider_blocker?.route_impact ?? {};
+    if (!providerBlockerReason) {
+      const diagnosticRef = `opl://stage-attempts/${input.stage_attempt_id}/no-output-diagnostic`;
+      return {
+        surface_kind: 'temporal_domain_handler_dispatch_receipt',
+        activity_kind: 'domain_handler_dispatch_activity',
+        activity_status: 'completed_with_quality_debt',
+        stage_attempt_id: input.stage_attempt_id,
+        domain_id: input.domain_id,
+        closeout_refs: [diagnosticRef],
+        consumed_refs: [],
+        consumed_memory_refs: [],
+        writeback_receipt_refs: [],
+        rejected_writes: [],
+        next_owner: input.domain_id,
+        domain_ready_verdict: null,
+        route_impact: {
+          ...routeImpact,
+          progression_effect: 'next_stage_may_start',
+          quality_debt_refs: [diagnosticRef],
+          no_output_diagnostic_ref: diagnosticRef,
+        },
+        closeout_packet_surface_kind: 'stage_attempt_closeout_packet',
+        authority_boundary: {
+          opl: 'no_output_diagnostic_projection_only',
+          domain: 'truth_quality_artifact_gate_owner',
+          provider_completion_is_domain_ready: false,
+          diagnostic_blocks_next_stage: false,
+        },
+      };
+    }
+    if (!isRuntimeHardStopReason(providerBlockerReason)) {
+      return providerRuntimeQualityDebtCloseout({
+        stageAttemptId: input.stage_attempt_id,
+        domainId: input.domain_id,
+        providerReason: providerBlockerReason,
+        routeImpact,
+      });
+    }
     const runtimeBlocker = providerRuntimeBlockerCloseout({
       stageAttemptId: input.stage_attempt_id,
       stageId: input.stage_id,
@@ -587,7 +665,7 @@ export async function domainHandlerDispatchActivity(input: TemporalStageAttemptW
       next_owner: input.domain_id,
       domain_ready_verdict: null,
       route_impact: runtimeBlocker?.route_impact ?? routeImpact,
-      blocked_reason: providerBlockerReason ?? 'typed_closeout_packet_required',
+      blocked_reason: providerBlockerReason,
       closeout_packet_surface_kind: null,
       authority_boundary: {
         opl: 'domain_handler_transport_only',
@@ -601,6 +679,14 @@ export async function domainHandlerDispatchActivity(input: TemporalStageAttemptW
   const closeout = normalizeTypedStageCloseoutPacket(input.closeout_packet);
   const providerRuntimeReason = providerRuntimeCloseoutReason(closeout);
   if (providerRuntimeReason) {
+    if (!isRuntimeHardStopReason(providerRuntimeReason)) {
+      return providerRuntimeQualityDebtCloseout({
+        stageAttemptId: input.stage_attempt_id,
+        domainId: input.domain_id,
+        providerReason: providerRuntimeReason,
+        routeImpact: closeout.route_impact ?? {},
+      });
+    }
     const runtimeBlocker = providerRuntimeBlockerCloseout({
       stageAttemptId: input.stage_attempt_id,
       stageId: input.stage_id,

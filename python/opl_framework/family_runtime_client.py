@@ -1,4 +1,4 @@
-"""Fail-closed Python client for canonical OPL family-runtime surfaces."""
+"""Python client for canonical OPL family-runtime transport surfaces."""
 
 from __future__ import annotations
 
@@ -19,7 +19,6 @@ class StageAttemptRequest(TypedDict, total=False):
     workspace_locator: dict[str, Any]
     action_id: str
     source_fingerprint: str
-    require_stage_admission: bool
     start: bool
 
 
@@ -131,11 +130,11 @@ def submit_stage_attempt_request(
     workspace_locator = request.get("workspace_locator")
     if not isinstance(workspace_locator, Mapping) or not workspace_locator:
         raise ValueError("request.workspace_locator must be a non-empty mapping.")
-    if request.get("require_stage_admission") is not True or request.get("start") is not True:
-        raise ValueError("request.require_stage_admission and request.start must both be true.")
+    if request.get("start") is not True:
+        raise ValueError("request.start must be true.")
     allowed = {
         "domain_id", "stage_id", "workspace_locator", "action_id", "source_fingerprint",
-        "require_stage_admission", "start",
+        "start",
     }
     unsupported = sorted(set(request) - allowed)
     if unsupported:
@@ -154,7 +153,7 @@ def submit_stage_attempt_request(
             "--source-fingerprint",
             _non_empty_string(request["source_fingerprint"], "request.source_fingerprint"),
         ])
-    args.extend(["--require-stage-admission", "--start"])
+    args.append("--start")
     payload = _invoke(args, opl_bin=opl_bin, timeout_seconds=timeout_seconds, runner=runner)
     if payload is None:
         raise RuntimeError("OPL family-runtime submit returned no JSON receipt.")

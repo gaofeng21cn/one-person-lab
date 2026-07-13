@@ -56,7 +56,6 @@ function materializeMasOwnerAnswerProfile(familyRoot: string) {
     }, null, 2)}\n`,
   );
 }
-
 export function withStageAttemptDb(fn: (db: DatabaseSync) => void) {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-terminal-sync-state-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
@@ -180,7 +179,7 @@ type TerminalObservationInput = TerminalObservationIdentity & {
 
 function terminalObservation(input: TerminalObservationInput & { status: 'blocked' | 'completed' | 'failed' }) {
   const completed = input.status === 'completed';
-  const blockedReason = input.blockedReason ?? 'typed_closeout_packet_required';
+  const blockedReason = input.blockedReason ?? 'zero_readable_artifact';
   const closeoutRefs = completed ? ['receipt:domain-closeout'] : [];
   return {
     surface_kind: 'temporal_stage_attempt_query_receipt',

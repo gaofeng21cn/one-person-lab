@@ -1,7 +1,6 @@
 import {
   parseRegisteredFamilyRuntimeCommand,
 } from './family-runtime-command-parts/registry.ts';
-import type { DomainAutonomySupervisorCommandInput } from './family-runtime-command-parts/domain-autonomy.ts';
 import {
   FAMILY_RUNTIME_DOMAIN_IDS,
   runtimeDomainAdapterProfiles,
@@ -23,7 +22,6 @@ export type StageAttemptProjectionInput = {
   priority?: number;
   source?: string;
   requiresApproval?: boolean;
-  requireStageAdmission?: boolean;
 };
 
 export type FamilyRuntimeTaskScope = {
@@ -94,7 +92,6 @@ export type FamilyRuntimeCommandInput =
       max_age_ms?: number | null;
     };
   }
-  | DomainAutonomySupervisorCommandInput
   | {
     mode: 'stage_artifact';
     input: {
@@ -167,7 +164,6 @@ export type FamilyRuntimeCommandInput =
       closeoutRefs?: string[];
       humanGateRefs?: string[];
       blockedReason?: string;
-      requireStageAdmission?: boolean;
       newAttempt?: boolean;
       start?: boolean;
     };

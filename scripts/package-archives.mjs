@@ -19,7 +19,8 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 
 function parseCliOptions(argv) {
   const parsed = {
-    version: process.env.OPL_RELEASE_VERSION || undefined,
+    releaseSetGeneration: process.env.OPL_RELEASE_SET_GENERATION || undefined,
+    generatedAt: process.env.OPL_RELEASE_SET_GENERATED_AT || undefined,
     outDir: path.join(repoRoot, 'dist', 'packages'),
     cloneRoot: null,
     owner: process.env.OPL_PACKAGES_OWNER || undefined,
@@ -28,8 +29,11 @@ function parseCliOptions(argv) {
   };
 
   parseRequiredValueOptions(argv, {
-    '--version': (value) => {
-      parsed.version = value;
+    '--release-set-generation': (value) => {
+      parsed.releaseSetGeneration = value;
+    },
+    '--generated-at': (value) => {
+      parsed.generatedAt = value;
     },
     '--out-dir': (value) => {
       parsed.outDir = path.resolve(value);
@@ -83,9 +87,11 @@ function readPreviousManifest(manifestPath) {
     return null;
   }
   const parsed = readJsonFile(manifestPath);
-  const version = typeof parsed.opl_version === 'string' ? parsed.opl_version.trim() : '';
-  if (!version) {
-    throw new Error(`Previous manifest has no opl_version: ${manifestPath}`);
+  const generation = typeof parsed.release_set_generation === 'string'
+    ? parsed.release_set_generation.trim()
+    : '';
+  if (!generation) {
+    throw new Error(`Previous manifest has no release_set_generation: ${manifestPath}`);
   }
   return parsed;
 }
@@ -171,6 +177,9 @@ function readOwnerPackageMetadata(spec, repoPath, releaseGate) {
   }
   if (!ownerLanguageVersion) throw new Error(`${spec.module_id}: owner package manifest has no version`);
   const packageVersion = normalizeDistributionVersion(ownerLanguageVersion);
+  if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/.test(packageVersion)) {
+    throw new Error(`${spec.module_id}: owner package version must normalize to SemVer; got ${ownerLanguageVersion}`);
+  }
   const plugin = readJsonObject(path.join(repoPath, spec.owner_plugin_manifest_ref));
   if (String(plugin.version ?? '').trim() !== ownerLanguageVersion) {
     throw new Error(`${spec.module_id}: owner plugin version does not match owner package manifest`);
@@ -252,19 +261,20 @@ function copyReleaseDisciplineWorkflows(outDir) {
 function main() {
   const options = parseCliOptions(process.argv.slice(2));
   const previousManifest = readPreviousManifest(options.previousManifest);
-  const rollbackVersion = previousManifest?.opl_version ?? null;
+  const rollbackVersion = previousManifest?.release_set_generation ?? null;
   const retainVersions = normalizeRetainVersions(options.retainVersions);
   const manifest = buildOplPackageManifest({
-    version: options.version,
+    releaseSetGeneration: options.releaseSetGeneration,
+    generatedAt: options.generatedAt,
     owner: options.owner,
     rollbackVersion,
     retainVersions,
   });
-  const version = manifest.opl_version;
+  const releaseSetGeneration = manifest.release_set_generation;
   const packagesOutDir = path.join(options.outDir, 'packages');
   const frameworkOutDir = path.join(options.outDir, 'framework');
   const archives = [];
-  const frameworkArchive = archiveFramework(repoRoot, frameworkOutDir, version);
+  const frameworkArchive = archiveFramework(repoRoot, frameworkOutDir, releaseSetGeneration);
   archives.push({
     ...frameworkArchive,
     relative_path: `framework/${frameworkArchive.file_name}`,
@@ -342,17 +352,17 @@ function main() {
 
   const checksumPath = writeChecksumFile(options.outDir, archives);
   const releaseDisciplineWorkflows = copyReleaseDisciplineWorkflows(options.outDir);
+  const channelManifest = buildOplPackageChannelManifest(manifest, previousManifest);
   const manifestPath = writeOplPackageManifest(path.join(options.outDir, 'opl-release-manifest.json'), manifest);
   const channelManifestPath = writeOplPackageManifest(
     path.join(options.outDir, 'opl-channel-manifest.json'),
-    buildOplPackageChannelManifest(manifest, previousManifest),
+    channelManifest,
   );
-  const channelManifest = readJsonFile(channelManifestPath);
   for (const [packageId, entry] of Object.entries(channelManifest.packages.package_catalog)) {
-    const version = entry.versions.find((candidate) => candidate.promotion_status === 'promoted');
+    const version = entry.versions.find((candidate) => candidate.selection_status === 'selected_for_release_set');
     const metadataRoot = path.join(packagesOutDir, packageId);
     fs.mkdirSync(metadataRoot, { recursive: true });
-    fs.writeFileSync(path.join(metadataRoot, 'agent-package-manifest.json'), version.manifest_json, 'utf8');
+    fs.writeFileSync(path.join(metadataRoot, 'package-manifest.json'), version.manifest_json, 'utf8');
     fs.writeFileSync(path.join(metadataRoot, 'payload-manifest.json'), version.payload_manifest_json, 'utf8');
   }
   console.log(JSON.stringify({
@@ -370,7 +380,8 @@ function main() {
       source_git: manifest.packages.framework_core.source_git,
     },
     packages: Object.values(manifest.packages.package_artifacts).map((entry) => ({
-      module_id: entry.module_id,
+      package_id: entry.package_id,
+      carrier_locator: entry.carrier_locator,
       artifact: entry.artifact,
       source_archive: entry.source_archive,
       source_git: entry.source_git,

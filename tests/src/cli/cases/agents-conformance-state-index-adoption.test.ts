@@ -1,4 +1,4 @@
-import { assert, fs, parseJsonText, path, runCli, test } from '../helpers.ts';
+import { assert, fs, parseJsonText, path, runCliReadOnly, test } from '../helpers.ts';
 import {
   buildReadyAgentRepo,
   writeJson,
@@ -35,14 +35,14 @@ function replaceLegacyStateIndexContractWithOplSidecar(repoDir: string) {
   return adoption.opl_state_index_kernel_adoption;
 }
 
-test('agents conformance requires State Index Kernel adoption as refs-only SQLite sidecar policy', () => {
+test('agents conformance requires State Index Kernel adoption as refs-only SQLite sidecar policy', async () => {
   const repoDir = buildReadyAgentRepo();
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
   const repo = report.reports[0];
 
   assert.equal(report.status, 'passed');
@@ -74,7 +74,7 @@ test('agents conformance requires State Index Kernel adoption as refs-only SQLit
   assert.deepEqual(repo.blockers, []);
 });
 
-test('agents conformance blocks domain repos that turn SQLite sidecar into truth or artifact body storage', () => {
+test('agents conformance blocks domain repos that turn SQLite sidecar into truth or artifact body storage', async () => {
   const repoDir = buildReadyAgentRepo();
   const adoptionPath = path.join(repoDir, 'contracts', 'state_index_kernel_adoption.json');
   const adoption = parseJsonText(fs.readFileSync(adoptionPath, 'utf8')) as Record<string, any>;
@@ -84,12 +84,12 @@ test('agents conformance blocks domain repos that turn SQLite sidecar into truth
   adoption.compaction_policy.large_payload_strategy = 'store_body_in_sqlite';
   writeJson(adoptionPath, adoption);
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
 
   assert.equal(report.status, 'blocked');
   assert.equal(report.reports[0].state_index_kernel_adoption_checks.status, 'blocked');
@@ -117,16 +117,16 @@ test('agents conformance blocks domain repos that turn SQLite sidecar into truth
   );
 });
 
-test('agents conformance accepts an OPL-owned deferred sidecar declared by Stage Artifact adoption', () => {
+test('agents conformance accepts an OPL-owned deferred sidecar declared by Stage Artifact adoption', async () => {
   const repoDir = buildReadyAgentRepo();
   replaceLegacyStateIndexContractWithOplSidecar(repoDir);
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
   const repo = report.reports[0];
 
   assert.equal(report.status, 'passed');
@@ -137,7 +137,7 @@ test('agents conformance accepts an OPL-owned deferred sidecar declared by Stage
   );
 });
 
-test('agents conformance permits explicit domain ownership declarations in an OPL sidecar', () => {
+test('agents conformance permits explicit domain ownership declarations in an OPL sidecar', async () => {
   const repoDir = buildReadyAgentRepo();
   const sidecar = replaceLegacyStateIndexContractWithOplSidecar(repoDir);
   sidecar.authority_boundary.rca_owns_file_authority = true;
@@ -150,18 +150,18 @@ test('agents conformance permits explicit domain ownership declarations in an OP
   adoption.opl_state_index_kernel_adoption = sidecar;
   writeJson(adoptionPath, adoption);
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
 
   assert.equal(report.status, 'passed');
   assert.equal(report.reports[0].state_index_kernel_adoption_checks.status, 'passed');
 });
 
-test('agents conformance blocks malformed domain ownership declarations in an OPL sidecar', () => {
+test('agents conformance blocks malformed domain ownership declarations in an OPL sidecar', async () => {
   const repoDir = buildReadyAgentRepo();
   const sidecar = replaceLegacyStateIndexContractWithOplSidecar(repoDir);
   sidecar.authority_boundary.sample_owns_domain_truth = false;
@@ -170,12 +170,12 @@ test('agents conformance blocks malformed domain ownership declarations in an OP
   adoption.opl_state_index_kernel_adoption = sidecar;
   writeJson(adoptionPath, adoption);
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
 
   assert.equal(report.status, 'blocked');
   assert.equal(
@@ -186,7 +186,7 @@ test('agents conformance blocks malformed domain ownership declarations in an OP
   );
 });
 
-test('agents conformance blocks a domain ownership declaration for generic SQLite persistence', () => {
+test('agents conformance blocks a domain ownership declaration for generic SQLite persistence', async () => {
   const repoDir = buildReadyAgentRepo();
   const sidecar = replaceLegacyStateIndexContractWithOplSidecar(repoDir);
   sidecar.authority_boundary.sample_owns_generic_sqlite_persistence_engine = true;
@@ -195,12 +195,12 @@ test('agents conformance blocks a domain ownership declaration for generic SQLit
   adoption.opl_state_index_kernel_adoption = sidecar;
   writeJson(adoptionPath, adoption);
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
 
   assert.equal(report.status, 'blocked');
   assert.equal(
@@ -211,7 +211,7 @@ test('agents conformance blocks a domain ownership declaration for generic SQLit
   );
 });
 
-test('agents conformance blocks an OPL sidecar that claims domain truth, artifact body, or verdict authority', () => {
+test('agents conformance blocks an OPL sidecar that claims domain truth, artifact body, or verdict authority', async () => {
   const repoDir = buildReadyAgentRepo();
   const sidecar = replaceLegacyStateIndexContractWithOplSidecar(repoDir);
   sidecar.authority_boundary.sqlite_can_be_truth_source = true;
@@ -222,12 +222,12 @@ test('agents conformance blocks an OPL sidecar that claims domain truth, artifac
   adoption.opl_state_index_kernel_adoption = sidecar;
   writeJson(adoptionPath, adoption);
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
 
   assert.equal(report.status, 'blocked');
   assert.equal(
@@ -240,7 +240,7 @@ test('agents conformance blocks an OPL sidecar that claims domain truth, artifac
     report.reports[0].blockers.includes('state_index_kernel_sidecar_verdict_authority_must_be_false'), true);
 });
 
-test('agents conformance blocks an OPL sidecar with a wrong contract version', () => {
+test('agents conformance blocks an OPL sidecar with a wrong contract version', async () => {
   const repoDir = buildReadyAgentRepo();
   const sidecar = replaceLegacyStateIndexContractWithOplSidecar(repoDir);
   sidecar.version = 'wrong';
@@ -249,12 +249,12 @@ test('agents conformance blocks an OPL sidecar with a wrong contract version', (
   adoption.opl_state_index_kernel_adoption = sidecar;
   writeJson(adoptionPath, adoption);
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
 
   assert.equal(report.status, 'blocked');
   assert.equal(
@@ -263,7 +263,7 @@ test('agents conformance blocks an OPL sidecar with a wrong contract version', (
   );
 });
 
-test('agents conformance blocks an OPL sidecar with undeclared authority', () => {
+test('agents conformance blocks an OPL sidecar with undeclared authority', async () => {
   const repoDir = buildReadyAgentRepo();
   const sidecar = replaceLegacyStateIndexContractWithOplSidecar(repoDir);
   sidecar.authority_boundary.sqlite_can_create_domain_owner_receipt = true;
@@ -272,12 +272,12 @@ test('agents conformance blocks an OPL sidecar with undeclared authority', () =>
   adoption.opl_state_index_kernel_adoption = sidecar;
   writeJson(adoptionPath, adoption);
 
-  const report = runCli([
+  const report = (await runCliReadOnly([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
 
   assert.equal(report.status, 'blocked');
   assert.equal(

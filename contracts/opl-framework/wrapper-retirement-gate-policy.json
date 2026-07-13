@@ -31,7 +31,6 @@
   "same_work_unit_live_evidence_scope": {
     "gate_id": "same_work_unit_live_evidence",
     "applies_to": "current_owner_answer_compensation_chain",
-    "stage_run_closeout_binding_gate_applies_to": "current_owner_answer_compensation_chain",
     "blocks_static_no_active_caller_retirement": false,
     "static_retired_surface_classes": [
       "retired_wrapper",

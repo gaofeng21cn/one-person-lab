@@ -22,7 +22,7 @@ export interface FamilyStagePackSourceSpecProjection {
     stage_pack_hash: string;
     stage_ids: string[];
     action_catalog_id: string | null;
-    admission_status: string;
+    conformance_status: string;
     graph_node_count: number;
     graph_edge_count: number;
     registry_lifecycle_statuses: string[];
@@ -148,7 +148,7 @@ export function buildFamilyStagePackSourceSpecProjection(
       stage_pack_hash: hash,
       stage_ids: input.proofBundle.identity.stage_ids,
       action_catalog_id: input.proofBundle.identity.action_catalog_id,
-      admission_status: input.proofBundle.admission_status,
+      conformance_status: input.proofBundle.conformance_status,
       graph_node_count: input.graphProjection.graph_summary.node_count,
       graph_edge_count: input.graphProjection.graph_summary.edge_count,
       registry_lifecycle_statuses: [

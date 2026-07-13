@@ -63,12 +63,13 @@ const REQUIRED_STAGE_RUN_STATE_FLAGS = [
   'provider_completion_counts_as_domain_accepted',
   'file_presence_counts_as_stage_complete',
   'latest_json_counts_as_domain_accepted',
-  'read_model_counts_as_transition_authority',
+  'read_model_can_select_semantic_route',
   'quality_debt_counts_as_quality_acceptance',
 ];
 
 const REQUIRED_STAGE_RUN_STATE_TRUE_FLAGS = [
-  'validated_consumable_artifact_progress_counts_as_transition',
+  'readable_artifact_counts_as_progress_input',
+  'codex_can_route_to_any_declared_stage',
 ];
 
 const REQUIRED_STAGE_RUN_AUTHORITY_FALSE_FLAGS = [
@@ -87,10 +88,11 @@ const REQUIRED_STAGE_RUN_LAUNCH_HARD_BLOCKERS = [
   'scope',
   'selected_executor',
   'authority_boundary',
-  'required_role_artifacts',
-  'receipt_or_blocker_shape',
   'forbidden_write',
-  'replay_audit_lineage',
+  'currentness',
+  'permission_or_credential',
+  'irreversible_action',
+  'explicit_human_gate',
 ];
 
 const STAGE_RUN_STRATEGY_ADVISORY_REFS = [
@@ -522,13 +524,15 @@ export function buildStageRunKernelProfileChecks(repoDir: string) {
   const profileFile = readJsonFile(repoDir, 'contracts/stage_run_kernel_profile.json');
   const profile = isRecord(profileFile.payload) ? profileFile.payload : null;
   const stateMachine = isRecord(profile?.stage_run_state_machine) ? profile.stage_run_state_machine : {};
-  const transitionAuthority = isRecord(profile?.transition_authority) ? profile.transition_authority : {};
+  const codexSemanticRoutePolicy = isRecord(profile?.codex_semantic_route_policy)
+    ? profile.codex_semantic_route_policy
+    : {};
   const projectionBoundary = isRecord(profile?.projection_boundary) ? profile.projection_boundary : {};
   const objectModels = isRecord(profile?.object_models) ? profile.object_models : {};
   const stageRunModel = isRecord(objectModels.StageRun) ? objectModels.StageRun : {};
   const stageRunAuthority = isRecord(stageRunModel.authority_boundary) ? stageRunModel.authority_boundary : {};
-  const launchAdmissionPolicy = isRecord(profile?.launch_admission_policy)
-    ? profile.launch_admission_policy
+  const stageContextPolicy = isRecord(profile?.stage_context_policy)
+    ? profile.stage_context_policy
     : {};
   const defaultReadSurface = isRecord(profile?.default_read_surface)
     ? profile.default_read_surface
@@ -538,8 +542,8 @@ export function buildStageRunKernelProfileChecks(repoDir: string) {
   const authority = isRecord(profile?.authority_boundary) ? profile.authority_boundary : {};
   const stageNativeUnit = stringList(profile?.stage_native_unit);
   const requiredObjectModels = stringList(profile?.required_object_models);
-  const launchHardBlockers = stringList(launchAdmissionPolicy.hard_blockers);
-  const launchAdvisoryRefs = stringList(launchAdmissionPolicy.advisory_refs);
+  const launchHardBlockers = stringList(stageContextPolicy.hard_blockers);
+  const launchAdvisoryRefs = stringList(stageContextPolicy.advisory_refs);
   const hasObjectModel = (model: string) => model === 'RoleArtifactRef'
     ? requiredObjectModels.includes('RoleArtifactRef') || requiredObjectModels.includes('ArtifactRef')
     : requiredObjectModels.includes(model);
@@ -548,8 +552,8 @@ export function buildStageRunKernelProfileChecks(repoDir: string) {
       return stateMachine.file_presence_counts_as_stage_complete
         ?? stateMachine.stage_folder_files_count_as_next_stage_ready;
     }
-    if (flag === 'read_model_counts_as_transition_authority') {
-      return stateMachine.read_model_counts_as_transition_authority
+    if (flag === 'read_model_can_select_semantic_route') {
+      return stateMachine.read_model_can_select_semantic_route
         ?? projectionBoundary.projection_can_authorize_next_stage;
     }
     return stateMachine[flag];
@@ -640,7 +644,7 @@ export function buildStageRunKernelProfileChecks(repoDir: string) {
     ...STAGE_RUN_STRATEGY_ADVISORY_REFS
       .filter((field) => !launchAdvisoryRefs.includes(field))
       .map((field) => `stage_run_kernel_profile_advisory_ref_missing:${field}`),
-    launchAdmissionPolicy.advisory_refs_can_block_launch === false
+    stageContextPolicy.advisory_refs_can_block_launch === false
       ? null
       : 'stage_run_kernel_profile_advisory_refs_can_block_launch',
     ...STAGE_RUN_STRATEGY_ADVISORY_REFS
@@ -658,24 +662,30 @@ export function buildStageRunKernelProfileChecks(repoDir: string) {
     defaultReadSurface.replay_packet_default === false
       ? null
       : 'stage_run_kernel_profile_replay_packet_default_forbidden',
-    (
-      optionalString(transitionAuthority.terminal_transition_authority)
-      ?? optionalString(profile?.transition_authority)
-    ) === 'consumable_artifact_progress_or_owner_answer_or_hard_stop'
+    optionalString(codexSemanticRoutePolicy.semantic_owner) === 'codex_cli'
       ? null
-      : 'stage_run_kernel_profile_terminal_transition_authority_invalid',
-    (transitionAuthority.provider_completion_counts_as_transition ?? stateMachine.provider_completion_counts_as_domain_accepted) === false
+      : 'stage_run_kernel_profile_codex_semantic_route_owner_invalid',
+    codexSemanticRoutePolicy.readable_artifact_allows_any_declared_stage === true
       ? null
-      : 'stage_run_kernel_profile_provider_completion_transition_invalid',
-    (transitionAuthority.file_presence_counts_as_transition ?? stateFlagValue('file_presence_counts_as_stage_complete')) === false
+      : 'stage_run_kernel_profile_readable_artifact_route_policy_invalid',
+    codexSemanticRoutePolicy.provider_completion_is_route_decision === false
       ? null
-      : 'stage_run_kernel_profile_file_presence_transition_invalid',
-    transitionAuthority.quality_budget_exhaustion_blocks_transition === false
+      : 'stage_run_kernel_profile_provider_completion_route_authority_invalid',
+    codexSemanticRoutePolicy.file_presence_without_readability_is_progress === false
       ? null
-      : 'stage_run_kernel_profile_quality_budget_exhaustion_must_not_block_transition',
-    transitionAuthority.owner_receipt_required_for_quality_or_ready_claim === true
+      : 'stage_run_kernel_profile_unreadable_file_progress_invalid',
+    codexSemanticRoutePolicy.quality_budget_exhaustion_blocks_route === false
+      ? null
+      : 'stage_run_kernel_profile_quality_budget_exhaustion_must_not_block_route',
+    codexSemanticRoutePolicy.owner_receipt_required_for_quality_or_ready_claim === true
       ? null
       : 'stage_run_kernel_profile_owner_receipt_required_for_quality_or_ready_claim',
+    codexSemanticRoutePolicy.framework_can_accept_reject_rank_or_override_route === false
+      ? null
+      : 'stage_run_kernel_profile_framework_semantic_route_authority_forbidden',
+    profile?.transition_authority === undefined
+      ? null
+      : 'stage_run_kernel_profile_second_transition_authority_plane_forbidden',
     ...REQUIRED_STAGE_RUN_AUTHORITY_FALSE_FLAGS
       .filter((flag) => authorityValue(flag) !== false)
       .map((flag) => `stage_run_kernel_profile_authority_flag_must_be_false:${flag}`),
@@ -692,11 +702,11 @@ export function buildStageRunKernelProfileChecks(repoDir: string) {
       [...REQUIRED_STAGE_RUN_STATE_FLAGS, ...REQUIRED_STAGE_RUN_STATE_TRUE_FLAGS]
         .map((flag) => [flag, stateFlagValue(flag) ?? null]),
     ),
-    launch_admission_policy: {
+    stage_context_policy: {
       hard_blockers: launchHardBlockers,
       advisory_refs: launchAdvisoryRefs,
       advisory_refs_can_block_launch:
-        launchAdmissionPolicy.advisory_refs_can_block_launch ?? null,
+        stageContextPolicy.advisory_refs_can_block_launch ?? null,
     },
     default_read_surface: {
       root: optionalString(defaultReadSurface.root),
@@ -704,22 +714,20 @@ export function buildStageRunKernelProfileChecks(repoDir: string) {
       readiness_default: defaultReadSurface.readiness_default ?? null,
       replay_packet_default: defaultReadSurface.replay_packet_default ?? null,
     },
-    transition_authority: {
-      terminal_transition_authority:
-        optionalString(transitionAuthority.terminal_transition_authority)
-        ?? optionalString(profile?.transition_authority),
-      provider_completion_counts_as_transition:
-        transitionAuthority.provider_completion_counts_as_transition
-        ?? stateMachine.provider_completion_counts_as_domain_accepted
-        ?? null,
-      file_presence_counts_as_transition:
-        transitionAuthority.file_presence_counts_as_transition
-        ?? stateFlagValue('file_presence_counts_as_stage_complete')
-        ?? null,
-      quality_budget_exhaustion_blocks_transition:
-        transitionAuthority.quality_budget_exhaustion_blocks_transition ?? null,
+    codex_semantic_route_policy: {
+      semantic_owner: optionalString(codexSemanticRoutePolicy.semantic_owner),
+      readable_artifact_allows_any_declared_stage:
+        codexSemanticRoutePolicy.readable_artifact_allows_any_declared_stage ?? null,
+      provider_completion_is_route_decision:
+        codexSemanticRoutePolicy.provider_completion_is_route_decision ?? null,
+      file_presence_without_readability_is_progress:
+        codexSemanticRoutePolicy.file_presence_without_readability_is_progress ?? null,
+      quality_budget_exhaustion_blocks_route:
+        codexSemanticRoutePolicy.quality_budget_exhaustion_blocks_route ?? null,
       owner_receipt_required_for_quality_or_ready_claim:
-        transitionAuthority.owner_receipt_required_for_quality_or_ready_claim ?? null,
+        codexSemanticRoutePolicy.owner_receipt_required_for_quality_or_ready_claim ?? null,
+      framework_can_accept_reject_rank_or_override_route:
+        codexSemanticRoutePolicy.framework_can_accept_reject_rank_or_override_route ?? null,
     },
     authority_boundary: Object.fromEntries(
       REQUIRED_STAGE_RUN_AUTHORITY_FALSE_FLAGS.map((flag) => [flag, authorityValue(flag) ?? null]),
