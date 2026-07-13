@@ -128,8 +128,23 @@ function readCloseoutRefEntries(value: unknown) {
   }
   const refs: string[] = [];
   const metadata: JsonRecord[] = [];
-  const allowedMetadataFields = new Set(['ref_kind', 'kind', 'uri', 'sha256', 'ref', 'size_bytes']);
-  const stringMetadataFields = ['ref_kind', 'kind', 'uri', 'sha256', 'ref'] as const;
+  const allowedMetadataFields = new Set([
+    'ref_kind',
+    'kind',
+    'uri',
+    'sha256',
+    'ref',
+    'size_bytes',
+    'artifact_identity_receipt_ref',
+  ]);
+  const stringMetadataFields = [
+    'ref_kind',
+    'kind',
+    'uri',
+    'sha256',
+    'ref',
+    'artifact_identity_receipt_ref',
+  ] as const;
   for (const entry of value) {
     const direct = optionalString(entry);
     if (direct) {

@@ -306,7 +306,11 @@ test('pack-bound CLI launch persists isolated review attempts and terminal quali
         },
         closeout_packet_surface_kind: 'domain_stage_closeout_packet',
         closeout_ref_metadata: role === 'producer'
-          ? [{ ref: artifactRef, sha256: artifactHash }]
+          ? [{
+              ref: artifactRef,
+              sha256: artifactHash,
+              artifact_identity_receipt_ref: 'artifact-identity:pack-bound-draft-v1',
+            }]
           : [],
       };
     },
@@ -405,6 +409,7 @@ test('pack-bound CLI launch persists isolated review attempts and terminal quali
     assert.deepEqual(state.attempts.map((attempt: any) => attempt.attempt_role), ['producer', 'reviewer']);
     assert.deepEqual(state.artifact_refs, [artifactRef]);
     assert.deepEqual(state.artifact_hashes, [artifactHash]);
+    assert.deepEqual(state.artifact_identity_receipt_refs, ['artifact-identity:pack-bound-draft-v1']);
     assert.equal(state.review_receipts.length, 1);
 
     const db = new DatabaseSync(path.join(stateRoot, 'family-runtime', 'queue.sqlite'));

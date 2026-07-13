@@ -4,6 +4,7 @@ import type {
   StageQualityCyclePolicy,
   StageQualityFinding,
   StageQualityFindingClosure,
+  StageQualityHardStopClass,
   StageQualityRepairMapEntry,
   StageReviewReceipt,
   StageRouteDecision,
@@ -152,6 +153,10 @@ export type TemporalStageRunWorkflowState = {
   route_recommendations: StageQualityRouteRecommendationRecord[];
   next_stage_run_launch: TemporalStageRunRouteLaunchReceipt | null;
   blocked_reason: string | null;
+  hard_stop_class: StageQualityHardStopClass | null;
+  typed_blocker_refs: string[];
+  human_gate_refs: string[];
+  source_attempt_ref: string | null;
   sqlite_projection: {
     status: 'pending' | 'synced' | 'failed';
     error: string | null;

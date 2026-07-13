@@ -8,7 +8,9 @@ import {
 import {
   buildFamilyConflictSubject,
   buildReceiptConflictEnvelope,
+  normalizeStageQualityAttemptRole,
   sanitizeStageQualityAttemptRouteImpact,
+  stageQualityAttemptOutcomeFromEnvelope,
 } from '../../stagecraft/index.ts';
 import {
   type StageAttemptCloseoutRow,
@@ -42,11 +44,19 @@ function normalizeRouteImpact(
     ? existingRouteImpact.selected_action_id
     : null;
   const selectedStageRoute = optionalRecord(existingRouteImpact.selected_stage_route);
+  const normalized = sanitizeStageQualityAttemptRouteImpact({
+    attempt,
+    routeImpact: domainRouteImpact,
+  });
+  if (attempt.attempt_role) {
+    const stageQualityCycle = optionalRecord(normalized.stage_quality_cycle) ?? {};
+    stageQualityAttemptOutcomeFromEnvelope({
+      attemptRole: normalizeStageQualityAttemptRole(attempt.attempt_role),
+      envelope: stageQualityCycle,
+    });
+  }
   return {
-    ...sanitizeStageQualityAttemptRouteImpact({
-      attempt,
-      routeImpact: domainRouteImpact,
-    }),
+    ...normalized,
     next_owner: packet.next_owner,
     domain_ready_verdict: packet.domain_ready_verdict,
     ...(selectedActionId ? { selected_action_id: selectedActionId } : {}),
@@ -177,6 +187,8 @@ export function ingestStageAttemptCloseout(
       },
     );
   }
+  // Validate role/outcome ABI before writing usage or closeout rows.
+  normalizeRouteImpact(packet, attempt.route_impact, attempt);
   const costSummary = optionalRecord(input.costSummary);
   const createdAt = nowIso();
   const closeoutId = packet.closeout_id

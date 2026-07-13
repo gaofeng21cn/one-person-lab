@@ -253,12 +253,14 @@ async function runController(input: {
         const round = attempt.quality_round_index ?? 0;
         if (role === input.preflightHardBlockRole && attempt.provider_blocker) {
           const blockedReason = attempt.provider_blocker.blocked_reason ?? 'dirty_checkout';
+          const blockerRef = `opl://stage-attempts/${attempt.stage_attempt_id}/runtime-blockers/${blockedReason}`;
           return {
             activity_status: 'blocked',
-            closeout_refs: [`opl://stage-attempts/${attempt.stage_attempt_id}/runtime-blocker/${blockedReason}`],
+            closeout_refs: [blockerRef],
             rejected_writes: [{
               surface_kind: 'opl_provider_runtime_typed_blocker_ref',
               blocker_id: blockedReason,
+              blocker_ref: blockerRef,
             }],
             route_impact: attempt.provider_blocker.route_impact ?? {},
             blocked_reason: blockedReason,
@@ -404,14 +406,15 @@ async function runController(input: {
                 ref: `artifact:deck-v${artifactVersion}`,
                 sha256: `sha256:deck-v${artifactVersion}`,
                 ref_kind: 'raw_executor_output',
+                artifact_identity_receipt_ref: `artifact-identity:deck-v${artifactVersion}`,
               }]
-            : (
-            (role === 'producer' || role === 'repairer')
-            && role !== input.omitIdentityReceiptForRole
-          )
+            : (role === 'producer' || role === 'repairer')
             ? [{
                 ref: `artifact:deck-v${artifactVersion}`,
                 sha256: `sha256:deck-v${artifactVersion}`,
+                ...(role !== input.omitIdentityReceiptForRole
+                  ? { artifact_identity_receipt_ref: `artifact-identity:deck-v${artifactVersion}` }
+                  : {}),
               }]
             : [],
           route_impact: routeImpact,
@@ -515,6 +518,12 @@ test('pre-Codex typed preflight blocker may omit a session and remains a hard st
   assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), ['producer', 'reviewer']);
   assert.equal(state.status, 'blocked');
   assert.equal(state.blocked_reason, 'dirty_checkout');
+  assert.equal(state.hard_stop_class, 'stale_or_mismatched_stage_identity');
+  assert.deepEqual(state.typed_blocker_refs, [
+    `opl://stage-attempts/${state.attempts[1]?.stage_attempt_id}/runtime-blockers/dirty_checkout`,
+  ]);
+  assert.deepEqual(state.human_gate_refs, []);
+  assert.equal(state.source_attempt_ref, `opl://stage_attempts/${state.attempts[1]?.stage_attempt_id}`);
   assert.equal(state.attempts[1]?.execution_session_ref, null);
   assert.equal(state.review_receipts.length, 0);
   assert.equal(state.quality_debt_refs.length, 0);
@@ -571,6 +580,15 @@ test('initial reviewer blocked and human_gate outcomes map to hard-stop status a
   });
   assert.equal(blocked.state.status, 'blocked');
   assert.equal(blocked.state.blocked_reason, 'reviewer-blocked');
+  assert.equal(blocked.state.hard_stop_class, 'safety_or_compliance');
+  assert.deepEqual(blocked.state.typed_blocker_refs, [
+    'typed-blocker:initial-review-blocked',
+  ]);
+  assert.deepEqual(blocked.state.human_gate_refs, []);
+  assert.equal(
+    blocked.state.source_attempt_ref,
+    `opl://stage_attempts/${blocked.state.attempts[1]?.stage_attempt_id}`,
+  );
   assert.equal(blocked.state.review_receipts[0]?.verdict, 'hard_stop');
   assert.equal(blocked.state.selected_stage_route, null);
 
@@ -581,6 +599,11 @@ test('initial reviewer blocked and human_gate outcomes map to hard-stop status a
   });
   assert.equal(humanGate.state.status, 'human_gate');
   assert.equal(humanGate.state.blocked_reason, 'reviewer-human_gate');
+  assert.equal(humanGate.state.hard_stop_class, 'human_decision_required');
+  assert.deepEqual(humanGate.state.typed_blocker_refs, []);
+  assert.deepEqual(humanGate.state.human_gate_refs, [
+    'human-gate:initial-review-human-gate',
+  ]);
   assert.equal(humanGate.state.review_receipts[0]?.verdict, 'hard_stop');
   assert.equal(humanGate.state.selected_stage_route, null);
 });
@@ -669,6 +692,14 @@ test('re-review blocked and human_gate outcomes map to hard-stop receipts and do
   });
   assert.equal(blocked.state.status, 'blocked');
   assert.equal(blocked.state.blocked_reason, 're-review-blocked');
+  assert.equal(blocked.state.hard_stop_class, 'safety_or_compliance');
+  assert.deepEqual(blocked.state.typed_blocker_refs, [
+    'typed-blocker:re-review-blocked',
+  ]);
+  assert.equal(
+    blocked.state.source_attempt_ref,
+    `opl://stage_attempts/${blocked.state.attempts[3]?.stage_attempt_id}`,
+  );
   assert.equal(blocked.state.review_receipts[1]?.verdict, 'hard_stop');
   assert.equal(blocked.state.selected_stage_route, null);
 
@@ -679,6 +710,10 @@ test('re-review blocked and human_gate outcomes map to hard-stop receipts and do
   });
   assert.equal(humanGate.state.status, 'human_gate');
   assert.equal(humanGate.state.blocked_reason, 're-review-human_gate');
+  assert.equal(humanGate.state.hard_stop_class, 'human_decision_required');
+  assert.deepEqual(humanGate.state.human_gate_refs, [
+    'human-gate:re-review-human-gate',
+  ]);
   assert.equal(humanGate.state.review_receipts[1]?.verdict, 'hard_stop');
   assert.equal(humanGate.state.selected_stage_route, null);
 });
@@ -850,7 +885,7 @@ test('reviewer protocol failure terminalizes a consumable producer artifact as q
   assert.deepEqual(state.attempts.map((attempt) => attempt.attempt_role), ['producer', 'reviewer']);
   assert.equal(state.attempts[1]?.status, 'failed');
   assert.deepEqual(state.artifact_refs, ['artifact:deck-v1']);
-  assert.deepEqual(state.artifact_identity_receipt_refs, ['artifact:deck-v1']);
+  assert.deepEqual(state.artifact_identity_receipt_refs, ['artifact-identity:deck-v1']);
   assert.equal(state.review_receipts.length, 0);
 });
 
@@ -888,6 +923,10 @@ test('literal zero artifact hard-stops, while a failed repair preserves prior co
   });
   assert.equal(zeroArtifact.state.status, 'blocked');
   assert.equal(zeroArtifact.state.blocked_reason, 'stage_quality_attempt_without_consumable_artifact');
+  assert.equal(
+    zeroArtifact.state.source_attempt_ref,
+    'opl://stage_attempts/sat_producer-zero-artifact_producer_0',
+  );
   assert.equal(zeroArtifact.state.artifact_refs.length, 0);
 
   const failedRepair = await runController({
@@ -903,7 +942,7 @@ test('literal zero artifact hard-stops, while a failed repair preserves prior co
   )));
 });
 
-test('producer artifact without a domain SHA receipt cannot enter formal Review', async () => {
+test('producer artifact without a verified identity receipt cannot enter formal Review', async () => {
   const { state, attempts } = await runController({
     id: 'producer-missing-identity-receipt',
     closeFindingAfterRound: null,
@@ -911,6 +950,12 @@ test('producer artifact without a domain SHA receipt cannot enter formal Review'
   });
   assert.equal(state.status, 'blocked');
   assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), ['producer']);
+  assert.equal(state.hard_stop_class, 'authority_boundary_violation');
+  assert.equal(state.blocked_reason, 'artifact_identity_receipt_missing_authority_violation');
+  assert.equal(
+    state.source_attempt_ref,
+    'opl://stage_attempts/sat_producer-missing-identity-receipt_producer_0',
+  );
   assert.equal(state.artifact_refs.length, 0);
   assert.equal(state.review_receipts.length, 0);
 });

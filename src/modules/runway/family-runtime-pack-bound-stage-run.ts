@@ -24,6 +24,7 @@ export function buildPackBoundTemporalStageRunInput(input: {
   artifactHashes?: string[];
   actionId?: string | null;
   taskId?: string | null;
+  checkoutCurrentnessAdmission?: Record<string, unknown> | null;
 }): TemporalStageRunWorkflowInput {
   const stageRunId = deriveStageRunId({
     domainId: input.domainId,
@@ -64,6 +65,17 @@ export function buildPackBoundTemporalStageRunInput(input: {
     workspace_locator: {
       ...input.workspaceLocator,
       domain_pack_root: input.domainPackRoot,
+      ...(input.checkoutCurrentnessAdmission && input.checkoutCurrentnessAdmission.status !== 'blocked'
+        ? {
+            stage_run_currentness_admission: {
+              ...input.checkoutCurrentnessAdmission,
+              surface_kind: 'opl_stage_run_currentness_admission',
+              stage_run_id: stageRunId,
+              child_attempts_inherit_admission: true,
+              mutable_artifact_changes_do_not_invalidate_admitted_source_snapshot: true,
+            },
+          }
+        : {}),
     },
     source_fingerprint: input.sourceFingerprint,
     executor_kind: input.executorKind?.trim() || 'codex_cli',

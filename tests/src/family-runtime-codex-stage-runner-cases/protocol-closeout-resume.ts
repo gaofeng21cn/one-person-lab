@@ -1,0 +1,265 @@
+import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import test from 'node:test';
+
+import { FrameworkContractError } from '../../../src/kernel/contract-validation.ts';
+import { createFakeCodexFixture } from '../cli/helpers.ts';
+import { runPublicCodexStageRunner } from '../family-runtime-codex-stage-runner-helpers.ts';
+
+function restoreEnv(name: string, value: string | undefined) {
+  if (value === undefined) delete process.env[name];
+  else process.env[name] = value;
+}
+
+test('formal quality Attempt uses one same-thread closeout-only resume without consuming Review budget', async () => {
+  const closeout = {
+    surface_kind: 'stage_attempt_closeout_packet',
+    stage_attempt_id: 'sat-protocol-closeout-resume',
+    closeout_refs: ['review:protocol-closeout'],
+    consumed_refs: ['artifact:reviewed'],
+    consumed_memory_refs: [],
+    writeback_receipt_refs: [],
+    rejected_writes: [],
+    next_owner: null,
+    domain_ready_verdict: null,
+    route_impact: {
+      stage_quality_cycle: { outcome: 'pass', findings: [] },
+    },
+    authority_boundary: {
+      opl: 'closeout_transport_only',
+      domain: 'truth_quality_artifact_gate_owner',
+    },
+  };
+  const resumeEvent = JSON.stringify({
+    type: 'item.completed',
+    item: { type: 'agent_message', id: 'resume-closeout', text: JSON.stringify(closeout) },
+  });
+  const invocationLog = path.join(os.tmpdir(), 'opl-protocol-closeout-resume-' + process.pid + '.log');
+  fs.rmSync(invocationLog, { force: true });
+  const script = [
+    'if [ "$1" = "exec" ] && [ "${2:-}" = "resume" ]; then',
+    '  printf "%s\\n" "$*" >> ' + JSON.stringify(invocationLog),
+    '  printf \'{"type":"thread.started","thread_id":"thread-protocol-closeout"}\\n\'',
+    '  printf "%s\\n" ' + JSON.stringify(resumeEvent),
+    '  printf \'{"type":"turn.completed"}\\n\'',
+    '  exit 0',
+    'fi',
+    'if [ "$1" = "exec" ]; then',
+    '  printf \'{"type":"thread.started","thread_id":"thread-protocol-closeout"}\\n\'',
+    '  printf \'{"type":"item.completed","item":{"type":"agent_message","id":"initial","text":"review completed but closeout omitted"}}\\n\'',
+    '  printf \'{"type":"turn.completed"}\\n\'',
+    '  exit 0',
+    'fi',
+    'exit 64',
+  ].join('\n');
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(script);
+  const previousBin = process.env.OPL_CODEX_BIN;
+  const previousRecoveryTimeout = process.env.OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS;
+  const previousRecoveryInterval = process.env.OPL_CODEX_SESSION_RECOVERY_INTERVAL_MS;
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    process.env.OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS = '1';
+    process.env.OPL_CODEX_SESSION_RECOVERY_INTERVAL_MS = '1';
+    const receipt = await runPublicCodexStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat-protocol-closeout-resume',
+        stage_run_id: 'sr-protocol-closeout-resume',
+        quality_cycle_id: 'quality-cycle:sr-protocol-closeout-resume',
+        attempt_role: 'reviewer',
+        quality_round_index: 0,
+        stage_id: 'review',
+        domain_id: 'example-domain',
+        workspace_locator: { workspace_root: fixtureRoot },
+        checkpoint_refs: ['packet:review'],
+      },
+      runnerMode: 'codex_cli',
+      timeoutMs: 10_000,
+      env: { OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'host' },
+    });
+    assert.equal(receipt.closeout_packet?.stage_attempt_id, 'sat-protocol-closeout-resume');
+    const protocol = receipt.process_output_summary?.protocol_closeout_resume as Record<string, unknown>;
+    assert.equal(protocol.status, 'completed');
+    assert.equal(protocol.same_thread, true);
+    assert.equal(protocol.creates_stage_attempt, false);
+    assert.equal(protocol.counts_as_review, false);
+    assert.equal(protocol.consumes_quality_budget, false);
+    assert.equal(protocol.may_change_artifact_bytes, false);
+    const invocation = fs.readFileSync(invocationLog, 'utf8');
+    assert.equal(invocation.match(/exec resume --skip-git-repo-check/g)?.length, 1);
+    assert.match(invocation, /--config sandbox_mode="read-only"/);
+    assert.match(invocation, /protocol_closeout_resume, not Review/);
+    assert.match(invocation, /Do not call tools, edit files, change artifact bytes/);
+  } finally {
+    restoreEnv('OPL_CODEX_BIN', previousBin);
+    restoreEnv('OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS', previousRecoveryTimeout);
+    restoreEnv('OPL_CODEX_SESSION_RECOVERY_INTERVAL_MS', previousRecoveryInterval);
+    fs.rmSync(invocationLog, { force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('protocol closeout resume is failed when the returned packet does not bind the current Attempt', async () => {
+  const closeout = {
+    surface_kind: 'stage_attempt_closeout_packet',
+    stage_attempt_id: 'sat-wrong-attempt',
+    closeout_refs: ['review:wrong-attempt'],
+    consumed_refs: [],
+    consumed_memory_refs: [],
+    writeback_receipt_refs: [],
+    rejected_writes: [],
+    next_owner: null,
+    domain_ready_verdict: null,
+    route_impact: { stage_quality_cycle: { outcome: 'pass', findings: [] } },
+    authority_boundary: {
+      opl: 'closeout_transport_only',
+      domain: 'truth_quality_artifact_gate_owner',
+    },
+  };
+  const resumeEvent = JSON.stringify({
+    type: 'item.completed',
+    item: { type: 'agent_message', id: 'resume-closeout', text: JSON.stringify(closeout) },
+  });
+  const script = [
+    'if [ "$1" = "exec" ] && [ "${2:-}" = "resume" ]; then',
+    '  printf \'{"type":"thread.started","thread_id":"thread-protocol-rejected"}\\n\'',
+    '  printf "%s\\n" ' + JSON.stringify(resumeEvent),
+    '  printf \'{"type":"turn.completed"}\\n\'',
+    '  exit 0',
+    'fi',
+    'if [ "$1" = "exec" ]; then',
+    '  printf \'{"type":"thread.started","thread_id":"thread-protocol-rejected"}\\n\'',
+    '  printf \'{"type":"item.completed","item":{"type":"agent_message","id":"initial","text":"closeout omitted"}}\\n\'',
+    '  printf \'{"type":"turn.completed"}\\n\'',
+    '  exit 0',
+    'fi',
+    'exit 64',
+  ].join('\n');
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(script);
+  const previousBin = process.env.OPL_CODEX_BIN;
+  const previousRecoveryTimeout = process.env.OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS;
+  const previousRecoveryInterval = process.env.OPL_CODEX_SESSION_RECOVERY_INTERVAL_MS;
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    process.env.OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS = '1';
+    process.env.OPL_CODEX_SESSION_RECOVERY_INTERVAL_MS = '1';
+    const receipt = await runPublicCodexStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat-protocol-rejected',
+        stage_run_id: 'sr-protocol-rejected',
+        quality_cycle_id: 'quality-cycle:sr-protocol-rejected',
+        attempt_role: 'reviewer',
+        quality_round_index: 0,
+        stage_id: 'review',
+        domain_id: 'example-domain',
+        workspace_locator: { workspace_root: fixtureRoot },
+        checkpoint_refs: ['packet:review'],
+      },
+      runnerMode: 'codex_cli',
+      timeoutMs: 10_000,
+      env: { OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'host' },
+    });
+    assert.equal(receipt.closeout_packet?.stage_attempt_id, 'sat-protocol-rejected');
+    assert.equal(receipt.closeout_packet?.domain_ready_verdict, 'completed_with_quality_debt');
+    assert.equal(receipt.process_output_summary?.protocol_closeout_resume?.status, 'failed');
+    assert.equal(receipt.process_output_summary?.closeout_rejection_reason, 'stage_attempt_id_mismatch');
+  } finally {
+    restoreEnv('OPL_CODEX_BIN', previousBin);
+    restoreEnv('OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS', previousRecoveryTimeout);
+    restoreEnv('OPL_CODEX_SESSION_RECOVERY_INTERVAL_MS', previousRecoveryInterval);
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('child Review inherits StageRun currentness admission after producer artifact writes dirty the checkout', async () => {
+  const closeout = {
+    surface_kind: 'stage_attempt_closeout_packet',
+    stage_attempt_id: 'sat-currentness-reviewer',
+    closeout_refs: ['review:currentness'],
+    consumed_refs: ['artifact:producer-output'],
+    consumed_memory_refs: [],
+    writeback_receipt_refs: [],
+    rejected_writes: [],
+    next_owner: null,
+    domain_ready_verdict: null,
+    route_impact: { stage_quality_cycle: { outcome: 'pass', findings: [] } },
+    authority_boundary: {
+      opl: 'closeout_transport_only',
+      domain: 'truth_quality_artifact_gate_owner',
+    },
+  };
+  const event = JSON.stringify({
+    type: 'item.completed',
+    item: { type: 'agent_message', id: 'review-closeout', text: JSON.stringify(closeout) },
+  });
+  const script = [
+    'if [ "$1" = "exec" ]; then',
+    '  printf \'{"type":"thread.started","thread_id":"thread-currentness-reviewer"}\\n\'',
+    '  printf "%s\\n" ' + JSON.stringify(event),
+    '  printf \'{"type":"turn.completed"}\\n\'',
+    '  exit 0',
+    'fi',
+    'exit 64',
+  ].join('\n');
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(script);
+  execFileSync('git', ['init', '-q'], { cwd: fixtureRoot });
+  execFileSync('git', ['config', 'user.email', 'test@example.com'], { cwd: fixtureRoot });
+  execFileSync('git', ['config', 'user.name', 'OPL Test'], { cwd: fixtureRoot });
+  fs.writeFileSync(path.join(fixtureRoot, 'tracked.txt'), 'baseline\n');
+  execFileSync('git', ['add', 'tracked.txt'], { cwd: fixtureRoot });
+  execFileSync('git', ['commit', '-qm', 'baseline'], { cwd: fixtureRoot });
+  const admittedHead = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: fixtureRoot, encoding: 'utf8' }).trim();
+  fs.writeFileSync(path.join(fixtureRoot, 'producer-output.txt'), 'new stage artifact\n');
+
+  const previousBin = process.env.OPL_CODEX_BIN;
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    const baseAttempt = {
+      stage_attempt_id: 'sat-currentness-reviewer',
+      stage_run_id: 'sr-currentness-admission',
+      quality_cycle_id: 'quality-cycle:sr-currentness-admission',
+      attempt_role: 'reviewer',
+      quality_round_index: 0,
+      stage_id: 'review',
+      domain_id: 'medautoscience',
+      checkpoint_refs: ['packet:review'],
+    };
+    await assert.rejects(
+      () => runPublicCodexStageRunner({
+        attempt: {
+          ...baseAttempt,
+          workspace_locator: { workspace_root: fixtureRoot },
+        },
+        runnerMode: 'codex_cli',
+        env: { OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'host' },
+      }),
+      (error) => error instanceof FrameworkContractError
+        && error.details?.blocked_reason === 'dirty_checkout',
+    );
+
+    const receipt = await runPublicCodexStageRunner({
+      attempt: {
+        ...baseAttempt,
+        workspace_locator: {
+          workspace_root: fixtureRoot,
+          stage_run_currentness_admission: {
+            surface_kind: 'opl_stage_run_currentness_admission',
+            stage_run_id: baseAttempt.stage_run_id,
+            status: 'current',
+            head_sha: admittedHead,
+            child_attempts_inherit_admission: true,
+          },
+        },
+      },
+      runnerMode: 'codex_cli',
+      env: { OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'host' },
+    });
+    assert.equal(receipt.closeout_packet?.stage_attempt_id, baseAttempt.stage_attempt_id);
+    assert.equal(receipt.progress_summary.thread_id, 'thread-currentness-reviewer');
+  } finally {
+    restoreEnv('OPL_CODEX_BIN', previousBin);
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});

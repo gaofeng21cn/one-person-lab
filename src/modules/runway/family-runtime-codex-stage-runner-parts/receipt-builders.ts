@@ -111,6 +111,15 @@ export type CodexStageRunnerProcessOutputSummary = {
   session_recovery_attempts?: number;
   domain_receipt_recovery_status?: string;
   domain_receipt_recovery_ref?: string;
+  protocol_closeout_resume?: {
+    status: 'completed' | 'failed';
+    same_thread: true;
+    thread_id: string;
+    creates_stage_attempt: false;
+    counts_as_review: false;
+    consumes_quality_budget: false;
+    may_change_artifact_bytes: false;
+  };
   closeout_rejection_reason?:
     | 'stage_attempt_id_mismatch'
     | 'idempotency_key_mismatch'

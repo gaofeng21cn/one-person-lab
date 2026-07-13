@@ -506,6 +506,7 @@ export async function runFamilyRuntime(
           artifactHashes: parsed.input.inputArtifactHashes,
           actionId: parsed.input.actionId,
           taskId,
+          checkoutCurrentnessAdmission: checkoutCurrentnessPreflight,
         });
         const durableLaunch = await launchRegisteredStageRun({
           db,

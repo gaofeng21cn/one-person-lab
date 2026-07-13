@@ -75,6 +75,7 @@ test('family runtime attempt contract keeps Temporal attempt, progress-first clo
     'sha256',
     'ref',
     'size_bytes',
+    'artifact_identity_receipt_ref',
   ]);
   assert.equal(
     contract.provider_lifecycle_contract.temporal.workflow_name,
@@ -251,7 +252,12 @@ test('Stage quality contracts bind bounded Attempts, exact artifact identity, re
     'stage_run_id', 'quality_cycle_id', 'producer_attempt_ref', 'reviewer_attempt_ref',
     'producer_session_ref', 'reviewer_session_ref', 'no_context_inheritance',
     'reviewed_artifact_refs', 'reviewed_artifact_hashes', 'rubric_refs', 'verdict',
+    'finding_lineage',
   ]);
+  assert.equal(
+    quality.review_receipt.local_artifact_identity_receipt_surface_kind,
+    'opl_transport_artifact_identity_receipt',
+  );
   assert.equal(
     quality.review_receipt.producer_and_repairer_artifact_identity_receipt_refs_required_before_formal_review,
     true,

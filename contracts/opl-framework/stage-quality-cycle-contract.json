@@ -41,7 +41,7 @@
   ],
   "attempt_outcome_contract": {
     "surface": "route_impact.stage_quality_cycle.outcome",
-    "outcome_required_for_completed_roles": [
+    "outcome_required_for_completed_formal_review_roles": [
       "reviewer",
       "re_reviewer"
     ],
@@ -64,8 +64,7 @@
         "artifact_hashes"
       ],
       "reviewer": [
-        "outcome",
-        "findings"
+        "outcome"
       ],
       "repairer": [
         "repair_map",
@@ -73,13 +72,26 @@
         "artifact_hashes"
       ],
       "re_reviewer": [
-        "outcome",
+        "outcome"
+      ]
+    },
+    "review_outcome_dependent_fields": {
+      "non_hard_stop_reviewer": [
+        "findings"
+      ],
+      "non_hard_stop_re_reviewer": [
         "finding_closures",
         "repair_regressions",
         "critical_new_findings",
         "optional_observations"
+      ],
+      "blocked_or_human_gate_reviewer_or_re_reviewer": [
+        "blocked_reason",
+        "hard_stop_class",
+        "typed_blocker_ref_or_human_gate_ref"
       ]
-    }
+    },
+    "hard_stop_review_must_not_fabricate_finding_closure_result": true
   },
   "terminology": {
     "in_thread_refinement": "Non-authoritative self-check and revision inside one provider thread. It is not Stage Review and cannot create a review receipt.",
@@ -260,7 +272,7 @@
     "review_context_allowlist": [
       "stage_goal_refs",
       "exact_artifact_refs_and_hashes",
-      "domain_owned_artifact_identity_receipt_refs",
+      "artifact_identity_receipt_refs_verified_by_opl_transport",
       "source_refs_and_fingerprint",
       "quality_rubric_refs",
       "necessary_artifact_lineage_refs",
@@ -298,7 +310,18 @@
       "finding_lineage"
     ],
     "reviewed_hash_must_match_current_artifact": true,
-    "producer_and_repairer_identity_source": "typed_closeout_ref_metadata_sha256_owned_by_domain",
+    "producer_and_repairer_identity_source": "transport_verified_local_bytes_with_opl_transport_artifact_identity_receipt_or_independent_domain_artifact_identity_receipt",
+    "local_artifact_identity_policy": "OPL transport reads final bytes, computes SHA-256, and creates an opl_transport_artifact_identity_receipt before formal Review",
+    "local_artifact_identity_receipt_surface_kind": "opl_transport_artifact_identity_receipt",
+    "external_artifact_identity_policy": "External artifact refs require a locally readable independent domain_artifact_identity_receipt bound to domain, producing Attempt, artifact ref, and SHA-256",
+    "currentness_admission_scope": "Checkout currentness is admitted once at StageRun launch and inherited by child Attempts; producer artifact writes do not trigger a second mutable-checkout admission inside the same StageRun.",
+    "hard_stop_evidence_fields": [
+      "hard_stop_class",
+      "typed_blocker_refs",
+      "human_gate_refs",
+      "source_attempt_ref"
+    ],
+    "hard_stop_cannot_be_downgraded_to_quality_debt_when_artifact_exists": true,
     "producer_and_repairer_artifact_identity_receipt_refs_required_before_formal_review": true,
     "reviewed_artifact_ref_hash_cardinality_must_match": true,
     "no_context_inheritance_required": true,
@@ -330,11 +353,14 @@
       "initial_review_binds": [
         "full_findings_body"
       ],
-      "finding_closure_review_binds": [
+      "finding_closure_review_always_binds": [
         "full_prior_findings_body",
-        "full_repair_map_body",
+        "full_repair_map_body"
+      ],
+      "finding_closure_review_non_hard_stop_binds": [
         "full_re_review_result_body"
       ],
+      "finding_closure_review_hard_stop_re_review_result_sha256": null,
       "repair_map_must_equal_persisted_repairer_output": true,
       "finding_body_must_equal_repairer_and_re_reviewer_inputs": true,
       "id_only_synthetic_finding_or_repair_map_forbidden": true
@@ -367,6 +393,20 @@
       "original_source_refs",
       "original_rubric_refs"
     ],
+    "re_review_output_requirements": {
+      "non_hard_stop": [
+        "finding_closures",
+        "repair_regressions",
+        "critical_new_findings",
+        "optional_observations"
+      ],
+      "blocked_or_human_gate": [
+        "blocked_reason",
+        "hard_stop_class",
+        "typed_blocker_ref_or_human_gate_ref"
+      ],
+      "hard_stop_does_not_require_or_fabricate_closure_result": true
+    },
     "finding_closure_statuses": [
       "closed",
       "partially_closed",

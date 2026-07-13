@@ -415,8 +415,24 @@ export function buildStageReviewContextManifest(input: {
 }
 
 export function validateIndependentStageReviewReceipt(receipt: StageReviewReceipt) {
-  requiredText(receipt.producer_attempt_ref, 'producer_attempt_ref');
-  requiredText(receipt.reviewer_attempt_ref, 'reviewer_attempt_ref');
+  if (receipt.surface_kind !== 'opl_stage_review_receipt' || receipt.version !== 'stage-review-receipt.v1') {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Stage Review receipt surface kind and version are invalid.',
+      { surface_kind: receipt.surface_kind, version: receipt.version },
+    );
+  }
+  requiredText(receipt.stage_run_id, 'stage_run_id');
+  requiredText(receipt.quality_cycle_id, 'quality_cycle_id');
+  const producerAttemptRef = requiredText(receipt.producer_attempt_ref, 'producer_attempt_ref');
+  const reviewerAttemptRef = requiredText(receipt.reviewer_attempt_ref, 'reviewer_attempt_ref');
+  if (producerAttemptRef === reviewerAttemptRef) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Formal Stage Review receipt must bind distinct producer and reviewer Attempts.',
+      { producer_attempt_ref: producerAttemptRef, reviewer_attempt_ref: reviewerAttemptRef },
+    );
+  }
   const producerSessionRef = requiredText(receipt.producer_session_ref, 'producer_session_ref');
   const reviewerSessionRef = requiredText(receipt.reviewer_session_ref, 'reviewer_session_ref');
   if (receipt.no_context_inheritance !== true) {
@@ -433,12 +449,26 @@ export function validateIndependentStageReviewReceipt(receipt: StageReviewReceip
     artifactHashes: receipt.reviewed_artifact_hashes,
   });
   requiredRefs(receipt.rubric_refs, 'rubric_refs');
+  if (!['pass', 'repair_required', 'quality_debt', 'hard_stop'].includes(receipt.verdict)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Stage Review receipt verdict is invalid.', {
+      verdict: receipt.verdict,
+    });
+  }
+  if (!receipt.finding_lineage || typeof receipt.finding_lineage !== 'object') {
+    throw new FrameworkContractError('contract_shape_invalid', 'Review receipt finding_lineage must be an object.');
+  }
   if (!['initial_review', 'finding_closure_review'].includes(receipt.finding_lineage.review_kind)) {
     throw new FrameworkContractError('contract_shape_invalid', 'Review receipt finding_lineage review_kind is invalid.');
   }
   uniqueIds(nonEmptyStringSequence(receipt.finding_lineage.finding_ids, 'finding_lineage.finding_ids'), 'finding_lineage.finding_ids');
+  if (!/^sha256:[a-f0-9]{64}$/.test(receipt.finding_lineage.findings_sha256)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Review receipt findings_sha256 must be a canonical SHA-256 digest.',
+      { value: receipt.finding_lineage.findings_sha256 },
+    );
+  }
   for (const [field, value] of Object.entries({
-    findings_sha256: receipt.finding_lineage.findings_sha256,
     repair_map_sha256: receipt.finding_lineage.repair_map_sha256,
     re_review_result_sha256: receipt.finding_lineage.re_review_result_sha256,
   })) {
@@ -456,11 +486,25 @@ export function validateIndependentStageReviewReceipt(receipt: StageReviewReceip
         'Initial Review receipt cannot bind repair-map or Re-review result digests.',
       );
     }
-  } else if (!receipt.finding_lineage.repair_map_sha256) {
-    throw new FrameworkContractError(
-      'contract_shape_invalid',
-      'Finding-closure Review receipt requires an exact repair-map digest.',
-    );
+  } else {
+    if (!receipt.finding_lineage.repair_map_sha256) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Finding-closure Review receipt requires an exact repair-map digest.',
+      );
+    }
+    if (receipt.verdict === 'hard_stop' && receipt.finding_lineage.re_review_result_sha256 !== null) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Hard-stop Re-review receipt cannot bind a finding-closure result digest.',
+      );
+    }
+    if (receipt.verdict !== 'hard_stop' && !receipt.finding_lineage.re_review_result_sha256) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Non-hard-stop finding-closure Review receipt requires an exact Re-review result digest.',
+      );
+    }
   }
   return {
     valid: true,

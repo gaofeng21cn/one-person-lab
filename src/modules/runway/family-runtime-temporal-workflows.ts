@@ -33,6 +33,7 @@ import {
   normalizeStageQualityArtifactIdentity,
   stageQualityAttemptOutcomeFromEnvelope,
   stageReviewVerdictForOutcome,
+  STAGE_QUALITY_HARD_STOP_CLASSES,
   validateInitialStageQualityReviewOutcome,
   validateStageQualityFindings,
   validateStageQualityRepairMap,
@@ -41,6 +42,7 @@ import {
   type StageQualityAttemptRole,
   type StageQualityFinding,
   type StageQualityFindingClosure,
+  type StageQualityHardStopClass,
   type StageQualityOutcome,
   type StageQualityRepairMapEntry,
   type StageQualityReReviewResult,
@@ -580,6 +582,7 @@ function qualityArtifactIdentity(
     artifactIdentityReceiptRefs: string[];
   },
 ) {
+  const sourceAttemptRef = `opl://stage_attempts/${state.stage_attempt_id}`;
   const declaredArtifactRefs = Array.isArray(value.artifact_refs) ? value.artifact_refs : [];
   const declaredArtifactHashes = Array.isArray(value.artifact_hashes) ? value.artifact_hashes : [];
   if (declaredArtifactRefs.length === 0 && declaredArtifactHashes.length === 0 && inputIdentity) {
@@ -614,6 +617,7 @@ function qualityArtifactIdentity(
       {
         hard_stop_class: 'zero_consumable_artifact',
         blocked_reason: 'stage_quality_attempt_without_consumable_artifact',
+        source_attempt_ref: sourceAttemptRef,
         artifact_ref_count: artifactRefs.length,
         artifact_hash_count: artifactHashes.length,
       },
@@ -634,11 +638,30 @@ function qualityArtifactIdentity(
   const receiptRefs = artifactRefs.map((artifactRef, index) => {
     const entry = metadata.find((candidate) => candidate.ref === artifactRef || candidate.uri === artifactRef);
     if (!entry || typeof entry.sha256 !== 'string' || entry.sha256 !== artifactHashes[index]) {
-      throw new Error(
-        'Producer and repairer artifact identity must match domain-owned closeout_ref_metadata SHA receipts.',
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Producer and repairer artifact identity must match transport-verified closeout_ref_metadata SHA receipts.',
+        {
+          hard_stop_class: 'stale_or_mismatched_stage_identity',
+          blocked_reason: 'artifact_byte_identity_mismatch',
+          source_attempt_ref: sourceAttemptRef,
+          artifact_ref: artifactRef,
+        },
       );
     }
-    return artifactRef;
+    if (typeof entry.artifact_identity_receipt_ref !== 'string' || !entry.artifact_identity_receipt_ref.trim()) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Producer and repairer artifacts require a verified artifact identity receipt before formal Review.',
+        {
+          hard_stop_class: 'authority_boundary_violation',
+          blocked_reason: 'artifact_identity_receipt_missing_authority_violation',
+          source_attempt_ref: sourceAttemptRef,
+          artifact_ref: artifactRef,
+        },
+      );
+    }
+    return entry.artifact_identity_receipt_ref.trim();
   });
   return {
     artifactRefs,
@@ -714,22 +737,62 @@ function qualityFailureRef(input: TemporalStageRunWorkflowInput, reason: string)
   return `opl://stage-runs/${encodeURIComponent(input.stage_run_id)}/quality-debt/${encodeURIComponent(reason)}`;
 }
 
-function providerRuntimeHardStop(state: TemporalStageAttemptWorkflowState) {
+function providerRuntimeHardStop(state: TemporalStageAttemptWorkflowState): {
+  hard_stop_class: StageQualityHardStopClass;
+  blocked_reason: string;
+  typed_blocker_refs: string[];
+  human_gate_refs: string[];
+} | null {
   const closeout = asRecord(state.closeout_packet);
   const authorityBoundary = asRecord(closeout.authority_boundary);
-  return closeout.activity_status === 'blocked'
+  const isRuntimeBlocker = closeout.activity_status === 'blocked'
     && authorityBoundary.provider_runtime_blocker_ref_only === true
     && asRecordList(closeout.rejected_writes).some(
       (entry) => entry.surface_kind === 'opl_provider_runtime_typed_blocker_ref',
-    );
+  );
+  if (!isRuntimeBlocker) return null;
+  const blockedReason = typeof closeout.blocked_reason === 'string' ? closeout.blocked_reason : '';
+  const routeImpact = asRecord(closeout.route_impact);
+  const declaredHardStopClass = routeImpact.hard_stop_class;
+  const hardStopClass = typeof declaredHardStopClass === 'string'
+    && STAGE_QUALITY_HARD_STOP_CLASSES.includes(declaredHardStopClass as StageQualityHardStopClass)
+    ? declaredHardStopClass as StageQualityHardStopClass
+    : null;
+  const typedBlockerRefs = asRecordList(closeout.rejected_writes)
+    .map((entry) => entry.blocker_ref)
+    .filter((entry): entry is string => typeof entry === 'string' && Boolean(entry));
+  return hardStopClass
+    ? {
+        hard_stop_class: hardStopClass,
+        blocked_reason: blockedReason || 'stage_quality_provider_runtime_hard_stop',
+        typed_blocker_refs: typedBlockerRefs,
+        human_gate_refs: asStringList(state.human_gate_refs),
+      }
+    : null;
 }
 
-function controllerHardStopFromError(error: unknown) {
+function controllerHardStopFromError(error: unknown): {
+  hardStopClass: StageQualityHardStopClass;
+  blockedReason: string;
+  typedBlockerRefs: string[];
+  humanGateRefs: string[];
+  sourceAttemptRef: string | null;
+} | null {
   if (!(error instanceof FrameworkContractError)) return null;
   const hardStopClass = error.details?.hard_stop_class;
   const blockedReason = error.details?.blocked_reason;
-  return hardStopClass === 'zero_consumable_artifact' && typeof blockedReason === 'string'
-    ? { hardStopClass, blockedReason }
+  return typeof hardStopClass === 'string'
+    && STAGE_QUALITY_HARD_STOP_CLASSES.includes(hardStopClass as StageQualityHardStopClass)
+    && typeof blockedReason === 'string'
+    ? {
+        hardStopClass: hardStopClass as StageQualityHardStopClass,
+        blockedReason,
+        typedBlockerRefs: asStringList(error.details?.typed_blocker_refs),
+        humanGateRefs: asStringList(error.details?.human_gate_refs),
+        sourceAttemptRef: typeof error.details?.source_attempt_ref === 'string'
+          ? error.details.source_attempt_ref
+          : null,
+      }
     : null;
 }
 
@@ -772,6 +835,10 @@ export async function StageRunWorkflow(
     route_recommendations: [],
     next_stage_run_launch: null,
     blocked_reason: null,
+    hard_stop_class: null,
+    typed_blocker_refs: [],
+    human_gate_refs: [],
+    source_attempt_ref: null,
     sqlite_projection: { status: 'pending', error: null },
     started_at: nowIso(),
     updated_at: nowIso(),
@@ -831,12 +898,17 @@ export async function StageRunWorkflow(
 
   const applyReviewStop = (
     hardStop: ReturnType<typeof validateStageQualityReviewHardStopOutcome>,
+    sourceAttemptRef: string,
   ) => {
     state = {
       ...state,
       status: hardStop.outcome,
       current_role: null,
       blocked_reason: hardStop.blocked_reason,
+      hard_stop_class: hardStop.hard_stop_class,
+      typed_blocker_refs: hardStop.typed_blocker_refs,
+      human_gate_refs: hardStop.human_gate_refs,
+      source_attempt_ref: sourceAttemptRef,
       updated_at: nowIso(),
     };
   };
@@ -951,7 +1023,15 @@ export async function StageRunWorkflow(
       updated_at: nowIso(),
     };
     if (result.status === 'human_gate') {
-      state = { ...state, status: 'human_gate', current_role: null, blocked_reason: 'human_gate' };
+      state = {
+        ...state,
+        status: 'human_gate',
+        current_role: null,
+        blocked_reason: 'human_gate',
+        hard_stop_class: 'human_decision_required',
+        human_gate_refs: asStringList(result.human_gate_refs),
+        source_attempt_ref: materialized.attempt_ref,
+      };
     } else if (result.status === 'blocked' || result.status === 'failed') {
       const closeout = asRecord(result.closeout_packet);
       const reason = typeof envelope.blocked_reason === 'string'
@@ -986,6 +1066,12 @@ export async function StageRunWorkflow(
             status: 'blocked',
             current_role: null,
             blocked_reason: reason,
+            hard_stop_class: runtimeHardStop?.hard_stop_class ?? (
+              hasConsumableArtifact(state) ? null : 'zero_consumable_artifact'
+            ),
+            typed_blocker_refs: runtimeHardStop?.typed_blocker_refs ?? [],
+            human_gate_refs: runtimeHardStop?.human_gate_refs ?? [],
+            source_attempt_ref: materialized.attempt_ref,
           };
     }
     return {
@@ -1054,7 +1140,7 @@ export async function StageRunWorkflow(
         outcome: initialOutcome,
         envelope: review.envelope,
       });
-      applyReviewStop(hardStop);
+      applyReviewStop(hardStop, review.attemptRef);
       const hardStopReceipt = await stageQualityReviewReceiptActivity({
         producer_attempt_ref: producer.attemptRef,
         reviewer_attempt_ref: review.attemptRef,
@@ -1150,7 +1236,7 @@ export async function StageRunWorkflow(
           outcome: reReviewOutcome,
           envelope: reReview.envelope,
         });
-        applyReviewStop(hardStop);
+        applyReviewStop(hardStop, reReview.attemptRef);
         const hardStopReceipt = await stageQualityReviewReceiptActivity({
           producer_attempt_ref: repair.attemptRef,
           reviewer_attempt_ref: reReview.attemptRef,
@@ -1244,6 +1330,10 @@ export async function StageRunWorkflow(
         status: 'blocked',
         current_role: null,
         blocked_reason: 'stage_quality_budget_exhausted_without_consumable_artifact',
+        hard_stop_class: 'zero_consumable_artifact',
+        source_attempt_ref: state.attempts.at(-1)?.stage_attempt_id
+          ? `opl://stage_attempts/${state.attempts.at(-1)!.stage_attempt_id}`
+          : null,
         updated_at: nowIso(),
       });
     }
@@ -1262,12 +1352,20 @@ export async function StageRunWorkflow(
   } catch (error) {
     if (stageRunStopped(state)) return terminalize(state);
     const hardStop = controllerHardStopFromError(error);
-    if (hardStop && !hasConsumableArtifact(state)) {
+    if (hardStop && (hardStop.hardStopClass !== 'zero_consumable_artifact' || !hasConsumableArtifact(state))) {
       return terminalize({
         ...state,
-        status: 'blocked',
+        status: hardStop.hardStopClass === 'human_decision_required' ? 'human_gate' : 'blocked',
         current_role: null,
         blocked_reason: hardStop.blockedReason,
+        hard_stop_class: hardStop.hardStopClass,
+        typed_blocker_refs: hardStop.typedBlockerRefs,
+        human_gate_refs: hardStop.humanGateRefs,
+        source_attempt_ref: hardStop.sourceAttemptRef ?? (
+          state.attempts.at(-1)?.stage_attempt_id
+            ? `opl://stage_attempts/${state.attempts.at(-1)!.stage_attempt_id}`
+            : null
+        ),
         updated_at: nowIso(),
       });
     }
@@ -1286,6 +1384,10 @@ export async function StageRunWorkflow(
           status: 'blocked',
           current_role: null,
           blocked_reason: 'stage_quality_failed_without_consumable_artifact',
+          hard_stop_class: 'zero_consumable_artifact',
+          source_attempt_ref: state.attempts.at(-1)?.stage_attempt_id
+            ? `opl://stage_attempts/${state.attempts.at(-1)!.stage_attempt_id}`
+            : null,
           updated_at: nowIso(),
         });
   }

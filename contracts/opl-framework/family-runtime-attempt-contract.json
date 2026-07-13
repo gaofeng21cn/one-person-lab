@@ -163,7 +163,7 @@
       "re_reviewer"
     ],
     "canonical_attempt_outcome_surface": "route_impact.stage_quality_cycle.outcome",
-    "canonical_attempt_outcome_required_for_completed_roles": [
+    "canonical_attempt_outcome_required_for_completed_formal_review_roles": [
       "reviewer",
       "re_reviewer"
     ],
@@ -178,6 +178,23 @@
       "blocked",
       "human_gate"
     ],
+    "non_hard_stop_review_required_fields": {
+      "reviewer": [
+        "findings"
+      ],
+      "re_reviewer": [
+        "finding_closures",
+        "repair_regressions",
+        "critical_new_findings",
+        "optional_observations"
+      ]
+    },
+    "hard_stop_review_required_fields": [
+      "blocked_reason",
+      "hard_stop_class",
+      "typed_blocker_ref_or_human_gate_ref"
+    ],
+    "hard_stop_re_review_closure_result_required": false,
     "attempt_verdict_field_forbidden": true,
     "review_receipt_verdict_generated_by_stage_run_controller": true,
     "fresh_execution_session_required_for_each_completed_attempt": true,
@@ -335,7 +352,8 @@
         "uri",
         "sha256",
         "ref",
-        "size_bytes"
+        "size_bytes",
+        "artifact_identity_receipt_ref"
       ],
       "unknown_fields_allowed": false,
       "string_fields_require_nonempty_values": true,

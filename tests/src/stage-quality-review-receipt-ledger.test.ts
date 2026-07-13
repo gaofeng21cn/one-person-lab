@@ -249,6 +249,8 @@ test('ledger accepts only repairer(round n) -> re_reviewer(round n) for re-revie
     });
     assert.equal(receipt.verdict, 'quality_debt');
     assert.deepEqual(receipt.reviewed_artifact_refs, ['artifact:document-v2']);
+    assert.match(String(receipt.finding_lineage.repair_map_sha256), /^sha256:[a-f0-9]{64}$/);
+    assert.match(String(receipt.finding_lineage.re_review_result_sha256), /^sha256:[a-f0-9]{64}$/);
   } finally {
     db.close();
   }
@@ -546,6 +548,8 @@ test('ledger validates re-review hard stop before requiring finding closure', ()
       verdict: 'hard_stop',
     });
     assert.equal(receipt.verdict, 'hard_stop');
+    assert.match(String(receipt.finding_lineage.repair_map_sha256), /^sha256:[a-f0-9]{64}$/);
+    assert.equal(receipt.finding_lineage.re_review_result_sha256, null);
   } finally {
     db.close();
   }
@@ -585,6 +589,91 @@ test('ledger rejects re-review without exact persisted prior-finding repair line
     }), /context manifest repair_map_refs must exactly match the Attempt lineage/);
   } finally {
     db.close();
+  }
+});
+
+test('ledger rejects a context manifest ref or body that no longer binds exact persisted bytes', () => {
+  const mutations = [
+    {
+      name: 'ref',
+      apply(db: DatabaseSync, reviewerId: string) {
+        db.prepare('UPDATE stage_attempts SET context_manifest_ref = ? WHERE stage_attempt_id = ?')
+          .run('opl://stage-quality-context/ctx_tampered', reviewerId);
+      },
+    },
+    {
+      name: 'body',
+      apply(db: DatabaseSync, reviewerId: string) {
+        const row = db.prepare('SELECT context_manifest_json FROM stage_attempts WHERE stage_attempt_id = ?')
+          .get(reviewerId) as { context_manifest_json: string };
+        const manifest = JSON.parse(row.context_manifest_json) as Record<string, unknown>;
+        db.prepare('UPDATE stage_attempts SET context_manifest_json = ? WHERE stage_attempt_id = ?')
+          .run(JSON.stringify({ ...manifest, tampered_binding: true }), reviewerId);
+      },
+    },
+  ];
+  for (const mutation of mutations) {
+    const db = new DatabaseSync(':memory:');
+    try {
+      const pair = validInitialReviewPair(db);
+      mutation.apply(db, pair.reviewer.stage_attempt_id);
+      assert.throws(
+        () => materializeInitialReceipt(db, pair),
+        (error) => error instanceof FrameworkContractError
+          && /context manifest ref must bind the exact persisted manifest body/.test(error.message),
+        mutation.name,
+      );
+    } finally {
+      db.close();
+    }
+  }
+});
+
+test('ledger rejects repairer and Re-reviewer finding or repair-map body drift', () => {
+  const mutations = [
+    {
+      name: 'finding body',
+      apply(db: DatabaseSync, repairerId: string) {
+        const row = db.prepare('SELECT quality_context_json FROM stage_attempts WHERE stage_attempt_id = ?')
+          .get(repairerId) as { quality_context_json: string };
+        const context = JSON.parse(row.quality_context_json) as Record<string, any>;
+        context.findings[0].repair_expectation = 'Tampered repair expectation.';
+        db.prepare('UPDATE stage_attempts SET quality_context_json = ? WHERE stage_attempt_id = ?')
+          .run(JSON.stringify(context), repairerId);
+      },
+      message: /share the exact persisted finding bodies/,
+    },
+    {
+      name: 'repair-map body',
+      apply(db: DatabaseSync, repairerId: string) {
+        const row = db.prepare('SELECT route_impact_json FROM stage_attempts WHERE stage_attempt_id = ?')
+          .get(repairerId) as { route_impact_json: string };
+        const routeImpact = JSON.parse(row.route_impact_json) as Record<string, any>;
+        routeImpact.stage_quality_cycle.repair_map[0].repair_evidence_refs = ['evidence:tampered-repair'];
+        db.prepare('UPDATE stage_attempts SET route_impact_json = ? WHERE stage_attempt_id = ?')
+          .run(JSON.stringify(routeImpact), repairerId);
+      },
+      message: /repair_map must exactly match the persisted repairer output/,
+    },
+  ];
+  for (const mutation of mutations) {
+    const db = new DatabaseSync(':memory:');
+    try {
+      const { repairer, reReviewer } = validReReviewPair(db);
+      mutation.apply(db, repairer.stage_attempt_id);
+      assert.throws(
+        () => materializePersistedStageReviewReceipt(db, {
+          producerAttemptId: repairer.stage_attempt_id,
+          reviewerAttemptId: reReviewer.stage_attempt_id,
+          rubricRefs,
+          verdict: 'quality_debt',
+        }),
+        (error) => error instanceof FrameworkContractError && mutation.message.test(error.message),
+        mutation.name,
+      );
+    } finally {
+      db.close();
+    }
   }
 });
 

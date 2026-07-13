@@ -35,7 +35,10 @@ import {
   runAgentStageRunner,
 } from './family-runtime-codex-stage-runner.ts';
 import { codexActivityEventForTemporalHistory } from './family-runtime-temporal-history-summary.ts';
-import { isRuntimeHardStopReason } from '../../kernel/progress-hard-stop-policy.ts';
+import {
+  isRuntimeHardStopReason,
+  runtimeHardStopClassForReason,
+} from '../../kernel/progress-hard-stop-policy.ts';
 import { buildStageReviewContextManifest } from '../stagecraft/index.ts';
 import { launchRegisteredStageRun } from './family-runtime-stage-run-launch.ts';
 import { recordStageRunClosed } from './family-runtime-stage-run-launch-registry.ts';
@@ -470,6 +473,7 @@ function providerRuntimeBlockerCloseout(input: {
   if (!input.providerBlockerReason) {
     return null;
   }
+  const hardStopClass = runtimeHardStopClassForReason(input.providerBlockerReason);
   const blockerRef = `opl://stage-attempts/${
     encodeURIComponent(input.stageAttemptId)
   }/runtime-blockers/${encodeURIComponent(input.providerBlockerReason)}`;
@@ -498,6 +502,7 @@ function providerRuntimeBlockerCloseout(input: {
     route_impact: {
       ...input.routeImpact,
       provider_blocker_reason: input.providerBlockerReason,
+      ...(hardStopClass ? { hard_stop_class: hardStopClass } : {}),
       provider_blocker_surface: 'codex_stage_activity.process_output_summary',
       runtime_blocker_ref: blockerRef,
       runtime_blocker_owner: 'one-person-lab',

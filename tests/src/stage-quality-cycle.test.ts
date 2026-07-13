@@ -114,6 +114,15 @@ test('official quality profile is explicit without adding per-agent registry pol
   assert.deepEqual(contract.stage_attempt_roles, ['producer', 'reviewer', 'repairer', 're_reviewer']);
   assert.deepEqual(contract.attempt_outcome_contract.canonical_values, STAGE_QUALITY_OUTCOMES);
   assert.equal(contract.attempt_outcome_contract.attempt_verdict_field_forbidden, true);
+  assert.deepEqual(
+    contract.attempt_outcome_contract.role_required_fields.re_reviewer,
+    ['outcome'],
+  );
+  assert.deepEqual(
+    contract.attempt_outcome_contract.review_outcome_dependent_fields.non_hard_stop_re_reviewer,
+    ['finding_closures', 'repair_regressions', 'critical_new_findings', 'optional_observations'],
+  );
+  assert.equal(contract.attempt_outcome_contract.hard_stop_review_must_not_fabricate_finding_closure_result, true);
   assert.equal(contract.stage_run_controller.maximum_attempt_instances, 8);
   assert.equal(contract.cross_stage_route_selection.primary_only_decisive_attempt_role, 'producer');
   assert.deepEqual(
@@ -236,6 +245,86 @@ test('formal review rejects shared provider sessions even when the same model is
     },
   }), (error) => error instanceof FrameworkContractError
     && /new provider session/.test(error.message));
+});
+
+function reviewReceipt(overrides: Record<string, unknown> = {}) {
+  return {
+    surface_kind: 'opl_stage_review_receipt',
+    version: 'stage-review-receipt.v1',
+    stage_run_id: 'stage-run:receipt-runtime',
+    quality_cycle_id: 'quality-cycle:receipt-runtime',
+    producer_attempt_ref: 'opl://stage_attempts/producer',
+    reviewer_attempt_ref: 'opl://stage_attempts/reviewer',
+    producer_session_ref: 'codex://threads/producer',
+    reviewer_session_ref: 'codex://threads/reviewer',
+    no_context_inheritance: true,
+    reviewed_artifact_refs: ['artifact:reviewed'],
+    reviewed_artifact_hashes: ['sha256:reviewed'],
+    rubric_refs: ['rubric:quality'],
+    verdict: 'pass',
+    finding_lineage: {
+      review_kind: 'initial_review',
+      finding_ids: [],
+      findings_sha256: `sha256:${'0'.repeat(64)}`,
+      repair_map_sha256: null,
+      re_review_result_sha256: null,
+    },
+    ...overrides,
+  } as any;
+}
+
+test('review receipt runtime rejects invalid identity, surface, verdict, and lineage digests', () => {
+  assert.doesNotThrow(() => validateIndependentStageReviewReceipt(reviewReceipt()));
+  const invalidCases = [
+    { overrides: { surface_kind: 'wrong' }, message: /surface kind and version/ },
+    { overrides: { version: 'wrong' }, message: /surface kind and version/ },
+    { overrides: { stage_run_id: '' }, message: /stage_run_id must be a non-empty string/ },
+    {
+      overrides: { reviewer_attempt_ref: 'opl://stage_attempts/producer' },
+      message: /distinct producer and reviewer Attempts/,
+    },
+    { overrides: { verdict: 'blocked' }, message: /verdict is invalid/ },
+    {
+      overrides: {
+        finding_lineage: {
+          review_kind: 'initial_review',
+          finding_ids: [],
+          findings_sha256: null,
+          repair_map_sha256: null,
+          re_review_result_sha256: null,
+        },
+      },
+      message: /findings_sha256 must be a canonical SHA-256 digest/,
+    },
+  ];
+  for (const invalidCase of invalidCases) {
+    assert.throws(
+      () => validateIndependentStageReviewReceipt(reviewReceipt(invalidCase.overrides)),
+      (error) => error instanceof FrameworkContractError && invalidCase.message.test(error.message),
+    );
+  }
+});
+
+test('re-review receipt binds a result digest only for non-hard-stop outcomes', () => {
+  const findingLineage = {
+    review_kind: 'finding_closure_review',
+    finding_ids: ['finding:required'],
+    findings_sha256: `sha256:${'1'.repeat(64)}`,
+    repair_map_sha256: `sha256:${'2'.repeat(64)}`,
+    re_review_result_sha256: `sha256:${'3'.repeat(64)}`,
+  };
+  assert.doesNotThrow(() => validateIndependentStageReviewReceipt(reviewReceipt({ finding_lineage: findingLineage })));
+  assert.throws(() => validateIndependentStageReviewReceipt(reviewReceipt({
+    finding_lineage: { ...findingLineage, re_review_result_sha256: null },
+  })), /Non-hard-stop finding-closure Review receipt requires/);
+  assert.doesNotThrow(() => validateIndependentStageReviewReceipt(reviewReceipt({
+    verdict: 'hard_stop',
+    finding_lineage: { ...findingLineage, re_review_result_sha256: null },
+  })));
+  assert.throws(() => validateIndependentStageReviewReceipt(reviewReceipt({
+    verdict: 'hard_stop',
+    finding_lineage: findingLineage,
+  })), /Hard-stop Re-review receipt cannot bind/);
 });
 
 test('quality cycle counts repair plus fresh re-review rounds and carries debt after round three', () => {
@@ -469,9 +558,34 @@ test('formal reviewer prompt binds isolated context and exact artifact identity'
   assert.match(prompt, /blocked or human_gate reviewer outcome must return blocked_reason, a canonical hard_stop_class/);
   assert.match(prompt, /stage_route_contract is controller-owned validation metadata/);
   assert.match(prompt, /stage_quality_cycle\.outcome, with exactly one of: pass, repair_required, quality_debt, blocked, human_gate/);
-  assert.match(prompt, /Required route_impact\.stage_quality_cycle fields for reviewer: outcome, findings/);
+  assert.match(prompt, /For a non-hard-stop reviewer outcome, required route_impact\.stage_quality_cycle fields are outcome and findings/);
+  assert.match(prompt, /or fabricate findings, finding closures, or a Re-review result/);
   assert.match(prompt, /Review receipt verdict is generated by the OPL StageRun controller/);
   assert.match(prompt, /cannot write a Stage current pointer or materialize a Stage transition/);
+});
+
+test('Re-review prompt requires closure fields only for non-hard-stop outcomes', () => {
+  const activity = buildCodexStageActivityInput({
+    attempt: {
+      stage_attempt_id: 'sat_re_review_prompt',
+      stage_run_id: 'stage-run:re-review-prompt',
+      quality_cycle_id: 'quality-cycle:re-review-prompt',
+      attempt_role: 're_reviewer',
+      quality_round_index: 1,
+      stage_id: 'review',
+      workspace_locator: { workspace_root: '/tmp/re-review-prompt' },
+      checkpoint_refs: ['packet:re-review'],
+      input_artifact_refs: ['artifact:repaired'],
+      reviewed_artifact_hashes: ['sha256:repaired'],
+      prior_finding_refs: ['finding:required'],
+      repair_map_refs: ['repair-map:finding:required'],
+      context_manifest_ref: 'manifest:re-review-context',
+      no_context_inheritance: true,
+    },
+  });
+  const prompt = activity.runner_status.command_preview.join('\n');
+  assert.match(prompt, /For a non-hard-stop re_reviewer outcome, required route_impact\.stage_quality_cycle fields are outcome, finding_closures/);
+  assert.match(prompt, /For outcome=blocked or outcome=human_gate, return only outcome plus the required hard-stop evidence; do not fabricate a finding-closure result/);
 });
 
 test('every quality-cycle role launches through a fresh codex exec command', () => {
@@ -967,6 +1081,10 @@ test('Temporal StageRun terminal state idempotently refreshes the SQLite quality
       artifact_identity_receipt_refs: ['artifact:deck-v4'],
       quality_debt_refs: ['quality-debt:finding:visual-clipping'],
       route_quality_debt_refs: [],
+      hard_stop_class: null,
+      typed_blocker_refs: [],
+      human_gate_refs: [],
+      source_attempt_ref: null,
       decisive_attempt_role: 're_reviewer',
       decisive_attempt_ref: 'opl://stage_attempts/sat-rereview-3',
       selected_stage_route: {

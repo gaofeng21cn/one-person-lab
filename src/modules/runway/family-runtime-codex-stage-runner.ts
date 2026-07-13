@@ -2,6 +2,7 @@ import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { preflightDomainWorkspaceCheckoutCurrentness } from './family-runtime-checkout-currentness.ts';
 import {
   buildCodexExecArgs,
+  buildCodexExecResumeArgs,
   parseCodexExecOutput,
   recoverCodexExecOutputFromSession,
   runCodexCommandStreaming,
@@ -40,12 +41,14 @@ import {
   normalizeCodexStageRunnerMode,
   resolvedStagePacketRef,
   runnerPromptForExecution,
+  protocolCloseoutResumePrompt,
   stageIdFromAttempt,
   workspaceRootFromAttempt,
   checkpointRefsFromAttempt,
   type CodexStageRunnerInput,
   type RunnerEventSummary,
 } from './family-runtime-codex-stage-runner-parts/input-prompt.ts';
+import { verifyStageQualityCloseoutArtifactIdentity } from './family-runtime-codex-stage-runner-parts/artifact-identity-verification.ts';
 import {
   parseCloseoutFromCodexMessages,
   recoverCloseoutFromCodexSessionWithRetry,
@@ -365,10 +368,24 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
       },
     );
   }
-  const checkoutCurrentnessPreflight = preflightDomainWorkspaceCheckoutCurrentness({
-    domainId: input.attempt.domain_id,
-    workspaceLocator: isRecord(input.attempt.workspace_locator) ? input.attempt.workspace_locator : null,
-  });
+  const workspaceLocator = isRecord(input.attempt.workspace_locator) ? input.attempt.workspace_locator : {};
+  const stageRunCurrentnessAdmission = isRecord(workspaceLocator.stage_run_currentness_admission)
+    ? workspaceLocator.stage_run_currentness_admission
+    : null;
+  const inheritedCurrentnessAdmissionAccepted = Boolean(
+    optionalString(input.attempt.stage_run_id)
+    && stageRunCurrentnessAdmission?.stage_run_id === optionalString(input.attempt.stage_run_id)
+    && stageRunCurrentnessAdmission?.child_attempts_inherit_admission === true
+    && ['current', 'fast_forwarded', 'not_git_checkout'].includes(
+      optionalString(stageRunCurrentnessAdmission.status) ?? '',
+    ),
+  );
+  const checkoutCurrentnessPreflight = inheritedCurrentnessAdmissionAccepted
+    ? null
+    : preflightDomainWorkspaceCheckoutCurrentness({
+        domainId: input.attempt.domain_id,
+        workspaceLocator,
+      });
   if (checkoutCurrentnessPreflight?.status === 'blocked') {
     throw new FrameworkContractError(
       'contract_shape_invalid',
@@ -509,6 +526,10 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   let sessionUsageRef: CodexSessionUsageRef | null = null;
   let domainReceiptRecoveryStatus: string | null = null;
   let domainReceiptRecoveryRef: string | null = null;
+  let protocolCloseoutResumeStatus: 'not_applicable' | 'completed' | 'failed' = 'not_applicable';
+  let protocolCloseoutResumeThreadId: string | null = null;
+  let protocolCloseoutResumeResult: CodexCommandResult | null = null;
+  let protocolCloseoutResumePacketObserved = false;
   let closeoutRejection: ReturnType<typeof validateCloseoutPacketForAttempt>['rejection'] = null;
   if (
     !runInSandbox
@@ -534,6 +555,66 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   if (!runInSandbox && !sessionUsageRef) {
     sessionUsageRef = extractCodexSessionUsageRef(recoverCodexExecOutputFromSession(parsed.threadId));
   }
+  const attemptRole = optionalString(input.attempt.attempt_role);
+  if (
+    !runInSandbox
+    && !closeoutPacket
+    && parsed.threadId
+    && ['producer', 'reviewer', 'repairer', 're_reviewer'].includes(attemptRole ?? '')
+    && result.timeoutReason !== 'unsupported_tool_protocol'
+    && result.timeoutReason !== 'activity_cancelled'
+  ) {
+    const resumeCapture = createCodexCloseoutCapture();
+    protocolCloseoutResumeStatus = 'failed';
+    protocolCloseoutResumeThreadId = parsed.threadId;
+    runnerEvents.push({ event_kind: 'protocol_closeout_resume.started', value: parsed.threadId });
+    input.onRunnerProgress?.({ event_kind: 'protocol_closeout_resume.started', value: parsed.threadId });
+    try {
+      const resumeArgs = buildCodexExecResumeArgs(
+        parsed.threadId,
+        protocolCloseoutResumePrompt(input.attempt),
+        {
+          ...codexCloseoutCaptureExecOptions({
+            codexExecOptions,
+            outputLastMessagePath: resumeCapture.outputLastMessagePath,
+          }),
+          json: true,
+          sandboxMode: 'read-only',
+        },
+      );
+      protocolCloseoutResumeResult = await runCodexCommandStreaming(resumeArgs, {
+        cwd: workspaceRoot,
+        env: { ...input.env, ...providerEnv },
+        timeoutMs: normalizeTimeoutMs(process.env.OPL_CODEX_PROTOCOL_CLOSEOUT_RESUME_TIMEOUT_MS, 30_000),
+        noOutputTimeoutMs,
+        commandNoProgressTimeoutMs,
+        signal: input.signal,
+        onStdoutEvent(event) {
+          const summary = eventSummary(event);
+          runnerEvents.push(summary);
+          input.onRunnerProgress?.(summary);
+        },
+      });
+      const resumed = parseCodexExecOutput(protocolCloseoutResumeResult.stdout);
+      if (resumed.threadId && resumed.threadId !== parsed.threadId) {
+        throw new FrameworkContractError(
+          'contract_shape_invalid',
+          'Protocol closeout resume must remain in the original Attempt thread.',
+          {
+            hard_stop_class: 'stale_or_mismatched_stage_identity',
+            blocked_reason: 'protocol_closeout_resume_session_identity_mismatch',
+            expected_thread_id: parsed.threadId,
+            actual_thread_id: resumed.threadId,
+          },
+        );
+      }
+      const resumedCapture = parseCapturedCloseoutMessage(resumeCapture.outputLastMessagePath);
+      closeoutPacket = parseCloseoutFromCodexMessages(resumed.messages) ?? resumedCapture.closeoutPacket;
+      protocolCloseoutResumePacketObserved = Boolean(closeoutPacket);
+    } finally {
+      resumeCapture.cleanup();
+    }
+  }
   if (!runInSandbox && !closeoutPacket && result.timeoutReason !== 'unsupported_tool_protocol') {
     const domainReceiptRecovery = recoverDefaultExecutorDomainReceiptCloseout({
       workspaceRoot,
@@ -550,6 +631,21 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   });
   closeoutPacket = validatedCloseout.closeoutPacket;
   closeoutRejection = validatedCloseout.rejection;
+  if (protocolCloseoutResumeStatus !== 'not_applicable') {
+    protocolCloseoutResumeStatus = protocolCloseoutResumePacketObserved && closeoutPacket
+      ? 'completed'
+      : 'failed';
+    runnerEvents.push({ event_kind: 'protocol_closeout_resume.completed', value: protocolCloseoutResumeStatus });
+    input.onRunnerProgress?.({
+      event_kind: 'protocol_closeout_resume.completed',
+      value: protocolCloseoutResumeStatus,
+    });
+  }
+  closeoutPacket = verifyStageQualityCloseoutArtifactIdentity({
+    closeoutPacket,
+    attempt: input.attempt,
+    workspaceRoot,
+  });
   const rawStageArtifact = persistRawStageOutput({
     attempt: input.attempt,
     content: capturedLastMessage.message ?? parsed.finalMessage ?? recoveredRawMessage,
@@ -600,7 +696,13 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
     });
   }
   const effectiveBlockedReason = rawStageArtifact ? null : primaryBlockedReason;
-  const costSummary = codexStageRunnerCostSummaryFrom(result.stdout, runnerMode, sessionUsageRef);
+  const combinedStdout = [result.stdout, protocolCloseoutResumeResult?.stdout]
+    .filter((entry): entry is string => Boolean(entry))
+    .join('\n');
+  const combinedStderr = [result.stderr, protocolCloseoutResumeResult?.stderr]
+    .filter((entry): entry is string => Boolean(entry))
+    .join('\n');
+  const costSummary = codexStageRunnerCostSummaryFrom(combinedStdout, runnerMode, sessionUsageRef);
   closeoutPacket = withCodexTokenAccounting(closeoutPacket, costSummary);
   const progressCloseoutProjection = buildProgressCloseoutProjection({
     attempt: input.attempt,
@@ -630,8 +732,8 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
       liveProcessStarted: true,
       processId,
       exitCode: result.exitCode,
-      stdoutBytes: Buffer.byteLength(result.stdout, 'utf8'),
-      stderrBytes: Buffer.byteLength(result.stderr, 'utf8'),
+      stdoutBytes: Buffer.byteLength(combinedStdout, 'utf8'),
+      stderrBytes: Buffer.byteLength(combinedStderr, 'utf8'),
       runnerEvents,
       threadId: parsed.threadId,
       timeoutMs,
@@ -706,6 +808,19 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
         ? {
             domain_receipt_recovery_status: domainReceiptRecoveryStatus,
             ...(domainReceiptRecoveryRef ? { domain_receipt_recovery_ref: domainReceiptRecoveryRef } : {}),
+          }
+        : {}),
+      ...(protocolCloseoutResumeStatus !== 'not_applicable' && protocolCloseoutResumeThreadId
+        ? {
+            protocol_closeout_resume: {
+              status: protocolCloseoutResumeStatus,
+              same_thread: true,
+              thread_id: protocolCloseoutResumeThreadId,
+              creates_stage_attempt: false,
+              counts_as_review: false,
+              consumes_quality_budget: false,
+              may_change_artifact_bytes: false,
+            },
           }
         : {}),
       ...(closeoutRejection
