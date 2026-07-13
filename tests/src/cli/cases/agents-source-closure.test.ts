@@ -235,6 +235,102 @@ test('agents source-closure resolves Python pyproject scripts and relative calls
   assert.equal(report.reachable_symbols.some((symbol: { symbol: string }) => symbol.symbol === 'handle'), true);
 });
 
+test('agents source-closure resolves relative imports from package init modules', () => {
+  const repoDir = buildRepo();
+  writeSource(repoDir, 'pyproject.toml', [
+    '[project]',
+    'name = "sample-agent"',
+    'version = "0.0.0"',
+    '[project.scripts]',
+    'sample-agent = "sample.nested:main"',
+    '',
+  ].join('\n'));
+  writeSource(repoDir, 'python/sample/nested/__init__.py', [
+    'from .handler import handle',
+    'def main():',
+    '    return handle()',
+    '',
+  ].join('\n'));
+  writeSource(repoDir, 'python/sample/nested/handler.py', [
+    'def handle():',
+    '    return "ok"',
+    '',
+  ].join('\n'));
+
+  const report = runSourceClosure(repoDir).reports[0];
+
+  assert.equal(report.status, 'passed');
+  assert.equal(
+    report.unresolved_edges.some((edge: { reason: string }) => edge.reason === 'relative_import_unresolved'),
+    false,
+  );
+  assert.equal(report.reachable_symbols.some((symbol: { symbol: string }) => symbol.symbol === 'handle'), true);
+});
+
+test('agents source-closure resolves relative submodules in namespace packages', () => {
+  const repoDir = buildRepo();
+  writeSource(repoDir, 'pyproject.toml', [
+    '[project]',
+    'name = "sample-agent"',
+    'version = "0.0.0"',
+    '[project.scripts]',
+    'sample-agent = "sample.namespace.entry:main"',
+    '',
+  ].join('\n'));
+  writeSource(repoDir, 'python/sample/namespace/entry.py', [
+    'from . import handler',
+    'def main():',
+    '    return handler.handle()',
+    '',
+  ].join('\n'));
+  writeSource(repoDir, 'python/sample/namespace/handler.py', [
+    'def handle():',
+    '    return "ok"',
+    '',
+  ].join('\n'));
+
+  const report = runSourceClosure(repoDir).reports[0];
+
+  assert.equal(report.status, 'passed');
+  assert.equal(
+    report.unresolved_edges.some((edge: { reason: string }) => edge.reason === 'relative_import_unresolved'),
+    false,
+  );
+  assert.equal(report.reachable_symbols.some((symbol: { symbol: string }) => symbol.symbol === 'handle'), true);
+});
+
+test('agents source-closure treats literal dynamic imports and attribute reads as static context', () => {
+  const repoDir = buildRepo();
+  writeSource(repoDir, 'pyproject.toml', [
+    '[project]',
+    'name = "sample-agent"',
+    'version = "0.0.0"',
+    '[project.scripts]',
+    'sample-agent = "sample.literal_import:main"',
+    '',
+  ].join('\n'));
+  writeSource(repoDir, 'python/sample/literal_import.py', [
+    'from importlib import import_module',
+    'def main(value):',
+    '    import_module("sample.helper")',
+    '    return getattr(value, "name", None)',
+    '',
+  ].join('\n'));
+  writeSource(repoDir, 'python/sample/helper.py', 'VALUE = "ok"\n');
+
+  const report = runSourceClosure(repoDir).reports[0];
+
+  assert.equal(report.status, 'passed');
+  assert.deepEqual(report.unresolved_edges, []);
+  assert.equal(
+    report.reachable_symbols.some(
+      (symbol: { file: string; symbol: string }) =>
+        symbol.file === 'python/sample/helper.py' && symbol.symbol === '<module>',
+    ),
+    true,
+  );
+});
+
 test('Python source closure does not buffer helper stdout', () => {
   const repoDir = buildRepo();
   writeSource(repoDir, 'python/sample/cli.py', 'def main():\n    return "ok"\n');
@@ -609,6 +705,42 @@ test('agents source-closure does not classify readonly os.open or ordinary objec
 
   assert.equal(report.status, 'passed');
   assert.deepEqual(report.observed_effects, []);
+});
+
+test('agents source-closure distinguishes read-only open APIs from explicit Path writes', () => {
+  const repoDir = buildRepo();
+  writeSource(repoDir, 'pyproject.toml', [
+    '[project]',
+    'name = "sample-agent"',
+    'version = "0.0.0"',
+    '[project.scripts]',
+    'sample-agent = "sample.open_modes:main"',
+    '',
+  ].join('\n'));
+  writeSource(repoDir, 'python/sample/open_modes.py', [
+    'import tarfile',
+    'from PIL import Image',
+    'def main(path):',
+    '    path.open(newline="", encoding="utf-8")',
+    '    Image.open(path)',
+    '    tarfile.open(path)',
+    '    path.open("wb")',
+    '    tarfile.open(path, "w")',
+    '',
+  ].join('\n'));
+
+  const report = runSourceClosure(repoDir).reports[0];
+  const openEffects = report.observed_effects.filter(
+    (effect: { effect_kind: string; callee: string }) => effect.effect_kind === 'filesystem_write',
+  );
+
+  assert.equal(report.status, 'blocked');
+  assert.deepEqual(
+    openEffects.map((effect: { callee: string }) => effect.callee),
+    ['path.open', 'tarfile.open'],
+  );
+  assert.equal(openEffects[0].line, 7);
+  assert.equal(openEffects[1].line, 8);
 });
 
 test('agents source-closure admits exact native-helper command and artifact slots without executor authority', () => {

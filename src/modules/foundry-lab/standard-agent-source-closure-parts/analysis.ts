@@ -126,12 +126,24 @@ function openIsWrite(call: SourceClosureObservedCall) {
     }
     return true;
   }
+  if (call.callee === 'PIL.Image.open') {
+    return false;
+  }
+  if (call.callee === 'tarfile.open') {
+    const keywordMode = call.literal_arguments.find((argument) => argument.startsWith('mode='));
+    const positionalMode = call.literal_arguments[1];
+    const mode = keywordMode?.slice('mode='.length)
+      ?? (positionalMode?.includes('=') ? undefined : positionalMode);
+    return mode === '<dynamic>' || (mode !== undefined && /[wax+]/i.test(mode));
+  }
   const keywordMode = call.literal_arguments.find((argument) => argument.startsWith('mode='));
   const positionalModeIndex = /(?:^|\.)(?:fs|fsp|promises)\.open$/.test(call.callee)
     || call.callee === 'open'
     ? 1
     : 0;
-  const mode = keywordMode?.slice('mode='.length) ?? call.literal_arguments[positionalModeIndex];
+  const positionalMode = call.literal_arguments[positionalModeIndex];
+  const mode = keywordMode?.slice('mode='.length)
+    ?? (positionalMode?.includes('=') ? undefined : positionalMode);
   if (mode === undefined) {
     return false;
   }
