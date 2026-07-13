@@ -377,6 +377,7 @@ export async function buildManagedUpdateKernelProjection(
   if (shouldBuildComponent(requested, 'opl_base')) {
     components.push(buildRuntimeSubstrateComponent(buildManagedUpdateRuntimeEnvironment(input.operation), channel, {
       allowFrameworkChannelLookup: input.operation === 'check' || input.operation === 'plan',
+      refreshManagedDependencyLatest: input.operation !== 'status',
     }));
   }
   if (shouldBuildComponent(requested, 'opl_packages')) {

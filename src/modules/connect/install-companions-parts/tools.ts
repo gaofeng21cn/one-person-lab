@@ -5,18 +5,32 @@ import { spawnSync } from 'node:child_process';
 
 import { resolveOplStatePaths } from '../../../kernel/runtime-state-paths.ts';
 
-export type OplCompanionToolActionStatus = 'ready' | 'installed' | 'missing' | 'failed';
+export type OplCompanionToolActionStatus = 'ready' | 'installed' | 'updated' | 'missing' | 'failed';
 export type OplCompanionToolId = 'officecli' | 'mineru-open-api';
+export type OplCompanionToolCurrentness = 'current' | 'update_available' | 'unknown' | 'missing';
 
 export type OplCompanionToolSyncItem = {
   tool_id: OplCompanionToolId;
   binary_path: string | null;
   version: string | null;
   status: OplCompanionToolActionStatus;
-  action: 'none' | 'install';
+  action: 'none' | 'install' | 'update';
   note: string | null;
   ownership: 'opl_managed' | 'app_bundled' | 'user_managed' | 'global_path' | 'missing';
   content_sha256: string | null;
+  latest_version: string | null;
+  currentness: OplCompanionToolCurrentness;
+  latest_version_source: 'github_tags' | 'npm_registry' | 'configured' | null;
+};
+
+type ParsedVersion = {
+  version: string;
+  parts: [number, number, number];
+};
+
+type LatestToolVersion = {
+  version: string | null;
+  source: OplCompanionToolSyncItem['latest_version_source'];
 };
 
 function managedToolHome() {
@@ -25,6 +39,25 @@ function managedToolHome() {
 
 function managedToolReceiptPath(toolId: OplCompanionToolId) {
   return path.join(managedToolHome(), 'receipts', `${toolId}.json`);
+}
+
+function readLatestToolVersionReceipt(toolId: OplCompanionToolId): LatestToolVersion | null {
+  const receiptPath = managedToolReceiptPath(toolId);
+  if (!fs.existsSync(receiptPath)) return null;
+  try {
+    const payload = JSON.parse(fs.readFileSync(receiptPath, 'utf8')) as {
+      latest_version?: unknown;
+      latest_version_source?: unknown;
+    };
+    const version = typeof payload.latest_version === 'string' ? payload.latest_version : null;
+    const source = payload.latest_version_source;
+    return {
+      version,
+      source: source === 'github_tags' || source === 'npm_registry' || source === 'configured' ? source : null,
+    };
+  } catch {
+    return null;
+  }
 }
 
 function binarySha256(binaryPath: string) {
@@ -67,16 +100,92 @@ function findExecutableInPath(command: string) {
   return null;
 }
 
-function runCommandForOutput(command: string, args: string[]) {
+function runCommandForOutput(command: string, args: string[], timeoutMs = 5_000) {
   const result = spawnSync(command, args, {
     encoding: 'utf8',
     env: process.env,
     stdio: 'pipe',
+    timeout: timeoutMs,
   });
   if (result.status !== 0) {
     return null;
   }
   return [result.stdout, result.stderr].filter(Boolean).join('\n').trim() || null;
+}
+
+function parseVersion(value: string | null | undefined): ParsedVersion | null {
+  const match = value?.match(/(?:^|[^0-9])(\d+)\.(\d+)\.(\d+)(?:[^0-9]|$)/);
+  if (!match) return null;
+  return {
+    version: `${Number(match[1])}.${Number(match[2])}.${Number(match[3])}`,
+    parts: [Number(match[1]), Number(match[2]), Number(match[3])],
+  };
+}
+
+function compareVersions(left: ParsedVersion, right: ParsedVersion) {
+  for (let index = 0; index < left.parts.length; index += 1) {
+    const difference = left.parts[index] - right.parts[index];
+    if (difference !== 0) return difference;
+  }
+  return 0;
+}
+
+function maxVersion(values: string[]) {
+  return values
+    .map((value) => parseVersion(value))
+    .filter((value): value is ParsedVersion => Boolean(value))
+    .sort(compareVersions)
+    .at(-1)?.version ?? null;
+}
+
+function configuredLatestVersion(toolId: OplCompanionToolId) {
+  const key = toolId === 'officecli'
+    ? 'OPL_OFFICECLI_LATEST_VERSION'
+    : 'OPL_MINERU_OPEN_API_LATEST_VERSION';
+  const value = process.env[key]?.trim();
+  return value ? parseVersion(value)?.version ?? value : null;
+}
+
+function resolveLatestToolVersion(toolId: OplCompanionToolId): LatestToolVersion {
+  const configured = configuredLatestVersion(toolId);
+  if (configured) return { version: configured, source: 'configured' };
+  if (process.env.OPL_COMPANION_SKIP_LATEST_LOOKUP === '1') {
+    return { version: null, source: null };
+  }
+  if (toolId === 'officecli') {
+    const output = runCommandForOutput(
+      'git',
+      ['ls-remote', '--tags', '--refs', process.env.OPL_OFFICECLI_REPO_URL?.trim() || 'https://github.com/iOfficeAI/OfficeCLI.git'],
+    );
+    return {
+      version: output ? maxVersion(output.split('\n').map((line) => line.split('refs/tags/')[1] ?? '')) : null,
+      source: output ? 'github_tags' : null,
+    };
+  }
+  const output = runCommandForOutput('npm', ['view', 'mineru-open-api', 'version', '--silent']);
+  return {
+    version: parseVersion(output)?.version ?? null,
+    source: output ? 'npm_registry' : null,
+  };
+}
+
+function withCurrentness(
+  tool: OplCompanionToolSyncItem,
+  latest: LatestToolVersion | null = null,
+): OplCompanionToolSyncItem {
+  if (!tool.binary_path) {
+    return { ...tool, latest_version: latest?.version ?? null, currentness: 'missing', latest_version_source: latest?.source ?? null };
+  }
+  const current = parseVersion(tool.version);
+  const target = parseVersion(latest?.version);
+  return {
+    ...tool,
+    latest_version: target?.version ?? latest?.version ?? null,
+    currentness: current && target
+      ? compareVersions(current, target) >= 0 ? 'current' : 'update_available'
+      : 'unknown',
+    latest_version_source: latest?.source ?? null,
+  };
 }
 
 function inspectToolBinary(
@@ -91,7 +200,7 @@ function inspectToolBinary(
   if (!version) {
     return null;
   }
-  return {
+  return withCurrentness({
     tool_id: toolId,
     binary_path: binaryPath,
     version,
@@ -100,7 +209,10 @@ function inspectToolBinary(
     note: null,
     ownership: pathOwnership(binaryPath),
     content_sha256: binarySha256(binaryPath),
-  };
+    latest_version: null,
+    currentness: 'unknown',
+    latest_version_source: null,
+  }, readLatestToolVersionReceipt(toolId));
 }
 
 function inspectOfficeCliBinary(binaryPath: string | null): OplCompanionToolSyncItem | null {
@@ -154,7 +266,7 @@ function buildOfficeCliInstallCommand() {
 
 function buildMineruOpenApiInstallCommand() {
   return process.env.OPL_MINERU_OPEN_API_INSTALL_COMMAND?.trim()
-    || 'npm install -g mineru-open-api';
+    || 'npm install -g mineru-open-api@latest';
 }
 
 function writeManagedToolReceipt(tool: OplCompanionToolSyncItem) {
@@ -166,13 +278,19 @@ function writeManagedToolReceipt(tool: OplCompanionToolSyncItem) {
     binary_path: tool.binary_path,
     version: tool.version,
     content_sha256: tool.content_sha256,
+    latest_version: tool.latest_version,
+    currentness: tool.currentness,
+    latest_version_source: tool.latest_version_source,
     ownership: tool.ownership,
     updated_at: new Date().toISOString(),
   }, null, 2)}\n`, 'utf8');
   return receiptPath;
 }
 
-function installOfficeCliTool(): OplCompanionToolSyncItem {
+function installOfficeCliTool(
+  action: 'install' | 'update' = 'install',
+  latest: LatestToolVersion | null = null,
+): OplCompanionToolSyncItem {
   const dependencyHome = managedToolHome();
   const localBin = path.join(dependencyHome, '.local', 'bin');
   fs.mkdirSync(localBin, { recursive: true });
@@ -184,18 +302,26 @@ function installOfficeCliTool(): OplCompanionToolSyncItem {
   });
   const installed = inspectOfficeCliBinary(path.join(localBin, 'officecli'));
   if (result.status === 0 && installed) {
-    const managed = { ...installed, status: 'installed' as const, action: 'install' as const, ownership: 'opl_managed' as const };
+    const managed = withCurrentness({
+      ...installed,
+      status: action === 'update' ? 'updated' as const : 'installed' as const,
+      action,
+      ownership: 'opl_managed' as const,
+    }, latest ?? resolveLatestToolVersion('officecli'));
     writeManagedToolReceipt(managed);
     return managed;
   }
   return {
-    tool_id: 'officecli', binary_path: null, version: null, status: 'failed', action: 'install',
+    tool_id: 'officecli', binary_path: null, version: null, status: 'failed', action,
     note: [result.stderr, result.stdout].filter(Boolean).join('\n').trim() || 'officecli install did not produce a runnable binary.',
-    ownership: 'missing', content_sha256: null,
+    ownership: 'missing', content_sha256: null, latest_version: null, currentness: 'missing', latest_version_source: null,
   };
 }
 
-function installMineruOpenApiTool(): OplCompanionToolSyncItem {
+function installMineruOpenApiTool(
+  action: 'install' | 'update' = 'install',
+  latest: LatestToolVersion | null = null,
+): OplCompanionToolSyncItem {
   const dependencyHome = managedToolHome();
   const localPrefix = path.join(dependencyHome, '.local');
   const localBin = path.join(localPrefix, 'bin');
@@ -208,14 +334,19 @@ function installMineruOpenApiTool(): OplCompanionToolSyncItem {
   });
   const installed = inspectMineruOpenApiBinary(path.join(localBin, 'mineru-open-api'));
   if (result.status === 0 && installed) {
-    const managed = { ...installed, status: 'installed' as const, action: 'install' as const, ownership: 'opl_managed' as const };
+    const managed = withCurrentness({
+      ...installed,
+      status: action === 'update' ? 'updated' as const : 'installed' as const,
+      action,
+      ownership: 'opl_managed' as const,
+    }, latest ?? resolveLatestToolVersion('mineru-open-api'));
     writeManagedToolReceipt(managed);
     return managed;
   }
   return {
-    tool_id: 'mineru-open-api', binary_path: null, version: null, status: 'failed', action: 'install',
+    tool_id: 'mineru-open-api', binary_path: null, version: null, status: 'failed', action,
     note: [result.stderr, result.stdout].filter(Boolean).join('\n').trim() || 'mineru-open-api install did not produce a runnable binary.',
-    ownership: 'missing', content_sha256: null,
+    ownership: 'missing', content_sha256: null, latest_version: null, currentness: 'missing', latest_version_source: null,
   };
 }
 
@@ -234,6 +365,9 @@ export function ensureOfficeCliTool(home: string): OplCompanionToolSyncItem {
       note: 'Remote companion install is disabled; officecli binary was not installed.',
       ownership: 'missing',
       content_sha256: null,
+      latest_version: null,
+      currentness: 'missing',
+      latest_version_source: null,
     };
   }
   return installOfficeCliTool();
@@ -254,9 +388,24 @@ export function ensureMineruOpenApiTool(home: string): OplCompanionToolSyncItem 
       note: 'Remote companion install is disabled; mineru-open-api binary was not installed.',
       ownership: 'missing',
       content_sha256: null,
+      latest_version: null,
+      currentness: 'missing',
+      latest_version_source: null,
     };
   }
   return installMineruOpenApiTool();
+}
+
+export function inspectManagedCompanionToolCurrentness(
+  home: string,
+  toolIds: OplCompanionToolId[] = ['officecli', 'mineru-open-api'],
+) {
+  return toolIds.map((toolId) => {
+    const current = toolId === 'officecli' ? resolveOfficeCliTool(home) : resolveMineruOpenApiTool(home);
+    return current?.ownership === 'opl_managed'
+      ? withCurrentness(current, resolveLatestToolVersion(toolId))
+      : current;
+  });
 }
 
 export function reconcileManagedCompanionTools(
@@ -295,10 +444,22 @@ export function reconcileManagedCompanionTools(
     if (current && current.ownership !== 'opl_managed') {
       return { ...current, note: `${current.ownership} dependency is detected but not overwritten by OPL Base.` };
     }
+    if (current?.ownership === 'opl_managed') {
+      const latest = resolveLatestToolVersion(toolId);
+      const inspected = withCurrentness(current, latest);
+      if (inspected.currentness !== 'update_available') {
+        writeManagedToolReceipt(inspected);
+        return inspected;
+      }
+      return toolId === 'officecli'
+        ? installOfficeCliTool('update', latest)
+        : installMineruOpenApiTool('update', latest);
+    }
     if (companionToolInstallDisabled()) {
       return current ?? {
         tool_id: toolId, binary_path: null, version: null, status: 'missing' as const, action: 'none' as const,
         note: 'Remote managed dependency update is disabled.', ownership: 'missing' as const, content_sha256: null,
+        latest_version: null, currentness: 'missing' as const, latest_version_source: null,
       };
     }
     return toolId === 'officecli' ? installOfficeCliTool() : installMineruOpenApiTool();

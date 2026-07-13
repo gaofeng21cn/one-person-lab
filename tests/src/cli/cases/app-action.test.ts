@@ -181,6 +181,41 @@ test('app action catalog exposes representative safe delegated action refs', () 
   }
 });
 
+test('App action catalog registers only verified external owner updates and executes the confirmation route as dry-run', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-external-owner-action-'));
+  const brew = path.join(root, 'bin', 'brew');
+  const codex = path.join(root, 'Cellar', 'codex', '0.1.0', 'bin', 'codex');
+  fs.mkdirSync(path.dirname(brew), { recursive: true });
+  fs.mkdirSync(path.dirname(codex), { recursive: true });
+  fs.writeFileSync(brew, [
+    '#!/usr/bin/env bash',
+    'if [ "$*" = "list --formula --versions codex" ]; then echo "codex 0.1.0"; fi',
+    '',
+  ].join('\n'), { mode: 0o755 });
+  fs.writeFileSync(codex, '#!/usr/bin/env bash\necho "codex-cli 0.1.0"\n', { mode: 0o755 });
+  const env = {
+    HOME: root,
+    OPL_STATE_DIR: path.join(root, 'state'),
+    OPL_HOMEBREW_BIN: brew,
+    OPL_CODEX_BIN: codex,
+    PATH: `${path.dirname(codex)}:/usr/bin:/bin`,
+  };
+  try {
+    const state = runCli(['app', 'state', '--profile', 'fast'], env) as any;
+    const action = state.app_state.actions.find((entry: any) => entry.action_id === 'external_codex_update_homebrew');
+    assert.equal(action.confirmation_required, true);
+    assert.equal(action.delegated_surface, 'brew upgrade codex');
+    const execution = runCli([
+      'app', 'action', 'execute', '--action', 'external_codex_update_homebrew', '--dry-run',
+    ], env) as any;
+    assert.equal(execution.app_action_execution.delegated_surface, 'brew upgrade codex');
+    assert.equal(execution.app_action_execution.result.external_dependency_update.status, 'dry_run');
+    assert.equal(execution.app_action_execution.result.external_dependency_update.auto_apply_allowed, false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('retired ScholarSkills App actions cannot execute through the generic action shell', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-action-retired-scholarskills-'));
   try {
