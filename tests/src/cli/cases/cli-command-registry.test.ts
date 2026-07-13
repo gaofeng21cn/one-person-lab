@@ -270,7 +270,7 @@ test('update commands parse registered options and reject cross-command options'
   try {
     const status = runCli(['update', 'status'], { OPL_STATE_DIR: stateRoot });
     assert.equal(status.managed_update.operation, 'status');
-    assert.equal(status.managed_update.requested_component_id, 'opl_base');
+    assert.equal(status.managed_update.requested_component_id, null);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
