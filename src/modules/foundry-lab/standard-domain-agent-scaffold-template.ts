@@ -43,6 +43,8 @@ export interface ScaffoldFile {
 }
 
 const STARTER_ACTION_ID = 'domain_intake_owner_handoff';
+const STARTER_HANDLER_REF = 'runtime/authority_functions/domain-intake-owner-handoff.ts';
+const STARTER_HANDLER_EXPORT = 'domainIntakeOwnerHandoff';
 
 function toolNamePrefix(domainId: string) {
   return domainId
@@ -85,7 +87,7 @@ function generatedSurfaceHandoffSurfaces() {
     },
     {
       surface_id: 'domain_handler',
-      current_paths: ['runtime/authority_functions/README.md'],
+      current_paths: [STARTER_HANDLER_REF],
       current_role: 'domain_authority_function_target',
       target_role: 'opl_generated_domain_handler_handoff_surface',
     },
@@ -203,7 +205,7 @@ function functionalPrivatizationModules(domainId: string) {
       module_id: `${domainId}.domain-handler-target`,
       classification: 'domain_handler_target',
       migration_class: 'domain_handler_target',
-      code_paths: ['runtime/authority_functions/README.md'],
+      code_paths: [STARTER_HANDLER_REF],
       current_surface_refs: ['domain_handler'],
       active_callers: ['OPL generated domain handler dispatch'],
       active_caller_status: 'domain_handler_target_returns_owner_receipt_or_typed_blocker',
@@ -229,7 +231,7 @@ function functionalPrivatizationModules(domainId: string) {
       module_id: `${domainId}.owner-receipt-signer`,
       classification: 'minimal_authority_function',
       migration_class: 'minimal_authority_function',
-      code_paths: ['runtime/authority_functions/README.md'],
+      code_paths: [STARTER_HANDLER_REF],
       active_callers: ['domain owner quality gate', 'OPL generated adapter receipt target'],
       active_caller_status: 'domain_authority_active_minimal_function',
       cannot_absorb_reason: 'OPL cannot sign target domain owner receipts or typed blockers.',
@@ -270,7 +272,12 @@ function physicalSourceMorphologyPolicy(domainId: string) {
       {
         surface_id: 'domain_handler_targets',
         classification: 'domain_handler_target',
-        source_refs: ['contracts/action_catalog.json', 'agent/skills/domain_execution.md'],
+        source_refs: [
+          'contracts/action_catalog.json',
+          'contracts/domain_handler_registry.json',
+          STARTER_HANDLER_REF,
+          'agent/skills/domain_execution.md',
+        ],
       },
       {
         surface_id: 'refs_only_adapters',
@@ -284,7 +291,7 @@ function physicalSourceMorphologyPolicy(domainId: string) {
       {
         surface_id: 'minimal_authority_functions',
         classification: 'minimal_authority_function',
-        source_refs: ['runtime/authority_functions/README.md'],
+        source_refs: [STARTER_HANDLER_REF],
       },
       {
         surface_id: 'fixture_or_provenance_refs',
@@ -613,6 +620,21 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
       }),
     },
     {
+      path: 'contracts/domain_handler_registry.json',
+      content: json({
+        surface_kind: 'domain_handler_registry',
+        version: 'domain-handler-registry.v1',
+        handlers: [{
+          handler_id: STARTER_ACTION_ID,
+          binding: {
+            kind: 'typescript_export',
+            file: STARTER_HANDLER_REF,
+            export: STARTER_HANDLER_EXPORT,
+          },
+        }],
+      }),
+    },
+    {
       path: 'contracts/domain-intake.input.schema.json',
       content: json({
         $schema: 'https://json-schema.org/draft/2020-12/schema',
@@ -789,6 +811,19 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
     {
       path: 'runtime/authority_functions/README.md',
       content: `# ${domainLabel} Authority Functions\n\nKeep only minimal domain authority functions here: quality/export verdict authorization, artifact mutation authorization, memory accept/reject decisions, source readiness verdicts, owner receipt signing, or domain-specific native helper implementation. Every retained function needs a cannot-absorb reason, receipt schema, active caller list, and no-forbidden-write evidence.\n`,
+    },
+    {
+      path: STARTER_HANDLER_REF,
+      content: `export function ${STARTER_HANDLER_EXPORT}() {
+  throw new Error(
+    'Domain owner implementation is required before this scaffold action can return an owner receipt or typed blocker ref.',
+  );
+}
+
+if (process.argv[1]?.endsWith('domain-intake-owner-handoff.ts')) {
+  ${STARTER_HANDLER_EXPORT}();
+}
+`,
     },
     {
       path: 'runtime/native_helpers/README.md',

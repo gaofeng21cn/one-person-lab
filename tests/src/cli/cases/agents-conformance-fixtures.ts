@@ -1,5 +1,6 @@
 import { fs, os, parseJsonText, path, runCli } from '../helpers.ts';
 import { compileStandardAgentStageManifest } from '../../../../src/modules/pack/index.ts';
+import { FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES } from '../../../../src/modules/foundry-lab/standard-domain-agent-scaffold-constants.ts';
 
 const OPL_DOMAIN_READONLY_AUTHORITY = {
   opl_can_write_domain_truth: false,
@@ -153,6 +154,9 @@ function syncStageManifestFromPlane(repoDir: string, stageControlPlane: Record<s
       ensures: stageContract.ensures ?? [`${stageId}_owner_receipt_or_typed_blocker_ref`],
       next_stage_refs: stage.handoff?.next_stage_refs ?? [],
       trust_lane: index === 0 ? 'codex_executor' : 'domain_agent',
+      ...(stage.handoff?.review_boundary
+        ? { handoff_review_boundary: stage.handoff.review_boundary }
+        : {}),
       ...(laneKind ? { lane_kind: laneKind } : {}),
     };
   });
@@ -342,6 +346,7 @@ export function buildReadyAgentRepo() {
   writeJson(contractPath(targetDir, 'functional_privatization_audit.json'), {
     surface_kind: 'functional_privatization_audit',
     target_domain_id: 'sample-brief-agent',
+    forbidden_generic_owner_roles: FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES,
     authority_boundary: {
       ...OPL_DOMAIN_READONLY_AUTHORITY,
       ...DOMAIN_GENERATED_SURFACE_READONLY_AUTHORITY,
@@ -725,6 +730,7 @@ function stageFromBase(baseStage: Record<string, any>, input: {
   laneKind?: string;
   executorKind?: string;
   executorBindingRef?: string;
+  handoffReviewBoundary?: Record<string, unknown>;
 }) {
   const defaultExecutor = input.defaultExecutor === true;
   return {
@@ -763,6 +769,9 @@ function stageFromBase(baseStage: Record<string, any>, input: {
     handoff: {
       next_owner: input.owner,
       next_stage_refs: [],
+      ...(input.handoffReviewBoundary
+        ? { review_boundary: input.handoffReviewBoundary }
+        : {}),
     },
   };
 }
@@ -853,6 +862,12 @@ export function configureReadyRcaMorphology(repoDir: string) {
       title: 'Package And Handoff',
       summary: 'Package the final visual artifact for handoff.',
       goal: 'Produce package refs, export refs, and owner receipt refs.',
+      handoffReviewBoundary: {
+        artifact_effect: 'reviewed_immutable_refs_only',
+        freezes_canonical_artifact_bytes: false,
+        issues_quality_export_publication_or_ready_claim: false,
+        downstream_owner_retains_acceptance: true,
+      },
     },
     {
       stageId: 'render_preview_lane',
@@ -885,6 +900,27 @@ export function configureReadyRcaMorphology(repoDir: string) {
       executorBindingRef: 'rca_native_pptx_export_affordance',
     },
   ].map((stage) => stageFromBase(baseStage, { owner: 'redcube-ai', ...stage }));
+  const actionCatalogPath = contractPath(repoDir, 'action_catalog.json');
+  const actionCatalog = readJson(actionCatalogPath);
+  actionCatalog.actions[0].stage_route = {
+    entry_stage_ref: 'source_intake',
+    required_stage_refs: [
+      'source_intake',
+      'communication_strategy',
+      'visual_direction',
+      'artifact_creation',
+      'review_and_revision',
+      'package_and_handoff',
+    ],
+    optional_stage_refs: [
+      'render_preview_lane',
+      'screenshot_review_lane',
+      'native_pptx_export_lane',
+    ],
+    terminal_stage_refs: ['package_and_handoff'],
+    route_policy: 'ai_selected_progress_route',
+  };
+  writeJson(actionCatalogPath, actionCatalog);
   syncStageManifestFromPlane(repoDir, stageControlPlane);
   syncStandardAgentConformanceProfile(repoDir);
 
