@@ -132,7 +132,7 @@ test('app state projects generic stage-attempt activity without domain progress 
     assert.ok(task);
     assert.equal(task.domain_id, 'redcube');
     assert.equal(task.study_id, null);
-    assert.equal(task.state, 'attention_needed');
+    assert.equal(task.state, 'waiting_for_direction');
     assert.equal(task.status, 'failed');
     assert.equal(task.active_stage_id, 'render');
     assert.equal(task.active_run_id, 'wf_redcube_deck_42');
@@ -140,9 +140,10 @@ test('app state projects generic stage-attempt activity without domain progress 
     assert.deepEqual(task.stage_attempt_ids, ['sat_redcube_deck_42']);
     assert.equal(task.runtime_blocker_summary, 'renderer_dependency_missing');
     assert.equal(task.typed_blocker_summary, null);
+    assert.equal(task.runtime_attention_demoted_to_diagnostic, true);
     assert.equal(
       workbench.activity_center.needs_attention.some((entry: any) => entry.task_id === task.task_id),
-      true,
+      false,
     );
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });

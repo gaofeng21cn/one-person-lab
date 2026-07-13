@@ -14,7 +14,7 @@ function seedLargeRuntimeActivityFixture(stateDir: string) {
   createStageAttemptTable(db);
   const update = db.prepare(`
       UPDATE stage_attempts
-      SET status = ?, blocked_reason = ?, created_at = ?, updated_at = ?
+      SET status = ?, blocked_reason = ?, provider_run_json = ?, created_at = ?, updated_at = ?
       WHERE stage_attempt_id = ?
     `);
   const seed = (workUnitId: string, status: string, updatedAt: string) => {
@@ -31,6 +31,10 @@ function seedLargeRuntimeActivityFixture(stateDir: string) {
     update.run(
       status,
       status === 'blocked' ? 'owner_attention_required' : null,
+      JSON.stringify(status === 'running' ? {
+        provider_status: 'running',
+        last_heartbeat_at: updatedAt,
+      } : {}),
       updatedAt,
       updatedAt,
       attempt.stage_attempt_id,
@@ -202,7 +206,7 @@ test('app state fast stays bounded for GUI rendering', () => {
   }
 });
 
-test('app state fast bounds large runtime history while preserving important activity lanes', () => {
+test('app state fast bounds large runtime history and demotes historical failures without a repair route', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-large-history-home-'));
   const stateDir = path.join(homeRoot, 'opl-state');
   const previousStateDir = process.env.OPL_STATE_DIR;
@@ -225,7 +229,7 @@ test('app state fast bounds large runtime history while preserving important act
     assert.equal(runtimeTasks.length <= 3, true);
     assert.equal(workbench.task_run_projection_v2.tasks.length <= 3, true);
     assert.equal(runtimeTaskIds.has('medautoscience:work-unit:important-running'), true);
-    assert.equal(runtimeTaskIds.has('medautoscience:work-unit:important-attention'), true);
+    assert.equal(runtimeTaskIds.has('medautoscience:work-unit:important-attention'), false);
     assert.equal(runtimeTaskIds.has('medautoscience:work-unit:important-recent'), true);
     const importantRunning = runtimeTasks.find(
       (entry: any) => entry.task_id === 'medautoscience:work-unit:important-running',
@@ -252,7 +256,9 @@ test('app state fast bounds large runtime history while preserving important act
     for (const field of ['stage', 'attempt', 'action', 'status']) {
       assert.equal(typeof workItem[field], 'object', `fast work item must retain ${field}`);
     }
-    for (const group of ['needs_attention_refs', 'active_project_refs', 'recent_project_refs']) {
+    assert.equal(Array.isArray(output.app_state.operator.visual_ref_groups.needs_attention_refs), true);
+    assert.equal(output.app_state.operator.visual_ref_groups.needs_attention_refs.length, 0);
+    for (const group of ['active_project_refs', 'recent_project_refs']) {
       assert.equal(
         typeof output.app_state.operator.visual_ref_groups[group][0],
         'object',
