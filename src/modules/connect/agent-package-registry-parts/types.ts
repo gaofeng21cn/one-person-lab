@@ -295,6 +295,7 @@ export type AgentPackageManagedPolicyMigration = {
   policy_sha256: string | null;
   inventory_digest: string | null;
   dependency_ids: string[];
+  dependencies: AgentPackageManagedPolicyDependency[];
   optional_dependency_ids: string[];
   migration_ids: string[];
   actions: AgentPackageManagedPolicyMigrationAction[];
