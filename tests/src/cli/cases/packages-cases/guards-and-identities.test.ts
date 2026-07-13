@@ -51,6 +51,24 @@ test('default Home shortcut visibility follows registry starter_default', () => 
   assert.equal(preferences[0].installed, false);
 });
 
+test('package registry uses version_source_ref and rejects mutable latest_version truth', () => {
+  const payload = registryPayload('https://registry.example');
+  const registry = normalizeRegistry(
+    payload,
+    'https://registry.example/registry.json',
+    'fixture-sha256',
+  );
+  assert.equal(registry.entries[0].version_source_ref, 'https://registry.example/manifest.json#/version');
+
+  assert.throws(
+    () => normalizeRegistry({
+      ...payload,
+      entries: [{ ...payload.entries[0], latest_version: '1.2.3' }],
+    }, 'https://registry.example/registry.json', 'fixture-sha256'),
+    /must not duplicate package version truth/,
+  );
+});
+
 test('official aliases resolve offline and local manifests own runtime source install repair rollback and uninstall', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-positional-state-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-runtime-source-'));
@@ -142,7 +160,7 @@ test('package actions describe both positional and flagged package selection', (
   );
 });
 
-test('OPL Flow manifest resolves its package-owned 0.1.16 carrier and managed policy payload', () => {
+test('OPL Flow manifest resolves its package-owned 0.1.18 carrier and managed policy payload', () => {
   const manifestPath = path.join(repoRoot, 'contracts', 'opl-framework', 'packages', 'opl-flow.json');
   const manifest = normalizePackageManifest(
     parseJsonText(fs.readFileSync(manifestPath, 'utf8')),
@@ -150,11 +168,11 @@ test('OPL Flow manifest resolves its package-owned 0.1.16 carrier and managed po
   );
 
   assert.equal(manifest.package_id, 'opl-flow');
-  assert.equal(manifest.version, '0.1.16');
-  assert.deepEqual(manifest.required_skill_ids, ['opl-flow', 'codex-ops-kit']);
+  assert.equal(manifest.version, '0.1.18');
+  assert.deepEqual(manifest.required_skill_ids, ['opl-flow']);
   assert.equal(
     manifest.plugin_payload_manifest_url,
-    path.join(repoRoot, 'contracts', 'opl-framework', 'packages', 'payloads', 'opl-flow-0.1.16.json'),
+    path.join(repoRoot, 'contracts', 'opl-framework', 'packages', 'payloads', 'opl-flow-0.1.18.json'),
   );
   assert.deepEqual(manifest.managed_policy_surface, {
     policy_kind: 'opl_flow_workflow_policy',

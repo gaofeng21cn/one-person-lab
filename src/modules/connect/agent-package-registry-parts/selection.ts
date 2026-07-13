@@ -85,14 +85,15 @@ export function assertManifestMatchesRegistrySelection(
       failure_code: 'registry_manifest_package_id_mismatch',
     });
   }
-  if (manifest.version !== selection.registryEntry.latest_version) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Agent package registry entry and manifest version must match.', {
+  const expectedVersionSourceRef = `${selection.manifestUrl}#/version`;
+  if (selection.registryEntry.version_source_ref !== expectedVersionSourceRef) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package registry version source must point to the selected manifest version.', {
       registry_url: selection.registryUrl,
       manifest_url: selection.manifestUrl,
       package_id: manifest.package_id,
-      registry_latest_version: selection.registryEntry.latest_version,
-      manifest_version: manifest.version,
-      failure_code: 'registry_manifest_version_mismatch',
+      registry_version_source_ref: selection.registryEntry.version_source_ref,
+      expected_version_source_ref: expectedVersionSourceRef,
+      failure_code: 'registry_manifest_version_source_mismatch',
     });
   }
   const ordinaryUserSource = selection.registryEntry.ordinary_user_source;

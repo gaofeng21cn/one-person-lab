@@ -124,11 +124,11 @@ exit 2
       assert.equal(output.managed_update.authority_boundary.can_sync_codex_plugin_skill_projection, false);
       assert.equal(output.managed_update.authority_boundary.can_mutate_user_global_npm, false);
       assert.equal(output.managed_update.receipts.write_policy, 'recorded_component_receipt');
-      assert.equal(output.managed_update.components.length, 1);
-      assert.equal(output.managed_update.components[0].component_id, 'opl_base');
-      assert.equal(output.managed_update.components[0].authority_boundary.can_mutate_app_owned_runtime_root, true);
+      const baseComponent = output.managed_update.components.find((entry) => entry.component_id === 'opl_base');
+      assert.equal(Boolean(baseComponent), true);
+      assert.equal(baseComponent?.authority_boundary.can_mutate_app_owned_runtime_root, true);
       assert.equal(
-        output.managed_update.components[0].plan.command_refs.every((entry) => entry.destructive === false),
+        baseComponent?.plan.command_refs.every((entry) => entry.destructive === false),
         true,
       );
     }

@@ -1,6 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
+
+import { resolveOplStatePaths } from '../../../kernel/runtime-state-paths.ts';
 
 export type OplCompanionToolActionStatus = 'ready' | 'installed' | 'missing' | 'failed';
 export type OplCompanionToolId = 'officecli' | 'mineru-open-api';
@@ -12,7 +15,31 @@ export type OplCompanionToolSyncItem = {
   status: OplCompanionToolActionStatus;
   action: 'none' | 'install';
   note: string | null;
+  ownership: 'opl_managed' | 'app_bundled' | 'user_managed' | 'global_path' | 'missing';
+  content_sha256: string | null;
 };
+
+function managedToolHome() {
+  return path.join(resolveOplStatePaths().state_dir, 'base-dependencies');
+}
+
+function managedToolReceiptPath(toolId: OplCompanionToolId) {
+  return path.join(managedToolHome(), 'receipts', `${toolId}.json`);
+}
+
+function binarySha256(binaryPath: string) {
+  return crypto.createHash('sha256').update(fs.readFileSync(binaryPath)).digest('hex');
+}
+
+function pathOwnership(binaryPath: string | null): OplCompanionToolSyncItem['ownership'] {
+  if (!binaryPath) return 'missing';
+  const normalized = path.resolve(binaryPath);
+  if (normalized.startsWith(`${path.resolve(managedToolHome())}${path.sep}`)) return 'opl_managed';
+  const runtimeHome = process.env.OPL_FULL_RUNTIME_HOME?.trim();
+  if (runtimeHome && normalized.startsWith(`${path.resolve(runtimeHome)}${path.sep}`)) return 'app_bundled';
+  if (normalized.startsWith(`${path.resolve(resolveOplStatePaths().home_dir, '.local')}${path.sep}`)) return 'user_managed';
+  return 'global_path';
+}
 
 function companionToolInstallDisabled() {
   return process.env.OPL_COMPANION_DISABLE_REMOTE_INSTALL === '1';
@@ -71,6 +98,8 @@ function inspectToolBinary(
     status: 'ready',
     action: 'none',
     note: null,
+    ownership: pathOwnership(binaryPath),
+    content_sha256: binarySha256(binaryPath),
   };
 }
 
@@ -86,6 +115,7 @@ export function resolveOfficeCliTool(home: string): OplCompanionToolSyncItem | n
   const runtimeHome = process.env.OPL_FULL_RUNTIME_HOME?.trim();
   const candidates = [
     process.env.OPL_OFFICECLI_BIN?.trim() || null,
+    path.join(managedToolHome(), '.local', 'bin', 'officecli'),
     runtimeHome ? path.join(runtimeHome, 'bin', 'officecli') : null,
     findExecutableInPath('officecli'),
     path.join(home, '.local', 'bin', 'officecli'),
@@ -103,6 +133,7 @@ export function resolveMineruOpenApiTool(home: string): OplCompanionToolSyncItem
   const runtimeHome = process.env.OPL_FULL_RUNTIME_HOME?.trim();
   const candidates = [
     process.env.OPL_MINERU_OPEN_API_BIN?.trim() || null,
+    path.join(managedToolHome(), '.local', 'bin', 'mineru-open-api'),
     runtimeHome ? path.join(runtimeHome, 'bin', 'mineru-open-api') : null,
     findExecutableInPath('mineru-open-api'),
     path.join(home, '.local', 'bin', 'mineru-open-api'),
@@ -126,6 +157,68 @@ function buildMineruOpenApiInstallCommand() {
     || 'npm install -g mineru-open-api';
 }
 
+function writeManagedToolReceipt(tool: OplCompanionToolSyncItem) {
+  const receiptPath = managedToolReceiptPath(tool.tool_id);
+  fs.mkdirSync(path.dirname(receiptPath), { recursive: true });
+  fs.writeFileSync(receiptPath, `${JSON.stringify({
+    surface_kind: 'opl_base_managed_dependency_receipt',
+    dependency_id: tool.tool_id,
+    binary_path: tool.binary_path,
+    version: tool.version,
+    content_sha256: tool.content_sha256,
+    ownership: tool.ownership,
+    updated_at: new Date().toISOString(),
+  }, null, 2)}\n`, 'utf8');
+  return receiptPath;
+}
+
+function installOfficeCliTool(): OplCompanionToolSyncItem {
+  const dependencyHome = managedToolHome();
+  const localBin = path.join(dependencyHome, '.local', 'bin');
+  fs.mkdirSync(localBin, { recursive: true });
+  ensurePathEntry(localBin);
+  const result = spawnSync(process.env.SHELL?.trim() || '/bin/bash', ['-lc', buildOfficeCliInstallCommand()], {
+    encoding: 'utf8',
+    env: { ...process.env, HOME: dependencyHome, PATH: process.env.PATH },
+    stdio: 'pipe',
+  });
+  const installed = inspectOfficeCliBinary(path.join(localBin, 'officecli'));
+  if (result.status === 0 && installed) {
+    const managed = { ...installed, status: 'installed' as const, action: 'install' as const, ownership: 'opl_managed' as const };
+    writeManagedToolReceipt(managed);
+    return managed;
+  }
+  return {
+    tool_id: 'officecli', binary_path: null, version: null, status: 'failed', action: 'install',
+    note: [result.stderr, result.stdout].filter(Boolean).join('\n').trim() || 'officecli install did not produce a runnable binary.',
+    ownership: 'missing', content_sha256: null,
+  };
+}
+
+function installMineruOpenApiTool(): OplCompanionToolSyncItem {
+  const dependencyHome = managedToolHome();
+  const localPrefix = path.join(dependencyHome, '.local');
+  const localBin = path.join(localPrefix, 'bin');
+  fs.mkdirSync(localBin, { recursive: true });
+  ensurePathEntry(localBin);
+  const result = spawnSync(process.env.SHELL?.trim() || '/bin/bash', ['-lc', buildMineruOpenApiInstallCommand()], {
+    encoding: 'utf8',
+    env: { ...process.env, HOME: dependencyHome, PATH: process.env.PATH, npm_config_prefix: localPrefix, NPM_CONFIG_PREFIX: localPrefix },
+    stdio: 'pipe',
+  });
+  const installed = inspectMineruOpenApiBinary(path.join(localBin, 'mineru-open-api'));
+  if (result.status === 0 && installed) {
+    const managed = { ...installed, status: 'installed' as const, action: 'install' as const, ownership: 'opl_managed' as const };
+    writeManagedToolReceipt(managed);
+    return managed;
+  }
+  return {
+    tool_id: 'mineru-open-api', binary_path: null, version: null, status: 'failed', action: 'install',
+    note: [result.stderr, result.stdout].filter(Boolean).join('\n').trim() || 'mineru-open-api install did not produce a runnable binary.',
+    ownership: 'missing', content_sha256: null,
+  };
+}
+
 export function ensureOfficeCliTool(home: string): OplCompanionToolSyncItem {
   const existing = resolveOfficeCliTool(home);
   if (existing) {
@@ -139,38 +232,11 @@ export function ensureOfficeCliTool(home: string): OplCompanionToolSyncItem {
       status: 'missing',
       action: 'none',
       note: 'Remote companion install is disabled; officecli binary was not installed.',
+      ownership: 'missing',
+      content_sha256: null,
     };
   }
-
-  const localBin = path.join(home, '.local', 'bin');
-  fs.mkdirSync(localBin, { recursive: true });
-  ensurePathEntry(localBin);
-  const installCommand = buildOfficeCliInstallCommand();
-  const result = spawnSync(process.env.SHELL?.trim() || '/bin/bash', ['-lc', installCommand], {
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      HOME: home,
-      PATH: process.env.PATH,
-    },
-    stdio: 'pipe',
-  });
-  const installed = resolveOfficeCliTool(home);
-  if (result.status === 0 && installed) {
-    return {
-      ...installed,
-      status: 'installed',
-      action: 'install',
-    };
-  }
-  return {
-    tool_id: 'officecli',
-    binary_path: null,
-    version: null,
-    status: 'failed',
-    action: 'install',
-    note: [result.stderr, result.stdout].filter(Boolean).join('\n').trim() || 'officecli install did not produce a runnable binary.',
-  };
+  return installOfficeCliTool();
 }
 
 export function ensureMineruOpenApiTool(home: string): OplCompanionToolSyncItem {
@@ -186,39 +252,55 @@ export function ensureMineruOpenApiTool(home: string): OplCompanionToolSyncItem 
       status: 'missing',
       action: 'none',
       note: 'Remote companion install is disabled; mineru-open-api binary was not installed.',
+      ownership: 'missing',
+      content_sha256: null,
     };
   }
+  return installMineruOpenApiTool();
+}
 
-  const localPrefix = path.join(home, '.local');
-  const localBin = path.join(localPrefix, 'bin');
-  fs.mkdirSync(localBin, { recursive: true });
-  ensurePathEntry(localBin);
-  const installCommand = buildMineruOpenApiInstallCommand();
-  const result = spawnSync(process.env.SHELL?.trim() || '/bin/bash', ['-lc', installCommand], {
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      HOME: home,
-      PATH: process.env.PATH,
-      npm_config_prefix: localPrefix,
-      NPM_CONFIG_PREFIX: localPrefix,
-    },
-    stdio: 'pipe',
+export function reconcileManagedCompanionTools(
+  home: string,
+  toolIds: OplCompanionToolId[] = ['officecli', 'mineru-open-api'],
+) {
+  return toolIds.map((toolId) => {
+    const current = toolId === 'officecli' ? resolveOfficeCliTool(home) : resolveMineruOpenApiTool(home);
+    if (current?.ownership === 'app_bundled' && current.binary_path) {
+      const targetPath = path.join(managedToolHome(), '.local', 'bin', toolId);
+      fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+      fs.copyFileSync(current.binary_path, targetPath);
+      fs.chmodSync(targetPath, 0o755);
+      const seeded = toolId === 'officecli'
+        ? inspectOfficeCliBinary(targetPath)
+        : inspectMineruOpenApiBinary(targetPath);
+      if (seeded) {
+        const managed = {
+          ...seeded,
+          status: 'installed' as const,
+          action: 'install' as const,
+          ownership: 'opl_managed' as const,
+          note: 'Materialized from the App Full offline seed into the OPL Base managed dependency root.',
+        };
+        writeManagedToolReceipt(managed);
+        return managed;
+      }
+      fs.rmSync(targetPath, { force: true });
+      return {
+        ...current,
+        status: 'failed' as const,
+        action: 'install' as const,
+        note: 'App bundled seed failed verification and was not activated.',
+      };
+    }
+    if (current && current.ownership !== 'opl_managed') {
+      return { ...current, note: `${current.ownership} dependency is detected but not overwritten by OPL Base.` };
+    }
+    if (companionToolInstallDisabled()) {
+      return current ?? {
+        tool_id: toolId, binary_path: null, version: null, status: 'missing' as const, action: 'none' as const,
+        note: 'Remote managed dependency update is disabled.', ownership: 'missing' as const, content_sha256: null,
+      };
+    }
+    return toolId === 'officecli' ? installOfficeCliTool() : installMineruOpenApiTool();
   });
-  const installed = resolveMineruOpenApiTool(home);
-  if (result.status === 0 && installed) {
-    return {
-      ...installed,
-      status: 'installed',
-      action: 'install',
-    };
-  }
-  return {
-    tool_id: 'mineru-open-api',
-    binary_path: null,
-    version: null,
-    status: 'failed',
-    action: 'install',
-    note: [result.stderr, result.stdout].filter(Boolean).join('\n').trim() || 'mineru-open-api install did not produce a runnable binary.',
-  };
 }

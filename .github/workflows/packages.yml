@@ -164,7 +164,7 @@ jobs:
           echo "OPL_CHANGED_PACKAGES_JSON=$changed_packages_json" >> "$GITHUB_ENV"
 
       - name: Check Package release discipline
-        run: npm run packages:release-discipline -- --manifest dist/opl-packages/opl-release-manifest.json
+        run: npm run packages:release-discipline -- --manifest dist/opl-packages/opl-release-manifest.json --promotion-target "$OPL_PACKAGE_PROMOTION_TARGET"
 
       - name: Publish immutable Packages and finalize complete BOM
         shell: bash

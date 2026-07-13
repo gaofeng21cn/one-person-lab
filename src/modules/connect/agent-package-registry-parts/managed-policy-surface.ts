@@ -200,7 +200,7 @@ function normalizePolicy(payload: unknown, manifest: AgentPackageManifest): OplF
     });
   }
   const expectedMigrationPolicy = {
-    trigger: 'explicit_opl_flow_install_or_update',
+    trigger: 'explicit_opl_flow_install_update_optimize_or_generic_app_post_update_reconcile',
     default_action: 'backup_disable_and_remove_from_discovery',
     physical_delete: false,
     receipt_owner: 'opl-framework',
@@ -337,10 +337,13 @@ function configTableInventory(configPath: string) {
     const match = line.trim().match(/^\[([^\]]+)\]$/);
     if (!match) return [];
     const canonicalId = match[1].replaceAll('"', '');
+    const [namespace, ...identityParts] = canonicalId.split('.');
+    if (namespace === 'projects') return [];
+    const identity = identityParts.length > 0 ? identityParts.join('.') : canonicalId;
     return [{
       surfaceKind: 'config_table',
       canonicalId,
-      aliases: idAliases(canonicalId),
+      aliases: idAliases(identity),
       physicalRef: configPath,
     }];
   });
@@ -389,10 +392,9 @@ function renderTomlDocument(preamble: string, tables: Array<Pick<TomlTableBlock,
   return parts.length > 0 ? `${parts.join('\n\n')}\n` : '';
 }
 
-function removeMatchedTomlTables(text: string, matchedAliases: Set<string>) {
+function removeMatchedTomlTables(text: string, matchedHeaders: Set<string>) {
   const document = parseTomlDocument(text);
-  const removed = document.tables.filter((table) =>
-    table.aliases.some((alias) => matchedAliases.has(alias)));
+  const removed = document.tables.filter((table) => matchedHeaders.has(table.header));
   const kept = document.tables.filter((table) => !removed.includes(table));
   return {
     text: renderTomlDocument(document.preamble, kept),
@@ -494,6 +496,15 @@ export function materializeManagedPolicySurface(input: {
   const home = resolveOplStatePaths().home_dir;
   const codexHome = resolveCodexHome(home);
   const configPath = resolveCodexConfigPath(codexHome);
+  const managedMarketplaceRoots = [
+    path.join(codexHome, 'plugins', 'cache', managedMarketplaceId),
+    path.join(codexHome, 'plugins', 'data', managedMarketplaceId),
+    path.join(codexHome, '.tmp', 'plugins', 'plugins', managedMarketplaceId),
+  ];
+  const isCurrentManagedCarrier = (physicalRef: string) => managedMarketplaceRoots.some((root) => {
+    const relative = path.relative(root, physicalRef);
+    return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+  });
   const inventory = [
     ...filesystemInventory(home, codexHome),
     ...configTableInventory(configPath),
@@ -502,10 +513,10 @@ export function materializeManagedPolicySurface(input: {
     .map((entry) => ({ ...entry, aliases: [...entry.aliases].sort() }))
     .sort((left, right) => left.physicalRef.localeCompare(right.physicalRef))));
   const classified = inventory.flatMap((item) => {
+    if (isCurrentManagedCarrier(item.physicalRef)) return [];
     const group = item.aliases.map((alias) => groupByAlias.get(alias)).find(Boolean);
     if (group && enabledGroups.has(group.id)) return [{ item, migrationId: group.id }];
     const selfCarrier = item.surfaceKind === 'plugin'
-      && !item.physicalRef.includes(`${path.sep}${managedMarketplaceId}${path.sep}`)
       && selfCarrierFingerprints.some((fingerprint) =>
         idAliases(fingerprint).some((alias) => item.aliases.includes(alias)));
     return selfCarrier ? [{ item: { ...item, surfaceKind: 'historical_self_carrier' as const }, migrationId: 'historical-self-carrier' }] : [];
@@ -549,8 +560,8 @@ export function materializeManagedPolicySurface(input: {
       }
       if (configMatches.length > 0 && fs.existsSync(configPath)) {
         const current = fs.readFileSync(configPath, 'utf8');
-        const matchedAliases = new Set(configMatches.flatMap((entry) => entry.item.aliases));
-        const removal = removeMatchedTomlTables(current, matchedAliases);
+        const matchedHeaders = new Set(configMatches.map((entry) => entry.item.canonicalId));
+        const removal = removeMatchedTomlTables(current, matchedHeaders);
         if (removal.text !== current) {
           const backupRef = `${backupPath(backupRoot, configPath)}.toml-delta.json`;
           const removedTomlTables = removal.removed.map((table) => ({

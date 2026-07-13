@@ -201,7 +201,7 @@ test('packages manifest exposes canonical Release Set coordinates for Package in
   );
   assert.equal(
     output.packages_manifest.release_automation.daily_package_channel.generation_template,
-    '<utc_yy.m.d>',
+    '<utc_yy.m.d[-rN_auto]>',
   );
   assert.equal(
     output.packages_manifest.release_automation.daily_package_channel.change_detector,
@@ -294,10 +294,10 @@ test('packages manifest exposes canonical Release Set coordinates for Package in
   );
   assert.equal(
     output.packages_manifest.packages.package_artifacts.mas.artifact,
-    'ghcr.io/gaofeng21cn/one-person-lab-packages/mas:0.1.0-alpha.4',
+    'ghcr.io/gaofeng21cn/one-person-lab-packages/mas:0.1.0',
   );
   assert.equal(output.packages_manifest.packages.package_artifacts.mas.package_id, 'mas');
-  assert.equal(output.packages_manifest.packages.package_artifacts.mas.package_version, '0.1.0-alpha.4');
+  assert.equal(output.packages_manifest.packages.package_artifacts.mas.package_version, '0.1.0');
   assert.equal(output.packages_manifest.packages.package_artifacts.mas.carrier_locator.module_id, 'medautoscience');
   assert.equal(output.packages_manifest.packages.package_artifacts.mas.carrier_locator.repo_name, 'med-autoscience');
   assert.equal(Object.hasOwn(output.packages_manifest.packages.package_artifacts.mas, 'module_id'), false);
@@ -427,7 +427,7 @@ test('packages manifest exposes canonical Release Set coordinates for Package in
   );
   assert.equal(
     output.packages_manifest.packages.package_artifacts.oma.artifact,
-    'ghcr.io/gaofeng21cn/one-person-lab-packages/oma:0.1.0',
+    'ghcr.io/gaofeng21cn/one-person-lab-packages/oma:0.1.1',
   );
   assert.equal(
     output.packages_manifest.packages.package_artifacts.oma.remote_publish_status,
@@ -446,11 +446,11 @@ test('packages manifest exposes canonical Release Set coordinates for Package in
     'ghcr.io/gaofeng21cn/one-person-lab-packages/mas-scholar-skills:0.1.1',
   );
   assert.equal(output.packages_manifest.packages.package_artifacts['opl-flow'].package_id, 'opl-flow');
-  assert.equal(output.packages_manifest.packages.package_artifacts['opl-flow'].package_version, '0.1.16');
+  assert.equal(output.packages_manifest.packages.package_artifacts['opl-flow'].package_version, '0.1.18');
   assert.equal(output.packages_manifest.packages.package_artifacts['opl-flow'].codex_standalone_distribution, null);
   assert.equal(
     output.packages_manifest.packages.package_artifacts['opl-flow'].artifact,
-    'ghcr.io/gaofeng21cn/one-person-lab-packages/opl-flow:0.1.16',
+    'ghcr.io/gaofeng21cn/one-person-lab-packages/opl-flow:0.1.18',
   );
   assert.equal(
     output.packages_manifest.packages.package_artifacts['mas-scholar-skills'].scope,

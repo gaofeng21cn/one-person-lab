@@ -178,8 +178,10 @@ export function readFrameworkChannelEntry() {
   }
 }
 
-export function fetchFrameworkArtifactFromChannel(tempRoot: string) {
-  const entry = readFrameworkChannelEntry();
+export function fetchFrameworkArtifactFromChannel(
+  tempRoot: string,
+  entry: ReturnType<typeof readFrameworkChannelEntry> = readFrameworkChannelEntry(),
+) {
   const imageRef = parseImageRef(entry.artifact);
   const token = fetchGhcrToken(imageRef);
   const manifest = fetchOciManifest(imageRef, token);

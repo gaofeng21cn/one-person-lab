@@ -254,7 +254,7 @@ function buildReleaseAutomation(retainVersions: number, rollbackVersion: string 
       status: 'active_change_detected_daily_publish',
       workflow: '.github/workflows/daily-package-channel.yml',
       schedule: 'daily',
-      generation_template: '<utc_yy.m.d>',
+      generation_template: '<utc_yy.m.d[-rN_auto]>',
       change_detector: 'scripts/package-channel-daily-check.mjs',
       comparison: 'package_source_fingerprint',
       ignored_fields: ['release_set_generation', 'generated_at', 'artifact tag'],

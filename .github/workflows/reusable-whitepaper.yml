@@ -1,0 +1,122 @@
+name: Reusable Whitepaper Build And Publish
+
+on:
+  workflow_call:
+    inputs:
+      profile:
+        required: true
+        type: string
+      output_name:
+        required: true
+        type: string
+      publish:
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout whitepaper owner repository
+        uses: actions/checkout@v6
+        with:
+          path: source
+
+      - name: Checkout the canonical OPL whitepaper toolchain
+        uses: actions/checkout@v6
+        with:
+          repository: gaofeng21cn/one-person-lab
+          ref: main
+          path: toolchain
+
+      - name: Install document render dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc texlive-xetex texlive-lang-chinese fonts-noto-cjk poppler-utils
+
+      - name: Build the immutable whitepaper bundle
+        run: |
+          node --experimental-strip-types toolchain/scripts/run-domain-whitepaper.ts \
+            --repo-root source \
+            --profile "${{ inputs.profile }}"
+
+      - name: Stage bundle and visual evidence
+        run: |
+          mkdir -p artifact/whitepapers artifact/evidence
+          find source/docs/site/latest/whitepapers -maxdepth 1 -type f \
+            \( -name '*.html' -o -name '*.pdf' -o -name '*.json' \) \
+            -exec cp {} artifact/whitepapers/ \;
+          cp -R "source/tmp/pdfs/${{ inputs.output_name }}/rendered" artifact/evidence/rendered-pages
+
+      - name: Upload approved-byte candidate
+        uses: actions/upload-artifact@v7
+        with:
+          name: whitepaper-${{ inputs.output_name }}-${{ github.sha }}
+          path: artifact
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    if: inputs.publish
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    environment: whitepaper-production
+    concurrency:
+      group: whitepaper-publish-${{ github.repository }}
+      cancel-in-progress: false
+    steps:
+      - name: Checkout current published site with history
+        uses: actions/checkout@v6
+        with:
+          ref: gh-pages
+          fetch-depth: 0
+          path: site
+
+      - name: Checkout the canonical OPL whitepaper toolchain
+        uses: actions/checkout@v6
+        with:
+          repository: gaofeng21cn/one-person-lab
+          ref: main
+          path: toolchain
+
+      - name: Download the exact build artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: whitepaper-${{ inputs.output_name }}-${{ github.sha }}
+          path: artifact
+
+      - name: Update only the whitepaper publication surface
+        run: |
+          mkdir -p site/latest/whitepapers
+          rsync -a --delete artifact/whitepapers/ site/latest/whitepapers/
+          touch site/.nojekyll
+          git -C site config user.name github-actions[bot]
+          git -C site config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git -C site add .nojekyll latest/whitepapers
+          if git -C site diff --cached --quiet; then
+            echo "No publication byte changes."
+          else
+            git -C site commit -m "docs: publish ${{ inputs.output_name }} from ${{ github.sha }}"
+            git -C site push origin gh-pages
+          fi
+
+      - name: Read back exact public bytes
+        run: |
+          node --experimental-strip-types toolchain/scripts/verify-whitepaper-publication.ts \
+            --verification "artifact/whitepapers/${{ inputs.output_name }}.verification.json" \
+            --output "publication-receipt.json" \
+            --attempts 6 \
+            --interval-ms 10000
+
+      - name: Upload publication receipt
+        uses: actions/upload-artifact@v7
+        with:
+          name: whitepaper-publication-receipt-${{ inputs.output_name }}-${{ github.sha }}
+          path: publication-receipt.json
+          if-no-files-found: error
+          retention-days: 90

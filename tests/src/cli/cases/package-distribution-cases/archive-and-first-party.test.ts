@@ -136,13 +136,13 @@ test('package archive builder writes channel manifest checksums git source and r
   }), 'utf8');
 
   const fixtures = {
-    medautoscience: createOwnerPackageFixture('med-autoscience', 'mas', '0.1.0a4'),
+    medautoscience: createOwnerPackageFixture('med-autoscience', 'mas', '0.1.0'),
     medautogrant: createOwnerPackageFixture('med-autogrant', 'mag', '0.1.0'),
-    redcube: createOwnerPackageFixture('redcube-ai', 'rca', '0.1.0'),
-    oplmetaagent: createOwnerPackageFixture('opl-meta-agent', 'oma', '0.1.0'),
+    redcube: createOwnerPackageFixture('redcube-ai', 'rca', '0.1.1'),
+    oplmetaagent: createOwnerPackageFixture('opl-meta-agent', 'oma', '0.1.1'),
     oplbookforge: createOwnerPackageFixture('opl-bookforge', 'obf', '0.1.0'),
     scholarskills: createOwnerPackageFixture('mas-scholar-skills', 'mas-scholar-skills', '0.1.1', 'capability_package'),
-    oplflow: createOwnerPackageFixture('opl-flow', 'opl-flow', '0.1.16', 'workflow_profile'),
+    oplflow: createOwnerPackageFixture('opl-flow', 'opl-flow', '0.1.18', 'workflow_profile'),
   };
 
   const archiveBuilderOutput = execFileSync(process.execPath, [
@@ -246,7 +246,7 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(manifest.release_automation.release_manifest_package.package_channel_status, 'active_release_channel');
   assert.equal(manifest.release_automation.daily_package_channel.status, 'active_change_detected_daily_publish');
   assert.equal(manifest.release_automation.daily_package_channel.no_change_behavior, 'skip_without_publish');
-  assert.equal(manifest.release_automation.daily_package_channel.generation_template, '<utc_yy.m.d>');
+  assert.equal(manifest.release_automation.daily_package_channel.generation_template, '<utc_yy.m.d[-rN_auto]>');
   assert.equal(manifest.release_automation.daily_package_channel.force_publish_input, 'force_publish');
   assert.equal(Object.hasOwn(manifest.packages, 'webui_docker_image'), false);
   assert.equal(manifest.packages.framework_core.artifact, 'ghcr.io/gaofeng21cn/one-person-lab-framework:26.4.31');
@@ -287,13 +287,13 @@ test('package archive builder writes channel manifest checksums git source and r
   }
   const masCatalog = packageCatalog.mas;
   assert.equal(masCatalog.package_role, 'standard_agent');
-  assert.equal(masCatalog.selected_version, '0.1.0-alpha.4');
+  assert.equal(masCatalog.selected_version, '0.1.0');
   assert.deepEqual(masCatalog.dependency_package_ids, ['mas-scholar-skills']);
   assert.equal(masCatalog.versions.length, 1);
   assert.equal(masCatalog.versions[0].selection_status, 'selected_for_release_set');
   assert.deepEqual(masCatalog.versions[0].dependency_package_ids, ['mas-scholar-skills']);
   assert.equal(masCatalog.versions[0].capability_abi, null);
-  assert.match(masCatalog.versions[0].manifest_url, /^opl\+oci:\/\/ghcr\.io\/gaofeng21cn\/one-person-lab-packages\/mas:0\.1\.0-alpha\.4#\//);
+  assert.match(masCatalog.versions[0].manifest_url, /^opl\+oci:\/\/ghcr\.io\/gaofeng21cn\/one-person-lab-packages\/mas:0\.1\.0#\//);
   assert.match(masCatalog.versions[0].manifest_sha256, /^sha256:[0-9a-f]{64}$/);
   const embeddedMasManifest = JSON.parse(masCatalog.versions[0].manifest_json);
   assert.equal(embeddedMasManifest.package_id, 'mas');
@@ -311,14 +311,14 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.match(masCatalog.versions[0].payload_digest, /^sha256:[0-9a-f]{64}$/);
   assert.equal(
     masCatalog.versions[0].source_artifact_ref,
-    'ghcr.io/gaofeng21cn/one-person-lab-packages/mas:0.1.0-alpha.4',
+    'ghcr.io/gaofeng21cn/one-person-lab-packages/mas:0.1.0',
   );
-  assert.equal(masCatalog.versions[0].owner_language_version, '0.1.0a4');
+  assert.equal(masCatalog.versions[0].owner_language_version, '0.1.0');
   assert.equal(masCatalog.versions[0].owner_source_commit, fixtures.medautoscience.getHeadSha());
   assert.equal(masCatalog.versions[0].release_gate, 'test_owner_sha_release_gate');
   assert.match(masCatalog.versions[0].package_content_digest, /^sha256:[0-9a-f]{64}$/);
   assert.equal(packageCatalog['opl-flow'].package_role, 'workflow_profile');
-  assert.equal(packageCatalog['opl-flow'].selected_version, '0.1.16');
+  assert.equal(packageCatalog['opl-flow'].selected_version, '0.1.18');
   assert.equal(packageCatalog['opl-flow'].homebrew_formula, undefined);
   assert.match(channelManifest.package_catalog_digest, /^sha256:[0-9a-f]{64}$/);
   const scholarSkillsCatalog = packageCatalog['mas-scholar-skills'];
@@ -435,8 +435,9 @@ test('package archive builder writes channel manifest checksums git source and r
   );
   assert.deepEqual(manifest.packages.package_artifacts['mas-scholar-skills'].dependency_of, ['mas']);
   assert.match(manifest.packages.package_artifacts['mas-scholar-skills'].source_archive.sha256, /^[0-9a-f]{64}$/);
-  assert.match(checksums, /mas-0\.1\.0-alpha\.4\.tar\.gz/);
-  assert.match(checksums, /oma-0\.1\.0\.tar\.gz/);
+  assert.match(checksums, /mas-0\.1\.0\.tar\.gz/);
+  assert.match(checksums, /oma-0\.1\.1\.tar\.gz/);
+  assert.match(checksums, /rca-0\.1\.1\.tar\.gz/);
   assert.match(checksums, /obf-0\.1\.0\.tar\.gz/);
   assert.match(checksums, /mas-scholar-skills-0\.1\.1\.tar\.gz/);
   assert.match(checksums, new RegExp(manifest.packages.package_artifacts.mas.source_archive.sha256));
@@ -449,6 +450,25 @@ test('package archive builder writes channel manifest checksums git source and r
     cwd: os.tmpdir(),
     encoding: 'utf8',
   });
+
+  const prereleaseManifest = structuredClone(manifest);
+  const prereleaseArtifact = prereleaseManifest.packages.package_artifacts.mas;
+  prereleaseArtifact.package_version = '0.1.0-alpha.1';
+  prereleaseArtifact.artifact = prereleaseArtifact.artifact.replace(':0.1.0', ':0.1.0-alpha.1');
+  prereleaseManifest.release_set.members.mas.package_version = '0.1.0-alpha.1';
+  prereleaseManifest.release_set.members.mas.oci_artifact_ref = prereleaseArtifact.artifact;
+  const prereleaseManifestPath = path.join(outDir, 'opl-release-manifest-prerelease.json');
+  fs.writeFileSync(prereleaseManifestPath, `${JSON.stringify(prereleaseManifest, null, 2)}\n`);
+  execFileSync(process.execPath, [
+    path.join(repoRoot, 'scripts/package-release-discipline.mjs'),
+    '--manifest', prereleaseManifestPath,
+    '--promotion-target', 'candidate',
+  ], { cwd: os.tmpdir(), encoding: 'utf8' });
+  assert.throws(() => execFileSync(process.execPath, [
+    path.join(repoRoot, 'scripts/package-release-discipline.mjs'),
+    '--manifest', prereleaseManifestPath,
+    '--promotion-target', 'latest-stable',
+  ], { cwd: os.tmpdir(), encoding: 'utf8' }), /latest-stable cannot select a prerelease Package/);
 });
 
 test('first-party agent package manifests declare Codex carrier and OPL package core from one source', () => {
@@ -470,7 +490,7 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
   assert.equal(manifest.schema_ref, 'contracts/opl-framework/agent-package-manifest.schema.json');
   assert.equal(manifest.package_id, 'mas');
   assert.equal(manifest.agent_id, 'mas');
-  assert.equal(manifest.version, '0.1.0-alpha.4');
+  assert.equal(manifest.version, '0.1.0');
   assert.equal(manifest.carrier_source_role, 'codex_plugin_default_carrier_not_package_truth');
   assert.equal(schema.required.includes('distribution_payload'), false);
   assert.equal(schema.properties.distribution_payload.properties.install_truth.const, 'resolved_digest_lock');
@@ -706,13 +726,13 @@ test('package archive builder refreshes reused managed clones before archiving s
   const gitConfigPath = path.join(os.tmpdir(), `opl-package-refresh-git-${Date.now()}.config`);
 
   const fixtures = {
-    medautoscience: createOwnerPackageFixture('med-autoscience', 'mas', '0.1.0a4'),
+    medautoscience: createOwnerPackageFixture('med-autoscience', 'mas', '0.1.0'),
     medautogrant: createOwnerPackageFixture('med-autogrant', 'mag', '0.1.0'),
-    redcube: createOwnerPackageFixture('redcube-ai', 'rca', '0.1.0'),
-    oplmetaagent: createOwnerPackageFixture('opl-meta-agent', 'oma', '0.1.0'),
+    redcube: createOwnerPackageFixture('redcube-ai', 'rca', '0.1.1'),
+    oplmetaagent: createOwnerPackageFixture('opl-meta-agent', 'oma', '0.1.1'),
     oplbookforge: createOwnerPackageFixture('opl-bookforge', 'obf', '0.1.0'),
     scholarskills: createOwnerPackageFixture('mas-scholar-skills', 'mas-scholar-skills', '0.1.1', 'capability_package'),
-    oplflow: createOwnerPackageFixture('opl-flow', 'opl-flow', '0.1.16', 'workflow_profile'),
+    oplflow: createOwnerPackageFixture('opl-flow', 'opl-flow', '0.1.18', 'workflow_profile'),
   };
   fs.writeFileSync(
     gitConfigPath,

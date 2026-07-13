@@ -1,4 +1,5 @@
 import { readOplFrameworkRuntimeUpdateStatus } from '../system-installation/framework-self-update.ts';
+import { inspectBaseManagedDependencies } from '../base-managed-dependencies.ts';
 import { resolveProjectRoot } from '../system-installation/shared.ts';
 import {
   componentReceipt,
@@ -32,9 +33,11 @@ export function buildRuntimeSubstrateComponent(
   const frameworkRuntime = readOplFrameworkRuntimeUpdateStatus(resolveProjectRoot(), {
     allowChannelLookup: options.allowFrameworkChannelLookup,
   });
+  const dependencyCatalog = inspectBaseManagedDependencies(process.env.HOME?.trim() || process.cwd());
   const installed = booleanValue(codex, 'installed') === true;
   const updateAvailable = booleanValue(codex, 'update_available') === true;
   const frameworkUpdateAvailable = frameworkRuntime.update_available && !frameworkRuntime.target_is_developer_checkout;
+  const developerSourceOverride = frameworkRuntime.source_root_configured === true;
   const runtimeLatestStatus = stringValue(runtimeSubstrate, 'latest_version_status');
   const binarySource = stringValue(codex, 'binary_source');
   const currentPointer = runtimeSubstrate?.current_root ?? null;
@@ -105,6 +108,7 @@ export function buildRuntimeSubstrateComponent(
       },
       opl_framework_runtime: frameworkRuntime,
       runtime_substrate_updater: runtimeSubstrate,
+      dependency_catalog: dependencyCatalog,
       owner_route: {
         route_kind: 'controlled_framework_executor',
         readback_ref: 'opl system startup-maintenance --json',
@@ -160,11 +164,11 @@ export function buildRuntimeSubstrateComponent(
     postApplyHooks,
     auto_apply: {
       mode: 'controlled_apply',
-      eligible: state !== 'current',
-      app_background_safe: false,
+      eligible: state !== 'current' && !developerSourceOverride,
+      app_background_safe: state !== 'current' && !developerSourceOverride,
       scope: 'app_owned_runtime_root_only',
-      command_ref: state === 'current' ? null : 'opl update apply --json',
-      blocked_reasons: [],
+      command_ref: state === 'current' || developerSourceOverride ? null : 'opl update apply --json',
+      blocked_reasons: developerSourceOverride ? ['developer_framework_source_override_detect_only'] : [],
     },
     status_detail: detail,
     post_apply_guidance: {

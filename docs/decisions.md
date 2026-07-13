@@ -5,6 +5,19 @@ Purpose: `decisions`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+## 2026-07-13
+
+### 决策：白皮书正文归各仓，构建与发布证据归 OPL 唯一工具链
+
+原因：白皮书是面向用户解释设计理念的长期公开材料，不是功能说明书，也不是运行状态或 readiness 证明。正文需要由 OPL Framework、App、Cloud、MAS 各自的 truth owner 维护；renderer、样式、构建验证和发布回读如果分叉，则无法证明线上字节来自哪份正文，也会让工具用必备章节和术语反向塑造叙事。
+
+影响：
+
+- 四仓只持有正文和 `contracts/whitepaper_profile.json`；Framework 持有唯一 renderer、样式、family registry、reusable workflow 与 exact-byte readback。
+- Profile 只约束 owner、输入输出、页数和公开 URL，不断言叙述性章节或固定措辞。
+- 普通 push 只生成可审核 bundle；显式发布消费同一 bundle，经 `whitepaper-production` approval 后更新保留历史的 `gh-pages`，不得本机 orphan force-push。
+- artifact verification 只证明 HTML/PDF 已渲染；只有公开 URL exact-byte 回读 receipt 才证明已发布，两者都不声明产品、runtime、domain 或 production ready。
+
 ## 2026-07-12
 
 ### 决策：安装、管理与更新统一为 OPL Base、OPL App、OPL Packages 三层生命周期
@@ -16,7 +29,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - `opl update status|check|plan|apply|repair|rollback` 只管理 `OPL Base`，不再接受 `--component`。
 - `opl packages list|install|update|enable|disable|repair|uninstall` 是 `OPL Packages` canonical lifecycle；registry validation、status、Framework link 和 shortcut preference 诊断也迁到同一 namespace。旧公共 package namespace 和 legacy component alias 直接退役。
 - `managed_update.components[].component_id` 只允许 `opl_base`、`opl_app`、`opl_packages`。`runtime_substrate`、`installation_carrier`、`capability_packages` 只作为内部 `provider_id`；不能作为 selector 或 lifecycle owner。
-- OPL Base 独占 Framework、Temporal-backed provider runtime、共享 toolchain 和系统级 dependency/integration lifecycle。标准 Agent 只声明并消费 Base 提供的 runtime contract；Agent package、App 或 domain repo 都不得安装、更新、回滚或反向管理 Base/Temporal。
+- OPL Base 独占 Framework、Temporal-backed provider runtime、共享 toolchain 和系统级 dependency/integration lifecycle。Base catalog 至少投影 Codex、Temporal、OfficeCLI 和 MinerU 的版本、ownership、digest/receipt 与 activation policy：OPL-managed clean 对象静默 reconcile，Full bundle 只作 seed，环境变量、Homebrew、global npm、PATH 与用户目录对象只检测。Codex 与 Framework/Temporal 写 pending generation并记录 staging process instance；相同 version/artifact 已 pending 时不重复下载或覆盖 marker；同一 App process instance 的 daily maintenance 不激活，App 重启后的新 instance 才切换。标准 Agent 只声明并消费 Base 提供的 runtime contract；Agent package、App 或 domain repo 都不得安装、更新、回滚或反向管理 Base/Temporal。
 - companion tools 归入 Base 的 `dependency_status` / `integration_status`。Codex skill/plugin sync 归入 Packages 的 `projection_status`，OPL Flow profile semantic merge 归入 `profile_migration_status`；空白 profile 可由 package transaction 安装，已有用户 profile 必须生成单一 current merge packet，并只允许 `opl packages profile apply <package_id> --merged-file <packet-path>` 显式应用 reviewed merge。禁止静默覆盖用户 profile，卸载 Package 也不得删除用户 profile。
 - package transaction 继续要求 immutable digest/content identity、dirty/developer checkout 保护、同 transaction 的 Codex skill/plugin sync、manifest-declared managed runtime source carrier 和单一 lifecycle receipt；Framework 复用现有 Agent Package lock/materializer 与 managed module package-channel，不创建第二套 package manager。runtime source 只有在 bootstrap、health 与 handler probe 全部成功后才可 current；后续失败必须恢复 previous generation 或删除本轮 fresh root，preexisting adopted root 不得误删。
 - OPL Flow 也是普通 `OPL Package`。其 owner `workflow-policy.json` 与 schema 由 manifest 的 `managed_policy_surface` 引入，Framework 先校验 package identity/version/schema，再通过通用 plugin/skill/service/config/prompt inventory 执行 typed conflict retirement；backup、inventory digest、policy digest、profile/model projection、lock、receipt 与 LKG 必须属于同一 Package transaction。禁止恢复 workflow 专属 checkout、lock、receipt、rollback 或 readback。

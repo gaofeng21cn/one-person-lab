@@ -27,6 +27,8 @@ export function writeManagedRuntimeSourceFixture(input: {
   fs.mkdirSync(blobRoot, { recursive: true });
   fs.mkdirSync(fakeBin, { recursive: true });
   fs.mkdirSync(path.join(sourceRoot, 'scripts'), { recursive: true });
+  fs.mkdirSync(path.join(sourceRoot, 'src'), { recursive: true });
+  fs.writeFileSync(path.join(sourceRoot, 'src', 'fixture_agent.py'), 'import opl_framework\n');
   fs.writeFileSync(path.join(sourceRoot, 'package.json'), JSON.stringify({
     name: input.repoName,
     version: input.version,
@@ -40,6 +42,7 @@ export function writeManagedRuntimeSourceFixture(input: {
   fs.writeFileSync(path.join(sourceRoot, 'scripts', 'opl-module-healthcheck.sh'), [
     '#!/usr/bin/env bash',
     'set -euo pipefail',
+    'PYTHONPATH=src python3 -c "import opl_framework"',
     'external-runtime-tool --check',
     `test "$(cat .runtime-prepared)" = ${JSON.stringify(input.version)}`,
     'if [[ "${1:-}" == "--probe" ]]; then',

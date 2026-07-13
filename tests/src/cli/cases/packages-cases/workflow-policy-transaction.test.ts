@@ -60,6 +60,12 @@ function writeOplFlowPackage(root: string) {
         auto_retire_on_optimize: true,
         reason: 'fixture',
       },
+      {
+        id: 'legacy-opl-flow-local-plugin',
+        discovery_ids: ['opl-flow-local'],
+        auto_retire_on_optimize: true,
+        reason: 'fixture',
+      },
     ],
     codex_model_policy: {
       authority: 'opl-flow',
@@ -69,7 +75,7 @@ function writeOplFlowPackage(root: string) {
       catalog_policy: {},
     },
     migration_policy: {
-      trigger: 'explicit_opl_flow_install_or_update',
+      trigger: 'explicit_opl_flow_install_update_optimize_or_generic_app_post_update_reconcile',
       default_action: 'backup_disable_and_remove_from_discovery',
       physical_delete: false,
       receipt_owner: 'opl-framework',
@@ -179,6 +185,19 @@ test('generic OPL package transaction owns OPL Flow policy migration without inv
     '[mcp_servers.codexcont]',
     'command = "codexcont"',
     '',
+    '[projects."/Users/test/workspace/opl-flow"]',
+    'trust_level = "trusted"',
+    '',
+    '[plugins."documents@openai-primary-runtime"]',
+    'enabled = true',
+    '',
+    '[marketplaces.opl-flow-local]',
+    'source_type = "local"',
+    'source = "/tmp/opl-flow-local"',
+    '',
+    '[plugins."opl-flow@opl-flow-local"]',
+    'enabled = true',
+    '',
   ].join('\n');
   const env = {
     HOME: home,
@@ -217,11 +236,25 @@ test('generic OPL package transaction owns OPL Flow policy migration without inv
       'codexcont-intelligence-enhancement',
       'superpowers-local-method-profile',
       'legacy-development-role-prompts',
+      'legacy-opl-flow-local-plugin',
     ]);
     assert.equal(migration.backup_active, true);
     assert.equal(fs.existsSync(migration.backup_root), true);
+    const managedCachePath = installed.opl_agent_package_install.physical_surface.codex_plugin_cache_path;
+    assert.equal(
+      fs.existsSync(path.join(managedCachePath, '.codex-plugin', 'plugin.json')),
+      true,
+    );
+    assert.equal(
+      migration.actions.some((action: { source_ref: string }) =>
+        action.source_ref === managedCachePath || action.source_ref.startsWith(`${managedCachePath}${path.sep}`)),
+      false,
+    );
     for (const legacyPath of legacyPaths) assert.equal(fs.existsSync(legacyPath), false, legacyPath);
-    assert.doesNotMatch(fs.readFileSync(configPath, 'utf8'), /superpowers|ponytail|codexcont/i);
+    const installedConfig = fs.readFileSync(configPath, 'utf8');
+    assert.doesNotMatch(installedConfig, /superpowers|ponytail|codexcont|opl-flow@opl-flow-local/i);
+    assert.match(installedConfig, /\[projects\."\/Users\/test\/workspace\/opl-flow"\]/);
+    assert.match(installedConfig, /\[plugins\."documents@openai-primary-runtime"\]/);
 
     const lockIndex = JSON.parse(fs.readFileSync(path.join(stateDir, 'agent-package-locks.json'), 'utf8'));
     assert.deepEqual(lockIndex.last_known_good_transactions, []);

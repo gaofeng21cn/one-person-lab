@@ -1,4 +1,6 @@
 import { syncFamilySkillPacks } from './opl-skills.ts';
+import { runOplAgentPackageBulkUpdate } from './agent-package-registry.ts';
+import { reconcileBaseManagedDependencies } from './base-managed-dependencies.ts';
 import {
   buildOplModules,
   resolveManagedModuleCheckoutPath,
@@ -33,6 +35,7 @@ import {
   type ManagedUpdateReloadGuidance,
 } from './managed-update-owner-boundary.ts';
 import { resolveFrameworkUpdateTargetRoot, runOplFrameworkSelfRollback } from './system-installation/framework-self-update.ts';
+import { rollbackCodexRuntimeGeneration } from './system-installation/engine-helpers.ts';
 import { resolveProjectRoot } from './system-installation/shared.ts';
 import {
   acquireManagedUpdateLock,
@@ -115,6 +118,28 @@ function systemActionStatus(value: unknown): ManagedUpdateOwnerExecutionStatus {
   return 'manual_required';
 }
 
+function moduleStatus(result: unknown) {
+  return isRecord(result) && result.status === 'completed' ? 'completed' : 'manual_required';
+}
+
+function reconcileLegacyChannelTargets() {
+  if (!process.env.OPL_PACKAGE_CHANNEL_MANIFEST_REF?.trim()) return [];
+  return buildOplModules().modules.modules.filter((module) => module.default_install).map((module) => {
+    if (!module.installed || module.install_origin === 'missing') {
+      const result = runOplModuleAction('install', module.module_id).module_action as Record<string, unknown>;
+      return { target_type: 'module', target_id: module.module_id, status: moduleStatus(result), reason: 'module_missing', action: 'install', result };
+    }
+    if (module.install_origin !== 'managed_root' || module.health_status === 'dirty'
+      || module.health_status === 'invalid_checkout' || module.git?.dirty
+      || ['ahead', 'diverged', 'unknown'].includes(module.git?.sync_status ?? '')) {
+      return { target_type: 'module', target_id: module.module_id, status: 'manual_required', reason: 'developer_or_dirty_checkout_visible', action: null, result: null };
+    }
+    const action = module.recommended_action === 'update' && module.available_actions.includes('update') ? 'update' : 'sync';
+    const result = runOplModuleAction(action, module.module_id).module_action as Record<string, unknown>;
+    return { target_type: 'module', target_id: module.module_id, status: moduleStatus(result), reason: action === 'update' ? 'capability_packages_refresh' : 'capability_packages_post_apply_sync', action, result };
+  });
+}
+
 function normalizeError(error: unknown) {
   if (error && typeof error === 'object' && 'toJSON' in error && typeof error.toJSON === 'function') {
     return error.toJSON() as Record<string, unknown>;
@@ -136,6 +161,7 @@ async function runRuntimeSubstrateAdapter(
       targetRoot: resolveFrameworkUpdateTargetRoot(resolveProjectRoot()),
     });
     const status = systemActionStatus(frameworkRollback);
+    const codexRollback = rollbackCodexRuntimeGeneration();
     return {
       component_id: 'opl_base',
       adapter_id: 'runtime_substrate_adapter',
@@ -152,6 +178,7 @@ async function runRuntimeSubstrateAdapter(
           ? 'run_startup_maintenance'
           : 'restart_app_with_previous_runtime_pointer_or_run_startup_maintenance',
         framework_rollback: frameworkRollback,
+        codex_runtime_rollback: codexRollback,
         manual_required_reason: status === 'manual_required'
           ? frameworkRollback.reason
           : null,
@@ -162,6 +189,7 @@ async function runRuntimeSubstrateAdapter(
 
   const result = await runOplStartupMaintenance(contracts, { scope: 'runtime_substrate' });
   const systemAction = result.system_action as Record<string, unknown>;
+  const dependencyReconcile = reconcileBaseManagedDependencies(process.env.HOME?.trim() || process.cwd());
   return {
     component_id: 'opl_base',
     adapter_id: 'runtime_substrate_adapter',
@@ -176,13 +204,10 @@ async function runRuntimeSubstrateAdapter(
       rollback_ref: rollbackRef,
       repair_action: 'run_startup_maintenance',
       startup_maintenance: systemAction,
+      dependency_reconcile: dependencyReconcile,
     },
     error: null,
   };
-}
-
-function moduleStatus(result: unknown) {
-  return isRecord(result) && result.status === 'completed' ? 'completed' : 'manual_required';
 }
 
 function buildAgentPackagePostApplyActions(
@@ -299,7 +324,7 @@ function buildAgentPackageStatusDetail(input: {
   };
 }
 
-function runAgentPackageAdapter(operation: ManagedUpdateKernelInput['operation']): AdapterExecutionResult {
+async function runAgentPackageAdapter(operation: ManagedUpdateKernelInput['operation']): Promise<AdapterExecutionResult> {
   if (operation === MANAGED_UPDATE_OWNER_ACTIONS.revert) {
     const modules = buildOplModules().modules.modules.filter((module) => module.default_install);
     const targets: Record<string, unknown>[] = [];
@@ -384,54 +409,12 @@ function runAgentPackageAdapter(operation: ManagedUpdateKernelInput['operation']
     };
   }
 
-  const modules = buildOplModules().modules.modules.filter((module) => module.default_install);
-  const targets: Record<string, unknown>[] = [];
-  for (const module of modules) {
-    if (!module.installed || module.install_origin === 'missing') {
-      const result = runOplModuleAction('install', module.module_id).module_action as Record<string, unknown>;
-      targets.push({
-        target_type: 'module',
-        target_id: module.module_id,
-        status: moduleStatus(result),
-        reason: 'module_missing',
-        action: 'install',
-        result,
-      });
-      continue;
-    }
-    if (
-      module.install_origin !== 'managed_root'
-      || module.health_status === 'dirty'
-      || module.health_status === 'invalid_checkout'
-      || module.git?.dirty
-      || module.git?.sync_status === 'ahead'
-      || module.git?.sync_status === 'diverged'
-      || module.git?.sync_status === 'unknown'
-    ) {
-      targets.push({
-        target_type: 'module',
-        target_id: module.module_id,
-        status: 'manual_required',
-        reason: 'developer_or_dirty_checkout_visible',
-        action: null,
-        result: null,
-      });
-      continue;
-    }
-
-    const action = module.recommended_action === 'update' && module.available_actions.includes('update')
-      ? 'update'
-      : 'sync';
-    const result = runOplModuleAction(action, module.module_id).module_action as Record<string, unknown>;
-    targets.push({
-      target_type: 'module',
-      target_id: module.module_id,
-      status: moduleStatus(result),
-      reason: action === 'update' ? 'capability_packages_refresh' : 'capability_packages_post_apply_sync',
-      action,
-      result,
-    });
-  }
+  const bulkUpdate = await runOplAgentPackageBulkUpdate();
+  const bulkResult = bulkUpdate.opl_agent_package_bulk_update;
+  const packageTargets = bulkResult.targets as Record<string, unknown>[];
+  const targets: Record<string, unknown>[] = packageTargets.length > 0
+    ? [...packageTargets]
+    : reconcileLegacyChannelTargets();
   const manualCount = targets.filter((target) => target.status === 'manual_required').length;
   const completedCount = targets.filter((target) => target.status === 'completed').length;
   const status: AdapterExecutionResult['status'] = manualCount > 0 ? 'manual_required' : 'completed';
@@ -459,7 +442,9 @@ function runAgentPackageAdapter(operation: ManagedUpdateKernelInput['operation']
     surface_kind: 'capability_packages_adapter_result',
     apply_mode: applyMode,
     app_background_safe: applyMode === 'auto_apply',
-    auto_apply_scope: 'clean_opl_managed_module_roots_only',
+    auto_apply_scope: packageTargets.length > 0
+      ? 'clean_digest_locked_installed_root_packages_only'
+      : 'legacy_explicit_channel_roots_only',
     status_detail: statusDetail,
     reload_guidance: reloadGuidance,
     read_model_guidance: {
@@ -499,7 +484,7 @@ async function runAdapter(
       return await runRuntimeSubstrateAdapter(contracts, operation);
     }
     if (componentId === 'opl_packages') {
-      return runAgentPackageAdapter(operation);
+      return await runAgentPackageAdapter(operation);
     }
     return {
       component_id: componentId,

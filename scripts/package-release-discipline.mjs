@@ -13,14 +13,20 @@ const PACKAGE_RELEASE_CALLER_WORKFLOW_PATH = '.github/workflows/release-package-
 const PACKAGE_DAILY_WORKFLOW_PATH = '.github/workflows/daily-package-channel.yml';
 
 function parseCliOptions(argv) {
-  const parsed = { manifest: null };
+  const parsed = { manifest: null, promotionTarget: 'candidate' };
   parseRequiredValueOptions(argv, {
     '--manifest': (value) => {
       parsed.manifest = path.resolve(value);
     },
+    '--promotion-target': (value) => {
+      parsed.promotionTarget = value.trim();
+    },
   });
   if (!parsed.manifest) {
     throw new Error('Usage: package-release-discipline.mjs --manifest <opl-release-manifest.json>');
+  }
+  if (!['candidate', 'latest-stable'].includes(parsed.promotionTarget)) {
+    throw new Error(`Invalid Package promotion target: ${parsed.promotionTarget}`);
   }
   return parsed;
 }
@@ -95,7 +101,7 @@ function validateFrameworkCore(entry, failures) {
   assertCondition(entry?.homebrew_formula?.sha256_source === 'tap_sync_download_and_hash', 'framework_core: Homebrew SHA-256 owner drifted', failures);
 }
 
-function validateManifest(manifest) {
+function validateManifest(manifest, promotionTarget = 'candidate') {
   const failures = [];
   const automation = manifest.release_automation;
   const generation = manifest.release_set_generation;
@@ -126,12 +132,15 @@ function validateManifest(manifest) {
   assertCondition(JSON.stringify(automation?.channel_manifest?.moving_tags) === JSON.stringify(['candidate', 'latest-stable']), 'Moving tags must be candidate and latest-stable only', failures);
   assertCondition(automation?.channel_manifest?.ghcr_ref?.includes('<release_set_generation>'), 'Catalog carrier must use Release Set generation', failures);
   assertCondition(automation?.artifact_build?.required_input === 'release_set_generation', 'Artifact build input must be Release Set generation', failures);
-  assertCondition(automation?.daily_package_channel?.generation_template === '<utc_yy.m.d>', 'Daily generation template drifted', failures);
+  assertCondition(automation?.daily_package_channel?.generation_template === '<utc_yy.m.d[-rN_auto]>', 'Daily generation template drifted', failures);
   assertCondition(automation?.daily_package_channel?.force_publish_input === 'force_publish', 'Daily force repair input drifted', failures);
   assertCondition(automation?.cleanup?.protected_tags?.includes('candidate') && automation?.cleanup?.protected_tags?.includes('latest-stable'), 'Cleanup must protect both moving tags', failures);
 
   for (const packageId of CANONICAL_PACKAGE_IDS) {
     validatePackageArtifact(packageId, packageArtifacts[packageId], releaseSet?.members?.[packageId], failures);
+    if (promotionTarget === 'latest-stable') {
+      assertCondition(!String(packageArtifacts[packageId]?.package_version ?? '').includes('-'), `${packageId}: latest-stable cannot select a prerelease Package`, failures);
+    }
   }
   assertCondition(packageArtifacts['mas-scholar-skills']?.scope === 'framework_capability_package', 'MAS Scholar Skills role drifted', failures);
   assertCondition(packageArtifacts['opl-flow']?.scope === 'runtime_dependency', 'OPL Flow workflow-profile role drifted', failures);
@@ -177,7 +186,10 @@ function validateWorkflow(manifest, manifestPath, failures) {
   assertCondition(/release:[\s\S]*types:[\s\S]*-\s*published/.test(releaseSource), 'Release caller must be gated by published GitHub Release', failures);
   assertCondition(/release_set_generation:/.test(releaseSource) && /promotion_target:\s*latest-stable/.test(releaseSource), 'Release caller must promote an explicit generation to latest-stable', failures);
   assertCondition(/schedule:[\s\S]*cron:/.test(dailySource), 'Daily Package workflow must remain scheduled', failures);
+  assertCondition(/concurrency:[\s\S]*group:\s*opl-daily-package-channel-\$\{\{ github\.repository_owner \}\}[\s\S]*cancel-in-progress:\s*false/.test(dailySource), 'Daily Package workflow must serialize Release Set generation allocation', failures);
   assertCondition(/release_set_generation:/.test(dailySource) && /--release-set-generation/.test(dailySource), 'Daily workflow must use Release Set generation vocabulary', failures);
+  assertCondition(/oras repo tags/.test(dailySource) && /release-set-generation\.mjs/.test(dailySource), 'Daily workflow must allocate a new immutable same-day revision', failures);
+  assertCondition(!/if ! oras repo tags/.test(dailySource), 'Daily Release Set generation must fail closed when tag readback fails', failures);
   assertCondition(/OPL_PACKAGE_RELEASE_GATE:\s*daily_package_channel_detection/.test(dailySource), 'Daily detection build must carry an explicit candidate-only release gate', failures);
   assertCondition(/one-person-lab-manifest:latest-stable/.test(dailySource), 'Daily workflow must compare with latest-stable', failures);
   assertCondition(/force_publish[\s\S]*publish_required=true/.test(dailySource), 'force_publish must be consumed as an explicit Release Set repair', failures);
@@ -189,7 +201,7 @@ function validateWorkflow(manifest, manifestPath, failures) {
 function main() {
   const options = parseCliOptions(process.argv.slice(2));
   const manifest = readJsonFile(options.manifest);
-  const failures = validateManifest(manifest);
+  const failures = validateManifest(manifest, options.promotionTarget);
   validateWorkflow(manifest, options.manifest, failures);
   if (failures.length > 0) {
     console.error(JSON.stringify({ status: 'failed', manifest: options.manifest, failures }, null, 2));

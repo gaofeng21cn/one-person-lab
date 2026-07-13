@@ -151,7 +151,7 @@ export function registryPayload(baseUrl: string, input: { packageId?: string } =
         publisher: 'example-org',
         source: 'third_party',
         manifest_url: `${baseUrl}/manifest.json`,
-        latest_version: '1.2.3',
+        version_source_ref: `${baseUrl}/manifest.json#/version`,
         trust_tier: 'third_party_verified',
         codex_visible_entry: 'third-party-research',
         required_skill_ids: ['third-party-research'],

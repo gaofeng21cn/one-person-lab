@@ -244,7 +244,7 @@ test('family-runtime use boundary reconciles the highest compatible provider and
     capabilityCatalogRef: catalog,
     packageCatalogRef: catalog,
   });
-  const consumerV2 = writeMasConsumer(path.join(root, 'consumer-v2'), providerV2, '0.1.0a5', {
+  const consumerV2 = writeMasConsumer(path.join(root, 'consumer-v2'), providerV2, '0.1.0', {
     capabilityCatalogRef: catalog,
     packageCatalogRef: catalog,
   });
@@ -268,10 +268,10 @@ test('family-runtime use boundary reconciles the highest compatible provider and
     assert.equal(created.workspace_locator.package_use_binding.provider_packages[0].package_version, '0.1.1');
     assert.match(created.workspace_locator.package_use_binding.provider_packages[0].artifact_digest, /^sha256:[0-9a-f]{64}$/);
     assert.equal(created.workspace_locator.package_use_binding.provider_packages[0].source_artifact_ref, providerV2);
-    assert.equal(created.workspace_locator.package_use_binding.root_package.package_version, '0.1.0-alpha.5');
+    assert.equal(created.workspace_locator.package_use_binding.root_package.package_version, '0.1.0');
     assert.deepEqual(created.workspace_locator.package_use_binding.root_package.owner_language_version, {
       scheme: 'pep440',
-      value: '0.1.0a5',
+      value: '0.1.0',
     });
     const helper = path.join(workspace, '.codex', 'skills', 'medical-manuscript-writing', 'helper.txt');
     assert.match(fs.readFileSync(helper, 'utf8'), /0\.1\.1/);
