@@ -141,6 +141,7 @@ export function writePackageCatalog(root: string, manifestPaths: string[]) {
     const raw = fs.readFileSync(manifestPath, 'utf8');
     const manifest = JSON.parse(raw);
     const packageId = manifest.package_id;
+    const manifestDigest = `sha256:${crypto.createHash('sha256').update(raw).digest('hex')}`;
     const capabilityAbi = manifest.surface_kind === 'opl_capability_package_manifest.v2'
       ? manifest.capability_abi.id
       : null;
@@ -148,17 +149,18 @@ export function writePackageCatalog(root: string, manifestPaths: string[]) {
       package_version: manifest.version,
       capability_abi: capabilityAbi,
       manifest_url: manifestPath,
-      manifest_sha256: `sha256:${crypto.createHash('sha256').update(raw).digest('hex')}`,
+      manifest_sha256: manifestDigest,
       manifest_json: raw,
       package_manifest: {
         ref: manifestPath,
-        sha256: `sha256:${crypto.createHash('sha256').update(raw).digest('hex')}`,
+        sha256: manifestDigest,
       },
       content_digest: manifest.content_lock?.digest ?? null,
       payload_digest: manifest.content_lock?.digest ?? null,
       source_artifact_ref: manifestPath,
       artifact_digest: `sha256:${crypto.createHash('sha256').update(`artifact:${packageId}:${manifest.version}`).digest('hex')}`,
       artifact_status: 'published_immutable',
+      package_content_digest: manifest.content_lock?.digest ?? manifestDigest,
       dependency_package_ids: manifest.capability_dependencies?.map((entry: any) => entry.package_id) ?? [],
       selection_status: 'selected_for_release_set',
     };
