@@ -185,6 +185,19 @@ test('generic OPL package transaction owns OPL Flow policy migration without inv
     '[mcp_servers.codexcont]',
     'command = "codexcont"',
     '',
+    '[projects."/Users/test/workspace/opl-flow"]',
+    'trust_level = "trusted"',
+    '',
+    '[plugins."documents@openai-primary-runtime"]',
+    'enabled = true',
+    '',
+    '[marketplaces.opl-flow-local]',
+    'source_type = "local"',
+    'source = "/tmp/opl-flow-local"',
+    '',
+    '[plugins."opl-flow@opl-flow-local"]',
+    'enabled = true',
+    '',
   ].join('\n');
   const env = {
     HOME: home,
@@ -238,7 +251,10 @@ test('generic OPL package transaction owns OPL Flow policy migration without inv
       false,
     );
     for (const legacyPath of legacyPaths) assert.equal(fs.existsSync(legacyPath), false, legacyPath);
-    assert.doesNotMatch(fs.readFileSync(configPath, 'utf8'), /superpowers|ponytail|codexcont/i);
+    const installedConfig = fs.readFileSync(configPath, 'utf8');
+    assert.doesNotMatch(installedConfig, /superpowers|ponytail|codexcont|opl-flow@opl-flow-local/i);
+    assert.match(installedConfig, /\[projects\."\/Users\/test\/workspace\/opl-flow"\]/);
+    assert.match(installedConfig, /\[plugins\."documents@openai-primary-runtime"\]/);
 
     const lockIndex = JSON.parse(fs.readFileSync(path.join(stateDir, 'agent-package-locks.json'), 'utf8'));
     assert.deepEqual(lockIndex.last_known_good_transactions, []);

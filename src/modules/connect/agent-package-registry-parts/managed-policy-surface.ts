@@ -337,10 +337,13 @@ function configTableInventory(configPath: string) {
     const match = line.trim().match(/^\[([^\]]+)\]$/);
     if (!match) return [];
     const canonicalId = match[1].replaceAll('"', '');
+    const [namespace, ...identityParts] = canonicalId.split('.');
+    if (namespace === 'projects') return [];
+    const identity = identityParts.length > 0 ? identityParts.join('.') : canonicalId;
     return [{
       surfaceKind: 'config_table',
       canonicalId,
-      aliases: idAliases(canonicalId),
+      aliases: idAliases(identity),
       physicalRef: configPath,
     }];
   });
@@ -389,10 +392,9 @@ function renderTomlDocument(preamble: string, tables: Array<Pick<TomlTableBlock,
   return parts.length > 0 ? `${parts.join('\n\n')}\n` : '';
 }
 
-function removeMatchedTomlTables(text: string, matchedAliases: Set<string>) {
+function removeMatchedTomlTables(text: string, matchedHeaders: Set<string>) {
   const document = parseTomlDocument(text);
-  const removed = document.tables.filter((table) =>
-    table.aliases.some((alias) => matchedAliases.has(alias)));
+  const removed = document.tables.filter((table) => matchedHeaders.has(table.header));
   const kept = document.tables.filter((table) => !removed.includes(table));
   return {
     text: renderTomlDocument(document.preamble, kept),
@@ -558,8 +560,8 @@ export function materializeManagedPolicySurface(input: {
       }
       if (configMatches.length > 0 && fs.existsSync(configPath)) {
         const current = fs.readFileSync(configPath, 'utf8');
-        const matchedAliases = new Set(configMatches.flatMap((entry) => entry.item.aliases));
-        const removal = removeMatchedTomlTables(current, matchedAliases);
+        const matchedHeaders = new Set(configMatches.map((entry) => entry.item.canonicalId));
+        const removal = removeMatchedTomlTables(current, matchedHeaders);
         if (removal.text !== current) {
           const backupRef = `${backupPath(backupRoot, configPath)}.toml-delta.json`;
           const removedTomlTables = removal.removed.map((table) => ({
