@@ -151,9 +151,19 @@ async function rotateSession() {
     writeGatewayCredentials({ ...credentials, refresh_token: session.refresh_token });
     return { session, credentials: { ...credentials, refresh_token: session.refresh_token } };
   } catch (error) {
+    const code = reasonCode(error);
     const state = readGatewayAccountState();
-    if (state) writeGatewayAccountState({ ...state, status: 'reauth_required', last_error_code: 'reauth_required' });
-    throw gatewayError('reauth_required', 'OPL Gateway account must be signed in again.');
+    const sessionOutcomeUnknown = code === 'network_timeout';
+    const authenticationRejected = code === 'auth_expired' || code === 'reauth_required';
+    if (state) {
+      writeGatewayAccountState(authenticationRejected || sessionOutcomeUnknown
+        ? { ...state, status: 'reauth_required', last_error_code: 'reauth_required' }
+        : { ...state, last_error_code: code, stale_after: new Date().toISOString() });
+    }
+    if (authenticationRejected || sessionOutcomeUnknown) {
+      throw gatewayError('reauth_required', 'OPL Gateway account must be signed in again.');
+    }
+    throw error;
   }
 }
 

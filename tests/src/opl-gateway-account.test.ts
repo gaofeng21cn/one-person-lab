@@ -39,6 +39,7 @@ test('gateway account login, refresh and disconnect keep secrets private and dis
   let keyStatus = 'active';
   let createIdempotency = '';
   let refreshUnauthorized = false;
+  let refreshFailureStatus: number | null = null;
   const requests: Array<{ method: string; url: string; body: Record<string, unknown> }> = [];
   const server = http.createServer(async (request, response) => {
     const chunks: Buffer[] = [];
@@ -54,6 +55,9 @@ test('gateway account login, refresh and disconnect keep secrets private and dis
     }
     if (route === '/api/v1/auth/refresh') {
       if (refreshUnauthorized) return json(response, { code: 401, message: 'expired' }, 401);
+      if (refreshFailureStatus !== null) {
+        return json(response, { code: refreshFailureStatus, message: 'temporary failure' }, refreshFailureStatus);
+      }
       refreshCount += 1;
       return json(response, { code: 0, data: {
         access_token: `access-${refreshCount}`,
@@ -155,6 +159,18 @@ test('gateway account login, refresh and disconnect keep secrets private and dis
     assert.equal(refreshed[0].gateway_account.status, 'connected');
     assert.equal(JSON.stringify(refreshed).includes('refresh-1'), false);
     assert.equal(refreshCount, 1);
+
+    refreshFailureStatus = 503;
+    await assert.rejects(
+      refreshOplGatewayAccount(),
+      (error: unknown) => error instanceof FrameworkContractError
+        && error.details?.reason_code === 'gateway_unavailable',
+    );
+    const staleAfterFailure = readOplGatewayAccount();
+    assert.equal(staleAfterFailure.status, 'connected');
+    assert.equal(staleAfterFailure.freshness.stale, true);
+    assert.equal(staleAfterFailure.freshness.last_error_code, 'gateway_unavailable');
+    refreshFailureStatus = null;
 
     refreshUnauthorized = true;
     await assert.rejects(refreshOplGatewayAccount(), (error: unknown) =>
