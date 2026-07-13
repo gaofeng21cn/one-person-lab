@@ -15,6 +15,147 @@ import {
 
 export type JsonRecord = Record<string, unknown>;
 
+type WorkspaceDescriptorFixtureAgent = 'mas' | 'mag' | 'rca';
+
+function executableWorkspaceCommandTemplates(agent: WorkspaceDescriptorFixtureAgent) {
+  if (agent === 'mas') {
+    return {
+      entry_command_template: ['opl-test-domain-entry', 'mas', 'status', '{workspace_root}', '{profile_ref}'],
+      manifest_command_template: ['opl-test-domain-entry', 'mas', 'manifest', '{workspace_root}', '{profile_ref}'],
+    };
+  }
+  if (agent === 'mag') {
+    return {
+      entry_command_template: ['opl-test-domain-entry', 'mag', 'status', '{workspace_path}', '{input_path}'],
+      manifest_command_template: ['opl-test-domain-entry', 'mag', 'manifest', '{workspace_path}', '{input_path}'],
+    };
+  }
+  return {
+    entry_command_template: ['opl-test-domain-entry', 'rca', 'status', '{workspace_root}'],
+    manifest_command_template: ['opl-test-domain-entry', 'rca', 'manifest', '{workspace_root}'],
+  };
+}
+
+function workspaceDescriptorFixture(
+  agent: WorkspaceDescriptorFixtureAgent,
+  includeExecutableCommands: boolean,
+) {
+  const commands = includeExecutableCommands
+    ? executableWorkspaceCommandTemplates(agent)
+    : { entry_command_template: null, manifest_command_template: null };
+  const common = {
+    version: 'opl_standard_agent_interface.v1',
+    runtime: {
+      runtime_domain_id: agent === 'mas' ? 'medautoscience' : agent === 'mag' ? 'medautogrant' : 'redcube_ai',
+      dispatch_command: null,
+      registration_ref: null,
+    },
+    progress: {
+      deliverable_delta_aliases: [],
+      platform_delta_aliases: [],
+    },
+    routing: {
+      explicit_aliases: [agent],
+      workstream_ids: [`${agent}_ops`],
+      intent_signals: [agent],
+      ambiguity_policy: 'require_explicit_workstream',
+    },
+  };
+  if (agent === 'mas') {
+    return {
+      repoName: 'med-autoscience',
+      payload: {
+        domain_id: 'medautoscience',
+        standard_agent_interface: {
+          ...common,
+          workspace_binding: {
+            locator_surface_kind: 'med_autoscience_workspace_profile',
+            default_profile_id: 'portfolio',
+            workspace_kind: 'medical_research_workspace',
+            project_kind: 'study',
+            project_collection_label: 'studies',
+            default_workspace_id: 'research-workspace',
+            default_project_id: 'study-001',
+            required_locator_fields: ['profile_ref'],
+            optional_locator_fields: ['workspace_root'],
+            ...commands,
+          },
+        },
+      },
+    };
+  }
+  if (agent === 'mag') {
+    return {
+      repoName: 'med-autogrant',
+      payload: {
+        domain_id: 'med-autogrant',
+        standard_agent_interface: {
+          ...common,
+          workspace_binding: {
+            locator_surface_kind: 'med_autogrant_workspace_input',
+            default_profile_id: 'one_off',
+            workspace_kind: 'grant_authoring_workspace',
+            project_kind: 'grant_project',
+            project_collection_label: 'deliverables',
+            default_workspace_id: 'grant-workspace',
+            default_project_id: 'grant-001',
+            required_locator_fields: ['input_path'],
+            optional_locator_fields: [],
+            ...commands,
+          },
+        },
+      },
+    };
+  }
+  return {
+    repoName: 'redcube-ai',
+    payload: {
+      domain_id: 'redcube_ai',
+      standard_agent_interface: {
+        ...common,
+        workspace_binding: {
+          locator_surface_kind: 'redcube_workspace',
+          default_profile_id: 'series',
+          workspace_kind: 'visual_production_workspace',
+          project_kind: 'slide_deck',
+          project_collection_label: 'deliverables',
+          default_workspace_id: 'visual-production',
+          default_project_id: 'deck-001',
+          required_locator_fields: ['workspace_root'],
+          optional_locator_fields: [],
+          ...commands,
+        },
+      },
+    },
+  };
+}
+
+export function createWorkspaceDescriptorFamilyFixture(
+  agents: WorkspaceDescriptorFixtureAgent[] = ['mas', 'mag', 'rca'],
+  options: { includeExecutableCommands?: boolean } = {},
+) {
+  const familyRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-descriptor-family-'));
+  for (const agent of agents) {
+    const descriptor = workspaceDescriptorFixture(agent, options.includeExecutableCommands === true);
+    const contractsDir = path.join(familyRoot, descriptor.repoName, 'contracts');
+    fs.mkdirSync(contractsDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(contractsDir, 'domain_descriptor.json'),
+      `${JSON.stringify(descriptor.payload, null, 2)}\n`,
+    );
+  }
+  return {
+    familyRoot,
+    cleanup() {
+      fs.rmSync(familyRoot, { recursive: true, force: true });
+    },
+  };
+}
+
+export function createRcaWorkspaceDescriptorFixture() {
+  return createWorkspaceDescriptorFamilyFixture(['rca']);
+}
+
 export function createWorkspaceFixture(input: {
   agent: 'mag' | 'mas' | 'rca';
   workspaceId: string;
@@ -22,6 +163,7 @@ export function createWorkspaceFixture(input: {
 }) {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-fixture-state-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-fixture-root-'));
+  const descriptorFixture = input.agent === 'rca' ? createRcaWorkspaceDescriptorFixture() : null;
   const output = runCli([
     'workspace',
     'init',
@@ -33,7 +175,10 @@ export function createWorkspaceFixture(input: {
     input.workspaceId,
     '--project-id',
     input.projectId,
-  ], { OPL_STATE_DIR: stateRoot });
+  ], {
+    OPL_STATE_DIR: stateRoot,
+    ...(descriptorFixture ? { OPL_FAMILY_WORKSPACE_ROOT: descriptorFixture.familyRoot } : {}),
+  });
 
   return {
     output,
@@ -43,6 +188,7 @@ export function createWorkspaceFixture(input: {
     cleanup() {
       fs.rmSync(stateRoot, { recursive: true, force: true });
       fs.rmSync(workspaceRoot, { recursive: true, force: true });
+      descriptorFixture?.cleanup();
     },
   };
 }

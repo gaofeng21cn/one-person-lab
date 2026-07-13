@@ -1,4 +1,5 @@
 import { assert, fs, os, parseJsonText, path, runCli, test } from '../../helpers.ts';
+import { createWorkspaceDescriptorFamilyFixture } from '../workspace-domain-test-helper.ts';
 
 const defaultDeveloperModePermissionsFixture = JSON.stringify({
   user: { login: 'gaofeng21cn' },
@@ -15,6 +16,7 @@ test('app action execute owns settings, release channel, workspace root, and pro
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-action-settings-home-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-action-workspace-'));
   const stateDir = path.join(homeRoot, 'opl-state');
+  const descriptorFixture = createWorkspaceDescriptorFamilyFixture();
 
   try {
     const developer = runCli([
@@ -94,6 +96,7 @@ test('app action execute owns settings, release channel, workspace root, and pro
     ], {
       HOME: homeRoot,
       OPL_STATE_DIR: stateDir,
+      OPL_FAMILY_WORKSPACE_ROOT: descriptorFixture.familyRoot,
     }).app_action_execution;
 
     assert.equal(workspaceInitialize.delegated_surface, 'opl workspace init');
@@ -122,6 +125,7 @@ test('app action execute owns settings, release channel, workspace root, and pro
     ], {
       HOME: homeRoot,
       OPL_STATE_DIR: stateDir,
+      OPL_FAMILY_WORKSPACE_ROOT: descriptorFixture.familyRoot,
     }).app_action_execution;
 
     assert.equal(magWorkspace.delegated_surface, 'opl workspace init');
@@ -146,6 +150,7 @@ test('app action execute owns settings, release channel, workspace root, and pro
     ], {
       HOME: homeRoot,
       OPL_STATE_DIR: stateDir,
+      OPL_FAMILY_WORKSPACE_ROOT: descriptorFixture.familyRoot,
     }).app_action_execution;
 
     assert.equal(magEnsure.delegated_surface, 'opl workspace ensure');
@@ -176,6 +181,7 @@ test('app action execute owns settings, release channel, workspace root, and pro
     ], {
       HOME: homeRoot,
       OPL_STATE_DIR: stateDir,
+      OPL_FAMILY_WORKSPACE_ROOT: descriptorFixture.familyRoot,
     }).app_action_execution;
 
     assert.equal(workspaceValidate.delegated_surface, 'opl workspace validate');
@@ -228,6 +234,7 @@ test('app action execute owns settings, release channel, workspace root, and pro
     ], {
       HOME: homeRoot,
       OPL_STATE_DIR: stateDir,
+      OPL_FAMILY_WORKSPACE_ROOT: descriptorFixture.familyRoot,
     }).app_action_execution;
 
     assert.equal(workspaceAdopt.delegated_surface, 'opl workspace adopt --dry-run');
@@ -249,6 +256,7 @@ test('app action execute owns settings, release channel, workspace root, and pro
     ], {
       HOME: homeRoot,
       OPL_STATE_DIR: stateDir,
+      OPL_FAMILY_WORKSPACE_ROOT: descriptorFixture.familyRoot,
     }).app_action_execution;
 
     assert.equal(workspaceAdoptApply.delegated_surface, 'opl workspace adopt --apply');
@@ -496,5 +504,6 @@ test('app action execute owns settings, release channel, workspace root, and pro
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    descriptorFixture.cleanup();
   }
 });
