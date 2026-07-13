@@ -25,3 +25,11 @@ export { assertRepoSourceByproductsClean, inspectRepoSourceByproducts } from './
 export { buildWorkspaceCatalog, getActiveWorkspaceBinding, inspectWorkspacePathCurrentness, listWorkspaceBindings, pruneWorkspaceRegistry, resolveWorkspaceLocator } from './workspace-registry.ts';
 export type { WorkspaceBinding, WorkspacePathCurrentness } from './workspace-registry.ts';
 export { WORKSPACE_TOPOLOGY_PROFILE_CONTRACT } from './workspace-topology.ts';
+export {
+  commitStandardAgentActionOutput,
+  STANDARD_AGENT_ACTION_RUNS_RELATIVE_ROOT,
+} from './standard-agent-action-output.ts';
+export type {
+  StandardAgentActionRunOutput,
+  StandardAgentActionRunStoredBytes,
+} from './standard-agent-action-output.ts';
