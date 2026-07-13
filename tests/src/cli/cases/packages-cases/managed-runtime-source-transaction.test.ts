@@ -178,6 +178,16 @@ test('Packages compensates managed runtime source across downstream failure upda
       installedSource.tree_sha256,
     );
 
+    const failedCurrentUpdate = runCliFailure([
+      'packages', 'update', '--package-id', 'redcube-ai',
+      '--scope', 'workspace',
+      '--target-workspace', badWorkspaceTarget,
+    ], env);
+    assert.equal(failedCurrentUpdate.payload.error.code, 'unexpected_error', JSON.stringify(failedCurrentUpdate.payload));
+    assert.equal(fs.existsSync(path.join(modulesRoot, 'redcube-ai.previous')), false);
+    const currentAfterFailure = runCli(['packages', 'status', '--package-id', 'redcube-ai'], env) as any;
+    assert.equal(currentAfterFailure.opl_agent_package_status.runtime_source_readiness.status, 'current');
+
     Object.assign(env, writeManagedRuntimeSourceFixture({
       root: fixtureRoot,
       moduleId: 'redcube',
@@ -325,7 +335,39 @@ test('Packages recovers durable runtime-source markers after interrupted apply a
       sourceHeadSha: 'recovery-v1',
     });
     const env = { OPL_STATE_DIR: stateDir, OPL_MODULES_ROOT: modulesRoot, ...fixtureEnv };
-    runCli(['packages', 'install', '--manifest-url', manifestPath, '--trust-tier', 'first_party'], env);
+    const installed = runCli([
+      'packages', 'install', '--manifest-url', manifestPath, '--trust-tier', 'first_party',
+    ], env) as any;
+    const installedSource = installed.opl_agent_package_install.package_lock.managed_runtime_source;
+    const markerDir = path.join(stateDir, 'agent-package-runtime-source-transactions');
+    const markerPath = path.join(markerDir, 'rca-stale-current-update.json');
+    fs.mkdirSync(markerDir, { recursive: true });
+    fs.writeFileSync(path.join(modulesRoot, 'redcube-ai', 'generated-drift.txt'), 'stale generated output\n');
+    fs.writeFileSync(markerPath, formatJsonPayload({
+      surface_kind: 'opl_agent_package_runtime_source_transaction',
+      version: 1,
+      phase: 'prepared',
+      mutation: {
+        kind: 'activated_with_previous',
+        package_id: 'rca',
+        action: 'update',
+        transaction_id: 'stale-current-update',
+        marker_path: markerPath,
+        module_id: 'redcube',
+        checkout_path: path.join(modulesRoot, 'redcube-ai'),
+        before: installedSource,
+        after: null,
+        staged_removal_paths: [],
+        repair_displaced_path: null,
+        checkout_existed_before: true,
+      },
+    }));
+    const staleMarkerRecovery = runCli(['packages', 'status', '--package-id', 'redcube-ai'], env) as any;
+    assert.equal(staleMarkerRecovery.opl_agent_package_status.runtime_source_recovery.cleared_prepared_transaction_count, 1);
+    assert.equal(staleMarkerRecovery.opl_agent_package_status.runtime_source_recovery.recovered_transaction_count, 0);
+    assert.equal(staleMarkerRecovery.opl_agent_package_status.runtime_source_readiness.status, 'incompatible');
+    runCli(['packages', 'repair', '--package-id', 'redcube-ai'], env);
+    assert.equal(fs.existsSync(markerPath), false);
 
     Object.assign(env, writeManagedRuntimeSourceFixture({
       root: fixtureRoot,
@@ -394,7 +436,6 @@ test('Packages recovers durable runtime-source markers after interrupted apply a
       OPL_TEST_RUNTIME_SOURCE_FINALIZE_FAIL: '1',
     }) as any;
     assert.equal(uninstalled.opl_agent_package_uninstall.runtime_source_cleanup.status, 'cleanup_pending');
-    const markerDir = path.join(stateDir, 'agent-package-runtime-source-transactions');
     assert.equal(fs.readdirSync(markerDir).length, 1);
     const postCommitRecovery = runCli(['packages', 'status', '--package-id', 'redcube-ai'], env) as any;
     assert.equal(postCommitRecovery.opl_agent_package_status.runtime_source_recovery.cleanup_completed_count, 1);
