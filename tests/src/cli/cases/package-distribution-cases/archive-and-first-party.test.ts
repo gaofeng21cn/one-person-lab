@@ -264,7 +264,7 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(manifest.packages.framework_core.homebrew_formula.package_name, 'opl');
   assert.equal(manifest.packages.framework_core.homebrew_formula.approval_status, 'owner_approved');
   assert.equal(manifest.packages.framework_core.homebrew_formula.carrier_scope, 'framework_core_only');
-  assert.equal(manifest.packages.framework_core.homebrew_formula.version, '0.2.0');
+  assert.equal(manifest.packages.framework_core.homebrew_formula.version, '0.2.1');
   assert.equal(
     manifest.packages.framework_core.homebrew_formula.source_head,
     manifest.packages.framework_core.source_git.head_sha,
@@ -287,7 +287,7 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(manifest.release_automation.daily_package_channel.generation_template, '<utc_yy.m.d[-rN_auto]>');
   assert.equal(manifest.release_automation.daily_package_channel.force_publish_input, 'force_publish');
   assert.equal(Object.hasOwn(manifest.packages, 'webui_docker_image'), false);
-  assert.equal(manifest.packages.framework_core.artifact, 'ghcr.io/gaofeng21cn/one-person-lab-framework:0.2.0');
+  assert.equal(manifest.packages.framework_core.artifact, 'ghcr.io/gaofeng21cn/one-person-lab-framework:0.2.1');
   assert.match(manifest.packages.framework_core.source_archive.sha256, /^[0-9a-f]{64}$/);
   assert.match(manifest.packages.framework_core.source_git.head_sha, /^[0-9a-f]{40}$/);
   assert.equal(channelManifest.packages.framework_core.artifact, manifest.packages.framework_core.artifact);
@@ -421,7 +421,7 @@ test('package archive builder writes channel manifest checksums git source and r
     )),
     true,
   );
-  assert.match(checksums, /one-person-lab-framework-0\.2\.0\.tar\.gz/);
+  assert.match(checksums, /one-person-lab-framework-0\.2\.1\.tar\.gz/);
   assert.match(checksums, new RegExp(manifest.packages.framework_core.source_archive.sha256));
   assert.equal(manifest.packages.native_helper.channel_status, 'active_ghcr_oci_prebuild');
   assert.equal(manifest.packages.native_helper.retention_policy.retain_versions, 4);
