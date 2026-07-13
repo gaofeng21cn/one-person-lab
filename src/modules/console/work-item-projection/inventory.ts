@@ -13,6 +13,11 @@ import type {
   WorkItemProjectionDiagnostic,
   WorkItemProjectionItem,
 } from './types.ts';
+import {
+  projectInventoryAction,
+  readStageIndexPresentation,
+} from './inventory-presentation.ts';
+import { projectWorkItemPrimaryState } from './primary-state.ts';
 
 export type InventoryDescriptorResolver = (agentId: string) => StandardAgentDescriptorInterface | null;
 
@@ -76,11 +81,20 @@ function sourceValue(item: JsonRecord, field: string) {
   return item[field];
 }
 
-function emptyExecution(): WorkItemProjectionItem['execution'] {
+function emptyExecution(input: {
+  currentStageId: string | null;
+  currentStageDisplayName: string | null;
+  nextStageId: string | null;
+  nextStageDisplayName: string | null;
+}): WorkItemProjectionItem['execution'] {
   return {
     state: 'idle',
     stage_id: null,
     stage_status: null,
+    current_stage_id: input.currentStageId,
+    current_stage_display_name: input.currentStageDisplayName,
+    next_stage_id: input.nextStageId,
+    next_stage_display_name: input.nextStageDisplayName,
     attempt_id: null,
     attempt_ids: [],
     workflow_id: null,
@@ -177,6 +191,12 @@ export function readProjectInventory(input: {
     const currentStageId = stringValue(sourceValue(rawItem, fieldMap.current_stage_id));
     const currentStageStatus = normalizedStatus(sourceValue(rawItem, fieldMap.current_stage_status));
     const packageStatus = normalizedStatus(sourceValue(rawItem, fieldMap.package_status));
+    const rawNextAction = fieldMap.next_action
+      ? sourceValue(rawItem, fieldMap.next_action)
+      : undefined;
+    const stageIndexRef = fieldMap.stage_index_ref
+      ? stringValue(sourceValue(rawItem, fieldMap.stage_index_ref))
+      : null;
     const mapped = {
       work_item_id: workItemId,
       display_name: displayName,
@@ -186,6 +206,8 @@ export function readProjectInventory(input: {
       current_stage_status: currentStageStatus,
       package_status: packageStatus,
       lifecycle_ref: lifecycleRefRelative,
+      next_action: rawNextAction ?? null,
+      stage_index_ref: stageIndexRef,
     };
     const observedGeneration = generation(mapped);
     const itemId = `${input.project.project_id}:${encodeURIComponent(workItemId)}`;
@@ -193,6 +215,53 @@ export function readProjectInventory(input: {
     const domainBusinessState = rawBusinessStatus
       ? BUSINESS_STATE_BY_STATUS.get(rawBusinessStatus) ?? 'unknown'
       : 'unknown';
+    const userDecisionRequired = domainBusinessState === 'active'
+      && ['human_gate', 'owner_decision_required', 'waiting_for_user', 'needs_user_decision'].includes(currentStageStatus ?? '');
+    const attention: WorkItemProjectionItem['attention'] = {
+      kind: userDecisionRequired
+        ? 'user'
+        : 'none',
+      reason: userDecisionRequired
+        ? 'domain_lifecycle_requires_user_decision'
+        : 'no_current_action_required',
+      owner: userDecisionRequired
+        ? 'user'
+        : null,
+      responsible_component: null,
+      issue: null,
+      impact: null,
+      repair_action: null,
+      expected_outcome: null,
+    };
+    const actionProjection = projectInventoryAction({
+      rawAction: rawNextAction,
+      businessState: domainBusinessState,
+      agentId: input.project.agent_id,
+      agentDisplayName: input.project.agent_display_name,
+    });
+    if (actionProjection.diagnostic) {
+      diagnostics.push({
+        reason: actionProjection.diagnostic,
+        agent_id: input.project.agent_id,
+        project_id: input.project.project_id,
+        work_item_id: workItemId,
+        ref: `${inventoryPath}#${declaration.items_pointer}/${index}`,
+      });
+    }
+    const stagePresentation = readStageIndexPresentation({
+      workItemRoot,
+      stageIndexRef,
+      businessState: domainBusinessState,
+      currentStageId,
+      agentId: input.project.agent_id,
+      agentDisplayName: input.project.agent_display_name,
+    });
+    diagnostics.push(...stagePresentation.diagnostics.map((diagnostic) => ({
+      ...diagnostic,
+      agent_id: input.project.agent_id,
+      project_id: input.project.project_id,
+      work_item_id: workItemId,
+    })));
     items.push({
       item_id: itemId,
       identity: {
@@ -215,8 +284,14 @@ export function readProjectInventory(input: {
         business_state: domainBusinessState,
         domain_business_state: domainBusinessState,
         control_state: null,
+        ...projectWorkItemPrimaryState({
+          businessState: domainBusinessState,
+          attention,
+          lastTransitionAt: inventoryObservedAt,
+        }),
         raw_business_status: rawBusinessStatus,
-        current_stage_id: currentStageId,
+        current_stage_id: stagePresentation.current_stage_id,
+        current_stage_display_name: stagePresentation.current_stage_display_name,
         current_stage_status: currentStageStatus,
         package_status: packageStatus,
         lifecycle_ref: lifecycleRef,
@@ -225,29 +300,23 @@ export function readProjectInventory(input: {
         control_updated_at: null,
         observed_generation: observedGeneration,
       },
-      execution: emptyExecution(),
-      attention: {
-        kind: ['human_gate', 'owner_decision_required', 'waiting_for_user', 'needs_user_decision'].includes(currentStageStatus ?? '')
-          ? 'user'
-          : 'none',
-        reason: ['human_gate', 'owner_decision_required', 'waiting_for_user', 'needs_user_decision'].includes(currentStageStatus ?? '')
-          ? 'domain_lifecycle_requires_user_decision'
-          : 'no_current_action_required',
-        owner: ['human_gate', 'owner_decision_required', 'waiting_for_user', 'needs_user_decision'].includes(currentStageStatus ?? '')
-          ? 'user'
-          : null,
-        responsible_component: null,
-        issue: null,
-        impact: null,
-        repair_action: null,
-        expected_outcome: null,
-      },
+      execution: emptyExecution({
+        currentStageId: stagePresentation.current_stage_id,
+        currentStageDisplayName: stagePresentation.current_stage_display_name,
+        nextStageId: stagePresentation.next_stage_id,
+        nextStageDisplayName: stagePresentation.next_stage_display_name,
+      }),
+      attention,
       telemetry: {
         state: 'missing',
-        current_stage: missingToken(missingReason),
+        current_stage: missingToken(
+          stagePresentation.current_stage_id ? missingReason : 'current_stage_not_applicable',
+        ),
         cumulative: missingToken(missingReason),
         missing_reason: missingReason,
       },
+      action: actionProjection.action,
+      stage_map: stagePresentation.stage_map,
       conditions: [],
       freshness: {
         state: 'current',
@@ -265,6 +334,9 @@ export function readProjectInventory(input: {
           role: 'domain_work_item_inventory',
         },
         ...(lifecycleRef ? [{ ref_kind: 'file' as const, ref: lifecycleRef, role: 'domain_lifecycle_ref' }] : []),
+        ...(stagePresentation.source_ref
+          ? [{ ref_kind: 'file' as const, ref: stagePresentation.source_ref, role: 'domain_stage_index' }]
+          : []),
       ],
     });
   }

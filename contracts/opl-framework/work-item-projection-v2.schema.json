@@ -102,13 +102,16 @@
     },
     "agentAvailability": {
       "type": "object",
-      "required": ["agent_id", "domain_id", "display_name", "availability", "reason", "package_id", "source_ref", "inventory_descriptor", "package_launch_readiness"],
+      "required": ["agent_id", "domain_id", "display_name", "availability", "reason", "last_checked_at", "source", "independent_from_work_item_state", "package_id", "source_ref", "inventory_descriptor", "package_launch_readiness"],
       "properties": {
         "agent_id": { "type": "string", "minLength": 1 },
         "domain_id": { "type": "string", "minLength": 1 },
         "display_name": { "type": "string", "minLength": 1 },
-        "availability": { "enum": ["available", "attention", "unavailable", "unknown"] },
+        "availability": { "enum": ["available", "attention_required", "unavailable"] },
         "reason": { "type": "string", "minLength": 1 },
+        "last_checked_at": { "type": "string", "format": "date-time" },
+        "source": { "enum": ["package_directory", "package_status"] },
+        "independent_from_work_item_state": { "const": true },
         "package_id": { "type": "string", "minLength": 1 },
         "source_ref": { "$ref": "#/$defs/nullableString" },
         "inventory_descriptor": {
@@ -203,9 +206,38 @@
       },
       "additionalProperties": false
     },
+    "action": {
+      "type": "object",
+      "required": ["kind", "title", "summary", "owner", "owner_display_name", "action_ref", "dry_run_required"],
+      "properties": {
+        "kind": { "enum": ["user_action", "system_action", "agent_action", "safe_action", "blocked_no_action"] },
+        "title": { "type": "string", "minLength": 1 },
+        "summary": { "type": "string", "minLength": 1 },
+        "owner": { "type": "string", "minLength": 1 },
+        "owner_display_name": { "type": "string", "minLength": 1 },
+        "action_ref": { "type": "string", "minLength": 1 },
+        "dry_run_required": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "stage": {
+      "type": "object",
+      "required": ["stage_id", "display_name", "state", "owner", "owner_display_name", "elapsed_seconds", "usage", "next_action"],
+      "properties": {
+        "stage_id": { "type": "string", "minLength": 1 },
+        "display_name": { "type": "string", "minLength": 1 },
+        "state": { "enum": ["completed", "current", "next", "pending", "waiting_user", "system_attention", "stopped", "failed"] },
+        "owner": { "$ref": "#/$defs/nullableString" },
+        "owner_display_name": { "$ref": "#/$defs/nullableString" },
+        "elapsed_seconds": { "type": ["integer", "null"], "minimum": 0 },
+        "usage": { "oneOf": [{ "$ref": "#/$defs/tokenObservation" }, { "type": "null" }] },
+        "next_action": { "$ref": "#/$defs/nullableString" }
+      },
+      "additionalProperties": false
+    },
     "workItem": {
       "type": "object",
-      "required": ["item_id", "identity", "lifecycle", "execution", "attention", "telemetry", "conditions", "freshness", "source_refs"],
+      "required": ["item_id", "identity", "lifecycle", "execution", "attention", "telemetry", "action", "stage_map", "conditions", "freshness", "source_refs"],
       "properties": {
         "item_id": { "type": "string", "minLength": 1 },
         "identity": {
@@ -231,13 +263,19 @@
         },
         "lifecycle": {
           "type": "object",
-          "required": ["business_state", "domain_business_state", "control_state", "raw_business_status", "current_stage_id", "current_stage_status", "package_status", "lifecycle_ref", "source", "control_ref", "control_updated_at", "observed_generation"],
+          "required": ["business_state", "domain_business_state", "control_state", "primary_state", "primary_state_label", "primary_state_reason", "reason", "last_transition_at", "raw_business_status", "current_stage_id", "current_stage_display_name", "current_stage_status", "package_status", "lifecycle_ref", "source", "control_ref", "control_updated_at", "observed_generation"],
           "properties": {
             "business_state": { "$ref": "#/$defs/businessState" },
             "domain_business_state": { "$ref": "#/$defs/businessState" },
             "control_state": { "oneOf": [{ "$ref": "#/$defs/controlState" }, { "type": "null" }] },
+            "primary_state": { "$ref": "#/$defs/primaryState" },
+            "primary_state_label": { "type": "string", "minLength": 1 },
+            "primary_state_reason": { "type": "string", "minLength": 1 },
+            "reason": { "type": "string", "minLength": 1 },
+            "last_transition_at": { "type": "string", "minLength": 1 },
             "raw_business_status": { "$ref": "#/$defs/nullableString" },
             "current_stage_id": { "$ref": "#/$defs/nullableString" },
+            "current_stage_display_name": { "$ref": "#/$defs/nullableString" },
             "current_stage_status": { "$ref": "#/$defs/nullableString" },
             "package_status": { "$ref": "#/$defs/nullableString" },
             "lifecycle_ref": { "$ref": "#/$defs/nullableString" },
@@ -250,11 +288,15 @@
         },
         "execution": {
           "type": "object",
-          "required": ["state", "stage_id", "stage_status", "attempt_id", "attempt_ids", "workflow_id", "provider_kind", "started_at", "last_heartbeat_at", "updated_at", "running_proof_status", "diagnostic_reason"],
+          "required": ["state", "stage_id", "stage_status", "current_stage_id", "current_stage_display_name", "next_stage_id", "next_stage_display_name", "attempt_id", "attempt_ids", "workflow_id", "provider_kind", "started_at", "last_heartbeat_at", "updated_at", "running_proof_status", "diagnostic_reason"],
           "properties": {
             "state": { "enum": ["running", "queued", "idle", "succeeded", "failed", "unknown"] },
             "stage_id": { "$ref": "#/$defs/nullableString" },
             "stage_status": { "$ref": "#/$defs/nullableString" },
+            "current_stage_id": { "$ref": "#/$defs/nullableString" },
+            "current_stage_display_name": { "$ref": "#/$defs/nullableString" },
+            "next_stage_id": { "$ref": "#/$defs/nullableString" },
+            "next_stage_display_name": { "$ref": "#/$defs/nullableString" },
             "attempt_id": { "$ref": "#/$defs/nullableString" },
             "attempt_ids": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
             "workflow_id": { "$ref": "#/$defs/nullableString" },
@@ -308,6 +350,8 @@
           },
           "additionalProperties": false
         },
+        "action": { "$ref": "#/$defs/action" },
+        "stage_map": { "type": "array", "items": { "$ref": "#/$defs/stage" } },
         "conditions": { "type": "array", "items": { "$ref": "#/$defs/condition" } },
         "freshness": {
           "type": "object",
@@ -331,6 +375,9 @@
     },
     "controlState": {
       "enum": ["active", "delivered_paused", "paused", "stopped", "archived"]
+    },
+    "primaryState": {
+      "enum": ["automatically_advancing", "awaiting_user_decision", "system_attention", "delivered_auto_paused", "paused", "stopped", "sync_pending"]
     }
   }
 }

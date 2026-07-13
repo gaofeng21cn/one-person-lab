@@ -64,7 +64,7 @@ test('standard Agent interface parses a domain-owned descriptor without domain b
   );
 });
 
-test('standard Agent interface accepts an optional JSON inventory projection and display name field', () => {
+test('standard Agent interface accepts optional inventory presentation fields', () => {
   const value = {
     ...fixture(),
     inventory_projection: {
@@ -73,6 +73,8 @@ test('standard Agent interface accepts an optional JSON inventory projection and
       items_pointer: '/studies',
       field_map: {
         display_name: 'display_name',
+        next_action: 'next_action',
+        stage_index_ref: 'stage_index_ref',
         work_item_id: 'study_id',
         work_item_root: 'canonical_study_root',
         business_status: 'status',
@@ -86,6 +88,8 @@ test('standard Agent interface accepts an optional JSON inventory projection and
   const descriptor = parseStandardAgentInterface(value, 'fixture.json#/standard_agent_interface');
   assert.equal(descriptor.inventory_projection?.relative_path, 'workspace_index.json');
   assert.equal(descriptor.inventory_projection?.field_map.display_name, 'display_name');
+  assert.equal(descriptor.inventory_projection?.field_map.next_action, 'next_action');
+  assert.equal(descriptor.inventory_projection?.field_map.stage_index_ref, 'stage_index_ref');
 
   const invalid = structuredClone(value);
   invalid.inventory_projection.relative_path = '../workspace_index.json';

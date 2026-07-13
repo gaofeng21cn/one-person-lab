@@ -12,6 +12,8 @@ import {
   openFamilyRuntimeSqlite,
 } from '../../runway/public/app-state.ts';
 import { canonicalWorkspacePath } from './catalog.ts';
+import { systemRepairAction } from './inventory-presentation.ts';
+import { withProjectedWorkItemPrimaryState } from './primary-state.ts';
 import type {
   ProjectCatalogEntry,
   TokenObservation,
@@ -25,7 +27,6 @@ const MAX_DIAGNOSTIC_ATTEMPTS = 100;
 const QUEUED_STATUSES = new Set(['created', 'pending', 'queued', 'scheduled']);
 const SUCCEEDED_STATUSES = new Set(['completed', 'succeeded', 'closed']);
 const FAILED_STATUSES = new Set(['blocked', 'dead_lettered', 'failed']);
-const CONTROL_LOCKED_STATES = new Set(['delivered_paused', 'paused', 'stopped', 'archived']);
 
 function normalizedStatus(value: unknown) {
   return stringValue(value)?.toLowerCase().replace(/[\s-]+/g, '_') ?? 'unknown';
@@ -104,6 +105,18 @@ function tokenObservation(input: {
     observed_at: input.observedAt,
     missing_reason: null,
     source_refs: [...new Set(observed.flatMap((projection) => projection.token.source_refs))],
+  };
+}
+
+function missingToken(reason: string): TokenObservation {
+  return {
+    state: 'missing',
+    input_tokens: null,
+    output_tokens: null,
+    total_tokens: null,
+    observed_at: null,
+    missing_reason: reason,
+    source_refs: [],
   };
 }
 
@@ -271,7 +284,7 @@ export function joinAttemptsToWorkItems(input: {
   const items: WorkItemProjectionItem[] = input.items.map((item): WorkItemProjectionItem => {
     const attempts = [...(grouped.get(item.item_id) ?? [])].sort(newestFirst);
     if (attempts.length === 0) {
-      return {
+      return withProjectedWorkItemPrimaryState({
         ...item,
         conditions: [
           condition({
@@ -295,21 +308,35 @@ export function joinAttemptsToWorkItems(input: {
             observed_generation: item.lifecycle.observed_generation,
           }),
         ],
-      };
+      });
     }
     const latest = attempts[0]!;
-    const execution = executionState(latest);
-    const stale = execution.currentness.projection_status === 'stale_projection';
-    const projections = attempts.map((attempt) => usageProjection(attempt, 'work_item_projection_v2'));
-    const currentStageTokens = tokenObservation({
-      projections: projections.slice(0, 1),
-      observedAt: stringValue(latest.updated_at),
-      stale,
-    });
+    const latestExecution = executionState(latest);
+    const currentStageId = item.lifecycle.business_state === 'active'
+      ? item.lifecycle.current_stage_id
+      : null;
+    const currentStageAttempts = currentStageId
+      ? attempts.filter((attempt) => stringValue(attempt.stage_id) === currentStageId)
+      : [];
+    const currentAttempt = currentStageAttempts[0] ?? null;
+    const currentExecution = currentAttempt ? executionState(currentAttempt) : null;
+    const stale = currentExecution?.currentness.projection_status === 'stale_projection';
+    const attemptProjections = attempts.map((attempt) => ({
+      attempt,
+      projection: usageProjection(attempt, 'work_item_projection_v2'),
+    }));
+    const currentStageTokens = currentStageId
+      ? tokenObservation({
+          projections: attemptProjections
+            .filter(({ attempt }) => stringValue(attempt.stage_id) === currentStageId)
+            .map(({ projection }) => projection),
+          observedAt: stringValue(currentStageAttempts[0]?.updated_at),
+          stale,
+        })
+      : missingToken('current_stage_not_applicable');
     const cumulativeTokens = tokenObservation({
-      projections,
+      projections: attemptProjections.map(({ projection }) => projection),
       observedAt: stringValue(latest.updated_at),
-      stale,
     });
     const telemetryState: WorkItemProjectionItem['telemetry']['state'] = stale
       ? 'stale'
@@ -318,10 +345,20 @@ export function joinAttemptsToWorkItems(input: {
         : currentStageTokens.state === 'observed' || cumulativeTokens.state === 'observed'
           ? 'partial'
           : 'missing';
-    const repairRoute = currentRepairRoute(item, latest);
-    const controlLocksAttention = item.lifecycle.control_state !== null
-      && CONTROL_LOCKED_STATES.has(item.lifecycle.control_state);
-    const systemAttention = repairRoute.complete && !controlLocksAttention && item.attention.kind !== 'user';
+    const repairRoute = currentAttempt
+      ? currentRepairRoute(item, currentAttempt)
+      : {
+          declared: false,
+          complete: false,
+          responsible_component: null,
+          issue: null,
+          impact: null,
+          repair_action: null,
+          expected_outcome: null,
+        };
+    const systemAttention = item.lifecycle.business_state === 'active'
+      && repairRoute.complete
+      && item.attention.kind !== 'user';
     const attention = systemAttention
       ? {
           kind: 'system' as const,
@@ -338,6 +375,10 @@ export function joinAttemptsToWorkItems(input: {
       .map((attempt) => stringValue(attempt.stage_attempt_id))
       .filter((attemptId): attemptId is string => Boolean(attemptId));
     const executionObservedAt = stringValue(latest.updated_at) ?? stringValue(latest.created_at);
+    const currentExecutionObservedAt = currentAttempt
+      ? stringValue(currentAttempt.updated_at) ?? stringValue(currentAttempt.created_at)
+      : null;
+    const currentExecutionState = currentExecution?.state ?? 'idle';
     const conditions = [
       condition({
         type: 'InventoryResolved',
@@ -351,14 +392,14 @@ export function joinAttemptsToWorkItems(input: {
       }),
       condition({
         type: 'ExecutionRunning',
-        status: execution.state === 'running' ? 'True' : 'False',
-        reason: execution.state === 'running' ? 'running_proof_observed' : 'no_current_running_proof',
-        message: execution.state === 'running'
+        status: currentExecutionState === 'running' ? 'True' : 'False',
+        reason: currentExecutionState === 'running' ? 'running_proof_observed' : 'no_current_running_proof',
+        message: currentExecutionState === 'running'
           ? 'A current runtime attempt has running evidence.'
           : 'No current running execution is projected.',
         owner: 'opl_framework',
-        severity: execution.state === 'running' ? 'info' : 'none',
-        last_transition_time: executionObservedAt,
+        severity: currentExecutionState === 'running' ? 'info' : 'none',
+        last_transition_time: currentExecutionObservedAt ?? executionObservedAt,
         observed_generation: item.lifecycle.observed_generation,
       }),
       condition({
@@ -389,39 +430,74 @@ export function joinAttemptsToWorkItems(input: {
         last_transition_time: executionObservedAt,
         observed_generation: item.lifecycle.observed_generation,
       }),
-      ...(execution.state === 'failed' ? [condition({
+      ...(latestExecution.state === 'failed' ? [condition({
         type: 'ExecutionFailed',
         status: 'True',
-        reason: systemAttention ? 'current_failure_has_repair_route' : 'historical_failure_is_diagnostic_only',
+        reason: systemAttention
+          ? 'current_failure_has_repair_route'
+          : currentAttempt === latest
+            ? 'current_failure_without_complete_repair_route'
+            : 'historical_failure_is_diagnostic_only',
         message: stringValue(latest.blocked_reason) ?? 'The latest execution attempt failed.',
         owner: 'opl_framework',
-        severity: systemAttention ? 'error' : 'warning',
+        severity: systemAttention ? 'error' : currentAttempt === latest ? 'warning' : 'info',
         last_transition_time: executionObservedAt,
         observed_generation: item.lifecycle.observed_generation,
       })] : []),
     ];
 
-    return {
+    return withProjectedWorkItemPrimaryState({
       ...item,
       execution: {
-        state: execution.state,
-        stage_id: stringValue(latest.stage_id),
-        stage_status: execution.ledgerStatus,
-        attempt_id: attemptIds[0] ?? null,
+        state: currentExecutionState,
+        stage_id: currentAttempt ? stringValue(currentAttempt.stage_id) : null,
+        stage_status: currentExecution?.ledgerStatus ?? null,
+        current_stage_id: currentStageId,
+        current_stage_display_name: currentStageId ? item.lifecycle.current_stage_display_name : null,
+        next_stage_id: currentStageId ? item.execution.next_stage_id : null,
+        next_stage_display_name: currentStageId ? item.execution.next_stage_display_name : null,
+        attempt_id: currentAttempt ? stringValue(currentAttempt.stage_attempt_id) : null,
         attempt_ids: attemptIds.slice(0, input.attemptRefLimit),
-        workflow_id: stringValue(latest.workflow_id),
-        provider_kind: stringValue(latest.provider_kind),
-        started_at: stringValue(record(latest.provider_run).started_at) ?? stringValue(latest.created_at),
-        last_heartbeat_at: stringValue(record(latest.provider_run).last_heartbeat_at),
-        updated_at: executionObservedAt,
-        running_proof_status: execution.currentness.running_proof_status,
+        workflow_id: currentAttempt ? stringValue(currentAttempt.workflow_id) : null,
+        provider_kind: currentAttempt ? stringValue(currentAttempt.provider_kind) : null,
+        started_at: currentAttempt
+          ? stringValue(record(currentAttempt.provider_run).started_at) ?? stringValue(currentAttempt.created_at)
+          : null,
+        last_heartbeat_at: currentAttempt
+          ? stringValue(record(currentAttempt.provider_run).last_heartbeat_at)
+          : null,
+        updated_at: currentExecutionObservedAt,
+        running_proof_status: currentExecution?.currentness.running_proof_status ?? 'not_applicable',
         diagnostic_reason: stale
-          ? execution.currentness.reason
-          : execution.state === 'failed'
-            ? stringValue(latest.blocked_reason)
-            : null,
+          ? currentExecution!.currentness.reason
+          : currentExecution?.state === 'failed'
+            ? stringValue(currentAttempt?.blocked_reason)
+            : attempts.length > 0 && !currentAttempt
+              ? 'historical_attempts_not_current_business_execution'
+              : null,
       },
       attention,
+      action: systemAttention
+        ? systemRepairAction({
+            itemId: item.item_id,
+            responsibleComponent: repairRoute.responsible_component!,
+            issue: repairRoute.issue!,
+            repairAction: repairRoute.repair_action!,
+          })
+        : item.action,
+      stage_map: item.stage_map.map((stage) => {
+        const stageProjection = tokenObservation({
+          projections: attemptProjections
+            .filter(({ attempt }) => stringValue(attempt.stage_id) === stage.stage_id)
+            .map(({ projection }) => projection),
+          observedAt: stringValue(attempts.find((attempt) => stringValue(attempt.stage_id) === stage.stage_id)?.updated_at),
+        });
+        return {
+          ...stage,
+          state: systemAttention && stage.stage_id === currentStageId ? 'system_attention' : stage.state,
+          usage: stageProjection.state === 'observed' ? stageProjection : null,
+        };
+      }),
       telemetry: {
         state: telemetryState,
         current_stage: currentStageTokens,
@@ -435,7 +511,9 @@ export function joinAttemptsToWorkItems(input: {
         ...item.freshness,
         state: stale ? 'stale' : 'current',
         execution_observed_at: executionObservedAt,
-        last_transition_time: item.lifecycle.control_updated_at ?? executionObservedAt ?? item.freshness.last_transition_time,
+        last_transition_time: item.lifecycle.control_updated_at
+          ?? currentExecutionObservedAt
+          ?? item.freshness.last_transition_time,
         reason: stale ? 'runtime_running_claim_lacks_current_proof' : item.freshness.reason,
       },
       source_refs: [
@@ -446,7 +524,7 @@ export function joinAttemptsToWorkItems(input: {
           role: 'stage_attempt_execution_evidence',
         })),
       ],
-    };
+    });
   });
   return { items, diagnostics };
 }

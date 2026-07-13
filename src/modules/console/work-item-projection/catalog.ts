@@ -48,10 +48,14 @@ function packageItemForAgent(agentId: string, packageItems: ReadonlyArray<JsonRe
 }
 
 export function buildAgentCatalog(input: {
+  profile?: 'fast' | 'full';
+  checkedAt?: string;
   packageItems?: ReadonlyArray<JsonRecord>;
   packageStatusById?: Readonly<Record<string, JsonRecord>>;
   descriptorByAgent?: ReadonlyMap<string, StandardAgentDescriptorInterface | null>;
 } = {}) {
+  const profile = input.profile ?? 'full';
+  const checkedAt = input.checkedAt ?? new Date().toISOString();
   const packageItems = input.packageItems ?? [];
   const agents: AgentCatalogEntry[] = [];
   const availability: AgentAvailability[] = [];
@@ -74,6 +78,14 @@ export function buildAgentCatalog(input: {
         ? 'unreadable'
         : 'not_checked';
     const packageStatus = input.packageStatusById?.[agent.agent_id];
+    const capabilityExposure = isRecord(packageStatus?.capability_exposure)
+      ? packageStatus.capability_exposure
+      : null;
+    const codexVisible = typeof packageStatus?.codex_visible === 'boolean'
+      ? packageStatus.codex_visible
+      : typeof capabilityExposure?.codex_visible === 'boolean'
+        ? capabilityExposure.codex_visible
+        : null;
     const launchAllowed = typeof packageStatus?.launch_allowed === 'boolean'
       ? packageStatus.launch_allowed
       : null;
@@ -85,28 +97,35 @@ export function buildAgentCatalog(input: {
         : input.packageStatusById && !packageStatus
           ? 'package_not_installed'
           : 'package_launch_readiness_not_projected';
-    const effectiveLaunchStatus = input.packageStatusById && !packageStatus ? 'blocked' : launchStatus;
-    const state = effectiveLaunchStatus === 'blocked'
+    const packageInstalled = Boolean(packageStatus);
+    const state: AgentAvailability['availability'] = !packageInstalled
       ? 'unavailable'
-      : effectiveLaunchStatus === 'ready' && descriptorStatus !== 'unreadable'
-        ? 'available'
-        : descriptorStatus === 'unreadable'
-          ? 'attention'
-          : 'unknown';
+      : profile === 'fast'
+        ? codexVisible === false ? 'attention_required' : 'available'
+        : launchAllowed === true ? 'available' : 'attention_required';
+    const reason = state === 'unavailable'
+      ? 'package_not_installed'
+      : profile === 'fast'
+        ? codexVisible === false
+          ? 'package_installed_but_not_visible_to_codex'
+          : 'package_installed_and_visible'
+        : launchAllowed === true
+          ? 'package_launch_allowed'
+          : launchReason;
     availability.push({
       agent_id: agent.agent_id,
       domain_id: agent.domain_id,
       display_name: agent.display_name,
       availability: state,
-      reason: state === 'available'
-        ? 'inventory_descriptor_readable_and_package_launch_ready'
-        : state === 'unavailable'
-          ? launchReason
-          : descriptorStatus === 'unreadable'
-            ? 'inventory_descriptor_unreadable'
-            : launchReason,
+      reason,
+      last_checked_at: checkedAt,
+      source: profile === 'fast' ? 'package_directory' : 'package_status',
+      independent_from_work_item_state: true,
       package_id: agent.agent_id,
-      source_ref: stringValue(packageItem?.source_path) ?? stringValue(packageItem?.managed_source_path),
+      source_ref: stringValue(packageStatus?.package_lock_ref)
+        ?? stringValue(packageStatus?.lock_ref)
+        ?? stringValue(packageItem?.source_path)
+        ?? stringValue(packageItem?.managed_source_path),
       inventory_descriptor: {
         status: descriptorStatus,
         reason: descriptorStatus === 'readable'
@@ -117,9 +136,9 @@ export function buildAgentCatalog(input: {
         source_ref: descriptor?.repo_dir ?? null,
       },
       package_launch_readiness: {
-        status: effectiveLaunchStatus,
-        launch_allowed: effectiveLaunchStatus === 'blocked' && launchAllowed === null ? false : launchAllowed,
-        reason: launchReason,
+        status: profile === 'fast' ? 'unknown' : launchStatus,
+        launch_allowed: profile === 'fast' ? null : launchAllowed,
+        reason: profile === 'fast' ? 'launch_readiness_deferred_to_full_profile' : launchReason,
       },
     });
   }

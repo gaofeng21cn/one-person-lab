@@ -23,6 +23,8 @@ export type StandardAgentInventoryProjection = {
   items_pointer: string;
   field_map: {
     display_name?: string;
+    next_action?: string;
+    stage_index_ref?: string;
     work_item_id: string;
     work_item_root: string;
     business_status: string;
@@ -88,7 +90,7 @@ const INVENTORY_FIELD_KEYS = [
   'package_status',
   'lifecycle_ref',
 ] as const;
-const OPTIONAL_INVENTORY_FIELD_KEYS = ['display_name'] as const;
+const OPTIONAL_INVENTORY_FIELD_KEYS = ['display_name', 'next_action', 'stage_index_ref'] as const;
 
 function invalid(message: string, sourceRef: string, details: Record<string, unknown> = {}): never {
   throw new FrameworkContractError('contract_shape_invalid', message, {
@@ -224,15 +226,15 @@ function inventoryProjection(value: unknown, sourceRef: string): StandardAgentIn
         field,
         stringValue(fieldMap[field], `inventory_projection.field_map.${field}`, sourceRef),
       ])),
-      ...(fieldMap.display_name === undefined
-        ? {}
-        : {
-            display_name: stringValue(
-              fieldMap.display_name,
-              'inventory_projection.field_map.display_name',
+      ...Object.fromEntries(OPTIONAL_INVENTORY_FIELD_KEYS.flatMap((field) =>
+        fieldMap[field] === undefined
+          ? []
+          : [[field, stringValue(
+              fieldMap[field],
+              `inventory_projection.field_map.${field}`,
               sourceRef,
-            ),
-          }),
+            )]],
+      )),
     } as StandardAgentInventoryProjection['field_map'],
   };
 }

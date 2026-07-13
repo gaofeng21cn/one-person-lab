@@ -11,7 +11,9 @@ import {
   type StandardAgentDescriptorInterface,
 } from '../../src/kernel/standard-agent-interface.ts';
 import { validateJsonSchemaPayload } from '../../src/kernel/schema-registry.ts';
+import { buildAgentCatalog } from '../../src/modules/console/work-item-projection/catalog.ts';
 import { buildWorkItemProjectionV2 } from '../../src/modules/console/work-item-projection/projection.ts';
+import { projectWorkItemPrimaryState } from '../../src/modules/console/work-item-projection/primary-state.ts';
 import { setWorkItemControlState } from '../../src/modules/ledger/work-item-control-ledger.ts';
 import type { WorkspaceBinding } from '../../src/modules/workspace/workspace-registry.ts';
 
@@ -45,6 +47,8 @@ function masDescriptor(): StandardAgentDescriptorInterface {
         items_pointer: '/studies',
         field_map: {
           display_name: 'display_name',
+          next_action: 'next_action',
+          stage_index_ref: 'stage_index_ref',
           work_item_id: 'study_id',
           work_item_root: 'canonical_study_root',
           business_status: 'status',
@@ -87,17 +91,62 @@ function writeWorkspace(root: string, label: keyof typeof MAS_STUDIES) {
   fs.mkdirSync(root, { recursive: true });
   const studies = MAS_STUDIES[label].map(([studyId, displayName, status]) => {
     const studyRoot = path.join(root, 'studies', studyId);
-    fs.mkdirSync(studyRoot, { recursive: true });
+    const controlRoot = path.join(studyRoot, 'control');
+    fs.mkdirSync(controlRoot, { recursive: true });
     fs.writeFileSync(path.join(studyRoot, 'STUDY_STATUS.md'), '# Status\n', 'utf8');
+    const active = status === 'active';
+    const delivered = status === 'delivered_paused';
+    const stages = [
+      {
+        stage_id: '01-study_intake',
+        status: active ? 'in_progress' : 'receipt_recorded',
+      },
+      ...(active
+        ? [{ stage_id: '02-protocol_and_analysis_plan', status: 'pending' }]
+        : delivered
+          ? [{ stage_id: '08-publication_package_handoff', status: 'typed_blocked' }]
+          : []),
+    ];
+    fs.writeFileSync(path.join(controlRoot, 'stage_index.json'), `${JSON.stringify({
+      schema_version: 'mas.study_stage_index.v1',
+      study_id: studyId,
+      lifecycle_state: status,
+      current_stage_id: active ? '01-study_intake' : null,
+      current_stage: active ? { stage_id: '01-study_intake' } : null,
+      last_recorded_stage_id: delivered ? '08-publication_package_handoff' : '01-study_intake',
+      stages,
+    }, null, 2)}\n`, 'utf8');
+    const nextAction = delivered
+      ? {
+          action_id: 'complete_submission_metadata_or_wake_for_revision',
+          action_type: 'user_action',
+          owner: 'user',
+          summary: 'Provide missing submission metadata, or explicitly wake the study for revision.',
+        }
+      : active
+        ? {
+            action_id: 'continue_current_stage',
+            action_type: 'agent_action',
+            owner: 'mas',
+            summary: 'Continue the current study stage.',
+          }
+        : {
+            action_id: 'wait_for_explicit_user_wakeup',
+            action_type: status === 'stopped' ? 'blocked_no_action' : 'user_action',
+            owner: 'user',
+            summary: 'Wait for an explicit user decision before continuing.',
+          };
     return {
       study_id: studyId,
       display_name: displayName,
       canonical_study_root: path.join('studies', studyId),
       status,
-      current_stage_id: status === 'delivered_paused' ? '08-publication_package_handoff' : '01-study_intake',
-      current_stage_status: 'receipt_recorded',
+      current_stage_id: active ? '01-study_intake' : null,
+      current_stage_status: active ? 'in_progress' : null,
       package_status: status === 'delivered_paused' ? 'milestone_delivered' : 'not_ready',
       study_status_ref: 'STUDY_STATUS.md',
+      next_action: nextAction,
+      stage_index_ref: 'control/stage_index.json',
     };
   });
   fs.writeFileSync(
@@ -141,13 +190,14 @@ function attempt(input: {
   updatedAt: string;
   tokenUsage?: { input_tokens: number; output_tokens: number; total_tokens: number };
   repairRoute?: Record<string, unknown>;
+  stageId?: string;
 }) {
   return {
     stage_attempt_id: input.id,
     provider_kind: 'temporal',
     workflow_id: `workflow:${input.id}`,
     domain_id: 'medautoscience',
-    stage_id: 'write',
+    stage_id: input.stageId ?? '01-study_intake',
     workspace_locator: {
       workspace_root: input.root,
       work_unit_id: input.workItemId,
@@ -199,7 +249,14 @@ function fixture() {
   }));
   const packageStatusById = Object.fromEntries(packageProjectionItems.map((item) => [
     item.package_id,
-    { launch_allowed: true, launch_blocked_reason: null },
+    {
+      status: 'installed',
+      codex_visible: true,
+      package_version: '1.0.0',
+      package_lock_ref: `/locks/${item.package_id}.json`,
+      launch_allowed: true,
+      launch_blocked_reason: null,
+    },
   ]));
   return {
     root,
@@ -240,11 +297,32 @@ test('WorkItemProjection V2 discovers MAS 3 projects and 9 studies independently
     assert.equal(obesityItem?.identity.work_item_kind, 'study');
     assert.equal(obesityItem?.telemetry.state, 'missing');
     assert.equal(obesityItem?.telemetry.cumulative.total_tokens, null);
+    assert.equal(obesityItem?.lifecycle.primary_state, 'automatically_advancing');
+    assert.equal(obesityItem?.lifecycle.primary_state_label, '自动推进中');
+    assert.equal(obesityItem?.lifecycle.primary_state_reason, 'user_visible_progress_advancing');
+    assert.equal(obesityItem?.lifecycle.last_transition_at, obesityItem?.freshness.last_transition_time);
+    assert.equal(obesityItem?.execution.current_stage_display_name, 'Study Intake');
+    assert.equal(obesityItem?.execution.next_stage_display_name, 'Protocol And Analysis Plan');
+    assert.deepEqual(obesityItem?.stage_map.map((stage) => stage.state), ['current', 'next']);
+    assert.equal(obesityItem?.action.kind, 'agent_action');
+    assert.equal(obesityItem?.action.summary, 'Continue the current study stage.');
+    const deliveredItem = projection.items.find(
+      (item) => item.identity.work_item_id === '003-dpcc-primary-care-phenotype-treatment-gap',
+    );
+    assert.equal(deliveredItem?.lifecycle.current_stage_id, null);
+    assert.equal(deliveredItem?.telemetry.current_stage.state, 'missing');
+    assert.equal(deliveredItem?.telemetry.current_stage.missing_reason, 'current_stage_not_applicable');
+    assert.equal(deliveredItem?.stage_map.at(-1)?.state, 'completed');
+    assert.equal(deliveredItem?.action.kind, 'user_action');
     assert.equal(projection.agent_catalog.length, 5);
     assert.equal(projection.agent_availability.length, 5);
     const masAvailability = projection.agent_availability.find((entry) => entry.agent_id === 'mas');
     assert.equal(masAvailability?.inventory_descriptor.status, 'readable');
-    assert.equal(masAvailability?.package_launch_readiness.status, 'ready');
+    assert.equal(masAvailability?.package_launch_readiness.status, 'unknown');
+    assert.equal(masAvailability?.availability, 'available');
+    assert.equal(masAvailability?.source, 'package_directory');
+    assert.equal(masAvailability?.last_checked_at, '2026-07-13T00:00:00.000Z');
+    assert.equal(projection.agent_availability.every((entry) => entry.availability === 'available'), true);
     assert.equal(projection.items.some((item) => item.identity.source_kind === 'runtime_only'), false);
   } finally {
     fs.rmSync(input.root, { recursive: true, force: true });
@@ -291,13 +369,20 @@ test('control lifecycle wins over old execution failure and token usage remains 
     assert.equal(item.lifecycle.business_state, 'delivered_paused');
     assert.equal(item.lifecycle.control_state, 'delivered_paused');
     assert.equal(item.lifecycle.source, 'work_item_control_ledger');
-    assert.equal(item.execution.state, 'failed');
+    assert.equal(item.lifecycle.primary_state, 'delivered_auto_paused');
+    assert.equal(item.lifecycle.primary_state_label, '已交付自动暂停');
+    assert.equal(item.lifecycle.last_transition_at, item.freshness.last_transition_time);
+    assert.equal(item.lifecycle.current_stage_id, null);
+    assert.equal(item.execution.state, 'idle');
+    assert.equal(item.execution.current_stage_id, null);
+    assert.equal(item.execution.attempt_id, null);
     assert.equal(item.attention.kind, 'none');
-    assert.equal(item.telemetry.state, 'observed');
+    assert.equal(item.telemetry.state, 'partial');
     assert.deepEqual(
-      [item.telemetry.current_stage.input_tokens, item.telemetry.current_stage.output_tokens, item.telemetry.cumulative.total_tokens],
-      [1200, 300, 1500],
+      [item.telemetry.current_stage.state, item.telemetry.current_stage.missing_reason, item.telemetry.cumulative.total_tokens],
+      ['missing', 'current_stage_not_applicable', 1500],
     );
+    assert.equal(item.stage_map.at(-1)?.state, 'completed');
     assert.equal(
       item.conditions.some((condition) =>
         condition.type === 'ExecutionFailed'
@@ -351,6 +436,9 @@ test('system attention requires a complete repair route bound to current item ge
     });
     const completeItem = complete.items.find((candidate) => candidate.identity.work_item_id === workItemId)!;
     assert.equal(completeItem.attention.kind, 'system');
+    assert.equal(completeItem.lifecycle.primary_state, 'system_attention');
+    assert.equal(completeItem.lifecycle.primary_state_reason, 'current_repair_route_blocks_work_item');
+    assert.equal(completeItem.action.kind, 'system_action');
     assert.deepEqual(
       [
         completeItem.attention.responsible_component,
@@ -383,6 +471,7 @@ test('system attention requires a complete repair route bound to current item ge
     });
     const incompleteItem = incomplete.items.find((candidate) => candidate.identity.work_item_id === workItemId)!;
     assert.equal(incompleteItem.attention.kind, 'none');
+    assert.equal(incompleteItem.lifecycle.primary_state, 'automatically_advancing');
     assert.equal(
       incompleteItem.conditions.some((condition) =>
         condition.type === 'NeedsSystemRepair'
@@ -393,6 +482,88 @@ test('system attention requires a complete repair route bound to current item ge
   } finally {
     fs.rmSync(input.root, { recursive: true, force: true });
   }
+});
+
+test('primary-state projection keeps responsibility and lifecycle precedence centralized', () => {
+  const baseAttention = {
+    kind: 'none' as const,
+    reason: 'no_current_action_required',
+    owner: null,
+    responsible_component: null,
+    issue: null,
+    impact: null,
+    repair_action: null,
+    expected_outcome: null,
+  };
+  const user = projectWorkItemPrimaryState({
+    businessState: 'active',
+    attention: { ...baseAttention, kind: 'user', reason: 'domain_lifecycle_requires_user_decision', owner: 'user' },
+    lastTransitionAt: '2026-07-13T08:00:00.000Z',
+  });
+  const incompleteSystem = projectWorkItemPrimaryState({
+    businessState: 'paused',
+    attention: { ...baseAttention, kind: 'system', responsible_component: 'opl_framework' },
+    lastTransitionAt: '2026-07-13T09:00:00.000Z',
+  });
+
+  assert.deepEqual(user, {
+    primary_state: 'awaiting_user_decision',
+    primary_state_reason: 'domain_lifecycle_requires_user_decision',
+    reason: 'domain_lifecycle_requires_user_decision',
+    primary_state_label: '等待你决定',
+    last_transition_at: '2026-07-13T08:00:00.000Z',
+  });
+  assert.equal(incompleteSystem.primary_state, 'paused');
+  assert.equal(incompleteSystem.primary_state_reason, 'paused_until_new_direction');
+});
+
+test('agent availability is package health only in fast and full profiles', () => {
+  const packageItems = ['mas', 'mag', 'rca', 'oma', 'obf'].map((packageId) => ({
+    package_id: packageId,
+    source_path: `/packages/${packageId}`,
+  }));
+  const fastStatuses = Object.fromEntries(packageItems.map(({ package_id }) => [package_id, {
+    status: 'installed',
+    codex_visible: true,
+    package_version: '1.0.0',
+    package_lock_ref: `/locks/${package_id}.json`,
+  }]));
+  const descriptorByAgent = new Map<string, StandardAgentDescriptorInterface | null>([
+    ['mas', masDescriptor()],
+    ['mag', null],
+    ['rca', null],
+    ['oma', null],
+    ['obf', null],
+  ]);
+  const fast = buildAgentCatalog({
+    profile: 'fast',
+    checkedAt: '2026-07-13T08:00:00.000Z',
+    packageItems,
+    packageStatusById: fastStatuses,
+    descriptorByAgent,
+  }).availability;
+  assert.equal(fast.every((entry) => entry.availability === 'available'), true);
+  assert.equal(fast.every((entry) => entry.last_checked_at === '2026-07-13T08:00:00.000Z'), true);
+  assert.equal(fast.every((entry) => entry.independent_from_work_item_state), true);
+  assert.equal(fast.find((entry) => entry.agent_id === 'mag')?.inventory_descriptor.status, 'unreadable');
+
+  const fullStatuses = Object.fromEntries(Object.entries(fastStatuses).map(([packageId, status]) => [packageId, {
+    ...status,
+    launch_allowed: packageId !== 'mag',
+    launch_blocked_reason: packageId === 'mag' ? 'managed_runtime_source_missing' : null,
+  }]));
+  delete fullStatuses.obf;
+  const full = buildAgentCatalog({
+    profile: 'full',
+    checkedAt: '2026-07-13T09:00:00.000Z',
+    packageItems,
+    packageStatusById: fullStatuses,
+    descriptorByAgent,
+  }).availability;
+  assert.equal(full.find((entry) => entry.agent_id === 'mas')?.availability, 'available');
+  assert.equal(full.find((entry) => entry.agent_id === 'mag')?.availability, 'attention_required');
+  assert.equal(full.find((entry) => entry.agent_id === 'obf')?.availability, 'unavailable');
+  assert.equal(full.every((entry) => entry.source === 'package_status'), true);
 });
 
 test('WorkItemProjection V2 output validates against its machine schema', () => {

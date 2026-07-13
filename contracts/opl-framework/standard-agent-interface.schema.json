@@ -18,6 +18,8 @@
           "required": ["work_item_id", "work_item_root", "business_status", "current_stage_id", "current_stage_status", "package_status", "lifecycle_ref"],
           "properties": {
             "display_name": { "type": "string", "minLength": 1 },
+            "next_action": { "type": "string", "minLength": 1 },
+            "stage_index_ref": { "type": "string", "minLength": 1 },
             "work_item_id": { "type": "string", "minLength": 1 },
             "work_item_root": { "type": "string", "minLength": 1 },
             "business_status": { "type": "string", "minLength": 1 },
