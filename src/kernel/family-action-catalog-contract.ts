@@ -1,24 +1,24 @@
 import { isRecord } from './contract-validation.ts';
-import { stringList, stringValue, type JsonRecord } from './json-record.ts';
+import { stringValue, type JsonRecord } from './json-record.ts';
+
+export const FAMILY_ACTION_CATALOG_VERSION = 'family-action-catalog.v2' as const;
+export const DOMAIN_HANDLER_REGISTRY_VERSION = 'domain-handler-registry.v1' as const;
+export const FAMILY_ACTION_STAGE_MANIFEST_REF = 'agent/stages/manifest.json' as const;
 
 export type FamilyActionEffect = 'read_only' | 'mutating';
 export type FamilyActionExportFormat = 'cli' | 'mcp' | 'skill' | 'openai' | 'ai-sdk';
 
-export interface FamilyActionSourceCommand {
-  command: string;
-  surface_kind: string;
-}
-
-export interface FamilyActionHandlerBinding {
-  binding_kind: 'python_callable';
-  callable_ref: string;
-  request: {
-    command: string;
-  };
-}
+export type FamilyActionExecutionBinding =
+  | {
+      kind: 'handler_ref';
+      handler_ref: `handler:${string}`;
+    }
+  | {
+      kind: 'stage_binding';
+      stage_manifest_ref: typeof FAMILY_ACTION_STAGE_MANIFEST_REF;
+    };
 
 export interface FamilyActionSurfaceDescriptor {
-  command?: string;
   surface_kind?: string;
   tool_name?: string;
   command_contract_id?: string;
@@ -37,7 +37,6 @@ export interface FamilyActionSourceOfWork {
 }
 
 export type FamilyActionStageRoutePolicy = 'ai_selected_progress_route';
-export type FamilyActionStageRouteExemption = 'domain_handler_target_only';
 
 export interface FamilyActionStageRoute {
   entry_stage_ref: string;
@@ -53,7 +52,7 @@ export interface FamilyActionCatalogAction {
   summary: string;
   owner: string;
   effect: FamilyActionEffect;
-  source_command: FamilyActionSourceCommand;
+  execution_binding: FamilyActionExecutionBinding;
   source_of_work?: FamilyActionSourceOfWork;
   input_schema_ref: string;
   output_schema_ref: string;
@@ -63,7 +62,6 @@ export interface FamilyActionCatalogAction {
   workspace_locator_fields: string[];
   human_gate_ids: string[];
   stage_route?: FamilyActionStageRoute;
-  stage_route_exempt?: FamilyActionStageRouteExemption;
   supported_surfaces: {
     cli: FamilyActionSurfaceDescriptor | null;
     mcp: FamilyActionSurfaceDescriptor | null;
@@ -73,18 +71,40 @@ export interface FamilyActionCatalogAction {
     ai_sdk: FamilyActionSurfaceDescriptor | null;
   };
   authority_boundary: JsonRecord | null;
-  handler_binding: FamilyActionHandlerBinding | null;
 }
 
 export interface FamilyActionCatalog {
   surface_kind: 'family_action_catalog';
-  version: 'family-action-catalog.v1';
+  version: typeof FAMILY_ACTION_CATALOG_VERSION;
   catalog_id: string;
   target_domain_id: string;
   owner: string;
   authority_boundary: JsonRecord;
   actions: FamilyActionCatalogAction[];
   notes: string[];
+}
+
+export type DomainHandlerImplementation =
+  | {
+      kind: 'typescript_export';
+      file: string;
+      export: string;
+    }
+  | {
+      kind: 'python_callable';
+      module: string;
+      callable: string;
+    };
+
+export interface DomainHandlerRegistryEntry {
+  handler_id: string;
+  binding: DomainHandlerImplementation;
+}
+
+export interface DomainHandlerRegistry {
+  surface_kind: 'domain_handler_registry';
+  version: typeof DOMAIN_HANDLER_REGISTRY_VERSION;
+  handlers: DomainHandlerRegistryEntry[];
 }
 
 const REQUIRED_SUPPORTED_SURFACE_KEYS = [
@@ -95,6 +115,35 @@ const REQUIRED_SUPPORTED_SURFACE_KEYS = [
   'openai',
   'ai_sdk',
 ] as const;
+const ACTION_KEYS = [
+  'action_id',
+  'title',
+  'summary',
+  'owner',
+  'effect',
+  'execution_binding',
+  'source_of_work',
+  'input_schema_ref',
+  'output_schema_ref',
+  'required_fields',
+  'optional_fields',
+  'workspace_locator_fields',
+  'human_gate_ids',
+  'stage_route',
+  'supported_surfaces',
+  'authority_boundary',
+] as const;
+const SURFACE_DESCRIPTOR_KEYS = [
+  'surface_kind',
+  'tool_name',
+  'command_contract_id',
+  'action_key',
+  'public_runtime',
+  'descriptor_only',
+] as const;
+const HANDLER_ID = /^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?$/;
+const PYTHON_MODULE = /^[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*$/;
+const SYMBOL_NAME = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 
 function requireString(value: unknown, field: string) {
   const text = stringValue(value);
@@ -102,6 +151,24 @@ function requireString(value: unknown, field: string) {
     throw new Error(`Missing required string field: ${field}`);
   }
   return text;
+}
+
+function assertKnownKeys(value: JsonRecord, allowed: readonly string[], field: string) {
+  const unknown = Object.keys(value).filter((key) => !allowed.includes(key));
+  if (unknown.length > 0) {
+    throw new Error(`${field} contains unknown properties: ${unknown.join(', ')}`);
+  }
+}
+
+function requiredStringArray(value: unknown, field: string) {
+  if (!Array.isArray(value)) {
+    throw new Error(`${field} must be an array of strings.`);
+  }
+  const values = value.map((entry, index) => requireString(entry, `${field}[${index}]`));
+  if (new Set(values).size !== values.length) {
+    throw new Error(`${field} must not contain duplicates.`);
+  }
+  return values;
 }
 
 function optionalStringArray(value: unknown, field: string) {
@@ -114,121 +181,189 @@ function optionalStringArray(value: unknown, field: string) {
   return value.map((entry, index) => requireString(entry, `${field}[${index}]`));
 }
 
-const PYTHON_HANDLER_TARGET = /^(?<module>[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*):(?<callable>[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)+)#(?<action>[A-Za-z_][A-Za-z0-9_-]*)$/;
-const PYTHON_HANDLER_PREFIX = /^[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*:[A-Za-z_]\w*\./;
+function optionalStringProperty(value: JsonRecord, key: string, field: string) {
+  return Object.prototype.hasOwnProperty.call(value, key)
+    ? requireString(value[key], `${field}.${key}`)
+    : null;
+}
 
-export function resolveFamilyActionHandlerBinding(
-  target: string,
-  actionId: string,
-): FamilyActionHandlerBinding | null {
-  const match = PYTHON_HANDLER_TARGET.exec(target);
-  if (!match?.groups) {
-    if (PYTHON_HANDLER_PREFIX.test(target)) {
-      throw new Error(`Invalid domain handler target: ${target}`);
-    }
+function optionalBooleanProperty(value: JsonRecord, key: string, field: string) {
+  if (!Object.prototype.hasOwnProperty.call(value, key)) {
     return null;
   }
-  if (match.groups.action !== actionId) {
-    throw new Error(`Domain handler target action ${match.groups.action} does not match ${actionId}.`);
+  if (typeof value[key] !== 'boolean') {
+    throw new Error(`${field}.${key} must be a boolean.`);
   }
-  return {
-    binding_kind: 'python_callable',
-    callable_ref: `${match.groups.module}:${match.groups.callable}`,
-    request: { command: actionId },
-  };
+  return value[key];
 }
 
-function normalizeSurfaceDescriptor(value: unknown): FamilyActionSurfaceDescriptor | null {
-  if (!isRecord(value)) {
-    return null;
-  }
-
-  return {
-    ...(stringValue(value.command) ? { command: stringValue(value.command)! } : {}),
-    ...(stringValue(value.surface_kind) ? { surface_kind: stringValue(value.surface_kind)! } : {}),
-    ...(stringValue(value.tool_name) ? { tool_name: stringValue(value.tool_name)! } : {}),
-    ...(stringValue(value.command_contract_id)
-      ? { command_contract_id: stringValue(value.command_contract_id)! }
-      : {}),
-    ...(stringValue(value.action_key) ? { action_key: stringValue(value.action_key)! } : {}),
-    ...(typeof value.public_runtime === 'boolean' ? { public_runtime: value.public_runtime } : {}),
-    ...(typeof value.descriptor_only === 'boolean' ? { descriptor_only: value.descriptor_only } : {}),
-  };
-}
-
-function requireSupportedSurfaceSlots(value: JsonRecord, field: string) {
-  for (const key of REQUIRED_SUPPORTED_SURFACE_KEYS) {
-    if (!Object.prototype.hasOwnProperty.call(value, key)) {
-      throw new Error(`Missing required supported surface slot: ${field}.supported_surfaces.${key}`);
+function assertNoForbiddenOplAuthority(value: JsonRecord, field: string) {
+  for (const ownerField of ['quality_verdict_owner', 'artifact_authority_owner'] as const) {
+    if (Object.prototype.hasOwnProperty.call(value, ownerField) && !stringValue(value[ownerField])) {
+      throw new Error(`${field}.${ownerField} must be a non-empty domain owner string.`);
     }
   }
+  const forbidden = Object.entries(value).filter(([key, entry]) => (
+    (
+      key.startsWith('opl_can_')
+      || key === 'provider_completion_is_domain_completion'
+      || key === 'provider_completion_counts_as_domain_completion'
+    )
+      ? entry !== false
+      : (
+          key === 'quality_verdict_owner'
+          || key === 'artifact_authority_owner'
+        ) && stringValue(entry) === 'one-person-lab'
+  ));
+  if (forbidden.length > 0) {
+    throw new Error(`${field} grants forbidden OPL or provider authority: ${forbidden.map(([key]) => key).join(', ')}`);
+  }
 }
 
-function normalizeSourceOfWork(
-  value: unknown,
-  actionId: string,
-  catalogId: string | null,
-  field: string,
-): FamilyActionSourceOfWork {
-  const fallback = {
-    source_catalog: 'family_action_catalog' as const,
-    source_catalog_ref: catalogId ? `family_action_catalog:${catalogId}` : 'family_action_catalog',
-    source_action_id: actionId,
-    stage_catalog_ref: 'family_stage_control_plane',
-    derived_surface_policy: 'derive_cli_mcp_openai_ai_sdk_skill_app_status_workbench_from_single_catalog' as const,
-    domain_repo_wrapper_policy: 'handler_target_refs_only_adapter_or_tombstone_candidate' as const,
-  };
+function normalizeCatalogAuthorityBoundary(value: unknown, field: string): JsonRecord {
   if (!isRecord(value)) {
-    return fallback;
+    throw new Error(`${field} must be an object.`);
   }
-  const sourceCatalog = stringValue(value.source_catalog) ?? fallback.source_catalog;
-  if (sourceCatalog !== 'family_action_catalog') {
-    throw new Error(`${field}.source_of_work.source_catalog must be family_action_catalog.`);
+  requireString(value.domain_truth_owner, `${field}.domain_truth_owner`);
+  if (value.opl_role !== 'projection_consumer_only') {
+    throw new Error(`${field}.opl_role must be projection_consumer_only.`);
   }
-  const derivedSurfacePolicy = stringValue(value.derived_surface_policy)
-    ?? fallback.derived_surface_policy;
-  if (derivedSurfacePolicy !== fallback.derived_surface_policy) {
-    throw new Error(`${field}.source_of_work.derived_surface_policy must be ${fallback.derived_surface_policy}.`);
+  if (value.write_policy !== 'no_domain_truth_writes') {
+    throw new Error(`${field}.write_policy must be no_domain_truth_writes.`);
   }
-  const wrapperPolicy = stringValue(value.domain_repo_wrapper_policy)
-    ?? fallback.domain_repo_wrapper_policy;
-  if (wrapperPolicy !== fallback.domain_repo_wrapper_policy) {
-    throw new Error(`${field}.source_of_work.domain_repo_wrapper_policy must be ${fallback.domain_repo_wrapper_policy}.`);
-  }
-  return {
-    source_catalog: 'family_action_catalog',
-    source_catalog_ref: requireString(value.source_catalog_ref, `${field}.source_of_work.source_catalog_ref`),
-    source_action_id: requireString(value.source_action_id, `${field}.source_of_work.source_action_id`),
-    stage_catalog_ref: requireString(value.stage_catalog_ref, `${field}.source_of_work.stage_catalog_ref`),
-    derived_surface_policy: fallback.derived_surface_policy,
-    domain_repo_wrapper_policy: fallback.domain_repo_wrapper_policy,
-  };
+  assertNoForbiddenOplAuthority(value, field);
+  return value;
 }
 
-function routeStringList(value: unknown, field: string) {
-  if (!Array.isArray(value)) {
-    throw new Error(`${field} must be an array.`);
-  }
-  const values = value.map((entry, index) => requireString(entry, `${field}[${index}]`));
-  if (new Set(values).size !== values.length) {
-    throw new Error(`${field} must not contain duplicates.`);
-  }
-  return values;
-}
-
-function normalizeStageRoute(value: unknown, field: string): FamilyActionStageRoute | null {
+function normalizeActionAuthorityBoundary(value: unknown, field: string): JsonRecord | null {
   if (value === undefined) {
     return null;
   }
   if (!isRecord(value)) {
     throw new Error(`${field} must be an object.`);
   }
-  const requiredStageRefs = routeStringList(value.required_stage_refs, `${field}.required_stage_refs`);
+  assertNoForbiddenOplAuthority(value, field);
+  return value;
+}
+
+function normalizeSurfaceDescriptor(value: unknown, field: string): FamilyActionSurfaceDescriptor | null {
+  if (value === null) {
+    return null;
+  }
+  if (!isRecord(value)) {
+    throw new Error(`${field} must be an object or null.`);
+  }
+  assertKnownKeys(value, SURFACE_DESCRIPTOR_KEYS, field);
+  const descriptorSurfaceKind = optionalStringProperty(value, 'surface_kind', field);
+  const toolName = optionalStringProperty(value, 'tool_name', field);
+  const commandContractId = optionalStringProperty(value, 'command_contract_id', field);
+  const actionKey = optionalStringProperty(value, 'action_key', field);
+  const publicRuntime = optionalBooleanProperty(value, 'public_runtime', field);
+  const descriptorOnly = optionalBooleanProperty(value, 'descriptor_only', field);
+  return {
+    ...(descriptorSurfaceKind ? { surface_kind: descriptorSurfaceKind } : {}),
+    ...(toolName ? { tool_name: toolName } : {}),
+    ...(commandContractId ? { command_contract_id: commandContractId } : {}),
+    ...(actionKey ? { action_key: actionKey } : {}),
+    ...(publicRuntime !== null ? { public_runtime: publicRuntime } : {}),
+    ...(descriptorOnly !== null ? { descriptor_only: descriptorOnly } : {}),
+  };
+}
+
+function normalizeSupportedSurfaces(
+  value: unknown,
+  field: string,
+): FamilyActionCatalogAction['supported_surfaces'] {
+  if (!isRecord(value)) {
+    throw new Error(`${field} must be an object.`);
+  }
+  assertKnownKeys(value, REQUIRED_SUPPORTED_SURFACE_KEYS, field);
+  for (const key of REQUIRED_SUPPORTED_SURFACE_KEYS) {
+    if (!Object.prototype.hasOwnProperty.call(value, key)) {
+      throw new Error(`Missing required supported surface slot: ${field}.${key}`);
+    }
+  }
+  return {
+    cli: normalizeSurfaceDescriptor(value.cli, `${field}.cli`),
+    mcp: normalizeSurfaceDescriptor(value.mcp, `${field}.mcp`),
+    skill: normalizeSurfaceDescriptor(value.skill, `${field}.skill`),
+    product_entry: normalizeSurfaceDescriptor(value.product_entry, `${field}.product_entry`),
+    openai: normalizeSurfaceDescriptor(value.openai, `${field}.openai`),
+    ai_sdk: normalizeSurfaceDescriptor(value.ai_sdk, `${field}.ai_sdk`),
+  };
+}
+
+function normalizeSourceOfWork(
+  value: unknown,
+  actionId: string,
+  catalogId: string,
+  field: string,
+): FamilyActionSourceOfWork {
+  const fallback: FamilyActionSourceOfWork = {
+    source_catalog: 'family_action_catalog',
+    source_catalog_ref: `family_action_catalog:${catalogId}`,
+    source_action_id: actionId,
+    stage_catalog_ref: 'family_stage_control_plane',
+    derived_surface_policy: 'derive_cli_mcp_openai_ai_sdk_skill_app_status_workbench_from_single_catalog',
+    domain_repo_wrapper_policy: 'handler_target_refs_only_adapter_or_tombstone_candidate',
+  };
+  if (value === undefined) {
+    return fallback;
+  }
+  if (!isRecord(value)) {
+    throw new Error(`${field} must be an object.`);
+  }
+  assertKnownKeys(value, [
+    'source_catalog',
+    'source_catalog_ref',
+    'source_action_id',
+    'stage_catalog_ref',
+    'derived_surface_policy',
+    'domain_repo_wrapper_policy',
+  ], field);
+  if (value.source_catalog !== 'family_action_catalog') {
+    throw new Error(`${field}.source_catalog must be family_action_catalog.`);
+  }
+  if (value.derived_surface_policy !== fallback.derived_surface_policy) {
+    throw new Error(`${field}.derived_surface_policy must be ${fallback.derived_surface_policy}.`);
+  }
+  if (
+    value.domain_repo_wrapper_policy !== undefined
+    && value.domain_repo_wrapper_policy !== fallback.domain_repo_wrapper_policy
+  ) {
+    throw new Error(`${field}.domain_repo_wrapper_policy must be ${fallback.domain_repo_wrapper_policy}.`);
+  }
+  const sourceActionId = requireString(value.source_action_id, `${field}.source_action_id`);
+  if (sourceActionId !== actionId) {
+    throw new Error(`${field}.source_action_id must match action_id ${actionId}.`);
+  }
+  return {
+    source_catalog: 'family_action_catalog',
+    source_catalog_ref: requireString(value.source_catalog_ref, `${field}.source_catalog_ref`),
+    source_action_id: sourceActionId,
+    stage_catalog_ref: requireString(value.stage_catalog_ref, `${field}.stage_catalog_ref`),
+    derived_surface_policy: fallback.derived_surface_policy,
+    domain_repo_wrapper_policy: fallback.domain_repo_wrapper_policy,
+  };
+}
+
+function normalizeStageRoute(value: unknown, field: string): FamilyActionStageRoute {
+  if (!isRecord(value)) {
+    throw new Error(`${field} must be an object.`);
+  }
+  assertKnownKeys(value, [
+    'entry_stage_ref',
+    'required_stage_refs',
+    'optional_stage_refs',
+    'terminal_stage_refs',
+    'route_policy',
+  ], field);
+  const requiredStageRefs = requiredStringArray(value.required_stage_refs, `${field}.required_stage_refs`);
   if (requiredStageRefs.length === 0) {
     throw new Error(`${field}.required_stage_refs must contain at least one stage.`);
   }
-  const optionalStageRefs = routeStringList(value.optional_stage_refs, `${field}.optional_stage_refs`);
-  const terminalStageRefs = routeStringList(value.terminal_stage_refs, `${field}.terminal_stage_refs`);
+  const optionalStageRefs = requiredStringArray(value.optional_stage_refs, `${field}.optional_stage_refs`);
+  const terminalStageRefs = requiredStringArray(value.terminal_stage_refs, `${field}.terminal_stage_refs`);
   if (terminalStageRefs.length === 0) {
     throw new Error(`${field}.terminal_stage_refs must contain at least one stage.`);
   }
@@ -245,8 +380,7 @@ function normalizeStageRoute(value: unknown, field: string): FamilyActionStageRo
   if (unknownTerminalRefs.length > 0) {
     throw new Error(`${field}.terminal_stage_refs must belong to the declared route: ${unknownTerminalRefs.join(', ')}`);
   }
-  const routePolicy = requireString(value.route_policy, `${field}.route_policy`);
-  if (routePolicy !== 'ai_selected_progress_route') {
+  if (value.route_policy !== 'ai_selected_progress_route') {
     throw new Error(`${field}.route_policy must be ai_selected_progress_route.`);
   }
   return {
@@ -258,148 +392,149 @@ function normalizeStageRoute(value: unknown, field: string): FamilyActionStageRo
   };
 }
 
-function normalizeStageRouteExemption(
-  value: unknown,
-  effect: FamilyActionEffect,
-  stageRoute: FamilyActionStageRoute | null,
-  supportedSurfaces: FamilyActionCatalogAction['supported_surfaces'],
-  field: string,
-): FamilyActionStageRouteExemption | null {
-  if (value === undefined) {
-    return null;
-  }
-  const exemption = requireString(value, `${field}.stage_route_exempt`);
-  if (exemption !== 'domain_handler_target_only') {
-    throw new Error(`${field}.stage_route_exempt must be domain_handler_target_only.`);
-  }
-  if (effect !== 'mutating') {
-    throw new Error(`${field}.stage_route_exempt=domain_handler_target_only requires effect=mutating.`);
-  }
-  if (stageRoute) {
-    throw new Error(`${field}.stage_route_exempt=domain_handler_target_only must not declare stage_route.`);
-  }
-  const mcpTarget = supportedSurfaces.mcp;
-  const hasPublicDirectSurface = [
-    supportedSurfaces.cli,
-    supportedSurfaces.skill,
-    supportedSurfaces.openai,
-    supportedSurfaces.ai_sdk,
-  ].some((surface) => surface !== null);
-  if (
-    !mcpTarget
-    || mcpTarget.descriptor_only !== true
-    || mcpTarget.public_runtime !== false
-    || hasPublicDirectSurface
-  ) {
-    throw new Error(
-      `${field}.stage_route_exempt=domain_handler_target_only requires a descriptor-only non-public MCP target.`,
-    );
-  }
-  return 'domain_handler_target_only';
-}
-
-function normalizeFamilyAction(value: unknown, field: string, catalogId: string | null): FamilyActionCatalogAction {
+function normalizeExecutionBinding(value: unknown, field: string): FamilyActionExecutionBinding {
   if (!isRecord(value)) {
     throw new Error(`${field} must be an object.`);
   }
+  const kind = requireString(value.kind, `${field}.kind`);
+  if (kind === 'handler_ref') {
+    assertKnownKeys(value, ['kind', 'handler_ref'], field);
+    const handlerRef = requireString(value.handler_ref, `${field}.handler_ref`);
+    const handlerId = handlerRef.startsWith('handler:') ? handlerRef.slice('handler:'.length) : '';
+    if (!handlerId || !HANDLER_ID.test(handlerId)) {
+      throw new Error(`${field}.handler_ref must use handler:<handler_id> with a bare canonical handler id.`);
+    }
+    return { kind: 'handler_ref', handler_ref: handlerRef as `handler:${string}` };
+  }
+  if (kind === 'stage_binding') {
+    assertKnownKeys(value, ['kind', 'stage_manifest_ref'], field);
+    const stageManifestRef = requireString(value.stage_manifest_ref, `${field}.stage_manifest_ref`);
+    if (stageManifestRef !== FAMILY_ACTION_STAGE_MANIFEST_REF) {
+      throw new Error(`${field}.stage_manifest_ref must be ${FAMILY_ACTION_STAGE_MANIFEST_REF}.`);
+    }
+    return { kind: 'stage_binding', stage_manifest_ref: FAMILY_ACTION_STAGE_MANIFEST_REF };
+  }
+  throw new Error(`${field}.kind must be handler_ref or stage_binding.`);
+}
 
+function normalizeFamilyAction(
+  value: unknown,
+  field: string,
+  catalogId: string,
+): FamilyActionCatalogAction {
+  if (!isRecord(value)) {
+    throw new Error(`${field} must be an object.`);
+  }
+  assertKnownKeys(value, ACTION_KEYS, field);
   const rawEffect = requireString(value.effect, `${field}.effect`);
   if (rawEffect !== 'read_only' && rawEffect !== 'mutating') {
     throw new Error(`${field}.effect must be read_only or mutating.`);
   }
-
-  const sourceCommand = isRecord(value.source_command) ? value.source_command : null;
-  if (!sourceCommand) {
-    throw new Error(`${field}.source_command must be an object.`);
-  }
-  const supportedSurfaces = isRecord(value.supported_surfaces) ? value.supported_surfaces : {};
-  requireSupportedSurfaceSlots(supportedSurfaces, field);
-
   const actionId = requireString(value.action_id, `${field}.action_id`);
-  const workspaceLocatorFields = optionalStringArray(
-    value.workspace_locator_fields,
-    `${field}.workspace_locator_fields`,
-  );
-  const hasExplicitRequiredFields = Object.prototype.hasOwnProperty.call(value, 'required_fields');
-  const hasExplicitOptionalFields = Object.prototype.hasOwnProperty.call(value, 'optional_fields');
-  const requiredFields = hasExplicitRequiredFields
-    ? optionalStringArray(value.required_fields, `${field}.required_fields`)
-    : workspaceLocatorFields;
-  const optionalFields = optionalStringArray(value.optional_fields, `${field}.optional_fields`);
+  const executionBinding = normalizeExecutionBinding(value.execution_binding, `${field}.execution_binding`);
+  const stageRoute = value.stage_route === undefined
+    ? null
+    : normalizeStageRoute(value.stage_route, `${field}.stage_route`);
+  if (executionBinding.kind === 'stage_binding' && !stageRoute) {
+    throw new Error(`${field}.execution_binding.kind=stage_binding requires stage_route.`);
+  }
+  if (executionBinding.kind === 'handler_ref' && stageRoute) {
+    throw new Error(`${field}.execution_binding.kind=handler_ref must not declare stage_route.`);
+  }
+  const requiredFields = requiredStringArray(value.required_fields, `${field}.required_fields`);
+  const optionalFields = requiredStringArray(value.optional_fields, `${field}.optional_fields`);
   const overlappingFields = requiredFields.filter((entry) => optionalFields.includes(entry));
   if (overlappingFields.length > 0) {
     throw new Error(`${field}.required_fields and optional_fields overlap: ${overlappingFields.join(', ')}`);
   }
-  if (hasExplicitRequiredFields) {
-    const parameterFields = new Set([...requiredFields, ...optionalFields]);
-    const missingLocatorFields = workspaceLocatorFields.filter((entry) => !parameterFields.has(entry));
-    if (missingLocatorFields.length > 0) {
-      throw new Error(`${field}.workspace_locator_fields are not declared parameters: ${missingLocatorFields.join(', ')}`);
-    }
-  }
-  const sourceCommandText = requireString(sourceCommand.command, `${field}.source_command.command`);
-  const stageRoute = normalizeStageRoute(value.stage_route, `${field}.stage_route`);
-  const normalizedSupportedSurfaces = {
-    cli: normalizeSurfaceDescriptor(supportedSurfaces.cli),
-    mcp: normalizeSurfaceDescriptor(supportedSurfaces.mcp),
-    skill: normalizeSurfaceDescriptor(supportedSurfaces.skill),
-    product_entry: normalizeSurfaceDescriptor(supportedSurfaces.product_entry),
-    openai: normalizeSurfaceDescriptor(supportedSurfaces.openai),
-    ai_sdk: normalizeSurfaceDescriptor(supportedSurfaces.ai_sdk),
-  };
-  const stageRouteExemption = normalizeStageRouteExemption(
-    value.stage_route_exempt,
-    rawEffect,
-    stageRoute,
-    normalizedSupportedSurfaces,
-    field,
+  const workspaceLocatorFields = requiredStringArray(
+    value.workspace_locator_fields,
+    `${field}.workspace_locator_fields`,
   );
-
+  const parameterFields = new Set([...requiredFields, ...optionalFields]);
+  const missingLocatorFields = workspaceLocatorFields.filter((entry) => !parameterFields.has(entry));
+  if (missingLocatorFields.length > 0) {
+    throw new Error(`${field}.workspace_locator_fields are not declared parameters: ${missingLocatorFields.join(', ')}`);
+  }
   return {
     action_id: actionId,
     title: requireString(value.title, `${field}.title`),
     summary: requireString(value.summary, `${field}.summary`),
     owner: requireString(value.owner, `${field}.owner`),
     effect: rawEffect,
-    source_command: {
-      command: sourceCommandText,
-      surface_kind: requireString(sourceCommand.surface_kind, `${field}.source_command.surface_kind`),
-    },
-    source_of_work: normalizeSourceOfWork(value.source_of_work, actionId, catalogId, field),
+    execution_binding: executionBinding,
+    source_of_work: normalizeSourceOfWork(value.source_of_work, actionId, catalogId, `${field}.source_of_work`),
     input_schema_ref: requireString(value.input_schema_ref, `${field}.input_schema_ref`),
     output_schema_ref: requireString(value.output_schema_ref, `${field}.output_schema_ref`),
     required_fields: requiredFields,
     optional_fields: optionalFields,
-    parameter_fields_explicit: hasExplicitRequiredFields || hasExplicitOptionalFields,
+    parameter_fields_explicit: true,
     workspace_locator_fields: workspaceLocatorFields,
-    human_gate_ids: stringList(value.human_gate_ids),
+    human_gate_ids: requiredStringArray(value.human_gate_ids, `${field}.human_gate_ids`),
     ...(stageRoute ? { stage_route: stageRoute } : {}),
-    ...(stageRouteExemption ? { stage_route_exempt: stageRouteExemption } : {}),
-    supported_surfaces: normalizedSupportedSurfaces,
-    authority_boundary: isRecord(value.authority_boundary) ? value.authority_boundary : null,
-    handler_binding: resolveFamilyActionHandlerBinding(sourceCommandText, actionId),
+    supported_surfaces: normalizeSupportedSurfaces(value.supported_surfaces, `${field}.supported_surfaces`),
+    authority_boundary: normalizeActionAuthorityBoundary(
+      value.authority_boundary,
+      `${field}.authority_boundary`,
+    ),
   };
 }
 
-export function normalizeFamilyActionCatalog(value: unknown, field = 'family_action_catalog'): FamilyActionCatalog | null {
+function assertUniqueProjectedSurfaceIds(actions: FamilyActionCatalogAction[], field: string) {
+  const surfaces = [
+    ['mcp', 'tool_name'],
+    ['skill', 'command_contract_id'],
+    ['product_entry', 'action_key'],
+    ['openai', 'tool_name'],
+    ['ai_sdk', 'tool_name'],
+  ] as const;
+  for (const [surface, idField] of surfaces) {
+    const seen = new Map<string, string>();
+    for (const action of actions) {
+      const descriptor = action.supported_surfaces[surface];
+      if (descriptor === null) {
+        continue;
+      }
+      const projectedId = descriptor[idField] ?? action.action_id;
+      const firstActionId = seen.get(projectedId);
+      if (firstActionId) {
+        throw new Error(
+          `${field}.actions contains duplicate ${surface} descriptor id ${projectedId}: ${firstActionId}, ${action.action_id}`,
+        );
+      }
+      seen.set(projectedId, action.action_id);
+    }
+  }
+}
+
+export function normalizeFamilyActionCatalog(
+  value: unknown,
+  field = 'family_action_catalog',
+): FamilyActionCatalog | null {
   if (!isRecord(value)) {
     return null;
   }
-
-  const surfaceKind = requireString(value.surface_kind, `${field}.surface_kind`);
-  if (surfaceKind !== 'family_action_catalog') {
+  assertKnownKeys(value, [
+    'surface_kind',
+    'version',
+    'catalog_id',
+    'target_domain_id',
+    'owner',
+    'authority_boundary',
+    'actions',
+    'notes',
+  ], field);
+  if (value.surface_kind !== 'family_action_catalog') {
     throw new Error(`${field}.surface_kind must be family_action_catalog.`);
   }
-  const version = requireString(value.version, `${field}.version`);
-  if (version !== 'family-action-catalog.v1') {
-    throw new Error(`${field}.version must be family-action-catalog.v1.`);
+  if (value.version !== FAMILY_ACTION_CATALOG_VERSION) {
+    throw new Error(`${field}.version must be ${FAMILY_ACTION_CATALOG_VERSION}.`);
   }
   if (!Array.isArray(value.actions) || value.actions.length === 0) {
     throw new Error(`${field}.actions must contain at least one action.`);
   }
-
-  const seen = new Set<string>();
   const catalogId = requireString(value.catalog_id, `${field}.catalog_id`);
+  const seen = new Set<string>();
   const actions = value.actions.map((entry, index) => {
     const action = normalizeFamilyAction(entry, `${field}.actions[${index}]`, catalogId);
     if (seen.has(action.action_id)) {
@@ -408,15 +543,118 @@ export function normalizeFamilyActionCatalog(value: unknown, field = 'family_act
     seen.add(action.action_id);
     return action;
   });
-
+  assertUniqueProjectedSurfaceIds(actions, field);
   return {
     surface_kind: 'family_action_catalog',
-    version: 'family-action-catalog.v1',
+    version: FAMILY_ACTION_CATALOG_VERSION,
     catalog_id: catalogId,
     target_domain_id: requireString(value.target_domain_id, `${field}.target_domain_id`),
     owner: requireString(value.owner, `${field}.owner`),
-    authority_boundary: isRecord(value.authority_boundary) ? value.authority_boundary : {},
+    authority_boundary: normalizeCatalogAuthorityBoundary(
+      value.authority_boundary,
+      `${field}.authority_boundary`,
+    ),
     actions,
-    notes: stringList(value.notes),
+    notes: optionalStringArray(value.notes, `${field}.notes`),
   };
+}
+
+function normalizeDomainHandlerBinding(value: unknown, field: string): DomainHandlerImplementation {
+  if (!isRecord(value)) {
+    throw new Error(`${field} must be an object.`);
+  }
+  const kind = requireString(value.kind, `${field}.kind`);
+  if (kind === 'typescript_export') {
+    assertKnownKeys(value, ['kind', 'file', 'export'], field);
+    const exportName = requireString(value.export, `${field}.export`);
+    if (!SYMBOL_NAME.test(exportName)) {
+      throw new Error(`${field}.export must be a TypeScript export identifier.`);
+    }
+    return {
+      kind: 'typescript_export',
+      file: requireString(value.file, `${field}.file`),
+      export: exportName,
+    };
+  }
+  if (kind === 'python_callable') {
+    assertKnownKeys(value, ['kind', 'module', 'callable'], field);
+    const moduleName = requireString(value.module, `${field}.module`);
+    const callableName = requireString(value.callable, `${field}.callable`);
+    if (!PYTHON_MODULE.test(moduleName) || !PYTHON_MODULE.test(callableName)) {
+      throw new Error(`${field} must declare a valid Python module and callable path.`);
+    }
+    return {
+      kind: 'python_callable',
+      module: moduleName,
+      callable: callableName,
+    };
+  }
+  throw new Error(`${field}.kind must be typescript_export or python_callable.`);
+}
+
+export function normalizeDomainHandlerRegistry(
+  value: unknown,
+  field = 'domain_handler_registry',
+): DomainHandlerRegistry | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  assertKnownKeys(value, ['surface_kind', 'version', 'handlers'], field);
+  if (value.surface_kind !== 'domain_handler_registry') {
+    throw new Error(`${field}.surface_kind must be domain_handler_registry.`);
+  }
+  if (value.version !== DOMAIN_HANDLER_REGISTRY_VERSION) {
+    throw new Error(`${field}.version must be ${DOMAIN_HANDLER_REGISTRY_VERSION}.`);
+  }
+  if (!Array.isArray(value.handlers)) {
+    throw new Error(`${field}.handlers must be an array.`);
+  }
+  const seen = new Set<string>();
+  const handlers = value.handlers.map((entry, index) => {
+    if (!isRecord(entry)) {
+      throw new Error(`${field}.handlers[${index}] must be an object.`);
+    }
+    assertKnownKeys(entry, ['handler_id', 'binding'], `${field}.handlers[${index}]`);
+    const handlerId = requireString(entry.handler_id, `${field}.handlers[${index}].handler_id`);
+    if (handlerId.startsWith('handler:') || !HANDLER_ID.test(handlerId)) {
+      throw new Error(`${field}.handlers[${index}].handler_id must be a bare canonical handler id.`);
+    }
+    if (seen.has(handlerId)) {
+      throw new Error(`${field}.handlers contains duplicate handler_id: ${handlerId}`);
+    }
+    seen.add(handlerId);
+    return {
+      handler_id: handlerId,
+      binding: normalizeDomainHandlerBinding(entry.binding, `${field}.handlers[${index}].binding`),
+    };
+  });
+  return {
+    surface_kind: 'domain_handler_registry',
+    version: DOMAIN_HANDLER_REGISTRY_VERSION,
+    handlers,
+  };
+}
+
+export function assertFamilyActionHandlerRefsResolve(
+  catalog: FamilyActionCatalog,
+  registry: DomainHandlerRegistry | null,
+) {
+  const handlerActions = catalog.actions.filter(
+    (action): action is FamilyActionCatalogAction & {
+      execution_binding: Extract<FamilyActionExecutionBinding, { kind: 'handler_ref' }>;
+    } => action.execution_binding.kind === 'handler_ref',
+  );
+  if (handlerActions.length === 0) {
+    return;
+  }
+  if (!registry) {
+    throw new Error('contracts/domain_handler_registry.json is required by handler_ref execution bindings.');
+  }
+  const registered = new Set(registry.handlers.map((handler) => handler.handler_id));
+  const unresolved = handlerActions
+    .map((action) => action.execution_binding.handler_ref.slice('handler:'.length))
+    .filter((handlerId) => !registered.has(handlerId));
+  if (unresolved.length > 0) {
+    throw new Error(`Unresolved domain handler refs: ${[...new Set(unresolved)].join(', ')}`);
+  }
 }

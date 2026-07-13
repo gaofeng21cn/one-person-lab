@@ -26,7 +26,7 @@ function readJson(relativePath: string): JsonRecord {
 function buildActionCatalog(): FamilyActionCatalog {
   return {
     surface_kind: 'family_action_catalog',
-    version: 'family-action-catalog.v1',
+    version: 'family-action-catalog.v2',
     catalog_id: 'mas_stage_actions',
     target_domain_id: 'med-autoscience',
     owner: 'med-autoscience',
@@ -40,17 +40,23 @@ function buildActionCatalog(): FamilyActionCatalog {
         summary: 'Produce a draft artifact under the domain stage.',
         owner: 'med-autoscience',
         effect: 'read_only',
-        source_command: {
-          command: 'medautosci write',
-          surface_kind: 'domain_cli',
+        execution_binding: {
+          kind: 'stage_binding',
+          stage_manifest_ref: 'agent/stages/manifest.json',
         },
         input_schema_ref: 'schemas/author.input.schema.json',
         output_schema_ref: 'schemas/author.output.schema.json',
         required_fields: ['workspace_root'],
         optional_fields: [],
         workspace_locator_fields: ['workspace_root'],
-        handler_binding: null,
         human_gate_ids: [],
+        stage_route: {
+          entry_stage_ref: 'manuscript_authoring',
+          required_stage_refs: ['manuscript_authoring'],
+          optional_stage_refs: [],
+          terminal_stage_refs: ['manuscript_authoring'],
+          route_policy: 'ai_selected_progress_route',
+        },
         supported_surfaces: {
           cli: null,
           mcp: null,
@@ -69,17 +75,23 @@ function buildActionCatalog(): FamilyActionCatalog {
         summary: 'Review explicit artifact refs and emit owner receipt refs.',
         owner: 'med-autoscience',
         effect: 'read_only',
-        source_command: {
-          command: 'medautosci review',
-          surface_kind: 'domain_cli',
+        execution_binding: {
+          kind: 'stage_binding',
+          stage_manifest_ref: 'agent/stages/manifest.json',
         },
         input_schema_ref: 'schemas/review.input.schema.json',
         output_schema_ref: 'schemas/review.output.schema.json',
         required_fields: ['workspace_root'],
         optional_fields: [],
         workspace_locator_fields: ['workspace_root'],
-        handler_binding: null,
         human_gate_ids: ['publication_quality_gate'],
+        stage_route: {
+          entry_stage_ref: 'publication_review',
+          required_stage_refs: ['publication_review'],
+          optional_stage_refs: [],
+          terminal_stage_refs: ['publication_review'],
+          route_policy: 'ai_selected_progress_route',
+        },
         supported_surfaces: {
           cli: null,
           mcp: null,

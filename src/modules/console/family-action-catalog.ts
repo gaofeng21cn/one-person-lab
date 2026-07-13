@@ -23,16 +23,19 @@ export {
   projectFamilyActionCatalog,
 } from '../../kernel/family-action-catalog-projection.ts';
 export {
+  assertFamilyActionHandlerRefsResolve,
+  normalizeDomainHandlerRegistry,
   normalizeFamilyActionCatalog,
-  resolveFamilyActionHandlerBinding,
 } from './family-action-catalog-contract.ts';
 export type {
+  DomainHandlerImplementation,
+  DomainHandlerRegistry,
+  DomainHandlerRegistryEntry,
   FamilyActionCatalog,
   FamilyActionCatalogAction,
   FamilyActionEffect,
+  FamilyActionExecutionBinding,
   FamilyActionExportFormat,
-  FamilyActionHandlerBinding,
-  FamilyActionSourceCommand,
   FamilyActionSurfaceDescriptor,
 } from './family-action-catalog-contract.ts';
 
@@ -52,11 +55,23 @@ export interface FamilyActionListEntry {
   human_gate_ids: string[];
 }
 
+function actionWorkspace(entry: DomainManifestCatalogEntry) {
+  if (!entry.workspace_path) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Resolved family action catalogs require an absolute workspace path.',
+      { project_id: entry.project_id, target_domain_id: entry.manifest?.target_domain_id ?? null },
+    );
+  }
+  return entry.workspace_path;
+}
+
 export function buildFamilyActionListEntry(
   entry: DomainManifestCatalogEntry,
   catalog: FamilyActionCatalog,
   action: FamilyActionCatalogAction,
 ): FamilyActionListEntry {
+  const projection = projectFamilyAction(action, catalog.target_domain_id, actionWorkspace(entry)).cli;
   return {
     project_id: entry.project_id,
     project: entry.project,
@@ -67,8 +82,8 @@ export function buildFamilyActionListEntry(
     summary: action.summary,
     owner: action.owner,
     effect: action.effect,
-    command: action.source_command.command,
-    surface_kind: action.source_command.surface_kind,
+    command: projection.command,
+    surface_kind: projection.surface_kind,
     supported_surface_kinds: Object.entries(action.supported_surfaces)
       .filter(([, descriptor]) => descriptor !== null)
       .map(([surface]) => surface),
@@ -198,7 +213,8 @@ export function buildFamilyActionInspect(contracts: FrameworkContracts, args: st
   const parsed = parseOptionArgs(args, ['domain', 'action']);
   const { entry, catalog } = findDomainEntry(contracts, parsed.domain);
   const action = findAction(catalog, parsed.action);
-  const projections = projectFamilyAction(action);
+  const workspacePath = actionWorkspace(entry);
+  const projections = projectFamilyAction(action, catalog.target_domain_id, workspacePath);
   return {
     version: 'g2',
     family_action: {
@@ -209,7 +225,7 @@ export function buildFamilyActionInspect(contracts: FrameworkContracts, args: st
       catalog_id: catalog.catalog_id,
       action,
       projections,
-      parity: buildFamilyActionCatalogParity(catalog, entry.manifest),
+      parity: buildFamilyActionCatalogParity(catalog, workspacePath, entry.manifest),
     },
   };
 }
@@ -228,6 +244,7 @@ export function buildFamilyActionExport(contracts: FrameworkContracts, args: str
   const parsed = parseOptionArgs(args, ['domain', 'format']);
   const format = parseExportFormat(parsed.format);
   const { entry, catalog } = findDomainEntry(contracts, parsed.domain);
+  const workspacePath = actionWorkspace(entry);
   return {
     version: 'g2',
     family_action_export: {
@@ -237,8 +254,8 @@ export function buildFamilyActionExport(contracts: FrameworkContracts, args: str
       target_domain_id: catalog.target_domain_id,
       catalog_id: catalog.catalog_id,
       format,
-      descriptors: projectFamilyActionCatalog(catalog, format),
-      parity: buildFamilyActionCatalogParity(catalog, entry.manifest),
+      descriptors: projectFamilyActionCatalog(catalog, format, workspacePath),
+      parity: buildFamilyActionCatalogParity(catalog, workspacePath, entry.manifest),
     },
   };
 }

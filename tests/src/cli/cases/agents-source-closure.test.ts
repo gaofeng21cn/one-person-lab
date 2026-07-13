@@ -28,6 +28,48 @@ function buildRepo() {
   return repoDir;
 }
 
+function actionCatalogAction(actionId: string, executionBinding: Record<string, unknown>) {
+  return {
+    action_id: actionId,
+    title: actionId,
+    summary: `${actionId} summary`,
+    owner: 'sample-agent',
+    effect: 'mutating',
+    execution_binding: executionBinding,
+    input_schema_ref: `contracts/schemas/${actionId}.input.schema.json`,
+    output_schema_ref: `contracts/schemas/${actionId}.output.schema.json`,
+    required_fields: [],
+    optional_fields: [],
+    workspace_locator_fields: [],
+    human_gate_ids: [],
+    supported_surfaces: {
+      cli: {},
+      mcp: {},
+      skill: {},
+      product_entry: {},
+      openai: {},
+      ai_sdk: {},
+    },
+  };
+}
+
+function installActionCatalog(repoDir: string, actions: Record<string, unknown>[]) {
+  writeJson(path.join(repoDir, 'contracts', 'action_catalog.json'), {
+    surface_kind: 'family_action_catalog',
+    version: 'family-action-catalog.v2',
+    catalog_id: 'sample_agent_action_catalog',
+    target_domain_id: 'sample-agent',
+    owner: 'sample-agent',
+    authority_boundary: {
+      domain_truth_owner: 'sample-agent',
+      opl_role: 'projection_consumer_only',
+      write_policy: 'no_domain_truth_writes',
+    },
+    actions,
+    notes: [],
+  });
+}
+
 function installTypescriptEntry(repoDir: string, source: string) {
   writeSource(repoDir, 'src/cli.ts', source);
   writeJson(path.join(repoDir, 'package.json'), {
@@ -36,14 +78,9 @@ function installTypescriptEntry(repoDir: string, source: string) {
     type: 'module',
     bin: { 'sample-agent': './src/cli.ts' },
   });
-  writeJson(path.join(repoDir, 'contracts', 'action_catalog.json'), {
-    surface_kind: 'family_action_catalog',
-    version: 'family-action-catalog.v2',
-    actions: [{
-      action_id: 'run',
-      execution_binding: { kind: 'handler_ref', handler_ref: 'handler:run' },
-    }],
-  });
+  installActionCatalog(repoDir, [
+    actionCatalogAction('run', { kind: 'handler_ref', handler_ref: 'handler:run' }),
+  ]);
   writeJson(path.join(repoDir, 'contracts', 'domain_handler_registry.json'), {
     surface_kind: 'domain_handler_registry',
     version: 'domain-handler-registry.v1',
@@ -310,47 +347,72 @@ test('agents source-closure reports unreachable sensitive residue', () => {
   assert.equal(report.unreachable_sensitive_residue[0].file, 'src/legacy.ts');
 });
 
-test('agents source-closure blocks missing handler refs and accepts exact OPL-hosted stage bindings', () => {
-  const missingHandlerRepo = buildRepo();
-  writeJson(path.join(missingHandlerRepo, 'contracts', 'action_catalog.json'), {
-    surface_kind: 'family_action_catalog',
-    version: 'family-action-catalog.v2',
-    actions: [{
-      action_id: 'missing',
-      execution_binding: { kind: 'handler_ref', handler_ref: 'handler:missing_handler' },
-    }],
+test('agents source-closure accepts canonical OPL-hosted stage bindings', () => {
+  const repoDir = buildRepo();
+  writeJson(path.join(repoDir, 'agent', 'stages', 'manifest.json'), {
+    surface_kind: 'family_stage_manifest',
   });
+  installActionCatalog(repoDir, [{
+    ...actionCatalogAction('hosted', {
+      kind: 'stage_binding',
+      stage_manifest_ref: 'agent/stages/manifest.json',
+    }),
+    stage_route: {
+      entry_stage_ref: 'sample-stage',
+      required_stage_refs: ['sample-stage'],
+      optional_stage_refs: [],
+      terminal_stage_refs: ['sample-stage'],
+      route_policy: 'ai_selected_progress_route',
+    },
+  }]);
 
-  const missingHandler = runSourceClosure(missingHandlerRepo).reports[0];
+  const report = runSourceClosure(repoDir).reports[0];
 
-  assert.equal(missingHandler.status, 'blocked');
+  assert.equal(report.status, 'passed');
   assert.equal(
-    missingHandler.entrypoints.some((entry: { entrypoint_id: string; resolution_status: string }) =>
-      entry.entrypoint_id === 'action_handler:missing' && entry.resolution_status === 'unresolved'
+    report.entrypoints.some((entry: { entrypoint_id: string; resolution_status: string }) =>
+      entry.entrypoint_id === 'action_catalog:hosted' && entry.resolution_status === 'resolved'
     ),
     true,
   );
+});
 
-  const stageRepo = buildRepo();
-  writeJson(path.join(stageRepo, 'contracts', 'action_catalog.json'), {
-    surface_kind: 'family_action_catalog',
-    version: 'family-action-catalog.v2',
-    actions: [{
-      action_id: 'hosted',
-      execution_binding: {
+test('agents source-closure blocks missing stage manifests and unresolved handler refs', () => {
+  const repoDir = buildRepo();
+  installActionCatalog(repoDir, [
+    {
+      ...actionCatalogAction('hosted', {
         kind: 'stage_binding',
         stage_manifest_ref: 'agent/stages/manifest.json',
+      }),
+      stage_route: {
+        entry_stage_ref: 'sample-stage',
+        required_stage_refs: ['sample-stage'],
+        optional_stage_refs: [],
+        terminal_stage_refs: ['sample-stage'],
+        route_policy: 'ai_selected_progress_route',
       },
-    }],
-  });
+    },
+    actionCatalogAction('missing-handler', {
+      kind: 'handler_ref',
+      handler_ref: 'handler:missing-handler',
+    }),
+  ]);
 
-  const stageBinding = runSourceClosure(stageRepo).reports[0];
+  const report = runSourceClosure(repoDir).reports[0];
 
-  assert.equal(stageBinding.status, 'passed');
+  assert.equal(report.status, 'blocked');
   assert.equal(
-    stageBinding.entrypoints.some((entry: { entrypoint_id: string; resolution_status: string }) =>
-      entry.entrypoint_id === 'action_stage_binding:hosted'
-      && entry.resolution_status === 'resolved'
+    report.entrypoints.some((entry: { entrypoint_id: string; resolution_status: string }) =>
+      entry.entrypoint_id === 'action_catalog:hosted'
+      && entry.resolution_status === 'hosted_declaration_unverified'
+    ),
+    true,
+  );
+  assert.equal(
+    report.entrypoints.some((entry: { entrypoint_id: string; resolution_status: string }) =>
+      entry.entrypoint_id === 'action_handler:missing-handler'
+      && entry.resolution_status === 'unresolved'
     ),
     true,
   );

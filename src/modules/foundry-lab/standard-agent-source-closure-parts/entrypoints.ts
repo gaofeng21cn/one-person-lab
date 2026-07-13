@@ -61,23 +61,23 @@ function sourceFileForDeclaredPath(declared: string, activeFiles: Set<string>) {
   return candidates.find((candidate) => activeFiles.has(candidate)) ?? normalized;
 }
 
-function entrypoint(input: Omit<SourceClosureEntrypoint, 'language' | 'resolution_status' | 'resolved_symbol_id'>): SourceClosureEntrypoint {
-  return {
-    ...input,
-    language: sourceLanguage(input.file, input.module_name),
-    resolution_status: input.hosted_by_opl ? 'hosted_declaration_unverified' : 'unresolved',
-    resolved_symbol_id: null,
-  };
-}
+type SourceClosureEntrypointInput = Omit<
+  SourceClosureEntrypoint,
+  'language' | 'resolution_status' | 'resolved_symbol_id'
+> & {
+  hosted_binding_verified?: boolean;
+};
 
-function verifiedHostedEntrypoint(
-  input: Omit<SourceClosureEntrypoint, 'language' | 'resolution_status' | 'resolved_symbol_id' | 'hosted_by_opl'>,
-): SourceClosureEntrypoint {
+function entrypoint(input: SourceClosureEntrypointInput): SourceClosureEntrypoint {
+  const { hosted_binding_verified: hostedBindingVerified = false, ...entry } = input;
   return {
-    ...input,
-    language: null,
-    hosted_by_opl: true,
-    resolution_status: 'resolved',
+    ...entry,
+    language: sourceLanguage(entry.file, entry.module_name),
+    resolution_status: hostedBindingVerified
+      ? 'resolved'
+      : entry.hosted_by_opl
+        ? 'hosted_declaration_unverified'
+        : 'unresolved',
     resolved_symbol_id: null,
   };
 }
@@ -146,7 +146,13 @@ function referencedHandlerRegistryPaths(...documents: JsonRecord[]) {
 
 function registryHandlers(registry: JsonRecord): JsonRecord[] {
   const handlers = registry.handlers;
-  return Array.isArray(handlers) ? handlers.map(record) : [];
+  if (Array.isArray(handlers)) {
+    return handlers.map(record);
+  }
+  return Object.entries(record(handlers)).map(([handlerId, value]) => ({
+    handler_id: handlerId,
+    ...record(value),
+  } as JsonRecord));
 }
 
 export function discoverSourceClosureEntrypoints(
@@ -194,14 +200,30 @@ export function discoverSourceClosureEntrypoints(
     .flatMap((registryPath) => registryHandlers(readJson(repoDir, registryPath)).map((handler) => {
       const handlerId = typeof handler.handler_id === 'string' ? handler.handler_id : '<missing-handler-id>';
       const binding = record(handler.binding);
-      const kind = typeof binding.kind === 'string' ? binding.kind : null;
-      const fileValue = typeof binding.file === 'string' ? binding.file : null;
-      const moduleName = typeof binding.module === 'string' ? binding.module : null;
+      const kind = typeof binding.kind === 'string'
+        ? binding.kind
+        : typeof handler.kind === 'string'
+          ? handler.kind
+          : null;
+      const fileValue = typeof binding.file === 'string'
+        ? binding.file
+        : typeof handler.file === 'string'
+          ? handler.file
+          : null;
+      const moduleName = typeof binding.module === 'string'
+        ? binding.module
+        : typeof handler.module === 'string'
+          ? handler.module
+          : null;
       const symbol = typeof binding.export === 'string'
         ? binding.export
         : typeof binding.callable === 'string'
           ? binding.callable
-          : null;
+          : typeof handler.export === 'string'
+            ? handler.export
+            : typeof handler.callable === 'string'
+              ? handler.callable
+              : null;
       return {
         handler_id: handlerId,
         registry_path: registryPath,
@@ -217,11 +239,13 @@ export function discoverSourceClosureEntrypoints(
     const actionId = typeof action.action_id === 'string' ? action.action_id : '<missing-action-id>';
     const executionBinding = record(action.execution_binding);
     const bindingKind = typeof executionBinding.kind === 'string' ? executionBinding.kind : null;
-    const handlerRef = bindingKind === 'handler_ref' && typeof executionBinding.handler_ref === 'string'
-      ? executionBinding.handler_ref
-      : null;
-    const handlerId = handlerRef?.startsWith('handler:') ? handlerRef.slice('handler:'.length) : null;
-    if (handlerId) {
+    if (bindingKind === 'handler_ref') {
+      const handlerRef = typeof executionBinding.handler_ref === 'string'
+        ? executionBinding.handler_ref
+        : '';
+      const handlerId = handlerRef.startsWith('handler:')
+        ? handlerRef.slice('handler:'.length)
+        : '';
       const registered = registeredHandlers.find((handler) => handler.handler_id === handlerId);
       entries.push(entrypoint({
         entrypoint_id: `action_handler:${actionId}`,
@@ -233,31 +257,37 @@ export function discoverSourceClosureEntrypoints(
         hosted_by_opl: false,
         action_id: actionId,
       }));
-    } else if (
-      bindingKind === 'stage_binding'
-      && executionBinding.stage_manifest_ref === 'agent/stages/manifest.json'
-    ) {
-      entries.push(verifiedHostedEntrypoint({
-        entrypoint_id: `action_stage_binding:${actionId}`,
+      continue;
+    }
+    if (bindingKind === 'stage_binding') {
+      const stageManifestRef = typeof executionBinding.stage_manifest_ref === 'string'
+        ? normalizedFile(executionBinding.stage_manifest_ref)
+        : '';
+      const hostedBindingVerified = stageManifestRef === 'agent/stages/manifest.json'
+        && repoFilePaths.includes(stageManifestRef);
+      entries.push(entrypoint({
+        entrypoint_id: `action_catalog:${actionId}`,
         source_kind: 'action_catalog',
         declared_ref: `contracts/action_catalog.json#/actions/${actionId}/execution_binding/stage_manifest_ref`,
         file: null,
         module_name: null,
         symbol: null,
+        hosted_by_opl: true,
+        hosted_binding_verified: hostedBindingVerified,
         action_id: actionId,
       }));
-    } else {
-      entries.push(entrypoint({
-        entrypoint_id: `action_catalog:${actionId}`,
-        source_kind: 'action_catalog',
-        declared_ref: `contracts/action_catalog.json#/actions/${actionId}`,
-        file: null,
-        module_name: null,
-        symbol: null,
-        hosted_by_opl: false,
-        action_id: actionId,
-      }));
+      continue;
     }
+    entries.push(entrypoint({
+      entrypoint_id: `action_catalog:${actionId}`,
+      source_kind: 'action_catalog',
+      declared_ref: `contracts/action_catalog.json#/actions/${actionId}/execution_binding`,
+      file: null,
+      module_name: null,
+      symbol: null,
+      hosted_by_opl: false,
+      action_id: actionId,
+    }));
   }
 
   for (const handler of registeredHandlers) {

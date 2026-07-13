@@ -32,6 +32,43 @@ test('agents scaffold validation blocks missing stage operating principles polic
   }
 });
 
+test('agents scaffold validation reads generic-owner guards from the functional privatization audit', () => {
+  const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-scaffold-generic-owner-guard-'));
+  try {
+    runCli([
+      'agents',
+      'scaffold',
+      '--target-dir',
+      targetDir,
+      '--domain-id',
+      'generic-owner-guard',
+    ]);
+    const catalogPath = path.join(targetDir, 'contracts', 'action_catalog.json');
+    const catalog = parseJsonText(fs.readFileSync(catalogPath, 'utf8')) as Record<string, unknown>;
+    assert.equal(Object.hasOwn(catalog, 'forbidden_generic_owner_roles'), false);
+
+    const passed = runCli(['agents', 'scaffold', '--validate', targetDir]).standard_domain_agent_scaffold;
+    assert.equal(passed.validation.status, 'passed');
+    assert.deepEqual(passed.validation.missing_forbidden_role_guards, []);
+
+    const auditPath = path.join(targetDir, 'contracts', 'functional_privatization_audit.json');
+    const audit = parseJsonText(fs.readFileSync(auditPath, 'utf8')) as {
+      forbidden_generic_owner_roles: string[];
+    };
+    audit.forbidden_generic_owner_roles = audit.forbidden_generic_owner_roles.filter(
+      (role) => role !== 'generic_scheduler_owner',
+    );
+    fs.writeFileSync(auditPath, `${JSON.stringify(audit, null, 2)}\n`);
+
+    const blocked = runCli(['agents', 'scaffold', '--validate', targetDir]).standard_domain_agent_scaffold;
+    assert.equal(blocked.validation.status, 'blocked');
+    assert.deepEqual(blocked.validation.missing_forbidden_role_guards, ['generic_scheduler_owner']);
+    assert.ok(blocked.validation.blockers.includes('missing_forbidden_role_guard:generic_scheduler_owner'));
+  } finally {
+    fs.rmSync(targetDir, { recursive: true, force: true });
+  }
+});
+
 test('agents scaffold validation blocks missing standard agent principles adoption contract', () => {
   const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-scaffold-principles-missing-'));
   try {

@@ -216,8 +216,8 @@ function buildSupportedDerivedSurfaces() {
 
 function buildActionStageRoutes(catalog: FamilyActionCatalog | null) {
   return catalog?.actions.flatMap((action) => (
-    action.stage_route
-    && action.stage_route_exempt !== 'domain_handler_target_only'
+    action.execution_binding.kind === 'stage_binding'
+    && action.stage_route
     ? [{ action_id: action.action_id, ...action.stage_route }]
     : []
   )) ?? [];
@@ -337,6 +337,17 @@ function descriptorRecord(descriptor: JsonRecord, key: string) {
   return isRecord(descriptor[key]) ? descriptor[key] as JsonRecord : null;
 }
 
+function hostedWorkspacePath(descriptor: JsonRecord) {
+  const sourceContractConsumption = descriptorRecord(descriptor, 'source_contract_consumption');
+  const workspacePath = optionalString(descriptor.repo_dir)
+    ?? optionalString(descriptor.workspace_path)
+    ?? optionalString(sourceContractConsumption?.workspace_path);
+  if (!workspacePath) {
+    throw new Error('Generated family action interfaces require an absolute workspace path.');
+  }
+  return workspacePath;
+}
+
 function buildStageRoutes(stageControlPlane: FamilyStageControlPlane | null) {
   return stageControlPlane?.stages.map((stage) => {
     const toolAffordanceBoundary = buildToolAffordanceBoundaryRoute(stage);
@@ -381,8 +392,10 @@ function buildStageRoutes(stageControlPlane: FamilyStageControlPlane | null) {
   }) ?? [];
 }
 
-function buildProductEntryDescriptors(catalog: FamilyActionCatalog) {
-  return catalog.actions.map((action) => projectFamilyAction(action).product_entry);
+function buildProductEntryDescriptors(catalog: FamilyActionCatalog, workspacePath: string) {
+  return catalog.actions
+    .filter((action) => action.supported_surfaces.product_entry !== null)
+    .map((action) => projectFamilyAction(action, catalog.target_domain_id, workspacePath).product_entry);
 }
 
 function firstActionForStageControlPlane(
@@ -403,12 +416,15 @@ function firstActionForStageControlPlane(
 function defaultSourceOfWork(
   catalog: FamilyActionCatalog | null,
   stageControlPlane: FamilyStageControlPlane | null,
+  workspacePath: string,
 ) {
   const action = firstActionForStageControlPlane(catalog, stageControlPlane);
-  return action ? projectFamilyAction(action).product_entry.source_of_work : null;
+  return action
+    ? projectFamilyAction(action, catalog!.target_domain_id, workspacePath).product_entry.source_of_work
+    : null;
 }
 
-function buildProductStatusDescriptors(catalog: FamilyActionCatalog | null) {
+function buildProductStatusDescriptors(catalog: FamilyActionCatalog | null, workspacePath: string) {
   if (!catalog) {
     return [];
   }
@@ -421,50 +437,52 @@ function buildProductStatusDescriptors(catalog: FamilyActionCatalog | null) {
   ]);
   return catalog.actions
     .filter((action) => {
-      const surfaceKind =
-        action.supported_surfaces.product_entry?.surface_kind
-        ?? action.source_command.surface_kind;
+      if (action.supported_surfaces.product_entry === null) {
+        return false;
+      }
+      const surfaceKind = action.supported_surfaces.product_entry?.surface_kind
+        ?? 'opl_agent_action_product_entry';
       return statusSurfaceKinds.has(surfaceKind) || action.effect === 'read_only';
     })
-    .map((action) => ({
-      action_id: action.action_id,
-      command: action.supported_surfaces.product_entry?.command ?? action.source_command.command,
-      surface_kind: action.supported_surfaces.product_entry?.surface_kind ?? action.source_command.surface_kind,
-      summary: action.summary,
-      effect: action.effect,
-      source_descriptor: 'family_action_catalog.supported_surfaces.product_entry',
-      source_of_work: projectFamilyAction(action).product_entry.source_of_work,
-    }));
+    .map((action) => {
+      const projection = projectFamilyAction(action, catalog.target_domain_id, workspacePath).product_entry;
+      return {
+        action_id: action.action_id,
+        command: projection.command,
+        surface_kind: projection.surface_kind,
+        summary: action.summary,
+        effect: action.effect,
+        source_descriptor: 'family_action_catalog.execution_binding',
+        execution_binding: action.execution_binding,
+        source_of_work: projection.source_of_work,
+      };
+    });
 }
 
-function buildDomainHandlerDescriptors(catalog: FamilyActionCatalog | null) {
+function buildDomainHandlerDescriptors(catalog: FamilyActionCatalog | null, workspacePath: string) {
   if (!catalog) {
     return [];
   }
-  return catalog.actions
-    .filter((action) => {
-      const surfaceKinds = [
-        action.source_command.surface_kind,
-        action.supported_surfaces.product_entry?.surface_kind,
-        action.supported_surfaces.mcp?.surface_kind,
-        action.supported_surfaces.skill?.surface_kind,
-      ].filter((entry): entry is string => Boolean(entry));
-      return Boolean(action.handler_binding)
-        || surfaceKinds.some((surfaceKind) => surfaceKind.includes('domain_handler'));
-    })
-    .map((action) => ({
-      action_id: action.action_id,
-      command: action.supported_surfaces.product_entry?.command ?? action.source_command.command,
-      surface_kind: action.supported_surfaces.product_entry?.surface_kind ?? action.source_command.surface_kind,
-      summary: action.summary,
-      effect: action.effect,
-      authority_boundary: action.authority_boundary ?? null,
-      required_fields: action.required_fields,
-      optional_fields: action.optional_fields,
-      workspace_locator_fields: action.workspace_locator_fields,
-      ...(action.handler_binding ?? {}),
-      source_of_work: projectFamilyAction(action).product_entry.source_of_work,
-    }));
+  return catalog.actions.flatMap((action) => {
+      if (action.execution_binding.kind !== 'handler_ref') {
+        return [];
+      }
+      const projection = projectFamilyAction(action, catalog.target_domain_id, workspacePath).product_entry;
+      return [{
+        action_id: action.action_id,
+        command: projection.command,
+        surface_kind: projection.surface_kind,
+        summary: action.summary,
+        effect: action.effect,
+        authority_boundary: action.authority_boundary ?? null,
+        required_fields: action.required_fields,
+        optional_fields: action.optional_fields,
+        workspace_locator_fields: action.workspace_locator_fields,
+        execution_binding: action.execution_binding,
+        handler_ref: action.execution_binding.handler_ref,
+        source_of_work: projection.source_of_work,
+      }];
+    });
 }
 
 function buildProductSessionDescriptor(stageControlPlane: FamilyStageControlPlane | null) {
@@ -502,8 +520,12 @@ function buildProductSessionDescriptorFromDescriptor(
   };
 }
 
-function buildDomainHandlerDescriptorBlock(catalog: FamilyActionCatalog | null, descriptor: JsonRecord) {
-  const descriptors = buildDomainHandlerDescriptors(catalog);
+function buildDomainHandlerDescriptorBlock(
+  catalog: FamilyActionCatalog | null,
+  descriptor: JsonRecord,
+  workspacePath: string,
+) {
+  const descriptors = buildDomainHandlerDescriptors(catalog, workspacePath);
   const handoff = handoffSurfaceFor(descriptor, 'domain_handler');
   return {
     surface_kind: 'opl_generated_domain_handler_descriptor',
@@ -529,6 +551,7 @@ function buildWorkbenchDescriptorBlock(
   catalog: FamilyActionCatalog | null,
   stageControlPlane: FamilyStageControlPlane | null,
   descriptor: JsonRecord,
+  workspacePath: string,
 ) {
   return {
     surface_kind: 'opl_hosted_workbench_descriptor',
@@ -536,7 +559,7 @@ function buildWorkbenchDescriptorBlock(
     status: stageControlPlane ? 'ready_from_stage_control_plane' : 'blocked_missing_family_stage_control_plane',
     descriptor_source_surfaces: ['family_stage_control_plane', 'domain_memory_descriptor', 'runtime_surfaces'],
     source_of_work_lineage: buildSourceOfWorkLineage(catalog, stageControlPlane),
-    default_source_of_work: defaultSourceOfWork(catalog, stageControlPlane),
+    default_source_of_work: defaultSourceOfWork(catalog, stageControlPlane, workspacePath),
     source_of_work_consumption_policy:
       'workbench_consumes_generated_surface_lineage_and_stage_routes_without_claiming_domain_ready',
     handoff_surface: handoffSurfaceFor(descriptor, 'workbench_drilldown'),
@@ -554,6 +577,7 @@ function formatDescriptorBlock(
   catalog: FamilyActionCatalog | null,
   format: GeneratedInterfaceFormat,
   stageControlPlane: FamilyStageControlPlane | null,
+  workspacePath: string,
 ) {
   if (!catalog) {
     return {
@@ -568,21 +592,15 @@ function formatDescriptorBlock(
       format,
       owner: 'one-person-lab',
       status: 'ready',
-      descriptors: buildProductEntryDescriptors(catalog),
+      descriptors: buildProductEntryDescriptors(catalog, workspacePath),
       family_stage_control_plane: stageControlPlane,
     };
   }
-  const publicCatalog = format === 'mcp'
-    ? catalog
-    : {
-      ...catalog,
-      actions: catalog.actions.filter((action) => action.stage_route_exempt !== 'domain_handler_target_only'),
-    };
   return {
     format,
     owner: 'one-person-lab',
     status: 'ready',
-    descriptors: projectFamilyActionCatalog(publicCatalog, format),
+    descriptors: projectFamilyActionCatalog(catalog, format, workspacePath),
   };
 }
 
@@ -821,12 +839,14 @@ export function buildGeneratedInterfaceBundle(
 ) {
   const catalog = rawDescriptorSurface<FamilyActionCatalog>(descriptor, 'family_action_catalog');
   const stageControlPlane = rawDescriptorSurface<FamilyStageControlPlane>(descriptor, 'family_stage_control_plane');
+  const workspacePath = catalog ? hostedWorkspacePath(descriptor) : '';
   const formats: GeneratedInterfaceFormat[] = ['cli', 'mcp', 'skill', 'product-entry', 'openai', 'ai-sdk'];
   const include = (format: GeneratedInterfaceFormat) => selectedFormat === 'all' || selectedFormat === format;
   const block = (format: GeneratedInterfaceFormat) => formatDescriptorBlock(
     catalog,
     format,
     stageControlPlane,
+    workspacePath,
   );
   const allBlocks = Object.fromEntries(
     formats.map((format) => [
@@ -860,10 +880,10 @@ export function buildGeneratedInterfaceBundle(
     status: catalog ? 'ready_from_family_action_catalog' : 'blocked_missing_family_action_catalog',
     descriptor_source_surfaces: ['family_action_catalog', 'runtime_surfaces'],
     source_of_work_lineage: buildSourceOfWorkLineage(catalog, stageControlPlane),
-    default_source_of_work: defaultSourceOfWork(catalog, stageControlPlane),
+    default_source_of_work: defaultSourceOfWork(catalog, stageControlPlane, workspacePath),
     source_of_work_consumption_policy:
       'status_read_model_consumes_generated_surface_lineage_without_claiming_domain_ready',
-    descriptors: buildProductStatusDescriptors(catalog),
+    descriptors: buildProductStatusDescriptors(catalog, workspacePath),
     authority_boundary: {
       product_status_can_write_domain_truth: false,
       product_status_can_authorize_quality_or_export: false,
@@ -871,8 +891,8 @@ export function buildGeneratedInterfaceBundle(
     },
   };
   const productSession = buildProductSessionDescriptorFromDescriptor(descriptor, stageControlPlane);
-  const domainHandler = buildDomainHandlerDescriptorBlock(catalog, descriptor);
-  const workbench = buildWorkbenchDescriptorBlock(catalog, stageControlPlane, descriptor);
+  const domainHandler = buildDomainHandlerDescriptorBlock(catalog, descriptor, workspacePath);
+  const workbench = buildWorkbenchDescriptorBlock(catalog, stageControlPlane, descriptor, workspacePath);
   const generatedDefaultEntryNoResurrectionGate = buildGeneratedDefaultEntryNoResurrectionGate(
     catalog,
     stageControlPlane,
@@ -885,7 +905,12 @@ export function buildGeneratedInterfaceBundle(
     domain_handler: domainHandler,
     workbench,
   };
-  const generatedDirectParity = buildGeneratedDirectParityProof(catalog, allBlocks, activeCallerTargetProof);
+  const generatedDirectParity = buildGeneratedDirectParityProof(
+    catalog,
+    allBlocks,
+    activeCallerTargetProof,
+    workspacePath,
+  );
   const activeCallerCutoverProof = buildActiveCallerCutoverProof(
     descriptor,
     compilerStatus,
@@ -949,7 +974,7 @@ export function buildGeneratedInterfaceBundle(
       ? buildStageRoutes(stageControlPlane)
       : [],
     action_stage_routes: buildActionStageRoutes(catalog),
-    parity: catalog ? buildFamilyActionCatalogParity(catalog) : null,
+    parity: catalog ? buildFamilyActionCatalogParity(catalog, workspacePath) : null,
     generated_direct_parity: generatedDirectParity,
     authority_boundary: {
       generated_interface_can_write_domain_truth: false,

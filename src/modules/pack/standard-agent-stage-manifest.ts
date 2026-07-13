@@ -1,10 +1,18 @@
 import crypto from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 
+import ts from 'typescript';
+
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
-import { normalizeFamilyActionCatalog } from '../../kernel/family-action-catalog-contract.ts';
+import {
+  assertFamilyActionHandlerRefsResolve,
+  normalizeDomainHandlerRegistry,
+  normalizeFamilyActionCatalog,
+  type DomainHandlerRegistry,
+} from '../../kernel/family-action-catalog-contract.ts';
 import { optionalString, parseJsonText } from '../../kernel/json-file.ts';
 import { STANDARD_AGENT_PACK_ABI } from './standard-agent-pack-abi.ts';
 import {
@@ -34,6 +42,7 @@ export const OFFICIAL_KNOWLEDGE_DELIVERABLE_QUALITY_PROFILE = {
   profile_ref: 'contracts/opl-framework/official-knowledge-deliverable-quality-profile.json',
 } as const;
 const ACTION_CATALOG_REF = 'contracts/action_catalog.json';
+const DOMAIN_HANDLER_REGISTRY_REF = 'contracts/domain_handler_registry.json';
 const PACK_COMPILER_INPUT_REF = 'contracts/pack_compiler_input.json';
 const OWNER_RECEIPT_CONTRACT_REF = 'contracts/owner_receipt_contract.json';
 const AUTHORITY_FUNCTION_INVENTORY_REF = 'runtime/authority_functions/README.md';
@@ -171,6 +180,231 @@ function repoRef(repoDir: string, value: unknown, field: string) {
   const fileRef = ref.split('#', 1)[0]!;
   repoFile(repoDir, fileRef, field);
   return ref;
+}
+
+function declarationModifiers(node: ts.Node) {
+  return ts.canHaveModifiers(node) ? ts.getModifiers(node) ?? [] : [];
+}
+
+function hasModifier(node: ts.Node, kind: ts.SyntaxKind) {
+  return declarationModifiers(node).some((modifier) => modifier.kind === kind);
+}
+
+function typescriptCallableExports(filePath: string) {
+  const source = fs.readFileSync(filePath, 'utf8');
+  const scriptKind = filePath.endsWith('.tsx')
+    ? ts.ScriptKind.TSX
+    : filePath.endsWith('.js') || filePath.endsWith('.mjs') || filePath.endsWith('.cjs')
+      ? ts.ScriptKind.JS
+      : ts.ScriptKind.TS;
+  const sourceFile = ts.createSourceFile(filePath, source, ts.ScriptTarget.Latest, true, scriptKind);
+  const parseDiagnostics = (sourceFile as ts.SourceFile & { parseDiagnostics?: readonly ts.Diagnostic[] })
+    .parseDiagnostics ?? [];
+  if (parseDiagnostics.length > 0) {
+    throw new Error(`TypeScript handler file has parse errors: ${filePath}`);
+  }
+
+  const localCallables = new Set<string>();
+  for (const statement of sourceFile.statements) {
+    if (
+      ts.isFunctionDeclaration(statement)
+      && statement.name
+      && statement.body
+      && !hasModifier(statement, ts.SyntaxKind.DeclareKeyword)
+    ) {
+      localCallables.add(statement.name.text);
+    }
+    if (ts.isVariableStatement(statement)) {
+      for (const declaration of statement.declarationList.declarations) {
+        if (
+          ts.isIdentifier(declaration.name)
+          && declaration.initializer
+          && (ts.isArrowFunction(declaration.initializer) || ts.isFunctionExpression(declaration.initializer))
+        ) {
+          localCallables.add(declaration.name.text);
+        }
+      }
+    }
+  }
+
+  const exported = new Set<string>();
+  for (const statement of sourceFile.statements) {
+    if (ts.isFunctionDeclaration(statement)) {
+      if (!statement.body || hasModifier(statement, ts.SyntaxKind.DeclareKeyword)) {
+        continue;
+      }
+      if (hasModifier(statement, ts.SyntaxKind.DefaultKeyword)) {
+        exported.add('default');
+      } else if (statement.name && hasModifier(statement, ts.SyntaxKind.ExportKeyword)) {
+        exported.add(statement.name.text);
+      }
+      continue;
+    }
+    if (ts.isVariableStatement(statement) && hasModifier(statement, ts.SyntaxKind.ExportKeyword)) {
+      for (const declaration of statement.declarationList.declarations) {
+        if (ts.isIdentifier(declaration.name) && localCallables.has(declaration.name.text)) {
+          exported.add(declaration.name.text);
+        }
+      }
+      continue;
+    }
+    if (ts.isExportDeclaration(statement) && statement.exportClause && ts.isNamedExports(statement.exportClause)) {
+      if (statement.moduleSpecifier) {
+        continue;
+      }
+      for (const element of statement.exportClause.elements) {
+        const localName = element.propertyName?.text ?? element.name.text;
+        if (localCallables.has(localName)) {
+          exported.add(element.name.text);
+        }
+      }
+      continue;
+    }
+    if (ts.isExportAssignment(statement) && !statement.isExportEquals) {
+      if (
+        ts.isArrowFunction(statement.expression)
+        || ts.isFunctionExpression(statement.expression)
+        || (ts.isIdentifier(statement.expression) && localCallables.has(statement.expression.text))
+      ) {
+        exported.add('default');
+      }
+    }
+  }
+  return exported;
+}
+
+const PYTHON_CALLABLE_PROBE = String.raw`
+import ast
+import json
+import sys
+
+with open(sys.argv[1], "r", encoding="utf-8") as handle:
+    tree = ast.parse(handle.read(), filename=sys.argv[1])
+
+parts = sys.argv[2].split(".")
+body = tree.body
+resolved = None
+for index, part in enumerate(parts):
+    resolved = None
+    for node in body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and node.name == part:
+            resolved = node
+            break
+        if isinstance(node, (ast.Assign, ast.AnnAssign)):
+            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+            value = node.value
+            if any(isinstance(target, ast.Name) and target.id == part for target in targets) and isinstance(value, ast.Lambda):
+                resolved = value
+                break
+    if resolved is None:
+        break
+    if index < len(parts) - 1:
+        if not isinstance(resolved, ast.ClassDef):
+            resolved = None
+            break
+        body = resolved.body
+
+is_callable = isinstance(resolved, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda))
+print(json.dumps({"callable": is_callable}))
+`;
+
+function pythonModuleFile(repoDir: string, moduleName: string, field: string) {
+  const modulePath = moduleName.split('.').join('/');
+  const candidates = [
+    `${modulePath}.py`,
+    `${modulePath}/__init__.py`,
+    `src/${modulePath}.py`,
+    `src/${modulePath}/__init__.py`,
+  ].filter((candidate) => fs.existsSync(path.resolve(repoDir, candidate)));
+  if (candidates.length === 0) {
+    fail(`${field}.module does not resolve to a repo-contained Python module.`, {
+      repo_dir: repoDir,
+      field,
+      module: moduleName,
+    });
+  }
+  if (candidates.length > 1) {
+    fail(`${field}.module resolves ambiguously inside the standard Agent root.`, {
+      repo_dir: repoDir,
+      field,
+      module: moduleName,
+      candidates,
+    });
+  }
+  return repoFile(repoDir, candidates[0], `${field}.module`);
+}
+
+function assertPythonCallable(filePath: string, callableName: string, field: string, repoDir: string) {
+  const executables = [process.env.PYTHON, 'python3', 'python']
+    .filter((entry, index, values): entry is string => Boolean(entry) && values.indexOf(entry) === index);
+  for (const executable of executables) {
+    const result = spawnSync(executable, ['-I', '-c', PYTHON_CALLABLE_PROBE, filePath, callableName], {
+      encoding: 'utf8',
+      maxBuffer: 1024 * 1024,
+    });
+    if (result.error && 'code' in result.error && result.error.code === 'ENOENT') {
+      continue;
+    }
+    if (result.status !== 0) {
+      fail(`${field} could not be parsed as a Python callable.`, {
+        repo_dir: repoDir,
+        field,
+        stderr: result.stderr.trim(),
+      });
+    }
+    let probe: unknown;
+    try {
+      probe = JSON.parse(result.stdout);
+    } catch {
+      fail(`${field} Python callable probe returned invalid output.`, { repo_dir: repoDir, field });
+    }
+    if (!isRecord(probe) || probe.callable !== true) {
+      fail(`${field} does not resolve to a callable Python symbol.`, {
+        repo_dir: repoDir,
+        field,
+        callable: callableName,
+      });
+    }
+    return;
+  }
+  fail(`${field} requires an available Python 3 interpreter for static callable validation.`, {
+    repo_dir: repoDir,
+    field,
+  });
+}
+
+function assertDomainHandlerImplementationsResolve(repoDir: string, registry: DomainHandlerRegistry) {
+  registry.handlers.forEach((handler, index) => {
+    const field = `domain_handler_registry.handlers[${index}].binding`;
+    if (handler.binding.kind === 'typescript_export') {
+      const file = repoFile(repoDir, handler.binding.file, `${field}.file`);
+      const extension = path.extname(file.ref);
+      if (
+        file.ref.endsWith('.d.ts')
+        || file.ref.endsWith('.d.mts')
+        || file.ref.endsWith('.d.cts')
+        || !['.ts', '.tsx', '.mts', '.cts', '.js', '.mjs', '.cjs'].includes(extension)
+      ) {
+        fail(`${field}.file must be a TypeScript or JavaScript module.`, {
+          repo_dir: repoDir,
+          field,
+          ref: file.ref,
+        });
+      }
+      const exported = typescriptCallableExports(file.resolved);
+      if (!exported.has(handler.binding.export)) {
+        fail(`${field}.export does not resolve to a callable export in the declared file.`, {
+          repo_dir: repoDir,
+          field,
+          ref: file.ref,
+          export: handler.binding.export,
+        });
+      }
+      return;
+    }
+    const file = pythonModuleFile(repoDir, handler.binding.module, field);
+    assertPythonCallable(file.resolved, handler.binding.callable, `${field}.callable`, repoDir);
+  });
 }
 
 function readJson(repoDir: string, ref: string, field: string) {
@@ -482,7 +716,7 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
   try {
     actionCatalog = normalizeFamilyActionCatalog(actionCatalogRead.payload);
   } catch (error) {
-    fail('contracts/action_catalog.json is not a valid family-action-catalog.v1 contract.', {
+    fail('contracts/action_catalog.json is not a valid family-action-catalog.v2 contract.', {
       repo_dir: repoDir,
       error: error instanceof Error ? error.message : String(error),
     });
@@ -495,6 +729,26 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
     'action_catalog.authority_boundary',
     repoDir,
   );
+  try {
+    const registryPath = path.join(repoDir, DOMAIN_HANDLER_REGISTRY_REF);
+    const registry = fs.existsSync(registryPath)
+      ? normalizeDomainHandlerRegistry(
+          readJson(repoDir, DOMAIN_HANDLER_REGISTRY_REF, 'domain_handler_registry_ref').payload,
+        )
+      : null;
+    if (fs.existsSync(registryPath) && !registry) {
+      throw new Error('contracts/domain_handler_registry.json must contain a domain-handler-registry.v1 object.');
+    }
+    assertFamilyActionHandlerRefsResolve(actionCatalog, registry);
+    if (registry) {
+      assertDomainHandlerImplementationsResolve(repoDir, registry);
+    }
+  } catch (error) {
+    fail('Action execution bindings do not resolve against domain-handler-registry.v1.', {
+      repo_dir: repoDir,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 
   const packCompilerInput = record(
     readJson(repoDir, PACK_COMPILER_INPUT_REF, 'pack_compiler_input_ref').payload,
@@ -997,9 +1251,7 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
     fail('Stage manifest did not compile to a family stage control plane.', { repo_dir: repoDir });
   }
   const actionStageRouteParity = buildFamilyActionStageRouteParity(actionCatalog, stageControlPlane, {
-    require_declared_routes: actionCatalog.actions.some(
-      (action) => action.effect === 'mutating' && Boolean(action.stage_route),
-    ),
+    require_declared_routes: true,
   });
   if (actionStageRouteParity.status !== 'aligned') {
     fail('Action-to-stage route contract is not aligned with the compiled stage manifest.', {
