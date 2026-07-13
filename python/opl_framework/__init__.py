@@ -151,6 +151,12 @@ from .skill_catalog import (
     build_skill_catalog,
     build_skill_descriptor,
 )
+from .source_transport import (
+    DEFAULT_SOURCE_FETCH_TIMEOUT_SECONDS,
+    SourceTransportError,
+    SourceTransportPolicyError,
+    fetch_text,
+)
 from .workspace_boundary import (
     DEFAULT_WORKSPACE_DOCUMENT,
     DEFAULT_WORKSPACE_GITIGNORE_ENTRIES,
@@ -171,6 +177,8 @@ __all__ = [
     "WorkspaceScaffoldFile",
     "SchemaSubsetValidator",
     "SchemaValidationIssue",
+    "SourceTransportError",
+    "SourceTransportPolicyError",
     "build_automation_catalog",
     "build_automation_descriptor",
     "build_refs_only_artifact_lifecycle_handoff",
@@ -261,6 +269,7 @@ __all__ = [
     "collect_family_human_gate_ids",
     "ensure_script_file",
     "ensure_workspace_git_boundary",
+    "fetch_text",
     "job_drift",
     "jobs_path",
     "load_jobs",
@@ -287,6 +296,7 @@ __all__ = [
     "RUNTIME_ALERT_ANSWER_CHECKLIST",
     "STATUS_NARRATION_CONTRACT_KIND",
     "STATUS_NARRATION_SCHEMA_VERSION",
+    "DEFAULT_SOURCE_FETCH_TIMEOUT_SECONDS",
     "validate_family_domain_entry_contract",
     "validate_family_action_catalog_parity",
     "validateFamilyActionCatalogParity",
