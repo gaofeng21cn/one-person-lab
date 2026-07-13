@@ -8,6 +8,7 @@ CARRIER_ONLY=${OPL_CARRIER_ONLY:-0}
 INSTALL_SOURCE_MODE=${OPL_INSTALL_SOURCE_MODE:-auto}
 MANAGED_TOOLCHAIN_ROOT=${OPL_MANAGED_TOOLCHAIN_ROOT:-$HOME/.opl/toolchain}
 MANAGED_NODE_VERSION=${OPL_MANAGED_NODE_VERSION:-v22.21.1}
+PREFILLED_NODE_MODULES_DIR=${OPL_PREFILLED_NODE_MODULES_DIR:-}
 INSTALL_SOURCE_MARKER=.opl-install-source
 SYSTEM_GIT_PATH=${OPL_SYSTEM_GIT_PATH:-/usr/bin/git}
 XCODE_SELECT=${OPL_XCODE_SELECT:-/usr/bin/xcode-select}
@@ -268,7 +269,16 @@ fi
 cd "$INSTALL_DIR"
 
 log "Installing OPL CLI"
-if [ "$CARRIER_ONLY" = "1" ]; then
+if [ -n "$PREFILLED_NODE_MODULES_DIR" ]; then
+  if [ ! -d "$PREFILLED_NODE_MODULES_DIR" ]; then
+    printf 'Prefilled OPL dependencies directory does not exist: %s\n' "$PREFILLED_NODE_MODULES_DIR" >&2
+    exit 1
+  fi
+  log "Restoring prefilled OPL dependencies"
+  rm -rf node_modules
+  cp -R "$PREFILLED_NODE_MODULES_DIR" node_modules
+  npm link --ignore-scripts
+elif [ "$CARRIER_ONLY" = "1" ]; then
   npm install --omit=dev --ignore-scripts
   npm link --ignore-scripts
 else

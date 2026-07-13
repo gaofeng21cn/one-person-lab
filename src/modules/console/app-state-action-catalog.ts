@@ -1,5 +1,6 @@
 import type { AgentWorkspaceNormContract, FrameworkContracts } from '../../kernel/types.ts';
 import { SETTINGS_CONTROL_CENTER_ACTIONS } from './app-state-settings-control-center.ts';
+import { listExternalOwnerDelegatedUpdateActions } from '../connect/index.ts';
 
 type AppActionCatalogEntry = {
   action_id: string;
@@ -276,6 +277,18 @@ export function buildActionCatalog(contracts: FrameworkContracts) {
       mutates: 'opl_update_channel_config',
     },
     ...codexActions,
+    ...listExternalOwnerDelegatedUpdateActions().map((action) => ({
+      action_id: action.action_id,
+      label: action.label,
+      surface: action.surface,
+      delegated_surface: action.delegated_surface,
+      payload_fields: action.payload_fields,
+      mutates: `external_dependency_via_${action.owner_kind}`,
+      dry_run_supported: true,
+      confirmation_required: action.confirmation_required,
+      danger_level: action.danger_level,
+      impact: 'Delegates one update to the verified original package manager; never enters managed background apply.',
+    })),
     ...moduleActions,
     {
       action_id: 'module_sync',

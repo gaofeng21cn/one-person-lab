@@ -31,10 +31,10 @@ const PROVIDER_CAPABILITY_REQUIREMENTS = [
     owner_action: 'record signal-history long-soak evidence or provider blocker',
   },
   {
-    requirement_id: 'typed_closeout_required_ready',
-    summary_field: 'provider_slo_capability_typed_closeout_ready',
-    required_ref_shape: 'typed_blocker_ref',
-    owner_action: 'record typed closeout evidence or typed blocker',
+    requirement_id: 'typed_closeout_claim_evidence_ready',
+    summary_field: 'provider_slo_capability_typed_closeout_claim_evidence_ready',
+    required_ref_shape: 'owner_or_quality_claim_evidence_ref',
+    owner_action: 'record typed closeout claim evidence without making it a stage-progress prerequisite',
   },
   {
     requirement_id: 'missing_closeout_diagnostic_ready',

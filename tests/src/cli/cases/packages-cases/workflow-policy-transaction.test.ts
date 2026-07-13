@@ -230,6 +230,14 @@ test('generic OPL package transaction owns OPL Flow policy migration without inv
     const migration = installed.opl_agent_package_install.package_lock.physical_surface.workflow_policy_migration;
     assert.equal(migration.status, 'applied');
     assert.deepEqual(migration.dependency_ids, ['opl-base']);
+    assert.deepEqual(migration.dependencies, [{
+      id: 'opl-base',
+      kind: 'base',
+      offline_bundle: 'full',
+      online_install_default: true,
+      activation: 'always',
+      source: 'fixture',
+    }]);
     assert.deepEqual(migration.migration_ids, [
       'upstream-superpowers',
       'ponytail',

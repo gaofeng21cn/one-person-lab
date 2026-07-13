@@ -26,7 +26,7 @@ function devDiagnosticNotConfiguredProof() {
       worker_completed_attempt: false,
       worker_restart_requery: false,
       signal_history_preserved: false,
-      typed_closeout_required_for_completed: false,
+      typed_closeout_claim_evidence_supported: false,
       missing_closeout_advances_with_diagnostic: false,
       domain_truth_boundary_preserved: false,
     },

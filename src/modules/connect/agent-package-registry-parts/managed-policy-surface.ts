@@ -429,6 +429,7 @@ export function noManagedPolicyMigration(note: string): AgentPackageManagedPolic
     policy_sha256: null,
     inventory_digest: null,
     dependency_ids: [],
+    dependencies: [],
     optional_dependency_ids: [],
     migration_ids: [],
     actions: [],
@@ -603,7 +604,7 @@ export function materializeManagedPolicySurface(input: {
       toolIds,
     });
     const dependencyWrites = dependencySync.items.some((entry) => ['synced', 'installed'].includes(entry.status))
-      || dependencySync.tools.some((entry) => entry.action === 'install');
+      || dependencySync.tools.some((entry) => entry.action === 'install' || entry.action === 'update');
     const writesPerformed = !input.dryRun && (actions.length > 0 || dependencyWrites);
     return {
       surface_kind: 'opl_package_managed_policy_migration',
@@ -614,6 +615,7 @@ export function materializeManagedPolicySurface(input: {
       policy_sha256: policySha256,
       inventory_digest: inventoryDigest,
       dependency_ids: [...new Set(dependencies.map((entry) => entry.id))],
+      dependencies,
       optional_dependency_ids: policy.compatible_optional.map((entry) => entry.id),
       migration_ids: groups.filter((group) => enabledGroups.has(group.id)).map((group) => group.id),
       actions,

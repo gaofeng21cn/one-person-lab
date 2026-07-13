@@ -255,8 +255,9 @@ test('Codex stage activity prompt enforces generic domain-route boundaries', () 
   assert.match(commandPreview, /already running inside OPL provider-backed runtime/);
   assert.match(commandPreview, /Do not recursively enqueue, redrive, tick, start, or submit another OPL runtime task/);
   assert.match(commandPreview, /Do not write domain truth, quality verdicts, owner receipts, typed blockers, human gates, current packages, or artifact bodies/);
-  assert.match(commandPreview, /must include domain-provided user-readable stage semantics/);
-  assert.match(commandPreview, /do not report provider liveness or platform repair as domain progress/);
+  assert.match(commandPreview, /typed closeout improves lineage and quality\/ready evidence but is never required/);
+  assert.match(commandPreview, /Codex CLI may advance, skip, repeat, reverse, or route back/);
+  assert.match(commandPreview, /Use a typed blocker only for an unavailable executor/);
 });
 
 test('Codex stage runner treats a missing packet as advisory but still requires an execution workspace', async () => {

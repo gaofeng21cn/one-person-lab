@@ -47,6 +47,19 @@ test('managed update contract exposes only OPL Base, OPL App, and OPL Packages l
   assert.equal(packages.transaction_guards.receipt_policy, 'single_package_transaction_receipt');
   assert.equal(packages.profile_migration_policy.semantic_merge_required, true);
   assert.equal(packages.profile_migration_policy.silent_overwrite_allowed, false);
+  assert.deepEqual(contract.base_dependency_catalog_contract.update_mode_values, [
+    'silent_managed',
+    'explicit_owner_delegated',
+    'detect_only_guidance',
+  ]);
+  assert.equal(contract.base_dependency_catalog_contract.external_dependency_policy.confirmation_required, true);
+  assert.equal(contract.base_dependency_catalog_contract.external_dependency_policy.auto_apply_allowed, false);
+  assert.equal(contract.base_dependency_catalog_contract.external_dependency_policy.unverified_owner_action, null);
+  assert.equal(contract.base_dependency_catalog_contract.external_dependency_policy.temporal_server_currentness_inference_allowed, false);
+  assert.equal(
+    contract.base_dependency_catalog_contract.flow_dependencies_projection.app_hardcoded_dependency_classification_allowed,
+    false,
+  );
 
   assert.deepEqual(contract.app_action_consumer_policy.canonical_delegated_surfaces, {
     module_sync: 'opl packages update',

@@ -548,6 +548,9 @@ function buildCompanionResult(
       note: 'officecli binary is not available.',
       ownership: 'missing',
       content_sha256: null,
+      latest_version: null,
+      currentness: 'missing',
+      latest_version_source: null,
     },
     resolveMineruOpenApiTool(home) ?? {
       tool_id: 'mineru-open-api',
@@ -558,6 +561,9 @@ function buildCompanionResult(
       note: 'mineru-open-api binary is not available.',
       ownership: 'missing',
       content_sha256: null,
+      latest_version: null,
+      currentness: 'missing',
+      latest_version_source: null,
     },
   ],
 ): OplCompanionSkillSyncResult {
@@ -574,7 +580,7 @@ function buildCompanionResult(
       synced: items.filter((entry) => entry.status === 'synced' || entry.status === 'installed' || entry.status === 'available').length,
       missing_source: items.filter((entry) => entry.status === 'missing_source').length,
       failed: items.filter((entry) => entry.status === 'failed').length,
-      tools_ready: tools.filter((entry) => entry.status === 'ready' || entry.status === 'installed').length,
+      tools_ready: tools.filter((entry) => entry.status === 'ready' || entry.status === 'installed' || entry.status === 'updated').length,
       tools_total: tools.length,
     },
   };

@@ -45,7 +45,7 @@ export function domainStageRoutePromptLines(input: DomainStageRoutePromptInput) 
     'Use the selected domain agent entry and the domain-owned profile or source refs for domain semantics.',
     'This attempt is already running inside OPL provider-backed runtime. Do not recursively enqueue, redrive, tick, start, or submit another OPL runtime task from inside the attempt.',
     'OPL transports route and closeout refs only. Do not write domain truth, quality verdicts, owner receipts, typed blockers, human gates, current packages, or artifact bodies unless the selected domain authority surface explicitly owns that write.',
-    'The final typed closeout must include domain-provided user-readable stage semantics in user_stage_log, stage_log_summary, human_stage_log, or route_impact.user_stage_log/stage_log_summary/human_stage_log.',
-    'When domain work cannot advance, return domain-owned evidence refs or a typed blocker ref through the declared authority path; do not report provider liveness or platform repair as domain progress.',
+    'Return the best available domain artifact, raw/free-text/partial/negative result, failed-attempt evidence, or no-output/failure diagnostic. A typed closeout improves lineage and quality/ready evidence but is never required for the next declared stage to start.',
+    'Retry, review, and repair are quality budgets. Codex CLI may advance, skip, repeat, reverse, or route back to any declared stage. Use a typed blocker only for an unavailable executor, wrong-target identity/currentness, permission/safety/authority boundary, irreversible action, or explicit human decision.',
   ].filter((line): line is string => typeof line === 'string');
 }
