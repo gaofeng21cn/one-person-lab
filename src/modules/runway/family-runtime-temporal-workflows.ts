@@ -800,13 +800,16 @@ export async function StageRunWorkflow(
   input: TemporalStageRunWorkflowInput,
 ): Promise<TemporalStageRunWorkflowState> {
   validateWorkflowStageRunInput(input);
+  const runtimeHumanGateClassificationEnabled = patched(
+    'opl-stage-run-runtime-human-gate-classification-v1',
+  );
   const qualityCycleId = stageRunQualityCycleId(input);
   const initialArtifactIdentity = normalizeStageQualityArtifactIdentity({
     artifactRefs: input.artifact_refs ?? [],
     artifactHashes: input.artifact_hashes ?? [],
     allowEmpty: true,
   });
-  let state: TemporalStageRunWorkflowState = {
+  let state = {
     surface_kind: 'temporal_stage_run_query',
     provider_kind: 'temporal',
     stage_run_id: input.stage_run_id,
@@ -847,7 +850,7 @@ export async function StageRunWorkflow(
       domain: 'review_findings_repair_artifact_and_quality_verdict_owner',
       provider_completion_is_domain_ready: false,
     },
-  };
+  } as TemporalStageRunWorkflowState;
   setHandler(stageRunQuery, () => state);
   const observedSessions = new Set<string>();
 
@@ -917,6 +920,7 @@ export async function StageRunWorkflow(
     role: StageQualityAttemptRole;
     round: number;
     parentAttemptRef?: string | null;
+    artifactProducerAttemptRef?: string | null;
     artifactRefs: string[];
     artifactHashes: string[];
     artifactIdentityReceiptRefs: string[];
@@ -930,6 +934,7 @@ export async function StageRunWorkflow(
       attempt_role: attemptInput.role,
       quality_round_index: attemptInput.round,
       parent_attempt_ref: attemptInput.parentAttemptRef,
+      artifact_producer_attempt_ref: attemptInput.artifactProducerAttemptRef,
       artifact_refs: attemptInput.artifactRefs,
       artifact_hashes: attemptInput.artifactHashes,
       artifact_identity_receipt_refs: attemptInput.artifactIdentityReceiptRefs,
@@ -996,6 +1001,7 @@ export async function StageRunWorkflow(
         stage_attempt_id: childInput.stage_attempt_id,
         workflow_id: childInput.workflow_id,
         execution_session_ref: executionSessionRef,
+        artifact_producer_attempt_ref: attemptInput.artifactProducerAttemptRef ?? null,
         status: result.status,
         artifact_refs: artifactIdentity.artifactRefs,
         artifact_hashes: artifactIdentity.artifactHashes,
@@ -1063,7 +1069,10 @@ export async function StageRunWorkflow(
           }
           : {
             ...state,
-            status: 'blocked',
+            status: runtimeHumanGateClassificationEnabled
+              && runtimeHardStop?.hard_stop_class === 'human_decision_required'
+              ? 'human_gate'
+              : 'blocked',
             current_role: null,
             blocked_reason: reason,
             hard_stop_class: runtimeHardStop?.hard_stop_class ?? (
@@ -1078,6 +1087,7 @@ export async function StageRunWorkflow(
       result,
       envelope,
       outcome,
+      artifactProducedByAttempt: !reviewRole && attemptReturnedArtifactIdentity,
       attemptRole: attemptInput.role,
       attemptRef: materialized.attempt_ref,
       executionSessionRef,
@@ -1102,6 +1112,7 @@ export async function StageRunWorkflow(
 
   try {
     let parentAttemptRef: string | null = null;
+    let currentArtifactProducerAttemptRef: string | null = null;
     const producer = await runAttempt({
       role: 'producer',
       round: 0,
@@ -1110,6 +1121,7 @@ export async function StageRunWorkflow(
       artifactIdentityReceiptRefs: state.artifact_identity_receipt_refs,
     });
     parentAttemptRef = producer.attemptRef;
+    currentArtifactProducerAttemptRef = producer.attemptRef;
     if (stageRunStopped(state)) {
       if (!input.quality_policy.formal_review.required && state.status === 'completed_with_quality_debt') {
         commitTerminalRouteDecision(producer);
@@ -1125,6 +1137,7 @@ export async function StageRunWorkflow(
       role: 'reviewer',
       round: 0,
       parentAttemptRef,
+      artifactProducerAttemptRef: currentArtifactProducerAttemptRef,
       artifactRefs: state.artifact_refs,
       artifactHashes: state.artifact_hashes,
       artifactIdentityReceiptRefs: state.artifact_identity_receipt_refs,
@@ -1199,6 +1212,7 @@ export async function StageRunWorkflow(
         role: 'repairer',
         round,
         parentAttemptRef,
+        artifactProducerAttemptRef: currentArtifactProducerAttemptRef,
         artifactRefs: state.artifact_refs,
         artifactHashes: state.artifact_hashes,
         artifactIdentityReceiptRefs: state.artifact_identity_receipt_refs,
@@ -1206,6 +1220,19 @@ export async function StageRunWorkflow(
       });
       parentAttemptRef = repair.attemptRef;
       if (stageRunStopped(state)) return terminalize(state);
+      if (!repair.artifactProducedByAttempt) {
+        return terminalize({
+          ...state,
+          status: 'completed_with_quality_debt',
+          current_role: null,
+          quality_debt_refs: [...new Set([
+            ...state.quality_debt_refs,
+            qualityFailureRef(input, `repair-round-${round}-did-not-produce-new-artifact`),
+          ])],
+          updated_at: nowIso(),
+        });
+      }
+      currentArtifactProducerAttemptRef = repair.attemptRef;
       const repairMap = repairMapList(repair.envelope.repair_map, findings);
       state = {
         ...state,
@@ -1218,6 +1245,7 @@ export async function StageRunWorkflow(
         role: 're_reviewer',
         round,
         parentAttemptRef,
+        artifactProducerAttemptRef: currentArtifactProducerAttemptRef,
         artifactRefs: state.artifact_refs,
         artifactHashes: state.artifact_hashes,
         artifactIdentityReceiptRefs: state.artifact_identity_receipt_refs,
@@ -1352,10 +1380,14 @@ export async function StageRunWorkflow(
   } catch (error) {
     if (stageRunStopped(state)) return terminalize(state);
     const hardStop = controllerHardStopFromError(error);
-    if (hardStop && (hardStop.hardStopClass !== 'zero_consumable_artifact' || !hasConsumableArtifact(state))) {
+    const hardStopTerminates = hardStop
+      && (hardStop.hardStopClass !== 'zero_consumable_artifact' || !hasConsumableArtifact(state));
+    if (hardStop && hardStopTerminates) {
       return terminalize({
         ...state,
-        status: hardStop.hardStopClass === 'human_decision_required' ? 'human_gate' : 'blocked',
+        status: runtimeHumanGateClassificationEnabled && hardStop.hardStopClass === 'human_decision_required'
+          ? 'human_gate'
+          : 'blocked',
         current_role: null,
         blocked_reason: hardStop.blockedReason,
         hard_stop_class: hardStop.hardStopClass,

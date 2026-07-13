@@ -200,6 +200,10 @@ export function projectTemporalStageRunQualityCycle(
       route_recommendations: state.route_recommendations,
       route_quality_debt_refs: state.route_quality_debt_refs,
       blocked_reason: state.blocked_reason,
+      hard_stop_class: state.hard_stop_class ?? null,
+      typed_blocker_refs: [...(state.typed_blocker_refs ?? [])],
+      human_gate_refs: [...(state.human_gate_refs ?? [])],
+      source_attempt_ref: state.source_attempt_ref ?? null,
     },
   };
   const now = new Date().toISOString();

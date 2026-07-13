@@ -262,6 +262,14 @@ test('Stage quality contracts bind bounded Attempts, exact artifact identity, re
     quality.review_receipt.producer_and_repairer_artifact_identity_receipt_refs_required_before_formal_review,
     true,
   );
+  assert.equal(quality.review_receipt.trusted_identity_receipt_filename_must_equal_sha256_of_receipt_bytes, true);
+  assert.equal(quality.review_receipt.artifact_bytes_reverified_before_each_non_producer_attempt_materialization, true);
+  assert.equal(quality.review_receipt.artifact_identity_receipt_must_match_artifact_producer_attempt_ref, true);
+  assert.equal(quality.review_receipt.artifact_producer_attempt_ref_is_distinct_from_parent_attempt_ref, true);
+  assert.equal(
+    quality.review_receipt.repair_without_new_artifact_identity_terminalizes_quality_debt_without_re_review,
+    true,
+  );
   assert.equal(quality.review_receipt.reviewed_artifact_ref_hash_cardinality_must_match, true);
   assert.equal(attempts.stage_quality_cycle_contract.review_receipt_surface_kind,
     'opl_stage_review_receipt');
@@ -269,6 +277,15 @@ test('Stage quality contracts bind bounded Attempts, exact artifact identity, re
     'route_impact.stage_route_decision');
   assert.equal(attempts.stage_quality_cycle_contract.non_terminal_route_output,
     'route_impact.stage_route_recommendation');
+  assert.equal(
+    attempts.stage_quality_cycle_contract.non_producer_materialization_requires_artifact_producer_attempt_ref,
+    true,
+  );
+  assert.equal(
+    temporal.workflow_activity_signal_mapping.stage_attempt_workflow.artifact_identity_revalidated_before_child_workflow_start,
+    true,
+  );
+  assert.equal(temporal.event_history_mapping.legacy_history_replay_fixture_required, true);
   assert.equal(
     attempts.stage_route_boundary.missing_or_invalid_route_fallback,
     'domain_pack_declared_default_progression_with_route_quality_debt_only',

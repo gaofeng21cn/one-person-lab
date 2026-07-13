@@ -173,6 +173,119 @@ test('protocol closeout resume is failed when the returned packet does not bind 
   }
 });
 
+test('protocol closeout resume rejects tool execution and preserves only the original raw progress artifact', async () => {
+  const closeout = {
+    surface_kind: 'stage_attempt_closeout_packet',
+    stage_attempt_id: 'sat-protocol-tool-violation',
+    closeout_refs: ['artifact:must-not-be-accepted'],
+    consumed_refs: [],
+    consumed_memory_refs: [],
+    writeback_receipt_refs: [],
+    rejected_writes: [],
+    next_owner: null,
+    domain_ready_verdict: null,
+    route_impact: {
+      stage_quality_cycle: {
+        artifact_refs: ['artifact:must-not-be-accepted'],
+        artifact_hashes: ['0'.repeat(64)],
+      },
+    },
+    authority_boundary: {
+      opl: 'closeout_transport_only',
+      domain: 'truth_quality_artifact_gate_owner',
+    },
+  };
+  const resumeCommand = JSON.stringify({
+    type: 'item.completed',
+    item: {
+      type: 'command_execution',
+      id: 'resume-command',
+      command: 'touch forbidden.txt',
+      status: 'completed',
+      aggregated_output: '',
+    },
+  });
+  const resumeUnsupportedFunction = JSON.stringify({
+    type: 'response_item',
+    payload: {
+      type: 'function_call',
+      call_id: 'resume-unsupported-function',
+      name: 'write_file',
+      arguments: '{}',
+    },
+  });
+  const resumeCloseout = JSON.stringify({
+    type: 'item.completed',
+    item: { type: 'agent_message', id: 'resume-closeout', text: JSON.stringify(closeout) },
+  });
+  const script = [
+    'if [ "$1" = "exec" ] && [ "${2:-}" = "resume" ]; then',
+    '  printf \'{"type":"thread.started","thread_id":"thread-protocol-tool-violation"}\\n\'',
+    '  printf "%s\\n" ' + JSON.stringify(resumeCommand),
+    '  printf "%s\\n" ' + JSON.stringify(resumeUnsupportedFunction),
+    '  printf "%s\\n" ' + JSON.stringify(resumeCloseout),
+    '  printf \'{"type":"turn.completed"}\\n\'',
+    '  exit 0',
+    'fi',
+    'if [ "$1" = "exec" ]; then',
+    '  printf \'{"type":"thread.started","thread_id":"thread-protocol-tool-violation"}\\n\'',
+    '  printf \'{"type":"item.completed","item":{"type":"agent_message","id":"initial","text":"producer draft completed without typed closeout"}}\\n\'',
+    '  printf \'{"type":"turn.completed"}\\n\'',
+    '  exit 0',
+    'fi',
+    'exit 64',
+  ].join('\n');
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(script);
+  const previousBin = process.env.OPL_CODEX_BIN;
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  const previousRecoveryTimeout = process.env.OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS;
+  const previousRecoveryInterval = process.env.OPL_CODEX_SESSION_RECOVERY_INTERVAL_MS;
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    process.env.OPL_STATE_DIR = path.join(fixtureRoot, 'opl-state');
+    process.env.OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS = '1';
+    process.env.OPL_CODEX_SESSION_RECOVERY_INTERVAL_MS = '1';
+    const receipt = await runPublicCodexStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat-protocol-tool-violation',
+        stage_run_id: 'sr-protocol-tool-violation',
+        quality_cycle_id: 'quality-cycle:sr-protocol-tool-violation',
+        attempt_role: 'producer',
+        quality_round_index: 0,
+        stage_id: 'authoring',
+        domain_id: 'example-domain',
+        workspace_locator: { workspace_root: fixtureRoot },
+        checkpoint_refs: ['packet:authoring'],
+      },
+      runnerMode: 'codex_cli',
+      timeoutMs: 10_000,
+      env: { OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'host' },
+    });
+    assert.equal(receipt.process_output_summary?.protocol_closeout_resume?.status, 'failed');
+    assert.equal(receipt.process_output_summary?.protocol_closeout_resume?.protocol_violation, 'tool_or_command_event_observed');
+    assert.deepEqual(receipt.process_output_summary?.protocol_closeout_resume?.tool_event_kinds, [
+      'command_execution',
+      'unsupported_function_call',
+    ]);
+    assert.equal(receipt.process_output_summary?.protocol_closeout_resume?.may_change_artifact_bytes, true);
+    assert.equal(
+      receipt.closeout_packet?.authority_boundary.opl,
+      'raw_executor_output_progress_envelope_only',
+    );
+    assert.notEqual(receipt.closeout_packet?.closeout_refs[0], 'artifact:must-not-be-accepted');
+    assert.equal(
+      typeof receipt.closeout_packet?.closeout_ref_metadata?.[0]?.artifact_identity_receipt_ref,
+      'string',
+    );
+  } finally {
+    restoreEnv('OPL_CODEX_BIN', previousBin);
+    restoreEnv('OPL_STATE_DIR', previousStateDir);
+    restoreEnv('OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS', previousRecoveryTimeout);
+    restoreEnv('OPL_CODEX_SESSION_RECOVERY_INTERVAL_MS', previousRecoveryInterval);
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('child Review inherits StageRun currentness admission after producer artifact writes dirty the checkout', async () => {
   const closeout = {
     surface_kind: 'stage_attempt_closeout_packet',

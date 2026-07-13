@@ -32,7 +32,11 @@
       "parent_workflow_type": "StageRunWorkflow",
       "role": "one_context_isolated_executor_invocation_for_a_framework_bounded_attempt_role",
       "may_create_authoritative_attempts": false,
-      "may_transition_stage": false
+      "may_transition_stage": false,
+      "non_producer_materialization_requires_artifact_producer_attempt_ref": true,
+      "artifact_producer_attempt_ref_is_distinct_from_parent_attempt_ref": true,
+      "artifact_identity_revalidated_before_child_workflow_start": true,
+      "trusted_identity_receipt_filename_is_exact_receipt_bytes_sha256": true
     },
     "stage_attempt_activity": {
       "contract_name": "StageAttemptActivity",
@@ -120,7 +124,9 @@
       "stage_attempts.status",
       "stage_attempt_signals.payload_json"
     ],
-    "sqlite_sidecar_role": "projection_and_readback_index_only_not_runtime_provider"
+    "sqlite_sidecar_role": "projection_and_readback_index_only_not_runtime_provider",
+    "workflow_code_evolution_guard": "Temporal patched markers preserve legacy command history while new executions enforce current hard-stop classification and artifact identity behavior",
+    "legacy_history_replay_fixture_required": true
   },
   "durable_lifecycle_readback": {
     "command_surface": "opl family-runtime attempt query <stage_attempt_id>",

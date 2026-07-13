@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
+import { pathToFileURL } from 'node:url';
 
 import { Client, Connection } from '@temporalio/client';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
@@ -22,11 +23,10 @@ import {
   stageQualityCycleProjectActivity,
   stageQualityReviewReceiptActivity,
 } from '../../src/modules/runway/family-runtime-temporal-activities.ts';
+import { verifyStageQualityCloseoutArtifactIdentity } from '../../src/modules/runway/family-runtime-codex-stage-runner-parts/artifact-identity-verification.ts';
 import type { TemporalStageAttemptWorkflowInput } from '../../src/modules/runway/family-runtime-temporal.ts';
 
 const repoRoot = path.resolve(import.meta.dirname, '../..');
-const artifactRef = 'artifact://pack-bound-draft/v1';
-const artifactHash = `sha256:${crypto.createHash('sha256').update('pack-bound-draft-v1').digest('hex')}`;
 
 function writeJson(root: string, ref: string, value: unknown) {
   const file = path.join(root, ref);
@@ -232,6 +232,11 @@ test('pack-bound CLI launch persists isolated review attempts and terminal quali
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-bound-quality-workspace-'));
   const familyWorkspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-bound-family-workspace-'));
   const packRoot = createPackFixture();
+  const artifactBytes = Buffer.from('pack-bound-draft-v1');
+  const artifactPath = path.join(workspaceRoot, 'draft.txt');
+  fs.writeFileSync(artifactPath, artifactBytes);
+  const artifactRef = pathToFileURL(artifactPath).href;
+  const artifactHash = crypto.createHash('sha256').update(artifactBytes).digest('hex');
   const testEnv = await TestWorkflowEnvironment.createLocal({
     server: { searchAttributes: [] },
   });
@@ -269,6 +274,38 @@ test('pack-bound CLI launch persists isolated review attempts and terminal quali
     stageQualityReviewReceiptActivity,
     async codexStageActivity(attempt: TemporalStageAttemptWorkflowInput) {
       const threadId = `thread-${attempt.attempt_role}-${attempt.stage_attempt_id}`;
+      const closeoutPacket = attempt.attempt_role === 'producer'
+        ? verifyStageQualityCloseoutArtifactIdentity({
+            closeoutPacket: {
+              surface_kind: 'stage_attempt_closeout_packet',
+              stage_attempt_id: attempt.stage_attempt_id,
+              closeout_refs: [artifactRef],
+              closeout_ref_metadata: [{ ref: artifactRef, sha256: artifactHash }],
+              consumed_refs: [],
+              consumed_memory_refs: [],
+              writeback_receipt_refs: [],
+              rejected_writes: [],
+              next_owner: null,
+              domain_ready_verdict: null,
+              route_impact: {
+                stage_quality_cycle: {
+                  artifact_refs: [artifactRef],
+                  artifact_hashes: [artifactHash],
+                },
+              },
+              authority_boundary: {
+                opl: 'closeout_transport_only',
+                domain: 'truth_quality_artifact_gate_owner',
+              },
+            },
+            attempt: attempt as unknown as Record<string, unknown>,
+            workspaceRoot,
+          })
+        : {
+            surface_kind: 'stage_attempt_closeout_packet' as const,
+            stage_attempt_id: attempt.stage_attempt_id,
+            closeout_refs: [`codex-closeout:${attempt.stage_attempt_id}`],
+          };
       return {
         surface_kind: 'temporal_codex_stage_activity_receipt',
         stage_attempt_id: attempt.stage_attempt_id,
@@ -279,11 +316,7 @@ test('pack-bound CLI launch persists isolated review attempts and terminal quali
           thread_id: threadId,
           execution_session_ref: `codex://threads/${threadId}`,
         },
-        closeout_packet: {
-          surface_kind: 'stage_attempt_closeout_packet',
-          stage_attempt_id: attempt.stage_attempt_id,
-          closeout_refs: [`codex-closeout:${attempt.stage_attempt_id}`],
-        },
+        closeout_packet: closeoutPacket,
       };
     },
     async domainHandlerDispatchActivity(attempt: TemporalStageAttemptWorkflowInput) {
@@ -306,11 +339,7 @@ test('pack-bound CLI launch persists isolated review attempts and terminal quali
         },
         closeout_packet_surface_kind: 'domain_stage_closeout_packet',
         closeout_ref_metadata: role === 'producer'
-          ? [{
-              ref: artifactRef,
-              sha256: artifactHash,
-              artifact_identity_receipt_ref: 'artifact-identity:pack-bound-draft-v1',
-            }]
+          ? attempt.closeout_packet?.closeout_ref_metadata ?? []
           : [],
       };
     },
@@ -403,13 +432,23 @@ test('pack-bound CLI launch persists isolated review attempts and terminal quali
     assert.equal(explicitNewLaunch.durable_launch.start_status, 'started');
     assert.equal(compatibilityAliasLaunch.durable_launch.start_status, 'started');
 
-    assert.equal(state.status, 'completed');
+    assert.equal(state.status, 'completed', JSON.stringify(state, null, 2));
     assert.equal(state.sqlite_projection.status, 'synced');
     assert.equal(state.repair_rounds_used, 0);
     assert.deepEqual(state.attempts.map((attempt: any) => attempt.attempt_role), ['producer', 'reviewer']);
     assert.deepEqual(state.artifact_refs, [artifactRef]);
     assert.deepEqual(state.artifact_hashes, [artifactHash]);
-    assert.deepEqual(state.artifact_identity_receipt_refs, ['artifact-identity:pack-bound-draft-v1']);
+    assert.equal(state.artifact_identity_receipt_refs.length, 1);
+    assert.match(state.artifact_identity_receipt_refs[0], /^file:\/\//);
+    const identityReceiptPath = new URL(state.artifact_identity_receipt_refs[0]);
+    const identityReceiptBytes = fs.readFileSync(identityReceiptPath);
+    assert.equal(
+      path.basename(identityReceiptPath.pathname),
+      `${crypto.createHash('sha256').update(identityReceiptBytes).digest('hex')}.json`,
+    );
+    const identityReceipt = JSON.parse(identityReceiptBytes.toString('utf8'));
+    assert.equal(identityReceipt.artifact_ref, artifactRef);
+    assert.equal(identityReceipt.sha256, artifactHash);
     assert.equal(state.review_receipts.length, 1);
 
     const db = new DatabaseSync(path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
@@ -435,6 +474,7 @@ test('pack-bound CLI launch persists isolated review attempts and terminal quali
 
       const producer = attempts[0]!;
       const reviewer = attempts[1]!;
+      assert.equal(identityReceipt.stage_attempt_id, producer.stage_attempt_id);
       assert.deepEqual(JSON.parse(reviewer.input_artifact_refs_json), [artifactRef]);
       assert.deepEqual(JSON.parse(reviewer.reviewed_artifact_hashes_json), [artifactHash]);
       const receipt = state.review_receipts[0];

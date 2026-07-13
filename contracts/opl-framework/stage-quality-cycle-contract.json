@@ -314,6 +314,12 @@
     "local_artifact_identity_policy": "OPL transport reads final bytes, computes SHA-256, and creates an opl_transport_artifact_identity_receipt before formal Review",
     "local_artifact_identity_receipt_surface_kind": "opl_transport_artifact_identity_receipt",
     "external_artifact_identity_policy": "External artifact refs require a locally readable independent domain_artifact_identity_receipt bound to domain, producing Attempt, artifact ref, and SHA-256",
+    "trusted_identity_receipt_filename_must_equal_sha256_of_receipt_bytes": true,
+    "artifact_bytes_reverified_before_each_non_producer_attempt_materialization": true,
+    "artifact_identity_receipt_must_match_artifact_producer_attempt_ref": true,
+    "artifact_producer_attempt_ref_is_distinct_from_parent_attempt_ref": true,
+    "repair_without_new_artifact_identity_terminalizes_quality_debt_without_re_review": true,
+    "stable_local_byte_observation_policy": "chunked_sha256_with_pre_and_post_fstat_identity_size_and_mtime_validation",
     "currentness_admission_scope": "Checkout currentness is admitted once at StageRun launch and inherited by child Attempts; producer artifact writes do not trigger a second mutable-checkout admission inside the same StageRun.",
     "hard_stop_evidence_fields": [
       "hard_stop_class",

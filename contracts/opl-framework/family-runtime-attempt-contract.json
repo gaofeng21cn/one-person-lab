@@ -207,6 +207,10 @@
     "raw_stage_run_start_cli_retired": true,
     "stage_run_query_remains_read_only": true,
     "artifact_identity_receipt_refs_required_for_reviewable_producer_and_repairer_outputs": true,
+    "non_producer_materialization_requires_artifact_producer_attempt_ref": true,
+    "artifact_producer_attempt_ref_is_distinct_from_parent_attempt_ref": true,
+    "artifact_identity_revalidated_before_child_workflow_start": true,
+    "trusted_identity_receipt_filename_is_exact_receipt_bytes_sha256": true,
     "review_receipt_surface_kind": "opl_stage_review_receipt",
     "review_receipt_materialization_requires_persisted_pair_validation": true,
     "review_receipt_allowed_attempt_pairs": [

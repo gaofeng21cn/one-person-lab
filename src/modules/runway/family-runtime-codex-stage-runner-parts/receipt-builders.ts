@@ -118,7 +118,9 @@ export type CodexStageRunnerProcessOutputSummary = {
     creates_stage_attempt: false;
     counts_as_review: false;
     consumes_quality_budget: false;
-    may_change_artifact_bytes: false;
+    may_change_artifact_bytes: boolean;
+    protocol_violation?: 'tool_or_command_event_observed';
+    tool_event_kinds?: Array<'command_execution' | 'unsupported_function_call'>;
   };
   closeout_rejection_reason?:
     | 'stage_attempt_id_mismatch'

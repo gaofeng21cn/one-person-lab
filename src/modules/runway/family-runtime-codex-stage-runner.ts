@@ -530,6 +530,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   let protocolCloseoutResumeThreadId: string | null = null;
   let protocolCloseoutResumeResult: CodexCommandResult | null = null;
   let protocolCloseoutResumePacketObserved = false;
+  const protocolCloseoutResumeViolationKinds = new Set<'command_execution' | 'unsupported_function_call'>();
   let closeoutRejection: ReturnType<typeof validateCloseoutPacketForAttempt>['rejection'] = null;
   if (
     !runInSandbox
@@ -593,6 +594,9 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
           const summary = eventSummary(event);
           runnerEvents.push(summary);
           input.onRunnerProgress?.(summary);
+          if (event.type === 'command_execution' || event.type === 'unsupported_function_call') {
+            protocolCloseoutResumeViolationKinds.add(event.type);
+          }
         },
       });
       const resumed = parseCodexExecOutput(protocolCloseoutResumeResult.stdout);
@@ -609,13 +613,19 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
         );
       }
       const resumedCapture = parseCapturedCloseoutMessage(resumeCapture.outputLastMessagePath);
-      closeoutPacket = parseCloseoutFromCodexMessages(resumed.messages) ?? resumedCapture.closeoutPacket;
-      protocolCloseoutResumePacketObserved = Boolean(closeoutPacket);
+      const resumedCloseout = parseCloseoutFromCodexMessages(resumed.messages) ?? resumedCapture.closeoutPacket;
+      protocolCloseoutResumePacketObserved = Boolean(resumedCloseout);
+      closeoutPacket = protocolCloseoutResumeViolationKinds.size === 0 ? resumedCloseout : null;
     } finally {
       resumeCapture.cleanup();
     }
   }
-  if (!runInSandbox && !closeoutPacket && result.timeoutReason !== 'unsupported_tool_protocol') {
+  if (
+    !runInSandbox
+    && !closeoutPacket
+    && protocolCloseoutResumeViolationKinds.size === 0
+    && result.timeoutReason !== 'unsupported_tool_protocol'
+  ) {
     const domainReceiptRecovery = recoverDefaultExecutorDomainReceiptCloseout({
       workspaceRoot,
       stagePacketRef: stagePacketTransportRef,
@@ -632,7 +642,9 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   closeoutPacket = validatedCloseout.closeoutPacket;
   closeoutRejection = validatedCloseout.rejection;
   if (protocolCloseoutResumeStatus !== 'not_applicable') {
-    protocolCloseoutResumeStatus = protocolCloseoutResumePacketObserved && closeoutPacket
+    protocolCloseoutResumeStatus = protocolCloseoutResumeViolationKinds.size === 0
+      && protocolCloseoutResumePacketObserved
+      && closeoutPacket
       ? 'completed'
       : 'failed';
     runnerEvents.push({ event_kind: 'protocol_closeout_resume.completed', value: protocolCloseoutResumeStatus });
@@ -641,11 +653,6 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
       value: protocolCloseoutResumeStatus,
     });
   }
-  closeoutPacket = verifyStageQualityCloseoutArtifactIdentity({
-    closeoutPacket,
-    attempt: input.attempt,
-    workspaceRoot,
-  });
   const rawStageArtifact = persistRawStageOutput({
     attempt: input.attempt,
     content: capturedLastMessage.message ?? parsed.finalMessage ?? recoveredRawMessage,
@@ -695,6 +702,11 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
       },
     });
   }
+  closeoutPacket = verifyStageQualityCloseoutArtifactIdentity({
+    closeoutPacket,
+    attempt: input.attempt,
+    workspaceRoot,
+  });
   const effectiveBlockedReason = rawStageArtifact ? null : primaryBlockedReason;
   const combinedStdout = [result.stdout, protocolCloseoutResumeResult?.stdout]
     .filter((entry): entry is string => Boolean(entry))
@@ -819,7 +831,13 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
               creates_stage_attempt: false,
               counts_as_review: false,
               consumes_quality_budget: false,
-              may_change_artifact_bytes: false,
+              may_change_artifact_bytes: protocolCloseoutResumeViolationKinds.size > 0,
+              ...(protocolCloseoutResumeViolationKinds.size > 0
+                ? {
+                    protocol_violation: 'tool_or_command_event_observed',
+                    tool_event_kinds: [...protocolCloseoutResumeViolationKinds],
+                  }
+                : {}),
             },
           }
         : {}),

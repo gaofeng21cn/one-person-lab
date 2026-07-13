@@ -86,6 +86,7 @@ async function runController(input: {
   maxRepairRounds?: number;
   failRole?: TemporalStageQualityAttemptMaterializationInput['attempt_role'];
   preflightHardBlockRole?: TemporalStageQualityAttemptMaterializationInput['attempt_role'];
+  preflightBlockedReason?: string;
   softBlockRole?: TemporalStageQualityAttemptMaterializationInput['attempt_role'];
   omitArtifactForRole?: 'producer' | 'repairer';
   omitIdentityReceiptForRole?: TemporalStageQualityAttemptMaterializationInput['attempt_role'];
@@ -229,7 +230,7 @@ async function runController(input: {
             stage_attempt_id: attempt.stage_attempt_id,
             checkpoint_refs: [],
             progress_summary: {},
-            process_output_summary: { blocked_reason: 'dirty_checkout' },
+            process_output_summary: { blocked_reason: input.preflightBlockedReason ?? 'dirty_checkout' },
             closeout_packet: null,
           };
         }
@@ -277,9 +278,16 @@ async function runController(input: {
           evidence_refs: [`screenshot:v${round + 1}`],
           repair_expectation: 'Remove clipping while preserving the approved claim.',
         };
+        const reviewedArtifactVersion = Number(
+          attempt.input_artifact_refs?.[0]?.match(/artifact:deck-v(\d+)/)?.[1] ?? 1,
+        );
         const artifactVersion = role === 'reviewer' && input.reviewerIdentityDrift
           ? 99
-          : role === 'producer' || role === 'reviewer' ? 1 : round + 1;
+          : role === 'producer'
+            ? 1
+            : role === 'reviewer' || role === 're_reviewer'
+              ? reviewedArtifactVersion
+              : round + 1;
         const reReviewClosed = role === 're_reviewer'
           && input.closeFindingAfterRound !== null
           && round >= input.closeFindingAfterRound;
@@ -462,6 +470,12 @@ test('StageRun controller materializes isolated producer-review-repair-re-review
   assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), [
     'producer', 'reviewer', 'repairer', 're_reviewer',
   ]);
+  assert.deepEqual(attempts.map((attempt) => attempt.artifact_producer_attempt_ref ?? null), [
+    null,
+    'opl://stage_attempts/sat_closure_producer_0',
+    'opl://stage_attempts/sat_closure_producer_0',
+    'opl://stage_attempts/sat_closure_repairer_1',
+  ]);
   assert.equal(new Set(state.attempts.map((attempt) => attempt.execution_session_ref)).size, 4);
   assert.deepEqual(state.artifact_refs, ['artifact:deck-v2']);
   assert.equal(state.sqlite_projection.status, 'synced');
@@ -527,6 +541,20 @@ test('pre-Codex typed preflight blocker may omit a session and remains a hard st
   assert.equal(state.attempts[1]?.execution_session_ref, null);
   assert.equal(state.review_receipts.length, 0);
   assert.equal(state.quality_debt_refs.length, 0);
+});
+
+test('provider human-decision blocker terminalizes as human_gate rather than blocked', async () => {
+  const { state, attempts } = await runController({
+    id: 'provider-human-decision-gate',
+    closeFindingAfterRound: null,
+    preflightHardBlockRole: 'reviewer',
+    preflightBlockedReason: 'operator_cancel_requested',
+  });
+  assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), ['producer', 'reviewer']);
+  assert.equal(state.status, 'human_gate');
+  assert.equal(state.blocked_reason, 'operator_cancel_requested');
+  assert.equal(state.hard_stop_class, 'human_decision_required');
+  assert.equal(state.source_attempt_ref, `opl://stage_attempts/${state.attempts[1]?.stage_attempt_id}`);
 });
 
 test('primary-only StageRun makes the producer the sole decisive route owner', async () => {
@@ -833,6 +861,24 @@ test('recoverable producer and repairer quality debt still reaches fresh formal 
     'producer', 'reviewer', 'repairer', 're_reviewer',
   ]);
   assert.equal(repairDebt.state.status, 'completed');
+});
+
+test('repair without new artifact bytes terminalizes quality debt before re-review', async () => {
+  const { state, attempts } = await runController({
+    id: 'repair-debt-without-new-artifact',
+    closeFindingAfterRound: 1,
+    softBlockRole: 'repairer',
+    omitArtifactForRole: 'repairer',
+  });
+  assert.equal(state.status, 'completed_with_quality_debt');
+  assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), [
+    'producer', 'reviewer', 'repairer',
+  ]);
+  assert.deepEqual(state.artifact_refs, ['artifact:deck-v1']);
+  assert.equal(state.review_receipts.length, 1);
+  assert.ok(state.quality_debt_refs.some((ref) => ref.includes(
+    'repair-round-1-did-not-produce-new-artifact',
+  )));
 });
 
 test('repairer terminal route output is rejected and fresh re-review remains decisive', async () => {

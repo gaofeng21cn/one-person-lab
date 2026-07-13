@@ -34,6 +34,7 @@ import {
   normalizeTypedStageCloseoutPacket,
   runAgentStageRunner,
 } from './family-runtime-codex-stage-runner.ts';
+import { verifyStageQualityArtifactIdentityAtAttemptBoundary } from './family-runtime-codex-stage-runner-parts/artifact-identity-verification.ts';
 import { codexActivityEventForTemporalHistory } from './family-runtime-temporal-history-summary.ts';
 import {
   isRuntimeHardStopReason,
@@ -858,6 +859,41 @@ export async function stageQualityAttemptMaterializeActivity(
     if (!rolePromptRef) {
       throw new Error(`Stage quality role prompt ref missing for ${input.attempt_role}`);
     }
+    const workspaceRoot = readString(input.stage_run.workspace_locator.workspace_root)
+      ?? readString(input.stage_run.workspace_locator.repo_root);
+    const artifactProducerAttemptRef = input.attempt_role === 'producer'
+      ? null
+      : input.artifact_producer_attempt_ref?.trim() || null;
+    if (input.attempt_role !== 'producer' && !artifactProducerAttemptRef) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Every non-producer Stage quality Attempt must identify the Attempt that produced its input artifact.',
+        {
+          stage_run_id: input.stage_run.stage_run_id,
+          attempt_role: input.attempt_role,
+          blocked_reason: 'artifact_identity_producing_attempt_missing_authority_violation',
+        },
+      );
+    }
+    const inputArtifactIdentity = input.attempt_role === 'producer'
+      ? {
+          artifact_refs: input.artifact_refs,
+          artifact_hashes: input.artifact_hashes,
+          artifact_identity_receipt_refs: input.artifact_identity_receipt_refs,
+        }
+      : verifyStageQualityArtifactIdentityAtAttemptBoundary({
+          artifactRefs: input.artifact_refs,
+          artifactHashes: input.artifact_hashes,
+          artifactIdentityReceiptRefs: input.artifact_identity_receipt_refs,
+          domainId: input.stage_run.domain_id,
+          workspaceRoot: workspaceRoot ?? input.stage_run.domain_pack_root,
+          expectedProducingAttemptId: stageAttemptIdFromRef(artifactProducerAttemptRef!),
+        });
+    const qualityLineageRefs = [...new Set([
+      ...(input.stage_run.lineage_refs ?? []),
+      ...(artifactProducerAttemptRef ? [artifactProducerAttemptRef] : []),
+      ...inputArtifactIdentity.artifact_identity_receipt_refs,
+    ])];
     const crossStageRouteSelection = {
       surface_kind: 'opl_stage_run_route_selection_context',
       version: 'stage-run-route-selection-context.v1',
@@ -881,17 +917,15 @@ export async function stageQualityAttemptMaterializeActivity(
           qualityCycleId: input.quality_cycle_id,
           reviewerAttemptRole: input.attempt_role,
           stageGoalRefs: input.stage_run.stage_goal_refs,
-          artifactRefs: input.artifact_refs,
-          artifactHashes: input.artifact_hashes,
+          artifactRefs: inputArtifactIdentity.artifact_refs,
+          artifactHashes: inputArtifactIdentity.artifact_hashes,
           sourceRefs: input.stage_run.source_refs,
           qualityRubricRefs: input.stage_run.quality_rubric_refs,
-          lineageRefs: [
-            ...(input.stage_run.lineage_refs ?? []),
-            ...input.artifact_identity_receipt_refs,
-          ],
+          lineageRefs: qualityLineageRefs,
           priorFindingRefs: (input.findings ?? []).map((finding) => finding.finding_id),
           repairMapRefs: (input.repair_map ?? []).map((entry) => `repair-map:${entry.finding_id}`),
           }),
+          artifact_producer_attempt_ref: artifactProducerAttemptRef,
           cross_stage_route_selection: crossStageRouteSelection,
         }
       : {
@@ -903,12 +937,10 @@ export async function stageQualityAttemptMaterializeActivity(
           stage_goal_refs: input.stage_run.stage_goal_refs ?? [],
           source_refs: input.stage_run.source_refs ?? [],
           quality_rubric_refs: input.stage_run.quality_rubric_refs,
-          lineage_refs: [
-            ...(input.stage_run.lineage_refs ?? []),
-            ...input.artifact_identity_receipt_refs,
-          ],
-          artifact_refs: input.artifact_refs,
-          artifact_hashes: input.artifact_hashes,
+          lineage_refs: qualityLineageRefs,
+          artifact_producer_attempt_ref: artifactProducerAttemptRef,
+          artifact_refs: inputArtifactIdentity.artifact_refs,
+          artifact_hashes: inputArtifactIdentity.artifact_hashes,
           prior_finding_refs: (input.findings ?? []).map((finding) => finding.finding_id),
           repair_map_refs: (input.repair_map ?? []).map((entry) => `repair-map:${entry.finding_id}`),
           no_context_inheritance: true,
@@ -929,14 +961,11 @@ export async function stageQualityAttemptMaterializeActivity(
       attemptRole: input.attempt_role,
       qualityRoundIndex: input.quality_round_index,
       parentAttemptRef: input.parent_attempt_ref ?? undefined,
-      inputArtifactRefs: input.artifact_refs,
-      reviewedArtifactHashes: input.artifact_hashes,
+      inputArtifactRefs: inputArtifactIdentity.artifact_refs,
+      reviewedArtifactHashes: inputArtifactIdentity.artifact_hashes,
       qualitySourceRefs: input.stage_run.source_refs,
       qualityStageGoalRefs: input.stage_run.stage_goal_refs,
-      qualityLineageRefs: [
-        ...(input.stage_run.lineage_refs ?? []),
-        ...input.artifact_identity_receipt_refs,
-      ],
+      qualityLineageRefs,
       qualityRubricRefs: input.stage_run.quality_rubric_refs,
       priorFindingRefs: (input.findings ?? []).map((finding) => finding.finding_id),
       repairMapRefs: (input.repair_map ?? []).map((entry) => `repair-map:${entry.finding_id}`),

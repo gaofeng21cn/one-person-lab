@@ -87,6 +87,7 @@ export type TemporalStageQualityAttemptMaterializationInput = {
   attempt_role: StageQualityAttemptRole;
   quality_round_index: number;
   parent_attempt_ref?: string | null;
+  artifact_producer_attempt_ref?: string | null;
   artifact_refs: string[];
   artifact_hashes: string[];
   artifact_identity_receipt_refs: string[];
@@ -118,6 +119,7 @@ export type TemporalStageRunAttemptSummary = {
   stage_attempt_id: string;
   workflow_id: string;
   execution_session_ref: string | null;
+  artifact_producer_attempt_ref?: string | null;
   status: 'registered' | 'running' | 'checkpointed' | 'blocked' | 'human_gate' | 'completed' | 'failed';
   artifact_refs: string[];
   artifact_hashes: string[];

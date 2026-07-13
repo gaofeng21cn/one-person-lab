@@ -1115,6 +1115,20 @@ test('Temporal StageRun terminal state idempotently refreshes the SQLite quality
     assert.deepEqual(second.state, first.state);
     assert.equal((second.state as any).controller_readback.controller_status, 'completed_with_quality_debt');
     assert.equal((second.state as any).controller_readback.attempts[0].attempt_role, 're_reviewer');
+    const humanGate = projectTemporalStageRunQualityCycle(db, {
+      ...state,
+      status: 'human_gate',
+      hard_stop_class: 'human_decision_required',
+      typed_blocker_refs: [],
+      human_gate_refs: ['human-gate:publication-owner'],
+      source_attempt_ref: 'opl://stage_attempts/sat-rereview-3',
+      blocked_reason: 'publication owner decision required',
+    });
+    const readback = (humanGate.state as any).controller_readback;
+    assert.equal(readback.hard_stop_class, 'human_decision_required');
+    assert.deepEqual(readback.typed_blocker_refs, []);
+    assert.deepEqual(readback.human_gate_refs, ['human-gate:publication-owner']);
+    assert.equal(readback.source_attempt_ref, 'opl://stage_attempts/sat-rereview-3');
   } finally {
     db.close();
   }
