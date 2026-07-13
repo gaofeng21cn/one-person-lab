@@ -108,7 +108,9 @@ function usageStatus(usage: JsonRecord, nestedCost: JsonRecord) {
 
 function isUnreportedUsageStatus(status: string | null) {
   const normalized = status?.trim().toLowerCase() ?? '';
-  return normalized.includes('unreported') || normalized.startsWith('not_measured');
+  return normalized === 'missing'
+    || normalized.includes('unreported')
+    || normalized.startsWith('not_measured');
 }
 
 function isZeroTokenUsage(tokens: ReturnType<typeof tokenUsage>) {
@@ -134,7 +136,13 @@ function hasUsageFields(value: JsonRecord) {
     || value.duration_ms
     || value.cadence_ref
     || costSummary.token_usage
-    || costSummary.estimated_cost_usd,
+    || costSummary.estimated_cost_usd
+    || value.usage_status
+    || value.telemetry_status
+    || value.missing_reason
+    || costSummary.usage_status
+    || costSummary.telemetry_status
+    || costSummary.missing_reason,
   );
 }
 
@@ -364,6 +372,7 @@ export function buildStageAttemptUsageProjection(input: StageAttemptUsageInput) 
   let apiCallObservedCount = 0;
   let durationMs = 0;
   let durationObservedCount = 0;
+  const missingUsageReasons: string[] = [];
 
   const providerDurationMs = msBetween(input.providerRun.started_at, input.providerRun.completed_at);
   if (providerDurationMs !== null) {
@@ -378,6 +387,15 @@ export function buildStageAttemptUsageProjection(input: StageAttemptUsageInput) 
     const nestedCost = usageRecord(usage.cost_summary);
     const tokens = tokenUsage(usage.token_usage) ?? tokenUsage(nestedCost.token_usage);
     const status = usageStatus(usage, nestedCost);
+    const missingReason = firstString(
+      usage.missing_reason,
+      usage.missing_usage_telemetry_reason,
+      nestedCost.missing_reason,
+      nestedCost.missing_usage_telemetry_reason,
+    );
+    if (missingReason) {
+      missingUsageReasons.push(missingReason);
+    }
     const unreportedZeroUsage = isUnreportedUsageStatus(status) && isZeroTokenUsage(tokens);
     const entryUsageRefs = usageRefs(usage);
     sourceRefs.push(...entryUsageRefs);
@@ -433,7 +451,9 @@ export function buildStageAttemptUsageProjection(input: StageAttemptUsageInput) 
         ? 'retry_budget_observed'
         : 'usage_unavailable',
     telemetry_status: telemetryStatus,
-    missing_usage_telemetry_reason: hasObservedResourceUsage ? null : 'no_stage_attempt_usage_telemetry_observed',
+    missing_usage_telemetry_reason: hasObservedResourceUsage
+      ? null
+      : uniqueStrings(missingUsageReasons)[0] ?? 'no_stage_attempt_usage_telemetry_observed',
     token: {
       observed_count: tokenObservedCount,
       input_tokens_observed: tokenObservedCount > 0 ? inputTokens : null,

@@ -226,12 +226,11 @@ export function buildAgentStageRunnerReceipt(input: {
     },
     cost_summary: {
       cost_status: 'not_measured_agent_executor_receipt',
-      estimated_cost_usd: 0,
-      token_usage: {
-        input_tokens: 0,
-        output_tokens: 0,
-        total_tokens: 0,
-      },
+      usage_status: 'missing',
+      estimated_cost_usd: null,
+      token_usage: null,
+      telemetry_source: null,
+      missing_reason: 'agent_executor_receipt_did_not_report_token_usage',
       billing_boundary: 'agent_executor_adapter_reports_only_declared_or_observed_usage',
     },
     agent_execution_receipt: input.agentExecutionReceipt,

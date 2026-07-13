@@ -177,7 +177,7 @@ export function codexStageRunnerCostSummaryFrom(
     .split(/\r?\n/)
     .map(parseJsonLineRecord)
     .filter((entry): entry is JsonRecord => Boolean(entry));
-  const tokenUsage = usageLines
+  const declaredTokenUsage = usageLines
     .map((entry) => {
       if (isRecord(entry.token_usage)) {
         return entry.token_usage;
@@ -187,23 +187,31 @@ export function codexStageRunnerCostSummaryFrom(
       }
       return null;
     })
-    .find((entry): entry is JsonRecord => Boolean(entry));
-  const declaredTokenUsage = tokenUsageTotals(tokenUsage);
+    .map(tokenUsageTotals)
+    .find((entry): entry is TokenUsageTotals => Boolean(entry)) ?? null;
   const sessionTokenDelta = sessionUsageRef?.token_delta;
+  const observedTokenUsage = sessionTokenDelta ?? declaredTokenUsage;
+  const usageObserved = observedTokenUsage !== null;
+  const estimatedCostUsd = usageLines
+    .map((entry) => isRecord(entry.usage) ? entry.usage : isRecord(entry.token_usage) ? entry.token_usage : null)
+    .map((entry) => entry?.estimated_cost_usd)
+    .find((value): value is number => typeof value === 'number' && Number.isFinite(value)) ?? null;
+  const liveRunner = runnerMode === 'codex_cli';
   return {
-    cost_status: runnerMode === 'codex_cli' ? 'observed_or_unreported' : 'not_measured_dry_run',
-    estimated_cost_usd: typeof tokenUsage?.estimated_cost_usd === 'number' ? tokenUsage.estimated_cost_usd : 0,
-    token_usage: {
-      input_tokens: sessionTokenDelta?.input_tokens
-        ?? declaredTokenUsage?.input_tokens
-        ?? 0,
-      output_tokens: sessionTokenDelta?.output_tokens
-        ?? declaredTokenUsage?.output_tokens
-        ?? 0,
-      total_tokens: sessionTokenDelta?.total_tokens
-        ?? declaredTokenUsage?.total_tokens
-        ?? 0,
-    },
+    cost_status: usageObserved ? 'observed' : liveRunner ? 'missing' : 'not_measured_dry_run',
+    usage_status: usageObserved ? 'observed' : liveRunner ? 'missing' : 'not_measured',
+    estimated_cost_usd: estimatedCostUsd,
+    token_usage: observedTokenUsage,
+    telemetry_source: sessionTokenDelta
+      ? 'codex_session_token_count'
+      : declaredTokenUsage
+        ? 'codex_exec_turn_completed'
+        : null,
+    missing_reason: usageObserved
+      ? null
+      : liveRunner
+        ? 'codex_cli_token_usage_not_observed'
+        : 'runner_mode_did_not_execute_codex_cli',
     ...(sessionUsageRef
       ? {
           usage_ref: sessionUsageRef.usage_ref,
