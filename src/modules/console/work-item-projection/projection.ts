@@ -141,8 +141,8 @@ export function buildWorkItemProjectionV2(
       running_count: items.filter((item) => item.execution.state === 'running').length,
       user_attention_count: items.filter((item) => item.attention.kind === 'user').length,
       system_attention_count: items.filter((item) => item.attention.kind === 'system').length,
-      telemetry_observed_count: items.filter((item) => item.telemetry.state === 'observed').length,
-      telemetry_missing_count: items.filter((item) => item.telemetry.state === 'missing').length,
+      telemetry_observed_count: items.filter((item) => item.telemetry.cumulative.state === 'observed').length,
+      telemetry_missing_count: items.filter((item) => item.telemetry.cumulative.state === 'missing').length,
     },
     items,
     diagnostics: {

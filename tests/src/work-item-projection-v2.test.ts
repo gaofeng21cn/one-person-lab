@@ -305,6 +305,7 @@ test('WorkItemProjection V2 discovers MAS 3 projects and 9 studies independently
     assert.equal(obesityItem?.execution.next_stage_display_name, 'Protocol And Analysis Plan');
     assert.deepEqual(obesityItem?.stage_map.map((stage) => stage.state), ['current', 'next']);
     assert.equal(obesityItem?.action.kind, 'agent_action');
+    assert.equal(obesityItem?.action.title, '继续推进');
     assert.equal(obesityItem?.action.summary, 'Continue the current study stage.');
     const deliveredItem = projection.items.find(
       (item) => item.identity.work_item_id === '003-dpcc-primary-care-phenotype-treatment-gap',
@@ -314,6 +315,11 @@ test('WorkItemProjection V2 discovers MAS 3 projects and 9 studies independently
     assert.equal(deliveredItem?.telemetry.current_stage.missing_reason, 'current_stage_not_applicable');
     assert.equal(deliveredItem?.stage_map.at(-1)?.state, 'completed');
     assert.equal(deliveredItem?.action.kind, 'user_action');
+    assert.equal(deliveredItem?.action.title, '补齐投稿信息或发起修订');
+    assert.equal(
+      deliveredItem?.action.summary,
+      'Provide missing submission metadata, or explicitly wake the study for revision.',
+    );
     assert.equal(projection.agent_catalog.length, 5);
     assert.equal(projection.agent_availability.length, 5);
     const masAvailability = projection.agent_availability.find((entry) => entry.agent_id === 'mas');
@@ -382,6 +388,8 @@ test('control lifecycle wins over old execution failure and token usage remains 
       [item.telemetry.current_stage.state, item.telemetry.current_stage.missing_reason, item.telemetry.cumulative.total_tokens],
       ['missing', 'current_stage_not_applicable', 1500],
     );
+    assert.equal(projection.summary.telemetry_observed_count, 1);
+    assert.equal(projection.summary.telemetry_missing_count, 8);
     assert.equal(item.stage_map.at(-1)?.state, 'completed');
     assert.equal(
       item.conditions.some((condition) =>

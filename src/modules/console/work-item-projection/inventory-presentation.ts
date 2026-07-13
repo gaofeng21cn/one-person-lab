@@ -153,7 +153,7 @@ export function projectInventoryAction(input: {
     ? declaredKind as WorkItemActionKind
     : fallback.kind;
   const owner = stringValue(raw?.owner) ?? fallback.owner;
-  const title = stringValue(raw?.title) ?? summary;
+  const title = stringValue(raw?.title) ?? fallback.title;
   return {
     action: {
       kind,
