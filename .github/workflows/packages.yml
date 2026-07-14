@@ -589,29 +589,6 @@ jobs:
           echo "OPL_RELEASE_SET_CARRIER_REF=$generation_ref" >> "$GITHUB_ENV"
           echo "OPL_RELEASE_SET_CARRIER_DIGEST=$digest" >> "$GITHUB_ENV"
 
-      - name: Attest exact Release Set files
-        uses: actions/attest@v4
-        with:
-          subject-path: |
-            dist/opl-packages/framework/*.tar.gz
-            dist/opl-packages/packages/*/*.tar.gz
-            dist/opl-packages/opl-release-manifest.json
-            dist/opl-packages/opl-channel-manifest.json
-            dist/opl-packages/owner-cohort-lock.json
-          predicate-type: https://slsa.dev/provenance/v1
-          predicate-path: dist/opl-packages/opl-release-provenance.json
-          create-storage-record: false
-
-      - name: Attest Release Set SBOM
-        uses: actions/attest@v4
-        with:
-          subject-path: |
-            dist/opl-packages/framework/*.tar.gz
-            dist/opl-packages/packages/*/*.tar.gz
-            dist/opl-packages/opl-release-manifest.json
-          sbom-path: dist/opl-packages/opl-release-set.spdx.json
-          create-storage-record: false
-
       - name: Write candidate promotion receipt
         shell: bash
         run: |
