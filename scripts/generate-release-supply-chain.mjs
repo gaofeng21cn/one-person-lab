@@ -112,8 +112,9 @@ function buildStatements(manifest) {
   }));
   const provenance = {
     buildDefinition: {
-      buildType: 'https://one-person-lab.dev/build-types/release-set/v2',
+      buildType: 'https://slsa-framework.github.io/github-actions-buildtypes/workflow/v1',
       externalParameters: {
+        opl_release_set_build_type: 'https://one-person-lab.dev/build-types/release-set/v2',
         release_set_generation: releaseSet.generation,
         component_ids: releaseSet.component_ids,
         owner_cohort_lock: releaseSet.owner_cohort_lock ?? null,

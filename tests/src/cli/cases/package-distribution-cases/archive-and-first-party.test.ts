@@ -591,6 +591,14 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(releaseSbom.spdxVersion, 'SPDX-2.3');
   assert.equal(releaseSbom.packages.length, 9);
   assert.equal(releaseSbom.packages.some((entry: Record<string, unknown>) => entry.name === 'opl-base'), true);
+  assert.equal(
+    releaseProvenance.buildDefinition.buildType,
+    'https://slsa-framework.github.io/github-actions-buildtypes/workflow/v1',
+  );
+  assert.equal(
+    releaseProvenance.buildDefinition.externalParameters.opl_release_set_build_type,
+    'https://one-person-lab.dev/build-types/release-set/v2',
+  );
   assert.equal(releaseProvenance.buildDefinition.resolvedDependencies.length, 9);
   assert.equal(
     releaseProvenance.buildDefinition.externalParameters.owner_cohort_lock.digest,
