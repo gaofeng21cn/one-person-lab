@@ -6,7 +6,10 @@ import {
   path,
   runCli,
 } from '../helpers.ts';
-import { STANDARD_AGENT_PACK_ABI } from '../../../../src/modules/foundry-lab/standard-domain-agent-scaffold-constants.ts';
+import {
+  FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES,
+  STANDARD_AGENT_PACK_ABI,
+} from '../../../../src/modules/foundry-lab/standard-domain-agent-scaffold-constants.ts';
 import { buildReadyAgentRepo } from './agents-conformance-fixtures.ts';
 
 export type JsonRecord = Record<string, unknown>;
@@ -239,6 +242,7 @@ function withFunctionalAudit(payload: JsonRecord, targetDomainId: string, owner:
   return attachManifestSurface(payload, 'functional_privatization_audit', {
     surface_kind: 'functional_privatization_audit',
     target_domain_id: targetDomainId,
+    forbidden_generic_owner_roles: FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES,
     modules: [
       {
         module_id: `${targetDomainId}_stage_policy_pack`,

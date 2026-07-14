@@ -13,6 +13,7 @@ import {
   writeManifestContractOverrides,
 } from './domain-pack-compiler-fixtures.ts';
 import { createAdmittedStagePackFixture } from './workspace-domain-test-helper.ts';
+import { FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES } from '../../../../src/modules/foundry-lab/standard-domain-agent-scaffold-constants.ts';
 
 function buildDelayedManifestCommand(payload: Record<string, unknown>, delayMs: number) {
   return `${process.execPath} -e ${
@@ -61,6 +62,10 @@ test('domain pack compiler projects OPL-owned generated surfaces for admitted do
   assert.match(
     mas.domain_pack_compiler.generated_interface_bundle.cli.descriptors[0].command,
     /^opl agents run --domain med-autoscience --action study_packet --workspace /,
+  );
+  assert.equal(
+    mas.domain_pack_compiler.generated_interface_bundle.cli.descriptors[0].execution_binding.kind,
+    'stage_binding',
   );
   assert.equal(mas.domain_pack_compiler.generated_interface_bundle.mcp.descriptors[0].name, 'study_packet');
   assert.equal(mas.domain_pack_compiler.generated_interface_bundle.skill.descriptors[0].command_contract_id, 'study_packet');
@@ -277,6 +282,7 @@ test('domain pack compiler blocks generated handoff when a domain still declares
     {
       surface_kind: 'functional_privatization_audit',
       target_domain_id: 'med-autoscience',
+      forbidden_generic_owner_roles: FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES,
       modules: [
         {
           module_id: 'repo_owned_generic_scheduler',

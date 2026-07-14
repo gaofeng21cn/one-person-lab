@@ -327,50 +327,22 @@ export function createAdmittedStagePackFixture(
   const inlineStagePlane = (
     productEntryManifest?.family_stage_control_plane ?? payload.family_stage_control_plane
   ) as JsonRecord | undefined;
-  const providedActionCatalog = (
-    productEntryManifest?.family_action_catalog ?? payload.family_action_catalog
-  ) as JsonRecord | undefined;
-  const providedActions = (providedActionCatalog?.actions as JsonRecord[] | undefined) ?? [];
-  const routedStageIds = [...new Set(providedActions.flatMap((action) => {
-    const route = action.stage_route as JsonRecord | undefined;
-    return [
-      ...((route?.required_stage_refs as string[] | undefined) ?? []),
-      ...((route?.optional_stage_refs as string[] | undefined) ?? []),
-    ];
-  }))];
-  const defaultSourceStages = buildAdmittedStagePlane(targetDomainId, owner).stages as JsonRecord[];
-  const sourceStages: JsonRecord[] = inlineStagePlane
+  const sourceStages = inlineStagePlane
     ? inlineStagePlane.stages as JsonRecord[]
-    : routedStageIds.length > 0
-      ? routedStageIds.map((stageId, index) => ({
-          ...defaultSourceStages[index % defaultSourceStages.length],
-          stage_id: stageId,
-          title: stageId,
-          summary: `${stageId} fixture stage.`,
-          goal: `Exercise the declared ${stageId} action route.`,
-          allowed_action_refs: providedActions
-            .filter((action) => {
-              const route = action.stage_route as JsonRecord | undefined;
-              return [
-                ...((route?.required_stage_refs as string[] | undefined) ?? []),
-                ...((route?.optional_stage_refs as string[] | undefined) ?? []),
-              ].includes(stageId);
-            })
-            .map((action) => String(action.action_id)),
-        }))
-      : defaultSourceStages;
+    : buildAdmittedStagePlane(targetDomainId, owner).stages as JsonRecord[];
   const selectedSourceStages = sourceStages.slice(0, options.stageCount ?? sourceStages.length);
-  const actionCatalog = providedActionCatalog ?? buildAdmittedActionCatalog(targetDomainId, owner, {
+  const actionCatalog = structuredClone((
+    productEntryManifest?.family_action_catalog ?? payload.family_action_catalog
+  ) as JsonRecord | undefined ?? buildAdmittedActionCatalog(targetDomainId, owner, {
     ...options,
     stageIds: selectedSourceStages.map((stage) => String(stage.stage_id)),
-  });
+  }));
   const actionIds = (actionCatalog.actions as JsonRecord[]).map((action) => String(action.action_id));
-  writeJson(path.join(repoDir, 'contracts/action_catalog.json'), actionCatalog);
 
   const stageManifestPath = path.join(repoDir, 'agent/stages/manifest.json');
   const stageManifest = JSON.parse(fs.readFileSync(stageManifestPath, 'utf8')) as JsonRecord;
   const baseStage = (stageManifest.stages as JsonRecord[])[0];
-  stageManifest.stages = selectedSourceStages
+  const materializedStages = selectedSourceStages
     .map((stage, index) => {
       const contract = stage.stage_contract as JsonRecord;
       const trustBoundary = stage.trust_boundary as JsonRecord | undefined;
@@ -404,7 +376,35 @@ export function createAdmittedStagePackFixture(
         ),
       };
     });
+  stageManifest.stages = materializedStages;
   writeJson(stageManifestPath, stageManifest);
+  const materializedStageIds = materializedStages.map((stage) => String(stage.stage_id));
+  for (const action of actionCatalog.actions as JsonRecord[]) {
+    const executionBinding = action.execution_binding as JsonRecord | undefined;
+    if (executionBinding?.kind !== 'stage_binding') continue;
+    const actionId = String(action.action_id);
+    const routedStageIds = materializedStages
+      .filter((stage) => (stage.allowed_action_refs as string[]).includes(actionId))
+      .map((stage) => String(stage.stage_id));
+    if (routedStageIds.length === 0) continue;
+    const stageRoute = action.stage_route as JsonRecord | undefined;
+    const declaredStageRefs = [
+      stageRoute?.entry_stage_ref,
+      ...((stageRoute?.required_stage_refs as unknown[] | undefined) ?? []),
+      ...((stageRoute?.optional_stage_refs as unknown[] | undefined) ?? []),
+      ...((stageRoute?.terminal_stage_refs as unknown[] | undefined) ?? []),
+    ].filter((entry): entry is string => typeof entry === 'string');
+    if (declaredStageRefs.every((stageId) => materializedStageIds.includes(stageId))) continue;
+    action.stage_route = {
+      ...stageRoute,
+      entry_stage_ref: routedStageIds[0],
+      required_stage_refs: routedStageIds,
+      optional_stage_refs: [],
+      terminal_stage_refs: [routedStageIds[routedStageIds.length - 1]],
+      route_policy: stageRoute?.route_policy ?? 'ai_selected_progress_route',
+    };
+  }
+  writeJson(path.join(repoDir, 'contracts/action_catalog.json'), actionCatalog);
   for (let index = 1; index <= 6; index += 1) {
     const schema = { $schema: 'https://json-schema.org/draft/2020-12/schema', type: 'object' };
     writeJson(path.join(repoDir, `contracts/stage-${index}.input.schema.json`), schema);

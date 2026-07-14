@@ -53,6 +53,10 @@ test('agents conformance treats explicit Codex follow-on lanes as non-default ro
     stage_id: 'book_materialization_follow_on',
     lane_kind: 'variant',
     title: 'Book materialization follow-on',
+    selected_executor: {
+      ...stageManifest.stages[0].selected_executor,
+      default_executor: false,
+    },
   };
   stageManifest.stages.push(followOnStage);
   writeJson(stageManifestPath, stageManifest);
@@ -115,16 +119,28 @@ test('agents conformance requires proof diagnostic cleanup and long-soak route v
       ...stageManifest.stages[0],
       stage_id: 'provider_proof_observation',
       title: 'Provider proof observation',
+      selected_executor: {
+        ...stageManifest.stages[0].selected_executor,
+        default_executor: false,
+      },
     },
     {
       ...stageManifest.stages[0],
       stage_id: 'legacy_cleanup_sweep',
       title: 'Legacy cleanup sweep',
+      selected_executor: {
+        ...stageManifest.stages[0].selected_executor,
+        default_executor: false,
+      },
     },
     {
       ...stageManifest.stages[0],
       stage_id: 'runtime_long_soak_window',
       title: 'Runtime long soak window',
+      selected_executor: {
+        ...stageManifest.stages[0].selected_executor,
+        default_executor: false,
+      },
     },
   );
   writeJson(stageManifestPath, stageManifest);

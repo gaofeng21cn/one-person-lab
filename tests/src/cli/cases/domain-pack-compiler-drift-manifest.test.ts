@@ -21,6 +21,7 @@ import {
   PACK_COMPILER_DEFAULT_DOMAIN_ALIASES,
 } from './domain-pack-compiler-assertions.ts';
 import { createAdmittedStagePackFixture } from './workspace-domain-test-helper.ts';
+import { FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES } from '../../../../src/modules/foundry-lab/standard-domain-agent-scaffold-constants.ts';
 
 test('domain pack compiler emits aligned generated artifact drift manifests for admitted packs', () => {
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
@@ -96,6 +97,7 @@ test('domain pack compiler marks generated artifact drift when blockers remain',
     {
       surface_kind: 'functional_privatization_audit',
       target_domain_id: 'med-autoscience',
+      forbidden_generic_owner_roles: FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES,
       modules: [
         {
           module_id: 'repo_owned_generic_scheduler',
