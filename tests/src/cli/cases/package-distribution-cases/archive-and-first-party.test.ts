@@ -155,7 +155,7 @@ test('package archive builder writes channel manifest checksums git source and r
   const previousScholarSkillsManifestSha256 = `sha256:${crypto.createHash('sha256').update(previousScholarSkillsManifestJson).digest('hex')}`;
   const previousScholarSkillsPayloadJson = `${JSON.stringify({
     ...parseJsonText(fs.readFileSync(
-      path.join(repoRoot, 'contracts/opl-framework/packages/payloads/mas-scholar-skills-0.2.0.json'),
+      path.join(repoRoot, 'contracts/opl-framework/packages/payloads/mas-scholar-skills-0.2.1.json'),
       'utf8',
     )) as Record<string, unknown>,
     package_version: '0.0.9',
@@ -208,7 +208,7 @@ test('package archive builder writes channel manifest checksums git source and r
     redcube: createOwnerPackageFixture('redcube-ai', 'rca', '0.2.2'),
     oplmetaagent: createOwnerPackageFixture('opl-meta-agent', 'oma', '0.2.1'),
     oplbookforge: createOwnerPackageFixture('opl-bookforge', 'obf', '0.2.1'),
-    scholarskills: createOwnerPackageFixture('mas-scholar-skills', 'mas-scholar-skills', '0.2.0', 'capability_package'),
+    scholarskills: createOwnerPackageFixture('mas-scholar-skills', 'mas-scholar-skills', '0.2.1', 'capability_package'),
     oplflow: createOwnerPackageFixture('opl-flow', 'opl-flow', '0.1.19', 'workflow_profile'),
   };
   const ownerSourceEnv = {
@@ -521,10 +521,10 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.match(channelManifest.package_catalog_digest, /^sha256:[0-9a-f]{64}$/);
   const scholarSkillsCatalog = packageCatalog['mas-scholar-skills'];
   assert.equal(scholarSkillsCatalog.package_role, 'framework_capability_package');
-  assert.equal(scholarSkillsCatalog.selected_version, '0.2.0');
+  assert.equal(scholarSkillsCatalog.selected_version, '0.2.1');
   assert.deepEqual(
     scholarSkillsCatalog.versions.map((entry: Record<string, unknown>) => entry.package_version),
-    ['0.2.0', '0.0.9'],
+    ['0.2.1', '0.0.9'],
   );
   assert.equal(
     scholarSkillsCatalog.versions.some((entry: Record<string, unknown>) => entry.package_version === '2.0.0'),
@@ -693,7 +693,8 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.match(checksums, /oma-0\.2\.1\.tar\.gz/);
   assert.match(checksums, /rca-0\.2\.2\.tar\.gz/);
   assert.match(checksums, /obf-0\.2\.1\.tar\.gz/);
-  assert.match(checksums, /mas-scholar-skills-0\.2\.0\.tar\.gz/);
+  assert.match(checksums, /mas-scholar-skills-0\.2\.1\.tar\.gz/);
+  assert.match(checksums, /opl-flow-0\.1\.19\.tar\.gz/);
   assert.match(checksums, new RegExp(manifest.packages.package_artifacts.mas.source_archive.sha256));
 
   execFileSync(process.execPath, [
@@ -941,9 +942,9 @@ test('MAS Scholar Skills provider manifest separates core Skill exports from mod
   const normalized = normalizeCapabilityPackageManifest(manifest, manifestPath);
   const payloadPath = path.join(path.dirname(manifestPath), manifest.codex_surface.plugin_payload_manifest_url);
   const payload = parseJsonText(fs.readFileSync(payloadPath, 'utf8')) as Record<string, any>;
-  assert.equal(manifest.version, '0.2.0');
+  assert.equal(manifest.version, '0.2.1');
   assert.equal(manifest.primary_consumer.version_requirement, '>=0.2.0 <0.3.0');
-  assert.equal(manifest.content_lock.digest, 'sha256:972585fa1150c15453fb2f85412142f06ee0be6670ea67e2ab09e2fbdea358ef');
+  assert.equal(manifest.content_lock.digest, 'sha256:12609ec31094dc7469c012fc8c6034ebb0119537f9018ea2048b7a8921e5ec81');
   assert.equal(normalized.required_skill_ids.length, 35);
   assert.equal(normalized.capability_provider?.module_export_ids.length, 8);
   assert.equal(normalized.capability_provider?.exports.filter((entry) => entry.install_mode === 'core_required').length, 11);
@@ -951,7 +952,7 @@ test('MAS Scholar Skills provider manifest separates core Skill exports from mod
   assert.equal(normalized.optional_skill_refs.length, 1);
   assert.equal(payload.package_id, manifest.package_id);
   assert.equal(payload.package_version, manifest.version);
-  assert.equal(payload.source_commit, '1076c6d29dbbf306eb3dae4ce5d0186274c37dd1');
+  assert.equal(payload.source_commit, '83046f0d10a439d06bc17c82d0ce0a327d609de2');
   assert.deepEqual(
     payload.files.map((entry: Record<string, any>) => entry.path).sort(),
     manifest.content_lock.paths.slice().sort(),
@@ -1111,7 +1112,7 @@ test('package archive builder refreshes reused managed clones before archiving s
     redcube: createOwnerPackageFixture('redcube-ai', 'rca', '0.2.2'),
     oplmetaagent: createOwnerPackageFixture('opl-meta-agent', 'oma', '0.2.1'),
     oplbookforge: createOwnerPackageFixture('opl-bookforge', 'obf', '0.2.1'),
-    scholarskills: createOwnerPackageFixture('mas-scholar-skills', 'mas-scholar-skills', '0.2.0', 'capability_package'),
+    scholarskills: createOwnerPackageFixture('mas-scholar-skills', 'mas-scholar-skills', '0.2.1', 'capability_package'),
     oplflow: createOwnerPackageFixture('opl-flow', 'opl-flow', '0.1.19', 'workflow_profile'),
   };
   fs.writeFileSync(

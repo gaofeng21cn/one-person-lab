@@ -36,13 +36,13 @@
       "package_id": "mas-scholar-skills",
       "repo_name": "mas-scholar-skills",
       "repo_url": "https://github.com/gaofeng21cn/mas-scholar-skills.git",
-      "source_commit": "1076c6d29dbbf306eb3dae4ce5d0186274c37dd1"
+      "source_commit": "83046f0d10a439d06bc17c82d0ce0a327d609de2"
     },
     "opl-flow": {
       "package_id": "opl-flow",
       "repo_name": "opl-flow",
       "repo_url": "https://github.com/gaofeng21cn/opl-flow.git",
-      "source_commit": "2c7fad262938fb4295d2bb866f6b955c0aa2361a"
+      "source_commit": "efd0e2034c3fc05f0ded70516fcb57e295dd7cdc"
     }
   }
 }
