@@ -151,6 +151,9 @@ These schema files are the machine-readable OPL target architecture surface. The
 - `source-module-map.json`
 - `module-dependency-policy.json`
 - `cli-command-registry.json`
+- `connect-reference-provider-profile.schema.json`
+- `connect-scientific-search-provider-profile.schema.json`
+- `external-skill-source-metadata.schema.json`
 - `target-operating-architecture-contract.json`
 - `observability-semantic-conventions-contract.json`
 - `advisory-knowledge-boundary-contract.json`

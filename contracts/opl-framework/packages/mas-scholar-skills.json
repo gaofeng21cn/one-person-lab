@@ -3,7 +3,7 @@
   "package_id": "mas-scholar-skills",
   "display_name": "MAS Scholar Skills",
   "publisher": "one-person-lab",
-  "version": "0.2.1",
+  "version": "0.2.3",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/mas-scholar-skills.git",
   "package_role": "required_agent_capability_package",
@@ -116,7 +116,111 @@
       "mas-scholar-skills.write",
       "mas-scholar-skills.review",
       "mas-scholar-skills.submit",
-      "mas-scholar-skills.data"
+      "mas-scholar-skills.data",
+      "mas-scholar-skills.reference-provider-adapters",
+      "mas-scholar-skills.scientific-search-adapters"
+    ],
+    "runtime_module_bindings": [
+      {
+        "module_id": "mas-scholar-skills.reference-provider-adapters",
+        "module_kind": "opl_connect_reference_provider_adapter",
+        "adapter_abi": "opl-connect-reference-provider-adapter.v1",
+        "profile_ref": "contracts/reference-provider-adapters/scientific-metadata.json",
+        "profile_schema_ref": "contracts/reference-provider-adapters/reference-provider-profile.schema.json",
+        "registry_ref": "contracts/reference-provider-adapters/reference-provider-adapter-registry.json",
+        "registry_schema_ref": "contracts/reference-provider-adapters/reference-provider-adapter-registry.schema.json",
+        "step_schema_ref": "contracts/reference-provider-adapters/reference-provider-adapter-step.schema.json",
+        "handler": {
+          "kind": "typescript_export",
+          "file": "runtime/reference-provider-adapters/index.ts",
+          "export": "runReferenceProviderAdapterStep"
+        },
+        "max_steps": 2,
+        "contained_implementation_files": [
+          "runtime/reference-provider-adapters/types.ts",
+          "runtime/reference-provider-adapters/normalization.ts",
+          "runtime/reference-provider-adapters/provider-adapters.ts",
+          "runtime/reference-provider-adapters/index.ts"
+        ],
+        "exports": [
+          "runReferenceProviderAdapterStep",
+          "build_request",
+          "parse_response",
+          "next_step"
+        ],
+        "sandbox": {
+          "network_io": false,
+          "environment_read": false,
+          "filesystem_read": false,
+          "filesystem_write": false,
+          "process_spawn": false,
+          "dynamic_module_load": false,
+          "input_output_policy": "serializable_request_state_response_only"
+        },
+        "authority_boundary": {
+          "can_perform_network_io": false,
+          "can_read_environment": false,
+          "can_write_files": false,
+          "can_spawn_processes": false,
+          "can_write_domain_truth": false,
+          "can_sign_owner_receipt": false,
+          "can_create_typed_blocker": false,
+          "can_claim_reference_truth": false,
+          "can_claim_quality_verdict": false,
+          "can_claim_domain_ready": false,
+          "can_claim_production_ready": false
+        }
+      },
+      {
+        "module_id": "mas-scholar-skills.scientific-search-adapters",
+        "module_kind": "opl_connect_scientific_search_adapter",
+        "adapter_abi": "opl-connect-scientific-search-adapter.v1",
+        "profile_ref": "contracts/scientific-search-adapters/scientific-search.json",
+        "profile_schema_ref": "contracts/scientific-search-adapters/scientific-search-provider-profile.schema.json",
+        "registry_ref": "contracts/scientific-search-adapters/scientific-search-adapter-registry.json",
+        "registry_schema_ref": "contracts/scientific-search-adapters/scientific-search-adapter-registry.schema.json",
+        "step_schema_ref": "contracts/scientific-search-adapters/scientific-search-adapter-step.schema.json",
+        "handler": {
+          "kind": "typescript_export",
+          "file": "runtime/scientific-search-adapters/index.ts",
+          "export": "runScientificSearchAdapterStep"
+        },
+        "max_steps": 1,
+        "contained_implementation_files": [
+          "runtime/reference-provider-adapters/types.ts",
+          "runtime/reference-provider-adapters/normalization.ts",
+          "runtime/scientific-search-adapters/types.ts",
+          "runtime/scientific-search-adapters/search-adapters.ts",
+          "runtime/scientific-search-adapters/index.ts"
+        ],
+        "exports": [
+          "runScientificSearchAdapterStep",
+          "build_search_request",
+          "parse_search_response"
+        ],
+        "sandbox": {
+          "network_io": false,
+          "environment_read": false,
+          "filesystem_read": false,
+          "filesystem_write": false,
+          "process_spawn": false,
+          "dynamic_module_load": false,
+          "input_output_policy": "serializable_request_state_response_only"
+        },
+        "authority_boundary": {
+          "can_perform_network_io": false,
+          "can_read_environment": false,
+          "can_write_files": false,
+          "can_spawn_processes": false,
+          "can_write_domain_truth": false,
+          "can_sign_owner_receipt": false,
+          "can_create_typed_blocker": false,
+          "can_claim_reference_truth": false,
+          "can_claim_quality_verdict": false,
+          "can_claim_domain_ready": false,
+          "can_claim_production_ready": false
+        }
+      }
     ],
     "optional_skill_policy_ref": "contracts/scholar-skills-capability-modules.json#/codex_skill_exposure_policy/optional_named_specialty_skill_ids",
     "optional_skills_installed_by_default": true,
@@ -125,10 +229,27 @@
   },
   "content_lock": {
     "algorithm": "sha256",
-    "canonicalization": "ordered_path_nul_file_bytes",
+    "canonicalization": "ordered_path_length_file_length_bytes",
     "paths": [
       ".codex-plugin/plugin.json",
       "contracts/scholar-skills-capability-modules.json",
+      "contracts/reference-provider-adapters/scientific-metadata.json",
+      "contracts/reference-provider-adapters/reference-provider-profile.schema.json",
+      "contracts/reference-provider-adapters/reference-provider-adapter-registry.json",
+      "contracts/reference-provider-adapters/reference-provider-adapter-registry.schema.json",
+      "contracts/reference-provider-adapters/reference-provider-adapter-step.schema.json",
+      "runtime/reference-provider-adapters/types.ts",
+      "runtime/reference-provider-adapters/normalization.ts",
+      "runtime/reference-provider-adapters/provider-adapters.ts",
+      "runtime/reference-provider-adapters/index.ts",
+      "contracts/scientific-search-adapters/scientific-search.json",
+      "contracts/scientific-search-adapters/scientific-search-provider-profile.schema.json",
+      "contracts/scientific-search-adapters/scientific-search-adapter-registry.json",
+      "contracts/scientific-search-adapters/scientific-search-adapter-registry.schema.json",
+      "contracts/scientific-search-adapters/scientific-search-adapter-step.schema.json",
+      "runtime/scientific-search-adapters/types.ts",
+      "runtime/scientific-search-adapters/search-adapters.ts",
+      "runtime/scientific-search-adapters/index.ts",
       "skills/mas-scholar-skills/SKILL.md",
       "skills/medical-manuscript-writing/SKILL.md",
       "skills/medical-manuscript-review/SKILL.md",
@@ -165,7 +286,7 @@
       "skills/medical-data-freeze-and-analysis-readiness-reviewer/SKILL.md",
       "skills/medical-research-portfolio-memory-curator/SKILL.md"
     ],
-    "digest": "sha256:12609ec31094dc7469c012fc8c6034ebb0119537f9018ea2048b7a8921e5ec81"
+    "digest": "sha256:eedf57475662da7d929b696f25015350e855764b9bff64df32f18341c4ec44f6"
   },
   "lifecycle": {
     "owner": "one-person-lab",
@@ -205,7 +326,7 @@
     "default_materialized_skill_ids_ref": "#/exports/all_skill_ids",
     "codex_default_exposure": false,
     "optional_install_policy": "all_exported_skills",
-    "plugin_payload_manifest_url": "payloads/mas-scholar-skills-0.2.1.json"
+    "plugin_payload_manifest_url": "payloads/mas-scholar-skills-0.2.3.json"
   },
   "authority_boundary": {
     "can_write_domain_truth": false,

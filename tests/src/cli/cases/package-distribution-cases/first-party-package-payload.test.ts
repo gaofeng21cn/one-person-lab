@@ -735,10 +735,6 @@ test('manifest and committed plugin JSON require strict round-trip UTF-8', (t) =
 test('Framework allowlists and historical payload envelopes validate at their explicit schema boundaries', () => {
   const schemaPath = path.join(repoRoot, 'contracts/opl-framework/package-payload-allowlist.schema.json');
   const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8')) as Record<string, any>;
-  const legacyPayloadSchema = JSON.parse(fs.readFileSync(
-    path.join(repoRoot, 'contracts/opl-framework/package-payload-manifest.schema.json'),
-    'utf8',
-  )) as Record<string, any>;
   const canonicalIds = ['mag', 'mas', 'rca', 'oma', 'obf', 'mas-scholar-skills', 'opl-flow'];
 
   for (const id of canonicalIds) {
@@ -760,22 +756,28 @@ test('Framework allowlists and historical payload envelopes validate at their ex
     assert.equal(allowlist.package_id, manifest.package_id, id);
     assert.equal(allowlist.plugin_id, manifest.codex_surface.plugin_id, id);
     if (manifest.source_repo !== undefined) assert.equal(allowlist.source_repo, manifest.source_repo, id);
-    assert.equal(allowlist.source_repo, payload.source_repo, id);
-    assert.equal(allowlist.source_root, payload.source_root, id);
-    assert.deepEqual(allowlist.paths, payload.files.map((entry: Record<string, string>) => entry.path), id);
-    if (payload.surface_kind === 'opl_package_payload_manifest.v1') {
-      assert.doesNotThrow(() => assertJsonSchemaPayload({
-        schemaId: legacyPayloadSchema.$id,
-        schema: legacyPayloadSchema,
-        sourceRef: 'contracts/opl-framework/package-payload-manifest.schema.json',
-      }, payload), id);
-    } else {
-      assert.equal(payload.surface_kind, 'opl_agent_package_payload_manifest', id);
-      assert.equal(payload.schema_ref, undefined, id);
-    }
-    assert.equal(payload.plugin_id, undefined, id);
-    assert.equal(payload.content_lock, undefined, id);
-    assert.equal(payload.files.some((entry: Record<string, unknown>) => entry.mode !== undefined), false, id);
+    assert.equal(payload.package_id, manifest.package_id, id);
+    assert.equal(payload.package_version, manifest.version, id);
+    assert.deepEqual(
+      payload.files.map((entry: Record<string, string>) => entry.path),
+      allowlist.paths,
+      `${id} current payload`,
+    );
+    assertPayloadEnvelope(payload, id);
+  }
+
+  const trackedPayloadFiles = fs.readdirSync(payloadRoot)
+    .filter((entry) => entry.endsWith('.json'))
+    .sort();
+  for (const file of trackedPayloadFiles) {
+    const payload = JSON.parse(fs.readFileSync(path.join(payloadRoot, file), 'utf8')) as Record<string, any>;
+    const label = `tracked payload ${file}`;
+    assert.ok(canonicalIds.includes(payload.package_id), label);
+    assert.equal(file, `${payload.package_id}-${payload.package_version}.json`, label);
+    const allowlist = allowlists[payload.package_id];
+    assert.equal(payload.source_repo, allowlist.source_repo, label);
+    assert.equal(payload.source_root, allowlist.source_root, label);
+    assertPayloadEnvelope(payload, label);
   }
 });
 

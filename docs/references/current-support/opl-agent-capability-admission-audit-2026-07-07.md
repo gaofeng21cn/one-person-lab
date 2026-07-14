@@ -117,7 +117,7 @@ Machine boundary: 本文是人读审计与治理建议；机器真相仍归各 r
 | --- | --- | --- |
 | 新需求默认沉淀为新 Skill，导致 Skill 数量膨胀。 | 已处理到 policy。 | `standard-agent-capability-management-policy.md#新能力准入门` 增加 admission record、判定顺序和拒绝条件。 |
 | OPL foundation support Skill 数量增长，metadata 污染日常 Codex。 | 当前受控，需持续治理。 | `exposure.json` 已是 machine guard；新增 foundation Skill 必须登记 `exposure_scope` / `activation_gate` / no-authority。 |
-| MAS Scholar Skills export catalog 与 OPL/MAS 本地清单漂移。 | 当前受控。 | provider manifest 是完整 export catalog 单源；OPL scope 从发布 payload 动态物化全部 exports，不复制 35 项清单。11 core + 8 modules 只定义 hard readiness floor。 |
+| MAS Scholar Skills export catalog 与 OPL/MAS 本地清单漂移。 | 当前受控。 | provider manifest 是完整 export catalog 单源；OPL scope 从发布 payload 动态物化全部 exports，不复制 35 项清单。11 core + 10 modules 只定义 hard readiness floor。 |
 | `agent/skills/*.md` 与 `agent/professional_skills/**` 混淆。 | 当前 RCA/OMA/BookForge/MAG 文档基本清楚。 | 新增能力必须先声明 `selected_layer`；`agent/skills/*.md` 默认按 domain skill declaration / policy ref 读取。 |
 | App `tmp/**`、VM evidence、generated cache 被误扫成当前 Skill source。 | 审计发现并排除。 | 当前 App repo-native skill source 只按 `assets/companion-skills/**` 与 contracts 读取。 |
 

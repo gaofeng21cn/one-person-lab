@@ -841,36 +841,36 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
   const manifest = manifests.mas;
   const expectedReleases: Record<string, { version: string; sourceCommit: string; payloadRef: string }> = {
     mas: {
-      version: '0.2.1',
-      sourceCommit: 'b4345d90745cd4e8f94d76686d97d238150f98cb',
-      payloadRef: 'payloads/mas-0.2.1.json',
+      version: '0.2.6',
+      sourceCommit: 'e6137d01aeb6f5cdd9cb61864b9fa116a590b5bf',
+      payloadRef: 'payloads/mas-0.2.6.json',
     },
     mag: {
-      version: '0.3.0',
-      sourceCommit: '42f75f50f15354ac1a6fd85c17ddc076823f81d5',
-      payloadRef: 'payloads/mag-0.3.0.json',
+      version: '0.3.2',
+      sourceCommit: '8ceb733acd63406816a330c465907e69f4179a6d',
+      payloadRef: 'payloads/mag-0.3.2.json',
     },
     rca: {
-      version: '0.2.4',
-      sourceCommit: 'df10aa4b40702358038ec77dc04f4f9b819672da',
-      payloadRef: 'payloads/rca-0.2.4.json',
+      version: '0.2.5',
+      sourceCommit: '0de0631fbdd2943c3004db8ff52222b1d33993f4',
+      payloadRef: 'payloads/rca-0.2.5.json',
     },
     oma: {
-      version: '0.3.0',
-      sourceCommit: '6cb3a78ae56019c77caab93bd022ace7afed2358',
-      payloadRef: 'payloads/oma-0.3.0.json',
+      version: '0.3.4',
+      sourceCommit: '4ed4a855796061d851e8640d465ff9061438cc50',
+      payloadRef: 'payloads/oma-0.3.4.json',
     },
     obf: {
-      version: '0.3.2',
-      sourceCommit: 'f7a26544bc73bdec7b394d7ab269328379703856',
-      payloadRef: 'payloads/obf-0.3.2.json',
+      version: '0.3.3',
+      sourceCommit: '86f38070bbf21d55abc12e35eeb352c62c208da3',
+      payloadRef: 'payloads/obf-0.3.3.json',
     },
   };
 
   assert.equal(manifest.schema_ref, 'contracts/opl-framework/agent-package-manifest.schema.json');
   assert.equal(manifest.package_id, 'mas');
   assert.equal(manifest.agent_id, 'mas');
-  assert.equal(manifest.version, '0.2.1');
+  assert.equal(manifest.version, '0.2.6');
   assert.equal(manifest.carrier_source_role, 'codex_plugin_default_carrier_not_package_truth');
   assert.equal(schema.required.includes('distribution_payload'), false);
   assert.equal(schema.properties.distribution_payload.properties.install_truth.const, 'resolved_digest_lock');
@@ -950,23 +950,24 @@ test('MAS Scholar Skills provider manifest separates core Skill exports from mod
   const normalized = normalizeCapabilityPackageManifest(manifest, manifestPath);
   const payloadPath = path.join(path.dirname(manifestPath), manifest.codex_surface.plugin_payload_manifest_url);
   const payload = parseJsonText(fs.readFileSync(payloadPath, 'utf8')) as Record<string, any>;
-  assert.equal(manifest.version, '0.2.1');
+  assert.equal(manifest.version, '0.2.3');
   assert.equal(manifest.primary_consumer.version_requirement, '>=0.2.0 <0.3.0');
-  assert.equal(manifest.content_lock.digest, 'sha256:12609ec31094dc7469c012fc8c6034ebb0119537f9018ea2048b7a8921e5ec81');
+  assert.equal(manifest.content_lock.canonicalization, 'ordered_path_length_file_length_bytes');
+  assert.equal(manifest.content_lock.digest, 'sha256:eedf57475662da7d929b696f25015350e855764b9bff64df32f18341c4ec44f6');
   assert.equal(normalized.required_skill_ids.length, 35);
-  assert.equal(normalized.capability_provider?.module_export_ids.length, 8);
+  assert.equal(normalized.capability_provider?.module_export_ids.length, 10);
   assert.equal(normalized.capability_provider?.exports.filter((entry) => entry.install_mode === 'core_required').length, 11);
   assert.equal(normalized.capability_provider?.exports.filter((entry) => entry.install_mode !== 'core_required').length, 24);
   assert.equal(normalized.optional_skill_refs.length, 1);
   assert.equal(payload.package_id, manifest.package_id);
   assert.equal(payload.package_version, manifest.version);
-  assert.equal(payload.source_commit, '83046f0d10a439d06bc17c82d0ce0a327d609de2');
+  assert.equal(payload.source_commit, 'ed621f53a905e02cdf272387d14d0d5415d73781');
   assert.deepEqual(
     payload.files.map((entry: Record<string, any>) => entry.path).sort(),
     manifest.content_lock.paths.slice().sort(),
   );
   assert.equal(payload.files.every((entry: Record<string, any>) => /^sha256:[0-9a-f]{64}$/.test(entry.sha256)), true);
-  assert.equal(payload.surface_kind, 'opl_package_payload_manifest.v1');
+  assert.equal(payload.surface_kind, 'opl_package_payload_manifest.v2');
   assert.equal(Object.hasOwn(payload, 'agent_id'), false);
 });
 

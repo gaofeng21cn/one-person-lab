@@ -132,6 +132,9 @@ Machine boundary: 本文是 OPL Framework contracts 的人读支撑索引。机�
 - `brand-module-l5-operating-evidence.json`
 - `brand-system-profile.json`
 - `cli-command-registry.json`
+- `connect-reference-provider-profile.schema.json`
+- `connect-scientific-search-provider-profile.schema.json`
+- `external-skill-source-metadata.schema.json`
 - `target-operating-architecture-contract.json`
 - `observability-semantic-conventions-contract.json`
 - `advisory-knowledge-boundary-contract.json`

@@ -307,10 +307,10 @@ test('packages manifest exposes canonical Release Set coordinates for Package in
   );
   assert.equal(
     output.packages_manifest.packages.package_artifacts.mas.artifact,
-    'ghcr.io/gaofeng21cn/one-person-lab-packages/mas:0.2.1',
+    'ghcr.io/gaofeng21cn/one-person-lab-packages/mas:0.2.6',
   );
   assert.equal(output.packages_manifest.packages.package_artifacts.mas.package_id, 'mas');
-  assert.equal(output.packages_manifest.packages.package_artifacts.mas.package_version, '0.2.1');
+  assert.equal(output.packages_manifest.packages.package_artifacts.mas.package_version, '0.2.6');
   assert.equal(output.packages_manifest.packages.package_artifacts.mas.carrier_locator.module_id, 'medautoscience');
   assert.equal(output.packages_manifest.packages.package_artifacts.mas.carrier_locator.repo_name, 'med-autoscience');
   assert.equal(Object.hasOwn(output.packages_manifest.packages.package_artifacts.mas, 'module_id'), false);
@@ -440,7 +440,7 @@ test('packages manifest exposes canonical Release Set coordinates for Package in
   );
   assert.equal(
     output.packages_manifest.packages.package_artifacts.oma.artifact,
-    'ghcr.io/gaofeng21cn/one-person-lab-packages/oma:0.3.0',
+    'ghcr.io/gaofeng21cn/one-person-lab-packages/oma:0.3.4',
   );
   assert.equal(
     output.packages_manifest.packages.package_artifacts.oma.remote_publish_status,
@@ -456,7 +456,7 @@ test('packages manifest exposes canonical Release Set coordinates for Package in
   assert.equal(omaCodexStandaloneDistribution.package_manifest_ref, 'contracts/opl-framework/packages/oma.json');
   assert.equal(
     output.packages_manifest.packages.package_artifacts['mas-scholar-skills'].artifact,
-    'ghcr.io/gaofeng21cn/one-person-lab-packages/mas-scholar-skills:0.2.1',
+    'ghcr.io/gaofeng21cn/one-person-lab-packages/mas-scholar-skills:0.2.3',
   );
   assert.equal(output.packages_manifest.packages.package_artifacts['opl-flow'].package_id, 'opl-flow');
   assert.equal(output.packages_manifest.packages.package_artifacts['opl-flow'].package_version, '0.1.20');

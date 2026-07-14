@@ -41,6 +41,8 @@ Stage 内质量循环的 canonical machine surface 是 `contracts/opl-framework/
 当前保留的 repo-tracked machine-readable truth：
 
 - `contracts/opl-framework/*.json`：当前 stage-led OPL framework、App consumer surface、Foundry package/domain-agent catalog、runtime 与 supporting-surface contract
+- `contracts/opl-framework/connect-reference-provider-profile.schema.json` 与 `connect-scientific-search-provider-profile.schema.json`：package-owned reference/search provider profile 的通用 envelope；Framework 只校验 installed package binding、handler refs、sandbox 与 no-authority flags，不持有 provider 名单、endpoint、协议或解析器
+- `contracts/opl-framework/external-skill-source-metadata.schema.json`：external Skill source owner 提供的 metadata 合同；要求 source identity、ontology 与实际 Skill 全覆盖闭合，Framework 不内置 source/alias/category/risk ontology
 - `contracts/opl-framework/brand-module-registry.json`：当前 OPL 品牌模块的机器注册表；`opl brand-modules list|inspect|maturity|validate|interfaces --json` 从这里派生，作为聚合目录与成熟度总览。
 - `contracts/opl-framework/public-whitepaper-registry.json`：OPL Framework、App、Cloud、MAS 四份公开白皮书的 pointer-only release-set registry；它记录 owner repo、Profile 与公开 URL。正文来源由各仓 Profile 持有，监听路径由各仓 workflow 持有；registry 不接管正文，也不声明任何 ready。
 - `contracts/opl-framework/public-whitepaper-profile.schema.json`：四仓白皮书 Profile 的统一输入 schema；只固定 owner、source/output、版式页数和公开 URL，不把章节或措辞变成机器接口。
