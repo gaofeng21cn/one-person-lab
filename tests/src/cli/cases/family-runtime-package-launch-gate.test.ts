@@ -104,16 +104,21 @@ test('family-runtime keeps duplicate create idempotent and restores the pinned s
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-package-scope-drift-'));
   const workspace = path.join(root, 'workspace');
   const providerManifest = writeCapabilityProvider(path.join(root, 'provider'));
-  const consumerManifest = writeMasConsumer(path.join(root, 'consumer'), providerManifest);
+  const catalog = path.join(root, 'catalog', 'capability-catalog.json');
+  const consumerManifest = writeMasConsumer(path.join(root, 'consumer'), providerManifest, '0.1.0a4', {
+    capabilityCatalogRef: catalog,
+    packageCatalogRef: catalog,
+  });
+  const releaseSet = writeCapabilityCatalog(path.dirname(catalog), [consumerManifest, providerManifest]);
   const env = {
     OPL_STATE_DIR: path.join(root, 'state'),
     CODEX_HOME: path.join(root, 'codex-home'),
+    ...releaseSet.env,
   };
   fs.mkdirSync(workspace, { recursive: true });
   try {
     await runCliAsync([
-      'packages', 'install', '--manifest-url', consumerManifest, '--trust-tier', 'first_party',
-      '--scope', 'workspace', '--target-workspace', workspace,
+      'packages', 'install', 'mas', '--scope', 'workspace', '--target-workspace', workspace,
     ], env);
     const existingAttempt = runCli(createArgs(workspace), env)
       .family_runtime_stage_attempt.attempt;
@@ -155,10 +160,16 @@ test('family-runtime quest launch activates every declared Skill and start or re
   const providerManifest = writeCapabilityProvider(path.join(root, 'provider'), '0.1.0', {
     specialtySkillIds: scholarSkillsSpecialtySkillIds,
   });
-  const consumerManifest = writeMasConsumer(path.join(root, 'consumer'), providerManifest);
+  const catalog = path.join(root, 'catalog', 'capability-catalog.json');
+  const consumerManifest = writeMasConsumer(path.join(root, 'consumer'), providerManifest, '0.1.0a4', {
+    capabilityCatalogRef: catalog,
+    packageCatalogRef: catalog,
+  });
+  const releaseSet = writeCapabilityCatalog(path.dirname(catalog), [consumerManifest, providerManifest]);
   const env = {
     OPL_STATE_DIR: path.join(root, 'state'),
     CODEX_HOME: path.join(root, 'codex-home'),
+    ...releaseSet.env,
   };
   try {
     const notInstalled = runCliFailure(createQuestArgs(quest), env);
@@ -166,9 +177,7 @@ test('family-runtime quest launch activates every declared Skill and start or re
     assert.equal(notInstalled.payload.error.details.launch_blocked_reason, 'package_not_installed');
     assertNoAttemptWasQueued(env.OPL_STATE_DIR, env);
 
-    await runCliAsync([
-      'packages', 'install', '--manifest-url', consumerManifest, '--trust-tier', 'first_party',
-    ], env);
+    await runCliAsync(['packages', 'install', 'mas'], env);
     assert.equal(fs.existsSync(path.join(quest, '.codex', 'skills')), false);
 
     const created = runCli(createQuestArgs(quest), env).family_runtime_stage_attempt.attempt;
@@ -251,26 +260,27 @@ test('family-runtime use boundary reconciles the highest compatible provider and
     capabilityCatalogRef: catalog,
     packageCatalogRef: catalog,
   });
-  writeCapabilityCatalog(path.dirname(catalog), [consumerV1, consumerV2, providerV1, providerV2]);
-  const consumer = writeMasConsumer(path.join(root, 'consumer-install'), providerV1, '0.1.0a4', {
-    capabilityCatalogRef: catalog,
-    packageCatalogRef: catalog,
-  });
+  const releaseSet = writeCapabilityCatalog(
+    path.dirname(catalog),
+    [consumerV1, consumerV2, providerV1, providerV2],
+  );
   const env = {
     OPL_STATE_DIR: path.join(root, 'state'),
     CODEX_HOME: path.join(root, 'codex-home'),
+    ...releaseSet.env,
   };
   try {
-    await runCliAsync([
-      'packages', 'install', '--manifest-url', consumer, '--trust-tier', 'first_party',
-    ], env);
+    await runCliAsync(['packages', 'install', 'mas'], env);
     const created = runCli(createSessionArgs(workspace, 'paper-session-a'), env)
       .family_runtime_stage_attempt.attempt;
     assert.equal(created.workspace_locator.package_use_binding.freshness_mode, 'channel_verified');
     assert.match(created.workspace_locator.package_use_binding.use_receipt_ref, /^opl:\/\/agent-package\/use\//);
     assert.equal(created.workspace_locator.package_use_binding.provider_packages[0].package_version, '0.1.1');
     assert.match(created.workspace_locator.package_use_binding.provider_packages[0].artifact_digest, /^sha256:[0-9a-f]{64}$/);
-    assert.equal(created.workspace_locator.package_use_binding.provider_packages[0].source_artifact_ref, providerV2);
+    assert.equal(
+      created.workspace_locator.package_use_binding.provider_packages[0].source_artifact_ref,
+      'ghcr.io/fixture/one-person-lab-packages/mas-scholar-skills:0.1.1',
+    );
     assert.equal(created.workspace_locator.package_use_binding.root_package.package_version, '0.1.0');
     assert.deepEqual(created.workspace_locator.package_use_binding.root_package.owner_language_version, {
       scheme: 'pep440',
@@ -351,15 +361,14 @@ test('provider retirement removes only unchanged package-owned Skills and preser
     capabilityCatalogRef: catalog,
     packageCatalogRef: catalog,
   });
-  writeCapabilityCatalog(path.dirname(catalog), [consumer, providerV1]);
+  const releaseSet = writeCapabilityCatalog(path.dirname(catalog), [consumer, providerV1]);
   const env = {
     OPL_STATE_DIR: path.join(root, 'state'),
     CODEX_HOME: path.join(root, 'codex-home'),
+    ...releaseSet.env,
   };
   try {
-    await runCliAsync([
-      'packages', 'install', '--manifest-url', consumer, '--trust-tier', 'first_party',
-    ], env);
+    await runCliAsync(['packages', 'install', 'mas'], env);
     runCli(createSessionArgs(workspaceA, 'retirement-a-v1'), env);
     runCli(createSessionArgs(workspaceB, 'retirement-b-v1'), env);
     const userModifiedSkill = path.join(workspaceB, '.codex', 'skills', retiredSkill, 'SKILL.md');
@@ -385,15 +394,14 @@ test('family-runtime use boundary uses verified LKG offline unless strict curren
     capabilityCatalogRef: catalog,
     packageCatalogRef: catalog,
   });
-  writeCapabilityCatalog(path.dirname(catalog), [consumer, provider]);
+  const releaseSet = writeCapabilityCatalog(path.dirname(catalog), [consumer, provider]);
   const env = {
     OPL_STATE_DIR: path.join(root, 'state'),
     CODEX_HOME: path.join(root, 'codex-home'),
+    ...releaseSet.env,
   };
   try {
-    await runCliAsync([
-      'packages', 'install', '--manifest-url', consumer, '--trust-tier', 'first_party',
-    ], env);
+    await runCliAsync(['packages', 'install', 'mas'], env);
     fs.rmSync(catalog, { force: true });
     const strict = runCliFailure(createSessionArgs(workspace, 'strict-offline'), {
       ...env,
@@ -417,15 +425,19 @@ test('family-runtime attempt start fails closed when its use receipt is tampered
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-capability-use-receipt-tamper-'));
   const workspace = path.join(root, 'workspace');
   const provider = writeCapabilityProvider(path.join(root, 'provider'), '0.1.0');
-  const consumer = writeMasConsumer(path.join(root, 'consumer'), provider);
+  const catalog = path.join(root, 'catalog', 'capability-catalog.json');
+  const consumer = writeMasConsumer(path.join(root, 'consumer'), provider, '0.1.0a4', {
+    capabilityCatalogRef: catalog,
+    packageCatalogRef: catalog,
+  });
+  const releaseSet = writeCapabilityCatalog(path.dirname(catalog), [consumer, provider]);
   const env = {
     OPL_STATE_DIR: path.join(root, 'state'),
     CODEX_HOME: path.join(root, 'codex-home'),
+    ...releaseSet.env,
   };
   try {
-    await runCliAsync([
-      'packages', 'install', '--manifest-url', consumer, '--trust-tier', 'first_party',
-    ], env);
+    await runCliAsync(['packages', 'install', 'mas'], env);
     const attempt = runCli(createSessionArgs(workspace, 'tampered-receipt'), env)
       .family_runtime_stage_attempt.attempt;
     const ledgerPath = path.join(env.OPL_STATE_DIR, 'agent-package-lifecycle-ledger.json');
@@ -511,15 +523,15 @@ test('family-runtime use boundary fails closed when the catalog has no compatibl
     capabilityCatalogRef: catalog,
     packageCatalogRef: catalog,
   });
-  writeCapabilityCatalog(path.dirname(catalog), [consumer, providerV2]);
+  const releaseSet = writeCapabilityCatalog(path.dirname(catalog), [consumer, providerV1]);
   const env = {
     OPL_STATE_DIR: path.join(root, 'state'),
     CODEX_HOME: path.join(root, 'codex-home'),
+    ...releaseSet.env,
   };
   try {
-    await runCliAsync([
-      'packages', 'install', '--manifest-url', consumer, '--trust-tier', 'first_party',
-    ], env);
+    await runCliAsync(['packages', 'install', 'mas'], env);
+    writeCapabilityCatalog(path.dirname(catalog), [consumer, providerV2]);
     const blocked = runCliFailure(createSessionArgs(workspace, 'incompatible-provider'), env);
     assert.equal(blocked.payload.error.details.failure_code, 'agent_package_capability_no_compatible_version');
     assert.equal(blocked.payload.error.details.update_action, 'opl packages update mas');
@@ -539,16 +551,15 @@ test('family-runtime use reconciliation rolls provider and scope back after an i
     capabilityCatalogRef: catalog,
     packageCatalogRef: catalog,
   });
-  writeCapabilityCatalog(path.dirname(catalog), [consumer, providerV1]);
+  const releaseSet = writeCapabilityCatalog(path.dirname(catalog), [consumer, providerV1]);
   const env = {
     OPL_STATE_DIR: path.join(root, 'state'),
     CODEX_HOME: path.join(root, 'codex-home'),
+    ...releaseSet.env,
   };
   const helper = path.join(workspace, '.codex', 'skills', 'medical-manuscript-writing', 'helper.txt');
   try {
-    await runCliAsync([
-      'packages', 'install', '--manifest-url', consumer, '--trust-tier', 'first_party',
-    ], env);
+    await runCliAsync(['packages', 'install', 'mas'], env);
     const baselineAttempt = runCli(createSessionArgs(workspace, 'baseline-session'), env)
       .family_runtime_stage_attempt.attempt;
     assert.match(fs.readFileSync(helper, 'utf8'), /0\.1\.0/);

@@ -18,7 +18,34 @@ test('system codex-config-hygiene reconciles only stale temp and global MAS tabl
   const configPath = path.join(codexHome, 'config.toml');
   const masWorkspaceConfig = path.join(root, 'med-autoscience', '.codex', 'config.toml');
   const validMarketplace = path.join(root, 'valid-marketplace');
-  const staleMarketplace = path.join(root, 'cache', 'opl-repo-temp-stale-mas');
+  const staleMarketplace = path.join(
+    root,
+    'cache',
+    'opl-package-mas-source-state-yylMYM',
+    'codex-plugin-marketplaces',
+    'opl-agent-mas-local',
+  );
+  const staleFixtureMarketplace = path.join(
+    root,
+    'cache',
+    'opl-package-mas-source-state-WzinK7',
+    'codex-plugin-marketplaces',
+    'opl-agent-fixture.mas-local',
+  );
+  const liveOplMarketplace = path.join(
+    root,
+    'cache',
+    'opl-package-rca-source-state-live',
+    'codex-plugin-marketplaces',
+    'opl-agent-rca-local',
+  );
+  const unrelatedMissingMarketplace = path.join(
+    root,
+    'cache',
+    'opl-package-mas-source-state-unrelated',
+    'codex-plugin-marketplaces',
+    'third-party-research-local',
+  );
   const globalMasCarrier = path.join(root, 'global-mas-carrier');
   const env = { HOME: home, CODEX_HOME: codexHome, OPL_STATE_DIR: stateDir };
   const originalConfig = [
@@ -29,6 +56,27 @@ test('system codex-config-hygiene reconciles only stale temp and global MAS tabl
     `source = "${staleMarketplace}"`,
     '',
     '[plugins."third-party-research@opl-agent-mas-local"]',
+    'enabled = true',
+    '',
+    '[marketplaces.opl-agent-fixture.mas-local]',
+    'source_type = "local"',
+    `source = "${staleFixtureMarketplace}"`,
+    '',
+    '[plugins."fixture-mas@opl-agent-fixture.mas-local"]',
+    'enabled = true',
+    '',
+    '[marketplaces.opl-agent-rca-local]',
+    'source_type = "local"',
+    `source = "${liveOplMarketplace}"`,
+    '',
+    '[plugins."rca@opl-agent-rca-local"]',
+    'enabled = true',
+    '',
+    '[marketplaces.third-party-research-local]',
+    'source_type = "local"',
+    `source = "${unrelatedMissingMarketplace}"`,
+    '',
+    '[plugins."third-party-research@third-party-research-local"]',
     'enabled = true',
     '',
     '[marketplaces.opl-agent-third.party.research-local]',
@@ -57,6 +105,7 @@ test('system codex-config-hygiene reconciles only stale temp and global MAS tabl
 
   try {
     fs.mkdirSync(validMarketplace, { recursive: true });
+    fs.mkdirSync(liveOplMarketplace, { recursive: true });
     fs.mkdirSync(globalMasCarrier, { recursive: true });
     fs.mkdirSync(path.dirname(configPath), { recursive: true });
     fs.writeFileSync(configPath, originalConfig, 'utf8');
@@ -72,7 +121,9 @@ test('system codex-config-hygiene reconciles only stale temp and global MAS tabl
       preview.receipt.removed_tables.map((entry: any) => entry.header).sort(),
       [
         'marketplaces.mas-scholar-skills-local',
+        'marketplaces.opl-agent-fixture.mas-local',
         'marketplaces.opl-agent-mas-local',
+        'plugins.fixture-mas@opl-agent-fixture.mas-local',
         'plugins.mas-scholar-skills@mas-scholar-skills-local',
         'plugins.third-party-research@opl-agent-mas-local',
       ],
@@ -98,6 +149,8 @@ test('system codex-config-hygiene reconciles only stale temp and global MAS tabl
     assert.doesNotMatch(reconciledConfig, /opl-agent-mas-local/);
     assert.doesNotMatch(reconciledConfig, /mas-scholar-skills-local/);
     assert.match(reconciledConfig, /opl-agent-third\.party\.research-local/);
+    assert.match(reconciledConfig, /opl-agent-rca-local/);
+    assert.match(reconciledConfig, /third-party-research@third-party-research-local/);
     assert.match(reconciledConfig, /ponytail@ponytail/);
     assert.equal(fs.readFileSync(masWorkspaceConfig, 'utf8'), workspaceConfig);
     assert.equal(fs.readFileSync(globalMasMarker, 'utf8'), 'physical carrier stays user-owned\n');

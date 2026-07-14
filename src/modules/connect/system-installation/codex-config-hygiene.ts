@@ -85,10 +85,32 @@ function pluginMarketplaceId(header: string) {
   return separator >= 0 ? identity.slice(separator + 1) : null;
 }
 
+function isOplPackageSourceStateMarketplace(id: string, source: string) {
+  const segments = source.split(/[\\/]/).filter(Boolean);
+  const stateIndex = segments.findIndex((segment) => /^opl-package-[a-z0-9][a-z0-9.-]*-source-state-[A-Za-z0-9_-]+$/.test(segment));
+  if (stateIndex < 0) return false;
+  const match = /^opl-package-([a-z0-9][a-z0-9.-]*)-source-state-[A-Za-z0-9_-]+$/.exec(segments[stateIndex]);
+  if (!match) return false;
+  const expectedIds = new Set([
+    `opl-agent-${match[1]}-local`,
+    `opl-agent-fixture.${match[1]}-local`,
+  ]);
+  return expectedIds.has(id)
+    && segments[stateIndex + 1] === 'codex-plugin-marketplaces'
+    && segments[stateIndex + 2] === id
+    && stateIndex + 3 === segments.length;
+}
+
 function isMissingOplTemporaryMarketplace(table: TomlTableBlock) {
   const id = marketplaceId(table.header);
   const source = tableStringValue(table, 'source');
-  if (!id || !source || !source.split(/[\\/]/).some((segment) => segment.startsWith('opl-repo-temp'))) {
+  if (!id || !source) return false;
+  const isOwnedTemporarySource = (
+    id.startsWith('opl-agent-')
+    && source.split(/[\\/]/).some((segment) => segment.startsWith('opl-repo-temp'))
+  )
+    || isOplPackageSourceStateMarketplace(id, source);
+  if (!isOwnedTemporarySource) {
     return false;
   }
   const sourceType = tableStringValue(table, 'source_type');

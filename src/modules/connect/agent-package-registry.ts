@@ -1963,11 +1963,6 @@ async function reconcilePackageClosureForUse(
         repair_action: `opl packages repair --package-id ${publicAgentPackageSelector(lock.package_id)}`,
       });
     }
-    assertAgentPackageUseBindingCarrierAuthority({
-      binding: pinned,
-      root: lock,
-      installedLocks: readLockIndex().packages,
-    });
     if (pinned.root_package.package_lock_ref !== lock.lock_ref
       || pinned.dependency_closure_digest !== lock.dependency_closure_digest) {
       throw new FrameworkContractError('contract_shape_invalid', 'The attempt package closure no longer matches its pinned use receipt.', {
@@ -1988,6 +1983,11 @@ async function reconcilePackageClosureForUse(
         ],
       });
     }
+    assertAgentPackageUseBindingCarrierAuthority({
+      binding: pinned,
+      root: lock,
+      installedLocks: readLockIndex().packages,
+    });
     return {
       freshnessMode: pinned.freshness_mode,
       latestVerified: pinned.latest_verified,
@@ -2186,6 +2186,8 @@ export async function ensureOplAgentPackageScopeActivation(input: AgentPackagePa
         artifactDigest: lock.artifact_digest ?? null,
         ownerSourceCommit: lock.owner_source_commit ?? null,
         carrierAuthority: lock.carrier_authority ?? null,
+        releaseChannelRef: lock.release_channel_ref ?? null,
+        releaseChannelDigest: lock.release_channel_digest ?? null,
         scopeMaterialization: materializations[0],
         scopeMaterializations: materializations,
       })
@@ -2286,6 +2288,8 @@ export async function ensureOplAgentPackageScopeActivation(input: AgentPackagePa
     artifactDigest: activatedLock.artifact_digest ?? null,
     ownerSourceCommit: activatedLock.owner_source_commit ?? null,
     carrierAuthority: activatedLock.carrier_authority ?? null,
+    releaseChannelRef: activatedLock.release_channel_ref ?? null,
+    releaseChannelDigest: activatedLock.release_channel_digest ?? null,
     useBinding,
   });
   useBinding.use_receipt_ref = useReceipt.receipt_ref;
