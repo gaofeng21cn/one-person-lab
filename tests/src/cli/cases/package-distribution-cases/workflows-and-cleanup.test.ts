@@ -110,6 +110,7 @@ test('framework packages workflow is release-gated and manually repairable witho
     'package-channel-daily-check.mjs',
     'package-release-discipline.mjs',
     'oci-publication-preflight.mjs',
+    'preflight-package-publication-set.mjs',
     'finalize-package-channel-digests.mjs',
     'generate-release-supply-chain.mjs',
     'write-release-promotion-receipt.mjs',
@@ -137,6 +138,11 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.match(workflow, /OPL_CHANGED_PACKAGES_JSON/);
   assert.match(workflow, /--component-id opl-base/);
   assert.match(workflow, /oras push .*--format json/s);
+  assert.ok(
+    workflow.indexOf('Preflight complete immutable publication set')
+      < workflow.indexOf('Publish immutable Packages and finalize complete BOM'),
+  );
+  assert.match(workflow, /--report dist\/opl-packages\/package-publication-preflight-report\.json/);
   assert.match(workflow, /finalize-package-channel-digests\.mjs/);
   assert.match(workflow, /owner-cohort-lock\.json/);
   assert.match(workflow, /owner_cohort_artifact_name/);

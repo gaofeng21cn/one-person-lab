@@ -726,6 +726,22 @@ test('package archive builder writes channel manifest checksums git source and r
 
   const docsOnlyFixturePath = path.join(repoRoot, 'docs', `.runtime-archive-exclusion-${process.pid}.md`);
   const repeatOutDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-repeat-out-'));
+  const immutablePreviousManifestPath = path.join(outDir, 'immutable-previous-manifest.json');
+  const immutablePreviousManifest = structuredClone(finalizedChannelManifest);
+  const immutablePreviousFlow = immutablePreviousManifest.packages.package_catalog['opl-flow'].versions
+    .find((entry: Record<string, unknown>) => entry.selection_status === 'selected_for_release_set');
+  const immutablePreviousFlowManifest = JSON.parse(immutablePreviousFlow.manifest_json);
+  immutablePreviousFlowManifest.immutable_registry_fixture = 'preserve exact published metadata';
+  immutablePreviousFlow.manifest_json = `${JSON.stringify(immutablePreviousFlowManifest, null, 2)}\n`;
+  immutablePreviousFlow.manifest_sha256 = `sha256:${crypto.createHash('sha256').update(immutablePreviousFlow.manifest_json).digest('hex')}`;
+  immutablePreviousFlow.package_manifest.sha256 = immutablePreviousFlow.manifest_sha256;
+  const immutablePreviousFlowPayload = JSON.parse(immutablePreviousFlow.payload_manifest_json);
+  delete immutablePreviousFlowPayload.package_source.archive_root;
+  immutablePreviousFlowPayload.immutable_registry_fixture = 'legacy published payload';
+  immutablePreviousFlow.payload_manifest_json = `${JSON.stringify(immutablePreviousFlowPayload, null, 2)}\n`;
+  immutablePreviousFlow.payload_manifest_sha256 = `sha256:${crypto.createHash('sha256').update(immutablePreviousFlow.payload_manifest_json).digest('hex')}`;
+  immutablePreviousFlow.payload_digest = immutablePreviousFlow.payload_manifest_sha256;
+  fs.writeFileSync(immutablePreviousManifestPath, `${JSON.stringify(immutablePreviousManifest, null, 2)}\n`, 'utf8');
   try {
     fs.writeFileSync(docsOnlyFixturePath, 'This file must not affect OPL Base runtime archive bytes.\n', 'utf8');
     execFileSync(process.execPath, [
@@ -735,7 +751,7 @@ test('package archive builder writes channel manifest checksums git source and r
       '--owner', 'gaofeng21cn',
       '--out-dir', repeatOutDir,
       '--owner-cohort-lock', archiveBuilderResult.owner_cohort_lock,
-      '--previous-manifest', previousManifest,
+      '--previous-manifest', immutablePreviousManifestPath,
       '--app-component-manifest', appComponentManifest,
     ], { cwd: repoRoot, encoding: 'utf8', env: ownerSourceEnv });
     const repeatedManifest = parseJsonText(fs.readFileSync(
@@ -746,6 +762,32 @@ test('package archive builder writes channel manifest checksums git source and r
       repeatedManifest.packages.framework_core.source_archive.sha256,
       manifest.packages.framework_core.source_archive.sha256,
     );
+    const repeatedChannelManifest = parseJsonText(fs.readFileSync(
+      path.join(repeatOutDir, 'opl-channel-manifest.json'),
+      'utf8',
+    )) as Record<string, any>;
+    const repeatedFlow = repeatedChannelManifest.packages.package_catalog['opl-flow'].versions
+      .find((entry: Record<string, unknown>) => entry.selection_status === 'selected_for_release_set');
+    assert.deepEqual(repeatedFlow, immutablePreviousFlow);
+
+    const collisionPreviousManifest = structuredClone(immutablePreviousManifest);
+    collisionPreviousManifest.packages.package_catalog.mas.versions[0].owner_source_commit = 'f'.repeat(40);
+    const collisionPreviousManifestPath = path.join(outDir, 'immutable-collision-previous-manifest.json');
+    fs.writeFileSync(
+      collisionPreviousManifestPath,
+      `${JSON.stringify(collisionPreviousManifest, null, 2)}\n`,
+      'utf8',
+    );
+    assert.throws(() => execFileSync(process.execPath, [
+      '--experimental-strip-types',
+      path.join(repoRoot, 'scripts/package-archives.mjs'),
+      '--release-set-generation', '26.4.33',
+      '--owner', 'gaofeng21cn',
+      '--out-dir', fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-collision-out-')),
+      '--owner-cohort-lock', archiveBuilderResult.owner_cohort_lock,
+      '--previous-manifest', collisionPreviousManifestPath,
+      '--app-component-manifest', appComponentManifest,
+    ], { cwd: repoRoot, encoding: 'utf8', env: ownerSourceEnv }), /Immutable Package version collision for mas:0\.2\.1.*Bump the owner Package version/s);
   } finally {
     fs.rmSync(docsOnlyFixturePath, { force: true });
     fs.rmSync(repeatOutDir, { recursive: true, force: true });

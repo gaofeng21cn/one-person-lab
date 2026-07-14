@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 
 import { assert, execFileSync, fs, os, parseJsonText, path, repoRoot, test } from './helpers.ts';
 
@@ -115,4 +116,95 @@ test('OCI publication readback verifies exact digest with an anonymous registry 
     '--expected-digest', `sha256:${'e'.repeat(64)}`,
     '--anonymous',
   ], { encoding: 'utf8', env: value.env }), /OCI digest readback mismatch/);
+});
+
+test('complete publication-set preflight reports every conflict before any push', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-publication-set-preflight-'));
+  const packageRoot = path.join(root, 'packages', 'mas');
+  const frameworkRoot = path.join(root, 'framework');
+  fs.mkdirSync(packageRoot, { recursive: true });
+  fs.mkdirSync(frameworkRoot, { recursive: true });
+  fs.writeFileSync(path.join(packageRoot, 'mas-0.2.1.tar.gz'), 'mas archive\n');
+  fs.writeFileSync(path.join(packageRoot, 'package-manifest.json'), '{}\n');
+  fs.writeFileSync(path.join(packageRoot, 'payload-manifest.json'), '{}\n');
+  fs.writeFileSync(path.join(frameworkRoot, 'one-person-lab-framework-0.1.0.tar.gz'), 'base archive\n');
+  fs.writeFileSync(path.join(root, 'opl-release-manifest.json'), `${JSON.stringify({
+    release_set_generation: '26.7.13-r5',
+    release_set: {
+      owner_cohort_lock: { ref: 'owner-cohort-lock.json', digest: `sha256:${'1'.repeat(64)}` },
+      components: {
+        packages: {
+          members: {
+            mas: {
+              package_version: '0.2.1',
+              owner_source_commit: '2'.repeat(40),
+              artifact_ref: 'ghcr.io/example/one-person-lab-packages/mas:0.2.1',
+            },
+          },
+        },
+        base: {
+          version: '0.1.0',
+          source_commit: '3'.repeat(40),
+          artifact_ref: 'ghcr.io/example/one-person-lab-framework:0.1.0',
+        },
+        app: {
+          version: '26.7.13',
+          source_commit: '4'.repeat(40),
+          artifact_digest: `sha256:${'5'.repeat(64)}`,
+        },
+      },
+    },
+  }, null, 2)}\n`);
+  const fakePreflight = path.join(root, 'fake-preflight.mjs');
+  fs.writeFileSync(fakePreflight, `
+const ref = process.argv[process.argv.indexOf('--ref') + 1];
+if (ref.includes('/mas:')) {
+  console.error('mas immutable conflict');
+  process.exit(1);
+}
+console.log(JSON.stringify({ status: 'absent_publish_required', action: 'publish', digest: null }));
+`);
+  const reportPath = path.join(root, 'report.json');
+  const result = spawnSync(process.execPath, [
+    path.join(repoRoot, 'scripts/preflight-package-publication-set.mjs'),
+    '--root', root,
+    '--owner', 'example',
+    '--source-url', 'https://github.com/example/one-person-lab',
+    '--harness-sha', '6'.repeat(40),
+    '--report', reportPath,
+    '--preflight-script', fakePreflight,
+  ], { encoding: 'utf8' });
+  assert.equal(result.status, 1);
+  const report = parseJsonText(fs.readFileSync(reportPath, 'utf8')) as Record<string, any>;
+  assert.equal(report.status, 'failed');
+  assert.equal(report.summary.component_count, 2);
+  assert.equal(report.summary.conflict_count, 1);
+  assert.equal(report.summary.publish_count, 1);
+  assert.deepEqual(
+    report.components.map((entry: Record<string, unknown>) => entry.component_id),
+    ['mas', 'opl-base'],
+  );
+  assert.match(report.components[0].error, /mas immutable conflict/);
+  assert.equal(report.components[1].action, 'publish');
+
+  const wrongOwnerManifest = parseJsonText(fs.readFileSync(
+    path.join(root, 'opl-release-manifest.json'),
+    'utf8',
+  )) as Record<string, any>;
+  wrongOwnerManifest.release_set.components.packages.members.mas.artifact_ref =
+    'ghcr.io/not-example/one-person-lab-packages/mas:0.2.1';
+  fs.writeFileSync(
+    path.join(root, 'opl-release-manifest.json'),
+    `${JSON.stringify(wrongOwnerManifest, null, 2)}\n`,
+  );
+  const wrongOwner = spawnSync(process.execPath, [
+    path.join(repoRoot, 'scripts/preflight-package-publication-set.mjs'),
+    '--root', root,
+    '--owner', 'example',
+    '--source-url', 'https://github.com/example/one-person-lab',
+    '--harness-sha', '6'.repeat(40),
+    '--preflight-script', fakePreflight,
+  ], { encoding: 'utf8' });
+  assert.equal(wrongOwner.status, 1);
+  assert.match(wrongOwner.stderr, /mas\.artifact_ref must belong to ghcr\.io\/example\//);
 });

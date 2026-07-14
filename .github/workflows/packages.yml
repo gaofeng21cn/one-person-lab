@@ -381,6 +381,17 @@ jobs:
       - name: Check Package release discipline
         run: node "$OPL_RELEASE_HARNESS_ROOT/scripts/package-release-discipline.mjs" --manifest dist/opl-packages/opl-release-manifest.json --promotion-target "$OPL_PACKAGE_PROMOTION_TARGET"
 
+      - name: Preflight complete immutable publication set
+        shell: bash
+        run: |
+          set -euo pipefail
+          node "$OPL_RELEASE_HARNESS_ROOT/scripts/preflight-package-publication-set.mjs" \
+            --root dist/opl-packages \
+            --owner "$OPL_PACKAGES_OWNER" \
+            --source-url "$OPL_OCI_SOURCE_URL" \
+            --harness-sha "$GITHUB_SHA" \
+            --report dist/opl-packages/package-publication-preflight-report.json
+
       - name: Publish immutable Packages and finalize complete BOM
         shell: bash
         env:

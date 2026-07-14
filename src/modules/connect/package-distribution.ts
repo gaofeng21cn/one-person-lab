@@ -840,17 +840,44 @@ function mergePackageCatalog(
   return Object.fromEntries(Object.entries(currentCatalog).map(([packageId, current]) => {
     const previousVersions = retainedVersions(previousManifest, packageId);
     const generatedCurrentVersion = current.versions[0];
-    const reusablePublishedVersion = previousVersions.find((candidate) => (
+    const previousCurrentVersion = previousVersions.find((candidate) => (
       stringValue(candidate.package_version) === generatedCurrentVersion.package_version
-      && stringValue(candidate.package_content_digest) === generatedCurrentVersion.package_content_digest
-      && candidate.artifact_status === 'published_immutable'
-      && /^sha256:[0-9a-f]{64}$/.test(stringValue(candidate.artifact_digest) ?? '')
     ));
+    const immutableIdentityFields = [
+      'package_content_digest',
+      'owner_source_commit',
+      'owner_package_manifest_sha256',
+      'owner_language_version',
+      'owner_version_tag',
+      'source_artifact_ref',
+    ] as const;
+    const immutableIdentityDrift = previousCurrentVersion
+      ? immutableIdentityFields.filter((field) => (
+          (previousCurrentVersion[field] ?? null) !== (generatedCurrentVersion[field] ?? null)
+        ))
+      : [];
+    if (immutableIdentityDrift.length > 0) {
+      throw new Error(
+        `Immutable Package version collision for ${packageId}:${generatedCurrentVersion.package_version}: `
+        + `${immutableIdentityDrift.join(', ')} changed. Bump the owner Package version before publication.`,
+      );
+    }
+    const reusablePublishedVersion = previousCurrentVersion
+      && previousCurrentVersion.artifact_status === 'published_immutable'
+      && /^sha256:[0-9a-f]{64}$/.test(stringValue(previousCurrentVersion.artifact_digest) ?? '')
+      ? previousCurrentVersion
+      : null;
+    if (reusablePublishedVersion && !isRetainableCatalogVersion(reusablePublishedVersion)) {
+      throw new Error(
+        `Published immutable Package version ${packageId}:${generatedCurrentVersion.package_version} `
+        + 'is incomplete in the previous channel manifest.',
+      );
+    }
     const currentVersion = reusablePublishedVersion
       ? {
           ...generatedCurrentVersion,
-          artifact_digest: reusablePublishedVersion.artifact_digest,
-          artifact_status: 'published_immutable',
+          ...reusablePublishedVersion,
+          selection_status: 'selected_for_release_set',
         }
       : generatedCurrentVersion;
     const retained = previousVersions
@@ -873,6 +900,9 @@ function mergePackageCatalog(
     }
     return [packageId, {
       ...current,
+      dependency_package_ids: Array.isArray(currentVersion.dependency_package_ids)
+        ? currentVersion.dependency_package_ids
+        : current.dependency_package_ids,
       versions: [...byVersion.values()].sort(comparePackageVersions).slice(0, retainVersions),
     }];
   }));

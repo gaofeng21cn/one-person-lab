@@ -220,6 +220,7 @@ function validateWorkflow(manifest, manifestPath, failures) {
     'package-channel-daily-check.mjs',
     'package-release-discipline.mjs',
     'oci-publication-preflight.mjs',
+    'preflight-package-publication-set.mjs',
     'finalize-package-channel-digests.mjs',
     'generate-release-supply-chain.mjs',
     'write-release-promotion-receipt.mjs',
@@ -232,7 +233,8 @@ function validateWorkflow(manifest, manifestPath, failures) {
   assertCondition(/concurrency:[\s\S]*opl-package-publication-/.test(source) && /cancel-in-progress:\s*false/.test(source), 'Package publication must be serialized without cancellation', failures);
   assertCondition(/release_set_generation:/.test(source) && !/\n\s+opl_version:/.test(source), 'Package workflow input must be Release Set generation', failures);
   assertCondition(/oci-publication-preflight\.mjs/.test(source), 'Package workflow must run OCI immutable preflight', failures);
-  assertCondition(source.indexOf('oci-publication-preflight.mjs') < source.indexOf('oras push --format json'), 'Immutable preflight must run before the first OCI push', failures);
+  assertCondition(/preflight-package-publication-set\.mjs/.test(source)
+    && source.indexOf('preflight-package-publication-set.mjs') < source.indexOf('oras push --format json'), 'Complete immutable publication-set preflight must run before the first OCI push', failures);
   assertCondition(/existing_identical_reuse|\.action.*reuse|= reuse/.test(source), 'Package workflow must reuse identical immutable tags', failures);
   assertCondition(/org\.opencontainers\.image\.source/.test(source), 'OCI artifacts must declare repository source association', failures);
   assertCondition(/visibility" -f visibility=public|visibility=public/.test(source), 'Package workflow must enforce public GHCR visibility', failures);
