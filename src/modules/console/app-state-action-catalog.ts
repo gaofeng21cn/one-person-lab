@@ -228,7 +228,10 @@ function workspaceActionsFromNorm(contract: AgentWorkspaceNormContract): AppActi
   ];
 }
 
-export function buildActionCatalog(contracts: FrameworkContracts) {
+export function buildActionCatalog(
+  contracts: FrameworkContracts,
+  options: { inspectExternalOwners?: boolean } = {},
+) {
   const codexActions: AppActionCatalogEntry[] = (['install', 'update', 'reinstall', 'remove'] as const).map((action) => ({
     action_id: `codex_${action}`,
     label: `${action[0].toUpperCase()}${action.slice(1)} Codex CLI`,
@@ -277,7 +280,7 @@ export function buildActionCatalog(contracts: FrameworkContracts) {
       mutates: 'opl_update_channel_config',
     },
     ...codexActions,
-    ...listExternalOwnerDelegatedUpdateActions().map((action) => ({
+    ...(options.inspectExternalOwners === false ? [] : listExternalOwnerDelegatedUpdateActions()).map((action) => ({
       action_id: action.action_id,
       label: action.label,
       surface: action.surface,

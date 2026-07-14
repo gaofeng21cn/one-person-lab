@@ -1,5 +1,6 @@
 import { assert, fs, os, parseJsonText, path, repoRoot, runCli, test } from '../helpers.ts';
 import {
+  buildOplDeveloperModeProjection,
   resolveOplDeveloperModeFrameworkCheckout,
 } from '../../../../src/modules/connect/developer-mode.ts';
 
@@ -78,8 +79,28 @@ test('developer supervisor persists direct-route developer mode only from explic
     ], env).system_action;
 
     assert.equal(initial.developer_mode.status, 'ready');
+    assert.equal(initial.developer_mode.enabled, 'auto');
+    assert.equal(initial.developer_mode.mode, 'developer_apply_safe');
     assert.equal(initial.developer_mode.effective_state, 'active_direct');
+    assert.equal(initial.developer_mode.inactive_reason, null);
+    assert.equal(initial.developer_mode.capabilities.source_channel.status, 'ready');
+    assert.equal(initial.developer_mode.capabilities.github_authority.status, 'ready');
+    assert.equal(initial.developer_mode.capabilities.agent_automation.status, 'ready');
+    assert.equal(initial.developer_mode.capabilities.agent_automation.level, 'repo_repair_automation');
     assert.equal(initial.developer_mode.capabilities.runtime_mutation_scope.status, 'blocked');
+    assert.deepEqual(initial.developer_mode.repository_maintenance_protection, {
+      status: 'ready',
+      dirty_worktree: {
+        policy: 'block_in_place_mutation',
+        requires_isolated_worktree: true,
+        preserves_existing_changes: true,
+      },
+      branch: {
+        policy: 'topic_branch_required',
+        protected_branches: ['main', 'master'],
+        direct_push_to_protected_branch: false,
+      },
+    });
     assert.equal(updated.status, 'completed');
     assert.equal(updated.developer_supervisor.source, 'user_config');
     assert.equal(updated.developer_mode.allowed_route, 'direct_repo_fix');
@@ -103,6 +124,30 @@ test('developer supervisor persists direct-route developer mode only from explic
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
+});
+
+test('automatic developer mode reports authority inspection pending on fast reads', () => {
+  const projection = buildOplDeveloperModeProjection({
+    version: 'g1',
+    enabled: 'auto',
+    mode: 'developer_apply_safe',
+    auto_enable_github_login: 'gaofeng21cn',
+    source: 'default',
+    updated_at: '2026-07-14T00:00:00.000Z',
+  }, { detail: 'fast' });
+
+  assert.equal(projection.status, 'pending');
+  assert.equal(projection.effective_state, 'inspection_pending');
+  assert.equal(projection.inactive_reason, 'authority_inspection_pending');
+  assert.equal(projection.allowed_route, 'blocked');
+  assert.equal(projection.github_identity.status, 'skipped');
+  assert.equal(projection.repo_authority.status, 'not_checked');
+  assert.equal(projection.developer_profile.status, 'not_checked');
+  assert.equal(projection.capabilities.source_channel.status, 'not_checked');
+  assert.equal(projection.capabilities.github_authority.status, 'not_checked');
+  assert.equal(projection.capabilities.runtime_mutation_scope.status, 'blocked');
+  assert.equal(projection.framework_checkout.selected_source_kind, 'managed_runtime');
+  assert.equal(projection.framework_checkout.should_use_local_checkout, false);
 });
 
 test('developer mode framework checkout resolves explicit local route', () => {

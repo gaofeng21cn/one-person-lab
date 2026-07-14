@@ -67,6 +67,7 @@ export type BuildWorkItemProjectionV2Options = {
   resolveDescriptor?: InventoryDescriptorResolver;
   findWorkItemControl?: WorkItemControlResolver;
   generatedAt?: string;
+  inventoryDetail?: 'deferred' | 'included';
 };
 
 export function buildWorkItemProjectionV2(
@@ -75,6 +76,57 @@ export function buildWorkItemProjectionV2(
   const profile = options.profile ?? 'full';
   const generatedAt = options.generatedAt ?? nowIso();
   const projectCatalog = buildProjectCatalog(options.bindings ?? listWorkspaceBindings());
+  if (options.inventoryDetail === 'deferred') {
+    const { agents, availability } = buildAgentCatalog({
+      profile,
+      checkedAt: generatedAt,
+      packageItems: options.packageProjectionItems,
+      packageStatusById: options.packageStatusById,
+    });
+    return {
+      surface_kind: 'opl_work_item_projection',
+      schema_version: 'work-item-projection.v2',
+      profile,
+      generated_at: generatedAt,
+      agent_catalog: agents,
+      agent_availability: availability,
+      project_catalog: projectCatalog.projects,
+      summary: {
+        agent_count: agents.length,
+        project_count: projectCatalog.projects.length,
+        work_item_count: 0,
+        visible_work_item_count: 0,
+        archived_work_item_count: 0,
+        total_work_item_count: 0,
+        running_count: 0,
+        user_attention_count: 0,
+        system_attention_count: 0,
+        telemetry_observed_count: 0,
+        telemetry_missing_count: 0,
+      },
+      items: [],
+      diagnostics: {
+        count: projectCatalog.diagnostics.length,
+        items: [],
+        detail_policy: 'summary_only',
+      },
+      detail_policy: {
+        all_work_item_summaries_included: false,
+        attempt_ref_limit_per_item: 0,
+        diagnostic_details: 'lazy',
+        inventory_detail: 'deferred',
+        full_detail_surface: 'opl app state --profile full --json',
+      },
+      authority_boundary: {
+        projection_only: true,
+        can_write_domain_truth: false,
+        can_create_owner_receipt: false,
+        can_create_typed_blocker: false,
+        can_authorize_quality_verdict: false,
+        temporal_is_work_item_inventory: false,
+      },
+    };
+  }
   const inventoryItems: WorkItemProjectionItem[] = [];
   const diagnostics = [...projectCatalog.diagnostics];
   const descriptorCache = new Map<string, ReturnType<InventoryDescriptorResolver>>();
@@ -159,6 +211,8 @@ export function buildWorkItemProjectionV2(
       all_work_item_summaries_included: true,
       attempt_ref_limit_per_item: profile === 'fast' ? 1 : 8,
       diagnostic_details: profile === 'fast' ? 'lazy' : 'included',
+      inventory_detail: 'included',
+      full_detail_surface: 'opl app state --profile full --json',
     },
     authority_boundary: {
       projection_only: true,

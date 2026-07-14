@@ -172,29 +172,43 @@ exit 1
       ],
     );
     assert.deepEqual(
+      configurationCatalog.host_owned_configuration_surfaces,
+      [output.app_state.settings_control_center.app_settings_read_model.workspace_services.app_log_directory],
+    );
+    const appLogDirectory = configurationCatalog.host_owned_configuration_surfaces[0];
+    assert.equal(appLogDirectory.configuration_id, 'log_directory');
+    assert.equal(appLogDirectory.owner_page_id, 'workspace');
+    assert.equal(appLogDirectory.typed_host_action_ref, 'application.updateSystemInfo');
+    assert.deepEqual(appLogDirectory.preserved_payload_fields, ['cacheDir', 'workDir']);
+    assert.equal(appLogDirectory.framework_action_id, null);
+    assert.equal(appLogDirectory.framework_write_allowed, false);
+    assert.equal(appLogDirectory.docker_volume_projection.host_volume_ref, 'OnePersonLab/data');
+    assert.equal(appLogDirectory.docker_volume_projection.container_path, '/data');
+    assert.equal(appLogDirectory.docker_volume_projection.framework_rewire_allowed, false);
+    assert.equal(JSON.stringify(output.app_state.settings_control_center).includes('log_directory_set'), false);
+    assert.deepEqual(
       configurationCatalog.items.map((entry: any) => entry.action_id).filter(
         (actionId: string) => !output.app_state.settings_control_center.allowed_action_ids.includes(actionId),
       ),
       [],
     );
+    assert.deepEqual(output.app_state.settings_control_center.action_catalog, []);
+    assert.deepEqual(output.app_state.settings_control_center.task_entries, []);
+    assert.equal(output.app_state.settings_control_center.detail_policy.action_catalog, 'deferred');
+    assert.equal(output.app_state.settings_control_center.detail_policy.task_entries, 'deferred');
+    assert.equal(output.app_state.settings_control_center.detail_policy.settings_projection, 'deferred');
     assert.equal(
-      output.app_state.settings_control_center.action_catalog.every(
-        (entry: any) => entry.surface_class === 'action'
-          && entry.owner === 'one-person-lab'
-          && entry.lifecycle === 'one_time_action',
-      ),
-      true,
+      output.app_state.settings_control_center.detail_policy.layout_source,
+      'one-person-lab-app/contracts/app-product-profile.json#settings_control_center',
     );
     assert.equal(
-      Object.values(output.app_state.settings_control_center.settings_projection.sections).every(
-        (section: any) => ['status', 'diagnostic'].includes(section.surface_class)
-          && section.items.every((entry: any) => entry.surface_class === section.surface_class),
-      ),
-      true,
+      output.app_state.settings_control_center.detail_policy.startup_layout_policy,
+      'read_persisted_app_narrow_snapshot_then_refresh_in_background',
     );
+    assert.equal(output.app_state.settings_control_center.detail_policy.broad_app_state_layout_inference, 'forbidden');
     assert.equal(
-      output.app_state.settings_control_center.settings_projection.sections.diagnostics.surface_class,
-      'diagnostic',
+      output.app_state.settings_control_center.detail_policy.full_detail_surface,
+      'opl app state --profile full --json#settings_control_center',
     );
 
     assert.equal(output.app_state.operator.default_read_surface_policy.profile, 'fast');

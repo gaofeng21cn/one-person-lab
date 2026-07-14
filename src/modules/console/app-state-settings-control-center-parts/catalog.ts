@@ -70,6 +70,13 @@ export type SettingsSecondaryRoute = {
   ordinary_entry_policy: string;
 };
 
+export type SettingsCompatibilityRedirect = {
+  source_route_id: string;
+  target_route_id: string;
+  target_section_id: string;
+  resolution_policy: string;
+};
+
 export type ConsumerOnlyTruthSurface = {
   surface: string;
   owner: string;
@@ -227,39 +234,71 @@ export const SETTINGS_CONTROL_CENTER_GROUPS: SettingsControlCenterGroup[] = [
   {
     group_id: 'overview',
     label: 'Overview',
-    role: 'control_center_summary',
+    role: 'overall_usability_exceptions_and_next_action_without_owner_detail_duplication',
     route_id: 'general',
-    action_section_ids: ['model_access', 'connections', 'docker_webui', 'workspace', 'capabilities', 'packages', 'updates', 'runtime_roots'],
+    action_section_ids: [],
     ordinary_entry_policy: 'top_level_control_center_route',
   },
   {
-    group_id: 'setup_access',
-    label: 'Setup & Access',
-    role: 'connect_models_accounts_workspace_web_remote',
+    group_id: 'gateway',
+    label: 'Account & Gateway',
+    role: 'gateway_identity_usage_credentials_and_account_lifecycle',
+    route_id: 'gateway',
+    action_section_ids: ['gateway_account'],
+    ordinary_entry_policy: 'top_level_control_center_route',
+  },
+  {
+    group_id: 'models',
+    label: 'Models',
+    role: 'model_source_selection_reasoning_and_active_codex_cli',
     route_id: 'access',
-    action_section_ids: ['model_access', 'connections', 'docker_webui', 'workspace', 'codex_surface'],
+    action_section_ids: ['model_access'],
+    ordinary_entry_policy: 'top_level_control_center_route',
+  },
+  {
+    group_id: 'workspace',
+    label: 'Workspace & Personalization',
+    role: 'workspace_root_app_log_directory_permissions_user_agents_and_app_context_refs',
+    route_id: 'workspace',
+    action_section_ids: ['workspace'],
+    ordinary_entry_policy: 'top_level_control_center_route',
+  },
+  {
+    group_id: 'agents',
+    label: 'Agents',
+    role: 'agent_packages_source_selection_developer_mode_and_home_visibility',
+    route_id: 'agents',
+    action_section_ids: ['packages'],
     ordinary_entry_policy: 'top_level_control_center_route',
   },
   {
     group_id: 'capabilities',
     label: 'Capabilities',
-    role: 'managed_agents_capability_status_and_tools',
+    role: 'flow_managed_and_third_party_skills_plugins_and_connectors',
     route_id: 'capabilities',
     action_section_ids: ['capabilities', 'codex_surface'],
     ordinary_entry_policy: 'top_level_control_center_route',
   },
   {
-    group_id: 'maintenance_updates',
-    label: 'Maintenance & Updates',
-    role: 'updates_packages_repairs_service_health',
-    route_id: 'environment',
-    action_section_ids: ['docker_webui', 'packages', 'updates', 'capabilities', 'runtime_roots'],
+    group_id: 'resources',
+    label: 'Resources & Connections',
+    role: 'webui_workspace_and_external_resource_connections',
+    route_id: 'resources',
+    action_section_ids: ['connections', 'docker_webui'],
     ordinary_entry_policy: 'top_level_control_center_route',
   },
   {
-    group_id: 'data_storage',
+    group_id: 'maintenance',
+    label: 'Maintenance',
+    role: 'managed_dependencies_updates_repairs_services_and_diagnostics',
+    route_id: 'environment',
+    action_section_ids: ['updates'],
+    ordinary_entry_policy: 'top_level_control_center_route',
+  },
+  {
+    group_id: 'storage',
     label: 'Data & Storage',
-    role: 'local_data_lifecycle_and_safe_cleanup',
+    role: 'local_data_usage_safe_cleanup_and_owner_page_references',
     route_id: 'storage',
     action_section_ids: ['runtime_roots'],
     ordinary_entry_policy: 'top_level_control_center_route',
@@ -272,65 +311,67 @@ export const SETTINGS_CONTROL_CENTER_GROUPS: SettingsControlCenterGroup[] = [
     action_section_ids: [],
     ordinary_entry_policy: 'top_level_control_center_route',
   },
-  {
-    group_id: 'advanced',
-    label: 'Advanced',
-    role: 'developer_diagnostics_versions_links_raw_refs',
-    route_id: 'advanced',
-    action_section_ids: ['codex_surface', 'updates'],
-    ordinary_entry_policy: 'top_level_control_center_route',
-  },
 ];
 
 export const SETTINGS_CONTROL_CENTER_SECONDARY_ROUTES: SettingsSecondaryRoute[] = [
   {
-    route_id: 'workspace',
-    group_id: 'overview',
-    parent_route_id: 'general',
-    label: 'Workspace',
-    role: 'workspace_root_permissions_and_user_work_product_location',
-    action_section_ids: ['workspace', 'runtime_roots'],
-    ordinary_entry_policy: 'secondary_page_under_overview_task_entry',
-  },
-  {
-    route_id: 'local-services',
-    group_id: 'maintenance_updates',
-    parent_route_id: 'environment',
-    label: 'Local Services',
-    role: 'codex_temporal_background_services_and_capability_pack_health',
-    action_section_ids: ['docker_webui', 'codex_surface', 'capabilities', 'packages'],
-    ordinary_entry_policy: 'secondary_page_under_maintenance_updates',
-  },
-  {
     route_id: 'about',
-    group_id: 'advanced',
-    parent_route_id: 'advanced',
+    group_id: 'about',
+    parent_route_id: 'settings_control_center',
     label: 'About',
     role: 'version_links_and_release_notes',
-    action_section_ids: ['updates'],
-    ordinary_entry_policy: 'secondary_page_under_advanced',
-  },
-  {
-    route_id: 'update',
-    group_id: 'maintenance_updates',
-    parent_route_id: 'environment',
-    label: 'Update',
-    role: 'app_update_status_and_post_update_guidance',
-    action_section_ids: ['updates'],
-    ordinary_entry_policy: 'secondary_page_under_maintenance_updates',
-  },
-  {
-    route_id: 'theme',
-    group_id: 'preferences',
-    parent_route_id: 'appearance',
-    label: 'Theme',
-    role: 'appearance_theme_preferences',
     action_section_ids: [],
-    ordinary_entry_policy: 'secondary_page_under_preferences',
+    ordinary_entry_policy: 'independent_secondary_page',
+  },
+];
+
+export const SETTINGS_CONTROL_CENTER_COMPATIBILITY_REDIRECTS: SettingsCompatibilityRedirect[] = [
+  {
+    source_route_id: 'advanced',
+    target_route_id: 'environment',
+    target_section_id: 'diagnostics',
+    resolution_policy: 'resolve_before_render_and_focus_target_section',
+  },
+  {
+    source_route_id: 'system',
+    target_route_id: 'environment',
+    target_section_id: 'diagnostics',
+    resolution_policy: 'resolve_before_render_and_focus_target_section',
+  },
+  {
+    source_route_id: 'update',
+    target_route_id: 'environment',
+    target_section_id: 'updates',
+    resolution_policy: 'resolve_before_render_and_focus_target_section',
+  },
+  {
+    source_route_id: 'local-services',
+    target_route_id: 'environment',
+    target_section_id: 'services',
+    resolution_policy: 'resolve_before_render_and_focus_target_section',
+  },
+  {
+    source_route_id: 'theme',
+    target_route_id: 'appearance',
+    target_section_id: 'themes',
+    resolution_policy: 'resolve_before_render_and_focus_target_section',
+  },
+  {
+    source_route_id: 'personalization',
+    target_route_id: 'workspace',
+    target_section_id: 'personalization',
+    resolution_policy: 'resolve_before_render_and_focus_target_section',
   },
 ];
 
 export const SETTINGS_CONTROL_CENTER_ACTION_SECTIONS: SettingsSection[] = [
+  {
+    section_id: 'gateway_account',
+    label: 'OPL Gateway account',
+    description: 'Gateway identity, usage, credential state, and account lifecycle actions.',
+    state: 'available',
+    source_ref: 'app_state.settings_control_center.app_settings_read_model.opl_gateway_account',
+  },
   {
     section_id: 'model_access',
     label: 'Model access',
@@ -401,7 +442,7 @@ export const SETTINGS_CONTROL_CENTER_ACTIONS: SettingsAction[] = [
     action_id: 'gateway_account_complete_setup',
     stable_id: 'gateway_account_complete_setup',
     label: 'Complete OPL Gateway setup',
-    section_id: 'model_access',
+    section_id: 'gateway_account',
     task_kind: 'configure',
     taxonomy: 'settings.model_access.gateway_account.complete_setup',
     delegated_surface: 'opl connect gateway complete-setup --group-id <id>',
@@ -417,7 +458,7 @@ export const SETTINGS_CONTROL_CENTER_ACTIONS: SettingsAction[] = [
     action_id: 'gateway_account_refresh',
     stable_id: 'gateway_account_refresh',
     label: 'Refresh OPL Gateway account',
-    section_id: 'model_access',
+    section_id: 'gateway_account',
     task_kind: 'refresh',
     taxonomy: 'settings.model_access.gateway_account.refresh',
     delegated_surface: 'opl connect gateway refresh',
@@ -433,7 +474,7 @@ export const SETTINGS_CONTROL_CENTER_ACTIONS: SettingsAction[] = [
     action_id: 'gateway_account_repair',
     stable_id: 'gateway_account_repair',
     label: 'Repair OPL Gateway account',
-    section_id: 'model_access',
+    section_id: 'gateway_account',
     task_kind: 'repair',
     taxonomy: 'settings.model_access.gateway_account.repair',
     delegated_surface: 'opl connect gateway repair',
@@ -449,7 +490,7 @@ export const SETTINGS_CONTROL_CENTER_ACTIONS: SettingsAction[] = [
     action_id: 'gateway_account_use_for_model_access',
     stable_id: 'gateway_account_use_for_model_access',
     label: 'Use OPL Gateway for model access',
-    section_id: 'model_access',
+    section_id: 'gateway_account',
     task_kind: 'configure',
     taxonomy: 'settings.model_access.gateway_account.use',
     delegated_surface: 'opl connect gateway use-for-model-access',
@@ -465,7 +506,7 @@ export const SETTINGS_CONTROL_CENTER_ACTIONS: SettingsAction[] = [
     action_id: 'gateway_account_disconnect',
     stable_id: 'gateway_account_disconnect',
     label: 'Disconnect OPL Gateway account',
-    section_id: 'model_access',
+    section_id: 'gateway_account',
     task_kind: 'uninstall',
     taxonomy: 'settings.model_access.gateway_account.disconnect',
     delegated_surface: 'opl connect gateway disconnect',
@@ -839,13 +880,6 @@ export const SETTINGS_ISSUE_CATALOG = [
     user_message: 'A managed component reported a failed state with an explicit repair or verification route.',
     severity: 'error',
     recommended_action_id: 'settings_sync_capabilities',
-  },
-  {
-    status_code: 'developer_profile_active',
-    label: 'Developer profile active',
-    user_message: 'Developer Mode is active, so Settings may expose supervised repair routes without becoming a domain truth owner.',
-    severity: 'info',
-    recommended_action_id: 'settings_repair_model_access',
   },
 ] as const;
 

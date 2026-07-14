@@ -23,6 +23,7 @@ import type {
   DeveloperModeAgentAuthorityProjection,
   DeveloperModeContext,
   DeveloperModeEffectiveState,
+  DeveloperModeRepositoryMaintenanceProtection,
   DeveloperModeStatus,
   DeveloperModeTargetAuthorityStatus,
   DeveloperProfileProjection,
@@ -295,6 +296,16 @@ function resolveDeveloperProfile(input: {
   githubIdentity: GithubIdentityProjection;
   repoAuthority: RepoAuthoritySummary;
 }): DeveloperProfileProjection {
+  if (input.status === 'pending') {
+    return {
+      profile_id: 'contributor',
+      status: 'not_checked',
+      level: 'contributor',
+      source: 'authority_inspection_pending',
+      impact: 'Developer repository authority is pending a full identity and permission inspection.',
+    };
+  }
+
   if (input.status === 'disabled') {
     return {
       profile_id: 'contributor',
@@ -382,10 +393,11 @@ function resolveDeveloperCapabilities(input: {
   const developerApplySafe = input.enabled === 'on' && input.mode === 'developer_apply_safe';
   const explicitlyTrusted = developerApplySafe && input.configSource === 'user_config';
   const disabled = input.status === 'disabled';
+  const pending = input.status === 'pending';
   const blocked = input.status === 'blocked' || input.status === 'inactive';
   const developerSourceSelected =
     input.enabled === 'on'
-    || (input.enabled === 'auto' && !disabled && !blocked);
+    || (input.enabled === 'auto' && !disabled && !blocked && !pending);
   const developerWorkspaceSelected = developerSourceSelected && input.configSource === 'user_config';
 
   const githubAuthority = (() => {
@@ -395,6 +407,14 @@ function resolveDeveloperCapabilities(input: {
         'disabled',
         'developer_mode_disabled',
         'Repository repair routes are not offered while Developer Mode is disabled.',
+      );
+    }
+    if (pending) {
+      return developerCapability(
+        'not_checked',
+        'permission_check_pending',
+        'authority_inspection_pending',
+        'Repository authority will be resolved by a full identity and permission inspection.',
       );
     }
     if (input.githubIdentity.status !== 'ready') {
@@ -447,7 +467,14 @@ function resolveDeveloperCapabilities(input: {
     );
   })();
 
-  const sourceChannel = developerSourceSelected
+  const sourceChannel = pending
+    ? developerCapability(
+      'not_checked',
+      'identity_check_pending',
+      'authority_inspection_pending',
+      'The managed package channel remains selected until automatic Developer Mode identity inspection completes.',
+    )
+    : developerSourceSelected
     ? developerCapability(
       'ready',
       'local_checkout',
@@ -461,7 +488,14 @@ function resolveDeveloperCapabilities(input: {
       'Module source remains on the managed package channel unless the source selector activates Developer Mode.',
     );
 
-  const workspaceTrust = developerWorkspaceSelected
+  const workspaceTrust = pending
+    ? developerCapability(
+      'not_checked',
+      'developer_workspace_pending',
+      'authority_inspection_pending',
+      'Developer workspace trust is not elevated until automatic identity inspection completes.',
+    )
+    : developerWorkspaceSelected
     ? developerCapability(
       'ready',
       'trusted_developer_workspace',
@@ -477,7 +511,14 @@ function resolveDeveloperCapabilities(input: {
         : 'Developer workspace trust is not elevated.',
     );
 
-  const agentAutomation = input.mode === 'external_observe'
+  const agentAutomation = pending
+    ? developerCapability(
+      'not_checked',
+      'repo_repair_pending',
+      'authority_inspection_pending',
+      'Supervised repository repair routes are deferred until authority inspection completes.',
+    )
+    : input.mode === 'external_observe'
     ? developerCapability(
       disabled ? 'disabled' : 'limited',
       'observe_only',
@@ -568,6 +609,22 @@ function buildAgentAuthorityProjection(): DeveloperModeAgentAuthorityProjection 
   };
 }
 
+function buildRepositoryMaintenanceProtection(): DeveloperModeRepositoryMaintenanceProtection {
+  return {
+    status: 'ready',
+    dirty_worktree: {
+      policy: 'block_in_place_mutation',
+      requires_isolated_worktree: true,
+      preserves_existing_changes: true,
+    },
+    branch: {
+      policy: 'topic_branch_required',
+      protected_branches: ['main', 'master'],
+      direct_push_to_protected_branch: false,
+    },
+  };
+}
+
 function resolveDeveloperIdentityClass(
   context: DeveloperModeContext,
   targetRepoId: string | null,
@@ -635,6 +692,11 @@ function buildResolvedTargetAuthority(input: {
     status = 'disabled';
     directWriteAllowed = false;
     reason = 'developer_mode_disabled';
+  } else if (input.context.status === 'pending') {
+    allowedRoute = 'blocked';
+    status = 'not_checked';
+    directWriteAllowed = false;
+    reason = 'authority_inspection_pending';
   } else if (input.context.status === 'inactive') {
     allowedRoute = 'blocked';
     status = 'blocked';
@@ -837,6 +899,7 @@ function buildDeveloperModeProjection(input: DeveloperModeContext): OplDeveloper
     status: input.status,
     enabled: input.enabled,
     effective_state: input.effectiveState,
+    inactive_reason: input.inactiveReason,
     mode: input.mode,
     config_source: input.configSource,
     auto_enable_github_login: input.autoEnableGithubLogin,
@@ -848,6 +911,7 @@ function buildDeveloperModeProjection(input: DeveloperModeContext): OplDeveloper
     target_authority: buildTargetAuthoritySurface(input),
     github_identity: input.githubIdentity,
     repo_authority: input.repoAuthority,
+    repository_maintenance_protection: buildRepositoryMaintenanceProtection(),
     inspection_detail: input.inspectionDetail,
   };
 }
@@ -865,6 +929,7 @@ function buildDeveloperModeContext(
       configSource: config.source,
       autoEnableGithubLogin: config.auto_enable_github_login,
       allowedRoute: 'disabled',
+      inactiveReason: 'developer_mode_disabled',
       githubIdentity: buildSkippedIdentity('skipped', 'developer_mode_disabled'),
       repoAuthority: buildDisabledRepoAuthority('disabled', 'developer_mode_disabled'),
       inspectionDetail: options.detail ?? 'full',
@@ -876,13 +941,14 @@ function buildDeveloperModeContext(
     const githubIdentity = buildSkippedIdentity('skipped', 'fast_profile_defers_github_identity_check');
     if (config.enabled === 'auto') {
       return {
-        status: 'inactive',
+        status: 'pending',
         enabled: config.enabled,
-        effectiveState: 'inactive_auto_identity_mismatch',
+        effectiveState: 'inspection_pending',
         mode: config.mode,
         configSource: config.source,
         autoEnableGithubLogin: config.auto_enable_github_login,
         allowedRoute: 'blocked',
+        inactiveReason: 'authority_inspection_pending',
         githubIdentity: githubIdentity,
         repoAuthority: repoAuthority,
         inspectionDetail: 'fast',
@@ -896,6 +962,7 @@ function buildDeveloperModeContext(
       configSource: config.source,
       autoEnableGithubLogin: config.auto_enable_github_login,
       allowedRoute: config.mode === 'external_observe' ? 'observe_only' : 'direct_repo_fix',
+      inactiveReason: null,
       githubIdentity: githubIdentity,
       repoAuthority: repoAuthority,
       inspectionDetail: 'fast',
@@ -913,6 +980,7 @@ function buildDeveloperModeContext(
       configSource: config.source,
       autoEnableGithubLogin: config.auto_enable_github_login,
       allowedRoute: 'blocked',
+      inactiveReason: 'github_identity_unavailable',
       githubIdentity: identity,
       repoAuthority: buildDisabledRepoAuthority('blocked', 'github_identity_unavailable'),
       inspectionDetail: 'full',
@@ -928,6 +996,7 @@ function buildDeveloperModeContext(
       configSource: config.source,
       autoEnableGithubLogin: config.auto_enable_github_login,
       allowedRoute: 'blocked',
+      inactiveReason: 'auto_identity_mismatch',
       githubIdentity: identity,
       repoAuthority: buildDisabledRepoAuthority('not_checked', 'auto_identity_mismatch'),
       inspectionDetail: 'full',
@@ -944,6 +1013,7 @@ function buildDeveloperModeContext(
       configSource: config.source,
       autoEnableGithubLogin: config.auto_enable_github_login,
       allowedRoute: repoAuthority.status === 'blocked' ? 'blocked' : 'observe_only',
+      inactiveReason: repoAuthority.status === 'blocked' ? 'repo_authority_blocked' : null,
       githubIdentity: identity,
       repoAuthority: repoAuthority,
       inspectionDetail: 'full',
@@ -966,6 +1036,7 @@ function buildDeveloperModeContext(
     configSource: config.source,
     autoEnableGithubLogin: config.auto_enable_github_login,
     allowedRoute: allowedRoute,
+    inactiveReason: status === 'blocked' ? 'repo_authority_blocked' : null,
     githubIdentity: identity,
     repoAuthority: repoAuthority,
     inspectionDetail: 'full',

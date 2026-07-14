@@ -157,13 +157,46 @@ exit 1
     ].join('\n'),
     { mode: 0o755 },
   );
+  const temporalBin = path.join(codexFixture.fixtureRoot, 'Cellar', 'temporal', '1.4.1', 'bin', 'temporal');
+  fs.mkdirSync(path.dirname(temporalBin), { recursive: true });
+  fs.writeFileSync(temporalBin, '#!/usr/bin/env bash\necho "temporal version 1.4.1"\n', { mode: 0o755 });
+  const brewMarker = path.join(codexFixture.fixtureRoot, 'brew-called.marker');
+  const brewBin = path.join(codexFixture.fixtureRoot, 'brew');
+  fs.writeFileSync(
+    brewBin,
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      `touch ${JSON.stringify(brewMarker)}`,
+      'echo "unexpected Homebrew owner probe" >&2',
+      'exit 42',
+      '',
+    ].join('\n'),
+    { mode: 0o755 },
+  );
+  const ghMarker = path.join(codexFixture.fixtureRoot, 'gh-called.marker');
+  const ghBin = path.join(codexFixture.fixtureRoot, 'gh');
+  fs.writeFileSync(
+    ghBin,
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      `touch ${JSON.stringify(ghMarker)}`,
+      'echo "unexpected GitHub identity probe" >&2',
+      'exit 42',
+      '',
+    ].join('\n'),
+    { mode: 0o755 },
+  );
 
   try {
     const output = runCli(['app', 'state', '--profile', 'fast'], {
       HOME: homeRoot,
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       OPL_MODULES_ROOT: path.join(homeRoot, 'opl-state', 'modules'),
-      OPL_DEVELOPER_MODE_GH_BINARY: path.join(homeRoot, 'missing-gh'),
+      OPL_DEVELOPER_MODE_GH_BINARY: ghBin,
+      OPL_TEMPORAL_BIN: temporalBin,
+      OPL_HOMEBREW_BIN: brewBin,
       PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
     }) as {
       app_state: {
@@ -183,6 +216,8 @@ exit 1
     assert.equal(output.app_state.core.codex.latest_version_status, 'unknown');
     assert.equal(output.app_state.core.codex.diagnostics.includes('codex_cli_latest_lookup_skipped_fast_profile'), true);
     assert.equal(fs.existsSync(npmMarker), false);
+    assert.equal(fs.existsSync(brewMarker), false);
+    assert.equal(fs.existsSync(ghMarker), false);
   } finally {
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
@@ -200,7 +235,7 @@ test('app state fast stays bounded for GUI rendering', () => {
       PATH: '/usr/bin:/bin',
     });
     const byteLength = Buffer.byteLength(JSON.stringify(output), 'utf8');
-    assert.equal(byteLength < 500000, true);
+    assert.equal(byteLength <= 262144, true, `fast app state was ${byteLength} bytes`);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
@@ -225,15 +260,22 @@ test('app state fast excludes unregistered runtime history from the work-item in
     );
     const workItemProjectionV2 = workbench.work_item_projection_v2;
 
-    assert.equal(Buffer.byteLength(JSON.stringify(output), 'utf8') < 500000, true);
+    assert.equal(Buffer.byteLength(JSON.stringify(output), 'utf8') <= 262144, true);
     assert.equal(runtimeTasks.length, 0);
     assert.equal(workbench.task_run_projection_v2.tasks.length, 0);
     assert.equal(workbench.work_item_projection_v1.items.length, 0);
     assert.equal(workItemProjectionV2.items.length, 0);
     assert.equal(workItemProjectionV2.summary.work_item_count, 0);
-    assert.equal(workItemProjectionV2.diagnostics.count, 100);
+    assert.equal(workItemProjectionV2.diagnostics.count, 0);
     assert.equal(workItemProjectionV2.diagnostics.detail_policy, 'summary_only');
     assert.deepEqual(workItemProjectionV2.diagnostics.items, []);
+    assert.equal(workItemProjectionV2.detail_policy.inventory_detail, 'deferred');
+    assert.equal(workItemProjectionV2.detail_policy.all_work_item_summaries_included, false);
+    assert.equal(workItemProjectionV2.detail_policy.attempt_ref_limit_per_item, 0);
+    assert.equal(
+      workItemProjectionV2.detail_policy.full_detail_surface,
+      'opl app state --profile full --json',
+    );
     assert.equal(Array.isArray(output.app_state.operator.visual_ref_groups.needs_attention_refs), true);
     assert.equal(output.app_state.operator.visual_ref_groups.needs_attention_refs.length, 0);
     assert.deepEqual(output.app_state.operator.visual_ref_groups.active_project_refs, []);

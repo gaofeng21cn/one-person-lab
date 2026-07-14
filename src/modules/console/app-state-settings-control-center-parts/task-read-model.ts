@@ -2,6 +2,7 @@ import { resolveSettingsCodexAccess } from './codex-access-read-model.ts';
 import {
   SETTINGS_CONTROL_CENTER_ACTION_SECTIONS,
   SETTINGS_CONTROL_CENTER_ACTIONS,
+  SETTINGS_CONTROL_CENTER_COMPATIBILITY_REDIRECTS,
   SETTINGS_CONTROL_CENTER_GROUPS,
   SETTINGS_CONTROL_CENTER_SECONDARY_ROUTES,
   type SettingsAction,
@@ -177,6 +178,12 @@ export function buildSettingsIa(taskEntries: ReturnType<typeof buildTaskEntries>
     surface_kind: 'opl_settings_control_center_ia.v1',
     ordinary_entry: 'settings_control_center',
     entry_policy: 'top_level_control_center_route',
+    layout_authority: {
+      owner: 'one-person-lab-app',
+      source_ref: 'one-person-lab-app/contracts/app-product-profile.json#settings_control_center',
+      framework_role: 'project_framework_owned_status_actions_and_compatibility_routes_only',
+      broad_app_state_layout_inference_allowed: false,
+    },
     ordinary_route_ids: SETTINGS_CONTROL_CENTER_GROUPS.map((group) => group.route_id),
     secondary_or_deep_link_route_ids: SETTINGS_CONTROL_CENTER_SECONDARY_ROUTES.map((route) => route.route_id),
     route_groups: SETTINGS_CONTROL_CENTER_GROUPS.map((group) => ({
@@ -191,9 +198,16 @@ export function buildSettingsIa(taskEntries: ReturnType<typeof buildTaskEntries>
       route_scope: 'secondary_or_deep_link', ordinary_entry_policy: route.ordinary_entry_policy,
       app_shell_must_not_promote_to_top_level_tab: true,
     })),
+    compatibility_redirects: SETTINGS_CONTROL_CENTER_COMPATIBILITY_REDIRECTS.map((redirect) => ({
+      ...redirect,
+      route_scope: 'compatibility_only',
+      app_shell_must_resolve_before_render: true,
+    })),
     app_shell_contract: {
       app_consumes_read_model_only: true,
       aion_shell_is_renderer_only: true,
+      layout_source: 'one-person-lab-app/contracts/app-product-profile.json#settings_control_center',
+      broad_app_state_layout_inference_allowed: false,
       shell_must_not_infer_domain_truth: true,
       shell_must_not_execute_unlisted_actions: true,
     },

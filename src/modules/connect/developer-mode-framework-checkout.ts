@@ -165,6 +165,7 @@ export function buildFrameworkCheckoutProjection(
       && context.status !== 'disabled'
       && context.status !== 'inactive'
       && context.status !== 'blocked'
+      && context.status !== 'pending'
     );
   const selectedSourceKind = shouldUseLocalCheckout ? 'local_checkout' : 'managed_runtime';
 

@@ -26,24 +26,39 @@
     ],
     "ordinary_route_ids": [
       "general",
+      "gateway",
       "access",
+      "workspace",
+      "agents",
       "capabilities",
+      "resources",
       "environment",
       "storage",
-      "appearance",
-      "advanced"
+      "appearance"
     ],
     "secondary_or_deep_link_route_ids": [
-      "workspace",
-      "local-services",
-      "about",
-      "update",
-      "theme"
+      "about"
     ],
     "secondary_or_deep_link_route_policy": "route_metadata_visible_for_search_and_task_entry_navigation_but_not_promoted_to_top_level_tabs",
+    "compatibility_redirects": {
+      "advanced": "environment#diagnostics",
+      "system": "environment#diagnostics",
+      "update": "environment#updates",
+      "local-services": "environment#services",
+      "theme": "appearance#themes",
+      "personalization": "workspace#personalization"
+    },
+    "layout_authority": {
+      "owner": "one-person-lab-app",
+      "source_ref": "one-person-lab-app/contracts/app-product-profile.json#settings_control_center",
+      "framework_role": "project_framework_owned_status_actions_and_compatibility_routes_only",
+      "broad_app_state_layout_inference_allowed": false
+    },
     "shell_policy": {
       "app_consumes_read_model_only": true,
       "aion_shell_is_renderer_only": true,
+      "layout_source": "one-person-lab-app/contracts/app-product-profile.json#settings_control_center",
+      "broad_app_state_layout_inference_allowed": false,
       "shell_must_not_infer_domain_truth": true,
       "shell_must_not_execute_unlisted_actions": true
     }
@@ -105,7 +120,40 @@
       "data_retention",
       "connection_credentials"
     ],
-    "policy": "No setting may be listed without an existing Framework-owned persistent implementation; excluded surfaces remain with their App, provider, connection, or domain owner."
+    "host_owned_configuration_surfaces": [
+      {
+        "configuration_id": "log_directory",
+        "stable_id": "settings.host_configuration.log_directory",
+        "label": "App log directory",
+        "surface_class": "host_owned_configuration",
+        "owner": "one-person-lab-app",
+        "owner_page_id": "workspace",
+        "current_value_source_ref": "application.systemInfo.logDir",
+        "typed_host_action_ref": "application.updateSystemInfo",
+        "typed_host_action_payload_fields": [
+          "cacheDir",
+          "workDir",
+          "logDir"
+        ],
+        "preserved_payload_fields": [
+          "cacheDir",
+          "workDir"
+        ],
+        "persistence_target": "desktop_client_system_info",
+        "readback_ref": "application.systemInfo.logDir",
+        "framework_action_id": null,
+        "framework_write_allowed": false,
+        "docker_volume_projection": {
+          "host_volume_ref": "OnePersonLab/data",
+          "container_path": "/data",
+          "log_path": "/data/logs",
+          "sync_owner": "one-person-lab-app_and_opl-aion-shell",
+          "sync_policy": "shell_keeps_host_app_log_root_projection_aligned_with_existing_docker_volume_mapping",
+          "framework_rewire_allowed": false
+        }
+      }
+    ],
+    "policy": "Framework-owned settings require existing persistent actions; typed host-owned surfaces stay with their App or shell owner and do not create Framework write actions; excluded surfaces remain with their provider, connection, or domain owner."
   },
   "app_settings_read_model": {
     "surface_kind": "opl_app_settings_read_model.v1",
@@ -132,21 +180,56 @@
       "app_state.release",
       "app_state.settings_control_center.settings_ia",
       "app_state.settings_control_center.action_catalog",
-      "app_state.settings_control_center.capability_task_awareness_refs"
+      "app_state.settings_control_center.capability_task_awareness_refs",
+      "app_state.codex_personalization",
+      "app_state.opl_agent_codex_context",
+      "application.systemInfo.logDir"
     ],
+    "workspace_services": {
+      "required_fields": [
+        "workspace_root",
+        "personalization_refs",
+        "app_log_directory"
+      ],
+      "app_log_directory": {
+        "owner_page_id": "workspace",
+        "current_value_source_ref": "application.systemInfo.logDir",
+        "typed_host_action_ref": "application.updateSystemInfo",
+        "preserved_payload_fields": [
+          "cacheDir",
+          "workDir"
+        ],
+        "persistence_target": "desktop_client_system_info",
+        "readback_ref": "application.systemInfo.logDir",
+        "framework_action_id": null,
+        "framework_write_allowed": false,
+        "storage_reference_policy": "read_only_usage_and_cleanup_reference",
+        "docker_volume_mapping": "OnePersonLab/data -> /data",
+        "framework_rewire_allowed": false
+      }
+    },
     "settings_projection": {
       "surface_kind": "opl_settings_projection.v1",
       "purpose": "Settings-specific projection sections for App/Aion rendering so the UI does not infer Settings IA from broad app_state.",
       "ordinary_sections": [
-        "summary",
-        "access",
+        "overview",
+        "gateway",
+        "models",
         "workspace",
+        "agents",
         "capabilities",
         "resources",
         "maintenance",
         "storage",
-        "diagnostics"
+        "preferences"
       ],
+      "compatibility_sections": {
+        "diagnostics": {
+          "parent_section": "maintenance",
+          "ordinary_visible": false,
+          "policy": "maintenance_drilldown_and_legacy_route_compatibility_only"
+        }
+      },
       "item_required_fields": [
         "surface_class",
         "scope",
@@ -157,7 +240,13 @@
         "details_ref",
         "editable_reason"
       ],
-      "section_surface_class_policy": "Every section and item declares status or diagnostic; configuration and one-time actions use their dedicated catalogs.",
+      "section_surface_class_policy": "Every ordinary section and item declares status; diagnostics is a Maintenance drilldown/compatibility section, while configuration and one-time actions use their dedicated catalogs.",
+      "shell_consumer_policy": "The shell consumes this Settings-specific projection by App-owned page id and must not infer Settings layout from broad app_state or compatibility settings_ia groups.",
+      "layout_authority": {
+        "owner": "one-person-lab-app",
+        "source_ref": "one-person-lab-app/contracts/app-product-profile.json#settings_control_center",
+        "framework_role": "status_action_and_compatibility_projection_only"
+      },
       "authority_policy": "settings_projection_is_read_model_only_no_live_readiness_or_release_claim"
     },
     "capability_task_awareness_refs": {
@@ -240,14 +329,18 @@
   },
   "control_center_groups": [
     "overview",
-    "setup_access",
+    "gateway",
+    "models",
+    "workspace",
+    "agents",
     "capabilities",
-    "maintenance_updates",
-    "data_storage",
-    "preferences",
-    "advanced"
+    "resources",
+    "maintenance",
+    "storage",
+    "preferences"
   ],
   "action_sections": [
+    "gateway_account",
     "model_access",
     "workspace",
     "connections",
@@ -262,8 +355,7 @@
     "needs_reload",
     "manual_required",
     "dirty_checkout",
-    "failed_with_repair",
-    "developer_profile_active"
+    "failed_with_repair"
   ],
   "allowed_action_ids": [
     "gateway_account_complete_setup",

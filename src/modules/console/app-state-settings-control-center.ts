@@ -100,11 +100,37 @@ function settingsSection(
   };
 }
 
+function buildAppLogDirectoryHostProjection() {
+  return {
+    configuration_id: 'log_directory',
+    stable_id: 'settings.host_configuration.log_directory',
+    label: 'App log directory',
+    surface_class: 'host_owned_configuration',
+    owner: 'one-person-lab-app',
+    owner_page_id: 'workspace',
+    current_value_source_ref: 'application.systemInfo.logDir',
+    typed_host_action_ref: 'application.updateSystemInfo',
+    typed_host_action_payload_fields: ['cacheDir', 'workDir', 'logDir'],
+    preserved_payload_fields: ['cacheDir', 'workDir'],
+    persistence_target: 'desktop_client_system_info',
+    readback_ref: 'application.systemInfo.logDir',
+    framework_action_id: null,
+    framework_write_allowed: false,
+    docker_volume_projection: {
+      host_volume_ref: 'OnePersonLab/data',
+      container_path: '/data',
+      log_path: '/data/logs',
+      sync_owner: 'one-person-lab-app_and_opl-aion-shell',
+      sync_policy: 'shell_keeps_host_app_log_root_projection_aligned_with_existing_docker_volume_mapping',
+      framework_rewire_allowed: false,
+    },
+  };
+}
+
 function buildSettingsProjection(
   input: BuildSettingsControlCenterInput,
   taskEntries: ReturnType<typeof buildTaskEntries>,
   issueQueue: Array<Record<string, unknown>>,
-  settingsIa: ReturnType<typeof buildSettingsIa>,
   connectionRegistry: ReturnType<typeof listOplConnections>,
 ) {
   const moduleSummary = asRecord(asRecord(input.modules).summary);
@@ -119,9 +145,15 @@ function buildSettingsProjection(
   const syncCapabilitiesTask = taskByActionId(taskEntries, 'settings_sync_capabilities');
   const appUpdateTask = taskByActionId(taskEntries, 'settings_check_app_update');
   const cleanupTask = taskByActionId(taskEntries, 'settings_prune_runtime_roots_dry_run');
+  const gatewaySetupTask = taskByActionId(taskEntries, 'gateway_account_complete_setup');
+  const dockerWebuiTask = taskByActionId(taskEntries, 'settings_install_docker_webui');
+  const developerEffectiveState = asString(input.developerMode.effective_state) ?? 'unknown';
+  const developerModeState = asString(input.developerMode.status) ?? 'unknown';
+  const developerMode = asString(input.developerMode.mode) ?? 'unknown';
+  const modulesReady = moduleSummary.healthy_default_carriers_count === moduleSummary.default_carriers_count;
 
   const sections = {
-    summary: settingsSection('summary', 'Summary', settingsIa.ordinary_entry, 'settings_overview_and_recommended_action', [
+    overview: settingsSection('overview', 'Overview', 'general', 'settings_overview_and_recommended_action', [
       settingsItem({
         item_id: 'settings_overview',
         label: 'Settings overview',
@@ -138,7 +170,24 @@ function buildSettingsProjection(
         editable_reason: 'read_only_projection_from_settings_status_summary',
       }),
     ]),
-    access: settingsSection('access', 'Access', 'access', 'model_access_local_remote_and_codex_cli', [
+    gateway: settingsSection('gateway', 'Account & Gateway', 'gateway', 'gateway_account_identity_access_and_usage', [
+      settingsItem({
+        item_id: 'gateway_account',
+        label: 'OPL Gateway account',
+        state: codexAccess.opl_gateway_status,
+        surface_class: 'status',
+        scope: 'user',
+        owner: 'one-person-lab',
+        risk: riskForTask(gatewaySetupTask),
+        normal_summary: codexAccess.opl_gateway_configured
+          ? 'OPL Gateway access is configured; account identity and usage stay on the Gateway owner page.'
+          : 'OPL Gateway access is not configured.',
+        next_action: codexAccess.opl_gateway_configured ? 'none' : 'gateway_account_complete_setup',
+        details_ref: 'app_state.settings_control_center.app_settings_read_model.opl_gateway_account',
+        editable_reason: editableReasonForTask(taskEntries, 'gateway_account_complete_setup', 'gateway_account_lifecycle_uses_listed_owner_actions'),
+      }),
+    ]),
+    models: settingsSection('models', 'Models', 'access', 'model_selection_source_and_codex_cli', [
       settingsItem({
         item_id: 'codex_model_access',
         label: 'Codex model access',
@@ -155,7 +204,7 @@ function buildSettingsProjection(
         editable_reason: editableReasonForTask(taskEntries, 'settings_repair_model_access', 'read_only_projection_from_codex_config'),
       }),
     ]),
-    workspace: settingsSection('workspace', 'Workspace', 'workspace', 'workspace_paths_permissions_and_default_outputs', [
+    workspace: settingsSection('workspace', 'Workspace & Personalization', 'workspace', 'workspace_root_app_log_directory_permissions_user_agents_and_app_context_refs', [
       settingsItem({
         item_id: 'workspace_root',
         label: 'Workspace root',
@@ -169,22 +218,50 @@ function buildSettingsProjection(
         details_ref: 'app_state.paths.workspace_root',
         editable_reason: editableReasonForTask(taskEntries, 'settings_verify_workspace', 'read_only_projection_from_workspace_root'),
       }),
-    ]),
-    capabilities: settingsSection('capabilities', 'Capabilities', 'capabilities', 'agent_packages_shortcuts_and_capability_health', [
       settingsItem({
-        item_id: 'managed_agent_packages',
-        label: 'Managed agent packages',
-        state: moduleSummary.healthy_default_carriers_count === moduleSummary.default_carriers_count ? 'ready' : 'attention_needed',
+        item_id: 'user_instructions_and_app_context',
+        label: 'User instructions and App context',
+        state: 'available',
         surface_class: 'status',
-        scope: 'local_machine',
+        scope: 'user',
+        owner: 'user_codex_home_and_one-person-lab-app',
+        risk: 'reversible',
+        normal_summary: 'User AGENTS.md and OPL App new-conversation context are projected by their canonical owners.',
+        next_action: 'none',
+        details_ref: 'app_state.codex_personalization + app_state.opl_agent_codex_context',
+        editable_reason: 'refs_only_framework_projection_actions_live_in_app_state_action_catalog',
+      }),
+    ]),
+    agents: settingsSection('agents', 'Agents', 'agents', 'agent_packages_source_selection_and_developer_mode', [
+      settingsItem({
+        item_id: 'agent_package_directory',
+        label: 'Agent packages and Developer Mode',
+        state: modulesReady ? developerModeState : 'attention_needed',
+        surface_class: 'status',
+        scope: 'user',
         owner: 'one-person-lab',
         risk: riskForTask(syncCapabilitiesTask),
-        normal_summary: `${moduleHealth} default runtime source carriers are healthy. Package installation state comes from OPL Packages.`,
-        next_action: moduleSummary.healthy_default_carriers_count === moduleSummary.default_carriers_count
+        normal_summary: `Developer Mode is ${developerEffectiveState} in ${developerMode}; ${moduleHealth} default runtime source carriers are healthy.`,
+        next_action: modulesReady
           ? 'none'
           : 'settings_sync_capabilities',
-        details_ref: 'app_state.settings_control_center.capability_task_awareness_refs.capability_health_refs',
+        details_ref: 'app_state.developer_mode + app_state.agent_packages',
         editable_reason: editableReasonForTask(taskEntries, 'settings_sync_capabilities', 'read_only_projection_from_runtime_source_carriers'),
+      }),
+    ]),
+    capabilities: settingsSection('capabilities', 'Capabilities', 'capabilities', 'flow_managed_and_third_party_capability_directory', [
+      settingsItem({
+        item_id: 'capability_directory',
+        label: 'Managed and third-party capabilities',
+        state: modulesReady ? 'available' : 'attention_needed',
+        surface_class: 'status',
+        scope: 'user',
+        owner: 'one-person-lab_and_package_owners',
+        risk: riskForTask(syncCapabilitiesTask),
+        normal_summary: 'Capability health, connector readiness, and workflow entries are refs-only and remain grouped by canonical owner.',
+        next_action: modulesReady ? 'none' : 'settings_sync_capabilities',
+        details_ref: 'app_state.settings_control_center.capability_task_awareness_refs',
+        editable_reason: editableReasonForTask(taskEntries, 'settings_sync_capabilities', 'read_only_refs_from_capability_owners'),
       }),
     ]),
     resources: settingsSection('resources', 'Resources', 'resources', 'connect_fabric_cloud_ssh_hpc_and_workspace_resource_directory', [
@@ -203,23 +280,52 @@ function buildSettingsProjection(
         details_ref: 'app_state.settings_control_center.connection_registry',
         editable_reason: 'editable_via_listed_connection_actions_handle_only',
       }),
-    ]),
-    maintenance: settingsSection('maintenance', 'Maintenance', 'environment', 'updates_repairs_runtime_fabric_package_sync_and_local_services', [
       settingsItem({
-        item_id: 'maintenance_routes',
-        label: 'Maintenance routes',
-        state: asString(appUpdateTask?.state) ?? 'unknown',
+        item_id: 'docker_webui_access_and_deploy',
+        label: 'Docker WebUI access and deployment',
+        state: codexAccess.model_access_ready ? 'action_available' : 'attention_needed',
         surface_class: 'status',
         scope: 'local_machine',
         owner: 'one-person-lab',
-        risk: riskForTask(appUpdateTask),
-        normal_summary: `Release channel is ${asString(input.release.channel) ?? 'unknown'}; provider status is ${statusTone(temporalStatus)}; module health is ${moduleHealth}.`,
-        next_action: 'settings_check_app_update',
-        details_ref: 'app_state.settings_control_center.app_settings_read_model.local_environment',
-        editable_reason: editableReasonForTask(taskEntries, 'settings_check_app_update', 'read_only_projection_from_release_state'),
+        risk: riskForTask(dockerWebuiTask),
+        normal_summary: 'Resources owns WebUI access, deployment, and diagnostics; storage usage and cleanup remain on Storage.',
+        next_action: codexAccess.model_access_ready ? 'settings_install_docker_webui' : 'settings_configure_webui_api_key',
+        details_ref: 'app_state.settings_control_center.app_settings_read_model.docker_webui',
+        editable_reason: editableReasonForTask(taskEntries, 'settings_install_docker_webui', 'read_only_projection_from_docker_webui_owner_routes'),
       }),
     ]),
+    maintenance: {
+      ...settingsSection('maintenance', 'Maintenance', 'environment', 'updates_repairs_runtime_fabric_package_sync_and_local_services', [
+        settingsItem({
+          item_id: 'maintenance_routes',
+          label: 'Maintenance routes',
+          state: asString(appUpdateTask?.state) ?? 'unknown',
+          surface_class: 'status',
+          scope: 'local_machine',
+          owner: 'one-person-lab',
+          risk: riskForTask(appUpdateTask),
+          normal_summary: `Release channel is ${asString(input.release.channel) ?? 'unknown'}; provider status is ${statusTone(temporalStatus)}; module health is ${moduleHealth}.`,
+          next_action: 'settings_check_app_update',
+          details_ref: 'app_state.settings_control_center.app_settings_read_model.local_environment',
+          editable_reason: editableReasonForTask(taskEntries, 'settings_check_app_update', 'read_only_projection_from_release_state'),
+        }),
+      ]),
+      drilldown_section_ids: ['diagnostics'],
+    },
     storage: settingsSection('storage', 'Storage', 'storage', 'storage_inventory_cleanup_plan_and_receipt_status', [
+      settingsItem({
+        item_id: 'app_log_usage_and_cleanup_reference',
+        label: 'App log usage and cleanup',
+        state: 'reference_only',
+        surface_class: 'status',
+        scope: 'local_machine',
+        owner: 'one-person-lab-app',
+        risk: 'read_only',
+        normal_summary: 'App log usage and cleanup are shown here; change the log directory in Workspace & Personalization.',
+        next_action: 'none',
+        details_ref: 'app_state.settings_control_center.app_settings_read_model.workspace_services.app_log_directory',
+        editable_reason: 'read_only_reference_configuration_owned_by_workspace',
+      }),
       settingsItem({
         item_id: 'runtime_roots_cleanup_plan',
         label: 'Runtime roots cleanup plan',
@@ -234,21 +340,41 @@ function buildSettingsProjection(
         editable_reason: editableReasonForTask(taskEntries, 'settings_prune_runtime_roots_dry_run', 'read_only_projection_from_action_catalog'),
       }),
     ]),
-    diagnostics: settingsSection('diagnostics', 'Diagnostics', 'advanced', 'raw_refs_logs_developer_source_and_action_routes', [
+    preferences: settingsSection('preferences', 'Preferences', 'appearance', 'app_behavior_display_and_theme', [
       settingsItem({
-        item_id: 'diagnostic_refs',
-        label: 'Diagnostic refs',
+        item_id: 'app_preferences',
+        label: 'App preferences',
         state: 'available',
-        surface_class: 'diagnostic',
-        scope: 'developer',
-        owner: 'one-person-lab',
+        surface_class: 'status',
+        scope: 'user',
+        owner: 'one-person-lab-app',
         risk: 'read_only',
-        normal_summary: 'Raw app state, Developer Mode, action policy, and consumer-only readback stay in diagnostics.',
+        normal_summary: 'App behavior, display, and themes remain App-owned preferences.',
         next_action: 'none',
-        details_ref: 'app_state.settings_control_center.app_aion_consumer_only_readback',
-        editable_reason: 'read_only_projection_from_app_state',
+        details_ref: 'one-person-lab-app/contracts/app-settings-control-plane.json#settings_projection.sections.preferences',
+        editable_reason: 'framework_read_model_does_not_own_app_local_preferences',
       }),
     ]),
+    diagnostics: {
+      ...settingsSection('diagnostics', 'Diagnostics', 'environment#diagnostics', 'raw_refs_logs_developer_source_and_action_routes', [
+        settingsItem({
+          item_id: 'diagnostic_refs',
+          label: 'Diagnostic refs',
+          state: 'available',
+          surface_class: 'diagnostic',
+          scope: 'developer',
+          owner: 'one-person-lab',
+          risk: 'read_only',
+          normal_summary: 'Raw app state, Developer Mode, action policy, and consumer-only readback stay in the Maintenance drilldown.',
+          next_action: 'none',
+          details_ref: 'app_state.settings_control_center.app_aion_consumer_only_readback',
+          editable_reason: 'read_only_projection_from_app_state',
+        }),
+      ]),
+      parent_section_id: 'maintenance',
+      ordinary_visible: false,
+      compatibility_route_ids: ['advanced', 'system'],
+    },
   };
 
   return {
@@ -258,10 +384,12 @@ function buildSettingsProjection(
     source_surface: 'app_state.settings_control_center',
     source_refs: [
       'app_state.settings_control_center.status_summary',
-      'app_state.settings_control_center.settings_ia',
       'app_state.settings_control_center.action_catalog',
       'app_state.settings_control_center.app_settings_read_model',
+      'one-person-lab-app/contracts/app-product-profile.json#settings_control_center',
       'app_state.core.codex',
+      'app_state.codex_personalization',
+      'app_state.opl_agent_codex_context',
       'app_state.paths',
       'app_state.runtime_source_carriers',
       'app_state.provider',
@@ -277,16 +405,20 @@ function buildSettingsProjection(
       'details_ref',
       'editable_reason',
     ],
-    ordinary_sections: [
-      'summary',
-      'access',
-      'workspace',
-      'capabilities',
-      'resources',
-      'maintenance',
-      'storage',
-      'diagnostics',
-    ],
+    ordinary_sections: SETTINGS_CONTROL_CENTER_GROUPS.map((group) => group.group_id),
+    compatibility_sections: {
+      diagnostics: {
+        parent_section: 'maintenance',
+        ordinary_visible: false,
+        policy: 'maintenance_drilldown_and_legacy_route_compatibility_only',
+      },
+    },
+    shell_consumer_policy: 'consume_settings_projection_by_app_owned_page_id_never_infer_layout_from_broad_app_state',
+    layout_authority: {
+      owner: 'one-person-lab-app',
+      source_ref: 'one-person-lab-app/contracts/app-product-profile.json#settings_control_center',
+      framework_role: 'status_action_and_compatibility_projection_only',
+    },
     sections,
     authority_boundary: settingsAuthorityFlags(),
   };
@@ -300,7 +432,7 @@ function buildConfigurationCatalog(input: BuildSettingsControlCenterInput) {
     surface_kind: 'opl_settings_configuration_catalog.v1',
     surface_class: 'configuration',
     owner: 'one-person-lab',
-    persistence_policy: 'listed_only_when_backed_by_existing_framework_owned_persistent_action',
+    persistence_policy: 'framework_items_require_existing_persistent_actions_host_owned_surfaces_are_typed_refs_only',
     items: [
       {
         configuration_id: 'workspace_root',
@@ -396,6 +528,7 @@ function buildConfigurationCatalog(input: BuildSettingsControlCenterInput) {
         authority_flags: settingsAuthorityFlags(),
       },
     ],
+    host_owned_configuration_surfaces: [buildAppLogDirectoryHostProjection()],
     excluded_surfaces: [
       { configuration_id: 'app_local_preferences', owner: 'one-person-lab-app' },
       { configuration_id: 'model_catalog', owner: 'one-person-lab-app_or_provider_owner' },
@@ -445,14 +578,10 @@ function buildAppSettingsReadModel(
   const codex = asRecord(asRecord(input.core).codex);
   const defaultProfile = asRecord(codex.default_profile);
   const developerProfile = asRecord(asRecord(input.developerMode).developer_profile);
-  const moduleSummary = asRecord(asRecord(input.modules).summary);
-  const moduleSource = asRecord(asRecord(input.modules).source);
   const temporal = asRecord(asRecord(input.provider).temporal);
   const workspaceRoot = asRecord(input.paths.workspace_root);
-  const familyWorkspaceRoot = asRecord(input.paths.family_workspace_root);
   const codexAccess = resolveSettingsCodexAccess(input.core);
   const temporalStatus = asString(temporal.health_status) ?? asString(temporal.status);
-  const moduleHealth = `${moduleSummary.healthy_default_carriers_count ?? 0}/${moduleSummary.default_carriers_count ?? 0}`;
   const capabilityTaskAwarenessRefs = buildCapabilityTaskAwarenessRefs(input);
 
   return {
@@ -471,6 +600,7 @@ function buildAppSettingsReadModel(
       'app_state.settings_control_center.action_catalog',
       'app_state.settings_control_center.capability_task_awareness_refs',
       'app_state.settings_control_center.connection_registry',
+      'application.systemInfo.logDir',
     ],
     shell_policy: {
       app_consumes_read_model_only: true,
@@ -497,11 +627,13 @@ function buildAppSettingsReadModel(
       runtime_readiness_claimed: false,
     },
     page_structure: {
+      layout_authority: settingsIa.layout_authority,
       ordinary_entry: settingsIa.ordinary_entry,
       ordinary_route_ids: settingsIa.ordinary_route_ids,
       secondary_or_deep_link_route_ids: settingsIa.secondary_or_deep_link_route_ids,
       route_groups: settingsIa.route_groups,
       secondary_or_deep_link_routes: settingsIa.secondary_or_deep_link_routes,
+      compatibility_redirects: settingsIa.compatibility_redirects,
       action_sections: SETTINGS_CONTROL_CENTER_ACTION_SECTIONS.map((section) => ({
         section_id: section.section_id,
         label: section.label,
@@ -559,37 +691,20 @@ function buildAppSettingsReadModel(
         verify_action_id: 'settings_verify_workspace',
         verify_route: routeFor('settings_verify_workspace'),
       },
-      family_workspace_root: {
-        source_ref: 'app_state.paths.family_workspace_root',
-        selected_path: asString(familyWorkspaceRoot.selected_path),
-        source: asString(familyWorkspaceRoot.source),
-        role: asString(familyWorkspaceRoot.role),
-      },
-      runtime_source_carriers: {
-        source_ref: 'app_state.runtime_source_carriers.summary',
-        source_mode: asString(moduleSource.mode),
-        runtime_sources_root: asString(input.paths.runtime_sources_root),
-        default_carriers_count: moduleSummary.default_carriers_count ?? 0,
-        healthy_default_carriers_count: moduleSummary.healthy_default_carriers_count ?? 0,
-        health: moduleHealth,
-        sync_action_id: 'settings_sync_capabilities',
-        apply_action_id: 'settings_apply_opl_packages',
-        capability_health_refs: capabilityTaskAwarenessRefs.capability_health_refs,
-        connector_readiness_refs: capabilityTaskAwarenessRefs.connector_readiness_refs,
-        workflow_refs: capabilityTaskAwarenessRefs.workflow_refs,
-      },
-      local_services: {
-        source_ref: 'app_state.provider.temporal',
-        temporal_provider: statusTone(temporalStatus),
-        temporal_health_status: asString(temporal.health_status),
-        temporal_status: asString(temporal.status),
-        selected_provider: asString(input.provider.selected_provider),
-        service_action_ids: [
-          'settings_sync_capabilities',
-          'settings_apply_opl_packages',
-          'agent_package_activate',
+      personalization_refs: {
+        source_refs: [
+          'app_state.codex_personalization.user_agents',
+          'app_state.opl_agent_codex_context',
         ],
+        user_agents_owner: 'user_codex_home',
+        opl_app_context_owner: 'one-person-lab-app',
+        edit_action_refs: [
+          'app_state.actions#codex_user_instructions_set',
+          'app_state.actions#codex_user_instructions_restore_opl_flow_default',
+        ],
+        framework_role: 'project_refs_and_existing_action_routes_only',
       },
+      app_log_directory: buildAppLogDirectoryHostProjection(),
     },
     docker_webui: buildDockerWebuiSettingsReadModel(input, taskEntries, issueQueue),
     local_environment: {
@@ -632,8 +747,6 @@ function issueRoute(actionId: string | null) {
 function buildIssueQueue(input: BuildSettingsControlCenterInput) {
   const issues: Array<Record<string, unknown>> = [];
   const codexAccess = resolveSettingsCodexAccess(input.core);
-  const developerProfile = asRecord(asRecord(input.developerMode).developer_profile);
-  const developerEffectiveState = asString(input.developerMode.effective_state);
   const moduleItems = asList(input.modules.items);
   const temporal = asRecord(asRecord(input.provider).temporal);
 
@@ -696,24 +809,6 @@ function buildIssueQueue(input: BuildSettingsControlCenterInput) {
     });
   }
 
-  if (
-    ['ready', 'limited'].includes(asString(developerProfile.status) ?? '')
-    && developerEffectiveState
-    && developerEffectiveState !== 'disabled'
-    && developerEffectiveState !== 'blocked'
-  ) {
-    issues.push({
-      issue_id: 'developer_profile_active',
-      status_code: 'developer_profile_active',
-      label: 'Developer Mode profile is active',
-      user_message: 'Developer Mode can expose supervised repair routes. This does not authorize domain truth writes or release-ready claims.',
-      severity: 'info',
-      source_ref: 'app_state.developer_mode.developer_profile',
-      recommended_action_id: 'settings_repair_model_access',
-      route: issueRoute('settings_repair_model_access'),
-    });
-  }
-
   return issues.map((issue) => ({
     ...issue,
     owner_surface: 'opl_framework_settings_control_center',
@@ -737,7 +832,6 @@ export function buildSettingsControlCenter(input: BuildSettingsControlCenterInpu
     input,
     taskEntries,
     issueQueue,
-    settingsIa,
     connectionRegistry,
   );
   const configurationCatalog = buildConfigurationCatalog(input);

@@ -885,10 +885,68 @@ test('agent availability is package health only in fast and full profiles', () =
   assert.equal(full.every((entry) => entry.source === 'package_status'), true);
 });
 
+test('deferred inventory keeps startup catalogs without resolving domain descriptors', () => {
+  const input = fixture();
+  let descriptorReadCount = 0;
+  try {
+    const projection = buildWorkItemProjectionV2({
+      profile: 'fast',
+      bindings: input.bindings,
+      packageProjectionItems: input.packageProjectionItems,
+      packageStatusById: input.packageStatusById,
+      inventoryDetail: 'deferred',
+      resolveDescriptor: () => {
+        descriptorReadCount += 1;
+        throw new Error('deferred inventory must not resolve domain descriptors');
+      },
+      generatedAt: '2026-07-13T00:00:00.000Z',
+    });
+    assert.equal(descriptorReadCount, 0);
+    assert.equal(projection.project_catalog.length, 3);
+    assert.equal(projection.agent_catalog.length > 0, true);
+    assert.deepEqual(projection.items, []);
+    assert.equal(projection.detail_policy.inventory_detail, 'deferred');
+    assert.equal(projection.detail_policy.all_work_item_summaries_included, false);
+    assert.equal(projection.detail_policy.attempt_ref_limit_per_item, 0);
+    assert.equal(projection.detail_policy.full_detail_surface, 'opl app state --profile full --json');
+  } finally {
+    fs.rmSync(input.root, { recursive: true, force: true });
+  }
+});
+
 test('WorkItemProjection V2 output validates against its machine schema', () => {
   const input = fixture();
   try {
-    const projection = buildWorkItemProjectionV2({
+    const schemaRef = 'contracts/opl-framework/work-item-projection-v2.schema.json';
+    const schema = parseJsonText(fs.readFileSync(path.join(process.cwd(), schemaRef), 'utf8')) as Record<string, unknown>;
+    for (const projection of [
+      buildWorkItemProjectionV2({
+        profile: 'full',
+        bindings: input.bindings,
+        packageProjectionItems: input.packageProjectionItems,
+        packageStatusById: input.packageStatusById,
+        attempts: [],
+        resolveDescriptor: input.resolveDescriptor,
+        generatedAt: '2026-07-13T00:00:00.000Z',
+      }),
+      buildWorkItemProjectionV2({
+        profile: 'fast',
+        bindings: input.bindings,
+        packageProjectionItems: input.packageProjectionItems,
+        packageStatusById: input.packageStatusById,
+        inventoryDetail: 'deferred',
+        generatedAt: '2026-07-13T00:00:00.000Z',
+      }),
+    ]) {
+      const validation = validateJsonSchemaPayload({
+        schemaId: 'opl.work_item_projection.v2',
+        schema,
+        sourceRef: schemaRef,
+      }, projection);
+      assert.equal(validation.ok, true, validation.ok ? undefined : JSON.stringify(validation.errors, null, 2));
+    }
+
+    const fullProjection = buildWorkItemProjectionV2({
       profile: 'full',
       bindings: input.bindings,
       packageProjectionItems: input.packageProjectionItems,
@@ -897,24 +955,25 @@ test('WorkItemProjection V2 output validates against its machine schema', () => 
       resolveDescriptor: input.resolveDescriptor,
       generatedAt: '2026-07-13T00:00:00.000Z',
     });
-    const schemaRef = 'contracts/opl-framework/work-item-projection-v2.schema.json';
-    const schema = parseJsonText(fs.readFileSync(path.join(process.cwd(), schemaRef), 'utf8')) as Record<string, unknown>;
-    const localizedProjection = structuredClone(projection);
-    const localizedStage = localizedProjection.items.find((item) => item.stage_map.length > 0)?.stage_map[0];
+    const localizedStage = fullProjection.items.find((item) => item.stage_map.length > 0)?.stage_map[0];
     assert.ok(localizedStage);
     localizedStage.display_names['zh-CN'] = '研究立项';
-    const validation = validateJsonSchemaPayload({
+    const localizedValidation = validateJsonSchemaPayload({
       schemaId: 'opl.work_item_projection.v2',
       schema,
       sourceRef: schemaRef,
-    }, localizedProjection);
-    assert.equal(validation.ok, true, validation.ok ? undefined : JSON.stringify(validation.errors, null, 2));
+    }, fullProjection);
+    assert.equal(
+      localizedValidation.ok,
+      true,
+      localizedValidation.ok ? undefined : JSON.stringify(localizedValidation.errors, null, 2),
+    );
     localizedStage.display_names['zh-CN'] = '   ';
     const invalidValidation = validateJsonSchemaPayload({
       schemaId: 'opl.work_item_projection.v2',
       schema,
       sourceRef: schemaRef,
-    }, localizedProjection);
+    }, fullProjection);
     assert.equal(invalidValidation.ok, false);
   } finally {
     fs.rmSync(input.root, { recursive: true, force: true });

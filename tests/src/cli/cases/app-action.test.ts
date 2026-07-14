@@ -243,7 +243,7 @@ test('App action catalog registers only verified external owner updates and exec
     PATH: `${path.dirname(codex)}:/usr/bin:/bin`,
   };
   try {
-    const state = runCli(['app', 'state', '--profile', 'fast'], env) as any;
+    const state = runCli(['app', 'state', '--profile', 'full'], env) as any;
     const action = state.app_state.actions.find((entry: any) => entry.action_id === 'external_codex_update_homebrew');
     assert.equal(action.confirmation_required, true);
     assert.equal(action.delegated_surface, 'brew upgrade codex');

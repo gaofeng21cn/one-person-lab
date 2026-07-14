@@ -279,9 +279,11 @@ export type WorkItemProjectionV2 = {
     detail_policy: 'summary_only' | 'included';
   };
   detail_policy: {
-    all_work_item_summaries_included: true;
+    all_work_item_summaries_included: boolean;
     attempt_ref_limit_per_item: number;
     diagnostic_details: 'lazy' | 'included';
+    inventory_detail: 'deferred' | 'included';
+    full_detail_surface: 'opl app state --profile full --json';
   };
   authority_boundary: {
     projection_only: true;

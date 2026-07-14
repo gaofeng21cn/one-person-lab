@@ -132,8 +132,10 @@ test('app state does not turn an unregistered failed attempt into a phantom work
     assert.equal(task, undefined);
     assert.equal(workbench.work_item_projection_v2.items.length, 0);
     assert.equal(workbench.work_item_projection_v2.summary.system_attention_count, 0);
-    assert.equal(workbench.work_item_projection_v2.diagnostics.count, 1);
+    assert.equal(workbench.work_item_projection_v2.diagnostics.count, 0);
     assert.equal(workbench.work_item_projection_v2.diagnostics.detail_policy, 'summary_only');
+    assert.equal(workbench.work_item_projection_v2.detail_policy.inventory_detail, 'deferred');
+    assert.equal(workbench.work_item_projection_v2.detail_policy.all_work_item_summaries_included, false);
     assert.equal(
       workbench.activity_center.needs_attention.some(
         (entry: any) => entry.task_id === 'redcube:work-unit:deck-42',

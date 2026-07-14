@@ -178,10 +178,25 @@ function moduleSourcePreference(spec: DomainModuleSpec): OplModuleSourcePreferen
   return readOplDeveloperSupervisorConfig().module_source_preferences?.[spec.module_id] ?? 'auto';
 }
 
-function developerModeUsesGitCheckouts(spec: DomainModuleSpec) {
+type ModuleInspectionProfile = 'fast' | 'full';
+
+function developerModeUsesGitCheckouts(
+  spec: DomainModuleSpec,
+  profile: ModuleInspectionProfile = 'full',
+) {
   const sourcePreference = moduleSourcePreference(spec);
-  return sourcePreference === 'developer'
-    || (sourcePreference === 'auto' && developerModePrefersLocalCheckouts());
+  if (sourcePreference === 'developer') {
+    return true;
+  }
+  if (sourcePreference !== 'auto') {
+    return false;
+  }
+
+  const developerSupervisor = readOplDeveloperSupervisorConfig();
+  if (profile === 'fast' && developerSupervisor.enabled === 'auto') {
+    return false;
+  }
+  return developerModePrefersLocalCheckouts(developerSupervisor);
 }
 
 function shouldUsePackageChannel(spec: DomainModuleSpec) {
@@ -227,7 +242,10 @@ function externalCheckoutSyncAvailable(
     );
 }
 
-function buildModuleSourcePolicy(spec: DomainModuleSpec): ModuleSourcePolicy {
+function buildModuleSourcePolicy(
+  spec: DomainModuleSpec,
+  profile: ModuleInspectionProfile = 'full',
+): ModuleSourcePolicy {
   const pathOverride = moduleHasPathOverride(spec);
   const repoUrlOverride = moduleHasRepoUrlOverride(spec);
   const sourcePreference = moduleSourcePreference(spec);
@@ -286,7 +304,7 @@ function buildModuleSourcePolicy(spec: DomainModuleSpec): ModuleSourcePolicy {
       low_level_override_env: null,
     };
   }
-  if (developerModeUsesGitCheckouts(spec)) {
+  if (developerModeUsesGitCheckouts(spec, profile)) {
     return {
       ...sourceSelection,
       effective_install_update_source: 'git_checkout',
@@ -378,18 +396,16 @@ function buildModuleCapabilities(
   };
 }
 
-type ModuleInspectionProfile = 'fast' | 'full';
-
 function inspectModule(spec: DomainModuleSpec, profile: ModuleInspectionProfile = 'full'): ModuleInspection {
   const managedCheckoutPath = resolveManagedModulePath(spec);
   const envCheckoutPath = normalizeOptionalString(process.env[buildModulePathEnvKey(spec.module_id)]);
   const explicitModulesRoot = normalizeOptionalString(process.env.OPL_MODULES_ROOT);
   const siblingCheckoutPath = path.join(resolveSiblingWorkspaceRoot(), spec.repo_name);
   const candidates: Array<{ path: string; origin: OplModuleInstallOrigin }> = [];
-  const sourcePolicy = buildModuleSourcePolicy(spec);
+  const sourcePolicy = buildModuleSourcePolicy(spec, profile);
   const preferLocalDeveloperCheckout =
     !explicitModulesRoot
-    && developerModeUsesGitCheckouts(spec);
+    && developerModeUsesGitCheckouts(spec, profile);
 
   if (envCheckoutPath) {
     candidates.push({

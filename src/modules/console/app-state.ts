@@ -19,7 +19,7 @@ import {
   resolveDefaultFamilyWorkspaceRoot,
   runOplAgentPackageStatus,
 } from '../connect/public/app-state.ts';
-import type { WorkspaceBinding } from '../workspace/public/app-state.ts';
+import { listWorkspaceBindings, type WorkspaceBinding } from '../workspace/public/app-state.ts';
 import { buildOplEndpoints } from '../../kernel/opl-runtime-endpoints.ts';
 import {
   familyRuntimePaths,
@@ -453,6 +453,255 @@ function recordArray(value: unknown) {
   return Array.isArray(value) ? value.filter(isRecord) : [];
 }
 
+function pickRecordFields(value: unknown, fields: readonly string[]): JsonRecord {
+  const record = isRecord(value) ? value : {};
+  return Object.fromEntries(
+    fields.filter((field) => Object.hasOwn(record, field)).map((field) => [field, record[field]]),
+  ) as JsonRecord;
+}
+
+function compactFastProviderState(value: unknown) {
+  const provider = isRecord(value) ? value : {};
+  const temporal = isRecord(provider.temporal) ? provider.temporal : {};
+  const details = isRecord(temporal.details) ? temporal.details : {};
+  const workerReadiness = isRecord(details.worker_readiness) ? details.worker_readiness : {};
+  const visibilityReadiness = isRecord(workerReadiness.visibility_readiness)
+    ? workerReadiness.visibility_readiness
+    : {};
+  return {
+    selected_provider: provider.selected_provider,
+    temporal: {
+      ...pickRecordFields(temporal, [
+        'required_for',
+        'health_status',
+        'status',
+        'ready',
+        'degraded_reason',
+        'capabilities',
+        'management',
+      ]),
+      details: {
+        ...pickRecordFields(details, [
+          'inspection_detail',
+          'address',
+          'address_source',
+          'namespace',
+          'task_queue',
+          'adapter_mode',
+          'worker_ready',
+          'runtime_dependency',
+          'required_env',
+        ]),
+        worker_readiness: {
+          ...pickRecordFields(workerReadiness, [
+            'inspection_detail',
+            'readiness_status',
+            'service_ready',
+            'worker_ready',
+            'server_reachable',
+            'blockers',
+          ]),
+          visibility_readiness: pickRecordFields(visibilityReadiness, [
+            'readiness_status',
+            'status',
+            'reason',
+            'inspection_detail',
+          ]),
+        },
+        detail_policy: {
+          detail: 'startup',
+          full_detail_surface: 'opl app state --profile full --json#provider.temporal.details',
+        },
+      },
+    },
+  };
+}
+
+function compactFastActionCatalog(actions: ReadonlyArray<JsonRecord>) {
+  return actions.map((action) => pickRecordFields(action, [
+    'action_id',
+    'label',
+    'surface',
+    'owner',
+    'delegated_surface',
+    'route',
+    'payload_fields',
+    'mutates',
+    'submit_via',
+    'execution_policy',
+    'route_requires_domain_or_app_payload',
+    'can_submit_to_safe_action_shell',
+    'dry_run_supported',
+    'confirmation_required',
+    'danger_level',
+  ]));
+}
+
+function compactFastDockerWebuiReadModel(value: unknown) {
+  const dockerWebui = isRecord(value) ? value : {};
+  const runtimeProxy = isRecord(dockerWebui.runtime_proxy) ? dockerWebui.runtime_proxy : {};
+  const failureRecovery = isRecord(dockerWebui.failure_recovery) ? dockerWebui.failure_recovery : {};
+  return {
+    ...pickRecordFields(dockerWebui, [
+      'surface_kind',
+      'ordinary_status',
+      'doctor_surface',
+      'doctor_read_model_ref',
+      'action_ids',
+      'issue_ids',
+    ]),
+    runtime_proxy: pickRecordFields(runtimeProxy, ['status', 'status_code', 'source_ref']),
+    failure_recovery: pickRecordFields(failureRecovery, ['status', 'status_code', 'source_ref']),
+    ordinary_next_actions: recordArray(dockerWebui.ordinary_next_actions).map((action) =>
+      pickRecordFields(action, [
+        'action_id',
+        'label',
+        'state',
+        'route',
+        'dry_run_route',
+        'payload_required',
+        'payload_fields',
+        'confirmation_required',
+        'danger_level',
+      ])),
+    detail_policy: {
+      detail: 'startup',
+      full_detail_surface:
+        'opl app state --profile full --json#settings_control_center.app_settings_read_model.docker_webui',
+    },
+  };
+}
+
+function compactFastSettingsControlCenter(value: unknown) {
+  const settings = isRecord(value) ? value : {};
+  const readModel = isRecord(settings.app_settings_read_model) ? settings.app_settings_read_model : {};
+  return {
+    ...pickRecordFields(settings, [
+      'surface_kind',
+      'schema_version',
+      'compatibility_schema_versions',
+      'profile',
+      'owner',
+      'contract_ref',
+      'read_surface',
+      'action_surface',
+      'allowed_action_ids',
+      'status_summary',
+      'surface_policy',
+      'configuration_catalog',
+      'connection_registry',
+      'issue_queue',
+      'authority_boundary',
+    ]),
+    app_settings_read_model: {
+      ...pickRecordFields(readModel, [
+        'surface_kind',
+        'schema_version',
+        'owner',
+        'source_surface',
+        'opl_gateway_account',
+        'resource_sources',
+        'local_environment',
+        'access_api_key',
+        'codex_model_policy',
+        'connections',
+        'workspace_services',
+        'action_policy',
+        'shell_policy',
+        'source_refs',
+      ]),
+      docker_webui: compactFastDockerWebuiReadModel(readModel.docker_webui),
+    },
+    task_entries: [],
+    action_catalog: [],
+    detail_policy: {
+      task_entries: 'deferred',
+      action_catalog: 'deferred',
+      settings_ia: 'deferred',
+      settings_projection: 'deferred',
+      layout_source: 'one-person-lab-app/contracts/app-product-profile.json#settings_control_center',
+      startup_layout_policy: 'read_persisted_app_narrow_snapshot_then_refresh_in_background',
+      broad_app_state_layout_inference: 'forbidden',
+      full_detail_surface: 'opl app state --profile full --json#settings_control_center',
+    },
+  };
+}
+
+function compactFastLegacyAgentPackageDirectory(value: unknown) {
+  return {
+    ...pickRecordFields(value, [
+      'surface_kind',
+      'status',
+      'installed_package_count',
+      'home_shortcut_preferences',
+      'recommended_action',
+      'detail_policy',
+    ]),
+    source_ref: 'app_state.agent_packages.directory',
+  };
+}
+
+function compactFastLegacyAgentPackageStatus(value: unknown) {
+  return {
+    ...pickRecordFields(value, [
+      'surface_kind',
+      'status',
+      'installed_package_count',
+      'status_read_failure_count',
+      'home_shortcut_preferences',
+      'diagnostics',
+    ]),
+    source_ref: 'app_state.agent_packages.status_index',
+    detail_policy: {
+      package_statuses: 'canonical_source_ref',
+      full_detail_surface: 'opl app state --profile full --json#agent_packages.status_index',
+    },
+  };
+}
+
+function compactFastFeedbackOps(value: unknown) {
+  return {
+    ...pickRecordFields(value, [
+      'version',
+      'surface_kind',
+      'read_model_id',
+      'status',
+      'refs_only',
+      'summary',
+      'status_buckets',
+      'status_items',
+      'intake_event_count',
+      'app_projection',
+      'authority_boundary',
+    ]),
+    work_order_status_items: [],
+    detail_policy: {
+      work_order_status_items: 'alias_deferred_use_status_items',
+      full_detail_surface: 'opl app state --profile full --json#feedbackops',
+    },
+  };
+}
+
+function compactFastDefaultReadSurfacePolicy(value: unknown) {
+  return pickRecordFields(value, [
+    'surface_kind',
+    'schema_version',
+    'profile',
+    'default_operator_payload',
+    'default_planning_root',
+    'normal_state_surface',
+    'full_state_surface',
+    'full_runtime_drilldown_surface',
+    'raw_runtime_projection_policy',
+    'worklist_projection_policy',
+    'first_screen_answers',
+    'fast_profile_excludes',
+    'forbidden_fast_profile_fields',
+    'shell_contract',
+    'authority_boundary',
+  ]);
+}
+
 function compactFastRuntimeTask(value: unknown) {
   const task = isRecord(value) ? value : {};
   return {
@@ -547,11 +796,94 @@ function compactFastOperatorRuntimeProjection(operator: JsonRecord) {
       ]))
     : operator.visual_ref_groups;
 
+  const currentOwnerDelta = isRecord(operator.current_owner_delta) ? operator.current_owner_delta : {};
+  const currentOwnerDeltaReadModel = isRecord(operator.current_owner_delta_read_model)
+    ? operator.current_owner_delta_read_model
+    : {};
+  const ordinaryCockpit = isRecord(operator.ordinary_cockpit) ? operator.ordinary_cockpit : {};
+  const stageRunCockpit = isRecord(operator.stage_run_cockpit) ? operator.stage_run_cockpit : {};
+
   return {
-    ...operator,
+    ...pickRecordFields(operator, [
+      'status',
+      'summary',
+      'full_detail_surface',
+      'stage_run_cockpit_summary',
+      'operator_required_delta',
+      'operator_current_owner_delta_owner',
+      'operator_next_owner',
+      'operator_next_action',
+      'operator_next_action_kind',
+      'operator_next_action_source',
+      'operator_next_action_owner',
+      'operator_next_required_action',
+      'operator_next_missing_input_refs',
+      'operator_next_required_ref_shape',
+      'operator_payload_requirement',
+      'operator_accepted_answer_shape',
+      'operator_next_action_authority_boundary',
+      'owner_boundary',
+      'refs',
+    ]),
+    default_read_surface_policy: compactFastDefaultReadSurfacePolicy(operator.default_read_surface_policy),
+    ordinary_cockpit: pickRecordFields(ordinaryCockpit, [
+      'surface_kind',
+      'schema_version',
+      'display_payload_policy',
+      'display_payload_fields',
+      'display_payload',
+      'developer_full_drilldown_only',
+      'authority_boundary',
+    ]),
+    current_owner_delta: currentOwnerDelta,
+    current_owner_delta_read_model: {
+      ...pickRecordFields(currentOwnerDeltaReadModel, [
+        'surface_kind',
+        'schema_version',
+        'current_owner',
+        'required_delta',
+        'default_summary',
+        'next_safe_action_or_none',
+        'accepted_return_shapes',
+        'default_next_action_derivation_policy',
+      ]),
+      current_owner_delta: currentOwnerDelta,
+    },
+    stage_run_cockpit: {
+      source_ref: 'opl runtime app-operator-drilldown --detail full --json#stage_run_cockpit',
+      ...pickRecordFields(stageRunCockpit, [
+        'projection_role',
+        'next_required_owner_action',
+        'authority_boundary',
+      ]),
+    },
+    dynamic_vertical_map: {
+      source_ref: 'opl runtime app-operator-drilldown --detail full --json#dynamic_vertical_map',
+    },
     workbench: {
-      ...workbench,
+      ...pickRecordFields(workbench, [
+        'view_model_schema',
+        'runtime_scope',
+        'user_task_status_summary',
+        'summary_cards',
+        'sections',
+        'navigation',
+        'action_queue',
+        'domain_lane_map',
+        'agent_availability',
+        'safe_action_routes',
+        'refresh_policy',
+        'performance_policy',
+        'lazy_refs',
+        'settings_control_center',
+      ]),
       activity_center: compactActivityCenter,
+      default_read_surface_policy: {
+        source_ref: 'app_state.operator.default_read_surface_policy',
+      },
+      ordinary_cockpit: {
+        source_ref: 'app_state.operator.ordinary_cockpit',
+      },
       current_owner_delta: {
         source_ref: 'app_state.operator.current_owner_delta',
       },
@@ -567,7 +899,7 @@ function compactFastOperatorRuntimeProjection(operator: JsonRecord) {
       stage_run_cockpit_summary: {
         source_ref: 'app_state.operator.stage_run_cockpit_summary',
       },
-      task_drilldowns: recordArray(workbench.task_drilldowns),
+      task_drilldowns: recordArray(workbench.task_drilldowns).map(compactFastRuntimeTask),
       task_run_projection_v2: {
         ...taskRun,
         tasks: recordArray(taskRun.tasks).map(compactFastTaskRun),
@@ -576,9 +908,16 @@ function compactFastOperatorRuntimeProjection(operator: JsonRecord) {
         },
       },
       work_item_projection_v1: { ...workItems, items: compactWorkItems },
-      work_item_projection_v2: workItemsV2,
+      work_item_projection_v2: {
+        ...workItemsV2,
+        items: recordArray(workItemsV2.items),
+      },
     },
     visual_ref_groups: compactVisualRefGroups,
+    detail_policy: {
+      detail: 'startup',
+      full_detail_surface: 'opl runtime app-operator-drilldown --detail full --json',
+    },
   };
 }
 
@@ -600,11 +939,17 @@ export async function buildOplAppState(input: {
     ...developerMode.developer_profile,
     capabilities: developerMode.capabilities,
   };
-  const provider = await buildProviderState(profile);
+  const rawProvider = await buildProviderState(profile);
+  const provider = profile === 'fast'
+    ? compactFastProviderState(rawProvider as unknown as JsonRecord)
+    : rawProvider;
   const release = buildReleaseState();
   const workspaceRoot = readOplWorkspaceRoot();
   const core = buildCoreState(profile);
-  const actions = buildActionCatalog(contracts);
+  const rawActions = buildActionCatalog(contracts, { inspectExternalOwners: profile === 'full' });
+  const actions = profile === 'fast'
+    ? compactFastActionCatalog(rawActions as unknown as JsonRecord[])
+    : rawActions;
   const readAgentPackageStatus = requestCachedAgentPackageStatusReader(
     input.readAgentPackageStatus ?? runOplAgentPackageStatus,
   );
@@ -615,6 +960,7 @@ export async function buildOplAppState(input: {
       workspaceRoot.selected_path,
     ),
   }).opl_agent_packages;
+  const workspaceBindings = listWorkspaceBindings();
   const packageIds = [...new Set([
     ...CANONICAL_OPL_PACKAGE_IDS,
     ...agentPackagesReadback.directory.entries.map((entry) => entry.package_id),
@@ -660,6 +1006,8 @@ export async function buildOplAppState(input: {
     profile,
     packageProjectionItems: runtimeSourceCarriers,
     packageStatusById: agentPackageStatuses,
+    bindings: workspaceBindings,
+    inventoryDetail: profile === 'fast' ? 'deferred' : 'included',
   });
   const runtimeActivityItems = projectWorkItemRuntimeActivityItems(workItemProjectionV2);
   const fullRuntimeDrilldown = profile === 'full'
@@ -675,7 +1023,10 @@ export async function buildOplAppState(input: {
   const agentLabFeedbackSelfEvolution = buildAgentLabDomainFeedbackSelfEvolutionReadModel({
     sourceRefs: ['app-state:operator-workbench'],
   });
-  const feedbackOps = buildFeedbackOpsReadModel({ developerMode });
+  const rawFeedbackOps = buildFeedbackOpsReadModel({ developerMode });
+  const feedbackOps = profile === 'fast'
+    ? compactFastFeedbackOps(rawFeedbackOps)
+    : rawFeedbackOps;
   const paths = {
     home_dir: statePaths.home_dir,
     state_dir: statePaths.state_dir,
@@ -710,7 +1061,7 @@ export async function buildOplAppState(input: {
       lifecycle_owner: 'opl_packages',
     },
   };
-  const settingsControlCenter = buildSettingsControlCenter({
+  const rawSettingsControlCenter = buildSettingsControlCenter({
     profile,
     core,
     developerMode,
@@ -719,6 +1070,9 @@ export async function buildOplAppState(input: {
     release,
     paths,
   });
+  const settingsControlCenter = profile === 'fast'
+    ? compactFastSettingsControlCenter(rawSettingsControlCenter)
+    : rawSettingsControlCenter;
   const rawOperator = buildOplAppOperatorViewModel({
     profile,
     core,
@@ -784,8 +1138,12 @@ export async function buildOplAppState(input: {
       developer_mode: developerMode,
       runtime_source_carriers: runtimeSourceCarriersState,
       agent_packages: agentPackagesProjection,
-      opl_agent_packages: agentPackagesReadback,
-      opl_agent_package_status: agentPackagesProjection.status_index,
+      opl_agent_packages: profile === 'fast'
+        ? compactFastLegacyAgentPackageDirectory(agentPackagesReadback)
+        : agentPackagesReadback,
+      opl_agent_package_status: profile === 'fast'
+        ? compactFastLegacyAgentPackageStatus(agentPackagesProjection.status_index)
+        : agentPackagesProjection.status_index,
       provider,
       assistants: {
         default_launch: 'direct_click',

@@ -2,7 +2,7 @@ import type { OplDeveloperSupervisorConfigFile } from '../../kernel/system-prefe
 import type { buildOplFrameworkLocator } from './opl-framework-locator.ts';
 import type { DeveloperModeGithubIdentityProjection } from './developer-mode-source-policy.ts';
 
-export type DeveloperModeStatus = 'ready' | 'limited' | 'blocked' | 'disabled' | 'inactive';
+export type DeveloperModeStatus = 'ready' | 'limited' | 'blocked' | 'disabled' | 'inactive' | 'pending';
 export type DeveloperModeEffectiveState =
   | 'active_direct'
   | 'active_pr_only'
@@ -10,6 +10,7 @@ export type DeveloperModeEffectiveState =
   | 'blocked'
   | 'disabled'
   | 'inactive_auto_identity_mismatch'
+  | 'inspection_pending'
   | 'observe_only';
 export type DeveloperModeAllowedRoute =
   | 'direct_repo_fix'
@@ -81,6 +82,28 @@ export type DeveloperCapabilityProjection = {
 
 export type DeveloperCapabilitiesProjection = Record<DeveloperCapabilityId, DeveloperCapabilityProjection>;
 export type FrameworkLocatorResolution = ReturnType<typeof buildOplFrameworkLocator>['framework_locator']['resolved'];
+
+export type DeveloperModeInactiveReason =
+  | 'developer_mode_disabled'
+  | 'authority_inspection_pending'
+  | 'github_identity_unavailable'
+  | 'auto_identity_mismatch'
+  | 'repo_authority_blocked'
+  | null;
+
+export type DeveloperModeRepositoryMaintenanceProtection = {
+  status: 'ready';
+  dirty_worktree: {
+    policy: 'block_in_place_mutation';
+    requires_isolated_worktree: true;
+    preserves_existing_changes: true;
+  };
+  branch: {
+    policy: 'topic_branch_required';
+    protected_branches: ['main', 'master'];
+    direct_push_to_protected_branch: false;
+  };
+};
 
 export type DeveloperModeAgentAuthorityProjection = {
   surface_kind: 'opl_developer_mode_agent_authority_policy';
@@ -173,6 +196,7 @@ export type DeveloperModeContext = {
   configSource: OplDeveloperSupervisorConfigFile['source'];
   autoEnableGithubLogin: string;
   allowedRoute: DeveloperModeAllowedRoute;
+  inactiveReason: DeveloperModeInactiveReason;
   githubIdentity: GithubIdentityProjection;
   repoAuthority: RepoAuthoritySummary;
   inspectionDetail: 'fast' | 'full';
@@ -183,6 +207,7 @@ export type OplDeveloperModeProjection = {
   status: DeveloperModeStatus;
   enabled: OplDeveloperSupervisorConfigFile['enabled'];
   effective_state: DeveloperModeEffectiveState;
+  inactive_reason: DeveloperModeInactiveReason;
   mode: OplDeveloperSupervisorConfigFile['mode'];
   config_source: OplDeveloperSupervisorConfigFile['source'];
   auto_enable_github_login: string;
@@ -194,5 +219,6 @@ export type OplDeveloperModeProjection = {
   target_authority: OplDeveloperModeTargetAuthoritySurface;
   github_identity: GithubIdentityProjection;
   repo_authority: RepoAuthoritySummary;
+  repository_maintenance_protection: DeveloperModeRepositoryMaintenanceProtection;
   inspection_detail?: 'fast' | 'full';
 };

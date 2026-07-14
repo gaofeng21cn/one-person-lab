@@ -55,11 +55,13 @@
     },
     "detail_policy": {
       "type": "object",
-      "required": ["all_work_item_summaries_included", "attempt_ref_limit_per_item", "diagnostic_details"],
+      "required": ["all_work_item_summaries_included", "attempt_ref_limit_per_item", "diagnostic_details", "inventory_detail", "full_detail_surface"],
       "properties": {
-        "all_work_item_summaries_included": { "const": true },
-        "attempt_ref_limit_per_item": { "type": "integer", "minimum": 1 },
-        "diagnostic_details": { "enum": ["lazy", "included"] }
+        "all_work_item_summaries_included": { "type": "boolean" },
+        "attempt_ref_limit_per_item": { "type": "integer", "minimum": 0 },
+        "diagnostic_details": { "enum": ["lazy", "included"] },
+        "inventory_detail": { "enum": ["deferred", "included"] },
+        "full_detail_surface": { "const": "opl app state --profile full --json" }
       },
       "additionalProperties": false
     },
