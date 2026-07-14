@@ -100,16 +100,30 @@ export async function runFamilyRuntime(
     stageReplayMissingReceiptExtraReceipts?: Parameters<
       typeof runFamilyRuntimeEvidenceWorklistCommand
     >[0]['stageReplayMissingReceiptExtraReceipts'];
+    stageRunRuntime?: {
+      ensurePackageLaunchReady?: typeof ensureFamilyRuntimePackageLaunchReady;
+      resolveStageBinding?: typeof resolveStandardAgentStageQualityRuntimeBinding;
+      startWorkflow?: (
+        input: Parameters<typeof launchRegisteredStageRun>[0]['stageRunInput'],
+        context: { paths: ReturnType<typeof familyRuntimePaths> },
+      ) => Promise<Record<string, unknown>>;
+      queryWorkflow?: (
+        input: { workflowId: string },
+        context: { paths: ReturnType<typeof familyRuntimePaths> },
+      ) => Promise<Record<string, unknown>>;
+    };
   } = {},
 ): Promise<Record<string, unknown>> {
   const parsed = parseFamilyRuntimeCommand(args);
   const { db, paths } = openQueueDb();
   try {
     if (parsed.mode === 'stage_run_query') {
-      const stage_run_query = await (await temporalProviderModule()).queryTemporalStageRunWorkflow({
-        workflowId: parsed.workflowId,
-        paths,
-      });
+      const stage_run_query = options.stageRunRuntime?.queryWorkflow
+        ? await options.stageRunRuntime.queryWorkflow({ workflowId: parsed.workflowId }, { paths })
+        : await (await temporalProviderModule()).queryTemporalStageRunWorkflow({
+            workflowId: parsed.workflowId,
+            paths,
+          });
       return { version: 'g2', family_runtime_stage_run_query: stage_run_query };
     }
     if (parsed.mode === 'status') {
@@ -360,7 +374,10 @@ export async function runFamilyRuntime(
       const useBoundaryId = stableId('package-use', [
         stageRunInvocationId,
       ]);
-      const packageReadiness = await ensureFamilyRuntimePackageLaunchReady({
+      const packageReadiness = await (
+        options.stageRunRuntime?.ensurePackageLaunchReady
+        ?? ensureFamilyRuntimePackageLaunchReady
+      )({
         domainId: parsed.input.domainId,
         workspaceLocator: parsed.input.workspaceLocator,
         useBoundaryId,
@@ -373,7 +390,8 @@ export async function runFamilyRuntime(
         : '';
       const domainPackRoot = managedDomainPackRoot || explicitDomainPackRoot || null;
       const stageQualityBinding = domainPackRoot
-        ? resolveStandardAgentStageQualityRuntimeBinding(domainPackRoot, parsed.input.stageId)
+        ? (options.stageRunRuntime?.resolveStageBinding
+          ?? resolveStandardAgentStageQualityRuntimeBinding)(domainPackRoot, parsed.input.stageId)
         : null;
       const useBoundWorkspaceLocator = packageReadiness?.package_use_binding
         ? {
@@ -488,7 +506,9 @@ export async function runFamilyRuntime(
           stageRunInput,
           start: Boolean(parsed.input.start && !blockedReason),
           startWorkflow: async (workflowInput) =>
-            await (await temporalProviderModule()).startTemporalStageRunWorkflow(workflowInput, { paths }),
+            options.stageRunRuntime?.startWorkflow
+              ? await options.stageRunRuntime.startWorkflow(workflowInput, { paths })
+              : await (await temporalProviderModule()).startTemporalStageRunWorkflow(workflowInput, { paths }),
         });
         const temporal_start = parsed.input.start && !blockedReason
           ? durableLaunch.temporal_start

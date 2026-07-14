@@ -136,9 +136,21 @@
     "allowed_payload": "bounded_exact_stage_run_launch_envelope_refs_hashes_policies_and_transport_receipts_only",
     "validate_identity_and_spec_before_write": true,
     "register_before_provider_start": true,
+    "launch_statuses": [
+      "registered",
+      "starting",
+      "start_failed",
+      "started",
+      "closed"
+    ],
+    "provider_start_claim": "sqlite_begin_immediate_compare_and_swap",
+    "provider_start_rpc_delivery": "at_least_once_when_starting_has_unknown_success",
+    "temporal_executions_per_stage_run": 1,
+    "started_to_start_failed_allowed": false,
     "invocation_spec_conflict_effect": "typed_fail_closed",
     "closed_replay_returns_existing_stage_run": true,
     "late_provider_start_receipt_cannot_reopen_closed_stage_run": true,
+    "late_provider_start_failure_cannot_downgrade_started_or_closed_stage_run": true,
     "registry_is_stage_current_pointer": false,
     "registry_is_domain_truth": false
   },

@@ -251,6 +251,9 @@ test('pack-bound CLI launch persists isolated review attempts and terminal quali
   delete process.env.TEMPORAL_ADDRESS;
   process.env.OPL_TEMPORAL_NAMESPACE = namespace;
   process.env.OPL_TEMPORAL_TASK_QUEUE = taskQueue;
+  const packageManifestSha256 = crypto.createHash('sha256')
+    .update(fs.readFileSync(path.join(packRoot, 'agent/stages/manifest.json')))
+    .digest('hex');
   registerAgentPackageReadinessPort({
     readStatus: () => ({
       opl_agent_package_status: {
@@ -258,7 +261,22 @@ test('pack-bound CLI launch persists isolated review attempts and terminal quali
         launch_allowed: true,
       },
     }),
-    ensureScopeActivation: async () => ({ package_use_binding: null }),
+    ensureScopeActivation: async () => ({
+      package_use_binding: {
+        surface_kind: 'opl_agent_package_use_binding.v1',
+        use_boundary_id: 'package-use:pack-bound-quality-e2e',
+        use_receipt_ref: 'opl://agent-package/use/pack-bound-quality-e2e',
+        root_package: {
+          package_id: 'mas',
+          package_version: '0.2.1',
+          package_lock_ref: 'opl://agent-package-lock/mas/0.2.1',
+          manifest_sha256: packageManifestSha256,
+          content_digest: `sha256:${crypto.createHash('sha256').update('pack-bound-quality-e2e').digest('hex')}`,
+        },
+        provider_packages: [],
+        dependency_closure_digest: packageManifestSha256,
+      },
+    }),
   });
 
   const activities = {

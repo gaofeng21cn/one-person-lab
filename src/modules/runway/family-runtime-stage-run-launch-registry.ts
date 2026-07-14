@@ -7,8 +7,14 @@ import {
   requireTemporalStageRunWorkflowInputLaunchable,
   type TemporalStageRunWorkflowInput,
 } from './family-runtime-temporal.ts';
+import { verifyStageRunImmutableContentBindingsAtUse } from './family-runtime-stage-run-identity.ts';
 
-export type StageRunLaunchStatus = 'registered' | 'start_failed' | 'started' | 'closed';
+export type StageRunLaunchStatus =
+  | 'registered'
+  | 'starting'
+  | 'start_failed'
+  | 'started'
+  | 'closed';
 
 type StageRunLaunchRow = {
   stage_run_id: string;
@@ -37,6 +43,82 @@ function parseObject(value: string | null) {
   return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
     ? parsed as Record<string, unknown>
     : null;
+}
+
+function temporalExecutionIdentity(
+  receipt: Record<string, unknown>,
+  expected: Pick<StageRunLaunchRow,
+    | 'stage_run_id'
+    | 'stage_run_invocation_id'
+    | 'stage_run_spec_sha256'
+    | 'workflow_id'>,
+) {
+  const workflowId = typeof receipt.workflow_id === 'string' && receipt.workflow_id.trim()
+    ? receipt.workflow_id.trim()
+    : null;
+  const receivedIdentity = {
+    stage_run_id: typeof receipt.stage_run_id === 'string' ? receipt.stage_run_id.trim() : null,
+    stage_run_invocation_id: typeof receipt.stage_run_invocation_id === 'string'
+      ? receipt.stage_run_invocation_id.trim()
+      : null,
+    stage_run_spec_sha256: typeof receipt.stage_run_spec_sha256 === 'string'
+      ? receipt.stage_run_spec_sha256.trim()
+      : null,
+    workflow_id: workflowId,
+  };
+  const expectedIdentity = {
+    stage_run_id: expected.stage_run_id,
+    stage_run_invocation_id: expected.stage_run_invocation_id,
+    stage_run_spec_sha256: expected.stage_run_spec_sha256,
+    workflow_id: expected.workflow_id,
+  };
+  if (canonicalJsonText(receivedIdentity) !== canonicalJsonText(expectedIdentity)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Temporal StageRun start receipt must bind the registered Run, invocation, spec, and workflow.',
+      {
+        failure_code: 'stage_run_temporal_receipt_identity_mismatch',
+        expected_identity: expectedIdentity,
+        received_identity: receivedIdentity,
+      },
+    );
+  }
+  const firstExecutionRunId = typeof receipt.first_execution_run_id === 'string'
+    && receipt.first_execution_run_id.trim()
+    ? receipt.first_execution_run_id.trim()
+    : null;
+  if (!firstExecutionRunId) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Temporal StageRun start receipt must bind the first execution run id.',
+      {
+        failure_code: 'stage_run_temporal_execution_run_id_missing',
+        workflow_id: expected.workflow_id,
+      },
+    );
+  }
+  return { workflow_id: workflowId, first_execution_run_id: firstExecutionRunId };
+}
+
+function requireSameTemporalExecution(input: {
+  existingReceipt: Record<string, unknown>;
+  receivedReceipt: Record<string, unknown>;
+  expected: StageRunLaunchRow;
+}) {
+  const existing = temporalExecutionIdentity(input.existingReceipt, input.expected);
+  const received = temporalExecutionIdentity(input.receivedReceipt, input.expected);
+  if (existing.first_execution_run_id !== received.first_execution_run_id) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'One StageRun launch cannot be rebound to a different Temporal execution.',
+      {
+        failure_code: 'stage_run_temporal_execution_identity_conflict',
+        workflow_id: input.expected.workflow_id,
+        existing_first_execution_run_id: existing.first_execution_run_id,
+        received_first_execution_run_id: received.first_execution_run_id,
+      },
+    );
+  }
 }
 
 function rowPayload(row: StageRunLaunchRow) {
@@ -113,6 +195,10 @@ export function registerStageRunLaunch(
   input: TemporalStageRunWorkflowInput,
 ) {
   const stageRunInput = requireTemporalStageRunWorkflowInputLaunchable(input);
+  verifyStageRunImmutableContentBindingsAtUse(
+    stageRunInput.stage_run_spec,
+    stageRunInput.domain_pack_root,
+  );
   createStageRunLaunchTable(db);
   const canonicalInput = canonicalJsonText(stageRunInput);
   db.exec('BEGIN IMMEDIATE');
@@ -145,11 +231,25 @@ export function registerStageRunLaunch(
           },
         );
       }
+      const persistedInput = parseObject(existing.stage_run_input_json) as TemporalStageRunWorkflowInput;
+      const refreshedInput = {
+        ...persistedInput,
+        workspace_locator: stageRunInput.workspace_locator,
+        domain_pack_root: stageRunInput.domain_pack_root,
+      };
+      if (canonicalJsonText(refreshedInput) !== existing.stage_run_input_json) {
+        db.prepare(`
+          UPDATE stage_run_launches
+          SET stage_run_input_json = ?, updated_at = ?
+          WHERE stage_run_id = ?
+        `).run(canonicalJsonText(refreshedInput), nowIso(), existing.stage_run_id);
+      }
+      const replay = launchRow(db, existing.stage_run_id)!;
       db.exec('COMMIT');
       return {
         registered: false,
         idempotent_replay: true,
-        launch: rowPayload(existing),
+        launch: rowPayload(replay),
       } as const;
     }
     const createdAt = nowIso();
@@ -185,27 +285,116 @@ export function registerStageRunLaunch(
   }
 }
 
+export function claimStageRunStart(db: DatabaseSync, stageRunId: string) {
+  createStageRunLaunchTable(db);
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    const existing = launchRow(db, stageRunId);
+    if (!existing) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Temporal StageRun start cannot be claimed before launch registration.',
+        { stage_run_id: stageRunId },
+      );
+    }
+    if (existing.launch_status !== 'registered' && existing.launch_status !== 'start_failed') {
+      db.exec('COMMIT');
+      return {
+        claimed: false,
+        launch: rowPayload(existing),
+      } as const;
+    }
+    const updated = db.prepare(`
+      UPDATE stage_run_launches
+      SET launch_status = 'starting', last_start_error = NULL, updated_at = ?
+      WHERE stage_run_id = ? AND launch_status = ?
+    `).run(nowIso(), stageRunId, existing.launch_status);
+    if (updated.changes !== 1) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Temporal StageRun start claim lost its compare-and-swap transition.',
+        {
+          failure_code: 'stage_run_start_claim_conflict',
+          stage_run_id: stageRunId,
+          expected_launch_status: existing.launch_status,
+        },
+      );
+    }
+    const claimed = launchRow(db, stageRunId)!;
+    db.exec('COMMIT');
+    return {
+      claimed: true,
+      launch: rowPayload(claimed),
+    } as const;
+  } catch (error) {
+    db.exec('ROLLBACK');
+    throw error;
+  }
+}
+
 export function recordStageRunTemporalStart(
   db: DatabaseSync,
   input: { stageRunId: string; temporalStartReceipt: Record<string, unknown> },
 ) {
-  const updatedAt = nowIso();
-  const result = db.prepare(`
-    UPDATE stage_run_launches
-    SET launch_status = CASE WHEN launch_status = 'closed' THEN 'closed' ELSE 'started' END,
-        temporal_start_receipt_json = ?,
-        terminal_status = CASE WHEN launch_status = 'closed' THEN terminal_status ELSE NULL END,
-        last_start_error = NULL, updated_at = ?
-    WHERE stage_run_id = ?
-  `).run(canonicalJsonText(input.temporalStartReceipt), updatedAt, input.stageRunId);
-  if (result.changes !== 1) {
-    throw new FrameworkContractError(
-      'contract_shape_invalid',
-      'Temporal StageRun start cannot be recorded before launch registration.',
-      { stage_run_id: input.stageRunId },
-    );
+  createStageRunLaunchTable(db);
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    const existing = launchRow(db, input.stageRunId);
+    if (!existing) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Temporal StageRun start cannot be recorded before launch registration.',
+        { stage_run_id: input.stageRunId },
+      );
+    }
+    temporalExecutionIdentity(input.temporalStartReceipt, existing);
+    const existingReceipt = parseObject(existing.temporal_start_receipt_json);
+    if (existingReceipt) {
+      requireSameTemporalExecution({
+        existingReceipt,
+        receivedReceipt: input.temporalStartReceipt,
+        expected: existing,
+      });
+    }
+    if (!['starting', 'start_failed', 'started', 'closed'].includes(existing.launch_status)) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Temporal StageRun start receipt requires an accepted start intent.',
+        {
+          failure_code: 'stage_run_start_receipt_transition_invalid',
+          stage_run_id: input.stageRunId,
+          launch_status: existing.launch_status,
+        },
+      );
+    }
+    if (!existingReceipt) {
+      db.prepare(`
+        UPDATE stage_run_launches
+        SET launch_status = CASE
+              WHEN launch_status = 'closed' THEN 'closed'
+              ELSE 'started'
+            END,
+            temporal_start_receipt_json = ?,
+            terminal_status = CASE WHEN launch_status = 'closed' THEN terminal_status ELSE NULL END,
+            last_start_error = CASE WHEN launch_status = 'closed' THEN last_start_error ELSE NULL END,
+            updated_at = CASE WHEN launch_status = 'closed' THEN updated_at ELSE ? END
+        WHERE stage_run_id = ?
+      `).run(canonicalJsonText(input.temporalStartReceipt), nowIso(), input.stageRunId);
+    } else if (existing.launch_status === 'starting' || existing.launch_status === 'start_failed') {
+      db.prepare(`
+        UPDATE stage_run_launches
+        SET launch_status = 'started', terminal_status = NULL,
+            last_start_error = NULL, updated_at = ?
+        WHERE stage_run_id = ?
+      `).run(nowIso(), input.stageRunId);
+    }
+    const persisted = launchRow(db, input.stageRunId)!;
+    db.exec('COMMIT');
+    return rowPayload(persisted);
+  } catch (error) {
+    db.exec('ROLLBACK');
+    throw error;
   }
-  return inspectStageRunLaunch(db, input.stageRunId);
 }
 
 export function recordStageRunStartFailure(
@@ -216,7 +405,7 @@ export function recordStageRunStartFailure(
   db.prepare(`
     UPDATE stage_run_launches
     SET launch_status = 'start_failed', last_start_error = ?, updated_at = ?
-    WHERE stage_run_id = ? AND launch_status != 'closed'
+    WHERE stage_run_id = ? AND launch_status = 'starting'
   `).run(message, nowIso(), input.stageRunId);
   return inspectStageRunLaunch(db, input.stageRunId);
 }
@@ -227,7 +416,10 @@ export function recordStageRunClosed(
 ) {
   const result = db.prepare(`
     UPDATE stage_run_launches
-    SET launch_status = 'closed', terminal_status = ?, last_start_error = NULL, updated_at = ?
+    SET launch_status = 'closed',
+        terminal_status = CASE WHEN launch_status = 'closed' THEN terminal_status ELSE ? END,
+        last_start_error = NULL,
+        updated_at = CASE WHEN launch_status = 'closed' THEN updated_at ELSE ? END
     WHERE stage_run_id = ?
   `).run(input.terminalStatus, nowIso(), input.stageRunId);
   return result.changes === 1 ? inspectStageRunLaunch(db, input.stageRunId) : null;

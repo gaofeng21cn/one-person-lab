@@ -1,6 +1,10 @@
 import { Context, heartbeat } from '@temporalio/activity';
 
-import { isRecord } from '../../kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
+import {
+  readStandardAgentQualityRolePromptFile,
+  resolveStandardAgentStagePrompt,
+} from '../pack/index.ts';
 import {
   buildTemporalStageAttemptWorkflowInput,
   type TemporalStageAttemptWorkflowInput,
@@ -38,8 +42,15 @@ import { codexActivityEventForTemporalHistory } from './family-runtime-temporal-
 import { isRuntimeHardStopReason } from '../../kernel/progress-hard-stop-policy.ts';
 import { buildStageReviewContextManifest } from '../stagecraft/index.ts';
 import { launchRegisteredStageRun } from './family-runtime-stage-run-launch.ts';
-import { recordStageRunClosed } from './family-runtime-stage-run-launch-registry.ts';
+import {
+  inspectStageRunLaunch,
+  recordStageRunClosed,
+} from './family-runtime-stage-run-launch-registry.ts';
 import { materializeStageRunRoute } from './family-runtime-stage-run-route-launch.ts';
+import {
+  stageRunSpecSha256,
+  verifyStageRunImmutableContentBindingsAtUse,
+} from './family-runtime-stage-run-identity.ts';
 
 function closeoutPacketFromRunnerReceipt(receipt: Record<string, unknown>) {
   if (isRecord(receipt.closeout_packet)) {
@@ -68,6 +79,78 @@ function readNumber(value: unknown) {
 
 function readBoolean(value: unknown) {
   return typeof value === 'boolean' ? value : null;
+}
+
+function stageRunPromptBindingsAtAttemptUse(input: TemporalStageAttemptWorkflowInput) {
+  if (!input.stage_run_id) return {};
+  const spec = input.stage_run_spec;
+  const domainPackRoot = readString(input.domain_pack_root);
+  const expectedSpecSha256 = readString(input.stage_run_spec_sha256);
+  const rolePromptRef = readString(input.quality_role_prompt_ref);
+  if (!spec || !domainPackRoot || !expectedSpecSha256 || !rolePromptRef) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'StageRun child Attempt requires its immutable spec, current pack root, and role prompt binding.',
+      {
+        failure_code: 'stage_run_child_content_bindings_missing',
+        stage_run_id: input.stage_run_id,
+      },
+    );
+  }
+  const actualSpecSha256 = stageRunSpecSha256(spec);
+  if (
+    actualSpecSha256 !== expectedSpecSha256
+    || spec.domain_id !== input.domain_id
+    || spec.stage_id !== input.stage_id
+    || spec.role_prompt_refs[input.attempt_role as keyof typeof spec.role_prompt_refs] !== rolePromptRef
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'StageRun child Attempt immutable content bindings do not match its parent Run identity.',
+      {
+        failure_code: 'stage_run_child_spec_identity_mismatch',
+        stage_run_id: input.stage_run_id,
+        expected_stage_run_spec_sha256: expectedSpecSha256,
+        received_stage_run_spec_sha256: actualSpecSha256,
+      },
+    );
+  }
+  verifyStageRunImmutableContentBindingsAtUse(spec, domainPackRoot);
+  const stagePrompt = resolveStandardAgentStagePrompt(domainPackRoot, input.stage_id);
+  const expectedStagePrompt = spec.content_bindings.find((entry) => entry.purpose === 'stage_prompt');
+  const rolePrompt = readStandardAgentQualityRolePromptFile(domainPackRoot, rolePromptRef);
+  const expectedRolePrompt = spec.content_bindings.find((entry) =>
+    entry.purpose === 'role_prompt' && entry.ref === rolePromptRef);
+  const stagePromptDigest = stagePrompt.sha256 ? `sha256:${stagePrompt.sha256}` : null;
+  const rolePromptDigest = `sha256:${rolePrompt.sha256}`;
+  if (
+    stagePrompt.status !== 'hydrated'
+    || stagePrompt.source_ref !== expectedStagePrompt?.ref
+    || stagePromptDigest !== expectedStagePrompt?.sha256
+    || rolePrompt.ref !== expectedRolePrompt?.ref
+    || rolePromptDigest !== expectedRolePrompt?.sha256
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'StageRun runner prompt hydration must use the exact bytes bound by the parent Run.',
+      {
+        failure_code: 'stage_run_runner_prompt_binding_mismatch',
+        stage_run_id: input.stage_run_id,
+        expected_stage_prompt: expectedStagePrompt ?? null,
+        received_stage_prompt: {
+          ref: stagePrompt.source_ref,
+          sha256: stagePromptDigest,
+          status: stagePrompt.status,
+        },
+        expected_role_prompt: expectedRolePrompt ?? null,
+        received_role_prompt: { ref: rolePrompt.ref, sha256: rolePromptDigest },
+      },
+    );
+  }
+  return {
+    effectiveStagePrompt: stagePrompt,
+    effectiveQualityRolePrompt: rolePrompt,
+  };
 }
 
 function compactStringList(value: unknown, maxEntries = 12, maxChars = 240) {
@@ -572,8 +655,10 @@ export async function codexStageActivity(input: TemporalStageAttemptWorkflowInpu
     });
   }, DEFAULT_CODEX_STAGE_ACTIVITY_HEARTBEAT_INTERVAL_MS);
   try {
+    const promptBindings = stageRunPromptBindingsAtAttemptUse(input);
     const runnerReceipt = await runAgentStageRunner({
       attempt: input as unknown as Record<string, unknown>,
+      ...promptBindings,
       stagePacketRef: input.stage_packet_ref,
       runnerMode: input.codex_stage_runner?.runner_mode,
       observedAt,
@@ -808,27 +893,46 @@ export async function stageQualityAttemptMaterializeActivity(
 ) {
   const { db } = openQueueDb();
   try {
+    const registered = inspectStageRunLaunch(db, input.stage_run.stage_run_id);
+    if (
+      registered.stage_run_spec_sha256 !== input.stage_run.stage_run_spec_sha256
+      || registered.stage_run_invocation_id !== input.stage_run.stage_run_invocation_id
+    ) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'StageRun Attempt materialization must use the registered invocation and immutable spec.',
+        {
+          failure_code: 'stage_run_attempt_registered_identity_mismatch',
+          stage_run_id: input.stage_run.stage_run_id,
+        },
+      );
+    }
+    const stageRun = registered.stage_run_input;
+    verifyStageRunImmutableContentBindingsAtUse(
+      stageRun.stage_run_spec,
+      stageRun.domain_pack_root,
+    );
     createStageAttemptTable(db);
     createStageQualityCycle(db, {
       qualityCycleId: input.quality_cycle_id,
-      stageRunId: input.stage_run.stage_run_id,
-      domainId: input.stage_run.domain_id,
-      stageId: input.stage_run.stage_id,
-      policy: input.stage_run.quality_policy,
+      stageRunId: stageRun.stage_run_id,
+      domainId: stageRun.domain_id,
+      stageId: stageRun.stage_id,
+      policy: stageRun.quality_policy,
     });
-    const rolePromptRef = input.stage_run.role_prompt_refs[input.attempt_role as keyof typeof input.stage_run.role_prompt_refs];
+    const rolePromptRef = stageRun.role_prompt_refs[input.attempt_role as keyof typeof stageRun.role_prompt_refs];
     if (!rolePromptRef) {
       throw new Error(`Stage quality role prompt ref missing for ${input.attempt_role}`);
     }
     const crossStageRouteSelection = {
       surface_kind: 'opl_stage_run_route_selection_context',
       version: 'stage-run-route-selection-context.v1',
-      configured_decisive_attempt_roles: input.stage_run.quality_policy.formal_review.required
+      configured_decisive_attempt_roles: stageRun.quality_policy.formal_review.required
         ? ['reviewer', 're_reviewer']
         : ['producer'],
       current_attempt_role: input.attempt_role,
-      declared_stage_ids: input.stage_run.declared_stage_ids,
-      max_repair_rounds: input.stage_run.quality_policy.formal_review.max_repair_rounds,
+      declared_stage_ids: stageRun.declared_stage_ids,
+      max_repair_rounds: stageRun.quality_policy.formal_review.max_repair_rounds,
       terminal_route_selection_requires_stage_run_terminal: true,
       prior_required_finding_ids: (input.findings ?? [])
         .filter((finding) => finding.required)
@@ -838,16 +942,16 @@ export async function stageQualityAttemptMaterializeActivity(
     const contextManifest = input.attempt_role === 'reviewer' || input.attempt_role === 're_reviewer'
       ? {
           ...buildStageReviewContextManifest({
-          stageRunId: input.stage_run.stage_run_id,
+          stageRunId: stageRun.stage_run_id,
           qualityCycleId: input.quality_cycle_id,
           reviewerAttemptRole: input.attempt_role,
-          stageGoalRefs: input.stage_run.stage_goal_refs,
+          stageGoalRefs: stageRun.stage_goal_refs,
           artifactRefs: input.artifact_refs,
           artifactHashes: input.artifact_hashes,
-          sourceRefs: input.stage_run.source_refs,
-          qualityRubricRefs: input.stage_run.quality_rubric_refs,
+          sourceRefs: stageRun.source_refs,
+          qualityRubricRefs: stageRun.quality_rubric_refs,
           lineageRefs: [
-            ...(input.stage_run.lineage_refs ?? []),
+            ...(stageRun.lineage_refs ?? []),
             ...input.artifact_identity_receipt_refs,
           ],
           priorFindingRefs: (input.findings ?? []).map((finding) => finding.finding_id),
@@ -857,35 +961,35 @@ export async function stageQualityAttemptMaterializeActivity(
       : {
           surface_kind: 'opl_stage_quality_attempt_context_manifest',
           version: 'stage-quality-attempt-context-manifest.v1',
-          stage_run_id: input.stage_run.stage_run_id,
+          stage_run_id: stageRun.stage_run_id,
           quality_cycle_id: input.quality_cycle_id,
           attempt_role: input.attempt_role,
-          stage_goal_refs: input.stage_run.stage_goal_refs ?? [],
-          source_refs: input.stage_run.source_refs ?? [],
-          quality_rubric_refs: input.stage_run.quality_rubric_refs,
-          lineage_refs: input.stage_run.lineage_refs ?? [],
+          stage_goal_refs: stageRun.stage_goal_refs ?? [],
+          source_refs: stageRun.source_refs ?? [],
+          quality_rubric_refs: stageRun.quality_rubric_refs,
+          lineage_refs: stageRun.lineage_refs ?? [],
           no_context_inheritance: true,
           cross_stage_route_selection: crossStageRouteSelection,
         };
     const contextManifestRef = `opl://stage-quality-context/${stableId('ctx', [contextManifest])}`;
     const attempt = createStageAttempt(db, {
-      domainId: input.stage_run.domain_id,
-      stageId: input.stage_run.stage_id,
+      domainId: stageRun.domain_id,
+      stageId: stageRun.stage_id,
       providerKind: 'temporal',
-      workspaceLocator: input.stage_run.workspace_locator,
-      sourceFingerprint: input.stage_run.source_fingerprint ?? undefined,
-      executorKind: input.stage_run.executor_kind,
-      stageAttemptExecutorPolicy: input.stage_run.stage_attempt_executor_policy,
-      checkpointRefs: [input.stage_run.stage_packet_ref, ...(input.stage_run.checkpoint_refs ?? [])],
-      stageRunId: input.stage_run.stage_run_id,
+      workspaceLocator: stageRun.workspace_locator,
+      sourceFingerprint: stageRun.source_fingerprint ?? undefined,
+      executorKind: stageRun.executor_kind,
+      stageAttemptExecutorPolicy: stageRun.stage_attempt_executor_policy,
+      checkpointRefs: [stageRun.stage_packet_ref, ...(stageRun.checkpoint_refs ?? [])],
+      stageRunId: stageRun.stage_run_id,
       qualityCycleId: input.quality_cycle_id,
       attemptRole: input.attempt_role,
       qualityRoundIndex: input.quality_round_index,
       parentAttemptRef: input.parent_attempt_ref ?? undefined,
       inputArtifactRefs: input.artifact_refs,
       reviewedArtifactHashes: input.artifact_hashes,
-      qualitySourceRefs: input.stage_run.source_refs,
-      qualityRubricRefs: input.stage_run.quality_rubric_refs,
+      qualitySourceRefs: stageRun.source_refs,
+      qualityRubricRefs: stageRun.quality_rubric_refs,
       priorFindingRefs: (input.findings ?? []).map((finding) => finding.finding_id),
       repairMapRefs: (input.repair_map ?? []).map((entry) => `repair-map:${entry.finding_id}`),
       qualityRolePromptRef: rolePromptRef,
@@ -901,13 +1005,16 @@ export async function stageQualityAttemptMaterializeActivity(
     });
     return {
       surface_kind: 'temporal_stage_quality_attempt_materialization_receipt',
-      stage_run_id: input.stage_run.stage_run_id,
+      stage_run_id: stageRun.stage_run_id,
       quality_cycle_id: input.quality_cycle_id,
       attempt_role: input.attempt_role,
       quality_round_index: input.quality_round_index,
       attempt_ref: attemptRef,
       workflow_input: {
         ...buildTemporalStageAttemptWorkflowInput(attempt),
+        stage_run_spec_sha256: stageRun.stage_run_spec_sha256,
+        stage_run_spec: stageRun.stage_run_spec,
+        domain_pack_root: stageRun.domain_pack_root,
         quality_context: {
           context_manifest: contextManifest,
           findings: input.findings ?? [],

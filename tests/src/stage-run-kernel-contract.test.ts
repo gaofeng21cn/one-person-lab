@@ -45,8 +45,14 @@ test('StageRun contract is passive transport and Codex owns semantic routing', (
     false,
   );
   assert.ok(value.durable_stage_run_launch.stage_run_spec_sha256.binds.includes(
-    'immutable_package_dependency_closure',
+    'immutable_package_dependency_closure_with_root_content_digest',
   ));
+  assert.equal(value.durable_stage_run_launch.content_binding_policy.pack_file_refs_bind_actual_bytes, true);
+  assert.equal(
+    value.durable_stage_run_launch.content_binding_policy.fresh_bytes_verified_before_every_attempt_materialization,
+    true,
+  );
+  assert.equal(value.durable_stage_run_launch.content_binding_policy.root_package_content_digest_required, true);
   assert.ok(value.durable_stage_run_launch.stage_run_spec_sha256.excludes.includes('checked_at'));
   assert.equal(value.durable_stage_run_launch.launch_registry.table, 'stage_run_launches');
   assert.equal(
@@ -57,6 +63,22 @@ test('StageRun contract is passive transport and Codex owns semantic routing', (
     value.durable_stage_run_launch.launch_registry.closed_state_is_monotonic_under_late_start_receipt,
     true,
   );
+  assert.deepEqual(value.durable_stage_run_launch.launch_registry.statuses, [
+    'registered', 'starting', 'start_failed', 'started', 'closed',
+  ]);
+  assert.equal(
+    value.durable_stage_run_launch.launch_registry.concurrent_start_callers,
+    'registry_serializes_state_transitions_but_may_redeliver_the_same_idempotent_provider_start',
+  );
+  assert.equal(
+    value.durable_stage_run_launch.launch_registry.provider_start_delivery,
+    'at_least_once_for_starting_unknown_success_recovery',
+  );
+  assert.equal(
+    value.durable_stage_run_launch.launch_registry.temporal_execution_deduplication,
+    'deterministic_workflow_id_plus_use_existing_and_reject_duplicate_yields_exactly_one_stage_run_execution',
+  );
+  assert.equal(value.durable_stage_run_launch.launch_registry.started_cannot_transition_to_start_failed, true);
   assert.equal(
     value.durable_stage_run_launch.launch_registry.same_invocation_different_spec,
     'typed_fail_closed_stage_run_invocation_spec_conflict',

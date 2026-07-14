@@ -35,6 +35,7 @@ import {
 import { requireStageQualityAttemptBoundary } from '../../src/modules/runway/family-runtime-stage-quality-attempt-boundary.ts';
 import {
   deriveStageRunId,
+  immutablePackageClosureFromWorkspaceLocator,
   stageRunSpecSha256,
   type StageRunImmutableSpec,
 } from '../../src/modules/runway/family-runtime-stage-run-identity.ts';
@@ -542,6 +543,22 @@ test('quality policy defaults to three rounds without making in-thread refinemen
 
 test('StageRun controller input rejects custom Attempt roles and quality budgets above three', () => {
   const invocationId = 'stage-run-invocation:bounded';
+  const manifestSha256 = 'a'.repeat(64);
+  const contentSha256 = `sha256:${'b'.repeat(64)}`;
+  const packageUseBinding = {
+    root_package: {
+      package_id: 'rca',
+      package_version: '0.2.2',
+      package_lock_ref: 'opl://agent-package-lock/rca/0.2.2',
+      manifest_sha256: 'c'.repeat(64),
+      content_digest: `sha256:${'d'.repeat(64)}`,
+    },
+    provider_packages: [],
+  };
+  const workspaceLocator = {
+    workspace_root: '/tmp/rca-quality-cycle',
+    package_use_binding: packageUseBinding,
+  };
   const policy = normalizeStageQualityCyclePolicy({
     formal_review: { required: true, risk_tier: 'high', max_repair_rounds: 3 },
   });
@@ -549,19 +566,35 @@ test('StageRun controller input rejects custom Attempt roles and quality budgets
     surface_kind: 'opl_stage_run_immutable_spec', version: 'opl-stage-run-immutable-spec.v1',
     domain_id: 'redcube', stage_id: 'artifact_creation', action_id: null, task_id: null,
     workspace_identity: { workspace_root: '/tmp/rca-quality-cycle' },
-    stage_manifest: { ref: 'agent/stages/manifest.json', sha256: 'sha256:manifest' },
+    stage_manifest: { ref: 'agent/stages/manifest.json', sha256: manifestSha256 },
     quality_policy: {
       ref: 'contracts/stage_quality_cycle_policy.json#/stages/artifact_creation',
       body: policy as unknown as Record<string, unknown>,
     },
     stage_packet_ref: 'packet:artifact-creation', checkpoint_refs: [],
     source_fingerprint: 'sha256:source', source_refs: [], input_artifacts: [],
+    content_bindings: [
+      { purpose: 'stage_manifest', ref: 'agent/stages/manifest.json', sha256: `sha256:${manifestSha256}`, byte_size: 1, digest_source: 'pack_file_bytes' },
+      { purpose: 'quality_policy', ref: 'contracts/stage_quality_cycle_policy.json#/stages/artifact_creation', sha256: contentSha256, byte_size: 1, digest_source: 'pack_file_bytes' },
+      { purpose: 'stage_prompt', ref: 'prompt:stage', sha256: contentSha256, byte_size: 1, digest_source: 'pack_file_bytes' },
+      { purpose: 'role_prompt', ref: 'prompt:producer', sha256: contentSha256, byte_size: 1, digest_source: 'pack_file_bytes' },
+      { purpose: 'role_prompt', ref: 'prompt:reviewer', sha256: contentSha256, byte_size: 1, digest_source: 'pack_file_bytes' },
+      { purpose: 'role_prompt', ref: 'prompt:repairer', sha256: contentSha256, byte_size: 1, digest_source: 'pack_file_bytes' },
+      { purpose: 'role_prompt', ref: 'prompt:re-reviewer', sha256: contentSha256, byte_size: 1, digest_source: 'pack_file_bytes' },
+      { purpose: 'quality_rubric', ref: 'rubric:visual', sha256: contentSha256, byte_size: 1, digest_source: 'pack_file_bytes' },
+      { purpose: 'stage_goal', ref: 'goal:artifact-creation', sha256: contentSha256, byte_size: 1, digest_source: 'pack_file_bytes' },
+      { purpose: 'source', ref: 'source:fixture', sha256: contentSha256, byte_size: 1, digest_source: 'pack_file_bytes' },
+      { purpose: 'lineage', ref: 'lineage:fixture', sha256: contentSha256, byte_size: 1, digest_source: 'pack_file_bytes' },
+      { purpose: 'stage_packet', ref: 'packet:artifact-creation', sha256: contentSha256, byte_size: null, digest_source: 'embedded_sha256' },
+      { purpose: 'checkpoint', ref: 'packet:artifact-creation', sha256: contentSha256, byte_size: null, digest_source: 'embedded_sha256' },
+    ],
     role_prompt_refs: {
       producer: 'prompt:producer', reviewer: 'prompt:reviewer',
       repairer: 'prompt:repairer', re_reviewer: 'prompt:re-reviewer',
     },
     quality_rubric_refs: ['rubric:visual'], stage_goal_refs: [], lineage_refs: [],
-    package_closure: null, executor_kind: 'codex_cli', stage_attempt_executor_policy: null,
+    package_closure: immutablePackageClosureFromWorkspaceLocator(workspaceLocator),
+    executor_kind: 'codex_cli', stage_attempt_executor_policy: null,
     parent_route_decision_ref: null,
   };
   const base = {
@@ -576,14 +609,14 @@ test('StageRun controller input rejects custom Attempt roles and quality budgets
     domain_id: 'redcube' as const,
     stage_id: 'artifact_creation',
     declared_stage_ids: ['artifact_creation', 'review_and_revision'],
-    workspace_locator: { workspace_root: '/tmp/rca-quality-cycle' },
+    workspace_locator: workspaceLocator,
     source_fingerprint: 'sha256:source',
     executor_kind: 'codex_cli',
     stage_packet_ref: 'packet:artifact-creation',
     quality_policy_ref: 'contracts/stage_quality_cycle_policy.json#/stages/artifact_creation',
     domain_pack_root: '/tmp/rca-domain-pack',
     stage_manifest_ref: 'agent/stages/manifest.json',
-    stage_manifest_sha256: 'sha256:manifest',
+    stage_manifest_sha256: manifestSha256,
     stage_role: null,
     quality_policy: policy,
     role_prompt_refs: {

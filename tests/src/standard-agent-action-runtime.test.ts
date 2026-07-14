@@ -1,11 +1,16 @@
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
 
 import { resolveStandardAgent } from '../../src/kernel/standard-agent-registry.ts';
+import type { StandardAgentStageQualityRuntimeBinding } from '../../src/modules/pack/index.ts';
+import { runFamilyRuntime } from '../../src/modules/runway/family-runtime.ts';
 import { runStandardAgentAction } from '../../src/modules/runway/standard-agent-action-runtime.ts';
+import { normalizeStageQualityCyclePolicy } from '../../src/modules/stagecraft/stage-quality-cycle.ts';
 
 function root(prefix: string) {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
@@ -92,16 +97,84 @@ function writeContracts(checkoutRoot: string, actions: Record<string, unknown>[]
   })}\n`);
 }
 
-function managed(checkoutRoot: string, workspaceRoot: string) {
+function managed(
+  checkoutRoot: string,
+  workspaceRoot: string,
+  packageUseBinding: Record<string, unknown> = { use_boundary_id: 'package-use:fixture' },
+) {
   return async () => ({
     agent: resolveStandardAgent('mas')!,
     package_id: 'mas',
     workspace_root: fs.realpathSync.native(workspaceRoot),
     checkout_root: fs.realpathSync.native(checkoutRoot),
     package_status: { launch_allowed: true },
-    package_use_binding: { use_boundary_id: 'package-use:fixture' },
+    package_use_binding: packageUseBinding,
     use_boundary_id: 'package-use:fixture',
   });
+}
+
+function writeStageRuntimeFixture(checkoutRoot: string): StandardAgentStageQualityRuntimeBinding {
+  const write = (ref: string, bytes: string) => {
+    const file = path.join(checkoutRoot, ref);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, bytes, 'utf8');
+  };
+  const manifestRef = 'agent/stages/manifest.json';
+  write(manifestRef, `${JSON.stringify({
+    surface_kind: 'opl_standard_agent_declarative_stage_manifest',
+    version: 'opl-standard-agent-declarative-stage-manifest.v1',
+    stages: [{ stage_id: 'intake', goal: 'Process the hosted action request.' }],
+  })}\n`);
+  write('contracts/stage_quality_cycle_policy.json', '{"stages":{"intake":{"enabled":true}}}\n');
+  write('agent/prompts/intake.md', '# Intake prompt\n');
+  write('agent/prompts/stage-quality.md', '# Producer\n# Reviewer\n# Repairer\n# Re Reviewer\n');
+  write('agent/quality_gates/stage.md', '# Stage rubric\n');
+  write('agent/stages/intake.md', '# Intake source policy\n');
+  return {
+    surface_kind: 'opl_pack_bound_stage_quality_runtime_binding',
+    version: 'opl-pack-bound-stage-quality-runtime-binding.v1',
+    stage_id: 'intake',
+    declared_stage_ids: ['intake'],
+    enabled: true,
+    stage_role: null,
+    policy_ref: 'contracts/stage_quality_cycle_policy.json#/stages/intake',
+    stage_prompt_ref: 'agent/prompts/intake.md',
+    quality_policy: normalizeStageQualityCyclePolicy({
+      formal_review: { required: true, risk_tier: 'high', max_repair_rounds: 3 },
+    }),
+    handoff_review_boundary: null,
+    role_prompt_refs: {
+      producer: 'agent/prompts/stage-quality.md#producer',
+      reviewer: 'agent/prompts/stage-quality.md#reviewer',
+      repairer: 'agent/prompts/stage-quality.md#repairer',
+      re_reviewer: 'agent/prompts/stage-quality.md#re-reviewer',
+    },
+    quality_rubric_refs: ['agent/quality_gates/stage.md'],
+    stage_goal_refs: [`${manifestRef}#/stages/0/goal`],
+    source_refs: ['agent/stages/intake.md'],
+    lineage_refs: [`${manifestRef}#/stages/0`],
+    manifest_ref: manifestRef,
+    manifest_sha256: crypto.createHash('sha256')
+      .update(fs.readFileSync(path.join(checkoutRoot, manifestRef)))
+      .digest('hex'),
+  };
+}
+
+function packageUseBinding() {
+  return {
+    surface_kind: 'opl_agent_package_use_binding.v1',
+    use_boundary_id: 'package-use:hosted-durable-replay',
+    use_receipt_ref: 'opl://agent-package/use/hosted-durable-replay',
+    root_package: {
+      package_id: 'mas',
+      package_version: '0.2.1',
+      package_lock_ref: 'opl://agent-package-lock/mas/0.2.1',
+      manifest_sha256: crypto.createHash('sha256').update('mas-manifest').digest('hex'),
+      content_digest: `sha256:${crypto.createHash('sha256').update('mas-content').digest('hex')}`,
+    },
+    provider_packages: [],
+    dependency_closure_digest: crypto.createHash('sha256').update('mas-closure').digest('hex'),
+  };
 }
 
 function recordLedger(input: Record<string, unknown>) {
@@ -227,6 +300,205 @@ test('Hosted Stage action passes a SHA-bound request ref into Temporal StageRun 
   } finally {
     fs.rmSync(checkoutRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('Hosted action replay reconciles one durable StageRun execution through deterministic RPC replay', async () => {
+  const checkoutRoot = root('opl-hosted-durable-checkout-');
+  const workspaceRoot = root('opl-hosted-durable-workspace-');
+  const stateRoot = root('opl-hosted-durable-state-');
+  const previousStateRoot = process.env.OPL_STATE_DIR;
+  let startCalls = 0;
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    const stageRoute = {
+      entry_stage_ref: 'intake',
+      required_stage_refs: ['intake'],
+      optional_stage_refs: [],
+      terminal_stage_refs: ['intake'],
+      route_policy: 'ai_selected_progress_route',
+    };
+    writeContracts(checkoutRoot, [action({
+      actionId: 'launch',
+      executionBinding: { kind: 'stage_binding', stage_manifest_ref: 'agent/stages/manifest.json' },
+      stageRoute,
+    })]);
+    const stageBinding = writeStageRuntimeFixture(checkoutRoot);
+    const useBinding = packageUseBinding();
+    const runRealStageRuntime = (args: string[]) => runFamilyRuntime(args, {
+      stageRunRuntime: {
+        ensurePackageLaunchReady: async () => ({
+          launch_allowed: true,
+          runtime_source_readiness: { checkout_path: checkoutRoot },
+          package_use_binding: useBinding,
+        } as any),
+        resolveStageBinding: () => stageBinding,
+        startWorkflow: async (workflowInput) => {
+          startCalls += 1;
+          return {
+            stage_run_id: workflowInput.stage_run_id,
+            stage_run_invocation_id: workflowInput.stage_run_invocation_id,
+            stage_run_spec_sha256: workflowInput.stage_run_spec_sha256,
+            workflow_id: workflowInput.workflow_id,
+            workflow_status: 'RUNNING',
+            first_execution_run_id: 'temporal-run-hosted-replay',
+          };
+        },
+        queryWorkflow: async ({ workflowId }) => ({ workflow_id: workflowId, status: 'running' }),
+      },
+    });
+    const actionInput = {
+      domainId: 'mas',
+      actionId: 'launch',
+      workspaceRoot,
+      payload: { value: 3 },
+      runId: 'hosted-durable-replay',
+    };
+    const dependencies = {
+      resolveManagedCheckout: managed(checkoutRoot, workspaceRoot, useBinding) as never,
+      compileStageManifest: (() => ({})) as never,
+      recordLedger,
+      runStageRuntime: runRealStageRuntime,
+    };
+    const first = await runStandardAgentAction(actionInput, dependencies);
+    const replay = await runStandardAgentAction(actionInput, dependencies);
+    const firstRun = first.standard_agent_action_run;
+    const replayRun = replay.standard_agent_action_run;
+    assert.equal(firstRun.execution_kind, 'stage_binding');
+    assert.equal(replayRun.execution_kind, 'stage_binding');
+    if (firstRun.execution_kind !== 'stage_binding' || replayRun.execution_kind !== 'stage_binding') {
+      assert.fail('expected Stage action results');
+    }
+    assert.equal(replayRun.stage_run_invocation_id, firstRun.stage_run_invocation_id);
+    assert.equal(
+      (replayRun.temporal_stage_run.family_runtime_stage_run as any).stage_run_input.stage_run_id,
+      (firstRun.temporal_stage_run.family_runtime_stage_run as any).stage_run_input.stage_run_id,
+    );
+    assert.equal(startCalls, 2);
+
+    const db = new DatabaseSync(path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
+    try {
+      const launches = db.prepare(`
+        SELECT stage_run_invocation_id, launch_status, temporal_start_receipt_json
+        FROM stage_run_launches
+      `).all() as Array<Record<string, unknown>>;
+      assert.equal(launches.length, 1);
+      assert.equal(launches[0]?.stage_run_invocation_id, firstRun.stage_run_invocation_id);
+      assert.equal(launches[0]?.launch_status, 'started');
+      assert.match(String(launches[0]?.temporal_start_receipt_json), /temporal-run-hosted-replay/);
+    } finally {
+      db.close();
+    }
+  } finally {
+    if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateRoot;
+    fs.rmSync(checkoutRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('concurrent Hosted action replay returns one canonical output over one Temporal execution', async () => {
+  const checkoutRoot = root('opl-hosted-concurrent-checkout-');
+  const workspaceRoot = root('opl-hosted-concurrent-workspace-');
+  const stateRoot = root('opl-hosted-concurrent-state-');
+  const previousStateRoot = process.env.OPL_STATE_DIR;
+  let startCalls = 0;
+  let observeFirstStart!: () => void;
+  let releaseFirstStart!: () => void;
+  const firstStartObserved = new Promise<void>((resolve) => { observeFirstStart = resolve; });
+  const firstStartReleased = new Promise<void>((resolve) => { releaseFirstStart = resolve; });
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    writeContracts(checkoutRoot, [action({
+      actionId: 'launch',
+      executionBinding: { kind: 'stage_binding', stage_manifest_ref: 'agent/stages/manifest.json' },
+      stageRoute: {
+        entry_stage_ref: 'intake',
+        required_stage_refs: ['intake'],
+        optional_stage_refs: [],
+        terminal_stage_refs: ['intake'],
+        route_policy: 'ai_selected_progress_route',
+      },
+    })]);
+    const stageBinding = writeStageRuntimeFixture(checkoutRoot);
+    const useBinding = packageUseBinding();
+    const runRealStageRuntime = (args: string[]) => runFamilyRuntime(args, {
+      stageRunRuntime: {
+        ensurePackageLaunchReady: async () => ({
+          launch_allowed: true,
+          runtime_source_readiness: { checkout_path: checkoutRoot },
+          package_use_binding: useBinding,
+        } as any),
+        resolveStageBinding: () => stageBinding,
+        startWorkflow: async (workflowInput) => {
+          startCalls += 1;
+          if (startCalls === 1) {
+            observeFirstStart();
+            await firstStartReleased;
+          }
+          return {
+            stage_run_id: workflowInput.stage_run_id,
+            stage_run_invocation_id: workflowInput.stage_run_invocation_id,
+            stage_run_spec_sha256: workflowInput.stage_run_spec_sha256,
+            workflow_id: workflowInput.workflow_id,
+            workflow_status: 'RUNNING',
+            first_execution_run_id: 'temporal-run-hosted-concurrent',
+            recovered_existing_execution: startCalls > 1,
+          };
+        },
+        queryWorkflow: async ({ workflowId }) => ({ workflow_id: workflowId, status: 'running' }),
+      },
+    });
+    const actionInput = {
+      domainId: 'mas',
+      actionId: 'launch',
+      workspaceRoot,
+      payload: { value: 3 },
+      runId: 'hosted-concurrent-replay',
+    };
+    const dependencies = {
+      resolveManagedCheckout: managed(checkoutRoot, workspaceRoot, useBinding) as never,
+      compileStageManifest: (() => ({})) as never,
+      recordLedger,
+      runStageRuntime: runRealStageRuntime,
+    };
+
+    const firstPromise = runStandardAgentAction(actionInput, dependencies);
+    await firstStartObserved;
+    const second = await runStandardAgentAction(actionInput, dependencies);
+    releaseFirstStart();
+    const first = await firstPromise;
+    const firstRun = first.standard_agent_action_run;
+    const secondRun = second.standard_agent_action_run;
+    assert.equal(firstRun.execution_kind, 'stage_binding');
+    assert.equal(secondRun.execution_kind, 'stage_binding');
+    if (firstRun.execution_kind !== 'stage_binding' || secondRun.execution_kind !== 'stage_binding') {
+      assert.fail('expected Stage action results');
+    }
+    assert.equal(startCalls, 2);
+    assert.equal(firstRun.output.sha256, secondRun.output.sha256);
+    assert.deepEqual(firstRun.temporal_stage_run, secondRun.temporal_stage_run);
+    assert.equal(
+      ((firstRun.temporal_stage_run.family_runtime_stage_run as any)
+        .durable_launch.launch.temporal_start_receipt.first_execution_run_id),
+      'temporal-run-hosted-concurrent',
+    );
+
+    const db = new DatabaseSync(path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
+    try {
+      const launches = db.prepare('SELECT stage_run_id, workflow_id FROM stage_run_launches').all();
+      assert.equal(launches.length, 1);
+    } finally {
+      db.close();
+    }
+  } finally {
+    releaseFirstStart();
+    if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateRoot;
+    fs.rmSync(checkoutRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
 

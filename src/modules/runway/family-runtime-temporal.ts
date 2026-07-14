@@ -28,7 +28,10 @@ import { requireStageQualityAttemptBoundary } from './family-runtime-stage-quali
 import type { TemporalStageRunWorkflowInput } from './family-runtime-temporal-stage-run.ts';
 import {
   deriveStageRunId,
+  deriveStageRunWorkflowId,
   stageRunSpecSha256,
+  type StageRunImmutableSpec,
+  validateStageRunImmutableContentBindings,
   validateStageRunImmutableSpecEnvelope,
 } from './family-runtime-stage-run-identity.ts';
 
@@ -125,6 +128,9 @@ export type TemporalStageAttemptWorkflowInput = {
   source_fingerprint: string | null;
   executor_kind: string;
   stage_run_id?: string | null;
+  stage_run_spec_sha256?: string | null;
+  stage_run_spec?: StageRunImmutableSpec | null;
+  domain_pack_root?: string | null;
   quality_cycle_id?: string | null;
   attempt_role?: StageQualityAttemptRole | null;
   quality_round_index?: number | null;
@@ -742,6 +748,19 @@ export function requireTemporalStageRunWorkflowInputLaunchable(input: TemporalSt
       },
     );
   }
+  const expectedWorkflowId = deriveStageRunWorkflowId(expectedStageRunId);
+  if (input.workflow_id !== expectedWorkflowId) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'StageRun workflow id must derive only from the durable StageRun id.',
+      {
+        failure_code: 'stage_run_workflow_identity_mismatch',
+        stage_run_id: input.stage_run_id,
+        workflow_id: input.workflow_id,
+        expected_workflow_id: expectedWorkflowId,
+      },
+    );
+  }
   const spec = input.stage_run_spec;
   if (
     spec?.surface_kind !== 'opl_stage_run_immutable_spec'
@@ -825,6 +844,7 @@ export function requireTemporalStageRunWorkflowInputLaunchable(input: TemporalSt
     stageAttemptExecutorPolicy: input.stage_attempt_executor_policy,
     parentRouteDecisionRef: input.parent_route_decision_ref,
   });
+  validateStageRunImmutableContentBindings(spec);
   const expectedSpecSha256 = stageRunSpecSha256(spec);
   if (input.stage_run_spec_sha256 !== expectedSpecSha256) {
     throw new FrameworkContractError(

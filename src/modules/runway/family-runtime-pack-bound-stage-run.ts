@@ -1,10 +1,10 @@
-import { stableId } from '../../kernel/stable-id.ts';
 import type { StandardAgentStageQualityRuntimeBinding } from '../pack/index.ts';
 import type { FamilyRuntimeDomainId } from './family-runtime-types.ts';
 import type { TemporalStageRunWorkflowInput } from './family-runtime-temporal.ts';
 import {
   buildStageRunImmutableSpec,
   deriveStageRunId,
+  deriveStageRunWorkflowId,
   stageRunSpecSha256,
 } from './family-runtime-stage-run-identity.ts';
 
@@ -35,6 +35,7 @@ export function buildPackBoundTemporalStageRunInput(input: {
   const checkpointRefs = [stagePacketRef, ...(input.checkpointRefs ?? []).filter((ref) => ref !== stagePacketRef)];
   const stageRunSpec = buildStageRunImmutableSpec({
     binding: input.binding,
+    domainPackRoot: input.domainPackRoot,
     domainId: input.domainId,
     stageId: input.stageId,
     workspaceLocator: input.workspaceLocator,
@@ -55,7 +56,7 @@ export function buildPackBoundTemporalStageRunInput(input: {
     stage_run_spec_sha256: stageRunSpecSha256(stageRunSpec),
     stage_run_spec: stageRunSpec,
     parent_route_decision_ref: input.parentRouteDecisionRef ?? null,
-    workflow_id: stableId('wf_stage_run', [stageRunId]),
+    workflow_id: deriveStageRunWorkflowId(stageRunId),
     domain_id: input.domainId,
     stage_id: input.stageId,
     action_id: input.actionId ?? null,

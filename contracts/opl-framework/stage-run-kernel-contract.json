@@ -69,6 +69,7 @@
       "stage_run_invocation_id",
       "stage_run_spec_sha256",
       "stage_run_spec",
+      "stage_run_spec.content_bindings",
       "parent_route_decision_ref"
     ],
     "stage_run_id_derivation": {
@@ -87,12 +88,12 @@
         "stable_workspace_identity",
         "stage_manifest_ref_and_sha256",
         "quality_policy_ref_and_body",
-        "stage_packet_and_checkpoint_refs",
-        "source_fingerprint_and_source_refs",
+        "stage_packet_and_checkpoint_refs_plus_content_digests",
+        "source_fingerprint_and_source_ref_content_digests",
         "input_artifact_refs_and_hashes",
-        "role_prompt_and_quality_rubric_refs",
-        "stage_goal_and_lineage_refs",
-        "immutable_package_dependency_closure",
+        "role_prompt_and_quality_rubric_refs_plus_file_byte_digests",
+        "stage_goal_and_lineage_refs_plus_file_byte_digests",
+        "immutable_package_dependency_closure_with_root_content_digest",
         "executor_binding",
         "parent_route_decision_ref"
       ],
@@ -104,6 +105,18 @@
         "runtime_source_readiness_observation",
         "materialization_or_checkout_path"
       ]
+    },
+    "content_binding_policy": {
+      "digest_algorithm": "sha256",
+      "pack_file_refs_bind_actual_bytes": true,
+      "input_checkpoint_refs_bind_artifact_sha256": true,
+      "embedded_sha256_refs_are_admitted_without_materialization_path": true,
+      "same_ref_changed_bytes_changes_stage_run_spec_sha256": true,
+      "fresh_bytes_verified_before_launch_registration_or_replay": true,
+      "fresh_bytes_verified_before_every_attempt_materialization": true,
+      "post_registration_content_drift_effect": "typed_fail_closed_before_provider_or_executor_use",
+      "root_package_content_digest_required": true,
+      "missing_or_invalid_content_digest_effect": "typed_fail_closed_before_launch_registration"
     },
     "invocation_sources": {
       "cli_default": "stable_domain_stage_action_workspace_task_idempotency",
@@ -119,14 +132,29 @@
       "validate_identity_and_spec_before_registry_write": true,
       "statuses": [
         "registered",
+        "starting",
         "start_failed",
         "started",
         "closed"
       ],
       "same_invocation_same_spec": "return_existing_running_or_closed_stage_run",
       "same_invocation_different_spec": "typed_fail_closed_stage_run_invocation_spec_conflict",
+      "start_claim": "begin_immediate_compare_and_swap_registered_or_start_failed_to_starting",
+      "provider_start_delivery": "at_least_once_for_starting_unknown_success_recovery",
+      "temporal_execution_deduplication": "deterministic_workflow_id_plus_use_existing_and_reject_duplicate_yields_exactly_one_stage_run_execution",
+      "concurrent_start_callers": "registry_serializes_state_transitions_but_may_redeliver_the_same_idempotent_provider_start",
+      "monotonic_transitions": [
+        "registered_to_starting",
+        "start_failed_to_starting",
+        "starting_to_started",
+        "starting_to_start_failed",
+        "start_failed_to_started_when_a_concurrent_or_replayed_start_succeeds",
+        "any_non_closed_state_to_closed"
+      ],
+      "started_cannot_transition_to_start_failed": true,
+      "closed_is_permanent_terminal_state": true,
       "pre_start_crash_recovery": "restart_from_registered_exact_input",
-      "post_start_crash_recovery": "recover_existing_temporal_execution_without_duplicate_start",
+      "post_start_crash_recovery": "redeliver_same_workflow_id_and_recover_existing_temporal_execution_without_duplicate_execution",
       "terminal_temporal_readback": "persist_start_receipt_then_mark_launch_closed",
       "closed_state_is_monotonic_under_late_start_receipt": true,
       "stores_domain_truth": false,

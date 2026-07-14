@@ -44,6 +44,26 @@ type RuntimeDependencies = {
   recordLedger?: typeof actionLedger;
 };
 
+type StandardAgentStageActionLaunch = {
+  surface_kind: 'opl_standard_agent_stage_action_launch';
+  version: 'opl-standard-agent-stage-action-launch.v1';
+  status: 'started' | 'blocked';
+  execution_kind: 'stage_binding';
+  run_id: string;
+  domain_id: string;
+  action_id: string;
+  binding_ref: string;
+  stage_route: NonNullable<FamilyActionCatalogAction['stage_route']>;
+  request_ref: string;
+  stage_run_invocation_id: string;
+  expected_domain_output_schema_ref: string;
+  temporal_stage_run: Record<string, unknown>;
+  temporal_stage_run_query: Record<string, unknown> | null;
+  temporal_stage_run_query_error: ReturnType<typeof observationFailure> | null;
+  blocked_reason: string | null;
+  authority_boundary: ReturnType<typeof actionAuthorityBoundary>;
+};
+
 function fail(message: string, details: Record<string, unknown> = {}): never {
   throw new FrameworkContractError('contract_shape_invalid', message, details);
 }
@@ -181,6 +201,45 @@ function actionAuthorityBoundary() {
     opl_can_create_typed_blocker: false,
     opl_can_claim_quality_or_export_ready: false,
   } as const;
+}
+
+function commitActionOutputOrReadPublishedWinner(input: {
+  workspaceRoot: string;
+  runId: string;
+  domainId: string;
+  actionId: string;
+  requestBytes: Buffer;
+  candidateOutputBytes: Buffer;
+  outputPath: string;
+}) {
+  let publishedBytes = input.candidateOutputBytes;
+  try {
+    const stored = commitStandardAgentActionOutput({
+      workspaceRoot: input.workspaceRoot,
+      runId: input.runId,
+      domainId: input.domainId,
+      actionId: input.actionId,
+      requestBytes: input.requestBytes,
+      outputBytes: publishedBytes,
+    });
+    return { stored, publishedBytes, candidatePublished: true } as const;
+  } catch (error) {
+    if (!fs.existsSync(input.outputPath)) throw error;
+    publishedBytes = fs.readFileSync(input.outputPath);
+    const stored = commitStandardAgentActionOutput({
+      workspaceRoot: input.workspaceRoot,
+      runId: input.runId,
+      domainId: input.domainId,
+      actionId: input.actionId,
+      requestBytes: input.requestBytes,
+      outputBytes: publishedBytes,
+    });
+    return {
+      stored,
+      publishedBytes,
+      candidatePublished: publishedBytes.equals(input.candidateOutputBytes),
+    } as const;
+  }
 }
 
 async function runHandlerAction(input: {
@@ -343,6 +402,7 @@ async function runStageAction(input: {
     actionId: input.action.action_id,
     requestBytes: input.requestBytes,
   });
+  const existingOutputPath = `${prepared.action_run_dir}/output.json`;
   const workspaceLocator = canonicalJsonText({
     workspace_root: input.workspaceRoot,
     standard_agent_action_run_ref: prepared.action_run_ref,
@@ -358,7 +418,7 @@ async function runStageAction(input: {
     actionRunRef: prepared.action_run_ref,
   });
 
-  const output = await (async () => {
+  const output = await (async (): Promise<StandardAgentStageActionLaunch> => {
     try {
       const created = await input.runStageRuntime([
         'attempt',
@@ -432,53 +492,50 @@ async function runStageAction(input: {
         authority_boundary: actionAuthorityBoundary(),
       };
     } catch (error) {
-      const recordedAt = new Date().toISOString();
-      const stored = commitStandardAgentActionOutput({
-        workspaceRoot: input.workspaceRoot,
-        runId: input.runId,
-        domainId: input.domainId,
-        actionId: input.action.action_id,
-        requestBytes: input.requestBytes,
-        outputBytes: failureBytes(error),
-      });
-      input.recordLedger({
-        runId: input.runId,
-        domainId: input.domainId,
-        actionId: input.action.action_id,
-        bindingRef,
-        status: 'failed',
-        startedAt: input.startedAt,
-        recordedAt,
-        stored,
-      });
-      wrapFailure(error, stored);
+      if (fs.existsSync(existingOutputPath)) {
+        const winner = parseJsonText(fs.readFileSync(existingOutputPath, 'utf8'));
+        if (isRecord(winner) && (winner.status === 'started' || winner.status === 'blocked')) {
+          return winner as StandardAgentStageActionLaunch;
+        }
+      }
+      throw error;
     }
   })();
 
-  const recordedAt = new Date().toISOString();
-  const stored = commitStandardAgentActionOutput({
+  const candidateOutputBytes = canonicalJsonBytes(output);
+  const published = commitActionOutputOrReadPublishedWinner({
     workspaceRoot: input.workspaceRoot,
     runId: input.runId,
     domainId: input.domainId,
     actionId: input.action.action_id,
     requestBytes: input.requestBytes,
-    outputBytes: canonicalJsonBytes(output),
+    candidateOutputBytes,
+    outputPath: existingOutputPath,
   });
+  const replayOutput = parseJsonText(published.publishedBytes.toString('utf8'));
+  if (!isRecord(replayOutput) || (replayOutput.status !== 'started' && replayOutput.status !== 'blocked')) {
+    fail('Persisted Standard Agent Stage action output is not a launch receipt.', {
+      run_id: input.runId,
+      action_id: input.action.action_id,
+    });
+  }
+  const persistedOutput = replayOutput as StandardAgentStageActionLaunch;
+  const recordedAt = new Date().toISOString();
   const ledger = input.recordLedger({
     runId: input.runId,
     domainId: input.domainId,
     actionId: input.action.action_id,
     bindingRef,
-    status: output.status,
+    status: persistedOutput.status,
     startedAt: input.startedAt,
     recordedAt,
-    stored,
+    stored: published.stored,
   });
   return {
-    ...output,
+    ...persistedOutput,
     package_use_binding: input.packageUseBinding,
-    request: stored.request,
-    output: stored.output,
+    request: published.stored.request,
+    output: published.stored.output,
     ledger: ledger.ledger_entry,
   };
 }

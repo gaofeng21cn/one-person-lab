@@ -147,7 +147,7 @@ export async function materializeStageRunRoute(
   return {
     surface_kind: 'opl_stage_run_route_launch_receipt',
     version: 'opl-stage-run-route-launch-receipt.v1',
-    materialization_status: durableLaunch.start_status === 'existing' ? 'existing' : 'launched',
+    materialization_status: durableLaunch.idempotent_replay ? 'existing' : 'launched',
     parent_stage_run_id: routeDecision.parent_stage_run_id,
     decisive_attempt_ref: routeDecision.decisive_attempt_ref,
     parent_route_decision_ref: invocation.parent_route_decision_ref,

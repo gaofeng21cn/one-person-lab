@@ -35,6 +35,7 @@ function stageRunInput(id: string): TemporalStageRunWorkflowInput {
       source_fingerprint: 'sha256:source',
       source_refs: ['source:brief'],
       input_artifacts: [],
+      content_bindings: [],
       role_prompt_refs: {
         producer: 'prompt:producer', reviewer: 'prompt:reviewer',
         repairer: 'prompt:repairer', re_reviewer: 'prompt:re-reviewer',

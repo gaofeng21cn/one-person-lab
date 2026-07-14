@@ -169,6 +169,10 @@ test('family-runtime quest launch activates every declared Skill and start or re
     assert.equal(fs.existsSync(path.join(quest, '.codex', 'skills')), false);
 
     const created = runCli(createQuestArgs(quest), env).family_runtime_stage_attempt.attempt;
+    assert.match(
+      created.workspace_locator.package_use_binding.root_package.content_digest,
+      /^sha256:[0-9a-f]{64}$/,
+    );
     const skillRoot = path.join(quest, '.codex', 'skills');
     assert.deepEqual(
       fs.readdirSync(skillRoot).sort(),
