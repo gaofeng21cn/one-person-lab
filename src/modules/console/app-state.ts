@@ -13,6 +13,7 @@ import {
   CANONICAL_OPL_PACKAGE_IDS,
   canonicalAgentPackageId,
   listOplAgentPackages,
+  readOplAgentPackageLockIndex,
   readOplFlowDefaultUserInstructions,
   resolveCodexVersion,
   resolveDefaultFamilyWorkspaceRoot,
@@ -43,6 +44,10 @@ import {
   buildFeedbackOpsReadModel,
 } from '../foundry-lab/public/app-state.ts';
 import { readCodexUserInstructions } from './codex-personalization.ts';
+import {
+  projectAppAgentPackageStatus,
+  unavailableAgentPackageCanonicalFields,
+} from './app-state-agent-packages.ts';
 
 function nowIso() {
   return new Date().toISOString();
@@ -142,52 +147,6 @@ function buildAssistants(items: ReturnType<typeof publicRuntimeSourceCarriers>) 
   }));
 }
 
-function buildFastAgentPackageStatus(
-  status: ReturnType<typeof runOplAgentPackageStatus>['opl_agent_package_status'],
-) {
-  const lock = status.installed_packages[0] ?? null;
-  const codexVisible = lock?.exposure_state === 'visible';
-  const positiveReadinessDeferred = Boolean(lock)
-    && (status.operational_ready === true || status.launch_allowed === true);
-  return {
-    surface_kind: 'opl_agent_package_status_fast_projection',
-    package_id: status.package_id,
-    status: positiveReadinessDeferred ? 'verification_deferred' : status.status,
-    package_version: lock?.package_version ?? null,
-    installed_version: lock?.package_version ?? null,
-    version: lock?.package_version ?? null,
-    source_kind: lock?.source_kind ?? null,
-    package_lock_ref: lock?.lock_ref ?? null,
-    lock_ref: lock?.lock_ref ?? null,
-    physical_surface: lock?.physical_surface ?? null,
-    codex_visible: codexVisible,
-    capability_exposure: {
-      status: lock ? (codexVisible ? 'visible' : lock.exposure_state) : 'not_installed',
-      codex_visible: codexVisible,
-    },
-    package_dependency_readiness: status.package_dependency_readiness,
-    materialization_readiness: status.materialization_readiness,
-    runtime_source_readiness: {
-      ...status.runtime_source_readiness,
-      ...(positiveReadinessDeferred ? { status: 'verification_deferred' } : {}),
-      operational_ready: false,
-      verification_mode: 'persisted_lock_and_path_fast_projection',
-      live_verification_deferred: true,
-      live_verification_surface: 'opl packages status --package-id <package_id> --json',
-    },
-    operational_ready: false,
-    operational_ready_scope: status.operational_ready_scope,
-    launch_allowed: false,
-    launch_blocked_reason: positiveReadinessDeferred
-      ? 'live_verification_deferred'
-      : status.launch_blocked_reason,
-    allowed_when_blocked: status.allowed_when_blocked,
-    repair_action: status.repair_action,
-    currentness_detail_deferred: true,
-    detail_surface: 'opl packages status --package-id <package_id> --json',
-  };
-}
-
 type AgentPackageStatusReader = typeof runOplAgentPackageStatus;
 
 function requestCachedAgentPackageStatusReader(readStatus: AgentPackageStatusReader): AgentPackageStatusReader {
@@ -219,19 +178,19 @@ function requestCachedAgentPackageStatusReader(readStatus: AgentPackageStatusRea
   };
 }
 
-function unavailableAgentPackageStatus(packageId: string, error: unknown): JsonRecord {
+function unavailableAgentPackageStatus(
+  packageId: string,
+  error: unknown,
+  lockIndex: ReturnType<typeof readOplAgentPackageLockIndex>,
+): JsonRecord {
   const contractError = error instanceof FrameworkContractError ? error : null;
   return {
+    ...unavailableAgentPackageCanonicalFields(packageId, lockIndex),
     surface_kind: 'opl_agent_package_status_unavailable',
-    package_id: packageId,
     status: 'unavailable',
     installed_package_count: null,
     installed_packages: [],
     codex_visible: false,
-    capability_exposure: {
-      status: 'unavailable',
-      codex_visible: false,
-    },
     package_dependency_readiness: null,
     materialization_readiness: null,
     runtime_source_readiness: {
@@ -244,7 +203,6 @@ function unavailableAgentPackageStatus(packageId: string, error: unknown): JsonR
     launch_allowed: false,
     launch_blocked_reason: 'package_status_read_failed',
     allowed_when_blocked: ['status', 'doctor', 'repair'],
-    repair_action: null,
     status_read_error: {
       code: contractError?.code ?? 'unexpected_error',
       message: error instanceof Error ? error.message : 'Unknown package status read failure.',
@@ -260,8 +218,10 @@ export function buildAppAgentPackageStatuses(input: {
   workspaceRootPath: string | null;
   profile: AppStateProfile;
   readStatus?: AgentPackageStatusReader;
+  lockIndex?: ReturnType<typeof readOplAgentPackageLockIndex>;
 }) {
   const readStatus = input.readStatus ?? runOplAgentPackageStatus;
+  const lockIndex = input.lockIndex ?? readOplAgentPackageLockIndex();
   const statuses: Record<string, JsonRecord> = {};
   for (const packageId of input.packageIds) {
     const context = appAgentPackageStatusContext(
@@ -274,11 +234,13 @@ export function buildAppAgentPackageStatuses(input: {
         recoverRuntimeSource: false,
         detail: input.profile,
       }).opl_agent_package_status;
-      statuses[packageId] = (input.profile === 'fast'
-        ? buildFastAgentPackageStatus(status)
-        : status) as unknown as JsonRecord;
+      statuses[packageId] = projectAppAgentPackageStatus({
+        status,
+        profile: input.profile,
+        lockIndex,
+      }) as unknown as JsonRecord;
     } catch (error) {
-      statuses[packageId] = unavailableAgentPackageStatus(packageId, error);
+      statuses[packageId] = unavailableAgentPackageStatus(packageId, error, lockIndex);
     }
   }
   return statuses;
@@ -662,6 +624,7 @@ export async function buildOplAppState(input: {
     workspaceRootPath: workspaceRoot.selected_path,
     profile,
     readStatus: readAgentPackageStatus,
+    lockIndex: readOplAgentPackageLockIndex(),
   });
   const packageStatusFailures = Object.entries(agentPackageStatuses)
     .filter(([, status]) => status.status === 'unavailable')
