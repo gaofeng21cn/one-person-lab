@@ -490,7 +490,13 @@ function runtimeActivityCurrentWorkUnitProjection(): JsonRecord | null {
       ...stringListFromRecords(selected.stage_attempt_ids, ''),
     ),
     stage_id: firstString(selected.active_stage_id, selected.stage_id, selected.stage_ref),
-    work_unit_id: firstString(selected.item_id, selected.task_id, selected.study_id),
+    work_unit_id: firstString(
+      selected.work_unit_id,
+      selected.work_item_id,
+      selected.study_id,
+      selected.item_id,
+      selected.task_id,
+    ),
     runtime_activity_updated_at: firstString(selected.updated_at),
   };
   const sourceRefs = stringListFromRecords(selected.source_refs, 'ref', 24);
