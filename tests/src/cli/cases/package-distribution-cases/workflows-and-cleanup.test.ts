@@ -94,6 +94,10 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.match(workflow, /OPL_PREVIOUS_PACKAGE_MANIFEST/);
   assert.match(workflow, /args\+=\(--previous-manifest "\$OPL_PREVIOUS_PACKAGE_MANIFEST"\)/);
   assert.ok(workflow.indexOf('Fetch previous latest-stable Release Set') < workflow.indexOf('Build Package archives and Release Set manifests'));
+  assert.ok(workflow.indexOf('Materialize exact release harness scripts') < workflow.indexOf('Resolve immutable OPL App component'));
+  assert.match(workflow, /contents\/scripts\/\$\{script\}\?ref=\$\{GITHUB_SHA\}/);
+  assert.match(workflow, /node "\$OPL_RELEASE_HARNESS_SCRIPTS\/resolve-opl-app-component\.mjs"/);
+  assert.doesNotMatch(workflow, /node scripts\/resolve-opl-app-component\.mjs/);
   assert.match(workflow, /one-person-lab-packages/);
   assert.doesNotMatch(workflow, /one-person-lab-modules/);
   assert.match(workflow, /one-person-lab-framework/);

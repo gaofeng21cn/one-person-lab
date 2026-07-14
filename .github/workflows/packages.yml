@@ -241,6 +241,23 @@ jobs:
             echo "::notice::No previous latest-stable Release Set is available; this run must publish all seven Packages."
           fi
 
+      - name: Materialize exact release harness scripts
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]
+          harness_root="$RUNNER_TEMP/opl-release-harness-scripts"
+          rm -rf "$harness_root"
+          mkdir -p "$harness_root"
+          for script in resolve-opl-app-component.mjs required-value-options.mjs script-json-boundary.mjs; do
+            gh api -H "Accept: application/vnd.github.raw+json" \
+              "repos/${GITHUB_REPOSITORY}/contents/scripts/${script}?ref=${GITHUB_SHA}" \
+              > "$harness_root/$script"
+          done
+          echo "OPL_RELEASE_HARNESS_SCRIPTS=$harness_root" >> "$GITHUB_ENV"
+
       - name: Resolve immutable OPL App component
         shell: bash
         env:
@@ -275,7 +292,7 @@ jobs:
           else
             echo "::notice::Historical App release has no owner component manifest; using exact public release readback projection."
           fi
-          node scripts/resolve-opl-app-component.mjs "${component_args[@]}"
+          node "$OPL_RELEASE_HARNESS_SCRIPTS/resolve-opl-app-component.mjs" "${component_args[@]}"
           resolved_version="$(jq -r .version "$RUNNER_TEMP/opl-app-component-manifest.json")"
           resolved_commit="$(jq -r .source_commit "$RUNNER_TEMP/opl-app-component-manifest.json")"
           resolved_digest="$(jq -r .primary_artifact.digest "$RUNNER_TEMP/opl-app-component-manifest.json")"
