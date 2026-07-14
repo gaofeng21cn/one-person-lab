@@ -80,6 +80,7 @@ import {
   agentPackageCarrierReceiptAuthorityStatus,
   assertAgentPackageCarrierAuthority,
   assertAgentPackageCarrierReceiptAuthority,
+  assertAgentPackageUseBindingCarrierAuthority,
   buildAgentPackageCarrierAuthority,
 } from './agent-package-registry-parts/carrier-authority.ts';
 import {
@@ -1962,6 +1963,11 @@ async function reconcilePackageClosureForUse(
         repair_action: `opl packages repair --package-id ${publicAgentPackageSelector(lock.package_id)}`,
       });
     }
+    assertAgentPackageUseBindingCarrierAuthority({
+      binding: pinned,
+      root: lock,
+      installedLocks: readLockIndex().packages,
+    });
     if (pinned.root_package.package_lock_ref !== lock.lock_ref
       || pinned.dependency_closure_digest !== lock.dependency_closure_digest) {
       throw new FrameworkContractError('contract_shape_invalid', 'The attempt package closure no longer matches its pinned use receipt.', {

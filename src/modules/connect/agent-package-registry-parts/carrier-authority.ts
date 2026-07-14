@@ -4,6 +4,7 @@ import type {
   AgentPackageCarrierAuthority,
   AgentPackageLifecycleReceipt,
   AgentPackageLock,
+  AgentPackageUseBinding,
 } from './types.ts';
 
 const EXACT_COMMIT = /^[0-9a-f]{40}$/;
@@ -148,4 +149,64 @@ export function sameAgentPackageCarrierAuthority(
   right: AgentPackageCarrierAuthority | null | undefined,
 ) {
   return JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
+}
+
+function boundPackageMatchesLock(
+  bound: AgentPackageUseBinding['root_package'] | AgentPackageUseBinding['provider_packages'][number],
+  lock: AgentPackageLock,
+) {
+  return bound.package_id === lock.package_id
+    && bound.package_version === lock.package_version
+    && bound.package_lock_ref === lock.lock_ref
+    && bound.manifest_sha256 === lock.manifest_sha256
+    && bound.content_digest === lock.content_digest
+    && bound.source_artifact_ref === (lock.source_artifact_ref ?? null)
+    && bound.artifact_digest === (lock.artifact_digest ?? null)
+    && bound.owner_source_commit === (lock.owner_source_commit ?? null)
+    && sameAgentPackageCarrierAuthority(bound.carrier_authority, lock.carrier_authority);
+}
+
+export function assertAgentPackageUseBindingCarrierAuthority(input: {
+  binding: AgentPackageUseBinding;
+  root: AgentPackageLock;
+  installedLocks: AgentPackageLock[];
+}) {
+  const expectedProviderIds = [...new Set(
+    (input.root.resolved_dependencies ?? []).map((entry) => entry.package_id),
+  )].sort();
+  const boundProviderIds = input.binding.provider_packages.map((entry) => entry.package_id).sort();
+  const reasons = [
+    input.binding.surface_kind === 'opl_agent_package_use_binding.v1' ? null : 'use_binding_surface_invalid',
+    boundPackageMatchesLock(input.binding.root_package, input.root) ? null : 'root_package_authority_mismatch',
+    input.binding.dependency_closure_digest === input.root.dependency_closure_digest
+      ? null
+      : 'dependency_closure_digest_mismatch',
+    JSON.stringify(boundProviderIds) === JSON.stringify(expectedProviderIds)
+      ? null
+      : 'provider_package_set_mismatch',
+    ...expectedProviderIds.flatMap((packageId) => {
+      const lock = input.installedLocks.find((entry) => entry.package_id === packageId);
+      const bound = input.binding.provider_packages.find((entry) => entry.package_id === packageId);
+      if (!lock) return [`provider_lock_missing:${packageId}`];
+      const authority = agentPackageCarrierAuthorityStatus(lock);
+      if (authority.status === 'invalid') {
+        return authority.reasons.map((reason) => `provider_carrier_authority_${packageId}:${reason}`);
+      }
+      return bound && boundPackageMatchesLock(bound, lock)
+        ? []
+        : [`provider_package_authority_mismatch:${packageId}`];
+    }),
+  ].filter((reason): reason is string => reason !== null);
+  if (reasons.length === 0) return;
+  throw new FrameworkContractError(
+    'contract_shape_invalid',
+    'Package use binding does not preserve the installed carrier authority.',
+    {
+      package_id: input.root.package_id,
+      use_boundary_id: input.binding.use_boundary_id,
+      use_receipt_ref: input.binding.use_receipt_ref,
+      failures: reasons,
+      failure_code: 'agent_package_use_binding_carrier_authority_invalid',
+    },
+  );
 }

@@ -417,6 +417,26 @@ function safeBundledSourceRoot(value: string) {
   return safeRelativePayloadPath(value);
 }
 
+function assertBundledPathComponentsAreReal(input: {
+  rootPath: string;
+  relativePath: string;
+  payloadManifestUrl: string;
+  payloadPath: string;
+}) {
+  let currentPath = input.rootPath;
+  for (const segment of input.relativePath === '.' ? [] : input.relativePath.split(path.sep)) {
+    currentPath = path.join(currentPath, segment);
+    if (fs.lstatSync(currentPath).isSymbolicLink()) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Bundled Full runtime package payload paths must not contain symbolic links.', {
+        payload_manifest_url: input.payloadManifestUrl,
+        payload_path: input.payloadPath,
+        symbolic_link_path: currentPath,
+        failure_code: 'agent_package_bundled_payload_symlink_forbidden',
+      });
+    }
+  }
+}
+
 function bundledPayloadFile(input: {
   packageRoot: string;
   sourceRoot: string;
@@ -456,18 +476,12 @@ function bundledPayloadFile(input: {
       failure_code: 'agent_package_bundled_payload_path_escape',
     });
   }
-  let currentPath = sourceRootPath;
-  for (const segment of relativePath.split(path.sep)) {
-    currentPath = path.join(currentPath, segment);
-    if (fs.lstatSync(currentPath).isSymbolicLink()) {
-      throw new FrameworkContractError('contract_shape_invalid', 'Bundled Full runtime package payload paths must not contain symbolic links.', {
-        payload_manifest_url: input.payloadManifestUrl,
-        payload_path: relativePath,
-        symbolic_link_path: currentPath,
-        failure_code: 'agent_package_bundled_payload_symlink_forbidden',
-      });
-    }
-  }
+  assertBundledPathComponentsAreReal({
+    rootPath: sourceRootPath,
+    relativePath,
+    payloadManifestUrl: input.payloadManifestUrl,
+    payloadPath: relativePath,
+  });
   const content = fs.readFileSync(fileReal);
   const expectedDigest = stringValue(input.entry.sha256);
   const actualDigest = `sha256:${crypto.createHash('sha256').update(content).digest('hex')}`;
@@ -545,6 +559,24 @@ export function resolveBundledFullRuntimeManifestPhysicalSource(input: {
       package_root: packageRoot,
       source_root: sourceRoot,
       failure_code: 'agent_package_bundled_payload_source_root_invalid',
+    });
+  }
+  assertBundledPathComponentsAreReal({
+    rootPath: packageRoot,
+    relativePath: sourceRoot,
+    payloadManifestUrl: input.catalogEntry.payloadManifestUrl,
+    payloadPath: sourceRoot,
+  });
+  const packageRootReal = fs.realpathSync(packageRoot);
+  const sourceRootReal = fs.realpathSync(sourceRootPath);
+  if (sourceRootReal !== packageRootReal && !sourceRootReal.startsWith(`${packageRootReal}${path.sep}`)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Bundled Full runtime payload source root escapes its packaged module root.', {
+      package_id: input.manifest.package_id,
+      package_root: packageRoot,
+      package_root_real: packageRootReal,
+      source_root: sourceRoot,
+      source_root_real: sourceRootReal,
+      failure_code: 'agent_package_bundled_payload_path_escape',
     });
   }
   const files = recordList(payload.files).map((entry, index) => bundledPayloadFile({
