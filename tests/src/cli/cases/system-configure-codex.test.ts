@@ -1,11 +1,179 @@
+import crypto from 'node:crypto';
+
 import { assert, fs, os, parseJsonText, path, test } from '../helpers.ts';
 import { createFakeFamilySkillWorkspace } from '../../cli-codex-default-shell-helpers.ts';
 import { readBundledCodexDefaultProfile } from '../../../../src/kernel/local-codex-defaults.ts';
+import {
+  CANONICAL_PACKAGE_CONTENT_LOCK,
+  packageContentLockDigest,
+} from '../../../../src/modules/connect/agent-package-registry-parts/payload-content-lock.ts';
+import {
+  assertBundledFullRuntimePackageRoots,
+  readBundledFullRuntimePackageCatalog,
+} from '../../../../src/modules/connect/agent-package-registry-parts/bundled-full-runtime-catalog.ts';
 import {
   runCliWithStdin,
 } from './system-install-fixtures.ts';
 
 const codexDefaultProfile = readBundledCodexDefaultProfile();
+
+const bundledPackageFixtures = [
+  { packageId: 'mas', project: 'med-autoscience', runtimePath: 'modules/mas' },
+  { packageId: 'mag', project: 'med-autogrant', runtimePath: 'modules/mag' },
+  { packageId: 'rca', project: 'redcube-ai', runtimePath: 'modules/rca' },
+  { packageId: 'oma', project: 'opl-meta-agent', runtimePath: 'modules/meta-agent' },
+  { packageId: 'obf', project: 'opl-bookforge', runtimePath: 'modules/bookforge' },
+] as const;
+
+function sha256(value: string | Buffer) {
+  return `sha256:${crypto.createHash('sha256').update(value).digest('hex')}`;
+}
+
+function writeJson(filePath: string, payload: unknown) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  const json = `${JSON.stringify(payload, null, 2)}\n`;
+  fs.writeFileSync(filePath, json, 'utf8');
+  return json;
+}
+
+function listFiles(root: string, relativeRoot = ''): string[] {
+  const absoluteRoot = path.join(root, relativeRoot);
+  return fs.readdirSync(absoluteRoot, { withFileTypes: true })
+    .flatMap((entry) => {
+      const relativePath = path.posix.join(relativeRoot.replaceAll(path.sep, '/'), entry.name);
+      if (entry.isDirectory()) return listFiles(root, relativePath);
+      return entry.isFile() ? [relativePath] : [];
+    })
+    .sort();
+}
+
+function rawSourceUrl(sourceRepo: string, sourceCommit: string, sourceRoot: string, relativePath: string) {
+  const match = /^https:\/\/github\.com\/([^/]+)\/([^/]+)\.git$/.exec(sourceRepo);
+  assert.ok(match);
+  const treePath = sourceRoot === '.' ? relativePath : `${sourceRoot}/${relativePath}`;
+  return `https://raw.githubusercontent.com/${match[1]}/${match[2]}/${sourceCommit}/${treePath}`;
+}
+
+function materializeScholarSkillsFixture(root: string, manifest: Record<string, any>) {
+  for (const relativePath of manifest.content_lock.paths as string[]) {
+    const filePath = path.join(root, relativePath);
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    const basename = path.basename(relativePath);
+    const content = relativePath === '.codex-plugin/plugin.json'
+      ? `${JSON.stringify({ name: 'mas-scholar-skills', skills: './skills/' }, null, 2)}\n`
+      : basename === 'SKILL.md'
+        ? `---\nname: ${path.basename(path.dirname(relativePath))}\ndescription: Bundled runtime fixture for ${path.basename(path.dirname(relativePath))}.\n---\n\n# ${path.basename(path.dirname(relativePath))}\n`
+        : basename.endsWith('.json')
+          ? '{}\n'
+          : 'export {};\n';
+    fs.writeFileSync(filePath, content, 'utf8');
+  }
+}
+
+function buildBundledRuntimeCatalogFixture(input: {
+  familyRoot: string;
+  runtimeHome: string;
+  outputRoot: string;
+}) {
+  const scholarRoot = path.join(input.runtimeHome, 'modules', 'mas-scholar-skills');
+  const scholarManifestPath = path.resolve('contracts', 'opl-framework', 'packages', 'mas-scholar-skills.json');
+  const scholarManifest = parseJsonText(fs.readFileSync(scholarManifestPath, 'utf8')) as Record<string, any>;
+  materializeScholarSkillsFixture(scholarRoot, scholarManifest);
+
+  const packageRoots: Record<string, string> = Object.fromEntries([
+    ...bundledPackageFixtures.map((entry) => [entry.packageId, path.join(input.familyRoot, entry.project)]),
+    ['mas-scholar-skills', scholarRoot],
+  ]);
+  const runtimePaths: Record<string, string> = Object.fromEntries([
+    ...bundledPackageFixtures.map((entry) => [entry.packageId, entry.runtimePath]),
+    ['mas-scholar-skills', 'modules/mas-scholar-skills'],
+  ]);
+  const packages: Record<string, unknown> = {};
+
+  for (const packageId of [...bundledPackageFixtures.map((entry) => entry.packageId), 'mas-scholar-skills']) {
+    const canonicalManifestPath = path.resolve('contracts', 'opl-framework', 'packages', `${packageId}.json`);
+    const canonicalPayloadPath = path.resolve(
+      'contracts',
+      'opl-framework',
+      'packages',
+      'payloads',
+      `${packageId}-${(parseJsonText(fs.readFileSync(canonicalManifestPath, 'utf8')) as Record<string, any>).version}.json`,
+    );
+    const manifest = parseJsonText(fs.readFileSync(canonicalManifestPath, 'utf8')) as Record<string, any>;
+    const canonicalPayload = parseJsonText(fs.readFileSync(canonicalPayloadPath, 'utf8')) as Record<string, any>;
+    const sourceRoot = canonicalPayload.source_root as string;
+    const sourcePath = sourceRoot === '.'
+      ? packageRoots[packageId]
+      : path.join(packageRoots[packageId], sourceRoot);
+    const files = listFiles(sourcePath).map((relativePath) => {
+      const content = fs.readFileSync(path.join(sourcePath, relativePath));
+      const executable = (fs.statSync(path.join(sourcePath, relativePath)).mode & 0o111) !== 0;
+      return {
+        path: relativePath,
+        mode: executable ? '100755' : '100644',
+        source_url: rawSourceUrl(manifest.source_repo, manifest.codex_surface.carrier_source_commit, sourceRoot, relativePath),
+        sha256: sha256(content),
+      };
+    });
+    const contentDigest = packageContentLockDigest(
+      CANONICAL_PACKAGE_CONTENT_LOCK,
+      files.map((entry) => ({
+        path: entry.path,
+        content: fs.readFileSync(path.join(sourcePath, entry.path)),
+      })),
+    );
+    if (packageId === 'mas-scholar-skills') {
+      manifest.content_lock.paths = files.map((entry) => entry.path);
+      manifest.content_lock.digest = contentDigest;
+    }
+    const manifestRef = `packages/${packageId}.json`;
+    const payloadRef = `packages/payloads/${packageId}.json`;
+    manifest.codex_surface.plugin_payload_manifest_url = `payloads/${packageId}.json`;
+    const payload = {
+      surface_kind: 'opl_package_payload_manifest.v2',
+      schema_ref: 'contracts/opl-framework/package-payload-manifest-v2.schema.json',
+      package_id: packageId,
+      plugin_id: manifest.codex_surface.plugin_id,
+      package_version: manifest.version,
+      source_repo: manifest.source_repo,
+      source_commit: manifest.codex_surface.carrier_source_commit,
+      source_root: sourceRoot,
+      content_lock: {
+        algorithm: 'sha256',
+        canonicalization: CANONICAL_PACKAGE_CONTENT_LOCK,
+        digest: contentDigest,
+      },
+      files,
+    };
+    const manifestJson = writeJson(path.join(input.outputRoot, manifestRef), manifest);
+    const payloadJson = writeJson(path.join(input.outputRoot, payloadRef), payload);
+    const packageRole = manifest.surface_kind === 'opl_capability_package_manifest.v2'
+      ? 'framework_capability_package'
+      : manifest.surface_kind === 'opl_workflow_profile_package_manifest.v1'
+        ? 'workflow_profile'
+        : 'standard_agent';
+    packages[packageId] = {
+      package_id: packageId,
+      package_role: packageRole,
+      package_version: manifest.version,
+      owner_source_commit: manifest.codex_surface.carrier_source_commit,
+      manifest_ref: manifestRef,
+      manifest_sha256: sha256(manifestJson),
+      payload_manifest_ref: payloadRef,
+      payload_manifest_sha256: sha256(payloadJson),
+      runtime_module_relative_path: runtimePaths[packageId],
+    };
+  }
+
+  const catalogPath = path.join(input.outputRoot, 'catalog.json');
+  writeJson(catalogPath, {
+    surface_kind: 'opl_bundled_full_runtime_package_catalog.v1',
+    schema_ref: 'contracts/opl-framework/bundled-full-runtime-package-catalog.schema.json',
+    catalog_id: 'opl-framework-bundled-full-runtime-packages',
+    packages,
+  });
+  return { catalogPath, scholarRoot };
+}
 
 function assertBundledCodexModel(
   bootstrap: { model: string; reasoning_effort: string },
@@ -21,6 +189,27 @@ function assertBundledCodexModel(
     true,
   );
 }
+
+test('bundled Full runtime catalog owns the canonical seven and fails closed on a missing dependency root', () => {
+  const catalog = readBundledFullRuntimePackageCatalog();
+  assert.deepEqual(
+    [...catalog.entries.keys()].sort(),
+    ['mag', 'mas', 'mas-scholar-skills', 'obf', 'oma', 'opl-flow', 'rca'],
+  );
+  assert.equal(
+    [...catalog.entries.values()].every((entry) => /^[0-9a-f]{40}$/.test(entry.ownerSourceCommit)),
+    true,
+  );
+  assert.throws(
+    () => assertBundledFullRuntimePackageRoots({
+      catalog,
+      rootPackageId: 'mas',
+      packageRoots: { mas: '/fixture/modules/mas' },
+    }),
+    (error: any) => error?.details?.failure_code === 'agent_package_bundled_dependency_root_missing'
+      && error?.details?.package_id === 'mas-scholar-skills',
+  );
+});
 
 test('system configure-codex writes the product endpoint and App-owned install fallback without leaking the API key', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-configure-codex-home-'));
@@ -409,6 +598,12 @@ test('system configure-codex syncs Full runtime family Codex plugins after API k
   const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-configure-codex-family-plugins-capture-'));
   const familyWorkspace = createFakeFamilySkillWorkspace(captureDir);
   const codexHome = path.join(homeRoot, 'codex-home');
+  const runtimeHome = path.join(homeRoot, 'full-runtime');
+  const bundledCatalog = buildBundledRuntimeCatalogFixture({
+    familyRoot: familyWorkspace.workspaceRoot,
+    runtimeHome,
+    outputRoot: path.join(captureDir, 'bundled-package-catalog'),
+  });
   for (const [repoName, moduleId, packageId] of [
     ['med-autoscience', 'medautoscience', 'mas'],
     ['med-autogrant', 'medautogrant', 'mag'],
@@ -441,11 +636,14 @@ test('system configure-codex syncs Full runtime family Codex plugins after API k
         HOME: homeRoot,
         CODEX_HOME: codexHome,
         OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+        OPL_FULL_RUNTIME_HOME: runtimeHome,
         OPL_MODULE_PATH_MEDAUTOSCIENCE: path.join(familyWorkspace.workspaceRoot, 'med-autoscience'),
         OPL_MODULE_PATH_MEDAUTOGRANT: path.join(familyWorkspace.workspaceRoot, 'med-autogrant'),
         OPL_MODULE_PATH_REDCUBE: path.join(familyWorkspace.workspaceRoot, 'redcube-ai'),
         OPL_MODULE_PATH_OPLMETAAGENT: path.join(familyWorkspace.workspaceRoot, 'opl-meta-agent'),
         OPL_MODULE_PATH_OPLBOOKFORGE: path.join(familyWorkspace.workspaceRoot, 'opl-bookforge'),
+        OPL_TEST_RUNTIME_SOURCE_FAULTS_ENABLED: '1',
+        OPL_TEST_BUNDLED_FULL_RUNTIME_PACKAGE_CATALOG: bundledCatalog.catalogPath,
         OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
         PATH: `${process.execPath ? path.dirname(process.execPath) : '/usr/bin'}:/usr/bin:/bin`,
       },
@@ -481,6 +679,25 @@ test('system configure-codex syncs Full runtime family Codex plugins after API k
       output.codex_config.agent_package_sync.items.every((item) => item.package_lock_ref?.startsWith('opl://agent-package-lock/')),
       true,
     );
+    const lockIndex = parseJsonText(fs.readFileSync(
+      path.join(homeRoot, 'opl-state', 'agent-package-locks.json'),
+      'utf8',
+    )) as Record<string, any>;
+    assert.deepEqual(
+      lockIndex.packages.map((entry: Record<string, any>) => entry.package_id).sort(),
+      ['mag', 'mas', 'mas-scholar-skills', 'obf', 'oma', 'rca'],
+    );
+    const masLock = lockIndex.packages.find((entry: Record<string, any>) => entry.package_id === 'mas');
+    const scholarLock = lockIndex.packages.find(
+      (entry: Record<string, any>) => entry.package_id === 'mas-scholar-skills',
+    );
+    assert.equal(masLock.resolved_dependencies[0].package_id, 'mas-scholar-skills');
+    assert.equal(masLock.resolved_dependencies[0].carrier_authority.status, 'verified');
+    assert.equal(scholarLock.source_kind, 'bundled_full_runtime_modules');
+    assert.equal(scholarLock.carrier_authority.status, 'verified');
+    assert.equal(scholarLock.carrier_authority.verified_source_commit, scholarLock.owner_source_commit);
+    assert.equal(scholarLock.managed_runtime_source, null);
+    assert.equal(fs.realpathSync(bundledCatalog.scholarRoot).startsWith(fs.realpathSync(runtimeHome)), true);
     assert.deepEqual(
       output.codex_config.skill_sync.packs.map((pack) => [pack.domain_id, pack.sync_status]),
       [

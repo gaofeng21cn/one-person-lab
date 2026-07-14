@@ -6,6 +6,7 @@ import { unregisterLocalCodexPlugin } from '../system-installation/codex-plugin-
 import { nowIso, refsOnlyAuthorityBoundary, sha256Text } from './shared.ts';
 import type {
   AgentPackageInstallInput,
+  AgentPackageCarrierAuthority,
   AgentPackageLifecycleAction,
   AgentPackageLifecycleReceipt,
   AgentPackageLock,
@@ -110,6 +111,7 @@ export function lifecycleReceipt(input: {
   sourceArtifactRef?: string | null;
   artifactDigest?: string | null;
   ownerSourceCommit?: string | null;
+  carrierAuthority?: AgentPackageCarrierAuthority | null;
   releaseChannelRef?: string | null;
   releaseChannelDigest?: string | null;
   useBinding?: AgentPackageLifecycleReceipt['use_binding'];
@@ -135,6 +137,7 @@ export function lifecycleReceipt(input: {
     source_artifact_ref: input.sourceArtifactRef ?? null,
     artifact_digest: input.artifactDigest ?? null,
     owner_source_commit: input.ownerSourceCommit ?? null,
+    carrier_authority: input.carrierAuthority ?? null,
     release_channel_ref: input.releaseChannelRef ?? null,
     release_channel_digest: input.releaseChannelDigest ?? null,
     package_lock_ref: input.packageLockRef ?? null,
@@ -207,6 +210,7 @@ export function buildLock(input: {
   sourceArtifactRef?: string | null;
   artifactDigest?: string | null;
   ownerSourceCommit?: string | null;
+  carrierAuthority?: AgentPackageCarrierAuthority | null;
   releaseChannelRef?: string | null;
   releaseChannelDigest?: string | null;
 }): AgentPackageLock {
@@ -238,6 +242,7 @@ export function buildLock(input: {
     source_artifact_ref: input.sourceArtifactRef ?? null,
     artifact_digest: input.artifactDigest ?? null,
     owner_source_commit: input.ownerSourceCommit ?? null,
+    carrier_authority: input.carrierAuthority ?? null,
     release_channel_ref: input.releaseChannelRef ?? null,
     release_channel_digest: input.releaseChannelDigest ?? null,
     ...(distributionPayload

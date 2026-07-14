@@ -20,6 +20,17 @@ export type AgentPackageSourceKind =
   | 'manifest_import'
   | 'developer_checkout_override';
 
+export type AgentPackageCarrierAuthority = {
+  surface_kind: 'opl_agent_package_carrier_authority.v1';
+  status: 'verified';
+  catalog_ref: string;
+  catalog_sha256: string;
+  catalog_owner_source_commit: string;
+  manifest_carrier_source_commit: string;
+  payload_source_commit: string;
+  verified_source_commit: string;
+};
+
 export type AgentPackageLifecycleAction =
   | 'registry_refresh'
   | 'manifest_validate'
@@ -49,6 +60,8 @@ export type AgentPackageLifecycleCondition = {
     | 'profile_current'
     | 'managed_policy_current'
     | 'managed_policy_drift_detected'
+    | 'carrier_authority_current'
+    | 'carrier_authority_invalid'
     | 'codex_reload_required';
   package_id: string | null;
   status: 'ok' | 'attention_needed';
@@ -392,6 +405,7 @@ export type AgentPackageResolvedDependency = {
   source_artifact_ref?: string | null;
   artifact_digest?: string | null;
   owner_source_commit?: string | null;
+  carrier_authority?: AgentPackageCarrierAuthority | null;
   content_digest: string;
   package_lock_ref: string;
 };
@@ -615,6 +629,7 @@ export type AgentPackageLock = {
   source_artifact_ref?: string | null;
   artifact_digest?: string | null;
   owner_source_commit?: string | null;
+  carrier_authority?: AgentPackageCarrierAuthority | null;
   release_channel_ref?: string | null;
   release_channel_digest?: string | null;
   oci_ref?: string;
@@ -662,6 +677,7 @@ export type AgentPackageCoreReadback = {
   trust: {
     trust_tier: string | null;
   };
+  carrier_authority: AgentPackageCarrierAuthority | null;
   lock: AgentPackageLockReadback;
   lifecycle: {
     latest_receipt_ref: string | null;
@@ -690,6 +706,7 @@ export type AgentPackageLifecycleReceipt = {
   source_artifact_ref?: string | null;
   artifact_digest?: string | null;
   owner_source_commit?: string | null;
+  carrier_authority?: AgentPackageCarrierAuthority | null;
   release_channel_ref?: string | null;
   release_channel_digest?: string | null;
   package_lock_ref: string | null;
@@ -711,6 +728,7 @@ export type AgentPackageLifecycleReceipt = {
     source_artifact_ref?: string | null;
     artifact_digest?: string | null;
     owner_source_commit?: string | null;
+    carrier_authority?: AgentPackageCarrierAuthority | null;
   }>;
   scope_materialization?: AgentPackageScopeMaterialization;
   scope_materializations?: AgentPackageScopeMaterialization[];
@@ -735,6 +753,7 @@ export type AgentPackageUseBinding = {
     source_artifact_ref: string | null;
     artifact_digest: string | null;
     owner_source_commit: string | null;
+    carrier_authority: AgentPackageCarrierAuthority | null;
   };
   provider_packages: Array<{
     package_id: string;
@@ -746,6 +765,7 @@ export type AgentPackageUseBinding = {
     source_artifact_ref: string | null;
     artifact_digest: string | null;
     owner_source_commit: string | null;
+    carrier_authority: AgentPackageCarrierAuthority | null;
   }>;
   dependency_closure_digest: string;
   freshness_mode: 'channel_verified' | 'offline_lkg';
@@ -807,8 +827,14 @@ export type AgentPackageOwnerRouteReadbackItem = {
   package_dependency_readiness: AgentPackageDependencyReadiness;
   materialization_readiness: AgentPackageMaterializationReadiness;
   runtime_source_readiness: AgentPackageManagedRuntimeSourceReadiness;
+  carrier_authority_readiness: {
+    status: 'not_required' | 'current' | 'invalid';
+    reasons: string[];
+  };
   operational_ready: boolean;
-  operational_ready_scope: 'package_dependency_scope_runtime_source_and_managed_policy';
+  operational_ready_scope:
+    | 'package_dependency_scope_runtime_source_and_managed_policy'
+    | 'package_dependency_scope_runtime_source_managed_policy_and_carrier_authority';
   launch_allowed: boolean;
   launch_blocked_reason: string | null;
   allowed_when_blocked: Array<'status' | 'doctor' | 'repair'>;

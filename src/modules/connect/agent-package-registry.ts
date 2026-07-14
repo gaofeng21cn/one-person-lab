@@ -1,7 +1,6 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { stringValue } from '../../kernel/json-record.ts';
@@ -70,8 +69,19 @@ import {
   rematerializePhysicalCodexSurfaceFromLock,
   rollbackManagedPolicySurface,
   rollbackNewPackageProfileSurface,
+  resolveBundledFullRuntimeManifestPhysicalSource,
   resolveManifestPhysicalSource,
 } from './agent-package-registry-parts/physical-surface.ts';
+import {
+  assertBundledFullRuntimePackageRoots,
+  readBundledFullRuntimePackageCatalog,
+} from './agent-package-registry-parts/bundled-full-runtime-catalog.ts';
+import {
+  agentPackageCarrierReceiptAuthorityStatus,
+  assertAgentPackageCarrierAuthority,
+  assertAgentPackageCarrierReceiptAuthority,
+  buildAgentPackageCarrierAuthority,
+} from './agent-package-registry-parts/carrier-authority.ts';
 import {
   applyPackageProfile,
   assertPackageProfileRollbackReady,
@@ -126,6 +136,7 @@ import type {
   AgentPackageHomeShortcutPreference,
   AgentPackageHomeShortcutPreferenceFile,
   AgentPackageHomeShortcutPreferencesSetInput,
+  AgentPackageCarrierAuthority,
   AgentPackageInstallInput,
   AgentPackageLifecycleReceipt,
   AgentPackageLastKnownGood,
@@ -165,22 +176,8 @@ type PreparedPackage = {
 type TrustedBundledFullRuntimeInstall = {
   packageId: string;
   agentRoot: string;
+  packageRoots: Record<string, string>;
 };
-
-function bundledFullRuntimeManifestUrl(packageId: string) {
-  return new URL(`../../../contracts/opl-framework/packages/${packageId}.json`, import.meta.url).href;
-}
-
-function isBundledFullRuntimeManifestSelection(packageId: string, manifestUrl: string) {
-  const selectedPath = manifestUrl.startsWith('file:')
-    ? fileURLToPath(manifestUrl)
-    : path.isAbsolute(manifestUrl) ? manifestUrl : null;
-  return Boolean(
-    resolveFirstPartyPackageCatalog(packageId)
-    && selectedPath
-    && path.resolve(selectedPath) === path.resolve(fileURLToPath(bundledFullRuntimeManifestUrl(packageId))),
-  );
-}
 
 function preparedOwnerSourceCommit(prepared: PreparedPackage) {
   const verifiedCommit = prepared.manifest.verified_payload_source_commit;
@@ -207,18 +204,36 @@ function preparedOwnerSourceCommit(prepared: PreparedPackage) {
   return verifiedCommit;
 }
 
-function assertInstalledCarrierAuthority(lock: AgentPackageLock) {
-  if (lock.source_kind !== 'first_party_managed_cohort'
-    && lock.source_kind !== 'bundled_full_runtime_modules'
-    && lock.owner_source_commit == null) return;
-  if (!/^[0-9a-f]{40}$/.test(lock.owner_source_commit ?? '')) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Installed package lock carrier source commit is missing or invalid.', {
-      package_id: lock.package_id,
-      owner_source_commit: lock.owner_source_commit ?? null,
-      failure_code: 'agent_package_lock_carrier_source_commit_invalid',
-    });
-  }
+function preparedCarrierAuthority(
+  prepared: PreparedPackage,
+  channelRef: string | null,
+  channelDigest: string | null,
+): AgentPackageCarrierAuthority | null {
+  if (prepared.sourceKind !== 'first_party_managed_cohort'
+    && prepared.sourceKind !== 'bundled_full_runtime_modules') return null;
+  return buildAgentPackageCarrierAuthority({
+    packageId: prepared.manifest.package_id,
+    catalogRef: channelRef,
+    catalogSha256: channelDigest,
+    catalogOwnerSourceCommit: prepared.catalogVersion?.owner_source_commit ?? null,
+    manifestCarrierSourceCommit: prepared.manifest.carrier_source_commit,
+    payloadSourceCommit: prepared.manifest.verified_payload_source_commit,
+  });
 }
+
+function preparedCatalogArtifactRef(prepared: PreparedPackage) {
+  return prepared.catalogVersion
+    ? prepared.catalogVersion.source_artifact_ref
+    : prepared.previousLock?.source_artifact_ref ?? null;
+}
+
+function preparedCatalogArtifactDigest(prepared: PreparedPackage) {
+  return prepared.catalogVersion
+    ? prepared.catalogVersion.artifact_digest
+    : prepared.previousLock?.artifact_digest ?? null;
+}
+
+const assertInstalledCarrierAuthority = assertAgentPackageCarrierAuthority;
 
 function packageChannelSelection(
   packageId: string,
@@ -284,6 +299,9 @@ async function applyManifestPackageLock(
 ) {
   const packageId = canonicalAgentPackageId(stringValue(input.packageId));
   const trustedBundledInstall = options.trustedBundledFullRuntimeInstall ?? null;
+  const bundledFullRuntimeCatalog = trustedBundledInstall
+    ? readBundledFullRuntimePackageCatalog()
+    : null;
   if (input.sourceKind === 'bundled_full_runtime_modules' && !trustedBundledInstall) {
     throw new FrameworkContractError('contract_shape_invalid', 'Bundled Full runtime package sources are restricted to the internal configure-codex reconciliation.', {
       package_id: packageId,
@@ -292,20 +310,30 @@ async function applyManifestPackageLock(
     });
   }
   if (trustedBundledInstall) {
-    const expectedManifestUrl = bundledFullRuntimeManifestUrl(trustedBundledInstall.packageId);
+    const catalogEntry = bundledFullRuntimeCatalog?.entries.get(trustedBundledInstall.packageId) ?? null;
+    const expectedManifestUrl = catalogEntry?.manifestUrl ?? null;
+    const selectedPackageRoot = stringValue(trustedBundledInstall.packageRoots[trustedBundledInstall.packageId]);
     if (action !== 'install'
       || packageId !== trustedBundledInstall.packageId
       || input.sourceKind !== 'bundled_full_runtime_modules'
       || stringValue(input.manifestUrl) !== expectedManifestUrl
+      || !selectedPackageRoot
+      || path.resolve(selectedPackageRoot) !== path.resolve(trustedBundledInstall.agentRoot)
       || path.resolve(stringValue(input.agentRoot) ?? '') !== path.resolve(trustedBundledInstall.agentRoot)) {
       throw new FrameworkContractError('contract_shape_invalid', 'Internal bundled Full runtime package selection is inconsistent.', {
         package_id: packageId,
         expected_package_id: trustedBundledInstall.packageId,
         manifest_url: stringValue(input.manifestUrl),
         expected_manifest_url: expectedManifestUrl,
+        selected_package_root: selectedPackageRoot,
         failure_code: 'agent_package_bundled_full_runtime_selection_invalid',
       });
     }
+    assertBundledFullRuntimePackageRoots({
+      catalog: bundledFullRuntimeCatalog!,
+      rootPackageId: trustedBundledInstall.packageId,
+      packageRoots: trustedBundledInstall.packageRoots,
+    });
   }
   const hasExplicitSource = Boolean(stringValue(input.manifestUrl) || stringValue(input.registryUrl));
   const hasResolvedCatalogSelection = Boolean(
@@ -326,6 +354,18 @@ async function applyManifestPackageLock(
   const existingLock = packageId
     ? index.packages.find((entry) => entry.package_id === packageId)
     : null;
+  if (existingLock?.source_kind === 'bundled_full_runtime_modules' && !trustedBundledInstall) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Bundled Full runtime packages must be reconciled from the App-carried local source closure.',
+      {
+        package_id: existingLock.package_id,
+        action,
+        failure_code: 'agent_package_bundled_full_runtime_internal_reconcile_required',
+        recovery_action: 'rerun the OPL App configure-codex workflow with the complete Full runtime package roots',
+      },
+    );
+  }
   if (action !== 'install' && existingLock?.source_kind === 'developer_checkout_override') {
     throw new FrameworkContractError('contract_shape_invalid', 'Developer checkout agent package sources require an explicit install after checkout review.', {
       package_id: existingLock.package_id,
@@ -349,12 +389,14 @@ async function applyManifestPackageLock(
       )
     );
   const firstParty = shouldUseFirstPartyCatalog ? firstPartyOwner : null;
-  let catalog = options.catalog ?? null;
-  let rootVersion = options.rootVersion ?? null;
+  let catalog = bundledFullRuntimeCatalog?.catalog ?? options.catalog ?? null;
+  let rootVersion = bundledFullRuntimeCatalog
+    ? selectManagedCatalogPackageVersion(bundledFullRuntimeCatalog.catalog, trustedBundledInstall!.packageId)
+    : options.rootVersion ?? null;
   let catalogSource = options.catalogSource
     ?? (trustedBundledInstall ? null : firstParty?.catalogSource ?? null);
-  let channelRef = options.channelRef ?? null;
-  let channelDigest = options.channelDigest ?? null;
+  let channelRef = bundledFullRuntimeCatalog?.catalogRef ?? options.channelRef ?? null;
+  let channelDigest = bundledFullRuntimeCatalog?.catalogSha256 ?? options.channelDigest ?? null;
   if (firstParty && !trustedBundledInstall && (!catalog || !rootVersion)) {
     const fetched = await fetchManagedPackageCatalog(firstParty.catalogSource);
     catalog = fetched.catalog;
@@ -363,14 +405,14 @@ async function applyManifestPackageLock(
     channelRef = fetched.channel_ref;
     channelDigest = fetched.channel_digest;
   }
-  if (firstParty && rootVersion) {
+  if (firstParty && rootVersion && !trustedBundledInstall) {
     assertFirstPartyPackageCatalogVersion(firstParty.canonicalId, rootVersion);
   }
   const selection = trustedBundledInstall
     ? {
         registryUrl: null,
         packageId: trustedBundledInstall.packageId,
-        manifestUrl: bundledFullRuntimeManifestUrl(trustedBundledInstall.packageId),
+        manifestUrl: bundledFullRuntimeCatalog!.entries.get(trustedBundledInstall.packageId)!.manifestUrl,
         trustTier: firstParty!.trustTier,
         registryEntry: null,
       }
@@ -403,7 +445,7 @@ async function applyManifestPackageLock(
     inheritedTrustTier?: string,
     catalogVersion?: ManagedCatalogVersion | null,
   ): Promise<PreparedPackage> {
-    if (firstParty && catalogVersion) {
+    if (firstParty && catalogVersion && !trustedBundledInstall) {
       assertFirstPartyPackageCatalogVersion(nextSelection.packageId ?? firstParty.canonicalId, catalogVersion);
     }
     const inlinePayload = catalogVersion ? catalogManifestPayload(catalogVersion) : null;
@@ -425,7 +467,7 @@ async function applyManifestPackageLock(
     const manifestFirstPartyOwner = resolveFirstPartyPackageCatalog(manifest.package_id);
     const trustedBundledManifestSelection = Boolean(
       trustedBundledInstall
-      && isBundledFullRuntimeManifestSelection(manifest.package_id, nextSelection.manifestUrl),
+      && bundledFullRuntimeCatalog?.entries.get(manifest.package_id)?.manifestUrl === nextSelection.manifestUrl,
     );
     if (manifestFirstPartyOwner
       && !(firstParty && catalogVersion && catalogSource)
@@ -462,27 +504,52 @@ async function applyManifestPackageLock(
         failure_code: 'agent_package_catalog_content_digest_mismatch',
       });
     }
-    if (catalogVersion && catalogSource) {
+    if (catalogVersion && catalogSource && !trustedBundledInstall) {
       manifest = { ...manifest, managed_update_source: catalogSource };
     }
     let inlinePayloadRoot: string | null = null;
-    if (catalogVersion?.payload_manifest_json) {
+    if (catalogVersion?.payload_manifest_json && !trustedBundledInstall) {
       inlinePayloadRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-inline-package-payload-'));
       const payloadPath = path.join(inlinePayloadRoot, 'payload.json');
       fs.writeFileSync(payloadPath, catalogVersion.payload_manifest_json, 'utf8');
       manifest = { ...manifest, plugin_source_path: null, plugin_payload_manifest_url: payloadPath };
     }
-    const immutableSelection = packageChannelSelection(manifest.package_id, catalogVersion);
+    const immutableSelection = trustedBundledInstall
+      ? null
+      : packageChannelSelection(manifest.package_id, catalogVersion);
     try {
-      manifest = await resolveManifestPhysicalSource(
-        manifest,
-        input.dryRun === true,
-        immutableSelection,
-      );
+      if (trustedBundledInstall) {
+        const catalogEntry = bundledFullRuntimeCatalog?.entries.get(manifest.package_id) ?? null;
+        const packageRoot = stringValue(trustedBundledInstall.packageRoots[manifest.package_id]);
+        if (!catalogEntry || !packageRoot) {
+          throw new FrameworkContractError('contract_shape_invalid', 'Bundled Full runtime package dependency is absent from the packaged source roots.', {
+            root_package_id: trustedBundledInstall.packageId,
+            package_id: manifest.package_id,
+            catalog_entry_present: Boolean(catalogEntry),
+            package_root_present: Boolean(packageRoot),
+            expected_runtime_module_relative_path: catalogEntry?.runtimeModuleRelativePath ?? null,
+            failure_code: 'agent_package_bundled_dependency_root_missing',
+          });
+        }
+        manifest = resolveBundledFullRuntimeManifestPhysicalSource({
+          manifest,
+          catalogEntry,
+          packageRoot,
+        });
+      } else {
+        manifest = await resolveManifestPhysicalSource(
+          manifest,
+          input.dryRun === true,
+          immutableSelection,
+        );
+      }
     } finally {
       if (inlinePayloadRoot) fs.rmSync(inlinePayloadRoot, { recursive: true, force: true });
     }
-    if (!(input.dryRun === true && manifest.plugin_payload_manifest_url && !immutableSelection)) {
+    if (!(input.dryRun === true
+      && manifest.plugin_payload_manifest_url
+      && !immutableSelection
+      && !trustedBundledInstall)) {
       verifyManifestContentLock(manifest);
     }
     assertManifestMatchesRegistrySelection(manifest, nextSelection);
@@ -499,11 +566,10 @@ async function applyManifestPackageLock(
       ? firstParty.trustTier
       : requestedTrustTier ?? nextSelection.trustTier ?? inheritedTrustTier ?? null;
     assertTrustTierAssigned(trustTier, nextSelection.manifestUrl);
-    const packagedFirstPartyRoot = Boolean(
+    const packagedFirstParty = Boolean(
       trustedBundledManifestSelection
-      && manifest.package_id === trustedBundledInstall?.packageId
       && input.sourceKind === 'bundled_full_runtime_modules'
-      && stringValue(input.agentRoot),
+      && stringValue(trustedBundledInstall?.packageRoots[manifest.package_id]),
     );
     if (firstParty
       && input.sourceKind
@@ -517,7 +583,7 @@ async function applyManifestPackageLock(
       });
     }
     const sourceKind = normalizeSourceKind(
-      packagedFirstPartyRoot
+      packagedFirstParty
         ? input.sourceKind
         : trustedBundledManifestSelection
           ? firstParty!.sourceKind
@@ -629,7 +695,7 @@ async function applyManifestPackageLock(
     });
   }
 
-  const frameworkLink = input.agentRoot
+  const frameworkLink = input.agentRoot && !trustedBundledInstall
     ? materializeStandardAgentFrameworkLink({ agentRoot: input.agentRoot, dryRun: input.dryRun })
     : null;
 
@@ -673,9 +739,11 @@ async function applyManifestPackageLock(
         dryRun: input.dryRun === true,
         packageId: prepared.manifest.package_id,
         sourceKind: prepared.sourceKind,
-        checkoutPath: prepared.manifest.package_id === root.manifest.package_id
-          ? input.agentRoot
-          : null,
+        checkoutPath: trustedBundledInstall
+          ? trustedBundledInstall.packageRoots[prepared.manifest.package_id] ?? null
+          : prepared.manifest.package_id === root.manifest.package_id
+            ? input.agentRoot
+            : null,
         packageChannelSelection: prepared.packageChannelSelection,
         verifiedCarrierSourceCommit: prepared.manifest.verified_payload_source_commit,
         transactionId: sha256Text([
@@ -737,10 +805,12 @@ async function applyManifestPackageLock(
         source_artifact_ref: providerLock.source_artifact_ref ?? null,
         artifact_digest: providerLock.artifact_digest ?? null,
         owner_source_commit: providerLock.owner_source_commit ?? null,
+        carrier_authority: providerLock.carrier_authority ?? null,
         content_digest: providerLock.content_digest,
         package_lock_ref: providerLock.lock_ref,
       };
     });
+    const carrierAuthority = preparedCarrierAuthority(prepared, channelRef, channelDigest);
     builtLocks.set(prepared.manifest.package_id, buildLock({
       manifest: prepared.manifest,
       manifestUrl: prepared.selection.manifestUrl,
@@ -752,9 +822,10 @@ async function applyManifestPackageLock(
       previousLock: prepared.previousLock,
       resolvedDependencies,
       managedRuntimeSource: runtimeSourceMutations.get(prepared.manifest.package_id)?.after ?? null,
-      sourceArtifactRef: prepared.catalogVersion?.source_artifact_ref ?? prepared.previousLock?.source_artifact_ref ?? null,
-      artifactDigest: prepared.catalogVersion?.artifact_digest ?? prepared.previousLock?.artifact_digest ?? null,
+      sourceArtifactRef: preparedCatalogArtifactRef(prepared),
+      artifactDigest: preparedCatalogArtifactDigest(prepared),
       ownerSourceCommit: preparedOwnerSourceCommit(prepared),
+      carrierAuthority,
       releaseChannelRef: prepared.catalogVersion ? channelRef : prepared.previousLock?.release_channel_ref ?? null,
       releaseChannelDigest: prepared.catalogVersion ? channelDigest : prepared.previousLock?.release_channel_digest ?? null,
     }));
@@ -850,6 +921,7 @@ async function applyManifestPackageLock(
     source_artifact_ref: entry.source_artifact_ref ?? null,
     artifact_digest: entry.artifact_digest ?? null,
     owner_source_commit: entry.owner_source_commit ?? null,
+    carrier_authority: entry.carrier_authority ?? null,
   }));
   const receipts = ordered.map((prepared) => {
     const lock = builtLocks.get(prepared.manifest.package_id)!;
@@ -877,11 +949,14 @@ async function applyManifestPackageLock(
         ? scopeMaterializations
         : undefined,
       managedRuntimeSource: lock.managed_runtime_source,
-      sourceArtifactRef: prepared.catalogVersion?.source_artifact_ref ?? prepared.previousLock?.source_artifact_ref ?? null,
-      artifactDigest: prepared.catalogVersion?.artifact_digest ?? prepared.previousLock?.artifact_digest ?? null,
+      sourceArtifactRef: preparedCatalogArtifactRef(prepared),
+      artifactDigest: preparedCatalogArtifactDigest(prepared),
       ownerSourceCommit: preparedOwnerSourceCommit(prepared),
+      carrierAuthority: lock.carrier_authority ?? null,
       releaseChannelRef: prepared.catalogVersion ? channelRef : prepared.previousLock?.release_channel_ref ?? null,
       releaseChannelDigest: prepared.catalogVersion ? channelDigest : prepared.previousLock?.release_channel_digest ?? null,
+      networkAccessed: trustedBundledInstall ? false : undefined,
+      remoteDependencyPolicy: trustedBundledInstall ? 'forbidden' : undefined,
     });
     Object.assign(lock, {
       action_receipt_id: receipt.receipt_ref,
@@ -1135,6 +1210,8 @@ function agentPackageInstallReadback(
 export async function runOplBundledFullRuntimeAgentPackageInstall(input: {
   packageId: string;
   agentRoot: string;
+  packageRoots?: Record<string, string>;
+  dryRun?: boolean;
 }) {
   const packageId = canonicalAgentPackageId(input.packageId);
   const firstParty = resolveFirstPartyPackageCatalog(packageId);
@@ -1146,15 +1223,31 @@ export async function runOplBundledFullRuntimeAgentPackageInstall(input: {
       failure_code: 'agent_package_bundled_full_runtime_selection_invalid',
     });
   }
+  const bundledCatalog = readBundledFullRuntimePackageCatalog();
+  const catalogEntry = bundledCatalog.entries.get(packageId) ?? null;
+  if (!catalogEntry) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Bundled Full runtime reconciliation requires a catalog-owned canonical package selection.', {
+      package_id: packageId,
+      failure_code: 'agent_package_bundled_full_runtime_selection_invalid',
+    });
+  }
+  const packageRoots = Object.fromEntries(Object.entries(input.packageRoots ?? {})
+    .flatMap(([candidateId, candidateRoot]) => {
+      const canonicalId = canonicalAgentPackageId(candidateId);
+      const root = stringValue(candidateRoot);
+      return canonicalId && root ? [[canonicalId, path.resolve(root)]] : [];
+    }));
+  packageRoots[packageId] = path.resolve(agentRoot);
   const installInput: AgentPackageInstallInput = {
     packageId,
-    manifestUrl: bundledFullRuntimeManifestUrl(packageId),
+    manifestUrl: catalogEntry.manifestUrl,
     trustTier: firstParty.trustTier,
     sourceKind: 'bundled_full_runtime_modules',
     agentRoot,
+    dryRun: input.dryRun === true,
   };
   const result = await applyManifestPackageLock(installInput, 'install', {
-    trustedBundledFullRuntimeInstall: { packageId, agentRoot },
+    trustedBundledFullRuntimeInstall: { packageId, agentRoot, packageRoots },
   });
   return agentPackageInstallReadback(installInput, result);
 }
@@ -1338,6 +1431,8 @@ export function runOplAgentPackageRepair(input: AgentPackageRepairInput) {
   if (
     (lock.capability_dependencies ?? []).length > 0
     || lock.runtime_source_carrier
+    || lock.source_kind === 'first_party_managed_cohort'
+    || lock.source_kind === 'bundled_full_runtime_modules'
     || stringValue(input.manifestUrl)
     || stringValue(input.registryUrl)
   ) {
@@ -1361,6 +1456,12 @@ export function runOplAgentPackageRepair(input: AgentPackageRepairInput) {
     sourceSha256: packageActionSourceSha256('repair', lock),
     writesPerformed: !input.dryRun,
     physicalSurface,
+    sourceArtifactRef: lock.source_artifact_ref ?? null,
+    artifactDigest: lock.artifact_digest ?? null,
+    ownerSourceCommit: lock.owner_source_commit ?? null,
+    carrierAuthority: lock.carrier_authority ?? null,
+    releaseChannelRef: lock.release_channel_ref ?? null,
+    releaseChannelDigest: lock.release_channel_digest ?? null,
   });
   const repairedLock = {
     ...lock,
@@ -1453,6 +1554,7 @@ export function runOplAgentPackageRollback(input: AgentPackagePackageActionInput
     });
   }
   const restoredLocks = structuredClone(lastKnownGood.package_locks);
+  for (const restoredLock of restoredLocks) assertInstalledCarrierAuthority(restoredLock);
   const latestReceipt = readLifecycleLedger().receipts.find((entry) =>
     entry.receipt_ref === lock.action_receipt_id);
   if (latestReceipt?.action === 'optimize') {
@@ -1513,6 +1615,10 @@ export function runOplAgentPackageRollback(input: AgentPackagePackageActionInput
       manifest_sha256: entry.manifest_sha256,
       content_digest: entry.content_digest,
       package_lock_ref: entry.lock_ref,
+      source_artifact_ref: entry.source_artifact_ref ?? null,
+      artifact_digest: entry.artifact_digest ?? null,
+      owner_source_commit: entry.owner_source_commit ?? null,
+      carrier_authority: entry.carrier_authority ?? null,
     }));
     const receipt = lifecycleReceipt({
       action: 'rollback',
@@ -1530,6 +1636,12 @@ export function runOplAgentPackageRollback(input: AgentPackagePackageActionInput
       dependencyClosureDigest: closureDigest,
       dependencyPackages,
       managedRuntimeSource: null,
+      sourceArtifactRef: lock.source_artifact_ref ?? null,
+      artifactDigest: lock.artifact_digest ?? null,
+      ownerSourceCommit: lock.owner_source_commit ?? null,
+      carrierAuthority: lock.carrier_authority ?? null,
+      releaseChannelRef: lock.release_channel_ref ?? null,
+      releaseChannelDigest: lock.release_channel_digest ?? null,
     });
     if (!input.dryRun) {
       const newlyInstalledLocks = currentLocks.filter((entry) => !restoredIds.has(entry.package_id));
@@ -1662,6 +1774,10 @@ export function runOplAgentPackageRollback(input: AgentPackagePackageActionInput
     manifest_sha256: entry.manifest_sha256,
     content_digest: entry.content_digest,
     package_lock_ref: entry.lock_ref,
+    source_artifact_ref: entry.source_artifact_ref ?? null,
+    artifact_digest: entry.artifact_digest ?? null,
+    owner_source_commit: entry.owner_source_commit ?? null,
+    carrier_authority: entry.carrier_authority ?? null,
   }));
   const receipts = restoredLocks.map((restoredLock) => lifecycleReceipt({
     action: 'rollback',
@@ -1679,6 +1795,12 @@ export function runOplAgentPackageRollback(input: AgentPackagePackageActionInput
     dependencyClosureDigest: closureDigest,
     dependencyPackages,
     managedRuntimeSource: restoredLock.managed_runtime_source,
+    sourceArtifactRef: restoredLock.source_artifact_ref ?? null,
+    artifactDigest: restoredLock.artifact_digest ?? null,
+    ownerSourceCommit: restoredLock.owner_source_commit ?? null,
+    carrierAuthority: restoredLock.carrier_authority ?? null,
+    releaseChannelRef: restoredLock.release_channel_ref ?? null,
+    releaseChannelDigest: restoredLock.release_channel_digest ?? null,
   }));
   restoredLocks.forEach((restoredLock) => {
     restoredLock.dependency_transaction_id = transactionId;
@@ -1962,6 +2084,11 @@ export async function ensureOplAgentPackageScopeActivation(input: AgentPackagePa
   const index = readLockIndex();
   const { lockIndex, lock } = requireInstalledPackage(index, packageId, 'activate');
   assertInstalledCarrierAuthority(lock);
+  const lifecycleLedger = readLifecycleLedger();
+  assertAgentPackageCarrierReceiptAuthority(
+    lock,
+    lifecycleLedger.receipts.find((entry) => entry.receipt_ref === lock.action_receipt_id),
+  );
   const targetRoot = packageScopeTarget(input);
   if (!input.scope || !targetRoot) {
     throw new FrameworkContractError('cli_usage_error', 'Package scope activation requires workspace or quest target.', {
@@ -2031,6 +2158,7 @@ export async function ensureOplAgentPackageScopeActivation(input: AgentPackagePa
     source_artifact_ref: entry.source_artifact_ref ?? null,
     artifact_digest: entry.artifact_digest ?? null,
     owner_source_commit: entry.owner_source_commit ?? null,
+    carrier_authority: entry.carrier_authority ?? null,
   }));
   const activationReceipt = materializations.length > 0
     ? lifecycleReceipt({
@@ -2051,6 +2179,7 @@ export async function ensureOplAgentPackageScopeActivation(input: AgentPackagePa
         sourceArtifactRef: lock.source_artifact_ref ?? null,
         artifactDigest: lock.artifact_digest ?? null,
         ownerSourceCommit: lock.owner_source_commit ?? null,
+        carrierAuthority: lock.carrier_authority ?? null,
         scopeMaterialization: materializations[0],
         scopeMaterializations: materializations,
       })
@@ -2082,6 +2211,10 @@ export async function ensureOplAgentPackageScopeActivation(input: AgentPackagePa
   const providerPackages = activatedLock.resolved_dependencies.map((dependency) => {
     const provider = nextIndex.packages.find((entry) => entry.package_id === dependency.package_id)!;
     assertInstalledCarrierAuthority(provider);
+    assertAgentPackageCarrierReceiptAuthority(
+      provider,
+      lifecycleLedger.receipts.find((entry) => entry.receipt_ref === provider.action_receipt_id),
+    );
     return {
       package_id: provider.package_id,
       package_version: provider.package_version,
@@ -2092,6 +2225,7 @@ export async function ensureOplAgentPackageScopeActivation(input: AgentPackagePa
       source_artifact_ref: provider.source_artifact_ref ?? null,
       artifact_digest: provider.artifact_digest ?? null,
       owner_source_commit: provider.owner_source_commit ?? null,
+      carrier_authority: provider.carrier_authority ?? null,
     };
   });
   const useBinding = {
@@ -2109,6 +2243,7 @@ export async function ensureOplAgentPackageScopeActivation(input: AgentPackagePa
       source_artifact_ref: activatedLock.source_artifact_ref ?? null,
       artifact_digest: activatedLock.artifact_digest ?? null,
       owner_source_commit: activatedLock.owner_source_commit ?? null,
+      carrier_authority: activatedLock.carrier_authority ?? null,
     },
     provider_packages: providerPackages,
     dependency_closure_digest: activatedLock.dependency_closure_digest,
@@ -2144,6 +2279,7 @@ export async function ensureOplAgentPackageScopeActivation(input: AgentPackagePa
     sourceArtifactRef: activatedLock.source_artifact_ref ?? null,
     artifactDigest: activatedLock.artifact_digest ?? null,
     ownerSourceCommit: activatedLock.owner_source_commit ?? null,
+    carrierAuthority: activatedLock.carrier_authority ?? null,
     useBinding,
   });
   useBinding.use_receipt_ref = useReceipt.receipt_ref;
@@ -2250,6 +2386,7 @@ export function runOplAgentPackageProfileApply(input: AgentPackageProfileApplyIn
   const packageId = requirePackageId(input.packageId, 'profile_apply');
   const { index } = readRecoveredLockIndex();
   const { lockIndex, lock } = requireInstalledPackage(index, packageId, 'profile_apply');
+  assertInstalledCarrierAuthority(lock);
   const profileMigration = applyPackageProfile({
     lock,
     mergedFile: input.mergedFile,
@@ -2277,6 +2414,12 @@ export function runOplAgentPackageProfileApply(input: AgentPackageProfileApplyIn
     ].join('\n')),
     writesPerformed: !input.dryRun,
     physicalSurface,
+    sourceArtifactRef: lock.source_artifact_ref ?? null,
+    artifactDigest: lock.artifact_digest ?? null,
+    ownerSourceCommit: lock.owner_source_commit ?? null,
+    carrierAuthority: lock.carrier_authority ?? null,
+    releaseChannelRef: lock.release_channel_ref ?? null,
+    releaseChannelDigest: lock.release_channel_digest ?? null,
   });
   const updatedLock = {
     ...lock,
@@ -2358,6 +2501,12 @@ export function runOplAgentPackageUninstall(input: AgentPackagePackageActionInpu
     writesPerformed: !input.dryRun,
     physicalSurface,
     managedRuntimeSource: runtimeSourceMutation.after,
+    sourceArtifactRef: lock.source_artifact_ref ?? null,
+    artifactDigest: lock.artifact_digest ?? null,
+    ownerSourceCommit: lock.owner_source_commit ?? null,
+    carrierAuthority: lock.carrier_authority ?? null,
+    releaseChannelRef: lock.release_channel_ref ?? null,
+    releaseChannelDigest: lock.release_channel_digest ?? null,
   });
   let runtimeSourceCleanup: {
     status: 'not_required' | 'cleanup_completed' | 'cleanup_pending';
@@ -2409,6 +2558,7 @@ export function runOplAgentPackageExposureAction(
   const { index } = readRecoveredLockIndex();
   if (action === 'disable') assertNoRequiredInstalledDependents(index, packageId, 'disable');
   const { lockIndex, lock } = requireInstalledPackage(index, packageId, action);
+  if (action === 'enable' || action === 'unhide') assertInstalledCarrierAuthority(lock);
   const nextState = action === 'hide'
     ? 'hidden'
     : action === 'disable'
@@ -2428,6 +2578,12 @@ export function runOplAgentPackageExposureAction(
     trustTier: lock.trust_tier,
     sourceSha256: packageActionSourceSha256(action, lock),
     writesPerformed: !input.dryRun,
+    sourceArtifactRef: lock.source_artifact_ref ?? null,
+    artifactDigest: lock.artifact_digest ?? null,
+    ownerSourceCommit: lock.owner_source_commit ?? null,
+    carrierAuthority: lock.carrier_authority ?? null,
+    releaseChannelRef: lock.release_channel_ref ?? null,
+    releaseChannelDigest: lock.release_channel_digest ?? null,
   });
   const updatedLock: AgentPackageLock = {
     ...lock,
@@ -2541,17 +2697,21 @@ export function runOplAgentPackageStatus(input: {
     : lockIndex.packages;
   const homeShortcutPreferences = mergedHomeShortcutPreferences(registryCache, lockIndex)
     .filter((entry) => !packageId || entry.package_id === packageId);
-  const latestReceipts = new Map<string, AgentPackageLifecycleReceipt>();
+  const receiptsByRef = new Map<string, AgentPackageLifecycleReceipt>();
   for (const receipt of lifecycleLedger.receipts) {
-    if (receipt.package_id && !latestReceipts.has(receipt.package_id)) {
-      latestReceipts.set(receipt.package_id, receipt);
-    }
+    receiptsByRef.set(receipt.receipt_ref, receipt);
   }
   const lifecycleUx = agentPackageLifecycleSummaryReadback({
     selectedPackageId: packageId ?? null,
     packages: installedPackages,
   });
   const selectedLock = packageId ? installedPackages[0] ?? null : null;
+  const selectedReceipt = selectedLock
+    ? receiptsByRef.get(selectedLock.action_receipt_id) ?? null
+    : null;
+  const carrierAuthorityReadiness = selectedLock
+    ? agentPackageCarrierReceiptAuthorityStatus(selectedLock, selectedReceipt)
+    : null;
   const policyCurrentness = managedPolicyCurrentness(selectedLock);
   const packageDependencyReadiness = selectedLock ? dependencyReadiness(selectedLock, lockIndex) : null;
   let materializationReadiness = selectedLock
@@ -2590,7 +2750,8 @@ export function runOplAgentPackageStatus(input: {
     packageDependencyReadiness?.operational_ready
     && (materializationReadiness?.status === 'current' || materializationReadiness?.status === 'not_required')
     && runtimeSourceReadiness.operational_ready
-    && (policyCurrentness.status === 'current' || policyCurrentness.status === 'not_requested'),
+    && (policyCurrentness.status === 'current' || policyCurrentness.status === 'not_requested')
+    && carrierAuthorityReadiness?.status !== 'invalid',
   );
   return {
     version: 'g2',
@@ -2611,10 +2772,11 @@ export function runOplAgentPackageStatus(input: {
       package_dependency_readiness: packageDependencyReadiness,
       materialization_readiness: materializationReadiness,
       runtime_source_readiness: runtimeSourceReadiness,
+      carrier_authority_readiness: carrierAuthorityReadiness,
       managed_policy_currentness: policyCurrentness,
       runtime_source_recovery: runtimeSourceRecovery,
       operational_ready: operationalReady,
-      operational_ready_scope: 'package_dependency_scope_runtime_source_and_managed_policy',
+      operational_ready_scope: 'package_dependency_scope_runtime_source_managed_policy_and_carrier_authority',
       launch_allowed: operationalReady,
       launch_blocked_reason: operationalReady
         ? null
@@ -2626,9 +2788,11 @@ export function runOplAgentPackageStatus(input: {
             ? `scope_materialization_${materializationReadiness.status}`
             : !runtimeSourceReadiness.operational_ready
               ? `runtime_source_${runtimeSourceReadiness.status}`
-              : policyCurrentness.status !== 'current' && policyCurrentness.status !== 'not_requested'
-                ? `managed_policy_${policyCurrentness.status}`
-                : 'package_not_installed',
+              : carrierAuthorityReadiness?.status === 'invalid'
+                ? 'carrier_authority_invalid'
+                : policyCurrentness.status !== 'current' && policyCurrentness.status !== 'not_requested'
+                  ? `managed_policy_${policyCurrentness.status}`
+                  : 'package_not_installed',
       allowed_when_blocked: ['status', 'doctor', 'repair'],
       repair_action: selectedLock && !operationalReady
         ? policyCurrentness.repair_command
@@ -2656,7 +2820,7 @@ export function runOplAgentPackageStatus(input: {
             packages: installedPackages.map((lock) => ({
               packageId: lock.package_id,
               lock,
-              receipt: latestReceipts.get(lock.package_id) ?? null,
+              receipt: receiptsByRef.get(lock.action_receipt_id) ?? null,
             })),
           }),
       files: {
@@ -2678,11 +2842,9 @@ export function listOplAgentPackages(input: {
   const { index: lockIndex } = readRecoveredLockIndex();
   const lifecycleLedger = readLifecycleLedger();
   const homeShortcutPreferences = mergedHomeShortcutPreferences(registryCache, lockIndex);
-  const latestReceipts = new Map<string, AgentPackageLifecycleReceipt>();
+  const receiptsByRef = new Map<string, AgentPackageLifecycleReceipt>();
   for (const receipt of lifecycleLedger.receipts) {
-    if (receipt.package_id && !latestReceipts.has(receipt.package_id)) {
-      latestReceipts.set(receipt.package_id, receipt);
-    }
+    receiptsByRef.set(receipt.receipt_ref, receipt);
   }
   const lifecycleUx = agentPackageLifecycleSummaryReadback({ packages: lockIndex.packages });
   const directory = buildAgentPackageDirectory({
@@ -2730,7 +2892,7 @@ export function listOplAgentPackages(input: {
             packages: lockIndex.packages.map((lock) => ({
               packageId: lock.package_id,
               lock,
-              receipt: latestReceipts.get(lock.package_id) ?? null,
+              receipt: receiptsByRef.get(lock.action_receipt_id) ?? null,
             })),
           }),
       files: {

@@ -8,6 +8,10 @@ import {
   capabilityPackageOwnerRoute,
 } from '../managed-update-owner-boundary.ts';
 import { dependencyReadiness } from './dependency-closure.ts';
+import {
+  agentPackageCarrierAuthorityStatus,
+  agentPackageCarrierReceiptAuthorityStatus,
+} from './carrier-authority.ts';
 import { managedPolicyCurrentness, noManagedPolicyMigration } from './managed-policy-surface.ts';
 import { scopeMaterializationReadiness } from './scope-materialization.ts';
 import { managedRuntimeSourceReadiness } from './managed-runtime-source-carrier.ts';
@@ -84,6 +88,26 @@ export function agentPackageLifecycleUxReadback(input: {
       action_ref: null,
     }),
   ];
+  const carrierAuthority = input.receipt
+    ? agentPackageCarrierReceiptAuthorityStatus(input.lock, input.receipt)
+    : agentPackageCarrierAuthorityStatus(input.lock);
+  if (carrierAuthority.status === 'invalid') {
+    conditions.push(lifecycleCondition({
+      condition_id: 'carrier_authority_invalid',
+      package_id: input.lock.package_id,
+      status: 'attention_needed',
+      reason: `Package carrier authority is invalid: ${carrierAuthority.reasons.join(', ')}.`,
+      action_ref: 'repair',
+    }));
+  } else if (carrierAuthority.status === 'current') {
+    conditions.push(lifecycleCondition({
+      condition_id: 'carrier_authority_current',
+      package_id: input.lock.package_id,
+      status: 'ok',
+      reason: 'Package catalog, manifest, payload, lock, and runtime carrier authority are current.',
+      action_ref: null,
+    }));
+  }
 
   if (!surface || surface.status === 'not_requested') {
     conditions.push(lifecycleCondition({
@@ -336,20 +360,27 @@ function ownerRouteReadbackItem(input: {
     input.lock?.managed_runtime_source,
     input.lock?.runtime_source_carrier,
   );
+  const carrierAuthorityReadiness = input.lock
+    ? input.receipt
+      ? agentPackageCarrierReceiptAuthorityStatus(input.lock, input.receipt)
+      : agentPackageCarrierAuthorityStatus(input.lock)
+    : { status: 'not_required' as const, reasons: [] as string[] };
   const managedPolicyReady = policyCurrentness.status === 'current'
     || policyCurrentness.status === 'not_requested';
   const operationalReady = readiness.operational_ready
     && (materializationReadiness.status === 'current' || materializationReadiness.status === 'not_required')
     && runtimeSourceReadiness.operational_ready
-    && managedPolicyReady;
+    && managedPolicyReady
+    && carrierAuthorityReadiness.status !== 'invalid';
   const runtimeSource = input.lock?.managed_runtime_source ?? input.receipt?.managed_runtime_source ?? null;
   return {
     package_id: input.packageId,
     package_dependency_readiness: readiness,
     materialization_readiness: materializationReadiness,
     runtime_source_readiness: runtimeSourceReadiness,
+    carrier_authority_readiness: carrierAuthorityReadiness,
     operational_ready: operationalReady,
-    operational_ready_scope: 'package_dependency_scope_runtime_source_and_managed_policy',
+    operational_ready_scope: 'package_dependency_scope_runtime_source_managed_policy_and_carrier_authority',
     launch_allowed: operationalReady,
     launch_blocked_reason: !readiness.operational_ready
       ? `package_dependency_${readiness.status}`
@@ -357,9 +388,11 @@ function ownerRouteReadbackItem(input: {
         ? `scope_materialization_${materializationReadiness.status}`
         : !runtimeSourceReadiness.operational_ready
           ? `runtime_source_${runtimeSourceReadiness.status}`
-          : !managedPolicyReady
-            ? `managed_policy_${policyCurrentness.status}`
-            : null,
+          : carrierAuthorityReadiness.status === 'invalid'
+            ? 'carrier_authority_invalid'
+            : !managedPolicyReady
+              ? `managed_policy_${policyCurrentness.status}`
+              : null,
     allowed_when_blocked: ['status', 'doctor', 'repair'],
     descriptor,
     digest,
@@ -381,6 +414,7 @@ function ownerRouteReadbackItem(input: {
       trust: {
         trust_tier: descriptor.trust_tier,
       },
+      carrier_authority: input.lock?.carrier_authority ?? null,
       lock,
       lifecycle: {
         latest_receipt_ref: lock.lifecycle_receipt_ref,

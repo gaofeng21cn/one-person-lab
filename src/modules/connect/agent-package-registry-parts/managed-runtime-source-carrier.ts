@@ -125,6 +125,49 @@ function sourceFailure(message: string, details: Record<string, unknown>) {
   });
 }
 
+function validateBundledFullRuntimeCheckout(input: {
+  checkoutPath: string;
+  spec: ReturnType<typeof resolveOplDomainModuleSpec>;
+  expectedOwnerSourceCommit: string | null;
+}) {
+  if (!fs.existsSync(input.checkoutPath)
+    || !fs.lstatSync(input.checkoutPath).isDirectory()
+    || fs.lstatSync(input.checkoutPath).isSymbolicLink()) {
+    throw sourceFailure('Bundled Full runtime source directory is missing or unsafe.', {
+      module_id: input.spec.module_id,
+      checkout_path: input.checkoutPath,
+      expected_source_kind: 'full_runtime',
+    });
+  }
+  const packaged = readPackagedModuleMarker(input.checkoutPath, input.spec);
+  if (packaged?.source_kind !== 'full_runtime') {
+    throw sourceFailure('Bundled Full runtime source is missing its immutable package marker.', {
+      module_id: input.spec.module_id,
+      checkout_path: input.checkoutPath,
+      expected_source_kind: 'full_runtime',
+    });
+  }
+  if (!/^[0-9a-f]{40}$/.test(input.expectedOwnerSourceCommit ?? '')) {
+    throw sourceFailure('Bundled Full runtime source is missing its verified carrier commit.', {
+      module_id: input.spec.module_id,
+      checkout_path: input.checkoutPath,
+      expected_owner_source_commit: input.expectedOwnerSourceCommit,
+    });
+  }
+  if (packaged.source_git.head_sha !== input.expectedOwnerSourceCommit) {
+    throw sourceFailure('Bundled Full runtime source does not match the verified Release Set carrier commit.', {
+      module_id: input.spec.module_id,
+      checkout_path: input.checkoutPath,
+      expected_owner_source_commit: input.expectedOwnerSourceCommit,
+      actual_owner_source_commit: packaged.source_git.head_sha,
+    });
+  }
+  return {
+    sourceGitHeadSha: packaged.source_git.head_sha,
+    treeSha256: computePackageChannelTreeSha256(input.checkoutPath),
+  };
+}
+
 function sourceState(input: {
   config: AgentPackageManagedRuntimeSourceCarrier;
   checkoutPath: string;
@@ -203,18 +246,21 @@ function validateCurrentState(state: AgentPackageManagedRuntimeSourceState) {
       tree_sha256: identity.tree_sha256,
     };
   }
-  const packaged = readPackagedModuleMarker(state.checkout_path, spec);
   if (
     sourceMode === 'bundled_full_runtime'
     && state.ownership === 'preexisting_adopted'
     && fs.existsSync(state.checkout_path)
-    && !readPackageChannelLifecycle(state.checkout_path, spec)
-    && packaged?.source_kind === 'full_runtime'
   ) {
+    const verified = validateBundledFullRuntimeCheckout({
+      checkoutPath: state.checkout_path,
+      spec,
+      expectedOwnerSourceCommit: state.source_git_head_sha,
+    });
     return {
       ...state,
       source_mode: sourceMode,
-      tree_sha256: computePackageChannelTreeSha256(state.checkout_path),
+      source_git_head_sha: verified.sourceGitHeadSha,
+      tree_sha256: verified.treeSha256,
     };
   }
   return sourceState({
@@ -462,6 +508,7 @@ export function managedRuntimeSourceReadiness(
     const bundledFullRuntime = runtimeSourceMode(state, spec) === 'bundled_full_runtime';
     const matches = bundledFullRuntime
       ? current.tree_sha256 === state.tree_sha256
+        && current.source_git_head_sha === state.source_git_head_sha
       : state.preparation_status === 'completed'
       && Boolean(state.health_output_sha256)
       && Boolean(state.handler_probe_output_sha256)
@@ -624,12 +671,56 @@ export function applyManagedRuntimeSourceCarrier(input: {
     : existed ? 'preexisting_adopted' : 'package_created';
   let before: AgentPackageManagedRuntimeSourceState | null = null;
   if (input.previous) {
-    try {
-      before = validateCurrentState(input.previous);
-    } catch (error) {
-      if (input.action !== 'repair' || input.previous.ownership !== 'package_created') throw error;
+    if (input.sourceKind === 'bundled_full_runtime_modules') {
       before = input.previous;
+    } else {
+      try {
+        before = validateCurrentState(input.previous);
+      } catch (error) {
+        if (input.action !== 'repair' || input.previous.ownership !== 'package_created') throw error;
+        before = input.previous;
+      }
     }
+  }
+  if (input.sourceKind === 'bundled_full_runtime_modules') {
+    const expectedOwnerSourceCommit = input.verifiedCarrierSourceCommit ?? null;
+    const verified = validateBundledFullRuntimeCheckout({
+      checkoutPath,
+      spec,
+      expectedOwnerSourceCommit,
+    });
+    const after: AgentPackageManagedRuntimeSourceState = {
+      surface_kind: 'opl_agent_package_managed_runtime_source',
+      status: input.dryRun ? 'validated_no_write' : 'current',
+      carrier_kind: input.config.carrier_kind,
+      module_id: input.config.module_id,
+      checkout_path: checkoutPath,
+      ownership: 'preexisting_adopted',
+      source_mode: 'bundled_full_runtime',
+      channel_version: null,
+      artifact_ref: null,
+      layer_digest: null,
+      source_archive_sha256: null,
+      source_git_head_sha: verified.sourceGitHeadSha,
+      tree_sha256: verified.treeSha256,
+      rollback_ref: null,
+      preparation_status: 'validated_no_write',
+      bootstrap_command: null,
+      health_check_command: [],
+      handler_probe_command: [],
+      health_output_sha256: null,
+      handler_probe_output_sha256: null,
+      preparation_root: null,
+      preparation_scope: 'preexisting_read_only_probe',
+    };
+    return {
+      kind: 'none',
+      module_id: input.config.module_id,
+      checkout_path: checkoutPath,
+      before: before ?? after,
+      after,
+      staged_removal_paths: [],
+    };
   }
   if (input.dryRun) {
     if (developerCheckout) {
@@ -703,69 +794,6 @@ export function applyManagedRuntimeSourceCarrier(input: {
       module_id: input.config.module_id,
       checkout_path: checkoutPath,
       before,
-      after,
-      staged_removal_paths: [],
-    };
-  }
-  if (
-    input.sourceKind === 'bundled_full_runtime_modules'
-    && existed
-    && !readPackageChannelLifecycle(checkoutPath, spec)
-  ) {
-    const packaged = readPackagedModuleMarker(checkoutPath, spec);
-    if (packaged?.source_kind !== 'full_runtime') {
-      throw sourceFailure('Bundled Full runtime source is missing its immutable package marker.', {
-        module_id: input.config.module_id,
-        checkout_path: checkoutPath,
-        expected_source_kind: 'full_runtime',
-      });
-    }
-    const expectedOwnerSourceCommit = input.verifiedCarrierSourceCommit ?? null;
-    if (!/^[0-9a-f]{40}$/.test(expectedOwnerSourceCommit ?? '')) {
-      throw sourceFailure('Bundled Full runtime source is missing its verified carrier commit.', {
-        module_id: input.config.module_id,
-        checkout_path: checkoutPath,
-        expected_owner_source_commit: expectedOwnerSourceCommit,
-      });
-    }
-    if (packaged.source_git.head_sha !== expectedOwnerSourceCommit) {
-      throw sourceFailure('Bundled Full runtime source does not match the verified Release Set carrier commit.', {
-        module_id: input.config.module_id,
-        checkout_path: checkoutPath,
-        expected_owner_source_commit: expectedOwnerSourceCommit,
-        actual_owner_source_commit: packaged.source_git.head_sha,
-      });
-    }
-    const treeSha256 = computePackageChannelTreeSha256(checkoutPath);
-    const after: AgentPackageManagedRuntimeSourceState = {
-      surface_kind: 'opl_agent_package_managed_runtime_source',
-      status: 'current',
-      carrier_kind: input.config.carrier_kind,
-      module_id: input.config.module_id,
-      checkout_path: checkoutPath,
-      ownership: 'preexisting_adopted',
-      source_mode: 'bundled_full_runtime',
-      channel_version: null,
-      artifact_ref: null,
-      layer_digest: null,
-      source_archive_sha256: null,
-      source_git_head_sha: expectedOwnerSourceCommit,
-      tree_sha256: treeSha256,
-      rollback_ref: null,
-      preparation_status: 'validated_no_write',
-      bootstrap_command: null,
-      health_check_command: [],
-      handler_probe_command: [],
-      health_output_sha256: null,
-      handler_probe_output_sha256: null,
-      preparation_root: null,
-      preparation_scope: 'preexisting_read_only_probe',
-    };
-    return {
-      kind: 'none',
-      module_id: input.config.module_id,
-      checkout_path: checkoutPath,
-      before: input.previous ?? after,
       after,
       staged_removal_paths: [],
     };

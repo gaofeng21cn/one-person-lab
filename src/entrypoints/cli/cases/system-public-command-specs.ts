@@ -7,8 +7,8 @@ import { syncOplCompanionSkills } from '../../../modules/connect/install-compani
 import { syncFamilySkillPacks } from '../../../modules/connect/opl-skills.ts';
 import {
   runOplBundledFullRuntimeAgentPackageInstall,
-  runOplAgentPackageStatus,
 } from '../../../modules/connect/agent-package-registry.ts';
+import { readBundledFullRuntimePackageCatalog } from '../../../modules/connect/agent-package-registry-parts/bundled-full-runtime-catalog.ts';
 import { buildOplSystemDependencyDoctor } from '../../../modules/connect/system-installation/dependency-doctor.ts';
 import { buildOplDockerWebuiDoctor } from '../../../modules/connect/system-installation/docker-webui-doctor.ts';
 import { buildOplEnvironment } from '../../../modules/connect/system-installation/environment.ts';
@@ -92,6 +92,12 @@ const FULL_RUNTIME_AGENT_PACKAGE_MANIFESTS = [
   { packageId: 'obf', env: 'OPL_MODULE_PATH_OPLBOOKFORGE' },
 ] as const;
 
+const FULL_RUNTIME_PACKAGE_ROOT_ENV = [
+  ...FULL_RUNTIME_AGENT_PACKAGE_MANIFESTS,
+  { packageId: 'mas-scholar-skills', env: 'OPL_MODULE_PATH_MAS_SCHOLAR_SKILLS' },
+  { packageId: 'opl-flow', env: 'OPL_FLOW_REPO_ROOT' },
+] as const;
+
 function syncFullRuntimeFamilyCodexPluginsIfAvailable() {
   const domains = FULL_RUNTIME_FAMILY_MODULE_ENV
     .filter((entry) => process.env[entry.env]?.trim())
@@ -113,26 +119,32 @@ async function syncFullRuntimeAgentPackageLocksIfAvailable() {
     return null;
   }
 
-  const installed = new Set(
-    runOplAgentPackageStatus().opl_agent_package_status.installed_packages.map((entry) => entry.package_id),
-  );
+  const packageRoots: Record<string, string> = Object.fromEntries(FULL_RUNTIME_PACKAGE_ROOT_ENV.flatMap((entry) => {
+    const root = process.env[entry.env]?.trim();
+    return root ? [[entry.packageId, path.resolve(root)]] : [];
+  }));
+  const runtimeHome = process.env.OPL_FULL_RUNTIME_HOME?.trim();
+  if (runtimeHome) {
+    for (const entry of readBundledFullRuntimePackageCatalog().entries.values()) {
+      const runtimeRoot = path.resolve(runtimeHome, entry.runtimeModuleRelativePath);
+      if (!packageRoots[entry.packageId] && fs.existsSync(runtimeRoot)) {
+        packageRoots[entry.packageId] = runtimeRoot;
+      }
+    }
+  }
   const items = [];
   for (const target of targets) {
-    if (installed.has(target.packageId)) {
-      items.push({ package_id: target.packageId, status: 'already_installed' });
-      continue;
-    }
     const runtimeSourceRoot = path.resolve(process.env[target.env]!.trim());
     const result = await runOplBundledFullRuntimeAgentPackageInstall({
       packageId: target.packageId,
       agentRoot: runtimeSourceRoot,
+      packageRoots,
     });
     items.push({
       package_id: target.packageId,
       status: result.opl_agent_package_install.status,
       package_lock_ref: result.opl_agent_package_install.package_lock.lock_ref,
     });
-    installed.add(target.packageId);
   }
 
   return {
@@ -141,7 +153,7 @@ async function syncFullRuntimeAgentPackageLocksIfAvailable() {
     summary: {
       total: items.length,
       installed: items.filter((item) => item.status === 'installed').length,
-      already_installed: items.filter((item) => item.status === 'already_installed').length,
+      already_installed: 0,
     },
     items,
   };

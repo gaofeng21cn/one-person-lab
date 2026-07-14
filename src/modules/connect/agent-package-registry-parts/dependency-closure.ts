@@ -1,4 +1,8 @@
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
+import {
+  agentPackageCarrierAuthorityStatus,
+  sameAgentPackageCarrierAuthority,
+} from './carrier-authority.ts';
 import { sha256Text } from './shared.ts';
 import {
   LEGACY_PACKAGE_CONTENT_LOCK,
@@ -146,6 +150,7 @@ export function dependencyClosureDigest(locks: AgentPackageLock[]) {
       package_version: lock.package_version,
       manifest_sha256: lock.manifest_sha256,
       owner_source_commit: lock.owner_source_commit ?? null,
+      carrier_authority: lock.carrier_authority ?? null,
       content_digest: lock.content_digest,
       package_lock_ref: lock.lock_ref,
     }))
@@ -188,6 +193,10 @@ export function dependencyReadiness(
     if (!provider) {
       reasons.push('dependency_lock_missing');
     } else {
+      const carrierAuthority = agentPackageCarrierAuthorityStatus(provider);
+      if (carrierAuthority.status === 'invalid') {
+        reasons.push(...carrierAuthority.reasons.map((reason) => `carrier_authority_${reason}`));
+      }
       if (provider.exposure_state === 'disabled') reasons.push('dependency_disabled');
       if (!versionSatisfiesRequirement(provider.package_version, dependency.version_requirement)) reasons.push('version_requirement_unsatisfied');
       if (provider.capability_provider?.capability_abi !== dependency.capability_abi) reasons.push('capability_abi_mismatch');
@@ -203,6 +212,7 @@ export function dependencyReadiness(
         resolved.installed_version !== provider.package_version
         || resolved.manifest_sha256 !== provider.manifest_sha256
         || (resolved.owner_source_commit ?? null) !== (provider.owner_source_commit ?? null)
+        || !sameAgentPackageCarrierAuthority(resolved.carrier_authority, provider.carrier_authority)
         || resolved.content_digest !== provider.content_digest
         || resolved.package_lock_ref !== provider.lock_ref
       ) {

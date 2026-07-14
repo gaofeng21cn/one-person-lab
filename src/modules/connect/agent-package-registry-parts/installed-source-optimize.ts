@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
+import { assertAgentPackageCarrierAuthority } from './carrier-authority.ts';
 import { dependencyClosureDigest, dependencyReadiness } from './dependency-closure.ts';
 import {
   lifecycleReceipt,
@@ -133,6 +134,7 @@ export function optimizeInstalledPackageSource(input: {
 }) {
   const dryRun = input.action.dryRun === true;
   const previousLocks = structuredClone(installedClosure(input.index, input.root));
+  for (const lock of previousLocks) assertAgentPackageCarrierAuthority(lock);
   assertInstalledPhysicalSources(previousLocks);
   const readiness = dependencyReadiness(input.root, input.index);
   if (!readiness.operational_ready) {
@@ -219,6 +221,7 @@ export function optimizeInstalledPackageSource(input: {
     source_artifact_ref: entry.source_artifact_ref ?? null,
     artifact_digest: entry.artifact_digest ?? null,
     owner_source_commit: entry.owner_source_commit ?? null,
+    carrier_authority: entry.carrier_authority ?? null,
   }));
   const sourceSha256 = sha256Text([
     packageActionSourceSha256('optimize', input.root),
@@ -250,6 +253,7 @@ export function optimizeInstalledPackageSource(input: {
     sourceArtifactRef: input.root.source_artifact_ref,
     artifactDigest: input.root.artifact_digest,
     ownerSourceCommit: input.root.owner_source_commit,
+    carrierAuthority: input.root.carrier_authority,
     releaseChannelRef: input.root.release_channel_ref,
     releaseChannelDigest: input.root.release_channel_digest,
     sourceSelection: 'installed_package_lock',
@@ -388,6 +392,7 @@ export function rollbackInstalledPackageOptimization(input: {
   const dryRun = input.action.dryRun === true;
   const currentLocks = structuredClone(installedClosure(input.index, input.root));
   const restoredLocks = structuredClone(input.generation.package_locks);
+  for (const lock of restoredLocks) assertAgentPackageCarrierAuthority(lock);
   const restoredRoot = restoredLocks.find((entry) => entry.package_id === input.root.package_id);
   if (!restoredRoot) {
     throw new FrameworkContractError(
@@ -422,6 +427,7 @@ export function rollbackInstalledPackageOptimization(input: {
     source_artifact_ref: entry.source_artifact_ref ?? null,
     artifact_digest: entry.artifact_digest ?? null,
     owner_source_commit: entry.owner_source_commit ?? null,
+    carrier_authority: entry.carrier_authority ?? null,
   }));
   const receipt = lifecycleReceipt({
     action: 'rollback',
@@ -443,6 +449,7 @@ export function rollbackInstalledPackageOptimization(input: {
     sourceArtifactRef: restoredRoot.source_artifact_ref,
     artifactDigest: restoredRoot.artifact_digest,
     ownerSourceCommit: restoredRoot.owner_source_commit,
+    carrierAuthority: restoredRoot.carrier_authority,
     releaseChannelRef: restoredRoot.release_channel_ref,
     releaseChannelDigest: restoredRoot.release_channel_digest,
     sourceSelection: 'installed_package_lock',

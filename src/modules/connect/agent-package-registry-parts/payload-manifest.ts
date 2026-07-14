@@ -2,7 +2,6 @@ import canonicalPayloadSchema from '../../../../contracts/opl-framework/package-
 import { FrameworkContractError, isRecord } from '../../../kernel/contract-validation.ts';
 import { recordList, stringValue } from '../../../kernel/json-record.ts';
 import { assertJsonSchemaPayload } from '../../../kernel/schema-registry.ts';
-import type { ManagedModulePackageChannelSelection } from '../system-installation/module-package-channel.ts';
 import {
   CANONICAL_PACKAGE_CONTENT_LOCK,
   packageContentLockDigest,
@@ -20,6 +19,16 @@ export type PackagePayloadAdmission = {
   kind: 'canonical_v2' | 'legacy_v1' | 'legacy_v0';
   contentLockDigest: string | null;
   sourceCommit: string | null;
+};
+
+export type PackagePayloadCatalogAuthority = {
+  package_id: string;
+  package_version: string;
+  owner_source_commit: string | null;
+  source_artifact_ref?: string | null;
+  artifact_digest?: string | null;
+  artifact_status?: 'published_immutable' | null;
+  package_content_digest?: string | null;
 };
 
 function fail(message: string, details: Record<string, unknown>): never {
@@ -81,7 +90,7 @@ function assertCarrierSourceAuthority(input: {
   payload: Record<string, unknown>;
   manifest: AgentPackageManifest;
   payloadManifestUrl: string;
-  catalogSelection: ManagedModulePackageChannelSelection | null;
+  catalogSelection: PackagePayloadCatalogAuthority | null;
 }) {
   const payloadCommit = stringValue(input.payload.source_commit);
   const manifestCommit = input.manifest.carrier_source_commit;
@@ -113,7 +122,7 @@ function assertCanonicalIdentity(input: {
   payload: Record<string, unknown>;
   manifest: AgentPackageManifest;
   payloadManifestUrl: string;
-  catalogSelection: ManagedModulePackageChannelSelection | null;
+  catalogSelection: PackagePayloadCatalogAuthority | null;
 }) {
   const payload = input.payload;
   if (!FIRST_PARTY_SOURCES.has(input.manifest.source)) {
@@ -217,7 +226,7 @@ export function admitPackagePayloadManifest(input: {
   payload: Record<string, unknown>;
   manifest: AgentPackageManifest;
   payloadManifestUrl: string;
-  catalogSelection: ManagedModulePackageChannelSelection | null;
+  catalogSelection: PackagePayloadCatalogAuthority | null;
 }): PackagePayloadAdmission {
   const surfaceKind = stringValue(input.payload.surface_kind);
   if (surfaceKind === CANONICAL_SURFACE) {

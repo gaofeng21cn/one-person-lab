@@ -1,0 +1,84 @@
+{
+  "surface_kind": "opl_bundled_full_runtime_package_catalog.v1",
+  "schema_ref": "contracts/opl-framework/bundled-full-runtime-package-catalog.schema.json",
+  "catalog_id": "opl-framework-bundled-full-runtime-packages",
+  "packages": {
+    "mas": {
+      "package_id": "mas",
+      "package_role": "standard_agent",
+      "package_version": "0.2.6",
+      "owner_source_commit": "e6137d01aeb6f5cdd9cb61864b9fa116a590b5bf",
+      "manifest_ref": "packages/mas.json",
+      "manifest_sha256": "sha256:b93bb06beef22714e1a6949e0802749b1cc54263966fe157cf582b6d6ad62adc",
+      "payload_manifest_ref": "packages/payloads/mas-0.2.6.json",
+      "payload_manifest_sha256": "sha256:5e5b821501246c687dea022f4a0ebfadd6a8c008daba130168fbceb40836dbd4",
+      "runtime_module_relative_path": "modules/mas"
+    },
+    "mag": {
+      "package_id": "mag",
+      "package_role": "standard_agent",
+      "package_version": "0.3.2",
+      "owner_source_commit": "8ceb733acd63406816a330c465907e69f4179a6d",
+      "manifest_ref": "packages/mag.json",
+      "manifest_sha256": "sha256:b67304465100950532157c18107a936502f2fb773cddbf817e8105f0077552ae",
+      "payload_manifest_ref": "packages/payloads/mag-0.3.2.json",
+      "payload_manifest_sha256": "sha256:1fc4962d154584d42d020f3b6c4b9057ff5244be7a2da0c49cf4b32c889e1c46",
+      "runtime_module_relative_path": "modules/mag"
+    },
+    "rca": {
+      "package_id": "rca",
+      "package_role": "standard_agent",
+      "package_version": "0.2.5",
+      "owner_source_commit": "0de0631fbdd2943c3004db8ff52222b1d33993f4",
+      "manifest_ref": "packages/rca.json",
+      "manifest_sha256": "sha256:4de15e907d990683c9226a7470cd8df650f259d95af3f63dcc4c7526eb760bb5",
+      "payload_manifest_ref": "packages/payloads/rca-0.2.5.json",
+      "payload_manifest_sha256": "sha256:b208ed30c5b86aa5b5c9ceb9f8aa31cb5a92ac1f872fc2b522bdb29d4849734c",
+      "runtime_module_relative_path": "modules/rca"
+    },
+    "oma": {
+      "package_id": "oma",
+      "package_role": "standard_agent",
+      "package_version": "0.3.4",
+      "owner_source_commit": "4ed4a855796061d851e8640d465ff9061438cc50",
+      "manifest_ref": "packages/oma.json",
+      "manifest_sha256": "sha256:c59311fa5f72e6f0d1681bb5851c4db333c553608786946e32489bb4c4b5ece2",
+      "payload_manifest_ref": "packages/payloads/oma-0.3.4.json",
+      "payload_manifest_sha256": "sha256:85e6adb614ff27024c3ee32e42322a234eaf0287cbb1ff0e9175f1f11b6895c5",
+      "runtime_module_relative_path": "modules/meta-agent"
+    },
+    "obf": {
+      "package_id": "obf",
+      "package_role": "standard_agent",
+      "package_version": "0.3.3",
+      "owner_source_commit": "86f38070bbf21d55abc12e35eeb352c62c208da3",
+      "manifest_ref": "packages/obf.json",
+      "manifest_sha256": "sha256:9d8531fae885de8959186f1fa3e99f816f376fedb3f68c604705a27f8e52394c",
+      "payload_manifest_ref": "packages/payloads/obf-0.3.3.json",
+      "payload_manifest_sha256": "sha256:e1da32af5decdedbc7a6bb12e3e7ea6abadaa897709a87f162311f06e135518b",
+      "runtime_module_relative_path": "modules/bookforge"
+    },
+    "mas-scholar-skills": {
+      "package_id": "mas-scholar-skills",
+      "package_role": "framework_capability_package",
+      "package_version": "0.2.3",
+      "owner_source_commit": "ed621f53a905e02cdf272387d14d0d5415d73781",
+      "manifest_ref": "packages/mas-scholar-skills.json",
+      "manifest_sha256": "sha256:eb7aeb481899ec90e7f7bd1f0ad06e908e2537501a37f48fdc60351e43312aae",
+      "payload_manifest_ref": "packages/payloads/mas-scholar-skills-0.2.3.json",
+      "payload_manifest_sha256": "sha256:bc459d297a68ff842f1f8f6b9d549cf392e2cc78b8dcde08e02a0dbc564c41c7",
+      "runtime_module_relative_path": "modules/mas-scholar-skills"
+    },
+    "opl-flow": {
+      "package_id": "opl-flow",
+      "package_role": "workflow_profile",
+      "package_version": "0.1.20",
+      "owner_source_commit": "9bfa310c6693787040701efd19a8ddd4cf79f6e4",
+      "manifest_ref": "packages/opl-flow.json",
+      "manifest_sha256": "sha256:ee62ed77879e0381eea4f70ee2e999551f235546180383640680c3b643c32811",
+      "payload_manifest_ref": "packages/payloads/opl-flow-0.1.20.json",
+      "payload_manifest_sha256": "sha256:f41c6e6e987695712c57398350f05d9f133026e1c109f006045dc7ad81afb858",
+      "runtime_module_relative_path": "modules/opl-flow"
+    }
+  }
+}
