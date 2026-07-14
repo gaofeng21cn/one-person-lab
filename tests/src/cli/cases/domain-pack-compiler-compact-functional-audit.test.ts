@@ -1,5 +1,6 @@
 import { assert, fs, os, path, runCli, test } from '../helpers.ts';
 import { buildRepoContractDescriptor } from '../../../../src/modules/pack/domain-pack-compiler/repo-contract-descriptor.ts';
+import { FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES } from '../../../../src/modules/foundry-lab/standard-domain-agent-scaffold-constants.ts';
 import { buildReadyAgentRepo, writeJson } from './agents-conformance-fixtures.ts';
 
 function writeCompactAudit(repoDir: string, codePaths: string[]) {
@@ -22,6 +23,7 @@ function writeCompactAudit(repoDir: string, codePaths: string[]) {
     owner: 'SampleBriefAgent',
     domain_id: 'sample-brief-agent',
     target_domain_id: 'sample-brief-agent',
+    forbidden_generic_owner_roles: FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES,
     authority_boundary: {
       domain_can_claim_generic_runtime_owner: false,
       domain_repo_can_own_generated_surface: false,

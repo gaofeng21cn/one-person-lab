@@ -58,12 +58,15 @@ test('domain pack compiler projects OPL-owned generated surfaces for admitted do
     'product_entry_manifest_descriptor',
     'domain_handler_descriptor',
   ]);
-  assert.equal(mas.domain_pack_compiler.generated_interface_bundle.cli.descriptors[0].command, 'MedAutoScience study_packet');
+  assert.match(
+    mas.domain_pack_compiler.generated_interface_bundle.cli.descriptors[0].command,
+    /^opl agents run --domain med-autoscience --action study_packet --workspace /,
+  );
   assert.equal(mas.domain_pack_compiler.generated_interface_bundle.mcp.descriptors[0].name, 'study_packet');
   assert.equal(mas.domain_pack_compiler.generated_interface_bundle.skill.descriptors[0].command_contract_id, 'study_packet');
-  assert.equal(
+  assert.match(
     mas.domain_pack_compiler.generated_interface_bundle.product_entry.descriptors[0].command,
-    'MedAutoScience product study_packet',
+    /^opl agents run --domain med-autoscience --action study_packet --workspace /,
   );
   assert.equal(
     mas.domain_pack_compiler.generated_interface_bundle.openai_tool.descriptors[0].function.name,

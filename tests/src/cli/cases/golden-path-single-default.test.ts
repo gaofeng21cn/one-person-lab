@@ -5,6 +5,13 @@ import {
   writeJson,
 } from './agents-conformance-fixtures.ts';
 
+function addOptionalActionRouteStages(repoDir: string, stageIds: string[]) {
+  const actionCatalogPath = path.join(repoDir, 'contracts', 'action_catalog.json');
+  const actionCatalog = parseJsonText(fs.readFileSync(actionCatalogPath, 'utf8')) as any;
+  actionCatalog.actions[0].stage_route.optional_stage_refs.push(...stageIds);
+  writeJson(actionCatalogPath, actionCatalog);
+}
+
 test('agents conformance ignores legacy stage-plane default routes after manifest cutover', () => {
   const repoDir = buildReadyAgentRepo();
   const stageControlPlanePath = path.join(repoDir, 'contracts', 'stage_control_plane.json');
@@ -49,6 +56,7 @@ test('agents conformance treats explicit Codex follow-on lanes as non-default ro
   };
   stageManifest.stages.push(followOnStage);
   writeJson(stageManifestPath, stageManifest);
+  addOptionalActionRouteStages(repoDir, ['book_materialization_follow_on']);
   const profilePath = path.join(repoDir, 'contracts', 'standard_agent_conformance_profile.json');
   const profile = parseJsonText(fs.readFileSync(profilePath, 'utf8')) as any;
   profile.golden_path.allowed_stage_ids.push('book_materialization_follow_on');
@@ -120,6 +128,11 @@ test('agents conformance requires proof diagnostic cleanup and long-soak route v
     },
   );
   writeJson(stageManifestPath, stageManifest);
+  addOptionalActionRouteStages(repoDir, [
+    'provider_proof_observation',
+    'legacy_cleanup_sweep',
+    'runtime_long_soak_window',
+  ]);
 
   const report = runCli([
     'agents',

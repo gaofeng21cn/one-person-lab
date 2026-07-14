@@ -14,7 +14,10 @@ test('real family-defaults pack compiler preserves JSON readback when all standa
     'opl-bookforge',
   ].every((repo) => fs.existsSync(`${familyRepoPath(repo)}/contracts/domain_descriptor.json`)),
 }, () => {
-  const report = runCli(['agents', 'pack-compiler', '--family-defaults']).domain_pack_compiler;
+  const report = runCli(
+    ['agents', 'pack-compiler', '--family-defaults'],
+    { OPL_FAMILY_WORKSPACE_ROOT: familyWorkspaceRoot },
+  ).domain_pack_compiler;
   const domains = new Map<string, Record<string, any>>(report.domains.map((domain: Record<string, any>) => [
     domain.requested_agent_id,
     domain,
@@ -45,7 +48,10 @@ test('real family-defaults generated interfaces preserve JSON readback when all 
     'opl-bookforge',
   ].every((repo) => fs.existsSync(`${familyRepoPath(repo)}/contracts/domain_descriptor.json`)),
 }, () => {
-  const report = runCli(['agents', 'interfaces', '--family-defaults']).generated_agent_interfaces;
+  const report = runCli(
+    ['agents', 'interfaces', '--family-defaults'],
+    { OPL_FAMILY_WORKSPACE_ROOT: familyWorkspaceRoot },
+  ).generated_agent_interfaces;
   const domains = new Map<string, Record<string, any>>(report.reports.map((domain: Record<string, any>) => [
     domain.requested_agent_id,
     domain,

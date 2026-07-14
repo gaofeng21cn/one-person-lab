@@ -327,13 +327,40 @@ export function createAdmittedStagePackFixture(
   const inlineStagePlane = (
     productEntryManifest?.family_stage_control_plane ?? payload.family_stage_control_plane
   ) as JsonRecord | undefined;
-  const sourceStages = inlineStagePlane
-    ? inlineStagePlane.stages as JsonRecord[]
-    : buildAdmittedStagePlane(targetDomainId, owner).stages as JsonRecord[];
-  const selectedSourceStages = sourceStages.slice(0, options.stageCount ?? sourceStages.length);
-  const actionCatalog = (
+  const providedActionCatalog = (
     productEntryManifest?.family_action_catalog ?? payload.family_action_catalog
-  ) as JsonRecord | undefined ?? buildAdmittedActionCatalog(targetDomainId, owner, {
+  ) as JsonRecord | undefined;
+  const providedActions = (providedActionCatalog?.actions as JsonRecord[] | undefined) ?? [];
+  const routedStageIds = [...new Set(providedActions.flatMap((action) => {
+    const route = action.stage_route as JsonRecord | undefined;
+    return [
+      ...((route?.required_stage_refs as string[] | undefined) ?? []),
+      ...((route?.optional_stage_refs as string[] | undefined) ?? []),
+    ];
+  }))];
+  const defaultSourceStages = buildAdmittedStagePlane(targetDomainId, owner).stages as JsonRecord[];
+  const sourceStages: JsonRecord[] = inlineStagePlane
+    ? inlineStagePlane.stages as JsonRecord[]
+    : routedStageIds.length > 0
+      ? routedStageIds.map((stageId, index) => ({
+          ...defaultSourceStages[index % defaultSourceStages.length],
+          stage_id: stageId,
+          title: stageId,
+          summary: `${stageId} fixture stage.`,
+          goal: `Exercise the declared ${stageId} action route.`,
+          allowed_action_refs: providedActions
+            .filter((action) => {
+              const route = action.stage_route as JsonRecord | undefined;
+              return [
+                ...((route?.required_stage_refs as string[] | undefined) ?? []),
+                ...((route?.optional_stage_refs as string[] | undefined) ?? []),
+              ].includes(stageId);
+            })
+            .map((action) => String(action.action_id)),
+        }))
+      : defaultSourceStages;
+  const selectedSourceStages = sourceStages.slice(0, options.stageCount ?? sourceStages.length);
+  const actionCatalog = providedActionCatalog ?? buildAdmittedActionCatalog(targetDomainId, owner, {
     ...options,
     stageIds: selectedSourceStages.map((stage) => String(stage.stage_id)),
   });
