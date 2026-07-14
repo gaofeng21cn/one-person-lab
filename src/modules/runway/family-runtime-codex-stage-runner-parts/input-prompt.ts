@@ -237,7 +237,8 @@ function qualityAttemptPromptLines(
     'Use only the declared context manifest, exact artifact refs and hashes, source refs, rubric refs, and necessary lineage.',
     `Context manifest ref: ${contextManifestRef ?? 'missing'}`,
     'The review closeout must bind reviewed artifact hashes and declare no_context_inheritance=true.',
-    `Repair budget: ${maxRepairRounds ?? 'unavailable'} rounds. outcome=repair_required continues the internal quality loop only while repair budget remains.`,
+    `Repair budget: ${maxRepairRounds ?? 'unavailable'} rounds. outcome=repair_required normally continues the internal quality loop while repair budget remains.`,
+    'If the required work belongs to a different declared Stage, a reviewer or re_reviewer may instead end this StageRun with outcome=repair_required plus decision_kind=route_back to that different Stage. This is the only terminal route allowed before repair-budget exhaustion for repair_required.',
     'When repair budget is exhausted and a consumable artifact remains, the current reviewer or re-reviewer is the decisive Codex Attempt: return the terminal stage_route_decision and the controller materializes completed_with_quality_debt without another repair Attempt.',
     'When this Review terminalizes the StageRun, it is the decisive Codex Attempt for cross-Stage semantic route selection.',
     ...(attemptRole === 're_reviewer'

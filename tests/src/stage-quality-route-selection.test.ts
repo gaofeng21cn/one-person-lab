@@ -82,15 +82,35 @@ test('producer and repairer cannot select terminal routes during formal Review',
   }
 });
 
-test('reviewer selects a route only when its outcome terminalizes the StageRun', () => {
+test('reviewer may route repair_required only to a different declared Stage before budget exhaustion', () => {
   const reviewer = attempt({ role: 'reviewer', decisiveRoles: ['reviewer', 're_reviewer'] });
-  assert.throws(() => assertQualityAttemptTerminalRouteSelection({
+  assert.doesNotThrow(() => assertQualityAttemptTerminalRouteSelection({
     attempt: reviewer,
     routeImpact: {
       stage_route_decision: routeBackDecision,
       stage_quality_cycle: { outcome: 'repair_required' },
     },
-  }), /invalid or non-authoritative cross-Stage route output/);
+  }));
+  for (const stageRouteDecision of [
+    {
+      decision_kind: 'advance',
+      target_stage_id: 'deliver',
+      evidence_refs: ['finding:f1'],
+    },
+    {
+      decision_kind: 'route_back',
+      target_stage_id: 'review',
+      evidence_refs: ['finding:f1'],
+    },
+  ]) {
+    assert.throws(() => assertQualityAttemptTerminalRouteSelection({
+      attempt: reviewer,
+      routeImpact: {
+        stage_route_decision: stageRouteDecision,
+        stage_quality_cycle: { outcome: 'repair_required' },
+      },
+    }), /invalid or non-authoritative cross-Stage route output/);
+  }
   assert.doesNotThrow(() => assertQualityAttemptTerminalRouteSelection({
     attempt: reviewer,
     routeImpact: {
@@ -154,7 +174,7 @@ test('hard-stop Attempts cannot select a terminal route regardless of decisive r
   }
 });
 
-test('re-reviewer routes terminal debt at budget exhaustion but not while repair budget remains', () => {
+test('re-reviewer may route open required repair cross-Stage before budget exhaustion', () => {
   const openRoute = {
     stage_route_decision: routeBackDecision,
     stage_quality_cycle: {
@@ -169,9 +189,20 @@ test('re-reviewer routes terminal debt at budget exhaustion but not while repair
       optional_observations: [],
     },
   };
-  assert.throws(() => assertQualityAttemptTerminalRouteSelection({
+  assert.doesNotThrow(() => assertQualityAttemptTerminalRouteSelection({
     attempt: attempt({ role: 're_reviewer', decisiveRoles: ['reviewer', 're_reviewer'], round: 1, maxRounds: 3 }),
     routeImpact: openRoute,
+  }));
+  assert.throws(() => assertQualityAttemptTerminalRouteSelection({
+    attempt: attempt({ role: 're_reviewer', decisiveRoles: ['reviewer', 're_reviewer'], round: 1, maxRounds: 3 }),
+    routeImpact: {
+      ...openRoute,
+      stage_route_decision: {
+        decision_kind: 'advance',
+        target_stage_id: 'deliver',
+        evidence_refs: ['finding:f1'],
+      },
+    },
   }), /invalid or non-authoritative cross-Stage route output/);
   assert.doesNotThrow(() => assertQualityAttemptTerminalRouteSelection({
     attempt: attempt({ role: 're_reviewer', decisiveRoles: ['reviewer', 're_reviewer'], round: 3, maxRounds: 3 }),
@@ -329,7 +360,6 @@ test('re-review route rejects outcome and closure mismatch', () => {
     },
   });
   assert.equal(evaluation.decision, null);
-  assert.ok(evaluation.decision_rejection_reasons.includes('re_review_outcome_does_not_terminalize_stage_run'));
   assert.ok(evaluation.decision_rejection_reasons.includes('re_review_outcome_closure_mismatch'));
 });
 

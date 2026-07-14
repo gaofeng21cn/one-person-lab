@@ -32,6 +32,24 @@ export type StageRouteRecommendation = StageRouteDecision & {
   reason: string;
 };
 
+export function isRepairRequiredCrossStageRouteBackDecision(input: {
+  attemptRole: unknown;
+  outcome: unknown;
+  currentStageId: unknown;
+  decision: StageRouteDecision | null | undefined;
+}) {
+  const attemptRole = text(input.attemptRole);
+  const outcome = text(input.outcome);
+  const currentStageId = text(input.currentStageId);
+  const targetStageId = text(input.decision?.target_stage_id);
+  return (attemptRole === 'reviewer' || attemptRole === 're_reviewer')
+    && outcome === 'repair_required'
+    && input.decision?.decision_kind === 'route_back'
+    && Boolean(currentStageId)
+    && Boolean(targetStageId)
+    && targetStageId !== currentStageId;
+}
+
 export type StageQualityRouteRecommendationRecord = {
   attempt_ref: string;
   attempt_role: string;
@@ -215,6 +233,7 @@ function reReviewClosureState(input: {
 function terminalDecisionRejectionReasons(input: {
   attempt: JsonRecord;
   routeImpact: JsonRecord;
+  decision: StageRouteDecision;
 }) {
   const role = text(input.attempt.attempt_role);
   if (!role) return [];
@@ -226,6 +245,12 @@ function terminalDecisionRejectionReasons(input: {
   const outcome = text(envelope.outcome);
   const reviewRole = role === 'reviewer' || role === 're_reviewer';
   const hardStopOutcome = outcome === 'blocked' || outcome === 'human_gate';
+  const repairRequiredCrossStageRouteBack = isRepairRequiredCrossStageRouteBackDecision({
+    attemptRole: role,
+    outcome,
+    currentStageId: input.attempt.stage_id,
+    decision: input.decision,
+  });
   if (Object.hasOwn(envelope, 'verdict')) {
     reasons.push('attempt_verdict_field_is_reserved_for_controller_receipt');
   }
@@ -244,12 +269,19 @@ function terminalDecisionRejectionReasons(input: {
   if (role === 'reviewer' && !hardStopOutcome) {
     const maxRepairRounds = Number(context.max_repair_rounds);
     const budgetExhaustedWithoutRepair = Number.isInteger(maxRepairRounds) && maxRepairRounds === 0;
-    if (outcome === 'repair_required' && !budgetExhaustedWithoutRepair) {
+    if (
+      outcome === 'repair_required'
+      && !budgetExhaustedWithoutRepair
+      && !repairRequiredCrossStageRouteBack
+    ) {
       reasons.push('review_requires_internal_repair_continuation');
     }
     if (
       !['pass', 'quality_debt'].includes(String(outcome))
-      && !(outcome === 'repair_required' && budgetExhaustedWithoutRepair)
+      && !(
+        outcome === 'repair_required'
+        && (budgetExhaustedWithoutRepair || repairRequiredCrossStageRouteBack)
+      )
     ) {
       reasons.push('review_outcome_does_not_terminalize_stage_run');
     }
@@ -277,12 +309,15 @@ function terminalDecisionRejectionReasons(input: {
         reasons.push('re_review_budget_identity_invalid');
       }
     }
-    if (budgetDisposition === 'continue_repair') {
+    if (budgetDisposition === 'continue_repair' && !repairRequiredCrossStageRouteBack) {
       reasons.push('re_review_requires_another_repair_round');
     }
     if (
       !['pass', 'quality_debt'].includes(String(outcome))
-      && !(outcome === 'repair_required' && budgetDisposition === 'terminal_quality_debt')
+      && !(
+        outcome === 'repair_required'
+        && (budgetDisposition === 'terminal_quality_debt' || repairRequiredCrossStageRouteBack)
+      )
     ) {
       reasons.push('re_review_outcome_does_not_terminalize_stage_run');
     }
@@ -343,7 +378,11 @@ export function evaluateStageQualityAttemptRoute(input: {
   const decisionRejectionReasons = [
     ...decision.rejection_reasons,
     ...(decisionPresent ? contextRejectionReasons : []),
-    ...(decision.selection ? terminalDecisionRejectionReasons({ attempt: input.attempt, routeImpact }) : []),
+    ...(decision.selection ? terminalDecisionRejectionReasons({
+      attempt: input.attempt,
+      routeImpact,
+      decision: decision.selection as StageRouteDecision,
+    }) : []),
     ...(legacyFields.length > 0 ? ['legacy_terminal_route_fields_are_not_authoritative'] : []),
   ];
   const recommendationRejectionReasons = [

@@ -75,6 +75,7 @@ export type {
 export {
   assertQualityAttemptTerminalRouteSelection,
   evaluateStageQualityAttemptRoute,
+  isRepairRequiredCrossStageRouteBackDecision,
   normalizeDeclaredStageRouteDecision,
   sanitizeStageQualityAttemptRouteImpact,
   STAGE_QUALITY_LEGACY_TERMINAL_ROUTE_FIELDS,

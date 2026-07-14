@@ -135,7 +135,21 @@ test('official quality profile is explicit without adding per-agent registry pol
   assert.equal(contract.cross_stage_route_selection.opl_domain_semantic_route_judgment_authority, false);
   assert.equal(contract.cross_stage_route_selection.opl_route_output_abi_validation_required, true);
   assert.equal(contract.cross_stage_route_selection.runtime_closeout_guard_required, true);
-  assert.equal(contract.cross_stage_route_selection.repair_required_review_may_select_terminal_route, false);
+  assert.equal(
+    contract.cross_stage_route_selection
+      .repair_required_review_or_re_review_may_select_cross_stage_route_back_before_budget_exhaustion,
+    true,
+  );
+  assert.equal(
+    contract.cross_stage_route_selection
+      .repair_required_cross_stage_route_back_requires_target_different_from_current_stage,
+    true,
+  );
+  assert.equal(
+    contract.cross_stage_route_selection
+      .repair_required_review_or_re_review_may_select_other_terminal_route_before_budget_exhaustion,
+    false,
+  );
   assert.equal(contract.cross_stage_route_selection.hard_stop_attempt_may_select_terminal_route, false);
   assert.deepEqual(contract.cross_stage_route_selection.route_abi_rejection_conditions, [
     'non_decisive_attempt_writes_terminal_decision',
@@ -556,6 +570,7 @@ test('formal reviewer prompt binds isolated context and exact artifact identity'
   assert.match(prompt, /terminal reviewer or re-reviewer/);
   assert.match(prompt, /decisive Codex Attempt for cross-Stage semantic route selection/);
   assert.match(prompt, /progress-terminal decisive Attempt/);
+  assert.match(prompt, /only terminal route allowed before repair-budget exhaustion for repair_required/);
   assert.match(prompt, /blocked or human_gate reviewer outcome must return blocked_reason, a canonical hard_stop_class/);
   assert.match(prompt, /stage_route_contract is controller-owned validation metadata/);
   assert.match(prompt, /stage_quality_cycle\.outcome, with exactly one of: pass, repair_required, quality_debt, blocked, human_gate/);

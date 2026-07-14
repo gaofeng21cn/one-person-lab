@@ -1,5 +1,6 @@
 export {
   evaluateStageQualityAttemptRoute,
+  isRepairRequiredCrossStageRouteBackDecision,
   type StageQualityRouteRecommendationRecord,
   type StageRouteDecision,
   type StageRouteRecommendation,

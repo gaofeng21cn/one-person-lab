@@ -182,7 +182,9 @@
       "review_or_re_review_not_terminal"
     ],
     "invalid_route_output_is_rejected_without_discarding_consumable_progress": true,
-    "repair_required_review_may_select_terminal_route": false,
+    "repair_required_review_or_re_review_may_select_cross_stage_route_back_before_budget_exhaustion": true,
+    "repair_required_cross_stage_route_back_requires_target_different_from_current_stage": true,
+    "repair_required_review_or_re_review_may_select_other_terminal_route_before_budget_exhaustion": false,
     "repair_required_review_or_re_review_may_select_terminal_route_after_budget_exhaustion": true,
     "hard_stop_attempt_may_select_terminal_route": false,
     "declared_default_progression_resolution": [

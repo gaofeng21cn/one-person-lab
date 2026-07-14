@@ -106,6 +106,11 @@ async function runController(input: {
   nonReviewOutcomeRole?: 'producer' | 'repairer';
   failReceiptForReviewerRole?: 'reviewer' | 're_reviewer';
   rawArtifactProgressRole?: 'producer';
+  repairRequiredRoute?: {
+    role: 'reviewer' | 're_reviewer';
+    decisionKind: 'advance' | 'route_back';
+    targetStageId: string;
+  };
 }) {
   const testEnv = await createTemporalTestWorkflowEnvironment();
   const taskQueue = `opl-stage-run-controller-${input.id}-${Date.now()}`;
@@ -410,6 +415,18 @@ async function runController(input: {
             };
           }
         }
+        const repairRequiredRoute = input.repairRequiredRoute;
+        if (
+          repairRequiredRoute
+          && repairRequiredRoute.role === role
+          && attemptOutcome === 'repair_required'
+        ) {
+          routeImpact.stage_route_decision = {
+            decision_kind: repairRequiredRoute.decisionKind,
+            target_stage_id: repairRequiredRoute.targetStageId,
+            evidence_refs: [finding.finding_id],
+          };
+        }
         return {
           closeout_refs: [`closeout:${attempt.stage_attempt_id}`],
           closeout_ref_metadata: rawArtifactProgress
@@ -488,6 +505,70 @@ test('StageRun controller materializes isolated producer-review-repair-re-review
   assert.equal(state.next_stage_run_launch?.materialization_status, 'launched');
   assert.equal(state.next_stage_run_launch?.target_stage_run_id, 'target:review_and_revision');
   assert.equal(state.route_quality_debt_refs.length, 0);
+});
+
+test('initial reviewer routes cross-Stage repair without creating an inapplicable repair Attempt', async () => {
+  const { state, attempts } = await runController({
+    id: 'initial-review-route-back',
+    closeFindingAfterRound: null,
+    repairRequiredRoute: {
+      role: 'reviewer',
+      decisionKind: 'route_back',
+      targetStageId: 'storyline',
+    },
+  });
+  assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), ['producer', 'reviewer']);
+  assert.equal(state.status, 'completed_with_quality_debt');
+  assert.equal(state.repair_rounds_used, 0);
+  assert.equal(state.review_receipts[0]?.verdict, 'repair_required');
+  assert.ok(state.quality_debt_refs.includes('quality-debt:finding:visual-clipping'));
+  assert.equal(state.decisive_attempt_role, 'reviewer');
+  assert.equal(state.selected_stage_route?.decision_kind, 'route_back');
+  assert.equal(state.selected_stage_route?.target_stage_id, 'storyline');
+  assert.equal(state.next_stage_run_launch?.target_stage_run_id, 'target:storyline');
+});
+
+test('re-reviewer routes cross-Stage repair without creating another repair round', async () => {
+  const { state, attempts } = await runController({
+    id: 're-review-route-back',
+    closeFindingAfterRound: null,
+    repairRequiredRoute: {
+      role: 're_reviewer',
+      decisionKind: 'route_back',
+      targetStageId: 'storyline',
+    },
+  });
+  assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), [
+    'producer', 'reviewer', 'repairer', 're_reviewer',
+  ]);
+  assert.equal(state.status, 'completed_with_quality_debt');
+  assert.equal(state.repair_rounds_used, 1);
+  assert.equal(state.review_receipts[1]?.verdict, 'repair_required');
+  assert.ok(state.quality_debt_refs.includes('quality-debt:finding:visual-clipping'));
+  assert.equal(state.decisive_attempt_role, 're_reviewer');
+  assert.equal(state.selected_stage_route?.decision_kind, 'route_back');
+  assert.equal(state.selected_stage_route?.target_stage_id, 'storyline');
+  assert.equal(state.next_stage_run_launch?.target_stage_run_id, 'target:storyline');
+});
+
+test('repair_required advance remains non-terminal while repair budget remains', async () => {
+  const { state, attempts } = await runController({
+    id: 'repair-required-advance-rejected',
+    closeFindingAfterRound: 1,
+    repairRequiredRoute: {
+      role: 'reviewer',
+      decisionKind: 'advance',
+      targetStageId: 'review_and_revision',
+    },
+  });
+  assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), [
+    'producer', 'reviewer', 'repairer', 're_reviewer',
+  ]);
+  assert.equal(state.status, 'completed');
+  assert.equal(state.decisive_attempt_role, 're_reviewer');
+  assert.ok(state.route_quality_debt_refs.some((ref) => ref.includes(
+    'review_requires_internal_repair_continuation',
+  )));
 });
 
 test('StageRun controller caps quality work at three repair rounds and carries consumable debt', async () => {

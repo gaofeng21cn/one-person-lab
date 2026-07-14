@@ -48,7 +48,10 @@ import {
   type StageQualityReReviewResult,
   type StageReviewReceipt,
 } from '../stagecraft/public/stage-quality-cycle.ts';
-import { evaluateStageQualityAttemptRoute } from '../stagecraft/public/stage-quality-route-selection.ts';
+import {
+  evaluateStageQualityAttemptRoute,
+  isRepairRequiredCrossStageRouteBackDecision,
+} from '../stagecraft/public/stage-quality-route-selection.ts';
 import {
   CODEX_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT,
   CODEX_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
@@ -829,6 +832,9 @@ export async function StageRunWorkflow(
   const runtimeHumanGateClassificationEnabled = patched(
     'opl-stage-run-runtime-human-gate-classification-v1',
   );
+  const earlyRepairRouteBackEnabled = patched(
+    'opl-stage-run-repair-required-cross-stage-route-back-v1',
+  );
   const qualityCycleId = stageRunQualityCycleId(input);
   const initialArtifactIdentity = normalizeStageQualityArtifactIdentity({
     artifactRefs: input.artifact_refs ?? [],
@@ -1137,6 +1143,44 @@ export async function StageRunWorkflow(
     };
   };
 
+  const isEarlyRepairRouteBack = (attempt: Awaited<ReturnType<typeof runAttempt>>) => (
+    earlyRepairRouteBackEnabled
+    && isRepairRequiredCrossStageRouteBackDecision({
+      attemptRole: attempt.attemptRole,
+      outcome: attempt.outcome,
+      currentStageId: input.stage_id,
+      decision: attempt.routeEvaluation.decision,
+    })
+  );
+
+  const terminalizeEarlyRepairRouteBack = (
+    attempt: Awaited<ReturnType<typeof runAttempt>>,
+    openFindings: StageQualityFinding[],
+  ) => {
+    if (!hasConsumableArtifact(state)) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Stage quality cross-Stage repair route-back requires a consumable artifact.',
+        {
+          hard_stop_class: 'zero_consumable_artifact',
+          blocked_reason: 'stage_quality_route_back_without_consumable_artifact',
+          source_attempt_ref: attempt.attemptRef,
+        },
+      );
+    }
+    commitTerminalRouteDecision(attempt);
+    return terminalize({
+      ...state,
+      status: 'completed_with_quality_debt',
+      current_role: null,
+      quality_debt_refs: [...new Set([
+        ...state.quality_debt_refs,
+        ...openFindings.map((finding) => `quality-debt:${finding.finding_id}`),
+      ])],
+      updated_at: nowIso(),
+    });
+  };
+
   try {
     let parentAttemptRef: string | null = null;
     let currentArtifactProducerAttemptRef: string | null = null;
@@ -1201,6 +1245,9 @@ export async function StageRunWorkflow(
       verdict: stageReviewVerdictForOutcome(initialOutcome),
     });
     state = { ...state, findings, review_receipts: [...state.review_receipts, initialReviewReceipt] };
+    if (isEarlyRepairRouteBack(review)) {
+      return terminalizeEarlyRepairRouteBack(review, findings);
+    }
     if (initialOutcome === 'pass') {
       commitTerminalRouteDecision(review);
       return terminalize({ ...state, status: 'completed', current_role: null, updated_at: nowIso() });
@@ -1353,6 +1400,9 @@ export async function StageRunWorkflow(
         ...reReviewResult.critical_new_findings,
       ];
       state = { ...state, findings };
+      if (isEarlyRepairRouteBack(reReview)) {
+        return terminalizeEarlyRepairRouteBack(reReview, findings);
+      }
       if (budgetDisposition === 'terminal_quality_debt') {
         if (!hasConsumableArtifact(state)) {
           throw new FrameworkContractError(
