@@ -981,6 +981,20 @@ export function configureReadyMetaMorphology(repoDir: string) {
       goal: 'Produce target-agent work-order output refs, no-forbidden-write proof, and target-owner handoff refs.',
     },
   ].map((stage) => stageFromBase(baseStage, { owner: 'opl-meta-agent', ...stage }));
+  const actionCatalogPath = contractPath(repoDir, 'action_catalog.json');
+  const actionCatalog = readJson(actionCatalogPath);
+  actionCatalog.actions[0].stage_route = {
+    entry_stage_ref: 'intent-intake',
+    required_stage_refs: [
+      'intent-intake',
+      'stage-decomposition',
+      'target-agent-takeover',
+    ],
+    optional_stage_refs: [],
+    terminal_stage_refs: ['target-agent-takeover'],
+    route_policy: 'ai_selected_progress_route',
+  };
+  writeJson(actionCatalogPath, actionCatalog);
   syncStageManifestFromPlane(repoDir, stageControlPlane);
   syncStandardAgentConformanceProfile(repoDir);
 
