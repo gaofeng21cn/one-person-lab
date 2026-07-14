@@ -63,6 +63,15 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.match(releaseCallerWorkflow, /expected_carrier_digest/);
   assert.match(releaseCallerWorkflow, /promotion_request_id/);
   assert.match(releaseCallerWorkflow, /write-release-promotion-receipt\.mjs/);
+  const releaseCallerHeader = releaseCallerWorkflow.slice(0, releaseCallerWorkflow.indexOf('\njobs:'));
+  const exactPromotionJob = releaseCallerWorkflow.slice(
+    releaseCallerWorkflow.indexOf('\n  promote-exact-release-set:'),
+  );
+  assert.doesNotMatch(releaseCallerHeader, /\nconcurrency:/);
+  assert.match(
+    exactPromotionJob,
+    /concurrency:\s*\n\s*group: opl-package-publication-\$\{\{ github\.repository_owner \}\}\s*\n\s*cancel-in-progress: false/,
+  );
   assert.doesNotMatch(workflow, /\n  push:\n/);
   assert.doesNotMatch(workflow, /webui-image:/);
   assert.match(workflow, /concurrency:[\s\S]*opl-package-publication-/);

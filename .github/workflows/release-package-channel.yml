@@ -60,10 +60,6 @@ permissions:
   id-token: write
   attestations: write
 
-concurrency:
-  group: opl-package-publication-${{ github.repository_owner }}
-  cancel-in-progress: false
-
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
@@ -88,6 +84,9 @@ jobs:
     if: inputs.promotion_target == 'latest-stable'
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    concurrency:
+      group: opl-package-publication-${{ github.repository_owner }}
+      cancel-in-progress: false
     steps:
       - name: Checkout OPL
         uses: actions/checkout@v6
