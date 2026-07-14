@@ -578,6 +578,7 @@ export function applyManagedRuntimeSourceCarrier(input: {
   sourceKind?: AgentPackageSourceKind;
   checkoutPath?: string | null;
   packageChannelSelection?: ManagedModulePackageChannelSelection | null;
+  verifiedCarrierSourceCommit?: string | null;
 }): ManagedRuntimeSourceMutation {
   if (!input.config) {
     return {
@@ -719,6 +720,22 @@ export function applyManagedRuntimeSourceCarrier(input: {
         expected_source_kind: 'full_runtime',
       });
     }
+    const expectedOwnerSourceCommit = input.verifiedCarrierSourceCommit ?? null;
+    if (!/^[0-9a-f]{40}$/.test(expectedOwnerSourceCommit ?? '')) {
+      throw sourceFailure('Bundled Full runtime source is missing its verified carrier commit.', {
+        module_id: input.config.module_id,
+        checkout_path: checkoutPath,
+        expected_owner_source_commit: expectedOwnerSourceCommit,
+      });
+    }
+    if (packaged.source_git.head_sha !== expectedOwnerSourceCommit) {
+      throw sourceFailure('Bundled Full runtime source does not match the verified Release Set carrier commit.', {
+        module_id: input.config.module_id,
+        checkout_path: checkoutPath,
+        expected_owner_source_commit: expectedOwnerSourceCommit,
+        actual_owner_source_commit: packaged.source_git.head_sha,
+      });
+    }
     const treeSha256 = computePackageChannelTreeSha256(checkoutPath);
     const after: AgentPackageManagedRuntimeSourceState = {
       surface_kind: 'opl_agent_package_managed_runtime_source',
@@ -732,7 +749,7 @@ export function applyManagedRuntimeSourceCarrier(input: {
       artifact_ref: null,
       layer_digest: null,
       source_archive_sha256: null,
-      source_git_head_sha: null,
+      source_git_head_sha: expectedOwnerSourceCommit,
       tree_sha256: treeSha256,
       rollback_ref: null,
       preparation_status: 'validated_no_write',

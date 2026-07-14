@@ -18,6 +18,10 @@ import {
   writeCapabilityProvider,
 } from './capability-fixtures.ts';
 import { writeManagedRuntimeSourceFixture } from './managed-runtime-source-fixture.ts';
+import {
+  applyManagedRuntimeSourceCarrier,
+  managedRuntimeSourceReadiness,
+} from '../../../../../src/modules/connect/agent-package-registry-parts/managed-runtime-source-carrier.ts';
 import { rollbackManagedModulePackageChannel } from '../../../../../src/modules/connect/system-installation/module-package-channel.ts';
 import { resolveOplDomainModuleSpec } from '../../../../../src/modules/connect/system-installation/modules.ts';
 
@@ -125,7 +129,7 @@ test('explicit developer checkout install locks the selected checkout without pa
   }
 });
 
-test('bundled Full runtime source requires an immutable marker and remains digest-checked', () => {
+test('bundled Full runtime source requires a matching carrier marker and rejects public injection', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-bundled-source-state-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-bundled-source-fixture-'));
   const pluginSourcePath = createPluginSourceFixture();
@@ -141,7 +145,7 @@ test('bundled Full runtime source requires an immutable marker and remains diges
     module_id: 'redcube',
     repo_name: 'redcube-ai',
     packaged_runtime: true,
-    source_git: { head_sha: 'bundled-redcube-v1' },
+    source_git: { head_sha: 'b'.repeat(40) },
   }));
   fs.writeFileSync(manifestPath, formatJsonPayload({
     ...agentPackageManifest({ packageId: FIXTURE_RCA_PACKAGE_ID, agentId: 'rca', pluginSourcePath }),
@@ -156,6 +160,45 @@ test('bundled Full runtime source requires an immutable marker and remains diges
   };
 
   try {
+    const carrierInput = {
+      config: {
+        carrier_kind: 'opl_managed_module_source' as const,
+        module_id: 'redcube',
+      },
+      previous: null,
+      action: 'install' as const,
+      dryRun: false,
+      packageId: FIXTURE_RCA_PACKAGE_ID,
+      sourceKind: 'bundled_full_runtime_modules' as const,
+      verifiedCarrierSourceCommit: 'a'.repeat(40),
+    };
+    assert.throws(
+      () => applyManagedRuntimeSourceCarrier({ ...carrierInput, checkoutPath: unmanagedRoot }),
+      (error: any) => error?.details?.failure_code === 'agent_package_runtime_source_carrier_invalid',
+    );
+    assert.throws(
+      () => applyManagedRuntimeSourceCarrier({ ...carrierInput, checkoutPath: bundledRoot }),
+      (error: any) => error?.details?.actual_owner_source_commit === 'b'.repeat(40),
+    );
+
+    fs.writeFileSync(path.join(bundledRoot, 'opl-runtime-module.json'), formatJsonPayload({
+      marker_version: 1,
+      module_id: 'redcube',
+      repo_name: 'redcube-ai',
+      packaged_runtime: true,
+      source_git: { head_sha: 'a'.repeat(40) },
+    }));
+    assert.throws(
+      () => applyManagedRuntimeSourceCarrier({
+        ...carrierInput,
+        checkoutPath: bundledRoot,
+        verifiedCarrierSourceCommit: null,
+      }),
+      (error: any) => error?.details?.failure_code === 'agent_package_runtime_source_carrier_invalid',
+    );
+    const adopted = applyManagedRuntimeSourceCarrier({ ...carrierInput, checkoutPath: bundledRoot });
+    assert.equal(adopted.after?.source_git_head_sha, 'a'.repeat(40));
+
     const invalid = runCliFailure([
       'packages', 'install', '--manifest-url', manifestPath, '--trust-tier', 'first_party',
       '--source-kind', 'bundled_full_runtime_modules', '--agent-root', unmanagedRoot,
@@ -163,28 +206,20 @@ test('bundled Full runtime source requires an immutable marker and remains diges
     assert.equal(invalid.payload.error.code, 'contract_shape_invalid');
     assert.equal(
       invalid.payload.error.details.failure_code,
-      'agent_package_runtime_source_carrier_invalid',
+      'agent_package_bundled_full_runtime_source_internal_only',
     );
 
-    const installed = runCli([
+    const blocked = runCliFailure([
       'packages', 'install', '--manifest-url', manifestPath, '--trust-tier', 'first_party',
       '--source-kind', 'bundled_full_runtime_modules', '--agent-root', bundledRoot,
-    ], env) as any;
-    assert.equal(
-      installed.opl_agent_package_install.package_lock.managed_runtime_source.ownership,
-      'preexisting_adopted',
-    );
-    const current = runCli(['packages', 'status', '--package-id', FIXTURE_RCA_PACKAGE_ID], env) as any;
-    assert.equal(
-      current.opl_agent_package_status.runtime_source_readiness.operational_ready,
-      true,
-    );
+    ], env);
+    assert.equal(blocked.payload.error.details.failure_code, 'agent_package_bundled_full_runtime_source_internal_only');
 
     fs.writeFileSync(path.join(bundledRoot, 'runtime.txt'), 'drifted bundled source\n');
-    const drifted = runCli(['packages', 'status', '--package-id', FIXTURE_RCA_PACKAGE_ID], env) as any;
-    assert.equal(drifted.opl_agent_package_status.runtime_source_readiness.status, 'incompatible');
+    const drifted = managedRuntimeSourceReadiness(adopted.after);
+    assert.equal(drifted.status, 'incompatible');
     assert.equal(
-      drifted.opl_agent_package_status.runtime_source_readiness.reason,
+      drifted.reason,
       'managed_runtime_source_lock_mismatch',
     );
   } finally {

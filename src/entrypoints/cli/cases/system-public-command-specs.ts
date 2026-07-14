@@ -6,7 +6,7 @@ import { buildOplFrameworkSemanticHygieneAudit } from '../../../modules/foundry-
 import { syncOplCompanionSkills } from '../../../modules/connect/install-companions.ts';
 import { syncFamilySkillPacks } from '../../../modules/connect/opl-skills.ts';
 import {
-  runOplAgentPackageInstall,
+  runOplBundledFullRuntimeAgentPackageInstall,
   runOplAgentPackageStatus,
 } from '../../../modules/connect/agent-package-registry.ts';
 import { buildOplSystemDependencyDoctor } from '../../../modules/connect/system-installation/dependency-doctor.ts';
@@ -85,11 +85,11 @@ const FULL_RUNTIME_FAMILY_MODULE_ENV = [
 ] as const;
 
 const FULL_RUNTIME_AGENT_PACKAGE_MANIFESTS = [
-  { packageId: 'mas', env: 'OPL_MODULE_PATH_MEDAUTOSCIENCE', manifest: 'mas.json' },
-  { packageId: 'mag', env: 'OPL_MODULE_PATH_MEDAUTOGRANT', manifest: 'mag.json' },
-  { packageId: 'rca', env: 'OPL_MODULE_PATH_REDCUBE', manifest: 'rca.json' },
-  { packageId: 'oma', env: 'OPL_MODULE_PATH_OPLMETAAGENT', manifest: 'oma.json' },
-  { packageId: 'obf', env: 'OPL_MODULE_PATH_OPLBOOKFORGE', manifest: 'obf.json' },
+  { packageId: 'mas', env: 'OPL_MODULE_PATH_MEDAUTOSCIENCE' },
+  { packageId: 'mag', env: 'OPL_MODULE_PATH_MEDAUTOGRANT' },
+  { packageId: 'rca', env: 'OPL_MODULE_PATH_REDCUBE' },
+  { packageId: 'oma', env: 'OPL_MODULE_PATH_OPLMETAAGENT' },
+  { packageId: 'obf', env: 'OPL_MODULE_PATH_OPLBOOKFORGE' },
 ] as const;
 
 function syncFullRuntimeFamilyCodexPluginsIfAvailable() {
@@ -123,10 +123,8 @@ async function syncFullRuntimeAgentPackageLocksIfAvailable() {
       continue;
     }
     const runtimeSourceRoot = path.resolve(process.env[target.env]!.trim());
-    const result = await runOplAgentPackageInstall({
-      manifestUrl: new URL(`../../../../contracts/opl-framework/packages/${target.manifest}`, import.meta.url).href,
-      trustTier: 'first_party',
-      sourceKind: 'bundled_full_runtime_modules',
+    const result = await runOplBundledFullRuntimeAgentPackageInstall({
+      packageId: target.packageId,
       agentRoot: runtimeSourceRoot,
     });
     items.push({

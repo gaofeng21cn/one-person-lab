@@ -409,13 +409,17 @@ test('system configure-codex syncs Full runtime family Codex plugins after API k
   const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-configure-codex-family-plugins-capture-'));
   const familyWorkspace = createFakeFamilySkillWorkspace(captureDir);
   const codexHome = path.join(homeRoot, 'codex-home');
-  for (const [repoName, moduleId] of [
-    ['med-autoscience', 'medautoscience'],
-    ['med-autogrant', 'medautogrant'],
-    ['redcube-ai', 'redcube'],
-    ['opl-meta-agent', 'oplmetaagent'],
-    ['opl-bookforge', 'oplbookforge'],
+  for (const [repoName, moduleId, packageId] of [
+    ['med-autoscience', 'medautoscience', 'mas'],
+    ['med-autogrant', 'medautogrant', 'mag'],
+    ['redcube-ai', 'redcube', 'rca'],
+    ['opl-meta-agent', 'oplmetaagent', 'oma'],
+    ['opl-bookforge', 'oplbookforge', 'obf'],
   ]) {
+    const packageManifest = parseJsonText(fs.readFileSync(
+      path.resolve('contracts', 'opl-framework', 'packages', `${packageId}.json`),
+      'utf8',
+    )) as Record<string, any>;
     fs.writeFileSync(
       path.join(familyWorkspace.workspaceRoot, repoName, 'opl-runtime-module.json'),
       `${JSON.stringify({
@@ -423,7 +427,7 @@ test('system configure-codex syncs Full runtime family Codex plugins after API k
         module_id: moduleId,
         repo_name: repoName,
         packaged_runtime: true,
-        source_git: { head_sha: `full-runtime-${moduleId}` },
+        source_git: { head_sha: packageManifest.codex_surface.carrier_source_commit },
       }, null, 2)}\n`,
       'utf8',
     );

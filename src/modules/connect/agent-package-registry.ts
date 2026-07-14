@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { stringValue } from '../../kernel/json-record.ts';
@@ -161,6 +162,26 @@ type PreparedPackage = {
   packageChannelSelection: ManagedModulePackageChannelSelection | null;
 };
 
+type TrustedBundledFullRuntimeInstall = {
+  packageId: string;
+  agentRoot: string;
+};
+
+function bundledFullRuntimeManifestUrl(packageId: string) {
+  return new URL(`../../../contracts/opl-framework/packages/${packageId}.json`, import.meta.url).href;
+}
+
+function isBundledFullRuntimeManifestSelection(packageId: string, manifestUrl: string) {
+  const selectedPath = manifestUrl.startsWith('file:')
+    ? fileURLToPath(manifestUrl)
+    : path.isAbsolute(manifestUrl) ? manifestUrl : null;
+  return Boolean(
+    resolveFirstPartyPackageCatalog(packageId)
+    && selectedPath
+    && path.resolve(selectedPath) === path.resolve(fileURLToPath(bundledFullRuntimeManifestUrl(packageId))),
+  );
+}
+
 function preparedOwnerSourceCommit(prepared: PreparedPackage) {
   const verifiedCommit = prepared.manifest.verified_payload_source_commit;
   const catalogCommit = prepared.catalogVersion?.owner_source_commit ?? null;
@@ -173,7 +194,8 @@ function preparedOwnerSourceCommit(prepared: PreparedPackage) {
       failure_code: 'agent_package_carrier_source_commit_mismatch',
     });
   }
-  if (prepared.sourceKind === 'first_party_managed_cohort'
+  if ((prepared.sourceKind === 'first_party_managed_cohort'
+    || prepared.sourceKind === 'bundled_full_runtime_modules')
     && (verifiedCommit === null || !/^[0-9a-f]{40}$/.test(verifiedCommit))) {
     throw new FrameworkContractError('contract_shape_invalid', 'First-party package installation requires a verified carrier source commit.', {
       package_id: prepared.manifest.package_id,
@@ -186,7 +208,9 @@ function preparedOwnerSourceCommit(prepared: PreparedPackage) {
 }
 
 function assertInstalledCarrierAuthority(lock: AgentPackageLock) {
-  if (lock.source_kind !== 'first_party_managed_cohort' && lock.owner_source_commit == null) return;
+  if (lock.source_kind !== 'first_party_managed_cohort'
+    && lock.source_kind !== 'bundled_full_runtime_modules'
+    && lock.owner_source_commit == null) return;
   if (!/^[0-9a-f]{40}$/.test(lock.owner_source_commit ?? '')) {
     throw new FrameworkContractError('contract_shape_invalid', 'Installed package lock carrier source commit is missing or invalid.', {
       package_id: lock.package_id,
@@ -255,9 +279,34 @@ async function applyManifestPackageLock(
     catalogSource?: AgentPackageManagedVersionCatalogSource | null;
     channelRef?: string | null;
     channelDigest?: string | null;
+    trustedBundledFullRuntimeInstall?: TrustedBundledFullRuntimeInstall | null;
   } = {},
 ) {
   const packageId = canonicalAgentPackageId(stringValue(input.packageId));
+  const trustedBundledInstall = options.trustedBundledFullRuntimeInstall ?? null;
+  if (input.sourceKind === 'bundled_full_runtime_modules' && !trustedBundledInstall) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Bundled Full runtime package sources are restricted to the internal configure-codex reconciliation.', {
+      package_id: packageId,
+      source_kind: input.sourceKind,
+      failure_code: 'agent_package_bundled_full_runtime_source_internal_only',
+    });
+  }
+  if (trustedBundledInstall) {
+    const expectedManifestUrl = bundledFullRuntimeManifestUrl(trustedBundledInstall.packageId);
+    if (action !== 'install'
+      || packageId !== trustedBundledInstall.packageId
+      || input.sourceKind !== 'bundled_full_runtime_modules'
+      || stringValue(input.manifestUrl) !== expectedManifestUrl
+      || path.resolve(stringValue(input.agentRoot) ?? '') !== path.resolve(trustedBundledInstall.agentRoot)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Internal bundled Full runtime package selection is inconsistent.', {
+        package_id: packageId,
+        expected_package_id: trustedBundledInstall.packageId,
+        manifest_url: stringValue(input.manifestUrl),
+        expected_manifest_url: expectedManifestUrl,
+        failure_code: 'agent_package_bundled_full_runtime_selection_invalid',
+      });
+    }
+  }
   const hasExplicitSource = Boolean(stringValue(input.manifestUrl) || stringValue(input.registryUrl));
   const hasResolvedCatalogSelection = Boolean(
     options.catalog
@@ -265,7 +314,7 @@ async function applyManifestPackageLock(
     && options.catalogSource,
   );
   const firstPartyOwner = resolveFirstPartyPackageCatalog(packageId);
-  if (firstPartyOwner && hasExplicitSource && !hasResolvedCatalogSelection) {
+  if (firstPartyOwner && hasExplicitSource && !hasResolvedCatalogSelection && !trustedBundledInstall) {
     throw new FrameworkContractError('contract_shape_invalid', 'Canonical first-party packages must resolve through the Framework-owned Release Set catalog.', {
       package_id: firstPartyOwner.canonicalId,
       explicit_manifest_source: Boolean(stringValue(input.manifestUrl)),
@@ -286,7 +335,7 @@ async function applyManifestPackageLock(
       manual_confirmation_path: 'review the checkout and run an explicit install with --source-kind developer_checkout_override and --agent-root',
     });
   }
-  const shouldUseFirstPartyCatalog = (!hasExplicitSource || hasResolvedCatalogSelection)
+  const shouldUseFirstPartyCatalog = (!hasExplicitSource || hasResolvedCatalogSelection || Boolean(trustedBundledInstall))
     && Boolean(packageId)
     && (
       action === 'install'
@@ -302,10 +351,11 @@ async function applyManifestPackageLock(
   const firstParty = shouldUseFirstPartyCatalog ? firstPartyOwner : null;
   let catalog = options.catalog ?? null;
   let rootVersion = options.rootVersion ?? null;
-  let catalogSource = options.catalogSource ?? firstParty?.catalogSource ?? null;
+  let catalogSource = options.catalogSource
+    ?? (trustedBundledInstall ? null : firstParty?.catalogSource ?? null);
   let channelRef = options.channelRef ?? null;
   let channelDigest = options.channelDigest ?? null;
-  if (firstParty && (!catalog || !rootVersion)) {
+  if (firstParty && !trustedBundledInstall && (!catalog || !rootVersion)) {
     const fetched = await fetchManagedPackageCatalog(firstParty.catalogSource);
     catalog = fetched.catalog;
     rootVersion = selectManagedCatalogPackageVersion(catalog, firstParty.canonicalId);
@@ -316,7 +366,15 @@ async function applyManifestPackageLock(
   if (firstParty && rootVersion) {
     assertFirstPartyPackageCatalogVersion(firstParty.canonicalId, rootVersion);
   }
-  const selection = firstParty && rootVersion
+  const selection = trustedBundledInstall
+    ? {
+        registryUrl: null,
+        packageId: trustedBundledInstall.packageId,
+        manifestUrl: bundledFullRuntimeManifestUrl(trustedBundledInstall.packageId),
+        trustTier: firstParty!.trustTier,
+        registryEntry: null,
+      }
+    : firstParty && rootVersion
     ? {
         registryUrl: null,
         packageId: firstParty.canonicalId,
@@ -365,7 +423,13 @@ async function applyManifestPackageLock(
     }
     let manifest = normalizePackageManifest(fetched.payload, nextSelection.manifestUrl);
     const manifestFirstPartyOwner = resolveFirstPartyPackageCatalog(manifest.package_id);
-    if (manifestFirstPartyOwner && !(firstParty && catalogVersion && catalogSource)) {
+    const trustedBundledManifestSelection = Boolean(
+      trustedBundledInstall
+      && isBundledFullRuntimeManifestSelection(manifest.package_id, nextSelection.manifestUrl),
+    );
+    if (manifestFirstPartyOwner
+      && !(firstParty && catalogVersion && catalogSource)
+      && !trustedBundledManifestSelection) {
       throw new FrameworkContractError('contract_shape_invalid', 'Canonical first-party package manifests must come from the Framework-owned Release Set catalog.', {
         package_id: manifestFirstPartyOwner.canonicalId,
         failure_code: 'first_party_package_external_manifest_forbidden',
@@ -435,7 +499,16 @@ async function applyManifestPackageLock(
       ? firstParty.trustTier
       : requestedTrustTier ?? nextSelection.trustTier ?? inheritedTrustTier ?? null;
     assertTrustTierAssigned(trustTier, nextSelection.manifestUrl);
-    if (firstParty && input.sourceKind && input.sourceKind !== firstParty.sourceKind) {
+    const packagedFirstPartyRoot = Boolean(
+      trustedBundledManifestSelection
+      && manifest.package_id === trustedBundledInstall?.packageId
+      && input.sourceKind === 'bundled_full_runtime_modules'
+      && stringValue(input.agentRoot),
+    );
+    if (firstParty
+      && input.sourceKind
+      && input.sourceKind !== firstParty.sourceKind
+      && !trustedBundledManifestSelection) {
       throw new FrameworkContractError('contract_shape_invalid', 'First-party catalog packages use the managed cohort source kind.', {
         package_id: manifest.package_id,
         requested_source_kind: input.sourceKind,
@@ -444,7 +517,11 @@ async function applyManifestPackageLock(
       });
     }
     const sourceKind = normalizeSourceKind(
-      firstParty && catalogVersion ? firstParty.sourceKind : input.sourceKind,
+      packagedFirstPartyRoot
+        ? input.sourceKind
+        : trustedBundledManifestSelection
+          ? firstParty!.sourceKind
+        : firstParty && catalogVersion ? firstParty.sourceKind : input.sourceKind,
       nextSelection.manifestUrl,
     );
     return {
@@ -600,6 +677,7 @@ async function applyManifestPackageLock(
           ? input.agentRoot
           : null,
         packageChannelSelection: prepared.packageChannelSelection,
+        verifiedCarrierSourceCommit: prepared.manifest.verified_payload_source_commit,
         transactionId: sha256Text([
           'runtime-source',
           action,
@@ -1014,6 +1092,14 @@ export async function runOplAgentPackageManifestValidate(input: AgentPackageMani
 export async function runOplAgentPackageInstall(input: AgentPackageInstallInput) {
   const result = await applyManifestPackageLock(input, 'install');
 
+  return agentPackageInstallReadback(input, result);
+}
+
+function agentPackageInstallReadback(
+  input: AgentPackageInstallInput,
+  result: Awaited<ReturnType<typeof applyManifestPackageLock>>,
+) {
+
   return {
     version: 'g2',
     opl_agent_package_install: {
@@ -1044,6 +1130,33 @@ export async function runOplAgentPackageInstall(input: AgentPackageInstallInput)
       authority_boundary: refsOnlyAuthorityBoundary(),
     },
   };
+}
+
+export async function runOplBundledFullRuntimeAgentPackageInstall(input: {
+  packageId: string;
+  agentRoot: string;
+}) {
+  const packageId = canonicalAgentPackageId(input.packageId);
+  const firstParty = resolveFirstPartyPackageCatalog(packageId);
+  const agentRoot = stringValue(input.agentRoot);
+  if (!packageId || !firstParty || !agentRoot) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Bundled Full runtime reconciliation requires a canonical first-party package and an explicit runtime root.', {
+      package_id: packageId,
+      agent_root_present: Boolean(agentRoot),
+      failure_code: 'agent_package_bundled_full_runtime_selection_invalid',
+    });
+  }
+  const installInput: AgentPackageInstallInput = {
+    packageId,
+    manifestUrl: bundledFullRuntimeManifestUrl(packageId),
+    trustTier: firstParty.trustTier,
+    sourceKind: 'bundled_full_runtime_modules',
+    agentRoot,
+  };
+  const result = await applyManifestPackageLock(installInput, 'install', {
+    trustedBundledFullRuntimeInstall: { packageId, agentRoot },
+  });
+  return agentPackageInstallReadback(installInput, result);
 }
 
 export async function runOplAgentPackageUpdate(input: AgentPackageInstallInput) {
