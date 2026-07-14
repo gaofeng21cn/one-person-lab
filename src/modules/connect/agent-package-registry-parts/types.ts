@@ -46,6 +46,8 @@ export type AgentPackageLifecycleCondition = {
     | 'physical_surface_removed'
     | 'profile_semantic_merge_required'
     | 'profile_current'
+    | 'managed_policy_current'
+    | 'managed_policy_drift_detected'
     | 'codex_reload_required';
   package_id: string | null;
   status: 'ok' | 'attention_needed';
@@ -289,6 +291,13 @@ export type AgentPackageManagedPolicyMigrationAction = {
   action: 'backed_up_and_removed_from_discovery';
 };
 
+export type AgentPackageManagedPolicyDetectedConflict = {
+  migration_id: string;
+  surface_kind: AgentPackageManagedPolicyMigrationAction['surface_kind'];
+  canonical_id: string;
+  physical_ref: string;
+};
+
 export type AgentPackageManagedPolicyMigration = {
   surface_kind: 'opl_package_managed_policy_migration';
   status: 'not_requested' | 'validated_no_write' | 'current' | 'applied' | 'rolled_back';
@@ -301,6 +310,7 @@ export type AgentPackageManagedPolicyMigration = {
   dependencies: AgentPackageManagedPolicyDependency[];
   optional_dependency_ids: string[];
   migration_ids: string[];
+  detected_conflicts: AgentPackageManagedPolicyDetectedConflict[];
   actions: AgentPackageManagedPolicyMigrationAction[];
   service_actions: Array<Record<string, unknown>>;
   dependency_sync: Record<string, unknown> | null;
@@ -309,6 +319,21 @@ export type AgentPackageManagedPolicyMigration = {
   backup_active: boolean;
   writes_performed: boolean;
   note: string;
+};
+
+export type AgentPackageManagedPolicyCurrentness = {
+  surface_kind: 'opl_package_managed_policy_currentness';
+  status: 'not_requested' | 'current' | 'drifted' | 'invalid';
+  policy_kind: AgentPackageManagedPolicySurfaceConfig['policy_kind'] | null;
+  policy_path: string | null;
+  schema_path: string | null;
+  expected_policy_sha256: string | null;
+  actual_policy_sha256: string | null;
+  inventory_digest: string | null;
+  enabled_migration_ids: string[];
+  detected_conflicts: AgentPackageManagedPolicyDetectedConflict[];
+  repair_command: string | null;
+  reason: string;
 };
 
 export type AgentPackageCapabilityDependency = {
@@ -757,7 +782,7 @@ export type AgentPackageOwnerRouteReadbackItem = {
   materialization_readiness: AgentPackageMaterializationReadiness;
   runtime_source_readiness: AgentPackageManagedRuntimeSourceReadiness;
   operational_ready: boolean;
-  operational_ready_scope: 'package_dependency_scope_and_runtime_source';
+  operational_ready_scope: 'package_dependency_scope_runtime_source_and_managed_policy';
   launch_allowed: boolean;
   launch_blocked_reason: string | null;
   allowed_when_blocked: Array<'status' | 'doctor' | 'repair'>;
@@ -779,6 +804,8 @@ export type AgentPackageOwnerRouteReadbackItem = {
     reload_required: boolean;
     failure_reason: string | null;
     profile_migration: AgentPackageProfileMigration;
+    managed_policy_migration: AgentPackageManagedPolicyMigration;
+    managed_policy_currentness: AgentPackageManagedPolicyCurrentness;
   };
   lifecycle_ux: AgentPackageLifecycleUxReadback;
   package_core: AgentPackageCoreReadback;

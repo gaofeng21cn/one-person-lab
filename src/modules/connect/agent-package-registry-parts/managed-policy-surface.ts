@@ -9,7 +9,10 @@ import { resolveOplStatePaths } from '../../../kernel/runtime-state-paths.ts';
 import { syncOplCompanionSkills } from '../install-companions.ts';
 import { resolveCodexConfigPath, resolveCodexHome, sha256Text } from './shared.ts';
 import type {
+  AgentPackageLock,
+  AgentPackageManagedPolicyCurrentness,
   AgentPackageManagedPolicyDependency,
+  AgentPackageManagedPolicyDetectedConflict,
   AgentPackageManagedPolicyMigration,
   AgentPackageManagedPolicyMigrationAction,
   AgentPackageManifest,
@@ -49,6 +52,32 @@ type InventoryItem = {
   canonicalId: string;
   aliases: string[];
   physicalRef: string;
+};
+
+type ManagedPolicyIdentity = {
+  packageId: string;
+  packageVersion: string;
+  pluginId: string | null;
+  config: NonNullable<AgentPackageManifest['managed_policy_surface']>;
+};
+
+type ClassifiedInventoryItem = {
+  item: InventoryItem;
+  migrationId: string;
+};
+
+type ManagedPolicyInspection = {
+  config: ManagedPolicyIdentity['config'];
+  policy: OplFlowPolicy;
+  policyPath: string;
+  schemaPath: string;
+  home: string;
+  configPath: string;
+  policySha256: string;
+  inventoryDigest: string;
+  enabledMigrationIds: string[];
+  detectedConflicts: AgentPackageManagedPolicyDetectedConflict[];
+  classifiedInventory: ClassifiedInventoryItem[];
 };
 
 function sha256File(filePath: string) {
@@ -176,25 +205,28 @@ function normalizeGroups(value: unknown, field: string) {
   });
 }
 
-function normalizePolicy(payload: unknown, manifest: AgentPackageManifest): OplFlowPolicy {
+function normalizePolicy(
+  payload: unknown,
+  identity: Pick<ManagedPolicyIdentity, 'packageId' | 'packageVersion'>,
+): OplFlowPolicy {
   if (!isRecord(payload) || !isRecord(payload.package) || !isRecord(payload.migration_policy)
     || !isRecord(payload.historical_fingerprints) || !isRecord(payload.codex_model_policy)) {
     throw new FrameworkContractError('contract_shape_invalid', 'Managed OPL Flow policy has an invalid root shape.', {
-      package_id: manifest.package_id,
+      package_id: identity.packageId,
       failure_code: 'agent_package_managed_policy_invalid',
     });
   }
   if (
     payload.schema !== 'opl_flow_workflow_policy.v1'
-    || payload.package.id !== manifest.package_id
-    || payload.package.version !== manifest.version
+    || payload.package.id !== identity.packageId
+    || payload.package.version !== identity.packageVersion
     || payload.package.owner !== 'opl-flow'
     || payload.package.kind !== 'workflow_profile'
     || payload.codex_model_policy.authority !== 'opl-flow'
   ) {
     throw new FrameworkContractError('contract_shape_invalid', 'Managed policy identity or version does not match the package manifest.', {
-      package_id: manifest.package_id,
-      package_version: manifest.version,
+      package_id: identity.packageId,
+      package_version: identity.packageVersion,
       policy_package: payload.package,
       failure_code: 'agent_package_managed_policy_identity_mismatch',
     });
@@ -211,7 +243,7 @@ function normalizePolicy(payload: unknown, manifest: AgentPackageManifest): OplF
   for (const [key, expected] of Object.entries(expectedMigrationPolicy)) {
     if (payload.migration_policy[key] !== expected) {
       throw new FrameworkContractError('contract_shape_invalid', 'Managed policy migration invariants are not compatible with OPL Packages.', {
-        package_id: manifest.package_id,
+        package_id: identity.packageId,
         field: `migration_policy.${key}`,
         expected,
         actual: payload.migration_policy[key],
@@ -419,6 +451,125 @@ function stopService(item: InventoryItem) {
   return { service_ref: item.physicalRef, action: 'not_running_service_definition', exit_code: null };
 }
 
+function inspectManagedPolicySurface(input: {
+  identity: ManagedPolicyIdentity;
+  sourceRoot: string;
+  keepMigrationIds?: string[];
+  enabledMigrationIds?: string[];
+}): ManagedPolicyInspection {
+  const { config } = input.identity;
+  const policyPath = resolveInside(input.sourceRoot, config.source_path, 'managed_policy_surface.source_path');
+  const schemaPath = resolveInside(input.sourceRoot, config.schema_path, 'managed_policy_surface.schema_path');
+  const policyPayload = JSON.parse(fs.readFileSync(policyPath, 'utf8')) as unknown;
+  const schemaPayload = JSON.parse(fs.readFileSync(schemaPath, 'utf8')) as unknown;
+  assertJsonSchemaPayload({
+    schemaId: `package-policy:${input.identity.packageId}:${input.identity.packageVersion}`,
+    schema: schemaPayload as Record<string, unknown>,
+    sourceRef: schemaPath,
+  }, policyPayload);
+  const policy = normalizePolicy(policyPayload, input.identity);
+  const groups = [...policy.conflicts, ...policy.retires];
+  const groupByAlias = new Map(groups.flatMap((group) =>
+    group.discovery_ids.flatMap((id) => idAliases(id).map((alias) => [alias, group] as const))));
+  const keep = new Set(input.keepMigrationIds ?? []);
+  const explicitlyEnabled = input.enabledMigrationIds ? new Set(input.enabledMigrationIds) : null;
+  const unknownMigrationIds = [...new Set([
+    ...keep,
+    ...(explicitlyEnabled ?? []),
+  ])].filter((id) => !groups.some((group) => group.id === id));
+  if (unknownMigrationIds.length > 0) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Managed policy selection contains unknown migration ids.', {
+      package_id: input.identity.packageId,
+      unknown_migration_ids: unknownMigrationIds,
+      available_migration_ids: groups.map((group) => group.id),
+      failure_code: input.enabledMigrationIds
+        ? 'agent_package_managed_policy_stored_migration_unknown'
+        : 'agent_package_managed_policy_keep_unknown',
+    });
+  }
+  const enabledGroups = new Map(groups
+    .filter((group) => group.auto_retire_on_optimize
+      && (explicitlyEnabled ? explicitlyEnabled.has(group.id) : !keep.has(group.id)))
+    .map((group) => [group.id, group]));
+  const pluginAliases = input.identity.pluginId ? idAliases(input.identity.pluginId) : [];
+  const selfCarrierFingerprints = policy.historical_fingerprints.plugin_ids.filter((id) =>
+    idAliases(id).some((alias) => pluginAliases.includes(alias)));
+  const unclassifiedFingerprints = Object.values(policy.historical_fingerprints)
+    .flat()
+    .filter((fingerprint) => {
+      const aliases = idAliases(fingerprint);
+      return !aliases.some((alias) => groupByAlias.has(alias))
+        && !selfCarrierFingerprints.includes(fingerprint);
+    });
+  if (unclassifiedFingerprints.length > 0) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Managed policy contains historical fingerprints that cannot be classified safely.', {
+      package_id: input.identity.packageId,
+      unclassified_historical_fingerprints: unclassifiedFingerprints,
+      failure_code: 'agent_package_managed_policy_fingerprint_unclassified',
+    });
+  }
+
+  const home = resolveOplStatePaths().home_dir;
+  const codexHome = resolveCodexHome(home);
+  const configPath = resolveCodexConfigPath(codexHome);
+  const managedMarketplaceId = `opl-agent-${input.identity.packageId}-local`;
+  const managedMarketplaceRoots = [
+    path.join(codexHome, 'plugins', 'cache', managedMarketplaceId),
+    path.join(codexHome, 'plugins', 'data', managedMarketplaceId),
+    path.join(codexHome, '.tmp', 'plugins', 'plugins', managedMarketplaceId),
+  ];
+  const managedConfigTables = new Set([
+    `marketplaces.${managedMarketplaceId}`,
+    ...(input.identity.pluginId ? [`plugins.${input.identity.pluginId}@${managedMarketplaceId}`] : []),
+  ]);
+  const isCurrentManagedCarrier = (physicalRef: string) => managedMarketplaceRoots.some((root) => {
+    const relative = path.relative(root, physicalRef);
+    return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+  });
+  const inventory = [
+    ...filesystemInventory(home, codexHome),
+    ...configTableInventory(configPath),
+  ];
+  const inventoryDigest = sha256Text(JSON.stringify(inventory
+    .map((entry) => ({ ...entry, aliases: [...entry.aliases].sort() }))
+    .sort((left, right) => left.physicalRef.localeCompare(right.physicalRef))));
+  const classified = inventory.flatMap((item): ClassifiedInventoryItem[] => {
+    if (isCurrentManagedCarrier(item.physicalRef)) return [];
+    if (item.surfaceKind === 'config_table' && managedConfigTables.has(item.canonicalId)) return [];
+    const group = item.aliases.map((alias) => groupByAlias.get(alias)).find(Boolean);
+    if (group && enabledGroups.has(group.id)) return [{ item, migrationId: group.id }];
+    const selfCarrier = item.surfaceKind === 'plugin'
+      && selfCarrierFingerprints.some((fingerprint) =>
+        idAliases(fingerprint).some((alias) => item.aliases.includes(alias)));
+    return selfCarrier
+      ? [{ item: { ...item, surfaceKind: 'historical_self_carrier' }, migrationId: 'historical-self-carrier' }]
+      : [];
+  });
+  const classifiedInventory = classified
+    .sort((left, right) => left.item.physicalRef.length - right.item.physicalRef.length)
+    .filter((entry, index, entries) => !entries.slice(0, index).some((selected) =>
+      entry.item.physicalRef.startsWith(`${selected.item.physicalRef}${path.sep}`)));
+  const detectedConflicts = classifiedInventory.map(({ item, migrationId }) => ({
+    migration_id: migrationId,
+    surface_kind: item.surfaceKind,
+    canonical_id: item.canonicalId,
+    physical_ref: item.physicalRef,
+  }));
+  return {
+    config,
+    policy,
+    policyPath,
+    schemaPath,
+    home,
+    configPath,
+    policySha256: sha256File(policyPath),
+    inventoryDigest,
+    enabledMigrationIds: groups.filter((group) => enabledGroups.has(group.id)).map((group) => group.id),
+    detectedConflicts,
+    classifiedInventory,
+  };
+}
+
 export function noManagedPolicyMigration(note: string): AgentPackageManagedPolicyMigration {
   return {
     surface_kind: 'opl_package_managed_policy_migration',
@@ -432,6 +583,7 @@ export function noManagedPolicyMigration(note: string): AgentPackageManagedPolic
     dependencies: [],
     optional_dependency_ids: [],
     migration_ids: [],
+    detected_conflicts: [],
     actions: [],
     service_actions: [],
     dependency_sync: null,
@@ -451,82 +603,28 @@ export function materializeManagedPolicySurface(input: {
 }): AgentPackageManagedPolicyMigration {
   const config = input.manifest.managed_policy_surface;
   if (!config) return noManagedPolicyMigration('Package manifest does not request a managed policy surface.');
-  const policyPath = resolveInside(input.sourceRoot, config.source_path, 'managed_policy_surface.source_path');
-  const schemaPath = resolveInside(input.sourceRoot, config.schema_path, 'managed_policy_surface.schema_path');
-  const policyPayload = JSON.parse(fs.readFileSync(policyPath, 'utf8')) as unknown;
-  const schemaPayload = JSON.parse(fs.readFileSync(schemaPath, 'utf8')) as unknown;
-  assertJsonSchemaPayload({
-    schemaId: `package-policy:${input.manifest.package_id}:${input.manifest.version}`,
-    schema: schemaPayload as Record<string, unknown>,
-    sourceRef: schemaPath,
-  }, policyPayload);
-  const policy = normalizePolicy(policyPayload, input.manifest);
-  const groups = [...policy.conflicts, ...policy.retires];
-  const groupByAlias = new Map(groups.flatMap((group) =>
-    group.discovery_ids.flatMap((id) => idAliases(id).map((alias) => [alias, group] as const))));
-  const keep = new Set(input.keepMigrationIds ?? []);
-  const unknownKeepIds = [...keep].filter((id) => !groups.some((group) => group.id === id));
-  if (unknownKeepIds.length > 0) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Managed policy keep override contains unknown migration ids.', {
-      package_id: input.manifest.package_id,
-      unknown_migration_ids: unknownKeepIds,
-      available_migration_ids: groups.map((group) => group.id),
-      failure_code: 'agent_package_managed_policy_keep_unknown',
-    });
-  }
-  const enabledGroups = new Map(groups
-    .filter((group) => group.auto_retire_on_optimize && !keep.has(group.id))
-    .map((group) => [group.id, group]));
-  const managedMarketplaceId = `opl-agent-${input.manifest.package_id}-local`;
-  const selfCarrierFingerprints = policy.historical_fingerprints.plugin_ids.filter((id) =>
-    idAliases(id).includes(input.manifest.plugin_id ?? ''));
-  const unclassifiedFingerprints = Object.values(policy.historical_fingerprints)
-    .flat()
-    .filter((fingerprint) => {
-      const aliases = idAliases(fingerprint);
-      return !aliases.some((alias) => groupByAlias.has(alias))
-        && !selfCarrierFingerprints.includes(fingerprint);
-    });
-  if (unclassifiedFingerprints.length > 0) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Managed policy contains historical fingerprints that cannot be classified safely.', {
-      package_id: input.manifest.package_id,
-      unclassified_historical_fingerprints: unclassifiedFingerprints,
-      failure_code: 'agent_package_managed_policy_fingerprint_unclassified',
-    });
-  }
-  const home = resolveOplStatePaths().home_dir;
-  const codexHome = resolveCodexHome(home);
-  const configPath = resolveCodexConfigPath(codexHome);
-  const managedMarketplaceRoots = [
-    path.join(codexHome, 'plugins', 'cache', managedMarketplaceId),
-    path.join(codexHome, 'plugins', 'data', managedMarketplaceId),
-    path.join(codexHome, '.tmp', 'plugins', 'plugins', managedMarketplaceId),
-  ];
-  const isCurrentManagedCarrier = (physicalRef: string) => managedMarketplaceRoots.some((root) => {
-    const relative = path.relative(root, physicalRef);
-    return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+  const inspection = inspectManagedPolicySurface({
+    identity: {
+      packageId: input.manifest.package_id,
+      packageVersion: input.manifest.version,
+      pluginId: input.manifest.plugin_id,
+      config,
+    },
+    sourceRoot: input.sourceRoot,
+    keepMigrationIds: input.keepMigrationIds,
   });
-  const inventory = [
-    ...filesystemInventory(home, codexHome),
-    ...configTableInventory(configPath),
-  ];
-  const inventoryDigest = sha256Text(JSON.stringify(inventory
-    .map((entry) => ({ ...entry, aliases: [...entry.aliases].sort() }))
-    .sort((left, right) => left.physicalRef.localeCompare(right.physicalRef))));
-  const classified = inventory.flatMap((item) => {
-    if (isCurrentManagedCarrier(item.physicalRef)) return [];
-    const group = item.aliases.map((alias) => groupByAlias.get(alias)).find(Boolean);
-    if (group && enabledGroups.has(group.id)) return [{ item, migrationId: group.id }];
-    const selfCarrier = item.surfaceKind === 'plugin'
-      && selfCarrierFingerprints.some((fingerprint) =>
-        idAliases(fingerprint).some((alias) => item.aliases.includes(alias)));
-    return selfCarrier ? [{ item: { ...item, surfaceKind: 'historical_self_carrier' as const }, migrationId: 'historical-self-carrier' }] : [];
-  });
-  const unique = classified
-    .sort((left, right) => left.item.physicalRef.length - right.item.physicalRef.length)
-    .filter((entry, index, entries) => !entries.slice(0, index).some((selected) =>
-      entry.item.physicalRef.startsWith(`${selected.item.physicalRef}${path.sep}`)));
-  const policySha256 = sha256File(policyPath);
+  const {
+    policy,
+    policyPath,
+    schemaPath,
+    home,
+    configPath,
+    policySha256,
+    inventoryDigest,
+    enabledMigrationIds,
+    detectedConflicts,
+    classifiedInventory: unique,
+  } = inspection;
   const backupRoot = path.join(
     resolveOplStatePaths().state_dir,
     'agent-package-transactions',
@@ -617,7 +715,8 @@ export function materializeManagedPolicySurface(input: {
       dependency_ids: [...new Set(dependencies.map((entry) => entry.id))],
       dependencies,
       optional_dependency_ids: policy.compatible_optional.map((entry) => entry.id),
-      migration_ids: groups.filter((group) => enabledGroups.has(group.id)).map((group) => group.id),
+      migration_ids: enabledMigrationIds,
+      detected_conflicts: detectedConflicts,
       actions,
       service_actions: serviceActions,
       dependency_sync: dependencySync as unknown as Record<string, unknown>,
@@ -650,6 +749,96 @@ export function materializeManagedPolicySurface(input: {
       writes_performed: actions.length > 0,
     });
     throw error;
+  }
+}
+
+function noManagedPolicyCurrentness(reason: string): AgentPackageManagedPolicyCurrentness {
+  return {
+    surface_kind: 'opl_package_managed_policy_currentness',
+    status: 'not_requested',
+    policy_kind: null,
+    policy_path: null,
+    schema_path: null,
+    expected_policy_sha256: null,
+    actual_policy_sha256: null,
+    inventory_digest: null,
+    enabled_migration_ids: [],
+    detected_conflicts: [],
+    repair_command: null,
+    reason,
+  };
+}
+
+export function managedPolicyCurrentness(
+  lock?: AgentPackageLock | null,
+): AgentPackageManagedPolicyCurrentness {
+  const surface = lock?.physical_surface;
+  const config = surface?.managed_policy_config;
+  if (!lock || !surface || !config) {
+    return noManagedPolicyCurrentness('Package does not request a managed policy surface.');
+  }
+
+  const migration = surface.workflow_policy_migration;
+  const sourceRoot = surface.status === 'validated_no_write'
+    ? surface.plugin_source_path
+    : surface.codex_plugin_cache_path ?? surface.plugin_source_path;
+  const policyPath = sourceRoot ? path.resolve(sourceRoot, config.source_path) : migration.policy_path;
+  const schemaPath = sourceRoot ? path.resolve(sourceRoot, config.schema_path) : migration.schema_path;
+  const expectedPolicySha256 = migration.policy_sha256;
+  const actualPolicySha256 = policyPath && fs.existsSync(policyPath) && fs.statSync(policyPath).isFile()
+    ? sha256File(policyPath)
+    : null;
+  const invalid = (reason: string): AgentPackageManagedPolicyCurrentness => ({
+    surface_kind: 'opl_package_managed_policy_currentness',
+    status: 'invalid',
+    policy_kind: config.policy_kind,
+    policy_path: policyPath,
+    schema_path: schemaPath,
+    expected_policy_sha256: expectedPolicySha256,
+    actual_policy_sha256: actualPolicySha256,
+    inventory_digest: null,
+    enabled_migration_ids: migration.migration_ids,
+    detected_conflicts: [],
+    repair_command: `opl packages repair --package-id ${lock.package_id}`,
+    reason,
+  });
+  if (!sourceRoot) {
+    return invalid('Managed policy source root is unavailable from the installed package lock.');
+  }
+
+  try {
+    const inspection = inspectManagedPolicySurface({
+      identity: {
+        packageId: lock.package_id,
+        packageVersion: lock.package_version,
+        pluginId: surface.plugin_id,
+        config,
+      },
+      sourceRoot,
+      enabledMigrationIds: migration.migration_ids,
+    });
+    if (expectedPolicySha256 && inspection.policySha256 !== expectedPolicySha256) {
+      return invalid('Managed policy bytes no longer match the installed package transaction.');
+    }
+    const drifted = inspection.detectedConflicts.length > 0;
+    return {
+      surface_kind: 'opl_package_managed_policy_currentness',
+      status: drifted ? 'drifted' : 'current',
+      policy_kind: config.policy_kind,
+      policy_path: inspection.policyPath,
+      schema_path: inspection.schemaPath,
+      expected_policy_sha256: expectedPolicySha256,
+      actual_policy_sha256: inspection.policySha256,
+      inventory_digest: inspection.inventoryDigest,
+      enabled_migration_ids: inspection.enabledMigrationIds,
+      detected_conflicts: inspection.detectedConflicts,
+      repair_command: drifted ? `opl packages repair --package-id ${lock.package_id}` : null,
+      reason: drifted
+        ? `Managed policy drift detected on ${inspection.detectedConflicts.length} discovery surface(s).`
+        : 'Managed policy is current; no conflicting discovery surface is present.',
+    };
+  } catch (error) {
+    return invalid(error instanceof Error ? error.message : 'Managed policy readback failed.');
   }
 }
 

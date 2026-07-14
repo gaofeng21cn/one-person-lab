@@ -8,7 +8,7 @@ import {
   capabilityPackageOwnerRoute,
 } from '../managed-update-owner-boundary.ts';
 import { dependencyReadiness } from './dependency-closure.ts';
-import { noManagedPolicyMigration } from './managed-policy-surface.ts';
+import { managedPolicyCurrentness, noManagedPolicyMigration } from './managed-policy-surface.ts';
 import { scopeMaterializationReadiness } from './scope-materialization.ts';
 import { managedRuntimeSourceReadiness } from './managed-runtime-source-carrier.ts';
 import { refsOnlyAuthorityBoundary, uniqueStrings } from './shared.ts';
@@ -18,6 +18,7 @@ import type {
   AgentPackageLifecycleReceipt,
   AgentPackageLifecycleUxReadback,
   AgentPackageLock,
+  AgentPackageManagedPolicyCurrentness,
   AgentPackageOwnerRouteReadback,
   AgentPackageOwnerRouteReadbackItem,
   AgentPackageSourceKind,
@@ -55,6 +56,7 @@ export function agentPackageLifecycleUxReadback(input: {
   packageId: string | null;
   lock?: AgentPackageLock | null;
   receipt?: AgentPackageLifecycleReceipt | null;
+  managedPolicyCurrentness?: AgentPackageManagedPolicyCurrentness;
 }): AgentPackageLifecycleUxReadback {
   const surface = input.lock?.physical_surface ?? input.receipt?.physical_surface;
   if (!input.lock) {
@@ -125,6 +127,25 @@ export function agentPackageLifecycleUxReadback(input: {
       status: 'ok',
       reason: surface.profile_migration.note,
       action_ref: null,
+    }));
+  }
+
+  const policyCurrentness = input.managedPolicyCurrentness ?? managedPolicyCurrentness(input.lock);
+  if (policyCurrentness.status === 'current') {
+    conditions.push(lifecycleCondition({
+      condition_id: 'managed_policy_current',
+      package_id: input.lock.package_id,
+      status: 'ok',
+      reason: policyCurrentness.reason,
+      action_ref: null,
+    }));
+  } else if (policyCurrentness.status === 'drifted' || policyCurrentness.status === 'invalid') {
+    conditions.push(lifecycleCondition({
+      condition_id: 'managed_policy_drift_detected',
+      package_id: input.lock.package_id,
+      status: 'attention_needed',
+      reason: policyCurrentness.reason,
+      action_ref: 'repair',
     }));
   }
 
@@ -229,6 +250,7 @@ function ownerRouteReadbackItem(input: {
     lock_file: paths.agent_package_lock_file,
     lifecycle_ledger_file: paths.agent_package_lifecycle_ledger_file,
   };
+  const policyCurrentness = managedPolicyCurrentness(input.lock);
   const materializer = {
     status: surface?.status ?? 'not_requested',
     plugin_id: surface?.plugin_id ?? null,
@@ -261,11 +283,13 @@ function ownerRouteReadbackItem(input: {
     },
     managed_policy_migration: surface?.workflow_policy_migration
       ?? noManagedPolicyMigration('Package does not request a managed policy surface.'),
+    managed_policy_currentness: policyCurrentness,
   };
   const lifecycleUx = agentPackageLifecycleUxReadback({
     packageId: input.packageId,
     lock: input.lock,
     receipt: input.receipt,
+    managedPolicyCurrentness: policyCurrentness,
   });
   const readiness = input.lock
     ? dependencyReadiness(input.lock, {
@@ -311,9 +335,12 @@ function ownerRouteReadbackItem(input: {
     input.lock?.managed_runtime_source,
     input.lock?.runtime_source_carrier,
   );
+  const managedPolicyReady = policyCurrentness.status === 'current'
+    || policyCurrentness.status === 'not_requested';
   const operationalReady = readiness.operational_ready
     && (materializationReadiness.status === 'current' || materializationReadiness.status === 'not_required')
-    && runtimeSourceReadiness.operational_ready;
+    && runtimeSourceReadiness.operational_ready
+    && managedPolicyReady;
   const runtimeSource = input.lock?.managed_runtime_source ?? input.receipt?.managed_runtime_source ?? null;
   return {
     package_id: input.packageId,
@@ -321,7 +348,7 @@ function ownerRouteReadbackItem(input: {
     materialization_readiness: materializationReadiness,
     runtime_source_readiness: runtimeSourceReadiness,
     operational_ready: operationalReady,
-    operational_ready_scope: 'package_dependency_scope_and_runtime_source',
+    operational_ready_scope: 'package_dependency_scope_runtime_source_and_managed_policy',
     launch_allowed: operationalReady,
     launch_blocked_reason: !readiness.operational_ready
       ? `package_dependency_${readiness.status}`
@@ -329,7 +356,9 @@ function ownerRouteReadbackItem(input: {
         ? `scope_materialization_${materializationReadiness.status}`
         : !runtimeSourceReadiness.operational_ready
           ? `runtime_source_${runtimeSourceReadiness.status}`
-        : null,
+          : !managedPolicyReady
+            ? `managed_policy_${policyCurrentness.status}`
+            : null,
     allowed_when_blocked: ['status', 'doctor', 'repair'],
     descriptor,
     digest,

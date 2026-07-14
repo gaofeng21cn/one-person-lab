@@ -274,6 +274,40 @@ test('generic OPL package transaction owns OPL Flow policy migration without inv
       statusMaterializer.managed_policy_migration.policy_sha256,
       migration.policy_sha256,
     );
+    assert.equal(
+      statusMaterializer.managed_policy_currentness.status,
+      'current',
+      JSON.stringify(statusMaterializer.managed_policy_currentness, null, 2),
+    );
+    assert.deepEqual(statusMaterializer.managed_policy_currentness.detected_conflicts, []);
+
+    const restoredPonytailPath = path.join(codexHome, 'plugins', 'cache', 'ponytail');
+    writeFile(path.join(restoredPonytailPath, 'restored.txt'), 'restored after install\n');
+    const drifted = runCli(['packages', 'status', '--package-id', 'opl-flow'], env) as any;
+    const driftedPackage = drifted.opl_agent_package_status.owner_route_readback.packages[0];
+    const driftedCurrentness = driftedPackage.materializer.managed_policy_currentness;
+    assert.equal(drifted.opl_agent_package_status.status, 'attention_needed');
+    assert.equal(drifted.opl_agent_package_status.operational_ready, false);
+    assert.equal(drifted.opl_agent_package_status.launch_blocked_reason, 'managed_policy_drifted');
+    assert.equal(drifted.opl_agent_package_status.recommended_action, 'repair');
+    assert.equal(driftedPackage.lifecycle_ux.recommended_action, 'repair');
+    assert.equal(driftedCurrentness.status, 'drifted');
+    assert.equal(driftedCurrentness.repair_command, 'opl packages repair --package-id opl-flow');
+    assert.deepEqual(driftedCurrentness.detected_conflicts, [{
+      migration_id: 'ponytail',
+      surface_kind: 'plugin',
+      canonical_id: 'ponytail',
+      physical_ref: restoredPonytailPath,
+    }]);
+
+    const repaired = runCli(['packages', 'repair', '--package-id', 'opl-flow'], env) as any;
+    assert.equal(repaired.opl_agent_package_repair.status, 'repaired');
+    assert.equal(fs.existsSync(restoredPonytailPath), false);
+    const repairedStatus = runCli(['packages', 'status', '--package-id', 'opl-flow'], env) as any;
+    const repairedPackage = repairedStatus.opl_agent_package_status.owner_route_readback.packages[0];
+    assert.equal(repairedStatus.opl_agent_package_status.operational_ready, true);
+    assert.equal(repairedPackage.materializer.managed_policy_currentness.status, 'current');
+    assert.notEqual(repairedPackage.lifecycle_ux.recommended_action, 'repair');
 
     const postInstallConfig = [
       'reasoning_effort = "high"',

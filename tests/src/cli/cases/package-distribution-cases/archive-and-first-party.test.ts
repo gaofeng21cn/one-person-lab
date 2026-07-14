@@ -169,7 +169,7 @@ test('package archive builder writes channel manifest checksums git source and r
     oplmetaagent: createOwnerPackageFixture('opl-meta-agent', 'oma', '0.2.1'),
     oplbookforge: createOwnerPackageFixture('opl-bookforge', 'obf', '0.2.1'),
     scholarskills: createOwnerPackageFixture('mas-scholar-skills', 'mas-scholar-skills', '0.2.0', 'capability_package'),
-    oplflow: createOwnerPackageFixture('opl-flow', 'opl-flow', '0.1.18', 'workflow_profile'),
+    oplflow: createOwnerPackageFixture('opl-flow', 'opl-flow', '0.1.19', 'workflow_profile'),
   };
   const ownerSourceEnv = {
     ...process.env,
@@ -428,7 +428,7 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(masCatalog.versions[0].release_gate, 'test_owner_sha_release_gate');
   assert.match(masCatalog.versions[0].package_content_digest, /^sha256:[0-9a-f]{64}$/);
   assert.equal(packageCatalog['opl-flow'].package_role, 'workflow_profile');
-  assert.equal(packageCatalog['opl-flow'].selected_version, '0.1.18');
+  assert.equal(packageCatalog['opl-flow'].selected_version, '0.1.19');
   assert.equal(packageCatalog['opl-flow'].homebrew_formula, undefined);
   assert.match(channelManifest.package_catalog_digest, /^sha256:[0-9a-f]{64}$/);
   const scholarSkillsCatalog = packageCatalog['mas-scholar-skills'];
@@ -847,13 +847,13 @@ test('OPL Flow is a workflow-profile Package without Agent identity', () => {
     'utf8',
   )) as Record<string, any>;
   assert.equal(manifest.surface_kind, 'opl_workflow_profile_package_manifest.v1');
-  assert.equal(manifest.version, '0.1.18');
-  assert.equal(manifest.codex_surface.carrier_source_commit, 'b1beed858575af2fb587261a412aaa7a76e60db1');
+  assert.equal(manifest.version, '0.1.19');
+  assert.equal(manifest.codex_surface.carrier_source_commit, 'efd0e2034c3fc05f0ded70516fcb57e295dd7cdc');
   assert.equal(Object.hasOwn(manifest, 'agent_id'), false);
   assert.equal(normalized.agent_id, null);
   assert.equal(normalized.profile_surface?.existing_profile_policy, 'semantic_merge_required');
   assert.equal(payload.surface_kind, 'opl_package_payload_manifest.v1');
-  assert.equal(payload.source_commit, 'b1beed858575af2fb587261a412aaa7a76e60db1');
+  assert.equal(payload.source_commit, 'efd0e2034c3fc05f0ded70516fcb57e295dd7cdc');
   assert.equal(Object.hasOwn(payload, 'agent_id'), false);
 });
 
@@ -982,7 +982,7 @@ test('package archive builder refreshes reused managed clones before archiving s
     oplmetaagent: createOwnerPackageFixture('opl-meta-agent', 'oma', '0.2.1'),
     oplbookforge: createOwnerPackageFixture('opl-bookforge', 'obf', '0.2.1'),
     scholarskills: createOwnerPackageFixture('mas-scholar-skills', 'mas-scholar-skills', '0.2.0', 'capability_package'),
-    oplflow: createOwnerPackageFixture('opl-flow', 'opl-flow', '0.1.18', 'workflow_profile'),
+    oplflow: createOwnerPackageFixture('opl-flow', 'opl-flow', '0.1.19', 'workflow_profile'),
   };
   fs.writeFileSync(
     gitConfigPath,

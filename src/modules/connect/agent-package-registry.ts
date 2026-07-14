@@ -80,6 +80,7 @@ import {
 import {
   assertManagedPolicyRollbackReady,
   finalizeManagedPolicyRollback,
+  managedPolicyCurrentness,
   rollbackManagedPolicyMigration,
 } from './agent-package-registry-parts/managed-policy-surface.ts';
 import {
@@ -2288,6 +2289,7 @@ export function runOplAgentPackageStatus(input: {
     packages: installedPackages,
   });
   const selectedLock = packageId ? installedPackages[0] ?? null : null;
+  const policyCurrentness = managedPolicyCurrentness(selectedLock);
   const packageDependencyReadiness = selectedLock ? dependencyReadiness(selectedLock, lockIndex) : null;
   let materializationReadiness = selectedLock
     ? scopeMaterializationReadiness(selectedLock, lockIndex, input)
@@ -2324,7 +2326,8 @@ export function runOplAgentPackageStatus(input: {
   const operationalReady = Boolean(
     packageDependencyReadiness?.operational_ready
     && (materializationReadiness?.status === 'current' || materializationReadiness?.status === 'not_required')
-    && runtimeSourceReadiness.operational_ready,
+    && runtimeSourceReadiness.operational_ready
+    && (policyCurrentness.status === 'current' || policyCurrentness.status === 'not_requested'),
   );
   return {
     version: 'g2',
@@ -2345,9 +2348,10 @@ export function runOplAgentPackageStatus(input: {
       package_dependency_readiness: packageDependencyReadiness,
       materialization_readiness: materializationReadiness,
       runtime_source_readiness: runtimeSourceReadiness,
+      managed_policy_currentness: policyCurrentness,
       runtime_source_recovery: runtimeSourceRecovery,
       operational_ready: operationalReady,
-      operational_ready_scope: 'package_dependency_scope_and_runtime_source',
+      operational_ready_scope: 'package_dependency_scope_runtime_source_and_managed_policy',
       launch_allowed: operationalReady,
       launch_blocked_reason: operationalReady
         ? null
@@ -2359,10 +2363,15 @@ export function runOplAgentPackageStatus(input: {
             ? `scope_materialization_${materializationReadiness.status}`
             : !runtimeSourceReadiness.operational_ready
               ? `runtime_source_${runtimeSourceReadiness.status}`
-              : 'package_not_installed',
+              : policyCurrentness.status !== 'current' && policyCurrentness.status !== 'not_requested'
+                ? `managed_policy_${policyCurrentness.status}`
+                : 'package_not_installed',
       allowed_when_blocked: ['status', 'doctor', 'repair'],
       repair_action: selectedLock && !operationalReady
-        ? materializationReadiness?.repair_command ?? packageDependencyReadiness?.repair_command ?? null
+        ? policyCurrentness.repair_command
+          ?? materializationReadiness?.repair_command
+          ?? packageDependencyReadiness?.repair_command
+          ?? null
         : null,
       home_shortcut_preferences: homeShortcutPreferences,
       lifecycle_receipts: lifecycleLedger.receipts.filter((receipt) => !packageId || receipt.package_id === packageId),
