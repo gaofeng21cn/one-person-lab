@@ -72,7 +72,7 @@ export function resolveAnnotatedOwnerVersionTag({
   spec,
   ownerRepoPath,
   packageVersion,
-  releaseGate = null,
+  releaseGate = /** @type {string | null} */ (null),
 }) {
   const head = gitValue(ownerRepoPath, ['rev-parse', 'HEAD']);
   const tagName = `v${packageVersion}`;
