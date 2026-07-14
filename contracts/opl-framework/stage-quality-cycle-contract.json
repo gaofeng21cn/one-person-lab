@@ -111,6 +111,8 @@
     "budget_exhaustion_with_consumable_artifact": "completed_with_quality_debt",
     "budget_exhaustion_without_consumable_artifact": "hard_stop",
     "repair_failure_with_prior_consumable_artifact": "completed_with_quality_debt",
+    "content_addressed_no_output_or_failure_diagnostic_counts_as_consumable_progress_artifact": true,
+    "literal_zero_requires_no_candidate_and_no_content_addressed_progress_diagnostic": true,
     "literal_zero_consumable_artifact": "hard_stop",
     "same_thread_refinement_can_close_review": false
   },

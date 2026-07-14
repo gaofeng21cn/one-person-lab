@@ -193,6 +193,14 @@ test('official quality profile is explicit without adding per-agent registry pol
     ],
   );
   assert.equal(contract.cross_stage_route_selection.hard_stop_attempt_may_select_terminal_route, false);
+  assert.equal(
+    contract.policy.content_addressed_no_output_or_failure_diagnostic_counts_as_consumable_progress_artifact,
+    true,
+  );
+  assert.equal(
+    contract.policy.literal_zero_requires_no_candidate_and_no_content_addressed_progress_diagnostic,
+    true,
+  );
   assert.deepEqual(contract.cross_stage_route_selection.route_abi_rejection_conditions, [
     'non_decisive_attempt_writes_terminal_decision',
     'decision_and_recommendation_both_present',
