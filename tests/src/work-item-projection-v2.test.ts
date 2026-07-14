@@ -463,6 +463,85 @@ test('delivered Stage Map uses the canonical recorded boundary without inferring
   }
 });
 
+test('Stage Map transports validated locale names and keeps an en-US compatibility fallback', () => {
+  const workItemRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-localized-stage-map-'));
+  const stageIndexRef = 'control/stage_index.json';
+  const stageIndexPath = path.join(workItemRoot, stageIndexRef);
+  fs.mkdirSync(path.dirname(stageIndexPath), { recursive: true });
+  fs.writeFileSync(stageIndexPath, `${JSON.stringify({
+    current_stage_id: '01-intake',
+    stages: [
+      {
+        stage_id: '01-intake',
+        display_name: 'Legacy intake',
+        display_names: {
+          'en-US': 'Intake',
+          'zh-CN': '立项',
+          'fr-FR': 'Accueil',
+        },
+        status: 'in_progress',
+      },
+      {
+        stage_id: '02-analysis_plan',
+        title: 'Analysis Plan',
+        display_names: { 'zh-CN': '   ', 'fr-FR': 42 },
+        status: 'pending',
+      },
+      { stage_id: '03-review', display_name: '复核', status: 'pending' },
+      { stage_id: '04-closeout', status: 'pending' },
+    ],
+  }, null, 2)}\n`, 'utf8');
+
+  try {
+    const projection = readStageIndexPresentation({
+      workItemRoot,
+      stageIndexRef,
+      businessState: 'active',
+      currentStageId: '01-intake',
+      agentId: 'example-agent',
+      agentDisplayName: 'Example Agent',
+    });
+
+    assert.deepEqual(
+      projection.stage_map.map((stage) => ({
+        stage_id: stage.stage_id,
+        display_name: stage.display_name,
+        display_names: stage.display_names,
+      })),
+      [
+        {
+          stage_id: '01-intake',
+          display_name: 'Legacy intake',
+          display_names: { 'en-US': 'Intake', 'zh-CN': '立项', 'fr-FR': 'Accueil' },
+        },
+        {
+          stage_id: '02-analysis_plan',
+          display_name: 'Analysis Plan',
+          display_names: { 'en-US': 'Analysis Plan' },
+        },
+        {
+          stage_id: '03-review',
+          display_name: '复核',
+          display_names: { 'en-US': '复核' },
+        },
+        {
+          stage_id: '04-closeout',
+          display_name: 'Closeout',
+          display_names: { 'en-US': 'Closeout' },
+        },
+      ],
+    );
+    assert.deepEqual(
+      projection.diagnostics.find((diagnostic) =>
+        diagnostic.reason === 'stage_index_stage_display_names_invalid'
+      )?.details,
+      { stage_id: '02-analysis_plan', invalid_entry_count: 2 },
+    );
+  } finally {
+    fs.rmSync(workItemRoot, { recursive: true, force: true });
+  }
+});
+
 test('control lifecycle wins over old execution failure and token usage remains observed', () => {
   const input = fixture();
   const previousStateDir = process.env.OPL_STATE_DIR;
@@ -819,12 +898,23 @@ test('WorkItemProjection V2 output validates against its machine schema', () => 
     });
     const schemaRef = 'contracts/opl-framework/work-item-projection-v2.schema.json';
     const schema = parseJsonText(fs.readFileSync(path.join(process.cwd(), schemaRef), 'utf8')) as Record<string, unknown>;
+    const localizedProjection = structuredClone(projection);
+    const localizedStage = localizedProjection.items.find((item) => item.stage_map.length > 0)?.stage_map[0];
+    assert.ok(localizedStage);
+    localizedStage.display_names['zh-CN'] = '研究立项';
     const validation = validateJsonSchemaPayload({
       schemaId: 'opl.work_item_projection.v2',
       schema,
       sourceRef: schemaRef,
-    }, projection);
+    }, localizedProjection);
     assert.equal(validation.ok, true, validation.ok ? undefined : JSON.stringify(validation.errors, null, 2));
+    localizedStage.display_names['zh-CN'] = '   ';
+    const invalidValidation = validateJsonSchemaPayload({
+      schemaId: 'opl.work_item_projection.v2',
+      schema,
+      sourceRef: schemaRef,
+    }, localizedProjection);
+    assert.equal(invalidValidation.ok, false);
   } finally {
     fs.rmSync(input.root, { recursive: true, force: true });
   }

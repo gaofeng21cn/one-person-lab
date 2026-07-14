@@ -48,6 +48,11 @@ export type WorkItemStageState =
   | 'stopped'
   | 'failed';
 
+export type WorkItemStageDisplayNames = {
+  'en-US': string;
+  [locale: string]: string;
+};
+
 export type WorkItemSourceRef = {
   ref_kind: 'file' | 'sqlite' | 'projection';
   ref: string;
@@ -217,6 +222,7 @@ export type WorkItemProjectionItem = {
   stage_map: Array<{
     stage_id: string;
     display_name: string;
+    display_names: WorkItemStageDisplayNames;
     state: WorkItemStageState;
     owner: string | null;
     owner_display_name: string | null;

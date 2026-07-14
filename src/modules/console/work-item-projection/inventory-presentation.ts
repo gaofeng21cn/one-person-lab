@@ -53,6 +53,25 @@ function humanizeIdentifier(value: string) {
   return words.replace(/\b[a-z]/g, (letter) => letter.toUpperCase());
 }
 
+function readStageDisplayNames(value: unknown) {
+  if (value === undefined || value === null) {
+    return { displayNames: {}, invalidEntryCount: 0 };
+  }
+  if (!isRecord(value)) {
+    return { displayNames: {}, invalidEntryCount: 1 };
+  }
+  const validEntries = Object.entries(value).flatMap(([locale, candidate]) => {
+    const displayName = stringValue(candidate);
+    return locale.length > 0 && !/\s/.test(locale) && displayName
+      ? [[locale, displayName] as const]
+      : [];
+  });
+  return {
+    displayNames: Object.fromEntries(validEntries),
+    invalidEntryCount: Object.keys(value).length - validEntries.length,
+  };
+}
+
 function ownerDisplayName(owner: string, agentId: string, agentDisplayName: string) {
   const normalized = owner.toLowerCase();
   if (['user', 'human', 'owner'].includes(normalized)) return '你';
@@ -353,11 +372,31 @@ export function readStageIndexPresentation(input: {
   const firstPendingIndex = projectedStageRecords.findIndex(
     (entry) => !COMPLETED_STAGE_STATUSES.has(entry.status),
   );
+  const stageDiagnostics: WorkItemProjectionDiagnostic[] = [];
   const stageMap = projectedStageRecords.map(({ stage, stageId, status }, index) => {
     const owner = stringValue(stage.owner) ?? input.agentId;
+    const sourceDisplayName = stringValue(stage.display_name) ?? stringValue(stage.title);
+    const humanizedDisplayName = humanizeIdentifier(stageId);
+    const localized = readStageDisplayNames(stage.display_names);
+    const displayName = sourceDisplayName ?? localized.displayNames['en-US'] ?? humanizedDisplayName;
+    const displayNames = {
+      ...localized.displayNames,
+      'en-US': localized.displayNames['en-US'] ?? sourceDisplayName ?? humanizedDisplayName,
+    };
+    if (localized.invalidEntryCount > 0) {
+      stageDiagnostics.push({
+        reason: 'stage_index_stage_display_names_invalid',
+        ref: stageIndexPath,
+        details: {
+          stage_id: stageId,
+          invalid_entry_count: localized.invalidEntryCount,
+        },
+      });
+    }
     return {
       stage_id: stageId,
-      display_name: stringValue(stage.display_name) ?? stringValue(stage.title) ?? humanizeIdentifier(stageId),
+      display_name: displayName,
+      display_names: displayNames,
       state: projectStageState({
         businessState: input.businessState,
         currentIndex,
@@ -381,7 +420,6 @@ export function readStageIndexPresentation(input: {
     ? stageMap[currentIndex + 1] ?? null
     : stageMap.find((stage) => stage.state === 'next') ?? null;
   const invalidStageCount = payload.stages.length - stageRecords.length;
-  const stageDiagnostics: WorkItemProjectionDiagnostic[] = [];
   if (invalidStageCount > 0) {
     stageDiagnostics.push({
       reason: 'stage_index_stage_entries_invalid',

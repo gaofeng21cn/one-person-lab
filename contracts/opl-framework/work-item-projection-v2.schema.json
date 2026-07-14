@@ -229,10 +229,20 @@
     },
     "stage": {
       "type": "object",
-      "required": ["stage_id", "display_name", "state", "owner", "owner_display_name", "elapsed_seconds", "usage", "next_action"],
+      "required": ["stage_id", "display_name", "display_names", "state", "owner", "owner_display_name", "elapsed_seconds", "usage", "next_action"],
       "properties": {
         "stage_id": { "type": "string", "minLength": 1 },
         "display_name": { "type": "string", "minLength": 1 },
+        "display_names": {
+          "type": "object",
+          "required": ["en-US"],
+          "propertyNames": { "type": "string", "minLength": 1, "pattern": "^\\S+$" },
+          "properties": {
+            "en-US": { "type": "string", "minLength": 1, "pattern": "\\S" },
+            "zh-CN": { "type": "string", "minLength": 1, "pattern": "\\S" }
+          },
+          "additionalProperties": { "type": "string", "minLength": 1, "pattern": "\\S" }
+        },
         "state": { "enum": ["completed", "current", "next", "pending", "waiting_user", "system_attention", "stopped", "failed"] },
         "owner": { "$ref": "#/$defs/nullableString" },
         "owner_display_name": { "$ref": "#/$defs/nullableString" },
