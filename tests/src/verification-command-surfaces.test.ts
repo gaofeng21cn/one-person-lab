@@ -93,6 +93,12 @@ test('repo hygiene blocks checkout-local OPL runtime state drift', () => {
 });
 
 test('repo temp env wrapper routes tool caches outside the checkout', () => {
+  const sourceHome = fs.mkdtempSync(path.join(process.env.OPL_REPO_TEMP_ROOT || '/tmp', 'opl-source-home-'));
+  const sourceCodexHome = path.join(sourceHome, '.codex');
+  const sourceConfig = path.join(sourceCodexHome, 'config.toml');
+  fs.mkdirSync(sourceCodexHome, { recursive: true });
+  fs.writeFileSync(sourceConfig, 'model = "sentinel"\n');
+
   const result = spawnSync('bash', [
     'scripts/run-with-repo-temp-env.sh',
     process.execPath,
@@ -101,6 +107,9 @@ test('repo temp env wrapper routes tool caches outside the checkout', () => {
       'const keys = [',
       '"OPL_REPO_TEMP_ENV_ACTIVE",',
       '"OPL_REPO_TEMP_ROOT",',
+      '"HOME",',
+      '"CODEX_HOME",',
+      '"OPL_STATE_DIR",',
       '"TMPDIR",',
       '"PYTHONPYCACHEPREFIX",',
       '"PYTEST_ADDOPTS",',
@@ -108,8 +117,12 @@ test('repo temp env wrapper routes tool caches outside the checkout', () => {
       '"NPM_CONFIG_CACHE",',
       '"NODE_COMPILE_CACHE",',
       '"CARGO_TARGET_DIR",',
-      '"XDG_CACHE_HOME"',
+      '"XDG_CACHE_HOME",',
+      '"XDG_CONFIG_HOME",',
+      '"XDG_DATA_HOME",',
+      '"XDG_STATE_HOME"',
       '];',
+      'require("node:fs").writeFileSync(require("node:path").join(process.env.CODEX_HOME, "config.toml"), "isolated\\n");',
       'console.log(JSON.stringify(Object.fromEntries(keys.map((key) => [key, process.env[key]]))));',
     ].join(' '),
   ], {
@@ -117,6 +130,10 @@ test('repo temp env wrapper routes tool caches outside the checkout', () => {
     encoding: 'utf8',
     env: {
       ...process.env,
+      HOME: sourceHome,
+      CODEX_HOME: sourceCodexHome,
+      OPL_REPO_TEMP_ROOT: '',
+      OPL_REPO_TEMP_ENV_ACTIVE: '',
       PYTHONPYCACHEPREFIX: path.join(repoRoot, 'stale-pycache'),
       UV_PROJECT_ENVIRONMENT: path.join(repoRoot, 'stale-uv-env'),
       NPM_CONFIG_CACHE: path.join(repoRoot, 'stale-npm-cache'),
@@ -133,7 +150,10 @@ test('repo temp env wrapper routes tool caches outside the checkout', () => {
   assert.equal(env.OPL_REPO_TEMP_ENV_ACTIVE, '1');
   assert.equal(path.isAbsolute(tempRoot), true);
   assert.equal(tempRoot.startsWith(repoRoot), false);
+  assert.equal(env.HOME, path.join(tempRoot, 'home'));
+  assert.equal(env.CODEX_HOME, path.join(tempRoot, 'home', '.codex'));
   [
+    env.OPL_STATE_DIR,
     env.TMPDIR,
     env.PYTHONPYCACHEPREFIX,
     env.UV_PROJECT_ENVIRONMENT,
@@ -141,10 +161,16 @@ test('repo temp env wrapper routes tool caches outside the checkout', () => {
     env.NODE_COMPILE_CACHE,
     env.CARGO_TARGET_DIR,
     env.XDG_CACHE_HOME,
+    env.XDG_CONFIG_HOME,
+    env.XDG_DATA_HOME,
+    env.XDG_STATE_HOME,
   ].forEach((value) => {
     assert.equal(value.startsWith(tempRoot), true);
   });
   assert.match(env.PYTEST_ADDOPTS, new RegExp(`cache_dir=${tempRoot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+  assert.equal(fs.readFileSync(sourceConfig, 'utf8'), 'model = "sentinel"\n');
+  assert.equal(fs.existsSync(tempRoot), false);
+  fs.rmSync(sourceHome, { recursive: true, force: true });
 });
 
 test('tracked files do not contain Google API key literals', () => {
