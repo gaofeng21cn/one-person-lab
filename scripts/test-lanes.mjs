@@ -555,7 +555,7 @@ function expandPureTestAggregator(relativePath, seen = new Set()) {
   if (seen.has(relativePath)) {
     fail(`Test import cycle detected while expanding ${relativePath}`);
   }
-  const importedTests = collectImportedTestFiles(relativePath).filter(isTrackedTestPath);
+  const importedTests = collectImportedTestFiles(relativePath).filter(isImportedTestModule);
   if (importedTests.length === 0 || hasOwnTestRegistration(relativePath)) {
     return [relativePath];
   }
@@ -565,11 +565,16 @@ function expandPureTestAggregator(relativePath, seen = new Set()) {
 
 function hasOwnTestRegistration(relativePath) {
   const source = fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
-  return /\b(?:test|describe)\s*\(/.test(source);
+  return /(?:^|[^\w.])(?:test|describe)\s*\(/m.test(source);
 }
 
 function isTrackedTestPath(relativePath) {
   return /\.test\.(?:ts|mjs)$/.test(relativePath);
+}
+
+function isImportedTestModule(relativePath) {
+  return relativePath.startsWith('tests/')
+    && (isTrackedTestPath(relativePath) || hasOwnTestRegistration(relativePath));
 }
 
 function duplicateTestImportClosure(entries) {
@@ -588,7 +593,7 @@ function duplicateTestImportClosure(entries) {
 function testImportClosure(relativePath, closure = new Set()) {
   if (closure.has(relativePath)) return closure;
   closure.add(relativePath);
-  for (const imported of collectImportedTestFiles(relativePath).filter(isTrackedTestPath)) {
+  for (const imported of collectImportedTestFiles(relativePath).filter(isImportedTestModule)) {
     testImportClosure(imported, closure);
   }
   return closure;
@@ -726,9 +731,12 @@ function spawnStep(commandName, args, context, options = {}) {
     },
   });
   if (isTimeoutResult(result)) {
-    cleanupTimedOutProcessGroup(result);
+    cleanupProcessGroup(result);
     reportStepTimeout(commandName, args, context);
     return { ...result, status: 1 };
+  }
+  if (result.status !== 0) {
+    cleanupProcessGroup(result);
   }
   return result;
 }
@@ -959,7 +967,7 @@ function isTimeoutResult(result) {
   return result.error?.code === 'ETIMEDOUT';
 }
 
-function cleanupTimedOutProcessGroup(result) {
+function cleanupProcessGroup(result) {
   if (!result.pid) {
     return;
   }
@@ -969,7 +977,7 @@ function cleanupTimedOutProcessGroup(result) {
     try {
       process.kill(result.pid, 'SIGKILL');
     } catch {
-      // The timeout report below is authoritative; cleanup is best-effort for child process groups.
+      // The child result is authoritative; cleanup is best-effort for its process group.
     }
   }
 }

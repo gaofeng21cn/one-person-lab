@@ -9,6 +9,29 @@ import { runCli, runCliAsync, runCliReadOnly } from './cli/helpers.ts';
 
 const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..');
 
+function processExists(pid: number) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ESRCH') {
+      return false;
+    }
+    throw error;
+  }
+}
+
+async function waitForProcessExit(pid: number) {
+  const deadline = Date.now() + 2_000;
+  while (Date.now() < deadline) {
+    if (!processExists(pid)) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  assert.fail(`Process ${pid} remained alive after its failed test lane step exited.`);
+}
+
 test('every Node test batch receives a distinct runner-owned OPL_STATE_DIR', () => {
   const captureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-test-lane-state-capture-'));
   const captureFile = path.join(captureRoot, 'state-dirs.txt');
@@ -50,6 +73,40 @@ test('every Node test batch receives a distinct runner-owned OPL_STATE_DIR', () 
     assert.equal(process.cwd(), repoRoot);
   } finally {
     fs.rmSync(captureRoot, { recursive: true, force: true });
+  }
+});
+
+test('a failed Node test step cleans up its detached process group', {
+  skip: process.platform === 'win32',
+}, async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-test-lane-process-group-'));
+  const pidFile = path.join(root, 'orphan.pid');
+  let childPid: number | null = null;
+
+  try {
+    const result = runNodeTestStep({
+      kind: 'node-test',
+      files: ['tests/fixtures/test-lanes/failing-orphan-probe.test.mjs'],
+      stripTypes: false,
+      batchSize: 1,
+      env: {
+        NODE_TEST_CONTEXT: undefined,
+        OPL_TEST_LANE_ORPHAN_PID_FILE: pidFile,
+      },
+    }, {
+      laneName: 'process-group-cleanup-test',
+      stepIndex: 0,
+    });
+
+    assert.notEqual(result.status, 0);
+    childPid = Number(fs.readFileSync(pidFile, 'utf8'));
+    assert.equal(Number.isSafeInteger(childPid) && childPid > 0, true);
+    await waitForProcessExit(childPid);
+  } finally {
+    if (childPid && processExists(childPid)) {
+      process.kill(childPid, 'SIGKILL');
+    }
+    fs.rmSync(root, { recursive: true, force: true });
   }
 });
 

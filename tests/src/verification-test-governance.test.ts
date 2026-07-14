@@ -268,6 +268,7 @@ test('test:full stays in the single test lane registry', () => {
       source_lane: string;
       batch_size: number | null;
       env: Record<string, string>;
+      files: string[];
     }>;
   };
   assert.ok(payload.deduplicated_entry_count > 0);
@@ -278,6 +279,35 @@ test('test:full stays in the single test lane registry', () => {
         && group.batch_size === 1
         && group.env.OPL_CLI_TEST_TIMEOUT_MS === '90000'),
     true,
+  );
+
+  const groupFor = (file: string) => payload.node_test_groups.filter(
+    (group) => group.files.includes(file),
+  );
+  assert.deepEqual(
+    groupFor('tests/src/family-runtime-temporal-terminal-sync.test.ts').map((group) => ({
+      source_lane: group.source_lane,
+      batch_size: group.batch_size,
+    })),
+    [{ source_lane: 'read-model-gates', batch_size: 1 }],
+  );
+  assert.deepEqual(
+    groupFor('tests/src/cli/cases/family-runtime-cases/provider-repair.ts').map((group) => ({
+      source_lane: group.source_lane,
+      batch_size: group.batch_size,
+    })),
+    [{ source_lane: 'read-model-gates', batch_size: 1 }],
+  );
+  assert.equal(
+    groupFor('tests/src/cli/cases/app-state-cases/public-surface.ts').length,
+    1,
+  );
+  assert.deepEqual(
+    groupFor('tests/src/cli/cases/system-startup-maintenance-cases/developer-mode-checkouts.ts').map((group) => ({
+      source_lane: group.source_lane,
+      batch_size: group.batch_size,
+    })),
+    [{ source_lane: 'read-model-gates', batch_size: 1 }],
   );
 
   const listed = spawnSync(process.execPath, [registryPath, 'list'], {
