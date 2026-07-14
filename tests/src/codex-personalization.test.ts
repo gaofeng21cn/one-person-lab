@@ -11,57 +11,49 @@ import {
 } from '../../src/modules/console/codex-personalization.ts';
 import { readOplFlowDefaultUserInstructions } from '../../src/modules/connect/index.ts';
 import { runCli } from './cli/helpers.ts';
-
-function writeFile(filePath: string, content: string) {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, content, 'utf8');
-}
+import { writeManagedRuntimeSourceFixture } from './cli/cases/packages-cases/managed-runtime-source-fixture.ts';
 
 function sha256(content: string) {
   return `sha256:${crypto.createHash('sha256').update(content).digest('hex')}`;
 }
 
 function writeOplFlowPackage(root: string) {
-  const sourceRoot = path.join(root, 'opl-flow-source');
-  const payloadPath = path.join(root, 'opl-flow-payload.json');
-  const manifestPath = path.join(root, 'opl-flow-manifest.json');
   const files = {
     '.codex-plugin/plugin.json': `${JSON.stringify({ name: 'opl-flow', version: '0.1.16', skills: './skills/' })}\n`,
     'skills/opl-flow/SKILL.md': '# OPL Flow\n',
     'templates/AGENTS.md': 'OPL Flow default instructions.\n',
   };
-  for (const [relativePath, content] of Object.entries(files)) {
-    writeFile(path.join(sourceRoot, relativePath), content);
-  }
-  writeFile(payloadPath, `${JSON.stringify({
-    surface_kind: 'opl_agent_package_payload_manifest',
-    package_id: 'opl-flow',
-    package_version: '0.1.16',
-    source_repo: 'https://example.test/opl-flow.git',
-    source_commit: 'fixture-opl-flow-0.1.16',
-    files: Object.entries(files).map(([relativePath, content]) => ({
-      path: relativePath,
-      source_url: path.join(sourceRoot, relativePath),
-      sha256: sha256(content),
-    })),
-  }, null, 2)}\n`);
-  writeFile(manifestPath, `${JSON.stringify({
-    surface_kind: 'opl_agent_package_manifest.v1',
-    agent_id: 'opl-flow',
-    package_id: 'opl-flow',
-    display_name: 'OPL Flow',
-    publisher: 'one-person-lab',
+  return writeManagedRuntimeSourceFixture({
+    root,
+    moduleId: 'opl-flow',
+    repoName: 'opl-flow',
     version: '0.1.16',
-    source: 'first_party',
-    carrier_source_role: 'codex_plugin_default_carrier_not_package_truth',
-    codex_surface: {
-      plugin_id: 'opl-flow',
-      plugin_payload_manifest_url: payloadPath,
-      required_skill_ids: ['opl-flow'],
+    sourceHeadSha: 'f'.repeat(40),
+    packageManifest: {
+      surface_kind: 'opl_agent_package_manifest.v1',
+      agent_id: 'opl-flow',
+      package_id: 'opl-flow',
+      display_name: 'OPL Flow',
+      publisher: 'one-person-lab',
+      version: '0.1.16',
+      source: 'first_party',
+      carrier_source_role: 'codex_plugin_default_carrier_not_package_truth',
+      codex_surface: {
+        plugin_id: 'opl-flow',
+        required_skill_ids: ['opl-flow'],
+      },
+      capability_dependencies: [],
     },
-    capability_dependencies: [],
-  }, null, 2)}\n`);
-  return manifestPath;
+    payloadManifest: {
+      surface_kind: 'opl_agent_package_payload_manifest',
+      files: Object.entries(files).map(([relativePath, content]) => ({
+        path: relativePath,
+        source_path: relativePath,
+        sha256: sha256(content),
+      })),
+    },
+    sourceFiles: Object.entries(files).map(([sourcePath, content]) => ({ sourcePath, content })),
+  });
 }
 
 test('Codex user instructions use SHA preconditions, backup, and atomic readback', () => {
@@ -75,13 +67,12 @@ test('Codex user instructions use SHA preconditions, backup, and atomic readback
 
   try {
     assert.equal(readOplFlowDefaultUserInstructions().reason, 'opl_flow_package_not_installed');
-    runCli([
-      'packages', 'install', '--manifest-url', writeOplFlowPackage(root), '--trust-tier', 'first_party',
-    ], {
+    runCli(['packages', 'install', 'opl-flow'], {
       HOME: process.env.HOME,
       CODEX_HOME: process.env.CODEX_HOME,
       OPL_STATE_DIR: process.env.OPL_STATE_DIR,
       OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
+      ...writeOplFlowPackage(root),
     });
 
     const missing = readCodexUserInstructions();

@@ -11,10 +11,8 @@ import {
   type CurrentOwnerDeltaCapabilityBinding,
 } from '../../src/modules/connect/capability-registry-resolver.ts';
 import { runOplAgentPackageInstall } from '../../src/modules/connect/agent-package-registry.ts';
-import {
-  writeCapabilityProvider,
-  writeMasConsumer,
-} from './cli/cases/packages-cases/capability-fixtures.ts';
+import { sha256Fixture } from './cli/cases/packages-cases/helpers.ts';
+import { writeManagedRuntimeSourceFixture } from './cli/cases/packages-cases/managed-runtime-source-fixture.ts';
 import { ensureProviderHostedStageAttempt } from '../../src/modules/runway/family-runtime-provider-hosted-attempts.ts';
 import {
   buildCapabilityRegistryStageContextReceipt,
@@ -612,9 +610,48 @@ test('provider-hosted attempt launch consumes typed capability readout without c
   const previousFamilyRoot = process.env.OPL_FAMILY_WORKSPACE_ROOT;
   const previousStateRoot = process.env.OPL_STATE_DIR;
   const previousCodexHome = process.env.CODEX_HOME;
+  const previousPath = process.env.PATH;
+  const previousPackagesOwner = process.env.OPL_PACKAGES_OWNER;
   process.env.OPL_FAMILY_WORKSPACE_ROOT = familyRoot;
   process.env.OPL_STATE_DIR = path.join(familyRoot, 'state');
   process.env.CODEX_HOME = path.join(familyRoot, 'codex-home');
+  const packageFiles = {
+    '.codex-plugin/plugin.json': `${JSON.stringify({ name: 'med-autoscience', version: '0.2.1' })}\n`,
+    'skills/med-autoscience/SKILL.md': '# Med Auto Science\n',
+  };
+  const packageFixtureEnv = writeManagedRuntimeSourceFixture({
+    root: path.join(familyRoot, 'release-set'),
+    moduleId: 'medautoscience',
+    repoName: 'med-autoscience',
+    version: '0.2.1',
+    sourceHeadSha: 'a'.repeat(40),
+    packageManifest: {
+      surface_kind: 'opl_agent_package_manifest.v1',
+      agent_id: 'mas',
+      package_id: 'mas',
+      display_name: 'Med Auto Science',
+      publisher: 'one-person-lab',
+      version: '0.2.1',
+      source: 'first_party',
+      carrier_source_role: 'codex_plugin_default_carrier_not_package_truth',
+      codex_surface: {
+        plugin_id: 'med-autoscience',
+        required_skill_ids: ['med-autoscience'],
+      },
+      capability_dependencies: [],
+    },
+    payloadManifest: {
+      surface_kind: 'opl_agent_package_payload_manifest',
+      files: Object.entries(packageFiles).map(([relativePath, content]) => ({
+        path: relativePath,
+        source_path: relativePath,
+        sha256: sha256Fixture(content),
+      })),
+    },
+    sourceFiles: Object.entries(packageFiles).map(([sourcePath, content]) => ({ sourcePath, content })),
+  });
+  process.env.PATH = packageFixtureEnv.PATH;
+  process.env.OPL_PACKAGES_OWNER = packageFixtureEnv.OPL_PACKAGES_OWNER;
   t.after(() => {
     if (previousFamilyRoot === undefined) delete process.env.OPL_FAMILY_WORKSPACE_ROOT;
     else process.env.OPL_FAMILY_WORKSPACE_ROOT = previousFamilyRoot;
@@ -622,13 +659,14 @@ test('provider-hosted attempt launch consumes typed capability readout without c
     else process.env.OPL_STATE_DIR = previousStateRoot;
     if (previousCodexHome === undefined) delete process.env.CODEX_HOME;
     else process.env.CODEX_HOME = previousCodexHome;
+    if (previousPath === undefined) delete process.env.PATH;
+    else process.env.PATH = previousPath;
+    if (previousPackagesOwner === undefined) delete process.env.OPL_PACKAGES_OWNER;
+    else process.env.OPL_PACKAGES_OWNER = previousPackagesOwner;
     fs.rmSync(familyRoot, { recursive: true, force: true });
   });
-  const providerManifest = writeCapabilityProvider(path.join(familyRoot, 'provider'));
-  const consumerManifest = writeMasConsumer(path.join(familyRoot, 'consumer'), providerManifest);
   await runOplAgentPackageInstall({
-    manifestUrl: consumerManifest,
-    trustTier: 'first_party',
+    packageId: 'mas',
     scope: 'workspace',
     targetWorkspace: familyRoot,
   });
