@@ -15,10 +15,10 @@ function writeOplFlowPackage(
   root: string,
   options: { includeRemoteCompanions?: boolean } = {},
 ) {
-  const sourceRoot = path.join(root, 'opl-flow-source');
+  const sourceRoot = path.join(root, 'fixture.opl-flow-source');
   const policy = {
     schema: 'opl_flow_workflow_policy.v1',
-    package: { id: 'opl-flow', version: '0.1.16', owner: 'opl-flow', kind: 'workflow_profile' },
+    package: { id: 'fixture.opl-flow', version: '0.1.16', owner: 'opl-flow', kind: 'workflow_profile' },
     workflow_generation: 'model-native-test',
     requires: [{
       id: 'opl-base',
@@ -99,8 +99,8 @@ function writeOplFlowPackage(
         reason: 'fixture',
       },
       {
-        id: 'legacy-opl-flow-local-plugin',
-        discovery_ids: ['opl-flow-local'],
+        id: 'legacy-fixture.opl-flow-local-plugin',
+        discovery_ids: ['fixture.opl-flow-local'],
         auto_retire_on_optimize: true,
         reason: 'fixture',
       },
@@ -122,7 +122,7 @@ function writeOplFlowPackage(
       fresh_discovery_required: true,
     },
     historical_fingerprints: {
-      plugin_ids: ['superpowers', 'ponytail@ponytail', 'opl-flow@opl-flow-local'],
+      plugin_ids: ['superpowers', 'ponytail@ponytail', 'fixture.opl-flow@fixture.opl-flow-local'],
       skill_ids: ['using-superpowers', 'superpowers-lite'],
       service_ids: ['codexcont', 'com.opl.codexcont'],
       config_markers: ['ponytail', 'codexcont', 'intelligence_enhancement'],
@@ -131,31 +131,31 @@ function writeOplFlowPackage(
   };
   writeFile(path.join(sourceRoot, 'contracts', 'workflow-policy.json'), formatJsonPayload(policy));
   writeFile(path.join(sourceRoot, '.codex-plugin', 'plugin.json'), formatJsonPayload({
-    name: 'opl-flow',
+    name: 'fixture.opl-flow',
     version: '0.1.16',
     skills: './skills/',
   }));
-  for (const skillId of ['opl-flow', 'codex-ops-kit']) {
+  for (const skillId of ['fixture.opl-flow', 'codex-ops-kit']) {
     writeFile(path.join(sourceRoot, 'skills', skillId, 'SKILL.md'), `# ${skillId}\n`);
   }
   writeFile(path.join(sourceRoot, 'profile', 'runtime-profile'), '你始终用中文回复。\n');
   writeFile(path.join(sourceRoot, 'profile', 'authoring-source'), '# TASTE\n');
   writeFile(path.join(sourceRoot, 'profile', 'manifest.json'), '{}\n');
   writeFile(path.join(sourceRoot, 'profile', 'modules', 'user-preferences'), 'user preferences\n');
-  const manifestPath = path.join(root, 'opl-flow-manifest.json');
+  const manifestPath = path.join(root, 'fixture.opl-flow-manifest.json');
   writeFile(manifestPath, formatJsonPayload({
     surface_kind: 'opl_agent_package_manifest.v1',
-    agent_id: 'opl-flow',
-    package_id: 'opl-flow',
+    agent_id: 'fixture.opl-flow',
+    package_id: 'fixture.opl-flow',
     display_name: 'OPL Flow',
     publisher: 'one-person-lab',
     version: '0.1.16',
     source: 'first_party',
     carrier_source_role: 'codex_plugin_default_carrier_not_package_truth',
     codex_surface: {
-      plugin_id: 'opl-flow',
+      plugin_id: 'fixture.opl-flow',
       plugin_source_path: sourceRoot,
-      required_skill_ids: ['opl-flow', 'codex-ops-kit'],
+      required_skill_ids: ['fixture.opl-flow', 'codex-ops-kit'],
     },
     profile_surface: {
       runtime_profile: { source_path: 'profile/runtime-profile', target_id: 'user_agents_profile' },
@@ -174,11 +174,11 @@ function writeOplFlowPackage(
     health_check: {},
     permissions: [],
     update_channel: 'manifest_url',
-    rollback_ref: 'rollback-ref:opl-flow/generic-package-lkg',
+    rollback_ref: 'rollback-ref:fixture.opl-flow/generic-package-lkg',
   }));
   writeFile(path.join(sourceRoot, 'contracts', 'workflow-policy.schema.json'), formatJsonPayload({
     $schema: 'https://json-schema.org/draft/2020-12/schema',
-    $id: 'https://example.test/opl-flow-workflow-policy.schema.json',
+    $id: 'https://example.test/fixture.opl-flow-workflow-policy.schema.json',
     type: 'object',
     required: ['schema', 'package', 'requires', 'recommends', 'compatible_optional', 'conflicts', 'retires', 'migration_policy', 'historical_fingerprints', 'codex_model_policy'],
     properties: {
@@ -198,7 +198,7 @@ function writeOplFlowPackage(
 }
 
 test('generic OPL package transaction owns OPL Flow policy migration without inventing a fresh-install rollback generation', async () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-flow-package-transaction-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fixture.opl-flow-package-transaction-'));
   const home = path.join(root, 'home');
   const codexHome = path.join(home, '.codex');
   const stateDir = path.join(root, 'state');
@@ -223,17 +223,17 @@ test('generic OPL package transaction owns OPL Flow policy migration without inv
     '[mcp_servers.codexcont]',
     'command = "codexcont"',
     '',
-    '[projects."/Users/test/workspace/opl-flow"]',
+    '[projects."/Users/test/workspace/fixture.opl-flow"]',
     'trust_level = "trusted"',
     '',
     '[plugins."documents@openai-primary-runtime"]',
     'enabled = true',
     '',
-    '[marketplaces.opl-flow-local]',
+    '[marketplaces.fixture.opl-flow-local]',
     'source_type = "local"',
-    'source = "/tmp/opl-flow-local"',
+    'source = "/tmp/fixture.opl-flow-local"',
     '',
-    '[plugins."opl-flow@opl-flow-local"]',
+    '[plugins."fixture.opl-flow@fixture.opl-flow-local"]',
     'enabled = true',
     '',
   ].join('\n');
@@ -282,7 +282,7 @@ test('generic OPL package transaction owns OPL Flow policy migration without inv
       'codexcont-intelligence-enhancement',
       'superpowers-local-method-profile',
       'legacy-development-role-prompts',
-      'legacy-opl-flow-local-plugin',
+      'legacy-fixture.opl-flow-local-plugin',
     ]);
     assert.equal(migration.backup_active, true);
     assert.equal(fs.existsSync(migration.backup_root), true);
@@ -298,14 +298,14 @@ test('generic OPL package transaction owns OPL Flow policy migration without inv
     );
     for (const legacyPath of legacyPaths) assert.equal(fs.existsSync(legacyPath), false, legacyPath);
     const installedConfig = fs.readFileSync(configPath, 'utf8');
-    assert.doesNotMatch(installedConfig, /superpowers|ponytail|codexcont|opl-flow@opl-flow-local/i);
-    assert.match(installedConfig, /\[projects\."\/Users\/test\/workspace\/opl-flow"\]/);
+    assert.doesNotMatch(installedConfig, /superpowers|ponytail|codexcont|fixture.opl-flow@fixture.opl-flow-local/i);
+    assert.match(installedConfig, /\[projects\."\/Users\/test\/workspace\/fixture.opl-flow"\]/);
     assert.match(installedConfig, /\[plugins\."documents@openai-primary-runtime"\]/);
 
     const lockIndex = JSON.parse(fs.readFileSync(path.join(stateDir, 'agent-package-locks.json'), 'utf8'));
     assert.deepEqual(lockIndex.last_known_good_transactions, []);
     assert.equal(fs.existsSync(path.join(stateDir, 'workflow-packages')), false);
-    const current = runCli(['packages', 'status', '--package-id', 'opl-flow'], env) as any;
+    const current = runCli(['packages', 'status', '--package-id', 'fixture.opl-flow'], env) as any;
     const statusMaterializer = current.opl_agent_package_status.owner_route_readback.packages[0].materializer;
     assert.equal(statusMaterializer.managed_policy_migration.status, 'applied');
     assert.equal(
@@ -321,7 +321,7 @@ test('generic OPL package transaction owns OPL Flow policy migration without inv
 
     const restoredPonytailPath = path.join(codexHome, 'plugins', 'cache', 'ponytail');
     writeFile(path.join(restoredPonytailPath, 'restored.txt'), 'restored after install\n');
-    const drifted = runCli(['packages', 'status', '--package-id', 'opl-flow'], env) as any;
+    const drifted = runCli(['packages', 'status', '--package-id', 'fixture.opl-flow'], env) as any;
     const driftedPackage = drifted.opl_agent_package_status.owner_route_readback.packages[0];
     const driftedCurrentness = driftedPackage.materializer.managed_policy_currentness;
     assert.equal(drifted.opl_agent_package_status.status, 'attention_needed');
@@ -330,7 +330,7 @@ test('generic OPL package transaction owns OPL Flow policy migration without inv
     assert.equal(drifted.opl_agent_package_status.recommended_action, 'repair');
     assert.equal(driftedPackage.lifecycle_ux.recommended_action, 'repair');
     assert.equal(driftedCurrentness.status, 'drifted');
-    assert.equal(driftedCurrentness.repair_command, 'opl packages repair --package-id opl-flow');
+    assert.equal(driftedCurrentness.repair_command, 'opl packages repair --package-id fixture.opl-flow');
     assert.deepEqual(driftedCurrentness.detected_conflicts, [{
       migration_id: 'ponytail',
       surface_kind: 'plugin',
@@ -338,10 +338,10 @@ test('generic OPL package transaction owns OPL Flow policy migration without inv
       physical_ref: restoredPonytailPath,
     }]);
 
-    const repaired = runCli(['packages', 'repair', '--package-id', 'opl-flow'], env) as any;
+    const repaired = runCli(['packages', 'repair', '--package-id', 'fixture.opl-flow'], env) as any;
     assert.equal(repaired.opl_agent_package_repair.status, 'repaired');
     assert.equal(fs.existsSync(restoredPonytailPath), false);
-    const repairedStatus = runCli(['packages', 'status', '--package-id', 'opl-flow'], env) as any;
+    const repairedStatus = runCli(['packages', 'status', '--package-id', 'fixture.opl-flow'], env) as any;
     const repairedPackage = repairedStatus.opl_agent_package_status.owner_route_readback.packages[0];
     assert.equal(repairedStatus.opl_agent_package_status.operational_ready, true);
     assert.equal(repairedPackage.materializer.managed_policy_currentness.status, 'current');
@@ -358,9 +358,9 @@ test('generic OPL package transaction owns OPL Flow policy migration without inv
     ].join('\n');
     fs.writeFileSync(configPath, postInstallConfig, 'utf8');
 
-    const rollbackFailure = runCliFailure(['packages', 'rollback', 'opl-flow'], env);
+    const rollbackFailure = runCliFailure(['packages', 'rollback', 'fixture.opl-flow'], env);
     assert.equal(rollbackFailure.payload.error.details.failure_code, 'agent_package_last_known_good_missing');
-    const status = runCli(['packages', 'status', '--package-id', 'opl-flow'], env) as any;
+    const status = runCli(['packages', 'status', '--package-id', 'fixture.opl-flow'], env) as any;
     assert.equal(status.opl_agent_package_status.installed_package_count, 1);
   } finally {
     fs.rmSync(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
@@ -368,7 +368,7 @@ test('generic OPL package transaction owns OPL Flow policy migration without inv
 });
 
 test('fresh install rollback has no virtual target', async () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-flow-clean-prestate-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fixture.opl-flow-clean-prestate-'));
   const home = path.join(root, 'home');
   const codexHome = path.join(home, '.codex');
   const env = {
@@ -386,9 +386,9 @@ test('fresh install rollback has no virtual target', async () => {
 
     const lockIndex = JSON.parse(fs.readFileSync(path.join(env.OPL_STATE_DIR, 'agent-package-locks.json'), 'utf8'));
     assert.deepEqual(lockIndex.last_known_good_transactions, []);
-    const failure = runCliFailure(['packages', 'rollback', 'opl-flow'], env);
+    const failure = runCliFailure(['packages', 'rollback', 'fixture.opl-flow'], env);
     assert.equal(failure.payload.error.details.failure_code, 'agent_package_last_known_good_missing');
-    assert.equal(runCli(['packages', 'status', '--package-id', 'opl-flow'], env)
+    assert.equal(runCli(['packages', 'status', '--package-id', 'fixture.opl-flow'], env)
       .opl_agent_package_status.installed_package_count, 1);
   } finally {
     fs.rmSync(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
@@ -396,7 +396,7 @@ test('fresh install rollback has no virtual target', async () => {
 });
 
 test('managed policy rollback helpers refuse conflicting TOML tables and recreated physical surfaces', async () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-flow-policy-conflict-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fixture.opl-flow-policy-conflict-'));
   const home = path.join(root, 'home');
   const codexHome = path.join(home, '.codex');
   const legacyPath = path.join(home, '.agents', 'skills', 'superpowers');
@@ -454,7 +454,7 @@ test('managed policy rollback helpers refuse conflicting TOML tables and recreat
 });
 
 test('installed-source optimize is offline, dry-run safe, and explicitly rolls back policy and profile state', async () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-flow-installed-source-optimize-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fixture.opl-flow-installed-source-optimize-'));
   const home = path.join(root, 'home');
   const codexHome = path.join(home, '.codex');
   const stateDir = path.join(root, 'state');
@@ -462,7 +462,7 @@ test('installed-source optimize is offline, dry-run safe, and explicitly rolls b
   const commandLog = path.join(root, 'remote-command.log');
   const configPath = path.join(codexHome, 'config.toml');
   const manifestPath = writeOplFlowPackage(root, { includeRemoteCompanions: true });
-  const sourceRoot = path.join(root, 'opl-flow-source');
+  const sourceRoot = path.join(root, 'fixture.opl-flow-source');
   const profilePath = path.join(codexHome, 'AGENTS.md');
   const conflictPath = path.join(codexHome, 'plugins', 'cache', 'ponytail');
   const baseEnv = {
@@ -504,7 +504,7 @@ test('installed-source optimize is offline, dry-run safe, and explicitly rolls b
       config: fs.readFileSync(configPath, 'utf8'),
       profile: fs.readFileSync(profilePath, 'utf8'),
     };
-    const preview = runCli(['packages', 'optimize', 'opl-flow', '--dry-run'], optimizeEnv) as any;
+    const preview = runCli(['packages', 'optimize', 'fixture.opl-flow', '--dry-run'], optimizeEnv) as any;
     assert.equal(preview.opl_agent_package_optimize.status, 'validated_no_write');
     assert.equal(preview.opl_agent_package_optimize.source_selection, 'installed_package_lock');
     assert.equal(preview.opl_agent_package_optimize.network_accessed, false);
@@ -514,7 +514,7 @@ test('installed-source optimize is offline, dry-run safe, and explicitly rolls b
     assert.equal(fs.readFileSync(configPath, 'utf8'), beforeDryRun.config);
     assert.equal(fs.readFileSync(profilePath, 'utf8'), beforeDryRun.profile);
 
-    const optimized = runCli(['packages', 'optimize', 'opl-flow'], optimizeEnv) as any;
+    const optimized = runCli(['packages', 'optimize', 'fixture.opl-flow'], optimizeEnv) as any;
     const optimization = optimized.opl_agent_package_optimize;
     assert.equal(optimization.status, 'optimized');
     assert.equal(optimization.lifecycle_receipt.source_selection, 'installed_package_lock');
@@ -535,7 +535,7 @@ test('installed-source optimize is offline, dry-run safe, and explicitly rolls b
       config: fs.readFileSync(configPath, 'utf8'),
       profile: fs.readFileSync(profilePath, 'utf8'),
     };
-    const rollbackPreview = runCli(['packages', 'rollback', 'opl-flow', '--dry-run'], optimizeEnv) as any;
+    const rollbackPreview = runCli(['packages', 'rollback', 'fixture.opl-flow', '--dry-run'], optimizeEnv) as any;
     assert.equal(rollbackPreview.opl_agent_package_rollback.status, 'validated_no_write');
     assert.equal(rollbackPreview.opl_agent_package_rollback.network_accessed, false);
     assert.equal(fs.readFileSync(lockPath, 'utf8'), rollbackPreviewState.lock);
@@ -544,7 +544,7 @@ test('installed-source optimize is offline, dry-run safe, and explicitly rolls b
     assert.equal(fs.readFileSync(profilePath, 'utf8'), rollbackPreviewState.profile);
 
     fs.chmodSync(stateDir, 0o555);
-    const rollbackFailure = runCliFailure(['packages', 'rollback', 'opl-flow'], optimizeEnv);
+    const rollbackFailure = runCliFailure(['packages', 'rollback', 'fixture.opl-flow'], optimizeEnv);
     fs.chmodSync(stateDir, 0o755);
     assert.notEqual(rollbackFailure.status, 0);
     assert.equal(fs.readFileSync(lockPath, 'utf8'), rollbackPreviewState.lock);
@@ -553,7 +553,7 @@ test('installed-source optimize is offline, dry-run safe, and explicitly rolls b
     assert.match(fs.readFileSync(profilePath, 'utf8'), /Optimize fixture/);
     assert.equal(fs.existsSync(conflictPath), false);
 
-    const rolledBack = runCli(['packages', 'rollback', 'opl-flow'], optimizeEnv) as any;
+    const rolledBack = runCli(['packages', 'rollback', 'fixture.opl-flow'], optimizeEnv) as any;
     const rollback = rolledBack.opl_agent_package_rollback;
     assert.equal(rollback.status, 'rolled_back');
     assert.equal(rollback.source_selection, 'installed_package_lock');
@@ -573,7 +573,7 @@ test('installed-source optimize is offline, dry-run safe, and explicitly rolls b
 });
 
 test('failed installed-source optimize restores policy and profile state before returning failure', async () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-flow-optimize-failure-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fixture.opl-flow-optimize-failure-'));
   const home = path.join(root, 'home');
   const codexHome = path.join(home, '.codex');
   const stateDir = path.join(root, 'state');
@@ -593,13 +593,13 @@ test('failed installed-source optimize restores policy and profile state before 
       'packages', 'install', '--manifest-url', manifestPath, '--trust-tier', 'first_party',
     ], env);
     const originalProfile = fs.readFileSync(profilePath, 'utf8');
-    writeFile(path.join(root, 'opl-flow-source', 'profile', 'runtime-profile'), 'updated on failed optimize\n');
+    writeFile(path.join(root, 'fixture.opl-flow-source', 'profile', 'runtime-profile'), 'updated on failed optimize\n');
     writeFile(path.join(conflictPath, 'restored.txt'), 'must survive failed optimize\n');
     fs.appendFileSync(configPath, '\n[marketplaces.ponytail]\nsource = "/tmp/failure"\n', 'utf8');
     const lockBefore = fs.readFileSync(path.join(stateDir, 'agent-package-locks.json'), 'utf8');
     const ledgerBefore = fs.readFileSync(path.join(stateDir, 'agent-package-lifecycle-ledger.json'), 'utf8');
     fs.chmodSync(stateDir, 0o555);
-    const failure = runCliFailure(['packages', 'optimize', 'opl-flow'], env);
+    const failure = runCliFailure(['packages', 'optimize', 'fixture.opl-flow'], env);
     fs.chmodSync(stateDir, 0o755);
     assert.notEqual(failure.status, 0);
     assert.equal(fs.readFileSync(path.join(stateDir, 'agent-package-locks.json'), 'utf8'), lockBefore);

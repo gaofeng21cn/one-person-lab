@@ -28,6 +28,8 @@ import { defaultHomeShortcutPreferences } from '../../../../../src/modules/conne
 import { assertManifestMatchesRegistrySelection } from '../../../../../src/modules/connect/agent-package-registry-parts/selection.ts';
 import { writeManagedRuntimeSourceFixture } from './managed-runtime-source-fixture.ts';
 
+const FIXTURE_RCA_PACKAGE_ID = 'fixture.rca';
+
 test('default Home shortcut visibility follows registry starter_default', () => {
   const registry = normalizeRegistry({
     ...registryPayload('https://registry.example'),
@@ -68,7 +70,7 @@ test('package registry uses version_source_ref and rejects mutable latest_versio
   );
 });
 
-test('official aliases resolve offline and local manifests own runtime source install repair rollback and uninstall', () => {
+test('local manifest fixtures own runtime source install repair rollback and uninstall', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-positional-state-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-runtime-source-'));
   const modulesRoot = path.join(fixtureRoot, 'modules');
@@ -85,7 +87,7 @@ test('official aliases resolve offline and local manifests own runtime source in
     const manifestPath = path.join(fixtureRoot, 'rca-local-manifest.json');
     fs.writeFileSync(manifestPath, formatJsonPayload({
       ...agentPackageManifest({
-        packageId: 'rca',
+        packageId: FIXTURE_RCA_PACKAGE_ID,
         agentId: 'rca',
         pluginSourcePath,
       }),
@@ -100,16 +102,16 @@ test('official aliases resolve offline and local manifests own runtime source in
     ], env) as {
       opl_agent_package_install: { package_lock: { package_id: string; trust_tier: string; managed_runtime_source: any } };
     };
-    assert.equal(rca.opl_agent_package_install.package_lock.package_id, 'rca');
+    assert.equal(rca.opl_agent_package_install.package_lock.package_id, FIXTURE_RCA_PACKAGE_ID);
     assert.equal(rca.opl_agent_package_install.package_lock.trust_tier, 'first_party');
     assert.equal(rca.opl_agent_package_install.package_lock.managed_runtime_source.preparation_status, 'completed');
     assert.match(rca.opl_agent_package_install.package_lock.managed_runtime_source.handler_probe_output_sha256, /^sha256:/);
     assert.equal(fs.readFileSync(path.join(modulesRoot, 'redcube-ai', '.runtime-prepared'), 'utf8').trim(), '0.1.0');
 
-    const repaired = runCli(['packages', 'repair', '--package-id', 'redcube-ai'], env) as {
+    const repaired = runCli(['packages', 'repair', '--package-id', FIXTURE_RCA_PACKAGE_ID], env) as {
       opl_agent_package_repair: { package_lock: { package_id: string } };
     };
-    assert.equal(repaired.opl_agent_package_repair.package_lock.package_id, 'rca');
+    assert.equal(repaired.opl_agent_package_repair.package_lock.package_id, FIXTURE_RCA_PACKAGE_ID);
 
     Object.assign(env, writeManagedRuntimeSourceFixture({
       root: fixtureRoot,
@@ -118,18 +120,18 @@ test('official aliases resolve offline and local manifests own runtime source in
       version: '0.1.1',
       sourceHeadSha: 'runtime-source-v2',
     }));
-    const updated = runCli(['packages', 'update', '--package-id', 'redcube-ai'], env) as any;
+    const updated = runCli(['packages', 'update', '--package-id', FIXTURE_RCA_PACKAGE_ID], env) as any;
     assert.equal(updated.opl_agent_package_update.package_lock.managed_runtime_source.source_git_head_sha, 'runtime-source-v2');
     assert.equal(fs.readFileSync(path.join(modulesRoot, 'redcube-ai', '.runtime-prepared'), 'utf8').trim(), '0.1.1');
 
-    const rolledBack = runCli(['packages', 'rollback', '--package-id', 'redcube-ai'], env) as any;
+    const rolledBack = runCli(['packages', 'rollback', '--package-id', FIXTURE_RCA_PACKAGE_ID], env) as any;
     assert.equal(rolledBack.opl_agent_package_rollback.package_lock.managed_runtime_source.source_git_head_sha, 'runtime-source-v1');
     assert.equal(fs.readFileSync(path.join(modulesRoot, 'redcube-ai', '.runtime-prepared'), 'utf8').trim(), '0.1.0');
 
-    const removed = runCli(['packages', 'uninstall', '--package-id', 'redcube-ai'], env) as {
+    const removed = runCli(['packages', 'uninstall', '--package-id', FIXTURE_RCA_PACKAGE_ID], env) as {
       opl_agent_package_uninstall: { removed_package_lock: { package_id: string } };
     };
-    assert.equal(removed.opl_agent_package_uninstall.removed_package_lock.package_id, 'rca');
+    assert.equal(removed.opl_agent_package_uninstall.removed_package_lock.package_id, FIXTURE_RCA_PACKAGE_ID);
     assert.equal(fs.existsSync(path.join(modulesRoot, 'redcube-ai')), false);
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });
@@ -247,7 +249,7 @@ test('repair migrates legacy Framework manifests to one stable catalog selection
   const legacySourceHead = '3'.repeat(40);
   const stableSourceHead = '4'.repeat(40);
   fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
-  fs.writeFileSync(manifestPath, formatJsonPayload({
+  const legacyManifest = {
     ...agentPackageManifest({
       packageId: 'rca',
       agentId: 'rca',
@@ -261,7 +263,29 @@ test('repair migrates legacy Framework manifests to one stable catalog selection
       carrier_kind: 'opl_managed_module_source',
       module_id: 'redcube',
     },
-  }));
+  };
+  fs.writeFileSync(manifestPath, formatJsonPayload(legacyManifest));
+  const pluginJson = fs.readFileSync(path.join(pluginSourcePath, '.codex-plugin', 'plugin.json'), 'utf8');
+  const skillMarkdown = fs.readFileSync(path.join(pluginSourcePath, 'skills', 'redcube-ai', 'SKILL.md'), 'utf8');
+  const payloadManifest = {
+    surface_kind: 'opl_agent_package_payload_manifest',
+    files: [
+      {
+        path: '.codex-plugin/plugin.json',
+        source_path: 'plugins/redcube-ai/.codex-plugin/plugin.json',
+        sha256: sha256Fixture(pluginJson),
+      },
+      {
+        path: 'skills/redcube-ai/SKILL.md',
+        source_path: 'plugins/redcube-ai/skills/redcube-ai/SKILL.md',
+        sha256: sha256Fixture(skillMarkdown),
+      },
+    ],
+  };
+  const sourceFiles = [
+    { sourcePath: 'plugins/redcube-ai/.codex-plugin/plugin.json', content: pluginJson },
+    { sourcePath: 'plugins/redcube-ai/skills/redcube-ai/SKILL.md', content: skillMarkdown },
+  ];
   const env = {
     OPL_STATE_DIR: stateDir,
     OPL_MODULES_ROOT: modulesRoot,
@@ -273,53 +297,29 @@ test('repair migrates legacy Framework manifests to one stable catalog selection
       repoName: 'redcube-ai',
       version: '0.2.0',
       sourceHeadSha: legacySourceHead,
+      packageManifest: legacyManifest,
+      payloadManifest,
+      sourceFiles,
     }),
   };
   try {
-    runCli([
-      'packages', 'install', '--manifest-url', manifestPath, '--trust-tier', 'first_party',
-      '--source-kind', 'local_manifest_file',
-    ], env);
-    const pluginJson = fs.readFileSync(path.join(pluginSourcePath, '.codex-plugin', 'plugin.json'), 'utf8');
-    const skillMarkdown = fs.readFileSync(path.join(pluginSourcePath, 'skills', 'redcube-ai', 'SKILL.md'), 'utf8');
+    runCli(['packages', 'install', 'rca'], env);
+    const lockPath = path.join(stateDir, 'agent-package-locks.json');
+    const lockIndex = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
+    const legacyLock = lockIndex.packages.find((entry: any) => entry.package_id === 'rca');
+    legacyLock.source_kind = 'local_manifest_file';
+    legacyLock.manifest_url = manifestPath;
+    fs.writeFileSync(lockPath, formatJsonPayload(lockIndex));
+
     const stableFixtureEnv = writeManagedRuntimeSourceFixture({
       root: fixtureRoot,
       moduleId: 'redcube',
       repoName: 'redcube-ai',
       version: '0.2.1',
       sourceHeadSha: stableSourceHead,
-      packageManifest: {
-        ...agentPackageManifest({
-          packageId: 'rca',
-          agentId: 'rca',
-          pluginId: 'redcube-ai',
-          distributionPayload: null,
-        }),
-        source: 'first_party',
-        runtime_source_carrier: {
-          carrier_kind: 'opl_managed_module_source',
-          module_id: 'redcube',
-        },
-      },
-      payloadManifest: {
-        surface_kind: 'opl_agent_package_payload_manifest',
-        files: [
-          {
-            path: '.codex-plugin/plugin.json',
-            source_path: 'plugins/redcube-ai/.codex-plugin/plugin.json',
-            sha256: sha256Fixture(pluginJson),
-          },
-          {
-            path: 'skills/redcube-ai/SKILL.md',
-            source_path: 'plugins/redcube-ai/skills/redcube-ai/SKILL.md',
-            sha256: sha256Fixture(skillMarkdown),
-          },
-        ],
-      },
-      sourceFiles: [
-        { sourcePath: 'plugins/redcube-ai/.codex-plugin/plugin.json', content: pluginJson },
-        { sourcePath: 'plugins/redcube-ai/skills/redcube-ai/SKILL.md', content: skillMarkdown },
-      ],
+      packageManifest: legacyManifest,
+      payloadManifest,
+      sourceFiles,
     });
     Object.assign(env, stableFixtureEnv);
 
@@ -848,89 +848,32 @@ test('packages validates first-party agent package manifest shape', () => {
   }
 });
 
-test('packages resolves public aliases without rewriting manifest identity', async () => {
+test('packages reject external registries that claim canonical public package identities', async () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-alias-state-'));
   const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-alias-home-'));
   const pluginSourcePath = createPluginSourceFixture();
-  const runtimeFixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-alias-runtime-'));
-  const runtimeEnv = writeManagedRuntimeSourceFixture({
-    root: runtimeFixtureRoot,
-    moduleId: 'medautoscience',
-    repoName: 'med-autoscience',
-    version: '0.1.0a4',
-    sourceHeadSha: 'alias-runtime-source-v1',
-  });
   const env = {
     OPL_STATE_DIR: stateDir,
     HOME: homeDir,
     CODEX_HOME: path.join(homeDir, '.codex'),
-    OPL_MODULES_ROOT: path.join(runtimeFixtureRoot, 'modules'),
-    ...runtimeEnv,
   };
   try {
     await withAgentPackageServer(async (baseUrl) => {
-      const refresh = await runCliAsync([
-        'packages',
-        'registry',
-        'refresh',
-        '--registry-url',
-        `${baseUrl}/registry.json`,
-      ], env) as {
-        opl_agent_package_registry: {
-          entries: Array<{ package_id: string }>;
-        };
-      };
-      assert.equal(refresh.opl_agent_package_registry.entries[0].package_id, 'mas');
-
-      const install = await runCliAsync([
-        'packages',
-        'install',
-        '--registry-url',
-        `${baseUrl}/registry.json`,
-        '--package-id',
-        'mas',
-      ], env) as {
-        opl_agent_package_install: {
-          package_lock: { package_id: string; agent_id: string };
-          owner_route_readback: { selected_package_id: string };
-        };
-      };
-      assert.equal(install.opl_agent_package_install.package_lock.package_id, 'mas');
-      assert.equal(install.opl_agent_package_install.package_lock.agent_id, 'mas');
-      assert.equal(install.opl_agent_package_install.owner_route_readback.selected_package_id, 'mas');
-
-      const shortcut = await runCliAsync([
-        'packages',
-        'preferences',
-        'set',
-        '--package-id',
-        'mas',
-        '--shortcut-id',
-        'research',
-      ], env) as {
-        opl_agent_package_home_shortcut_preferences: {
-          preference: { package_id: string };
-        };
-      };
-      assert.equal(shortcut.opl_agent_package_home_shortcut_preferences.preference.package_id, 'mas');
-
-      const status = runCli(['packages', 'status', '--package-id', 'mas'], env) as {
-        opl_agent_package_status: {
-          package_id: string;
-          installed_packages: Array<{ package_id: string; agent_id: string }>;
-          home_shortcut_preferences: Array<{ package_id: string }>;
-          owner_route_readback: {
-            selected_package_id: string;
-            packages: Array<{ package_id: string }>;
-          };
-        };
-      };
-      assert.equal(status.opl_agent_package_status.package_id, 'mas');
-      assert.equal(status.opl_agent_package_status.installed_packages[0].package_id, 'mas');
-      assert.equal(status.opl_agent_package_status.installed_packages[0].agent_id, 'mas');
-      assert.equal(status.opl_agent_package_status.home_shortcut_preferences[0].package_id, 'mas');
-      assert.equal(status.opl_agent_package_status.owner_route_readback.selected_package_id, 'mas');
-      assert.equal(status.opl_agent_package_status.owner_route_readback.packages[0].package_id, 'mas');
+      await assert.rejects(
+        () => runCliAsync([
+          'packages', 'registry', 'refresh', '--registry-url', `${baseUrl}/registry.json`,
+        ], env),
+        /agent_package_registry_first_party_identity_collision/,
+      );
+      await assert.rejects(
+        () => runCliAsync([
+          'packages', 'install', '--registry-url', `${baseUrl}/registry.json`, '--package-id', 'mas',
+        ], env),
+        /first_party_package_explicit_source_forbidden/,
+      );
+      assert.equal(fs.existsSync(path.join(stateDir, 'agent-package-registry-cache.json')), false);
+      assert.equal(fs.existsSync(path.join(stateDir, 'agent-package-locks.json')), false);
+      assert.equal(fs.existsSync(path.join(homeDir, '.codex')), false);
     }, agentPackageManifest({
       packageId: 'mas',
       agentId: 'mas',
@@ -940,7 +883,6 @@ test('packages resolves public aliases without rewriting manifest identity', asy
     fs.rmSync(stateDir, { recursive: true, force: true });
     fs.rmSync(homeDir, { recursive: true, force: true });
     fs.rmSync(pluginSourcePath, { recursive: true, force: true });
-    fs.rmSync(runtimeFixtureRoot, { recursive: true, force: true });
   }
 });
 

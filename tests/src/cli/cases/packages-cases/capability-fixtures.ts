@@ -188,7 +188,13 @@ export function writeMasConsumer(
   root: string,
   providerManifestPath: string,
   version = '0.1.0a4',
-  options: { runtimeSourceCarrier?: boolean; capabilityCatalogRef?: string; packageCatalogRef?: string } = {},
+  options: {
+    runtimeSourceCarrier?: boolean;
+    capabilityCatalogRef?: string;
+    packageCatalogRef?: string;
+    packageId?: string;
+    providerPackageId?: string;
+  } = {},
 ) {
   const packageVersion = version.replace(/^(\d+\.\d+\.\d+)a(\d+)$/, '$1-alpha.$2');
   fs.mkdirSync(root, { recursive: true });
@@ -196,7 +202,7 @@ export function writeMasConsumer(
   fs.writeFileSync(manifestPath, formatJsonPayload({
     surface_kind: 'opl_agent_package_manifest.v1',
     agent_id: 'mas',
-    package_id: 'mas',
+    package_id: options.packageId ?? 'mas',
     display_name: 'Med Auto Science',
     publisher: 'one-person-lab',
     version: packageVersion,
@@ -223,7 +229,7 @@ export function writeMasConsumer(
     } : {}),
     capability_dependencies: [{
       module_id: 'scholarskills',
-      package_id: 'mas-scholar-skills',
+      package_id: options.providerPackageId ?? 'mas-scholar-skills',
       kind: 'framework_capability_package',
       required: true,
       version_requirement: '>=0.1.0 <0.2.0',

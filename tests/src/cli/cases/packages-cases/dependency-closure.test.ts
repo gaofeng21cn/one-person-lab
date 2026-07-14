@@ -12,9 +12,36 @@ import {
 import {
   scholarSkillsCoreSkillIds as coreSkillIds,
   scholarSkillsModuleIds as moduleIds,
-  writeCapabilityProvider,
-  writeMasConsumer,
+  writeCapabilityProvider as writeRawCapabilityProvider,
+  writeMasConsumer as writeRawMasConsumer,
 } from './capability-fixtures.ts';
+
+const FIXTURE_CONSUMER_PACKAGE_ID = 'fixture.mas';
+const FIXTURE_PROVIDER_PACKAGE_ID = 'fixture.mas-scholar-skills';
+
+function writeFixtureCapabilityProvider(
+  root: string,
+  version = '0.1.0',
+  options: NonNullable<Parameters<typeof writeRawCapabilityProvider>[2]> = {},
+) {
+  return writeRawCapabilityProvider(root, version, {
+    ...options,
+    packageId: options.packageId ?? FIXTURE_PROVIDER_PACKAGE_ID,
+  });
+}
+
+function writeFixtureMasConsumer(
+  root: string,
+  providerManifestPath: string,
+  version = '0.1.0a4',
+  options: NonNullable<Parameters<typeof writeRawMasConsumer>[3]> = {},
+) {
+  return writeRawMasConsumer(root, providerManifestPath, version, {
+    ...options,
+    packageId: FIXTURE_CONSUMER_PACKAGE_ID,
+    providerPackageId: FIXTURE_PROVIDER_PACKAGE_ID,
+  });
+}
 
 function appendCapabilityDependency(
   consumerManifestPath: string,
@@ -48,8 +75,8 @@ test('MAS package lifecycle atomically installs and repairs its 11-core capabili
   const workspace = path.join(root, 'workspace');
   fs.mkdirSync(workspace, { recursive: true });
   const providerRoot = path.join(root, 'provider');
-  const providerManifestPath = writeCapabilityProvider(providerRoot);
-  const consumerManifestPath = writeMasConsumer(root, providerManifestPath);
+  const providerManifestPath = writeFixtureCapabilityProvider(providerRoot);
+  const consumerManifestPath = writeFixtureMasConsumer(root, providerManifestPath);
   const env = { OPL_STATE_DIR: stateDir, CODEX_HOME: codexHome };
   try {
     const install = await runCliAsync([
@@ -59,7 +86,7 @@ test('MAS package lifecycle atomically installs and repairs its 11-core capabili
     assert.equal(install.opl_agent_package_install.status, 'installed');
     assert.deepEqual(
       install.opl_agent_package_install.dependency_package_locks.map((entry: any) => entry.package_id).sort(),
-      ['mas', 'mas-scholar-skills'],
+      [FIXTURE_CONSUMER_PACKAGE_ID, FIXTURE_PROVIDER_PACKAGE_ID],
     );
     const masLock = install.opl_agent_package_install.package_lock;
     assert.equal(masLock.resolved_dependencies[0].installed_version, '0.1.0');
@@ -72,7 +99,7 @@ test('MAS package lifecycle atomically installs and repairs its 11-core capabili
     assert.equal(fs.existsSync(path.join(localSkillRoot, 'medical-manuscript-writing', 'helper.txt')), true);
 
     const current = runCli([
-      'packages', 'status', '--package-id', 'mas',
+      'packages', 'status', '--package-id', FIXTURE_CONSUMER_PACKAGE_ID,
       '--scope', 'workspace', '--target-workspace', workspace,
     ], env) as any;
     assert.equal(current.opl_agent_package_status.package_dependency_readiness.status, 'current');
@@ -83,7 +110,7 @@ test('MAS package lifecycle atomically installs and repairs its 11-core capabili
 
     fs.rmSync(path.join(localSkillRoot, 'medical-manuscript-writing'), { recursive: true, force: true });
     const degraded = runCli([
-      'packages', 'status', '--package-id', 'mas',
+      'packages', 'status', '--package-id', FIXTURE_CONSUMER_PACKAGE_ID,
       '--scope', 'workspace', '--target-workspace', workspace,
     ], env) as any;
     assert.equal(degraded.opl_agent_package_status.materialization_readiness.status, 'missing');
@@ -92,18 +119,18 @@ test('MAS package lifecycle atomically installs and repairs its 11-core capabili
     assert.deepEqual(degraded.opl_agent_package_status.allowed_when_blocked, ['status', 'doctor', 'repair']);
 
     const repaired = await runCliAsync([
-      'packages', 'repair', 'mas', '--scope', 'workspace', '--target-workspace', workspace,
+      'packages', 'repair', FIXTURE_CONSUMER_PACKAGE_ID, '--scope', 'workspace', '--target-workspace', workspace,
     ], env) as any;
     assert.equal(repaired.opl_agent_package_repair.status, 'repaired');
     assert.equal(fs.existsSync(path.join(localSkillRoot, 'medical-manuscript-writing', 'SKILL.md')), true);
 
     const lockPath = path.join(stateDir, 'agent-package-locks.json');
     const lockIndex = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
-    const providerLock = lockIndex.packages.find((entry: any) => entry.package_id === 'mas-scholar-skills');
+    const providerLock = lockIndex.packages.find((entry: any) => entry.package_id === FIXTURE_PROVIDER_PACKAGE_ID);
     providerLock.capability_provider.module_export_ids = providerLock.capability_provider.module_export_ids.slice(1);
     fs.writeFileSync(lockPath, formatJsonPayload(lockIndex));
     const moduleMissing = runCli([
-      'packages', 'status', '--package-id', 'mas', '--scope', 'workspace', '--target-workspace', workspace,
+      'packages', 'status', '--package-id', FIXTURE_CONSUMER_PACKAGE_ID, '--scope', 'workspace', '--target-workspace', workspace,
     ], env) as any;
     const dependencyItem = moduleMissing.opl_agent_package_status.package_dependency_readiness.dependencies[0];
     assert.equal(dependencyItem.status, 'incompatible');
@@ -114,21 +141,21 @@ test('MAS package lifecycle atomically installs and repairs its 11-core capabili
     fs.writeFileSync(lockPath, formatJsonPayload(lockIndex));
 
     for (const action of ['disable', 'uninstall']) {
-      const blocked = runCliFailure(['packages', action, 'mas-scholar-skills'], env);
+      const blocked = runCliFailure(['packages', action, FIXTURE_PROVIDER_PACKAGE_ID], env);
       assert.equal(blocked.payload.error.details.failure_code, 'agent_package_required_by_installed_dependents');
-      assert.deepEqual(blocked.payload.error.details.dependent_package_ids, ['mas']);
+      assert.deepEqual(blocked.payload.error.details.dependent_package_ids, [FIXTURE_CONSUMER_PACKAGE_ID]);
     }
 
     const ledgerPath = path.join(stateDir, 'agent-package-lifecycle-ledger.json');
     const ledger = JSON.parse(fs.readFileSync(ledgerPath, 'utf8'));
     const statusBeforeReceiptRemoval = runCli([
-      'packages', 'status', '--package-id', 'mas', '--scope', 'workspace', '--target-workspace', workspace,
+      'packages', 'status', '--package-id', FIXTURE_CONSUMER_PACKAGE_ID, '--scope', 'workspace', '--target-workspace', workspace,
     ], env) as any;
     const receiptRef = statusBeforeReceiptRemoval.opl_agent_package_status.materialization_readiness.lifecycle_receipt_ref;
     ledger.receipts = ledger.receipts.filter((entry: any) => entry.receipt_ref !== receiptRef);
     fs.writeFileSync(ledgerPath, formatJsonPayload(ledger));
     const receiptMissing = runCli([
-      'packages', 'status', '--package-id', 'mas', '--scope', 'workspace', '--target-workspace', workspace,
+      'packages', 'status', '--package-id', FIXTURE_CONSUMER_PACKAGE_ID, '--scope', 'workspace', '--target-workspace', workspace,
     ], env) as any;
     assert.equal(receiptMissing.opl_agent_package_status.materialization_readiness.status, 'incompatible');
     assert.equal(receiptMissing.opl_agent_package_status.materialization_readiness.lifecycle_receipt_ref, null);
@@ -146,10 +173,10 @@ test('MAS dependency closure update and rollback atomically rematerialize known 
   const secondWorkspace = path.join(root, 'workspace-two');
   fs.mkdirSync(workspace, { recursive: true });
   fs.mkdirSync(secondWorkspace, { recursive: true });
-  const providerV1 = writeCapabilityProvider(path.join(root, 'provider-v1'), '0.1.0');
-  const consumerV1 = writeMasConsumer(path.join(root, 'consumer-v1'), providerV1, '0.1.0a4');
-  const providerV2 = writeCapabilityProvider(path.join(root, 'provider-v2'), '0.1.1');
-  const consumerV2 = writeMasConsumer(path.join(root, 'consumer-v2'), providerV2, '0.1.0');
+  const providerV1 = writeFixtureCapabilityProvider(path.join(root, 'provider-v1'), '0.1.0');
+  const consumerV1 = writeFixtureMasConsumer(path.join(root, 'consumer-v1'), providerV1, '0.1.0a4');
+  const providerV2 = writeFixtureCapabilityProvider(path.join(root, 'provider-v2'), '0.1.1');
+  const consumerV2 = writeFixtureMasConsumer(path.join(root, 'consumer-v2'), providerV2, '0.1.0');
   const env = { OPL_STATE_DIR: stateDir, CODEX_HOME: codexHome };
   const helperPath = path.join(workspace, '.codex', 'skills', 'medical-manuscript-writing', 'helper.txt');
   try {
@@ -158,47 +185,47 @@ test('MAS dependency closure update and rollback atomically rematerialize known 
       '--scope', 'workspace', '--target-workspace', workspace,
     ], env);
     runCli([
-      'packages', 'activate', 'mas', '--scope', 'workspace', '--target-workspace', secondWorkspace,
+      'packages', 'activate', FIXTURE_CONSUMER_PACKAGE_ID, '--scope', 'workspace', '--target-workspace', secondWorkspace,
     ], env);
     assert.match(fs.readFileSync(helperPath, 'utf8'), /0\.1\.0/);
 
     const updated = await runCliAsync([
-      'packages', 'update', 'mas', '--manifest-url', consumerV2, '--trust-tier', 'first_party',
+      'packages', 'update', FIXTURE_CONSUMER_PACKAGE_ID, '--manifest-url', consumerV2, '--trust-tier', 'first_party',
     ], env) as any;
     assert.equal(updated.opl_agent_package_update.status, 'updated');
     assert.deepEqual(
       updated.opl_agent_package_update.dependency_package_locks
         .map((entry: any) => `${entry.package_id}@${entry.package_version}`).sort(),
-      ['mas-scholar-skills@0.1.1', 'mas@0.1.0'],
+      [`${FIXTURE_PROVIDER_PACKAGE_ID}@0.1.1`, `${FIXTURE_CONSUMER_PACKAGE_ID}@0.1.0`],
     );
     assert.match(fs.readFileSync(helperPath, 'utf8'), /0\.1\.1/);
     const updatedStatus = runCli([
-      'packages', 'status', '--package-id', 'mas',
+      'packages', 'status', '--package-id', FIXTURE_CONSUMER_PACKAGE_ID,
       '--scope', 'workspace', '--target-workspace', workspace,
     ], env) as any;
     assert.equal(updatedStatus.opl_agent_package_status.materialization_readiness.status, 'current');
     const secondUpdatedStatus = runCli([
-      'packages', 'status', '--package-id', 'mas',
+      'packages', 'status', '--package-id', FIXTURE_CONSUMER_PACKAGE_ID,
       '--scope', 'workspace', '--target-workspace', secondWorkspace,
     ], env) as any;
     assert.equal(secondUpdatedStatus.opl_agent_package_status.materialization_readiness.status, 'current');
 
-    const rolledBack = runCli(['packages', 'rollback', 'mas'], env) as any;
+    const rolledBack = runCli(['packages', 'rollback', FIXTURE_CONSUMER_PACKAGE_ID], env) as any;
     assert.equal(rolledBack.opl_agent_package_rollback.status, 'rolled_back');
     assert.deepEqual(
       rolledBack.opl_agent_package_rollback.dependency_package_locks
         .map((entry: any) => `${entry.package_id}@${entry.package_version}`).sort(),
-      ['mas-scholar-skills@0.1.0', 'mas@0.1.0-alpha.4'],
+      [`${FIXTURE_PROVIDER_PACKAGE_ID}@0.1.0`, `${FIXTURE_CONSUMER_PACKAGE_ID}@0.1.0-alpha.4`],
     );
     assert.match(fs.readFileSync(helperPath, 'utf8'), /0\.1\.0/);
     const rollbackStatus = runCli([
-      'packages', 'status', '--package-id', 'mas',
+      'packages', 'status', '--package-id', FIXTURE_CONSUMER_PACKAGE_ID,
       '--scope', 'workspace', '--target-workspace', workspace,
     ], env) as any;
     assert.equal(rollbackStatus.opl_agent_package_status.materialization_readiness.status, 'current');
     assert.equal(rollbackStatus.opl_agent_package_status.operational_ready, true);
     const secondRollbackStatus = runCli([
-      'packages', 'status', '--package-id', 'mas',
+      'packages', 'status', '--package-id', FIXTURE_CONSUMER_PACKAGE_ID,
       '--scope', 'workspace', '--target-workspace', secondWorkspace,
     ], env) as any;
     assert.equal(secondRollbackStatus.opl_agent_package_status.materialization_readiness.status, 'current');
@@ -214,8 +241,8 @@ test('installed-source optimize records dependency and scope transactions and ro
   const codexHome = path.join(root, 'codex-home');
   const workspace = path.join(root, 'workspace');
   const providerRoot = path.join(root, 'provider');
-  const providerManifest = writeCapabilityProvider(providerRoot);
-  const consumerManifest = writeMasConsumer(path.join(root, 'consumer'), providerManifest);
+  const providerManifest = writeFixtureCapabilityProvider(providerRoot);
+  const consumerManifest = writeFixtureMasConsumer(path.join(root, 'consumer'), providerManifest);
   const env = { OPL_STATE_DIR: stateDir, CODEX_HOME: codexHome };
   const helperPath = path.join(workspace, '.codex', 'skills', 'medical-manuscript-writing', 'helper.txt');
   try {
@@ -230,12 +257,12 @@ test('installed-source optimize records dependency and scope transactions and ro
       'utf8',
     );
 
-    const optimized = runCli(['packages', 'optimize', 'mas'], env) as any;
+    const optimized = runCli(['packages', 'optimize', FIXTURE_CONSUMER_PACKAGE_ID], env) as any;
     const optimization = optimized.opl_agent_package_optimize;
     assert.equal(optimization.status, 'optimized');
     assert.deepEqual(
       optimization.lifecycle_receipt.dependency_packages.map((entry: any) => entry.package_id).sort(),
-      ['mas', 'mas-scholar-skills'],
+      [FIXTURE_CONSUMER_PACKAGE_ID, FIXTURE_PROVIDER_PACKAGE_ID],
     );
     assert.equal(optimization.scope_materializations.length, 1);
     assert.equal(optimization.lifecycle_receipt.scope_materializations.length, 1);
@@ -248,7 +275,7 @@ test('installed-source optimize records dependency and scope transactions and ro
     );
     assert.equal(fs.existsSync(transactionRoot), true);
 
-    const rolledBack = runCli(['packages', 'rollback', 'mas'], env) as any;
+    const rolledBack = runCli(['packages', 'rollback', FIXTURE_CONSUMER_PACKAGE_ID], env) as any;
     const rollback = rolledBack.opl_agent_package_rollback;
     assert.equal(rollback.status, 'rolled_back');
     assert.equal(rollback.source_selection, 'installed_package_lock');
@@ -269,8 +296,8 @@ test('MAS scope materialization never overwrites an unowned local Skill', async 
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-scope-collision-'));
   const workspace = path.join(root, 'workspace');
   const localSkill = path.join(workspace, '.codex', 'skills', 'medical-manuscript-writing');
-  const providerManifest = writeCapabilityProvider(path.join(root, 'provider'));
-  const consumerManifest = writeMasConsumer(path.join(root, 'consumer'), providerManifest);
+  const providerManifest = writeFixtureCapabilityProvider(path.join(root, 'provider'));
+  const consumerManifest = writeFixtureMasConsumer(path.join(root, 'consumer'), providerManifest);
   const env = { OPL_STATE_DIR: path.join(root, 'state'), CODEX_HOME: path.join(root, 'codex-home') };
   try {
     fs.mkdirSync(localSkill, { recursive: true });
@@ -292,8 +319,8 @@ test('initial MAS rollback preserves a preinstalled provider and restores the wo
   const stateDir = path.join(root, 'state');
   const codexHome = path.join(root, 'codex-home');
   const workspace = path.join(root, 'workspace');
-  const providerManifest = writeCapabilityProvider(path.join(root, 'provider'));
-  const consumerManifest = writeMasConsumer(path.join(root, 'consumer'), providerManifest);
+  const providerManifest = writeFixtureCapabilityProvider(path.join(root, 'provider'));
+  const consumerManifest = writeFixtureMasConsumer(path.join(root, 'consumer'), providerManifest);
   const originalSkillRoot = path.join(workspace, '.codex', 'skills', 'workspace-user-skill');
   const env = { OPL_STATE_DIR: stateDir, CODEX_HOME: codexHome };
   try {
@@ -305,7 +332,7 @@ test('initial MAS rollback preserves a preinstalled provider and restores the wo
       'packages', 'install', '--manifest-url', providerManifest, '--trust-tier', 'first_party',
     ], env);
     const providerBefore = runCli([
-      'packages', 'status', '--package-id', 'mas-scholar-skills',
+      'packages', 'status', '--package-id', FIXTURE_PROVIDER_PACKAGE_ID,
     ], env).opl_agent_package_status.installed_packages[0];
 
     await runCliAsync([
@@ -314,19 +341,19 @@ test('initial MAS rollback preserves a preinstalled provider and restores the wo
     ], env);
     assert.equal(fs.existsSync(path.join(originalSkillRoot, 'local.txt')), true);
 
-    const rolledBack = runCli(['packages', 'rollback', 'mas'], env) as any;
+    const rolledBack = runCli(['packages', 'rollback', FIXTURE_CONSUMER_PACKAGE_ID], env) as any;
     assert.equal(rolledBack.opl_agent_package_rollback.package_lock, null);
     assert.deepEqual(
       rolledBack.opl_agent_package_rollback.dependency_package_locks.map((entry: any) => entry.package_id),
-      ['mas-scholar-skills'],
+      [FIXTURE_PROVIDER_PACKAGE_ID],
     );
     assert.equal(fs.readFileSync(path.join(originalSkillRoot, 'SKILL.md'), 'utf8'), '# workspace-owned prestate\n');
     assert.equal(fs.readFileSync(path.join(originalSkillRoot, 'local.txt'), 'utf8'), 'preserve me\n');
 
-    const masStatus = runCli(['packages', 'status', '--package-id', 'mas'], env) as any;
+    const masStatus = runCli(['packages', 'status', '--package-id', FIXTURE_CONSUMER_PACKAGE_ID], env) as any;
     assert.equal(masStatus.opl_agent_package_status.installed_package_count, 0);
     const providerAfter = runCli([
-      'packages', 'status', '--package-id', 'mas-scholar-skills',
+      'packages', 'status', '--package-id', FIXTURE_PROVIDER_PACKAGE_ID,
     ], env).opl_agent_package_status.installed_packages[0];
     assert.equal(providerAfter.package_version, providerBefore.package_version);
     assert.equal(providerAfter.lock_ref, providerBefore.lock_ref);
@@ -339,8 +366,8 @@ test('fresh MAS install has no virtual rollback target and preserves its install
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-fresh-install-rollback-'));
   const workspace = path.join(root, 'workspace');
   const originalSkillRoot = path.join(workspace, '.codex', 'skills', 'workspace-user-skill');
-  const providerManifest = writeCapabilityProvider(path.join(root, 'provider'));
-  const consumerManifest = writeMasConsumer(path.join(root, 'consumer'), providerManifest);
+  const providerManifest = writeFixtureCapabilityProvider(path.join(root, 'provider'));
+  const consumerManifest = writeFixtureMasConsumer(path.join(root, 'consumer'), providerManifest);
   const env = { OPL_STATE_DIR: path.join(root, 'state'), CODEX_HOME: path.join(root, 'codex-home') };
   try {
     fs.mkdirSync(originalSkillRoot, { recursive: true });
@@ -356,11 +383,11 @@ test('fresh MAS install has no virtual rollback target and preserves its install
       'utf8',
     ));
     assert.deepEqual(lockIndex.last_known_good_transactions, []);
-    const rollbackFailure = runCliFailure(['packages', 'rollback', 'mas'], env);
+    const rollbackFailure = runCliFailure(['packages', 'rollback', FIXTURE_CONSUMER_PACKAGE_ID], env);
     assert.equal(rollbackFailure.payload.error.details.failure_code, 'agent_package_last_known_good_missing');
-    assert.equal(runCli(['packages', 'status', '--package-id', 'mas'], env)
+    assert.equal(runCli(['packages', 'status', '--package-id', FIXTURE_CONSUMER_PACKAGE_ID], env)
       .opl_agent_package_status.installed_package_count, 1);
-    assert.equal(runCli(['packages', 'status', '--package-id', 'mas-scholar-skills'], env)
+    assert.equal(runCli(['packages', 'status', '--package-id', FIXTURE_PROVIDER_PACKAGE_ID], env)
       .opl_agent_package_status.installed_package_count, 1);
     assert.equal(fs.readFileSync(path.join(originalSkillRoot, 'SKILL.md'), 'utf8'), '# workspace prestate\n');
     assert.equal(fs.readFileSync(path.join(originalSkillRoot, 'local.txt'), 'utf8'), 'keep me\n');
@@ -373,15 +400,15 @@ test('fresh MAS install has no virtual rollback target and preserves its install
 test('last-known-good generations are retained per root package', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-lkg-per-root-'));
   const stateDir = path.join(root, 'state');
-  const providerManifest = writeCapabilityProvider(path.join(root, 'provider'));
-  const consumerManifest = writeMasConsumer(path.join(root, 'consumer'), providerManifest);
+  const providerManifest = writeFixtureCapabilityProvider(path.join(root, 'provider'));
+  const consumerManifest = writeFixtureMasConsumer(path.join(root, 'consumer'), providerManifest);
   const env = { OPL_STATE_DIR: stateDir, CODEX_HOME: path.join(root, 'codex-home') };
   try {
     await runCliAsync(['packages', 'install', '--manifest-url', providerManifest, '--trust-tier', 'first_party'], env);
     await runCliAsync(['packages', 'install', '--manifest-url', consumerManifest, '--trust-tier', 'first_party'], env);
     const lockPath = path.join(stateDir, 'agent-package-locks.json');
     const lockIndex = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
-    const masLkg = lockIndex.last_known_good_transactions.find((entry: any) => entry.root_package_id === 'mas');
+    const masLkg = lockIndex.last_known_good_transactions.find((entry: any) => entry.root_package_id === FIXTURE_CONSUMER_PACKAGE_ID);
     lockIndex.last_known_good_transactions = [0, 1, 2, 3, 4].map((index) => ({
       root_package_id: `unrelated-${index}`,
       transaction_id: `transaction-${index}`,
@@ -390,7 +417,7 @@ test('last-known-good generations are retained per root package', async () => {
     })).concat(masLkg);
     fs.writeFileSync(lockPath, formatJsonPayload(lockIndex));
 
-    assert.equal(runCli(['packages', 'rollback', 'mas'], env).opl_agent_package_rollback.status, 'rolled_back');
+    assert.equal(runCli(['packages', 'rollback', FIXTURE_CONSUMER_PACKAGE_ID], env).opl_agent_package_rollback.status, 'rolled_back');
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -400,20 +427,20 @@ test('multi-provider scope readiness checks every provider and activation compen
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-multi-provider-scope-'));
   const workspace = path.join(root, 'workspace');
   const failedWorkspace = path.join(root, 'failed-workspace');
-  const providerA = writeCapabilityProvider(path.join(root, 'provider-a'), '0.1.0', {
+  const providerA = writeFixtureCapabilityProvider(path.join(root, 'provider-a'), '0.1.0', {
     packageId: 'capability-provider-a',
     capabilityAbi: 'capability-provider-a.v1',
     coreSkillIds: ['provider-a-skill'],
     moduleIds: ['provider-a.module'],
   });
   const providerBRoot = path.join(root, 'provider-b');
-  const providerB = writeCapabilityProvider(providerBRoot, '0.1.0', {
+  const providerB = writeFixtureCapabilityProvider(providerBRoot, '0.1.0', {
     packageId: 'capability-provider-b',
     capabilityAbi: 'capability-provider-b.v1',
     coreSkillIds: ['provider-b-skill'],
     moduleIds: ['provider-b.module'],
   });
-  const consumer = writeMasConsumer(path.join(root, 'consumer'), providerA);
+  const consumer = writeFixtureMasConsumer(path.join(root, 'consumer'), providerA);
   const manifest = JSON.parse(fs.readFileSync(consumer, 'utf8'));
   Object.assign(manifest.capability_dependencies[0], {
     module_id: 'provider-a',
@@ -436,17 +463,17 @@ test('multi-provider scope readiness checks every provider and activation compen
     fs.mkdirSync(workspace, { recursive: true });
     fs.mkdirSync(failedWorkspace, { recursive: true });
     await runCliAsync(['packages', 'install', '--manifest-url', consumer, '--trust-tier', 'first_party'], env);
-    runCli(['packages', 'activate', 'mas', '--scope', 'workspace', '--target-workspace', workspace], env);
+    runCli(['packages', 'activate', FIXTURE_CONSUMER_PACKAGE_ID, '--scope', 'workspace', '--target-workspace', workspace], env);
     fs.rmSync(path.join(workspace, '.codex', 'skills', 'provider-b-skill'), { recursive: true, force: true });
     const degraded = runCli([
-      'packages', 'status', '--package-id', 'mas', '--scope', 'workspace', '--target-workspace', workspace,
+      'packages', 'status', '--package-id', FIXTURE_CONSUMER_PACKAGE_ID, '--scope', 'workspace', '--target-workspace', workspace,
     ], env).opl_agent_package_status;
     assert.equal(degraded.materialization_readiness.status, 'missing');
     assert.equal(degraded.launch_allowed, false);
 
     fs.rmSync(path.join(providerBRoot, 'skills', 'provider-b-skill', 'SKILL.md'), { force: true });
     const failure = runCliFailure([
-      'packages', 'activate', 'mas', '--scope', 'workspace', '--target-workspace', failedWorkspace,
+      'packages', 'activate', FIXTURE_CONSUMER_PACKAGE_ID, '--scope', 'workspace', '--target-workspace', failedWorkspace,
     ], env);
     assert.equal(failure.payload.error.details.failure_code, 'agent_package_scope_core_skill_missing');
     assert.equal(fs.existsSync(path.join(failedWorkspace, '.codex', 'skills', 'provider-a-skill')), false);
@@ -457,9 +484,9 @@ test('multi-provider scope readiness checks every provider and activation compen
 
 test('install cannot overwrite a provider that has installed required dependents', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-provider-install-guard-'));
-  const providerV1 = writeCapabilityProvider(path.join(root, 'provider-v1'));
-  const providerV2 = writeCapabilityProvider(path.join(root, 'provider-v2'), '0.1.1');
-  const consumer = writeMasConsumer(path.join(root, 'consumer'), providerV1);
+  const providerV1 = writeFixtureCapabilityProvider(path.join(root, 'provider-v1'));
+  const providerV2 = writeFixtureCapabilityProvider(path.join(root, 'provider-v2'), '0.1.1');
+  const consumer = writeFixtureMasConsumer(path.join(root, 'consumer'), providerV1);
   const env = { OPL_STATE_DIR: path.join(root, 'state'), CODEX_HOME: path.join(root, 'codex-home') };
   try {
     await runCliAsync(['packages', 'install', '--manifest-url', consumer, '--trust-tier', 'first_party'], env);
@@ -467,7 +494,7 @@ test('install cannot overwrite a provider that has installed required dependents
       'packages', 'install', '--manifest-url', providerV2, '--trust-tier', 'first_party',
     ], env);
     assert.equal(failure.payload.error.details.failure_code, 'agent_package_required_by_installed_dependents');
-    assert.deepEqual(failure.payload.error.details.dependent_package_ids, ['mas']);
+    assert.deepEqual(failure.payload.error.details.dependent_package_ids, [FIXTURE_CONSUMER_PACKAGE_ID]);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -479,14 +506,14 @@ test('failed MAS closure update and rollback restore package state and scope fil
   const codexHome = path.join(root, 'codex-home');
   const workspace = path.join(root, 'workspace');
   fs.mkdirSync(workspace, { recursive: true });
-  const providerV1 = writeCapabilityProvider(path.join(root, 'provider-v1'), '0.1.0');
-  const consumerV1 = writeMasConsumer(path.join(root, 'consumer-v1'), providerV1, '0.1.0a4');
-  const providerV2 = writeCapabilityProvider(path.join(root, 'provider-v2'), '0.1.1');
-  const consumerV2 = writeMasConsumer(path.join(root, 'consumer-v2'), providerV2, '0.1.0');
+  const providerV1 = writeFixtureCapabilityProvider(path.join(root, 'provider-v1'), '0.1.0');
+  const consumerV1 = writeFixtureMasConsumer(path.join(root, 'consumer-v1'), providerV1, '0.1.0a4');
+  const providerV2 = writeFixtureCapabilityProvider(path.join(root, 'provider-v2'), '0.1.1');
+  const consumerV2 = writeFixtureMasConsumer(path.join(root, 'consumer-v2'), providerV2, '0.1.0');
   const env = { OPL_STATE_DIR: stateDir, CODEX_HOME: codexHome };
   const helperPath = path.join(workspace, '.codex', 'skills', 'medical-manuscript-writing', 'helper.txt');
   const status = () => runCli([
-    'packages', 'status', '--package-id', 'mas',
+    'packages', 'status', '--package-id', FIXTURE_CONSUMER_PACKAGE_ID,
     '--scope', 'workspace', '--target-workspace', workspace,
   ], env).opl_agent_package_status;
   const withReadOnlyState = (action: () => void) => {
@@ -507,7 +534,7 @@ test('failed MAS closure update and rollback restore package state and scope fil
     });
     assert.equal(fs.existsSync(path.join(workspace, '.codex', 'skills')), false);
     assert.equal(runCli([
-      'packages', 'status', '--package-id', 'mas',
+      'packages', 'status', '--package-id', FIXTURE_CONSUMER_PACKAGE_ID,
       '--scope', 'workspace', '--target-workspace', workspace,
     ], env).opl_agent_package_status.installed_package_count, 0);
 
@@ -518,7 +545,7 @@ test('failed MAS closure update and rollback restore package state and scope fil
 
     withReadOnlyState(() => {
       runCliFailure([
-        'packages', 'update', 'mas', '--manifest-url', consumerV2, '--trust-tier', 'first_party',
+        'packages', 'update', FIXTURE_CONSUMER_PACKAGE_ID, '--manifest-url', consumerV2, '--trust-tier', 'first_party',
       ], env);
     });
     assert.match(fs.readFileSync(helperPath, 'utf8'), /0\.1\.0/);
@@ -526,12 +553,12 @@ test('failed MAS closure update and rollback restore package state and scope fil
     assert.equal(status().installed_packages[0].package_version, '0.1.0-alpha.4');
 
     await runCliAsync([
-      'packages', 'update', 'mas', '--manifest-url', consumerV2, '--trust-tier', 'first_party',
+      'packages', 'update', FIXTURE_CONSUMER_PACKAGE_ID, '--manifest-url', consumerV2, '--trust-tier', 'first_party',
     ], env);
     assert.match(fs.readFileSync(helperPath, 'utf8'), /0\.1\.1/);
 
     withReadOnlyState(() => {
-      runCliFailure(['packages', 'rollback', 'mas'], env);
+      runCliFailure(['packages', 'rollback', FIXTURE_CONSUMER_PACKAGE_ID], env);
     });
     assert.match(fs.readFileSync(helperPath, 'utf8'), /0\.1\.1/);
     assert.equal(status().materialization_readiness.status, 'current');

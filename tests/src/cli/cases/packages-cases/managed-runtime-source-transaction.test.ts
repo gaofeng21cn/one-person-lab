@@ -21,6 +21,10 @@ import { writeManagedRuntimeSourceFixture } from './managed-runtime-source-fixtu
 import { rollbackManagedModulePackageChannel } from '../../../../../src/modules/connect/system-installation/module-package-channel.ts';
 import { resolveOplDomainModuleSpec } from '../../../../../src/modules/connect/system-installation/modules.ts';
 
+const FIXTURE_MAS_PACKAGE_ID = 'fixture.mas';
+const FIXTURE_RCA_PACKAGE_ID = 'fixture.rca';
+const FIXTURE_PROVIDER_PACKAGE_ID = 'fixture.mas-scholar-skills';
+
 function runGit(checkoutPath: string, args: string[]) {
   const result = spawnSync('git', args, { cwd: checkoutPath, encoding: 'utf8' });
   assert.equal(result.status, 0, `${args.join(' ')}\n${result.stdout}\n${result.stderr}`);
@@ -43,7 +47,7 @@ test('explicit developer checkout install locks the selected checkout without pa
   );
   fs.chmodSync(path.join(checkoutPath, 'scripts', 'opl-module-healthcheck.sh'), 0o755);
   fs.writeFileSync(manifestPath, formatJsonPayload({
-    ...agentPackageManifest({ packageId: 'mas', agentId: 'mas', pluginSourcePath }),
+    ...agentPackageManifest({ packageId: FIXTURE_MAS_PACKAGE_ID, agentId: 'mas', pluginSourcePath }),
     runtime_source_carrier: {
       carrier_kind: 'opl_managed_module_source',
       module_id: 'medautoscience',
@@ -86,20 +90,20 @@ test('explicit developer checkout install locks the selected checkout without pa
     assert.match(installedSource.handler_probe_output_sha256, /^sha256:/);
     assert.equal(fs.existsSync(path.join(checkoutPath, 'opl-runtime-module.json')), false);
     assert.equal(
-      (runCli(['packages', 'status', '--package-id', 'mas'], env) as any)
+      (runCli(['packages', 'status', '--package-id', FIXTURE_MAS_PACKAGE_ID], env) as any)
         .opl_agent_package_status.runtime_source_readiness.status,
       'current',
     );
 
     fs.writeFileSync(path.join(checkoutPath, 'runtime.txt'), 'developer source v2\n');
-    const drifted = runCli(['packages', 'status', '--package-id', 'mas'], env) as any;
+    const drifted = runCli(['packages', 'status', '--package-id', FIXTURE_MAS_PACKAGE_ID], env) as any;
     assert.equal(drifted.opl_agent_package_status.runtime_source_readiness.status, 'incompatible');
     assert.equal(
-      runCliFailure(['packages', 'update', '--package-id', 'mas'], env).payload.error.details.failure_code,
+      runCliFailure(['packages', 'update', '--package-id', FIXTURE_MAS_PACKAGE_ID], env).payload.error.details.failure_code,
       'agent_package_developer_checkout_auto_update_forbidden',
     );
     assert.equal(
-      runCliFailure(['packages', 'repair', '--package-id', 'mas'], env).payload.error.details.failure_code,
+      runCliFailure(['packages', 'repair', '--package-id', FIXTURE_MAS_PACKAGE_ID], env).payload.error.details.failure_code,
       'agent_package_developer_checkout_auto_update_forbidden',
     );
 
@@ -109,7 +113,7 @@ test('explicit developer checkout install locks the selected checkout without pa
       installedSource.tree_sha256,
     );
     assert.equal(
-      (runCli(['packages', 'status', '--package-id', 'mas'], env) as any)
+      (runCli(['packages', 'status', '--package-id', FIXTURE_MAS_PACKAGE_ID], env) as any)
         .opl_agent_package_status.runtime_source_readiness.status,
       'current',
     );
@@ -140,7 +144,7 @@ test('bundled Full runtime source requires an immutable marker and remains diges
     source_git: { head_sha: 'bundled-redcube-v1' },
   }));
   fs.writeFileSync(manifestPath, formatJsonPayload({
-    ...agentPackageManifest({ packageId: 'rca', agentId: 'rca', pluginSourcePath }),
+    ...agentPackageManifest({ packageId: FIXTURE_RCA_PACKAGE_ID, agentId: 'rca', pluginSourcePath }),
     runtime_source_carrier: {
       carrier_kind: 'opl_managed_module_source',
       module_id: 'redcube',
@@ -170,14 +174,14 @@ test('bundled Full runtime source requires an immutable marker and remains diges
       installed.opl_agent_package_install.package_lock.managed_runtime_source.ownership,
       'preexisting_adopted',
     );
-    const current = runCli(['packages', 'status', '--package-id', 'rca'], env) as any;
+    const current = runCli(['packages', 'status', '--package-id', FIXTURE_RCA_PACKAGE_ID], env) as any;
     assert.equal(
       current.opl_agent_package_status.runtime_source_readiness.operational_ready,
       true,
     );
 
     fs.writeFileSync(path.join(bundledRoot, 'runtime.txt'), 'drifted bundled source\n');
-    const drifted = runCli(['packages', 'status', '--package-id', 'rca'], env) as any;
+    const drifted = runCli(['packages', 'status', '--package-id', FIXTURE_RCA_PACKAGE_ID], env) as any;
     assert.equal(drifted.opl_agent_package_status.runtime_source_readiness.status, 'incompatible');
     assert.equal(
       drifted.opl_agent_package_status.runtime_source_readiness.reason,
@@ -202,11 +206,13 @@ test('Packages compensates managed runtime source across downstream failure upda
   fs.mkdirSync(workspaceRoot, { recursive: true });
   fs.writeFileSync(badWorkspaceTarget, 'file blocks scope materialization\n');
   try {
-    const providerManifest = writeCapabilityProvider(providerRoot);
+    const providerManifest = writeCapabilityProvider(providerRoot, '0.1.0', {
+      packageId: FIXTURE_PROVIDER_PACKAGE_ID,
+    });
     const consumerManifest = path.join(fixtureRoot, 'consumer.json');
     fs.writeFileSync(consumerManifest, formatJsonPayload({
       ...agentPackageManifest({
-        packageId: 'rca',
+        packageId: FIXTURE_RCA_PACKAGE_ID,
         agentId: 'rca',
         pluginSourcePath,
       }),
@@ -216,7 +222,7 @@ test('Packages compensates managed runtime source across downstream failure upda
       },
       capability_dependencies: [{
         module_id: 'scholarskills',
-        package_id: 'mas-scholar-skills',
+        package_id: FIXTURE_PROVIDER_PACKAGE_ID,
         kind: 'framework_capability_package',
         required: true,
         version_requirement: '>=0.1.0 <0.2.0',
@@ -281,13 +287,13 @@ test('Packages compensates managed runtime source across downstream failure upda
     );
 
     const failedCurrentUpdate = runCliFailure([
-      'packages', 'update', '--package-id', 'redcube-ai',
+      'packages', 'update', '--package-id', FIXTURE_RCA_PACKAGE_ID,
       '--scope', 'workspace',
       '--target-workspace', badWorkspaceTarget,
     ], env);
     assert.equal(failedCurrentUpdate.payload.error.code, 'unexpected_error', JSON.stringify(failedCurrentUpdate.payload));
     assert.equal(fs.existsSync(path.join(modulesRoot, 'redcube-ai.previous')), false);
-    const currentAfterFailure = runCli(['packages', 'status', '--package-id', 'redcube-ai'], env) as any;
+    const currentAfterFailure = runCli(['packages', 'status', '--package-id', FIXTURE_RCA_PACKAGE_ID], env) as any;
     assert.equal(currentAfterFailure.opl_agent_package_status.runtime_source_readiness.status, 'current');
 
     Object.assign(env, writeManagedRuntimeSourceFixture({
@@ -298,7 +304,7 @@ test('Packages compensates managed runtime source across downstream failure upda
       sourceHeadSha: 'source-transaction-v2',
     }));
     const failedUpdate = runCliFailure([
-      'packages', 'update', '--package-id', 'redcube-ai',
+      'packages', 'update', '--package-id', FIXTURE_RCA_PACKAGE_ID,
       '--scope', 'workspace',
       '--target-workspace', badWorkspaceTarget,
     ], env);
@@ -306,20 +312,20 @@ test('Packages compensates managed runtime source across downstream failure upda
     assert.equal(fs.readFileSync(path.join(modulesRoot, 'redcube-ai', '.runtime-prepared'), 'utf8').trim(), '0.1.0');
     const persistedAfterFailure = JSON.parse(fs.readFileSync(path.join(stateDir, 'agent-package-locks.json'), 'utf8'));
     assert.equal(
-      persistedAfterFailure.packages.find((entry: any) => entry.package_id === 'rca')
+      persistedAfterFailure.packages.find((entry: any) => entry.package_id === FIXTURE_RCA_PACKAGE_ID)
         .managed_runtime_source.source_git_head_sha,
       'source-transaction-v1',
     );
 
-    const updated = runCli(['packages', 'update', '--package-id', 'redcube-ai'], env) as any;
+    const updated = runCli(['packages', 'update', '--package-id', FIXTURE_RCA_PACKAGE_ID], env) as any;
     assert.equal(updated.opl_agent_package_update.package_lock.managed_runtime_source.source_git_head_sha, 'source-transaction-v2');
     env.OPL_PACKAGES_OWNER = 'missing-fixture-owner';
-    const preActivationFailure = runCliFailure(['packages', 'update', '--package-id', 'redcube-ai'], env);
+    const preActivationFailure = runCliFailure(['packages', 'update', '--package-id', FIXTURE_RCA_PACKAGE_ID], env);
     assert.equal(preActivationFailure.payload.error.code, 'build_command_failed');
     assert.equal(fs.readFileSync(path.join(modulesRoot, 'redcube-ai', '.runtime-prepared'), 'utf8').trim(), '0.1.1');
     env.OPL_PACKAGES_OWNER = 'fixture';
     const status = runCli([
-      'packages', 'status', '--package-id', 'redcube-ai',
+      'packages', 'status', '--package-id', FIXTURE_RCA_PACKAGE_ID,
       '--scope', 'workspace', '--target-workspace', workspaceRoot,
     ], env) as any;
     assert.equal(status.opl_agent_package_status.runtime_source_readiness.status, 'current');
@@ -329,7 +335,7 @@ test('Packages compensates managed runtime source across downstream failure upda
     const failingRuntimeToolPath = path.join(fixtureRoot, 'bin', 'external-runtime-tool');
     fs.writeFileSync(failingRuntimeToolPath, '#!/usr/bin/env bash\nexit 1\n', { mode: 0o755 });
     const missingRuntimeStatus = runCli([
-      'packages', 'status', '--package-id', 'redcube-ai',
+      'packages', 'status', '--package-id', FIXTURE_RCA_PACKAGE_ID,
       '--scope', 'workspace', '--target-workspace', workspaceRoot,
     ], env) as any;
     assert.equal(missingRuntimeStatus.opl_agent_package_status.runtime_source_readiness.status, 'incompatible');
@@ -346,12 +352,14 @@ test('Packages compensates managed runtime source across downstream failure upda
 
     const lockPath = path.join(stateDir, 'agent-package-locks.json');
     const missingStateIndex = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
-    const missingStateLock = missingStateIndex.packages.find((entry: any) => entry.package_id === 'rca');
+    const missingStateLock = missingStateIndex.packages.find(
+      (entry: any) => entry.package_id === FIXTURE_RCA_PACKAGE_ID,
+    );
     const retainedSourceState = missingStateLock.managed_runtime_source;
     delete missingStateLock.managed_runtime_source;
     fs.writeFileSync(lockPath, formatJsonPayload(missingStateIndex));
     const missingStateStatus = runCli([
-      'packages', 'status', '--package-id', 'redcube-ai',
+      'packages', 'status', '--package-id', FIXTURE_RCA_PACKAGE_ID,
       '--scope', 'workspace', '--target-workspace', workspaceRoot,
     ], env) as any;
     assert.equal(missingStateStatus.opl_agent_package_status.runtime_source_readiness.status, 'missing');
@@ -361,21 +369,23 @@ test('Packages compensates managed runtime source across downstream failure upda
 
     fs.rmSync(path.join(modulesRoot, 'redcube-ai', '.runtime-prepared'));
     const driftedStatus = runCli([
-      'packages', 'status', '--package-id', 'redcube-ai',
+      'packages', 'status', '--package-id', FIXTURE_RCA_PACKAGE_ID,
       '--scope', 'workspace', '--target-workspace', workspaceRoot,
     ], env) as any;
     assert.equal(driftedStatus.opl_agent_package_status.runtime_source_readiness.status, 'incompatible');
     assert.equal(driftedStatus.opl_agent_package_status.launch_allowed, false);
     assert.equal(driftedStatus.opl_agent_package_status.launch_blocked_reason, 'runtime_source_incompatible');
     const staleManifestIndex = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
-    staleManifestIndex.packages.find((entry: any) => entry.package_id === 'rca').manifest_url = path.join(
+    staleManifestIndex.packages.find(
+      (entry: any) => entry.package_id === FIXTURE_RCA_PACKAGE_ID,
+    ).manifest_url = path.join(
       fixtureRoot,
       'retired-worktree',
       'consumer.json',
     );
     fs.writeFileSync(lockPath, formatJsonPayload(staleManifestIndex));
     const driftRepaired = runCli([
-      'packages', 'repair', 'redcube-ai',
+      'packages', 'repair', FIXTURE_RCA_PACKAGE_ID,
       '--manifest-url', consumerManifest,
       '--trust-tier', 'first_party',
     ], env) as any;
@@ -384,9 +394,9 @@ test('Packages compensates managed runtime source across downstream failure upda
     assert.equal(fs.readFileSync(path.join(modulesRoot, 'redcube-ai', '.runtime-prepared'), 'utf8').trim(), '0.1.1');
 
     fs.rmSync(path.join(modulesRoot, 'redcube-ai'), { recursive: true, force: true });
-    const missingSourceStatus = runCli(['packages', 'status', '--package-id', 'redcube-ai'], env) as any;
+    const missingSourceStatus = runCli(['packages', 'status', '--package-id', FIXTURE_RCA_PACKAGE_ID], env) as any;
     assert.equal(missingSourceStatus.opl_agent_package_status.runtime_source_readiness.status, 'missing');
-    const missingSourceRepaired = runCli(['packages', 'repair', '--package-id', 'redcube-ai'], env) as any;
+    const missingSourceRepaired = runCli(['packages', 'repair', '--package-id', FIXTURE_RCA_PACKAGE_ID], env) as any;
     assert.equal(missingSourceRepaired.opl_agent_package_repair.package_lock.managed_runtime_source.source_git_head_sha, 'source-transaction-v2');
     assert.equal(fs.readFileSync(path.join(modulesRoot, 'redcube-ai', '.runtime-prepared'), 'utf8').trim(), '0.1.1');
 
@@ -405,7 +415,7 @@ test('Packages compensates managed runtime source across downstream failure upda
       assert.equal(fs.existsSync(`${path.join(modulesRoot, 'redcube-ai')}.revert-${process.pid}`), false);
     }
 
-    const rolledBack = runCli(['packages', 'rollback', '--package-id', 'redcube-ai'], {
+    const rolledBack = runCli(['packages', 'rollback', '--package-id', FIXTURE_RCA_PACKAGE_ID], {
       ...env,
       OPL_TEST_RUNTIME_SOURCE_FAULTS_ENABLED: '1',
       OPL_TEST_RUNTIME_SOURCE_FINALIZE_FAIL: '1',
@@ -413,12 +423,12 @@ test('Packages compensates managed runtime source across downstream failure upda
     assert.equal(rolledBack.opl_agent_package_rollback.runtime_source_cleanup.status, 'cleanup_pending');
     assert.equal(rolledBack.opl_agent_package_rollback.package_lock.managed_runtime_source.source_git_head_sha, 'source-transaction-v1');
     assert.equal(fs.readFileSync(path.join(modulesRoot, 'redcube-ai', '.runtime-prepared'), 'utf8').trim(), '0.1.0');
-    const rollbackCleanup = runCli(['packages', 'status', '--package-id', 'redcube-ai'], env) as any;
+    const rollbackCleanup = runCli(['packages', 'status', '--package-id', FIXTURE_RCA_PACKAGE_ID], env) as any;
     assert.equal(rollbackCleanup.opl_agent_package_status.runtime_source_recovery.cleanup_completed_count, 1);
 
     const moduleRuntimeEnvRoot = path.join(stateDir, 'agent-package-runtime-envs', 'redcube');
     assert.ok(fs.readdirSync(moduleRuntimeEnvRoot).length >= 2);
-    runCli(['packages', 'uninstall', '--package-id', 'redcube-ai'], env);
+    runCli(['packages', 'uninstall', '--package-id', FIXTURE_RCA_PACKAGE_ID], env);
     assert.equal(fs.existsSync(path.join(modulesRoot, 'redcube-ai')), false);
     assert.equal(fs.existsSync(moduleRuntimeEnvRoot), false);
   } finally {
@@ -438,7 +448,7 @@ test('Packages recovers durable runtime-source markers after interrupted apply a
   const manifestPath = path.join(fixtureRoot, 'manifest.json');
   try {
     fs.writeFileSync(manifestPath, formatJsonPayload({
-      ...agentPackageManifest({ packageId: 'rca', agentId: 'rca', pluginSourcePath }),
+      ...agentPackageManifest({ packageId: FIXTURE_RCA_PACKAGE_ID, agentId: 'rca', pluginSourcePath }),
       runtime_source_carrier: { carrier_kind: 'opl_managed_module_source', module_id: 'redcube' },
     }));
     const fixtureEnv = writeManagedRuntimeSourceFixture({
@@ -463,7 +473,7 @@ test('Packages recovers durable runtime-source markers after interrupted apply a
       phase: 'prepared',
       mutation: {
         kind: 'activated_with_previous',
-        package_id: 'rca',
+        package_id: FIXTURE_RCA_PACKAGE_ID,
         action: 'update',
         transaction_id: 'stale-current-update',
         marker_path: markerPath,
@@ -476,11 +486,11 @@ test('Packages recovers durable runtime-source markers after interrupted apply a
         checkout_existed_before: true,
       },
     }));
-    const staleMarkerRecovery = runCli(['packages', 'status', '--package-id', 'redcube-ai'], env) as any;
+    const staleMarkerRecovery = runCli(['packages', 'status', '--package-id', FIXTURE_RCA_PACKAGE_ID], env) as any;
     assert.equal(staleMarkerRecovery.opl_agent_package_status.runtime_source_recovery.cleared_prepared_transaction_count, 1);
     assert.equal(staleMarkerRecovery.opl_agent_package_status.runtime_source_recovery.recovered_transaction_count, 0);
     assert.equal(staleMarkerRecovery.opl_agent_package_status.runtime_source_readiness.status, 'incompatible');
-    runCli(['packages', 'repair', '--package-id', 'redcube-ai'], env);
+    runCli(['packages', 'repair', '--package-id', FIXTURE_RCA_PACKAGE_ID], env);
     assert.equal(fs.existsSync(markerPath), false);
 
     Object.assign(env, writeManagedRuntimeSourceFixture({
@@ -490,7 +500,7 @@ test('Packages recovers durable runtime-source markers after interrupted apply a
       version: '0.1.1',
       sourceHeadSha: 'recovery-v2',
     }));
-    const preparedUpdate = runCliFailure(['packages', 'update', '--package-id', 'redcube-ai'], {
+    const preparedUpdate = runCliFailure(['packages', 'update', '--package-id', FIXTURE_RCA_PACKAGE_ID], {
       ...env,
       OPL_TEST_RUNTIME_SOURCE_FAULTS_ENABLED: '1',
       OPL_TEST_RUNTIME_SOURCE_INTERRUPT_AFTER_PREPARE_APPLY: '1',
@@ -500,58 +510,58 @@ test('Packages recovers durable runtime-source markers after interrupted apply a
     const interruptedStagePath = path.join(modulesRoot, 'redcube-ai.stage');
     fs.mkdirSync(interruptedStagePath, { recursive: true });
     fs.writeFileSync(path.join(interruptedStagePath, 'partial-download'), 'staged but not activated\n');
-    const preparedUpdateRecovery = runCli(['packages', 'status', '--package-id', 'redcube-ai'], env) as any;
+    const preparedUpdateRecovery = runCli(['packages', 'status', '--package-id', FIXTURE_RCA_PACKAGE_ID], env) as any;
     assert.equal(preparedUpdateRecovery.opl_agent_package_status.runtime_source_recovery.cleared_prepared_transaction_count, 1);
     assert.equal(preparedUpdateRecovery.opl_agent_package_status.runtime_source_recovery.recovered_transaction_count, 0);
     assert.equal(fs.readFileSync(path.join(modulesRoot, 'redcube-ai', '.runtime-prepared'), 'utf8').trim(), '0.1.0');
     assert.equal(fs.existsSync(interruptedStagePath), false);
 
-    const interruptedUpdate = runCliFailure(['packages', 'update', '--package-id', 'redcube-ai'], {
+    const interruptedUpdate = runCliFailure(['packages', 'update', '--package-id', FIXTURE_RCA_PACKAGE_ID], {
       ...env,
       OPL_TEST_RUNTIME_SOURCE_FAULTS_ENABLED: '1',
       OPL_TEST_RUNTIME_SOURCE_INTERRUPT_AFTER_APPLY: '1',
     });
     assert.equal(interruptedUpdate.payload.error.details.failure_code, 'test_runtime_source_interrupted_after_apply', JSON.stringify(interruptedUpdate.payload));
     assert.equal(fs.readFileSync(path.join(modulesRoot, 'redcube-ai', '.runtime-prepared'), 'utf8').trim(), '0.1.1');
-    const recoveredStatus = runCli(['packages', 'status', '--package-id', 'redcube-ai'], env) as any;
+    const recoveredStatus = runCli(['packages', 'status', '--package-id', FIXTURE_RCA_PACKAGE_ID], env) as any;
     assert.equal(recoveredStatus.opl_agent_package_status.runtime_source_recovery.recovered_transaction_count, 1);
     assert.equal(fs.readFileSync(path.join(modulesRoot, 'redcube-ai', '.runtime-prepared'), 'utf8').trim(), '0.1.0');
     assert.equal(recoveredStatus.opl_agent_package_status.runtime_source_readiness.status, 'current');
 
-    runCli(['packages', 'update', '--package-id', 'redcube-ai'], env);
+    runCli(['packages', 'update', '--package-id', FIXTURE_RCA_PACKAGE_ID], env);
     assert.equal(fs.readFileSync(path.join(modulesRoot, 'redcube-ai', '.runtime-prepared'), 'utf8').trim(), '0.1.1');
-    const preparedRollback = runCliFailure(['packages', 'rollback', '--package-id', 'redcube-ai'], {
+    const preparedRollback = runCliFailure(['packages', 'rollback', '--package-id', FIXTURE_RCA_PACKAGE_ID], {
       ...env,
       OPL_TEST_RUNTIME_SOURCE_FAULTS_ENABLED: '1',
       OPL_TEST_RUNTIME_SOURCE_INTERRUPT_AFTER_PREPARE_ROLLBACK: '1',
     });
     assert.equal(preparedRollback.payload.error.details.failure_code, 'test_runtime_source_interrupted_after_prepare_rollback');
     assert.equal(fs.readFileSync(path.join(modulesRoot, 'redcube-ai', '.runtime-prepared'), 'utf8').trim(), '0.1.1');
-    const preparedRollbackRecovery = runCli(['packages', 'status', '--package-id', 'redcube-ai'], env) as any;
+    const preparedRollbackRecovery = runCli(['packages', 'status', '--package-id', FIXTURE_RCA_PACKAGE_ID], env) as any;
     assert.equal(preparedRollbackRecovery.opl_agent_package_status.runtime_source_recovery.cleared_prepared_transaction_count, 1);
     assert.equal(preparedRollbackRecovery.opl_agent_package_status.runtime_source_recovery.recovered_transaction_count, 0);
     assert.equal(fs.readFileSync(path.join(modulesRoot, 'redcube-ai', '.runtime-prepared'), 'utf8').trim(), '0.1.1');
 
-    const interruptedUninstall = runCliFailure(['packages', 'uninstall', '--package-id', 'redcube-ai'], {
+    const interruptedUninstall = runCliFailure(['packages', 'uninstall', '--package-id', FIXTURE_RCA_PACKAGE_ID], {
       ...env,
       OPL_TEST_RUNTIME_SOURCE_FAULTS_ENABLED: '1',
       OPL_TEST_RUNTIME_SOURCE_INTERRUPT_AFTER_STAGE_UNINSTALL: '1',
     });
     assert.equal(interruptedUninstall.payload.error.details.failure_code, 'test_runtime_source_interrupted_after_stage_uninstall');
     assert.equal(fs.existsSync(path.join(modulesRoot, 'redcube-ai')), false);
-    const restoredStatus = runCli(['packages', 'status', '--package-id', 'redcube-ai'], env) as any;
+    const restoredStatus = runCli(['packages', 'status', '--package-id', FIXTURE_RCA_PACKAGE_ID], env) as any;
     assert.equal(restoredStatus.opl_agent_package_status.runtime_source_recovery.recovered_transaction_count, 1);
     assert.equal(restoredStatus.opl_agent_package_status.runtime_source_readiness.status, 'current');
     assert.equal(fs.existsSync(path.join(modulesRoot, 'redcube-ai')), true);
 
-    const uninstalled = runCli(['packages', 'uninstall', '--package-id', 'redcube-ai'], {
+    const uninstalled = runCli(['packages', 'uninstall', '--package-id', FIXTURE_RCA_PACKAGE_ID], {
       ...env,
       OPL_TEST_RUNTIME_SOURCE_FAULTS_ENABLED: '1',
       OPL_TEST_RUNTIME_SOURCE_FINALIZE_FAIL: '1',
     }) as any;
     assert.equal(uninstalled.opl_agent_package_uninstall.runtime_source_cleanup.status, 'cleanup_pending');
     assert.equal(fs.readdirSync(markerDir).length, 1);
-    const postCommitRecovery = runCli(['packages', 'status', '--package-id', 'redcube-ai'], env) as any;
+    const postCommitRecovery = runCli(['packages', 'status', '--package-id', FIXTURE_RCA_PACKAGE_ID], env) as any;
     assert.equal(postCommitRecovery.opl_agent_package_status.runtime_source_recovery.cleanup_completed_count, 1);
     assert.equal(fs.readdirSync(markerDir).length, 0);
   } finally {
@@ -570,7 +580,7 @@ test('MAS package install executes the owner runtime probe instead of a retired 
     const manifestPath = path.join(fixtureRoot, 'manifest.json');
     fs.writeFileSync(manifestPath, formatJsonPayload({
       ...agentPackageManifest({
-        packageId: 'mas',
+        packageId: FIXTURE_MAS_PACKAGE_ID,
         agentId: 'mas',
         pluginSourcePath,
       }),
@@ -614,20 +624,20 @@ test('MAS package install executes the owner runtime probe instead of a retired 
     ].join('\n'), { mode: 0o755 });
     const lockPath = path.join(stateDir, 'agent-package-locks.json');
     const lockIndex = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
-    const masLock = lockIndex.packages.find((entry: any) => entry.package_id === 'mas');
+    const masLock = lockIndex.packages.find((entry: any) => entry.package_id === FIXTURE_MAS_PACKAGE_ID);
     masLock.managed_runtime_source.health_check_command = ['bash', maliciousCommand];
     fs.writeFileSync(lockPath, formatJsonPayload(lockIndex));
-    const tamperedStatus = runCli(['packages', 'status', '--package-id', 'med-autoscience'], env) as any;
+    const tamperedStatus = runCli(['packages', 'status', '--package-id', FIXTURE_MAS_PACKAGE_ID], env) as any;
     assert.equal(fs.existsSync(maliciousSentinel), false);
     assert.equal(tamperedStatus.opl_agent_package_status.runtime_source_readiness.status, 'incompatible');
     assert.equal(tamperedStatus.opl_agent_package_status.runtime_source_readiness.reason, 'managed_runtime_source_command_drift');
 
-    const repaired = runCli(['packages', 'repair', '--package-id', 'med-autoscience'], env) as any;
+    const repaired = runCli(['packages', 'repair', '--package-id', FIXTURE_MAS_PACKAGE_ID], env) as any;
     assert.notDeepEqual(
       repaired.opl_agent_package_repair.package_lock.managed_runtime_source.health_check_command,
       ['bash', maliciousCommand],
     );
-    const repairedStatus = runCli(['packages', 'status', '--package-id', 'med-autoscience'], env) as any;
+    const repairedStatus = runCli(['packages', 'status', '--package-id', FIXTURE_MAS_PACKAGE_ID], env) as any;
     assert.equal(repairedStatus.opl_agent_package_status.runtime_source_readiness.status, 'current');
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });
@@ -645,7 +655,7 @@ test('uninstall validates but never deletes a preexisting adopted runtime source
     const manifestPath = path.join(fixtureRoot, 'manifest.json');
     fs.writeFileSync(manifestPath, formatJsonPayload({
       ...agentPackageManifest({
-        packageId: 'rca',
+        packageId: FIXTURE_RCA_PACKAGE_ID,
         agentId: 'rca',
         pluginSourcePath,
       }),
@@ -667,11 +677,11 @@ test('uninstall validates but never deletes a preexisting adopted runtime source
     ], env);
     const lockPath = path.join(stateDir, 'agent-package-locks.json');
     const lockIndex = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
-    lockIndex.packages.find((entry: any) => entry.package_id === 'rca')
+    lockIndex.packages.find((entry: any) => entry.package_id === FIXTURE_RCA_PACKAGE_ID)
       .managed_runtime_source.ownership = 'preexisting_adopted';
     fs.writeFileSync(lockPath, formatJsonPayload(lockIndex));
 
-    const removed = runCli(['packages', 'uninstall', '--package-id', 'redcube-ai'], env) as any;
+    const removed = runCli(['packages', 'uninstall', '--package-id', FIXTURE_RCA_PACKAGE_ID], env) as any;
     assert.equal(
       removed.opl_agent_package_uninstall.lifecycle_receipt.managed_runtime_source.status,
       'retained_on_uninstall',
