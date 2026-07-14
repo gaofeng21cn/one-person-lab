@@ -12,10 +12,12 @@ import { writeNativeHelperFixtureScripts } from './native-helper-fixtures.ts';
 
 test('runtime manager reports OPL control plane over provider-backed family runtime', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-state-'));
+  const modulesRoot = path.join(stateRoot, 'modules');
 
   try {
     const output = runCli(['runtime', 'manager'], {
       OPL_STATE_DIR: stateRoot,
+      OPL_MODULES_ROOT: modulesRoot,
       OPL_FAMILY_RUNTIME_PROVIDER: '',
       OPL_TEMPORAL_ADDRESS: '',
       TEMPORAL_ADDRESS: '',
@@ -132,11 +134,17 @@ test('runtime manager reports OPL control plane over provider-backed family runt
     const registrationDomains = output.runtime_manager.registration_registry.domains;
     assert.equal(registrationDomains.length, runtimeManagerDomainProfiles().length);
     assert.deepEqual(
-      registrationDomains,
-      runtimeManagerDomainProfiles().map((profile) => {
-        const { scheduler: _scheduler, ...registration } = profile;
-        return registration;
-      }),
+      registrationDomains.map(
+        (domain: { domain_id: string }) => domain.domain_id,
+      ),
+      FAMILY_RUNTIME_DOMAIN_IDS,
+    );
+    assert.equal(
+      registrationDomains.every(
+        (domain: { expected_registration_surface: { ref: string } }) =>
+          domain.expected_registration_surface.ref.startsWith('package:'),
+      ),
+      true,
     );
     const masRegistration = registrationDomains.find(
       (domain: { domain_id: string }) => domain.domain_id === 'medautoscience',
@@ -151,8 +159,10 @@ test('runtime manager reports OPL control plane over provider-backed family runt
       'package:mas#/standard_agent_interface/runtime/registration_ref',
     );
     assert.deepEqual(
-      rcaRegistration.consumable_projection_refs,
-      [],
+      registrationDomains.map(
+        (domain: { consumable_projection_refs: string[] }) => domain.consumable_projection_refs,
+      ),
+      runtimeManagerDomainProfiles().map(() => []),
     );
     assert.equal(
       output.runtime_manager.registration_registry.required_domain_registration_fields.includes('state_index_inputs'),

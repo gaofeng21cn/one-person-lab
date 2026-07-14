@@ -29,8 +29,9 @@ test('family runtime support and aliases derive from standard-agent runtime prof
   assert.equal(resolveFamilyRuntimeDomainId('redcube-ai'), 'redcube_ai');
   assert.equal(resolveFamilyRuntimeDomainId('obf'), 'opl-bookforge');
 
-  const mas = runtimeDomainProfileFor('medautoscience');
+  const mas = runtimeDomainProfileFor('medautoscience', () => null);
   assert.ok(mas);
+  assert.equal(mas.runtime_domain_id, 'medautoscience');
   assert.equal('dispatch_command' in mas, false);
   assert.equal(mas.registration_ref, null);
 });

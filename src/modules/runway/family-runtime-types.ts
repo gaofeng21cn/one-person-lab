@@ -10,6 +10,8 @@ type RuntimeAgent = StandardAgentRegistryEntry & {
   series_membership: typeof STANDARD_AGENT_SERIES_MEMBERSHIP;
 };
 
+type StandardAgentDescriptorReader = typeof readStandardAgentDescriptorForDomain;
+
 export type FamilyRuntimeDomainId = string;
 
 export type StandardAgentFamilyRuntimeProfile = {
@@ -24,15 +26,21 @@ function runtimeEnabledStandardAgents() {
   );
 }
 
-function descriptorFor(entry: RuntimeAgent) {
-  return readStandardAgentDescriptorForDomain(entry.target_domain_id);
+function descriptorFor(
+  entry: RuntimeAgent,
+  readDescriptor: StandardAgentDescriptorReader = readStandardAgentDescriptorForDomain,
+) {
+  return readDescriptor(entry.target_domain_id);
 }
 
-function runtimeProfile(entry: RuntimeAgent): StandardAgentFamilyRuntimeProfile {
-  const runtime = descriptorFor(entry)?.interface.runtime;
+function runtimeProfile(
+  entry: RuntimeAgent,
+  readDescriptor: StandardAgentDescriptorReader = readStandardAgentDescriptorForDomain,
+): StandardAgentFamilyRuntimeProfile {
+  const runtime = descriptorFor(entry, readDescriptor)?.interface.runtime;
   return {
     supported: true,
-    runtime_domain_id: runtime?.runtime_domain_id ?? entry.target_domain_id,
+    runtime_domain_id: entry.target_domain_id,
     registration_ref: runtime?.registration_ref ?? null,
   };
 }
@@ -41,15 +49,21 @@ export const FAMILY_RUNTIME_DOMAIN_IDS = runtimeEnabledStandardAgents().map((ent
   entry.target_domain_id
 );
 
-export function runtimeDomainProfileFor(domainId: string): StandardAgentFamilyRuntimeProfile | null {
+export function runtimeDomainProfileFor(
+  domainId: string,
+  readDescriptor: StandardAgentDescriptorReader = readStandardAgentDescriptorForDomain,
+): StandardAgentFamilyRuntimeProfile | null {
   const entry = resolveStandardAgent(domainId);
   return entry?.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP
-    ? runtimeProfile(entry)
+    ? runtimeProfile(entry, readDescriptor)
     : null;
 }
 
 export function resolveFamilyRuntimeDomainId(value: string) {
-  return runtimeDomainProfileFor(value)?.runtime_domain_id ?? null;
+  const entry = resolveStandardAgent(value);
+  return entry?.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP
+    ? entry.target_domain_id
+    : null;
 }
 
 export function runtimeDomainAliases(domainId: string) {

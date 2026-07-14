@@ -68,6 +68,7 @@ test('runtime snapshot projects stage attempt workbench without owning domain ve
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     });
+    assert.equal(attempt.family_runtime_stage_attempt.attempt.domain_id, 'medautoscience');
     const attemptId = attempt.family_runtime_stage_attempt.attempt.stage_attempt_id;
 
     runCli([

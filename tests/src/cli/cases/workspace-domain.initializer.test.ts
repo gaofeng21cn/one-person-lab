@@ -38,6 +38,7 @@ const workspaceIndexSchema = readJsonFile(workspaceIndexSchemaPath);
 test('workspace init uses generic one-off topology without a current domain descriptor', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-mas-state-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-mas-root-'));
+  const modulesRoot = path.join(stateRoot, 'modules');
 
   try {
     const first = runCli([
@@ -53,6 +54,7 @@ test('workspace init uses generic one-off topology without a current domain desc
       'DM002',
     ], {
       OPL_STATE_DIR: stateRoot,
+      OPL_MODULES_ROOT: modulesRoot,
     });
     const second = runCli([
       'workspace',
@@ -67,6 +69,7 @@ test('workspace init uses generic one-off topology without a current domain desc
       'DM003',
     ], {
       OPL_STATE_DIR: stateRoot,
+      OPL_MODULES_ROOT: modulesRoot,
     });
 
     const workspacePath = path.join(workspaceRoot, 'dm-cvd');
@@ -104,6 +107,7 @@ test('workspace init and validate roundtrip every standard-agent registry profil
   for (const agent of agents) {
     const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), `opl-workspace-${agent.agent_id}-state-`));
     const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), `opl-workspace-${agent.agent_id}-root-`));
+    const modulesRoot = path.join(stateRoot, 'modules');
     try {
       const projectId = `${agent.agent_id}-roundtrip`;
       const initialized = runCli([
@@ -117,14 +121,20 @@ test('workspace init and validate roundtrip every standard-agent registry profil
         `${agent.agent_id}-roundtrip`,
         '--project-id',
         projectId,
-      ], { OPL_STATE_DIR: stateRoot });
+      ], {
+        OPL_STATE_DIR: stateRoot,
+        OPL_MODULES_ROOT: modulesRoot,
+      });
       const workspacePath = initialized.workspace_initialization.workspace_path;
       const validated = runCli([
         'workspace',
         'validate',
         '--workspace',
         workspacePath,
-      ], { OPL_STATE_DIR: stateRoot });
+      ], {
+        OPL_STATE_DIR: stateRoot,
+        OPL_MODULES_ROOT: modulesRoot,
+      });
       const workspaceIndex = readJsonFile(path.join(workspacePath, 'workspace_index.json'));
       const schemaValidation = validateJsonSchemaPayload({
         schemaId: workspaceIndexSchema.$id,
