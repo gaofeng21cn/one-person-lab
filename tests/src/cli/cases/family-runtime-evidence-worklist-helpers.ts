@@ -80,17 +80,18 @@ function evidenceWorklistStage(stageId: string, owner: string) {
   };
 }
 
-function defaultCallerActionCatalog(targetDomainId: string, owner: string) {
+function defaultCallerActionCatalog(targetDomainId: string, owner: string, stageId: string) {
   const toolName = `${targetDomainId.replace(/-/g, '_')}_fixture_status`;
-  const command = `${targetDomainId} fixture status --workspace-root <workspace_root>`;
   return {
     surface_kind: 'family_action_catalog',
-    version: 'family-action-catalog.v1',
+    version: 'family-action-catalog.v2',
     catalog_id: `${targetDomainId}_default_caller_fixture_catalog`,
     target_domain_id: targetDomainId,
     owner,
     authority_boundary: {
-      opl_role: 'generated_interface_projection_only',
+      domain_truth_owner: owner,
+      opl_role: 'projection_consumer_only',
+      write_policy: 'no_domain_truth_writes',
       can_write_domain_truth: false,
       can_authorize_quality_verdict: false,
     },
@@ -100,18 +101,29 @@ function defaultCallerActionCatalog(targetDomainId: string, owner: string) {
       summary: 'Fixture action used to exercise generated/hosted default caller descriptors.',
       owner,
       effect: 'read_only',
-      source_command: { command, surface_kind: 'domain_cli' },
+      execution_binding: {
+        kind: 'stage_binding',
+        stage_manifest_ref: 'agent/stages/manifest.json',
+      },
       input_schema_ref: 'contracts/default-caller-fixture.input.schema.json',
       output_schema_ref: 'contracts/default-caller-fixture.output.schema.json',
+      required_fields: [],
+      optional_fields: ['workspace_root'],
       workspace_locator_fields: ['workspace_root'],
       human_gate_ids: [],
+      stage_route: {
+        entry_stage_ref: stageId,
+        required_stage_refs: [stageId],
+        optional_stage_refs: [],
+        terminal_stage_refs: [stageId],
+        route_policy: 'ai_selected_progress_route',
+      },
       supported_surfaces: {
-        cli: { command, surface_kind: 'domain_cli' },
+        cli: { surface_kind: 'domain_cli' },
         mcp: { tool_name: toolName, surface_kind: 'domain_mcp_descriptor', descriptor_only: true },
         skill: { command_contract_id: `${targetDomainId}.fixture_status`, surface_kind: 'domain_skill_contract' },
         product_entry: {
           action_key: 'default_caller_fixture_action',
-          command: `${targetDomainId} product fixture-status --workspace-root <workspace_root>`,
           surface_kind: 'domain_product_entry',
         },
         openai: { tool_name: toolName },
@@ -179,7 +191,7 @@ export function withEvidenceWorklistSurfaces(
     ...(defaultCallerDeletionEvidence
       ? {
           generated_surface_handoff: defaultCallerGeneratedSurfaceHandoff(targetDomainId),
-          family_action_catalog: defaultCallerActionCatalog(targetDomainId, owner),
+          family_action_catalog: defaultCallerActionCatalog(targetDomainId, owner, stageIds[0]),
         }
       : {}),
     family_stage_control_plane: {
