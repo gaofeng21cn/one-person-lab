@@ -75,7 +75,7 @@ export function buildCurrentOwnerDeltaTopline(input: {
       transition_outcome: text(closeoutProgress.transition_outcome),
       quality_debt_reasons: strings(closeoutProgress.quality_debt_reasons),
       missing_transport_refs_block_next_stage: false,
-      semantic_route_owner: 'codex_cli',
+      semantic_route_owner: 'decisive_codex_attempt',
       refs_only: true,
     },
   };

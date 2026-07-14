@@ -48,6 +48,7 @@ test('readable artifact makes the next declared stage startable with quality deb
     'owner_answer_missing_for_quality_or_ready_claim',
   ));
   assert.equal(topline.stage_run_cockpit_summary.missing_transport_refs_block_next_stage, false);
+  assert.equal(topline.stage_run_cockpit_summary.semantic_route_owner, 'decisive_codex_attempt');
 });
 
 test('domain owner answer is projected directly and never minted by StageRun', () => {

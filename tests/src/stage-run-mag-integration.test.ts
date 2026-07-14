@@ -104,7 +104,7 @@ test('StageRun transports real MAG artifacts without becoming a semantic route o
   const p3aPath = path.join(repoDir, 'examples/nsfc_workspace_p3a_ready_for_submission.json');
   const nextStep = runMagJson(repoDir, ['workspace', 'next-step', '--input', p3aPath], env);
   assert.equal(nextStep.surface_kind, 'mag_ai_route_context');
-  assert.equal(nextStep.semantic_route_owner, 'codex_cli');
+  assert.equal(nextStep.semantic_route_owner, 'decisive_codex_attempt');
   assert.equal(nextStep.ai_route_policy.program_recommendation_can_block_or_select_route, false);
   assert.equal(nextStep.authority_boundary.framework_can_accept_reject_or_override_codex_route, false);
 
@@ -143,7 +143,7 @@ test('StageRun transports real MAG artifacts without becoming a semantic route o
 
     const routeContext = runMagJson(repoDir, ['workspace', 'next-step', '--input', revisedPath], env);
     assert.equal(routeContext.surface_kind, 'mag_ai_route_context');
-    assert.equal(routeContext.semantic_route_owner, 'codex_cli');
+    assert.equal(routeContext.semantic_route_owner, 'decisive_codex_attempt');
     assert.equal(routeContext.ai_route_policy.program_recommendation_can_block_or_select_route, false);
     assert.equal(routeContext.authority_boundary.framework_can_accept_reject_or_override_codex_route, false);
 

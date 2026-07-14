@@ -172,8 +172,8 @@ docker run --rm \
 ```bash
 printf "%s" "$OPL_CODEX_API_KEY" \
   | CODEX_HOME=/data/codex \
-    OPL_CODEX_MODEL=gpt-5.5 \
-    OPL_CODEX_REASONING_EFFORT=xhigh \
+    OPL_CODEX_MODEL=gpt-5.6-sol \
+    OPL_CODEX_REASONING_EFFORT=max \
     OPL_CODEX_BASE_URL=https://your-provider.example/v1 \
     opl system configure-codex --api-key-stdin
 ```

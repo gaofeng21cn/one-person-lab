@@ -232,7 +232,7 @@ function transportReceipt(input: {
       ? input.nextTask.reason
       : null,
     route_impact: Object.keys(routeImpact).length > 0 ? routeImpact : null,
-    semantic_route_owner: 'codex_cli',
+    semantic_route_owner: 'decisive_codex_attempt',
     transport_projection_blocks_next_stage: false,
     authority_boundary: {
       role: 'transport_receipt_only',

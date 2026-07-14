@@ -434,7 +434,7 @@ function buildFrameworkReadinessCompactReadbackFromCore(
           Array.isArray(stageRunCockpitSummary.artifact_or_blocker_refs)
             ? stageRunCockpitSummary.artifact_or_blocker_refs
             : [],
-        semantic_route_owner: 'codex_cli',
+        semantic_route_owner: 'decisive_codex_attempt',
         missing_format_or_receipt_blocks_next_stage: false,
         refs_only: stageRunCockpitSummary.refs_only === true,
       },
