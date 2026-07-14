@@ -278,20 +278,27 @@ test('retired ScholarSkills App actions cannot execute through the generic actio
 test('generic package activation action returns the launch binding at the App boundary', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-action-package-activate-'));
   const workspace = path.join(root, 'workspace');
-  const providerManifest = writeCapabilityProvider(path.join(root, 'provider'));
-  const consumerManifest = writeMasConsumer(path.join(root, 'consumer'), providerManifest);
+  const providerPackageId = 'fixture.app-action-provider';
+  const consumerPackageId = 'fixture.app-action-consumer';
+  const providerManifest = writeCapabilityProvider(path.join(root, 'provider'), '0.1.0', {
+    packageId: providerPackageId,
+  });
+  const consumerManifest = writeMasConsumer(path.join(root, 'consumer'), providerManifest, '0.1.0a4', {
+    packageId: consumerPackageId,
+    providerPackageId,
+  });
   const env = {
     OPL_STATE_DIR: path.join(root, 'state'),
     CODEX_HOME: path.join(root, 'codex-home'),
   };
   try {
     await runCliAsync([
-      'packages', 'install', '--manifest-url', consumerManifest, '--trust-tier', 'first_party',
+      'packages', 'install', '--manifest-url', consumerManifest, '--trust-tier', 'third_party_unverified',
     ], env);
     const output = await runCliAsync([
       'app', 'action', 'execute', '--action', 'agent_package_activate',
       '--payload', JSON.stringify({
-        package_id: 'mas',
+        package_id: consumerPackageId,
         scope: 'workspace',
         target_workspace: workspace,
         use_boundary_id: 'app-conversation-create-1',
@@ -302,13 +309,13 @@ test('generic package activation action returns the launch binding at the App bo
 
     assert.equal(execution.action_id, 'agent_package_activate');
     assert.equal(execution.delegated_surface, 'opl packages activate --package-id <package_id> --scope <workspace|quest>');
-    assert.equal(activation.package_id, 'mas');
+    assert.equal(activation.package_id, consumerPackageId);
     assert.equal(activation.launch_allowed, true);
     assert.equal(activation.operational_ready, true);
     assert.equal(activation.use_boundary_id, 'app-conversation-create-1');
     assert.equal(activation.package_use_binding.use_boundary_id, activation.use_boundary_id);
     assert.equal(activation.package_use_binding.use_receipt_ref, activation.use_receipt_ref);
-    assert.match(activation.use_receipt_ref, /^opl:\/\/agent-package\/use\/mas\//);
+    assert.match(activation.use_receipt_ref, /^opl:\/\/agent-package\/use\/fixture\.app-action-consumer\//);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

@@ -14,36 +14,91 @@ import {
 
 import { repoRoot } from './constants.ts';
 import { createContractsFixtureRoot, readJsonFixture, shellSingleQuote } from './fixtures.ts';
-import { runCli } from './runner.ts';
 
 export function installRuntimePackageFixture(stateRoot: string, packageId: string) {
   const canonicalPackageId = canonicalAgentPackageId(packageId);
   assert.ok(canonicalPackageId);
-  const env = {
-    OPL_STATE_DIR: stateRoot,
-    CODEX_HOME: path.join(stateRoot, 'codex-home'),
-  };
-  const current = runCli(['packages', 'status', '--package-id', canonicalPackageId], env)
-    .opl_agent_package_status;
-  if (current.installed_package_count > 0) return;
-  const fixtureRoot = path.join(stateRoot, 'test-package-fixtures');
-  const manifestPath = path.join(fixtureRoot, `${canonicalPackageId}.json`);
-  fs.mkdirSync(fixtureRoot, { recursive: true });
-  fs.writeFileSync(manifestPath, `${JSON.stringify({
-    surface_kind: 'opl_agent_package_manifest.v1',
-    agent_id: canonicalPackageId,
+  fs.mkdirSync(stateRoot, { recursive: true });
+  const lockPath = path.join(stateRoot, 'agent-package-locks.json');
+  const ledgerPath = path.join(stateRoot, 'agent-package-lifecycle-ledger.json');
+  const lockIndex = fs.existsSync(lockPath)
+    ? parseJsonText(fs.readFileSync(lockPath, 'utf8')) as any
+    : {
+        surface_kind: 'opl_agent_package_lock_index',
+        version: 'opl-agent-package-lock-index.v1',
+        packages: [],
+        last_known_good_transactions: [],
+      };
+  if (lockIndex.packages.some((entry: any) => entry.package_id === canonicalPackageId)) return;
+
+  const installedAt = '2026-01-01T00:00:00.000Z';
+  const installReceiptRef = `opl://agent-package/install/${canonicalPackageId}/fixture`;
+  const lockRef = `opl://agent-package-lock/${canonicalPackageId}/0.0.0-test/fixture`;
+  lockIndex.packages.push({
+    surface_kind: 'opl_agent_package_lock',
     package_id: canonicalPackageId,
+    agent_id: canonicalPackageId,
     display_name: canonicalPackageId,
     publisher: 'opl-test',
-    version: '0.0.0-test',
-    source: 'local_contract_fixture',
-    carrier_source_role: 'codex_plugin_default_carrier_not_package_truth',
-    codex_surface: { required_skill_ids: [canonicalPackageId] },
+    version_or_source_digest: '0.0.0-test+sha256:fixture',
+    package_version: '0.0.0-test',
+    owner_language_version: null,
+    installed_at: installedAt,
+    updated_at: installedAt,
+    codex_visible_entry: canonicalPackageId,
+    bundled_required_skill_ids: [canonicalPackageId],
+    optional_skill_refs: [],
+    source_kind: 'manifest_import',
+    trust_tier: 'third_party_unverified',
+    action_receipt_id: installReceiptRef,
+    rollback_ref: `opl://agent-package/rollback/${canonicalPackageId}/fixture`,
+    manifest_url: `test://agent-package/${canonicalPackageId}`,
+    manifest_sha256: 'sha256:' + '1'.repeat(64),
+    owner_source_commit: null,
+    permission_scope_sha256: 'sha256:' + '2'.repeat(64),
+    lock_ref: lockRef,
+    exposure_state: 'visible',
+    capability_provider: null,
     capability_dependencies: [],
-  }, null, 2)}\n`);
-  runCli([
-    'packages', 'install', '--manifest-url', manifestPath, '--trust-tier', 'first_party',
-  ], env);
+    resolved_dependencies: [],
+    dependency_closure_digest: 'sha256:' + '3'.repeat(64),
+    dependency_transaction_id: `fixture-${canonicalPackageId}`,
+    content_digest: 'sha256:' + '4'.repeat(64),
+    content_lock_paths: [],
+    scope_materializations: [],
+    runtime_source_carrier: null,
+    managed_runtime_source: null,
+    managed_update_source: null,
+  });
+  fs.writeFileSync(lockPath, `${JSON.stringify(lockIndex, null, 2)}\n`, 'utf8');
+
+  const ledger = fs.existsSync(ledgerPath)
+    ? parseJsonText(fs.readFileSync(ledgerPath, 'utf8')) as any
+    : {
+        surface_kind: 'opl_agent_package_lifecycle_ledger',
+        version: 'opl-agent-package-lifecycle-ledger.v1',
+        receipts: [],
+      };
+  ledger.receipts.push({
+    surface_kind: 'opl_agent_package_lifecycle_receipt',
+    receipt_ref: installReceiptRef,
+    receipt_status: 'recorded',
+    recorded_at: installedAt,
+    action: 'install',
+    action_status: 'completed',
+    package_id: canonicalPackageId,
+    registry_url: null,
+    manifest_url: `test://agent-package/${canonicalPackageId}`,
+    manifest_sha256: 'sha256:' + '1'.repeat(64),
+    package_lock_ref: lockRef,
+    rollback_ref: `opl://agent-package/rollback/${canonicalPackageId}/fixture`,
+    source_kind: 'manifest_import',
+    trust_tier: 'third_party_unverified',
+    writes_performed: true,
+    source_surface: 'opl_test_runtime_package_fixture',
+    authority_boundary: { can_write_domain_truth: false },
+  });
+  fs.writeFileSync(ledgerPath, `${JSON.stringify(ledger, null, 2)}\n`, 'utf8');
 }
 
 export function loadFamilyManifestFixtures() {
