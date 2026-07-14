@@ -14,6 +14,36 @@ function restoreEnv(name: string, value: string | undefined) {
   else process.env[name] = value;
 }
 
+function materializeCheckoutCurrentnessProfile(repoRoot: string) {
+  const contractsRoot = path.join(repoRoot, 'contracts');
+  fs.mkdirSync(contractsRoot, { recursive: true });
+  fs.writeFileSync(path.join(contractsRoot, 'domain_descriptor.json'), `${JSON.stringify({
+    standard_contract_refs: {
+      domain_owner_answer_projection_profile: 'contracts/domain_owner_answer_projection_profile.json',
+    },
+  }, null, 2)}\n`);
+  fs.writeFileSync(path.join(contractsRoot, 'domain_owner_answer_projection_profile.json'), `${JSON.stringify({
+    surface_kind: 'opl_domain_owner_answer_projection_profile',
+    version: 'domain-owner-answer-projection-profile.v1',
+    profile_id: 'medautoscience.checkout-currentness.v1',
+    profile_role: 'registry',
+    domain_id: 'medautoscience',
+    binding_project_id: 'medautoscience',
+    source_owner: 'med-autoscience',
+    checkout_currentness_required: true,
+    studies_dir_name: 'studies',
+    projection_relative_path: ['artifacts', 'publication_handoff', 'owner_receipt.json'],
+    authority_boundary: {
+      refs_only: true,
+      can_write_domain_truth: false,
+      can_create_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_claim_domain_ready: false,
+      can_claim_production_ready: false,
+    },
+  }, null, 2)}\n`);
+}
+
 test('formal quality Attempt uses one same-thread closeout-only resume without consuming Review budget', async () => {
   const closeout = {
     surface_kind: 'stage_attempt_closeout_packet',
@@ -317,18 +347,22 @@ test('child Review inherits StageRun currentness admission after producer artifa
     'exit 64',
   ].join('\n');
   const { fixtureRoot, codexPath } = createFakeCodexFixture(script);
-  execFileSync('git', ['init', '-q'], { cwd: fixtureRoot });
-  execFileSync('git', ['config', 'user.email', 'test@example.com'], { cwd: fixtureRoot });
-  execFileSync('git', ['config', 'user.name', 'OPL Test'], { cwd: fixtureRoot });
-  fs.writeFileSync(path.join(fixtureRoot, 'tracked.txt'), 'baseline\n');
-  execFileSync('git', ['add', 'tracked.txt'], { cwd: fixtureRoot });
-  execFileSync('git', ['commit', '-qm', 'baseline'], { cwd: fixtureRoot });
-  const admittedHead = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: fixtureRoot, encoding: 'utf8' }).trim();
-  fs.writeFileSync(path.join(fixtureRoot, 'producer-output.txt'), 'new stage artifact\n');
+  const domainRoot = path.join(fixtureRoot, 'med-autoscience');
+  materializeCheckoutCurrentnessProfile(domainRoot);
+  execFileSync('git', ['init', '-q'], { cwd: domainRoot });
+  execFileSync('git', ['config', 'user.email', 'test@example.com'], { cwd: domainRoot });
+  execFileSync('git', ['config', 'user.name', 'OPL Test'], { cwd: domainRoot });
+  fs.writeFileSync(path.join(domainRoot, 'tracked.txt'), 'baseline\n');
+  execFileSync('git', ['add', '.'], { cwd: domainRoot });
+  execFileSync('git', ['commit', '-qm', 'baseline'], { cwd: domainRoot });
+  const admittedHead = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: domainRoot, encoding: 'utf8' }).trim();
+  fs.writeFileSync(path.join(domainRoot, 'producer-output.txt'), 'new stage artifact\n');
 
   const previousBin = process.env.OPL_CODEX_BIN;
+  const previousFamilyWorkspaceRoot = process.env.OPL_FAMILY_WORKSPACE_ROOT;
   try {
     process.env.OPL_CODEX_BIN = codexPath;
+    process.env.OPL_FAMILY_WORKSPACE_ROOT = fixtureRoot;
     const baseAttempt = {
       stage_attempt_id: 'sat-currentness-reviewer',
       stage_run_id: 'sr-currentness-admission',
@@ -343,7 +377,7 @@ test('child Review inherits StageRun currentness admission after producer artifa
       () => runPublicCodexStageRunner({
         attempt: {
           ...baseAttempt,
-          workspace_locator: { workspace_root: fixtureRoot },
+          workspace_locator: { workspace_root: domainRoot },
         },
         runnerMode: 'codex_cli',
         env: { OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'host' },
@@ -356,7 +390,7 @@ test('child Review inherits StageRun currentness admission after producer artifa
       attempt: {
         ...baseAttempt,
         workspace_locator: {
-          workspace_root: fixtureRoot,
+          workspace_root: domainRoot,
           stage_run_currentness_admission: {
             surface_kind: 'opl_stage_run_currentness_admission',
             stage_run_id: baseAttempt.stage_run_id,
@@ -373,6 +407,7 @@ test('child Review inherits StageRun currentness admission after producer artifa
     assert.equal(receipt.progress_summary.thread_id, 'thread-currentness-reviewer');
   } finally {
     restoreEnv('OPL_CODEX_BIN', previousBin);
+    restoreEnv('OPL_FAMILY_WORKSPACE_ROOT', previousFamilyWorkspaceRoot);
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
