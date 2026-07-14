@@ -131,16 +131,26 @@ jobs:
     name: Publish immutable Package Release Set
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      OPL_RELEASE_HARNESS_ROOT: ${{ github.workspace }}/.release-harness
+      OPL_FRAMEWORK_SOURCE_ROOT: ${{ github.workspace }}/.framework-source
     outputs:
       release_set_generation: ${{ steps.release.outputs.release_set_generation }}
       promotion_request_id: ${{ steps.release.outputs.promotion_request_id }}
     steps:
+      - name: Checkout exact release harness
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          path: .release-harness
+
       - name: Checkout frozen Framework source
         uses: actions/checkout@v6
         with:
           ref: ${{ inputs.expected_framework_source_commit }}
+          path: .framework-source
 
-      - name: Verify exact Framework source commit
+      - name: Verify exact release roots
         shell: bash
         env:
           EXPECTED_FRAMEWORK_SOURCE_COMMIT: ${{ inputs.expected_framework_source_commit }}
@@ -151,9 +161,18 @@ jobs:
             echo "::error::expected_framework_source_commit must be one exact lowercase 40-character Git SHA."
             exit 1
           fi
-          actual_head="$(git rev-parse --verify HEAD)"
-          if [ "$actual_head" != "$expected" ]; then
-            echo "::error::Checkout HEAD $actual_head does not match expected Framework commit $expected."
+          harness_head="$(git -C "$OPL_RELEASE_HARNESS_ROOT" rev-parse --verify HEAD)"
+          source_head="$(git -C "$OPL_FRAMEWORK_SOURCE_ROOT" rev-parse --verify HEAD)"
+          if [ "$harness_head" != "$GITHUB_SHA" ]; then
+            echo "::error::Release harness HEAD $harness_head does not match workflow SHA $GITHUB_SHA."
+            exit 1
+          fi
+          if [ "$source_head" != "$expected" ]; then
+            echo "::error::Frozen Framework HEAD $source_head does not match expected commit $expected."
+            exit 1
+          fi
+          if [ "$(cd "$OPL_RELEASE_HARNESS_ROOT" && pwd -P)" = "$(cd "$OPL_FRAMEWORK_SOURCE_ROOT" && pwd -P)" ]; then
+            echo "::error::Release harness and frozen Framework source must use separate roots."
             exit 1
           fi
 
@@ -170,7 +189,7 @@ jobs:
           fi
           promotion_target="${{ inputs.promotion_target }}"
           [ "$promotion_target" = candidate ] || { echo "::error::Use release-package-channel.yml to promote an existing immutable BOM to latest-stable."; exit 2; }
-          generated_at="$(git show -s --format=%cI HEAD)"
+          generated_at="$(git -C "$OPL_FRAMEWORK_SOURCE_ROOT" show -s --format=%cI HEAD)"
           request_id="${{ inputs.promotion_request_id }}"
           if [ -z "$request_id" ]; then request_id="run-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"; fi
           [[ "$request_id" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$ ]] || { echo "::error::Invalid promotion request id: $request_id"; exit 1; }
@@ -202,9 +221,17 @@ jobs:
         with:
           node-version: '24'
           cache: npm
+          cache-dependency-path: |
+            .release-harness/package-lock.json
+            .framework-source/package-lock.json
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Install release harness dependencies
+        working-directory: .release-harness
+        run: npm ci --ignore-scripts
+
+      - name: Install frozen Framework dependencies
+        working-directory: .framework-source
+        run: npm ci --ignore-scripts
 
       - name: Setup ORAS
         uses: oras-project/setup-oras@v1
@@ -240,23 +267,6 @@ jobs:
           else
             echo "::notice::No previous latest-stable Release Set is available; this run must publish all seven Packages."
           fi
-
-      - name: Materialize exact release harness scripts
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]
-          harness_root="$RUNNER_TEMP/opl-release-harness-scripts"
-          rm -rf "$harness_root"
-          mkdir -p "$harness_root"
-          for script in resolve-opl-app-component.mjs required-value-options.mjs script-json-boundary.mjs; do
-            gh api -H "Accept: application/vnd.github.raw+json" \
-              "repos/${GITHUB_REPOSITORY}/contents/scripts/${script}?ref=${GITHUB_SHA}" \
-              > "$harness_root/$script"
-          done
-          echo "OPL_RELEASE_HARNESS_SCRIPTS=$harness_root" >> "$GITHUB_ENV"
 
       - name: Resolve immutable OPL App component
         shell: bash
@@ -301,7 +311,7 @@ jobs:
             --output "$RUNNER_TEMP/opl-app-component-manifest.json"
           )
           [ -z "$owner_manifest" ] || component_args+=(--owner-manifest "$owner_manifest")
-          node "$OPL_RELEASE_HARNESS_SCRIPTS/resolve-opl-app-component.mjs" "${component_args[@]}"
+          node "$OPL_RELEASE_HARNESS_ROOT/scripts/resolve-opl-app-component.mjs" "${component_args[@]}"
           resolved_version="$(jq -r .version "$RUNNER_TEMP/opl-app-component-manifest.json")"
           resolved_commit="$(jq -r .source_commit "$RUNNER_TEMP/opl-app-component-manifest.json")"
           resolved_digest="$(jq -r .primary_artifact.digest "$RUNNER_TEMP/opl-app-component-manifest.json")"
@@ -324,6 +334,7 @@ jobs:
             --owner "$OPL_PACKAGES_OWNER"
             --out-dir dist/opl-packages
             --app-component-manifest "$OPL_APP_COMPONENT_MANIFEST"
+            --framework-source-root "$OPL_FRAMEWORK_SOURCE_ROOT"
           )
           if [ -n "${OPL_PREVIOUS_PACKAGE_MANIFEST:-}" ]; then
             args+=(--previous-manifest "$OPL_PREVIOUS_PACKAGE_MANIFEST")
@@ -331,7 +342,7 @@ jobs:
           if [ -n "${OPL_PACKAGE_OWNER_COHORT_LOCK:-}" ]; then
             args+=(--owner-cohort-lock "$OPL_PACKAGE_OWNER_COHORT_LOCK")
           fi
-          npm run packages:manifest -- "${args[@]}"
+          node --experimental-strip-types "$OPL_RELEASE_HARNESS_ROOT/scripts/package-archives.mjs" "${args[@]}"
 
       - name: Resolve changed Package publication plan
         shell: bash
@@ -340,7 +351,7 @@ jobs:
           requested='${{ inputs.changed_packages_json }}'
           catalog_ids="$(jq -c '.packages.package_catalog | keys' dist/opl-packages/opl-channel-manifest.json)"
           if [ -n "${OPL_PREVIOUS_PACKAGE_MANIFEST:-}" ]; then
-            npm run packages:daily-check -- \
+            node "$OPL_RELEASE_HARNESS_ROOT/scripts/package-channel-daily-check.mjs" \
               --candidate-manifest dist/opl-packages/opl-channel-manifest.json \
               --current-manifest "$OPL_PREVIOUS_PACKAGE_MANIFEST" \
               --release-set-generation "$OPL_RELEASE_SET_GENERATION" \
@@ -362,7 +373,7 @@ jobs:
           echo "OPL_CHANGED_PACKAGES_JSON=$changed_packages_json" >> "$GITHUB_ENV"
 
       - name: Check Package release discipline
-        run: npm run packages:release-discipline -- --manifest dist/opl-packages/opl-release-manifest.json --promotion-target "$OPL_PACKAGE_PROMOTION_TARGET"
+        run: node "$OPL_RELEASE_HARNESS_ROOT/scripts/package-release-discipline.mjs" --manifest dist/opl-packages/opl-release-manifest.json --promotion-target "$OPL_PACKAGE_PROMOTION_TARGET"
 
       - name: Publish immutable Packages and finalize complete BOM
         shell: bash
@@ -414,7 +425,7 @@ jobs:
             archive="$package_root/${package_id}-${package_version}.tar.gz"
             image="ghcr.io/${OPL_PACKAGES_OWNER}/one-person-lab-packages/${package_id}"
             mapfile -t preflight_args < <(package_preflight_args "$package_root" "$package_id" "$package_version")
-            preflight="$(node scripts/oci-publication-preflight.mjs \
+            preflight="$(node "$OPL_RELEASE_HARNESS_ROOT/scripts/oci-publication-preflight.mjs" \
               --ref "${image}:${package_version}" "${preflight_args[@]}")"
             action="$(jq -r '.action' <<<"$preflight")"
             if [ "$action" = reuse ]; then
@@ -430,14 +441,14 @@ jobs:
             fi
             test "$digest" != null
             ensure_public_package "one-person-lab-packages/${package_id}"
-            node scripts/oci-publication-preflight.mjs \
+            node "$OPL_RELEASE_HARNESS_ROOT/scripts/oci-publication-preflight.mjs" \
               --ref "${image}:${package_version}" "${preflight_args[@]}" \
               --verify-only --expected-digest "$digest" --anonymous
             oras tag "${image}@${digest}" candidate
-            node scripts/oci-publication-preflight.mjs \
+            node "$OPL_RELEASE_HARNESS_ROOT/scripts/oci-publication-preflight.mjs" \
               --ref "${image}:candidate" "${preflight_args[@]}" \
               --verify-only --expected-digest "$digest" --anonymous
-            node scripts/finalize-package-channel-digests.mjs \
+            node "$OPL_RELEASE_HARNESS_ROOT/scripts/finalize-package-channel-digests.mjs" \
               --release-manifest dist/opl-packages/opl-release-manifest.json \
               --channel-manifest dist/opl-packages/opl-channel-manifest.json \
               --package-id "$package_id" \
@@ -451,11 +462,11 @@ jobs:
             image="ghcr.io/${OPL_PACKAGES_OWNER}/one-person-lab-packages/${package_id}"
             ensure_public_package "one-person-lab-packages/${package_id}"
             mapfile -t preflight_args < <(package_preflight_args "$package_root" "$package_id" "$package_version")
-            node scripts/oci-publication-preflight.mjs \
+            node "$OPL_RELEASE_HARNESS_ROOT/scripts/oci-publication-preflight.mjs" \
               --ref "${image}@${digest}" "${preflight_args[@]}" \
               --verify-only --expected-digest "$digest" --anonymous
             oras tag "${image}@${digest}" candidate
-            node scripts/oci-publication-preflight.mjs \
+            node "$OPL_RELEASE_HARNESS_ROOT/scripts/oci-publication-preflight.mjs" \
               --ref "${image}:candidate" "${preflight_args[@]}" \
               --verify-only --expected-digest "$digest" --anonymous
           done
@@ -468,7 +479,7 @@ jobs:
             --source-url "$OPL_OCI_SOURCE_URL"
             --layer "${framework_archive}=application/vnd.onepersonlab.framework.source.v1+gzip"
           )
-          preflight="$(node scripts/oci-publication-preflight.mjs --ref "$framework_ref" "${framework_args[@]}")"
+          preflight="$(node "$OPL_RELEASE_HARNESS_ROOT/scripts/oci-publication-preflight.mjs" --ref "$framework_ref" "${framework_args[@]}")"
           if [ "$(jq -r '.action' <<<"$preflight")" = reuse ]; then
             framework_digest="$(jq -r '.digest' <<<"$preflight")"
           else
@@ -479,24 +490,24 @@ jobs:
             framework_digest="$(jq -r '.digest' <<<"$framework_push")"
           fi
           ensure_public_package one-person-lab-framework
-          node scripts/oci-publication-preflight.mjs --ref "$framework_ref" "${framework_args[@]}" \
+          node "$OPL_RELEASE_HARNESS_ROOT/scripts/oci-publication-preflight.mjs" --ref "$framework_ref" "${framework_args[@]}" \
             --verify-only --expected-digest "$framework_digest" --anonymous
           framework_image="${framework_ref%:*}"
           oras tag "${framework_image}@${framework_digest}" candidate
-          node scripts/oci-publication-preflight.mjs --ref "${framework_image}:candidate" "${framework_args[@]}" \
+          node "$OPL_RELEASE_HARNESS_ROOT/scripts/oci-publication-preflight.mjs" --ref "${framework_image}:candidate" "${framework_args[@]}" \
             --verify-only --expected-digest "$framework_digest" --anonymous
-          node scripts/finalize-package-channel-digests.mjs \
+          node "$OPL_RELEASE_HARNESS_ROOT/scripts/finalize-package-channel-digests.mjs" \
             --release-manifest dist/opl-packages/opl-release-manifest.json \
             --channel-manifest dist/opl-packages/opl-channel-manifest.json \
             --component-id opl-base \
             --digest "$framework_digest"
-          node scripts/finalize-package-channel-digests.mjs \
+          node "$OPL_RELEASE_HARNESS_ROOT/scripts/finalize-package-channel-digests.mjs" \
             --release-manifest dist/opl-packages/opl-release-manifest.json \
             --channel-manifest dist/opl-packages/opl-channel-manifest.json \
             --check
 
       - name: Generate Release Set SBOM and provenance
-        run: node scripts/generate-release-supply-chain.mjs --release-manifest dist/opl-packages/opl-release-manifest.json --output-dir dist/opl-packages
+        run: node "$OPL_RELEASE_HARNESS_ROOT/scripts/generate-release-supply-chain.mjs" --release-manifest dist/opl-packages/opl-release-manifest.json --output-dir dist/opl-packages
 
       - name: Publish immutable Release Set catalog carrier
         shell: bash
@@ -537,7 +548,7 @@ jobs:
             --layer "dist/opl-packages/opl-release-provenance.json=application/vnd.in-toto+json"
             --layer "dist/opl-packages/SHA256SUMS=text/plain"
           )
-          preflight="$(node scripts/oci-publication-preflight.mjs --ref "$generation_ref" "${carrier_args[@]}")"
+          preflight="$(node "$OPL_RELEASE_HARNESS_ROOT/scripts/oci-publication-preflight.mjs" --ref "$generation_ref" "${carrier_args[@]}")"
           if [ "$(jq -r '.action' <<<"$preflight")" = reuse ]; then
             digest="$(jq -r '.digest' <<<"$preflight")"
           else
@@ -553,10 +564,10 @@ jobs:
             digest="$(jq -r '.digest' <<<"$push_result")"
           fi
           ensure_public_package one-person-lab-manifest
-          node scripts/oci-publication-preflight.mjs --ref "$generation_ref" "${carrier_args[@]}" \
+          node "$OPL_RELEASE_HARNESS_ROOT/scripts/oci-publication-preflight.mjs" --ref "$generation_ref" "${carrier_args[@]}" \
             --verify-only --expected-digest "$digest" --anonymous
           oras tag "${carrier}@${digest}" candidate
-          node scripts/oci-publication-preflight.mjs --ref "${carrier}:candidate" "${carrier_args[@]}" \
+          node "$OPL_RELEASE_HARNESS_ROOT/scripts/oci-publication-preflight.mjs" --ref "${carrier}:candidate" "${carrier_args[@]}" \
             --verify-only --expected-digest "$digest" --anonymous
           echo "OPL_RELEASE_SET_CARRIER_REF=$generation_ref" >> "$GITHUB_ENV"
           echo "OPL_RELEASE_SET_CARRIER_DIGEST=$digest" >> "$GITHUB_ENV"
@@ -586,7 +597,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node scripts/write-release-promotion-receipt.mjs \
+          node "$OPL_RELEASE_HARNESS_ROOT/scripts/write-release-promotion-receipt.mjs" \
             --release-manifest dist/opl-packages/opl-release-manifest.json \
             --output dist/opl-packages/opl-release-promotion-receipt.json \
             --target candidate \

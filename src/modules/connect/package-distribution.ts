@@ -43,6 +43,7 @@ type BuildPackageManifestInput = Partial<{
   rollbackVersion: string | null;
   retainVersions: number;
   appComponent: AppComponentInput | null;
+  frameworkVersion: string;
 }>;
 
 type ComponentArtifact = {
@@ -195,9 +196,10 @@ function buildFrameworkRef(owner: string, version: string) {
   return `ghcr.io/${owner}/one-person-lab-framework:${version}`;
 }
 
-function frameworkVersion() {
-  const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8')) as Record<string, unknown>;
-  const version = stringValue(packageJson.version);
+function frameworkVersion(explicitVersion?: string) {
+  const version = explicitVersion ?? stringValue(
+    (JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8')) as Record<string, unknown>).version,
+  );
   if (!version || !/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version)) {
     throw new Error(`OPL Base package.json version must be stable SemVer, got: ${version ?? 'missing'}`);
   }
@@ -402,7 +404,7 @@ export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
   const generatedAt = input.generatedAt ?? new Date().toISOString();
   const retainVersions = normalizeRetainVersions(input.retainVersions);
   const rollbackVersion = input.rollbackVersion === undefined ? null : input.rollbackVersion;
-  const baseVersion = frameworkVersion();
+  const baseVersion = frameworkVersion(input.frameworkVersion);
   const packageMembers = Object.fromEntries(PACKAGE_SPECS.map((spec) => {
     const packageVersion = projectedPackageVersion(spec);
     return [spec.package_id, {

@@ -75,6 +75,46 @@ function createOwnerPackageFixture(
   return createGitModuleRemoteFixture(repoName, { extraFiles });
 }
 
+function createFrozenFrameworkFixture(version: string) {
+  const sourceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-frozen-framework-'));
+  const files: Record<string, string> = {
+    'package.json': `${JSON.stringify({
+      name: 'one-person-lab',
+      version,
+      files: ['bin', 'dist', 'contracts/opl-framework'],
+      scripts: { build: 'fixture-build', prepare: 'fixture-prepare' },
+    }, null, 2)}\n`,
+    'package-lock.json': `${JSON.stringify({
+      name: 'one-person-lab',
+      version,
+      lockfileVersion: 3,
+      requires: true,
+      packages: { '': { name: 'one-person-lab', version } },
+    }, null, 2)}\n`,
+    'bin/opl': '#!/bin/sh\nexit 0\n',
+    'dist/entrypoints/cli.js': 'export {};\n',
+    'contracts/opl-framework/fixture.json': '{}\n',
+  };
+  for (const [relativePath, content] of Object.entries(files)) {
+    const target = path.join(sourceRoot, relativePath);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, content, 'utf8');
+  }
+  fs.chmodSync(path.join(sourceRoot, 'bin/opl'), 0o755);
+  execFileSync('git', ['init', '--quiet'], { cwd: sourceRoot, encoding: 'utf8' });
+  execFileSync('git', ['config', 'user.name', 'OPL Fixture'], { cwd: sourceRoot, encoding: 'utf8' });
+  execFileSync('git', ['config', 'user.email', 'fixture@one-person-lab.invalid'], { cwd: sourceRoot, encoding: 'utf8' });
+  execFileSync('git', ['add', '--all'], { cwd: sourceRoot, encoding: 'utf8' });
+  execFileSync('git', ['-c', 'commit.gpgsign=false', 'commit', '--quiet', '-m', 'Frozen Framework fixture'], {
+    cwd: sourceRoot,
+    encoding: 'utf8',
+  });
+  return {
+    sourceRoot,
+    headSha: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: sourceRoot, encoding: 'utf8' }).trim(),
+  };
+}
+
 test('package archive builder writes channel manifest checksums git source and release discipline gate', () => {
   const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-out-'));
   const previousManifest = path.join(outDir, 'previous-manifest.json');
@@ -330,6 +370,54 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.match(manifest.packages.framework_core.source_archive.sha256, /^[0-9a-f]{64}$/);
   assert.match(manifest.packages.framework_core.source_git.head_sha, /^[0-9a-f]{40}$/);
   assert.equal(channelManifest.packages.framework_core.artifact, manifest.packages.framework_core.artifact);
+
+  const frozenFramework = createFrozenFrameworkFixture('0.1.0');
+  const frozenOutDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-frozen-framework-out-'));
+  const fakeBin = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-frozen-framework-bin-'));
+  fs.writeFileSync(path.join(fakeBin, 'npm'), '#!/bin/sh\nexit 0\n', { mode: 0o755 });
+  try {
+    const frozenOutput = execFileSync(process.execPath, [
+      '--experimental-strip-types',
+      path.join(repoRoot, 'scripts/package-archives.mjs'),
+      '--release-set-generation', '26.4.31-r2',
+      '--owner', 'gaofeng21cn',
+      '--out-dir', frozenOutDir,
+      '--owner-cohort-lock', archiveBuilderResult.owner_cohort_lock,
+      '--app-component-manifest', appComponentManifest,
+      '--framework-source-root', frozenFramework.sourceRoot,
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...ownerSourceEnv,
+        PATH: `${fakeBin}:${process.env.PATH ?? ''}`,
+      },
+    });
+    const frozenResult = parseJsonText(frozenOutput) as Record<string, any>;
+    const frozenManifest = parseJsonText(fs.readFileSync(
+      path.join(frozenOutDir, 'opl-release-manifest.json'),
+      'utf8',
+    )) as Record<string, any>;
+    const frozenArchive = path.join(frozenOutDir, 'framework', 'one-person-lab-framework-0.1.0.tar.gz');
+    assert.notEqual(frozenFramework.sourceRoot, repoRoot);
+    assert.equal(frozenResult.framework_source_root, frozenFramework.sourceRoot);
+    assert.equal(frozenManifest.release_set.components.base.version, '0.1.0');
+    assert.equal(frozenManifest.release_set.components.base.source_commit, frozenFramework.headSha);
+    assert.equal(frozenManifest.packages.framework_core.version, '0.1.0');
+    assert.equal(frozenManifest.packages.framework_core.source_git.head_sha, frozenFramework.headSha);
+    assert.equal(frozenManifest.packages.framework_core.source_archive.file_name, 'one-person-lab-framework-0.1.0.tar.gz');
+    assert.equal(frozenManifest.packages.framework_core.artifact, 'ghcr.io/gaofeng21cn/one-person-lab-framework:0.1.0');
+    assert.equal(fs.existsSync(frozenArchive), true);
+    const frozenRuntimePackage = parseJsonText(execFileSync(
+      'tar', ['-xOf', frozenArchive, 'one-person-lab/package.json'], { encoding: 'utf8' },
+    )) as Record<string, any>;
+    assert.equal(frozenRuntimePackage.version, '0.1.0');
+  } finally {
+    fs.rmSync(frozenFramework.sourceRoot, { recursive: true, force: true });
+    fs.rmSync(frozenOutDir, { recursive: true, force: true });
+    fs.rmSync(fakeBin, { recursive: true, force: true });
+  }
+
   assert.equal(channelManifest.package_catalog_surface_kind, 'opl_package_catalog.v1');
   const packageCatalog = channelManifest.packages.package_catalog;
   const expectedSourceRoots: Record<string, string> = {

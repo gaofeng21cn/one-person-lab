@@ -18,6 +18,16 @@ import {
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
+function readFrameworkSourceVersion(frameworkSourceRoot) {
+  const packageJsonPath = path.join(frameworkSourceRoot, 'package.json');
+  const packageJson = readJsonFile(packageJsonPath);
+  const version = typeof packageJson.version === 'string' ? packageJson.version.trim() : '';
+  if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version)) {
+    throw new Error(`Frozen Framework package.json version must be stable SemVer, got: ${version || 'missing'}`);
+  }
+  return version;
+}
+
 function parseCliOptions(argv) {
   const parsed = {
     releaseSetGeneration: process.env.OPL_RELEASE_SET_GENERATION || undefined,
@@ -29,6 +39,9 @@ function parseCliOptions(argv) {
     retainVersions: process.env.OPL_PACKAGE_RETAIN_VERSIONS || undefined,
     appComponentManifest: process.env.OPL_APP_COMPONENT_MANIFEST || undefined,
     ownerCohortLock: process.env.OPL_PACKAGE_OWNER_COHORT_LOCK || undefined,
+    frameworkSourceRoot: process.env.OPL_FRAMEWORK_SOURCE_ROOT
+      ? path.resolve(process.env.OPL_FRAMEWORK_SOURCE_ROOT)
+      : repoRoot,
   };
 
   parseRequiredValueOptions(argv, {
@@ -58,6 +71,9 @@ function parseCliOptions(argv) {
     },
     '--owner-cohort-lock': (value) => {
       parsed.ownerCohortLock = path.resolve(value);
+    },
+    '--framework-source-root': (value) => {
+      parsed.frameworkSourceRoot = path.resolve(value);
     },
   });
 
@@ -394,6 +410,7 @@ function main() {
   const ownerCohort = resolveOwnerCohort(options);
   const rollbackVersion = previousManifest?.release_set_generation ?? null;
   const retainVersions = normalizeRetainVersions(options.retainVersions);
+  const frameworkVersion = readFrameworkSourceVersion(options.frameworkSourceRoot);
   const manifest = buildOplPackageManifest({
     releaseSetGeneration: options.releaseSetGeneration,
     generatedAt: options.generatedAt,
@@ -401,6 +418,7 @@ function main() {
     rollbackVersion,
     retainVersions,
     appComponent,
+    frameworkVersion,
   });
   const releaseSetGeneration = manifest.release_set_generation;
   const packagesOutDir = path.join(options.outDir, 'packages');
@@ -420,8 +438,7 @@ function main() {
     relative_path: 'owner-cohort-lock.json',
     sha256: ownerCohortLockDigest.replace(/^sha256:/, ''),
   });
-  const frameworkVersion = manifest.packages.framework_core.version;
-  const frameworkArchive = archiveFramework(repoRoot, frameworkOutDir, frameworkVersion);
+  const frameworkArchive = archiveFramework(options.frameworkSourceRoot, frameworkOutDir, frameworkVersion);
   archives.push({
     ...frameworkArchive,
     relative_path: `framework/${frameworkArchive.file_name}`,
@@ -532,6 +549,7 @@ function main() {
     packages_dir: packagesOutDir,
     framework_dir: frameworkOutDir,
     clone_root: options.cloneRoot,
+    framework_source_root: options.frameworkSourceRoot,
     framework_core: {
       artifact: manifest.packages.framework_core.artifact,
       source_archive: manifest.packages.framework_core.source_archive,

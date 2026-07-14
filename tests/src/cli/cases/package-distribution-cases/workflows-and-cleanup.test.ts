@@ -38,10 +38,13 @@ test('framework packages workflow is release-gated and manually repairable witho
     assert.doesNotMatch(source, /\[ "\$GITHUB_SHA" != "\$expected" \]/);
     assert.doesNotMatch(source, /\[ -z "\$expected" \]/);
   }
-  assert.match(workflow, /ref: \$\{\{ inputs\.expected_framework_source_commit \}\}/);
-  assert.match(workflow, /\[ "\$actual_head" != "\$expected" \]/);
-  assert.ok(workflow.indexOf('Checkout frozen Framework source') < workflow.indexOf('Verify exact Framework source commit'));
-  assert.ok(workflow.indexOf('Verify exact Framework source commit') < workflow.indexOf('Resolve Release Set generation'));
+  assert.match(workflow, /ref: \$\{\{ github\.sha \}\}\s+path: \.release-harness/);
+  assert.match(workflow, /ref: \$\{\{ inputs\.expected_framework_source_commit \}\}\s+path: \.framework-source/);
+  assert.match(workflow, /\[ "\$harness_head" != "\$GITHUB_SHA" \]/);
+  assert.match(workflow, /\[ "\$source_head" != "\$expected" \]/);
+  assert.ok(workflow.indexOf('Checkout exact release harness') < workflow.indexOf('Checkout frozen Framework source'));
+  assert.ok(workflow.indexOf('Checkout frozen Framework source') < workflow.indexOf('Verify exact release roots'));
+  assert.ok(workflow.indexOf('Verify exact release roots') < workflow.indexOf('Resolve Release Set generation'));
   assert.ok(releaseCallerWorkflow.indexOf('Checkout OPL') < releaseCallerWorkflow.indexOf('Validate frozen Framework source input'));
   assert.ok(releaseCallerWorkflow.indexOf('Validate frozen Framework source input') < releaseCallerWorkflow.indexOf('Setup Node.js'));
   assert.match(releaseCallerWorkflow, /\.release_set\.components\.base\.source_commit/);
@@ -94,10 +97,27 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.match(workflow, /OPL_PREVIOUS_PACKAGE_MANIFEST/);
   assert.match(workflow, /args\+=\(--previous-manifest "\$OPL_PREVIOUS_PACKAGE_MANIFEST"\)/);
   assert.ok(workflow.indexOf('Fetch previous latest-stable Release Set') < workflow.indexOf('Build Package archives and Release Set manifests'));
-  assert.ok(workflow.indexOf('Materialize exact release harness scripts') < workflow.indexOf('Resolve immutable OPL App component'));
-  assert.match(workflow, /contents\/scripts\/\$\{script\}\?ref=\$\{GITHUB_SHA\}/);
-  assert.match(workflow, /node "\$OPL_RELEASE_HARNESS_SCRIPTS\/resolve-opl-app-component\.mjs"/);
-  assert.doesNotMatch(workflow, /node scripts\/resolve-opl-app-component\.mjs/);
+  assert.ok(workflow.indexOf('Verify exact release roots') < workflow.indexOf('Resolve immutable OPL App component'));
+  assert.match(workflow, /OPL_RELEASE_HARNESS_ROOT: \$\{\{ github\.workspace \}\}\/\.release-harness/);
+  assert.match(workflow, /OPL_FRAMEWORK_SOURCE_ROOT: \$\{\{ github\.workspace \}\}\/\.framework-source/);
+  assert.equal(workflow.match(/run: npm ci --ignore-scripts/g)?.length, 2);
+  assert.doesNotMatch(workflow, /run: npm ci\s*$/m);
+  assert.match(workflow, /node "\$OPL_RELEASE_HARNESS_ROOT\/scripts\/resolve-opl-app-component\.mjs"/);
+  assert.match(workflow, /--framework-source-root "\$OPL_FRAMEWORK_SOURCE_ROOT"/);
+  for (const script of [
+    'resolve-opl-app-component.mjs',
+    'package-archives.mjs',
+    'package-channel-daily-check.mjs',
+    'package-release-discipline.mjs',
+    'oci-publication-preflight.mjs',
+    'finalize-package-channel-digests.mjs',
+    'generate-release-supply-chain.mjs',
+    'write-release-promotion-receipt.mjs',
+  ]) {
+    assert.match(workflow, new RegExp(`\\$OPL_RELEASE_HARNESS_ROOT/scripts/${script.replaceAll('.', '\\.')}`));
+  }
+  assert.doesNotMatch(workflow, /\bnode(?:\s+--experimental-strip-types)?\s+scripts\//);
+  assert.doesNotMatch(workflow, /npm run packages:(?:manifest|daily-check|release-discipline)/);
   assert.match(workflow, /app_commit="\$\{\{ inputs\.expected_app_source_commit \}\}"/);
   assert.match(workflow, /if \[ -z "\$app_commit" \] && \[ -n "\$owner_manifest" \]; then\s+app_commit="\$\(jq -r \.source_commit "\$owner_manifest"\)"/);
   assert.match(workflow, /if \[ -z "\$app_commit" \]; then\s+app_commit="\$\(gh api "repos\/gaofeng21cn\/one-person-lab-app\/commits\/v\$app_version" --jq \.sha\)"/);

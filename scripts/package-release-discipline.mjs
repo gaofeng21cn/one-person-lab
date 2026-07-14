@@ -197,17 +197,38 @@ function validateWorkflow(manifest, manifestPath, failures) {
   const packageFrameworkCommitInputs = workflowInputBlocks(source, 'expected_framework_source_commit');
   assertCondition(packageFrameworkCommitInputs.length === 2
     && packageFrameworkCommitInputs.every(isRequiredStringInput), 'Package workflow must require one non-default Framework source commit for both dispatch and workflow_call', failures);
-  assertCondition(source.includes('ref: ${{ inputs.expected_framework_source_commit }}')
+  assertCondition(source.includes('ref: ${{ github.sha }}')
+    && source.includes('path: .release-harness')
+    && source.includes('ref: ${{ inputs.expected_framework_source_commit }}')
+    && source.includes('path: .framework-source')
     && source.includes('EXPECTED_FRAMEWORK_SOURCE_COMMIT: ${{ inputs.expected_framework_source_commit }}')
     && source.includes('[[ "$expected" =~ ^[0-9a-f]{40}$ ]]')
-    && source.includes('[ "$actual_head" != "$expected" ]')
+    && source.includes('[ "$harness_head" != "$GITHUB_SHA" ]')
+    && source.includes('[ "$source_head" != "$expected" ]')
     && !source.includes('[ "$GITHUB_SHA" != "$expected" ]'), 'Package workflow must load the exact frozen Framework source while allowing a newer workflow harness', failures);
-  const packageCheckoutIndex = source.indexOf('- name: Checkout frozen Framework source');
-  const packageSourceGateIndex = source.indexOf('- name: Verify exact Framework source commit');
+  const packageHarnessCheckoutIndex = source.indexOf('- name: Checkout exact release harness');
+  const packageSourceCheckoutIndex = source.indexOf('- name: Checkout frozen Framework source');
+  const packageSourceGateIndex = source.indexOf('- name: Verify exact release roots');
   const packageResolutionIndex = source.indexOf('- name: Resolve Release Set generation');
-  assertCondition(packageCheckoutIndex >= 0
-    && packageCheckoutIndex < packageSourceGateIndex
+  assertCondition(packageHarnessCheckoutIndex >= 0
+    && packageHarnessCheckoutIndex < packageSourceCheckoutIndex
+    && packageSourceCheckoutIndex < packageSourceGateIndex
     && packageSourceGateIndex < packageResolutionIndex, 'Package Framework source gate must run immediately after checkout and before build or publication work', failures);
+  const releaseHarnessScripts = [
+    'resolve-opl-app-component.mjs',
+    'package-archives.mjs',
+    'package-channel-daily-check.mjs',
+    'package-release-discipline.mjs',
+    'oci-publication-preflight.mjs',
+    'finalize-package-channel-digests.mjs',
+    'generate-release-supply-chain.mjs',
+    'write-release-promotion-receipt.mjs',
+  ];
+  assertCondition(releaseHarnessScripts.every((script) => source.includes(`$OPL_RELEASE_HARNESS_ROOT/scripts/${script}`))
+    && source.includes('--framework-source-root "$OPL_FRAMEWORK_SOURCE_ROOT"')
+    && source.match(/npm ci --ignore-scripts/g)?.length === 2
+    && !/\bnode(?:\s+--experimental-strip-types)?\s+scripts\//.test(source)
+    && !/npm run packages:(?:manifest|daily-check|release-discipline)/.test(source), 'Candidate publication must run every release control helper from the exact harness root and reserve the frozen root for Base source', failures);
   assertCondition(/concurrency:[\s\S]*opl-package-publication-/.test(source) && /cancel-in-progress:\s*false/.test(source), 'Package publication must be serialized without cancellation', failures);
   assertCondition(/release_set_generation:/.test(source) && !/\n\s+opl_version:/.test(source), 'Package workflow input must be Release Set generation', failures);
   assertCondition(/oci-publication-preflight\.mjs/.test(source), 'Package workflow must run OCI immutable preflight', failures);
