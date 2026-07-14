@@ -13,11 +13,13 @@ import { writeNativeHelperFixtureScripts } from './native-helper-fixtures.ts';
 test('runtime manager reports OPL control plane over provider-backed family runtime', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-state-'));
   const modulesRoot = path.join(stateRoot, 'modules');
+  const expectedDomainProfiles = runtimeManagerDomainProfiles(() => null);
 
   try {
     const output = runCli(['runtime', 'manager'], {
       OPL_STATE_DIR: stateRoot,
       OPL_MODULES_ROOT: modulesRoot,
+      OPL_FAMILY_WORKSPACE_ROOT: path.join(stateRoot, 'family'),
       OPL_FAMILY_RUNTIME_PROVIDER: '',
       OPL_TEMPORAL_ADDRESS: '',
       TEMPORAL_ADDRESS: '',
@@ -124,7 +126,7 @@ test('runtime manager reports OPL control plane over provider-backed family runt
     );
     assert.deepEqual(
       output.runtime_manager.daemon_policy.domain_launchagent_policy,
-      Object.fromEntries(runtimeManagerDomainProfiles().map((profile) => [
+      Object.fromEntries(expectedDomainProfiles.map((profile) => [
         profile.domain_id,
         profile.scheduler.daemon_policy,
       ])),
@@ -132,7 +134,7 @@ test('runtime manager reports OPL control plane over provider-backed family runt
     assert.equal(output.runtime_manager.non_goals.includes('not_a_domain_runtime_truth_owner'), true);
     assert.equal(output.runtime_manager.registration_registry.surface_kind, 'opl_stage_runtime_registration_registry');
     const registrationDomains = output.runtime_manager.registration_registry.domains;
-    assert.equal(registrationDomains.length, runtimeManagerDomainProfiles().length);
+    assert.equal(registrationDomains.length, expectedDomainProfiles.length);
     assert.deepEqual(
       registrationDomains.map(
         (domain: { domain_id: string }) => domain.domain_id,
@@ -145,6 +147,13 @@ test('runtime manager reports OPL control plane over provider-backed family runt
           domain.expected_registration_surface.ref.startsWith('package:'),
       ),
       true,
+    );
+    assert.deepEqual(
+      registrationDomains,
+      expectedDomainProfiles.map((profile) => {
+        const { scheduler: _scheduler, ...registration } = profile;
+        return registration;
+      }),
     );
     const masRegistration = registrationDomains.find(
       (domain: { domain_id: string }) => domain.domain_id === 'medautoscience',

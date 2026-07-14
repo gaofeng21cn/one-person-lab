@@ -89,9 +89,11 @@ export function runtimeDomainOwnerProfiles() {
   }));
 }
 
-export function runtimeManagerDomainProfiles() {
+export function runtimeManagerDomainProfiles(
+  readDescriptor: StandardAgentDescriptorReader = readStandardAgentDescriptorForDomain,
+) {
   return runtimeEnabledStandardAgents().map((entry) => {
-    const profile = runtimeProfile(entry);
+    const profile = runtimeProfile(entry, readDescriptor);
     const packageStatusCommand = `opl packages status --package-id ${entry.agent_id}`;
     return {
       domain_id: profile.runtime_domain_id,

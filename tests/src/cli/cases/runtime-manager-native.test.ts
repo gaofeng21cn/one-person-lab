@@ -686,6 +686,7 @@ test('runtime manager reports temporal provider code landed when live runtime is
     const output = runTemporalRuntimeManager(stateRoot, path.join(stateRoot, 'missing-native-bin'), {
       OPL_TEMPORAL_ADDRESS: '',
       TEMPORAL_ADDRESS: '',
+      OPL_MODULES_ROOT: path.join(stateRoot, 'modules'),
       PATH: '',
     });
     const reconcile = output.runtime_manager.reconcile;

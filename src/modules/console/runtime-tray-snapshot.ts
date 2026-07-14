@@ -491,10 +491,10 @@ function runtimeActivityCurrentWorkUnitProjection(): JsonRecord | null {
     ),
     stage_id: firstString(selected.active_stage_id, selected.stage_id, selected.stage_ref),
     work_unit_id: firstString(
-      selected.work_unit_id,
-      selected.work_item_id,
-      selected.study_id,
       selected.item_id,
+      selected.work_item_id,
+      selected.work_unit_id,
+      selected.study_id,
       selected.task_id,
     ),
     runtime_activity_updated_at: firstString(selected.updated_at),
