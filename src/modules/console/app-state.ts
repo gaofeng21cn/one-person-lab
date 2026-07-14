@@ -287,7 +287,7 @@ function appAgentPackageStatusContext(
 ) {
   const binding = activeWorkspaceBindings.find((entry) =>
     canonicalAgentPackageId(entry.project_id) === packageId);
-  const targetWorkspace = binding?.workspace_path ?? workspaceRootPath;
+  const targetWorkspace = workspaceRootPath ?? binding?.workspace_path;
   return targetWorkspace
     ? { scope: 'workspace' as const, targetWorkspace }
     : {};

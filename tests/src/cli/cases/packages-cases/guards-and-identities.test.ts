@@ -522,6 +522,36 @@ test('published registry entry rejects a source-only manifest without distributi
   );
 });
 
+test('registry selection rejects declared package role or selected version drift', () => {
+  const manifestUrl = 'https://registry.example/manifest.json';
+  const registryEntry = normalizeRegistry(
+    registryPayload('https://registry.example'),
+    'https://registry.example/registry.json',
+    'fixture-sha256',
+  ).entries[0];
+  const manifest = normalizeManifest(agentPackageManifest(), manifestUrl);
+  const selection = {
+    packageId: manifest.package_id,
+    registryUrl: 'https://registry.example/registry.json',
+    manifestUrl,
+  };
+
+  assert.throws(
+    () => assertManifestMatchesRegistrySelection(manifest, {
+      ...selection,
+      registryEntry: { ...registryEntry, package_role: 'workflow_profile' },
+    }),
+    (error: any) => error?.details?.failure_code === 'registry_manifest_package_role_mismatch',
+  );
+  assert.throws(
+    () => assertManifestMatchesRegistrySelection(manifest, {
+      ...selection,
+      registryEntry: { ...registryEntry, selected_version: '9.9.9' },
+    }),
+    (error: any) => error?.details?.failure_code === 'registry_manifest_selected_version_mismatch',
+  );
+});
+
 test('packages rejects registry manifest identity drift before writing locks', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-drift-state-'));
   const fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-drift-'));

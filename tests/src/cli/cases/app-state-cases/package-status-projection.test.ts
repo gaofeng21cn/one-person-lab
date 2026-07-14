@@ -132,14 +132,14 @@ test('app state isolates one invalid package status while direct status reads re
   assert.equal(availability.find((entry) => entry.agent_id === 'obf')?.reason, 'package_status_read_failed');
 });
 
-test('app package status uses a package binding before falling back to the selected workspace root', () => {
+test('app package status keeps the selected workspace root authoritative over an old package binding', () => {
   const selectedWorkspaceRoot = '/tmp/opl-selected-workspace';
   const packageWorkspace = '/tmp/opl-mas-workspace';
   const requests: Array<{ packageId: string; scope?: string; targetWorkspace?: string }> = [];
   const readStatus = ((input: { packageId: string; scope?: string; targetWorkspace?: string }) => {
     requests.push(input);
     const materialized = input.scope === 'workspace'
-      && (input.targetWorkspace === packageWorkspace || input.targetWorkspace === selectedWorkspaceRoot);
+      && input.targetWorkspace === selectedWorkspaceRoot;
     return {
       opl_agent_package_status: {
         package_id: input.packageId,
@@ -173,7 +173,7 @@ test('app package status uses a package binding before falling back to the selec
     readStatus,
   });
 
-  assert.equal(requests.find((entry) => entry.packageId === 'mas')?.targetWorkspace, packageWorkspace);
+  assert.equal(requests.find((entry) => entry.packageId === 'mas')?.targetWorkspace, selectedWorkspaceRoot);
   assert.equal(requests.find((entry) => entry.packageId === 'opl-flow')?.targetWorkspace, selectedWorkspaceRoot);
   assert.equal(statuses['opl-flow'].status, 'available');
   assert.equal(statuses['opl-flow'].operational_ready, true);
@@ -273,7 +273,9 @@ exit 1
       (entry: any) => entry.package_id === 'third.party.research',
     );
     assert.equal(directoryEntry.activated, true);
-    assert.equal(directoryEntry.readiness.status, 'ready');
+    assert.equal(directoryEntry.readiness.status, 'verification_deferred');
+    assert.equal(directoryEntry.readiness.verification_deferred, true);
+    assert.equal(directoryEntry.readiness.reason, 'live_verification_deferred');
     assert.equal(calls.get('third.party.research'), 1);
   } finally {
     for (const [key, value] of previousEnv) {

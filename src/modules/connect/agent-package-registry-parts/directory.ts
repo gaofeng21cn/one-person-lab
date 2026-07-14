@@ -25,6 +25,11 @@ type PackageStatusReadback = {
   materialization_readiness?: {
     status?: string;
   } | null;
+  runtime_source_readiness?: {
+    status?: string;
+    live_verification_deferred?: boolean;
+  } | null;
+  currentness_detail_deferred?: boolean;
 };
 
 type DirectorySource = {
@@ -318,7 +323,11 @@ function installedRoleResolution(lock: AgentPackageLock, source: DirectorySource
       diagnostic: null,
     };
   } catch (error) {
-    if (source?.source_kind === 'first_party_release_catalog' && source.package_role) {
+    const legacyRoleMissing = error instanceof FrameworkContractError
+      && error.details?.failure_code === 'agent_package_lock_role_missing';
+    if (legacyRoleMissing
+      && source?.source_kind === 'first_party_release_catalog'
+      && source.package_role) {
       return {
         role: source.package_role,
         source: 'first_party_release_catalog_fallback' as const,
@@ -538,6 +547,11 @@ export function buildAgentPackageDirectory(input: {
       && status.operational_ready === true
       && status.launch_allowed === true
       && (materializationStatus === 'current' || materializationStatus === 'not_required');
+    const verificationDeferred = installed && activated && (
+      input.detail === 'fast'
+      || status.currentness_detail_deferred === true
+      || status.runtime_source_readiness?.live_verification_deferred === true
+    );
     const actions = availableActions(
       effectiveSource,
       installed,
@@ -558,7 +572,7 @@ export function buildAgentPackageDirectory(input: {
         : !installed
       ? roleKnown ? 'not_installed' : 'migration_required'
         : activated
-          ? 'ready'
+          ? verificationDeferred ? 'verification_deferred' : 'ready'
           : recommendedAction === 'agent_package_activate'
             ? 'activation_required'
           : 'attention_needed';
@@ -614,11 +628,15 @@ export function buildAgentPackageDirectory(input: {
         status: readinessStatus,
         operational_ready: installed && status.operational_ready === true,
         launch_allowed: installed && status.launch_allowed === true,
+        verification_deferred: verificationDeferred,
         reason: !installed
           ? roleKnown ? 'package_not_installed' : 'registry_role_refresh_required'
           : roleRepairRequired
             ? roleMismatch ? 'installed_role_mismatch' : 'installed_role_migration_required'
-            : status.launch_blocked_reason ?? (activated ? null : 'package_activation_required'),
+            : status.launch_blocked_reason
+              ?? (activated
+                ? verificationDeferred ? 'live_verification_deferred' : null
+                : 'package_activation_required'),
         detail_surface: `opl packages status --package-id ${source.package_id} --json`,
         status_read_error: statusReadError,
       },

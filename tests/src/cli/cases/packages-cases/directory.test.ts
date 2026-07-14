@@ -383,7 +383,9 @@ test('scope-less list and App workspace context project different activation sta
       statusContext: () => ({ scope: 'workspace', targetWorkspace: workspace }),
     }).opl_agent_packages.directory.entries.find((entry) => entry.package_id === lock.package_id)!;
     assert.equal(appWorkspace.activated, true);
-    assert.equal(appWorkspace.readiness.status, 'ready');
+    assert.equal(appWorkspace.readiness.status, 'verification_deferred');
+    assert.equal(appWorkspace.readiness.verification_deferred, true);
+    assert.equal(appWorkspace.readiness.reason, 'live_verification_deferred');
     assert.equal(appWorkspace.recommended_action, null);
     assert.equal(appWorkspace.available_actions.some((action) => action.action_id === 'agent_package_activate'), false);
     assertRecommendedActionMatchesAvailable(appWorkspace);
@@ -425,11 +427,31 @@ test('installed-only directory entries retain persisted role and consume canonic
   }).entries.find((entry) => entry.package_id === lock.package_id)!;
   assert.equal(ready.package_role, 'workflow_profile');
   assert.equal(ready.activated, true);
-  assert.equal(ready.readiness.status, 'ready');
+  assert.equal(ready.readiness.status, 'verification_deferred');
+  assert.equal(ready.readiness.verification_deferred, true);
+  assert.equal(ready.readiness.reason, 'live_verification_deferred');
   assert.equal(ready.recommended_action, null);
   assert.equal(ready.recommended_action_ref, null);
   assert.equal(ready.available_actions.some((action) => action.action_id === 'agent_package_activate'), false);
   assertRecommendedActionMatchesAvailable(ready);
+
+  const fullyVerified = buildAgentPackageDirectory({
+    registryCache: null,
+    locks: [lock],
+    detail: 'full',
+    readStatus: () => ({
+      status: 'available',
+      recommended_action: null,
+      operational_ready: true,
+      launch_allowed: true,
+      launch_blocked_reason: null,
+      materialization_readiness: { status: 'not_required' },
+    }),
+  }).entries.find((entry) => entry.package_id === lock.package_id)!;
+  assert.equal(fullyVerified.activated, true);
+  assert.equal(fullyVerified.readiness.status, 'ready');
+  assert.equal(fullyVerified.readiness.verification_deferred, false);
+  assert.equal(fullyVerified.readiness.reason, null);
 
   const needsActivation = buildAgentPackageDirectory({
     registryCache: null,
@@ -479,6 +501,20 @@ test('installed-only directory entries retain persisted role and consume canonic
     ['agent_package_repair', 'agent_package_uninstall'],
   );
   assertRecommendedActionMatchesAvailable(legacy);
+
+  const invalidRoleDirectory = buildAgentPackageDirectory({
+    registryCache: null,
+    locks: [{ ...lock, package_id: 'opl-flow', package_role: 'invalid_role' }],
+    detail: 'fast',
+  });
+  const invalidRole = invalidRoleDirectory.entries.find((entry) => entry.package_id === 'opl-flow')!;
+  assert.equal(invalidRoleDirectory.status, 'attention_required');
+  assert.equal(invalidRole.package_role, null);
+  assert.equal(invalidRole.role_state.status, 'migration_required');
+  assert.equal(invalidRole.role_state.source, 'unresolved_installed_lock');
+  assert.equal(invalidRole.role_state.diagnostic?.code, 'contract_shape_invalid');
+  assert.equal(invalidRole.recommended_action, 'agent_package_repair');
+  assertRecommendedActionMatchesAvailable(invalidRole);
 
   const failedStatusDirectory = buildAgentPackageDirectory({
     registryCache: null,
