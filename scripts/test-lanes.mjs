@@ -334,15 +334,6 @@ const readModelGateStartupMaintenanceHeavyTestFiles = [
   'tests/src/cli/cases/system-startup-maintenance.test.ts',
 ];
 
-const fastTemporalHeavyTestFiles = [
-  'tests/src/family-runtime-temporal-stage-run-controller.test.ts',
-  'tests/src/family-runtime-pack-bound-stage-quality-e2e.test.ts',
-];
-
-const fastNonTemporalHeavyTestFiles = fastTestFiles.filter(
-  (file) => !fastTemporalHeavyTestFiles.includes(file),
-);
-
 const readModelGateNonTemporalHeavyTestFiles = readModelGateTestFiles.filter(
   (file) => !readModelGateTemporalHeavyTestFiles.includes(file)
     && !readModelGateStartupMaintenanceHeavyTestFiles.includes(file),
