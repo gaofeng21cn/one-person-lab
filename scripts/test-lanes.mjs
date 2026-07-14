@@ -312,12 +312,22 @@ const readModelGateTestFiles = [
 
 const readModelGateTemporalHeavyTestFiles = [
   'tests/src/family-runtime-temporal-provider.test.ts',
+  'tests/src/family-runtime-temporal-terminal-sync.test.ts',
   'tests/src/cli/cases/family-runtime.test.ts',
   'tests/src/cli/cases/family-runtime-provider-repair.test.ts',
   'tests/src/cli/cases/family-runtime-worker.test.ts',
   'tests/src/cli/cases/family-runtime-worker-lifecycle.test.ts',
   'tests/src/cli/cases/family-runtime-stage-attempts-temporal-provider.test.ts',
 ];
+
+const fastTemporalHeavyTestFiles = [
+  'tests/src/family-runtime-temporal-stage-run-controller.test.ts',
+  'tests/src/family-runtime-pack-bound-stage-quality-e2e.test.ts',
+];
+
+const fastNonTemporalHeavyTestFiles = fastTestFiles.filter(
+  (file) => !fastTemporalHeavyTestFiles.includes(file),
+);
 
 const readModelGateStartupMaintenanceHeavyTestFiles = [
   'tests/src/cli/cases/system-seed-manifest.test.ts',

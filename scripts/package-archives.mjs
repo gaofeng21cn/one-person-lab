@@ -8,6 +8,10 @@ import { readJsonFile } from './script-json-boundary.mjs';
 
 import { parseRequiredValueOptions } from './required-value-options.mjs';
 import {
+  resolveAnnotatedOwnerVersionTag,
+  validatePackageSourceProjection,
+} from './package-source-projection-gate.mjs';
+import {
   buildOplPackageManifest,
   buildOplPackageChannelManifest,
   getOplPackageSpecs,
@@ -244,12 +248,12 @@ function readOwnerPackageMetadata(spec, repoPath, releaseGate) {
     }
   }
   const headSha = readGitValue(repoPath, ['rev-parse', 'HEAD']);
-  const matchingTag = readGitValue(repoPath, ['tag', '--points-at', 'HEAD'])
-    .split(/\r?\n/)
-    .find((tag) => tag === packageVersion || tag === `v${packageVersion}`) ?? null;
-  if (!matchingTag && !releaseGate) {
-    throw new Error(`${spec.module_id}: owner HEAD has no ${packageVersion} tag and no release gate`);
-  }
+  const matchingTag = resolveAnnotatedOwnerVersionTag({
+    spec,
+    ownerRepoPath: repoPath,
+    packageVersion,
+    releaseGate,
+  });
   return {
     package_id: spec.package_id,
     package_version: packageVersion,
@@ -486,6 +490,12 @@ function main() {
       repoPath,
       process.env.OPL_PACKAGE_RELEASE_GATE?.trim() || null,
     );
+    validatePackageSourceProjection({
+      frameworkRoot: repoRoot,
+      spec,
+      ownerRepoPath: repoPath,
+      releaseGate: process.env.OPL_PACKAGE_RELEASE_GATE?.trim() || null,
+    });
     const archive = archiveModule(spec, repoPath, packagesOutDir, ownerMetadata.package_version);
     archives.push({
       ...archive,

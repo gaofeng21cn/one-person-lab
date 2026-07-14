@@ -94,7 +94,8 @@ Re-review 采用 finding closure，不得用普通新建议无限重开循环。
 
 影响：
 
-- 七个 Package 各自以 canonical owner manifest 的 SemVer 为唯一版本。`major` 表示不兼容的 package contract、ABI 或依赖边界变化；`minor` 表示向后兼容的新能力；`patch` 表示向后兼容的修复或内容更新；尚未稳定的 owner 可使用 `alpha`、`beta`、`rc` prerelease。owner language version 只作 carrier projection，例如 MAS 的 PEP 440 `0.1.0a4` 对应 canonical Package SemVer `0.1.0-alpha.4`。
+- 七个 Package 各自以 canonical owner manifest 的 SemVer 为唯一版本。`1.0.0` 以前，不兼容的 package contract、ABI 或依赖边界变化推进 `minor`，向后兼容的修复或内容更新推进 `patch`；进入稳定期后，不兼容变化推进 `major`、向后兼容的新能力推进 `minor`、向后兼容修复推进 `patch`。尚未稳定的 owner 只有在确实需要 prerelease channel 时才使用 `alpha`、`beta`、`rc`，不把普通开发迭代永久挂在 prerelease 后缀上。owner language version 只作 carrier projection。
+- stable cohort 的 owner HEAD 必须存在与 manifest SemVer 相同的 annotated `v<version>` tag；Framework projection 必须逐项绑定 owner HEAD、payload source URL、逐文件 SHA-256，以及适用时的 OPL Flow carrier commit 和 Scholar Skills content lock。同一 SemVer 不得映射到第二组字节；source 已变化但版本/tag 未推进时以 `version_bump_required` fail closed。
 - capability、workflow-profile 与通用 payload schema 都必须在 owner manifest 入口接受合法 SemVer；release discipline 再对七个 artifact、Release Set BOM 与 OCI immutable tag 做同一版本校验。内容发生变化但 SemVer 未推进时 fail closed。
 - Release Set generation 使用 UTC `YY.M.D`；同日需要新的不可变选择时使用 `YY.M.D-rN`。`opl_release_set.v2` 同时记录 OPL Base、OPL App 与七个 Package 的精确独立版本、source commit、artifact ref 与 digest，是 install/update/rollback 可复现的九组件生态 BOM。Base 与 Package 使用各自 SemVer，App 使用用户可见 CalVer；Release Set revision 不参与组件更新判断。
 - `ghcr.io/<owner>/one-person-lab-manifest:<release-set-generation>` 是 Release Set catalog carrier。它可使用 `candidate` 与 `latest-stable` moving tag，但 `catalog_carrier_is_package_identity=false`，不能进入 Package dependency graph、普通 Package 安装列表或独立用户 lifecycle。
