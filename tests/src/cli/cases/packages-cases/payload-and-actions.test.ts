@@ -136,7 +136,7 @@ test('packages materializes manifest-declared remote plugin payloads', async () 
   }
 });
 
-test('first-party package carrier converges on the Connect marketplace and retires legacy aliases', () => {
+test('third-party package carrier stays isolated from canonical marketplace aliases', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-canonical-carrier-state-'));
   const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-canonical-carrier-home-'));
   const codexHome = path.join(homeDir, '.codex');
@@ -174,15 +174,15 @@ test('first-party package carrier converges on the Connect marketplace and retir
       }
     }
     fs.writeFileSync(manifestPath, formatJsonPayload(agentPackageManifest({
-      packageId: 'rca',
-      agentId: 'rca',
+      packageId: 'third.party.redcube',
+      agentId: 'third-party-redcube',
       pluginId: 'redcube-ai',
       pluginSourcePath,
       distributionPayload: null,
     })), 'utf8');
 
     const install = runCli([
-      'packages', 'install', '--manifest-url', manifestPath, '--trust-tier', 'first_party',
+      'packages', 'install', '--manifest-url', manifestPath, '--trust-tier', 'third_party_verified',
     ], {
       OPL_STATE_DIR: stateDir,
       HOME: homeDir,
@@ -191,14 +191,18 @@ test('first-party package carrier converges on the Connect marketplace and retir
     const physical = install.opl_agent_package_install.physical_surface;
     const config = fs.readFileSync(configPath, 'utf8');
 
-    assert.equal(physical.marketplace_id, 'redcube-ai-local');
-    assert.match(physical.codex_plugin_cache_path, /redcube-ai-local\/redcube-ai\/1\.2\.3$/);
-    assert.match(config, /\[plugins\."redcube-ai@redcube-ai-local"\]/);
-    assert.doesNotMatch(config, /rca@rca-local/);
-    assert.doesNotMatch(config, /opl-agent-rca-local/);
-    assert.equal(physical.removed_paths.length, 4);
-    for (const removedPath of physical.removed_paths) {
-      assert.equal(fs.existsSync(removedPath), false);
+    assert.equal(physical.marketplace_id, 'opl-agent-third.party.redcube-local');
+    assert.match(
+      physical.codex_plugin_cache_path,
+      /opl-agent-third\.party\.redcube-local\/redcube-ai\/1\.2\.3$/,
+    );
+    assert.match(config, /\[plugins\."redcube-ai@opl-agent-third\.party\.redcube-local"\]/);
+    assert.match(config, /rca@rca-local/);
+    assert.match(config, /opl-agent-rca-local/);
+    assert.equal(physical.removed_paths.length, 0);
+    for (const marketplaceId of legacyMarketplaceIds) {
+      assert.equal(fs.existsSync(path.join(stateDir, 'codex-plugin-marketplaces', marketplaceId)), true);
+      assert.equal(fs.existsSync(path.join(codexHome, 'plugins', 'cache', marketplaceId)), true);
     }
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });
