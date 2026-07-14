@@ -1,0 +1,14 @@
+{
+  "surface_kind": "opl_package_payload_allowlist.v1",
+  "package_id": "mag",
+  "plugin_id": "med-autogrant",
+  "source_repo": "https://github.com/gaofeng21cn/med-autogrant.git",
+  "source_root": "plugins/med-autogrant",
+  "paths": [
+    ".codex-plugin/plugin.json",
+    "assets/icon.png",
+    "assets/icon.svg",
+    "skills/med-autogrant/SKILL.md",
+    "skills/med-autogrant/agents/openai.yaml"
+  ]
+}

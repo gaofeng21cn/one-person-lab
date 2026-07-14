@@ -1,0 +1,14 @@
+{
+  "surface_kind": "opl_package_payload_allowlist.v1",
+  "package_id": "mas",
+  "plugin_id": "med-autoscience",
+  "source_repo": "https://github.com/gaofeng21cn/med-autoscience.git",
+  "source_root": "plugins/med-autoscience",
+  "paths": [
+    ".codex-plugin/plugin.json",
+    "assets/icon.png",
+    "assets/icon.svg",
+    "skills/med-autoscience/SKILL.md",
+    "skills/med-autoscience/agents/openai.yaml"
+  ]
+}

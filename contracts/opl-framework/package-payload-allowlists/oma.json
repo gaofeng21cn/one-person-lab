@@ -1,0 +1,12 @@
+{
+  "surface_kind": "opl_package_payload_allowlist.v1",
+  "package_id": "oma",
+  "plugin_id": "opl-meta-agent",
+  "source_repo": "https://github.com/gaofeng21cn/opl-meta-agent.git",
+  "source_root": "plugins/opl-meta-agent",
+  "paths": [
+    ".codex-plugin/plugin.json",
+    "assets/icon.svg",
+    "skills/opl-meta-agent/SKILL.md"
+  ]
+}

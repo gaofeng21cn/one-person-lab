@@ -1,0 +1,12 @@
+{
+  "surface_kind": "opl_package_payload_allowlist.v1",
+  "package_id": "obf",
+  "plugin_id": "opl-bookforge",
+  "source_repo": "https://github.com/gaofeng21cn/opl-bookforge.git",
+  "source_root": "plugins/opl-bookforge",
+  "paths": [
+    ".codex-plugin/plugin.json",
+    "assets/icon.svg",
+    "skills/opl-bookforge/SKILL.md"
+  ]
+}

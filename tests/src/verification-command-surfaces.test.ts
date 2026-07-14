@@ -359,6 +359,9 @@ test('machine-readable framework contracts do not pin human docs paths outside t
         source_url: entry.source_url ? '<typed-package-payload-source>' : undefined,
       }));
     }
+    if (payload.surface_kind === 'opl_package_payload_allowlist.v1' && Array.isArray(payload.paths)) {
+      payload.paths = payload.paths.map(() => '<typed-package-payload-path>');
+    }
     const content = JSON.stringify(payload);
     const pinnedPaths = content.match(pinnedHumanDocPathPattern) ?? [];
 

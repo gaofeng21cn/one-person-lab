@@ -1,0 +1,13 @@
+{
+  "surface_kind": "opl_package_payload_allowlist.v1",
+  "package_id": "rca",
+  "plugin_id": "redcube-ai",
+  "source_repo": "https://github.com/gaofeng21cn/redcube-ai.git",
+  "source_root": "plugins/redcube-ai",
+  "paths": [
+    ".codex-plugin/plugin.json",
+    "assets/icon.png",
+    "skills/redcube-ai/SKILL.md",
+    "skills/redcube-ai/agents/openai.yaml"
+  ]
+}

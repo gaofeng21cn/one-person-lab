@@ -5,6 +5,7 @@
   "type": "object",
   "required": [
     "surface_kind",
+    "schema_ref",
     "package_id",
     "package_version",
     "source_repo",
@@ -16,13 +17,16 @@
     "surface_kind": {
       "const": "opl_package_payload_manifest.v1"
     },
+    "schema_ref": {
+      "const": "contracts/opl-framework/package-payload-manifest.schema.json"
+    },
     "package_id": {
       "type": "string",
       "minLength": 1
     },
     "package_version": {
       "type": "string",
-      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
     },
     "source_repo": {
       "type": "string",
