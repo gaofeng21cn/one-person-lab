@@ -151,6 +151,7 @@ const fastTestFiles = [
   'tests/src/cli/cases/pack-bundle-command-surface.test.ts',
   'tests/src/cli/cases/pack-native-helper-probe.test.ts',
   'tests/src/cli/cases/pack-native-helper-run.test.ts',
+  'tests/src/cli/cases/pack-submission-resource-provisioning.test.ts',
   'tests/src/cli/cases/opl-foundation-skills-plugin-surface.test.ts',
   ...expandTestFiles(['tests/src/cli/cases/connect-scientific.test.ts', 'tests/src/cli/cases/connect-reference-verification.test.ts', 'tests/src/cli/cases/connect-external-skills.test.ts', 'tests/src/cli/cases/connect-foundation-skills.test.ts', 'tests/src/cli/cases/packages.test.ts']),
   'tests/src/standard-agent-framework-link.test.ts',
