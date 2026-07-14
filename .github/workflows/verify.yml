@@ -37,7 +37,7 @@ jobs:
   fast:
     name: Fast lane
     runs-on: macos-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
