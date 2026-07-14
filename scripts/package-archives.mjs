@@ -314,7 +314,12 @@ function archiveFramework(repoPath, frameworkOutDir, version) {
       cwd: payloadRoot,
     });
   } finally {
-    fs.rmSync(tempRoot, { recursive: true, force: true });
+    fs.rmSync(tempRoot, {
+      recursive: true,
+      force: true,
+      maxRetries: 5,
+      retryDelay: 100,
+    });
   }
   const stat = fs.statSync(archivePath);
   return {
