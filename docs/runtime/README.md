@@ -104,6 +104,10 @@ Fast Local Env
 2. **Projection**
    - 输出 scope options、current scope、scope source 和 inferred scope hint；默认 scope 只面向用户认知层：全部项目、智能体、项目。单篇论文 / task、workspace binding id、autopush 或 stage-attempt 名称只进任务详情或诊断。
    - 输出用户主状态、自动运行副状态、阶段、时长、token、liveness、next owner 与 blocker route；未观测到 token/cost telemetry 时必须保持 missing / null，不得把未记录写成 0。
+   - `project_catalog.display_name` 严格取 canonical `workspace_path` 的 basename；workspace binding label 只可作为诊断元数据，不能覆盖用户看到的项目名。
+   - `work-item-projection.v2` action 同时输出兼容文案 `title/summary` 与稳定语义 `title_key/summary_key/message_args/owner_kind`。Framework lifecycle action 必须使用 `lifecycle.*` 语义键，中文文案不得成为唯一机器真相。
+   - 手工归档是独立 `visibility=visible|archived` 轴，不改写 domain business lifecycle，也不停止 runtime、清空 Stage Map/action/telemetry。`items` 保留 archived 任务供归档库读取；`work_item_count` 与运行/attention/telemetry 摘要默认只统计 visible，另投影 visible/archived/total 计数。
+   - 每个 item 的 visibility 都携带 durable control ledger 全局 `generation`；即使没有该 item 的 control entry，也投影当前 generation 供 App 提交 `expected_generation`。归档与恢复统一走 `work_item_visibility_set`，lifecycle 变更继续走 `work_item_lifecycle_set`，两轴共享 generation conflict 且互不覆盖。
    - `work-item-projection.v2` 的 `delivered_paused` Stage Map 在 canonical `last_recorded_stage_id` 可解析时，只展示 domain stage index 中截至该锚点的已发生历程；锚点缺失或无法解析时保留完整 stage list 与诊断，不从 status 或排列顺序猜测截断边界。
    - 保留 provider/control-plane 术语到 diagnostic refs。
 

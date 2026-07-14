@@ -62,7 +62,12 @@ import {
   restoreCodexUserInstructionsFromOplFlowDefault,
   writeCodexUserInstructions,
 } from '../codex-personalization.ts';
-import { setWorkItemControlState, type WorkItemUserLifecycleState } from '../../ledger/index.ts';
+import {
+  setWorkItemControlState,
+  setWorkItemVisibilityState,
+  type WorkItemUserLifecycleState,
+  type WorkItemVisibilityState,
+} from '../../ledger/index.ts';
 
 import type { AppActionExecuteOptions } from './action-execute-parser.ts';
 export { parseAppActionExecuteArgs } from './action-execute-parser.ts';
@@ -75,6 +80,22 @@ function requireAgentPackageDelegatedSurface(actionId: string) {
     });
   }
   return delegatedSurface;
+}
+
+function expectedWorkItemControlGeneration(options: AppActionExecuteOptions) {
+  const expectedGeneration = options.payload.expected_generation;
+  if (
+    expectedGeneration !== undefined
+    && expectedGeneration !== null
+    && (!Number.isInteger(expectedGeneration) || (expectedGeneration as number) < 0)
+  ) {
+    throw new FrameworkContractError(
+      'cli_usage_error',
+      `${options.actionId} expected_generation must be a non-negative integer.`,
+      { action_id: options.actionId },
+    );
+  }
+  return expectedGeneration as number | null | undefined;
 }
 
 async function buildManagedUpdateControlCenterDryRun(
@@ -165,16 +186,6 @@ async function executeDirectAppAction(
   }
 
   if (options.actionId === 'work_item_lifecycle_set') {
-    const expectedGeneration = options.payload.expected_generation;
-    if (
-      expectedGeneration !== undefined
-      && expectedGeneration !== null
-      && (!Number.isInteger(expectedGeneration) || (expectedGeneration as number) < 0)
-    ) {
-      throw new FrameworkContractError('cli_usage_error', 'work_item_lifecycle_set expected_generation must be a non-negative integer.', {
-        action_id: options.actionId,
-      });
-    }
     return {
       delegatedSurface: 'OPL Ledger work-item control transition',
       result: setWorkItemControlState({
@@ -184,7 +195,22 @@ async function executeDirectAppAction(
         lifecycle_state: stringPayloadField(options.payload, 'lifecycle_state') as WorkItemUserLifecycleState,
         reason: stringPayloadField(options.payload, 'reason'),
         source: 'opl_app',
-        expected_generation: expectedGeneration as number | null | undefined,
+        expected_generation: expectedWorkItemControlGeneration(options),
+      }, { dryRun: options.dryRun }),
+    };
+  }
+
+  if (options.actionId === 'work_item_visibility_set') {
+    return {
+      delegatedSurface: 'OPL Ledger work-item visibility transition',
+      result: setWorkItemVisibilityState({
+        agent_id: stringPayloadField(options.payload, 'agent_id') ?? '',
+        project_id: stringPayloadField(options.payload, 'project_id') ?? '',
+        work_item_id: stringPayloadField(options.payload, 'work_item_id') ?? '',
+        visibility_state: stringPayloadField(options.payload, 'visibility_state') as WorkItemVisibilityState,
+        reason: stringPayloadField(options.payload, 'reason'),
+        source: 'opl_app',
+        expected_generation: expectedWorkItemControlGeneration(options),
       }, { dryRun: options.dryRun }),
     };
   }

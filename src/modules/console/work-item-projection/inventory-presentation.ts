@@ -6,6 +6,7 @@ import { readJsonFileOrNull } from '../../../kernel/json-file.ts';
 import { stringValue, type JsonRecord } from '../../../kernel/json-record.ts';
 import type {
   WorkItemActionKind,
+  WorkItemActionOwnerKind,
   WorkItemBusinessState,
   WorkItemProjectionDiagnostic,
   WorkItemProjectionItem,
@@ -60,6 +61,21 @@ function ownerDisplayName(owner: string, agentId: string, agentDisplayName: stri
   return owner;
 }
 
+function actionOwnerKind(
+  owner: string,
+  kind: WorkItemActionKind,
+  agentId: string,
+): WorkItemActionOwnerKind {
+  const normalized = owner.toLowerCase();
+  if (['user', 'human', 'owner'].includes(normalized)) return 'user';
+  if (['system', 'opl_framework', 'opl-framework'].includes(normalized)) return 'system';
+  if (normalized === agentId.toLowerCase()) return 'agent';
+  if (kind === 'user_action') return 'user';
+  if (kind === 'system_action' || kind === 'safe_action') return 'system';
+  if (kind === 'agent_action') return 'agent';
+  return 'other';
+}
+
 function lifecycleAction(input: {
   businessState: WorkItemBusinessState;
   agentId: string;
@@ -69,48 +85,78 @@ function lifecycleAction(input: {
     active: {
       kind: 'agent_action',
       title: '继续推进',
+      title_key: 'lifecycle.active.title',
       summary: `由 ${input.agentDisplayName} 按当前计划继续推进。`,
+      summary_key: 'lifecycle.active.summary',
+      message_args: {
+        agent_id: input.agentId,
+        agent_display_name: input.agentDisplayName,
+      },
       owner: input.agentId,
+      owner_kind: 'agent',
       action_ref: 'lifecycle:active',
       dry_run_required: false,
     },
     delivered_paused: {
       kind: 'user_action',
       title: '补齐投稿信息或发起修订',
+      title_key: 'lifecycle.deliveredPaused.title',
       summary: '里程碑交付已完成；补齐投稿信息，或在需要修订时重新启动。',
+      summary_key: 'lifecycle.deliveredPaused.summary',
+      message_args: {},
       owner: 'user',
+      owner_kind: 'user',
       action_ref: 'lifecycle:delivered_paused',
       dry_run_required: false,
     },
     paused: {
       kind: 'user_action',
       title: '等待明确后续方向',
+      title_key: 'lifecycle.paused.title',
       summary: '当前不会自动继续；明确后续方向后可重新启动。',
+      summary_key: 'lifecycle.paused.summary',
+      message_args: {},
       owner: 'user',
+      owner_kind: 'user',
       action_ref: 'lifecycle:paused',
       dry_run_required: false,
     },
     stopped: {
       kind: 'blocked_no_action',
       title: '当前不再推进',
+      title_key: 'lifecycle.stopped.title',
       summary: '该任务已停止；只有显式重新启动后才会继续。',
+      summary_key: 'lifecycle.stopped.summary',
+      message_args: {},
       owner: 'user',
+      owner_kind: 'user',
       action_ref: 'lifecycle:stopped',
       dry_run_required: false,
     },
     archived: {
       kind: 'blocked_no_action',
       title: '已归档',
+      title_key: 'lifecycle.archived.title',
       summary: '该任务已归档，当前没有后续动作。',
+      summary_key: 'lifecycle.archived.summary',
+      message_args: {},
       owner: 'user',
+      owner_kind: 'user',
       action_ref: 'lifecycle:archived',
       dry_run_required: false,
     },
     unknown: {
       kind: 'blocked_no_action',
       title: '等待状态同步',
+      title_key: 'lifecycle.unknown.title',
       summary: '当前业务状态不完整，需要先由所属智能体同步。',
+      summary_key: 'lifecycle.unknown.summary',
+      message_args: {
+        agent_id: input.agentId,
+        agent_display_name: input.agentDisplayName,
+      },
       owner: input.agentId,
+      owner_kind: 'agent',
       action_ref: 'lifecycle:unknown',
       dry_run_required: false,
     },
@@ -154,18 +200,30 @@ export function projectInventoryAction(input: {
     : fallback.kind;
   const owner = stringValue(raw?.owner) ?? fallback.owner;
   const title = stringValue(raw?.title) ?? fallback.title;
+  const actionRef = stringValue(raw?.action_ref)
+    ?? stringValue(raw?.action_id)
+    ?? stringValue(raw?.surface_kind)
+    ?? fallback.action_ref;
   return {
     action: {
       kind,
       title,
+      title_key: stringValue(raw?.title_key)
+        ?? (stringValue(raw?.title) ? 'inventory.nextAction.title' : fallback.title_key),
       summary,
+      summary_key: stringValue(raw?.summary_key) ?? 'inventory.nextAction.summary',
+      message_args: {
+        action_ref: actionRef,
+        agent_id: input.agentId,
+        agent_display_name: input.agentDisplayName,
+        owner,
+        ...(isRecord(raw?.message_args) ? raw.message_args : {}),
+      },
       owner,
+      owner_kind: actionOwnerKind(owner, kind, input.agentId),
       owner_display_name: stringValue(raw?.owner_display_name)
         ?? ownerDisplayName(owner, input.agentId, input.agentDisplayName),
-      action_ref: stringValue(raw?.action_ref)
-        ?? stringValue(raw?.action_id)
-        ?? stringValue(raw?.surface_kind)
-        ?? fallback.action_ref,
+      action_ref: actionRef,
       dry_run_required: typeof raw?.dry_run_required === 'boolean'
         ? raw.dry_run_required
         : kind === 'system_action' || kind === 'safe_action',
@@ -364,8 +422,17 @@ export function systemRepairAction(input: {
   return {
     kind: 'system_action',
     title: input.repairAction,
+    title_key: 'systemRepair.action.title',
     summary: input.issue,
+    summary_key: 'systemRepair.action.summary',
+    message_args: {
+      item_id: input.itemId,
+      responsible_component: input.responsibleComponent,
+      issue: input.issue,
+      repair_action: input.repairAction,
+    },
     owner: input.responsibleComponent,
+    owner_kind: 'system',
     owner_display_name: ownerDisplayName(input.responsibleComponent, '', ''),
     action_ref: `system-repair:${input.itemId}`,
     dry_run_required: true,

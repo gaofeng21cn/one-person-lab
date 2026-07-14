@@ -18,7 +18,7 @@ import {
   resolveDefaultFamilyWorkspaceRoot,
   runOplAgentPackageStatus,
 } from '../connect/public/app-state.ts';
-import { listWorkspaceBindings } from '../workspace/public/app-state.ts';
+import { listWorkspaceBindings, type WorkspaceBinding } from '../workspace/public/app-state.ts';
 import { buildOplEndpoints } from '../../kernel/opl-runtime-endpoints.ts';
 import {
   familyRuntimePaths,
@@ -180,6 +180,76 @@ function buildFastAgentPackageStatus(
     currentness_detail_deferred: true,
     detail_surface: 'opl packages status --package-id <package_id> --json',
   };
+}
+
+type AgentPackageStatusReader = typeof runOplAgentPackageStatus;
+
+function unavailableAgentPackageStatus(packageId: string, error: unknown): JsonRecord {
+  const contractError = error instanceof FrameworkContractError ? error : null;
+  return {
+    surface_kind: 'opl_agent_package_status_unavailable',
+    package_id: packageId,
+    status: 'unavailable',
+    installed_package_count: null,
+    installed_packages: [],
+    codex_visible: false,
+    capability_exposure: {
+      status: 'unavailable',
+      codex_visible: false,
+    },
+    package_dependency_readiness: null,
+    materialization_readiness: null,
+    runtime_source_readiness: {
+      status: 'unavailable',
+      operational_ready: false,
+      reason: 'package_status_read_failed',
+    },
+    operational_ready: false,
+    operational_ready_scope: 'package_dependency_scope_and_runtime_source',
+    launch_allowed: false,
+    launch_blocked_reason: 'package_status_read_failed',
+    allowed_when_blocked: ['status', 'doctor', 'repair'],
+    repair_action: null,
+    status_read_error: {
+      code: contractError?.code ?? 'unexpected_error',
+      message: error instanceof Error ? error.message : 'Unknown package status read failure.',
+      details: contractError?.details ?? null,
+    },
+    detail_surface: `opl packages status --package-id ${packageId} --json`,
+  };
+}
+
+export function buildAppAgentPackageStatuses(input: {
+  packageIds: readonly string[];
+  activeWorkspaceBindings: ReadonlyArray<Pick<WorkspaceBinding, 'project_id' | 'workspace_path'>>;
+  profile: AppStateProfile;
+  readStatus?: AgentPackageStatusReader;
+}) {
+  const readStatus = input.readStatus ?? runOplAgentPackageStatus;
+  const statuses: Record<string, JsonRecord> = {};
+  for (const packageId of input.packageIds) {
+    const binding = input.activeWorkspaceBindings.find((entry) =>
+      canonicalAgentPackageId(entry.project_id) === packageId);
+    try {
+      const status = readStatus({
+        packageId,
+        ...(binding
+          ? {
+              scope: 'workspace' as const,
+              targetWorkspace: binding.workspace_path,
+            }
+          : {}),
+        recoverRuntimeSource: false,
+        detail: input.profile,
+      }).opl_agent_package_status;
+      statuses[packageId] = (input.profile === 'fast'
+        ? buildFastAgentPackageStatus(status)
+        : status) as unknown as JsonRecord;
+    } catch (error) {
+      statuses[packageId] = unavailableAgentPackageStatus(packageId, error);
+    }
+  }
+  return statuses;
 }
 
 async function buildProviderState(profile: AppStateProfile) {
@@ -536,27 +606,19 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
     ...CANONICAL_OPL_PACKAGE_IDS,
     ...agentPackagesReadback.installed_packages.map((lock) => lock.package_id),
   ])];
-  const agentPackageStatuses = Object.fromEntries(
-    packageIds.map((packageId) => {
-      const binding = activeWorkspaceBindings.find((entry) =>
-        canonicalAgentPackageId(entry.project_id) === packageId);
-      const status = runOplAgentPackageStatus({
-        packageId,
-        ...(binding
-          ? {
-              scope: 'workspace' as const,
-              targetWorkspace: binding.workspace_path,
-            }
-          : {}),
-        recoverRuntimeSource: false,
-        detail: profile,
-      }).opl_agent_package_status;
-      return [
-        packageId,
-        profile === 'fast' ? buildFastAgentPackageStatus(status) : status,
-      ];
-    }),
-  );
+  const agentPackageStatuses = buildAppAgentPackageStatuses({
+    packageIds,
+    activeWorkspaceBindings,
+    profile,
+  });
+  const packageStatusFailures = Object.entries(agentPackageStatuses)
+    .filter(([, status]) => status.status === 'unavailable')
+    .map(([packageId, status]) => ({
+      package_id: packageId,
+      reason: 'package_status_read_failed',
+      error: status.status_read_error,
+      detail_surface: status.detail_surface,
+    }));
   const agentPackagesProjection = {
     surface_kind: 'opl_app_agent_packages_projection',
     source: {
@@ -566,8 +628,10 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
     directory: agentPackagesReadback,
     status_index: {
       surface_kind: 'opl_agent_package_status_index',
-      status: 'available',
+      status: packageStatusFailures.length > 0 ? 'attention_required' : 'available',
       installed_package_count: agentPackagesReadback.installed_package_count,
+      status_read_failure_count: packageStatusFailures.length,
+      diagnostics: packageStatusFailures,
       packages: agentPackageStatuses,
       home_shortcut_preferences: agentPackagesReadback.home_shortcut_preferences,
       files: {

@@ -608,6 +608,13 @@ export function resolveOplDomainModuleSpec(moduleId: string): DomainModuleRuntim
   return findModuleSpecOrThrow(moduleId);
 }
 
+export function inspectOplModule(
+  moduleId: string,
+  input: { profile?: ModuleInspectionProfile } = {},
+) {
+  return inspectModule(findModuleSpecOrThrow(moduleId), input.profile ?? 'full');
+}
+
 export function buildOplModules(input: { profile?: ModuleInspectionProfile } = {}) {
   const profile = input.profile ?? 'full';
   const modules = DOMAIN_MODULE_SPECS.map((spec) => inspectModule(spec, profile));

@@ -2,16 +2,21 @@ import type {
   WorkItemBusinessState,
   WorkItemProjectionDiagnostic,
   WorkItemProjectionItem,
+  WorkItemVisibilityState,
 } from './types.ts';
 import { projectLifecycleAction } from './inventory-presentation.ts';
 import { withProjectedWorkItemPrimaryState } from './primary-state.ts';
 
-export type WorkItemControlState = Exclude<WorkItemBusinessState, 'unknown'>;
+export type WorkItemControlState = Exclude<WorkItemBusinessState, 'unknown' | 'archived'>;
 
 export type WorkItemControlRecord = {
-  state: WorkItemControlState;
-  updated_at: string | null;
+  lifecycle_state: WorkItemControlState | null;
+  lifecycle_updated_at: string | null;
+  visibility_state: WorkItemVisibilityState;
+  visibility_source: 'default' | 'work_item_control_ledger';
+  visibility_updated_at: string | null;
   source_ref: string | null;
+  generation: number;
 };
 
 export type WorkItemControlResolver = (identity: {
@@ -47,7 +52,34 @@ export function applyWorkItemControlState(input: {
       return item;
     }
     if (!control) return item;
-    const terminal = control.state !== 'active';
+    const visibility = {
+      state: control.visibility_state,
+      source: control.visibility_source,
+      updated_at: control.visibility_updated_at,
+      control_ref: control.visibility_source === 'work_item_control_ledger'
+        ? control.source_ref
+        : null,
+      generation: control.generation,
+    } satisfies WorkItemProjectionItem['visibility'];
+    const sourceRefUsed = control.source_ref
+      && (control.lifecycle_state !== null || control.visibility_source === 'work_item_control_ledger')
+      ? control.source_ref
+      : null;
+    const sourceRefs = sourceRefUsed && !item.source_refs.some((entry) => entry.ref === sourceRefUsed)
+      ? [
+          ...item.source_refs,
+          { ref_kind: 'projection' as const, ref: sourceRefUsed, role: 'work_item_control_ledger' },
+        ]
+      : item.source_refs;
+    if (control.lifecycle_state === null) {
+      return {
+        ...item,
+        visibility,
+        source_refs: sourceRefs,
+      };
+    }
+    const lifecycleState = control.lifecycle_state;
+    const terminal = lifecycleState !== 'active';
     const attention = terminal
       ? {
           kind: 'none' as const,
@@ -62,16 +94,17 @@ export function applyWorkItemControlState(input: {
       : item.attention;
     return withProjectedWorkItemPrimaryState({
       ...item,
+      visibility,
       lifecycle: {
         ...item.lifecycle,
-        business_state: control.state,
-        control_state: control.state,
+        business_state: lifecycleState,
+        control_state: lifecycleState,
         current_stage_id: terminal ? null : item.lifecycle.current_stage_id,
         current_stage_display_name: terminal ? null : item.lifecycle.current_stage_display_name,
         current_stage_status: terminal ? null : item.lifecycle.current_stage_status,
         source: 'work_item_control_ledger' as const,
         control_ref: control.source_ref,
-        control_updated_at: control.updated_at,
+        control_updated_at: control.lifecycle_updated_at,
       },
       execution: terminal
         ? {
@@ -90,7 +123,7 @@ export function applyWorkItemControlState(input: {
         : item.execution,
       attention,
       action: projectLifecycleAction({
-        businessState: control.state,
+        businessState: lifecycleState,
         agentId: item.identity.agent_id,
         agentDisplayName: item.identity.agent_display_name,
       }),
@@ -101,20 +134,15 @@ export function applyWorkItemControlState(input: {
               ? 'completed'
               : stage.state === 'pending' || stage.state === 'next'
                 ? 'pending'
-                : control.state === 'delivered_paused'
+                : lifecycleState === 'delivered_paused'
                   ? 'completed'
                   : 'stopped',
           }))
         : item.stage_map,
-      source_refs: control.source_ref
-        ? [
-            ...item.source_refs,
-            { ref_kind: 'projection' as const, ref: control.source_ref, role: 'work_item_control_ledger' },
-          ]
-        : item.source_refs,
+      source_refs: sourceRefs,
       freshness: {
         ...item.freshness,
-        last_transition_time: control.updated_at ?? item.freshness.last_transition_time,
+        last_transition_time: control.lifecycle_updated_at ?? item.freshness.last_transition_time,
         reason: 'work_item_control_ledger_overlays_user_collaboration_lifecycle',
       },
     });

@@ -78,6 +78,8 @@ export function buildAgentCatalog(input: {
         ? 'unreadable'
         : 'not_checked';
     const packageStatus = input.packageStatusById?.[agent.agent_id];
+    const packageStatusUnavailable = packageStatus?.status === 'unavailable'
+      || isRecord(packageStatus?.status_read_error);
     const capabilityExposure = isRecord(packageStatus?.capability_exposure)
       ? packageStatus.capability_exposure
       : null;
@@ -97,21 +99,25 @@ export function buildAgentCatalog(input: {
         : input.packageStatusById && !packageStatus
           ? 'package_not_installed'
           : 'package_launch_readiness_not_projected';
-    const packageInstalled = Boolean(packageStatus);
-    const state: AgentAvailability['availability'] = !packageInstalled
+    const packageInstalled = Boolean(packageStatus) && !packageStatusUnavailable;
+    const state: AgentAvailability['availability'] = packageStatusUnavailable
       ? 'unavailable'
-      : profile === 'fast'
-        ? codexVisible === false ? 'attention_required' : 'available'
-        : launchAllowed === true ? 'available' : 'attention_required';
-    const reason = state === 'unavailable'
-      ? 'package_not_installed'
-      : profile === 'fast'
-        ? codexVisible === false
-          ? 'package_installed_but_not_visible_to_codex'
-          : 'package_installed_and_visible'
-        : launchAllowed === true
-          ? 'package_launch_allowed'
-          : launchReason;
+      : !packageInstalled
+        ? 'unavailable'
+        : profile === 'fast'
+          ? codexVisible === false ? 'attention_required' : 'available'
+          : launchAllowed === true ? 'available' : 'attention_required';
+    const reason = packageStatusUnavailable
+      ? 'package_status_read_failed'
+      : state === 'unavailable'
+        ? 'package_not_installed'
+        : profile === 'fast'
+          ? codexVisible === false
+            ? 'package_installed_but_not_visible_to_codex'
+            : 'package_installed_and_visible'
+          : launchAllowed === true
+            ? 'package_launch_allowed'
+            : launchReason;
     availability.push({
       agent_id: agent.agent_id,
       domain_id: agent.domain_id,
@@ -172,14 +178,13 @@ export function buildProjectCatalog(bindings: ReadonlyArray<WorkspaceBinding>) {
     const agentId = agent?.agent_id ?? selected.project_id;
     const workspacePath = canonicalWorkspacePath(selected.workspace_path);
     const projectId = stableProjectId(agentId, workspacePath);
-    const label = stringValue(selected.label) ?? path.basename(workspacePath);
     projects.push({
       project_id: projectId,
       scope_id: `project:${projectId}`,
       agent_id: agentId,
       agent_display_name: agent?.display_name ?? agentId,
       domain_id: agent?.domain_id ?? selected.project_id,
-      display_name: label,
+      display_name: path.basename(workspacePath),
       workspace_path: workspacePath,
       binding_status: bindingsForPath.some((binding) => binding.status === 'active') ? 'active' : 'inactive',
       selected_binding_id: selected.binding_id,

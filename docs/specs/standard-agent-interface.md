@@ -1,6 +1,6 @@
 # OPL 标准智能体接口
 
-Owner: `OPL Pack / Atlas / Workspace / Stagecraft / Runway`
+Owner: `OPL Pack / Connect / Atlas / Workspace / Stagecraft / Runway`
 Purpose: `standard_agent_domain_owned_interface_boundary`
 State: `active`
 Machine boundary: `contracts/opl-framework/standard-agent-interface.schema.json`
@@ -21,6 +21,10 @@ Machine boundary: `contracts/opl-framework/standard-agent-interface.schema.json`
 ## 发现与校验
 
 接口可以直接内嵌在 `domain_descriptor.json`，也可以用 repo-contained `repo_json_pointer` 指向领域仓内独立 JSON SSOT。OPL 拒绝目录逃逸、失效 JSON pointer、未知 locator 字段、required/optional 重叠和任何未声明字段。
+
+descriptor discovery 必须消费 `OPL Connect` module source selector 的 canonical checkout。Developer Mode 或显式 path override 已选中 sibling/env checkout 时，只解析该 selected source，inactive managed mirror 不再作为第二 active source 被读取；selected source 自身 descriptor 非法时仍直接 fail closed。selected source 是 managed root 时，package dependency/runtime-source readiness 继续作为门禁，并要求 readiness checkout 与 selected checkout 指向同一位置。
+
+`opl app state` 是跨 Agent 聚合读面：单个 package status 因 stale/invalid contract 失败时，该 package 投影为结构化 `unavailable` 和 attention diagnostic，其余 Agent、project inventory 与 Runtime 页面继续生成。`opl packages status --package-id ...` 等直接 package status/doctor/repair 命令不使用这层聚合隔离，仍对所选 package 的真实 contract 错误 fail closed。
 
 `workspace_binding.entry_command_template`、`workspace_binding.manifest_command_template` 与 `runtime.dispatch_command` 已退役，并因 closed-object 校验 fail closed。domain descriptor 缺失时 Workspace 只保留通用 workspace root locator 或用户显式提供的 command，不重建历史 MAS/MAG/RCA materializer。
 

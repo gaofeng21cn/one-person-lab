@@ -35,6 +35,9 @@ export type WorkItemActionKind =
   | 'safe_action'
   | 'blocked_no_action';
 
+export type WorkItemActionOwnerKind = 'user' | 'system' | 'agent' | 'other';
+export type WorkItemVisibilityState = 'visible' | 'archived';
+
 export type WorkItemStageState =
   | 'completed'
   | 'current'
@@ -157,6 +160,13 @@ export type WorkItemProjectionItem = {
     control_updated_at: string | null;
     observed_generation: string;
   };
+  visibility: {
+    state: WorkItemVisibilityState;
+    source: 'default' | 'work_item_control_ledger';
+    updated_at: string | null;
+    control_ref: string | null;
+    generation: number;
+  };
   execution: {
     state: WorkItemExecutionState;
     stage_id: string | null;
@@ -194,8 +204,12 @@ export type WorkItemProjectionItem = {
   action: {
     kind: WorkItemActionKind;
     title: string;
+    title_key: string;
     summary: string;
+    summary_key: string;
+    message_args: JsonRecord;
     owner: string;
+    owner_kind: WorkItemActionOwnerKind;
     owner_display_name: string;
     action_ref: string;
     dry_run_required: boolean;
@@ -243,6 +257,9 @@ export type WorkItemProjectionV2 = {
     agent_count: number;
     project_count: number;
     work_item_count: number;
+    visible_work_item_count: number;
+    archived_work_item_count: number;
+    total_work_item_count: number;
     running_count: number;
     user_attention_count: number;
     system_attention_count: number;

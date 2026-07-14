@@ -23,11 +23,14 @@
     },
     "summary": {
       "type": "object",
-      "required": ["agent_count", "project_count", "work_item_count", "running_count", "user_attention_count", "system_attention_count", "telemetry_observed_count", "telemetry_missing_count"],
+      "required": ["agent_count", "project_count", "work_item_count", "visible_work_item_count", "archived_work_item_count", "total_work_item_count", "running_count", "user_attention_count", "system_attention_count", "telemetry_observed_count", "telemetry_missing_count"],
       "properties": {
         "agent_count": { "type": "integer", "minimum": 0 },
         "project_count": { "type": "integer", "minimum": 0 },
         "work_item_count": { "type": "integer", "minimum": 0 },
+        "visible_work_item_count": { "type": "integer", "minimum": 0 },
+        "archived_work_item_count": { "type": "integer", "minimum": 0 },
+        "total_work_item_count": { "type": "integer", "minimum": 0 },
         "running_count": { "type": "integer", "minimum": 0 },
         "user_attention_count": { "type": "integer", "minimum": 0 },
         "system_attention_count": { "type": "integer", "minimum": 0 },
@@ -208,12 +211,16 @@
     },
     "action": {
       "type": "object",
-      "required": ["kind", "title", "summary", "owner", "owner_display_name", "action_ref", "dry_run_required"],
+      "required": ["kind", "title", "title_key", "summary", "summary_key", "message_args", "owner", "owner_kind", "owner_display_name", "action_ref", "dry_run_required"],
       "properties": {
         "kind": { "enum": ["user_action", "system_action", "agent_action", "safe_action", "blocked_no_action"] },
         "title": { "type": "string", "minLength": 1 },
+        "title_key": { "type": "string", "minLength": 1 },
         "summary": { "type": "string", "minLength": 1 },
+        "summary_key": { "type": "string", "minLength": 1 },
+        "message_args": { "type": "object" },
         "owner": { "type": "string", "minLength": 1 },
+        "owner_kind": { "enum": ["user", "system", "agent", "other"] },
         "owner_display_name": { "type": "string", "minLength": 1 },
         "action_ref": { "type": "string", "minLength": 1 },
         "dry_run_required": { "type": "boolean" }
@@ -237,7 +244,7 @@
     },
     "workItem": {
       "type": "object",
-      "required": ["item_id", "identity", "lifecycle", "execution", "attention", "telemetry", "action", "stage_map", "conditions", "freshness", "source_refs"],
+      "required": ["item_id", "identity", "lifecycle", "visibility", "execution", "attention", "telemetry", "action", "stage_map", "conditions", "freshness", "source_refs"],
       "properties": {
         "item_id": { "type": "string", "minLength": 1 },
         "identity": {
@@ -284,6 +291,35 @@
             "control_updated_at": { "$ref": "#/$defs/nullableString" },
             "observed_generation": { "type": "string", "minLength": 1 }
           },
+          "additionalProperties": false
+        },
+        "visibility": {
+          "type": "object",
+          "required": ["state", "source", "updated_at", "control_ref", "generation"],
+          "properties": {
+            "state": { "enum": ["visible", "archived"] },
+            "source": { "enum": ["default", "work_item_control_ledger"] },
+            "updated_at": { "$ref": "#/$defs/nullableString" },
+            "control_ref": { "$ref": "#/$defs/nullableString" },
+            "generation": { "type": "integer", "minimum": 0 }
+          },
+          "allOf": [
+            {
+              "if": { "properties": { "source": { "const": "default" } } },
+              "then": {
+                "properties": {
+                  "updated_at": { "type": "null" },
+                  "control_ref": { "type": "null" }
+                }
+              },
+              "else": {
+                "properties": {
+                  "updated_at": { "type": "string", "minLength": 1 },
+                  "control_ref": { "type": "string", "minLength": 1 }
+                }
+              }
+            }
+          ],
           "additionalProperties": false
         },
         "execution": {
@@ -374,7 +410,7 @@
       "enum": ["active", "delivered_paused", "paused", "stopped", "archived", "unknown"]
     },
     "controlState": {
-      "enum": ["active", "delivered_paused", "paused", "stopped", "archived"]
+      "enum": ["active", "delivered_paused", "paused", "stopped"]
     },
     "primaryState": {
       "enum": ["automatically_advancing", "awaiting_user_decision", "system_attention", "delivered_auto_paused", "paused", "stopped", "sync_pending"]

@@ -127,6 +127,7 @@ export { runOplEngineAction } from './system-installation/engine-actions.ts';
 export { resolveCodexVersion } from './system-installation/engine-helpers.ts';
 export {
   buildOplModules,
+  inspectOplModule,
   listDefaultOplDomainModuleSpecs,
   resolveOplDomainModuleSpec,
   resolveOplModuleExecCommand,

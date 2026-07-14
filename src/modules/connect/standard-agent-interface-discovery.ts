@@ -10,8 +10,15 @@ import {
   STANDARD_AGENT_SERIES_MEMBERSHIP,
 } from '../../kernel/standard-agent-registry.ts';
 import { runOplAgentPackageStatus } from './agent-package-registry.ts';
+import { inspectOplModule } from './system-installation/modules.ts';
+import type { ModuleInspection } from './system-installation/shared.ts';
 
 type PackageStatusReader = typeof runOplAgentPackageStatus;
+type SelectedModuleSource = Pick<
+  ModuleInspection,
+  'installed' | 'install_origin' | 'checkout_path' | 'health_status'
+>;
+type SelectedModuleSourceReader = (moduleId: string) => SelectedModuleSource | null;
 
 export type StandardAgentProgressDeltaKeySet = {
   deliverable: string[];
@@ -33,6 +40,25 @@ function registryIdentities(entry: typeof STANDARD_AGENT_REGISTRY[number]) {
   ];
 }
 
+function descriptorMatchesAgent(
+  descriptor: StandardAgentDescriptorInterface,
+  agent: typeof STANDARD_AGENT_REGISTRY[number],
+) {
+  const expectedDomains = registryIdentities(agent).map(normalizedIdentity);
+  return [descriptor.domain_id, descriptor.interface.runtime.runtime_domain_id]
+    .map(normalizedIdentity)
+    .some((domainId) => expectedDomains.includes(domainId));
+}
+
+function descriptorMatchesTarget(
+  descriptor: StandardAgentDescriptorInterface,
+  target: string,
+) {
+  return [descriptor.domain_id, descriptor.interface.runtime.runtime_domain_id]
+    .map(normalizedIdentity)
+    .includes(target);
+}
+
 function packageIdsForAliases(packageIds: readonly string[]) {
   const requested = new Set(packageIds.map(normalizedIdentity));
   return STANDARD_AGENT_REGISTRY
@@ -42,10 +68,10 @@ function packageIdsForAliases(packageIds: readonly string[]) {
     .map((entry) => entry.agent_id);
 }
 
-function currentDescriptorFromStatus(
+function currentCheckoutFromStatus(
   packageId: string,
   readStatus: PackageStatusReader,
-): StandardAgentDescriptorInterface | null {
+): string | null {
   let status: ReturnType<PackageStatusReader>['opl_agent_package_status'];
   try {
     status = readStatus({ packageId, recoverRuntimeSource: false }).opl_agent_package_status;
@@ -63,7 +89,59 @@ function currentDescriptorFromStatus(
     || !source.checkout_path.trim()
     || source.expected_tree_sha256 !== source.actual_tree_sha256
   ) return null;
-  return readStandardAgentDescriptorInterface(source.checkout_path);
+  return source.checkout_path;
+}
+
+function currentDescriptorFromStatus(
+  packageId: string,
+  readStatus: PackageStatusReader,
+): StandardAgentDescriptorInterface | null {
+  const checkoutPath = currentCheckoutFromStatus(packageId, readStatus);
+  return checkoutPath ? readStandardAgentDescriptorInterface(checkoutPath) : null;
+}
+
+function pathsReferToSameLocation(left: string, right: string) {
+  const canonicalPath = (value: string) => {
+    try {
+      return fs.realpathSync(value);
+    } catch {
+      return path.resolve(value);
+    }
+  };
+  return canonicalPath(left) === canonicalPath(right);
+}
+
+function defaultSelectedModuleSource(moduleId: string): SelectedModuleSource {
+  return inspectOplModule(moduleId, { profile: 'fast' });
+}
+
+function descriptorFromSelectedModule(
+  agent: typeof STANDARD_AGENT_REGISTRY[number],
+  readStatus: PackageStatusReader,
+  readSelectedModule: SelectedModuleSourceReader,
+) {
+  const selected = readSelectedModule(agent.domain_id);
+  if (!selected) {
+    return { source_selected: false as const, descriptor: null };
+  }
+  if (!selected.installed && selected.health_status === 'missing') {
+    return { source_selected: false as const, descriptor: null };
+  }
+  if (!selected.installed || selected.health_status === 'invalid_checkout') {
+    return { source_selected: true as const, descriptor: null };
+  }
+
+  if (selected.install_origin === 'managed_root') {
+    const readyCheckout = currentCheckoutFromStatus(agent.agent_id, readStatus);
+    if (!readyCheckout || !pathsReferToSameLocation(readyCheckout, selected.checkout_path)) {
+      return { source_selected: true as const, descriptor: null };
+    }
+  }
+
+  return {
+    source_selected: true as const,
+    descriptor: readStandardAgentDescriptorInterface(selected.checkout_path),
+  };
 }
 
 export function readPackageManagedStandardAgentDescriptor(
@@ -89,6 +167,7 @@ function configuredDescriptors() {
 export function readStandardAgentDescriptorForDomain(
   domainId: string,
   readStatus: PackageStatusReader = runOplAgentPackageStatus,
+  readSelectedModule: SelectedModuleSourceReader = defaultSelectedModuleSource,
 ): StandardAgentDescriptorInterface | null {
   const target = normalizedIdentity(domainId);
   const standardAgents = STANDARD_AGENT_REGISTRY.filter((agent) =>
@@ -97,20 +176,26 @@ export function readStandardAgentDescriptorForDomain(
   const directMatches = standardAgents.filter((agent) =>
     registryIdentities(agent).some((identity) => normalizedIdentity(identity) === target)
   );
+  for (const agent of directMatches) {
+    const selected = descriptorFromSelectedModule(agent, readStatus, readSelectedModule);
+    if (!selected.source_selected) continue;
+    if (selected.descriptor && descriptorMatchesAgent(selected.descriptor, agent)) {
+      return selected.descriptor;
+    }
+    return null;
+  }
   for (const agent of directMatches.length > 0 ? directMatches : standardAgents) {
     const descriptor = currentDescriptorFromStatus(agent.agent_id, readStatus);
     if (
       descriptor
-      && [descriptor.domain_id, descriptor.interface.runtime.runtime_domain_id]
-        .map(normalizedIdentity)
-        .includes(target)
+      && (directMatches.length > 0
+        ? descriptorMatchesAgent(descriptor, agent)
+        : descriptorMatchesTarget(descriptor, target))
     ) return descriptor;
   }
-  return configuredDescriptors().find((descriptor) =>
-    [descriptor.domain_id, descriptor.interface.runtime.runtime_domain_id]
-      .map(normalizedIdentity)
-      .includes(target)
-  ) ?? null;
+  return configuredDescriptors().find((descriptor) => directMatches.length > 0
+    ? directMatches.some((agent) => descriptorMatchesAgent(descriptor, agent))
+    : descriptorMatchesTarget(descriptor, target)) ?? null;
 }
 
 export function standardAgentProgressDeltaKeySet(

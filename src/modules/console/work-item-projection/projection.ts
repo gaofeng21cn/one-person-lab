@@ -125,6 +125,8 @@ export function buildWorkItemProjectionV2(
     packageStatusById: options.packageStatusById,
     descriptorByAgent: descriptorCache,
   });
+  const visibleItems = items.filter((item) => item.visibility.state === 'visible');
+  const archivedItemCount = items.length - visibleItems.length;
 
   return {
     surface_kind: 'opl_work_item_projection',
@@ -137,12 +139,15 @@ export function buildWorkItemProjectionV2(
     summary: {
       agent_count: agents.length,
       project_count: projectCatalog.projects.length,
-      work_item_count: items.length,
-      running_count: items.filter((item) => item.execution.state === 'running').length,
-      user_attention_count: items.filter((item) => item.attention.kind === 'user').length,
-      system_attention_count: items.filter((item) => item.attention.kind === 'system').length,
-      telemetry_observed_count: items.filter((item) => item.telemetry.cumulative.state === 'observed').length,
-      telemetry_missing_count: items.filter((item) => item.telemetry.cumulative.state === 'missing').length,
+      work_item_count: visibleItems.length,
+      visible_work_item_count: visibleItems.length,
+      archived_work_item_count: archivedItemCount,
+      total_work_item_count: items.length,
+      running_count: visibleItems.filter((item) => item.execution.state === 'running').length,
+      user_attention_count: visibleItems.filter((item) => item.attention.kind === 'user').length,
+      system_attention_count: visibleItems.filter((item) => item.attention.kind === 'system').length,
+      telemetry_observed_count: visibleItems.filter((item) => item.telemetry.cumulative.state === 'observed').length,
+      telemetry_missing_count: visibleItems.filter((item) => item.telemetry.cumulative.state === 'missing').length,
     },
     items,
     diagnostics: {

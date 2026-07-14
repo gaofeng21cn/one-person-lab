@@ -1,4 +1,7 @@
 import { assert, createFakeCodexFixture, fs, os, path, runCli, test } from '../../helpers.ts';
+import { FrameworkContractError } from '../../../../../src/kernel/contract-validation.ts';
+import { buildAppAgentPackageStatuses } from '../../../../../src/modules/console/app-state.ts';
+import { buildAgentCatalog } from '../../../../../src/modules/console/work-item-projection/catalog.ts';
 import { managedRuntimeSourceLockReadiness } from '../../../../../src/modules/connect/agent-package-registry-parts/managed-runtime-source-carrier.ts';
 import type { AgentPackageManagedRuntimeSourceState } from '../../../../../src/modules/connect/agent-package-registry-parts/types.ts';
 
@@ -65,6 +68,64 @@ test('app state fast projects every uninstalled canonical package as fail closed
 
 test('app state full projects every uninstalled canonical package as fail closed', () => {
   assertCanonicalPackagesFailClosed('full');
+});
+
+test('app state isolates one invalid package status while direct status reads remain fail closed', () => {
+  const readStatus = ((input: { packageId?: string | null }) => {
+    if (input.packageId === 'obf') {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Selected package runtime source contains a retired descriptor field.',
+        {
+          package_id: 'obf',
+          failure_code: 'standard_agent_interface_unknown_property',
+        },
+      );
+    }
+    return {
+      opl_agent_package_status: {
+        package_id: input.packageId,
+        status: 'available',
+        installed_packages: [{
+          package_version: '1.0.0',
+          source_kind: 'fixture',
+          lock_ref: 'opl://agent-package-lock/mas/1.0.0/fixture',
+          physical_surface: null,
+          exposure_state: 'visible',
+        }],
+        package_dependency_readiness: { status: 'current', operational_ready: true },
+        materialization_readiness: { status: 'not_required' },
+        runtime_source_readiness: { status: 'current', operational_ready: true },
+        operational_ready: true,
+        operational_ready_scope: 'package_dependency_scope_and_runtime_source',
+        launch_allowed: true,
+        launch_blocked_reason: null,
+        allowed_when_blocked: ['status', 'doctor', 'repair'],
+        repair_action: null,
+      },
+    };
+  }) as any;
+
+  assert.throws(() => readStatus({ packageId: 'obf' }), /retired descriptor field/);
+
+  const statuses = buildAppAgentPackageStatuses({
+    packageIds: ['mas', 'obf'],
+    activeWorkspaceBindings: [],
+    profile: 'fast',
+    readStatus,
+  });
+  const availability = buildAgentCatalog({
+    profile: 'fast',
+    packageStatusById: statuses,
+  }).availability;
+
+  assert.equal(statuses.mas.status, 'available');
+  assert.equal(statuses.obf.status, 'unavailable');
+  assert.equal(statuses.obf.launch_allowed, false);
+  assert.equal((statuses.obf.status_read_error as Record<string, unknown>).code, 'contract_shape_invalid');
+  assert.equal(availability.find((entry) => entry.agent_id === 'mas')?.availability, 'available');
+  assert.equal(availability.find((entry) => entry.agent_id === 'obf')?.availability, 'unavailable');
+  assert.equal(availability.find((entry) => entry.agent_id === 'obf')?.reason, 'package_status_read_failed');
 });
 
 test('fast managed runtime readiness rejects a checkout path that is not a directory', () => {

@@ -5,8 +5,8 @@ export const OPL_LEDGER_SOURCE_MODULE = {
   physicalRoot: 'src/modules/ledger',
 } as const;
 
-export { buildWorkItemControlResolver, findWorkItemControl, readWorkItemControlLedger, setWorkItemControlState, workItemControlKey, WORK_ITEM_USER_LIFECYCLE_STATES } from './work-item-control-ledger.ts';
-export type { SetWorkItemControlStateInput, WorkItemControlEntry, WorkItemControlIdentity, WorkItemControlLedger, WorkItemControlProjectionRecord, WorkItemUserLifecycleState } from './work-item-control-ledger.ts';
+export { buildWorkItemControlResolver, findWorkItemControl, readWorkItemControlLedger, setWorkItemControlState, setWorkItemVisibilityState, workItemControlKey, WORK_ITEM_USER_LIFECYCLE_STATES, WORK_ITEM_VISIBILITY_STATES } from './work-item-control-ledger.ts';
+export type { SetWorkItemControlStateInput, SetWorkItemVisibilityStateInput, WorkItemControlEntry, WorkItemControlIdentity, WorkItemControlLedger, WorkItemControlProjectionRecord, WorkItemUserLifecycleState, WorkItemVisibilityState } from './work-item-control-ledger.ts';
 
 // Public cross-module surface generated from existing module consumers.
 export { buildEvidenceGroundedLedgerSubstrate } from './evidence-grounded-substrate.ts';

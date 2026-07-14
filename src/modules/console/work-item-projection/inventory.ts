@@ -300,6 +300,13 @@ export function readProjectInventory(input: {
         control_updated_at: null,
         observed_generation: observedGeneration,
       },
+      visibility: {
+        state: 'visible',
+        source: 'default',
+        updated_at: null,
+        control_ref: null,
+        generation: 0,
+      },
       execution: emptyExecution({
         currentStageId: stagePresentation.current_stage_id,
         currentStageDisplayName: stagePresentation.current_stage_display_name,

@@ -15,7 +15,10 @@ import { buildAgentCatalog } from '../../src/modules/console/work-item-projectio
 import { readStageIndexPresentation } from '../../src/modules/console/work-item-projection/inventory-presentation.ts';
 import { buildWorkItemProjectionV2 } from '../../src/modules/console/work-item-projection/projection.ts';
 import { projectWorkItemPrimaryState } from '../../src/modules/console/work-item-projection/primary-state.ts';
-import { setWorkItemControlState } from '../../src/modules/ledger/work-item-control-ledger.ts';
+import {
+  setWorkItemControlState,
+  setWorkItemVisibilityState,
+} from '../../src/modules/ledger/work-item-control-ledger.ts';
 import type { WorkspaceBinding } from '../../src/modules/workspace/workspace-registry.ts';
 
 const MAS_STUDIES = {
@@ -287,6 +290,14 @@ test('WorkItemProjection V2 discovers MAS 3 projects and 9 studies independently
     assert.equal(projection.schema_version, 'work-item-projection.v2');
     assert.equal(projection.project_catalog.length, 3);
     assert.equal(projection.items.length, 9);
+    assert.deepEqual(
+      projection.project_catalog.map((project) => project.display_name).sort(),
+      ['DM-CVD-Mortality-Risk', 'NF-PitNET', 'Obesity'],
+    );
+    assert.equal(projection.summary.work_item_count, 9);
+    assert.equal(projection.summary.visible_work_item_count, 9);
+    assert.equal(projection.summary.archived_work_item_count, 0);
+    assert.equal(projection.summary.total_work_item_count, 9);
     assert.equal(projection.detail_policy.all_work_item_summaries_included, true);
     assert.equal(projection.project_catalog.find((project) => project.display_name === 'Obesity')?.binding_status, 'inactive');
     assert.equal(projection.project_catalog.some((project) => project.display_name === 'Diabetes stale duplicate'), false);
@@ -308,7 +319,18 @@ test('WorkItemProjection V2 discovers MAS 3 projects and 9 studies independently
     assert.deepEqual(obesityItem?.stage_map.map((stage) => stage.state), ['current', 'next']);
     assert.equal(obesityItem?.action.kind, 'agent_action');
     assert.equal(obesityItem?.action.title, '继续推进');
+    assert.equal(obesityItem?.action.title_key, 'lifecycle.active.title');
+    assert.equal(obesityItem?.action.summary_key, 'inventory.nextAction.summary');
+    assert.equal(obesityItem?.action.owner_kind, 'agent');
+    assert.equal(obesityItem?.action.message_args.action_ref, 'continue_current_stage');
     assert.equal(obesityItem?.action.summary, 'Continue the current study stage.');
+    assert.deepEqual(obesityItem?.visibility, {
+      state: 'visible',
+      source: 'default',
+      updated_at: null,
+      control_ref: null,
+      generation: obesityItem?.visibility.generation,
+    });
     const deliveredItem = projection.items.find(
       (item) => item.identity.work_item_id === '003-dpcc-primary-care-phenotype-treatment-gap',
     );
@@ -330,6 +352,9 @@ test('WorkItemProjection V2 discovers MAS 3 projects and 9 studies independently
     );
     assert.equal(deliveredItem?.action.kind, 'user_action');
     assert.equal(deliveredItem?.action.title, '补齐投稿信息或发起修订');
+    assert.equal(deliveredItem?.action.title_key, 'lifecycle.deliveredPaused.title');
+    assert.equal(deliveredItem?.action.summary_key, 'inventory.nextAction.summary');
+    assert.equal(deliveredItem?.action.owner_kind, 'user');
     assert.equal(
       deliveredItem?.action.summary,
       'Provide missing submission metadata, or explicitly wake the study for revision.',
@@ -482,6 +507,10 @@ test('control lifecycle wins over old execution failure and token usage remains 
     assert.equal(item.lifecycle.primary_state_label, '已交付自动暂停');
     assert.equal(item.lifecycle.last_transition_at, item.freshness.last_transition_time);
     assert.equal(item.lifecycle.current_stage_id, null);
+    assert.equal(item.action.title_key, 'lifecycle.deliveredPaused.title');
+    assert.equal(item.action.summary_key, 'lifecycle.deliveredPaused.summary');
+    assert.deepEqual(item.action.message_args, {});
+    assert.equal(item.action.owner_kind, 'user');
     assert.equal(item.execution.state, 'idle');
     assert.equal(item.execution.current_stage_id, null);
     assert.equal(item.execution.attempt_id, null);
@@ -501,6 +530,105 @@ test('control lifecycle wins over old execution failure and token usage remains 
       ),
       true,
     );
+  } finally {
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(input.root, { recursive: true, force: true });
+  }
+});
+
+test('visibility archive keeps lifecycle, Stage Map, action, telemetry, and runtime execution intact', () => {
+  const input = fixture();
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = path.join(input.root, 'opl-state');
+  try {
+    const workItemId = 'obesity_multicenter_phenotype_atlas';
+    const runningAttempt = attempt({
+      id: 'sat-running-while-archived',
+      root: input.obesity,
+      workItemId,
+      status: 'running',
+      updatedAt: new Date().toISOString(),
+      tokenUsage: { input_tokens: 800, output_tokens: 200, total_tokens: 1000 },
+    });
+    const build = () => buildWorkItemProjectionV2({
+      profile: 'full',
+      bindings: input.bindings,
+      packageProjectionItems: input.packageProjectionItems,
+      packageStatusById: input.packageStatusById,
+      resolveDescriptor: input.resolveDescriptor,
+      attempts: [runningAttempt],
+    });
+    const baseline = build();
+    const baselineItem = baseline.items.find(
+      (candidate) => candidate.identity.work_item_id === workItemId,
+    )!;
+    assert.equal(baselineItem.execution.state, 'running');
+    assert.equal(baselineItem.visibility.generation, 0);
+
+    setWorkItemVisibilityState({
+      agent_id: baselineItem.identity.agent_id,
+      project_id: baselineItem.identity.project_id,
+      work_item_id: baselineItem.identity.work_item_id,
+      visibility_state: 'archived',
+      reason: 'hide completed review from the default list',
+      expected_generation: baselineItem.visibility.generation,
+    });
+    const archived = build();
+    const archivedItem = archived.items.find(
+      (candidate) => candidate.identity.work_item_id === workItemId,
+    )!;
+    assert.equal(archived.items.length, 9);
+    assert.equal(archived.summary.work_item_count, 8);
+    assert.equal(archived.summary.visible_work_item_count, 8);
+    assert.equal(archived.summary.archived_work_item_count, 1);
+    assert.equal(archived.summary.total_work_item_count, 9);
+    assert.equal(archived.summary.running_count, 0);
+    assert.deepEqual(archivedItem.visibility, {
+      state: 'archived',
+      source: 'work_item_control_ledger',
+      updated_at: archivedItem.visibility.updated_at,
+      control_ref: `opl://work-item-control/${encodeURIComponent(archivedItem.identity.agent_id)}/${encodeURIComponent(archivedItem.identity.project_id)}/${encodeURIComponent(workItemId)}`,
+      generation: 1,
+    });
+    assert.equal(typeof archivedItem.visibility.updated_at, 'string');
+    assert.equal(archivedItem.lifecycle.business_state, baselineItem.lifecycle.business_state);
+    assert.equal(archivedItem.lifecycle.control_state, null);
+    assert.equal(archivedItem.lifecycle.source, 'domain_inventory_projection');
+    assert.deepEqual(archivedItem.execution, baselineItem.execution);
+    assert.deepEqual(archivedItem.stage_map, baselineItem.stage_map);
+    assert.deepEqual(archivedItem.action, baselineItem.action);
+    assert.deepEqual(archivedItem.telemetry, baselineItem.telemetry);
+    const defaultVisibleItem = archived.items.find(
+      (candidate) => candidate.identity.work_item_id === '001-dm-cvd-mortality-risk',
+    )!;
+    assert.deepEqual(defaultVisibleItem.visibility, {
+      state: 'visible',
+      source: 'default',
+      updated_at: null,
+      control_ref: null,
+      generation: 1,
+    });
+
+    setWorkItemVisibilityState({
+      agent_id: archivedItem.identity.agent_id,
+      project_id: archivedItem.identity.project_id,
+      work_item_id: archivedItem.identity.work_item_id,
+      visibility_state: 'visible',
+      reason: 'restore to the default list',
+      expected_generation: archivedItem.visibility.generation,
+    });
+    const restored = build();
+    const restoredItem = restored.items.find(
+      (candidate) => candidate.identity.work_item_id === workItemId,
+    )!;
+    assert.equal(restoredItem.visibility.state, 'visible');
+    assert.equal(restoredItem.visibility.source, 'work_item_control_ledger');
+    assert.equal(restoredItem.visibility.generation, 2);
+    assert.equal(restoredItem.lifecycle.business_state, 'active');
+    assert.equal(restoredItem.execution.state, 'running');
+    assert.equal(restored.summary.work_item_count, 9);
+    assert.equal(restored.summary.archived_work_item_count, 0);
   } finally {
     if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
     else process.env.OPL_STATE_DIR = previousStateDir;

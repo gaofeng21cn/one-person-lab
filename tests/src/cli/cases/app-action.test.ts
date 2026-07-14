@@ -144,6 +144,17 @@ test('app action catalog exposes representative safe delegated action refs', () 
     ]);
     assert.equal(actions.get('work_item_lifecycle_set')?.mutates, 'opl_work_item_control_ledger');
     assert.equal(actions.get('work_item_lifecycle_set')?.dry_run_supported, true);
+    assert.equal(actions.has('work_item_visibility_set'), true);
+    assert.deepEqual(actions.get('work_item_visibility_set')?.payload_fields, [
+      'agent_id',
+      'project_id',
+      'work_item_id',
+      'visibility_state',
+      'reason',
+      'expected_generation',
+    ]);
+    assert.equal(actions.get('work_item_visibility_set')?.mutates, 'opl_work_item_control_ledger');
+    assert.equal(actions.get('work_item_visibility_set')?.dry_run_supported, true);
     assert.equal(
       actions.get('task_export_bundle_preview')?.delegated_surface,
       'opl app action execute --action task_export_bundle_preview --dry-run',
