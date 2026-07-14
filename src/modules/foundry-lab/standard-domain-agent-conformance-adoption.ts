@@ -662,9 +662,16 @@ export function buildStageRunKernelProfileChecks(repoDir: string) {
     defaultReadSurface.replay_packet_default === false
       ? null
       : 'stage_run_kernel_profile_replay_packet_default_forbidden',
-    optionalString(codexSemanticRoutePolicy.semantic_owner) === 'codex_cli'
+    optionalString(codexSemanticRoutePolicy.semantic_route_decision_owner) === 'decisive_codex_attempt'
       ? null
-      : 'stage_run_kernel_profile_codex_semantic_route_owner_invalid',
+      : 'stage_run_kernel_profile_semantic_route_decision_owner_invalid',
+    optionalString(codexSemanticRoutePolicy.stage_transition_materialization_owner)
+        === 'opl_stage_run_controller'
+      ? null
+      : 'stage_run_kernel_profile_stage_transition_materialization_owner_invalid',
+    Object.hasOwn(codexSemanticRoutePolicy, 'semantic_owner')
+      ? 'stage_run_kernel_profile_legacy_semantic_owner_forbidden'
+      : null,
     codexSemanticRoutePolicy.readable_artifact_allows_any_declared_stage === true
       ? null
       : 'stage_run_kernel_profile_readable_artifact_route_policy_invalid',
@@ -715,7 +722,10 @@ export function buildStageRunKernelProfileChecks(repoDir: string) {
       replay_packet_default: defaultReadSurface.replay_packet_default ?? null,
     },
     codex_semantic_route_policy: {
-      semantic_owner: optionalString(codexSemanticRoutePolicy.semantic_owner),
+      semantic_route_decision_owner:
+        optionalString(codexSemanticRoutePolicy.semantic_route_decision_owner),
+      stage_transition_materialization_owner:
+        optionalString(codexSemanticRoutePolicy.stage_transition_materialization_owner),
       readable_artifact_allows_any_declared_stage:
         codexSemanticRoutePolicy.readable_artifact_allows_any_declared_stage ?? null,
       provider_completion_is_route_decision:

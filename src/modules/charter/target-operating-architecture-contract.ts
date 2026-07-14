@@ -102,6 +102,17 @@ export function validateTargetOperatingArchitecture(
     );
   }
 
+  if (Object.hasOwn(codexRouteOwnerRaw, 'semantic_owner')) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'codex_stage_route_owner.semantic_owner is a retired mixed-authority field.',
+      {
+        file: filePath,
+        field: 'codex_stage_route_owner.semantic_owner',
+      },
+    );
+  }
+
   const designPrinciples = expectNonEmptyStringArray(value.design_principles, 'design_principles', filePath);
   requireEveryValue(designPrinciples, TARGET_ARCHITECTURE_DESIGN_PRINCIPLES, 'design_principles', filePath);
 
@@ -384,12 +395,35 @@ export function validateTargetOperatingArchitecture(
       resource_kinds: resourceKinds,
     },
     codex_stage_route_owner: {
-      semantic_owner: (() => {
-        const owner = expectString(codexRouteOwnerRaw.semantic_owner, 'codex_stage_route_owner.semantic_owner', filePath);
-        if (owner !== 'codex_cli') {
-          throw new FrameworkContractError('contract_shape_invalid', 'codex_stage_route_owner.semantic_owner must be codex_cli.', { file: filePath, actual: owner });
+      semantic_route_decision_owner: (() => {
+        const owner = expectString(
+          codexRouteOwnerRaw.semantic_route_decision_owner,
+          'codex_stage_route_owner.semantic_route_decision_owner',
+          filePath,
+        );
+        if (owner !== 'decisive_codex_attempt') {
+          throw new FrameworkContractError(
+            'contract_shape_invalid',
+            'codex_stage_route_owner.semantic_route_decision_owner must be decisive_codex_attempt.',
+            { file: filePath, actual: owner },
+          );
         }
-        return 'codex_cli' as const;
+        return 'decisive_codex_attempt' as const;
+      })(),
+      stage_transition_materialization_owner: (() => {
+        const owner = expectString(
+          codexRouteOwnerRaw.stage_transition_materialization_owner,
+          'codex_stage_route_owner.stage_transition_materialization_owner',
+          filePath,
+        );
+        if (owner !== 'opl_stage_run_controller') {
+          throw new FrameworkContractError(
+            'contract_shape_invalid',
+            'codex_stage_route_owner.stage_transition_materialization_owner must be opl_stage_run_controller.',
+            { file: filePath, actual: owner },
+          );
+        }
+        return 'opl_stage_run_controller' as const;
       })(),
       single_semantic_control_plane: expectTrueBoolean(codexRouteOwnerRaw.single_semantic_control_plane, 'codex_stage_route_owner.single_semantic_control_plane', filePath),
       framework_route_abi_validation: expectString(

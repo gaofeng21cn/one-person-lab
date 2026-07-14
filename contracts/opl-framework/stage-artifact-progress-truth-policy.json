@@ -37,7 +37,8 @@
     "no_output_diagnostic_counts_as_progress": true,
     "corrupt_output_diagnostic_counts_as_progress": true,
     "artifact_attempt_pointer_can_write_stage_current_pointer": false,
-    "codex_cli_route_context_is_semantic_owner": true,
+    "decisive_codex_attempt_route_context_is_semantic_owner": true,
+    "stage_transition_materialization_owner_is_opl_stage_run_controller": true,
     "framework_can_accept_reject_or_override_codex_route": false
   }
 }

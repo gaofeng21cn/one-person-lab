@@ -120,7 +120,8 @@ export const STAGE_RUN_KERNEL_PROFILE = {
     replay_packet_default: false,
   },
   codex_semantic_route_policy: {
-    semantic_owner: 'codex_cli',
+    semantic_route_decision_owner: 'decisive_codex_attempt',
+    stage_transition_materialization_owner: 'opl_stage_run_controller',
     readable_artifact_allows_any_declared_stage: true,
     provider_completion_is_route_decision: false,
     file_presence_without_readability_is_progress: false,

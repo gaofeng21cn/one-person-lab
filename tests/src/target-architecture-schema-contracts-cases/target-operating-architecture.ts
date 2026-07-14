@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { loadFrameworkContracts } from '../../../src/modules/charter/contracts.ts';
+import { validateTargetOperatingArchitecture } from '../../../src/modules/charter/target-operating-architecture-contract.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..', '..');
@@ -42,7 +43,14 @@ test('target operating architecture keeps framework-wide ownership and authority
     'ProgressReconciler',
   ]);
 
-  assert.equal(contract.codex_stage_route_owner.semantic_owner, 'codex_cli');
+  assert.equal(
+    contract.codex_stage_route_owner.semantic_route_decision_owner,
+    'decisive_codex_attempt',
+  );
+  assert.equal(
+    contract.codex_stage_route_owner.stage_transition_materialization_owner,
+    'opl_stage_run_controller',
+  );
   assert.equal(contract.codex_stage_route_owner.single_semantic_control_plane, true);
   assert.equal(
     contract.codex_stage_route_owner.framework_route_abi_validation,
@@ -219,4 +227,17 @@ test('target operating architecture keeps framework-wide ownership and authority
 
   assert.equal(contract.forbidden_claims.includes('contract_validation_is_domain_ready'), true);
   assert.equal(contract.forbidden_claims.includes('cleanup_lane_is_physical_delete_authority'), true);
+});
+
+test('target operating architecture rejects the retired mixed route-owner field', () => {
+  const contract = loadFrameworkContracts({
+    contractsDir: path.join(repoRoot, 'contracts', 'opl-framework'),
+  }).targetOperatingArchitecture;
+  const legacyContract = structuredClone(contract) as Record<string, any>;
+  legacyContract.codex_stage_route_owner.semantic_owner = 'codex_cli';
+
+  assert.throws(
+    () => validateTargetOperatingArchitecture('target-operating-architecture-contract.json', legacyContract),
+    /codex_stage_route_owner\.semantic_owner is a retired mixed-authority field/,
+  );
 });

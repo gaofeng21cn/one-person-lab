@@ -122,7 +122,8 @@
     ]
   },
   "codex_stage_route_owner": {
-    "semantic_owner": "codex_cli",
+    "semantic_route_decision_owner": "decisive_codex_attempt",
+    "stage_transition_materialization_owner": "opl_stage_run_controller",
     "single_semantic_control_plane": true,
     "framework_route_abi_validation": "required_for_attempt_role_terminality_shape_legacy_field_absence_and_declared_target_only",
     "progression_policy": "any_readable_stage_artifact_allows_next_declared_stage_to_start_quality_debt_restricts_claims_only",

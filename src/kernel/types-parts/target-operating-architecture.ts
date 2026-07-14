@@ -36,7 +36,8 @@ export interface TargetOperatingArchitectureContract {
     resource_kinds: TargetOperatingArchitectureResourceKind[];
   };
   codex_stage_route_owner: {
-    semantic_owner: 'codex_cli';
+    semantic_route_decision_owner: 'decisive_codex_attempt';
+    stage_transition_materialization_owner: 'opl_stage_run_controller';
     single_semantic_control_plane: true;
     framework_route_abi_validation: string;
     progression_policy: string;

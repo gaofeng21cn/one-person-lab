@@ -248,7 +248,14 @@ test('policy contract sentinels keep audit, progress, and physical-delete author
   }
   assert.equal(progressTruth.authority_boundary.readable_file_counts_as_progress, true);
   assert.equal(progressTruth.authority_boundary.raw_evidence_envelope_counts_as_progress, true);
-  assert.equal(progressTruth.authority_boundary.codex_cli_route_context_is_semantic_owner, true);
+  assert.equal(
+    progressTruth.authority_boundary.decisive_codex_attempt_route_context_is_semantic_owner,
+    true,
+  );
+  assert.equal(
+    progressTruth.authority_boundary.stage_transition_materialization_owner_is_opl_stage_run_controller,
+    true,
+  );
 
   const wrapperRetirement = readJson<Record<string, any>>(
     'contracts/opl-framework/wrapper-retirement-gate-policy.json',

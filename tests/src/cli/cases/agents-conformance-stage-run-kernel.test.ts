@@ -100,6 +100,37 @@ test('agents conformance keeps StageRun strategy refs advisory and current owner
   assert.equal(checks.default_read_surface.raw_worklist_default, false);
   assert.equal(checks.default_read_surface.readiness_default, false);
   assert.equal(checks.default_read_surface.replay_packet_default, false);
+  assert.equal(
+    checks.codex_semantic_route_policy.semantic_route_decision_owner,
+    'decisive_codex_attempt',
+  );
+  assert.equal(
+    checks.codex_semantic_route_policy.stage_transition_materialization_owner,
+    'opl_stage_run_controller',
+  );
+});
+
+test('agents conformance rejects legacy or mixed StageRun route ownership', async () => {
+  const repoDir = buildReadyAgentRepo();
+  const profilePath = path.join(repoDir, 'contracts', 'stage_run_kernel_profile.json');
+  const profile = parseJsonText(fs.readFileSync(profilePath, 'utf8')) as Record<string, any>;
+  profile.codex_semantic_route_policy.semantic_owner = 'codex_cli';
+  profile.codex_semantic_route_policy.semantic_route_decision_owner = 'opl_stage_run_controller';
+  profile.codex_semantic_route_policy.stage_transition_materialization_owner = 'decisive_codex_attempt';
+  writeJson(profilePath, profile);
+
+  const report = (await runCliReadOnly([
+    'agents',
+    'conformance',
+    '--agent',
+    `sample=${repoDir}`,
+  ])).standard_domain_agent_conformance;
+  const blockers = report.reports[0].stage_run_kernel_profile_checks.blockers;
+
+  assert.equal(report.status, 'blocked');
+  assert.equal(blockers.includes('stage_run_kernel_profile_semantic_route_decision_owner_invalid'), true);
+  assert.equal(blockers.includes('stage_run_kernel_profile_stage_transition_materialization_owner_invalid'), true);
+  assert.equal(blockers.includes('stage_run_kernel_profile_legacy_semantic_owner_forbidden'), true);
 });
 
 test('agents conformance blocks StageRun profile that turns strategy refs or raw worklist into launch authority', async () => {
