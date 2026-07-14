@@ -111,6 +111,21 @@ test('package source projection gate rejects a lightweight or missing owner vers
   );
 });
 
+test('package source projection gate rejects an annotated bare-version tag', (t) => {
+  const fixture = standardFixture(t);
+  git(fixture.ownerRoot, ['tag', '-d', `v${fixture.version}`]);
+  git(fixture.ownerRoot, ['tag', '-a', fixture.version, '-m', fixture.version]);
+  assert.throws(
+    () => resolveAnnotatedOwnerVersionTag({
+      spec: fixture.spec,
+      ownerRepoPath: fixture.ownerRoot,
+      packageVersion: fixture.version,
+      releaseGate: 'daily_package_channel_detection',
+    }),
+    (error: unknown) => (error as { code?: string }).code === 'version_bump_required',
+  );
+});
+
 test('package source projection gate rejects stale source commits and owner byte drift', (t) => {
   const fixture = standardFixture(t);
   const payload = JSON.parse(fs.readFileSync(fixture.payloadPath, 'utf8'));
@@ -178,6 +193,7 @@ test('package source projection gate verifies Scholar Skills ordered content loc
   writeJson(manifestPath, {
     package_id: 'mas-scholar-skills',
     version,
+    source_repo: repoUrl,
     content_lock: contentLock,
     codex_surface: { plugin_payload_manifest_url: payloadRef },
   });

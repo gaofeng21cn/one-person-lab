@@ -75,15 +75,14 @@ export function resolveAnnotatedOwnerVersionTag({
   releaseGate = null,
 }) {
   const head = gitValue(ownerRepoPath, ['rev-parse', 'HEAD']);
-  for (const tagName of [`v${packageVersion}`, packageVersion]) {
-    const tagRef = `refs/tags/${tagName}`;
-    const objectType = gitValue(ownerRepoPath, ['cat-file', '-t', tagRef], true);
-    const taggedCommit = objectType === 'tag'
-      ? gitValue(ownerRepoPath, ['rev-list', '-n', '1', tagRef], true)
-      : null;
-    if (taggedCommit === head) {
-      return tagName;
-    }
+  const tagName = `v${packageVersion}`;
+  const tagRef = `refs/tags/${tagName}`;
+  const objectType = gitValue(ownerRepoPath, ['cat-file', '-t', tagRef], true);
+  const taggedCommit = objectType === 'tag'
+    ? gitValue(ownerRepoPath, ['rev-list', '-n', '1', tagRef], true)
+    : null;
+  if (taggedCommit === head) {
+    return tagName;
   }
   if (releaseGate === TEST_ONLY_PACKAGE_RELEASE_GATE) {
     return null;
@@ -195,7 +194,7 @@ export function validatePackageSourceProjection({
       owner_version: owner.version,
     });
   }
-  if (projectedManifest.source_repo !== undefined && projectedManifest.source_repo !== spec.repo_url) {
+  if (projectedManifest.source_repo !== spec.repo_url) {
     fail('source_repository_drift', spec.package_id, 'Framework manifest source repository differs from owner');
   }
   const expectedPayloadRef = `payloads/${spec.package_id}-${owner.version}.json`;
