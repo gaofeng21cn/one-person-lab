@@ -135,8 +135,10 @@ jobs:
       release_set_generation: ${{ steps.release.outputs.release_set_generation }}
       promotion_request_id: ${{ steps.release.outputs.promotion_request_id }}
     steps:
-      - name: Checkout OPL
+      - name: Checkout frozen Framework source
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.expected_framework_source_commit }}
 
       - name: Verify exact Framework source commit
         shell: bash
@@ -150,10 +152,6 @@ jobs:
             exit 1
           fi
           actual_head="$(git rev-parse --verify HEAD)"
-          if [ "$GITHUB_SHA" != "$expected" ]; then
-            echo "::error::Workflow source $GITHUB_SHA does not match expected Framework commit $expected."
-            exit 1
-          fi
           if [ "$actual_head" != "$expected" ]; then
             echo "::error::Checkout HEAD $actual_head does not match expected Framework commit $expected."
             exit 1

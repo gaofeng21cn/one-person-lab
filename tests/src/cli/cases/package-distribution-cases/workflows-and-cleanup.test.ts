@@ -35,14 +35,16 @@ test('framework packages workflow is release-gated and manually repairable witho
   for (const source of [workflow, releaseCallerWorkflow]) {
     assert.match(source, /EXPECTED_FRAMEWORK_SOURCE_COMMIT: \$\{\{ inputs\.expected_framework_source_commit \}\}/);
     assert.match(source, /\[\[ "\$expected" =~ \^\[0-9a-f\]\{40\}\$ \]\]/);
-    assert.match(source, /\[ "\$GITHUB_SHA" != "\$expected" \]/);
-    assert.match(source, /\[ "\$actual_head" != "\$expected" \]/);
+    assert.doesNotMatch(source, /\[ "\$GITHUB_SHA" != "\$expected" \]/);
     assert.doesNotMatch(source, /\[ -z "\$expected" \]/);
   }
-  assert.ok(workflow.indexOf('Checkout OPL') < workflow.indexOf('Verify exact Framework source commit'));
+  assert.match(workflow, /ref: \$\{\{ inputs\.expected_framework_source_commit \}\}/);
+  assert.match(workflow, /\[ "\$actual_head" != "\$expected" \]/);
+  assert.ok(workflow.indexOf('Checkout frozen Framework source') < workflow.indexOf('Verify exact Framework source commit'));
   assert.ok(workflow.indexOf('Verify exact Framework source commit') < workflow.indexOf('Resolve Release Set generation'));
-  assert.ok(releaseCallerWorkflow.indexOf('Checkout OPL') < releaseCallerWorkflow.indexOf('Verify exact Framework source commit'));
-  assert.ok(releaseCallerWorkflow.indexOf('Verify exact Framework source commit') < releaseCallerWorkflow.indexOf('Setup Node.js'));
+  assert.ok(releaseCallerWorkflow.indexOf('Checkout OPL') < releaseCallerWorkflow.indexOf('Validate frozen Framework source input'));
+  assert.ok(releaseCallerWorkflow.indexOf('Validate frozen Framework source input') < releaseCallerWorkflow.indexOf('Setup Node.js'));
+  assert.match(releaseCallerWorkflow, /\.release_set\.components\.base\.source_commit/);
   assert.match(releaseCallerWorkflow, /expected_framework_source_commit:\s*\$\{\{ inputs\.expected_framework_source_commit \}\}/);
   assert.match(dailyPackageWorkflow, /expected_framework_source_commit:\s*\$\{\{ github\.sha \}\}/);
   assert.match(workflow, /release_gate:\s*\n\s*description:/);

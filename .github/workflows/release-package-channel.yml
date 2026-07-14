@@ -92,7 +92,7 @@ jobs:
       - name: Checkout OPL
         uses: actions/checkout@v6
 
-      - name: Verify exact Framework source commit
+      - name: Validate frozen Framework source input
         shell: bash
         env:
           EXPECTED_FRAMEWORK_SOURCE_COMMIT: ${{ inputs.expected_framework_source_commit }}
@@ -101,15 +101,6 @@ jobs:
           expected="$EXPECTED_FRAMEWORK_SOURCE_COMMIT"
           if ! [[ "$expected" =~ ^[0-9a-f]{40}$ ]]; then
             echo "::error::expected_framework_source_commit must be one exact lowercase 40-character Git SHA."
-            exit 1
-          fi
-          actual_head="$(git rev-parse --verify HEAD)"
-          if [ "$GITHUB_SHA" != "$expected" ]; then
-            echo "::error::Workflow source $GITHUB_SHA does not match expected Framework commit $expected."
-            exit 1
-          fi
-          if [ "$actual_head" != "$expected" ]; then
-            echo "::error::Checkout HEAD $actual_head does not match expected Framework commit $expected."
             exit 1
           fi
 
@@ -125,6 +116,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          EXPECTED_FRAMEWORK_SOURCE_COMMIT: ${{ inputs.expected_framework_source_commit }}
         run: |
           set -euo pipefail
           generation="${{ inputs.release_set_generation }}"
@@ -148,6 +140,7 @@ jobs:
           channel_manifest="$(find "$root" -name opl-channel-manifest.json -print -quit)"
           test -n "$release_manifest" && test -n "$channel_manifest"
           test "$(jq -r .release_set_generation "$release_manifest")" = "$generation"
+          test "$(jq -r '.release_set.components.base.source_commit' "$release_manifest")" = "$EXPECTED_FRAMEWORK_SOURCE_COMMIT"
           app_version="$(jq -r '.release_set.components.app.version' "$release_manifest")"
           app_commit="$(jq -r '.release_set.components.app.source_commit' "$release_manifest")"
           app_digest="$(jq -r '.release_set.components.app.artifact_digest' "$release_manifest")"

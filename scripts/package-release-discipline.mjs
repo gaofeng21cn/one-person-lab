@@ -197,11 +197,12 @@ function validateWorkflow(manifest, manifestPath, failures) {
   const packageFrameworkCommitInputs = workflowInputBlocks(source, 'expected_framework_source_commit');
   assertCondition(packageFrameworkCommitInputs.length === 2
     && packageFrameworkCommitInputs.every(isRequiredStringInput), 'Package workflow must require one non-default Framework source commit for both dispatch and workflow_call', failures);
-  assertCondition(source.includes('EXPECTED_FRAMEWORK_SOURCE_COMMIT: ${{ inputs.expected_framework_source_commit }}')
+  assertCondition(source.includes('ref: ${{ inputs.expected_framework_source_commit }}')
+    && source.includes('EXPECTED_FRAMEWORK_SOURCE_COMMIT: ${{ inputs.expected_framework_source_commit }}')
     && source.includes('[[ "$expected" =~ ^[0-9a-f]{40}$ ]]')
-    && source.includes('[ "$GITHUB_SHA" != "$expected" ]')
-    && source.includes('[ "$actual_head" != "$expected" ]'), 'Package workflow must fail closed unless expected Framework commit, GITHUB_SHA, and checkout HEAD match exactly', failures);
-  const packageCheckoutIndex = source.indexOf('- name: Checkout OPL');
+    && source.includes('[ "$actual_head" != "$expected" ]')
+    && !source.includes('[ "$GITHUB_SHA" != "$expected" ]'), 'Package workflow must load the exact frozen Framework source while allowing a newer workflow harness', failures);
+  const packageCheckoutIndex = source.indexOf('- name: Checkout frozen Framework source');
   const packageSourceGateIndex = source.indexOf('- name: Verify exact Framework source commit');
   const packageResolutionIndex = source.indexOf('- name: Resolve Release Set generation');
   assertCondition(packageCheckoutIndex >= 0
@@ -237,10 +238,10 @@ function validateWorkflow(manifest, manifestPath, failures) {
   assertCondition(/expected_framework_source_commit:\s*\$\{\{ inputs\.expected_framework_source_commit \}\}/.test(releaseSource), 'Candidate caller must pass the exact Framework source commit into packages.yml', failures);
   assertCondition(releaseSource.includes('EXPECTED_FRAMEWORK_SOURCE_COMMIT: ${{ inputs.expected_framework_source_commit }}')
     && releaseSource.includes('[[ "$expected" =~ ^[0-9a-f]{40}$ ]]')
-    && releaseSource.includes('[ "$GITHUB_SHA" != "$expected" ]')
-    && releaseSource.includes('[ "$actual_head" != "$expected" ]'), 'Stable promotion must fail closed unless expected Framework commit, GITHUB_SHA, and checkout HEAD match exactly', failures);
+    && releaseSource.includes(".release_set.components.base.source_commit")
+    && !releaseSource.includes('[ "$GITHUB_SHA" != "$expected" ]'), 'Stable promotion must validate the exact frozen Framework component without conflating it with the workflow harness', failures);
   const releaseCheckoutIndex = releaseSource.indexOf('- name: Checkout OPL');
-  const releaseSourceGateIndex = releaseSource.indexOf('- name: Verify exact Framework source commit');
+  const releaseSourceGateIndex = releaseSource.indexOf('- name: Validate frozen Framework source input');
   const releaseSetupIndex = releaseSource.indexOf('- name: Setup Node.js');
   assertCondition(releaseCheckoutIndex >= 0
     && releaseCheckoutIndex < releaseSourceGateIndex
