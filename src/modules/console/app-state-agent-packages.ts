@@ -44,13 +44,7 @@ function dependencyCheck(
   const availableExportIds = provider?.capability_provider?.exports.map((entry) => entry.export_id)
     ?? (check.status === 'current' ? requiredExportIds : []);
   const exportsSatisfied = installed && !failureReasons.includes('required_exports_missing');
-  const physicalSurfaceStatus = !installed
-    ? 'missing'
-    : provider?.exposure_state === 'disabled'
-      ? 'disabled'
-      : check.status === 'current'
-        ? 'ready'
-        : 'incompatible';
+  const physicalSurfaceStatus = provider?.physical_surface?.status ?? null;
   return {
     package_id: check.package_id,
     required: check.required,
@@ -130,15 +124,18 @@ function canonicalRepairAction(
 function canonicalActivationAction(
   installed: boolean,
   materializationStatus: string | null,
+  disabled: boolean,
 ) {
   const ready = materializationStatus === 'current' || materializationStatus === 'not_required';
   return {
     action_id: 'agent_package_activate',
     command_ref: ACTIVATE_COMMAND_REF,
-    enabled: installed,
+    enabled: installed && !disabled,
     preparation_status: !installed ? 'not_installed' : ready ? 'ready' : 'prepare_required',
     reason_code: !installed
       ? 'package_not_installed'
+      : disabled
+        ? 'package_disabled'
       : ready
         ? 'use_boundary_reconciliation_ready'
         : 'scope_reconciliation_required',
@@ -172,6 +169,8 @@ export function projectAppAgentPackageStatus(input: {
   const dependencyReadiness = canonicalDependencyReadiness(status, lockIndex);
   const rawRepairCommand = typeof status.repair_action === 'string' ? status.repair_action : null;
   const canonicalFields = {
+    action_receipt_ref: lock?.action_receipt_id ?? null,
+    rollback_ref: lock?.rollback_ref ?? null,
     capability_exposure: {
       status: exposureStatus,
       codex_visible: exposureStatus === 'visible',
@@ -182,6 +181,7 @@ export function projectAppAgentPackageStatus(input: {
     activation_action: canonicalActivationAction(
       installed,
       status.materialization_readiness?.status ?? null,
+      disabled,
     ),
     dependent_guard: dependentGuard(lockIndex, status.package_id),
   };
@@ -244,11 +244,19 @@ export function unavailableAgentPackageCanonicalFields(
   lockIndex: AgentPackageLockIndex,
 ) {
   const guard = dependentGuard(lockIndex, packageId);
+  const lock = selectedLock(lockIndex, packageId);
+  const installed = Boolean(lock);
+  const exposureStatus = lock?.exposure_state ?? (installed ? 'visible' : 'unavailable');
   const reasonCode = guard.required_by_package_ids.length > 0
     ? 'agent_package_required_by_installed_dependents'
     : 'package_status_unavailable';
   return {
-    capability_exposure: { status: 'unavailable', codex_visible: false },
+    action_receipt_ref: lock?.action_receipt_id ?? null,
+    rollback_ref: lock?.rollback_ref ?? null,
+    capability_exposure: {
+      status: exposureStatus,
+      codex_visible: exposureStatus === 'visible',
+    },
     dependency_readiness: {
       status: 'blocked',
       required_count: 0,
@@ -260,15 +268,15 @@ export function unavailableAgentPackageCanonicalFields(
       action_id: 'agent_package_repair',
       command_ref: REPAIR_COMMAND_REF,
       enabled: false,
-      reason_code: 'package_status_unavailable',
+      reason_code: 'status_unavailable',
     },
     repair_command: null,
     activation_action: {
       action_id: 'agent_package_activate',
       command_ref: ACTIVATE_COMMAND_REF,
       enabled: false,
-      preparation_status: 'not_installed',
-      reason_code: 'package_not_installed',
+      preparation_status: installed ? 'prepare_required' : 'not_installed',
+      reason_code: 'status_unavailable',
     },
     dependent_guard: {
       required_by_package_ids: guard.required_by_package_ids,

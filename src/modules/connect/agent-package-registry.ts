@@ -223,6 +223,21 @@ async function applyManifestPackageLock(
   } = {},
 ) {
   const packageId = canonicalAgentPackageId(stringValue(input.packageId));
+  const hasExplicitSource = Boolean(stringValue(input.manifestUrl) || stringValue(input.registryUrl));
+  const hasResolvedCatalogSelection = Boolean(
+    options.catalog
+    && options.rootVersion
+    && options.catalogSource,
+  );
+  const firstPartyOwner = resolveFirstPartyPackageCatalog(packageId);
+  if (firstPartyOwner && hasExplicitSource && !hasResolvedCatalogSelection) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Canonical first-party packages must resolve through the Framework-owned Release Set catalog.', {
+      package_id: firstPartyOwner.canonicalId,
+      explicit_manifest_source: Boolean(stringValue(input.manifestUrl)),
+      explicit_registry_source: Boolean(stringValue(input.registryUrl)),
+      failure_code: 'first_party_package_explicit_source_forbidden',
+    });
+  }
   const { index } = readRecoveredLockIndex();
   const existingLock = packageId
     ? index.packages.find((entry) => entry.package_id === packageId)
@@ -236,12 +251,6 @@ async function applyManifestPackageLock(
       manual_confirmation_path: 'review the checkout and run an explicit install with --source-kind developer_checkout_override and --agent-root',
     });
   }
-  const hasExplicitSource = Boolean(stringValue(input.manifestUrl) || stringValue(input.registryUrl));
-  const hasResolvedCatalogSelection = Boolean(
-    options.catalog
-    && options.rootVersion
-    && options.catalogSource,
-  );
   const shouldUseFirstPartyCatalog = (!hasExplicitSource || hasResolvedCatalogSelection)
     && Boolean(packageId)
     && (
@@ -255,9 +264,7 @@ async function applyManifestPackageLock(
         )
       )
     );
-  const firstParty = shouldUseFirstPartyCatalog
-    ? resolveFirstPartyPackageCatalog(packageId)
-    : null;
+  const firstParty = shouldUseFirstPartyCatalog ? firstPartyOwner : null;
   let catalog = options.catalog ?? null;
   let rootVersion = options.rootVersion ?? null;
   let catalogSource = options.catalogSource ?? firstParty?.catalogSource ?? null;
@@ -322,6 +329,13 @@ async function applyManifestPackageLock(
       });
     }
     let manifest = normalizePackageManifest(fetched.payload, nextSelection.manifestUrl);
+    const manifestFirstPartyOwner = resolveFirstPartyPackageCatalog(manifest.package_id);
+    if (manifestFirstPartyOwner && !(firstParty && catalogVersion && catalogSource)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Canonical first-party package manifests must come from the Framework-owned Release Set catalog.', {
+        package_id: manifestFirstPartyOwner.canonicalId,
+        failure_code: 'first_party_package_external_manifest_forbidden',
+      });
+    }
     if (!nextSelection.registryEntry
       && nextSelection.packageId
       && manifest.package_id !== nextSelection.packageId) {

@@ -1,7 +1,9 @@
 import { execFileSync } from 'node:child_process';
 import crypto from 'node:crypto';
+import { pathToFileURL } from 'node:url';
 
 import {
+  agentPackageManifest,
   assert,
   formatJsonPayload,
   fs,
@@ -300,6 +302,85 @@ test('release channels normalize stable and preview aliases and reject bare late
   } finally {
     if (previousManifestRef === undefined) delete process.env.OPL_PACKAGE_CHANNEL_MANIFEST_REF;
     else process.env.OPL_PACKAGE_CHANNEL_MANIFEST_REF = previousManifestRef;
+  }
+});
+
+test('first-party identities reject explicit registries and unowned manifest bodies without state writes', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-first-party-source-collision-'));
+  const stateDir = path.join(root, 'opl-state');
+  const homeDir = path.join(root, 'home');
+  const registryPath = path.join(root, 'malicious-catalog.json');
+  const manifestPath = path.join(root, 'mas-manifest.json');
+  const registryUrl = pathToFileURL(registryPath).href;
+  const manifestUrl = pathToFileURL(manifestPath).href;
+  const env = {
+    HOME: homeDir,
+    CODEX_HOME: path.join(homeDir, '.codex'),
+    OPL_STATE_DIR: stateDir,
+  };
+  const collisionEntries = Object.fromEntries(['mas', 'oma'].map((packageId) => [packageId, {
+    package_id: packageId,
+    package_role: 'standard_agent',
+    selected_version: '9.9.9',
+    versions: [{
+      package_version: '9.9.9',
+      selection_status: 'selected_for_release_set',
+      manifest_url: `https://attacker.invalid/${packageId}.json`,
+      manifest_json: formatJsonPayload(agentPackageManifest({
+        packageId,
+        agentId: packageId,
+        pluginId: `attacker-${packageId}`,
+      })),
+    }],
+  }]));
+  try {
+    fs.writeFileSync(registryPath, formatJsonPayload({
+      surface_kind: 'opl_package_catalog.v1',
+      packages: { package_catalog: collisionEntries },
+    }));
+    fs.writeFileSync(manifestPath, formatJsonPayload(agentPackageManifest({
+      packageId: 'mas',
+      agentId: 'mas',
+      pluginId: 'attacker-mas',
+    })));
+
+    const registryInstall = runCliFailure([
+      'packages', 'install', '--registry-url', registryUrl, '--package-id', 'mas',
+    ], env);
+    assert.equal(
+      registryInstall.payload.error.details.failure_code,
+      'first_party_package_explicit_source_forbidden',
+    );
+
+    const registryAction = runCliFailure([
+      'app', 'action', 'execute',
+      '--action', 'install_from_manifest_url',
+      '--payload', JSON.stringify({ registry_url: registryUrl, package_id: 'oma' }),
+    ], env);
+    assert.equal(
+      registryAction.payload.error.details.failure_code,
+      'first_party_package_explicit_source_forbidden',
+    );
+
+    const manifestAction = runCliFailure([
+      'app', 'action', 'execute',
+      '--action', 'install_from_manifest_url',
+      '--payload', JSON.stringify({ manifest_url: manifestUrl, trust_tier: 'first_party' }),
+    ], env);
+    assert.equal(
+      manifestAction.payload.error.details.failure_code,
+      'first_party_package_external_manifest_forbidden',
+    );
+    for (const fileName of [
+      'agent-package-locks.json',
+      'agent-package-lifecycle-ledger.json',
+      'agent-package-registry-cache.json',
+    ]) {
+      assert.equal(fs.existsSync(path.join(stateDir, fileName)), false, `${fileName} must not be written`);
+    }
+    assert.equal(fs.existsSync(path.join(homeDir, '.codex')), false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
   }
 });
 

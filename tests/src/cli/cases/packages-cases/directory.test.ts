@@ -19,6 +19,7 @@ import {
   normalizePackageCatalogRegistry,
 } from '../../../../../src/modules/connect/agent-package-registry-parts/directory.ts';
 import { normalizeRegistry } from '../../../../../src/modules/connect/agent-package-registry-parts/manifest-normalizers.ts';
+import { fetchAndValidateRegistry } from '../../../../../src/modules/connect/agent-package-registry-parts/selection.ts';
 import { listOplAgentPackages } from '../../../../../src/modules/connect/agent-package-registry.ts';
 import { agentPackageActivationPayload } from '../../../../../src/modules/console/app-state-parts/action-execute-payloads.ts';
 
@@ -130,20 +131,19 @@ exit 1
   }
 });
 
-test('canonical opl package catalog preserves selected stable versions and validates manifest role', () => {
-  const manifestPath = path.join(repoRoot, 'contracts', 'opl-framework', 'packages', 'opl-flow.json');
-  const manifestJson = fs.readFileSync(manifestPath, 'utf8');
-  const manifestUrl = pathToFileURL(manifestPath).toString();
+test('external package catalogs preserve third-party selection and reject first-party identity collisions', () => {
+  const manifestJson = formatJsonPayload(agentPackageManifest());
+  const manifestUrl = 'file:///tmp/third-party-research.json';
   const catalog = {
     surface_kind: 'opl_package_catalog.v1',
     packages: {
       package_catalog: {
-        'opl-flow': {
-          package_id: 'opl-flow',
-          package_role: 'workflow_profile',
-          selected_version: '0.1.20',
+        'third.party.research': {
+          package_id: 'third.party.research',
+          package_role: 'standard_agent',
+          selected_version: '1.2.3',
           versions: [{
-            package_version: '0.1.20',
+            package_version: '1.2.3',
             selection_status: 'selected_for_release_set',
             manifest_url: manifestUrl,
             manifest_json: manifestJson,
@@ -154,9 +154,9 @@ test('canonical opl package catalog preserves selected stable versions and valid
   };
   const cache = normalizePackageCatalogRegistry(catalog, 'file:///tmp/opl-catalog.json', 'catalog-sha');
   assert.equal(cache.entry_count, 1);
-  assert.equal(cache.entries[0].package_role, 'workflow_profile');
-  assert.equal(cache.entries[0].selected_version, '0.1.20');
-  assert.equal(cache.entries[0].stable_version, '0.1.20');
+  assert.equal(cache.entries[0].package_role, 'standard_agent');
+  assert.equal(cache.entries[0].selected_version, '1.2.3');
+  assert.equal(cache.entries[0].stable_version, '1.2.3');
   assert.equal(cache.entries[0].manifest_validation, 'catalog_inline_manifest');
 
   assert.throws(
@@ -164,15 +164,122 @@ test('canonical opl package catalog preserves selected stable versions and valid
       ...catalog,
       packages: {
         package_catalog: {
-          'opl-flow': {
-            ...catalog.packages.package_catalog['opl-flow'],
-            package_role: 'standard_agent',
+          'third.party.research': {
+            ...catalog.packages.package_catalog['third.party.research'],
+            package_role: 'workflow_profile',
           },
         },
       },
     }, 'file:///tmp/invalid-catalog.json', 'catalog-sha'),
     (error: any) => error?.details?.failure_code === 'agent_package_directory_catalog_role_invalid',
   );
+
+  const collisionEntries = Object.fromEntries(['mas', 'oma'].map((packageId) => [packageId, {
+    package_id: packageId,
+    package_role: 'standard_agent',
+    selected_version: '9.9.9',
+    versions: [{
+      package_version: '9.9.9',
+      selection_status: 'selected_for_release_set',
+      manifest_url: `https://attacker.invalid/${packageId}.json`,
+      manifest_json: formatJsonPayload(agentPackageManifest({
+        packageId,
+        agentId: packageId,
+        pluginId: `attacker-${packageId}`,
+      })),
+    }],
+  }]));
+  assert.throws(
+    () => normalizePackageCatalogRegistry({
+      surface_kind: 'opl_package_catalog.v1',
+      packages: { package_catalog: collisionEntries },
+    }, 'file:///tmp/malicious-catalog.json', 'malicious-sha'),
+    (error: any) => error?.details?.failure_code === 'agent_package_registry_first_party_identity_collision',
+  );
+
+  const baseline = buildAgentPackageDirectory({ registryCache: null, locks: [], detail: 'fast' });
+  const staleCollisionCache = {
+    surface_kind: 'opl_agent_package_registry_cache',
+    version: 'opl-agent-package-registry-cache.v1',
+    refreshed_at: new Date().toISOString(),
+    registry_url: 'file:///tmp/malicious-catalog.json',
+    registry_sha256: 'malicious-sha',
+    entry_count: 2,
+    entries: ['mas', 'oma'].map((packageId) => ({
+      package_id: packageId,
+      display_name: `Hijacked ${packageId}`,
+      publisher: 'attacker',
+      description: 'Malicious first-party identity collision.',
+      tags: ['attacker'],
+      package_role: 'standard_agent',
+      source: 'first_party_release_catalog',
+      manifest_url: `https://attacker.invalid/${packageId}.json`,
+      version_source_ref: `https://attacker.invalid/${packageId}.json#/version`,
+      selected_version: '9.9.9',
+      stable_version: '9.9.9',
+      manifest_validation: 'catalog_inline_manifest',
+      trust_tier: 'first_party',
+    })),
+  } as any;
+  const defended = buildAgentPackageDirectory({
+    registryCache: staleCollisionCache,
+    locks: [],
+    detail: 'fast',
+  });
+  for (const packageId of ['mas', 'oma']) {
+    const expected = baseline.entries.find((entry) => entry.package_id === packageId)!;
+    const actual = defended.entries.find((entry) => entry.package_id === packageId)!;
+    assert.deepEqual({
+      display_name: actual.display_name,
+      publisher: actual.publisher,
+      manifest_url: actual.manifest_url,
+      selected_version: actual.selected_version,
+      stable_version: actual.stable_version,
+      trust_tier: actual.trust_tier,
+      source_explanation: actual.source_explanation,
+    }, {
+      display_name: expected.display_name,
+      publisher: expected.publisher,
+      manifest_url: expected.manifest_url,
+      selected_version: expected.selected_version,
+      stable_version: expected.stable_version,
+      trust_tier: expected.trust_tier,
+      source_explanation: expected.source_explanation,
+    });
+    assert.deepEqual(actual.recommended_action_ref?.payload, { package_id: packageId });
+    assert.deepEqual(actual.recommended_action_ref?.required_payload_fields, ['package_id']);
+    assert.equal(Object.hasOwn(actual.recommended_action_ref?.payload ?? {}, 'registry_url'), false);
+    assert.equal(Object.hasOwn(actual.recommended_action_ref?.payload ?? {}, 'manifest_url'), false);
+    assert.equal(Object.hasOwn(actual.recommended_action_ref?.payload ?? {}, 'trust_tier'), false);
+  }
+});
+
+test('external registries reject canonical first-party package identities', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-directory-first-party-registry-collision-'));
+  const registryPath = path.join(root, 'registry.json');
+  try {
+    fs.writeFileSync(registryPath, formatJsonPayload({
+      registry_id: 'malicious-first-party-collision',
+      entries: ['mas', 'oma'].map((packageId) => ({
+        package_id: packageId,
+        display_name: `Hijacked ${packageId}`,
+        publisher: 'attacker',
+        description: 'Malicious first-party identity collision.',
+        tags: ['attacker'],
+        package_role: 'standard_agent',
+        source: 'third_party',
+        manifest_url: `https://attacker.invalid/${packageId}.json`,
+        version_source_ref: `https://attacker.invalid/${packageId}.json#/version`,
+        trust_tier: 'third_party_verified',
+      })),
+    }));
+    await assert.rejects(
+      fetchAndValidateRegistry(pathToFileURL(registryPath).href),
+      (error: any) => error?.details?.failure_code === 'agent_package_registry_first_party_identity_collision',
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('registry manifest enrichment admits third-party packages and rejects role or manifest drift', async () => {
@@ -204,6 +311,29 @@ test('registry manifest enrichment admits third-party packages and rejects role 
       registry_url: 'file:///tmp/registry.json',
     });
     assert.equal(Object.hasOwn(installAction.payload, 'trust_tier'), false);
+    const directManifestEntry = buildAgentPackageDirectory({
+      registryCache: { ...enriched, registry_url: null } as any,
+      locks: [],
+      detail: 'fast',
+    }).entries.find((entry) => entry.package_id === 'third.party.research')!;
+    const directInstallAction = directManifestEntry.recommended_action_ref!;
+    assert.deepEqual(Object.keys(directInstallAction).sort(), [
+      'action_id',
+      'action_ref',
+      'confirmation_required',
+      'payload',
+      'required_payload_fields',
+    ]);
+    assert.deepEqual(directInstallAction.payload, {
+      package_id: 'third.party.research',
+      manifest_url: manifestUrl,
+      trust_tier: 'third_party_verified',
+    });
+    assert.deepEqual(directInstallAction.required_payload_fields, ['manifest_url', 'trust_tier']);
+    assert.equal(
+      directInstallAction.required_payload_fields.every((field) => Object.hasOwn(directInstallAction.payload, field)),
+      true,
+    );
 
     const roleDrift = normalizeRegistry(
       registryPayload(manifestUrl, 'workflow_profile'),

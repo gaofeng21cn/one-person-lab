@@ -1,6 +1,7 @@
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import { stringValue } from '../../../kernel/json-record.ts';
 import { canonicalAgentPackageId } from '../agent-package-identity.ts';
+import { resolveFirstPartyPackageCatalog } from '../agent-package-first-party.ts';
 import { normalizeRegistry } from './manifest-normalizers.ts';
 import { isOplPackageCatalog, normalizePackageCatalogRegistry } from './directory.ts';
 import { fetchJsonSource } from './shared.ts';
@@ -61,6 +62,14 @@ export async function fetchAndValidateRegistry(registryUrl: string) {
   const cache = isOplPackageCatalog(fetched.payload)
     ? normalizePackageCatalogRegistry(fetched.payload, registryUrl, fetched.source_sha256)
     : normalizeRegistry(fetched.payload, registryUrl, fetched.source_sha256);
+  const firstPartyCollision = cache.entries.find((entry) => resolveFirstPartyPackageCatalog(entry.package_id));
+  if (firstPartyCollision) {
+    throw new FrameworkContractError('contract_shape_invalid', 'External registries cannot claim canonical first-party package identities.', {
+      registry_url: registryUrl,
+      package_id: firstPartyCollision.package_id,
+      failure_code: 'agent_package_registry_first_party_identity_collision',
+    });
+  }
   return { fetched, cache };
 }
 

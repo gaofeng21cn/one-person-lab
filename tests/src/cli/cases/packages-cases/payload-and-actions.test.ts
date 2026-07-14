@@ -427,6 +427,18 @@ test('app action execute routes install_from_manifest_url to Framework package l
     const manifestPath = path.join(fixtureDir, 'manifest.json');
     fs.writeFileSync(manifestPath, formatJsonPayload(agentPackageManifest({ pluginSourcePath })), 'utf8');
     const manifestUrl = pathToFileURL(manifestPath).href;
+    const missingTrustTier = runCliFailure([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'install_from_manifest_url',
+      '--payload',
+      JSON.stringify({ manifest_url: manifestUrl }),
+    ], env);
+    assert.equal(missingTrustTier.payload.error.code, 'cli_usage_error');
+    assert.deepEqual(missingTrustTier.payload.error.details.required, ['--trust-tier']);
+    assert.equal(fs.existsSync(path.join(stateDir, 'agent-package-locks.json')), false);
     const output = runCli([
       'app',
       'action',

@@ -130,6 +130,13 @@ export function normalizePackageCatalogRegistry(
         failure_code: 'agent_package_directory_catalog_identity_invalid',
       });
     }
+    if (resolveFirstPartyPackageCatalog(packageId)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'External package catalogs cannot claim canonical first-party package identities.', {
+        registry_url: registryUrl,
+        package_id: packageId,
+        failure_code: 'agent_package_registry_first_party_identity_collision',
+      });
+    }
     const { selectedVersion, selected } = selectedCatalogVersion(rawEntry, packageId);
     const manifestUrl = stringValue(selected.manifest_url);
     const manifestJson = stringValue(selected.manifest_json);
@@ -430,7 +437,7 @@ function availableActions(
       Object.hasOwn(payload, 'registry_url')
         ? ['registry_url', 'package_id']
         : Object.hasOwn(payload, 'manifest_url')
-          ? ['manifest_url']
+          ? ['manifest_url', 'trust_tier']
           : ['package_id'],
       true,
     )];
@@ -497,12 +504,10 @@ export function buildAgentPackageDirectory(input: {
 }) {
   const sources = new Map(firstPartyDirectorySources().map((entry) => [entry.package_id, entry]));
   for (const entry of input.registryCache?.entries ?? []) {
+    if (resolveFirstPartyPackageCatalog(entry.package_id)) continue;
     const existing = sources.get(entry.package_id);
     const candidate = registryDirectorySource(input.registryCache!, entry);
-    const canonicalCatalogEntry = entry.manifest_validation === 'catalog_inline_manifest'
-      && entry.trust_tier === 'first_party'
-      && entry.source === 'first_party_release_catalog';
-    if (!existing || existing.source_kind !== 'first_party_release_catalog' || canonicalCatalogEntry) {
+    if (!existing || existing.source_kind !== 'first_party_release_catalog') {
       sources.set(entry.package_id, existing ? {
         ...existing,
         ...candidate,

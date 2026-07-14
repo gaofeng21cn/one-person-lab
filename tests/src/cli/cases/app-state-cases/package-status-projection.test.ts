@@ -53,6 +53,8 @@ exit 1
       assert.equal(status.operational_ready, false);
       assert.equal(status.launch_allowed, false);
       assert.equal(status.launch_blocked_reason, 'package_not_installed');
+      assert.equal(status.action_receipt_ref, null);
+      assert.equal(status.rollback_ref, null);
       assert.deepEqual(status.allowed_when_blocked, ['status', 'doctor', 'repair']);
       assert.deepEqual(status.dependency_readiness, {
         status: 'blocked',
@@ -102,6 +104,22 @@ test('app state full projects every uninstalled canonical package as fail closed
 });
 
 test('app state isolates one invalid package status while direct status reads remain fail closed', () => {
+  const lockIndex = {
+    surface_kind: 'opl_agent_package_lock_index',
+    version: 'opl-agent-package-lock-index.v1',
+    packages: [{
+      package_id: 'obf',
+      package_version: '0.3.2',
+      lock_ref: 'opl://agent-package-lock/obf/0.3.2/fixture',
+      exposure_state: 'hidden',
+      capability_dependencies: [],
+      dependency_transaction_id: 'tx-obf-current',
+      dependency_closure_digest: 'sha256:obf-current',
+      action_receipt_id: 'opl://agent-package-receipt/obf/update/fixture',
+      rollback_ref: 'opl://agent-package-rollback/obf/0.3.1/fixture',
+    }],
+    last_known_good_transactions: [],
+  } as unknown as AgentPackageLockIndex;
   const readStatus = ((input: { packageId?: string | null }) => {
     if (input.packageId === 'obf') {
       throw new FrameworkContractError(
@@ -145,6 +163,7 @@ test('app state isolates one invalid package status while direct status reads re
     workspaceRootPath: null,
     profile: 'fast',
     readStatus,
+    lockIndex,
   });
   const availability = buildAgentCatalog({
     profile: 'fast',
@@ -159,7 +178,12 @@ test('app state isolates one invalid package status while direct status reads re
   assert.equal(statuses.obf.launch_allowed, false);
   assert.equal((statuses.obf.dependency_readiness as Record<string, unknown>).status, 'blocked');
   assert.equal((statuses.obf.repair_action as Record<string, unknown>).action_id, 'agent_package_repair');
+  assert.equal((statuses.obf.repair_action as Record<string, unknown>).reason_code, 'status_unavailable');
   assert.equal((statuses.obf.activation_action as Record<string, unknown>).enabled, false);
+  assert.equal((statuses.obf.activation_action as Record<string, unknown>).reason_code, 'status_unavailable');
+  assert.equal((statuses.obf.capability_exposure as Record<string, unknown>).status, 'hidden');
+  assert.equal(statuses.obf.action_receipt_ref, 'opl://agent-package-receipt/obf/update/fixture');
+  assert.equal(statuses.obf.rollback_ref, 'opl://agent-package-rollback/obf/0.3.1/fixture');
   assert.equal(
     ((statuses.obf.dependent_guard as Record<string, any>).disable as Record<string, unknown>).allowed,
     false,
@@ -264,6 +288,14 @@ test('app package status normalizes dependency closure and dependent guards for 
     required_export_ids: ['medical-research'],
     required_module_ids: [],
   };
+  const missingDependency = {
+    package_id: 'missing-provider',
+    required: true,
+    version_requirement: '>=1.0.0',
+    capability_abi: 'missing-provider.v1',
+    required_export_ids: ['missing-export'],
+    required_module_ids: [],
+  };
   const lockIndex = {
     surface_kind: 'opl_agent_package_lock_index',
     version: 'opl-agent-package-lock-index.v1',
@@ -273,7 +305,7 @@ test('app package status normalizes dependency closure and dependent guards for 
         package_version: '0.2.4',
         lock_ref: 'opl://agent-package-lock/mas/0.2.4/current',
         exposure_state: 'hidden',
-        capability_dependencies: [dependency],
+        capability_dependencies: [dependency, missingDependency],
         resolved_dependencies: [],
         dependency_transaction_id: 'tx-mas-current',
         dependency_closure_digest: 'sha256:mas-current',
@@ -315,15 +347,18 @@ test('app package status normalizes dependency closure and dependent guards for 
   const readStatus = ((input: { packageId?: string | null }) => {
     const packageId = input.packageId ?? null;
     const isMas = packageId === 'mas';
+    const isOma = packageId === 'oma';
     const dependencyDisabled = isMas;
+    const dependencyMissing = isOma;
+    const dependencyReady = !dependencyDisabled && !dependencyMissing;
     return {
       opl_agent_package_status: {
         package_id: packageId,
-        status: dependencyDisabled ? 'attention_needed' : 'available',
+        status: dependencyReady ? 'available' : 'attention_needed',
         installed_packages: lockIndex.packages.filter((entry) => entry.package_id === packageId),
         package_dependency_readiness: {
-          status: dependencyDisabled ? 'incompatible' : 'current',
-          operational_ready: !dependencyDisabled,
+          status: dependencyDisabled ? 'incompatible' : dependencyMissing ? 'missing' : 'current',
+          operational_ready: dependencyReady,
           repair_command: `opl packages repair --package-id ${packageId}`,
           dependencies: isMas ? [{
             ...dependency,
@@ -334,29 +369,42 @@ test('app package status normalizes dependency closure and dependent guards for 
             reasons: ['dependency_disabled'],
             missing_required_export_ids: [],
             missing_required_module_ids: [],
+          }] : isOma ? [{
+            ...missingDependency,
+            installed_version: null,
+            manifest_sha256: null,
+            content_digest: null,
+            status: 'missing',
+            reasons: ['dependency_lock_missing'],
+            missing_required_export_ids: ['missing-export'],
+            missing_required_module_ids: [],
           }] : [],
         },
         materialization_readiness: { status: 'current' },
         runtime_source_readiness: { status: 'current', operational_ready: true },
-        operational_ready: !dependencyDisabled,
+        operational_ready: dependencyReady,
         operational_ready_scope: 'package_dependency_scope_runtime_source_and_managed_policy',
-        launch_allowed: !dependencyDisabled,
-        launch_blocked_reason: dependencyDisabled ? 'package_dependency_incompatible' : null,
+        launch_allowed: dependencyReady,
+        launch_blocked_reason: dependencyDisabled
+          ? 'package_dependency_incompatible'
+          : dependencyMissing
+            ? 'package_dependency_missing'
+            : null,
         allowed_when_blocked: ['status', 'doctor', 'repair'],
-        repair_action: dependencyDisabled ? `opl packages repair --package-id ${packageId}` : null,
+        repair_action: dependencyReady ? null : `opl packages repair --package-id ${packageId}`,
       },
     };
   }) as any;
 
   const fast = buildAppAgentPackageStatuses({
-    packageIds: ['mas', 'mas-scholar-skills'],
+    packageIds: ['mas', 'oma', 'mas-scholar-skills'],
     workspaceRootPath: '/tmp/opl-workspace',
     profile: 'fast',
     readStatus,
     lockIndex,
   });
   const full = buildAppAgentPackageStatuses({
-    packageIds: ['mas', 'mas-scholar-skills'],
+    packageIds: ['mas', 'oma', 'mas-scholar-skills'],
     workspaceRootPath: '/tmp/opl-workspace',
     profile: 'full',
     readStatus,
@@ -364,6 +412,8 @@ test('app package status normalizes dependency closure and dependent guards for 
   });
   const fastMas = fast.mas as any;
   const fullMas = full.mas as any;
+  const fastOma = fast.oma as any;
+  const fullOma = full.oma as any;
   const fastProvider = fast['mas-scholar-skills'] as any;
 
   assert.deepEqual(fastMas.dependency_readiness, fullMas.dependency_readiness);
@@ -386,7 +436,7 @@ test('app package status normalizes dependency closure and dependent guards for 
       available_export_ids: ['medical-research'],
       exports_satisfied: true,
       content_lock_digest: 'sha256:mas-scholar-skills',
-      physical_surface_status: 'disabled',
+      physical_surface_status: null,
       ready: false,
       failure_reasons: ['dependency_disabled'],
     }],
@@ -406,6 +456,11 @@ test('app package status normalizes dependency closure and dependent guards for 
   });
   assert.deepEqual(fastMas.activation_action, fullMas.activation_action);
   assert.equal(fastMas.capability_exposure.status, 'hidden');
+  assert.equal(fastOma.dependency_readiness.status, 'repair_required');
+  assert.deepEqual(fastOma.dependency_readiness, fullOma.dependency_readiness);
+  assert.equal(fastOma.dependency_readiness.checks[0].failure_reasons[0], 'dependency_lock_missing');
+  assert.equal(fastOma.repair_action.enabled, true);
+  assert.equal(fastProvider.dependency_readiness.status, 'ready');
   assert.deepEqual(fastProvider.dependent_guard, {
     required_by_package_ids: ['mas', 'oma'],
     disable: { allowed: false, reason_code: 'agent_package_required_by_installed_dependents' },
@@ -415,6 +470,8 @@ test('app package status normalizes dependency closure and dependent guards for 
   assert.equal(fastProvider.status, 'attention_needed');
   assert.equal(fastProvider.launch_allowed, false);
   assert.equal(fastProvider.launch_blocked_reason, 'package_disabled');
+  assert.equal(fastProvider.activation_action.enabled, false);
+  assert.equal(fastProvider.activation_action.reason_code, 'package_disabled');
 });
 
 test('app state reuses status reads and publishes the same canonical package ABI in fast and full', async () => {
@@ -446,52 +503,126 @@ exit 1
   try {
     fs.mkdirSync(stateDir, { recursive: true });
     fs.mkdirSync(workspaceRoot, { recursive: true });
-    fs.writeFileSync(path.join(stateDir, 'agent-package-locks.json'), `${JSON.stringify({
+    const packageLockIndexFixture = {
       surface_kind: 'opl_agent_package_lock_index',
       version: 'opl-agent-package-lock-index.v1',
-      packages: [{
-        surface_kind: 'opl_agent_package_lock',
-        package_id: 'third.party.research',
-        agent_id: 'third.party.research',
-        package_role: 'standard_agent',
-        display_name: 'Third Party Research',
-        publisher: 'example-org',
-        package_version: '1.0.0',
-        trust_tier: 'third_party_verified',
-        source_kind: 'manifest_url',
-        manifest_url: 'https://example.test/research.json',
-        lock_ref: 'opl://agent-package-lock/third.party.research/1.0.0/fixture',
-        capability_provider: null,
-        scope_materializations: [],
+      packages: [
+        {
+          surface_kind: 'opl_agent_package_lock',
+          package_id: 'third.party.research',
+          agent_id: 'third.party.research',
+          package_role: 'standard_agent',
+          display_name: 'Third Party Research',
+          publisher: 'example-org',
+          package_version: '1.0.0',
+          trust_tier: 'third_party_verified',
+          source_kind: 'manifest_url',
+          manifest_url: 'https://example.test/research.json',
+          lock_ref: 'opl://agent-package-lock/third.party.research/1.0.0/fixture',
+          exposure_state: 'visible',
+          physical_surface: {
+            status: 'materialized',
+            note: null,
+            profile_migration: {
+              status: 'not_requested',
+              note: 'Package does not request a profile surface.',
+            },
+            managed_policy_config: null,
+          },
+          capability_provider: {
+            capability_abi: 'third-party-research.v1',
+            exports: [{
+              export_id: 'research-search',
+              skill_id: 'third-party-research',
+              install_mode: 'core_required',
+            }],
+            module_export_ids: [],
+          },
+          capability_dependencies: [],
+          resolved_dependencies: [],
+          dependency_transaction_id: 'tx-research-current',
+          dependency_closure_digest: 'sha256:research-current',
+          action_receipt_id: 'opl://agent-package-receipt/third.party.research/install/fixture',
+          rollback_ref: 'opl://agent-package-rollback/third.party.research/1.0.0/fixture',
+          content_digest: 'sha256:research-content',
+          scope_materializations: [],
+        },
+        {
+          surface_kind: 'opl_agent_package_lock',
+          package_id: 'mas',
+          agent_id: 'mas',
+          package_role: 'standard_agent',
+          display_name: 'Med Auto Science',
+          publisher: 'one-person-lab',
+          package_version: '0.2.4',
+          trust_tier: 'first_party',
+          source_kind: 'first_party_managed_cohort',
+          manifest_url: 'opl+oci://example.test/mas:0.2.4#/package-manifest.json',
+          lock_ref: 'opl://agent-package-lock/mas/0.2.4/fixture',
+          exposure_state: 'visible',
+          capability_provider: null,
+          capability_dependencies: [{
+            package_id: 'third.party.research',
+            required: true,
+            version_requirement: '>=1.0.0',
+            capability_abi: 'third-party-research.v1',
+            required_export_ids: ['research-search'],
+            required_module_ids: [],
+          }],
+          resolved_dependencies: [],
+          dependency_transaction_id: 'tx-mas-current',
+          dependency_closure_digest: 'sha256:mas-current',
+          content_digest: 'sha256:mas-content',
+          scope_materializations: [],
+        },
+      ],
+      last_known_good_transactions: [{
+        root_package_id: 'mas',
+        transaction_id: 'tx-mas-lkg',
+        closure_digest: 'sha256:mas-lkg',
+        package_locks: [],
       }],
-      last_known_good_transactions: [],
-    }, null, 2)}\n`);
+    };
+    fs.writeFileSync(
+      path.join(stateDir, 'agent-package-locks.json'),
+      `${JSON.stringify(packageLockIndexFixture, null, 2)}\n`,
+    );
     for (const [key, value] of Object.entries(env)) process.env[key] = value;
 
     const readAgentPackageStatus = ((input: { packageId?: string; scope?: string; targetWorkspace?: string } = {}) => {
         const packageId = input.packageId ?? 'unknown';
         calls.set(packageId, (calls.get(packageId) ?? 0) + 1);
-        const installed = packageId === 'third.party.research';
+        const lock = packageLockIndexFixture.packages.find((entry) => entry.package_id === packageId) ?? null;
+        const installed = Boolean(lock);
         const materialized = installed
           && input.scope === 'workspace'
           && input.targetWorkspace === workspaceRoot;
+        const dependencies = packageId === 'mas' ? [{
+          package_id: 'third.party.research',
+          required: true,
+          version_requirement: '>=1.0.0',
+          capability_abi: 'third-party-research.v1',
+          required_export_ids: ['research-search'],
+          required_module_ids: [],
+          installed_version: '1.0.0',
+          manifest_sha256: 'sha256:research-manifest',
+          content_digest: 'sha256:research-content',
+          status: 'current',
+          reasons: [],
+          missing_required_export_ids: [],
+          missing_required_module_ids: [],
+        }] : [];
         return {
           opl_agent_package_status: {
             package_id: packageId,
             status: installed ? materialized ? 'available' : 'attention_needed' : 'not_installed',
             recommended_action: installed && !materialized ? 'agent_package_activate' : null,
-            installed_packages: installed ? [{
-              package_version: '1.0.0',
-              source_kind: 'manifest_url',
-              lock_ref: 'opl://agent-package-lock/third.party.research/1.0.0/fixture',
-              physical_surface: null,
-              exposure_state: 'visible',
-            }] : [],
+            installed_packages: installed ? [lock] : [],
             package_dependency_readiness: installed ? {
               status: 'current',
               operational_ready: true,
               repair_command: `opl packages repair --package-id ${packageId}`,
-              dependencies: [],
+              dependencies,
             } : null,
             materialization_readiness: { status: installed ? materialized ? 'current' : 'scope_required' : 'not_required' },
             runtime_source_readiness: { status: installed ? 'current' : 'not_installed', operational_ready: installed },
@@ -524,6 +655,8 @@ exit 1
     assert.equal(directoryEntry.readiness.launch_allowed, false);
     const statusIndexEntry = fastAppState.app_state.agent_packages.status_index.packages['third.party.research'];
     const fullStatusIndexEntry = fullAppState.app_state.agent_packages.status_index.packages['third.party.research'];
+    const fastMasStatus = fastAppState.app_state.agent_packages.status_index.packages.mas;
+    const fullMasStatus = fullAppState.app_state.agent_packages.status_index.packages.mas;
     assert.equal(statusIndexEntry.status, 'verification_deferred');
     assert.equal(statusIndexEntry.operational_ready, false);
     assert.equal(statusIndexEntry.launch_allowed, false);
@@ -545,7 +678,53 @@ exit 1
     assert.deepEqual(statusIndexEntry.capability_exposure, fullStatusIndexEntry.capability_exposure);
     assert.equal(statusIndexEntry.repair_action.action_id, 'agent_package_repair');
     assert.equal(statusIndexEntry.activation_action.action_id, 'agent_package_activate');
+    assert.equal(
+      statusIndexEntry.action_receipt_ref,
+      'opl://agent-package-receipt/third.party.research/install/fixture',
+    );
+    assert.equal(
+      statusIndexEntry.rollback_ref,
+      'opl://agent-package-rollback/third.party.research/1.0.0/fixture',
+    );
+    assert.equal(statusIndexEntry.action_receipt_ref, fullStatusIndexEntry.action_receipt_ref);
+    assert.equal(statusIndexEntry.rollback_ref, fullStatusIndexEntry.rollback_ref);
     assert.equal('generation_id' in (statusIndexEntry.dependency_readiness.closure ?? {}), false);
+    assert.deepEqual(fastMasStatus.dependency_readiness, fullMasStatus.dependency_readiness);
+    assert.deepEqual(fastMasStatus.dependency_readiness, {
+      status: 'ready',
+      required_count: 1,
+      ready_count: 1,
+      checks: [{
+        package_id: 'third.party.research',
+        required: true,
+        installed: true,
+        enabled: true,
+        version_requirement: '>=1.0.0',
+        installed_version: '1.0.0',
+        version_satisfied: true,
+        capability_abi: 'third-party-research.v1',
+        installed_capability_abi: 'third-party-research.v1',
+        abi_satisfied: true,
+        required_export_ids: ['research-search'],
+        available_export_ids: ['research-search'],
+        exports_satisfied: true,
+        content_lock_digest: 'sha256:research-content',
+        physical_surface_status: 'materialized',
+        ready: true,
+        failure_reasons: [],
+      }],
+      closure: {
+        transaction_id: 'tx-mas-current',
+        closure_digest: 'sha256:mas-current',
+        last_known_good_transaction_id: 'tx-mas-lkg',
+        last_known_good_closure_digest: 'sha256:mas-lkg',
+      },
+    });
+    assert.deepEqual(statusIndexEntry.dependent_guard, {
+      required_by_package_ids: ['mas'],
+      disable: { allowed: false, reason_code: 'agent_package_required_by_installed_dependents' },
+      uninstall: { allowed: false, reason_code: 'agent_package_required_by_installed_dependents' },
+    });
     assert.equal(fastAppState.app_state.agent_packages.directory.entry_count, 8);
     assert.equal(fastAppState.app_state.agent_packages.directory.entries.length, 8);
     assert.equal('installed_packages' in fastAppState.app_state.agent_packages.directory, false);
