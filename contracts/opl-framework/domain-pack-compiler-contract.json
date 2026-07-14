@@ -62,7 +62,15 @@
       "target_only_requirement_ref"
     ],
     "provenance_exclusivity_policy": "source_pattern_ref_and_target_only_requirement_are_mutually_exclusive_stage_origins",
-    "source_pattern_binding_policy": "generated stage source_pattern_ref must exactly match the planned primary source_pattern_ref; when stage_pattern_source_refs is declared its first entry is that same primary ref and later aliases cannot substitute for it"
+    "source_pattern_binding_policy": "generated stage source_pattern_ref must exactly match the planned primary source_pattern_ref; when stage_pattern_source_refs is declared its first entry is that same primary ref and later aliases cannot substitute for it",
+    "stage_display_names_policy": {
+      "source_field_ref": "agent/stages/manifest.json#/stages/*/display_names",
+      "legacy_source_policy": "missing_display_names_compiles_to_en-US_from_title",
+      "explicit_map_policy": "non_empty_object_with_non_empty_whitespace_free_locale_keys_and_non_empty_string_values",
+      "en_us_policy": "explicit_display_names_must_contain_en-US",
+      "title_compatibility_policy": "title_remains_required_and_must_exactly_equal_display_names.en-US",
+      "generated_surface_policy": "preserve_all_declared_locale_entries_without_translation_or_fallback_invention"
+    }
   },
   "standard_agent_stage_quality_runtime_binding": {
     "surface_kind": "opl_pack_bound_stage_quality_runtime_binding",
@@ -113,6 +121,7 @@
     "family_agent_descriptor.pack_compiler_input_contract.standard_agent_pack_abi",
     "family_agent_descriptor.pack_compiler_input_contract.implementation_profile",
     "standard_agent_stage_manifest.quality_governance_profile_ref",
+    "standard_agent_stage_manifest.stages[].display_names",
     "standard_agent_stage_manifest.stages[].stage_quality_cycle_policy_ref",
     "standard_agent_stage_manifest.stages[].handoff_review_boundary",
     "domain_stage_quality_cycle_policy"

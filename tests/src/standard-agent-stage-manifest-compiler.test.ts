@@ -14,6 +14,7 @@ import {
   resolveStandardAgentStageQualityRuntimeBinding,
 } from '../../src/modules/pack/index.ts';
 import { FrameworkContractError } from '../../src/kernel/contract-validation.ts';
+import { normalizeFamilyStageControlPlane } from '../../src/modules/stagecraft/family-stage-control-plane-contract.ts';
 import { buildReadyAgentRepo, retargetReadyRepo } from './cli/cases/agents-conformance-fixtures.ts';
 
 type JsonRecord = Record<string, any>;
@@ -202,6 +203,10 @@ function fixture(domainId: string, canonicalAgentId = domainId) {
         stage_id: 'intake',
         stage_kind: 'intake',
         title: 'Intake',
+        display_names: {
+          'en-US': 'Intake',
+          'fr-FR': 'Accueil',
+        },
         summary: 'Intake.',
         goal: 'Inspect the request.',
         policy_ref: 'agent/stages/intake.md',
@@ -224,6 +229,9 @@ function fixture(domainId: string, canonicalAgentId = domainId) {
           downstream_owner_retains_acceptance: true,
         },
         title: 'Deliver',
+        display_names: {
+          'en-US': 'Deliver',
+        },
         summary: 'Deliver.',
         goal: 'Route the accepted delivery.',
         policy_ref: 'agent/stages/deliver.md',
@@ -262,6 +270,14 @@ test('standard Agent stage manifest compiler keeps stable domain identity and ta
   assert.equal(alphaAgain.stage_control_plane.plane_id, alpha.stage_control_plane.plane_id);
   assert.equal(alphaAgain.source_binding.stage_manifest_sha256, alpha.source_binding.stage_manifest_sha256);
   assert.notEqual(beta.stage_control_plane.plane_id, alpha.stage_control_plane.plane_id);
+  assert.deepEqual(alpha.stage_control_plane.stages[0]?.display_names, {
+    'en-US': 'Intake',
+    'fr-FR': 'Accueil',
+  });
+  assert.equal(
+    alpha.stage_control_plane.stages[0]?.title,
+    alpha.stage_control_plane.stages[0]?.display_names?.['en-US'],
+  );
   assert.deepEqual(alpha.stage_control_plane.stages[0]?.skills.map((entry) => entry.ref), ['agent/skills/domain.md']);
   assert.deepEqual(alpha.stage_control_plane.stages[0]?.tool_refs?.map((entry) => entry.ref), ['agent/tools/domain.md']);
   assert.deepEqual(alpha.stage_control_plane.stages[0]?.allowed_action_refs, ['inspect']);
@@ -290,6 +306,86 @@ test('standard Agent stage manifest compiler keeps stable domain identity and ta
   const generated = buildRepoGeneratedInterfaceBundle(alphaRoot, 'product-entry').bundle as JsonRecord;
   assert.equal(generated.agent_id, 'agent-alpha');
   assert.equal(generated.target_domain_id, 'target-alpha');
+});
+
+test('standard Agent stage manifest compiler round-trips locale names and backfills legacy en-US', () => {
+  const root = fixture('target-localized-stage');
+  const manifest = readManifest(root);
+  manifest.stages[0].display_names = {
+    'en-US': 'Intake',
+    'fr-FR': 'Accueil',
+    'de-DE': 'Aufnahme',
+  };
+  delete manifest.stages[1].display_names;
+  writeManifest(root, manifest);
+
+  const stages = compileStandardAgentStageManifest(root).stage_control_plane.stages;
+  assert.deepEqual(stages[0]?.display_names, manifest.stages[0].display_names);
+  assert.equal(stages[0]?.title, stages[0]?.display_names?.['en-US']);
+  assert.deepEqual(stages[1]?.display_names, { 'en-US': 'Deliver' });
+  assert.equal(stages[1]?.title, stages[1]?.display_names?.['en-US']);
+});
+
+test('standard Agent stage manifest compiler rejects invalid localized stage names', async (t) => {
+  const cases: Array<[string, unknown, RegExp]> = [
+    ['non-object map', [], /display_names must be a JSON object/],
+    ['empty map', {}, /display_names must contain at least the en-US entry/],
+    [
+      'empty locale key',
+      { '': 'Intake', 'en-US': 'Intake' },
+      /display_names locale keys must be non-empty and contain no whitespace/,
+    ],
+    [
+      'whitespace locale key',
+      { 'en US': 'Intake', 'en-US': 'Intake' },
+      /display_names locale keys must be non-empty and contain no whitespace/,
+    ],
+    ['non-string value', { 'en-US': 42 }, /display_names\.en-US must be a non-empty string/],
+    ['blank value', { 'en-US': '   ' }, /display_names\.en-US must be a non-empty string/],
+    ['missing en-US', { 'fr-FR': 'Accueil' }, /display_names must contain the en-US entry/],
+    ['title mismatch', { 'en-US': 'Intake stage' }, /display_names\.en-US must exactly match stage\.title/],
+  ];
+
+  for (const [name, displayNames, expected] of cases) {
+    await t.test(name, () => {
+      const root = fixture(`target-localized-${name.replaceAll(' ', '-')}`);
+      const manifest = readManifest(root);
+      manifest.stages[0].display_names = displayNames;
+      writeManifest(root, manifest);
+      assert.throws(() => compileStandardAgentStageManifest(root), expected);
+    });
+  }
+});
+
+test('family stage control plane normalizer preserves and validates localized names', async (t) => {
+  const baseline = compileStandardAgentStageManifest(fixture('target-shared-localization')).stage_control_plane;
+  const valid = structuredClone(baseline);
+  valid.stages[0]!.display_names = {
+    'en-US': 'Intake',
+    'fr-FR': 'Accueil',
+  };
+  assert.deepEqual(
+    normalizeFamilyStageControlPlane(valid)?.stages[0]?.display_names,
+    valid.stages[0]!.display_names,
+  );
+
+  for (const [name, displayNames, expected] of [
+    ['non-object map', [], /display_names must be an object/],
+    [
+      'whitespace locale key',
+      { 'en-US': 'Intake', 'bad locale': 'Invalid' },
+      /locale keys must be non-empty and contain no whitespace/,
+    ],
+    ['blank value', { 'en-US': 'Intake', 'fr-FR': '   ' }, /display_names\.fr-FR must be a non-empty string/],
+    ['missing en-US', { 'fr-FR': 'Accueil' }, /display_names must contain the en-US entry/],
+    ['title mismatch', { 'en-US': 'Different' }, /display_names\.en-US must exactly match the stage title/],
+  ] as const) {
+    await t.test(name, () => {
+      const candidate = structuredClone(baseline) as JsonRecord;
+      candidate.stages[0].display_names = displayNames;
+      assert.throws(() => normalizeFamilyStageControlPlane(candidate), expected);
+    });
+  }
 });
 
 test('packaging Handoff must classify its final-artifact review boundary', () => {

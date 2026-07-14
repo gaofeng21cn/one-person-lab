@@ -213,12 +213,16 @@ export function registerFamilyOrchestrationSchemaBoundaryTests(): void {
     const stagePlaneSchema = readJson(
       'contracts/family-orchestration/family-stage-control-plane.schema.json',
     );
+    const stageProperties = (((stagePlaneSchema.$defs as Json).stage as Json).properties as Json);
     const stageKinds = (
-      ((((stagePlaneSchema.$defs as Json).stage as Json).properties as Json).stage_kind as Json)
-        .enum
+      ((stageProperties.stage_kind as Json).enum)
     ) as string[];
     assert.ok(stageKinds.includes('release_gate'));
     assert.equal(stageKinds.includes('publish'), false);
+    const displayNames = stageProperties.display_names as Json;
+    assert.deepEqual(displayNames.required, ['en-US']);
+    assert.equal((displayNames.propertyNames as Json).pattern, '^\\S+$');
+    assert.equal((displayNames.additionalProperties as Json).pattern, '\\S');
   });
 
   test('family manifest schema requires repo-owned runtime continuity discovery surfaces', () => {

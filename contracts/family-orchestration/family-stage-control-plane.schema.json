@@ -127,6 +127,31 @@
           "type": "string",
           "minLength": 1
         },
+        "display_names": {
+          "description": "Optional for legacy family planes. When present, en-US is required and must exactly match title; the canonical normalizer enforces that cross-field equality.",
+          "type": "object",
+          "minProperties": 1,
+          "required": [
+            "en-US"
+          ],
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^\\S+$"
+          },
+          "properties": {
+            "en-US": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            }
+          },
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          }
+        },
         "summary": {
           "type": "string"
         },

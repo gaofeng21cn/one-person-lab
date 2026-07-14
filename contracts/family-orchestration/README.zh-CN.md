@@ -234,6 +234,8 @@ canonical classification 固定为：
 
 这个 contract 记录 stage goal、domain-owned stage refs、输入/输出 refs、knowledge refs、skill refs、prompt refs、evaluation refs、handoff metadata、allowed action refs、runtime assumptions、monitor refs、source/artifact/workspace scope refs 与 authority boundary。`OPL` 持有 schema、manifest discovery、parity check 和只读 `opl stages list|inspect` 命令。各 domain 仓继续持有实际 route contract、stage execution、memory content、review verdict、quality authority 与 artifacts。
 
+stage descriptor 可携带 locale 到 label 的 `display_names` map。旧 family plane 可以缺省；一旦声明，locale key 与 value 必须非空，必须包含 `en-US`，且 `display_names.en-US` 必须与兼容字段 `title` 完全一致。canonical normalizer 原样保留所有显式 locale，不猜造翻译。
+
 Stagecraft 在这里提供 stage pack 静态 conformance readback：`family-stage-control-plane` 和 `family-stage-conformance` 描述 stage id、owner、goal、输入/输出 refs、knowledge、skill / prompt / evaluation refs、handoff、scope 与 authority boundary 是否自洽。缺口影响 pack accepted/promotion/ready 声明，但不授权或阻止 Codex 启动 stage；AI 输出、人类批准、外部系统返回、artifact mutation、memory writeback 与 domain quality verdict 仍属于 runtime/domain owner。
 
 `mode_tags` 与 `guarantee_mode` 只描述 Stage Kernel 能静态检查、运行时需要边界证据或必须回到 domain owner 的范围，不作为 domain verdict。`failure_localization` 是 Derived Diagnostic Lens，把 blocker / warning 按 `ai`、`human`、`external`、`provider`、`runtime`、`domain`、`artifact`、`source`、`monitor`、`executor` lane 分类，并暴露 `source_ref` 与 minimal counterexample；它只服务 operator drilldown 和 launch-readiness，不替代 domain owner receipt 或质量判断。

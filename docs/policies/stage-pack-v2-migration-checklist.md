@@ -40,6 +40,7 @@ OBF 当前是样板；MAS、MAG、RCA、OMA 迁移时复用同一组字段，不
 | 字段 | 要求 |
 | --- | --- |
 | `stage_id` / `stage_kind` / `title` / `goal` | 非空，且 `stage_id` 全局唯一 |
+| `display_names` | 可为旧 source 缺省；缺省时 compiler 以 `title` 生成 `en-US`。显式声明时 map 不得为空，locale key 不得为空或含空白，value 必须为含非空白字符的字符串，必须包含 `en-US`，且 `display_names.en-US` 必须与兼容字段 `title` 完全一致；其他 locale 原样投影，不自动翻译。 |
 | `policy_ref` / `prompt_ref` | 指向 repo 内真实 `agent/stages/*` / `agent/prompts/*` |
 | `knowledge_refs[]` / `quality_gate_refs[]` | 指向 repo 内真实 source；quality gate 至少一个 |
 | `allowed_action_refs[]` | 非空，且全部存在于 `contracts/action_catalog.json` |

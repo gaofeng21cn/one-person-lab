@@ -168,6 +168,49 @@ function text(value: unknown, field: string, repoDir: string) {
   return resolved;
 }
 
+function stageDisplayNames(value: unknown, title: string, field: string, repoDir: string) {
+  if (value === undefined) {
+    return { 'en-US': title };
+  }
+  if (!isRecord(value)) {
+    fail(`${field} must be a JSON object.`, { repo_dir: repoDir, field });
+  }
+
+  const entries = Object.entries(value);
+  if (entries.length === 0) {
+    fail(`${field} must contain at least the en-US entry.`, { repo_dir: repoDir, field });
+  }
+  for (const [locale, displayName] of entries) {
+    if (locale.length === 0 || /\s/.test(locale)) {
+      fail(`${field} locale keys must be non-empty and contain no whitespace.`, {
+        repo_dir: repoDir,
+        field,
+        locale,
+      });
+    }
+    if (typeof displayName !== 'string' || displayName.trim().length === 0) {
+      fail(`${field}.${locale} must be a non-empty string.`, {
+        repo_dir: repoDir,
+        field: `${field}.${locale}`,
+      });
+    }
+  }
+
+  const displayNames = Object.fromEntries(entries) as Record<string, string>;
+  if (!Object.hasOwn(displayNames, 'en-US')) {
+    fail(`${field} must contain the en-US entry.`, { repo_dir: repoDir, field });
+  }
+  if (displayNames['en-US'] !== title) {
+    fail(`${field}.en-US must exactly match stage.title.`, {
+      repo_dir: repoDir,
+      field: `${field}.en-US`,
+      title,
+      display_name: displayNames['en-US'],
+    });
+  }
+  return displayNames;
+}
+
 function strings(value: unknown, field: string, repoDir: string) {
   if (!Array.isArray(value)) {
     fail(`${field} must be an array of non-empty strings.`, { repo_dir: repoDir, field });
@@ -1012,6 +1055,13 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
   const stages = stageRecords.map((stage, index) => {
     const stageId = stageIds[index]!;
     const stageKind = text(stage.stage_kind, 'stage.stage_kind', repoDir);
+    const title = text(stage.title, 'stage.title', repoDir);
+    const displayNames = stageDisplayNames(
+      stage.display_names,
+      title,
+      `stage_manifest.stages[${index}].display_names`,
+      repoDir,
+    );
     const handoffReviewBoundary = validateHandoffReviewBoundary({
       repoDir,
       stageId,
@@ -1217,7 +1267,8 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
     return {
       stage_id: stageId,
       stage_kind: stageKind,
-      title: text(stage.title, 'stage.title', repoDir),
+      title,
+      display_names: displayNames,
       summary: optionalString(stage.summary),
       goal: text(stage.goal, 'stage.goal', repoDir),
       owner: domainId,

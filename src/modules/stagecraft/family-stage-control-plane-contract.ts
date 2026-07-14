@@ -19,6 +19,8 @@ export type FamilyStageKind =
   | 'operator_gate'
   | 'domain_specific';
 
+export type FamilyStageDisplayNames = Record<string, string>;
+
 export interface FamilyStageSurfaceRef {
   ref_kind?: string;
   ref: string | string[];
@@ -101,6 +103,7 @@ export interface FamilyStageDescriptor {
   stage_id: string;
   stage_kind: FamilyStageKind;
   title: string;
+  display_names?: FamilyStageDisplayNames;
   summary: string | null;
   goal: string;
   owner: string;
@@ -157,6 +160,41 @@ function requireString(value: unknown, field: string) {
     invalid(`Missing required string field: ${field}`);
   }
   return text;
+}
+
+function normalizeDisplayNames(
+  value: unknown,
+  title: string,
+  field: string,
+): FamilyStageDisplayNames | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!isRecord(value)) {
+    invalid(`${field} must be an object.`);
+  }
+
+  const entries = Object.entries(value);
+  if (entries.length === 0) {
+    invalid(`${field} must contain at least the en-US entry.`);
+  }
+  for (const [locale, displayName] of entries) {
+    if (locale.length === 0 || /\s/.test(locale)) {
+      invalid(`${field} locale keys must be non-empty and contain no whitespace.`);
+    }
+    if (typeof displayName !== 'string' || displayName.trim().length === 0) {
+      invalid(`${field}.${locale} must be a non-empty string.`);
+    }
+  }
+
+  const displayNames = Object.fromEntries(entries) as FamilyStageDisplayNames;
+  if (!Object.hasOwn(displayNames, 'en-US')) {
+    invalid(`${field} must contain the en-US entry.`);
+  }
+  if (displayNames['en-US'] !== title) {
+    invalid(`${field}.en-US must exactly match the stage title.`);
+  }
+  return displayNames;
 }
 
 function readStringList(value: unknown) {
@@ -360,11 +398,14 @@ function normalizeFamilyStageDescriptor(value: unknown, field: string): FamilySt
   const targetOnlyRequirementRef = optionalString(value.target_only_requirement_ref);
   const sourceAnchorRefs = readStringList(value.source_anchor_refs);
   const stagePatternSourceRefs = readStringList(value.stage_pattern_source_refs);
+  const title = requireString(value.title, `${field}.title`);
+  const displayNames = normalizeDisplayNames(value.display_names, title, `${field}.display_names`);
 
   return {
     stage_id: requireString(value.stage_id, `${field}.stage_id`),
     stage_kind: normalizeStageKind(value.stage_kind, `${field}.stage_kind`),
-    title: requireString(value.title, `${field}.title`),
+    title,
+    ...(displayNames ? { display_names: displayNames } : {}),
     summary: optionalString(value.summary),
     goal: requireString(value.goal, `${field}.goal`),
     owner: requireString(value.owner, `${field}.owner`),
