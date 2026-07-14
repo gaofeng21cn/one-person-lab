@@ -9,6 +9,7 @@ import './cli-codex-default-shell-cases/raw-codex-passthrough.ts';
 import {
   binPath,
   createFakeCodexFixture,
+  repoRoot,
   retiredCliCommandMatrix,
   runCli,
   runEntryPathFailure,
@@ -193,6 +194,59 @@ exit 0
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(capturePath, { force: true });
+  }
+});
+
+test('installed opl launcher reports the Framework version without sync or Codex passthrough', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-launcher-version-'));
+  const syncCapturePath = path.join(fixtureRoot, 'sync-invoked.txt');
+  const codexCapturePath = path.join(fixtureRoot, 'codex-invoked.txt');
+  const fakeNodePath = path.join(fixtureRoot, 'node');
+  const fakeCodexPath = path.join(fixtureRoot, 'codex');
+  const stateDir = path.join(fixtureRoot, 'state');
+  const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8')) as {
+    version: string;
+  };
+
+  fs.writeFileSync(
+    fakeNodePath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+if [[ " $* " == *" connect sync-skills "* ]]; then
+  touch ${JSON.stringify(syncCapturePath)}
+  exit 91
+fi
+exec ${JSON.stringify(process.execPath)} "$@"
+`,
+    { mode: 0o755 },
+  );
+  fs.writeFileSync(
+    fakeCodexPath,
+    `#!/usr/bin/env bash
+touch ${JSON.stringify(codexCapturePath)}
+printf 'codex-cli 999.0.0\\n'
+`,
+    { mode: 0o755 },
+  );
+
+  try {
+    for (const versionFlag of ['--version', '-V']) {
+      const result = runEntryPathRaw(binPath, [versionFlag], {
+        HOME: fixtureRoot,
+        OPL_CODEX_BIN: fakeCodexPath,
+        OPL_SKIP_SKILL_SYNC: '0',
+        OPL_STATE_DIR: stateDir,
+        PATH: `${fixtureRoot}:${process.env.PATH ?? ''}`,
+      });
+
+      assert.equal(result.stdout, `${packageJson.version}\n`);
+      assert.equal(result.stderr, '');
+      assert.equal(fs.existsSync(syncCapturePath), false);
+      assert.equal(fs.existsSync(codexCapturePath), false);
+      assert.equal(fs.existsSync(stateDir), false);
+    }
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
 

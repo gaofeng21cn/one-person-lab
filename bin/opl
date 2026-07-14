@@ -30,6 +30,19 @@ invoke_opl() {
   node "$ROOT_DIR/dist/entrypoints/cli.js" "$@"
 }
 
+print_framework_version() {
+  node -e '
+const fs = require("node:fs");
+const packageJson = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+const version = typeof packageJson.version === "string" ? packageJson.version.trim() : "";
+if (!version) {
+  process.stderr.write("OPL Framework package.json is missing version.\n");
+  process.exit(1);
+}
+process.stdout.write(`${version}\n`);
+' "$ROOT_DIR/package.json"
+}
+
 run_codex() {
   if [[ -n "${OPL_CODEX_BIN:-}" ]]; then
     exec "$OPL_CODEX_BIN" "$@"
@@ -52,6 +65,9 @@ if [[ "$#" -eq 0 ]]; then
 fi
 
 case "$1" in
+  --version|-V)
+    print_framework_version
+    ;;
   --help|-h)
     run_opl --help --text
     ;;
