@@ -207,11 +207,18 @@ export const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
     ),
     package_bootstrap_command: (checkoutPath) => buildNpmPackageBootstrapCommand(checkoutPath),
     package_prepare_command: () => buildNpmPackagePrepareCommand(),
-    health_check_command: (checkoutPath) => buildHealthCheckCommand(checkoutPath),
-    exec_command: (_checkoutPath, args) => ({
-      command: 'npm',
-      args: ['run', '--silent', 'redcube', '--', ...args],
-    }),
+    health_check_command: (checkoutPath) => resolveRepoOwnedScriptCommand(
+      checkoutPath,
+      path.join('scripts', 'opl-module-healthcheck.sh'),
+    ),
+    package_health_check_command: (checkoutPath) => resolveRepoOwnedScriptCommand(
+      checkoutPath,
+      path.join('scripts', 'opl-module-healthcheck.sh'),
+    ),
+    runtime_probe_command: (checkoutPath) => resolveRepoOwnedScriptCommand(
+      checkoutPath,
+      path.join('scripts', 'opl-module-healthcheck.sh'),
+    ),
     skill_sync_domain: 'redcube',
   },
   {

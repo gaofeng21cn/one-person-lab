@@ -40,7 +40,7 @@ export function writeManagedRuntimeSourceFixture(input: {
   fs.writeFileSync(path.join(sourceRoot, 'package.json'), JSON.stringify({
     name: input.repoName,
     version: input.version,
-    scripts: { redcube: 'node scripts/handler.mjs' },
+    scripts: {},
   }, null, 2));
   fs.writeFileSync(path.join(sourceRoot, 'scripts', 'opl-module-bootstrap.sh'), [
     '#!/usr/bin/env bash',
@@ -58,12 +58,6 @@ export function writeManagedRuntimeSourceFixture(input: {
     'fi',
     `printf '%s\\n' ${JSON.stringify(`healthy:${input.version}`)}`,
   ].join('\n'), { mode: 0o755 });
-  fs.writeFileSync(path.join(sourceRoot, 'scripts', 'handler.mjs'), [
-    "import fs from 'node:fs';",
-    "const version = fs.readFileSync('.runtime-prepared', 'utf8').trim();",
-    "if (!process.argv.includes('--help')) process.exit(2);",
-    "process.stdout.write(`handler-ready:${version}\\n`);",
-  ].join('\n'));
   if (input.moduleId === 'medautoscience' || input.moduleId === 'medautogrant') {
     fs.writeFileSync(path.join(sourceRoot, 'scripts', 'run-python-clean.sh'), [
       '#!/usr/bin/env bash',

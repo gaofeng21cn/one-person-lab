@@ -93,6 +93,27 @@ test('MAS runtime preparation uses only its repo-owned bootstrap health and prob
   }
 });
 
+test('RCA runtime preparation uses only its repo-owned healthcheck and exposes no private exec entry', () => {
+  const checkoutPath = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-rca-runtime-spec-'));
+  const scriptsPath = path.join(checkoutPath, 'scripts');
+  const healthcheckPath = path.join(scriptsPath, 'opl-module-healthcheck.sh');
+  fs.mkdirSync(scriptsPath, { recursive: true });
+  fs.writeFileSync(healthcheckPath, '#!/usr/bin/env bash\n');
+  try {
+    const rca = DOMAIN_MODULE_SPECS.find((module) => module.module_id === 'redcube');
+    const expectedHealthcheck = {
+      command: 'bash',
+      args: [healthcheckPath],
+    };
+    assert.deepEqual(rca?.health_check_command?.(checkoutPath), expectedHealthcheck);
+    assert.deepEqual(rca?.package_health_check_command?.(checkoutPath), expectedHealthcheck);
+    assert.deepEqual(rca?.runtime_probe_command?.(checkoutPath), expectedHealthcheck);
+    assert.equal(rca?.exec_command, undefined);
+  } finally {
+    fs.rmSync(checkoutPath, { recursive: true, force: true });
+  }
+});
+
 function createBasicMasModuleRemoteFixture(turnkeyLogPath: string) {
   return createGitModuleRemoteFixture('med-autoscience', {
     extraFiles: {
@@ -653,7 +674,7 @@ test('modules projection treats Full runtime packaged overrides as launch source
   }
 });
 
-test('module exec runs domain CLIs from the current module checkout instead of PATH tools', () => {
+test('module exec runs supported domain CLIs from the current checkout and rejects retired private entries', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-module-exec-home-'));
   const fakeBinRoot = path.join(homeRoot, 'fake-bin');
   const magRunnerArgvPath = path.join(homeRoot, 'mag-runner.argv');
@@ -768,26 +789,15 @@ printf '{"ok":true,"runner":"npm"}\\n'
     assert.equal(fs.existsSync(uvCwdPath), false);
     assert.equal(fs.existsSync(uvArgvPath), false);
 
-    const rcaExec = runCli(
+    const rcaFailure = runCliFailure(
       ['connect', 'exec', '--module', 'redcube', '--', 'product', 'manifest', '--workspace-root', '/tmp/demo'],
       env,
-    ) as any;
-    assert.equal(rcaExec.module_exec.module_id, 'redcube');
-    assert.equal(rcaExec.module_exec.working_directory, rcaFixture.sourceRoot);
-    assert.deepEqual(rcaExec.module_exec.result, { ok: true, runner: 'npm' });
-    assert.equal(realpath(fs.readFileSync(npmCwdPath, 'utf8').trim()), realpath(rcaFixture.sourceRoot));
-    assert.deepEqual(rcaExec.module_exec.command_preview, [
-      'npm',
-      'run',
-      '--silent',
-      'redcube',
-      '--',
-      'product',
-      'manifest',
-      '--workspace-root',
-      '/tmp/demo',
-    ]);
-    assert.deepEqual(readLines(npmArgvPath), rcaExec.module_exec.command_preview.slice(1));
+    );
+    assert.equal(rcaFailure.status, 2);
+    assert.equal(rcaFailure.payload.error.code, 'cli_usage_error');
+    assert.match(rcaFailure.payload.error.message, /does not expose an OPL module exec entry/);
+    assert.equal(fs.existsSync(npmCwdPath), false);
+    assert.equal(fs.existsSync(npmArgvPath), false);
 
     const mdsFailure = runCliFailure(
       ['connect', 'exec', '--module', 'mds', '--', '--help'],
