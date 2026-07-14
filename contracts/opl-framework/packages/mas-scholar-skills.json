@@ -5,6 +5,7 @@
   "publisher": "one-person-lab",
   "version": "0.2.1",
   "source": "first_party_owner_projection",
+  "source_repo": "https://github.com/gaofeng21cn/mas-scholar-skills.git",
   "package_role": "required_agent_capability_package",
   "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",
   "primary_consumer": {

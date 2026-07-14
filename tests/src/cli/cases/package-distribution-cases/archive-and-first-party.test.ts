@@ -846,9 +846,9 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
       payloadRef: 'payloads/mas-0.2.1.json',
     },
     mag: {
-      version: '0.2.1',
-      sourceCommit: '199e5a52387c61bb5f9202f247d63264a02d1b5f',
-      payloadRef: 'payloads/mag-0.2.1.json',
+      version: '0.3.0',
+      sourceCommit: '42f75f50f15354ac1a6fd85c17ddc076823f81d5',
+      payloadRef: 'payloads/mag-0.3.0.json',
     },
     rca: {
       version: '0.2.3',
@@ -856,14 +856,14 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
       payloadRef: 'payloads/rca-0.2.3.json',
     },
     oma: {
-      version: '0.2.1',
-      sourceCommit: '5f78190417c3e6ee19d1678c928099a6e4104b13',
-      payloadRef: 'payloads/oma-0.2.1.json',
+      version: '0.3.0',
+      sourceCommit: '6cb3a78ae56019c77caab93bd022ace7afed2358',
+      payloadRef: 'payloads/oma-0.3.0.json',
     },
     obf: {
-      version: '0.2.1',
-      sourceCommit: 'b43789908fc00d40a9ca33b5c946c81df41a6ed9',
-      payloadRef: 'payloads/obf-0.2.1.json',
+      version: '0.3.0',
+      sourceCommit: '63d65d02adfeb8087414e97492f10002f17b9642',
+      payloadRef: 'payloads/obf-0.3.0.json',
     },
   };
 
