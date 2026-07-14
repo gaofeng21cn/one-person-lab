@@ -98,6 +98,9 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.match(workflow, /contents\/scripts\/\$\{script\}\?ref=\$\{GITHUB_SHA\}/);
   assert.match(workflow, /node "\$OPL_RELEASE_HARNESS_SCRIPTS\/resolve-opl-app-component\.mjs"/);
   assert.doesNotMatch(workflow, /node scripts\/resolve-opl-app-component\.mjs/);
+  assert.match(workflow, /app_commit="\$\{\{ inputs\.expected_app_source_commit \}\}"/);
+  assert.match(workflow, /if \[ -z "\$app_commit" \] && \[ -n "\$owner_manifest" \]; then\s+app_commit="\$\(jq -r \.source_commit "\$owner_manifest"\)"/);
+  assert.match(workflow, /if \[ -z "\$app_commit" \]; then\s+app_commit="\$\(gh api "repos\/gaofeng21cn\/one-person-lab-app\/commits\/v\$app_version" --jq \.sha\)"/);
   assert.match(workflow, /one-person-lab-packages/);
   assert.doesNotMatch(workflow, /one-person-lab-modules/);
   assert.match(workflow, /one-person-lab-framework/);

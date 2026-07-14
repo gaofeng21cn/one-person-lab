@@ -279,19 +279,28 @@ jobs:
           gh release view "v$app_version" --repo gaofeng21cn/one-person-lab-app \
             --json tagName,isDraft,isPrerelease,publishedAt,targetCommitish,assets,url \
             > "$RUNNER_TEMP/opl-app-release.json"
-          app_commit="$(gh api "repos/gaofeng21cn/one-person-lab-app/commits/v$app_version" --jq .sha)"
+          owner_manifest=""
+          mkdir -p "$RUNNER_TEMP/opl-app-owner-component"
+          if gh release download "v$app_version" --repo gaofeng21cn/one-person-lab-app \
+            --pattern opl-app-component-manifest.json --dir "$RUNNER_TEMP/opl-app-owner-component"; then
+            owner_manifest="$RUNNER_TEMP/opl-app-owner-component/opl-app-component-manifest.json"
+          else
+            echo "::notice::Historical App release has no owner component manifest; using exact public release readback projection."
+          fi
+          app_commit="${{ inputs.expected_app_source_commit }}"
+          if [ -z "$app_commit" ] && [ -n "$owner_manifest" ]; then
+            app_commit="$(jq -r .source_commit "$owner_manifest")"
+          fi
+          if [ -z "$app_commit" ]; then
+            app_commit="$(gh api "repos/gaofeng21cn/one-person-lab-app/commits/v$app_version" --jq .sha)"
+          fi
+          [[ "$app_commit" =~ ^[0-9a-f]{40}$ ]]
           component_args=(
             --release-json "$RUNNER_TEMP/opl-app-release.json" \
             --source-commit "$app_commit" \
             --output "$RUNNER_TEMP/opl-app-component-manifest.json"
           )
-          mkdir -p "$RUNNER_TEMP/opl-app-owner-component"
-          if gh release download "v$app_version" --repo gaofeng21cn/one-person-lab-app \
-            --pattern opl-app-component-manifest.json --dir "$RUNNER_TEMP/opl-app-owner-component"; then
-            component_args+=(--owner-manifest "$RUNNER_TEMP/opl-app-owner-component/opl-app-component-manifest.json")
-          else
-            echo "::notice::Historical App release has no owner component manifest; using exact public release readback projection."
-          fi
+          [ -z "$owner_manifest" ] || component_args+=(--owner-manifest "$owner_manifest")
           node "$OPL_RELEASE_HARNESS_SCRIPTS/resolve-opl-app-component.mjs" "${component_args[@]}"
           resolved_version="$(jq -r .version "$RUNNER_TEMP/opl-app-component-manifest.json")"
           resolved_commit="$(jq -r .source_commit "$RUNNER_TEMP/opl-app-component-manifest.json")"
