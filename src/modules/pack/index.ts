@@ -40,6 +40,7 @@ export {
   readStandardAgentStagePromptFile,
   resolveStandardAgentStagePrompt,
   readStandardAgentQualityRolePromptFile,
+  resolveStandardAgentRepoFile,
   STANDARD_AGENT_STAGE_MANIFEST_REF,
   STANDARD_AGENT_STAGE_PROMPT_LAYER,
 } from './standard-agent-stage-prompt.ts';

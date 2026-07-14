@@ -5,7 +5,7 @@ import {
   readStandardAgentQualityRolePromptFile,
   resolveStandardAgentRepoFile,
   STANDARD_AGENT_STAGE_MANIFEST_REF,
-} from '../pack/standard-agent-stage-prompt.ts';
+} from '../pack/index.ts';
 import {
   collectFieldValues,
   isRecord,
