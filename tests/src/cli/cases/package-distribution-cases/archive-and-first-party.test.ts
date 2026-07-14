@@ -204,10 +204,10 @@ test('package archive builder writes channel manifest checksums git source and r
 
   const fixtures = {
     medautoscience: createOwnerPackageFixture('med-autoscience', 'mas', '0.2.1'),
-    medautogrant: createOwnerPackageFixture('med-autogrant', 'mag', '0.2.1'),
+    medautogrant: createOwnerPackageFixture('med-autogrant', 'mag', '0.3.0'),
     redcube: createOwnerPackageFixture('redcube-ai', 'rca', '0.2.2'),
-    oplmetaagent: createOwnerPackageFixture('opl-meta-agent', 'oma', '0.2.1'),
-    oplbookforge: createOwnerPackageFixture('opl-bookforge', 'obf', '0.2.1'),
+    oplmetaagent: createOwnerPackageFixture('opl-meta-agent', 'oma', '0.3.0'),
+    oplbookforge: createOwnerPackageFixture('opl-bookforge', 'obf', '0.3.0'),
     scholarskills: createOwnerPackageFixture('mas-scholar-skills', 'mas-scholar-skills', '0.2.1', 'capability_package'),
     oplflow: createOwnerPackageFixture('opl-flow', 'opl-flow', '0.1.19', 'workflow_profile'),
   };
@@ -318,11 +318,11 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(manifest.release_set.component_count, 9);
   assert.equal(manifest.release_set.components.packages.package_count, 7);
   assert.equal(manifest.release_set.components.app.version, '26.7.12');
-  assert.equal(manifest.packages.package_artifacts.mag.package_version, '0.2.1');
-  assert.equal(manifest.release_set.components.packages.members.mag.version, '0.2.1');
+  assert.equal(manifest.packages.package_artifacts.mag.package_version, '0.3.0');
+  assert.equal(manifest.release_set.components.packages.members.mag.version, '0.3.0');
   assert.equal(
     manifest.release_set.components.packages.members.mag.artifact_ref,
-    'ghcr.io/gaofeng21cn/one-person-lab-packages/mag:0.2.1',
+    'ghcr.io/gaofeng21cn/one-person-lab-packages/mag:0.3.0',
   );
   assert.equal(channelManifest.manifest_role, 'opl_release_channel_manifest');
   assert.notEqual(channelManifestSource, releaseManifestSource);
@@ -682,7 +682,7 @@ test('package archive builder writes channel manifest checksums git source and r
   );
   assert.equal(
     manifest.packages.package_artifacts.obf.codex_standalone_distribution.distribution_shape,
-    'repo_carrier_source',
+    'generated_carrier_surface',
   );
   assert.match(manifest.packages.package_artifacts.obf.source_archive.sha256, /^[0-9a-f]{64}$/);
   assert.equal(
@@ -697,10 +697,10 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.deepEqual(manifest.packages.package_artifacts['mas-scholar-skills'].dependency_of, ['mas']);
   assert.match(manifest.packages.package_artifacts['mas-scholar-skills'].source_archive.sha256, /^[0-9a-f]{64}$/);
   assert.match(checksums, /mas-0\.2\.1\.tar\.gz/);
-  assert.match(checksums, /mag-0\.2\.1\.tar\.gz/);
-  assert.match(checksums, /oma-0\.2\.1\.tar\.gz/);
+  assert.match(checksums, /mag-0\.3\.0\.tar\.gz/);
+  assert.match(checksums, /oma-0\.3\.0\.tar\.gz/);
   assert.match(checksums, /rca-0\.2\.2\.tar\.gz/);
-  assert.match(checksums, /obf-0\.2\.1\.tar\.gz/);
+  assert.match(checksums, /obf-0\.3\.0\.tar\.gz/);
   assert.match(checksums, /mas-scholar-skills-0\.2\.1\.tar\.gz/);
   assert.match(checksums, /opl-flow-0\.1\.19\.tar\.gz/);
   assert.match(checksums, new RegExp(manifest.packages.package_artifacts.mas.source_archive.sha256));
@@ -887,8 +887,8 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
   assert.deepEqual(manifest.codex_surface.bundled_capability_package_ids, ['mas-scholar-skills']);
   assert.equal(manifests.mag.codex_surface.standalone_distribution, 'repo_carrier_source');
   assert.equal(manifests.rca.codex_surface.standalone_distribution, 'repo_carrier_source');
-  assert.equal(manifests.oma.codex_surface.standalone_distribution, 'repo_carrier_source');
-  assert.equal(manifests.obf.codex_surface.standalone_distribution, 'repo_carrier_source');
+  assert.equal(manifests.oma.codex_surface.standalone_distribution, 'generated_carrier_surface');
+  assert.equal(manifests.obf.codex_surface.standalone_distribution, 'generated_carrier_surface');
   assert.deepEqual(manifests.mag.capability_dependencies, []);
   assert.deepEqual(manifests.rca.capability_dependencies, []);
   Object.values(manifests).forEach((sourceManifest) => {
@@ -1043,6 +1043,23 @@ test('first-party agent package manifest rejects non-canonical identity fields',
   );
 });
 
+test('first-party agent package manifest rejects unknown Codex carrier distributions', () => {
+  const manifest = parseJsonText(fs.readFileSync(
+    path.join(repoRoot, 'contracts/opl-framework/packages/oma.json'),
+    'utf8',
+  )) as Record<string, any>;
+  assert.throws(
+    () => normalizeFirstPartyAgentPackageManifest({
+      ...manifest,
+      codex_surface: {
+        ...manifest.codex_surface,
+        standalone_distribution: 'private_repo_installer',
+      },
+    }),
+    /standalone_distribution is invalid/,
+  );
+});
+
 test('MAS first-party agent package manifest fails closed for unsafe dependency declarations', () => {
   const manifest = parseJsonText(fs.readFileSync(
     path.join(repoRoot, 'contracts/opl-framework/packages/mas.json'),
@@ -1116,10 +1133,10 @@ test('package archive builder refreshes reused managed clones before archiving s
 
   const fixtures = {
     medautoscience: createOwnerPackageFixture('med-autoscience', 'mas', '0.2.1'),
-    medautogrant: createOwnerPackageFixture('med-autogrant', 'mag', '0.2.1'),
+    medautogrant: createOwnerPackageFixture('med-autogrant', 'mag', '0.3.0'),
     redcube: createOwnerPackageFixture('redcube-ai', 'rca', '0.2.2'),
-    oplmetaagent: createOwnerPackageFixture('opl-meta-agent', 'oma', '0.2.1'),
-    oplbookforge: createOwnerPackageFixture('opl-bookforge', 'obf', '0.2.1'),
+    oplmetaagent: createOwnerPackageFixture('opl-meta-agent', 'oma', '0.3.0'),
+    oplbookforge: createOwnerPackageFixture('opl-bookforge', 'obf', '0.3.0'),
     scholarskills: createOwnerPackageFixture('mas-scholar-skills', 'mas-scholar-skills', '0.2.1', 'capability_package'),
     oplflow: createOwnerPackageFixture('opl-flow', 'opl-flow', '0.1.19', 'workflow_profile'),
   };

@@ -21,7 +21,7 @@
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
   "source_repo": "https://github.com/gaofeng21cn/opl-meta-agent.git",
   "schema_ref": "contracts/opl-framework/agent-package-manifest.schema.json",
-  "machine_boundary": "This manifest declares first-party package distribution and repo-local materialized Codex carrier projection. It does not write domain truth, sign owner receipts, create typed blockers, write runtime queues, or claim runtime/release readiness.",
+  "machine_boundary": "This manifest declares first-party package distribution and OPL-generated Codex carrier projection. It does not write domain truth, sign owner receipts, create typed blockers, write runtime queues, or claim runtime/release readiness.",
   "package_core": {
     "core_kind": "opl_agent_package_core",
     "identity_fields": [
@@ -43,7 +43,7 @@
   "codex_surface": {
     "plugin_id": "opl-meta-agent",
     "plugin_payload_manifest_url": "payloads/oma-0.3.0.json",
-    "standalone_distribution": "repo_carrier_source",
+    "standalone_distribution": "generated_carrier_surface",
     "required_skill_ids": [
       "opl-meta-agent"
     ],

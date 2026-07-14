@@ -452,7 +452,7 @@ test('packages manifest exposes canonical Release Set coordinates for Package in
   );
   const omaCodexStandaloneDistribution = output.packages_manifest.packages.package_artifacts.oma.codex_standalone_distribution;
   assert.ok(omaCodexStandaloneDistribution);
-  assert.equal(omaCodexStandaloneDistribution.distribution_shape, 'repo_carrier_source');
+  assert.equal(omaCodexStandaloneDistribution.distribution_shape, 'generated_carrier_surface');
   assert.equal(omaCodexStandaloneDistribution.package_manifest_ref, 'contracts/opl-framework/packages/oma.json');
   assert.equal(
     output.packages_manifest.packages.package_artifacts['mas-scholar-skills'].artifact,

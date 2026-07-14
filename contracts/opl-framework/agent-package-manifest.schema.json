@@ -219,6 +219,7 @@
       "type": "object",
       "required": [
         "plugin_id",
+        "standalone_distribution",
         "required_skill_ids"
       ],
       "properties": {
@@ -229,6 +230,12 @@
         "plugin_payload_manifest_url": {
           "type": "string",
           "minLength": 1
+        },
+        "standalone_distribution": {
+          "enum": [
+            "repo_carrier_source",
+            "generated_carrier_surface"
+          ]
         },
         "required_skill_ids": {
           "type": "array",
