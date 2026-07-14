@@ -26,7 +26,7 @@ function invalid(message: string, details: Record<string, unknown> = {}): never 
   throw new FrameworkContractError('contract_shape_invalid', message, details);
 }
 
-function canonicalRepoFile(repoDir: string, ref: string, field: string) {
+export function resolveStandardAgentRepoFile(repoDir: string, ref: string, field: string) {
   if (
     path.posix.isAbsolute(ref)
     || ref.includes('\\')
@@ -49,7 +49,7 @@ function canonicalRepoFile(repoDir: string, ref: string, field: string) {
 }
 
 export function readStandardAgentStagePromptFile(repoDir: string, promptRef: string) {
-  const resolved = canonicalRepoFile(repoDir, promptRef, 'stage.prompt_ref');
+  const resolved = resolveStandardAgentRepoFile(repoDir, promptRef, 'stage.prompt_ref');
   const content = fs.readFileSync(resolved, 'utf8');
   const sizeBytes = Buffer.byteLength(content, 'utf8');
   if (sizeBytes === 0 || sizeBytes > MAX_STAGE_PROMPT_BYTES) {
@@ -195,7 +195,7 @@ export function resolveStandardAgentStagePrompt(
       content: null,
     };
   }
-  canonicalRepoFile(repoDir, STANDARD_AGENT_STAGE_MANIFEST_REF, 'stage_manifest_ref');
+  resolveStandardAgentRepoFile(repoDir, STANDARD_AGENT_STAGE_MANIFEST_REF, 'stage_manifest_ref');
   let manifest: unknown;
   try {
     manifest = parseJsonText(fs.readFileSync(manifestPath, 'utf8'));

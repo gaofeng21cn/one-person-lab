@@ -23,6 +23,7 @@ import {
   buildWorkspaceFileLifecycleChecks,
 } from './standard-domain-agent-conformance-adoption.ts';
 import { buildStageOperatingPrincipleChecks } from './standard-domain-agent-stage-operating-principles.ts';
+import { buildStageQualityRoutePromptAlignmentChecks } from './standard-domain-agent-stage-quality-route-conformance.ts';
 import { buildStandardAgentPrincipleAdoptionChecks } from './standard-agent-principles.ts';
 import { buildEvidenceTailClassification } from './standard-domain-agent-conformance-evidence-tail.ts';
 import { buildFamilyAgentLiveConformanceProbe } from './family-agent-conformance-probe.ts';
@@ -277,6 +278,7 @@ function buildRepoConformance(
   const stageRunKernelProfileChecks = buildStageRunKernelProfileChecks(repoDir);
   const stageRunCanaryEvidenceChecks = buildStageRunCanaryEvidenceChecks(repoDir);
   const stageOperatingPrincipleChecks = buildStageOperatingPrincipleChecks(repoDir);
+  const stageQualityRoutePromptAlignmentChecks = buildStageQualityRoutePromptAlignmentChecks(repoDir);
   const standardAgentPrincipleChecks = buildStandardAgentPrincipleAdoptionChecks(repoDir);
   const stateIndexKernelAdoptionChecks = buildStateIndexKernelAdoptionChecks(repoDir);
   const goldenPathDefaultSurfaceBudgetChecks = buildGoldenPathDefaultSurfaceBudgetChecks(
@@ -306,6 +308,7 @@ function buildRepoConformance(
     ...stageRunKernelProfileChecks.blockers,
     ...stageRunCanaryEvidenceChecks.blockers,
     ...stageOperatingPrincipleChecks.blockers,
+    ...stageQualityRoutePromptAlignmentChecks.blockers,
     ...standardAgentPrincipleChecks.blockers,
     ...stateIndexKernelAdoptionChecks.blockers,
     ...goldenPathDefaultSurfaceBudgetChecks.blockers,
@@ -338,6 +341,7 @@ function buildRepoConformance(
     stage_run_kernel_profile_checks: stageRunKernelProfileChecks,
     stage_run_canary_evidence_checks: stageRunCanaryEvidenceChecks,
     stage_operating_principle_checks: stageOperatingPrincipleChecks,
+    stage_quality_route_prompt_alignment_checks: stageQualityRoutePromptAlignmentChecks,
     standard_agent_principle_checks: standardAgentPrincipleChecks,
     state_index_kernel_adoption_checks: stateIndexKernelAdoptionChecks,
     golden_path_default_surface_budget_checks: goldenPathDefaultSurfaceBudgetChecks,

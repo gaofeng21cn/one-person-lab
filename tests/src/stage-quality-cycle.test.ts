@@ -150,6 +150,48 @@ test('official quality profile is explicit without adding per-agent registry pol
       .repair_required_review_or_re_review_may_select_other_terminal_route_before_budget_exhaustion,
     false,
   );
+  assert.equal(
+    contract.cross_stage_route_selection
+      .repair_required_review_or_re_review_may_select_terminal_route_after_budget_exhaustion,
+    true,
+  );
+  assert.equal(
+    contract.cross_stage_route_selection
+      .same_stage_repair_required_with_budget_remaining_continues_quality_loop,
+    true,
+  );
+  assert.equal(
+    contract.cross_stage_route_selection
+      .cross_stage_route_back_requires_narrowest_canonical_owner_stage,
+    true,
+  );
+  assert.deepEqual(
+    contract.cross_stage_route_selection.domain_prompt_conformance
+      .reviewer_and_re_reviewer_required_markers,
+    ['same_stage_repair_required', 'cross_stage_route_back_before_budget_exhaustion'],
+  );
+  assert.equal(
+    contract.cross_stage_route_selection.domain_prompt_conformance
+      .repair_required_prompt_refs_must_carry_both_markers,
+    true,
+  );
+  assert.deepEqual(
+    contract.cross_stage_route_selection.domain_prompt_conformance
+      .scoped_route_authority_fields_required,
+    [
+      'primary_only_decisive_attempt_role',
+      'formal_review_decisive_attempt_roles',
+      'repairer_can_be_decisive_attempt',
+    ],
+  );
+  assert.deepEqual(
+    contract.cross_stage_route_selection.domain_prompt_conformance
+      .ambiguous_policy_fields_forbidden,
+    [
+      'repair_required_with_budget_remaining_route_output',
+      'producer_or_repairer_may_return_terminal_route_decision',
+    ],
+  );
   assert.equal(contract.cross_stage_route_selection.hard_stop_attempt_may_select_terminal_route, false);
   assert.deepEqual(contract.cross_stage_route_selection.route_abi_rejection_conditions, [
     'non_decisive_attempt_writes_terminal_decision',

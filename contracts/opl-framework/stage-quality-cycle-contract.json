@@ -186,7 +186,27 @@
     "repair_required_cross_stage_route_back_requires_target_different_from_current_stage": true,
     "repair_required_review_or_re_review_may_select_other_terminal_route_before_budget_exhaustion": false,
     "repair_required_review_or_re_review_may_select_terminal_route_after_budget_exhaustion": true,
+    "same_stage_repair_required_with_budget_remaining_continues_quality_loop": true,
+    "cross_stage_route_back_requires_narrowest_canonical_owner_stage": true,
     "hard_stop_attempt_may_select_terminal_route": false,
+    "domain_prompt_conformance": {
+      "policy_ref": "contracts/stage_quality_cycle_policy.json#/cross_stage_route_selection",
+      "applies_only_when_domain_declares_stage_quality_cycle_policy": true,
+      "reviewer_and_re_reviewer_required_markers": [
+        "same_stage_repair_required",
+        "cross_stage_route_back_before_budget_exhaustion"
+      ],
+      "repair_required_prompt_refs_must_carry_both_markers": true,
+      "scoped_route_authority_fields_required": [
+        "primary_only_decisive_attempt_role",
+        "formal_review_decisive_attempt_roles",
+        "repairer_can_be_decisive_attempt"
+      ],
+      "ambiguous_policy_fields_forbidden": [
+        "repair_required_with_budget_remaining_route_output",
+        "producer_or_repairer_may_return_terminal_route_decision"
+      ]
+    },
     "declared_default_progression_resolution": [
       "action_stage_route.required_stage_refs_order",
       "unique_current_stage.next_stage_refs"

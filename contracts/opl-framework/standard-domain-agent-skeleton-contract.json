@@ -7,6 +7,13 @@
     "quality_profile_ref_field": "agent/stages/manifest.json#/quality_governance_profile_ref",
     "meta_review_policy_ref_field": "agent/stages/manifest.json#/meta_review_policy_ref",
     "per_stage_policy_ref_field": "agent/stages/manifest.json#/stages/*/stage_quality_cycle_policy_ref",
+    "cross_stage_route_prompt_conformance": {
+      "applies_when_stage_quality_cycle_policy_is_declared": true,
+      "domain_policy_ref": "contracts/stage_quality_cycle_policy.json#/cross_stage_route_selection",
+      "framework_contract_ref": "contracts/opl-framework/stage-quality-cycle-contract.json#/cross_stage_route_selection/domain_prompt_conformance",
+      "reviewer_and_re_reviewer_must_distinguish_same_stage_repair_from_cross_stage_route_back": true,
+      "conformance_surface": "opl agents conformance --family-defaults --json#reports/*/stage_quality_route_prompt_alignment_checks"
+    },
     "handoff_review_boundary_field": "agent/stages/manifest.json#/stages/*/handoff_review_boundary",
     "handoff_review_policy": {
       "packaging_stage_must_classify_final_artifact_risk": true,
