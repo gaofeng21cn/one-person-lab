@@ -244,12 +244,18 @@ jobs:
           path: ${{ runner.temp }}/opl-owner-cohort
 
       - name: Bind frozen owner cohort
-        if: inputs.owner_cohort_artifact_name != ''
         shell: bash
         run: |
           set -euo pipefail
-          lock="$(find "$RUNNER_TEMP/opl-owner-cohort" -name owner-cohort-lock.json -print -quit)"
-          test -n "$lock"
+          if [ -n "${{ inputs.owner_cohort_artifact_name }}" ]; then
+            lock="$(find "$RUNNER_TEMP/opl-owner-cohort" -name owner-cohort-lock.json -print -quit)"
+          else
+            lock="$OPL_RELEASE_HARNESS_ROOT/release/cohorts/$OPL_RELEASE_SET_GENERATION/owner-cohort-lock.json"
+          fi
+          if [ -z "$lock" ] || [ ! -f "$lock" ]; then
+            echo "::error::Release Set $OPL_RELEASE_SET_GENERATION has no frozen owner cohort lock."
+            exit 1
+          fi
           echo "OPL_PACKAGE_OWNER_COHORT_LOCK=$lock" >> "$GITHUB_ENV"
 
       - name: Fetch previous latest-stable Release Set

@@ -140,6 +140,12 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.match(workflow, /finalize-package-channel-digests\.mjs/);
   assert.match(workflow, /owner-cohort-lock\.json/);
   assert.match(workflow, /owner_cohort_artifact_name/);
+  assert.match(
+    workflow,
+    /lock="\$OPL_RELEASE_HARNESS_ROOT\/release\/cohorts\/\$OPL_RELEASE_SET_GENERATION\/owner-cohort-lock\.json"/,
+  );
+  assert.match(workflow, /Release Set \$OPL_RELEASE_SET_GENERATION has no frozen owner cohort lock/);
+  assert.doesNotMatch(workflow, /- name: Bind frozen owner cohort\n\s+if:/);
   assert.match(workflow, /generate-release-supply-chain\.mjs/);
   assert.match(workflow, /actions\/attest@v4/);
   assert.match(workflow, /push-to-registry:\s*true/);
