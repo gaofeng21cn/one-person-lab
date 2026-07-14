@@ -141,6 +141,8 @@ test('external package catalogs preserve third-party selection and reject first-
         'third.party.research': {
           package_id: 'third.party.research',
           package_role: 'standard_agent',
+          source: 'third_party',
+          trust_tier: 'third_party_verified',
           selected_version: '1.2.3',
           versions: [{
             package_version: '1.2.3',
@@ -158,6 +160,38 @@ test('external package catalogs preserve third-party selection and reject first-
   assert.equal(cache.entries[0].selected_version, '1.2.3');
   assert.equal(cache.entries[0].stable_version, '1.2.3');
   assert.equal(cache.entries[0].manifest_validation, 'catalog_inline_manifest');
+  assert.equal(cache.entries[0].source, 'third_party');
+  assert.equal(cache.entries[0].trust_tier, 'third_party_verified');
+
+  for (const trustTier of [undefined, 'first_party', 'first_party_managed']) {
+    const entry = {
+      ...catalog.packages.package_catalog['third.party.research'],
+      ...(trustTier ? { trust_tier: trustTier } : {}),
+    };
+    if (!trustTier) delete (entry as Record<string, unknown>).trust_tier;
+    assert.throws(
+      () => normalizePackageCatalogRegistry({
+        ...catalog,
+        packages: { package_catalog: { 'third.party.research': entry } },
+      }, 'file:///tmp/untrusted-catalog.json', 'catalog-sha'),
+      (error: any) => error?.details?.failure_code === 'agent_package_directory_catalog_trust_tier_invalid',
+    );
+  }
+
+  for (const source of [undefined, 'first_party_release_catalog', 'first_party_managed_cohort']) {
+    const entry = {
+      ...catalog.packages.package_catalog['third.party.research'],
+      ...(source ? { source } : {}),
+    };
+    if (!source) delete (entry as Record<string, unknown>).source;
+    assert.throws(
+      () => normalizePackageCatalogRegistry({
+        ...catalog,
+        packages: { package_catalog: { 'third.party.research': entry } },
+      }, 'file:///tmp/invalid-source-catalog.json', 'catalog-sha'),
+      (error: any) => error?.details?.failure_code === 'agent_package_directory_catalog_source_invalid',
+    );
+  }
 
   assert.throws(
     () => normalizePackageCatalogRegistry({

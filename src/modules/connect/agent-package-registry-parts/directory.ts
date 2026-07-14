@@ -55,6 +55,12 @@ const PACKAGE_ROLES = new Set<AgentPackageRole>([
   'framework_capability_package',
   'workflow_profile',
 ]);
+const EXTERNAL_CATALOG_SOURCES = new Set(['third_party']);
+const EXTERNAL_CATALOG_TRUST_TIERS = new Set([
+  'third_party_verified',
+  'third_party',
+  'untrusted',
+]);
 
 function packageRoleFromManifest(payload: unknown, manifestUrl: string) {
   if (!isRecord(payload)) {
@@ -137,6 +143,26 @@ export function normalizePackageCatalogRegistry(
         failure_code: 'agent_package_registry_first_party_identity_collision',
       });
     }
+    const declaredSource = stringValue(rawEntry.source);
+    if (!declaredSource || !EXTERNAL_CATALOG_SOURCES.has(declaredSource)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'External package catalogs require an explicit non-first-party source.', {
+        registry_url: registryUrl,
+        package_id: packageId,
+        declared_source: declaredSource,
+        allowed_sources: [...EXTERNAL_CATALOG_SOURCES],
+        failure_code: 'agent_package_directory_catalog_source_invalid',
+      });
+    }
+    const declaredTrustTier = stringValue(rawEntry.trust_tier);
+    if (!declaredTrustTier || !EXTERNAL_CATALOG_TRUST_TIERS.has(declaredTrustTier)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'External package catalogs require an explicit non-first-party trust tier.', {
+        registry_url: registryUrl,
+        package_id: packageId,
+        declared_trust_tier: declaredTrustTier,
+        allowed_trust_tiers: [...EXTERNAL_CATALOG_TRUST_TIERS],
+        failure_code: 'agent_package_directory_catalog_trust_tier_invalid',
+      });
+    }
     const { selectedVersion, selected } = selectedCatalogVersion(rawEntry, packageId);
     const manifestUrl = stringValue(selected.manifest_url);
     const manifestJson = stringValue(selected.manifest_json);
@@ -176,13 +202,13 @@ export function normalizePackageCatalogRegistry(
       description: stringValue(rawEntry.description) ?? metadata.description,
       tags: uniqueStrings([...stringList(rawEntry.tags), ...metadata.tags]),
       package_role: metadata.package_role,
-      source: 'first_party_release_catalog',
+      source: declaredSource,
       manifest_url: manifestUrl,
       version_source_ref: `${manifestUrl}#/version`,
       selected_version: selectedVersion,
       stable_version: selectedVersion,
       manifest_validation: 'catalog_inline_manifest' as const,
-      trust_tier: stringValue(rawEntry.trust_tier) ?? 'first_party',
+      trust_tier: declaredTrustTier,
       starter_default: rawEntry.starter_default === true,
       codex_visible_entry: null,
       required_skill_ids: [],
