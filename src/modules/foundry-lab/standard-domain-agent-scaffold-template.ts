@@ -357,7 +357,8 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
         target_domain_id: domainId,
         owner: domainId,
         progress_first_policy: {
-          route_selection_owner: 'codex_cli',
+          semantic_route_decision_owner: 'decisive_codex_attempt',
+          stage_transition_materialization_owner: 'opl_stage_run_controller',
           codex_may_advance_skip_repeat_reverse_or_route_back: true,
           any_declared_stage_may_start_from_any_prior_stage_result: true,
           declared_requires_are_quality_context_not_launch_gates: true,

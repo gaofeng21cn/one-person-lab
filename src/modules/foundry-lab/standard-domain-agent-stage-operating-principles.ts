@@ -79,7 +79,8 @@ export const STAGE_OPERATING_PRINCIPLES_POLICY = {
     default_operator_question: 'what_does_current_owner_need_to_answer_next',
   },
   speed_policy: {
-    route_selection_owner: 'codex_cli',
+    semantic_route_decision_owner: 'decisive_codex_attempt',
+    stage_transition_materialization_owner: 'opl_stage_run_controller',
     codex_may_advance_skip_repeat_reverse_or_route_back: true,
     any_declared_stage_may_start_from_any_prior_stage_result: true,
     declared_requires_are_quality_context_not_launch_gates: true,
@@ -160,9 +161,15 @@ export function buildStageOperatingPrincipleChecks(repoDir: string) {
     optionalString(managementBoundary.default_operator_question) === 'what_does_current_owner_need_to_answer_next'
       ? null
       : 'stage_operating_principles_operator_question_must_be_current_owner_delta',
-    optionalString(speedPolicy.route_selection_owner) === 'codex_cli'
+    optionalString(speedPolicy.semantic_route_decision_owner) === 'decisive_codex_attempt'
       ? null
-      : 'stage_operating_principles_route_selection_owner_must_be_codex_cli',
+      : 'stage_operating_principles_semantic_route_decision_owner_must_be_decisive_codex_attempt',
+    optionalString(speedPolicy.stage_transition_materialization_owner) === 'opl_stage_run_controller'
+      ? null
+      : 'stage_operating_principles_stage_transition_materialization_owner_must_be_opl_stage_run_controller',
+    Object.hasOwn(speedPolicy, 'route_selection_owner')
+      ? 'stage_operating_principles_legacy_route_selection_owner_forbidden'
+      : null,
     speedPolicy.codex_may_advance_skip_repeat_reverse_or_route_back === true
       ? null
       : 'stage_operating_principles_codex_route_flexibility_required',

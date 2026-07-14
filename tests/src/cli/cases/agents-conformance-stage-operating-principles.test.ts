@@ -136,3 +136,40 @@ test('agents conformance blocks stage policies that slow ordinary owner-delta pr
     true,
   );
 });
+
+test('agents conformance rejects mixed route ownership and the retired owner field', async () => {
+  const repoDir = buildReadyAgentRepo();
+  const policyPath = path.join(repoDir, 'contracts', 'stage_operating_principles.json');
+  const policy = parseJsonText(fs.readFileSync(policyPath, 'utf8')) as Record<string, any>;
+  policy.speed_policy.semantic_route_decision_owner = 'opl_stage_run_controller';
+  policy.speed_policy.stage_transition_materialization_owner = 'decisive_codex_attempt';
+  policy.speed_policy.route_selection_owner = 'codex_cli';
+  writeJson(policyPath, policy);
+
+  const report = (await runCliReadOnly([
+    'agents',
+    'conformance',
+    '--agent',
+    `sample=${repoDir}`,
+  ])).standard_domain_agent_conformance;
+
+  const checks = report.reports[0].stage_operating_principle_checks;
+  assert.equal(report.status, 'blocked');
+  assert.equal(checks.status, 'blocked');
+  assert.equal(
+    checks.blockers.includes(
+      'stage_operating_principles_semantic_route_decision_owner_must_be_decisive_codex_attempt',
+    ),
+    true,
+  );
+  assert.equal(
+    checks.blockers.includes(
+      'stage_operating_principles_stage_transition_materialization_owner_must_be_opl_stage_run_controller',
+    ),
+    true,
+  );
+  assert.equal(
+    checks.blockers.includes('stage_operating_principles_legacy_route_selection_owner_forbidden'),
+    true,
+  );
+});
