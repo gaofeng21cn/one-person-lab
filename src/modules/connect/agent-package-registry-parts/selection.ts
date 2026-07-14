@@ -2,6 +2,7 @@ import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import { stringValue } from '../../../kernel/json-record.ts';
 import { canonicalAgentPackageId } from '../agent-package-identity.ts';
 import { normalizeRegistry } from './manifest-normalizers.ts';
+import { isOplPackageCatalog, normalizePackageCatalogRegistry } from './directory.ts';
 import { fetchJsonSource } from './shared.ts';
 import type {
   AgentPackageManifest,
@@ -47,7 +48,9 @@ export async function resolveManifestSelection(input: AgentPackageManifestValida
 
 export async function fetchAndValidateRegistry(registryUrl: string) {
   const fetched = await fetchJsonSource(registryUrl);
-  const cache = normalizeRegistry(fetched.payload, registryUrl, fetched.source_sha256);
+  const cache = isOplPackageCatalog(fetched.payload)
+    ? normalizePackageCatalogRegistry(fetched.payload, registryUrl, fetched.source_sha256)
+    : normalizeRegistry(fetched.payload, registryUrl, fetched.source_sha256);
   return { fetched, cache };
 }
 

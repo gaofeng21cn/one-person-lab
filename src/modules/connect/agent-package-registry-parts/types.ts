@@ -84,6 +84,11 @@ export type AgentPackageInstallInput = AgentPackageManifestValidateInput & {
   keepMigrationIds?: string[];
 };
 
+export type AgentPackageRole =
+  | 'standard_agent'
+  | 'framework_capability_package'
+  | 'workflow_profile';
+
 export type AgentPackagePackageActionInput = {
   packageId: string;
   dryRun?: boolean;
@@ -128,9 +133,15 @@ export type AgentPackageRegistryEntry = {
   package_id: string;
   display_name: string;
   publisher: string;
+  description: string;
+  tags: string[];
+  package_role: AgentPackageRole | null;
   source: string;
   manifest_url: string;
   version_source_ref: string;
+  selected_version: string | null;
+  stable_version: string | null;
+  manifest_validation: 'deferred' | 'fetched_manifest' | 'catalog_inline_manifest';
   trust_tier: string;
   starter_default: boolean;
   codex_visible_entry: string | null;
@@ -175,6 +186,7 @@ export type AgentPackageDistributionPayload = {
 export type AgentPackageManifest = {
   package_id: string;
   agent_id: string | null;
+  package_role: AgentPackageRole;
   display_name: string;
   publisher: string;
   version: string;
@@ -576,6 +588,7 @@ export type AgentPackageLock = {
   surface_kind: 'opl_agent_package_lock';
   package_id: string;
   agent_id: string | null;
+  package_role?: AgentPackageRole;
   display_name: string;
   publisher: string;
   version_or_source_digest: string;

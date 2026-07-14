@@ -24,6 +24,8 @@ type PackageSourceId =
 type PackageSpec = {
   module_id: PackageSourceId;
   label: string;
+  description: string;
+  tags: readonly string[];
   repo_name: string;
   repo_url: string;
   scope: 'domain_module' | 'runtime_dependency' | 'framework_capability_package';
@@ -79,6 +81,8 @@ const PACKAGE_SPECS: PackageSpec[] = [
   {
     module_id: 'medautoscience',
     label: 'Med Auto Science',
+    description: 'Medical research workflows for evidence, analysis, writing, figures, and submission.',
+    tags: ['medical-research', 'evidence', 'manuscript'],
     repo_name: 'med-autoscience',
     repo_url: 'https://github.com/gaofeng21cn/med-autoscience.git',
     scope: 'domain_module',
@@ -93,6 +97,8 @@ const PACKAGE_SPECS: PackageSpec[] = [
   {
     module_id: 'medautogrant',
     label: 'Med Auto Grant',
+    description: 'Grant planning, drafting, critique, revision, and submission workflows.',
+    tags: ['grant-writing', 'proposal', 'review'],
     repo_name: 'med-autogrant',
     repo_url: 'https://github.com/gaofeng21cn/med-autogrant.git',
     scope: 'domain_module',
@@ -106,6 +112,8 @@ const PACKAGE_SPECS: PackageSpec[] = [
   {
     module_id: 'redcube',
     label: 'RedCube AI',
+    description: 'Visual deliverable, presentation, and figure production workflows.',
+    tags: ['visual-deliverables', 'presentations', 'figures'],
     repo_name: 'redcube-ai',
     repo_url: 'https://github.com/gaofeng21cn/redcube-ai.git',
     scope: 'domain_module',
@@ -119,6 +127,8 @@ const PACKAGE_SPECS: PackageSpec[] = [
   {
     module_id: 'oplmetaagent',
     label: 'OPL Meta Agent',
+    description: 'Agent architecture, baseline, takeover, and OPL conformance workflows.',
+    tags: ['agent-design', 'architecture', 'conformance'],
     repo_name: 'opl-meta-agent',
     repo_url: 'https://github.com/gaofeng21cn/opl-meta-agent.git',
     scope: 'domain_module',
@@ -132,6 +142,8 @@ const PACKAGE_SPECS: PackageSpec[] = [
   {
     module_id: 'oplbookforge',
     label: 'OPL Book Forge',
+    description: 'Long-form book architecture, drafting, review, and publication workflows.',
+    tags: ['book-authoring', 'long-form', 'publishing'],
     repo_name: 'opl-bookforge',
     repo_url: 'https://github.com/gaofeng21cn/opl-bookforge.git',
     scope: 'domain_module',
@@ -145,6 +157,8 @@ const PACKAGE_SPECS: PackageSpec[] = [
   {
     module_id: 'scholarskills',
     label: 'MAS Scholar Skills',
+    description: 'Reusable medical research capabilities consumed by Med Auto Science.',
+    tags: ['medical-research', 'capabilities', 'skills'],
     repo_name: 'mas-scholar-skills',
     repo_url: 'https://github.com/gaofeng21cn/mas-scholar-skills.git',
     scope: 'framework_capability_package',
@@ -157,6 +171,8 @@ const PACKAGE_SPECS: PackageSpec[] = [
   {
     module_id: 'oplflow',
     label: 'OPL Flow',
+    description: 'Recommended OPL workflow profile and managed Codex policy.',
+    tags: ['workflow-profile', 'codex', 'policy'],
     repo_name: 'opl-flow',
     repo_url: 'https://github.com/gaofeng21cn/opl-flow.git',
     scope: 'runtime_dependency',
@@ -247,7 +263,7 @@ export function normalizeReleaseSetGeneration(value: string) {
   return generation;
 }
 
-function packageRole(spec: PackageSpec) {
+function packageRole(spec: PackageSpec): 'standard_agent' | 'framework_capability_package' | 'workflow_profile' {
   return spec.owner_manifest_kind === 'workflow_profile'
     ? 'workflow_profile'
     : spec.scope === 'framework_capability_package'
@@ -608,7 +624,15 @@ export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
 }
 
 export function getOplPackageSpecs() {
-  return [...PACKAGE_SPECS];
+  return PACKAGE_SPECS.map((spec) => ({
+    ...spec,
+    tags: [...spec.tags],
+    package_role: packageRole(spec),
+    selected_version: projectedPackageVersion(spec),
+    stable_version: null,
+    manifest_url: spec.package_manifest_ref,
+    trust_tier: 'first_party' as const,
+  }));
 }
 
 function sha256Payload(payload: string | Buffer) {
@@ -776,7 +800,12 @@ function buildCurrentPackageCatalog(manifest: OplPackageManifest) {
     };
     return [packageId, {
       package_id: packageId,
+      display_name: spec.label,
+      publisher: 'one-person-lab',
+      description: spec.description,
+      tags: [...spec.tags],
       package_role: packageRole(spec),
+      trust_tier: 'first_party',
       selected_version: packageVersion,
       dependency_package_ids: versionEntry.dependency_package_ids,
       versions: [versionEntry],

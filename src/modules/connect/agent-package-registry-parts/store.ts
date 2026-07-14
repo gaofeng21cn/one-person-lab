@@ -80,7 +80,7 @@ export function readRegistryCache() {
   const entries = recordList(parsed.entries).map(normalizeRegistryEntry);
   return {
     surface_kind: 'opl_agent_package_registry_cache' as const,
-    version: stringValue(parsed.version) ?? 'opl-agent-package-registry-cache.v1',
+    version: 'opl-agent-package-registry-cache.v1' as const,
     refreshed_at: stringValue(parsed.refreshed_at) ?? nowIso(),
     registry_url: stringValue(parsed.registry_url) ?? '',
     registry_sha256: stringValue(parsed.registry_sha256) ?? '',

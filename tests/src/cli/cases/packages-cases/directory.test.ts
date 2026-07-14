@@ -1,0 +1,472 @@
+import { pathToFileURL } from 'node:url';
+
+import {
+  agentPackageManifest,
+  assert,
+  formatJsonPayload,
+  fs,
+  os,
+  path,
+  repoRoot,
+  runCli,
+  test,
+} from './helpers.ts';
+import { createFakeCodexFixture } from '../../helpers.ts';
+import {
+  buildAgentPackageDirectory,
+  enrichRegistryCacheManifestMetadata,
+  normalizePackageCatalogRegistry,
+} from '../../../../../src/modules/connect/agent-package-registry-parts/directory.ts';
+import { normalizeRegistry } from '../../../../../src/modules/connect/agent-package-registry-parts/manifest-normalizers.ts';
+import { listOplAgentPackages } from '../../../../../src/modules/connect/agent-package-registry.ts';
+import { agentPackageActivationPayload } from '../../../../../src/modules/console/app-state-parts/action-execute-payloads.ts';
+
+const CANONICAL_PACKAGE_ROLES = new Set([
+  'standard_agent',
+  'framework_capability_package',
+  'workflow_profile',
+]);
+
+function isolatedPackageEnv(prefix: string) {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), `${prefix}-home-`));
+  return {
+    home,
+    env: {
+      HOME: home,
+      CODEX_HOME: path.join(home, '.codex'),
+      OPL_STATE_DIR: path.join(home, 'opl-state'),
+    },
+  };
+}
+
+function registryPayload(manifestUrl: string, packageRole: string | null = 'standard_agent') {
+  return {
+    registry_id: 'directory-test-registry',
+    entries: [{
+      package_id: 'third.party.research',
+      display_name: 'Third Party Research',
+      publisher: 'example-org',
+      description: 'Third-party research workflow package.',
+      tags: ['research'],
+      ...(packageRole ? { package_role: packageRole } : {}),
+      source: 'third_party',
+      manifest_url: manifestUrl,
+      version_source_ref: `${manifestUrl}#/version`,
+      trust_tier: 'third_party_verified',
+    }],
+  };
+}
+
+function assertRecommendedActionMatchesAvailable(entry: any) {
+  if (entry.recommended_action === null) {
+    assert.equal(entry.recommended_action_ref, null);
+    return;
+  }
+  const available = entry.available_actions.find(
+    (action: any) => action.action_id === entry.recommended_action,
+  );
+  assert.deepEqual(entry.recommended_action_ref, available);
+  assert.equal(available.action_ref, `app_state.actions#${entry.recommended_action}`);
+  assert.equal(typeof available.payload, 'object');
+}
+
+test('packages list and app state expose the canonical public package directory before installation', () => {
+  const fixture = isolatedPackageEnv('opl-package-directory');
+  const codexFixture = createFakeCodexFixture(`
+if [[ "$1" == "--version" ]]; then
+  echo "codex-cli 0.125.0"
+  exit 0
+fi
+exit 1
+`);
+  try {
+    const list = runCli(['packages', 'list'], fixture.env) as any;
+    const directory = list.opl_agent_packages.directory;
+    assert.equal(directory.surface_kind, 'opl_agent_package_directory.v1');
+    assert.equal(directory.entry_count, 7);
+    assert.equal(directory.installed_package_count, 0);
+    assert.equal(directory.installable_package_count, 7);
+    for (const entry of directory.entries) {
+      assert.equal(typeof entry.package_id, 'string');
+      assert.equal(typeof entry.description, 'string');
+      assert.equal(entry.description.length > 0, true);
+      assert.equal(Array.isArray(entry.tags), true);
+      assert.equal(entry.tags.length > 0, true);
+      assert.equal(CANONICAL_PACKAGE_ROLES.has(entry.package_role), true);
+      assert.equal(entry.installed, false);
+      assert.equal(entry.activated, false);
+      assert.equal(entry.installability.installable, true);
+      assert.equal(entry.recommended_action, 'install_from_manifest_url');
+      assert.deepEqual(entry.available_actions[0].payload, { package_id: entry.package_id });
+      assertRecommendedActionMatchesAvailable(entry);
+    }
+    const flow = directory.entries.find((entry: any) => entry.package_id === 'opl-flow');
+    const scholarSkills = directory.entries.find((entry: any) => entry.package_id === 'mas-scholar-skills');
+    assert.equal(flow.package_role, 'workflow_profile');
+    assert.equal(flow.selected_version, '0.1.20');
+    assert.equal(flow.stable_version, '0.1.20');
+    assert.equal(scholarSkills.package_role, 'framework_capability_package');
+
+    for (const profile of ['fast', 'full'] as const) {
+      const appState = runCli(['app', 'state', '--profile', profile], {
+        ...fixture.env,
+        OPL_MODULES_ROOT: path.join(fixture.home, 'opl-state', 'modules'),
+        OPL_CODEX_CLI_LATEST_VERSION: '0.125.0',
+        OPL_DEVELOPER_MODE_GH_BINARY: path.join(fixture.home, 'missing-gh'),
+        PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
+      }) as any;
+      const projected = appState.app_state.agent_packages.directory;
+      assert.equal(projected.surface_kind, 'opl_agent_package_directory.v1');
+      assert.equal(projected.detail, profile);
+      assert.equal(projected.entries.length, 7);
+      assert.equal(projected.entries.every((entry: any) =>
+        entry.package_id && entry.package_role && entry.installability && entry.recommended_action), true);
+      assert.equal('directory' in projected, false);
+    }
+  } finally {
+    fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(fixture.home, { recursive: true, force: true });
+  }
+});
+
+test('canonical opl package catalog preserves selected stable versions and validates manifest role', () => {
+  const manifestPath = path.join(repoRoot, 'contracts', 'opl-framework', 'packages', 'opl-flow.json');
+  const manifestJson = fs.readFileSync(manifestPath, 'utf8');
+  const manifestUrl = pathToFileURL(manifestPath).toString();
+  const catalog = {
+    surface_kind: 'opl_package_catalog.v1',
+    packages: {
+      package_catalog: {
+        'opl-flow': {
+          package_id: 'opl-flow',
+          package_role: 'workflow_profile',
+          selected_version: '0.1.20',
+          versions: [{
+            package_version: '0.1.20',
+            selection_status: 'selected_for_release_set',
+            manifest_url: manifestUrl,
+            manifest_json: manifestJson,
+          }],
+        },
+      },
+    },
+  };
+  const cache = normalizePackageCatalogRegistry(catalog, 'file:///tmp/opl-catalog.json', 'catalog-sha');
+  assert.equal(cache.entry_count, 1);
+  assert.equal(cache.entries[0].package_role, 'workflow_profile');
+  assert.equal(cache.entries[0].selected_version, '0.1.20');
+  assert.equal(cache.entries[0].stable_version, '0.1.20');
+  assert.equal(cache.entries[0].manifest_validation, 'catalog_inline_manifest');
+
+  assert.throws(
+    () => normalizePackageCatalogRegistry({
+      ...catalog,
+      packages: {
+        package_catalog: {
+          'opl-flow': {
+            ...catalog.packages.package_catalog['opl-flow'],
+            package_role: 'standard_agent',
+          },
+        },
+      },
+    }, 'file:///tmp/invalid-catalog.json', 'catalog-sha'),
+    (error: any) => error?.details?.failure_code === 'agent_package_directory_catalog_role_invalid',
+  );
+});
+
+test('registry manifest enrichment admits third-party packages and rejects role or manifest drift', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-directory-registry-'));
+  const manifestPath = path.join(root, 'manifest.json');
+  const manifestUrl = pathToFileURL(manifestPath).toString();
+  try {
+    fs.writeFileSync(manifestPath, formatJsonPayload({
+      ...agentPackageManifest(),
+      description: 'Manifest-owned third-party research package.',
+      tags: ['literature', 'analysis'],
+    }));
+    const cache = normalizeRegistry(registryPayload(manifestUrl), 'file:///tmp/registry.json', 'registry-sha');
+    const enriched = await enrichRegistryCacheManifestMetadata(cache);
+    assert.equal(enriched.entries[0].package_role, 'standard_agent');
+    assert.equal(enriched.entries[0].selected_version, '1.2.3');
+    assert.equal(enriched.entries[0].stable_version, '1.2.3');
+    assert.equal(enriched.entries[0].manifest_validation, 'fetched_manifest');
+    assert.equal(enriched.entries[0].tags.includes('literature'), true);
+
+    const roleDrift = normalizeRegistry(
+      registryPayload(manifestUrl, 'workflow_profile'),
+      'file:///tmp/role-drift-registry.json',
+      'registry-sha',
+    );
+    await assert.rejects(
+      enrichRegistryCacheManifestMetadata(roleDrift),
+      (error: any) => error?.details?.failure_code === 'registry_manifest_package_role_mismatch',
+    );
+
+    fs.writeFileSync(manifestPath, formatJsonPayload({
+      ...agentPackageManifest(),
+      codex_surface: undefined,
+    }));
+    await assert.rejects(
+      enrichRegistryCacheManifestMetadata(cache),
+      (error: any) => error?.details?.failure_code === 'invalid_package_manifest',
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('legacy registry entries derive capability and workflow roles from validated manifests', async () => {
+  const cases = [
+    ['mas-scholar-skills', 'framework_capability_package'],
+    ['opl-flow', 'workflow_profile'],
+  ] as const;
+  for (const [packageId, expectedRole] of cases) {
+    const manifestPath = path.join(repoRoot, 'contracts', 'opl-framework', 'packages', `${packageId}.json`);
+    const manifestUrl = pathToFileURL(manifestPath).toString();
+    const cache = normalizeRegistry({
+      registry_id: `legacy-${packageId}`,
+      entries: [{
+        package_id: packageId,
+        display_name: packageId,
+        publisher: 'one-person-lab',
+        source: 'first_party',
+        manifest_url: manifestUrl,
+        version_source_ref: `${manifestUrl}#/version`,
+        trust_tier: 'first_party',
+      }],
+    }, `file:///tmp/${packageId}-registry.json`, 'registry-sha');
+    assert.equal(cache.entries[0].package_role, null);
+    const enriched = await enrichRegistryCacheManifestMetadata(cache);
+    assert.equal(enriched.entries[0].package_role, expectedRole);
+    assert.equal(enriched.entries[0].manifest_validation, 'fetched_manifest');
+  }
+
+  assert.throws(
+    () => normalizeRegistry(registryPayload('file:///tmp/manifest.json', 'unsupported_role'), 'file:///tmp/registry.json', 'registry-sha'),
+    (error: any) => error?.details?.failure_code === 'agent_package_registry_role_invalid',
+  );
+});
+
+test('legacy roleless cache keeps App state readable and recovers through registry refresh', () => {
+  const fixture = isolatedPackageEnv('opl-package-directory-legacy-cache');
+  const codexFixture = createFakeCodexFixture(`
+if [[ "$1" == "--version" ]]; then
+  echo "codex-cli 0.125.0"
+  exit 0
+fi
+exit 1
+`);
+  const manifestPath = path.join(fixture.home, 'manifest.json');
+  const registryPath = path.join(fixture.home, 'registry.json');
+  const manifestUrl = pathToFileURL(manifestPath).toString();
+  const registryUrl = pathToFileURL(registryPath).toString();
+  try {
+    const [legacyEntry] = registryPayload(manifestUrl, null).entries;
+    assert.equal(Object.hasOwn(legacyEntry, 'package_role'), false);
+    fs.mkdirSync(fixture.env.OPL_STATE_DIR, { recursive: true });
+    fs.writeFileSync(path.join(fixture.env.OPL_STATE_DIR, 'agent-package-registry-cache.json'), formatJsonPayload({
+      surface_kind: 'opl_agent_package_registry_cache',
+      version: 'opl-agent-package-registry-cache.v1',
+      refreshed_at: '2026-01-01T00:00:00.000Z',
+      registry_url: registryUrl,
+      registry_sha256: 'legacy-cache',
+      entry_count: 1,
+      entries: [legacyEntry],
+    }));
+    const staleList = runCli(['packages', 'list'], fixture.env) as any;
+    const staleDirectory = staleList.opl_agent_packages.directory;
+    const staleEntry = staleDirectory.entries.find((entry: any) => entry.package_id === 'third.party.research');
+    assert.equal(staleDirectory.status, 'attention_required');
+    assert.equal(staleDirectory.migration_required_count, 1);
+    assert.equal(staleEntry.package_role, null);
+    assert.equal(staleEntry.installed, false);
+    assert.equal(staleEntry.installability.status, 'migration_required');
+    assert.equal(staleEntry.installability.installable, false);
+    assert.equal(staleEntry.readiness.operational_ready, false);
+    assert.equal(staleEntry.recommended_action, 'refresh_registry');
+    assert.deepEqual(staleEntry.recommended_action_ref.payload, { registry_url: registryUrl });
+    assertRecommendedActionMatchesAvailable(staleEntry);
+
+    const appState = runCli(['app', 'state', '--profile', 'fast'], {
+      ...fixture.env,
+      OPL_MODULES_ROOT: path.join(fixture.home, 'opl-state', 'modules'),
+      OPL_CODEX_CLI_LATEST_VERSION: '0.125.0',
+      OPL_DEVELOPER_MODE_GH_BINARY: path.join(fixture.home, 'missing-gh'),
+      PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
+    }) as any;
+    assert.equal(appState.app_state.agent_packages.directory.status, 'attention_required');
+    assert.equal(
+      appState.app_state.agent_packages.directory.entries.find(
+        (entry: any) => entry.package_id === 'third.party.research',
+      ).recommended_action,
+      'refresh_registry',
+    );
+
+    fs.writeFileSync(manifestPath, formatJsonPayload(agentPackageManifest()));
+    fs.writeFileSync(registryPath, formatJsonPayload(registryPayload(manifestUrl)));
+    const refresh = runCli([
+      'packages', 'registry', 'refresh', '--registry-url', registryUrl,
+    ], fixture.env) as any;
+    assert.equal(refresh.opl_agent_package_registry.entries[0].package_role, 'standard_agent');
+    const recovered = runCli(['packages', 'list'], fixture.env) as any;
+    const recoveredEntry = recovered.opl_agent_packages.directory.entries.find(
+      (entry: any) => entry.package_id === 'third.party.research',
+    );
+    assert.equal(recovered.opl_agent_packages.directory.status, 'available');
+    assert.equal(recoveredEntry.package_role, 'standard_agent');
+    assert.equal(recoveredEntry.installability.installable, true);
+    assert.equal(recoveredEntry.recommended_action, 'install_from_manifest_url');
+    assertRecommendedActionMatchesAvailable(recoveredEntry);
+  } finally {
+    fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(fixture.home, { recursive: true, force: true });
+  }
+});
+
+test('scope-less list and App workspace context project different activation state from one lock', () => {
+  const fixture = isolatedPackageEnv('opl-package-directory-scope');
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  const workspace = path.join(fixture.home, 'workspace');
+  const lock = {
+    surface_kind: 'opl_agent_package_lock',
+    package_id: 'third.party.capability-consumer',
+    agent_id: 'third.party.capability-consumer',
+    package_role: 'standard_agent',
+    display_name: 'Capability Consumer',
+    publisher: 'example-org',
+    package_version: '1.0.0',
+    trust_tier: 'third_party_verified',
+    source_kind: 'manifest_url',
+    manifest_url: 'https://example.test/consumer.json',
+    lock_ref: 'opl://agent-package-lock/third.party.capability-consumer/1.0.0/fixture',
+    capability_provider: null,
+    scope_materializations: [],
+  };
+  const statusReader = (input: any) => ({
+    opl_agent_package_status: input.scope === 'workspace' && input.targetWorkspace === workspace
+      ? {
+          status: 'available',
+          recommended_action: null,
+          operational_ready: true,
+          launch_allowed: true,
+          launch_blocked_reason: null,
+          materialization_readiness: { status: 'current' },
+        }
+      : {
+          status: 'attention_needed',
+          recommended_action: 'agent_package_activate',
+          operational_ready: false,
+          launch_allowed: false,
+          launch_blocked_reason: 'scope_materialization_scope_required',
+          materialization_readiness: { status: 'scope_required' },
+        },
+  });
+  try {
+    process.env.OPL_STATE_DIR = fixture.env.OPL_STATE_DIR;
+    fs.mkdirSync(fixture.env.OPL_STATE_DIR, { recursive: true });
+    fs.writeFileSync(path.join(fixture.env.OPL_STATE_DIR, 'agent-package-locks.json'), formatJsonPayload({
+      surface_kind: 'opl_agent_package_lock_index',
+      version: 'opl-agent-package-lock-index.v1',
+      packages: [lock],
+      last_known_good_transactions: [],
+    }));
+    const scopeLess = listOplAgentPackages({ detail: 'fast', readStatus: statusReader as any })
+      .opl_agent_packages.directory.entries.find((entry) => entry.package_id === lock.package_id)!;
+    assert.equal(scopeLess.activated, false);
+    assert.equal(scopeLess.readiness.status, 'activation_required');
+    assert.equal(scopeLess.recommended_action, 'agent_package_activate');
+    assertRecommendedActionMatchesAvailable(scopeLess);
+
+    const appWorkspace = listOplAgentPackages({
+      detail: 'fast',
+      readStatus: statusReader as any,
+      statusContext: () => ({ scope: 'workspace', targetWorkspace: workspace }),
+    }).opl_agent_packages.directory.entries.find((entry) => entry.package_id === lock.package_id)!;
+    assert.equal(appWorkspace.activated, true);
+    assert.equal(appWorkspace.readiness.status, 'ready');
+    assert.equal(appWorkspace.recommended_action, null);
+    assert.equal(appWorkspace.available_actions.some((action) => action.action_id === 'agent_package_activate'), false);
+    assertRecommendedActionMatchesAvailable(appWorkspace);
+  } finally {
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(fixture.home, { recursive: true, force: true });
+  }
+});
+
+test('installed-only directory entries retain persisted role and consume canonical readiness', () => {
+  const lock = {
+    surface_kind: 'opl_agent_package_lock',
+    package_id: 'third.party.workflow',
+    agent_id: null,
+    package_role: 'workflow_profile',
+    display_name: 'Third Party Workflow',
+    publisher: 'example-org',
+    package_version: '2.0.0',
+    trust_tier: 'third_party_verified',
+    source_kind: 'manifest_url',
+    manifest_url: 'https://example.test/workflow.json',
+    lock_ref: 'opl://agent-package-lock/third.party.workflow/2.0.0/fixture',
+    capability_provider: null,
+    scope_materializations: [],
+  } as any;
+  const ready = buildAgentPackageDirectory({
+    registryCache: null,
+    locks: [lock],
+    detail: 'fast',
+    readStatus: () => ({
+      status: 'available',
+      recommended_action: null,
+      operational_ready: true,
+      launch_allowed: true,
+      launch_blocked_reason: null,
+      materialization_readiness: { status: 'not_required' },
+    }),
+  }).entries.find((entry) => entry.package_id === lock.package_id)!;
+  assert.equal(ready.package_role, 'workflow_profile');
+  assert.equal(ready.activated, true);
+  assert.equal(ready.readiness.status, 'ready');
+  assert.equal(ready.recommended_action, null);
+  assert.equal(ready.recommended_action_ref, null);
+  assert.equal(ready.available_actions.some((action) => action.action_id === 'agent_package_activate'), false);
+  assertRecommendedActionMatchesAvailable(ready);
+
+  const needsActivation = buildAgentPackageDirectory({
+    registryCache: null,
+    locks: [lock],
+    detail: 'full',
+    readStatus: () => ({
+      status: 'attention_needed',
+      recommended_action: 'agent_package_activate',
+      operational_ready: false,
+      launch_allowed: false,
+      launch_blocked_reason: 'scope_materialization_missing',
+      materialization_readiness: { status: 'missing' },
+    }),
+    actionContext: () => ({ scope: 'workspace', targetWorkspace: '/tmp/opl-workspace' }),
+  }).entries.find((entry) => entry.package_id === lock.package_id)!;
+  assert.equal(needsActivation.activated, false);
+  assert.equal(needsActivation.readiness.status, 'activation_required');
+  assert.equal(needsActivation.recommended_action, 'agent_package_activate');
+  assert.deepEqual(
+    needsActivation.recommended_action_ref,
+    needsActivation.available_actions.find((action) => action.action_id === 'agent_package_activate'),
+  );
+  assert.deepEqual(agentPackageActivationPayload(needsActivation.recommended_action_ref!.payload), {
+    packageId: lock.package_id,
+    scope: 'workspace',
+    targetWorkspace: '/tmp/opl-workspace',
+    targetQuest: undefined,
+    useBoundaryId: null,
+  });
+  assertRecommendedActionMatchesAvailable(needsActivation);
+
+  assert.throws(
+    () => buildAgentPackageDirectory({
+      registryCache: null,
+      locks: [{ ...lock, package_id: 'third.party.legacy', package_role: undefined }],
+      detail: 'fast',
+    }),
+    (error: any) => error?.details?.failure_code === 'agent_package_lock_role_missing',
+  );
+});

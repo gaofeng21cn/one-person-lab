@@ -99,7 +99,7 @@ function writeFirstPartyCatalogFixture(version: string, ownerSourceCommit: strin
       package_catalog: {
         'opl-flow': {
           package_id: 'opl-flow',
-          package_role: 'workflow_profile',
+          package_role: 'standard_agent',
           selected_version: version,
           versions: [{
             package_version: version,
@@ -246,12 +246,22 @@ test('first-party install and update lock one Release Set catalog member by vers
     OPL_STATE_DIR: stateDir,
   };
   try {
-    const installed = runCli(['packages', 'install', 'opl-flow'], {
+    const installedAction = runCli([
+      'app', 'action', 'execute',
+      '--action', 'install_from_manifest_url',
+      '--payload', JSON.stringify({ package_id: 'opl-flow' }),
+    ], {
       ...commonEnv,
       ...first.env,
     }) as any;
+    assert.equal(
+      installedAction.app_action_execution.delegated_surface,
+      'opl packages install --manifest-url <manifest_url>',
+    );
+    const installed = installedAction.app_action_execution.result;
     const installedLock = installed.opl_agent_package_install.package_lock;
     assert.equal(installedLock.package_id, 'opl-flow');
+    assert.equal(installedLock.package_role, 'standard_agent');
     assert.equal(installedLock.package_version, '0.2.0');
     assert.equal(installedLock.source_kind, 'first_party_managed_cohort');
     assert.equal(installedLock.trust_tier, 'first_party');

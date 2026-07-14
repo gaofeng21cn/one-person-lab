@@ -67,6 +67,10 @@ test('packages fetches registry URL, validates manifest, and writes lock receipt
       ) as { entries: Array<Record<string, unknown>> };
       assert.equal(refreshedCache.entries[0].version_source_ref, `${baseUrl}/manifest.json#/version`);
       assert.equal(Object.hasOwn(refreshedCache.entries[0], 'latest_version'), false);
+      assert.equal(refreshedCache.entries[0].package_role, 'standard_agent');
+      assert.equal(refreshedCache.entries[0].selected_version, '1.2.3');
+      assert.equal(refreshedCache.entries[0].stable_version, '1.2.3');
+      assert.equal(refreshedCache.entries[0].manifest_validation, 'fetched_manifest');
 
       const validated = await runCliAsync([
         'packages',
@@ -340,6 +344,15 @@ test('packages fetches registry URL, validates manifest, and writes lock receipt
           }>;
           lifecycle_receipt_count: number;
           registry_cache: { entry_count: number };
+          directory: {
+            entries: Array<{
+              package_id: string;
+              installed: boolean;
+              activated: boolean;
+              recommended_action: string | null;
+              available_actions: Array<{ action_id: string; payload: Record<string, unknown> }>;
+            }>;
+          };
           owner_route_readback: {
             package_count: number;
             packages: Array<{ materializer: { status: string }; lifecycle_ux: { recommended_action: string | null } }>;
@@ -371,6 +384,26 @@ test('packages fetches registry URL, validates manifest, and writes lock receipt
       }]);
       assert.equal(list.opl_agent_packages.lifecycle_receipt_count, 3);
       assert.equal(list.opl_agent_packages.registry_cache.entry_count, 1);
+      const installedDirectoryEntry = list.opl_agent_packages.directory.entries.find(
+        (entry) => entry.package_id === 'third.party.research',
+      );
+      const uninstalledDirectoryEntry = list.opl_agent_packages.directory.entries.find(
+        (entry) => entry.package_id === 'opl-flow',
+      );
+      assert.equal(installedDirectoryEntry?.installed, true);
+      assert.equal(installedDirectoryEntry?.activated, false);
+      assert.equal(installedDirectoryEntry?.recommended_action, 'agent_package_activate');
+      assert.equal(
+        installedDirectoryEntry?.available_actions.some((action) => action.action_id === 'agent_package_activate'),
+        true,
+      );
+      assert.equal(
+        installedDirectoryEntry?.available_actions.some((action) => action.action_id === 'agent_package_update'),
+        true,
+      );
+      assert.equal(uninstalledDirectoryEntry?.installed, false);
+      assert.equal(uninstalledDirectoryEntry?.recommended_action, 'install_from_manifest_url');
+      assert.deepEqual(uninstalledDirectoryEntry?.available_actions[0].payload, { package_id: 'opl-flow' });
       assert.equal(list.opl_agent_packages.owner_route_readback.package_count, 1);
       assert.equal(list.opl_agent_packages.owner_route_readback.packages[0].materializer.status, 'materialized');
       assert.equal(

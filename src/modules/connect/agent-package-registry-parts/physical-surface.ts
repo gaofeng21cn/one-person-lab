@@ -38,6 +38,7 @@ import {
   noManagedPolicyMigration,
   rollbackManagedPolicyMigration,
 } from './managed-policy-surface.ts';
+import { packageRoleFromInstalledLock } from './package-role.ts';
 import type {
   AgentPackageLock,
   AgentPackageLockIndex,
@@ -772,6 +773,7 @@ export function rematerializePhysicalCodexSurfaceFromLock(
   const materialized = materializePhysicalCodexSurface({
     package_id: lock.package_id,
     agent_id: lock.agent_id,
+    package_role: packageRoleFromInstalledLock(lock),
     display_name: lock.display_name,
     publisher: lock.publisher,
     version: lock.package_version,

@@ -249,7 +249,7 @@ export function buildPackagesCommandSpecs(
   const specs: Record<string, CommandSpec> = {
     'packages list': {
       usage: 'opl packages list',
-      summary: 'List installed OPL Packages, content identities, exposure state, projections, and lifecycle receipts.',
+      summary: 'Browse the OPL Package catalog merged with installed state, actions, projections, and lifecycle receipts.',
       examples: ['opl packages list --json'],
       group: 'packages',
       help_surface: 'default',

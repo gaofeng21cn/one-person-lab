@@ -222,23 +222,22 @@ function unavailableAgentPackageStatus(packageId: string, error: unknown): JsonR
 export function buildAppAgentPackageStatuses(input: {
   packageIds: readonly string[];
   activeWorkspaceBindings: ReadonlyArray<Pick<WorkspaceBinding, 'project_id' | 'workspace_path'>>;
+  workspaceRootPath: string | null;
   profile: AppStateProfile;
   readStatus?: AgentPackageStatusReader;
 }) {
   const readStatus = input.readStatus ?? runOplAgentPackageStatus;
   const statuses: Record<string, JsonRecord> = {};
   for (const packageId of input.packageIds) {
-    const binding = input.activeWorkspaceBindings.find((entry) =>
-      canonicalAgentPackageId(entry.project_id) === packageId);
+    const context = appAgentPackageStatusContext(
+      packageId,
+      input.activeWorkspaceBindings,
+      input.workspaceRootPath,
+    );
     try {
       const status = readStatus({
         packageId,
-        ...(binding
-          ? {
-              scope: 'workspace' as const,
-              targetWorkspace: binding.workspace_path,
-            }
-          : {}),
+        ...context,
         recoverRuntimeSource: false,
         detail: input.profile,
       }).opl_agent_package_status;
@@ -250,6 +249,19 @@ export function buildAppAgentPackageStatuses(input: {
     }
   }
   return statuses;
+}
+
+function appAgentPackageStatusContext(
+  packageId: string,
+  activeWorkspaceBindings: ReadonlyArray<Pick<WorkspaceBinding, 'project_id' | 'workspace_path'>>,
+  workspaceRootPath: string | null,
+) {
+  const binding = activeWorkspaceBindings.find((entry) =>
+    canonicalAgentPackageId(entry.project_id) === packageId);
+  const targetWorkspace = binding?.workspace_path ?? workspaceRootPath;
+  return targetWorkspace
+    ? { scope: 'workspace' as const, targetWorkspace }
+    : {};
 }
 
 async function buildProviderState(profile: AppStateProfile) {
@@ -600,15 +612,23 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
   const workspaceRoot = readOplWorkspaceRoot();
   const core = buildCoreState(profile);
   const actions = buildActionCatalog(contracts);
-  const agentPackagesReadback = listOplAgentPackages({ detail: profile }).opl_agent_packages;
   const activeWorkspaceBindings = listWorkspaceBindings().filter((binding) => binding.status === 'active');
+  const agentPackagesReadback = listOplAgentPackages({
+    detail: profile,
+    statusContext: (packageId) => appAgentPackageStatusContext(
+      packageId,
+      activeWorkspaceBindings,
+      workspaceRoot.selected_path,
+    ),
+  }).opl_agent_packages;
   const packageIds = [...new Set([
     ...CANONICAL_OPL_PACKAGE_IDS,
-    ...agentPackagesReadback.installed_packages.map((lock) => lock.package_id),
+    ...agentPackagesReadback.directory.entries.map((entry) => entry.package_id),
   ])];
   const agentPackageStatuses = buildAppAgentPackageStatuses({
     packageIds,
     activeWorkspaceBindings,
+    workspaceRootPath: workspaceRoot.selected_path,
     profile,
   });
   const packageStatusFailures = Object.entries(agentPackageStatuses)
@@ -625,7 +645,7 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
       list_surface: 'opl packages list --json',
       status_surface: 'opl packages status --package-id <package_id> --json',
     },
-    directory: agentPackagesReadback,
+    directory: agentPackagesReadback.directory,
     status_index: {
       surface_kind: 'opl_agent_package_status_index',
       status: packageStatusFailures.length > 0 ? 'attention_required' : 'available',

@@ -2903,18 +2903,66 @@
             "required": [
               "surface_kind",
               "status",
+              "directory",
+              "registry_cache",
               "installed_package_count",
               "installed_packages",
-              "package_dependency_readiness",
-              "materialization_readiness",
-              "operational_ready",
-              "launch_allowed",
-              "allowed_when_blocked",
+              "conditions",
+              "recommended_action",
+              "lifecycle_ux",
               "lifecycle_receipts",
               "owner_route_readback",
               "authority_boundary"
             ],
-            "additionalProperties": true
+            "additionalProperties": true,
+            "properties": {
+              "directory": {
+                "type": "object",
+                "required": [
+                  "surface_kind",
+                  "status",
+                  "source_catalog_kind",
+                  "entry_count",
+                  "installed_package_count",
+                  "installable_package_count",
+                  "entries",
+                  "authority_boundary"
+                ],
+                "additionalProperties": true,
+                "properties": {
+                  "surface_kind": {
+                    "const": "opl_agent_package_directory.v1"
+                  },
+                  "entries": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "package_id",
+                        "display_name",
+                        "publisher",
+                        "description",
+                        "tags",
+                        "package_role",
+                        "trust_tier",
+                        "source_explanation",
+                        "manifest_url",
+                        "selected_version",
+                        "stable_version",
+                        "installed",
+                        "activated",
+                        "installability",
+                        "readiness",
+                        "recommended_action",
+                        "recommended_action_ref",
+                        "available_actions"
+                      ],
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       },

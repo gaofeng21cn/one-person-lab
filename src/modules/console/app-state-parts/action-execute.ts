@@ -474,7 +474,7 @@ async function executeDirectAppAction(
     options.actionId === 'install_from_manifest_url'
     || options.actionId === 'agent_package_install_from_manifest_url'
   ) {
-    const installPayload = agentPackageInstallPayload(options.payload);
+    const installPayload = agentPackageInstallPayload(options.payload, { allowPackageOnly: true });
     return {
       delegatedSurface: requireAgentPackageDelegatedSurface(options.actionId),
       result: await runOplAgentPackageInstall({

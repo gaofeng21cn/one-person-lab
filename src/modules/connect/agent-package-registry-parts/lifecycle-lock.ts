@@ -216,6 +216,7 @@ export function buildLock(input: {
     surface_kind: 'opl_agent_package_lock',
     package_id: input.manifest.package_id,
     agent_id: input.manifest.agent_id,
+    package_role: input.manifest.package_role,
     display_name: input.manifest.display_name,
     publisher: input.manifest.publisher,
     version_or_source_digest: distributionPayload

@@ -24,7 +24,28 @@ import type {
   AgentPackageProfileSurfaceConfig,
   AgentPackageRegistryCache,
   AgentPackageRegistryEntry,
+  AgentPackageRole,
 } from './types.ts';
+
+const AGENT_PACKAGE_ROLES = new Set<AgentPackageRole>([
+  'standard_agent',
+  'framework_capability_package',
+  'workflow_profile',
+]);
+
+function normalizeAgentPackageRole(value: unknown, field: string): AgentPackageRole | null {
+  const role = stringValue(value);
+  if (!role) return null;
+  if (!AGENT_PACKAGE_ROLES.has(role as AgentPackageRole)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package registry role is invalid.', {
+      field,
+      role,
+      allowed_roles: [...AGENT_PACKAGE_ROLES],
+      failure_code: 'agent_package_registry_role_invalid',
+    });
+  }
+  return role as AgentPackageRole;
+}
 
 function normalizeCapabilityDependencies(
   value: unknown,
@@ -389,15 +410,37 @@ export function normalizeRegistryEntry(entry: Record<string, unknown>, index: nu
   }
   const manifestUrl = stringValue(entry.manifest_url)!;
   const versionSourceRef = stringValue(entry.version_source_ref)!;
-  validateUrlLike(manifestUrl, `entries.${index}.manifest_url`);
-  validateUrlLike(versionSourceRef, `entries.${index}.version_source_ref`);
+  if (!manifestUrl.startsWith('opl+oci://')) {
+    validateUrlLike(manifestUrl, `entries.${index}.manifest_url`);
+  }
+  if (!versionSourceRef.startsWith('opl+oci://')) {
+    validateUrlLike(versionSourceRef, `entries.${index}.version_source_ref`);
+  }
+  const displayName = stringValue(entry.display_name)!;
+  const packageRole = normalizeAgentPackageRole(entry.package_role, `entries.${index}.package_role`);
+  const selectedVersion = stringValue(entry.selected_version);
+  const stableVersion = stringValue(entry.stable_version);
+  const manifestValidation = stringValue(entry.manifest_validation) ?? 'deferred';
+  if (!['deferred', 'fetched_manifest', 'catalog_inline_manifest'].includes(manifestValidation)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package registry manifest validation state is invalid.', {
+      entry_index: index,
+      manifest_validation: manifestValidation,
+      failure_code: 'agent_package_registry_manifest_validation_invalid',
+    });
+  }
   return {
     package_id: packageId!,
-    display_name: stringValue(entry.display_name)!,
+    display_name: displayName,
     publisher: stringValue(entry.publisher)!,
+    description: stringValue(entry.description) ?? `${displayName} package.`,
+    tags: uniqueStrings([...stringList(entry.tags), ...(packageRole ? [packageRole] : [])]),
+    package_role: packageRole,
     source: stringValue(entry.source)!,
     manifest_url: manifestUrl,
     version_source_ref: versionSourceRef,
+    selected_version: selectedVersion,
+    stable_version: stableVersion,
+    manifest_validation: manifestValidation as AgentPackageRegistryEntry['manifest_validation'],
     trust_tier: stringValue(entry.trust_tier)!,
     starter_default: entry.starter_default === true,
     codex_visible_entry: stringValue(entry.codex_visible_entry),
@@ -547,6 +590,15 @@ export function normalizeManifest(payload: unknown, manifestUrl: string): AgentP
       failure_code: 'invalid_package_manifest',
     });
   }
+  const declaredPackageRole = stringValue(payload.package_role);
+  if (declaredPackageRole && declaredPackageRole !== 'standard_agent') {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest declares an incompatible package role.', {
+      manifest_url: manifestUrl,
+      declared_role: declaredPackageRole,
+      expected_role: 'standard_agent',
+      failure_code: 'agent_package_manifest_role_invalid',
+    });
+  }
   const capabilityDependencies = normalizeCapabilityDependencies(payload.capability_dependencies, manifestUrl);
   const capabilityProvider = normalizeCapabilityProvider(payload.capability_provider);
   const healthCheck = isRecord(payload.health_check) ? payload.health_check : {};
@@ -623,6 +675,7 @@ export function normalizeManifest(payload: unknown, manifestUrl: string): AgentP
   return {
     package_id: canonicalManifestIdentity(payload.package_id, 'package_id'),
     agent_id: canonicalManifestIdentity(payload.agent_id, 'agent_id'),
+    package_role: 'standard_agent',
     display_name: stringValue(payload.display_name)!,
     publisher: stringValue(payload.publisher)!,
     version: normalizePackageVersion(payload.version),
@@ -744,6 +797,7 @@ export function normalizeCapabilityPackageManifest(payload: unknown, manifestUrl
   return {
     package_id: packageId,
     agent_id: null,
+    package_role: 'framework_capability_package',
     display_name: assertStringValue(payload.display_name, 'display_name'),
     publisher: assertStringValue(payload.publisher, 'publisher'),
     version: normalizePackageVersion(payload.version),
@@ -841,6 +895,7 @@ export function normalizeWorkflowProfilePackageManifest(payload: unknown, manife
   return {
     package_id: packageId,
     agent_id: null,
+    package_role: 'workflow_profile',
     display_name: assertStringValue(payload.display_name, 'display_name'),
     publisher: assertStringValue(payload.publisher, 'publisher'),
     version: normalizePackageVersion(payload.version),

@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
+import { packageRoleFromInstalledLock } from './package-role.ts';
 import { nowIso, sha256Text } from './shared.ts';
 import type {
   AgentPackageLock,
@@ -282,6 +283,7 @@ export function materializeCapabilityScopeFromLock(input: {
     provider: {
       package_id: input.provider.package_id,
       agent_id: input.provider.agent_id,
+      package_role: packageRoleFromInstalledLock(input.provider),
       display_name: input.provider.display_name,
       publisher: input.provider.publisher,
       version: input.provider.package_version,

@@ -98,6 +98,10 @@ import {
   ownerRouteReadback,
 } from './agent-package-registry-parts/readback.ts';
 import {
+  buildAgentPackageDirectory,
+  enrichRegistryCacheManifestMetadata,
+} from './agent-package-registry-parts/directory.ts';
+import {
   fetchJsonSource,
   normalizeSourceKind,
   nowIso,
@@ -856,7 +860,8 @@ export async function runOplAgentPackageRegistryRefresh(input: AgentPackageRegis
       required: ['--registry-url'],
     });
   }
-  const { fetched, cache } = await fetchAndValidateRegistry(registryUrl);
+  const { fetched, cache: fetchedCache } = await fetchAndValidateRegistry(registryUrl);
+  const cache = await enrichRegistryCacheManifestMetadata(fetchedCache);
   writeRegistryCache(cache);
   const lifecycleUx = agentPackageLifecycleSummaryReadback({ packages: [] });
   const receipt = lifecycleReceipt({
@@ -2487,7 +2492,12 @@ export function runOplAgentPackageStatus(input: {
   };
 }
 
-export function listOplAgentPackages(input: { detail?: 'fast' | 'full' } = {}) {
+export function listOplAgentPackages(input: {
+  detail?: 'fast' | 'full';
+  statusContext?: (packageId: string) => Pick<AgentPackagePackageActionInput, 'scope' | 'targetWorkspace' | 'targetQuest'> | null;
+  readStatus?: typeof runOplAgentPackageStatus;
+} = {}) {
+  const detail = input.detail ?? 'fast';
   const paths = resolveOplStatePaths();
   const registryCache = readRegistryCache();
   const { index: lockIndex } = readRecoveredLockIndex();
@@ -2500,12 +2510,28 @@ export function listOplAgentPackages(input: { detail?: 'fast' | 'full' } = {}) {
     }
   }
   const lifecycleUx = agentPackageLifecycleSummaryReadback({ packages: lockIndex.packages });
+  const directory = buildAgentPackageDirectory({
+    registryCache,
+    locks: lockIndex.packages,
+    detail,
+    actionContext: input.statusContext,
+    readStatus: (packageId) => {
+      const context = input.statusContext?.(packageId) ?? {};
+      return (input.readStatus ?? runOplAgentPackageStatus)({
+        packageId,
+        detail,
+        recoverRuntimeSource: false,
+        ...context,
+      }).opl_agent_package_status;
+    },
+  });
   return {
     version: 'g2',
     opl_agent_packages: {
       surface_kind: 'opl_agent_package_readback',
       status: 'available',
       registry_cache: registryCache,
+      directory,
       installed_package_count: lockIndex.packages.length,
       installed_packages: lockIndex.packages,
       conditions: lifecycleUx.conditions,

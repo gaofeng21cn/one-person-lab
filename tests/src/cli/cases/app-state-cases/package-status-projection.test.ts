@@ -111,6 +111,7 @@ test('app state isolates one invalid package status while direct status reads re
   const statuses = buildAppAgentPackageStatuses({
     packageIds: ['mas', 'obf'],
     activeWorkspaceBindings: [],
+    workspaceRootPath: null,
     profile: 'fast',
     readStatus,
   });
@@ -126,6 +127,57 @@ test('app state isolates one invalid package status while direct status reads re
   assert.equal(availability.find((entry) => entry.agent_id === 'mas')?.availability, 'available');
   assert.equal(availability.find((entry) => entry.agent_id === 'obf')?.availability, 'unavailable');
   assert.equal(availability.find((entry) => entry.agent_id === 'obf')?.reason, 'package_status_read_failed');
+});
+
+test('app package status uses a package binding before falling back to the selected workspace root', () => {
+  const selectedWorkspaceRoot = '/tmp/opl-selected-workspace';
+  const packageWorkspace = '/tmp/opl-mas-workspace';
+  const requests: Array<{ packageId: string; scope?: string; targetWorkspace?: string }> = [];
+  const readStatus = ((input: { packageId: string; scope?: string; targetWorkspace?: string }) => {
+    requests.push(input);
+    const materialized = input.scope === 'workspace'
+      && (input.targetWorkspace === packageWorkspace || input.targetWorkspace === selectedWorkspaceRoot);
+    return {
+      opl_agent_package_status: {
+        package_id: input.packageId,
+        status: materialized ? 'available' : 'attention_needed',
+        recommended_action: materialized ? null : 'agent_package_activate',
+        installed_packages: [{
+          package_version: '1.0.0',
+          source_kind: 'fixture',
+          lock_ref: `opl://agent-package-lock/${input.packageId}/1.0.0/fixture`,
+          physical_surface: null,
+          exposure_state: 'visible',
+        }],
+        package_dependency_readiness: { status: 'current', operational_ready: true },
+        operational_ready: materialized,
+        operational_ready_scope: 'package_dependency_scope_and_runtime_source',
+        launch_allowed: materialized,
+        launch_blocked_reason: materialized ? null : 'scope_materialization_scope_required',
+        materialization_readiness: { status: materialized ? 'current' : 'scope_required' },
+        runtime_source_readiness: { status: 'current', operational_ready: true },
+        allowed_when_blocked: ['status', 'doctor', 'repair'],
+        repair_action: null,
+      },
+    };
+  }) as any;
+
+  const statuses = buildAppAgentPackageStatuses({
+    packageIds: ['mas', 'opl-flow'],
+    activeWorkspaceBindings: [{ project_id: 'mas', workspace_path: packageWorkspace }],
+    workspaceRootPath: selectedWorkspaceRoot,
+    profile: 'fast',
+    readStatus,
+  });
+
+  assert.equal(requests.find((entry) => entry.packageId === 'mas')?.targetWorkspace, packageWorkspace);
+  assert.equal(requests.find((entry) => entry.packageId === 'opl-flow')?.targetWorkspace, selectedWorkspaceRoot);
+  assert.equal(statuses['opl-flow'].status, 'available');
+  assert.equal(statuses['opl-flow'].operational_ready, true);
+  assert.equal(
+    (statuses['opl-flow'].materialization_readiness as Record<string, unknown>).status,
+    'current',
+  );
 });
 
 test('fast managed runtime readiness rejects a checkout path that is not a directory', () => {
