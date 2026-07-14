@@ -117,7 +117,6 @@ permissions:
   contents: read
   packages: write
   id-token: write
-  attestations: write
 
 concurrency:
   group: opl-package-publication-${{ github.repository_owner }}
@@ -589,6 +588,15 @@ jobs:
           echo "OPL_RELEASE_SET_CARRIER_REF=$generation_ref" >> "$GITHUB_ENV"
           echo "OPL_RELEASE_SET_CARRIER_DIGEST=$digest" >> "$GITHUB_ENV"
 
+      - name: Verify exact Release Set file checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          (
+            cd dist/opl-packages
+            sha256sum --check SHA256SUMS
+          )
+
       - name: Write candidate promotion receipt
         shell: bash
         run: |
@@ -623,6 +631,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
+      max-parallel: 3
       matrix:
         include:
           - component_id: opl-release-set
@@ -650,6 +659,17 @@ jobs:
           name: opl-release-set-${{ needs.package-release-set.outputs.release_set_generation }}
           path: dist/opl-packages
 
+      - name: Setup Cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          cosign-release: v3.1.1
+
+      - name: Authenticate GHCR for OCI attestations
+        shell: bash
+        env:
+          GHCR_TOKEN: ${{ github.token }}
+        run: echo "$GHCR_TOKEN" | cosign login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+
       - name: Resolve exact OCI digest
         id: subject
         shell: bash
@@ -666,24 +686,45 @@ jobs:
           [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
 
-      - name: Publish OCI provenance referrer
-        uses: actions/attest@v4
-        with:
-          subject-name: ghcr.io/${{ github.repository_owner }}/${{ matrix.image_suffix }}
-          subject-digest: ${{ steps.subject.outputs.digest }}
-          predicate-type: https://slsa.dev/provenance/v1
-          predicate-path: dist/opl-packages/opl-release-provenance.json
-          push-to-registry: true
-          create-storage-record: false
+      - name: Publish and verify OCI provenance and SBOM attestations
+        shell: bash
+        env:
+          OCI_SUBJECT: ghcr.io/${{ github.repository_owner }}/${{ matrix.image_suffix }}@${{ steps.subject.outputs.digest }}
+        run: |
+          set -euo pipefail
+          retry() {
+            local attempt
+            for attempt in 1 2 3; do
+              if "$@"; then
+                return 0
+              fi
+              if [ "$attempt" -eq 3 ]; then
+                return 1
+              fi
+              echo "::warning::Attestation command failed on attempt ${attempt}; retrying after $((attempt * 10)) seconds."
+              sleep "$((attempt * 10))"
+            done
+          }
 
-      - name: Publish OCI SBOM referrer
-        uses: actions/attest@v4
-        with:
-          subject-name: ghcr.io/${{ github.repository_owner }}/${{ matrix.image_suffix }}
-          subject-digest: ${{ steps.subject.outputs.digest }}
-          sbom-path: dist/opl-packages/opl-release-set.spdx.json
-          push-to-registry: true
-          create-storage-record: false
+          certificate_identity="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/.github/workflows/packages.yml@${GITHUB_REF}"
+          retry cosign attest --yes --timeout 60s --oidc-provider github-actions \
+            --type slsaprovenance1 \
+            --predicate dist/opl-packages/opl-release-provenance.json \
+            "$OCI_SUBJECT"
+          retry cosign attest --yes --timeout 60s --oidc-provider github-actions \
+            --type spdxjson \
+            --predicate dist/opl-packages/opl-release-set.spdx.json \
+            "$OCI_SUBJECT"
+          retry cosign verify-attestation --timeout 60s \
+            --type slsaprovenance1 \
+            --certificate-identity "$certificate_identity" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            "$OCI_SUBJECT"
+          retry cosign verify-attestation --timeout 60s \
+            --type spdxjson \
+            --certificate-identity "$certificate_identity" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            "$OCI_SUBJECT"
 
   publish-candidate-receipt:
     name: Publish attested candidate receipt

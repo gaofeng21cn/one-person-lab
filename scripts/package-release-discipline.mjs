@@ -242,8 +242,15 @@ function validateWorkflow(manifest, manifestPath, failures) {
   assertCondition(/--expected-digest/.test(source), 'Package workflow must verify exact digest readback', failures);
   assertCondition(/finalize-package-channel-digests\.mjs[\s\S]*--check/.test(source), 'Package workflow must verify a complete Release Set BOM', failures);
   assertCondition(/owner-cohort-lock\.json/.test(source) && /owner_cohort_artifact_name/.test(source), 'Package workflow must consume a frozen owner cohort lock', failures);
-  assertCondition(/generate-release-supply-chain\.mjs/.test(source) && /actions\/attest@v4/.test(source), 'Package workflow must generate and attest SBOM/provenance', failures);
-  assertCondition(/push-to-registry:\s*true/.test(source), 'Package workflow must publish OCI attestation referrers', failures);
+  assertCondition(/generate-release-supply-chain\.mjs/.test(source)
+    && /sha256sum --check SHA256SUMS/.test(source), 'Package workflow must generate supply-chain evidence and verify exact Release Set file checksums', failures);
+  assertCondition(/sigstore\/cosign-installer@[0-9a-f]{40}/.test(source)
+    && /cosign attest[\s\S]*--type slsaprovenance1/.test(source)
+    && /cosign attest[\s\S]*--type spdxjson/.test(source)
+    && source.match(/cosign verify-attestation/g)?.length === 2
+    && /cosign login ghcr\.io/.test(source), 'Package workflow must publish and verify keyless SLSA and SPDX attestations directly in GHCR', failures);
+  assertCondition(!/actions\/attest@/.test(source)
+    && !/attestations:\s*write/.test(source), 'Package workflow must not depend on the GitHub repository Attestations API', failures);
   assertCondition(/write-release-promotion-receipt\.mjs/.test(source), 'Candidate publication must emit a machine-readable promotion receipt', failures);
   assertCondition(/release_set_generation:\s*\$\{\{ steps\.release\.outputs\.release_set_generation \}\}/.test(source)
     && /opl-release-set-\$\{\{ needs\.package-release-set\.outputs\.release_set_generation \}\}/.test(source), 'Downstream publication jobs must consume the normalized Release Set generation', failures);
