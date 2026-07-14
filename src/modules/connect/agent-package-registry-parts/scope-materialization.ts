@@ -202,6 +202,49 @@ function scopeTransactionRoot(targetRoot: string, transactionId: string) {
   return path.join(targetRoot, '.codex', '.opl-package-transactions', transactionId);
 }
 
+export function assertCapabilityScopeRollbackReady(
+  materialization: AgentPackageScopeMaterialization,
+) {
+  const transactionRoot = scopeTransactionRoot(
+    materialization.target_root,
+    materialization.transaction_id,
+  );
+  if (!fs.existsSync(transactionRoot) || !fs.statSync(transactionRoot).isDirectory()) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Package scope rollback backup is missing.',
+      {
+        provider_package_id: materialization.provider_package_id,
+        target_root: materialization.target_root,
+        transaction_id: materialization.transaction_id,
+        failure_code: 'agent_package_scope_rollback_backup_missing',
+      },
+    );
+  }
+  const targetSkillsRoot = path.join(materialization.target_root, '.codex', 'skills');
+  for (const skillId of materialization.managed_skill_ids) {
+    const targetSkill = path.join(targetSkillsRoot, skillId);
+    const expectedDigest = materialization.skill_digests[skillId];
+    const actualDigest = fs.existsSync(targetSkill)
+      ? skillDigest(targetSkillsRoot, skillId)
+      : null;
+    if (!expectedDigest || actualDigest !== expectedDigest) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Package scope rollback target changed after optimization.',
+        {
+          provider_package_id: materialization.provider_package_id,
+          target_root: materialization.target_root,
+          skill_id: skillId,
+          expected_digest: expectedDigest ?? null,
+          actual_digest: actualDigest,
+          failure_code: 'agent_package_scope_rollback_conflict',
+        },
+      );
+    }
+  }
+}
+
 export function finalizeCapabilityScopeTransaction(materialization: AgentPackageScopeMaterialization) {
   fs.rmSync(scopeTransactionRoot(materialization.target_root, materialization.transaction_id), { recursive: true, force: true });
 }

@@ -8,6 +8,7 @@ import { resolveOplStatePaths } from '../../../kernel/runtime-state-paths.ts';
 export type OplCompanionToolActionStatus = 'ready' | 'installed' | 'updated' | 'missing' | 'failed';
 export type OplCompanionToolId = 'officecli' | 'mineru-open-api';
 export type OplCompanionToolCurrentness = 'current' | 'update_available' | 'unknown' | 'missing';
+export type OplCompanionNetworkAccess = 'allowed' | 'forbidden';
 
 export type OplCompanionToolSyncItem = {
   tool_id: OplCompanionToolId;
@@ -350,12 +351,15 @@ function installMineruOpenApiTool(
   };
 }
 
-export function ensureOfficeCliTool(home: string): OplCompanionToolSyncItem {
+export function ensureOfficeCliTool(
+  home: string,
+  options: { networkAccess?: OplCompanionNetworkAccess } = {},
+): OplCompanionToolSyncItem {
   const existing = resolveOfficeCliTool(home);
   if (existing) {
     return existing;
   }
-  if (companionToolInstallDisabled()) {
+  if (options.networkAccess === 'forbidden' || companionToolInstallDisabled()) {
     return {
       tool_id: 'officecli',
       binary_path: null,
@@ -373,12 +377,15 @@ export function ensureOfficeCliTool(home: string): OplCompanionToolSyncItem {
   return installOfficeCliTool();
 }
 
-export function ensureMineruOpenApiTool(home: string): OplCompanionToolSyncItem {
+export function ensureMineruOpenApiTool(
+  home: string,
+  options: { networkAccess?: OplCompanionNetworkAccess } = {},
+): OplCompanionToolSyncItem {
   const existing = resolveMineruOpenApiTool(home);
   if (existing) {
     return existing;
   }
-  if (companionToolInstallDisabled()) {
+  if (options.networkAccess === 'forbidden' || companionToolInstallDisabled()) {
     return {
       tool_id: 'mineru-open-api',
       binary_path: null,

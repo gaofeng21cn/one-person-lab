@@ -28,6 +28,7 @@ const registryCases = [
   ['connect remove', 'connect_remove', ['module'], undefined],
   ['packages install', 'packages_install', ['manifest-url', 'registry-url', 'package-id', 'trust-tier', 'source-kind', 'agent-root', 'keep-migration', 'scope', 'target-workspace', 'target-quest', 'dry-run'], 'OPL Packages'],
   ['packages update', 'packages_update', ['manifest-url', 'registry-url', 'package-id', 'trust-tier', 'source-kind', 'agent-root', 'keep-migration', 'scope', 'target-workspace', 'target-quest', 'dry-run'], 'OPL Packages'],
+  ['packages optimize', 'packages_optimize', ['package-id', 'scope', 'target-workspace', 'target-quest', 'dry-run'], 'OPL Packages'],
   ['packages repair', 'packages_repair', ['manifest-url', 'registry-url', 'package-id', 'trust-tier', 'source-kind', 'agent-root', 'scope', 'target-workspace', 'target-quest', 'dry-run'], 'OPL Packages'],
   ['packages link-framework', 'packages_link_framework', ['agent-root', 'check', 'dry-run'], 'OPL Packages'],
   ['status workspace', 'status_workspace', ['path'], 'OPL Console'],

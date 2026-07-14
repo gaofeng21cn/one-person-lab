@@ -3709,6 +3709,94 @@
         }
       ]
     },
+    "packages_optimize": {
+      "command_id": "packages optimize",
+      "owner": "OPL Packages",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "package-id",
+          "flag": "--package-id",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Installed OPL Package id whose locked local source is reconciled."
+        },
+        {
+          "name": "scope",
+          "flag": "--scope",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Optional installed materialization scope: workspace or quest."
+        },
+        {
+          "name": "target-workspace",
+          "flag": "--target-workspace",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Workspace root whose existing package scope is reconciled."
+        },
+        {
+          "name": "target-quest",
+          "flag": "--target-quest",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Quest root whose existing package scope is reconciled."
+        },
+        {
+          "name": "dry-run",
+          "flag": "--dry-run",
+          "value_kind": "boolean",
+          "required": false,
+          "summary": "Validate installed source reconciliation without writing package or user state."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "opl_agent_package_optimize"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "opl_agent_package_optimize": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "dry_run",
+              "source_selection",
+              "network_accessed",
+              "remote_dependency_policy",
+              "package_lock",
+              "physical_surface",
+              "lifecycle_receipt",
+              "owner_route_readback",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Packages",
+        "surface": "opl_packages_lifecycle"
+      },
+      "positional_args": [
+        {
+          "name": "package_id",
+          "required": true,
+          "summary": "Installed OPL Package id or alias."
+        }
+      ]
+    },
     "packages_rollback": {
       "command_id": "packages rollback",
       "owner": "OPL Packages",

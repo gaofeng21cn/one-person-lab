@@ -11,7 +11,10 @@ function writeFile(filePath: string, content: string) {
   fs.writeFileSync(filePath, content, 'utf8');
 }
 
-function writeOplFlowPackage(root: string) {
+function writeOplFlowPackage(
+  root: string,
+  options: { includeRemoteCompanions?: boolean } = {},
+) {
   const sourceRoot = path.join(root, 'opl-flow-source');
   const policy = {
     schema: 'opl_flow_workflow_policy.v1',
@@ -25,7 +28,42 @@ function writeOplFlowPackage(root: string) {
       activation: 'always',
       source: 'fixture',
     }],
-    recommends: [],
+    recommends: options.includeRemoteCompanions
+      ? [
+          {
+            id: 'officecli',
+            kind: 'cli',
+            offline_bundle: 'full',
+            online_install_default: true,
+            activation: 'task_routed',
+            source: 'fixture-remote',
+          },
+          {
+            id: 'mineru-open-api',
+            kind: 'cli',
+            offline_bundle: 'full',
+            online_install_default: true,
+            activation: 'task_routed',
+            source: 'fixture-remote',
+          },
+          {
+            id: 'ui-ux-pro-max',
+            kind: 'codex_skill',
+            offline_bundle: 'full',
+            online_install_default: true,
+            activation: 'explicit',
+            source: 'fixture-remote',
+          },
+          {
+            id: 'mineru-document-extractor',
+            kind: 'codex_skill',
+            offline_bundle: 'full',
+            online_install_default: true,
+            activation: 'explicit',
+            source: 'fixture-remote',
+          },
+        ]
+      : [],
     compatible_optional: [],
     conflicts: [
       {
@@ -412,5 +450,165 @@ test('managed policy rollback helpers refuse conflicting TOML tables and recreat
     assert.equal(fs.existsSync(retained.backup_root!), false);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('installed-source optimize is offline, dry-run safe, and explicitly rolls back policy and profile state', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-flow-installed-source-optimize-'));
+  const home = path.join(root, 'home');
+  const codexHome = path.join(home, '.codex');
+  const stateDir = path.join(root, 'state');
+  const fakeBin = path.join(root, 'fake-bin');
+  const commandLog = path.join(root, 'remote-command.log');
+  const configPath = path.join(codexHome, 'config.toml');
+  const manifestPath = writeOplFlowPackage(root, { includeRemoteCompanions: true });
+  const sourceRoot = path.join(root, 'opl-flow-source');
+  const profilePath = path.join(codexHome, 'AGENTS.md');
+  const conflictPath = path.join(codexHome, 'plugins', 'cache', 'ponytail');
+  const baseEnv = {
+    HOME: home,
+    CODEX_HOME: codexHome,
+    OPL_STATE_DIR: stateDir,
+    OPL_COMPANION_SOURCES_ROOT: path.join(codexHome, 'opl-companion-sources'),
+  };
+  try {
+    writeFile(configPath, '[projects."/tmp/fixture"]\ntrust_level = "trusted"\n');
+    await runCliAsync([
+      'packages', 'install', '--manifest-url', manifestPath, '--trust-tier', 'first_party',
+    ], { ...baseEnv, OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' });
+    const originalProfile = fs.readFileSync(profilePath, 'utf8');
+
+    writeFile(path.join(sourceRoot, 'profile', 'runtime-profile'), '你始终用中文回复。\nOptimize fixture.\n');
+    writeFile(path.join(conflictPath, 'restored.txt'), 'restore after rollback\n');
+    fs.appendFileSync(
+      configPath,
+      '\n[marketplaces.ponytail]\nsource_type = "local"\nsource = "/tmp/ponytail-optimize"\n',
+      'utf8',
+    );
+    for (const command of ['git', 'curl', 'npm']) {
+      const commandPath = path.join(fakeBin, command);
+      writeFile(commandPath, `#!/bin/sh\nprintf '%s\\n' '${command}' >> '${commandLog}'\nexit 97\n`);
+      fs.chmodSync(commandPath, 0o755);
+    }
+    const optimizeEnv = {
+      ...baseEnv,
+      PATH: `${fakeBin}${path.delimiter}${process.env.PATH ?? ''}`,
+      OPL_COMPANION_DISABLE_REMOTE_INSTALL: '0',
+      OPL_COMPANION_SKIP_LATEST_LOOKUP: '0',
+    };
+    const lockPath = path.join(stateDir, 'agent-package-locks.json');
+    const ledgerPath = path.join(stateDir, 'agent-package-lifecycle-ledger.json');
+    const beforeDryRun = {
+      lock: fs.readFileSync(lockPath, 'utf8'),
+      ledger: fs.readFileSync(ledgerPath, 'utf8'),
+      config: fs.readFileSync(configPath, 'utf8'),
+      profile: fs.readFileSync(profilePath, 'utf8'),
+    };
+    const preview = runCli(['packages', 'optimize', 'opl-flow', '--dry-run'], optimizeEnv) as any;
+    assert.equal(preview.opl_agent_package_optimize.status, 'validated_no_write');
+    assert.equal(preview.opl_agent_package_optimize.source_selection, 'installed_package_lock');
+    assert.equal(preview.opl_agent_package_optimize.network_accessed, false);
+    assert.equal(preview.opl_agent_package_optimize.remote_dependency_policy, 'forbidden');
+    assert.equal(fs.readFileSync(lockPath, 'utf8'), beforeDryRun.lock);
+    assert.equal(fs.readFileSync(ledgerPath, 'utf8'), beforeDryRun.ledger);
+    assert.equal(fs.readFileSync(configPath, 'utf8'), beforeDryRun.config);
+    assert.equal(fs.readFileSync(profilePath, 'utf8'), beforeDryRun.profile);
+
+    const optimized = runCli(['packages', 'optimize', 'opl-flow'], optimizeEnv) as any;
+    const optimization = optimized.opl_agent_package_optimize;
+    assert.equal(optimization.status, 'optimized');
+    assert.equal(optimization.lifecycle_receipt.source_selection, 'installed_package_lock');
+    assert.equal(optimization.lifecycle_receipt.network_accessed, false);
+    assert.equal(optimization.lifecycle_receipt.remote_dependency_policy, 'forbidden');
+    assert.equal(fs.existsSync(commandLog), false, 'optimize must not invoke git, curl, or npm');
+    assert.equal(fs.existsSync(conflictPath), false);
+    assert.doesNotMatch(fs.readFileSync(configPath, 'utf8'), /marketplaces\.ponytail/);
+    assert.match(fs.readFileSync(profilePath, 'utf8'), /Optimize fixture/);
+    assert.equal(
+      JSON.parse(fs.readFileSync(lockPath, 'utf8')).last_known_good_transactions.length,
+      1,
+    );
+
+    const rollbackPreviewState = {
+      lock: fs.readFileSync(lockPath, 'utf8'),
+      ledger: fs.readFileSync(ledgerPath, 'utf8'),
+      config: fs.readFileSync(configPath, 'utf8'),
+      profile: fs.readFileSync(profilePath, 'utf8'),
+    };
+    const rollbackPreview = runCli(['packages', 'rollback', 'opl-flow', '--dry-run'], optimizeEnv) as any;
+    assert.equal(rollbackPreview.opl_agent_package_rollback.status, 'validated_no_write');
+    assert.equal(rollbackPreview.opl_agent_package_rollback.network_accessed, false);
+    assert.equal(fs.readFileSync(lockPath, 'utf8'), rollbackPreviewState.lock);
+    assert.equal(fs.readFileSync(ledgerPath, 'utf8'), rollbackPreviewState.ledger);
+    assert.equal(fs.readFileSync(configPath, 'utf8'), rollbackPreviewState.config);
+    assert.equal(fs.readFileSync(profilePath, 'utf8'), rollbackPreviewState.profile);
+
+    fs.chmodSync(stateDir, 0o555);
+    const rollbackFailure = runCliFailure(['packages', 'rollback', 'opl-flow'], optimizeEnv);
+    fs.chmodSync(stateDir, 0o755);
+    assert.notEqual(rollbackFailure.status, 0);
+    assert.equal(fs.readFileSync(lockPath, 'utf8'), rollbackPreviewState.lock);
+    assert.equal(fs.readFileSync(ledgerPath, 'utf8'), rollbackPreviewState.ledger);
+    assert.doesNotMatch(fs.readFileSync(configPath, 'utf8'), /marketplaces\.ponytail/);
+    assert.match(fs.readFileSync(profilePath, 'utf8'), /Optimize fixture/);
+    assert.equal(fs.existsSync(conflictPath), false);
+
+    const rolledBack = runCli(['packages', 'rollback', 'opl-flow'], optimizeEnv) as any;
+    const rollback = rolledBack.opl_agent_package_rollback;
+    assert.equal(rollback.status, 'rolled_back');
+    assert.equal(rollback.source_selection, 'installed_package_lock');
+    assert.equal(rollback.network_accessed, false);
+    assert.equal(rollback.remote_dependency_policy, 'forbidden');
+    assert.equal(fs.existsSync(commandLog), false, 'optimize rollback must remain offline');
+    assert.equal(fs.readFileSync(path.join(conflictPath, 'restored.txt'), 'utf8'), 'restore after rollback\n');
+    assert.match(fs.readFileSync(configPath, 'utf8'), /marketplaces\.ponytail/);
+    assert.equal(fs.readFileSync(profilePath, 'utf8'), originalProfile);
+    assert.deepEqual(
+      JSON.parse(fs.readFileSync(lockPath, 'utf8')).last_known_good_transactions,
+      [],
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
+  }
+});
+
+test('failed installed-source optimize restores policy and profile state before returning failure', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-flow-optimize-failure-'));
+  const home = path.join(root, 'home');
+  const codexHome = path.join(home, '.codex');
+  const stateDir = path.join(root, 'state');
+  const configPath = path.join(codexHome, 'config.toml');
+  const profilePath = path.join(codexHome, 'AGENTS.md');
+  const conflictPath = path.join(codexHome, 'plugins', 'cache', 'ponytail');
+  const manifestPath = writeOplFlowPackage(root);
+  const env = {
+    HOME: home,
+    CODEX_HOME: codexHome,
+    OPL_STATE_DIR: stateDir,
+    OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
+  };
+  try {
+    writeFile(configPath, '[projects."/tmp/fixture"]\ntrust_level = "trusted"\n');
+    await runCliAsync([
+      'packages', 'install', '--manifest-url', manifestPath, '--trust-tier', 'first_party',
+    ], env);
+    const originalProfile = fs.readFileSync(profilePath, 'utf8');
+    writeFile(path.join(root, 'opl-flow-source', 'profile', 'runtime-profile'), 'updated on failed optimize\n');
+    writeFile(path.join(conflictPath, 'restored.txt'), 'must survive failed optimize\n');
+    fs.appendFileSync(configPath, '\n[marketplaces.ponytail]\nsource = "/tmp/failure"\n', 'utf8');
+    const lockBefore = fs.readFileSync(path.join(stateDir, 'agent-package-locks.json'), 'utf8');
+    const ledgerBefore = fs.readFileSync(path.join(stateDir, 'agent-package-lifecycle-ledger.json'), 'utf8');
+    fs.chmodSync(stateDir, 0o555);
+    const failure = runCliFailure(['packages', 'optimize', 'opl-flow'], env);
+    fs.chmodSync(stateDir, 0o755);
+    assert.notEqual(failure.status, 0);
+    assert.equal(fs.readFileSync(path.join(stateDir, 'agent-package-locks.json'), 'utf8'), lockBefore);
+    assert.equal(fs.readFileSync(path.join(stateDir, 'agent-package-lifecycle-ledger.json'), 'utf8'), ledgerBefore);
+    assert.equal(fs.readFileSync(profilePath, 'utf8'), originalProfile);
+    assert.equal(fs.readFileSync(path.join(conflictPath, 'restored.txt'), 'utf8'), 'must survive failed optimize\n');
+    assert.match(fs.readFileSync(configPath, 'utf8'), /marketplaces\.ponytail/);
+  } finally {
+    if (fs.existsSync(stateDir)) fs.chmodSync(stateDir, 0o755);
+    fs.rmSync(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
   }
 });

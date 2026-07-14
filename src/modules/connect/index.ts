@@ -67,6 +67,7 @@ export {
   runOplAgentPackageHomeShortcutPreferencesSet,
   runOplAgentPackageInstall,
   runOplAgentPackageManifestValidate,
+  runOplAgentPackageOptimize,
   runOplAgentPackageProfileApply,
   runOplAgentPackageRegistryRefresh,
   runOplAgentPackageRepair,

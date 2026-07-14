@@ -25,6 +25,7 @@ export type AgentPackageLifecycleAction =
   | 'manifest_validate'
   | 'install'
   | 'update'
+  | 'optimize'
   | 'repair'
   | 'activate'
   | 'use'
@@ -695,6 +696,9 @@ export type AgentPackageLifecycleReceipt = {
   scope_materializations?: AgentPackageScopeMaterialization[];
   managed_runtime_source?: AgentPackageManagedRuntimeSourceState | null;
   use_binding?: AgentPackageUseBinding;
+  source_selection?: 'installed_package_lock';
+  network_accessed?: false;
+  remote_dependency_policy?: 'forbidden';
 };
 
 export type AgentPackageUseBinding = {

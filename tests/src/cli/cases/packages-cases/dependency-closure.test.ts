@@ -208,6 +208,63 @@ test('MAS dependency closure update and rollback atomically rematerialize known 
   }
 });
 
+test('installed-source optimize records dependency and scope transactions and rollback consumes the retained scope backup', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-installed-source-scope-'));
+  const stateDir = path.join(root, 'state');
+  const codexHome = path.join(root, 'codex-home');
+  const workspace = path.join(root, 'workspace');
+  const providerRoot = path.join(root, 'provider');
+  const providerManifest = writeCapabilityProvider(providerRoot);
+  const consumerManifest = writeMasConsumer(path.join(root, 'consumer'), providerManifest);
+  const env = { OPL_STATE_DIR: stateDir, CODEX_HOME: codexHome };
+  const helperPath = path.join(workspace, '.codex', 'skills', 'medical-manuscript-writing', 'helper.txt');
+  try {
+    await runCliAsync([
+      'packages', 'install', '--manifest-url', consumerManifest, '--trust-tier', 'first_party',
+      '--scope', 'workspace', '--target-workspace', workspace,
+    ], env);
+    const originalHelper = fs.readFileSync(helperPath, 'utf8');
+    fs.writeFileSync(
+      path.join(providerRoot, 'skills', 'medical-manuscript-writing', 'helper.txt'),
+      'optimized installed source helper\n',
+      'utf8',
+    );
+
+    const optimized = runCli(['packages', 'optimize', 'mas'], env) as any;
+    const optimization = optimized.opl_agent_package_optimize;
+    assert.equal(optimization.status, 'optimized');
+    assert.deepEqual(
+      optimization.lifecycle_receipt.dependency_packages.map((entry: any) => entry.package_id).sort(),
+      ['mas', 'mas-scholar-skills'],
+    );
+    assert.equal(optimization.scope_materializations.length, 1);
+    assert.equal(optimization.lifecycle_receipt.scope_materializations.length, 1);
+    assert.equal(fs.readFileSync(helperPath, 'utf8'), 'optimized installed source helper\n');
+    const transactionRoot = path.join(
+      workspace,
+      '.codex',
+      '.opl-package-transactions',
+      optimization.scope_materializations[0].transaction_id,
+    );
+    assert.equal(fs.existsSync(transactionRoot), true);
+
+    const rolledBack = runCli(['packages', 'rollback', 'mas'], env) as any;
+    const rollback = rolledBack.opl_agent_package_rollback;
+    assert.equal(rollback.status, 'rolled_back');
+    assert.equal(rollback.source_selection, 'installed_package_lock');
+    assert.equal(rollback.network_accessed, false);
+    assert.equal(fs.readFileSync(helperPath, 'utf8'), originalHelper);
+    assert.equal(fs.existsSync(transactionRoot), false);
+    assert.deepEqual(
+      JSON.parse(fs.readFileSync(path.join(stateDir, 'agent-package-locks.json'), 'utf8'))
+        .last_known_good_transactions,
+      [],
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('MAS scope materialization never overwrites an unowned local Skill', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-scope-collision-'));
   const workspace = path.join(root, 'workspace');

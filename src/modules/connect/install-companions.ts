@@ -13,12 +13,14 @@ import {
   resolveMineruOpenApiTool,
   resolveOfficeCliTool,
   type OplCompanionToolId,
+  type OplCompanionNetworkAccess,
   type OplCompanionToolSyncItem,
 } from './install-companions-parts/tools.ts';
 
 export type {
   OplCompanionToolActionStatus,
   OplCompanionToolId,
+  OplCompanionNetworkAccess,
   OplCompanionToolSyncItem,
 } from './install-companions-parts/tools.ts';
 
@@ -155,8 +157,8 @@ function getMineruDocumentExtractorArchiveUrl() {
     || 'https://github.com/MinerU-Extract/mineru-document-extractor/archive/refs/heads/main.tar.gz';
 }
 
-function remoteCompanionInstallDisabled() {
-  return process.env.OPL_COMPANION_DISABLE_REMOTE_INSTALL === '1';
+function remoteCompanionInstallDisabled(networkAccess: OplCompanionNetworkAccess = 'allowed') {
+  return networkAccess === 'forbidden' || process.env.OPL_COMPANION_DISABLE_REMOTE_INSTALL === '1';
 }
 
 function forceSymlinkDirectory(sourcePath: string, targetPath: string) {
@@ -396,10 +398,14 @@ function resolveMineruDocumentExtractorSourceRoot(home: string) {
     || path.join(resolveCompanionSourcesRoot(home), 'mineru-document-extractor');
 }
 
-function materializeOfficeCliSkillSource(home: string, skillId: string) {
+function materializeOfficeCliSkillSource(
+  home: string,
+  skillId: string,
+  networkAccess: OplCompanionNetworkAccess,
+) {
   const repoDir = resolveOfficeCliSourceRoot(home);
   let refresh: ReturnType<typeof cloneOrUpdateRepo> | null = null;
-  if (isPathWithin(resolveCompanionSourcesRoot(home), repoDir) && !remoteCompanionInstallDisabled()) {
+  if (isPathWithin(resolveCompanionSourcesRoot(home), repoDir) && !remoteCompanionInstallDisabled(networkAccess)) {
     refresh = cloneOrUpdateRepo(getOfficeCliRepoUrl(), repoDir);
     if (!refresh.ok) {
       return {
@@ -433,10 +439,13 @@ function materializeOfficeCliSkillSource(home: string, skillId: string) {
   } : null;
 }
 
-function materializeUiUxProMaxSkillSource(home: string) {
+function materializeUiUxProMaxSkillSource(
+  home: string,
+  networkAccess: OplCompanionNetworkAccess,
+) {
   const repoDir = resolveUiUxProMaxSourceRoot(home);
   let refresh: ReturnType<typeof cloneOrUpdateRepo> | null = null;
-  if (isPathWithin(resolveCompanionSourcesRoot(home), repoDir) && !remoteCompanionInstallDisabled()) {
+  if (isPathWithin(resolveCompanionSourcesRoot(home), repoDir) && !remoteCompanionInstallDisabled(networkAccess)) {
     refresh = cloneOrUpdateRepo(getUiUxProMaxRepoUrl(), repoDir);
     if (!refresh.ok) return {
       report_path: repoDir, link_path: repoDir, refresh_status: 'manual_required' as const,
@@ -464,10 +473,13 @@ function materializeUiUxProMaxSkillSource(home: string) {
   return source ? { ...source, refresh_status: refresh?.status ?? 'current', refresh_note: refresh?.note ?? null, source_digest: refresh?.sourceDigest ?? null } : null;
 }
 
-function materializeMineruDocumentExtractorSkillSource(home: string) {
+function materializeMineruDocumentExtractorSkillSource(
+  home: string,
+  networkAccess: OplCompanionNetworkAccess,
+) {
   const repoDir = resolveMineruDocumentExtractorSourceRoot(home);
   let refresh: ReturnType<typeof downloadArchiveToDirectory> | null = null;
-  if (isPathWithin(resolveCompanionSourcesRoot(home), repoDir) && !remoteCompanionInstallDisabled()) {
+  if (isPathWithin(resolveCompanionSourcesRoot(home), repoDir) && !remoteCompanionInstallDisabled(networkAccess)) {
     refresh = downloadArchiveToDirectory(getMineruDocumentExtractorArchiveUrl(), repoDir);
     if (!refresh.ok) return {
       report_path: repoDir, link_path: repoDir, refresh_status: 'manual_required' as const,
@@ -484,17 +496,21 @@ function materializeMineruDocumentExtractorSkillSource(home: string) {
   return source ? { ...source, refresh_status: refresh ? 'updated' : 'current', refresh_note: refresh?.note ?? null, source_digest: refresh?.sourceDigest ?? null } : null;
 }
 
-function ensureRecommendedSkillSource(home: string, skill: OplRecommendedSkill) {
+function ensureRecommendedSkillSource(
+  home: string,
+  skill: OplRecommendedSkill,
+  networkAccess: OplCompanionNetworkAccess,
+) {
   if (skill.skill_id === 'ui-ux-pro-max') {
-    const managed = materializeUiUxProMaxSkillSource(home);
+    const managed = materializeUiUxProMaxSkillSource(home, networkAccess);
     if (managed) return managed;
   }
   if (skill.skill_id === 'officecli' || skill.skill_id.startsWith('officecli-')) {
-    const managed = materializeOfficeCliSkillSource(home, skill.skill_id);
+    const managed = materializeOfficeCliSkillSource(home, skill.skill_id, networkAccess);
     if (managed) return managed;
   }
   if (skill.skill_id === 'mineru-document-extractor') {
-    const managed = materializeMineruDocumentExtractorSkillSource(home);
+    const managed = materializeMineruDocumentExtractorSkillSource(home, networkAccess);
     if (managed) return managed;
   }
   return pickFirstExistingSkillSource(skill.install_source_paths ?? skill.expected_paths);
@@ -592,6 +608,7 @@ export function syncOplCompanionSkills(
     mode: OplCompanionSkillApplyMode;
     skillIds: string[];
     toolIds: OplCompanionToolId[];
+    networkAccess: OplCompanionNetworkAccess;
   }> = {},
 ): OplCompanionSkillSyncResult {
   const mode = options.mode ?? 'observe';
@@ -605,13 +622,14 @@ export function syncOplCompanionSkills(
     .filter((skill) => !selectedSkills || selectedSkills.has(skill.skill_id));
   const items: OplCompanionSkillSyncItem[] = [];
   const selectedTools = options.toolIds ? new Set(options.toolIds) : null;
+  const networkAccess = options.networkAccess ?? 'allowed';
   const tools = [
-    ...(selectedTools && !selectedTools.has('officecli') ? [] : [ensureOfficeCliTool(home)]),
-    ...(selectedTools && !selectedTools.has('mineru-open-api') ? [] : [ensureMineruOpenApiTool(home)]),
+    ...(selectedTools && !selectedTools.has('officecli') ? [] : [ensureOfficeCliTool(home, { networkAccess })]),
+    ...(selectedTools && !selectedTools.has('mineru-open-api') ? [] : [ensureMineruOpenApiTool(home, { networkAccess })]),
   ];
 
   for (const skill of recommendedSkills) {
-    const source = ensureRecommendedSkillSource(home, skill);
+    const source = ensureRecommendedSkillSource(home, skill, networkAccess);
     const targetPath = path.join(codexSkillsDir, skill.skill_id);
     if (!source) {
       if (resolveSkillSourceCandidate(targetPath)) {

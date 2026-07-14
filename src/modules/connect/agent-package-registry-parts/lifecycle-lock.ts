@@ -46,6 +46,7 @@ export function packageActionStatus(action: AgentPackageLifecycleAction) {
   return {
     install: 'installed',
     update: 'updated',
+    optimize: 'optimized',
     repair: 'repaired',
     activate: 'activated',
     use: 'used',
@@ -112,6 +113,9 @@ export function lifecycleReceipt(input: {
   releaseChannelRef?: string | null;
   releaseChannelDigest?: string | null;
   useBinding?: AgentPackageLifecycleReceipt['use_binding'];
+  sourceSelection?: AgentPackageLifecycleReceipt['source_selection'];
+  networkAccessed?: AgentPackageLifecycleReceipt['network_accessed'];
+  remoteDependencyPolicy?: AgentPackageLifecycleReceipt['remote_dependency_policy'];
 }): AgentPackageLifecycleReceipt {
   const receipt: AgentPackageLifecycleReceipt = {
     surface_kind: 'opl_agent_package_lifecycle_receipt',
@@ -151,6 +155,9 @@ export function lifecycleReceipt(input: {
   if (input.scopeMaterializations) receipt.scope_materializations = input.scopeMaterializations;
   if (input.managedRuntimeSource !== undefined) receipt.managed_runtime_source = input.managedRuntimeSource;
   if (input.useBinding) receipt.use_binding = input.useBinding;
+  if (input.sourceSelection) receipt.source_selection = input.sourceSelection;
+  if (input.networkAccessed !== undefined) receipt.network_accessed = input.networkAccessed;
+  if (input.remoteDependencyPolicy) receipt.remote_dependency_policy = input.remoteDependencyPolicy;
   return receipt;
 }
 

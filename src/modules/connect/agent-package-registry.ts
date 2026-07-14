@@ -113,6 +113,10 @@ import {
   writePackageTransaction,
   writeRegistryCache,
 } from './agent-package-registry-parts/store.ts';
+import {
+  optimizeInstalledPackageSource,
+  rollbackInstalledPackageOptimization,
+} from './agent-package-registry-parts/installed-source-optimize.ts';
 import type {
   AgentPackageHomeShortcutPreference,
   AgentPackageHomeShortcutPreferenceFile,
@@ -1223,6 +1227,47 @@ export function runOplAgentPackageRepair(input: AgentPackageRepairInput) {
   };
 }
 
+export function runOplAgentPackageOptimize(input: AgentPackagePackageActionInput) {
+  const packageId = requirePackageId(input.packageId, 'optimize');
+  const { index } = readRecoveredLockIndex();
+  const { lock } = requireInstalledPackage(index, packageId, 'optimize');
+  const result = optimizeInstalledPackageSource({
+    index,
+    root: lock,
+    action: { ...input, packageId },
+  });
+  return {
+    version: 'g2',
+    opl_agent_package_optimize: {
+      surface_kind: 'opl_agent_package_optimize',
+      status: result.status,
+      dry_run: input.dryRun === true,
+      source_selection: result.sourceSelection,
+      network_accessed: result.networkAccessed,
+      remote_dependency_policy: 'forbidden',
+      package_lock: result.lock,
+      physical_surface: result.physicalSurface,
+      dependency_package_locks: result.closureLocks,
+      dependency_closure_digest: result.closureDigest,
+      scope_materializations: result.scopeMaterializations,
+      rollback_generation: result.rollbackGeneration,
+      lifecycle_receipt: result.receipt,
+      owner_route_readback: ownerRouteReadback({
+        selectedPackageId: packageId,
+        scope: input.scope,
+        targetWorkspace: input.targetWorkspace,
+        targetQuest: input.targetQuest,
+        packages: result.closureLocks.map((entry) => ({
+          packageId: entry.package_id,
+          lock: entry,
+          receipt: entry.package_id === packageId ? result.receipt : null,
+        })),
+      }),
+      authority_boundary: refsOnlyAuthorityBoundary(),
+    },
+  };
+}
+
 export function runOplAgentPackageRollback(input: AgentPackagePackageActionInput) {
   const packageId = requirePackageId(input.packageId, 'rollback');
   const { index } = readRecoveredLockIndex();
@@ -1241,6 +1286,44 @@ export function runOplAgentPackageRollback(input: AgentPackagePackageActionInput
     });
   }
   const restoredLocks = structuredClone(lastKnownGood.package_locks);
+  const latestReceipt = readLifecycleLedger().receipts.find((entry) =>
+    entry.receipt_ref === lock.action_receipt_id);
+  if (latestReceipt?.action === 'optimize') {
+    const result = rollbackInstalledPackageOptimization({
+      index,
+      root: lock,
+      generation: lastKnownGood,
+      optimizeReceipt: latestReceipt,
+      action: input,
+    });
+    return {
+      version: 'g2',
+      opl_agent_package_rollback: {
+        surface_kind: 'opl_agent_package_rollback',
+        status: result.status,
+        dry_run: input.dryRun === true,
+        source_selection: result.sourceSelection,
+        network_accessed: result.networkAccessed,
+        remote_dependency_policy: 'forbidden',
+        package_lock: result.root,
+        dependency_package_locks: result.locks,
+        dependency_transaction_id: result.root.dependency_transaction_id,
+        dependency_closure_digest: result.closureDigest,
+        scope_materializations: result.scopeMaterializations,
+        lifecycle_receipt: result.receipt,
+        runtime_source_cleanup: { status: 'not_required', cleanup_paths: [] },
+        owner_route_readback: ownerRouteReadback({
+          selectedPackageId: packageId,
+          packages: result.locks.map((entry) => ({
+            packageId: entry.package_id,
+            lock: entry,
+            receipt: entry.package_id === packageId ? result.receipt : null,
+          })),
+        }),
+        authority_boundary: refsOnlyAuthorityBoundary(),
+      },
+    };
+  }
   const currentLocks = index.packages.filter((entry) =>
     entry.package_id === packageId || entry.dependency_transaction_id === lock.dependency_transaction_id);
   const currentIds = new Set(currentLocks.map((entry) => entry.package_id));

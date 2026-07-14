@@ -45,6 +45,13 @@ import type {
   AgentPackagePayloadFile,
   AgentPackagePhysicalSurface,
 } from './types.ts';
+import type { OplCompanionNetworkAccess } from '../install-companions.ts';
+
+type PhysicalMaterializationOptions = {
+  keepMigrationIds?: string[];
+  companionNetworkAccess?: OplCompanionNetworkAccess;
+  skipManagedSurfaces?: boolean;
+};
 
 function resolveLocalPath(value: string) {
   return value.startsWith('file:') ? fileURLToPath(value) : path.resolve(value);
@@ -481,7 +488,7 @@ function validateMaterializedRequiredSkills(manifest: AgentPackageManifest, plug
 export function materializePhysicalCodexSurface(
   manifest: AgentPackageManifest,
   dryRun: boolean,
-  options: { keepMigrationIds?: string[] } = {},
+  options: PhysicalMaterializationOptions = {},
 ): AgentPackagePhysicalSurface {
   const paths = buildPhysicalSurfacePaths(manifest);
   const codexConfigPreexisting = fs.existsSync(paths.codexConfigPath);
@@ -554,12 +561,15 @@ export function materializePhysicalCodexSurface(
       }
     }
     const materializedSourceRoot = dryRun ? pluginSourcePath : paths.codexPluginCachePath!;
-    managedPolicyMigration = materializeManagedPolicySurface({
-      manifest,
-      sourceRoot: materializedSourceRoot,
-      dryRun,
-      keepMigrationIds: options.keepMigrationIds,
-    });
+    if (!options.skipManagedSurfaces) {
+      managedPolicyMigration = materializeManagedPolicySurface({
+        manifest,
+        sourceRoot: materializedSourceRoot,
+        dryRun,
+        keepMigrationIds: options.keepMigrationIds,
+        companionNetworkAccess: options.companionNetworkAccess,
+      });
+    }
     if (!dryRun) {
       materializeLocalCodexPluginMarketplace({
         marketplace_id: paths.marketplaceId,
@@ -576,12 +586,14 @@ export function materializePhysicalCodexSurface(
         manifest.plugin_id!,
       ));
     }
-    profileMigration = materializePackageProfile({
-      manifest,
-      sourceRoot: materializedSourceRoot,
-      codexHome: paths.codexHome,
-      dryRun,
-    });
+    if (!options.skipManagedSurfaces) {
+      profileMigration = materializePackageProfile({
+        manifest,
+        sourceRoot: materializedSourceRoot,
+        codexHome: paths.codexHome,
+        dryRun,
+      });
+    }
     removedSupersededPaths = removeSupersededOplFamilyCodexPluginPaths(
       manifest.package_id,
       manifest.plugin_id,
@@ -721,6 +733,7 @@ export function rollbackNewPackageProfileSurface(surface: AgentPackagePhysicalSu
 export function rematerializePhysicalCodexSurfaceFromLock(
   lock: AgentPackageLock,
   dryRun: boolean,
+  options: Omit<PhysicalMaterializationOptions, 'keepMigrationIds'> = {},
 ): AgentPackagePhysicalSurface {
   if (!lock.physical_surface?.plugin_source_path || !lock.physical_surface.plugin_id) {
     return {
@@ -756,7 +769,7 @@ export function rematerializePhysicalCodexSurfaceFromLock(
     };
   }
 
-  return materializePhysicalCodexSurface({
+  const materialized = materializePhysicalCodexSurface({
     package_id: lock.package_id,
     agent_id: lock.agent_id,
     display_name: lock.display_name,
@@ -788,5 +801,14 @@ export function rematerializePhysicalCodexSurfaceFromLock(
     capability_provider: lock.capability_provider ?? null,
     content_digest: lock.content_digest ?? null,
     content_lock_paths: lock.content_lock_paths ?? [],
-  }, dryRun);
+  }, dryRun, options);
+  return options.skipManagedSurfaces && lock.physical_surface
+    ? {
+        ...materialized,
+        profile_config: lock.physical_surface.profile_config,
+        profile_migration: lock.physical_surface.profile_migration,
+        managed_policy_config: lock.physical_surface.managed_policy_config,
+        workflow_policy_migration: lock.physical_surface.workflow_policy_migration,
+      }
+    : materialized;
 }

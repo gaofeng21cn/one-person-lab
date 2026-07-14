@@ -6,7 +6,10 @@ import { spawnSync } from 'node:child_process';
 import { FrameworkContractError, isRecord } from '../../../kernel/contract-validation.ts';
 import { assertJsonSchemaPayload } from '../../../kernel/schema-registry.ts';
 import { resolveOplStatePaths } from '../../../kernel/runtime-state-paths.ts';
-import { syncOplCompanionSkills } from '../install-companions.ts';
+import {
+  syncOplCompanionSkills,
+  type OplCompanionNetworkAccess,
+} from '../install-companions.ts';
 import { resolveCodexConfigPath, resolveCodexHome, sha256Text } from './shared.ts';
 import type {
   AgentPackageLock,
@@ -600,6 +603,7 @@ export function materializeManagedPolicySurface(input: {
   sourceRoot: string;
   dryRun: boolean;
   keepMigrationIds?: string[];
+  companionNetworkAccess?: OplCompanionNetworkAccess;
 }): AgentPackageManagedPolicyMigration {
   const config = input.manifest.managed_policy_surface;
   if (!config) return noManagedPolicyMigration('Package manifest does not request a managed policy surface.');
@@ -700,6 +704,7 @@ export function materializeManagedPolicySurface(input: {
       mode: input.dryRun ? 'ask_to_apply' : 'managed',
       skillIds,
       toolIds,
+      networkAccess: input.companionNetworkAccess,
     });
     const dependencyWrites = dependencySync.items.some((entry) => ['synced', 'installed'].includes(entry.status))
       || dependencySync.tools.some((entry) => entry.action === 'install' || entry.action === 'update');
