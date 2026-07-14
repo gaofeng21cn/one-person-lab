@@ -53,6 +53,7 @@
       "required": [
         "plugin_id",
         "plugin_payload_manifest_url",
+        "carrier_source_commit",
         "required_skill_ids"
       ],
       "properties": {
@@ -63,6 +64,10 @@
         "plugin_payload_manifest_url": {
           "type": "string",
           "minLength": 1
+        },
+        "carrier_source_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
         },
         "required_skill_ids": {
           "type": "array",

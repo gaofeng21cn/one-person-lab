@@ -63,6 +63,7 @@ function canonicalFixture() {
   const manifest: AgentPackageManifest = {
     package_id: packageId,
     agent_id: packageId,
+    package_role: 'standard_agent',
     display_name: 'Example Agent',
     publisher: 'example',
     version: packageVersion,
@@ -70,6 +71,8 @@ function canonicalFixture() {
     source: 'first_party',
     source_repo: sourceRepo,
     source_commit: sourceCommit,
+    carrier_source_commit: sourceCommit,
+    verified_payload_source_commit: null,
     codex_surface: {},
     skill_packs: [],
     entrypoints: [],
@@ -106,7 +109,7 @@ test('Connect admits only strict canonical first-party payload identity and expl
     manifest: fixture.manifest,
     payloadManifestUrl: '/fixture/payload.json',
     catalogSelection: null,
-  }).kind, 'canonical_v2');
+  }).sourceCommit, sourceCommit);
 
   const cases: Array<{ name: string; payload: Record<string, any>; manifest?: AgentPackageManifest; failureCode: string }> = [
     {
@@ -122,6 +125,18 @@ test('Connect admits only strict canonical first-party payload identity and expl
     {
       name: 'source commit mismatch',
       payload: { ...structuredClone(fixture.payload), source_commit: 'b'.repeat(40) },
+      failureCode: 'first_party_package_payload_identity_mismatch',
+    },
+    {
+      name: 'manifest carrier commit missing',
+      payload: structuredClone(fixture.payload),
+      manifest: { ...fixture.manifest, carrier_source_commit: null },
+      failureCode: 'first_party_package_payload_identity_mismatch',
+    },
+    {
+      name: 'manifest source authority drift',
+      payload: structuredClone(fixture.payload),
+      manifest: { ...fixture.manifest, source_commit: 'b'.repeat(40) },
       failureCode: 'first_party_package_payload_identity_mismatch',
     },
     {
@@ -164,6 +179,21 @@ test('Connect admits only strict canonical first-party payload identity and expl
       catalogSelection: null,
     }), (error: any) => error?.details?.failure_code === invalid.failureCode, invalid.name);
   }
+
+  assert.throws(() => admitPackagePayloadManifest({
+    payload: fixture.payload,
+    manifest: fixture.manifest,
+    payloadManifestUrl: '/fixture/catalog-drift.json',
+    catalogSelection: {
+      package_id: packageId,
+      package_version: packageVersion,
+      source_artifact_ref: 'ghcr.io/example/example-agent:0.3.1',
+      artifact_digest: `sha256:${'1'.repeat(64)}`,
+      artifact_status: 'published_immutable',
+      package_content_digest: `sha256:${'2'.repeat(64)}`,
+      owner_source_commit: 'b'.repeat(40),
+    },
+  }), (error: any) => error?.details?.failure_code === 'first_party_package_payload_identity_mismatch');
 });
 
 test('Connect verifies canonical bytes and preserves 100755 through physical Codex materialization', async () => {
@@ -193,6 +223,7 @@ test('Connect verifies canonical bytes and preserves 100755 through physical Cod
 
   try {
     const resolved = await resolveManifestPhysicalSource(fixture.manifest, false);
+    assert.equal(resolved.verified_payload_source_commit, sourceCommit);
     const stagedSkill = path.join(resolved.plugin_source_path!, 'skills', pluginId, 'SKILL.md');
     assert.equal(fs.statSync(stagedSkill).mode & 0o777, 0o755);
     const physical = materializePhysicalCodexSurface(resolved, false);

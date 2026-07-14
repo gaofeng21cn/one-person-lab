@@ -321,6 +321,7 @@
   },
   "codex_surface": {
     "plugin_id": "mas-scholar-skills",
+    "carrier_source_commit": "ed621f53a905e02cdf272387d14d0d5415d73781",
     "carrier_source_role": "codex_plugin_carrier_not_package_truth",
     "required_skill_ids_ref": "#/exports/core_skill_ids",
     "default_materialized_skill_ids_ref": "#/exports/all_skill_ids",

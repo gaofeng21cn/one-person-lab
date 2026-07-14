@@ -587,6 +587,29 @@ function normalizeOwnerLanguageVersion(value: unknown) {
   return { scheme: 'pep440' as const, value: stringValue(value.value)! };
 }
 
+function normalizeCarrierSourceAuthority(
+  payload: Record<string, unknown>,
+  codexSurface: Record<string, unknown>,
+  manifestUrl: string,
+) {
+  const sourceCommit = stringValue(payload.source_commit);
+  const carrierSourceCommit = stringValue(codexSurface.carrier_source_commit);
+  const invalidFields = [
+    sourceCommit !== null && !/^[0-9a-f]{40}$/.test(sourceCommit) ? 'source_commit' : null,
+    carrierSourceCommit !== null && !/^[0-9a-f]{40}$/.test(carrierSourceCommit) ? 'codex_surface.carrier_source_commit' : null,
+  ].filter((entry): entry is string => entry !== null);
+  if (invalidFields.length > 0 || (sourceCommit !== null && carrierSourceCommit !== null && sourceCommit !== carrierSourceCommit)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest carrier source commit authority is invalid or conflicting.', {
+      manifest_url: manifestUrl,
+      source_commit: sourceCommit,
+      carrier_source_commit: carrierSourceCommit,
+      invalid_fields: invalidFields,
+      failure_code: 'agent_package_manifest_carrier_source_commit_invalid',
+    });
+  }
+  return { sourceCommit, carrierSourceCommit };
+}
+
 export function normalizeManifest(payload: unknown, manifestUrl: string): AgentPackageManifest {
   if (!isRecord(payload)) {
     throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest must be a JSON object.', {
@@ -693,6 +716,7 @@ export function normalizeManifest(payload: unknown, manifestUrl: string): AgentP
     validateUrlLike(pluginPayloadManifestUrl, 'codex_surface.plugin_payload_manifest_url');
   }
   const distributionPayload = normalizeDistributionPayload(payload.distribution_payload);
+  const carrierAuthority = normalizeCarrierSourceAuthority(payload, payload.codex_surface, manifestUrl);
   const codexVisibleEntry = pluginId
     ?? stringValue(payload.codex_surface.codex_visible_entry)
     ?? stringValue(payload.agent_id)!;
@@ -706,8 +730,9 @@ export function normalizeManifest(payload: unknown, manifestUrl: string): AgentP
     owner_language_version: normalizeOwnerLanguageVersion(payload.owner_language_version),
     source: stringValue(payload.source)!,
     source_repo: stringValue(payload.source_repo),
-    source_commit: stringValue(payload.source_commit)
-      ?? stringValue(payload.codex_surface.carrier_source_commit),
+    source_commit: carrierAuthority.sourceCommit,
+    carrier_source_commit: carrierAuthority.carrierSourceCommit,
+    verified_payload_source_commit: null,
     codex_surface: payload.codex_surface,
     skill_packs: skillPacks,
     entrypoints,
@@ -828,6 +853,7 @@ export function normalizeCapabilityPackageManifest(payload: unknown, manifestUrl
     });
   }
   const codexSurface = isRecord(payload.codex_surface) ? payload.codex_surface : {};
+  const carrierAuthority = normalizeCarrierSourceAuthority(payload, codexSurface, manifestUrl);
   const pluginId = stringValue(codexSurface.plugin_id) ?? packageId;
   const pluginSourceRef = stringValue(codexSurface.plugin_source_path);
   const pluginSourcePath = pluginSourceRef
@@ -850,8 +876,9 @@ export function normalizeCapabilityPackageManifest(payload: unknown, manifestUrl
     owner_language_version: null,
     source: assertStringValue(payload.source, 'source'),
     source_repo: stringValue(payload.source_repo),
-    source_commit: stringValue(payload.source_commit)
-      ?? stringValue(codexSurface.carrier_source_commit),
+    source_commit: carrierAuthority.sourceCommit,
+    carrier_source_commit: carrierAuthority.carrierSourceCommit,
+    verified_payload_source_commit: null,
     codex_surface: codexSurface,
     skill_packs: [],
     entrypoints: [],
@@ -936,6 +963,7 @@ export function normalizeWorkflowProfilePackageManifest(payload: unknown, manife
   validateUrlLike(pluginPayloadManifestUrl, 'codex_surface.plugin_payload_manifest_url');
   const profileSurface = normalizeProfileSurface(payload.profile_surface);
   const managedPolicySurface = normalizeManagedPolicySurface(payload.managed_policy_surface);
+  const carrierAuthority = normalizeCarrierSourceAuthority(payload, codexSurface, manifestUrl);
   if (!profileSurface || !managedPolicySurface) {
     throw new FrameworkContractError('contract_shape_invalid', 'Workflow profile package must declare profile and managed policy surfaces.', {
       manifest_url: manifestUrl,
@@ -952,8 +980,9 @@ export function normalizeWorkflowProfilePackageManifest(payload: unknown, manife
     owner_language_version: null,
     source: assertStringValue(payload.source, 'source'),
     source_repo: stringValue(payload.source_repo),
-    source_commit: stringValue(payload.source_commit)
-      ?? stringValue(codexSurface.carrier_source_commit),
+    source_commit: carrierAuthority.sourceCommit,
+    carrier_source_commit: carrierAuthority.carrierSourceCommit,
+    verified_payload_source_commit: null,
     codex_surface: codexSurface,
     skill_packs: [],
     entrypoints: [],

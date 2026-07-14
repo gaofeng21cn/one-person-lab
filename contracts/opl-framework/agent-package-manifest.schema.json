@@ -219,6 +219,7 @@
       "type": "object",
       "required": [
         "plugin_id",
+        "carrier_source_commit",
         "standalone_distribution",
         "required_skill_ids"
       ],
@@ -230,6 +231,10 @@
         "plugin_payload_manifest_url": {
           "type": "string",
           "minLength": 1
+        },
+        "carrier_source_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
         },
         "standalone_distribution": {
           "enum": [

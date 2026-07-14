@@ -291,6 +291,8 @@ export function materializeCapabilityScopeFromLock(input: {
       source: '',
       source_repo: null,
       source_commit: input.provider.owner_source_commit ?? null,
+      carrier_source_commit: input.provider.owner_source_commit ?? null,
+      verified_payload_source_commit: input.provider.owner_source_commit ?? null,
       codex_surface: {},
       skill_packs: [],
       entrypoints: [],

@@ -43,6 +43,7 @@
   "codex_surface": {
     "plugin_id": "med-autogrant",
     "plugin_payload_manifest_url": "payloads/mag-0.3.2.json",
+    "carrier_source_commit": "8ceb733acd63406816a330c465907e69f4179a6d",
     "standalone_distribution": "repo_carrier_source",
     "required_skill_ids": [
       "med-autogrant"

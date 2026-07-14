@@ -88,9 +88,19 @@ export function writeManagedRuntimeSourceFixture(input: {
   };
   const packageId = packageIdByModule[input.moduleId] ?? input.moduleId;
   const sourceArtifactRef = `ghcr.io/fixture/one-person-lab-packages/${packageId}:${input.version}`;
-  const manifestJson = input.packageManifest
+  const exactSourceCommit = /^[0-9a-f]{40}$/.test(input.sourceHeadSha) ? input.sourceHeadSha : null;
+  const packageManifest = input.packageManifest ? structuredClone(input.packageManifest) : null;
+  if (packageManifest && exactSourceCommit) {
+    const codexSurface = packageManifest.codex_surface;
+    if (codexSurface && typeof codexSurface === 'object' && !Array.isArray(codexSurface)) {
+      (codexSurface as Record<string, unknown>).carrier_source_commit = exactSourceCommit;
+    }
+  }
+  const payloadManifest = input.payloadManifest ? structuredClone(input.payloadManifest) : null;
+  if (payloadManifest && exactSourceCommit) payloadManifest.source_commit = exactSourceCommit;
+  const manifestJson = packageManifest
     ? `${JSON.stringify({
-        ...input.packageManifest,
+        ...packageManifest,
         package_id: packageId,
         version: input.version,
       }, null, 2)}\n`
@@ -98,9 +108,9 @@ export function writeManagedRuntimeSourceFixture(input: {
   const manifestDigest = manifestJson
     ? `sha256:${crypto.createHash('sha256').update(manifestJson).digest('hex')}`
     : null;
-  const payloadManifestJson = input.payloadManifest
+  const payloadManifestJson = payloadManifest
     ? `${JSON.stringify({
-        ...input.payloadManifest,
+        ...payloadManifest,
         package_id: packageId,
         package_version: input.version,
         package_source: {
@@ -109,8 +119,8 @@ export function writeManagedRuntimeSourceFixture(input: {
           archive_sha256: `sha256:${archiveDigest}`,
           archive_root: input.repoName,
         },
-        files: Array.isArray(input.payloadManifest.files)
-          ? input.payloadManifest.files.map((candidate) => {
+        files: Array.isArray(payloadManifest.files)
+          ? payloadManifest.files.map((candidate) => {
               const file = candidate && typeof candidate === 'object' && !Array.isArray(candidate)
                 ? candidate as Record<string, unknown>
                 : {};

@@ -196,6 +196,8 @@ export type AgentPackageManifest = {
   source: string;
   source_repo: string | null;
   source_commit: string | null;
+  carrier_source_commit: string | null;
+  verified_payload_source_commit: string | null;
   codex_surface: Record<string, unknown>;
   skill_packs: Record<string, unknown>[];
   entrypoints: Record<string, unknown>[];
@@ -732,6 +734,7 @@ export type AgentPackageUseBinding = {
     content_digest: string;
     source_artifact_ref: string | null;
     artifact_digest: string | null;
+    owner_source_commit: string | null;
   };
   provider_packages: Array<{
     package_id: string;
@@ -742,6 +745,7 @@ export type AgentPackageUseBinding = {
     content_digest: string;
     source_artifact_ref: string | null;
     artifact_digest: string | null;
+    owner_source_commit: string | null;
   }>;
   dependency_closure_digest: string;
   freshness_mode: 'channel_verified' | 'offline_lkg';

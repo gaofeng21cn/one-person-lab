@@ -43,6 +43,7 @@
   "codex_surface": {
     "plugin_id": "opl-meta-agent",
     "plugin_payload_manifest_url": "payloads/oma-0.3.4.json",
+    "carrier_source_commit": "4ed4a855796061d851e8640d465ff9061438cc50",
     "standalone_distribution": "generated_carrier_surface",
     "required_skill_ids": [
       "opl-meta-agent"

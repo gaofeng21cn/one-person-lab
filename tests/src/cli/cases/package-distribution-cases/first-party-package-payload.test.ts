@@ -154,6 +154,7 @@ function createAuthority(root: string, source: SourceFixture, input: {
   else manifest.source_repo = repository;
   manifest.codex_surface.plugin_id = plugin;
   manifest.codex_surface.plugin_payload_manifest_url = `payloads/${id}-${version}.json`;
+  manifest.codex_surface.carrier_source_commit = source.sourceCommit;
   if (manifest.codex_surface.required_skill_ids !== undefined) manifest.codex_surface.required_skill_ids = [plugin];
   if (manifest.content_lock !== undefined) {
     manifest.content_lock.canonicalization = 'ordered_path_length_file_length_bytes';
@@ -487,6 +488,9 @@ test('concurrent equal writers converge and changed authority cannot replace the
   editJson(authority.ownerCohortLock, (lock) => {
     lock.packages[packageId].source_commit = divergentCommit;
   });
+  editJson(authority.manifest, (manifest) => {
+    manifest.codex_surface.carrier_source_commit = divergentCommit;
+  });
   const divergent = runFailure({ authority, repo: source.repo, sourceCommit: divergentCommit });
   assert.notEqual(divergent.status, 0);
   assert.match(divergent.stderr, /Immutable payload manifest conflict/);
@@ -575,6 +579,28 @@ test('manifest, allowlist, source repository, output, and committed plugin ident
         manifest.codex_surface.plugin_payload_manifest_url = `payloads/wrong-${packageVersion}.json`;
       }),
       error: /payload output is not identity-bound/,
+    },
+    {
+      name: 'missing manifest carrier source commit',
+      mutate: (authority) => editJson(authority.manifest, (manifest) => {
+        delete manifest.source_commit;
+        delete manifest.codex_surface.carrier_source_commit;
+      }),
+      error: /manifest carrier source commit must be a non-empty string/,
+    },
+    {
+      name: 'manifest carrier source commit drift',
+      mutate: (authority) => editJson(authority.manifest, (manifest) => {
+        manifest.codex_surface.carrier_source_commit = 'f'.repeat(40);
+      }),
+      error: /carrier source commit does not match Package owner cohort authority/,
+    },
+    {
+      name: 'conflicting manifest source commit authorities',
+      mutate: (authority) => editJson(authority.manifest, (manifest) => {
+        manifest.source_commit = 'f'.repeat(40);
+      }),
+      error: /source_commit and codex_surface\.carrier_source_commit must match/,
     },
     {
       name: 'allowlist package mismatch',
@@ -735,13 +761,60 @@ test('manifest and committed plugin JSON require strict round-trip UTF-8', (t) =
 test('Framework allowlists and historical payload envelopes validate at their explicit schema boundaries', () => {
   const schemaPath = path.join(repoRoot, 'contracts/opl-framework/package-payload-allowlist.schema.json');
   const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8')) as Record<string, any>;
+  const canonicalPayloadSchema = JSON.parse(fs.readFileSync(
+    path.join(repoRoot, 'contracts/opl-framework/package-payload-manifest-v2.schema.json'),
+    'utf8',
+  )) as Record<string, any>;
+  const legacyPayloadSchema = JSON.parse(fs.readFileSync(
+    path.join(repoRoot, 'contracts/opl-framework/package-payload-manifest.schema.json'),
+    'utf8',
+  )) as Record<string, any>;
   const canonicalIds = ['mag', 'mas', 'rca', 'oma', 'obf', 'mas-scholar-skills', 'opl-flow'];
+  const packageRoot = path.join(repoRoot, 'contracts/opl-framework/packages');
+  const payloadRoot = path.join(packageRoot, 'payloads');
+  const manifests = Object.fromEntries(canonicalIds.map((id) => [
+    id,
+    JSON.parse(fs.readFileSync(path.join(packageRoot, `${id}.json`), 'utf8')) as Record<string, any>,
+  ]));
+  const allowlists = Object.fromEntries(canonicalIds.map((id) => [
+    id,
+    JSON.parse(fs.readFileSync(
+      path.join(repoRoot, 'contracts/opl-framework/package-payload-allowlists', `${id}.json`),
+      'utf8',
+    )) as Record<string, any>,
+  ]));
+
+  function assertPayloadEnvelope(payload: Record<string, any>, label: string) {
+    if (payload.surface_kind === 'opl_package_payload_manifest.v2') {
+      assert.doesNotThrow(() => assertJsonSchemaPayload({
+        schemaId: canonicalPayloadSchema.$id,
+        schema: canonicalPayloadSchema,
+        sourceRef: 'contracts/opl-framework/package-payload-manifest-v2.schema.json',
+      }, payload), label);
+      assert.equal(payload.plugin_id, manifests[payload.package_id].codex_surface.plugin_id, label);
+      assert.equal(payload.content_lock.algorithm, 'sha256', label);
+      assert.equal(payload.content_lock.canonicalization, 'ordered_path_length_file_length_bytes', label);
+      assert.equal(payload.files.every((entry: Record<string, unknown>) => entry.mode !== undefined), true, label);
+    } else if (payload.surface_kind === 'opl_package_payload_manifest.v1') {
+      assert.doesNotThrow(() => assertJsonSchemaPayload({
+        schemaId: legacyPayloadSchema.$id,
+        schema: legacyPayloadSchema,
+        sourceRef: 'contracts/opl-framework/package-payload-manifest.schema.json',
+      }, payload), label);
+      assert.equal(payload.plugin_id, undefined, label);
+      assert.equal(payload.content_lock, undefined, label);
+      assert.equal(payload.files.some((entry: Record<string, unknown>) => entry.mode !== undefined), false, label);
+    } else {
+      assert.equal(payload.surface_kind, 'opl_agent_package_payload_manifest', label);
+      assert.equal(payload.schema_ref, undefined, label);
+      assert.equal(payload.plugin_id, undefined, label);
+      assert.equal(payload.content_lock, undefined, label);
+      assert.equal(payload.files.some((entry: Record<string, unknown>) => entry.mode !== undefined), false, label);
+    }
+  }
 
   for (const id of canonicalIds) {
-    const manifest = JSON.parse(fs.readFileSync(
-      path.join(repoRoot, 'contracts/opl-framework/packages', `${id}.json`),
-      'utf8',
-    )) as Record<string, any>;
+    const manifest = manifests[id];
     const allowlistPath = path.join(repoRoot, 'contracts/opl-framework/package-payload-allowlists', `${id}.json`);
     const allowlist = JSON.parse(fs.readFileSync(allowlistPath, 'utf8')) as Record<string, any>;
     const payload = JSON.parse(fs.readFileSync(
@@ -758,6 +831,7 @@ test('Framework allowlists and historical payload envelopes validate at their ex
     if (manifest.source_repo !== undefined) assert.equal(allowlist.source_repo, manifest.source_repo, id);
     assert.equal(payload.package_id, manifest.package_id, id);
     assert.equal(payload.package_version, manifest.version, id);
+    assert.equal(payload.source_commit, manifest.codex_surface.carrier_source_commit, id);
     assert.deepEqual(
       payload.files.map((entry: Record<string, string>) => entry.path),
       allowlist.paths,
@@ -805,6 +879,9 @@ test('generator rejects caller commit drift, missing authority objects, unreacha
   editJson(missingAuthority.ownerCohortLock, (lock) => {
     lock.packages[packageId].source_commit = 'f'.repeat(40);
   });
+  editJson(missingAuthority.manifest, (manifest) => {
+    manifest.codex_surface.carrier_source_commit = 'f'.repeat(40);
+  });
   const missingCommit = runFailure({
     authority: missingAuthority,
     repo: missingSource.repo,
@@ -817,6 +894,9 @@ test('generator rejects caller commit drift, missing authority objects, unreacha
   const unreachableCommit = commitAll(source.repo, 'unreachable payload source');
   editJson(authority.ownerCohortLock, (lock) => {
     lock.packages[packageId].source_commit = unreachableCommit;
+  });
+  editJson(authority.manifest, (manifest) => {
+    manifest.codex_surface.carrier_source_commit = unreachableCommit;
   });
   const unreachable = runFailure({ authority, repo: source.repo, sourceCommit: unreachableCommit });
   assert.notEqual(unreachable.status, 0);

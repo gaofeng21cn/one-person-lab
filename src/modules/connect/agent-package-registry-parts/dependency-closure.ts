@@ -145,6 +145,7 @@ export function dependencyClosureDigest(locks: AgentPackageLock[]) {
       package_id: lock.package_id,
       package_version: lock.package_version,
       manifest_sha256: lock.manifest_sha256,
+      owner_source_commit: lock.owner_source_commit ?? null,
       content_digest: lock.content_digest,
       package_lock_ref: lock.lock_ref,
     }))
@@ -201,6 +202,7 @@ export function dependencyReadiness(
       } else if (
         resolved.installed_version !== provider.package_version
         || resolved.manifest_sha256 !== provider.manifest_sha256
+        || (resolved.owner_source_commit ?? null) !== (provider.owner_source_commit ?? null)
         || resolved.content_digest !== provider.content_digest
         || resolved.package_lock_ref !== provider.lock_ref
       ) {

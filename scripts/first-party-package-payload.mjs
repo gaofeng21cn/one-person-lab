@@ -277,6 +277,21 @@ function loadAuthority(options) {
   if (!PACKAGE_ID.test(pluginId)) {
     throw new Error(`Invalid canonical plugin id: ${pluginId}`);
   }
+  const topLevelSourceCommit = manifest.source_commit;
+  const carrierSourceCommit = codexSurface.carrier_source_commit;
+  if (topLevelSourceCommit !== undefined && carrierSourceCommit !== undefined
+    && topLevelSourceCommit !== carrierSourceCommit) {
+    throw new Error('Framework package manifest source_commit and codex_surface.carrier_source_commit must match');
+  }
+  const manifestSourceCommit = requireString(
+    topLevelSourceCommit ?? carrierSourceCommit,
+    'Framework package manifest carrier source commit',
+  );
+  if (!FULL_GIT_SHA.test(manifestSourceCommit)) {
+    throw new Error(
+      `Framework package manifest carrier source commit must be an exact lowercase 40-character Git SHA: ${manifestSourceCommit}`,
+    );
+  }
 
   const outputRef = requireString(codexSurface.plugin_payload_manifest_url, 'Framework package payload manifest URL');
   assertSafePosixPath(outputRef, 'Framework package payload manifest URL');
@@ -348,6 +363,11 @@ function loadAuthority(options) {
     sourceRepoUrl,
     githubRepository,
   );
+  if (manifestSourceCommit !== sourceAuthority.expectedCommit) {
+    throw new Error(
+      `Framework package manifest carrier source commit does not match Package owner cohort authority: expected=${sourceAuthority.expectedCommit} actual=${manifestSourceCommit}`,
+    );
+  }
 
   return {
     packageId,

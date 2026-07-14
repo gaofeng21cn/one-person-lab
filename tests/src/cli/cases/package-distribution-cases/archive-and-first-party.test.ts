@@ -461,7 +461,7 @@ test('package archive builder writes channel manifest checksums git source and r
         assert.equal(normalizedPayload.package_source.artifact_ref, version.source_artifact_ref);
         assert.equal(normalizedPayload.package_source.archive_sha256, version.package_content_digest);
         assert.equal(normalizedPayload.package_source.archive_root, expectedArchiveRoots[catalogPackageId]);
-        assert.equal(Object.hasOwn(normalizedPayload, 'source_root'), false);
+        assert.equal(normalizedPayload.source_root, expectedSourceRoots[catalogPackageId]);
         for (const file of normalizedPayload.files) {
           const expectedSourcePath = expectedSourceRoots[catalogPackageId] === '.'
             ? file.path
@@ -881,6 +881,8 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
   assert.equal(manifest.carrier_adapters[0].owns_package_core, false);
   assert.equal(schema.properties.capability_dependencies.items.properties.codex_distribution.const, 'bundled');
   assert.equal(schema.properties.codex_surface.properties.plugin_payload_manifest_url.type, 'string');
+  assert.equal(schema.properties.codex_surface.properties.carrier_source_commit.pattern, '^[0-9a-f]{40}$');
+  assert.equal(schema.properties.codex_surface.required.includes('carrier_source_commit'), true);
   assert.equal(schema.properties.package_core.properties.core_kind.const, 'opl_agent_package_core');
   assert.equal(schema.properties.carrier_adapters.items.properties.carrier.const, 'codex_plugin');
   assert.deepEqual(manifest.codex_surface.required_skill_ids, ['med-autoscience']);
@@ -895,6 +897,7 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
     const expectedRelease = expectedReleases[sourceManifest.package_id];
     assert.equal(sourceManifest.version, expectedRelease.version);
     assert.equal(sourceManifest.codex_surface.plugin_payload_manifest_url, expectedRelease.payloadRef);
+    assert.equal(sourceManifest.codex_surface.carrier_source_commit, expectedRelease.sourceCommit);
     const payloadRef = sourceManifest.codex_surface.plugin_payload_manifest_url;
     assert.match(payloadRef, /^payloads\/[a-z0-9.-]+\.json$/);
     const payload = parseJsonText(fs.readFileSync(
@@ -989,10 +992,11 @@ test('OPL Flow is a workflow-profile Package without Agent identity', () => {
   assert.equal(manifest.surface_kind, 'opl_workflow_profile_package_manifest.v1');
   assert.equal(manifest.version, '0.1.20');
   assert.equal(manifest.codex_surface.carrier_source_commit, '9bfa310c6693787040701efd19a8ddd4cf79f6e4');
+  assert.equal(schema.properties.codex_surface.required.includes('carrier_source_commit'), true);
   assert.equal(Object.hasOwn(manifest, 'agent_id'), false);
   assert.equal(normalized.agent_id, null);
   assert.equal(normalized.profile_surface?.existing_profile_policy, 'semantic_merge_required');
-  assert.equal(payload.surface_kind, 'opl_package_payload_manifest.v1');
+  assert.equal(payload.surface_kind, 'opl_package_payload_manifest.v2');
   assert.equal(payload.source_commit, '9bfa310c6693787040701efd19a8ddd4cf79f6e4');
   assert.equal(Object.hasOwn(payload, 'agent_id'), false);
 });

@@ -161,6 +161,41 @@ type PreparedPackage = {
   packageChannelSelection: ManagedModulePackageChannelSelection | null;
 };
 
+function preparedOwnerSourceCommit(prepared: PreparedPackage) {
+  const verifiedCommit = prepared.manifest.verified_payload_source_commit;
+  const catalogCommit = prepared.catalogVersion?.owner_source_commit ?? null;
+  if (catalogCommit !== null && verifiedCommit !== catalogCommit) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Verified package payload carrier commit does not match the current catalog selection.', {
+      package_id: prepared.manifest.package_id,
+      manifest_carrier_source_commit: prepared.manifest.carrier_source_commit,
+      verified_payload_source_commit: verifiedCommit,
+      catalog_owner_source_commit: catalogCommit,
+      failure_code: 'agent_package_carrier_source_commit_mismatch',
+    });
+  }
+  if (prepared.sourceKind === 'first_party_managed_cohort'
+    && (verifiedCommit === null || !/^[0-9a-f]{40}$/.test(verifiedCommit))) {
+    throw new FrameworkContractError('contract_shape_invalid', 'First-party package installation requires a verified carrier source commit.', {
+      package_id: prepared.manifest.package_id,
+      manifest_carrier_source_commit: prepared.manifest.carrier_source_commit,
+      verified_payload_source_commit: verifiedCommit,
+      failure_code: 'agent_package_carrier_source_commit_missing',
+    });
+  }
+  return verifiedCommit;
+}
+
+function assertInstalledCarrierAuthority(lock: AgentPackageLock) {
+  if (lock.source_kind !== 'first_party_managed_cohort' && lock.owner_source_commit == null) return;
+  if (!/^[0-9a-f]{40}$/.test(lock.owner_source_commit ?? '')) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Installed package lock carrier source commit is missing or invalid.', {
+      package_id: lock.package_id,
+      owner_source_commit: lock.owner_source_commit ?? null,
+      failure_code: 'agent_package_lock_carrier_source_commit_invalid',
+    });
+  }
+}
+
 function packageChannelSelection(
   packageId: string,
   version: ManagedCatalogVersion | null | undefined,
@@ -641,7 +676,7 @@ async function applyManifestPackageLock(
       managedRuntimeSource: runtimeSourceMutations.get(prepared.manifest.package_id)?.after ?? null,
       sourceArtifactRef: prepared.catalogVersion?.source_artifact_ref ?? prepared.previousLock?.source_artifact_ref ?? null,
       artifactDigest: prepared.catalogVersion?.artifact_digest ?? prepared.previousLock?.artifact_digest ?? null,
-      ownerSourceCommit: prepared.catalogVersion?.owner_source_commit ?? prepared.previousLock?.owner_source_commit ?? null,
+      ownerSourceCommit: preparedOwnerSourceCommit(prepared),
       releaseChannelRef: prepared.catalogVersion ? channelRef : prepared.previousLock?.release_channel_ref ?? null,
       releaseChannelDigest: prepared.catalogVersion ? channelDigest : prepared.previousLock?.release_channel_digest ?? null,
     }));
@@ -766,7 +801,7 @@ async function applyManifestPackageLock(
       managedRuntimeSource: lock.managed_runtime_source,
       sourceArtifactRef: prepared.catalogVersion?.source_artifact_ref ?? prepared.previousLock?.source_artifact_ref ?? null,
       artifactDigest: prepared.catalogVersion?.artifact_digest ?? prepared.previousLock?.artifact_digest ?? null,
-      ownerSourceCommit: prepared.catalogVersion?.owner_source_commit ?? prepared.previousLock?.owner_source_commit ?? null,
+      ownerSourceCommit: preparedOwnerSourceCommit(prepared),
       releaseChannelRef: prepared.catalogVersion ? channelRef : prepared.previousLock?.release_channel_ref ?? null,
       releaseChannelDigest: prepared.catalogVersion ? channelDigest : prepared.previousLock?.release_channel_digest ?? null,
     });
@@ -1813,6 +1848,7 @@ export async function ensureOplAgentPackageScopeActivation(input: AgentPackagePa
   const reconciliation = await reconcilePackageClosureForUse(input, initial.lock);
   const index = readLockIndex();
   const { lockIndex, lock } = requireInstalledPackage(index, packageId, 'activate');
+  assertInstalledCarrierAuthority(lock);
   const targetRoot = packageScopeTarget(input);
   if (!input.scope || !targetRoot) {
     throw new FrameworkContractError('cli_usage_error', 'Package scope activation requires workspace or quest target.', {
@@ -1879,6 +1915,9 @@ export async function ensureOplAgentPackageScopeActivation(input: AgentPackagePa
     manifest_sha256: entry.manifest_sha256,
     content_digest: entry.content_digest,
     package_lock_ref: entry.lock_ref,
+    source_artifact_ref: entry.source_artifact_ref ?? null,
+    artifact_digest: entry.artifact_digest ?? null,
+    owner_source_commit: entry.owner_source_commit ?? null,
   }));
   const activationReceipt = materializations.length > 0
     ? lifecycleReceipt({
@@ -1896,6 +1935,9 @@ export async function ensureOplAgentPackageScopeActivation(input: AgentPackagePa
         dependencyTransactionId: lock.dependency_transaction_id,
         dependencyClosureDigest: lock.dependency_closure_digest,
         dependencyPackages,
+        sourceArtifactRef: lock.source_artifact_ref ?? null,
+        artifactDigest: lock.artifact_digest ?? null,
+        ownerSourceCommit: lock.owner_source_commit ?? null,
         scopeMaterialization: materializations[0],
         scopeMaterializations: materializations,
       })
@@ -1926,6 +1968,7 @@ export async function ensureOplAgentPackageScopeActivation(input: AgentPackagePa
   const materializationReadiness = scopeMaterializationReadiness(activatedLock, nextIndex, input);
   const providerPackages = activatedLock.resolved_dependencies.map((dependency) => {
     const provider = nextIndex.packages.find((entry) => entry.package_id === dependency.package_id)!;
+    assertInstalledCarrierAuthority(provider);
     return {
       package_id: provider.package_id,
       package_version: provider.package_version,
@@ -1935,6 +1978,7 @@ export async function ensureOplAgentPackageScopeActivation(input: AgentPackagePa
       content_digest: provider.content_digest,
       source_artifact_ref: provider.source_artifact_ref ?? null,
       artifact_digest: provider.artifact_digest ?? null,
+      owner_source_commit: provider.owner_source_commit ?? null,
     };
   });
   const useBinding = {
@@ -1951,6 +1995,7 @@ export async function ensureOplAgentPackageScopeActivation(input: AgentPackagePa
       content_digest: activatedLock.content_digest,
       source_artifact_ref: activatedLock.source_artifact_ref ?? null,
       artifact_digest: activatedLock.artifact_digest ?? null,
+      owner_source_commit: activatedLock.owner_source_commit ?? null,
     },
     provider_packages: providerPackages,
     dependency_closure_digest: activatedLock.dependency_closure_digest,
@@ -1983,6 +2028,9 @@ export async function ensureOplAgentPackageScopeActivation(input: AgentPackagePa
     dependencyTransactionId: activatedLock.dependency_transaction_id,
     dependencyClosureDigest: activatedLock.dependency_closure_digest,
     dependencyPackages,
+    sourceArtifactRef: activatedLock.source_artifact_ref ?? null,
+    artifactDigest: activatedLock.artifact_digest ?? null,
+    ownerSourceCommit: activatedLock.owner_source_commit ?? null,
     useBinding,
   });
   useBinding.use_receipt_ref = useReceipt.receipt_ref;

@@ -22,7 +22,11 @@ import {
 const PACKAGE_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.package.source.v1+gzip';
 const CHANNEL_MANIFEST_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.release.channel-manifest.v1+json';
 
-function writeFirstPartyCatalogFixture(version: string, ownerSourceCommit: string) {
+function writeFirstPartyCatalogFixture(
+  version: string,
+  ownerSourceCommit: string,
+  options: { manifestCarrierSourceCommit?: string | null } = {},
+) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), `opl-first-party-catalog-${version}-`));
   const sourceParent = path.join(root, 'source');
   const sourceRoot = path.join(sourceParent, 'opl-flow');
@@ -103,6 +107,9 @@ function writeFirstPartyCatalogFixture(version: string, ownerSourceCommit: strin
     codex_surface: {
       plugin_id: 'opl-flow',
       plugin_payload_manifest_url: 'payload.json',
+      ...(options.manifestCarrierSourceCommit === null ? {} : {
+        carrier_source_commit: options.manifestCarrierSourceCommit ?? ownerSourceCommit,
+      }),
       required_skill_ids: ['opl-flow'],
     },
     profile_surface: {
@@ -387,6 +394,7 @@ test('first-party identities reject explicit registries and unowned manifest bod
 test('first-party install and update lock one Release Set catalog member by version commit and digest', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-first-party-catalog-state-'));
   const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-first-party-catalog-home-'));
+  const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-first-party-catalog-workspace-'));
   const first = writeFirstPartyCatalogFixture('0.2.0', '1'.repeat(40));
   const second = writeFirstPartyCatalogFixture('0.2.1', '2'.repeat(40));
   const commonEnv = {
@@ -435,6 +443,16 @@ test('first-party install and update lock one Release Set catalog member by vers
       .filter((line) => line.includes('/one-person-lab-manifest/manifests/latest-stable'));
     assert.equal(firstChannelReads.length, 1);
 
+    const activated = runCli([
+      'packages', 'activate', 'opl-flow', '--scope', 'workspace', '--target-workspace', workspace,
+    ], {
+      ...commonEnv,
+      ...first.env,
+    }) as any;
+    assert.equal(activated.opl_agent_package_activation.package_use_binding.root_package.owner_source_commit, '1'.repeat(40));
+    assert.equal(activated.opl_agent_package_activation.use_receipt.owner_source_commit, '1'.repeat(40));
+    assert.equal(activated.opl_agent_package_activation.use_receipt.use_binding.root_package.owner_source_commit, '1'.repeat(40));
+
     const updated = runCli(['packages', 'update', 'opl-flow'], {
       ...commonEnv,
       ...second.env,
@@ -451,8 +469,39 @@ test('first-party install and update lock one Release Set catalog member by vers
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });
     fs.rmSync(homeDir, { recursive: true, force: true });
+    fs.rmSync(workspace, { recursive: true, force: true });
     fs.rmSync(first.root, { recursive: true, force: true });
     fs.rmSync(second.root, { recursive: true, force: true });
+  }
+});
+
+test('a previous first-party lock cannot mask a new manifest missing carrier authority', () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-first-party-carrier-state-'));
+  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-first-party-carrier-home-'));
+  const first = writeFirstPartyCatalogFixture('0.2.0', '1'.repeat(40));
+  const missing = writeFirstPartyCatalogFixture('0.2.1', '2'.repeat(40), {
+    manifestCarrierSourceCommit: null,
+  });
+  const commonEnv = {
+    HOME: homeDir,
+    CODEX_HOME: path.join(homeDir, '.codex'),
+    OPL_STATE_DIR: stateDir,
+  };
+  try {
+    const installed = runCli(['packages', 'install', 'opl-flow'], { ...commonEnv, ...first.env }) as any;
+    const originalLockRef = installed.opl_agent_package_install.package_lock.lock_ref;
+    const failure = runCliFailure(['packages', 'update', 'opl-flow'], { ...commonEnv, ...missing.env });
+    assert.equal(failure.payload.error.code, 'contract_shape_invalid');
+    assert.equal(failure.payload.error.details.failure_code, 'first_party_package_payload_identity_mismatch');
+    assert.ok(failure.payload.error.details.mismatches.includes('manifest_carrier_source_commit'));
+    const retained = runCli(['packages', 'status', '--package-id', 'opl-flow'], commonEnv) as any;
+    assert.equal(retained.opl_agent_package_status.installed_packages[0].lock_ref, originalLockRef);
+    assert.equal(retained.opl_agent_package_status.installed_packages[0].owner_source_commit, '1'.repeat(40));
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+    fs.rmSync(homeDir, { recursive: true, force: true });
+    fs.rmSync(first.root, { recursive: true, force: true });
+    fs.rmSync(missing.root, { recursive: true, force: true });
   }
 });
 

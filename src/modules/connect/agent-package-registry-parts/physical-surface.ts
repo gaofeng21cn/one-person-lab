@@ -406,6 +406,7 @@ async function materializePayloadManifestSource(input: {
     payloadRoot,
     payloadManifestSha256: fetched.source_sha256,
     persistentCachePath: input.dryRun ? null : payloadRoot,
+    verifiedPayloadSourceCommit: admission.sourceCommit,
   };
 }
 
@@ -428,6 +429,7 @@ export async function resolveManifestPhysicalSource(
     plugin_source_path: payload.payloadRoot,
     plugin_payload_manifest_sha256: payload.payloadManifestSha256,
     plugin_payload_cache_path: payload.persistentCachePath,
+    verified_payload_source_commit: payload.verifiedPayloadSourceCommit,
   };
 }
 
@@ -810,6 +812,8 @@ export function rematerializePhysicalCodexSurfaceFromLock(
     source: '',
     source_repo: null,
     source_commit: lock.owner_source_commit ?? null,
+    carrier_source_commit: lock.owner_source_commit ?? null,
+    verified_payload_source_commit: lock.owner_source_commit ?? null,
     codex_surface: {},
     skill_packs: [],
     entrypoints: [],

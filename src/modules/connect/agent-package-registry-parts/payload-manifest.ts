@@ -19,6 +19,7 @@ const FIRST_PARTY_SOURCES = new Set(['first_party', 'first_party_owner_projectio
 export type PackagePayloadAdmission = {
   kind: 'canonical_v2' | 'legacy_v1' | 'legacy_v0';
   contentLockDigest: string | null;
+  sourceCommit: string | null;
 };
 
 function fail(message: string, details: Record<string, unknown>): never {
@@ -76,6 +77,38 @@ function assertPortablePaths(files: Record<string, unknown>[], payloadManifestUr
   }
 }
 
+function assertCarrierSourceAuthority(input: {
+  payload: Record<string, unknown>;
+  manifest: AgentPackageManifest;
+  payloadManifestUrl: string;
+  catalogSelection: ManagedModulePackageChannelSelection | null;
+}) {
+  const payloadCommit = stringValue(input.payload.source_commit);
+  const manifestCommit = input.manifest.carrier_source_commit;
+  const catalogCommit = input.catalogSelection?.owner_source_commit ?? null;
+  const mismatches = [
+    payloadCommit !== null && /^[0-9a-f]{40}$/.test(payloadCommit) ? null : 'payload_source_commit',
+    manifestCommit !== null && /^[0-9a-f]{40}$/.test(manifestCommit) ? null : 'manifest_carrier_source_commit',
+    input.manifest.source_commit === null || input.manifest.source_commit === manifestCommit
+      ? null
+      : 'manifest_source_commit',
+    input.catalogSelection === null || catalogCommit === manifestCommit ? null : 'catalog_owner_source_commit',
+    payloadCommit === manifestCommit ? null : 'source_commit',
+  ].filter((entry): entry is string => entry !== null);
+  if (mismatches.length > 0) {
+    fail('Package payload carrier source commit does not match its manifest and catalog authority.', {
+      payload_manifest_url: input.payloadManifestUrl,
+      package_id: input.manifest.package_id,
+      payload_source_commit: payloadCommit,
+      manifest_carrier_source_commit: manifestCommit,
+      catalog_owner_source_commit: catalogCommit,
+      mismatches,
+      failure_code: 'first_party_package_payload_identity_mismatch',
+    });
+  }
+  return payloadCommit!;
+}
+
 function assertCanonicalIdentity(input: {
   payload: Record<string, unknown>;
   manifest: AgentPackageManifest;
@@ -105,13 +138,12 @@ function assertCanonicalIdentity(input: {
       failure_code: 'first_party_package_payload_schema_invalid',
     });
   }
-  const expectedCommit = input.catalogSelection?.owner_source_commit ?? input.manifest.source_commit;
+  const sourceCommit = assertCarrierSourceAuthority(input);
   const mismatches = [
     payload.package_id === input.manifest.package_id ? null : 'package_id',
     payload.plugin_id === input.manifest.plugin_id ? null : 'plugin_id',
     payload.package_version === input.manifest.version ? null : 'package_version',
     input.manifest.source_repo === null || payload.source_repo === input.manifest.source_repo ? null : 'source_repo',
-    expectedCommit !== null && payload.source_commit === expectedCommit ? null : 'source_commit',
     input.catalogSelection === null || input.catalogSelection.package_id === input.manifest.package_id ? null : 'catalog_package_id',
     input.catalogSelection === null || input.catalogSelection.package_version === input.manifest.version ? null : 'catalog_package_version',
   ].filter((entry): entry is string => entry !== null);
@@ -121,7 +153,7 @@ function assertCanonicalIdentity(input: {
       package_id: input.manifest.package_id,
       plugin_id: input.manifest.plugin_id,
       package_version: input.manifest.version,
-      expected_source_commit: expectedCommit,
+      expected_source_commit: sourceCommit,
       mismatches,
       failure_code: 'first_party_package_payload_identity_mismatch',
     });
@@ -142,12 +174,12 @@ function assertCanonicalIdentity(input: {
     });
   }
   const sourceRepo = stringValue(payload.source_repo)!;
-  const sourceCommit = stringValue(payload.source_commit)!;
+  const payloadSourceCommit = stringValue(payload.source_commit)!;
   const sourceRoot = stringValue(payload.source_root)!;
   for (const file of files) {
     const relativePath = stringValue(file.path)!;
     const treePath = sourceTreePath(sourceRoot, relativePath);
-    if (remoteBacked && file.source_url !== rawSourceUrl(sourceRepo, sourceCommit, treePath)) {
+    if (remoteBacked && file.source_url !== rawSourceUrl(sourceRepo, payloadSourceCommit, treePath)) {
       fail('Canonical package payload source_url does not match its source identity.', {
         payload_manifest_url: input.payloadManifestUrl,
         payload_path: relativePath,
@@ -166,6 +198,7 @@ function assertCanonicalIdentity(input: {
       });
     }
   }
+  return sourceCommit;
 }
 
 function assertLegacyBoundary(payload: Record<string, unknown>, payloadManifestUrl: string) {
@@ -188,10 +221,11 @@ export function admitPackagePayloadManifest(input: {
 }): PackagePayloadAdmission {
   const surfaceKind = stringValue(input.payload.surface_kind);
   if (surfaceKind === CANONICAL_SURFACE) {
-    assertCanonicalIdentity(input);
+    const sourceCommit = assertCanonicalIdentity(input);
     return {
       kind: 'canonical_v2',
       contentLockDigest: stringValue((input.payload.content_lock as Record<string, unknown>).digest),
+      sourceCommit,
     };
   }
   if (surfaceKind === LEGACY_V1_SURFACE) {
@@ -202,7 +236,11 @@ export function admitPackagePayloadManifest(input: {
       });
     }
     assertLegacyBoundary(input.payload, input.payloadManifestUrl);
-    return { kind: 'legacy_v1', contentLockDigest: null };
+    return {
+      kind: 'legacy_v1',
+      contentLockDigest: null,
+      sourceCommit: input.catalogSelection ? assertCarrierSourceAuthority(input) : null,
+    };
   }
   if (surfaceKind === LEGACY_V0_SURFACE) {
     if (input.payload.schema_ref !== undefined) {
@@ -212,7 +250,11 @@ export function admitPackagePayloadManifest(input: {
       });
     }
     assertLegacyBoundary(input.payload, input.payloadManifestUrl);
-    return { kind: 'legacy_v0', contentLockDigest: null };
+    return {
+      kind: 'legacy_v0',
+      contentLockDigest: null,
+      sourceCommit: input.catalogSelection ? assertCarrierSourceAuthority(input) : null,
+    };
   }
   fail('Agent package payload manifest uses an unsupported envelope boundary.', {
     payload_manifest_url: input.payloadManifestUrl,

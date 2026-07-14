@@ -89,11 +89,12 @@
     },
     "codex_surface": {
       "type": "object",
-      "required": ["plugin_id", "codex_default_exposure", "optional_install_policy"],
+      "required": ["plugin_id", "carrier_source_commit", "codex_default_exposure", "optional_install_policy"],
       "properties": {
         "plugin_id": { "type": "string", "minLength": 1 },
         "plugin_source_path": { "type": "string", "minLength": 1 },
         "plugin_payload_manifest_url": { "type": "string", "minLength": 1 },
+        "carrier_source_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
         "codex_default_exposure": { "const": false },
         "optional_install_policy": { "const": "all_exported_skills" }
       },
