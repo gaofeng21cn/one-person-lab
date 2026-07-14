@@ -1,5 +1,9 @@
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import { sha256Text } from './shared.ts';
+import {
+  LEGACY_PACKAGE_CONTENT_LOCK,
+  packageContentLockDigest,
+} from './payload-content-lock.ts';
 import type {
   AgentPackageCapabilityDependency,
   AgentPackageDependencyReadiness,
@@ -63,7 +67,7 @@ export function manifestContentDigest(manifest: AgentPackageManifest, manifestSh
 
 export function verifyManifestContentLock(manifest: AgentPackageManifest) {
   if (!manifest.plugin_source_path || manifest.content_lock_paths.length === 0 || !manifest.content_digest) return;
-  const digest = crypto.createHash('sha256');
+  const files: Array<{ path: string; content: Buffer }> = [];
   for (const relativePath of manifest.content_lock_paths) {
     const filePath = path.join(manifest.plugin_source_path, relativePath);
     if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
@@ -73,11 +77,12 @@ export function verifyManifestContentLock(manifest: AgentPackageManifest) {
         failure_code: 'capability_package_content_lock_path_missing',
       });
     }
-    digest.update(relativePath);
-    digest.update('\0');
-    digest.update(fs.readFileSync(filePath));
+    files.push({ path: relativePath, content: fs.readFileSync(filePath) });
   }
-  const actualDigest = `sha256:${digest.digest('hex')}`;
+  const actualDigest = packageContentLockDigest(
+    manifest.content_lock_canonicalization ?? LEGACY_PACKAGE_CONTENT_LOCK,
+    files,
+  );
   if (actualDigest !== manifest.content_digest) {
     throw new FrameworkContractError('contract_shape_invalid', 'Capability provider content lock digest does not match its source files.', {
       package_id: manifest.package_id,
@@ -237,4 +242,3 @@ export function dependencyReadiness(
 }
 import fs from 'node:fs';
 import path from 'node:path';
-import crypto from 'node:crypto';

@@ -36,6 +36,7 @@ type SourceFixture = {
 type AuthorityFixture = {
   manifest: string;
   allowlist: string;
+  ownerCohortLock: string;
   output: string;
 };
 
@@ -67,6 +68,8 @@ function createSourceRepo(root: string, input: {
   pluginBytes?: Buffer;
   executableSkill?: boolean;
   symlinkSkill?: boolean;
+  assetBytes?: Buffer;
+  extraFile?: { path: string; content: string | Buffer };
 } = {}): SourceFixture {
   const sourceRoot = input.sourceRoot ?? defaultSourceRoot;
   const repo = path.join(root, 'source');
@@ -81,7 +84,10 @@ function createSourceRepo(root: string, input: {
     pluginPath,
     input.pluginBytes ?? `${JSON.stringify({ name: input.pluginName ?? pluginId, version: input.pluginVersion ?? packageVersion })}\n`,
   );
-  writeFile(repo, rootedPath(sourceRoot, 'assets/icon.bin'), Buffer.from([0, 1, 2, 255]));
+  writeFile(repo, rootedPath(sourceRoot, 'assets/icon.bin'), input.assetBytes ?? Buffer.from([0, 1, 2, 255]));
+  if (input.extraFile) {
+    writeFile(repo, rootedPath(sourceRoot, input.extraFile.path), input.extraFile.content);
+  }
   const skillPath = rootedPath(sourceRoot, `skills/${pluginId}/SKILL.md`);
   if (input.symlinkSkill) {
     writeFile(repo, rootedPath(sourceRoot, 'skills/shared.md'), '# Shared\n');
@@ -93,15 +99,38 @@ function createSourceRepo(root: string, input: {
   writeFile(repo, rootedPath(sourceRoot, 'README.md'), 'not part of the carrier payload\n');
   writeFile(repo, 'docs/repository-only.md', 'must never be discovered recursively\n');
   const sourceCommit = commitAll(repo, 'example payload source');
+  git(repo, ['update-ref', 'refs/remotes/origin/main', sourceCommit]);
   return {
     repo,
     sourceCommit,
     sourceRoot,
-    paths: ['.codex-plugin/plugin.json', 'assets/icon.bin', `skills/${pluginId}/SKILL.md`],
+    paths: [
+      '.codex-plugin/plugin.json',
+      'assets/icon.bin',
+      ...(input.extraFile ? [input.extraFile.path] : []),
+      `skills/${pluginId}/SKILL.md`,
+    ],
   };
 }
 
-function createAuthority(root: string, source: Pick<SourceFixture, 'repo' | 'sourceRoot' | 'paths'>, input: {
+function lengthPrefixedContentLock(source: Pick<SourceFixture, 'repo' | 'sourceRoot' | 'paths'>) {
+  const contentLock = crypto.createHash('sha256');
+  for (const relativePath of source.paths) {
+    const pathBytes = Buffer.from(relativePath, 'utf8');
+    const fileBytes = fs.readFileSync(path.join(source.repo, rootedPath(source.sourceRoot, relativePath)));
+    const pathLength = Buffer.allocUnsafe(8);
+    const fileLength = Buffer.allocUnsafe(8);
+    pathLength.writeBigUInt64BE(BigInt(pathBytes.length));
+    fileLength.writeBigUInt64BE(BigInt(fileBytes.length));
+    contentLock.update(pathLength);
+    contentLock.update(pathBytes);
+    contentLock.update(fileLength);
+    contentLock.update(fileBytes);
+  }
+  return `sha256:${contentLock.digest('hex')}`;
+}
+
+function createAuthority(root: string, source: SourceFixture, input: {
   id?: string;
   plugin?: string;
   version?: string;
@@ -116,6 +145,7 @@ function createAuthority(root: string, source: Pick<SourceFixture, 'repo' | 'sou
   const packagesDir = path.join(root, 'framework', 'packages');
   const manifestPath = path.join(packagesDir, `${id}.json`);
   const allowlistPath = path.join(root, 'framework', 'package-payload-allowlists', `${id}.json`);
+  const ownerCohortLockPath = path.join(root, 'framework', 'owner-cohort-lock.json');
   const manifest = structuredClone(packageTemplates[input.surface ?? 'agent']);
   manifest.package_id = id;
   if (manifest.agent_id !== undefined) manifest.agent_id = id;
@@ -126,14 +156,9 @@ function createAuthority(root: string, source: Pick<SourceFixture, 'repo' | 'sou
   manifest.codex_surface.plugin_payload_manifest_url = `payloads/${id}-${version}.json`;
   if (manifest.codex_surface.required_skill_ids !== undefined) manifest.codex_surface.required_skill_ids = [plugin];
   if (manifest.content_lock !== undefined) {
-    const contentLock = crypto.createHash('sha256');
-    for (const relativePath of source.paths) {
-      contentLock.update(relativePath, 'utf8');
-      contentLock.update('\0');
-      contentLock.update(fs.readFileSync(path.join(source.repo, rootedPath(source.sourceRoot, relativePath))));
-    }
+    manifest.content_lock.canonicalization = 'ordered_path_length_file_length_bytes';
     manifest.content_lock.paths = source.paths;
-    manifest.content_lock.digest = `sha256:${contentLock.digest('hex')}`;
+    manifest.content_lock.digest = lengthPrefixedContentLock(source);
   }
   const allowlist = {
     surface_kind: 'opl_package_payload_allowlist.v1',
@@ -145,9 +170,22 @@ function createAuthority(root: string, source: Pick<SourceFixture, 'repo' | 'sou
   };
   writeFile(root, path.relative(root, manifestPath), `${JSON.stringify(manifest, null, 2)}\n`);
   writeFile(root, path.relative(root, allowlistPath), `${JSON.stringify(allowlist, null, 2)}\n`);
+  writeFile(root, path.relative(root, ownerCohortLockPath), `${JSON.stringify({
+    surface_kind: 'opl_package_owner_cohort_lock.v1',
+    generated_at: '2026-07-14T00:00:00.000Z',
+    packages: {
+      [id]: {
+        package_id: id,
+        repo_name: new URL(repository).pathname.split('/').at(-1)!.replace(/\.git$/, ''),
+        repo_url: repository,
+        source_commit: source.sourceCommit,
+      },
+    },
+  }, null, 2)}\n`);
   return {
     manifest: manifestPath,
     allowlist: allowlistPath,
+    ownerCohortLock: ownerCohortLockPath,
     output: path.join(packagesDir, 'payloads', `${id}-${version}.json`),
   };
 }
@@ -168,6 +206,7 @@ function generatorArgs(input: {
     generator,
     '--manifest', input.authority.manifest,
     '--allowlist', input.authority.allowlist,
+    '--owner-cohort-lock', input.authority.ownerCohortLock,
     '--repo', input.repo,
     '--source-commit', input.sourceCommit,
     ...(input.check ? ['--check'] : []),
@@ -210,11 +249,42 @@ function sha256(content: string | Buffer) {
   return `sha256:${crypto.createHash('sha256').update(content).digest('hex')}`;
 }
 
+function legacyContentLock(source: SourceFixture) {
+  const digest = crypto.createHash('sha256');
+  for (const relativePath of source.paths) {
+    digest.update(relativePath);
+    digest.update('\0');
+    digest.update(fs.readFileSync(path.join(source.repo, rootedPath(source.sourceRoot, relativePath))));
+  }
+  return `sha256:${digest.digest('hex')}`;
+}
+
+function legacyV1Payload(source: SourceFixture) {
+  return {
+    surface_kind: 'opl_package_payload_manifest.v1',
+    schema_ref: 'contracts/opl-framework/package-payload-manifest.schema.json',
+    package_id: packageId,
+    package_version: packageVersion,
+    source_repo: sourceRepoUrl,
+    source_commit: source.sourceCommit,
+    source_root: source.sourceRoot,
+    files: source.paths.map((relativePath) => {
+      const treePath = rootedPath(source.sourceRoot, relativePath);
+      return {
+        path: relativePath,
+        source_url: `https://raw.githubusercontent.com/example/example-agent/${source.sourceCommit}/${treePath}`,
+        sha256: sha256(fs.readFileSync(path.join(source.repo, treePath))),
+      };
+    }),
+  };
+}
+
 test('generator consumes manifest identity and an exact allowlist, emits the canonical schema, and is idempotent', (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-payload-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const source = createSourceRepo(root);
   const authority = createAuthority(root, source);
+  const expectedContentLock = lengthPrefixedContentLock(source);
   const previousPayload = path.join(path.dirname(authority.output), `${packageId}-0.3.0.json`);
   fs.mkdirSync(path.dirname(previousPayload), { recursive: true });
   fs.writeFileSync(previousPayload, 'immutable-previous-payload\n');
@@ -229,14 +299,18 @@ test('generator consumes manifest identity and an exact allowlist, emits the can
   assert.equal(first.output, authority.output);
   assert.equal(first.file_count, 3);
   assert.equal(first.payload_sha256, sha256(firstBytes));
-  assert.equal(payload.surface_kind, 'opl_package_payload_manifest.v1');
-  assert.equal(payload.schema_ref, 'contracts/opl-framework/package-payload-manifest.schema.json');
+  assert.equal(payload.surface_kind, 'opl_package_payload_manifest.v2');
+  assert.equal(payload.schema_ref, 'contracts/opl-framework/package-payload-manifest-v2.schema.json');
   assert.equal(payload.package_id, packageId);
+  assert.equal(payload.plugin_id, pluginId);
   assert.equal(payload.package_version, packageVersion);
   assert.equal(payload.source_repo, sourceRepoUrl);
   assert.equal(payload.source_commit, source.sourceCommit);
   assert.equal(payload.source_root, defaultSourceRoot);
   assert.deepEqual(payload.files.map((entry: Record<string, string>) => entry.path), source.paths);
+  assert.deepEqual(payload.files.map((entry: Record<string, string>) => entry.mode), ['100644', '100644', '100644']);
+  assert.equal(payload.content_lock.canonicalization, 'ordered_path_length_file_length_bytes');
+  assert.equal(payload.content_lock.digest, expectedContentLock);
   assert.equal(payload.files.some((entry: Record<string, string>) => entry.path === 'README.md'), false);
   assert.equal(payload.files[0].sha256, sha256(`${JSON.stringify({ name: pluginId, version: packageVersion })}\n`));
   assert.equal(payload.files[1].sha256, sha256(Buffer.from([0, 1, 2, 255])));
@@ -245,20 +319,20 @@ test('generator consumes manifest identity and an exact allowlist, emits the can
   assert.equal(fs.readFileSync(previousPayload, 'utf8'), 'immutable-previous-payload\n');
 
   const payloadSchema = JSON.parse(fs.readFileSync(
-    path.join(repoRoot, 'contracts/opl-framework/package-payload-manifest.schema.json'),
+    path.join(repoRoot, 'contracts/opl-framework/package-payload-manifest-v2.schema.json'),
     'utf8',
   )) as Record<string, any>;
   assert.doesNotThrow(() => assertJsonSchemaPayload({
     schemaId: payloadSchema.$id,
     schema: payloadSchema,
-    sourceRef: 'contracts/opl-framework/package-payload-manifest.schema.json',
+    sourceRef: 'contracts/opl-framework/package-payload-manifest-v2.schema.json',
   }, payload));
   const invalidPrereleasePayload = structuredClone(payload);
   invalidPrereleasePayload.package_version = '0.3.1-alpha.01';
   assert.throws(() => assertJsonSchemaPayload({
     schemaId: payloadSchema.$id,
     schema: payloadSchema,
-    sourceRef: 'contracts/opl-framework/package-payload-manifest.schema.json',
+    sourceRef: 'contracts/opl-framework/package-payload-manifest-v2.schema.json',
   }, invalidPrereleasePayload));
 
   const second = runGenerator({ authority, repo: source.repo, sourceCommit: source.sourceCommit });
@@ -291,6 +365,65 @@ test('source_root dot still reads only allowlisted blobs instead of recursively 
     assert.equal(payload.files.some((entry: Record<string, string>) => entry.path.startsWith('docs/')), false, surface);
     assert.equal(payload.files.some((entry: Record<string, string>) => entry.path === 'README.md'), false, surface);
   }
+});
+
+test('generator preserves executable Git blobs as the canonical 100755 mode', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-payload-mode-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const source = createSourceRepo(root, { executableSkill: true });
+  const authority = createAuthority(root, source);
+
+  runGenerator({ authority, repo: source.repo, sourceCommit: source.sourceCommit });
+  const payload = JSON.parse(fs.readFileSync(authority.output, 'utf8')) as Record<string, any>;
+  assert.equal(
+    payload.files.find((entry: Record<string, string>) => entry.path === `skills/${pluginId}/SKILL.md`).mode,
+    '100755',
+  );
+});
+
+test('published legacy envelopes are check-only and cannot be replaced by canonical v2 at the same SemVer', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-payload-legacy-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const source = createSourceRepo(root);
+  const authority = createAuthority(root, source);
+  fs.mkdirSync(path.dirname(authority.output), { recursive: true });
+  fs.writeFileSync(authority.output, `${JSON.stringify(legacyV1Payload(source), null, 2)}\n`);
+  const before = fs.readFileSync(authority.output);
+
+  const write = runFailure({ authority, repo: source.repo, sourceCommit: source.sourceCommit });
+  assert.notEqual(write.status, 0);
+  assert.match(write.stderr, /historical read-only; bump package SemVer/);
+  assert.deepEqual(fs.readFileSync(authority.output), before);
+  const checked = runGenerator({
+    authority,
+    repo: source.repo,
+    sourceCommit: source.sourceCommit,
+    check: true,
+  });
+  assert.equal(checked.status, 'checked_legacy');
+  assert.deepEqual(fs.readFileSync(authority.output), before);
+});
+
+test('length-prefixed content locks distinguish payloads that collide under legacy concatenation', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-payload-content-lock-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const left = createSourceRepo(path.join(root, 'left'), {
+    assetBytes: Buffer.from('a'),
+    extraFile: { path: 'bc', content: 'same' },
+  });
+  const right = createSourceRepo(path.join(root, 'right'), {
+    assetBytes: Buffer.from('ab'),
+    extraFile: { path: 'c', content: 'same' },
+  });
+  assert.equal(legacyContentLock(left), legacyContentLock(right));
+
+  const leftAuthority = createAuthority(path.join(root, 'left'), left);
+  const rightAuthority = createAuthority(path.join(root, 'right'), right);
+  runGenerator({ authority: leftAuthority, repo: left.repo, sourceCommit: left.sourceCommit });
+  runGenerator({ authority: rightAuthority, repo: right.repo, sourceCommit: right.sourceCommit });
+  const leftPayload = JSON.parse(fs.readFileSync(leftAuthority.output, 'utf8')) as Record<string, any>;
+  const rightPayload = JSON.parse(fs.readFileSync(rightAuthority.output, 'utf8')) as Record<string, any>;
+  assert.notEqual(leftPayload.content_lock.digest, rightPayload.content_lock.digest);
 });
 
 test('existing SemVer paths are immutable in write and check modes', (t) => {
@@ -332,7 +465,7 @@ test('existing SemVer paths are immutable in write and check modes', (t) => {
   assert.deepEqual(fs.readdirSync(outside), []);
 });
 
-test('concurrent writers converge for equal bytes and fail closed for different bytes', async (t) => {
+test('concurrent equal writers converge and changed authority cannot replace the same SemVer bytes', async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-payload-concurrent-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const source = createSourceRepo(root);
@@ -350,23 +483,35 @@ test('concurrent writers converge for equal bytes and fail closed for different 
 
   writeFile(source.repo, rootedPath(source.sourceRoot, `skills/${pluginId}/SKILL.md`), '# Divergent same-version bytes\n');
   const divergentCommit = commitAll(source.repo, 'divergent same-version payload');
-  const expectedRoot = path.join(root, 'expected');
-  const expectedA = createAuthority(path.join(expectedRoot, 'a'), source);
-  const expectedB = createAuthority(path.join(expectedRoot, 'b'), source);
-  runGenerator({ authority: expectedA, repo: source.repo, sourceCommit: source.sourceCommit });
-  runGenerator({ authority: expectedB, repo: source.repo, sourceCommit: divergentCommit });
-  const expectedBytes = [fs.readFileSync(expectedA.output), fs.readFileSync(expectedB.output)];
+  git(source.repo, ['update-ref', 'refs/remotes/origin/main', divergentCommit]);
+  editJson(authority.ownerCohortLock, (lock) => {
+    lock.packages[packageId].source_commit = divergentCommit;
+  });
+  const divergent = runFailure({ authority, repo: source.repo, sourceCommit: divergentCommit });
+  assert.notEqual(divergent.status, 0);
+  assert.match(divergent.stderr, /Immutable payload manifest conflict/);
+  assert.equal(fs.readdirSync(path.dirname(authority.output)).some((name) => name.endsWith('.tmp')), false);
+});
 
-  const raceAuthority = createAuthority(path.join(root, 'race'), source);
-  const divergentResults = await Promise.all([
-    runConcurrent({ authority: raceAuthority, repo: source.repo, sourceCommit: source.sourceCommit }),
-    runConcurrent({ authority: raceAuthority, repo: source.repo, sourceCommit: divergentCommit }),
-  ]);
-  assert.equal(divergentResults.filter((result) => result.status === 0).length, 1);
-  assert.equal(divergentResults.filter((result) => result.status !== 0).length, 1);
-  assert.match(divergentResults.find((result) => result.status !== 0)?.stderr ?? '', /Immutable payload manifest conflict/);
-  const winner = fs.readFileSync(raceAuthority.output);
-  assert.equal(expectedBytes.some((candidate) => candidate.equals(winner)), true);
+test('generator removes only dead-writer temporary files for the current immutable target', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-payload-temp-cleanup-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const source = createSourceRepo(root);
+  const authority = createAuthority(root, source);
+  const directory = path.dirname(authority.output);
+  fs.mkdirSync(directory, { recursive: true });
+  const stale = path.join(directory, `.${path.basename(authority.output)}.999999.${'a'.repeat(24)}.tmp`);
+  const unrelated = path.join(directory, `.other-payload.json.999999.${'b'.repeat(24)}.tmp`);
+  fs.writeFileSync(stale, 'crashed writer\n');
+  fs.writeFileSync(unrelated, 'different target\n');
+
+  runGenerator({ authority, repo: source.repo, sourceCommit: source.sourceCommit });
+  assert.equal(fs.existsSync(stale), false);
+  assert.equal(fs.existsSync(unrelated), true);
+  assert.deepEqual(
+    fs.readdirSync(directory).filter((name) => name.startsWith(`.${path.basename(authority.output)}.`)),
+    [],
+  );
 });
 
 test('Git parsing ignores hostile inherited GIT_* variables and binds the worktree root and origin', (t) => {
@@ -442,7 +587,7 @@ test('manifest, allowlist, source repository, output, and committed plugin ident
         editJson(authority.manifest, (manifest) => {
           manifest.content_lock = {
             algorithm: 'sha256',
-            canonicalization: 'ordered_path_nul_file_bytes',
+            canonicalization: 'ordered_path_length_file_length_bytes',
             paths: ['.codex-plugin/plugin.json', `skills/${pluginId}/SKILL.md`],
             digest: `sha256:${'0'.repeat(64)}`,
           };
@@ -456,7 +601,7 @@ test('manifest, allowlist, source repository, output, and committed plugin ident
         editJson(authority.manifest, (manifest) => {
           manifest.content_lock = {
             algorithm: 'sha256',
-            canonicalization: 'ordered_path_nul_file_bytes',
+            canonicalization: 'ordered_path_length_file_length_bytes',
             paths: ['.codex-plugin/plugin.json', 'assets/icon.bin', `skills/${pluginId}/SKILL.md`],
             digest: `sha256:${'0'.repeat(64)}`,
           };
@@ -506,7 +651,7 @@ test('manifest, allowlist, source repository, output, and committed plugin ident
   }
 });
 
-test('allowlist paths reject missing, executable, symlink, backslash, case, and Unicode hazards', (t) => {
+test('allowlist paths reject missing, symlink, backslash, case, and Unicode hazards', (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-payload-paths-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const cases: Array<{
@@ -521,14 +666,9 @@ test('allowlist paths reject missing, executable, symlink, backslash, case, and 
       error: /Allowlisted carrier files are missing/,
     },
     {
-      name: 'executable file',
-      sourceOptions: { executableSkill: true },
-      error: /only 100644 blobs are allowed/,
-    },
-    {
       name: 'symlink file',
       sourceOptions: { symlinkSkill: true },
-      error: /only 100644 blobs are allowed/,
+      error: /only 100644 and 100755 blobs are allowed/,
     },
     {
       name: 'backslash path',
@@ -592,9 +732,13 @@ test('manifest and committed plugin JSON require strict round-trip UTF-8', (t) =
   assert.match(manifestResult.stderr, /Framework package manifest is not valid UTF-8/);
 });
 
-test('canonical Framework allowlists validate and remain aligned with package/plugin/source identities', () => {
+test('Framework allowlists and historical payload envelopes validate at their explicit schema boundaries', () => {
   const schemaPath = path.join(repoRoot, 'contracts/opl-framework/package-payload-allowlist.schema.json');
   const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8')) as Record<string, any>;
+  const legacyPayloadSchema = JSON.parse(fs.readFileSync(
+    path.join(repoRoot, 'contracts/opl-framework/package-payload-manifest.schema.json'),
+    'utf8',
+  )) as Record<string, any>;
   const canonicalIds = ['mag', 'mas', 'rca', 'oma', 'obf', 'mas-scholar-skills', 'opl-flow'];
 
   for (const id of canonicalIds) {
@@ -619,10 +763,23 @@ test('canonical Framework allowlists validate and remain aligned with package/pl
     assert.equal(allowlist.source_repo, payload.source_repo, id);
     assert.equal(allowlist.source_root, payload.source_root, id);
     assert.deepEqual(allowlist.paths, payload.files.map((entry: Record<string, string>) => entry.path), id);
+    if (payload.surface_kind === 'opl_package_payload_manifest.v1') {
+      assert.doesNotThrow(() => assertJsonSchemaPayload({
+        schemaId: legacyPayloadSchema.$id,
+        schema: legacyPayloadSchema,
+        sourceRef: 'contracts/opl-framework/package-payload-manifest.schema.json',
+      }, payload), id);
+    } else {
+      assert.equal(payload.surface_kind, 'opl_agent_package_payload_manifest', id);
+      assert.equal(payload.schema_ref, undefined, id);
+    }
+    assert.equal(payload.plugin_id, undefined, id);
+    assert.equal(payload.content_lock, undefined, id);
+    assert.equal(payload.files.some((entry: Record<string, unknown>) => entry.mode !== undefined), false, id);
   }
 });
 
-test('generator rejects non-exact commits and unknown caller-supplied identity flags', (t) => {
+test('generator rejects caller commit drift, missing authority objects, unreachable commits, and identity flags', (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-payload-cli-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const source = createSourceRepo(root);
@@ -635,15 +792,39 @@ test('generator rejects non-exact commits and unknown caller-supplied identity f
   });
   assert.notEqual(shortCommit.status, 0);
   assert.match(shortCommit.stderr, /exact lowercase 40-character Git SHA/);
-  const missingCommit = runFailure({ authority, repo: source.repo, sourceCommit: 'f'.repeat(40) });
+  const wrongFirstWriter = runFailure({ authority, repo: source.repo, sourceCommit: 'f'.repeat(40) });
+  assert.notEqual(wrongFirstWriter.status, 0);
+  assert.match(wrongFirstWriter.stderr, /does not match Package owner cohort authority/);
+  assert.equal(fs.existsSync(authority.output), false);
+
+  const missingAuthorityRoot = path.join(root, 'missing');
+  const missingSource = createSourceRepo(missingAuthorityRoot);
+  const missingAuthority = createAuthority(missingAuthorityRoot, missingSource);
+  editJson(missingAuthority.ownerCohortLock, (lock) => {
+    lock.packages[packageId].source_commit = 'f'.repeat(40);
+  });
+  const missingCommit = runFailure({
+    authority: missingAuthority,
+    repo: missingSource.repo,
+    sourceCommit: 'f'.repeat(40),
+  });
   assert.notEqual(missingCommit.status, 0);
   assert.match(missingCommit.stderr, /does not exist as an exact local Git commit object/);
 
+  writeFile(source.repo, rootedPath(source.sourceRoot, 'assets/unreachable.txt'), 'unreachable\n');
+  const unreachableCommit = commitAll(source.repo, 'unreachable payload source');
+  editJson(authority.ownerCohortLock, (lock) => {
+    lock.packages[packageId].source_commit = unreachableCommit;
+  });
+  const unreachable = runFailure({ authority, repo: source.repo, sourceCommit: unreachableCommit });
+  assert.notEqual(unreachable.status, 0);
+  assert.match(unreachable.stderr, /not reachable from refs\/remotes\/origin\/main/);
+
   const injectedIdentity = spawnSync(process.execPath, [
-    ...generatorArgs({ authority, repo: source.repo, sourceCommit: source.sourceCommit }),
+    ...generatorArgs({ authority: missingAuthority, repo: missingSource.repo, sourceCommit: 'f'.repeat(40) }),
     '--package-id', 'attacker',
   ], { cwd: repoRoot, encoding: 'utf8' });
   assert.notEqual(injectedIdentity.status, 0);
   assert.match(injectedIdentity.stderr, /Unknown option '--package-id'/);
-  assert.equal(fs.existsSync(authority.output), false);
+  assert.equal(fs.existsSync(missingAuthority.output), false);
 });

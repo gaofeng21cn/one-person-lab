@@ -13,6 +13,16 @@ const PACKAGE_ID = /^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/;
 const SEMVER = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$/;
 const GITHUB_COMPONENT = /^[A-Za-z0-9](?:[A-Za-z0-9_.-]*[A-Za-z0-9])?$/;
 const MAX_GIT_OUTPUT = 128 * 1024 * 1024;
+const CANONICAL_PAYLOAD_SURFACE = 'opl_package_payload_manifest.v2';
+const CANONICAL_PAYLOAD_SCHEMA = 'contracts/opl-framework/package-payload-manifest-v2.schema.json';
+const CANONICAL_CONTENT_LOCK = 'ordered_path_length_file_length_bytes';
+const LEGACY_CONTENT_LOCK = 'ordered_path_nul_file_bytes';
+const LEGACY_PAYLOAD_SURFACES = new Set([
+  'opl_agent_package_payload_manifest',
+  'opl_package_payload_manifest.v1',
+]);
+const ALLOWED_FILE_MODES = new Set(['100644', '100755']);
+const EXPECTED_REMOTE_REF = 'refs/remotes/origin/main';
 const PACKAGE_MANIFEST_SCHEMAS = new Map([
   ['opl_agent_package_manifest.v1', {
     ref: 'contracts/opl-framework/agent-package-manifest.schema.json',
@@ -40,12 +50,13 @@ function parseOptions(argv) {
     options: {
       manifest: { type: 'string' },
       allowlist: { type: 'string' },
+      'owner-cohort-lock': { type: 'string' },
       repo: { type: 'string' },
       'source-commit': { type: 'string' },
       check: { type: 'boolean', default: false },
     },
   });
-  const required = ['manifest', 'allowlist', 'repo', 'source-commit'];
+  const required = ['manifest', 'allowlist', 'owner-cohort-lock', 'repo', 'source-commit'];
   const missing = required.filter((name) => typeof values[name] !== 'string' || !values[name].trim());
   if (missing.length > 0) {
     throw new Error(`Missing required options: ${missing.map((name) => `--${name}`).join(', ')}`);
@@ -53,6 +64,7 @@ function parseOptions(argv) {
   return {
     manifest: path.resolve(values.manifest.trim()),
     allowlist: path.resolve(values.allowlist.trim()),
+    ownerCohortLock: path.resolve(values['owner-cohort-lock'].trim()),
     repo: path.resolve(values.repo.trim()),
     sourceCommit: values['source-commit'].trim(),
     check: values.check,
@@ -203,6 +215,43 @@ function parseGithubRepository(value, label) {
   return { owner, repository };
 }
 
+function loadOwnerCohortAuthority(options, packageId, sourceRepoUrl, githubRepository) {
+  const lock = requireObject(
+    readJsonFile(options.ownerCohortLock, 'Package owner cohort lock'),
+    'Package owner cohort lock',
+  );
+  assertSchemaPayload(
+    'contracts/opl-framework/package-owner-cohort-lock.schema.json',
+    lock,
+    'Package owner cohort lock',
+  );
+  const packages = requireObject(lock.packages, 'Package owner cohort lock packages');
+  const entry = requireObject(packages[packageId], `Package owner cohort lock entry ${packageId}`);
+  if (entry.package_id !== packageId
+    || entry.repo_url !== sourceRepoUrl
+    || entry.repo_name !== githubRepository.repository) {
+    throw new Error(
+      `Package owner cohort authority does not match Framework identity: package=${packageId} repo=${sourceRepoUrl}`,
+    );
+  }
+  const expectedCommit = requireString(entry.source_commit, 'Package owner cohort source commit');
+  if (!FULL_GIT_SHA.test(expectedCommit)) {
+    throw new Error(`Package owner cohort source commit must be an exact lowercase 40-character Git SHA: ${expectedCommit}`);
+  }
+  if (!FULL_GIT_SHA.test(options.sourceCommit)) {
+    throw new Error(`Source commit must be one exact lowercase 40-character Git SHA: ${options.sourceCommit}`);
+  }
+  if (options.sourceCommit !== expectedCommit) {
+    throw new Error(
+      `Caller source commit does not match Package owner cohort authority: expected=${expectedCommit} actual=${options.sourceCommit}`,
+    );
+  }
+  return {
+    expectedCommit,
+    remoteRef: EXPECTED_REMOTE_REF,
+  };
+}
+
 function loadAuthority(options) {
   const manifest = requireObject(readJsonFile(options.manifest, 'Framework package manifest'), 'Framework package manifest');
   const surfaceKind = requireString(manifest.surface_kind, 'Framework package manifest surface_kind');
@@ -262,21 +311,24 @@ function loadAuthority(options) {
     return value;
   });
   assertNoPortablePathCollisions(paths);
-  let contentLockDigest = null;
+  let contentLock = null;
   if (manifest.content_lock !== undefined) {
-    const contentLock = requireObject(manifest.content_lock, 'Framework package content_lock');
-    if (contentLock.algorithm !== 'sha256'
-      || contentLock.canonicalization !== 'ordered_path_nul_file_bytes'
-      || typeof contentLock.digest !== 'string'
-      || !/^sha256:[0-9a-f]{64}$/.test(contentLock.digest)) {
-      throw new Error('Framework package content_lock must use sha256 ordered_path_nul_file_bytes canonicalization');
+    const declared = requireObject(manifest.content_lock, 'Framework package content_lock');
+    if (declared.algorithm !== 'sha256'
+      || ![LEGACY_CONTENT_LOCK, CANONICAL_CONTENT_LOCK].includes(declared.canonicalization)
+      || typeof declared.digest !== 'string'
+      || !/^sha256:[0-9a-f]{64}$/.test(declared.digest)) {
+      throw new Error('Framework package content_lock must use a supported sha256 canonicalization');
     }
-    if (!Array.isArray(contentLock.paths)
-      || contentLock.paths.length !== paths.length
-      || contentLock.paths.some((candidate, index) => candidate !== paths[index])) {
+    if (!Array.isArray(declared.paths)
+      || declared.paths.length !== paths.length
+      || declared.paths.some((candidate, index) => candidate !== paths[index])) {
       throw new Error('Framework package content_lock paths do not match the payload allowlist');
     }
-    contentLockDigest = contentLock.digest;
+    contentLock = {
+      canonicalization: declared.canonicalization,
+      digest: declared.digest,
+    };
   }
   if (!paths.includes('.codex-plugin/plugin.json')) {
     throw new Error('Framework payload allowlist must include .codex-plugin/plugin.json');
@@ -290,6 +342,12 @@ function loadAuthority(options) {
     allowlist,
     'Framework payload allowlist',
   );
+  const sourceAuthority = loadOwnerCohortAuthority(
+    options,
+    packageId,
+    sourceRepoUrl,
+    githubRepository,
+  );
 
   return {
     packageId,
@@ -299,7 +357,8 @@ function loadAuthority(options) {
     githubRepository,
     sourceRoot,
     paths,
-    contentLockDigest,
+    contentLock,
+    ...sourceAuthority,
     output: path.resolve(path.dirname(options.manifest), outputRef),
   };
 }
@@ -389,6 +448,17 @@ function assertExactCommit(repo, commit) {
   }
 }
 
+function assertRemoteReachability(repo, commit, remoteRef) {
+  const resolvedRemote = spawnGit(repo, ['rev-parse', '--verify', `${remoteRef}^{commit}`], 'utf8');
+  if (resolvedRemote.status !== 0 || !FULL_GIT_SHA.test(resolvedRemote.stdout.trim())) {
+    throw new Error(`Expected remote-tracking authority ref is missing: ${remoteRef}`);
+  }
+  const reachable = spawnGit(repo, ['merge-base', '--is-ancestor', commit, remoteRef], 'utf8');
+  if (reachable.status !== 0) {
+    throw new Error(`Package owner cohort source commit is not reachable from ${remoteRef}: ${commit}`);
+  }
+}
+
 function assertSourceTree(repo, commit, sourceRoot) {
   const treeish = sourceRoot === '.' ? `${commit}^{tree}` : `${commit}:${sourceRoot}`;
   const probe = spawnGit(repo, ['cat-file', '-t', treeish], 'utf8');
@@ -425,10 +495,10 @@ function allowlistedTreeEntries(repo, commit, sourceRoot, paths) {
     if (relativePath === undefined || entries.has(relativePath)) {
       throw new Error(`Git returned an unexpected or duplicate carrier path: ${treePath}`);
     }
-    if (type !== 'blob' || mode !== '100644') {
-      throw new Error(`Unsupported carrier tree entry at ${treePath}: mode=${mode} type=${type}; only 100644 blobs are allowed`);
+    if (type !== 'blob' || !ALLOWED_FILE_MODES.has(mode)) {
+      throw new Error(`Unsupported carrier tree entry at ${treePath}: mode=${mode} type=${type}; only 100644 and 100755 blobs are allowed`);
     }
-    entries.set(relativePath, { objectId, relativePath, treePath });
+    entries.set(relativePath, { mode, objectId, relativePath, treePath });
   }
   const missing = paths.filter((relativePath) => !entries.has(relativePath));
   if (missing.length > 0) {
@@ -453,13 +523,40 @@ function sha256(bytes) {
   return crypto.createHash('sha256').update(bytes).digest('hex');
 }
 
-function buildPayload(options, authority) {
+function contentLockDigest(canonicalization, paths, blobs) {
+  const digest = crypto.createHash('sha256');
+  for (const relativePath of paths) {
+    const pathBytes = Buffer.from(relativePath, 'utf8');
+    const fileBytes = blobs.get(relativePath);
+    if (canonicalization === LEGACY_CONTENT_LOCK) {
+      digest.update(pathBytes);
+      digest.update('\0');
+      digest.update(fileBytes);
+      continue;
+    }
+    if (canonicalization !== CANONICAL_CONTENT_LOCK) {
+      throw new Error(`Unsupported content_lock canonicalization: ${canonicalization}`);
+    }
+    const pathLength = Buffer.allocUnsafe(8);
+    const fileLength = Buffer.allocUnsafe(8);
+    pathLength.writeBigUInt64BE(BigInt(pathBytes.length));
+    fileLength.writeBigUInt64BE(BigInt(fileBytes.length));
+    digest.update(pathLength);
+    digest.update(pathBytes);
+    digest.update(fileLength);
+    digest.update(fileBytes);
+  }
+  return `sha256:${digest.digest('hex')}`;
+}
+
+function readSourceSnapshot(options, authority) {
   assertRepositoryBinding(options.repo, authority.sourceRepoUrl);
-  assertExactCommit(options.repo, options.sourceCommit);
-  assertSourceTree(options.repo, options.sourceCommit, authority.sourceRoot);
+  assertExactCommit(options.repo, authority.expectedCommit);
+  assertRemoteReachability(options.repo, authority.expectedCommit, authority.remoteRef);
+  assertSourceTree(options.repo, authority.expectedCommit, authority.sourceRoot);
   const entries = allowlistedTreeEntries(
     options.repo,
-    options.sourceCommit,
+    authority.expectedCommit,
     authority.sourceRoot,
     authority.paths,
   );
@@ -467,18 +564,6 @@ function buildPayload(options, authority) {
     entry.relativePath,
     gitBytes(options.repo, ['cat-file', 'blob', entry.objectId], `Cannot read carrier blob ${entry.objectId}`),
   ]));
-  if (authority.contentLockDigest) {
-    const contentLock = crypto.createHash('sha256');
-    for (const relativePath of authority.paths) {
-      contentLock.update(relativePath, 'utf8');
-      contentLock.update('\0');
-      contentLock.update(blobs.get(relativePath));
-    }
-    const actualContentLockDigest = `sha256:${contentLock.digest('hex')}`;
-    if (actualContentLockDigest !== authority.contentLockDigest) {
-      throw new Error(`Exact commit does not match Framework package content_lock: expected=${authority.contentLockDigest} actual=${actualContentLockDigest}`);
-    }
-  }
   const plugin = requireObject(
     parseJsonBytes(blobs.get('.codex-plugin/plugin.json'), 'Committed Codex plugin manifest'),
     'Committed Codex plugin manifest',
@@ -491,20 +576,51 @@ function buildPayload(options, authority) {
   if (pluginVersion !== authority.packageVersion) {
     throw new Error(`Committed plugin version does not match Framework package version: expected=${authority.packageVersion} actual=${pluginVersion}`);
   }
+  return { blobs, entries };
+}
+
+function verifyDeclaredContentLock(authority, snapshot, { allowLegacy }) {
+  if (authority.contentLock) {
+    if (!allowLegacy && authority.contentLock.canonicalization !== CANONICAL_CONTENT_LOCK) {
+      throw new Error(
+        `Framework package content_lock uses the historical ${LEGACY_CONTENT_LOCK} boundary; bump SemVer and issue ${CANONICAL_CONTENT_LOCK}`,
+      );
+    }
+    const actual = contentLockDigest(
+      authority.contentLock.canonicalization,
+      authority.paths,
+      snapshot.blobs,
+    );
+    if (actual !== authority.contentLock.digest) {
+      throw new Error(`Exact commit does not match Framework package content_lock: expected=${authority.contentLock.digest} actual=${actual}`);
+    }
+  }
+  return contentLockDigest(CANONICAL_CONTENT_LOCK, authority.paths, snapshot.blobs);
+}
+
+function buildPayload(authority, snapshot) {
+  const canonicalDigest = verifyDeclaredContentLock(authority, snapshot, { allowLegacy: false });
 
   return {
-    surface_kind: 'opl_package_payload_manifest.v1',
-    schema_ref: 'contracts/opl-framework/package-payload-manifest.schema.json',
+    surface_kind: CANONICAL_PAYLOAD_SURFACE,
+    schema_ref: CANONICAL_PAYLOAD_SCHEMA,
     package_id: authority.packageId,
+    plugin_id: authority.pluginId,
     package_version: authority.packageVersion,
     source_repo: authority.sourceRepoUrl,
-    source_commit: options.sourceCommit,
+    source_commit: authority.expectedCommit,
     source_root: authority.sourceRoot,
-    files: entries.map((entry) => {
-      const bytes = blobs.get(entry.relativePath);
+    content_lock: {
+      algorithm: 'sha256',
+      canonicalization: CANONICAL_CONTENT_LOCK,
+      digest: canonicalDigest,
+    },
+    files: snapshot.entries.map((entry) => {
+      const bytes = snapshot.blobs.get(entry.relativePath);
       return {
         path: entry.relativePath,
-        source_url: rawSourceUrl(authority.githubRepository, options.sourceCommit, entry.treePath),
+        mode: entry.mode,
+        source_url: rawSourceUrl(authority.githubRepository, authority.expectedCommit, entry.treePath),
         sha256: `sha256:${sha256(bytes)}`,
       };
     }),
@@ -554,6 +670,93 @@ function assertExpectedBytes(filePath, expected, expectedDigest, conflictMessage
   }
 }
 
+function legacyPayloadAt(filePath) {
+  if (!fs.existsSync(filePath)) return null;
+  const bytes = readImmutableTarget(filePath, `Tracked payload manifest is missing: ${filePath}`);
+  let payload;
+  try {
+    payload = parseJsonBytes(bytes, 'Published payload manifest');
+  } catch {
+    return null;
+  }
+  return payload && typeof payload === 'object' && LEGACY_PAYLOAD_SURFACES.has(payload.surface_kind)
+    ? { bytes, payload }
+    : null;
+}
+
+function checkLegacyPayload(authority, snapshot, legacy) {
+  const payload = requireObject(legacy.payload, 'Published legacy payload manifest');
+  if (payload.surface_kind === 'opl_package_payload_manifest.v1') {
+    assertSchemaPayload(
+      'contracts/opl-framework/package-payload-manifest.schema.json',
+      payload,
+      'Published legacy package payload manifest',
+    );
+  } else if (payload.schema_ref !== undefined) {
+    throw new Error('Historical unversioned payload manifest must not claim a canonical schema_ref');
+  }
+  if (payload.package_id !== authority.packageId
+    || payload.package_version !== authority.packageVersion
+    || payload.source_repo !== authority.sourceRepoUrl
+    || payload.source_commit !== authority.expectedCommit
+    || payload.source_root !== authority.sourceRoot) {
+    throw new Error('Published legacy payload identity does not match Framework and owner cohort authority');
+  }
+  if (!Array.isArray(payload.files) || payload.files.length !== snapshot.entries.length) {
+    throw new Error('Published legacy payload files do not match the Framework allowlist');
+  }
+  for (let index = 0; index < snapshot.entries.length; index += 1) {
+    const expected = snapshot.entries[index];
+    const actual = requireObject(payload.files[index], `Published legacy payload file ${index}`);
+    const bytes = snapshot.blobs.get(expected.relativePath);
+    if (actual.path !== expected.relativePath
+      || actual.source_url !== rawSourceUrl(authority.githubRepository, authority.expectedCommit, expected.treePath)
+      || actual.sha256 !== `sha256:${sha256(bytes)}`) {
+      throw new Error(`Published legacy payload file does not match exact source authority: ${expected.relativePath}`);
+    }
+  }
+  verifyDeclaredContentLock(authority, snapshot, { allowLegacy: true });
+  return `sha256:${sha256(legacy.bytes)}`;
+}
+
+function fsyncDirectory(directory) {
+  const descriptor = fs.openSync(
+    directory,
+    fs.constants.O_RDONLY | (fs.constants.O_DIRECTORY ?? 0),
+  );
+  try {
+    fs.fsyncSync(descriptor);
+  } finally {
+    fs.closeSync(descriptor);
+  }
+}
+
+function processIsRunning(pid) {
+  if (pid === process.pid) return true;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return Boolean(error && typeof error === 'object' && error.code === 'EPERM');
+  }
+}
+
+function cleanupTargetTemporaryFiles(directory, filePath) {
+  const escaped = path.basename(filePath).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pattern = new RegExp(`^\\.${escaped}\\.([1-9][0-9]*)\\.[0-9a-f]{24}\\.tmp$`);
+  let removed = false;
+  for (const name of fs.readdirSync(directory)) {
+    const match = pattern.exec(name);
+    if (!match || processIsRunning(Number(match[1]))) continue;
+    const temporary = path.join(directory, name);
+    const state = fs.lstatSync(temporary);
+    if (!state.isFile() || state.isSymbolicLink()) continue;
+    fs.rmSync(temporary);
+    removed = true;
+  }
+  if (removed) fsyncDirectory(directory);
+}
+
 function prepareOutputDirectory(filePath, manifestPath) {
   const directory = path.dirname(filePath);
   fs.mkdirSync(directory, { recursive: true });
@@ -569,6 +772,7 @@ function prepareOutputDirectory(filePath, manifestPath) {
 
 function installImmutable(filePath, expected, expectedDigest, manifestPath) {
   const directory = prepareOutputDirectory(filePath, manifestPath);
+  cleanupTargetTemporaryFiles(directory, filePath);
   const temporary = path.join(
     directory,
     `.${path.basename(filePath)}.${process.pid}.${crypto.randomBytes(12).toString('hex')}.tmp`,
@@ -588,6 +792,7 @@ function installImmutable(filePath, expected, expectedDigest, manifestPath) {
     try {
       // A hard-link install is an atomic create-if-absent CAS and never replaces a published SemVer path.
       fs.linkSync(temporary, filePath);
+      fsyncDirectory(directory);
       return 'created';
     } catch (error) {
       if (!error || typeof error !== 'object' || error.code !== 'EEXIST') throw error;
@@ -596,7 +801,9 @@ function installImmutable(filePath, expected, expectedDigest, manifestPath) {
     }
   } finally {
     if (descriptor !== undefined) fs.closeSync(descriptor);
+    const temporaryExists = fs.existsSync(temporary);
     fs.rmSync(temporary, { force: true });
+    if (temporaryExists) fsyncDirectory(directory);
   }
 }
 
@@ -614,9 +821,32 @@ function applyPayload(options, authority, source) {
 function main() {
   const options = parseOptions(process.argv.slice(2));
   const authority = loadAuthority(options);
-  const payload = buildPayload(options, authority);
+  const snapshot = readSourceSnapshot(options, authority);
+  const legacy = legacyPayloadAt(authority.output);
+  if (legacy) {
+    if (!options.check) {
+      throw new Error(
+        `Published legacy payload is historical read-only; bump package SemVer before creating ${CANONICAL_PAYLOAD_SURFACE}: ${authority.output}`,
+      );
+    }
+    const payloadSha256 = checkLegacyPayload(authority, snapshot, legacy);
+    process.stdout.write(`${JSON.stringify({
+      status: 'checked_legacy',
+      output: authority.output,
+      package_id: authority.packageId,
+      package_version: authority.packageVersion,
+      plugin_id: authority.pluginId,
+      source_commit: authority.expectedCommit,
+      source_remote_ref: authority.remoteRef,
+      source_root: authority.sourceRoot,
+      file_count: legacy.payload.files.length,
+      payload_sha256: payloadSha256,
+    }, null, 2)}\n`);
+    return;
+  }
+  const payload = buildPayload(authority, snapshot);
   assertSchemaPayload(
-    'contracts/opl-framework/package-payload-manifest.schema.json',
+    CANONICAL_PAYLOAD_SCHEMA,
     payload,
     'Generated package payload manifest',
   );
@@ -628,7 +858,8 @@ function main() {
     package_id: authority.packageId,
     package_version: authority.packageVersion,
     plugin_id: authority.pluginId,
-    source_commit: options.sourceCommit,
+    source_commit: authority.expectedCommit,
+    source_remote_ref: authority.remoteRef,
     source_root: authority.sourceRoot,
     file_count: payload.files.length,
     payload_sha256: result.payloadSha256,

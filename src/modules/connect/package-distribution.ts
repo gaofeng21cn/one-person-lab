@@ -729,7 +729,9 @@ function buildCurrentPackageCatalog(manifest: OplPackageManifest) {
       package_id: packageId,
       package_version: packageVersion,
       source_commit: packageEntry.owner_source_commit,
-      source_root: undefined,
+      ...(payload.surface_kind === 'opl_package_payload_manifest.v2'
+        ? {}
+        : { source_root: undefined }),
       ...(trackedSourceCommit && trackedSourceCommit !== packageEntry.owner_source_commit
         ? { migration_source_commit: trackedSourceCommit }
         : {}),

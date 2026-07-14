@@ -71,7 +71,12 @@
       "required": ["algorithm", "canonicalization", "paths", "digest"],
       "properties": {
         "algorithm": { "const": "sha256" },
-        "canonicalization": { "const": "ordered_path_nul_file_bytes" },
+        "canonicalization": {
+          "enum": [
+            "ordered_path_nul_file_bytes",
+            "ordered_path_length_file_length_bytes"
+          ]
+        },
         "paths": {
           "type": "array",
           "items": { "type": "string", "minLength": 1 },

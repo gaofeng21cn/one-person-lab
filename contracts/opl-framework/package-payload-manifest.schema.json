@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://one-person-lab.local/contracts/opl-framework/package-payload-manifest.schema.json",
-  "title": "OPL Package Payload Manifest",
+  "title": "Legacy OPL Package Payload Manifest v1",
   "type": "object",
   "required": [
     "surface_kind",
@@ -22,7 +22,7 @@
     },
     "package_id": {
       "type": "string",
-      "minLength": 1
+      "pattern": "^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$"
     },
     "package_version": {
       "type": "string",
@@ -30,7 +30,7 @@
     },
     "source_repo": {
       "type": "string",
-      "minLength": 1
+      "pattern": "^https://github\\.com/[A-Za-z0-9](?:[A-Za-z0-9_.-]*[A-Za-z0-9])?/[A-Za-z0-9](?:[A-Za-z0-9_.-]*[A-Za-z0-9])?\\.git$"
     },
     "source_commit": {
       "type": "string",
@@ -43,25 +43,32 @@
     "agent_id": false,
     "files": {
       "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
       "items": {
         "type": "object",
         "required": [
           "path",
+          "source_url",
           "sha256"
         ],
         "properties": {
           "path": {
             "type": "string",
-            "minLength": 1
+            "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\\\)[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "source_url": {
+            "type": "string",
+            "pattern": "^https://raw\\.githubusercontent\\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/[0-9a-f]{40}/[^\\u0000-\\u001f\\u007f]+$"
           },
           "sha256": {
             "type": "string",
             "pattern": "^sha256:[0-9a-f]{64}$"
           }
         },
-        "additionalProperties": true
+        "additionalProperties": false
       }
     }
   },
-  "additionalProperties": true
+  "additionalProperties": false
 }

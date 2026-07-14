@@ -34,6 +34,12 @@ import {
   rollbackPackageProfileMigration,
 } from './profile-surface.ts';
 import {
+  admitPackagePayloadManifest,
+  payloadFileMode,
+  type PackagePayloadAdmission,
+  verifyCanonicalPayloadContentLock,
+} from './payload-manifest.ts';
+import {
   materializeManagedPolicySurface,
   noManagedPolicyMigration,
   rollbackManagedPolicyMigration,
@@ -175,6 +181,7 @@ async function normalizePayloadFiles(
   payloadManifestUrl: string,
   dryRun: boolean,
   artifactSource: { sourceRoot: string; sourceArtifactRef: string } | null,
+  admission: PackagePayloadAdmission,
 ): Promise<AgentPackagePayloadFile[]> {
   if (!isRecord(payload) || !Array.isArray(payload.files)) {
     throw new FrameworkContractError('contract_shape_invalid', 'Agent package payload manifest must contain a files array.', {
@@ -233,6 +240,8 @@ async function normalizePayloadFiles(
       relativePath: safeRelativePayloadPath(relativePath),
       content,
       sha256,
+      mode: payloadFileMode(admission, entry),
+      digestVerified,
     };
   }));
 }
@@ -330,6 +339,12 @@ async function materializePayloadManifestSource(input: {
       failure_code: 'agent_package_payload_manifest_invalid',
     });
   }
+  const admission = admitPackagePayloadManifest({
+    payload: fetched.payload,
+    manifest: input.manifest,
+    payloadManifestUrl: input.payloadManifestUrl,
+    catalogSelection: input.catalogSelection,
+  });
   const artifactStageRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-source-'));
   let files: AgentPackagePayloadFile[];
   try {
@@ -345,10 +360,12 @@ async function materializePayloadManifestSource(input: {
       input.payloadManifestUrl,
       input.dryRun,
       artifactSource,
+      admission,
     );
   } finally {
     fs.rmSync(artifactStageRoot, { recursive: true, force: true });
   }
+  verifyCanonicalPayloadContentLock(admission, files, input.payloadManifestUrl);
   const payloadRoot = input.dryRun
     ? fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-payload-'))
     : path.join(
@@ -371,7 +388,19 @@ async function materializePayloadManifestSource(input: {
       });
     }
     fs.mkdirSync(path.dirname(targetPath), { recursive: true });
-    fs.writeFileSync(targetPath, file.content);
+    let descriptor: number | undefined;
+    try {
+      descriptor = fs.openSync(
+        targetPath,
+        fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_WRONLY | (fs.constants.O_NOFOLLOW ?? 0),
+        0o600,
+      );
+      fs.writeFileSync(descriptor, file.content);
+      fs.fchmodSync(descriptor, file.mode === '100755' ? 0o755 : 0o644);
+      fs.fsyncSync(descriptor);
+    } finally {
+      if (descriptor !== undefined) fs.closeSync(descriptor);
+    }
   }
   return {
     payloadRoot,
@@ -779,6 +808,8 @@ export function rematerializePhysicalCodexSurfaceFromLock(
     version: lock.package_version,
     owner_language_version: lock.owner_language_version,
     source: '',
+    source_repo: null,
+    source_commit: lock.owner_source_commit ?? null,
     codex_surface: {},
     skill_packs: [],
     entrypoints: [],
@@ -802,6 +833,7 @@ export function rematerializePhysicalCodexSurfaceFromLock(
     capability_dependencies: lock.capability_dependencies ?? [],
     capability_provider: lock.capability_provider ?? null,
     content_digest: lock.content_digest ?? null,
+    content_lock_canonicalization: null,
     content_lock_paths: lock.content_lock_paths ?? [],
   }, dryRun, options);
   return options.skipManagedSurfaces && lock.physical_surface

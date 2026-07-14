@@ -127,6 +127,8 @@ export type AgentPackagePayloadFile = {
   relativePath: string;
   content: Buffer;
   sha256: string | null;
+  mode: '100644' | '100755';
+  digestVerified: boolean;
 };
 
 export type AgentPackageRegistryEntry = {
@@ -192,6 +194,8 @@ export type AgentPackageManifest = {
   version: string;
   owner_language_version: AgentPackageOwnerLanguageVersion | null;
   source: string;
+  source_repo: string | null;
+  source_commit: string | null;
   codex_surface: Record<string, unknown>;
   skill_packs: Record<string, unknown>[];
   entrypoints: Record<string, unknown>[];
@@ -215,6 +219,7 @@ export type AgentPackageManifest = {
   capability_dependencies: AgentPackageCapabilityDependency[];
   capability_provider: AgentPackageCapabilityProvider | null;
   content_digest: string | null;
+  content_lock_canonicalization: 'ordered_path_nul_file_bytes' | 'ordered_path_length_file_length_bytes' | null;
   content_lock_paths: string[];
 };
 

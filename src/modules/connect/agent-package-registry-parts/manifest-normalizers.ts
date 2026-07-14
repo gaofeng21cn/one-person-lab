@@ -705,6 +705,9 @@ export function normalizeManifest(payload: unknown, manifestUrl: string): AgentP
     version: normalizePackageVersion(payload.version),
     owner_language_version: normalizeOwnerLanguageVersion(payload.owner_language_version),
     source: stringValue(payload.source)!,
+    source_repo: stringValue(payload.source_repo),
+    source_commit: stringValue(payload.source_commit)
+      ?? stringValue(payload.codex_surface.carrier_source_commit),
     codex_surface: payload.codex_surface,
     skill_packs: skillPacks,
     entrypoints,
@@ -731,6 +734,7 @@ export function normalizeManifest(payload: unknown, manifestUrl: string): AgentP
     capability_dependencies: capabilityDependencies,
     capability_provider: capabilityProvider,
     content_digest: distributionPayload?.payload_digest_ref ?? null,
+    content_lock_canonicalization: null,
     content_lock_paths: [],
   };
 }
@@ -772,6 +776,24 @@ export function normalizeCapabilityPackageManifest(payload: unknown, manifestUrl
     });
   }
   const capabilityAbi = assertStringValue(payload.capability_abi.id, 'capability_abi.id');
+  if (payload.content_lock.algorithm !== 'sha256') {
+    throw new FrameworkContractError('contract_shape_invalid', 'Capability package content lock algorithm must be sha256.', {
+      manifest_url: manifestUrl,
+      failure_code: 'invalid_capability_package_manifest',
+    });
+  }
+  const contentLockCanonicalization = assertStringValue(
+    payload.content_lock.canonicalization,
+    'content_lock.canonicalization',
+  );
+  if (contentLockCanonicalization !== 'ordered_path_nul_file_bytes'
+    && contentLockCanonicalization !== 'ordered_path_length_file_length_bytes') {
+    throw new FrameworkContractError('contract_shape_invalid', 'Capability package content lock canonicalization is unsupported.', {
+      manifest_url: manifestUrl,
+      content_lock_canonicalization: contentLockCanonicalization,
+      failure_code: 'invalid_capability_package_manifest',
+    });
+  }
   const contentDigest = assertStringValue(payload.content_lock.digest, 'content_lock.digest');
   if (!/^sha256:[0-9a-f]{64}$/.test(contentDigest)) {
     throw new FrameworkContractError('contract_shape_invalid', 'Capability package content lock digest must be sha256.', {
@@ -827,6 +849,9 @@ export function normalizeCapabilityPackageManifest(payload: unknown, manifestUrl
     version: normalizePackageVersion(payload.version),
     owner_language_version: null,
     source: assertStringValue(payload.source, 'source'),
+    source_repo: stringValue(payload.source_repo),
+    source_commit: stringValue(payload.source_commit)
+      ?? stringValue(codexSurface.carrier_source_commit),
     codex_surface: codexSurface,
     skill_packs: [],
     entrypoints: [],
@@ -862,6 +887,7 @@ export function normalizeCapabilityPackageManifest(payload: unknown, manifestUrl
       module_export_ids: coreModuleIds,
     },
     content_digest: contentDigest,
+    content_lock_canonicalization: contentLockCanonicalization,
     content_lock_paths: contentLockPaths,
   };
 }
@@ -925,6 +951,9 @@ export function normalizeWorkflowProfilePackageManifest(payload: unknown, manife
     version: normalizePackageVersion(payload.version),
     owner_language_version: null,
     source: assertStringValue(payload.source, 'source'),
+    source_repo: stringValue(payload.source_repo),
+    source_commit: stringValue(payload.source_commit)
+      ?? stringValue(codexSurface.carrier_source_commit),
     codex_surface: codexSurface,
     skill_packs: [],
     entrypoints: [],
@@ -948,6 +977,7 @@ export function normalizeWorkflowProfilePackageManifest(payload: unknown, manife
     capability_dependencies: [],
     capability_provider: null,
     content_digest: null,
+    content_lock_canonicalization: null,
     content_lock_paths: [],
   };
 }

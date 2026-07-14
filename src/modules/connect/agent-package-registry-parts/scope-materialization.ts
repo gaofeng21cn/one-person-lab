@@ -289,6 +289,8 @@ export function materializeCapabilityScopeFromLock(input: {
       version: input.provider.package_version,
       owner_language_version: input.provider.owner_language_version,
       source: '',
+      source_repo: null,
+      source_commit: input.provider.owner_source_commit ?? null,
       codex_surface: {},
       skill_packs: [],
       entrypoints: [],
@@ -312,6 +314,7 @@ export function materializeCapabilityScopeFromLock(input: {
       capability_dependencies: input.provider.capability_dependencies,
       capability_provider: input.provider.capability_provider,
       content_digest: input.provider.content_digest,
+      content_lock_canonicalization: null,
       content_lock_paths: input.provider.content_lock_paths,
     },
   });
