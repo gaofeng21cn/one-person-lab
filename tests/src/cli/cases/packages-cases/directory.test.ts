@@ -461,12 +461,39 @@ test('installed-only directory entries retain persisted role and consume canonic
   });
   assertRecommendedActionMatchesAvailable(needsActivation);
 
-  assert.throws(
-    () => buildAgentPackageDirectory({
-      registryCache: null,
-      locks: [{ ...lock, package_id: 'third.party.legacy', package_role: undefined }],
-      detail: 'fast',
-    }),
-    (error: any) => error?.details?.failure_code === 'agent_package_lock_role_missing',
+  const legacyDirectory = buildAgentPackageDirectory({
+    registryCache: null,
+    locks: [{ ...lock, package_id: 'third.party.legacy', package_role: undefined }],
+    detail: 'fast',
+  });
+  const legacy = legacyDirectory.entries.find((entry) => entry.package_id === 'third.party.legacy')!;
+  assert.equal(legacyDirectory.status, 'attention_required');
+  assert.equal(legacy.package_role, null);
+  assert.equal(legacy.role_state.status, 'migration_required');
+  assert.equal(legacy.role_state.source, 'unresolved_installed_lock');
+  assert.equal(legacy.installability.status, 'migration_required');
+  assert.equal(legacy.readiness.status, 'migration_required');
+  assert.equal(legacy.recommended_action, 'agent_package_repair');
+  assert.deepEqual(
+    legacy.available_actions.map((action) => action.action_id),
+    ['agent_package_repair', 'agent_package_uninstall'],
   );
+  assertRecommendedActionMatchesAvailable(legacy);
+
+  const failedStatusDirectory = buildAgentPackageDirectory({
+    registryCache: null,
+    locks: [lock],
+    detail: 'full',
+    readStatus: () => {
+      throw new Error('fixture status read failed');
+    },
+  });
+  const failedStatus = failedStatusDirectory.entries.find((entry) => entry.package_id === lock.package_id)!;
+  assert.equal(failedStatusDirectory.status, 'attention_required');
+  assert.equal(failedStatus.activated, false);
+  assert.equal(failedStatus.readiness.status, 'repair_required');
+  assert.equal(failedStatus.readiness.reason, 'package_status_read_failed');
+  assert.equal(failedStatus.readiness.status_read_error?.code, 'unexpected_error');
+  assert.equal(failedStatus.recommended_action, 'agent_package_repair');
+  assertRecommendedActionMatchesAvailable(failedStatus);
 });

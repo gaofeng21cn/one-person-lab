@@ -184,6 +184,35 @@ function buildFastAgentPackageStatus(
 
 type AgentPackageStatusReader = typeof runOplAgentPackageStatus;
 
+function requestCachedAgentPackageStatusReader(readStatus: AgentPackageStatusReader): AgentPackageStatusReader {
+  const cache = new Map<string,
+    | { ok: true; value: ReturnType<AgentPackageStatusReader> }
+    | { ok: false; error: unknown }>();
+  return (input = {}) => {
+    const key = JSON.stringify([
+      input.packageId ?? null,
+      input.scope ?? null,
+      input.targetWorkspace ?? null,
+      input.targetQuest ?? null,
+      input.detail ?? null,
+      input.recoverRuntimeSource ?? null,
+    ]);
+    const cached = cache.get(key);
+    if (cached) {
+      if (cached.ok) return cached.value;
+      throw cached.error;
+    }
+    try {
+      const status = readStatus(input);
+      cache.set(key, { ok: true, value: status });
+      return status;
+    } catch (error) {
+      cache.set(key, { ok: false, error });
+      throw error;
+    }
+  };
+}
+
 function unavailableAgentPackageStatus(packageId: string, error: unknown): JsonRecord {
   const contractError = error instanceof FrameworkContractError ? error : null;
   return {
@@ -592,7 +621,10 @@ function compactFastOperatorRuntimeProjection(operator: JsonRecord) {
   };
 }
 
-export async function buildOplAppState(input: { profile?: AppStateProfile } = {}) {
+export async function buildOplAppState(input: {
+  profile?: AppStateProfile;
+  readAgentPackageStatus?: AgentPackageStatusReader;
+} = {}) {
   const startedAt = Date.now();
   const profile = input.profile ?? 'fast';
   const contracts = loadFrameworkContracts() as FrameworkContracts;
@@ -613,8 +645,12 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
   const core = buildCoreState(profile);
   const actions = buildActionCatalog(contracts);
   const activeWorkspaceBindings = listWorkspaceBindings().filter((binding) => binding.status === 'active');
+  const readAgentPackageStatus = requestCachedAgentPackageStatusReader(
+    input.readAgentPackageStatus ?? runOplAgentPackageStatus,
+  );
   const agentPackagesReadback = listOplAgentPackages({
     detail: profile,
+    readStatus: readAgentPackageStatus,
     statusContext: (packageId) => appAgentPackageStatusContext(
       packageId,
       activeWorkspaceBindings,
@@ -630,6 +666,7 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
     activeWorkspaceBindings,
     workspaceRootPath: workspaceRoot.selected_path,
     profile,
+    readStatus: readAgentPackageStatus,
   });
   const packageStatusFailures = Object.entries(agentPackageStatuses)
     .filter(([, status]) => status.status === 'unavailable')

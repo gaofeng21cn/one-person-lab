@@ -1,6 +1,9 @@
 import { assert, createFakeCodexFixture, fs, os, path, runCli, test } from '../../helpers.ts';
 import { FrameworkContractError } from '../../../../../src/kernel/contract-validation.ts';
-import { buildAppAgentPackageStatuses } from '../../../../../src/modules/console/app-state.ts';
+import {
+  buildAppAgentPackageStatuses,
+  buildOplAppState,
+} from '../../../../../src/modules/console/app-state.ts';
 import { buildAgentCatalog } from '../../../../../src/modules/console/work-item-projection/catalog.ts';
 import { managedRuntimeSourceLockReadiness } from '../../../../../src/modules/connect/agent-package-registry-parts/managed-runtime-source-carrier.ts';
 import type { AgentPackageManagedRuntimeSourceState } from '../../../../../src/modules/connect/agent-package-registry-parts/types.ts';
@@ -178,6 +181,108 @@ test('app package status uses a package binding before falling back to the selec
     (statuses['opl-flow'].materialization_readiness as Record<string, unknown>).status,
     'current',
   );
+});
+
+test('app state reuses one status read across directory and status index for the workspace-root fallback', async () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-package-status-cache-'));
+  const stateDir = path.join(homeRoot, 'opl-state');
+  const workspaceRoot = path.join(homeRoot, 'workspace');
+  const codexFixture = createFakeCodexFixture(`
+if [[ "$1" == "--version" ]]; then
+  echo "codex-cli 0.125.0"
+  exit 0
+fi
+exit 1
+`);
+  const env = {
+    HOME: homeRoot,
+    CODEX_HOME: path.join(homeRoot, '.codex'),
+    OPL_STATE_DIR: stateDir,
+    OPL_MODULES_ROOT: path.join(stateDir, 'modules'),
+    OPL_WORKSPACE_ROOT: workspaceRoot,
+    OPL_CODEX_CLI_LATEST_VERSION: '0.125.0',
+    OPL_DEVELOPER_MODE_GH_BINARY: path.join(homeRoot, 'missing-gh'),
+    OPL_FAMILY_RUNTIME_PROVIDER: '',
+    OPL_TEMPORAL_ADDRESS: '',
+    TEMPORAL_ADDRESS: '',
+    PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
+  };
+  const previousEnv = new Map(Object.keys(env).map((key) => [key, process.env[key]]));
+  const calls = new Map<string, number>();
+  try {
+    fs.mkdirSync(stateDir, { recursive: true });
+    fs.mkdirSync(workspaceRoot, { recursive: true });
+    fs.writeFileSync(path.join(stateDir, 'agent-package-locks.json'), `${JSON.stringify({
+      surface_kind: 'opl_agent_package_lock_index',
+      version: 'opl-agent-package-lock-index.v1',
+      packages: [{
+        surface_kind: 'opl_agent_package_lock',
+        package_id: 'third.party.research',
+        agent_id: 'third.party.research',
+        package_role: 'standard_agent',
+        display_name: 'Third Party Research',
+        publisher: 'example-org',
+        package_version: '1.0.0',
+        trust_tier: 'third_party_verified',
+        source_kind: 'manifest_url',
+        manifest_url: 'https://example.test/research.json',
+        lock_ref: 'opl://agent-package-lock/third.party.research/1.0.0/fixture',
+        capability_provider: null,
+        scope_materializations: [],
+      }],
+      last_known_good_transactions: [],
+    }, null, 2)}\n`);
+    for (const [key, value] of Object.entries(env)) process.env[key] = value;
+
+    const appState = await buildOplAppState({
+      profile: 'fast',
+      readAgentPackageStatus: ((input: { packageId?: string; scope?: string; targetWorkspace?: string } = {}) => {
+        const packageId = input.packageId ?? 'unknown';
+        calls.set(packageId, (calls.get(packageId) ?? 0) + 1);
+        const installed = packageId === 'third.party.research';
+        const materialized = installed
+          && input.scope === 'workspace'
+          && input.targetWorkspace === workspaceRoot;
+        return {
+          opl_agent_package_status: {
+            package_id: packageId,
+            status: installed ? materialized ? 'available' : 'attention_needed' : 'not_installed',
+            recommended_action: installed && !materialized ? 'agent_package_activate' : null,
+            installed_packages: installed ? [{
+              package_version: '1.0.0',
+              source_kind: 'manifest_url',
+              lock_ref: 'opl://agent-package-lock/third.party.research/1.0.0/fixture',
+              physical_surface: null,
+              exposure_state: 'visible',
+            }] : [],
+            package_dependency_readiness: { status: installed ? 'current' : 'not_installed', operational_ready: installed },
+            materialization_readiness: { status: installed ? materialized ? 'current' : 'scope_required' : 'not_required' },
+            runtime_source_readiness: { status: installed ? 'current' : 'not_installed', operational_ready: installed },
+            operational_ready: materialized,
+            operational_ready_scope: 'package_dependency_scope_and_runtime_source',
+            launch_allowed: materialized,
+            launch_blocked_reason: installed ? materialized ? null : 'scope_materialization_scope_required' : 'package_not_installed',
+            allowed_when_blocked: ['status', 'doctor', 'repair'],
+            repair_action: null,
+          },
+        };
+      }) as any,
+    }) as any;
+
+    const directoryEntry = appState.app_state.agent_packages.directory.entries.find(
+      (entry: any) => entry.package_id === 'third.party.research',
+    );
+    assert.equal(directoryEntry.activated, true);
+    assert.equal(directoryEntry.readiness.status, 'ready');
+    assert.equal(calls.get('third.party.research'), 1);
+  } finally {
+    for (const [key, value] of previousEnv) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+    fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
 });
 
 test('fast managed runtime readiness rejects a checkout path that is not a directory', () => {

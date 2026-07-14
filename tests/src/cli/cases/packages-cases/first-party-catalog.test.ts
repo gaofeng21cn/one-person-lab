@@ -2,7 +2,6 @@ import { execFileSync } from 'node:child_process';
 import crypto from 'node:crypto';
 
 import {
-  agentPackageManifest,
   assert,
   formatJsonPayload,
   fs,
@@ -34,12 +33,52 @@ function writeFirstPartyCatalogFixture(version: string, ownerSourceCommit: strin
     description: 'First-party catalog fixture.',
   });
   const skillMarkdown = '# OPL Flow\n\nFirst-party catalog fixture.\n';
+  const agentsMarkdown = '# OPL Flow fixture profile\n';
+  const tasteMarkdown = '# OPL Flow fixture authoring source\n';
+  const workflowPolicy = formatJsonPayload({
+    schema: 'opl_flow_workflow_policy.v1',
+    package: { id: 'opl-flow', version, owner: 'opl-flow', kind: 'workflow_profile' },
+    workflow_generation: 'fixture',
+    requires: [],
+    recommends: [],
+    compatible_optional: [],
+    conflicts: [],
+    retires: [],
+    migration_policy: {
+      trigger: 'explicit_opl_flow_install_update_optimize_or_generic_app_post_update_reconcile',
+      default_action: 'backup_disable_and_remove_from_discovery',
+      physical_delete: false,
+      receipt_owner: 'opl-framework',
+      rollback_required: true,
+      keep_override_supported: true,
+      fresh_discovery_required: true,
+    },
+    historical_fingerprints: {
+      plugin_ids: ['opl-flow'],
+      skill_ids: ['opl-flow'],
+      service_ids: ['opl-flow'],
+      config_markers: ['opl-flow'],
+      legacy_prompt_ids: ['opl-flow'],
+    },
+    codex_model_policy: {
+      authority: 'opl-flow',
+      configured_default: 'fixture',
+      override_precedence: [],
+    },
+  });
+  const workflowPolicySchema = formatJsonPayload({ type: 'object' });
   fs.mkdirSync(path.join(sourceRoot, '.codex-plugin'), { recursive: true });
   fs.mkdirSync(path.join(sourceRoot, 'skills', 'opl-flow'), { recursive: true });
+  fs.mkdirSync(path.join(sourceRoot, 'templates'), { recursive: true });
+  fs.mkdirSync(path.join(sourceRoot, 'contracts'), { recursive: true });
   fs.mkdirSync(blobRoot, { recursive: true });
   fs.mkdirSync(fakeBin, { recursive: true });
   fs.writeFileSync(path.join(sourceRoot, '.codex-plugin', 'plugin.json'), pluginJson);
   fs.writeFileSync(path.join(sourceRoot, 'skills', 'opl-flow', 'SKILL.md'), skillMarkdown);
+  fs.writeFileSync(path.join(sourceRoot, 'templates', 'AGENTS.md'), agentsMarkdown);
+  fs.writeFileSync(path.join(sourceRoot, 'templates', 'TASTE.md'), tasteMarkdown);
+  fs.writeFileSync(path.join(sourceRoot, 'contracts', 'workflow-policy.json'), workflowPolicy);
+  fs.writeFileSync(path.join(sourceRoot, 'contracts', 'workflow-policy.schema.json'), workflowPolicySchema);
   const archivePath = path.join(root, `opl-flow-${version}.tar.gz`);
   execFileSync('tar', ['-czf', archivePath, 'opl-flow'], { cwd: sourceParent });
   const archiveSha256 = crypto.createHash('sha256').update(fs.readFileSync(archivePath)).digest('hex');
@@ -51,14 +90,31 @@ function writeFirstPartyCatalogFixture(version: string, ownerSourceCommit: strin
   const packageArtifactManifestJson = JSON.stringify(packageArtifactManifest);
   const artifactDigest = `sha256:${crypto.createHash('sha256').update(packageArtifactManifestJson).digest('hex')}`;
   const manifest = {
-    ...agentPackageManifest({
-      packageId: 'opl-flow',
-      agentId: 'opl-flow',
-      pluginId: 'opl-flow',
-      pluginPayloadManifestUrl: 'payload.json',
-      distributionPayload: null,
-    }),
+    surface_kind: 'opl_workflow_profile_package_manifest.v1',
+    package_id: 'opl-flow',
+    display_name: 'OPL Flow',
+    publisher: 'one-person-lab',
     version,
+    source: 'first_party',
+    package_role: 'workflow_profile',
+    carrier_source_role: 'codex_plugin_default_carrier_not_package_truth',
+    codex_surface: {
+      plugin_id: 'opl-flow',
+      plugin_payload_manifest_url: 'payload.json',
+      required_skill_ids: ['opl-flow'],
+    },
+    profile_surface: {
+      runtime_profile: { source_path: 'templates/AGENTS.md', target_id: 'user_agents_profile' },
+      authoring_sources: [{ source_path: 'templates/TASTE.md', target_id: 'user_taste_source' }],
+      merge_context_paths: [],
+      existing_profile_policy: 'semantic_merge_required',
+    },
+    managed_policy_surface: {
+      policy_kind: 'opl_flow_workflow_policy',
+      source_path: 'contracts/workflow-policy.json',
+      schema_path: 'contracts/workflow-policy.schema.json',
+    },
+    capability_dependencies: [],
   };
   const payload = {
     surface_kind: 'opl_agent_package_payload_manifest',
@@ -86,6 +142,18 @@ function writeFirstPartyCatalogFixture(version: string, ownerSourceCommit: strin
         migration_source_url: `https://raw.githubusercontent.com/fixture/opl-flow/${ownerSourceCommit}/skills/opl-flow/SKILL.md`,
         sha256: `sha256:${crypto.createHash('sha256').update(skillMarkdown).digest('hex')}`,
       },
+      ...[
+        ['templates/AGENTS.md', agentsMarkdown],
+        ['templates/TASTE.md', tasteMarkdown],
+        ['contracts/workflow-policy.json', workflowPolicy],
+        ['contracts/workflow-policy.schema.json', workflowPolicySchema],
+      ].map(([filePath, content]) => ({
+        path: filePath,
+        source_path: filePath,
+        source_artifact_ref: sourceArtifactRef,
+        migration_source_url: `https://raw.githubusercontent.com/fixture/opl-flow/${ownerSourceCommit}/${filePath}`,
+        sha256: `sha256:${crypto.createHash('sha256').update(content).digest('hex')}`,
+      })),
     ],
   };
   const manifestJson = formatJsonPayload(manifest);
@@ -99,7 +167,7 @@ function writeFirstPartyCatalogFixture(version: string, ownerSourceCommit: strin
       package_catalog: {
         'opl-flow': {
           package_id: 'opl-flow',
-          package_role: 'standard_agent',
+          package_role: 'workflow_profile',
           selected_version: version,
           versions: [{
             package_version: version,
@@ -261,7 +329,7 @@ test('first-party install and update lock one Release Set catalog member by vers
     const installed = installedAction.app_action_execution.result;
     const installedLock = installed.opl_agent_package_install.package_lock;
     assert.equal(installedLock.package_id, 'opl-flow');
-    assert.equal(installedLock.package_role, 'standard_agent');
+    assert.equal(installedLock.package_role, 'workflow_profile');
     assert.equal(installedLock.package_version, '0.2.0');
     assert.equal(installedLock.source_kind, 'first_party_managed_cohort');
     assert.equal(installedLock.trust_tier, 'first_party');

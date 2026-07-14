@@ -290,14 +290,13 @@ function registryDirectorySource(cache: AgentPackageRegistryCache, entry: AgentP
   };
 }
 
-function lockDirectorySource(lock: AgentPackageLock): DirectorySource {
-  const packageRole = packageRoleFromInstalledLock(lock);
+function lockDirectorySource(lock: AgentPackageLock, packageRole: AgentPackageRole | null): DirectorySource {
   return {
     package_id: lock.package_id,
     display_name: lock.display_name,
     publisher: lock.publisher,
     description: `${lock.display_name} installed package.`,
-    tags: ['installed', packageRole],
+    tags: uniqueStrings(['installed', ...(packageRole ? [packageRole] : [])]),
     package_role: packageRole,
     trust_tier: lock.trust_tier,
     source: lock.source_kind,
@@ -309,6 +308,32 @@ function lockDirectorySource(lock: AgentPackageLock): DirectorySource {
     source_kind: 'installed_package_lock',
     registry_source_ref: null,
   };
+}
+
+function installedRoleResolution(lock: AgentPackageLock, source: DirectorySource | null) {
+  try {
+    return {
+      role: packageRoleFromInstalledLock(lock),
+      source: 'installed_lock' as const,
+      diagnostic: null,
+    };
+  } catch (error) {
+    if (source?.source_kind === 'first_party_release_catalog' && source.package_role) {
+      return {
+        role: source.package_role,
+        source: 'first_party_release_catalog_fallback' as const,
+        diagnostic: null,
+      };
+    }
+    return {
+      role: null,
+      source: 'unresolved_installed_lock' as const,
+      diagnostic: {
+        code: error instanceof FrameworkContractError ? error.code : 'unexpected_error',
+        message: error instanceof Error ? error.message : 'Installed package role could not be resolved.',
+      },
+    };
+  }
 }
 
 function packageAction(
@@ -362,6 +387,12 @@ function availableActions(
   context: Pick<AgentPackagePackageActionInput, 'scope' | 'targetWorkspace' | 'targetQuest'> | null,
 ) {
   if (!source.package_role) {
+    if (installed) {
+      return [
+        packageAction('agent_package_repair', { package_id: source.package_id }, ['package_id'], true),
+        packageAction('agent_package_uninstall', { package_id: source.package_id }, ['package_id'], true),
+      ];
+    }
     return [packageAction(
       'refresh_registry',
       { registry_url: source.registry_url },
@@ -384,7 +415,17 @@ function availableActions(
   }
   const updatePayload = source.source_kind === 'first_party_release_catalog'
     ? { package_id: source.package_id }
-    : { package_id: source.package_id, registry_url: source.registry_url };
+    : source.registry_url
+      ? {
+          package_id: source.package_id,
+          registry_url: source.registry_url,
+          trust_tier: source.trust_tier,
+        }
+      : {
+          package_id: source.package_id,
+          manifest_url: source.manifest_url,
+          trust_tier: source.trust_tier,
+        };
   return [
     ...(!activated ? [packageAction('agent_package_activate', activationPayload(source, context), [
         'package_id',
@@ -448,35 +489,75 @@ export function buildAgentPackageDirectory(input: {
       } : candidate);
     }
   }
-  for (const lock of input.locks) {
-    if (!sources.has(lock.package_id)) sources.set(lock.package_id, lockDirectorySource(lock));
-  }
   const locksById = new Map(input.locks.map((lock) => [lock.package_id, lock]));
+  const installedRoles = new Map(input.locks.map((lock) => {
+    const source = sources.get(lock.package_id) ?? null;
+    const resolution = installedRoleResolution(lock, source);
+    if (!source) sources.set(lock.package_id, lockDirectorySource(lock, resolution.role));
+    return [lock.package_id, resolution] as const;
+  }));
   const entries = [...sources.values()].map((source) => {
     const lock = locksById.get(source.package_id) ?? null;
     const installed = Boolean(lock);
-    const roleKnown = source.package_role !== null;
+    const installedRole = lock ? installedRoles.get(source.package_id)! : null;
+    const effectiveSource = installed
+      ? { ...source, package_role: installedRole!.role }
+      : source;
+    const roleKnown = effectiveSource.package_role !== null;
+    const roleMismatch = Boolean(
+      installedRole?.role
+      && source.package_role
+      && installedRole.role !== source.package_role,
+    );
+    const roleRepairRequired = installed && (!roleKnown || roleMismatch);
     const lifecycle = agentPackageLifecycleUxReadback({ packageId: source.package_id, lock });
-    const status = installed ? input.readStatus?.(source.package_id) ?? {} : {};
+    let status: PackageStatusReadback = {};
+    let statusReadError: { code: string; message: string } | null = null;
+    if (installed) {
+      try {
+        status = input.readStatus?.(source.package_id) ?? {};
+      } catch (error) {
+        statusReadError = {
+          code: error instanceof FrameworkContractError ? error.code : 'unexpected_error',
+          message: error instanceof Error ? error.message : 'Package status read failed.',
+        };
+        status = {
+          recommended_action: 'agent_package_repair',
+          operational_ready: false,
+          launch_allowed: false,
+          launch_blocked_reason: 'package_status_read_failed',
+        };
+      }
+    }
     const materializationStatus = status.materialization_readiness?.status ?? null;
     const activationRequired = status.recommended_action === 'agent_package_activate'
       || lifecycle.recommended_action === 'agent_package_activate';
     const activated = installed
+      && !roleRepairRequired
       && !activationRequired
       && status.operational_ready === true
       && status.launch_allowed === true
       && (materializationStatus === 'current' || materializationStatus === 'not_required');
-    const actions = availableActions(source, installed, activated, input.actionContext?.(source.package_id) ?? null);
+    const actions = availableActions(
+      effectiveSource,
+      installed,
+      activated,
+      input.actionContext?.(source.package_id) ?? null,
+    );
     const recommendedAction = recommendedActionId({
       installed,
       activated,
-      statusAction: status.recommended_action ?? null,
+      statusAction: roleRepairRequired ? 'agent_package_repair' : status.recommended_action ?? null,
       lifecycleAction: lifecycle.recommended_action,
       availableActionIds: new Set(actions.map((action) => action.action_id)),
     });
-    const readinessStatus = !installed
+    const readinessStatus = installed && !roleKnown
+      ? 'migration_required'
+      : roleMismatch || statusReadError
+        ? 'repair_required'
+        : !installed
       ? roleKnown ? 'not_installed' : 'migration_required'
-        : status.operational_ready === true && status.launch_allowed === true
+        : activated
           ? 'ready'
           : recommendedAction === 'agent_package_activate'
             ? 'activation_required'
@@ -487,7 +568,20 @@ export function buildAgentPackageDirectory(input: {
       publisher: source.publisher,
       description: source.description,
       tags: source.tags,
-      package_role: source.package_role,
+      package_role: effectiveSource.package_role,
+      role_state: {
+        status: !installed
+          ? roleKnown ? 'declared' : 'migration_required'
+          : !roleKnown
+            ? 'migration_required'
+            : roleMismatch
+              ? 'mismatch_repair_required'
+              : 'current',
+        source: installedRole?.source ?? source.source_kind,
+        discovered_role: source.package_role,
+        installed_role: installedRole?.role ?? null,
+        diagnostic: installedRole?.diagnostic ?? null,
+      },
       trust_tier: source.trust_tier,
       source_explanation: {
         kind: source.source_kind,
@@ -511,7 +605,9 @@ export function buildAgentPackageDirectory(input: {
       installed,
       activated,
       installability: {
-        status: installed ? 'installed' : roleKnown ? 'installable' : 'migration_required',
+        status: installed
+          ? roleRepairRequired ? 'migration_required' : 'installed'
+          : roleKnown ? 'installable' : 'migration_required',
         installable: !installed && roleKnown,
       },
       readiness: {
@@ -520,8 +616,11 @@ export function buildAgentPackageDirectory(input: {
         launch_allowed: installed && status.launch_allowed === true,
         reason: !installed
           ? roleKnown ? 'package_not_installed' : 'registry_role_refresh_required'
-          : status.launch_blocked_reason ?? (activated ? null : 'package_activation_required'),
+          : roleRepairRequired
+            ? roleMismatch ? 'installed_role_mismatch' : 'installed_role_migration_required'
+            : status.launch_blocked_reason ?? (activated ? null : 'package_activation_required'),
         detail_surface: `opl packages status --package-id ${source.package_id} --json`,
+        status_read_error: statusReadError,
       },
       recommended_action: recommendedAction,
       recommended_action_ref: actions.find((action) => action.action_id === recommendedAction) ?? null,
@@ -536,7 +635,11 @@ export function buildAgentPackageDirectory(input: {
   }).sort((left, right) => left.display_name.localeCompare(right.display_name, 'en'));
   return {
     surface_kind: 'opl_agent_package_directory.v1',
-    status: entries.some((entry) => entry.package_role === null) ? 'attention_required' : 'available',
+    status: entries.some((entry) => entry.role_state.status === 'migration_required'
+      || entry.role_state.status === 'mismatch_repair_required'
+      || entry.readiness.status === 'repair_required')
+      ? 'attention_required'
+      : 'available',
     source_catalog_kind: 'opl_package_catalog.v1+opl_agent_package_registry_cache',
     detail: input.detail,
     entry_count: entries.length,
