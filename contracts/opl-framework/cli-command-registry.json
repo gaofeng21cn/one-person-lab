@@ -18,7 +18,8 @@
     "runtime app-operator-drilldown",
     "runtime observability",
     "pack provision-submission-resource",
-    "packages"
+    "packages",
+    "system codex-config-hygiene"
   ],
   "commands": {
     "pack_provision_submission_resource": {
@@ -4260,6 +4261,61 @@
         "can_claim_production_ready": false,
         "owner": "OPL Packages",
         "surface": "opl_packages_preferences"
+      }
+    },
+    "system_codex_config_hygiene": {
+      "command_id": "system codex-config-hygiene",
+      "owner": "OPL Base",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "dry-run",
+          "flag": "--dry-run",
+          "value_kind": "boolean",
+          "required": false,
+          "summary": "Validate the exact Codex TOML delta without writing config, backup, or receipt files."
+        },
+        {
+          "name": "rollback-receipt",
+          "flag": "--rollback-receipt",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Restore the exact pre-migration config from one Framework-owned hygiene receipt."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "codex_config_hygiene"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "codex_config_hygiene": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "dry_run",
+              "receipt",
+              "receipt_path",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Base",
+        "surface": "codex_config_hygiene"
       }
     }
   }

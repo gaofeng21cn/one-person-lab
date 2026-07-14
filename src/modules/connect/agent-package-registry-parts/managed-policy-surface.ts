@@ -384,13 +384,13 @@ function configTableInventory(configPath: string) {
   });
 }
 
-type TomlTableBlock = {
+export type TomlTableBlock = {
   header: string;
   content: string;
   aliases: string[];
 };
 
-function parseTomlDocument(text: string) {
+export function parseTomlDocument(text: string) {
   const preamble: string[] = [];
   const tables: TomlTableBlock[] = [];
   let current: { header: string; lines: string[]; aliases: string[] } | null = null;
@@ -422,7 +422,7 @@ function parseTomlDocument(text: string) {
   return { preamble: preamble.join('\n').trimEnd(), tables };
 }
 
-function renderTomlDocument(preamble: string, tables: Array<Pick<TomlTableBlock, 'content'>>) {
+export function renderTomlDocument(preamble: string, tables: Array<Pick<TomlTableBlock, 'content'>>) {
   const parts = [preamble.trimEnd(), ...tables.map((table) => table.content.trim())].filter(Boolean);
   return parts.length > 0 ? `${parts.join('\n\n')}\n` : '';
 }

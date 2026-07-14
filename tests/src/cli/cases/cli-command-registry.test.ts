@@ -31,6 +31,7 @@ const registryCases = [
   ['packages optimize', 'packages_optimize', ['package-id', 'scope', 'target-workspace', 'target-quest', 'dry-run'], 'OPL Packages'],
   ['packages repair', 'packages_repair', ['manifest-url', 'registry-url', 'package-id', 'trust-tier', 'source-kind', 'agent-root', 'scope', 'target-workspace', 'target-quest', 'dry-run'], 'OPL Packages'],
   ['packages link-framework', 'packages_link_framework', ['agent-root', 'check', 'dry-run'], 'OPL Packages'],
+  ['system codex-config-hygiene', 'system_codex_config_hygiene', ['dry-run', 'rollback-receipt'], 'OPL Base'],
   ['status workspace', 'status_workspace', ['path'], 'OPL Console'],
   ['status runtime', 'status_runtime', ['limit'], 'OPL Runway'],
   ['status dashboard', 'status_dashboard', ['path', 'sessions-limit'], 'OPL Console'],

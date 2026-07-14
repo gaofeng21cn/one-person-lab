@@ -13,6 +13,7 @@ import { buildOplSystemDependencyDoctor } from '../../../modules/connect/system-
 import { buildOplDockerWebuiDoctor } from '../../../modules/connect/system-installation/docker-webui-doctor.ts';
 import { buildOplEnvironment } from '../../../modules/connect/system-installation/environment.ts';
 import { buildOplInitialize } from '../../../modules/connect/system-installation/initialize.ts';
+import { runCodexConfigHygiene } from '../../../modules/connect/system-installation/codex-config-hygiene.ts';
 import { runOplSystemAction } from '../../../modules/connect/system-installation/system-actions.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
 import {
@@ -28,6 +29,7 @@ import {
   parseSystemConfigureCodexArgs,
   parseSystemSeedApplyArgs,
   parseSystemStartupMaintenanceArgs,
+  parseRegisteredCommandOptions,
   parseUpdateChannelArgs,
 } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
@@ -266,6 +268,37 @@ export function buildPublicSystemCommandSpecs(
     },
   };
 
+  const systemCodexConfigHygieneSpec: CommandSpec = {
+    usage: 'opl system codex-config-hygiene [--dry-run | --rollback-receipt <path>]',
+    summary: 'Reconcile stale temporary Codex marketplaces and global MAS Scholar discovery with a rollback receipt.',
+    examples: [
+      'opl system codex-config-hygiene --dry-run --json',
+      'opl system codex-config-hygiene --json',
+    ],
+    group: 'system',
+    handler: (args) => {
+      const parsed = parseRegisteredCommandOptions(
+        'system codex-config-hygiene',
+        args,
+        systemCodexConfigHygieneSpec,
+      );
+      const rollbackReceipt = typeof parsed['rollback-receipt'] === 'string'
+        ? parsed['rollback-receipt']
+        : null;
+      if (parsed['dry-run'] === true && rollbackReceipt) {
+        throw buildUsageError(
+          'system codex-config-hygiene accepts --dry-run or --rollback-receipt, not both.',
+          systemCodexConfigHygieneSpec,
+          { conflicting: ['--dry-run', '--rollback-receipt'] },
+        );
+      }
+      return runCodexConfigHygiene({
+        dryRun: parsed['dry-run'] === true,
+        rollbackReceipt,
+      });
+    },
+  };
+
   const systemDependencyDoctorSpec: CommandSpec = {
     usage: 'opl system dependency-doctor --profile <profile-id>',
     summary:
@@ -366,6 +399,7 @@ export function buildPublicSystemCommandSpecs(
     'system dependency-doctor': systemDependencyDoctorSpec,
     'system dependency-maintenance': systemDependencyMaintenanceSpec,
     'system configure-codex': systemConfigureCodexSpec,
+    'system codex-config-hygiene': systemCodexConfigHygieneSpec,
     'system repair': buildNoArgSpec(
       {
         usage: 'opl system repair',
