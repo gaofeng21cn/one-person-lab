@@ -84,3 +84,8 @@ export type {
   StandardAgentImplementationProfile,
   StandardAgentImplementationProfileValidation,
 } from './standard-agent-implementation-profile.ts';
+export {
+  OPL_PACK_PROVISION_SUBMISSION_RESOURCE_ACTION_ID,
+  provisionSubmissionResource,
+} from './submission-resource-provisioning.ts';
+export type { SubmissionResourceProvisionRequest } from './submission-resource-provisioning.ts';

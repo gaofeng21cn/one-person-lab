@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.onepersonlab.dev/opl/submission-resource-provision-request.v1",
+  "title": "OPL Submission Resource Provision Request",
+  "type": "object",
+  "required": [
+    "resource_id"
+  ],
+  "properties": {
+    "requirements_path": {
+      "type": "string",
+      "minLength": 1
+    },
+    "requirements_payload": {
+      "type": "object"
+    },
+    "resource_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "package_root": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_path": {
+      "type": "string",
+      "minLength": 1
+    },
+    "expected_sha256": {
+      "type": "string",
+      "pattern": "^[A-Fa-f0-9]{64}$"
+    },
+    "destination_root": {
+      "type": "string",
+      "minLength": 1
+    },
+    "dry_run": {
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "required": [
+        "requirements_path"
+      ],
+      "not": {
+        "required": [
+          "requirements_payload"
+        ]
+      }
+    },
+    {
+      "required": [
+        "requirements_payload"
+      ],
+      "not": {
+        "required": [
+          "requirements_path"
+        ]
+      }
+    }
+  ]
+}

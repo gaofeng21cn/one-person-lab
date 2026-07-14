@@ -1,0 +1,213 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.onepersonlab.dev/opl/submission-resource-provision-receipt.v1",
+  "title": "OPL Submission Resource Provision Receipt",
+  "type": "object",
+  "required": [
+    "surface_kind",
+    "schema_version",
+    "action_id",
+    "status",
+    "resource_id",
+    "requirement",
+    "source",
+    "target",
+    "provisioned_resources",
+    "authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "opl_pack_submission_resource_provision_receipt.v1"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "action_id": {
+      "const": "opl_pack_provision_submission_resource"
+    },
+    "status": {
+      "const": "resolved_for_provisioning"
+    },
+    "resource_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "requirement": {
+      "type": "object",
+      "required": [
+        "requirements_ref",
+        "requirements_sha256",
+        "resource_requirement_sha256",
+        "provisioning"
+      ],
+      "properties": {
+        "requirements_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "requirements_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "resource_requirement_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "provisioning": {
+          "enum": [
+            "package_bundled_or_host_exact_path",
+            "host_exact_path_required"
+          ]
+        },
+        "package_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path_env_guidance": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "source": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/resource_identity"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "package_bundled_file",
+                "host_exact_file"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "target": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/resource_identity"
+        },
+        {
+          "properties": {
+            "kind": {
+              "const": "opl_content_addressed_cache"
+            }
+          }
+        }
+      ]
+    },
+    "provisioned_resources": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "cached_path",
+          "sha256",
+          "bytes"
+        ],
+        "properties": {
+          "cached_path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "authority_boundary": {
+      "type": "object",
+      "required": [
+        "can_download_network_resource",
+        "can_write_domain_truth",
+        "can_mutate_artifact_body",
+        "can_mutate_domain_artifact",
+        "can_sign_owner_receipt",
+        "can_create_owner_receipt",
+        "can_create_typed_blocker",
+        "can_authorize_quality_verdict",
+        "can_authorize_submission_readiness"
+      ],
+      "properties": {
+        "can_download_network_resource": {
+          "const": false
+        },
+        "can_write_domain_truth": {
+          "const": false
+        },
+        "can_mutate_artifact_body": {
+          "const": false
+        },
+        "can_mutate_domain_artifact": {
+          "const": false
+        },
+        "can_sign_owner_receipt": {
+          "const": false
+        },
+        "can_create_owner_receipt": {
+          "const": false
+        },
+        "can_create_typed_blocker": {
+          "const": false
+        },
+        "can_authorize_quality_verdict": {
+          "const": false
+        },
+        "can_authorize_submission_readiness": {
+          "const": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "resource_identity": {
+      "type": "object",
+      "required": [
+        "kind",
+        "exact_path",
+        "sha256",
+        "bytes"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "package_bundled_file",
+            "host_exact_file",
+            "opl_content_addressed_cache"
+          ]
+        },
+        "exact_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

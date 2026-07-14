@@ -51,6 +51,9 @@ Pack 的机器 contract 至少绑定这些 refs：
 ```text
 contracts/opl-framework/pack-bundle-contract.json
 contracts/opl-framework/pack-native-helper-probe-contract.json
+contracts/opl-framework/submission-resource-requirements.schema.json
+contracts/opl-framework/submission-resource-provision-request.schema.json
+contracts/opl-framework/submission-resource-provision-receipt.schema.json
 contracts/opl-framework/domain-pack-compiler-contract.json
 contracts/opl-framework/standard-domain-agent-skeleton-contract.json
 contracts/opl-framework/foundry-agent-series-contract.json
@@ -95,9 +98,12 @@ opl pack check --pack <path> --json
 opl pack run --pack <path> --action <id> --template <id> --mode final|candidate --json
 opl pack gallery --pack <path> --json
 opl pack native-helper probe --descriptor <path> --json
+opl pack provision-submission-resource --requirements <path> --resource-id <id> (--package-root <dir>|--source-path <path>) --json
 ```
 
-这些入口只读取 `opl_pack.json` / Pack OS descriptor 或 native-helper probe descriptor，生成 refs-only inspection / validation / action plan 或由 descriptor/content SHA-256 绑定的 `resolved|missing` 探测 receipt。native-helper probe 只解析 entrypoint 与声明的 runtime/tool commands，不执行 helper 或 domain renderer，不渲染 PDF/image asset，也不声明质量 verdict、artifact authority、publication proof 或 export readiness。`medical-display-core` 是 MAS Scholar Skills 提供的外部 capability pack resource；OPL 不提供 `opl display` 顶层命令，也不把科研画图纳入 OPL 基座 domain 语义。
+这些入口只读取 `opl_pack.json`、Pack OS descriptor、native-helper probe descriptor，或 domain-owned submission-resource requirements。`provision-submission-resource` 只接受 requirement 中冻结的 `provisioning/package_path/path_env` 形状：package 模式严格以 `package_root + package_path` 做 containment 和 symlink 检查，host 模式只接受 caller 显式传入的 absolute `source_path`；`path_env` 仅回投为 operator guidance，OPL 不读环境变量、不下载、不尝试 URL fallback。它对 exact bytes 做稳定读取与 SHA-256 校验，把内容和 false-authority receipt 原子写入 OPL state 或显式 destination root；dry-run 只解析、校验和计算路径，零写入。该 surface 不是 Agent Package install/update/repair 生命周期，不改变 package lock，也不授权 submission ready、quality verdict、artifact authority 或 owner receipt。
+
+其余入口生成 refs-only inspection / validation / action plan 或由 descriptor/content SHA-256 绑定的 `resolved|missing` 探测 receipt。native-helper probe 只解析 entrypoint 与声明的 runtime/tool commands，不执行 helper 或 domain renderer，不渲染 PDF/image asset，也不声明质量 verdict、artifact authority、publication proof 或 export readiness。`medical-display-core` 是 MAS Scholar Skills 提供的外部 capability pack resource；OPL 不提供 `opl display` 顶层命令，也不把科研画图纳入 OPL 基座 domain 语义。
 
 Pack 对象视图入口：
 
@@ -129,6 +135,7 @@ opl contract validate --json
 | --- | --- |
 | `app_action:pack_status` | 只读 status action，delegated surface 为 `opl pack status --json`。 |
 | `app_action:pack_inspect` | 只读 drilldown action，支持 domain pack、authority ABI、generated surface 或 compiler result scope。 |
+| `app_action:opl_pack_provision_submission_resource` | 复用同一 Pack action，把既有 exact local bytes 写入 OPL content-addressed cache；支持零写入 dry-run，不读取 `path_env`，不进入 Agent Package lifecycle，也不签 submission/quality/owner verdict。 |
 | `read_model.pack.domain_packs` | Foundry Agent pack summary、owner、source refs、required sections 和 conformance state。 |
 | `read_model.pack.authority_abi` | domain authority function refs、accepted owner answer shape 和 forbidden authority flags。 |
 | `read_model.pack.capability_execution_view` | Agent ordinary path 的执行视图，只包含可执行 action、input shape、owner/action refs 和 false-authority flags。 |

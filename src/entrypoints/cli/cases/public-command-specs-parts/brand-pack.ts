@@ -4,6 +4,7 @@ import {
   runPackBundleWriteCommand,
 } from '../../../../modules/pack/pack-bundle.ts';
 import { runPackNativeHelperProbeCommand } from '../../../../modules/pack/native-helper-probe.ts';
+import { provisionSubmissionResource } from '../../../../modules/pack/submission-resource-provisioning.ts';
 import { runPackNativeHelperExecutionCommand } from '../../../../modules/runway/index.ts';
 import {
   runGenericPackCheckCommand,
@@ -18,7 +19,11 @@ import {
   runPackOsRegistryCommand,
   runPackOsValidateCommand,
 } from '../../../../modules/pack/pack-os.ts';
-import { assertNoArgs, buildCommandHelp } from '../../modules/support.ts';
+import {
+  assertNoArgs,
+  buildCommandHelp,
+  parseRegisteredCommandOptions,
+} from '../../modules/support.ts';
 import type { CommandSpec } from '../../modules/support.ts';
 
 export function buildBrandPackCommandSpecs(packInspectFallback?: CommandSpec): Record<string, CommandSpec> {
@@ -68,6 +73,36 @@ export function buildBrandPackCommandSpecs(packInspectFallback?: CommandSpec): R
       ],
       group: 'brand-pack',
       handler: runGenericPackGalleryCommand,
+    },
+    'pack provision-submission-resource': {
+      usage: 'opl pack provision-submission-resource --requirements <path> --resource-id <id> (--package-root <dir>|--source-path <path>) [--expected-sha256 <sha256>] [--destination-root <dir>] [--dry-run]',
+      summary: 'Provision one declared local submission resource into the OPL content-addressed cache without network fallback or domain authority.',
+      examples: [
+        'opl pack provision-submission-resource --requirements contracts/submission-resource-requirements.json --resource-id frontiers_harvard_csl --package-root . --json',
+        'opl pack provision-submission-resource --requirements contracts/submission-resource-requirements.json --resource-id frontiers_word_manuscript_template --source-path /exact/path/template.docx --dry-run --json',
+      ],
+      group: 'brand-pack',
+      handler: (args) => {
+        const command = 'pack provision-submission-resource';
+        const parsed = parseRegisteredCommandOptions(command, args, specs[command]);
+        return provisionSubmissionResource({
+          requirements_path: parsed.requirements as string,
+          resource_id: parsed['resource-id'] as string,
+          ...(typeof parsed['package-root'] === 'string'
+            ? { package_root: parsed['package-root'] }
+            : {}),
+          ...(typeof parsed['source-path'] === 'string'
+            ? { source_path: parsed['source-path'] }
+            : {}),
+          ...(typeof parsed['expected-sha256'] === 'string'
+            ? { expected_sha256: parsed['expected-sha256'] }
+            : {}),
+          ...(typeof parsed['destination-root'] === 'string'
+            ? { destination_root: parsed['destination-root'] }
+            : {}),
+          dry_run: parsed['dry-run'] === true,
+        });
+      },
     },
     'pack bundle': {
       usage: 'opl pack bundle <manifest|write|check> --assembly <path>',

@@ -297,6 +297,9 @@
       "contract_refs": [
         "contracts/opl-framework/brand-module-surfaces.json",
         "contracts/opl-framework/domain-pack-compiler-contract.json",
+        "contracts/opl-framework/submission-resource-requirements.schema.json",
+        "contracts/opl-framework/submission-resource-provision-request.schema.json",
+        "contracts/opl-framework/submission-resource-provision-receipt.schema.json",
         "contracts/opl-framework/standard-domain-agent-skeleton-contract.json",
         "contracts/opl-framework/foundry-agent-series-contract.json",
         "contracts/opl-framework/owner-answer.schema.json",
@@ -309,6 +312,7 @@
         "opl pack interfaces --json",
         "opl pack validate --json",
         "opl pack doctor --json",
+        "opl pack provision-submission-resource --requirements <path> --resource-id <id> --json",
         "opl agents pack-compiler --json",
         "opl agents interfaces --family-defaults --json",
         "opl agents conformance --family-defaults --json"
@@ -316,6 +320,7 @@
       "app_surfaces": [
         "app_action:pack_status",
         "app_action:pack_inspect",
+        "app_action:opl_pack_provision_submission_resource",
         "opl brand-modules interfaces --json#app.descriptors.brand_modules_inspect",
         "opl app state --profile full --json"
       ],

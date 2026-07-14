@@ -92,6 +92,7 @@ test('app action catalog exposes representative safe delegated action refs', () 
       'settings_rollback_runtime_substrate',
       'settings_configure_webui_api_key',
       'task_action_receipt_preview',
+      'opl_pack_provision_submission_resource',
     ]) {
       assert.ok(actions.has(actionId), `missing App action: ${actionId}`);
       const delegatedSurface = actions.get(actionId)?.delegated_surface ?? '';
@@ -162,6 +163,24 @@ test('app action catalog exposes representative safe delegated action refs', () 
     assert.deepEqual(actions.get('task_export_bundle_preview')?.payload_fields, ['task_id', 'export_bundle_ref']);
     assert.equal(actions.get('task_export_bundle_preview')?.mutates, 'none_read_only');
     assert.equal(actions.get('task_export_bundle_preview')?.dry_run_supported, true);
+    assert.equal(
+      actions.get('opl_pack_provision_submission_resource')?.delegated_surface,
+      'opl pack provision-submission-resource',
+    );
+    assert.deepEqual(actions.get('opl_pack_provision_submission_resource')?.payload_fields, [
+      'requirements_path',
+      'requirements_payload',
+      'resource_id',
+      'package_root',
+      'source_path',
+      'expected_sha256',
+      'destination_root',
+    ]);
+    assert.equal(
+      actions.get('opl_pack_provision_submission_resource')?.mutates,
+      'opl_pack_content_addressed_submission_resource_cache',
+    );
+    assert.equal(actions.get('opl_pack_provision_submission_resource')?.dry_run_supported, true);
     assert.equal(
       actions.get('settings_repair_model_access')?.delegated_surface,
       'opl system developer-supervisor',

@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.onepersonlab.dev/opl/submission-resource-requirements.v1",
+  "title": "OPL Submission Resource Requirements",
+  "type": "object",
+  "required": [
+    "surface_kind",
+    "schema_version",
+    "resources"
+  ],
+  "properties": {
+    "surface_kind": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*_submission_resource_requirements\\.v1$"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "owner": {
+      "type": "string",
+      "minLength": 1
+    },
+    "purpose": {
+      "type": "string",
+      "minLength": 1
+    },
+    "resources": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/resource_requirement"
+      }
+    },
+    "missing_resource_output": {
+      "type": "object",
+      "required": [
+        "action_id"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "action_id": {
+          "const": "opl_pack_provision_submission_resource"
+        }
+      },
+      "additionalProperties": true
+    },
+    "authority_boundary": {
+      "type": "object",
+      "properties": {
+        "network_fallback_allowed": {
+          "const": false
+        },
+        "requires_existing_exact_path": {
+          "const": true
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "resource_requirement": {
+      "type": "object",
+      "required": [
+        "provisioning"
+      ],
+      "properties": {
+        "provisioning": {
+          "enum": [
+            "package_bundled_or_host_exact_path",
+            "host_exact_path_required"
+          ]
+        },
+        "package_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path_env": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]*$"
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "provisioning": {
+                "const": "package_bundled_or_host_exact_path"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "package_path"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "provisioning": {
+                "const": "host_exact_path_required"
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "required": [
+                "package_path"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

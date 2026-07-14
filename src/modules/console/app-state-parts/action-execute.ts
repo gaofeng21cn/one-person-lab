@@ -68,6 +68,10 @@ import {
   type WorkItemUserLifecycleState,
   type WorkItemVisibilityState,
 } from '../../ledger/index.ts';
+import {
+  OPL_PACK_PROVISION_SUBMISSION_RESOURCE_ACTION_ID,
+  provisionSubmissionResource,
+} from '../../pack/index.ts';
 
 import type { AppActionExecuteOptions } from './action-execute-parser.ts';
 export { parseAppActionExecuteArgs } from './action-execute-parser.ts';
@@ -151,6 +155,16 @@ async function executeDirectAppAction(
 ) {
   const connectionAction = await executeConnectionAppAction(options);
   if (connectionAction) return connectionAction;
+
+  if (options.actionId === OPL_PACK_PROVISION_SUBMISSION_RESOURCE_ACTION_ID) {
+    return {
+      delegatedSurface: 'opl pack provision-submission-resource',
+      result: provisionSubmissionResource({
+        ...options.payload,
+        dry_run: options.dryRun,
+      }),
+    };
+  }
 
   if (options.actionId === 'runtime_archive_attempt' || options.actionId === 'runtime_restore_attempt') {
     const stageAttemptId = stringPayloadField(options.payload, 'stage_attempt_id');

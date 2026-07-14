@@ -17,9 +17,100 @@
     "runtime manager",
     "runtime app-operator-drilldown",
     "runtime observability",
+    "pack provision-submission-resource",
     "packages"
   ],
   "commands": {
+    "pack_provision_submission_resource": {
+      "command_id": "pack provision-submission-resource",
+      "owner": "OPL Pack",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "requirements",
+          "flag": "--requirements",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Exact local path to a domain submission-resource requirements contract."
+        },
+        {
+          "name": "resource-id",
+          "flag": "--resource-id",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Resource id declared in the requirements resources map."
+        },
+        {
+          "name": "package-root",
+          "flag": "--package-root",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Exact package root used only with the declared package_path."
+        },
+        {
+          "name": "source-path",
+          "flag": "--source-path",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Explicit absolute host file path; path_env is never read automatically."
+        },
+        {
+          "name": "expected-sha256",
+          "flag": "--expected-sha256",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Expected SHA-256 for fail-closed exact-byte verification."
+        },
+        {
+          "name": "destination-root",
+          "flag": "--destination-root",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Optional local cache root; defaults to the OPL state directory."
+        },
+        {
+          "name": "dry-run",
+          "flag": "--dry-run",
+          "value_kind": "boolean",
+          "required": false,
+          "summary": "Resolve and validate exact bytes and target paths without writing files or directories."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "pack_submission_resource_provisioning"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "pack_submission_resource_provisioning": {
+            "type": "object",
+            "required": [
+              "status",
+              "dry_run",
+              "writes_performed",
+              "receipt_path",
+              "receipt_sha256",
+              "receipt"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Pack",
+        "surface": "content_addressed_submission_resource_provisioning"
+      }
+    },
     "connect_gateway_status": {
       "command_id": "connect gateway status",
       "owner": "OPL Connect",
