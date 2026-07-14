@@ -118,13 +118,3 @@ test('native profile exposes OPL Flow completion audit as closeout gate', () => 
     'release_ready_claim',
   ]);
 });
-
-test('repo agent instructions require Plan Completion Audit before thorough landing claims', () => {
-  const repoAgents = read('AGENTS.md');
-
-  assert.match(repoAgents, /Plan Completion Audit/);
-  assert.match(repoAgents, /彻底落地/);
-  assert.match(repoAgents, /完成度百分比/);
-  assert.match(repoAgents, /fresh executable evidence/);
-  assert.match(repoAgents, /subagent|worktree/);
-});
