@@ -201,6 +201,7 @@ const readModelGateTestFiles = [
   'tests/src/cli/cases/system-startup-maintenance.test.ts',
   'tests/src/cli/cases/system-module-package-channel.test.ts',
   'tests/src/cli/cases/system-configure-codex.test.ts',
+  'tests/src/cli/cases/system-codex-config-hygiene.test.ts',
   'tests/src/cli/cases/managed-update-kernel-projection.test.ts',
   'tests/src/cli/cases/app-state.test.ts',
   'tests/src/app-state-view-model-runtime-scope.test.ts',
