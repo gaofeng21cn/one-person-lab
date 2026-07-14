@@ -851,9 +851,9 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
       payloadRef: 'payloads/mag-0.2.1.json',
     },
     rca: {
-      version: '0.2.2',
-      sourceCommit: '9d11a424137d737e45e07d8966cded66617b42ef',
-      payloadRef: 'payloads/rca-0.2.2.json',
+      version: '0.2.3',
+      sourceCommit: '24ff15e78be0fdc4404e77763f88362accbc9e59',
+      payloadRef: 'payloads/rca-0.2.3.json',
     },
     oma: {
       version: '0.2.1',
