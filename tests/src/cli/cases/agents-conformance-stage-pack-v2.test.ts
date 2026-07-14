@@ -73,7 +73,7 @@ test('agents conformance exposes the frozen Standard Agent Pack ABI baseline', (
   assert.equal(stage.l5_entry_gate_status, 'declared');
 });
 
-test('agents conformance accepts Codex CLI variant stages with explicit non-default binding', () => {
+test('agents conformance accepts a routed Codex CLI variant stage with explicit binding', () => {
   const repoDir = buildScaffoldRepo();
   const stageManifestPath = path.join(repoDir, 'agent/stages/manifest.json');
   const stageManifest = parseJsonText(fs.readFileSync(stageManifestPath, 'utf8')) as any;
@@ -82,6 +82,11 @@ test('agents conformance accepts Codex CLI variant stages with explicit non-defa
   variantStage.lane_kind = 'variant';
   stageManifest.stages.push(variantStage);
   writeJson(stageManifestPath, stageManifest);
+  const actionCatalogPath = path.join(repoDir, 'contracts/action_catalog.json');
+  const actionCatalog = parseJsonText(fs.readFileSync(actionCatalogPath, 'utf8')) as any;
+  actionCatalog.actions[0].stage_route.optional_stage_refs.push('domain_review_variant');
+  actionCatalog.actions[0].stage_route.terminal_stage_refs.push('domain_review_variant');
+  writeJson(actionCatalogPath, actionCatalog);
 
   const report = runCli([
     'agents',
