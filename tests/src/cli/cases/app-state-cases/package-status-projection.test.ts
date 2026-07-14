@@ -123,7 +123,10 @@ test('app state isolates one invalid package status while direct status reads re
     packageStatusById: statuses,
   }).availability;
 
-  assert.equal(statuses.mas.status, 'available');
+  assert.equal(statuses.mas.status, 'verification_deferred');
+  assert.equal(statuses.mas.operational_ready, false);
+  assert.equal(statuses.mas.launch_allowed, false);
+  assert.equal(statuses.mas.launch_blocked_reason, 'live_verification_deferred');
   assert.equal(statuses.obf.status, 'unavailable');
   assert.equal(statuses.obf.launch_allowed, false);
   assert.equal((statuses.obf.status_read_error as Record<string, unknown>).code, 'contract_shape_invalid');
@@ -132,11 +135,11 @@ test('app state isolates one invalid package status while direct status reads re
   assert.equal(availability.find((entry) => entry.agent_id === 'obf')?.reason, 'package_status_read_failed');
 });
 
-test('app package status keeps the selected workspace root authoritative over an old package binding', () => {
+test('app package status uses only the selected workspace and keeps fast readiness fail closed', () => {
   const selectedWorkspaceRoot = '/tmp/opl-selected-workspace';
   const packageWorkspace = '/tmp/opl-mas-workspace';
-  const requests: Array<{ packageId: string; scope?: string; targetWorkspace?: string }> = [];
-  const readStatus = ((input: { packageId: string; scope?: string; targetWorkspace?: string }) => {
+  const requests: Array<{ packageId: string; scope?: string; targetWorkspace?: string; detail?: string }> = [];
+  const readStatus = ((input: { packageId: string; scope?: string; targetWorkspace?: string; detail?: string }) => {
     requests.push(input);
     const materialized = input.scope === 'workspace'
       && input.targetWorkspace === selectedWorkspaceRoot;
@@ -165,25 +168,51 @@ test('app package status keeps the selected workspace root authoritative over an
     };
   }) as any;
 
-  const statuses = buildAppAgentPackageStatuses({
+  const fastStatuses = buildAppAgentPackageStatuses({
     packageIds: ['mas', 'opl-flow'],
     activeWorkspaceBindings: [{ project_id: 'mas', workspace_path: packageWorkspace }],
     workspaceRootPath: selectedWorkspaceRoot,
     profile: 'fast',
     readStatus,
   });
+  const fullStatuses = buildAppAgentPackageStatuses({
+    packageIds: ['opl-flow'],
+    activeWorkspaceBindings: [{ project_id: 'mas', workspace_path: packageWorkspace }],
+    workspaceRootPath: selectedWorkspaceRoot,
+    profile: 'full',
+    readStatus,
+  });
+  const noSelectedWorkspace = buildAppAgentPackageStatuses({
+    packageIds: ['mas'],
+    activeWorkspaceBindings: [{ project_id: 'mas', workspace_path: packageWorkspace }],
+    workspaceRootPath: null,
+    profile: 'fast',
+    readStatus,
+  });
 
-  assert.equal(requests.find((entry) => entry.packageId === 'mas')?.targetWorkspace, selectedWorkspaceRoot);
-  assert.equal(requests.find((entry) => entry.packageId === 'opl-flow')?.targetWorkspace, selectedWorkspaceRoot);
-  assert.equal(statuses['opl-flow'].status, 'available');
-  assert.equal(statuses['opl-flow'].operational_ready, true);
+  const fastMasRequest = requests.find((entry) => entry.packageId === 'mas' && entry.detail === 'fast'
+    && entry.targetWorkspace === selectedWorkspaceRoot);
+  const noWorkspaceRequest = requests.find((entry) => entry.packageId === 'mas' && entry.detail === 'fast'
+    && entry.targetWorkspace === undefined);
+  assert.equal(fastMasRequest?.targetWorkspace, selectedWorkspaceRoot);
+  assert.equal(noWorkspaceRequest?.scope, undefined);
+  assert.equal(noWorkspaceRequest?.targetWorkspace, undefined);
+  assert.equal(fastStatuses['opl-flow'].status, 'verification_deferred');
+  assert.equal(fastStatuses['opl-flow'].operational_ready, false);
+  assert.equal(fastStatuses['opl-flow'].launch_allowed, false);
+  assert.equal(fastStatuses['opl-flow'].launch_blocked_reason, 'live_verification_deferred');
+  assert.equal(fullStatuses['opl-flow'].status, 'available');
+  assert.equal(fullStatuses['opl-flow'].operational_ready, true);
+  assert.equal(fullStatuses['opl-flow'].launch_allowed, true);
+  assert.equal(noSelectedWorkspace.mas.status, 'attention_needed');
+  assert.equal(noSelectedWorkspace.mas.launch_blocked_reason, 'scope_materialization_scope_required');
   assert.equal(
-    (statuses['opl-flow'].materialization_readiness as Record<string, unknown>).status,
+    (fastStatuses['opl-flow'].materialization_readiness as Record<string, unknown>).status,
     'current',
   );
 });
 
-test('app state reuses one status read across directory and status index for the workspace-root fallback', async () => {
+test('app state reuses one status read across directory and status index for the selected workspace', async () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-package-status-cache-'));
   const stateDir = path.join(homeRoot, 'opl-state');
   const workspaceRoot = path.join(homeRoot, 'workspace');
@@ -276,6 +305,15 @@ exit 1
     assert.equal(directoryEntry.readiness.status, 'verification_deferred');
     assert.equal(directoryEntry.readiness.verification_deferred, true);
     assert.equal(directoryEntry.readiness.reason, 'live_verification_deferred');
+    assert.equal(directoryEntry.readiness.operational_ready, false);
+    assert.equal(directoryEntry.readiness.launch_allowed, false);
+    const statusIndexEntry = appState.app_state.agent_packages.status_index.packages['third.party.research'];
+    assert.equal(statusIndexEntry.status, 'verification_deferred');
+    assert.equal(statusIndexEntry.operational_ready, false);
+    assert.equal(statusIndexEntry.launch_allowed, false);
+    assert.equal(statusIndexEntry.launch_blocked_reason, 'live_verification_deferred');
+    assert.equal(appState.app_state.agent_packages.directory.entry_count, 8);
+    assert.equal(appState.app_state.agent_packages.directory.entries.length, 8);
     assert.equal(calls.get('third.party.research'), 1);
   } finally {
     for (const [key, value] of previousEnv) {

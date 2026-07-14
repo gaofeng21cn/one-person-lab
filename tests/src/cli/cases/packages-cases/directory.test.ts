@@ -9,6 +9,7 @@ import {
   path,
   repoRoot,
   runCli,
+  runCliFailure,
   test,
 } from './helpers.ts';
 import { createFakeCodexFixture } from '../../helpers.ts';
@@ -191,6 +192,18 @@ test('registry manifest enrichment admits third-party packages and rejects role 
     assert.equal(enriched.entries[0].stable_version, '1.2.3');
     assert.equal(enriched.entries[0].manifest_validation, 'fetched_manifest');
     assert.equal(enriched.entries[0].tags.includes('literature'), true);
+    const directoryEntry = buildAgentPackageDirectory({
+      registryCache: enriched,
+      locks: [],
+      detail: 'fast',
+    }).entries.find((entry) => entry.package_id === 'third.party.research')!;
+    const installAction = directoryEntry.recommended_action_ref;
+    assert.ok(installAction);
+    assert.deepEqual(installAction.payload, {
+      package_id: 'third.party.research',
+      registry_url: 'file:///tmp/registry.json',
+    });
+    assert.equal(Object.hasOwn(installAction.payload, 'trust_tier'), false);
 
     const roleDrift = normalizeRegistry(
       registryPayload(manifestUrl, 'workflow_profile'),
@@ -212,6 +225,60 @@ test('registry manifest enrichment admits third-party packages and rejects role 
     );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('registry refresh rejects declared version drift without writing cache or receipt', () => {
+  for (const [field, failureCode] of [
+    ['selected_version', 'registry_manifest_selected_version_mismatch'],
+    ['stable_version', 'registry_manifest_stable_version_mismatch'],
+  ] as const) {
+    const fixture = isolatedPackageEnv(`opl-package-directory-${field}-drift`);
+    const manifestPath = path.join(fixture.home, 'manifest.json');
+    const registryPath = path.join(fixture.home, 'registry.json');
+    const manifestUrl = pathToFileURL(manifestPath).toString();
+    const registryUrl = pathToFileURL(registryPath).toString();
+    try {
+      fs.writeFileSync(manifestPath, formatJsonPayload(agentPackageManifest()));
+      const payload = registryPayload(manifestUrl);
+      (payload.entries[0] as Record<string, unknown>)[field] = '9.9.9';
+      fs.writeFileSync(registryPath, formatJsonPayload(payload));
+
+      const failure = runCliFailure([
+        'packages', 'registry', 'refresh', '--registry-url', registryUrl,
+      ], fixture.env);
+      assert.equal(failure.payload.error.details.failure_code, failureCode);
+      assert.equal(fs.existsSync(path.join(fixture.env.OPL_STATE_DIR, 'agent-package-registry-cache.json')), false);
+      assert.equal(fs.existsSync(path.join(fixture.env.OPL_STATE_DIR, 'agent-package-lifecycle-ledger.json')), false);
+    } finally {
+      fs.rmSync(fixture.home, { recursive: true, force: true });
+    }
+  }
+});
+
+test('ordinary registries reject opl+oci manifest refs before refresh can cache them', () => {
+  const fixture = isolatedPackageEnv('opl-package-directory-oci-registry');
+  const registryPath = path.join(fixture.home, 'registry.json');
+  const registryUrl = pathToFileURL(registryPath).toString();
+  const manifestUrl = 'opl+oci://ghcr.io/example/third-party-research:1.2.3#/package-manifest.json';
+  const payload = registryPayload(manifestUrl);
+  try {
+    assert.throws(
+      () => normalizeRegistry(payload, registryUrl, 'registry-sha'),
+      (error: any) => error?.details?.failure_code === 'agent_package_registry_manifest_scheme_unsupported',
+    );
+    fs.writeFileSync(registryPath, formatJsonPayload(payload));
+    const failure = runCliFailure([
+      'packages', 'registry', 'refresh', '--registry-url', registryUrl,
+    ], fixture.env);
+    assert.equal(
+      failure.payload.error.details.failure_code,
+      'agent_package_registry_manifest_scheme_unsupported',
+    );
+    assert.equal(fs.existsSync(path.join(fixture.env.OPL_STATE_DIR, 'agent-package-registry-cache.json')), false);
+    assert.equal(fs.existsSync(path.join(fixture.env.OPL_STATE_DIR, 'agent-package-lifecycle-ledger.json')), false);
+  } finally {
+    fs.rmSync(fixture.home, { recursive: true, force: true });
   }
 });
 
@@ -377,6 +444,25 @@ test('scope-less list and App workspace context project different activation sta
     assert.equal(scopeLess.recommended_action, 'agent_package_activate');
     assertRecommendedActionMatchesAvailable(scopeLess);
 
+    const missingWorkspace = listOplAgentPackages({
+      detail: 'fast',
+      readStatus: statusReader as any,
+      statusContext: () => ({}),
+    }).opl_agent_packages.directory.entries.find((entry) => entry.package_id === lock.package_id)!;
+    const targetlessActivation = missingWorkspace.available_actions.find(
+      (action) => action.action_id === 'agent_package_activate',
+    )!;
+    assert.deepEqual(targetlessActivation.payload, { package_id: lock.package_id });
+    assert.deepEqual(Object.keys(targetlessActivation).sort(), [
+      'action_id',
+      'action_ref',
+      'confirmation_required',
+      'payload',
+      'required_payload_fields',
+    ]);
+    assert.equal(missingWorkspace.recommended_action, 'agent_package_activate');
+    assertRecommendedActionMatchesAvailable(missingWorkspace);
+
     const appWorkspace = listOplAgentPackages({
       detail: 'fast',
       readStatus: statusReader as any,
@@ -452,6 +538,29 @@ test('installed-only directory entries retain persisted role and consume canonic
   assert.equal(fullyVerified.readiness.status, 'ready');
   assert.equal(fullyVerified.readiness.verification_deferred, false);
   assert.equal(fullyVerified.readiness.reason, null);
+
+  const developerCheckout = buildAgentPackageDirectory({
+    registryCache: null,
+    locks: [{ ...lock, source_kind: 'developer_checkout_override' }],
+    detail: 'full',
+    readStatus: () => ({
+      status: 'available',
+      recommended_action: 'agent_package_update',
+      operational_ready: true,
+      launch_allowed: true,
+      launch_blocked_reason: null,
+      materialization_readiness: { status: 'not_required' },
+    }),
+  }).entries.find((entry) => entry.package_id === lock.package_id)!;
+  assert.equal(
+    developerCheckout.available_actions.some((action) => action.action_id === 'agent_package_update'),
+    false,
+  );
+  assert.equal(developerCheckout.recommended_action, null);
+  assert.deepEqual(
+    developerCheckout.available_actions.map((action) => action.action_id),
+    ['agent_package_repair', 'agent_package_preferences_set', 'agent_package_uninstall'],
+  );
 
   const needsActivation = buildAgentPackageDirectory({
     registryCache: null,

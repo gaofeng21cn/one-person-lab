@@ -230,6 +230,19 @@ export async function enrichRegistryCacheManifestMetadata(cache: AgentPackageReg
         failure_code: 'registry_manifest_version_source_mismatch',
       });
     }
+    for (const field of ['selected_version', 'stable_version'] as const) {
+      const registryVersion = entry[field];
+      if (registryVersion && registryVersion !== metadata.selected_version) {
+        throw new FrameworkContractError('contract_shape_invalid', `Registry entry ${field} must match its manifest version.`, {
+          registry_url: cache.registry_url,
+          manifest_url: entry.manifest_url,
+          package_id: entry.package_id,
+          [`registry_${field}`]: registryVersion,
+          manifest_version: metadata.selected_version,
+          failure_code: `registry_manifest_${field.replace('_version', '')}_version_mismatch`,
+        });
+      }
+    }
     return {
       ...entry,
       display_name: entry.display_name || metadata.display_name,
@@ -368,7 +381,6 @@ function installPayload(source: DirectorySource) {
     ? {
         package_id: source.package_id,
         registry_url: source.registry_url,
-        trust_tier: source.trust_tier,
       }
     : {
         package_id: source.package_id,
@@ -394,6 +406,7 @@ function availableActions(
   installed: boolean,
   activated: boolean,
   context: Pick<AgentPackagePackageActionInput, 'scope' | 'targetWorkspace' | 'targetQuest'> | null,
+  automaticUpdateAllowed: boolean,
 ) {
   if (!source.package_role) {
     if (installed) {
@@ -428,7 +441,6 @@ function availableActions(
       ? {
           package_id: source.package_id,
           registry_url: source.registry_url,
-          trust_tier: source.trust_tier,
         }
       : {
           package_id: source.package_id,
@@ -441,7 +453,9 @@ function availableActions(
         'scope',
         'target_workspace or target_quest',
       ], false)] : []),
-    packageAction('agent_package_update', updatePayload, ['package_id'], true),
+    ...(automaticUpdateAllowed
+      ? [packageAction('agent_package_update', updatePayload, ['package_id'], true)]
+      : []),
     packageAction('agent_package_repair', { package_id: source.package_id }, ['package_id'], true),
     packageAction('agent_package_preferences_set', { package_id: source.package_id }, [
       'package_id',
@@ -552,11 +566,13 @@ export function buildAgentPackageDirectory(input: {
       || status.currentness_detail_deferred === true
       || status.runtime_source_readiness?.live_verification_deferred === true
     );
+    const actionContext = input.actionContext?.(source.package_id) ?? null;
     const actions = availableActions(
       effectiveSource,
       installed,
       activated,
-      input.actionContext?.(source.package_id) ?? null,
+      actionContext,
+      lock?.source_kind !== 'developer_checkout_override',
     );
     const recommendedAction = recommendedActionId({
       installed,
@@ -626,8 +642,8 @@ export function buildAgentPackageDirectory(input: {
       },
       readiness: {
         status: readinessStatus,
-        operational_ready: installed && status.operational_ready === true,
-        launch_allowed: installed && status.launch_allowed === true,
+        operational_ready: installed && !verificationDeferred && status.operational_ready === true,
+        launch_allowed: installed && !verificationDeferred && status.launch_allowed === true,
         verification_deferred: verificationDeferred,
         reason: !installed
           ? roleKnown ? 'package_not_installed' : 'registry_role_refresh_required'

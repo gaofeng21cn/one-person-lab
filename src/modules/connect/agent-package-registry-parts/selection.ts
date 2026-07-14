@@ -37,6 +37,16 @@ export async function resolveManifestSelection(input: AgentPackageManifestValida
       available_package_ids: registry.cache.entries.map((entry) => entry.package_id),
     });
   }
+  const requestedTrustTier = stringValue(input.trustTier);
+  if (requestedTrustTier && requestedTrustTier !== registryEntry.trust_tier) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package registry trust tier cannot be overridden by the request payload.', {
+      registry_url: registryUrl,
+      package_id: packageId,
+      requested_trust_tier: requestedTrustTier,
+      registry_trust_tier: registryEntry.trust_tier,
+      failure_code: 'agent_package_registry_trust_tier_override_forbidden',
+    });
+  }
   return {
     registryUrl,
     packageId,
@@ -108,6 +118,17 @@ export function assertManifestMatchesRegistrySelection(
       registry_selected_version: selection.registryEntry.selected_version,
       manifest_version: manifest.version,
       failure_code: 'registry_manifest_selected_version_mismatch',
+    });
+  }
+  if (selection.registryEntry.stable_version
+    && selection.registryEntry.stable_version !== manifest.version) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package registry stable_version and manifest version must match.', {
+      registry_url: selection.registryUrl,
+      manifest_url: selection.manifestUrl,
+      package_id: manifest.package_id,
+      registry_stable_version: selection.registryEntry.stable_version,
+      manifest_version: manifest.version,
+      failure_code: 'registry_manifest_stable_version_mismatch',
     });
   }
   const expectedVersionSourceRef = `${selection.manifestUrl}#/version`;

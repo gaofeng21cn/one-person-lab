@@ -18,7 +18,7 @@ import {
   resolveDefaultFamilyWorkspaceRoot,
   runOplAgentPackageStatus,
 } from '../connect/public/app-state.ts';
-import { listWorkspaceBindings, type WorkspaceBinding } from '../workspace/public/app-state.ts';
+import type { WorkspaceBinding } from '../workspace/public/app-state.ts';
 import { buildOplEndpoints } from '../../kernel/opl-runtime-endpoints.ts';
 import {
   familyRuntimePaths,
@@ -147,10 +147,12 @@ function buildFastAgentPackageStatus(
 ) {
   const lock = status.installed_packages[0] ?? null;
   const codexVisible = lock?.exposure_state === 'visible';
+  const positiveReadinessDeferred = Boolean(lock)
+    && (status.operational_ready === true || status.launch_allowed === true);
   return {
     surface_kind: 'opl_agent_package_status_fast_projection',
     package_id: status.package_id,
-    status: status.status,
+    status: positiveReadinessDeferred ? 'verification_deferred' : status.status,
     package_version: lock?.package_version ?? null,
     installed_version: lock?.package_version ?? null,
     version: lock?.package_version ?? null,
@@ -167,14 +169,18 @@ function buildFastAgentPackageStatus(
     materialization_readiness: status.materialization_readiness,
     runtime_source_readiness: {
       ...status.runtime_source_readiness,
+      ...(positiveReadinessDeferred ? { status: 'verification_deferred' } : {}),
+      operational_ready: false,
       verification_mode: 'persisted_lock_and_path_fast_projection',
       live_verification_deferred: true,
       live_verification_surface: 'opl packages status --package-id <package_id> --json',
     },
-    operational_ready: status.operational_ready,
+    operational_ready: false,
     operational_ready_scope: status.operational_ready_scope,
-    launch_allowed: status.launch_allowed,
-    launch_blocked_reason: status.launch_blocked_reason,
+    launch_allowed: false,
+    launch_blocked_reason: positiveReadinessDeferred
+      ? 'live_verification_deferred'
+      : status.launch_blocked_reason,
     allowed_when_blocked: status.allowed_when_blocked,
     repair_action: status.repair_action,
     currentness_detail_deferred: true,
@@ -250,7 +256,7 @@ function unavailableAgentPackageStatus(packageId: string, error: unknown): JsonR
 
 export function buildAppAgentPackageStatuses(input: {
   packageIds: readonly string[];
-  activeWorkspaceBindings: ReadonlyArray<Pick<WorkspaceBinding, 'project_id' | 'workspace_path'>>;
+  activeWorkspaceBindings?: ReadonlyArray<Pick<WorkspaceBinding, 'project_id' | 'workspace_path'>>;
   workspaceRootPath: string | null;
   profile: AppStateProfile;
   readStatus?: AgentPackageStatusReader;
@@ -259,8 +265,6 @@ export function buildAppAgentPackageStatuses(input: {
   const statuses: Record<string, JsonRecord> = {};
   for (const packageId of input.packageIds) {
     const context = appAgentPackageStatusContext(
-      packageId,
-      input.activeWorkspaceBindings,
       input.workspaceRootPath,
     );
     try {
@@ -281,15 +285,10 @@ export function buildAppAgentPackageStatuses(input: {
 }
 
 function appAgentPackageStatusContext(
-  packageId: string,
-  activeWorkspaceBindings: ReadonlyArray<Pick<WorkspaceBinding, 'project_id' | 'workspace_path'>>,
   workspaceRootPath: string | null,
 ) {
-  const binding = activeWorkspaceBindings.find((entry) =>
-    canonicalAgentPackageId(entry.project_id) === packageId);
-  const targetWorkspace = workspaceRootPath ?? binding?.workspace_path;
-  return targetWorkspace
-    ? { scope: 'workspace' as const, targetWorkspace }
+  return workspaceRootPath
+    ? { scope: 'workspace' as const, targetWorkspace: workspaceRootPath }
     : {};
 }
 
@@ -644,16 +643,13 @@ export async function buildOplAppState(input: {
   const workspaceRoot = readOplWorkspaceRoot();
   const core = buildCoreState(profile);
   const actions = buildActionCatalog(contracts);
-  const activeWorkspaceBindings = listWorkspaceBindings().filter((binding) => binding.status === 'active');
   const readAgentPackageStatus = requestCachedAgentPackageStatusReader(
     input.readAgentPackageStatus ?? runOplAgentPackageStatus,
   );
   const agentPackagesReadback = listOplAgentPackages({
     detail: profile,
     readStatus: readAgentPackageStatus,
-    statusContext: (packageId) => appAgentPackageStatusContext(
-      packageId,
-      activeWorkspaceBindings,
+    statusContext: () => appAgentPackageStatusContext(
       workspaceRoot.selected_path,
     ),
   }).opl_agent_packages;
@@ -663,7 +659,6 @@ export async function buildOplAppState(input: {
   ])];
   const agentPackageStatuses = buildAppAgentPackageStatuses({
     packageIds,
-    activeWorkspaceBindings,
     workspaceRootPath: workspaceRoot.selected_path,
     profile,
     readStatus: readAgentPackageStatus,

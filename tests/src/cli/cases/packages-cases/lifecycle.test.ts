@@ -72,6 +72,34 @@ test('packages fetches registry URL, validates manifest, and writes lock receipt
       assert.equal(refreshedCache.entries[0].stable_version, '1.2.3');
       assert.equal(refreshedCache.entries[0].manifest_validation, 'fetched_manifest');
 
+      const beforeInstall = runCli(['packages', 'list'], env) as any;
+      const installAction = beforeInstall.opl_agent_packages.directory.entries.find(
+        (entry: any) => entry.package_id === 'third.party.research',
+      ).recommended_action_ref;
+      assert.deepEqual(installAction.payload, {
+        package_id: 'third.party.research',
+        registry_url: registryUrl,
+      });
+      const ledgerPath = path.join(stateDir, 'agent-package-lifecycle-ledger.json');
+      const receiptCountBeforeOverrides = (parseJsonText(fs.readFileSync(ledgerPath, 'utf8')) as any).receipts.length;
+      for (const command of ['validate-manifest', 'install']) {
+        await assert.rejects(
+          runCliAsync([
+            'packages', command,
+            '--registry-url', registryUrl,
+            '--package-id', 'third.party.research',
+            '--trust-tier', 'first_party',
+          ], env),
+          (error: any) => error instanceof Error
+            && error.message.includes('agent_package_registry_trust_tier_override_forbidden'),
+        );
+      }
+      assert.equal(fs.existsSync(path.join(stateDir, 'agent-package-locks.json')), false);
+      assert.equal(
+        (parseJsonText(fs.readFileSync(ledgerPath, 'utf8')) as any).receipts.length,
+        receiptCountBeforeOverrides,
+      );
+
       const validated = await runCliAsync([
         'packages',
         'validate-manifest',
@@ -401,6 +429,13 @@ test('packages fetches registry URL, validates manifest, and writes lock receipt
         installedDirectoryEntry?.available_actions.some((action) => action.action_id === 'agent_package_update'),
         true,
       );
+      const registryUpdateAction = installedDirectoryEntry?.available_actions.find(
+        (action) => action.action_id === 'agent_package_update',
+      );
+      assert.deepEqual(registryUpdateAction?.payload, {
+        package_id: 'third.party.research',
+        registry_url: registryUrl,
+      });
       assert.equal(uninstalledDirectoryEntry?.installed, false);
       assert.equal(uninstalledDirectoryEntry?.recommended_action, 'install_from_manifest_url');
       assert.deepEqual(uninstalledDirectoryEntry?.available_actions[0].payload, { package_id: 'opl-flow' });

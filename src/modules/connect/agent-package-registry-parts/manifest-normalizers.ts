@@ -410,12 +410,17 @@ export function normalizeRegistryEntry(entry: Record<string, unknown>, index: nu
   }
   const manifestUrl = stringValue(entry.manifest_url)!;
   const versionSourceRef = stringValue(entry.version_source_ref)!;
-  if (!manifestUrl.startsWith('opl+oci://')) {
-    validateUrlLike(manifestUrl, `entries.${index}.manifest_url`);
+  if (manifestUrl.startsWith('opl+oci://') || versionSourceRef.startsWith('opl+oci://')) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package registry entries must use manifest sources supported by registry refresh.', {
+      entry_index: index,
+      manifest_url: manifestUrl,
+      version_source_ref: versionSourceRef,
+      supported_schemes: ['https', 'http', 'file', 'local_path'],
+      failure_code: 'agent_package_registry_manifest_scheme_unsupported',
+    });
   }
-  if (!versionSourceRef.startsWith('opl+oci://')) {
-    validateUrlLike(versionSourceRef, `entries.${index}.version_source_ref`);
-  }
+  validateUrlLike(manifestUrl, `entries.${index}.manifest_url`);
+  validateUrlLike(versionSourceRef, `entries.${index}.version_source_ref`);
   const displayName = stringValue(entry.display_name)!;
   const packageRole = normalizeAgentPackageRole(entry.package_role, `entries.${index}.package_role`);
   const selectedVersion = stringValue(entry.selected_version);
