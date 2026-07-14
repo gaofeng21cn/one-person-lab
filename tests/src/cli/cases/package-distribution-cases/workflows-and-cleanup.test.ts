@@ -155,6 +155,8 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.match(workflow, /generate-release-supply-chain\.mjs/);
   assert.match(workflow, /actions\/attest@v4/);
   assert.match(workflow, /push-to-registry:\s*true/);
+  assert.equal(workflow.match(/actions\/attest@v4/g)?.length, 4);
+  assert.equal(workflow.match(/create-storage-record:\s*false/g)?.length, 4);
   assert.match(workflow, /write-release-promotion-receipt\.mjs/);
   assert.match(workflow, /name:\s*opl-release-set-\$\{\{ needs\.package-release-set\.outputs\.release_set_generation \}\}/);
   assert.match(workflow, /publish-candidate-receipt:[\s\S]*needs:\s*\[package-release-set, attest-oci-components\]/);

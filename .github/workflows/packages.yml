@@ -600,6 +600,7 @@ jobs:
             dist/opl-packages/owner-cohort-lock.json
           predicate-type: https://slsa.dev/provenance/v1
           predicate-path: dist/opl-packages/opl-release-provenance.json
+          create-storage-record: false
 
       - name: Attest Release Set SBOM
         uses: actions/attest@v4
@@ -609,6 +610,7 @@ jobs:
             dist/opl-packages/packages/*/*.tar.gz
             dist/opl-packages/opl-release-manifest.json
           sbom-path: dist/opl-packages/opl-release-set.spdx.json
+          create-storage-record: false
 
       - name: Write candidate promotion receipt
         shell: bash
@@ -695,6 +697,7 @@ jobs:
           predicate-type: https://slsa.dev/provenance/v1
           predicate-path: dist/opl-packages/opl-release-provenance.json
           push-to-registry: true
+          create-storage-record: false
 
       - name: Publish OCI SBOM referrer
         uses: actions/attest@v4
@@ -703,6 +706,7 @@ jobs:
           subject-digest: ${{ steps.subject.outputs.digest }}
           sbom-path: dist/opl-packages/opl-release-set.spdx.json
           push-to-registry: true
+          create-storage-record: false
 
   publish-candidate-receipt:
     name: Publish attested candidate receipt
