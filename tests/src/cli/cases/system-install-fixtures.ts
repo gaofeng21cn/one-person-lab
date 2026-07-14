@@ -22,6 +22,29 @@ export function runCliWithStdin(args: string[], stdin: string, envOverrides: Rec
   return parseJsonText(result.stdout);
 }
 
+export function runCliWithStdinFailure(args: string[], stdin: string, envOverrides: Record<string, string>) {
+  const result = spawnSync(
+    process.execPath,
+    ['--experimental-strip-types', cliPath, ...args],
+    {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      input: stdin,
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: '1',
+        ...envOverrides,
+      },
+    },
+  );
+
+  assert.notEqual(result.status, 0, result.stdout);
+  return {
+    status: result.status ?? 1,
+    payload: parseJsonText(result.stderr),
+  };
+}
+
 function createFakeOfficeCliSource(root: string) {
   fs.mkdirSync(root, { recursive: true });
   fs.writeFileSync(

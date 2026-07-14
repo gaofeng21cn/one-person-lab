@@ -15,6 +15,9 @@ import {
   writeCapabilityProvider,
   writeMasConsumer,
 } from './packages-cases/capability-fixtures.ts';
+import {
+  assertAgentPackageUseBindingCarrierAuthority,
+} from '../../../../src/modules/connect/agent-package-registry-parts/carrier-authority.ts';
 import { packageLaunchHardStopReason } from '../../../../src/modules/runway/family-runtime-package-readiness.ts';
 
 test('package conformance and materialization gaps are quality debt when runtime source remains usable', () => {
@@ -439,6 +442,61 @@ test('family-runtime attempt start fails closed when its use receipt is tampered
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+test('family-runtime use binding rejects a pinned provider after its installed lock drifts', () => {
+  const packageLock = (packageId: string) => ({
+    package_id: packageId,
+    package_version: '0.1.0',
+    lock_ref: `opl://agent-package-lock/${packageId}/0.1.0/current`,
+    manifest_sha256: 'a'.repeat(64),
+    content_digest: `sha256:${'b'.repeat(64)}`,
+    source_artifact_ref: null,
+    artifact_digest: null,
+    owner_source_commit: null,
+    carrier_authority: null,
+    source_kind: 'manifest_url',
+    resolved_dependencies: [] as Array<{ package_id: string }>,
+    dependency_closure_digest: `sha256:${'c'.repeat(64)}`,
+  });
+  const boundPackage = (lock: ReturnType<typeof packageLock>) => ({
+    package_id: lock.package_id,
+    package_version: lock.package_version,
+    owner_language_version: null,
+    package_lock_ref: lock.lock_ref,
+    manifest_sha256: lock.manifest_sha256,
+    content_digest: lock.content_digest,
+    source_artifact_ref: lock.source_artifact_ref,
+    artifact_digest: lock.artifact_digest,
+    owner_source_commit: lock.owner_source_commit,
+    carrier_authority: lock.carrier_authority,
+  });
+  const providerLock = packageLock('fixture.mas-scholar-skills');
+  const rootLock = {
+    ...packageLock('fixture.mas'),
+    resolved_dependencies: [{ package_id: providerLock.package_id }],
+  };
+  const binding = {
+    surface_kind: 'opl_agent_package_use_binding.v1',
+    use_boundary_id: 'fixture-use-boundary',
+    use_receipt_ref: 'opl://agent-package/use/fixture',
+    root_package: boundPackage(rootLock),
+    provider_packages: [boundPackage(providerLock)],
+    dependency_closure_digest: rootLock.dependency_closure_digest,
+  };
+  providerLock.package_version = '9.9.9';
+
+  assert.throws(
+    () => assertAgentPackageUseBindingCarrierAuthority({
+      binding: binding as any,
+      root: rootLock as any,
+      installedLocks: [rootLock, providerLock] as any,
+    }),
+    (error: any) => error?.details?.failure_code === 'agent_package_use_binding_carrier_authority_invalid'
+      && JSON.stringify(error?.details?.failures) === JSON.stringify([
+        'provider_package_authority_mismatch:fixture.mas-scholar-skills',
+      ]),
+  );
 });
 
 test('family-runtime use boundary fails closed when the catalog has no compatible retained provider', async () => {

@@ -9,8 +9,12 @@ import {
 } from './helpers.ts';
 import {
   materializePhysicalCodexSurface,
+  resolveBundledFullRuntimeManifestPhysicalSource,
   resolveManifestPhysicalSource,
 } from '../../../../../src/modules/connect/agent-package-registry-parts/physical-surface.ts';
+import type {
+  BundledFullRuntimeCatalogEntry,
+} from '../../../../../src/modules/connect/agent-package-registry-parts/bundled-full-runtime-catalog.ts';
 import {
   admitPackagePayloadManifest,
 } from '../../../../../src/modules/connect/agent-package-registry-parts/payload-manifest.ts';
@@ -100,6 +104,42 @@ function canonicalFixture() {
     content_lock_paths: [],
   };
   return { files, manifest, payload };
+}
+
+function bundledPhysicalFixture() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-bundled-payload-source-'));
+  const packageRoot = path.join(root, 'package');
+  const sourceRoot = 'nested/source';
+  const sourceRootPath = path.join(packageRoot, sourceRoot);
+  const fixture = canonicalFixture();
+  const payload = structuredClone(fixture.payload);
+  payload.source_root = sourceRoot;
+  payload.files = payload.files.map((entry) => ({
+    ...entry,
+    source_url: sourceUrl(`${sourceRoot}/${entry.path}`),
+  }));
+  for (const file of fixture.files) {
+    const filePath = path.join(sourceRootPath, file.path);
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    fs.writeFileSync(filePath, file.content, { mode: file.mode === '100755' ? 0o755 : 0o644 });
+  }
+  const payloadManifestJson = `${JSON.stringify(payload, null, 2)}\n`;
+  const payloadManifestSha256 = `sha256:${crypto.createHash('sha256').update(payloadManifestJson).digest('hex')}`;
+  const catalogEntry: BundledFullRuntimeCatalogEntry = {
+    packageId,
+    packageRole: 'standard_agent',
+    packageVersion,
+    ownerSourceCommit: sourceCommit,
+    manifestUrl: 'file:///fixture/manifest.json',
+    manifestJson: '{}\n',
+    manifestSha256: `sha256:${'0'.repeat(64)}`,
+    payloadManifestUrl: 'file:///fixture/payload.json',
+    payloadManifestJson,
+    payloadManifestSha256,
+    runtimeModuleRelativePath: 'modules/example-agent',
+    dependencyPackageIds: [],
+  };
+  return { ...fixture, root, packageRoot, sourceRootPath, catalogEntry };
 }
 
 test('Connect admits only strict canonical first-party payload identity and explicit legacy envelopes', () => {
@@ -236,5 +276,100 @@ test('Connect verifies canonical bytes and preserves 100755 through physical Cod
       else process.env[name] = value;
     }
     fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('bundled Full runtime payloads stay offline and reject source-root or file path escape', () => {
+  const previousFetch = globalThis.fetch;
+  let fetchCount = 0;
+  globalThis.fetch = async () => {
+    fetchCount += 1;
+    throw new Error('bundled payload resolution must stay offline');
+  };
+  const success = bundledPhysicalFixture();
+  try {
+    const resolved = resolveBundledFullRuntimeManifestPhysicalSource({
+      manifest: success.manifest,
+      catalogEntry: success.catalogEntry,
+      packageRoot: success.packageRoot,
+    });
+    assert.equal(resolved.plugin_source_path, success.sourceRootPath);
+    assert.equal(resolved.verified_payload_source_commit, sourceCommit);
+    assert.equal(fetchCount, 0);
+  } finally {
+    globalThis.fetch = previousFetch;
+    fs.rmSync(success.root, { recursive: true, force: true });
+  }
+
+  const sourceEscape = bundledPhysicalFixture();
+  const outsideSourceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-bundled-payload-outside-source-'));
+  try {
+    fs.cpSync(sourceEscape.sourceRootPath, path.join(outsideSourceRoot, 'source'), { recursive: true });
+    fs.rmSync(path.join(sourceEscape.packageRoot, 'nested'), { recursive: true, force: true });
+    fs.symlinkSync(outsideSourceRoot, path.join(sourceEscape.packageRoot, 'nested'), 'dir');
+    assert.throws(() => resolveBundledFullRuntimeManifestPhysicalSource({
+      manifest: sourceEscape.manifest,
+      catalogEntry: sourceEscape.catalogEntry,
+      packageRoot: sourceEscape.packageRoot,
+    }), (error: any) => error?.details?.failure_code === 'agent_package_bundled_payload_symlink_forbidden');
+  } finally {
+    fs.rmSync(sourceEscape.root, { recursive: true, force: true });
+    fs.rmSync(outsideSourceRoot, { recursive: true, force: true });
+  }
+
+  const fileEscape = bundledPhysicalFixture();
+  const outsideFilesRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-bundled-payload-outside-files-'));
+  try {
+    const skillsRoot = path.join(fileEscape.sourceRootPath, 'skills');
+    fs.cpSync(skillsRoot, path.join(outsideFilesRoot, 'skills'), { recursive: true });
+    fs.rmSync(skillsRoot, { recursive: true, force: true });
+    fs.symlinkSync(path.join(outsideFilesRoot, 'skills'), skillsRoot, 'dir');
+    assert.throws(() => resolveBundledFullRuntimeManifestPhysicalSource({
+      manifest: fileEscape.manifest,
+      catalogEntry: fileEscape.catalogEntry,
+      packageRoot: fileEscape.packageRoot,
+    }), (error: any) => error?.details?.failure_code === 'agent_package_bundled_payload_path_escape');
+  } finally {
+    fs.rmSync(fileEscape.root, { recursive: true, force: true });
+    fs.rmSync(outsideFilesRoot, { recursive: true, force: true });
+  }
+});
+
+test('bundled Full runtime payloads reject missing bytes digest drift and mode drift', () => {
+  const cases = [
+    {
+      name: 'missing',
+      failureCode: 'agent_package_bundled_payload_file_missing',
+      mutate: (fixture: ReturnType<typeof bundledPhysicalFixture>) => {
+        fs.rmSync(path.join(fixture.sourceRootPath, fixture.files[0].path));
+      },
+    },
+    {
+      name: 'digest',
+      failureCode: 'agent_package_bundled_payload_file_sha256_mismatch',
+      mutate: (fixture: ReturnType<typeof bundledPhysicalFixture>) => {
+        fs.appendFileSync(path.join(fixture.sourceRootPath, fixture.files[0].path), 'drift\n');
+      },
+    },
+    {
+      name: 'mode',
+      failureCode: 'agent_package_bundled_payload_file_mode_mismatch',
+      mutate: (fixture: ReturnType<typeof bundledPhysicalFixture>) => {
+        fs.chmodSync(path.join(fixture.sourceRootPath, fixture.files[1].path), 0o644);
+      },
+    },
+  ];
+  for (const invalid of cases) {
+    const fixture = bundledPhysicalFixture();
+    try {
+      invalid.mutate(fixture);
+      assert.throws(() => resolveBundledFullRuntimeManifestPhysicalSource({
+        manifest: fixture.manifest,
+        catalogEntry: fixture.catalogEntry,
+        packageRoot: fixture.packageRoot,
+      }), (error: any) => error?.details?.failure_code === invalid.failureCode, invalid.name);
+    } finally {
+      fs.rmSync(fixture.root, { recursive: true, force: true });
+    }
   }
 });

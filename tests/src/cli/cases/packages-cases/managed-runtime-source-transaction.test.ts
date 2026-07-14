@@ -135,9 +135,11 @@ test('bundled Full runtime source requires a matching carrier marker and rejects
   const pluginSourcePath = createPluginSourceFixture();
   const bundledRoot = path.join(fixtureRoot, 'full-runtime', 'modules', 'redcube-ai');
   const unmanagedRoot = path.join(fixtureRoot, 'unmarked-redcube-ai');
+  const symlinkRoot = path.join(fixtureRoot, 'linked-redcube-ai');
   const manifestPath = path.join(fixtureRoot, 'manifest.json');
   fs.mkdirSync(bundledRoot, { recursive: true });
   fs.mkdirSync(unmanagedRoot, { recursive: true });
+  fs.symlinkSync(bundledRoot, symlinkRoot, 'dir');
   fs.writeFileSync(path.join(bundledRoot, 'runtime.txt'), 'immutable bundled source\n');
   fs.writeFileSync(path.join(unmanagedRoot, 'runtime.txt'), 'unmarked source\n');
   fs.writeFileSync(path.join(bundledRoot, 'opl-runtime-module.json'), formatJsonPayload({
@@ -177,6 +179,22 @@ test('bundled Full runtime source requires a matching carrier marker and rejects
       (error: any) => error?.details?.failure_code === 'agent_package_runtime_source_carrier_invalid',
     );
     assert.throws(
+      () => applyManagedRuntimeSourceCarrier({
+        ...carrierInput,
+        checkoutPath: unmanagedRoot,
+        dryRun: true,
+      }),
+      (error: any) => error?.details?.failure_code === 'agent_package_runtime_source_carrier_invalid',
+    );
+    assert.throws(
+      () => applyManagedRuntimeSourceCarrier({
+        ...carrierInput,
+        checkoutPath: symlinkRoot,
+        dryRun: true,
+      }),
+      (error: any) => error?.details?.failure_code === 'agent_package_runtime_source_carrier_invalid',
+    );
+    assert.throws(
       () => applyManagedRuntimeSourceCarrier({ ...carrierInput, checkoutPath: bundledRoot }),
       (error: any) => error?.details?.actual_owner_source_commit === 'b'.repeat(40),
     );
@@ -186,7 +204,9 @@ test('bundled Full runtime source requires a matching carrier marker and rejects
       module_id: 'redcube',
       repo_name: 'redcube-ai',
       packaged_runtime: true,
+      package_channel: true,
       source_git: { head_sha: 'a'.repeat(40) },
+      package_channel_lifecycle: { stale: true },
     }));
     assert.throws(
       () => applyManagedRuntimeSourceCarrier({
@@ -196,8 +216,18 @@ test('bundled Full runtime source requires a matching carrier marker and rejects
       }),
       (error: any) => error?.details?.failure_code === 'agent_package_runtime_source_carrier_invalid',
     );
+    const preview = applyManagedRuntimeSourceCarrier({
+      ...carrierInput,
+      checkoutPath: bundledRoot,
+      dryRun: true,
+    });
+    assert.equal(preview.after?.status, 'validated_no_write');
+    assert.equal(preview.after?.source_mode, 'bundled_full_runtime');
+    assert.equal(preview.after?.channel_version, null);
     const adopted = applyManagedRuntimeSourceCarrier({ ...carrierInput, checkoutPath: bundledRoot });
     assert.equal(adopted.after?.source_git_head_sha, 'a'.repeat(40));
+    assert.equal(adopted.after?.source_mode, 'bundled_full_runtime');
+    assert.equal(adopted.after?.channel_version, null);
 
     const invalid = runCliFailure([
       'packages', 'install', '--manifest-url', manifestPath, '--trust-tier', 'first_party',

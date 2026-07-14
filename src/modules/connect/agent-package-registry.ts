@@ -2710,6 +2710,7 @@ export function runOplAgentPackageStatus(input: {
   const lifecycleUx = agentPackageLifecycleSummaryReadback({
     selectedPackageId: packageId ?? null,
     packages: installedPackages,
+    receipts: lifecycleLedger.receipts,
   });
   const selectedLock = packageId ? installedPackages[0] ?? null : null;
   const selectedReceipt = selectedLock
@@ -2852,7 +2853,10 @@ export function listOplAgentPackages(input: {
   for (const receipt of lifecycleLedger.receipts) {
     receiptsByRef.set(receipt.receipt_ref, receipt);
   }
-  const lifecycleUx = agentPackageLifecycleSummaryReadback({ packages: lockIndex.packages });
+  const lifecycleUx = agentPackageLifecycleSummaryReadback({
+    packages: lockIndex.packages,
+    receipts: lifecycleLedger.receipts,
+  });
   const directory = buildAgentPackageDirectory({
     registryCache,
     locks: lockIndex.packages,

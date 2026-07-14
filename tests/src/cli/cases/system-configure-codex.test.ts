@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-import { assert, fs, os, parseJsonText, path, test } from '../helpers.ts';
+import { assert, fs, os, parseJsonText, path, runCli, runCliFailure, test } from '../helpers.ts';
 import { createFakeFamilySkillWorkspace } from '../../cli-codex-default-shell-helpers.ts';
 import { readBundledCodexDefaultProfile } from '../../../../src/kernel/local-codex-defaults.ts';
 import {
@@ -12,7 +12,11 @@ import {
   readBundledFullRuntimePackageCatalog,
 } from '../../../../src/modules/connect/agent-package-registry-parts/bundled-full-runtime-catalog.ts';
 import {
+  agentPackageLifecycleUxReadback,
+} from '../../../../src/modules/connect/agent-package-registry-parts/readback.ts';
+import {
   runCliWithStdin,
+  runCliWithStdinFailure,
 } from './system-install-fixtures.ts';
 
 const codexDefaultProfile = readBundledCodexDefaultProfile();
@@ -175,6 +179,59 @@ function buildBundledRuntimeCatalogFixture(input: {
   return { catalogPath, scholarRoot };
 }
 
+function buildFullRuntimeFamilyFixture(input: { captureDir: string; homeRoot: string }) {
+  const familyWorkspace = createFakeFamilySkillWorkspace(input.captureDir);
+  const runtimeHome = path.join(input.homeRoot, 'full-runtime');
+  const bundledCatalog = buildBundledRuntimeCatalogFixture({
+    familyRoot: familyWorkspace.workspaceRoot,
+    runtimeHome,
+    outputRoot: path.join(input.captureDir, 'bundled-package-catalog'),
+  });
+  for (const [repoName, moduleId, packageId] of [
+    ['med-autoscience', 'medautoscience', 'mas'],
+    ['med-autogrant', 'medautogrant', 'mag'],
+    ['redcube-ai', 'redcube', 'rca'],
+    ['opl-meta-agent', 'oplmetaagent', 'oma'],
+    ['opl-bookforge', 'oplbookforge', 'obf'],
+  ]) {
+    const packageManifest = parseJsonText(fs.readFileSync(
+      path.resolve('contracts', 'opl-framework', 'packages', `${packageId}.json`),
+      'utf8',
+    )) as Record<string, any>;
+    fs.writeFileSync(
+      path.join(familyWorkspace.workspaceRoot, repoName, 'opl-runtime-module.json'),
+      `${JSON.stringify({
+        marker_version: 1,
+        module_id: moduleId,
+        repo_name: repoName,
+        packaged_runtime: true,
+        source_git: { head_sha: packageManifest.codex_surface.carrier_source_commit },
+      }, null, 2)}\n`,
+      'utf8',
+    );
+  }
+  return {
+    familyWorkspace,
+    runtimeHome,
+    bundledCatalog,
+    env: {
+      HOME: input.homeRoot,
+      CODEX_HOME: path.join(input.homeRoot, 'codex-home'),
+      OPL_STATE_DIR: path.join(input.homeRoot, 'opl-state'),
+      OPL_FULL_RUNTIME_HOME: runtimeHome,
+      OPL_MODULE_PATH_MEDAUTOSCIENCE: path.join(familyWorkspace.workspaceRoot, 'med-autoscience'),
+      OPL_MODULE_PATH_MEDAUTOGRANT: path.join(familyWorkspace.workspaceRoot, 'med-autogrant'),
+      OPL_MODULE_PATH_REDCUBE: path.join(familyWorkspace.workspaceRoot, 'redcube-ai'),
+      OPL_MODULE_PATH_OPLMETAAGENT: path.join(familyWorkspace.workspaceRoot, 'opl-meta-agent'),
+      OPL_MODULE_PATH_OPLBOOKFORGE: path.join(familyWorkspace.workspaceRoot, 'opl-bookforge'),
+      OPL_TEST_RUNTIME_SOURCE_FAULTS_ENABLED: '1',
+      OPL_TEST_BUNDLED_FULL_RUNTIME_PACKAGE_CATALOG: bundledCatalog.catalogPath,
+      OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
+      PATH: `${process.execPath ? path.dirname(process.execPath) : '/usr/bin'}:/usr/bin:/bin`,
+    },
+  };
+}
+
 function assertBundledCodexModel(
   bootstrap: { model: string; reasoning_effort: string },
   config: string,
@@ -209,6 +266,28 @@ test('bundled Full runtime catalog owns the canonical seven and fails closed on 
     (error: any) => error?.details?.failure_code === 'agent_package_bundled_dependency_root_missing'
       && error?.details?.package_id === 'mas-scholar-skills',
   );
+});
+
+test('system configure-codex fails closed before package lock writes when Full runtime misses ScholarSkills', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-configure-codex-missing-scholar-home-'));
+  const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-configure-codex-missing-scholar-capture-'));
+  const fixture = buildFullRuntimeFamilyFixture({ captureDir, homeRoot });
+  try {
+    fs.rmSync(fixture.bundledCatalog.scholarRoot, { recursive: true, force: true });
+    const failure = runCliWithStdinFailure(
+      ['system', 'configure-codex', '--api-key-stdin'],
+      'secret-family-key\n',
+      fixture.env,
+    ) as any;
+    assert.equal(failure.payload.error.code, 'contract_shape_invalid');
+    assert.equal(failure.payload.error.details.failure_code, 'agent_package_bundled_dependency_root_missing');
+    assert.equal(failure.payload.error.details.package_id, 'mas-scholar-skills');
+    assert.equal(fs.existsSync(path.join(fixture.env.OPL_STATE_DIR, 'agent-package-locks.json')), false);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(captureDir, { recursive: true, force: true });
+    fs.rmSync(fixture.familyWorkspace.workspaceRoot, { recursive: true, force: true });
+  }
 });
 
 test('system configure-codex writes the product endpoint and App-owned install fallback without leaking the API key', () => {
@@ -596,57 +675,15 @@ test('system configure-codex syncs packaged Full companion skills after API key 
 test('system configure-codex syncs Full runtime family Codex plugins after API key setup', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-configure-codex-family-plugins-home-'));
   const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-configure-codex-family-plugins-capture-'));
-  const familyWorkspace = createFakeFamilySkillWorkspace(captureDir);
+  const fixture = buildFullRuntimeFamilyFixture({ captureDir, homeRoot });
+  const { familyWorkspace, runtimeHome, bundledCatalog } = fixture;
   const codexHome = path.join(homeRoot, 'codex-home');
-  const runtimeHome = path.join(homeRoot, 'full-runtime');
-  const bundledCatalog = buildBundledRuntimeCatalogFixture({
-    familyRoot: familyWorkspace.workspaceRoot,
-    runtimeHome,
-    outputRoot: path.join(captureDir, 'bundled-package-catalog'),
-  });
-  for (const [repoName, moduleId, packageId] of [
-    ['med-autoscience', 'medautoscience', 'mas'],
-    ['med-autogrant', 'medautogrant', 'mag'],
-    ['redcube-ai', 'redcube', 'rca'],
-    ['opl-meta-agent', 'oplmetaagent', 'oma'],
-    ['opl-bookforge', 'oplbookforge', 'obf'],
-  ]) {
-    const packageManifest = parseJsonText(fs.readFileSync(
-      path.resolve('contracts', 'opl-framework', 'packages', `${packageId}.json`),
-      'utf8',
-    )) as Record<string, any>;
-    fs.writeFileSync(
-      path.join(familyWorkspace.workspaceRoot, repoName, 'opl-runtime-module.json'),
-      `${JSON.stringify({
-        marker_version: 1,
-        module_id: moduleId,
-        repo_name: repoName,
-        packaged_runtime: true,
-        source_git: { head_sha: packageManifest.codex_surface.carrier_source_commit },
-      }, null, 2)}\n`,
-      'utf8',
-    );
-  }
 
   try {
     const output = runCliWithStdin(
       ['system', 'configure-codex', '--api-key-stdin'],
       'secret-family-key\n',
-      {
-        HOME: homeRoot,
-        CODEX_HOME: codexHome,
-        OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
-        OPL_FULL_RUNTIME_HOME: runtimeHome,
-        OPL_MODULE_PATH_MEDAUTOSCIENCE: path.join(familyWorkspace.workspaceRoot, 'med-autoscience'),
-        OPL_MODULE_PATH_MEDAUTOGRANT: path.join(familyWorkspace.workspaceRoot, 'med-autogrant'),
-        OPL_MODULE_PATH_REDCUBE: path.join(familyWorkspace.workspaceRoot, 'redcube-ai'),
-        OPL_MODULE_PATH_OPLMETAAGENT: path.join(familyWorkspace.workspaceRoot, 'opl-meta-agent'),
-        OPL_MODULE_PATH_OPLBOOKFORGE: path.join(familyWorkspace.workspaceRoot, 'opl-bookforge'),
-        OPL_TEST_RUNTIME_SOURCE_FAULTS_ENABLED: '1',
-        OPL_TEST_BUNDLED_FULL_RUNTIME_PACKAGE_CATALOG: bundledCatalog.catalogPath,
-        OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
-        PATH: `${process.execPath ? path.dirname(process.execPath) : '/usr/bin'}:/usr/bin:/bin`,
-      },
+      fixture.env,
     ) as {
       codex_config: {
         skill_sync: {
@@ -747,6 +784,113 @@ test('system configure-codex syncs Full runtime family Codex plugins after API k
       true,
     );
     assert.equal(fs.existsSync(familyWorkspace.syncLogPath), false);
+
+    for (const action of ['update', 'repair']) {
+      const failure = runCliFailure(['packages', action, 'mas'], fixture.env);
+      assert.equal(
+        failure.payload.error.details.failure_code,
+        'agent_package_bundled_full_runtime_internal_reconcile_required',
+      );
+    }
+
+    const lockPath = path.join(fixture.env.OPL_STATE_DIR, 'agent-package-locks.json');
+    const expectedMasOwnerSourceCommit = masLock.owner_source_commit;
+    const expectedMasCarrierAuthority = structuredClone(masLock.carrier_authority);
+    const driftedLockIndex = parseJsonText(fs.readFileSync(lockPath, 'utf8')) as Record<string, any>;
+    const driftedMasLock = driftedLockIndex.packages.find((entry: Record<string, any>) => entry.package_id === 'mas');
+    driftedMasLock.owner_source_commit = 'f'.repeat(40);
+    writeJson(lockPath, driftedLockIndex);
+
+    const reconciled = runCliWithStdin(
+      ['system', 'configure-codex', '--api-key-stdin'],
+      'secret-family-key\n',
+      fixture.env,
+    ) as any;
+    assert.equal(
+      reconciled.codex_config.agent_package_sync.items.find(
+        (item: Record<string, any>) => item.package_id === 'mas',
+      )?.status,
+      'installed',
+    );
+    const reconciledLockIndex = parseJsonText(fs.readFileSync(lockPath, 'utf8')) as Record<string, any>;
+    const reconciledMasLock = reconciledLockIndex.packages.find(
+      (entry: Record<string, any>) => entry.package_id === 'mas',
+    );
+    assert.equal(reconciledMasLock.owner_source_commit, expectedMasOwnerSourceCommit);
+    assert.deepEqual(reconciledMasLock.carrier_authority, expectedMasCarrierAuthority);
+
+    const optimized = runCli(['packages', 'optimize', 'mas'], fixture.env) as any;
+    assert.equal(optimized.opl_agent_package_optimize.status, 'optimized');
+    assert.deepEqual(
+      optimized.opl_agent_package_optimize.package_lock.carrier_authority,
+      expectedMasCarrierAuthority,
+    );
+    assert.deepEqual(
+      optimized.opl_agent_package_optimize.lifecycle_receipt.carrier_authority,
+      expectedMasCarrierAuthority,
+    );
+
+    const rolledBack = runCli(['packages', 'rollback', 'mas'], fixture.env) as any;
+    assert.equal(rolledBack.opl_agent_package_rollback.status, 'rolled_back');
+    assert.deepEqual(
+      rolledBack.opl_agent_package_rollback.package_lock.carrier_authority,
+      expectedMasCarrierAuthority,
+    );
+    assert.deepEqual(
+      rolledBack.opl_agent_package_rollback.lifecycle_receipt.carrier_authority,
+      expectedMasCarrierAuthority,
+    );
+
+    const currentLockIndex = parseJsonText(fs.readFileSync(lockPath, 'utf8')) as Record<string, any>;
+    const currentMasLock = currentLockIndex.packages.find(
+      (entry: Record<string, any>) => entry.package_id === 'mas',
+    );
+    const ledgerPath = path.join(fixture.env.OPL_STATE_DIR, 'agent-package-lifecycle-ledger.json');
+    const ledger = parseJsonText(fs.readFileSync(ledgerPath, 'utf8')) as Record<string, any>;
+    const currentMasReceipt = ledger.receipts.find(
+      (entry: Record<string, any>) => entry.receipt_ref === currentMasLock.action_receipt_id,
+    );
+    assert.ok(currentMasReceipt);
+    for (const receipt of [
+      null,
+      { ...structuredClone(currentMasReceipt), owner_source_commit: 'f'.repeat(40) },
+    ]) {
+      const lifecycle = agentPackageLifecycleUxReadback({
+        packageId: 'mas',
+        lock: currentMasLock,
+        receipt,
+      });
+      assert.equal(lifecycle.status, 'attention_needed');
+      assert.equal(
+        lifecycle.conditions.some((condition) => condition.condition_id === 'carrier_authority_invalid'),
+        true,
+      );
+    }
+    ledger.receipts = ledger.receipts.filter(
+      (entry: Record<string, any>) => entry.receipt_ref !== currentMasLock.action_receipt_id,
+    );
+    writeJson(ledgerPath, ledger);
+
+    const receiptMissing = runCli(['packages', 'status', '--package-id', 'mas'], fixture.env) as any;
+    assert.equal(receiptMissing.opl_agent_package_status.status, 'attention_needed');
+    assert.equal(receiptMissing.opl_agent_package_status.carrier_authority_readiness.status, 'invalid');
+    assert.equal(receiptMissing.opl_agent_package_status.lifecycle_ux.status, 'attention_needed');
+    assert.equal(
+      receiptMissing.opl_agent_package_status.conditions.some(
+        (condition: Record<string, any>) => condition.condition_id === 'carrier_authority_invalid',
+      ),
+      true,
+    );
+
+    const workspace = path.join(homeRoot, 'workspace');
+    fs.mkdirSync(workspace, { recursive: true });
+    const activationFailure = runCliFailure([
+      'packages', 'activate', 'mas', '--scope', 'workspace', '--target-workspace', workspace,
+    ], fixture.env);
+    assert.equal(
+      activationFailure.payload.error.details.failure_code,
+      'agent_package_lifecycle_receipt_carrier_authority_invalid',
+    );
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(captureDir, { recursive: true, force: true });

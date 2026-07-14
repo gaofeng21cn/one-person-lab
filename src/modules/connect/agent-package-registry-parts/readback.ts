@@ -88,7 +88,7 @@ export function agentPackageLifecycleUxReadback(input: {
       action_ref: null,
     }),
   ];
-  const carrierAuthority = input.receipt
+  const carrierAuthority = Object.prototype.hasOwnProperty.call(input, 'receipt')
     ? agentPackageCarrierReceiptAuthorityStatus(input.lock, input.receipt)
     : agentPackageCarrierAuthorityStatus(input.lock);
   if (carrierAuthority.status === 'invalid') {
@@ -200,6 +200,7 @@ export function agentPackageLifecycleUxReadback(input: {
 export function agentPackageLifecycleSummaryReadback(input: {
   selectedPackageId?: string | null;
   packages: AgentPackageLock[];
+  receipts?: AgentPackageLifecycleReceipt[];
 }): AgentPackageLifecycleUxReadback {
   if (input.selectedPackageId && input.packages.length === 0) {
     return agentPackageLifecycleUxReadback({ packageId: input.selectedPackageId });
@@ -218,7 +219,14 @@ export function agentPackageLifecycleSummaryReadback(input: {
       lifecycle_action_refs: ['install'],
     };
   }
-  const packageReadbacks = input.packages.map((lock) => agentPackageLifecycleUxReadback({ packageId: lock.package_id, lock }));
+  const receiptsByRef = new Map(
+    (input.receipts ?? []).map((receipt) => [receipt.receipt_ref, receipt]),
+  );
+  const packageReadbacks = input.packages.map((lock) => agentPackageLifecycleUxReadback({
+    packageId: lock.package_id,
+    lock,
+    receipt: receiptsByRef.get(lock.action_receipt_id) ?? null,
+  }));
   const recommendedAction = packageReadbacks.find((entry) => entry.recommended_action)?.recommended_action ?? null;
   return {
     status: recommendedAction ? 'attention_needed' : 'available',
