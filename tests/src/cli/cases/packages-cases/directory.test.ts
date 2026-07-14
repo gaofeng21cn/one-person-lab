@@ -28,6 +28,15 @@ const CANONICAL_PACKAGE_ROLES = new Set([
   'framework_capability_package',
   'workflow_profile',
 ]);
+const CANONICAL_PACKAGE_IDS = [
+  'mas',
+  'mag',
+  'rca',
+  'oma',
+  'obf',
+  'mas-scholar-skills',
+  'opl-flow',
+];
 
 function isolatedPackageEnv(prefix: string) {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), `${prefix}-home-`));
@@ -163,7 +172,32 @@ test('external package catalogs preserve third-party selection and reject first-
   assert.equal(cache.entries[0].source, 'third_party');
   assert.equal(cache.entries[0].trust_tier, 'third_party_verified');
 
-  for (const trustTier of [undefined, 'first_party', 'first_party_managed']) {
+  for (const [source, trustTier] of [
+    ['organization_registry', 'organization_verified'],
+    ['user_registry', 'third_party_unverified'],
+  ]) {
+    const entry = {
+      ...catalog.packages.package_catalog['third.party.research'],
+      source,
+      trust_tier: trustTier,
+    };
+    const preserved = normalizePackageCatalogRegistry({
+      ...catalog,
+      packages: { package_catalog: { 'third.party.research': entry } },
+    }, `file:///tmp/${source}-catalog.json`, 'catalog-sha');
+    assert.equal(preserved.entries[0].source, source);
+    assert.equal(preserved.entries[0].trust_tier, trustTier);
+  }
+
+  const reservedFirstPartyClaimVariants = [
+    'first_party',
+    'first-party-managed',
+    'first party',
+    'first.party',
+    'firstParty',
+    'firstPartyReleaseCatalog',
+  ];
+  for (const trustTier of [undefined, ...reservedFirstPartyClaimVariants]) {
     const entry = {
       ...catalog.packages.package_catalog['third.party.research'],
       ...(trustTier ? { trust_tier: trustTier } : {}),
@@ -178,7 +212,10 @@ test('external package catalogs preserve third-party selection and reject first-
     );
   }
 
-  for (const source of [undefined, 'first_party_release_catalog', 'first_party_managed_cohort']) {
+  for (const source of [
+    undefined,
+    ...reservedFirstPartyClaimVariants,
+  ]) {
     const entry = {
       ...catalog.packages.package_catalog['third.party.research'],
       ...(source ? { source } : {}),
@@ -288,10 +325,58 @@ test('external package catalogs preserve third-party selection and reject first-
   }
 });
 
-test('external registries reject canonical first-party package identities', async () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-directory-first-party-registry-collision-'));
-  const registryPath = path.join(root, 'registry.json');
+test('external registries preserve external claims and reject first-party authority', async () => {
+  const fixture = isolatedPackageEnv('opl-package-directory-first-party-registry-collision');
+  const codexFixture = createFakeCodexFixture(`
+if [[ "$1" == "--version" ]]; then
+  echo "codex-cli 0.125.0"
+  exit 0
+fi
+exit 1
+`);
+  const registryPath = path.join(fixture.home, 'registry.json');
+  const registryUrl = pathToFileURL(registryPath).href;
+  const manifestUrl = pathToFileURL(path.join(fixture.home, 'manifest.json')).href;
+  const baseEntry = registryPayload(manifestUrl).entries[0];
   try {
+    for (const [source, trustTier] of [
+      ['organization_registry', 'organization_verified'],
+      ['user_registry', 'third_party_unverified'],
+    ]) {
+      const normalized = normalizeRegistry({
+        registry_id: 'external-claims',
+        entries: [{ ...baseEntry, source, trust_tier: trustTier }],
+      }, registryUrl, 'registry-sha');
+      assert.equal(normalized.entries[0].source, source);
+      assert.equal(normalized.entries[0].trust_tier, trustTier);
+    }
+
+    for (const field of ['source', 'trust_tier'] as const) {
+      const missing = { ...baseEntry } as Record<string, unknown>;
+      delete missing[field];
+      assert.throws(
+        () => normalizeRegistry({ registry_id: 'missing-claim', entries: [missing] }, registryUrl, 'registry-sha'),
+        (error: any) => error?.details?.missing_fields?.includes(field) === true,
+      );
+      for (const claim of [
+        'first_party',
+        'first-party-managed',
+        'first party',
+        'first.party',
+        'firstParty',
+        'firstPartyReleaseCatalog',
+        'first_party_future',
+      ]) {
+        assert.throws(
+          () => normalizeRegistry({
+            registry_id: 'reserved-claim',
+            entries: [{ ...baseEntry, [field]: claim }],
+          }, registryUrl, 'registry-sha'),
+          (error: any) => error?.details?.failure_code === `agent_package_registry_${field === 'source' ? 'source' : 'trust_tier'}_invalid`,
+        );
+      }
+    }
+
     fs.writeFileSync(registryPath, formatJsonPayload({
       registry_id: 'malicious-first-party-collision',
       entries: ['mas', 'oma'].map((packageId) => ({
@@ -308,11 +393,83 @@ test('external registries reject canonical first-party package identities', asyn
       })),
     }));
     await assert.rejects(
-      fetchAndValidateRegistry(pathToFileURL(registryPath).href),
+      fetchAndValidateRegistry(registryUrl),
       (error: any) => error?.details?.failure_code === 'agent_package_registry_first_party_identity_collision',
     );
+
+    fs.writeFileSync(registryPath, formatJsonPayload({
+      registry_id: 'malicious-noncanonical-trust-claim',
+      entries: [{ ...baseEntry, source: 'first_party_release_catalog' }],
+    }));
+    const installFailure = runCliFailure([
+      'packages', 'install', '--registry-url', registryUrl, '--package-id', baseEntry.package_id,
+    ], fixture.env);
+    assert.equal(installFailure.payload.error.details.failure_code, 'agent_package_registry_source_invalid');
+    for (const relativePath of [
+      'agent-package-registry-cache.json',
+      'agent-package-locks.json',
+      'agent-package-lifecycle-ledger.json',
+    ]) {
+      assert.equal(fs.existsSync(path.join(fixture.env.OPL_STATE_DIR, relativePath)), false);
+    }
+    assert.equal(fs.existsSync(fixture.env.CODEX_HOME), false);
+
+    const baseline = buildAgentPackageDirectory({ registryCache: null, locks: [], detail: 'fast' });
+    fs.mkdirSync(fixture.env.OPL_STATE_DIR, { recursive: true });
+    fs.writeFileSync(path.join(fixture.env.OPL_STATE_DIR, 'agent-package-registry-cache.json'), formatJsonPayload({
+      surface_kind: 'opl_agent_package_registry_cache',
+      version: 'opl-agent-package-registry-cache.v1',
+      refreshed_at: '2026-01-01T00:00:00.000Z',
+      registry_url: registryUrl,
+      registry_sha256: 'stale-cache-sha',
+      entry_count: CANONICAL_PACKAGE_IDS.length + 3,
+      entries: [
+        ...CANONICAL_PACKAGE_IDS.map((packageId) => ({
+          ...baseEntry,
+          package_id: packageId,
+          display_name: `Hijacked ${packageId}`,
+          publisher: 'attacker',
+          source: 'first_party_release_catalog',
+          trust_tier: 'first_party',
+        })),
+        { ...baseEntry, package_id: 'attacker.source', source: 'first_party_managed' },
+        { ...baseEntry, package_id: 'attacker.trust', trust_tier: 'first_party_managed_cohort' },
+        { ...baseEntry, source: 'organization_registry', trust_tier: 'third_party_unverified' },
+      ],
+    }));
+    const directory = (runCli(['packages', 'list'], fixture.env) as any).opl_agent_packages.directory;
+    assert.equal(directory.entry_count, CANONICAL_PACKAGE_IDS.length + 1);
+    assert.equal(directory.entries.some((entry: any) => entry.package_id.startsWith('attacker.')), false);
+    const validExternal = directory.entries.find((entry: any) => entry.package_id === baseEntry.package_id);
+    assert.equal(validExternal.source_explanation.source, 'organization_registry');
+    assert.equal(validExternal.trust_tier, 'third_party_unverified');
+    for (const packageId of CANONICAL_PACKAGE_IDS) {
+      const expected = baseline.entries.find((entry) => entry.package_id === packageId)!;
+      const actual = directory.entries.find((entry: any) => entry.package_id === packageId)!;
+      assert.deepEqual({
+        display_name: actual.display_name,
+        publisher: actual.publisher,
+        manifest_url: actual.manifest_url,
+        trust_tier: actual.trust_tier,
+      }, {
+        display_name: expected.display_name,
+        publisher: expected.publisher,
+        manifest_url: expected.manifest_url,
+        trust_tier: expected.trust_tier,
+      });
+    }
+    const appDirectory = (runCli(['app', 'state', '--profile', 'fast'], {
+      ...fixture.env,
+      OPL_MODULES_ROOT: path.join(fixture.home, 'opl-state', 'modules'),
+      OPL_CODEX_CLI_LATEST_VERSION: '0.125.0',
+      OPL_DEVELOPER_MODE_GH_BINARY: path.join(fixture.home, 'missing-gh'),
+      PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
+    }) as any).app_state.agent_packages.directory;
+    assert.equal(appDirectory.entry_count, CANONICAL_PACKAGE_IDS.length + 1);
+    assert.equal(appDirectory.entries.some((entry: any) => entry.package_id.startsWith('attacker.')), false);
   } finally {
-    fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(fixture.home, { recursive: true, force: true });
   }
 });
 
@@ -447,29 +604,43 @@ test('ordinary registries reject opl+oci manifest refs before refresh can cache 
 });
 
 test('legacy registry entries derive capability and workflow roles from validated manifests', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-directory-generic-role-fixtures-'));
   const cases = [
-    ['mas-scholar-skills', 'framework_capability_package'],
-    ['opl-flow', 'workflow_profile'],
+    ['mas-scholar-skills', 'fixture.scholar-skills', 'framework_capability_package'],
+    ['opl-flow', 'fixture.opl-flow', 'workflow_profile'],
   ] as const;
-  for (const [packageId, expectedRole] of cases) {
-    const manifestPath = path.join(repoRoot, 'contracts', 'opl-framework', 'packages', `${packageId}.json`);
-    const manifestUrl = pathToFileURL(manifestPath).toString();
-    const cache = normalizeRegistry({
-      registry_id: `legacy-${packageId}`,
-      entries: [{
+  try {
+    for (const [sourcePackageId, packageId, expectedRole] of cases) {
+      const sourceManifest = JSON.parse(fs.readFileSync(
+        path.join(repoRoot, 'contracts', 'opl-framework', 'packages', `${sourcePackageId}.json`),
+        'utf8',
+      ));
+      const manifestPath = path.join(root, `${packageId}.json`);
+      fs.writeFileSync(manifestPath, formatJsonPayload({
+        ...sourceManifest,
         package_id: packageId,
-        display_name: packageId,
-        publisher: 'one-person-lab',
-        source: 'first_party',
-        manifest_url: manifestUrl,
-        version_source_ref: `${manifestUrl}#/version`,
-        trust_tier: 'first_party',
-      }],
-    }, `file:///tmp/${packageId}-registry.json`, 'registry-sha');
-    assert.equal(cache.entries[0].package_role, null);
-    const enriched = await enrichRegistryCacheManifestMetadata(cache);
-    assert.equal(enriched.entries[0].package_role, expectedRole);
-    assert.equal(enriched.entries[0].manifest_validation, 'fetched_manifest');
+        source: 'third_party',
+      }));
+      const manifestUrl = pathToFileURL(manifestPath).toString();
+      const cache = normalizeRegistry({
+        registry_id: `legacy-${packageId}`,
+        entries: [{
+          package_id: packageId,
+          display_name: packageId,
+          publisher: 'example-org',
+          source: 'organization_registry',
+          manifest_url: manifestUrl,
+          version_source_ref: `${manifestUrl}#/version`,
+          trust_tier: 'third_party_unverified',
+        }],
+      }, `file:///tmp/${packageId}-registry.json`, 'registry-sha');
+      assert.equal(cache.entries[0].package_role, null);
+      const enriched = await enrichRegistryCacheManifestMetadata(cache);
+      assert.equal(enriched.entries[0].package_role, expectedRole);
+      assert.equal(enriched.entries[0].manifest_validation, 'fetched_manifest');
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
   }
 
   assert.throws(
@@ -756,6 +927,24 @@ test('installed-only directory entries retain persisted role and consume canonic
   });
   assertRecommendedActionMatchesAvailable(needsActivation);
 
+  const disabled = buildAgentPackageDirectory({
+    registryCache: null,
+    locks: [{ ...lock, exposure_state: 'disabled' }],
+    detail: 'full',
+    readStatus: () => ({
+      status: 'attention_needed',
+      recommended_action: 'agent_package_activate',
+      operational_ready: false,
+      launch_allowed: false,
+      launch_blocked_reason: 'package_disabled',
+      materialization_readiness: { status: 'missing' },
+    }),
+  }).entries.find((entry) => entry.package_id === lock.package_id)!;
+  assert.equal(disabled.activated, false);
+  assert.equal(disabled.recommended_action, null);
+  assert.equal(disabled.available_actions.some((action) => action.action_id === 'agent_package_activate'), false);
+  assert.equal(disabled.available_actions.some((action) => action.action_id === 'agent_package_preferences_set'), true);
+
   const legacyDirectory = buildAgentPackageDirectory({
     registryCache: null,
     locks: [{ ...lock, package_id: 'third.party.legacy', package_role: undefined }],
@@ -804,5 +993,9 @@ test('installed-only directory entries retain persisted role and consume canonic
   assert.equal(failedStatus.readiness.reason, 'package_status_read_failed');
   assert.equal(failedStatus.readiness.status_read_error?.code, 'unexpected_error');
   assert.equal(failedStatus.recommended_action, 'agent_package_repair');
+  assert.deepEqual(
+    failedStatus.available_actions.map((action) => action.action_id),
+    ['agent_package_repair'],
+  );
   assertRecommendedActionMatchesAvailable(failedStatus);
 });

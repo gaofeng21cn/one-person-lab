@@ -9,6 +9,20 @@ import { stringValue } from '../../../kernel/json-record.ts';
 import { FORBIDDEN_AGENT_PACKAGE_FIELDS } from './constants.ts';
 import type { AgentPackageAuthorityBoundary, AgentPackageSourceKind, FetchJsonResult } from './types.ts';
 
+const RESERVED_FIRST_PARTY_REGISTRY_CLAIMS = [
+  'first_party',
+  'first_party_managed',
+  'first_party_managed_cohort',
+  'first_party_release_catalog',
+] as const;
+
+function externalRegistryClaimKey(claim: string) {
+  return claim
+    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '');
+}
+
 export function nowIso() {
   return new Date().toISOString();
 }
@@ -148,4 +162,33 @@ export function assertStringValue(value: unknown, field: string): string {
     });
   }
   return normalized;
+}
+
+export function assertExplicitExternalRegistryClaim(
+  value: unknown,
+  input: {
+    field: 'source' | 'trust_tier';
+    sourceLabel: string;
+    failureCode: string;
+  },
+) {
+  const claim = stringValue(value);
+  const claimKey = claim ? externalRegistryClaimKey(claim) : null;
+  if (
+    !claim
+    || claimKey?.startsWith('firstparty') === true
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      `External package registries require an explicit non-first-party ${input.field}.`,
+      {
+        source: input.sourceLabel,
+        field: input.field,
+        declared_claim: claim,
+        forbidden_first_party_claims: [...RESERVED_FIRST_PARTY_REGISTRY_CLAIMS],
+        failure_code: input.failureCode,
+      },
+    );
+  }
+  return claim;
 }

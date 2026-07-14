@@ -77,7 +77,15 @@ export function readRegistryCache() {
   if (!isRecord(parsed) || !Array.isArray(parsed.entries)) {
     return null;
   }
-  const entries = recordList(parsed.entries).map(normalizeRegistryEntry);
+  const entries = recordList(parsed.entries).flatMap((entry, index) => {
+    try {
+      return [normalizeRegistryEntry(entry, index)];
+    } catch (error) {
+      // This cache is a non-authoritative read model; stale invalid rows cannot hide the built-in directory.
+      if (error instanceof FrameworkContractError) return [];
+      throw error;
+    }
+  });
   return {
     surface_kind: 'opl_agent_package_registry_cache' as const,
     version: 'opl-agent-package-registry-cache.v1' as const,

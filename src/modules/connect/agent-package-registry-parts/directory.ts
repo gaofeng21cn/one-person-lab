@@ -7,7 +7,12 @@ import { getOplPackageSpecs } from '../package-distribution.ts';
 import { normalizePackageManifest } from './manifest-normalizers.ts';
 import { packageRoleFromInstalledLock } from './package-role.ts';
 import { agentPackageLifecycleUxReadback } from './readback.ts';
-import { fetchJsonSource, refsOnlyAuthorityBoundary, uniqueStrings } from './shared.ts';
+import {
+  assertExplicitExternalRegistryClaim,
+  fetchJsonSource,
+  refsOnlyAuthorityBoundary,
+  uniqueStrings,
+} from './shared.ts';
 import type {
   AgentPackageLock,
   AgentPackagePackageActionInput,
@@ -55,13 +60,6 @@ const PACKAGE_ROLES = new Set<AgentPackageRole>([
   'framework_capability_package',
   'workflow_profile',
 ]);
-const EXTERNAL_CATALOG_SOURCES = new Set(['third_party']);
-const EXTERNAL_CATALOG_TRUST_TIERS = new Set([
-  'third_party_verified',
-  'third_party',
-  'untrusted',
-]);
-
 function packageRoleFromManifest(payload: unknown, manifestUrl: string) {
   if (!isRecord(payload)) {
     normalizePackageManifest(payload, manifestUrl);
@@ -143,26 +141,16 @@ export function normalizePackageCatalogRegistry(
         failure_code: 'agent_package_registry_first_party_identity_collision',
       });
     }
-    const declaredSource = stringValue(rawEntry.source);
-    if (!declaredSource || !EXTERNAL_CATALOG_SOURCES.has(declaredSource)) {
-      throw new FrameworkContractError('contract_shape_invalid', 'External package catalogs require an explicit non-first-party source.', {
-        registry_url: registryUrl,
-        package_id: packageId,
-        declared_source: declaredSource,
-        allowed_sources: [...EXTERNAL_CATALOG_SOURCES],
-        failure_code: 'agent_package_directory_catalog_source_invalid',
-      });
-    }
-    const declaredTrustTier = stringValue(rawEntry.trust_tier);
-    if (!declaredTrustTier || !EXTERNAL_CATALOG_TRUST_TIERS.has(declaredTrustTier)) {
-      throw new FrameworkContractError('contract_shape_invalid', 'External package catalogs require an explicit non-first-party trust tier.', {
-        registry_url: registryUrl,
-        package_id: packageId,
-        declared_trust_tier: declaredTrustTier,
-        allowed_trust_tiers: [...EXTERNAL_CATALOG_TRUST_TIERS],
-        failure_code: 'agent_package_directory_catalog_trust_tier_invalid',
-      });
-    }
+    const declaredSource = assertExplicitExternalRegistryClaim(rawEntry.source, {
+      field: 'source',
+      sourceLabel: `${registryUrl}#packages.package_catalog.${packageId}`,
+      failureCode: 'agent_package_directory_catalog_source_invalid',
+    });
+    const declaredTrustTier = assertExplicitExternalRegistryClaim(rawEntry.trust_tier, {
+      field: 'trust_tier',
+      sourceLabel: `${registryUrl}#packages.package_catalog.${packageId}`,
+      failureCode: 'agent_package_directory_catalog_trust_tier_invalid',
+    });
     const { selectedVersion, selected } = selectedCatalogVersion(rawEntry, packageId);
     const manifestUrl = stringValue(selected.manifest_url);
     const manifestJson = stringValue(selected.manifest_json);
@@ -439,6 +427,7 @@ function availableActions(
   installed: boolean,
   activated: boolean,
   context: Pick<AgentPackagePackageActionInput, 'scope' | 'targetWorkspace' | 'targetQuest'> | null,
+  activationAllowed: boolean,
   automaticUpdateAllowed: boolean,
 ) {
   if (!source.package_role) {
@@ -481,7 +470,7 @@ function availableActions(
           trust_tier: source.trust_tier,
         };
   return [
-    ...(!activated ? [packageAction('agent_package_activate', activationPayload(source, context), [
+    ...(!activated && activationAllowed ? [packageAction('agent_package_activate', activationPayload(source, context), [
         'package_id',
         'scope',
         'target_workspace or target_quest',
@@ -598,13 +587,16 @@ export function buildAgentPackageDirectory(input: {
       || status.runtime_source_readiness?.live_verification_deferred === true
     );
     const actionContext = input.actionContext?.(source.package_id) ?? null;
-    const actions = availableActions(
-      effectiveSource,
-      installed,
-      activated,
-      actionContext,
-      lock?.source_kind !== 'developer_checkout_override',
-    );
+    const actions = statusReadError
+      ? [packageAction('agent_package_repair', { package_id: source.package_id }, ['package_id'], true)]
+      : availableActions(
+          effectiveSource,
+          installed,
+          activated,
+          actionContext,
+          lock?.exposure_state !== 'disabled',
+          lock?.source_kind !== 'developer_checkout_override',
+        );
     const recommendedAction = recommendedActionId({
       installed,
       activated,

@@ -35,9 +35,9 @@ test('default Home shortcut visibility follows registry starter_default', () => 
     ...registryPayload('https://registry.example'),
     entries: [{
       ...registryPayload('https://registry.example').entries[0],
-      package_id: 'oma',
+      package_id: 'fixture.oma',
       starter_default: false,
-      home_shortcut_ids: ['oma'],
+      home_shortcut_ids: ['fixture-oma'],
     }],
   }, 'https://registry.example/registry.json', 'fixture-sha256');
 
@@ -47,7 +47,7 @@ test('default Home shortcut visibility follows registry starter_default', () => 
     packages: [],
   });
 
-  assert.equal(preferences[0].shortcut_id, 'oma');
+  assert.equal(preferences[0].shortcut_id, 'fixture-oma');
   assert.equal(preferences[0].visible, false);
   assert.equal(preferences[0].installed, false);
 });
@@ -886,7 +886,7 @@ test('packages reject external registries that claim canonical public package id
   }
 });
 
-test('packages rejects legacy persisted package identities instead of migrating them on readback', () => {
+test('packages quarantines legacy external registry identities without hiding built-in packages', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-legacy-state-'));
   try {
     fs.writeFileSync(path.join(stateDir, 'agent-package-registry-cache.json'), formatJsonPayload({
@@ -1016,11 +1016,19 @@ test('packages rejects legacy persisted package identities instead of migrating 
       ],
     }), 'utf8');
 
-    const failure = runCliFailure(['packages', 'list'], { OPL_STATE_DIR: stateDir });
-    assert.equal(failure.payload.error.code, 'contract_shape_invalid');
-    assert.equal(failure.payload.error.details.failure_code, 'agent_package_identity_not_canonical');
-    assert.equal(failure.payload.error.details.declared_id, 'medautoscience');
-    assert.equal(failure.payload.error.details.canonical_id, 'mas');
+    const directory = (runCli(['packages', 'list'], { OPL_STATE_DIR: stateDir }) as any).opl_agent_packages.directory;
+    const packageIds = directory.entries.map((entry: any) => entry.package_id);
+    assert.deepEqual(
+      ['mas', 'mag', 'rca', 'oma', 'obf', 'mas-scholar-skills', 'opl-flow']
+        .filter((packageId) => !packageIds.includes(packageId)),
+      [],
+    );
+    assert.equal(packageIds.includes('medautoscience'), false);
+    assert.equal(packageIds.includes('bookforge'), false);
+    assert.equal(
+      directory.entries.some((entry: any) => entry.manifest_url?.startsWith('https://example.test/')),
+      false,
+    );
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });
   }

@@ -3,9 +3,11 @@ import { fileURLToPath } from 'node:url';
 
 import { FrameworkContractError, isRecord } from '../../../kernel/contract-validation.ts';
 import { recordList, stringList, stringValue } from '../../../kernel/json-record.ts';
+import { resolveFirstPartyPackageCatalog } from '../agent-package-first-party.ts';
 import { canonicalAgentPackageId } from '../agent-package-identity.ts';
 import { MANIFEST_REQUIRED_FIELDS, REGISTRY_REQUIRED_FIELDS } from './constants.ts';
 import {
+  assertExplicitExternalRegistryClaim,
   assertNoForbiddenFields,
   assertStringValue,
   missingFields,
@@ -392,6 +394,13 @@ export function normalizeRegistryEntry(entry: Record<string, unknown>, index: nu
   const packageId = declaredPackageId
     ? canonicalManifestIdentity(declaredPackageId, `registry.entries.${index}.package_id`)
     : null;
+  if (resolveFirstPartyPackageCatalog(packageId)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'External registries cannot claim canonical first-party package identities.', {
+      entry_index: index,
+      package_id: packageId,
+      failure_code: 'agent_package_registry_first_party_identity_collision',
+    });
+  }
   const missing = missingFields(entry, REGISTRY_REQUIRED_FIELDS);
   assertNoForbiddenFields(entry, `registry.entries.${index}`);
   if (missing.length > 0) {
@@ -422,6 +431,16 @@ export function normalizeRegistryEntry(entry: Record<string, unknown>, index: nu
   validateUrlLike(manifestUrl, `entries.${index}.manifest_url`);
   validateUrlLike(versionSourceRef, `entries.${index}.version_source_ref`);
   const displayName = stringValue(entry.display_name)!;
+  const source = assertExplicitExternalRegistryClaim(entry.source, {
+    field: 'source',
+    sourceLabel: `registry.entries.${index}`,
+    failureCode: 'agent_package_registry_source_invalid',
+  });
+  const trustTier = assertExplicitExternalRegistryClaim(entry.trust_tier, {
+    field: 'trust_tier',
+    sourceLabel: `registry.entries.${index}`,
+    failureCode: 'agent_package_registry_trust_tier_invalid',
+  });
   const packageRole = normalizeAgentPackageRole(entry.package_role, `entries.${index}.package_role`);
   const selectedVersion = stringValue(entry.selected_version);
   const stableVersion = stringValue(entry.stable_version);
@@ -440,13 +459,13 @@ export function normalizeRegistryEntry(entry: Record<string, unknown>, index: nu
     description: stringValue(entry.description) ?? `${displayName} package.`,
     tags: uniqueStrings([...stringList(entry.tags), ...(packageRole ? [packageRole] : [])]),
     package_role: packageRole,
-    source: stringValue(entry.source)!,
+    source,
     manifest_url: manifestUrl,
     version_source_ref: versionSourceRef,
     selected_version: selectedVersion,
     stable_version: stableVersion,
     manifest_validation: manifestValidation as AgentPackageRegistryEntry['manifest_validation'],
-    trust_tier: stringValue(entry.trust_tier)!,
+    trust_tier: trustTier,
     starter_default: entry.starter_default === true,
     codex_visible_entry: stringValue(entry.codex_visible_entry),
     required_skill_ids: stringList(entry.required_skill_ids),
