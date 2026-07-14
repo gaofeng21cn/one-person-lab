@@ -33,6 +33,26 @@
       },
       "additionalProperties": false
     },
+    "stage_catalog": {
+      "type": "object",
+      "required": ["source_kind", "relative_path", "items_pointer", "field_map"],
+      "properties": {
+        "source_kind": { "const": "agent_repo_relative_json" },
+        "relative_path": { "type": "string", "minLength": 1 },
+        "items_pointer": { "type": "string", "pattern": "^/" },
+        "field_map": {
+          "type": "object",
+          "required": ["stage_id", "display_name", "display_names"],
+          "properties": {
+            "stage_id": { "type": "string", "minLength": 1 },
+            "display_name": { "type": "string", "minLength": 1 },
+            "display_names": { "type": "string", "minLength": 1 }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
     "workspace_binding": {
       "type": "object",
       "required": ["locator_surface_kind", "default_profile_id", "workspace_kind", "project_kind", "project_collection_label", "default_workspace_id", "default_project_id", "required_locator_fields", "optional_locator_fields"],

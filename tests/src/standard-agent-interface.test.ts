@@ -5,6 +5,8 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
+import { parseJsonText } from '../../src/kernel/json-file.ts';
+import { validateJsonSchemaPayload } from '../../src/kernel/schema-registry.ts';
 import {
   assertStandardAgentDescriptorIdentity,
   parseStandardAgentInterface,
@@ -163,6 +165,7 @@ test('standard Agent interface parses a domain-owned descriptor without domain b
   const descriptor = parseStandardAgentInterface(fixture(), 'fixture.json#/standard_agent_interface');
   assert.equal(descriptor.workspace_binding.locator_surface_kind, 'fixture_workspace_locator');
   assert.equal(descriptor.inventory_projection, null);
+  assert.equal(descriptor.stage_catalog, null);
   assert.equal(descriptor.runtime.registration_ref, 'contracts/domain_descriptor.json#/runtime');
 });
 
@@ -215,6 +218,59 @@ test('standard Agent interface accepts optional inventory presentation fields', 
   assert.throws(
     () => parseStandardAgentInterface(invalid, 'fixture.json#/standard_agent_interface'),
     /must stay inside the workspace/,
+  );
+});
+
+test('standard Agent interface accepts a repo-relative Stage Catalog declaration', () => {
+  const value = {
+    ...fixture(),
+    stage_catalog: {
+      source_kind: 'agent_repo_relative_json',
+      relative_path: 'contracts/stage_catalog.json',
+      items_pointer: '/catalog/stages',
+      field_map: {
+        stage_id: 'id',
+        display_name: 'name',
+        display_names: 'localized_names',
+      },
+    },
+  };
+
+  const parsed = parseStandardAgentInterface(value, 'fixture.json#/standard_agent_interface');
+
+  assert.deepEqual(parsed.stage_catalog, value.stage_catalog);
+  const schemaRef = 'contracts/opl-framework/standard-agent-interface.schema.json';
+  const schema = parseJsonText(fs.readFileSync(path.join(process.cwd(), schemaRef), 'utf8')) as Record<string, unknown>;
+  const validation = validateJsonSchemaPayload({
+    schemaId: 'opl.standard_agent_interface.v1',
+    schema,
+    sourceRef: schemaRef,
+  }, value);
+  assert.equal(validation.ok, true, validation.ok ? undefined : JSON.stringify(validation.errors, null, 2));
+
+  const escaped = structuredClone(value);
+  escaped.stage_catalog.relative_path = '../stage_catalog.json';
+  assert.throws(
+    () => parseStandardAgentInterface(escaped, 'fixture.json#/standard_agent_interface'),
+    /must stay inside the Agent repo/,
+  );
+  const relativePointer = structuredClone(value);
+  relativePointer.stage_catalog.items_pointer = 'catalog/stages';
+  assert.throws(
+    () => parseStandardAgentInterface(relativePointer, 'fixture.json#/standard_agent_interface'),
+    /must be an absolute JSON Pointer/,
+  );
+  const unsupportedSource = structuredClone(value);
+  unsupportedSource.stage_catalog.source_kind = 'workspace_relative_json';
+  assert.throws(
+    () => parseStandardAgentInterface(unsupportedSource, 'fixture.json#/standard_agent_interface'),
+    /stage_catalog source_kind is unsupported/,
+  );
+  const incomplete = structuredClone(value) as any;
+  delete incomplete.stage_catalog.field_map.display_names;
+  assert.throws(
+    () => parseStandardAgentInterface(incomplete, 'fixture.json#/standard_agent_interface'),
+    /field_map is incomplete/,
   );
 });
 

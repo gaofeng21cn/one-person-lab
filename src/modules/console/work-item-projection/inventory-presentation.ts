@@ -4,6 +4,10 @@ import path from 'node:path';
 import { isRecord } from '../../../kernel/contract-validation.ts';
 import { readJsonFileOrNull } from '../../../kernel/json-file.ts';
 import { stringValue, type JsonRecord } from '../../../kernel/json-record.ts';
+import {
+  readStageDisplayNames,
+  type StageCatalogPresentationEntry,
+} from './inventory-stage-catalog.ts';
 import type {
   WorkItemActionKind,
   WorkItemActionOwnerKind,
@@ -51,25 +55,6 @@ function humanizeIdentifier(value: string) {
   const words = withoutOrdinal.replace(/[._-]+/g, ' ').replace(/\s+/g, ' ').trim();
   if (!words) return value;
   return words.replace(/\b[a-z]/g, (letter) => letter.toUpperCase());
-}
-
-function readStageDisplayNames(value: unknown) {
-  if (value === undefined || value === null) {
-    return { displayNames: {}, invalidEntryCount: 0 };
-  }
-  if (!isRecord(value)) {
-    return { displayNames: {}, invalidEntryCount: 1 };
-  }
-  const validEntries = Object.entries(value).flatMap(([locale, candidate]) => {
-    const displayName = stringValue(candidate);
-    return locale.length > 0 && !/\s/.test(locale) && displayName
-      ? [[locale, displayName] as const]
-      : [];
-  });
-  return {
-    displayNames: Object.fromEntries(validEntries),
-    invalidEntryCount: Object.keys(value).length - validEntries.length,
-  };
 }
 
 function ownerDisplayName(owner: string, agentId: string, agentDisplayName: string) {
@@ -301,6 +286,7 @@ export function readStageIndexPresentation(input: {
   currentStageId: string | null;
   agentId: string;
   agentDisplayName: string;
+  stageCatalog?: StageCatalogPresentationEntry[] | null;
 }): {
   stage_map: WorkItemProjectionItem['stage_map'];
   current_stage_id: string | null;
@@ -321,38 +307,60 @@ export function readStageIndexPresentation(input: {
     source_ref: null,
     diagnostics: [] as WorkItemProjectionDiagnostic[],
   };
-  if (!input.stageIndexRef) return empty;
-  if (!input.workItemRoot) {
-    return {
-      ...empty,
-      diagnostics: [{ reason: 'stage_index_work_item_root_missing', ref: input.stageIndexRef }],
-    };
+  const stageDiagnostics: WorkItemProjectionDiagnostic[] = [];
+  let stageIndexPath: string | null = null;
+  let stageIndexSourceRef: string | null = null;
+  let payload: JsonRecord & { stages: unknown[] } = { stages: [] };
+  if (!input.stageIndexRef) {
+    if (!input.stageCatalog) return empty;
+  } else if (!input.workItemRoot) {
+    const diagnostic = { reason: 'stage_index_work_item_root_missing', ref: input.stageIndexRef };
+    if (!input.stageCatalog) return { ...empty, diagnostics: [diagnostic] };
+    stageDiagnostics.push(diagnostic);
+  } else {
+    stageIndexPath = descendant(input.workItemRoot, input.stageIndexRef);
+    if (!stageIndexPath) {
+      const diagnostic = { reason: 'stage_index_ref_escapes_work_item_root', ref: input.stageIndexRef };
+      if (!input.stageCatalog) return { ...empty, diagnostics: [diagnostic] };
+      stageDiagnostics.push(diagnostic);
+    } else if (!fs.existsSync(stageIndexPath)) {
+      const diagnostic = { reason: 'stage_index_source_missing', ref: stageIndexPath };
+      if (!input.stageCatalog) return { ...empty, diagnostics: [diagnostic] };
+      stageDiagnostics.push(diagnostic);
+    } else {
+      stageIndexSourceRef = stageIndexPath;
+      const parsed = readJsonFileOrNull(stageIndexPath);
+      if (!isRecord(parsed) || !Array.isArray(parsed.stages)) {
+        const diagnostic = { reason: 'stage_index_shape_invalid', ref: stageIndexPath };
+        if (!input.stageCatalog) {
+          return { ...empty, source_ref: stageIndexPath, diagnostics: [diagnostic] };
+        }
+        stageDiagnostics.push(diagnostic);
+      } else {
+        payload = { ...parsed, stages: parsed.stages };
+      }
+    }
   }
-  const stageIndexPath = descendant(input.workItemRoot, input.stageIndexRef);
-  if (!stageIndexPath) {
-    return {
-      ...empty,
-      diagnostics: [{ reason: 'stage_index_ref_escapes_work_item_root', ref: input.stageIndexRef }],
-    };
-  }
-  if (!fs.existsSync(stageIndexPath)) {
-    return {
-      ...empty,
-      diagnostics: [{ reason: 'stage_index_source_missing', ref: stageIndexPath }],
-    };
-  }
-  const payload = readJsonFileOrNull(stageIndexPath);
-  if (!isRecord(payload) || !Array.isArray(payload.stages)) {
-    return {
-      ...empty,
-      source_ref: stageIndexPath,
-      diagnostics: [{ reason: 'stage_index_shape_invalid', ref: stageIndexPath }],
-    };
-  }
-  const stageRecords = payload.stages.filter(isRecord).flatMap((stage) => {
+  const workspaceStageRecords = payload.stages.filter(isRecord).flatMap((stage) => {
     const stageId = stringValue(stage.stage_id);
     return stageId ? [{ stage, stageId, status: normalizedStatus(stage.status) }] : [];
   });
+  const stageRecords = input.stageCatalog
+    ? input.stageCatalog.map((catalogStage) => {
+        const workspaceStage = workspaceStageRecords.find((entry) => entry.stageId === catalogStage.stage_id);
+        return {
+          stage: workspaceStage?.stage ?? {},
+          stageId: catalogStage.stage_id,
+          status: workspaceStage?.status ?? 'unknown',
+          catalogStage,
+          workspaceStageObserved: Boolean(workspaceStage),
+        };
+      })
+    : workspaceStageRecords.map((entry) => ({
+        ...entry,
+        catalogStage: null,
+        workspaceStageObserved: true,
+      }));
   const payloadCurrentStage = isRecord(payload.current_stage)
     ? stringValue(payload.current_stage.stage_id)
     : stringValue(payload.current_stage);
@@ -366,27 +374,43 @@ export function readStageIndexPresentation(input: {
   const lastRecordedIndex = lastRecordedStageId
     ? stageRecords.findIndex((entry) => entry.stageId === lastRecordedStageId)
     : -1;
-  const projectedStageRecords = input.businessState === 'delivered_paused' && lastRecordedIndex >= 0
+  const projectedStageRecords = !input.stageCatalog
+    && input.businessState === 'delivered_paused'
+    && lastRecordedIndex >= 0
     ? stageRecords.slice(0, lastRecordedIndex + 1)
     : stageRecords;
   const firstPendingIndex = projectedStageRecords.findIndex(
     (entry) => !COMPLETED_STAGE_STATUSES.has(entry.status),
   );
-  const stageDiagnostics: WorkItemProjectionDiagnostic[] = [];
-  const stageMap = projectedStageRecords.map(({ stage, stageId, status }, index) => {
-    const owner = stringValue(stage.owner) ?? input.agentId;
+  const stageMap = projectedStageRecords.map(({
+    stage,
+    stageId,
+    status,
+    catalogStage,
+    workspaceStageObserved,
+  }, index) => {
+    const owner = stringValue(stage.owner) ?? (workspaceStageObserved ? input.agentId : null);
     const sourceDisplayName = stringValue(stage.display_name) ?? stringValue(stage.title);
     const humanizedDisplayName = humanizeIdentifier(stageId);
     const localized = readStageDisplayNames(stage.display_names);
-    const displayName = sourceDisplayName ?? localized.displayNames['en-US'] ?? humanizedDisplayName;
+    const displayName = sourceDisplayName
+      ?? localized.displayNames['en-US']
+      ?? catalogStage?.display_name
+      ?? catalogStage?.display_names['en-US']
+      ?? humanizedDisplayName;
     const displayNames = {
+      ...(catalogStage?.display_names ?? {}),
       ...localized.displayNames,
-      'en-US': localized.displayNames['en-US'] ?? sourceDisplayName ?? humanizedDisplayName,
+      'en-US': localized.displayNames['en-US']
+        ?? sourceDisplayName
+        ?? catalogStage?.display_names['en-US']
+        ?? catalogStage?.display_name
+        ?? humanizedDisplayName,
     };
     if (localized.invalidEntryCount > 0) {
       stageDiagnostics.push({
         reason: 'stage_index_stage_display_names_invalid',
-        ref: stageIndexPath,
+        ref: stageIndexSourceRef ?? undefined,
         details: {
           stage_id: stageId,
           invalid_entry_count: localized.invalidEntryCount,
@@ -406,8 +430,10 @@ export function readStageIndexPresentation(input: {
         firstPendingIndex,
       }),
       owner,
-      owner_display_name: stringValue(stage.owner_display_name)
-        ?? ownerDisplayName(owner, input.agentId, input.agentDisplayName),
+      owner_display_name: owner
+        ? stringValue(stage.owner_display_name)
+          ?? ownerDisplayName(owner, input.agentId, input.agentDisplayName)
+        : null,
       elapsed_seconds: null,
       usage: null,
       next_action: rawStageNextAction(stage),
@@ -419,34 +445,62 @@ export function readStageIndexPresentation(input: {
   const nextStage = currentIndex >= 0
     ? stageMap[currentIndex + 1] ?? null
     : stageMap.find((stage) => stage.state === 'next') ?? null;
-  const invalidStageCount = payload.stages.length - stageRecords.length;
+  const invalidStageCount = payload.stages.length - workspaceStageRecords.length;
   if (invalidStageCount > 0) {
     stageDiagnostics.push({
       reason: 'stage_index_stage_entries_invalid',
-      ref: stageIndexPath,
+      ref: stageIndexSourceRef ?? undefined,
       details: { invalid_stage_count: invalidStageCount },
     });
+  }
+  if (input.stageCatalog) {
+    const catalogStageIds = new Set(input.stageCatalog.map((stage) => stage.stage_id));
+    const hiddenStageIds = [...new Set(workspaceStageRecords
+      .map((entry) => entry.stageId)
+      .filter((stageId) => !catalogStageIds.has(stageId)))];
+    if (hiddenStageIds.length > 0) {
+      stageDiagnostics.push({
+        reason: 'stage_index_stages_outside_catalog_hidden',
+        ref: stageIndexSourceRef ?? undefined,
+        details: {
+          stage_ids: hiddenStageIds,
+          hidden_from_default_stage_map: true,
+        },
+      });
+    }
   }
   if (input.businessState === 'delivered_paused' && !lastRecordedStageId) {
     stageDiagnostics.push({
       reason: 'stage_index_last_recorded_stage_id_missing',
-      ref: stageIndexPath,
+      ref: stageIndexSourceRef ?? input.stageIndexRef ?? undefined,
     });
   } else if (input.businessState === 'delivered_paused' && lastRecordedIndex < 0) {
     stageDiagnostics.push({
       reason: 'stage_index_last_recorded_stage_id_unresolved',
-      ref: stageIndexPath,
+      ref: stageIndexSourceRef ?? input.stageIndexRef ?? undefined,
       details: { last_recorded_stage_id: lastRecordedStageId },
     });
   }
+  const currentWorkspaceStage = currentStageId
+    ? workspaceStageRecords.find((entry) => entry.stageId === currentStageId)?.stage ?? null
+    : null;
+  const currentWorkspaceDisplayNames = readStageDisplayNames(currentWorkspaceStage?.display_names).displayNames;
+  const currentWorkspaceDisplayName = currentWorkspaceStage
+    ? stringValue(currentWorkspaceStage.display_name)
+      ?? stringValue(currentWorkspaceStage.title)
+      ?? currentWorkspaceDisplayNames['en-US']
+    : null;
   return {
     stage_map: stageMap,
-    current_stage_id: currentStageId,
-    current_stage_display_name: currentStage?.display_name
-      ?? (currentStageId ? humanizeIdentifier(currentStageId) : null),
+    current_stage_id: input.stageCatalog && !currentStage ? null : currentStageId,
+    current_stage_display_name: input.stageCatalog && !currentStage
+      ? null
+      : currentStage?.display_name
+        ?? currentWorkspaceDisplayName
+        ?? (currentStageId ? humanizeIdentifier(currentStageId) : null),
     next_stage_id: nextStage?.stage_id ?? null,
     next_stage_display_name: nextStage?.display_name ?? null,
-    source_ref: stageIndexPath,
+    source_ref: stageIndexSourceRef,
     diagnostics: stageDiagnostics,
   };
 }

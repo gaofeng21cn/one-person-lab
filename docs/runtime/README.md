@@ -106,10 +106,10 @@ Fast Local Env
    - 输出用户主状态、自动运行副状态、阶段、时长、token、liveness、next owner 与 blocker route；未观测到 token/cost telemetry 时必须保持 missing / null，不得把未记录写成 0。
    - `project_catalog.display_name` 严格取 canonical `workspace_path` 的 basename；workspace binding label 只可作为诊断元数据，不能覆盖用户看到的项目名。
    - `work-item-projection.v2` action 同时输出兼容文案 `title/summary` 与稳定语义 `title_key/summary_key/message_args/owner_kind`。Framework lifecycle action 必须使用 `lifecycle.*` 语义键，中文文案不得成为唯一机器真相。
-   - `stage_map[].display_names` 透传 domain stage index 明确提供的非空 locale 文案，并始终提供 `en-US`；缺失时只以现有 `display_name`、`title` 或 humanized stage id 补足 `en-US`。`zh-CN` 只能来自 domain 明确值，不由 Framework 猜造；`display_name` 保留为旧 consumer 的兼容回退。
+   - `stage_map[].display_names` 优先透传 workspace stage index 明确提供的非空 locale 文案；声明有效 `standard_agent_interface.stage_catalog` 时，再由 agent catalog 按 locale 补空缺，并始终提供 `en-US`。两者均缺失时只以现有 `display_name`、`title` 或 humanized stage id 补足 `en-US`。`zh-CN` 只能来自 workspace 或 agent catalog 明确值，不由 Framework 猜造；`display_name` 保留为旧 consumer 的兼容回退。
    - 手工归档是独立 `visibility=visible|archived` 轴，不改写 domain business lifecycle，也不停止 runtime、清空 Stage Map/action/telemetry。`items` 保留 archived 任务供归档库读取；`work_item_count` 与运行/attention/telemetry 摘要默认只统计 visible，另投影 visible/archived/total 计数。
    - 每个 item 的 visibility 都携带 durable control ledger 全局 `generation`；即使没有该 item 的 control entry，也投影当前 generation 供 App 提交 `expected_generation`。归档与恢复统一走 `work_item_visibility_set`，lifecycle 变更继续走 `work_item_lifecycle_set`，两轴共享 generation conflict 且互不覆盖。
-   - `work-item-projection.v2` 的 `delivered_paused` Stage Map 在 canonical `last_recorded_stage_id` 可解析时，只展示 domain stage index 中截至该锚点的已发生历程；锚点缺失或无法解析时保留完整 stage list 与诊断，不从 status 或排列顺序猜测截断边界。
+   - 未声明有效 stage catalog 时，`work-item-projection.v2` 的 `delivered_paused` Stage Map 在 canonical `last_recorded_stage_id` 可解析时，只展示 workspace stage index 中截至该锚点的已发生历程；锚点缺失或无法解析时保留完整 workspace stage list 与诊断。声明有效 catalog 时，默认 Stage Map 始终按 catalog 投影完整 canonical 列表与顺序，workspace stage index 只按 `stage_id` overlay；catalog 外 migration/internal stage 不进入默认列表，只进入 diagnostic 与 source evidence。
    - 保留 provider/control-plane 术语到 diagnostic refs。
 
 3. **Boundary**

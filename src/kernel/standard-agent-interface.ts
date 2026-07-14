@@ -35,9 +35,21 @@ export type StandardAgentInventoryProjection = {
   };
 };
 
+export type StandardAgentStageCatalogDeclaration = {
+  source_kind: 'agent_repo_relative_json';
+  relative_path: string;
+  items_pointer: string;
+  field_map: {
+    stage_id: string;
+    display_name: string;
+    display_names: string;
+  };
+};
+
 export type StandardAgentInterface = {
   version: typeof STANDARD_AGENT_INTERFACE_VERSION;
   inventory_projection: StandardAgentInventoryProjection | null;
+  stage_catalog: StandardAgentStageCatalogDeclaration | null;
   workspace_binding: {
     locator_surface_kind: string;
     default_profile_id: 'one_off' | 'series' | 'portfolio';
@@ -87,6 +99,7 @@ const INVENTORY_FIELD_KEYS = [
   'lifecycle_ref',
 ] as const;
 const OPTIONAL_INVENTORY_FIELD_KEYS = ['display_name', 'next_action', 'stage_index_ref'] as const;
+const STAGE_CATALOG_FIELD_KEYS = ['stage_id', 'display_name', 'display_names'] as const;
 
 function invalid(message: string, sourceRef: string, details: Record<string, unknown> = {}): never {
   throw new FrameworkContractError('contract_shape_invalid', message, {
@@ -205,6 +218,64 @@ function inventoryProjection(value: unknown, sourceRef: string): StandardAgentIn
   };
 }
 
+function stageCatalog(value: unknown, sourceRef: string): StandardAgentStageCatalogDeclaration | null {
+  if (value === undefined || value === null) return null;
+  if (!isRecord(value)) {
+    invalid('Standard Agent interface field stage_catalog must be an object.', sourceRef, {
+      field: 'stage_catalog',
+    });
+  }
+  assertKnownKeys(
+    value,
+    ['source_kind', 'relative_path', 'items_pointer', 'field_map'],
+    'stage_catalog',
+    sourceRef,
+  );
+  if (value.source_kind !== 'agent_repo_relative_json') {
+    invalid('Standard Agent interface stage_catalog source_kind is unsupported.', sourceRef, {
+      field: 'stage_catalog.source_kind',
+      actual: value.source_kind ?? null,
+    });
+  }
+  const relativePath = stringValue(value.relative_path, 'stage_catalog.relative_path', sourceRef);
+  if (path.isAbsolute(relativePath) || relativePath.split(/[\\/]+/).includes('..')) {
+    invalid('Standard Agent interface stage_catalog relative_path must stay inside the Agent repo.', sourceRef, {
+      field: 'stage_catalog.relative_path',
+      relative_path: relativePath,
+    });
+  }
+  const itemsPointer = stringValue(value.items_pointer, 'stage_catalog.items_pointer', sourceRef);
+  if (!itemsPointer.startsWith('/')) {
+    invalid('Standard Agent interface stage_catalog items_pointer must be an absolute JSON Pointer.', sourceRef, {
+      field: 'stage_catalog.items_pointer',
+      items_pointer: itemsPointer,
+    });
+  }
+  const fieldMap = value.field_map;
+  if (!isRecord(fieldMap)) {
+    invalid('Standard Agent interface stage_catalog field_map must be an object.', sourceRef, {
+      field: 'stage_catalog.field_map',
+    });
+  }
+  assertKnownKeys(fieldMap, STAGE_CATALOG_FIELD_KEYS, 'stage_catalog.field_map', sourceRef);
+  const missing = STAGE_CATALOG_FIELD_KEYS.filter((field) => !(field in fieldMap));
+  if (missing.length > 0) {
+    invalid('Standard Agent interface stage_catalog field_map is incomplete.', sourceRef, {
+      field: 'stage_catalog.field_map',
+      missing,
+    });
+  }
+  return {
+    source_kind: 'agent_repo_relative_json',
+    relative_path: relativePath,
+    items_pointer: itemsPointer,
+    field_map: Object.fromEntries(STAGE_CATALOG_FIELD_KEYS.map((field) => [
+      field,
+      stringValue(fieldMap[field], `stage_catalog.field_map.${field}`, sourceRef),
+    ])) as StandardAgentStageCatalogDeclaration['field_map'],
+  };
+}
+
 export function parseStandardAgentInterface(value: unknown, sourceRef: string): StandardAgentInterface {
   if (!isRecord(value)) invalid('Standard Agent interface must be an object.', sourceRef);
   if (value.version !== STANDARD_AGENT_INTERFACE_VERSION) {
@@ -222,7 +293,7 @@ export function parseStandardAgentInterface(value: unknown, sourceRef: string): 
   }
   assertKnownKeys(
     value,
-    ['version', 'inventory_projection', 'workspace_binding', 'runtime', 'progress', 'routing'],
+    ['version', 'inventory_projection', 'stage_catalog', 'workspace_binding', 'runtime', 'progress', 'routing'],
     'root',
     sourceRef,
   );
@@ -283,6 +354,7 @@ export function parseStandardAgentInterface(value: unknown, sourceRef: string): 
   return {
     version: STANDARD_AGENT_INTERFACE_VERSION,
     inventory_projection: inventoryProjection(value.inventory_projection, sourceRef),
+    stage_catalog: stageCatalog(value.stage_catalog, sourceRef),
     workspace_binding: {
       locator_surface_kind: stringValue(
         workspaceBinding.locator_surface_kind,

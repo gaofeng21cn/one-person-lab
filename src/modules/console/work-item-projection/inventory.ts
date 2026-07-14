@@ -17,6 +17,7 @@ import {
   projectInventoryAction,
   readStageIndexPresentation,
 } from './inventory-presentation.ts';
+import { readAgentStageCatalog } from './inventory-stage-catalog.ts';
 import { projectWorkItemPrimaryState } from './primary-state.ts';
 
 export type InventoryDescriptorResolver = (agentId: string) => StandardAgentDescriptorInterface | null;
@@ -125,6 +126,15 @@ export function readProjectInventory(input: {
 }) {
   const diagnostics: WorkItemProjectionDiagnostic[] = [];
   const descriptor = (input.resolveDescriptor ?? readStandardAgentDescriptorForDomain)(input.project.agent_id);
+  const stageCatalog = readAgentStageCatalog({
+    agentRepoDir: descriptor?.repo_dir ?? '',
+    declaration: descriptor?.interface.stage_catalog ?? null,
+  });
+  diagnostics.push(...stageCatalog.diagnostics.map((diagnostic) => ({
+    ...diagnostic,
+    agent_id: input.project.agent_id,
+    project_id: input.project.project_id,
+  })));
   const declaration = descriptor?.interface.inventory_projection;
   if (!declaration) {
     diagnostics.push({
@@ -155,7 +165,6 @@ export function readProjectInventory(input: {
     });
     return { items: [] as WorkItemProjectionItem[], diagnostics };
   }
-
   const inventoryObservedAt = fs.statSync(inventoryPath).mtime.toISOString();
   const items: WorkItemProjectionItem[] = [];
   const seen = new Set<string>();
@@ -255,6 +264,7 @@ export function readProjectInventory(input: {
       currentStageId,
       agentId: input.project.agent_id,
       agentDisplayName: input.project.agent_display_name,
+      stageCatalog: stageCatalog.entries,
     });
     diagnostics.push(...stagePresentation.diagnostics.map((diagnostic) => ({
       ...diagnostic,
@@ -343,6 +353,9 @@ export function readProjectInventory(input: {
         ...(lifecycleRef ? [{ ref_kind: 'file' as const, ref: lifecycleRef, role: 'domain_lifecycle_ref' }] : []),
         ...(stagePresentation.source_ref
           ? [{ ref_kind: 'file' as const, ref: stagePresentation.source_ref, role: 'domain_stage_index' }]
+          : []),
+        ...(stageCatalog.entries && stageCatalog.source_ref
+          ? [{ ref_kind: 'file' as const, ref: stageCatalog.source_ref, role: 'agent_stage_catalog' }]
           : []),
       ],
     });

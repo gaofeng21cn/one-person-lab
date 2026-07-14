@@ -278,6 +278,7 @@ function fixture() {
 test('WorkItemProjection V2 discovers MAS 3 projects and 9 studies independently of Temporal', () => {
   const input = fixture();
   try {
+    assert.equal(input.resolveDescriptor('mas')?.interface.stage_catalog, null);
     const projection = buildWorkItemProjectionV2({
       profile: 'fast',
       bindings: input.bindings,
