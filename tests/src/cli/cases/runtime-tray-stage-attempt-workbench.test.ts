@@ -241,7 +241,7 @@ db.close();`,
     assert.equal(workbench.summary.attention_count, 2);
     assert.equal(workbench.summary.memory_ref_counters.consumed_memory_ref_count, 2);
     assert.equal(workbench.groups.by_domain.medautoscience.memory_ref_counters.consumed_memory_ref_count, 2);
-    assert.equal(workbench.groups.by_domain.redcube.human_gate_count, 1);
+    assert.equal(workbench.groups.by_domain.redcube_ai.human_gate_count, 1);
     assert.equal(workbench.groups.by_domain.medautogrant.dead_letter_count, 1);
     assert.equal(workbench.action_routing.authority_boundary.can_execute_domain_action, false);
     assert.equal(trayItems.some((item: { item_id: string }) => item.item_id === `opl:stage-attempt:${attemptIds[0]}`), false);

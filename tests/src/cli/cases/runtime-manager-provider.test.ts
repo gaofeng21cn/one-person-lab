@@ -47,27 +47,26 @@ test('runtime manager reports OPL control plane over provider-backed family runt
       'scheduler_cadence',
       'runtime_manager_projection',
     ]);
+    const masManagedDomain = output.runtime_manager.family_scheduler_replacement.managed_domains.find(
+      (domain: { domain_id: string }) => domain.domain_id === 'medautoscience',
+    );
+    assert.ok(masManagedDomain);
     assert.equal(
-      output.runtime_manager.family_scheduler_replacement.managed_domains[0].legacy_scheduler_owner,
+      masManagedDomain.legacy_scheduler_owner,
       null,
     );
     assert.equal(
-      output.runtime_manager.family_scheduler_replacement.managed_domains[0].legacy_scheduler_residue_policy,
+      masManagedDomain.legacy_scheduler_residue_policy,
       'history_tombstone_or_negative_guard_only',
     );
-    assert.equal(
-      output.runtime_manager.family_scheduler_replacement.managed_domains[0].required_domain_refs[0],
-      'domain_runtime_owner_route_handoff',
+    assert.deepEqual(
+      masManagedDomain.required_domain_refs,
+      [],
     );
     assert.equal(
-      output.runtime_manager.family_scheduler_replacement.managed_domains[0].required_domain_refs[1],
-      'opl_runtime_owner_route',
+      masManagedDomain.migration_priority,
+      'package_managed',
     );
-    assert.equal(
-      output.runtime_manager.family_scheduler_replacement.managed_domains[0].required_domain_refs[2],
-      'domain_route/reconcile-apply',
-    );
-    assert.equal(output.runtime_manager.family_scheduler_replacement.managed_domains[0].migration_priority, 'p0');
     assert.deepEqual(output.runtime_manager.family_runtime_stage_attempt_index.domain_route_projection.canonical_task_kinds, [
       'domain_route/stage-route',
       'domain_route/reconcile-apply',
@@ -117,7 +116,10 @@ test('runtime manager reports OPL control plane over provider-backed family runt
     assert.equal(output.runtime_manager.daemon_policy.local_daemon_added, false);
     assert.equal(output.runtime_manager.daemon_policy.opl_domain_daemon_installation_allowed, false);
     assert.equal(output.runtime_manager.daemon_policy.cadence_owner, 'provider_backed_family_runtime');
-    assert.equal(output.runtime_manager.daemon_policy.domain_launchagent_policy.medautoscience, 'legacy_diagnostic_cleanup_only');
+    assert.equal(
+      output.runtime_manager.daemon_policy.domain_launchagent_policy.medautoscience,
+      'not_installed_or_maintained_by_opl',
+    );
     assert.deepEqual(
       output.runtime_manager.daemon_policy.domain_launchagent_policy,
       Object.fromEntries(runtimeManagerDomainProfiles().map((profile) => [
@@ -127,21 +129,30 @@ test('runtime manager reports OPL control plane over provider-backed family runt
     );
     assert.equal(output.runtime_manager.non_goals.includes('not_a_domain_runtime_truth_owner'), true);
     assert.equal(output.runtime_manager.registration_registry.surface_kind, 'opl_stage_runtime_registration_registry');
-    assert.equal(output.runtime_manager.registration_registry.domains.length, 3);
+    const registrationDomains = output.runtime_manager.registration_registry.domains;
+    assert.equal(registrationDomains.length, runtimeManagerDomainProfiles().length);
     assert.deepEqual(
-      output.runtime_manager.registration_registry.domains,
+      registrationDomains,
       runtimeManagerDomainProfiles().map((profile) => {
         const { scheduler: _scheduler, ...registration } = profile;
         return registration;
       }),
     );
+    const masRegistration = registrationDomains.find(
+      (domain: { domain_id: string }) => domain.domain_id === 'medautoscience',
+    );
+    const rcaRegistration = registrationDomains.find(
+      (domain: { domain_id: string }) => domain.domain_id === 'redcube_ai',
+    );
+    assert.ok(masRegistration);
+    assert.ok(rcaRegistration);
     assert.equal(
-      output.runtime_manager.registration_registry.domains[0].expected_registration_surface.ref,
-      '/skill_catalog/skills/0/domain_projection/opl_stage_runtime_registration',
+      masRegistration.expected_registration_surface.ref,
+      'package:mas#/standard_agent_interface/runtime/registration_ref',
     );
     assert.deepEqual(
-      output.runtime_manager.registration_registry.domains[2].consumable_projection_refs.slice(-2),
-      ['/review_state', '/publication_projection'],
+      rcaRegistration.consumable_projection_refs,
+      [],
     );
     assert.equal(
       output.runtime_manager.registration_registry.required_domain_registration_fields.includes('state_index_inputs'),

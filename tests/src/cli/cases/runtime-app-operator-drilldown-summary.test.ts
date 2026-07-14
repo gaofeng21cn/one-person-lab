@@ -16,6 +16,7 @@ import {
 } from '../../../../src/modules/ledger/index.ts';
 import { openQueueDb } from '../../../../src/modules/runway/family-runtime-store.ts';
 import { createStageAttempt, runStageAttemptFixtureActivity } from '../../../../src/modules/runway/family-runtime-stage-attempts.ts';
+import { createWorkspaceDescriptorFamilyFixture } from './workspace-domain-test-helper.ts';
 
 const SUMMARY_COMMAND = ['runtime', 'app-operator-drilldown'];
 
@@ -78,7 +79,12 @@ function seedRunningCurrentWorkUnit(workspaceRoot: string) {
       taskId: 'task-current-work-unit-from-study-progress',
       checkpointRefs: ['checkpoint:current-work-unit'],
     }).attempt;
-    db.prepare("UPDATE stage_attempts SET status = 'running' WHERE stage_attempt_id = ?")
+    db.prepare(`
+      UPDATE stage_attempts
+      SET status = 'running',
+        provider_run_json = json_set(provider_run_json, '$.provider_status', 'running')
+      WHERE stage_attempt_id = ?
+    `)
       .run(attempt.stage_attempt_id);
   } finally {
     db.close();
@@ -90,7 +96,7 @@ function bindMasWorkspace(input: {
   fixtureContractsRoot: string;
   workspaceRoot: string;
   profilePath: string;
-  progressCommand: string;
+  familyWorkspaceRoot: string;
 }) {
   const manifest = structuredClone(loadFamilyManifestFixtures().medautoscience) as Record<string, any>;
   manifest.workspace_locator = {
@@ -103,10 +109,6 @@ function bindMasWorkspace(input: {
     ...((manifest.task_lifecycle as Record<string, unknown>) ?? {}),
     status: 'active',
     human_gate_ids: [],
-    progress_surface: {
-      ...((manifest.task_lifecycle?.progress_surface as Record<string, unknown>) ?? {}),
-      command: input.progressCommand,
-    },
   };
   manifest.progress_projection = {
     ...((manifest.progress_projection as Record<string, unknown>) ?? {}),
@@ -114,17 +116,6 @@ function bindMasWorkspace(input: {
     runtime_status: 'running',
     attention_items: [],
     human_gate_ids: [],
-    progress_surface: {
-      ...((manifest.progress_projection?.progress_surface as Record<string, unknown>) ?? {}),
-      command: input.progressCommand,
-    },
-  };
-  manifest.product_entry_overview = {
-    ...((manifest.product_entry_overview as Record<string, unknown>) ?? {}),
-    progress_surface: {
-      ...((manifest.product_entry_overview?.progress_surface as Record<string, unknown>) ?? {}),
-      command: input.progressCommand,
-    },
   };
   runCli([
     'workspace',
@@ -138,6 +129,7 @@ function bindMasWorkspace(input: {
   ], {
     OPL_STATE_DIR: input.stateRoot,
     OPL_CONTRACTS_DIR: input.fixtureContractsRoot,
+    OPL_FAMILY_WORKSPACE_ROOT: input.familyWorkspaceRoot,
   });
 }
 
@@ -177,73 +169,48 @@ function assertCurrentWorkUnitAuthority(drilldown: Record<string, any>) {
   }
 }
 
-function portalPayloadWithoutCurrentWorkUnit(workspaceRoot: string) {
-  return {
-    schema_version: 1,
-    surface_kind: 'mas_progress_portal',
-    workspace: {
-      profile_name: 'summary-current-work-unit',
-      workspace_root: workspaceRoot,
-      workspace_status: 'running',
-      studies: [
-        {
-          study_id: 'summary-current-work-unit-study',
-          state_label: '自动运行中',
-          state_summary: 'Portal 投影仍是普通运行状态。',
-          current_stage: 'live',
-          active_run_id: 'portal-run-current-work-unit',
-          runtime_health_status: 'recovering',
-          progress_freshness_status: 'fresh',
-          next_system_action: '不要让历史 backlog 抢占普通推进判断。',
-          worker_running: true,
-        },
-      ],
-    },
-    opl_handoff: {
-      handoff_kind: 'mas_progress_portal_opl_family_projection',
-      owner: 'mas',
-      role: 'family_level_projection',
-      authority: 'display_artifact_only',
-      opl_role: 'family_level_projection_consumer_only',
-      payload_refs: {
-        progress_portal: 'artifacts/runtime/progress_portal/latest.json',
-      },
-      freshness: {
-        status: 'fresh',
-        latest_event_at: '2026-07-09T00:00:00.000Z',
-      },
-      source_refs: [],
-      deep_link: 'ops/mas/progress/index.html',
+function writeMasWorkItemInventoryFixture(familyWorkspaceRoot: string, workspaceRoot: string) {
+  const descriptorPath = path.join(
+    familyWorkspaceRoot,
+    'med-autoscience',
+    'contracts',
+    'domain_descriptor.json',
+  );
+  const descriptor = JSON.parse(fs.readFileSync(descriptorPath, 'utf8')) as Record<string, any>;
+  descriptor.domain_id = 'mas';
+  descriptor.standard_agent_interface.runtime.runtime_domain_id = 'mas';
+  descriptor.standard_agent_interface.inventory_projection = {
+    source_kind: 'workspace_relative_json',
+    relative_path: 'workspace_index.json',
+    items_pointer: '/studies',
+    field_map: {
+      display_name: 'display_name',
+      next_action: 'next_action',
+      stage_index_ref: 'stage_index_ref',
+      work_item_id: 'study_id',
+      work_item_root: 'canonical_study_root',
+      business_status: 'status',
+      current_stage_id: 'current_stage_id',
+      current_stage_status: 'current_stage_status',
+      package_status: 'package_status',
+      lifecycle_ref: 'study_status_ref',
     },
   };
-}
-
-function writeStudyProgressProbe(workspaceRoot: string) {
-  const scriptPath = path.join(workspaceRoot, 'ops', 'medautoscience', 'bin', 'study-progress');
-  fs.mkdirSync(path.dirname(scriptPath), { recursive: true });
-  fs.writeFileSync(scriptPath, `#!/usr/bin/env node
-const payload = {
-  generated_at: '2026-07-09T00:00:01.000Z',
-  truth_epoch: 'truth-event-000010-current-work-unit',
-  runtime_health_epoch: 'runtime-health-event-000011-current-work-unit',
-  current_work_unit: {
-    status: 'executable_owner_action',
-    current_owner: 'med-autoscience',
-    owner: 'med-autoscience',
-    stage_id: 'submission_milestone_candidate',
-    action_type: 'owner_answer_required',
-    work_unit_id: 'current-work-unit-from-study-progress',
-    work_unit_fingerprint: 'current-work-unit-from-study-progress',
-    currentness_basis: {
-      truth_epoch: 'truth-event-000010-current-work-unit',
-      runtime_health_epoch: 'runtime-health-event-000011-current-work-unit'
-    }
-  }
-};
-process.stdout.write(JSON.stringify(payload));
-`);
-  fs.chmodSync(scriptPath, 0o755);
-  return scriptPath;
+  fs.writeFileSync(descriptorPath, `${JSON.stringify(descriptor, null, 2)}\n`);
+  fs.writeFileSync(path.join(workspaceRoot, 'workspace_index.json'), `${JSON.stringify({
+    studies: [{
+      study_id: 'current-work-unit-from-study-progress',
+      display_name: 'Current work unit from domain inventory',
+      canonical_study_root: '.',
+      status: 'active',
+      current_stage_id: 'submission_milestone_candidate',
+      current_stage_status: 'running',
+      package_status: 'not_applicable',
+      study_status_ref: 'ops/medautoscience/profiles/summary.workspace.toml',
+      next_action: null,
+      stage_index_ref: null,
+    }],
+  }, null, 2)}\n`);
 }
 
 function writeCurrentOwnerDeltaCache() {
@@ -354,23 +321,18 @@ test('runtime app operator summary uses current-owner cache before workstream ba
   }
 });
 
-test('runtime app operator summary prefers current work-unit over historical safe-action backlog', () => {
+test('runtime app operator summary prefers current work-item activity over historical safe-action backlog', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-operator-current-work-unit-state-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-operator-current-work-unit-workspace-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const descriptorFixture = createWorkspaceDescriptorFamilyFixture(['mas']);
   const profileDir = path.join(workspaceRoot, 'ops', 'medautoscience', 'profiles');
   const profilePath = path.join(profileDir, 'summary.workspace.toml');
-  const portalPayloadPath = path.join(workspaceRoot, 'artifacts', 'runtime', 'progress_portal', 'latest.json');
-  const portalHtmlPath = path.join(workspaceRoot, 'ops', 'mas', 'progress', 'index.html');
   const previousStateDir = process.env.OPL_STATE_DIR;
 
   fs.mkdirSync(profileDir, { recursive: true });
   fs.writeFileSync(profilePath, 'workspace_name = "summary-current-work-unit"\n');
-  fs.mkdirSync(path.dirname(portalPayloadPath), { recursive: true });
-  fs.mkdirSync(path.dirname(portalHtmlPath), { recursive: true });
-  fs.writeFileSync(portalHtmlPath, '<!doctype html><title>MAS Progress Portal</title>\n');
-  fs.writeFileSync(portalPayloadPath, `${JSON.stringify(portalPayloadWithoutCurrentWorkUnit(workspaceRoot), null, 2)}\n`);
-  const progressCommand = writeStudyProgressProbe(workspaceRoot);
+  writeMasWorkItemInventoryFixture(descriptorFixture.familyRoot, workspaceRoot);
 
   try {
     bindMasWorkspace({
@@ -378,24 +340,34 @@ test('runtime app operator summary prefers current work-unit over historical saf
       fixtureContractsRoot,
       workspaceRoot,
       profilePath,
-      progressCommand,
+      familyWorkspaceRoot: descriptorFixture.familyRoot,
     });
     const boundManifest = runCli(['domain', 'manifests'], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_FAMILY_WORKSPACE_ROOT: descriptorFixture.familyRoot,
     }).domain_manifests.projects.find(
       (entry: { project_id: string }) => entry.project_id === 'medautoscience',
     ).manifest;
-    assert.equal(boundManifest.task_lifecycle.progress_surface.command, progressCommand);
-    assert.equal(boundManifest.progress_projection.progress_surface.command, progressCommand);
-    assert.equal(boundManifest.product_entry_overview.progress_surface.command, progressCommand);
+    assert.equal(boundManifest.workspace_locator.workspace_root, workspaceRoot);
     process.env.OPL_STATE_DIR = stateRoot;
     seedSummaryStageAttempts(1);
     seedRunningCurrentWorkUnit(workspaceRoot);
 
+    const workItemProjection = runCli(['app', 'state', '--profile', 'full'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_FAMILY_WORKSPACE_ROOT: descriptorFixture.familyRoot,
+    }).app_state.operator.workbench.work_item_projection_v2;
+    const projectionDiagnostics = JSON.stringify(workItemProjection.diagnostics.items);
+    assert.equal(workItemProjection.summary.project_count, 1, projectionDiagnostics);
+    assert.equal(workItemProjection.summary.work_item_count, 1, projectionDiagnostics);
+    assert.equal(workItemProjection.summary.running_count, 1, projectionDiagnostics);
+
     const summaryDrilldown = runCli(SUMMARY_COMMAND, {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_FAMILY_WORKSPACE_ROOT: descriptorFixture.familyRoot,
     }).app_operator_drilldown;
 
     assert.equal(
@@ -406,9 +378,9 @@ test('runtime app operator summary prefers current work-unit over historical saf
       summaryDrilldown.attention_first_payload.owner_delta_first.primary_item.source,
       'domain_current_work_unit',
     );
-    assert.equal(
+    assert.match(
       summaryDrilldown.current_owner_delta.work_unit_id,
-      'medautoscience:work-unit:current-work-unit-from-study-progress',
+      /^mas:[a-f0-9]{16}:current-work-unit-from-study-progress$/,
     );
     assert.equal(
       summaryDrilldown.operator_next_action.payload_requirement,
@@ -449,5 +421,6 @@ test('runtime app operator summary prefers current work-unit over historical saf
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    descriptorFixture.cleanup();
   }
 });

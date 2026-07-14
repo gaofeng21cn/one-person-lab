@@ -169,6 +169,7 @@ test('system seed-apply materializes payload metadata but preserves existing fra
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-seed-payload-home-'));
   const seedDir = path.join(homeRoot, 'image-seed');
   const dataDir = path.join(homeRoot, 'data');
+  const stateDir = path.join(dataDir, 'opl', 'state');
   const projectsDir = path.join(dataDir, 'projects');
   try {
     writeImageManifest(seedDir, 'payload_manifest');
@@ -179,6 +180,7 @@ test('system seed-apply materializes payload metadata but preserves existing fra
 
     const output = runCli(['system', 'seed-apply', '--from', seedDir, '--data-dir', dataDir, '--projects-dir', projectsDir], {
       HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
       PATH: process.env.PATH ?? '',
     }).system_action;
     assert.equal(output.status, 'applied');
@@ -202,6 +204,7 @@ test('system seed-apply records preheated payloads without copying runtime trees
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-seed-preheated-home-'));
   const seedDir = path.join(homeRoot, 'image-seed');
   const dataDir = path.join(homeRoot, 'data');
+  const stateDir = path.join(dataDir, 'opl', 'state');
   const projectsDir = path.join(dataDir, 'projects');
   try {
     writeImageManifest(seedDir, 'payload_preheated');
@@ -212,6 +215,7 @@ test('system seed-apply records preheated payloads without copying runtime trees
 
     const output = runCli(['system', 'seed-apply', '--from', seedDir, '--data-dir', dataDir, '--projects-dir', projectsDir], {
       HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
       PATH: process.env.PATH ?? '',
     }).system_action;
     assert.equal(output.status, 'applied');
@@ -233,6 +237,7 @@ test('system seed-apply rejects non-canonical full seed strategy names', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-seed-strategy-home-'));
   const seedDir = path.join(homeRoot, 'image-seed');
   const dataDir = path.join(homeRoot, 'data');
+  const stateDir = path.join(dataDir, 'opl', 'state');
   try {
     writeImageManifest(seedDir, 'manifest_payload_dir', '26.7.2-webui');
     fs.writeFileSync(path.join(seedDir, 'metadata.json'), JSON.stringify({
@@ -241,6 +246,7 @@ test('system seed-apply rejects non-canonical full seed strategy names', () => {
     }, null, 2));
     const output = runCli(['system', 'seed-apply', '--from', seedDir, '--data-dir', dataDir], {
       HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
       PATH: process.env.PATH ?? '',
     }).system_action;
     assert.equal(output.status, 'pending');

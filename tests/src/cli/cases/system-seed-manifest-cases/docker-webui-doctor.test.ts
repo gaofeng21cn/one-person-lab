@@ -217,6 +217,7 @@ test('system docker-webui doctor reads persisted seed manifest and browser URL',
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-webui-doctor-seeded-home-'));
   const seedDir = path.join(homeRoot, 'image-seed');
   const dataDir = path.join(homeRoot, 'data');
+  const stateDir = path.join(dataDir, 'opl', 'state');
   const projectsDir = path.join(dataDir, 'projects');
   const codexHome = path.join(homeRoot, 'codex-home');
   fs.mkdirSync(seedDir, { recursive: true });
@@ -239,6 +240,7 @@ test('system docker-webui doctor reads persisted seed manifest and browser URL',
       projectsDir,
     ], {
       HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
       PATH: process.env.PATH ?? '',
     });
 
@@ -246,6 +248,7 @@ test('system docker-webui doctor reads persisted seed manifest and browser URL',
       HOME: homeRoot,
       CODEX_HOME: codexHome,
       AIONUI_DATA_DIR: dataDir,
+      OPL_STATE_DIR: stateDir,
       AIONUI_BROWSER_URL: 'http://localhost:3000/',
       PATH: process.env.PATH ?? '',
     }) as {

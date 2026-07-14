@@ -374,20 +374,7 @@ export function writeStartupPackageChannelFixture(input: {
     });
     const archiveDigest = sha256(archivePath);
     const packageId = packageIdForModule(module.moduleId);
-    packageEntries[packageId] = {
-      package_id: packageId,
-      selected_version: input.version,
-      versions: [{
-        package_version: input.version,
-        selection_status: 'selected_for_release_set',
-        source_artifact_ref: `ghcr.io/owner/one-person-lab-packages/${packageId}:${input.version}`,
-        artifact_digest: `sha256:${'a'.repeat(64)}`,
-        artifact_status: 'published_immutable',
-        package_content_digest: `sha256:${archiveDigest}`,
-        owner_source_commit: module.sourceHeadSha,
-      }],
-    };
-    manifests[`owner/one-person-lab-packages/${packageId}`] = {
+    const ociManifest = {
       schemaVersion: 2,
       mediaType: 'application/vnd.oci.image.manifest.v1+json',
       layers: [
@@ -400,6 +387,21 @@ export function writeStartupPackageChannelFixture(input: {
         },
       ],
     };
+    const artifactDigest = crypto.createHash('sha256').update(JSON.stringify(ociManifest)).digest('hex');
+    packageEntries[packageId] = {
+      package_id: packageId,
+      selected_version: input.version,
+      versions: [{
+        package_version: input.version,
+        selection_status: 'selected_for_release_set',
+        source_artifact_ref: `ghcr.io/owner/one-person-lab-packages/${packageId}:${input.version}`,
+        artifact_digest: `sha256:${artifactDigest}`,
+        artifact_status: 'published_immutable',
+        package_content_digest: `sha256:${archiveDigest}`,
+        owner_source_commit: module.sourceHeadSha,
+      }],
+    };
+    manifests[`owner/one-person-lab-packages/${packageId}`] = ociManifest;
     blobsByDigest[`sha256:${archiveDigest}`] = archivePath;
   }
 
