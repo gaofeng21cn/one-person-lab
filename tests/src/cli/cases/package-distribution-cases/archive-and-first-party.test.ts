@@ -205,9 +205,9 @@ test('package archive builder writes channel manifest checksums git source and r
   const fixtures = {
     medautoscience: createOwnerPackageFixture('med-autoscience', 'mas', '0.2.1'),
     medautogrant: createOwnerPackageFixture('med-autogrant', 'mag', '0.3.0'),
-    redcube: createOwnerPackageFixture('redcube-ai', 'rca', '0.2.2'),
+    redcube: createOwnerPackageFixture('redcube-ai', 'rca', '0.2.4'),
     oplmetaagent: createOwnerPackageFixture('opl-meta-agent', 'oma', '0.3.0'),
-    oplbookforge: createOwnerPackageFixture('opl-bookforge', 'obf', '0.3.0'),
+    oplbookforge: createOwnerPackageFixture('opl-bookforge', 'obf', '0.3.2'),
     scholarskills: createOwnerPackageFixture('mas-scholar-skills', 'mas-scholar-skills', '0.2.1', 'capability_package'),
     oplflow: createOwnerPackageFixture('opl-flow', 'opl-flow', '0.1.20', 'workflow_profile'),
   };
@@ -699,10 +699,10 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.match(checksums, /mas-0\.2\.1\.tar\.gz/);
   assert.match(checksums, /mag-0\.3\.0\.tar\.gz/);
   assert.match(checksums, /oma-0\.3\.0\.tar\.gz/);
-  assert.match(checksums, /rca-0\.2\.2\.tar\.gz/);
-  assert.match(checksums, /obf-0\.3\.0\.tar\.gz/);
+  assert.match(checksums, /rca-0\.2\.4\.tar\.gz/);
+  assert.match(checksums, /obf-0\.3\.2\.tar\.gz/);
   assert.match(checksums, /mas-scholar-skills-0\.2\.1\.tar\.gz/);
-  assert.match(checksums, /opl-flow-0\.1\.19\.tar\.gz/);
+  assert.match(checksums, /opl-flow-0\.1\.20\.tar\.gz/);
   assert.match(checksums, new RegExp(manifest.packages.package_artifacts.mas.source_archive.sha256));
 
   execFileSync(process.execPath, [
@@ -851,9 +851,9 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
       payloadRef: 'payloads/mag-0.3.0.json',
     },
     rca: {
-      version: '0.2.3',
-      sourceCommit: '24ff15e78be0fdc4404e77763f88362accbc9e59',
-      payloadRef: 'payloads/rca-0.2.3.json',
+      version: '0.2.4',
+      sourceCommit: 'df10aa4b40702358038ec77dc04f4f9b819672da',
+      payloadRef: 'payloads/rca-0.2.4.json',
     },
     oma: {
       version: '0.3.0',
@@ -861,9 +861,9 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
       payloadRef: 'payloads/oma-0.3.0.json',
     },
     obf: {
-      version: '0.3.0',
-      sourceCommit: '63d65d02adfeb8087414e97492f10002f17b9642',
-      payloadRef: 'payloads/obf-0.3.0.json',
+      version: '0.3.2',
+      sourceCommit: 'f7a26544bc73bdec7b394d7ab269328379703856',
+      payloadRef: 'payloads/obf-0.3.2.json',
     },
   };
 
@@ -1134,9 +1134,9 @@ test('package archive builder refreshes reused managed clones before archiving s
   const fixtures = {
     medautoscience: createOwnerPackageFixture('med-autoscience', 'mas', '0.2.1'),
     medautogrant: createOwnerPackageFixture('med-autogrant', 'mag', '0.3.0'),
-    redcube: createOwnerPackageFixture('redcube-ai', 'rca', '0.2.2'),
+    redcube: createOwnerPackageFixture('redcube-ai', 'rca', '0.2.4'),
     oplmetaagent: createOwnerPackageFixture('opl-meta-agent', 'oma', '0.3.0'),
-    oplbookforge: createOwnerPackageFixture('opl-bookforge', 'obf', '0.3.0'),
+    oplbookforge: createOwnerPackageFixture('opl-bookforge', 'obf', '0.3.2'),
     scholarskills: createOwnerPackageFixture('mas-scholar-skills', 'mas-scholar-skills', '0.2.1', 'capability_package'),
     oplflow: createOwnerPackageFixture('opl-flow', 'opl-flow', '0.1.20', 'workflow_profile'),
   };
