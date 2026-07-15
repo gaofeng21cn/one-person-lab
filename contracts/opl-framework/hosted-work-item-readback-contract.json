@@ -1,0 +1,65 @@
+{
+  "contract_kind": "opl_hosted_work_item_readback_contract.v1",
+  "surface_kind": "opl_hosted_work_item_readback_contract",
+  "owner": "one-person-lab",
+  "state": "active_contract",
+  "purpose": "Provide one OPL-hosted, read-only work-item readback after retirement of domain-private control-plane wrappers.",
+  "command": "opl workspace work-item readback",
+  "projection_model": {
+    "business_and_runtime_source": "WorkItemProjectionV2",
+    "required_business_fields": [
+      "lifecycle",
+      "next_action",
+      "next_owner"
+    ],
+    "required_runtime_fields": [
+      "execution",
+      "stage_map",
+      "telemetry",
+      "conditions",
+      "freshness"
+    ],
+    "domain_truth_source_policy": "workspace_declared_refs_only",
+    "source_values_are_projected_exactly": true,
+    "source_sha256_and_mtime_are_observation_metadata_only": true
+  },
+  "source_manifest": {
+    "surface_kind": "opl_hosted_work_item_readback_sources",
+    "schema_version": 1,
+    "path_owner": "workspace",
+    "relative_source_paths_are_rooted_at": "selected_work_item_root",
+    "authority_scopes": [
+      "domain_owner",
+      "derived_non_authority"
+    ],
+    "required_authority_boundary": {
+      "opl_consumption": "read_only_exact_value_projection",
+      "app_state_is_domain_quality_authority": false,
+      "filesystem_mtime_is_semantic_currentness": false
+    }
+  },
+  "retirement_migration": {
+    "retired_private_surfaces": [
+      "study-progress",
+      "paper-mission",
+      "study-state-matrix",
+      "enter-study"
+    ],
+    "read_replacement": "workspace-owned wrapper -> opl workspace work-item readback",
+    "execution_replacement": "opl agents run --domain <agent> --action <stage-action>",
+    "private_dispatch_compatibility_authority_allowed": false
+  },
+  "authority_boundary": {
+    "opl_role": "hosted_projection_and_exact_domain_source_readback",
+    "app_state_is_domain_quality_authority": false,
+    "filesystem_mtime_is_semantic_currentness": false,
+    "derived_source_can_override_domain_owner_source": false,
+    "can_write_domain_truth": false,
+    "can_create_owner_receipt": false,
+    "can_create_typed_blocker": false,
+    "can_authorize_quality_verdict": false,
+    "can_authorize_publication_or_submission": false,
+    "can_claim_domain_ready": false,
+    "can_claim_production_ready": false
+  }
+}

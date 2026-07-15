@@ -19,7 +19,8 @@
     "runtime observability",
     "pack provision-submission-resource",
     "packages",
-    "system codex-config-hygiene"
+    "system codex-config-hygiene",
+    "workspace work-item readback"
   ],
   "commands": {
     "pack_provision_submission_resource": {
@@ -2255,6 +2256,147 @@
         "can_claim_production_ready": false,
         "owner": "OPL Base",
         "surface": "opl_base_update_lifecycle"
+      }
+    },
+    "workspace_work_item_readback": {
+      "command_id": "workspace work-item readback",
+      "owner": "OPL Console",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "workspace",
+          "flag": "--workspace",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Absolute workspace path containing the selected work item."
+        },
+        {
+          "name": "work-item",
+          "flag": "--work-item",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Exact domain inventory work-item identifier."
+        },
+        {
+          "name": "agent",
+          "flag": "--agent",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Optional standard Agent or domain identifier used to disambiguate the work item."
+        },
+        {
+          "name": "source-manifest",
+          "flag": "--source-manifest",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Optional absolute path to a workspace-owned refs-only domain source declaration."
+        },
+        {
+          "name": "profile",
+          "flag": "--profile",
+          "value_kind": "string",
+          "required": false,
+          "allowed_values": [
+            "fast",
+            "full"
+          ],
+          "default": "full",
+          "summary": "Projection detail profile."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "hosted_work_item_readback"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "hosted_work_item_readback": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "schema_version",
+              "generated_at",
+              "identity",
+              "business",
+              "runtime",
+              "domain_truth_sources",
+              "diagnostics",
+              "authority_boundary"
+            ],
+            "additionalProperties": true,
+            "properties": {
+              "surface_kind": {
+                "const": "opl_hosted_work_item_readback"
+              },
+              "schema_version": {
+                "const": "opl-hosted-work-item-readback.v1"
+              },
+              "business": {
+                "type": "object",
+                "required": [
+                  "lifecycle",
+                  "attention",
+                  "next_action",
+                  "next_owner"
+                ],
+                "additionalProperties": true
+              },
+              "runtime": {
+                "type": "object",
+                "required": [
+                  "execution",
+                  "telemetry",
+                  "stage_map",
+                  "conditions",
+                  "freshness"
+                ],
+                "additionalProperties": true
+              },
+              "authority_boundary": {
+                "type": "object",
+                "required": [
+                  "app_state_is_domain_quality_authority",
+                  "can_write_domain_truth",
+                  "can_create_owner_receipt",
+                  "can_create_typed_blocker",
+                  "can_authorize_quality_publication_or_submission"
+                ],
+                "additionalProperties": true,
+                "properties": {
+                  "app_state_is_domain_quality_authority": {
+                    "const": false
+                  },
+                  "can_write_domain_truth": {
+                    "const": false
+                  },
+                  "can_create_owner_receipt": {
+                    "const": false
+                  },
+                  "can_create_typed_blocker": {
+                    "const": false
+                  },
+                  "can_authorize_quality_publication_or_submission": {
+                    "const": false
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Console",
+        "surface": "hosted_work_item_exact_readback"
       }
     },
     "status_workspace": {

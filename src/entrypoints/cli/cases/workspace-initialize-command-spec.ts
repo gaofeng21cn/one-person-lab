@@ -26,6 +26,7 @@ import { materializeWorkspaceArtifactLifecycle } from '../../../modules/workspac
 import { ingestWorkspaceSourceMaterial } from '../../../modules/workspace/workspace-source-material.ts';
 import { assertRepoSourceByproductsClean } from '../../../modules/workspace/repo-source-byproduct-guard.ts';
 import { buildBrandModuleSurfaceInspect } from '../../../modules/charter/brand-module-surfaces.ts';
+import { buildHostedWorkItemReadback } from '../../../modules/console/work-item-hosted-readback.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
 import {
   assertNoArgs,
@@ -36,6 +37,7 @@ import {
   parseWorkspaceLifecycleArgs,
   parseWorkspaceSourceIngestArgs,
   parseWorkspaceValidationArgs,
+  parseRegisteredCommandOptions,
 } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
 
@@ -382,6 +384,30 @@ export function buildWorkspaceInitializeCommandSpecs(
         const parsed = parseWorkspaceValidationArgs(args, specs['workspace report']);
         return workspaceReport(getContracts(), {
           workspacePath: parsed.workspacePath,
+        });
+      },
+    },
+    'workspace work-item readback': {
+      usage:
+        'opl workspace work-item readback --workspace <absolute_path> --work-item <id> [--agent <agent_id>] [--source-manifest <absolute_path>] [--profile fast|full]',
+      summary:
+        'Read one hosted work item across business lifecycle, Stage/Attempt, token telemetry, next owner, and explicitly declared domain-owner package/publication refs without taking domain quality authority.',
+      examples: [
+        'opl workspace work-item readback --workspace /Users/gaofeng/workspace/dm-cvd --work-item DM003 --agent mas --profile full',
+        'opl workspace work-item readback --workspace /Users/gaofeng/workspace/dm-cvd --work-item DM003 --agent mas --source-manifest /Users/gaofeng/workspace/dm-cvd/ops/medautoscience/hosted-readback-sources.json --json',
+      ],
+      handler: (args) => {
+        const parsed = parseRegisteredCommandOptions(
+          'workspace work-item readback',
+          args,
+          specs['workspace work-item readback'],
+        );
+        return buildHostedWorkItemReadback({
+          workspaceRoot: parsed.workspace as string,
+          workItemId: parsed['work-item'] as string,
+          agentId: parsed.agent as string | undefined,
+          sourceManifestPath: parsed['source-manifest'] as string | undefined,
+          profile: parsed.profile as 'fast' | 'full' | undefined,
         });
       },
     },

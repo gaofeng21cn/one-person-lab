@@ -13,7 +13,7 @@ export function buildWorkspaceCommandSpecs(
   const workspaceCommandSpecs: Record<string, CommandSpec> = {
     workspace: {
       usage:
-        'opl workspace projects|list|fleet report|maintenance prune|root|init|ensure|validate|doctor|source-hygiene|adopt|upgrade|artifact-lifecycle|source ingest|project lifecycle|project archive|project delete|export-map|health|inspect|inventory|report|interfaces|bind|activate|archive [options]',
+        'opl workspace projects|list|fleet report|maintenance prune|root|init|ensure|validate|doctor|source-hygiene|adopt|upgrade|artifact-lifecycle|source ingest|project lifecycle|project archive|project delete|export-map|health|inspect|inventory|report|work-item readback|interfaces|bind|activate|archive [options]',
       summary:
         'Manage OPL workspace bindings, standard family-agent workspace initialization, generated inspection refs, and workspace-local project lifecycle projections.',
       examples: [
@@ -22,6 +22,7 @@ export function buildWorkspaceCommandSpecs(
         'opl workspace init --agent rca --workspace-id visual-theme-a --project-id deck-001',
         'opl workspace validate --workspace /Users/gaofeng/workspace/visual-theme-a',
         'opl workspace report --workspace /Users/gaofeng/workspace/visual-theme-a',
+        'opl workspace work-item readback --workspace /Users/gaofeng/workspace/dm-cvd --work-item DM003 --agent mas',
         'opl workspace fleet report',
         'opl workspace inspect --workspace /Users/gaofeng/workspace/visual-theme-a',
         'opl workspace source-hygiene --source-root /Users/gaofeng/workspace/opl-bookforge',
@@ -85,6 +86,11 @@ export function buildWorkspaceCommandSpecs(
           command: 'workspace report',
           usage: 'opl workspace report --workspace <path>',
           summary: 'Read the user-first workspace report with current project, stage refs, lifecycle counts, and blockers.',
+        },
+        {
+          command: 'workspace work-item readback',
+          usage: 'opl workspace work-item readback --workspace <absolute_path> --work-item <id> [--agent <agent_id>] [--source-manifest <absolute_path>] [--profile fast|full]',
+          summary: 'Read one hosted work item and its explicitly declared domain-owner truth refs without taking domain authority.',
         },
         {
           command: 'workspace artifact-lifecycle',
@@ -265,6 +271,14 @@ export function buildWorkspaceCommandSpecs(
       usage: 'opl workspace report --workspace <path>',
       examples: [
         'opl workspace report --workspace /Users/gaofeng/workspace/visual-theme-a',
+      ],
+      group: 'workspace',
+    }),
+    'workspace work-item readback': cloneCommandSpec(commandSpecs['workspace work-item readback'], {
+      usage: 'opl workspace work-item readback --workspace <absolute_path> --work-item <id> [--agent <agent_id>] [--source-manifest <absolute_path>] [--profile fast|full]',
+      examples: [
+        'opl workspace work-item readback --workspace /Users/gaofeng/workspace/dm-cvd --work-item DM003 --agent mas --profile full',
+        'opl workspace work-item readback --workspace /Users/gaofeng/workspace/dm-cvd --work-item DM003 --agent mas --source-manifest /Users/gaofeng/workspace/dm-cvd/ops/medautoscience/hosted-readback-sources.json --json',
       ],
       group: 'workspace',
     }),
