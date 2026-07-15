@@ -990,14 +990,14 @@ test('OPL Flow is a workflow-profile Package without Agent identity', () => {
     'utf8',
   )) as Record<string, any>;
   assert.equal(manifest.surface_kind, 'opl_workflow_profile_package_manifest.v1');
-  assert.equal(manifest.version, '0.1.20');
-  assert.equal(manifest.codex_surface.carrier_source_commit, '9bfa310c6693787040701efd19a8ddd4cf79f6e4');
+  assert.equal(manifest.version, '0.1.22');
+  assert.equal(manifest.codex_surface.carrier_source_commit, '0e6be1220cddeed791e8e09b0170024d95e06f9f');
   assert.equal(schema.properties.codex_surface.required.includes('carrier_source_commit'), true);
   assert.equal(Object.hasOwn(manifest, 'agent_id'), false);
   assert.equal(normalized.agent_id, null);
   assert.equal(normalized.profile_surface?.existing_profile_policy, 'semantic_merge_required');
   assert.equal(payload.surface_kind, 'opl_package_payload_manifest.v2');
-  assert.equal(payload.source_commit, '9bfa310c6693787040701efd19a8ddd4cf79f6e4');
+  assert.equal(payload.source_commit, '0e6be1220cddeed791e8e09b0170024d95e06f9f');
   assert.equal(Object.hasOwn(payload, 'agent_id'), false);
 });
 

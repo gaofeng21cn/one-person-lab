@@ -13,7 +13,7 @@ function writeFile(filePath: string, content: string) {
 
 function writeOplFlowPackage(
   root: string,
-  options: { includeRemoteCompanions?: boolean } = {},
+  options: { includeRemoteCompanions?: boolean; includeManagedSkillCompanion?: boolean } = {},
 ) {
   const sourceRoot = path.join(root, 'fixture.opl-flow-source');
   const policy = {
@@ -63,6 +63,17 @@ function writeOplFlowPackage(
             source: 'fixture-remote',
           },
         ]
+      : options.includeManagedSkillCompanion
+        ? [
+            {
+              id: 'ui-ux-pro-max',
+              kind: 'codex_skill',
+              offline_bundle: 'full',
+              online_install_default: true,
+              activation: 'explicit',
+              source: 'skills-manager:ui-ux-pro-max',
+            },
+          ]
       : [],
     compatible_optional: [],
     conflicts: [
@@ -390,6 +401,64 @@ test('fresh install rollback has no virtual target', async () => {
     assert.equal(failure.payload.error.details.failure_code, 'agent_package_last_known_good_missing');
     assert.equal(runCli(['packages', 'status', '--package-id', 'fixture.opl-flow'], env)
       .opl_agent_package_status.installed_package_count, 1);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
+  }
+});
+
+test('managed policy currentness detects and repairs a missing Agents skill entrypoint', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fixture.opl-flow-skill-currentness-'));
+  const home = path.join(root, 'home');
+  const codexHome = path.join(home, '.codex');
+  const managerSkillRoot = path.join(home, '.skills-manager', 'skills', 'ui-ux-pro-max');
+  const codexSkillRoot = path.join(codexHome, 'skills', 'ui-ux-pro-max');
+  const agentsSkillRoot = path.join(home, '.agents', 'skills', 'ui-ux-pro-max');
+  const env = {
+    HOME: home,
+    CODEX_HOME: codexHome,
+    OPL_STATE_DIR: path.join(root, 'state'),
+    OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
+  };
+  try {
+    writeFile(
+      path.join(managerSkillRoot, 'SKILL.md'),
+      '---\nname: ui-ux-pro-max\ndescription: Skills Manager UI review skill.\n---\n\n# UI UX Pro Max\n',
+    );
+    const installed = await runCliAsync([
+      'packages', 'install', '--manifest-url', writeOplFlowPackage(root, { includeManagedSkillCompanion: true }),
+      '--trust-tier', 'first_party',
+    ], env) as any;
+    assert.equal(installed.opl_agent_package_install.status, 'installed');
+    assert.equal(fs.realpathSync(codexSkillRoot), fs.realpathSync(managerSkillRoot));
+    assert.equal(fs.realpathSync(agentsSkillRoot), fs.realpathSync(managerSkillRoot));
+
+    const current = runCli(['packages', 'status', '--package-id', 'fixture.opl-flow'], env) as any;
+    const currentness = current.opl_agent_package_status.owner_route_readback.packages[0]
+      .materializer.managed_policy_currentness;
+    assert.equal(currentness.status, 'current');
+    assert.equal(currentness.dependency_sync.items[0].source_authority, 'skills_manager');
+    assert.equal(currentness.dependency_sync.items[0].payload_currentness, 'current');
+    assert.equal(currentness.dependency_sync.items[0].entrypoint_authority_status, 'converged');
+
+    fs.rmSync(agentsSkillRoot, { recursive: true, force: true });
+    const drifted = runCli(['packages', 'status', '--package-id', 'fixture.opl-flow'], env) as any;
+    const driftedCurrentness = drifted.opl_agent_package_status.owner_route_readback.packages[0]
+      .materializer.managed_policy_currentness;
+    assert.equal(drifted.opl_agent_package_status.status, 'attention_needed');
+    assert.equal(drifted.opl_agent_package_status.launch_blocked_reason, 'managed_policy_drifted');
+    assert.equal(driftedCurrentness.status, 'drifted');
+    assert.equal(driftedCurrentness.dependency_sync.items[0].entrypoint_authority_status, 'missing');
+    assert.equal(driftedCurrentness.repair_command, 'opl packages repair --package-id fixture.opl-flow');
+
+    const repaired = runCli(['packages', 'repair', '--package-id', 'fixture.opl-flow'], env) as any;
+    assert.equal(repaired.opl_agent_package_repair.status, 'repaired');
+    assert.equal(fs.realpathSync(agentsSkillRoot), fs.realpathSync(managerSkillRoot));
+    const repairedStatus = runCli(['packages', 'status', '--package-id', 'fixture.opl-flow'], env) as any;
+    assert.equal(
+      repairedStatus.opl_agent_package_status.owner_route_readback.packages[0]
+        .materializer.managed_policy_currentness.status,
+      'current',
+    );
   } finally {
     fs.rmSync(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
   }

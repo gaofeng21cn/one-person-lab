@@ -196,14 +196,15 @@ test('managed companion sync prefers Skills Manager packages over fallback mater
     );
   }
   const toolBin = writeFakeCompanionToolBinaries(homeRoot);
+  const runEnv = {
+    HOME: homeRoot,
+    CODEX_HOME: path.join(homeRoot, 'codex-home'),
+    PATH: `${toolBin}:/usr/bin:/bin`,
+    ...env,
+  };
 
   try {
-    const output = runCli(['skill', 'companion', 'apply', '--mode', 'managed'], {
-      HOME: homeRoot,
-      CODEX_HOME: path.join(homeRoot, 'codex-home'),
-      PATH: `${toolBin}:/usr/bin:/bin`,
-      ...env,
-    }) as any;
+    const output = runCli(['skill', 'companion', 'apply', '--mode', 'managed'], runEnv) as any;
 
     const itemById = new Map<string, any>(output.companion_skills.items.map(
       (item: any) => [item.skill_id, item],
@@ -211,11 +212,139 @@ test('managed companion sync prefers Skills Manager packages over fallback mater
     for (const skillId of skillIds) {
       const managerSkillRoot = path.join(managerSkillsRoot, skillId);
       const targetRoot = path.join(homeRoot, 'codex-home', 'skills', skillId);
+      const agentsTargetRoot = path.join(homeRoot, '.agents', 'skills', skillId);
+      const item = itemById.get(skillId);
       assert.equal(itemById.get(skillId)?.source_path, path.join(managerSkillRoot, 'SKILL.md'));
-      assert.equal(itemById.get(skillId)?.status, 'synced');
+      assert.equal(item?.status, 'synced');
+      assert.equal(item?.source_authority, 'skills_manager');
+      assert.equal(item?.payload_currentness, 'current');
+      assert.equal(item?.frontmatter_schema_status, 'valid');
+      assert.equal(item?.resource_closure_status, 'complete');
+      assert.equal(item?.entrypoint_authority_status, 'converged');
+      assert.equal(item?.source_payload_sha256, item?.installed_payload_sha256);
       assert.equal(fs.realpathSync(targetRoot), fs.realpathSync(managerSkillRoot));
+      assert.equal(fs.realpathSync(agentsTargetRoot), fs.realpathSync(managerSkillRoot));
+      assert.equal(item?.codex_entry_realpath, fs.realpathSync(managerSkillRoot));
+      assert.equal(item?.agents_entry_realpath, fs.realpathSync(managerSkillRoot));
     }
     assert.equal(fs.existsSync(path.join(homeRoot, 'companion-sources', 'materialized')), false);
+
+    const officeBefore = itemById.get('officecli')?.source_payload_sha256;
+    const runtimeCache = path.join(managerSkillsRoot, 'officecli', '__pycache__');
+    fs.mkdirSync(runtimeCache, { recursive: true });
+    fs.writeFileSync(path.join(runtimeCache, 'helper.cpython-313.pyc'), 'runtime cache\n', 'utf8');
+    fs.writeFileSync(path.join(managerSkillsRoot, 'officecli', 'helper.pyo'), 'runtime cache\n', 'utf8');
+    const observed = runCli(['skill', 'companion', 'status'], runEnv) as any;
+    const observedOffice = observed.companion_skills.items.find((item: any) => item.skill_id === 'officecli');
+    assert.equal(observedOffice.status, 'ready');
+    assert.equal(observedOffice.source_payload_sha256, officeBefore);
+    assert.equal(observedOffice.payload_currentness, 'current');
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
+  }
+});
+
+test('managed companion sync rejects invalid payloads before writing either skill entrypoint', () => {
+  const cases = [
+    {
+      label: 'unexpected frontmatter field',
+      skill: '---\nname: officecli-docx\ndescription: >\n  Valid folded description.\nhidden: true\n---\n\n# officecli-docx\n',
+      expectedFrontmatter: 'invalid',
+      expectedClosure: 'complete',
+    },
+    {
+      label: 'missing resource closure',
+      skill: '---\nname: officecli-docx\ndescription: |\n  Valid literal description.\n---\n\n# officecli-docx\n\nRead `references/missing.md`.\n',
+      expectedFrontmatter: 'valid',
+      expectedClosure: 'incomplete',
+    },
+    {
+      label: 'mismatched skill identity',
+      skill: '---\nname: different-skill\ndescription: Valid but mismatched skill identity.\n---\n\n# different-skill\n',
+      expectedFrontmatter: 'invalid',
+      expectedClosure: 'complete',
+    },
+  ];
+
+  for (const fixture of cases) {
+    const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-invalid-managed-skill-home-'));
+    const env = createFakeCompanionInstallEnv(homeRoot);
+    const managerSkillRoot = path.join(homeRoot, '.skills-manager', 'skills', 'officecli-docx');
+    fs.mkdirSync(managerSkillRoot, { recursive: true });
+    fs.writeFileSync(path.join(managerSkillRoot, 'SKILL.md'), fixture.skill, 'utf8');
+    try {
+      const output = runCli(['skill', 'companion', 'apply', '--mode', 'managed'], {
+        HOME: homeRoot,
+        CODEX_HOME: path.join(homeRoot, 'codex-home'),
+        PATH: '/usr/bin:/bin',
+        ...env,
+      }) as any;
+      const item = output.companion_skills.items.find((entry: any) => entry.skill_id === 'officecli-docx');
+      assert.equal(item.status, 'failed', fixture.label);
+      assert.equal(item.frontmatter_schema_status, fixture.expectedFrontmatter, fixture.label);
+      assert.equal(item.resource_closure_status, fixture.expectedClosure, fixture.label);
+      assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', 'officecli-docx')), false);
+      assert.equal(fs.existsSync(path.join(homeRoot, '.agents', 'skills', 'officecli-docx')), false);
+    } finally {
+      fs.rmSync(homeRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
+    }
+  }
+});
+
+test('managed companion sync accepts a referenced resource directory inside the skill root', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-managed-skill-directory-resource-home-'));
+  const env = createFakeCompanionInstallEnv(homeRoot);
+  const managerSkillRoot = path.join(homeRoot, '.skills-manager', 'skills', 'officecli-docx');
+  fs.mkdirSync(path.join(managerSkillRoot, 'assets', 'starter'), { recursive: true });
+  fs.writeFileSync(
+    path.join(managerSkillRoot, 'SKILL.md'),
+    '---\nname: officecli-docx\ndescription: Skills Manager skill with a directory resource.\n---\n\n# officecli-docx\n\nUse `assets/starter/`.\n',
+    'utf8',
+  );
+  fs.writeFileSync(path.join(managerSkillRoot, 'assets', 'starter', 'template.txt'), 'template\n', 'utf8');
+  try {
+    const output = runCli(['skill', 'companion', 'apply', '--mode', 'managed'], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      PATH: '/usr/bin:/bin',
+      ...env,
+    }) as any;
+    const item = output.companion_skills.items.find((entry: any) => entry.skill_id === 'officecli-docx');
+    assert.equal(item.status, 'synced');
+    assert.equal(item.frontmatter_schema_status, 'valid');
+    assert.equal(item.resource_closure_status, 'complete');
+    assert.equal(item.entrypoint_authority_status, 'converged');
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
+  }
+});
+
+test('managed companion sync fails closed when either entrypoint is user-managed', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-user-managed-skill-conflict-home-'));
+  const env = createFakeCompanionInstallEnv(homeRoot);
+  const managerSkillRoot = path.join(homeRoot, '.skills-manager', 'skills', 'officecli-docx');
+  const codexSkillRoot = path.join(homeRoot, 'codex-home', 'skills', 'officecli-docx');
+  const userSkill = '---\nname: officecli-docx\ndescription: User-managed skill.\n---\n\n# user copy\n';
+  fs.mkdirSync(managerSkillRoot, { recursive: true });
+  fs.writeFileSync(
+    path.join(managerSkillRoot, 'SKILL.md'),
+    '---\nname: officecli-docx\ndescription: Skills Manager skill.\n---\n\n# managed copy\n',
+    'utf8',
+  );
+  fs.mkdirSync(codexSkillRoot, { recursive: true });
+  fs.writeFileSync(path.join(codexSkillRoot, 'SKILL.md'), userSkill, 'utf8');
+  try {
+    const output = runCli(['skill', 'companion', 'apply', '--mode', 'managed'], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      PATH: '/usr/bin:/bin',
+      ...env,
+    }) as any;
+    const item = output.companion_skills.items.find((entry: any) => entry.skill_id === 'officecli-docx');
+    assert.equal(item.status, 'failed');
+    assert.match(item.note, /User-managed skill entrypoint conflict/);
+    assert.equal(fs.readFileSync(path.join(codexSkillRoot, 'SKILL.md'), 'utf8'), userSkill);
+    assert.equal(fs.existsSync(path.join(homeRoot, '.agents', 'skills', 'officecli-docx')), false);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
   }

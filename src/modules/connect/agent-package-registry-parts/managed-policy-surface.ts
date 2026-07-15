@@ -598,6 +598,20 @@ export function noManagedPolicyMigration(note: string): AgentPackageManagedPolic
   };
 }
 
+function managedPolicyDependencySelection(dependencies: AgentPackageManagedPolicyDependency[]) {
+  const selected = dependencies.filter((entry) => entry.online_install_default);
+  return {
+    dependencies: selected,
+    skillIds: selected
+      .filter((entry) => entry.kind === 'codex_skill')
+      .map((entry) => entry.id),
+    toolIds: selected
+      .filter((entry) => entry.kind === 'cli'
+        && (entry.id === 'officecli' || entry.id === 'mineru-open-api'))
+      .map((entry) => entry.id as 'officecli' | 'mineru-open-api'),
+  };
+}
+
 export function materializeManagedPolicySurface(input: {
   manifest: AgentPackageManifest;
   sourceRoot: string;
@@ -694,12 +708,10 @@ export function materializeManagedPolicySurface(input: {
         }
       }
     }
-    const dependencies = [...policy.requires, ...policy.recommends]
-      .filter((entry) => entry.online_install_default);
-    const skillIds = dependencies.filter((entry) => entry.kind === 'codex_skill').map((entry) => entry.id);
-    const toolIds = dependencies.filter((entry) => entry.kind === 'cli'
-      && (entry.id === 'officecli' || entry.id === 'mineru-open-api'))
-      .map((entry) => entry.id as 'officecli' | 'mineru-open-api');
+    const { dependencies, skillIds, toolIds } = managedPolicyDependencySelection([
+      ...policy.requires,
+      ...policy.recommends,
+    ]);
     const dependencySync = syncOplCompanionSkills(home, {
       mode: input.dryRun ? 'ask_to_apply' : 'managed',
       skillIds,
@@ -769,9 +781,51 @@ function noManagedPolicyCurrentness(reason: string): AgentPackageManagedPolicyCu
     inventory_digest: null,
     enabled_migration_ids: [],
     detected_conflicts: [],
+    dependency_sync: null,
     repair_command: null,
     reason,
   };
+}
+
+function dependencySyncDriftReasons(
+  sync: ReturnType<typeof syncOplCompanionSkills>,
+  skillIds: string[],
+  toolIds: Array<'officecli' | 'mineru-open-api'>,
+) {
+  const reasons: string[] = [];
+  const itemsById = new Map(sync.items.map((entry) => [entry.skill_id, entry]));
+  for (const skillId of skillIds) {
+    const item = itemsById.get(skillId);
+    if (!item) {
+      reasons.push(`missing_skill_readback:${skillId}`);
+      continue;
+    }
+    const discoverOnly = item.action === 'discover_only';
+    const current = discoverOnly
+      ? item.status === 'available'
+        && item.source_authority !== 'missing'
+        && item.frontmatter_schema_status !== 'invalid'
+        && item.resource_closure_status !== 'incomplete'
+      : item.status === 'ready'
+        && item.source_authority !== 'missing'
+        && item.source_payload_sha256 !== null
+        && item.payload_currentness === 'current'
+        && item.frontmatter_schema_status === 'valid'
+        && item.resource_closure_status === 'complete'
+        && item.entrypoint_authority_status === 'converged';
+    if (!current) reasons.push(`skill_drift:${skillId}`);
+  }
+  const toolsById = new Map(sync.tools.map((entry) => [entry.tool_id, entry]));
+  for (const toolId of toolIds) {
+    const tool = toolsById.get(toolId);
+    if (!tool
+      || !['ready', 'installed', 'updated'].includes(tool.status)
+      || tool.currentness === 'missing'
+      || tool.currentness === 'update_available') {
+      reasons.push(`tool_drift:${toolId}`);
+    }
+  }
+  return reasons;
 }
 
 export function managedPolicyCurrentness(
@@ -804,6 +858,7 @@ export function managedPolicyCurrentness(
     inventory_digest: null,
     enabled_migration_ids: migration.migration_ids,
     detected_conflicts: [],
+    dependency_sync: null,
     repair_command: `opl packages repair --package-id ${lock.package_id}`,
     reason,
   });
@@ -825,7 +880,19 @@ export function managedPolicyCurrentness(
     if (expectedPolicySha256 && inspection.policySha256 !== expectedPolicySha256) {
       return invalid('Managed policy bytes no longer match the installed package transaction.');
     }
-    const drifted = inspection.detectedConflicts.length > 0;
+    const { skillIds, toolIds } = managedPolicyDependencySelection([
+      ...inspection.policy.requires,
+      ...inspection.policy.recommends,
+    ]);
+    const dependencySync = syncOplCompanionSkills(inspection.home, {
+      mode: 'observe',
+      skillIds,
+      toolIds,
+      networkAccess: 'forbidden',
+    });
+    const dependencyDriftReasons = dependencySyncDriftReasons(dependencySync, skillIds, toolIds);
+    const conflictDrifted = inspection.detectedConflicts.length > 0;
+    const drifted = conflictDrifted || dependencyDriftReasons.length > 0;
     return {
       surface_kind: 'opl_package_managed_policy_currentness',
       status: drifted ? 'drifted' : 'current',
@@ -837,9 +904,17 @@ export function managedPolicyCurrentness(
       inventory_digest: inspection.inventoryDigest,
       enabled_migration_ids: inspection.enabledMigrationIds,
       detected_conflicts: inspection.detectedConflicts,
+      dependency_sync: dependencySync as unknown as Record<string, unknown>,
       repair_command: drifted ? `opl packages repair --package-id ${lock.package_id}` : null,
       reason: drifted
-        ? `Managed policy drift detected on ${inspection.detectedConflicts.length} discovery surface(s).`
+        ? [
+            conflictDrifted
+              ? `Managed policy drift detected on ${inspection.detectedConflicts.length} discovery surface(s).`
+              : null,
+            dependencyDriftReasons.length > 0
+              ? `Managed dependency drift detected: ${dependencyDriftReasons.join(', ')}.`
+              : null,
+          ].filter(Boolean).join(' ')
         : 'Managed policy is current; no conflicting discovery surface is present.',
     };
   } catch (error) {

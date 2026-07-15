@@ -42,12 +42,12 @@ export function buildOplRecommendedSkillSpecs(options: {
       skill_id: 'ui-ux-pro-max',
       label: 'UI UX Pro Max skill',
       required: false,
-      source: 'github',
+      source: 'skills_manager',
       expected_paths: [
         path.join(skillsManagerHome, 'skills', 'ui-ux-pro-max', 'SKILL.md'),
         ...packagedSkillPath(packagedSkillsRoot, 'ui-ux-pro-max'),
       ],
-      install_hint: 'Install https://github.com/nextlevelbuilder/ui-ux-pro-max-skill so RCA can review and improve visual deliverables.',
+      install_hint: 'Install the Skills Manager ui-ux-pro-max package so RCA can review and improve visual deliverables; the upstream GitHub repository is a fallback only when that authority is absent.',
       supports: ['rca', 'ui_review', 'ux_design', 'presentation_visuals'],
     },
     {

@@ -35,13 +35,32 @@ type OplCompanionSkillSourceCandidate = {
 };
 export type OplCompanionSkillActionStatus = 'planned' | 'ready' | 'missing_source' | 'synced' | 'available' | 'installed' | 'failed';
 export type OplCompanionSkillApplyMode = 'observe' | 'ask_to_apply' | 'managed';
+export type OplCompanionSkillSourceAuthority =
+  | 'skills_manager'
+  | 'packaged_runtime'
+  | 'framework_materialized_fallback'
+  | 'codex_builtin'
+  | 'existing_codex_entry'
+  | 'external'
+  | 'missing';
 
 export type OplCompanionSkillSyncItem = {
   skill_id: string;
   source_path: string | null;
   target_path: string;
+  agents_target_path: string;
   status: OplCompanionSkillActionStatus;
   action: 'none' | 'symlink' | 'clone_and_symlink' | 'update_and_symlink' | 'discover_only';
+  source_authority: OplCompanionSkillSourceAuthority;
+  source_payload_sha256: string | null;
+  installed_payload_sha256: string | null;
+  payload_currentness: 'current' | 'diverged' | 'missing' | 'not_applicable';
+  frontmatter_schema_status: 'valid' | 'invalid' | 'not_checked';
+  resource_closure_status: 'complete' | 'incomplete' | 'not_checked';
+  missing_resource_paths: string[];
+  codex_entry_realpath: string | null;
+  agents_entry_realpath: string | null;
+  entrypoint_authority_status: 'converged' | 'diverged' | 'missing' | 'not_applicable';
   note: string | null;
 };
 
@@ -167,20 +186,12 @@ function forceSymlinkDirectory(sourcePath: string, targetPath: string) {
   fs.symlinkSync(sourcePath, targetPath, 'junction');
 }
 
-function isUserManagedSkillDirectory(targetPath: string) {
-  if (!pathExists(targetPath)) {
-    return false;
-  }
-
-  try {
-    const stat = fs.lstatSync(targetPath);
-    return !stat.isSymbolicLink() && stat.isDirectory() && pathExists(path.join(targetPath, 'SKILL.md'));
-  } catch {
-    return false;
-  }
-}
-
 function isSameResolvedPath(left: string, right: string) {
+  const leftResolved = realPathOrNull(left);
+  const rightResolved = realPathOrNull(right);
+  if (leftResolved && rightResolved) {
+    return leftResolved === rightResolved;
+  }
   return path.resolve(left) === path.resolve(right);
 }
 
@@ -234,6 +245,226 @@ function normalizeMaterializedSkillPermissions(root: string) {
 function isPathWithin(parentPath: string, childPath: string) {
   const relativePath = path.relative(parentPath, childPath);
   return relativePath === '' || (relativePath !== '' && !relativePath.startsWith('..') && !path.isAbsolute(relativePath));
+}
+
+const SKILL_FRONTMATTER_FIELDS = new Set(['name', 'description', 'license', 'allowed-tools', 'metadata']);
+const SKILL_RESOURCE_PATTERN = /(?:^|[^/A-Za-z0-9_.-])((?:references|scripts|templates|assets)\/[A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)*)/gm;
+
+type SkillPayloadInspection = {
+  payloadSha256: string | null;
+  frontmatterStatus: OplCompanionSkillSyncItem['frontmatter_schema_status'];
+  resourceClosureStatus: OplCompanionSkillSyncItem['resource_closure_status'];
+  missingResourcePaths: string[];
+  errors: string[];
+};
+
+function realPathOrNull(targetPath: string) {
+  try {
+    return fs.realpathSync(targetPath);
+  } catch {
+    return null;
+  }
+}
+
+function isIgnoredRuntimeArtifact(name: string, isDirectory: boolean) {
+  return (isDirectory && name === '__pycache__')
+    || (!isDirectory && (name.endsWith('.pyc') || name.endsWith('.pyo')));
+}
+
+function skillPayloadSha256(skillRoot: string) {
+  const resolvedRoot = realPathOrNull(skillRoot);
+  if (!resolvedRoot || !fs.statSync(resolvedRoot).isDirectory()) return null;
+  const digest = crypto.createHash('sha256');
+  const visit = (currentPath: string, relativePath: string) => {
+    const stat = fs.lstatSync(currentPath);
+    if (stat.isSymbolicLink()) {
+      digest.update(`link\0${relativePath}\0${fs.readlinkSync(currentPath)}\0`);
+      return;
+    }
+    if (stat.isDirectory()) {
+      digest.update(`dir\0${relativePath}\0`);
+      for (const entry of fs.readdirSync(currentPath).sort()) {
+        const entryPath = path.join(currentPath, entry);
+        const entryStat = fs.lstatSync(entryPath);
+        if (isIgnoredRuntimeArtifact(entry, entryStat.isDirectory())) continue;
+        visit(entryPath, path.posix.join(relativePath, entry));
+      }
+      return;
+    }
+    if (stat.isFile()) {
+      digest.update(`file\0${relativePath}\0`);
+      digest.update(fs.readFileSync(currentPath));
+    }
+  };
+  visit(resolvedRoot, '.');
+  return digest.digest('hex');
+}
+
+function normalizeFrontmatterScalar(value: string) {
+  const trimmed = value.trim();
+  if (trimmed.length >= 2) {
+    const first = trimmed[0];
+    const last = trimmed[trimmed.length - 1];
+    if ((first === '"' && last === '"') || (first === "'" && last === "'")) {
+      return trimmed.slice(1, -1).trim();
+    }
+  }
+  return trimmed;
+}
+
+function frontmatterFieldValue(frontmatterLines: string[], key: string) {
+  const index = frontmatterLines.findIndex((line) => line.match(/^([A-Za-z0-9_-]+)\s*:/)?.[1] === key);
+  if (index < 0) return '';
+  const inline = frontmatterLines[index].slice(frontmatterLines[index].indexOf(':') + 1).trim();
+  if (!/^[>|][+-]?$/.test(inline)) return normalizeFrontmatterScalar(inline);
+
+  const blockLines: string[] = [];
+  for (const line of frontmatterLines.slice(index + 1)) {
+    if (line.trim() === '') {
+      blockLines.push('');
+      continue;
+    }
+    if (!/^\s/.test(line)) break;
+    blockLines.push(line.replace(/^\s+/, ''));
+  }
+  const value = inline.startsWith('>')
+    ? blockLines.join(' ').replace(/\s+/g, ' ')
+    : blockLines.join('\n');
+  return value.trim();
+}
+
+function validateSkillFrontmatter(content: string, expectedName: string) {
+  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
+  if (!match) return ['missing_or_invalid_frontmatter'];
+  const lines = match[1].split(/\r?\n/);
+  const keys = lines.flatMap((line) => {
+    const key = line.match(/^([A-Za-z0-9_-]+)\s*:/)?.[1];
+    return key ? [key] : [];
+  });
+  const errors: string[] = [];
+  const unexpected = [...new Set(keys.filter((key) => !SKILL_FRONTMATTER_FIELDS.has(key)))].sort();
+  if (unexpected.length > 0) errors.push(`unexpected_frontmatter_fields:${unexpected.join(',')}`);
+  if (new Set(keys).size !== keys.length) errors.push('duplicate_frontmatter_fields');
+  for (const required of ['name', 'description']) {
+    if (!keys.includes(required)) errors.push(`missing_frontmatter_field:${required}`);
+  }
+  const name = frontmatterFieldValue(lines, 'name');
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name) || name.length > 64) {
+    errors.push('invalid_frontmatter_name');
+  } else if (name !== expectedName) {
+    errors.push(`frontmatter_name_mismatch:${name}`);
+  }
+  const description = frontmatterFieldValue(lines, 'description');
+  if (!description) errors.push('empty_frontmatter_description');
+  if (description.includes('<') || description.includes('>') || description.length > 1024) {
+    errors.push('invalid_frontmatter_description');
+  }
+  return errors;
+}
+
+function inspectSkillPayload(skillRoot: string, expectedName: string): SkillPayloadInspection {
+  const skillPath = path.join(skillRoot, 'SKILL.md');
+  if (!fs.existsSync(skillPath) || !fs.statSync(skillPath).isFile()) {
+    return {
+      payloadSha256: null,
+      frontmatterStatus: 'not_checked',
+      resourceClosureStatus: 'not_checked',
+      missingResourcePaths: [],
+      errors: ['missing_skill_entry'],
+    };
+  }
+  const content = fs.readFileSync(skillPath, 'utf8');
+  const frontmatterErrors = validateSkillFrontmatter(content, expectedName);
+  const resolvedRoot = realPathOrNull(skillRoot) ?? path.resolve(skillRoot);
+  const resourcePaths = [...content.matchAll(SKILL_RESOURCE_PATTERN)]
+    .map((match) => match[1].replace(/[.,;:)]*$/, ''));
+  const missingResourcePaths = [...new Set(resourcePaths)]
+    .filter((relativePath) => {
+      const candidate = path.resolve(skillRoot, relativePath);
+      const resolvedCandidate = realPathOrNull(candidate);
+      return !isPathWithin(path.resolve(skillRoot), candidate)
+        || !resolvedCandidate
+        || !isPathWithin(resolvedRoot, resolvedCandidate);
+    })
+    .sort();
+  return {
+    payloadSha256: skillPayloadSha256(skillRoot),
+    frontmatterStatus: frontmatterErrors.length === 0 ? 'valid' : 'invalid',
+    resourceClosureStatus: missingResourcePaths.length === 0 ? 'complete' : 'incomplete',
+    missingResourcePaths,
+    errors: [
+      ...frontmatterErrors,
+      ...missingResourcePaths.map((relativePath) => `missing_skill_resource:${relativePath}`),
+    ],
+  };
+}
+
+function skillSourceAuthority(home: string, skillRoot: string): OplCompanionSkillSourceAuthority {
+  const resolvedRoot = realPathOrNull(skillRoot) ?? path.resolve(skillRoot);
+  const packagedSkillsRoot = resolvePackagedSkillsRoot();
+  const candidates: Array<[string | null, OplCompanionSkillSourceAuthority]> = [
+    [path.join(home, '.skills-manager', 'skills'), 'skills_manager'],
+    [packagedSkillsRoot, 'packaged_runtime'],
+    [resolveCompanionSourcesRoot(home), 'framework_materialized_fallback'],
+    [path.join(resolveCodexHome(home), 'plugins', 'cache'), 'codex_builtin'],
+    [resolveCodexSkillsDir(home), 'existing_codex_entry'],
+  ];
+  return candidates.find(([root]) => root && isPathWithin(realPathOrNull(root) ?? path.resolve(root), resolvedRoot))?.[1]
+    ?? 'external';
+}
+
+type SkillEntrypointSnapshot =
+  | { kind: 'missing' }
+  | { kind: 'symlink'; link: string };
+
+function entrypointSnapshot(targetPath: string): SkillEntrypointSnapshot {
+  try {
+    const stat = fs.lstatSync(targetPath);
+    return stat.isSymbolicLink()
+      ? { kind: 'symlink', link: fs.readlinkSync(targetPath) }
+      : { kind: 'missing' };
+  } catch {
+    return { kind: 'missing' };
+  }
+}
+
+function hasUserManagedEntrypointConflict(targetPath: string, sourcePath: string) {
+  try {
+    const stat = fs.lstatSync(targetPath);
+    return !stat.isSymbolicLink() && !isSameResolvedPath(targetPath, sourcePath);
+  } catch {
+    return false;
+  }
+}
+
+function restoreEntrypoint(targetPath: string, snapshot: SkillEntrypointSnapshot) {
+  fs.rmSync(targetPath, { recursive: true, force: true });
+  if (snapshot.kind === 'symlink') {
+    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+    fs.symlinkSync(snapshot.link, targetPath, 'junction');
+  }
+}
+
+function convergeSkillEntrypoints(sourcePath: string, targetPaths: string[]) {
+  const pendingTargets = targetPaths.filter((targetPath) => !isSameResolvedPath(sourcePath, targetPath));
+  const conflicts = pendingTargets.filter((targetPath) => hasUserManagedEntrypointConflict(targetPath, sourcePath));
+  if (conflicts.length > 0) {
+    throw new Error(`User-managed skill entrypoint conflict: ${conflicts.join(', ')}`);
+  }
+  const snapshots = new Map(pendingTargets.map((targetPath) => [targetPath, entrypointSnapshot(targetPath)]));
+  const changed: string[] = [];
+  try {
+    for (const targetPath of pendingTargets) {
+      forceSymlinkDirectory(sourcePath, targetPath);
+      changed.push(targetPath);
+    }
+  } catch (error) {
+    for (const targetPath of [...pendingTargets].reverse()) {
+      restoreEntrypoint(targetPath, snapshots.get(targetPath) ?? { kind: 'missing' });
+    }
+    throw error;
+  }
+  return changed.length;
 }
 
 function normalizeManagedCompanionSourcePermissions(home: string, sourceRoot: string) {
@@ -402,7 +633,7 @@ function materializeOfficeCliSkillSource(
   home: string,
   skillId: string,
   networkAccess: OplCompanionNetworkAccess,
-) {
+): OplCompanionSkillSourceCandidate | null {
   const repoDir = resolveOfficeCliSourceRoot(home);
   let refresh: ReturnType<typeof cloneOrUpdateRepo> | null = null;
   if (isPathWithin(resolveCompanionSourcesRoot(home), repoDir) && !remoteCompanionInstallDisabled(networkAccess)) {
@@ -442,7 +673,7 @@ function materializeOfficeCliSkillSource(
 function materializeUiUxProMaxSkillSource(
   home: string,
   networkAccess: OplCompanionNetworkAccess,
-) {
+): OplCompanionSkillSourceCandidate | null {
   const repoDir = resolveUiUxProMaxSourceRoot(home);
   let refresh: ReturnType<typeof cloneOrUpdateRepo> | null = null;
   if (isPathWithin(resolveCompanionSourcesRoot(home), repoDir) && !remoteCompanionInstallDisabled(networkAccess)) {
@@ -481,7 +712,7 @@ function materializeUiUxProMaxSkillSource(
 function materializeMineruDocumentExtractorSkillSource(
   home: string,
   networkAccess: OplCompanionNetworkAccess,
-) {
+): OplCompanionSkillSourceCandidate | null {
   const repoDir = resolveMineruDocumentExtractorSourceRoot(home);
   let refresh: ReturnType<typeof downloadArchiveToDirectory> | null = null;
   if (isPathWithin(resolveCompanionSourcesRoot(home), repoDir) && !remoteCompanionInstallDisabled(networkAccess)) {
@@ -505,7 +736,7 @@ function ensureRecommendedSkillSource(
   home: string,
   skill: OplRecommendedSkill,
   networkAccess: OplCompanionNetworkAccess,
-) {
+): OplCompanionSkillSourceCandidate | null {
   const installed = pickFirstExistingSkillSource(skill.install_source_paths ?? skill.expected_paths);
   if (installed) return installed;
 
@@ -524,20 +755,108 @@ function ensureRecommendedSkillSource(
   return null;
 }
 
-function buildObservedCompanionItem(
+function buildFreshCompanionItem(
   home: string,
   skill: OplRecommendedSkill,
+  input: {
+    source: OplCompanionSkillSourceCandidate | null;
+    status: OplCompanionSkillActionStatus;
+    action: OplCompanionSkillSyncItem['action'];
+    note: string | null;
+  },
 ): OplCompanionSkillSyncItem {
   const targetPath = path.join(resolveCodexSkillsDir(home), skill.skill_id);
-  const source = pickFirstExistingSkillSource(skill.expected_paths);
+  const agentsTargetPath = path.join(resolveAgentsSkillsDir(home), skill.skill_id);
+  const sourceRoot = input.source?.link_path ?? null;
+  const builtin = skill.source === 'codex_builtin';
+  const sourceInspection = sourceRoot && !builtin ? inspectSkillPayload(sourceRoot, skill.skill_id) : null;
+  const sourceRealPath = sourceRoot ? realPathOrNull(sourceRoot) : null;
+  const codexEntryRealPath = realPathOrNull(targetPath);
+  const agentsEntryRealPath = realPathOrNull(agentsTargetPath);
+  const entrypointAuthorityStatus: OplCompanionSkillSyncItem['entrypoint_authority_status'] = builtin
+    ? 'not_applicable'
+    : !sourceRealPath
+      ? 'missing'
+      : codexEntryRealPath && agentsEntryRealPath
+        ? codexEntryRealPath === sourceRealPath && agentsEntryRealPath === sourceRealPath
+          ? 'converged'
+          : 'diverged'
+        : 'missing';
+  const installedPayloadSha256 = codexEntryRealPath ? skillPayloadSha256(targetPath) : null;
+  const payloadCurrentness: OplCompanionSkillSyncItem['payload_currentness'] = builtin
+    ? 'not_applicable'
+    : !sourceInspection?.payloadSha256 || !installedPayloadSha256
+      ? 'missing'
+      : sourceInspection.payloadSha256 === installedPayloadSha256 && entrypointAuthorityStatus === 'converged'
+        ? 'current'
+        : 'diverged';
 
   return {
     skill_id: skill.skill_id,
-    source_path: source?.report_path ?? null,
+    source_path: input.source?.report_path ?? null,
     target_path: targetPath,
-    status: skill.status === 'ready' ? 'ready' : 'planned',
-    action: skill.source === 'codex_builtin' ? 'discover_only' : 'none',
-    note: skill.status === 'ready' ? null : skill.install_hint,
+    agents_target_path: agentsTargetPath,
+    status: input.status,
+    action: input.action,
+    source_authority: sourceRoot ? skillSourceAuthority(home, sourceRoot) : 'missing',
+    source_payload_sha256: sourceInspection?.payloadSha256 ?? null,
+    installed_payload_sha256: installedPayloadSha256,
+    payload_currentness: payloadCurrentness,
+    frontmatter_schema_status: sourceInspection?.frontmatterStatus ?? 'not_checked',
+    resource_closure_status: sourceInspection?.resourceClosureStatus ?? 'not_checked',
+    missing_resource_paths: sourceInspection?.missingResourcePaths ?? [],
+    codex_entry_realpath: codexEntryRealPath,
+    agents_entry_realpath: agentsEntryRealPath,
+    entrypoint_authority_status: entrypointAuthorityStatus,
+    note: input.note,
+  };
+}
+
+function buildObservedCompanionItem(
+  home: string,
+  skill: OplRecommendedSkill,
+  mode: OplCompanionSkillApplyMode,
+): OplCompanionSkillSyncItem {
+  const source = pickFirstExistingSkillSource(skill.expected_paths);
+  if (!source) {
+    return buildFreshCompanionItem(home, skill, {
+      source: null,
+      status: mode === 'ask_to_apply' ? 'planned' : 'missing_source',
+      action: skill.source === 'codex_builtin' ? 'discover_only' : 'none',
+      note: skill.install_hint,
+    });
+  }
+  if (skill.source === 'codex_builtin') {
+    return buildFreshCompanionItem(home, skill, {
+      source,
+      status: 'available',
+      action: 'discover_only',
+      note: 'Codex bundled skill is available from its plugin cache.',
+    });
+  }
+  const inspection = inspectSkillPayload(source.link_path, skill.skill_id);
+  if (inspection.errors.length > 0) {
+    return buildFreshCompanionItem(home, skill, {
+      source,
+      status: 'failed',
+      action: 'none',
+      note: `Skill payload validation failed: ${inspection.errors.join(', ')}`,
+    });
+  }
+  const observed = buildFreshCompanionItem(home, skill, {
+    source,
+    status: 'ready',
+    action: 'none',
+    note: null,
+  });
+  if (observed.payload_currentness === 'current'
+    && observed.entrypoint_authority_status === 'converged') {
+    return observed;
+  }
+  return {
+    ...observed,
+    status: 'planned',
+    note: 'Managed Codex and Agents skill entrypoints require convergence.',
   };
 }
 
@@ -551,7 +870,7 @@ function buildNoApplyCompanionResult(
   const selectedTools = toolIds ? new Set(toolIds) : null;
   const items = buildOplRecommendedSkills(home)
     .filter((skill) => !selectedSkills || selectedSkills.has(skill.skill_id))
-    .map((skill) => buildObservedCompanionItem(home, skill));
+    .map((skill) => buildObservedCompanionItem(home, skill, mode));
   const tools = [resolveOfficeCliTool(home), resolveMineruOpenApiTool(home)]
     .filter((tool): tool is OplCompanionToolSyncItem => Boolean(tool))
     .filter((tool) => !selectedTools || selectedTools.has(tool.tool_id));
@@ -639,90 +958,63 @@ export function syncOplCompanionSkills(
   for (const skill of recommendedSkills) {
     const source = ensureRecommendedSkillSource(home, skill, networkAccess);
     const targetPath = path.join(codexSkillsDir, skill.skill_id);
+    const agentsTargetPath = path.join(resolveAgentsSkillsDir(home), skill.skill_id);
     if (!source) {
-      if (resolveSkillSourceCandidate(targetPath)) {
-        items.push({
-          skill_id: skill.skill_id,
-          source_path: targetPath,
-          target_path: targetPath,
-          status: 'ready',
-          action: 'none',
-          note: 'Existing Codex skill is already available.',
-        });
-        continue;
-      }
-
-      items.push({
-        skill_id: skill.skill_id,
-        source_path: null,
-        target_path: targetPath,
+      items.push(buildFreshCompanionItem(home, skill, {
+        source: null,
         status: 'missing_source',
-        action: 'symlink',
+        action: 'none',
         note: skill.install_hint,
-      });
+      }));
       continue;
     }
 
     try {
       if (source.refresh_status === 'manual_required') {
-        items.push({
-          skill_id: skill.skill_id,
-          source_path: source.report_path,
-          target_path: targetPath,
+        items.push(buildFreshCompanionItem(home, skill, {
+          source,
           status: 'failed',
           action: 'update_and_symlink',
           note: source.refresh_note ?? 'Managed companion source update requires review.',
-        });
+        }));
         continue;
       }
       if (skill.source === 'codex_builtin') {
-        fs.rmSync(targetPath, { recursive: true, force: true });
-        items.push({
-          skill_id: skill.skill_id,
-          source_path: source.report_path,
-          target_path: targetPath,
+        items.push(buildFreshCompanionItem(home, skill, {
+          source,
           status: 'available',
           action: 'discover_only',
           note: 'Codex bundled skills are discovered from the plugin cache and are not mirrored into ~/.codex/skills.',
-        });
-      } else if (isSameResolvedPath(source.link_path, targetPath)) {
-        items.push({
-          skill_id: skill.skill_id,
-          source_path: source.report_path,
-          target_path: targetPath,
-          status: 'ready',
-          action: 'none',
-          note: 'Existing Codex skill is already installed at the target path.',
-        });
-      } else if (isUserManagedSkillDirectory(targetPath)) {
-        items.push({
-          skill_id: skill.skill_id,
-          source_path: targetPath,
-          target_path: targetPath,
-          status: 'ready',
-          action: 'none',
-          note: 'Preserved existing user-managed Codex skill directory.',
-        });
-      } else {
-        forceSymlinkDirectory(source.link_path, targetPath);
-        items.push({
-          skill_id: skill.skill_id,
-          source_path: source.report_path,
-          target_path: targetPath,
-          status: 'synced',
-          action: 'symlink',
-          note: null,
-        });
+        }));
+        continue;
       }
+      const inspection = inspectSkillPayload(source.link_path, skill.skill_id);
+      if (inspection.errors.length > 0) {
+        items.push(buildFreshCompanionItem(home, skill, {
+          source,
+          status: 'failed',
+          action: 'none',
+          note: `Skill payload validation failed: ${inspection.errors.join(', ')}`,
+        }));
+        continue;
+      }
+      const changedEntrypointCount = convergeSkillEntrypoints(
+        source.link_path,
+        [targetPath, agentsTargetPath],
+      );
+      items.push(buildFreshCompanionItem(home, skill, {
+        source,
+        status: changedEntrypointCount > 0 ? 'synced' : 'ready',
+        action: changedEntrypointCount > 0 ? 'symlink' : 'none',
+        note: null,
+      }));
     } catch (error) {
-      items.push({
-        skill_id: skill.skill_id,
-        source_path: source.report_path,
-        target_path: targetPath,
+      items.push(buildFreshCompanionItem(home, skill, {
+        source,
         status: 'failed',
-        action: 'symlink',
+        action: 'none',
         note: error instanceof Error ? error.message : String(error),
-      });
+      }));
     }
   }
 

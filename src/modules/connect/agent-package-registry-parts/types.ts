@@ -365,6 +365,7 @@ export type AgentPackageManagedPolicyCurrentness = {
   inventory_digest: string | null;
   enabled_migration_ids: string[];
   detected_conflicts: AgentPackageManagedPolicyDetectedConflict[];
+  dependency_sync: Record<string, unknown> | null;
   repair_command: string | null;
   reason: string;
 };
