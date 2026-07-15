@@ -170,7 +170,9 @@ function fixtureProjection(workspaceRoot: string, workItemRoot: string): WorkIte
     detail_policy: {
       all_work_item_summaries_included: true,
       attempt_ref_limit_per_item: 8,
-      diagnostic_details: 'included'
+      diagnostic_details: 'included',
+      inventory_detail: 'included',
+      full_detail_surface: 'opl app state --profile full --json'
     },
     authority_boundary: {
       projection_only: true,
