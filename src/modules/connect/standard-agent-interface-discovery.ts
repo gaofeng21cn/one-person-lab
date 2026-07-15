@@ -6,6 +6,7 @@ import {
   type StandardAgentDescriptorInterface,
 } from '../../kernel/standard-agent-interface.ts';
 import {
+  resolveStandardAgent,
   STANDARD_AGENT_REGISTRY,
   STANDARD_AGENT_SERIES_MEMBERSHIP,
 } from '../../kernel/standard-agent-registry.ts';
@@ -19,6 +20,16 @@ type SelectedModuleSource = Pick<
   'installed' | 'install_origin' | 'checkout_path' | 'health_status'
 >;
 type SelectedModuleSourceReader = (moduleId: string) => SelectedModuleSource | null;
+
+export type StandardAgentContractCheckout = {
+  agent_id: string;
+  domain_id: string;
+  target_domain_id: string;
+  package_id: string;
+  checkout_path: string;
+  install_origin: SelectedModuleSource['install_origin'] | 'package_status';
+  source_kind: 'opl_selected_developer_checkout' | 'opl_managed_package_checkout';
+};
 
 export type StandardAgentProgressDeltaKeySet = {
   deliverable: string[];
@@ -111,8 +122,47 @@ function pathsReferToSameLocation(left: string, right: string) {
   return canonicalPath(left) === canonicalPath(right);
 }
 
+function canonicalCheckoutPath(value: string) {
+  try {
+    const resolved = fs.realpathSync.native(value);
+    return fs.statSync(resolved).isDirectory() ? resolved : null;
+  } catch {
+    return null;
+  }
+}
+
 function defaultSelectedModuleSource(moduleId: string): SelectedModuleSource {
   return inspectOplModule(moduleId, { profile: 'fast' });
+}
+
+function checkoutFromSelectedModule(
+  agent: typeof STANDARD_AGENT_REGISTRY[number],
+  readStatus: PackageStatusReader,
+  readSelectedModule: SelectedModuleSourceReader,
+) {
+  const selected = readSelectedModule(agent.domain_id);
+  if (!selected) {
+    return { source_selected: false as const, checkout_path: null, install_origin: null };
+  }
+  if (!selected.installed && selected.health_status === 'missing') {
+    return { source_selected: false as const, checkout_path: null, install_origin: selected.install_origin };
+  }
+  if (!selected.installed || selected.health_status === 'invalid_checkout') {
+    return { source_selected: true as const, checkout_path: null, install_origin: selected.install_origin };
+  }
+
+  if (selected.install_origin === 'managed_root') {
+    const readyCheckout = currentCheckoutFromStatus(agent.agent_id, readStatus);
+    if (!readyCheckout || !pathsReferToSameLocation(readyCheckout, selected.checkout_path)) {
+      return { source_selected: true as const, checkout_path: null, install_origin: selected.install_origin };
+    }
+  }
+
+  return {
+    source_selected: true as const,
+    checkout_path: canonicalCheckoutPath(selected.checkout_path),
+    install_origin: selected.install_origin,
+  };
 }
 
 function descriptorFromSelectedModule(
@@ -120,28 +170,55 @@ function descriptorFromSelectedModule(
   readStatus: PackageStatusReader,
   readSelectedModule: SelectedModuleSourceReader,
 ) {
-  const selected = readSelectedModule(agent.domain_id);
-  if (!selected) {
-    return { source_selected: false as const, descriptor: null };
-  }
-  if (!selected.installed && selected.health_status === 'missing') {
-    return { source_selected: false as const, descriptor: null };
-  }
-  if (!selected.installed || selected.health_status === 'invalid_checkout') {
-    return { source_selected: true as const, descriptor: null };
-  }
-
-  if (selected.install_origin === 'managed_root') {
-    const readyCheckout = currentCheckoutFromStatus(agent.agent_id, readStatus);
-    if (!readyCheckout || !pathsReferToSameLocation(readyCheckout, selected.checkout_path)) {
-      return { source_selected: true as const, descriptor: null };
-    }
-  }
-
+  const selected = checkoutFromSelectedModule(agent, readStatus, readSelectedModule);
   return {
-    source_selected: true as const,
-    descriptor: readStandardAgentDescriptorInterface(selected.checkout_path),
+    source_selected: selected.source_selected,
+    descriptor: selected.checkout_path
+      ? readStandardAgentDescriptorInterface(selected.checkout_path)
+      : null,
   };
+}
+
+export function resolveStandardAgentContractCheckout(
+  domainId: string,
+  readStatus: PackageStatusReader = runOplAgentPackageStatus,
+  readSelectedModule: SelectedModuleSourceReader = defaultSelectedModuleSource,
+): StandardAgentContractCheckout | null {
+  const agent = resolveStandardAgent(domainId);
+  if (!agent || agent.series_membership !== STANDARD_AGENT_SERIES_MEMBERSHIP) {
+    return null;
+  }
+
+  const selected = checkoutFromSelectedModule(agent, readStatus, readSelectedModule);
+  if (selected.source_selected) {
+    return selected.checkout_path
+      ? {
+          agent_id: agent.agent_id,
+          domain_id: agent.domain_id,
+          target_domain_id: agent.target_domain_id,
+          package_id: agent.agent_id,
+          checkout_path: selected.checkout_path,
+          install_origin: selected.install_origin,
+          source_kind: selected.install_origin === 'managed_root'
+            ? 'opl_managed_package_checkout'
+            : 'opl_selected_developer_checkout',
+        }
+      : null;
+  }
+
+  const packageCheckout = currentCheckoutFromStatus(agent.agent_id, readStatus);
+  const checkoutPath = packageCheckout ? canonicalCheckoutPath(packageCheckout) : null;
+  return checkoutPath
+    ? {
+        agent_id: agent.agent_id,
+        domain_id: agent.domain_id,
+        target_domain_id: agent.target_domain_id,
+        package_id: agent.agent_id,
+        checkout_path: checkoutPath,
+        install_origin: 'package_status',
+        source_kind: 'opl_managed_package_checkout',
+      }
+    : null;
 }
 
 export function readPackageManagedStandardAgentDescriptor(

@@ -1,7 +1,17 @@
-import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, runCli, test } from '../helpers.ts';
+import { execFileSync } from 'node:child_process';
+
+import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, repoRoot, runCli, shellSingleQuote, test } from '../helpers.ts';
 import { createAdmittedStagePackFixture } from './workspace-domain-test-helper.ts';
 
 type JsonRecord = Record<string, unknown>;
+
+function initializeManagedCheckout(repoDir: string) {
+  execFileSync('git', ['init', '--quiet'], { cwd: repoDir });
+  execFileSync('git', ['config', 'user.email', 'fixture@example.com'], { cwd: repoDir });
+  execFileSync('git', ['config', 'user.name', 'Fixture'], { cwd: repoDir });
+  execFileSync('git', ['add', '.'], { cwd: repoDir });
+  execFileSync('git', ['-c', 'commit.gpgsign=false', 'commit', '--quiet', '-m', 'fixture'], { cwd: repoDir });
+}
 
 function buildActionCatalog(targetDomainId: string, actionId: string, stageId: string, options: {
   owner: string;
@@ -181,7 +191,7 @@ function withSkillDomainProjectionOnly(payload: JsonRecord, catalog: JsonRecord)
   return attachCatalog(payload);
 }
 
-test('family action catalog is resolved from domain manifests and exported as derived tool surfaces', () => {
+test('standard family action catalogs resolve from managed contracts and export derived tool surfaces', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-actions-state-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const fixtures = loadFamilyManifestFixtures();
@@ -246,6 +256,17 @@ test('family action catalog is resolved from domain manifests and exported as de
     'MedAutoGrant',
     { stageCount: 1 },
   );
+  initializeManagedCheckout(redcubePack.repoDir);
+  initializeManagedCheckout(masPack.repoDir);
+  initializeManagedCheckout(magPack.repoDir);
+  const cliEnv = {
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_STATE_DIR: stateRoot,
+    OPL_MODULES_ROOT: path.join(stateRoot, 'modules'),
+    OPL_MODULE_PATH_REDCUBE: redcubePack.repoDir,
+    OPL_MODULE_PATH_MEDAUTOSCIENCE: masPack.repoDir,
+    OPL_MODULE_PATH_MEDAUTOGRANT: magPack.repoDir,
+  };
 
   try {
     runCli([
@@ -257,7 +278,7 @@ test('family action catalog is resolved from domain manifests and exported as de
       redcubePack.repoDir,
       '--manifest-command',
       buildManifestCommand(redcubePack.manifest),
-    ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
+    ], cliEnv);
     runCli([
       'workspace',
       'bind',
@@ -267,7 +288,7 @@ test('family action catalog is resolved from domain manifests and exported as de
       masPack.repoDir,
       '--manifest-command',
       buildManifestCommand(masPack.manifest),
-    ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
+    ], cliEnv);
     runCli([
       'workspace',
       'bind',
@@ -277,54 +298,48 @@ test('family action catalog is resolved from domain manifests and exported as de
       magPack.repoDir,
       '--manifest-command',
       buildManifestCommand(magPack.manifest),
-    ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
+    ], cliEnv);
 
-    const manifests = runCli(['domain', 'manifests'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    });
+    const manifests = runCli(['domain', 'manifests'], cliEnv);
     const redcubeEntry = manifests.domain_manifests.projects.find(
       (entry: { project_id: string }) => entry.project_id === 'redcube',
     );
     assert.equal(redcubeEntry.status, 'resolved', JSON.stringify(redcubeEntry.error));
     assert.equal(redcubeEntry.manifest.family_action_catalog.actions[0].action_id, 'start_deliverable');
 
-    const list = runCli(['actions', 'list'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    });
+    const list = runCli(['actions', 'list'], cliEnv);
     assert.equal(list.family_actions.summary.resolved_catalogs_count, 3);
+    assert.equal(list.family_actions.summary.managed_catalogs_count, 3);
+    assert.equal(list.family_actions.summary.legacy_catalogs_count, 0);
     assert.equal(list.family_actions.summary.actions_count, 3);
     assert.deepEqual(
       list.family_actions.actions.map((entry: { action_id: string }) => entry.action_id).sort(),
       ['inspect_study_progress', 'open_grant_user_loop', 'start_deliverable'],
     );
+    assert.ok(list.family_actions.domains.every((entry: any) =>
+      entry.catalog_source.source_kind === 'managed_standard_agent_contract'
+      && entry.stage_catalog.stage_count === 1
+      && entry.legacy_binding.used_for_catalog_resolution === false
+    ));
 
-    const inspect = runCli(['actions', 'inspect', '--domain', 'redcube', '--action', 'start_deliverable'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    });
+    const inspect = runCli(['actions', 'inspect', '--domain', 'redcube', '--action', 'start_deliverable'], cliEnv);
     assert.equal(inspect.family_action.action.action_id, 'start_deliverable');
     assert.equal(
       inspect.family_action.projections.cli.command,
-      `opl agents run --domain redcube_ai --action start_deliverable --workspace ${redcubePack.repoDir}`,
+      `opl agents run --domain redcube_ai --action start_deliverable --workspace ${repoRoot}`,
     );
+    assert.equal(inspect.family_action.catalog_source.source_kind, 'managed_standard_agent_contract');
+    assert.equal(inspect.family_action.stage_catalog.stage_ids[0], 'stage_1');
     assert.equal(inspect.family_action.projections.openai.type, 'function');
     assert.equal(inspect.family_action.parity.status, 'aligned');
 
-    const mcpExport = runCli(['actions', 'export', '--domain', 'medautogrant', '--format', 'mcp'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    });
+    const mcpExport = runCli(['actions', 'export', '--domain', 'medautogrant', '--format', 'mcp'], cliEnv);
     assert.equal(mcpExport.family_action_export.format, 'mcp');
     assert.equal(mcpExport.family_action_export.descriptors[0].name, 'open_grant_user_loop');
     assert.equal(mcpExport.family_action_export.descriptors[0].descriptor_only, true);
     assert.equal(mcpExport.family_action_export.descriptors[0].public_runtime, false);
 
-    const openaiExport = runCli(['actions', 'export', '--domain', 'redcube', '--format', 'openai'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    });
+    const openaiExport = runCli(['actions', 'export', '--domain', 'redcube', '--format', 'openai'], cliEnv);
     assert.equal(openaiExport.family_action_export.descriptors[0].type, 'function');
     assert.equal(openaiExport.family_action_export.descriptors[0].function.name, 'start_deliverable');
   } finally {
@@ -333,6 +348,79 @@ test('family action catalog is resolved from domain manifests and exported as de
     fs.rmSync(masPack.repoDir, { recursive: true, force: true });
     fs.rmSync(magPack.repoDir, { recursive: true, force: true });
     fs.rmSync(redcubePack.repoDir, { recursive: true, force: true });
+  }
+});
+
+test('stale deleted Standard Agent manifest command cannot override a managed contract catalog', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-actions-stale-binding-state-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const fixtures = loadFamilyManifestFixtures();
+  const masManifest = withFamilyActionCatalog(
+    fixtures.medautoscience,
+    buildActionCatalog(
+      'medautoscience',
+      'inspect_study_progress',
+      'stage_1',
+      {
+        owner: 'med-autoscience',
+        title: 'Inspect MAS study progress',
+        surfaceKind: 'study_progress',
+        effect: 'read_only',
+      },
+    ),
+  );
+  const masPack = createAdmittedStagePackFixture(
+    masManifest,
+    'medautoscience',
+    'MedAutoScience',
+    { stageCount: 1 },
+  );
+  initializeManagedCheckout(masPack.repoDir);
+  const staleCommandMarker = path.join(stateRoot, 'legacy-command-executed');
+  const deletedManifestCommand = path.join(stateRoot, 'deleted-manifest-command');
+  const cliEnv = {
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_STATE_DIR: stateRoot,
+    OPL_MODULES_ROOT: path.join(stateRoot, 'modules'),
+    OPL_MODULE_PATH_MEDAUTOSCIENCE: masPack.repoDir,
+  };
+
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      masPack.repoDir,
+      '--manifest-command',
+      `touch ${shellSingleQuote(staleCommandMarker)} && ${shellSingleQuote(deletedManifestCommand)}`,
+    ], cliEnv);
+
+    const list = runCli(['actions', 'list'], cliEnv);
+    const mas = list.family_actions.domains.find(
+      (entry: { project_id: string }) => entry.project_id === 'medautoscience',
+    );
+
+    assert.equal(fs.existsSync(staleCommandMarker), false, 'legacy manifest command must not execute');
+    assert.equal(mas.manifest_status, 'resolved');
+    assert.equal(mas.ready, true);
+    assert.equal(mas.action_count, 1);
+    assert.equal(mas.catalog_source.source_kind, 'managed_standard_agent_contract');
+    assert.equal(mas.stage_catalog.stage_count, 1);
+    assert.equal(mas.legacy_binding.source_role, 'migration_diagnostic_only');
+    assert.equal(mas.legacy_binding.manifest_command_configured, true);
+    assert.equal(mas.legacy_binding.used_for_catalog_resolution, false);
+    assert.deepEqual(
+      list.family_actions.actions
+        .filter((entry: { project_id: string }) => entry.project_id === 'medautoscience')
+        .map((entry: { action_id: string }) => entry.action_id),
+      ['inspect_study_progress'],
+    );
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(masPack.repoDir, { recursive: true, force: true });
   }
 });
 
@@ -360,6 +448,13 @@ test('family action parity accepts skill domain projection and product-entry act
     'RedCubeAI',
     { stageCount: 1 },
   );
+  initializeManagedCheckout(redcubePack.repoDir);
+  const cliEnv = {
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_STATE_DIR: stateRoot,
+    OPL_MODULES_ROOT: path.join(stateRoot, 'modules'),
+    OPL_MODULE_PATH_REDCUBE: redcubePack.repoDir,
+  };
 
   try {
     runCli([
@@ -371,12 +466,12 @@ test('family action parity accepts skill domain projection and product-entry act
       redcubePack.repoDir,
       '--manifest-command',
       buildManifestCommand(redcubePack.manifest),
-    ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
+    ], cliEnv);
 
-    const inspect = runCli(['actions', 'inspect', '--domain', 'redcube', '--action', 'start_deliverable'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    });
+    const inspect = runCli(
+      ['actions', 'inspect', '--domain', 'redcube', '--action', 'start_deliverable'],
+      cliEnv,
+    );
 
     assert.equal(inspect.family_action.parity.status, 'aligned');
     assert.deepEqual(inspect.family_action.parity.issues, []);

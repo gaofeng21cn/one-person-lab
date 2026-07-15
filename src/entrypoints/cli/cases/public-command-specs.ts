@@ -520,7 +520,7 @@ export function buildPublicCommandSpecs(
     }),
     'actions list': {
       usage: 'opl actions list',
-      summary: 'List family action catalogs resolved from bound domain-owned manifests.',
+      summary: 'List domain-owned family action catalogs from selected managed Standard Agent contracts or non-standard legacy bindings.',
       examples: ['opl actions list'],
       group: 'domain',
       handler: (args) => {
@@ -530,14 +530,14 @@ export function buildPublicCommandSpecs(
     },
     'actions inspect': {
       usage: 'opl actions inspect --domain <domain> --action <action_id>',
-      summary: 'Inspect one domain-owned family action plus its derived CLI/MCP/Skill/tool projections.',
+      summary: 'Inspect one managed or legacy domain action plus its derived CLI/MCP/Skill/tool projections.',
       examples: ['opl actions inspect --domain redcube --action start_deliverable'],
       group: 'domain',
       handler: (args) => buildFamilyActionInspect(getContracts(), args),
     },
     'actions export': {
       usage: 'opl actions export --domain <domain> --format <cli|mcp|skill|openai|ai-sdk>',
-      summary: 'Export one domain action catalog as a derived CLI, MCP, Skill, OpenAI, or AI SDK descriptor set.',
+      summary: 'Export one resolved domain action catalog as a derived CLI, MCP, Skill, OpenAI, or AI SDK descriptor set.',
       examples: [
         'opl actions export --domain medautoscience --format mcp',
         'opl actions export --domain redcube --format openai',

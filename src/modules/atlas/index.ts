@@ -10,6 +10,11 @@ export { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts
 export type { DomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 export { normalizeManifest } from './domain-manifest/normalizers.ts';
 export { resolveBindingManifest } from './domain-manifest/resolver.ts';
+export {
+  loadManagedStandardAgentContractCatalog,
+  STANDARD_AGENT_ACTION_CATALOG_REF,
+  STANDARD_AGENT_STAGE_CATALOG_REF,
+} from './domain-manifest/managed-standard-agent-contracts.ts';
 export type { ManifestCommandTimeoutPolicy } from './domain-manifest/resolver.ts';
 export { isRecord } from './domain-manifest/shared-utils.ts';
 export type { DomainManifestCatalogEntry, NormalizedDomainManifest, NormalizedSurfaceRef } from './domain-manifest/types.ts';

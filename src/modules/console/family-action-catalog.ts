@@ -2,10 +2,17 @@ import type { FrameworkContracts } from '../../kernel/types.ts';
 import {
   matchesStandardDomainAgentCatalogEntry,
   normalizeStandardDomainAgentId,
+  resolveStandardAgent,
+  STANDARD_AGENT_SERIES_MEMBERSHIP,
 } from '../../kernel/standard-agent-registry.ts';
-import { buildDomainManifestCatalog } from '../atlas/index.ts';
+import {
+  resolveBindingManifest,
+  loadManagedStandardAgentContractCatalog,
+} from '../atlas/index.ts';
 import type { DomainManifestCatalogEntry } from '../atlas/index.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { resolveStandardAgentContractCheckout } from '../connect/index.ts';
+import { getActiveWorkspaceBinding } from '../workspace/index.ts';
 import type {
   FamilyActionCatalog,
   FamilyActionCatalogAction,
@@ -55,19 +62,34 @@ export interface FamilyActionListEntry {
   human_gate_ids: string[];
 }
 
-function actionWorkspace(entry: DomainManifestCatalogEntry) {
+type FamilyActionDomainEntry = {
+  project_id: string;
+  project: string;
+  binding_id: string | null;
+  workspace_path: string | null;
+  manifest_status: string;
+  target_domain_id: string | null;
+  catalog: FamilyActionCatalog | null;
+  projection_manifest: DomainManifestCatalogEntry['manifest'];
+  catalog_source: Record<string, unknown> | null;
+  stage_catalog: Record<string, unknown> | null;
+  legacy_binding: Record<string, unknown>;
+  error: unknown;
+};
+
+function actionWorkspace(entry: FamilyActionDomainEntry) {
   if (!entry.workspace_path) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
       'Resolved family action catalogs require an absolute workspace path.',
-      { project_id: entry.project_id, target_domain_id: entry.manifest?.target_domain_id ?? null },
+      { project_id: entry.project_id, target_domain_id: entry.target_domain_id },
     );
   }
   return entry.workspace_path;
 }
 
-export function buildFamilyActionListEntry(
-  entry: DomainManifestCatalogEntry,
+function buildFamilyActionListEntry(
+  entry: FamilyActionDomainEntry,
   catalog: FamilyActionCatalog,
   action: FamilyActionCatalogAction,
 ): FamilyActionListEntry {
@@ -91,35 +113,196 @@ export function buildFamilyActionListEntry(
   };
 }
 
-function resolveCatalogFromEntry(entry: DomainManifestCatalogEntry) {
-  return entry.status === 'resolved' ? entry.manifest?.family_action_catalog ?? null : null;
+function legacyBindingProjection(
+  binding: ReturnType<typeof getActiveWorkspaceBinding>,
+  status: 'not_bound' | 'migration_diagnostic_only' | 'active_legacy_source',
+) {
+  return {
+    source_role: status,
+    binding_id: binding?.binding_id ?? null,
+    workspace_path: binding?.workspace_path ?? null,
+    manifest_command_configured: Boolean(binding?.direct_entry.manifest_command),
+    used_for_catalog_resolution: status === 'active_legacy_source',
+  };
+}
+
+function managedContractError(error: unknown) {
+  return {
+    code: error instanceof FrameworkContractError ? error.code : 'managed_contract_invalid',
+    message: error instanceof Error ? error.message : String(error),
+    details: error instanceof FrameworkContractError ? error.details : {},
+  };
+}
+
+function buildManagedActionDomainEntry(
+  domain: FrameworkContracts['domains']['domains'][number],
+): FamilyActionDomainEntry {
+  const binding = getActiveWorkspaceBinding(domain.domain_id);
+  try {
+    const source = resolveStandardAgentContractCheckout(domain.domain_id);
+    if (!source) {
+      return {
+        project_id: domain.domain_id,
+        project: domain.project,
+        binding_id: binding?.binding_id ?? null,
+        workspace_path: process.cwd(),
+        manifest_status: 'managed_contract_unavailable',
+        target_domain_id: resolveStandardAgent(domain.domain_id)?.target_domain_id ?? null,
+        catalog: null,
+        projection_manifest: null,
+        catalog_source: null,
+        stage_catalog: null,
+        legacy_binding: legacyBindingProjection(binding, binding ? 'migration_diagnostic_only' : 'not_bound'),
+        error: {
+          code: 'managed_contract_unavailable',
+          message: 'The Standard Agent managed source checkout is unavailable or not current.',
+        },
+      };
+    }
+    const resolved = loadManagedStandardAgentContractCatalog({
+      requested_domain_id: domain.domain_id,
+      checkout_agent_id: source.agent_id,
+      checkout_path: source.checkout_path,
+    });
+
+    return {
+      project_id: domain.domain_id,
+      project: domain.project,
+      binding_id: binding?.binding_id ?? null,
+      workspace_path: process.cwd(),
+      manifest_status: 'resolved',
+      target_domain_id: resolved.catalog.target_domain_id,
+      catalog: resolved.catalog,
+      projection_manifest: null,
+      catalog_source: {
+        source_kind: 'managed_standard_agent_contract',
+        package_id: source.package_id,
+        checkout_source_kind: source.source_kind,
+        install_origin: source.install_origin,
+        checkout_path: source.checkout_path,
+        action_catalog_ref: resolved.action_catalog_ref,
+        authority_boundary: resolved.authority_boundary,
+      },
+      stage_catalog: {
+        source_kind: 'compiled_managed_standard_agent_stage_catalog',
+        source_ref: resolved.stage_catalog_ref,
+        plane_id: resolved.stage_control_plane.plane_id,
+        stage_count: resolved.stage_control_plane.stages.length,
+        stage_ids: resolved.stage_control_plane.stages.map((stage) => stage.stage_id),
+      },
+      legacy_binding: legacyBindingProjection(binding, binding ? 'migration_diagnostic_only' : 'not_bound'),
+      error: null,
+    };
+  } catch (error) {
+    return {
+      project_id: domain.domain_id,
+      project: domain.project,
+      binding_id: binding?.binding_id ?? null,
+      workspace_path: process.cwd(),
+      manifest_status: 'managed_contract_invalid',
+      target_domain_id: resolveStandardAgent(domain.domain_id)?.target_domain_id ?? null,
+      catalog: null,
+      projection_manifest: null,
+      catalog_source: null,
+      stage_catalog: null,
+      legacy_binding: legacyBindingProjection(binding, binding ? 'migration_diagnostic_only' : 'not_bound'),
+      error: managedContractError(error),
+    };
+  }
+}
+
+function buildLegacyActionDomainEntry(
+  domain: FrameworkContracts['domains']['domains'][number],
+): FamilyActionDomainEntry {
+  const binding = getActiveWorkspaceBinding(domain.domain_id);
+  if (!binding) {
+    return {
+      project_id: domain.domain_id,
+      project: domain.project,
+      binding_id: null,
+      workspace_path: null,
+      manifest_status: 'not_bound',
+      target_domain_id: null,
+      catalog: null,
+      projection_manifest: null,
+      catalog_source: null,
+      stage_catalog: null,
+      legacy_binding: legacyBindingProjection(null, 'not_bound'),
+      error: null,
+    };
+  }
+  const manifestEntry = resolveBindingManifest(domain.domain_id, domain.project, binding);
+  const catalog = manifestEntry.status === 'resolved'
+    ? manifestEntry.manifest?.family_action_catalog ?? null
+    : null;
+  const stageControlPlane = manifestEntry.status === 'resolved'
+    ? manifestEntry.manifest?.family_stage_control_plane ?? null
+    : null;
+  return {
+    project_id: domain.domain_id,
+    project: domain.project,
+    binding_id: binding.binding_id,
+    workspace_path: binding.workspace_path,
+    manifest_status: manifestEntry.status,
+    target_domain_id: catalog?.target_domain_id ?? manifestEntry.manifest?.target_domain_id ?? null,
+    catalog,
+    projection_manifest: manifestEntry.manifest,
+    catalog_source: catalog
+      ? {
+          source_kind: 'legacy_direct_entry_manifest',
+          workspace_path: binding.workspace_path,
+          authority_boundary: {
+            source_role: 'non_standard_or_migration_only',
+            opl_can_write_domain_truth: false,
+          },
+        }
+      : null,
+    stage_catalog: stageControlPlane
+      ? {
+          source_kind: 'legacy_direct_entry_manifest',
+          plane_id: stageControlPlane.plane_id,
+          stage_count: stageControlPlane.stages.length,
+          stage_ids: stageControlPlane.stages.map((stage) => stage.stage_id),
+        }
+      : null,
+    legacy_binding: legacyBindingProjection(binding, 'active_legacy_source'),
+    error: manifestEntry.error,
+  };
 }
 
 function buildActionIndex(contracts: FrameworkContracts) {
-  const catalog = buildDomainManifestCatalog(contracts).domain_manifests;
-  const domains = catalog.projects.map((entry) => {
-    const actionCatalog = resolveCatalogFromEntry(entry);
+  const entries = contracts.domains.domains.map((domain) => {
+    const agent = resolveStandardAgent(domain.domain_id);
+    return agent?.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP
+      ? buildManagedActionDomainEntry(domain)
+      : buildLegacyActionDomainEntry(domain);
+  });
+  const domains = entries.map((entry) => {
+    const actionCatalog = entry.catalog;
     return {
       project_id: entry.project_id,
       project: entry.project,
       binding_id: entry.binding_id,
-      manifest_status: entry.status,
-      target_domain_id: actionCatalog?.target_domain_id ?? entry.manifest?.target_domain_id ?? null,
+      manifest_status: entry.manifest_status,
+      target_domain_id: actionCatalog?.target_domain_id ?? entry.target_domain_id,
       catalog_id: actionCatalog?.catalog_id ?? null,
       action_count: actionCatalog?.actions.length ?? 0,
       ready: Boolean(actionCatalog),
+      catalog_source: entry.catalog_source,
+      stage_catalog: entry.stage_catalog,
+      legacy_binding: entry.legacy_binding,
       error: entry.error,
     };
   });
-  const actions = catalog.projects.flatMap((entry) => {
-    const actionCatalog = resolveCatalogFromEntry(entry);
+  const actions = entries.flatMap((entry) => {
+    const actionCatalog = entry.catalog;
     return actionCatalog
       ? actionCatalog.actions.map((action) => buildFamilyActionListEntry(entry, actionCatalog, action))
       : [];
   });
 
   return {
-    domain_manifests: catalog,
+    entries,
     domains,
     actions,
   };
@@ -134,6 +317,12 @@ export function buildFamilyActionsList(contracts: FrameworkContracts) {
       summary: {
         total_projects_count: index.domains.length,
         resolved_catalogs_count: index.domains.filter((entry) => entry.ready).length,
+        managed_catalogs_count: index.domains.filter(
+          (entry) => entry.catalog_source?.source_kind === 'managed_standard_agent_contract',
+        ).length,
+        legacy_catalogs_count: index.domains.filter(
+          (entry) => entry.catalog_source?.source_kind === 'legacy_direct_entry_manifest',
+        ).length,
         actions_count: index.actions.length,
       },
       domains: index.domains,
@@ -149,26 +338,27 @@ function normalizeDomainSelection(value: string) {
 function findDomainEntry(contracts: FrameworkContracts, domain: string) {
   const index = buildActionIndex(contracts);
   const normalized = normalizeDomainSelection(domain);
-  const entry = index.domain_manifests.projects.find((candidate) => {
-    const catalog = resolveCatalogFromEntry(candidate);
+  const entry = index.entries.find((candidate) => {
+    const catalog = candidate.catalog;
     return candidate.project_id === normalized
       || candidate.project === normalized
       || matchesStandardDomainAgentCatalogEntry(domain, candidate)
       || catalog?.target_domain_id === domain
       || catalog?.target_domain_id === normalized
-      || candidate.manifest?.domain_entry_contract?.domain_agent_entry_spec?.agent_id === normalized;
+      || candidate.target_domain_id === normalized;
   });
   if (!entry) {
     throw new FrameworkContractError('cli_usage_error', `Unknown family action domain: ${domain}.`, {
       domain,
-      allowed_domains: index.domain_manifests.projects.map((project) => project.project_id),
+      allowed_domains: index.entries.map((project) => project.project_id),
     });
   }
-  const catalog = resolveCatalogFromEntry(entry);
+  const catalog = entry.catalog;
   if (!catalog) {
     throw new FrameworkContractError('missing_family_action_catalog', `Domain does not expose a family action catalog: ${domain}.`, {
       domain,
-      manifest_status: entry.status,
+      manifest_status: entry.manifest_status,
+      error: entry.error,
     });
   }
   return { entry, catalog };
@@ -223,9 +413,12 @@ export function buildFamilyActionInspect(contracts: FrameworkContracts, args: st
       project: entry.project,
       target_domain_id: catalog.target_domain_id,
       catalog_id: catalog.catalog_id,
+      catalog_source: entry.catalog_source,
+      stage_catalog: entry.stage_catalog,
+      legacy_binding: entry.legacy_binding,
       action,
       projections,
-      parity: buildFamilyActionCatalogParity(catalog, workspacePath, entry.manifest),
+      parity: buildFamilyActionCatalogParity(catalog, workspacePath, entry.projection_manifest),
     },
   };
 }
@@ -253,9 +446,12 @@ export function buildFamilyActionExport(contracts: FrameworkContracts, args: str
       project: entry.project,
       target_domain_id: catalog.target_domain_id,
       catalog_id: catalog.catalog_id,
+      catalog_source: entry.catalog_source,
+      stage_catalog: entry.stage_catalog,
+      legacy_binding: entry.legacy_binding,
       format,
       descriptors: projectFamilyActionCatalog(catalog, format, workspacePath),
-      parity: buildFamilyActionCatalogParity(catalog, workspacePath, entry.manifest),
+      parity: buildFamilyActionCatalogParity(catalog, workspacePath, entry.projection_manifest),
     },
   };
 }

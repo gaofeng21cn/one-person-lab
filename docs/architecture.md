@@ -318,7 +318,7 @@ OPL 的三层产品认知说明“面向谁”，当前十个品牌模块说明 
 
 - `family-action-graph` 继续描述流程图、节点、边、checkpoint policy 与 human gate。
 - `family-action-catalog` 描述可调用 action：`action_id`、owner、effect、input/output schema ref、source command、supported surfaces、human gates、workspace locator 与 authority boundary。
-- `OPL` 只负责 shared schema、TS/Python helper、manifest normalizer、parity helper，以及 `opl actions list|inspect|export` 这组只读发现命令。
+- `OPL` 只负责 shared schema、TS/Python helper、manifest normalizer、parity helper，以及 `opl actions list|inspect|export` 这组只读发现命令。对 Standard Agent，发现链固定从 OPL 当前选中的 developer checkout 或通过 package currentness 校验的 managed checkout 读取 `contracts/action_catalog.json`，并从同一 checkout 编译 `agent/stages/manifest.json`；workspace binding 的 `direct_entry.manifest_command` 只保留为迁移诊断信息，不参与 Standard Agent catalog 解析。非 Standard Agent 才可继续使用 legacy direct-entry manifest 发现链。
 - domain 仓继续持有 handler、runtime、controller truth、review truth、quality verdict 与 publication/deliverable authority。
 - 外部 `Ageniti` 的可取之处只被吸收到 contract 思路：单一 app action 定义派生多种调用面；OPL family 不引入 `@ageniti/core` runtime dependency。
 

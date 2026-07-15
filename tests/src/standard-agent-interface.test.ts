@@ -17,6 +17,7 @@ import {
 import {
   readPackageManagedStandardAgentDescriptor,
   readStandardAgentDescriptorForDomain,
+  resolveStandardAgentContractCheckout,
   standardAgentProgressDeltaKeySet,
   standardAgentProgressDeltaKeys,
 } from '../../src/modules/connect/standard-agent-interface-discovery.ts';
@@ -458,6 +459,65 @@ test('known domain discovery probes only its matching managed package', () => {
   readStandardAgentDescriptorForDomain('medautoscience', statusReader, () => null);
 
   assert.deepEqual(statusReads, ['mas']);
+});
+
+test('standard Agent contract checkout prefers the OPL-selected developer source', () => {
+  const repoDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-standard-contract-checkout-'));
+  const statusReads: string[] = [];
+  const statusReader = ((input: { packageId?: string | null }) => {
+    statusReads.push(input.packageId ?? '');
+    throw new Error('Package status must not override a selected developer checkout.');
+  }) as PackageStatusReaderFixture;
+  try {
+    const checkout = resolveStandardAgentContractCheckout('medautoscience', statusReader, () => ({
+      installed: true,
+      install_origin: 'sibling_workspace',
+      checkout_path: repoDir,
+      health_status: 'ready',
+    }));
+
+    assert.equal(checkout?.agent_id, 'mas');
+    assert.equal(checkout?.domain_id, 'medautoscience');
+    assert.equal(checkout?.source_kind, 'opl_selected_developer_checkout');
+    assert.equal(fs.realpathSync.native(checkout?.checkout_path ?? ''), fs.realpathSync.native(repoDir));
+    assert.deepEqual(statusReads, []);
+  } finally {
+    fs.rmSync(repoDir, { recursive: true, force: true });
+  }
+});
+
+test('managed-root contract checkout requires matching current package source', () => {
+  const selectedRepo = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-standard-selected-managed-'));
+  const packageRepo = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-standard-package-managed-'));
+  const statusReader = (() => ({
+    opl_agent_package_status: {
+      installed_package_count: 1,
+      package_dependency_readiness: {
+        status: 'current',
+        operational_ready: true,
+      },
+      runtime_source_readiness: {
+        status: 'current',
+        operational_ready: true,
+        checkout_path: packageRepo,
+        expected_tree_sha256: 'sha256:current',
+        actual_tree_sha256: 'sha256:current',
+      },
+    },
+  })) as PackageStatusReaderFixture;
+  try {
+    const checkout = resolveStandardAgentContractCheckout('mas', statusReader, () => ({
+      installed: true,
+      install_origin: 'managed_root',
+      checkout_path: selectedRepo,
+      health_status: 'ready',
+    }));
+
+    assert.equal(checkout, null);
+  } finally {
+    fs.rmSync(selectedRepo, { recursive: true, force: true });
+    fs.rmSync(packageRepo, { recursive: true, force: true });
+  }
 });
 
 test('developer-selected sibling descriptor wins over an inactive stale managed mirror', () => {
