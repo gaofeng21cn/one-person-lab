@@ -166,11 +166,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Verify native helper lifecycle
+      - name: Verify native helper lifecycle and fixture family smoke
         run: ./scripts/verify.sh native
-
-      - name: Verify native helper fixture family smoke
-        run: npm run native:family-smoke -- --fixture --require-real-workspaces
 
   lint-and-structure:
     name: Lint and local structure gate

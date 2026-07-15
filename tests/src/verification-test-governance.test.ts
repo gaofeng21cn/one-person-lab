@@ -47,7 +47,6 @@ const verifyWorkflowNativeAndStructurePatterns = [
   /\.\/scripts\/verify\.sh native/,
   /\.\/scripts\/verify\.sh lint/,
   /\.\/scripts\/verify\.sh structure/,
-  /npm run native:family-smoke -- --fixture --require-real-workspaces/,
   /rust-toolchain/,
   /\.\/scripts\/install-sentrux-ci\.sh/,
   /OPL_QUALITY_DETAILS_TIMEOUT_SECONDS: '240'/,
@@ -165,6 +164,12 @@ test('GitHub verification workflow runs build and JavaScript test gates', () => 
 
 test('GitHub verification workflow runs native and local structure gates', () => {
   assertFilePatterns('.github/workflows/verify.yml', verifyWorkflowNativeAndStructurePatterns);
+});
+
+test('canonical native verification keeps fixture smoke in the same isolated environment', () => {
+  assertFilePatterns('scripts/verify.sh', [
+    /npm run native:family-smoke -- --fixture --require-real-workspaces/,
+  ]);
 });
 
 test('Sentrux advisory workflow publishes OPL quality details sidecar', () => {

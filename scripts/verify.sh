@@ -68,6 +68,7 @@ case "$lane" in
     npm run native:build
     npm run native:cache
     npm run native:family-smoke
+    npm run native:family-smoke -- --fixture --require-real-workspaces
     ;;
   full)
     npm run test:full
