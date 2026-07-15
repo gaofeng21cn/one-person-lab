@@ -4,7 +4,7 @@
   "package_id": "obf",
   "display_name": "OPL Book Forge",
   "publisher": "one-person-lab",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "source": "first_party",
   "registry_entry": {
     "registry_kind": "first_party_agent_package_registry_entry",
@@ -42,8 +42,8 @@
   },
   "codex_surface": {
     "plugin_id": "opl-bookforge",
-    "plugin_payload_manifest_url": "payloads/obf-0.3.3.json",
-    "carrier_source_commit": "86f38070bbf21d55abc12e35eeb352c62c208da3",
+    "plugin_payload_manifest_url": "payloads/obf-0.3.4.json",
+    "carrier_source_commit": "80c5a0da174511034401b31b440c629223e058f8",
     "standalone_distribution": "generated_carrier_surface",
     "required_skill_ids": [
       "opl-bookforge"

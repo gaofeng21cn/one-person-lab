@@ -18,6 +18,7 @@ import {
   enrichRegistryCacheManifestMetadata,
   normalizePackageCatalogRegistry,
 } from '../../../../../src/modules/connect/agent-package-registry-parts/directory.ts';
+import { getOplPackageSpecs } from '../../../../../src/modules/connect/package-distribution.ts';
 import { normalizeRegistry } from '../../../../../src/modules/connect/agent-package-registry-parts/manifest-normalizers.ts';
 import { fetchAndValidateRegistry } from '../../../../../src/modules/connect/agent-package-registry-parts/selection.ts';
 import { listOplAgentPackages } from '../../../../../src/modules/connect/agent-package-registry.ts';
@@ -114,8 +115,13 @@ exit 1
     const flow = directory.entries.find((entry: any) => entry.package_id === 'opl-flow');
     const scholarSkills = directory.entries.find((entry: any) => entry.package_id === 'mas-scholar-skills');
     assert.equal(flow.package_role, 'workflow_profile');
-    assert.equal(flow.selected_version, '0.1.20');
-    assert.equal(flow.stable_version, '0.1.20');
+    assert.equal(flow.projected_version, '0.1.20');
+    assert.equal(flow.selected_version, null);
+    assert.equal(flow.stable_version, null);
+    assert.equal(flow.source_explanation.kind, 'first_party_framework_projection');
+    assert.equal(flow.version_currentness.status, 'framework_projection_only');
+    assert.equal(flow.version_currentness.live_verified, false);
+    assert.equal(directory.first_party_release_currentness.status, 'unknown');
     assert.equal(scholarSkills.package_role, 'framework_capability_package');
 
     for (const profile of ['fast', 'full'] as const) {
@@ -138,6 +144,55 @@ exit 1
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(fixture.home, { recursive: true, force: true });
   }
+});
+
+test('first-party Directory versions come only from the managed Release Set selector', () => {
+  const versions = new Map(getOplPackageSpecs().map((spec) => {
+    const packageVersion = spec.package_id === 'opl-flow' ? '0.1.19' : spec.selected_version;
+    const sourceArtifactRef = `ghcr.io/fixture/one-person-lab-packages/${spec.package_id}:${packageVersion}`;
+    return [spec.package_id, {
+      package_id: spec.package_id,
+      package_role: spec.package_role,
+      selected_version: packageVersion,
+      versions: [{
+        package_version: packageVersion,
+        capability_abi: null,
+        manifest_url: `opl+oci://${sourceArtifactRef}#/package-manifest.json`,
+        manifest_sha256: `sha256:${'1'.repeat(64)}`,
+        manifest_json: '{}',
+        payload_manifest_json: '{}',
+        payload_manifest_sha256: `sha256:${'2'.repeat(64)}`,
+        content_digest: `sha256:${'3'.repeat(64)}`,
+        payload_digest: `sha256:${'4'.repeat(64)}`,
+        source_artifact_ref: sourceArtifactRef,
+        artifact_digest: `sha256:${'5'.repeat(64)}`,
+        artifact_status: 'published_immutable',
+        package_content_digest: `sha256:${'6'.repeat(64)}`,
+        owner_source_commit: '7'.repeat(40),
+        dependency_package_ids: [],
+        selection_status: 'selected_for_release_set' as const,
+      }],
+    }];
+  }));
+  const directory = buildAgentPackageDirectory({
+    registryCache: null,
+    locks: [],
+    detail: 'fast',
+    firstPartyCatalog: {
+      catalog: versions,
+      freshness: 'live',
+      catalog_ref: 'ghcr.io/fixture/one-person-lab-manifest:latest-stable',
+      catalog_digest: `sha256:${'8'.repeat(64)}`,
+      checked_at: '2026-07-15T00:00:00.000Z',
+    },
+  });
+  const flow = directory.entries.find((entry) => entry.package_id === 'opl-flow')!;
+  assert.equal(flow.projected_version, '0.1.20');
+  assert.equal(flow.selected_version, '0.1.19');
+  assert.equal(flow.stable_version, '0.1.19');
+  assert.equal(flow.version_currentness.status, 'live_release_set');
+  assert.equal(flow.version_currentness.live_verified, true);
+  assert.equal(directory.first_party_release_currentness.status, 'live');
 });
 
 test('external package catalogs preserve third-party selection and reject first-party identity collisions', () => {

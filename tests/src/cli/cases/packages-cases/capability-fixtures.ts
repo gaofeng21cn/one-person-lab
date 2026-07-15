@@ -6,6 +6,7 @@ import {
   CANONICAL_PACKAGE_CONTENT_LOCK,
   packageContentLockDigest,
 } from '../../../../../src/modules/connect/agent-package-registry-parts/payload-content-lock.ts';
+import { resolveOplDomainModuleSpec } from '../../../../../src/modules/connect/system-installation/modules.ts';
 
 const PACKAGE_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.package.source.v1+gzip';
 const CHANNEL_MANIFEST_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.release.channel-manifest.v1+json';
@@ -287,7 +288,10 @@ export function writePackageCatalog(root: string, manifestPaths: string[]) {
       manifest.version,
       requiredSkillIds,
     );
-    const archiveRoot = `${packageId}-${manifest.version}`;
+    const runtimeSourceModuleId = sourceManifest.runtime_source_carrier?.module_id;
+    const archiveRoot = typeof runtimeSourceModuleId === 'string'
+      ? resolveOplDomainModuleSpec(runtimeSourceModuleId).repo_name
+      : `${packageId}-${manifest.version}`;
     const archiveParent = path.join(root, 'release-set-sources');
     const archiveSourceRoot = path.join(archiveParent, archiveRoot);
     const archivePath = path.join(root, 'release-set-artifacts', `${archiveRoot}.tar.gz`);

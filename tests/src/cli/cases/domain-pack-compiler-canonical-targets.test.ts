@@ -27,7 +27,7 @@ test('generated interfaces expose a family-defaults source for readiness drilldo
     );
   }
   for (const [agentId, targetDomainId] of [
-    ['mas', 'mas'],
+    ['mas', 'medautoscience'],
     ['mag', 'med-autogrant'],
     ['rca', 'redcube_ai'],
     ['oma', 'opl-meta-agent'],

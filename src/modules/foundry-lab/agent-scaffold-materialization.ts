@@ -20,6 +20,11 @@ import { SOURCE_DERIVED_AGENT_DESIGN_TYPED_OBJECTS } from './source-derived-agen
 export const AGENT_SCAFFOLD_MATERIALIZATION_REQUEST_SCHEMA_REF =
   'contracts/opl-framework/agent-scaffold-materialization-request.schema.json';
 
+const AGENT_SCAFFOLD_MATERIALIZATION_REQUEST_VERSION =
+  'opl-agent-scaffold-materialization-request.v2';
+const LEGACY_AGENT_SCAFFOLD_MATERIALIZATION_REQUEST_VERSION =
+  'opl-agent-scaffold-materialization-request.v1';
+
 const MERGE_PATHS = [
   'contracts/domain_descriptor.json',
   'contracts/capability_map.json',
@@ -158,25 +163,27 @@ function readRequest(requestPath: string) {
   return { path: resolved, sha256: sha256(raw), value: parsed };
 }
 
-function validateHeader(request: Record<string, unknown>) {
-  const expected = {
-    surface_kind: 'opl_agent_scaffold_materialization_request',
-    version: 'opl-agent-scaffold-materialization-request.v1',
-    canonical_schema_ref: AGENT_SCAFFOLD_MATERIALIZATION_REQUEST_SCHEMA_REF,
-    request_owner: 'opl-meta-agent',
-    execution_owner: 'one-person-lab/OPL Foundry Lab',
-  };
-  for (const [field, value] of Object.entries(expected)) {
-    if (request[field] !== value) fail(`Scaffold materialization request ${field} is invalid.`, { field, expected: value });
+function normalizeMaterializationRequest(request: Record<string, unknown>) {
+  const inputVersion = requireString(request.version, 'version');
+  if (inputVersion === AGENT_SCAFFOLD_MATERIALIZATION_REQUEST_VERSION) {
+    return {
+      value: request,
+      inputVersion,
+      compatibilityAdapter: null,
+    };
   }
-  requireExactObject(request.overwrite_policy, 'overwrite_policy', {
-    mode: 'replace_declared_files_only',
-    allow_existing_target_dir: true,
-    reject_absolute_paths: true,
-    reject_parent_traversal: true,
-    reject_symlink_escape: true,
-    allowed_merge_object_paths: [...MERGE_PATHS],
-  });
+  if (inputVersion !== LEGACY_AGENT_SCAFFOLD_MATERIALIZATION_REQUEST_VERSION) {
+    fail('Scaffold materialization request version is unsupported.', {
+      input_version: inputVersion,
+      supported_versions: [
+        AGENT_SCAFFOLD_MATERIALIZATION_REQUEST_VERSION,
+        LEGACY_AGENT_SCAFFOLD_MATERIALIZATION_REQUEST_VERSION,
+      ],
+    });
+  }
+  if (request.request_owner !== 'opl-meta-agent' || Object.hasOwn(request, 'producer_agent_id')) {
+    fail('Legacy scaffold materialization requests must retain the exact OMA v1 owner identity.');
+  }
   requireExactObject(request.authority_boundary, 'authority_boundary', {
     oma_authors_agent_building_semantics: true,
     oma_writes_target_agent_files: false,
@@ -187,6 +194,74 @@ function validateHeader(request: Record<string, unknown>) {
     opl_can_write_target_domain_truth: false,
     opl_can_authorize_quality_or_export: false,
   });
+  const candidate = requireObject(request.build_receipt_candidate, 'build_receipt_candidate');
+  const { request_owner: _requestOwner, ...requestWithoutLegacyOwner } = request;
+  return {
+    value: {
+      ...requestWithoutLegacyOwner,
+      version: AGENT_SCAFFOLD_MATERIALIZATION_REQUEST_VERSION,
+      producer_agent_id: 'oma',
+      build_receipt_candidate: {
+        ...candidate,
+        surface_kind: [
+          'opl_meta_agent_build_receipt',
+          'opl_meta_agent_build_receipt_candidate',
+        ].includes(String(candidate.surface_kind))
+          ? 'opl_foundry_agent_build_receipt_candidate'
+          : candidate.surface_kind,
+        producer_agent_id: 'oma',
+      },
+      authority_boundary: {
+        producer_authors_agent_building_semantics: true,
+        producer_writes_target_agent_files: false,
+        opl_owns_physical_scaffold_materialization: true,
+        opl_owns_materialized_file_digests: true,
+        opl_owns_final_build_receipt: true,
+        build_receipt_candidate_is_final_receipt: false,
+        opl_can_write_target_domain_truth: false,
+        opl_can_authorize_quality_or_export: false,
+      },
+    },
+    inputVersion,
+    compatibilityAdapter: 'opl_agent_scaffold_materialization_request.v1_to_v2',
+  };
+}
+
+function validateHeader(request: Record<string, unknown>) {
+  const expected = {
+    surface_kind: 'opl_agent_scaffold_materialization_request',
+    version: AGENT_SCAFFOLD_MATERIALIZATION_REQUEST_VERSION,
+    canonical_schema_ref: AGENT_SCAFFOLD_MATERIALIZATION_REQUEST_SCHEMA_REF,
+    execution_owner: 'one-person-lab/OPL Foundry Lab',
+  };
+  for (const [field, value] of Object.entries(expected)) {
+    if (request[field] !== value) fail(`Scaffold materialization request ${field} is invalid.`, { field, expected: value });
+  }
+  const producerAgentId = requireString(request.producer_agent_id, 'producer_agent_id');
+  if (!/^[a-z][a-z0-9_-]*$/.test(producerAgentId) || Object.hasOwn(request, 'request_owner')) {
+    fail('Scaffold materialization request producer identity is invalid.', {
+      producer_agent_id: producerAgentId,
+    });
+  }
+  requireExactObject(request.overwrite_policy, 'overwrite_policy', {
+    mode: 'replace_declared_files_only',
+    allow_existing_target_dir: true,
+    reject_absolute_paths: true,
+    reject_parent_traversal: true,
+    reject_symlink_escape: true,
+    allowed_merge_object_paths: [...MERGE_PATHS],
+  });
+  requireExactObject(request.authority_boundary, 'authority_boundary', {
+    producer_authors_agent_building_semantics: true,
+    producer_writes_target_agent_files: false,
+    opl_owns_physical_scaffold_materialization: true,
+    opl_owns_materialized_file_digests: true,
+    opl_owns_final_build_receipt: true,
+    build_receipt_candidate_is_final_receipt: false,
+    opl_can_write_target_domain_truth: false,
+    opl_can_authorize_quality_or_export: false,
+  });
+  return producerAgentId;
 }
 
 function parseJsonObjectText(raw: string, field: string) {
@@ -216,7 +291,7 @@ function inspectTargetBeforeWrite(targetDir: string) {
 }
 
 function preflightMaterializationRequest(request: Record<string, unknown>, targetDir: string) {
-  validateHeader(request);
+  const producerAgentId = validateHeader(request);
   const target = requireObject(request.target_identity, 'target_identity');
   const domainId = requireString(target.domain_id, 'target_identity.domain_id');
   const domainLabel = requireString(target.domain_label, 'target_identity.domain_label');
@@ -361,12 +436,13 @@ function preflightMaterializationRequest(request: Record<string, unknown>, targe
   if (candidate.receipt_ref !== expectedReceiptRef) {
     fail('build_receipt_candidate.receipt_ref does not match the expected build receipt ref.');
   }
-  if (!['opl_meta_agent_build_receipt', 'opl_meta_agent_build_receipt_candidate'].includes(String(candidate.surface_kind))
+  if (candidate.surface_kind !== 'opl_foundry_agent_build_receipt_candidate'
+    || candidate.producer_agent_id !== producerAgentId
     || Object.hasOwn(candidate, 'materialized_file_digests')
     || Object.hasOwn(candidate, 'materialization_receipt')
     || Object.hasOwn(candidate, 'materialization')
     || Object.hasOwn(candidate, 'receipt_timing')) {
-    fail('OMA build receipt input must remain a candidate and cannot self-sign final materialization evidence.');
+    fail('Foundry producer build receipt input must remain a candidate and cannot self-sign final materialization evidence.');
   }
 
   const validationRequests = request.validation_requests;
@@ -389,6 +465,7 @@ function preflightMaterializationRequest(request: Record<string, unknown>, targe
     expectedReceiptRef,
     projectionPaths: projectionPaths as string[],
     validationRequests: validationRequests as string[],
+    producerAgentId,
   };
 }
 
@@ -438,7 +515,7 @@ function parseWrites(request: Record<string, unknown>, root: string) {
         fail(`${relativePath} existing file must contain valid JSON.`);
       }
     }
-    add({ relativePath, bytes: Buffer.from(formatJsonPayload({ ...existing, ...incoming })), role: 'oma_json_projection' });
+    add({ relativePath, bytes: Buffer.from(formatJsonPayload({ ...existing, ...incoming })), role: 'producer_json_projection' });
   });
   const replacements: Array<[unknown, string]> = [[request.stage_manifest, 'stage_manifest']];
   if (!Array.isArray(request.contracts) || request.contracts.length === 0) fail('contracts must be a non-empty array.');
@@ -498,7 +575,8 @@ function parseWrites(request: Record<string, unknown>, root: string) {
 
 export function materializeAgentScaffold(input: { requestPath: string; targetDir: string }) {
   const request = readRequest(input.requestPath);
-  const preflight = preflightMaterializationRequest(request.value, input.targetDir);
+  const normalizedRequest = normalizeMaterializationRequest(request.value);
+  const preflight = preflightMaterializationRequest(normalizedRequest.value, input.targetDir);
   const root = prepareTargetRoot(input.targetDir);
   assertNoExistingSymlinks(root);
   buildStandardDomainAgentScaffold({
@@ -507,7 +585,7 @@ export function materializeAgentScaffold(input: { requestPath: string; targetDir
     domainLabel: preflight.domainLabel,
     force: false,
   });
-  const writes = parseWrites(request.value, root);
+  const writes = parseWrites(normalizedRequest.value, root);
   const {
     candidate,
     expectedReceiptRef,
@@ -515,6 +593,7 @@ export function materializeAgentScaffold(input: { requestPath: string; targetDir
     receiptPath,
     target,
     validationRequests,
+    producerAgentId,
   } = preflight;
   for (const entry of writes.values()) atomicWrite(root, entry);
   const capabilityMapPath = path.join(root, 'contracts/capability_map.json');
@@ -603,6 +682,10 @@ export function materializeAgentScaffold(input: { requestPath: string; targetDir
         status: 'materialized',
         request_ref: request.path,
         request_sha256: request.sha256,
+        input_request_version: normalizedRequest.inputVersion,
+        normalized_request_version: AGENT_SCAFFOLD_MATERIALIZATION_REQUEST_VERSION,
+        compatibility_adapter: normalizedRequest.compatibilityAdapter,
+        producer_agent_id: producerAgentId,
         target_agent_ref: target.target_agent_ref,
         target_dir: root,
         overwrite_mode: 'replace_declared_files_only',

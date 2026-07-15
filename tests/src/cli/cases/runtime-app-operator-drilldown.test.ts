@@ -5,6 +5,7 @@ import {
   buildManifestCommand,
   createFamilyContractsFixtureRoot,
   fs,
+  installRuntimePackageFixture,
   loadFamilyManifestFixtures,
   os,
   path,
@@ -13,10 +14,6 @@ import {
   spawn,
   test,
 } from '../helpers.ts';
-import {
-  writeCapabilityProvider,
-  writeMasConsumer,
-} from './packages-cases/capability-fixtures.ts';
 
 test('runtime snapshot exposes the user-visible summary and stale Temporal worker repair route', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-operator-state-'));
@@ -110,12 +107,7 @@ test('runtime app operator projects completed memory trace refs without body or 
 
   try {
     fs.mkdirSync(workspaceRoot, { recursive: true });
-    const providerManifest = writeCapabilityProvider(path.join(stateRoot, 'provider'));
-    const consumerManifest = writeMasConsumer(path.join(stateRoot, 'consumer'), providerManifest);
-    runCli([
-      'packages', 'install', '--manifest-url', consumerManifest, '--trust-tier', 'first_party',
-      '--scope', 'workspace', '--target-workspace', workspaceRoot,
-    ], env);
+    installRuntimePackageFixture(stateRoot, 'mas');
     const attempt = runCli([
       'family-runtime',
       'attempt',

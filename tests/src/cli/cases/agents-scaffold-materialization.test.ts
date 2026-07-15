@@ -13,6 +13,17 @@ const AUTHORITY = {
   opl_can_authorize_quality_or_export: false,
 };
 
+const V2_AUTHORITY = {
+  producer_authors_agent_building_semantics: true,
+  producer_writes_target_agent_files: false,
+  opl_owns_physical_scaffold_materialization: true,
+  opl_owns_materialized_file_digests: true,
+  opl_owns_final_build_receipt: true,
+  build_receipt_candidate_is_final_receipt: false,
+  opl_can_write_target_domain_truth: false,
+  opl_can_authorize_quality_or_export: false,
+};
+
 function request(overrides: Record<string, unknown> = {}) {
   return {
     surface_kind: 'opl_agent_scaffold_materialization_request',
@@ -62,6 +73,23 @@ function request(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function v2Request(overrides: Record<string, unknown> = {}) {
+  const legacy = request();
+  const { request_owner: _requestOwner, ...canonical } = legacy;
+  return {
+    ...canonical,
+    version: 'opl-agent-scaffold-materialization-request.v2',
+    producer_agent_id: 'oma',
+    build_receipt_candidate: {
+      ...(canonical.build_receipt_candidate as Record<string, unknown>),
+      surface_kind: 'opl_foundry_agent_build_receipt_candidate',
+      producer_agent_id: 'oma',
+    },
+    authority_boundary: V2_AUTHORITY,
+    ...overrides,
+  };
+}
+
 function sha256(bytes: Buffer) {
   return crypto.createHash('sha256').update(bytes).digest('hex');
 }
@@ -96,6 +124,10 @@ test('agents scaffold materializes only declared files and OPL-signs byte digest
     const packInput = JSON.parse(fs.readFileSync(path.join(target, 'contracts/pack_compiler_input.json'), 'utf8'));
     const buildReceipt = JSON.parse(fs.readFileSync(path.join(target, 'contracts/agent_build_receipt.json'), 'utf8'));
     assert.equal(receipt.status, 'materialized');
+    assert.equal(receipt.input_request_version, 'opl-agent-scaffold-materialization-request.v1');
+    assert.equal(receipt.normalized_request_version, 'opl-agent-scaffold-materialization-request.v2');
+    assert.equal(receipt.compatibility_adapter, 'opl_agent_scaffold_materialization_request.v1_to_v2');
+    assert.equal(receipt.producer_agent_id, 'oma');
     assert.equal(descriptor.kept, true);
     assert.equal(descriptor.projected, true);
     assert.deepEqual(packInput.required_domain_pack_paths, ['agent/stages/manifest.json', 'agent/prompts/run.md']);
@@ -120,6 +152,25 @@ test('agents scaffold materializes only declared files and OPL-signs byte digest
       assert.equal(digest.sha256, sha256(fs.readFileSync(path.join(target, digest.path))));
     }
     assert.equal(receipt.authority_boundary.materialization_receipt_can_claim_domain_ready, false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('agents scaffold consumes the producer-neutral v2 ABI without a compatibility adapter', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scaffold-materialize-v2-'));
+  const target = path.join(root, 'target');
+  const requestPath = path.join(root, 'request.json');
+  fs.writeFileSync(requestPath, JSON.stringify(v2Request()));
+  try {
+    const receipt = runCli([
+      'agents', 'scaffold', '--materialize-request', requestPath, '--target-dir', target,
+    ]).standard_domain_agent_scaffold.materialization_receipt;
+    assert.equal(receipt.input_request_version, 'opl-agent-scaffold-materialization-request.v2');
+    assert.equal(receipt.normalized_request_version, 'opl-agent-scaffold-materialization-request.v2');
+    assert.equal(receipt.compatibility_adapter, null);
+    assert.equal(receipt.producer_agent_id, 'oma');
+    assert.equal(receipt.build_receipt.producer_agent_id, 'oma');
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

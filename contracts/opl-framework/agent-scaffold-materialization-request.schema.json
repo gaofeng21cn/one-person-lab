@@ -4,16 +4,16 @@
   "title": "OPL Agent Scaffold Materialization Request",
   "type": "object",
   "required": [
-    "surface_kind", "version", "canonical_schema_ref", "request_owner", "execution_owner",
+    "surface_kind", "version", "canonical_schema_ref", "producer_agent_id", "execution_owner",
     "target_identity", "overwrite_policy", "files", "json_projections", "stage_manifest",
     "contracts", "pack_compiler_input", "build_receipt_candidate", "build_receipt_installation",
     "validation_requests", "authority_boundary"
   ],
   "properties": {
     "surface_kind": { "const": "opl_agent_scaffold_materialization_request" },
-    "version": { "const": "opl-agent-scaffold-materialization-request.v1" },
+    "version": { "const": "opl-agent-scaffold-materialization-request.v2" },
     "canonical_schema_ref": { "const": "contracts/opl-framework/agent-scaffold-materialization-request.schema.json" },
-    "request_owner": { "const": "opl-meta-agent" },
+    "producer_agent_id": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$" },
     "execution_owner": { "const": "one-person-lab/OPL Foundry Lab" },
     "target_identity": {
       "type": "object",
@@ -61,7 +61,16 @@
       },
       "additionalProperties": false
     },
-    "build_receipt_candidate": { "type": "object" },
+    "build_receipt_candidate": {
+      "type": "object",
+      "required": ["surface_kind", "receipt_ref", "producer_agent_id"],
+      "properties": {
+        "surface_kind": { "const": "opl_foundry_agent_build_receipt_candidate" },
+        "receipt_ref": { "$ref": "#/$defs/nonEmptyString" },
+        "producer_agent_id": { "$ref": "#/$defs/producerAgentId" }
+      },
+      "additionalProperties": true
+    },
     "build_receipt_installation": {
       "type": "object", "required": ["expected_build_receipt_ref", "receipt_path", "projection_paths"],
       "properties": {
@@ -74,10 +83,10 @@
     "validation_requests": { "const": ["standard_domain_agent_scaffold", "domain_pack_compiler", "agent_profile_conformance"] },
     "authority_boundary": {
       "type": "object",
-      "required": ["oma_authors_agent_building_semantics", "oma_writes_target_agent_files", "opl_owns_physical_scaffold_materialization", "opl_owns_materialized_file_digests", "opl_owns_final_build_receipt", "build_receipt_candidate_is_final_receipt", "opl_can_write_target_domain_truth", "opl_can_authorize_quality_or_export"],
+      "required": ["producer_authors_agent_building_semantics", "producer_writes_target_agent_files", "opl_owns_physical_scaffold_materialization", "opl_owns_materialized_file_digests", "opl_owns_final_build_receipt", "build_receipt_candidate_is_final_receipt", "opl_can_write_target_domain_truth", "opl_can_authorize_quality_or_export"],
       "properties": {
-        "oma_authors_agent_building_semantics": { "const": true },
-        "oma_writes_target_agent_files": { "const": false },
+        "producer_authors_agent_building_semantics": { "const": true },
+        "producer_writes_target_agent_files": { "const": false },
         "opl_owns_physical_scaffold_materialization": { "const": true },
         "opl_owns_materialized_file_digests": { "const": true },
         "opl_owns_final_build_receipt": { "const": true },
@@ -90,6 +99,7 @@
   },
   "$defs": {
     "nonEmptyString": { "type": "string", "minLength": 1 },
+    "producerAgentId": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$" },
     "safeRelativePath": { "type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\\\]+$" },
     "file": {
       "type": "object", "required": ["path", "body", "role"],

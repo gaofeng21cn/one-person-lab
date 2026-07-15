@@ -45,8 +45,17 @@ function standardFixture(t: TestContext) {
   git(ownerRoot, ['config', 'user.email', 'test@example.com']);
   git(ownerRoot, ['add', '.']);
   git(ownerRoot, ['commit', '-qm', 'owner source']);
-  const head = git(ownerRoot, ['rev-parse', 'HEAD']);
+  const carrierCommit = git(ownerRoot, ['rev-parse', 'HEAD']);
   git(ownerRoot, ['tag', '-a', `v${version}`, '-m', `v${version}`]);
+  writeJson(path.join(ownerRoot, 'contracts', 'owner-package.json'), {
+    package_id: packageId,
+    agent_id: packageId,
+    version,
+    codex_surface: { carrier_source_commit: carrierCommit },
+  });
+  git(ownerRoot, ['add', 'contracts/owner-package.json']);
+  git(ownerRoot, ['commit', '-qm', 'bind carrier source authority']);
+  const head = git(ownerRoot, ['rev-parse', 'HEAD']);
   const payloadRef = `payloads/${packageId}-${version}.json`;
   const manifestPath = path.join(frameworkRoot, 'contracts', 'opl-framework', 'packages', `${packageId}.json`);
   const payloadPath = path.join(path.dirname(manifestPath), payloadRef);
@@ -55,7 +64,7 @@ function standardFixture(t: TestContext) {
     { path: 'skills/med-autoscience/SKILL.md', absolute: skillPath },
   ].map((entry) => ({
     path: entry.path,
-    source_url: `https://raw.githubusercontent.com/example/med-autoscience/${head}/${sourceRoot}/${entry.path}`,
+    source_url: `https://raw.githubusercontent.com/example/med-autoscience/${carrierCommit}/${sourceRoot}/${entry.path}`,
     sha256: digest(entry.absolute),
   }));
   writeJson(manifestPath, {
@@ -63,13 +72,16 @@ function standardFixture(t: TestContext) {
     agent_id: packageId,
     version,
     source_repo: repoUrl,
-    codex_surface: { plugin_payload_manifest_url: payloadRef },
+    codex_surface: {
+      plugin_payload_manifest_url: payloadRef,
+      carrier_source_commit: carrierCommit,
+    },
   });
   writeJson(payloadPath, {
     package_id: packageId,
     package_version: version,
     source_repo: repoUrl,
-    source_commit: head,
+    source_commit: carrierCommit,
     source_root: sourceRoot,
     files,
   });
@@ -80,7 +92,17 @@ function standardFixture(t: TestContext) {
     owner_package_manifest_ref: 'contracts/owner-package.json',
     owner_manifest_kind: 'standard_agent',
   };
-  return { ownerRoot, frameworkRoot, manifestPath, payloadPath, spec, version, head, skillPath };
+  return {
+    ownerRoot,
+    frameworkRoot,
+    manifestPath,
+    payloadPath,
+    spec,
+    version,
+    head,
+    carrierCommit,
+    skillPath,
+  };
 }
 
 test('package source projection gate binds annotated owner tag, exact commit, URLs, and bytes', (t) => {
@@ -91,9 +113,44 @@ test('package source projection gate binds annotated owner tag, exact commit, UR
     ownerRepoPath: fixture.ownerRoot,
   });
   assert.equal(result.status, 'validated');
-  assert.equal(result.owner_source_commit, fixture.head);
+  assert.equal(result.owner_source_commit, fixture.carrierCommit);
+  assert.equal(result.owner_head, fixture.head);
+  assert.notEqual(result.owner_head, result.owner_source_commit);
   assert.equal(result.owner_version_tag, `v${fixture.version}`);
   assert.equal(result.file_count, 2);
+});
+
+test('package source projection gate requires owner carrier authority for standard Agents', (t) => {
+  const fixture = standardFixture(t);
+  const ownerManifestPath = path.join(fixture.ownerRoot, 'contracts', 'owner-package.json');
+  const ownerManifest = JSON.parse(fs.readFileSync(ownerManifestPath, 'utf8'));
+  delete ownerManifest.codex_surface.carrier_source_commit;
+  writeJson(ownerManifestPath, ownerManifest);
+
+  assert.throws(
+    () => validatePackageSourceProjection({
+      frameworkRoot: fixture.frameworkRoot,
+      spec: fixture.spec,
+      ownerRepoPath: fixture.ownerRoot,
+    }),
+    (error: unknown) => (error as { code?: string }).code === 'carrier_source_commit_missing',
+  );
+});
+
+test('package source projection gate rejects central carrier authority drift', (t) => {
+  const fixture = standardFixture(t);
+  const projected = JSON.parse(fs.readFileSync(fixture.manifestPath, 'utf8'));
+  projected.codex_surface.carrier_source_commit = '0'.repeat(40);
+  writeJson(fixture.manifestPath, projected);
+
+  assert.throws(
+    () => validatePackageSourceProjection({
+      frameworkRoot: fixture.frameworkRoot,
+      spec: fixture.spec,
+      ownerRepoPath: fixture.ownerRoot,
+    }),
+    (error: unknown) => (error as { code?: string }).code === 'carrier_source_commit_drift',
+  );
 });
 
 test('package source projection gate rejects a lightweight or missing owner version tag', (t) => {
@@ -105,6 +162,7 @@ test('package source projection gate rejects a lightweight or missing owner vers
       spec: fixture.spec,
       ownerRepoPath: fixture.ownerRoot,
       packageVersion: fixture.version,
+      sourceCommit: fixture.carrierCommit,
       releaseGate: 'daily_package_channel_detection',
     }),
     (error: unknown) => (error as { code?: string }).code === 'version_bump_required',
@@ -120,13 +178,14 @@ test('package source projection gate rejects an annotated bare-version tag', (t)
       spec: fixture.spec,
       ownerRepoPath: fixture.ownerRoot,
       packageVersion: fixture.version,
+      sourceCommit: fixture.carrierCommit,
       releaseGate: 'daily_package_channel_detection',
     }),
     (error: unknown) => (error as { code?: string }).code === 'version_bump_required',
   );
 });
 
-test('package source projection gate rejects stale source commits and owner byte drift', (t) => {
+test('package source projection gate rejects stale payload authority and validates exact committed bytes', (t) => {
   const fixture = standardFixture(t);
   const payload = JSON.parse(fs.readFileSync(fixture.payloadPath, 'utf8'));
   payload.source_commit = '0'.repeat(40);
@@ -140,9 +199,17 @@ test('package source projection gate rejects stale source commits and owner byte
     (error: unknown) => (error as { code?: string }).code === 'payload_source_drift',
   );
 
-  payload.source_commit = fixture.head;
+  payload.source_commit = fixture.carrierCommit;
   writeJson(fixture.payloadPath, payload);
   fs.writeFileSync(fixture.skillPath, '# changed bytes\n');
+  assert.equal(validatePackageSourceProjection({
+    frameworkRoot: fixture.frameworkRoot,
+    spec: fixture.spec,
+    ownerRepoPath: fixture.ownerRoot,
+  }).status, 'validated');
+
+  payload.files[1].sha256 = `sha256:${'0'.repeat(64)}`;
+  writeJson(fixture.payloadPath, payload);
   assert.throws(
     () => validatePackageSourceProjection({
       frameworkRoot: fixture.frameworkRoot,
@@ -195,7 +262,10 @@ test('package source projection gate verifies Scholar Skills ordered content loc
     version,
     source_repo: repoUrl,
     content_lock: contentLock,
-    codex_surface: { plugin_payload_manifest_url: payloadRef },
+    codex_surface: {
+      plugin_payload_manifest_url: payloadRef,
+      carrier_source_commit: head,
+    },
   });
   writeJson(path.join(path.dirname(manifestPath), payloadRef), {
     package_id: 'mas-scholar-skills',

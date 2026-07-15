@@ -841,9 +841,9 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
   const manifest = manifests.mas;
   const expectedReleases: Record<string, { version: string; sourceCommit: string; payloadRef: string }> = {
     mas: {
-      version: '0.2.6',
-      sourceCommit: 'e6137d01aeb6f5cdd9cb61864b9fa116a590b5bf',
-      payloadRef: 'payloads/mas-0.2.6.json',
+      version: '0.2.9',
+      sourceCommit: 'd95b681bfd5d55ee2038456689927518caac0161',
+      payloadRef: 'payloads/mas-0.2.9.json',
     },
     mag: {
       version: '0.3.2',
@@ -851,26 +851,26 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
       payloadRef: 'payloads/mag-0.3.2.json',
     },
     rca: {
-      version: '0.2.5',
-      sourceCommit: '0de0631fbdd2943c3004db8ff52222b1d33993f4',
-      payloadRef: 'payloads/rca-0.2.5.json',
+      version: '0.2.6',
+      sourceCommit: '566fd793cb91860146bf81a104945b76f85ce7e5',
+      payloadRef: 'payloads/rca-0.2.6.json',
     },
     oma: {
-      version: '0.3.4',
-      sourceCommit: '4ed4a855796061d851e8640d465ff9061438cc50',
-      payloadRef: 'payloads/oma-0.3.4.json',
+      version: '0.3.6',
+      sourceCommit: '4761b7ce27275cfcac73444ac82945631e56aa86',
+      payloadRef: 'payloads/oma-0.3.6.json',
     },
     obf: {
-      version: '0.3.3',
-      sourceCommit: '86f38070bbf21d55abc12e35eeb352c62c208da3',
-      payloadRef: 'payloads/obf-0.3.3.json',
+      version: '0.3.4',
+      sourceCommit: '80c5a0da174511034401b31b440c629223e058f8',
+      payloadRef: 'payloads/obf-0.3.4.json',
     },
   };
 
   assert.equal(manifest.schema_ref, 'contracts/opl-framework/agent-package-manifest.schema.json');
   assert.equal(manifest.package_id, 'mas');
   assert.equal(manifest.agent_id, 'mas');
-  assert.equal(manifest.version, '0.2.6');
+  assert.equal(manifest.version, '0.2.9');
   assert.equal(manifest.carrier_source_role, 'codex_plugin_default_carrier_not_package_truth');
   assert.equal(schema.required.includes('distribution_payload'), false);
   assert.equal(schema.properties.distribution_payload.properties.install_truth.const, 'resolved_digest_lock');

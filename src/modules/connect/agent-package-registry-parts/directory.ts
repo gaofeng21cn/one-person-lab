@@ -2,8 +2,15 @@ import { FrameworkContractError, isRecord } from '../../../kernel/contract-valid
 import { parseJsonText } from '../../../kernel/json-file.ts';
 import { recordList, stringList, stringValue } from '../../../kernel/json-record.ts';
 import { canonicalAgentPackageId } from '../agent-package-identity.ts';
-import { resolveFirstPartyPackageCatalog } from '../agent-package-first-party.ts';
+import {
+  assertFirstPartyPackageCatalogVersion,
+  resolveFirstPartyPackageCatalog,
+} from '../agent-package-first-party.ts';
 import { getOplPackageSpecs } from '../package-distribution.ts';
+import {
+  selectManagedCatalogPackageVersion,
+  type ManagedPackageCatalog,
+} from './capability-reconciliation.ts';
 import { normalizePackageManifest } from './manifest-normalizers.ts';
 import { packageRoleFromInstalledLock } from './package-role.ts';
 import { agentPackageLifecycleUxReadback } from './readback.ts';
@@ -47,12 +54,28 @@ type DirectorySource = {
   trust_tier: string;
   source: string;
   manifest_url: string;
+  projected_version: string | null;
   selected_version: string | null;
   stable_version: string | null;
   registry_url: string | null;
   version_source_ref: string;
-  source_kind: 'first_party_release_catalog' | 'agent_package_registry_cache' | 'installed_package_lock';
+  source_kind: 'first_party_framework_projection' | 'first_party_release_catalog' | 'agent_package_registry_cache' | 'installed_package_lock';
   registry_source_ref: string | null;
+  version_currentness: {
+    status: 'live_release_set' | 'cached_release_set' | 'last_known_good_release_set' | 'framework_projection_only' | 'registry_cache' | 'installed_lock_only';
+    live_verified: boolean;
+    source_ref: string | null;
+    source_digest: string | null;
+    checked_at: string | null;
+  };
+};
+
+export type FirstPartyDirectoryCatalogSnapshot = {
+  catalog: ManagedPackageCatalog;
+  freshness: 'live' | 'cached' | 'last_known_good';
+  catalog_ref: string;
+  catalog_digest: string | null;
+  checked_at: string;
 };
 
 const PACKAGE_ROLES = new Set<AgentPackageRole>([
@@ -60,6 +83,11 @@ const PACKAGE_ROLES = new Set<AgentPackageRole>([
   'framework_capability_package',
   'workflow_profile',
 ]);
+
+function isFirstPartyDirectorySource(source: DirectorySource) {
+  return source.source_kind === 'first_party_release_catalog'
+    || source.source_kind === 'first_party_framework_projection';
+}
 function packageRoleFromManifest(payload: unknown, manifestUrl: string) {
   if (!isRecord(payload)) {
     normalizePackageManifest(payload, manifestUrl);
@@ -281,32 +309,47 @@ export async function enrichRegistryCacheManifestMetadata(cache: AgentPackageReg
   return { ...cache, entries, entry_count: entries.length };
 }
 
-function firstPartyManifestUrl(packageId: string, version: string) {
-  const catalogRef = resolveFirstPartyPackageCatalog(packageId)?.catalogSource.catalog_ref ?? '';
-  const repositoryRoot = catalogRef.replace(/\/one-person-lab-manifest:[^/]+$/, '');
-  return repositoryRoot
-    ? `opl+oci://${repositoryRoot}/one-person-lab-packages/${packageId}:${version}#/package-manifest.json`
-    : `opl+catalog://${packageId}/${version}`;
-}
-
-function firstPartyDirectorySources(): DirectorySource[] {
-  return getOplPackageSpecs().map((spec) => ({
-    package_id: spec.package_id,
-    display_name: spec.label,
-    publisher: 'one-person-lab',
-    description: spec.description,
-    tags: [...spec.tags],
-    package_role: spec.package_role,
-    trust_tier: spec.trust_tier,
-    source: 'first_party',
-    manifest_url: firstPartyManifestUrl(spec.package_id, spec.selected_version),
-    selected_version: spec.selected_version,
-    stable_version: spec.stable_version ?? spec.selected_version,
-    registry_url: null,
-    version_source_ref: `${spec.package_manifest_ref}#/version`,
-    source_kind: 'first_party_release_catalog',
-    registry_source_ref: spec.package_manifest_ref,
-  }));
+function firstPartyDirectorySources(snapshot: FirstPartyDirectoryCatalogSnapshot | null): DirectorySource[] {
+  return getOplPackageSpecs().map((spec) => {
+    const selected = snapshot
+      ? selectManagedCatalogPackageVersion(snapshot.catalog, spec.package_id)
+      : null;
+    if (selected) assertFirstPartyPackageCatalogVersion(spec.package_id, selected);
+    const currentnessStatus = snapshot?.freshness === 'live'
+      ? 'live_release_set'
+      : snapshot?.freshness === 'cached'
+        ? 'cached_release_set'
+        : snapshot?.freshness === 'last_known_good'
+          ? 'last_known_good_release_set'
+          : 'framework_projection_only';
+    return {
+      package_id: spec.package_id,
+      display_name: spec.label,
+      publisher: 'one-person-lab',
+      description: spec.description,
+      tags: [...spec.tags],
+      package_role: spec.package_role,
+      trust_tier: spec.trust_tier,
+      source: 'first_party',
+      manifest_url: selected?.manifest_url ?? spec.package_manifest_ref,
+      projected_version: spec.selected_version,
+      selected_version: selected?.package_version ?? null,
+      stable_version: selected?.package_version ?? null,
+      registry_url: null,
+      version_source_ref: selected
+        ? `${snapshot!.catalog_ref}#packages.package_catalog.${spec.package_id}.selected_version`
+        : `${spec.package_manifest_ref}#/version`,
+      source_kind: selected ? 'first_party_release_catalog' : 'first_party_framework_projection',
+      registry_source_ref: selected ? snapshot!.catalog_ref : spec.package_manifest_ref,
+      version_currentness: {
+        status: currentnessStatus,
+        live_verified: snapshot?.freshness === 'live',
+        source_ref: snapshot?.catalog_ref ?? spec.package_manifest_ref,
+        source_digest: snapshot?.catalog_digest ?? null,
+        checked_at: snapshot?.checked_at ?? null,
+      },
+    };
+  });
 }
 
 function registryDirectorySource(cache: AgentPackageRegistryCache, entry: AgentPackageRegistryEntry): DirectorySource {
@@ -320,12 +363,20 @@ function registryDirectorySource(cache: AgentPackageRegistryCache, entry: AgentP
     trust_tier: entry.trust_tier,
     source: entry.source,
     manifest_url: entry.manifest_url,
+    projected_version: null,
     selected_version: entry.selected_version,
     stable_version: entry.stable_version,
     registry_url: cache.registry_url,
     version_source_ref: entry.version_source_ref,
     source_kind: 'agent_package_registry_cache',
     registry_source_ref: cache.registry_url,
+    version_currentness: {
+      status: 'registry_cache',
+      live_verified: false,
+      source_ref: cache.registry_url,
+      source_digest: cache.registry_sha256,
+      checked_at: cache.refreshed_at,
+    },
   };
 }
 
@@ -340,12 +391,20 @@ function lockDirectorySource(lock: AgentPackageLock, packageRole: AgentPackageRo
     trust_tier: lock.trust_tier,
     source: lock.source_kind,
     manifest_url: lock.manifest_url,
+    projected_version: null,
     selected_version: lock.package_version,
     stable_version: null,
     registry_url: null,
     version_source_ref: `${lock.manifest_url}#/version`,
     source_kind: 'installed_package_lock',
     registry_source_ref: null,
+    version_currentness: {
+      status: 'installed_lock_only',
+      live_verified: false,
+      source_ref: lock.release_channel_ref ?? lock.manifest_url,
+      source_digest: lock.release_channel_digest ?? null,
+      checked_at: lock.updated_at,
+    },
   };
 }
 
@@ -359,12 +418,10 @@ function installedRoleResolution(lock: AgentPackageLock, source: DirectorySource
   } catch (error) {
     const legacyRoleMissing = error instanceof FrameworkContractError
       && error.details?.failure_code === 'agent_package_lock_role_missing';
-    if (legacyRoleMissing
-      && source?.source_kind === 'first_party_release_catalog'
-      && source.package_role) {
+    if (legacyRoleMissing && source && isFirstPartyDirectorySource(source) && source.package_role) {
       return {
         role: source.package_role,
-        source: 'first_party_release_catalog_fallback' as const,
+        source: 'first_party_catalog_identity_fallback' as const,
         diagnostic: null,
       };
     }
@@ -395,7 +452,7 @@ function packageAction(
 }
 
 function installPayload(source: DirectorySource) {
-  if (source.source_kind === 'first_party_release_catalog') {
+  if (isFirstPartyDirectorySource(source)) {
     return { package_id: source.package_id };
   }
   return source.registry_url
@@ -457,7 +514,7 @@ function availableActions(
       true,
     )];
   }
-  const updatePayload = source.source_kind === 'first_party_release_catalog'
+  const updatePayload = isFirstPartyDirectorySource(source)
     ? { package_id: source.package_id }
     : source.registry_url
       ? {
@@ -514,15 +571,17 @@ export function buildAgentPackageDirectory(input: {
   registryCache: AgentPackageRegistryCache | null;
   locks: AgentPackageLock[];
   detail: 'fast' | 'full';
+  firstPartyCatalog?: FirstPartyDirectoryCatalogSnapshot | null;
   readStatus?: (packageId: string) => PackageStatusReadback;
   actionContext?: (packageId: string) => Pick<AgentPackagePackageActionInput, 'scope' | 'targetWorkspace' | 'targetQuest'> | null;
 }) {
-  const sources = new Map(firstPartyDirectorySources().map((entry) => [entry.package_id, entry]));
+  const sources = new Map(firstPartyDirectorySources(input.firstPartyCatalog ?? null)
+    .map((entry) => [entry.package_id, entry]));
   for (const entry of input.registryCache?.entries ?? []) {
     if (resolveFirstPartyPackageCatalog(entry.package_id)) continue;
     const existing = sources.get(entry.package_id);
     const candidate = registryDirectorySource(input.registryCache!, entry);
-    if (!existing || existing.source_kind !== 'first_party_release_catalog') {
+    if (!existing || !isFirstPartyDirectorySource(existing)) {
       sources.set(entry.package_id, existing ? {
         ...existing,
         ...candidate,
@@ -640,7 +699,9 @@ export function buildAgentPackageDirectory(input: {
         kind: source.source_kind,
         source: source.source,
         summary: source.source_kind === 'first_party_release_catalog'
-          ? 'Bundled Framework projection of the canonical first-party OPL Package catalog.'
+          ? 'Release Set selection resolved by the canonical managed Package catalog selector.'
+          : source.source_kind === 'first_party_framework_projection'
+            ? 'Framework-owned first-party Package projection; no Release Set selection was verified for this readback.'
           : source.source_kind === 'agent_package_registry_cache'
             ? 'Validated discovery metadata from the Framework Agent Package registry cache.'
             : 'Installed lock retained after its discovery source became unavailable.',
@@ -652,8 +713,10 @@ export function buildAgentPackageDirectory(input: {
         version_source_ref: source.version_source_ref,
       },
       manifest_url: source.manifest_url,
+      projected_version: source.projected_version,
       selected_version: source.selected_version,
       stable_version: source.stable_version,
+      version_currentness: source.version_currentness,
       installed_version: lock?.package_version ?? null,
       installed,
       activated,
@@ -697,7 +760,14 @@ export function buildAgentPackageDirectory(input: {
       || entry.readiness.status === 'repair_required')
       ? 'attention_required'
       : 'available',
-    source_catalog_kind: 'opl_package_catalog.v1+opl_agent_package_registry_cache',
+    source_catalog_kind: 'opl_framework_package_projection+optional_release_set+opl_agent_package_registry_cache',
+    first_party_release_currentness: {
+      status: input.firstPartyCatalog?.freshness ?? 'unknown',
+      live_verified: input.firstPartyCatalog?.freshness === 'live',
+      catalog_ref: input.firstPartyCatalog?.catalog_ref ?? null,
+      catalog_digest: input.firstPartyCatalog?.catalog_digest ?? null,
+      checked_at: input.firstPartyCatalog?.checked_at ?? null,
+    },
     detail: input.detail,
     entry_count: entries.length,
     installed_package_count: entries.filter((entry) => entry.installed).length,

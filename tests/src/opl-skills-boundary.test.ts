@@ -248,6 +248,10 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
 
 test('OPL Codex plugin registry removes standalone family MCP server blocks', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-plugin-registry-home-'));
+  const originalCodexHome = process.env.CODEX_HOME;
+  const originalOplStateDir = process.env.OPL_STATE_DIR;
+  process.env.CODEX_HOME = path.join(homeRoot, '.codex');
+  process.env.OPL_STATE_DIR = path.join(homeRoot, 'Library', 'Application Support', 'OPL', 'state');
   const reposRoot = path.join(homeRoot, 'repos');
   const repoPaths = new Map<OplModuleId, string>([
     ['medautoscience', path.join(reposRoot, 'med-autoscience')],
@@ -364,6 +368,10 @@ test('OPL Codex plugin registry removes standalone family MCP server blocks', ()
       assert.match(config, new RegExp(`\\[marketplaces\\.${item.marketplace_id}\\]\\nsource_type = "local"\\nsource = "${item.marketplace_root.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
     }
   } finally {
+    if (originalCodexHome === undefined) delete process.env.CODEX_HOME;
+    else process.env.CODEX_HOME = originalCodexHome;
+    if (originalOplStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = originalOplStateDir;
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
 });

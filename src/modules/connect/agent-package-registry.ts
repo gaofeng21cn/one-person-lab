@@ -2837,6 +2837,7 @@ export function runOplAgentPackageStatus(input: {
 
 export function listOplAgentPackages(input: {
   detail?: 'fast' | 'full';
+  firstPartyCatalog?: import('./agent-package-registry-parts/directory.ts').FirstPartyDirectoryCatalogSnapshot | null;
   statusContext?: (packageId: string) => Pick<AgentPackagePackageActionInput, 'scope' | 'targetWorkspace' | 'targetQuest'> | null;
   readStatus?: typeof runOplAgentPackageStatus;
 } = {}) {
@@ -2858,6 +2859,7 @@ export function listOplAgentPackages(input: {
     registryCache,
     locks: lockIndex.packages,
     detail,
+    firstPartyCatalog: input.firstPartyCatalog,
     actionContext: input.statusContext,
     readStatus: (packageId) => {
       const context = input.statusContext?.(packageId) ?? {};

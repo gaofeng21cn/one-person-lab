@@ -1,5 +1,3 @@
-import { execFileSync } from 'node:child_process';
-
 import {
   assert,
   assertContractsContext,
@@ -22,6 +20,7 @@ import {
   selectDomainAgentEntry,
   test,
 } from '../helpers.ts';
+import { writeCapabilityCatalog } from './packages-cases/capability-fixtures.ts';
 
 test('contract validate honors explicit contract-root provenance', () => {
   const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot(() => {});
@@ -345,16 +344,7 @@ test('domain selection uses package-locked domain routing signals for natural-la
       'set -euo pipefail',
       "printf 'redcube-health-ready\\n'",
     ].join('\n'), { mode: 0o755 });
-    execFileSync('git', ['init', '-q'], { cwd: domainRepo });
-    execFileSync('git', ['add', '.'], { cwd: domainRepo });
-    execFileSync('git', [
-      '-c', 'user.email=fixture@example.com',
-      '-c', 'user.name=Fixture',
-      'commit', '-qm', 'package-managed descriptor fixture',
-    ], { cwd: domainRepo });
-
-    const manifestPath = path.join(stateRoot, 'rca-package-manifest.json');
-    fs.mkdirSync(stateRoot, { recursive: true });
+    const manifestPath = path.join(domainRepo, 'rca-package-manifest.json');
     fs.writeFileSync(manifestPath, `${JSON.stringify({
       surface_kind: 'opl_agent_package_manifest.v1',
       package_id: 'rca',
@@ -371,16 +361,15 @@ test('domain selection uses package-locked domain routing signals for natural-la
         module_id: 'redcube',
       },
     }, null, 2)}\n`);
+    const releaseSet = writeCapabilityCatalog(path.join(stateRoot, 'release-set'), [manifestPath]);
     const packageEnv = {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, '.codex'),
       OPL_STATE_DIR: stateRoot,
       OPL_MODULES_ROOT: path.join(stateRoot, 'managed-modules'),
+      ...releaseSet.env,
     };
-    runCli([
-      'packages', 'install', '--manifest-url', manifestPath, '--trust-tier', 'first_party',
-      '--source-kind', 'developer_checkout_override', '--agent-root', domainRepo,
-    ], packageEnv);
+    runCli(['packages', 'install', 'rca'], packageEnv);
     const status = runCli(['packages', 'status', '--package-id', 'rca'], packageEnv)
       .opl_agent_package_status;
     assert.equal(status.package_dependency_readiness.operational_ready, true);

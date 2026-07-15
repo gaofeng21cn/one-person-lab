@@ -17,6 +17,7 @@ import {
 import { createAdmittedStagePackFixture } from './workspace-domain-test-helper.ts';
 import {
   scholarSkillsCoreSkillIds,
+  writeCapabilityCatalog,
   writeCapabilityProvider,
   writeMasConsumer,
 } from './packages-cases/capability-fixtures.ts';
@@ -218,12 +219,14 @@ test('MAS launch activates a new workspace scope and automatically recovers mana
   const workspace = path.join(root, 'workspace');
   const providerManifest = writeCapabilityProvider(path.join(root, 'provider'));
   const consumerManifest = writeMasConsumer(root, providerManifest);
+  const releaseSet = writeCapabilityCatalog(path.join(root, 'release-set'), [consumerManifest, providerManifest]);
   const openFixture = createFakeOpenFixture();
   const entryUrl = 'http://127.0.0.1:3310/mas';
   const env = {
     OPL_STATE_DIR: stateRoot,
     CODEX_HOME: codexHome,
     OPL_OPEN_BIN: openFixture.openPath,
+    ...releaseSet.env,
   };
   fs.mkdirSync(workspace, { recursive: true });
   try {
@@ -233,7 +236,7 @@ test('MAS launch activates a new workspace scope and automatically recovers mana
       '--manifest-command', buildManifestCommand(loadFamilyManifestFixtures().medautoscience),
     ], env);
     await runCliAsync([
-      'packages', 'install', '--manifest-url', consumerManifest, '--trust-tier', 'first_party',
+      'packages', 'install', 'mas',
     ], env);
 
     const skillsRoot = path.join(workspace, '.codex', 'skills');
@@ -283,11 +286,12 @@ test('quest activation materializes core skills and automatically recovers manag
   const quest = path.join(root, 'quest');
   const providerManifest = writeCapabilityProvider(path.join(root, 'provider'));
   const consumerManifest = writeMasConsumer(root, providerManifest);
-  const env = { OPL_STATE_DIR: stateRoot, CODEX_HOME: codexHome };
+  const releaseSet = writeCapabilityCatalog(path.join(root, 'release-set'), [consumerManifest, providerManifest]);
+  const env = { OPL_STATE_DIR: stateRoot, CODEX_HOME: codexHome, ...releaseSet.env };
   fs.mkdirSync(quest, { recursive: true });
   try {
     await runCliAsync([
-      'packages', 'install', '--manifest-url', consumerManifest, '--trust-tier', 'first_party',
+      'packages', 'install', 'mas',
     ], env);
     const preview = runCli([
       'packages', 'activate', 'mas', '--scope', 'quest', '--target-quest', quest, '--dry-run',
@@ -336,7 +340,13 @@ test('workspace activation automatically ensures the installed MAS package scope
   const workspaceC = path.join(root, 'workspace-c');
   const providerManifest = writeCapabilityProvider(path.join(root, 'provider'));
   const consumerManifest = writeMasConsumer(root, providerManifest);
-  const env = { OPL_STATE_DIR: stateRoot, CODEX_HOME: codexHome };
+  const releaseSet = writeCapabilityCatalog(path.join(root, 'release-set'), [consumerManifest, providerManifest]);
+  const env = {
+    OPL_STATE_DIR: stateRoot,
+    CODEX_HOME: codexHome,
+    OPL_WORKSPACE_ROOT: workspaceA,
+    ...releaseSet.env,
+  };
   fs.mkdirSync(workspaceA, { recursive: true });
   fs.mkdirSync(workspaceB, { recursive: true });
   fs.mkdirSync(workspaceC, { recursive: true });
@@ -349,7 +359,7 @@ test('workspace activation automatically ensures the installed MAS package scope
       ], env);
     }
     await runCliAsync([
-      'packages', 'install', '--manifest-url', consumerManifest, '--trust-tier', 'first_party',
+      'packages', 'install', 'mas',
     ], env);
 
     assert.equal(fs.existsSync(path.join(workspaceA, '.codex', 'skills')), false);
@@ -376,8 +386,16 @@ test('workspace activation automatically ensures the installed MAS package scope
     assert.equal(current.materialization_readiness.status, 'current');
     assert.equal(current.launch_allowed, true);
     const appState = runCli(['app', 'state', '--profile', 'fast'], env).app_state;
-    assert.equal(appState.agent_packages.status_index.packages.mas.operational_ready, true);
-    assert.equal(appState.agent_packages.status_index.packages.mas.launch_allowed, true);
+    assert.equal(appState.agent_packages.status_index.packages.mas.status, 'verification_deferred');
+    assert.equal(
+      appState.agent_packages.status_index.packages.mas.operational_ready,
+      false,
+    );
+    assert.equal(appState.agent_packages.status_index.packages.mas.launch_allowed, false);
+    assert.equal(
+      appState.agent_packages.status_index.packages.mas.launch_blocked_reason,
+      'live_verification_deferred',
+    );
 
     fs.rmSync(path.join(workspaceA, '.codex', 'skills', 'medical-manuscript-writing'), {
       recursive: true,
