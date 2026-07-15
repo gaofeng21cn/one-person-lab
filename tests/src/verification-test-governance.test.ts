@@ -41,6 +41,7 @@ const verifyWorkflowBuildAndJsLanePatterns = [
   /npm run test:integration/,
   /npm run test:fresh-install/,
   /FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'/,
+  /fast:\n\s+name: Fast lane\n\s+runs-on: macos-latest\n\s+timeout-minutes: 25/,
 ];
 
 const verifyWorkflowNativeAndStructurePatterns = [
