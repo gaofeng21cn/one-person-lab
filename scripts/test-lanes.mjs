@@ -182,6 +182,7 @@ const fastTestFiles = [
 
 const readModelGateTestFiles = [
   'tests/src/work-item-projection-v2.test.ts',
+  'tests/src/work-item-hosted-readback.test.ts',
   'tests/src/work-item-stage-catalog.test.ts',
   'tests/src/verification-test-governance.test.ts',
   'tests/src/current-owner-delta-topline.test.ts',

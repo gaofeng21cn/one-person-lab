@@ -36,7 +36,7 @@ import { buildActionCatalog } from './app-state-action-catalog.ts';
 import { buildSettingsControlCenter } from './app-state-settings-control-center.ts';
 import { parseAppStateProfile, type AppStateProfile } from './app-state-profile.ts';
 import { buildOplAppOperatorViewModel } from './app-state-view-model.ts';
-import { buildWorkItemProjectionV2 } from './work-item-projection/projection.ts';
+import { buildAppRuntimeWorkItemProjection } from './app-runtime-work-item-projection.ts';
 import { projectWorkItemRuntimeActivityItems } from './work-item-projection/legacy-adapter.ts';
 import { selectAppStateCurrentOwnerDeltaReadModel } from './app-state-current-owner-delta.ts';
 import {
@@ -1002,14 +1002,15 @@ export async function buildOplAppState(input: {
     },
   };
   const uiDefaults = buildUiDefaults();
-  const workItemProjectionV2 = buildWorkItemProjectionV2({
+  const workItemProjectionV2 = buildAppRuntimeWorkItemProjection({
     profile,
     packageProjectionItems: runtimeSourceCarriers,
     packageStatusById: agentPackageStatuses,
     bindings: workspaceBindings,
-    inventoryDetail: profile === 'fast' ? 'deferred' : 'included',
   });
-  const runtimeActivityItems = projectWorkItemRuntimeActivityItems(workItemProjectionV2);
+  const runtimeActivityItems = profile === 'full'
+    ? projectWorkItemRuntimeActivityItems(workItemProjectionV2)
+    : [];
   const fullRuntimeDrilldown = profile === 'full'
     ? (await (await import('./runtime-tray-snapshot.ts')).buildRuntimeTraySnapshot(contracts, {
         appOperatorDrilldownDetailLevel: 'full',

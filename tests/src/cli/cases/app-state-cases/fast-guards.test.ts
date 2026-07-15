@@ -266,12 +266,12 @@ test('app state fast excludes unregistered runtime history from the work-item in
     assert.equal(workbench.work_item_projection_v1.items.length, 0);
     assert.equal(workItemProjectionV2.items.length, 0);
     assert.equal(workItemProjectionV2.summary.work_item_count, 0);
-    assert.equal(workItemProjectionV2.diagnostics.count, 0);
+    assert.equal(workItemProjectionV2.diagnostics.count > 0, true);
     assert.equal(workItemProjectionV2.diagnostics.detail_policy, 'summary_only');
     assert.deepEqual(workItemProjectionV2.diagnostics.items, []);
-    assert.equal(workItemProjectionV2.detail_policy.inventory_detail, 'deferred');
-    assert.equal(workItemProjectionV2.detail_policy.all_work_item_summaries_included, false);
-    assert.equal(workItemProjectionV2.detail_policy.attempt_ref_limit_per_item, 0);
+    assert.equal(workItemProjectionV2.detail_policy.inventory_detail, 'included');
+    assert.equal(workItemProjectionV2.detail_policy.all_work_item_summaries_included, true);
+    assert.equal(workItemProjectionV2.detail_policy.attempt_ref_limit_per_item, 1);
     assert.equal(
       workItemProjectionV2.detail_policy.full_detail_surface,
       'opl app state --profile full --json',

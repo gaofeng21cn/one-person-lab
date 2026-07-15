@@ -120,6 +120,10 @@ test('family product operator projection pins OPL as App state/action producer o
 
   assert.equal(boundary.framework_role, 'gui_ready_state_action_producer_only');
   assert.equal(boundary.default_state_command, 'opl app state --profile fast --json');
+  assert.equal(
+    boundary.fast_work_item_projection_producer_contract_ref,
+    'contracts/opl-framework/app-runtime-fast-work-item-projection-contract.json',
+  );
   assert.equal(boundary.default_operator_payload, 'current_owner_delta');
   assert.equal('compatibility_operator_payload' in boundary, false);
   assert.equal(boundary.full_state_command, 'opl app state --profile full --json');

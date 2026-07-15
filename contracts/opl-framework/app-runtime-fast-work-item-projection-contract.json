@@ -1,0 +1,76 @@
+{
+  "contract_kind": "opl_app_runtime_fast_work_item_projection_producer.v1",
+  "owner": "one-person-lab",
+  "producer_surface": "opl app state --profile fast --json#app_state.operator.workbench.work_item_projection_v2",
+  "projection_schema_ref": "contracts/opl-framework/work-item-projection-v2.schema.json",
+  "consumer_role": "default_runtime_page_state",
+  "cognitive_model": [
+    "Agent",
+    "Project",
+    "Work Item",
+    "Stage",
+    "Attempt",
+    "Action"
+  ],
+  "inventory_policy": {
+    "source": "registered_workspace_binding_plus_agent_declared_inventory",
+    "all_registered_work_item_summaries_included": true,
+    "archived_work_items_included": true,
+    "runtime_history_may_create_work_items": false,
+    "legacy_runtime_views_repopulated_from_work_items": false,
+    "workspace_binding_deduplication_required": true
+  },
+  "default_summary_axes": [
+    "identity.agent_id",
+    "identity.project_id",
+    "identity.work_item_id",
+    "lifecycle.primary_state",
+    "visibility.state",
+    "execution.state",
+    "execution.current_stage_id",
+    "execution.current_stage_display_name",
+    "execution.next_stage_id",
+    "execution.next_stage_display_name",
+    "execution.attempt_id",
+    "telemetry.current_stage",
+    "telemetry.cumulative",
+    "action"
+  ],
+  "stage_popover_axes": [
+    "stage_map[].stage_id",
+    "stage_map[].display_name",
+    "stage_map[].display_names",
+    "stage_map[].state",
+    "stage_map[].elapsed_seconds",
+    "stage_map[].usage",
+    "stage_map[].next_action",
+    "execution.attempt_id"
+  ],
+  "bounded_fast_policy": {
+    "max_serialized_work_item_summary_bytes_per_item": 16384,
+    "current_projection_acceptance_budget_bytes": 131072,
+    "attempt_ref_limit_per_item": 1,
+    "diagnostic_details": "lazy",
+    "diagnostic_items_embedded": false,
+    "condition_details_embedded": false,
+    "source_ref_details_embedded": false,
+    "token_source_ref_details_embedded": false,
+    "inventory_detail": "included",
+    "full_detail_surface": "opl app state --profile full --json",
+    "forbidden_embedded_detail": [
+      "raw_evidence_envelope",
+      "raw_ledger_browser",
+      "provider_internal_trace",
+      "runtime_tray_snapshot",
+      "stage_attempt_history_body"
+    ]
+  },
+  "authority_boundary": {
+    "projection_only": true,
+    "can_write_domain_truth": false,
+    "can_create_owner_receipt": false,
+    "can_create_typed_blocker": false,
+    "can_authorize_quality_verdict": false,
+    "can_authorize_publication_or_submission": false
+  }
+}

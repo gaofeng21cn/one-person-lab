@@ -12,6 +12,7 @@ import {
 } from '../../src/kernel/standard-agent-interface.ts';
 import { validateJsonSchemaPayload } from '../../src/kernel/schema-registry.ts';
 import { buildAgentCatalog } from '../../src/modules/console/work-item-projection/catalog.ts';
+import { buildAppRuntimeWorkItemProjection } from '../../src/modules/console/app-runtime-work-item-projection.ts';
 import { readStageIndexPresentation } from '../../src/modules/console/work-item-projection/inventory-presentation.ts';
 import { buildWorkItemProjectionV2 } from '../../src/modules/console/work-item-projection/projection.ts';
 import { projectWorkItemPrimaryState } from '../../src/modules/console/work-item-projection/primary-state.ts';
@@ -375,6 +376,62 @@ test('WorkItemProjection V2 discovers MAS 3 projects and 9 studies independently
   }
 });
 
+test('App Runtime fast producer includes registered work items with bounded attempt and telemetry summaries', () => {
+  const input = fixture();
+  try {
+    const projection = buildAppRuntimeWorkItemProjection({
+      profile: 'fast',
+      bindings: input.bindings,
+      packageProjectionItems: input.packageProjectionItems,
+      packageStatusById: input.packageStatusById,
+      attempts: [attempt({
+        id: 'sat-dm003-token-readback',
+        root: input.diabetes,
+        workItemId: '003-dpcc-primary-care-phenotype-treatment-gap',
+        status: 'completed',
+        stageId: '08-publication_package_handoff',
+        updatedAt: '2026-07-15T00:00:00.000Z',
+        tokenUsage: { input_tokens: 20_000, output_tokens: 5_490, total_tokens: 25_490 },
+      })],
+      resolveDescriptor: input.resolveDescriptor,
+      generatedAt: '2026-07-15T00:01:00.000Z',
+    });
+    const dm003 = projection.items.find(
+      (item) => item.identity.work_item_id === '003-dpcc-primary-care-phenotype-treatment-gap',
+    );
+
+    assert.equal(projection.items.length, 9);
+    assert.equal(Buffer.byteLength(JSON.stringify(projection), 'utf8') <= 131_072, true);
+    assert.equal(
+      projection.items.every((item) => Buffer.byteLength(JSON.stringify(item), 'utf8') <= 16_384),
+      true,
+    );
+    assert.equal(projection.summary.visible_work_item_count, 9);
+    assert.equal(projection.detail_policy.all_work_item_summaries_included, true);
+    assert.equal(projection.detail_policy.inventory_detail, 'included');
+    assert.equal(projection.detail_policy.attempt_ref_limit_per_item, 1);
+    assert.equal(projection.detail_policy.diagnostic_details, 'lazy');
+    assert.deepEqual(projection.diagnostics.items, []);
+    assert.equal(dm003?.execution.attempt_ids.length, 1);
+    assert.equal(dm003?.telemetry.cumulative.total_tokens, 25_490);
+    assert.deepEqual(dm003?.telemetry.cumulative.source_refs, []);
+    assert.equal((dm003?.stage_map.length ?? 0) > 0, true);
+    assert.deepEqual(dm003?.conditions, []);
+    assert.deepEqual(dm003?.source_refs, []);
+    assert.equal(dm003?.visibility.state, 'visible');
+    const schemaRef = 'contracts/opl-framework/work-item-projection-v2.schema.json';
+    const schema = parseJsonText(fs.readFileSync(schemaRef, 'utf8')) as Record<string, unknown>;
+    const validation = validateJsonSchemaPayload({
+      schemaId: 'opl.work_item_projection.v2',
+      schema,
+      sourceRef: schemaRef,
+    }, projection);
+    assert.equal(validation.ok, true, validation.ok ? undefined : JSON.stringify(validation.errors, null, 2));
+  } finally {
+    fs.rmSync(input.root, { recursive: true, force: true });
+  }
+});
+
 test('delivered Stage Map uses the canonical recorded boundary without inferring a missing one', () => {
   const workItemRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-terminal-stage-map-'));
   const stageIndexRef = 'control/stage_index.json';
@@ -617,7 +674,7 @@ test('control lifecycle wins over old execution failure and token usage remains 
   }
 });
 
-test('visibility archive keeps lifecycle, Stage Map, action, telemetry, and runtime execution intact', () => {
+test('App Runtime fast visibility archive keeps lifecycle, Stage Map, action, telemetry, and execution intact', () => {
   const input = fixture();
   const previousStateDir = process.env.OPL_STATE_DIR;
   process.env.OPL_STATE_DIR = path.join(input.root, 'opl-state');
@@ -631,8 +688,8 @@ test('visibility archive keeps lifecycle, Stage Map, action, telemetry, and runt
       updatedAt: new Date().toISOString(),
       tokenUsage: { input_tokens: 800, output_tokens: 200, total_tokens: 1000 },
     });
-    const build = () => buildWorkItemProjectionV2({
-      profile: 'full',
+    const build = () => buildAppRuntimeWorkItemProjection({
+      profile: 'fast',
       bindings: input.bindings,
       packageProjectionItems: input.packageProjectionItems,
       packageStatusById: input.packageStatusById,

@@ -70,6 +70,7 @@
   "app_runtime_boundary": {
     "framework_role": "gui_ready_state_action_producer_only",
     "default_state_command": "opl app state --profile fast --json",
+    "fast_work_item_projection_producer_contract_ref": "contracts/opl-framework/app-runtime-fast-work-item-projection-contract.json",
     "default_operator_payload": "current_owner_delta",
     "full_state_command": "opl app state --profile full --json",
     "action_command": "opl app action execute --action <id> [--payload <json>] [--dry-run] --json",
