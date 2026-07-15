@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../../../kernel/contract-validation.ts';
 import { readJsonFileOrNull, writeJsonPayloadFile } from '../../../kernel/json-file.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from '../../../kernel/runtime-state-paths.ts';
 import {
@@ -17,6 +17,7 @@ import {
   resolveManagedModuleCheckoutPath,
   resolveOplDomainModuleSpec,
 } from '../system-installation/modules.ts';
+import { canonicalAgentPackageId } from '../agent-package-identity.ts';
 import { readPackagedModuleMarker } from '../system-installation/module-packaged.ts';
 import { runCommand } from '../system-installation/shared.ts';
 import { materializeStandardAgentFrameworkLink } from '../standard-agent-framework-link.ts';
@@ -62,7 +63,7 @@ type RuntimeSourceTransactionMarker = {
 
 function transactionMarkerDirectory() {
   return path.join(
-    ensureOplStateDir(resolveOplStatePaths()).state_dir,
+    resolveOplStatePaths().state_dir,
     'agent-package-runtime-source-transactions',
   );
 }
@@ -1121,14 +1122,206 @@ export function finalizeManagedRuntimeSourceMutation(
   }
 }
 
-function parseTransactionMarker(filePath: string) {
-  const parsed = readJsonFileOrNull(filePath) as RuntimeSourceTransactionMarker | null;
-  if (parsed?.surface_kind !== 'opl_agent_package_runtime_source_transaction'
-    || parsed.version !== 1
-    || !parsed.mutation?.kind) {
-    throw sourceFailure('Managed runtime source recovery marker is invalid.', { marker_path: filePath });
+function transactionMarkerFailure(filePath: string, reason: string, details: Record<string, unknown> = {}) {
+  return new FrameworkContractError(
+    'contract_shape_invalid',
+    'Managed runtime source recovery marker requires manual intervention.',
+    {
+      marker_path: filePath,
+      reason,
+      failure_code: 'agent_package_runtime_source_transaction_invalid',
+      recovery_status: 'recovery_required',
+      recovery_action_state: 'manual_owner_intervention_required',
+      ...details,
+    },
+  );
+}
+
+function requiredMarkerId(value: unknown, filePath: string, field: string) {
+  if (typeof value !== 'string'
+    || value.length === 0
+    || value === '.'
+    || value === '..'
+    || path.basename(value) !== value) {
+    throw transactionMarkerFailure(filePath, 'marker_identity_invalid', { field });
   }
-  return parsed;
+  return value;
+}
+
+function requireExactMarkerPath(value: unknown, expected: string, filePath: string, field: string) {
+  if (typeof value !== 'string'
+    || !path.isAbsolute(value)
+    || path.resolve(value) !== path.resolve(expected)) {
+    throw transactionMarkerFailure(filePath, 'managed_path_mismatch', {
+      field,
+      expected_path: expected,
+    });
+  }
+  return path.resolve(value);
+}
+
+function validateMarkerRuntimeState(
+  value: unknown,
+  filePath: string,
+  field: string,
+  moduleId: string,
+  checkoutPath: string,
+  runtimeEnvironmentModuleRoot: string,
+) {
+  if (value === null) return;
+  if (!isRecord(value)
+    || value.module_id !== moduleId
+    || typeof value.tree_sha256 !== 'string') {
+    throw transactionMarkerFailure(filePath, 'runtime_state_identity_invalid', { field });
+  }
+  requireExactMarkerPath(value.checkout_path, checkoutPath, filePath, `${field}.checkout_path`);
+  if (value.preparation_root !== null) {
+    if (typeof value.preparation_root !== 'string'
+      || !path.isAbsolute(value.preparation_root)
+      || path.dirname(path.resolve(value.preparation_root)) !== path.resolve(runtimeEnvironmentModuleRoot)) {
+      throw transactionMarkerFailure(filePath, 'runtime_preparation_root_invalid', { field });
+    }
+  }
+}
+
+function parseTransactionMarker(filePath: string) {
+  const parsed = readJsonFileOrNull(filePath);
+  if (!isRecord(parsed)
+    || parsed.surface_kind !== 'opl_agent_package_runtime_source_transaction'
+    || parsed.version !== 1
+    || !['prepared', 'physical_applied', 'cleanup_pending'].includes(String(parsed.phase))
+    || !isRecord(parsed.mutation)) {
+    throw transactionMarkerFailure(filePath, 'root_shape_invalid');
+  }
+  const mutation = parsed.mutation;
+  const packageId = requiredMarkerId(mutation.package_id, filePath, 'mutation.package_id');
+  if (canonicalAgentPackageId(packageId) !== packageId) {
+    throw transactionMarkerFailure(filePath, 'package_identity_not_canonical');
+  }
+  const transactionId = requiredMarkerId(mutation.transaction_id, filePath, 'mutation.transaction_id');
+  const moduleId = requiredMarkerId(mutation.module_id, filePath, 'mutation.module_id');
+  if (path.resolve(filePath) !== path.resolve(transactionMarkerPath(packageId, transactionId))) {
+    throw transactionMarkerFailure(filePath, 'marker_file_identity_mismatch');
+  }
+  let spec: ReturnType<typeof resolveOplDomainModuleSpec>;
+  try {
+    spec = resolveOplDomainModuleSpec(moduleId);
+  } catch {
+    throw transactionMarkerFailure(filePath, 'module_identity_invalid', { module_id: moduleId });
+  }
+  const checkoutPath = resolveManagedModuleCheckoutPath(spec);
+  requireExactMarkerPath(mutation.checkout_path, checkoutPath, filePath, 'mutation.checkout_path');
+  requireExactMarkerPath(mutation.marker_path, filePath, filePath, 'mutation.marker_path');
+  const kind = mutation.kind;
+  const action = mutation.action;
+  const validKindAction = kind === 'installed_fresh'
+    ? action === 'install' || action === 'update' || action === 'repair'
+    : kind === 'activated_with_previous'
+      ? action === 'update' || action === 'repair'
+    : kind === 'restored_previous'
+      ? action === 'rollback'
+      : kind === 'staged_removal' && action === 'uninstall';
+  if (!validKindAction) {
+    throw transactionMarkerFailure(filePath, 'mutation_kind_action_mismatch', { kind, action });
+  }
+  const expectedCheckoutExistedBefore = kind === 'installed_fresh'
+    ? false
+    : kind === 'activated_with_previous' || kind === 'restored_previous'
+      ? true
+      : null;
+  if (expectedCheckoutExistedBefore !== null
+    && mutation.checkout_existed_before !== expectedCheckoutExistedBefore) {
+    throw transactionMarkerFailure(filePath, 'checkout_history_mismatch');
+  }
+  const runtimeEnvironmentModuleRoot = path.join(
+    resolveOplStatePaths().state_dir,
+    'agent-package-runtime-envs',
+    moduleId,
+  );
+  validateMarkerRuntimeState(
+    mutation.before,
+    filePath,
+    'mutation.before',
+    moduleId,
+    checkoutPath,
+    runtimeEnvironmentModuleRoot,
+  );
+  validateMarkerRuntimeState(
+    mutation.after,
+    filePath,
+    'mutation.after',
+    moduleId,
+    checkoutPath,
+    runtimeEnvironmentModuleRoot,
+  );
+  if (!Array.isArray(mutation.staged_removal_paths)) {
+    throw transactionMarkerFailure(filePath, 'staged_removal_paths_invalid');
+  }
+  const allowedRemovalRoots = new Map([
+    [path.resolve(checkoutPath), 0],
+    [path.resolve(`${checkoutPath}.previous`), 1],
+    [path.resolve(runtimeEnvironmentModuleRoot), 2],
+  ]);
+  const observedRemovalRoots = new Set<string>();
+  for (const entry of mutation.staged_removal_paths) {
+    if (!isRecord(entry) || typeof entry.original !== 'string') {
+      throw transactionMarkerFailure(filePath, 'staged_removal_entry_invalid');
+    }
+    const original = path.resolve(entry.original);
+    const originalIndex = allowedRemovalRoots.get(original);
+    if (kind !== 'staged_removal'
+      || originalIndex === undefined
+      || observedRemovalRoots.has(original)) {
+      throw transactionMarkerFailure(filePath, 'staged_removal_path_outside_managed_roots');
+    }
+    requireExactMarkerPath(
+      entry.backup,
+      `${original}.opl-package-remove-${transactionId}-${originalIndex}`,
+      filePath,
+      'mutation.staged_removal_paths.backup',
+    );
+    observedRemovalRoots.add(original);
+  }
+  if (kind !== 'staged_removal' && mutation.staged_removal_paths.length > 0) {
+    throw transactionMarkerFailure(filePath, 'staged_removal_paths_not_allowed');
+  }
+  if (mutation.repair_displaced_path !== null && mutation.repair_displaced_path !== undefined) {
+    if (action !== 'repair') {
+      throw transactionMarkerFailure(filePath, 'repair_displaced_path_not_allowed');
+    }
+    requireExactMarkerPath(
+      mutation.repair_displaced_path,
+      `${checkoutPath}.repair-displaced-${transactionId}`,
+      filePath,
+      'mutation.repair_displaced_path',
+    );
+  } else if (action === 'repair' && mutation.checkout_existed_before === true) {
+    throw transactionMarkerFailure(filePath, 'repair_displaced_path_missing');
+  }
+  return parsed as unknown as RuntimeSourceTransactionMarker;
+}
+
+function transactionMarkerFiles() {
+  const markerDir = transactionMarkerDirectory();
+  if (!fs.existsSync(markerDir)) return [];
+  return fs.readdirSync(markerDir)
+    .filter((entry) => entry.endsWith('.json'))
+    .sort()
+    .map((fileName) => path.join(markerDir, fileName));
+}
+
+export function inspectManagedRuntimeSourceTransactions() {
+  const markerFiles = transactionMarkerFiles();
+  for (const markerFile of markerFiles) parseTransactionMarker(markerFile);
+  return {
+    status: markerFiles.length > 0 ? 'recovery_required' as const : 'not_required' as const,
+    pending_transaction_count: markerFiles.length,
+    recovered_transaction_count: 0,
+    cleanup_completed_count: 0,
+    cleared_prepared_transaction_count: 0,
+    recovered_transaction_ids: [] as string[],
+    writes_performed: false,
+  };
 }
 
 function preparedMutationChangedPhysicalState(mutation: ManagedRuntimeSourceMutation) {
@@ -1168,8 +1361,8 @@ function preparedMutationDidNotActivateChannel(mutation: ManagedRuntimeSourceMut
 }
 
 export function recoverManagedRuntimeSourceTransactions(index: AgentPackageLockIndex) {
-  const markerDir = transactionMarkerDirectory();
-  if (!fs.existsSync(markerDir)) {
+  const markerFiles = transactionMarkerFiles();
+  if (markerFiles.length === 0) {
     return {
       status: 'not_required' as const,
       recovered_transaction_count: 0,
@@ -1182,14 +1375,17 @@ export function recoverManagedRuntimeSourceTransactions(index: AgentPackageLockI
   let cleanupCompletedCount = 0;
   let clearedPreparedCount = 0;
   const recoveredIds: string[] = [];
-  for (const fileName of fs.readdirSync(markerDir).filter((entry) => entry.endsWith('.json')).sort()) {
-    const marker = parseTransactionMarker(path.join(markerDir, fileName));
+  const markers = markerFiles.map((markerFile) => ({
+    markerFile,
+    marker: parseTransactionMarker(markerFile),
+  }));
+  for (const { markerFile, marker } of markers) {
     const mutation = marker.mutation;
     if (marker.phase === 'prepared' && preparedMutationDidNotActivateChannel(mutation)) {
       fs.rmSync(`${mutation.checkout_path}.stage`, { recursive: true, force: true });
       clearTransactionMarker(mutation);
       clearedPreparedCount += 1;
-      recoveredIds.push(mutation.transaction_id ?? fileName);
+      recoveredIds.push(mutation.transaction_id ?? path.basename(markerFile));
       continue;
     }
     if (marker.phase === 'prepared' && !preparedMutationChangedPhysicalState(mutation)) {
@@ -1198,7 +1394,7 @@ export function recoverManagedRuntimeSourceTransactions(index: AgentPackageLockI
       }
       clearTransactionMarker(mutation);
       clearedPreparedCount += 1;
-      recoveredIds.push(mutation.transaction_id ?? fileName);
+      recoveredIds.push(mutation.transaction_id ?? path.basename(markerFile));
       continue;
     }
     const lock = index.packages.find((entry) => entry.package_id === mutation.package_id) ?? null;
@@ -1213,7 +1409,7 @@ export function recoverManagedRuntimeSourceTransactions(index: AgentPackageLockI
       rollbackManagedRuntimeSourceMutation(mutation);
       recoveredCount += 1;
     }
-    recoveredIds.push(mutation.transaction_id ?? fileName);
+    recoveredIds.push(mutation.transaction_id ?? path.basename(markerFile));
   }
   return {
     status: 'recovered' as const,

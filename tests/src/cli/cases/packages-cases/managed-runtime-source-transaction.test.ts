@@ -489,7 +489,9 @@ test('Packages compensates managed runtime source across downstream failure upda
     assert.equal(rolledBack.opl_agent_package_rollback.package_lock.managed_runtime_source.source_git_head_sha, 'source-transaction-v1');
     assert.equal(fs.readFileSync(path.join(modulesRoot, 'redcube-ai', '.runtime-prepared'), 'utf8').trim(), '0.1.0');
     const rollbackCleanup = runCli(['packages', 'status', '--package-id', FIXTURE_RCA_PACKAGE_ID], env) as any;
-    assert.equal(rollbackCleanup.opl_agent_package_status.runtime_source_recovery.cleanup_completed_count, 1);
+    assert.equal(rollbackCleanup.opl_agent_package_status.runtime_source_recovery.status, 'recovery_required');
+    assert.equal(rollbackCleanup.opl_agent_package_status.runtime_source_recovery.pending_transaction_count, 1);
+    assert.equal(rollbackCleanup.opl_agent_package_status.runtime_source_recovery.cleanup_completed_count, 0);
 
     const moduleRuntimeEnvRoot = path.join(stateDir, 'agent-package-runtime-envs', 'redcube');
     assert.ok(fs.readdirSync(moduleRuntimeEnvRoot).length >= 2);
@@ -529,7 +531,7 @@ test('Packages recovers durable runtime-source markers after interrupted apply a
     ], env) as any;
     const installedSource = installed.opl_agent_package_install.package_lock.managed_runtime_source;
     const markerDir = path.join(stateDir, 'agent-package-runtime-source-transactions');
-    const markerPath = path.join(markerDir, 'rca-stale-current-update.json');
+    const markerPath = path.join(markerDir, `${FIXTURE_RCA_PACKAGE_ID}-stale-current-update.json`);
     fs.mkdirSync(markerDir, { recursive: true });
     fs.writeFileSync(path.join(modulesRoot, 'redcube-ai', 'generated-drift.txt'), 'stale generated output\n');
     fs.writeFileSync(markerPath, formatJsonPayload({
@@ -551,10 +553,15 @@ test('Packages recovers durable runtime-source markers after interrupted apply a
         checkout_existed_before: true,
       },
     }));
+    const staleMarkerBytes = fs.readFileSync(markerPath);
     const staleMarkerRecovery = runCli(['packages', 'status', '--package-id', FIXTURE_RCA_PACKAGE_ID], env) as any;
-    assert.equal(staleMarkerRecovery.opl_agent_package_status.runtime_source_recovery.cleared_prepared_transaction_count, 1);
+    assert.equal(staleMarkerRecovery.opl_agent_package_status.runtime_source_recovery.status, 'recovery_required');
+    assert.equal(staleMarkerRecovery.opl_agent_package_status.runtime_source_recovery.pending_transaction_count, 1);
+    assert.equal(staleMarkerRecovery.opl_agent_package_status.runtime_source_recovery.cleared_prepared_transaction_count, 0);
     assert.equal(staleMarkerRecovery.opl_agent_package_status.runtime_source_recovery.recovered_transaction_count, 0);
     assert.equal(staleMarkerRecovery.opl_agent_package_status.runtime_source_readiness.status, 'incompatible');
+    assert.deepEqual(fs.readFileSync(markerPath), staleMarkerBytes);
+    assert.equal(fs.existsSync(path.join(modulesRoot, 'redcube-ai', 'generated-drift.txt')), true);
     runCli(['packages', 'repair', '--package-id', FIXTURE_RCA_PACKAGE_ID], env);
     assert.equal(fs.existsSync(markerPath), false);
 
@@ -575,11 +582,22 @@ test('Packages recovers durable runtime-source markers after interrupted apply a
     const interruptedStagePath = path.join(modulesRoot, 'redcube-ai.stage');
     fs.mkdirSync(interruptedStagePath, { recursive: true });
     fs.writeFileSync(path.join(interruptedStagePath, 'partial-download'), 'staged but not activated\n');
+    const preparedMarkerPath = fs.readdirSync(markerDir).map((entry) => path.join(markerDir, entry))[0]!;
+    const preparedMarkerBytes = fs.readFileSync(preparedMarkerPath);
     const preparedUpdateRecovery = runCli(['packages', 'status', '--package-id', FIXTURE_RCA_PACKAGE_ID], env) as any;
-    assert.equal(preparedUpdateRecovery.opl_agent_package_status.runtime_source_recovery.cleared_prepared_transaction_count, 1);
+    assert.equal(preparedUpdateRecovery.opl_agent_package_status.runtime_source_recovery.status, 'recovery_required');
+    assert.equal(preparedUpdateRecovery.opl_agent_package_status.runtime_source_recovery.pending_transaction_count, 1);
+    assert.equal(preparedUpdateRecovery.opl_agent_package_status.runtime_source_recovery.cleared_prepared_transaction_count, 0);
     assert.equal(preparedUpdateRecovery.opl_agent_package_status.runtime_source_recovery.recovered_transaction_count, 0);
     assert.equal(fs.readFileSync(path.join(modulesRoot, 'redcube-ai', '.runtime-prepared'), 'utf8').trim(), '0.1.0');
-    assert.equal(fs.existsSync(interruptedStagePath), false);
+    assert.equal(fs.existsSync(interruptedStagePath), true);
+    assert.deepEqual(fs.readFileSync(preparedMarkerPath), preparedMarkerBytes);
+    const dryRunUpdate = runCli([
+      'packages', 'update', '--package-id', FIXTURE_RCA_PACKAGE_ID, '--dry-run',
+    ], env) as any;
+    assert.equal(dryRunUpdate.opl_agent_package_update.dry_run, true);
+    assert.equal(fs.existsSync(interruptedStagePath), true);
+    assert.deepEqual(fs.readFileSync(preparedMarkerPath), preparedMarkerBytes);
 
     const interruptedUpdate = runCliFailure(['packages', 'update', '--package-id', FIXTURE_RCA_PACKAGE_ID], {
       ...env,
@@ -588,10 +606,15 @@ test('Packages recovers durable runtime-source markers after interrupted apply a
     });
     assert.equal(interruptedUpdate.payload.error.details.failure_code, 'test_runtime_source_interrupted_after_apply', JSON.stringify(interruptedUpdate.payload));
     assert.equal(fs.readFileSync(path.join(modulesRoot, 'redcube-ai', '.runtime-prepared'), 'utf8').trim(), '0.1.1');
+    const appliedMarkerPath = fs.readdirSync(markerDir).map((entry) => path.join(markerDir, entry))[0]!;
+    const appliedMarkerBytes = fs.readFileSync(appliedMarkerPath);
     const recoveredStatus = runCli(['packages', 'status', '--package-id', FIXTURE_RCA_PACKAGE_ID], env) as any;
-    assert.equal(recoveredStatus.opl_agent_package_status.runtime_source_recovery.recovered_transaction_count, 1);
-    assert.equal(fs.readFileSync(path.join(modulesRoot, 'redcube-ai', '.runtime-prepared'), 'utf8').trim(), '0.1.0');
+    assert.equal(recoveredStatus.opl_agent_package_status.runtime_source_recovery.status, 'recovery_required');
+    assert.equal(recoveredStatus.opl_agent_package_status.runtime_source_recovery.pending_transaction_count, 1);
+    assert.equal(recoveredStatus.opl_agent_package_status.runtime_source_recovery.recovered_transaction_count, 0);
+    assert.equal(fs.readFileSync(path.join(modulesRoot, 'redcube-ai', '.runtime-prepared'), 'utf8').trim(), '0.1.1');
     assert.equal(recoveredStatus.opl_agent_package_status.runtime_source_readiness.status, 'current');
+    assert.deepEqual(fs.readFileSync(appliedMarkerPath), appliedMarkerBytes);
 
     runCli(['packages', 'update', '--package-id', FIXTURE_RCA_PACKAGE_ID], env);
     assert.equal(fs.readFileSync(path.join(modulesRoot, 'redcube-ai', '.runtime-prepared'), 'utf8').trim(), '0.1.1');
@@ -603,7 +626,9 @@ test('Packages recovers durable runtime-source markers after interrupted apply a
     assert.equal(preparedRollback.payload.error.details.failure_code, 'test_runtime_source_interrupted_after_prepare_rollback');
     assert.equal(fs.readFileSync(path.join(modulesRoot, 'redcube-ai', '.runtime-prepared'), 'utf8').trim(), '0.1.1');
     const preparedRollbackRecovery = runCli(['packages', 'status', '--package-id', FIXTURE_RCA_PACKAGE_ID], env) as any;
-    assert.equal(preparedRollbackRecovery.opl_agent_package_status.runtime_source_recovery.cleared_prepared_transaction_count, 1);
+    assert.equal(preparedRollbackRecovery.opl_agent_package_status.runtime_source_recovery.status, 'recovery_required');
+    assert.equal(preparedRollbackRecovery.opl_agent_package_status.runtime_source_recovery.pending_transaction_count, 1);
+    assert.equal(preparedRollbackRecovery.opl_agent_package_status.runtime_source_recovery.cleared_prepared_transaction_count, 0);
     assert.equal(preparedRollbackRecovery.opl_agent_package_status.runtime_source_recovery.recovered_transaction_count, 0);
     assert.equal(fs.readFileSync(path.join(modulesRoot, 'redcube-ai', '.runtime-prepared'), 'utf8').trim(), '0.1.1');
 
@@ -615,9 +640,11 @@ test('Packages recovers durable runtime-source markers after interrupted apply a
     assert.equal(interruptedUninstall.payload.error.details.failure_code, 'test_runtime_source_interrupted_after_stage_uninstall');
     assert.equal(fs.existsSync(path.join(modulesRoot, 'redcube-ai')), false);
     const restoredStatus = runCli(['packages', 'status', '--package-id', FIXTURE_RCA_PACKAGE_ID], env) as any;
-    assert.equal(restoredStatus.opl_agent_package_status.runtime_source_recovery.recovered_transaction_count, 1);
-    assert.equal(restoredStatus.opl_agent_package_status.runtime_source_readiness.status, 'current');
-    assert.equal(fs.existsSync(path.join(modulesRoot, 'redcube-ai')), true);
+    assert.equal(restoredStatus.opl_agent_package_status.runtime_source_recovery.status, 'recovery_required');
+    assert.equal(restoredStatus.opl_agent_package_status.runtime_source_recovery.pending_transaction_count, 1);
+    assert.equal(restoredStatus.opl_agent_package_status.runtime_source_recovery.recovered_transaction_count, 0);
+    assert.equal(restoredStatus.opl_agent_package_status.runtime_source_readiness.status, 'missing');
+    assert.equal(fs.existsSync(path.join(modulesRoot, 'redcube-ai')), false);
 
     const uninstalled = runCli(['packages', 'uninstall', '--package-id', FIXTURE_RCA_PACKAGE_ID], {
       ...env,
@@ -627,8 +654,98 @@ test('Packages recovers durable runtime-source markers after interrupted apply a
     assert.equal(uninstalled.opl_agent_package_uninstall.runtime_source_cleanup.status, 'cleanup_pending');
     assert.equal(fs.readdirSync(markerDir).length, 1);
     const postCommitRecovery = runCli(['packages', 'status', '--package-id', FIXTURE_RCA_PACKAGE_ID], env) as any;
-    assert.equal(postCommitRecovery.opl_agent_package_status.runtime_source_recovery.cleanup_completed_count, 1);
+    assert.equal(postCommitRecovery.opl_agent_package_status.runtime_source_recovery.status, 'recovery_required');
+    assert.equal(postCommitRecovery.opl_agent_package_status.runtime_source_recovery.pending_transaction_count, 1);
+    assert.equal(postCommitRecovery.opl_agent_package_status.runtime_source_recovery.cleanup_completed_count, 0);
+    runCliFailure(['packages', 'uninstall', '--package-id', FIXTURE_RCA_PACKAGE_ID], env);
     assert.equal(fs.readdirSync(markerDir).length, 0);
+
+    const corruptTransactionId = 'corrupt-target';
+    const corruptMarkerPath = path.join(
+      markerDir,
+      `${FIXTURE_RCA_PACKAGE_ID}-${corruptTransactionId}.json`,
+    );
+    const outsideRoot = path.join(fixtureRoot, 'outside-managed-modules');
+    const sentinelPath = path.join(outsideRoot, 'sentinel.txt');
+    fs.mkdirSync(outsideRoot, { recursive: true });
+    fs.writeFileSync(sentinelPath, 'must remain unchanged\n');
+    fs.writeFileSync(corruptMarkerPath, formatJsonPayload({
+      surface_kind: 'opl_agent_package_runtime_source_transaction',
+      version: 1,
+      phase: 'prepared',
+      mutation: {
+        kind: 'installed_fresh',
+        package_id: FIXTURE_RCA_PACKAGE_ID,
+        action: 'install',
+        transaction_id: corruptTransactionId,
+        marker_path: corruptMarkerPath,
+        module_id: 'redcube',
+        checkout_path: outsideRoot,
+        before: null,
+        after: null,
+        staged_removal_paths: [],
+        repair_displaced_path: null,
+        checkout_existed_before: false,
+      },
+    }));
+    const corruptMarkerBytes = fs.readFileSync(corruptMarkerPath);
+    const lockFile = path.join(stateDir, 'agent-package-locks.json');
+    const lockBytes = fs.readFileSync(lockFile);
+    for (const args of [
+      ['packages', 'status', '--package-id', FIXTURE_RCA_PACKAGE_ID],
+      ['packages', 'install', '--manifest-url', manifestPath, '--trust-tier', 'first_party'],
+    ]) {
+      const failure = runCliFailure(args, env);
+      assert.equal(failure.payload.error.code, 'contract_shape_invalid');
+      assert.equal(
+        failure.payload.error.details.failure_code,
+        'agent_package_runtime_source_transaction_invalid',
+      );
+      assert.equal(failure.payload.error.details.recovery_status, 'recovery_required');
+      assert.deepEqual(fs.readFileSync(corruptMarkerPath), corruptMarkerBytes);
+      assert.deepEqual(fs.readFileSync(lockFile), lockBytes);
+      assert.equal(fs.readFileSync(sentinelPath, 'utf8'), 'must remain unchanged\n');
+    }
+
+    fs.rmSync(corruptMarkerPath);
+    const nonCanonicalPackageId = 'Fixture.RCA';
+    const invalidIdentityMarkerPath = path.join(
+      markerDir,
+      `${nonCanonicalPackageId}-invalid-package-identity.json`,
+    );
+    fs.writeFileSync(invalidIdentityMarkerPath, formatJsonPayload({
+      surface_kind: 'opl_agent_package_runtime_source_transaction',
+      version: 1,
+      phase: 'prepared',
+      mutation: {
+        kind: 'installed_fresh',
+        package_id: nonCanonicalPackageId,
+        action: 'install',
+        transaction_id: 'invalid-package-identity',
+        marker_path: invalidIdentityMarkerPath,
+        module_id: 'redcube',
+        checkout_path: path.join(modulesRoot, 'redcube-ai'),
+        before: null,
+        after: null,
+        staged_removal_paths: [],
+        repair_displaced_path: null,
+        checkout_existed_before: false,
+      },
+    }));
+    const invalidIdentityMarkerBytes = fs.readFileSync(invalidIdentityMarkerPath);
+    const invalidIdentity = runCliFailure([
+      'packages', 'status', '--package-id', FIXTURE_RCA_PACKAGE_ID,
+    ], env);
+    assert.equal(
+      invalidIdentity.payload.error.details.failure_code,
+      'agent_package_runtime_source_transaction_invalid',
+    );
+    assert.equal(
+      invalidIdentity.payload.error.details.recovery_action_state,
+      'manual_owner_intervention_required',
+    );
+    assert.deepEqual(fs.readFileSync(invalidIdentityMarkerPath), invalidIdentityMarkerBytes);
+    assert.deepEqual(fs.readFileSync(lockFile), lockBytes);
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });

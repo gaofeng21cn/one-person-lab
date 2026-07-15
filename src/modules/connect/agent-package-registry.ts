@@ -98,6 +98,7 @@ import {
 import {
   applyManagedRuntimeSourceCarrier,
   finalizeManagedRuntimeSourceMutation,
+  inspectManagedRuntimeSourceTransactions,
   managedRuntimeSourceLockReadiness,
   managedRuntimeSourceReadiness,
   recoverManagedRuntimeSourceTransactions,
@@ -266,11 +267,13 @@ function packageChannelSelection(
   };
 }
 
-function readRecoveredLockIndex() {
+function readRecoveredLockIndex(dryRun = false) {
   const index = readLockIndex();
   return {
     index,
-    runtimeSourceRecovery: recoverManagedRuntimeSourceTransactions(index),
+    runtimeSourceRecovery: dryRun
+      ? inspectManagedRuntimeSourceTransactions()
+      : recoverManagedRuntimeSourceTransactions(index),
   };
 }
 
@@ -351,7 +354,7 @@ async function applyManifestPackageLock(
       failure_code: 'first_party_package_explicit_source_forbidden',
     });
   }
-  const { index } = readRecoveredLockIndex();
+  const { index } = readRecoveredLockIndex(input.dryRun === true);
   const existingLock = packageId
     ? index.packages.find((entry) => entry.package_id === packageId)
     : null;
@@ -1313,7 +1316,7 @@ function packageBulkUpdateSafety(lock: AgentPackageLock) {
 }
 
 export async function runOplAgentPackageBulkUpdate(input: { dryRun?: boolean } = {}) {
-  const { index } = readRecoveredLockIndex();
+  const { index } = readRecoveredLockIndex(input.dryRun === true);
   const dependencyIds = new Set(index.packages.flatMap((lock) =>
     (lock.resolved_dependencies ?? []).map((dependency) => dependency.package_id)));
   const recordedRootIds = new Set((index.last_known_good_transactions ?? [])
@@ -1427,7 +1430,7 @@ function packageRepairResult(
 
 export function runOplAgentPackageRepair(input: AgentPackageRepairInput) {
   const packageId = requirePackageId(input.packageId, 'repair');
-  const { index } = readRecoveredLockIndex();
+  const { index } = readRecoveredLockIndex(input.dryRun === true);
   const { lockIndex, lock } = requireInstalledPackage(index, packageId, 'repair');
   if (
     (lock.capability_dependencies ?? []).length > 0
@@ -1498,7 +1501,7 @@ export function runOplAgentPackageRepair(input: AgentPackageRepairInput) {
 
 export function runOplAgentPackageOptimize(input: AgentPackagePackageActionInput) {
   const packageId = requirePackageId(input.packageId, 'optimize');
-  const { index } = readRecoveredLockIndex();
+  const { index } = readRecoveredLockIndex(input.dryRun === true);
   const { lock } = requireInstalledPackage(index, packageId, 'optimize');
   const result = optimizeInstalledPackageSource({
     index,
@@ -1539,7 +1542,7 @@ export function runOplAgentPackageOptimize(input: AgentPackagePackageActionInput
 
 export function runOplAgentPackageRollback(input: AgentPackagePackageActionInput) {
   const packageId = requirePackageId(input.packageId, 'rollback');
-  const { index } = readRecoveredLockIndex();
+  const { index } = readRecoveredLockIndex(input.dryRun === true);
   const { lock } = requireInstalledPackage(index, packageId, 'rollback');
   assertNoRequiredInstalledDependents(index, packageId, 'rollback');
   const lastKnownGood = (index.last_known_good_transactions ?? [])
@@ -2084,7 +2087,7 @@ async function reconcilePackageClosureForUse(
 
 export async function ensureOplAgentPackageScopeActivation(input: AgentPackagePackageActionInput) {
   const packageId = requirePackageId(input.packageId, 'activate');
-  const recovered = readRecoveredLockIndex();
+  const recovered = readRecoveredLockIndex(input.dryRun === true);
   const initial = requireInstalledPackage(recovered.index, packageId, 'activate');
   const reconciliation = await reconcilePackageClosureForUse(input, initial.lock);
   const index = readLockIndex();
@@ -2394,7 +2397,7 @@ export async function runOplAgentPackageActivate(input: AgentPackagePackageActio
 
 export function runOplAgentPackageProfileApply(input: AgentPackageProfileApplyInput) {
   const packageId = requirePackageId(input.packageId, 'profile_apply');
-  const { index } = readRecoveredLockIndex();
+  const { index } = readRecoveredLockIndex(input.dryRun === true);
   const { lockIndex, lock } = requireInstalledPackage(index, packageId, 'profile_apply');
   assertInstalledCarrierAuthority(lock);
   const profileMigration = applyPackageProfile({
@@ -2469,7 +2472,7 @@ export function runOplAgentPackageFrameworkLink(input: { agentRoot: string; dryR
 
 export function runOplAgentPackageUninstall(input: AgentPackagePackageActionInput) {
   const packageId = requirePackageId(input.packageId, 'uninstall');
-  const { index } = readRecoveredLockIndex();
+  const { index } = readRecoveredLockIndex(input.dryRun === true);
   assertNoRequiredInstalledDependents(index, packageId, 'uninstall');
   const { lockIndex, lock } = requireInstalledPackage(index, packageId, 'uninstall');
   const physicalSurface = removePhysicalCodexSurface(
@@ -2565,7 +2568,7 @@ export function runOplAgentPackageExposureAction(
   input: AgentPackagePackageActionInput,
 ) {
   const packageId = requirePackageId(input.packageId, action);
-  const { index } = readRecoveredLockIndex();
+  const { index } = readRecoveredLockIndex(input.dryRun === true);
   if (action === 'disable') assertNoRequiredInstalledDependents(index, packageId, 'disable');
   const { lockIndex, lock } = requireInstalledPackage(index, packageId, action);
   if (action === 'enable' || action === 'unhide') assertInstalledCarrierAuthority(lock);
@@ -2629,7 +2632,7 @@ export function runOplAgentPackageHomeShortcutPreferencesSet(input: AgentPackage
       required: ['shortcut_id'],
     });
   }
-  const { index: lockIndex } = readRecoveredLockIndex();
+  const { index: lockIndex } = readRecoveredLockIndex(input.dryRun === true);
   const stored = readHomeShortcutPreferenceFile();
   const updatedAt = nowIso();
   const nextEntry: AgentPackageHomeShortcutPreference = {
@@ -2687,18 +2690,8 @@ export function runOplAgentPackageStatus(input: {
   detail?: 'fast' | 'full';
 } = {}) {
   const packageId = canonicalAgentPackageId(input.packageId);
-  const { index: lockIndex, runtimeSourceRecovery } = input.recoverRuntimeSource === false
-    ? {
-        index: readLockIndex(),
-        runtimeSourceRecovery: {
-          status: 'deferred_read_only' as const,
-          recovered_transaction_count: 0,
-          cleanup_completed_count: 0,
-          cleared_prepared_transaction_count: 0,
-          recovered_transaction_ids: [] as string[],
-        },
-      }
-    : readRecoveredLockIndex();
+  const lockIndex = readLockIndex();
+  const runtimeSourceRecovery = inspectManagedRuntimeSourceTransactions();
   const lifecycleLedger = readLifecycleLedger();
   const paths = resolveOplStatePaths();
   const registryCache = readRegistryCache();
@@ -2850,7 +2843,7 @@ export function listOplAgentPackages(input: {
   const detail = input.detail ?? 'fast';
   const paths = resolveOplStatePaths();
   const registryCache = readRegistryCache();
-  const { index: lockIndex } = readRecoveredLockIndex();
+  const lockIndex = readLockIndex();
   const lifecycleLedger = readLifecycleLedger();
   const homeShortcutPreferences = mergedHomeShortcutPreferences(registryCache, lockIndex);
   const receiptsByRef = new Map<string, AgentPackageLifecycleReceipt>();
@@ -2921,7 +2914,7 @@ export function listOplAgentPackages(input: {
 }
 
 export function readInstalledOplAgentPackageLocks() {
-  return readRecoveredLockIndex().index.packages;
+  return readLockIndex().packages;
 }
 
 export function readOplFlowDefaultUserInstructions() {
