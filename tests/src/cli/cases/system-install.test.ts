@@ -159,9 +159,64 @@ test('managed companion sync writes materialized skills with readable permission
       fs.readFileSync(targetSkillPath, 'utf8'),
       fs.readFileSync(materializedSkillPath, 'utf8'),
     );
+    const uiUxReferencePath = path.join(
+      homeRoot,
+      'companion-sources',
+      'materialized',
+      'ui-ux-pro-max',
+      'references',
+      'quick-reference.md',
+    );
+    assert.equal(fs.readFileSync(uiUxReferencePath, 'utf8'), '# Quick reference\n');
   } finally {
     fs.chmodSync(mineruSkillPath, 0o644);
     fs.chmodSync(mineruMetaPath, 0o644);
+    fs.rmSync(homeRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
+  }
+});
+
+test('managed companion sync prefers Skills Manager packages over fallback materialization', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-skills-manager-first-home-'));
+  const env = createFakeCompanionInstallEnv(homeRoot);
+  const managerSkillsRoot = path.join(homeRoot, '.skills-manager', 'skills');
+  const skillIds = [
+    'officecli', 'officecli-docx', 'officecli-pptx', 'officecli-xlsx',
+    'officecli-academic-paper', 'officecli-data-dashboard',
+    'officecli-financial-model', 'officecli-pitch-deck',
+    'ui-ux-pro-max',
+    'mineru-document-extractor',
+  ];
+  for (const skillId of skillIds) {
+    const skillRoot = path.join(managerSkillsRoot, skillId);
+    fs.mkdirSync(skillRoot, { recursive: true });
+    fs.writeFileSync(
+      path.join(skillRoot, 'SKILL.md'),
+      `---\nname: ${skillId}\ndescription: Skills Manager ${skillId} fixture.\n---\n\n# ${skillId}\n`,
+      'utf8',
+    );
+  }
+  const toolBin = writeFakeCompanionToolBinaries(homeRoot);
+
+  try {
+    const output = runCli(['skill', 'companion', 'apply', '--mode', 'managed'], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      PATH: `${toolBin}:/usr/bin:/bin`,
+      ...env,
+    }) as any;
+
+    const itemById = new Map<string, any>(output.companion_skills.items.map(
+      (item: any) => [item.skill_id, item],
+    ));
+    for (const skillId of skillIds) {
+      const managerSkillRoot = path.join(managerSkillsRoot, skillId);
+      const targetRoot = path.join(homeRoot, 'codex-home', 'skills', skillId);
+      assert.equal(itemById.get(skillId)?.source_path, path.join(managerSkillRoot, 'SKILL.md'));
+      assert.equal(itemById.get(skillId)?.status, 'synced');
+      assert.equal(fs.realpathSync(targetRoot), fs.realpathSync(managerSkillRoot));
+    }
+    assert.equal(fs.existsSync(path.join(homeRoot, 'companion-sources', 'materialized')), false);
+  } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
   }
 });

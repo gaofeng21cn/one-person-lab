@@ -453,6 +453,7 @@ function materializeUiUxProMaxSkillSource(
     };
   }
   const skillFile = path.join(repoDir, '.claude', 'skills', 'ui-ux-pro-max', 'SKILL.md');
+  const skillRoot = path.dirname(skillFile);
   const sourceRoot = path.join(repoDir, 'src', 'ui-ux-pro-max');
   if (!fs.existsSync(skillFile) || !fs.existsSync(sourceRoot)) {
     return null;
@@ -462,6 +463,10 @@ function materializeUiUxProMaxSkillSource(
   fs.rmSync(materializedRoot, { recursive: true, force: true });
   fs.mkdirSync(materializedRoot, { recursive: true });
   writeMaterializedFile(skillFile, path.join(materializedRoot, 'SKILL.md'));
+  const referencesRoot = path.join(skillRoot, 'references');
+  if (fs.existsSync(referencesRoot)) {
+    copyMaterializedTree(referencesRoot, path.join(materializedRoot, 'references'));
+  }
   for (const entry of ['data', 'scripts', 'templates']) {
     const source = path.join(sourceRoot, entry);
     if (fs.existsSync(source)) {
@@ -501,6 +506,9 @@ function ensureRecommendedSkillSource(
   skill: OplRecommendedSkill,
   networkAccess: OplCompanionNetworkAccess,
 ) {
+  const installed = pickFirstExistingSkillSource(skill.install_source_paths ?? skill.expected_paths);
+  if (installed) return installed;
+
   if (skill.skill_id === 'ui-ux-pro-max') {
     const managed = materializeUiUxProMaxSkillSource(home, networkAccess);
     if (managed) return managed;
@@ -513,7 +521,7 @@ function ensureRecommendedSkillSource(
     const managed = materializeMineruDocumentExtractorSkillSource(home, networkAccess);
     if (managed) return managed;
   }
-  return pickFirstExistingSkillSource(skill.install_source_paths ?? skill.expected_paths);
+  return null;
 }
 
 function buildObservedCompanionItem(

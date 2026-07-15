@@ -72,14 +72,16 @@ function createFakeOfficeCliSource(root: string) {
 }
 
 function createFakeUiUxProMaxSource(root: string) {
-  fs.mkdirSync(path.join(root, '.claude', 'skills', 'ui-ux-pro-max'), { recursive: true });
+  const skillRoot = path.join(root, '.claude', 'skills', 'ui-ux-pro-max');
+  fs.mkdirSync(path.join(skillRoot, 'references'), { recursive: true });
   fs.mkdirSync(path.join(root, 'src', 'ui-ux-pro-max', 'data'), { recursive: true });
   fs.mkdirSync(path.join(root, 'src', 'ui-ux-pro-max', 'scripts'), { recursive: true });
   fs.writeFileSync(
-    path.join(root, '.claude', 'skills', 'ui-ux-pro-max', 'SKILL.md'),
-    '---\nname: ui-ux-pro-max\ndescription: Test UI UX Pro Max skill.\n---\n\n# ui-ux-pro-max\n',
+    path.join(skillRoot, 'SKILL.md'),
+    '---\nname: ui-ux-pro-max\ndescription: Test UI UX Pro Max skill.\n---\n\n# ui-ux-pro-max\n\nRead `references/quick-reference.md`.\n',
     'utf8',
   );
+  fs.writeFileSync(path.join(skillRoot, 'references', 'quick-reference.md'), '# Quick reference\n', 'utf8');
   fs.writeFileSync(path.join(root, 'src', 'ui-ux-pro-max', 'data', 'palettes.json'), '{}\n', 'utf8');
   fs.writeFileSync(path.join(root, 'src', 'ui-ux-pro-max', 'scripts', 'search.js'), 'export {};\n', 'utf8');
 }
