@@ -314,6 +314,99 @@ test('MAS scope materialization never overwrites an unowned local Skill', async 
   }
 });
 
+test('MAS scope materialization adopts verified legacy OPL-managed Skills and rollback restores them', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-scope-legacy-managed-'));
+  const stateDir = path.join(root, 'state');
+  const workspace = path.join(root, 'workspace');
+  const providerRoot = path.join(root, 'provider');
+  const providerManifest = writeFixtureCapabilityProvider(providerRoot);
+  const consumerManifest = writeFixtureMasConsumer(path.join(root, 'consumer'), providerManifest);
+  const targetSkillsRoot = path.join(workspace, '.codex', 'skills');
+  const aggregateSkill = path.join(targetSkillsRoot, 'mas-scholar-skills');
+  const specialistSkill = path.join(targetSkillsRoot, 'medical-manuscript-writing');
+  const env = { OPL_STATE_DIR: stateDir, CODEX_HOME: path.join(root, 'codex-home') };
+  try {
+    fs.cpSync(path.join(providerRoot, 'skills', 'mas-scholar-skills'), aggregateSkill, { recursive: true });
+    fs.writeFileSync(path.join(aggregateSkill, 'helper.txt'), 'legacy aggregate helper\n');
+    fs.writeFileSync(path.join(aggregateSkill, '.opl-install-receipt.json'), formatJsonPayload({
+      receipt_kind: 'opl_scholarskills_workspace_or_quest_local_install_receipt',
+      schema_version: 'g1',
+      source_repo_path: providerRoot,
+      source_plugin_path: providerRoot,
+      target_scope: 'workspace',
+      target_root: workspace,
+      skill_root: aggregateSkill,
+      skill_entry: path.join(aggregateSkill, 'SKILL.md'),
+    }));
+
+    fs.cpSync(path.join(providerRoot, 'skills', 'medical-manuscript-writing'), specialistSkill, { recursive: true });
+    fs.writeFileSync(path.join(specialistSkill, 'helper.txt'), 'legacy specialist helper\n');
+    fs.writeFileSync(path.join(specialistSkill, '.opl-connect-skill-sync.json'), formatJsonPayload({
+      surface_kind: 'opl_connect_managed_mas_scholar_skills_specialist_dir',
+      schema_version: 'g1',
+      pack_id: 'medical-manuscript-writing',
+      source_skill_dir: path.join(providerRoot, 'skills', 'medical-manuscript-writing'),
+    }));
+
+    await runCliAsync([
+      'packages', 'install', '--manifest-url', providerManifest, '--trust-tier', 'first_party',
+    ], env);
+    const installed = await runCliAsync([
+      'packages', 'install', '--manifest-url', consumerManifest, '--trust-tier', 'first_party',
+      '--scope', 'workspace', '--target-workspace', workspace,
+    ], env) as any;
+    assert.equal(installed.opl_agent_package_install.status, 'installed');
+    assert.equal(
+      fs.readFileSync(path.join(aggregateSkill, 'helper.txt'), 'utf8'),
+      'mas-scholar-skills helper 0.1.0\n',
+    );
+    assert.equal(
+      fs.readFileSync(path.join(specialistSkill, 'helper.txt'), 'utf8'),
+      'medical-manuscript-writing helper 0.1.0\n',
+    );
+
+    const rolledBack = runCli(['packages', 'rollback', FIXTURE_CONSUMER_PACKAGE_ID], env) as any;
+    assert.equal(rolledBack.opl_agent_package_rollback.status, 'rolled_back');
+    assert.equal(fs.readFileSync(path.join(aggregateSkill, 'helper.txt'), 'utf8'), 'legacy aggregate helper\n');
+    assert.equal(fs.readFileSync(path.join(specialistSkill, 'helper.txt'), 'utf8'), 'legacy specialist helper\n');
+    assert.equal(
+      JSON.parse(fs.readFileSync(path.join(specialistSkill, '.opl-connect-skill-sync.json'), 'utf8')).pack_id,
+      'medical-manuscript-writing',
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('MAS scope materialization rejects forged legacy OPL management markers', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-scope-forged-managed-'));
+  const workspace = path.join(root, 'workspace');
+  const localSkill = path.join(workspace, '.codex', 'skills', 'medical-manuscript-writing');
+  const providerRoot = path.join(root, 'provider');
+  const providerManifest = writeFixtureCapabilityProvider(providerRoot);
+  const consumerManifest = writeFixtureMasConsumer(path.join(root, 'consumer'), providerManifest);
+  const env = { OPL_STATE_DIR: path.join(root, 'state'), CODEX_HOME: path.join(root, 'codex-home') };
+  try {
+    fs.mkdirSync(localSkill, { recursive: true });
+    fs.writeFileSync(path.join(localSkill, 'SKILL.md'), '# user-owned local Skill\n');
+    fs.writeFileSync(path.join(localSkill, '.opl-connect-skill-sync.json'), formatJsonPayload({
+      surface_kind: 'opl_connect_managed_mas_scholar_skills_specialist_dir',
+      schema_version: 'g1',
+      pack_id: 'medical-manuscript-writing',
+      source_skill_dir: path.join(root, 'unrelated', 'skills', 'medical-manuscript-writing'),
+    }));
+    const blocked = await runCliFailure([
+      'packages', 'install', '--manifest-url', consumerManifest, '--trust-tier', 'first_party',
+      '--scope', 'workspace', '--target-workspace', workspace,
+    ], env);
+    assert.equal(blocked.payload.error.details.failure_code, 'agent_package_scope_unowned_skill_collision');
+    assert.deepEqual(blocked.payload.error.details.collision_skill_ids, ['medical-manuscript-writing']);
+    assert.equal(fs.readFileSync(path.join(localSkill, 'SKILL.md'), 'utf8'), '# user-owned local Skill\n');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('initial MAS rollback preserves a preinstalled provider and restores the workspace prestate', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-initial-rollback-'));
   const stateDir = path.join(root, 'state');

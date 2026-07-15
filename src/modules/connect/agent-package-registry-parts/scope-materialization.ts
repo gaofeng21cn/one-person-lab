@@ -75,6 +75,102 @@ function skillDigest(root: string, skillId: string) {
   return skillTreeDigest(root, [skillId]);
 }
 
+function readJsonRecord(filePath: string): Record<string, unknown> | null {
+  if (!fs.existsSync(filePath)) return null;
+  try {
+    const value = JSON.parse(fs.readFileSync(filePath, 'utf8')) as unknown;
+    return value !== null && typeof value === 'object' && !Array.isArray(value)
+      ? value as Record<string, unknown>
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function samePath(left: unknown, right: string) {
+  return typeof left === 'string' && path.resolve(left) === path.resolve(right);
+}
+
+function providerIdentityIds(provider: AgentPackageManifest) {
+  const ids = new Set([provider.package_id, provider.plugin_id].filter((value): value is string => Boolean(value)));
+  if (provider.plugin_source_path) {
+    const plugin = readJsonRecord(path.join(provider.plugin_source_path, '.codex-plugin', 'plugin.json'));
+    if (typeof plugin?.name === 'string') ids.add(plugin.name);
+  }
+  return ids;
+}
+
+function legacySourceMatchesProvider(input: {
+  provider: AgentPackageManifest;
+  skillId: string;
+  sourceSkillDir: unknown;
+}) {
+  if (typeof input.sourceSkillDir !== 'string') return false;
+  const sourceSkillDir = path.resolve(input.sourceSkillDir);
+  if (
+    path.basename(sourceSkillDir) !== input.skillId
+    || path.basename(path.dirname(sourceSkillDir)) !== 'skills'
+    || !fs.existsSync(path.join(sourceSkillDir, 'SKILL.md'))
+  ) {
+    return false;
+  }
+  const pluginRoot = path.dirname(path.dirname(sourceSkillDir));
+  const plugin = readJsonRecord(path.join(pluginRoot, '.codex-plugin', 'plugin.json'));
+  return typeof plugin?.name === 'string'
+    && providerIdentityIds(input.provider).has(plugin.name);
+}
+
+function isVerifiedLegacyManagedSkill(input: {
+  provider: AgentPackageManifest;
+  scope: 'workspace' | 'quest';
+  targetRoot: string;
+  skillId: string;
+  targetSkillRoot: string;
+  managedSkillIds: string[];
+}) {
+  if (!fs.existsSync(path.join(input.targetSkillRoot, 'SKILL.md'))) return false;
+
+  const marker = readJsonRecord(path.join(input.targetSkillRoot, '.opl-connect-skill-sync.json'));
+  if (marker) {
+    const sourceMatches = legacySourceMatchesProvider({
+      provider: input.provider,
+      skillId: input.skillId,
+      sourceSkillDir: marker.source_skill_dir,
+    });
+    const currentFrameworkMarker = marker.surface_kind === 'opl_connect_managed_framework_capability_skill_dir'
+      && marker.skill_id === input.skillId
+      && typeof marker.capability_package_id === 'string'
+      && providerIdentityIds(input.provider).has(marker.capability_package_id);
+    const legacyScholarSkillsMarker = marker.surface_kind === 'opl_connect_managed_mas_scholar_skills_specialist_dir'
+      && marker.pack_id === input.skillId
+      && input.managedSkillIds.includes('mas-scholar-skills');
+    if (sourceMatches && (currentFrameworkMarker || legacyScholarSkillsMarker)) return true;
+  }
+
+  const receipt = readJsonRecord(path.join(input.targetSkillRoot, '.opl-install-receipt.json'));
+  if (
+    input.skillId !== 'mas-scholar-skills'
+    || receipt?.receipt_kind !== 'opl_scholarskills_workspace_or_quest_local_install_receipt'
+    || receipt.target_scope !== input.scope
+    || !samePath(receipt.target_root, input.targetRoot)
+    || !samePath(receipt.skill_root, input.targetSkillRoot)
+    || !samePath(receipt.skill_entry, path.join(input.targetSkillRoot, 'SKILL.md'))
+    || !input.managedSkillIds.includes('mas-scholar-skills')
+  ) {
+    return false;
+  }
+  const legacyPluginRoot = typeof receipt.source_plugin_path === 'string'
+    ? receipt.source_plugin_path
+    : receipt.source_repo_path;
+  return legacySourceMatchesProvider({
+    provider: input.provider,
+    skillId: input.skillId,
+    sourceSkillDir: typeof legacyPluginRoot === 'string'
+      ? path.join(legacyPluginRoot, 'skills', input.skillId)
+      : null,
+  });
+}
+
 export function materializeCapabilityScope(input: {
   provider: AgentPackageManifest;
   scope: 'workspace' | 'quest';
@@ -122,7 +218,17 @@ export function materializeCapabilityScope(input: {
   const transactionSkillIds = [...managedSkillIds, ...retiredSkillIds];
   if (!input.previousMaterialization) {
     const targetSkillsRoot = path.join(input.targetRoot, '.codex', 'skills');
-    const collisions = managedSkillIds.filter((skillId) => fs.existsSync(path.join(targetSkillsRoot, skillId)));
+    const collisions = managedSkillIds.filter((skillId) => {
+      const targetSkillRoot = path.join(targetSkillsRoot, skillId);
+      return fs.existsSync(targetSkillRoot) && !isVerifiedLegacyManagedSkill({
+        provider: input.provider,
+        scope: input.scope,
+        targetRoot: input.targetRoot,
+        skillId,
+        targetSkillRoot,
+        managedSkillIds,
+      });
+    });
     if (collisions.length > 0) {
       throw new FrameworkContractError('contract_shape_invalid', 'Package scope activation refuses to overwrite unowned local Skills.', {
         provider_package_id: input.provider.package_id,
