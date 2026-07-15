@@ -4,6 +4,7 @@ import {
   runPackBundleWriteCommand,
 } from '../../../../modules/pack/pack-bundle.ts';
 import { runPackNativeHelperProbeCommand } from '../../../../modules/pack/native-helper-probe.ts';
+import { materializeArtifactProjectionRequestFile } from '../../../../modules/pack/artifact-projection-materialization.ts';
 import { provisionSubmissionResource } from '../../../../modules/pack/submission-resource-provisioning.ts';
 import { runPackNativeHelperExecutionCommand } from '../../../../modules/runway/index.ts';
 import {
@@ -102,6 +103,23 @@ export function buildBrandPackCommandSpecs(packInspectFallback?: CommandSpec): R
             : {}),
           dry_run: parsed['dry-run'] === true,
         });
+      },
+    },
+    'pack materialize-artifact-projection': {
+      usage: 'opl pack materialize-artifact-projection --request <path> [--dry-run]',
+      summary: 'Atomically publish a domain-authorized exact-byte artifact tree after all completion markers validate.',
+      examples: [
+        'opl pack materialize-artifact-projection --request artifact-projection-request.json --dry-run --json',
+        'opl pack materialize-artifact-projection --request artifact-projection-request.json --json',
+      ],
+      group: 'brand-pack',
+      handler: (args) => {
+        const command = 'pack materialize-artifact-projection';
+        const parsed = parseRegisteredCommandOptions(command, args, specs[command]);
+        return materializeArtifactProjectionRequestFile(
+          parsed.request as string,
+          parsed['dry-run'] === true,
+        );
       },
     },
     'pack bundle': {

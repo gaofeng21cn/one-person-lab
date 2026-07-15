@@ -113,6 +113,61 @@
         "surface": "content_addressed_submission_resource_provisioning"
       }
     },
+    "pack_materialize_artifact_projection": {
+      "command_id": "pack materialize-artifact-projection",
+      "owner": "OPL Pack",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "request",
+          "flag": "--request",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Exact local path to a domain-authorized artifact projection request."
+        },
+        {
+          "name": "dry-run",
+          "flag": "--dry-run",
+          "value_kind": "boolean",
+          "required": false,
+          "summary": "Validate source bytes, completion markers, target containment, and transaction shape without writing."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "pack_artifact_projection_materialization"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "pack_artifact_projection_materialization": {
+            "type": "object",
+            "required": [
+              "status",
+              "dry_run",
+              "writes_performed",
+              "receipt_path",
+              "receipt_sha256",
+              "receipt"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Pack",
+        "surface": "domain_authorized_atomic_artifact_projection_transport"
+      }
+    },
     "connect_gateway_status": {
       "command_id": "connect gateway status",
       "owner": "OPL Connect",

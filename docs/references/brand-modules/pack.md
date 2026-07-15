@@ -54,6 +54,8 @@ contracts/opl-framework/pack-native-helper-probe-contract.json
 contracts/opl-framework/submission-resource-requirements.schema.json
 contracts/opl-framework/submission-resource-provision-request.schema.json
 contracts/opl-framework/submission-resource-provision-receipt.schema.json
+contracts/opl-framework/artifact-projection-materialization-request.schema.json
+contracts/opl-framework/artifact-projection-materialization-receipt.schema.json
 contracts/opl-framework/domain-pack-compiler-contract.json
 contracts/opl-framework/standard-domain-agent-skeleton-contract.json
 contracts/opl-framework/foundry-agent-series-contract.json
@@ -99,9 +101,12 @@ opl pack run --pack <path> --action <id> --template <id> --mode final|candidate 
 opl pack gallery --pack <path> --json
 opl pack native-helper probe --descriptor <path> --json
 opl pack provision-submission-resource --requirements <path> --resource-id <id> (--package-root <dir>|--source-path <path>) --json
+opl pack materialize-artifact-projection --request <path> [--dry-run] --json
 ```
 
-这些入口只读取 `opl_pack.json`、Pack OS descriptor、native-helper probe descriptor，或 domain-owned submission-resource requirements。`provision-submission-resource` 只接受 requirement 中冻结的 `provisioning/package_path/path_env` 形状：package 模式严格以 `package_root + package_path` 做 containment 和 symlink 检查，host 模式只接受 caller 显式传入的 absolute `source_path`；`path_env` 仅回投为 operator guidance，OPL 不读环境变量、不下载、不尝试 URL fallback。它对 exact bytes 做稳定读取与 SHA-256 校验，把内容和 false-authority receipt 原子写入 OPL state 或显式 destination root；dry-run 只解析、校验和计算路径，零写入。该 surface 不是 Agent Package install/update/repair 生命周期，不改变 package lock，也不授权 submission ready、quality verdict、artifact authority 或 owner receipt。
+这些入口只读取 `opl_pack.json`、Pack OS descriptor、native-helper probe descriptor、domain-owned submission-resource requirements，或 domain owner 已准备并授权的 artifact projection request。`provision-submission-resource` 只接受 requirement 中冻结的 `provisioning/package_path/path_env` 形状：package 模式严格以 `package_root + package_path` 做 containment 和 symlink 检查，host 模式只接受 caller 显式传入的 absolute `source_path`；`path_env` 仅回投为 operator guidance，OPL 不读环境变量、不下载、不尝试 URL fallback。它对 exact bytes 做稳定读取与 SHA-256 校验，把内容和 false-authority receipt 原子写入 OPL state 或显式 destination root；dry-run 只解析、校验和计算路径，零写入。该 surface 不是 Agent Package install/update/repair 生命周期，不改变 package lock，也不授权 submission ready、quality verdict、artifact authority 或 owner receipt。
+
+`materialize-artifact-projection` 只搬运 domain owner 已经完成、逐文件列入 manifest 且带 completion markers 的完整树。OPL 在 sibling staging 中重新校验每个文件的 size/SHA-256，验证 source tree 与 expected manifest 完全一致后才切换 canonical target；切换失败恢复旧树，dead-owner transaction 先恢复再重试。这个 transport 可以防止半成品目录被 preferred-root consumer 抢先读取，但不会创建或解释 `STATUS.json`、publication evaluation、next action、quality verdict、owner receipt、typed blocker 或 submission authority。`domain_authorization` 只是调用方提供并进入 receipt 的授权引用，Framework 不验证或扩张其 domain 语义。
 
 其余入口生成 refs-only inspection / validation / action plan 或由 descriptor/content SHA-256 绑定的 `resolved|missing` 探测 receipt。native-helper probe 只解析 entrypoint 与声明的 runtime/tool commands，不执行 helper 或 domain renderer，不渲染 PDF/image asset，也不声明质量 verdict、artifact authority、publication proof 或 export readiness。`medical-display-core` 是 MAS Scholar Skills 提供的外部 capability pack resource；OPL 不提供 `opl display` 顶层命令，也不把科研画图纳入 OPL 基座 domain 语义。
 
@@ -136,6 +141,7 @@ opl contract validate --json
 | `app_action:pack_status` | 只读 status action，delegated surface 为 `opl pack status --json`。 |
 | `app_action:pack_inspect` | 只读 drilldown action，支持 domain pack、authority ABI、generated surface 或 compiler result scope。 |
 | `app_action:opl_pack_provision_submission_resource` | 复用同一 Pack action，把既有 exact local bytes 写入 OPL content-addressed cache；支持零写入 dry-run，不读取 `path_env`，不进入 Agent Package lifecycle，也不签 submission/quality/owner verdict。 |
+| `app_action:opl_pack_materialize_artifact_projection` | 原子投影 domain owner 已授权的完整 exact-byte artifact tree；只生成 OPL transport receipt，不创建或提升 domain truth、quality、publication 或 submission authority。 |
 | `read_model.pack.domain_packs` | Foundry Agent pack summary、owner、source refs、required sections 和 conformance state。 |
 | `read_model.pack.authority_abi` | domain authority function refs、accepted owner answer shape 和 forbidden authority flags。 |
 | `read_model.pack.capability_execution_view` | Agent ordinary path 的执行视图，只包含可执行 action、input shape、owner/action refs 和 false-authority flags。 |

@@ -90,3 +90,13 @@ export {
   provisionSubmissionResource,
 } from './submission-resource-provisioning.ts';
 export type { SubmissionResourceProvisionRequest } from './submission-resource-provisioning.ts';
+export {
+  artifactProjectionTreeSha256,
+  materializeArtifactProjection,
+  materializeArtifactProjectionRequestFile,
+  OPL_PACK_MATERIALIZE_ARTIFACT_PROJECTION_ACTION_ID,
+} from './artifact-projection-materialization.ts';
+export type {
+  ArtifactProjectionMaterializationHooks,
+  ArtifactProjectionMaterializationRequest,
+} from './artifact-projection-materialization.ts';

@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.onepersonlab.dev/opl/artifact-projection-materialization-request.v1",
+  "title": "OPL Artifact Projection Materialization Request",
+  "type": "object",
+  "required": [
+    "surface_kind",
+    "schema_version",
+    "operation_id",
+    "domain_id",
+    "generation_id",
+    "workspace_root",
+    "source_root",
+    "target_relative_path",
+    "expected_files",
+    "expected_tree_sha256",
+    "completion_marker_paths",
+    "domain_authorization"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "opl_artifact_projection_materialization_request.v1"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "operation_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+    },
+    "domain_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "generation_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "workspace_root": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_root": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target_relative_path": {
+      "$ref": "#/$defs/relative_path"
+    },
+    "expected_files": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/file_identity"
+      }
+    },
+    "expected_tree_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "completion_marker_paths": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/relative_path"
+      }
+    },
+    "domain_authorization": {
+      "type": "object",
+      "required": [
+        "owner",
+        "ref",
+        "scope",
+        "artifact_body_write_authorized",
+        "authorizes_quality_publication_or_submission"
+      ],
+      "properties": {
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scope": {
+          "const": "artifact_projection_only"
+        },
+        "artifact_body_write_authorized": {
+          "const": true
+        },
+        "authorizes_quality_publication_or_submission": {
+          "const": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "dry_run": {
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "relative_path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*(?:^|[\\\\/])\\.\\.(?:[\\\\/]|$)).+$"
+    },
+    "file_identity": {
+      "type": "object",
+      "required": [
+        "path",
+        "byte_size",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/relative_path"
+        },
+        "byte_size": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

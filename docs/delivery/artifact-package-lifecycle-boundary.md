@@ -14,6 +14,7 @@ OPL 只负责通用 artifact/package/export lifecycle shell：
 - artifact locator、package/export ledger、restore/retention/migration refs；
 - runtime artifact root locator、artifact index、receipt refs 和 restore proof refs；源码仓只保存这些引用和 policy，不保存 artifact body；
 - Pack OS 的通用 capability pack descriptor intake、install registry、content-addressed cache、refs-only distribution bundle、refs-only pack lock、artifact lifecycle refs 和 review receipt refs transport；
+- domain owner 已准备并授权的完整 artifact tree 的 exact-byte 原子投影 transport；
 - OPL-owned runtime/index/provenance/tombstone refs 的 dry-run / apply / verify lifecycle ledger apply；
 - stage attempt closeout、owner receipt refs、typed blocker refs 和 App/workbench gallery projection；
 - package/export lifecycle 的通用 read model、handoff shell 和 operator action route。
@@ -21,6 +22,8 @@ OPL 只负责通用 artifact/package/export lifecycle shell：
 OPL 不拥有 manuscript、grant package、deck、visual artifact、review/export verdict、submission ready verdict 或 artifact mutation permission。真实 artifact body、receipt 实例和最终交付物应位于外部 runtime artifact root；developer checkout 只保存 locator、schema、receipt ref、restore / retention policy 和可审查 fixture。`family-runtime lifecycle apply` 遇到 domain truth、memory body、artifact body 或 source repo active file mutation 会 fail-closed；domain artifact mutation 只能作为 domain owner receipt ref 被记录。
 
 Pack OS 是这条边界里的 landed 通用 transport surface：`contracts/opl-framework/pack-os-contract.json` 与 `src/modules/pack/pack-os.ts` 支持 `opl pack os inspect|install|registry|cache|distribute|lock|validate --json`，从 descriptor 派生 refs-only lock、registry entry、content-addressed cache manifest 和 refs-only distribution bundle，记录 descriptor ref/hash、present local file 的 content hash、artifact locator refs、lifecycle state refs、review receipt refs、provenance 和 authority false flags。它接受 domain-owned adapter 产出的通用 descriptor，不保留 MAS Display Pack 专用 smoke 或 conversion contract；它不复制 artifact body 到合同，不改写 domain artifact，不把 review receipt transport 解释成 quality verdict，不签 domain owner receipt，也不授权 publication/grant/visual/App ready 或 production maturity。
+
+`opl pack materialize-artifact-projection --request <path>` 是同一边界下的 apply surface。domain owner 必须先生成完整 source tree、逐文件 size/SHA-256 manifest、completion markers 和 artifact-body write authorization ref；OPL 只在 sibling staging 中复验 exact bytes，并在整树验证成功后切换 canonical target。切换失败恢复旧树，dead-owner transaction 可恢复；source/target overlap、symlink、路径逃逸、缺 marker 或任一 hash 漂移均 fail closed。该命令不能生成 domain 文件内容、选择 publication 状态、解释 next action、签 owner receipt，或授权 quality/publication/submission；transport receipt 只证明指定字节被原子投影。
 
 ## Stage Artifact 单元
 
@@ -49,6 +52,7 @@ artifact 状态分类固定为：
 | --- | --- | --- |
 | Generic substrate projection | OPL 只拥有 artifact ref index、memory/source/workspace ref index、lifecycle projection、manifest ref transport 和 App/operator grouping。 | `contracts/opl-framework/generic-substrate-projection-contract.json`、`src/generic-substrate-projection.ts`、`tests/src/generic-substrate-projection.test.ts`。 |
 | Pack OS descriptor / lifecycle | OPL 只把 capability pack descriptor、resource refs、content hashes、artifact lifecycle refs 和 review receipt refs 投影成 refs-only lock、registry entry、cache manifest 与 distribution bundle；domain conversion与质量判断留在domain adapter；不存artifact body，不生成owner receipt，不判断quality/publication/export readiness。 | `contracts/opl-framework/pack-os-contract.json`、`src/modules/pack/pack-os.ts`、`opl pack os inspect --descriptor <path> --json`、`opl pack os install --descriptor <path> --registry <path> --json`、`opl pack os registry --registry <path> --json`、`opl pack os cache --descriptor <path> --cache-root <dir> --json`、`opl pack os distribute --descriptor <path> --output <path> --json`、`opl pack os lock --descriptor <path> --json`、`opl pack os validate --descriptor <path> --json`。 |
+| Atomic artifact projection | OPL 只搬运 domain owner 已准备、已授权且 exact-byte manifest 完整的 artifact tree；staging validation、canonical switch、rollback、recovery 和 content-addressed transport receipt 归 OPL，artifact 内容与所有 domain verdict 归 domain owner。 | `contracts/opl-framework/artifact-projection-materialization-request.schema.json`、`contracts/opl-framework/artifact-projection-materialization-receipt.schema.json`、`src/modules/pack/artifact-projection-materialization.ts`、`tests/src/cli/cases/pack-artifact-projection-materialization.test.ts`、`opl pack materialize-artifact-projection --request <path> --json`。 |
 | Stage Artifact runtime | OPL 从物理 stage folders 重建 status/explain/index/workbench，执行 conformance、content hash、lineage graph、retention archive 和 restore proof ref 维护；不持有 artifact body 或 owner verdict。 | `contracts/opl-framework/stage-artifact-runtime-contract.json`、`src/stage-artifact-runtime.ts`、`tests/src/stage-artifact-runtime.test.ts`、`opl stage conformance --json`、`opl stage workbench --json`。 |
 | Package/export projection | Stage attempt 和 workbench 只投影 package refs、export refs、gap report refs、handoff refs、artifact refs 和 external submission status ref。 | `src/runtime-tray-package-export-lifecycle.ts`、`tests/src/cli/cases/runtime-app-operator-drilldown-lifecycle.test.ts`、`opl runtime app-operator-drilldown --json`。 |
 | Lifecycle apply/index | OPL-owned runtime/index/provenance/tombstone refs 可以走 dry-run/apply/verify ledger；domain artifact mutation 只能以 domain owner receipt ref 进入索引；refs-only drift/readiness inspection 通过 lifecycle index、tests 和 App/operator read-model 读取。 | `contracts/family-orchestration/family-lifecycle-ledger.schema.json`、`src/family-runtime-lifecycle-index.ts`、`tests/src/family-runtime-lifecycle-index.test.ts`、`src/family-runtime-command-parts/lifecycle.ts`、`opl family-runtime lifecycle apply`、`opl family-runtime lifecycle reconcile`。 |
@@ -74,6 +78,7 @@ artifact 状态分类固定为：
 - orphan artifact、broken artifact 或 historical artifact 被计入 current progress。
 - App gallery、package/export projection、lifecycle index 或 restore proof ref 等于 domain owner receipt、artifact mutation authority 或 final deliverable authority。
 - OPL 可读取、改写、清理或接受真实 artifact body、memory body、domain truth body 或 source repo active file。
+- OPL 可替 domain owner 生成 completion marker、`STATUS.json`、publication evaluation、next action 或任何 quality/submission verdict；原子投影只运输 owner 已准备的字节。
 - `family-runtime lifecycle apply` 可以替代 MAS/MAG/RCA 的 cleanup、restore、retention、artifact mutation 或 owner-chain receipt。
 - developer checkout 可作为 runtime artifact root、真实交付物根、receipt 实例根或 package/export body 根。
 - 为退役 product-entry、gateway-era route、local manager、compat alias、facade 或 wrapper 保留 delivery/package/export 入口。

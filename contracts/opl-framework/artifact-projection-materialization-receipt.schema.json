@@ -1,0 +1,195 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.onepersonlab.dev/opl/artifact-projection-materialization-receipt.v1",
+  "title": "OPL Artifact Projection Materialization Receipt",
+  "type": "object",
+  "required": [
+    "surface_kind",
+    "schema_version",
+    "action_id",
+    "status",
+    "operation_id",
+    "domain_id",
+    "generation_id",
+    "source",
+    "target",
+    "completion_marker_paths",
+    "domain_authorization",
+    "transaction",
+    "authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "opl_pack_artifact_projection_materialization_receipt.v1"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "action_id": {
+      "const": "opl_pack_materialize_artifact_projection"
+    },
+    "status": {
+      "enum": [
+        "materialized",
+        "already_materialized",
+        "dry_run"
+      ]
+    },
+    "operation_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "domain_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generation_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source": {
+      "$ref": "#/$defs/tree_identity"
+    },
+    "target": {
+      "$ref": "#/$defs/tree_identity"
+    },
+    "completion_marker_paths": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "domain_authorization": {
+      "type": "object",
+      "required": [
+        "owner",
+        "ref",
+        "scope",
+        "artifact_body_write_authorized",
+        "authorizes_quality_publication_or_submission"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scope": {
+          "const": "artifact_projection_only"
+        },
+        "artifact_body_write_authorized": {
+          "const": true
+        },
+        "authorizes_quality_publication_or_submission": {
+          "const": false
+        }
+      }
+    },
+    "transaction": {
+      "type": "object",
+      "required": [
+        "staging_validated_before_switch",
+        "canonical_root_never_exposed_as_incomplete",
+        "previous_root_restored_on_switch_failure",
+        "recovery_action"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "staging_validated_before_switch": {
+          "const": true
+        },
+        "canonical_root_never_exposed_as_incomplete": {
+          "const": true
+        },
+        "previous_root_restored_on_switch_failure": {
+          "const": true
+        },
+        "recovery_action": {
+          "enum": [
+            "none",
+            "removed_abandoned_staging",
+            "restored_previous_target",
+            "finalized_installed_target",
+            "kept_existing_target"
+          ]
+        }
+      }
+    },
+    "authority_boundary": {
+      "type": "object",
+      "required": [
+        "framework_role",
+        "copies_domain_prepared_bytes_only",
+        "requires_declared_domain_authorization",
+        "framework_validates_authorization_semantics",
+        "can_write_domain_truth",
+        "can_create_owner_receipt",
+        "can_create_typed_blocker",
+        "can_authorize_quality_publication_or_submission"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "framework_role": {
+          "const": "atomic_artifact_projection_transport"
+        },
+        "copies_domain_prepared_bytes_only": {
+          "const": true
+        },
+        "requires_declared_domain_authorization": {
+          "const": true
+        },
+        "framework_validates_authorization_semantics": {
+          "const": false
+        },
+        "can_write_domain_truth": {
+          "const": false
+        },
+        "can_create_owner_receipt": {
+          "const": false
+        },
+        "can_create_typed_blocker": {
+          "const": false
+        },
+        "can_authorize_quality_publication_or_submission": {
+          "const": false
+        }
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "tree_identity": {
+      "type": "object",
+      "required": [
+        "root",
+        "file_count",
+        "tree_sha256"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "root": {
+          "type": "string",
+          "minLength": 1
+        },
+        "file_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "tree_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    }
+  }
+}
