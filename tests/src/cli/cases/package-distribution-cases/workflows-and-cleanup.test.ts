@@ -189,6 +189,19 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.match(dailyPackageWorkflow, /force_publish[\s\S]*publish_required=true/);
   assert.match(dailyPackageWorkflow, /npm run packages:manifest/);
   assert.match(dailyPackageWorkflow, /OPL_PACKAGE_RELEASE_GATE:\s*daily_package_channel_detection/);
+  assert.match(dailyPackageWorkflow, /owner_manifest=""/);
+  assert.match(
+    dailyPackageWorkflow,
+    /if \[ -n "\$owner_manifest" \]; then\s+app_commit="\$\(jq -r \.source_commit "\$owner_manifest"\)"/,
+  );
+  assert.match(
+    dailyPackageWorkflow,
+    /if \[ -z "\$app_commit" \]; then\s+app_commit="\$\(gh api "repos\/gaofeng21cn\/one-person-lab-app\/commits\/v\$app_version" --jq \.sha\)"/,
+  );
+  assert.ok(
+    dailyPackageWorkflow.indexOf('gh release download "v$app_version"')
+      < dailyPackageWorkflow.indexOf('app_commit=""'),
+  );
   assert.match(dailyPackageWorkflow, /npm run packages:daily-check/);
   assert.match(dailyPackageWorkflow, /one-person-lab-manifest:latest-stable/);
   assert.match(dailyPackageWorkflow, /test -n "\$current"/);
