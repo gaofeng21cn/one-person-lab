@@ -1,0 +1,341 @@
+{
+  "surface_kind": "opl_package_payload_manifest.v2",
+  "schema_ref": "contracts/opl-framework/package-payload-manifest-v2.schema.json",
+  "package_id": "mas-scholar-skills",
+  "plugin_id": "mas-scholar-skills",
+  "package_version": "0.2.4",
+  "source_repo": "https://github.com/gaofeng21cn/mas-scholar-skills.git",
+  "source_commit": "c6175831068d26ce175c235a18c10fc0e73c99b8",
+  "source_root": ".",
+  "content_lock": {
+    "algorithm": "sha256",
+    "canonicalization": "ordered_path_length_file_length_bytes",
+    "digest": "sha256:79aa2ac5d3c8f7a3afdc4f4043eb1be342db20f0c19451f3fac30b9085d0fa78"
+  },
+  "files": [
+    {
+      "path": ".codex-plugin/plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/.codex-plugin/plugin.json",
+      "sha256": "sha256:c3121448b08c39da13d3e84eed094b40fefd26f954f5e5b98185c085a08e481e"
+    },
+    {
+      "path": "contracts/scholar-skills-capability-modules.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/contracts/scholar-skills-capability-modules.json",
+      "sha256": "sha256:b04bcdf1a416d60af91d6ad030e98537e1eb8c5157373b6c3eb3c6102d5685dc"
+    },
+    {
+      "path": "contracts/reference-provider-adapters/scientific-metadata.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/contracts/reference-provider-adapters/scientific-metadata.json",
+      "sha256": "sha256:573d6263fba2f8d825c5f66e30ff1317dc015604f1deba391106eb785b572f34"
+    },
+    {
+      "path": "contracts/reference-provider-adapters/reference-provider-profile.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/contracts/reference-provider-adapters/reference-provider-profile.schema.json",
+      "sha256": "sha256:73ee2f21f19163c821d69407cf47ba5a73b4fabc7f2fc35388f8e32e8d74aa2f"
+    },
+    {
+      "path": "contracts/reference-provider-adapters/reference-provider-adapter-registry.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/contracts/reference-provider-adapters/reference-provider-adapter-registry.json",
+      "sha256": "sha256:fe9d935d05ea7ceeaf5ed3a0808a7df0689cca5916d06ce64e5d28b5c3322b02"
+    },
+    {
+      "path": "contracts/reference-provider-adapters/reference-provider-adapter-registry.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/contracts/reference-provider-adapters/reference-provider-adapter-registry.schema.json",
+      "sha256": "sha256:5cbf9bf3e8566f424176510802376e96ee1269b36e75e60819da2aa886a232d0"
+    },
+    {
+      "path": "contracts/reference-provider-adapters/reference-provider-adapter-step.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/contracts/reference-provider-adapters/reference-provider-adapter-step.schema.json",
+      "sha256": "sha256:f43b3aed608b90aadfd1ea07ffb21b2fa31884f57a59527baf036adb5ef4358b"
+    },
+    {
+      "path": "runtime/reference-provider-adapters/types.ts",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/runtime/reference-provider-adapters/types.ts",
+      "sha256": "sha256:fa3f467ebbbd20eef7f0a8c21a9ab9bec6dc050d693e400a7a635d2df51147f5"
+    },
+    {
+      "path": "runtime/reference-provider-adapters/normalization.ts",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/runtime/reference-provider-adapters/normalization.ts",
+      "sha256": "sha256:31751b115c4054073da5d200eb58e02aea6fb675bed6a3345c5b7942280e5d85"
+    },
+    {
+      "path": "runtime/reference-provider-adapters/provider-adapters.ts",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/runtime/reference-provider-adapters/provider-adapters.ts",
+      "sha256": "sha256:ecc548c06899f1a928e39b5dfaa6f68481b7a714e3f8692bb6730839bc3387f8"
+    },
+    {
+      "path": "runtime/reference-provider-adapters/index.ts",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/runtime/reference-provider-adapters/index.ts",
+      "sha256": "sha256:4f2136afa02059b5e3e7ce57300ec4590806df9ca9d77c0ee6b1fda0fc17005c"
+    },
+    {
+      "path": "contracts/scientific-search-adapters/scientific-search.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/contracts/scientific-search-adapters/scientific-search.json",
+      "sha256": "sha256:c29ae791073380d3ee1d2e31631d494ffce73a8eae87d8d41224d8b8278125c1"
+    },
+    {
+      "path": "contracts/scientific-search-adapters/scientific-search-provider-profile.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/contracts/scientific-search-adapters/scientific-search-provider-profile.schema.json",
+      "sha256": "sha256:1271893544d3e05508dff9d0d0a3276836242b882496f7ff0746afc7f6d0f7a5"
+    },
+    {
+      "path": "contracts/scientific-search-adapters/scientific-search-adapter-registry.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/contracts/scientific-search-adapters/scientific-search-adapter-registry.json",
+      "sha256": "sha256:d5b966dfe26fcffe6de0cbda42fef311e4e94baaedc98d3b77c4e85008eb69ad"
+    },
+    {
+      "path": "contracts/scientific-search-adapters/scientific-search-adapter-registry.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/contracts/scientific-search-adapters/scientific-search-adapter-registry.schema.json",
+      "sha256": "sha256:f12aaf2997af24b9b5623df73f3738998288f7d98fffae7084eaf5c8e3e4ad4e"
+    },
+    {
+      "path": "contracts/scientific-search-adapters/scientific-search-adapter-step.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/contracts/scientific-search-adapters/scientific-search-adapter-step.schema.json",
+      "sha256": "sha256:4a026e0b754e1efec4642dedd916507df505b01ecb5a1732132c07c8fead895a"
+    },
+    {
+      "path": "runtime/scientific-search-adapters/types.ts",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/runtime/scientific-search-adapters/types.ts",
+      "sha256": "sha256:051f29e8ca0ff25139d36da585cfb52ae2168b0418d144cf455391553e23594a"
+    },
+    {
+      "path": "runtime/scientific-search-adapters/search-adapters.ts",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/runtime/scientific-search-adapters/search-adapters.ts",
+      "sha256": "sha256:ba6f067c85a76fc223b49c41c5528801211a93b7889482166bcd527d0e2474bb"
+    },
+    {
+      "path": "runtime/scientific-search-adapters/index.ts",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/runtime/scientific-search-adapters/index.ts",
+      "sha256": "sha256:627aba39dd0b9db64dd3df18ddd857b5bbf40300c6a6ea683f3dc69a45060b2d"
+    },
+    {
+      "path": "skills/mas-scholar-skills/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/skills/mas-scholar-skills/SKILL.md",
+      "sha256": "sha256:e6a676b562e52b0f076429be9633ed9f7cb00926f1a2918d396641299dff498c"
+    },
+    {
+      "path": "skills/medical-manuscript-writing/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/skills/medical-manuscript-writing/SKILL.md",
+      "sha256": "sha256:ab2d5d60b0418cef435a92027bca0282b3d2c90074d6f4c45e2a8cc3198dd38b"
+    },
+    {
+      "path": "skills/medical-manuscript-review/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/skills/medical-manuscript-review/SKILL.md",
+      "sha256": "sha256:3f01603bd8dd6b0572e27da7b0763f3af1822eea782490d1bedbf074f36363e0"
+    },
+    {
+      "path": "skills/medical-figure-design/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/skills/medical-figure-design/SKILL.md",
+      "sha256": "sha256:e724cc9ca3e42a3cf60c2d8bc2637ef611498567d37182a670322a911e980c4d"
+    },
+    {
+      "path": "skills/medical-figure-style/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/skills/medical-figure-style/SKILL.md",
+      "sha256": "sha256:35d46570dc36cdaee2bd39dfcc47cc1823f29dc0055014ce3fa8faf1855fc334"
+    },
+    {
+      "path": "skills/medical-figure-composer/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/skills/medical-figure-composer/SKILL.md",
+      "sha256": "sha256:2e61b766d7e5b62556723446108cb799ce5907ead452d036f137f281b70f1545"
+    },
+    {
+      "path": "skills/medical-research-lit/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/skills/medical-research-lit/SKILL.md",
+      "sha256": "sha256:5cbcc38bb1e3008fe4a4538031e185cf826688f23da51855ba10dfe5de7cac3a"
+    },
+    {
+      "path": "skills/medical-statistical-review/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/skills/medical-statistical-review/SKILL.md",
+      "sha256": "sha256:ca4f62d035bc31b0e1016494cddf822ce60326739848153fe2c20cc41a4c09d1"
+    },
+    {
+      "path": "skills/medical-table-design/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/skills/medical-table-design/SKILL.md",
+      "sha256": "sha256:d451beff1ddb1ce60480399e6bb3c78382ab3c13f7c31168c63ff8ac21a9faf0"
+    },
+    {
+      "path": "skills/medical-submission-prep/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/skills/medical-submission-prep/SKILL.md",
+      "sha256": "sha256:a0f19edb85db4ceafb31b64c3ae844937bf236b04fbd0f3535ee09fd2f166f2d"
+    },
+    {
+      "path": "skills/medical-data-governance/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/skills/medical-data-governance/SKILL.md",
+      "sha256": "sha256:44e94185180005b8892b5e44c5530e40c3600437c7704900954c7ca2fe0dcd5f"
+    },
+    {
+      "path": "skills/medical-advanced-biomed-router/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/skills/medical-advanced-biomed-router/SKILL.md",
+      "sha256": "sha256:d1b36f5d36ba29b0eeed1ce5ac3ea621d5de687907826fe86ec6d185cceee3ba"
+    },
+    {
+      "path": "skills/medical-methodology-planner/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/skills/medical-methodology-planner/SKILL.md",
+      "sha256": "sha256:ae6536506658ad9649730f5738ef52d6530af35a8e84de67d3e199415c89cb9a"
+    },
+    {
+      "path": "skills/medical-evidence-integrity-reviewer/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/skills/medical-evidence-integrity-reviewer/SKILL.md",
+      "sha256": "sha256:d7094b9d60c4abc10367fe9a15f8cd88c7372b8349250423c359c8846d90a139"
+    },
+    {
+      "path": "skills/medical-publication-routeback-reviewer/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/skills/medical-publication-routeback-reviewer/SKILL.md",
+      "sha256": "sha256:8caa2723f70d03fff68708588682005227bef6a142137cd1864b52407bf2d3f9"
+    },
+    {
+      "path": "skills/medical-structural-biology/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/skills/medical-structural-biology/SKILL.md",
+      "sha256": "sha256:dbd56af294dd48eebf0b7be9693fb610b124fbfdfd0dcb6b3a7e190ff53c7813"
+    },
+    {
+      "path": "skills/medical-protein-design/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/skills/medical-protein-design/SKILL.md",
+      "sha256": "sha256:019d5e6be990c60eb8d148fe04c092171c88c4ae598a0eed1ad1830abbdeb521"
+    },
+    {
+      "path": "skills/medical-genomics-foundation-models/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/skills/medical-genomics-foundation-models/SKILL.md",
+      "sha256": "sha256:bcbabe7c041bd0464d4ec25f24841555e61b0e7b0554b1eecffaf6ec1fa74e39"
+    },
+    {
+      "path": "skills/medical-single-cell-modeling/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/skills/medical-single-cell-modeling/SKILL.md",
+      "sha256": "sha256:fd4a2b842b5e849a2b085bf883b6668b9f798a475aa2b3d94d3b641562c0de09"
+    },
+    {
+      "path": "skills/medical-indication-dossier/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/skills/medical-indication-dossier/SKILL.md",
+      "sha256": "sha256:ad4093e97487b1eef4987fdd38a280f0b2db05398f2ce1cdc22cae8115bed849"
+    },
+    {
+      "path": "skills/research-pdf-evidence-explorer/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/skills/research-pdf-evidence-explorer/SKILL.md",
+      "sha256": "sha256:d78412b406d616110304cf7f2f462058a744af919abe6771ae1b6ddc3ff85a5a"
+    },
+    {
+      "path": "skills/scientific-compute-runner/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/skills/scientific-compute-runner/SKILL.md",
+      "sha256": "sha256:8c861baf02a150b5dc6017284d6898b3dcb7cc35382a7679b8e43570bf8a05ed"
+    },
+    {
+      "path": "skills/medical-protocol-and-sap-planner/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/skills/medical-protocol-and-sap-planner/SKILL.md",
+      "sha256": "sha256:a79c31466c0e418f2fd53cf27ef4d1fdaa85983c8da51cc33d3c90b82d290e68"
+    },
+    {
+      "path": "skills/medical-cohort-phenotyping/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/skills/medical-cohort-phenotyping/SKILL.md",
+      "sha256": "sha256:ba60fc8a2fa268a79cac7efbf564de00f99a539cfc1552a13e77bc7694e4c9d4"
+    },
+    {
+      "path": "skills/medical-evidence-synthesis-and-claim-map/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/skills/medical-evidence-synthesis-and-claim-map/SKILL.md",
+      "sha256": "sha256:64adc3cbf2dece3ab41e4f0554363dd6ac7846cd0701ce87e9587544435336b1"
+    },
+    {
+      "path": "skills/medical-reference-integrity-auditor/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/skills/medical-reference-integrity-auditor/SKILL.md",
+      "sha256": "sha256:054f6483be5f7dd385870c6bc7cd4cbc941c848bbbce3cf0688267f1b808b5c1"
+    },
+    {
+      "path": "skills/medical-rebuttal-strategy/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/skills/medical-rebuttal-strategy/SKILL.md",
+      "sha256": "sha256:b49af7428b5d0ba7d7591d07ccb7c2c03dacb5dd16e4880df97a7b69da1ce45b"
+    },
+    {
+      "path": "skills/medical-display-qc/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/skills/medical-display-qc/SKILL.md",
+      "sha256": "sha256:381cd9bf5fee90904b60e2412300b8a88c9c458dfa87e0d0251525c2261c6db4"
+    },
+    {
+      "path": "skills/medical-causal-inference-plan/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/skills/medical-causal-inference-plan/SKILL.md",
+      "sha256": "sha256:b3adab43d495d63d7fb5831c5e307c35ddd364385d74d049a42acebaa32794ac"
+    },
+    {
+      "path": "skills/medical-survival-analysis-plan/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/skills/medical-survival-analysis-plan/SKILL.md",
+      "sha256": "sha256:b01a3e32ee4ee2cc61db77a19ad3f9af400d325fc8b0acdd96ffb96cf1e82060"
+    },
+    {
+      "path": "skills/medical-risk-model-transportability-reviewer/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/skills/medical-risk-model-transportability-reviewer/SKILL.md",
+      "sha256": "sha256:6ad25fb5f7be0b3cb00ab544d2a29c7191579ecc96c6764bb54766733ca0a352"
+    },
+    {
+      "path": "skills/medical-registry-atlas-story-architect/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/skills/medical-registry-atlas-story-architect/SKILL.md",
+      "sha256": "sha256:791e8dd126db8d73220138948068c5b8019c82903f1add77e7349d36dcf599e6"
+    },
+    {
+      "path": "skills/medical-display-regression-debugger/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/skills/medical-display-regression-debugger/SKILL.md",
+      "sha256": "sha256:782d428c5f9640d0550a71f59872d10b485c1c1950c7739a6c7fc95056e6a621"
+    },
+    {
+      "path": "skills/medical-data-freeze-and-analysis-readiness-reviewer/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/skills/medical-data-freeze-and-analysis-readiness-reviewer/SKILL.md",
+      "sha256": "sha256:c7d6c30f0fa695a7fe3a15a49fc1959d7fa6bac4e4b59025f89ec9128b7c6d26"
+    },
+    {
+      "path": "skills/medical-research-portfolio-memory-curator/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/mas-scholar-skills/c6175831068d26ce175c235a18c10fc0e73c99b8/skills/medical-research-portfolio-memory-curator/SKILL.md",
+      "sha256": "sha256:31324673ff85dd2453cf4645b55d05cf26717c6e9a88cfa6530b179c7aad4310"
+    }
+  ]
+}

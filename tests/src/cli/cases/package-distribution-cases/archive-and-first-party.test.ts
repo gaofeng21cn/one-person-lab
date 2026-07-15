@@ -953,10 +953,10 @@ test('MAS Scholar Skills provider manifest separates core Skill exports from mod
   const normalized = normalizeCapabilityPackageManifest(manifest, manifestPath);
   const payloadPath = path.join(path.dirname(manifestPath), manifest.codex_surface.plugin_payload_manifest_url);
   const payload = parseJsonText(fs.readFileSync(payloadPath, 'utf8')) as Record<string, any>;
-  assert.equal(manifest.version, '0.2.3');
+  assert.equal(manifest.version, '0.2.4');
   assert.equal(manifest.primary_consumer.version_requirement, '>=0.2.0 <0.3.0');
   assert.equal(manifest.content_lock.canonicalization, 'ordered_path_length_file_length_bytes');
-  assert.equal(manifest.content_lock.digest, 'sha256:eedf57475662da7d929b696f25015350e855764b9bff64df32f18341c4ec44f6');
+  assert.equal(manifest.content_lock.digest, 'sha256:79aa2ac5d3c8f7a3afdc4f4043eb1be342db20f0c19451f3fac30b9085d0fa78');
   assert.equal(normalized.required_skill_ids.length, 35);
   assert.equal(normalized.capability_provider?.module_export_ids.length, 10);
   assert.equal(normalized.capability_provider?.exports.filter((entry) => entry.install_mode === 'core_required').length, 11);
@@ -964,7 +964,7 @@ test('MAS Scholar Skills provider manifest separates core Skill exports from mod
   assert.equal(normalized.optional_skill_refs.length, 1);
   assert.equal(payload.package_id, manifest.package_id);
   assert.equal(payload.package_version, manifest.version);
-  assert.equal(payload.source_commit, 'ed621f53a905e02cdf272387d14d0d5415d73781');
+  assert.equal(payload.source_commit, 'c6175831068d26ce175c235a18c10fc0e73c99b8');
   assert.deepEqual(
     payload.files.map((entry: Record<string, any>) => entry.path).sort(),
     manifest.content_lock.paths.slice().sort(),

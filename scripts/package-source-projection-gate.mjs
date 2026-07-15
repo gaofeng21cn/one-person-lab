@@ -16,6 +16,8 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 const semVerPattern = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
 const exactCommitPattern = /^[0-9a-f]{40}$/;
 const allowedPayloadModes = new Set(['100644', '100755']);
+const legacyContentLock = 'ordered_path_nul_file_bytes';
+const canonicalContentLock = 'ordered_path_length_file_length_bytes';
 
 function fail(code, packageId, message, details = {}) {
   const error = new Error(`${code}: ${packageId}: ${message}`);
@@ -183,22 +185,19 @@ function resolveCarrierSourceCommit({ spec, ownerRepoPath, owner, projectedManif
     ?? owner.ownerManifest?.codex_surface?.carrier_source_commit
     ?? null;
   const projectedCommit = projectedCarrierSourceCommit(spec.package_id, projectedManifest);
-  if (spec.owner_manifest_kind === 'standard_agent' && ownerCommit === null) {
-    fail('carrier_source_commit_missing', spec.package_id, 'owner Agent package manifest must declare codex_surface.carrier_source_commit');
-  }
-  const sourceCommit = ownerCommit ?? projectedCommit;
-  if (!exactCommitPattern.test(sourceCommit ?? '')) {
-    fail('carrier_source_commit_invalid', spec.package_id, 'carrier source authority must be an exact Git commit', {
+  if (!exactCommitPattern.test(projectedCommit ?? '')) {
+    fail('carrier_source_commit_invalid', spec.package_id, 'Framework carrier source projection must be an exact Git commit', {
       owner_carrier_source_commit: ownerCommit,
       projected_carrier_source_commit: projectedCommit,
     });
   }
-  if (projectedCommit !== sourceCommit) {
+  if (ownerCommit !== null && ownerCommit !== projectedCommit) {
     fail('carrier_source_commit_drift', spec.package_id, 'Framework projection differs from owner carrier source authority', {
       owner_carrier_source_commit: ownerCommit,
       projected_carrier_source_commit: projectedCommit,
     });
   }
+  const sourceCommit = projectedCommit;
   const objectType = gitValue(ownerRepoPath, ['cat-file', '-t', `${sourceCommit}^{commit}`], true);
   if (objectType !== 'commit') {
     fail('carrier_source_commit_unavailable', spec.package_id, 'carrier source commit is not available in the owner repository', {
@@ -223,7 +222,7 @@ function validateContentLock({
     fail('content_lock_drift', packageId, 'Framework and owner content locks differ');
   }
   if (ownerLock?.algorithm !== 'sha256'
-    || ownerLock?.canonicalization !== 'ordered_path_nul_file_bytes'
+    || ![legacyContentLock, canonicalContentLock].includes(ownerLock?.canonicalization)
     || !Array.isArray(ownerLock?.paths)
     || !/^sha256:[0-9a-f]{64}$/.test(ownerLock?.digest ?? '')) {
     fail('content_lock_invalid', packageId, 'owner content lock contract is invalid');
@@ -241,8 +240,19 @@ function validateContentLock({
       treePath: relative,
       failureCode: 'content_lock_source_missing',
     });
-    hash.update(Buffer.from(relative, 'utf8'));
-    hash.update(Buffer.from([0]));
+    const pathBytes = Buffer.from(relative, 'utf8');
+    if (ownerLock.canonicalization === legacyContentLock) {
+      hash.update(pathBytes);
+      hash.update(Buffer.from([0]));
+    } else {
+      const pathLength = Buffer.allocUnsafe(8);
+      const fileLength = Buffer.allocUnsafe(8);
+      pathLength.writeBigUInt64BE(BigInt(pathBytes.length));
+      fileLength.writeBigUInt64BE(BigInt(bytes.length));
+      hash.update(pathLength);
+      hash.update(pathBytes);
+      hash.update(fileLength);
+    }
     hash.update(bytes);
   }
   const digest = `sha256:${hash.digest('hex')}`;

@@ -120,21 +120,21 @@ test('package source projection gate binds annotated owner tag, exact commit, UR
   assert.equal(result.file_count, 2);
 });
 
-test('package source projection gate requires owner carrier authority for standard Agents', (t) => {
+test('package source projection gate accepts the annotated owner tag without a self-referential manifest commit', (t) => {
   const fixture = standardFixture(t);
   const ownerManifestPath = path.join(fixture.ownerRoot, 'contracts', 'owner-package.json');
   const ownerManifest = JSON.parse(fs.readFileSync(ownerManifestPath, 'utf8'));
   delete ownerManifest.codex_surface.carrier_source_commit;
   writeJson(ownerManifestPath, ownerManifest);
 
-  assert.throws(
-    () => validatePackageSourceProjection({
-      frameworkRoot: fixture.frameworkRoot,
-      spec: fixture.spec,
-      ownerRepoPath: fixture.ownerRoot,
-    }),
-    (error: unknown) => (error as { code?: string }).code === 'carrier_source_commit_missing',
-  );
+  const result = validatePackageSourceProjection({
+    frameworkRoot: fixture.frameworkRoot,
+    spec: fixture.spec,
+    ownerRepoPath: fixture.ownerRoot,
+  });
+  assert.equal(result.status, 'validated');
+  assert.equal(result.owner_source_commit, fixture.carrierCommit);
+  assert.equal(result.owner_version_tag, `v${fixture.version}`);
 });
 
 test('package source projection gate rejects central carrier authority drift', (t) => {
@@ -231,17 +231,33 @@ test('package source projection gate verifies Scholar Skills ordered content loc
   writeJson(path.join(ownerRoot, paths[0]), { id: 'mas-scholar-skills', version });
   fs.mkdirSync(path.dirname(path.join(ownerRoot, paths[1])), { recursive: true });
   fs.writeFileSync(path.join(ownerRoot, paths[1]), '# Skill\n');
-  const lockHash = crypto.createHash('sha256');
-  for (const declaredPath of paths) {
-    lockHash.update(Buffer.from(declaredPath));
-    lockHash.update(Buffer.from([0]));
-    lockHash.update(fs.readFileSync(path.join(ownerRoot, declaredPath)));
-  }
+  const contentLockDigest = (canonicalization: string) => {
+    const lockHash = crypto.createHash('sha256');
+    for (const declaredPath of paths) {
+      const pathBytes = Buffer.from(declaredPath);
+      const fileBytes = fs.readFileSync(path.join(ownerRoot, declaredPath));
+      if (canonicalization === 'ordered_path_nul_file_bytes') {
+        lockHash.update(pathBytes);
+        lockHash.update(Buffer.from([0]));
+      } else {
+        const pathLength = Buffer.allocUnsafe(8);
+        const fileLength = Buffer.allocUnsafe(8);
+        pathLength.writeBigUInt64BE(BigInt(pathBytes.length));
+        fileLength.writeBigUInt64BE(BigInt(fileBytes.length));
+        lockHash.update(pathLength);
+        lockHash.update(pathBytes);
+        lockHash.update(fileLength);
+      }
+      lockHash.update(fileBytes);
+    }
+    return `sha256:${lockHash.digest('hex')}`;
+  };
+  const canonicalization = 'ordered_path_length_file_length_bytes';
   const contentLock = {
     algorithm: 'sha256',
-    canonicalization: 'ordered_path_nul_file_bytes',
+    canonicalization,
     paths,
-    digest: `sha256:${lockHash.digest('hex')}`,
+    digest: contentLockDigest(canonicalization),
   };
   writeJson(path.join(ownerRoot, 'contracts', 'owner-package.json'), {
     package_id: 'mas-scholar-skills',
@@ -287,7 +303,19 @@ test('package source projection gate verifies Scholar Skills ordered content loc
     owner_manifest_kind: 'capability_package',
   };
   assert.equal(validatePackageSourceProjection({ frameworkRoot, spec, ownerRepoPath: ownerRoot }).status, 'validated');
+  const ownerManifestPath = path.join(ownerRoot, 'contracts', 'owner-package.json');
+  const ownerManifest = JSON.parse(fs.readFileSync(ownerManifestPath, 'utf8'));
   const projected = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const legacyLock = {
+    ...contentLock,
+    canonicalization: 'ordered_path_nul_file_bytes',
+    digest: contentLockDigest('ordered_path_nul_file_bytes'),
+  };
+  ownerManifest.content_lock = legacyLock;
+  projected.content_lock = legacyLock;
+  writeJson(ownerManifestPath, ownerManifest);
+  writeJson(manifestPath, projected);
+  assert.equal(validatePackageSourceProjection({ frameworkRoot, spec, ownerRepoPath: ownerRoot }).status, 'validated');
   projected.content_lock.digest = `sha256:${'0'.repeat(64)}`;
   writeJson(manifestPath, projected);
   assert.throws(
