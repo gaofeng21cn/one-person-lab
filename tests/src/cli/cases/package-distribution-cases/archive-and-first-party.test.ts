@@ -740,13 +740,14 @@ test('package archive builder writes channel manifest checksums git source and r
   const immutablePreviousFlow = immutablePreviousManifest.packages.package_catalog['opl-flow'].versions
     .find((entry: Record<string, unknown>) => entry.selection_status === 'selected_for_release_set');
   const immutablePreviousFlowManifest = JSON.parse(immutablePreviousFlow.manifest_json);
-  immutablePreviousFlowManifest.immutable_registry_fixture = 'preserve exact published metadata';
+  immutablePreviousFlowManifest.source = 'first_party_repo_local';
+  immutablePreviousFlowManifest.legacy_registry_fixture = 'must not override the canonical projection';
   immutablePreviousFlow.manifest_json = `${JSON.stringify(immutablePreviousFlowManifest, null, 2)}\n`;
   immutablePreviousFlow.manifest_sha256 = `sha256:${crypto.createHash('sha256').update(immutablePreviousFlow.manifest_json).digest('hex')}`;
   immutablePreviousFlow.package_manifest.sha256 = immutablePreviousFlow.manifest_sha256;
   const immutablePreviousFlowPayload = JSON.parse(immutablePreviousFlow.payload_manifest_json);
   delete immutablePreviousFlowPayload.package_source.archive_root;
-  immutablePreviousFlowPayload.immutable_registry_fixture = 'legacy published payload';
+  immutablePreviousFlowPayload.legacy_registry_fixture = 'must not override the canonical projection';
   immutablePreviousFlow.payload_manifest_json = `${JSON.stringify(immutablePreviousFlowPayload, null, 2)}\n`;
   immutablePreviousFlow.payload_manifest_sha256 = `sha256:${crypto.createHash('sha256').update(immutablePreviousFlow.payload_manifest_json).digest('hex')}`;
   immutablePreviousFlow.payload_digest = immutablePreviousFlow.payload_manifest_sha256;
@@ -777,7 +778,18 @@ test('package archive builder writes channel manifest checksums git source and r
     )) as Record<string, any>;
     const repeatedFlow = repeatedChannelManifest.packages.package_catalog['opl-flow'].versions
       .find((entry: Record<string, unknown>) => entry.selection_status === 'selected_for_release_set');
-    assert.deepEqual(repeatedFlow, immutablePreviousFlow);
+    assert.equal(repeatedFlow.artifact_digest, immutablePreviousFlow.artifact_digest);
+    assert.equal(repeatedFlow.artifact_status, immutablePreviousFlow.artifact_status);
+    assert.equal(repeatedFlow.source_artifact_ref, immutablePreviousFlow.source_artifact_ref);
+    assert.equal(repeatedFlow.manifest_url, immutablePreviousFlow.manifest_url);
+    assert.notEqual(repeatedFlow.manifest_sha256, immutablePreviousFlow.manifest_sha256);
+    assert.notEqual(repeatedFlow.payload_manifest_sha256, immutablePreviousFlow.payload_manifest_sha256);
+    const repeatedFlowManifest = JSON.parse(repeatedFlow.manifest_json);
+    assert.equal(repeatedFlowManifest.source, 'first_party');
+    assert.equal(repeatedFlowManifest.legacy_registry_fixture, undefined);
+    const repeatedFlowPayload = JSON.parse(repeatedFlow.payload_manifest_json);
+    assert.equal(repeatedFlowPayload.package_source.archive_root, 'opl-flow');
+    assert.equal(repeatedFlowPayload.legacy_registry_fixture, undefined);
 
     const collisionPreviousManifest = structuredClone(immutablePreviousManifest);
     collisionPreviousManifest.packages.package_catalog.mas.versions[0].owner_source_commit = 'f'.repeat(40);

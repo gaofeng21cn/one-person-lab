@@ -907,7 +907,8 @@ function mergePackageCatalog(
     const currentVersion = reusablePublishedVersion
       ? {
           ...generatedCurrentVersion,
-          ...reusablePublishedVersion,
+          artifact_digest: reusablePublishedVersion.artifact_digest,
+          artifact_status: reusablePublishedVersion.artifact_status,
           selection_status: 'selected_for_release_set',
         }
       : generatedCurrentVersion;
