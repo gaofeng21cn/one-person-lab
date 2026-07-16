@@ -49,6 +49,8 @@ test('domain pack compiler projects OPL-owned generated surfaces for admitted do
   assert.equal(mas.domain_pack_compiler.generated_interface_bundle.surface_kind, 'opl_generated_agent_interface_bundle');
   assert.equal(mas.domain_pack_compiler.generated_interface_bundle.owner, 'one-person-lab');
   assert.equal(mas.domain_pack_compiler.generated_interface_bundle.domain_repo_can_own_generated_surface, false);
+  assert.equal(mas.domain_pack_compiler.generated_interface_bundle.target_domain_id, 'med-autoscience');
+  assert.equal(mas.domain_pack_compiler.generated_interface_bundle.agent_id, 'mas');
   assert.deepEqual(mas.domain_pack_compiler.generated_interface_bundle.generated_from, [
     'family_action_catalog',
     'family_stage_control_plane',
@@ -61,7 +63,7 @@ test('domain pack compiler projects OPL-owned generated surfaces for admitted do
   ]);
   assert.match(
     mas.domain_pack_compiler.generated_interface_bundle.cli.descriptors[0].command,
-    /^opl agents run --domain med-autoscience --action study_packet --workspace /,
+    /^opl agents run --domain mas --action study_packet --workspace /,
   );
   assert.equal(
     mas.domain_pack_compiler.generated_interface_bundle.cli.descriptors[0].execution_binding.kind,
@@ -71,7 +73,7 @@ test('domain pack compiler projects OPL-owned generated surfaces for admitted do
   assert.equal(mas.domain_pack_compiler.generated_interface_bundle.skill.descriptors[0].command_contract_id, 'study_packet');
   assert.match(
     mas.domain_pack_compiler.generated_interface_bundle.product_entry.descriptors[0].command,
-    /^opl agents run --domain med-autoscience --action study_packet --workspace /,
+    /^opl agents run --domain mas --action study_packet --workspace /,
   );
   assert.equal(
     mas.domain_pack_compiler.generated_interface_bundle.openai_tool.descriptors[0].function.name,
