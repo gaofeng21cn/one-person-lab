@@ -61,6 +61,16 @@ export { buildCodexCliPreview, buildCodexExecArgs, parseCodexExecOutput, resolve
 export type { CodexExecEvent } from './codex.ts';
 export { listCodexAppRuntimeEvidenceReceipts } from './codex-app-runtime-evidence-ledger.ts';
 export { runFamilyRuntime } from './family-runtime.ts';
+export {
+  materializeReviewerInputSnapshot,
+  readReviewerInputSnapshotManifest,
+  resolveReviewerInputSnapshotMaterialization,
+} from './family-runtime-reviewer-input-snapshot.ts';
+export {
+  persistReviewEvidenceCacheCandidate,
+  readReviewEvidenceCacheReceipt,
+  reviewEvidenceCacheKey,
+} from './family-runtime-review-evidence-cache.ts';
 export { runStandardAgentAction } from './standard-agent-action-runtime.ts';
 export { recordStandardAgentActionRunEvent } from './standard-agent-action-run-recorder.ts';
 export type { StandardAgentActionRunEventInput } from './standard-agent-action-run-recorder.ts';

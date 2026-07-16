@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/scholarskills-page-hash-evidence-candidate.schema.json",
+  "title": "ScholarSkills Page Hash Evidence Candidate",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "surface_kind",
+    "schema_version",
+    "review_lane",
+    "review_scope_sha256",
+    "rubric_sha256",
+    "raster_contract",
+    "pages",
+    "cache_key_sha256",
+    "origin_reviewer_invocation_ref",
+    "origin_reviewer_evidence_ref",
+    "cache_reuse_eligible",
+    "cache_authority",
+    "requires_fresh_reviewer_invocation",
+    "requires_fresh_reviewer_receipt",
+    "requires_mas_judgment",
+    "authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": { "const": "scholarskills_page_hash_evidence_candidate" },
+    "schema_version": { "const": 1 },
+    "review_lane": { "const": "display" },
+    "review_scope_sha256": { "$ref": "#/$defs/sha256" },
+    "rubric_sha256": { "$ref": "#/$defs/sha256" },
+    "raster_contract": { "$ref": "#/$defs/raster_contract" },
+    "pages": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["page_number", "width", "height", "pixel_format", "pixel_sha256"],
+        "properties": {
+          "page_number": { "type": "integer", "minimum": 1 },
+          "width": { "type": "integer", "minimum": 1 },
+          "height": { "type": "integer", "minimum": 1 },
+          "pixel_format": { "const": "RGB8" },
+          "pixel_sha256": { "$ref": "#/$defs/sha256" }
+        }
+      }
+    },
+    "cache_key_sha256": { "$ref": "#/$defs/sha256" },
+    "origin_reviewer_invocation_ref": { "type": ["object", "null"] },
+    "origin_reviewer_evidence_ref": { "type": ["object", "null"] },
+    "cache_reuse_eligible": { "type": "boolean" },
+    "cache_authority": { "const": false },
+    "requires_fresh_reviewer_invocation": { "const": true },
+    "requires_fresh_reviewer_receipt": { "const": true },
+    "requires_mas_judgment": { "const": true },
+    "authority_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "can_emit_verdict",
+        "can_sign_reviewer_receipt",
+        "can_sign_owner_receipt",
+        "can_create_typed_blocker",
+        "can_claim_quality_readiness",
+        "can_claim_publication_readiness",
+        "can_claim_current_package_authority"
+      ],
+      "properties": {
+        "can_emit_verdict": { "const": false },
+        "can_sign_reviewer_receipt": { "const": false },
+        "can_sign_owner_receipt": { "const": false },
+        "can_create_typed_blocker": { "const": false },
+        "can_claim_quality_readiness": { "const": false },
+        "can_claim_publication_readiness": { "const": false },
+        "can_claim_current_package_authority": { "const": false }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "raster_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_id", "contract_version", "scale_x", "scale_y", "nominal_dpi",
+        "colorspace", "pixel_format", "alpha", "annotations", "hash_algorithm", "page_order"
+      ],
+      "properties": {
+        "contract_id": { "const": "scholarskills_pdf_page_pixel_raster" },
+        "contract_version": { "const": 1 },
+        "scale_x": { "const": 2.0 },
+        "scale_y": { "const": 2.0 },
+        "nominal_dpi": { "const": 144 },
+        "colorspace": { "const": "sRGB" },
+        "pixel_format": { "const": "RGB8" },
+        "alpha": { "const": false },
+        "annotations": { "const": true },
+        "hash_algorithm": { "const": "sha256" },
+        "page_order": { "const": "document_order" }
+      }
+    }
+  }
+}

@@ -79,6 +79,8 @@ import {
 import { canonicalStageRunSha256 } from './family-runtime-stage-run-identity-parts/content-bindings.ts';
 import { launchRegisteredStageRun } from './family-runtime-stage-run-launch.ts';
 import { findStageRunLaunch } from './family-runtime-stage-run-launch-registry.ts';
+import { materializeReviewerInputSnapshot } from './family-runtime-reviewer-input-snapshot.ts';
+import { persistReviewEvidenceCacheCandidate } from './family-runtime-review-evidence-cache.ts';
 
 function stageRunReplayBusinessIdentity(
   input: Parameters<typeof launchRegisteredStageRun>[0]['stageRunInput'],
@@ -456,6 +458,18 @@ export async function runFamilyRuntime(
       return {
         version: 'g2',
         family_runtime_lifecycle_reconcile: reconcileFamilyRuntimeLifecycleRefs(parsed.input),
+      };
+    }
+    if (parsed.mode === 'review_snapshot_materialize') {
+      return {
+        version: 'g2',
+        family_runtime_review_snapshot: materializeReviewerInputSnapshot(parsed.input),
+      };
+    }
+    if (parsed.mode === 'review_evidence_cache_persist') {
+      return {
+        version: 'g2',
+        family_runtime_review_evidence_cache: persistReviewEvidenceCacheCandidate(parsed.input),
       };
     }
     if (parsed.mode === 'evidence_worklist') {

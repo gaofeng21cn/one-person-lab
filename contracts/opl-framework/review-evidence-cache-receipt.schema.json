@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/review-evidence-cache-receipt.schema.json",
+  "title": "OPL Refs-only Review Evidence Cache Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "surface_kind",
+    "schema_version",
+    "status",
+    "cache_hit",
+    "cache_key_sha256",
+    "review_lane",
+    "review_scope_sha256",
+    "rubric_sha256",
+    "evidence_candidate_ref",
+    "stored_entry_ref",
+    "candidate_origin_reviewer_invocation_ref",
+    "candidate_origin_reviewer_evidence_ref",
+    "reusable_origin_reviewer_invocation_ref",
+    "reusable_origin_reviewer_evidence_ref",
+    "cache_reuse_eligible",
+    "cache_authority",
+    "requires_fresh_reviewer_invocation",
+    "requires_fresh_reviewer_receipt",
+    "requires_mas_judgment",
+    "authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": { "const": "opl_review_evidence_cache_receipt" },
+    "schema_version": { "const": 1 },
+    "status": { "enum": ["stored_not_reusable", "cache_miss_stored", "cache_hit"] },
+    "cache_hit": { "type": "boolean" },
+    "cache_key_sha256": { "$ref": "#/$defs/sha256" },
+    "review_lane": { "const": "display" },
+    "review_scope_sha256": { "$ref": "#/$defs/sha256" },
+    "rubric_sha256": { "$ref": "#/$defs/sha256" },
+    "evidence_candidate_ref": { "$ref": "#/$defs/exact_ref" },
+    "stored_entry_ref": { "oneOf": [{ "$ref": "#/$defs/exact_ref" }, { "type": "null" }] },
+    "candidate_origin_reviewer_invocation_ref": { "type": ["object", "null"] },
+    "candidate_origin_reviewer_evidence_ref": { "type": ["object", "null"] },
+    "reusable_origin_reviewer_invocation_ref": { "type": ["object", "null"] },
+    "reusable_origin_reviewer_evidence_ref": { "type": ["object", "null"] },
+    "cache_reuse_eligible": { "type": "boolean" },
+    "cache_authority": { "const": false },
+    "requires_fresh_reviewer_invocation": { "const": true },
+    "requires_fresh_reviewer_receipt": { "const": true },
+    "requires_mas_judgment": { "const": true },
+    "authority_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cache_authority": { "const": false },
+        "can_emit_verdict": { "const": false },
+        "can_sign_reviewer_receipt": { "const": false },
+        "can_sign_owner_receipt": { "const": false },
+        "can_create_typed_blocker": { "const": false },
+        "can_claim_quality_readiness": { "const": false },
+        "can_claim_publication_readiness": { "const": false },
+        "can_claim_current_package_authority": { "const": false },
+        "cache_hit_can_skip_fresh_reviewer_invocation": { "const": false },
+        "cache_hit_can_skip_fresh_reviewer_receipt": { "const": false },
+        "cache_hit_can_skip_mas_judgment": { "const": false }
+      },
+      "required": [
+        "cache_authority",
+        "can_emit_verdict",
+        "can_sign_reviewer_receipt",
+        "can_sign_owner_receipt",
+        "can_create_typed_blocker",
+        "can_claim_quality_readiness",
+        "can_claim_publication_readiness",
+        "can_claim_current_package_authority",
+        "cache_hit_can_skip_fresh_reviewer_invocation",
+        "cache_hit_can_skip_fresh_reviewer_receipt",
+        "cache_hit_can_skip_mas_judgment"
+      ]
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "exact_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "ref", "size_bytes", "sha256"],
+      "properties": {
+        "kind": { "type": "string", "minLength": 1 },
+        "ref": { "type": "string", "pattern": "^file://" },
+        "size_bytes": { "type": "integer", "minimum": 0 },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  }
+}

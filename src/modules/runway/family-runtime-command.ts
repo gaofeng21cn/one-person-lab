@@ -91,6 +91,10 @@ export type FamilyRuntimeCommandInput =
       max_age_ms?: number | null;
     };
   }
+  | {
+    mode: 'review_snapshot_materialize' | 'review_evidence_cache_persist';
+    input: Record<string, unknown>;
+  }
   | { mode: 'stage_run_query'; workflowId: string }
   | {
     mode: 'stage_artifact';
