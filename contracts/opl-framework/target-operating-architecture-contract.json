@@ -1186,30 +1186,36 @@
       "surface_kind": "opl_foundry_new_agent_baseline_handoff_policy",
       "policy_id": "opl.foundry.new_agent_baseline_handoff.v1",
       "owner": "one-person-lab",
-      "oma_owner": "opl-meta-agent",
+      "semantic_provider_contract_ref": "contracts/opl-framework/foundry-provider-manifest.schema.json",
       "required_gates": [
-        "scaffold_validation",
-        "generated_interface_projection",
-        "foundry_evidence_bundle",
-        "independent_reviewer_assessment",
-        "oma_improvement_or_no_patch_loop",
-        "delivery_receipt_or_work_order_or_typed_blocker"
+        "design_request_validated",
+        "agent_blueprint_materialized",
+        "frozen_evaluation_plan_executed",
+        "independent_evidence_bundle",
+        "risk_policy_evaluated",
+        "version_qualification_recorded",
+        "owner_gate_satisfied_when_required",
+        "activation_readback_or_qualified_closeout"
       ],
       "scaffold_or_generated_interface_can_claim_complete": false,
       "conformance_or_suite_pass_can_claim_complete": false,
       "exactly_one_terminal_outcome_required": true,
       "accepted_terminal_outcomes": [
-        "delivery_receipt",
-        "no_patch_coordination_receipt",
-        "developer_patch_work_order",
-        "typed_blocker"
+        "completed_active",
+        "completed_qualified",
+        "completed_unqualified",
+        "rejected",
+        "cancelled",
+        "failed",
+        "quarantined"
       ],
       "authority_boundary": {
         "opl_can_write_target_domain_truth": false,
         "opl_can_sign_target_owner_receipt": false,
         "opl_can_create_target_typed_blocker": false,
-        "oma_can_claim_target_domain_ready": false,
-        "oma_can_promote_default_agent_without_gate": false
+        "semantic_provider_can_claim_target_domain_ready": false,
+        "semantic_provider_can_execute_evaluation": false,
+        "semantic_provider_can_activate_without_policy": false
       }
     }
   }

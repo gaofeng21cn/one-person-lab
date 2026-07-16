@@ -6,6 +6,9 @@ import {
   WorkflowIdReusePolicy,
 } from '@temporalio/common';
 
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { foundryContentDigest } from '../foundry/index.ts';
+
 import {
   foundryCancelUpdate,
   foundryOwnerDecisionUpdate,
@@ -14,7 +17,8 @@ import {
 import type {
   FoundryCancelUpdate,
   FoundryOwnerDecisionUpdate,
-  FoundryRunWorkflowInput,
+  FoundryRunStartInput,
+  FoundryRunWorkflowState,
 } from './foundry-temporal.ts';
 import {
   type TemporalClientOptions,
@@ -33,16 +37,18 @@ function taskQueue(options: TemporalClientOptions) {
 }
 
 export async function startTemporalFoundryRunWorkflow(
-  input: FoundryRunWorkflowInput,
+  input: FoundryRunStartInput,
   options: TemporalClientOptions = {},
 ) {
   const workflowId = foundryTemporalWorkflowId(input.run_id);
+  const requestDigest = foundryContentDigest(input.request);
+  const workflowInput = { ...input, request_digest: requestDigest };
   return withTemporalClient(async (client) => {
     let recoveredExisting = false;
     let handle;
     try {
       handle = await withTemporalRpcDeadline(client, () => client.workflow.start('FoundryRunWorkflow', {
-        args: [input],
+        args: [workflowInput],
         taskQueue: taskQueue(options),
         workflowId,
         staticSummary: `OPL FoundryRun ${input.run_id}`,
@@ -60,12 +66,30 @@ export async function startTemporalFoundryRunWorkflow(
       recoveredExisting = true;
       handle = client.workflow.getHandle(workflowId);
     }
-    const state = await withTemporalRpcDeadline(client, () => handle.query(foundryRunQuery), options);
+    const state: FoundryRunWorkflowState = await withTemporalRpcDeadline(
+      client,
+      () => handle.query(foundryRunQuery),
+      options,
+    );
+    if (state.run_id !== input.run_id || state.request_digest !== requestDigest) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Temporal Foundry USE_EXISTING resolved a different DesignRequest.',
+        {
+          workflow_id: workflowId,
+          requested_run_id: input.run_id,
+          resolved_run_id: state.run_id,
+          requested_request_digest: requestDigest,
+          resolved_request_digest: state.request_digest ?? null,
+        },
+      );
+    }
     return {
       surface_kind: 'temporal_foundry_run_start_receipt' as const,
       version: 'opl-temporal-foundry-run-start.v1' as const,
       provider_kind: 'temporal' as const,
       run_id: input.run_id,
+      request_digest: requestDigest,
       workflow_id: workflowId,
       recovered_existing_execution: recoveredExisting,
       task_queue: taskQueue(options),

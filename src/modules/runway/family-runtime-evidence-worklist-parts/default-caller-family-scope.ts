@@ -16,11 +16,6 @@ function hasDefaultCallerProjection(drilldown: JsonRecord) {
   return drilldown.default_caller_deletion_evidence_refs !== undefined;
 }
 
-function hasExplicitEmptyDefaultCallerProjection(drilldown: JsonRecord) {
-  return hasDefaultCallerProjection(drilldown)
-    && recordList(record(drilldown.default_caller_deletion_evidence_refs).domains).length === 0;
-}
-
 function compactDefaultCallerReadinessWorklist(worklist: JsonRecord) {
   const requirementIds = stringList(worklist.requirement_ids);
   const missingRequirementIds = requirementIds.filter((requirementId) =>
@@ -106,56 +101,10 @@ function familyDefaultCallerDeletionEvidenceDomains(input: EvidenceWorklistFamil
   });
 }
 
-function isFamilyDefaultDomainId(domainId: string | null) {
-  return [
-    'med-autoscience',
-    'medautoscience',
-    'med-autogrant',
-    'medautogrant',
-    'redcube-ai',
-    'redcube',
-    'redcube_ai',
-    'opl-meta-agent',
-  ].includes(domainId ?? '');
-}
-
-function isFamilyDefaultDomainIdString(domainId: string | null): domainId is string {
-  return isFamilyDefaultDomainId(domainId);
-}
-
-function isThreeDomainDefaultProjection(domainIds: string[]) {
-  const values = new Set(domainIds);
-  return [
-    ['med-autoscience', 'medautoscience'],
-    ['med-autogrant', 'medautogrant'],
-    ['redcube-ai', 'redcube', 'redcube_ai'],
-  ].every((aliases) => aliases.some((alias) => values.has(alias)));
-}
-
-export function familyDefaultCallerSupplementalDomains(
+export function familyDefaultCallerFallbackDomains(
   input: EvidenceWorklistFamilyScopeInput,
   drilldown: JsonRecord,
 ) {
-  if (hasExplicitEmptyDefaultCallerProjection(drilldown)) {
-    return [];
-  }
-  const projection = record(drilldown.default_caller_deletion_evidence_refs);
-  const projectedDomains = recordList(projection.domains);
-  if (projectedDomains.length === 0) {
-    if (hasDefaultCallerProjection(drilldown)) {
-      return [];
-    }
-    return familyDefaultCallerDeletionEvidenceDomains(input);
-  }
-  const projectedFamilyDomainIds = projectedDomains
-    .map((domain) => stringValue(domain.domain_id) ?? stringValue(domain.project_id))
-    .filter(isFamilyDefaultDomainIdString);
-  if (projectedFamilyDomainIds.length === 0) {
-    return [];
-  }
-  if (!isThreeDomainDefaultProjection(projectedFamilyDomainIds)) {
-    return [];
-  }
-  return familyDefaultCallerDeletionEvidenceDomains(input)
-    .filter((domain) => stringValue(domain.domain_id) === 'opl-meta-agent');
+  if (hasDefaultCallerProjection(drilldown)) return [];
+  return familyDefaultCallerDeletionEvidenceDomains(input);
 }

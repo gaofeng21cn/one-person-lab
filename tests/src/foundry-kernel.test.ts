@@ -1,12 +1,15 @@
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
+import { canonicalJsonBytes } from '../../src/kernel/canonical-json.ts';
 import { assertRepoJsonSchemaPayload } from '../../src/kernel/repo-json-schema.ts';
 import {
   DeterministicInMemoryCandidateCompiler,
+  InMemoryActivationRuntime,
   InMemoryFoundryEventStore,
   InMemoryFoundryObjectStore,
   InMemoryOwnerGate,
@@ -34,17 +37,21 @@ import {
   evaluateDesignRequestResourceConstraints,
   FrozenPlanEvaluationRuntime,
   foundryFrozenEvaluationPlanDigest,
+  isQualificationGradeEvaluationRuntime,
   recomputeEvaluationQualification,
   type EvaluationCaseExecutor,
   type IndependentEvaluationReviewer,
 } from '../../src/modules/foundry/evaluation-runtime.ts';
 import type {
+  ActivationRuntime,
   CandidateCompiler,
   DesignerPort,
   EvaluationExecutor,
+  FoundryEventStore,
   MaterializedCandidate,
   OwnerGateAction,
   OwnerGateDecision,
+  VersionRegistry,
 } from '../../src/modules/foundry/ports.ts';
 import {
   FOUNDRY_PROTOCOL_VERSION,
@@ -61,9 +68,23 @@ import {
 } from '../../src/modules/foundry/protocol.ts';
 import { verifyFoundryEventChain } from '../../src/modules/foundry/state-machine.ts';
 import { ProcessFoundryEvaluationExecutor } from '../../src/modules/runway/foundry-process-evaluator.ts';
+import { createProductionFoundryKernel } from '../../src/modules/runway/foundry-production-runtime.ts';
+import type { resolveStandardAgentManagedCheckout } from '../../src/modules/runway/standard-agent-managed-checkout.ts';
 import { compileStandardAgentStageManifest } from '../../src/modules/pack/standard-agent-stage-manifest.ts';
 
 const ownerGate = new InMemoryOwnerGate(() => '2026-07-16T00:00:00.000Z');
+ownerGate.registerAuthorityPolicy({
+  policy_ref: 'opl://foundry/authority-policies/fixture-agent',
+  target_agent_id: 'fixture-agent',
+  target_domain_id: 'fixture-domain',
+  authority_refs: ['owner-gate:activation'],
+});
+ownerGate.registerAuthorityPolicy({
+  policy_ref: 'opl://foundry/authority-policies/oma',
+  target_agent_id: 'oma',
+  target_domain_id: 'agent_engineering',
+  authority_refs: ['owner-gate:activation'],
+});
 
 function authorizeRunMutation(input: {
   inspection: Awaited<ReturnType<FoundryKernel['inspectRun']>>;
@@ -136,6 +157,8 @@ function request(input: Partial<DesignRequest> = {}): DesignRequest {
 }
 
 function blueprint(designRequest: DesignRequest, generation: number, promptRef: string): AgentBlueprint {
+  const inputSchemaRef = `opl-content://sha256/${'a'.repeat(64)}`;
+  const outputSchemaRef = `opl-content://sha256/${'b'.repeat(64)}`;
   return {
     surface_kind: 'opl_foundry_agent_blueprint',
     version: FOUNDRY_PROTOCOL_VERSION,
@@ -164,12 +187,12 @@ function blueprint(designRequest: DesignRequest, generation: number, promptRef: 
       action_id: 'deliver',
       summary: 'Deliver the fixture artifact.',
       entry_stage_id: 'deliver',
-      input_schema_ref: 'schema:fixture-input',
-      output_schema_ref: 'schema:fixture-output',
+      input_schema_ref: inputSchemaRef,
+      output_schema_ref: outputSchemaRef,
     }],
     artifact_contracts: [{
       artifact_type: 'delivery',
-      schema_ref: 'schema:fixture-output',
+      schema_ref: outputSchemaRef,
       authority_owner_ref: 'owner:fixture-domain',
     }],
     content_refs: {
@@ -179,13 +202,14 @@ function blueprint(designRequest: DesignRequest, generation: number, promptRef: 
       helper_refs: [],
       model_refs: ['model:default'],
       tool_refs: [],
+      schema_refs: [inputSchemaRef, outputSchemaRef],
     },
     capability_requirements: ['capability:text'],
     authority_policy: {
       truth_owner_ref: 'owner:fixture-domain',
       artifact_owner_ref: 'owner:fixture-domain',
       quality_owner_ref: 'owner:fixture-domain',
-      owner_gate_refs: ['owner-gate:activation'],
+      permission_refs: [...designRequest.constraints.permission_refs],
       generated_agent_can_modify_versions: false,
       generated_agent_can_modify_evaluation: false,
       generated_agent_can_modify_permissions: false,
@@ -333,6 +357,9 @@ function evidence(input: {
       findings: input.qualified ? [] : ['The required behavior is missing.'],
       evidence_refs: ['evidence:independent-review'],
     },
+    candidate_cost_observations: { usd: 0 },
+    candidate_latency_observations: { milliseconds: 0 },
+    safety_observations: [],
     safety_delta: { incidents: 0 },
     cost_delta: { usd: 0 },
     latency_delta: { milliseconds: 0 },
@@ -528,9 +555,60 @@ class CanaryRegressionEvaluator extends FixtureEvaluator {
   }
 }
 
-function harness(evaluator: EvaluationExecutor = new FixtureEvaluator()) {
+class ControlledActivationRuntime implements ActivationRuntime {
+  readonly #delegate: InMemoryActivationRuntime;
+  #preflightFailure: string | null;
+  readonly #mismatchReadback: boolean;
+  readonly #emptyRuntimeBindingRef: boolean;
+  preflightCalls = 0;
+  readbackCalls = 0;
+
+  constructor(
+    versions: VersionRegistry,
+    options: {
+      preflightFailure?: string;
+      mismatchReadback?: boolean;
+      emptyRuntimeBindingRef?: boolean;
+    } = {},
+  ) {
+    this.#delegate = new InMemoryActivationRuntime(versions);
+    this.#preflightFailure = options.preflightFailure ?? null;
+    this.#mismatchReadback = options.mismatchReadback ?? false;
+    this.#emptyRuntimeBindingRef = options.emptyRuntimeBindingRef ?? false;
+  }
+
+  denyPreflight(message: string) {
+    this.#preflightFailure = message;
+  }
+
+  async preflight(input: Parameters<ActivationRuntime['preflight']>[0]) {
+    this.preflightCalls += 1;
+    if (this.#preflightFailure) throw new Error(this.#preflightFailure);
+    const preflight = await this.#delegate.preflight(input);
+    return {
+      ...preflight,
+      runtime_binding_ref: this.#emptyRuntimeBindingRef
+        ? ''
+        : `opl://foundry/test-prepared-runtime-bindings/${preflight.version_digest}/${preflight.expected_activation_revision}`,
+    };
+  }
+
+  async readback(input: Parameters<ActivationRuntime['readback']>[0]) {
+    this.readbackCalls += 1;
+    const readback = await this.#delegate.readback(input);
+    return this.#mismatchReadback
+      ? { ...readback, candidate_digest: `sha256:${'f'.repeat(64)}` }
+      : readback;
+  }
+}
+
+function harness(
+  evaluator: EvaluationExecutor = new FixtureEvaluator(),
+  activationRuntime?: (versions: InMemoryVersionRegistry) => ActivationRuntime,
+) {
   const events = new InMemoryFoundryEventStore();
   const versions = new InMemoryVersionRegistry();
+  const runtime = activationRuntime?.(versions);
   const kernel = new FoundryKernel({
     designer: new FixtureDesigner(),
     compiler: new DeterministicInMemoryCandidateCompiler(),
@@ -538,10 +616,11 @@ function harness(evaluator: EvaluationExecutor = new FixtureEvaluator()) {
     objects: new InMemoryFoundryObjectStore(),
     events,
     versions,
+    activationRuntime: runtime,
     ownerGate,
     clock: { now: () => '2026-07-16T00:00:00.000Z' },
   });
-  return { kernel, events, versions };
+  return { kernel, events, versions, activationRuntime: runtime };
 }
 
 test('DesignRequest capability, permission, and privacy constraints are mandatory blueprint coverage', async () => {
@@ -557,7 +636,6 @@ test('DesignRequest capability, permission, and privacy constraints are mandator
   });
   const covered = blueprint(constrainedRequest, 0, 'prompt:constraints');
   covered.capability_requirements.push('capability:search');
-  covered.authority_policy.owner_gate_refs.push('owner-gate:permission:publish');
   covered.eval_spec.protected_requirements.push({
     category: 'privacy:no-cross-owner-disclosure',
     minimum_case_count: 1,
@@ -566,7 +644,7 @@ test('DesignRequest capability, permission, and privacy constraints are mandator
 
   for (const [detailKey, mutate] of [
     ['missing_capability_refs', (candidate: AgentBlueprint) => candidate.capability_requirements.pop()],
-    ['missing_permission_owner_gate_refs', (candidate: AgentBlueprint) => candidate.authority_policy.owner_gate_refs.pop()],
+    ['missing_permission_refs', (candidate: AgentBlueprint) => candidate.authority_policy.permission_refs.pop()],
     ['missing_privacy_protected_requirements', (candidate: AgentBlueprint) => candidate.eval_spec.protected_requirements.pop()],
   ] as const) {
     const invalid = structuredClone(covered);
@@ -609,8 +687,8 @@ test('DesignRequest cost and latency limits require matching observations and bl
   const designRequest = request();
   assert.deepEqual(evaluateDesignRequestResourceConstraints({
     request: designRequest,
-    cost_observations: { usd: 0.5 },
-    latency_observations: { milliseconds: 1200 },
+    candidate_cost_observations: { usd: 0.5 },
+    candidate_latency_observations: { milliseconds: 1200 },
   }), {
     results: [
       { constraint_kind: 'cost', metric: 'usd', limit: 1, observed: 0.5, passed: true },
@@ -620,9 +698,54 @@ test('DesignRequest cost and latency limits require matching observations and bl
   });
   assert.throws(() => evaluateDesignRequestResourceConstraints({
     request: designRequest,
-    cost_observations: { tokens: 10 },
-    latency_observations: { milliseconds: 100 },
+    candidate_cost_observations: { tokens: 10 },
+    candidate_latency_observations: { milliseconds: 100 },
   }), /missing required cost observations/);
+});
+
+test('high and critical safety observations force unqualified evidence with exact failure classification', async () => {
+  const designRequest = request({ request_id: 'request:safety-observation' });
+  const agentBlueprint = blueprint(designRequest, 0, 'prompt:safety-observation');
+  const candidate = await new DeterministicInMemoryCandidateCompiler().materialize({
+    run_id: 'run:safety-observation',
+    blueprint: agentBlueprint,
+    blueprint_digest: foundryContentDigest(agentBlueprint),
+  });
+  const unsafe = evidence({
+    runId: 'run:safety-observation',
+    designRequest,
+    agentBlueprint,
+    candidate,
+    baselineDigest: null,
+    qualified: true,
+  });
+  unsafe.safety_observations = [{
+    observation_id: 'safety:unsafe-write',
+    event_type: 'forbidden_write_attempt',
+    severity: 'high',
+    evidence_refs: ['evidence:safety:unsafe-write'],
+  }];
+  unsafe.failure_classification = [{
+    failure_class: 'safety_event',
+    gate_id: 'safety_observation:safety:unsafe-write',
+    severity: 'high',
+    evidence_refs: ['evidence:safety:unsafe-write'],
+  }];
+  unsafe.qualified = false;
+
+  const facts = assertEvaluationEvidenceFacts({
+    request: designRequest,
+    spec: agentBlueprint.eval_spec,
+    evidence: unsafe,
+    baseline_present: false,
+  });
+  assert.equal(facts.safetyPassed, false);
+  assert.throws(() => assertEvaluationEvidenceFacts({
+    request: designRequest,
+    spec: agentBlueprint.eval_spec,
+    evidence: { ...unsafe, failure_classification: [] },
+    baseline_present: false,
+  }), /safety failure classifications do not match/);
 });
 
 async function activateCreateRun(
@@ -660,12 +783,71 @@ async function activateCreateRun(
   });
 }
 
+async function prepareActivatingCreateRun(kernel: FoundryKernel, runId: string) {
+  await kernel.startRun({ request: request({ request_id: `request:${runId}` }), run_id: runId });
+  let inspection = await kernel.advanceUntilPause(runId);
+  assert.equal(inspection.run.state, 'awaiting_owner_canary');
+  inspection = await kernel.submitOwnerDecision({
+    run_id: runId,
+    expected_revision: inspection.run.revision,
+    decision: 'approve',
+    authority_receipt_ref: authorizeRunMutation({
+      inspection,
+      action: 'approve_canary',
+      decision: 'approve',
+    }),
+  });
+  assert.equal(inspection.run.state, 'awaiting_owner_active');
+  const activating = await kernel.submitOwnerDecision({
+    run_id: runId,
+    expected_revision: inspection.run.revision,
+    decision: 'approve',
+    authority_receipt_ref: authorizeRunMutation({
+      inspection,
+      action: 'approve_active',
+      decision: 'approve',
+    }),
+  }, { advance: false });
+  assert.equal(activating.run.state, 'activating');
+  return activating;
+}
+
 test('FoundryKernel evolves a failed design, gates high risk, activates, and rolls back exact bytes', async () => {
   const { kernel, events, versions } = harness();
   const first = await activateCreateRun(kernel, 'run:create');
   assert.equal(first.run.state, 'completed_active');
   const [versionOne] = await kernel.listVersions('fixture-agent', 'fixture-domain');
   assert.equal(first.activation.active_version_digest, versionOne!.version_digest);
+  const activationEvent = (await events.read('run:create')).at(-1)!;
+  assert.equal(activationEvent.event_type, 'activation_completed');
+  assert.equal(typeof activationEvent.payload.activation_runtime_preflight_ref, 'string');
+  assert.equal(typeof activationEvent.payload.activation_runtime_binding_ref, 'string');
+  assert.equal(
+    activationEvent.payload.activation_runtime_binding_ref,
+    activationEvent.payload.activation_runtime_preflight_ref,
+  );
+  assert.deepEqual(activationEvent.payload.activation_runtime_binding_verification, {
+    surface_kind: 'opl_foundry_activation_runtime_binding_verification',
+    version: 'opl-foundry-activation-runtime-binding-verification.v1',
+    verification_phase: 'pre_commit',
+    transaction_kind: 'activate',
+    target_agent_id: versionOne!.target_agent_id,
+    target_domain_id: versionOne!.target_domain_id,
+    version_id: versionOne!.version_id,
+    version_digest: versionOne!.version_digest,
+    candidate_digest: versionOne!.candidate_digest,
+    candidate_ref: versionOne!.candidate_ref,
+    expected_activation_revision: 0,
+    preflight_ref: activationEvent.payload.activation_runtime_preflight_ref,
+    runtime_binding_ref: activationEvent.payload.activation_runtime_binding_ref,
+  });
+  const [activationTransaction] = await versions.activationHistory('fixture-agent', 'fixture-domain');
+  assert.ok(activationTransaction);
+  assert.deepEqual(
+    activationTransaction.runtime_binding_verification,
+    activationEvent.payload.activation_runtime_binding_verification,
+  );
+  assert.equal(Object.hasOwn(activationEvent.payload, 'activation_runtime_readback'), false);
 
   const improveRequest = request({
     request_id: 'request:improve:fixture',
@@ -693,8 +875,203 @@ test('FoundryKernel evolves a failed design, gates high risk, activates, and rol
     }),
   });
   assert.equal(rollback.transaction_kind, 'rollback');
+  assert.equal(rollback.runtime_preflight.version_digest, versionOne!.version_digest);
+  assert.equal(rollback.runtime_binding_verification.verification_phase, 'pre_commit');
+  assert.equal(rollback.runtime_binding_verification.version_digest, versionOne!.version_digest);
+  assert.equal(rollback.runtime_binding_verification.candidate_digest, versionOne!.candidate_digest);
+  assert.equal(rollback.runtime_binding_verification.expected_activation_revision, 2);
+  assert.deepEqual(
+    (await versions.activationHistory('fixture-agent', 'fixture-domain')).at(-1)?.runtime_binding_verification,
+    rollback.runtime_binding_verification,
+  );
   assert.equal((await versions.activation('fixture-agent', 'fixture-domain')).active_version_digest, versionOne!.version_digest);
   assert.equal(verifyFoundryEventChain(await events.read('run:create')).status, 'valid');
+});
+
+test('FoundryKernel preserves the activation pointer when hosted candidate preflight fails', async () => {
+  let controlled: ControlledActivationRuntime | undefined;
+  const { kernel, versions, events } = harness(new FixtureEvaluator(), (registry) => {
+    controlled = new ControlledActivationRuntime(registry, { preflightFailure: 'hosted ABI preflight denied' });
+    return controlled;
+  });
+  await prepareActivatingCreateRun(kernel, 'run:activation-preflight-failure');
+
+  const failed = await kernel.advanceRunStep('run:activation-preflight-failure');
+  assert.equal(failed.run.state, 'failed');
+  assert.match(String((await events.read('run:activation-preflight-failure')).at(-1)?.payload.failure_message),
+    /hosted ABI preflight denied/);
+  assert.equal(controlled?.preflightCalls, 1);
+  assert.equal(controlled?.readbackCalls, 0);
+  assert.equal((await versions.activation('fixture-agent', 'fixture-domain')).active_version_digest, null);
+  assert.equal((await kernel.inspectRun('run:activation-preflight-failure')).run.state, 'failed');
+  assert.equal((await events.read('run:activation-preflight-failure'))
+    .some((event) => event.event_type === 'activation_completed'), false);
+});
+
+test('FoundryKernel does not change the pointer or read back runtime when activation CAS is stale', async () => {
+  const backing = new InMemoryVersionRegistry();
+  const staleVersions: VersionRegistry = {
+    register: (input) => backing.register(input),
+    list: (targetAgentId, targetDomainId) => backing.list(targetAgentId, targetDomainId),
+    resolveVersion: (ref, targetAgentId, targetDomainId) => backing.resolveVersion(ref, targetAgentId, targetDomainId),
+    activation: (targetAgentId, targetDomainId) => backing.activation(targetAgentId, targetDomainId),
+    activationHistory: (targetAgentId, targetDomainId) => backing.activationHistory(targetAgentId, targetDomainId),
+    compareAndSwapActivation: async () => { throw new Error('ActivationPointer compare-and-swap failed: stale fixture'); },
+    rollback: (input) => backing.rollback(input),
+  };
+  const activationRuntime = new ControlledActivationRuntime(staleVersions);
+  const events = new InMemoryFoundryEventStore();
+  const kernel = new FoundryKernel({
+    designer: new FixtureDesigner(),
+    compiler: new DeterministicInMemoryCandidateCompiler(),
+    evaluator: new FixtureEvaluator(),
+    objects: new InMemoryFoundryObjectStore(),
+    events,
+    versions: staleVersions,
+    activationRuntime,
+    ownerGate,
+    clock: { now: () => '2026-07-16T00:00:00.000Z' },
+  });
+  await prepareActivatingCreateRun(kernel, 'run:activation-stale-cas');
+
+  const failed = await kernel.advanceRunStep('run:activation-stale-cas');
+  assert.equal(failed.run.state, 'failed');
+  assert.match(String((await events.read('run:activation-stale-cas')).at(-1)?.payload.failure_message),
+    /compare-and-swap failed: stale fixture/);
+  assert.equal(activationRuntime.preflightCalls, 1);
+  assert.equal(activationRuntime.readbackCalls, 0);
+  assert.equal((await backing.activation('fixture-agent', 'fixture-domain')).active_version_digest, null);
+  assert.equal((await events.read('run:activation-stale-cas'))
+    .some((event) => event.event_type === 'activation_completed'), false);
+});
+
+test('FoundryKernel uses exact pre-commit binding verification instead of post-CAS readback', async () => {
+  let controlled: ControlledActivationRuntime | undefined;
+  const { kernel, versions, events } = harness(new FixtureEvaluator(), (registry) => {
+    controlled = new ControlledActivationRuntime(registry, { mismatchReadback: true });
+    return controlled;
+  });
+  await prepareActivatingCreateRun(kernel, 'run:activation-readback-mismatch');
+  const [version] = await kernel.listVersions('fixture-agent', 'fixture-domain');
+  assert.ok(version);
+
+  const completed = await kernel.advanceRunStep('run:activation-readback-mismatch');
+  assert.equal(completed.run.state, 'completed_active');
+  assert.equal(controlled?.preflightCalls, 1);
+  assert.equal(controlled?.readbackCalls, 0);
+  assert.equal((await versions.activation('fixture-agent', 'fixture-domain')).active_version_digest, version.version_digest);
+  const activationEvent = (await events.read('run:activation-readback-mismatch')).at(-1)!;
+  assert.equal(activationEvent.event_type, 'activation_completed');
+  assert.equal(
+    (activationEvent.payload.activation_runtime_binding_verification as { verification_phase?: unknown })
+      .verification_phase,
+    'pre_commit',
+  );
+  assert.equal(Object.hasOwn(activationEvent.payload, 'activation_runtime_readback'), false);
+});
+
+test('FoundryKernel rejects an empty prepared runtime binding before activation CAS', async () => {
+  let controlled: ControlledActivationRuntime | undefined;
+  const { kernel, versions, events } = harness(new FixtureEvaluator(), (registry) => {
+    controlled = new ControlledActivationRuntime(registry, { emptyRuntimeBindingRef: true });
+    return controlled;
+  });
+  await prepareActivatingCreateRun(kernel, 'run:activation-binding-preflight-mismatch');
+
+  const quarantined = await kernel.advanceRunStep('run:activation-binding-preflight-mismatch');
+  assert.equal(quarantined.run.state, 'quarantined');
+  assert.match(
+    String((await events.read('run:activation-binding-preflight-mismatch')).at(-1)?.payload.failure_message),
+    /preflight does not bind the exact target AgentVersion and revision/,
+  );
+  assert.equal(controlled?.preflightCalls, 1);
+  assert.equal(controlled?.readbackCalls, 0);
+  assert.equal((await versions.activation('fixture-agent', 'fixture-domain')).active_version_digest, null);
+  assert.equal((await versions.activationHistory('fixture-agent', 'fixture-domain')).length, 0);
+});
+
+test('FoundryKernel rollback commits from exact pre-commit binding verification without post-CAS readback', async () => {
+  let controlled: ControlledActivationRuntime | undefined;
+  const { kernel, versions } = harness(new FixtureEvaluator(), (registry) => {
+    controlled = new ControlledActivationRuntime(registry, { mismatchReadback: true });
+    return controlled;
+  });
+  await activateCreateRun(kernel, 'run:rollback-precommit-baseline');
+  const [baseline] = await kernel.listVersions('fixture-agent', 'fixture-domain');
+  assert.ok(baseline);
+  await kernel.startRun({
+    request: request({
+      request_id: 'request:rollback-precommit-improve',
+      mode: 'improve',
+      target_version_ref: baseline.version_digest,
+    }),
+    run_id: 'run:rollback-precommit-improve',
+  });
+  const improved = await kernel.advanceUntilPause('run:rollback-precommit-improve');
+  assert.equal(improved.run.state, 'completed_active');
+
+  const rollback = await kernel.rollbackActivation({
+    target_agent_id: 'fixture-agent',
+    target_domain_id: 'fixture-domain',
+    version_digest: baseline.version_digest,
+    expected_revision: 2,
+    authority_receipt_ref: authorizeRollback({
+      target_agent_id: 'fixture-agent',
+      target_domain_id: 'fixture-domain',
+      version_digest: baseline.version_digest,
+      expected_revision: 2,
+    }),
+  });
+
+  assert.equal(rollback.runtime_binding_verification.verification_phase, 'pre_commit');
+  assert.equal(rollback.runtime_binding_verification.transaction_kind, 'rollback');
+  assert.equal(rollback.runtime_binding_verification.version_digest, baseline.version_digest);
+  assert.equal(rollback.runtime_binding_verification.expected_activation_revision, 2);
+  assert.equal(controlled?.preflightCalls, 3);
+  assert.equal(controlled?.readbackCalls, 0);
+  assert.equal((await versions.activation('fixture-agent', 'fixture-domain')).active_version_digest, baseline.version_digest);
+  assert.equal((await versions.activationHistory('fixture-agent', 'fixture-domain')).length, 3);
+});
+
+test('FoundryKernel rollback preflight failure preserves the current pointer and activation history', async () => {
+  let controlled: ControlledActivationRuntime | undefined;
+  const { kernel, versions } = harness(new FixtureEvaluator(), (registry) => {
+    controlled = new ControlledActivationRuntime(registry);
+    return controlled;
+  });
+  await activateCreateRun(kernel, 'run:rollback-preflight-baseline');
+  const [baseline] = await kernel.listVersions('fixture-agent', 'fixture-domain');
+  assert.ok(baseline);
+  await kernel.startRun({
+    request: request({
+      request_id: 'request:rollback-preflight-improve',
+      mode: 'improve',
+      target_version_ref: baseline.version_digest,
+    }),
+    run_id: 'run:rollback-preflight-improve',
+  });
+  const improved = await kernel.advanceUntilPause('run:rollback-preflight-improve');
+  assert.equal(improved.run.state, 'completed_active');
+  const before = await versions.activation('fixture-agent', 'fixture-domain');
+  assert.equal(before.revision, 2);
+  controlled!.denyPreflight('rollback prepared binding denied');
+
+  await assert.rejects(kernel.rollbackActivation({
+    target_agent_id: 'fixture-agent',
+    target_domain_id: 'fixture-domain',
+    version_digest: baseline.version_digest,
+    expected_revision: before.revision,
+    authority_receipt_ref: authorizeRollback({
+      target_agent_id: 'fixture-agent',
+      target_domain_id: 'fixture-domain',
+      version_digest: baseline.version_digest,
+      expected_revision: before.revision,
+    }),
+  }), /rollback prepared binding denied/);
+
+  assert.deepEqual(await versions.activation('fixture-agent', 'fixture-domain'), before);
+  assert.equal((await versions.activationHistory('fixture-agent', 'fixture-domain')).length, 2);
+  assert.equal(controlled?.readbackCalls, 0);
 });
 
 test('FoundryKernel takeover binds an exact active baseline and activates a separately qualified version', async () => {
@@ -796,50 +1173,33 @@ test('FoundryKernel verifies exact OwnerGate coverage before appending an author
   assert.equal(replay.run.revision, approved.run.revision);
 });
 
-test('FoundryKernel refuses Owner mutation when the current blueprint has no gate refs', async () => {
-  class MissingGateDesigner extends PassingDesigner {
-    override async design(designRequest: DesignRequest) {
-      const result = await super.design(designRequest);
-      result.authority_policy.owner_gate_refs = [];
-      return result;
-    }
-  }
-  const kernel = new FoundryKernel({
-    designer: new MissingGateDesigner(),
-    evaluator: new FixtureEvaluator(),
-    compiler: new DeterministicInMemoryCandidateCompiler(),
-    objects: new InMemoryFoundryObjectStore(),
-    events: new InMemoryFoundryEventStore(),
-    versions: new InMemoryVersionRegistry(),
-    ownerGate,
-  });
-  await kernel.startRun({ request: request(), run_id: 'run:missing-owner-gate-ref' });
-  const waiting = await kernel.advanceUntilPause('run:missing-owner-gate-ref');
-  const receipt = ownerGate.register({
-    surface_kind: 'opl_foundry_owner_authority_receipt',
-    version: 'opl-foundry-owner-authority-receipt.v1',
-    receipt_id: 'receipt:missing-owner-gate-ref',
-    authority_ref: 'owner-gate:activation',
+test('FoundryKernel rejects authority selected outside the Framework-owned target policy', async () => {
+  const { kernel, events } = harness();
+  await kernel.startRun({ request: request(), run_id: 'run:untrusted-owner-authority' });
+  const waiting = await kernel.advanceUntilPause('run:untrusted-owner-authority');
+  const revision = waiting.run.revision;
+  const eventCount = (await events.read(waiting.run.run_id)).length;
+  const receiptRef = authorizeRunMutation({
+    inspection: waiting,
     action: 'approve_canary',
     decision: 'approve',
-    target_agent_id: waiting.request.target_agent_id,
-    target_domain_id: waiting.request.target_domain_id,
-    run_id: waiting.run.run_id,
-    version_digest: waiting.run.version_digest,
-    expected_revision: waiting.run.revision,
-    issued_at: '2026-07-16T00:00:00.000Z',
+    authority_ref: 'owner-gate:attacker',
   });
   await assert.rejects(kernel.submitOwnerDecision({
     run_id: waiting.run.run_id,
-    expected_revision: waiting.run.revision,
+    expected_revision: revision,
     decision: 'approve',
-    authority_receipt_ref: receipt.receipt_ref,
-  }), /no OwnerGate authority refs/);
+    authority_receipt_ref: receiptRef,
+  }), /Framework-owned target authority policy/);
+  assert.equal((await kernel.inspectRun(waiting.run.run_id)).run.revision, revision);
+  assert.equal((await events.read(waiting.run.run_id)).length, eventCount);
 });
 
 test('FoundryKernel rejects missing or stale non-create baselines before design starts', async () => {
   const { kernel } = harness();
   await activateCreateRun(kernel, 'run:exact-baseline');
+  const [historicalBaseline] = await kernel.listVersions('fixture-agent', 'fixture-domain');
+  assert.ok(historicalBaseline);
 
   await assert.rejects(kernel.startRun({
     request: request({
@@ -857,6 +1217,29 @@ test('FoundryKernel rejects missing or stale non-create baselines before design 
     }),
     run_id: 'run:stale-baseline',
   }), /existing exact target version/);
+
+  await kernel.startRun({
+    request: request({
+      request_id: 'request:takeover:advance-active',
+      mode: 'takeover',
+      target_version_ref: historicalBaseline.version_digest,
+    }),
+    run_id: 'run:advance-active',
+  });
+  assert.equal((await kernel.advanceUntilPause('run:advance-active')).run.state, 'completed_active');
+  await assert.rejects(kernel.startRun({
+    request: request({
+      request_id: 'request:improve:historical-baseline',
+      mode: 'improve',
+      target_version_ref: historicalBaseline.version_digest,
+    }),
+    run_id: 'run:historical-baseline',
+  }), /exact active AgentVersion/);
+
+  await assert.rejects(kernel.startRun({
+    request: request({ request_id: 'request:create:existing-active' }),
+    run_id: 'run:create-existing-active',
+  }), /no active AgentVersion/);
 });
 
 test('FoundryKernel exhausts the declared evolution generation budget even when scores improve', async () => {
@@ -996,10 +1379,53 @@ test('FoundryKernel qualification and canary reuse one admitted materialized can
   assert.deepEqual(observedCandidateDigests, [waiting.run.candidate_digest, waiting.run.candidate_digest]);
 });
 
-test('Process evaluator transport excludes protected bodies and cannot self-report qualification', async () => {
+test('Process evaluator transport excludes protected bodies and cannot self-report qualification', async (t) => {
   const designRequest = request({ request_id: 'request:external-process-evaluator' });
   const agentBlueprint = blueprint(designRequest, 0, 'prompt:v1');
   const expectedPlanDigest = foundryFrozenEvaluationPlanDigest(agentBlueprint.eval_spec);
+  const packRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-process-pack-'));
+  t.after(() => fs.rmSync(packRoot, { recursive: true, force: true }));
+  const candidateDirectories = new Map<string, string>();
+  const exactPackCompiler: CandidateCompiler = {
+    async materialize(input) {
+      const manifestBytes = canonicalJsonBytes({
+        surface_kind: 'opl_foundry_test_candidate_manifest',
+        blueprint_digest: input.blueprint_digest,
+      });
+      const manifestSha = crypto.createHash('sha256').update(manifestBytes).digest('hex');
+      const files = [{
+        path: 'agent/agent-pack.json',
+        sha256: manifestSha,
+        byte_size: manifestBytes.byteLength,
+      }];
+      const candidateDigest = foundryContentDigest({
+        surface_kind: 'opl_foundry_candidate_file_index',
+        version: 'opl-foundry-candidate-index.v2',
+        blueprint_digest: input.blueprint_digest,
+        files,
+      });
+      const directory = path.join(packRoot, candidateDigest.slice('sha256:'.length));
+      fs.mkdirSync(path.join(directory, 'agent'), { recursive: true });
+      fs.writeFileSync(path.join(directory, files[0]!.path), manifestBytes);
+      fs.writeFileSync(path.join(directory, 'candidate-index.json'), canonicalJsonBytes({
+        surface_kind: 'opl_foundry_candidate_file_index',
+        version: 'opl-foundry-candidate-index.v2',
+        blueprint_digest: input.blueprint_digest,
+        candidate_digest: candidateDigest,
+        files,
+      }));
+      candidateDirectories.set(candidateDigest, directory);
+      return {
+        surface_kind: 'opl_foundry_materialized_candidate',
+        target_agent_id: input.blueprint.target_agent_id,
+        target_domain_id: input.blueprint.target_domain_id,
+        blueprint_digest: input.blueprint_digest,
+        candidate_digest: candidateDigest,
+        candidate_ref: `opl://foundry/candidate/${candidateDigest}`,
+        manifest_digest: `sha256:${manifestSha}`,
+      };
+    },
+  };
   const evaluatorScript = `
     const chunks = [];
     for await (const chunk of process.stdin) chunks.push(chunk);
@@ -1046,6 +1472,7 @@ test('Process evaluator transport excludes protected bodies and cannot self-repo
     }));
   `;
   const evaluator = new ProcessFoundryEvaluationExecutor({
+    execution_mode: 'offline_projected_pack_observation.v1',
     executable: process.execPath,
     args: ['--input-type=module', '--eval', evaluatorScript],
     reviewer_executable: process.execPath,
@@ -1058,14 +1485,16 @@ test('Process evaluator transport excludes protected bodies and cannot self-repo
         evidence_refs: ['evidence:review']
       }));
     `],
-    candidate_directory: () => process.cwd(),
+    candidate_pack_resolver: {
+      resolveDirectory: (candidate) => candidateDirectories.get(candidate.candidate_digest) ?? '',
+    },
     timeout_ms: 10_000,
   });
   const events = new InMemoryFoundryEventStore();
   const kernel = new FoundryKernel({
     designer: new FixtureDesigner(),
     evaluator,
-    compiler: new DeterministicInMemoryCandidateCompiler(),
+    compiler: exactPackCompiler,
     objects: new InMemoryFoundryObjectStore(),
     events,
     versions: new InMemoryVersionRegistry(),
@@ -1167,6 +1596,40 @@ test('FoundryKernel rejects stale Owner decisions and locks one writer per targe
     }),
   });
   assert.equal(cancelled.run.state, 'cancelled');
+});
+
+test('FoundryKernel cancels accepted and designing runs from Framework-owned authority without a Blueprint', async () => {
+  for (const phase of ['accepted', 'designing'] as const) {
+    const { kernel, events } = harness();
+    const runId = `run:cancel-before-blueprint:${phase}`;
+    await kernel.startRun({
+      request: request({ request_id: `request:cancel-before-blueprint:${phase}` }),
+      run_id: runId,
+    });
+    if (phase === 'designing') await kernel.advanceRunStep(runId);
+    const before = await kernel.inspectRun(runId);
+    assert.equal(before.run.state, phase);
+    assert.equal(before.run.blueprint_digest, null);
+
+    const authorityReceiptRef = authorizeRunMutation({
+      inspection: before,
+      action: 'cancel',
+      decision: 'cancel',
+    });
+    const cancelled = await kernel.cancelRun({
+      run_id: runId,
+      expected_revision: before.run.revision,
+      authority_receipt_ref: authorityReceiptRef,
+    });
+    assert.equal(cancelled.run.state, 'cancelled');
+    assert.equal(cancelled.run.blueprint_digest, null);
+    assert.equal((await events.read(runId)).at(-1)?.event_type, 'foundry_run_cancelled');
+    assert.deepEqual(await kernel.cancelRun({
+      run_id: runId,
+      expected_revision: before.run.revision,
+      authority_receipt_ref: authorityReceiptRef,
+    }), cancelled);
+  }
 });
 
 test('FoundryKernel quarantines evidence that changes the frozen test plan', async () => {
@@ -1337,16 +1800,24 @@ test('Evaluation Runtime isolates protected execution and evaluates baseline and
     },
     async runProtectedRequirement(input) {
       protectedSubjects.push(`${input.subject.kind}:${input.requirement.category}`);
-      return {
+      const aggregate = {
         category: input.requirement.category,
         total: input.requirement.minimum_case_count,
         passed: input.requirement.minimum_case_count,
         failed: 0,
         score: 1,
       };
-    },
-    async observeResourceDeltas() {
       return {
+        aggregate,
+        receipt_ref: `opl://foundry/protected-requirement-receipts/${input.subject.kind}/${encodeURIComponent(input.requirement.category)}`,
+        aggregate_digest: foundryContentDigest(aggregate),
+      };
+    },
+    async observeResourceObservations() {
+      return {
+        candidate_cost_observations: { usd: 0 },
+        candidate_latency_observations: { milliseconds: 0 },
+        safety_observations: [],
         safety_delta: { incidents: 0 },
         cost_delta: { usd: 0 },
         latency_delta: { milliseconds: 0 },
@@ -1372,6 +1843,19 @@ test('Evaluation Runtime isolates protected execution and evaluates baseline and
     now: () => '2026-07-16T00:00:00.000Z',
   });
 
+  assert.deepEqual(runtime.qualification_capability, {
+    status: 'qualification_grade',
+    execution_mode: 'frozen_plan_evaluation_runtime.v1',
+    protected_fact_authority: 'framework_owned_case_executor',
+  });
+  assert.equal(isQualificationGradeEvaluationRuntime(runtime), true);
+  assert.equal(isQualificationGradeEvaluationRuntime({
+    evaluator_id: runtime.evaluator_id,
+    qualification_capability: runtime.qualification_capability,
+    evaluate: (input) => runtime.evaluate(input),
+    canary: (input) => runtime.canary(input),
+  }), false);
+
   const result = await runtime.evaluate({
     run_id: 'run:evaluation-runtime',
     request: designRequest,
@@ -1394,6 +1878,32 @@ test('Evaluation Runtime isolates protected execution and evaluates baseline and
   assert.equal(result.baseline_protected_aggregates?.[0]?.score, 1);
   assert.equal(result.frozen_test_plan_digest, foundryFrozenEvaluationPlanDigest(agentBlueprint.eval_spec));
   assert.equal(result.qualified, true);
+  assert.ok(result.provenance.source_refs.includes(
+    'opl://foundry/protected-requirement-receipts/candidate/privacy%3Ano-sensitive-data',
+  ));
+  assert.ok(result.provenance.source_refs.includes(
+    'opl://foundry/protected-requirement-receipts/baseline/privacy%3Ano-sensitive-data',
+  ));
+
+  const tamperedRuntime = new FrozenPlanEvaluationRuntime({
+    evaluator_id: 'evaluator:tampered-protected-receipt',
+    executor: {
+      ...executor,
+      runProtectedRequirement: async (input) => ({
+        ...await executor.runProtectedRequirement(input),
+        aggregate_digest: `sha256:${'f'.repeat(64)}`,
+      }),
+    },
+    reviewer,
+  });
+  await assert.rejects(() => tamperedRuntime.evaluate({
+    run_id: 'run:tampered-protected-receipt',
+    request: designRequest,
+    blueprint: agentBlueprint,
+    blueprint_digest: foundryContentDigest(agentBlueprint),
+    candidate,
+    baseline_version: baseline,
+  }), /direct receipt ref and exact digest/);
 });
 
 test('baseline comparison rejects per-category protected regressions and incomplete baseline aggregates', () => {
@@ -1420,8 +1930,9 @@ test('baseline comparison rejects per-category protected regressions and incompl
     }],
     independent_review_verdict: 'pass' as const,
     baseline_present: true,
-    cost_observations: { usd: 0 },
-    latency_observations: { milliseconds: 0 },
+    candidate_cost_observations: { usd: 0 },
+    candidate_latency_observations: { milliseconds: 0 },
+    safety_observations: [],
   };
   const regressed = recomputeEvaluationQualification({
     ...common,
@@ -1483,8 +1994,18 @@ test('Evaluation Runtime requires pairwise-independent evaluator, executor, and 
     executor_id: 'identity:shared',
     executionRef: () => 'execution:shared',
     runPublicCase: async () => ({ case_id: 'case', status: 'pass', score: 1, evidence_refs: ['evidence:case'] }),
-    runProtectedRequirement: async () => ({ category: 'protected', total: 1, passed: 1, failed: 0, score: 1 }),
-    observeResourceDeltas: async () => ({
+    runProtectedRequirement: async () => {
+      const aggregate = { category: 'protected', total: 1, passed: 1, failed: 0, score: 1 };
+      return {
+        aggregate,
+        receipt_ref: 'opl://foundry/protected-requirement-receipts/identity',
+        aggregate_digest: foundryContentDigest(aggregate),
+      };
+    },
+    observeResourceObservations: async () => ({
+      candidate_cost_observations: {},
+      candidate_latency_observations: {},
+      safety_observations: [],
       safety_delta: {},
       cost_delta: {},
       latency_delta: {},
@@ -1602,6 +2123,18 @@ test('the runtime Foundry validators enforce the same closed nested protocol bou
     }),
     /unknown next Stage/,
   );
+  const symbolicActionSchema = structuredClone(agentBlueprint);
+  symbolicActionSchema.actions[0]!.input_schema_ref = 'opl://schema/symbolic-input';
+  assert.throws(
+    () => validateAgentBlueprint(symbolicActionSchema),
+    /not declared in content_refs.schema_refs/,
+  );
+  const undeclaredArtifactSchema = structuredClone(agentBlueprint);
+  undeclaredArtifactSchema.artifact_contracts[0]!.schema_ref = `opl-content://sha256/${'c'.repeat(64)}`;
+  assert.throws(
+    () => validateAgentBlueprint(undeclaredArtifactSchema),
+    /artifact_contracts\[0\].schema_ref is not declared/,
+  );
 
   const candidate = await new DeterministicInMemoryCandidateCompiler().materialize({
     run_id: 'run:runtime-validator',
@@ -1656,6 +2189,8 @@ test('file-backed Foundry truth survives restart and rebuilds its SQLite project
   const skill = content.put(Buffer.from('fixture skill\n'));
   const knowledge = content.put(Buffer.from('fixture knowledge\n'));
   const model = content.put(Buffer.from('fixture model lock\n'));
+  const inputSchema = content.put(Buffer.from('{"type":"object","title":"fixture input"}\n'));
+  const outputSchema = content.put(Buffer.from('{"type":"object","title":"fixture output"}\n'));
   const bindResources = (value: AgentBlueprint, promptRef: string) => {
     value.stage_graph.stages[0]!.prompt_ref = promptRef;
     value.stage_graph.stages[0]!.skill_refs = [skill.ref];
@@ -1664,6 +2199,10 @@ test('file-backed Foundry truth survives restart and rebuilds its SQLite project
     value.content_refs.skill_refs = [skill.ref];
     value.content_refs.knowledge_refs = [knowledge.ref];
     value.content_refs.model_refs = [model.ref];
+    value.actions[0]!.input_schema_ref = inputSchema.ref;
+    value.actions[0]!.output_schema_ref = outputSchema.ref;
+    value.artifact_contracts[0]!.schema_ref = outputSchema.ref;
+    value.content_refs.schema_refs = [inputSchema.ref, outputSchema.ref];
     return value;
   };
   const semanticDesigner = new FixtureDesigner();
@@ -1701,16 +2240,25 @@ test('file-backed Foundry truth survives restart and rebuilds its SQLite project
       });
     },
   };
-  const buildKernel = () => new FoundryKernel({
-    designer: persistentDesigner,
-    evaluator: persistentEvaluator,
-    compiler: new ContentAddressedCandidateCompiler(root),
-    objects: new FileFoundryObjectStore(root),
-    events: new LedgerFoundryEventStore(root),
-    versions: new LedgerVersionRegistry(root),
-    ownerGate,
-    clock: { now: () => '2026-07-16T00:00:00.000Z' },
-  });
+  const buildKernel = (options: {
+    events?: FoundryEventStore;
+    now?: string;
+    propagateTransientActivityFailures?: boolean;
+  } = {}) => {
+    const versions = new LedgerVersionRegistry(root);
+    return new FoundryKernel({
+      designer: persistentDesigner,
+      evaluator: persistentEvaluator,
+      compiler: new ContentAddressedCandidateCompiler(root),
+      objects: new FileFoundryObjectStore(root),
+      events: options.events ?? new LedgerFoundryEventStore(root),
+      versions,
+      activationRuntime: new InMemoryActivationRuntime(versions),
+      ownerGate,
+      clock: { now: () => options.now ?? '2026-07-16T00:00:00.000Z' },
+      propagateTransientActivityFailures: options.propagateTransientActivityFailures,
+    });
+  };
 
   const firstKernel = buildKernel();
   const completed = await activateCreateRun(
@@ -1741,20 +2289,112 @@ test('file-backed Foundry truth survives restart and rebuilds its SQLite project
   eventStore.rebuildStateIndex();
   assert.equal((await eventStore.list())[0]!.state, 'completed_active');
 
+  const improveRequest = request({
+    request_id: 'request:persistent-improve',
+    mode: 'improve',
+    target_version_ref: version!.version_digest,
+  });
+  await restartedKernel.startRun({ request: improveRequest, run_id: 'run:persistent-improve' });
+  const activeAfterImprove = await restartedKernel.advanceUntilPause('run:persistent-improve');
+  assert.equal(activeAfterImprove.run.state, 'completed_active');
+  assert.notEqual(activeAfterImprove.activation.active_version_digest, version!.version_digest);
+
   const rollback = await restartedKernel.rollbackActivation({
     target_agent_id: 'fixture-agent',
     target_domain_id: 'fixture-domain',
     version_digest: version!.version_digest,
-    expected_revision: 1,
+    expected_revision: 2,
     authority_receipt_ref: authorizeRollback({
       target_agent_id: 'fixture-agent',
       target_domain_id: 'fixture-domain',
       version_digest: version!.version_digest,
-      expected_revision: 1,
+      expected_revision: 2,
     }),
   });
   assert.equal(rollback.to_version_digest, version!.version_digest);
   assert.deepEqual(fs.readFileSync(path.join(candidateDirectory, 'agent-blueprint.json')), before);
+
+  const durableCrashEvents = new LedgerFoundryEventStore(root);
+  let failActivationAppend = true;
+  const crashEvents: FoundryEventStore = {
+    create: (input) => durableCrashEvents.create(input),
+    read: (runId) => durableCrashEvents.read(runId),
+    list: () => durableCrashEvents.list(),
+    append: async (input) => {
+      if (failActivationAppend && input.event.event_type === 'activation_completed') {
+        failActivationAppend = false;
+        throw new FoundryTransientActivityError('injected activation event append outage');
+      }
+      return durableCrashEvents.append(input);
+    },
+  };
+  const crashRequest = request({
+    request_id: 'request:activation-event-recovery',
+    target_agent_id: 'activation-event-recovery-agent',
+    target_domain_id: 'activation_event_recovery',
+  });
+  ownerGate.registerAuthorityPolicy({
+    policy_ref: 'opl://foundry/authority-policies/activation-event-recovery-agent',
+    target_agent_id: crashRequest.target_agent_id,
+    target_domain_id: crashRequest.target_domain_id,
+    authority_refs: ['owner-gate:activation'],
+  });
+  const crashKernel = buildKernel({
+    events: crashEvents,
+    now: '2026-07-16T00:05:00.000Z',
+    propagateTransientActivityFailures: true,
+  });
+  await crashKernel.startRun({ request: crashRequest, run_id: 'run:activation-event-recovery' });
+  let crashGate = await crashKernel.advanceUntilPause('run:activation-event-recovery');
+  crashGate = await crashKernel.submitOwnerDecision({
+    run_id: crashGate.run.run_id,
+    expected_revision: crashGate.run.revision,
+    decision: 'approve',
+    authority_receipt_ref: authorizeRunMutation({
+      inspection: crashGate,
+      action: 'approve_canary',
+      decision: 'approve',
+    }),
+  });
+  const activating = await crashKernel.submitOwnerDecision({
+    run_id: crashGate.run.run_id,
+    expected_revision: crashGate.run.revision,
+    decision: 'approve',
+    authority_receipt_ref: authorizeRunMutation({
+      inspection: crashGate,
+      action: 'approve_active',
+      decision: 'approve',
+    }),
+  }, { advance: false });
+  assert.equal(activating.run.state, 'activating');
+  await assert.rejects(
+    crashKernel.advanceRunStep(activating.run.run_id),
+    /injected activation event append outage/,
+  );
+  assert.equal((await crashKernel.inspectRun(activating.run.run_id)).run.state, 'activating');
+  assert.equal((await new LedgerVersionRegistry(root).activation(
+    crashRequest.target_agent_id,
+    crashRequest.target_domain_id,
+  )).revision, 1);
+  const [durableActivation] = await new LedgerVersionRegistry(root).activationHistory(
+    crashRequest.target_agent_id,
+    crashRequest.target_domain_id,
+  );
+  assert.equal(durableActivation?.runtime_binding_verification.verification_phase, 'pre_commit');
+  assert.equal(
+    durableActivation?.runtime_binding_verification.version_digest,
+    durableActivation?.to_version_digest,
+  );
+
+  const recoveredKernel = buildKernel({ now: '2026-07-16T00:06:00.000Z' });
+  const recovered = await recoveredKernel.advanceRunStep(activating.run.run_id);
+  assert.equal(recovered.run.state, 'completed_active');
+  assert.equal(recovered.activation.revision, 1);
+  const recoveredEvent = (await durableCrashEvents.read(activating.run.run_id)).at(-1)!;
+  assert.deepEqual(
+    recoveredEvent.payload.activation_runtime_binding_verification,
+    durableActivation?.runtime_binding_verification,
+  );
 });
 
 test('file-backed Foundry store keeps the one-writer target lock across process objects', async (t) => {
@@ -1788,6 +2428,8 @@ test('CandidateCompiler hydrates content-addressed Agent Pack bytes deterministi
   const skill = content.put(Buffer.from('# Fixture Skill\n', 'utf8'));
   const knowledge = content.put(Buffer.from('# Fixture Knowledge\n', 'utf8'));
   const model = content.put(Buffer.from('fixture model lock\n', 'utf8'));
+  const inputSchema = content.put(Buffer.from('{"type":"object","title":"fixture input"}\n', 'utf8'));
+  const outputSchema = content.put(Buffer.from('{"type":"object","title":"fixture output"}\n', 'utf8'));
   const designRequest = request({ request_id: 'request:content-pack' });
   const agentBlueprint = blueprint(designRequest, 0, prompt.ref);
   agentBlueprint.stage_graph.stages[0]!.skill_refs = [skill.ref];
@@ -1795,6 +2437,10 @@ test('CandidateCompiler hydrates content-addressed Agent Pack bytes deterministi
   agentBlueprint.content_refs.skill_refs = [skill.ref];
   agentBlueprint.content_refs.knowledge_refs = [knowledge.ref];
   agentBlueprint.content_refs.model_refs = [model.ref];
+  agentBlueprint.actions[0]!.input_schema_ref = inputSchema.ref;
+  agentBlueprint.actions[0]!.output_schema_ref = outputSchema.ref;
+  agentBlueprint.artifact_contracts[0]!.schema_ref = outputSchema.ref;
+  agentBlueprint.content_refs.schema_refs = [inputSchema.ref, outputSchema.ref];
   const blueprintDigest = foundryContentDigest(agentBlueprint);
   const compiler = new ContentAddressedCandidateCompiler(root);
 
@@ -1812,7 +2458,7 @@ test('CandidateCompiler hydrates content-addressed Agent Pack bytes deterministi
   const directory = compiler.candidateDirectory(first.candidate_digest);
   const pack = JSON.parse(fs.readFileSync(path.join(directory, 'agent/agent-pack.json'), 'utf8'));
   assert.equal(pack.conformance.status, 'valid');
-  assert.equal(pack.content_bindings.length, 4);
+  assert.equal(pack.content_bindings.length, 6);
   assert.equal(pack.content_bindings.every((entry: { declared_ref: string; immutable_ref: string }) =>
     entry.declared_ref === entry.immutable_ref), true);
   assert.equal(fs.readFileSync(path.join(directory, `content/prompt/${prompt.digest.slice(7)}.blob`), 'utf8'), 'Deliver the accepted result.\n');
@@ -1876,7 +2522,7 @@ test('Foundry designer ports are producer-neutral across function and manifest a
         input_schema_refs: ['opl://foundry-protocol/DesignRequest'],
         output_schema_ref: 'opl://foundry-protocol/AgentBlueprint',
         entry_stage_ref: 'mission-intake',
-        required_stage_refs: ['mission-intake'],
+        required_stage_refs: ['mission-intake', 'evaluation-design'],
         optional_stage_refs: [],
         terminal_stage_ref: 'evaluation-design',
       },
@@ -1888,7 +2534,7 @@ test('Foundry designer ports are producer-neutral across function and manifest a
         ],
         output_schema_ref: 'opl://foundry-protocol/EvolutionProposal',
         entry_stage_ref: 'evidence-diagnosis',
-        required_stage_refs: ['evidence-diagnosis'],
+        required_stage_refs: ['evidence-diagnosis', 'evolution-proposal'],
         optional_stage_refs: [],
         terminal_stage_ref: 'evolution-proposal',
       },
@@ -1944,6 +2590,105 @@ test('Foundry designer ports are producer-neutral across function and manifest a
     await functionAdapter.design(designRequest, designActivity),
   );
   assert.equal(manifestAdapter.producer_id, 'foundry-provider:fixture-designer');
+});
+
+test('production Foundry resolves a configurable semantic provider and keeps OMA as the default', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-production-provider-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const checkout = path.join(root, 'provider-checkout');
+  fs.mkdirSync(path.join(checkout, 'contracts'), { recursive: true });
+  fs.writeFileSync(path.join(checkout, 'contracts', 'foundry_provider.json'), JSON.stringify({
+    surface_kind: 'opl_foundry_provider',
+    version: 'opl-foundry-provider.v1',
+    provider_id: 'provider-fixture',
+    agent_id: 'provider-fixture',
+    package_id: 'provider-fixture',
+    domain_id: 'agent_engineering',
+    carrier_slug: 'provider-fixture',
+    operations: {
+      design: {
+        input_schema_refs: ['opl://foundry-protocol/DesignRequest'],
+        output_schema_ref: 'opl://foundry-protocol/AgentBlueprint',
+        entry_stage_ref: 'mission-intake',
+        required_stage_refs: ['mission-intake', 'evaluation-design'],
+        optional_stage_refs: [],
+        terminal_stage_ref: 'evaluation-design',
+      },
+      diagnose: {
+        input_schema_refs: [
+          'opl://foundry-protocol/DesignRequest',
+          'opl://foundry-protocol/AgentBlueprint',
+          'opl://foundry-protocol/EvidenceBundle',
+        ],
+        output_schema_ref: 'opl://foundry-protocol/EvolutionProposal',
+        entry_stage_ref: 'evidence-diagnosis',
+        required_stage_refs: ['evidence-diagnosis', 'evolution-proposal'],
+        optional_stage_refs: [],
+        terminal_stage_ref: 'evolution-proposal',
+      },
+    },
+    projection_policy: {
+      public_action_ids: ['engineer-agent'],
+      internal_operations_are_public_actions: false,
+      internal_operations_are_cli_commands: false,
+      internal_operations_are_mcp_tools: false,
+    },
+    authority_boundary: {
+      provider_owns_design_semantics: true,
+      provider_owns_evaluation_semantics: true,
+      provider_owns_evidence_diagnosis: true,
+      provider_owns_evolution_proposals: true,
+      provider_owns_foundry_run_state: false,
+      provider_owns_candidate_materialization: false,
+      provider_owns_evaluation_execution: false,
+      provider_owns_versions_or_activation: false,
+      provider_can_return_patch_or_work_order: false,
+      provider_can_view_protected_test_bodies: false,
+      opl_can_write_target_domain_truth: false,
+    },
+  }));
+  const observedProviderIds: string[] = [];
+  const resolveManagedCheckout: typeof resolveStandardAgentManagedCheckout = async (input) => {
+    observedProviderIds.push(input.domainId);
+    return {
+      checkout_root: checkout,
+    } as Awaited<ReturnType<typeof resolveStandardAgentManagedCheckout>>;
+  };
+
+  await createProductionFoundryKernel({
+    root_override: path.join(root, 'custom-provider-state'),
+    semantic_provider_agent_id: 'provider-fixture',
+    resolve_managed_checkout: resolveManagedCheckout,
+  });
+  await createProductionFoundryKernel({
+    root_override: path.join(root, 'default-provider-state'),
+    resolve_managed_checkout: resolveManagedCheckout,
+  });
+
+  assert.deepEqual(observedProviderIds, ['provider-fixture', 'oma']);
+});
+
+test('production Foundry rejects structurally spoofed qualification evaluators before provider resolution', async () => {
+  let providerResolutionAttempted = false;
+  const spoofedRuntime: EvaluationExecutor = {
+    evaluator_id: 'evaluator:spoofed-runtime',
+    qualification_capability: {
+      status: 'qualification_grade',
+      execution_mode: 'frozen_plan_evaluation_runtime.v1',
+      protected_fact_authority: 'framework_owned_case_executor',
+    },
+    evaluate: async () => { throw new Error('unreachable'); },
+    canary: async () => { throw new Error('unreachable'); },
+  };
+
+  await assert.rejects(() => createProductionFoundryKernel({
+    trusted_evaluation_runtime: spoofedRuntime,
+    resolve_managed_checkout: async () => {
+      providerResolutionAttempted = true;
+      throw new Error('unreachable');
+    },
+  }), /Framework-owned FrozenPlan Evaluation Runtime/);
+  assert.equal(providerResolutionAttempted, false);
 });
 
 test('the exact OMA checkout exposes the canonical producer manifest', {

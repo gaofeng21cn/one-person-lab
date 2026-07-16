@@ -1,0 +1,170 @@
+{
+  "surface_kind": "opl_foundry_agent_blueprint",
+  "version": "opl-foundry-protocol.v1",
+  "blueprint_id": "fixture-research-agent-blueprint-001",
+  "target_agent_id": "fixture-research-agent",
+  "target_domain_id": "fixture_research",
+  "target_version_ref": null,
+  "design_request_digest": "sha256:ddaeb1b0d89c056d0ac5a1aa29cacbe48b21ffecb7b16bf783e4fffe9db069e2",
+  "generation": 0,
+  "stage_graph": {
+    "entry_stage_id": "evidence-synthesis",
+    "stages": [
+      {
+        "stage_id": "evidence-synthesis",
+        "stage_kind": "semantic",
+        "goal": "Synthesize admitted evidence into a claim-support map.",
+        "input_artifact_types": [
+          "source_bundle"
+        ],
+        "output_artifact_types": [
+          "claim_support_map"
+        ],
+        "prompt_ref": "opl-content://sha256/1111111111111111111111111111111111111111111111111111111111111111",
+        "skill_refs": [
+          "opl-content://sha256/2222222222222222222222222222222222222222222222222222222222222222"
+        ],
+        "knowledge_refs": [
+          "opl-content://sha256/3333333333333333333333333333333333333333333333333333333333333333"
+        ],
+        "capability_refs": [
+          "opl://capability/evidence-synthesis"
+        ],
+        "next_stage_ids": [
+          "brief-authoring"
+        ]
+      },
+      {
+        "stage_id": "brief-authoring",
+        "stage_kind": "semantic",
+        "goal": "Author a brief whose claims resolve to the claim-support map.",
+        "input_artifact_types": [
+          "claim_support_map"
+        ],
+        "output_artifact_types": [
+          "research_brief"
+        ],
+        "prompt_ref": "opl-content://sha256/4444444444444444444444444444444444444444444444444444444444444444",
+        "skill_refs": [
+          "opl-content://sha256/5555555555555555555555555555555555555555555555555555555555555555"
+        ],
+        "knowledge_refs": [],
+        "capability_refs": [
+          "opl://capability/structured-authoring"
+        ],
+        "next_stage_ids": []
+      }
+    ]
+  },
+  "actions": [
+    {
+      "action_id": "produce-research-brief",
+      "summary": "Produce an evidence-grounded research brief.",
+      "entry_stage_id": "evidence-synthesis",
+      "input_schema_ref": "opl-content://sha256/7777777777777777777777777777777777777777777777777777777777777777",
+      "output_schema_ref": "opl-content://sha256/8888888888888888888888888888888888888888888888888888888888888888"
+    }
+  ],
+  "artifact_contracts": [
+    {
+      "artifact_type": "claim_support_map",
+      "schema_ref": "opl-content://sha256/9999999999999999999999999999999999999999999999999999999999999999",
+      "authority_owner_ref": "opl://owner/fixture-research"
+    },
+    {
+      "artifact_type": "research_brief",
+      "schema_ref": "opl-content://sha256/8888888888888888888888888888888888888888888888888888888888888888",
+      "authority_owner_ref": "opl://owner/fixture-research"
+    }
+  ],
+  "content_refs": {
+    "prompt_refs": [
+      "opl-content://sha256/1111111111111111111111111111111111111111111111111111111111111111",
+      "opl-content://sha256/4444444444444444444444444444444444444444444444444444444444444444"
+    ],
+    "skill_refs": [
+      "opl-content://sha256/2222222222222222222222222222222222222222222222222222222222222222",
+      "opl-content://sha256/5555555555555555555555555555555555555555555555555555555555555555"
+    ],
+    "knowledge_refs": [
+      "opl-content://sha256/3333333333333333333333333333333333333333333333333333333333333333"
+    ],
+    "helper_refs": [],
+    "model_refs": [
+      "opl-content://sha256/4444444444444444444444444444444444444444444444444444444444444444"
+    ],
+    "tool_refs": [],
+    "schema_refs": [
+      "opl-content://sha256/7777777777777777777777777777777777777777777777777777777777777777",
+      "opl-content://sha256/8888888888888888888888888888888888888888888888888888888888888888",
+      "opl-content://sha256/9999999999999999999999999999999999999999999999999999999999999999"
+    ]
+  },
+  "capability_requirements": [
+    "opl://capability/evidence-synthesis",
+    "opl://capability/structured-authoring"
+  ],
+  "authority_policy": {
+    "truth_owner_ref": "opl://owner/fixture-research",
+    "artifact_owner_ref": "opl://owner/fixture-research",
+    "quality_owner_ref": "opl://owner/fixture-research",
+    "permission_refs": [],
+    "generated_agent_can_modify_versions": false,
+    "generated_agent_can_modify_evaluation": false,
+    "generated_agent_can_modify_permissions": false,
+    "generated_agent_can_modify_activation": false
+  },
+  "memory_policy": {
+    "memory_classes": [
+      "task_observation"
+    ],
+    "retention_refs": [
+      "opl://retention/fixture-research/default"
+    ],
+    "write_authority_refs": [
+      "opl://owner/fixture-research"
+    ]
+  },
+  "assumptions": [
+    "All admitted sources expose stable semantic references."
+  ],
+  "design_evidence_refs": [
+    "opl://source/fixture-research-agent/mission-v1"
+  ],
+  "eval_spec": {
+    "eval_spec_id": "fixture-research-agent-eval-001",
+    "public_cases": [
+      {
+        "case_id": "public-claim-support",
+        "test_ref": "opl://test/fixture-research-agent/public-claim-support",
+        "weight": 1,
+        "required": true
+      }
+    ],
+    "protected_requirements": [
+      {
+        "category": "privacy:owner-boundary-nondisclosure",
+        "minimum_case_count": 1
+      },
+      {
+        "category": "unsupported-claim-resistance",
+        "minimum_case_count": 2
+      }
+    ],
+    "gates": [
+      {
+        "gate_id": "required-quality-floor",
+        "metric": "score",
+        "operator": "gte",
+        "threshold": 0.9,
+        "required": true
+      }
+    ],
+    "baseline_comparison": {
+      "required": false,
+      "regression_tolerance": 0
+    },
+    "independent_evaluator_required": true
+  },
+  "risk_hint": "low"
+}

@@ -244,16 +244,32 @@ function nextWorkflowId(state: JsonRecord) {
     : null;
 }
 
+const BLUEPRINT_CONTENT_REF_FIELDS = [
+  'prompt_refs',
+  'skill_refs',
+  'knowledge_refs',
+  'helper_refs',
+  'model_refs',
+  'tool_refs',
+  'schema_refs',
+] as const;
+
 function blueprintContentRefs(value: unknown) {
   const envelope = record(value, 'Foundry provider protocol output');
   const blueprint = envelope.surface_kind === 'opl_foundry_evolution_proposal'
     ? record(envelope.next_blueprint, 'EvolutionProposal.next_blueprint')
     : envelope;
-  if (!isRecord(blueprint.content_refs)) return [];
-  const refs = blueprint.content_refs;
-  return ['prompt_refs', 'skill_refs', 'knowledge_refs', 'helper_refs']
-    .flatMap((field) => stringList(refs[field], `AgentBlueprint.content_refs.${field}`))
-    .filter((ref) => ref.startsWith('opl-content:'));
+  const refs = record(blueprint.content_refs, 'AgentBlueprint.content_refs');
+  const actualFields = Object.keys(refs).sort();
+  const expectedFields = [...BLUEPRINT_CONTENT_REF_FIELDS].sort();
+  if (canonicalJsonText(actualFields) !== canonicalJsonText(expectedFields)) {
+    fail('AgentBlueprint.content_refs must declare the closed seven-class resource inventory.', {
+      actual_fields: actualFields,
+      expected_fields: expectedFields,
+    });
+  }
+  return BLUEPRINT_CONTENT_REF_FIELDS.flatMap((field) =>
+    stringList(refs[field], `AgentBlueprint.content_refs.${field}`));
 }
 
 export class StageRunFoundryProviderInvoker implements FoundryProviderOperationInvoker {
@@ -381,7 +397,6 @@ export class StageRunFoundryProviderInvoker implements FoundryProviderOperationI
     }
     const contentStore = new FileFoundryContentStore(this.#storageRoot);
     for (const ref of blueprintContentRefs(candidates[0])) {
-      if (contentStore.has(ref)) continue;
       const expected = /^opl-content:\/\/sha256\/([a-f0-9]{64})$/.exec(ref)?.[1];
       if (!expected) fail('Foundry provider returned a malformed content ref.', { content_ref: ref });
       const artifact = artifactBodies.find((entry) => entry.sha256.replace(/^sha256:/, '') === expected);

@@ -593,9 +593,7 @@
           "supporting_domain_owner_chain_refs": [
             "supporting_domain_owner_chain_ref://med-autoscience/contracts/production_acceptance/mas-multiprofile-guarded-apply-receipt-scaleout-evidence-20260527.json",
             "supporting_domain_owner_chain_ref://med-autogrant/contracts/production_acceptance/mag-workspace-receipt-scaleout-evidence-20260527.json#/workspace_receipt_scaleout",
-            "supporting_domain_owner_chain_ref://redcube-ai/contracts/production_acceptance/rca-workspace-receipt-scaleout-evidence-20260528.json#/scaleout_projection",
-            "supporting_domain_owner_chain_ref://opl-meta-agent/contracts/real_target_agent_scaleout_evidence.json#/multi_target_scaleout_closeout",
-            "supporting_domain_owner_chain_ref://opl-meta-agent/contracts/target_agent_owner_chain_evidence.json#/domain_owner_chain_scaleout"
+            "supporting_domain_owner_chain_ref://redcube-ai/contracts/production_acceptance/rca-workspace-receipt-scaleout-evidence-20260528.json#/scaleout_projection"
           ]
         },
         {
@@ -1663,9 +1661,9 @@
       "l5_completion_status": "evidence_required",
       "l5_can_be_claimed": false,
       "immediate_enabling_surfaces": [
-        "foundry_lab_canary_promotion_envelope",
-        "foundry_lab_rollback_gate",
-        "foundry_lab_owner_acceptance_ref_gate"
+        "foundry_kernel_canary_promotion_envelope",
+        "foundry_kernel_rollback_gate",
+        "foundry_kernel_owner_acceptance_ref_gate"
       ],
       "evidence_requirements": [
         {

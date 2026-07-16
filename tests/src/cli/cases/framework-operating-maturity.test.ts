@@ -34,7 +34,14 @@ test('framework operating maturity reports owner gates and false-ready boundarie
     assert.equal(maturity.current_owner_delta_bridge.hard_gate.domain_ready_authorized, false);
     assert.equal(maturity.summary.domain_owner_chain_open_domain_count, 4);
     assert.equal(maturity.domain_owner_chain_scaleout.domains.length, 4);
-    assert.equal(maturity.owner_evidence_intake.status, 'owner_evidence_observed_not_ready_claim');
+    assert.equal(maturity.owner_evidence_intake.status, 'owner_evidence_required');
+    const domainOwnerEvidence = maturity.owner_evidence_intake.lane_evidence.find(
+      (entry: { lane: string }) => entry.lane === 'domain_owner_chain_scaleout',
+    );
+    assert.equal(domainOwnerEvidence.evidence_route, 'opl runtime domain-owner-payload-summary list --json');
+    assert.equal(domainOwnerEvidence.verified_receipt_count, 0);
+    assert.deepEqual(domainOwnerEvidence.observed_receipt_refs, []);
+    assert.deepEqual(domainOwnerEvidence.observed_domains, []);
     assert.equal(maturity.foundry_agent_os_production_evidence_gate.status, 'evidence_required');
     assert.equal(maturity.foundry_agent_os_production_evidence_gate.summary.closed_by_opl, false);
     assert.equal(maturity.foundry_agent_os_production_evidence_gate.summary.production_ready_claim_authorized, false);

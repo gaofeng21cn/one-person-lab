@@ -19,6 +19,7 @@ import {
 } from '../../src/modules/foundry/protocol.ts';
 import type {
   ActivationPointer,
+  ActivationRuntimeBindingVerification,
   ActivationTransaction,
   AgentVersion,
   MaterializedCandidate,
@@ -45,6 +46,19 @@ function registryDirectory(root: string) {
     foundryStoragePaths(root).registry,
     sha256(`${TARGET_AGENT_ID}\0${TARGET_DOMAIN_ID}`),
   );
+}
+
+function currentRegistryDirectory(root: string) {
+  return path.join(registryDirectory(root), 'epoch-v1');
+}
+
+function writeRegistryEpochMarker(root: string) {
+  writeCanonical(path.join(currentRegistryDirectory(root), 'registry-epoch.json'), {
+    surface_kind: 'opl_foundry_version_registry_epoch',
+    version: 'opl-foundry-version-registry.v1',
+    target_agent_id: TARGET_AGENT_ID,
+    target_domain_id: TARGET_DOMAIN_ID,
+  });
 }
 
 function writeCanonical(file: string, value: unknown) {
@@ -103,13 +117,14 @@ function createCandidate(root: string, label: string): MaterializedCandidate {
       helper_refs: [],
       model_refs: [],
       tool_refs: [],
+      schema_refs: [],
     },
     capability_requirements: ['capability:text'],
     authority_policy: {
       truth_owner_ref: 'owner:persistent-fixture',
       artifact_owner_ref: 'owner:persistent-fixture',
       quality_owner_ref: 'owner:persistent-fixture',
-      owner_gate_refs: ['owner-gate:persistent-fixture'],
+      permission_refs: [],
       generated_agent_can_modify_versions: false,
       generated_agent_can_modify_evaluation: false,
       generated_agent_can_modify_permissions: false,
@@ -257,7 +272,7 @@ function registrationRecords(input: RegisterInput) {
 }
 
 function registrationFiles(root: string, records: ReturnType<typeof registrationRecords>) {
-  const directory = registryDirectory(root);
+  const directory = currentRegistryDirectory(root);
   return {
     qualification: path.join(
       directory,
@@ -285,7 +300,7 @@ async function createRegisteredFixture(root: string, label = 'v1') {
 function transaction(
   kind: ActivationTransaction['transaction_kind'],
   fromVersionDigest: string | null,
-  toVersionDigest: string,
+  version: AgentVersion,
   previousRevision: number,
   authorityReceiptRef: string | null,
   occurredAt: string,
@@ -296,13 +311,37 @@ function transaction(
     target_agent_id: TARGET_AGENT_ID,
     target_domain_id: TARGET_DOMAIN_ID,
     from_version_digest: fromVersionDigest,
-    to_version_digest: toVersionDigest,
+    to_version_digest: version.version_digest,
     previous_revision: previousRevision,
     next_revision: previousRevision + 1,
     authority_receipt_ref: authorityReceiptRef,
     occurred_at: occurredAt,
+    runtime_binding_verification: activationVerification(version, kind, previousRevision),
   };
   return { ...base, transaction_id: `activation:${digest(base)}` };
+}
+
+function activationVerification(
+  version: AgentVersion,
+  kind: ActivationTransaction['transaction_kind'],
+  expectedRevision: number,
+  label = `${kind}:${expectedRevision}:${version.version_digest}`,
+): ActivationRuntimeBindingVerification {
+  return {
+    surface_kind: 'opl_foundry_activation_runtime_binding_verification',
+    version: 'opl-foundry-activation-runtime-binding-verification.v1',
+    verification_phase: 'pre_commit',
+    transaction_kind: kind,
+    target_agent_id: version.target_agent_id,
+    target_domain_id: version.target_domain_id,
+    version_id: version.version_id,
+    version_digest: version.version_digest,
+    candidate_digest: version.candidate_digest,
+    candidate_ref: version.candidate_ref,
+    expected_activation_revision: expectedRevision,
+    preflight_ref: `opl://foundry/activation-runtime-preflights/${fixtureDigest(`preflight:${label}`)}`,
+    runtime_binding_ref: `opl://foundry/prepared-runtime-bindings/${fixtureDigest(`binding:${label}`)}`,
+  };
 }
 
 function pointer(versionDigest: string, revision: number, updatedAt: string): ActivationPointer {
@@ -323,6 +362,7 @@ test('registration hides a prepared qualification and exact retry atomically pub
   const input = registerInput(candidate);
   const records = registrationRecords(input);
   const files = registrationFiles(root, records);
+  writeRegistryEpochMarker(root);
   writeCanonical(files.qualification, records.qualification);
 
   const registry = new LedgerVersionRegistry(root);
@@ -331,6 +371,11 @@ test('registration hides a prepared qualification and exact retry atomically pub
   assert.deepEqual(committed, records);
   assert.deepEqual(await registry.list(TARGET_AGENT_ID, TARGET_DOMAIN_ID), [records.version]);
   assert.deepEqual(await new LedgerVersionRegistry(root).register(input), records);
+
+  const deadLegacyTemp = `${files.qualification}.tmp-999999-${crypto.randomUUID()}`;
+  fs.writeFileSync(deadLegacyTemp, 'uncommitted legacy staging bytes');
+  assert.deepEqual(await new LedgerVersionRegistry(root).list(TARGET_AGENT_ID, TARGET_DOMAIN_ID), [records.version]);
+  assert.equal(fs.existsSync(deadLegacyTemp), false);
 
   await assert.rejects(
     registry.register({ ...input, evidence_digest: fixtureDigest('different-evidence') }),
@@ -466,22 +511,63 @@ test('activation history is contiguous, replay is exact, and a missing pointer r
     qualified_at: '2026-07-16T00:01:00.000Z',
   }));
 
-  await first.registry.compareAndSwapActivation({
+  const firstActivation = await first.registry.compareAndSwapActivation({
     target_agent_id: TARGET_AGENT_ID,
     target_domain_id: TARGET_DOMAIN_ID,
     expected_revision: 0,
     version_digest: first.version.version_digest,
     authority_receipt_ref: null,
     occurred_at: '2026-07-16T00:02:00.000Z',
+    runtime_binding_verification: activationVerification(first.version, 'activate', 0),
   });
-  await first.registry.compareAndSwapActivation({
+  const secondActivation = await first.registry.compareAndSwapActivation({
     target_agent_id: TARGET_AGENT_ID,
     target_domain_id: TARGET_DOMAIN_ID,
     expected_revision: 1,
     version_digest: second.version.version_digest,
     authority_receipt_ref: 'owner:activate-v2',
     occurred_at: '2026-07-16T00:03:00.000Z',
+    runtime_binding_verification: activationVerification(second.version, 'activate', 1),
   });
+  assert.deepEqual(
+    (await first.registry.activationHistory(TARGET_AGENT_ID, TARGET_DOMAIN_ID)).map(
+      (entry) => entry.runtime_binding_verification,
+    ),
+    [
+      activationVerification(first.version, 'activate', 0),
+      activationVerification(second.version, 'activate', 1),
+    ],
+  );
+  const files = registrationFiles(root, registrationRecords(first.input));
+  writeCanonical(
+    files.activation,
+    pointer(first.version.version_digest, firstActivation.next_revision, firstActivation.occurred_at),
+  );
+  assert.deepEqual(
+    await first.registry.activation(TARGET_AGENT_ID, TARGET_DOMAIN_ID),
+    pointer(second.version.version_digest, secondActivation.next_revision, secondActivation.occurred_at),
+  );
+  assert.deepEqual(
+    readJson(files.activation),
+    pointer(second.version.version_digest, secondActivation.next_revision, secondActivation.occurred_at),
+  );
+  const neverActiveCandidate = createCandidate(root, 'activation-never-active');
+  const neverActive = await first.registry.register(registerInput(neverActiveCandidate, {
+    evidence_digest: fixtureDigest('evidence:never-active'),
+    qualified_at: '2026-07-16T00:03:30.000Z',
+  }));
+  await assert.rejects(
+    first.registry.rollback({
+      target_agent_id: TARGET_AGENT_ID,
+      target_domain_id: TARGET_DOMAIN_ID,
+      expected_revision: 2,
+      version_digest: neverActive.version.version_digest,
+      authority_receipt_ref: 'owner:rollback-never-active',
+      occurred_at: '2026-07-16T00:03:45.000Z',
+      runtime_binding_verification: activationVerification(neverActive.version, 'rollback', 2),
+    }),
+    /has never been active/,
+  );
   const rollbackInput = {
     target_agent_id: TARGET_AGENT_ID,
     target_domain_id: TARGET_DOMAIN_ID,
@@ -489,26 +575,48 @@ test('activation history is contiguous, replay is exact, and a missing pointer r
     version_digest: first.version.version_digest,
     authority_receipt_ref: 'owner:rollback-v1',
     occurred_at: '2026-07-16T00:04:00.000Z',
+    runtime_binding_verification: activationVerification(first.version, 'rollback', 2),
   };
   const rollback = await first.registry.rollback(rollbackInput);
   assert.equal((await first.registry.activation(TARGET_AGENT_ID, TARGET_DOMAIN_ID)).revision, 3);
   assert.deepEqual(await first.registry.rollback(rollbackInput), rollback);
-  await assert.rejects(
-    first.registry.rollback({ ...rollbackInput, occurred_at: '2026-07-16T00:04:01.000Z' }),
-    /replay conflicts with immutable history/,
+  assert.deepEqual(
+    await first.registry.rollback({ ...rollbackInput, occurred_at: '2026-07-16T00:04:01.000Z' }),
+    rollback,
   );
   await assert.rejects(
-    first.registry.rollback({ ...rollbackInput, expected_revision: 99 }),
+    first.registry.rollback({
+      ...rollbackInput,
+      expected_revision: 3,
+      runtime_binding_verification: activationVerification(first.version, 'rollback', 3),
+    }),
+    /already active/,
+  );
+  await assert.rejects(
+    first.registry.rollback({
+      ...rollbackInput,
+      expected_revision: 99,
+      runtime_binding_verification: activationVerification(first.version, 'rollback', 99),
+    }),
     /compare-and-swap failed/,
   );
+  await assert.rejects(
+    first.registry.rollback({
+      ...rollbackInput,
+      runtime_binding_verification: activationVerification(first.version, 'rollback', 2, 'different-binding'),
+    }),
+    /replay conflicts with immutable history/,
+  );
 
-  const files = registrationFiles(root, registrationRecords(first.input));
   fs.rmSync(files.activation);
   assert.deepEqual(
     await new LedgerVersionRegistry(root).activation(TARGET_AGENT_ID, TARGET_DOMAIN_ID),
     pointer(first.version.version_digest, 3, rollbackInput.occurred_at),
   );
-  assert.equal(fs.existsSync(files.activation), false);
+  assert.deepEqual(
+    readJson(files.activation),
+    pointer(first.version.version_digest, 3, rollbackInput.occurred_at),
+  );
   assert.deepEqual(await first.registry.rollback(rollbackInput), rollback);
   assert.deepEqual(
     readJson(files.activation),
@@ -535,6 +643,7 @@ test('exact activation replay repairs a pointer publish failure without duplicat
     version_digest: fixture.version.version_digest,
     authority_receipt_ref: 'owner:activate-after-crash',
     occurred_at: '2026-07-16T00:04:30.000Z',
+    runtime_binding_verification: activationVerification(fixture.version, 'activate', 0),
   };
   const renameDescriptor = Object.getOwnPropertyDescriptor(fs, 'renameSync')!;
   const originalRename = fs.renameSync;
@@ -560,6 +669,10 @@ test('exact activation replay repairs a pointer publish failure without duplicat
 
   assert.equal(fs.existsSync(files.activation), false);
   assert.deepEqual(fs.readdirSync(files.transactions), ['0000000001.json']);
+  assert.deepEqual(
+    readJson(path.join(files.transactions, '0000000001.json')).runtime_binding_verification,
+    activationInput.runtime_binding_verification,
+  );
   assert.deepEqual(
     fs.readdirSync(path.dirname(files.activation)).filter((entry) => entry.startsWith('activation.json.tmp-')),
     [],
@@ -630,9 +743,138 @@ test('activation load and rollback fail closed on history, pointer, or candidate
       error: /ActivationTransaction target identity does not match/,
     },
     {
+      name: 'runtime verification missing',
+      corrupt: ({ transaction, files }) => {
+        const base = { ...transaction };
+        delete (base as Partial<ActivationTransaction>).transaction_id;
+        delete (base as Partial<ActivationTransaction>).runtime_binding_verification;
+        writeCanonical(path.join(files.transactions, '0000000001.json'), {
+          ...base,
+          transaction_id: `activation:${digest(base)}`,
+        });
+      },
+      error: /ActivationTransaction fields do not match/,
+    },
+    {
+      name: 'runtime verification kind',
+      corrupt: ({ transaction, files }) => {
+        const base = {
+          ...transaction,
+          runtime_binding_verification: {
+            ...transaction.runtime_binding_verification,
+            transaction_kind: 'rollback',
+          },
+        };
+        delete (base as Partial<ActivationTransaction>).transaction_id;
+        writeCanonical(path.join(files.transactions, '0000000001.json'), {
+          ...base,
+          transaction_id: `activation:${digest(base)}`,
+        });
+      },
+      error: /runtime binding verification.*transaction kind/i,
+    },
+    {
+      name: 'runtime verification target',
+      corrupt: ({ transaction, files }) => {
+        const base = {
+          ...transaction,
+          runtime_binding_verification: {
+            ...transaction.runtime_binding_verification,
+            target_domain_id: 'wrong-domain',
+          },
+        };
+        delete (base as Partial<ActivationTransaction>).transaction_id;
+        writeCanonical(path.join(files.transactions, '0000000001.json'), {
+          ...base,
+          transaction_id: `activation:${digest(base)}`,
+        });
+      },
+      error: /runtime binding verification.*target identity/i,
+    },
+    {
+      name: 'runtime verification version',
+      corrupt: ({ transaction, files }) => {
+        const base = {
+          ...transaction,
+          runtime_binding_verification: {
+            ...transaction.runtime_binding_verification,
+            version_id: 'wrong-version-id',
+          },
+        };
+        delete (base as Partial<ActivationTransaction>).transaction_id;
+        writeCanonical(path.join(files.transactions, '0000000001.json'), {
+          ...base,
+          transaction_id: `activation:${digest(base)}`,
+        });
+      },
+      error: /runtime binding verification.*AgentVersion/i,
+    },
+    {
+      name: 'runtime verification candidate',
+      corrupt: ({ transaction, files }) => {
+        const base = {
+          ...transaction,
+          runtime_binding_verification: {
+            ...transaction.runtime_binding_verification,
+            candidate_digest: fixtureDigest('wrong-candidate'),
+          },
+        };
+        delete (base as Partial<ActivationTransaction>).transaction_id;
+        writeCanonical(path.join(files.transactions, '0000000001.json'), {
+          ...base,
+          transaction_id: `activation:${digest(base)}`,
+        });
+      },
+      error: /runtime binding verification.*AgentVersion/i,
+    },
+    {
+      name: 'runtime verification expected revision',
+      corrupt: ({ transaction, files }) => {
+        const base = {
+          ...transaction,
+          runtime_binding_verification: {
+            ...transaction.runtime_binding_verification,
+            expected_activation_revision: 7,
+          },
+        };
+        delete (base as Partial<ActivationTransaction>).transaction_id;
+        writeCanonical(path.join(files.transactions, '0000000001.json'), {
+          ...base,
+          transaction_id: `activation:${digest(base)}`,
+        });
+      },
+      error: /runtime binding verification.*revision/i,
+    },
+    {
+      name: 'runtime verification prepared ref',
+      corrupt: ({ transaction, files }) => {
+        const base = {
+          ...transaction,
+          runtime_binding_verification: {
+            ...transaction.runtime_binding_verification,
+            runtime_binding_ref: '',
+          },
+        };
+        delete (base as Partial<ActivationTransaction>).transaction_id;
+        writeCanonical(path.join(files.transactions, '0000000001.json'), {
+          ...base,
+          transaction_id: `activation:${digest(base)}`,
+        });
+      },
+      error: /runtime binding verification.*prepared runtime binding ref/i,
+    },
+    {
       name: 'transaction target version',
       corrupt: ({ transaction, files }) => {
-        const base = { ...transaction, to_version_digest: fixtureDigest('missing-version') };
+        const missingVersionDigest = fixtureDigest('missing-version');
+        const base = {
+          ...transaction,
+          to_version_digest: missingVersionDigest,
+          runtime_binding_verification: {
+            ...transaction.runtime_binding_verification,
+            version_digest: missingVersionDigest,
+          },
+        };
         delete (base as Partial<ActivationTransaction>).transaction_id;
         writeCanonical(path.join(files.transactions, '0000000001.json'), {
           ...base,
@@ -644,7 +886,15 @@ test('activation load and rollback fail closed on history, pointer, or candidate
     {
       name: 'transaction revision continuity',
       corrupt: ({ transaction, files }) => {
-        const base = { ...transaction, previous_revision: 1, next_revision: 2 };
+        const base = {
+          ...transaction,
+          previous_revision: 1,
+          next_revision: 2,
+          runtime_binding_verification: {
+            ...transaction.runtime_binding_verification,
+            expected_activation_revision: 1,
+          },
+        };
         delete (base as Partial<ActivationTransaction>).transaction_id;
         fs.rmSync(path.join(files.transactions, '0000000001.json'));
         writeCanonical(path.join(files.transactions, '0000000002.json'), {
@@ -696,6 +946,7 @@ test('activation load and rollback fail closed on history, pointer, or candidate
         version_digest: fixture.version.version_digest,
         authority_receipt_ref: 'owner:activate',
         occurred_at: '2026-07-16T00:02:00.000Z',
+        runtime_binding_verification: activationVerification(fixture.version, 'activate', 0),
       };
       const activated = await fixture.registry.compareAndSwapActivation(activationInput);
       const files = registrationFiles(root, registrationRecords(fixture.input));
@@ -708,19 +959,33 @@ test('activation load and rollback fail closed on history, pointer, or candidate
   }
 });
 
-test('legacy flat qualification/version/transaction files remain readable without a new commit marker', async (t) => {
+test('legacy flat qualification/version/transaction files remain archived outside current truth', async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-registry-legacy-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const candidate = createCandidate(root, 'legacy');
   const input = registerInput(candidate);
   const records = registrationRecords(input);
-  const files = registrationFiles(root, records);
+  const legacyDirectory = registryDirectory(root);
+  const files = {
+    qualification: path.join(
+      legacyDirectory,
+      'qualifications',
+      `${records.qualification.qualification_digest.slice('sha256:'.length)}.json`,
+    ),
+    version: path.join(
+      legacyDirectory,
+      'agent-versions',
+      `${records.version.version_digest.slice('sha256:'.length)}.json`,
+    ),
+    activation: path.join(legacyDirectory, 'activation.json'),
+    transactions: path.join(legacyDirectory, 'activation-transactions'),
+  };
   writeCanonical(files.qualification, records.qualification);
   writeCanonical(files.version, records.version);
   const activated = transaction(
     'activate',
     null,
-    records.version.version_digest,
+    records.version,
     0,
     null,
     '2026-07-16T00:05:00.000Z',
@@ -729,9 +994,43 @@ test('legacy flat qualification/version/transaction files remain readable withou
   writeCanonical(files.activation, pointer(records.version.version_digest, 1, activated.occurred_at));
 
   const registry = new LedgerVersionRegistry(root);
-  assert.deepEqual(await registry.list(TARGET_AGENT_ID, TARGET_DOMAIN_ID), [records.version]);
+  assert.deepEqual(await registry.list(TARGET_AGENT_ID, TARGET_DOMAIN_ID), []);
   assert.deepEqual(
     await registry.activation(TARGET_AGENT_ID, TARGET_DOMAIN_ID),
-    pointer(records.version.version_digest, 1, activated.occurred_at),
+    {
+      surface_kind: 'opl_foundry_activation_pointer',
+      target_agent_id: TARGET_AGENT_ID,
+      target_domain_id: TARGET_DOMAIN_ID,
+      active_version_digest: null,
+      revision: 0,
+      updated_at: null,
+    },
+  );
+  assert.equal(fs.existsSync(files.version), true);
+  assert.equal(fs.existsSync(files.activation), true);
+  assert.equal(fs.existsSync(currentRegistryDirectory(root)), false);
+});
+
+test('current registry epoch requires a canonical marker bound to the target identity', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-registry-epoch-marker-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const fixture = await createRegisteredFixture(root, 'epoch-marker');
+  const marker = path.join(currentRegistryDirectory(root), 'registry-epoch.json');
+
+  fs.rmSync(marker);
+  await assert.rejects(
+    new LedgerVersionRegistry(root).list(TARGET_AGENT_ID, TARGET_DOMAIN_ID),
+    /epoch marker is missing/,
+  );
+
+  writeCanonical(marker, {
+    surface_kind: 'opl_foundry_version_registry_epoch',
+    version: 'opl-foundry-version-registry.v1',
+    target_agent_id: fixture.version.target_agent_id,
+    target_domain_id: 'wrong-domain',
+  });
+  await assert.rejects(
+    new LedgerVersionRegistry(root).list(TARGET_AGENT_ID, TARGET_DOMAIN_ID),
+    /does not match its target identity or format/,
   );
 });

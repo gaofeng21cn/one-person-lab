@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
+import { FrameworkContractError } from '../../../src/kernel/contract-validation.ts';
+import { materializeAgentScaffold } from '../../../src/modules/pack/agent-scaffold-materialization.ts';
 import { buildAgentProfileConformance } from '../../../src/modules/pack/agent-profile-spine.ts';
 import {
   makeConformantAgentFixture,
@@ -26,6 +29,32 @@ test('profile conformance checks selected profile refs, stage knowledge refs, an
   assert.deepEqual(conformance.blockers, []);
   assert.equal(conformance.observed.stages_with_knowledge_refs, 1);
   assert.equal(conformance.authority_boundary.conformance_can_claim_domain_ready, false);
+});
+
+test('scaffold materialization rejects the retired producer-specific v1 request', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scaffold-materialization-v1-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const requestPath = path.join(root, 'request.json');
+  writeJson(requestPath, {
+    surface_kind: 'opl_agent_scaffold_materialization_request',
+    version: 'opl-agent-scaffold-materialization-request.v1',
+    request_owner: 'opl-meta-agent',
+  });
+
+  assert.throws(
+    () => materializeAgentScaffold({
+      requestPath,
+      targetDir: path.join(root, 'target'),
+    }),
+    (error: unknown) => {
+      assert.ok(error instanceof FrameworkContractError);
+      assert.equal(error.message, 'Scaffold materialization request version is unsupported.');
+      assert.deepEqual(error.details?.supported_versions, [
+        'opl-agent-scaffold-materialization-request.v2',
+      ]);
+      return true;
+    },
+  );
 });
 
 test('profile conformance accepts source-derived design route receipts without a builtin profile', () => {
@@ -280,11 +309,34 @@ test('profile conformance requires one user packet per declared source and keeps
     true,
   );
 
+  const seedDispositionFixture = makeSourceDerivedAgentFixture();
+  updateSourceDerivedTypedObjectProjections(seedDispositionFixture.repoDir, (typedObjects) => {
+    typedObjects.reference_design_packet.reference_design_pattern_packet_refs.push(seedPacketRef);
+    typedObjects.reference_design_packet.pattern_dispositions[0] = {
+      pattern_ref: seedPacketRef,
+      pattern_origin: 'provider_neutral_seed_catalog',
+      disposition: 'adopt',
+    };
+  });
+  const seedDisposition = buildAgentProfileConformance([
+    '--repo-dir',
+    seedDispositionFixture.repoDir,
+    '--profile',
+    'source_derived_design_profile_route.v1',
+  ]).profile_conformance;
+  assert.equal(seedDisposition.status, 'blocked');
+  assert.equal(
+    seedDisposition.blockers.includes(
+      `source_derived_design_seed_disposition_invalid:${seedPacketRef}`,
+    ),
+    true,
+  );
+
   const relabeledOriginFixture = makeSourceDerivedAgentFixture();
   let relabeledPatternRef = '';
   updateSourceDerivedTypedObjectProjections(relabeledOriginFixture.repoDir, (typedObjects) => {
     relabeledPatternRef = typedObjects.reference_design_packet.transferable_design_patterns[0].source_pattern_ref;
-    typedObjects.reference_design_packet.transferable_design_patterns[0].pattern_origin = 'oma_seed_library';
+    typedObjects.reference_design_packet.transferable_design_patterns[0].pattern_origin = 'provider_neutral_seed_catalog';
   });
   const relabeledOrigin = buildAgentProfileConformance([
     '--repo-dir',

@@ -7,14 +7,15 @@ import { canonicalJsonBytes, canonicalJsonText } from '../../kernel/canonical-js
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
 import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
-import { foundryContentDigest } from '../foundry/index.ts';
+import { compileStandardAgentStageManifest } from '../pack/public/standard-agent-action-runtime.ts';
 import {
+  foundryContentDigest,
   materializeFoundryOperationResult,
   validateFoundryEvaluationOperationIdentity,
   validateFoundryOperationResult,
   type FoundryEvaluationOperationIdentity,
   type FoundryOperationResultJournal,
-} from '../foundry/operation-result.ts';
+} from '../foundry/index.ts';
 import type {
   ActivationPointer,
   ActivationTransaction,
@@ -26,7 +27,9 @@ import type {
   QualificationRecord,
   VersionRegistry,
 } from '../foundry/index.ts';
+import type { ActivationRuntimeBindingVerification } from '../foundry/ports.ts';
 import {
+  assertFoundryEventReplay,
   FOUNDRY_TERMINAL_STATES,
   snapshotFromEvents,
   verifyFoundryEventChain,
@@ -35,9 +38,17 @@ import {
 } from '../foundry/index.ts';
 
 const FILE_STORE_VERSION = 'opl-foundry-file-store.v1';
+const VERSION_REGISTRY_EPOCH_VERSION = 'opl-foundry-version-registry.v1';
+const VERSION_REGISTRY_EPOCH_DIRECTORY = 'epoch-v1';
+const VERSION_REGISTRY_EPOCH_MARKER = 'registry-epoch.json';
 const CANDIDATE_INDEX_VERSION = 'opl-foundry-candidate-index.v2';
 const CANDIDATE_RESOURCE_LOCK_VERSION = 'opl-foundry-candidate-resource-lock.v1';
 const CANDIDATE_RESOURCE_LOCK_PATH = 'contracts/resource-lock.json';
+const CANDIDATE_STAGE_MANIFEST_PATH = 'agent/stages/manifest.json';
+const CANDIDATE_ACTION_CATALOG_PATH = 'contracts/action_catalog.json';
+const CANDIDATE_QUALITY_POLICY_PATH = 'contracts/stage_quality_cycle_policy.json';
+const CANDIDATE_QUALITY_ROLE_PROMPT_PATH = 'agent/prompts/foundry-quality-roles.md';
+const CANDIDATE_QUALITY_RUBRIC_PATH = 'agent/quality_gates/foundry-quality-rubric.md';
 const CANDIDATE_RESOURCE_FIELDS = [
   { kind: 'prompt', field: 'prompt_refs' },
   { kind: 'skill', field: 'skill_refs' },
@@ -45,6 +56,7 @@ const CANDIDATE_RESOURCE_FIELDS = [
   { kind: 'helper', field: 'helper_refs' },
   { kind: 'model', field: 'model_refs' },
   { kind: 'tool', field: 'tool_refs' },
+  { kind: 'schema', field: 'schema_refs' },
 ] as const;
 
 type CandidateResourceKind = typeof CANDIDATE_RESOURCE_FIELDS[number]['kind'];
@@ -80,6 +92,10 @@ function clone<T>(value: T): T {
   return structuredClone(value);
 }
 
+function errorCode(error: unknown) {
+  return (error as NodeJS.ErrnoException).code;
+}
+
 function readJson<T>(file: string): T {
   return parseJsonText(fs.readFileSync(file, 'utf8')) as T;
 }
@@ -97,6 +113,15 @@ function fsyncDirectory(directory: string) {
   }
 }
 
+function fsyncFile(file: string) {
+  const handle = fs.openSync(file, 'r');
+  try {
+    fs.fsyncSync(handle);
+  } finally {
+    fs.closeSync(handle);
+  }
+}
+
 function ensureDurableDirectory(directory: string) {
   if (fs.existsSync(directory)) return;
   const parent = path.dirname(directory);
@@ -109,34 +134,48 @@ function ensureDurableDirectory(directory: string) {
   fsyncDirectory(parent);
 }
 
-function writeExclusive(file: string, bytes: Buffer) {
-  ensureDurableDirectory(path.dirname(file));
-  const handle = fs.openSync(file, 'wx', 0o600);
+function stagedEntry(stagingRoot: string, label: string) {
+  ensureDurableDirectory(stagingRoot);
+  const safeLabel = label.replace(/[^a-zA-Z0-9._-]/g, '-').slice(0, 48) || 'bytes';
+  return path.join(stagingRoot, `stage-${process.pid}-${crypto.randomUUID()}-${safeLabel}`);
+}
+
+function writeStagedFile(stagingRoot: string, label: string, bytes: Buffer) {
+  const temporary = stagedEntry(stagingRoot, label);
+  const handle = fs.openSync(temporary, 'wx', 0o600);
   try {
     fs.writeFileSync(handle, bytes);
     fs.fsyncSync(handle);
   } finally {
     fs.closeSync(handle);
   }
-  fsyncDirectory(path.dirname(file));
+  fsyncDirectory(stagingRoot);
+  return temporary;
 }
 
-function writeAtomic(file: string, bytes: Buffer) {
+function writeExclusive(file: string, bytes: Buffer, stagingRoot: string) {
   ensureDurableDirectory(path.dirname(file));
-  const temporary = `${file}.tmp-${process.pid}-${crypto.randomUUID()}`;
-  const handle = fs.openSync(temporary, 'wx', 0o600);
+  const temporary = writeStagedFile(stagingRoot, path.basename(file), bytes);
   try {
-    try {
-      fs.writeFileSync(handle, bytes);
-      fs.fsyncSync(handle);
-    } finally {
-      fs.closeSync(handle);
-    }
+    fs.linkSync(temporary, file);
+    fsyncDirectory(path.dirname(file));
+  } finally {
+    fs.rmSync(temporary, { force: true });
+    fsyncDirectory(stagingRoot);
+  }
+}
+
+function writeAtomic(file: string, bytes: Buffer, stagingRoot: string) {
+  ensureDurableDirectory(path.dirname(file));
+  const temporary = writeStagedFile(stagingRoot, path.basename(file), bytes);
+  try {
     fs.renameSync(temporary, file);
     fsyncDirectory(path.dirname(file));
   } catch (error) {
     fs.rmSync(temporary, { force: true });
     throw error;
+  } finally {
+    fsyncDirectory(stagingRoot);
   }
 }
 
@@ -150,45 +189,67 @@ function processIsAlive(pid: number) {
   }
 }
 
+type MutationLockRecord = {
+  surface_kind: 'opl_foundry_mutation_lock';
+  version: typeof FILE_STORE_VERSION;
+  pid: number;
+  owner_token: string;
+  acquired_at: string;
+};
+
+function readMutationLock(file: string) {
+  const owner = readPhysicalCanonicalJson<MutationLockRecord>(file, 'Foundry mutation lock');
+  requireExactKeys(
+    owner as unknown as Record<string, unknown>,
+    ['surface_kind', 'version', 'pid', 'owner_token', 'acquired_at'],
+    'Foundry mutation lock',
+  );
+  if (
+    owner.surface_kind !== 'opl_foundry_mutation_lock'
+    || owner.version !== FILE_STORE_VERSION
+    || !Number.isSafeInteger(owner.pid)
+    || owner.pid <= 0
+    || typeof owner.owner_token !== 'string'
+    || owner.owner_token.length === 0
+    || typeof owner.acquired_at !== 'string'
+    || !Number.isFinite(Date.parse(owner.acquired_at))
+  ) {
+    fail('Foundry mutation lock record is invalid.', { lock_file: file });
+  }
+  return owner;
+}
+
 function reclaimAbandonedMutationLock(file: string) {
   try {
-    const owner = readJson<{ pid?: unknown }>(file);
-    if (typeof owner.pid !== 'number' || processIsAlive(owner.pid)) return false;
+    const owner = readMutationLock(file);
+    if (processIsAlive(owner.pid)) return false;
     fs.rmSync(file, { force: true });
+    fsyncDirectory(path.dirname(file));
     return true;
   } catch {
     return false;
   }
 }
 
-function acquireMutationLock(file: string) {
-  const directory = path.dirname(file);
-  ensureDurableDirectory(directory);
-  const temporary = `${file}.prepare-${process.pid}-${crypto.randomUUID()}`;
-  const handle = fs.openSync(temporary, 'wx', 0o600);
-  let linked = false;
-  try {
-    fs.writeFileSync(handle, canonicalJsonBytes({ pid: process.pid, acquired_at: new Date().toISOString() }));
-    fs.fsyncSync(handle);
-    fs.linkSync(temporary, file);
-    linked = true;
-    fs.rmSync(temporary, { force: true });
-    fsyncDirectory(directory);
-    return handle;
-  } catch (error) {
-    fs.closeSync(handle);
-    fs.rmSync(temporary, { force: true });
-    if (linked) fs.rmSync(file, { force: true });
-    throw error;
-  }
+function acquireMutationLock(file: string, stagingRoot: string) {
+  const ownerToken = crypto.randomUUID();
+  const record: MutationLockRecord = {
+    surface_kind: 'opl_foundry_mutation_lock',
+    version: FILE_STORE_VERSION,
+    pid: process.pid,
+    owner_token: ownerToken,
+    acquired_at: new Date().toISOString(),
+  };
+  writeExclusive(file, canonicalJsonBytes(record), stagingRoot);
+  return ownerToken;
 }
 
-function withMutationLock<T>(file: string, operation: () => T): T {
-  let handle: number;
+function withMutationLock<T>(file: string, stagingRoot: string, operation: () => T): T {
+  let ownerToken: string;
   let openError: unknown;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
-      handle = acquireMutationLock(file);
+      ownerToken = acquireMutationLock(file, stagingRoot);
       openError = null;
       break;
     } catch (error) {
@@ -206,8 +267,13 @@ function withMutationLock<T>(file: string, operation: () => T): T {
   try {
     return operation();
   } finally {
-    fs.closeSync(handle!);
-    fs.rmSync(file, { force: true });
+    if (fs.existsSync(file)) {
+      const current = readMutationLock(file);
+      if (current.owner_token !== ownerToken!) {
+        fail('Foundry mutation lock ownership changed before release.', { lock_file: file });
+      }
+      fs.rmSync(file, { force: true });
+    }
     fsyncDirectory(path.dirname(file));
   }
 }
@@ -236,6 +302,7 @@ export function foundryStoragePaths(rootOverride?: string) {
     : path.join(resolveOplStatePaths().state_dir, 'foundry');
   return {
     root,
+    staging: path.join(root, '.staging'),
     objects: path.join(root, 'objects'),
     runs: path.join(root, 'ledger', 'runs'),
     target_locks: path.join(root, 'ledger', 'target-locks'),
@@ -248,9 +315,40 @@ export function foundryStoragePaths(rootOverride?: string) {
   };
 }
 
+function cleanupDeadStaging(stagingRoot: string) {
+  if (!fs.existsSync(stagingRoot)) return;
+  let removed = false;
+  for (const entry of fs.readdirSync(stagingRoot, { withFileTypes: true })) {
+    const match = /^stage-(\d+)-[0-9a-f-]+-/.exec(entry.name);
+    if (!match || processIsAlive(Number(match[1]))) continue;
+    fs.rmSync(path.join(stagingRoot, entry.name), { recursive: entry.isDirectory(), force: true });
+    removed = true;
+  }
+  if (removed) fsyncDirectory(stagingRoot);
+}
+
+function cleanupLegacyMutationLockTemps(lockRoot: string) {
+  let removed = false;
+  for (const entry of fs.readdirSync(lockRoot, { withFileTypes: true })) {
+    const match = /\.prepare-(\d+)-[0-9a-f-]+$/.exec(entry.name);
+    if (!match || !entry.isFile() || processIsAlive(Number(match[1]))) continue;
+    fs.rmSync(path.join(lockRoot, entry.name), { force: true });
+    removed = true;
+  }
+  if (removed) fsyncDirectory(lockRoot);
+}
+
+function cleanupDeadMutationLocks(lockRoot: string) {
+  for (const entry of fs.readdirSync(lockRoot, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith('.lock')) continue;
+    reclaimAbandonedMutationLock(path.join(lockRoot, entry.name));
+  }
+}
+
 function ensureStorage(paths: FoundryStoragePaths) {
   for (const directory of [
     paths.root,
+    paths.staging,
     paths.objects,
     paths.runs,
     paths.target_locks,
@@ -262,6 +360,9 @@ function ensureStorage(paths: FoundryStoragePaths) {
   ]) {
     ensureDurableDirectory(directory);
   }
+  cleanupDeadStaging(paths.staging);
+  cleanupLegacyMutationLockTemps(paths.mutation_locks);
+  cleanupDeadMutationLocks(paths.mutation_locks);
 }
 
 export class FileFoundryObjectStore implements FoundryObjectStore {
@@ -276,19 +377,26 @@ export class FileFoundryObjectStore implements FoundryObjectStore {
     const digest = foundryContentDigest(value);
     const file = path.join(this.#paths.objects, `${digestSegment(digest)}.json`);
     const bytes = canonicalJsonBytes(value);
-    if (fs.existsSync(file)) {
-      const existing = fs.readFileSync(file);
-      if (!existing.equals(bytes)) fail('Content-addressed Foundry object collision.', { digest });
-    } else {
-      writeExclusive(file, bytes);
+    if (!fs.existsSync(file)) {
+      try {
+        writeExclusive(file, bytes, this.#paths.staging);
+      } catch (error) {
+        if (errorCode(error) !== 'EEXIST') throw error;
+      }
     }
+    const stat = fs.lstatSync(file);
+    if (!stat.isFile() || stat.isSymbolicLink()) {
+      fail('Content-addressed Foundry object address is not a physical file.', { digest });
+    }
+    const existing = fs.readFileSync(file);
+    if (!existing.equals(bytes)) fail('Content-addressed Foundry object collision.', { digest });
     return { digest, ref: `opl://foundry/object/${digest}` };
   }
 
   async get<T>(digest: string) {
     const file = path.join(this.#paths.objects, `${digestSegment(digest)}.json`);
     if (!fs.existsSync(file)) return null;
-    const value = readJson<T>(file);
+    const value = readPhysicalCanonicalJson<T>(file, 'Content-addressed Foundry object');
     if (foundryContentDigest(value) !== digest) fail('Stored Foundry object digest does not match its address.', { digest });
     return clone(value);
   }
@@ -305,6 +413,7 @@ function contentDigestFromRef(ref: string) {
 
 export class FileFoundryContentStore {
   readonly #root: string;
+  readonly #stagingRoot: string;
   readonly #maxBytes: number;
 
   constructor(rootOverride?: string, maxBytes = 16 * 1024 * 1024) {
@@ -315,6 +424,7 @@ export class FileFoundryContentStore {
       fail('Foundry content store root must be a physical directory.');
     }
     this.#root = fs.realpathSync.native(paths.content);
+    this.#stagingRoot = paths.staging;
     this.#maxBytes = maxBytes;
   }
 
@@ -327,13 +437,16 @@ export class FileFoundryContentStore {
       fail('Foundry content bytes do not match their content ref.', { content_ref: expectedRef });
     }
     const file = path.join(this.#root, `${digest}.blob`);
-    if (fs.existsSync(file)) {
-      const stat = fs.lstatSync(file);
-      if (!stat.isFile() || stat.isSymbolicLink() || !fs.readFileSync(file).equals(bytes)) {
-        fail('Foundry content address is occupied by invalid bytes.', { digest: `sha256:${digest}` });
+    if (!fs.existsSync(file)) {
+      try {
+        writeExclusive(file, bytes, this.#stagingRoot);
+      } catch (error) {
+        if (errorCode(error) !== 'EEXIST') throw error;
       }
-    } else {
-      writeExclusive(file, bytes);
+    }
+    const stat = fs.lstatSync(file);
+    if (!stat.isFile() || stat.isSymbolicLink() || !fs.readFileSync(file).equals(bytes)) {
+      fail('Foundry content address is occupied by invalid bytes.', { digest: `sha256:${digest}` });
     }
     return {
       ref: `opl-content://sha256/${digest}`,
@@ -383,21 +496,235 @@ function runMetadataFile(paths: FoundryStoragePaths, runId: string) {
   return path.join(paths.runs, requireSafeSegment(runId, 'run_id'), 'run.json');
 }
 
+type RunLedgerMetadata = {
+  surface_kind: 'opl_foundry_run_ledger_metadata';
+  version: typeof FILE_STORE_VERSION;
+  run_id: string;
+  target_key: string;
+};
+
+type TargetReservation = {
+  surface_kind: 'opl_foundry_target_reservation';
+  version: typeof FILE_STORE_VERSION;
+  run_id: string;
+  target_key: string;
+};
+
+function readPhysicalCanonicalJson<T>(file: string, label: string): T {
+  const stat = fs.lstatSync(file);
+  if (!stat.isFile() || stat.isSymbolicLink()) fail(`${label} must be a physical JSON file.`, { file });
+  const bytes = fs.readFileSync(file);
+  const value = parseJsonText(bytes.toString('utf8'));
+  if (!bytes.equals(canonicalJsonBytes(value))) fail(`${label} is not canonical JSON.`, { file });
+  return value as T;
+}
+
+function targetKeyParts(targetKey: string) {
+  const parts = targetKey.split('\0');
+  if (parts.length !== 2 || !parts[0] || !parts[1]) fail('Foundry target key is invalid.');
+  return { target_agent_id: parts[0], target_domain_id: parts[1] };
+}
+
+function snapshotTargetKey(snapshot: FoundryRunSnapshot) {
+  if (!snapshot.target_agent_id || !snapshot.target_domain_id) {
+    fail('FoundryRun acceptance event does not bind a target identity.', { run_id: snapshot.run_id });
+  }
+  return `${snapshot.target_agent_id}\0${snapshot.target_domain_id}`;
+}
+
+function assertTargetBinding(targetKey: string, snapshot: FoundryRunSnapshot) {
+  targetKeyParts(targetKey);
+  const expected = snapshotTargetKey(snapshot);
+  if (targetKey !== expected) {
+    fail('Foundry target key does not match the authoritative run target.', {
+      run_id: snapshot.run_id,
+      expected_target_key: expected,
+      actual_target_key: targetKey,
+    });
+  }
+}
+
+function readRunMetadata(paths: FoundryStoragePaths, runId: string) {
+  const raw = readPhysicalCanonicalJson<Record<string, unknown>>(runMetadataFile(paths, runId), 'FoundryRun metadata');
+  requireExactKeys(raw, ['surface_kind', 'version', 'run_id', 'target_key'], 'FoundryRun metadata');
+  if (
+    raw.surface_kind !== 'opl_foundry_run_ledger_metadata'
+    || raw.version !== FILE_STORE_VERSION
+    || raw.run_id !== runId
+    || typeof raw.target_key !== 'string'
+  ) {
+    fail('FoundryRun metadata identity is invalid.', { run_id: runId });
+  }
+  targetKeyParts(raw.target_key);
+  return raw as RunLedgerMetadata;
+}
+
 function readRunEvents(paths: FoundryStoragePaths, runId: string): FoundryRunEvent[] {
+  requireSafeSegment(runId, 'run_id');
   const directory = path.dirname(eventFile(paths, runId, 1));
   if (!fs.existsSync(directory)) return [];
-  const events = fs.readdirSync(directory)
-    .filter((name) => /^\d{10}\.json$/.test(name))
-    .sort()
-    .map((name) => readJson<FoundryRunEvent>(path.join(directory, name)));
+  const directoryStat = fs.lstatSync(directory);
+  if (!directoryStat.isDirectory() || directoryStat.isSymbolicLink()) {
+    fail('FoundryRun events must be a physical directory.', { run_id: runId });
+  }
+  const events = fs.readdirSync(directory, { withFileTypes: true })
+    .sort((left, right) => left.name.localeCompare(right.name))
+    .map((entry) => {
+      const match = /^(\d{10})\.json$/.exec(entry.name);
+      if (!match || !entry.isFile() || entry.isSymbolicLink()) {
+        fail('FoundryRun event directory contains a forbidden entry.', { run_id: runId, entry: entry.name });
+      }
+      const event = readPhysicalCanonicalJson<FoundryRunEvent>(
+        path.join(directory, entry.name),
+        'FoundryRun event',
+      );
+      const fileRevision = Number(match[1]);
+      if (event.run_id !== runId || event.revision !== fileRevision) {
+        fail('FoundryRun event physical address does not match its identity.', {
+          run_id: runId,
+          event_id: event.event_id,
+          file_revision: fileRevision,
+        });
+      }
+      return event;
+    });
   if (events.length > 0) verifyFoundryEventChain(events);
   return events;
 }
 
-function openStateIndex(paths: FoundryStoragePaths) {
-  ensureStorage(paths);
-  const db = new DatabaseSync(paths.state_index);
-  db.exec('PRAGMA busy_timeout = 5000; PRAGMA journal_mode = WAL;');
+function readRunLedger(paths: FoundryStoragePaths, runId: string) {
+  requireSafeSegment(runId, 'run_id');
+  const directory = path.join(paths.runs, runId);
+  if (!fs.existsSync(directory)) return null;
+  const stat = fs.lstatSync(directory);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) {
+    fail('FoundryRun ledger must be a physical directory.', { run_id: runId });
+  }
+  const actualEntries = fs.readdirSync(directory).sort();
+  if (canonicalJsonText(actualEntries) !== canonicalJsonText(['events', 'run.json'])) {
+    fail('FoundryRun ledger contains missing or forbidden entries.', { run_id: runId, actual_entries: actualEntries });
+  }
+  const metadata = readRunMetadata(paths, runId);
+  const events = readRunEvents(paths, runId);
+  if (events.length === 0) fail('FoundryRun ledger has no acceptance event.', { run_id: runId });
+  const snapshot = snapshotFromEvents(events);
+  assertTargetBinding(metadata.target_key, snapshot);
+  return { metadata, events, snapshot };
+}
+
+function readAllRunLedgers(paths: FoundryStoragePaths) {
+  const ledgers = fs.readdirSync(paths.runs, { withFileTypes: true })
+    .sort((left, right) => left.name.localeCompare(right.name))
+    .map((entry) => {
+      if (!entry.isDirectory() || entry.isSymbolicLink()) {
+        fail('FoundryRun root contains a forbidden entry.', { entry: entry.name });
+      }
+      requireSafeSegment(entry.name, 'run_id');
+      return readRunLedger(paths, entry.name)!;
+    });
+  const activeTargets = new Map<string, string>();
+  for (const ledger of ledgers) {
+    if (FOUNDRY_TERMINAL_STATES.has(ledger.snapshot.state)) continue;
+    const prior = activeTargets.get(ledger.metadata.target_key);
+    if (prior) {
+      fail('Foundry target has multiple non-terminal authoritative runs.', {
+        target_key: ledger.metadata.target_key,
+        run_ids: [prior, ledger.snapshot.run_id],
+      });
+    }
+    activeTargets.set(ledger.metadata.target_key, ledger.snapshot.run_id);
+  }
+  return ledgers;
+}
+
+function targetReservationFile(paths: FoundryStoragePaths, targetKey: string) {
+  targetKeyParts(targetKey);
+  return path.join(paths.target_locks, `${sha256(targetKey)}.json`);
+}
+
+function readTargetReservation(file: string, targetKey: string) {
+  const raw = readPhysicalCanonicalJson<Record<string, unknown>>(file, 'Foundry target reservation');
+  requireExactKeys(raw, ['surface_kind', 'version', 'run_id', 'target_key'], 'Foundry target reservation');
+  if (
+    raw.surface_kind !== 'opl_foundry_target_reservation'
+    || raw.version !== FILE_STORE_VERSION
+    || typeof raw.run_id !== 'string'
+    || raw.target_key !== targetKey
+  ) {
+    fail('Foundry target reservation identity is invalid.', { target_key: targetKey });
+  }
+  requireSafeSegment(raw.run_id, 'run_id');
+  return raw as TargetReservation;
+}
+
+function removeDurable(file: string) {
+  if (!fs.existsSync(file)) return;
+  fs.rmSync(file, { force: true });
+  fsyncDirectory(path.dirname(file));
+}
+
+function repairTargetReservation(
+  paths: FoundryStoragePaths,
+  targetKey: string,
+  snapshot: FoundryRunSnapshot,
+) {
+  assertTargetBinding(targetKey, snapshot);
+  const file = targetReservationFile(paths, targetKey);
+  if (FOUNDRY_TERMINAL_STATES.has(snapshot.state)) {
+    if (fs.existsSync(file) && readTargetReservation(file, targetKey).run_id === snapshot.run_id) removeDurable(file);
+    return;
+  }
+  const expected: TargetReservation = {
+    surface_kind: 'opl_foundry_target_reservation',
+    version: FILE_STORE_VERSION,
+    run_id: snapshot.run_id,
+    target_key: targetKey,
+  };
+  if (fs.existsSync(file)) {
+    const existing = readTargetReservation(file, targetKey);
+    if (canonicalJsonText(existing) !== canonicalJsonText(expected)) {
+      fail('Target Agent already has an active write FoundryRun.', {
+        target_key: targetKey,
+        run_id: existing.run_id,
+      });
+    }
+    return;
+  }
+  writeExclusive(file, canonicalJsonBytes(expected), paths.staging);
+}
+
+function activeRunForTarget(paths: FoundryStoragePaths, targetKey: string) {
+  const active = readAllRunLedgers(paths).filter((entry) =>
+    entry.metadata.target_key === targetKey && !FOUNDRY_TERMINAL_STATES.has(entry.snapshot.state));
+  if (active.length > 1) {
+    fail('Foundry target has multiple non-terminal authoritative runs.', {
+      target_key: targetKey,
+      run_ids: active.map((entry) => entry.snapshot.run_id),
+    });
+  }
+  return active[0] ?? null;
+}
+
+function reconcileTargetReservation(paths: FoundryStoragePaths, targetKey: string) {
+  const file = targetReservationFile(paths, targetKey);
+  if (fs.existsSync(file)) {
+    const reservation = readTargetReservation(file, targetKey);
+    const ledger = readRunLedger(paths, reservation.run_id);
+    if (!ledger) {
+      removeDurable(file);
+    } else {
+      assertTargetBinding(targetKey, ledger.snapshot);
+      if (FOUNDRY_TERMINAL_STATES.has(ledger.snapshot.state)) removeDurable(file);
+      else return ledger;
+    }
+  }
+  const active = activeRunForTarget(paths, targetKey);
+  if (active) repairTargetReservation(paths, targetKey, active.snapshot);
+  return active;
+}
+
+function configureStateIndex(db: DatabaseSync) {
+  db.exec('PRAGMA busy_timeout = 5000; PRAGMA journal_mode = DELETE; PRAGMA synchronous = FULL;');
   db.exec(`
     CREATE TABLE IF NOT EXISTS foundry_runs (
       run_id TEXT PRIMARY KEY,
@@ -422,20 +749,19 @@ function openStateIndex(paths: FoundryStoragePaths) {
     INSERT INTO foundry_state_index_meta(key, value) VALUES ('schema_version', ?)
     ON CONFLICT(key) DO UPDATE SET value = excluded.value
   `).run(FILE_STORE_VERSION);
-  return db;
 }
 
-function projectSnapshot(paths: FoundryStoragePaths, targetKey: string, snapshot: FoundryRunSnapshot) {
-  const [targetAgentId, targetDomainId] = targetKey.split('\0');
-  if (!targetAgentId || !targetDomainId) fail('Foundry target key is invalid.');
-  const db = openStateIndex(paths);
-  try {
-    db.prepare(`
+function insertProjectedSnapshot(db: DatabaseSync, targetKey: string, snapshot: FoundryRunSnapshot) {
+  assertTargetBinding(targetKey, snapshot);
+  const target = targetKeyParts(targetKey);
+  db.prepare(`
       INSERT INTO foundry_runs(
         run_id, target_agent_id, target_domain_id, state, revision, generation,
         risk_tier, version_digest, updated_at, snapshot_json
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(run_id) DO UPDATE SET
+        target_agent_id = excluded.target_agent_id,
+        target_domain_id = excluded.target_domain_id,
         state = excluded.state,
         revision = excluded.revision,
         generation = excluded.generation,
@@ -443,10 +769,11 @@ function projectSnapshot(paths: FoundryStoragePaths, targetKey: string, snapshot
         version_digest = excluded.version_digest,
         updated_at = excluded.updated_at,
         snapshot_json = excluded.snapshot_json
+      WHERE excluded.revision >= foundry_runs.revision
     `).run(
       snapshot.run_id,
-      targetAgentId,
-      targetDomainId,
+      target.target_agent_id,
+      target.target_domain_id,
       snapshot.state,
       snapshot.revision,
       snapshot.generation,
@@ -455,9 +782,135 @@ function projectSnapshot(paths: FoundryStoragePaths, targetKey: string, snapshot
       snapshot.updated_at,
       canonicalJsonText(snapshot),
     );
+}
+
+function stateIndexLock(paths: FoundryStoragePaths) {
+  return path.join(paths.mutation_locks, 'state-index.lock');
+}
+
+function projectSnapshot(paths: FoundryStoragePaths, targetKey: string, snapshot: FoundryRunSnapshot) {
+  return withMutationLock(stateIndexLock(paths), paths.staging, () => {
+    try {
+      const stat = fs.lstatSync(paths.state_index);
+      if (!stat.isFile() || stat.isSymbolicLink()) removeDurable(paths.state_index);
+    } catch (error) {
+      if (errorCode(error) !== 'ENOENT') throw error;
+    }
+    const db = new DatabaseSync(paths.state_index);
+    try {
+      configureStateIndex(db);
+      db.exec('BEGIN IMMEDIATE;');
+      try {
+        insertProjectedSnapshot(db, targetKey, snapshot);
+        db.exec('COMMIT;');
+      } catch (error) {
+        db.exec('ROLLBACK;');
+        throw error;
+      }
+    } finally {
+      db.close();
+    }
+  });
+}
+
+function projectedSnapshots(paths: FoundryStoragePaths) {
+  if (!fs.existsSync(paths.state_index)) return null;
+  const stat = fs.lstatSync(paths.state_index);
+  if (!stat.isFile() || stat.isSymbolicLink()) return null;
+  let db: DatabaseSync | null = null;
+  try {
+    db = new DatabaseSync(paths.state_index, { readOnly: true });
+    const version = db.prepare(
+      "SELECT value FROM foundry_state_index_meta WHERE key = 'schema_version'",
+    ).get() as { value?: unknown } | undefined;
+    if (version?.value !== FILE_STORE_VERSION) return null;
+    const rows = db.prepare(`
+      SELECT target_agent_id, target_domain_id, revision, snapshot_json
+      FROM foundry_runs
+      ORDER BY run_id
+    `).all() as Array<{
+      target_agent_id: string;
+      target_domain_id: string;
+      revision: number;
+      snapshot_json: string;
+    }>;
+    return rows.map((row) => {
+      const snapshot = parseJsonText(row.snapshot_json) as FoundryRunSnapshot;
+      if (
+        row.snapshot_json !== canonicalJsonText(snapshot)
+        || row.target_agent_id !== snapshot.target_agent_id
+        || row.target_domain_id !== snapshot.target_domain_id
+        || row.revision !== snapshot.revision
+      ) {
+        fail('Foundry state index row does not match its canonical snapshot.', { run_id: snapshot.run_id });
+      }
+      return snapshot;
+    });
+  } catch {
+    return null;
   } finally {
-    db.close();
+    db?.close();
   }
+}
+
+function buildStateIndex(paths: FoundryStoragePaths, ledgers: ReturnType<typeof readAllRunLedgers>) {
+  const temporary = stagedEntry(paths.staging, 'state-index.sqlite');
+  let db: DatabaseSync | null = null;
+  try {
+    db = new DatabaseSync(temporary);
+    configureStateIndex(db);
+    db.exec('BEGIN IMMEDIATE;');
+    try {
+      for (const ledger of ledgers) {
+        insertProjectedSnapshot(db, ledger.metadata.target_key, ledger.snapshot);
+      }
+      db.exec('COMMIT;');
+    } catch (error) {
+      db.exec('ROLLBACK;');
+      throw error;
+    }
+    const check = db.prepare('PRAGMA quick_check;').get() as { quick_check?: unknown } | undefined;
+    if (check?.quick_check !== 'ok') fail('Foundry state index rebuild failed SQLite integrity check.');
+    db.close();
+    db = null;
+    fs.chmodSync(temporary, 0o600);
+    fsyncFile(temporary);
+    for (const suffix of ['-wal', '-shm', '-journal']) {
+      fs.rmSync(`${paths.state_index}${suffix}`, { force: true });
+    }
+    fs.renameSync(temporary, paths.state_index);
+    fsyncDirectory(path.dirname(paths.state_index));
+  } finally {
+    db?.close();
+    fs.rmSync(temporary, { force: true });
+    fsyncDirectory(paths.staging);
+  }
+}
+
+function rebuildStateIndexFromLedger(paths: FoundryStoragePaths) {
+  return withMutationLock(stateIndexLock(paths), paths.staging, () => {
+    const ledgers = readAllRunLedgers(paths);
+    buildStateIndex(paths, ledgers);
+    return ledgers;
+  });
+}
+
+function stateIndexMatches(paths: FoundryStoragePaths, ledgers: ReturnType<typeof readAllRunLedgers>) {
+  const projected = projectedSnapshots(paths);
+  if (!projected) return false;
+  const authoritative = ledgers.map((entry) => entry.snapshot).sort((left, right) => left.run_id.localeCompare(right.run_id));
+  return canonicalJsonText(projected) === canonicalJsonText(authoritative);
+}
+
+function reconcileRunDerivedState(
+  paths: FoundryStoragePaths,
+  targetKey: string,
+  events: FoundryRunEvent[],
+) {
+  const snapshot = snapshotFromEvents(events);
+  projectSnapshot(paths, targetKey, snapshot);
+  repairTargetReservation(paths, targetKey, snapshot);
+  return snapshot;
 }
 
 export class LedgerFoundryEventStore implements FoundryEventStore {
@@ -471,48 +924,85 @@ export class LedgerFoundryEventStore implements FoundryEventStore {
   async create(input: { target_key: string; event: FoundryRunEvent }) {
     const runId = requireSafeSegment(input.event.run_id, 'run_id');
     verifyFoundryEventChain([input.event]);
+    const inputSnapshot = snapshotFromEvents([input.event]);
+    assertTargetBinding(input.target_key, inputSnapshot);
     const runDirectory = path.join(this.#paths.runs, runId);
-    const targetLock = path.join(this.#paths.target_locks, `${sha256(input.target_key)}.json`);
-    if (fs.existsSync(runDirectory)) fail('FoundryRun already exists.', { run_id: runId });
-    if (fs.existsSync(targetLock)) {
-      const locked = readJson<{ run_id: string }>(targetLock);
-      const lockedEvents = readRunEvents(this.#paths, locked.run_id);
-      const lockedSnapshot = lockedEvents.length > 0 ? snapshotFromEvents(lockedEvents) : null;
-      if (!lockedSnapshot || !FOUNDRY_TERMINAL_STATES.has(lockedSnapshot.state)) {
+    const targetMutationLock = path.join(this.#paths.mutation_locks, `target-${sha256(input.target_key)}.lock`);
+    return withMutationLock(targetMutationLock, this.#paths.staging, () => {
+      const existing = readRunLedger(this.#paths, runId);
+      if (existing) {
+        if (existing.metadata.target_key !== input.target_key) {
+          fail('FoundryRun already exists for a different target.', { run_id: runId });
+        }
+        assertFoundryEventReplay(existing.events[0]!, input.event, 0);
+        const active = reconcileTargetReservation(this.#paths, input.target_key);
+        if (active && active.snapshot.run_id !== runId) {
+          fail('Target Agent already has an active write FoundryRun.', {
+            target_key: input.target_key,
+            run_id: active.snapshot.run_id,
+          });
+        }
+        projectSnapshot(this.#paths, input.target_key, existing.snapshot);
+        return;
+      }
+      const active = reconcileTargetReservation(this.#paths, input.target_key);
+      if (active) {
         fail('Target Agent already has an active write FoundryRun.', {
           target_key: input.target_key,
-          run_id: locked.run_id,
+          run_id: active.snapshot.run_id,
         });
       }
-      fs.rmSync(targetLock, { force: true });
-    }
-    writeExclusive(targetLock, canonicalJsonBytes({ run_id: runId, target_key: input.target_key }));
-    try {
-      fs.mkdirSync(runDirectory, { recursive: false });
-      fs.mkdirSync(path.join(runDirectory, 'events'), { recursive: false });
-      writeExclusive(runMetadataFile(this.#paths, runId), canonicalJsonBytes({
+      const temporary = stagedEntry(this.#paths.staging, 'run-ledger');
+      fs.mkdirSync(temporary);
+      fs.mkdirSync(path.join(temporary, 'events'));
+      fsyncDirectory(temporary);
+      const metadata: RunLedgerMetadata = {
         surface_kind: 'opl_foundry_run_ledger_metadata',
         version: FILE_STORE_VERSION,
         run_id: runId,
         target_key: input.target_key,
-      }));
-      writeExclusive(eventFile(this.#paths, runId, 1), canonicalJsonBytes(input.event));
-      projectSnapshot(this.#paths, input.target_key, snapshotFromEvents([input.event]));
-    } catch (error) {
-      fs.rmSync(runDirectory, { recursive: true, force: true });
-      fs.rmSync(targetLock, { force: true });
-      throw error;
-    }
+      };
+      try {
+        writeExclusive(path.join(temporary, 'run.json'), canonicalJsonBytes(metadata), this.#paths.staging);
+        writeExclusive(
+          path.join(temporary, 'events', '0000000001.json'),
+          canonicalJsonBytes(input.event),
+          this.#paths.staging,
+        );
+        fs.renameSync(temporary, runDirectory);
+        fsyncDirectory(this.#paths.runs);
+      } catch (error) {
+        fs.rmSync(temporary, { recursive: true, force: true });
+        throw error;
+      } finally {
+        fsyncDirectory(this.#paths.staging);
+      }
+      reconcileRunDerivedState(this.#paths, input.target_key, [input.event]);
+    });
   }
 
   async append(input: { target_key: string; expected_revision: number; event: FoundryRunEvent }) {
     const runId = requireSafeSegment(input.event.run_id, 'run_id');
-    const lock = path.join(this.#paths.mutation_locks, `run-${sha256(runId)}.lock`);
-    return withMutationLock(lock, () => {
-      const events = readRunEvents(this.#paths, runId);
-      if (events.length === 0) fail('FoundryRun does not exist.', { run_id: runId });
+    const targetMutationLock = path.join(this.#paths.mutation_locks, `target-${sha256(input.target_key)}.lock`);
+    const runMutationLock = path.join(this.#paths.mutation_locks, `run-${sha256(runId)}.lock`);
+    return withMutationLock(targetMutationLock, this.#paths.staging, () =>
+      withMutationLock(runMutationLock, this.#paths.staging, () => {
+      const ledger = readRunLedger(this.#paths, runId);
+      if (!ledger) fail('FoundryRun does not exist.', { run_id: runId });
+      if (ledger.metadata.target_key !== input.target_key) {
+        fail('Foundry append target does not match run metadata.', { run_id: runId });
+      }
+      const active = reconcileTargetReservation(this.#paths, input.target_key);
+      if (!active || active.snapshot.run_id !== runId) {
+        fail('FoundryRun is not the authoritative active writer for its target.', { run_id: runId });
+      }
+      const events = ledger.events;
       const replay = events.find((entry) => entry.idempotency_key === input.event.idempotency_key);
-      if (replay) return clone(replay);
+      if (replay) {
+        assertFoundryEventReplay(replay, input.event, input.expected_revision);
+        reconcileRunDerivedState(this.#paths, input.target_key, events);
+        return clone(replay);
+      }
       const current = events.at(-1)!;
       if (current.revision !== input.expected_revision) {
         fail('FoundryRun revision compare-and-swap failed.', {
@@ -522,46 +1012,50 @@ export class LedgerFoundryEventStore implements FoundryEventStore {
       }
       const next = [...events, input.event];
       verifyFoundryEventChain(next);
-      writeExclusive(eventFile(this.#paths, runId, input.event.revision), canonicalJsonBytes(input.event));
-      const snapshot = snapshotFromEvents(next);
-      projectSnapshot(this.#paths, input.target_key, snapshot);
-      if (FOUNDRY_TERMINAL_STATES.has(snapshot.state)) {
-        const targetLock = path.join(this.#paths.target_locks, `${sha256(input.target_key)}.json`);
-        if (fs.existsSync(targetLock)) {
-          const locked = readJson<{ run_id: string }>(targetLock);
-          if (locked.run_id === runId) fs.rmSync(targetLock, { force: true });
-        }
-      }
+      writeExclusive(
+        eventFile(this.#paths, runId, input.event.revision),
+        canonicalJsonBytes(input.event),
+        this.#paths.staging,
+      );
+      reconcileRunDerivedState(this.#paths, input.target_key, next);
       return clone(input.event);
-    });
+    }));
   }
 
   async read(runId: string) {
-    return clone(readRunEvents(this.#paths, runId));
+    const ledger = readRunLedger(this.#paths, runId);
+    if (!ledger) return [];
+    try {
+      const targetMutationLock = path.join(
+        this.#paths.mutation_locks,
+        `target-${sha256(ledger.metadata.target_key)}.lock`,
+      );
+      withMutationLock(targetMutationLock, this.#paths.staging, () => {
+        repairTargetReservation(this.#paths, ledger.metadata.target_key, ledger.snapshot);
+      });
+      projectSnapshot(this.#paths, ledger.metadata.target_key, ledger.snapshot);
+    } catch {
+      // Event bytes are authoritative; a derived-state repair failure must not hide them.
+    }
+    return clone(ledger.events);
   }
 
   async list() {
-    const db = openStateIndex(this.#paths);
-    try {
-      const rows = db.prepare('SELECT snapshot_json FROM foundry_runs ORDER BY updated_at, run_id').all() as Array<{ snapshot_json: string }>;
-      return rows.map((row) => parseJsonText(row.snapshot_json) as FoundryRunSnapshot);
-    } finally {
-      db.close();
+    let ledgers = readAllRunLedgers(this.#paths);
+    if (!stateIndexMatches(this.#paths, ledgers)) {
+      try {
+        ledgers = rebuildStateIndexFromLedger(this.#paths);
+      } catch {
+        // The append-only ledgers remain readable when their derived SQLite projection cannot be repaired yet.
+      }
     }
+    return ledgers
+      .map((entry) => clone(entry.snapshot))
+      .sort((left, right) => left.updated_at.localeCompare(right.updated_at) || left.run_id.localeCompare(right.run_id));
   }
 
   rebuildStateIndex() {
-    const db = openStateIndex(this.#paths);
-    try {
-      db.exec('DELETE FROM foundry_runs;');
-    } finally {
-      db.close();
-    }
-    for (const runId of fs.readdirSync(this.#paths.runs).sort()) {
-      const metadata = readJson<{ target_key: string }>(runMetadataFile(this.#paths, runId));
-      const events = readRunEvents(this.#paths, runId);
-      if (events.length > 0) projectSnapshot(this.#paths, metadata.target_key, snapshotFromEvents(events));
-    }
+    rebuildStateIndexFromLedger(this.#paths);
   }
 }
 
@@ -648,6 +1142,377 @@ function candidateManifest(
   };
 }
 
+const CANDIDATE_QUALITY_ROLE_PROMPT = `# Foundry Stage Quality Roles
+
+## Producer
+
+Produce the requested Stage artifact from the frozen Stage goal, inputs, and exact candidate resources.
+
+## Reviewer
+
+Review the exact producer artifact independently against the frozen quality rubric and Stage goal.
+
+## Repairer
+
+Repair only substantiated findings while preserving the frozen authority and resource boundaries.
+
+## Re Reviewer
+
+Re-review the repaired artifact independently and close only findings supported by exact evidence.
+`;
+
+const CANDIDATE_QUALITY_RUBRIC = `# Foundry Generated Agent Quality Rubric
+
+- The result satisfies the frozen Stage goal and declared artifact contract.
+- Claims are supported by the exact candidate resources and input artifacts.
+- The result does not exceed target-owner authority or mutate Foundry state.
+- Remaining quality debt, safety concerns, and owner decisions are explicit.
+`;
+
+function candidateResourcePackPath(kind: CandidateResourceKind, digest: string) {
+  if (kind === 'tool') return `agent/tools/${digest}.blob`;
+  if (kind === 'schema') return `content/schema/${digest}.json`;
+  return `content/${kind}/${digest}.blob`;
+}
+
+function candidateStagePolicyPath(index: number) {
+  return `agent/stages/stage-${String(index + 1).padStart(4, '0')}.md`;
+}
+
+function candidateStagePolicy(input: {
+  stage_id: string;
+  stage_kind: string;
+  goal: string;
+}) {
+  return `# ${input.stage_id} Stage Policy
+
+Stage kind: ${input.stage_kind}
+
+Goal: ${input.goal}
+
+Use only the frozen candidate resources and runtime-provided inputs. Return consumable progress, explicit quality debt, or a target-owner decision request without modifying versions, evaluation policy, permissions, or activation state.
+`;
+}
+
+function bindingFor(
+  bindings: CandidateResourceBinding[],
+  kind: CandidateResourceKind,
+  ref: string,
+) {
+  return bindings.find((entry) => entry.kind === kind && entry.declared_ref === ref)
+    ?? fail('Foundry candidate runtime pack references an unhydrated resource.', {
+      resource_kind: kind,
+      declared_ref: ref,
+    });
+}
+
+function candidateSchemaFields(bytes: Buffer, ref: string) {
+  let parsed: unknown;
+  try {
+    parsed = parseJsonText(bytes.toString('utf8'));
+  } catch (error) {
+    fail('Foundry candidate action schema content is not valid JSON.', {
+      schema_ref: ref,
+      cause: error instanceof Error ? error.message : String(error),
+    });
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    fail('Foundry candidate action schema content must be a JSON object.', { schema_ref: ref });
+  }
+  const schema = parsed as Record<string, unknown>;
+  const required = Array.isArray(schema.required)
+    ? schema.required.map((entry, index) => {
+        if (typeof entry !== 'string' || entry.length === 0) {
+          fail('Foundry candidate action schema required fields must be non-empty strings.', {
+            schema_ref: ref,
+            required_index: index,
+          });
+        }
+        return entry;
+      })
+    : [];
+  requireUnique(required, `Foundry candidate action schema ${ref} required fields`);
+  const properties = schema.properties && typeof schema.properties === 'object' && !Array.isArray(schema.properties)
+    ? Object.keys(schema.properties as Record<string, unknown>).sort()
+    : [];
+  const parameterFields = [...new Set([...required, ...properties])];
+  return {
+    required,
+    optional: parameterFields.filter((entry) => !required.includes(entry)),
+    workspaceLocatorFields: parameterFields.filter((entry) => (
+      entry === 'workspace_root' || entry === 'workspace_path'
+    )),
+  };
+}
+
+function candidateSurfaceId(value: string) {
+  return value.replace(/[^A-Za-z0-9_]+/g, '_').replace(/^_+|_+$/g, '') || 'generated';
+}
+
+const STANDARD_CANDIDATE_STAGE_KINDS = new Set([
+  'intake',
+  'planning',
+  'source_preparation',
+  'creation',
+  'review',
+  'revision',
+  'packaging',
+  'publish',
+  'operator_gate',
+  'domain_specific',
+]);
+
+function candidateStandardStageKind(stageKind: string) {
+  return STANDARD_CANDIDATE_STAGE_KINDS.has(stageKind) ? stageKind : 'domain_specific';
+}
+
+function reachableCandidateStages(
+  blueprint: Parameters<CandidateCompiler['materialize']>[0]['blueprint'],
+  entryStageId: string,
+) {
+  const stagesById = new Map(blueprint.stage_graph.stages.map((stage) => [stage.stage_id, stage]));
+  const reached = new Set<string>();
+  const pending = [entryStageId];
+  while (pending.length > 0) {
+    const stageId = pending.shift()!;
+    if (reached.has(stageId)) continue;
+    reached.add(stageId);
+    pending.push(...(stagesById.get(stageId)?.next_stage_ids ?? []));
+  }
+  const ordered = blueprint.stage_graph.stages.filter((stage) => reached.has(stage.stage_id));
+  const terminal = ordered.filter((stage) => stage.next_stage_ids.length === 0).map((stage) => stage.stage_id);
+  if (terminal.length === 0) {
+    fail('Foundry candidate action route must reach at least one terminal Stage.', { entry_stage_id: entryStageId });
+  }
+  return { ordered: ordered.map((stage) => stage.stage_id), terminal };
+}
+
+function buildCandidateRuntimePack(input: {
+  materialize: Parameters<CandidateCompiler['materialize']>[0];
+  contentBindings: CandidateResourceBinding[];
+  hydratedByPath: Map<string, Buffer>;
+}) {
+  const { blueprint } = input.materialize;
+  const actionRoutes = new Map(blueprint.actions.map((action) => [
+    action.action_id,
+    reachableCandidateStages(blueprint, action.entry_stage_id),
+  ]));
+  const actions = blueprint.actions.map((action, index) => {
+    const inputBinding = bindingFor(input.contentBindings, 'schema', action.input_schema_ref);
+    const outputBinding = bindingFor(input.contentBindings, 'schema', action.output_schema_ref);
+    const inputBytes = input.hydratedByPath.get(inputBinding.pack_path)
+      ?? fail('Foundry candidate input schema bytes are unavailable.', { schema_ref: action.input_schema_ref });
+    const fields = candidateSchemaFields(inputBytes, action.input_schema_ref);
+    const route = actionRoutes.get(action.action_id)!;
+    const surfaceId = `${candidateSurfaceId(blueprint.target_agent_id)}_${candidateSurfaceId(action.action_id)}_${index + 1}`;
+    return {
+      action_id: action.action_id,
+      title: action.action_id,
+      summary: action.summary,
+      owner: blueprint.target_domain_id,
+      effect: 'mutating',
+      execution_binding: {
+        kind: 'stage_binding',
+        stage_manifest_ref: CANDIDATE_STAGE_MANIFEST_PATH,
+      },
+      input_schema_ref: inputBinding.pack_path,
+      output_schema_ref: outputBinding.pack_path,
+      required_fields: fields.required,
+      optional_fields: fields.optional,
+      workspace_locator_fields: fields.workspaceLocatorFields,
+      human_gate_ids: [],
+      stage_route: {
+        entry_stage_ref: action.entry_stage_id,
+        required_stage_refs: [action.entry_stage_id],
+        optional_stage_refs: route.ordered.filter((stageId) => stageId !== action.entry_stage_id),
+        terminal_stage_refs: route.terminal,
+        route_policy: 'ai_selected_progress_route',
+      },
+      supported_surfaces: {
+        cli: { surface_kind: 'foundry_generated_agent_action' },
+        mcp: { surface_kind: 'foundry_generated_agent_action', tool_name: surfaceId },
+        skill: {
+          surface_kind: 'foundry_generated_agent_action',
+          command_contract_id: `${blueprint.target_agent_id}.${action.action_id}`,
+        },
+        product_entry: { surface_kind: 'foundry_generated_agent_action', action_key: action.action_id },
+        openai: { surface_kind: 'foundry_generated_agent_action', tool_name: surfaceId },
+        ai_sdk: { surface_kind: 'foundry_generated_agent_action', tool_name: surfaceId },
+      },
+      authority_boundary: {
+        opl_can_write_domain_truth: false,
+        opl_can_write_memory_body: false,
+        opl_can_authorize_quality_or_export: false,
+        opl_can_sign_owner_receipt: false,
+        provider_completion_is_domain_completion: false,
+      },
+    };
+  });
+  const actionCatalog = {
+    surface_kind: 'family_action_catalog',
+    version: 'family-action-catalog.v2',
+    catalog_id: `${blueprint.target_agent_id}.foundry-generated-actions`,
+    target_domain_id: blueprint.target_domain_id,
+    owner: blueprint.target_domain_id,
+    authority_boundary: {
+      domain_truth_owner: blueprint.target_domain_id,
+      opl_role: 'projection_consumer_only',
+      write_policy: 'no_domain_truth_writes',
+      opl_can_write_domain_truth: false,
+      opl_can_write_memory_body: false,
+      opl_can_authorize_quality_or_export: false,
+      opl_can_sign_owner_receipt: false,
+      provider_completion_is_domain_completion: false,
+    },
+    actions,
+    notes: [],
+  };
+  const qualityPolicies = Object.fromEntries(blueprint.stage_graph.stages.map((stage) => {
+    const reviewDepth = blueprint.risk_hint === 'high'
+      ? 'multi_axis'
+      : blueprint.risk_hint === 'medium' ? 'full' : 'focused';
+    return [stage.stage_id, {
+      surface_kind: 'opl_stage_quality_cycle_policy',
+      version: 'stage-quality-cycle-policy.v1',
+      enabled: true,
+      stage_prompt_ref: bindingFor(input.contentBindings, 'prompt', stage.prompt_ref).pack_path,
+      role_prompt_refs: {
+        producer: `${CANDIDATE_QUALITY_ROLE_PROMPT_PATH}#producer`,
+        reviewer: `${CANDIDATE_QUALITY_ROLE_PROMPT_PATH}#reviewer`,
+        repairer: `${CANDIDATE_QUALITY_ROLE_PROMPT_PATH}#repairer`,
+        re_reviewer: `${CANDIDATE_QUALITY_ROLE_PROMPT_PATH}#re-reviewer`,
+      },
+      quality_rubric_refs: [CANDIDATE_QUALITY_RUBRIC_PATH],
+      in_thread_refinement: { allowed: true, authoritative: false },
+      formal_review: {
+        required: true,
+        risk_tier: blueprint.risk_hint,
+        review_depth: reviewDepth,
+        context_isolation_required: true,
+        max_repair_rounds: 1,
+      },
+      budget_exhaustion: 'complete_with_quality_debt_if_consumable',
+      attempt_boundary: {
+        inherits_stage_goal_scope_authority: true,
+        role_overlay_may_only_narrow: true,
+        controller_creates_next_attempt: true,
+        attempt_is_not_sub_stage: true,
+      },
+    }];
+  }));
+  const stages = blueprint.stage_graph.stages.map((stage, index) => {
+    const promptBinding = bindingFor(input.contentBindings, 'prompt', stage.prompt_ref);
+    return {
+      stage_id: stage.stage_id,
+      stage_kind: candidateStandardStageKind(stage.stage_kind),
+      title: stage.stage_id,
+      display_names: { 'en-US': stage.stage_id },
+      summary: stage.goal,
+      goal: stage.goal,
+      policy_ref: candidateStagePolicyPath(index),
+      prompt_ref: promptBinding.pack_path,
+      skill_refs: stage.skill_refs.map((ref) => bindingFor(input.contentBindings, 'skill', ref).pack_path),
+      knowledge_refs: stage.knowledge_refs.map((ref) => bindingFor(input.contentBindings, 'knowledge', ref).pack_path),
+      quality_gate_refs: [CANDIDATE_QUALITY_RUBRIC_PATH],
+      allowed_action_refs: blueprint.actions
+        .filter((action) => actionRoutes.get(action.action_id)!.ordered.includes(stage.stage_id))
+        .map((action) => action.action_id),
+      requires: stage.input_artifact_types,
+      ensures: stage.output_artifact_types,
+      next_stage_refs: stage.next_stage_ids,
+      trust_lane: 'domain_agent',
+      stage_quality_cycle_policy_ref: `${CANDIDATE_QUALITY_POLICY_PATH}#/stages/${stage.stage_id.replaceAll('~', '~0').replaceAll('/', '~1')}`,
+      ...(stage.stage_kind === 'packaging' ? {
+        handoff_review_boundary: {
+          artifact_effect: 'new_or_transformed_reviewable_bytes',
+          freezes_canonical_artifact_bytes: false,
+          issues_quality_export_publication_or_ready_claim: false,
+          downstream_owner_retains_acceptance: true,
+        },
+      } : {}),
+    };
+  });
+  const stageManifest = {
+    surface_kind: 'opl_standard_agent_declarative_stage_manifest',
+    version: 'opl-standard-agent-declarative-stage-manifest.v1',
+    target_domain_id: blueprint.target_domain_id,
+    owner: blueprint.target_domain_id,
+    authority_boundary: {
+      domain_truth_owner: blueprint.target_domain_id,
+      opl_can_write_domain_truth: false,
+      opl_can_write_memory_body: false,
+      opl_can_authorize_quality_or_export: false,
+      opl_can_sign_owner_receipt: false,
+      provider_completion_is_domain_completion: false,
+    },
+    stages,
+  };
+  const stagePolicyFiles = blueprint.stage_graph.stages.map((stage, index) => ({
+    path: candidateStagePolicyPath(index),
+    bytes: Buffer.from(candidateStagePolicy(stage), 'utf8'),
+  }));
+  const requiredPackPaths = [...new Set([
+    CANDIDATE_STAGE_MANIFEST_PATH,
+    CANDIDATE_QUALITY_POLICY_PATH,
+    CANDIDATE_QUALITY_ROLE_PROMPT_PATH,
+    CANDIDATE_QUALITY_RUBRIC_PATH,
+    ...stagePolicyFiles.map((entry) => entry.path),
+    ...input.contentBindings.map((entry) => entry.pack_path),
+  ])].sort();
+  const artifactContracts = blueprint.artifact_contracts.map((artifact) => ({
+    ...artifact,
+    schema_ref: bindingFor(input.contentBindings, 'schema', artifact.schema_ref).pack_path,
+  }));
+  return [
+    { path: 'contracts/domain_descriptor.json', bytes: canonicalJsonBytes({
+      surface_kind: 'domain_agent_descriptor',
+      schema_version: 1,
+      domain_id: blueprint.target_domain_id,
+      domain_label: blueprint.target_agent_id,
+      authority_boundary: {
+        opl_can_write_domain_truth: false,
+        opl_can_write_memory_body: false,
+        opl_can_authorize_quality_or_export: false,
+        opl_can_sign_owner_receipt: false,
+      },
+    }) },
+    { path: CANDIDATE_ACTION_CATALOG_PATH, bytes: canonicalJsonBytes(actionCatalog) },
+    { path: CANDIDATE_STAGE_MANIFEST_PATH, bytes: canonicalJsonBytes(stageManifest) },
+    { path: CANDIDATE_QUALITY_POLICY_PATH, bytes: canonicalJsonBytes({
+      surface_kind: 'opl_domain_stage_quality_cycle_profile',
+      version: 'domain-stage-quality-cycle-profile.v1',
+      stages: qualityPolicies,
+    }) },
+    { path: CANDIDATE_QUALITY_ROLE_PROMPT_PATH, bytes: Buffer.from(CANDIDATE_QUALITY_ROLE_PROMPT, 'utf8') },
+    { path: CANDIDATE_QUALITY_RUBRIC_PATH, bytes: Buffer.from(CANDIDATE_QUALITY_RUBRIC, 'utf8') },
+    { path: 'contracts/pack_compiler_input.json', bytes: canonicalJsonBytes({
+      surface_kind: 'opl_domain_pack_compiler_input',
+      domain_id: blueprint.target_domain_id,
+      canonical_agent_id: blueprint.target_agent_id,
+      generated_surface_owner: 'one-person-lab',
+      domain_repo_can_own_generated_surface: false,
+      authority_boundary: {
+        opl_can_write_domain_truth: false,
+        opl_can_write_memory_body: false,
+        opl_can_authorize_quality_or_export: false,
+        domain_can_claim_generated_surface_owner: false,
+      },
+      required_domain_pack_paths: requiredPackPaths,
+    }) },
+    { path: 'contracts/owner_receipt_contract.json', bytes: canonicalJsonBytes({
+      surface_kind: 'owner_receipt_contract',
+      authority_owner_ref: blueprint.authority_policy.truth_owner_ref,
+      provider_can_sign_owner_receipt: false,
+    }) },
+    { path: 'runtime/authority_functions/README.md', bytes: Buffer.from(
+      '# Target Owner Authority Boundary\n\nThe target owner remains the only authority for domain truth, quality acceptance, permissions, and production adoption.\n',
+      'utf8',
+    ) },
+    { path: 'contracts/artifact_contracts.json', bytes: canonicalJsonBytes(artifactContracts) },
+    ...stagePolicyFiles,
+  ];
+}
+
 function listPhysicalFiles(root: string, relative = ''): string[] {
   const directory = path.join(root, relative);
   const entries = fs.readdirSync(directory, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name));
@@ -698,7 +1563,7 @@ export class ContentAddressedCandidateCompiler implements CandidateCompiler {
           });
         }
         const bytes = this.#content.readExact(ref);
-        const packPath = `content/${kind}/${digest}.blob`;
+        const packPath = candidateResourcePackPath(kind, digest);
         hydratedFiles.push({ path: packPath, bytes });
         contentBindings.push({
           kind,
@@ -726,29 +1591,22 @@ export class ContentAddressedCandidateCompiler implements CandidateCompiler {
       blueprint_digest: input.blueprint_digest,
       action_ids: input.blueprint.actions.map((action) => action.action_id),
     };
+    const hydratedByPath = new Map(hydratedFiles.map((entry) => [entry.path, entry.bytes]));
+    const runtimePackFiles = buildCandidateRuntimePack({
+      materialize: input,
+      contentBindings,
+      hydratedByPath,
+    });
     const files = [
       { path: 'agent-blueprint.json', bytes: canonicalJsonBytes(input.blueprint) },
       { path: 'agent/descriptor.json', bytes: canonicalJsonBytes(descriptor) },
       { path: 'agent/agent-pack.json', bytes: canonicalJsonBytes(manifest) },
-      { path: 'agent/stages/manifest.json', bytes: canonicalJsonBytes({
-        surface_kind: 'opl_foundry_generated_stage_manifest',
-        version: 'opl-foundry-generated-stage-manifest.v1',
-        entry_stage_id: input.blueprint.stage_graph.entry_stage_id,
-        stages: input.blueprint.stage_graph.stages,
-      }) },
-      { path: 'contracts/action_catalog.json', bytes: canonicalJsonBytes({
-        surface_kind: 'opl_foundry_generated_action_catalog',
-        version: 'opl-foundry-generated-action-catalog.v1',
-        target_agent_id: input.blueprint.target_agent_id,
-        target_domain_id: input.blueprint.target_domain_id,
-        actions: input.blueprint.actions,
-      }) },
-      { path: 'contracts/artifact_contracts.json', bytes: canonicalJsonBytes(input.blueprint.artifact_contracts) },
       { path: 'contracts/authority_policy.json', bytes: canonicalJsonBytes(input.blueprint.authority_policy) },
       { path: 'contracts/memory_policy.json', bytes: canonicalJsonBytes(input.blueprint.memory_policy) },
       { path: 'contracts/evaluation_spec.json', bytes: canonicalJsonBytes(input.blueprint.eval_spec) },
       { path: 'contracts/agent-pack-conformance.json', bytes: canonicalJsonBytes(conformance) },
       { path: CANDIDATE_RESOURCE_LOCK_PATH, bytes: canonicalJsonBytes(resourceLock) },
+      ...runtimePackFiles,
       ...hydratedFiles,
     ].sort((left, right) => left.path.localeCompare(right.path));
     requireUnique(files.map((entry) => entry.path), 'Foundry candidate file plan');
@@ -765,7 +1623,7 @@ export class ContentAddressedCandidateCompiler implements CandidateCompiler {
       files: fileIndex,
     });
     const directory = path.join(this.#candidateRoot, digestSegment(candidateDigest));
-    const temporary = `${directory}.tmp-${process.pid}-${crypto.randomUUID()}`;
+    const temporary = stagedEntry(this.#paths.staging, 'candidate-directory');
     const candidateIndex = {
       surface_kind: 'opl_foundry_candidate_file_index',
       version: CANDIDATE_INDEX_VERSION,
@@ -775,14 +1633,31 @@ export class ContentAddressedCandidateCompiler implements CandidateCompiler {
     };
     if (!fs.existsSync(directory)) {
       fs.mkdirSync(temporary, { recursive: false });
+      fsyncDirectory(this.#paths.staging);
       try {
-        for (const entry of files) writeExclusive(path.join(temporary, entry.path), entry.bytes);
-        writeExclusive(path.join(temporary, 'candidate-index.json'), canonicalJsonBytes(candidateIndex));
-        fs.renameSync(temporary, directory);
-        fsyncDirectory(this.#candidateRoot);
+        for (const entry of files) {
+          writeExclusive(path.join(temporary, entry.path), entry.bytes, this.#paths.staging);
+        }
+        compileStandardAgentStageManifest(temporary);
+        writeExclusive(
+          path.join(temporary, 'candidate-index.json'),
+          canonicalJsonBytes(candidateIndex),
+          this.#paths.staging,
+        );
+        let published = false;
+        try {
+          fs.renameSync(temporary, directory);
+          published = true;
+        } catch (error) {
+          if (!fs.existsSync(directory)) throw error;
+        }
+        if (published) fsyncDirectory(this.#candidateRoot);
       } catch (error) {
         fs.rmSync(temporary, { recursive: true, force: true });
         throw error;
+      } finally {
+        fs.rmSync(temporary, { recursive: true, force: true });
+        fsyncDirectory(this.#paths.staging);
       }
     }
     const directoryStat = fs.lstatSync(directory);
@@ -839,6 +1714,13 @@ type RegistryState = {
   transactions: ActivationTransaction[];
 };
 
+type VersionRegistryEpochMarker = {
+  surface_kind: 'opl_foundry_version_registry_epoch';
+  version: typeof VERSION_REGISTRY_EPOCH_VERSION;
+  target_agent_id: string;
+  target_domain_id: string;
+};
+
 type CandidateVersionIdentity = Pick<
   AgentVersion,
   'target_agent_id' | 'target_domain_id' | 'blueprint_digest' | 'candidate_digest' | 'candidate_ref'
@@ -887,12 +1769,7 @@ function requireStoredIdentity(
 }
 
 function readCanonicalRegistryJson(file: string, label: string) {
-  const stat = fs.lstatSync(file);
-  if (!stat.isFile() || stat.isSymbolicLink()) fail(`${label} must be a physical JSON file.`, { file });
-  const bytes = fs.readFileSync(file);
-  const value = parseJsonText(bytes.toString('utf8'));
-  if (!bytes.equals(canonicalJsonBytes(value))) fail(`${label} is not canonical JSON.`, { file });
-  return value;
+  return readPhysicalCanonicalJson(file, label);
 }
 
 function readRegistryDirectory<T>(
@@ -903,7 +1780,18 @@ function readRegistryDirectory<T>(
   if (!fs.existsSync(directory)) return [];
   const stat = fs.lstatSync(directory);
   if (!stat.isDirectory() || stat.isSymbolicLink()) fail(`${label} must be a physical directory.`, { directory });
-  return fs.readdirSync(directory, { withFileTypes: true })
+  let removed = false;
+  const authoritative = fs.readdirSync(directory, { withFileTypes: true }).filter((entry) => {
+    const match = /\.json\.tmp-(\d+)-[0-9a-f-]+$/.exec(entry.name);
+    if (!match || !entry.isFile()) return true;
+    if (!processIsAlive(Number(match[1]))) {
+      fs.rmSync(path.join(directory, entry.name), { force: true });
+      removed = true;
+    }
+    return false;
+  });
+  if (removed) fsyncDirectory(directory);
+  return authoritative
     .sort((left, right) => left.name.localeCompare(right.name))
     .map((entry) => {
       if (!entry.isFile() || entry.isSymbolicLink() || !entry.name.endsWith('.json')) {
@@ -1018,7 +1906,7 @@ function validateActivationTransaction(
   requireExactKeys(raw, [
     'surface_kind', 'transaction_id', 'transaction_kind', 'target_agent_id', 'target_domain_id',
     'from_version_digest', 'to_version_digest', 'previous_revision', 'next_revision',
-    'authority_receipt_ref', 'occurred_at',
+    'authority_receipt_ref', 'occurred_at', 'runtime_binding_verification',
   ], 'ActivationTransaction');
   const transaction = raw as unknown as ActivationTransaction;
   if (transaction.surface_kind !== 'opl_foundry_activation_transaction') fail('ActivationTransaction surface is invalid.');
@@ -1042,6 +1930,13 @@ function validateActivationTransaction(
     fail('Rollback transaction requires an authority receipt.');
   }
   requireString(transaction.occurred_at, 'occurred_at');
+  validateActivationRuntimeBindingVerification(transaction.runtime_binding_verification, {
+    transaction_kind: transaction.transaction_kind,
+    target_agent_id: transaction.target_agent_id,
+    target_domain_id: transaction.target_domain_id,
+    version_digest: transaction.to_version_digest,
+    expected_revision: transaction.previous_revision,
+  });
   const { transaction_id: _storedId, ...base } = transaction;
   const expectedId = `activation:${canonicalDigest(base)}`;
   if (transaction.transaction_id !== expectedId) {
@@ -1055,6 +1950,67 @@ function validateActivationTransaction(
     fail('ActivationTransaction filename does not match its revision.', { file_name: fileName, expected_file: expectedFile });
   }
   return transaction;
+}
+
+function validateActivationRuntimeBindingVerification(
+  value: unknown,
+  context: {
+    transaction_kind: ActivationTransaction['transaction_kind'];
+    target_agent_id: string;
+    target_domain_id: string;
+    version_digest: string;
+    expected_revision: number;
+    version?: AgentVersion;
+  },
+) {
+  const raw = requireRecord(value, 'Activation runtime binding verification');
+  requireExactKeys(raw, [
+    'surface_kind', 'version', 'verification_phase', 'transaction_kind', 'target_agent_id',
+    'target_domain_id', 'version_id', 'version_digest', 'candidate_digest', 'candidate_ref',
+    'expected_activation_revision', 'preflight_ref', 'runtime_binding_ref',
+  ], 'Activation runtime binding verification');
+  const verification = raw as unknown as ActivationRuntimeBindingVerification;
+  if (
+    verification.surface_kind !== 'opl_foundry_activation_runtime_binding_verification'
+    || verification.version !== 'opl-foundry-activation-runtime-binding-verification.v1'
+    || verification.verification_phase !== 'pre_commit'
+  ) {
+    fail('Activation runtime binding verification surface is invalid.');
+  }
+  if (verification.transaction_kind !== context.transaction_kind) {
+    fail('Activation runtime binding verification transaction kind does not match ActivationTransaction.');
+  }
+  if (
+    verification.target_agent_id !== context.target_agent_id
+    || verification.target_domain_id !== context.target_domain_id
+  ) {
+    fail('Activation runtime binding verification target identity does not match ActivationTransaction.');
+  }
+  requireString(verification.version_id, 'runtime_binding_verification.version_id');
+  requireDigest(verification.version_digest, 'runtime_binding_verification.version_digest');
+  requireDigest(verification.candidate_digest, 'runtime_binding_verification.candidate_digest');
+  requireString(verification.candidate_ref, 'runtime_binding_verification.candidate_ref');
+  if (verification.version_digest !== context.version_digest) {
+    fail('Activation runtime binding verification version digest does not match ActivationTransaction.');
+  }
+  if (verification.expected_activation_revision !== context.expected_revision) {
+    fail('Activation runtime binding verification expected revision does not match ActivationTransaction.');
+  }
+  requireString(verification.preflight_ref, 'runtime_binding_verification.preflight_ref');
+  if (typeof verification.runtime_binding_ref !== 'string' || verification.runtime_binding_ref.length === 0) {
+    fail('Activation runtime binding verification prepared runtime binding ref is invalid.');
+  }
+  if (context.version && (
+    verification.version_id !== context.version.version_id
+    || verification.version_digest !== context.version.version_digest
+    || verification.candidate_digest !== context.version.candidate_digest
+    || verification.candidate_ref !== context.version.candidate_ref
+  )) {
+    fail('Activation runtime binding verification does not match the exact AgentVersion.', {
+      version_digest: context.version.version_digest,
+    });
+  }
+  return verification;
 }
 
 function storedBlueprintResourceRefs(value: unknown, version: CandidateVersionIdentity) {
@@ -1171,7 +2127,7 @@ function validateCandidateResourceLock(
       });
     }
     const resourceDigest = requireDigest(entry.sha256, 'resource_lock.sha256');
-    const expectedPackPath = `content/${expected.kind}/${digest}.blob`;
+    const expectedPackPath = candidateResourcePackPath(expected.kind, digest);
     if (resourceDigest !== `sha256:${digest}` || entry.pack_path !== expectedPackPath) {
       fail('Foundry candidate resource lock address does not match its immutable ref.', {
         candidate_digest: version.candidate_digest,
@@ -1202,11 +2158,12 @@ function validateCandidateResourceLock(
     };
   });
   requireUnique(resources.map(({ kind, declared_ref: ref }) => `${kind}\0${ref}`), 'Foundry candidate resource lock');
+  const lockedResourceFiles = resources.map((entry) => entry.pack_path).sort();
+  const lockedResourceFileSet = new Set(lockedResourceFiles);
   const indexedResourceFiles = files
     .map((entry) => entry.path)
-    .filter((candidatePath) => candidatePath.startsWith('content/'))
+    .filter((candidatePath) => candidatePath.startsWith('content/') || lockedResourceFileSet.has(candidatePath))
     .sort();
-  const lockedResourceFiles = resources.map((entry) => entry.pack_path).sort();
   if (canonicalJsonText(indexedResourceFiles) !== canonicalJsonText(lockedResourceFiles)) {
     fail('Foundry candidate contains resource bytes outside the immutable resource lock.', {
       candidate_digest: version.candidate_digest,
@@ -1346,7 +2303,12 @@ function validateCandidateDirectory(paths: FoundryStoragePaths, version: Candida
   return validateCandidateResourceLock(realDirectory, version, files);
 }
 
-function publishImmutableRegistryRecord(file: string, value: unknown, label: string) {
+function publishImmutableRegistryRecord(
+  file: string,
+  value: unknown,
+  label: string,
+  stagingRoot: string,
+) {
   const bytes = canonicalJsonBytes(value);
   if (fs.existsSync(file)) {
     const existing = readCanonicalRegistryJson(file, label);
@@ -1355,14 +2317,98 @@ function publishImmutableRegistryRecord(file: string, value: unknown, label: str
     }
     return;
   }
-  writeAtomic(file, bytes);
+  writeExclusive(file, bytes, stagingRoot);
 }
 
-function repairActivationProjection(directory: string, activation: ActivationPointer) {
+function versionRegistryEpochMarker(agentId: string, domainId: string): VersionRegistryEpochMarker {
+  return {
+    surface_kind: 'opl_foundry_version_registry_epoch',
+    version: VERSION_REGISTRY_EPOCH_VERSION,
+    target_agent_id: agentId,
+    target_domain_id: domainId,
+  };
+}
+
+function validateVersionRegistryEpoch(directory: string, agentId: string, domainId: string) {
+  const markerFile = path.join(directory, VERSION_REGISTRY_EPOCH_MARKER);
+  if (!fs.existsSync(markerFile)) {
+    fail('Foundry version registry epoch marker is missing.', {
+      target_agent_id: agentId,
+      target_domain_id: domainId,
+      registry_directory: directory,
+    });
+  }
+  const marker = requireRecord(
+    readCanonicalRegistryJson(markerFile, 'Foundry version registry epoch marker'),
+    'Foundry version registry epoch marker',
+  );
+  requireExactKeys(
+    marker,
+    ['surface_kind', 'version', 'target_agent_id', 'target_domain_id'],
+    'Foundry version registry epoch marker',
+  );
+  const expected = versionRegistryEpochMarker(agentId, domainId);
+  if (canonicalJsonText(marker) !== canonicalJsonText(expected)) {
+    fail('Foundry version registry epoch marker does not match its target identity or format.', {
+      target_agent_id: agentId,
+      target_domain_id: domainId,
+      registry_directory: directory,
+    });
+  }
+  const allowedEntries = new Set([
+    VERSION_REGISTRY_EPOCH_MARKER,
+    'activation.json',
+    'agent-versions',
+    'qualifications',
+    'activation-transactions',
+  ]);
+  const unexpectedEntries = fs.readdirSync(directory).filter((entry) => !allowedEntries.has(entry));
+  if (unexpectedEntries.length > 0) {
+    fail('Foundry version registry epoch contains forbidden entries.', {
+      registry_directory: directory,
+      unexpected_entries: unexpectedEntries.sort(),
+    });
+  }
+  return expected;
+}
+
+function ensureVersionRegistryEpoch(
+  directory: string,
+  agentId: string,
+  domainId: string,
+  stagingRoot: string,
+) {
+  const markerFile = path.join(directory, VERSION_REGISTRY_EPOCH_MARKER);
+  if (fs.existsSync(markerFile)) {
+    validateVersionRegistryEpoch(directory, agentId, domainId);
+    return;
+  }
+  if (fs.existsSync(directory)) {
+    const stat = fs.lstatSync(directory);
+    if (!stat.isDirectory() || stat.isSymbolicLink()) {
+      fail('Foundry version registry epoch must be a physical directory.', { registry_directory: directory });
+    }
+    const entries = fs.readdirSync(directory);
+    if (entries.length > 0) {
+      fail('Unmarked Foundry version registry epoch cannot become current truth.', {
+        registry_directory: directory,
+        archived_entry_count: entries.length,
+      });
+    }
+  }
+  writeExclusive(
+    markerFile,
+    canonicalJsonBytes(versionRegistryEpochMarker(agentId, domainId)),
+    stagingRoot,
+  );
+  validateVersionRegistryEpoch(directory, agentId, domainId);
+}
+
+function repairActivationProjection(directory: string, activation: ActivationPointer, stagingRoot: string) {
   const file = path.join(directory, 'activation.json');
   const bytes = canonicalJsonBytes(activation);
   if (fs.existsSync(file) && fs.readFileSync(file).equals(bytes)) return;
-  writeAtomic(file, bytes);
+  writeAtomic(file, bytes, stagingRoot);
 }
 
 export class LedgerFoundryOperationResultJournal implements FoundryOperationResultJournal {
@@ -1395,7 +2441,7 @@ export class LedgerFoundryOperationResultJournal implements FoundryOperationResu
     const identity = validateFoundryEvaluationOperationIdentity(input.identity);
     const result = materializeFoundryOperationResult(input);
     const lock = path.join(this.#paths.mutation_locks, `operation-${sha256(result.operation_key)}.lock`);
-    return withMutationLock(lock, () => {
+    return withMutationLock(lock, this.#paths.staging, () => {
       const existing = this.#read(identity);
       if (existing) {
         if (canonicalJsonText(existing) !== canonicalJsonText(result)) {
@@ -1407,7 +2453,7 @@ export class LedgerFoundryOperationResultJournal implements FoundryOperationResu
       }
       const file = this.#file(identity);
       try {
-        writeAtomic(file, canonicalJsonBytes(result));
+        writeExclusive(file, canonicalJsonBytes(result), this.#paths.staging);
       } catch (error) {
         const recovered = this.#read(identity);
         if (recovered && canonicalJsonText(recovered) === canonicalJsonText(result)) {
@@ -1430,7 +2476,11 @@ export class LedgerVersionRegistry implements VersionRegistry {
   }
 
   #directory(agentId: string, domainId: string) {
-    return path.join(this.#paths.registry, targetStorageKey(agentId, domainId));
+    return path.join(
+      this.#paths.registry,
+      targetStorageKey(agentId, domainId),
+      VERSION_REGISTRY_EPOCH_DIRECTORY,
+    );
   }
 
   #mutationLock(agentId: string, domainId: string) {
@@ -1461,6 +2511,7 @@ export class LedgerVersionRegistry implements VersionRegistry {
     if (!fs.existsSync(directory)) return this.#empty(agentId, domainId);
     const directoryStat = fs.lstatSync(directory);
     if (!directoryStat.isDirectory() || directoryStat.isSymbolicLink()) fail('Foundry version registry must be a physical directory.');
+    validateVersionRegistryEpoch(directory, agentId, domainId);
     const versionsDirectory = path.join(directory, 'agent-versions');
     const qualificationsDirectory = path.join(directory, 'qualifications');
     const transactionsDirectory = path.join(directory, 'activation-transactions');
@@ -1517,12 +2568,21 @@ export class LedgerVersionRegistry implements VersionRegistry {
       if (transaction.from_version_digest !== activation.active_version_digest) {
         fail('Activation transaction source version does not match history.', { transaction_id: transaction.transaction_id });
       }
-      if (!versionsByDigest.has(transaction.to_version_digest)) {
+      const targetVersion = versionsByDigest.get(transaction.to_version_digest);
+      if (!targetVersion) {
         fail('Activation transaction target version does not exist.', {
           transaction_id: transaction.transaction_id,
           version_digest: transaction.to_version_digest,
         });
       }
+      validateActivationRuntimeBindingVerification(transaction.runtime_binding_verification, {
+        transaction_kind: transaction.transaction_kind,
+        target_agent_id: transaction.target_agent_id,
+        target_domain_id: transaction.target_domain_id,
+        version_digest: transaction.to_version_digest,
+        expected_revision: transaction.previous_revision,
+        version: targetVersion,
+      });
       activation = {
         surface_kind: 'opl_foundry_activation_pointer',
         target_agent_id: agentId,
@@ -1561,7 +2621,7 @@ export class LedgerVersionRegistry implements VersionRegistry {
   async register(input: Parameters<VersionRegistry['register']>[0]) {
     const directory = this.#directory(input.target_agent_id, input.target_domain_id);
     const lock = this.#mutationLock(input.target_agent_id, input.target_domain_id);
-    return withMutationLock(lock, () => {
+    return withMutationLock(lock, this.#paths.staging, () => {
       requireString(input.target_agent_id, 'target_agent_id');
       requireString(input.target_domain_id, 'target_domain_id');
       requireDigest(input.blueprint_digest, 'blueprint_digest');
@@ -1592,6 +2652,12 @@ export class LedgerVersionRegistry implements VersionRegistry {
           expected_manifest_digest: candidateIntegrity.manifest_digest,
         });
       }
+      ensureVersionRegistryEpoch(
+        directory,
+        input.target_agent_id,
+        input.target_domain_id,
+        this.#paths.staging,
+      );
       const state = this.#read(input.target_agent_id, input.target_domain_id);
       const qualificationBase = {
         surface_kind: 'opl_foundry_qualification_record' as const,
@@ -1646,11 +2712,13 @@ export class LedgerVersionRegistry implements VersionRegistry {
         path.join(directory, 'qualifications', `${digestSegment(qualification.qualification_digest)}.json`),
         qualification,
         'QualificationRecord',
+        this.#paths.staging,
       );
       publishImmutableRegistryRecord(
         path.join(directory, 'agent-versions', `${digestSegment(version.version_digest)}.json`),
         version,
         'AgentVersion',
+        this.#paths.staging,
       );
       const committed = this.#read(input.target_agent_id, input.target_domain_id);
       const committedVersion = committed.versions.find((entry) => entry.version_digest === version.version_digest)
@@ -1676,7 +2744,19 @@ export class LedgerVersionRegistry implements VersionRegistry {
   }
 
   async activation(targetAgentId: string, targetDomainId: string) {
-    return clone(this.#read(targetAgentId, targetDomainId).activation);
+    const directory = this.#directory(targetAgentId, targetDomainId);
+    const lock = this.#mutationLock(targetAgentId, targetDomainId);
+    return withMutationLock(lock, this.#paths.staging, () => {
+      const activation = this.#read(targetAgentId, targetDomainId).activation;
+      if (fs.existsSync(directory)) {
+        repairActivationProjection(directory, activation, this.#paths.staging);
+      }
+      return clone(activation);
+    });
+  }
+
+  async activationHistory(targetAgentId: string, targetDomainId: string) {
+    return clone(this.#read(targetAgentId, targetDomainId).transactions);
   }
 
   async compareAndSwapActivation(input: Parameters<VersionRegistry['compareAndSwapActivation']>[0]) {
@@ -1692,7 +2772,7 @@ export class LedgerVersionRegistry implements VersionRegistry {
   }) {
     const directory = this.#directory(input.target_agent_id, input.target_domain_id);
     const lock = this.#mutationLock(input.target_agent_id, input.target_domain_id);
-    return withMutationLock(lock, () => {
+    return withMutationLock(lock, this.#paths.staging, () => {
       requireString(input.target_agent_id, 'target_agent_id');
       requireString(input.target_domain_id, 'target_domain_id');
       requireDigest(input.version_digest, 'version_digest');
@@ -1705,13 +2785,27 @@ export class LedgerVersionRegistry implements VersionRegistry {
         fail('Rollback requires an authority receipt.');
       }
       const state = this.#read(input.target_agent_id, input.target_domain_id);
+      const targetVersion = state.versions.find((entry) => entry.version_digest === input.version_digest)
+        ?? fail('Activation target version does not exist.', { version_digest: input.version_digest });
+      const runtimeBindingVerification = validateActivationRuntimeBindingVerification(
+        input.runtime_binding_verification,
+        {
+          transaction_kind: input.transaction_kind,
+          target_agent_id: input.target_agent_id,
+          target_domain_id: input.target_domain_id,
+          version_digest: input.version_digest,
+          expected_revision: input.expected_revision,
+          version: targetVersion,
+        },
+      );
       const replay = state.transactions.find((entry) => entry.previous_revision === input.expected_revision);
       if (replay) {
         if (
           replay.transaction_kind !== input.transaction_kind
           || replay.to_version_digest !== input.version_digest
           || replay.authority_receipt_ref !== input.authority_receipt_ref
-          || replay.occurred_at !== input.occurred_at
+          || canonicalJsonText(replay.runtime_binding_verification)
+            !== canonicalJsonText(runtimeBindingVerification)
         ) {
           fail('Activation transaction replay conflicts with immutable history.', {
             expected_revision: input.expected_revision,
@@ -1721,7 +2815,7 @@ export class LedgerVersionRegistry implements VersionRegistry {
         const replayVersion = state.versions.find((entry) => entry.version_digest === replay.to_version_digest)
           ?? fail('Activation replay target version does not exist.', { version_digest: replay.to_version_digest });
         validateCandidateDirectory(this.#paths, replayVersion);
-        repairActivationProjection(directory, state.activation);
+        repairActivationProjection(directory, state.activation, this.#paths.staging);
         return clone(replay);
       }
       if (state.activation.revision !== input.expected_revision) {
@@ -1730,9 +2824,15 @@ export class LedgerVersionRegistry implements VersionRegistry {
           actual_revision: state.activation.revision,
         });
       }
-      const targetVersion = state.versions.find((entry) => entry.version_digest === input.version_digest)
-        ?? fail('Activation target version does not exist.', { version_digest: input.version_digest });
       validateCandidateDirectory(this.#paths, targetVersion);
+      if (input.transaction_kind === 'rollback') {
+        if (state.activation.active_version_digest === input.version_digest) {
+          fail('Rollback target version is already active.', { version_digest: input.version_digest });
+        }
+        if (!state.transactions.some((entry) => entry.to_version_digest === input.version_digest)) {
+          fail('Rollback target version has never been active.', { version_digest: input.version_digest });
+        }
+      }
       const transactionBase = {
         surface_kind: 'opl_foundry_activation_transaction' as const,
         transaction_kind: input.transaction_kind,
@@ -1744,6 +2844,7 @@ export class LedgerVersionRegistry implements VersionRegistry {
         next_revision: state.activation.revision + 1,
         authority_receipt_ref: input.authority_receipt_ref,
         occurred_at: input.occurred_at,
+        runtime_binding_verification: clone(runtimeBindingVerification),
       };
       const transaction: ActivationTransaction = {
         ...transactionBase,
@@ -1755,11 +2856,12 @@ export class LedgerVersionRegistry implements VersionRegistry {
         revision: transaction.next_revision,
         updated_at: input.occurred_at,
       };
-      writeAtomic(
+      writeExclusive(
         path.join(directory, 'activation-transactions', `${String(transaction.next_revision).padStart(10, '0')}.json`),
         canonicalJsonBytes(transaction),
+        this.#paths.staging,
       );
-      repairActivationProjection(directory, activation);
+      repairActivationProjection(directory, activation, this.#paths.staging);
       const committed = this.#read(input.target_agent_id, input.target_domain_id);
       if (
         committed.activation.revision !== transaction.next_revision

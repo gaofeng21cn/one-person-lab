@@ -31,14 +31,19 @@
     "artifact_contracts": { "type": "array", "items": { "$ref": "#/$defs/artifact_contract" } },
     "content_refs": {
       "type": "object",
-      "required": ["prompt_refs", "skill_refs", "knowledge_refs", "helper_refs", "model_refs", "tool_refs"],
+      "required": ["prompt_refs", "skill_refs", "knowledge_refs", "helper_refs", "model_refs", "tool_refs", "schema_refs"],
       "properties": {
         "prompt_refs": { "$ref": "#/$defs/string_list" },
         "skill_refs": { "$ref": "#/$defs/string_list" },
         "knowledge_refs": { "$ref": "#/$defs/string_list" },
         "helper_refs": { "$ref": "#/$defs/string_list" },
         "model_refs": { "$ref": "#/$defs/string_list" },
-        "tool_refs": { "$ref": "#/$defs/string_list" }
+        "tool_refs": { "$ref": "#/$defs/string_list" },
+        "schema_refs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/exact_content_ref" },
+          "uniqueItems": true
+        }
       },
       "additionalProperties": false
     },
@@ -46,7 +51,7 @@
     "authority_policy": {
       "type": "object",
       "required": [
-        "truth_owner_ref", "artifact_owner_ref", "quality_owner_ref", "owner_gate_refs",
+        "truth_owner_ref", "artifact_owner_ref", "quality_owner_ref", "permission_refs",
         "generated_agent_can_modify_versions", "generated_agent_can_modify_evaluation",
         "generated_agent_can_modify_permissions", "generated_agent_can_modify_activation"
       ],
@@ -54,7 +59,7 @@
         "truth_owner_ref": { "$ref": "#/$defs/non_empty" },
         "artifact_owner_ref": { "$ref": "#/$defs/non_empty" },
         "quality_owner_ref": { "$ref": "#/$defs/non_empty" },
-        "owner_gate_refs": { "$ref": "#/$defs/string_list" },
+        "permission_refs": { "$ref": "#/$defs/string_list" },
         "generated_agent_can_modify_versions": { "const": false },
         "generated_agent_can_modify_evaluation": { "const": false },
         "generated_agent_can_modify_permissions": { "const": false },
@@ -81,6 +86,7 @@
   "$defs": {
     "non_empty": { "type": "string", "minLength": 1 },
     "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "exact_content_ref": { "type": "string", "pattern": "^opl-content://sha256/[a-f0-9]{64}$" },
     "risk_tier": { "enum": ["low", "medium", "high"] },
     "string_list": { "type": "array", "items": { "$ref": "#/$defs/non_empty" }, "uniqueItems": true },
     "stage": {
@@ -110,8 +116,8 @@
         "action_id": { "$ref": "#/$defs/non_empty" },
         "summary": { "$ref": "#/$defs/non_empty" },
         "entry_stage_id": { "$ref": "#/$defs/non_empty" },
-        "input_schema_ref": { "$ref": "#/$defs/non_empty" },
-        "output_schema_ref": { "$ref": "#/$defs/non_empty" }
+        "input_schema_ref": { "$ref": "#/$defs/exact_content_ref" },
+        "output_schema_ref": { "$ref": "#/$defs/exact_content_ref" }
       },
       "additionalProperties": false
     },
@@ -120,7 +126,7 @@
       "required": ["artifact_type", "schema_ref", "authority_owner_ref"],
       "properties": {
         "artifact_type": { "$ref": "#/$defs/non_empty" },
-        "schema_ref": { "$ref": "#/$defs/non_empty" },
+        "schema_ref": { "$ref": "#/$defs/exact_content_ref" },
         "authority_owner_ref": { "$ref": "#/$defs/non_empty" }
       },
       "additionalProperties": false

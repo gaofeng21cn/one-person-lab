@@ -104,7 +104,7 @@ export function validateReferenceSourcePacketPolicy(
     const patternRef = machineString(disposition.pattern_ref) ?? 'missing-pattern-ref';
     if (
       declaredSourceRefs.length > 0
-      && disposition.pattern_origin === 'oma_seed_library'
+      && isSeedPacketRef(patternRef)
       && disposition.disposition !== 'adapt'
       && disposition.disposition !== 'reject'
     ) {

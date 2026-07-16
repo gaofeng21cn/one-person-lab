@@ -22,8 +22,6 @@ export const AGENT_SCAFFOLD_MATERIALIZATION_REQUEST_SCHEMA_REF =
 
 const AGENT_SCAFFOLD_MATERIALIZATION_REQUEST_VERSION =
   'opl-agent-scaffold-materialization-request.v2';
-const LEGACY_AGENT_SCAFFOLD_MATERIALIZATION_REQUEST_VERSION =
-  'opl-agent-scaffold-materialization-request.v1';
 
 const MERGE_PATHS = [
   'contracts/domain_descriptor.json',
@@ -165,65 +163,15 @@ function readRequest(requestPath: string) {
 
 function normalizeMaterializationRequest(request: Record<string, unknown>) {
   const inputVersion = requireString(request.version, 'version');
-  if (inputVersion === AGENT_SCAFFOLD_MATERIALIZATION_REQUEST_VERSION) {
-    return {
-      value: request,
-      inputVersion,
-      compatibilityAdapter: null,
-    };
-  }
-  if (inputVersion !== LEGACY_AGENT_SCAFFOLD_MATERIALIZATION_REQUEST_VERSION) {
+  if (inputVersion !== AGENT_SCAFFOLD_MATERIALIZATION_REQUEST_VERSION) {
     fail('Scaffold materialization request version is unsupported.', {
       input_version: inputVersion,
-      supported_versions: [
-        AGENT_SCAFFOLD_MATERIALIZATION_REQUEST_VERSION,
-        LEGACY_AGENT_SCAFFOLD_MATERIALIZATION_REQUEST_VERSION,
-      ],
+      supported_versions: [AGENT_SCAFFOLD_MATERIALIZATION_REQUEST_VERSION],
     });
   }
-  if (request.request_owner !== 'opl-meta-agent' || Object.hasOwn(request, 'producer_agent_id')) {
-    fail('Legacy scaffold materialization requests must retain the exact OMA v1 owner identity.');
-  }
-  requireExactObject(request.authority_boundary, 'authority_boundary', {
-    oma_authors_agent_building_semantics: true,
-    oma_writes_target_agent_files: false,
-    opl_owns_physical_scaffold_materialization: true,
-    opl_owns_materialized_file_digests: true,
-    opl_owns_final_build_receipt: true,
-    build_receipt_candidate_is_final_receipt: false,
-    opl_can_write_target_domain_truth: false,
-    opl_can_authorize_quality_or_export: false,
-  });
-  const candidate = requireObject(request.build_receipt_candidate, 'build_receipt_candidate');
-  const { request_owner: _requestOwner, ...requestWithoutLegacyOwner } = request;
   return {
-    value: {
-      ...requestWithoutLegacyOwner,
-      version: AGENT_SCAFFOLD_MATERIALIZATION_REQUEST_VERSION,
-      producer_agent_id: 'oma',
-      build_receipt_candidate: {
-        ...candidate,
-        surface_kind: [
-          'opl_meta_agent_build_receipt',
-          'opl_meta_agent_build_receipt_candidate',
-        ].includes(String(candidate.surface_kind))
-          ? 'opl_foundry_agent_build_receipt_candidate'
-          : candidate.surface_kind,
-        producer_agent_id: 'oma',
-      },
-      authority_boundary: {
-        producer_authors_agent_building_semantics: true,
-        producer_writes_target_agent_files: false,
-        opl_owns_physical_scaffold_materialization: true,
-        opl_owns_materialized_file_digests: true,
-        opl_owns_final_build_receipt: true,
-        build_receipt_candidate_is_final_receipt: false,
-        opl_can_write_target_domain_truth: false,
-        opl_can_authorize_quality_or_export: false,
-      },
-    },
+    value: request,
     inputVersion,
-    compatibilityAdapter: 'opl_agent_scaffold_materialization_request.v1_to_v2',
   };
 }
 
@@ -526,7 +474,7 @@ function parseWrites(request: Record<string, unknown>, root: string) {
     add({
       relativePath: safeRelativePath(replacement.path, `${field}.path`),
       bytes: Buffer.from(formatJsonPayload(requireObject(replacement.value, `${field}.value`))),
-      role: 'oma_json_replacement',
+      role: 'producer_json_replacement',
     });
   }
   const compilerInput = requireObject(request.pack_compiler_input, 'pack_compiler_input');
@@ -684,7 +632,6 @@ export function materializeAgentScaffold(input: { requestPath: string; targetDir
         request_sha256: request.sha256,
         input_request_version: normalizedRequest.inputVersion,
         normalized_request_version: AGENT_SCAFFOLD_MATERIALIZATION_REQUEST_VERSION,
-        compatibility_adapter: normalizedRequest.compatibilityAdapter,
         producer_agent_id: producerAgentId,
         target_agent_ref: target.target_agent_ref,
         target_dir: root,

@@ -1,0 +1,39 @@
+{
+  "surface_kind": "opl_foundry_design_request",
+  "version": "opl-foundry-protocol.v1",
+  "request_id": "fixture-create-request-001",
+  "mode": "create",
+  "target_agent_id": "fixture-research-agent",
+  "target_domain_id": "fixture_research",
+  "target_version_ref": null,
+  "objective": "Produce evidence-grounded research briefs with explicit claim support.",
+  "acceptance_criteria": [
+    "Every substantive claim has a traceable evidence reference.",
+    "The final brief passes required public and protected evaluation gates."
+  ],
+  "non_goals": [
+    "Modify its own implementation or activation state."
+  ],
+  "source_refs": [
+    "opl://source/fixture-research-agent/mission-v1"
+  ],
+  "constraints": {
+    "capability_refs": [
+      "opl://capability/evidence-synthesis"
+    ],
+    "permission_refs": [],
+    "privacy_requirements": [
+      "privacy:owner-boundary-nondisclosure"
+    ],
+    "cost_limits": {
+      "total_usd": 20
+    },
+    "latency_limits": {
+      "p95_seconds": 900
+    }
+  },
+  "delivery_policy": {
+    "activation_mode": "activate",
+    "max_generations": 3
+  }
+}

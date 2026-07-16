@@ -21,6 +21,14 @@ type EvaluationSubject =
 
 export type PublicCaseResult = EvidenceBundle['public_results'][number];
 export type ProtectedAggregate = EvidenceBundle['protected_aggregates'][number];
+export type SafetyObservation = EvidenceBundle['safety_observations'][number];
+export type FailureClassification = EvidenceBundle['failure_classification'][number];
+
+export interface ProtectedRequirementExecution {
+  aggregate: ProtectedAggregate;
+  receipt_ref: string;
+  aggregate_digest: string;
+}
 
 export interface EvaluationCaseExecutor {
   readonly executor_id: string;
@@ -42,14 +50,17 @@ export interface EvaluationCaseExecutor {
     phase: 'evaluation' | 'canary';
     subject: EvaluationSubject;
     requirement: EvalSpec['protected_requirements'][number];
-  }): Promise<ProtectedAggregate>;
-  observeResourceDeltas(input: {
+  }): Promise<ProtectedRequirementExecution>;
+  observeResourceObservations(input: {
     run_id: string;
     generation: number;
     phase: 'evaluation' | 'canary';
     candidate: MaterializedCandidate;
     baseline_version: AgentVersion | null;
   }): Promise<{
+    candidate_cost_observations: Record<string, number>;
+    candidate_latency_observations: Record<string, number>;
+    safety_observations: SafetyObservation[];
     safety_delta: Record<string, number>;
     cost_delta: Record<string, number>;
     latency_delta: Record<string, number>;
@@ -68,6 +79,9 @@ export interface IndependentEvaluationReviewer {
     protected_aggregates: ProtectedAggregate[];
     gate_results: Array<{ gate_id: string; passed: boolean; observed: number }>;
     request_constraints: DesignRequest['constraints'];
+    candidate_cost_observations: Record<string, number>;
+    candidate_latency_observations: Record<string, number>;
+    safety_observations: SafetyObservation[];
     safety_delta: Record<string, number>;
     cost_delta: Record<string, number>;
     latency_delta: Record<string, number>;
@@ -92,6 +106,24 @@ function fail(message: string, details: Record<string, unknown> = {}): never {
 
 function digest(value: unknown) {
   return `sha256:${crypto.createHash('sha256').update(canonicalJsonText(value), 'utf8').digest('hex')}`;
+}
+
+function verifiedProtectedRequirementExecution(
+  execution: ProtectedRequirementExecution,
+  label: string,
+) {
+  const receiptRef = execution.receipt_ref?.trim();
+  if (!receiptRef || execution.aggregate_digest !== digest(execution.aggregate)) {
+    fail(`${label} must bind the protected aggregate to a direct receipt ref and exact digest.`, {
+      receipt_ref: execution.receipt_ref,
+      expected_aggregate_digest: digest(execution.aggregate),
+      actual_aggregate_digest: execution.aggregate_digest,
+    });
+  }
+  return {
+    aggregate: execution.aggregate,
+    receipt_ref: receiptRef,
+  };
 }
 
 export function foundryFrozenEvaluationPlanDigest(spec: EvalSpec) {
@@ -199,17 +231,27 @@ export function assertBlueprintSatisfiesDesignRequest(
   );
   const missingPermissions = missingRefs(
     request.constraints.permission_refs,
-    blueprint.authority_policy.owner_gate_refs,
+    blueprint.authority_policy.permission_refs,
+  );
+  const unexpectedPermissions = missingRefs(
+    blueprint.authority_policy.permission_refs,
+    request.constraints.permission_refs,
   );
   const protectedCategories = blueprint.eval_spec.protected_requirements.map((entry) => entry.category);
   const missingPrivacyRequirements = missingRefs(
     request.constraints.privacy_requirements,
     protectedCategories,
   );
-  if (missingCapabilities.length > 0 || missingPermissions.length > 0 || missingPrivacyRequirements.length > 0) {
-    fail('AgentBlueprint does not cover every DesignRequest capability, permission, and privacy constraint.', {
+  if (
+    missingCapabilities.length > 0
+    || missingPermissions.length > 0
+    || unexpectedPermissions.length > 0
+    || missingPrivacyRequirements.length > 0
+  ) {
+    fail('AgentBlueprint violates the DesignRequest capability, permission, or privacy boundary.', {
       missing_capability_refs: missingCapabilities,
-      missing_permission_owner_gate_refs: missingPermissions,
+      missing_permission_refs: missingPermissions,
+      unexpected_permission_refs: unexpectedPermissions,
       missing_privacy_protected_requirements: missingPrivacyRequirements,
     });
   }
@@ -226,7 +268,7 @@ function resourceConstraintResults(input: {
   }
   return Object.entries(input.limits).map(([metric, limit]) => {
     const observed = input.observations[metric]!;
-    if (!Number.isFinite(limit) || !Number.isFinite(observed)) {
+    if (!Number.isFinite(limit) || !Number.isFinite(observed) || observed < 0) {
       fail(`EvidenceBundle ${input.kind} observations and DesignRequest limits must be finite.`, { metric });
     }
     return {
@@ -241,22 +283,55 @@ function resourceConstraintResults(input: {
 
 export function evaluateDesignRequestResourceConstraints(input: {
   request: DesignRequest;
-  cost_observations: Record<string, number>;
-  latency_observations: Record<string, number>;
+  candidate_cost_observations: Record<string, number>;
+  candidate_latency_observations: Record<string, number>;
 }) {
   const results = [
     ...resourceConstraintResults({
       kind: 'cost',
       limits: input.request.constraints.cost_limits,
-      observations: input.cost_observations,
+      observations: input.candidate_cost_observations,
     }),
     ...resourceConstraintResults({
       kind: 'latency',
       limits: input.request.constraints.latency_limits,
-      observations: input.latency_observations,
+      observations: input.candidate_latency_observations,
     }),
   ];
   return { results, passed: results.every((entry) => entry.passed) };
+}
+
+const SAFETY_FAILURE_CLASS = 'safety_event';
+
+function safetyFailureClassifications(observations: SafetyObservation[]): FailureClassification[] {
+  return observations
+    .filter((entry) => entry.severity === 'high' || entry.severity === 'critical')
+    .map((entry) => ({
+      failure_class: SAFETY_FAILURE_CLASS,
+      gate_id: `safety_observation:${entry.observation_id}`,
+      severity: entry.severity,
+      evidence_refs: [...entry.evidence_refs],
+    }));
+}
+
+function sortedFailureClassifications(entries: FailureClassification[]) {
+  return [...entries].sort((left, right) => canonicalJsonText(left).localeCompare(canonicalJsonText(right)));
+}
+
+function assertSafetyFailureClassifications(
+  observations: SafetyObservation[],
+  classifications: FailureClassification[],
+) {
+  const expected = sortedFailureClassifications(safetyFailureClassifications(observations));
+  const actual = sortedFailureClassifications(
+    classifications.filter((entry) => entry.failure_class === SAFETY_FAILURE_CLASS),
+  );
+  if (canonicalJsonText(actual) !== canonicalJsonText(expected)) {
+    fail('EvidenceBundle safety failure classifications do not match high and critical safety observations.', {
+      expected,
+      actual,
+    });
+  }
 }
 
 export function recomputeEvaluationQualification(input: {
@@ -268,8 +343,9 @@ export function recomputeEvaluationQualification(input: {
   baseline_protected_aggregates: ProtectedAggregate[] | null;
   independent_review_verdict: EvaluationStatus;
   baseline_present: boolean;
-  cost_observations: Record<string, number>;
-  latency_observations: Record<string, number>;
+  candidate_cost_observations: Record<string, number>;
+  candidate_latency_observations: Record<string, number>;
+  safety_observations: SafetyObservation[];
 }) {
   const publicById = assertPublicResultSet(input.spec, input.public_results, 'EvidenceBundle.public_results');
   const protectedByCategory = assertProtectedAggregateSet(
@@ -323,9 +399,11 @@ export function recomputeEvaluationQualification(input: {
   const baselinePassed = baselinePublicPassed && baselineProtectedPassed;
   const resourceConstraints = evaluateDesignRequestResourceConstraints({
     request: input.request,
-    cost_observations: input.cost_observations,
-    latency_observations: input.latency_observations,
+    candidate_cost_observations: input.candidate_cost_observations,
+    candidate_latency_observations: input.candidate_latency_observations,
   });
+  const safetyFailures = safetyFailureClassifications(input.safety_observations);
+  const safetyPassed = safetyFailures.length === 0;
   return {
     gateScore,
     baselineScore,
@@ -335,11 +413,14 @@ export function recomputeEvaluationQualification(input: {
     baselinePassed,
     resourceConstraintResults: resourceConstraints.results,
     resourceConstraintsPassed: resourceConstraints.passed,
+    safetyFailureClassifications: safetyFailures,
+    safetyPassed,
     qualified: requiredPublicPassed
       && protectedPassed
       && requiredGatesPassed
       && baselinePassed
       && resourceConstraints.passed
+      && safetyPassed
       && input.independent_review_verdict === 'pass',
   };
 }
@@ -359,8 +440,9 @@ export function assertEvaluationEvidenceFacts(input: {
     baseline_protected_aggregates: input.evidence.baseline_protected_aggregates,
     independent_review_verdict: input.evidence.independent_review.verdict,
     baseline_present: input.baseline_present,
-    cost_observations: input.evidence.cost_delta,
-    latency_observations: input.evidence.latency_delta,
+    candidate_cost_observations: input.evidence.candidate_cost_observations,
+    candidate_latency_observations: input.evidence.candidate_latency_observations,
+    safety_observations: input.evidence.safety_observations,
   });
   if (input.evidence.gate_score !== facts.gateScore || input.evidence.qualified !== facts.qualified) {
     fail('EvidenceBundle qualification or gate score does not match independently recomputed facts.', {
@@ -370,11 +452,31 @@ export function assertEvaluationEvidenceFacts(input: {
       actual_qualified: input.evidence.qualified,
     });
   }
+  assertSafetyFailureClassifications(
+    input.evidence.safety_observations,
+    input.evidence.failure_classification,
+  );
   return facts;
+}
+
+const qualificationGradeEvaluationRuntimes = new WeakSet<EvaluationExecutor>();
+
+export function isQualificationGradeEvaluationRuntime(
+  evaluator: EvaluationExecutor,
+): evaluator is FrozenPlanEvaluationRuntime {
+  return qualificationGradeEvaluationRuntimes.has(evaluator)
+    && evaluator.qualification_capability?.status === 'qualification_grade'
+    && evaluator.qualification_capability.execution_mode === 'frozen_plan_evaluation_runtime.v1'
+    && evaluator.qualification_capability.protected_fact_authority === 'framework_owned_case_executor';
 }
 
 export class FrozenPlanEvaluationRuntime implements EvaluationExecutor {
   readonly evaluator_id: string;
+  readonly qualification_capability = {
+    status: 'qualification_grade',
+    execution_mode: 'frozen_plan_evaluation_runtime.v1',
+    protected_fact_authority: 'framework_owned_case_executor',
+  } as const;
   readonly #executor: EvaluationCaseExecutor;
   readonly #reviewer: IndependentEvaluationReviewer;
   readonly #now: () => string;
@@ -395,6 +497,7 @@ export class FrozenPlanEvaluationRuntime implements EvaluationExecutor {
     if (new Set([this.evaluator_id, this.#executor.executor_id, this.#reviewer.reviewer_id]).size !== 3) {
       fail('Evaluator, case executor, and independent reviewer must use distinct identities.');
     }
+    qualificationGradeEvaluationRuntimes.add(this);
   }
 
   evaluate(input: Parameters<EvaluationExecutor['evaluate']>[0]) {
@@ -425,14 +528,18 @@ export class FrozenPlanEvaluationRuntime implements EvaluationExecutor {
         subject: candidateSubject,
         test_case: testCase,
       })));
-    const protectedAggregates = await Promise.all(input.blueprint.eval_spec.protected_requirements.map((requirement) =>
+    const protectedExecutions = (await Promise.all(input.blueprint.eval_spec.protected_requirements.map((requirement) =>
       this.#executor.runProtectedRequirement({
         run_id: input.run_id,
         generation: input.blueprint.generation,
         phase,
         subject: candidateSubject,
         requirement,
-      })));
+      })))).map((execution) => verifiedProtectedRequirementExecution(
+        execution,
+        'Evaluation candidate protected requirement execution',
+      ));
+    const protectedAggregates = protectedExecutions.map((execution) => execution.aggregate);
     const publicById = assertPublicResultSet(input.blueprint.eval_spec, publicResults, 'Evaluation public results');
     assertProtectedAggregateSet(
       input.blueprint.eval_spec,
@@ -446,6 +553,7 @@ export class FrozenPlanEvaluationRuntime implements EvaluationExecutor {
     });
     let baselinePublicResults: PublicCaseResult[] | null = null;
     let baselineProtectedAggregates: ProtectedAggregate[] | null = null;
+    let baselineProtectedReceiptRefs: string[] = [];
     if (input.baseline_version) {
       baselinePublicResults = await Promise.all(input.blueprint.eval_spec.public_cases.map((testCase) =>
         this.#executor.runPublicCase({
@@ -456,7 +564,7 @@ export class FrozenPlanEvaluationRuntime implements EvaluationExecutor {
           test_case: testCase,
         })));
       assertPublicResultSet(input.blueprint.eval_spec, baselinePublicResults, 'Evaluation baseline public results');
-      baselineProtectedAggregates = await Promise.all(
+      const baselineProtectedExecutions = (await Promise.all(
         input.blueprint.eval_spec.protected_requirements.map((requirement) =>
           this.#executor.runProtectedRequirement({
             run_id: input.run_id,
@@ -465,14 +573,19 @@ export class FrozenPlanEvaluationRuntime implements EvaluationExecutor {
             subject: { kind: 'baseline', version: input.baseline_version! },
             requirement,
           })),
-      );
+      )).map((execution) => verifiedProtectedRequirementExecution(
+        execution,
+        'Evaluation baseline protected requirement execution',
+      ));
+      baselineProtectedAggregates = baselineProtectedExecutions.map((execution) => execution.aggregate);
+      baselineProtectedReceiptRefs = baselineProtectedExecutions.map((execution) => execution.receipt_ref);
       assertProtectedAggregateSet(
         input.blueprint.eval_spec,
         baselineProtectedAggregates,
         'Evaluation baseline protected aggregates',
       );
     }
-    const resourceDeltas = await this.#executor.observeResourceDeltas({
+    const resourceObservations = await this.#executor.observeResourceObservations({
       run_id: input.run_id,
       generation: input.blueprint.generation,
       phase,
@@ -481,8 +594,8 @@ export class FrozenPlanEvaluationRuntime implements EvaluationExecutor {
     });
     const resourceFacts = evaluateDesignRequestResourceConstraints({
       request: input.request,
-      cost_observations: resourceDeltas.cost_delta,
-      latency_observations: resourceDeltas.latency_delta,
+      candidate_cost_observations: resourceObservations.candidate_cost_observations,
+      candidate_latency_observations: resourceObservations.candidate_latency_observations,
     });
     const review = await this.#reviewer.review({
       run_id: input.run_id,
@@ -494,9 +607,12 @@ export class FrozenPlanEvaluationRuntime implements EvaluationExecutor {
       protected_aggregates: protectedAggregates,
       gate_results: gateResults,
       request_constraints: input.request.constraints,
-      safety_delta: resourceDeltas.safety_delta,
-      cost_delta: resourceDeltas.cost_delta,
-      latency_delta: resourceDeltas.latency_delta,
+      candidate_cost_observations: resourceObservations.candidate_cost_observations,
+      candidate_latency_observations: resourceObservations.candidate_latency_observations,
+      safety_observations: resourceObservations.safety_observations,
+      safety_delta: resourceObservations.safety_delta,
+      cost_delta: resourceObservations.cost_delta,
+      latency_delta: resourceObservations.latency_delta,
       resource_constraint_results: resourceFacts.results,
     });
     if (!review.execution_ref?.trim()
@@ -524,8 +640,9 @@ export class FrozenPlanEvaluationRuntime implements EvaluationExecutor {
       baseline_protected_aggregates: baselineProtectedAggregates,
       independent_review_verdict: review.verdict,
       baseline_present: input.baseline_version !== null,
-      cost_observations: resourceDeltas.cost_delta,
-      latency_observations: resourceDeltas.latency_delta,
+      candidate_cost_observations: resourceObservations.candidate_cost_observations,
+      candidate_latency_observations: resourceObservations.candidate_latency_observations,
+      safety_observations: resourceObservations.safety_observations,
     });
     const failedGateIds = gateResults.filter((entry) => !entry.passed).map((entry) => entry.gate_id);
     const frozenPlanDigest = foundryFrozenEvaluationPlanDigest(input.blueprint.eval_spec);
@@ -552,9 +669,12 @@ export class FrozenPlanEvaluationRuntime implements EvaluationExecutor {
         findings: review.findings,
         evidence_refs: review.evidence_refs,
       },
-      safety_delta: resourceDeltas.safety_delta,
-      cost_delta: resourceDeltas.cost_delta,
-      latency_delta: resourceDeltas.latency_delta,
+      candidate_cost_observations: resourceObservations.candidate_cost_observations,
+      candidate_latency_observations: resourceObservations.candidate_latency_observations,
+      safety_observations: resourceObservations.safety_observations,
+      safety_delta: resourceObservations.safety_delta,
+      cost_delta: resourceObservations.cost_delta,
+      latency_delta: resourceObservations.latency_delta,
       failure_classification: [
         ...failedGateIds.map((gateId) => ({
           failure_class: 'quality_gate',
@@ -574,6 +694,7 @@ export class FrozenPlanEvaluationRuntime implements EvaluationExecutor {
           severity: 'high' as const,
           evidence_refs: publicResults.flatMap((result) => result.evidence_refs),
         })),
+        ...facts.safetyFailureClassifications,
       ],
       qualified: facts.qualified,
       gate_score: facts.gateScore,
@@ -582,7 +703,12 @@ export class FrozenPlanEvaluationRuntime implements EvaluationExecutor {
         generation: input.blueprint.generation,
         producer_id: this.evaluator_id,
         evaluated_at: this.#now(),
-        source_refs: [`opl://foundry/frozen-plan/${frozenPlanDigest}`],
+        source_refs: [
+          `opl://foundry/frozen-plan/${frozenPlanDigest}`,
+          evaluationExecutionRef,
+          ...protectedExecutions.map((execution) => execution.receipt_ref),
+          ...baselineProtectedReceiptRefs,
+        ],
       },
     };
   }

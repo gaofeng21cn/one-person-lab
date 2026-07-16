@@ -10,9 +10,13 @@ export const FOUNDRY_RUN_QUERY_NAME = 'FoundryRunQuery';
 export const FOUNDRY_OWNER_DECISION_UPDATE_NAME = 'FoundryOwnerDecisionUpdate';
 export const FOUNDRY_CANCEL_UPDATE_NAME = 'FoundryCancelUpdate';
 
-export type FoundryRunWorkflowInput = {
+export type FoundryRunStartInput = {
   run_id: string;
   request: DesignRequest;
+};
+
+export type FoundryRunWorkflowInput = FoundryRunStartInput & {
+  request_digest: string;
 };
 
 export type FoundryRunWorkflowStatus =
@@ -27,6 +31,7 @@ export type FoundryRunWorkflowState = {
   version: 'opl-temporal-foundry-run.v1';
   provider_kind: 'temporal';
   run_id: string;
+  request_digest: string;
   workflow_status: FoundryRunWorkflowStatus;
   inspection: FoundryRunInspection | null;
 };

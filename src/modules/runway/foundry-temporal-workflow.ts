@@ -1,4 +1,6 @@
 import {
+  ActivityCancellationType,
+  CancellationScope,
   condition,
   defineQuery,
   defineUpdate,
@@ -51,8 +53,22 @@ const activities = proxyActivities<FoundryTemporalActivities>({
   },
 });
 
+const advanceActivities = proxyActivities<FoundryTemporalActivities>({
+  scheduleToCloseTimeout: '35 minutes',
+  startToCloseTimeout: '30 minutes',
+  cancellationType: ActivityCancellationType.TRY_CANCEL,
+  retry: {
+    maximumAttempts: 3,
+    initialInterval: '1 second',
+    maximumInterval: '10 seconds',
+    backoffCoefficient: 2,
+    nonRetryableErrorTypes: ['FrameworkContractError'],
+  },
+});
+
 function stateFor(
   runId: string,
+  requestDigest: string,
   inspection: FoundryRunWorkflowState['inspection'],
 ): FoundryRunWorkflowState {
   const runState = inspection?.run.state ?? null;
@@ -66,6 +82,7 @@ function stateFor(
     version: 'opl-temporal-foundry-run.v1',
     provider_kind: 'temporal',
     run_id: runId,
+    request_digest: requestDigest,
     workflow_status: workflowStatus,
     inspection,
   };
@@ -93,8 +110,12 @@ function foundryActivityFailureCode(error: unknown) {
 export async function FoundryRunWorkflow(
   input: FoundryRunWorkflowInput,
 ): Promise<FoundryRunWorkflowState> {
-  let state = stateFor(input.run_id, null);
+  if (!/^sha256:[a-f0-9]{64}$/.test(input.request_digest)) {
+    throw new Error('FoundryRun Workflow input requires an exact request_digest.');
+  }
+  let state = stateFor(input.run_id, input.request_digest, null);
   let mutationTail = Promise.resolve();
+  let activeAdvanceScope: CancellationScope | null = null;
   const serialize = async <T>(operation: () => Promise<T>) => {
     const previous = mutationTail;
     let release!: () => void;
@@ -106,24 +127,44 @@ export async function FoundryRunWorkflow(
       release();
     }
   };
+  const adoptInspection = (inspection: NonNullable<FoundryRunWorkflowState['inspection']>) => {
+    if (
+      inspection.run.run_id !== input.run_id
+      || inspection.run.request_digest !== input.request_digest
+    ) {
+      throw new Error('Foundry activity returned an inspection for a different immutable run request.');
+    }
+    const current = state.inspection;
+    if (current && inspection.run.revision < current.run.revision) return state;
+    if (
+      current
+      && inspection.run.revision === current.run.revision
+      && inspection.run.last_event_hash !== current.run.last_event_hash
+    ) {
+      throw new Error('Foundry activities returned conflicting event chains at the same revision.');
+    }
+    state = stateFor(input.run_id, input.request_digest, inspection);
+    return state;
+  };
   setHandler(foundryRunQuery, () => state);
 
   setHandler(foundryOwnerDecisionUpdate, async (decision) => {
     requireMatchingRun(input.run_id, decision.run_id);
-    state = stateFor(input.run_id, await serialize(
+    adoptInspection(await serialize(
       () => activities.foundrySubmitOwnerDecisionActivity(decision),
     ));
     return state;
   });
   setHandler(foundryCancelUpdate, async (cancellation) => {
     requireMatchingRun(input.run_id, cancellation.run_id);
-    state = stateFor(input.run_id, await serialize(
+    adoptInspection(await serialize(
       () => activities.foundryCancelRunActivity(cancellation),
     ));
+    activeAdvanceScope?.cancel();
     return state;
   });
 
-  state = stateFor(input.run_id, await serialize(() => activities.foundryStartRunActivity(input)));
+  adoptInspection(await serialize(() => activities.foundryStartRunActivity(input)));
 
   while (state.workflow_status !== 'terminal') {
     if (
@@ -135,24 +176,42 @@ export async function FoundryRunWorkflow(
         && state.workflow_status !== 'awaiting_owner_active');
       continue;
     }
+    let operation: ReturnType<typeof foundryAdvanceOperationForInspection> | null = null;
+    let scope: CancellationScope | null = null;
     try {
       if (!state.inspection) throw new Error('FoundryRun inspection is unavailable during automatic advance.');
-      const operation = foundryAdvanceOperationForInspection(state.inspection);
-      state = stateFor(input.run_id, await serialize(
-        () => activities.foundryAdvanceRunActivity.executeWithOptions(
-          { activityId: operation.operation_key },
-          [operation],
+      const nextOperation = foundryAdvanceOperationForInspection(state.inspection);
+      operation = nextOperation;
+      scope = new CancellationScope();
+      activeAdvanceScope = scope;
+      adoptInspection(await scope.run(
+        () => advanceActivities.foundryAdvanceRunActivity.executeWithOptions(
+          { activityId: nextOperation.operation_key },
+          [nextOperation],
         ),
       ));
     } catch (error) {
+      const current = state.inspection;
+      const operationStillCurrent = operation !== null
+        && current?.run.revision === operation.expected_revision
+        && current.run.state === operation.expected_state
+        && current.run.last_event_hash === operation.input_digest;
+      if (
+        (current ? TERMINAL_STATES.has(current.run.state) : false)
+        || !operationStillCurrent
+      ) {
+        continue;
+      }
       const message = error instanceof Error ? error.message : String(error);
-      state = stateFor(input.run_id, await serialize(
+      adoptInspection(await serialize(
         () => activities.foundryFailRunActivity({
           run_id: input.run_id,
           failure_code: foundryActivityFailureCode(error),
           failure_message: message,
         }),
       ));
+    } finally {
+      if (scope && activeAdvanceScope === scope) activeAdvanceScope = null;
     }
   }
   return state;

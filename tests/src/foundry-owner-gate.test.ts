@@ -13,6 +13,7 @@ import {
 import { ProcessFoundryOwnerGate } from '../../src/modules/runway/foundry-owner-gate.ts';
 
 const fixedNow = '2026-07-16T00:00:00.000Z';
+const authorityPolicyRef = 'opl://foundry/authority-policies/fixture-agent';
 
 function context(
   input: Partial<OwnerGateVerificationContext> = {},
@@ -28,7 +29,6 @@ function context(
     run_id: 'run:fixture',
     version_digest: `sha256:${'1'.repeat(64)}`,
     expected_revision: 7,
-    allowed_authority_refs: ['owner-gate:fixture'],
     ...input,
   };
 }
@@ -41,7 +41,7 @@ function statement(
     surface_kind: 'opl_foundry_owner_authority_receipt',
     version: 'opl-foundry-owner-authority-receipt.v1',
     receipt_id: `receipt:${verificationContext.action}:${verificationContext.expected_revision}`,
-    authority_ref: verificationContext.allowed_authority_refs[0]!,
+    authority_ref: 'owner-gate:fixture',
     action: verificationContext.action,
     decision: verificationContext.decision,
     target_agent_id: verificationContext.target_agent_id,
@@ -84,9 +84,18 @@ test('InMemoryOwnerGate rejects arbitrary refs and every mismatched authority di
   for (const [label, mutation] of mutations) {
     await t.test(label, async () => {
       const gate = new InMemoryOwnerGate(() => fixedNow);
+      gate.registerAuthorityPolicy({
+        policy_ref: authorityPolicyRef,
+        target_agent_id: 'fixture-agent',
+        target_domain_id: 'fixture-domain',
+        authority_refs: ['owner-gate:fixture'],
+      });
       const base = context();
       const receipt = gate.register(statement(base, mutation));
-      await assert.rejects(gate.verify({ ...base, authority_receipt_ref: receipt.receipt_ref }), /exact requested authority mutation|action and decision/);
+      await assert.rejects(
+        gate.verify({ ...base, authority_receipt_ref: receipt.receipt_ref }),
+        /exact requested authority mutation|action and decision|Framework-owned target authority policy/,
+      );
     });
   }
 
@@ -105,6 +114,7 @@ test('ProcessFoundryOwnerGate transports an exact context and Kernel-side valida
     version: 'opl-foundry-owner-gate-verification.v1',
     verifier_id: 'owner-verifier:fixture-process',
     verification_ref: 'opl://owner-verifier/fixture-process/7',
+    authority_policy_ref: authorityPolicyRef,
     verified_at: fixedNow,
     covered_authority_ref: receipt.authority_ref,
     receipt,

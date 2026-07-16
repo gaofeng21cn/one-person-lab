@@ -50,6 +50,11 @@ type CommitStandardAgentActionOutputInput = {
   outputBytes: Uint8Array;
 };
 
+type InspectStandardAgentActionOutputInput = Pick<
+  CommitStandardAgentActionOutputInput,
+  'workspaceRoot' | 'runId' | 'domainId' | 'actionId'
+>;
+
 const RUN_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 
 function fail(message: string, details: Record<string, unknown> = {}): never {
@@ -268,18 +273,13 @@ function readPreparedRun(
   };
 }
 
-function normalizedRunInput(input: Omit<CommitStandardAgentActionOutputInput, 'outputBytes'>) {
+function normalizedRunIdentity(input: InspectStandardAgentActionOutputInput) {
   const root = workspaceRoot(input.workspaceRoot);
   if (!RUN_ID_PATTERN.test(input.runId)) {
     fail('Standard Agent action run_id must be a single safe path segment.', { run_id: input.runId });
   }
   const domainId = identityText(input.domainId, 'domain_id');
   const actionId = identityText(input.actionId, 'action_id');
-  if (!(input.requestBytes instanceof Uint8Array) || input.requestBytes.byteLength === 0) {
-    fail('Standard Agent action canonical request bytes must be non-empty.', {
-      run_id: input.runId,
-    });
-  }
   const identityBytes = Buffer.from(`${JSON.stringify({
     surface_kind: 'opl_standard_agent_action_run_identity',
     version: 'opl-standard-agent-action-run-identity.v1',
@@ -287,11 +287,18 @@ function normalizedRunInput(input: Omit<CommitStandardAgentActionOutputInput, 'o
     domain_id: domainId,
     action_id: actionId,
   })}\n`, 'utf8');
+  return { root, domainId, actionId, identityBytes };
+}
+
+function normalizedRunInput(input: Omit<CommitStandardAgentActionOutputInput, 'outputBytes'>) {
+  const identity = normalizedRunIdentity(input);
+  if (!(input.requestBytes instanceof Uint8Array) || input.requestBytes.byteLength === 0) {
+    fail('Standard Agent action canonical request bytes must be non-empty.', {
+      run_id: input.runId,
+    });
+  }
   return {
-    root,
-    domainId,
-    actionId,
-    identityBytes,
+    ...identity,
     requestBytes: Buffer.from(input.requestBytes),
   };
 }
@@ -388,6 +395,53 @@ export function inspectStandardAgentActionRunOutput(
     action_run_dir: prepared.action_run_dir,
     action_run_ref: prepared.action_run_ref,
     request: prepared.request,
+    output: observedStoredBytes(outputPath, 'output'),
+  };
+}
+
+export function inspectStoredStandardAgentActionRunOutput(
+  input: InspectStandardAgentActionOutputInput,
+): StandardAgentActionRunOutput | null {
+  const normalized = normalizedRunIdentity(input);
+  const runDirectory = path.join(
+    normalized.root,
+    ...STANDARD_AGENT_ACTION_RUNS_RELATIVE_ROOT.split('/'),
+    input.runId,
+  );
+  assertContained(normalized.root, runDirectory, 'action_run_dir');
+  if (!fs.existsSync(runDirectory)) return null;
+  const stat = fs.lstatSync(runDirectory);
+  if (stat.isSymbolicLink() || !stat.isDirectory()) {
+    fail('Standard Agent action run identity resolves to a non-directory or symbolic link.', {
+      run_id: input.runId,
+      action_run_dir: runDirectory,
+    });
+  }
+  const realRunDirectory = fs.realpathSync.native(runDirectory);
+  assertContained(normalized.root, realRunDirectory, 'action_run_dir');
+  const identityPath = path.join(realRunDirectory, 'identity.json');
+  const requestPath = path.join(realRunDirectory, 'request.json');
+  const outputPath = path.join(realRunDirectory, 'output.json');
+  if (!fs.existsSync(identityPath) || !fs.existsSync(requestPath) || !fs.existsSync(outputPath)) {
+    fail('Standard Agent completed action run is partially materialized.', {
+      run_id: input.runId,
+      identity_exists: fs.existsSync(identityPath),
+      request_exists: fs.existsSync(requestPath),
+      output_exists: fs.existsSync(outputPath),
+    });
+  }
+  storedBytes(identityPath, normalized.identityBytes, 'identity');
+  return {
+    surface_kind: 'opl_standard_agent_action_run_output',
+    version: 'opl-standard-agent-action-run-output.v1',
+    status: 'already_materialized',
+    run_id: input.runId,
+    domain_id: normalized.domainId,
+    action_id: normalized.actionId,
+    workspace_root: normalized.root,
+    action_run_dir: realRunDirectory,
+    action_run_ref: pathToFileURL(realRunDirectory).href,
+    request: observedStoredBytes(requestPath, 'request'),
     output: observedStoredBytes(outputPath, 'output'),
   };
 }

@@ -103,13 +103,14 @@ export interface AgentBlueprint {
     helper_refs: string[];
     model_refs: string[];
     tool_refs: string[];
+    schema_refs: string[];
   };
   capability_requirements: string[];
   authority_policy: {
     truth_owner_ref: string;
     artifact_owner_ref: string;
     quality_owner_ref: string;
-    owner_gate_refs: string[];
+    permission_refs: string[];
     generated_agent_can_modify_versions: false;
     generated_agent_can_modify_evaluation: false;
     generated_agent_can_modify_permissions: false;
@@ -171,13 +172,21 @@ export interface EvidenceBundle {
     findings: string[];
     evidence_refs: string[];
   };
+  candidate_cost_observations: Record<string, number>;
+  candidate_latency_observations: Record<string, number>;
+  safety_observations: Array<{
+    observation_id: string;
+    event_type: string;
+    severity: 'low' | 'medium' | 'high' | 'critical';
+    evidence_refs: string[];
+  }>;
   safety_delta: Record<string, number>;
   cost_delta: Record<string, number>;
   latency_delta: Record<string, number>;
   failure_classification: Array<{
     failure_class: string;
     gate_id: string;
-    severity: 'low' | 'medium' | 'high';
+    severity: 'low' | 'medium' | 'high' | 'critical';
     evidence_refs: string[];
   }>;
   qualified: boolean;
@@ -619,6 +628,7 @@ export function validateAgentBlueprint(value: unknown): AgentBlueprint {
     'helper_refs',
     'model_refs',
     'tool_refs',
+    'schema_refs',
   ]);
   const contentRefs = {
     prompt_refs: requiredUniqueStringList(input.content_refs.prompt_refs, 'AgentBlueprint.content_refs.prompt_refs'),
@@ -627,7 +637,27 @@ export function validateAgentBlueprint(value: unknown): AgentBlueprint {
     helper_refs: requiredUniqueStringList(input.content_refs.helper_refs, 'AgentBlueprint.content_refs.helper_refs'),
     model_refs: requiredUniqueStringList(input.content_refs.model_refs, 'AgentBlueprint.content_refs.model_refs'),
     tool_refs: requiredUniqueStringList(input.content_refs.tool_refs, 'AgentBlueprint.content_refs.tool_refs'),
+    schema_refs: requiredUniqueStringList(input.content_refs.schema_refs, 'AgentBlueprint.content_refs.schema_refs'),
   };
+  for (const [index, schemaRef] of contentRefs.schema_refs.entries()) {
+    if (!/^opl-content:\/\/sha256\/[a-f0-9]{64}$/.test(schemaRef)) {
+      fail(`AgentBlueprint.content_refs.schema_refs[${index}] must be an exact opl-content ref.`);
+    }
+  }
+  for (const [index, action] of input.actions.entries()) {
+    const record = action as Record<string, unknown>;
+    for (const field of ['input_schema_ref', 'output_schema_ref'] as const) {
+      if (!contentRefs.schema_refs.includes(String(record[field]))) {
+        fail(`AgentBlueprint.actions[${index}].${field} is not declared in content_refs.schema_refs.`);
+      }
+    }
+  }
+  for (const [index, artifact] of input.artifact_contracts.entries()) {
+    const schemaRef = String((artifact as Record<string, unknown>).schema_ref);
+    if (!contentRefs.schema_refs.includes(schemaRef)) {
+      fail(`AgentBlueprint.artifact_contracts[${index}].schema_ref is not declared in content_refs.schema_refs.`);
+    }
+  }
   const capabilityRequirements = requiredUniqueStringList(
     input.capability_requirements,
     'AgentBlueprint.capability_requirements',
@@ -651,7 +681,7 @@ export function validateAgentBlueprint(value: unknown): AgentBlueprint {
     'truth_owner_ref',
     'artifact_owner_ref',
     'quality_owner_ref',
-    'owner_gate_refs',
+    'permission_refs',
     'generated_agent_can_modify_versions',
     'generated_agent_can_modify_evaluation',
     'generated_agent_can_modify_permissions',
@@ -660,7 +690,7 @@ export function validateAgentBlueprint(value: unknown): AgentBlueprint {
   requiredString(input.authority_policy.truth_owner_ref, 'AgentBlueprint.authority_policy.truth_owner_ref');
   requiredString(input.authority_policy.artifact_owner_ref, 'AgentBlueprint.authority_policy.artifact_owner_ref');
   requiredString(input.authority_policy.quality_owner_ref, 'AgentBlueprint.authority_policy.quality_owner_ref');
-  requiredUniqueStringList(input.authority_policy.owner_gate_refs, 'AgentBlueprint.authority_policy.owner_gate_refs');
+  requiredUniqueStringList(input.authority_policy.permission_refs, 'AgentBlueprint.authority_policy.permission_refs');
   for (const field of ['generated_agent_can_modify_versions', 'generated_agent_can_modify_evaluation', 'generated_agent_can_modify_permissions', 'generated_agent_can_modify_activation']) {
     if (input.authority_policy[field] !== false) fail(`AgentBlueprint.authority_policy.${field} must be false.`);
   }
@@ -697,6 +727,9 @@ export function validateEvidenceBundle(value: unknown): EvidenceBundle {
     'baseline_protected_aggregates',
     'protected_aggregates',
     'independent_review',
+    'candidate_cost_observations',
+    'candidate_latency_observations',
+    'safety_observations',
     'safety_delta',
     'cost_delta',
     'latency_delta',
@@ -754,6 +787,32 @@ export function validateEvidenceBundle(value: unknown): EvidenceBundle {
   }
   requiredUniqueStringList(input.independent_review.findings, 'EvidenceBundle.independent_review.findings');
   requiredUniqueStringList(input.independent_review.evidence_refs, 'EvidenceBundle.independent_review.evidence_refs', 1);
+  assertNonNegativeNumericMap(
+    input.candidate_cost_observations,
+    'EvidenceBundle.candidate_cost_observations',
+  );
+  assertNonNegativeNumericMap(
+    input.candidate_latency_observations,
+    'EvidenceBundle.candidate_latency_observations',
+  );
+  if (!Array.isArray(input.safety_observations)) {
+    fail('EvidenceBundle.safety_observations must be an array.');
+  }
+  const safetyObservationIds = input.safety_observations.map((entry, index) => {
+    if (!isRecord(entry)) fail(`EvidenceBundle.safety_observations[${index}] must be an object.`);
+    const label = `EvidenceBundle.safety_observations[${index}]`;
+    assertExactKeys(entry, label, ['observation_id', 'event_type', 'severity', 'evidence_refs']);
+    const observationId = requiredString(entry.observation_id, `${label}.observation_id`);
+    requiredString(entry.event_type, `${label}.event_type`);
+    if (!['low', 'medium', 'high', 'critical'].includes(String(entry.severity))) {
+      fail(`${label}.severity is invalid.`);
+    }
+    requiredUniqueStringList(entry.evidence_refs, `${label}.evidence_refs`, 1);
+    return observationId;
+  });
+  if (new Set(safetyObservationIds).size !== safetyObservationIds.length) {
+    fail('EvidenceBundle.safety_observations observation ids must be unique.');
+  }
   assertNumericMap(input.safety_delta, 'EvidenceBundle.safety_delta');
   assertNumericMap(input.cost_delta, 'EvidenceBundle.cost_delta');
   assertNumericMap(input.latency_delta, 'EvidenceBundle.latency_delta');
@@ -764,7 +823,9 @@ export function validateEvidenceBundle(value: unknown): EvidenceBundle {
     assertExactKeys(entry, label, ['failure_class', 'gate_id', 'severity', 'evidence_refs']);
     requiredString(entry.failure_class, `${label}.failure_class`);
     requiredString(entry.gate_id, `${label}.gate_id`);
-    if (!['low', 'medium', 'high'].includes(String(entry.severity))) fail(`${label}.severity is invalid.`);
+    if (!['low', 'medium', 'high', 'critical'].includes(String(entry.severity))) {
+      fail(`${label}.severity is invalid.`);
+    }
     requiredUniqueStringList(entry.evidence_refs, `${label}.evidence_refs`);
   }
   if (typeof input.qualified !== 'boolean'

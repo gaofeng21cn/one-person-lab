@@ -220,7 +220,6 @@ function buildCapabilityPackagesComponent(
     'sync_skills',
     'sync_plugin_registry',
     'sync_plugin_packaged_skills',
-    'sync_oma_generated_plugin_surface',
   ];
   const cleanManagedScopeSafe = cleanManagedTargetsCount > 0;
   const autoApplyEligible = cleanManagedScopeSafe && action !== 'none';

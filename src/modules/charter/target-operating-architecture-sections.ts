@@ -84,6 +84,14 @@ const capabilityRegistryRaw = value.capability_registry_boundary;
       { file: filePath, field: 'foundry_agent_os_standard.new_agent_baseline_handoff_policy' },
     );
   }
+  for (const retiredField of ['oma_owner']) {
+    if (Object.hasOwn(newAgentBaselineHandoffPolicyRaw, retiredField)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'new agent baseline handoff policy contains a retired OMA execution field.', {
+        file: filePath,
+        field: `foundry_agent_os_standard.new_agent_baseline_handoff_policy.${retiredField}`,
+      });
+    }
+  }
   const newAgentBaselineHandoffSurfaceKind = expectString(
     newAgentBaselineHandoffPolicyRaw.surface_kind,
     'foundry_agent_os_standard.new_agent_baseline_handoff_policy.surface_kind',
@@ -96,45 +104,77 @@ const capabilityRegistryRaw = value.capability_registry_boundary;
       actual: newAgentBaselineHandoffSurfaceKind,
     });
   }
+  const semanticProviderContractRef = expectString(
+    newAgentBaselineHandoffPolicyRaw.semantic_provider_contract_ref,
+    'foundry_agent_os_standard.new_agent_baseline_handoff_policy.semantic_provider_contract_ref',
+    filePath,
+  );
+  if (semanticProviderContractRef !== 'contracts/opl-framework/foundry-provider-manifest.schema.json') {
+    throw new FrameworkContractError('contract_shape_invalid', 'new agent baseline handoff policy must use the canonical producer-neutral provider contract.', {
+      file: filePath,
+      field: 'foundry_agent_os_standard.new_agent_baseline_handoff_policy.semantic_provider_contract_ref',
+      actual: semanticProviderContractRef,
+    });
+  }
   const newAgentBaselineRequiredGates = expectNonEmptyStringArray(
     newAgentBaselineHandoffPolicyRaw.required_gates,
     'foundry_agent_os_standard.new_agent_baseline_handoff_policy.required_gates',
     filePath,
   );
-  for (const requiredGate of [
-    'scaffold_validation',
-    'generated_interface_projection',
-    'foundry_evidence_bundle',
-    'independent_reviewer_assessment',
-    'oma_improvement_or_no_patch_loop',
-    'delivery_receipt_or_work_order_or_typed_blocker',
-  ]) {
-    if (!newAgentBaselineRequiredGates.includes(requiredGate)) {
-      throw new FrameworkContractError('contract_shape_invalid', 'new agent baseline handoff policy is missing a required gate.', {
-        file: filePath,
-        field: 'foundry_agent_os_standard.new_agent_baseline_handoff_policy.required_gates',
-        missing: requiredGate,
-      });
-    }
+  const expectedNewAgentBaselineRequiredGates = [
+    'design_request_validated',
+    'agent_blueprint_materialized',
+    'frozen_evaluation_plan_executed',
+    'independent_evidence_bundle',
+    'risk_policy_evaluated',
+    'version_qualification_recorded',
+    'owner_gate_satisfied_when_required',
+    'activation_readback_or_qualified_closeout',
+  ];
+  if (
+    newAgentBaselineRequiredGates.length !== expectedNewAgentBaselineRequiredGates.length
+    || expectedNewAgentBaselineRequiredGates.some((gate) => !newAgentBaselineRequiredGates.includes(gate))
+  ) {
+    throw new FrameworkContractError('contract_shape_invalid', 'new agent baseline handoff policy must use the closed FoundryRun gate set.', {
+      file: filePath,
+      field: 'foundry_agent_os_standard.new_agent_baseline_handoff_policy.required_gates',
+      expected: expectedNewAgentBaselineRequiredGates,
+      actual: newAgentBaselineRequiredGates,
+    });
   }
   const acceptedTerminalOutcomes = expectNonEmptyStringArray(
     newAgentBaselineHandoffPolicyRaw.accepted_terminal_outcomes,
     'foundry_agent_os_standard.new_agent_baseline_handoff_policy.accepted_terminal_outcomes',
     filePath,
   );
-  for (const acceptedOutcome of [
-    'delivery_receipt',
-    'no_patch_coordination_receipt',
-    'developer_patch_work_order',
-    'typed_blocker',
-  ]) {
-    if (!acceptedTerminalOutcomes.includes(acceptedOutcome)) {
-      throw new FrameworkContractError('contract_shape_invalid', 'new agent baseline handoff policy is missing an accepted terminal outcome.', {
-        file: filePath,
-        field: 'foundry_agent_os_standard.new_agent_baseline_handoff_policy.accepted_terminal_outcomes',
-        missing: acceptedOutcome,
-      });
-    }
+  const expectedAcceptedTerminalOutcomes = [
+    'completed_active',
+    'completed_qualified',
+    'completed_unqualified',
+    'rejected',
+    'cancelled',
+    'failed',
+    'quarantined',
+  ];
+  if (
+    acceptedTerminalOutcomes.length !== expectedAcceptedTerminalOutcomes.length
+    || expectedAcceptedTerminalOutcomes.some((outcome) => !acceptedTerminalOutcomes.includes(outcome))
+  ) {
+    throw new FrameworkContractError('contract_shape_invalid', 'new agent baseline handoff policy must use the closed FoundryRun terminal set.', {
+      file: filePath,
+      field: 'foundry_agent_os_standard.new_agent_baseline_handoff_policy.accepted_terminal_outcomes',
+      expected: expectedAcceptedTerminalOutcomes,
+      actual: acceptedTerminalOutcomes,
+    });
+  }
+  if (
+    isRecord(newAgentBaselineHandoffPolicyRaw.authority_boundary)
+    && Object.keys(newAgentBaselineHandoffPolicyRaw.authority_boundary).some((field) => field.startsWith('oma_'))
+  ) {
+    throw new FrameworkContractError('contract_shape_invalid', 'new agent baseline authority boundary must be semantic-provider neutral.', {
+      file: filePath,
+      field: 'foundry_agent_os_standard.new_agent_baseline_handoff_policy.authority_boundary',
+    });
   }
 
   const mappingRaw = value.opl_module_mapping;
@@ -466,11 +506,7 @@ const capabilityRegistryRaw = value.capability_registry_boundary;
         'foundry_agent_os_standard.new_agent_baseline_handoff_policy.owner',
         filePath,
       ),
-      oma_owner: expectString(
-        newAgentBaselineHandoffPolicyRaw.oma_owner,
-        'foundry_agent_os_standard.new_agent_baseline_handoff_policy.oma_owner',
-        filePath,
-      ),
+      semantic_provider_contract_ref: semanticProviderContractRef,
       required_gates: newAgentBaselineRequiredGates,
       scaffold_or_generated_interface_can_claim_complete: expectFalseBoolean(
         newAgentBaselineHandoffPolicyRaw.scaffold_or_generated_interface_can_claim_complete,

@@ -53,6 +53,63 @@ function stageBindings(blueprint: AgentBlueprint, kind: 'prompt' | 'skill' | 'kn
   }));
 }
 
+function unclassifiedRiskProjection(blueprint: AgentBlueprint) {
+  const projection = structuredClone(blueprint);
+  projection.blueprint_id = '<classified-generation-identity>';
+  projection.target_version_ref = null;
+  projection.design_request_digest = `sha256:${'0'.repeat(64)}`;
+  projection.generation = 0;
+  projection.risk_hint = 'low';
+  projection.stage_graph.entry_stage_id = '<classified-stage-structure>';
+  projection.stage_graph.stages = projection.stage_graph.stages.map((stage) => ({
+    ...stage,
+    stage_id: '<classified-stage-structure>',
+    stage_kind: '<classified-stage-structure>',
+    input_artifact_types: [],
+    output_artifact_types: [],
+    prompt_ref: '<classified-prompt-binding>',
+    skill_refs: [],
+    knowledge_refs: [],
+    capability_refs: [],
+    next_stage_ids: [],
+  }));
+  projection.actions = projection.actions.map((action) => ({
+    ...action,
+    action_id: '<classified-action-identity>',
+    entry_stage_id: '<classified-action-routing>',
+    input_schema_ref: '<classified-action-io>',
+    output_schema_ref: '<classified-action-io>',
+  }));
+  projection.artifact_contracts = [];
+  projection.content_refs = {
+    prompt_refs: [],
+    skill_refs: [],
+    knowledge_refs: [],
+    helper_refs: [],
+    model_refs: [],
+    tool_refs: [],
+    schema_refs: [],
+  };
+  projection.capability_requirements = [];
+  projection.authority_policy = {
+    ...projection.authority_policy,
+    truth_owner_ref: '<classified-authority-policy>',
+    artifact_owner_ref: '<classified-authority-policy>',
+    quality_owner_ref: '<classified-authority-policy>',
+    permission_refs: [],
+  };
+  projection.memory_policy = {
+    memory_classes: [],
+    retention_refs: [],
+    write_authority_refs: [],
+  };
+  projection.eval_spec.public_cases = [];
+  projection.eval_spec.protected_requirements = [];
+  projection.eval_spec.gates = [];
+  projection.eval_spec.baseline_comparison = { required: true, regression_tolerance: 0 };
+  return projection;
+}
+
 export function maximumRiskTier(...tiers: FoundryRiskTier[]) {
   return tiers.reduce((highest, tier) => RISK_ORDER[tier] > RISK_ORDER[highest] ? tier : highest, 'low');
 }
@@ -124,6 +181,9 @@ export function recomputeBlueprintRisk(
       > previous.eval_spec.baseline_comparison.regression_tolerance
     ) {
       raise('high', 'baseline_regression_tolerance_weakened');
+    }
+    if (changed(unclassifiedRiskProjection(previous), unclassifiedRiskProjection(next))) {
+      raise('high', 'unclassified_blueprint_change');
     }
   }
 

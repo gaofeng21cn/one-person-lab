@@ -310,38 +310,32 @@ export const retiredCliCommandMatrix: Array<{
   {
     args: ['agents', 'foundry', 'status'],
     command: 'opl agents foundry',
-    errorCode: 'cli_usage_error',
-    replacements: [/opl help foundry/],
+    errorCode: 'unknown_command',
   },
   {
     args: ['agents', 'scaffold'],
     command: 'opl agents scaffold',
-    errorCode: 'cli_usage_error',
-    replacements: [/opl agents run --domain oma --action engineer-agent/],
+    errorCode: 'unknown_command',
   },
   {
     args: ['agent-lab', 'sample'],
     command: 'opl agent-lab',
-    errorCode: 'cli_usage_error',
-    replacements: [/opl help foundry/],
+    errorCode: 'unknown_command',
   },
   {
     args: ['foundry-lab', 'status'],
     command: 'opl foundry-lab',
-    errorCode: 'cli_usage_error',
-    replacements: [/opl help foundry/],
+    errorCode: 'unknown_command',
   },
   {
     args: ['feedback', 'submit'],
     command: 'opl feedback',
-    errorCode: 'cli_usage_error',
-    replacements: [/opl help foundry/],
+    errorCode: 'unknown_command',
   },
   {
     args: ['work-order', 'execute'],
     command: 'opl work-order',
-    errorCode: 'cli_usage_error',
-    replacements: [/opl help foundry/],
+    errorCode: 'unknown_command',
   },
 ];
 

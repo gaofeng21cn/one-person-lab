@@ -17,6 +17,12 @@ import {
   validateEvolutionProposal,
 } from './protocol.ts';
 import type {
+  ActivationRuntime,
+  ActivationRuntimeBindingVerification,
+  ActivationRuntimePreflight,
+  ActivationRuntimeTransactionResult,
+  ActivationTransaction,
+  ActivationTransactionKind,
   AgentVersion,
   CandidateCompiler,
   DesignerPort,
@@ -60,7 +66,12 @@ import {
   type FoundryOperationResult,
   type FoundryOperationResultJournal,
 } from './operation-result.ts';
-import { InMemoryFoundryOperationResultJournal } from './in-memory-adapters.ts';
+import {
+  FailClosedActivationRuntime,
+  InMemoryActivationRuntime,
+  InMemoryFoundryOperationResultJournal,
+  InMemoryVersionRegistry,
+} from './in-memory-adapters.ts';
 
 type KernelDependencies = {
   designer: DesignerPort;
@@ -69,6 +80,7 @@ type KernelDependencies = {
   objects: FoundryObjectStore;
   events: FoundryEventStore;
   versions: VersionRegistry;
+  activationRuntime?: ActivationRuntime;
   operationResults?: FoundryOperationResultJournal;
   ownerGate?: OwnerGate;
   clock?: FoundryClock;
@@ -160,6 +172,7 @@ export class FoundryKernel {
   readonly #objects: FoundryObjectStore;
   readonly #events: FoundryEventStore;
   readonly #versions: VersionRegistry;
+  readonly #activationRuntime: ActivationRuntime;
   readonly #operationResults: FoundryOperationResultJournal;
   readonly #ownerGate: OwnerGate;
   readonly #clock: FoundryClock;
@@ -177,6 +190,10 @@ export class FoundryKernel {
     this.#objects = dependencies.objects;
     this.#events = dependencies.events;
     this.#versions = dependencies.versions;
+    this.#activationRuntime = dependencies.activationRuntime
+      ?? (dependencies.versions instanceof InMemoryVersionRegistry
+        ? new InMemoryActivationRuntime(dependencies.versions)
+        : new FailClosedActivationRuntime());
     this.#operationResults = dependencies.operationResults ?? new InMemoryFoundryOperationResultJournal();
     this.#ownerGate = dependencies.ownerGate ?? new FailClosedOwnerGate();
     this.#clock = dependencies.clock ?? systemClock();
@@ -210,9 +227,20 @@ export class FoundryKernel {
     const baseline = await this.#resolveBaseline(request);
     const activation = await this.#versions.activation(request.target_agent_id, request.target_domain_id);
     if (request.mode === 'create' && baseline) fail('Create mode must not bind a baseline version.');
+    if (request.mode === 'create' && activation.active_version_digest !== null) {
+      fail('Create mode requires a target with no active AgentVersion.', {
+        active_version_digest: activation.active_version_digest,
+      });
+    }
     if (request.mode !== 'create' && !baseline) {
       fail('Takeover and improve modes require an existing exact target version.', {
         target_version_ref: request.target_version_ref,
+      });
+    }
+    if (request.mode !== 'create' && activation.active_version_digest !== baseline!.version_digest) {
+      fail('Takeover and improve modes must bind the exact active AgentVersion.', {
+        target_version_ref: request.target_version_ref,
+        active_version_digest: activation.active_version_digest,
       });
     }
     const event = buildFoundryEvent({
@@ -331,7 +359,6 @@ export class FoundryKernel {
       run_id: inspection.run.run_id,
       version_digest: version.version_digest,
       expected_revision: expected,
-      allowed_authority_refs: this.#ownerGateRefs(blueprint),
     });
     const toState = input.decision === 'reject'
       ? 'rejected'
@@ -371,7 +398,6 @@ export class FoundryKernel {
     if (FOUNDRY_TERMINAL_STATES.has(inspection.run.state)) {
       fail('A terminal FoundryRun cannot be cancelled.', { state: inspection.run.state });
     }
-    const blueprint = await this.#blueprint(inspection);
     const verification = await this.#verifyOwnerAuthority({
       authority_receipt_ref: authorityRef,
       action: 'cancel',
@@ -381,7 +407,6 @@ export class FoundryKernel {
       run_id: inspection.run.run_id,
       version_digest: inspection.run.version_digest,
       expected_revision: expected,
-      allowed_authority_refs: this.#ownerGateRefs(blueprint),
     });
     await this.#append(inspection, {
       eventType: 'foundry_run_cancelled',
@@ -451,6 +476,37 @@ export class FoundryKernel {
       || blueprint.target_domain_id !== targetDomainId) {
       fail('Rollback AgentBlueprint does not bind the exact target AgentVersion.');
     }
+    const targetRequest = validateDesignRequest(
+      await this.#object<DesignRequest>(blueprint.design_request_digest, 'rollback DesignRequest'),
+    );
+    assertSameTarget(targetRequest, blueprint, 'Rollback AgentBlueprint');
+    assertBlueprintSatisfiesDesignRequest(targetRequest, blueprint);
+    const activation = await this.#versions.activation(targetAgentId, targetDomainId);
+    if (!activation.active_version_digest) fail('Rollback requires an active target AgentVersion.');
+    const history = await this.#versions.activationHistory(targetAgentId, targetDomainId);
+    if (!history.some((entry) => entry.to_version_digest === versionDigest)) {
+      fail('Rollback target AgentVersion has never been active.', { version_digest: versionDigest });
+    }
+    const activeVersion = await this.#versions.resolveVersion(
+      activation.active_version_digest,
+      targetAgentId,
+      targetDomainId,
+    ) ?? fail('Active AgentVersion does not exist.', { version_digest: activation.active_version_digest });
+    const activeBlueprint = validateAgentBlueprint(
+      await this.#object<AgentBlueprint>(activeVersion.blueprint_digest, 'active rollback AgentBlueprint'),
+    );
+    if (
+      foundryContentDigest(activeBlueprint) !== activeVersion.blueprint_digest
+      || activeBlueprint.target_agent_id !== targetAgentId
+      || activeBlueprint.target_domain_id !== targetDomainId
+    ) {
+      fail('Active rollback AgentBlueprint does not bind the exact active AgentVersion.');
+    }
+    const activeRequest = validateDesignRequest(
+      await this.#object<DesignRequest>(activeBlueprint.design_request_digest, 'active rollback DesignRequest'),
+    );
+    assertSameTarget(activeRequest, activeBlueprint, 'Active rollback AgentBlueprint');
+    assertBlueprintSatisfiesDesignRequest(activeRequest, activeBlueprint);
     const verification = await this.#verifyOwnerAuthority({
       authority_receipt_ref: authorityRef,
       action: 'rollback',
@@ -460,15 +516,12 @@ export class FoundryKernel {
       run_id: null,
       version_digest: versionDigest,
       expected_revision: expected,
-      allowed_authority_refs: this.#ownerGateRefs(blueprint),
     });
-    return this.#versions.rollback({
-      target_agent_id: targetAgentId,
-      target_domain_id: targetDomainId,
-      version_digest: versionDigest,
-      expected_revision: expected,
+    return this.#commitActivation({
+      transaction_kind: 'rollback',
+      version,
+      expected_activation_revision: expected,
       authority_receipt_ref: verification.receipt.receipt_ref,
-      occurred_at: this.#clock.now(),
     });
   }
 
@@ -833,14 +886,19 @@ export class FoundryKernel {
     if (ownerGatePolicy(inspection.run.risk_tier!).active_owner_required && !authority) {
       fail('Owner-gated activation has no verified active approval receipt.');
     }
-    const transaction = await this.#activity('activate', () => this.#versions.compareAndSwapActivation({
-      target_agent_id: inspection.request.target_agent_id,
-      target_domain_id: inspection.request.target_domain_id,
-      expected_revision: inspection.run.activation_revision_at_start,
-      version_digest: inspection.run.version_digest!,
-      occurred_at: this.#clock.now(),
+    const version = await this.#versions.resolveVersion(
+      inspection.run.version_digest,
+      inspection.request.target_agent_id,
+      inspection.request.target_domain_id,
+    ) ?? fail('Activation target AgentVersion does not exist.', {
+      version_digest: inspection.run.version_digest,
+    });
+    const transaction = await this.#commitActivation({
+      transaction_kind: 'activate',
+      version,
+      expected_activation_revision: inspection.run.activation_revision_at_start,
       authority_receipt_ref: authority?.ref ?? null,
-    }));
+    });
     return this.#append(inspection, {
       eventType: 'activation_completed',
       toState: 'completed_active',
@@ -848,12 +906,148 @@ export class FoundryKernel {
       inputDigest: inspection.run.version_digest!,
       payload: {
         activation_transaction_id: transaction.transaction_id,
+        activation_runtime_preflight_ref: transaction.runtime_preflight.preflight_ref,
+        activation_runtime_binding_ref: transaction.runtime_binding_verification.runtime_binding_ref,
+        activation_runtime_binding_verification: transaction.runtime_binding_verification,
         ...(authority ? {
           owner_authority_receipt_ref: authority.ref,
           owner_authority_receipt_digest: authority.digest,
         } : {}),
       },
     });
+  }
+
+  async #commitActivation(input: {
+    transaction_kind: ActivationTransactionKind;
+    version: AgentVersion;
+    expected_activation_revision: number;
+    authority_receipt_ref: string | null;
+  }): Promise<ActivationRuntimeTransactionResult> {
+    if (input.transaction_kind === 'rollback' && !input.authority_receipt_ref) {
+      fail('Rollback activation transaction requires an Owner authority receipt.');
+    }
+    const preflight = await this.#activity(
+      `${input.transaction_kind}_runtime_preflight`,
+      () => this.#activationRuntime.preflight({
+        transaction_kind: input.transaction_kind,
+        version: input.version,
+        expected_activation_revision: input.expected_activation_revision,
+      }),
+    );
+    this.#assertActivationPreflight(preflight, input);
+    const runtimeBindingVerification = this.#runtimeBindingVerification(preflight);
+    const occurredAt = this.#clock.now();
+    const transaction = await this.#activity(input.transaction_kind, () => (
+      input.transaction_kind === 'activate'
+        ? this.#versions.compareAndSwapActivation({
+            target_agent_id: input.version.target_agent_id,
+            target_domain_id: input.version.target_domain_id,
+            expected_revision: input.expected_activation_revision,
+            version_digest: input.version.version_digest,
+            occurred_at: occurredAt,
+            authority_receipt_ref: input.authority_receipt_ref,
+            runtime_binding_verification: runtimeBindingVerification,
+          })
+        : this.#versions.rollback({
+            target_agent_id: input.version.target_agent_id,
+            target_domain_id: input.version.target_domain_id,
+            expected_revision: input.expected_activation_revision,
+            version_digest: input.version.version_digest,
+            occurred_at: occurredAt,
+            authority_receipt_ref: input.authority_receipt_ref!,
+            runtime_binding_verification: runtimeBindingVerification,
+          })
+    ));
+    this.#assertActivationTransaction(transaction, {
+      ...input,
+      runtime_binding_verification: runtimeBindingVerification,
+    });
+    return {
+      ...transaction,
+      runtime_preflight: preflight,
+    };
+  }
+
+  #assertActivationPreflight(
+    preflight: ActivationRuntimePreflight,
+    input: {
+      transaction_kind: ActivationTransactionKind;
+      version: AgentVersion;
+      expected_activation_revision: number;
+    },
+  ) {
+    if (
+      preflight.surface_kind !== 'opl_foundry_activation_runtime_preflight'
+      || preflight.version !== 'opl-foundry-activation-runtime-preflight.v1'
+      || preflight.transaction_kind !== input.transaction_kind
+      || preflight.target_agent_id !== input.version.target_agent_id
+      || preflight.target_domain_id !== input.version.target_domain_id
+      || preflight.version_id !== input.version.version_id
+      || preflight.version_digest !== input.version.version_digest
+      || preflight.candidate_digest !== input.version.candidate_digest
+      || preflight.candidate_ref !== input.version.candidate_ref
+      || preflight.expected_activation_revision !== input.expected_activation_revision
+      || !preflight.preflight_ref.trim()
+      || (preflight.runtime_binding_ref !== undefined && !preflight.runtime_binding_ref.trim())
+    ) {
+      fail('Activation runtime preflight does not bind the exact target AgentVersion and revision.', {
+        expected_version_digest: input.version.version_digest,
+        expected_candidate_digest: input.version.candidate_digest,
+        expected_activation_revision: input.expected_activation_revision,
+      });
+    }
+  }
+
+  #runtimeBindingVerification(
+    preflight: ActivationRuntimePreflight,
+  ): ActivationRuntimeBindingVerification {
+    return {
+      surface_kind: 'opl_foundry_activation_runtime_binding_verification',
+      version: 'opl-foundry-activation-runtime-binding-verification.v1',
+      verification_phase: 'pre_commit',
+      transaction_kind: preflight.transaction_kind,
+      target_agent_id: preflight.target_agent_id,
+      target_domain_id: preflight.target_domain_id,
+      version_id: preflight.version_id,
+      version_digest: preflight.version_digest,
+      candidate_digest: preflight.candidate_digest,
+      candidate_ref: preflight.candidate_ref,
+      expected_activation_revision: preflight.expected_activation_revision,
+      preflight_ref: preflight.preflight_ref,
+      runtime_binding_ref: preflight.runtime_binding_ref ?? preflight.preflight_ref,
+    };
+  }
+
+  #assertActivationTransaction(
+    transaction: ActivationTransaction,
+    input: {
+      transaction_kind: ActivationTransactionKind;
+      version: AgentVersion;
+      expected_activation_revision: number;
+      authority_receipt_ref: string | null;
+      runtime_binding_verification: ActivationRuntimeBindingVerification;
+    },
+  ) {
+    if (
+      transaction.surface_kind !== 'opl_foundry_activation_transaction'
+      || transaction.transaction_kind !== input.transaction_kind
+      || transaction.target_agent_id !== input.version.target_agent_id
+      || transaction.target_domain_id !== input.version.target_domain_id
+      || transaction.to_version_digest !== input.version.version_digest
+      || transaction.previous_revision !== input.expected_activation_revision
+      || transaction.next_revision !== input.expected_activation_revision + 1
+      || transaction.authority_receipt_ref !== input.authority_receipt_ref
+      || foundryContentDigest(transaction.runtime_binding_verification)
+        !== foundryContentDigest(input.runtime_binding_verification)
+      || !transaction.transaction_id.trim()
+      || !Number.isFinite(Date.parse(transaction.occurred_at))
+    ) {
+      fail('Version registry returned an invalid activation transaction.', {
+        expected_transaction_kind: input.transaction_kind,
+        expected_version_digest: input.version.version_digest,
+        expected_activation_revision: input.expected_activation_revision,
+      });
+    }
   }
 
   async #appendJournaledResult(
@@ -930,6 +1124,7 @@ export class FoundryKernel {
   }
 
   async #resolveBaseline(request: DesignRequest): Promise<AgentVersion | null> {
+    if (request.target_version_ref === null) return null;
     return this.#versions.resolveVersion(
       request.target_version_ref,
       request.target_agent_id,
@@ -1065,15 +1260,6 @@ export class FoundryKernel {
     return `${decision}_${state === 'awaiting_owner_canary' ? 'canary' : 'active'}`;
   }
 
-  #ownerGateRefs(blueprint: AgentBlueprint) {
-    const refs = Array.isArray(blueprint.authority_policy.owner_gate_refs)
-      ? blueprint.authority_policy.owner_gate_refs.map((entry) => requiredRef(entry, 'authority_policy.owner_gate_refs'))
-      : [];
-    if (refs.length === 0) fail('Current AgentBlueprint has no OwnerGate authority refs.');
-    if (new Set(refs).size !== refs.length) fail('Current AgentBlueprint OwnerGate authority refs must be unique.');
-    return refs;
-  }
-
   async #verifyOwnerAuthority(
     input: Omit<OwnerGateVerificationContext, 'surface_kind' | 'version'>,
   ) {
@@ -1092,6 +1278,7 @@ export class FoundryKernel {
       owner_authority_ref: verification.covered_authority_ref,
       owner_authority_verifier_id: verification.verifier_id,
       owner_authority_verification_ref: verification.verification_ref,
+      owner_authority_policy_ref: verification.authority_policy_ref,
       owner_gate_action: verification.receipt.action,
       owner_gate_decision: verification.receipt.decision,
     };

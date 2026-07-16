@@ -7,7 +7,8 @@
     "surface_kind", "version", "evidence_id", "target_agent_id", "target_domain_id", "target_version_ref",
     "blueprint_digest", "candidate_digest", "baseline_version_digest", "frozen_test_plan_digest", "public_results",
     "baseline_public_results", "baseline_protected_aggregates",
-    "protected_aggregates", "independent_review", "safety_delta", "cost_delta", "latency_delta",
+    "protected_aggregates", "independent_review", "candidate_cost_observations",
+    "candidate_latency_observations", "safety_observations", "safety_delta", "cost_delta", "latency_delta",
     "failure_classification", "qualified", "gate_score", "provenance"
   ],
   "properties": {
@@ -47,6 +48,12 @@
         "evidence_refs": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/non_empty" }, "uniqueItems": true }
       },
       "additionalProperties": false
+    },
+    "candidate_cost_observations": { "$ref": "#/$defs/non_negative_numeric_map" },
+    "candidate_latency_observations": { "$ref": "#/$defs/non_negative_numeric_map" },
+    "safety_observations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/safety_observation" }
     },
     "safety_delta": { "$ref": "#/$defs/numeric_map" },
     "cost_delta": { "$ref": "#/$defs/numeric_map" },
@@ -94,6 +101,26 @@
     "status": { "enum": ["pass", "fail", "blocked"] },
     "string_list": { "type": "array", "items": { "$ref": "#/$defs/non_empty" }, "uniqueItems": true },
     "numeric_map": { "type": "object", "additionalProperties": { "type": "number" } },
+    "non_negative_numeric_map": {
+      "type": "object",
+      "additionalProperties": { "type": "number", "minimum": 0 }
+    },
+    "safety_observation": {
+      "type": "object",
+      "required": ["observation_id", "event_type", "severity", "evidence_refs"],
+      "properties": {
+        "observation_id": { "$ref": "#/$defs/non_empty" },
+        "event_type": { "$ref": "#/$defs/non_empty" },
+        "severity": { "enum": ["low", "medium", "high", "critical"] },
+        "evidence_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/non_empty" },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
     "public_result": {
       "type": "object",
       "required": ["case_id", "status", "score", "evidence_refs"],
@@ -123,7 +150,7 @@
       "properties": {
         "failure_class": { "$ref": "#/$defs/non_empty" },
         "gate_id": { "$ref": "#/$defs/non_empty" },
-        "severity": { "enum": ["low", "medium", "high"] },
+        "severity": { "enum": ["low", "medium", "high", "critical"] },
         "evidence_refs": { "$ref": "#/$defs/string_list" }
       },
       "additionalProperties": false

@@ -8,6 +8,9 @@ import {
 } from '../../src/modules/foundry/risk-policy.ts';
 
 function blueprint(): AgentBlueprint {
+  const inputSchemaRef = `opl-content://sha256/${'3'.repeat(64)}`;
+  const outputSchemaRef = `opl-content://sha256/${'4'.repeat(64)}`;
+  const artifactSchemaRef = `opl-content://sha256/${'5'.repeat(64)}`;
   return {
     surface_kind: 'opl_foundry_agent_blueprint',
     version: 'opl-foundry-protocol.v1',
@@ -36,12 +39,12 @@ function blueprint(): AgentBlueprint {
       action_id: 'deliver',
       summary: 'Deliver',
       entry_stage_id: 'deliver',
-      input_schema_ref: 'schema:input',
-      output_schema_ref: 'schema:output',
+      input_schema_ref: inputSchemaRef,
+      output_schema_ref: outputSchemaRef,
     }],
     artifact_contracts: [{
       artifact_type: 'result',
-      schema_ref: 'schema:result',
+      schema_ref: artifactSchemaRef,
       authority_owner_ref: 'owner:result',
     }],
     content_refs: {
@@ -51,13 +54,14 @@ function blueprint(): AgentBlueprint {
       helper_refs: [],
       model_refs: ['model:one'],
       tool_refs: ['tool:one'],
+      schema_refs: [inputSchemaRef, outputSchemaRef, artifactSchemaRef],
     },
     capability_requirements: ['capability:one'],
     authority_policy: {
       truth_owner_ref: 'owner:truth',
       artifact_owner_ref: 'owner:artifact',
       quality_owner_ref: 'owner:quality',
-      owner_gate_refs: ['owner:gate'],
+      permission_refs: [],
       generated_agent_can_modify_versions: false,
       generated_agent_can_modify_evaluation: false,
       generated_agent_can_modify_permissions: false,
@@ -131,4 +135,21 @@ test('baseline comparison cannot be disabled or relaxed during evolution', () =>
     error.details?.violations?.includes('baseline_regression_tolerance_weakened') === true
   ));
   assert.equal(recomputeBlueprintRisk(previous, relaxed).risk_tier, 'high');
+});
+
+test('risk recomputation fails closed for previously unclassified Blueprint changes', () => {
+  const previous = blueprint();
+  const assumptionChanged = structuredClone(previous);
+  assumptionChanged.assumptions = ['new operational assumption'];
+  assert.deepEqual(recomputeBlueprintRisk(previous, assumptionChanged), {
+    risk_tier: 'high',
+    reasons: ['unclassified_blueprint_change'],
+  });
+
+  const actionSummaryChanged = structuredClone(previous);
+  actionSummaryChanged.actions[0]!.summary = 'A materially different command';
+  assert.deepEqual(recomputeBlueprintRisk(previous, actionSummaryChanged), {
+    risk_tier: 'high',
+    reasons: ['unclassified_blueprint_change'],
+  });
 });

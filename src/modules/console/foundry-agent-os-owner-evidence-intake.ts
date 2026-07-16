@@ -1,7 +1,4 @@
-import path from 'node:path';
-
 import { listBrandModuleL5EvidenceReceipts } from '../charter/index.ts';
-import { readJsonPayloadFile } from '../../kernel/json-file.ts';
 import {
   stringList,
   uniqueStringList,
@@ -66,11 +63,7 @@ type ObservedDomainEvidence = NonNullable<OwnerEvidenceProjection['observed_doma
 
 function domainKey(value: unknown) {
   const raw = typeof value === 'string' ? value : '';
-  const compact = raw.toLowerCase().replace(/[^a-z0-9]/g, '');
-  const aliases: Record<string, string> = {
-    redcubeai: 'redcube',
-  };
-  return aliases[compact] ?? compact;
+  return raw.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
 function emptyCounts(): RefCounts {
@@ -140,325 +133,7 @@ function observedStatus(input: {
   };
 }
 
-function observedDomainStatus(input: ObservedDomainEvidence) {
-  return observedStatus({
-    recordedReceiptCount: input.recorded_receipt_count,
-    verifiedReceiptCount: input.verified_receipt_count,
-    counts: input.observed_ref_counts,
-  }).status;
-}
-
-function addDomainEvidence(
-  current: Record<string, ObservedDomainEvidence>,
-  input: {
-    domainId: string;
-    receiptRefs: string[];
-    counts: Partial<RefCounts>;
-    recordedReceiptCount?: number;
-    verifiedReceiptCount?: number;
-  },
-) {
-  const key = domainKey(input.domainId);
-  const entry = current[key] ?? {
-    domain_id: input.domainId,
-    recorded_receipt_count: 0,
-    verified_receipt_count: 0,
-    observed_receipt_refs: [],
-    observed_ref_counts: emptyCounts(),
-    observed_ref_shapes: [],
-    status: 'owner_evidence_required',
-  };
-  entry.recorded_receipt_count += input.recordedReceiptCount ?? 0;
-  entry.verified_receipt_count += input.verifiedReceiptCount ?? 0;
-  entry.observed_receipt_refs = uniqueStringList([
-    ...entry.observed_receipt_refs,
-    ...input.receiptRefs,
-  ]);
-  entry.observed_ref_counts = {
-    ...entry.observed_ref_counts,
-    domain_owner_receipt_ref_count:
-      entry.observed_ref_counts.domain_owner_receipt_ref_count
-      + (input.counts.domain_owner_receipt_ref_count ?? 0),
-    domain_receipt_ref_count:
-      entry.observed_ref_counts.domain_receipt_ref_count
-      + (input.counts.domain_receipt_ref_count ?? 0),
-    release_owner_receipt_ref_count:
-      entry.observed_ref_counts.release_owner_receipt_ref_count
-      + (input.counts.release_owner_receipt_ref_count ?? 0),
-    install_evidence_ref_count:
-      entry.observed_ref_counts.install_evidence_ref_count
-      + (input.counts.install_evidence_ref_count ?? 0),
-    no_regression_ref_count:
-      entry.observed_ref_counts.no_regression_ref_count
-      + (input.counts.no_regression_ref_count ?? 0),
-    owner_chain_ref_count:
-      entry.observed_ref_counts.owner_chain_ref_count
-      + (input.counts.owner_chain_ref_count ?? 0),
-    human_gate_ref_count:
-      entry.observed_ref_counts.human_gate_ref_count
-      + (input.counts.human_gate_ref_count ?? 0),
-    quality_or_export_receipt_ref_count:
-      entry.observed_ref_counts.quality_or_export_receipt_ref_count
-      + (input.counts.quality_or_export_receipt_ref_count ?? 0),
-    reviewer_receipt_ref_count:
-      entry.observed_ref_counts.reviewer_receipt_ref_count
-      + (input.counts.reviewer_receipt_ref_count ?? 0),
-    long_soak_ref_count:
-      entry.observed_ref_counts.long_soak_ref_count
-      + (input.counts.long_soak_ref_count ?? 0),
-    recovery_ref_count:
-      entry.observed_ref_counts.recovery_ref_count
-      + (input.counts.recovery_ref_count ?? 0),
-    dead_letter_ref_count:
-      entry.observed_ref_counts.dead_letter_ref_count
-      + (input.counts.dead_letter_ref_count ?? 0),
-    provider_blocker_ref_count:
-      entry.observed_ref_counts.provider_blocker_ref_count
-      + (input.counts.provider_blocker_ref_count ?? 0),
-    monitor_freshness_ref_count:
-      entry.observed_ref_counts.monitor_freshness_ref_count
-      + (input.counts.monitor_freshness_ref_count ?? 0),
-    runtime_event_ref_count:
-      entry.observed_ref_counts.runtime_event_ref_count
-      + (input.counts.runtime_event_ref_count ?? 0),
-    typed_blocker_ref_count:
-      entry.observed_ref_counts.typed_blocker_ref_count
-      + (input.counts.typed_blocker_ref_count ?? 0),
-    evidence_ref_count:
-      entry.observed_ref_counts.evidence_ref_count
-      + (input.counts.evidence_ref_count ?? 0),
-    owner_acceptance_ref_count:
-      entry.observed_ref_counts.owner_acceptance_ref_count
-      + (input.counts.owner_acceptance_ref_count ?? 0),
-  };
-  entry.observed_ref_shapes = refShapes(entry.observed_ref_counts);
-  entry.status = observedDomainStatus(entry);
-  current[key] = entry;
-}
-
-function addCounts(current: RefCounts, addition: RefCounts) {
-  current.domain_owner_receipt_ref_count += addition.domain_owner_receipt_ref_count;
-  current.domain_receipt_ref_count += addition.domain_receipt_ref_count;
-  current.release_owner_receipt_ref_count += addition.release_owner_receipt_ref_count;
-  current.install_evidence_ref_count += addition.install_evidence_ref_count;
-  current.no_regression_ref_count += addition.no_regression_ref_count;
-  current.owner_chain_ref_count += addition.owner_chain_ref_count;
-  current.human_gate_ref_count += addition.human_gate_ref_count;
-  current.quality_or_export_receipt_ref_count += addition.quality_or_export_receipt_ref_count;
-  current.reviewer_receipt_ref_count += addition.reviewer_receipt_ref_count;
-  current.long_soak_ref_count += addition.long_soak_ref_count;
-  current.recovery_ref_count += addition.recovery_ref_count;
-  current.dead_letter_ref_count += addition.dead_letter_ref_count;
-  current.provider_blocker_ref_count += addition.provider_blocker_ref_count;
-  current.monitor_freshness_ref_count += addition.monitor_freshness_ref_count;
-  current.runtime_event_ref_count += addition.runtime_event_ref_count;
-  current.typed_blocker_ref_count += addition.typed_blocker_ref_count;
-  current.evidence_ref_count += addition.evidence_ref_count;
-  current.owner_acceptance_ref_count += addition.owner_acceptance_ref_count;
-}
-
-function repoTrackedContractRef(repoDir: string, evidencePath: string) {
-  return `repo-tracked-contract:${path.relative(repoDir, evidencePath)}`;
-}
-
-function magRepoTrackedEvidence(
-  domains: Record<string, unknown>[],
-): ObservedDomainEvidence | null {
-  const magDomain = domains.find((domain) =>
-    domainKey(stringValue(domain.domain_id)) === 'medautogrant'
-  );
-  const repoDir = stringValue(magDomain?.repo_dir);
-  if (!repoDir) {
-    return null;
-  }
-  const evidencePath = path.join(
-    repoDir,
-    'contracts',
-    'production_acceptance',
-    'mag-production-acceptance.json',
-  );
-  try {
-    const evidence = record(readJsonPayloadFile(evidencePath));
-    const refs = record(evidence.refs);
-    const closureEvidence = record(evidence.closure_evidence);
-    const externalEvidenceLedger = record(evidence.external_evidence_receipt_ledger);
-    const grantReceiptChain = record(evidence.grant_receipt_chain);
-    const domainOwnerReceiptRefs = uniqueStringList([
-      ...stringList(refs.grant_owner_receipt_refs),
-      ...stringList(refs.owner_receipt_refs),
-      ...stringList(refs.acceptance_receipt_refs),
-      stringValue(closureEvidence.owner_receipt_ref) ?? '',
-    ]);
-    const typedBlockerRefs = uniqueStringList(stringList(refs.typed_blocker_refs));
-    const ownerChainRefs = uniqueStringList([
-      stringValue(externalEvidenceLedger.ledger_ref) ?? '',
-      booleanValue(grantReceiptChain.production_like_grant_receipt_chain_present) === true
-        ? stringValue(grantReceiptChain.chain_status) ?? 'grant_receipt_chain_present'
-        : '',
-    ]);
-    if (
-      domainOwnerReceiptRefs.length === 0
-      && typedBlockerRefs.length === 0
-      && ownerChainRefs.length === 0
-    ) {
-      return null;
-    }
-    const counts = {
-      ...emptyCounts(),
-      domain_owner_receipt_ref_count: domainOwnerReceiptRefs.length,
-      typed_blocker_ref_count: typedBlockerRefs.length,
-      owner_chain_ref_count: ownerChainRefs.length > 0 ? 1 : 0,
-    };
-    const observedReceiptRefs = uniqueStringList([
-      repoTrackedContractRef(repoDir, evidencePath),
-      ...domainOwnerReceiptRefs,
-      ...typedBlockerRefs,
-      ...ownerChainRefs,
-    ]);
-    const verifiedSourceCount = 1;
-    const status = observedStatus({
-      recordedReceiptCount: 0,
-      verifiedReceiptCount: verifiedSourceCount,
-      counts,
-    });
-    return {
-      domain_id: stringValue(evidence.domain_id) ?? 'med-autogrant',
-      recorded_receipt_count: 0,
-      verified_receipt_count: verifiedSourceCount,
-      observed_receipt_refs: observedReceiptRefs,
-      observed_ref_counts: counts,
-      observed_ref_shapes: status.observed_ref_shapes,
-      status: status.status,
-    };
-  } catch {
-    return null;
-  }
-}
-
-function rcaRepoTrackedEvidence(
-  domains: Record<string, unknown>[],
-): ObservedDomainEvidence | null {
-  const rcaDomain = domains.find((domain) =>
-    domainKey(stringValue(domain.domain_id)) === 'redcube'
-  );
-  const repoDir = stringValue(rcaDomain?.repo_dir);
-  if (!repoDir) {
-    return null;
-  }
-  const evidencePath = path.join(repoDir, 'contracts', 'owner_chain_live_progress_evidence.json');
-  try {
-    const evidence = record(readJsonPayloadFile(evidencePath));
-    const liveCanary = record(evidence.live_visual_owner_chain_canary);
-    const ownerActionCanary = record(evidence.rca_owned_owner_action_canary);
-    const ownerReceiptRefs = uniqueStringList([
-      ...stringList(liveCanary.observed_owner_receipt_refs),
-      stringValue(ownerActionCanary.observed_owner_receipt_ref) ?? '',
-    ]);
-    const domainReceiptRefs = uniqueStringList(stringList(liveCanary.observed_review_export_receipt_refs));
-    const typedBlockerRefs = uniqueStringList([
-      ...stringList(liveCanary.observed_typed_blocker_refs),
-      stringValue(ownerActionCanary.observed_typed_blocker_ref) ?? '',
-    ]);
-    const noRegressionRefs = uniqueStringList([
-      stringValue(ownerActionCanary.observed_no_regression_evidence_ref) ?? '',
-    ]);
-    if (
-      ownerReceiptRefs.length === 0
-      && domainReceiptRefs.length === 0
-      && typedBlockerRefs.length === 0
-      && noRegressionRefs.length === 0
-    ) {
-      return null;
-    }
-    const counts = {
-      ...emptyCounts(),
-      domain_owner_receipt_ref_count: ownerReceiptRefs.length,
-      domain_receipt_ref_count: domainReceiptRefs.length,
-      quality_or_export_receipt_ref_count: domainReceiptRefs.length,
-      no_regression_ref_count: noRegressionRefs.length,
-      typed_blocker_ref_count: typedBlockerRefs.length,
-      owner_chain_ref_count: 1,
-    };
-    const observedReceiptRefs = uniqueStringList([
-      repoTrackedContractRef(repoDir, evidencePath),
-      ...ownerReceiptRefs,
-      ...domainReceiptRefs,
-      ...typedBlockerRefs,
-      ...noRegressionRefs,
-    ]);
-    const verifiedSourceCount = 1;
-    const status = observedStatus({
-      recordedReceiptCount: 0,
-      verifiedReceiptCount: verifiedSourceCount,
-      counts,
-    });
-    return {
-      domain_id: stringValue(evidence.domain_id) ?? 'redcube-ai',
-      recorded_receipt_count: 0,
-      verified_receipt_count: verifiedSourceCount,
-      observed_receipt_refs: observedReceiptRefs,
-      observed_ref_counts: counts,
-      observed_ref_shapes: status.observed_ref_shapes,
-      status: status.status,
-    };
-  } catch {
-    return null;
-  }
-}
-
-function omaRepoTrackedEvidence(
-  domains: Record<string, unknown>[],
-): ObservedDomainEvidence | null {
-  const omaDomain = domains.find((domain) =>
-    domainKey(stringValue(domain.domain_id)) === 'oplmetaagent'
-  );
-  const repoDir = stringValue(omaDomain?.repo_dir);
-  if (!repoDir) {
-    return null;
-  }
-  const evidencePath = path.join(repoDir, 'contracts', 'target_agent_owner_chain_evidence.json');
-  try {
-    const evidence = record(readJsonPayloadFile(evidencePath));
-    const blockerClosure = record(evidence.stage_replay_human_gate_blocker_closure);
-    const typedBlockerRefs = stringList(blockerClosure.typed_blocker_refs);
-    const noRegressionRefs = stringList(blockerClosure.no_regression_refs);
-    if (typedBlockerRefs.length === 0 && noRegressionRefs.length === 0) {
-      return null;
-    }
-    const counts = {
-      ...emptyCounts(),
-      typed_blocker_ref_count: typedBlockerRefs.length,
-      no_regression_ref_count: noRegressionRefs.length,
-      owner_chain_ref_count: 1,
-    };
-    const observedReceiptRefs = uniqueStringList([
-      repoTrackedContractRef(repoDir, evidencePath),
-      ...typedBlockerRefs,
-      ...noRegressionRefs,
-    ]);
-    const verifiedSourceCount = 1;
-    const status = observedStatus({
-      recordedReceiptCount: 0,
-      verifiedReceiptCount: verifiedSourceCount,
-      counts,
-    });
-    return {
-      domain_id: stringValue(evidence.domain_id) ?? 'opl-meta-agent',
-      recorded_receipt_count: 0,
-      verified_receipt_count: verifiedSourceCount,
-      observed_receipt_refs: observedReceiptRefs,
-      observed_ref_counts: counts,
-      observed_ref_shapes: status.observed_ref_shapes,
-      status: status.status,
-    };
-  } catch {
-    return null;
-  }
-}
-
-function domainOwnerChainProjection(input: {
-  domains: Record<string, unknown>[];
-}): OwnerEvidenceProjection {
+function domainOwnerChainProjection(): OwnerEvidenceProjection {
   const receipts = listDomainOwnerPayloadSummaryReceipts();
   const observedDomains = receipts.reduce<Record<string, ObservedDomainEvidence>>((current, receipt) => {
     const domainId = stringValue(receipt.target_identity.domain_id)
@@ -533,19 +208,6 @@ function domainOwnerChainProjection(input: {
     current[key] = entry;
     return current;
   }, {});
-  const repoTrackedEvidences = [
-    magRepoTrackedEvidence(input.domains),
-    rcaRepoTrackedEvidence(input.domains),
-    omaRepoTrackedEvidence(input.domains),
-  ].filter((entry): entry is ObservedDomainEvidence => Boolean(entry));
-  for (const evidence of repoTrackedEvidences) {
-    addDomainEvidence(observedDomains, {
-      domainId: evidence.domain_id,
-      receiptRefs: evidence.observed_receipt_refs,
-      counts: evidence.observed_ref_counts,
-      verifiedReceiptCount: evidence.verified_receipt_count,
-    });
-  }
   const counts = receipts.reduce((current, receipt) => ({
     ...current,
     domain_owner_receipt_ref_count:
@@ -574,35 +236,16 @@ function domainOwnerChainProjection(input: {
     typed_blocker_ref_count:
       current.typed_blocker_ref_count + receipt.typed_blocker_refs.length,
   }), emptyCounts());
-  for (const evidence of repoTrackedEvidences) {
-    addCounts(counts, evidence.observed_ref_counts);
-  }
   const status = observedStatus({
     recordedReceiptCount: receipts.filter((receipt) => receipt.receipt_status === 'recorded').length,
-    verifiedReceiptCount:
-      receipts.filter((receipt) => receipt.receipt_status === 'verified').length
-      + repoTrackedEvidences.reduce(
-        (total, evidence) => total + evidence.verified_receipt_count,
-        0,
-      ),
+    verifiedReceiptCount: receipts.filter((receipt) => receipt.receipt_status === 'verified').length,
     counts,
   });
-  const evidenceRouteParts = [
-    'opl runtime domain-owner-payload-summary list --json',
-    'MAG contracts/production_acceptance/mag-production-acceptance.json',
-    'RCA contracts/owner_chain_live_progress_evidence.json',
-    'OMA contracts/target_agent_owner_chain_evidence.json',
-  ];
   return {
     lane: 'domain_owner_chain_scaleout',
     ...status,
     recorded_receipt_count: receipts.filter((receipt) => receipt.receipt_status === 'recorded').length,
-    verified_receipt_count:
-      receipts.filter((receipt) => receipt.receipt_status === 'verified').length
-      + repoTrackedEvidences.reduce(
-        (total, evidence) => total + evidence.verified_receipt_count,
-        0,
-      ),
+    verified_receipt_count: receipts.filter((receipt) => receipt.receipt_status === 'verified').length,
     observed_receipt_refs: uniqueStringList([
       ...receipts.map((receipt) => receipt.receipt_ref),
       ...receipts.flatMap((receipt) => [
@@ -611,11 +254,10 @@ function domainOwnerChainProjection(input: {
         ...receipt.reviewer_receipt_refs,
         ...receipt.long_soak_refs,
       ]),
-      ...repoTrackedEvidences.flatMap((evidence) => evidence.observed_receipt_refs),
     ]),
     observed_ref_counts: counts,
     observed_domains: Object.values(observedDomains),
-    evidence_route: evidenceRouteParts.join(' + '),
+    evidence_route: 'opl runtime domain-owner-payload-summary list --json',
   };
 }
 
@@ -850,9 +492,7 @@ export function buildFoundryAgentOsOwnerEvidenceIntake(input: {
   lifecycleEvidence?: Record<string, unknown>;
 }) {
   const laneEvidence = [
-    domainOwnerChainProjection({
-      domains: recordList(input.domainOwnerChain?.domains),
-    }),
+    domainOwnerChainProjection(),
     brandModuleL5Projection(input.contracts),
     appReleaseProjection(input.appReleaseEvidence),
     providerLongSoakProjection(),

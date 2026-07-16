@@ -8,13 +8,7 @@
     "canonical_version": "opl-agent-scaffold-materialization-request.v2",
     "producer_identity_field": "producer_agent_id",
     "producer_neutral": true,
-    "compatibility_adapters": [
-      {
-        "input_version": "opl-agent-scaffold-materialization-request.v1",
-        "adapter": "opl_agent_scaffold_materialization_request.v1_to_v2",
-        "legacy_producer": "oma"
-      }
-    ]
+    "compatibility_adapters": []
   },
   "write_policy": {
     "mode": "replace_declared_files_only",

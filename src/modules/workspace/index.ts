@@ -34,6 +34,7 @@ export { WORKSPACE_TOPOLOGY_PROFILE_CONTRACT } from './workspace-topology.ts';
 export {
   commitStandardAgentActionOutput,
   inspectStandardAgentActionRunOutput,
+  inspectStoredStandardAgentActionRunOutput,
   prepareStandardAgentActionRunRequest,
   STANDARD_AGENT_ACTION_RUNS_RELATIVE_ROOT,
 } from './standard-agent-action-output.ts';

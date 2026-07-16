@@ -25,7 +25,12 @@ const ROOT_HELP_DIAGNOSTIC_GROUPS = new Set([
 
 function looksLikeNaturalLanguage(command: string, args: string[]) {
   if (args.length > 0) {
-    return true;
+    const joined = [command, ...args].join(' ');
+    if (/[\u3400-\u9fff]/u.test(joined) || /[.,!?;:()[\]{}'"“”‘’]/.test(joined)) {
+      return true;
+    }
+    if (/^[A-Z]/.test(command)) return true;
+    return args.length >= 2 && !/^[a-z0-9]+(?:-[a-z0-9]+)+$/.test(command);
   }
 
   if (/\s/.test(command)) {
@@ -83,6 +88,8 @@ const NON_PASSTHROUGH_COMMAND_PREFIXES = new Set([
   ['front', 'door'].join(''),
   ['front', 'desk'].join(''),
   'app',
+  'agent-lab',
+  'agents',
   'ask',
   'atlas',
   'brand-modules',
@@ -93,7 +100,9 @@ const NON_PASSTHROUGH_COMMAND_PREFIXES = new Set([
   'env',
   'console',
   'framework',
+  'feedback',
   'foundry',
+  'foundry-lab',
   'index',
   'module',
   'modules',
@@ -112,6 +121,7 @@ const NON_PASSTHROUGH_COMMAND_PREFIXES = new Set([
   'ledger',
   'web',
   'workspace',
+  'work-order',
 ]);
 
 function cloneCommandSpec(

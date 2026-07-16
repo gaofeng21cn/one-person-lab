@@ -13,6 +13,10 @@ import {
 } from './operation-result.ts';
 import type {
   ActivationPointer,
+  ActivationRuntime,
+  ActivationRuntimeBindingVerification,
+  ActivationRuntimePreflight,
+  ActivationRuntimeReadback,
   ActivationTransaction,
   AgentVersion,
   CandidateCompiler,
@@ -30,7 +34,12 @@ import {
   validateOwnerGateVerification,
   validateOwnerGateVerificationContext,
 } from './owner-gate.ts';
-import { FOUNDRY_TERMINAL_STATES, snapshotFromEvents, verifyFoundryEventChain } from './state-machine.ts';
+import {
+  assertFoundryEventReplay,
+  FOUNDRY_TERMINAL_STATES,
+  snapshotFromEvents,
+  verifyFoundryEventChain,
+} from './state-machine.ts';
 import type { FoundryRunEvent, FoundryRunSnapshot } from './state-machine.ts';
 
 function fail(message: string, details: Record<string, unknown> = {}): never {
@@ -88,10 +97,43 @@ export class InMemoryFoundryOperationResultJournal implements FoundryOperationRe
 
 export class InMemoryOwnerGate implements OwnerGate {
   readonly #receipts = new Map<string, OwnerAuthorityReceipt>();
+  readonly #policies = new Map<string, {
+    policy_ref: string;
+    authority_refs: string[];
+  }>();
   readonly #now: () => string;
 
   constructor(now: () => string = () => new Date().toISOString()) {
     this.#now = now;
+  }
+
+  registerAuthorityPolicy(input: {
+    policy_ref: string;
+    target_agent_id: string;
+    target_domain_id: string;
+    authority_refs: string[];
+  }) {
+    const policyRef = input.policy_ref.trim();
+    const targetAgentId = input.target_agent_id.trim();
+    const targetDomainId = input.target_domain_id.trim();
+    const authorityRefs = input.authority_refs.map((entry) => entry.trim()).filter(Boolean);
+    if (!policyRef || !targetAgentId || !targetDomainId || authorityRefs.length === 0) {
+      fail('In-memory OwnerGate authority policy is incomplete.');
+    }
+    if (authorityRefs.length !== input.authority_refs.length || new Set(authorityRefs).size !== authorityRefs.length) {
+      fail('In-memory OwnerGate authority policy refs must be non-empty and unique.');
+    }
+    const key = `${targetAgentId}\u0000${targetDomainId}`;
+    const policy = { policy_ref: policyRef, authority_refs: authorityRefs };
+    const existing = this.#policies.get(key);
+    if (existing && canonicalJsonText(existing) !== canonicalJsonText(policy)) {
+      fail('In-memory OwnerGate target already has a different Framework authority policy.', {
+        target_agent_id: targetAgentId,
+        target_domain_id: targetDomainId,
+      });
+    }
+    this.#policies.set(key, clone(policy));
+    return clone(policy);
   }
 
   register(statement: Parameters<typeof materializeOwnerAuthorityReceipt>[0]) {
@@ -106,14 +148,27 @@ export class InMemoryOwnerGate implements OwnerGate {
       ?? fail('Owner authority receipt is not registered with the in-memory OwnerGate.', {
         authority_receipt_ref: context.authority_receipt_ref,
       });
+    const policy = this.#policies.get(`${context.target_agent_id}\u0000${context.target_domain_id}`)
+      ?? fail('Framework-owned target authority policy is not registered with the in-memory OwnerGate.', {
+        target_agent_id: context.target_agent_id,
+        target_domain_id: context.target_domain_id,
+      });
+    if (!policy.authority_refs.includes(receipt.authority_ref)) {
+      fail('Owner authority receipt is not allowed by the Framework-owned target authority policy.', {
+        authority_ref: receipt.authority_ref,
+        authority_policy_ref: policy.policy_ref,
+      });
+    }
     return validateOwnerGateVerification(context, {
       surface_kind: 'opl_foundry_owner_gate_verification',
       version: 'opl-foundry-owner-gate-verification.v1',
       verifier_id: 'foundry-owner-gate:in-memory',
       verification_ref: `opl://foundry/owner-gate-verifications/${internalDigest({
         verifier_id: 'foundry-owner-gate:in-memory',
+        authority_policy_ref: policy.policy_ref,
         receipt_digest: receipt.receipt_digest,
       })}`,
+      authority_policy_ref: policy.policy_ref,
       verified_at: this.#now(),
       covered_authority_ref: receipt.authority_ref,
       receipt,
@@ -137,7 +192,7 @@ export class InMemoryFoundryEventStore implements FoundryEventStore {
   async append(input: { target_key: string; expected_revision: number; event: FoundryRunEvent }) {
     const events = this.#runs.get(input.event.run_id) ?? fail('FoundryRun does not exist.', { run_id: input.event.run_id });
     const replay = events.find((entry) => entry.idempotency_key === input.event.idempotency_key);
-    if (replay) return clone(replay);
+    if (replay) return clone(assertFoundryEventReplay(replay, input.event, input.expected_revision));
     const current = events.at(-1)!;
     if (current.revision !== input.expected_revision) {
       fail('FoundryRun revision compare-and-swap failed.', {
@@ -202,6 +257,61 @@ type RegistryState = {
 
 function registryKey(agentId: string, domainId: string) {
   return `${agentId}\u0000${domainId}`;
+}
+
+function assertActivationRuntimeBindingVerification(input: {
+  verification: ActivationRuntimeBindingVerification;
+  transaction_kind: ActivationTransaction['transaction_kind'];
+  expected_revision: number;
+  version: AgentVersion;
+}) {
+  if (!input.verification || typeof input.verification !== 'object' || Array.isArray(input.verification)) {
+    fail('Activation runtime binding verification must be an object.');
+  }
+  const verification = input.verification as ActivationRuntimeBindingVerification;
+  const expectedFields = [
+    'surface_kind', 'version', 'verification_phase', 'transaction_kind', 'target_agent_id',
+    'target_domain_id', 'version_id', 'version_digest', 'candidate_digest', 'candidate_ref',
+    'expected_activation_revision', 'preflight_ref', 'runtime_binding_ref',
+  ].sort();
+  if (canonicalJsonText(Object.keys(verification).sort()) !== canonicalJsonText(expectedFields)) {
+    fail('Activation runtime binding verification fields are invalid.');
+  }
+  if (
+    verification.surface_kind !== 'opl_foundry_activation_runtime_binding_verification'
+    || verification.version !== 'opl-foundry-activation-runtime-binding-verification.v1'
+    || verification.verification_phase !== 'pre_commit'
+  ) {
+    fail('Activation runtime binding verification surface is invalid.');
+  }
+  if (verification.transaction_kind !== input.transaction_kind) {
+    fail('Activation runtime binding verification transaction kind is invalid.');
+  }
+  if (
+    verification.target_agent_id !== input.version.target_agent_id
+    || verification.target_domain_id !== input.version.target_domain_id
+  ) {
+    fail('Activation runtime binding verification target identity is invalid.');
+  }
+  if (
+    verification.version_id !== input.version.version_id
+    || verification.version_digest !== input.version.version_digest
+    || verification.candidate_digest !== input.version.candidate_digest
+    || verification.candidate_ref !== input.version.candidate_ref
+  ) {
+    fail('Activation runtime binding verification does not match the exact AgentVersion.');
+  }
+  if (verification.expected_activation_revision !== input.expected_revision) {
+    fail('Activation runtime binding verification expected revision is invalid.');
+  }
+  if (
+    typeof verification.preflight_ref !== 'string'
+    || verification.preflight_ref.length === 0
+    || typeof verification.runtime_binding_ref !== 'string'
+    || verification.runtime_binding_ref.length === 0
+  ) {
+    fail('Activation runtime binding verification prepared runtime binding ref is invalid.');
+  }
 }
 
 export class InMemoryVersionRegistry implements VersionRegistry {
@@ -296,6 +406,10 @@ export class InMemoryVersionRegistry implements VersionRegistry {
     return clone(this.#state(targetAgentId, targetDomainId).activation);
   }
 
+  async activationHistory(targetAgentId: string, targetDomainId: string) {
+    return clone(this.#state(targetAgentId, targetDomainId).transactions);
+  }
+
   async compareAndSwapActivation(input: Parameters<VersionRegistry['compareAndSwapActivation']>[0]) {
     return this.#activate({ ...input, transaction_kind: 'activate' });
   }
@@ -311,23 +425,47 @@ export class InMemoryVersionRegistry implements VersionRegistry {
     version_digest: string;
     occurred_at: string;
     authority_receipt_ref: string | null;
+    runtime_binding_verification: ActivationRuntimeBindingVerification;
     transaction_kind: 'activate' | 'rollback';
   }) {
     const state = this.#state(input.target_agent_id, input.target_domain_id);
-    const replay = state.transactions.find((entry) =>
-      entry.transaction_kind === input.transaction_kind
-      && entry.previous_revision === input.expected_revision
-      && entry.to_version_digest === input.version_digest
-      && entry.authority_receipt_ref === input.authority_receipt_ref);
-    if (replay) return clone(replay);
+    const targetVersion = state.versions.find((entry) => entry.version_digest === input.version_digest)
+      ?? fail('Activation target version does not exist.', { version_digest: input.version_digest });
+    assertActivationRuntimeBindingVerification({
+      verification: input.runtime_binding_verification,
+      transaction_kind: input.transaction_kind,
+      expected_revision: input.expected_revision,
+      version: targetVersion,
+    });
+    const replay = state.transactions.find((entry) => entry.previous_revision === input.expected_revision);
+    if (replay) {
+      if (
+        replay.transaction_kind !== input.transaction_kind
+        || replay.to_version_digest !== input.version_digest
+        || replay.authority_receipt_ref !== input.authority_receipt_ref
+        || canonicalJsonText(replay.runtime_binding_verification)
+          !== canonicalJsonText(input.runtime_binding_verification)
+      ) {
+        fail('Activation transaction replay conflicts with immutable history.', {
+          expected_revision: input.expected_revision,
+          transaction_id: replay.transaction_id,
+        });
+      }
+      return clone(replay);
+    }
     if (state.activation.revision !== input.expected_revision) {
       fail('ActivationPointer compare-and-swap failed.', {
         expected_revision: input.expected_revision,
         actual_revision: state.activation.revision,
       });
     }
-    if (!state.versions.some((entry) => entry.version_digest === input.version_digest)) {
-      fail('Activation target version does not exist.', { version_digest: input.version_digest });
+    if (input.transaction_kind === 'rollback') {
+      if (state.activation.active_version_digest === input.version_digest) {
+        fail('Rollback target version is already active.', { version_digest: input.version_digest });
+      }
+      if (!state.transactions.some((entry) => entry.to_version_digest === input.version_digest)) {
+        fail('Rollback target version has never been active.', { version_digest: input.version_digest });
+      }
     }
     const transaction: ActivationTransaction = {
       surface_kind: 'opl_foundry_activation_transaction',
@@ -341,6 +479,7 @@ export class InMemoryVersionRegistry implements VersionRegistry {
       next_revision: state.activation.revision + 1,
       authority_receipt_ref: input.authority_receipt_ref,
       occurred_at: input.occurred_at,
+      runtime_binding_verification: clone(input.runtime_binding_verification),
     };
     state.activation = {
       ...state.activation,
@@ -350,5 +489,105 @@ export class InMemoryVersionRegistry implements VersionRegistry {
     };
     state.transactions.push(transaction);
     return clone(transaction);
+  }
+}
+
+function assertExactAgentVersion(expected: AgentVersion, actual: AgentVersion | null, label: string) {
+  if (!actual || canonicalJsonText(actual) !== canonicalJsonText(expected)) {
+    fail(`${label} does not resolve the exact AgentVersion identity.`, {
+      version_digest: expected.version_digest,
+      target_agent_id: expected.target_agent_id,
+      target_domain_id: expected.target_domain_id,
+    });
+  }
+}
+
+export class FailClosedActivationRuntime implements ActivationRuntime {
+  async preflight(): Promise<ActivationRuntimePreflight> {
+    return fail('Foundry activation requires an explicit hosted ActivationRuntime.');
+  }
+
+  async readback(): Promise<ActivationRuntimeReadback> {
+    return fail('Foundry activation requires an explicit hosted ActivationRuntime.');
+  }
+}
+
+export class InMemoryActivationRuntime implements ActivationRuntime {
+  readonly #versions: VersionRegistry;
+
+  constructor(versions: VersionRegistry) {
+    this.#versions = versions;
+  }
+
+  async preflight(input: Parameters<ActivationRuntime['preflight']>[0]) {
+    const resolved = await this.#versions.resolveVersion(
+      input.version.version_digest,
+      input.version.target_agent_id,
+      input.version.target_domain_id,
+    );
+    assertExactAgentVersion(input.version, resolved, 'Activation runtime preflight');
+    const record = {
+      surface_kind: 'opl_foundry_activation_runtime_preflight' as const,
+      version: 'opl-foundry-activation-runtime-preflight.v1' as const,
+      transaction_kind: input.transaction_kind,
+      target_agent_id: input.version.target_agent_id,
+      target_domain_id: input.version.target_domain_id,
+      version_id: input.version.version_id,
+      version_digest: input.version.version_digest,
+      candidate_digest: input.version.candidate_digest,
+      candidate_ref: input.version.candidate_ref,
+      expected_activation_revision: input.expected_activation_revision,
+    };
+    return {
+      ...record,
+      preflight_ref: `opl://foundry/in-memory-activation-preflights/${internalDigest(record)}`,
+    };
+  }
+
+  async readback(input: Parameters<ActivationRuntime['readback']>[0]) {
+    const resolved = await this.#versions.resolveVersion(
+      input.version.version_digest,
+      input.version.target_agent_id,
+      input.version.target_domain_id,
+    );
+    assertExactAgentVersion(input.version, resolved, 'Activation runtime readback');
+    const activation = await this.#versions.activation(
+      input.version.target_agent_id,
+      input.version.target_domain_id,
+    );
+    if (
+      input.transaction.target_agent_id !== input.version.target_agent_id
+      || input.transaction.target_domain_id !== input.version.target_domain_id
+      || input.transaction.to_version_digest !== input.version.version_digest
+      || activation.target_agent_id !== input.version.target_agent_id
+      || activation.target_domain_id !== input.version.target_domain_id
+      || activation.active_version_digest !== input.version.version_digest
+      || activation.revision !== input.transaction.next_revision
+      || activation.updated_at !== input.transaction.occurred_at
+    ) {
+      fail('Activation runtime readback does not match the exact committed transaction.', {
+        transaction_id: input.transaction.transaction_id,
+        expected_version_digest: input.version.version_digest,
+        active_version_digest: activation.active_version_digest,
+        expected_activation_revision: input.transaction.next_revision,
+        actual_activation_revision: activation.revision,
+      });
+    }
+    const record = {
+      surface_kind: 'opl_foundry_activation_runtime_readback' as const,
+      version: 'opl-foundry-activation-runtime-readback.v1' as const,
+      transaction_kind: input.transaction.transaction_kind,
+      target_agent_id: input.version.target_agent_id,
+      target_domain_id: input.version.target_domain_id,
+      active_version_id: input.version.version_id,
+      active_version_digest: input.version.version_digest,
+      candidate_digest: input.version.candidate_digest,
+      candidate_ref: input.version.candidate_ref,
+      activation_revision: input.transaction.next_revision,
+    };
+    return {
+      ...record,
+      runtime_binding_ref: `opl://foundry/in-memory-runtime-bindings/${internalDigest(record)}`,
+    };
   }
 }

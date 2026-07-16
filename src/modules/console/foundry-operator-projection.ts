@@ -1,10 +1,7 @@
-import fs from 'node:fs';
-
 import {
   type FoundryRunSnapshot,
 } from '../foundry/index.ts';
 import {
-  foundryStoragePaths,
   LedgerFoundryEventStore,
   LedgerVersionRegistry,
 } from '../ledger/index.ts';
@@ -83,9 +80,6 @@ export async function buildFoundryOperatorProjection(input: {
   profile?: 'fast' | 'full';
   storageRoot?: string;
 } = {}) {
-  const paths = foundryStoragePaths(input.storageRoot);
-  if (!fs.existsSync(paths.state_index)) return emptyProjection();
-
   const runs = (await new LedgerFoundryEventStore(input.storageRoot).list())
     .sort((left, right) => right.updated_at.localeCompare(left.updated_at));
   const targetRuns = new Map<string, FoundryRunSnapshot>();

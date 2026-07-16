@@ -15,9 +15,13 @@ import {
   FileFoundryContentStore,
   LedgerVersionRegistry,
 } from '../../src/modules/ledger/foundry-persistent-adapters.ts';
+import {
+  compileStandardAgentStageManifest,
+  resolveStandardAgentStageQualityRuntimeBinding,
+} from '../../src/modules/pack/standard-agent-stage-manifest.ts';
 
 type StoredResource = ReturnType<FileFoundryContentStore['put']>;
-type ResourceSet = Record<'prompt' | 'skill' | 'knowledge' | 'helper' | 'model' | 'tool', StoredResource>;
+type ResourceSet = Record<'prompt' | 'skill' | 'knowledge' | 'helper' | 'model' | 'tool' | 'schema', StoredResource>;
 
 function digest(label: string) {
   return `sha256:${crypto.createHash('sha256').update(label).digest('hex')}`;
@@ -31,6 +35,7 @@ function resources(store: FileFoundryContentStore, modelBody = 'model fixture v1
     helper: store.put(Buffer.from('helper fixture v1\n')),
     model: store.put(Buffer.from(modelBody)),
     tool: store.put(Buffer.from('tool fixture v1\n')),
+    schema: store.put(Buffer.from('{"type":"object","additionalProperties":true}\n')),
   };
 }
 
@@ -63,12 +68,12 @@ function blueprint(input: ResourceSet): AgentBlueprint {
       action_id: 'deliver',
       summary: 'Deliver the fixture.',
       entry_stage_id: 'deliver',
-      input_schema_ref: 'schema:fixture-input',
-      output_schema_ref: 'schema:fixture-output',
+      input_schema_ref: input.schema.ref,
+      output_schema_ref: input.schema.ref,
     }],
     artifact_contracts: [{
       artifact_type: 'delivery',
-      schema_ref: 'schema:fixture-output',
+      schema_ref: input.schema.ref,
       authority_owner_ref: 'owner:fixture',
     }],
     content_refs: {
@@ -78,13 +83,14 @@ function blueprint(input: ResourceSet): AgentBlueprint {
       helper_refs: [input.helper.ref],
       model_refs: [input.model.ref],
       tool_refs: [input.tool.ref],
+      schema_refs: [input.schema.ref],
     },
     capability_requirements: ['capability:fixture'],
     authority_policy: {
       truth_owner_ref: 'owner:fixture',
       artifact_owner_ref: 'owner:fixture',
       quality_owner_ref: 'owner:fixture',
-      owner_gate_refs: ['owner-gate:fixture'],
+      permission_refs: [],
       generated_agent_can_modify_versions: false,
       generated_agent_can_modify_evaluation: false,
       generated_agent_can_modify_permissions: false,
@@ -141,7 +147,7 @@ test('candidate resource lock binds all external behavior bytes and survives exa
   };
   assert.equal(lock.surface_kind, 'opl_foundry_candidate_resource_lock');
   assert.deepEqual(lock.resources.map((entry) => entry.kind), [
-    'prompt', 'skill', 'knowledge', 'helper', 'model', 'tool',
+    'prompt', 'skill', 'knowledge', 'helper', 'model', 'tool', 'schema',
   ]);
   for (const entry of lock.resources) {
     assert.equal(entry.declared_ref, entry.immutable_ref);
@@ -155,6 +161,39 @@ test('candidate resource lock binds all external behavior bytes and survives exa
   };
   assert.equal(candidateIndex.version, 'opl-foundry-candidate-index.v2');
   assert.equal(candidateIndex.files.some((entry) => entry.path === 'contracts/resource-lock.json'), true);
+
+  const actionCatalog = JSON.parse(
+    fs.readFileSync(path.join(directory, 'contracts/action_catalog.json'), 'utf8'),
+  ) as Record<string, any>;
+  const stageManifest = JSON.parse(
+    fs.readFileSync(path.join(directory, 'agent/stages/manifest.json'), 'utf8'),
+  ) as Record<string, any>;
+  const schemaBinding = lock.resources.find((entry) => entry.kind === 'schema')!;
+  const promptBinding = lock.resources.find((entry) => entry.kind === 'prompt')!;
+  const toolBinding = lock.resources.find((entry) => entry.kind === 'tool')!;
+  assert.equal(actionCatalog.surface_kind, 'family_action_catalog');
+  assert.equal(actionCatalog.version, 'family-action-catalog.v2');
+  assert.equal(actionCatalog.actions[0].execution_binding.kind, 'stage_binding');
+  assert.equal(actionCatalog.actions[0].input_schema_ref, schemaBinding.pack_path);
+  assert.equal(actionCatalog.actions[0].output_schema_ref, schemaBinding.pack_path);
+  assert.equal(stageManifest.surface_kind, 'opl_standard_agent_declarative_stage_manifest');
+  assert.equal(stageManifest.version, 'opl-standard-agent-declarative-stage-manifest.v1');
+  assert.equal(stageManifest.stages[0].stage_kind, 'domain_specific');
+  assert.equal(stageManifest.stages[0].prompt_ref, promptBinding.pack_path);
+  assert.match(schemaBinding.pack_path, /^content\/schema\/[a-f0-9]{64}\.json$/);
+  assert.match(toolBinding.pack_path, /^agent\/tools\/[a-f0-9]{64}\.blob$/);
+  assert.doesNotMatch(fs.readFileSync(path.join(directory, 'contracts/action_catalog.json'), 'utf8'), /opl_foundry_generated/);
+  assert.doesNotMatch(fs.readFileSync(path.join(directory, 'agent/stages/manifest.json'), 'utf8'), /opl_foundry_generated/);
+
+  const compiled = compileStandardAgentStageManifest(directory);
+  assert.equal(compiled.source_binding.canonical_agent_id, agentBlueprint.target_agent_id);
+  assert.equal(compiled.source_binding.domain_id, agentBlueprint.target_domain_id);
+  const runtimeBinding = resolveStandardAgentStageQualityRuntimeBinding(directory, 'deliver');
+  assert.equal(runtimeBinding?.enabled, true);
+  assert.deepEqual(Object.keys(runtimeBinding?.role_prompt_refs ?? {}).sort(), [
+    'producer', 're_reviewer', 'repairer', 'reviewer',
+  ]);
+  assert.deepEqual(runtimeBinding?.quality_rubric_refs, ['agent/quality_gates/foundry-quality-rubric.md']);
 
   const registry = new LedgerVersionRegistry(root);
   const registered = await registry.register({
@@ -173,6 +212,21 @@ test('candidate resource lock binds all external behavior bytes and survives exa
     version_digest: registered.version.version_digest,
     occurred_at: '2026-07-16T00:01:00.000Z',
     authority_receipt_ref: null,
+    runtime_binding_verification: {
+      surface_kind: 'opl_foundry_activation_runtime_binding_verification',
+      version: 'opl-foundry-activation-runtime-binding-verification.v1',
+      verification_phase: 'pre_commit',
+      transaction_kind: 'activate',
+      target_agent_id: registered.version.target_agent_id,
+      target_domain_id: registered.version.target_domain_id,
+      version_id: registered.version.version_id,
+      version_digest: registered.version.version_digest,
+      candidate_digest: registered.version.candidate_digest,
+      candidate_ref: registered.version.candidate_ref,
+      expected_activation_revision: 0,
+      preflight_ref: `opl://foundry/activation-runtime-preflights/${digest('resource-lock-preflight')}`,
+      runtime_binding_ref: `opl://foundry/prepared-runtime-bindings/${digest('resource-lock-binding')}`,
+    },
   });
   const model = lock.resources.find((entry) => entry.kind === 'model')!;
   fs.writeFileSync(path.join(directory, model.pack_path), 'model drifted!\n');

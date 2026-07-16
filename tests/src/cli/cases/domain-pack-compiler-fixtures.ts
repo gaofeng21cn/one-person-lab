@@ -495,39 +495,6 @@ function writeFamilyDefaultContractRepo(workspaceRoot: string, spec: FamilyDefau
   if (spec.targetDomainId === 'redcube_ai') {
     writeRcaOwnerChainEvidenceFixture(contractsDir);
   }
-  if (spec.targetDomainId === 'opl-meta-agent') {
-    writeJson(path.join(contractsDir, 'target_agent_owner_chain_evidence.json'), {
-      surface_kind: 'opl_meta_agent_target_agent_owner_chain_evidence',
-      domain_id: 'opl-meta-agent',
-      evidence_scope: 'opl_hosted_canary_not_target_repo_mutation',
-      evidence_ref: 'repo-tracked-contract:contracts/target_agent_owner_chain_evidence.json',
-      target_agent_ready_claimed: false,
-      production_ready_claimed: false,
-      stage_replay_human_gate_blocker_closure: {
-        closure_status: 'blocked_by_domain_owned_typed_blocker_ref',
-        typed_blocker_refs: [
-          'oma-typed-blocker:stage-replay-human-gate:stage-decomposition:oma_baseline_owner_review/baseline-owner-review-receipt-pending',
-        ],
-        no_regression_refs: [
-          'no-regression-ref:opl-meta-agent/stage-replay-human-gate/oma_baseline_owner_review/no-target-repo-mutation',
-        ],
-        success_claimed: false,
-        human_gate_approval_claimed: false,
-        target_agent_ready_claimed: false,
-        production_ready_claimed: false,
-      },
-      authority_boundary: {
-        refs_only: true,
-        can_write_target_domain_truth: false,
-        can_write_target_domain_memory_body: false,
-        can_mutate_target_domain_artifact_body: false,
-        can_authorize_target_domain_quality_or_export: false,
-        can_claim_target_domain_ready: false,
-        can_claim_production_ready: false,
-        can_write_target_owner_receipt_body: false,
-      },
-    });
-  }
   return repoDir;
 }
 

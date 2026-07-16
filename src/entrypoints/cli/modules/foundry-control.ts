@@ -8,10 +8,15 @@ import {
 import {
   ContentAddressedCandidateCompiler,
   FileFoundryObjectStore,
+  foundryStoragePaths,
   LedgerFoundryEventStore,
   LedgerFoundryOperationResultJournal,
   LedgerVersionRegistry,
 } from '../../../modules/ledger/index.ts';
+import {
+  DefaultHostedAgentRuntimeBindingResolver,
+  HostedFoundryActivationRuntime,
+} from '../../../modules/runway/index.ts';
 import { configuredFoundryOwnerGate } from '../../../modules/runway/foundry-owner-gate.ts';
 
 function deferred(operation: string): never {
@@ -38,14 +43,25 @@ const deferredEvaluator: EvaluationExecutor = {
 };
 
 export function createPersistentFoundryControl(rootOverride?: string) {
+  const compiler = new ContentAddressedCandidateCompiler(rootOverride);
+  const versions = new LedgerVersionRegistry(rootOverride);
+  const storage = foundryStoragePaths(rootOverride);
   return new FoundryControlService(new FoundryKernel({
     designer: deferredDesigner,
     evaluator: deferredEvaluator,
-    compiler: new ContentAddressedCandidateCompiler(rootOverride),
+    compiler,
     objects: new FileFoundryObjectStore(rootOverride),
     events: new LedgerFoundryEventStore(rootOverride),
     operationResults: new LedgerFoundryOperationResultJournal(rootOverride),
-    versions: new LedgerVersionRegistry(rootOverride),
+    versions,
+    activationRuntime: new HostedFoundryActivationRuntime({
+      resolver: new DefaultHostedAgentRuntimeBindingResolver({
+        root_override: rootOverride,
+        registry_factory: () => versions,
+      }),
+      candidate_directory: (candidateDigest) => compiler.candidateDirectory(candidateDigest),
+      workspace_root: storage.root,
+    }),
     ownerGate: configuredFoundryOwnerGate(),
   }));
 }

@@ -1,0 +1,37 @@
+{
+  "surface_kind": "opl_foundry_oma_fixture_lock",
+  "version": "opl-foundry-oma-fixture-lock.v1",
+  "package_id": "oma",
+  "package_version": "0.4.0",
+  "source_repo": "https://github.com/gaofeng21cn/opl-meta-agent.git",
+  "source_commit": "33a91c7d7f6f71670c13ae63024c54f9063945ee",
+  "evidence_class": "deterministic_local_fixture",
+  "live_model_proof": false,
+  "files": [
+    {
+      "path": "foundry_provider.json",
+      "source_path": "contracts/foundry_provider.json",
+      "sha256": "sha256:1990ec386dfcc17c558cfabd7e80ddc7337c2874bc53a747ad7a7d3e9c1ff006"
+    },
+    {
+      "path": "foundry-protocol/design-request.json",
+      "source_path": "contracts/fixtures/foundry-protocol/design-request.json",
+      "sha256": "sha256:b20ba14d1ce42fa8c996923f16e76ab3ad60c1e528330c32fed5ba11acd2c956"
+    },
+    {
+      "path": "foundry-protocol/agent-blueprint.json",
+      "source_path": "contracts/fixtures/foundry-protocol/agent-blueprint.json",
+      "sha256": "sha256:14739b31121b56c63009e6dbcfbe4951b5b44274e64853913b2d36b1ad7b1b28"
+    },
+    {
+      "path": "foundry-protocol/evidence-bundle.json",
+      "source_path": "contracts/fixtures/foundry-protocol/evidence-bundle.json",
+      "sha256": "sha256:71a81329a04d366e4cc3e8eed5916e902a9045addb67a3daf01ff9d5d924c2ae"
+    },
+    {
+      "path": "foundry-protocol/evolution-proposal.json",
+      "source_path": "contracts/fixtures/foundry-protocol/evolution-proposal.json",
+      "sha256": "sha256:39f206085ef2c39dbe18773e912d1fe0d835b5c28d03d721542207243aa0c081"
+    }
+  ]
+}

@@ -34,11 +34,15 @@ import * as registeredActivities from '../../src/modules/runway/family-runtime-t
 import { buildFoundryTemporalActivities } from '../../src/modules/runway/foundry-temporal-activities.ts';
 import {
   cancelTemporalFoundryRun,
+  foundryTemporalWorkflowId,
   queryTemporalFoundryRunWorkflow,
   startTemporalFoundryRunWorkflow,
   submitTemporalFoundryOwnerDecision,
 } from '../../src/modules/runway/foundry-temporal-control.ts';
-import type { FoundryRunWorkflowState } from '../../src/modules/runway/foundry-temporal.ts';
+import type {
+  FoundryRunWorkflowInput,
+  FoundryRunWorkflowState,
+} from '../../src/modules/runway/foundry-temporal.ts';
 import { createTemporalTestWorkflowEnvironment } from './temporal-test-environment.ts';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -50,6 +54,12 @@ function authorizeTemporalMutation(input: {
   action: 'approve_canary' | 'approve_active' | 'cancel';
   decision: 'approve' | 'cancel';
 }) {
+  ownerGate.registerAuthorityPolicy({
+    policy_ref: 'opl://foundry/authority-policy/temporal-fixture',
+    target_agent_id: input.inspection.request.target_agent_id,
+    target_domain_id: input.inspection.request.target_domain_id,
+    authority_refs: ['opl://owner-gate/temporal-fixture'],
+  });
   return ownerGate.register({
     surface_kind: 'opl_foundry_owner_authority_receipt',
     version: 'opl-foundry-owner-authority-receipt.v1',
@@ -90,6 +100,14 @@ function designRequest(target = 'temporal-fixture-agent'): DesignRequest {
   };
 }
 
+function workflowInput(runId: string, request: DesignRequest): FoundryRunWorkflowInput {
+  return {
+    run_id: runId,
+    request,
+    request_digest: foundryContentDigest(request),
+  };
+}
+
 function agentBlueprint(request: DesignRequest): AgentBlueprint {
   return {
     surface_kind: 'opl_foundry_agent_blueprint',
@@ -119,12 +137,12 @@ function agentBlueprint(request: DesignRequest): AgentBlueprint {
       action_id: 'deliver',
       summary: 'Deliver the result.',
       entry_stage_id: 'deliver',
-      input_schema_ref: 'opl://schema/temporal-fixture/input.v1',
-      output_schema_ref: 'opl://schema/temporal-fixture/output.v1',
+      input_schema_ref: `opl-content://sha256/${'2'.repeat(64)}`,
+      output_schema_ref: `opl-content://sha256/${'3'.repeat(64)}`,
     }],
     artifact_contracts: [{
       artifact_type: 'delivery',
-      schema_ref: 'opl://schema/temporal-fixture/output.v1',
+      schema_ref: `opl-content://sha256/${'3'.repeat(64)}`,
       authority_owner_ref: 'opl://owner/temporal-fixture',
     }],
     content_refs: {
@@ -134,13 +152,17 @@ function agentBlueprint(request: DesignRequest): AgentBlueprint {
       helper_refs: [],
       model_refs: ['opl://model/default'],
       tool_refs: [],
+      schema_refs: [
+        `opl-content://sha256/${'2'.repeat(64)}`,
+        `opl-content://sha256/${'3'.repeat(64)}`,
+      ],
     },
     capability_requirements: ['opl://capability/text'],
     authority_policy: {
       truth_owner_ref: 'opl://owner/temporal-fixture',
       artifact_owner_ref: 'opl://owner/temporal-fixture',
       quality_owner_ref: 'opl://owner/temporal-fixture',
-      owner_gate_refs: ['opl://owner-gate/temporal-fixture'],
+      permission_refs: [],
       generated_agent_can_modify_versions: false,
       generated_agent_can_modify_evaluation: false,
       generated_agent_can_modify_permissions: false,
@@ -200,6 +222,9 @@ function passingEvidence(input: {
       findings: [],
       evidence_refs: ['opl://evidence/review'],
     },
+    candidate_cost_observations: { usd: 0 },
+    candidate_latency_observations: { milliseconds: 0 },
+    safety_observations: [],
     safety_delta: { incidents: 0 },
     cost_delta: { usd: 0 },
     latency_delta: { milliseconds: 0 },
@@ -335,6 +360,20 @@ async function waitForState(
   throw new Error(`Foundry workflow ${runId} did not reach ${expected}.`);
 }
 
+async function within<T>(promise: Promise<T>, timeoutMs: number, message: string) {
+  let timer: NodeJS.Timeout | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 test('Temporal FoundryRun survives worker restart and applies query, Update, CAS, and cancel semantics', async () => {
   const testEnv = await createTemporalTestWorkflowEnvironment();
   const taskQueue = `opl-foundry-temporal-control-${Date.now()}`;
@@ -352,12 +391,27 @@ test('Temporal FoundryRun survives worker restart and applies query, Update, CAS
       activities,
     });
     const firstGate = await firstWorker.runUntil(async () => {
+      const request = designRequest();
       const receipt = await startTemporalFoundryRunWorkflow({
         run_id: 'run-temporal-restart',
-        request: designRequest(),
+        request,
       }, options);
       assert.equal(receipt.provider_kind, 'temporal');
-      return waitForState('run-temporal-restart', 'awaiting_owner_canary', testEnv.address);
+      assert.equal(receipt.request_digest, foundryContentDigest(request));
+      const gate = await waitForState('run-temporal-restart', 'awaiting_owner_canary', testEnv.address);
+      const replay = await startTemporalFoundryRunWorkflow({
+        run_id: 'run-temporal-restart',
+        request: structuredClone(request),
+      }, options);
+      assert.equal(replay.state.request_digest, foundryContentDigest(request));
+      await assert.rejects(
+        startTemporalFoundryRunWorkflow({
+          run_id: 'run-temporal-restart',
+          request: { ...request, objective: 'Conflicting objective for the same run id.' },
+        }, options),
+        /USE_EXISTING resolved a different DesignRequest/,
+      );
+      return gate;
     });
     assert.equal(firstGate.inspection?.run.generation, 0);
 
@@ -457,8 +511,9 @@ test('Temporal retries a transient Foundry activity three times without Kernel r
   });
   try {
     const result = await worker.runUntil(async () => {
+      const request = designRequest('temporal-retry-agent');
       const handle = await testEnv.client.workflow.start('FoundryRunWorkflow', {
-        args: [{ run_id: 'run-temporal-retry', request: designRequest('temporal-retry-agent') }],
+        args: [workflowInput('run-temporal-retry', request)],
         taskQueue,
         workflowId: `wf-foundry-retry-${Date.now()}`,
       });
@@ -512,10 +567,7 @@ test('Temporal replays a journaled evaluation to repair qualification append wit
   try {
     const { result, temporalHistory } = await worker.runUntil(async () => {
       const handle = await testEnv.client.workflow.start('FoundryRunWorkflow', {
-        args: [{
-          run_id: 'run-temporal-evaluation-unknown',
-          request,
-        }],
+        args: [workflowInput('run-temporal-evaluation-unknown', request)],
         taskQueue,
         workflowId: `wf-foundry-evaluation-unknown-${Date.now()}`,
       });
@@ -574,10 +626,10 @@ test('Temporal fails closed before registration when evaluator completion is unk
   try {
     const result = await worker.runUntil(async () => {
       const handle = await testEnv.client.workflow.start('FoundryRunWorkflow', {
-        args: [{
-          run_id: 'run-temporal-evaluation-unjournaled',
-          request: designRequest('temporal-evaluation-unjournaled-agent'),
-        }],
+        args: [workflowInput(
+          'run-temporal-evaluation-unjournaled',
+          designRequest('temporal-evaluation-unjournaled-agent'),
+        )],
         taskQueue,
         workflowId: `wf-foundry-evaluation-unjournaled-${Date.now()}`,
       });
@@ -628,7 +680,7 @@ test('Temporal recovers the ledger result when evaluation Activity completion is
   try {
     const { result, temporalHistory } = await worker.runUntil(async () => {
       const handle = await testEnv.client.workflow.start('FoundryRunWorkflow', {
-        args: [{ run_id: 'run-temporal-evaluation-recovery', request }],
+        args: [workflowInput('run-temporal-evaluation-recovery', request)],
         taskQueue,
         workflowId: `wf-foundry-evaluation-recovery-${Date.now()}`,
       });
@@ -650,6 +702,81 @@ test('Temporal recovers the ledger result when evaluation Activity completion is
     assert.equal(evaluateIds.length, 1);
     assert.match(evaluateIds[0]!, /^opl-foundry-step\.v1\/run-temporal-evaluation-recovery\/4\/evaluate\/sha256:/);
   } finally {
+    await testEnv.teardown();
+  }
+});
+
+test('Temporal cancel bypasses a long design Activity and closes one authoritative event chain', async () => {
+  const testEnv = await createTemporalTestWorkflowEnvironment();
+  const taskQueue = `opl-foundry-temporal-cancel-race-${Date.now()}`;
+  let enterDesign!: () => void;
+  let releaseDesign!: () => void;
+  let designReleased = false;
+  const designEntered = new Promise<void>((resolve) => { enterDesign = resolve; });
+  const designRelease = new Promise<void>((resolve) => {
+    releaseDesign = () => {
+      designReleased = true;
+      resolve();
+    };
+  });
+  const dependencies = passingKernelDependencies();
+  const designer: DesignerPort = {
+    producer_id: 'designer:long-temporal-fixture',
+    design: async (request) => {
+      enterDesign();
+      await designRelease;
+      return agentBlueprint(request);
+    },
+    diagnose: async () => { throw new Error('diagnose should not run'); },
+  };
+  const kernel = new FoundryKernel({ ...dependencies, designer });
+  const worker = await Worker.create({
+    connection: testEnv.nativeConnection,
+    namespace: testEnv.namespace,
+    taskQueue,
+    workflowsPath,
+    activities: { ...registeredActivities, ...buildFoundryTemporalActivities(() => kernel) },
+  });
+  const options = { addressOverride: testEnv.address, rpcTimeoutMs: 10_000 };
+  try {
+    await worker.runUntil(async () => {
+      try {
+        const request = designRequest('temporal-cancel-race-agent');
+        await testEnv.client.workflow.start('FoundryRunWorkflow', {
+          args: [workflowInput('run-temporal-cancel-race', request)],
+          taskQueue,
+          workflowId: foundryTemporalWorkflowId('run-temporal-cancel-race'),
+        });
+        await within(designEntered, 2_000, 'Long design Activity did not start.');
+        const designing = await queryTemporalFoundryRunWorkflow('run-temporal-cancel-race', options);
+        assert.equal(designing.inspection?.run.state, 'designing');
+        const cancelled = await within(cancelTemporalFoundryRun({
+          run_id: 'run-temporal-cancel-race',
+          expected_revision: designing.inspection!.run.revision,
+          authority_receipt_ref: authorizeTemporalMutation({
+            inspection: designing.inspection!,
+            action: 'cancel',
+            decision: 'cancel',
+          }),
+        }, options), 2_000, 'Cancel waited for the long design Activity.');
+        assert.equal(cancelled.inspection?.run.state, 'cancelled');
+        assert.equal(designReleased, false);
+        releaseDesign();
+        const terminal = await waitForState('run-temporal-cancel-race', 'terminal', testEnv.address);
+        assert.equal(terminal.inspection?.run.state, 'cancelled');
+        const history = await dependencies.events.read('run-temporal-cancel-race');
+        assert.deepEqual(history.map((event) => event.event_type), [
+          'foundry_run_accepted',
+          'design_started',
+          'foundry_run_cancelled',
+        ]);
+        assert.deepEqual(history.map((event) => event.revision), [1, 2, 3]);
+      } finally {
+        releaseDesign();
+      }
+    });
+  } finally {
+    releaseDesign();
     await testEnv.teardown();
   }
 });

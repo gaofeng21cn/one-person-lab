@@ -63,6 +63,19 @@ export { listCodexAppRuntimeEvidenceReceipts } from './codex-app-runtime-evidenc
 export { runFamilyRuntime } from './family-runtime.ts';
 export { runStandardAgentAction } from './standard-agent-action-runtime.ts';
 export {
+  DefaultHostedAgentRuntimeBindingResolver,
+  hostedRuntimeExecutionBindingRef,
+  readHostedAgentRuntimeActionContracts,
+} from './hosted-agent-runtime-binding.ts';
+export type {
+  FoundryHostedAgentCandidatePreflight,
+  FoundryHostedAgentPackageUseBinding,
+  HostedAgentRuntimeBindingProvenance,
+  HostedAgentRuntimeBindingResolver,
+  HostedAgentRuntimeBindingSnapshot,
+} from './hosted-agent-runtime-binding.ts';
+export { HostedFoundryActivationRuntime } from './foundry-activation-runtime.ts';
+export {
   cancelTemporalFoundryRun,
   foundryTemporalWorkflowId,
   queryTemporalFoundryRunWorkflow,

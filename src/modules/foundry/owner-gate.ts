@@ -127,7 +127,6 @@ export function validateOwnerGateVerificationContext(value: unknown): OwnerGateV
     'run_id',
     'version_digest',
     'expected_revision',
-    'allowed_authority_refs',
   ], 'Owner gate verification context');
   if (value.surface_kind !== CONTEXT_SURFACE || value.version !== CONTEXT_VERSION) {
     fail('Owner gate verification context identity is invalid.');
@@ -138,14 +137,6 @@ export function validateOwnerGateVerificationContext(value: unknown): OwnerGateV
   const runId = nullableString(value.run_id, 'Owner gate context run_id');
   const versionDigest = optionalDigest(value.version_digest, 'Owner gate context version_digest');
   assertRunVersionShape({ action: actionValue, run_id: runId, version_digest: versionDigest }, 'Owner gate context');
-  if (!Array.isArray(value.allowed_authority_refs) || value.allowed_authority_refs.length === 0) {
-    fail('Owner gate verification requires non-empty blueprint authority refs.');
-  }
-  const authorityRefs = value.allowed_authority_refs.map((entry, index) =>
-    requiredString(entry, `Owner gate context allowed_authority_refs[${index}]`));
-  if (new Set(authorityRefs).size !== authorityRefs.length) {
-    fail('Owner gate verification authority refs must be unique.');
-  }
   return {
     surface_kind: CONTEXT_SURFACE,
     version: CONTEXT_VERSION,
@@ -157,7 +148,6 @@ export function validateOwnerGateVerificationContext(value: unknown): OwnerGateV
     run_id: runId,
     version_digest: versionDigest,
     expected_revision: expectedRevision(value.expected_revision, 'Owner gate context expected_revision'),
-    allowed_authority_refs: authorityRefs,
   };
 }
 
@@ -254,6 +244,7 @@ export function validateOwnerGateVerification(
     'version',
     'verifier_id',
     'verification_ref',
+    'authority_policy_ref',
     'verified_at',
     'covered_authority_ref',
     'receipt',
@@ -277,7 +268,6 @@ export function validateOwnerGateVerification(
     || receipt.version_digest !== context.version_digest
     || receipt.expected_revision !== context.expected_revision
     || receipt.authority_ref !== coveredAuthorityRef
-    || !context.allowed_authority_refs.includes(coveredAuthorityRef)
   ) {
     fail('Owner gate verification does not cover the exact requested authority mutation.', {
       context,
@@ -290,6 +280,10 @@ export function validateOwnerGateVerification(
     version: VERIFICATION_VERSION,
     verifier_id: requiredString(verificationValue.verifier_id, 'Owner gate verification verifier_id'),
     verification_ref: requiredString(verificationValue.verification_ref, 'Owner gate verification verification_ref'),
+    authority_policy_ref: requiredString(
+      verificationValue.authority_policy_ref,
+      'Owner gate verification authority_policy_ref',
+    ),
     verified_at: timestamp(verificationValue.verified_at, 'Owner gate verification verified_at'),
     covered_authority_ref: coveredAuthorityRef,
     receipt,

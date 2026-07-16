@@ -173,12 +173,40 @@ test('retired evaluation actor stays absent and Foundry exports remain kernel-on
   assert.equal(packageJson.exports?.['./foundry-control'], './dist/modules/foundry/control.js');
   assert.equal(Object.keys(packageJson.exports ?? {}).some((key) => key.includes('lab')), false);
 
+  const cliMain = fs.readFileSync(path.join(repoRoot, 'src/entrypoints/cli/main.ts'), 'utf8');
+  for (const retiredCommand of [
+    'opl agents foundry',
+    'opl agents scaffold',
+    'opl agent-lab',
+    'opl foundry-lab',
+    'opl feedback',
+    'opl work-order',
+  ]) {
+    assert.doesNotMatch(cliMain, new RegExp(retiredCommand.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  }
+
   const fallowConfig = parseJsonText(fs.readFileSync(path.join(repoRoot, '.fallowrc.json'), 'utf8')) as {
     entry?: string[];
   };
   assert.ok(fallowConfig.entry?.includes('src/modules/foundry/protocol.ts'));
   assert.ok(fallowConfig.entry?.includes('src/modules/foundry/control.ts'));
   assert.equal(fallowConfig.entry?.some((entry) => entry.includes('foundry-lab') || entry.includes('agent-lab')), false);
+});
+
+test('active Foundry operating-evidence contract uses only kernel canonical ids', () => {
+  const relativePath = 'contracts/opl-framework/brand-module-l5-operating-evidence.json';
+  const content = fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
+  assert.doesNotMatch(content, /\bfoundry_lab_[a-z0-9_]+\b/);
+
+  const contract = parseJsonText(content) as {
+    modules?: Array<{ module_id?: string; immediate_enabling_surfaces?: string[] }>;
+  };
+  const foundry = contract.modules?.find((entry) => entry.module_id === 'foundry');
+  assert.deepEqual(foundry?.immediate_enabling_surfaces, [
+    'foundry_kernel_canary_promotion_envelope',
+    'foundry_kernel_rollback_gate',
+    'foundry_kernel_owner_acceptance_ref_gate',
+  ]);
 });
 
 test('retired internal write and fallback helper exports do not return', () => {

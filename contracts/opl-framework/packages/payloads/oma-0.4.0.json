@@ -1,0 +1,35 @@
+{
+  "surface_kind": "opl_package_payload_manifest.v2",
+  "schema_ref": "contracts/opl-framework/package-payload-manifest-v2.schema.json",
+  "package_id": "oma",
+  "plugin_id": "opl-meta-agent",
+  "package_version": "0.4.0",
+  "source_repo": "https://github.com/gaofeng21cn/opl-meta-agent.git",
+  "source_commit": "33a91c7d7f6f71670c13ae63024c54f9063945ee",
+  "source_root": "plugins/opl-meta-agent",
+  "content_lock": {
+    "algorithm": "sha256",
+    "canonicalization": "ordered_path_length_file_length_bytes",
+    "digest": "sha256:1a6cc56fe8f588f90a432999df2c09b9160a51b0fa53d5e028fbcbaca0ee548f"
+  },
+  "files": [
+    {
+      "path": ".codex-plugin/plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-meta-agent/33a91c7d7f6f71670c13ae63024c54f9063945ee/plugins/opl-meta-agent/.codex-plugin/plugin.json",
+      "sha256": "sha256:0231b07ac55ff78eee0750496e235797a6cfbff8fc2bb61cda8c067a62f54a11"
+    },
+    {
+      "path": "assets/icon.svg",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-meta-agent/33a91c7d7f6f71670c13ae63024c54f9063945ee/plugins/opl-meta-agent/assets/icon.svg",
+      "sha256": "sha256:c8513ae10777203b9f9d689f893c9c18944bcf76b68128d89fadef165c2c1a55"
+    },
+    {
+      "path": "skills/opl-meta-agent/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-meta-agent/33a91c7d7f6f71670c13ae63024c54f9063945ee/plugins/opl-meta-agent/skills/opl-meta-agent/SKILL.md",
+      "sha256": "sha256:90f63f5732ec944ebe6bd64909d92855650b99cd2e93ab9c8c23e843aff380b1"
+    }
+  ]
+}
