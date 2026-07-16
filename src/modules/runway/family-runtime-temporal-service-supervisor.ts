@@ -84,22 +84,30 @@ function restoreFileSnapshot(filePath: string, snapshot: string | null) {
   atomicWriteText(filePath, snapshot);
 }
 
-function plistEnvironmentVariables(paths: RuntimePaths, launcher: TemporalServiceLauncher) {
+function plistEnvironmentVariables(
+  paths: RuntimePaths,
+  launcher: TemporalServiceLauncher,
+  env: NodeJS.ProcessEnv,
+) {
   const values: Record<string, string> = {
     OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
     OPL_FAMILY_RUNTIME_ROOT: paths.root,
     OPL_STATE_DIR: paths.state_dir,
     OPL_TEMPORAL_ADDRESS: launcher.address,
   };
-  const pathValue = process.env.PATH?.trim();
+  const pathValue = env.PATH?.trim();
   if (pathValue) {
     values.PATH = pathValue;
   }
   return values;
 }
 
-function plistEnvironmentXml(paths: RuntimePaths, launcher: TemporalServiceLauncher) {
-  return Object.entries(plistEnvironmentVariables(paths, launcher))
+function plistEnvironmentXml(
+  paths: RuntimePaths,
+  launcher: TemporalServiceLauncher,
+  env: NodeJS.ProcessEnv,
+) {
+  return Object.entries(plistEnvironmentVariables(paths, launcher, env))
     .map(([key, value]) => `    <key>${escapeXml(key)}</key>\n    <string>${escapeXml(value)}</string>`)
     .join('\n');
 }
@@ -107,6 +115,7 @@ function plistEnvironmentXml(paths: RuntimePaths, launcher: TemporalServiceLaunc
 export function buildTemporalServiceSupervisorPlist(
   paths: RuntimePaths,
   launcher: TemporalServiceLauncher,
+  env: NodeJS.ProcessEnv = process.env,
 ) {
   const logRoot = path.join(paths.root, 'logs');
   const args = [launcher.executable, ...launcher.args]
@@ -124,7 +133,7 @@ ${args}
   </array>
   <key>EnvironmentVariables</key>
   <dict>
-${plistEnvironmentXml(paths, launcher)}
+${plistEnvironmentXml(paths, launcher, env)}
   </dict>
   <key>WorkingDirectory</key>
   <string>${escapeXml(paths.root)}</string>
@@ -402,7 +411,7 @@ async function installSupervisor(
     : resolvedLauncher;
   const plistPath = temporalServiceSupervisorPlistPath(runtime);
   const configPath = temporalServiceSupervisorConfigPath(paths);
-  const plist = buildTemporalServiceSupervisorPlist(paths, launcher);
+  const plist = buildTemporalServiceSupervisorPlist(paths, launcher, runtime.env ?? process.env);
   const config = supervisorConfig(paths, launcher, plist, runtime);
   const before = inspectTemporalServiceSupervisorState(paths, runtime);
   const plistSnapshot = readFileSnapshot(plistPath);

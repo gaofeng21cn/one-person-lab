@@ -336,6 +336,7 @@ test('Temporal service supervisor installs an idempotent direct-executable launc
     assert.match(plist, /<key>ThrottleInterval<\/key>\s*<integer>15<\/integer>/);
     assert.match(plist, new RegExp(`<key>WorkingDirectory<\\/key>\\s*<string>${fixture.paths.root.replaceAll('/', '\\/')}<\\/string>`));
     assert.equal(plist.includes('/Users/gaofeng/workspace/one-person-lab'), false);
+    assert.equal(plist.includes('<key>PATH</key>'), false);
     const configPath = temporalServiceSupervisorConfigPath(fixture.paths);
     const configRaw = fs.readFileSync(configPath, 'utf8');
     const config = JSON.parse(configRaw) as {
@@ -355,7 +356,7 @@ test('Temporal service supervisor installs an idempotent direct-executable launc
       ...fixture.launcher,
       args: config.launcher_args,
       command: [fixture.launcher.executable, ...config.launcher_args].join(' '),
-    }), plist);
+    }, runtime.env), plist);
 
     const second = await runTemporalServiceSupervisorCommand(fixture.db, fixture.paths, 'install', runtime);
     assert.equal(second.status, 'already_ready');
