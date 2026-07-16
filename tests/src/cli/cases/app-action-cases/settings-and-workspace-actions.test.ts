@@ -485,6 +485,24 @@ test('app action execute owns settings, release channel, workspace root, and pro
     assert.equal(provider.delegated_surface, 'opl family-runtime scheduler status --provider temporal');
     assert.equal(provider.result.family_runtime_scheduler_cadence.status, 'blocked_provider_not_ready');
 
+    const temporalService = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'provider_service_status',
+    ], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
+      PATH: '/usr/bin:/bin',
+    }).app_action_execution;
+
+    assert.equal(temporalService.delegated_surface, 'opl family-runtime service status --provider temporal');
+    assert.equal(temporalService.result.family_runtime_service.service_status, 'not_configured');
+    assert.equal(temporalService.result.family_runtime_service.server_reachable, false);
+
     const developerRefresh = runCli([
       'app',
       'action',

@@ -12,7 +12,7 @@
 <p align="center">Move papers, grants, presentations, patents, and other demanding projects beyond one-shot answers into sustained progress, review, revision, and delivery.</p>
 
 <p align="center">
-  <img src="assets/branding/opl-stage-delivery-model.png" alt="One Person Lab stage-led delivery model" width="100%" />
+  <img src="assets/branding/opl-stage-delivery-model-v2.png" alt="One Person Lab journey from complex goal to deliverable" width="100%" />
 </p>
 
 ## Why One Person Lab
@@ -88,10 +88,6 @@ With this design, OPL keeps attention on real progress: whether the next version
 
 Workflow tools are strongest when the task is deterministic: call a few tools, fill a few fields, and produce a fixed output. High-value knowledge work behaves more like a professional team moving a project forward: someone prepares material, someone creates, someone reviews, someone revises, and someone closes out delivery. OPL organizes those roles and stages so AI keeps producing inspectable, editable, deliverable work.
 
-<p align="center">
-  <img src="assets/branding/opl-knowledge-delivery-advantage.png" alt="One Person Lab compared with workflow-style agents" width="100%" />
-</p>
-
 ## Product Layers
 
 One Person Lab has three user-visible layers:
@@ -109,10 +105,6 @@ Users do not need to understand the repository split to use the product. For dev
 For the complete repository split, see the [OPL family repository map](./docs/public/repo-map.md).
 
 The desktop product follows the Codex App interaction shape and presents MAS, MAG, RCA, and later Foundry Agents as built-in task entries. Users do not need to choose the underlying executor or shell implementation; those details stay in developer diagnostics and verification material.
-
-<p align="center">
-  <img src="assets/branding/opl-framework-ecosystem-map.png" alt="One Person Lab builds domain agents and packages them into the desktop product" width="100%" />
-</p>
 
 ## Current Product Lines
 

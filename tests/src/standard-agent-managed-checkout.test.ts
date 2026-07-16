@@ -52,6 +52,35 @@ test('managed checkout resolver uses package activation and exact current runtim
   assert.equal(activationCalls, 1);
 });
 
+test('managed checkout resolver accepts live-probed developer checkout provenance drift', async () => {
+  const { workspaceRoot, checkoutRoot } = fixture();
+  const result = await resolveStandardAgentManagedCheckout({
+    domainId: 'mas',
+    workspaceRoot,
+    packageReadiness: {
+      readStatus: () => ({
+        opl_agent_package_status: status(checkoutRoot, {
+          runtime_source_readiness: {
+            status: 'current',
+            operational_ready: true,
+            checkout_path: checkoutRoot,
+            expected_tree_sha256: 'recorded-tree-sha',
+            actual_tree_sha256: 'current-tree-sha',
+            provenance_observation: {
+              policy: 'observation_only',
+              status: 'changed',
+            },
+          },
+        }),
+      }),
+      ensureScopeActivation: async () => ({ package_use_binding: null }),
+    },
+  });
+
+  assert.equal(result.checkout_root, fs.realpathSync(checkoutRoot));
+  assert.equal(result.package_status.launch_allowed, true);
+});
+
 test('managed checkout resolver rejects package quality-debt fail-open states', async () => {
   const { workspaceRoot, checkoutRoot } = fixture();
   await assert.rejects(resolveStandardAgentManagedCheckout({

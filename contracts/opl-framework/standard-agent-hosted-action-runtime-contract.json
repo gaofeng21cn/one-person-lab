@@ -2,7 +2,7 @@
   "contract_kind": "opl_standard_agent_hosted_action_runtime_contract.v1",
   "surface_kind": "opl_standard_agent_hosted_action_runtime_contract",
   "owner": "one-person-lab",
-  "purpose": "Host Standard OPL Agent actions from exact managed package sources without restoring per-agent command control planes or moving domain authority into OPL.",
+  "purpose": "Host Standard OPL Agent actions from immutable managed releases or live-probed developer checkouts without restoring per-agent command control planes or moving domain authority into OPL.",
   "state": "active_contract",
   "brand_module_ownership": {
     "primary_module": "runway",
@@ -35,13 +35,16 @@
       "runtime_source_status": "current",
       "runtime_source_operational_ready": true,
       "checkout_path_absolute": true,
-      "expected_tree_sha256_equals_actual_tree_sha256": true,
+      "immutable_runtime_source_identity_matches_recorded_digest": true,
+      "developer_checkout_identity_is_provenance_observation_only": true,
+      "developer_checkout_live_health_and_handler_probe_required": true,
       "workspace_scope_activation_attempted_for_installed_package": true
     },
     "use_binding_surface_kind": "opl_agent_package_use_binding.v1",
     "moving_pointer_is_install_truth": false,
     "origin_main_is_implicit_launch_target": false,
     "dirty_or_diverged_development_checkout_repair_in_action_runtime": false,
+    "dirty_or_diverged_development_checkout_blocks_launch": false,
     "failure_policy": "fail_closed_before_handler_or_stage_launch"
   },
   "domain_pack_action_abi": {

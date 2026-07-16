@@ -22,20 +22,20 @@ test('system startup-maintenance does not block all modules on a timed-out modul
 
   try {
     fs.writeFileSync(
-      path.join(masRemote.sourceRoot, 'scripts', 'opl-module-healthcheck.sh'),
+      path.join(magRemote.sourceRoot, 'scripts', 'opl-module-healthcheck.sh'),
       [
         '#!/usr/bin/env bash',
         'set -euo pipefail',
-        `printf 'mas-health-start\\n' >> ${JSON.stringify(logPath)}`,
+        `printf 'mag-health-start\\n' >> ${JSON.stringify(logPath)}`,
         'sleep 5',
-        `printf 'mas-health-finished\\n' >> ${JSON.stringify(logPath)}`,
+        `printf 'mag-health-finished\\n' >> ${JSON.stringify(logPath)}`,
         '',
       ].join('\n'),
       { mode: 0o755 },
     );
-    runGitFixtureCommand(masRemote.sourceRoot, ['add', 'scripts/opl-module-healthcheck.sh']);
-    runGitFixtureCommand(masRemote.sourceRoot, ['commit', '-m', 'slow mas healthcheck']);
-    runGitFixtureCommand(masRemote.sourceRoot, ['push', 'origin', 'main']);
+    runGitFixtureCommand(magRemote.sourceRoot, ['add', 'scripts/opl-module-healthcheck.sh']);
+    runGitFixtureCommand(magRemote.sourceRoot, ['commit', '-m', 'slow mag healthcheck']);
+    runGitFixtureCommand(magRemote.sourceRoot, ['push', 'origin', 'main']);
 
     const output = withCliTimeout('120000', () => runCli(['system', 'startup-maintenance'], {
       HOME: homeRoot,
@@ -94,21 +94,21 @@ test('system startup-maintenance does not block all modules on a timed-out modul
     };
 
     const targets = new Map(output.system_action.details.module_targets.map((target) => [target.target_id, target]));
-    const masTarget = targets.get('medautoscience');
+    const magTarget = targets.get('medautogrant');
     assert.equal(output.system_action.status, 'manual_required');
     assert.equal(output.system_action.details.summary.manual_required_targets_count, 1);
     assert.equal(output.system_action.details.summary.completed_targets_count, 4);
-    assert.equal(masTarget?.status, 'manual_required');
-    assert.equal(masTarget?.reason, 'module_health_check_blocked');
-    assert.equal(masTarget?.result.turnkey.health_check.status, 'blocked');
-    assert.equal(masTarget?.result.turnkey.health_check.result.blocker_kind, 'module_action_step_timeout');
-    assert.equal(masTarget?.result.turnkey.health_check.result.timeout_ms, 100);
+    assert.equal(magTarget?.status, 'manual_required');
+    assert.equal(magTarget?.reason, 'module_health_check_blocked');
+    assert.equal(magTarget?.result.turnkey.health_check.status, 'blocked');
+    assert.equal(magTarget?.result.turnkey.health_check.result.blocker_kind, 'module_action_step_timeout');
+    assert.equal(magTarget?.result.turnkey.health_check.result.timeout_ms, 100);
     assert.equal(
-      masTarget?.result.turnkey.health_check.result.authority_boundary.can_claim_module_healthy,
+      magTarget?.result.turnkey.health_check.result.authority_boundary.can_claim_module_healthy,
       false,
     );
     assert.equal(
-      masTarget?.result.turnkey.health_check.result.authority_boundary.can_claim_production_ready,
+      magTarget?.result.turnkey.health_check.result.authority_boundary.can_claim_production_ready,
       false,
     );
     assert.equal(targets.get('oplmetaagent')?.status, 'completed');

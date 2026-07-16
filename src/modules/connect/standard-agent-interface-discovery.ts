@@ -98,7 +98,6 @@ function currentCheckoutFromStatus(
     || source.operational_ready !== true
     || typeof source.checkout_path !== 'string'
     || !source.checkout_path.trim()
-    || source.expected_tree_sha256 !== source.actual_tree_sha256
   ) return null;
   return source.checkout_path;
 }

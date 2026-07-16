@@ -105,6 +105,16 @@ function buildBookForgeProbe(checkoutPath: string) {
   ]);
 }
 
+function buildMasSourceCarrierProbe(checkoutPath: string) {
+  return buildRequiredFilesProbe(checkoutPath, [
+    path.join('contracts', 'action_catalog.json'),
+    path.join('contracts', 'domain_handler_registry.json'),
+    path.join('contracts', 'pack_compiler_input.json'),
+    path.join('agent', 'stages', 'manifest.json'),
+    path.join('agent', 'primary_skill', 'SKILL.md'),
+  ]);
+}
+
 function buildNpmPackageBootstrapCommand(checkoutPath: string) {
   const repoBootstrap = path.join(checkoutPath, 'scripts', 'opl-module-bootstrap.sh');
   return {
@@ -143,19 +153,9 @@ export const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
     scope: 'domain_module',
     default_install: true,
     description: 'Research Foundry in medicine: study execution, paper drafting, progress narration, and deliverable files.',
-    bootstrap_command: (checkoutPath) => resolveRepoOwnedScriptCommand(
-      checkoutPath,
-      path.join('scripts', 'opl-module-bootstrap.sh'),
-    ),
-    health_check_command: (checkoutPath) => resolveRepoOwnedScriptCommand(
-      checkoutPath,
-      path.join('scripts', 'opl-module-healthcheck.sh'),
-    ),
-    runtime_probe_command: (checkoutPath) => resolveRepoOwnedScriptCommand(
-      checkoutPath,
-      path.join('scripts', 'opl-module-healthcheck.sh'),
-      ['--probe'],
-    ),
+    bootstrap_command: (checkoutPath) => buildMasSourceCarrierProbe(checkoutPath),
+    health_check_command: (checkoutPath) => buildMasSourceCarrierProbe(checkoutPath),
+    runtime_probe_command: (checkoutPath) => buildMasSourceCarrierProbe(checkoutPath),
     skill_sync_domain: 'medautoscience',
     capability_dependencies: getCapabilityDependenciesForModule('medautoscience'),
   },

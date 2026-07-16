@@ -437,6 +437,22 @@ export function buildActionCatalog(
     })),
     ...workspaceActionsFromNorm(contracts.agentWorkspaceNorm),
     {
+      action_id: 'provider_service_status',
+      label: 'Read Temporal service status',
+      surface: 'opl app action execute',
+      delegated_surface: 'opl family-runtime service status --provider temporal',
+      payload_fields: [],
+      mutates: 'none_read_only',
+    },
+    {
+      action_id: 'provider_service_start',
+      label: 'Start or configure Temporal service',
+      surface: 'opl app action execute',
+      delegated_surface: 'opl family-runtime service start --provider temporal',
+      payload_fields: [],
+      mutates: 'opl_temporal_service',
+    },
+    {
       action_id: 'provider_scheduler_status',
       label: 'Read Temporal scheduler status',
       surface: 'opl app action execute',

@@ -11,6 +11,9 @@ import type { familyRuntimePaths } from './family-runtime-store.ts';
 
 type TemporalServicePaths = Pick<ReturnType<typeof familyRuntimePaths>, 'root'>;
 
+const TEMPORAL_SERVICE_START_TIMEOUT_MS = 5_000;
+const TEMPORAL_SERVICE_START_POLL_MS = 100;
+
 type TemporalServiceState = {
   provider_kind: 'temporal';
   service_kind: 'temporal_cli' | 'custom_command';
@@ -248,6 +251,21 @@ export async function inspectTemporalServiceLifecycle(paths: TemporalServicePath
   };
 }
 
+async function waitForTemporalServiceStart(paths: TemporalServicePaths) {
+  const deadline = Date.now() + TEMPORAL_SERVICE_START_TIMEOUT_MS;
+  let status = await inspectTemporalServiceLifecycle(paths);
+  while (
+    status.service_status !== 'running'
+    && status.service_status !== 'external_running'
+    && status.service_status !== 'stale_state'
+    && Date.now() < deadline
+  ) {
+    await new Promise((resolve) => setTimeout(resolve, TEMPORAL_SERVICE_START_POLL_MS));
+    status = await inspectTemporalServiceLifecycle(paths);
+  }
+  return status;
+}
+
 export async function startTemporalServiceLifecycle(
   paths: TemporalServicePaths,
   input: { detach?: boolean } = {},
@@ -319,7 +337,7 @@ export async function startTemporalServiceLifecycle(
     surface_kind: 'temporal_service_lifecycle_start',
     provider_kind: 'temporal',
     start_status: 'started',
-    status: await inspectTemporalServiceLifecycle(paths),
+    status: await waitForTemporalServiceStart(paths),
   };
 }
 

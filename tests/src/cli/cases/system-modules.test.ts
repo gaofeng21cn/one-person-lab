@@ -67,26 +67,25 @@ test('Book Forge fallback bootstrap does not create an untracked package lock', 
   }
 });
 
-test('MAS runtime preparation uses only its repo-owned bootstrap health and probe scripts', () => {
+test('MAS runtime preparation probes its declarative carrier without a private exec entry', () => {
   const checkoutPath = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-mas-runtime-spec-'));
-  const scriptsPath = path.join(checkoutPath, 'scripts');
-  fs.mkdirSync(scriptsPath, { recursive: true });
-  fs.writeFileSync(path.join(scriptsPath, 'opl-module-bootstrap.sh'), '#!/usr/bin/env bash\n');
-  fs.writeFileSync(path.join(scriptsPath, 'opl-module-healthcheck.sh'), '#!/usr/bin/env bash\n');
   try {
     const mas = DOMAIN_MODULE_SPECS.find((module) => module.module_id === 'medautoscience');
-    assert.deepEqual(mas?.bootstrap_command?.(checkoutPath), {
-      command: 'bash',
-      args: [path.join(scriptsPath, 'opl-module-bootstrap.sh')],
-    });
-    assert.deepEqual(mas?.health_check_command?.(checkoutPath), {
-      command: 'bash',
-      args: [path.join(scriptsPath, 'opl-module-healthcheck.sh')],
-    });
-    assert.deepEqual(mas?.runtime_probe_command?.(checkoutPath), {
-      command: 'bash',
-      args: [path.join(scriptsPath, 'opl-module-healthcheck.sh'), '--probe'],
-    });
+    const expectedProbe = {
+      command: 'node',
+      args: [
+        '-e',
+        'const fs=require("node:fs");for(const p of process.argv.slice(1)){if(!fs.statSync(p).isFile())process.exit(1)}',
+        path.join(checkoutPath, 'contracts', 'action_catalog.json'),
+        path.join(checkoutPath, 'contracts', 'domain_handler_registry.json'),
+        path.join(checkoutPath, 'contracts', 'pack_compiler_input.json'),
+        path.join(checkoutPath, 'agent', 'stages', 'manifest.json'),
+        path.join(checkoutPath, 'agent', 'primary_skill', 'SKILL.md'),
+      ],
+    };
+    assert.deepEqual(mas?.bootstrap_command?.(checkoutPath), expectedProbe);
+    assert.deepEqual(mas?.health_check_command?.(checkoutPath), expectedProbe);
+    assert.deepEqual(mas?.runtime_probe_command?.(checkoutPath), expectedProbe);
     assert.equal(mas?.exec_command, undefined);
   } finally {
     fs.rmSync(checkoutPath, { recursive: true, force: true });
@@ -212,7 +211,7 @@ test('modules and module actions manage OPL-owned domain module installs and upd
       fs.existsSync(path.join(install.module_action.module.checkout_path, 'README.md')),
       true,
     );
-    assert.deepEqual(readLines(turnkeyLogPath), ['bootstrap', 'health']);
+    assert.equal(fs.existsSync(turnkeyLogPath), false);
     const globalMasSkillPath = path.join(homeRoot, '.codex', 'skills', 'mas', 'SKILL.md');
     assert.equal(fs.existsSync(globalMasSkillPath), false);
 
@@ -256,7 +255,7 @@ test('modules and module actions manage OPL-owned domain module installs and upd
     assert.equal(update.module_action.action, 'update');
     assert.equal(update.module_action.status, 'completed');
     assert.equal(update.module_action.module.git.head_sha, nextSha);
-    assert.deepEqual(readLines(turnkeyLogPath), ['bootstrap', 'health', 'bootstrap', 'health']);
+    assert.equal(fs.existsSync(turnkeyLogPath), false);
     assert.equal(fs.existsSync(globalMasSkillPath), false);
 
     const remove = runCli(
@@ -372,7 +371,7 @@ test('module install is idempotent when the managed checkout already exists', ()
     assert.equal(install.module_action.module.installed, true);
     assert.equal(install.module_action.module.install_origin, 'managed_root');
     assert.equal(install.module_action.module.checkout_path, managedCheckout);
-    assert.deepEqual(readLines(turnkeyLogPath), ['bootstrap', 'health']);
+    assert.equal(fs.existsSync(turnkeyLogPath), false);
   } finally {
     fs.rmSync(medAutoScienceRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
@@ -409,7 +408,7 @@ test('module install replaces a non-empty invalid managed checkout', () => {
     assert.equal(install.module_action.module.checkout_path, managedCheckout);
     assert.equal(fs.existsSync(path.join(managedCheckout, '.git')), true);
     assert.equal(fs.existsSync(path.join(managedCheckout, 'stale-partial-install.txt')), false);
-    assert.deepEqual(readLines(turnkeyLogPath), ['bootstrap', 'health']);
+    assert.equal(fs.existsSync(turnkeyLogPath), false);
   } finally {
     fs.rmSync(medAutoScienceRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });

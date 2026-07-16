@@ -301,6 +301,14 @@ export type AgentPackageManagedRuntimeSourceReadiness = {
   expected_tree_sha256: string | null;
   actual_tree_sha256: string | null;
   reason: string | null;
+  provenance_observation?: {
+    policy: 'observation_only';
+    status: 'unchanged' | 'changed' | 'unavailable';
+    recorded_source_git_head_sha: string | null;
+    actual_source_git_head_sha: string | null;
+    recorded_tree_sha256: string;
+    actual_tree_sha256: string | null;
+  };
 };
 
 export type AgentPackageManagedPolicySurfaceConfig = {

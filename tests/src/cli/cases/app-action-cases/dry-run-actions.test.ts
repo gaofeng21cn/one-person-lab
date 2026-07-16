@@ -180,6 +180,26 @@ test('app action execute dry-runs Codex, module, scheduler, and worker actions f
     assert.equal(worker.delegated_surface, 'opl family-runtime repair --provider temporal');
     assert.equal(worker.result.family_runtime_provider.status, 'dry_run');
 
+    const temporalService = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'provider_service_start',
+      '--dry-run',
+    ], env).app_action_execution;
+
+    assert.equal(temporalService.delegated_surface, 'opl family-runtime service start --provider temporal');
+    assert.equal(temporalService.result.family_runtime_service.status, 'dry_run');
+    assert.deepEqual(temporalService.result.family_runtime_service.command_preview, [
+      'opl',
+      'family-runtime',
+      'service',
+      'start',
+      '--provider',
+      'temporal',
+    ]);
+
     const settingsRepair = runCli([
       'app',
       'action',

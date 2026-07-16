@@ -279,9 +279,12 @@ async function buildProviderState(profile: AppStateProfile) {
       management: {
         owner_surface: 'opl app action execute',
         actions: [
+          'provider_service_status',
+          'provider_service_start',
           'provider_scheduler_status',
           'provider_scheduler_install',
           'provider_scheduler_trigger',
+          'provider_worker_status',
           'provider_worker_start',
           'provider_worker_restart',
         ],

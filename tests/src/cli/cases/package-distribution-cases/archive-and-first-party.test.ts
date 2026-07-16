@@ -255,7 +255,7 @@ test('package archive builder writes channel manifest checksums git source and r
   const releaseManifestPath = path.join(outDir, 'opl-release-manifest.json');
   const channelManifestPath = path.join(outDir, 'opl-channel-manifest.json');
   const checksumsPath = path.join(outDir, 'SHA256SUMS');
-  const frameworkArchivePath = path.join(outDir, 'framework', 'one-person-lab-framework-0.3.0.tar.gz');
+  const frameworkArchivePath = path.join(outDir, 'framework', 'one-person-lab-framework-0.3.2.tar.gz');
   const defaultCloneRoot = path.join(path.dirname(outDir), `${path.basename(outDir)}-package-sources`);
   const manifest = parseJsonText(fs.readFileSync(releaseManifestPath, 'utf8')) as any;
   const channelManifest = parseJsonText(fs.readFileSync(channelManifestPath, 'utf8')) as any;
@@ -309,7 +309,7 @@ test('package archive builder writes channel manifest checksums git source and r
   const runtimePackageJson = parseJsonText(execFileSync(
     'tar', ['-xOf', frameworkArchivePath, 'one-person-lab/package.json'], { encoding: 'utf8' },
   )) as Record<string, any>;
-  assert.equal(runtimePackageJson.version, '0.3.0');
+  assert.equal(runtimePackageJson.version, '0.3.2');
   assert.equal(runtimePackageJson.scripts.prepare, undefined);
   assert.equal(runtimePackageJson.scripts.build, undefined);
   assert.equal(channelManifest.release_set_generation, manifest.release_set_generation);
@@ -343,7 +343,7 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(manifest.packages.framework_core.homebrew_formula.package_name, 'opl');
   assert.equal(manifest.packages.framework_core.homebrew_formula.approval_status, 'owner_approved');
   assert.equal(manifest.packages.framework_core.homebrew_formula.carrier_scope, 'framework_core_only');
-  assert.equal(manifest.packages.framework_core.homebrew_formula.version, '0.3.0');
+  assert.equal(manifest.packages.framework_core.homebrew_formula.version, '0.3.2');
   assert.equal(
     manifest.packages.framework_core.homebrew_formula.source_head,
     manifest.packages.framework_core.source_git.head_sha,
@@ -366,7 +366,7 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(manifest.release_automation.daily_package_channel.generation_template, '<utc_yy.m.d[-rN_auto]>');
   assert.equal(manifest.release_automation.daily_package_channel.force_publish_input, 'force_publish');
   assert.equal(Object.hasOwn(manifest.packages, 'webui_docker_image'), false);
-  assert.equal(manifest.packages.framework_core.artifact, 'ghcr.io/gaofeng21cn/one-person-lab-framework:0.3.0');
+  assert.equal(manifest.packages.framework_core.artifact, 'ghcr.io/gaofeng21cn/one-person-lab-framework:0.3.2');
   assert.match(manifest.packages.framework_core.source_archive.sha256, /^[0-9a-f]{64}$/);
   assert.match(manifest.packages.framework_core.source_git.head_sha, /^[0-9a-f]{40}$/);
   assert.equal(channelManifest.packages.framework_core.artifact, manifest.packages.framework_core.artifact);
@@ -636,7 +636,7 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(promotionReceipt.surface_kind, 'opl_release_set_promotion_receipt.v1');
   assert.equal(promotionReceipt.carrier.digest, `sha256:${'b'.repeat(64)}`);
   assert.equal(promotionReceipt.anonymous_readback.verified_refs.length, 9);
-  assert.match(checksums, /one-person-lab-framework-0\.3\.0\.tar\.gz/);
+  assert.match(checksums, /one-person-lab-framework-0\.3\.2\.tar\.gz/);
   assert.match(checksums, new RegExp(manifest.packages.framework_core.source_archive.sha256));
   assert.equal(manifest.packages.native_helper.channel_status, 'active_ghcr_oci_prebuild');
   assert.equal(manifest.packages.native_helper.retention_policy.retain_versions, 4);
@@ -816,7 +816,12 @@ test('package archive builder writes channel manifest checksums git source and r
 
   fs.writeFileSync(path.join(fixtures.medautoscience.sourceRoot, 'OWNER-HEAD-MOVED.txt'), 'new owner head\n', 'utf8');
   execFileSync('git', ['add', 'OWNER-HEAD-MOVED.txt'], { cwd: fixtures.medautoscience.sourceRoot, encoding: 'utf8' });
-  execFileSync('git', ['commit', '-m', 'move owner head after cohort freeze'], {
+  execFileSync('git', [
+    '-c', 'user.name=OPL Test',
+    '-c', 'user.email=opl@example.test',
+    '-c', 'commit.gpgsign=false',
+    'commit', '-m', 'move owner head after cohort freeze',
+  ], {
     cwd: fixtures.medautoscience.sourceRoot,
     encoding: 'utf8',
   });
@@ -853,36 +858,36 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
   const manifest = manifests.mas;
   const expectedReleases: Record<string, { version: string; sourceCommit: string; payloadRef: string }> = {
     mas: {
-      version: '0.2.9',
-      sourceCommit: 'd95b681bfd5d55ee2038456689927518caac0161',
-      payloadRef: 'payloads/mas-0.2.9.json',
+      version: '0.2.10',
+      sourceCommit: '9ca3f57aaf581baf959530e9c0b55343d80f595b',
+      payloadRef: 'payloads/mas-0.2.10.json',
     },
     mag: {
-      version: '0.3.2',
-      sourceCommit: '8ceb733acd63406816a330c465907e69f4179a6d',
-      payloadRef: 'payloads/mag-0.3.2.json',
+      version: '0.3.3',
+      sourceCommit: '96dc9fc1832c191daa99407f38acfbc1d0ec61df',
+      payloadRef: 'payloads/mag-0.3.3.json',
     },
     rca: {
-      version: '0.2.6',
-      sourceCommit: '566fd793cb91860146bf81a104945b76f85ce7e5',
-      payloadRef: 'payloads/rca-0.2.6.json',
+      version: '0.2.7',
+      sourceCommit: 'c10ad7e198b10cd3491ff43343b50fe1d6f11c74',
+      payloadRef: 'payloads/rca-0.2.7.json',
     },
     oma: {
-      version: '0.3.6',
-      sourceCommit: '4761b7ce27275cfcac73444ac82945631e56aa86',
-      payloadRef: 'payloads/oma-0.3.6.json',
+      version: '0.3.7',
+      sourceCommit: '240318b3b0c4980eb4193fb02a7e1f9c9ea7bd7c',
+      payloadRef: 'payloads/oma-0.3.7.json',
     },
     obf: {
-      version: '0.3.4',
-      sourceCommit: '80c5a0da174511034401b31b440c629223e058f8',
-      payloadRef: 'payloads/obf-0.3.4.json',
+      version: '0.3.5',
+      sourceCommit: 'eb1ad4a44b1809e4e1e15490abf7f34710a797eb',
+      payloadRef: 'payloads/obf-0.3.5.json',
     },
   };
 
   assert.equal(manifest.schema_ref, 'contracts/opl-framework/agent-package-manifest.schema.json');
   assert.equal(manifest.package_id, 'mas');
   assert.equal(manifest.agent_id, 'mas');
-  assert.equal(manifest.version, '0.2.9');
+  assert.equal(manifest.version, '0.2.10');
   assert.equal(manifest.carrier_source_role, 'codex_plugin_default_carrier_not_package_truth');
   assert.equal(schema.required.includes('distribution_payload'), false);
   assert.equal(schema.properties.distribution_payload.properties.install_truth.const, 'resolved_digest_lock');
@@ -965,10 +970,10 @@ test('MAS Scholar Skills provider manifest separates core Skill exports from mod
   const normalized = normalizeCapabilityPackageManifest(manifest, manifestPath);
   const payloadPath = path.join(path.dirname(manifestPath), manifest.codex_surface.plugin_payload_manifest_url);
   const payload = parseJsonText(fs.readFileSync(payloadPath, 'utf8')) as Record<string, any>;
-  assert.equal(manifest.version, '0.2.4');
+  assert.equal(manifest.version, '0.2.5');
   assert.equal(manifest.primary_consumer.version_requirement, '>=0.2.0 <0.3.0');
   assert.equal(manifest.content_lock.canonicalization, 'ordered_path_length_file_length_bytes');
-  assert.equal(manifest.content_lock.digest, 'sha256:79aa2ac5d3c8f7a3afdc4f4043eb1be342db20f0c19451f3fac30b9085d0fa78');
+  assert.equal(manifest.content_lock.digest, 'sha256:75069ffae799037bf379ad816894d5a929b1186e914bc4280efe7523b0265f4b');
   assert.equal(normalized.required_skill_ids.length, 35);
   assert.equal(normalized.capability_provider?.module_export_ids.length, 10);
   assert.equal(normalized.capability_provider?.exports.filter((entry) => entry.install_mode === 'core_required').length, 11);
@@ -976,7 +981,7 @@ test('MAS Scholar Skills provider manifest separates core Skill exports from mod
   assert.equal(normalized.optional_skill_refs.length, 1);
   assert.equal(payload.package_id, manifest.package_id);
   assert.equal(payload.package_version, manifest.version);
-  assert.equal(payload.source_commit, 'c6175831068d26ce175c235a18c10fc0e73c99b8');
+  assert.equal(payload.source_commit, '6cb1674894d8895d508364e33adced9eef8b9929');
   assert.deepEqual(
     payload.files.map((entry: Record<string, any>) => entry.path).sort(),
     manifest.content_lock.paths.slice().sort(),

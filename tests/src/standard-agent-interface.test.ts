@@ -402,14 +402,30 @@ test('package dependency and runtime source readiness gate descriptor discovery 
       platform: ['platform_repair_delta', 'fixture_platform_delta'],
     });
     assert.equal(statusReads.length, statusReadCountBeforeKeySet + 1);
-    const staleStatusReader = ((input: { packageId?: string | null }) => {
+    const observedDeveloperDriftReader = ((input: { packageId?: string | null }) => {
       const readback = statusReader(input);
       if (input.packageId === 'mas') {
         readback.opl_agent_package_status.runtime_source_readiness.actual_tree_sha256 = 'sha256:stale';
+        readback.opl_agent_package_status.runtime_source_readiness.provenance_observation = {
+          policy: 'observation_only',
+          status: 'changed',
+        };
       }
       return readback;
     }) as any;
-    assert.equal(readPackageManagedStandardAgentDescriptor(['mas'], staleStatusReader), null);
+    assert.equal(
+      readPackageManagedStandardAgentDescriptor(['mas'], observedDeveloperDriftReader)?.repo_dir,
+      repoDir,
+    );
+    const incompatibleSourceStatusReader = ((input: { packageId?: string | null }) => {
+      const readback = statusReader(input);
+      if (input.packageId === 'mas') {
+        readback.opl_agent_package_status.runtime_source_readiness.status = 'incompatible';
+        readback.opl_agent_package_status.runtime_source_readiness.operational_ready = false;
+      }
+      return readback;
+    }) as any;
+    assert.equal(readPackageManagedStandardAgentDescriptor(['mas'], incompatibleSourceStatusReader), null);
     const missingDependencyStatusReader = ((input: { packageId?: string | null }) => {
       const readback = statusReader(input);
       if (input.packageId === 'mas') {

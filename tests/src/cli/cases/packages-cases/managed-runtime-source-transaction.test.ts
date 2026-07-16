@@ -26,6 +26,7 @@ import { rollbackManagedModulePackageChannel } from '../../../../../src/modules/
 import { resolveOplDomainModuleSpec } from '../../../../../src/modules/connect/system-installation/modules.ts';
 
 const FIXTURE_MAS_PACKAGE_ID = 'fixture.mas';
+const FIXTURE_MAG_PACKAGE_ID = 'fixture.mag';
 const FIXTURE_RCA_PACKAGE_ID = 'fixture.rca';
 const FIXTURE_PROVIDER_PACKAGE_ID = 'fixture.mas-scholar-skills';
 
@@ -35,26 +36,33 @@ function runGit(checkoutPath: string, args: string[]) {
   return result.stdout.trim();
 }
 
-test('explicit developer checkout install locks the selected checkout without package-channel metadata', () => {
+test('explicit developer checkout records provenance but live probes current source without relocking', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-developer-source-state-'));
   const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-developer-source-home-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-developer-source-fixture-'));
   const pluginSourcePath = createPluginSourceFixture();
-  const checkoutPath = path.join(fixtureRoot, 'med-autoscience');
+  const checkoutPath = path.join(fixtureRoot, 'med-autogrant');
   const manifestPath = path.join(fixtureRoot, 'manifest.json');
   fs.mkdirSync(path.join(checkoutPath, 'scripts'), { recursive: true });
-  fs.writeFileSync(path.join(checkoutPath, 'package.json'), formatJsonPayload({ name: 'med-autoscience-fixture' }));
+  fs.writeFileSync(path.join(checkoutPath, 'package.json'), formatJsonPayload({ name: 'med-autogrant-fixture' }));
   fs.writeFileSync(path.join(checkoutPath, 'runtime.txt'), 'developer source v1\n');
   fs.writeFileSync(
     path.join(checkoutPath, 'scripts', 'opl-module-healthcheck.sh'),
     '#!/bin/sh\nset -eu\nprintf "ready\\n"\n',
   );
   fs.chmodSync(path.join(checkoutPath, 'scripts', 'opl-module-healthcheck.sh'), 0o755);
+  fs.writeFileSync(path.join(checkoutPath, 'scripts', 'run-python-clean.sh'), [
+    '#!/bin/sh',
+    'set -eu',
+    'test "$1" = "-m"',
+    'test "$3" = "--help"',
+    'printf "handler-ready\\n"',
+  ].join('\n'), { mode: 0o755 });
   fs.writeFileSync(manifestPath, formatJsonPayload({
     ...agentPackageManifest({ packageId: FIXTURE_MAS_PACKAGE_ID, agentId: 'mas', pluginSourcePath }),
     runtime_source_carrier: {
       carrier_kind: 'opl_managed_module_source',
-      module_id: 'medautoscience',
+      module_id: 'medautogrant',
     },
   }));
   runGit(checkoutPath, ['init', '-q']);
@@ -100,8 +108,49 @@ test('explicit developer checkout install locks the selected checkout without pa
     );
 
     fs.writeFileSync(path.join(checkoutPath, 'runtime.txt'), 'developer source v2\n');
-    const drifted = runCli(['packages', 'status', '--package-id', FIXTURE_MAS_PACKAGE_ID], env) as any;
-    assert.equal(drifted.opl_agent_package_status.runtime_source_readiness.status, 'incompatible');
+    const dirty = runCli(['packages', 'status', '--package-id', FIXTURE_MAS_PACKAGE_ID], env) as any;
+    const dirtyReadiness = dirty.opl_agent_package_status.runtime_source_readiness;
+    assert.equal(dirtyReadiness.status, 'current');
+    assert.equal(dirtyReadiness.operational_ready, true);
+    assert.equal(dirty.opl_agent_package_status.launch_allowed, true);
+    assert.equal(dirtyReadiness.expected_tree_sha256, installedSource.tree_sha256);
+    assert.notEqual(dirtyReadiness.actual_tree_sha256, installedSource.tree_sha256);
+    assert.equal(dirtyReadiness.provenance_observation.policy, 'observation_only');
+    assert.equal(dirtyReadiness.provenance_observation.status, 'changed');
+    assert.equal(dirtyReadiness.provenance_observation.recorded_source_git_head_sha, headSha);
+
+    fs.mkdirSync(path.join(checkoutPath, 'docs'));
+    fs.writeFileSync(path.join(checkoutPath, 'docs', 'notes.md'), 'developer notes\n');
+    const untracked = runCli(['packages', 'status', '--package-id', FIXTURE_MAS_PACKAGE_ID], env) as any;
+    assert.equal(untracked.opl_agent_package_status.runtime_source_readiness.status, 'current');
+    assert.equal(untracked.opl_agent_package_status.launch_allowed, true);
+
+    runGit(checkoutPath, ['add', '.']);
+    runGit(checkoutPath, ['commit', '-qm', 'fixture v2']);
+    const advancedHeadSha = runGit(checkoutPath, ['rev-parse', 'HEAD']);
+    const advanced = runCli(['packages', 'status', '--package-id', FIXTURE_MAS_PACKAGE_ID], env) as any;
+    assert.equal(advanced.opl_agent_package_status.runtime_source_readiness.status, 'current');
+    assert.equal(advanced.opl_agent_package_status.launch_allowed, true);
+    assert.equal(
+      advanced.opl_agent_package_status.runtime_source_readiness.provenance_observation.actual_source_git_head_sha,
+      advancedHeadSha,
+    );
+
+    const healthPath = path.join(checkoutPath, 'scripts', 'opl-module-healthcheck.sh');
+    const healthyScript = fs.readFileSync(healthPath, 'utf8');
+    fs.writeFileSync(healthPath, '#!/bin/sh\nexit 1\n', { mode: 0o755 });
+    const probeFailed = runCli(['packages', 'status', '--package-id', FIXTURE_MAS_PACKAGE_ID], env) as any;
+    assert.equal(probeFailed.opl_agent_package_status.runtime_source_readiness.status, 'incompatible');
+    assert.equal(
+      probeFailed.opl_agent_package_status.runtime_source_readiness.reason,
+      'managed_runtime_source_probe_failed',
+    );
+    assert.equal(probeFailed.opl_agent_package_status.launch_allowed, false);
+    fs.writeFileSync(healthPath, healthyScript, { mode: 0o755 });
+    const recovered = runCli(['packages', 'status', '--package-id', FIXTURE_MAS_PACKAGE_ID], env) as any;
+    assert.equal(recovered.opl_agent_package_status.runtime_source_readiness.status, 'current');
+    assert.equal(recovered.opl_agent_package_status.launch_allowed, true);
+
     assert.equal(
       runCliFailure(['packages', 'update', '--package-id', FIXTURE_MAS_PACKAGE_ID], env).payload.error.details.failure_code,
       'agent_package_developer_checkout_auto_update_forbidden',
@@ -110,22 +159,85 @@ test('explicit developer checkout install locks the selected checkout without pa
       runCliFailure(['packages', 'repair', '--package-id', FIXTURE_MAS_PACKAGE_ID], env).payload.error.details.failure_code,
       'agent_package_developer_checkout_auto_update_forbidden',
     );
-
-    const reinstalled = runCli(installArgs, env) as any;
-    assert.notEqual(
-      reinstalled.opl_agent_package_install.package_lock.managed_runtime_source.tree_sha256,
-      installedSource.tree_sha256,
-    );
-    assert.equal(
-      (runCli(['packages', 'status', '--package-id', FIXTURE_MAS_PACKAGE_ID], env) as any)
-        .opl_agent_package_status.runtime_source_readiness.status,
-      'current',
-    );
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });
     fs.rmSync(homeDir, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(pluginSourcePath, { recursive: true, force: true });
+  }
+});
+
+test('developer checkout source switch does not validate a displaced managed carrier', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-developer-source-switch-'));
+  const developerCheckout = path.join(fixtureRoot, 'med-autogrant');
+  const displacedCheckout = path.join(fixtureRoot, 'managed-med-autogrant');
+  fs.mkdirSync(path.join(developerCheckout, 'scripts'), { recursive: true });
+  fs.mkdirSync(displacedCheckout, { recursive: true });
+  fs.writeFileSync(path.join(developerCheckout, 'package.json'), formatJsonPayload({
+    name: 'med-autogrant-fixture',
+  }));
+  fs.writeFileSync(path.join(developerCheckout, 'scripts', 'opl-module-healthcheck.sh'), [
+    '#!/bin/sh',
+    'set -eu',
+    'printf "healthy\\n"',
+  ].join('\n'), { mode: 0o755 });
+  fs.writeFileSync(path.join(developerCheckout, 'scripts', 'run-python-clean.sh'), [
+    '#!/bin/sh',
+    'set -eu',
+    'test "$1" = "-m"',
+    'test "$3" = "--help"',
+    'printf "ready\\n"',
+  ].join('\n'), { mode: 0o755 });
+  runGit(developerCheckout, ['init', '-q']);
+  runGit(developerCheckout, ['config', 'user.email', 'fixture@example.com']);
+  runGit(developerCheckout, ['config', 'user.name', 'Fixture']);
+  runGit(developerCheckout, ['add', '.']);
+  runGit(developerCheckout, ['commit', '-qm', 'developer checkout']);
+  const previous = {
+    surface_kind: 'opl_agent_package_managed_runtime_source' as const,
+    status: 'current' as const,
+    carrier_kind: 'opl_managed_module_source' as const,
+    module_id: 'medautogrant',
+    checkout_path: displacedCheckout,
+    ownership: 'package_created' as const,
+    source_mode: 'package_channel' as const,
+    channel_version: '0.1.0',
+    artifact_ref: 'ghcr.io/fixture/mas:0.1.0@sha256:deadbeef',
+    layer_digest: `sha256:${'1'.repeat(64)}`,
+    source_archive_sha256: '2'.repeat(64),
+    source_git_head_sha: '3'.repeat(40),
+    tree_sha256: '4'.repeat(64),
+    rollback_ref: null,
+    preparation_status: 'completed' as const,
+    bootstrap_command: null,
+    package_prepare_command: null,
+    health_check_command: ['/bin/false'],
+    handler_probe_command: ['/bin/false'],
+    health_output_sha256: `sha256:${'5'.repeat(64)}`,
+    handler_probe_output_sha256: `sha256:${'6'.repeat(64)}`,
+    preparation_root: null,
+    preparation_scope: 'managed_source_root' as const,
+  };
+
+  try {
+    const preview = applyManagedRuntimeSourceCarrier({
+      config: {
+        carrier_kind: 'opl_managed_module_source',
+        module_id: 'medautogrant',
+      },
+      previous,
+      action: 'install',
+      dryRun: true,
+      packageId: FIXTURE_MAG_PACKAGE_ID,
+      sourceKind: 'developer_checkout_override',
+      checkoutPath: developerCheckout,
+    });
+    assert.equal(preview.before, previous);
+    assert.equal(preview.after?.checkout_path, developerCheckout);
+    assert.equal(preview.after?.source_mode, 'developer_checkout');
+    assert.equal(preview.after?.status, 'validated_no_write');
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
 
@@ -753,7 +865,7 @@ test('Packages recovers durable runtime-source markers after interrupted apply a
   }
 });
 
-test('MAS package install executes the owner runtime probe instead of a retired private CLI', () => {
+test('MAS package install probes its declarative source carrier instead of a retired private CLI', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-mas-source-state-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-mas-source-fixture-'));
   const pluginSourcePath = createPluginSourceFixture();
@@ -777,6 +889,13 @@ test('MAS package install executes the owner runtime probe instead of a retired 
       repoName: 'med-autoscience',
       version: '0.1.0a4',
       sourceHeadSha: 'mas-owner-probe-v1',
+      sourceFiles: [
+        { sourcePath: 'contracts/action_catalog.json', content: '{}\n' },
+        { sourcePath: 'contracts/domain_handler_registry.json', content: '{}\n' },
+        { sourcePath: 'contracts/pack_compiler_input.json', content: '{}\n' },
+        { sourcePath: 'agent/stages/manifest.json', content: '{}\n' },
+        { sourcePath: 'agent/primary_skill/SKILL.md', content: '# MAS\n' },
+      ],
     });
     const env = {
       OPL_STATE_DIR: stateDir,
@@ -788,10 +907,19 @@ test('MAS package install executes the owner runtime probe instead of a retired 
       'packages', 'install', '--manifest-url', manifestPath, '--trust-tier', 'first_party',
     ], env) as any;
     const checkoutPath = path.join(modulesRoot, 'med-autoscience');
-    assert.equal(fs.readFileSync(path.join(checkoutPath, '.runtime-probed'), 'utf8').trim(), '0.1.0a4');
+    const expectedProbe = [
+      'node',
+      '-e',
+      'const fs=require("node:fs");for(const p of process.argv.slice(1)){if(!fs.statSync(p).isFile())process.exit(1)}',
+      path.join(checkoutPath, 'contracts', 'action_catalog.json'),
+      path.join(checkoutPath, 'contracts', 'domain_handler_registry.json'),
+      path.join(checkoutPath, 'contracts', 'pack_compiler_input.json'),
+      path.join(checkoutPath, 'agent', 'stages', 'manifest.json'),
+      path.join(checkoutPath, 'agent', 'primary_skill', 'SKILL.md'),
+    ];
     assert.deepEqual(
       installed.opl_agent_package_install.package_lock.managed_runtime_source.handler_probe_command,
-      ['bash', path.join(checkoutPath, 'scripts', 'opl-module-healthcheck.sh'), '--probe'],
+      expectedProbe,
     );
     assert.doesNotMatch(
       installed.opl_agent_package_install.package_lock.managed_runtime_source.handler_probe_command.join(' '),

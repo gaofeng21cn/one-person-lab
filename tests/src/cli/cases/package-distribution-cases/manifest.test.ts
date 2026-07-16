@@ -243,7 +243,7 @@ test('packages manifest exposes canonical Release Set coordinates for Package in
   assert.deepEqual(output.packages_manifest.release_automation.cleanup.protected_tags, ['candidate', 'latest-stable']);
   assert.equal(Object.hasOwn(output.packages_manifest.packages, 'webui_docker_image'), false);
   assert.equal(output.packages_manifest.packages.framework_core.package_name, 'one-person-lab-framework');
-  assert.equal(output.packages_manifest.packages.framework_core.artifact, 'ghcr.io/gaofeng21cn/one-person-lab-framework:0.3.0');
+  assert.equal(output.packages_manifest.packages.framework_core.artifact, 'ghcr.io/gaofeng21cn/one-person-lab-framework:0.3.2');
   assert.equal(output.packages_manifest.packages.framework_core.package_consumption_status, 'consumed_by_runtime_substrate_updates');
   assert.equal(output.packages_manifest.packages.framework_core.current_install_update_source, 'opl_release_channel_manifest');
   assert.equal(
@@ -307,10 +307,10 @@ test('packages manifest exposes canonical Release Set coordinates for Package in
   );
   assert.equal(
     output.packages_manifest.packages.package_artifacts.mas.artifact,
-    'ghcr.io/gaofeng21cn/one-person-lab-packages/mas:0.2.9',
+    'ghcr.io/gaofeng21cn/one-person-lab-packages/mas:0.2.10',
   );
   assert.equal(output.packages_manifest.packages.package_artifacts.mas.package_id, 'mas');
-  assert.equal(output.packages_manifest.packages.package_artifacts.mas.package_version, '0.2.9');
+  assert.equal(output.packages_manifest.packages.package_artifacts.mas.package_version, '0.2.10');
   assert.equal(output.packages_manifest.packages.package_artifacts.mas.carrier_locator.module_id, 'medautoscience');
   assert.equal(output.packages_manifest.packages.package_artifacts.mas.carrier_locator.repo_name, 'med-autoscience');
   assert.equal(Object.hasOwn(output.packages_manifest.packages.package_artifacts.mas, 'module_id'), false);
@@ -440,7 +440,7 @@ test('packages manifest exposes canonical Release Set coordinates for Package in
   );
   assert.equal(
     output.packages_manifest.packages.package_artifacts.oma.artifact,
-    'ghcr.io/gaofeng21cn/one-person-lab-packages/oma:0.3.6',
+    'ghcr.io/gaofeng21cn/one-person-lab-packages/oma:0.3.7',
   );
   assert.equal(
     output.packages_manifest.packages.package_artifacts.oma.remote_publish_status,
@@ -456,7 +456,7 @@ test('packages manifest exposes canonical Release Set coordinates for Package in
   assert.equal(omaCodexStandaloneDistribution.package_manifest_ref, 'contracts/opl-framework/packages/oma.json');
   assert.equal(
     output.packages_manifest.packages.package_artifacts['mas-scholar-skills'].artifact,
-    'ghcr.io/gaofeng21cn/one-person-lab-packages/mas-scholar-skills:0.2.4',
+    'ghcr.io/gaofeng21cn/one-person-lab-packages/mas-scholar-skills:0.2.5',
   );
   assert.equal(output.packages_manifest.packages.package_artifacts['opl-flow'].package_id, 'opl-flow');
   assert.equal(output.packages_manifest.packages.package_artifacts['opl-flow'].package_version, '0.1.22');

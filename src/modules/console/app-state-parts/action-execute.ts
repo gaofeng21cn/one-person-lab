@@ -717,6 +717,38 @@ async function executeDirectAppAction(
     };
   }
 
+  if (options.actionId === 'provider_service_status') {
+    return {
+      delegatedSurface: 'opl family-runtime service status --provider temporal',
+      result: options.dryRun
+        ? {
+            family_runtime_service: {
+              action: 'status',
+              provider_kind: 'temporal',
+              status: 'dry_run',
+            },
+          }
+        : await runFamilyRuntime(['service', 'status', '--provider', 'temporal']),
+    };
+  }
+
+  if (options.actionId === 'provider_service_start') {
+    const args = ['service', 'start', '--provider', 'temporal'];
+    return {
+      delegatedSurface: 'opl family-runtime service start --provider temporal',
+      result: options.dryRun
+        ? {
+            family_runtime_service: {
+              action: 'start',
+              provider_kind: 'temporal',
+              status: 'dry_run',
+              command_preview: ['opl', 'family-runtime', ...args],
+            },
+          }
+        : await runFamilyRuntime(args),
+    };
+  }
+
   if (options.actionId === 'provider_scheduler_install') {
     const args = ['scheduler', 'install', '--provider', 'temporal'];
     return {
