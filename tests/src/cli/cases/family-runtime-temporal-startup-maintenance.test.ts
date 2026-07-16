@@ -39,6 +39,11 @@ function workerLifecycle(ready: boolean, readinessStatus?: string) {
   return {
     worker_ready: ready,
     readiness_status: readinessStatus ?? (ready ? 'ready' : 'worker_not_ready'),
+    managed_worker_source_current: ready
+      ? true
+      : readinessStatus === 'worker_source_stale'
+        ? false
+        : null,
   } as never;
 }
 
@@ -196,7 +201,7 @@ test('Temporal startup maintenance installs Server then Worker then Scheduler wi
         ? schedulerStatus(schedulerInstalled)
         : { status: 'ok', action: { install_status: 'created' } } as never;
     }) as never,
-    workerReadinessAttempts: 1,
+    workerReadinessTimeoutMs: 0,
     sleep: async () => {},
   });
 
@@ -242,7 +247,7 @@ test('Temporal startup maintenance repairs configuration drift through idempoten
     runWorkerSupervisor: (async () => workerSupervisorStatus(true)) as never,
     inspectWorker: async () => workerLifecycle(true),
     runScheduler: (async () => schedulerStatus(true)) as never,
-    workerReadinessAttempts: 1,
+    workerReadinessTimeoutMs: 0,
   });
 
   assert.equal(result.status, 'ready');
@@ -280,6 +285,7 @@ test('Temporal startup maintenance stops after a failed Server fresh readback', 
 
 test('Temporal startup maintenance stops before Scheduler when Worker does not become ready', async () => {
   let schedulerCallCount = 0;
+  let sleepCallCount = 0;
   const result = await reconcileTemporalRuntimeStartupMaintenance({
     platform: 'darwin',
     env: { OPL_APP_HOST_KIND: 'desktop', OPL_APP_PROCESS_INSTANCE_ID: 'desktop-worker-fail' },
@@ -298,19 +304,22 @@ test('Temporal startup maintenance stops before Scheduler when Worker does not b
       schedulerCallCount += 1;
       return schedulerStatus(false);
     }) as never,
-    workerReadinessAttempts: 1,
+    sleep: async () => { sleepCallCount += 1; },
   });
 
   assert.equal(result.status, 'blocked');
   assert.equal(result.failed_step, 'provider_worker_supervisor');
   assert.equal(result.steps.temporal_scheduler_cadence.status, 'skipped_dependency_not_ready');
   assert.equal(schedulerCallCount, 0);
+  assert.equal(sleepCallCount, 0);
 });
 
 test('Temporal startup maintenance safely restarts a stale Worker before installing Scheduler', async () => {
   const order: string[] = [];
   let workerRestarted = false;
+  let workerReadbackAfterRestartCount = 0;
   let schedulerInstalled = false;
+  let currentTimeMs = 0;
   const result = await reconcileTemporalRuntimeStartupMaintenance({
     platform: 'darwin',
     env: { OPL_APP_HOST_KIND: 'desktop', OPL_APP_PROCESS_INSTANCE_ID: 'desktop-worker-stale' },
@@ -327,7 +336,9 @@ test('Temporal startup maintenance safely restarts a stale Worker before install
     }) as never,
     inspectWorker: async () => {
       order.push('worker_runtime_status');
-      return workerLifecycle(workerRestarted, workerRestarted ? 'ready' : 'worker_source_stale');
+      if (!workerRestarted) return workerLifecycle(false, 'worker_source_stale');
+      workerReadbackAfterRestartCount += 1;
+      return workerLifecycle(workerReadbackAfterRestartCount >= 3);
     },
     repairWorker: (async () => {
       order.push('worker_restart');
@@ -345,8 +356,13 @@ test('Temporal startup maintenance safely restarts a stale Worker before install
         ? schedulerStatus(schedulerInstalled)
         : { status: 'ok', action: { install_status: 'created' } } as never;
     }) as never,
-    workerReadinessAttempts: 1,
-    sleep: async () => {},
+    nowMs: () => currentTimeMs,
+    workerReadinessTimeoutMs: 1_000,
+    workerReadinessPollMs: 250,
+    sleep: async (milliseconds) => {
+      order.push(`worker_wait_${milliseconds}`);
+      currentTimeMs += milliseconds;
+    },
   });
 
   assert.equal(result.status, 'ready');
@@ -359,10 +375,60 @@ test('Temporal startup maintenance safely restarts a stale Worker before install
     'worker_restart',
     'worker_status',
     'worker_runtime_status',
+    'worker_wait_250',
+    'worker_runtime_status',
+    'worker_wait_250',
+    'worker_runtime_status',
     'scheduler_status',
     'scheduler_install',
     'scheduler_status',
   ]);
+});
+
+test('Temporal startup maintenance blocks after the bounded restart readiness timeout', async () => {
+  let currentTimeMs = 0;
+  let workerRestarted = false;
+  let workerReadbackCount = 0;
+  let schedulerCallCount = 0;
+  const sleeps: number[] = [];
+  const result = await reconcileTemporalRuntimeStartupMaintenance({
+    platform: 'darwin',
+    env: { OPL_APP_HOST_KIND: 'desktop', OPL_APP_PROCESS_INSTANCE_ID: 'desktop-worker-restart-timeout' },
+    openRuntime: fakeRuntimeHandle,
+    inspectService: async () => serviceLifecycle({ ready: true }),
+    runServiceSupervisor: (async () => ({ status: 'already_ready', ready: true })) as never,
+    runWorkerSupervisor: (async () => workerSupervisorStatus(true)) as never,
+    inspectWorker: async () => {
+      workerReadbackCount += 1;
+      return workerRestarted
+        ? workerLifecycle(false, 'worker_not_ready')
+        : workerLifecycle(false, 'worker_source_stale');
+    },
+    repairWorker: (async () => {
+      workerRestarted = true;
+      return { repair_status: 'executed' } as never;
+    }) as never,
+    runScheduler: (async () => {
+      schedulerCallCount += 1;
+      return schedulerStatus(false);
+    }) as never,
+    nowMs: () => currentTimeMs,
+    workerReadinessTimeoutMs: 500,
+    workerReadinessPollMs: 250,
+    sleep: async (milliseconds) => {
+      sleeps.push(milliseconds);
+      currentTimeMs += milliseconds;
+    },
+  });
+
+  assert.equal(result.status, 'blocked');
+  assert.equal(result.failed_step, 'provider_worker_supervisor');
+  assert.equal(result.steps.provider_worker_supervisor.action, 'restart');
+  assert.equal(result.steps.provider_worker_supervisor.reason, 'worker_not_ready');
+  assert.equal(result.steps.temporal_scheduler_cadence.status, 'skipped_dependency_not_ready');
+  assert.equal(workerReadbackCount, 4);
+  assert.deepEqual(sleeps, [250, 250]);
+  assert.equal(schedulerCallCount, 0);
 });
 
 test('Temporal startup maintenance preserves restart action when fresh Worker readback fails', async () => {
@@ -385,7 +451,7 @@ test('Temporal startup maintenance preserves restart action when fresh Worker re
       schedulerCallCount += 1;
       return schedulerStatus(false);
     }) as never,
-    workerReadinessAttempts: 1,
+    workerReadinessTimeoutMs: 0,
     sleep: async () => {},
   });
 
@@ -426,7 +492,7 @@ test('Temporal startup maintenance does not replace a loaded Worker owned by ano
       schedulerCallCount += 1;
       return schedulerStatus(false);
     }) as never,
-    workerReadinessAttempts: 1,
+    workerReadinessTimeoutMs: 0,
   });
 
   assert.equal(result.status, 'blocked');

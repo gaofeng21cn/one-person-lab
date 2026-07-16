@@ -36,6 +36,9 @@ type SchedulerOperation = Awaited<ReturnType<typeof runTemporalSchedulerCadenceC
 
 type TemporalStartupStepStatus = 'ready' | 'blocked' | 'not_applicable' | 'skipped_dependency_not_ready';
 
+const DEFAULT_WORKER_READINESS_TIMEOUT_MS = 30_000;
+const DEFAULT_WORKER_READINESS_POLL_MS = 250;
+
 export type TemporalStartupMaintenanceRuntime = {
   platform?: NodeJS.Platform;
   env?: NodeJS.ProcessEnv;
@@ -47,8 +50,9 @@ export type TemporalStartupMaintenanceRuntime = {
   repairWorker?: typeof repairTemporalWorkerLifecycleForProvider;
   inspectWorker?: (paths: RuntimePaths) => Promise<WorkerLifecycle>;
   runScheduler?: typeof runTemporalSchedulerCadenceCommand;
+  nowMs?: () => number;
   sleep?: (milliseconds: number) => Promise<void>;
-  workerReadinessAttempts?: number;
+  workerReadinessTimeoutMs?: number;
   workerReadinessPollMs?: number;
 };
 
@@ -178,19 +182,28 @@ function serviceReady(lifecycle: ServiceLifecycle) {
     && lifecycle.supervisor.error === null;
 }
 
+function workerRuntimeReady(lifecycle: WorkerLifecycle) {
+  return lifecycle.worker_ready === true
+    && lifecycle.readiness_status === 'ready'
+    && lifecycle.managed_worker_source_current === true;
+}
+
 async function waitForWorkerReadiness(
   paths: RuntimePaths,
   inspectWorker: (paths: RuntimePaths) => Promise<WorkerLifecycle>,
   runtime: TemporalStartupMaintenanceRuntime,
 ) {
-  const attempts = Math.max(1, runtime.workerReadinessAttempts ?? 41);
-  const pollMs = Math.max(0, runtime.workerReadinessPollMs ?? 250);
+  const timeoutMs = Math.max(0, runtime.workerReadinessTimeoutMs ?? DEFAULT_WORKER_READINESS_TIMEOUT_MS);
+  const pollMs = Math.max(1, runtime.workerReadinessPollMs ?? DEFAULT_WORKER_READINESS_POLL_MS);
+  const nowMs = runtime.nowMs ?? Date.now;
   const sleep = runtime.sleep ?? ((milliseconds: number) => new Promise<void>((resolve) => {
     setTimeout(resolve, milliseconds);
   }));
+  const deadline = nowMs() + timeoutMs;
+  const maximumPolls = Math.ceil(timeoutMs / pollMs);
   let state = await inspectWorker(paths);
-  for (let attempt = 1; state.worker_ready !== true && attempt < attempts; attempt += 1) {
-    await sleep(pollMs);
+  for (let poll = 0; !workerRuntimeReady(state) && nowMs() < deadline && poll < maximumPolls; poll += 1) {
+    await sleep(Math.min(pollMs, Math.max(0, deadline - nowMs())));
     state = await inspectWorker(paths);
   }
   return state;
@@ -394,25 +407,26 @@ export async function reconcileTemporalRuntimeStartupMaintenance(
         });
       }
       let supervisorIsReady = workerSupervisorReady(workerAfter);
-      let workerLifecycle = supervisorIsReady
+      let workerLifecycle = supervisorIsReady && workerAction === 'install'
         ? await waitForWorkerReadiness(handle.paths, inspectWorker, runtime)
         : await inspectWorker(handle.paths);
       if (supervisorIsReady && workerLifecycle.readiness_status === 'worker_source_stale') {
         workerAction = 'restart';
-        workerOperations.push(await repairWorker(handle.paths, {
+        const repairOperation = await repairWorker(handle.paths, {
           trigger: 'startup_maintenance',
           allowRestart: true,
-        }));
+        });
+        workerOperations.push(repairOperation);
         workerAfter = await runWorkerSupervisor(handle.db, handle.paths, {
           action: 'status',
           providerKind: 'temporal',
         });
         supervisorIsReady = workerSupervisorReady(workerAfter);
-        workerLifecycle = supervisorIsReady
+        workerLifecycle = supervisorIsReady && repairOperation.repair_status === 'executed'
           ? await waitForWorkerReadiness(handle.paths, inspectWorker, runtime)
           : await inspectWorker(handle.paths);
       }
-      const runtimeIsReady = workerLifecycle.worker_ready === true;
+      const runtimeIsReady = workerRuntimeReady(workerLifecycle);
       const workerIsReady = supervisorIsReady && runtimeIsReady;
       if (workerAction === 'status') workerAction = 'none';
       steps.provider_worker_supervisor = step({
