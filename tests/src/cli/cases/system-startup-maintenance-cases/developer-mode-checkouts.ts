@@ -130,7 +130,6 @@ test('system startup-maintenance uses Developer Mode domain checkouts without gl
     }
 
     assert.deepEqual(fs.readFileSync(logPath, 'utf8').trim().split('\n'), [
-      'med-autoscience-health',
       'med-autogrant-health',
       'redcube-ai-health',
       'opl-meta-agent-health',

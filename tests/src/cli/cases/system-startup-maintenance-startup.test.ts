@@ -191,8 +191,6 @@ test('system startup-maintenance installs clean managed modules and returns App 
       'oplbookforge',
     ]);
     assert.deepEqual(fs.readFileSync(logPath, 'utf8').trim().split('\n'), [
-      'med-autoscience-bootstrap',
-      'med-autoscience-health',
       'med-autogrant-bootstrap',
       'med-autogrant-health',
       'redcube-ai-bootstrap',
