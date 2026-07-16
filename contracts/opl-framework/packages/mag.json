@@ -4,7 +4,7 @@
   "package_id": "mag",
   "display_name": "Med Auto Grant",
   "publisher": "one-person-lab",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "source": "first_party",
   "registry_entry": {
     "registry_kind": "first_party_agent_package_registry_entry",
@@ -42,8 +42,8 @@
   },
   "codex_surface": {
     "plugin_id": "med-autogrant",
-    "plugin_payload_manifest_url": "payloads/mag-0.3.2.json",
-    "carrier_source_commit": "8ceb733acd63406816a330c465907e69f4179a6d",
+    "plugin_payload_manifest_url": "payloads/mag-0.3.3.json",
+    "carrier_source_commit": "96dc9fc1832c191daa99407f38acfbc1d0ec61df",
     "standalone_distribution": "repo_carrier_source",
     "required_skill_ids": [
       "med-autogrant"

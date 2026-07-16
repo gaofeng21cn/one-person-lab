@@ -440,7 +440,7 @@ test('packages manifest exposes canonical Release Set coordinates for Package in
   );
   assert.equal(
     output.packages_manifest.packages.package_artifacts.oma.artifact,
-    'ghcr.io/gaofeng21cn/one-person-lab-packages/oma:0.3.6',
+    'ghcr.io/gaofeng21cn/one-person-lab-packages/oma:0.3.7',
   );
   assert.equal(
     output.packages_manifest.packages.package_artifacts.oma.remote_publish_status,
@@ -456,7 +456,7 @@ test('packages manifest exposes canonical Release Set coordinates for Package in
   assert.equal(omaCodexStandaloneDistribution.package_manifest_ref, 'contracts/opl-framework/packages/oma.json');
   assert.equal(
     output.packages_manifest.packages.package_artifacts['mas-scholar-skills'].artifact,
-    'ghcr.io/gaofeng21cn/one-person-lab-packages/mas-scholar-skills:0.2.4',
+    'ghcr.io/gaofeng21cn/one-person-lab-packages/mas-scholar-skills:0.2.5',
   );
   assert.equal(output.packages_manifest.packages.package_artifacts['opl-flow'].package_id, 'opl-flow');
   assert.equal(output.packages_manifest.packages.package_artifacts['opl-flow'].package_version, '0.1.22');
