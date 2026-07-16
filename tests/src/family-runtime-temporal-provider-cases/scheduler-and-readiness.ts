@@ -63,7 +63,7 @@ test('Temporal scheduler status does not resolve unrelated Standard Agent domain
     assert.ok('schedule_status' in result.action);
     assert.equal(result.action.schedule_status, 'active');
     assert.equal(
-      result.replaces_domain_daemon_surface['opl-meta-agent'],
+      result.replaces_domain_daemon_surface.agent_engineering,
       'opl_runway_provider_cadence_and_stage_attempt_runtime',
     );
   } finally {
