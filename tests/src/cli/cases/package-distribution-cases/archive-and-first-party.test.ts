@@ -255,7 +255,7 @@ test('package archive builder writes channel manifest checksums git source and r
   const releaseManifestPath = path.join(outDir, 'opl-release-manifest.json');
   const channelManifestPath = path.join(outDir, 'opl-channel-manifest.json');
   const checksumsPath = path.join(outDir, 'SHA256SUMS');
-  const frameworkArchivePath = path.join(outDir, 'framework', 'one-person-lab-framework-0.3.1.tar.gz');
+  const frameworkArchivePath = path.join(outDir, 'framework', 'one-person-lab-framework-0.3.2.tar.gz');
   const defaultCloneRoot = path.join(path.dirname(outDir), `${path.basename(outDir)}-package-sources`);
   const manifest = parseJsonText(fs.readFileSync(releaseManifestPath, 'utf8')) as any;
   const channelManifest = parseJsonText(fs.readFileSync(channelManifestPath, 'utf8')) as any;
@@ -309,7 +309,7 @@ test('package archive builder writes channel manifest checksums git source and r
   const runtimePackageJson = parseJsonText(execFileSync(
     'tar', ['-xOf', frameworkArchivePath, 'one-person-lab/package.json'], { encoding: 'utf8' },
   )) as Record<string, any>;
-  assert.equal(runtimePackageJson.version, '0.3.1');
+  assert.equal(runtimePackageJson.version, '0.3.2');
   assert.equal(runtimePackageJson.scripts.prepare, undefined);
   assert.equal(runtimePackageJson.scripts.build, undefined);
   assert.equal(channelManifest.release_set_generation, manifest.release_set_generation);
@@ -343,7 +343,7 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(manifest.packages.framework_core.homebrew_formula.package_name, 'opl');
   assert.equal(manifest.packages.framework_core.homebrew_formula.approval_status, 'owner_approved');
   assert.equal(manifest.packages.framework_core.homebrew_formula.carrier_scope, 'framework_core_only');
-  assert.equal(manifest.packages.framework_core.homebrew_formula.version, '0.3.1');
+  assert.equal(manifest.packages.framework_core.homebrew_formula.version, '0.3.2');
   assert.equal(
     manifest.packages.framework_core.homebrew_formula.source_head,
     manifest.packages.framework_core.source_git.head_sha,
@@ -366,7 +366,7 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(manifest.release_automation.daily_package_channel.generation_template, '<utc_yy.m.d[-rN_auto]>');
   assert.equal(manifest.release_automation.daily_package_channel.force_publish_input, 'force_publish');
   assert.equal(Object.hasOwn(manifest.packages, 'webui_docker_image'), false);
-  assert.equal(manifest.packages.framework_core.artifact, 'ghcr.io/gaofeng21cn/one-person-lab-framework:0.3.1');
+  assert.equal(manifest.packages.framework_core.artifact, 'ghcr.io/gaofeng21cn/one-person-lab-framework:0.3.2');
   assert.match(manifest.packages.framework_core.source_archive.sha256, /^[0-9a-f]{64}$/);
   assert.match(manifest.packages.framework_core.source_git.head_sha, /^[0-9a-f]{40}$/);
   assert.equal(channelManifest.packages.framework_core.artifact, manifest.packages.framework_core.artifact);
@@ -636,7 +636,7 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(promotionReceipt.surface_kind, 'opl_release_set_promotion_receipt.v1');
   assert.equal(promotionReceipt.carrier.digest, `sha256:${'b'.repeat(64)}`);
   assert.equal(promotionReceipt.anonymous_readback.verified_refs.length, 9);
-  assert.match(checksums, /one-person-lab-framework-0\.3\.1\.tar\.gz/);
+  assert.match(checksums, /one-person-lab-framework-0\.3\.2\.tar\.gz/);
   assert.match(checksums, new RegExp(manifest.packages.framework_core.source_archive.sha256));
   assert.equal(manifest.packages.native_helper.channel_status, 'active_ghcr_oci_prebuild');
   assert.equal(manifest.packages.native_helper.retention_policy.retain_versions, 4);
@@ -816,7 +816,12 @@ test('package archive builder writes channel manifest checksums git source and r
 
   fs.writeFileSync(path.join(fixtures.medautoscience.sourceRoot, 'OWNER-HEAD-MOVED.txt'), 'new owner head\n', 'utf8');
   execFileSync('git', ['add', 'OWNER-HEAD-MOVED.txt'], { cwd: fixtures.medautoscience.sourceRoot, encoding: 'utf8' });
-  execFileSync('git', ['commit', '-m', 'move owner head after cohort freeze'], {
+  execFileSync('git', [
+    '-c', 'user.name=OPL Test',
+    '-c', 'user.email=opl@example.test',
+    '-c', 'commit.gpgsign=false',
+    'commit', '-m', 'move owner head after cohort freeze',
+  ], {
     cwd: fixtures.medautoscience.sourceRoot,
     encoding: 'utf8',
   });

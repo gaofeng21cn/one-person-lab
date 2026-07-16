@@ -121,7 +121,7 @@ EOF
     OPL_FRAMEWORK_UPDATE_TARGET_ROOT: frameworkTargetRoot,
     OPL_FRAMEWORK_UPDATE_SKIP_DEPENDENCY_INSTALL: '1',
     OPL_CODEX_CLI_LATEST_VERSION: '0.125.0',
-    PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
+    PATH: `${codexFixture.fixtureRoot}:${path.dirname(process.execPath)}:/usr/bin:/bin`,
   };
 
   try {
@@ -343,9 +343,9 @@ console.log(JSON.stringify({ sync: 'ok' }));
     assert.equal(targets.get('medautogrant')?.status, 'manual_required');
     assert.equal(targets.get('medautogrant')?.reason, 'developer_or_dirty_checkout_visible');
     const turnkeyLog = fs.readFileSync(turnkeyLogPath, 'utf8');
-    assert.match(turnkeyLog, /bootstrap:med-autoscience/);
+    assert.doesNotMatch(turnkeyLog, /bootstrap:med-autoscience/);
     assert.doesNotMatch(turnkeyLog, /skill:med-autoscience/);
-    assert.match(turnkeyLog, /health:med-autoscience/);
+    assert.doesNotMatch(turnkeyLog, /health:med-autoscience/);
     assert.doesNotMatch(turnkeyLog, /med-deepscientist/);
     assert.doesNotMatch(turnkeyLog, /bootstrap:external-redcube-ai/);
     assert.doesNotMatch(turnkeyLog, /skill:external-redcube-ai/);

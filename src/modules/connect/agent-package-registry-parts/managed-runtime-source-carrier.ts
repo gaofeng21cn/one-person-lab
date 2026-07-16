@@ -672,7 +672,8 @@ export function applyManagedRuntimeSourceCarrier(input: {
     : existed ? 'preexisting_adopted' : 'package_created';
   let before: AgentPackageManagedRuntimeSourceState | null = null;
   if (input.previous) {
-    if (input.sourceKind === 'bundled_full_runtime_modules') {
+    if (input.sourceKind === 'bundled_full_runtime_modules'
+      || (developerCheckout && !sameCheckout && input.action === 'install')) {
       before = input.previous;
     } else {
       try {

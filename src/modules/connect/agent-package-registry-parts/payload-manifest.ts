@@ -14,6 +14,7 @@ const LEGACY_V1_SURFACE = 'opl_package_payload_manifest.v1';
 const LEGACY_V1_SCHEMA_REF = 'contracts/opl-framework/package-payload-manifest.schema.json';
 const LEGACY_V0_SURFACE = 'opl_agent_package_payload_manifest';
 const FIRST_PARTY_SOURCES = new Set(['first_party', 'first_party_owner_projection']);
+const CATALOG_BOUND_FIRST_PARTY_SOURCES = new Set(['first_party_repo_local']);
 
 export type PackagePayloadAdmission = {
   kind: 'canonical_v2' | 'legacy_v1' | 'legacy_v0';
@@ -125,7 +126,9 @@ function assertCanonicalIdentity(input: {
   catalogSelection: PackagePayloadCatalogAuthority | null;
 }) {
   const payload = input.payload;
-  if (!FIRST_PARTY_SOURCES.has(input.manifest.source)) {
+  const catalogBoundFirstParty = input.catalogSelection !== null
+    && CATALOG_BOUND_FIRST_PARTY_SOURCES.has(input.manifest.source);
+  if (!FIRST_PARTY_SOURCES.has(input.manifest.source) && !catalogBoundFirstParty) {
     fail('Canonical package payload manifests are reserved for first-party package sources.', {
       payload_manifest_url: input.payloadManifestUrl,
       package_source: input.manifest.source,

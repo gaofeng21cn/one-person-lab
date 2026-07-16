@@ -150,6 +150,16 @@ test('Connect admits only strict canonical first-party payload identity and expl
     payloadManifestUrl: '/fixture/payload.json',
     catalogSelection: null,
   }).sourceCommit, sourceCommit);
+  assert.equal(admitPackagePayloadManifest({
+    payload: fixture.payload,
+    manifest: { ...fixture.manifest, source: 'first_party_repo_local' },
+    payloadManifestUrl: '/fixture/catalog-bound-repo-local.json',
+    catalogSelection: {
+      package_id: packageId,
+      package_version: packageVersion,
+      owner_source_commit: sourceCommit,
+    },
+  }).sourceCommit, sourceCommit);
 
   const cases: Array<{ name: string; payload: Record<string, any>; manifest?: AgentPackageManifest; failureCode: string }> = [
     {
@@ -193,6 +203,12 @@ test('Connect admits only strict canonical first-party payload identity and expl
       name: 'canonical third party',
       payload: structuredClone(fixture.payload),
       manifest: { ...fixture.manifest, source: 'third_party' },
+      failureCode: 'canonical_package_payload_requires_first_party_source',
+    },
+    {
+      name: 'canonical repo-local without catalog authority',
+      payload: structuredClone(fixture.payload),
+      manifest: { ...fixture.manifest, source: 'first_party_repo_local' },
       failureCode: 'canonical_package_payload_requires_first_party_source',
     },
     {

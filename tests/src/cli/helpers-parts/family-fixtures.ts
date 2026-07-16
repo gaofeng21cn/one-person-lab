@@ -410,6 +410,10 @@ export function runGitFixtureCommand(
     encoding: 'utf8',
     env: {
       ...process.env,
+      GIT_AUTHOR_NAME: 'OPL Test',
+      GIT_AUTHOR_EMAIL: 'opl@example.test',
+      GIT_COMMITTER_NAME: 'OPL Test',
+      GIT_COMMITTER_EMAIL: 'opl@example.test',
       ...envOverrides,
     },
   });
@@ -485,6 +489,16 @@ export function createGitModuleRemoteFixture(
 }
 
 function withStandardPrimarySkillCarrierFiles(moduleName: string, files: Record<string, string>) {
+  const carrierFiles = moduleName === 'med-autoscience'
+    ? {
+        'contracts/action_catalog.json': '{}\n',
+        'contracts/domain_handler_registry.json': '{}\n',
+        'contracts/pack_compiler_input.json': '{}\n',
+        'agent/stages/manifest.json': '{}\n',
+        'agent/primary_skill/SKILL.md': '# med-autoscience\n',
+        ...files,
+      }
+    : files;
   const pluginNameByModule: Record<string, string> = {
     'med-autoscience': 'med-autoscience',
     'med-autogrant': 'med-autogrant',
@@ -494,15 +508,15 @@ function withStandardPrimarySkillCarrierFiles(moduleName: string, files: Record<
   };
   const pluginName = pluginNameByModule[moduleName];
   if (!pluginName || files['agent/primary_skill/SKILL.md']) {
-    return files;
+    return carrierFiles;
   }
-  const carrierSkill = files[`plugins/${pluginName}/skills/${pluginName}/SKILL.md`];
+  const carrierSkill = carrierFiles[`plugins/${pluginName}/skills/${pluginName}/SKILL.md`];
   return carrierSkill
     ? {
+        ...carrierFiles,
         'agent/primary_skill/SKILL.md': carrierSkill,
-        ...files,
       }
-    : files;
+    : carrierFiles;
 }
 
 export function createFakeShellCommandFixture() {
