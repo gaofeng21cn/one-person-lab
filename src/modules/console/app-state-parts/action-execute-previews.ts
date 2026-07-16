@@ -305,6 +305,16 @@ export function dryRunFamilyRuntimeResult(surface: string, args: string[]) {
       },
     };
   }
+  if (surface === 'service') {
+    return {
+      family_runtime_service: {
+        action: args[1],
+        provider_kind: 'temporal',
+        status: 'dry_run',
+        command_preview: commandPreview,
+      },
+    };
+  }
   return {
     family_runtime_worker: {
       action: args[1],

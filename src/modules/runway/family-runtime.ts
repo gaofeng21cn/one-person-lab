@@ -193,7 +193,12 @@ export async function runFamilyRuntime(
         },
       };
     }
-    if (parsed.mode === 'service_status' || parsed.mode === 'service_start' || parsed.mode === 'service_stop') {
+    if (
+      parsed.mode === 'service_status'
+      || parsed.mode === 'service_start'
+      || parsed.mode === 'service_restart'
+      || parsed.mode === 'service_stop'
+    ) {
       return await runTemporalServiceCommand(db, paths, parsed);
     }
     if (parsed.mode === 'worker_start') {

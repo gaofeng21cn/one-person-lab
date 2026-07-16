@@ -86,6 +86,8 @@ test('app action catalog exposes representative safe delegated action refs', () 
       'module_sync',
       'provider_service_status',
       'provider_service_start',
+      'provider_service_restart',
+      'provider_service_stop',
       'provider_scheduler_status',
       'workspace_initialize',
       'workspace_validate',
@@ -123,6 +125,18 @@ test('app action catalog exposes representative safe delegated action refs', () 
     );
     assert.equal(actions.get('provider_service_start')?.mutates, 'opl_temporal_service');
     assert.equal(actions.get('provider_service_start')?.dry_run_supported, true);
+    assert.equal(actions.get('provider_service_restart')?.mutates, 'opl_temporal_service');
+    assert.equal(actions.get('provider_service_restart')?.dry_run_supported, true);
+    assert.equal(
+      actions.get('provider_service_restart')?.delegated_surface,
+      'opl family-runtime service restart --provider temporal',
+    );
+    assert.equal(actions.get('provider_service_stop')?.mutates, 'opl_temporal_service');
+    assert.equal(
+      actions.get('provider_service_stop')?.delegated_surface,
+      'opl family-runtime service stop --provider temporal',
+    );
+    assert.equal(actions.get('provider_worker_stop')?.mutates, 'opl_temporal_worker');
     assert.equal(actions.get('workspace_initialize')?.delegated_surface, 'opl workspace init');
     assert.equal(actions.get('workspace_initialize')?.dry_run_supported, true);
     assert.deepEqual(actions.get('workspace_initialize')?.payload_fields, [

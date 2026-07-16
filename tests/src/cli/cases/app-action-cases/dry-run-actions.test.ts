@@ -200,6 +200,58 @@ test('app action execute dry-runs Codex, module, scheduler, and worker actions f
       'temporal',
     ]);
 
+    const temporalServiceRestart = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'provider_service_restart',
+      '--dry-run',
+    ], env).app_action_execution;
+
+    assert.equal(
+      temporalServiceRestart.delegated_surface,
+      'opl family-runtime service restart --provider temporal',
+    );
+    assert.equal(temporalServiceRestart.result.family_runtime_service.status, 'dry_run');
+    assert.deepEqual(temporalServiceRestart.result.family_runtime_service.success_requires, [
+      'fresh_service_readback_ready',
+      'fresh_supervisor_readback_ready_or_not_applicable',
+      'darwin_managed_supervisor_pid_changed',
+    ]);
+    assert.deepEqual(temporalServiceRestart.result.family_runtime_service.command_preview, [
+      'opl',
+      'family-runtime',
+      'service',
+      'restart',
+      '--provider',
+      'temporal',
+    ]);
+
+    const temporalServiceStop = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'provider_service_stop',
+      '--dry-run',
+    ], env).app_action_execution;
+
+    assert.equal(temporalServiceStop.delegated_surface, 'opl family-runtime service stop --provider temporal');
+    assert.equal(temporalServiceStop.result.family_runtime_service.status, 'dry_run');
+
+    const temporalWorkerStop = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'provider_worker_stop',
+      '--dry-run',
+    ], env).app_action_execution;
+
+    assert.equal(temporalWorkerStop.delegated_surface, 'opl family-runtime worker stop --provider temporal');
+    assert.equal(temporalWorkerStop.result.family_runtime_worker.status, 'dry_run');
+
     const settingsRepair = runCli([
       'app',
       'action',

@@ -34,6 +34,7 @@ function supervisorState(paths: { root: string }, installed = true) {
     launchctl: null,
     keep_alive: true,
     run_at_load: true,
+    throttle_interval_seconds: 15,
     resident_worker_process: true,
     supervises_family_runtime_root: installed,
     family_runtime_root: paths.root,

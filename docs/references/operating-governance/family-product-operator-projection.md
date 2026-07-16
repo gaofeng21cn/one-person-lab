@@ -48,7 +48,8 @@ Operator projection 必须表达：
 - 默认 `opl`、`opl exec`、`opl resume` 保持 `Codex-default session/runtime`。
 - 显式 runtime switch / explicit runtime switch 或显式 domain activation / explicit domain activation 才进入 domain / hosted runtime 语义。
 - GUI / tray / dashboard 只能消费 `OPL` projection 和 domain-owned source refs。
-- 不新增 local daemon、LaunchAgent、LaunchDaemon 或 SMAppService helper。
+- Operator projection 本身不创建、不安装也不授权 local daemon、LaunchAgent、LaunchDaemon 或 SMAppService helper；它只投影 OPL-owned lifecycle 与 repair action。
+- OPL-owned provider deployment substrate 可以在 Desktop macOS 使用显式、可移除的 launchd supervisor 托管必需的 Temporal Server 与 Worker。该例外不授权 domain repo 安装私有 daemon / scheduler，不适用于 WebUI/Linux 容器路径，也不能把 provider liveness 写成 domain ready。
 - 不让 `OPL` 接管 scheduler、session、memory、domain runtime truth 或 domain quality authority。
 
 ## Operator Answers

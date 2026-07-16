@@ -42,9 +42,10 @@ export type FamilyRuntimeCommandInput =
     detach?: boolean;
   }
   | {
-    mode: 'service_start' | 'service_status' | 'service_stop';
+    mode: 'service_start' | 'service_status' | 'service_restart' | 'service_stop';
     providerKind?: FamilyRuntimeProviderKind;
     detach?: boolean;
+    supervisorAction?: 'status' | 'install' | 'remove' | 'trigger';
   }
   | { mode: 'residency_proof'; providerKind?: FamilyRuntimeProviderKind; live?: boolean; production?: boolean }
   | { mode: 'provider_slo_tick'; providerKind?: FamilyRuntimeProviderKind; force?: boolean }

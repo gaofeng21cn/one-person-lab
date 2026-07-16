@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import net from 'node:net';
 import { pathToFileURL } from 'node:url';
 
 import { assert, buildManifestCommand, fs, loadFamilyManifestFixtures, os, path, repoRoot, runCli, test } from '../helpers.ts';
@@ -22,9 +23,19 @@ function buildMasManifestWithManagedTemporalProjection(managedTemporal: Record<s
   };
 }
 
-test('app state fast fails closed on stale worker source without live manifest refresh', () => {
+test('app state fast fails closed on stale worker source without live manifest refresh', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-local-temporal-'));
   const runtimeRoot = path.join(stateRoot, 'family-runtime');
+  const temporalServer = net.createServer((socket) => socket.end());
+  await new Promise<void>((resolve, reject) => {
+    temporalServer.once('error', reject);
+    temporalServer.listen(0, '127.0.0.1', resolve);
+  });
+  const temporalServerAddress = temporalServer.address();
+  if (!temporalServerAddress || typeof temporalServerAddress === 'string') {
+    throw new Error('Unable to resolve Temporal fixture port.');
+  }
+  const temporalAddress = `127.0.0.1:${temporalServerAddress.port}`;
   const child = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 30000);'], {
     detached: true,
     stdio: 'ignore',
@@ -38,7 +49,7 @@ test('app state fast fails closed on stale worker source without live manifest r
       provider_kind: 'temporal',
       service_kind: 'custom_command',
       pid: child.pid,
-      address: '127.0.0.1:65534',
+      address: temporalAddress,
       started_at: new Date().toISOString(),
       status: 'running',
       command: 'test temporal service',
@@ -50,7 +61,7 @@ test('app state fast fails closed on stale worker source without live manifest r
     const workerState = {
       provider_kind: 'temporal',
       pid: child.pid,
-      address: '127.0.0.1:65534',
+      address: temporalAddress,
       namespace: 'default',
       task_queue: taskQueue,
       started_at: new Date().toISOString(),
@@ -123,7 +134,7 @@ test('app state fast fails closed on stale worker source without live manifest r
     assert.equal(output.app_state.provider.temporal.details.worker_readiness.inspection_detail, 'fast');
     assert.equal(output.app_state.provider.temporal.details.worker_readiness.readiness_status, 'ready');
     assert.equal(output.app_state.provider.temporal.details.worker_readiness.service_ready, true);
-    assert.equal(output.app_state.provider.temporal.details.worker_readiness.server_reachable, null);
+    assert.equal(output.app_state.provider.temporal.details.worker_readiness.server_reachable, true);
     assert.equal(
       output.app_state.provider.temporal.details.worker_readiness.temporal_service_lifecycle.service_status,
       'running',
@@ -150,6 +161,7 @@ test('app state fast fails closed on stale worker source without live manifest r
         // Test process may already have exited.
       }
     }
+    await new Promise<void>((resolve) => temporalServer.close(() => resolve()));
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });

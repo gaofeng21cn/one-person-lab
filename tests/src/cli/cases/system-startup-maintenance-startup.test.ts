@@ -105,6 +105,13 @@ test('system startup-maintenance installs clean managed modules and returns App 
             action: string;
             affected_domains: string[];
           };
+          temporal_runtime_reconcile: {
+            surface_kind: string;
+            status: string;
+            applicable: boolean;
+            ready: boolean | null;
+            reason: string;
+          };
         };
       };
     };
@@ -183,6 +190,19 @@ test('system startup-maintenance installs clean managed modules and returns App 
     assert.deepEqual(output.system_action.details.plugin_cache_freshness.managed_capability_packages, []);
     assert.equal(output.system_action.details.restart_reload_prompt.required, true);
     assert.equal(output.system_action.details.restart_reload_prompt.action, 'reload_app_and_codex_plugin_cache');
+    assert.equal(
+      output.system_action.details.temporal_runtime_reconcile.surface_kind,
+      'opl_temporal_runtime_startup_reconcile.v1',
+    );
+    assert.equal(output.system_action.details.temporal_runtime_reconcile.status, 'not_applicable');
+    assert.equal(output.system_action.details.temporal_runtime_reconcile.applicable, false);
+    assert.equal(output.system_action.details.temporal_runtime_reconcile.ready, null);
+    assert.equal(
+      output.system_action.details.temporal_runtime_reconcile.reason,
+      process.platform === 'darwin'
+        ? 'desktop_host_hint_missing'
+        : 'launchd_supervision_not_available_on_non_darwin',
+    );
     assert.deepEqual(output.system_action.details.restart_reload_prompt.affected_domains, [
       'medautoscience',
       'medautogrant',

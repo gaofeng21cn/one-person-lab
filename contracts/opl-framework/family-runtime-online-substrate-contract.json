@@ -53,9 +53,128 @@
         "history": "durable_replay_and_audit"
       },
       "required_configuration": [
-        "OPL_TEMPORAL_ADDRESS",
+        "OPL_TEMPORAL_ADDRESS or OPL-managed local Temporal service supervisor address",
         "Temporal worker implementing OPL stage attempt contract"
-      ]
+      ],
+      "local_service_supervision": {
+        "dependency_role": "required_local_durable_workflow_service",
+        "desktop_macos": {
+          "supervisor_kind": "launchd_user_agent",
+          "label": "ai.opl.family-runtime.temporal-service",
+          "run_at_load": true,
+          "keep_alive": true,
+          "throttle_interval_seconds": 15,
+          "launchctl_timeout_ms": 5000,
+          "launcher_policy": "direct_realpath_temporal_cli_only_no_framework_checkout_or_shell_command",
+          "configuration_currentness": "exact_plist_sha256_and_launcher_sha256_plus_executable_realpath_x_ok_readback",
+          "database_path": "${OPL_STATE_DIR}/family-runtime/temporal-server/temporal.sqlite",
+          "database_argument": "--db-filename",
+          "commands": {
+            "status": "opl family-runtime service supervisor status --provider temporal",
+            "install": "opl family-runtime service supervisor install --provider temporal",
+            "trigger": "opl family-runtime service supervisor trigger --provider temporal",
+            "remove": "opl family-runtime service supervisor remove --provider temporal"
+          },
+          "app_actions": {
+            "status": "provider_service_status",
+            "start_or_install": "provider_service_start",
+            "restart": "provider_service_restart",
+            "stop": "provider_service_stop"
+          }
+        },
+        "non_darwin": {
+          "launchd_supervisor_supported": false,
+          "supervisor_status": "not_applicable",
+          "supervisor_error": null,
+          "ordinary_service_start_policy": "retain_external_container_or_explicit_foreground_detached_service_lifecycle",
+          "managed_detached_restart_policy": "bounded_stop_then_start_with_fresh_service_readback",
+          "webui_policy": "container_or_external_temporal_service_not_launchd"
+        },
+        "readiness_contract": {
+          "ready_requires": [
+            "installed",
+            "configuration_current",
+            "loaded",
+            "supervisor_process_running",
+            "fresh_tcp_probe_reachable",
+            "error_null"
+          ],
+          "required_projection_fields": [
+            "installed",
+            "loaded",
+            "ready",
+            "observed_at",
+            "error",
+            "supported",
+            "applicable",
+            "required"
+          ],
+          "fast_projection_path": "app_state.provider.temporal.details.worker_readiness.temporal_service_lifecycle.supervisor",
+          "full_projection_path": "family_runtime.provider_runtime.providers.temporal.details.worker_readiness.temporal_service_lifecycle.supervisor"
+        },
+        "restart_lifecycle": {
+          "command": "opl family-runtime service restart --provider temporal",
+          "app_action_id": "provider_service_restart",
+          "darwin_local_managed_route": "launchctl_kickstart_k_existing_opl_supervisor",
+          "non_darwin_managed_detached_route": "bounded_stop_then_start",
+          "external_service_route": "typed_not_applicable_no_mutation",
+          "success_requires": [
+            "fresh_service_readback_ready",
+            "fresh_supervisor_readback_ready_or_not_applicable",
+            "darwin_managed_supervisor_pid_changed",
+            "error_null"
+          ],
+          "start_is_not_restart": true
+        },
+        "maintenance_order": [
+          "temporal_service_supervisor",
+          "provider_worker_supervisor",
+          "temporal_scheduler_cadence"
+        ],
+        "startup_maintenance_reconcile": {
+          "receipt_path": "system_action.details.temporal_runtime_reconcile",
+          "surface_kind": "opl_temporal_runtime_startup_reconcile.v1",
+          "applicability": {
+            "platform": "darwin",
+            "host_kind": "desktop",
+            "private_host_hint": "OPL_APP_HOST_KIND=desktop",
+            "packaged_local_default_address": "127.0.0.1:7233",
+            "packaged_local_default_address_source": "OPL_TEMPORAL_ADDRESS_SOURCE=packaged_local_default",
+            "provider_kind": "temporal",
+            "service_owner": "opl_local_managed",
+            "process_instance_hint_is_insufficient": true
+          },
+          "strict_dependency_order": [
+            "fresh_server_supervisor_ready",
+            "fresh_worker_supervisor_and_worker_runtime_ready",
+            "fresh_scheduler_cadence_ready"
+          ],
+          "dependency_failure_policy": "stop_before_next_step_and_return_blocked_manual_required",
+          "worker_root_drift_policy": "loaded_supervisor_for_different_runtime_root_is_blocked_without_remove_or_reinstall",
+          "non_applicable_policy": "external_custom_non_darwin_and_non_desktop_hosts_return_ready_null_without_opening_runtime_or_mutating_services",
+          "address_provenance_policy": "only the exact packaged loopback default plus packaged_local_default provenance may cross the environment-address boundary into managed reconcile; missing, unknown, remote, or mismatched provenance stays mutation-free not_applicable",
+          "system_action_status": "blocked_reconcile_maps_to_manual_required",
+          "private_host_hint_is_mutation_authority": false,
+          "mutation_requires_explicit_startup_maintenance_execution": true
+        },
+        "scheduler_independence": "service_process_supervision_never_installs_triggers_or_inferrs_scheduler_cadence",
+        "detached_service_adoption": {
+          "required_order": [
+            "bounded_stop_existing_detached_process",
+            "confirm_address_released",
+            "bootstrap_supervisor",
+            "confirm_fresh_readiness"
+          ],
+          "failure_policy": "rollback_supervisor_files_and_restore_detached_service_when_safe",
+          "old_in_memory_history_migration": "not_available_and_never_claimed"
+        },
+        "rollback_policy": "bootstrap_or_write_failure_restores_exact_prior_plist_and_config; failed_bootout_preserves_current_files",
+        "authority_boundary": {
+          "service_supervisor_owner": "one-person-lab",
+          "domain_daemon_install_allowed": false,
+          "provider_ready_authorizes_domain_ready": false
+        }
+      }
     }
   },
   "opl_owned_capabilities": [

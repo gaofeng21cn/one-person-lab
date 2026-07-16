@@ -61,6 +61,10 @@ export { buildCodexCliPreview, buildCodexExecArgs, parseCodexExecOutput, resolve
 export type { CodexExecEvent } from './codex.ts';
 export { listCodexAppRuntimeEvidenceReceipts } from './codex-app-runtime-evidence-ledger.ts';
 export { runFamilyRuntime } from './family-runtime.ts';
+export {
+  reconcileTemporalRuntimeStartupMaintenance,
+  type TemporalStartupMaintenanceRuntime,
+} from './family-runtime-temporal-startup-maintenance.ts';
 export { runStandardAgentAction } from './standard-agent-action-runtime.ts';
 export {
   DefaultHostedAgentRuntimeBindingResolver,

@@ -282,12 +282,15 @@ async function buildProviderState(profile: AppStateProfile) {
         actions: [
           'provider_service_status',
           'provider_service_start',
+          'provider_service_restart',
+          'provider_service_stop',
           'provider_scheduler_status',
           'provider_scheduler_install',
           'provider_scheduler_trigger',
           'provider_worker_status',
           'provider_worker_start',
           'provider_worker_restart',
+          'provider_worker_stop',
         ],
       },
     },
@@ -462,7 +465,7 @@ function pickRecordFields(value: unknown, fields: readonly string[]): JsonRecord
   ) as JsonRecord;
 }
 
-function compactFastProviderState(value: unknown) {
+export function compactFastProviderState(value: unknown) {
   const provider = isRecord(value) ? value : {};
   const temporal = isRecord(provider.temporal) ? provider.temporal : {};
   const details = isRecord(temporal.details) ? temporal.details : {};
@@ -472,6 +475,12 @@ function compactFastProviderState(value: unknown) {
     : {};
   const workerMutationGuard = isRecord(workerReadiness.worker_mutation_guard)
     ? workerReadiness.worker_mutation_guard
+    : {};
+  const serviceSupervisor = isRecord(serviceLifecycle.supervisor)
+    ? serviceLifecycle.supervisor
+    : {};
+  const serviceRepairAction = isRecord(serviceLifecycle.repair_action)
+    ? serviceLifecycle.repair_action
     : {};
   const scheduler = isRecord(details.scheduler) ? details.scheduler : {};
   const visibilityReadiness = isRecord(workerReadiness.visibility_readiness)
@@ -511,15 +520,49 @@ function compactFastProviderState(value: unknown) {
             'server_reachable',
             'blockers',
           ]),
-          temporal_service_lifecycle: pickRecordFields(serviceLifecycle, [
-            'inspection_detail',
-            'service_status',
-            'address_source',
-            'server_reachable',
-            'managed_service_pid',
-            'service_kind',
-            'blockers',
-          ]),
+          temporal_service_lifecycle: {
+            ...pickRecordFields(serviceLifecycle, [
+              'inspection_detail',
+              'service_status',
+              'address_source',
+              'server_reachable',
+              'managed_service_pid',
+              'service_kind',
+              'blockers',
+            ]),
+            supervisor: pickRecordFields(serviceSupervisor, [
+              'surface_kind',
+              'status',
+              'installed',
+              'loaded',
+              'ready',
+              'observed_at',
+              'error',
+              'supported',
+              'applicable',
+              'required',
+              'configuration_current',
+              'process_state',
+              'pid',
+              'last_exit_status',
+              'last_exit_signal',
+              'run_at_load',
+              'keep_alive',
+              'throttle_interval_seconds',
+              'address',
+              'database_path',
+              'launcher_source',
+              'schedule_independent',
+            ]),
+            repair_action: pickRecordFields(serviceRepairAction, [
+              'surface_kind',
+              'provider_kind',
+              'supervisor_applicable',
+              'supervisor_required',
+              'action_id',
+              'next_command',
+            ]),
+          },
           worker_mutation_guard: pickRecordFields(workerMutationGuard, [
             'mutation_guard_status',
             'allowed',
