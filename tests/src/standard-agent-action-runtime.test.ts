@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
 
 import { resolveStandardAgent } from '../../src/kernel/standard-agent-registry.ts';
@@ -244,6 +245,85 @@ test('Hosted Handler action validates schemas, runs the callable, and persists e
   }
 });
 
+test('Hosted Handler replay reads G1 output without resolving or executing G2', async () => {
+  const checkoutRoot = root('opl-action-handler-replay-checkout-');
+  const workspaceRoot = root('opl-action-handler-replay-workspace-');
+  const reservationDb = new DatabaseSync(':memory:');
+  let resolverCalls = 0;
+  let handlerCalls = 0;
+  try {
+    writeContracts(checkoutRoot, [action({
+      actionId: 'evaluate',
+      executionBinding: { kind: 'handler_ref', handler_ref: 'handler:fixture.evaluate' },
+    })], {
+      surface_kind: 'domain_handler_registry',
+      version: 'domain-handler-registry.v1',
+      handlers: [{
+        handler_id: 'fixture.evaluate',
+        binding: { kind: 'typescript_export', file: 'handler.ts', export: 'evaluate' },
+      }],
+    });
+    fs.writeFileSync(path.join(checkoutRoot, 'handler.ts'), 'export const evaluate = () => null;\n');
+    const resolveG1 = managed(checkoutRoot, workspaceRoot);
+    const dependencies = {
+      actionRunReservationDb: reservationDb,
+      resolveManagedCheckout: (async () => {
+        resolverCalls += 1;
+        if (resolverCalls > 1) throw new Error('G2 resolver must not run during replay');
+        return resolveG1();
+      }) as never,
+      runHandler: (() => {
+        handlerCalls += 1;
+        const output = { accepted: true, value: 17 };
+        return {
+          runtime_kind: 'node_permission_model',
+          sandbox_kind: 'macos_sandbox_exec',
+          exit_code: 0,
+          timed_out: false,
+          stdout_bytes: Buffer.from(`${JSON.stringify(output)}\n`, 'utf8'),
+          stderr: '',
+          output,
+        };
+      }) as never,
+      recordLedger,
+    };
+
+    const first = await runStandardAgentAction({
+      domainId: 'mas', actionId: 'evaluate', workspaceRoot, payload: { value: 17 }, runId: 'handler-g1',
+    }, dependencies);
+    const replay = await runStandardAgentAction({
+      domainId: 'medautoscience',
+      actionId: 'evaluate',
+      workspaceRoot,
+      payload: { value: 17 },
+      runId: 'handler-g1',
+    }, dependencies);
+
+    const firstRun = first.standard_agent_action_run;
+    const replayRun = replay.standard_agent_action_run;
+    assert.equal(firstRun.execution_kind, 'handler_ref');
+    assert.equal(replayRun.execution_kind, 'handler_ref');
+    if (firstRun.execution_kind !== 'handler_ref' || replayRun.execution_kind !== 'handler_ref') {
+      assert.fail('expected handler action results');
+    }
+    assert.equal(resolverCalls, 1);
+    assert.equal(handlerCalls, 1);
+    assert.deepEqual(replayRun.result, { accepted: true, value: 17 });
+    assert.equal(
+      replayRun.output.sha256,
+      firstRun.output.sha256,
+    );
+    assert.deepEqual(
+      replayRun.package_use_binding,
+      firstRun.package_use_binding,
+    );
+  } finally {
+    reservationDb.close();
+    fs.rmSync(checkoutRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
 test('Hosted Stage action passes a SHA-bound request ref into Temporal StageRun create/start/query', async () => {
   const checkoutRoot = root('opl-stage-action-checkout-');
   const workspaceRoot = root('opl-stage-action-workspace-');
@@ -406,12 +486,135 @@ test('Hosted Stage action replays one durable registry launch and starts a later
       'started',
     );
     assert.equal(replayRun.output.sha256, firstRun.output.sha256);
-    assert.equal(stageRuntimeCreateCalls, 3);
+    assert.equal(stageRuntimeCreateCalls, 2);
     assert.deepEqual(startedWorkflowIds.length, 2);
     assert.equal(new Set(startedWorkflowIds).size, 2);
   } finally {
     if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
     else process.env.OPL_STATE_DIR = previousStateRoot;
+    fs.rmSync(checkoutRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('Hosted Stage replay resumes the G1 launch when G2 route drifts before output persistence', async () => {
+  const checkoutRoot = root('opl-stage-action-g1-replay-checkout-');
+  const workspaceRoot = root('opl-stage-action-g1-replay-workspace-');
+  const stateRoot = root('opl-stage-action-g1-replay-state-');
+  const reservationDb = new DatabaseSync(':memory:');
+  const previousStateRoot = process.env.OPL_STATE_DIR;
+  const stageBinding = writeStagePack(checkoutRoot);
+  const startedWorkflowIds: string[] = [];
+  const firstExecutionByWorkflow = new Map<string, string>();
+  let resolverCalls = 0;
+  let packageReadinessCalls = 0;
+  let stageRuntimeCreateCalls = 0;
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    writeContracts(checkoutRoot, [action({
+      actionId: 'launch',
+      executionBinding: { kind: 'stage_binding', stage_manifest_ref: 'agent/stages/manifest.json' },
+      stageRoute: {
+        entry_stage_ref: 'intake',
+        required_stage_refs: ['intake'],
+        optional_stage_refs: [],
+        terminal_stage_refs: ['intake'],
+        route_policy: 'ai_selected_progress_route',
+      },
+    })]);
+    const runStageRuntime: typeof runFamilyRuntime = async (args) => {
+      if (args[0] === 'attempt' && args[1] === 'create') stageRuntimeCreateCalls += 1;
+      return runFamilyRuntime(args, {
+        stageRunRuntime: {
+          ensurePackageLaunchReady: async () => {
+            packageReadinessCalls += 1;
+            return {
+              launch_allowed: true,
+              runtime_source_readiness: { checkout_path: checkoutRoot },
+              package_use_binding: stagePackageUseBinding(),
+            } as never;
+          },
+          resolveStageBinding: () => stageBinding,
+          startWorkflow: async (stageRunInput) => {
+            startedWorkflowIds.push(stageRunInput.workflow_id);
+            const firstExecutionRunId = `run-${stageRunInput.stage_run_id}`;
+            firstExecutionByWorkflow.set(stageRunInput.workflow_id, firstExecutionRunId);
+            return {
+              workflow_id: stageRunInput.workflow_id,
+              first_execution_run_id: firstExecutionRunId,
+              workflow_status: 'RUNNING',
+            };
+          },
+          describeWorkflow: async ({ workflow_id: workflowId }) => ({
+            workflow_found: true,
+            workflow_id: workflowId,
+            first_execution_run_id: firstExecutionByWorkflow.get(workflowId),
+            workflow_status: 'RUNNING',
+          }),
+          queryWorkflow: async ({ workflowId }) => ({
+            workflow_id: workflowId,
+            workflow_status: 'RUNNING',
+          }),
+        },
+      });
+    };
+    const resolveG1 = managed(checkoutRoot, workspaceRoot);
+    const dependencies = {
+      actionRunReservationDb: reservationDb,
+      resolveManagedCheckout: (async () => {
+        resolverCalls += 1;
+        if (resolverCalls > 1) throw new Error('G2 resolver must not run during replay');
+        return resolveG1();
+      }) as never,
+      compileStageManifest: (() => ({})) as never,
+      recordLedger,
+      runStageRuntime,
+    };
+
+    const first = await runStandardAgentAction({
+      domainId: 'mas', actionId: 'launch', workspaceRoot, payload: { value: 23 }, runId: 'stage-g1',
+    }, dependencies);
+    const firstRun = first.standard_agent_action_run;
+    assert.equal(firstRun.execution_kind, 'stage_binding');
+    if (firstRun.execution_kind !== 'stage_binding') assert.fail('expected stage-bound hosted action result');
+    fs.rmSync(firstRun.output.file_path);
+    writeContracts(checkoutRoot, [action({
+      actionId: 'launch',
+      executionBinding: { kind: 'stage_binding', stage_manifest_ref: 'agent/stages/manifest.json' },
+      stageRoute: {
+        entry_stage_ref: 'review',
+        required_stage_refs: ['review'],
+        optional_stage_refs: [],
+        terminal_stage_refs: ['review'],
+        route_policy: 'ai_selected_progress_route',
+      },
+    })]);
+
+    const replay = await runStandardAgentAction({
+      domainId: 'mas', actionId: 'launch', workspaceRoot, payload: { value: 23 }, runId: 'stage-g1',
+    }, dependencies);
+    const replayRun = replay.standard_agent_action_run;
+    assert.equal(replayRun.execution_kind, 'stage_binding');
+    if (replayRun.execution_kind !== 'stage_binding') assert.fail('expected stage-bound hosted action result');
+    assert.equal(resolverCalls, 1);
+    assert.equal(packageReadinessCalls, 1);
+    assert.equal(stageRuntimeCreateCalls, 2);
+    assert.equal(startedWorkflowIds.length, 1);
+    assert.equal(replayRun.stage_route.entry_stage_ref, 'intake');
+    assert.equal(
+      (replayRun as { stage_run_invocation_id: string }).stage_run_invocation_id,
+      firstRun.stage_run_invocation_id,
+    );
+    assert.deepEqual(
+      replayRun.package_use_binding,
+      firstRun.package_use_binding,
+    );
+    assert.equal(fs.existsSync(replayRun.output.file_path), true);
+  } finally {
+    if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateRoot;
+    reservationDb.close();
     fs.rmSync(checkoutRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
     fs.rmSync(stateRoot, { recursive: true, force: true });
