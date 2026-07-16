@@ -150,6 +150,7 @@ const fastTestFiles = [
   'tests/src/cli/cases/okf-command-surface.test.ts',
   'tests/src/cli/cases/runtime-environment-substrate-command-surface.test.ts',
   'tests/src/cli/cases/pack-bundle-command-surface.test.ts',
+  'tests/src/cli/cases/pack-artifact-projection-materialization.test.ts',
   'tests/src/cli/cases/pack-native-helper-probe.test.ts',
   'tests/src/cli/cases/pack-native-helper-run.test.ts',
   'tests/src/cli/cases/pack-submission-resource-provisioning.test.ts',
