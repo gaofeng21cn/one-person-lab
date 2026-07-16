@@ -8,6 +8,9 @@ import {
   runProviderWorkerSupervisorCommand,
 } from './family-runtime-provider-worker-supervisor.ts';
 import {
+  repairTemporalWorkerLifecycleForProvider,
+} from './family-runtime-provider-worker-repair.ts';
+import {
   runTemporalSchedulerCadenceCommand,
 } from './family-runtime-scheduler.ts';
 import {
@@ -28,6 +31,7 @@ type RuntimeHandle = { db: DatabaseSync; paths: RuntimePaths };
 type ServiceLifecycle = Awaited<ReturnType<typeof inspectTemporalServiceLifecycle>>;
 type WorkerLifecycle = Awaited<ReturnType<typeof inspectTemporalWorkerLifecycleFast>>;
 type WorkerSupervisorOperation = Awaited<ReturnType<typeof runProviderWorkerSupervisorCommand>>;
+type WorkerRepairOperation = Awaited<ReturnType<typeof repairTemporalWorkerLifecycleForProvider>>;
 type SchedulerOperation = Awaited<ReturnType<typeof runTemporalSchedulerCadenceCommand>>;
 
 type TemporalStartupStepStatus = 'ready' | 'blocked' | 'not_applicable' | 'skipped_dependency_not_ready';
@@ -40,6 +44,7 @@ export type TemporalStartupMaintenanceRuntime = {
   inspectService?: (paths: RuntimePaths) => Promise<ServiceLifecycle>;
   runServiceSupervisor?: typeof runTemporalServiceSupervisorCommand;
   runWorkerSupervisor?: typeof runProviderWorkerSupervisorCommand;
+  repairWorker?: typeof repairTemporalWorkerLifecycleForProvider;
   inspectWorker?: (paths: RuntimePaths) => Promise<WorkerLifecycle>;
   runScheduler?: typeof runTemporalSchedulerCadenceCommand;
   sleep?: (milliseconds: number) => Promise<void>;
@@ -285,6 +290,7 @@ export async function reconcileTemporalRuntimeStartupMaintenance(
     ?? ((paths: RuntimePaths) => inspectTemporalServiceLifecycle(paths, { env, platform }));
   const runServiceSupervisor = runtime.runServiceSupervisor ?? runTemporalServiceSupervisorCommand;
   const runWorkerSupervisor = runtime.runWorkerSupervisor ?? runProviderWorkerSupervisorCommand;
+  const repairWorker = runtime.repairWorker ?? repairTemporalWorkerLifecycleForProvider;
   const inspectWorker = runtime.inspectWorker ?? inspectTemporalWorkerLifecycleFast;
   const runScheduler = runtime.runScheduler ?? runTemporalSchedulerCadenceCommand;
   const handle = openRuntime();
@@ -366,13 +372,14 @@ export async function reconcileTemporalRuntimeStartupMaintenance(
     }
 
     let workerBefore: WorkerSupervisorOperation;
-    const workerOperations: unknown[] = [];
+    const workerOperations: Array<WorkerSupervisorOperation | WorkerRepairOperation> = [];
     try {
       workerBefore = await runWorkerSupervisor(handle.db, handle.paths, {
         action: 'status',
         providerKind: 'temporal',
       });
       let workerAfter = workerBefore;
+      let workerAction = 'none';
       const loadedForDifferentRuntime = !workerSupervisorReady(workerBefore)
         && readBoolean(readRecord(workerBefore, 'supervisor_state'), 'launchctl_loaded') === true;
       if (!workerSupervisorReady(workerBefore) && !loadedForDifferentRuntime) {
@@ -380,20 +387,36 @@ export async function reconcileTemporalRuntimeStartupMaintenance(
           action: 'install',
           providerKind: 'temporal',
         }));
+        workerAction = 'install';
         workerAfter = await runWorkerSupervisor(handle.db, handle.paths, {
           action: 'status',
           providerKind: 'temporal',
         });
       }
-      const supervisorIsReady = workerSupervisorReady(workerAfter);
-      const workerLifecycle = supervisorIsReady
+      let supervisorIsReady = workerSupervisorReady(workerAfter);
+      let workerLifecycle = supervisorIsReady
         ? await waitForWorkerReadiness(handle.paths, inspectWorker, runtime)
         : await inspectWorker(handle.paths);
+      if (supervisorIsReady && workerLifecycle.readiness_status === 'worker_source_stale') {
+        workerOperations.push(await repairWorker(handle.paths, {
+          trigger: 'startup_maintenance',
+          allowRestart: true,
+        }));
+        workerAction = 'restart';
+        workerAfter = await runWorkerSupervisor(handle.db, handle.paths, {
+          action: 'status',
+          providerKind: 'temporal',
+        });
+        supervisorIsReady = workerSupervisorReady(workerAfter);
+        workerLifecycle = supervisorIsReady
+          ? await waitForWorkerReadiness(handle.paths, inspectWorker, runtime)
+          : await inspectWorker(handle.paths);
+      }
       const runtimeIsReady = workerLifecycle.worker_ready === true;
       const workerIsReady = supervisorIsReady && runtimeIsReady;
       steps.provider_worker_supervisor = step({
         status: workerIsReady ? 'ready' : 'blocked',
-        action: workerOperations.length > 0 ? 'install' : 'none',
+        action: workerAction,
         ready: workerIsReady,
         reason: workerIsReady
           ? null

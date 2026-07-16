@@ -15,7 +15,7 @@ type TemporalWorkerPaths = Parameters<TemporalProviderModule['inspectTemporalWor
 type TemporalWorkerLifecycleStart = Awaited<ReturnType<TemporalProviderModule['startTemporalWorkerLifecycle']>>;
 type TemporalWorkerLifecycleStop = Awaited<ReturnType<TemporalProviderModule['stopTemporalWorkerLifecycle']>>;
 
-export type TemporalWorkerRepairTrigger = 'provider_repair' | 'provider_slo_tick';
+export type TemporalWorkerRepairTrigger = 'provider_repair' | 'provider_slo_tick' | 'startup_maintenance';
 
 export type TemporalWorkerRepairDeps = {
   inspectTemporalWorkerLifecycle?: TemporalProviderModule['inspectTemporalWorkerLifecycle'];

@@ -35,10 +35,10 @@ function workerSupervisorStatus(ready: boolean) {
   } as never;
 }
 
-function workerLifecycle(ready: boolean) {
+function workerLifecycle(ready: boolean, readinessStatus?: string) {
   return {
     worker_ready: ready,
-    readiness_status: ready ? 'ready' : 'worker_not_ready',
+    readiness_status: readinessStatus ?? (ready ? 'ready' : 'worker_not_ready'),
   } as never;
 }
 
@@ -305,6 +305,64 @@ test('Temporal startup maintenance stops before Scheduler when Worker does not b
   assert.equal(result.failed_step, 'provider_worker_supervisor');
   assert.equal(result.steps.temporal_scheduler_cadence.status, 'skipped_dependency_not_ready');
   assert.equal(schedulerCallCount, 0);
+});
+
+test('Temporal startup maintenance safely restarts a stale Worker before installing Scheduler', async () => {
+  const order: string[] = [];
+  let workerRestarted = false;
+  let schedulerInstalled = false;
+  const result = await reconcileTemporalRuntimeStartupMaintenance({
+    platform: 'darwin',
+    env: { OPL_APP_HOST_KIND: 'desktop', OPL_APP_PROCESS_INSTANCE_ID: 'desktop-worker-stale' },
+    openRuntime: fakeRuntimeHandle,
+    inspectService: async () => serviceLifecycle({ ready: true }),
+    runServiceSupervisor: (async () => ({ status: 'already_ready', ready: true })) as never,
+    runWorkerSupervisor: (async (
+      _db: unknown,
+      _paths: unknown,
+      input: { action: 'status' | 'install' | 'remove' | 'trigger' },
+    ) => {
+      order.push(`worker_${input.action}`);
+      return workerSupervisorStatus(true);
+    }) as never,
+    inspectWorker: async () => {
+      order.push('worker_runtime_status');
+      return workerLifecycle(workerRestarted, workerRestarted ? 'ready' : 'worker_source_stale');
+    },
+    repairWorker: (async () => {
+      order.push('worker_restart');
+      workerRestarted = true;
+      return { repair_status: 'executed' } as never;
+    }) as never,
+    runScheduler: (async (
+      _db: unknown,
+      _paths: unknown,
+      input: { mode: 'scheduler_status' | 'scheduler_install' | 'scheduler_remove' | 'scheduler_trigger' },
+    ) => {
+      order.push(input.mode);
+      if (input.mode === 'scheduler_install') schedulerInstalled = true;
+      return input.mode === 'scheduler_status'
+        ? schedulerStatus(schedulerInstalled)
+        : { status: 'ok', action: { install_status: 'created' } } as never;
+    }) as never,
+    workerReadinessAttempts: 1,
+    sleep: async () => {},
+  });
+
+  assert.equal(result.status, 'ready');
+  assert.equal(result.steps.provider_worker_supervisor.action, 'restart');
+  assert.equal(result.steps.provider_worker_supervisor.ready, true);
+  assert.equal(result.steps.temporal_scheduler_cadence.ready, true);
+  assert.deepEqual(order, [
+    'worker_status',
+    'worker_runtime_status',
+    'worker_restart',
+    'worker_status',
+    'worker_runtime_status',
+    'scheduler_status',
+    'scheduler_install',
+    'scheduler_status',
+  ]);
 });
 
 test('Temporal startup maintenance does not replace a loaded Worker owned by another runtime root', async () => {
