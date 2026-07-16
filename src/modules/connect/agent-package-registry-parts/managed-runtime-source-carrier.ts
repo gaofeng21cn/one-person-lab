@@ -465,6 +465,50 @@ function managedRuntimeCheckoutIsDirectory(checkoutPath: string) {
   }
 }
 
+function developerCheckoutReadiness(state: AgentPackageManagedRuntimeSourceState) {
+  let probeFailed = false;
+  try {
+    probeCurrentRuntimeSource(state, resolvedCurrentProbeCommands(state));
+  } catch {
+    probeFailed = true;
+  }
+
+  let actualSourceGitHeadSha: string | null = null;
+  let actualTreeSha256: string | null = null;
+  try {
+    const identity = readDeveloperCheckoutSourceIdentity(state.checkout_path);
+    actualSourceGitHeadSha = identity.source_git_head_sha;
+    actualTreeSha256 = identity.tree_sha256;
+  } catch {
+    // Source identity is provenance for a developer checkout; live probes decide readiness.
+  }
+  const identityUnavailable = actualTreeSha256 === null;
+  const identityChanged = !identityUnavailable && (
+    actualTreeSha256 !== state.tree_sha256
+    || actualSourceGitHeadSha !== state.source_git_head_sha
+  );
+
+  return {
+    status: probeFailed ? 'incompatible' as const : 'current' as const,
+    operational_ready: !probeFailed,
+    module_id: state.module_id,
+    checkout_path: state.checkout_path,
+    expected_tree_sha256: state.tree_sha256,
+    actual_tree_sha256: actualTreeSha256,
+    reason: probeFailed ? 'managed_runtime_source_probe_failed' : null,
+    provenance_observation: {
+      policy: 'observation_only' as const,
+      status: identityUnavailable
+        ? 'unavailable' as const
+        : identityChanged ? 'changed' as const : 'unchanged' as const,
+      recorded_source_git_head_sha: state.source_git_head_sha,
+      actual_source_git_head_sha: actualSourceGitHeadSha,
+      recorded_tree_sha256: state.tree_sha256,
+      actual_tree_sha256: actualTreeSha256,
+    },
+  };
+}
+
 export function managedRuntimeSourceReadiness(
   state: AgentPackageManagedRuntimeSourceState | null | undefined,
   declaration: AgentPackageManagedRuntimeSourceCarrier | null | undefined = null,
@@ -504,9 +548,13 @@ export function managedRuntimeSourceReadiness(
     };
   }
   try {
-    const current = validateCurrentState(state);
     const spec = resolveOplDomainModuleSpec(state.module_id);
-    const bundledFullRuntime = runtimeSourceMode(state, spec) === 'bundled_full_runtime';
+    const sourceMode = runtimeSourceMode(state, spec);
+    if (sourceMode === 'developer_checkout') {
+      return developerCheckoutReadiness(state);
+    }
+    const current = validateCurrentState(state);
+    const bundledFullRuntime = sourceMode === 'bundled_full_runtime';
     const matches = bundledFullRuntime
       ? current.tree_sha256 === state.tree_sha256
         && current.source_git_head_sha === state.source_git_head_sha

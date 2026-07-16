@@ -36,9 +36,8 @@ function managedCheckoutFromStatus(packageStatus: any, packageId: string) {
     || source.operational_ready !== true
     || typeof source.checkout_path !== 'string'
     || !path.isAbsolute(source.checkout_path)
-    || source.expected_tree_sha256 !== source.actual_tree_sha256
   ) {
-    blocked('Standard Agent action launch requires an exact current managed runtime source.', {
+    blocked('Standard Agent action launch requires an operationally ready managed runtime source.', {
       package_id: packageId,
       runtime_source_readiness: source ?? null,
     });

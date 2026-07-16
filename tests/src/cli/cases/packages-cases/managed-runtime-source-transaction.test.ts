@@ -36,7 +36,7 @@ function runGit(checkoutPath: string, args: string[]) {
   return result.stdout.trim();
 }
 
-test('explicit developer checkout install locks the selected checkout without package-channel metadata', () => {
+test('explicit developer checkout records provenance but live probes current source without relocking', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-developer-source-state-'));
   const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-developer-source-home-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-developer-source-fixture-'));
@@ -108,8 +108,49 @@ test('explicit developer checkout install locks the selected checkout without pa
     );
 
     fs.writeFileSync(path.join(checkoutPath, 'runtime.txt'), 'developer source v2\n');
-    const drifted = runCli(['packages', 'status', '--package-id', FIXTURE_MAS_PACKAGE_ID], env) as any;
-    assert.equal(drifted.opl_agent_package_status.runtime_source_readiness.status, 'incompatible');
+    const dirty = runCli(['packages', 'status', '--package-id', FIXTURE_MAS_PACKAGE_ID], env) as any;
+    const dirtyReadiness = dirty.opl_agent_package_status.runtime_source_readiness;
+    assert.equal(dirtyReadiness.status, 'current');
+    assert.equal(dirtyReadiness.operational_ready, true);
+    assert.equal(dirty.opl_agent_package_status.launch_allowed, true);
+    assert.equal(dirtyReadiness.expected_tree_sha256, installedSource.tree_sha256);
+    assert.notEqual(dirtyReadiness.actual_tree_sha256, installedSource.tree_sha256);
+    assert.equal(dirtyReadiness.provenance_observation.policy, 'observation_only');
+    assert.equal(dirtyReadiness.provenance_observation.status, 'changed');
+    assert.equal(dirtyReadiness.provenance_observation.recorded_source_git_head_sha, headSha);
+
+    fs.mkdirSync(path.join(checkoutPath, 'docs'));
+    fs.writeFileSync(path.join(checkoutPath, 'docs', 'notes.md'), 'developer notes\n');
+    const untracked = runCli(['packages', 'status', '--package-id', FIXTURE_MAS_PACKAGE_ID], env) as any;
+    assert.equal(untracked.opl_agent_package_status.runtime_source_readiness.status, 'current');
+    assert.equal(untracked.opl_agent_package_status.launch_allowed, true);
+
+    runGit(checkoutPath, ['add', '.']);
+    runGit(checkoutPath, ['commit', '-qm', 'fixture v2']);
+    const advancedHeadSha = runGit(checkoutPath, ['rev-parse', 'HEAD']);
+    const advanced = runCli(['packages', 'status', '--package-id', FIXTURE_MAS_PACKAGE_ID], env) as any;
+    assert.equal(advanced.opl_agent_package_status.runtime_source_readiness.status, 'current');
+    assert.equal(advanced.opl_agent_package_status.launch_allowed, true);
+    assert.equal(
+      advanced.opl_agent_package_status.runtime_source_readiness.provenance_observation.actual_source_git_head_sha,
+      advancedHeadSha,
+    );
+
+    const healthPath = path.join(checkoutPath, 'scripts', 'opl-module-healthcheck.sh');
+    const healthyScript = fs.readFileSync(healthPath, 'utf8');
+    fs.writeFileSync(healthPath, '#!/bin/sh\nexit 1\n', { mode: 0o755 });
+    const probeFailed = runCli(['packages', 'status', '--package-id', FIXTURE_MAS_PACKAGE_ID], env) as any;
+    assert.equal(probeFailed.opl_agent_package_status.runtime_source_readiness.status, 'incompatible');
+    assert.equal(
+      probeFailed.opl_agent_package_status.runtime_source_readiness.reason,
+      'managed_runtime_source_probe_failed',
+    );
+    assert.equal(probeFailed.opl_agent_package_status.launch_allowed, false);
+    fs.writeFileSync(healthPath, healthyScript, { mode: 0o755 });
+    const recovered = runCli(['packages', 'status', '--package-id', FIXTURE_MAS_PACKAGE_ID], env) as any;
+    assert.equal(recovered.opl_agent_package_status.runtime_source_readiness.status, 'current');
+    assert.equal(recovered.opl_agent_package_status.launch_allowed, true);
+
     assert.equal(
       runCliFailure(['packages', 'update', '--package-id', FIXTURE_MAS_PACKAGE_ID], env).payload.error.details.failure_code,
       'agent_package_developer_checkout_auto_update_forbidden',
@@ -117,17 +158,6 @@ test('explicit developer checkout install locks the selected checkout without pa
     assert.equal(
       runCliFailure(['packages', 'repair', '--package-id', FIXTURE_MAS_PACKAGE_ID], env).payload.error.details.failure_code,
       'agent_package_developer_checkout_auto_update_forbidden',
-    );
-
-    const reinstalled = runCli(installArgs, env) as any;
-    assert.notEqual(
-      reinstalled.opl_agent_package_install.package_lock.managed_runtime_source.tree_sha256,
-      installedSource.tree_sha256,
-    );
-    assert.equal(
-      (runCli(['packages', 'status', '--package-id', FIXTURE_MAS_PACKAGE_ID], env) as any)
-        .opl_agent_package_status.runtime_source_readiness.status,
-      'current',
     );
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });

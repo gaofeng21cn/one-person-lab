@@ -15,7 +15,7 @@ function readContract() {
   ), 'utf8')) as Record<string, any>;
 }
 
-test('hosted Standard Agent actions use exact managed packages and typed bindings', () => {
+test('hosted Standard Agent actions enforce immutable releases and live-probe developer checkouts', () => {
   const contract = readContract();
   const packageGate = contract.managed_package_gate;
   const actionAbi = contract.domain_pack_action_abi;
@@ -27,7 +27,10 @@ test('hosted Standard Agent actions use exact managed packages and typed binding
   assert.equal(packageGate.moving_pointer_is_install_truth, false);
   assert.equal(packageGate.origin_main_is_implicit_launch_target, false);
   assert.equal(packageGate.launch_requirements.package_status_launch_allowed, true);
-  assert.equal(packageGate.launch_requirements.expected_tree_sha256_equals_actual_tree_sha256, true);
+  assert.equal(packageGate.launch_requirements.immutable_runtime_source_identity_matches_recorded_digest, true);
+  assert.equal(packageGate.launch_requirements.developer_checkout_identity_is_provenance_observation_only, true);
+  assert.equal(packageGate.launch_requirements.developer_checkout_live_health_and_handler_probe_required, true);
+  assert.equal(packageGate.dirty_or_diverged_development_checkout_blocks_launch, false);
   assert.equal(actionAbi.catalog_version, 'family-action-catalog.v2');
   assert.equal(actionAbi.handler_registry_version, 'domain-handler-registry.v1');
   assert.deepEqual(actionAbi.execution_binding_union.map((binding: any) => binding.required_shape), [
