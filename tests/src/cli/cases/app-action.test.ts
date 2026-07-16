@@ -84,6 +84,8 @@ test('app action catalog exposes representative safe delegated action refs', () 
     for (const actionId of [
       'codex_update',
       'module_sync',
+      'provider_service_status',
+      'provider_service_start',
       'provider_scheduler_status',
       'workspace_initialize',
       'workspace_validate',
@@ -113,6 +115,14 @@ test('app action catalog exposes representative safe delegated action refs', () 
     assert.equal(actions.get('provider_scheduler_status')?.can_submit_to_safe_action_shell, true);
     assert.equal(actions.get('provider_scheduler_status')?.dry_run_supported, true);
     assert.equal(actions.get('provider_scheduler_status')?.route, 'opl app action execute --action provider_scheduler_status');
+    assert.equal(actions.get('provider_service_status')?.mutates, 'none_read_only');
+    assert.equal(actions.get('provider_service_status')?.dry_run_supported, true);
+    assert.equal(
+      actions.get('provider_service_status')?.route,
+      'opl app action execute --action provider_service_status',
+    );
+    assert.equal(actions.get('provider_service_start')?.mutates, 'opl_temporal_service');
+    assert.equal(actions.get('provider_service_start')?.dry_run_supported, true);
     assert.equal(actions.get('workspace_initialize')?.delegated_surface, 'opl workspace init');
     assert.equal(actions.get('workspace_initialize')?.dry_run_supported, true);
     assert.deepEqual(actions.get('workspace_initialize')?.payload_fields, [

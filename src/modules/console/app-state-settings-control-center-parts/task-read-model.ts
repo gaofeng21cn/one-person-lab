@@ -90,7 +90,7 @@ export function buildCapabilityTaskAwarenessRefs(input: BuildSettingsControlCent
         status: statusTone(temporalStatus),
         ref: 'app_state.provider.temporal',
         owner: 'one-person-lab',
-        next_action: statusTone(temporalStatus) === 'ready' ? 'provider_scheduler_status' : 'settings_sync_capabilities',
+        next_action: statusTone(temporalStatus) === 'ready' ? 'provider_scheduler_status' : 'provider_service_status',
       },
       {
         id: 'codex_surface',
