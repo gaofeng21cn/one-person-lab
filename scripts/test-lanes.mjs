@@ -204,6 +204,8 @@ const readModelGateTestFiles = [
   'tests/src/foundry-temporal.test.ts',
   'tests/src/family-runtime-agent-stage-runner.test.ts',
   'tests/src/family-runtime-temporal-provider.test.ts',
+  'tests/src/cli/cases/family-runtime-temporal-service-supervisor.test.ts',
+  'tests/src/cli/cases/family-runtime-temporal-startup-maintenance.test.ts',
   'tests/src/temporal-production-proof-fixture.test.ts',
   'tests/src/default-executor-recovery.test.ts',
   'tests/src/agent-executor.test.ts',
