@@ -3,7 +3,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { FrameworkContractError, isRecord } from '../../../kernel/contract-validation.ts';
-import { nowIso, safePathSegment } from './shared.ts';
+import {
+  assertSafePersistedPackagePath,
+  removeSafePersistedPackagePath,
+} from './persisted-path-safety.ts';
+import { nowIso, resolveCodexHome, safePathSegment } from './shared.ts';
 import type {
   AgentPackageLock,
   AgentPackageManifest,
@@ -89,6 +93,46 @@ function readProfileReceipt(receiptPath: string) {
 }
 
 type ProfileMutationAction = AgentPackageProfileMigration['mutation_actions'][number];
+
+function assertPersistedProfileActionPaths(action: ProfileMutationAction) {
+  const codexHome = path.resolve(resolveCodexHome());
+  const expectedTarget = action.surface_kind === 'runtime_profile'
+    ? path.join(codexHome, 'AGENTS.md')
+    : action.surface_kind === 'authoring_source'
+      ? path.join(codexHome, 'TASTE.md')
+      : null;
+  if (expectedTarget && path.resolve(action.target_path) !== expectedTarget) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Persisted package profile target does not match its managed surface.', {
+      surface_kind: action.surface_kind,
+      target_path: action.target_path,
+      expected_target_path: expectedTarget,
+      failure_code: 'agent_package_persisted_path_unsafe',
+    });
+  }
+  if (!expectedTarget) {
+    assertSafePersistedPackagePath({
+      candidatePath: action.target_path,
+      allowedRoots: [path.join(codexHome, 'state')],
+      pathKind: `profile_migration.${action.surface_kind}.target_path`,
+    });
+  }
+  if (action.backup_ref) {
+    assertSafePersistedPackagePath({
+      candidatePath: action.backup_ref,
+      allowedRoots: [path.join(codexHome, 'state')],
+      pathKind: `profile_migration.${action.surface_kind}.backup_ref`,
+    });
+  }
+}
+
+function removePersistedProfilePath(candidatePath: string, pathKind: string, recursive = false) {
+  return removeSafePersistedPackagePath({
+    candidatePath,
+    allowedRoots: [path.join(resolveCodexHome(), 'state')],
+    pathKind,
+    recursive,
+  });
+}
 
 function writeProfileMutation(input: {
   targetPath: string;
@@ -433,6 +477,14 @@ export function applyPackageProfile(input: {
       failure_code: 'agent_package_profile_state_missing',
     });
   }
+  if (path.resolve(codexHome) !== path.resolve(resolveCodexHome())) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Installed package profile belongs to a different Codex home.', {
+      package_id: input.lock.package_id,
+      codex_home: codexHome,
+      active_codex_home: resolveCodexHome(),
+      failure_code: 'agent_package_persisted_path_unsafe',
+    });
+  }
   const targetPath = path.resolve(current.target_path);
   const resolvedCodexHome = path.resolve(codexHome);
   if (!targetPath.startsWith(`${resolvedCodexHome}${path.sep}`)) {
@@ -460,6 +512,11 @@ export function applyPackageProfile(input: {
     });
   }
   const resolvedPacketRoot = path.resolve(current.merge_packet_path);
+  assertSafePersistedPackagePath({
+    candidatePath: current.merge_packet_path,
+    allowedRoots: [path.join(resolveCodexHome(), 'state')],
+    pathKind: 'profile_migration.merge_packet_path',
+  });
   if (!mergedFile.startsWith(`${resolvedPacketRoot}${path.sep}`)) {
     throw new FrameworkContractError('contract_shape_invalid', 'Merged profile file must come from the pending package merge packet.', {
       package_id: input.lock.package_id,
@@ -488,7 +545,7 @@ export function applyPackageProfile(input: {
       backupRoot,
     });
     mutationActions.push(receipt.mutation);
-    fs.rmSync(current.merge_packet_path, { recursive: true, force: true });
+    removePersistedProfilePath(current.merge_packet_path, 'profile_migration.merge_packet_path', true);
   }
   return {
     ...current,
@@ -532,7 +589,9 @@ function removeEmptyParents(startPath: string, stopPath: string) {
   let current = path.resolve(startPath);
   const stop = path.resolve(stopPath);
   while (current.startsWith(`${stop}${path.sep}`) && current !== stop) {
-    if (!fs.existsSync(current) || !fs.statSync(current).isDirectory() || fs.readdirSync(current).length > 0) break;
+    if (!fs.existsSync(current)) break;
+    const stat = fs.lstatSync(current);
+    if (stat.isSymbolicLink() || !stat.isDirectory() || fs.readdirSync(current).length > 0) break;
     fs.rmdirSync(current);
     current = path.dirname(current);
   }
@@ -548,6 +607,7 @@ export function assertPackageProfileRollbackReady(
   const actions = [...migration.mutation_actions].reverse();
   const virtualTargetSha256 = new Map<string, string | null>();
   for (const action of actions) {
+    assertPersistedProfileActionPaths(action);
     if (!virtualTargetSha256.has(action.target_path)) {
       virtualTargetSha256.set(
         action.target_path,
@@ -595,14 +655,23 @@ export function rollbackPackageProfileMigration(
   const actions = [...migration.mutation_actions].reverse();
 
   for (const action of actions) {
+    assertPersistedProfileActionPaths(action);
     if (action.operation === 'created') {
-      fs.rmSync(action.target_path, { force: true });
+      removeSafePersistedPackagePath({
+        candidatePath: action.target_path,
+        allowedRoots: [resolveCodexHome()],
+        pathKind: `profile_migration.${action.surface_kind}.target_path`,
+      });
     } else {
       writeFileAtomic(action.target_path, fs.readFileSync(action.backup_ref!));
-      if (!options.retainBackups) fs.rmSync(action.backup_ref!, { force: true });
+      if (!options.retainBackups) {
+        removePersistedProfilePath(action.backup_ref!, `profile_migration.${action.surface_kind}.backup_ref`);
+      }
     }
   }
-  if (migration.merge_packet_path) fs.rmSync(migration.merge_packet_path, { recursive: true, force: true });
+  if (migration.merge_packet_path) {
+    removePersistedProfilePath(migration.merge_packet_path, 'profile_migration.merge_packet_path', true);
+  }
   const rolledBack = {
     ...migration,
     status: 'rolled_back' as const,
@@ -629,13 +698,14 @@ export function finalizePackageProfileRollback(
     });
   }
   for (const action of migration.mutation_actions) {
+    assertPersistedProfileActionPaths(action);
     if (action.backup_ref) {
-      fs.rmSync(action.backup_ref, { force: true });
+      removePersistedProfilePath(action.backup_ref, `profile_migration.${action.surface_kind}.backup_ref`);
       const backupRoot = path.dirname(action.backup_ref);
       const stateRoot = path.dirname(backupRoot);
       removeEmptyParents(backupRoot, path.dirname(stateRoot));
     }
-    removeEmptyParents(path.dirname(action.target_path), path.dirname(path.dirname(action.target_path)));
+    removeEmptyParents(path.dirname(action.target_path), path.resolve(resolveCodexHome()));
   }
   return {
     ...migration,

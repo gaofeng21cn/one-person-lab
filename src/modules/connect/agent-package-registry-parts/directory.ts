@@ -478,18 +478,33 @@ function activationPayload(
   source: DirectorySource,
   context: Pick<AgentPackagePackageActionInput, 'scope' | 'targetWorkspace' | 'targetQuest'> | null,
 ) {
+  const scope = context?.scope ?? 'workspace';
   return {
     package_id: source.package_id,
-    ...(context?.scope ? { scope: context.scope } : {}),
-    ...(context?.targetWorkspace ? { target_workspace: context.targetWorkspace } : {}),
-    ...(context?.targetQuest ? { target_quest: context.targetQuest } : {}),
+    scope,
+    ...(scope === 'workspace' && context?.targetWorkspace
+      ? { target_workspace: context.targetWorkspace }
+      : {}),
+    ...(scope === 'quest' && context?.targetQuest
+      ? { target_quest: context.targetQuest }
+      : {}),
   };
+}
+
+function activationAction(
+  source: DirectorySource,
+  context: Pick<AgentPackagePackageActionInput, 'scope' | 'targetWorkspace' | 'targetQuest'> | null,
+) {
+  const payload = activationPayload(source, context);
+  return packageAction('agent_package_activate', payload, [
+    'package_id',
+    payload.scope === 'workspace' ? 'target_workspace' : 'target_quest',
+  ], false);
 }
 
 function availableActions(
   source: DirectorySource,
   installed: boolean,
-  activated: boolean,
   context: Pick<AgentPackagePackageActionInput, 'scope' | 'targetWorkspace' | 'targetQuest'> | null,
   activationAllowed: boolean,
   automaticUpdateAllowed: boolean,
@@ -534,11 +549,9 @@ function availableActions(
           trust_tier: source.trust_tier,
         };
   return [
-    ...(!activated && activationAllowed ? [packageAction('agent_package_activate', activationPayload(source, context), [
-        'package_id',
-        'scope',
-        'target_workspace or target_quest',
-      ], false)] : []),
+    ...(activationAllowed
+      ? [activationAction(source, context)]
+      : []),
     ...(automaticUpdateAllowed
       ? [packageAction('agent_package_update', updatePayload, ['package_id'], true)]
       : []),
@@ -553,7 +566,6 @@ function availableActions(
 
 function recommendedActionId(input: {
   installed: boolean;
-  activated: boolean;
   statusAction: string | null;
   lifecycleAction: string | null;
   availableActionIds: Set<string>;
@@ -569,8 +581,8 @@ function recommendedActionId(input: {
     : candidate === 'install_from_manifest_url'
       ? 'agent_package_update'
       : candidate;
+  if (normalized === 'agent_package_activate') return null;
   if (normalized && input.availableActionIds.has(normalized)) return normalized;
-  if (!input.activated && input.availableActionIds.has('agent_package_activate')) return 'agent_package_activate';
   return null;
 }
 
@@ -642,20 +654,24 @@ export function buildAgentPackageDirectory(input: {
       }
     }
     const materializationStatus = status.materialization_readiness?.status ?? null;
-    const activationRequired = status.recommended_action === 'agent_package_activate'
-      || lifecycle.recommended_action === 'agent_package_activate';
     const activated = installed
       && !roleRepairRequired
-      && !activationRequired
       && status.operational_ready === true
       && status.launch_allowed === true
       && (materializationStatus === 'current' || materializationStatus === 'not_required');
+    const useBoundaryReconciliationReady = installed
+      && !roleRepairRequired
+      && !statusReadError
+      && lock?.exposure_state !== 'disabled'
+      && (
+        materializationStatus === 'scope_required'
+        || status.launch_blocked_reason?.startsWith('scope_materialization_') === true
+      );
     const verificationDeferred = installed && activated && (
       input.detail === 'fast'
       || status.currentness_detail_deferred === true
       || status.runtime_source_readiness?.live_verification_deferred === true
     );
-    const actionContext = input.actionContext?.(source.package_id) ?? null;
     const desiredSourceKind = sourcePolicy?.desired_source_kind ?? lock?.source_kind ?? null;
     const targetCurrentness = lock && source.release_target && desiredSourceKind
       ? agentPackageTargetCurrentness({
@@ -684,12 +700,16 @@ export function buildAgentPackageDirectory(input: {
       ),
     );
     const actions = statusReadError
-      ? [packageAction('agent_package_repair', { package_id: source.package_id }, ['package_id'], true)]
+      ? [
+          ...(roleKnown && lock?.exposure_state !== 'disabled'
+            ? [activationAction(effectiveSource, input.actionContext?.(source.package_id) ?? null)]
+            : []),
+          packageAction('agent_package_repair', { package_id: source.package_id }, ['package_id'], true),
+        ]
       : availableActions(
           effectiveSource,
           installed,
-          activated,
-          actionContext,
+          input.actionContext?.(source.package_id) ?? null,
           lock?.exposure_state !== 'disabled',
           lock?.source_kind !== 'developer_checkout_override' && (
             sourcePolicy?.package_channel_auto_update === true
@@ -699,7 +719,6 @@ export function buildAgentPackageDirectory(input: {
         );
     const recommendedAction = recommendedActionId({
       installed,
-      activated,
       statusAction: roleRepairRequired ? 'agent_package_repair' : status.recommended_action ?? null,
       lifecycleAction: lifecycle.recommended_action,
       availableActionIds: new Set(actions.map((action) => action.action_id)),
@@ -712,8 +731,8 @@ export function buildAgentPackageDirectory(input: {
       ? roleKnown ? 'not_installed' : 'migration_required'
         : activated
           ? verificationDeferred ? 'verification_deferred' : 'ready'
-          : recommendedAction === 'agent_package_activate'
-            ? 'activation_required'
+          : useBoundaryReconciliationReady
+            ? 'ready'
           : 'attention_needed';
     return {
       package_id: source.package_id,
@@ -799,17 +818,21 @@ export function buildAgentPackageDirectory(input: {
       },
       readiness: {
         status: readinessStatus,
-        operational_ready: installed && !verificationDeferred && status.operational_ready === true,
-        launch_allowed: installed && !verificationDeferred && status.launch_allowed === true,
+        operational_ready: installed && !verificationDeferred
+          && (status.operational_ready === true || useBoundaryReconciliationReady),
+        launch_allowed: installed && !verificationDeferred
+          && (status.launch_allowed === true || useBoundaryReconciliationReady),
         verification_deferred: verificationDeferred,
         reason: !installed
           ? roleKnown ? 'package_not_installed' : 'registry_role_refresh_required'
           : roleRepairRequired
             ? roleMismatch ? 'installed_role_mismatch' : 'installed_role_migration_required'
-            : status.launch_blocked_reason
+            : useBoundaryReconciliationReady
+              ? 'use_boundary_reconciliation_ready'
+              : status.launch_blocked_reason
               ?? (activated
                 ? verificationDeferred ? 'live_verification_deferred' : null
-                : 'package_activation_required'),
+                : 'package_not_operational'),
         detail_surface: `opl packages status --package-id ${source.package_id} --json`,
         status_read_error: statusReadError,
       },

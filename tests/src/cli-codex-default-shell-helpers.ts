@@ -409,6 +409,20 @@ process.stdout.write(JSON.stringify({ repo: 'redcube-ai', sync: 'ok' }) + '\\n')
       `${spec.plugin.toUpperCase()} Primary Skill`,
       `This fixture represents the repo-owned rich primary skill for ${spec.project}. The tracked legacy plugin skill is only a compatibility mirror.`,
     );
+    for (const relativePath of [
+      path.join('contracts', 'action_catalog.json'),
+      path.join('contracts', 'domain_descriptor.json'),
+      path.join('contracts', 'pack_compiler_input.json'),
+      path.join('agent', 'stages', 'manifest.json'),
+      ...(spec.project === 'med-autoscience'
+        ? [path.join('contracts', 'domain_handler_registry.json')]
+        : []),
+    ]) {
+      writeJsonFixture(path.join(repoRoot, relativePath), {
+        surface_kind: 'opl_test_standard_agent_pack_fixture',
+        repo_name: spec.project,
+      });
+    }
     writeFakeRepoLocalPluginCarrier(repoRoot, spec.plugin);
     fs.mkdirSync(path.join(skillRoot, 'agents'), { recursive: true });
     fs.writeFileSync(

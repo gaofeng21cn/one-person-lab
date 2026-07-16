@@ -10,6 +10,7 @@ import { Worker } from 'node:worker_threads';
 
 import type { StandardAgentStageQualityRuntimeBinding } from '../../src/modules/pack/index.ts';
 import { parseFamilyRuntimeCommand } from '../../src/modules/runway/family-runtime-command.ts';
+import { runFamilyRuntime } from '../../src/modules/runway/family-runtime.ts';
 import { buildPackBoundTemporalStageRunInput } from '../../src/modules/runway/family-runtime-pack-bound-stage-run.ts';
 import { resolveStageRunAttemptExecutorContent } from '../../src/modules/runway/family-runtime-stage-run-attempt-content.ts';
 import {
@@ -17,12 +18,14 @@ import {
   buildHostedActionStageRunInvocationId,
   buildRouteStageRunInvocation,
   deriveStageRunId,
+  stageAttemptExecutionContentBindingSha256,
   stageRunSpecSha256,
 } from '../../src/modules/runway/family-runtime-stage-run-identity.ts';
 import { launchRegisteredStageRun } from '../../src/modules/runway/family-runtime-stage-run-launch.ts';
 import { materializeStageRunRoute } from '../../src/modules/runway/family-runtime-stage-run-route-launch.ts';
 import {
   claimStageRunStart,
+  findStageRunLaunch,
   inspectStageRunLaunch,
   recordStageRunClosed,
   recordStageRunStartFailure,
@@ -80,12 +83,13 @@ test.after(() => fs.rmSync(fixtureRoot, { recursive: true, force: true }));
 function binding(
   stageId = 'intake',
   sourceRefs: string[] = ['agent/sources/request.md'],
+  declaredStageIds: string[] = ['intake', 'draft', 'review'],
 ): StandardAgentStageQualityRuntimeBinding {
   return {
     surface_kind: 'opl_pack_bound_stage_quality_runtime_binding',
     version: 'opl-pack-bound-stage-quality-runtime-binding.v1',
     stage_id: stageId,
-    declared_stage_ids: ['intake', 'draft', 'review'],
+    declared_stage_ids: declaredStageIds,
     enabled: true,
     stage_role: null,
     policy_ref: `contracts/stage_quality_cycle_policy.json#/stages/${stageId}`,
@@ -200,6 +204,25 @@ function stageRunInput(input: {
       ? [input.artifact.identityReceiptRef]
       : undefined,
   });
+}
+
+function decisiveExecutionBinding(
+  stageRun: ReturnType<typeof stageRunInput>,
+  declaredStageIds = stageRun.declared_stage_ids,
+) {
+  const payload = {
+    surface_kind: 'opl_stage_attempt_execution_content_binding' as const,
+    version: 'opl-stage-attempt-execution-content-binding.v1' as const,
+    parent_stage_run_spec_sha256: stageRun.stage_run_spec_sha256,
+    use_boundary_id: `package-use:decisive:${stageRun.stage_run_id}`,
+    spec_sha256: stageRunSpecSha256(stageRun.stage_run_spec),
+    spec: stageRun.stage_run_spec,
+    declared_stage_ids: [...new Set(declaredStageIds)].sort(),
+  };
+  return {
+    ...payload,
+    binding_sha256: stageAttemptExecutionContentBindingSha256(payload),
+  };
 }
 
 function writeTrustedIdentityReceipt(input: {
@@ -375,7 +398,8 @@ test('StageRun identity ignores currentness observations but binds immutable pac
       status: 'admitted',
       checked_at: '2026-07-14T01:00:00.000Z',
       stage_run_id: 'sr:observation-only',
-      child_attempts_inherit_admission: true,
+      checkout_currentness_is_provenance_only: true,
+      child_attempts_refresh_package_use: true,
     },
   };
   const firstInvocation = buildCliStageRunInvocationId({
@@ -447,15 +471,41 @@ test('route invocation makes A-B-A a new Run while replaying the same decision i
 test('controller route materialization starts targets, replays idempotently, and creates a new A-B-A Run', async () => {
   const db = new DatabaseSync(':memory:');
   const parent = stageRunInput({ invocationId: 'sri_initial_a', stageId: 'intake' });
+  const routeCurrentPackRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-route-current-pack-'));
+  fs.cpSync(domainPackRoot, routeCurrentPackRoot, { recursive: true });
+  writeFixture(routeCurrentPackRoot, 'agent/prompts/publication_followup.md', '# publication followup prompt\n');
+  writeFixture(routeCurrentPackRoot, 'agent/goals/publication_followup.md', '# publication followup goal\n');
+  writeFixture(
+    routeCurrentPackRoot,
+    'agent/lineage/publication_followup.json',
+    `${JSON.stringify({ stage_id: 'publication_followup' })}\n`,
+  );
+  const currentDeclaredStageIds = ['intake', 'draft', 'review', 'publication_followup'];
   const launchedInputs: ReturnType<typeof stageRunInput>[] = [];
   let temporalStarts = 0;
+  let packageReadinessCalls = 0;
+  let hideNextPersistedLookup = false;
   const dependencies = {
-    ensurePackageLaunchReady: async () => ({
-      launch_allowed: true,
-      runtime_source_readiness: { checkout_path: domainPackRoot },
-      package_use_binding: packageUseBinding(),
-    } as any),
-    resolveStageBinding: (_root: string, stageId: string) => binding(stageId),
+    findTargetStageRun: (stageRunId: string) => {
+      if (hideNextPersistedLookup) {
+        hideNextPersistedLookup = false;
+        return null;
+      }
+      return findStageRunLaunch(db, stageRunId)?.stage_run_input ?? null;
+    },
+    ensurePackageLaunchReady: async () => {
+      packageReadinessCalls += 1;
+      return {
+        launch_allowed: true,
+        runtime_source_readiness: { checkout_path: routeCurrentPackRoot },
+        package_use_binding: packageUseBinding({
+          packageVersion: packageReadinessCalls === 1 ? '0.2.1' : '0.2.2',
+        }),
+      } as any;
+    },
+    resolveStageBinding: (_root: string, stageId: string) => currentDeclaredStageIds.includes(stageId)
+      ? binding(stageId, ['agent/sources/request.md'], currentDeclaredStageIds)
+      : null,
     launchTargetStageRun: async (target: ReturnType<typeof stageRunInput>) => {
       launchedInputs.push(target);
       return await launchRegisteredStageRun({
@@ -473,6 +523,7 @@ test('controller route materialization starts targets, replays idempotently, and
     const aToB = {
       parent_stage_run: parent,
       decisive_attempt_ref: 'opl://stage_attempts/reviewer-a',
+      decisive_execution_content_binding: decisiveExecutionBinding(parent, currentDeclaredStageIds),
       decision: {
         decision_kind: 'advance' as const,
         target_stage_id: 'draft',
@@ -487,6 +538,7 @@ test('controller route materialization starts targets, replays idempotently, and
     assert.equal(first.decision.target_stage_id, 'draft');
     assert.equal(first.durable_launch?.start_status, 'started');
     assert.equal(temporalStarts, 1);
+    assert.equal(packageReadinessCalls, 1);
     const stageRunB = launchedInputs.at(-1)!;
     assert.deepEqual(stageRunB.stage_run_spec.input_artifacts, [{
       ref: artifactFixtures.a!.ref,
@@ -499,10 +551,23 @@ test('controller route materialization starts targets, replays idempotently, and
     assert.equal(replay.materialization_status, 'existing');
     assert.equal(replay.target_stage_run_id, first.target_stage_run_id);
     assert.equal(temporalStarts, 1);
+    assert.equal(packageReadinessCalls, 1);
+
+    hideNextPersistedLookup = true;
+    const concurrentReplay = await materializeStageRunRoute(aToB, dependencies);
+    assert.equal(concurrentReplay.materialization_status, 'existing');
+    assert.equal(concurrentReplay.target_stage_run_spec_sha256, first.target_stage_run_spec_sha256);
+    assert.equal(temporalStarts, 1);
+    assert.equal(packageReadinessCalls, 2);
+    assert.equal(
+      launchedInputs.at(-1)?.stage_run_spec_sha256,
+      first.target_stage_run_spec_sha256,
+    );
 
     const bToA = await materializeStageRunRoute({
       parent_stage_run: stageRunB,
       decisive_attempt_ref: 'opl://stage_attempts/reviewer-b',
+      decisive_execution_content_binding: decisiveExecutionBinding(stageRunB, currentDeclaredStageIds),
       decision: {
         decision_kind: 'route_back',
         target_stage_id: 'intake',
@@ -544,12 +609,27 @@ test('controller route materialization starts targets, replays idempotently, and
         evidence_refs: ['artifact:a'],
       },
     }, dependencies), (error: any) => {
-      assert.equal(error.details?.failure_code, 'route_target_stage_not_declared');
+      assert.equal(error.details?.failure_code, 'route_target_stage_not_declared_by_decisive_attempt');
       return true;
     });
     assert.equal(temporalStarts, 3);
+
+    const newlyDeclared = await materializeStageRunRoute({
+      ...aToB,
+      decisive_attempt_ref: 'opl://stage_attempts/reviewer-current-package',
+      decision: {
+        decision_kind: 'advance',
+        target_stage_id: 'publication_followup',
+        evidence_refs: ['artifact:a'],
+      },
+    }, dependencies);
+    assert.equal(newlyDeclared.materialization_status, 'launched');
+    assert.equal(newlyDeclared.target_stage_run_id, launchedInputs.at(-1)?.stage_run_id);
+    assert.deepEqual(launchedInputs.at(-1)?.declared_stage_ids, currentDeclaredStageIds);
+    assert.equal(temporalStarts, 4);
   } finally {
     db.close();
+    fs.rmSync(routeCurrentPackRoot, { recursive: true, force: true });
   }
 });
 
@@ -568,6 +648,72 @@ test('Hosted action invocation replays one action run and separates later runs',
     runId: 'hosted-run-two',
     actionRunRef: 'file:///tmp/workspace/.opl/action-runs/hosted-run-two',
   }), first);
+});
+
+test('registered StageRun replay does not refresh package readiness or resolve a new binding', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-readiness-replay-'));
+  const previousStateRoot = process.env.OPL_STATE_DIR;
+  let readinessCalls = 0;
+  let bindingCalls = 0;
+  const args = [
+    'attempt',
+    'create',
+    '--domain',
+    'medautoscience',
+    '--stage',
+    'intake',
+    '--provider',
+    'temporal',
+    '--workspace-locator',
+    JSON.stringify({ workspace_root: workspaceRoot, domain_pack_root: domainPackRoot }),
+    '--source-fingerprint',
+    manifestFixture.sha256,
+    '--stage-run-invocation-id',
+    'sri_registered_readiness_replay',
+    '--start',
+  ];
+  const runtime = {
+    stageRunRuntime: {
+      ensurePackageLaunchReady: (async () => {
+        readinessCalls += 1;
+        return {
+          runtime_source_readiness: {
+            checkout_path: domainPackRoot,
+            operational_ready: true,
+          },
+          package_use_binding: packageUseBinding(),
+        };
+      }) as any,
+      resolveStageBinding: () => {
+        bindingCalls += 1;
+        return binding();
+      },
+      startWorkflow: async (input: ReturnType<typeof stageRunInput>) => temporalStartReceipt(input),
+      describeWorkflow: async (input: ReturnType<typeof stageRunInput>) => temporalStartReceipt(input),
+    },
+  };
+  process.env.OPL_STATE_DIR = stateRoot;
+  try {
+    const first = await runFamilyRuntime(args, runtime) as any;
+    assert.equal(first.family_runtime_stage_run.durable_launch.start_status, 'started');
+    assert.equal(readinessCalls, 1);
+    assert.equal(bindingCalls, 1);
+
+    readinessCalls = 0;
+    bindingCalls = 0;
+    const replay = await runFamilyRuntime(args, runtime) as any;
+    assert.equal(replay.family_runtime_stage_run.durable_launch.start_status, 'existing');
+    assert.equal(readinessCalls, 0);
+    assert.equal(bindingCalls, 0);
+    assert.deepEqual(
+      replay.family_runtime_stage_run.stage_run_input,
+      first.family_runtime_stage_run.stage_run_input,
+    );
+  } finally {
+    if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateRoot;
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
 });
 
 test('launch registry recovers pre-start and post-start crash windows without duplicate starts', async () => {
@@ -1042,13 +1188,37 @@ test('trusted content-addressed receipt binds an external source through the imm
   }
 });
 
-test('every new child Attempt revalidates parent bytes at materialization and immediately before executor use', async () => {
+test('every child Attempt preserves parent evidence and binds the latest execution snapshot', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-child-content-'));
   const previousStateRoot = process.env.OPL_STATE_DIR;
   const stagePromptPath = path.join(domainPackRoot, 'agent/prompts/intake.md');
   const rubricPath = path.join(domainPackRoot, 'agent/quality_gates/stage.md');
   const originalStagePrompt = fs.readFileSync(stagePromptPath);
   const originalRubric = fs.readFileSync(rubricPath);
+  const executionPackRoot = path.join(stateRoot, 'current-pack');
+  fs.cpSync(domainPackRoot, executionPackRoot, { recursive: true });
+  const currentStagePromptPath = path.join(executionPackRoot, 'agent/prompts/intake.md');
+  const currentRolePromptPath = path.join(executionPackRoot, 'agent/prompts/stage-quality.md');
+  const currentRubricPath = path.join(executionPackRoot, 'agent/quality_gates/stage.md');
+  fs.writeFileSync(currentStagePromptPath, '# intake prompt from current package\n');
+  fs.writeFileSync(
+    currentRolePromptPath,
+    '# Stage quality roles\n\n## Producer\nUse the current producer policy.\n\n## Reviewer\nUse the current reviewer policy.\n\n## Repairer\nRepair current findings.\n\n## Re-reviewer\nClose current findings.\n',
+  );
+  const currentUseBinding = packageUseBinding({
+    packageVersion: '0.2.2',
+    useReceiptRef: 'opl://agent-package/use/fixture/current',
+  });
+  const materializationOptions = {
+    ensurePackageLaunchReady: async () => ({
+      runtime_source_readiness: {
+        checkout_path: executionPackRoot,
+        operational_ready: true,
+      },
+      package_use_binding: currentUseBinding,
+    }),
+    resolveStageBinding: () => binding(),
+  };
   process.env.OPL_STATE_DIR = stateRoot;
   try {
     const input = stageRunInput({ invocationId: 'sri_child_executor_content' });
@@ -1060,10 +1230,32 @@ test('every new child Attempt revalidates parent bytes at materialization and im
       artifact_refs: input.artifact_refs ?? [],
       artifact_hashes: input.artifact_hashes ?? [],
       artifact_identity_receipt_refs: input.artifact_identity_receipt_refs ?? [],
-    });
+    }, materializationOptions);
     assert.equal(
       materialized.workflow_input.stage_run_content_binding_version,
       'opl-stage-run-attempt-content-binding.v1',
+    );
+    assert.deepEqual(materialized.workflow_input.stage_run_spec, input.stage_run_spec);
+    assert.equal(materialized.workflow_input.stage_run_spec_sha256, input.stage_run_spec_sha256);
+    assert.equal(materialized.workflow_input.domain_pack_root, executionPackRoot);
+    assert.equal(
+      materialized.workflow_input.execution_content_binding?.parent_stage_run_spec_sha256,
+      input.stage_run_spec_sha256,
+    );
+    assert.equal(
+      (materialized.workflow_input.execution_content_binding?.spec.package_closure as any)
+        ?.root_package?.package_version,
+      '0.2.2',
+    );
+    assert.deepEqual(
+      materialized.workflow_input.execution_content_binding?.declared_stage_ids,
+      ['draft', 'intake', 'review'],
+    );
+    assert.equal(
+      materialized.workflow_input.execution_content_binding?.binding_sha256,
+      stageAttemptExecutionContentBindingSha256(
+        materialized.workflow_input.execution_content_binding!,
+      ),
     );
     const { stage_run_content_binding_version: _bindingVersion, ...unboundChild } = materialized.workflow_input;
     assert.throws(() => resolveStageRunAttemptExecutorContent(unboundChild), (error: any) => {
@@ -1071,37 +1263,57 @@ test('every new child Attempt revalidates parent bytes at materialization and im
       return true;
     });
     const resolved = resolveStageRunAttemptExecutorContent(materialized.workflow_input);
-    assert.equal(resolved.effectiveStagePrompt?.content, originalStagePrompt.toString('utf8'));
-    assert.match(resolved.effectiveQualityRolePrompt?.content ?? '', /Producer/);
+    assert.equal(resolved.effectiveStagePrompt?.content, '# intake prompt from current package\n');
+    assert.match(resolved.effectiveQualityRolePrompt?.content ?? '', /current producer policy/);
+    assert.throws(() => resolveStageRunAttemptExecutorContent({
+      ...materialized.workflow_input,
+      execution_content_binding: {
+        ...materialized.workflow_input.execution_content_binding!,
+        declared_stage_ids: ['draft', 'intake', 'new-stage', 'review'],
+      },
+    }), (error: any) => {
+      assert.equal(error.details?.failure_code, 'stage_attempt_execution_content_binding_mismatch');
+      return true;
+    });
 
+    // Parent bytes are historical evidence. Their later availability or drift cannot invalidate this Attempt.
     fs.appendFileSync(stagePromptPath, 'changed-after-child-materialization\n');
+    fs.appendFileSync(rubricPath, 'historical-parent-rubric-drift\n');
+    assert.doesNotThrow(() => resolveStageRunAttemptExecutorContent(materialized.workflow_input));
+
+    // The immutable snapshot selected for this Attempt must remain byte-stable while it executes.
+    fs.appendFileSync(currentStagePromptPath, 'changed-after-child-materialization\n');
     assert.throws(() => resolveStageRunAttemptExecutorContent(materialized.workflow_input), (error: any) => {
       assert.equal(error.details?.failure_code, 'stage_run_content_binding_stale');
       assert.equal(error.details?.ref, 'agent/prompts/intake.md');
       assert.ok(['lineage', 'stage_prompt'].includes(error.details?.purpose));
       return true;
     });
-    fs.writeFileSync(stagePromptPath, originalStagePrompt);
+    fs.writeFileSync(currentStagePromptPath, '# intake prompt from current package\n');
 
-    const driftBeforeMaterialization = stageRunInput({
-      invocationId: 'sri_child_materialization_content_drift',
-    });
-    fs.appendFileSync(rubricPath, 'changed-before-child-materialization\n');
-    await assert.rejects(
-      stageQualityAttemptMaterializeActivity({
-        stage_run: driftBeforeMaterialization,
-        quality_cycle_id: 'sqc_child_materialization_content_drift',
-        attempt_role: 'producer',
-        quality_round_index: 0,
-        artifact_refs: driftBeforeMaterialization.artifact_refs ?? [],
-        artifact_hashes: driftBeforeMaterialization.artifact_hashes ?? [],
-        artifact_identity_receipt_refs: driftBeforeMaterialization.artifact_identity_receipt_refs ?? [],
-      }),
-      (error: any) => {
-        assert.equal(error.details?.failure_code, 'stage_run_content_binding_stale');
-        assert.equal(error.details?.purpose, 'quality_rubric');
-        return true;
-      },
+    // A newer package appearing before the next Attempt is captured as that Attempt's current truth.
+    fs.appendFileSync(currentRubricPath, 'new rubric rule before next attempt\n');
+    fs.writeFileSync(
+      currentRolePromptPath,
+      fs.readFileSync(currentRolePromptPath, 'utf8').replace(
+        'Use the current producer policy.',
+        'Use the newer producer policy.',
+      ),
+    );
+    const next = await stageQualityAttemptMaterializeActivity({
+      stage_run: input,
+      quality_cycle_id: 'sqc_child_next_current_snapshot',
+      attempt_role: 'producer',
+      quality_round_index: 0,
+      artifact_refs: input.artifact_refs ?? [],
+      artifact_hashes: input.artifact_hashes ?? [],
+      artifact_identity_receipt_refs: input.artifact_identity_receipt_refs ?? [],
+    }, materializationOptions);
+    const nextResolved = resolveStageRunAttemptExecutorContent(next.workflow_input);
+    assert.match(nextResolved.effectiveQualityRolePrompt?.content ?? '', /newer producer policy/);
+    assert.notEqual(
+      next.workflow_input.execution_content_binding?.spec_sha256,
+      materialized.workflow_input.execution_content_binding?.spec_sha256,
     );
   } finally {
     fs.writeFileSync(stagePromptPath, originalStagePrompt);
@@ -1112,14 +1324,152 @@ test('every new child Attempt revalidates parent bytes at materialization and im
   }
 });
 
-test('StageRun creation requires the root package content digest', () => {
+test('Temporal materialization retry reuses the first child Attempt and package-use binding', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-child-retry-'));
+  const previousStateRoot = process.env.OPL_STATE_DIR;
+  const firstPackRoot = path.join(stateRoot, 'first-pack');
+  const laterPackRoot = path.join(stateRoot, 'later-pack');
+  fs.cpSync(domainPackRoot, firstPackRoot, { recursive: true });
+  fs.cpSync(domainPackRoot, laterPackRoot, { recursive: true });
+  fs.writeFileSync(
+    path.join(laterPackRoot, 'agent/prompts/stage-quality.md'),
+    '# Stage quality roles\n\n## Producer\nUse the later producer policy.\n',
+  );
+  const firstUseBinding = {
+    ...packageUseBinding({
+      checkedAt: '2026-07-14T00:00:00.000Z',
+      packageVersion: '0.2.2',
+      useReceiptRef: 'opl://agent-package/use/fixture/retry-first',
+    }),
+    use_boundary_id: 'package-use:retry-first',
+  };
+  const laterUseBinding = {
+    ...packageUseBinding({
+      checkedAt: '2026-07-14T00:01:00.000Z',
+      packageVersion: '0.2.3',
+      useReceiptRef: 'opl://agent-package/use/fixture/retry-later',
+    }),
+    use_boundary_id: 'package-use:retry-later',
+  };
+  const firstStageBinding = binding();
+  const laterStageBinding = {
+    ...binding(),
+    role_prompt_refs: {
+      ...binding().role_prompt_refs,
+      producer: 'agent/prompts/stage-quality.md#later-producer',
+    },
+  };
+  let readinessCalls = 0;
+  let bindingCalls = 0;
+  const materializationOptions = {
+    ensurePackageLaunchReady: async () => {
+      const snapshot = readinessCalls === 0
+        ? { checkoutRoot: firstPackRoot, useBinding: firstUseBinding }
+        : { checkoutRoot: laterPackRoot, useBinding: laterUseBinding };
+      readinessCalls += 1;
+      return {
+        runtime_source_readiness: {
+          checkout_path: snapshot.checkoutRoot,
+          operational_ready: true,
+        },
+        package_use_binding: snapshot.useBinding,
+      };
+    },
+    resolveStageBinding: () => {
+      const snapshot = bindingCalls === 0 ? firstStageBinding : laterStageBinding;
+      bindingCalls += 1;
+      return snapshot;
+    },
+  };
+  process.env.OPL_STATE_DIR = stateRoot;
+  try {
+    const stageRun = stageRunInput({ invocationId: 'sri_child_temporal_retry' });
+    const materializationInput = {
+      stage_run: stageRun,
+      quality_cycle_id: 'sqc_child_temporal_retry',
+      attempt_role: 'producer' as const,
+      quality_round_index: 0,
+      artifact_refs: stageRun.artifact_refs ?? [],
+      artifact_hashes: stageRun.artifact_hashes ?? [],
+      artifact_identity_receipt_refs: stageRun.artifact_identity_receipt_refs ?? [],
+    };
+
+    const first = await stageQualityAttemptMaterializeActivity(
+      materializationInput,
+      materializationOptions,
+    );
+    const retry = await stageQualityAttemptMaterializeActivity(
+      materializationInput,
+      materializationOptions,
+    );
+
+    assert.equal(readinessCalls, 1);
+    assert.equal(bindingCalls, 1);
+    assert.equal(retry.attempt_ref, first.attempt_ref);
+    assert.deepEqual(
+      retry.workflow_input.execution_content_binding,
+      first.workflow_input.execution_content_binding,
+    );
+    assert.equal(
+      retry.workflow_input.execution_content_binding?.use_boundary_id,
+      firstUseBinding.use_boundary_id,
+    );
+    assert.equal(
+      (retry.workflow_input.workspace_locator.package_use_binding as any)?.use_receipt_ref,
+      firstUseBinding.use_receipt_ref,
+    );
+
+    const db = new DatabaseSync(path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
+    try {
+      const count = db.prepare(`
+        SELECT COUNT(*) AS count
+        FROM stage_attempts
+        WHERE stage_run_id = ? AND quality_cycle_id = ?
+      `).get(stageRun.stage_run_id, materializationInput.quality_cycle_id) as { count: number };
+      assert.equal(count.count, 1);
+    } finally {
+      db.close();
+    }
+  } finally {
+    if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateRoot;
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('StageRun creation records incomplete package provenance without blocking execution', () => {
   const useBinding: any = packageUseBinding();
+  delete useBinding.root_package.package_version;
+  delete useBinding.root_package.package_lock_ref;
+  delete useBinding.root_package.manifest_sha256;
   delete useBinding.root_package.content_digest;
+  delete useBinding.provider_packages[0].manifest_sha256;
+  delete useBinding.provider_packages[0].content_digest;
+  delete useBinding.dependency_closure_digest;
+  const stageRun = stageRunInput({
+    invocationId: 'sri_incomplete_package_provenance',
+    locator: workspaceLocator(useBinding),
+  });
+  const closure = stageRun.stage_run_spec.package_closure as any;
+  assert.equal(closure.root_package.package_id, 'mas');
+  assert.equal(closure.root_package.package_version, null);
+  assert.equal(closure.root_package.package_lock_ref, null);
+  assert.equal(closure.root_package.manifest_sha256, null);
+  assert.equal(closure.root_package.content_digest, null);
+  assert.equal(closure.provider_packages[0].package_id, 'mas-scholar-skills');
+  assert.equal(closure.provider_packages[0].manifest_sha256, null);
+  assert.equal(closure.provider_packages[0].content_digest, null);
+  assert.equal(closure.dependency_closure_digest, null);
+});
+
+test('StageRun creation still rejects a malformed package provenance digest when present', () => {
+  const useBinding: any = packageUseBinding();
+  useBinding.root_package.content_digest = 'not-a-sha256';
   assert.throws(() => stageRunInput({
-    invocationId: 'sri_missing_root_content_digest',
+    invocationId: 'sri_invalid_root_content_digest',
     locator: workspaceLocator(useBinding),
   }), (error: any) => {
-    assert.equal(error.details?.failure_code, 'stage_run_root_package_content_digest_missing');
+    assert.equal(error.details?.failure_code, 'stage_run_content_digest_invalid');
     return true;
   });
 });

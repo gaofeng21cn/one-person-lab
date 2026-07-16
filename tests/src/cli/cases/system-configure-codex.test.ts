@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-import { assert, fs, os, parseJsonText, path, runCli, runCliFailure, test } from '../helpers.ts';
+import { assert, fs, os, parseJsonText, path, removeFixtureTree, runCli, runCliFailure, test } from '../helpers.ts';
 import { createFakeFamilySkillWorkspace } from '../../cli-codex-default-shell-helpers.ts';
 import { readBundledCodexDefaultProfile } from '../../../../src/kernel/local-codex-defaults.ts';
 import {
@@ -860,11 +860,13 @@ test('system configure-codex syncs Full runtime family Codex plugins after API k
         lock: currentMasLock,
         receipt,
       });
-      assert.equal(lifecycle.status, 'attention_needed');
-      assert.equal(
-        lifecycle.conditions.some((condition) => condition.condition_id === 'carrier_authority_invalid'),
-        true,
+      assert.equal(lifecycle.status, 'installed');
+      assert.equal(lifecycle.recommended_action, null);
+      const carrierObservation = lifecycle.conditions.find(
+        (condition) => condition.condition_id === 'carrier_authority_invalid',
       );
+      assert.equal(carrierObservation?.status, 'ok');
+      assert.equal(carrierObservation?.action_ref, null);
     }
     ledger.receipts = ledger.receipts.filter(
       (entry: Record<string, any>) => entry.receipt_ref !== currentMasLock.action_receipt_id,
@@ -872,27 +874,27 @@ test('system configure-codex syncs Full runtime family Codex plugins after API k
     writeJson(ledgerPath, ledger);
 
     const receiptMissing = runCli(['packages', 'status', '--package-id', 'mas'], fixture.env) as any;
-    assert.equal(receiptMissing.opl_agent_package_status.status, 'attention_needed');
+    assert.equal(receiptMissing.opl_agent_package_status.status, 'available');
+    assert.equal(receiptMissing.opl_agent_package_status.operational_ready, true);
+    assert.equal(receiptMissing.opl_agent_package_status.launch_allowed, true);
     assert.equal(receiptMissing.opl_agent_package_status.carrier_authority_readiness.status, 'invalid');
-    assert.equal(receiptMissing.opl_agent_package_status.lifecycle_ux.status, 'attention_needed');
-    assert.equal(
-      receiptMissing.opl_agent_package_status.conditions.some(
-        (condition: Record<string, any>) => condition.condition_id === 'carrier_authority_invalid',
-      ),
-      true,
+    assert.equal(receiptMissing.opl_agent_package_status.lifecycle_ux.status, 'available');
+    const carrierObservation = receiptMissing.opl_agent_package_status.conditions.find(
+      (condition: Record<string, any>) => condition.condition_id === 'carrier_authority_invalid',
     );
+    assert.equal(carrierObservation?.status, 'ok');
+    assert.equal(carrierObservation?.action_ref, null);
 
     const workspace = path.join(homeRoot, 'workspace');
     fs.mkdirSync(workspace, { recursive: true });
-    const activationFailure = runCliFailure([
+    const activation = runCli([
       'packages', 'activate', 'mas', '--scope', 'workspace', '--target-workspace', workspace,
-    ], fixture.env);
-    assert.equal(
-      activationFailure.payload.error.details.failure_code,
-      'agent_package_lifecycle_receipt_carrier_authority_invalid',
-    );
+    ], fixture.env) as any;
+    assert.equal(activation.opl_agent_package_activation.operational_ready, true);
+    assert.equal(activation.opl_agent_package_activation.launch_allowed, true);
+    assert.equal(activation.opl_agent_package_activation.package_use_binding.use_boundary_id.length > 0, true);
   } finally {
-    fs.rmSync(homeRoot, { recursive: true, force: true });
+    removeFixtureTree(homeRoot);
     fs.rmSync(captureDir, { recursive: true, force: true });
     fs.rmSync(familyWorkspace.workspaceRoot, { recursive: true, force: true });
   }

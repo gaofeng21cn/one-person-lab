@@ -106,7 +106,22 @@
       "re_reviewer"
     ],
     "manifest_sha256_is_exact_compiled_manifest_identity": true,
-    "binding_is_only_stage_run_creation_input": true,
+    "binding_consumers": [
+      "stage_run_creation_historical_plan",
+      "new_attempt_execution_content_binding",
+      "route_target_stage_run_creation"
+    ],
+    "stage_run_creation_binding_is_historical_after_creation": true,
+    "new_attempt_re_resolves_current_or_lkg_binding": true,
+    "attempt_execution_binding_required_fields": [
+      "parent_stage_run_spec_sha256",
+      "use_boundary_id",
+      "spec_sha256",
+      "spec",
+      "declared_stage_ids",
+      "binding_sha256"
+    ],
+    "attempt_execution_binding_sha256_covers_spec_and_declared_stage_ids": true,
     "raw_stage_run_start_cli_retired": true,
     "binding_does_not_authorize_domain_quality_verdict": true
   },

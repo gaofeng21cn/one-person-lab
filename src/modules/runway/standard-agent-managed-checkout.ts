@@ -8,6 +8,7 @@ import {
   resolveStandardAgent,
   STANDARD_AGENT_SERIES_MEMBERSHIP,
 } from '../../kernel/standard-agent-registry.ts';
+import { packageLaunchHardStopReason } from './family-runtime-package-readiness.ts';
 
 type AgentPackageReadinessPort = ReturnType<typeof requireAgentPackageReadinessPort>;
 
@@ -19,11 +20,12 @@ function blocked(message: string, details: Record<string, unknown>): never {
 }
 
 function managedCheckoutFromStatus(packageStatus: any, packageId: string) {
-  if (packageStatus?.launch_allowed !== true) {
-    blocked('Standard Agent action launch requires canonical package launch_allowed=true.', {
+  const hardStopReason = packageLaunchHardStopReason(packageStatus);
+  if (hardStopReason) {
+    blocked('Standard Agent action launch requires an installed package with an operational runtime source.', {
       package_id: packageId,
       launch_allowed: packageStatus?.launch_allowed ?? false,
-      launch_blocked_reason: packageStatus?.launch_blocked_reason ?? 'package_status_unavailable',
+      launch_blocked_reason: hardStopReason,
       package_dependency_readiness: packageStatus?.package_dependency_readiness ?? null,
       materialization_readiness: packageStatus?.materialization_readiness ?? null,
       runtime_source_readiness: packageStatus?.runtime_source_readiness ?? null,
@@ -32,8 +34,7 @@ function managedCheckoutFromStatus(packageStatus: any, packageId: string) {
   }
   const source = packageStatus.runtime_source_readiness;
   if (
-    source?.status !== 'current'
-    || source.operational_ready !== true
+    source?.operational_ready !== true
     || typeof source.checkout_path !== 'string'
     || !path.isAbsolute(source.checkout_path)
   ) {
@@ -96,7 +97,8 @@ export async function resolveStandardAgentManagedCheckout(input: {
         useBoundaryId,
       })
     : null;
-  const packageStatus = packageReadiness.readStatus({ packageId, ...scope }).opl_agent_package_status;
+  const packageStatus = activation?.package_status
+    ?? packageReadiness.readStatus({ packageId, ...scope }).opl_agent_package_status;
   const checkoutRoot = managedCheckoutFromStatus(packageStatus, packageId);
 
   return {

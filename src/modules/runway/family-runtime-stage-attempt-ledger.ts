@@ -713,19 +713,16 @@ function persistedStageReviewReceiptInputs(db: DatabaseSync, input: PersistedSta
       },
     );
   }
-  const producerRubricRefs = persistedStringList(producer.quality_rubric_refs_json, 'producer.quality_rubric_refs');
   const reviewerRubricRefs = persistedStringList(reviewer.quality_rubric_refs_json, 'reviewer.quality_rubric_refs');
   const requestedRubricRefs = input.rubricRefs.map((ref) => ref.trim());
   if (
-    producerRubricRefs.length === 0
-    || !exactStringList(producerRubricRefs, reviewerRubricRefs)
-    || !exactStringList(producerRubricRefs, requestedRubricRefs)
+    reviewerRubricRefs.length === 0
+    || !exactStringList(reviewerRubricRefs, requestedRubricRefs)
   ) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
-      'Review receipt rubric refs must exactly match producer, reviewer, and controller request.',
+      'Review receipt rubric refs must exactly match the reviewer Attempt and controller request.',
       {
-        producer_rubric_refs: producerRubricRefs,
         reviewer_rubric_refs: reviewerRubricRefs,
         requested_rubric_refs: requestedRubricRefs,
       },

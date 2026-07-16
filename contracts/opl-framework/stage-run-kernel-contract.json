@@ -94,7 +94,7 @@
         "role_prompt_refs_plus_backing_file_and_effective_section_byte_digests",
         "quality_rubric_refs_plus_file_byte_digests",
         "stage_goal_and_lineage_refs_plus_file_byte_digests",
-        "immutable_package_dependency_closure_with_root_content_digest",
+        "immutable_package_ids_with_available_dependency_closure_provenance",
         "executor_binding",
         "parent_route_decision_ref"
       ],
@@ -122,8 +122,17 @@
       "legacy_branch_can_admit_new_child_workflow": false,
       "new_child_attempt_without_binding_version": "typed_fail_closed",
       "post_registration_content_drift_effect": "typed_fail_closed_before_provider_or_executor_use",
-      "root_package_content_digest_required": true,
-      "missing_or_invalid_content_digest_effect": "typed_fail_closed_before_launch_registration"
+      "root_package_id_required": true,
+      "package_provenance_fields_nullable": [
+        "package_version",
+        "package_lock_ref",
+        "manifest_sha256",
+        "content_digest",
+        "artifact_digest",
+        "dependency_closure_digest"
+      ],
+      "missing_package_provenance_effect": "record_null_and_continue_execution",
+      "invalid_present_provenance_digest_effect": "typed_fail_closed_as_malformed_attempt_binding"
     },
     "invocation_sources": {
       "cli_default": "stable_domain_stage_action_workspace_task_idempotency",

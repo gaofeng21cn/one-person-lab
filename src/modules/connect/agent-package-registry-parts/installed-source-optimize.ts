@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
-import { assertAgentPackageCarrierAuthority } from './carrier-authority.ts';
+import { resolveOplStatePaths } from '../../../kernel/runtime-state-paths.ts';
 import { dependencyClosureDigest, dependencyReadiness } from './dependency-closure.ts';
 import {
   lifecycleReceipt,
@@ -24,13 +24,14 @@ import {
   finalizePackageProfileRollback,
   rollbackPackageProfileMigration,
 } from './profile-surface.ts';
+import { removeSafePersistedPackagePath } from './persisted-path-safety.ts';
 import {
   assertCapabilityScopeRollbackReady,
   materializeCapabilityScopeFromLock,
   packageScopeTarget,
   rollbackCapabilityScopeTransaction,
 } from './scope-materialization.ts';
-import { nowIso, sha256Text } from './shared.ts';
+import { nowIso, resolveCodexHome, sha256Text } from './shared.ts';
 import { writePackageTransaction } from './store.ts';
 import type {
   AgentPackageLastKnownGood,
@@ -134,7 +135,6 @@ export function optimizeInstalledPackageSource(input: {
 }) {
   const dryRun = input.action.dryRun === true;
   const previousLocks = structuredClone(installedClosure(input.index, input.root));
-  for (const lock of previousLocks) assertAgentPackageCarrierAuthority(lock);
   assertInstalledPhysicalSources(previousLocks);
   const readiness = dependencyReadiness(input.root, input.index);
   if (!readiness.operational_ready) {
@@ -327,13 +327,31 @@ export function optimizeInstalledPackageSource(input: {
 
 function discardCompensationBackups(surface: AgentPackagePhysicalSurface) {
   const policy = surface.workflow_policy_migration;
-  if (policy.backup_root) fs.rmSync(policy.backup_root, { recursive: true, force: true });
+  if (policy.backup_root) {
+    removeSafePersistedPackagePath({
+      candidatePath: policy.backup_root,
+      allowedRoots: [path.join(resolveOplStatePaths().state_dir, 'agent-package-transactions')],
+      pathKind: 'optimization_compensation.workflow_policy_migration.backup_root',
+      recursive: true,
+    });
+  }
   const profile = surface.profile_migration;
   for (const action of profile.mutation_actions) {
-    if (action.backup_ref) fs.rmSync(action.backup_ref, { force: true });
+    if (action.backup_ref) {
+      removeSafePersistedPackagePath({
+        candidatePath: action.backup_ref,
+        allowedRoots: [path.join(resolveCodexHome(), 'state')],
+        pathKind: 'optimization_compensation.profile_migration.backup_ref',
+      });
+    }
   }
   if (profile.merge_packet_path) {
-    fs.rmSync(profile.merge_packet_path, { recursive: true, force: true });
+    removeSafePersistedPackagePath({
+      candidatePath: profile.merge_packet_path,
+      allowedRoots: [path.join(resolveCodexHome(), 'state')],
+      pathKind: 'optimization_compensation.profile_migration.merge_packet_path',
+      recursive: true,
+    });
   }
 }
 
@@ -374,7 +392,11 @@ function compensateOptimizationRollback(input: {
   discardCompensationBackups(compensationSurface);
   for (const [targetPath, content] of input.profileTargets) {
     if (content === null) {
-      fs.rmSync(targetPath, { force: true });
+      removeSafePersistedPackagePath({
+        candidatePath: targetPath,
+        allowedRoots: [resolveCodexHome()],
+        pathKind: 'optimization_compensation.profile_target',
+      });
       continue;
     }
     fs.mkdirSync(path.dirname(targetPath), { recursive: true });
@@ -392,7 +414,6 @@ export function rollbackInstalledPackageOptimization(input: {
   const dryRun = input.action.dryRun === true;
   const currentLocks = structuredClone(installedClosure(input.index, input.root));
   const restoredLocks = structuredClone(input.generation.package_locks);
-  for (const lock of restoredLocks) assertAgentPackageCarrierAuthority(lock);
   const restoredRoot = restoredLocks.find((entry) => entry.package_id === input.root.package_id);
   if (!restoredRoot) {
     throw new FrameworkContractError(

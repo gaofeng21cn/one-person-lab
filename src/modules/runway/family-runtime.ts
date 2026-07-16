@@ -2,7 +2,8 @@ import { DatabaseSync } from 'node:sqlite';
 import { randomUUID } from 'node:crypto';
 
 import { loadFrameworkContracts } from '../charter/index.ts';
-import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
+import { canonicalJsonText } from '../../kernel/canonical-json.ts';
 import { preflightDomainWorkspaceCheckoutCurrentness } from './family-runtime-checkout-currentness.ts';
 import {
   parseFamilyRuntimeCommand,
@@ -62,8 +63,8 @@ import { runFamilyRuntimeStageArtifactCommand } from './family-runtime-stage-art
 import { buildFamilyRuntimeControlLoopStatus } from './family-runtime-control-loop.ts';
 import type { RuntimeTraySnapshotProvider } from './runtime-tray-snapshot-provider.ts';
 import {
-  blockAttemptForCheckoutCurrentness,
   attachCheckoutCurrentnessToStageContext,
+  persistStageAttemptLaunchBinding,
   recordTemporalStartOnAttempt,
 } from './family-runtime-parts/stage-attempt-launch.ts';
 import { ensureFamilyRuntimePackageLaunchReady } from './family-runtime-package-readiness.ts';
@@ -71,9 +72,118 @@ import { resolveStandardAgentStageQualityRuntimeBinding } from '../pack/index.ts
 import { buildPackBoundTemporalStageRunInput } from './family-runtime-pack-bound-stage-run.ts';
 import {
   buildCliStageRunInvocationId,
+  deriveStageRunId,
   explicitStageRunInvocationId,
+  stageRunWorkspaceIdentity,
 } from './family-runtime-stage-run-identity.ts';
+import { canonicalStageRunSha256 } from './family-runtime-stage-run-identity-parts/content-bindings.ts';
 import { launchRegisteredStageRun } from './family-runtime-stage-run-launch.ts';
+import { findStageRunLaunch } from './family-runtime-stage-run-launch-registry.ts';
+
+function stageRunReplayBusinessIdentity(
+  input: Parameters<typeof launchRegisteredStageRun>[0]['stageRunInput'],
+) {
+  const spec = input.stage_run_spec;
+  return {
+    domain_id: spec.domain_id,
+    stage_id: spec.stage_id,
+    action_id: spec.action_id,
+    task_id: spec.task_id,
+    workspace_identity: spec.workspace_identity,
+    source_fingerprint: spec.source_fingerprint,
+    input_artifacts: spec.input_artifacts,
+    executor_kind: spec.executor_kind,
+    stage_attempt_executor_policy: spec.stage_attempt_executor_policy,
+    parent_route_decision_ref: spec.parent_route_decision_ref,
+    checkpoint_refs: spec.checkpoint_refs.filter((ref) => ref !== spec.stage_packet_ref),
+  };
+}
+
+function normalizedReplayStringList(values: unknown) {
+  return Array.isArray(values)
+    ? [...new Set(values
+        .filter((value): value is string => typeof value === 'string' && Boolean(value.trim()))
+        .map((value) => value.trim()))]
+    : [];
+}
+
+function stageRunReplayRequestBusinessIdentity(input: {
+  domainId: Parameters<typeof buildCliStageRunInvocationId>[0]['domainId'];
+  stageId: string;
+  actionId?: string;
+  taskId?: string;
+  workspaceLocator: Record<string, unknown>;
+  sourceFingerprint?: string;
+  executorKind?: string;
+  executorBindingRef?: string;
+  invocationMode?: string;
+  boundedEditRef?: string;
+  parentRouteDecisionRef?: string;
+  checkpointRefs?: string[];
+  inputArtifactRefs?: string[];
+  inputArtifactHashes?: string[];
+}) {
+  const artifactRefs = Array.isArray(input.inputArtifactRefs)
+    ? input.inputArtifactRefs
+        .filter((value): value is string => typeof value === 'string' && Boolean(value.trim()))
+        .map((value) => value.trim())
+    : [];
+  const artifactHashes = input.inputArtifactHashes ?? [];
+  if (artifactRefs.length !== artifactHashes.length) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'StageRun immutable input artifact refs and hashes must have equal cardinality.',
+      { artifact_ref_count: artifactRefs.length, artifact_hash_count: artifactHashes.length },
+    );
+  }
+  const artifactIndex = new Map<string, { sha256: string; identity_receipt_ref: null }>();
+  artifactRefs.forEach((ref, index) => {
+    const artifact = {
+      sha256: canonicalStageRunSha256(artifactHashes[index], `input_artifact_hashes[${index}]`),
+      identity_receipt_ref: null,
+    };
+    const existing = artifactIndex.get(ref);
+    if (existing && existing.sha256 !== artifact.sha256) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'One StageRun input artifact ref cannot be bound to conflicting hashes or receipts.',
+        {
+          artifact_ref: ref,
+          existing_sha256: existing.sha256,
+          received_sha256: artifact.sha256,
+        },
+      );
+    }
+    artifactIndex.set(ref, artifact);
+  });
+  const inputArtifacts = [...artifactIndex.entries()]
+    .map(([ref, artifact]) => ({ ref, ...artifact }))
+    .sort((left, right) => left.ref.localeCompare(right.ref) || left.sha256.localeCompare(right.sha256));
+  const checkpointRefs = normalizedReplayStringList(input.checkpointRefs);
+  const stagePacketRef = checkpointRefs[0] ?? null;
+  const stageAttemptExecutorPolicy = {
+    ...(input.executorBindingRef ? { executor_binding_ref: input.executorBindingRef } : {}),
+    ...(input.invocationMode ? { invocation_mode: input.invocationMode } : {}),
+    ...(input.boundedEditRef ? { bounded_edit_ref: input.boundedEditRef } : {}),
+  };
+  return {
+    domain_id: input.domainId,
+    stage_id: input.stageId.trim(),
+    action_id: input.actionId?.trim() || null,
+    task_id: input.taskId?.trim() || null,
+    workspace_identity: stageRunWorkspaceIdentity(input.workspaceLocator),
+    source_fingerprint: input.sourceFingerprint?.trim()
+      ? canonicalStageRunSha256(input.sourceFingerprint, 'source_fingerprint')
+      : null,
+    input_artifacts: inputArtifacts,
+    executor_kind: input.executorKind?.trim() || 'codex_cli',
+    stage_attempt_executor_policy: stageAttemptExecutorPolicy,
+    parent_route_decision_ref: input.parentRouteDecisionRef?.trim() || null,
+    checkpoint_refs: stagePacketRef
+      ? checkpointRefs.filter((ref) => ref !== stagePacketRef)
+      : checkpointRefs,
+  };
+}
 
 async function temporalProviderModule() {
   return await import('./family-runtime-temporal-provider.ts');
@@ -374,7 +484,7 @@ export async function runFamilyRuntime(
       const existingAttempt = usesExplicitStageRunIdentity
         ? null
         : findIdempotentStageAttempt(db, parsed.input);
-      if (existingAttempt) {
+      if (existingAttempt && !parsed.input.start) {
         return {
           version: 'g2',
           family_runtime_stage_attempt: {
@@ -399,33 +509,60 @@ export async function runFamilyRuntime(
         : parsed.input.newStageRun || parsed.input.newAttempt
           ? stableId('sri', [baseStageRunInvocationId, 'explicit_new_stage_run', randomUUID()])
           : baseStageRunInvocationId;
-      const useBoundaryId = stableId('package-use', [
-        stageRunInvocationId,
-      ]);
-      const packageReadiness = await (
-        options.stageRunRuntime?.ensurePackageLaunchReady
-        ?? ensureFamilyRuntimePackageLaunchReady
-      )({
+      const stageRunId = deriveStageRunId({
         domainId: parsed.input.domainId,
-        workspaceLocator: parsed.input.workspaceLocator,
-        useBoundaryId,
+        stageId: parsed.input.stageId,
+        stageRunInvocationId,
       });
+      const existingStageRunLaunch = findStageRunLaunch(db, stageRunId);
+      if (existingStageRunLaunch && canonicalJsonText(
+        stageRunReplayBusinessIdentity(existingStageRunLaunch.stage_run_input),
+      ) !== canonicalJsonText(stageRunReplayRequestBusinessIdentity(parsed.input))) {
+        throw new FrameworkContractError(
+          'contract_shape_invalid',
+          'StageRun invocation is already bound to a different immutable spec.',
+          {
+            failure_code: 'stage_run_invocation_spec_conflict',
+            domain_id: parsed.input.domainId,
+            stage_id: parsed.input.stageId,
+            stage_run_invocation_id: stageRunInvocationId,
+            existing_stage_run_id: existingStageRunLaunch.stage_run_id,
+            existing_stage_run_spec_sha256: existingStageRunLaunch.stage_run_spec_sha256,
+          },
+        );
+      }
+      const useBoundaryId = stableId('package-use', [stageRunInvocationId]);
+      const packageReadiness = existingStageRunLaunch
+        ? null
+        : await (
+            options.stageRunRuntime?.ensurePackageLaunchReady
+            ?? ensureFamilyRuntimePackageLaunchReady
+          )({
+            domainId: parsed.input.domainId,
+            workspaceLocator: parsed.input.workspaceLocator,
+            activateMissingScope: Boolean(parsed.input.start),
+            ...(parsed.input.start ? { useBoundaryId } : {}),
+          });
       const explicitDomainPackRoot = typeof parsed.input.workspaceLocator.domain_pack_root === 'string'
         ? parsed.input.workspaceLocator.domain_pack_root.trim()
         : '';
       const managedDomainPackRoot = typeof packageReadiness?.runtime_source_readiness?.checkout_path === 'string'
         ? packageReadiness.runtime_source_readiness.checkout_path.trim()
         : '';
-      const domainPackRoot = managedDomainPackRoot || explicitDomainPackRoot || null;
-      const stageQualityBinding = domainPackRoot
+      const persistedDomainPackRoot = existingStageRunLaunch?.stage_run_input.domain_pack_root?.trim() ?? '';
+      const domainPackRoot = persistedDomainPackRoot || managedDomainPackRoot || explicitDomainPackRoot || null;
+      const stageQualityBinding = !existingStageRunLaunch && domainPackRoot
         ? (options.stageRunRuntime?.resolveStageBinding
           ?? resolveStandardAgentStageQualityRuntimeBinding)(domainPackRoot, parsed.input.stageId)
         : null;
-      const useBoundWorkspaceLocator = packageReadiness?.package_use_binding
+      const selectedPackageUseBinding = parsed.input.start
+        ? packageReadiness?.package_use_binding
+        : null;
+      const useBoundWorkspaceLocator = selectedPackageUseBinding
         ? {
             ...parsed.input.workspaceLocator,
             ...(domainPackRoot ? { domain_pack_root: domainPackRoot } : {}),
-            package_use_binding: packageReadiness.package_use_binding,
+            package_use_binding: selectedPackageUseBinding,
           }
         : {
             ...parsed.input.workspaceLocator,
@@ -477,14 +614,10 @@ export async function runFamilyRuntime(
         planeId: stageLaunchContextObservation.plane_id,
         contextPlaneId: stageLaunchContextObservation.plane_id,
       });
-      const blockedReason =
-        checkoutCurrentnessPreflight?.status === 'blocked'
-          ? checkoutCurrentnessPreflight.reason ?? 'checkout_currentness_blocked'
-          :
-        launchInvocation.blocker_reason
+      const blockedReason = launchInvocation.blocker_reason
         ?? parsed.input.blockedReason
         ?? undefined;
-      if (stageQualityBinding?.enabled) {
+      if (!existingAttempt && (existingStageRunLaunch || stageQualityBinding?.enabled)) {
         if (parsed.input.newStageRun && parsed.input.newAttempt) {
           throw new FrameworkContractError(
             'cli_usage_error',
@@ -508,28 +641,29 @@ export async function runFamilyRuntime(
             },
           );
         }
-        const stageRunInput = buildPackBoundTemporalStageRunInput({
-          binding: stageQualityBinding,
-          domainPackRoot: domainPackRoot!,
-          domainId: parsed.input.domainId,
-          stageId: parsed.input.stageId,
-          stageRunInvocationId,
-          parentRouteDecisionRef: parsed.input.parentRouteDecisionRef,
-          workspaceLocator: useBoundWorkspaceLocator,
-          sourceFingerprint,
-          executorKind: parsed.input.executorKind,
-          stageAttemptExecutorPolicy: {
-            ...(parsed.input.executorBindingRef ? { executor_binding_ref: parsed.input.executorBindingRef } : {}),
-            ...(parsed.input.invocationMode ? { invocation_mode: parsed.input.invocationMode } : {}),
-            ...(parsed.input.boundedEditRef ? { bounded_edit_ref: parsed.input.boundedEditRef } : {}),
-          },
-          checkpointRefs: parsed.input.checkpointRefs,
-          artifactRefs: parsed.input.inputArtifactRefs,
-          artifactHashes: parsed.input.inputArtifactHashes,
-          actionId: parsed.input.actionId,
-          taskId,
-          checkoutCurrentnessAdmission: checkoutCurrentnessPreflight,
-        });
+        const stageRunInput = existingStageRunLaunch?.stage_run_input
+          ?? buildPackBoundTemporalStageRunInput({
+            binding: stageQualityBinding!,
+            domainPackRoot: domainPackRoot!,
+            domainId: parsed.input.domainId,
+            stageId: parsed.input.stageId,
+            stageRunInvocationId,
+            parentRouteDecisionRef: parsed.input.parentRouteDecisionRef,
+            workspaceLocator: useBoundWorkspaceLocator,
+            sourceFingerprint,
+            executorKind: parsed.input.executorKind,
+            stageAttemptExecutorPolicy: {
+              ...(parsed.input.executorBindingRef ? { executor_binding_ref: parsed.input.executorBindingRef } : {}),
+              ...(parsed.input.invocationMode ? { invocation_mode: parsed.input.invocationMode } : {}),
+              ...(parsed.input.boundedEditRef ? { bounded_edit_ref: parsed.input.boundedEditRef } : {}),
+            },
+            checkpointRefs: parsed.input.checkpointRefs,
+            artifactRefs: parsed.input.inputArtifactRefs,
+            artifactHashes: parsed.input.inputArtifactHashes,
+            actionId: parsed.input.actionId,
+            taskId,
+            checkoutCurrentnessAdmission: checkoutCurrentnessPreflight,
+          });
         const durableLaunch = await launchRegisteredStageRun({
           db,
           stageRunInput,
@@ -596,28 +730,42 @@ export async function runFamilyRuntime(
           },
         );
       }
-      const result = createStageAttempt(db, {
-        ...parsed.input,
-        workspaceLocator: useBoundWorkspaceLocator,
-        idempotencyWorkspaceLocator: parsed.input.workspaceLocator,
-        blockedReason,
-        routeImpact: defaultStageContextObservation.selected_action_id
-          ? {
-              selected_action_id: defaultStageContextObservation.selected_action_id,
-              selected_stage_route: defaultStageContextObservation.selected_stage_route,
-            }
-          : undefined,
-        launchContextObservation: stageLaunchContextObservation,
-        launchInvocation,
-      });
+      const result = existingAttempt
+        ? {
+            created: false,
+            idempotent_noop: true,
+            attempt: existingAttempt,
+          }
+        : createStageAttempt(db, {
+            ...parsed.input,
+            workspaceLocator: useBoundWorkspaceLocator,
+            idempotencyWorkspaceLocator: parsed.input.workspaceLocator,
+            blockedReason,
+            routeImpact: defaultStageContextObservation.selected_action_id
+              ? {
+                  selected_action_id: defaultStageContextObservation.selected_action_id,
+                  selected_stage_route: defaultStageContextObservation.selected_stage_route,
+                }
+              : undefined,
+            launchContextObservation: stageLaunchContextObservation,
+            launchInvocation,
+          });
       const { attempt } = result;
-      const stageLaunchHardStopped = checkoutCurrentnessPreflight?.status === 'blocked'
-        || Boolean(launchInvocation.blocker_reason);
+      const stageLaunchHardStopped = Boolean(launchInvocation.blocker_reason);
+      const launchAttempt = parsed.input.start && attempt.status !== 'blocked'
+        ? persistStageAttemptLaunchBinding(db, attempt, {
+            workspaceLocator: useBoundWorkspaceLocator,
+            packageUseBinding: isRecord(selectedPackageUseBinding)
+              ? selectedPackageUseBinding
+              : null,
+            domainPackRoot,
+          })
+        : attempt;
       const temporal_start = parsed.input.start
-        && attempt.status !== 'blocked'
-          ? await (await temporalProviderModule()).startTemporalStageAttemptWorkflow(attempt, { paths })
+        && launchAttempt.status !== 'blocked'
+          ? await (await temporalProviderModule()).startTemporalStageAttemptWorkflow(launchAttempt, { paths })
         : null;
-      recordTemporalStartOnAttempt(db, attempt, temporal_start);
+      recordTemporalStartOnAttempt(db, launchAttempt, temporal_start);
       const projectedAttempt = inspectStageAttempt(db, attempt.stage_attempt_id);
       insertEvent(db, {
         taskId: projectedAttempt.task_id,
@@ -672,50 +820,48 @@ export async function runFamilyRuntime(
           },
         );
       }
-      const pinnedUseBinding = attempt.workspace_locator.package_use_binding;
-      await ensureFamilyRuntimePackageLaunchReady({
-        domainId: attempt.domain_id,
-        workspaceLocator: attempt.workspace_locator,
-        useBoundaryId: typeof pinnedUseBinding === 'object' && pinnedUseBinding
-          ? String((pinnedUseBinding as Record<string, unknown>).use_boundary_id ?? '')
-          : undefined,
-        pinnedUseBinding: typeof pinnedUseBinding === 'object' && pinnedUseBinding
-          ? pinnedUseBinding
-          : undefined,
-      });
-      const checkoutCurrentnessPreflight = preflightDomainWorkspaceCheckoutCurrentness({
-        domainId: attempt.domain_id,
-        workspaceLocator: attempt.workspace_locator,
-      });
-      if (checkoutCurrentnessPreflight?.status === 'blocked') {
-        const projectedAttempt = blockAttemptForCheckoutCurrentness(db, {
-          attempt,
-          checkoutCurrentnessPreflight,
-        });
-        insertEvent(db, {
-          taskId: projectedAttempt.task_id,
-          domainId: projectedAttempt.domain_id,
-          eventType: 'stage_attempt_checkout_currentness_blocked',
-          source: 'opl-cli',
-          payload: {
-            stage_attempt_id: attempt.stage_attempt_id,
-            reason: checkoutCurrentnessPreflight.reason ?? 'checkout_currentness_blocked',
-            checkout_currentness_preflight: checkoutCurrentnessPreflight,
-          },
-        });
-        return {
-          version: 'g2',
-          family_runtime_stage_attempt_start: {
-            surface_id: 'opl_family_runtime_stage_attempt_start',
-            attempt: projectedAttempt,
-            temporal_start: null,
-            checkout_currentness_preflight: checkoutCurrentnessPreflight,
-          },
-        };
-      }
+      const workflowAlreadyStarted = typeof attempt.provider_run.first_execution_run_id === 'string'
+        && attempt.provider_run.first_execution_run_id.length > 0;
+      const persistedLaunchContext = isRecord(attempt.provider_run.execution_package_use_context)
+        ? attempt.provider_run.execution_package_use_context
+        : null;
+      const launchBindingAlreadySelected = workflowAlreadyStarted
+        || persistedLaunchContext?.status === 'attempt_launch_binding_persisted';
+      const packageReadiness = launchBindingAlreadySelected
+        ? null
+        : await (
+            options.stageRunRuntime?.ensurePackageLaunchReady
+            ?? ensureFamilyRuntimePackageLaunchReady
+          )({
+            domainId: attempt.domain_id,
+            workspaceLocator: attempt.workspace_locator,
+            useBoundaryId: stableId('package-use', [
+              'stage_attempt_start',
+              attempt.stage_attempt_id,
+            ]),
+          });
+      const refreshedDomainPackRoot = typeof packageReadiness?.runtime_source_readiness?.checkout_path === 'string'
+        ? packageReadiness.runtime_source_readiness.checkout_path.trim()
+        : '';
+      const refreshedWorkspaceLocator = packageReadiness?.package_use_binding
+        ? {
+            ...attempt.workspace_locator,
+            ...(refreshedDomainPackRoot ? { domain_pack_root: refreshedDomainPackRoot } : {}),
+            package_use_binding: packageReadiness.package_use_binding,
+          }
+        : attempt.workspace_locator;
+      const reboundAttempt = launchBindingAlreadySelected
+        ? attempt
+        : persistStageAttemptLaunchBinding(db, attempt, {
+            workspaceLocator: refreshedWorkspaceLocator,
+            packageUseBinding: isRecord(packageReadiness?.package_use_binding)
+              ? packageReadiness.package_use_binding
+              : null,
+            domainPackRoot: refreshedDomainPackRoot || null,
+          });
       const { startTemporalStageAttemptWorkflow } = await temporalProviderModule();
-      const temporal_start = await startTemporalStageAttemptWorkflow(attempt, { paths });
-      recordTemporalStartOnAttempt(db, attempt, temporal_start);
+      const temporal_start = await startTemporalStageAttemptWorkflow(reboundAttempt, { paths });
+      recordTemporalStartOnAttempt(db, reboundAttempt, temporal_start);
       const projectedAttempt = inspectStageAttempt(db, parsed.stageAttemptId);
       insertEvent(db, {
         taskId: projectedAttempt.task_id,

@@ -65,6 +65,19 @@ test('full Settings projection follows App page ownership without treating activ
       },
       items: [],
     },
+    agentPackages: {
+      status_index: {
+        packages: {
+          mas: {
+            status: 'available',
+            installed_version: '0.2.10',
+            capability_exposure: { status: 'visible' },
+            operational_ready: true,
+            launch_allowed: true,
+          },
+        },
+      },
+    },
     provider: {
       selected_provider: 'temporal',
       temporal: { status: 'ready', health_status: 'ready' },
@@ -81,6 +94,14 @@ test('full Settings projection follows App page ownership without treating activ
     ORDINARY_SETTINGS_SECTIONS,
   );
   assert.deepEqual(settings.settings_projection.ordinary_sections, ORDINARY_SETTINGS_SECTIONS);
+  assert.deepEqual(contract.package_functional_readiness, {
+    source_ref: 'app_state.agent_packages.status_index',
+    attention_scope: 'installed_enabled_packages_without_runnable_current_or_last_known_good_generation',
+    disabled_and_uninstalled_packages_are_attention: false,
+    runtime_source_carriers_role: 'provenance_only',
+    runtime_source_carrier_health_can_enqueue_issue: false,
+    runtime_source_carrier_health_can_recommend_sync: false,
+  });
   assert.deepEqual(contract.control_center_groups, ORDINARY_SETTINGS_SECTIONS);
   assert.deepEqual(settings.control_center_groups.map((group) => group.group_id), ORDINARY_SETTINGS_SECTIONS);
   assert.deepEqual(contract.settings_ia.ordinary_route_ids, ORDINARY_SETTINGS_ROUTES);
@@ -172,4 +193,138 @@ test('full Settings projection follows App page ownership without treating activ
       .every((entry) => entry.section_id === 'gateway_account'),
     true,
   );
+});
+
+test('Settings treats runtime source carrier health as provenance and package generations as functional truth', () => {
+  const baseInput = {
+    profile: 'full' as const,
+    core: {
+      codex: {
+        model_access_ready: true,
+        opl_gateway_configured: true,
+        api_key_present: true,
+        model_access_source: 'opl_gateway',
+        parsed_version: '0.125.0',
+      },
+    },
+    developerMode: {
+      status: 'ready',
+      effective_state: 'active_direct',
+      mode: 'developer_apply_safe',
+      developer_profile: { status: 'ready' },
+    },
+    modules: {
+      summary: {
+        healthy_default_carriers_count: 0,
+        default_carriers_count: 2,
+      },
+      items: [{
+        package_id: 'mas',
+        label: 'MAS source checkout',
+        source_health_status: 'dirty',
+      }, {
+        package_id: 'oma',
+        label: 'OMA source checkout',
+        source_health_status: 'missing',
+      }],
+    },
+    provider: {
+      selected_provider: 'temporal',
+      temporal: { status: 'ready', health_status: 'ready' },
+    },
+    release: { channel: 'stable' },
+    paths: {
+      workspace_root: { health_status: 'ready', selected_path: '/tmp/workspace' },
+      workspace_root_path: '/tmp/workspace',
+    },
+  };
+  const settings = buildSettingsControlCenter({
+    ...baseInput,
+    agentPackages: {
+      status_index: {
+        packages: {
+          mas: {
+            status: 'available',
+            installed_version: '0.2.10',
+            capability_exposure: { status: 'visible' },
+            operational_ready: true,
+            launch_allowed: true,
+          },
+          oma: {
+            status: 'using_last_known_good',
+            installed_version: '0.3.7',
+            capability_exposure: { status: 'hidden' },
+            operational_ready: false,
+            launch_allowed: false,
+          },
+          disabled: {
+            status: 'attention_needed',
+            installed_version: '1.0.0',
+            capability_exposure: { status: 'disabled' },
+            operational_ready: false,
+            launch_allowed: false,
+          },
+          uninstalled: {
+            status: 'not_installed',
+            installed_version: null,
+            capability_exposure: { status: 'not_installed' },
+            operational_ready: false,
+            launch_allowed: false,
+          },
+        },
+      },
+    },
+  });
+
+  assert.equal(settings.issue_queue.length, 0);
+  assert.equal(settings.status_summary.runtime_source_carrier_health, '0/2');
+  assert.equal(settings.status_summary.agent_package_functional_health, '2/2');
+  assert.equal(settings.settings_projection.sections.agents.items[0].state, 'ready');
+  assert.equal(settings.settings_projection.sections.agents.items[0].next_action, 'none');
+  assert.equal(settings.settings_projection.sections.capabilities.items[0].state, 'available');
+  assert.equal(settings.settings_projection.sections.capabilities.items[0].next_action, 'none');
+  assert.equal(
+    settings.task_entries.find((entry) => entry.action_id === 'settings_sync_capabilities')?.state,
+    'ready',
+  );
+  assert.deepEqual(
+    settings.capability_task_awareness_refs.runtime_source_provenance_refs.map((entry) => ({
+      id: entry.id,
+      status: entry.status,
+      observation: entry.observed_source_health_status,
+      next_action: entry.next_action,
+    })),
+    [{ id: 'mas', status: 'provenance_observation', observation: 'dirty', next_action: 'none' },
+      { id: 'oma', status: 'provenance_observation', observation: 'missing', next_action: 'none' }],
+  );
+  assert.equal(JSON.stringify(settings.issue_queue).includes('settings_sync_capabilities'), false);
+
+  const noRunnableGeneration = buildSettingsControlCenter({
+    ...baseInput,
+    agentPackages: {
+      status_index: {
+        packages: {
+          mas: {
+            status: 'attention_needed',
+            installed_version: '0.2.10',
+            capability_exposure: { status: 'visible' },
+            operational_ready: false,
+            launch_allowed: false,
+          },
+          disabled: {
+            status: 'attention_needed',
+            installed_version: '1.0.0',
+            capability_exposure: { status: 'disabled' },
+            operational_ready: false,
+            launch_allowed: false,
+          },
+        },
+      },
+    },
+  });
+  assert.equal(noRunnableGeneration.issue_queue.length, 1);
+  assert.deepEqual(noRunnableGeneration.issue_queue[0].affected_ids, ['mas']);
+  assert.equal(noRunnableGeneration.issue_queue[0].recommended_action_id, 'agent_package_repair');
+  assert.equal(noRunnableGeneration.settings_projection.sections.agents.items[0].state, 'attention_needed');
+  assert.equal(noRunnableGeneration.settings_projection.sections.capabilities.items[0].state, 'attention_needed');
 });

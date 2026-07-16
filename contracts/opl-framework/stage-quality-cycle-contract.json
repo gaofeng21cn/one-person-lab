@@ -124,6 +124,10 @@
     "codex_attempt_cannot_expand_quality_loop": true,
     "attempt_instances_declared_in_manifest": false,
     "attempt_instances_materialized_dynamically_from_policy": true,
+    "stage_run_spec_quality_policy_and_declared_stage_ids_are_historical_after_creation": true,
+    "new_attempt_execution_content_binding_is_effective_control_policy": true,
+    "formal_review_requirement_source": "producer_attempt_execution_content_binding",
+    "repair_budget_source": "latest_materialized_attempt_execution_content_binding",
     "maximum_attempt_instances": 8,
     "maximum_shape": "one_producer_plus_one_initial_reviewer_plus_three_repairer_re_reviewer_pairs",
     "provider_retry_budget_is_separate": true,
@@ -166,6 +170,10 @@
     "passive_transport_materializes_codex_selected_declared_stage": true,
     "attempt_route_output_is_closeout_judgment_not_stage_topology_or_transition_authority": true,
     "attempt_context_surface_kind": "opl_stage_run_route_selection_context",
+    "attempt_route_context_declared_stage_ids_source": "attempt_execution_content_binding",
+    "route_launch_declared_stage_validation_source": "decisive_attempt_execution_content_binding",
+    "route_target_stage_run_binding_source": "current_or_lkg_at_route_use_boundary",
+    "historical_parent_declared_stage_ids_can_reject_current_target": false,
     "legacy_terminal_route_fields_forbidden": [
       "route_back_stage_ref",
       "selected_next_stage_ref",
@@ -344,7 +352,9 @@
     "artifact_producer_attempt_ref_is_distinct_from_parent_attempt_ref": true,
     "repair_without_new_artifact_identity_terminalizes_quality_debt_without_re_review": true,
     "stable_local_byte_observation_policy": "chunked_sha256_with_pre_and_post_fstat_identity_size_and_mtime_validation",
-    "currentness_admission_scope": "Checkout currentness is admitted once at StageRun launch and inherited by child Attempts; producer artifact writes do not trigger a second mutable-checkout admission inside the same StageRun.",
+    "package_resolution_scope": "Every new Attempt silently resolves the newest available package generation for its user source policy and falls back to LKG on refresh failure; the admitted StageRun binding remains historical evidence.",
+    "review_receipt_rubric_source": "reviewer_attempt_execution_content_binding",
+    "producer_and_reviewer_rubric_equality_required": false,
     "hard_stop_evidence_fields": [
       "hard_stop_class",
       "typed_blocker_refs",
@@ -374,7 +384,7 @@
       "both_attempts_no_context_inheritance_true",
       "distinct_nonempty_execution_sessions",
       "producer_output_artifact_refs_and_hashes_equal_reviewer_inputs",
-      "producer_reviewer_and_controller_rubric_refs_equal",
+      "reviewer_attempt_and_controller_rubric_refs_equal",
       "requested_receipt_verdict_matches_reviewer_canonical_outcome"
     ],
     "finding_lineage_binding": {

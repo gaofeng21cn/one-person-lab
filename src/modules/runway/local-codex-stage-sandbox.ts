@@ -10,6 +10,7 @@ import type { CodexCommandResult } from './codex.ts';
 import { stringValue as optionalString } from '../../kernel/json-record.ts';
 import { isRecord, normalizeTimeoutMs, type JsonRecord } from './family-runtime-codex-stage-runner-parts/shared.ts';
 import type { RunnerEventSummary } from './family-runtime-codex-stage-runner-parts/input-prompt.ts';
+import { sandboxAttemptSkillRuntime } from './family-runtime-attempt-skill-projection.ts';
 
 type LocalSandboxProviderKind = 'local_devcontainer' | 'local_docker';
 
@@ -245,6 +246,66 @@ async function runDocker(args: string[], opts?: {
   return await (commandRunnerForTest ?? defaultCommandRunner)(args, opts);
 }
 
+function safeProviderErrorKind(error?: string) {
+  if (!error) return null;
+  if (error === 'activity_cancelled' || error === 'total_timeout') return error;
+  return 'provider_error';
+}
+
+function failLocalSandboxPreparation(input: {
+  providerKind: LocalSandboxProviderKind;
+  phase: string;
+  failureCode: string;
+  result?: LocalSandboxCommandResult | null;
+  providerThrew?: boolean;
+  generationId?: string;
+}): never {
+  throw new FrameworkContractError(
+    'launcher_failed',
+    `Local Codex sandbox preparation failed during ${input.phase}; Codex was not executed.`,
+    {
+      failure_code: input.failureCode,
+      sandbox_phase: input.phase,
+      provider_kind: input.providerKind,
+      exit_code: input.result?.exitCode ?? null,
+      provider_error_kind: input.providerThrew
+        ? 'provider_error'
+        : safeProviderErrorKind(input.result?.error),
+      codex_executed: false,
+      credential_material_logged: false,
+      stderr_logged: false,
+      ...(input.generationId ? { generation_id: input.generationId } : {}),
+    },
+  );
+}
+
+async function runRequiredDockerPreparation(input: {
+  args: string[];
+  opts: {
+    timeoutMs?: number;
+    signal?: AbortSignal;
+  };
+  providerKind: LocalSandboxProviderKind;
+  phase: string;
+  failureCode: string;
+  generationId?: string;
+}) {
+  let result: LocalSandboxCommandResult;
+  try {
+    result = await runDocker(input.args, input.opts);
+  } catch {
+    failLocalSandboxPreparation({
+      ...input,
+      result: null,
+      providerThrew: true,
+    });
+  }
+  if (result.exitCode !== 0 || result.error) {
+    failLocalSandboxPreparation({ ...input, result });
+  }
+  return result;
+}
+
 function parseStdoutEvents(stdout: string, onRunnerProgress?: (event: RunnerEventSummary) => void) {
   if (!onRunnerProgress) {
     return;
@@ -398,19 +459,74 @@ export async function runCodexInLocalSandbox(input: {
         env,
       );
     }
-    await runDocker(['exec', containerName, 'sh', '-lc', `mkdir -p ${shellQuote(parentDir)} && rm -rf ${shellQuote(workspaceRoot)}`], {
-      timeoutMs: 30_000,
-      signal: input.signal,
+    await runRequiredDockerPreparation({
+      args: ['exec', containerName, 'sh', '-lc', `mkdir -p ${shellQuote(parentDir)} && rm -rf ${shellQuote(workspaceRoot)}`],
+      opts: { timeoutMs: 30_000, signal: input.signal },
+      providerKind: input.providerKind,
+      phase: 'workspace_reset',
+      failureCode: 'codex_sandbox_workspace_reset_failed',
     });
-    const clone = await runDocker(['exec', containerName, 'git', 'clone', repoUrl, workspaceRoot], {
-      timeoutMs: commandTimeoutMs,
-      signal: input.signal,
+    const clone = await runRequiredDockerPreparation({
+      args: ['exec', containerName, 'git', 'clone', repoUrl, workspaceRoot],
+      opts: { timeoutMs: commandTimeoutMs, signal: input.signal },
+      providerKind: input.providerKind,
+      phase: 'workspace_clone',
+      failureCode: 'codex_sandbox_workspace_clone_failed',
     });
     let checkout: LocalSandboxCommandResult | null = null;
     if (checkoutRef) {
-      checkout = await runDocker(['exec', containerName, 'git', '-C', workspaceRoot, 'checkout', checkoutRef], {
-        timeoutMs: 30_000,
-        signal: input.signal,
+      checkout = await runRequiredDockerPreparation({
+        args: ['exec', containerName, 'git', '-C', workspaceRoot, 'checkout', checkoutRef],
+        opts: { timeoutMs: 30_000, signal: input.signal },
+        providerKind: input.providerKind,
+        phase: 'workspace_checkout',
+        failureCode: 'codex_sandbox_workspace_checkout_failed',
+      });
+    }
+    const skillRuntime = sandboxAttemptSkillRuntime(input.attempt, workspaceRoot);
+    if (skillRuntime) {
+      await runRequiredDockerPreparation({
+        args: [
+          'exec',
+          containerName,
+          'mkdir',
+          '-p',
+          skillRuntime.skillsRoot,
+        ],
+        opts: { timeoutMs: 30_000, signal: input.signal },
+        providerKind: input.providerKind,
+        phase: 'skill_root_create',
+        failureCode: 'agent_package_skill_projection_sandbox_mkdir_failed',
+        generationId: skillRuntime.projection.generation_id,
+      });
+      await runRequiredDockerPreparation({
+        args: [
+          'cp',
+          `${skillRuntime.projection.skills_root}${path.sep}.`,
+          `${containerName}:${skillRuntime.skillsRoot}`,
+        ],
+        opts: { timeoutMs: 30_000, signal: input.signal },
+        providerKind: input.providerKind,
+        phase: 'skill_projection_copy',
+        failureCode: 'agent_package_skill_projection_sandbox_copy_failed',
+        generationId: skillRuntime.projection.generation_id,
+      });
+      const excludeLines = skillRuntime.projection.skill_ids
+        .map((skillId) => `.agents/skills/${skillId}/`)
+        .join('\n');
+      await runRequiredDockerPreparation({
+        args: [
+          'exec',
+          containerName,
+          'sh',
+          '-lc',
+          `printf '%s\\n' ${shellQuote(excludeLines)} >> ${shellQuote(path.posix.join(workspaceRoot, '.git', 'info', 'exclude'))}`,
+        ],
+        opts: { timeoutMs: 30_000, signal: input.signal },
+        providerKind: input.providerKind,
+        phase: 'skill_projection_exclude',
+        failureCode: 'agent_package_skill_projection_sandbox_exclude_failed',
+        generationId: skillRuntime.projection.generation_id,
       });
     }
     const codexResult = await runDocker([

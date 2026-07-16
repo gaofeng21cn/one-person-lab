@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
+import { writeOplDeveloperSupervisorConfig } from '../../src/kernel/system-preferences.ts';
 import {
   buildCapabilityRegistryReadout,
   type CapabilityRegistryCatalog,
@@ -13,7 +14,10 @@ import {
 import { runOplAgentPackageInstall } from '../../src/modules/connect/agent-package-registry.ts';
 import { sha256Fixture } from './cli/cases/packages-cases/helpers.ts';
 import { writeManagedRuntimeSourceFixture } from './cli/cases/packages-cases/managed-runtime-source-fixture.ts';
+import { removeFixtureTree } from './cli/helpers-parts/filesystem.ts';
 import { ensureProviderHostedStageAttempt } from '../../src/modules/runway/family-runtime-provider-hosted-attempts.ts';
+import { createStageAttempt } from '../../src/modules/runway/family-runtime-stage-attempts.ts';
+import { persistStageAttemptLaunchBinding } from '../../src/modules/runway/family-runtime-parts/stage-attempt-launch.ts';
 import {
   buildCapabilityRegistryStageContextReceipt,
   capabilityRegistryStageContextInputFromPayload,
@@ -555,6 +559,70 @@ test('malformed current-owner-delta with optional-only requirements remains fail
   );
 });
 
+test('StageAttempt launch binding reservation replaces a preliminary observation once', () => {
+  const db = new DatabaseSync(':memory:');
+  createFamilyRuntimeQueueTables(db);
+  try {
+    const preliminaryBinding = {
+      surface_kind: 'opl_agent_package_use_binding.v1',
+      use_boundary_id: 'package-use:preliminary',
+      root_package: { package_id: 'mas', content_digest: 'sha256:preliminary' },
+    };
+    const attempt = createStageAttempt(db, {
+      domainId: 'medautoscience',
+      stageId: 'review',
+      providerKind: 'temporal',
+      workspaceLocator: {
+        workspace_root: '/tmp/attempt-binding-reservation',
+        domain_pack_root: '/tmp/generation-preliminary',
+        package_use_binding: preliminaryBinding,
+      },
+    }).attempt;
+    const firstBinding = {
+      surface_kind: 'opl_agent_package_use_binding.v1',
+      use_boundary_id: 'package-use:first',
+      root_package: { package_id: 'mas', content_digest: 'sha256:first' },
+    };
+    const laterBinding = {
+      surface_kind: 'opl_agent_package_use_binding.v1',
+      use_boundary_id: 'package-use:later',
+      root_package: { package_id: 'mas', content_digest: 'sha256:later' },
+    };
+    const reserved = persistStageAttemptLaunchBinding(db, attempt, {
+      workspaceLocator: {
+        ...attempt.workspace_locator,
+        domain_pack_root: '/tmp/generation-first',
+        package_use_binding: firstBinding,
+      },
+      packageUseBinding: firstBinding,
+      domainPackRoot: '/tmp/generation-first',
+    });
+    const replay = persistStageAttemptLaunchBinding(db, attempt, {
+      workspaceLocator: {
+        ...attempt.workspace_locator,
+        domain_pack_root: '/tmp/generation-later',
+        package_use_binding: laterBinding,
+      },
+      packageUseBinding: laterBinding,
+      domainPackRoot: '/tmp/generation-later',
+    });
+
+    assert.notDeepEqual(reserved.workspace_locator.package_use_binding, preliminaryBinding);
+    assert.deepEqual(reserved.workspace_locator.package_use_binding, firstBinding);
+    assert.equal(
+      (reserved.provider_run.execution_package_use_context as { status: string }).status,
+      'attempt_launch_binding_persisted',
+    );
+    assert.deepEqual(replay.workspace_locator, reserved.workspace_locator);
+    assert.deepEqual(
+      replay.provider_run.execution_package_use_context,
+      reserved.provider_run.execution_package_use_context,
+    );
+  } finally {
+    db.close();
+  }
+});
+
 test('provider-hosted attempt launch fails closed before queueing when its canonical package is absent', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-hosted-package-gate-'));
   const previousStateRoot = process.env.OPL_STATE_DIR;
@@ -615,6 +683,9 @@ test('provider-hosted attempt launch consumes typed capability readout without c
   process.env.OPL_FAMILY_WORKSPACE_ROOT = familyRoot;
   process.env.OPL_STATE_DIR = path.join(familyRoot, 'state');
   process.env.CODEX_HOME = path.join(familyRoot, 'codex-home');
+  writeOplDeveloperSupervisorConfig({
+    module_source_preferences: { medautoscience: 'managed' },
+  });
   const packageFiles = {
     '.codex-plugin/plugin.json': `${JSON.stringify({ name: 'med-autoscience', version: '0.2.1' })}\n`,
     'skills/med-autoscience/SKILL.md': '# Med Auto Science\n',
@@ -663,7 +734,7 @@ test('provider-hosted attempt launch consumes typed capability readout without c
     else process.env.PATH = previousPath;
     if (previousPackagesOwner === undefined) delete process.env.OPL_PACKAGES_OWNER;
     else process.env.OPL_PACKAGES_OWNER = previousPackagesOwner;
-    fs.rmSync(familyRoot, { recursive: true, force: true });
+    removeFixtureTree(familyRoot);
   });
   await runOplAgentPackageInstall({
     packageId: 'mas',
@@ -732,6 +803,23 @@ test('provider-hosted attempt launch consumes typed capability readout without c
     assert.equal(
       launchEvent.observation.capability_registry_context_receipt.authority_boundary.can_create_domain_typed_blocker,
       false,
+    );
+
+    const nextAttempt = await ensureProviderHostedStageAttempt(db, row, {
+      opl_provider_hosted_stage_attempt: true,
+      stage_id: 'review',
+      workspace_root: familyRoot,
+      current_owner_delta: routeRequiredDelta,
+      capability_registry_readout: readout,
+      capability_registry_readout_ref: 'opl://capability-readouts/review-source-route',
+      capability_registry_resolution: readout.resolutions[0],
+      capability_registry_resolution_receipt_ref: 'opl://capability-resolutions/review-source-route',
+    }, { newAttempt: true });
+    assert.ok(nextAttempt);
+    assert.notEqual(nextAttempt.stage_attempt_id, attempt.stage_attempt_id);
+    assert.notEqual(
+      (nextAttempt.workspace_locator.package_use_binding as any)?.use_boundary_id,
+      (attempt.workspace_locator.package_use_binding as any)?.use_boundary_id,
     );
 
     const resolutionOnlyAttempt = await ensureProviderHostedStageAttempt(db, {

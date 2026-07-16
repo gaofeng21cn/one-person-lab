@@ -49,6 +49,26 @@ export function packageLaunchHardStopReason(packageStatus: any) {
   if (runtimeSource && runtimeSource.operational_ready !== true) {
     return runtimeSource.reason ?? `runtime_source_${runtimeSource.status ?? 'unavailable'}`;
   }
+  const hardDependencyReasons = new Set([
+    'dependency_lock_missing',
+    'dependency_disabled',
+    'package_id_mismatch',
+    'capability_abi_mismatch',
+    'required_exports_missing',
+    'required_modules_missing',
+  ]);
+  for (const dependency of packageStatus?.package_dependency_readiness?.dependencies ?? []) {
+    if (dependency?.required === false) continue;
+    const reason = Array.isArray(dependency?.reasons)
+      ? dependency.reasons.find((entry: unknown) => typeof entry === 'string' && hardDependencyReasons.has(entry))
+      : null;
+    if (reason) return reason;
+  }
+  const materialization = packageStatus?.materialization_readiness;
+  if (materialization?.core_readiness?.status === 'missing'
+    || (materialization?.status === 'missing' && !materialization?.core_readiness)) {
+    return 'required_core_skill_missing';
+  }
   return null;
 }
 
@@ -77,7 +97,7 @@ export async function ensureFamilyRuntimePackageLaunchReady(input: {
       pinnedUseBinding: input.pinnedUseBinding,
     });
   }
-  const packageStatus = packageReadiness.readStatus({
+  const packageStatus = activation?.package_status ?? packageReadiness.readStatus({
     packageId,
     ...scope,
   }).opl_agent_package_status;
@@ -89,7 +109,12 @@ export async function ensureFamilyRuntimePackageLaunchReady(input: {
     };
   }
 
-  const hardStopReason = packageLaunchHardStopReason(packageStatus);
+  const hardStopReason = packageLaunchHardStopReason(input.activateMissingScope === false
+    ? {
+        ...packageStatus,
+        materialization_readiness: undefined,
+      }
+    : packageStatus);
   if (!hardStopReason) {
     return {
       ...packageStatus,

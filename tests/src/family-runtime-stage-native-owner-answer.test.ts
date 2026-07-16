@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -170,6 +171,42 @@ test('checkout currentness is enabled only by a domain profile', () => {
       workspaceLocator: { workspace_root: workspaceRoot },
       profiles: [{ ...profile, checkoutCurrentnessRequired: false }],
     }), null);
+  } finally {
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('checkout currentness observes local bytes without fetching, merging, or blocking', () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-checkout-observation-'));
+  const git = (...args: string[]) => execFileSync('git', args, { cwd: workspaceRoot, encoding: 'utf8' }).trim();
+  try {
+    git('init');
+    git('config', 'user.name', 'OPL Test');
+    git('config', 'user.email', 'opl-test@example.invalid');
+    fs.writeFileSync(path.join(workspaceRoot, 'source.txt'), 'version A\n');
+    git('add', 'source.txt');
+    git('commit', '-m', 'fixture A');
+    const head = git('rev-parse', 'HEAD');
+
+    const clean = checkoutCurrentness.preflightDomainWorkspaceCheckoutCurrentness({
+      domainId: 'example-domain',
+      workspaceLocator: { workspace_root: workspaceRoot },
+      profiles: [{ domainId: 'example-domain', checkoutCurrentnessRequired: true } as any],
+    });
+    assert.equal(clean?.status, 'observed');
+    assert.equal(clean?.currentness_status, 'target_unresolved_observed');
+    assert.equal(git('rev-parse', 'HEAD'), head);
+
+    fs.writeFileSync(path.join(workspaceRoot, 'source.txt'), 'version B\n');
+    const dirty = checkoutCurrentness.preflightDomainWorkspaceCheckoutCurrentness({
+      domainId: 'example-domain',
+      workspaceLocator: { workspace_root: workspaceRoot },
+      profiles: [{ domainId: 'example-domain', checkoutCurrentnessRequired: true } as any],
+    });
+    assert.equal(dirty?.status, 'observed');
+    assert.equal(dirty?.currentness_status, 'dirty_observed');
+    assert.equal(git('rev-parse', 'HEAD'), head);
+    assert.match(fs.readFileSync(path.join(workspaceRoot, 'source.txt'), 'utf8'), /version B/);
   } finally {
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }

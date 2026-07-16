@@ -1,9 +1,12 @@
+import { spawnSync } from 'node:child_process';
+
 import {
   assert,
   createGitModuleRemoteFixture,
   fs,
   os,
   path,
+  repoRoot,
   runCli,
   runCliFailure,
   runCliInCwd,
@@ -13,7 +16,53 @@ import { runGitFixtureCommand } from '../helpers-parts/family-fixtures.ts';
 import { writeFakeOmaGeneratedSurfacePack } from '../../cli-codex-default-shell-helpers.ts';
 import { parseGitStatusPorcelainV2 } from '../../../../src/modules/connect/system-installation/module-git.ts';
 import { DOMAIN_MODULE_SPECS } from '../../../../src/modules/connect/system-installation/module-specs.ts';
+import { getOplPackageSpecs } from '../../../../src/modules/connect/package-distribution.ts';
+import { loadDeveloperCheckoutPackageSource } from '../../../../src/modules/connect/agent-package-registry-parts/developer-checkout-package-source.ts';
 import './system-modules-cases/mds-skill-boundary.ts';
+
+const REQUIRED_FILES_PROBE_PROGRAM = 'const fs=require("node:fs");for(const p of process.argv.slice(1)){if(!fs.statSync(p).isFile())process.exit(1)}';
+
+function requiredFilesProbe(checkoutPath: string, relativePaths: string[]) {
+  return {
+    command: 'node',
+    args: [
+      '-e',
+      REQUIRED_FILES_PROBE_PROGRAM,
+      ...relativePaths.map((relativePath) => path.join(checkoutPath, relativePath)),
+    ],
+  };
+}
+
+function runProbe(probe: { command: string; args: string[] }, checkoutPath: string) {
+  return spawnSync(probe.command, probe.args, {
+    cwd: checkoutPath,
+    encoding: 'utf8',
+  });
+}
+
+function exactTreeInventory(root: string) {
+  const entries: string[] = [];
+  const visit = (directory: string) => {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })
+      .sort((left, right) => left.name.localeCompare(right.name))) {
+      const absolutePath = path.join(directory, entry.name);
+      const relativePath = path.relative(root, absolutePath).split(path.sep).join('/');
+      const stat = fs.lstatSync(absolutePath);
+      entries.push(entry.isDirectory()
+        ? `directory\0${relativePath}\0${stat.mode & 0o777}`
+        : `file\0${relativePath}\0${stat.mode & 0o777}\0${fs.readFileSync(absolutePath).toString('base64')}`);
+      if (entry.isDirectory()) visit(absolutePath);
+    }
+  };
+  visit(root);
+  return entries;
+}
+
+function writeFixtureFile(root: string, relativePath: string, content = '{}\n') {
+  const targetPath = path.join(root, relativePath);
+  fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+  fs.writeFileSync(targetPath, content);
+}
 
 test('git status porcelain v2 parser preserves sync and dirty state', () => {
   assert.deepEqual(
@@ -72,16 +121,13 @@ test('MAS runtime preparation probes its declarative carrier without a private e
   try {
     const mas = DOMAIN_MODULE_SPECS.find((module) => module.module_id === 'medautoscience');
     const expectedProbe = {
-      command: 'node',
-      args: [
-        '-e',
-        'const fs=require("node:fs");for(const p of process.argv.slice(1)){if(!fs.statSync(p).isFile())process.exit(1)}',
-        path.join(checkoutPath, 'contracts', 'action_catalog.json'),
-        path.join(checkoutPath, 'contracts', 'domain_handler_registry.json'),
-        path.join(checkoutPath, 'contracts', 'pack_compiler_input.json'),
-        path.join(checkoutPath, 'agent', 'stages', 'manifest.json'),
-        path.join(checkoutPath, 'agent', 'primary_skill', 'SKILL.md'),
-      ],
+      ...requiredFilesProbe(checkoutPath, [
+        'contracts/action_catalog.json',
+        'contracts/domain_handler_registry.json',
+        'contracts/pack_compiler_input.json',
+        'agent/stages/manifest.json',
+        'agent/primary_skill/SKILL.md',
+      ]),
     };
     assert.deepEqual(mas?.bootstrap_command?.(checkoutPath), expectedProbe);
     assert.deepEqual(mas?.health_check_command?.(checkoutPath), expectedProbe);
@@ -92,7 +138,7 @@ test('MAS runtime preparation probes its declarative carrier without a private e
   }
 });
 
-test('RCA runtime preparation uses only its repo-owned healthcheck and exposes no private exec entry', () => {
+test('RCA mutable checkout health uses its repo script while package/runtime probes use pack structure', () => {
   const checkoutPath = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-rca-runtime-spec-'));
   const scriptsPath = path.join(checkoutPath, 'scripts');
   const healthcheckPath = path.join(scriptsPath, 'opl-module-healthcheck.sh');
@@ -104,12 +150,217 @@ test('RCA runtime preparation uses only its repo-owned healthcheck and exposes n
       command: 'bash',
       args: [healthcheckPath],
     };
+    const expectedPackProbe = requiredFilesProbe(checkoutPath, [
+      'contracts/action_catalog.json',
+      'contracts/domain_descriptor.json',
+      'contracts/pack_compiler_input.json',
+      'agent/stages/manifest.json',
+      'agent/primary_skill/SKILL.md',
+    ]);
     assert.deepEqual(rca?.health_check_command?.(checkoutPath), expectedHealthcheck);
-    assert.deepEqual(rca?.package_health_check_command?.(checkoutPath), expectedHealthcheck);
-    assert.deepEqual(rca?.runtime_probe_command?.(checkoutPath), expectedHealthcheck);
+    assert.deepEqual(rca?.package_health_check_command?.(checkoutPath), expectedPackProbe);
+    assert.deepEqual(rca?.runtime_probe_command?.(checkoutPath), expectedPackProbe);
     assert.equal(rca?.exec_command, undefined);
   } finally {
     fs.rmSync(checkoutPath, { recursive: true, force: true });
+  }
+});
+
+test('immutable snapshot probes cover every runtime-bearing first-party package without build environments', () => {
+  const checkoutPath = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-immutable-pack-probes-'));
+  const standardAgentPaths = [
+    'contracts/action_catalog.json',
+    'contracts/domain_descriptor.json',
+    'contracts/pack_compiler_input.json',
+    'agent/stages/manifest.json',
+    'agent/primary_skill/SKILL.md',
+  ];
+  const matrix = [
+    {
+      packageId: 'mas',
+      moduleId: 'medautoscience',
+      probeKinds: ['runtime'] as const,
+      paths: [
+        'contracts/action_catalog.json',
+        'contracts/domain_handler_registry.json',
+        'contracts/pack_compiler_input.json',
+        'agent/stages/manifest.json',
+        'agent/primary_skill/SKILL.md',
+      ],
+    },
+    { packageId: 'mag', moduleId: 'medautogrant', probeKinds: ['package', 'runtime'] as const, paths: standardAgentPaths },
+    { packageId: 'rca', moduleId: 'redcube', probeKinds: ['package', 'runtime'] as const, paths: standardAgentPaths },
+    {
+      packageId: 'oma',
+      moduleId: 'oplmetaagent',
+      probeKinds: ['package', 'runtime'] as const,
+      paths: [
+        'contracts/action_catalog.json',
+        'contracts/domain_descriptor.json',
+        'contracts/foundry_provider.json',
+        'contracts/pack_compiler_input.json',
+        'agent/stages/manifest.json',
+        'agent/primary_skill/SKILL.md',
+      ],
+    },
+    {
+      packageId: 'obf',
+      moduleId: 'oplbookforge',
+      probeKinds: ['package', 'runtime'] as const,
+      paths: ['contracts/domain_descriptor.json', 'agent/primary_skill/SKILL.md'],
+    },
+  ];
+
+  try {
+    for (const relativePath of new Set(matrix.flatMap((entry) => entry.paths))) {
+      writeFixtureFile(checkoutPath, relativePath);
+    }
+    assert.equal(fs.existsSync(path.join(checkoutPath, '.git')), false);
+    assert.equal(fs.existsSync(path.join(checkoutPath, 'node_modules')), false);
+    assert.equal(fs.existsSync(path.join(checkoutPath, '.venv')), false);
+    const before = exactTreeInventory(checkoutPath);
+
+    for (const entry of matrix) {
+      const spec = DOMAIN_MODULE_SPECS.find((candidate) => candidate.module_id === entry.moduleId);
+      assert.ok(spec, `${entry.packageId} must resolve a domain module probe owner`);
+      for (const probeKind of entry.probeKinds) {
+        const probe: { command: string; args: string[] } | null | undefined = probeKind === 'package'
+          ? spec.package_health_check_command?.(checkoutPath)
+          : spec.runtime_probe_command?.(checkoutPath);
+        assert.deepEqual(probe, requiredFilesProbe(checkoutPath, entry.paths));
+        assert.ok(probe);
+        const result = runProbe(probe, checkoutPath);
+        assert.equal(result.status, 0, `${entry.packageId} ${probeKind} probe: ${result.stderr}`);
+        assert.equal(probe.args.some((argument) => /scripts\/lib\/domain-pack|\.git|node_modules|\.venv/.test(argument)), false);
+      }
+    }
+    assert.deepEqual(exactTreeInventory(checkoutPath), before);
+
+    const flow = getOplPackageSpecs().find((entry) => entry.package_id === 'opl-flow');
+    assert.equal(flow?.owner_manifest_kind, 'workflow_profile');
+    assert.equal(DOMAIN_MODULE_SPECS.some((entry) => entry.repo_name === flow?.repo_name), false);
+
+    fs.rmSync(path.join(checkoutPath, 'contracts', 'foundry_provider.json'));
+    const oma = DOMAIN_MODULE_SPECS.find((entry) => entry.module_id === 'oplmetaagent');
+    const missingProvider = oma?.runtime_probe_command?.(checkoutPath);
+    assert.ok(missingProvider);
+    assert.notEqual(runProbe(missingProvider, checkoutPath).status, 0);
+  } finally {
+    fs.rmSync(checkoutPath, { recursive: true, force: true });
+  }
+});
+
+test('developer package snapshots cover Agent and Flow owners while excluding local environments', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-developer-package-source-matrix-'));
+  const packageIds = ['mas', 'mag', 'rca', 'oma', 'obf', 'opl-flow'] as const;
+
+  try {
+    for (const packageId of packageIds) {
+      const spec = getOplPackageSpecs().find((entry) => entry.package_id === packageId);
+      assert.ok(spec);
+      const checkoutPath = path.join(fixtureRoot, spec.repo_name);
+      const frameworkManifest = JSON.parse(fs.readFileSync(
+        path.join(repoRoot, spec.package_manifest_ref),
+        'utf8',
+      )) as Record<string, any>;
+      const pluginId = frameworkManifest.codex_surface.plugin_id as string;
+      const requiredSkillIds = frameworkManifest.codex_surface.required_skill_ids as string[];
+      const ownerManifestPath = path.join(checkoutPath, spec.owner_package_manifest_ref);
+      const ownerPayload = packageId === 'oma'
+        ? {
+            surface_kind: 'opl_agent_package_manifest.v1',
+            agent_id: 'oma',
+            package_id: 'oma',
+            domain_id: 'agent_engineering',
+            carrier_slug: 'opl-meta-agent',
+            display_name: 'OPL Meta Agent',
+            publisher: 'one-person-lab',
+            version: '0.4.0',
+            source: 'first_party_repo_local',
+            provider_manifest_ref: 'contracts/foundry_provider.json',
+            codex_surface: {
+              plugin_id: 'opl-meta-agent',
+              standalone_distribution: 'generated_carrier_surface',
+              required_skill_ids: ['opl-meta-agent'],
+              user_install_action_count: 1,
+            },
+            capability_dependencies: [],
+          }
+        : packageId === 'opl-flow'
+          ? {
+              schema: 'opl_flow_workflow_policy.v1',
+              package: {
+                id: 'opl-flow',
+                version: frameworkManifest.version,
+                owner: 'opl-flow',
+                kind: 'workflow_profile',
+              },
+            }
+          : frameworkManifest;
+
+      writeFixtureFile(checkoutPath, spec.owner_package_manifest_ref, `${JSON.stringify(ownerPayload, null, 2)}\n`);
+      writeFixtureFile(
+        checkoutPath,
+        spec.owner_plugin_manifest_ref,
+        `${JSON.stringify({ name: pluginId, version: frameworkManifest.version, skills: './skills/' }, null, 2)}\n`,
+      );
+      const pluginManifestPath = path.join(checkoutPath, spec.owner_plugin_manifest_ref);
+      const pluginRoot = path.dirname(path.dirname(pluginManifestPath));
+      for (const skillId of requiredSkillIds) {
+        writeFixtureFile(pluginRoot, path.join('skills', skillId, 'SKILL.md'), `# ${skillId}\n`);
+        for (const ignoredName of ['.git', '.venv', 'node_modules']) {
+          writeFixtureFile(pluginRoot, path.join('skills', skillId, ignoredName, 'ignored.txt'), 'ignored\n');
+        }
+      }
+
+      if (packageId === 'opl-flow') {
+        const declaredPaths = [
+          frameworkManifest.profile_surface.runtime_profile.source_path,
+          ...frameworkManifest.profile_surface.authoring_sources.map((entry: any) => entry.source_path),
+          ...frameworkManifest.profile_surface.merge_context_paths,
+          frameworkManifest.managed_policy_surface.source_path,
+          frameworkManifest.managed_policy_surface.schema_path,
+        ] as string[];
+        for (const relativePath of new Set(declaredPaths)) {
+          if (path.resolve(checkoutPath, relativePath) !== path.resolve(ownerManifestPath)) {
+            writeFixtureFile(checkoutPath, relativePath);
+          }
+        }
+      }
+
+      const loaded = loadDeveloperCheckoutPackageSource(packageId, checkoutPath);
+      assert.equal(loaded.ownerManifest.package_id, packageId);
+      assert.equal(loaded.ownerManifest.version, packageId === 'oma' ? '0.4.0' : frameworkManifest.version);
+      for (const ignoredName of ['.git', '.venv', 'node_modules']) {
+        assert.equal(
+          loaded.source.copy_paths.some((relativePath) => relativePath.split('/').includes(ignoredName)),
+          false,
+        );
+      }
+      assert.deepEqual(
+        Object.keys(loaded.source.copy_file_modes).sort(),
+        loaded.source.copy_paths,
+      );
+      assert.equal(
+        Object.values(loaded.source.copy_file_modes).every((mode) =>
+          mode === '100644' || mode === '100755'),
+        true,
+      );
+      if (packageId === 'opl-flow') {
+        for (const relativePath of [
+          'contracts/workflow-policy.json',
+          'contracts/workflow-policy.schema.json',
+          'templates/AGENTS.md',
+          'templates/TASTE.md',
+          'profile/manifest.json',
+          'profile/modules/01-user-preferences.md',
+        ]) {
+          assert.equal(loaded.source.copy_paths.includes(relativePath), true, relativePath);
+        }
+      }
+    }
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
 

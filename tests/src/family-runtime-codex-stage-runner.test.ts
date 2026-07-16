@@ -7,6 +7,7 @@ import path from 'node:path';
 import './family-runtime-codex-stage-runner-cases/terminal-closeout-capture.ts';
 import './family-runtime-codex-stage-runner-cases/telemetry.ts';
 import './family-runtime-codex-stage-runner-cases/protocol-closeout-resume.ts';
+import './family-runtime-codex-stage-runner-cases/sandbox-fail-fast.ts';
 
 import { createFakeCodexFixture } from './cli/helpers.ts';
 import { runPublicCodexStageRunner } from './family-runtime-codex-stage-runner-helpers.ts';

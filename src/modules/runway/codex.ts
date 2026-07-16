@@ -99,6 +99,8 @@ export interface CodexExecOptions {
   enableImageGeneration?: boolean;
   promptViaStdin?: boolean;
   sandboxMode?: 'read-only' | 'workspace-write' | 'danger-full-access';
+  packageSkillBindings?: Array<{ name: string; path: string }>;
+  shellHome?: string;
 }
 
 export interface ParsedCodexExecOutput {
@@ -180,6 +182,25 @@ function quoteTomlString(value: string) {
   return JSON.stringify(value);
 }
 
+function appendPackageSkillConfig(
+  args: string[],
+  bindings: CodexExecOptions['packageSkillBindings'],
+) {
+  if (!bindings || bindings.length === 0) return;
+  const entries = [...bindings]
+    .sort((left, right) => left.name.localeCompare(right.name) || left.path.localeCompare(right.path))
+    .flatMap((binding) => [
+      `{name=${quoteTomlString(binding.name)},enabled=false}`,
+      `{path=${quoteTomlString(binding.path)},enabled=true}`,
+    ]);
+  args.push('--config', `skills.config=[${entries.join(',')}]`);
+}
+
+function appendShellHomeConfig(args: string[], shellHome: string | undefined) {
+  if (!shellHome) return;
+  args.push('--config', `shell_environment_policy.set.HOME=${quoteTomlString(shellHome)}`);
+}
+
 function spawnEnvWithOverlay(overlay?: NodeJS.ProcessEnv | Record<string, string | undefined>) {
   if (!overlay) {
     return process.env;
@@ -233,6 +254,9 @@ export function buildCodexExecArgs(
     args.push('--config', `sandbox_mode=${quoteTomlString(options.sandboxMode)}`);
   }
 
+  appendPackageSkillConfig(args, options.packageSkillBindings);
+  appendShellHomeConfig(args, options.shellHome);
+
 
   if (options.outputLastMessagePath) {
     args.push('--output-last-message', options.outputLastMessagePath);
@@ -268,6 +292,9 @@ export function buildCodexExecResumeArgs(
   if (options.sandboxMode) {
     args.push('--config', `sandbox_mode=${quoteTomlString(options.sandboxMode)}`);
   }
+
+  appendPackageSkillConfig(args, options.packageSkillBindings);
+  appendShellHomeConfig(args, options.shellHome);
 
 
   if (options.outputLastMessagePath) {

@@ -13,6 +13,7 @@ import {
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import type {
   TemporalStageAttemptOperatorUpdateReceipt,
+  StageAttemptExecutionContentBinding,
   TemporalStageAttemptSignalPayload,
   TemporalStageAttemptWorkflowInput,
   TemporalStageAttemptWorkflowState,
@@ -163,6 +164,50 @@ function asRecord(value: unknown) {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
     ? value as Record<string, unknown>
     : {};
+}
+
+function executionPolicyForAttempt(input: TemporalStageAttemptWorkflowInput) {
+  const binding = input.execution_content_binding;
+  if (!binding) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Stage quality controller requires the materialized Attempt execution content binding.',
+      {
+        failure_code: 'stage_attempt_execution_content_binding_missing',
+        stage_attempt_id: input.stage_attempt_id,
+      },
+    );
+  }
+  const policy = asRecord(binding.spec.quality_policy.body);
+  const formalReview = asRecord(policy.formal_review);
+  const required = formalReview.required;
+  const maxRepairRounds = formalReview.max_repair_rounds;
+  if (
+    typeof required !== 'boolean'
+    || !Number.isInteger(maxRepairRounds)
+    || (maxRepairRounds as number) < 0
+    || (maxRepairRounds as number) > 3
+    || !Array.isArray(binding.spec.quality_rubric_refs)
+    || binding.spec.quality_rubric_refs.length === 0
+    || !Array.isArray(binding.declared_stage_ids)
+    || !binding.declared_stage_ids.includes(input.stage_id)
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Stage quality controller received an invalid Attempt execution policy binding.',
+      {
+        failure_code: 'stage_attempt_execution_policy_invalid',
+        stage_attempt_id: input.stage_attempt_id,
+      },
+    );
+  }
+  return {
+    binding: binding as StageAttemptExecutionContentBinding,
+    formalReviewRequired: required,
+    maxRepairRounds: maxRepairRounds as number,
+    rubricRefs: binding.spec.quality_rubric_refs,
+    declaredStageIds: binding.declared_stage_ids,
+  };
 }
 
 function upsertStageAttemptVisibility(input: {
@@ -885,6 +930,7 @@ export async function StageRunWorkflow(
   } as TemporalStageRunWorkflowState;
   setHandler(stageRunQuery, () => state);
   const observedSessions = new Set<string>();
+  let decisiveExecutionContentBinding: StageAttemptExecutionContentBinding | null = null;
 
   const terminalize = async (nextState: TemporalStageRunWorkflowState) => {
     const routeDecisionRequired = nextState.status === 'completed'
@@ -902,10 +948,12 @@ export async function StageRunWorkflow(
       routeDecisionRequired
       && state.selected_stage_route
       && state.decisive_attempt_ref
+      && decisiveExecutionContentBinding
     ) {
       const nextStageRunLaunch = await stageRunRouteLaunchActivity({
         parent_stage_run: input,
         decisive_attempt_ref: state.decisive_attempt_ref,
+        decisive_execution_content_binding: decisiveExecutionContentBinding,
         decision: state.selected_stage_route,
         artifact_refs: state.artifact_refs,
         artifact_hashes: state.artifact_hashes,
@@ -976,6 +1024,12 @@ export async function StageRunWorkflow(
       route_recommendations: state.route_recommendations,
     });
     const childInput = materialized.workflow_input;
+    const executionPolicy = executionPolicyForAttempt(childInput);
+    state = {
+      ...state,
+      max_repair_rounds: executionPolicy.maxRepairRounds,
+      updated_at: nowIso(),
+    };
     const result = await executeChild(StageAttemptWorkflow, {
       args: [childInput],
       workflowId: childInput.workflow_id,
@@ -1082,7 +1136,7 @@ export async function StageRunWorkflow(
       const recoverableAttemptCanContinue = hasConsumableArtifact(state)
         && !runtimeHardStop
         && (
-          (attemptInput.role === 'producer' && input.quality_policy.formal_review.required)
+          (attemptInput.role === 'producer' && executionPolicy.formalReviewRequired)
           || attemptInput.role === 'repairer'
         );
       state = recoverableAttemptCanContinue
@@ -1125,6 +1179,7 @@ export async function StageRunWorkflow(
       attemptRef: materialized.attempt_ref,
       executionSessionRef,
       routeEvaluation,
+      executionPolicy,
       reviewedArtifactRefs: attemptInput.artifactRefs,
       reviewedArtifactHashes: attemptInput.artifactHashes,
       artifactIdentity,
@@ -1133,6 +1188,7 @@ export async function StageRunWorkflow(
 
   const commitTerminalRouteDecision = (attempt: Awaited<ReturnType<typeof runAttempt>>) => {
     if (!attempt.routeEvaluation.decision) return;
+    decisiveExecutionContentBinding = attempt.executionPolicy.binding;
     state = {
       ...state,
       decisive_attempt_role: attempt.attemptRole,
@@ -1194,12 +1250,12 @@ export async function StageRunWorkflow(
     parentAttemptRef = producer.attemptRef;
     currentArtifactProducerAttemptRef = producer.attemptRef;
     if (stageRunStopped(state)) {
-      if (!input.quality_policy.formal_review.required && state.status === 'completed_with_quality_debt') {
+      if (!producer.executionPolicy.formalReviewRequired && state.status === 'completed_with_quality_debt') {
         commitTerminalRouteDecision(producer);
       }
       return terminalize(state);
     }
-    if (!input.quality_policy.formal_review.required) {
+    if (!producer.executionPolicy.formalReviewRequired) {
       commitTerminalRouteDecision(producer);
       return terminalize({ ...state, status: 'completed', current_role: null, updated_at: nowIso() });
     }
@@ -1228,7 +1284,7 @@ export async function StageRunWorkflow(
       const hardStopReceipt = await stageQualityReviewReceiptActivity({
         producer_attempt_ref: producer.attemptRef,
         reviewer_attempt_ref: review.attemptRef,
-        rubric_refs: input.quality_rubric_refs,
+        rubric_refs: review.executionPolicy.rubricRefs,
         verdict: stageReviewVerdictForOutcome(initialOutcome),
       });
       state = { ...state, review_receipts: [...state.review_receipts, hardStopReceipt] };
@@ -1241,7 +1297,7 @@ export async function StageRunWorkflow(
     const initialReviewReceipt = await stageQualityReviewReceiptActivity({
       producer_attempt_ref: producer.attemptRef,
       reviewer_attempt_ref: review.attemptRef,
-      rubric_refs: input.quality_rubric_refs,
+      rubric_refs: review.executionPolicy.rubricRefs,
       verdict: stageReviewVerdictForOutcome(initialOutcome),
     });
     state = { ...state, findings, review_receipts: [...state.review_receipts, initialReviewReceipt] };
@@ -1342,7 +1398,7 @@ export async function StageRunWorkflow(
         const hardStopReceipt = await stageQualityReviewReceiptActivity({
           producer_attempt_ref: repair.attemptRef,
           reviewer_attempt_ref: reReview.attemptRef,
-          rubric_refs: input.quality_rubric_refs,
+          rubric_refs: reReview.executionPolicy.rubricRefs,
           verdict: stageReviewVerdictForOutcome(reReviewOutcome),
         });
         state = { ...state, review_receipts: [...state.review_receipts, hardStopReceipt] };
@@ -1362,12 +1418,12 @@ export async function StageRunWorkflow(
       const budgetDisposition = classifyStageQualityReReviewBudget({
         closure,
         qualityRoundIndex: round,
-        maxRepairRounds: state.max_repair_rounds,
+        maxRepairRounds: reReview.executionPolicy.maxRepairRounds,
       });
       const reReviewReceipt = await stageQualityReviewReceiptActivity({
         producer_attempt_ref: repair.attemptRef,
         reviewer_attempt_ref: reReview.attemptRef,
-        rubric_refs: input.quality_rubric_refs,
+        rubric_refs: reReview.executionPolicy.rubricRefs,
         verdict: stageReviewVerdictForOutcome(reReviewOutcome),
       });
       state = {

@@ -7,3 +7,4 @@ import './packages-cases/first-party-catalog.test.ts';
 import './packages-cases/dependency-closure.test.ts';
 import './packages-cases/workflow-policy-transaction.test.ts';
 import './packages-cases/managed-runtime-source-transaction.test.ts';
+import './packages-cases/package-lifecycle-writer-lock.test.ts';

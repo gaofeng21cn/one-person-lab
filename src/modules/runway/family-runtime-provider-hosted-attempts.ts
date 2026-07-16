@@ -912,10 +912,22 @@ export async function ensureProviderHostedStageAttempt(
   if (!stageId) {
     return null;
   }
+  const createNewAttempt = options.newAttempt === true || forceNewAttemptAfterTransportOnlyAdmission;
+  const packageUseAttemptOrdinal = createNewAttempt
+    ? existingAttempts.filter((attempt) => (
+        attempt.provider_kind === providerKind
+        && attempt.source_fingerprint === expectedSourceFingerprint
+      )).length + 1
+    : 1;
   const packageReadiness = await ensureFamilyRuntimePackageLaunchReady({
     domainId: row.domain_id,
     workspaceLocator,
-    useBoundaryId: stableId('package-use', [row.task_id, expectedSourceFingerprint]),
+    useBoundaryId: stableId('package-use', [
+      row.task_id,
+      expectedSourceFingerprint,
+      'attempt_ordinal',
+      packageUseAttemptOrdinal,
+    ]),
   });
   const useBoundWorkspaceLocator = packageReadiness?.package_use_binding
     ? { ...workspaceLocator, package_use_binding: packageReadiness.package_use_binding }
@@ -948,12 +960,9 @@ export async function ensureProviderHostedStageAttempt(
     sourceFingerprint: expectedSourceFingerprint,
     executorKind: isDefaultExecutorDispatchTask(row, payload) ? 'codex_cli' : 'domain_handler',
     taskId: row.task_id,
-    newAttempt: options.newAttempt === true || forceNewAttemptAfterTransportOnlyAdmission,
+    newAttempt: createNewAttempt,
     checkpointRefs: isDefaultExecutorDispatchTask(row, payload)
       ? defaultExecutorStageCheckpointRefs(payload)
-      : undefined,
-    blockedReason: checkoutCurrentnessPreflight?.status === 'blocked'
-      ? checkoutCurrentnessPreflight.reason ?? 'checkout_currentness_blocked'
       : undefined,
     launchContextObservation: stageLaunchContextObservation,
   });
@@ -962,8 +971,6 @@ export async function ensureProviderHostedStageAttempt(
     domainId: row.domain_id,
     eventType: result.idempotent_noop
       ? 'stage_attempt_idempotent_noop'
-      : checkoutCurrentnessPreflight?.status === 'blocked'
-        ? 'stage_attempt_blocked_by_checkout_currentness'
       : 'stage_attempt_created_for_provider_hosted_task',
     source: options.eventSource ?? 'opl-family-runtime',
     payload: {
@@ -971,7 +978,7 @@ export async function ensureProviderHostedStageAttempt(
       stage_id: stageId,
       provider_kind: result.attempt.provider_kind,
       task_kind: row.task_kind,
-      new_attempt: options.newAttempt === true || forceNewAttemptAfterTransportOnlyAdmission,
+      new_attempt: createNewAttempt,
       new_attempt_reason: forceNewAttemptAfterTransportOnlyAdmission
         ? DEFAULT_EXECUTOR_TRANSPORT_ONLY_CHECKPOINT_SUPERSEDED_REASON
         : null,

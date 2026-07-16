@@ -22,7 +22,6 @@ import { getOplPackageSpecs } from '../../../../../src/modules/connect/package-d
 import { normalizeRegistry } from '../../../../../src/modules/connect/agent-package-registry-parts/manifest-normalizers.ts';
 import { fetchAndValidateRegistry } from '../../../../../src/modules/connect/agent-package-registry-parts/selection.ts';
 import { listOplAgentPackages } from '../../../../../src/modules/connect/agent-package-registry.ts';
-import { agentPackageActivationPayload } from '../../../../../src/modules/console/app-state-parts/action-execute-payloads.ts';
 
 const CANONICAL_PACKAGE_ROLES = new Set([
   'standard_agent',
@@ -871,8 +870,19 @@ test('scope-less list and App workspace context project different activation sta
     const scopeLess = listOplAgentPackages({ detail: 'fast', readStatus: statusReader as any })
       .opl_agent_packages.directory.entries.find((entry) => entry.package_id === lock.package_id)!;
     assert.equal(scopeLess.activated, false);
-    assert.equal(scopeLess.readiness.status, 'activation_required');
-    assert.equal(scopeLess.recommended_action, 'agent_package_activate');
+    assert.equal(scopeLess.readiness.status, 'ready');
+    assert.equal(scopeLess.readiness.operational_ready, true);
+    assert.equal(scopeLess.readiness.launch_allowed, true);
+    assert.equal(scopeLess.readiness.reason, 'use_boundary_reconciliation_ready');
+    assert.equal(scopeLess.recommended_action, null);
+    const scopeLessActivation = scopeLess.available_actions.find(
+      (action) => action.action_id === 'agent_package_activate'
+    )!;
+    assert.deepEqual(scopeLessActivation.payload, {
+      package_id: lock.package_id,
+      scope: 'workspace',
+    });
+    assert.deepEqual(scopeLessActivation.required_payload_fields, ['package_id', 'target_workspace']);
     assertRecommendedActionMatchesAvailable(scopeLess);
 
     const missingWorkspace = listOplAgentPackages({
@@ -880,18 +890,13 @@ test('scope-less list and App workspace context project different activation sta
       readStatus: statusReader as any,
       statusContext: () => ({}),
     }).opl_agent_packages.directory.entries.find((entry) => entry.package_id === lock.package_id)!;
-    const targetlessActivation = missingWorkspace.available_actions.find(
-      (action) => action.action_id === 'agent_package_activate',
-    )!;
-    assert.deepEqual(targetlessActivation.payload, { package_id: lock.package_id });
-    assert.deepEqual(Object.keys(targetlessActivation).sort(), [
-      'action_id',
-      'action_ref',
-      'confirmation_required',
-      'payload',
-      'required_payload_fields',
-    ]);
-    assert.equal(missingWorkspace.recommended_action, 'agent_package_activate');
+    assert.equal(missingWorkspace.readiness.status, 'ready');
+    assert.equal(missingWorkspace.readiness.reason, 'use_boundary_reconciliation_ready');
+    assert.equal(missingWorkspace.recommended_action, null);
+    assert.deepEqual(
+      missingWorkspace.available_actions.find((action) => action.action_id === 'agent_package_activate')?.payload,
+      { package_id: lock.package_id, scope: 'workspace' },
+    );
     assertRecommendedActionMatchesAvailable(missingWorkspace);
 
     const appWorkspace = listOplAgentPackages({
@@ -904,7 +909,10 @@ test('scope-less list and App workspace context project different activation sta
     assert.equal(appWorkspace.readiness.verification_deferred, true);
     assert.equal(appWorkspace.readiness.reason, 'live_verification_deferred');
     assert.equal(appWorkspace.recommended_action, null);
-    assert.equal(appWorkspace.available_actions.some((action) => action.action_id === 'agent_package_activate'), false);
+    assert.deepEqual(
+      appWorkspace.available_actions.find((action) => action.action_id === 'agent_package_activate')?.payload,
+      { package_id: lock.package_id, scope: 'workspace', target_workspace: workspace },
+    );
     assertRecommendedActionMatchesAvailable(appWorkspace);
   } finally {
     if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
@@ -949,7 +957,7 @@ test('installed-only directory entries retain persisted role and consume canonic
   assert.equal(ready.readiness.reason, 'live_verification_deferred');
   assert.equal(ready.recommended_action, null);
   assert.equal(ready.recommended_action_ref, null);
-  assert.equal(ready.available_actions.some((action) => action.action_id === 'agent_package_activate'), false);
+  assert.equal(ready.available_actions.some((action) => action.action_id === 'agent_package_activate'), true);
   assertRecommendedActionMatchesAvailable(ready);
 
   const fullyVerified = buildAgentPackageDirectory({
@@ -969,6 +977,9 @@ test('installed-only directory entries retain persisted role and consume canonic
   assert.equal(fullyVerified.readiness.status, 'ready');
   assert.equal(fullyVerified.readiness.verification_deferred, false);
   assert.equal(fullyVerified.readiness.reason, null);
+  assert.equal(fullyVerified.available_actions.some(
+    (action) => action.action_id === 'agent_package_activate'
+  ), true);
 
   const developerCheckout = buildAgentPackageDirectory({
     registryCache: null,
@@ -990,7 +1001,7 @@ test('installed-only directory entries retain persisted role and consume canonic
   assert.equal(developerCheckout.recommended_action, null);
   assert.deepEqual(
     developerCheckout.available_actions.map((action) => action.action_id),
-    ['agent_package_repair', 'agent_package_preferences_set', 'agent_package_uninstall'],
+    ['agent_package_activate', 'agent_package_repair', 'agent_package_preferences_set', 'agent_package_uninstall'],
   );
 
   const needsActivation = buildAgentPackageDirectory({
@@ -1008,19 +1019,20 @@ test('installed-only directory entries retain persisted role and consume canonic
     actionContext: () => ({ scope: 'workspace', targetWorkspace: '/tmp/opl-workspace' }),
   }).entries.find((entry) => entry.package_id === lock.package_id)!;
   assert.equal(needsActivation.activated, false);
-  assert.equal(needsActivation.readiness.status, 'activation_required');
-  assert.equal(needsActivation.recommended_action, 'agent_package_activate');
+  assert.equal(needsActivation.readiness.status, 'ready');
+  assert.equal(needsActivation.readiness.operational_ready, true);
+  assert.equal(needsActivation.readiness.launch_allowed, true);
+  assert.equal(needsActivation.readiness.reason, 'use_boundary_reconciliation_ready');
+  assert.equal(needsActivation.recommended_action, null);
+  assert.equal(needsActivation.recommended_action_ref, null);
   assert.deepEqual(
-    needsActivation.recommended_action_ref,
-    needsActivation.available_actions.find((action) => action.action_id === 'agent_package_activate'),
+    needsActivation.available_actions.find((action) => action.action_id === 'agent_package_activate')?.payload,
+    {
+      package_id: lock.package_id,
+      scope: 'workspace',
+      target_workspace: '/tmp/opl-workspace',
+    },
   );
-  assert.deepEqual(agentPackageActivationPayload(needsActivation.recommended_action_ref!.payload), {
-    packageId: lock.package_id,
-    scope: 'workspace',
-    targetWorkspace: '/tmp/opl-workspace',
-    targetQuest: undefined,
-    useBoundaryId: null,
-  });
   assertRecommendedActionMatchesAvailable(needsActivation);
 
   const disabled = buildAgentPackageDirectory({
@@ -1037,6 +1049,8 @@ test('installed-only directory entries retain persisted role and consume canonic
     }),
   }).entries.find((entry) => entry.package_id === lock.package_id)!;
   assert.equal(disabled.activated, false);
+  assert.equal(disabled.readiness.status, 'attention_needed');
+  assert.equal(disabled.readiness.reason, 'package_disabled');
   assert.equal(disabled.recommended_action, null);
   assert.equal(disabled.available_actions.some((action) => action.action_id === 'agent_package_activate'), false);
   assert.equal(disabled.available_actions.some((action) => action.action_id === 'agent_package_preferences_set'), true);
@@ -1091,7 +1105,7 @@ test('installed-only directory entries retain persisted role and consume canonic
   assert.equal(failedStatus.recommended_action, 'agent_package_repair');
   assert.deepEqual(
     failedStatus.available_actions.map((action) => action.action_id),
-    ['agent_package_repair'],
+    ['agent_package_activate', 'agent_package_repair'],
   );
   assertRecommendedActionMatchesAvailable(failedStatus);
 });

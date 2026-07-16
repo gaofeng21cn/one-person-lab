@@ -71,13 +71,14 @@ export function buildPackBoundTemporalStageRunInput(input: {
     workspace_locator: {
       ...input.workspaceLocator,
       domain_pack_root: input.domainPackRoot,
-      ...(input.checkoutCurrentnessAdmission && input.checkoutCurrentnessAdmission.status !== 'blocked'
+      ...(input.checkoutCurrentnessAdmission
         ? {
             stage_run_currentness_admission: {
               ...input.checkoutCurrentnessAdmission,
               surface_kind: 'opl_stage_run_currentness_admission',
               stage_run_id: stageRunId,
-              child_attempts_inherit_admission: true,
+              checkout_currentness_is_provenance_only: true,
+              child_attempts_refresh_package_use: true,
               mutable_artifact_changes_do_not_invalidate_admitted_source_snapshot: true,
             },
           }

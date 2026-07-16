@@ -9,6 +9,7 @@ import {
   type SettingsControlCenterGroup,
 } from './catalog.ts';
 import {
+  agentPackageFunctionalReadiness,
   asList,
   asRecord,
   asString,
@@ -60,27 +61,41 @@ function runtimeSourceCarrierRef(entry: JsonRecord) {
 
 export function buildCapabilityTaskAwarenessRefs(input: BuildSettingsControlCenterInput) {
   const moduleItems = asList(input.modules.items);
+  const packageReadiness = agentPackageFunctionalReadiness(input.agentPackages);
   const temporal = asRecord(asRecord(input.provider).temporal);
   const temporalStatus = asString(temporal.health_status) ?? asString(temporal.status) ?? 'unknown';
   return {
     surface_kind: 'opl_settings_capability_task_awareness_refs.v1',
     source_refs: [
+      'app_state.agent_packages.status_index',
       'app_state.runtime_source_carriers.items',
       'app_state.provider.temporal',
       'app_state.actions#task_action_receipt_preview',
       'app_state.actions#task_export_bundle_preview',
       'app_state.operator.workbench.task_drilldowns[].workflow_refs',
     ],
-    capability_health_refs: moduleItems.map((entry) => {
+    capability_health_refs: packageReadiness.entries
+      .filter((entry) => entry.installed)
+      .map((entry) => ({
+        id: entry.package_id,
+        title: entry.package_id,
+        status: entry.enabled
+          ? entry.runnable ? 'ready' : 'attention_needed'
+          : 'disabled',
+        ref: entry.source_ref,
+        owner: 'one-person-lab',
+        next_action: entry.enabled && !entry.runnable ? 'agent_package_repair' : 'none',
+      })),
+    runtime_source_provenance_refs: moduleItems.map((entry) => {
       const packageId = asString(entry.package_id) ?? 'unknown';
-      const status = asString(entry.source_health_status) ?? 'unknown';
       return {
         id: packageId,
         title: asString(entry.label) ?? packageId,
-        status,
+        status: 'provenance_observation',
+        observed_source_health_status: asString(entry.source_health_status) ?? 'unknown',
         ref: runtimeSourceCarrierRef(entry),
         owner: 'one-person-lab',
-        next_action: status === 'ready' ? 'none' : 'settings_sync_capabilities',
+        next_action: 'none',
       };
     }),
     connector_readiness_refs: [
@@ -95,10 +110,10 @@ export function buildCapabilityTaskAwarenessRefs(input: BuildSettingsControlCent
       {
         id: 'codex_surface',
         title: 'Codex-visible capability surface',
-        status: 'refs_available',
-        ref: 'app_state.actions#agent_package_activate',
+        status: 'automatic_at_use_boundary',
+        ref: 'app_state.agent_packages.status_index',
         owner: 'one-person-lab',
-        next_action: 'agent_package_activate',
+        next_action: 'none',
       },
     ],
     workflow_refs: [
@@ -124,10 +139,6 @@ export function buildCapabilityTaskAwarenessRefs(input: BuildSettingsControlCent
 function actionState(action: SettingsAction, input: BuildSettingsControlCenterInput) {
   if (action.action_id === 'settings_repair_model_access') return resolveSettingsCodexAccess(input.core).model_access_status;
   if (action.action_id === 'settings_configure_webui_api_key') return resolveSettingsCodexAccess(input.core).opl_gateway_status;
-  if (action.action_id === 'settings_sync_capabilities' || action.action_id === 'settings_apply_opl_packages') {
-    const summary = asRecord(asRecord(input.modules).summary);
-    return summary.healthy_default_carriers_count === summary.default_carriers_count ? 'ready' : 'attention_needed';
-  }
   if (action.action_id === 'settings_prune_runtime_roots_dry_run') return 'plan_only';
   if (action.action_id === 'settings_open_docker_webui' || action.action_id === 'settings_diagnose_docker_webui') return 'ready';
   if (action.action_id === 'settings_rollback_runtime_substrate') return 'manual_required';
@@ -135,6 +146,10 @@ function actionState(action: SettingsAction, input: BuildSettingsControlCenterIn
 }
 
 export function sectionState(sectionId: string, input: BuildSettingsControlCenterInput) {
+  if (['capabilities', 'packages', 'codex_surface'].includes(sectionId)
+    && agentPackageFunctionalReadiness(input.agentPackages).status === 'attention_needed') {
+    return 'attention_needed';
+  }
   const relatedActions = SETTINGS_CONTROL_CENTER_ACTIONS.filter((action) => action.section_id === sectionId);
   if (relatedActions.some((action) => actionState(action, input) === 'attention_needed')) return 'attention_needed';
   return SETTINGS_CONTROL_CENTER_ACTION_SECTIONS.find((section) => section.section_id === sectionId)?.state ?? 'available';

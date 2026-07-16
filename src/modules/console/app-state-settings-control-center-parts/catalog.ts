@@ -197,14 +197,14 @@ export const APP_AION_CONSUMER_ONLY_TRUTH_SURFACES: ConsumerOnlyTruthSurface[] =
   {
     surface: 'managed_module_and_capability_packages',
     owner: 'one-person-lab',
-    truth_owner: 'one-person-lab Pack/Connect package channel and managed update receipt projection',
-    app_aion_role: 'show package source, owner, action, and receipt/blocker refs',
+    truth_owner: 'one-person-lab Packages status index and use-boundary current/LKG selection',
+    app_aion_role: 'show functional package readiness and package action refs while source carriers remain provenance',
     local_truth_allowed: false,
-    current_source_ref: 'app_state.runtime_source_carriers.source',
-    delegated_action_id: 'settings_sync_capabilities',
+    current_source_ref: 'app_state.agent_packages.status_index',
+    delegated_action_id: 'agent_package_repair',
     receipt_ref_or_typed_blocker_ref: null,
-    blocked_reason: 'managed_update_receipt_or_typed_blocker_required_before_package_currentness_claim',
-    package_descriptor_ref: 'app_state.runtime_source_carriers.items',
+    blocked_reason: 'repair_only_when_installed_enabled_package_has_no_runnable_current_or_last_known_good_generation',
+    package_descriptor_ref: 'app_state.agent_packages.directory',
     required_visible_refs: [
       'package_descriptor_ref',
       'receipt_ref_or_typed_blocker_ref',
@@ -410,9 +410,9 @@ export const SETTINGS_CONTROL_CENTER_ACTION_SECTIONS: SettingsSection[] = [
   {
     section_id: 'codex_surface',
     label: 'Codex surface',
-    description: 'Codex-visible skill/plugin metadata refresh routes.',
+    description: 'Codex-visible skill and plugin readiness reconciled automatically at each use boundary.',
     state: 'available',
-    source_ref: 'app_state.actions#agent_package_activate',
+    source_ref: 'app_state.agent_packages.status_index',
   },
   {
     section_id: 'docker_webui',
@@ -424,7 +424,7 @@ export const SETTINGS_CONTROL_CENTER_ACTION_SECTIONS: SettingsSection[] = [
   {
     section_id: 'updates',
     label: 'Updates',
-    description: 'App update checks, managed update projection, reload guidance, and explicit previous-version planning.',
+    description: 'App update checks, managed update projection, automatic use-boundary generation selection, and explicit previous-version planning.',
     state: 'available',
     source_ref: 'opl update status/check + app_state.release',
   },
@@ -671,7 +671,7 @@ export const SETTINGS_CONTROL_CENTER_ACTIONS: SettingsAction[] = [
     confirmation_required: false,
     danger_level: 'low',
     impact: 'Runs the unified managed update coordinator for clean OPL-managed capability package roots and derived capability exposure.',
-    follow_up_action_ids: ['provider_scheduler_status', 'agent_package_activate'],
+    follow_up_action_ids: ['provider_scheduler_status'],
     verify_action_id: 'provider_scheduler_status',
   },
   {
@@ -688,7 +688,7 @@ export const SETTINGS_CONTROL_CENTER_ACTIONS: SettingsAction[] = [
     confirmation_required: true,
     danger_level: 'medium',
     impact: 'Applies package-channel updates through the managed update coordinator; module update primitives stay behind the capability_packages adapter.',
-    follow_up_action_ids: ['agent_package_activate', 'provider_scheduler_status'],
+    follow_up_action_ids: ['provider_scheduler_status'],
     rollback_action_id: 'settings_rollback_runtime_substrate',
     verify_action_id: 'provider_scheduler_status',
   },
@@ -707,7 +707,7 @@ export const SETTINGS_CONTROL_CENTER_ACTIONS: SettingsAction[] = [
     confirmation_required: false,
     danger_level: 'none',
     impact: 'Reads the installation carrier projection through the managed update coordinator; App release truth remains App-owned and outside Framework apply.',
-    follow_up_action_ids: ['agent_package_activate'],
+    follow_up_action_ids: [],
     verify_action_id: 'settings_check_app_update',
   },
   {
@@ -741,7 +741,7 @@ export const SETTINGS_CONTROL_CENTER_ACTIONS: SettingsAction[] = [
     confirmation_required: true,
     danger_level: 'high',
     impact: 'Projects the explicit previous-runtime restore route; actual pointer restore stays behind the managed update authority.',
-    follow_up_action_ids: ['settings_check_app_update', 'agent_package_activate'],
+    follow_up_action_ids: ['settings_check_app_update'],
     verify_action_id: 'settings_check_app_update',
   },
   {
@@ -854,25 +854,11 @@ export const SETTINGS_CONTROL_CENTER_ACTION_IDS = SETTINGS_CONTROL_CENTER_ACTION
 
 export const SETTINGS_ISSUE_CATALOG = [
   {
-    status_code: 'needs_reload',
-    label: 'Reload needed',
-    user_message: 'A settings or package change needs the Codex-visible surface to be reloaded before the App can show the latest capabilities.',
-    severity: 'notice',
-    recommended_action_id: 'agent_package_activate',
-  },
-  {
     status_code: 'manual_required',
     label: 'Manual attention required',
     user_message: 'The Framework can show the safe next action, but this item needs an explicit user or owner action before OPL may mutate anything.',
     severity: 'warning',
     recommended_action_id: 'settings_verify_workspace',
-  },
-  {
-    status_code: 'dirty_checkout',
-    label: 'Dirty checkout blocks managed action',
-    user_message: 'A visible module checkout has local changes. OPL must not overwrite it from Settings.',
-    severity: 'warning',
-    recommended_action_id: 'settings_sync_capabilities',
   },
   {
     status_code: 'failed_with_repair',

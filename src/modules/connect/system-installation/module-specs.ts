@@ -1,6 +1,5 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
 
 import { getCapabilityDependenciesForModule } from '../agent-package-manifests.ts';
 import { getShellBinary } from './shared.ts';
@@ -75,18 +74,6 @@ function buildPythonCleanRunnerExecCommand(checkoutPath: string, moduleName: str
   };
 }
 
-function buildNodeImportProbe(checkoutPath: string, relativePath: string) {
-  return {
-    command: 'node',
-    args: [
-      '--experimental-strip-types',
-      '--input-type=module',
-      '-e',
-      `await import(${JSON.stringify(pathToFileURL(path.join(checkoutPath, relativePath)).href)})`,
-    ],
-  };
-}
-
 function buildRequiredFilesProbe(checkoutPath: string, relativePaths: string[]) {
   return {
     command: 'node',
@@ -109,6 +96,27 @@ function buildMasSourceCarrierProbe(checkoutPath: string) {
   return buildRequiredFilesProbe(checkoutPath, [
     path.join('contracts', 'action_catalog.json'),
     path.join('contracts', 'domain_handler_registry.json'),
+    path.join('contracts', 'pack_compiler_input.json'),
+    path.join('agent', 'stages', 'manifest.json'),
+    path.join('agent', 'primary_skill', 'SKILL.md'),
+  ]);
+}
+
+function buildStandardAgentPackProbe(checkoutPath: string) {
+  return buildRequiredFilesProbe(checkoutPath, [
+    path.join('contracts', 'action_catalog.json'),
+    path.join('contracts', 'domain_descriptor.json'),
+    path.join('contracts', 'pack_compiler_input.json'),
+    path.join('agent', 'stages', 'manifest.json'),
+    path.join('agent', 'primary_skill', 'SKILL.md'),
+  ]);
+}
+
+function buildFoundryAgentPackProbe(checkoutPath: string) {
+  return buildRequiredFilesProbe(checkoutPath, [
+    path.join('contracts', 'action_catalog.json'),
+    path.join('contracts', 'domain_descriptor.json'),
+    path.join('contracts', 'foundry_provider.json'),
     path.join('contracts', 'pack_compiler_input.json'),
     path.join('agent', 'stages', 'manifest.json'),
     path.join('agent', 'primary_skill', 'SKILL.md'),
@@ -186,6 +194,8 @@ export const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
       ?? buildPythonEditableBootstrapCommand(checkoutPath, '3.12')
     ),
     health_check_command: (checkoutPath) => buildHealthCheckCommand(checkoutPath),
+    package_health_check_command: (checkoutPath) => buildStandardAgentPackProbe(checkoutPath),
+    runtime_probe_command: (checkoutPath) => buildStandardAgentPackProbe(checkoutPath),
     exec_command: (checkoutPath, args) => buildPythonCleanRunnerExecCommand(
       checkoutPath,
       'med_autogrant.cli',
@@ -211,14 +221,8 @@ export const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
       checkoutPath,
       path.join('scripts', 'opl-module-healthcheck.sh'),
     ),
-    package_health_check_command: (checkoutPath) => resolveRepoOwnedScriptCommand(
-      checkoutPath,
-      path.join('scripts', 'opl-module-healthcheck.sh'),
-    ),
-    runtime_probe_command: (checkoutPath) => resolveRepoOwnedScriptCommand(
-      checkoutPath,
-      path.join('scripts', 'opl-module-healthcheck.sh'),
-    ),
+    package_health_check_command: (checkoutPath) => buildStandardAgentPackProbe(checkoutPath),
+    runtime_probe_command: (checkoutPath) => buildStandardAgentPackProbe(checkoutPath),
     skill_sync_domain: 'redcube',
   },
   {
@@ -234,10 +238,8 @@ export const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
       ?? { command: 'npm', args: ['install'] }
     ),
     health_check_command: (checkoutPath) => buildHealthCheckCommand(checkoutPath, 'smoke'),
-    package_health_check_command: (checkoutPath) => buildNodeImportProbe(
-      checkoutPath,
-      path.join('scripts', 'lib', 'domain-pack.ts'),
-    ),
+    package_health_check_command: (checkoutPath) => buildFoundryAgentPackProbe(checkoutPath),
+    runtime_probe_command: (checkoutPath) => buildFoundryAgentPackProbe(checkoutPath),
     exec_command: (_checkoutPath, args) => ({
       command: 'npm',
       args: ['test', '--', ...args],

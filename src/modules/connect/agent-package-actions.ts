@@ -67,8 +67,7 @@ const AGENT_PACKAGE_ACTION_CATALOG = [
     confirmation_required: true,
     danger_level: 'medium',
     impact: 'Validates one manifest and records package lock/receipt refs without owning agent domain semantics.',
-    follow_up_action_ids: ['agent_package_activate'],
-    verify_action_id: 'agent_package_activate',
+    follow_up_action_ids: [],
   },
   {
     action_id: 'agent_package_update',
@@ -85,8 +84,7 @@ const AGENT_PACKAGE_ACTION_CATALOG = [
     confirmation_required: true,
     danger_level: 'medium',
     impact: 'Replaces an installed package lock through the package core lifecycle without owning carrier-specific release truth.',
-    follow_up_action_ids: ['agent_package_activate'],
-    verify_action_id: 'agent_package_activate',
+    follow_up_action_ids: [],
   },
   {
     action_id: 'agent_package_repair',
@@ -103,8 +101,7 @@ const AGENT_PACKAGE_ACTION_CATALOG = [
     confirmation_required: true,
     danger_level: 'medium',
     impact: 'Re-materializes the package carrier surface from the existing lock and records a lifecycle receipt.',
-    follow_up_action_ids: ['agent_package_activate'],
-    verify_action_id: 'agent_package_activate',
+    follow_up_action_ids: [],
   },
   {
     action_id: 'agent_package_activate',
@@ -172,9 +169,21 @@ export function agentPackageDelegatedSurface(actionId: string) {
 }
 
 export function listAgentPackageSettingsActions() {
-  return AGENT_PACKAGE_ACTION_CATALOG.map(({ aliases: _aliases, ...entry }) => ({
-    ...entry,
-    payload_fields: [...entry.payload_fields],
-    follow_up_action_ids: [...entry.follow_up_action_ids],
-  }));
+  return AGENT_PACKAGE_ACTION_CATALOG
+    .filter((entry) => entry.action_id !== 'agent_package_activate')
+    .map(({ aliases: _aliases, ...entry }) => ({
+      ...entry,
+      payload_fields: [...entry.payload_fields],
+      follow_up_action_ids: [...entry.follow_up_action_ids],
+    }));
+}
+
+export function listAgentPackageLaunchActions() {
+  return AGENT_PACKAGE_ACTION_CATALOG
+    .filter((entry) => entry.action_id === 'agent_package_activate')
+    .map(({ aliases: _aliases, ...entry }) => ({
+      ...entry,
+      payload_fields: [...entry.payload_fields],
+      follow_up_action_ids: [...entry.follow_up_action_ids],
+    }));
 }

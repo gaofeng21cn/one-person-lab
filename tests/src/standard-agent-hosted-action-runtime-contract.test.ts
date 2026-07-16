@@ -60,7 +60,9 @@ test('hosted action persistence and ledger distinguish Stage launch from complet
     contract.stage_execution.stage_run_spec_sha256_binds_prompt_rubric_policy_source_checkpoint_and_manifest_bytes,
     true,
   );
-  assert.equal(contract.stage_execution.root_package_content_digest_required, true);
+  assert.equal(contract.stage_execution.root_package_id_required, true);
+  assert.equal(contract.stage_execution.package_provenance_fields_nullable, true);
+  assert.equal(contract.stage_execution.missing_package_provenance_alone_can_block_execution, false);
   assert.equal(contract.stage_execution.exact_stage_run_input_registered_before_temporal_start, true);
   assert.equal(contract.stage_execution.same_invocation_different_spec_fails_closed, true);
   assert.equal(contract.stage_execution.pre_and_post_start_crash_recovery_required, true);

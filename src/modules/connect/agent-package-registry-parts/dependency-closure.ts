@@ -19,6 +19,15 @@ import type {
 
 type NumericVersion = [number, number, number];
 
+const DEPENDENCY_HARD_FAILURE_REASONS = new Set([
+  'package_id_mismatch',
+  'dependency_lock_missing',
+  'dependency_disabled',
+  'capability_abi_mismatch',
+  'required_exports_missing',
+  'required_modules_missing',
+]);
+
 function numericVersion(value: string): NumericVersion | null {
   const match = value.match(/^(\d+)\.(\d+)\.(\d+)/);
   return match ? [Number(match[1]), Number(match[2]), Number(match[3])] : null;
@@ -103,8 +112,11 @@ export function validateCapabilityProvider(
   manifestSha256: string,
 ): AgentPackageResolvedDependency {
   const reasons: string[] = [];
+  const currentnessObservations: string[] = [];
   if (provider.package_id !== dependency.package_id) reasons.push('package_id_mismatch');
-  if (!versionSatisfiesRequirement(provider.version, dependency.version_requirement)) reasons.push('version_requirement_unsatisfied');
+  if (!versionSatisfiesRequirement(provider.version, dependency.version_requirement)) {
+    currentnessObservations.push('version_requirement_unsatisfied');
+  }
   if (provider.capability_provider?.capability_abi !== dependency.capability_abi) reasons.push('capability_abi_mismatch');
   const providerExports = new Set(provider.capability_provider?.exports
     .filter((entry) => entry.install_mode === 'core_required')
@@ -124,6 +136,7 @@ export function validateCapabilityProvider(
       missing_required_export_ids: missingExports,
       missing_required_module_ids: missingModules,
       reasons,
+      currentness_observations: currentnessObservations,
       failure_code: 'agent_package_dependency_incompatible',
     });
   }
@@ -149,7 +162,9 @@ export function dependencyClosureDigest(locks: AgentPackageLock[]) {
       package_id: lock.package_id,
       package_version: lock.package_version,
       manifest_sha256: lock.manifest_sha256,
-      owner_source_commit: lock.owner_source_commit ?? null,
+      owner_source_commit: lock.source_kind === 'developer_checkout_override'
+        ? null
+        : lock.owner_source_commit ?? null,
       carrier_authority: lock.carrier_authority ?? null,
       content_digest: lock.content_digest,
       package_lock_ref: lock.lock_ref,
@@ -219,6 +234,7 @@ export function dependencyReadiness(
         reasons.push('dependency_closure_digest_mismatch');
       }
     }
+    const hardFailureReasons = reasons.filter((reason) => DEPENDENCY_HARD_FAILURE_REASONS.has(reason));
     return {
       package_id: dependency.package_id,
       required: dependency.required,
@@ -229,7 +245,7 @@ export function dependencyReadiness(
       installed_version: provider?.package_version ?? null,
       manifest_sha256: provider?.manifest_sha256 ?? null,
       content_digest: provider?.content_digest ?? null,
-      status: (!provider ? 'missing' : reasons.length > 0 ? 'incompatible' : 'current') as 'missing' | 'incompatible' | 'current',
+      status: (!provider ? 'missing' : hardFailureReasons.length > 0 ? 'incompatible' : 'current') as 'missing' | 'incompatible' | 'current',
       reasons,
       missing_required_export_ids: provider
         ? dependency.required_export_ids.filter((exportId) => !(provider.capability_provider?.exports
@@ -247,7 +263,8 @@ export function dependencyReadiness(
       : 'current';
   return {
     status,
-    operational_ready: status === 'current',
+    operational_ready: items.every((entry) => !entry.required
+      || !entry.reasons.some((reason) => DEPENDENCY_HARD_FAILURE_REASONS.has(reason))),
     repair_command: `opl packages repair --package-id ${lock.package_id}`,
     dependencies: items,
   };

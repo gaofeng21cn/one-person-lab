@@ -1,9 +1,17 @@
-import fs from 'node:fs';
+import path from 'node:path';
 
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
+import { resolveOplStatePaths } from '../../../kernel/runtime-state-paths.ts';
 import { canonicalAgentPackageId } from '../agent-package-identity.ts';
 import { unregisterLocalCodexPlugin } from '../system-installation/codex-plugin-registry.ts';
-import { nowIso, refsOnlyAuthorityBoundary, sha256Text } from './shared.ts';
+import { removeSafePersistedPackagePath } from './persisted-path-safety.ts';
+import {
+  nowIso,
+  refsOnlyAuthorityBoundary,
+  resolveCodexConfigPath,
+  resolveCodexHome,
+  sha256Text,
+} from './shared.ts';
 import type {
   AgentPackageInstallInput,
   AgentPackageCarrierAuthority,
@@ -108,6 +116,7 @@ export function lifecycleReceipt(input: {
   scopeMaterialization?: AgentPackageScopeMaterialization;
   scopeMaterializations?: AgentPackageScopeMaterialization[];
   managedRuntimeSource?: AgentPackageManagedRuntimeSourceState | null;
+  developerCheckoutSource?: AgentPackageLifecycleReceipt['developer_checkout_source'];
   sourceArtifactRef?: string | null;
   artifactDigest?: string | null;
   ownerSourceCommit?: string | null;
@@ -169,6 +178,9 @@ export function lifecycleReceipt(input: {
   if (input.scopeMaterialization) receipt.scope_materialization = input.scopeMaterialization;
   if (input.scopeMaterializations) receipt.scope_materializations = input.scopeMaterializations;
   if (input.managedRuntimeSource !== undefined) receipt.managed_runtime_source = input.managedRuntimeSource;
+  if (input.developerCheckoutSource !== undefined) {
+    receipt.developer_checkout_source = input.developerCheckoutSource;
+  }
   if (input.useBinding) receipt.use_binding = input.useBinding;
   if (input.sourceSelection) receipt.source_selection = input.sourceSelection;
   if (input.networkAccessed !== undefined) receipt.network_accessed = input.networkAccessed;
@@ -291,13 +303,14 @@ export function buildLock(input: {
     runtime_source_carrier: input.manifest.runtime_source_carrier,
     managed_runtime_source: input.managedRuntimeSource ?? null,
     managed_update_source: input.manifest.managed_update_source,
+    developer_checkout_source: input.manifest.developer_checkout_source ?? null,
   };
 }
 
 export function cleanupPreviousPhysicalSurface(
   previous: AgentPackagePhysicalSurface | undefined,
   current: AgentPackagePhysicalSurface,
-  options: { retainPayloadSource?: boolean } = {},
+  options: { retainPayloadSource?: boolean; retainedPaths?: ReadonlySet<string> } = {},
 ) {
   if (!previous || previous.status === 'not_requested') {
     return;
@@ -308,21 +321,48 @@ export function cleanupPreviousPhysicalSurface(
     && previous.marketplace_id
     && (previous.plugin_id !== current.plugin_id || previous.marketplace_id !== current.marketplace_id)
   ) {
+    const expectedConfigPath = resolveCodexConfigPath(resolveCodexHome());
+    if (path.resolve(previous.codex_config_path) !== path.resolve(expectedConfigPath)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Persisted package Codex config path does not match the active Codex home.', {
+        codex_config_path: previous.codex_config_path,
+        expected_codex_config_path: expectedConfigPath,
+        failure_code: 'agent_package_persisted_path_unsafe',
+      });
+    }
     unregisterLocalCodexPlugin(previous.codex_config_path, previous.marketplace_id, previous.plugin_id);
   }
 
-  for (const oldPath of [
-    previous.codex_plugin_cache_path,
-    previous.marketplace_plugin_path,
-    options.retainPayloadSource ? null : previous.plugin_payload_cache_path,
-  ]) {
+  const removals = [
+    previous.codex_plugin_cache_path ? {
+      path: previous.codex_plugin_cache_path,
+      root: path.join(resolveCodexHome(), 'plugins', 'cache'),
+      kind: 'previous_physical_surface.codex_plugin_cache_path',
+    } : null,
+    previous.marketplace_plugin_path ? {
+      path: previous.marketplace_plugin_path,
+      root: path.join(resolveOplStatePaths().state_dir, 'codex-plugin-marketplaces'),
+      kind: 'previous_physical_surface.marketplace_plugin_path',
+    } : null,
+    !options.retainPayloadSource && previous.plugin_payload_cache_path ? {
+      path: previous.plugin_payload_cache_path,
+      root: path.join(resolveOplStatePaths().state_dir, 'agent-package-payloads'),
+      kind: 'previous_physical_surface.plugin_payload_cache_path',
+    } : null,
+  ].flatMap((entry) => entry ? [entry] : []);
+  for (const removal of removals) {
+    const oldPath = removal.path;
     if (
-      oldPath
+      !options.retainedPaths?.has(oldPath)
       && oldPath !== current.codex_plugin_cache_path
       && oldPath !== current.marketplace_plugin_path
       && oldPath !== current.plugin_payload_cache_path
     ) {
-      fs.rmSync(oldPath, { recursive: true, force: true });
+      removeSafePersistedPackagePath({
+        candidatePath: oldPath,
+        allowedRoots: [removal.root],
+        pathKind: removal.kind,
+        recursive: true,
+      });
     }
   }
 }

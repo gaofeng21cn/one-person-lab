@@ -1,25 +1,59 @@
-import { spawnSync } from 'node:child_process';
-
 import { TestWorkflowEnvironment } from '@temporalio/testing';
 
 import {
   assert,
-  cliPath,
   fs,
-  installRuntimePackageFixture,
   os,
-  parseJsonText,
   path,
-  repoRoot,
-  runCli,
   test,
 } from '../../helpers.ts';
-import type {
-  TemporalStageAttemptCreateOutput,
-} from '../family-runtime-stage-attempts-temporal-provider-fixtures.ts';
+import { runFamilyRuntime } from '../../../../../src/modules/runway/family-runtime.ts';
 
-function familyRuntimeEnv(stateRoot: string) {
-  return { OPL_STATE_DIR: stateRoot };
+function packageLaunchRuntime() {
+  let useBoundarySequence = 0;
+  return {
+    readinessCallCount: () => useBoundarySequence,
+    stageRunRuntime: {
+      ensurePackageLaunchReady: async () => {
+        useBoundarySequence += 1;
+        return {
+          launch_allowed: true,
+          runtime_source_readiness: { checkout_path: null },
+          package_use_binding: {
+            surface_kind: 'opl_agent_package_use_binding.v1',
+            use_boundary_id: `package-use:test:${useBoundarySequence}`,
+            use_receipt_ref: `opl://agent-package/use/test/${useBoundarySequence}`,
+            root_package: { package_id: 'rca' },
+            provider_packages: [],
+            dependency_closure_digest: `sha256:${'0'.repeat(64)}`,
+          },
+        } as any;
+      },
+    },
+  };
+}
+
+function setRuntimeEnv(input: {
+  stateRoot: string;
+  temporalAddress: string;
+  temporalNamespace?: string;
+}) {
+  const previous = {
+    OPL_STATE_DIR: process.env.OPL_STATE_DIR,
+    OPL_TEMPORAL_ADDRESS: process.env.OPL_TEMPORAL_ADDRESS,
+    OPL_TEMPORAL_NAMESPACE: process.env.OPL_TEMPORAL_NAMESPACE,
+    TEMPORAL_ADDRESS: process.env.TEMPORAL_ADDRESS,
+  };
+  process.env.OPL_STATE_DIR = input.stateRoot;
+  process.env.OPL_TEMPORAL_ADDRESS = input.temporalAddress;
+  process.env.OPL_TEMPORAL_NAMESPACE = input.temporalNamespace ?? 'default';
+  process.env.TEMPORAL_ADDRESS = '';
+  return () => {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  };
 }
 
 test('family-runtime Temporal start treats a missing stage packet as nonblocking context debt', async () => {
@@ -29,10 +63,14 @@ test('family-runtime Temporal start treats a missing stage packet as nonblocking
       searchAttributes: [],
     },
   });
+  const restoreEnv = setRuntimeEnv({
+    stateRoot,
+    temporalAddress: testEnv.address,
+    temporalNamespace: testEnv.namespace ?? 'default',
+  });
   try {
-    installRuntimePackageFixture(stateRoot, 'redcube-ai');
-    const created = runCli([
-      'family-runtime',
+    const runtime = packageLaunchRuntime();
+    const created = await runFamilyRuntime([
       'attempt',
       'create',
       '--domain',
@@ -45,29 +83,13 @@ test('family-runtime Temporal start treats a missing stage packet as nonblocking
       '{"workspace_root":"/tmp/redcube-runtime"}',
       '--executor-kind',
       'codex_cli',
-    ], familyRuntimeEnv(stateRoot)) as TemporalStageAttemptCreateOutput;
-    const started = spawnSync(process.execPath, [
-      '--experimental-strip-types',
-      cliPath,
-      'family-runtime',
+    ], runtime) as Record<string, any>;
+    const output = await runFamilyRuntime([
       'attempt',
       'start',
       created.family_runtime_stage_attempt.attempt.stage_attempt_id,
-    ], {
-      cwd: repoRoot,
-      encoding: 'utf8',
-      env: {
-        ...process.env,
-        NODE_NO_WARNINGS: '1',
-        OPL_STATE_DIR: stateRoot,
-        OPL_TEMPORAL_ADDRESS: testEnv.address,
-        OPL_TEMPORAL_NAMESPACE: testEnv.namespace ?? 'default',
-        TEMPORAL_ADDRESS: '',
-      },
-    });
-    const output = parseJsonText(started.stdout || started.stderr) as Record<string, any>;
+    ], runtime) as Record<string, any>;
 
-    assert.equal(started.status, 0, started.stderr);
     assert.equal(
       output.family_runtime_stage_attempt_start.surface_id,
       'opl_family_runtime_stage_attempt_start',
@@ -77,18 +99,49 @@ test('family-runtime Temporal start treats a missing stage packet as nonblocking
       created.family_runtime_stage_attempt.attempt.stage_attempt_id,
     );
     assert.ok(output.family_runtime_stage_attempt_start.temporal_start);
+    assert.equal(
+      Object.hasOwn(created.family_runtime_stage_attempt.attempt.workspace_locator, 'package_use_binding'),
+      false,
+    );
+    const startedAttempt = output.family_runtime_stage_attempt_start.attempt;
+    const startedBinding = startedAttempt.workspace_locator.package_use_binding;
+    assert.match(startedBinding.use_boundary_id, /^package-use:test:/);
+    assert.equal(
+      startedAttempt.provider_run.execution_package_use_context.status,
+      'attempt_launch_binding_persisted',
+    );
+    assert.deepEqual(
+      startedAttempt.provider_run.execution_package_use_context.package_use_binding,
+      startedBinding,
+    );
+    assert.equal(runtime.readinessCallCount(), 2);
+
+    const replay = await runFamilyRuntime([
+      'attempt',
+      'start',
+      created.family_runtime_stage_attempt.attempt.stage_attempt_id,
+    ], runtime) as Record<string, any>;
+    assert.equal(runtime.readinessCallCount(), 2);
+    assert.deepEqual(
+      replay.family_runtime_stage_attempt_start.attempt.provider_run.execution_package_use_context,
+      startedAttempt.provider_run.execution_package_use_context,
+    );
+    assert.deepEqual(
+      replay.family_runtime_stage_attempt_start.attempt.workspace_locator.package_use_binding,
+      startedBinding,
+    );
   } finally {
     await testEnv.teardown();
+    restoreEnv();
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
 
-test('family-runtime Temporal query keeps the local public envelope when provider is unavailable', () => {
+test('family-runtime Temporal query keeps the local public envelope when provider is unavailable', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-temporal-query-missing-'));
+  const restoreEnv = setRuntimeEnv({ stateRoot, temporalAddress: '' });
   try {
-    installRuntimePackageFixture(stateRoot, 'redcube-ai');
-    const created = runCli([
-      'family-runtime',
+    const created = await runFamilyRuntime([
       'attempt',
       'create',
       '--domain',
@@ -99,13 +152,11 @@ test('family-runtime Temporal query keeps the local public envelope when provide
       'temporal',
       '--workspace-locator',
       '{"workspace_root":"/tmp/redcube-runtime"}',
-    ], familyRuntimeEnv(stateRoot));
+    ], packageLaunchRuntime()) as Record<string, any>;
     const attemptId = created.family_runtime_stage_attempt.attempt.stage_attempt_id;
-    const output = runCli(['family-runtime', 'attempt', 'query', attemptId], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_TEMPORAL_ADDRESS: '',
-      TEMPORAL_ADDRESS: '',
-    }).family_runtime_stage_attempt_query;
+    const output = (await runFamilyRuntime([
+      'attempt', 'query', attemptId,
+    ]) as Record<string, any>).family_runtime_stage_attempt_query;
 
     assert.equal(output.stage_attempt_query.attempt.stage_attempt_id, attemptId);
     assert.equal(output.temporal_query.status, 'unavailable');
@@ -115,6 +166,7 @@ test('family-runtime Temporal query keeps the local public envelope when provide
       'local_stage_attempt_ledger_projection_only',
     );
   } finally {
+    restoreEnv();
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });

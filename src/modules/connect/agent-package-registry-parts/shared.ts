@@ -94,12 +94,20 @@ export function validateUrlLike(value: string, field: string) {
   });
 }
 
-export async function fetchJsonSource(sourceUrl: string): Promise<FetchJsonResult> {
+export async function fetchJsonSource(
+  sourceUrl: string,
+  input: { timeoutMs?: number } = {},
+): Promise<FetchJsonResult> {
   validateUrlLike(sourceUrl, 'source_url');
   let raw: string;
   let sourceKind: FetchJsonResult['source_kind'];
   if (sourceUrl.startsWith('http://') || sourceUrl.startsWith('https://')) {
-    const response = await fetch(sourceUrl);
+    const timeoutMs = Number.isFinite(input.timeoutMs) && Number(input.timeoutMs) > 0
+      ? Math.floor(Number(input.timeoutMs))
+      : 60_000;
+    const response = await fetch(sourceUrl, {
+      signal: AbortSignal.timeout(timeoutMs),
+    });
     if (!response.ok) {
       throw new FrameworkContractError('codex_command_failed', 'Agent package source fetch failed.', {
         source_url: sourceUrl,

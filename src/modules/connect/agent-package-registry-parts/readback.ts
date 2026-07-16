@@ -95,9 +95,9 @@ export function agentPackageLifecycleUxReadback(input: {
     conditions.push(lifecycleCondition({
       condition_id: 'carrier_authority_invalid',
       package_id: input.lock.package_id,
-      status: 'attention_needed',
-      reason: `Package carrier authority is invalid: ${carrierAuthority.reasons.join(', ')}.`,
-      action_ref: 'repair',
+      status: 'ok',
+      reason: `Package carrier provenance observation: ${carrierAuthority.reasons.join(', ')}. Provenance drift does not block a functionally runnable package generation.`,
+      action_ref: null,
     }));
   } else if (carrierAuthority.status === 'current') {
     conditions.push(lifecycleCondition({
@@ -164,7 +164,15 @@ export function agentPackageLifecycleUxReadback(input: {
       reason: policyCurrentness.reason,
       action_ref: null,
     }));
-  } else if (policyCurrentness.status === 'drifted' || policyCurrentness.status === 'invalid') {
+  } else if (policyCurrentness.status === 'drifted') {
+    conditions.push(lifecycleCondition({
+      condition_id: 'managed_policy_drift_detected',
+      package_id: input.lock.package_id,
+      status: 'ok',
+      reason: `${policyCurrentness.reason} Currentness drift remains observable but does not block a functionally runnable package generation.`,
+      action_ref: null,
+    }));
+  } else if (policyCurrentness.status === 'invalid') {
     conditions.push(lifecycleCondition({
       condition_id: 'managed_policy_drift_detected',
       package_id: input.lock.package_id,
@@ -176,11 +184,11 @@ export function agentPackageLifecycleUxReadback(input: {
 
   if (surface?.reload_required) {
     conditions.push(lifecycleCondition({
-      condition_id: 'codex_reload_required',
+      condition_id: 'codex_reload_observed',
       package_id: input.lock.package_id,
-      status: 'attention_needed',
-      reason: 'Codex must reload before the materialized plugin surface is active.',
-      action_ref: 'agent_package_activate',
+      status: 'ok',
+      reason: 'The current interactive Codex process may still expose its startup plugin snapshot; hosted actions and future Codex processes use the newly activated package generation.',
+      action_ref: null,
     }));
   }
 
@@ -369,17 +377,17 @@ function ownerRouteReadbackItem(input: {
     input.lock?.runtime_source_carrier,
   );
   const carrierAuthorityReadiness = input.lock
-    ? input.receipt
+    ? Object.prototype.hasOwnProperty.call(input, 'receipt')
       ? agentPackageCarrierReceiptAuthorityStatus(input.lock, input.receipt)
       : agentPackageCarrierAuthorityStatus(input.lock)
     : { status: 'not_required' as const, reasons: [] as string[] };
   const managedPolicyReady = policyCurrentness.status === 'current'
-    || policyCurrentness.status === 'not_requested';
+    || policyCurrentness.status === 'not_requested'
+    || policyCurrentness.status === 'drifted';
   const operationalReady = readiness.operational_ready
     && (materializationReadiness.status === 'current' || materializationReadiness.status === 'not_required')
     && runtimeSourceReadiness.operational_ready
-    && managedPolicyReady
-    && carrierAuthorityReadiness.status !== 'invalid';
+    && managedPolicyReady;
   const runtimeSource = input.lock?.managed_runtime_source ?? input.receipt?.managed_runtime_source ?? null;
   return {
     package_id: input.packageId,
@@ -388,7 +396,7 @@ function ownerRouteReadbackItem(input: {
     runtime_source_readiness: runtimeSourceReadiness,
     carrier_authority_readiness: carrierAuthorityReadiness,
     operational_ready: operationalReady,
-    operational_ready_scope: 'package_dependency_scope_runtime_source_managed_policy_and_carrier_authority',
+    operational_ready_scope: 'package_dependency_scope_runtime_source_and_managed_policy',
     launch_allowed: operationalReady,
     launch_blocked_reason: !readiness.operational_ready
       ? `package_dependency_${readiness.status}`
@@ -396,11 +404,9 @@ function ownerRouteReadbackItem(input: {
         ? `scope_materialization_${materializationReadiness.status}`
         : !runtimeSourceReadiness.operational_ready
           ? `runtime_source_${runtimeSourceReadiness.status}`
-          : carrierAuthorityReadiness.status === 'invalid'
-            ? 'carrier_authority_invalid'
-            : !managedPolicyReady
-              ? `managed_policy_${policyCurrentness.status}`
-              : null,
+          : !managedPolicyReady
+            ? `managed_policy_${policyCurrentness.status}`
+            : null,
     allowed_when_blocked: ['status', 'doctor', 'repair'],
     descriptor,
     digest,

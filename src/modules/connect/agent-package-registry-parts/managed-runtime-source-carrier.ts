@@ -23,6 +23,8 @@ import { runCommand } from '../system-installation/shared.ts';
 import { materializeStandardAgentFrameworkLink } from '../standard-agent-framework-link.ts';
 import {
   buildDeveloperCheckoutRuntimeSourceState,
+  makeDeveloperCheckoutRuntimeSnapshotWritable,
+  materializeDeveloperCheckoutRuntimeSnapshot,
   readDeveloperCheckoutSourceIdentity,
 } from './developer-checkout-runtime-source.ts';
 import type {
@@ -60,6 +62,145 @@ type RuntimeSourceTransactionMarker = {
   phase: 'prepared' | 'physical_applied' | 'cleanup_pending';
   mutation: ManagedRuntimeSourceMutation;
 };
+
+const SHA256_HEX = /^[0-9a-f]{64}$/;
+
+function safeDeveloperRuntimeSnapshotModuleId(value: unknown): value is string {
+  return typeof value === 'string'
+    && value.length > 0
+    && value !== '.'
+    && value !== '..'
+    && path.basename(value) === value;
+}
+
+function lstatOrNull(filePath: string) {
+  try {
+    return fs.lstatSync(filePath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+    throw error;
+  }
+}
+
+function developerRuntimeSnapshotRoot() {
+  return path.resolve(
+    resolveOplStatePaths().state_dir,
+    'agent-package-developer-runtime-snapshots',
+  );
+}
+
+function packageRuntimeGenerationRoot() {
+  return path.resolve(
+    resolveOplStatePaths().state_dir,
+    'agent-package-runtime-generations',
+  );
+}
+
+function packageRuntimeGenerationModuleRoot(moduleId: string) {
+  return path.join(packageRuntimeGenerationRoot(), moduleId);
+}
+
+function packageRuntimeGenerationPath(
+  moduleId: string,
+  selection: ManagedModulePackageChannelSelection,
+) {
+  if (!safeDeveloperRuntimeSnapshotModuleId(moduleId)
+    || !/^sha256:[0-9a-f]{64}$/.test(selection.package_content_digest)) {
+    throw sourceFailure('Package runtime generation identity is unsafe.', {
+      module_id: moduleId,
+      package_content_digest: selection.package_content_digest,
+    });
+  }
+  return path.join(
+    packageRuntimeGenerationModuleRoot(moduleId),
+    selection.package_content_digest.replace(/^sha256:/, ''),
+  );
+}
+
+function safePackageRuntimeGenerationPath(value: unknown, moduleId: string) {
+  if (!safeDeveloperRuntimeSnapshotModuleId(moduleId)
+    || typeof value !== 'string'
+    || !path.isAbsolute(value)) return null;
+  const resolved = path.resolve(value);
+  const moduleRoot = packageRuntimeGenerationModuleRoot(moduleId);
+  return path.dirname(resolved) === moduleRoot && SHA256_HEX.test(path.basename(resolved))
+    ? resolved
+    : null;
+}
+
+function realPackageRuntimeGenerationPath(value: unknown, moduleId: string) {
+  const resolved = safePackageRuntimeGenerationPath(value, moduleId);
+  if (!resolved) return null;
+  try {
+    const generationRoot = packageRuntimeGenerationRoot();
+    const moduleRoot = packageRuntimeGenerationModuleRoot(moduleId);
+    const generationRootStat = lstatOrNull(generationRoot);
+    const moduleRootStat = lstatOrNull(moduleRoot);
+    const resolvedStat = lstatOrNull(resolved);
+    for (const stat of [generationRootStat, moduleRootStat, resolvedStat]) {
+      if (stat && (stat.isSymbolicLink() || !stat.isDirectory())) return null;
+    }
+    if (moduleRootStat) {
+      if (!generationRootStat
+        || path.dirname(fs.realpathSync(moduleRoot)) !== fs.realpathSync(generationRoot)) {
+        return null;
+      }
+    }
+    if (resolvedStat
+      && (!moduleRootStat
+        || path.dirname(fs.realpathSync(resolved)) !== fs.realpathSync(moduleRoot))) {
+      return null;
+    }
+    return resolved;
+  } catch {
+    return null;
+  }
+}
+
+function developerRuntimeSnapshotModuleRoot(moduleId: string) {
+  return path.join(developerRuntimeSnapshotRoot(), moduleId);
+}
+
+function safeDeveloperRuntimeSnapshotPath(value: unknown, moduleId: string) {
+  if (!safeDeveloperRuntimeSnapshotModuleId(moduleId)
+    || typeof value !== 'string'
+    || !path.isAbsolute(value)) return null;
+  const resolved = path.resolve(value);
+  const moduleRoot = developerRuntimeSnapshotModuleRoot(moduleId);
+  if (path.dirname(resolved) !== moduleRoot || !SHA256_HEX.test(path.basename(resolved))) {
+    return null;
+  }
+  return resolved;
+}
+
+function realDeveloperRuntimeSnapshotPath(value: unknown, moduleId: string) {
+  const resolved = safeDeveloperRuntimeSnapshotPath(value, moduleId);
+  if (!resolved) return null;
+  try {
+    const snapshotRoot = developerRuntimeSnapshotRoot();
+    const moduleRoot = developerRuntimeSnapshotModuleRoot(moduleId);
+    const snapshotRootStat = lstatOrNull(snapshotRoot);
+    const moduleRootStat = lstatOrNull(moduleRoot);
+    const resolvedStat = lstatOrNull(resolved);
+    for (const stat of [snapshotRootStat, moduleRootStat, resolvedStat]) {
+      if (stat && (stat.isSymbolicLink() || !stat.isDirectory())) return null;
+    }
+    if (moduleRootStat) {
+      if (!snapshotRootStat
+        || path.dirname(fs.realpathSync(moduleRoot)) !== fs.realpathSync(snapshotRoot)) {
+        return null;
+      }
+    }
+    if (resolvedStat
+      && (!moduleRootStat
+        || path.dirname(fs.realpathSync(resolved)) !== fs.realpathSync(moduleRoot))) {
+      return null;
+    }
+    return resolved;
+  } catch {
+    return null;
+  }
+}
 
 function transactionMarkerDirectory() {
   return path.join(
@@ -239,13 +380,14 @@ function validateCurrentState(state: AgentPackageManagedRuntimeSourceState) {
   const spec = resolveOplDomainModuleSpec(state.module_id);
   const sourceMode = runtimeSourceMode(state, spec);
   if (sourceMode === 'developer_checkout' && fs.existsSync(state.checkout_path)) {
-    const identity = readDeveloperCheckoutSourceIdentity(state.checkout_path);
-    return {
-      ...state,
-      source_mode: sourceMode,
-      source_git_head_sha: identity.source_git_head_sha,
-      tree_sha256: identity.tree_sha256,
-    };
+    if (state.preparation_scope === 'developer_snapshot_root'
+      && realDeveloperRuntimeSnapshotPath(state.checkout_path, state.module_id) === null) {
+      throw sourceFailure('Developer runtime snapshot path is outside its managed immutable root or contains a symbolic link.', {
+        module_id: state.module_id,
+        checkout_path: state.checkout_path,
+      });
+    }
+    return { ...state, source_mode: sourceMode };
   }
   if (
     sourceMode === 'bundled_full_runtime'
@@ -418,10 +560,16 @@ function currentProbeEnvironment(state: AgentPackageManagedRuntimeSourceState) {
 
 function resolvedCurrentProbeCommands(state: AgentPackageManagedRuntimeSourceState) {
   const spec = resolveOplDomainModuleSpec(state.module_id);
+  const developerSnapshot = state.preparation_scope === 'developer_snapshot_root';
   const health = state.preparation_scope === 'managed_source_root'
     ? packageHealthCommand(state.module_id, state.checkout_path)
-    : spec.health_check_command?.(state.checkout_path) ?? null;
+    : developerSnapshot
+      ? (spec.package_health_check_command
+        ?? spec.runtime_probe_command
+        ?? spec.health_check_command)?.(state.checkout_path) ?? null
+      : spec.health_check_command?.(state.checkout_path) ?? null;
   const handler = spec.runtime_probe_command?.(state.checkout_path)
+    ?? (developerSnapshot ? spec.package_health_check_command?.(state.checkout_path) : null)
     ?? spec.exec_command?.(state.checkout_path, ['--help'])
     ?? null;
   return {
@@ -459,13 +607,43 @@ function probeCurrentRuntimeSource(
 
 function managedRuntimeCheckoutIsDirectory(checkoutPath: string) {
   try {
-    return fs.statSync(checkoutPath).isDirectory();
+    const stat = fs.lstatSync(checkoutPath);
+    return stat.isDirectory() && !stat.isSymbolicLink();
   } catch {
     return false;
   }
 }
 
 function developerCheckoutReadiness(state: AgentPackageManagedRuntimeSourceState) {
+  const managedSnapshot = state.preparation_scope === 'developer_snapshot_root';
+  if (managedSnapshot
+    && realDeveloperRuntimeSnapshotPath(state.checkout_path, state.module_id) === null) {
+    return {
+      status: 'incompatible' as const,
+      operational_ready: false,
+      module_id: state.module_id,
+      checkout_path: state.checkout_path,
+      expected_tree_sha256: state.tree_sha256,
+      actual_tree_sha256: null,
+      reason: 'managed_runtime_source_snapshot_path_invalid',
+    };
+  }
+  let actualRuntimeSnapshotSha256: string | null = null;
+  if (managedSnapshot) {
+    try {
+      actualRuntimeSnapshotSha256 = computePackageChannelTreeSha256(state.checkout_path);
+    } catch {
+      return {
+        status: 'incompatible' as const,
+        operational_ready: false,
+        module_id: state.module_id,
+        checkout_path: state.checkout_path,
+        expected_tree_sha256: state.tree_sha256,
+        actual_tree_sha256: null,
+        reason: 'managed_runtime_source_snapshot_invalid',
+      };
+    }
+  }
   let probeFailed = false;
   try {
     probeCurrentRuntimeSource(state, resolvedCurrentProbeCommands(state));
@@ -476,7 +654,9 @@ function developerCheckoutReadiness(state: AgentPackageManagedRuntimeSourceState
   let actualSourceGitHeadSha: string | null = null;
   let actualTreeSha256: string | null = null;
   try {
-    const identity = readDeveloperCheckoutSourceIdentity(state.checkout_path);
+    const identity = readDeveloperCheckoutSourceIdentity(
+      state.source_checkout_path ?? state.checkout_path,
+    );
     actualSourceGitHeadSha = identity.source_git_head_sha;
     actualTreeSha256 = identity.tree_sha256;
   } catch {
@@ -487,24 +667,39 @@ function developerCheckoutReadiness(state: AgentPackageManagedRuntimeSourceState
     actualTreeSha256 !== state.tree_sha256
     || actualSourceGitHeadSha !== state.source_git_head_sha
   );
+  const snapshotIdentityUnavailable = managedSnapshot
+    && (!state.runtime_snapshot_sha256 || actualRuntimeSnapshotSha256 === null);
+  const snapshotIdentityChanged = managedSnapshot
+    && !snapshotIdentityUnavailable
+    && actualRuntimeSnapshotSha256 !== state.runtime_snapshot_sha256;
+  const observationChanged = identityChanged || snapshotIdentityChanged;
 
   return {
-    status: probeFailed ? 'incompatible' as const : 'current' as const,
+    status: probeFailed || snapshotIdentityChanged ? 'incompatible' as const : 'current' as const,
     operational_ready: !probeFailed,
     module_id: state.module_id,
     checkout_path: state.checkout_path,
     expected_tree_sha256: state.tree_sha256,
     actual_tree_sha256: actualTreeSha256,
-    reason: probeFailed ? 'managed_runtime_source_probe_failed' : null,
+    reason: probeFailed
+      ? 'managed_runtime_source_probe_failed'
+      : snapshotIdentityChanged ? 'managed_runtime_source_observation_changed' : null,
     provenance_observation: {
       policy: 'observation_only' as const,
       status: identityUnavailable
         ? 'unavailable' as const
-        : identityChanged ? 'changed' as const : 'unchanged' as const,
+        : observationChanged ? 'changed' as const : 'unchanged' as const,
       recorded_source_git_head_sha: state.source_git_head_sha,
       actual_source_git_head_sha: actualSourceGitHeadSha,
       recorded_tree_sha256: state.tree_sha256,
       actual_tree_sha256: actualTreeSha256,
+      runtime_snapshot: managedSnapshot ? {
+        status: snapshotIdentityUnavailable
+          ? 'unavailable' as const
+          : snapshotIdentityChanged ? 'changed' as const : 'unchanged' as const,
+        recorded_sha256: state.runtime_snapshot_sha256 ?? null,
+        actual_sha256: actualRuntimeSnapshotSha256,
+      } : null,
     },
   };
 }
@@ -553,53 +748,74 @@ export function managedRuntimeSourceReadiness(
     if (sourceMode === 'developer_checkout') {
       return developerCheckoutReadiness(state);
     }
-    const current = validateCurrentState(state);
-    const bundledFullRuntime = sourceMode === 'bundled_full_runtime';
-    const matches = bundledFullRuntime
-      ? current.tree_sha256 === state.tree_sha256
-        && current.source_git_head_sha === state.source_git_head_sha
-      : state.preparation_status === 'completed'
-      && Boolean(state.health_output_sha256)
-      && Boolean(state.handler_probe_output_sha256)
-      && current.tree_sha256 === state.tree_sha256
-      && current.source_git_head_sha === state.source_git_head_sha
-      && current.layer_digest === state.layer_digest;
-    if (matches && !bundledFullRuntime) {
-      const commands = resolvedCurrentProbeCommands(state);
-      if (!matchingCommand(commands.healthCommand, state.health_check_command)
-        || !matchingCommand(commands.handlerCommand, state.handler_probe_command)) {
-        return {
-          status: 'incompatible' as const,
-          operational_ready: false,
-          module_id: state.module_id,
-          checkout_path: state.checkout_path,
-          expected_tree_sha256: state.tree_sha256,
-          actual_tree_sha256: current.tree_sha256,
-          reason: 'managed_runtime_source_command_drift',
-        };
-      }
-      try {
-        probeCurrentRuntimeSource(state, commands);
-      } catch {
-        return {
-          status: 'incompatible' as const,
-          operational_ready: false,
-          module_id: state.module_id,
-          checkout_path: state.checkout_path,
-          expected_tree_sha256: state.tree_sha256,
-          actual_tree_sha256: current.tree_sha256,
-          reason: 'managed_runtime_source_probe_failed',
-        };
-      }
+    const commands = resolvedCurrentProbeCommands(state);
+    try {
+      probeCurrentRuntimeSource(state, commands);
+    } catch {
+      return {
+        status: 'incompatible' as const,
+        operational_ready: false,
+        module_id: state.module_id,
+        checkout_path: state.checkout_path,
+        expected_tree_sha256: state.tree_sha256,
+        actual_tree_sha256: null,
+        reason: 'managed_runtime_source_probe_failed',
+      };
     }
+    let lifecycle: ReturnType<typeof readPackageChannelLifecycle>;
+    let packaged: ReturnType<typeof readPackagedModuleMarker>;
+    let actualTreeSha256: string;
+    try {
+      lifecycle = readPackageChannelLifecycle(state.checkout_path, spec);
+      packaged = readPackagedModuleMarker(state.checkout_path, spec);
+      actualTreeSha256 = computePackageChannelTreeSha256(state.checkout_path);
+    } catch {
+      return {
+        status: 'incompatible' as const,
+        operational_ready: true,
+        module_id: state.module_id,
+        checkout_path: state.checkout_path,
+        expected_tree_sha256: state.tree_sha256,
+        actual_tree_sha256: null,
+        reason: 'managed_runtime_source_observation_unavailable',
+        provenance_observation: {
+          policy: 'observation_only' as const,
+          status: 'unavailable' as const,
+          recorded_source_git_head_sha: state.source_git_head_sha,
+          actual_source_git_head_sha: null,
+          recorded_tree_sha256: state.tree_sha256,
+          actual_tree_sha256: null,
+        },
+      };
+    }
+    const actualSourceGitHeadSha = sourceMode === 'bundled_full_runtime'
+      ? packaged?.source_git.head_sha ?? null
+      : lifecycle?.current.source_git_head_sha ?? null;
+    const actualLayerDigest = sourceMode === 'package_channel'
+      ? lifecycle?.current.layer_digest ?? null
+      : null;
+    const commandChanged = !matchingCommand(commands.healthCommand, state.health_check_command)
+      || !matchingCommand(commands.handlerCommand, state.handler_probe_command);
+    const identityChanged = actualTreeSha256 !== state.tree_sha256
+      || actualSourceGitHeadSha !== state.source_git_head_sha
+      || actualLayerDigest !== state.layer_digest;
+    const observationChanged = commandChanged || identityChanged;
     return {
-      status: matches ? 'current' as const : 'incompatible' as const,
-      operational_ready: matches,
+      status: observationChanged ? 'incompatible' as const : 'current' as const,
+      operational_ready: true,
       module_id: state.module_id,
       checkout_path: state.checkout_path,
       expected_tree_sha256: state.tree_sha256,
-      actual_tree_sha256: current.tree_sha256,
-      reason: matches ? null : 'managed_runtime_source_lock_mismatch',
+      actual_tree_sha256: actualTreeSha256,
+      reason: observationChanged ? 'managed_runtime_source_observation_changed' : null,
+      provenance_observation: {
+        policy: 'observation_only' as const,
+        status: observationChanged ? 'changed' as const : 'unchanged' as const,
+        recorded_source_git_head_sha: state.source_git_head_sha,
+        actual_source_git_head_sha: actualSourceGitHeadSha,
+        recorded_tree_sha256: state.tree_sha256,
+        actual_tree_sha256: actualTreeSha256,
+      },
     };
   } catch {
     return {
@@ -674,6 +890,10 @@ export function applyManagedRuntimeSourceCarrier(input: {
   sourceKind?: AgentPackageSourceKind;
   checkoutPath?: string | null;
   packageChannelSelection?: ManagedModulePackageChannelSelection | null;
+  expectedDeveloperSourceIdentity?: {
+    source_git_head_sha: string | null;
+    tree_sha256: string;
+  } | null;
   verifiedCarrierSourceCommit?: string | null;
 }): ManagedRuntimeSourceMutation {
   if (!input.config) {
@@ -694,9 +914,21 @@ export function applyManagedRuntimeSourceCarrier(input: {
     });
   }
   const spec = resolveOplDomainModuleSpec(input.config.module_id);
-  const checkoutPath = input.checkoutPath
+  const requestedCheckoutPath = input.checkoutPath
     ? path.resolve(input.checkoutPath)
     : resolveManagedModuleCheckoutPath(spec);
+  const immutablePackageGeneration = input.sourceKind === 'first_party_managed_cohort'
+    && input.packageChannelSelection
+    ? packageRuntimeGenerationPath(input.config.module_id, input.packageChannelSelection)
+    : null;
+  const checkoutPath = immutablePackageGeneration ?? requestedCheckoutPath;
+  if (immutablePackageGeneration
+    && realPackageRuntimeGenerationPath(checkoutPath, input.config.module_id) === null) {
+    throw sourceFailure('Package runtime generation path is unsafe.', {
+      module_id: input.config.module_id,
+      checkout_path: checkoutPath,
+    });
+  }
   const existed = fs.existsSync(checkoutPath);
   const developerCheckout = input.sourceKind === 'developer_checkout_override';
   if (developerCheckout && !input.checkoutPath) {
@@ -721,7 +953,7 @@ export function applyManagedRuntimeSourceCarrier(input: {
   let before: AgentPackageManagedRuntimeSourceState | null = null;
   if (input.previous) {
     if (input.sourceKind === 'bundled_full_runtime_modules'
-      || (developerCheckout && !sameCheckout && input.action === 'install')) {
+      || (developerCheckout && input.action === 'install')) {
       before = input.previous;
     } else {
       try {
@@ -774,6 +1006,12 @@ export function applyManagedRuntimeSourceCarrier(input: {
   }
   if (input.dryRun) {
     if (developerCheckout) {
+      const previewSnapshot = materializeDeveloperCheckoutRuntimeSnapshot({
+        moduleId: input.config.module_id,
+        checkoutPath,
+        dryRun: true,
+        expectedSourceIdentity: input.expectedDeveloperSourceIdentity,
+      });
       return {
         kind: 'none',
         module_id: input.config.module_id,
@@ -784,6 +1022,7 @@ export function applyManagedRuntimeSourceCarrier(input: {
           checkoutPath,
           status: 'validated_no_write',
           dryRun: true,
+          sourceIdentity: previewSnapshot.sourceIdentity,
         }),
         staged_removal_paths: [],
       };
@@ -832,12 +1071,77 @@ export function applyManagedRuntimeSourceCarrier(input: {
     };
   }
   if (developerCheckout) {
-    materializeStandardAgentFrameworkLink({ agentRoot: checkoutPath });
-    const after = buildDeveloperCheckoutRuntimeSourceState({
+    const snapshot = materializeDeveloperCheckoutRuntimeSnapshot({
+      moduleId: input.config.module_id,
+      checkoutPath,
+      dryRun: false,
+      expectedSourceIdentity: input.expectedDeveloperSourceIdentity,
+    });
+    let after: AgentPackageManagedRuntimeSourceState;
+    try {
+      after = buildDeveloperCheckoutRuntimeSourceState({
+        config: input.config,
+        checkoutPath: snapshot.snapshotPath,
+        status: 'current',
+        dryRun: false,
+        sourceCheckoutPath: checkoutPath,
+        sourceIdentity: snapshot.sourceIdentity,
+        runtimeSnapshotSha256: snapshot.runtimeSnapshotSha256,
+      });
+    } catch (error) {
+      if (snapshot.created) {
+        makeDeveloperCheckoutRuntimeSnapshotWritable(snapshot.snapshotPath);
+        fs.rmSync(snapshot.snapshotPath, { recursive: true, force: true });
+      }
+      throw error;
+    }
+    const sameSnapshot = input.previous
+      && path.resolve(input.previous.checkout_path) === path.resolve(snapshot.snapshotPath);
+    const mutation = sameSnapshot ? null : transactionMutation({
+      kind: 'installed_fresh',
+      packageId: input.packageId ?? input.config.module_id,
+      action: input.action,
+      transactionId: input.transactionId ?? `${input.action}-${process.pid}`,
+      moduleId: input.config.module_id,
+      checkoutPath: snapshot.snapshotPath,
+      before,
+      checkoutExistedBefore: !snapshot.created,
+    });
+    if (mutation) {
+      mutation.after = after;
+      persistTransactionMarker(mutation, 'physical_applied');
+    }
+    return mutation ?? {
+      kind: 'none',
+      module_id: input.config.module_id,
+      checkout_path: snapshot.snapshotPath,
+      before,
+      after,
+      staged_removal_paths: [],
+    };
+  }
+  const packageId = input.packageId ?? input.config.module_id;
+  const transactionId = input.transactionId ?? `${input.action}-${process.pid}`;
+  if (immutablePackageGeneration && existed) {
+    const lifecycle = readPackageChannelLifecycle(checkoutPath, spec);
+    const selection = input.packageChannelSelection!;
+    const immutableArtifactRef = `${selection.source_artifact_ref.replace(/@sha256:[0-9a-f]{64}$/, '')}@${selection.artifact_digest}`;
+    if (!lifecycle
+      || lifecycle.current.channel_version !== selection.package_version
+      || lifecycle.current.artifact_ref !== immutableArtifactRef
+      || lifecycle.current.source_archive_sha256 !== selection.package_content_digest.replace(/^sha256:/, '')) {
+      throw sourceFailure('Existing package runtime generation does not match its content-addressed identity.', {
+        module_id: input.config.module_id,
+        checkout_path: checkoutPath,
+        package_content_digest: selection.package_content_digest,
+      });
+    }
+    const preparation = prepareRuntimeSource(input.config.module_id, checkoutPath, false, true);
+    const after = sourceState({
       config: input.config,
       checkoutPath,
-      status: 'current',
-      dryRun: false,
+      ownership: 'package_created',
+      preparation,
     });
     return {
       kind: 'none',
@@ -848,8 +1152,6 @@ export function applyManagedRuntimeSourceCarrier(input: {
       staged_removal_paths: [],
     };
   }
-  const packageId = input.packageId ?? input.config.module_id;
-  const transactionId = input.transactionId ?? `${input.action}-${process.pid}`;
   if (input.action === 'install' && existed) {
     materializeStandardAgentFrameworkLink({ agentRoot: checkoutPath });
     const preparation = prepareRuntimeSource(input.config.module_id, checkoutPath, false);
@@ -864,7 +1166,9 @@ export function applyManagedRuntimeSourceCarrier(input: {
       staged_removal_paths: [],
     };
   }
-  const mutationKind = existed ? 'activated_with_previous' : 'installed_fresh';
+  const mutationKind = immutablePackageGeneration
+    ? 'installed_fresh'
+    : existed ? 'activated_with_previous' : 'installed_fresh';
   const repairDisplacedPath = input.action === 'repair' && existed
     ? `${checkoutPath}.repair-displaced-${transactionId}`
     : null;
@@ -918,6 +1222,28 @@ export function applyManagedRuntimeSourceCarrier(input: {
 }
 
 function stagedRemovalPaths(state: AgentPackageManagedRuntimeSourceState, transactionId: string) {
+  if (state.source_mode === 'developer_checkout'
+    && state.preparation_scope === 'developer_snapshot_root') {
+    const snapshotPath = realDeveloperRuntimeSnapshotPath(state.checkout_path, state.module_id);
+    if (!snapshotPath) {
+      throw sourceFailure('Developer runtime snapshot cannot be removed outside its managed immutable root.', {
+        module_id: state.module_id,
+        checkout_path: state.checkout_path,
+      });
+    }
+    return fs.existsSync(snapshotPath)
+      ? [{ original: snapshotPath, backup: `${snapshotPath}.opl-package-remove-${transactionId}-0` }]
+      : [];
+  }
+  if (state.source_mode === 'package_channel') {
+    const generationPath = realPackageRuntimeGenerationPath(state.checkout_path, state.module_id);
+    if (generationPath) {
+      return [{
+        original: generationPath,
+        backup: `${generationPath}.opl-package-remove-${transactionId}-0`,
+      }];
+    }
+  }
   const runtimeEnvironmentModuleRoot = state.preparation_root
     ? path.dirname(state.preparation_root)
     : null;
@@ -1103,11 +1429,35 @@ export function rollbackManagedRuntimeSourceMutation(mutation: ManagedRuntimeSou
     return;
   }
   if (mutation.kind === 'installed_fresh') {
-    const roots = mutation.action === 'repair'
-      ? [mutation.checkout_path, `${mutation.checkout_path}.stage`]
-      : [mutation.checkout_path, `${mutation.checkout_path}.previous`, `${mutation.checkout_path}.stage`];
-    for (const root of roots) {
-      fs.rmSync(root, { recursive: true, force: true });
+    const developerSnapshotPath = safeDeveloperRuntimeSnapshotPath(
+      mutation.checkout_path,
+      mutation.module_id,
+    );
+    const packageGenerationPath = safePackageRuntimeGenerationPath(
+      mutation.checkout_path,
+      mutation.module_id,
+    );
+    const roots = developerSnapshotPath
+      ? [developerSnapshotPath]
+      : packageGenerationPath
+        ? [packageGenerationPath]
+      : mutation.action === 'repair'
+        ? [mutation.checkout_path, `${mutation.checkout_path}.stage`]
+        : [mutation.checkout_path, `${mutation.checkout_path}.previous`, `${mutation.checkout_path}.stage`];
+    if (mutation.checkout_existed_before !== true) {
+      for (const root of roots) {
+        if ((developerSnapshotPath
+          && realDeveloperRuntimeSnapshotPath(root, mutation.module_id) === null)
+          || (packageGenerationPath
+            && realPackageRuntimeGenerationPath(root, mutation.module_id) === null)) {
+          throw sourceFailure('Runtime generation rollback refused an unsafe persisted path.', {
+            module_id: mutation.module_id,
+            checkout_path: root,
+          });
+        }
+        if (developerSnapshotPath) makeDeveloperCheckoutRuntimeSnapshotWritable(root);
+        fs.rmSync(root, { recursive: true, force: true });
+      }
     }
     if (mutation.after?.preparation_root) {
       fs.rmSync(mutation.after.preparation_root, { recursive: true, force: true });
@@ -1157,6 +1507,10 @@ export function finalizeManagedRuntimeSourceMutation(
       throw new Error('injected runtime source finalize failure');
     }
     for (const cleanupPath of cleanupPaths) {
+      if (mutation.before?.preparation_scope === 'developer_snapshot_root'
+        || mutation.after?.preparation_scope === 'developer_snapshot_root') {
+        makeDeveloperCheckoutRuntimeSnapshotWritable(cleanupPath);
+      }
       fs.rmSync(cleanupPath, { recursive: true, force: true });
     }
     clearTransactionMarker(mutation);
@@ -1168,6 +1522,53 @@ export function finalizeManagedRuntimeSourceMutation(
   } catch {
     persistTransactionMarker(mutation, 'cleanup_pending');
     return { status: 'cleanup_pending' as const, cleanup_paths: cleanupPaths };
+  }
+}
+
+function developerRuntimeSnapshotRefs(index: AgentPackageLockIndex) {
+  return [
+    ...index.packages,
+    ...(index.last_known_good_transactions ?? []).flatMap((entry) => entry.package_locks),
+  ].flatMap((lock) => {
+    const state = lock.managed_runtime_source;
+    return state?.source_mode === 'developer_checkout'
+      && state.preparation_scope === 'developer_snapshot_root'
+      ? [{ moduleId: state.module_id, checkoutPath: state.checkout_path }]
+      : [];
+  });
+}
+
+export function cleanupUnreferencedDeveloperRuntimeSnapshots(
+  previous: AgentPackageLockIndex,
+  current: AgentPackageLockIndex,
+) {
+  const root = developerRuntimeSnapshotRoot();
+  const rootStat = lstatOrNull(root);
+  if (!rootStat || rootStat.isSymbolicLink() || !rootStat.isDirectory()) return;
+  const retained = new Set(developerRuntimeSnapshotRefs(current).flatMap((entry) => {
+    const resolved = safeDeveloperRuntimeSnapshotPath(entry.checkoutPath, entry.moduleId);
+    return resolved ? [resolved] : [];
+  }));
+  for (const entry of developerRuntimeSnapshotRefs(previous)) {
+    const resolved = safeDeveloperRuntimeSnapshotPath(entry.checkoutPath, entry.moduleId);
+    if (!resolved || retained.has(resolved)) continue;
+    const moduleRoot = developerRuntimeSnapshotModuleRoot(entry.moduleId);
+    const moduleRootStat = lstatOrNull(moduleRoot);
+    const candidateStat = lstatOrNull(resolved);
+    if (!moduleRootStat
+      || moduleRootStat.isSymbolicLink()
+      || !moduleRootStat.isDirectory()
+      || !candidateStat
+      || candidateStat.isSymbolicLink()
+      || !candidateStat.isDirectory()) continue;
+    try {
+      if (path.dirname(fs.realpathSync(moduleRoot)) !== fs.realpathSync(root)
+        || path.dirname(fs.realpathSync(resolved)) !== fs.realpathSync(moduleRoot)) continue;
+    } catch {
+      continue;
+    }
+    makeDeveloperCheckoutRuntimeSnapshotWritable(resolved);
+    fs.rmSync(resolved, { recursive: true, force: true });
   }
 }
 
@@ -1214,7 +1615,7 @@ function validateMarkerRuntimeState(
   filePath: string,
   field: string,
   moduleId: string,
-  checkoutPath: string,
+  managedCheckoutPath: string,
   runtimeEnvironmentModuleRoot: string,
 ) {
   if (value === null) return;
@@ -1223,7 +1624,45 @@ function validateMarkerRuntimeState(
     || typeof value.tree_sha256 !== 'string') {
     throw transactionMarkerFailure(filePath, 'runtime_state_identity_invalid', { field });
   }
-  requireExactMarkerPath(value.checkout_path, checkoutPath, filePath, `${field}.checkout_path`);
+  const developerState = value.source_mode === 'developer_checkout';
+  const developerSnapshotState = developerState
+    && value.preparation_scope === 'developer_snapshot_root';
+  if (developerSnapshotState) {
+    if (realDeveloperRuntimeSnapshotPath(value.checkout_path, moduleId) === null) {
+      throw transactionMarkerFailure(filePath, 'developer_snapshot_path_invalid', { field });
+    }
+    if (typeof value.runtime_snapshot_sha256 !== 'string'
+      || !SHA256_HEX.test(value.runtime_snapshot_sha256)) {
+      throw transactionMarkerFailure(filePath, 'developer_snapshot_digest_invalid', { field });
+    }
+    if (typeof value.source_checkout_path !== 'string'
+      || !path.isAbsolute(value.source_checkout_path)) {
+      throw transactionMarkerFailure(filePath, 'developer_source_checkout_path_invalid', { field });
+    }
+  } else if (developerState) {
+    if (typeof value.checkout_path !== 'string' || !path.isAbsolute(value.checkout_path)) {
+      throw transactionMarkerFailure(filePath, 'developer_checkout_path_invalid', { field });
+    }
+    if (fs.existsSync(value.checkout_path)) {
+      const stat = fs.lstatSync(value.checkout_path);
+      if (stat.isSymbolicLink() || !stat.isDirectory()) {
+        throw transactionMarkerFailure(filePath, 'developer_checkout_path_invalid', { field });
+      }
+    }
+  } else {
+    requireExactMarkerPath(
+      value.checkout_path,
+      managedCheckoutPath,
+      filePath,
+      `${field}.checkout_path`,
+    );
+  }
+  if (value.source_checkout_path !== undefined
+    && value.source_checkout_path !== null
+    && (typeof value.source_checkout_path !== 'string'
+      || !path.isAbsolute(value.source_checkout_path))) {
+    throw transactionMarkerFailure(filePath, 'developer_source_checkout_path_invalid', { field });
+  }
   if (value.preparation_root !== null) {
     if (typeof value.preparation_root !== 'string'
       || !path.isAbsolute(value.preparation_root)
@@ -1258,8 +1697,21 @@ function parseTransactionMarker(filePath: string) {
   } catch {
     throw transactionMarkerFailure(filePath, 'module_identity_invalid', { module_id: moduleId });
   }
-  const checkoutPath = resolveManagedModuleCheckoutPath(spec);
-  requireExactMarkerPath(mutation.checkout_path, checkoutPath, filePath, 'mutation.checkout_path');
+  const managedCheckoutPath = resolveManagedModuleCheckoutPath(spec);
+  const developerSnapshotCheckoutPath = realDeveloperRuntimeSnapshotPath(
+    mutation.checkout_path,
+    moduleId,
+  );
+  const developerSnapshotMutation = developerSnapshotCheckoutPath !== null;
+  const checkoutPath = developerSnapshotCheckoutPath ?? managedCheckoutPath;
+  if (!developerSnapshotMutation) {
+    requireExactMarkerPath(
+      mutation.checkout_path,
+      managedCheckoutPath,
+      filePath,
+      'mutation.checkout_path',
+    );
+  }
   requireExactMarkerPath(mutation.marker_path, filePath, filePath, 'mutation.marker_path');
   const kind = mutation.kind;
   const action = mutation.action;
@@ -1273,7 +1725,7 @@ function parseTransactionMarker(filePath: string) {
   if (!validKindAction) {
     throw transactionMarkerFailure(filePath, 'mutation_kind_action_mismatch', { kind, action });
   }
-  const expectedCheckoutExistedBefore = kind === 'installed_fresh'
+  const expectedCheckoutExistedBefore = kind === 'installed_fresh' && !developerSnapshotMutation
     ? false
     : kind === 'activated_with_previous' || kind === 'restored_previous'
       ? true
@@ -1292,7 +1744,7 @@ function parseTransactionMarker(filePath: string) {
     filePath,
     'mutation.before',
     moduleId,
-    checkoutPath,
+    managedCheckoutPath,
     runtimeEnvironmentModuleRoot,
   );
   validateMarkerRuntimeState(
@@ -1300,17 +1752,34 @@ function parseTransactionMarker(filePath: string) {
     filePath,
     'mutation.after',
     moduleId,
-    checkoutPath,
+    managedCheckoutPath,
     runtimeEnvironmentModuleRoot,
   );
+  if (developerSnapshotMutation && mutation.after !== null) {
+    if (!isRecord(mutation.after)
+      || mutation.after.source_mode !== 'developer_checkout'
+      || mutation.after.preparation_scope !== 'developer_snapshot_root') {
+      throw transactionMarkerFailure(filePath, 'developer_snapshot_state_invalid', {
+        field: 'mutation.after',
+      });
+    }
+    requireExactMarkerPath(
+      mutation.after.checkout_path,
+      checkoutPath,
+      filePath,
+      'mutation.after.checkout_path',
+    );
+  }
   if (!Array.isArray(mutation.staged_removal_paths)) {
     throw transactionMarkerFailure(filePath, 'staged_removal_paths_invalid');
   }
-  const allowedRemovalRoots = new Map([
-    [path.resolve(checkoutPath), 0],
-    [path.resolve(`${checkoutPath}.previous`), 1],
-    [path.resolve(runtimeEnvironmentModuleRoot), 2],
-  ]);
+  const allowedRemovalRoots = new Map(developerSnapshotMutation
+    ? [[path.resolve(checkoutPath), 0] as const]
+    : [
+        [path.resolve(checkoutPath), 0] as const,
+        [path.resolve(`${checkoutPath}.previous`), 1] as const,
+        [path.resolve(runtimeEnvironmentModuleRoot), 2] as const,
+      ]);
   const observedRemovalRoots = new Set<string>();
   for (const entry of mutation.staged_removal_paths) {
     if (!isRecord(entry) || typeof entry.original !== 'string') {
@@ -1335,7 +1804,7 @@ function parseTransactionMarker(filePath: string) {
     throw transactionMarkerFailure(filePath, 'staged_removal_paths_not_allowed');
   }
   if (mutation.repair_displaced_path !== null && mutation.repair_displaced_path !== undefined) {
-    if (action !== 'repair') {
+    if (action !== 'repair' || developerSnapshotMutation) {
       throw transactionMarkerFailure(filePath, 'repair_displaced_path_not_allowed');
     }
     requireExactMarkerPath(
@@ -1344,7 +1813,9 @@ function parseTransactionMarker(filePath: string) {
       filePath,
       'mutation.repair_displaced_path',
     );
-  } else if (action === 'repair' && mutation.checkout_existed_before === true) {
+  } else if (action === 'repair'
+    && !developerSnapshotMutation
+    && mutation.checkout_existed_before === true) {
     throw transactionMarkerFailure(filePath, 'repair_displaced_path_missing');
   }
   return parsed as unknown as RuntimeSourceTransactionMarker;
@@ -1378,6 +1849,13 @@ function preparedMutationChangedPhysicalState(mutation: ManagedRuntimeSourceMuta
     return mutation.staged_removal_paths.some((entry) =>
       fs.existsSync(entry.backup) || !fs.existsSync(entry.original));
   }
+  const developerSnapshotPath = safeDeveloperRuntimeSnapshotPath(
+    mutation.checkout_path,
+    mutation.module_id,
+  );
+  if (developerSnapshotPath) {
+    return mutation.checkout_existed_before !== true && lstatOrNull(developerSnapshotPath) !== null;
+  }
   if (mutation.action === 'repair') {
     return Boolean(mutation.repair_displaced_path && fs.existsSync(mutation.repair_displaced_path))
       || fs.existsSync(mutation.checkout_path) !== mutation.checkout_existed_before;
@@ -1389,6 +1867,30 @@ function preparedMutationChangedPhysicalState(mutation: ManagedRuntimeSourceMuta
   } catch {
     return true;
   }
+}
+
+function clearPreparedRuntimeSourceMutation(mutation: ManagedRuntimeSourceMutation) {
+  if (!safeDeveloperRuntimeSnapshotPath(mutation.checkout_path, mutation.module_id)
+    && (mutation.action === 'install'
+      || mutation.action === 'update'
+      || mutation.action === 'repair')) {
+    fs.rmSync(`${mutation.checkout_path}.stage`, { recursive: true, force: true });
+  }
+  clearTransactionMarker(mutation);
+}
+
+function runtimeSourceStateMatches(
+  actual: AgentPackageManagedRuntimeSourceState | null | undefined,
+  expected: AgentPackageManagedRuntimeSourceState,
+) {
+  return Boolean(
+    actual
+    && actual.module_id === expected.module_id
+    && path.resolve(actual.checkout_path) === path.resolve(expected.checkout_path)
+    && (actual.source_mode ?? null) === (expected.source_mode ?? null)
+    && actual.tree_sha256 === expected.tree_sha256
+    && (actual.runtime_snapshot_sha256 ?? null) === (expected.runtime_snapshot_sha256 ?? null),
+  );
 }
 
 function preparedMutationDidNotActivateChannel(mutation: ManagedRuntimeSourceMutation) {
@@ -1431,17 +1933,13 @@ export function recoverManagedRuntimeSourceTransactions(index: AgentPackageLockI
   for (const { markerFile, marker } of markers) {
     const mutation = marker.mutation;
     if (marker.phase === 'prepared' && preparedMutationDidNotActivateChannel(mutation)) {
-      fs.rmSync(`${mutation.checkout_path}.stage`, { recursive: true, force: true });
-      clearTransactionMarker(mutation);
+      clearPreparedRuntimeSourceMutation(mutation);
       clearedPreparedCount += 1;
       recoveredIds.push(mutation.transaction_id ?? path.basename(markerFile));
       continue;
     }
     if (marker.phase === 'prepared' && !preparedMutationChangedPhysicalState(mutation)) {
-      if (mutation.action === 'install' || mutation.action === 'update' || mutation.action === 'repair') {
-        fs.rmSync(`${mutation.checkout_path}.stage`, { recursive: true, force: true });
-      }
-      clearTransactionMarker(mutation);
+      clearPreparedRuntimeSourceMutation(mutation);
       clearedPreparedCount += 1;
       recoveredIds.push(mutation.transaction_id ?? path.basename(markerFile));
       continue;
@@ -1450,7 +1948,7 @@ export function recoverManagedRuntimeSourceTransactions(index: AgentPackageLockI
     const committed = mutation.action === 'uninstall'
       ? lock === null
       : mutation.after !== null
-        && lock?.managed_runtime_source?.tree_sha256 === mutation.after.tree_sha256;
+        && runtimeSourceStateMatches(lock?.managed_runtime_source, mutation.after);
     if (committed) {
       const cleanup = finalizeManagedRuntimeSourceMutation(mutation, { ignoreTestFailure: true });
       if (cleanup.status === 'cleanup_completed') cleanupCompletedCount += 1;

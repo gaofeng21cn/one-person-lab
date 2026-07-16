@@ -11,7 +11,7 @@ import {
   SETTINGS_CONFIGURATION_ACTION_IDS,
 } from './app-state-settings-control-center-parts/task-read-model.ts';
 import {
-  asList,
+  agentPackageFunctionalReadiness,
   asRecord,
   asString,
   routeFor,
@@ -139,10 +139,12 @@ function buildSettingsProjection(
   const codexAccess = resolveSettingsCodexAccess(input.core);
   const temporalStatus = asString(temporal.health_status) ?? asString(temporal.status);
   const moduleHealth = `${moduleSummary.healthy_default_carriers_count ?? 0}/${moduleSummary.default_carriers_count ?? 0}`;
+  const packageReadiness = agentPackageFunctionalReadiness(input.agentPackages);
+  const packageHealth = `${packageReadiness.runnable_count}/${packageReadiness.enabled_count}`;
   const firstIssueAction = asString(issueQueue[0]?.recommended_action_id);
   const modelAccessTask = taskByActionId(taskEntries, 'settings_repair_model_access');
   const workspaceTask = taskByActionId(taskEntries, 'settings_verify_workspace');
-  const syncCapabilitiesTask = taskByActionId(taskEntries, 'settings_sync_capabilities');
+  const packageRepairTask = taskByActionId(taskEntries, 'agent_package_repair');
   const appUpdateTask = taskByActionId(taskEntries, 'settings_check_app_update');
   const cleanupTask = taskByActionId(taskEntries, 'settings_prune_runtime_roots_dry_run');
   const gatewaySetupTask = taskByActionId(taskEntries, 'gateway_account_complete_setup');
@@ -150,7 +152,6 @@ function buildSettingsProjection(
   const developerEffectiveState = asString(input.developerMode.effective_state) ?? 'unknown';
   const developerModeState = asString(input.developerMode.status) ?? 'unknown';
   const developerMode = asString(input.developerMode.mode) ?? 'unknown';
-  const modulesReady = moduleSummary.healthy_default_carriers_count === moduleSummary.default_carriers_count;
 
   const sections = {
     overview: settingsSection('overview', 'Overview', 'general', 'settings_overview_and_recommended_action', [
@@ -236,32 +237,30 @@ function buildSettingsProjection(
       settingsItem({
         item_id: 'agent_package_directory',
         label: 'Agent packages and Developer Mode',
-        state: modulesReady ? developerModeState : 'attention_needed',
+        state: packageReadiness.status === 'available' ? developerModeState : 'attention_needed',
         surface_class: 'status',
         scope: 'user',
         owner: 'one-person-lab',
-        risk: riskForTask(syncCapabilitiesTask),
-        normal_summary: `Developer Mode is ${developerEffectiveState} in ${developerMode}; ${moduleHealth} default runtime source carriers are healthy.`,
-        next_action: modulesReady
-          ? 'none'
-          : 'settings_sync_capabilities',
+        risk: riskForTask(packageRepairTask),
+        normal_summary: `Developer Mode is ${developerEffectiveState} in ${developerMode}; ${packageHealth} enabled Agent Packages have a runnable current or last-known-good generation.`,
+        next_action: packageReadiness.status === 'available' ? 'none' : 'agent_package_repair',
         details_ref: 'app_state.developer_mode + app_state.agent_packages',
-        editable_reason: editableReasonForTask(taskEntries, 'settings_sync_capabilities', 'read_only_projection_from_runtime_source_carriers'),
+        editable_reason: editableReasonForTask(taskEntries, 'agent_package_repair', 'read_only_projection_from_agent_package_status_index'),
       }),
     ]),
     capabilities: settingsSection('capabilities', 'Capabilities', 'capabilities', 'flow_managed_and_third_party_capability_directory', [
       settingsItem({
         item_id: 'capability_directory',
         label: 'Managed and third-party capabilities',
-        state: modulesReady ? 'available' : 'attention_needed',
+        state: packageReadiness.status,
         surface_class: 'status',
         scope: 'user',
         owner: 'one-person-lab_and_package_owners',
-        risk: riskForTask(syncCapabilitiesTask),
+        risk: riskForTask(packageRepairTask),
         normal_summary: 'Capability health, connector readiness, and workflow entries are refs-only and remain grouped by canonical owner.',
-        next_action: modulesReady ? 'none' : 'settings_sync_capabilities',
+        next_action: packageReadiness.status === 'available' ? 'none' : 'agent_package_repair',
         details_ref: 'app_state.settings_control_center.capability_task_awareness_refs',
-        editable_reason: editableReasonForTask(taskEntries, 'settings_sync_capabilities', 'read_only_refs_from_capability_owners'),
+        editable_reason: editableReasonForTask(taskEntries, 'agent_package_repair', 'read_only_refs_from_capability_owners'),
       }),
     ]),
     resources: settingsSection('resources', 'Resources', 'resources', 'connect_fabric_cloud_ssh_hpc_and_workspace_resource_directory', [
@@ -304,7 +303,7 @@ function buildSettingsProjection(
           scope: 'local_machine',
           owner: 'one-person-lab',
           risk: riskForTask(appUpdateTask),
-          normal_summary: `Release channel is ${asString(input.release.channel) ?? 'unknown'}; provider status is ${statusTone(temporalStatus)}; module health is ${moduleHealth}.`,
+          normal_summary: `Release channel is ${asString(input.release.channel) ?? 'unknown'}; provider status is ${statusTone(temporalStatus)}; runtime source provenance is ${moduleHealth}.`,
           next_action: 'settings_check_app_update',
           details_ref: 'app_state.settings_control_center.app_settings_read_model.local_environment',
           editable_reason: editableReasonForTask(taskEntries, 'settings_check_app_update', 'read_only_projection_from_release_state'),
@@ -391,6 +390,7 @@ function buildSettingsProjection(
       'app_state.codex_personalization',
       'app_state.opl_agent_codex_context',
       'app_state.paths',
+      'app_state.agent_packages.status_index',
       'app_state.runtime_source_carriers',
       'app_state.provider',
       'app_state.release',
@@ -592,6 +592,7 @@ function buildAppSettingsReadModel(
     source_refs: [
       'app_state.core.codex',
       'app_state.developer_mode',
+      'app_state.agent_packages.status_index',
       'app_state.runtime_source_carriers',
       'app_state.provider',
       'app_state.paths',
@@ -744,10 +745,10 @@ function issueRoute(actionId: string | null) {
   return actionId ? routeFor(actionId) : null;
 }
 
-function buildIssueQueue(input: BuildSettingsControlCenterInput) {
+function buildIssueQueue(input: BuildSettingsControlCenterInput): Array<Record<string, unknown>> {
   const issues: Array<Record<string, unknown>> = [];
   const codexAccess = resolveSettingsCodexAccess(input.core);
-  const moduleItems = asList(input.modules.items);
+  const packageReadiness = agentPackageFunctionalReadiness(input.agentPackages);
   const temporal = asRecord(asRecord(input.provider).temporal);
 
   if (!codexAccess.model_access_ready) {
@@ -763,35 +764,17 @@ function buildIssueQueue(input: BuildSettingsControlCenterInput) {
     });
   }
 
-  const dirtyModules = moduleItems.filter((entry) => asString(entry.source_health_status) === 'dirty');
-  if (dirtyModules.length > 0) {
+  if (packageReadiness.attention_count > 0) {
     issues.push({
-      issue_id: 'runtime_source_carrier_dirty_checkout',
-      status_code: 'dirty_checkout',
-      label: 'Local runtime source checkout has uncommitted changes',
-      user_message: 'One or more developer runtime source carriers are dirty. Settings will not overwrite them; review or commit those changes first.',
-      severity: 'warning',
-      source_ref: 'app_state.runtime_source_carriers.items[].source_health_status',
-      affected_ids: dirtyModules.map((entry) => asString(entry.package_id)).filter(Boolean),
-      recommended_action_id: 'settings_sync_capabilities',
-      route: issueRoute('settings_sync_capabilities'),
-    });
-  }
-
-  const manualModules = moduleItems.filter((entry) =>
-    ['missing', 'invalid_checkout'].includes(asString(entry.source_health_status) ?? '')
-  );
-  if (manualModules.length > 0) {
-    issues.push({
-      issue_id: 'runtime_source_carrier_attention_required',
-      status_code: 'manual_required',
-      label: 'OPL package attention required',
-      user_message: 'One or more package runtime source carriers are missing or invalid. Use the package actions only through OPL-owned routes.',
-      severity: 'warning',
-      source_ref: 'app_state.runtime_source_carriers.items[].source_health_status',
-      affected_ids: manualModules.map((entry) => asString(entry.package_id)).filter(Boolean),
-      recommended_action_id: 'settings_apply_opl_packages',
-      route: issueRoute('settings_apply_opl_packages'),
+      issue_id: 'agent_package_functional_readiness_required',
+      status_code: 'failed_with_repair',
+      label: 'Agent Package has no runnable generation',
+      user_message: 'One or more installed and enabled Agent Packages have neither a runnable current generation nor a runnable last-known-good generation.',
+      severity: 'error',
+      source_ref: 'app_state.agent_packages.status_index.packages',
+      affected_ids: packageReadiness.attention_package_ids,
+      recommended_action_id: 'agent_package_repair',
+      route: issueRoute('agent_package_repair'),
     });
   }
 
@@ -822,6 +805,7 @@ export function buildSettingsControlCenter(input: BuildSettingsControlCenterInpu
   const temporal = asRecord(asRecord(input.provider).temporal);
   const releaseChannel = asString(input.release.channel) ?? 'unknown';
   const moduleSummary = asRecord(asRecord(input.modules).summary);
+  const packageReadiness = agentPackageFunctionalReadiness(input.agentPackages);
   const taskEntries = buildTaskEntries(input);
   const issueQueue = buildIssueQueue(input);
   const settingsIa = buildSettingsIa(taskEntries);
@@ -860,6 +844,7 @@ export function buildSettingsControlCenter(input: BuildSettingsControlCenterInpu
       model_access: codexAccess.model_access_status,
       codex_version: asString(codex.parsed_version) ?? asString(codex.version) ?? 'missing',
       runtime_source_carrier_health: `${moduleSummary.healthy_default_carriers_count ?? 0}/${moduleSummary.default_carriers_count ?? 0}`,
+      agent_package_functional_health: `${packageReadiness.runnable_count}/${packageReadiness.enabled_count}`,
       temporal_provider: statusTone(asString(temporal.status) ?? asString(temporal.health_status)),
       release_channel: releaseChannel,
       issue_count: issueQueue.length,

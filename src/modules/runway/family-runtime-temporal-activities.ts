@@ -22,6 +22,7 @@ import { openQueueDb, stableId } from './family-runtime-store.ts';
 import {
   createStageAttempt,
   createStageAttemptTable,
+  findStageAttemptByIdempotencyBoundary,
   materializePersistedStageReviewReceipt,
   recordStageAttemptActivityHeartbeat,
   syncStageAttemptFromTemporalTerminalObservation,
@@ -42,13 +43,24 @@ import {
   runtimeHardStopClassForReason,
 } from '../../kernel/progress-hard-stop-policy.ts';
 import { buildStageReviewContextManifest } from '../stagecraft/index.ts';
+import { resolveStandardAgentStageQualityRuntimeBinding } from '../pack/index.ts';
 import { launchRegisteredStageRun } from './family-runtime-stage-run-launch.ts';
-import { recordStageRunClosed } from './family-runtime-stage-run-launch-registry.ts';
+import {
+  findStageRunLaunch,
+  recordStageRunClosed,
+} from './family-runtime-stage-run-launch-registry.ts';
 import { materializeStageRunRoute } from './family-runtime-stage-run-route-launch.ts';
 import {
   resolveStageRunAttemptExecutorContent,
   STAGE_RUN_ATTEMPT_CONTENT_BINDING_VERSION,
 } from './family-runtime-stage-run-attempt-content.ts';
+import {
+  buildStageRunImmutableSpec,
+  canonicalStageAttemptDeclaredStageIds,
+  stageAttemptExecutionContentBindingSha256,
+  stageRunSpecSha256,
+} from './family-runtime-stage-run-identity.ts';
+import { ensureFamilyRuntimePackageLaunchReady } from './family-runtime-package-readiness.ts';
 
 function closeoutPacketFromRunnerReceipt(receipt: Record<string, unknown>) {
   if (isRecord(receipt.closeout_packet)) {
@@ -77,6 +89,88 @@ function readNumber(value: unknown) {
 
 function readBoolean(value: unknown) {
   return typeof value === 'boolean' ? value : null;
+}
+
+function persistedStageQualityAttemptMaterializationReceipt(
+  stageRun: ReturnType<typeof requireTemporalStageRunWorkflowInputLaunchable>,
+  attempt: any,
+) {
+  const qualityContext = isRecord(attempt.quality_context) ? attempt.quality_context : {};
+  const executionContentBinding = qualityContext.execution_content_binding;
+  if (!isRecord(executionContentBinding)
+    || executionContentBinding.surface_kind !== 'opl_stage_attempt_execution_content_binding'
+    || executionContentBinding.version !== 'opl-stage-attempt-execution-content-binding.v1') {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Persisted Stage quality Attempt is missing its execution content binding.',
+      {
+        stage_attempt_id: attempt.stage_attempt_id,
+        failure_code: 'stage_attempt_execution_content_binding_missing',
+      },
+    );
+  }
+  const declaredStageIds = canonicalStageAttemptDeclaredStageIds(
+    executionContentBinding.declared_stage_ids,
+  );
+  const expectedBindingSha256 = stageAttemptExecutionContentBindingSha256({
+    parent_stage_run_spec_sha256: readString(
+      executionContentBinding.parent_stage_run_spec_sha256,
+    ) ?? '',
+    use_boundary_id: readString(executionContentBinding.use_boundary_id) ?? '',
+    spec_sha256: readString(executionContentBinding.spec_sha256) ?? '',
+    spec: executionContentBinding.spec as NonNullable<
+      TemporalStageAttemptWorkflowInput['execution_content_binding']
+    >['spec'],
+    declared_stage_ids: declaredStageIds,
+  });
+  if (
+    JSON.stringify(executionContentBinding.declared_stage_ids) !== JSON.stringify(declaredStageIds)
+    || !declaredStageIds.includes(stageRun.stage_id)
+    || executionContentBinding.binding_sha256 !== expectedBindingSha256
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Persisted Stage quality Attempt execution content binding identity is invalid.',
+      {
+        stage_attempt_id: attempt.stage_attempt_id,
+        failure_code: 'stage_attempt_execution_content_binding_identity_invalid',
+      },
+    );
+  }
+  const {
+    execution_content_binding: _executionContentBinding,
+    ...persistedQualityContext
+  } = qualityContext;
+  const attemptRef = `opl://stage_attempts/${attempt.stage_attempt_id}`;
+  return {
+    surface_kind: 'temporal_stage_quality_attempt_materialization_receipt' as const,
+    stage_run_id: stageRun.stage_run_id,
+    quality_cycle_id: attempt.quality_cycle_id,
+    attempt_role: attempt.attempt_role,
+    quality_round_index: attempt.quality_round_index,
+    attempt_ref: attemptRef,
+    workflow_input: {
+      ...buildTemporalStageAttemptWorkflowInput(attempt),
+      stage_run_content_binding_version: STAGE_RUN_ATTEMPT_CONTENT_BINDING_VERSION,
+      stage_run_spec_sha256: stageRun.stage_run_spec_sha256,
+      stage_run_spec: stageRun.stage_run_spec,
+      execution_content_binding: (
+        executionContentBinding as TemporalStageAttemptWorkflowInput['execution_content_binding']
+      ),
+      domain_pack_root: readString(attempt.workspace_locator?.domain_pack_root)
+        ?? stageRun.domain_pack_root,
+      quality_context: {
+        ...persistedQualityContext,
+        ...(isRecord(attempt.context_manifest)
+          ? { context_manifest: attempt.context_manifest }
+          : {}),
+      },
+    },
+    authority_boundary: {
+      opl: 'stage_attempt_identity_and_refs_projection_only',
+      domain: 'review_findings_repair_artifact_and_quality_verdict_owner',
+    },
+  };
 }
 
 function compactStringList(value: unknown, maxEntries = 12, maxChars = 240) {
@@ -851,8 +945,14 @@ export async function schedulerTickActivity(input: {
 
 export async function stageQualityAttemptMaterializeActivity(
   input: TemporalStageQualityAttemptMaterializationInput,
+  options: {
+    ensurePackageLaunchReady?: typeof ensureFamilyRuntimePackageLaunchReady;
+    resolveStageBinding?: typeof resolveStandardAgentStageQualityRuntimeBinding;
+  } = {},
 ) {
-  const stageRun = requireTemporalStageRunWorkflowInputLaunchable(input.stage_run);
+  const stageRun = requireTemporalStageRunWorkflowInputLaunchable(input.stage_run, {
+    revalidateContent: 'historical_evidence',
+  });
   const { db } = openQueueDb();
   try {
     createStageAttemptTable(db);
@@ -863,13 +963,35 @@ export async function stageQualityAttemptMaterializeActivity(
       stageId: stageRun.stage_id,
       policy: stageRun.quality_policy,
     });
-    const rolePromptRef = stageRun.role_prompt_refs[input.attempt_role as keyof typeof stageRun.role_prompt_refs];
-    if (!rolePromptRef) {
-      throw new Error(`Stage quality role prompt ref missing for ${input.attempt_role}`);
+    const requestedUseBoundaryId = stableId('package-use', [
+      'stage_quality_attempt',
+      stageRun.stage_run_id,
+      input.quality_cycle_id,
+      input.attempt_role,
+      input.quality_round_index,
+      input.parent_attempt_ref ?? null,
+      input.artifact_producer_attempt_ref ?? null,
+      input.artifact_refs,
+      input.artifact_hashes,
+      input.artifact_identity_receipt_refs,
+      input.findings ?? [],
+      input.repair_map ?? [],
+      input.route_recommendations ?? [],
+    ]);
+    const existingAttempt = findStageAttemptByIdempotencyBoundary(db, {
+      domainId: stageRun.domain_id,
+      stageId: stageRun.stage_id,
+      providerKind: 'temporal',
+      idempotencyBoundaryId: requestedUseBoundaryId,
+    });
+    if (existingAttempt) {
+      const receipt = persistedStageQualityAttemptMaterializationReceipt(stageRun, existingAttempt);
+      markStageQualityCycleCurrentAttempt(db, {
+        qualityCycleId: input.quality_cycle_id,
+        attemptRef: receipt.attempt_ref,
+      });
+      return receipt;
     }
-    const workspaceRoot = readString(stageRun.workspace_locator.workspace_root)
-      ?? readString(stageRun.workspace_locator.repo_root)
-      ?? stageRun.domain_pack_root;
     const artifactProducerAttemptRef = input.attempt_role === 'producer'
       ? null
       : input.artifact_producer_attempt_ref?.trim() || null;
@@ -884,6 +1006,63 @@ export async function stageQualityAttemptMaterializeActivity(
         },
       );
     }
+    if (artifactProducerAttemptRef) {
+      // Reject stale artifact bytes before package reconciliation can write a new generation.
+      verifyStageQualityArtifactIdentityAtAttemptBoundary({
+        artifactRefs: input.artifact_refs,
+        artifactHashes: input.artifact_hashes,
+        artifactIdentityReceiptRefs: input.artifact_identity_receipt_refs,
+        domainId: stageRun.domain_id,
+        workspaceRoot: readString(stageRun.workspace_locator.workspace_root)
+          ?? readString(stageRun.workspace_locator.repo_root)
+          ?? stageRun.domain_pack_root,
+        expectedProducingAttemptId: stageAttemptIdFromRef(artifactProducerAttemptRef),
+      });
+    }
+    const packageReadiness = await (
+      options.ensurePackageLaunchReady
+      ?? ensureFamilyRuntimePackageLaunchReady
+    )({
+      domainId: stageRun.domain_id,
+      workspaceLocator: stageRun.workspace_locator,
+      useBoundaryId: requestedUseBoundaryId,
+    });
+    const executionDomainPackRoot = readString(packageReadiness?.runtime_source_readiness?.checkout_path)
+      ?? readString(stageRun.workspace_locator.domain_pack_root)
+      ?? stageRun.domain_pack_root;
+    const executionWorkspaceLocator: Record<string, unknown> = {
+      ...stageRun.workspace_locator,
+      domain_pack_root: executionDomainPackRoot,
+      ...(packageReadiness?.package_use_binding
+        ? { package_use_binding: packageReadiness.package_use_binding }
+        : {}),
+    };
+    const executionStageBinding = (
+      options.resolveStageBinding
+      ?? resolveStandardAgentStageQualityRuntimeBinding
+    )(executionDomainPackRoot, stageRun.stage_id);
+    if (!executionStageBinding?.enabled) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'The current package runtime does not expose the Stage quality binding required by this Attempt.',
+        {
+          failure_code: 'stage_attempt_execution_binding_missing',
+          stage_run_id: stageRun.stage_run_id,
+          stage_id: stageRun.stage_id,
+          attempt_role: input.attempt_role,
+          domain_pack_root: executionDomainPackRoot,
+        },
+      );
+    }
+    const rolePromptRef = executionStageBinding.role_prompt_refs[
+      input.attempt_role as keyof typeof executionStageBinding.role_prompt_refs
+    ];
+    if (!rolePromptRef) {
+      throw new Error(`Stage quality role prompt ref missing for ${input.attempt_role}`);
+    }
+    const workspaceRoot = readString(executionWorkspaceLocator.workspace_root)
+      ?? readString(executionWorkspaceLocator.repo_root)
+      ?? stageRun.domain_pack_root;
     const inputArtifactIdentity = input.attempt_role === 'producer'
       ? {
           artifact_refs: input.artifact_refs,
@@ -898,20 +1077,80 @@ export async function stageQualityAttemptMaterializeActivity(
           workspaceRoot,
           expectedProducingAttemptId: stageAttemptIdFromRef(artifactProducerAttemptRef!),
         });
+    const executionStagePacketRef = `${executionStageBinding.manifest_ref}`
+      + `@sha256:${executionStageBinding.manifest_sha256}`
+      + `#stage=${encodeURIComponent(stageRun.stage_id)}`;
+    const executionCheckpointRefs = [
+      executionStagePacketRef,
+      ...(stageRun.checkpoint_refs ?? []).filter((ref) => (
+        ref !== stageRun.stage_packet_ref && ref !== stageRun.stage_run_spec.stage_packet_ref
+      )),
+    ];
+    const executionContentSpec = buildStageRunImmutableSpec({
+      binding: executionStageBinding,
+      domainPackRoot: executionDomainPackRoot,
+      domainId: stageRun.domain_id,
+      stageId: stageRun.stage_id,
+      workspaceLocator: executionWorkspaceLocator,
+      sourceFingerprint: stageRun.source_fingerprint,
+      executorKind: stageRun.executor_kind,
+      stageAttemptExecutorPolicy: stageRun.stage_attempt_executor_policy,
+      stagePacketRef: executionStagePacketRef,
+      actionId: stageRun.action_id,
+      taskId: stageRun.task_id,
+      checkpointRefs: executionCheckpointRefs,
+      artifactRefs: input.artifact_refs,
+      artifactHashes: input.artifact_hashes,
+      artifactIdentityReceiptRefs: input.artifact_identity_receipt_refs,
+      parentRouteDecisionRef: stageRun.parent_route_decision_ref,
+    });
+    const executionContentSpecSha256 = stageRunSpecSha256(executionContentSpec);
+    const useBoundaryId = readString(packageReadiness?.package_use_binding?.use_boundary_id)
+      ?? requestedUseBoundaryId;
+    const executionDeclaredStageIds = canonicalStageAttemptDeclaredStageIds(
+      executionStageBinding.declared_stage_ids,
+    );
+    if (!executionDeclaredStageIds.includes(stageRun.stage_id)) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'The current package runtime Stage catalog does not contain the executing Stage.',
+        {
+          failure_code: 'stage_attempt_execution_stage_not_declared',
+          stage_run_id: stageRun.stage_run_id,
+          stage_id: stageRun.stage_id,
+          declared_stage_ids: executionDeclaredStageIds,
+        },
+      );
+    }
+    const executionContentBindingPayload = {
+      surface_kind: 'opl_stage_attempt_execution_content_binding' as const,
+      version: 'opl-stage-attempt-execution-content-binding.v1' as const,
+      parent_stage_run_spec_sha256: stageRun.stage_run_spec_sha256,
+      use_boundary_id: useBoundaryId,
+      spec_sha256: executionContentSpecSha256,
+      spec: executionContentSpec,
+      declared_stage_ids: executionDeclaredStageIds,
+    };
+    const executionContentBinding = {
+      ...executionContentBindingPayload,
+      binding_sha256: stageAttemptExecutionContentBindingSha256(executionContentBindingPayload),
+    };
     const qualityLineageRefs = [...new Set([
       ...(stageRun.lineage_refs ?? []),
       ...(artifactProducerAttemptRef ? [artifactProducerAttemptRef] : []),
       ...inputArtifactIdentity.artifact_identity_receipt_refs,
+      `opl://stage-runs/${stageRun.stage_run_id}/spec@sha256:${stageRun.stage_run_spec_sha256}`,
+      `opl://stage-attempt-execution-content/${executionContentSpecSha256}`,
     ])];
     const crossStageRouteSelection = {
       surface_kind: 'opl_stage_run_route_selection_context',
       version: 'stage-run-route-selection-context.v1',
-      configured_decisive_attempt_roles: stageRun.quality_policy.formal_review.required
+      configured_decisive_attempt_roles: executionStageBinding.quality_policy.formal_review.required
         ? ['reviewer', 're_reviewer']
         : ['producer'],
       current_attempt_role: input.attempt_role,
-      declared_stage_ids: stageRun.declared_stage_ids,
-      max_repair_rounds: stageRun.quality_policy.formal_review.max_repair_rounds,
+      declared_stage_ids: executionDeclaredStageIds,
+      max_repair_rounds: executionStageBinding.quality_policy.formal_review.max_repair_rounds,
       terminal_route_selection_requires_stage_run_terminal: true,
       prior_required_finding_ids: (input.findings ?? [])
         .filter((finding) => finding.required)
@@ -925,11 +1164,11 @@ export async function stageQualityAttemptMaterializeActivity(
           stageRunId: stageRun.stage_run_id,
           qualityCycleId: input.quality_cycle_id,
           reviewerAttemptRole: input.attempt_role,
-          stageGoalRefs: stageRun.stage_goal_refs,
+          stageGoalRefs: executionStageBinding.stage_goal_refs,
           artifactRefs: inputArtifactIdentity.artifact_refs,
           artifactHashes: inputArtifactIdentity.artifact_hashes,
-          sourceRefs: stageRun.source_refs,
-          qualityRubricRefs: stageRun.quality_rubric_refs,
+          sourceRefs: executionStageBinding.source_refs,
+          qualityRubricRefs: executionStageBinding.quality_rubric_refs,
           lineageRefs: qualityLineageRefs,
           priorFindingRefs: (input.findings ?? []).map((finding) => finding.finding_id),
           repairMapRefs: (input.repair_map ?? []).map((entry) => `repair-map:${entry.finding_id}`),
@@ -943,9 +1182,9 @@ export async function stageQualityAttemptMaterializeActivity(
           stage_run_id: stageRun.stage_run_id,
           quality_cycle_id: input.quality_cycle_id,
           attempt_role: input.attempt_role,
-          stage_goal_refs: stageRun.stage_goal_refs ?? [],
-          source_refs: stageRun.source_refs ?? [],
-          quality_rubric_refs: stageRun.quality_rubric_refs,
+          stage_goal_refs: executionStageBinding.stage_goal_refs,
+          source_refs: executionStageBinding.source_refs,
+          quality_rubric_refs: executionStageBinding.quality_rubric_refs,
           lineage_refs: qualityLineageRefs,
           artifact_producer_attempt_ref: artifactProducerAttemptRef,
           artifact_refs: inputArtifactIdentity.artifact_refs,
@@ -960,11 +1199,12 @@ export async function stageQualityAttemptMaterializeActivity(
       domainId: stageRun.domain_id,
       stageId: stageRun.stage_id,
       providerKind: 'temporal',
-      workspaceLocator: stageRun.workspace_locator,
+      workspaceLocator: executionWorkspaceLocator,
+      idempotencyBoundaryId: requestedUseBoundaryId,
       sourceFingerprint: stageRun.source_fingerprint ?? undefined,
       executorKind: stageRun.executor_kind,
       stageAttemptExecutorPolicy: stageRun.stage_attempt_executor_policy,
-      checkpointRefs: [stageRun.stage_packet_ref, ...(stageRun.checkpoint_refs ?? [])],
+      checkpointRefs: executionCheckpointRefs,
       stageRunId: stageRun.stage_run_id,
       qualityCycleId: input.quality_cycle_id,
       attemptRole: input.attempt_role,
@@ -972,16 +1212,17 @@ export async function stageQualityAttemptMaterializeActivity(
       parentAttemptRef: input.parent_attempt_ref ?? undefined,
       inputArtifactRefs: inputArtifactIdentity.artifact_refs,
       reviewedArtifactHashes: inputArtifactIdentity.artifact_hashes,
-      qualitySourceRefs: stageRun.source_refs,
-      qualityStageGoalRefs: stageRun.stage_goal_refs,
+      qualitySourceRefs: executionStageBinding.source_refs,
+      qualityStageGoalRefs: executionStageBinding.stage_goal_refs,
       qualityLineageRefs,
-      qualityRubricRefs: stageRun.quality_rubric_refs,
+      qualityRubricRefs: executionStageBinding.quality_rubric_refs,
       priorFindingRefs: (input.findings ?? []).map((finding) => finding.finding_id),
       repairMapRefs: (input.repair_map ?? []).map((entry) => `repair-map:${entry.finding_id}`),
       qualityContext: {
         findings: input.findings ?? [],
         repair_map: input.repair_map ?? [],
         route_recommendations: input.route_recommendations ?? [],
+        execution_content_binding: executionContentBinding,
       },
       qualityRolePromptRef: rolePromptRef,
       contextManifestRef,
@@ -994,31 +1235,7 @@ export async function stageQualityAttemptMaterializeActivity(
       qualityCycleId: input.quality_cycle_id,
       attemptRef,
     });
-    return {
-      surface_kind: 'temporal_stage_quality_attempt_materialization_receipt',
-      stage_run_id: stageRun.stage_run_id,
-      quality_cycle_id: input.quality_cycle_id,
-      attempt_role: input.attempt_role,
-      quality_round_index: input.quality_round_index,
-      attempt_ref: attemptRef,
-      workflow_input: {
-        ...buildTemporalStageAttemptWorkflowInput(attempt),
-        stage_run_content_binding_version: STAGE_RUN_ATTEMPT_CONTENT_BINDING_VERSION,
-        stage_run_spec_sha256: stageRun.stage_run_spec_sha256,
-        stage_run_spec: stageRun.stage_run_spec,
-        domain_pack_root: stageRun.domain_pack_root,
-        quality_context: {
-          context_manifest: contextManifest,
-          findings: input.findings ?? [],
-          repair_map: input.repair_map ?? [],
-          route_recommendations: input.route_recommendations ?? [],
-        },
-      },
-      authority_boundary: {
-        opl: 'stage_attempt_identity_and_refs_projection_only',
-        domain: 'review_findings_repair_artifact_and_quality_verdict_owner',
-      },
-    };
+    return persistedStageQualityAttemptMaterializationReceipt(stageRun, attempt);
   } finally {
     db.close();
   }
@@ -1071,6 +1288,14 @@ export async function stageRunRouteLaunchActivity(
   input: TemporalStageRunRouteLaunchInput,
 ): Promise<TemporalStageRunRouteLaunchReceipt> {
   return materializeStageRunRoute(input, {
+    findTargetStageRun: (stageRunId) => {
+      const { db } = openQueueDb();
+      try {
+        return findStageRunLaunch(db, stageRunId)?.stage_run_input ?? null;
+      } finally {
+        db.close();
+      }
+    },
     launchTargetStageRun: async (stageRunInput) => {
       const { db, paths } = openQueueDb();
       try {

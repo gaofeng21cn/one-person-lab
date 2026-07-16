@@ -156,15 +156,26 @@ function resolveChannelManifestRef(declaredRef?: string) {
   return parseImageRef(resolveOplReleaseManifestRef(declaredRef));
 }
 
-function runCurl(args: string[], errorKind: string, details: Record<string, unknown>, capture = true) {
+function runCurl(
+  args: string[],
+  errorKind: string,
+  details: Record<string, unknown>,
+  capture = true,
+  timeoutMs = 60_000,
+) {
+  const boundedTimeoutMs = Number.isFinite(timeoutMs) && timeoutMs > 0
+    ? Math.max(1, Math.floor(timeoutMs))
+    : 60_000;
+  const connectTimeoutSeconds = (Math.min(10_000, boundedTimeoutMs) / 1000).toFixed(3);
+  const maxTimeSeconds = (boundedTimeoutMs / 1000).toFixed(3);
   const result = runCommand('curl', [
     '--connect-timeout',
-    '10',
+    connectTimeoutSeconds,
     '--max-time',
-    '60',
+    maxTimeSeconds,
     ...args,
   ], undefined, {
-    timeoutMs: 70_000,
+    timeoutMs: boundedTimeoutMs,
     maxBuffer: 64 * 1024 * 1024,
   });
   if (result.exitCode !== 0) {
@@ -174,15 +185,18 @@ function runCurl(args: string[], errorKind: string, details: Record<string, unkn
       {
         ...details,
         command: ['curl', ...args],
+        timeout_ms: boundedTimeoutMs,
+        timed_out: result.timedOut === true,
         stdout: result.stdout,
         stderr: result.stderr,
+        failure_code: 'agent_package_capability_channel_unavailable',
       },
     );
   }
   return capture ? result.stdout : '';
 }
 
-function fetchGhcrToken(imageRef: OciImageRef) {
+function fetchGhcrToken(imageRef: OciImageRef, timeoutMs?: number) {
   if (imageRef.registry !== 'ghcr.io') {
     throw new FrameworkContractError(
       'contract_shape_invalid',
@@ -192,7 +206,13 @@ function fetchGhcrToken(imageRef: OciImageRef) {
   }
   const scope = `repository:${imageRef.repository}:pull`;
   const tokenUrl = `https://${imageRef.registry}/token?service=${encodeURIComponent(imageRef.registry)}&scope=${encodeURIComponent(scope)}`;
-  const payload = runCurl(['-fsSL', tokenUrl], 'ghcr_token', { image: imageRef.image, tag: imageRef.tag });
+  const payload = runCurl(
+    ['-fsSL', tokenUrl],
+    'ghcr_token',
+    { image: imageRef.image, tag: imageRef.tag },
+    true,
+    timeoutMs,
+  );
   const parsed = parseJsonText(payload);
   const token = isRecord(parsed) ? stringValue(parsed.token) : null;
   if (!token) {
@@ -204,7 +224,7 @@ function fetchGhcrToken(imageRef: OciImageRef) {
   return token;
 }
 
-function fetchOciManifest(imageRef: OciImageRef, token: string) {
+function fetchOciManifest(imageRef: OciImageRef, token: string, timeoutMs?: number) {
   const manifestUrl = `https://${imageRef.registry}/v2/${imageRef.repository}/manifests/${imageRef.tag}`;
   const payload = runCurl([
     '-fsSL',
@@ -213,7 +233,7 @@ function fetchOciManifest(imageRef: OciImageRef, token: string) {
     '-H',
     'Accept: application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json',
     manifestUrl,
-  ], 'oci_manifest', { image: imageRef.image, tag: imageRef.tag });
+  ], 'oci_manifest', { image: imageRef.image, tag: imageRef.tag }, true, timeoutMs);
   const parsed = parseJsonText(payload);
   return isRecord(parsed) ? parsed as { layers?: OciLayer[] } : {};
 }
@@ -242,7 +262,13 @@ function fetchPinnedOciManifest(imageRef: OciImageRef, token: string, expectedDi
   return isRecord(parsed) ? parsed as { layers?: OciLayer[] } : {};
 }
 
-function fetchOciBlob(imageRef: OciImageRef, token: string, digest: string, targetPath: string) {
+function fetchOciBlob(
+  imageRef: OciImageRef,
+  token: string,
+  digest: string,
+  targetPath: string,
+  timeoutMs?: number,
+) {
   const blobUrl = `https://${imageRef.registry}/v2/${imageRef.repository}/blobs/${digest}`;
   runCurl([
     '-fsSL',
@@ -251,7 +277,7 @@ function fetchOciBlob(imageRef: OciImageRef, token: string, digest: string, targ
     blobUrl,
     '-o',
     targetPath,
-  ], 'oci_blob', { image: imageRef.image, tag: imageRef.tag, digest }, false);
+  ], 'oci_blob', { image: imageRef.image, tag: imageRef.tag, digest }, false, timeoutMs);
 }
 
 function verifySha256(filePath: string, expected: string, details: Record<string, unknown>) {
@@ -552,10 +578,29 @@ function selectLayer(manifest: { layers?: OciLayer[] }, mediaType: string, title
     ?? null;
 }
 
-export function readOplPackageChannelManifestWithMetadata(declaredRef?: string) {
+export function readOplPackageChannelManifestWithMetadata(
+  declaredRef?: string,
+  input: { timeoutMs?: number } = {},
+) {
   const imageRef = resolveChannelManifestRef(declaredRef);
-  const token = fetchGhcrToken(imageRef);
-  const manifest = fetchOciManifest(imageRef, token);
+  const totalTimeoutMs = Number.isFinite(input.timeoutMs) && Number(input.timeoutMs) > 0
+    ? Math.floor(Number(input.timeoutMs))
+    : 60_000;
+  const deadline = Date.now() + totalTimeoutMs;
+  const remainingTimeoutMs = () => {
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) {
+      throw new FrameworkContractError('build_command_failed', 'OPL package channel refresh exceeded its total time budget.', {
+        image: imageRef.image,
+        tag: imageRef.tag,
+        timeout_ms: totalTimeoutMs,
+        failure_code: 'agent_package_capability_channel_unavailable',
+      });
+    }
+    return remaining;
+  };
+  const token = fetchGhcrToken(imageRef, remainingTimeoutMs());
+  const manifest = fetchOciManifest(imageRef, token, remainingTimeoutMs());
   const layer = selectLayer(manifest, CHANNEL_MANIFEST_LAYER_MEDIA_TYPE, 'opl-channel-manifest.json');
   if (!layer?.digest) {
     throw new FrameworkContractError('contract_shape_invalid', 'OPL package-channel manifest layer is missing.', {
@@ -566,7 +611,7 @@ export function readOplPackageChannelManifestWithMetadata(declaredRef?: string) 
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-channel-manifest-'));
   try {
     const manifestPath = path.join(tempRoot, 'opl-channel-manifest.json');
-    fetchOciBlob(imageRef, token, layer.digest, manifestPath);
+    fetchOciBlob(imageRef, token, layer.digest, manifestPath, remainingTimeoutMs());
     const raw = fs.readFileSync(manifestPath);
     const parsed = readJsonPayloadFile(manifestPath);
     return {

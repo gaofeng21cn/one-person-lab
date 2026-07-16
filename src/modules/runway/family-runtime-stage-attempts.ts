@@ -15,6 +15,7 @@ export { buildStageAttemptCurrentProviderReadinessPayload } from './family-runti
 export {
   createStageAttempt,
   findIdempotentStageAttempt,
+  findStageAttemptByIdempotencyBoundary,
   type StageAttemptCreateInput,
 } from './family-runtime-stage-attempts-parts/create.ts';
 export {

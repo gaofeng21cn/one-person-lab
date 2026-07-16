@@ -17,4 +17,5 @@ export { runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, ru
 export { buildManifestCommand, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createMasWorkspaceFixture, readJsonFixture, shellSingleQuote } from './helpers-parts/fixtures.ts';
 export { assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph, createFakeLaunchctlFixture, createFakeOpenFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, insertFamilyRuntimeTaskProjectionFixture, installRuntimePackageFixture, loadFamilyManifestFixtures, writeMasCleanRunnerFixture } from './helpers-parts/family-fixtures.ts';
 export { startFakeOplApiServer } from './helpers-parts/fake-api-server.ts';
+export { removeFixtureTree } from './helpers-parts/filesystem.ts';
 export { assertContractsContext, assertNoContractsProvenance, readJsonLine, startCliServer, stopCliPipeChild, stopCliServer, stopHttpServer, writeJsonLine } from './helpers-parts/server-helpers.ts';

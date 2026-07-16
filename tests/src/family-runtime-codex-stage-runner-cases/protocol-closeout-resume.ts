@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { FrameworkContractError } from '../../../src/kernel/contract-validation.ts';
+import { preflightDomainWorkspaceCheckoutCurrentness } from '../../../src/modules/runway/family-runtime-checkout-currentness.ts';
 import { createFakeCodexFixture } from '../cli/helpers.ts';
 import { runPublicCodexStageRunner } from '../family-runtime-codex-stage-runner-helpers.ts';
 
@@ -316,7 +316,7 @@ test('protocol closeout resume rejects tool execution and preserves only the ori
   }
 });
 
-test('child Review inherits StageRun currentness admission after producer artifact writes dirty the checkout', async () => {
+test('child Review observes a dirty checkout and runs with or without inherited StageRun admission', async () => {
   const closeout = {
     surface_kind: 'stage_attempt_closeout_packet',
     stage_attempt_id: 'sat-currentness-reviewer',
@@ -357,6 +357,10 @@ test('child Review inherits StageRun currentness admission after producer artifa
   execFileSync('git', ['commit', '-qm', 'baseline'], { cwd: domainRoot });
   const admittedHead = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: domainRoot, encoding: 'utf8' }).trim();
   fs.writeFileSync(path.join(domainRoot, 'producer-output.txt'), 'new stage artifact\n');
+  const dirtyStatus = execFileSync('git', ['status', '--porcelain=v1', '-uall'], {
+    cwd: domainRoot,
+    encoding: 'utf8',
+  });
 
   const previousBin = process.env.OPL_CODEX_BIN;
   const previousFamilyWorkspaceRoot = process.env.OPL_FAMILY_WORKSPACE_ROOT;
@@ -373,20 +377,25 @@ test('child Review inherits StageRun currentness admission after producer artifa
       domain_id: 'medautoscience',
       checkpoint_refs: ['packet:review'],
     };
-    await assert.rejects(
-      () => runPublicCodexStageRunner({
-        attempt: {
-          ...baseAttempt,
-          workspace_locator: { workspace_root: domainRoot },
-        },
-        runnerMode: 'codex_cli',
-        env: { OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'host' },
-      }),
-      (error) => error instanceof FrameworkContractError
-        && error.details?.blocked_reason === 'dirty_checkout',
-    );
+    const observation = preflightDomainWorkspaceCheckoutCurrentness({
+      domainId: baseAttempt.domain_id,
+      workspaceLocator: { workspace_root: domainRoot },
+    });
+    assert.equal(observation?.status, 'observed');
+    assert.equal(observation?.currentness_status, 'dirty_observed');
 
-    const receipt = await runPublicCodexStageRunner({
+    const receiptWithoutAdmission = await runPublicCodexStageRunner({
+      attempt: {
+        ...baseAttempt,
+        workspace_locator: { workspace_root: domainRoot },
+      },
+      runnerMode: 'codex_cli',
+      env: { OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'host' },
+    });
+    assert.equal(receiptWithoutAdmission.closeout_packet?.stage_attempt_id, baseAttempt.stage_attempt_id);
+    assert.equal(receiptWithoutAdmission.progress_summary.thread_id, 'thread-currentness-reviewer');
+
+    const receiptWithAdmission = await runPublicCodexStageRunner({
       attempt: {
         ...baseAttempt,
         workspace_locator: {
@@ -396,15 +405,28 @@ test('child Review inherits StageRun currentness admission after producer artifa
             stage_run_id: baseAttempt.stage_run_id,
             status: 'current',
             head_sha: admittedHead,
-            child_attempts_inherit_admission: true,
+            checkout_currentness_is_provenance_only: true,
+            child_attempts_refresh_package_use: true,
           },
         },
       },
       runnerMode: 'codex_cli',
       env: { OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'host' },
     });
-    assert.equal(receipt.closeout_packet?.stage_attempt_id, baseAttempt.stage_attempt_id);
-    assert.equal(receipt.progress_summary.thread_id, 'thread-currentness-reviewer');
+    assert.equal(receiptWithAdmission.closeout_packet?.stage_attempt_id, baseAttempt.stage_attempt_id);
+    assert.equal(receiptWithAdmission.progress_summary.thread_id, 'thread-currentness-reviewer');
+    assert.equal(
+      execFileSync('git', ['rev-parse', 'HEAD'], { cwd: domainRoot, encoding: 'utf8' }).trim(),
+      admittedHead,
+    );
+    assert.equal(
+      execFileSync('git', ['status', '--porcelain=v1', '-uall'], { cwd: domainRoot, encoding: 'utf8' }),
+      dirtyStatus,
+    );
+    assert.equal(
+      fs.readFileSync(path.join(domainRoot, 'producer-output.txt'), 'utf8'),
+      'new stage artifact\n',
+    );
   } finally {
     restoreEnv('OPL_CODEX_BIN', previousBin);
     restoreEnv('OPL_FAMILY_WORKSPACE_ROOT', previousFamilyWorkspaceRoot);

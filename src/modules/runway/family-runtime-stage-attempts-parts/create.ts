@@ -35,6 +35,7 @@ export type StageAttemptCreateInput = {
   providerKind?: FamilyRuntimeProviderKind;
   workspaceLocator: Record<string, unknown>;
   idempotencyWorkspaceLocator?: Record<string, unknown>;
+  idempotencyBoundaryId?: string;
   sourceFingerprint?: string;
   executorKind?: string;
   stageAttemptExecutorPolicy?: Record<string, unknown> | null;
@@ -73,7 +74,32 @@ export type StageAttemptCreateInput = {
   noContextInheritance?: boolean;
 };
 
+function explicitStageAttemptIdempotencyKey(input: {
+  domainId: FamilyRuntimeDomainId;
+  stageId: string;
+  providerKind?: FamilyRuntimeProviderKind;
+  idempotencyBoundaryId?: string;
+}) {
+  if (input.idempotencyBoundaryId === undefined) return null;
+  const boundaryId = input.idempotencyBoundaryId.trim();
+  if (!boundaryId) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'StageAttempt idempotency boundary id must be non-empty when provided.',
+    );
+  }
+  return stableId('idem', [
+    'explicit_attempt_boundary.v1',
+    input.domainId,
+    normalizedStageId(input.stageId),
+    resolveFamilyRuntimeProviderKind(input.providerKind),
+    boundaryId,
+  ]);
+}
+
 function stageAttemptBaseIdempotencyKey(input: StageAttemptCreateInput) {
+  const explicitKey = explicitStageAttemptIdempotencyKey(input);
+  if (explicitKey) return explicitKey;
   return stableId('idem', [
     input.domainId,
     normalizedStageId(input.stageId),
@@ -102,6 +128,22 @@ function stageAttemptBaseIdempotencyKey(input: StageAttemptCreateInput) {
     input.contextManifest ?? null,
     input.noContextInheritance ?? null,
   ]);
+}
+
+export function findStageAttemptByIdempotencyBoundary(
+  db: DatabaseSync,
+  input: {
+    domainId: FamilyRuntimeDomainId;
+    stageId: string;
+    providerKind?: FamilyRuntimeProviderKind;
+    idempotencyBoundaryId: string;
+  },
+) {
+  const idempotencyKey = explicitStageAttemptIdempotencyKey(input)!;
+  const existing = db.prepare(`
+    SELECT * FROM stage_attempts WHERE idempotency_key = ? ORDER BY created_at ASC LIMIT 1
+  `).get(idempotencyKey) as StageAttemptRow | undefined;
+  return existing ? stageAttemptToPayload(existing) : null;
 }
 
 export function findIdempotentStageAttempt(db: DatabaseSync, input: StageAttemptCreateInput) {
@@ -139,6 +181,29 @@ function stageAttemptOrdinalForNewAttempt(
       AND COALESCE(task_id, '') = COALESCE(?, '')
   `).get(input.domainId, input.stageId, input.providerKind, input.taskId) as { count: number };
   return row.count + 1;
+}
+
+function idempotentStageAttemptResult(existing: StageAttemptRow) {
+  const attempt = stageAttemptToPayload(existing);
+  return {
+    created: false,
+    idempotent_noop: true,
+    attempt,
+    conflict_or_blocker_envelopes: [
+      buildDuplicateTaskEnvelope({
+        subject: buildFamilyConflictSubject({
+          domain: attempt.domain_id,
+          stageId: attempt.stage_id,
+          taskKind: attempt.stage_id,
+          sourceFingerprint: attempt.source_fingerprint,
+          idempotencyKey: attempt.idempotency_key,
+          stageAttemptId: attempt.stage_attempt_id,
+          taskId: attempt.task_id,
+        }),
+        existingAttemptRef: `opl://stage_attempts/${attempt.stage_attempt_id}`,
+      }),
+    ],
+  };
 }
 
 export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateInput) {
@@ -339,44 +404,27 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
       SELECT * FROM stage_attempts WHERE idempotency_key = ? ORDER BY created_at ASC LIMIT 1
     `).get(idempotencyKey) as StageAttemptRow | undefined;
     if (existing) {
-      const attempt = stageAttemptToPayload(existing);
-      return {
-        created: false,
-        idempotent_noop: true,
-        attempt,
-        conflict_or_blocker_envelopes: [
-          buildDuplicateTaskEnvelope({
-            subject: buildFamilyConflictSubject({
-              domain: attempt.domain_id,
-              stageId: attempt.stage_id,
-              taskKind: attempt.stage_id,
-              sourceFingerprint: attempt.source_fingerprint,
-              idempotencyKey: attempt.idempotency_key,
-              stageAttemptId: attempt.stage_attempt_id,
-              taskId: attempt.task_id,
-            }),
-            existingAttemptRef: `opl://stage_attempts/${attempt.stage_attempt_id}`,
-          }),
-        ],
-      };
+      return idempotentStageAttemptResult(existing);
     }
   }
-  const stageAttemptId = stableId('sat', [
-    input.domainId,
-    stageId,
-    input.actionId?.trim() || null,
-    providerKind,
-    input.workspaceLocator,
-    sourceFingerprint,
-    stageAttemptExecutorPolicy,
-    input.taskId ?? null,
-    input.stageRunId?.trim() || null,
-    input.qualityCycleId?.trim() || null,
-    attemptRole,
-    qualityRoundIndex,
-    input.parentAttemptRef?.trim() || null,
-    input.newAttempt ? newAttemptOrdinal : createdAt,
-  ]);
+  const stageAttemptId = input.idempotencyBoundaryId && !input.newAttempt
+    ? stableId('sat', ['explicit_attempt_boundary.v1', idempotencyKey])
+    : stableId('sat', [
+        input.domainId,
+        stageId,
+        input.actionId?.trim() || null,
+        providerKind,
+        input.workspaceLocator,
+        sourceFingerprint,
+        stageAttemptExecutorPolicy,
+        input.taskId ?? null,
+        input.stageRunId?.trim() || null,
+        input.qualityCycleId?.trim() || null,
+        attemptRole,
+        qualityRoundIndex,
+        input.parentAttemptRef?.trim() || null,
+        input.newAttempt ? newAttemptOrdinal : createdAt,
+      ]);
   const workflowId = stableId('wf', [input.domainId, stageId, stageAttemptId]);
   const workspaceLocator = input.workspaceLocator;
   const providerReceipt = buildStageAttemptProviderReceipt({
@@ -459,8 +507,9 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
     created_at: createdAt,
     updated_at: createdAt,
   };
-  db.prepare(`
-    INSERT INTO stage_attempts(
+  try {
+    db.prepare(`
+      INSERT INTO stage_attempts(
       stage_attempt_id, idempotency_key, provider_kind, workflow_id, domain_id, stage_id, workspace_locator_json,
       source_fingerprint, executor_kind, stage_attempt_executor_policy_json, stage_run_id, quality_cycle_id,
       attempt_role, quality_round_index, parent_attempt_ref, input_artifact_refs_json, reviewed_artifact_hashes_json,
@@ -472,7 +521,7 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
       provider_receipt_json, provider_run_json, activity_events_json, route_impact_json,
       closeout_receipt_status, created_at, updated_at
     )
-    VALUES (
+      VALUES (
       @stage_attempt_id, @idempotency_key, @provider_kind, @workflow_id, @domain_id, @stage_id, @workspace_locator_json,
       @source_fingerprint, @executor_kind, @stage_attempt_executor_policy_json, @stage_run_id, @quality_cycle_id,
       @attempt_role, @quality_round_index, @parent_attempt_ref, @input_artifact_refs_json, @reviewed_artifact_hashes_json,
@@ -483,8 +532,17 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
       @human_gate_refs_json, @retry_budget_json, @attempt_count, @task_id, @blocked_reason,
       @provider_receipt_json, @provider_run_json, @activity_events_json, @route_impact_json,
       @closeout_receipt_status, @created_at, @updated_at
-    )
-  `).run(row);
+      )
+    `).run(row);
+  } catch (error) {
+    if (input.idempotencyBoundaryId && !input.newAttempt) {
+      const existing = db.prepare(`
+        SELECT * FROM stage_attempts WHERE stage_attempt_id = ? AND idempotency_key = ? LIMIT 1
+      `).get(stageAttemptId, idempotencyKey) as StageAttemptRow | undefined;
+      if (existing) return idempotentStageAttemptResult(existing);
+    }
+    throw error;
+  }
   return {
     created: true,
     idempotent_noop: false,

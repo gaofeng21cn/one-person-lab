@@ -61,11 +61,13 @@ export function readFirstPartyPackageCatalogSnapshot(): FirstPartyDirectoryCatal
 
 export async function refreshFirstPartyPackageCatalogSnapshot(
   packageId = 'mas',
-  input: { persist?: boolean } = {},
+  input: { persist?: boolean; timeoutMs?: number } = {},
 ): Promise<FirstPartyDirectoryCatalogSnapshot> {
   const owner = resolveFirstPartyPackageCatalog(packageId);
   if (!owner) throw new Error(`Unknown first-party OPL Package: ${packageId}`);
-  const fetched = await fetchManagedPackageCatalog(owner.catalogSource);
+  const fetched = await fetchManagedPackageCatalog(owner.catalogSource, {
+    timeoutMs: input.timeoutMs,
+  });
   const cache: ReleaseCatalogCache = {
     surface_kind: 'opl_agent_package_release_catalog_cache.v1',
     catalog_ref: fetched.channel_ref,
@@ -90,11 +92,13 @@ export async function resolveFirstPartyPackageCatalogSnapshot(input: {
   refresh: boolean;
   packageId?: string;
   persist?: boolean;
+  timeoutMs?: number;
 }): Promise<FirstPartyDirectoryCatalogSnapshot | null> {
   if (input.refresh) {
     try {
       return await refreshFirstPartyPackageCatalogSnapshot(input.packageId, {
         persist: input.persist,
+        timeoutMs: input.timeoutMs,
       });
     } catch {
       return readFirstPartyPackageCatalogSnapshot();

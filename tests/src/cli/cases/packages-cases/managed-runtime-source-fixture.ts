@@ -58,6 +58,21 @@ export function writeManagedRuntimeSourceFixture(input: {
     'fi',
     `printf '%s\\n' ${JSON.stringify(`healthy:${input.version}`)}`,
   ].join('\n'), { mode: 0o755 });
+  if (input.moduleId === 'medautogrant' || input.moduleId === 'redcube') {
+    for (const relativePath of [
+      'contracts/action_catalog.json',
+      'contracts/domain_descriptor.json',
+      'contracts/pack_compiler_input.json',
+      'agent/stages/manifest.json',
+    ]) {
+      const targetPath = path.join(sourceRoot, relativePath);
+      fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+      fs.writeFileSync(targetPath, JSON.stringify({ fixture_version: input.version }, null, 2));
+    }
+    const skillPath = path.join(sourceRoot, 'agent', 'primary_skill', 'SKILL.md');
+    fs.mkdirSync(path.dirname(skillPath), { recursive: true });
+    fs.writeFileSync(skillPath, `# Standard Agent ${input.version}\n`);
+  }
   if (input.moduleId === 'medautoscience' || input.moduleId === 'medautogrant') {
     fs.writeFileSync(path.join(sourceRoot, 'scripts', 'run-python-clean.sh'), [
       '#!/usr/bin/env bash',

@@ -10,6 +10,8 @@ import { stringValue as optionalString } from '../../kernel/json-record.ts';
 import { isRecord, normalizeTimeoutMs, type JsonRecord } from './family-runtime-codex-stage-runner-parts/shared.ts';
 import { inspectExternalSandboxProviderAdapterEnv } from './external-sandbox-provider-adapter.ts';
 import type { RunnerEventSummary } from './family-runtime-codex-stage-runner-parts/input-prompt.ts';
+import { projectionFiles } from '../connect/agent-package-registry-parts/skill-projection.ts';
+import { sandboxAttemptSkillRuntime } from './family-runtime-attempt-skill-projection.ts';
 
 type E2bCommandResult = {
   exitCode: number;
@@ -30,6 +32,9 @@ type E2bSandbox = {
       onStdout?: (data: string) => void | Promise<void>;
       onStderr?: (data: string) => void | Promise<void>;
     }) => Promise<E2bCommandResult>;
+  };
+  files: {
+    write: (filePath: string, data: string | ArrayBuffer) => Promise<unknown>;
   };
 };
 
@@ -213,6 +218,67 @@ function timeoutReasonFromExit(result: E2bCommandResult): CodexCommandResult['ti
   return result.error ? 'provider_unavailable' : undefined;
 }
 
+function safeProviderErrorKind(error?: string) {
+  if (!error) return null;
+  if (error === 'activity_cancelled' || error === 'total_timeout') return error;
+  return 'provider_error';
+}
+
+function failE2bPreparation(input: {
+  phase: string;
+  failureCode: string;
+  result?: E2bCommandResult | null;
+  providerThrew?: boolean;
+  generationId?: string;
+}): never {
+  throw new FrameworkContractError(
+    'launcher_failed',
+    `E2B Codex sandbox preparation failed during ${input.phase}; Codex was not executed.`,
+    {
+      failure_code: input.failureCode,
+      sandbox_phase: input.phase,
+      provider_kind: 'e2b',
+      exit_code: input.result?.exitCode ?? null,
+      provider_error_kind: input.providerThrew
+        ? 'provider_error'
+        : safeProviderErrorKind(input.result?.error),
+      codex_executed: false,
+      credential_material_logged: false,
+      stderr_logged: false,
+      ...(input.generationId ? { generation_id: input.generationId } : {}),
+    },
+  );
+}
+
+async function runRequiredE2bPreparation(input: {
+  sandbox: E2bSandbox;
+  command: string;
+  opts: {
+    cwd?: string;
+    envs?: Record<string, string>;
+    timeoutMs?: number;
+    signal?: AbortSignal;
+  };
+  phase: string;
+  failureCode: string;
+  generationId?: string;
+}) {
+  let result: E2bCommandResult;
+  try {
+    result = await input.sandbox.commands.run(input.command, input.opts);
+  } catch {
+    failE2bPreparation({
+      ...input,
+      result: null,
+      providerThrew: true,
+    });
+  }
+  if (result.exitCode !== 0 || result.error) {
+    failE2bPreparation({ ...input, result });
+  }
+  return result;
+}
+
 function parseStdoutEvents(stdout: string, onRunnerProgress?: (event: RunnerEventSummary) => void) {
   if (!onRunnerProgress) {
     return;
@@ -286,19 +352,82 @@ export async function runCodexInE2bSandbox(input: {
   const parentDir = path.posix.dirname(workspaceRoot);
   const commandTimeoutMs = normalizeTimeoutMs(input.timeoutMs, 120_000);
 
-  await sandbox.commands.run(`mkdir -p ${shellQuote(parentDir)} && rm -rf ${shellQuote(workspaceRoot)}`, {
-    timeoutMs: 30_000,
-    signal: input.signal,
+  await runRequiredE2bPreparation({
+    sandbox,
+    command: `mkdir -p ${shellQuote(parentDir)} && rm -rf ${shellQuote(workspaceRoot)}`,
+    opts: { timeoutMs: 30_000, signal: input.signal },
+    phase: 'workspace_reset',
+    failureCode: 'codex_sandbox_workspace_reset_failed',
   });
-  const clone = await sandbox.commands.run(
-    `git clone ${shellQuote(repoUrl)} ${shellQuote(workspaceRoot)}`,
-    { timeoutMs: commandTimeoutMs, signal: input.signal },
-  );
+  const clone = await runRequiredE2bPreparation({
+    sandbox,
+    command: `git clone ${shellQuote(repoUrl)} ${shellQuote(workspaceRoot)}`,
+    opts: { timeoutMs: commandTimeoutMs, signal: input.signal },
+    phase: 'workspace_clone',
+    failureCode: 'codex_sandbox_workspace_clone_failed',
+  });
   let checkout: E2bCommandResult | null = null;
   if (checkoutRef) {
-    checkout = await sandbox.commands.run(`git -C ${shellQuote(workspaceRoot)} checkout ${shellQuote(checkoutRef)}`, {
-      timeoutMs: 30_000,
-      signal: input.signal,
+    checkout = await runRequiredE2bPreparation({
+      sandbox,
+      command: `git -C ${shellQuote(workspaceRoot)} checkout ${shellQuote(checkoutRef)}`,
+      opts: { timeoutMs: 30_000, signal: input.signal },
+      phase: 'workspace_checkout',
+      failureCode: 'codex_sandbox_workspace_checkout_failed',
+    });
+  }
+  const skillRuntime = sandboxAttemptSkillRuntime(input.attempt, workspaceRoot);
+  if (skillRuntime) {
+    await runRequiredE2bPreparation({
+      sandbox,
+      command: `mkdir -p ${shellQuote(skillRuntime.skillsRoot)}`,
+      opts: { timeoutMs: 30_000, signal: input.signal },
+      phase: 'skill_root_create',
+      failureCode: 'agent_package_skill_projection_sandbox_mkdir_failed',
+      generationId: skillRuntime.projection.generation_id,
+    });
+    for (const file of projectionFiles(skillRuntime.projection)) {
+      const relativePath = file.relative_path.split(path.sep).join(path.posix.sep);
+      const targetPath = path.posix.join(skillRuntime.skillsRoot, relativePath);
+      await runRequiredE2bPreparation({
+        sandbox,
+        command: `mkdir -p ${shellQuote(path.posix.dirname(targetPath))}`,
+        opts: { timeoutMs: 30_000, signal: input.signal },
+        phase: 'skill_file_parent_create',
+        failureCode: 'agent_package_skill_projection_sandbox_mkdir_failed',
+        generationId: skillRuntime.projection.generation_id,
+      });
+      try {
+        await sandbox.files.write(targetPath, Uint8Array.from(file.bytes).buffer);
+      } catch {
+        failE2bPreparation({
+          phase: 'skill_file_write',
+          failureCode: 'agent_package_skill_projection_sandbox_write_failed',
+          providerThrew: true,
+          generationId: skillRuntime.projection.generation_id,
+        });
+      }
+      if (file.executable) {
+        await runRequiredE2bPreparation({
+          sandbox,
+          command: `chmod 0555 ${shellQuote(targetPath)}`,
+          opts: { timeoutMs: 30_000, signal: input.signal },
+          phase: 'skill_file_chmod',
+          failureCode: 'agent_package_skill_projection_sandbox_chmod_failed',
+          generationId: skillRuntime.projection.generation_id,
+        });
+      }
+    }
+    const excludeLines = skillRuntime.projection.skill_ids
+      .map((skillId) => `.agents/skills/${skillId}/`)
+      .join('\n');
+    await runRequiredE2bPreparation({
+      sandbox,
+      command: `printf '%s\\n' ${shellQuote(excludeLines)} >> ${shellQuote(path.posix.join(workspaceRoot, '.git', 'info', 'exclude'))}`,
+      opts: { timeoutMs: 30_000, signal: input.signal },
+      phase: 'skill_projection_exclude',
+      failureCode: 'agent_package_skill_projection_sandbox_exclude_failed',
+      generationId: skillRuntime.projection.generation_id,
     });
   }
   const commandEnv = forwardedEnv(env, input.env ?? {});

@@ -1075,6 +1075,7 @@ export async function buildOplAppState(input: {
     core,
     developerMode,
     modules: runtimeSourceCarriersState,
+    agentPackages: agentPackagesProjection,
     provider,
     release,
     paths,

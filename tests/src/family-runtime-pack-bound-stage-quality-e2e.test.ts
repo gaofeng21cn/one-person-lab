@@ -220,11 +220,11 @@ Close prior findings against the repaired artifact.
   return root;
 }
 
-function packageUseBinding(packRoot: string) {
+function packageUseBinding(packRoot: string, version = '0.0.0-test') {
   const manifestBytes = fs.readFileSync(path.join(packRoot, 'agent/stages/manifest.json'));
   const manifestSha256 = crypto.createHash('sha256').update(manifestBytes).digest('hex');
   const rootContentDigest = crypto.createHash('sha256')
-    .update('pack-bound-quality-e2e-root-package-v1')
+    .update(`pack-bound-quality-e2e-root-package-v1\0${version}`)
     .digest('hex');
   const closureDigest = crypto.createHash('sha256')
     .update(`medautoscience\0${manifestSha256}\0${rootContentDigest}`)
@@ -235,9 +235,9 @@ function packageUseBinding(packRoot: string) {
     use_receipt_ref: 'opl://agent-package/use/pack-bound-quality-e2e',
     root_package: {
       package_id: 'medautoscience',
-      package_version: '0.0.0-test',
-      owner_language_version: { scheme: 'pep440', value: '0.0.0-test' },
-      package_lock_ref: 'opl://agent-package-lock/medautoscience/0.0.0-test',
+      package_version: version,
+      owner_language_version: { scheme: 'pep440', value: version },
+      package_lock_ref: `opl://agent-package-lock/medautoscience/${version}`,
       manifest_sha256: manifestSha256,
       content_digest: `sha256:${rootContentDigest}`,
       source_artifact_ref: null,
@@ -261,6 +261,29 @@ test('pack-bound CLI launch persists isolated review attempts and terminal quali
   const familyWorkspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-bound-family-workspace-'));
   const packRoot = createPackFixture();
   const useBinding = packageUseBinding(packRoot);
+  const updatedPackRoot = path.join(stateRoot, 'updated-pack');
+  fs.cpSync(packRoot, updatedPackRoot, { recursive: true });
+  fs.writeFileSync(
+    path.join(updatedPackRoot, 'agent/prompts/draft.md'),
+    `# Draft
+
+## Producer
+Produce using the latest package.
+
+## Reviewer
+Review using the latest package.
+
+## Repairer
+Repair using the latest package.
+
+## Re Reviewer
+Close findings using the latest package.
+`,
+  );
+  const updatedUseBinding = packageUseBinding(updatedPackRoot, '0.0.1-test');
+  let activePackRoot = packRoot;
+  let activeUseBinding = useBinding;
+  const observedAttemptInputs: TemporalStageAttemptWorkflowInput[] = [];
   const artifactBytes = Buffer.from('pack-bound-draft-v1');
   const artifactPath = path.join(workspaceRoot, 'draft.txt');
   fs.writeFileSync(artifactPath, artifactBytes);
@@ -291,9 +314,13 @@ test('pack-bound CLI launch persists isolated review attempts and terminal quali
       opl_agent_package_status: {
         installed_package_count: 1,
         launch_allowed: true,
+        runtime_source_readiness: {
+          operational_ready: true,
+          checkout_path: activePackRoot,
+        },
       },
     }),
-    ensureScopeActivation: async () => ({ package_use_binding: useBinding }),
+    ensureScopeActivation: async () => ({ package_use_binding: activeUseBinding }),
   });
 
   const activities = {
@@ -302,6 +329,7 @@ test('pack-bound CLI launch persists isolated review attempts and terminal quali
     stageQualityCycleProjectActivity,
     stageQualityReviewReceiptActivity,
     async codexStageActivity(attempt: TemporalStageAttemptWorkflowInput) {
+      observedAttemptInputs.push(attempt);
       const threadId = `thread-${attempt.attempt_role}-${attempt.stage_attempt_id}`;
       const closeoutPacket = attempt.attempt_role === 'producer'
         ? verifyStageQualityCloseoutArtifactIdentity({
@@ -335,7 +363,7 @@ test('pack-bound CLI launch persists isolated review attempts and terminal quali
             stage_attempt_id: attempt.stage_attempt_id,
             closeout_refs: [`codex-closeout:${attempt.stage_attempt_id}`],
           };
-      return {
+      const receipt = {
         surface_kind: 'temporal_codex_stage_activity_receipt',
         stage_attempt_id: attempt.stage_attempt_id,
         stage_id: attempt.stage_id,
@@ -347,6 +375,11 @@ test('pack-bound CLI launch persists isolated review attempts and terminal quali
         },
         closeout_packet: closeoutPacket,
       };
+      if (attempt.attempt_role === 'producer' && activePackRoot === packRoot) {
+        activePackRoot = updatedPackRoot;
+        activeUseBinding = updatedUseBinding;
+      }
+      return receipt;
     },
     async domainHandlerDispatchActivity(attempt: TemporalStageAttemptWorkflowInput) {
       const role = attempt.attempt_role;
@@ -479,6 +512,25 @@ test('pack-bound CLI launch persists isolated review attempts and terminal quali
     assert.equal(identityReceipt.artifact_ref, artifactRef);
     assert.equal(identityReceipt.sha256, artifactHash);
     assert.equal(state.review_receipts.length, 1);
+    const firstRunAttemptInputs = observedAttemptInputs.filter((attempt) => (
+      attempt.stage_run_id === stageRunInput.stage_run_id
+    ));
+    assert.deepEqual(firstRunAttemptInputs.map((attempt) => attempt.attempt_role), ['producer', 'reviewer']);
+    assert.equal(
+      (firstRunAttemptInputs[0]?.execution_content_binding?.spec.package_closure as any)
+        ?.root_package?.package_version,
+      '0.0.0-test',
+    );
+    assert.equal(
+      (firstRunAttemptInputs[1]?.execution_content_binding?.spec.package_closure as any)
+        ?.root_package?.package_version,
+      '0.0.1-test',
+    );
+    assert.equal(firstRunAttemptInputs[0]?.stage_run_spec_sha256, firstRunAttemptInputs[1]?.stage_run_spec_sha256);
+    assert.notEqual(
+      firstRunAttemptInputs[0]?.execution_content_binding?.spec_sha256,
+      firstRunAttemptInputs[1]?.execution_content_binding?.spec_sha256,
+    );
 
     const db = new DatabaseSync(path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
     try {

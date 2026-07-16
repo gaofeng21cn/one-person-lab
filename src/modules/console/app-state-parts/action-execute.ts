@@ -510,7 +510,7 @@ async function executeDirectAppAction(
   if (options.actionId === 'agent_package_uninstall') {
     return {
       delegatedSurface: requireAgentPackageDelegatedSurface(options.actionId),
-      result: runOplAgentPackageUninstall({
+      result: await runOplAgentPackageUninstall({
         ...agentPackageIdPayload(options.actionId, options.payload),
         dryRun: options.dryRun,
       }),
@@ -522,7 +522,7 @@ async function executeDirectAppAction(
     if (preferencesPayload.exposureAction) {
       return {
         delegatedSurface: `opl packages ${preferencesPayload.exposureAction} --package-id <package_id>`,
-        result: runOplAgentPackageExposureAction(preferencesPayload.exposureAction, {
+        result: await runOplAgentPackageExposureAction(preferencesPayload.exposureAction, {
           packageId: preferencesPayload.packageId,
           dryRun: options.dryRun,
         }),
@@ -530,7 +530,7 @@ async function executeDirectAppAction(
     }
     return {
       delegatedSurface: 'opl packages preferences set --package-id <package_id> --shortcut-id <shortcut_id>',
-      result: runOplAgentPackageHomeShortcutPreferencesSet({
+      result: await runOplAgentPackageHomeShortcutPreferencesSet({
         packageId: preferencesPayload.packageId,
         shortcutId: preferencesPayload.shortcutId,
         visible: preferencesPayload.visible,

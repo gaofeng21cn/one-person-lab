@@ -45,8 +45,13 @@ test('StageRun contract is passive transport and Codex owns semantic routing', (
     false,
   );
   assert.ok(value.durable_stage_run_launch.stage_run_spec_sha256.binds.includes(
-    'immutable_package_dependency_closure_with_root_content_digest',
+    'immutable_package_ids_with_available_dependency_closure_provenance',
   ));
+  assert.equal(value.durable_stage_run_launch.content_binding_policy.root_package_id_required, true);
+  assert.equal(
+    value.durable_stage_run_launch.content_binding_policy.missing_package_provenance_effect,
+    'record_null_and_continue_execution',
+  );
   assert.equal(value.durable_stage_run_launch.content_binding_policy.pack_file_refs_bind_actual_bytes, true);
   assert.equal(
     value.durable_stage_run_launch.content_binding_policy

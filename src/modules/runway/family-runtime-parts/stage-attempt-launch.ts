@@ -1,7 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite';
 
 import type { preflightDomainWorkspaceCheckoutCurrentness } from '../family-runtime-checkout-currentness.ts';
-import { inspectStageAttempt, updateStageAttemptsForTask } from '../family-runtime-stage-attempts.ts';
+import { inspectStageAttempt } from '../family-runtime-stage-attempts.ts';
 import { nowIso } from '../family-runtime-store.ts';
 
 export function temporalStartProviderRun(
@@ -44,6 +44,54 @@ export function recordTemporalStartOnAttempt(
   `).run(JSON.stringify(providerRun), updatedAt, attempt.stage_attempt_id);
 }
 
+export function persistStageAttemptLaunchBinding<T extends {
+  stage_attempt_id: string;
+  workspace_locator: Record<string, unknown>;
+  provider_run: Record<string, unknown>;
+}>(
+  db: DatabaseSync,
+  attempt: T,
+  input: {
+    workspaceLocator: Record<string, unknown>;
+    packageUseBinding: Record<string, unknown> | null;
+    domainPackRoot: string | null;
+  },
+) {
+  const updatedAt = nowIso();
+  const providerRun = {
+    ...attempt.provider_run,
+    execution_package_use_context: {
+      status: 'attempt_launch_binding_persisted',
+      recorded_at: updatedAt,
+      package_use_binding: input.packageUseBinding,
+      domain_pack_root: input.domainPackRoot,
+    },
+  };
+  const reservation = db.prepare(`
+    UPDATE stage_attempts
+    SET workspace_locator_json = ?, provider_run_json = ?, updated_at = ?
+    WHERE stage_attempt_id = ?
+      AND COALESCE(json_extract(
+        provider_run_json,
+        '$.execution_package_use_context.status'
+      ), '') = ''
+      AND COALESCE(json_extract(provider_run_json, '$.first_execution_run_id'), '') = ''
+  `).run(
+    JSON.stringify(input.workspaceLocator),
+    JSON.stringify(providerRun),
+    updatedAt,
+    attempt.stage_attempt_id,
+  );
+  if (reservation.changes === 0) {
+    return inspectStageAttempt(db, attempt.stage_attempt_id);
+  }
+  return {
+    ...attempt,
+    workspace_locator: input.workspaceLocator,
+    provider_run: providerRun,
+  };
+}
+
 type CheckoutCurrentnessPreflight = ReturnType<typeof preflightDomainWorkspaceCheckoutCurrentness>;
 
 export function attachCheckoutCurrentnessToStageContext<T extends object>(
@@ -53,74 +101,8 @@ export function attachCheckoutCurrentnessToStageContext<T extends object>(
   if (!checkoutCurrentnessPreflight) {
     return observation;
   }
-  if (checkoutCurrentnessPreflight.status !== 'blocked') {
-    return {
-      ...observation,
-      checkout_currentness_preflight: checkoutCurrentnessPreflight,
-    } as T & { checkout_currentness_preflight: typeof checkoutCurrentnessPreflight };
-  }
   return {
     ...observation,
-    progression_effect: 'hard_stop_wrong_checkout',
-    hard_stop_reason: checkoutCurrentnessPreflight.reason ?? 'checkout_currentness_blocked',
     checkout_currentness_preflight: checkoutCurrentnessPreflight,
-  } as T & {
-    progression_effect: 'hard_stop_wrong_checkout';
-    hard_stop_reason: string;
-    checkout_currentness_preflight: typeof checkoutCurrentnessPreflight;
-  };
-}
-
-export function blockAttemptForCheckoutCurrentness(
-  db: DatabaseSync,
-  input: {
-    attempt: ReturnType<typeof inspectStageAttempt>;
-    checkoutCurrentnessPreflight: NonNullable<CheckoutCurrentnessPreflight>;
-  },
-) {
-  const reason = input.checkoutCurrentnessPreflight.reason ?? 'checkout_currentness_blocked';
-  const activityEvent = {
-    activity_kind: 'stage_attempt_checkout_currentness_preflight',
-    activity_status: 'blocked',
-    reason,
-    checkout_currentness_preflight: input.checkoutCurrentnessPreflight,
-    authority_boundary: {
-      opl: 'provider_transport_start_gate_only',
-      domain: 'truth_quality_artifact_gate_owner',
-      provider_completion_is_domain_ready: false,
-    },
-  };
-  if (!input.attempt.task_id) {
-    const updatedAt = nowIso();
-    const providerRun = {
-      ...input.attempt.provider_run,
-      provider_status: 'blocked',
-      last_heartbeat_at: updatedAt,
-    };
-    const activityEvents = [
-      ...input.attempt.activity_events,
-      { event_time: updatedAt, ...activityEvent },
-    ];
-    db.prepare(`
-      UPDATE stage_attempts
-      SET status = 'blocked', blocked_reason = ?, provider_run_json = ?,
-        activity_events_json = ?, updated_at = ?
-      WHERE stage_attempt_id = ?
-    `).run(
-      reason,
-      JSON.stringify(providerRun),
-      JSON.stringify(activityEvents),
-      updatedAt,
-      input.attempt.stage_attempt_id,
-    );
-    return inspectStageAttempt(db, input.attempt.stage_attempt_id);
-  }
-  const blockedAttempts = updateStageAttemptsForTask(db, {
-    taskId: input.attempt.task_id,
-    stageAttemptIds: [input.attempt.stage_attempt_id],
-    status: 'blocked',
-    blockedReason: reason,
-    activityEvent,
-  });
-  return blockedAttempts[0] ?? inspectStageAttempt(db, input.attempt.stage_attempt_id);
+  } as T & { checkout_currentness_preflight: typeof checkoutCurrentnessPreflight };
 }

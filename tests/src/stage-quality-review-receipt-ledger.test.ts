@@ -28,7 +28,9 @@ function contextBinding(input: {
   artifactHashes?: string[];
   priorFindingRefs?: string[];
   repairMapRefs?: string[];
+  rubricRefs?: string[];
 }) {
+  const attemptRubricRefs = input.rubricRefs ?? rubricRefs;
   const artifactIdentity = {
     artifact_refs: input.artifactRefs ?? [],
     artifact_hashes: input.artifactHashes ?? [],
@@ -40,7 +42,7 @@ function contextBinding(input: {
         reviewerAttemptRole: input.role,
         artifactRefs: artifactIdentity.artifact_refs,
         artifactHashes: artifactIdentity.artifact_hashes,
-        qualityRubricRefs: rubricRefs,
+        qualityRubricRefs: attemptRubricRefs,
         priorFindingRefs: input.priorFindingRefs,
         repairMapRefs: input.repairMapRefs,
       })
@@ -53,7 +55,7 @@ function contextBinding(input: {
         stage_goal_refs: [],
         source_refs: [],
         lineage_refs: [],
-        quality_rubric_refs: rubricRefs,
+        quality_rubric_refs: attemptRubricRefs,
         prior_finding_refs: input.priorFindingRefs ?? [],
         repair_map_refs: input.repairMapRefs ?? [],
         ...artifactIdentity,
@@ -78,7 +80,10 @@ function completeAttempt(
   `).run(sessionRef, JSON.stringify({ stage_quality_cycle: stageQualityCycle }), attemptId);
 }
 
-function validInitialReviewPair(db: DatabaseSync) {
+function validInitialReviewPair(db: DatabaseSync, input: {
+  producerRubricRefs?: string[];
+  reviewerRubricRefs?: string[];
+} = {}) {
   createStageAttemptTable(db);
   const shared = {
     domainId: 'redcube' as const,
@@ -89,22 +94,24 @@ function validInitialReviewPair(db: DatabaseSync) {
     stageRunId: 'stage-run:review-receipt',
     qualityCycleId: 'quality-cycle:review-receipt',
     qualityRolePromptRef: 'prompt:quality-role',
-    qualityRubricRefs: rubricRefs,
     noContextInheritance: true,
     newAttempt: true,
   };
   const producer = createStageAttempt(db, {
     ...shared,
+    qualityRubricRefs: input.producerRubricRefs ?? rubricRefs,
     attemptRole: 'producer',
     qualityRoundIndex: 0,
     ...contextBinding({
       role: 'producer',
       stageRunId: shared.stageRunId,
       qualityCycleId: shared.qualityCycleId,
+      rubricRefs: input.producerRubricRefs,
     }),
   }).attempt;
   const reviewer = createStageAttempt(db, {
     ...shared,
+    qualityRubricRefs: input.reviewerRubricRefs ?? rubricRefs,
     attemptRole: 'reviewer',
     qualityRoundIndex: 0,
     parentAttemptRef: `opl://stage_attempts/${producer.stage_attempt_id}`,
@@ -116,6 +123,7 @@ function validInitialReviewPair(db: DatabaseSync) {
       qualityCycleId: shared.qualityCycleId,
       artifactRefs,
       artifactHashes,
+      rubricRefs: input.reviewerRubricRefs,
     }),
   }).attempt;
   completeAttempt(db, producer.stage_attempt_id, 'codex://threads/producer', {
@@ -232,6 +240,26 @@ test('ledger materializes an initial review receipt only from exact persisted At
     assert.deepEqual(receipt.reviewed_artifact_hashes, artifactHashes);
     assert.deepEqual(receipt.rubric_refs, rubricRefs);
     assert.equal(receipt.verdict, 'pass');
+  } finally {
+    db.close();
+  }
+});
+
+test('ledger binds the receipt to the reviewer Attempt rubric across a package generation change', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    const reviewerRubricRefs = ['rubric:quality-v2'];
+    const pair = validInitialReviewPair(db, {
+      producerRubricRefs: ['rubric:quality-v1'],
+      reviewerRubricRefs,
+    });
+    const receipt = materializePersistedStageReviewReceipt(db, {
+      producerAttemptId: pair.producer.stage_attempt_id,
+      reviewerAttemptId: pair.reviewer.stage_attempt_id,
+      rubricRefs: reviewerRubricRefs,
+      verdict: 'pass',
+    });
+    assert.deepEqual(receipt.rubric_refs, reviewerRubricRefs);
   } finally {
     db.close();
   }
@@ -361,12 +389,6 @@ const invalidPersistedCases: Array<{
     name: 'reviewer rubric mismatch',
     mutate: (db, pair) => db.prepare('UPDATE stage_attempts SET quality_rubric_refs_json = ? WHERE stage_attempt_id = ?')
       .run(JSON.stringify(['rubric:other']), pair.reviewer.stage_attempt_id),
-    message: /rubric refs must exactly match/,
-  },
-  {
-    name: 'producer rubric mismatch',
-    mutate: (db, pair) => db.prepare('UPDATE stage_attempts SET quality_rubric_refs_json = ? WHERE stage_attempt_id = ?')
-      .run(JSON.stringify(['rubric:other']), pair.producer.stage_attempt_id),
     message: /rubric refs must exactly match/,
   },
   {

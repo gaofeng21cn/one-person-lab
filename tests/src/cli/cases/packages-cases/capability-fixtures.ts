@@ -429,7 +429,17 @@ export function writeMasConsumer(
   } = {},
 ) {
   const packageVersion = version.replace(/^(\d+\.\d+\.\d+)a(\d+)$/, '$1-alpha.$2');
-  fs.mkdirSync(root, { recursive: true });
+  const pluginRoot = path.join(root, 'plugins', 'med-autoscience');
+  fs.mkdirSync(path.join(pluginRoot, '.codex-plugin'), { recursive: true });
+  fs.mkdirSync(path.join(pluginRoot, 'skills', 'med-autoscience'), { recursive: true });
+  fs.writeFileSync(path.join(pluginRoot, '.codex-plugin', 'plugin.json'), formatJsonPayload({
+    name: 'med-autoscience',
+    version: packageVersion,
+  }));
+  fs.writeFileSync(
+    path.join(pluginRoot, 'skills', 'med-autoscience', 'SKILL.md'),
+    '# Med Auto Science\n',
+  );
   const manifestPath = path.join(root, 'mas.json');
   fs.writeFileSync(manifestPath, formatJsonPayload({
     surface_kind: 'opl_agent_package_manifest.v1',
@@ -451,6 +461,8 @@ export function writeMasConsumer(
     } : {}),
     carrier_source_role: 'codex_plugin_default_carrier_not_package_truth',
     codex_surface: {
+      plugin_id: 'med-autoscience',
+      plugin_source_path: pluginRoot,
       required_skill_ids: ['med-autoscience'],
     },
     ...(options.runtimeSourceCarrier ? {
@@ -496,4 +508,325 @@ export function writeMasConsumer(
     }],
   }));
   return manifestPath;
+}
+
+function commitDeveloperFixture(checkoutPath: string, message: string) {
+  execFileSync('git', ['init', '-q'], { cwd: checkoutPath });
+  execFileSync('git', ['config', 'user.name', 'OPL Fixture'], { cwd: checkoutPath });
+  execFileSync('git', ['config', 'user.email', 'opl-fixture@example.test'], { cwd: checkoutPath });
+  execFileSync('git', ['add', '.'], { cwd: checkoutPath });
+  execFileSync('git', ['commit', '-q', '-m', message], { cwd: checkoutPath });
+  return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: checkoutPath, encoding: 'utf8' }).trim();
+}
+
+export function commitDeveloperCheckout(checkoutPath: string, message: string) {
+  execFileSync('git', ['add', '-A'], { cwd: checkoutPath });
+  execFileSync('git', ['commit', '-q', '-m', message], { cwd: checkoutPath });
+  return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: checkoutPath, encoding: 'utf8' }).trim();
+}
+
+function writeDeveloperMasRuntimeProbeFixtures(checkoutPath: string, version: string) {
+  const writeJson = (relativePath: string, value: unknown) => {
+    const targetPath = path.join(checkoutPath, relativePath);
+    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+    fs.writeFileSync(targetPath, formatJsonPayload(value));
+  };
+  const packRefs = [
+    'agent/stages/manifest.json',
+    'agent/stages/scout.md',
+    'agent/prompts/scout.md',
+    'agent/knowledge/domain.md',
+    'agent/quality_gates/quality.md',
+    'agent/skills/domain.md',
+    'agent/tools/domain.md',
+  ];
+  for (const relativePath of packRefs.filter((entry) => !entry.endsWith('manifest.json'))) {
+    const targetPath = path.join(checkoutPath, relativePath);
+    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+    fs.writeFileSync(targetPath, `# MAS developer fixture ${relativePath}\n`);
+  }
+  fs.writeFileSync(
+    path.join(checkoutPath, 'contracts', 'domain_descriptor.json'),
+    formatJsonPayload({
+      surface_kind: 'domain_agent_descriptor',
+      schema_version: 1,
+      domain_id: 'medautoscience',
+      domain_label: 'MAS developer package fixture',
+      standard_agent_interface: {
+        version: 'opl_standard_agent_interface.v1',
+        workspace_binding: {
+          locator_surface_kind: 'mas_workspace_locator',
+          default_profile_id: 'one_off',
+          workspace_kind: 'medical_research_workspace',
+          project_kind: 'medical_research_project',
+          project_collection_label: 'studies',
+          default_workspace_id: 'mas-workspace',
+          default_project_id: 'mas-project',
+          required_locator_fields: ['workspace_root'],
+          optional_locator_fields: ['profile_ref'],
+        },
+        runtime: {
+          runtime_domain_id: 'medautoscience',
+          registration_ref: null,
+        },
+        progress: {
+          deliverable_delta_aliases: ['deliverable_progress_delta'],
+          platform_delta_aliases: ['platform_repair_delta'],
+        },
+        routing: {
+          explicit_aliases: ['mas', 'med-autoscience'],
+          workstream_ids: ['medical_research'],
+          intent_signals: ['medical research'],
+          ambiguity_policy: 'require_explicit_workstream',
+        },
+      },
+      authority_boundary: {
+        opl_can_write_domain_truth: false,
+        opl_can_write_memory_body: false,
+        opl_can_authorize_quality_or_export: false,
+      },
+    }),
+  );
+  writeJson('contracts/action_catalog.json', {
+    surface_kind: 'family_action_catalog',
+    version: 'family-action-catalog.v2',
+    catalog_id: 'medautoscience.developer-fixture.actions',
+    target_domain_id: 'medautoscience',
+    owner: 'medautoscience',
+    authority_boundary: {
+      domain_truth_owner: 'medautoscience',
+      opl_role: 'projection_consumer_only',
+      write_policy: 'no_domain_truth_writes',
+    },
+    actions: [{
+      action_id: 'fixture-action',
+      title: 'Fixture action',
+      summary: 'Exercise the developer package fixture ABI.',
+      owner: 'medautoscience',
+      effect: 'mutating',
+      execution_binding: {
+        kind: 'stage_binding',
+        stage_manifest_ref: 'agent/stages/manifest.json',
+      },
+      input_schema_ref: 'contracts/input.schema.json',
+      output_schema_ref: 'contracts/output.schema.json',
+      required_fields: ['workspace_root'],
+      optional_fields: [],
+      workspace_locator_fields: ['workspace_root'],
+      human_gate_ids: [],
+      stage_route: {
+        entry_stage_ref: 'scout',
+        required_stage_refs: ['scout'],
+        optional_stage_refs: [],
+        terminal_stage_refs: ['scout'],
+        route_policy: 'ai_selected_progress_route',
+      },
+      supported_surfaces: {
+        cli: { surface_kind: 'domain_cli' },
+        mcp: { tool_name: 'mas_fixture_action', surface_kind: 'domain_mcp' },
+        skill: { command_contract_id: 'mas.fixture-action', surface_kind: 'domain_skill' },
+        product_entry: { action_key: 'fixture-action', surface_kind: 'domain_product_entry' },
+        openai: { tool_name: 'mas_fixture_action' },
+        ai_sdk: { tool_name: 'mas_fixture_action' },
+      },
+    }],
+    notes: [],
+  });
+  writeJson('contracts/domain_handler_registry.json', {
+    surface_kind: 'domain_handler_registry',
+    version: 'domain-handler-registry.v1',
+    handlers: [],
+  });
+  writeJson('contracts/input.schema.json', {
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
+    type: 'object',
+    properties: { workspace_root: { type: 'string' } },
+    required: ['workspace_root'],
+  });
+  writeJson('contracts/output.schema.json', {
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
+    type: 'object',
+  });
+  writeJson('contracts/owner_receipt_contract.json', {
+    surface_kind: 'owner_receipt_contract',
+  });
+  const authorityFunctionReadme = path.join(
+    checkoutPath,
+    'runtime',
+    'authority_functions',
+    'README.md',
+  );
+  fs.mkdirSync(path.dirname(authorityFunctionReadme), { recursive: true });
+  fs.writeFileSync(authorityFunctionReadme, '# MAS fixture authority functions\n');
+  writeJson('contracts/pack_compiler_input.json', {
+    surface_kind: 'opl_domain_pack_compiler_input',
+    domain_id: 'medautoscience',
+    canonical_agent_id: 'mas',
+    generated_surface_owner: 'one-person-lab',
+    domain_repo_can_own_generated_surface: false,
+    authority_boundary: {
+      opl_can_write_domain_truth: false,
+      opl_can_write_memory_body: false,
+      opl_can_authorize_quality_or_export: false,
+      domain_can_claim_generated_surface_owner: false,
+    },
+    required_domain_pack_paths: packRefs,
+  });
+  writeJson('agent/stages/manifest.json', {
+    surface_kind: 'opl_standard_agent_declarative_stage_manifest',
+    version: 'opl-standard-agent-declarative-stage-manifest.v1',
+    target_domain_id: 'medautoscience',
+    owner: 'medautoscience',
+    authority_boundary: {
+      domain_truth_owner: 'medautoscience',
+      opl_can_write_domain_truth: false,
+      opl_can_authorize_quality_or_export: false,
+    },
+    stages: [{
+      stage_id: 'scout',
+      stage_kind: 'intake',
+      title: 'Fixture stage',
+      display_names: { 'en-US': 'Fixture stage' },
+      summary: 'Exercise the developer package fixture ABI.',
+      goal: 'Keep the package fixture structurally valid.',
+      policy_ref: 'agent/stages/scout.md',
+      prompt_ref: 'agent/prompts/scout.md',
+      knowledge_refs: ['agent/knowledge/domain.md'],
+      quality_gate_refs: ['agent/quality_gates/quality.md'],
+      allowed_action_refs: ['fixture-action'],
+      requires: ['fixture_request'],
+      ensures: ['fixture_observation'],
+      next_stage_refs: [],
+      trust_lane: 'domain_agent',
+    }],
+  });
+  const primarySkillPath = path.join(checkoutPath, 'agent', 'primary_skill', 'SKILL.md');
+  fs.mkdirSync(path.dirname(primarySkillPath), { recursive: true });
+  fs.writeFileSync(primarySkillPath, `# Med Auto Science\n\nDeveloper runtime probe fixture ${version}.\n`);
+}
+
+export function writeDeveloperCapabilityCheckoutClosure(input: {
+  masCheckout: string;
+  scholarCheckout: string;
+  masManifestPath: string;
+  providerManifestPath: string;
+}) {
+  const masManifest = JSON.parse(fs.readFileSync(input.masManifestPath, 'utf8'));
+  const providerRoot = path.dirname(input.providerManifestPath);
+  fs.mkdirSync(path.join(input.masCheckout, 'contracts'), { recursive: true });
+  fs.mkdirSync(path.join(input.masCheckout, 'plugins', 'med-autoscience', '.codex-plugin'), {
+    recursive: true,
+  });
+  fs.mkdirSync(path.join(input.masCheckout, 'plugins', 'med-autoscience', 'skills', 'med-autoscience'), {
+    recursive: true,
+  });
+  fs.writeFileSync(
+    path.join(input.masCheckout, 'contracts', 'opl_agent_package_manifest.json'),
+    formatJsonPayload(masManifest),
+  );
+  writeDeveloperMasRuntimeProbeFixtures(input.masCheckout, masManifest.version);
+  fs.writeFileSync(
+    path.join(input.masCheckout, 'plugins', 'med-autoscience', '.codex-plugin', 'plugin.json'),
+    formatJsonPayload({
+      name: 'med-autoscience',
+      version: masManifest.version,
+      displayName: 'Med Auto Science',
+      description: 'Developer checkout fixture.',
+    }),
+  );
+  fs.writeFileSync(
+    path.join(input.masCheckout, 'plugins', 'med-autoscience', 'skills', 'med-autoscience', 'SKILL.md'),
+    '# Med Auto Science\n\nDeveloper checkout fixture.\n',
+  );
+  fs.writeFileSync(
+    path.join(input.masCheckout, 'plugins', 'med-autoscience', 'skills', 'med-autoscience', 'helper.txt'),
+    'MAS developer helper A\n',
+  );
+
+  fs.mkdirSync(path.join(input.scholarCheckout, 'contracts'), { recursive: true });
+  fs.copyFileSync(
+    input.providerManifestPath,
+    path.join(input.scholarCheckout, 'contracts', 'opl_capability_package_manifest.json'),
+  );
+  fs.cpSync(
+    path.join(providerRoot, '.codex-plugin'),
+    path.join(input.scholarCheckout, '.codex-plugin'),
+    { recursive: true },
+  );
+  fs.cpSync(
+    path.join(providerRoot, 'skills'),
+    path.join(input.scholarCheckout, 'skills'),
+    { recursive: true },
+  );
+  const nestedAsset = path.join(
+    input.scholarCheckout,
+    'skills',
+    'medical-manuscript-writing',
+    'fixtures',
+    'nested.txt',
+  );
+  fs.mkdirSync(path.dirname(nestedAsset), { recursive: true });
+  fs.writeFileSync(nestedAsset, 'nested developer fixture A\n');
+
+  return {
+    masHead: commitDeveloperFixture(input.masCheckout, 'fixture A'),
+    scholarHead: commitDeveloperFixture(input.scholarCheckout, 'fixture A'),
+    providerHelperPath: path.join(
+      input.scholarCheckout,
+      'skills',
+      'medical-manuscript-writing',
+      'helper.txt',
+    ),
+    providerRequiredSkillPath: path.join(
+      input.scholarCheckout,
+      'skills',
+      'medical-manuscript-writing',
+      'SKILL.md',
+    ),
+    providerNestedAssetPath: nestedAsset,
+  };
+}
+
+export function updateDeveloperCapabilityCheckoutClosure(input: {
+  masCheckout: string;
+  scholarCheckout: string;
+  masManifestPath: string;
+  providerManifestPath: string;
+  message?: string;
+}) {
+  const masManifest = JSON.parse(fs.readFileSync(input.masManifestPath, 'utf8'));
+  const providerRoot = path.dirname(input.providerManifestPath);
+  fs.writeFileSync(
+    path.join(input.masCheckout, 'contracts', 'opl_agent_package_manifest.json'),
+    formatJsonPayload(masManifest),
+  );
+  writeDeveloperMasRuntimeProbeFixtures(input.masCheckout, masManifest.version);
+  fs.writeFileSync(
+    path.join(input.masCheckout, 'plugins', 'med-autoscience', '.codex-plugin', 'plugin.json'),
+    formatJsonPayload({
+      name: 'med-autoscience',
+      version: masManifest.version,
+      displayName: 'Med Auto Science',
+      description: 'Developer checkout fixture.',
+    }),
+  );
+  fs.copyFileSync(
+    input.providerManifestPath,
+    path.join(input.scholarCheckout, 'contracts', 'opl_capability_package_manifest.json'),
+  );
+  fs.cpSync(
+    path.join(providerRoot, '.codex-plugin'),
+    path.join(input.scholarCheckout, '.codex-plugin'),
+    { recursive: true, force: true },
+  );
+  fs.cpSync(
+    path.join(providerRoot, 'skills'),
+    path.join(input.scholarCheckout, 'skills'),
+    { recursive: true, force: true },
+  );
+  const message = input.message ?? 'fixture update';
+  return {
+    masHead: commitDeveloperCheckout(input.masCheckout, message),
+    scholarHead: commitDeveloperCheckout(input.scholarCheckout, message),
+  };
 }

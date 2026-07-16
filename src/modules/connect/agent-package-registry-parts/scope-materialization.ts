@@ -3,6 +3,10 @@ import path from 'node:path';
 
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import { packageRoleFromInstalledLock } from './package-role.ts';
+import {
+  assertSafePersistedPackagePath,
+  removeSafePersistedPackagePath,
+} from './persisted-path-safety.ts';
 import { nowIso, sha256Text } from './shared.ts';
 import type {
   AgentPackageLock,
@@ -14,6 +18,41 @@ import type {
 } from './types.ts';
 
 type ScopeInput = Pick<AgentPackagePackageActionInput, 'scope' | 'targetWorkspace' | 'targetQuest'>;
+
+function safeScopePathSegment(value: string, field: string) {
+  if (!value || value === '.' || value === '..' || path.basename(value) !== value) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Package scope path identity must be one safe segment.', {
+      field,
+      value,
+      failure_code: 'agent_package_persisted_path_unsafe',
+    });
+  }
+  return value;
+}
+
+function assertScopeManagedPath(targetRoot: string, candidatePath: string, pathKind: string) {
+  if (!path.isAbsolute(targetRoot)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Package scope target root must be absolute.', {
+      target_root: targetRoot,
+      path_kind: pathKind,
+      failure_code: 'agent_package_persisted_path_unsafe',
+    });
+  }
+  return assertSafePersistedPackagePath({
+    candidatePath,
+    allowedRoots: [targetRoot],
+    pathKind,
+  });
+}
+
+function removeScopeManagedPath(targetRoot: string, candidatePath: string, pathKind: string) {
+  return removeSafePersistedPackagePath({
+    candidatePath,
+    allowedRoots: [targetRoot],
+    pathKind,
+    recursive: true,
+  });
+}
 
 export function packageScopeTarget(input: ScopeInput) {
   if (!input.scope) return null;
@@ -185,6 +224,8 @@ export function materializeCapabilityScope(input: {
   const requiredSkillIds = coreSkillIds(input.provider);
   const specialtyIds = specialtySkillIds(input.provider);
   const managedSkillIds = [...requiredSkillIds, ...specialtyIds];
+  safeScopePathSegment(input.transactionId, 'transaction_id');
+  for (const skillId of managedSkillIds) safeScopePathSegment(skillId, 'managed_skill_ids[]');
   if (!sourceRoot || requiredSkillIds.length === 0) {
     throw new FrameworkContractError('contract_shape_invalid', 'Capability provider cannot materialize a scope without a physical core-skill source.', {
       provider_package_id: input.provider.package_id,
@@ -216,6 +257,7 @@ export function materializeCapabilityScope(input: {
         && skillDigest(path.dirname(targetSkill), skillId) === previousDigest);
     });
   const transactionSkillIds = [...managedSkillIds, ...retiredSkillIds];
+  for (const skillId of transactionSkillIds) safeScopePathSegment(skillId, 'scope_transaction.skill_ids[]');
   if (!input.previousMaterialization) {
     const targetSkillsRoot = path.join(input.targetRoot, '.codex', 'skills');
     const collisions = managedSkillIds.filter((skillId) => {
@@ -244,7 +286,7 @@ export function materializeCapabilityScope(input: {
     const transactionRoot = path.join(codexRoot, '.opl-package-transactions', input.transactionId);
     const stageRoot = path.join(transactionRoot, 'stage');
     const backupRoot = path.join(transactionRoot, 'backup');
-    fs.rmSync(transactionRoot, { recursive: true, force: true });
+    removeScopeManagedPath(input.targetRoot, transactionRoot, 'scope_transaction.transaction_root');
     try {
       for (const skillId of managedSkillIds) {
         fs.mkdirSync(stageRoot, { recursive: true });
@@ -257,6 +299,8 @@ export function materializeCapabilityScope(input: {
       for (const skillId of transactionSkillIds) {
         const targetSkill = path.join(targetSkillsRoot, skillId);
         const backupSkill = path.join(backupRoot, skillId);
+        assertScopeManagedPath(input.targetRoot, targetSkill, 'scope_transaction.target_skill');
+        assertScopeManagedPath(input.targetRoot, backupSkill, 'scope_transaction.backup_skill');
         if (fs.existsSync(targetSkill)) {
           fs.mkdirSync(path.dirname(backupSkill), { recursive: true });
           fs.renameSync(targetSkill, backupSkill);
@@ -267,19 +311,19 @@ export function materializeCapabilityScope(input: {
         throw new Error('activated scope skill digest mismatch');
       }
       if (!input.retainTransactionBackup) {
-        fs.rmSync(transactionRoot, { recursive: true, force: true });
+        removeScopeManagedPath(input.targetRoot, transactionRoot, 'scope_transaction.transaction_root');
       }
     } catch (error) {
       for (const skillId of transactionSkillIds) {
         const targetSkill = path.join(targetSkillsRoot, skillId);
         const backupSkill = path.join(backupRoot, skillId);
-        fs.rmSync(targetSkill, { recursive: true, force: true });
+        removeScopeManagedPath(input.targetRoot, targetSkill, 'scope_transaction.target_skill');
         if (fs.existsSync(backupSkill)) {
           fs.mkdirSync(path.dirname(targetSkill), { recursive: true });
           fs.renameSync(backupSkill, targetSkill);
         }
       }
-      fs.rmSync(transactionRoot, { recursive: true, force: true });
+      removeScopeManagedPath(input.targetRoot, transactionRoot, 'scope_transaction.transaction_root');
       throw error;
     }
   }
@@ -305,7 +349,73 @@ export function materializeCapabilityScope(input: {
   };
 }
 
+export function retireCapabilityScopeMaterialization(input: {
+  previousMaterialization: AgentPackageScopeMaterialization;
+  transactionId: string;
+  dryRun: boolean;
+  retainTransactionBackup?: boolean;
+}): AgentPackageScopeMaterialization {
+  const previous = input.previousMaterialization;
+  safeScopePathSegment(input.transactionId, 'transaction_id');
+  for (const skillId of previous.managed_skill_ids) safeScopePathSegment(skillId, 'managed_skill_ids[]');
+  const targetSkillsRoot = path.join(previous.target_root, '.codex', 'skills');
+  const retiredSkillIds = previous.managed_skill_ids.filter((skillId) => {
+    const targetSkill = path.join(targetSkillsRoot, skillId);
+    const expectedDigest = previous.skill_digests[skillId];
+    return Boolean(expectedDigest
+      && fs.existsSync(targetSkill)
+      && skillDigest(targetSkillsRoot, skillId) === expectedDigest);
+  });
+  if (!input.dryRun) {
+    const transactionRoot = path.join(
+      previous.target_root,
+      '.codex',
+      '.opl-package-transactions',
+      input.transactionId,
+    );
+    const backupRoot = path.join(transactionRoot, 'backup');
+    removeScopeManagedPath(previous.target_root, transactionRoot, 'scope_transaction.transaction_root');
+    try {
+      for (const skillId of retiredSkillIds) {
+        const targetSkill = path.join(targetSkillsRoot, skillId);
+        const backupSkill = path.join(backupRoot, skillId);
+        fs.mkdirSync(path.dirname(backupSkill), { recursive: true });
+        fs.renameSync(targetSkill, backupSkill);
+      }
+      if (!input.retainTransactionBackup) {
+        removeScopeManagedPath(previous.target_root, transactionRoot, 'scope_transaction.transaction_root');
+      }
+    } catch (error) {
+      for (const skillId of [...retiredSkillIds].reverse()) {
+        const targetSkill = path.join(targetSkillsRoot, skillId);
+        const backupSkill = path.join(backupRoot, skillId);
+        if (!fs.existsSync(targetSkill) && fs.existsSync(backupSkill)) {
+          fs.mkdirSync(path.dirname(targetSkill), { recursive: true });
+          fs.renameSync(backupSkill, targetSkill);
+        }
+      }
+      removeScopeManagedPath(previous.target_root, transactionRoot, 'scope_transaction.transaction_root');
+      throw error;
+    }
+  }
+  return {
+    ...previous,
+    transaction_id: input.transactionId,
+    required_skill_ids: [],
+    managed_skill_ids: [],
+    specialty_skill_ids: [],
+    retired_skill_ids: retiredSkillIds,
+    skill_digests: {},
+    content_digest: previous.content_digest,
+    core_digest: previous.core_digest,
+    full_export_digest: previous.full_export_digest,
+    materialized_at: nowIso(),
+    lifecycle_receipt_ref: 'pending_dependency_transaction',
+  };
+}
+
 function scopeTransactionRoot(targetRoot: string, transactionId: string) {
+  safeScopePathSegment(transactionId, 'transaction_id');
   return path.join(targetRoot, '.codex', '.opl-package-transactions', transactionId);
 }
 
@@ -315,6 +425,11 @@ export function assertCapabilityScopeRollbackReady(
   const transactionRoot = scopeTransactionRoot(
     materialization.target_root,
     materialization.transaction_id,
+  );
+  assertScopeManagedPath(
+    materialization.target_root,
+    transactionRoot,
+    'scope_materialization.transaction_root',
   );
   if (!fs.existsSync(transactionRoot) || !fs.statSync(transactionRoot).isDirectory()) {
     throw new FrameworkContractError(
@@ -330,7 +445,13 @@ export function assertCapabilityScopeRollbackReady(
   }
   const targetSkillsRoot = path.join(materialization.target_root, '.codex', 'skills');
   for (const skillId of materialization.managed_skill_ids) {
+    safeScopePathSegment(skillId, 'scope_materialization.managed_skill_ids[]');
     const targetSkill = path.join(targetSkillsRoot, skillId);
+    assertScopeManagedPath(
+      materialization.target_root,
+      targetSkill,
+      'scope_materialization.target_skill',
+    );
     const expectedDigest = materialization.skill_digests[skillId];
     const actualDigest = fs.existsSync(targetSkill)
       ? skillDigest(targetSkillsRoot, skillId)
@@ -353,7 +474,11 @@ export function assertCapabilityScopeRollbackReady(
 }
 
 export function finalizeCapabilityScopeTransaction(materialization: AgentPackageScopeMaterialization) {
-  fs.rmSync(scopeTransactionRoot(materialization.target_root, materialization.transaction_id), { recursive: true, force: true });
+  removeScopeManagedPath(
+    materialization.target_root,
+    scopeTransactionRoot(materialization.target_root, materialization.transaction_id),
+    'scope_materialization.transaction_root',
+  );
 }
 
 export function rollbackCapabilityScopeTransaction(
@@ -363,15 +488,17 @@ export function rollbackCapabilityScopeTransaction(
   const backupRoot = path.join(transactionRoot, 'backup');
   const targetSkillsRoot = path.join(materialization.target_root, '.codex', 'skills');
   for (const skillId of [...materialization.managed_skill_ids, ...materialization.retired_skill_ids]) {
+    safeScopePathSegment(skillId, 'scope_materialization.skill_ids[]');
     const targetSkill = path.join(targetSkillsRoot, skillId);
     const backupSkill = path.join(backupRoot, skillId);
-    fs.rmSync(targetSkill, { recursive: true, force: true });
+    assertScopeManagedPath(materialization.target_root, backupSkill, 'scope_materialization.backup_skill');
+    removeScopeManagedPath(materialization.target_root, targetSkill, 'scope_materialization.target_skill');
     if (fs.existsSync(backupSkill)) {
       fs.mkdirSync(path.dirname(targetSkill), { recursive: true });
       fs.renameSync(backupSkill, targetSkill);
     }
   }
-  fs.rmSync(transactionRoot, { recursive: true, force: true });
+  removeScopeManagedPath(materialization.target_root, transactionRoot, 'scope_materialization.transaction_root');
 }
 
 export function materializeCapabilityScopeFromLock(input: {
@@ -411,7 +538,11 @@ export function materializeCapabilityScopeFromLock(input: {
       required_skill_ids: input.provider.bundled_required_skill_ids,
       optional_skill_refs: input.provider.optional_skill_refs,
       plugin_id: input.provider.physical_surface?.plugin_id ?? null,
-      plugin_source_path: input.provider.physical_surface?.plugin_source_path ?? null,
+      plugin_source_path: input.provider.source_kind === 'developer_checkout_override'
+        ? input.provider.physical_surface?.codex_plugin_cache_path
+          ?? input.provider.physical_surface?.plugin_source_path
+          ?? null
+        : input.provider.physical_surface?.plugin_source_path ?? null,
       plugin_payload_manifest_url: input.provider.physical_surface?.plugin_payload_manifest_url ?? null,
       plugin_payload_manifest_sha256: input.provider.physical_surface?.plugin_payload_manifest_sha256 ?? null,
       plugin_payload_cache_path: input.provider.physical_surface?.plugin_payload_cache_path ?? null,
@@ -495,14 +626,10 @@ export function scopeMaterializationReadiness(
       && materializedSpecialtyIds.length === specialtyIds.length
       ? skillTreeDigest(targetSkillsRoot, managedSkillIds)
       : null;
-    const status = !record || materializedSkillIds.length !== requiredSkillIds.length
+    const status = materializedSkillIds.length !== requiredSkillIds.length
       ? 'missing'
-      : coreActualDigest !== (record.core_digest ?? record.content_digest)
-        || !record.lifecycle_receipt_ref
-        || record.lifecycle_receipt_ref === 'pending_dependency_transaction'
-        || !provider
-        || record.provider_lock_ref !== provider.lock_ref
-        ? 'incompatible'
+      : !provider
+          ? 'incompatible'
         : 'current';
     return {
       record,

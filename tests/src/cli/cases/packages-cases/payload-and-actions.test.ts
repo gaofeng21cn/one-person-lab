@@ -307,11 +307,19 @@ test('packages owns profile install, semantic merge apply, and non-destructive u
     assert.equal(fs.readFileSync(path.join(codexHome, 'TASTE.md'), 'utf8'), authoringSource);
 
     const appliedMigration = applied.opl_agent_package_profile_apply.profile_migration;
-    assert.doesNotThrow(() => assertPackageProfileRollbackReady(appliedMigration));
-    const rolledBack = rollbackPackageProfileMigration(
-      appliedMigration,
-      { retainBackups: true },
-    );
+    const previousCodexHome = process.env.CODEX_HOME;
+    process.env.CODEX_HOME = codexHome;
+    let rolledBack: ReturnType<typeof rollbackPackageProfileMigration>;
+    try {
+      assert.doesNotThrow(() => assertPackageProfileRollbackReady(appliedMigration));
+      rolledBack = rollbackPackageProfileMigration(
+        appliedMigration,
+        { retainBackups: true },
+      );
+    } finally {
+      if (previousCodexHome === undefined) delete process.env.CODEX_HOME;
+      else process.env.CODEX_HOME = previousCodexHome;
+    }
     assert.equal(rolledBack.status, 'rolled_back');
     assert.equal(rolledBack.rollback_backups_retained, true);
     assert.equal(
@@ -322,7 +330,15 @@ test('packages owns profile install, semantic merge apply, and non-destructive u
     assert.equal(fs.readFileSync(path.join(codexHome, 'AGENTS.md'), 'utf8'), existingProfile);
     assert.equal(fs.existsSync(path.join(codexHome, 'TASTE.md')), false);
     assert.equal(fs.existsSync(applied.opl_agent_package_profile_apply.profile_migration.receipt_path), false);
-    const finalized = finalizePackageProfileRollback(rolledBack);
+    const finalizePreviousCodexHome = process.env.CODEX_HOME;
+    process.env.CODEX_HOME = codexHome;
+    let finalized: ReturnType<typeof finalizePackageProfileRollback>;
+    try {
+      finalized = finalizePackageProfileRollback(rolledBack);
+    } finally {
+      if (finalizePreviousCodexHome === undefined) delete process.env.CODEX_HOME;
+      else process.env.CODEX_HOME = finalizePreviousCodexHome;
+    }
     assert.equal(finalized.rollback_backups_retained, false);
     assert.equal(
       rolledBack.mutation_actions.filter((entry: any) => entry.backup_ref)
@@ -373,10 +389,17 @@ test('packages installs a declared profile directly on an empty Codex home', () 
 
     const editedAuthoringSource = '# User edited authoring source\n';
     fs.writeFileSync(path.join(codexHome, 'TASTE.md'), editedAuthoringSource, 'utf8');
-    assert.throws(
-      () => rollbackPackageProfileMigration(migration),
-      /target changed after the package write/,
-    );
+    const previousCodexHome = process.env.CODEX_HOME;
+    process.env.CODEX_HOME = codexHome;
+    try {
+      assert.throws(
+        () => rollbackPackageProfileMigration(migration),
+        /target changed after the package write/,
+      );
+    } finally {
+      if (previousCodexHome === undefined) delete process.env.CODEX_HOME;
+      else process.env.CODEX_HOME = previousCodexHome;
+    }
     assert.equal(fs.readFileSync(path.join(codexHome, 'TASTE.md'), 'utf8'), editedAuthoringSource);
     assert.equal(fs.readFileSync(path.join(codexHome, 'AGENTS.md'), 'utf8'), candidateProfile);
   } finally {

@@ -489,6 +489,7 @@ export function revalidateStageRunImmutableContentBindings(input: {
   domainPackRoot: string;
   workspaceRoot: string | null;
   bindings: StageRunImmutableContentBinding[];
+  skipManagedPackBytes?: boolean;
 }) {
   if (!Array.isArray(input.bindings) || input.bindings.length === 0) {
     fail('StageRun immutable spec requires executable byte bindings.', {
@@ -526,6 +527,7 @@ export function revalidateStageRunImmutableContentBindings(input: {
           effective_content_byte_size: binding.effective_content_byte_size,
         });
       }
+      if (input.skipManagedPackBytes) continue;
       const observedPrompt = readStandardAgentQualityRolePromptFile(input.domainPackRoot, binding.ref);
       const observedFileSha256 = `sha256:${observedPrompt.source_file_sha256}`;
       const observedEffectiveSha256 = `sha256:${observedPrompt.sha256}`;
@@ -568,6 +570,9 @@ export function revalidateStageRunImmutableContentBindings(input: {
           identity_receipt_ref: binding.identity_receipt_ref,
         },
       });
+      continue;
+    }
+    if (input.skipManagedPackBytes && binding.verification_kind === 'managed_pack_file_bytes') {
       continue;
     }
     const filePath = binding.verification_kind === 'managed_pack_file_bytes'

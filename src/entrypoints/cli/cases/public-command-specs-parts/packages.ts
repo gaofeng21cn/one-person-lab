@@ -322,13 +322,13 @@ export function buildPackagesCommandSpecs(
     },
     'packages activate': {
       usage: 'opl packages activate <package_id> --scope workspace|quest [--target-workspace <path>|--target-quest <path>] [--dry-run]',
-      summary: 'Activate one installed OPL Package dependency closure for a workspace or quest.',
+      summary: 'Compatibility route for explicitly reconciling a package scope; normal use boundaries do this automatically.',
       examples: [
         'opl packages activate mas --scope workspace --target-workspace /path/to/study --json',
         'opl packages activate mas --scope quest --target-quest /path/to/quest --json',
       ],
       group: 'packages',
-      help_surface: 'default',
+      help_surface: 'migration_compatibility',
       handler: (args) => runOplAgentPackageActivate(
         parsePackageAction('packages activate', args, getCommandSpec('packages activate')),
       ),

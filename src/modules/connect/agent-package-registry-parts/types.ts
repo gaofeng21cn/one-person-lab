@@ -62,7 +62,7 @@ export type AgentPackageLifecycleCondition = {
     | 'managed_policy_drift_detected'
     | 'carrier_authority_current'
     | 'carrier_authority_invalid'
-    | 'codex_reload_required';
+    | 'codex_reload_observed';
   package_id: string | null;
   status: 'ok' | 'attention_needed';
   reason: string;
@@ -247,6 +247,21 @@ export type AgentPackageManifest = {
   content_digest: string | null;
   content_lock_canonicalization: 'ordered_path_nul_file_bytes' | 'ordered_path_length_file_length_bytes' | null;
   content_lock_paths: string[];
+  developer_checkout_source?: AgentPackageDeveloperCheckoutSource | null;
+};
+
+export type AgentPackageDeveloperCheckoutSource = {
+  surface_kind: 'opl_agent_package_developer_checkout_source.v1';
+  checkout_path: string;
+  owner_manifest_path: string;
+  owner_manifest_sha256: string;
+  plugin_source_path: string;
+  source_git_head_sha: string | null;
+  tree_sha256: string;
+  payload_digest: string;
+  declared_content_digest: string | null;
+  copy_paths: string[];
+  copy_file_modes: Record<string, '100644' | '100755'>;
 };
 
 export type AgentPackageOwnerLanguageVersion = {
@@ -273,6 +288,7 @@ export type AgentPackageManagedRuntimeSourceState = {
   carrier_kind: 'opl_managed_module_source';
   module_id: string;
   checkout_path: string;
+  source_checkout_path?: string | null;
   ownership: 'package_created' | 'preexisting_adopted';
   source_mode?: 'package_channel' | 'developer_checkout' | 'bundled_full_runtime';
   channel_version: string | null;
@@ -281,6 +297,7 @@ export type AgentPackageManagedRuntimeSourceState = {
   source_archive_sha256: string | null;
   source_git_head_sha: string | null;
   tree_sha256: string;
+  runtime_snapshot_sha256?: string | null;
   rollback_ref: string | null;
   preparation_status: 'validated_no_write' | 'completed';
   bootstrap_command: string[] | null;
@@ -290,7 +307,7 @@ export type AgentPackageManagedRuntimeSourceState = {
   health_output_sha256: string | null;
   handler_probe_output_sha256: string | null;
   preparation_root: string | null;
-  preparation_scope: 'managed_source_root' | 'developer_checkout_root' | 'preexisting_read_only_probe';
+  preparation_scope: 'managed_source_root' | 'developer_checkout_root' | 'developer_snapshot_root' | 'preexisting_read_only_probe';
 };
 
 export type AgentPackageManagedRuntimeSourceReadiness = {
@@ -673,6 +690,7 @@ export type AgentPackageLock = {
   runtime_source_carrier: AgentPackageManagedRuntimeSourceCarrier | null;
   managed_runtime_source: AgentPackageManagedRuntimeSourceState | null;
   managed_update_source: AgentPackageManagedVersionCatalogSource | null;
+  developer_checkout_source?: AgentPackageDeveloperCheckoutSource | null;
 };
 
 export type AgentPackageLastKnownGood = {
@@ -755,10 +773,13 @@ export type AgentPackageLifecycleReceipt = {
     artifact_digest?: string | null;
     owner_source_commit?: string | null;
     carrier_authority?: AgentPackageCarrierAuthority | null;
+    source_kind?: AgentPackageSourceKind;
+    developer_checkout_source?: AgentPackageDeveloperCheckoutSource | null;
   }>;
   scope_materialization?: AgentPackageScopeMaterialization;
   scope_materializations?: AgentPackageScopeMaterialization[];
   managed_runtime_source?: AgentPackageManagedRuntimeSourceState | null;
+  developer_checkout_source?: AgentPackageDeveloperCheckoutSource | null;
   use_binding?: AgentPackageUseBinding;
   source_selection?: 'installed_package_lock';
   network_accessed?: false;
@@ -780,6 +801,8 @@ export type AgentPackageUseBinding = {
     artifact_digest: string | null;
     owner_source_commit: string | null;
     carrier_authority: AgentPackageCarrierAuthority | null;
+    source_kind?: AgentPackageSourceKind;
+    developer_checkout_source?: AgentPackageDeveloperCheckoutSource | null;
   };
   provider_packages: Array<{
     package_id: string;
@@ -792,20 +815,46 @@ export type AgentPackageUseBinding = {
     artifact_digest: string | null;
     owner_source_commit: string | null;
     carrier_authority: AgentPackageCarrierAuthority | null;
+    source_kind?: AgentPackageSourceKind;
+    developer_checkout_source?: AgentPackageDeveloperCheckoutSource | null;
   }>;
   dependency_closure_digest: string;
-  freshness_mode: 'channel_verified' | 'offline_lkg';
+  freshness_mode: 'channel_verified' | 'source_reconciled' | 'offline_lkg';
   latest_verified: boolean;
   checked_at: string;
   refresh_outcome: 'updated' | 'current' | 'recovered_last_known_good';
   channel_ref: string | null;
   channel_digest: string | null;
+  reconciliation_issue?: {
+    status: 'update_failed_using_last_known_good';
+    source: 'developer_checkout' | 'package_channel' | 'mixed';
+    failure_code: string | null;
+    message: string;
+  } | null;
   scope: 'workspace' | 'quest';
   target_root: string;
+  skill_projection?: AgentPackageSkillProjection | null;
   core_skill_tree_digest: string | null;
   skill_tree_digest: string | null;
   core_readiness: AgentPackageMaterializationReadiness['core_readiness'];
   specialty_exposure: AgentPackageMaterializationReadiness['specialty_exposure'];
+};
+
+export type AgentPackageSkillProjection = {
+  surface_kind: 'opl_agent_package_skill_projection.v1';
+  status: 'materialized' | 'planned_no_write';
+  generation_id: string;
+  projection_root: string;
+  skills_root: string;
+  root_package_id: string;
+  package_lock_refs: string[];
+  root_skill_ids: string[];
+  core_skill_ids: string[];
+  specialty_skill_ids: string[];
+  skill_ids: string[];
+  skill_digests: Record<string, string>;
+  core_digest: string;
+  full_export_digest: string;
 };
 
 export type AgentPackageHomeShortcutPreference = {

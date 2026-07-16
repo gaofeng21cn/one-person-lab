@@ -52,6 +52,47 @@ test('managed checkout resolver uses package activation and exact current runtim
   assert.equal(activationCalls, 1);
 });
 
+test('managed checkout resolver keeps the activation binding and runtime snapshot in one generation', async () => {
+  const { workspaceRoot, checkoutRoot: firstCheckoutRoot } = fixture();
+  const secondCheckoutRoot = path.join(path.dirname(firstCheckoutRoot), 'managed-source-v2');
+  fs.mkdirSync(secondCheckoutRoot);
+  let generation: 'v1' | 'v2' = 'v1';
+  let readCalls = 0;
+  const firstStatus = status(firstCheckoutRoot, {
+    installed_packages: [{ package_id: 'mas', package_version: '0.2.9' }],
+  });
+  const secondStatus = status(secondCheckoutRoot, {
+    installed_packages: [{ package_id: 'mas', package_version: '0.3.0' }],
+  });
+  const result = await resolveStandardAgentManagedCheckout({
+    domainId: 'mas',
+    workspaceRoot,
+    packageReadiness: {
+      readStatus: () => {
+        readCalls += 1;
+        return {
+          opl_agent_package_status: generation === 'v1' ? firstStatus : secondStatus,
+        };
+      },
+      ensureScopeActivation: async () => {
+        generation = 'v2';
+        return {
+          package_use_binding: {
+            use_boundary_id: 'package-use:generation-v1',
+            root_package: { package_id: 'mas', package_version: '0.2.9' },
+          },
+          package_status: firstStatus,
+        };
+      },
+    },
+  });
+
+  assert.equal(readCalls, 1);
+  assert.equal(result.checkout_root, fs.realpathSync(firstCheckoutRoot));
+  assert.equal(result.package_status.installed_packages[0].package_version, '0.2.9');
+  assert.equal(result.package_use_binding.root_package.package_version, '0.2.9');
+});
+
 test('managed checkout resolver accepts live-probed developer checkout provenance drift', async () => {
   const { workspaceRoot, checkoutRoot } = fixture();
   const result = await resolveStandardAgentManagedCheckout({
@@ -81,9 +122,9 @@ test('managed checkout resolver accepts live-probed developer checkout provenanc
   assert.equal(result.package_status.launch_allowed, true);
 });
 
-test('managed checkout resolver rejects package quality-debt fail-open states', async () => {
+test('managed checkout resolver permits package quality debt when the runtime source is operational', async () => {
   const { workspaceRoot, checkoutRoot } = fixture();
-  await assert.rejects(resolveStandardAgentManagedCheckout({
+  const result = await resolveStandardAgentManagedCheckout({
     domainId: 'mas',
     workspaceRoot,
     packageReadiness: {
@@ -95,5 +136,9 @@ test('managed checkout resolver rejects package quality-debt fail-open states', 
       }),
       ensureScopeActivation: async () => ({ package_use_binding: null }),
     },
-  }), /launch_allowed=true/);
+  });
+
+  assert.equal(result.checkout_root, fs.realpathSync(checkoutRoot));
+  assert.equal(result.package_status.launch_allowed, false);
+  assert.equal(result.package_status.launch_blocked_reason, 'scope_materialization_stale');
 });

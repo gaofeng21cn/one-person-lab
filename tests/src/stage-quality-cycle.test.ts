@@ -125,6 +125,16 @@ test('official quality profile is explicit without adding per-agent registry pol
   );
   assert.equal(contract.attempt_outcome_contract.hard_stop_review_must_not_fabricate_finding_closure_result, true);
   assert.equal(contract.stage_run_controller.maximum_attempt_instances, 8);
+  assert.equal(
+    contract.stage_run_controller
+      .stage_run_spec_quality_policy_and_declared_stage_ids_are_historical_after_creation,
+    true,
+  );
+  assert.equal(contract.stage_run_controller.new_attempt_execution_content_binding_is_effective_control_policy, true);
+  assert.equal(
+    contract.stage_run_controller.formal_review_requirement_source,
+    'producer_attempt_execution_content_binding',
+  );
   assert.equal(contract.cross_stage_route_selection.primary_only_decisive_attempt_role, 'producer');
   assert.deepEqual(
     contract.cross_stage_route_selection.formal_review_decisive_attempt_roles,
@@ -135,6 +145,21 @@ test('official quality profile is explicit without adding per-agent registry pol
   assert.equal(contract.cross_stage_route_selection.opl_domain_semantic_route_judgment_authority, false);
   assert.equal(contract.cross_stage_route_selection.opl_route_output_abi_validation_required, true);
   assert.equal(contract.cross_stage_route_selection.runtime_closeout_guard_required, true);
+  assert.equal(
+    contract.cross_stage_route_selection.attempt_route_context_declared_stage_ids_source,
+    'attempt_execution_content_binding',
+  );
+  assert.equal(
+    contract.cross_stage_route_selection.route_launch_declared_stage_validation_source,
+    'decisive_attempt_execution_content_binding',
+  );
+  assert.equal(
+    contract.cross_stage_route_selection.historical_parent_declared_stage_ids_can_reject_current_target,
+    false,
+  );
+  assert.equal(contract.review_receipt.review_receipt_rubric_source,
+    'reviewer_attempt_execution_content_binding');
+  assert.equal(contract.review_receipt.producer_and_reviewer_rubric_equality_required, false);
   assert.equal(
     contract.cross_stage_route_selection
       .repair_required_review_or_re_review_may_select_cross_stage_route_back_before_budget_exhaustion,

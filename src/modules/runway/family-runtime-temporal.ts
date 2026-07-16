@@ -25,7 +25,10 @@ import {
   TEMPORAL_STAGE_ATTEMPT_SEARCH_ATTRIBUTES,
 } from './family-runtime-temporal-visibility.ts';
 import { requireStageQualityAttemptBoundary } from './family-runtime-stage-quality-attempt-boundary.ts';
-import type { TemporalStageRunWorkflowInput } from './family-runtime-temporal-stage-run.ts';
+import type {
+  StageAttemptExecutionContentBinding,
+  TemporalStageRunWorkflowInput,
+} from './family-runtime-temporal-stage-run.ts';
 import {
   deriveStageRunId,
   deriveStageRunWorkflowId,
@@ -36,6 +39,7 @@ import {
 } from './family-runtime-stage-run-identity.ts';
 
 export type {
+  StageAttemptExecutionContentBinding,
   TemporalStageQualityAttemptMaterializationInput,
   TemporalStageQualityAttemptSyncInput,
   TemporalStageQualityCycleProjectionInput,
@@ -131,6 +135,7 @@ export type TemporalStageAttemptWorkflowInput = {
   stage_run_content_binding_version?: 'opl-stage-run-attempt-content-binding.v1' | null;
   stage_run_spec_sha256?: string | null;
   stage_run_spec?: StageRunImmutableSpec | null;
+  execution_content_binding?: StageAttemptExecutionContentBinding | null;
   domain_pack_root?: string | null;
   quality_cycle_id?: string | null;
   attempt_role?: StageQualityAttemptRole | null;
@@ -718,7 +723,10 @@ export function requireTemporalStageAttemptWorkflowInputLaunchable(input: Tempor
   return input;
 }
 
-export function requireTemporalStageRunWorkflowInputLaunchable(input: TemporalStageRunWorkflowInput) {
+export function requireTemporalStageRunWorkflowInputLaunchable(
+  input: TemporalStageRunWorkflowInput,
+  options: { revalidateContent?: boolean | 'historical_evidence' } = {},
+) {
   for (const [field, value] of Object.entries({
     stage_run_id: input.stage_run_id,
     stage_run_invocation_id: input.stage_run_invocation_id,
@@ -873,11 +881,14 @@ export function requireTemporalStageRunWorkflowInputLaunchable(input: TemporalSt
       },
     );
   }
-  revalidateStageRunImmutableSpecContent({
-    spec,
-    domainPackRoot: input.domain_pack_root,
-    workspaceLocator: input.workspace_locator,
-  });
+  if (options.revalidateContent !== false) {
+    revalidateStageRunImmutableSpecContent({
+      spec,
+      domainPackRoot: input.domain_pack_root,
+      workspaceLocator: input.workspace_locator,
+      skipManagedPackBytes: options.revalidateContent === 'historical_evidence',
+    });
+  }
   return input;
 }
 

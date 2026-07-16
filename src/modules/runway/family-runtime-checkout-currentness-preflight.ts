@@ -2,18 +2,16 @@ import { spawnSync, type SpawnSyncReturns } from 'node:child_process';
 import path from 'node:path';
 
 export type CheckoutCurrentnessPreflight = {
-  status: 'not_git_checkout' | 'current' | 'fast_forwarded' | 'blocked';
+  status: 'not_git_checkout' | 'current' | 'observed';
   currentness_status:
     | 'not_git_checkout'
     | 'current'
-    | 'fast_forwarded'
-    | 'dirty_fail_closed'
-    | 'diverged_fail_closed'
-    | 'target_unresolved_fail_closed'
-    | 'git_unreadable_fail_closed'
-    | 'fetch_failed_fail_closed'
-    | 'fast_forward_failed_fail_closed'
-    | 'ahead_fail_closed';
+    | 'dirty_observed'
+    | 'behind_observed'
+    | 'diverged_observed'
+    | 'target_unresolved_observed'
+    | 'git_unreadable_observed'
+    | 'ahead_observed';
   workspace_path: string;
   target_ref?: string;
   head_sha?: string;
@@ -67,8 +65,8 @@ export function preflightGitCheckoutCurrentness(
   const headSha = head.status === 0 ? gitOutput(head) : undefined;
   if (head.status !== 0) {
     return {
-      status: 'blocked',
-      currentness_status: 'git_unreadable_fail_closed',
+      status: 'observed',
+      currentness_status: 'git_unreadable_observed',
       workspace_path: workspacePath,
       reason: 'git_head_unreadable',
       detail: gitErrorDetail(head),
@@ -78,8 +76,8 @@ export function preflightGitCheckoutCurrentness(
   const status = runGit(cwd, ['status', '--porcelain']);
   if (status.status !== 0) {
     return {
-      status: 'blocked',
-      currentness_status: 'git_unreadable_fail_closed',
+      status: 'observed',
+      currentness_status: 'git_unreadable_observed',
       workspace_path: workspacePath,
       reason: 'git_status_unreadable',
       head_sha: headSha,
@@ -88,34 +86,21 @@ export function preflightGitCheckoutCurrentness(
   }
   if (gitOutput(status)) {
     return {
-      status: 'blocked',
-      currentness_status: 'dirty_fail_closed',
+      status: 'observed',
+      currentness_status: 'dirty_observed',
       workspace_path: workspacePath,
       reason: 'dirty_checkout',
       head_sha: headSha,
-      detail: 'Checkout has uncommitted changes; refusing to run against a mutable source tree.',
+      detail: 'Checkout has uncommitted changes; current bytes remain the execution source and this state is recorded as provenance.',
     };
   }
 
   const targetRef = checkoutCurrentnessTargetRef(env);
-  const fetch = runGit(cwd, ['fetch', '--quiet', 'origin']);
-  if (fetch.status !== 0) {
-    return {
-      status: 'blocked',
-      currentness_status: 'fetch_failed_fail_closed',
-      workspace_path: workspacePath,
-      reason: 'git_fetch_failed',
-      target_ref: targetRef,
-      head_sha: headSha,
-      detail: gitErrorDetail(fetch),
-    };
-  }
-
   const target = runGit(cwd, ['rev-parse', '--verify', targetRef]);
   if (target.status !== 0) {
     return {
-      status: 'blocked',
-      currentness_status: 'target_unresolved_fail_closed',
+      status: 'observed',
+      currentness_status: 'target_unresolved_observed',
       workspace_path: workspacePath,
       reason: 'target_ref_unreadable',
       target_ref: targetRef,
@@ -137,39 +122,27 @@ export function preflightGitCheckoutCurrentness(
 
   const headAncestor = runGit(cwd, ['merge-base', '--is-ancestor', 'HEAD', targetRef]);
   if (headAncestor.status === 0) {
-    const merge = runGit(cwd, ['merge', '--ff-only', targetRef]);
-    if (merge.status !== 0) {
-      return {
-        status: 'blocked',
-        currentness_status: 'fast_forward_failed_fail_closed',
-        workspace_path: workspacePath,
-        reason: 'fast_forward_failed',
-        target_ref: targetRef,
-        head_sha: headSha,
-        target_sha: targetSha,
-        detail: gitErrorDetail(merge),
-      };
-    }
-    const newHead = runGit(cwd, ['rev-parse', 'HEAD']);
     return {
-      status: 'fast_forwarded',
-      currentness_status: 'fast_forwarded',
+      status: 'observed',
+      currentness_status: 'behind_observed',
       workspace_path: workspacePath,
       target_ref: targetRef,
-      head_sha: newHead.status === 0 ? gitOutput(newHead) : targetSha,
+      head_sha: headSha,
       target_sha: targetSha,
+      reason: 'checkout_behind_target',
+      detail: 'Checkout is behind the observed target ref; execution continues from the current local bytes without mutating the checkout.',
     };
   }
 
   const targetAncestor = runGit(cwd, ['merge-base', '--is-ancestor', targetRef, 'HEAD']);
   return {
-    status: 'blocked',
-    currentness_status: targetAncestor.status === 0 ? 'ahead_fail_closed' : 'diverged_fail_closed',
+    status: 'observed',
+    currentness_status: targetAncestor.status === 0 ? 'ahead_observed' : 'diverged_observed',
     workspace_path: workspacePath,
     reason: targetAncestor.status === 0 ? 'checkout_ahead_of_target' : 'diverged_checkout',
     target_ref: targetRef,
     head_sha: headSha,
     target_sha: targetSha,
-    detail: 'Checkout is not a clean fast-forward from the target ref; refusing to run against a non-current source tree.',
+    detail: 'Checkout differs from the observed target ref; execution continues from the current local bytes and records the difference as provenance.',
   };
 }

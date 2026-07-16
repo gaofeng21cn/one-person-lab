@@ -9,17 +9,21 @@ import {
   fs,
   os,
   path,
+  removeFixtureTree,
   runCli,
   runCliFailure,
   test,
 } from './helpers.ts';
 import { resolveFirstPartyPackageCatalog } from '../../../../../src/modules/connect/agent-package-first-party.ts';
+import { materializeAgentPackageSkillProjection } from '../../../../../src/modules/connect/agent-package-registry-parts/skill-projection.ts';
 import {
   normalizeOplReleaseChannelTag,
   resolveOplReleaseManifestRef,
 } from '../../../../../src/modules/connect/system-installation/release-channel.ts';
 import {
+  updateDeveloperCapabilityCheckoutClosure,
   writeCapabilityCatalog,
+  writeDeveloperCapabilityCheckoutClosure,
   writeCapabilityProvider,
   writeMasConsumer,
 } from './capability-fixtures.ts';
@@ -392,7 +396,7 @@ test('first-party identities reject explicit registries and unowned manifest bod
     }
     assert.equal(fs.existsSync(path.join(homeDir, '.codex')), false);
   } finally {
-    fs.rmSync(root, { recursive: true, force: true });
+    removeFixtureTree(root);
   }
 });
 
@@ -472,7 +476,7 @@ test('first-party install and update lock one Release Set catalog member by vers
     assert.equal(updated.opl_agent_package_update.lifecycle_receipt.owner_source_commit, '2'.repeat(40));
     assert.equal(updated.opl_agent_package_update.lifecycle_receipt.artifact_digest, second.artifactDigest);
   } finally {
-    fs.rmSync(stateDir, { recursive: true, force: true });
+    removeFixtureTree(stateDir);
     fs.rmSync(homeDir, { recursive: true, force: true });
     fs.rmSync(workspace, { recursive: true, force: true });
     fs.rmSync(first.root, { recursive: true, force: true });
@@ -503,7 +507,7 @@ test('a previous first-party lock cannot mask a new manifest missing carrier aut
     assert.equal(retained.opl_agent_package_status.installed_packages[0].lock_ref, originalLockRef);
     assert.equal(retained.opl_agent_package_status.installed_packages[0].owner_source_commit, '1'.repeat(40));
   } finally {
-    fs.rmSync(stateDir, { recursive: true, force: true });
+    removeFixtureTree(stateDir);
     fs.rmSync(homeDir, { recursive: true, force: true });
     fs.rmSync(first.root, { recursive: true, force: true });
     fs.rmSync(missing.root, { recursive: true, force: true });
@@ -522,12 +526,12 @@ test('first-party install rejects a catalog member without an immutable owner co
     assert.equal(failure.payload.error.details.failure_code, 'first_party_package_catalog_selection_invalid');
     assert.deepEqual(failure.payload.error.details.failures, ['owner_source_commit_invalid']);
   } finally {
-    fs.rmSync(stateDir, { recursive: true, force: true });
+    removeFixtureTree(stateDir);
     fs.rmSync(fixture.root, { recursive: true, force: true });
   }
 });
 
-test('first-party activation rejects an internally resolved catalog member without an immutable owner commit', () => {
+test('first-party activation keeps the installed LKG when the next catalog member is invalid', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-first-party-activation-state-'));
   const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-first-party-activation-home-'));
   const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-first-party-activation-workspace-'));
@@ -549,19 +553,22 @@ test('first-party activation rejects an internally resolved catalog member witho
       'plugin.json',
     );
 
-    const failure = runCliFailure([
+    const activation = runCli([
       'packages', 'activate', 'opl-flow',
       '--scope', 'workspace', '--target-workspace', workspace,
     ], {
       ...commonEnv,
       ...invalidFixture.env,
-    });
-    assert.equal(failure.payload.error.code, 'contract_shape_invalid');
-    assert.equal(failure.payload.error.details.failure_code, 'first_party_package_catalog_selection_invalid');
-    assert.deepEqual(failure.payload.error.details.failures, ['owner_source_commit_invalid']);
+    }).opl_agent_package_activation;
+    assert.equal(activation.package_lock.package_version, '0.2.0');
+    assert.equal(activation.package_use_binding.freshness_mode, 'offline_lkg');
+    assert.equal(
+      activation.package_use_binding.reconciliation_issue.failure_code,
+      'first_party_package_catalog_selection_invalid',
+    );
     assert.equal(JSON.parse(fs.readFileSync(pluginPath, 'utf8')).version, '0.2.0');
   } finally {
-    fs.rmSync(stateDir, { recursive: true, force: true });
+    removeFixtureTree(stateDir);
     fs.rmSync(homeDir, { recursive: true, force: true });
     fs.rmSync(workspace, { recursive: true, force: true });
     fs.rmSync(installedFixture.root, { recursive: true, force: true });
@@ -592,6 +599,12 @@ test('developer checkout policy tracks Release Set currentness without accepting
   fs.mkdirSync(masCheckout, { recursive: true });
   fs.mkdirSync(scholarCheckout, { recursive: true });
   fs.mkdirSync(wrongCheckout, { recursive: true });
+  writeDeveloperCapabilityCheckoutClosure({
+    masCheckout,
+    scholarCheckout,
+    masManifestPath: oldMas,
+    providerManifestPath: oldProvider,
+  });
 
   try {
     const pathFailure = runCliFailure([
@@ -623,6 +636,14 @@ test('developer checkout policy tracks Release Set currentness without accepting
         ['mas', '0.1.0', 'developer_checkout_override'],
       ],
     );
+
+    updateDeveloperCapabilityCheckoutClosure({
+      masCheckout,
+      scholarCheckout,
+      masManifestPath: nextMas,
+      providerManifestPath: nextProvider,
+      message: 'fixture B',
+    });
 
     const releaseCatalogCache = path.join(stateDir, 'agent-package-release-catalog-cache.json');
     const cachedOldReleaseSet = formatJsonPayload({
@@ -674,7 +695,7 @@ test('developer checkout policy tracks Release Set currentness without accepting
       ],
     );
   } finally {
-    fs.rmSync(root, { recursive: true, force: true });
+    removeFixtureTree(root);
   }
 });
 
@@ -706,6 +727,12 @@ test('single-package developer update reconciles from the live Release Set and b
   fs.mkdirSync(masCheckout, { recursive: true });
   fs.mkdirSync(scholarCheckout, { recursive: true });
   fs.mkdirSync(wrongCheckout, { recursive: true });
+  const developerFixture = writeDeveloperCapabilityCheckoutClosure({
+    masCheckout,
+    scholarCheckout,
+    masManifestPath: oldMas,
+    providerManifestPath: oldProvider,
+  });
   fs.writeFileSync(masSentinel, 'developer MAS source\n');
   fs.writeFileSync(scholarSentinel, 'developer ScholarSkills source\n');
 
@@ -734,6 +761,14 @@ test('single-package developer update reconciles from the live Release Set and b
     assert.equal(fs.readFileSync(lockFile, 'utf8'), installedLockBytes);
     assert.equal(fs.readFileSync(ledgerFile, 'utf8'), installedLedgerBytes);
     assert.equal(fs.existsSync(releaseCatalogCache), false);
+
+    updateDeveloperCapabilityCheckoutClosure({
+      masCheckout,
+      scholarCheckout,
+      masManifestPath: nextMas,
+      providerManifestPath: nextProvider,
+      message: 'fixture B',
+    });
 
     const preview = runCli(['packages', 'update', 'mas', '--dry-run'], {
       ...commonEnv,
@@ -835,7 +870,56 @@ test('single-package developer update reconciles from the live Release Set and b
     assert.equal(fs.readFileSync(lockFile, 'utf8'), currentLockBytes);
     assert.equal(fs.readFileSync(ledgerFile, 'utf8'), currentLedgerBytes);
     assert.equal(fs.existsSync(releaseCatalogCache), false);
+
+    const scholarHead = execFileSync('git', ['rev-parse', 'HEAD'], {
+      cwd: scholarCheckout,
+      encoding: 'utf8',
+    }).trim();
+    fs.appendFileSync(developerFixture.providerHelperPath, 'offline dirty developer update\n');
+    fs.rmSync(nextReleaseSet.catalogPath, { force: true });
+    const offlineDeveloper = runCli(['packages', 'update', 'mas'], {
+      ...commonEnv,
+      ...nextReleaseSet.env,
+    }) as any;
+    const offlineUpdate = offlineDeveloper.opl_agent_package_update;
+    const offlineProvider = offlineUpdate.dependency_package_locks.find(
+      (entry: any) => entry.package_id === 'mas-scholar-skills',
+    );
+    assert.equal(offlineUpdate.status, 'updated');
+    assert.equal(offlineUpdate.reconciliation_action, 'source_reconcile');
+    assert.equal(offlineUpdate.release_catalog_freshness, null);
+    assert.equal(offlineProvider.developer_checkout_source.source_git_head_sha, scholarHead);
+    assert.match(
+      fs.readFileSync(
+        path.join(offlineProvider.physical_surface.codex_plugin_cache_path, 'skills', 'medical-manuscript-writing', 'helper.txt'),
+        'utf8',
+      ),
+      /offline dirty developer update/,
+    );
+    assert.notEqual(execFileSync('git', ['status', '--porcelain'], {
+      cwd: scholarCheckout,
+      encoding: 'utf8',
+    }), '');
+    assert.equal(fs.existsSync(releaseCatalogCache), false);
+
+    const providerSkillRoot = path.join(
+      offlineProvider.physical_surface.codex_plugin_cache_path,
+      'skills',
+      'medical-manuscript-writing',
+    );
+    assert.equal(fs.statSync(offlineProvider.physical_surface.codex_plugin_cache_path).mode & 0o777, 0o555);
+    assert.equal(fs.statSync(path.join(providerSkillRoot, 'SKILL.md')).mode & 0o777, 0o444);
+    fs.chmodSync(providerSkillRoot, 0o755);
+    const injectedSkillInstruction = path.join(providerSkillRoot, 'untracked-instruction.md');
+    fs.writeFileSync(injectedSkillInstruction, 'must never enter a Skill projection\n', { mode: 0o444 });
+    fs.chmodSync(providerSkillRoot, 0o555);
+    assert.throws(() => materializeAgentPackageSkillProjection({
+      root: offlineUpdate.package_lock,
+      providers: [offlineProvider],
+      dryRun: true,
+    }), (error: any) =>
+      error?.details?.failure_code === 'agent_package_plugin_cache_generation_invalid');
   } finally {
-    fs.rmSync(root, { recursive: true, force: true });
+    removeFixtureTree(root);
   }
 });

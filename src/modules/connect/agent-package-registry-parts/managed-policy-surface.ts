@@ -11,6 +11,10 @@ import {
   type OplCompanionNetworkAccess,
 } from '../install-companions.ts';
 import { resolveCodexConfigPath, resolveCodexHome, sha256Text } from './shared.ts';
+import {
+  assertSafePersistedPackagePath,
+  removeSafePersistedPackagePath,
+} from './persisted-path-safety.ts';
 import type {
   AgentPackageLock,
   AgentPackageManagedPolicyCurrentness,
@@ -905,7 +909,7 @@ export function managedPolicyCurrentness(
       enabled_migration_ids: inspection.enabledMigrationIds,
       detected_conflicts: inspection.detectedConflicts,
       dependency_sync: dependencySync as unknown as Record<string, unknown>,
-      repair_command: drifted ? `opl packages repair --package-id ${lock.package_id}` : null,
+      repair_command: null,
       reason: drifted
         ? [
             conflictDrifted
@@ -937,10 +941,41 @@ function managedPolicyRollbackConflict(
   });
 }
 
+function managedPolicyBackupRoot() {
+  return path.join(resolveOplStatePaths().state_dir, 'agent-package-transactions');
+}
+
+function assertManagedPolicyBackupPaths(migration: AgentPackageManagedPolicyMigration) {
+  if (migration.backup_root) {
+    assertSafePersistedPackagePath({
+      candidatePath: migration.backup_root,
+      allowedRoots: [managedPolicyBackupRoot()],
+      pathKind: 'managed_policy_migration.backup_root',
+    });
+  }
+  for (const action of migration.actions) {
+    assertSafePersistedPackagePath({
+      candidatePath: action.backup_ref,
+      allowedRoots: [managedPolicyBackupRoot()],
+      pathKind: 'managed_policy_migration.actions[].backup_ref',
+    });
+  }
+}
+
+function removeManagedPolicyBackupRoot(backupRoot: string) {
+  removeSafePersistedPackagePath({
+    candidatePath: backupRoot,
+    allowedRoots: [managedPolicyBackupRoot()],
+    pathKind: 'managed_policy_migration.backup_root',
+    recursive: true,
+  });
+}
+
 export function assertManagedPolicyRollbackReady(
   migration: AgentPackageManagedPolicyMigration | undefined,
 ) {
   if (!migration?.backup_active) return;
+  assertManagedPolicyBackupPaths(migration);
   const actions = [...migration.actions].reverse();
 
   for (const action of actions) {
@@ -1002,6 +1037,7 @@ export function rollbackManagedPolicyMigration(
   options: { retainBackups?: boolean } = {},
 ): AgentPackageManagedPolicyMigration {
   if (!migration?.backup_active) return migration ?? noManagedPolicyMigration('No managed policy backup required rollback.');
+  assertManagedPolicyBackupPaths(migration);
   assertManagedPolicyRollbackReady(migration);
   const actions = [...migration.actions].reverse();
 
@@ -1023,7 +1059,7 @@ export function rollbackManagedPolicyMigration(
     restoreManagedBackup(action, options.retainBackups === true);
   }
   if (!options.retainBackups && migration.backup_root) {
-    fs.rmSync(migration.backup_root, { recursive: true, force: true });
+    removeManagedPolicyBackupRoot(migration.backup_root);
   }
   return {
     ...migration,
@@ -1047,7 +1083,7 @@ export function finalizeManagedPolicyRollback(
       failure_code: 'agent_package_managed_policy_rollback_not_completed',
     });
   }
-  if (migration.backup_root) fs.rmSync(migration.backup_root, { recursive: true, force: true });
+  if (migration.backup_root) removeManagedPolicyBackupRoot(migration.backup_root);
   return {
     ...migration,
     backup_active: false,

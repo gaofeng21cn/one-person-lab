@@ -16,6 +16,11 @@ type AdmissionGate = {
   required_for_formal_admission: boolean;
   required_evidence_refs: string[];
   forbidden_claims: string[];
+  currentness_or_provenance_observation_alone_can_block_execution?: boolean;
+  new_hosted_action_and_child_attempt_resolve_latest_or_lkg?: boolean;
+  active_attempt_hot_reload?: boolean;
+  historical_artifact_or_evidence_invalidated_by_package_update?: boolean;
+  hard_stop_reasons?: string[];
 };
 
 type AdmissionGateContract = {
@@ -86,6 +91,21 @@ test('standard domain-agent admission gates freeze required package sections as 
     assert.equal(gate.forbidden_claims.includes('domain_ready'), true, `${gateId} must not claim domain ready`);
     assert.equal(gate.forbidden_claims.includes('production_ready'), true, `${gateId} must not claim production ready`);
   }
+
+  const sourceResolutionGate = gatesById.get('clean_checkout_currentness_gate');
+  assert.ok(sourceResolutionGate);
+  assert.equal(sourceResolutionGate.requirement_kind, 'runtime_source_resolution_and_observation');
+  assert.equal(sourceResolutionGate.currentness_or_provenance_observation_alone_can_block_execution, false);
+  assert.equal(sourceResolutionGate.new_hosted_action_and_child_attempt_resolve_latest_or_lkg, true);
+  assert.equal(sourceResolutionGate.active_attempt_hot_reload, false);
+  assert.equal(sourceResolutionGate.historical_artifact_or_evidence_invalidated_by_package_update, false);
+  assert.deepEqual(sourceResolutionGate.hard_stop_reasons, [
+    'no_current_or_lkg_runnable_generation',
+    'required_abi_or_export_missing',
+    'required_module_or_skill_missing',
+    'runtime_path_permission_or_safety_failure',
+    'health_or_handler_probe_failed',
+  ]);
 });
 
 test('standard domain-agent admission contract keeps false-authority boundaries explicit', () => {

@@ -12,6 +12,10 @@ import type {
 import { StageRunWorkflow } from '../../src/modules/runway/family-runtime-temporal-workflows.ts';
 import { STAGE_RUN_ATTEMPT_CONTENT_BINDING_VERSION } from '../../src/modules/runway/family-runtime-stage-quality-attempt-boundary.ts';
 import {
+  stageAttemptExecutionContentBindingSha256,
+  stageRunSpecSha256,
+} from '../../src/modules/runway/family-runtime-stage-run-identity.ts';
+import {
   normalizeStageQualityCyclePolicy,
   type StageQualityOutcome,
 } from '../../src/modules/stagecraft/stage-quality-cycle.ts';
@@ -86,6 +90,13 @@ async function runController(input: {
   closeFindingAfterRound: number | null;
   formalReviewRequired?: boolean;
   maxRepairRounds?: number;
+  executionFormalReviewRequired?: boolean;
+  executionMaxRepairRounds?: number;
+  executionDeclaredStageIds?: string[];
+  executionRubricRefsByRole?: Partial<Record<
+    TemporalStageQualityAttemptMaterializationInput['attempt_role'],
+    string[]
+  >>;
   failRole?: TemporalStageQualityAttemptMaterializationInput['attempt_role'];
   preflightHardBlockRole?: TemporalStageQualityAttemptMaterializationInput['attempt_role'];
   preflightBlockedReason?: string;
@@ -115,24 +126,63 @@ async function runController(input: {
   const testEnv = await createTemporalTestWorkflowEnvironment();
   const taskQueue = `opl-stage-run-controller-${input.id}-${Date.now()}`;
   const attempts: TemporalStageQualityAttemptMaterializationInput[] = [];
+  const workflowInputs: TemporalStageAttemptWorkflowInput[] = [];
+  const reviewReceiptInputs: any[] = [];
+  const routeInputs: any[] = [];
   try {
     const activities = {
       async stageQualityAttemptMaterializeActivity(materialization: TemporalStageQualityAttemptMaterializationInput) {
         attempts.push(materialization);
         const role = materialization.attempt_role;
         const round = materialization.quality_round_index;
+        const executionPolicy = normalizeStageQualityCyclePolicy({
+          formal_review: {
+            required: input.executionFormalReviewRequired ?? input.formalReviewRequired ?? true,
+            risk_tier: 'high',
+            max_repair_rounds:
+              input.executionMaxRepairRounds ?? input.maxRepairRounds ?? 3,
+          },
+        });
+        const executionDeclaredStageIds = [...new Set(
+          input.executionDeclaredStageIds ?? materialization.stage_run.declared_stage_ids,
+        )].sort();
+        const executionRubricRefs = input.executionRubricRefsByRole?.[role]
+          ?? materialization.stage_run.quality_rubric_refs;
+        const executionSpec = {
+          ...materialization.stage_run.stage_run_spec,
+          quality_policy: {
+            ref: materialization.stage_run.quality_policy_ref,
+            body: executionPolicy,
+          },
+          role_prompt_refs: materialization.stage_run.role_prompt_refs,
+          quality_rubric_refs: executionRubricRefs,
+        };
+        const executionSpecSha256 = stageRunSpecSha256(executionSpec);
+        const executionBindingPayload = {
+          surface_kind: 'opl_stage_attempt_execution_content_binding' as const,
+          version: 'opl-stage-attempt-execution-content-binding.v1' as const,
+          parent_stage_run_spec_sha256: materialization.stage_run.stage_run_spec_sha256,
+          use_boundary_id: `package-use:${input.id}:${role}:${round}`,
+          spec_sha256: executionSpecSha256,
+          spec: executionSpec,
+          declared_stage_ids: executionDeclaredStageIds,
+        };
+        const executionContentBinding = {
+          ...executionBindingPayload,
+          binding_sha256: stageAttemptExecutionContentBindingSha256(executionBindingPayload),
+        };
         const contextManifest = {
           surface_kind: 'opl_stage_quality_attempt_context_manifest',
           version: 'stage-quality-attempt-context-manifest.v1',
           cross_stage_route_selection: {
             surface_kind: 'opl_stage_run_route_selection_context',
             version: 'stage-run-route-selection-context.v1',
-            configured_decisive_attempt_roles: materialization.stage_run.quality_policy.formal_review.required
+            configured_decisive_attempt_roles: executionPolicy.formal_review.required
               ? ['reviewer', 're_reviewer']
               : ['producer'],
             current_attempt_role: role,
-            declared_stage_ids: materialization.stage_run.declared_stage_ids,
-            max_repair_rounds: materialization.stage_run.quality_policy.formal_review.max_repair_rounds,
+            declared_stage_ids: executionDeclaredStageIds,
+            max_repair_rounds: executionPolicy.formal_review.max_repair_rounds,
           },
         };
         const workflowInput: TemporalStageAttemptWorkflowInput = {
@@ -148,6 +198,9 @@ async function runController(input: {
           checkpoint_refs: [materialization.stage_run.stage_packet_ref],
           stage_run_id: materialization.stage_run.stage_run_id,
           stage_run_content_binding_version: STAGE_RUN_ATTEMPT_CONTENT_BINDING_VERSION,
+          stage_run_spec_sha256: materialization.stage_run.stage_run_spec_sha256,
+          stage_run_spec: materialization.stage_run.stage_run_spec,
+          execution_content_binding: executionContentBinding,
           quality_cycle_id: materialization.quality_cycle_id,
           attempt_role: role,
           quality_round_index: round,
@@ -161,12 +214,12 @@ async function runController(input: {
           input_artifact_refs: materialization.artifact_refs,
           reviewed_artifact_hashes: materialization.artifact_hashes,
           quality_source_refs: materialization.stage_run.source_refs,
-          quality_rubric_refs: materialization.stage_run.quality_rubric_refs,
+          quality_rubric_refs: executionRubricRefs,
           prior_finding_refs: (materialization.findings ?? []).map((finding) => finding.finding_id),
           repair_map_refs: (materialization.repair_map ?? []).map(
             (entry) => `repair-map:${entry.finding_id}`,
           ),
-          quality_role_prompt_ref: materialization.stage_run.role_prompt_refs[role],
+          quality_role_prompt_ref: executionSpec.role_prompt_refs[role],
           context_manifest_ref: `context:${role}:${round}`,
           no_context_inheritance: true,
           quality_context: {
@@ -175,6 +228,7 @@ async function runController(input: {
             repair_map: materialization.repair_map ?? [],
           },
         };
+        workflowInputs.push(workflowInput);
         return {
           attempt_ref: `opl://stage_attempts/${workflowInput.stage_attempt_id}`,
           workflow_input: workflowInput,
@@ -187,6 +241,7 @@ async function runController(input: {
         return { synced: true };
       },
       async stageQualityReviewReceiptActivity(receiptInput: any) {
+        reviewReceiptInputs.push(receiptInput);
         const reviewerRole = String(receiptInput.reviewer_attempt_ref).includes('_re_reviewer_')
           ? 're_reviewer'
           : 'reviewer';
@@ -210,6 +265,7 @@ async function runController(input: {
         };
       },
       async stageRunRouteLaunchActivity(routeInput: any) {
+        routeInputs.push(routeInput);
         const complete = routeInput.decision.decision_kind === 'complete';
         return {
           surface_kind: 'opl_stage_run_route_launch_receipt',
@@ -217,6 +273,8 @@ async function runController(input: {
           materialization_status: complete ? 'workflow_complete' : 'launched',
           parent_stage_run_id: routeInput.parent_stage_run.stage_run_id,
           decisive_attempt_ref: routeInput.decisive_attempt_ref,
+          decisive_execution_content_binding_sha256:
+            routeInput.decisive_execution_content_binding.binding_sha256,
           parent_route_decision_ref: `route:${routeInput.decisive_attempt_ref}`,
           route_decision_sha256: 'sha256:route',
           decision: routeInput.decision,
@@ -238,7 +296,9 @@ async function runController(input: {
             stage_attempt_id: attempt.stage_attempt_id,
             checkpoint_refs: [],
             progress_summary: {},
-            process_output_summary: { blocked_reason: input.preflightBlockedReason ?? 'dirty_checkout' },
+            process_output_summary: {
+              blocked_reason: input.preflightBlockedReason ?? 'codex_cli_provider_unavailable',
+            },
             closeout_packet: null,
           };
         }
@@ -261,7 +321,7 @@ async function runController(input: {
         const role = attempt.attempt_role;
         const round = attempt.quality_round_index ?? 0;
         if (role === input.preflightHardBlockRole && attempt.provider_blocker) {
-          const blockedReason = attempt.provider_blocker.blocked_reason ?? 'dirty_checkout';
+          const blockedReason = attempt.provider_blocker.blocked_reason ?? 'codex_cli_provider_unavailable';
           const blockerRef = `opl://stage-attempts/${attempt.stage_attempt_id}/runtime-blockers/${blockedReason}`;
           return {
             activity_status: 'blocked',
@@ -375,7 +435,16 @@ async function runController(input: {
         const routeImpact: Record<string, unknown> = rawArtifactProgress
           ? {}
           : { stage_quality_cycle: stageQualityCycle };
-        if (role === 'producer' && input.formalReviewRequired === false) {
+        const routeSelection = (
+          attempt.quality_context?.context_manifest as any
+        )?.cross_stage_route_selection;
+        const attemptFormalReviewRequired = Array.isArray(
+          routeSelection?.configured_decisive_attempt_roles,
+        ) && routeSelection.configured_decisive_attempt_roles.includes('reviewer');
+        const attemptMaxRepairRounds = typeof routeSelection?.max_repair_rounds === 'number'
+          ? routeSelection.max_repair_rounds
+          : 3;
+        if (role === 'producer' && !attemptFormalReviewRequired) {
           routeImpact.stage_route_decision = {
             decision_kind: 'advance',
             target_stage_id: input.terminalRouteTarget ?? 'review_and_revision',
@@ -386,7 +455,7 @@ async function runController(input: {
           role === 'reviewer'
           && (
             ['pass', 'quality_debt'].includes(attemptOutcome)
-            || (attemptOutcome === 'repair_required' && (input.maxRepairRounds ?? 3) === 0)
+            || (attemptOutcome === 'repair_required' && attemptMaxRepairRounds === 0)
           )
         ) {
           routeImpact.stage_route_decision = {
@@ -403,7 +472,7 @@ async function runController(input: {
           };
         }
         if (role === 're_reviewer') {
-          const budgetExhausted = round === (input.maxRepairRounds ?? 3);
+          const budgetExhausted = round === attemptMaxRepairRounds;
           if (
             (reReviewClosed && ['pass', 'quality_debt'].includes(attemptOutcome))
             || (!reReviewClosed && attemptOutcome === 'repair_required' && budgetExhausted)
@@ -477,7 +546,7 @@ async function runController(input: {
       });
       return await handle.result();
     });
-    return { state, attempts };
+    return { state, attempts, workflowInputs, reviewReceiptInputs, routeInputs };
   } finally {
     await testEnv.teardown();
   }
@@ -607,7 +676,7 @@ test('max=0 initial reviewer repair_required is the decisive terminal quality-de
   assert.ok(state.quality_debt_refs.includes('quality-debt:finding:visual-clipping'));
 });
 
-test('pre-Codex typed preflight blocker may omit a session and remains a hard stop', async () => {
+test('a truly unavailable pre-Codex provider may omit a session and remains a hard stop', async () => {
   const { state, attempts } = await runController({
     id: 'preflight-hard-blocker',
     closeFindingAfterRound: null,
@@ -615,10 +684,10 @@ test('pre-Codex typed preflight blocker may omit a session and remains a hard st
   });
   assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), ['producer', 'reviewer']);
   assert.equal(state.status, 'blocked');
-  assert.equal(state.blocked_reason, 'dirty_checkout');
-  assert.equal(state.hard_stop_class, 'stale_or_mismatched_stage_identity');
+  assert.equal(state.blocked_reason, 'codex_cli_provider_unavailable');
+  assert.equal(state.hard_stop_class, 'permission_or_credential_boundary');
   assert.deepEqual(state.typed_blocker_refs, [
-    `opl://stage-attempts/${state.attempts[1]?.stage_attempt_id}/runtime-blockers/dirty_checkout`,
+    `opl://stage-attempts/${state.attempts[1]?.stage_attempt_id}/runtime-blockers/codex_cli_provider_unavailable`,
   ]);
   assert.deepEqual(state.human_gate_refs, []);
   assert.equal(state.source_attempt_ref, `opl://stage_attempts/${state.attempts[1]?.stage_attempt_id}`);
@@ -654,6 +723,56 @@ test('primary-only StageRun makes the producer the sole decisive route owner', a
   assert.equal(state.selected_stage_route?.target_stage_id, 'review_and_revision');
   assert.equal(state.next_stage_run_launch?.target_stage_run_id, 'target:review_and_revision');
   assert.equal(state.workflow_id, `stage-run-workflow:primary-route-owner`);
+});
+
+test('producer Attempt current policy can enable Review after a primary-only StageRun was created', async () => {
+  const { state, attempts, workflowInputs, reviewReceiptInputs } = await runController({
+    id: 'attempt-policy-enables-review',
+    closeFindingAfterRound: null,
+    formalReviewRequired: false,
+    executionFormalReviewRequired: true,
+    initialReviewerOutcome: 'pass',
+    executionRubricRefsByRole: {
+      producer: ['rubric:v0-producer'],
+      reviewer: ['rubric:v1-reviewer'],
+    },
+  });
+  assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), ['producer', 'reviewer']);
+  assert.equal(state.status, 'completed');
+  assert.equal(state.decisive_attempt_role, 'reviewer');
+  assert.deepEqual(
+    workflowInputs[0]?.execution_content_binding?.spec.quality_rubric_refs,
+    ['rubric:v0-producer'],
+  );
+  assert.deepEqual(
+    workflowInputs[1]?.execution_content_binding?.spec.quality_rubric_refs,
+    ['rubric:v1-reviewer'],
+  );
+  assert.deepEqual(reviewReceiptInputs[0]?.rubric_refs, ['rubric:v1-reviewer']);
+});
+
+test('decisive Attempt route validation uses its current declared Stage catalog', async () => {
+  const currentDeclaredStageIds = [
+    'storyline',
+    'artifact_creation',
+    'review_and_revision',
+    'package_and_handoff',
+    'publication_followup',
+  ];
+  const { state, workflowInputs, routeInputs } = await runController({
+    id: 'attempt-current-stage-catalog',
+    closeFindingAfterRound: null,
+    initialReviewerOutcome: 'pass',
+    terminalRouteTarget: 'publication_followup',
+    executionDeclaredStageIds: currentDeclaredStageIds,
+  });
+  assert.equal(state.status, 'completed');
+  assert.equal(state.selected_stage_route?.target_stage_id, 'publication_followup');
+  assert.deepEqual(
+    workflowInputs[1]?.execution_content_binding?.declared_stage_ids,
+    [...currentDeclaredStageIds].sort(),
+  );
+  assert.equal(routeInputs[0]?.decision.target_stage_id, 'publication_followup');
 });
 
 test('raw producer output uses its persisted ref-hash receipt as formal Review input', async () => {

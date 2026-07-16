@@ -139,11 +139,19 @@ export function inspectStageRunLaunch(db: DatabaseSync, stageRunId: string) {
   return rowPayload(row);
 }
 
+export function findStageRunLaunch(db: DatabaseSync, stageRunId: string) {
+  createStageRunLaunchTable(db);
+  const row = launchRow(db, stageRunId);
+  return row ? rowPayload(row) : null;
+}
+
 export function registerStageRunLaunch(
   db: DatabaseSync,
   input: TemporalStageRunWorkflowInput,
 ) {
-  const stageRunInput = requireTemporalStageRunWorkflowInputLaunchable(input);
+  const stageRunInput = requireTemporalStageRunWorkflowInputLaunchable(input, {
+    revalidateContent: 'historical_evidence',
+  });
   createStageRunLaunchTable(db);
   const canonicalInput = canonicalJsonText(stageRunInput);
   db.exec('BEGIN IMMEDIATE');
@@ -183,6 +191,7 @@ export function registerStageRunLaunch(
         launch: rowPayload(existing),
       } as const;
     }
+    requireTemporalStageRunWorkflowInputLaunchable(stageRunInput);
     const createdAt = nowIso();
     db.prepare(`
       INSERT INTO stage_run_launches (

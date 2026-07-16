@@ -76,6 +76,14 @@
     "action": "One-time actions remain independent from persistent configuration.",
     "app_product_truth_policy": "App-local preferences and App product truth are not owned or copied by Framework."
   },
+  "package_functional_readiness": {
+    "source_ref": "app_state.agent_packages.status_index",
+    "attention_scope": "installed_enabled_packages_without_runnable_current_or_last_known_good_generation",
+    "disabled_and_uninstalled_packages_are_attention": false,
+    "runtime_source_carriers_role": "provenance_only",
+    "runtime_source_carrier_health_can_enqueue_issue": false,
+    "runtime_source_carrier_health_can_recommend_sync": false
+  },
   "configuration_catalog": {
     "surface_kind": "opl_settings_configuration_catalog.v1",
     "owner": "one-person-lab",
@@ -174,6 +182,7 @@
     "source_refs": [
       "app_state.core.codex",
       "app_state.developer_mode",
+      "app_state.agent_packages.status_index",
       "app_state.runtime_source_carriers",
       "app_state.provider",
       "app_state.paths",
@@ -352,9 +361,7 @@
     "runtime_roots"
   ],
   "issue_status_codes": [
-    "needs_reload",
     "manual_required",
-    "dirty_checkout",
     "failed_with_repair"
   ],
   "allowed_action_ids": [
@@ -377,7 +384,6 @@
     "install_from_manifest_url",
     "agent_package_update",
     "agent_package_repair",
-    "agent_package_activate",
     "agent_package_uninstall",
     "agent_package_preferences_set",
     "settings_check_app_update",
@@ -413,7 +419,6 @@
     "install_from_manifest_url": "settings.capabilities.agent_package.install",
     "agent_package_update": "settings.capabilities.agent_package.update",
     "agent_package_repair": "settings.capabilities.agent_package.repair",
-    "agent_package_activate": "settings.capabilities.agent_package.activate",
     "agent_package_uninstall": "settings.capabilities.agent_package.uninstall",
     "agent_package_preferences_set": "settings.capabilities.agent_package.preferences",
     "settings_check_app_update": "settings.updates.check_app_update",
@@ -518,8 +523,8 @@
       },
       {
         "surface": "managed_module_and_capability_packages",
-        "truth_owner": "one-person-lab Pack/Connect package channel and managed update receipt projection",
-        "app_aion_role": "show package source, owner, action, and receipt/blocker refs",
+        "truth_owner": "one-person-lab Packages status index and use-boundary current/LKG selection",
+        "app_aion_role": "show functional package readiness and package action refs while source carriers remain provenance",
         "local_truth_allowed": false,
         "required_visible_refs": [
           "package_descriptor_ref",

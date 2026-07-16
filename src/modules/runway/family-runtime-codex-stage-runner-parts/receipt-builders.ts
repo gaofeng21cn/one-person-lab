@@ -21,6 +21,10 @@ import {
   type CodexStageRunnerMode,
   type RunnerEventSummary,
 } from './input-prompt.ts';
+import {
+  hostAttemptSkillRuntime,
+  packageSkillPromptPrefix,
+} from '../family-runtime-attempt-skill-projection.ts';
 import type { StandardAgentStagePromptResolution } from '../../pack/index.ts';
 import type { TypedStageCloseoutPacket } from './closeout-normalization.ts';
 import type { buildProgressCloseoutProjection } from '../progress-closeout-projection.ts';
@@ -269,13 +273,18 @@ export function buildCodexStageRunnerReceipt(input: {
   const checkpointRefs = checkpointRefsFromAttempt(input.attempt);
   const stagePacketRef = resolvedStagePacketRef(input);
   const observedAt = input.observedAt ?? null;
-  const args = buildCodexExecArgs(runnerPromptFor({
+  const skillRuntime = hostAttemptSkillRuntime(input.attempt);
+  const prompt = runnerPromptFor({
     attempt: input.attempt,
     stagePacketRef,
     effectiveStagePrompt: input.effectiveStagePrompt,
-  }), {
+  });
+  const skillPromptPrefix = packageSkillPromptPrefix(skillRuntime?.projection ?? null);
+  const args = buildCodexExecArgs(skillPromptPrefix ? `${skillPromptPrefix}\n\n${prompt}` : prompt, {
     cwd: workspaceRootFromAttempt(input.attempt) ?? undefined,
     json: true,
+    packageSkillBindings: skillRuntime?.packageSkillBindings,
+    shellHome: skillRuntime?.shellHome,
     ...input.codexExecOptions,
   });
   return {

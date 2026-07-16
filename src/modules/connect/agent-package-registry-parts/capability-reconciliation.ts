@@ -158,16 +158,19 @@ export function normalizeManagedPackageCatalog(payload: unknown): ManagedPackage
   return result;
 }
 
-export async function fetchManagedPackageCatalog(source: AgentPackageManagedVersionCatalogSource) {
+export async function fetchManagedPackageCatalog(
+  source: AgentPackageManagedVersionCatalogSource,
+  input: { timeoutMs?: number } = {},
+) {
   const fetched = source.transport === 'json_url'
-    ? await fetchJsonSource(source.catalog_ref).then((result) => ({
+    ? await fetchJsonSource(source.catalog_ref, input).then((result) => ({
         ...result,
         channel_ref: source.catalog_ref,
         channel_digest: `sha256:${result.source_sha256.replace(/^sha256:/, '')}`,
         checked_at: new Date().toISOString(),
       }))
     : (() => {
-        const channel = readOplPackageChannelManifestWithMetadata(source.catalog_ref);
+        const channel = readOplPackageChannelManifestWithMetadata(source.catalog_ref, input);
         return {
           payload: channel.payload,
           source_sha256: channel.source_sha256,

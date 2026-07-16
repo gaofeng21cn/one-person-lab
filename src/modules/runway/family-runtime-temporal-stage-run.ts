@@ -19,6 +19,17 @@ export type TemporalStageRunQualityRolePromptRefs = {
   re_reviewer: string;
 };
 
+export type StageAttemptExecutionContentBinding = {
+  surface_kind: 'opl_stage_attempt_execution_content_binding';
+  version: 'opl-stage-attempt-execution-content-binding.v1';
+  parent_stage_run_spec_sha256: string;
+  use_boundary_id: string;
+  spec_sha256: string;
+  spec: StageRunImmutableSpec;
+  declared_stage_ids: string[];
+  binding_sha256: string;
+};
+
 export type TemporalStageRunWorkflowInput = {
   stage_run_id: string;
   stage_run_invocation_id: string;
@@ -56,6 +67,7 @@ export type TemporalStageRunWorkflowInput = {
 export type TemporalStageRunRouteLaunchInput = {
   parent_stage_run: TemporalStageRunWorkflowInput;
   decisive_attempt_ref: string;
+  decisive_execution_content_binding: StageAttemptExecutionContentBinding;
   decision: StageRouteDecision;
   artifact_refs: string[];
   artifact_hashes: string[];
@@ -68,6 +80,7 @@ export type TemporalStageRunRouteLaunchReceipt = {
   materialization_status: 'workflow_complete' | 'launched' | 'existing';
   parent_stage_run_id: string;
   decisive_attempt_ref: string;
+  decisive_execution_content_binding_sha256: string;
   parent_route_decision_ref: string;
   route_decision_sha256: string;
   decision: StageRouteDecision;

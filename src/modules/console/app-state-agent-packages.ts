@@ -12,8 +12,15 @@ type RawDependencyCheck = RawDependencyReadiness['dependencies'][number];
 
 const REPAIR_COMMAND_REF =
   'opl app action execute --action agent_package_repair --payload <json> --json';
-const ACTIVATE_COMMAND_REF =
-  'opl app action execute --action agent_package_activate --payload <json> --json';
+
+const HARD_DEPENDENCY_FAILURE_REASONS = new Set([
+  'package_id_mismatch',
+  'dependency_lock_missing',
+  'dependency_disabled',
+  'capability_abi_mismatch',
+  'required_exports_missing',
+  'required_modules_missing',
+]);
 
 function selectedLock(index: AgentPackageLockIndex, packageId: string | null) {
   return packageId ? index.packages.find((entry) => entry.package_id === packageId) ?? null : null;
@@ -24,7 +31,10 @@ function canonicalDependencyStatus(
   readiness: RawAgentPackageStatus['package_dependency_readiness'],
 ) {
   if (!installed || !readiness) return 'blocked' as const;
-  return readiness.status === 'current' ? 'ready' as const : 'repair_required' as const;
+  const hardFailure = (readiness.dependencies ?? []).some((check) =>
+    check.required !== false
+    && (check.reasons ?? []).some((reason) => HARD_DEPENDENCY_FAILURE_REASONS.has(reason)));
+  return hardFailure ? 'repair_required' as const : 'ready' as const;
 }
 
 function dependencyCheck(
@@ -44,6 +54,12 @@ function dependencyCheck(
   const availableExportIds = provider?.capability_provider?.exports.map((entry) => entry.export_id)
     ?? (check.status === 'current' ? requiredExportIds : []);
   const exportsSatisfied = installed && !failureReasons.includes('required_exports_missing');
+  const requiredModuleIds = check.required_module_ids ?? [];
+  const availableModuleIds = provider?.capability_provider?.module_export_ids
+    ?? (check.status === 'current' ? requiredModuleIds : []);
+  const modulesSatisfied = installed && !failureReasons.includes('required_modules_missing');
+  const hardFailureReasons = failureReasons.filter((reason) =>
+    HARD_DEPENDENCY_FAILURE_REASONS.has(reason));
   const physicalSurfaceStatus = provider?.physical_surface?.status ?? null;
   return {
     package_id: check.package_id,
@@ -59,9 +75,16 @@ function dependencyCheck(
     required_export_ids: requiredExportIds,
     available_export_ids: [...new Set(availableExportIds)].sort(),
     exports_satisfied: exportsSatisfied,
+    required_module_ids: requiredModuleIds,
+    available_module_ids: [...new Set(availableModuleIds)].sort(),
+    modules_satisfied: modulesSatisfied,
     content_lock_digest: provider?.content_digest ?? check.content_digest,
     physical_surface_status: physicalSurfaceStatus,
-    ready: check.status === 'current' && enabled && versionSatisfied && abiSatisfied && exportsSatisfied,
+    ready: installed && enabled && abiSatisfied && exportsSatisfied && modulesSatisfied
+      && hardFailureReasons.length === 0,
+    hard_failure_reasons: hardFailureReasons,
+    currentness_observations: failureReasons.filter((reason) =>
+      !HARD_DEPENDENCY_FAILURE_REASONS.has(reason)),
     failure_reasons: failureReasons,
   };
 }
@@ -104,9 +127,9 @@ function canonicalDependencyReadiness(
 function canonicalRepairAction(
   installed: boolean,
   dependencyStatus: 'ready' | 'repair_required' | 'blocked',
-  rawRepairCommand: string | null,
+  hardRepairReason: string | null,
 ) {
-  const enabled = installed && (dependencyStatus === 'repair_required' || Boolean(rawRepairCommand));
+  const enabled = installed && hardRepairReason !== null;
   return {
     action_id: 'agent_package_repair',
     command_ref: REPAIR_COMMAND_REF,
@@ -116,30 +139,60 @@ function canonicalRepairAction(
       : dependencyStatus === 'repair_required'
         ? 'dependency_closure_repair_required'
         : enabled
-          ? 'package_repair_required'
+          ? hardRepairReason
           : 'dependency_closure_ready',
   };
 }
 
-function canonicalActivationAction(
-  installed: boolean,
-  materializationStatus: string | null,
-  disabled: boolean,
+function packageHardRepairReason(status: RawAgentPackageStatus) {
+  const hardDependencyReason = status.package_dependency_readiness?.dependencies
+    ?.filter((check) => check.required !== false)
+    .flatMap((check) => check.reasons ?? [])
+    .find((reason) => HARD_DEPENDENCY_FAILURE_REASONS.has(reason));
+  if (hardDependencyReason) return hardDependencyReason;
+  const materialization = status.materialization_readiness;
+  const coreStatus = materialization?.core_readiness?.status;
+  const requiredSkillIds = materialization?.core_readiness?.required_skill_ids
+    ?? materialization?.required_skill_ids
+    ?? [];
+  const materializedSkillIds = new Set(
+    materialization?.core_readiness?.materialized_skill_ids
+      ?? materialization?.materialized_skill_ids
+      ?? [],
+  );
+  const requiredSkillMissing = requiredSkillIds.some((skillId) => !materializedSkillIds.has(skillId));
+  if (requiredSkillMissing) {
+    return 'required_skill_repair_required';
+  }
+  if ((coreStatus === 'missing' || materialization?.status === 'missing')
+    && requiredSkillIds.length === 0) {
+    return 'required_skill_repair_required';
+  }
+  if (status.runtime_source_readiness?.operational_ready === false) {
+    return status.runtime_source_readiness.status
+      ? `runtime_source_${status.runtime_source_readiness.status}`
+      : 'runtime_source_repair_required';
+  }
+  if (status.managed_policy_currentness?.status === 'invalid') return 'managed_policy_invalid';
+  return null;
+}
+
+function observationOnlyBlockedReason(
+  status: RawAgentPackageStatus,
+  dependencyStatus: 'ready' | 'repair_required' | 'blocked',
 ) {
-  const ready = materializationStatus === 'current' || materializationStatus === 'not_required';
-  return {
-    action_id: 'agent_package_activate',
-    command_ref: ACTIVATE_COMMAND_REF,
-    enabled: installed && !disabled,
-    preparation_status: !installed ? 'not_installed' : ready ? 'ready' : 'prepare_required',
-    reason_code: !installed
-      ? 'package_not_installed'
-      : disabled
-        ? 'package_disabled'
-      : ready
-        ? 'use_boundary_reconciliation_ready'
-        : 'scope_reconciliation_required',
-  };
+  if (dependencyStatus !== 'ready') return false;
+  const reason = status.launch_blocked_reason;
+  return reason === 'package_dependency_incompatible'
+    || reason === 'carrier_authority_invalid'
+    || reason === 'managed_policy_drifted'
+    || reason === 'codex_reload_required'
+    || reason === 'codex_reload_observed'
+    || reason?.startsWith('scope_materialization_') === true
+    || reason?.includes('currentness') === true
+    || reason?.includes('digest') === true
+    || reason?.includes('reload') === true
+    || reason?.includes('receipt') === true;
 }
 
 function dependentGuard(index: AgentPackageLockIndex, packageId: string | null) {
@@ -163,11 +216,21 @@ export function projectAppAgentPackageStatus(input: {
   const installed = Boolean(lock);
   const exposureStatus = lock?.exposure_state ?? (installed ? 'visible' : 'not_installed');
   const disabled = exposureStatus === 'disabled';
-  const operationalReady = !disabled && status.operational_ready === true;
-  const launchAllowed = !disabled && status.launch_allowed === true;
-  const positiveReadinessDeferred = profile === 'fast' && (operationalReady || launchAllowed);
   const dependencyReadiness = canonicalDependencyReadiness(status, lockIndex);
   const rawRepairCommand = typeof status.repair_action === 'string' ? status.repair_action : null;
+  const hardRepairReason = packageHardRepairReason(status);
+  const functionallyRunnable = installed
+    && !disabled
+    && hardRepairReason === null
+    && dependencyReadiness.status === 'ready'
+    && (
+      status.operational_ready === true
+      || status.launch_allowed === true
+      || observationOnlyBlockedReason(status, dependencyReadiness.status)
+    );
+  const operationalReady = functionallyRunnable;
+  const launchAllowed = functionallyRunnable;
+  const positiveReadinessDeferred = profile === 'fast' && functionallyRunnable;
   const canonicalFields = {
     action_receipt_ref: lock?.action_receipt_id ?? null,
     rollback_ref: lock?.rollback_ref ?? null,
@@ -176,13 +239,8 @@ export function projectAppAgentPackageStatus(input: {
       codex_visible: exposureStatus === 'visible',
     },
     dependency_readiness: dependencyReadiness,
-    repair_action: canonicalRepairAction(installed, dependencyReadiness.status, rawRepairCommand),
-    repair_command: rawRepairCommand,
-    activation_action: canonicalActivationAction(
-      installed,
-      status.materialization_readiness?.status ?? null,
-      disabled,
-    ),
+    repair_action: canonicalRepairAction(installed, dependencyReadiness.status, hardRepairReason),
+    repair_command: hardRepairReason ? rawRepairCommand : null,
     dependent_guard: dependentGuard(lockIndex, status.package_id),
   };
 
@@ -191,10 +249,18 @@ export function projectAppAgentPackageStatus(input: {
     return {
       ...fullStatus,
       ...canonicalFields,
-      status: disabled ? 'attention_needed' : status.status,
+      status: disabled
+        ? 'attention_needed'
+        : functionallyRunnable && status.status === 'attention_needed'
+          ? 'available'
+          : status.status,
       operational_ready: operationalReady,
       launch_allowed: launchAllowed,
-      launch_blocked_reason: disabled ? 'package_disabled' : status.launch_blocked_reason,
+      launch_blocked_reason: disabled
+        ? 'package_disabled'
+        : functionallyRunnable
+          ? null
+          : status.launch_blocked_reason,
     };
   }
 
@@ -271,13 +337,6 @@ export function unavailableAgentPackageCanonicalFields(
       reason_code: 'status_unavailable',
     },
     repair_command: null,
-    activation_action: {
-      action_id: 'agent_package_activate',
-      command_ref: ACTIVATE_COMMAND_REF,
-      enabled: false,
-      preparation_status: installed ? 'prepare_required' : 'not_installed',
-      reason_code: 'status_unavailable',
-    },
     dependent_guard: {
       required_by_package_ids: guard.required_by_package_ids,
       disable: { allowed: false, reason_code: reasonCode },

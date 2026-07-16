@@ -1,4 +1,7 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import fs from 'node:fs';
+import path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 
 import { FrameworkContractError, isRecord } from '../../../kernel/contract-validation.ts';
 import {
@@ -20,6 +23,99 @@ import type {
   AgentPackageLockIndex,
   AgentPackageRegistryCache,
 } from './types.ts';
+
+type PackageLifecycleTransactionOptions = {
+  timeoutMs?: number;
+  retryMs?: number;
+};
+
+const PACKAGE_LIFECYCLE_LOCK_TIMEOUT_MS = 5_000;
+const packageLifecycleTransactionContext = new AsyncLocalStorage<boolean>();
+
+function packageLifecycleLockPath() {
+  return path.join(ensureOplStateDir().state_dir, 'agent-package-lifecycle.sqlite');
+}
+
+function packageLifecycleLockTimeoutError(lockPath: string) {
+  return new FrameworkContractError('runtime_state_lock_timeout', 'Timed out waiting for another agent package lifecycle transaction.', {
+    lock_path: lockPath,
+    owner_pid_alive: null,
+    failure_code: 'agent_package_lifecycle_lock_timeout',
+  });
+}
+
+function normalizedLockTiming(options: PackageLifecycleTransactionOptions) {
+  return {
+    timeoutMs: Number.isFinite(options.timeoutMs) && Number(options.timeoutMs) >= 0
+      ? Number(options.timeoutMs)
+      : PACKAGE_LIFECYCLE_LOCK_TIMEOUT_MS,
+  };
+}
+
+function acquirePackageLifecycleLock(options: PackageLifecycleTransactionOptions) {
+  const lockPath = packageLifecycleLockPath();
+  const timing = normalizedLockTiming(options);
+  const db = new DatabaseSync(lockPath);
+  try {
+    db.exec(`PRAGMA busy_timeout = ${Math.floor(timing.timeoutMs)};`);
+    db.exec('PRAGMA journal_mode = WAL;');
+    db.exec('CREATE TABLE IF NOT EXISTS lifecycle_mutex (singleton INTEGER PRIMARY KEY CHECK (singleton = 1));');
+    db.exec('BEGIN IMMEDIATE;');
+    return { db, path: lockPath };
+  } catch (error) {
+    db.close();
+    const message = error instanceof Error ? error.message : String(error);
+    if (/busy|locked/i.test(message)) throw packageLifecycleLockTimeoutError(lockPath);
+    throw error;
+  }
+}
+
+function releasePackageLifecycleLock(
+  acquired: ReturnType<typeof acquirePackageLifecycleLock>,
+  commit: boolean,
+) {
+  try {
+    acquired.db.exec(commit ? 'COMMIT;' : 'ROLLBACK;');
+  } finally {
+    acquired.db.close();
+  }
+}
+
+export async function withAgentPackageLifecycleTransaction<T>(
+  dryRun: boolean,
+  operation: () => Promise<T>,
+  options: PackageLifecycleTransactionOptions = {},
+): Promise<T> {
+  if (dryRun || packageLifecycleTransactionContext.getStore()) {
+    return await operation();
+  }
+  const acquired = acquirePackageLifecycleLock(options);
+  try {
+    const result = await packageLifecycleTransactionContext.run(true, operation);
+    releasePackageLifecycleLock(acquired, true);
+    return result;
+  } catch (error) {
+    releasePackageLifecycleLock(acquired, false);
+    throw error;
+  }
+}
+
+export function withAgentPackageLifecycleTransactionSync<T>(
+  dryRun: boolean,
+  operation: () => T,
+  options: PackageLifecycleTransactionOptions = {},
+): T {
+  if (dryRun || packageLifecycleTransactionContext.getStore()) return operation();
+  const acquired = acquirePackageLifecycleLock(options);
+  try {
+    const result = packageLifecycleTransactionContext.run(true, operation);
+    releasePackageLifecycleLock(acquired, true);
+    return result;
+  } catch (error) {
+    releasePackageLifecycleLock(acquired, false);
+    throw error;
+  }
+}
 
 function emptyLockIndex(): AgentPackageLockIndex {
   return {

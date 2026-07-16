@@ -1,5 +1,4 @@
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
-import { preflightDomainWorkspaceCheckoutCurrentness } from './family-runtime-checkout-currentness.ts';
 import {
   buildCodexExecArgs,
   buildCodexExecResumeArgs,
@@ -78,6 +77,11 @@ import {
   type JsonRecord,
 } from './family-runtime-codex-stage-runner-parts/shared.ts';
 import { stringValue as optionalString } from '../../kernel/json-record.ts';
+import {
+  hostAttemptSkillRuntime,
+  packageSkillPromptPrefix,
+  sandboxAttemptSkillRuntime,
+} from './family-runtime-attempt-skill-projection.ts';
 
 export {
   normalizeTypedStageCloseoutPacket,
@@ -368,37 +372,6 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
       },
     );
   }
-  const workspaceLocator = isRecord(input.attempt.workspace_locator) ? input.attempt.workspace_locator : {};
-  const stageRunCurrentnessAdmission = isRecord(workspaceLocator.stage_run_currentness_admission)
-    ? workspaceLocator.stage_run_currentness_admission
-    : null;
-  const inheritedCurrentnessAdmissionAccepted = Boolean(
-    optionalString(input.attempt.stage_run_id)
-    && stageRunCurrentnessAdmission?.stage_run_id === optionalString(input.attempt.stage_run_id)
-    && stageRunCurrentnessAdmission?.child_attempts_inherit_admission === true
-    && ['current', 'fast_forwarded', 'not_git_checkout'].includes(
-      optionalString(stageRunCurrentnessAdmission.status) ?? '',
-    ),
-  );
-  const checkoutCurrentnessPreflight = inheritedCurrentnessAdmissionAccepted
-    ? null
-    : preflightDomainWorkspaceCheckoutCurrentness({
-        domainId: input.attempt.domain_id,
-        workspaceLocator,
-      });
-  if (checkoutCurrentnessPreflight?.status === 'blocked') {
-    throw new FrameworkContractError(
-      'contract_shape_invalid',
-      'Live codex_cli stage runner requires a current clean MAS workspace checkout.',
-      {
-        stage_attempt_id: optionalString(input.attempt.stage_attempt_id),
-        executor_kind: optionalString(input.attempt.executor_kind) ?? 'codex_cli',
-        blocked_reason: checkoutCurrentnessPreflight.reason ?? 'checkout_currentness_blocked',
-        checkout_currentness_preflight: checkoutCurrentnessPreflight,
-      },
-    );
-  }
-
   const stageCloseoutCapture = createCodexCloseoutCapture();
   const runnerEvents: RunnerEventSummary[] = [];
   let processId: number | null = null;
@@ -445,16 +418,28 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
       stagePacketRef: stagePacketTransportRef,
       workspaceRoot: runInSandbox ? sandboxWorkspaceRoot : workspaceRoot,
     });
-    const args = buildCodexExecArgs(runnerPromptForExecution({ ...input, stagePacketRef }, executionAttempt), {
+    const hostSkillRuntime = runInSandbox ? null : hostAttemptSkillRuntime(input.attempt);
+    const sandboxSkillRuntime = runInSandbox
+      ? sandboxAttemptSkillRuntime(input.attempt, sandboxWorkspaceRoot)
+      : null;
+    const skillRuntime = hostSkillRuntime ?? sandboxSkillRuntime;
+    const stagePrompt = runnerPromptForExecution({ ...input, stagePacketRef }, executionAttempt);
+    const skillPromptPrefix = packageSkillPromptPrefix(skillRuntime?.projection ?? null);
+    const args = buildCodexExecArgs(
+      skillPromptPrefix ? `${skillPromptPrefix}\n\n${stagePrompt}` : stagePrompt,
+      {
       cwd: runInSandbox ? sandboxWorkspaceRoot : workspaceRoot,
       json: true,
+      packageSkillBindings: skillRuntime?.packageSkillBindings,
+      shellHome: hostSkillRuntime?.shellHome,
       ...(runInSandbox
         ? codexExecOptions
         : codexCloseoutCaptureExecOptions({
             codexExecOptions,
             outputLastMessagePath: stageCloseoutCapture.outputLastMessagePath,
           })),
-    });
+      },
+    );
     let result: CodexCommandResult;
     if (runInE2bSandbox) {
       const sandboxResult = await runCodexInE2bSandbox({
@@ -497,6 +482,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
           env: {
             ...input.env,
             ...providerEnv,
+            ...hostSkillRuntime?.env,
           },
           timeoutMs,
           noOutputTimeoutMs,
@@ -581,11 +567,13 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
           }),
           json: true,
           sandboxMode: 'read-only',
+          packageSkillBindings: hostSkillRuntime?.packageSkillBindings,
+          shellHome: hostSkillRuntime?.shellHome,
         },
       );
       protocolCloseoutResumeResult = await runCodexCommandStreaming(resumeArgs, {
         cwd: workspaceRoot,
-        env: { ...input.env, ...providerEnv },
+        env: { ...input.env, ...providerEnv, ...hostSkillRuntime?.env },
         timeoutMs: normalizeTimeoutMs(process.env.OPL_CODEX_PROTOCOL_CLOSEOUT_RESUME_TIMEOUT_MS, 30_000),
         noOutputTimeoutMs,
         commandNoProgressTimeoutMs,

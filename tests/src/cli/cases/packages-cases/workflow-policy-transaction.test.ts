@@ -335,13 +335,14 @@ test('generic OPL package transaction owns OPL Flow policy migration without inv
     const drifted = runCli(['packages', 'status', '--package-id', 'fixture.opl-flow'], env) as any;
     const driftedPackage = drifted.opl_agent_package_status.owner_route_readback.packages[0];
     const driftedCurrentness = driftedPackage.materializer.managed_policy_currentness;
-    assert.equal(drifted.opl_agent_package_status.status, 'attention_needed');
-    assert.equal(drifted.opl_agent_package_status.operational_ready, false);
-    assert.equal(drifted.opl_agent_package_status.launch_blocked_reason, 'managed_policy_drifted');
-    assert.equal(drifted.opl_agent_package_status.recommended_action, 'repair');
-    assert.equal(driftedPackage.lifecycle_ux.recommended_action, 'repair');
+    assert.equal(drifted.opl_agent_package_status.status, 'available');
+    assert.equal(drifted.opl_agent_package_status.operational_ready, true);
+    assert.equal(drifted.opl_agent_package_status.launch_blocked_reason, null);
+    assert.equal(drifted.opl_agent_package_status.recommended_action, null);
+    assert.equal(driftedPackage.lifecycle_ux.status, 'installed');
+    assert.equal(driftedPackage.lifecycle_ux.recommended_action, null);
     assert.equal(driftedCurrentness.status, 'drifted');
-    assert.equal(driftedCurrentness.repair_command, 'opl packages repair --package-id fixture.opl-flow');
+    assert.equal(driftedCurrentness.repair_command, null);
     assert.deepEqual(driftedCurrentness.detected_conflicts, [{
       migration_id: 'ponytail',
       surface_kind: 'plugin',
@@ -442,13 +443,17 @@ test('managed policy currentness detects and repairs a missing Agents skill entr
 
     fs.rmSync(agentsSkillRoot, { recursive: true, force: true });
     const drifted = runCli(['packages', 'status', '--package-id', 'fixture.opl-flow'], env) as any;
-    const driftedCurrentness = drifted.opl_agent_package_status.owner_route_readback.packages[0]
-      .materializer.managed_policy_currentness;
-    assert.equal(drifted.opl_agent_package_status.status, 'attention_needed');
-    assert.equal(drifted.opl_agent_package_status.launch_blocked_reason, 'managed_policy_drifted');
+    const driftedPackage = drifted.opl_agent_package_status.owner_route_readback.packages[0];
+    const driftedCurrentness = driftedPackage.materializer.managed_policy_currentness;
+    assert.equal(drifted.opl_agent_package_status.status, 'available');
+    assert.equal(drifted.opl_agent_package_status.operational_ready, true);
+    assert.equal(drifted.opl_agent_package_status.launch_blocked_reason, null);
+    assert.equal(drifted.opl_agent_package_status.recommended_action, null);
+    assert.equal(driftedPackage.lifecycle_ux.status, 'installed');
+    assert.equal(driftedPackage.lifecycle_ux.recommended_action, null);
     assert.equal(driftedCurrentness.status, 'drifted');
     assert.equal(driftedCurrentness.dependency_sync.items[0].entrypoint_authority_status, 'missing');
-    assert.equal(driftedCurrentness.repair_command, 'opl packages repair --package-id fixture.opl-flow');
+    assert.equal(driftedCurrentness.repair_command, null);
 
     const repaired = runCli(['packages', 'repair', '--package-id', 'fixture.opl-flow'], env) as any;
     assert.equal(repaired.opl_agent_package_repair.status, 'repaired');
@@ -488,33 +493,48 @@ test('managed policy rollback helpers refuse conflicting TOML tables and recreat
     writeFile(path.join(legacyPath, 'replacement.txt'), 'replacement\n');
 
     assert.equal(fs.existsSync(installed.opl_agent_package_install.physical_surface.codex_plugin_cache_path), true);
+    const previousStateDir = process.env.OPL_STATE_DIR;
+    process.env.OPL_STATE_DIR = env.OPL_STATE_DIR;
+    let retained: ReturnType<typeof rollbackManagedPolicyMigration>;
+    try {
+      assert.throws(
+        () => rollbackManagedPolicyMigration(migration),
+        /conflicting TOML table/,
+      );
+      assert.equal(fs.readFileSync(path.join(legacyPath, 'replacement.txt'), 'utf8'), 'replacement\n');
+      assert.match(fs.readFileSync(configPath, 'utf8'), /replacement/);
+      assert.equal(fs.existsSync(migration.backup_root), true);
 
-    assert.throws(
-      () => rollbackManagedPolicyMigration(migration),
-      /conflicting TOML table/,
-    );
-    assert.equal(fs.readFileSync(path.join(legacyPath, 'replacement.txt'), 'utf8'), 'replacement\n');
-    assert.match(fs.readFileSync(configPath, 'utf8'), /replacement/);
-    assert.equal(fs.existsSync(migration.backup_root), true);
+      fs.writeFileSync(
+        configPath,
+        fs.readFileSync(configPath, 'utf8').replace(/\n\[marketplaces\.ponytail\]\nsource = "\/replacement"\n/, '\n'),
+        'utf8',
+      );
+      assert.throws(
+        () => rollbackManagedPolicyMigration(migration),
+        /target was recreated/,
+      );
+      assert.equal(fs.readFileSync(path.join(legacyPath, 'replacement.txt'), 'utf8'), 'replacement\n');
 
-    fs.writeFileSync(
-      configPath,
-      fs.readFileSync(configPath, 'utf8').replace(/\n\[marketplaces\.ponytail\]\nsource = "\/replacement"\n/, '\n'),
-      'utf8',
-    );
-    assert.throws(
-      () => rollbackManagedPolicyMigration(migration),
-      /target was recreated/,
-    );
-    assert.equal(fs.readFileSync(path.join(legacyPath, 'replacement.txt'), 'utf8'), 'replacement\n');
-
-    fs.rmSync(legacyPath, { recursive: true, force: true });
-    assert.doesNotThrow(() => assertManagedPolicyRollbackReady(migration));
-    const retained = rollbackManagedPolicyMigration(migration, { retainBackups: true });
+      fs.rmSync(legacyPath, { recursive: true, force: true });
+      assert.doesNotThrow(() => assertManagedPolicyRollbackReady(migration));
+      retained = rollbackManagedPolicyMigration(migration, { retainBackups: true });
+    } finally {
+      if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+      else process.env.OPL_STATE_DIR = previousStateDir;
+    }
     assert.equal(retained.backup_active, true);
     assert.equal(fs.readFileSync(path.join(legacyPath, 'legacy.txt'), 'utf8'), 'legacy\n');
     assert.equal(fs.existsSync(retained.backup_root!), true);
-    const finalized = finalizeManagedPolicyRollback(retained);
+    const finalizePreviousStateDir = process.env.OPL_STATE_DIR;
+    process.env.OPL_STATE_DIR = env.OPL_STATE_DIR;
+    let finalized: ReturnType<typeof finalizeManagedPolicyRollback>;
+    try {
+      finalized = finalizeManagedPolicyRollback(retained);
+    } finally {
+      if (finalizePreviousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+      else process.env.OPL_STATE_DIR = finalizePreviousStateDir;
+    }
     assert.equal(finalized.backup_active, false);
     assert.equal(fs.existsSync(retained.backup_root!), false);
   } finally {
@@ -592,10 +612,23 @@ test('installed-source optimize is offline, dry-run safe, and explicitly rolls b
     assert.equal(fs.existsSync(commandLog), false, 'optimize must not invoke git, curl, or npm');
     assert.equal(fs.existsSync(conflictPath), false);
     assert.doesNotMatch(fs.readFileSync(configPath, 'utf8'), /marketplaces\.ponytail/);
-    assert.match(fs.readFileSync(profilePath, 'utf8'), /Optimize fixture/);
+    const optimizedProfileSource = path.join(
+      optimization.package_lock.physical_surface.codex_plugin_cache_path,
+      'profile',
+      'runtime-profile',
+    );
+    assert.equal(optimization.physical_surface.profile_migration.source_path, optimizedProfileSource);
+    assert.equal(fs.readFileSync(optimizedProfileSource, 'utf8'), originalProfile);
+    assert.equal(fs.readFileSync(profilePath, 'utf8'), originalProfile);
+    assert.match(fs.readFileSync(path.join(sourceRoot, 'profile', 'runtime-profile'), 'utf8'), /Optimize fixture/);
+    const optimizedLockIndex = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
+    assert.equal(optimizedLockIndex.last_known_good_transactions.length, 1);
+    const lkgRoot = optimizedLockIndex.last_known_good_transactions[0].package_locks.find(
+      (entry: any) => entry.package_id === 'fixture.opl-flow',
+    );
     assert.equal(
-      JSON.parse(fs.readFileSync(lockPath, 'utf8')).last_known_good_transactions.length,
-      1,
+      lkgRoot.physical_surface.codex_plugin_cache_path,
+      optimization.package_lock.physical_surface.codex_plugin_cache_path,
     );
 
     const rollbackPreviewState = {
@@ -619,7 +652,7 @@ test('installed-source optimize is offline, dry-run safe, and explicitly rolls b
     assert.equal(fs.readFileSync(lockPath, 'utf8'), rollbackPreviewState.lock);
     assert.equal(fs.readFileSync(ledgerPath, 'utf8'), rollbackPreviewState.ledger);
     assert.doesNotMatch(fs.readFileSync(configPath, 'utf8'), /marketplaces\.ponytail/);
-    assert.match(fs.readFileSync(profilePath, 'utf8'), /Optimize fixture/);
+    assert.equal(fs.readFileSync(profilePath, 'utf8'), originalProfile);
     assert.equal(fs.existsSync(conflictPath), false);
 
     const rolledBack = runCli(['packages', 'rollback', 'fixture.opl-flow'], optimizeEnv) as any;

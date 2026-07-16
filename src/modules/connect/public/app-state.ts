@@ -7,6 +7,7 @@ export {
 export { requiredDependents } from '../agent-package-registry-parts/dependency-closure.ts';
 export { readLockIndex as readOplAgentPackageLockIndex } from '../agent-package-registry-parts/store.ts';
 export { resolveFirstPartyPackageCatalogSnapshot } from '../agent-package-registry-parts/release-catalog-cache.ts';
+export { listAgentPackageLaunchActions } from '../agent-package-actions.ts';
 export type { AgentPackageLockIndex } from '../agent-package-registry-parts/types.ts';
 export { listOplConnections } from '../connection-registry.ts';
 export { readOplGatewayAccount } from '../opl-gateway-account.ts';

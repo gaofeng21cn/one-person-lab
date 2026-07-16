@@ -4,6 +4,7 @@ import {
   fs,
   os,
   path,
+  removeFixtureTree,
   runCli,
   runCliAsync,
   runCliFailure,
@@ -157,9 +158,62 @@ test('MAS package lifecycle atomically installs and repairs its 11-core capabili
     const receiptMissing = runCli([
       'packages', 'status', '--package-id', FIXTURE_CONSUMER_PACKAGE_ID, '--scope', 'workspace', '--target-workspace', workspace,
     ], env) as any;
-    assert.equal(receiptMissing.opl_agent_package_status.materialization_readiness.status, 'incompatible');
-    assert.equal(receiptMissing.opl_agent_package_status.materialization_readiness.lifecycle_receipt_ref, null);
-    assert.equal(receiptMissing.opl_agent_package_status.operational_ready, false);
+    assert.equal(receiptMissing.opl_agent_package_status.materialization_readiness.status, 'current');
+    assert.equal(
+      receiptMissing.opl_agent_package_status.materialization_readiness.lifecycle_receipt_ref,
+      receiptRef,
+    );
+    assert.equal(receiptMissing.opl_agent_package_status.status, 'available');
+    assert.equal(receiptMissing.opl_agent_package_status.operational_ready, true);
+    assert.equal(receiptMissing.opl_agent_package_status.launch_allowed, true);
+    assert.equal(receiptMissing.opl_agent_package_status.launch_blocked_reason, null);
+    assert.equal(receiptMissing.opl_agent_package_status.repair_action, null);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('MAS accepts a newer capability provider beyond the recorded version range when its ABI and exports remain compatible', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-dependency-latest-compatible-'));
+  const workspace = path.join(root, 'workspace');
+  const providerManifestPath = writeFixtureCapabilityProvider(path.join(root, 'provider'), '0.2.0');
+  const consumerManifestPath = writeFixtureMasConsumer(path.join(root, 'consumer'), providerManifestPath);
+  const env = {
+    OPL_STATE_DIR: path.join(root, 'state'),
+    CODEX_HOME: path.join(root, 'codex-home'),
+  };
+  try {
+    const installed = await runCliAsync([
+      'packages', 'install', '--manifest-url', consumerManifestPath,
+      '--trust-tier', 'first_party', '--scope', 'workspace', '--target-workspace', workspace,
+    ], env) as any;
+    assert.equal(installed.opl_agent_package_install.status, 'installed');
+    assert.equal(
+      installed.opl_agent_package_install.package_lock.resolved_dependencies[0].installed_version,
+      '0.2.0',
+    );
+
+    const status = runCli([
+      'packages', 'status', '--package-id', FIXTURE_CONSUMER_PACKAGE_ID,
+      '--scope', 'workspace', '--target-workspace', workspace,
+    ], env) as any;
+    const readiness = status.opl_agent_package_status.package_dependency_readiness;
+    assert.equal(readiness.status, 'current');
+    assert.equal(readiness.operational_ready, true);
+    assert.equal(readiness.dependencies[0].status, 'current');
+    assert.deepEqual(readiness.dependencies[0].reasons, ['version_requirement_unsatisfied']);
+    assert.equal(status.opl_agent_package_status.status, 'available');
+    assert.equal(status.opl_agent_package_status.operational_ready, true);
+    assert.equal(status.opl_agent_package_status.launch_allowed, true);
+    assert.equal(status.opl_agent_package_status.launch_blocked_reason, null);
+    assert.equal(status.opl_agent_package_status.repair_action, null);
+    assert.equal(
+      fs.readFileSync(
+        path.join(workspace, '.codex', 'skills', 'medical-manuscript-writing', 'helper.txt'),
+        'utf8',
+      ),
+      'medical-manuscript-writing helper 0.2.0\n',
+    );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -231,7 +285,7 @@ test('MAS dependency closure update and rollback atomically rematerialize known 
     assert.equal(secondRollbackStatus.opl_agent_package_status.materialization_readiness.status, 'current');
     assert.equal(secondRollbackStatus.opl_agent_package_status.operational_ready, true);
   } finally {
-    fs.rmSync(root, { recursive: true, force: true });
+    removeFixtureTree(root);
   }
 });
 
@@ -571,7 +625,7 @@ test('multi-provider scope readiness checks every provider and activation compen
     assert.equal(failure.payload.error.details.failure_code, 'agent_package_scope_core_skill_missing');
     assert.equal(fs.existsSync(path.join(failedWorkspace, '.codex', 'skills', 'provider-a-skill')), false);
   } finally {
-    fs.rmSync(root, { recursive: true, force: true });
+    removeFixtureTree(root);
   }
 });
 

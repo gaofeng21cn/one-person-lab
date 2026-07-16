@@ -16,6 +16,22 @@ test('Codex exec can carry large prompts over stdin instead of argv', () => {
   assert.equal(args.includes(prompt), false);
 });
 
+test('Codex exec isolates package-bound Skills while preserving the real shell home', () => {
+  const args = buildCodexExecArgs('run the package agent', {
+    packageSkillBindings: [{
+      name: 'med-autoscience',
+      path: '/state/projection/.agents/skills/med-autoscience/SKILL.md',
+    }],
+    shellHome: '/Users/researcher',
+  });
+  const configs = args.flatMap((entry, index) => entry === '--config' ? [args[index + 1]] : []);
+
+  assert.deepEqual(configs, [
+    'skills.config=[{name="med-autoscience",enabled=false},{path="/state/projection/.agents/skills/med-autoscience/SKILL.md",enabled=true}]',
+    'shell_environment_policy.set.HOME="/Users/researcher"',
+  ]);
+});
+
 test('Codex streaming transport writes the supplied prompt to child stdin', async () => {
   const prompt = 'stdin prompt payload';
   const result = await runCodexCommandStreaming([

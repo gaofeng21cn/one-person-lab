@@ -3,7 +3,18 @@ import crypto from 'node:crypto';
 import type { AddressInfo } from 'node:net';
 import { pathToFileURL } from 'node:url';
 
-import { assert, fs, os, path, repoRoot, runCli, runCliAsync, runCliFailure, test } from '../../helpers.ts';
+import {
+  assert,
+  fs,
+  os,
+  path,
+  removeFixtureTree,
+  repoRoot,
+  runCli,
+  runCliAsync,
+  runCliFailure,
+  test,
+} from '../../helpers.ts';
 import { formatJsonPayload, parseJsonText } from '../../../../../src/kernel/json-file.ts';
 
 export { repoRoot };
@@ -265,4 +276,17 @@ export async function withRemotePayloadAgentPackageServer(run: (baseUrl: string)
 }
 
 
-export { assert, fs, os, path, pathToFileURL, runCli, runCliAsync, runCliFailure, test, formatJsonPayload, parseJsonText };
+export {
+  assert,
+  fs,
+  os,
+  path,
+  pathToFileURL,
+  removeFixtureTree,
+  runCli,
+  runCliAsync,
+  runCliFailure,
+  test,
+  formatJsonPayload,
+  parseJsonText,
+};

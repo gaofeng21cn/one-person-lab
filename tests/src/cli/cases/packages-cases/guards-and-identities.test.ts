@@ -307,6 +307,7 @@ test('repair migrates legacy Framework manifests to one stable catalog selection
     const lockPath = path.join(stateDir, 'agent-package-locks.json');
     const lockIndex = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
     const legacyLock = lockIndex.packages.find((entry: any) => entry.package_id === 'rca');
+    const legacyRuntimeGenerationPath = legacyLock.managed_runtime_source.checkout_path;
     legacyLock.source_kind = 'local_manifest_file';
     legacyLock.manifest_url = manifestPath;
     fs.writeFileSync(lockPath, formatJsonPayload(lockIndex));
@@ -337,13 +338,26 @@ test('repair migrates legacy Framework manifests to one stable catalog selection
       previewLock.managed_runtime_source.artifact_ref,
       `ghcr.io/fixture/one-person-lab-packages/rca:0.2.1@${stableFixtureEnv.OPL_FIXTURE_ARTIFACT_DIGEST}`,
     );
-    assert.equal(fs.readFileSync(path.join(modulesRoot, 'redcube-ai', '.runtime-prepared'), 'utf8').trim(), '0.2.0');
+    assert.equal(
+      fs.readFileSync(path.join(legacyRuntimeGenerationPath, '.runtime-prepared'), 'utf8').trim(),
+      '0.2.0',
+    );
+    assert.notEqual(previewLock.managed_runtime_source.checkout_path, legacyRuntimeGenerationPath);
+    assert.equal(fs.existsSync(previewLock.managed_runtime_source.checkout_path), false);
+    assert.equal(fs.existsSync(path.join(modulesRoot, 'redcube-ai')), false);
 
     const repaired = runCli(['packages', 'repair', 'rca'], env) as any;
     const repairedLock = repaired.opl_agent_package_repair.package_lock;
     assert.equal(repairedLock.package_version, '0.2.1');
     assert.equal(repairedLock.managed_runtime_source.source_git_head_sha, stableSourceHead);
-    assert.equal(fs.readFileSync(path.join(modulesRoot, 'redcube-ai', '.runtime-prepared'), 'utf8').trim(), '0.2.1');
+    assert.equal(
+      fs.readFileSync(
+        path.join(repairedLock.managed_runtime_source.checkout_path, '.runtime-prepared'),
+        'utf8',
+      ).trim(),
+      '0.2.1',
+    );
+    assert.equal(fs.existsSync(path.join(modulesRoot, 'redcube-ai')), false);
     assert.equal(
       fs.readFileSync(path.join(repairedLock.physical_surface.codex_plugin_cache_path, 'skills', 'redcube-ai', 'SKILL.md'), 'utf8'),
       skillMarkdown,

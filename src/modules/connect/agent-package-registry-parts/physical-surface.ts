@@ -46,6 +46,19 @@ import {
   noManagedPolicyMigration,
   rollbackManagedPolicyMigration,
 } from './managed-policy-surface.ts';
+import {
+  CANONICAL_PACKAGE_CONTENT_LOCK,
+  packageContentLockDigest,
+} from './payload-content-lock.ts';
+import {
+  developerCheckoutPayloadDigest,
+  type DeveloperCheckoutPayloadFile,
+} from './developer-checkout-package-source.ts';
+import { verifyManifestContentLock } from './dependency-closure.ts';
+import {
+  assertSafePersistedPackagePath,
+  removeSafePersistedPackagePath,
+} from './persisted-path-safety.ts';
 import { packageRoleFromInstalledLock } from './package-role.ts';
 import type {
   AgentPackageLock,
@@ -60,7 +73,12 @@ type PhysicalMaterializationOptions = {
   keepMigrationIds?: string[];
   companionNetworkAccess?: OplCompanionNetworkAccess;
   skipManagedSurfaces?: boolean;
+  reuseExistingPluginCache?: boolean;
+  existingPluginCachePath?: string;
+  developerCheckoutPayloadFiles?: DeveloperCheckoutPayloadFile[];
 };
+
+const PACKAGE_SOURCE_FETCH_TIMEOUT_MS = 60_000;
 
 function resolveLocalPath(value: string) {
   return value.startsWith('file:') ? fileURLToPath(value) : path.resolve(value);
@@ -165,7 +183,9 @@ async function readPayloadFileContent(
   validateUrlLike(sourceUrl!, 'payload.files[].source_url');
   if (sourceUrl!.startsWith('http://') || sourceUrl!.startsWith('https://')) {
     if (dryRun) return { content: Buffer.alloc(0), digestVerified: false, artifactBacked: false };
-    const response = await fetch(sourceUrl!);
+    const response = await fetch(sourceUrl!, {
+      signal: AbortSignal.timeout(PACKAGE_SOURCE_FETCH_TIMEOUT_MS),
+    });
     if (!response.ok) {
       throw new FrameworkContractError('codex_command_failed', 'Agent package payload file fetch failed.', {
         source_url: sourceUrl,
@@ -250,6 +270,44 @@ async function normalizePayloadFiles(
 
 function normalizedSha256(value: string) {
   return value.startsWith('sha256:') ? value : `sha256:${value}`;
+}
+
+function exactPayloadGenerationMatches(root: string, files: AgentPackagePayloadFile[]) {
+  if (!fs.existsSync(root)) return false;
+  const rootStat = fs.lstatSync(root);
+  if (!rootStat.isDirectory() || rootStat.isSymbolicLink()) return false;
+
+  const actualPaths: string[] = [];
+  const visit = (directory: string): boolean => {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const absolutePath = path.join(directory, entry.name);
+      const stat = fs.lstatSync(absolutePath);
+      if (stat.isSymbolicLink()) return false;
+      if (stat.isDirectory()) {
+        if (!visit(absolutePath)) return false;
+      } else if (stat.isFile()) {
+        actualPaths.push(path.relative(root, absolutePath));
+      } else {
+        return false;
+      }
+    }
+    return true;
+  };
+  if (!visit(root)) return false;
+
+  const expectedPaths = files.map((file) => file.relativePath).sort();
+  actualPaths.sort();
+  if (actualPaths.length !== expectedPaths.length
+    || actualPaths.some((entry, index) => entry !== expectedPaths[index])) return false;
+
+  return files.every((file) => {
+    const targetPath = path.join(root, file.relativePath);
+    const stat = fs.lstatSync(targetPath);
+    return stat.isFile()
+      && !stat.isSymbolicLink()
+      && fs.readFileSync(targetPath).equals(file.content)
+      && (stat.mode & 0o777) === (file.mode === '100755' ? 0o755 : 0o644);
+  });
 }
 
 function materializeArtifactPayloadSource(input: {
@@ -368,46 +426,82 @@ async function materializePayloadManifestSource(input: {
     fs.rmSync(artifactStageRoot, { recursive: true, force: true });
   }
   verifyCanonicalPayloadContentLock(admission, files, input.payloadManifestUrl);
+  const persistentPayloadRoot = path.join(
+    resolveOplStatePaths().state_dir,
+    'agent-package-payloads',
+    safePathSegment(input.manifest.package_id),
+    `${safePathSegment(input.manifest.version)}-${fetched.source_sha256}`,
+  );
+  if (!input.dryRun) {
+    assertSafePersistedPackagePath({
+      candidatePath: persistentPayloadRoot,
+      allowedRoots: [path.join(resolveOplStatePaths().state_dir, 'agent-package-payloads')],
+      pathKind: 'agent_package_payload_generation',
+    });
+  }
   const payloadRoot = input.dryRun
     ? fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-payload-'))
-    : path.join(
-        resolveOplStatePaths().state_dir,
-        'agent-package-payloads',
-        safePathSegment(input.manifest.package_id),
-        `${safePathSegment(input.manifest.version)}-${fetched.source_sha256.slice(0, 16)}`,
-      );
-  if (!input.dryRun) {
-    fs.rmSync(payloadRoot, { recursive: true, force: true });
-  }
-  fs.mkdirSync(payloadRoot, { recursive: true });
-  for (const file of files) {
-    const targetPath = path.join(payloadRoot, file.relativePath);
-    if (!targetPath.startsWith(`${payloadRoot}${path.sep}`)) {
-      throw new FrameworkContractError('contract_shape_invalid', 'Agent package payload file path escapes the payload root.', {
-        payload_manifest_url: input.payloadManifestUrl,
-        payload_path: file.relativePath,
-        failure_code: 'agent_package_payload_path_invalid',
+    : `${persistentPayloadRoot}.stage-${process.pid}-${crypto.randomBytes(8).toString('hex')}`;
+  if (!input.dryRun && fs.existsSync(persistentPayloadRoot)) {
+    if (!exactPayloadGenerationMatches(persistentPayloadRoot, files)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Existing package payload generation does not match its immutable digest.', {
+        package_id: input.manifest.package_id,
+        payload_root: persistentPayloadRoot,
+        payload_manifest_sha256: fetched.source_sha256,
+        failure_code: 'agent_package_payload_generation_digest_mismatch',
       });
     }
-    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
-    let descriptor: number | undefined;
-    try {
-      descriptor = fs.openSync(
-        targetPath,
-        fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_WRONLY | (fs.constants.O_NOFOLLOW ?? 0),
-        0o600,
-      );
-      fs.writeFileSync(descriptor, file.content);
-      fs.fchmodSync(descriptor, file.mode === '100755' ? 0o755 : 0o644);
-      fs.fsyncSync(descriptor);
-    } finally {
-      if (descriptor !== undefined) fs.closeSync(descriptor);
+    return {
+      payloadRoot: persistentPayloadRoot,
+      payloadManifestSha256: fetched.source_sha256,
+      persistentCachePath: persistentPayloadRoot,
+      verifiedPayloadSourceCommit: admission.sourceCommit,
+    };
+  }
+  fs.mkdirSync(payloadRoot, { recursive: true });
+  try {
+    for (const file of files) {
+      const targetPath = path.join(payloadRoot, file.relativePath);
+      if (!targetPath.startsWith(`${payloadRoot}${path.sep}`)) {
+        throw new FrameworkContractError('contract_shape_invalid', 'Agent package payload file path escapes the payload root.', {
+          payload_manifest_url: input.payloadManifestUrl,
+          payload_path: file.relativePath,
+          failure_code: 'agent_package_payload_path_invalid',
+        });
+      }
+      fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+      let descriptor: number | undefined;
+      try {
+        descriptor = fs.openSync(
+          targetPath,
+          fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_WRONLY | (fs.constants.O_NOFOLLOW ?? 0),
+          0o600,
+        );
+        fs.writeFileSync(descriptor, file.content);
+        fs.fchmodSync(descriptor, file.mode === '100755' ? 0o755 : 0o644);
+        fs.fsyncSync(descriptor);
+      } finally {
+        if (descriptor !== undefined) fs.closeSync(descriptor);
+      }
     }
+    if (!input.dryRun) fs.renameSync(payloadRoot, persistentPayloadRoot);
+  } catch (error) {
+    fs.rmSync(payloadRoot, { recursive: true, force: true });
+    throw error;
+  }
+  const finalPayloadRoot = input.dryRun ? payloadRoot : persistentPayloadRoot;
+  if (!exactPayloadGenerationMatches(finalPayloadRoot, files)) {
+    if (!input.dryRun) fs.rmSync(finalPayloadRoot, { recursive: true, force: true });
+    throw new FrameworkContractError('contract_shape_invalid', 'Package payload generation failed exact-byte verification.', {
+      package_id: input.manifest.package_id,
+      payload_root: finalPayloadRoot,
+      failure_code: 'agent_package_payload_generation_digest_mismatch',
+    });
   }
   return {
-    payloadRoot,
+    payloadRoot: finalPayloadRoot,
     payloadManifestSha256: fetched.source_sha256,
-    persistentCachePath: input.dryRun ? null : payloadRoot,
+    persistentCachePath: input.dryRun ? null : finalPayloadRoot,
     verifiedPayloadSourceCommit: admission.sourceCommit,
   };
 }
@@ -631,6 +725,36 @@ export async function resolveManifestPhysicalSource(
 function buildPhysicalSurfacePaths(manifest: AgentPackageManifest) {
   const codexHome = resolveCodexHome();
   const pluginId = manifest.plugin_id;
+  if (pluginId && (pluginId === '.'
+    || pluginId === '..'
+    || pluginId.includes('/')
+    || pluginId.includes('\\')
+    || path.basename(pluginId) !== pluginId)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package plugin id must be one safe path segment.', {
+      package_id: manifest.package_id,
+      plugin_id: pluginId,
+      failure_code: 'agent_package_plugin_id_invalid',
+    });
+  }
+  if (manifest.version === '.'
+    || manifest.version === '..'
+    || manifest.version.includes('/')
+    || manifest.version.includes('\\')
+    || path.basename(manifest.version) !== manifest.version) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package version must be one safe path segment.', {
+      package_id: manifest.package_id,
+      package_version: manifest.version,
+      failure_code: 'agent_package_version_path_invalid',
+    });
+  }
+  if (manifest.developer_checkout_source
+    && !/^sha256:[0-9a-f]{64}$/.test(manifest.developer_checkout_source.payload_digest)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Developer checkout payload digest is invalid.', {
+      package_id: manifest.package_id,
+      payload_digest: manifest.developer_checkout_source.payload_digest,
+      failure_code: 'agent_package_developer_checkout_source_invalid',
+    });
+  }
   const marketplaceId = pluginId
     ? resolveCanonicalOplFamilyMarketplaceId(manifest.package_id, pluginId)
       ?? `opl-agent-${safePathSegment(manifest.package_id)}-local`
@@ -638,9 +762,24 @@ function buildPhysicalSurfacePaths(manifest: AgentPackageManifest) {
   const marketplaceRoot = path.join(resolveOplStatePaths().state_dir, 'codex-plugin-marketplaces', marketplaceId);
   const marketplacePath = path.join(marketplaceRoot, '.agents', 'plugins', 'marketplace.json');
   const marketplacePluginPath = pluginId ? path.join(marketplaceRoot, 'plugins', pluginId) : null;
+  const cacheIdentity = manifest.developer_checkout_source?.payload_digest
+    ?? manifest.content_digest
+    ?? (manifest.plugin_payload_manifest_sha256
+      ? `sha256:${manifest.plugin_payload_manifest_sha256.replace(/^sha256:/, '')}`
+      : null);
+  const cacheVersion = cacheIdentity
+    ? `${manifest.version}-${manifest.developer_checkout_source ? 'dev-' : ''}${cacheIdentity.replace(/^sha256:/, '')}`
+    : manifest.version;
   const codexPluginCachePath = pluginId
-    ? path.join(codexHome, 'plugins', 'cache', marketplaceId, pluginId, manifest.version)
+    ? path.join(codexHome, 'plugins', 'cache', marketplaceId, pluginId, cacheVersion)
     : null;
+  if (codexPluginCachePath) {
+    assertSafePersistedPackagePath({
+      candidatePath: codexPluginCachePath,
+      allowedRoots: [path.join(codexHome, 'plugins', 'cache')],
+      pathKind: 'agent_package_plugin_cache_generation',
+    });
+  }
   return {
     codexHome,
     codexConfigPath: resolveCodexConfigPath(codexHome),
@@ -682,6 +821,318 @@ function copyContentLockPaths(source: string, target: string, relativePaths: str
   }
 }
 
+function makeGenerationTreeWritable(root: string) {
+  if (!fs.existsSync(root)) return;
+  const stat = fs.lstatSync(root);
+  if (stat.isSymbolicLink()) return;
+  if (stat.isFile()) {
+    fs.chmodSync(root, stat.mode & 0o111 ? 0o755 : 0o644);
+    return;
+  }
+  if (!stat.isDirectory()) return;
+  fs.chmodSync(root, 0o755);
+  for (const entry of fs.readdirSync(root)) makeGenerationTreeWritable(path.join(root, entry));
+}
+
+function freezeDeveloperPluginGeneration(root: string) {
+  const stat = fs.lstatSync(root);
+  if (stat.isSymbolicLink() || (!stat.isDirectory() && !stat.isFile())) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Developer plugin cache only admits regular files and directories.', {
+      cache_path: root,
+      failure_code: 'agent_package_plugin_cache_generation_invalid',
+    });
+  }
+  if (stat.isFile()) {
+    fs.chmodSync(root, stat.mode & 0o111 ? 0o555 : 0o444);
+    return;
+  }
+  for (const entry of fs.readdirSync(root)) freezeDeveloperPluginGeneration(path.join(root, entry));
+  fs.chmodSync(root, 0o555);
+}
+
+function expectedDeveloperPluginDirectories(paths: string[]) {
+  const directories = new Set<string>();
+  for (const relativePath of paths) {
+    let parent = path.posix.dirname(relativePath);
+    while (parent !== '.') {
+      directories.add(parent);
+      parent = path.posix.dirname(parent);
+    }
+  }
+  return [...directories].sort();
+}
+
+function developerPluginGenerationInventory(root: string) {
+  const files = new Map<string, fs.Stats>();
+  const directories = new Map<string, fs.Stats>();
+  const visit = (current: string) => {
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })
+      .sort((left, right) => left.name.localeCompare(right.name, 'en'))) {
+      const absolutePath = path.join(current, entry.name);
+      const relativePath = path.relative(root, absolutePath).split(path.sep).join('/');
+      const stat = fs.lstatSync(absolutePath);
+      if (stat.isSymbolicLink()) {
+        throw new FrameworkContractError('contract_shape_invalid', 'Developer plugin cache does not admit symbolic links.', {
+          cache_path: root,
+          generation_path: relativePath,
+          failure_code: 'agent_package_plugin_cache_generation_invalid',
+        });
+      }
+      if (stat.isDirectory()) {
+        directories.set(relativePath, stat);
+        visit(absolutePath);
+      } else if (stat.isFile()) {
+        files.set(relativePath, stat);
+      } else {
+        throw new FrameworkContractError('contract_shape_invalid', 'Developer plugin cache contains an unsupported filesystem entry.', {
+          cache_path: root,
+          generation_path: relativePath,
+          failure_code: 'agent_package_plugin_cache_generation_invalid',
+        });
+      }
+    }
+  };
+  visit(root);
+  return { files, directories };
+}
+
+function verifyImmutablePluginCache(manifest: AgentPackageManifest, cachePath: string) {
+  if (!fs.existsSync(cachePath)
+    || !fs.lstatSync(cachePath).isDirectory()
+    || fs.lstatSync(cachePath).isSymbolicLink()) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Package plugin cache generation is missing or unsafe.', {
+      package_id: manifest.package_id,
+      codex_plugin_cache_path: cachePath,
+      failure_code: 'agent_package_plugin_cache_generation_invalid',
+    });
+  }
+  const cachedManifest = { ...manifest, plugin_source_path: cachePath };
+  if (manifest.developer_checkout_source) {
+    const actualDigest = developerCheckoutCacheDigest(cachePath, manifest);
+    if (actualDigest !== manifest.developer_checkout_source.payload_digest) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Package developer plugin cache generation digest mismatch.', {
+        package_id: manifest.package_id,
+        expected_payload_digest: manifest.developer_checkout_source.payload_digest,
+        actual_payload_digest: actualDigest,
+        failure_code: 'agent_package_plugin_cache_generation_invalid',
+      });
+    }
+  } else {
+    verifyManifestContentLock(cachedManifest);
+  }
+  validateMaterializedRequiredSkills(cachedManifest, cachePath);
+}
+
+function materializeImmutablePluginCache(input: {
+  manifest: AgentPackageManifest;
+  sourcePath: string;
+  targetPath: string;
+  developerCheckoutPayloadFiles?: DeveloperCheckoutPayloadFile[];
+}) {
+  if (fs.existsSync(input.targetPath)) {
+    try {
+      verifyImmutablePluginCache(input.manifest, input.targetPath);
+      return false;
+    } catch (error) {
+      if (!input.manifest.developer_checkout_source || !input.developerCheckoutPayloadFiles) throw error;
+      copyDeveloperCheckoutSurface(
+        input.targetPath,
+        input.manifest,
+        input.developerCheckoutPayloadFiles,
+      );
+      verifyImmutablePluginCache(input.manifest, input.targetPath);
+      return true;
+    }
+  }
+  const stagePath = `${input.targetPath}.stage-${process.pid}-${crypto.randomBytes(8).toString('hex')}`;
+  try {
+    if (input.manifest.developer_checkout_source) {
+      copyDeveloperCheckoutSurface(
+        stagePath,
+        input.manifest,
+        input.developerCheckoutPayloadFiles,
+      );
+    } else if (input.manifest.content_lock_paths.length > 0) {
+      copyContentLockPaths(input.sourcePath, stagePath, input.manifest.content_lock_paths);
+    } else {
+      copyDirectory(input.sourcePath, stagePath);
+    }
+    verifyImmutablePluginCache(input.manifest, stagePath);
+    fs.mkdirSync(path.dirname(input.targetPath), { recursive: true });
+    fs.renameSync(stagePath, input.targetPath);
+    return true;
+  } catch (error) {
+    makeGenerationTreeWritable(stagePath);
+    fs.rmSync(stagePath, { recursive: true, force: true });
+    throw error;
+  }
+}
+
+function verifiedDeveloperCheckoutPayloadFiles(
+  manifest: AgentPackageManifest,
+  payloadFiles: DeveloperCheckoutPayloadFile[] | undefined,
+) {
+  const snapshot = manifest.developer_checkout_source;
+  if (!snapshot || !payloadFiles) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Developer checkout package snapshot does not match its plugin source.', {
+      package_id: manifest.package_id,
+      failure_code: 'agent_package_developer_checkout_source_invalid',
+    });
+  }
+  const byPath = new Map(payloadFiles.map((entry) => [entry.path, entry.content]));
+  const modeByPath = new Map(payloadFiles.map((entry) => [entry.path, entry.mode]));
+  const expectedPaths = [...snapshot.copy_paths].sort();
+  const expectedModes = snapshot.copy_file_modes ?? {};
+  if (byPath.size !== payloadFiles.length
+    || byPath.size !== expectedPaths.length
+    || Object.keys(expectedModes).length !== expectedPaths.length
+    || expectedPaths.some((relativePath) =>
+      !byPath.has(relativePath)
+      || (expectedModes[relativePath] !== '100644' && expectedModes[relativePath] !== '100755')
+      || modeByPath.get(relativePath) !== expectedModes[relativePath])) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Developer checkout captured payload paths do not match its snapshot.', {
+      package_id: manifest.package_id,
+      failure_code: 'agent_package_developer_checkout_source_invalid',
+    });
+  }
+  const ordered = expectedPaths.map((relativePath) => ({
+    path: relativePath,
+    content: Buffer.from(byPath.get(relativePath)!),
+    mode: expectedModes[relativePath],
+  }));
+  const digest = developerCheckoutPayloadDigest(ordered);
+  if (digest !== snapshot.payload_digest) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Developer checkout captured payload bytes do not match its snapshot digest.', {
+      package_id: manifest.package_id,
+      expected_payload_digest: snapshot.payload_digest,
+      actual_payload_digest: digest,
+      failure_code: 'agent_package_developer_checkout_source_invalid',
+    });
+  }
+  return ordered;
+}
+
+function developerCheckoutCacheDigest(
+  target: string,
+  manifest: AgentPackageManifest,
+) {
+  const snapshot = manifest.developer_checkout_source!;
+  const expectedPaths = [...snapshot.copy_paths].sort();
+  const expectedModes = snapshot.copy_file_modes ?? {};
+  const expectedDirectories = expectedDeveloperPluginDirectories(expectedPaths);
+  const inventory = developerPluginGenerationInventory(target);
+  if ((fs.lstatSync(target).mode & 0o777) !== 0o555
+    || inventory.files.size !== expectedPaths.length
+    || inventory.directories.size !== expectedDirectories.length
+    || expectedPaths.some((relativePath) => !inventory.files.has(relativePath))
+    || expectedDirectories.some((relativePath) => !inventory.directories.has(relativePath))) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Developer checkout plugin cache is not an exact frozen generation.', {
+      package_id: manifest.package_id,
+      cache_path: target,
+      expected_file_count: expectedPaths.length,
+      actual_file_count: inventory.files.size,
+      expected_directory_count: expectedDirectories.length,
+      actual_directory_count: inventory.directories.size,
+      failure_code: 'agent_package_plugin_cache_generation_invalid',
+    });
+  }
+  for (const relativePath of expectedDirectories) {
+    if ((inventory.directories.get(relativePath)!.mode & 0o777) !== 0o555) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Developer checkout plugin cache directory mode drifted.', {
+        package_id: manifest.package_id,
+        cache_path: target,
+        generation_path: relativePath,
+        failure_code: 'agent_package_plugin_cache_generation_invalid',
+      });
+    }
+  }
+  return developerCheckoutPayloadDigest(
+    expectedPaths.map((relativePath) => {
+      const targetPath = path.resolve(target, relativePath);
+      const targetRoot = path.resolve(target);
+      const expectedSourceMode = expectedModes[relativePath];
+      const expectedGenerationMode = expectedSourceMode === '100755' ? 0o555 : 0o444;
+      if ((targetPath !== targetRoot && !targetPath.startsWith(`${targetRoot}${path.sep}`))
+        || !fs.existsSync(targetPath)
+        || !fs.lstatSync(targetPath).isFile()
+        || fs.lstatSync(targetPath).isSymbolicLink()
+        || (expectedSourceMode !== '100644' && expectedSourceMode !== '100755')
+        || (fs.lstatSync(targetPath).mode & 0o777) !== expectedGenerationMode) {
+        throw new FrameworkContractError('contract_shape_invalid', 'Developer checkout LKG cache is incomplete or unsafe.', {
+          package_id: manifest.package_id,
+          cache_path: target,
+          copy_path: relativePath,
+          failure_code: 'agent_package_developer_checkout_lkg_unavailable',
+        });
+      }
+      return {
+        path: relativePath,
+        content: fs.readFileSync(targetPath),
+        mode: expectedSourceMode,
+      };
+    }),
+  );
+}
+
+export function assertDeveloperCheckoutPluginCacheGeneration(input: {
+  packageId: string;
+  cachePath: string;
+  source: NonNullable<AgentPackageManifest['developer_checkout_source']>;
+}) {
+  return developerCheckoutCacheDigest(input.cachePath, {
+    package_id: input.packageId,
+    developer_checkout_source: input.source,
+  } as AgentPackageManifest);
+}
+
+function copyDeveloperCheckoutSurface(
+  target: string,
+  manifest: AgentPackageManifest,
+  payloadFiles: DeveloperCheckoutPayloadFile[] | undefined,
+) {
+  const ordered = verifiedDeveloperCheckoutPayloadFiles(manifest, payloadFiles);
+  const parent = path.dirname(target);
+  fs.mkdirSync(parent, { recursive: true });
+  const stage = fs.mkdtempSync(path.join(parent, `.${path.basename(target)}.stage-`));
+  const displaced = `${target}.displaced-${process.pid}-${Date.now()}`;
+  let targetDisplaced = false;
+  try {
+    for (const entry of ordered) {
+      const targetPath = path.join(stage, entry.path);
+      fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+      const generationMode = entry.mode === '100755' ? 0o555 : 0o444;
+      fs.writeFileSync(targetPath, entry.content, { mode: generationMode });
+      fs.chmodSync(targetPath, generationMode);
+    }
+    freezeDeveloperPluginGeneration(stage);
+    const stagedDigest = developerCheckoutCacheDigest(stage, manifest);
+    if (stagedDigest !== manifest.developer_checkout_source!.payload_digest) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Developer checkout staged payload bytes failed digest verification.', {
+        package_id: manifest.package_id,
+        expected_payload_digest: manifest.developer_checkout_source!.payload_digest,
+        actual_payload_digest: stagedDigest,
+        failure_code: 'agent_package_developer_checkout_source_invalid',
+      });
+    }
+    if (fs.existsSync(target)) {
+      fs.renameSync(target, displaced);
+      targetDisplaced = true;
+    }
+    fs.renameSync(stage, target);
+    if (targetDisplaced) {
+      makeGenerationTreeWritable(displaced);
+      fs.rmSync(displaced, { recursive: true, force: true });
+    }
+  } catch (error) {
+    makeGenerationTreeWritable(stage);
+    fs.rmSync(stage, { recursive: true, force: true });
+    if (!fs.existsSync(target) && targetDisplaced && fs.existsSync(displaced)) {
+      fs.renameSync(displaced, target);
+    }
+    throw error;
+  }
+}
+
 function requiredSkillPath(pluginSourcePath: string, skillId: string) {
   const normalized = skillId.trim();
   if (!normalized || normalized.includes('/') || normalized.includes('\\') || normalized === '.' || normalized === '..') {
@@ -718,6 +1169,26 @@ export function materializePhysicalCodexSurface(
   options: PhysicalMaterializationOptions = {},
 ): AgentPackagePhysicalSurface {
   const paths = buildPhysicalSurfacePaths(manifest);
+  if (options.existingPluginCachePath) {
+    if (!paths.codexPluginCachePath
+      || path.dirname(path.resolve(options.existingPluginCachePath))
+        !== path.dirname(path.resolve(paths.codexPluginCachePath))) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Recorded package plugin cache does not match its package and plugin identity.', {
+        package_id: manifest.package_id,
+        plugin_id: manifest.plugin_id,
+        codex_plugin_cache_path: options.existingPluginCachePath,
+        expected_cache_parent: paths.codexPluginCachePath
+          ? path.dirname(paths.codexPluginCachePath)
+          : null,
+        failure_code: 'agent_package_persisted_path_unsafe',
+      });
+    }
+    paths.codexPluginCachePath = assertSafePersistedPackagePath({
+      candidatePath: path.resolve(options.existingPluginCachePath),
+      allowedRoots: [path.join(paths.codexHome, 'plugins', 'cache')],
+      pathKind: 'agent_package_plugin_cache_generation',
+    });
+  }
   const codexConfigPreexisting = fs.existsSync(paths.codexConfigPath);
   const pluginSourceInput = manifest.plugin_source_path;
   if (!pluginSourceInput && !manifest.plugin_id) {
@@ -764,7 +1235,15 @@ export function materializePhysicalCodexSurface(
   }
 
   const pluginSourcePath = resolveLocalPath(pluginSourceInput);
-  const pluginManifestPath = path.join(pluginSourcePath, '.codex-plugin', 'plugin.json');
+  const materializationSourcePath = options.reuseExistingPluginCache
+    ? paths.codexPluginCachePath!
+    : pluginSourcePath;
+  if (options.reuseExistingPluginCache) {
+    verifyImmutablePluginCache(manifest, materializationSourcePath);
+  } else if (manifest.developer_checkout_source) {
+    verifiedDeveloperCheckoutPayloadFiles(manifest, options.developerCheckoutPayloadFiles);
+  }
+  const pluginManifestPath = path.join(materializationSourcePath, '.codex-plugin', 'plugin.json');
   if (!fs.existsSync(pluginManifestPath)) {
     throw new FrameworkContractError('contract_shape_invalid', 'Agent package plugin source must contain .codex-plugin/plugin.json before physical materialization.', {
       package_id: manifest.package_id,
@@ -774,20 +1253,22 @@ export function materializePhysicalCodexSurface(
       failure_code: 'agent_package_plugin_manifest_missing',
     });
   }
-  const materializedRequiredSkills = validateMaterializedRequiredSkills(manifest, pluginSourcePath);
+  const materializedRequiredSkills = validateMaterializedRequiredSkills(manifest, materializationSourcePath);
 
   let profileMigration = noPackageProfileMigration('Package profile materialization has not run.');
   let managedPolicyMigration = noManagedPolicyMigration('Managed policy materialization has not run.');
   let removedSupersededPaths: string[] = [];
+  let pluginCacheCreated = false;
   try {
-    if (!dryRun) {
-      if (manifest.content_lock_paths.length > 0) {
-        copyContentLockPaths(pluginSourcePath, paths.codexPluginCachePath!, manifest.content_lock_paths);
-      } else {
-        copyDirectory(pluginSourcePath, paths.codexPluginCachePath!);
-      }
+    if (!dryRun && !options.reuseExistingPluginCache) {
+      pluginCacheCreated = materializeImmutablePluginCache({
+        manifest,
+        sourcePath: pluginSourcePath,
+        targetPath: paths.codexPluginCachePath!,
+        developerCheckoutPayloadFiles: options.developerCheckoutPayloadFiles,
+      });
     }
-    const materializedSourceRoot = dryRun ? pluginSourcePath : paths.codexPluginCachePath!;
+    const materializedSourceRoot = dryRun ? materializationSourcePath : paths.codexPluginCachePath!;
     if (!options.skipManagedSurfaces) {
       managedPolicyMigration = materializeManagedPolicySurface({
         manifest,
@@ -833,7 +1314,10 @@ export function materializePhysicalCodexSurface(
       unregisterLocalCodexPlugin(paths.codexConfigPath, paths.marketplaceId, manifest.plugin_id);
       removeCreatedEmptyCodexConfig(paths.codexConfigPath, codexConfigPreexisting);
       fs.rmSync(paths.marketplaceRoot, { recursive: true, force: true });
-      fs.rmSync(paths.codexPluginCachePath!, { recursive: true, force: true });
+      if (pluginCacheCreated) {
+        makeGenerationTreeWritable(paths.codexPluginCachePath!);
+        fs.rmSync(paths.codexPluginCachePath!, { recursive: true, force: true });
+      }
       rollbackManagedPolicyMigration(managedPolicyMigration);
     }
     throw error;
@@ -878,21 +1362,57 @@ export function removePhysicalCodexSurface(
   surface: AgentPackagePhysicalSurface | undefined,
   dryRun: boolean,
   packageId?: string,
-  options: { retainPayloadSource?: boolean } = {},
+  options: { retainPayloadSource?: boolean; retainPluginCache?: boolean } = {},
 ): AgentPackagePhysicalSurface {
   const codexHome = resolveCodexHome();
-  const codexConfigPath = surface?.codex_config_path ?? resolveCodexConfigPath(codexHome);
-  const removedPaths = [
-    surface?.marketplace_root,
-    surface?.codex_plugin_cache_path,
-    options.retainPayloadSource ? null : surface?.plugin_payload_cache_path,
+  const expectedCodexConfigPath = resolveCodexConfigPath(codexHome);
+  const codexConfigPath = surface?.codex_config_path ?? expectedCodexConfigPath;
+  if (path.resolve(codexConfigPath) !== path.resolve(expectedCodexConfigPath)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Persisted package Codex config path does not match the active Codex home.', {
+      codex_config_path: codexConfigPath,
+      expected_codex_config_path: expectedCodexConfigPath,
+      failure_code: 'agent_package_persisted_path_unsafe',
+    });
+  }
+  const stateDir = resolveOplStatePaths().state_dir;
+  const removals = [
+    surface?.marketplace_root ? {
+      path: surface.marketplace_root,
+      root: path.join(stateDir, 'codex-plugin-marketplaces'),
+      kind: 'physical_surface.marketplace_root',
+    } : null,
+    !options.retainPluginCache && surface?.codex_plugin_cache_path ? {
+      path: surface.codex_plugin_cache_path,
+      root: path.join(codexHome, 'plugins', 'cache'),
+      kind: 'physical_surface.codex_plugin_cache_path',
+    } : null,
+    !options.retainPayloadSource && surface?.plugin_payload_cache_path ? {
+      path: surface.plugin_payload_cache_path,
+      root: path.join(stateDir, 'agent-package-payloads'),
+      kind: 'physical_surface.plugin_payload_cache_path',
+    } : null,
   ].flatMap((value) => value ? [value] : []);
+  const safeRemovals = removals.map((entry) => ({
+    ...entry,
+    path: assertSafePersistedPackagePath({
+      candidatePath: entry.path,
+      allowedRoots: [entry.root],
+      pathKind: entry.kind,
+    }),
+  }));
+  const removedPaths = safeRemovals.map((entry) => entry.path);
 
   if (!dryRun) {
     unregisterLocalCodexPlugin(codexConfigPath, surface?.marketplace_id ?? null, surface?.plugin_id ?? null);
     removeCreatedEmptyCodexConfig(codexConfigPath, surface?.codex_config_preexisting ?? true);
-    for (const pathToRemove of removedPaths) {
-      fs.rmSync(pathToRemove, { recursive: true, force: true });
+    for (const removal of safeRemovals) {
+      makeGenerationTreeWritable(removal.path);
+      removeSafePersistedPackagePath({
+        candidatePath: removal.path,
+        allowedRoots: [removal.root],
+        pathKind: removal.kind,
+        recursive: true,
+      });
     }
   }
 
@@ -939,13 +1459,44 @@ function payloadSourceRefs(index: AgentPackageLockIndex) {
     : []));
 }
 
+function developerPluginCacheRefs(index: AgentPackageLockIndex) {
+  return new Set([
+    ...index.packages,
+    ...(index.last_known_good_transactions ?? []).flatMap((entry) => entry.package_locks),
+  ].flatMap((lock) => lock.source_kind === 'developer_checkout_override'
+    && lock.physical_surface?.codex_plugin_cache_path
+    ? [lock.physical_surface.codex_plugin_cache_path]
+    : []));
+}
+
 export function cleanupUnreferencedPackagePayloadSources(
   previous: AgentPackageLockIndex,
   current: AgentPackageLockIndex,
 ) {
   const retained = payloadSourceRefs(current);
+  const payloadRoot = path.resolve(resolveOplStatePaths().state_dir, 'agent-package-payloads');
   for (const payloadPath of payloadSourceRefs(previous)) {
-    if (!retained.has(payloadPath)) fs.rmSync(payloadPath, { recursive: true, force: true });
+    if (!retained.has(payloadPath)) {
+      removeSafePersistedPackagePath({
+        candidatePath: payloadPath,
+        allowedRoots: [payloadRoot],
+        pathKind: 'lock.physical_surface.plugin_payload_cache_path',
+        recursive: true,
+      });
+    }
+  }
+  const retainedDeveloperCaches = developerPluginCacheRefs(current);
+  const cacheRoot = path.resolve(resolveCodexHome(), 'plugins', 'cache');
+  for (const cachePath of developerPluginCacheRefs(previous)) {
+    if (!retainedDeveloperCaches.has(cachePath)) {
+      makeGenerationTreeWritable(cachePath);
+      removeSafePersistedPackagePath({
+        candidatePath: cachePath,
+        allowedRoots: [cacheRoot],
+        pathKind: 'lock.physical_surface.codex_plugin_cache_path',
+        recursive: true,
+      });
+    }
   }
 }
 
@@ -996,6 +1547,16 @@ export function rematerializePhysicalCodexSurfaceFromLock(
     };
   }
 
+  const recordedCachePath = lock.physical_surface.codex_plugin_cache_path;
+  const developerCache = lock.source_kind === 'developer_checkout_override';
+  const reuseExistingPluginCache = Boolean(recordedCachePath && fs.existsSync(recordedCachePath));
+  if (developerCache && !reuseExistingPluginCache) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Developer checkout rollback requires its retained LKG cache.', {
+      package_id: lock.package_id,
+      codex_plugin_cache_path: recordedCachePath ?? null,
+      failure_code: 'agent_package_developer_checkout_lkg_unavailable',
+    });
+  }
   const materialized = materializePhysicalCodexSurface({
     package_id: lock.package_id,
     agent_id: lock.agent_id,
@@ -1034,7 +1595,12 @@ export function rematerializePhysicalCodexSurfaceFromLock(
     content_digest: lock.content_digest ?? null,
     content_lock_canonicalization: null,
     content_lock_paths: lock.content_lock_paths ?? [],
-  }, dryRun, options);
+    developer_checkout_source: lock.developer_checkout_source ?? null,
+  }, dryRun, {
+    ...options,
+    reuseExistingPluginCache,
+    existingPluginCachePath: recordedCachePath ?? undefined,
+  });
   return options.skipManagedSurfaces && lock.physical_surface
     ? {
         ...materialized,

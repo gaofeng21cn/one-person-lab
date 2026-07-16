@@ -5,6 +5,7 @@ export type BuildSettingsControlCenterInput = {
   core: JsonRecord;
   developerMode: JsonRecord;
   modules: JsonRecord;
+  agentPackages: JsonRecord;
   provider: JsonRecord;
   release: JsonRecord;
   paths: JsonRecord;
@@ -22,6 +23,49 @@ export function asList(value: unknown): JsonRecord[] {
   return Array.isArray(value)
     ? value.filter((entry): entry is JsonRecord => Boolean(entry) && typeof entry === 'object' && !Array.isArray(entry))
     : [];
+}
+
+export function agentPackageFunctionalReadiness(agentPackages: JsonRecord) {
+  const statusIndex = asRecord(agentPackages.status_index);
+  const packages = asRecord(statusIndex.packages);
+  const entries = Object.entries(packages).map(([packageId, value]) => {
+    const status = asRecord(value);
+    const exposure = asRecord(status.capability_exposure);
+    const exposureStatus = asString(exposure.status) ?? 'unknown';
+    const installed = asString(status.installed_version) !== null
+      || asString(status.package_lock_ref) !== null
+      || asString(status.lock_ref) !== null
+      || ['visible', 'hidden', 'disabled'].includes(exposureStatus);
+    const enabled = installed && exposureStatus !== 'disabled';
+    const statusCode = asString(status.status) ?? 'unknown';
+    const runnable = enabled && (
+      status.operational_ready === true
+      || status.launch_allowed === true
+      || ['available', 'ready', 'verification_deferred', 'using_last_known_good'].includes(statusCode)
+    );
+    return {
+      package_id: packageId,
+      installed,
+      enabled,
+      runnable,
+      status: statusCode,
+      exposure_status: exposureStatus,
+      source_ref: `app_state.agent_packages.status_index.packages.${packageId}`,
+    };
+  });
+  const installed = entries.filter((entry) => entry.installed);
+  const enabled = installed.filter((entry) => entry.enabled);
+  const runnable = enabled.filter((entry) => entry.runnable);
+  const attention = enabled.filter((entry) => !entry.runnable);
+  return {
+    status: attention.length === 0 ? 'available' as const : 'attention_needed' as const,
+    installed_count: installed.length,
+    enabled_count: enabled.length,
+    runnable_count: runnable.length,
+    attention_count: attention.length,
+    attention_package_ids: attention.map((entry) => entry.package_id),
+    entries,
+  };
 }
 
 export function statusTone(status: string | null) {

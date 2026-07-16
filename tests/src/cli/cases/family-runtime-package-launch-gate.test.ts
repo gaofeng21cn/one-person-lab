@@ -1,32 +1,68 @@
+import { execFileSync } from 'node:child_process';
+
 import {
   assert,
   fs,
   os,
   path,
+  removeFixtureTree,
   runCli,
   runCliAsync,
   runCliFailure,
   test,
 } from '../helpers.ts';
 import {
+  commitDeveloperCheckout,
   scholarSkillsCoreSkillIds,
   scholarSkillsSpecialtySkillIds,
   writeCapabilityCatalog,
+  writeDeveloperCapabilityCheckoutClosure,
   writeCapabilityProvider,
   writeMasConsumer,
 } from './packages-cases/capability-fixtures.ts';
-import {
-  assertAgentPackageUseBindingCarrierAuthority,
-} from '../../../../src/modules/connect/agent-package-registry-parts/carrier-authority.ts';
 import { packageLaunchHardStopReason } from '../../../../src/modules/runway/family-runtime-package-readiness.ts';
 
-test('package conformance and materialization gaps are quality debt when runtime source remains usable', () => {
+test('package launch stops only for missing required capability while metadata drift remains quality debt', () => {
   assert.equal(packageLaunchHardStopReason({
     installed_package_count: 1,
-    package_dependency_readiness: { status: 'incompatible', operational_ready: false },
-    materialization_readiness: { status: 'missing' },
+    package_dependency_readiness: {
+      status: 'incompatible',
+      operational_ready: true,
+      dependencies: [{
+        required: true,
+        reasons: ['version_requirement_unsatisfied', 'dependency_closure_digest_mismatch'],
+      }],
+    },
+    materialization_readiness: {
+      status: 'incompatible',
+      core_readiness: { status: 'incompatible' },
+    },
     runtime_source_readiness: { status: 'current', operational_ready: true },
   }), null);
+  for (const reason of [
+    'dependency_lock_missing',
+    'dependency_disabled',
+    'package_id_mismatch',
+    'capability_abi_mismatch',
+    'required_exports_missing',
+    'required_modules_missing',
+  ]) {
+    assert.equal(packageLaunchHardStopReason({
+      installed_package_count: 1,
+      package_dependency_readiness: {
+        dependencies: [{ required: true, reasons: [reason] }],
+      },
+      runtime_source_readiness: { status: 'current', operational_ready: true },
+    }), reason);
+  }
+  assert.equal(packageLaunchHardStopReason({
+    installed_package_count: 1,
+    materialization_readiness: {
+      status: 'missing',
+      core_readiness: { status: 'missing' },
+    },
+    runtime_source_readiness: { status: 'current', operational_ready: true },
+  }), 'required_core_skill_missing');
   assert.equal(packageLaunchHardStopReason({
     installed_package_count: 1,
     runtime_source_readiness: {
@@ -81,6 +117,37 @@ function assertNoAttemptWasQueued(stateRoot: string, env: Record<string, string>
   assert.deepEqual(attempts.attempts, []);
 }
 
+function queryAttempt(stageAttemptId: string, env: Record<string, string>) {
+  return runCli([
+    'family-runtime', 'attempt', 'query', stageAttemptId,
+  ], env).family_runtime_stage_attempt_query.stage_attempt_query.attempt;
+}
+
+function createThenBindAtStart(
+  args: string[],
+  env: Record<string, string>,
+  startEnv: Record<string, string> = env,
+) {
+  const created = runCli(args, env).family_runtime_stage_attempt.attempt;
+  assert.equal(Object.hasOwn(created.workspace_locator, 'package_use_binding'), false);
+  const startFailure = runCliFailure([
+    'family-runtime', 'attempt', 'start', created.stage_attempt_id,
+  ], {
+    ...startEnv,
+    OPL_TEMPORAL_ADDRESS: '',
+    TEMPORAL_ADDRESS: '',
+  });
+  assert.notEqual(
+    startFailure.payload.error.details?.failure_code,
+    'agent_package_operational_readiness_blocked',
+  );
+  return {
+    created,
+    attempt: queryAttempt(created.stage_attempt_id, env),
+    startFailure,
+  };
+}
+
 test('family-runtime attempt create fails closed when the canonical domain package is not installed', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-package-not-installed-'));
   const workspace = path.join(root, 'workspace');
@@ -96,11 +163,11 @@ test('family-runtime attempt create fails closed when the canonical domain packa
     assert.deepEqual(failure.payload.error.details.allowed_when_blocked, ['status', 'doctor', 'repair']);
     assertNoAttemptWasQueued(env.OPL_STATE_DIR, env);
   } finally {
-    fs.rmSync(root, { recursive: true, force: true });
+    removeFixtureTree(root);
   }
 });
 
-test('family-runtime keeps duplicate create idempotent and restores the pinned scope at start', async () => {
+test('family-runtime keeps duplicate create idempotent and refreshes the scope at actual start', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-package-scope-drift-'));
   const workspace = path.join(root, 'workspace');
   const providerManifest = writeCapabilityProvider(path.join(root, 'provider'));
@@ -113,6 +180,8 @@ test('family-runtime keeps duplicate create idempotent and restores the pinned s
   const env = {
     OPL_STATE_DIR: path.join(root, 'state'),
     CODEX_HOME: path.join(root, 'codex-home'),
+    OPL_TEMPORAL_ADDRESS: '',
+    TEMPORAL_ADDRESS: '',
     ...releaseSet.env,
   };
   fs.mkdirSync(workspace, { recursive: true });
@@ -120,8 +189,22 @@ test('family-runtime keeps duplicate create idempotent and restores the pinned s
     await runCliAsync([
       'packages', 'install', 'mas', '--scope', 'workspace', '--target-workspace', workspace,
     ], env);
+    const lockPath = path.join(env.OPL_STATE_DIR, 'agent-package-locks.json');
+    const ledgerPath = path.join(env.OPL_STATE_DIR, 'agent-package-lifecycle-ledger.json');
+    const projectionRoot = path.join(env.OPL_STATE_DIR, 'agent-package-skill-projections');
+    const packageBytesBeforeCreate = {
+      lock: fs.readFileSync(lockPath, 'utf8'),
+      ledger: fs.readFileSync(ledgerPath, 'utf8'),
+      generations: fs.existsSync(projectionRoot) ? fs.readdirSync(projectionRoot).sort() : [],
+    };
     const existingAttempt = runCli(createArgs(workspace), env)
       .family_runtime_stage_attempt.attempt;
+    assert.equal(Object.hasOwn(existingAttempt.workspace_locator, 'package_use_binding'), false);
+    assert.deepEqual({
+      lock: fs.readFileSync(lockPath, 'utf8'),
+      ledger: fs.readFileSync(ledgerPath, 'utf8'),
+      generations: fs.existsSync(projectionRoot) ? fs.readdirSync(projectionRoot).sort() : [],
+    }, packageBytesBeforeCreate);
     fs.rmSync(path.join(workspace, '.codex', 'skills', 'medical-manuscript-writing'), {
       recursive: true,
       force: true,
@@ -149,12 +232,53 @@ test('family-runtime keeps duplicate create idempotent and restores the pinned s
       fs.existsSync(path.join(workspace, '.codex', 'skills', 'medical-manuscript-writing', 'SKILL.md')),
       true,
     );
+    const startedAttempt = runCli([
+      'family-runtime', 'attempt', 'query', existingAttempt.stage_attempt_id,
+    ], env).family_runtime_stage_attempt_query.stage_attempt_query.attempt;
+    assert.match(
+      startedAttempt.workspace_locator.package_use_binding.use_boundary_id,
+      /^package-use[_:]/,
+    );
+    assert.equal(
+      startedAttempt.provider_run.execution_package_use_context.status,
+      'attempt_launch_binding_persisted',
+    );
+    assert.deepEqual(
+      startedAttempt.provider_run.execution_package_use_context.package_use_binding,
+      startedAttempt.workspace_locator.package_use_binding,
+    );
+
+    const createStartFailure = runCliFailure([
+      ...createArgs(workspace), '--new-attempt', '--start',
+    ], env);
+    assert.notEqual(
+      createStartFailure.payload.error.details?.failure_code,
+      'agent_package_operational_readiness_blocked',
+    );
+    const afterCreateStart = runCli([
+      'family-runtime', 'attempt', 'list', '--domain', 'medautoscience', '--full',
+    ], env).family_runtime_stage_attempts;
+    assert.equal(afterCreateStart.summary.total, 2);
+    const createStartAttemptSummary = afterCreateStart.attempts.find(
+      (entry: any) => entry.stage_attempt_id !== existingAttempt.stage_attempt_id,
+    );
+    const createStartAttempt = runCli([
+      'family-runtime', 'attempt', 'query', createStartAttemptSummary.stage_attempt_id,
+    ], env).family_runtime_stage_attempt_query.stage_attempt_query.attempt;
+    assert.equal(
+      createStartAttempt.provider_run.execution_package_use_context.status,
+      'attempt_launch_binding_persisted',
+    );
+    assert.deepEqual(
+      createStartAttempt.provider_run.execution_package_use_context.package_use_binding,
+      createStartAttempt.workspace_locator.package_use_binding,
+    );
   } finally {
-    fs.rmSync(root, { recursive: true, force: true });
+    removeFixtureTree(root);
   }
 });
 
-test('family-runtime quest launch activates every declared Skill and start or repair restores drift', async () => {
+test('family-runtime quest first start activates every declared Skill while retry stays pinned and repair restores drift', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-quest-package-scope-'));
   const quest = path.join(root, 'quest');
   const providerManifest = writeCapabilityProvider(path.join(root, 'provider'), '0.1.0', {
@@ -182,6 +306,16 @@ test('family-runtime quest launch activates every declared Skill and start or re
 
     const created = runCli(createQuestArgs(quest), env).family_runtime_stage_attempt.attempt;
     const skillRoot = path.join(quest, '.codex', 'skills');
+    assert.equal(Object.hasOwn(created.workspace_locator, 'package_use_binding'), false);
+    assert.equal(fs.existsSync(skillRoot), false);
+    const firstStart = runCliFailure([
+      'family-runtime', 'attempt', 'start', created.stage_attempt_id,
+    ], {
+      ...env,
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
+    });
+    assert.notEqual(firstStart.payload.error.details?.failure_code, 'agent_package_operational_readiness_blocked');
     assert.deepEqual(
       fs.readdirSync(skillRoot).sort(),
       [...scholarSkillsCoreSkillIds, ...scholarSkillsSpecialtySkillIds].sort(),
@@ -202,9 +336,13 @@ test('family-runtime quest launch activates every declared Skill and start or re
 
     const startBlocked = runCliFailure([
       'family-runtime', 'attempt', 'start', created.stage_attempt_id,
-    ], env);
+    ], {
+      ...env,
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
+    });
     assert.notEqual(startBlocked.payload.error.details?.failure_code, 'agent_package_operational_readiness_blocked');
-    assert.equal(fs.existsSync(path.join(skillRoot, 'medical-manuscript-writing', 'SKILL.md')), true);
+    assert.equal(fs.existsSync(path.join(skillRoot, 'medical-manuscript-writing', 'SKILL.md')), false);
 
     fs.rmSync(path.join(skillRoot, 'medical-manuscript-review'), {
       recursive: true,
@@ -235,7 +373,7 @@ test('family-runtime quest launch activates every declared Skill and start or re
       .family_runtime_stage_attempt.attempt;
     assert.notEqual(resumed.stage_attempt_id, created.stage_attempt_id);
   } finally {
-    fs.rmSync(root, { recursive: true, force: true });
+    removeFixtureTree(root);
   }
 });
 
@@ -260,6 +398,10 @@ test('family-runtime use boundary reconciles the highest compatible provider and
     capabilityCatalogRef: catalog,
     packageCatalogRef: catalog,
   });
+  const consumerV3 = writeMasConsumer(path.join(root, 'consumer-v3'), providerV3, '0.1.1', {
+    capabilityCatalogRef: catalog,
+    packageCatalogRef: catalog,
+  });
   const releaseSet = writeCapabilityCatalog(
     path.dirname(catalog),
     [consumerV1, consumerV2, providerV1, providerV2],
@@ -271,8 +413,10 @@ test('family-runtime use boundary reconciles the highest compatible provider and
   };
   try {
     await runCliAsync(['packages', 'install', 'mas'], env);
-    const created = runCli(createSessionArgs(workspace, 'paper-session-a'), env)
-      .family_runtime_stage_attempt.attempt;
+    const created = createThenBindAtStart(
+      createSessionArgs(workspace, 'paper-session-a'),
+      env,
+    ).attempt;
     assert.equal(created.workspace_locator.package_use_binding.freshness_mode, 'channel_verified');
     assert.match(created.workspace_locator.package_use_binding.use_receipt_ref, /^opl:\/\/agent-package\/use\//);
     assert.equal(created.workspace_locator.package_use_binding.provider_packages[0].package_version, '0.1.1');
@@ -303,8 +447,10 @@ test('family-runtime use boundary reconciles the highest compatible provider and
     assert.equal(specialtyDrift.materialization_readiness.core_readiness.status, 'current');
     assert.equal(specialtyDrift.materialization_readiness.specialty_exposure.status, 'degraded');
     assert.equal(specialtyDrift.launch_allowed, true);
-    const specialtyRecovered = runCli(createSessionArgs(workspace, 'specialty-repair'), env)
-      .family_runtime_stage_attempt.attempt;
+    const specialtyRecovered = createThenBindAtStart(
+      createSessionArgs(workspace, 'specialty-repair'),
+      env,
+    ).attempt;
     assert.equal(
       fs.existsSync(path.join(workspace, '.codex', 'skills', removedSpecialty, 'SKILL.md')),
       true,
@@ -312,35 +458,239 @@ test('family-runtime use boundary reconciles the highest compatible provider and
     assert.equal(specialtyRecovered.workspace_locator.package_use_binding.core_readiness.status, 'current');
     assert.equal(specialtyRecovered.workspace_locator.package_use_binding.specialty_exposure.status, 'current');
 
-    writeCapabilityCatalog(path.dirname(catalog), [consumerV1, consumerV2, providerV1, providerV2, providerV3]);
+    const oldLocks = JSON.parse(fs.readFileSync(path.join(env.OPL_STATE_DIR, 'agent-package-locks.json'), 'utf8'));
+    assert.equal(oldLocks.packages.find((entry: any) => entry.package_id === 'mas').package_version, '0.1.0');
+    assert.equal(
+      oldLocks.packages.find((entry: any) => entry.package_id === 'mas-scholar-skills').package_version,
+      '0.1.1',
+    );
+    writeCapabilityCatalog(
+      path.dirname(catalog),
+      [consumerV1, consumerV2, consumerV3, providerV1, providerV2, providerV3],
+    );
     fs.rmSync(path.dirname(helper), { recursive: true, force: true });
     const startFailure = runCliFailure([
       'family-runtime', 'attempt', 'start', created.stage_attempt_id,
-    ], env);
+    ], {
+      ...env,
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
+    });
     assert.notEqual(startFailure.payload.error.details?.failure_code, 'agent_package_operational_readiness_blocked');
-    assert.match(fs.readFileSync(helper, 'utf8'), /0\.1\.1/);
+    assert.notEqual(startFailure.payload.error.details?.failure_code, 'agent_package_pinned_closure_changed');
+    assert.equal(fs.existsSync(helper), false);
 
-    const nextSession = runCli(createSessionArgs(workspace, 'paper-session-b'), env)
-      .family_runtime_stage_attempt.attempt;
+    const nextSession = createThenBindAtStart(
+      createSessionArgs(workspace, 'paper-session-b'),
+      env,
+    ).attempt;
+    assert.equal(nextSession.workspace_locator.package_use_binding.root_package.package_version, '0.1.1');
     assert.equal(nextSession.workspace_locator.package_use_binding.provider_packages[0].package_version, '0.1.2');
+    assert.equal(nextSession.workspace_locator.package_use_binding.freshness_mode, 'channel_verified');
+    assert.equal(nextSession.workspace_locator.package_use_binding.latest_verified, true);
+    assert.equal(nextSession.workspace_locator.package_use_binding.reconciliation_issue, null);
     assert.match(fs.readFileSync(helper, 'utf8'), /0\.1\.2/);
 
-    const pinnedBlocked = runCliFailure([
+    const resumedFailure = runCliFailure([
       'family-runtime', 'attempt', 'start', created.stage_attempt_id,
-    ], env);
-    assert.equal(pinnedBlocked.payload.error.details.failure_code, 'agent_package_pinned_closure_changed');
-    assert.equal(
-      pinnedBlocked.payload.error.details.resume_policy,
-      'fail_closed_shared_scope_cannot_restore_pinned_bytes_without_mutating_current_scope',
-    );
-    assert.deepEqual(pinnedBlocked.payload.error.details.shared_scope, {
-      scope: 'workspace',
-      target_root: workspace,
-      discovery_surface: `${workspace}/.codex/skills`,
+    ], {
+      ...env,
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
     });
+    assert.notEqual(resumedFailure.payload.error.details?.failure_code, 'agent_package_pinned_closure_changed');
     assert.match(fs.readFileSync(helper, 'utf8'), /0\.1\.2/);
   } finally {
-    fs.rmSync(root, { recursive: true, force: true });
+    removeFixtureTree(root);
+  }
+});
+
+test('family-runtime silently reconciles helper-only developer checkout changes before a new invocation', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-developer-use-reconcile-'));
+  const workspaceA = path.join(root, 'workspace-a');
+  const workspaceB = path.join(root, 'workspace-b');
+  const masCheckout = path.join(root, 'workspace', 'med-autoscience');
+  const scholarCheckout = path.join(root, 'workspace', 'mas-scholar-skills');
+  const provider = writeCapabilityProvider(path.join(root, 'release-provider'), '0.1.0');
+  const consumer = writeMasConsumer(path.join(root, 'release-consumer'), provider, '0.1.0a4');
+  const releaseSet = writeCapabilityCatalog(path.join(root, 'release-set'), [consumer, provider]);
+  const fixture = writeDeveloperCapabilityCheckoutClosure({
+    masCheckout,
+    scholarCheckout,
+    masManifestPath: consumer,
+    providerManifestPath: provider,
+  });
+  const env = {
+    OPL_STATE_DIR: path.join(root, 'state'),
+    CODEX_HOME: path.join(root, 'codex-home'),
+    OPL_MODULE_PATH_MEDAUTOSCIENCE: masCheckout,
+    OPL_MODULE_PATH_SCHOLARSKILLS: scholarCheckout,
+    ...releaseSet.env,
+  };
+  const lockFile = path.join(env.OPL_STATE_DIR, 'agent-package-locks.json');
+  try {
+    await runCliAsync(['packages', 'install', 'mas'], env);
+    const first = createThenBindAtStart(
+      createSessionArgs(workspaceA, 'developer-a'),
+      env,
+    ).attempt;
+    const firstBinding = first.workspace_locator.package_use_binding;
+    const firstLocks = JSON.parse(fs.readFileSync(lockFile, 'utf8'));
+    const firstProvider = firstLocks.packages.find(
+      (entry: any) => entry.package_id === 'mas-scholar-skills',
+    );
+    assert.equal(firstBinding.freshness_mode, 'source_reconciled');
+    assert.equal(firstBinding.latest_verified, true);
+    assert.equal(firstBinding.reconciliation_issue, null);
+    assert.equal(firstProvider.developer_checkout_source.source_git_head_sha, fixture.scholarHead);
+    assert.equal(firstProvider.source_artifact_ref, null);
+    assert.equal(firstProvider.artifact_digest, null);
+
+    fs.writeFileSync(fixture.providerHelperPath, 'medical-manuscript-writing helper B\n');
+    const scholarHeadB = commitDeveloperCheckout(scholarCheckout, 'fixture B helper');
+    const second = createThenBindAtStart(
+      createSessionArgs(workspaceB, 'developer-b'),
+      env,
+    ).attempt;
+    const binding = second.workspace_locator.package_use_binding;
+    const nextLocks = JSON.parse(fs.readFileSync(lockFile, 'utf8'));
+    const nextProvider = nextLocks.packages.find(
+      (entry: any) => entry.package_id === 'mas-scholar-skills',
+    );
+    const boundProvider = binding.provider_packages.find(
+      (entry: any) => entry.package_id === 'mas-scholar-skills',
+    );
+    assert.equal(binding.freshness_mode, 'source_reconciled');
+    assert.equal(binding.latest_verified, true);
+    assert.equal(binding.refresh_outcome, 'updated');
+    assert.equal(binding.reconciliation_issue, null);
+    assert.equal(boundProvider.source_kind, 'developer_checkout_override');
+    assert.equal(boundProvider.developer_checkout_source.source_git_head_sha, scholarHeadB);
+    assert.equal(boundProvider.source_artifact_ref, null);
+    assert.equal(boundProvider.artifact_digest, null);
+    assert.equal(nextProvider.package_version, firstProvider.package_version);
+    assert.equal(nextProvider.manifest_sha256, firstProvider.manifest_sha256);
+    assert.notEqual(nextProvider.content_digest, firstProvider.content_digest);
+    assert.notEqual(nextProvider.developer_checkout_source.tree_sha256, firstProvider.developer_checkout_source.tree_sha256);
+    assert.notEqual(nextProvider.dependency_closure_digest, firstProvider.dependency_closure_digest);
+    assert.match(
+      fs.readFileSync(path.join(workspaceB, '.codex', 'skills', 'medical-manuscript-writing', 'helper.txt'), 'utf8'),
+      /helper B/,
+    );
+    assert.equal(
+      fs.readFileSync(
+        path.join(workspaceB, '.codex', 'skills', 'medical-manuscript-writing', 'fixtures', 'nested.txt'),
+        'utf8',
+      ),
+      'nested developer fixture A\n',
+    );
+    assert.equal(execFileSync('git', ['status', '--porcelain'], { cwd: masCheckout, encoding: 'utf8' }), '');
+    assert.equal(execFileSync('git', ['status', '--porcelain'], { cwd: scholarCheckout, encoding: 'utf8' }), '');
+    assert.equal(
+      execFileSync('git', ['rev-parse', 'HEAD'], { cwd: masCheckout, encoding: 'utf8' }).trim(),
+      fixture.masHead,
+    );
+    assert.equal(
+      execFileSync('git', ['rev-parse', 'HEAD'], { cwd: scholarCheckout, encoding: 'utf8' }).trim(),
+      scholarHeadB,
+    );
+  } finally {
+    removeFixtureTree(root);
+  }
+});
+
+test('family-runtime keeps the developer LKG when the latest checkout is incomplete', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-developer-use-lkg-'));
+  const workspace = path.join(root, 'fresh-workspace');
+  const masCheckout = path.join(root, 'workspace', 'med-autoscience');
+  const scholarCheckout = path.join(root, 'workspace', 'mas-scholar-skills');
+  const provider = writeCapabilityProvider(path.join(root, 'release-provider'), '0.1.0');
+  const consumer = writeMasConsumer(path.join(root, 'release-consumer'), provider, '0.1.0a4');
+  const releaseSet = writeCapabilityCatalog(path.join(root, 'release-set'), [consumer, provider]);
+  const fixture = writeDeveloperCapabilityCheckoutClosure({
+    masCheckout,
+    scholarCheckout,
+    masManifestPath: consumer,
+    providerManifestPath: provider,
+  });
+  const env = {
+    OPL_STATE_DIR: path.join(root, 'state'),
+    CODEX_HOME: path.join(root, 'codex-home'),
+    OPL_MODULE_PATH_MEDAUTOSCIENCE: masCheckout,
+    OPL_MODULE_PATH_SCHOLARSKILLS: scholarCheckout,
+    ...releaseSet.env,
+  };
+  const lockFile = path.join(env.OPL_STATE_DIR, 'agent-package-locks.json');
+  try {
+    await runCliAsync(['packages', 'install', 'mas'], env);
+    const beforeBytes = fs.readFileSync(lockFile, 'utf8');
+    const beforeLocks = JSON.parse(beforeBytes);
+    const beforeProvider = beforeLocks.packages.find(
+      (entry: any) => entry.package_id === 'mas-scholar-skills',
+    );
+    const cachePath = beforeProvider.physical_surface.codex_plugin_cache_path;
+    assert.equal(fs.existsSync(path.join(cachePath, 'skills', 'medical-manuscript-writing', 'SKILL.md')), true);
+
+    fs.rmSync(fixture.providerRequiredSkillPath);
+    commitDeveloperCheckout(scholarCheckout, 'fixture B incomplete');
+    const attempt = createThenBindAtStart(
+      createSessionArgs(workspace, 'developer-lkg'),
+      env,
+    ).attempt;
+    const binding = attempt.workspace_locator.package_use_binding;
+    assert.equal(binding.freshness_mode, 'offline_lkg');
+    assert.equal(binding.latest_verified, false);
+    assert.equal(binding.refresh_outcome, 'recovered_last_known_good');
+    assert.equal(binding.reconciliation_issue.status, 'update_failed_using_last_known_good');
+    assert.equal(binding.reconciliation_issue.source, 'developer_checkout');
+    assert.equal(
+      binding.reconciliation_issue.failure_code,
+      'agent_package_developer_checkout_source_invalid',
+    );
+    assert.ok(binding.reconciliation_issue.message.length > 0);
+    const afterLocks = JSON.parse(fs.readFileSync(lockFile, 'utf8'));
+    const afterProvider = afterLocks.packages.find(
+      (entry: any) => entry.package_id === 'mas-scholar-skills',
+    );
+    assert.deepEqual(
+      {
+        package_version: afterProvider.package_version,
+        manifest_sha256: afterProvider.manifest_sha256,
+        content_digest: afterProvider.content_digest,
+        owner_source_commit: afterProvider.owner_source_commit,
+        developer_checkout_source: afterProvider.developer_checkout_source,
+        codex_plugin_cache_path: afterProvider.physical_surface.codex_plugin_cache_path,
+      },
+      {
+        package_version: beforeProvider.package_version,
+        manifest_sha256: beforeProvider.manifest_sha256,
+        content_digest: beforeProvider.content_digest,
+        owner_source_commit: beforeProvider.owner_source_commit,
+        developer_checkout_source: beforeProvider.developer_checkout_source,
+        codex_plugin_cache_path: beforeProvider.physical_surface.codex_plugin_cache_path,
+      },
+    );
+    assert.equal(fs.existsSync(path.join(cachePath, 'skills', 'medical-manuscript-writing', 'SKILL.md')), true);
+    assert.match(
+      fs.readFileSync(path.join(workspace, '.codex', 'skills', 'medical-manuscript-writing', 'helper.txt'), 'utf8'),
+      /0\.1\.0/,
+    );
+    assert.equal(
+      fs.readFileSync(
+        path.join(workspace, '.codex', 'skills', 'medical-manuscript-writing', 'fixtures', 'nested.txt'),
+        'utf8',
+      ),
+      'nested developer fixture A\n',
+    );
+    const ledger = JSON.parse(fs.readFileSync(
+      path.join(env.OPL_STATE_DIR, 'agent-package-lifecycle-ledger.json'),
+      'utf8',
+    ));
+    const useReceipt = ledger.receipts.find((entry: any) =>
+      entry.receipt_ref === binding.use_receipt_ref);
+    assert.deepEqual(useReceipt.use_binding.reconciliation_issue, binding.reconciliation_issue);
+  } finally {
+    removeFixtureTree(root);
   }
 });
 
@@ -369,23 +719,23 @@ test('provider retirement removes only unchanged package-owned Skills and preser
   };
   try {
     await runCliAsync(['packages', 'install', 'mas'], env);
-    runCli(createSessionArgs(workspaceA, 'retirement-a-v1'), env);
-    runCli(createSessionArgs(workspaceB, 'retirement-b-v1'), env);
+    createThenBindAtStart(createSessionArgs(workspaceA, 'retirement-a-v1'), env);
+    createThenBindAtStart(createSessionArgs(workspaceB, 'retirement-b-v1'), env);
     const userModifiedSkill = path.join(workspaceB, '.codex', 'skills', retiredSkill, 'SKILL.md');
     fs.appendFileSync(userModifiedSkill, '\nUser-owned local note.\n');
 
     writeCapabilityCatalog(path.dirname(catalog), [consumer, providerV1, providerV2]);
-    runCli(createSessionArgs(workspaceA, 'retirement-a-v2'), env);
+    createThenBindAtStart(createSessionArgs(workspaceA, 'retirement-a-v2'), env);
 
     assert.equal(fs.existsSync(path.join(workspaceA, '.codex', 'skills', retiredSkill)), false);
     assert.equal(fs.existsSync(userModifiedSkill), true);
     assert.match(fs.readFileSync(userModifiedSkill, 'utf8'), /User-owned local note/);
   } finally {
-    fs.rmSync(root, { recursive: true, force: true });
+    removeFixtureTree(root);
   }
 });
 
-test('family-runtime use boundary uses verified LKG offline unless strict currentness is requested', async () => {
+test('family-runtime use boundary always uses verified LKG when the update channel is offline', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-capability-use-offline-'));
   const workspace = path.join(root, 'workspace');
   const provider = writeCapabilityProvider(path.join(root, 'provider'), '0.1.0');
@@ -402,26 +752,42 @@ test('family-runtime use boundary uses verified LKG offline unless strict curren
   };
   try {
     await runCliAsync(['packages', 'install', 'mas'], env);
+    fs.writeFileSync(path.join(env.OPL_STATE_DIR, 'agent-package-release-catalog-cache.json'), `${JSON.stringify({
+      surface_kind: 'opl_agent_package_release_catalog_cache.v1',
+      catalog_ref: catalog,
+      catalog_digest: `sha256:${'f'.repeat(64)}`,
+      checked_at: new Date().toISOString(),
+      catalog_payload: JSON.parse(fs.readFileSync(catalog, 'utf8')),
+    }, null, 2)}\n`);
     fs.rmSync(catalog, { force: true });
-    const strict = runCliFailure(createSessionArgs(workspace, 'strict-offline'), {
+    const strictEnv = {
       ...env,
       OPL_PACKAGE_USE_STRICT_CURRENTNESS: '1',
-    });
-    assert.equal(strict.payload.error.details.failure_code, 'agent_package_capability_channel_unavailable');
-    assert.equal(strict.payload.error.details.update_action, 'opl packages update mas');
-    assertNoAttemptWasQueued(env.OPL_STATE_DIR, env);
+    };
+    const strict = createThenBindAtStart(
+      createSessionArgs(workspace, 'strict-offline'),
+      strictEnv,
+    ).attempt;
+    assert.equal(strict.workspace_locator.package_use_binding.freshness_mode, 'offline_lkg');
+    assert.equal(strict.workspace_locator.package_use_binding.latest_verified, false);
+    assert.equal(
+      strict.workspace_locator.package_use_binding.reconciliation_issue.failure_code,
+      'agent_package_capability_channel_unavailable',
+    );
 
-    const offline = runCli(createSessionArgs(workspace, 'offline-lkg'), env)
-      .family_runtime_stage_attempt.attempt;
+    const offline = createThenBindAtStart(
+      createSessionArgs(workspace, 'offline-lkg'),
+      env,
+    ).attempt;
     assert.equal(offline.workspace_locator.package_use_binding.freshness_mode, 'offline_lkg');
     assert.equal(offline.workspace_locator.package_use_binding.latest_verified, false);
     assert.match(offline.workspace_locator.package_use_binding.use_receipt_ref, /^opl:\/\/agent-package\/use\//);
   } finally {
-    fs.rmSync(root, { recursive: true, force: true });
+    removeFixtureTree(root);
   }
 });
 
-test('family-runtime attempt start fails closed when its use receipt is tampered', async () => {
+test('family-runtime treats lifecycle and prior use receipt metadata as observation-only', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-capability-use-receipt-tamper-'));
   const workspace = path.join(root, 'workspace');
   const provider = writeCapabilityProvider(path.join(root, 'provider'), '0.1.0');
@@ -438,80 +804,38 @@ test('family-runtime attempt start fails closed when its use receipt is tampered
   };
   try {
     await runCliAsync(['packages', 'install', 'mas'], env);
-    const attempt = runCli(createSessionArgs(workspace, 'tampered-receipt'), env)
-      .family_runtime_stage_attempt.attempt;
+    const lockIndex = JSON.parse(fs.readFileSync(
+      path.join(env.OPL_STATE_DIR, 'agent-package-locks.json'),
+      'utf8',
+    ));
+    const installedMas = lockIndex.packages.find((entry: any) => entry.package_id === 'mas');
     const ledgerPath = path.join(env.OPL_STATE_DIR, 'agent-package-lifecycle-ledger.json');
+    const installLedger = JSON.parse(fs.readFileSync(ledgerPath, 'utf8'));
+    const installReceipt = installLedger.receipts.find((entry: any) =>
+      entry.receipt_ref === installedMas.action_receipt_id);
+    installReceipt.owner_source_commit = 'f'.repeat(40);
+    fs.writeFileSync(ledgerPath, `${JSON.stringify(installLedger, null, 2)}\n`);
+
+    const attempt = createThenBindAtStart(
+      createSessionArgs(workspace, 'tampered-receipt'),
+      env,
+    ).attempt;
     const ledger = JSON.parse(fs.readFileSync(ledgerPath, 'utf8'));
     const receipt = ledger.receipts.find((entry: any) =>
       entry.receipt_ref === attempt.workspace_locator.package_use_binding.use_receipt_ref);
     receipt.use_binding.provider_packages[0].package_version = '9.9.9';
     fs.writeFileSync(ledgerPath, `${JSON.stringify(ledger, null, 2)}\n`);
 
-    const blocked = runCliFailure([
+    const resumedFailure = runCliFailure([
       'family-runtime', 'attempt', 'start', attempt.stage_attempt_id,
     ], env);
-    assert.equal(blocked.payload.error.details.failure_code, 'agent_package_use_receipt_invalid');
+    assert.notEqual(resumedFailure.payload.error.details?.failure_code, 'agent_package_use_receipt_invalid');
   } finally {
-    fs.rmSync(root, { recursive: true, force: true });
+    removeFixtureTree(root);
   }
 });
 
-test('family-runtime use binding rejects a pinned provider after its installed lock drifts', () => {
-  const packageLock = (packageId: string) => ({
-    package_id: packageId,
-    package_version: '0.1.0',
-    lock_ref: `opl://agent-package-lock/${packageId}/0.1.0/current`,
-    manifest_sha256: 'a'.repeat(64),
-    content_digest: `sha256:${'b'.repeat(64)}`,
-    source_artifact_ref: null,
-    artifact_digest: null,
-    owner_source_commit: null,
-    carrier_authority: null,
-    source_kind: 'manifest_url',
-    resolved_dependencies: [] as Array<{ package_id: string }>,
-    dependency_closure_digest: `sha256:${'c'.repeat(64)}`,
-  });
-  const boundPackage = (lock: ReturnType<typeof packageLock>) => ({
-    package_id: lock.package_id,
-    package_version: lock.package_version,
-    owner_language_version: null,
-    package_lock_ref: lock.lock_ref,
-    manifest_sha256: lock.manifest_sha256,
-    content_digest: lock.content_digest,
-    source_artifact_ref: lock.source_artifact_ref,
-    artifact_digest: lock.artifact_digest,
-    owner_source_commit: lock.owner_source_commit,
-    carrier_authority: lock.carrier_authority,
-  });
-  const providerLock = packageLock('fixture.mas-scholar-skills');
-  const rootLock = {
-    ...packageLock('fixture.mas'),
-    resolved_dependencies: [{ package_id: providerLock.package_id }],
-  };
-  const binding = {
-    surface_kind: 'opl_agent_package_use_binding.v1',
-    use_boundary_id: 'fixture-use-boundary',
-    use_receipt_ref: 'opl://agent-package/use/fixture',
-    root_package: boundPackage(rootLock),
-    provider_packages: [boundPackage(providerLock)],
-    dependency_closure_digest: rootLock.dependency_closure_digest,
-  };
-  providerLock.package_version = '9.9.9';
-
-  assert.throws(
-    () => assertAgentPackageUseBindingCarrierAuthority({
-      binding: binding as any,
-      root: rootLock as any,
-      installedLocks: [rootLock, providerLock] as any,
-    }),
-    (error: any) => error?.details?.failure_code === 'agent_package_use_binding_carrier_authority_invalid'
-      && JSON.stringify(error?.details?.failures) === JSON.stringify([
-        'provider_package_authority_mismatch:fixture.mas-scholar-skills',
-      ]),
-  );
-});
-
-test('family-runtime use boundary fails closed when the catalog has no compatible retained provider', async () => {
+test('family-runtime use boundary keeps the LKG when the catalog has no compatible retained provider', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-capability-use-incompatible-'));
   const workspace = path.join(root, 'workspace');
   const providerV1 = writeCapabilityProvider(path.join(root, 'provider-v1'), '0.1.0');
@@ -532,12 +856,17 @@ test('family-runtime use boundary fails closed when the catalog has no compatibl
   try {
     await runCliAsync(['packages', 'install', 'mas'], env);
     writeCapabilityCatalog(path.dirname(catalog), [consumer, providerV2]);
-    const blocked = runCliFailure(createSessionArgs(workspace, 'incompatible-provider'), env);
-    assert.equal(blocked.payload.error.details.failure_code, 'agent_package_capability_no_compatible_version');
-    assert.equal(blocked.payload.error.details.update_action, 'opl packages update mas');
-    assertNoAttemptWasQueued(env.OPL_STATE_DIR, env);
+    const attempt = createThenBindAtStart(
+      createSessionArgs(workspace, 'incompatible-provider'),
+      env,
+    ).attempt;
+    assert.equal(attempt.workspace_locator.package_use_binding.freshness_mode, 'offline_lkg');
+    assert.equal(
+      attempt.workspace_locator.package_use_binding.reconciliation_issue.failure_code,
+      'agent_package_capability_no_compatible_version',
+    );
   } finally {
-    fs.rmSync(root, { recursive: true, force: true });
+    removeFixtureTree(root);
   }
 });
 
@@ -560,25 +889,35 @@ test('family-runtime use reconciliation rolls provider and scope back after an i
   const helper = path.join(workspace, '.codex', 'skills', 'medical-manuscript-writing', 'helper.txt');
   try {
     await runCliAsync(['packages', 'install', 'mas'], env);
-    const baselineAttempt = runCli(createSessionArgs(workspace, 'baseline-session'), env)
-      .family_runtime_stage_attempt.attempt;
+    const baselineAttempt = createThenBindAtStart(
+      createSessionArgs(workspace, 'baseline-session'),
+      env,
+    ).attempt;
     assert.match(fs.readFileSync(helper, 'utf8'), /0\.1\.0/);
     writeCapabilityCatalog(path.dirname(catalog), [consumer, providerV1, providerV2]);
 
-    const failed = runCliFailure(createSessionArgs(workspace, 'faulted-session'), {
-      ...env,
-      OPL_TEST_CAPABILITY_RECONCILIATION_FAIL_AFTER_SCOPE: '1',
-    });
-    assert.equal(failed.payload.error.details.failure_code, 'test_capability_reconciliation_interrupted');
+    const recovered = createThenBindAtStart(
+      createSessionArgs(workspace, 'faulted-session'),
+      env,
+      {
+        ...env,
+        OPL_TEST_CAPABILITY_RECONCILIATION_FAIL_AFTER_SCOPE: '1',
+      },
+    ).attempt;
+    assert.equal(recovered.workspace_locator.package_use_binding.freshness_mode, 'offline_lkg');
+    assert.equal(
+      recovered.workspace_locator.package_use_binding.reconciliation_issue.failure_code,
+      'test_capability_reconciliation_interrupted',
+    );
     assert.match(fs.readFileSync(helper, 'utf8'), /0\.1\.0/);
     const lockIndex = JSON.parse(fs.readFileSync(path.join(env.OPL_STATE_DIR, 'agent-package-locks.json'), 'utf8'));
     assert.equal(lockIndex.packages.find((entry: any) => entry.package_id === 'mas-scholar-skills').package_version, '0.1.0');
     const attempts = runCli([
       'family-runtime', 'attempt', 'list', '--domain', 'medautoscience', '--full',
     ], env).family_runtime_stage_attempts;
-    assert.equal(attempts.summary.total, 1);
-    assert.equal(attempts.attempts[0].stage_attempt_id, baselineAttempt.stage_attempt_id);
+    assert.equal(attempts.summary.total, 2);
+    assert.ok(attempts.attempts.some((entry: any) => entry.stage_attempt_id === baselineAttempt.stage_attempt_id));
   } finally {
-    fs.rmSync(root, { recursive: true, force: true });
+    removeFixtureTree(root);
   }
 });

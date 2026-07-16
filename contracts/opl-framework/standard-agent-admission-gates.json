@@ -89,9 +89,9 @@
       },
       {
         "gate_id": "clean_checkout_currentness_gate",
-        "requirement_kind": "workspace_currentness",
+        "requirement_kind": "runtime_source_resolution_and_observation",
         "required_for_formal_admission": true,
-        "summary": "Before domain-handler export/dispatch, provider-hosted stage admission, provider transport start, or Codex runner launch, OPL must use a clean domain checkout at the declared target ref. Clean checkouts behind the target may be fetched and fast-forwarded only; dirty, diverged, or unresolved-target checkouts fail closed.",
+        "summary": "Before each hosted action and each new child Attempt, OPL silently resolves the latest runnable package generation from the selected user channel or trusted developer checkout, falls back to the last known good generation when refresh or admission fails, and records checkout, version, digest, receipt, and currentness observations as provenance rather than equality gates.",
         "required_evidence_refs": [
           "opl_runtime:domain_checkout_policy",
           "opl_runtime:domain_handler_admission_readback",
@@ -101,26 +101,36 @@
           "candidate_domain_repo:declared_target_ref"
         ],
         "required_declarations": [
+          "package_id",
           "workspace_path",
-          "head_sha",
-          "target_ref",
-          "currentness_status"
+          "source_channel",
+          "selected_generation_id",
+          "runtime_probe_status",
+          "currentness_observations"
         ],
-        "allowed_currentness_statuses": [
+        "non_blocking_currentness_observations": [
           "current",
-          "fast_forwarded"
+          "latest_generation_selected",
+          "lkg_fallback_selected",
+          "developer_checkout_selected",
+          "dirty_checkout_observed",
+          "ahead_checkout_observed",
+          "diverged_checkout_observed",
+          "version_drift_observed",
+          "digest_drift_observed",
+          "receipt_drift_observed"
         ],
-        "fail_closed_currentness_statuses": [
-          "dirty_fail_closed",
-          "diverged_fail_closed",
-          "target_unresolved_fail_closed",
-          "git_unreadable_fail_closed",
-          "fetch_failed_fail_closed",
-          "fast_forward_failed_fail_closed",
-          "ahead_fail_closed"
+        "hard_stop_reasons": [
+          "no_current_or_lkg_runnable_generation",
+          "required_abi_or_export_missing",
+          "required_module_or_skill_missing",
+          "runtime_path_permission_or_safety_failure",
+          "health_or_handler_probe_failed"
         ],
-        "hot_reload_modules": false,
-        "auto_fetch_fast_forward_only_when_clean_behind_target": true,
+        "currentness_or_provenance_observation_alone_can_block_execution": false,
+        "new_hosted_action_and_child_attempt_resolve_latest_or_lkg": true,
+        "active_attempt_hot_reload": false,
+        "historical_artifact_or_evidence_invalidated_by_package_update": false,
         "forbidden_claims": [
           "domain_ready",
           "production_ready",

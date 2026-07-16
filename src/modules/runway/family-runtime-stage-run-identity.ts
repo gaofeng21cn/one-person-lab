@@ -76,13 +76,23 @@ function optionalText(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
+function optionalSha256(value: unknown, field: string) {
+  return value === null || value === undefined || value === ''
+    ? null
+    : canonicalStageRunSha256(value, field);
+}
+
 function stringList(values: unknown) {
   return Array.isArray(values)
     ? [...new Set(values.filter((value): value is string => typeof value === 'string' && Boolean(value.trim())).map((value) => value.trim()))]
     : [];
 }
 
-function artifactBindings(refs: unknown, hashes: unknown, receiptRefs: unknown) {
+export function canonicalStageRunInputArtifacts(
+  refs: unknown,
+  hashes: unknown,
+  receiptRefs: unknown,
+) {
   const artifactRefs = Array.isArray(refs) ? refs : [];
   const artifactHashes = Array.isArray(hashes) ? hashes : [];
   const artifactReceiptRefs = Array.isArray(receiptRefs) ? receiptRefs : [];
@@ -147,29 +157,15 @@ function packageIdentity(value: unknown, field: string) {
       { failure_code: 'stage_run_package_identity_missing', field },
     );
   }
-  if (typeof value.content_digest !== 'string' || !value.content_digest.trim()) {
-    throw new FrameworkContractError(
-      'contract_shape_invalid',
-      'StageRun immutable package closure requires a content digest for every package.',
-      {
-        failure_code: field.endsWith('.root_package')
-          ? 'stage_run_root_package_content_digest_missing'
-          : 'stage_run_provider_package_content_digest_missing',
-        field: `${field}.content_digest`,
-      },
-    );
-  }
   return definedRecord([
     ['package_id', text(value.package_id, `${field}.package_id`)],
-    ['package_version', text(value.package_version, `${field}.package_version`)],
+    ['package_version', optionalText(value.package_version)],
     ['owner_language_version', isRecord(value.owner_language_version) ? value.owner_language_version : null],
-    ['package_lock_ref', text(value.package_lock_ref, `${field}.package_lock_ref`)],
-    ['manifest_sha256', canonicalStageRunSha256(value.manifest_sha256, `${field}.manifest_sha256`)],
-    ['content_digest', canonicalStageRunSha256(value.content_digest, `${field}.content_digest`)],
+    ['package_lock_ref', optionalText(value.package_lock_ref)],
+    ['manifest_sha256', optionalSha256(value.manifest_sha256, `${field}.manifest_sha256`)],
+    ['content_digest', optionalSha256(value.content_digest, `${field}.content_digest`)],
     ['source_artifact_ref', optionalText(value.source_artifact_ref)],
-    ['artifact_digest', value.artifact_digest === null || value.artifact_digest === undefined
-      ? null
-      : canonicalStageRunSha256(value.artifact_digest, `${field}.artifact_digest`)],
+    ['artifact_digest', optionalSha256(value.artifact_digest, `${field}.artifact_digest`)],
   ]);
 }
 
@@ -192,7 +188,7 @@ export function immutablePackageClosureFromWorkspaceLocator(
     ['version', 'opl-stage-run-package-closure-identity.v1'],
     ['root_package', rootPackage],
     ['provider_packages', providerPackages],
-    ['dependency_closure_digest', canonicalStageRunSha256(
+    ['dependency_closure_digest', optionalSha256(
       binding.dependency_closure_digest,
       'package_use_binding.dependency_closure_digest',
     )],
@@ -324,7 +320,7 @@ export function buildStageRunImmutableSpec(input: {
     input.binding.stage_prompt_ref,
     ...input.binding.lineage_refs,
   ]);
-  const inputArtifacts = artifactBindings(
+  const inputArtifacts = canonicalStageRunInputArtifacts(
     input.artifactRefs,
     input.artifactHashes,
     input.artifactIdentityReceiptRefs,
@@ -389,6 +385,37 @@ export function stageRunSpecSha256(spec: StageRunImmutableSpec) {
   return crypto.createHash('sha256').update(canonicalJsonText(spec)).digest('hex');
 }
 
+export function canonicalStageAttemptDeclaredStageIds(value: unknown) {
+  const declaredStageIds = stringList(value).sort();
+  if (declaredStageIds.length === 0) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Stage Attempt execution content binding requires at least one declared Stage id.',
+      { failure_code: 'stage_attempt_execution_declared_stages_missing' },
+    );
+  }
+  return declaredStageIds;
+}
+
+export function stageAttemptExecutionContentBindingSha256(input: {
+  parent_stage_run_spec_sha256: string;
+  use_boundary_id: string;
+  spec_sha256: string;
+  spec: StageRunImmutableSpec;
+  declared_stage_ids: string[];
+}) {
+  return crypto.createHash('sha256').update(canonicalJsonText({
+    parent_stage_run_spec_sha256: text(
+      input.parent_stage_run_spec_sha256,
+      'parent_stage_run_spec_sha256',
+    ),
+    use_boundary_id: text(input.use_boundary_id, 'use_boundary_id'),
+    spec_sha256: text(input.spec_sha256, 'spec_sha256'),
+    spec: input.spec,
+    declared_stage_ids: canonicalStageAttemptDeclaredStageIds(input.declared_stage_ids),
+  })).digest('hex');
+}
+
 export function validateStageRunImmutableSpecEnvelope(input: {
   spec: StageRunImmutableSpec;
   domainId: FamilyRuntimeDomainId;
@@ -415,7 +442,7 @@ export function validateStageRunImmutableSpecEnvelope(input: {
   stageAttemptExecutorPolicy?: Record<string, unknown> | null;
   parentRouteDecisionRef?: string | null;
 }) {
-  const inputArtifacts = artifactBindings(
+  const inputArtifacts = canonicalStageRunInputArtifacts(
     input.artifactRefs,
     input.artifactHashes,
     input.artifactIdentityReceiptRefs,
@@ -471,6 +498,7 @@ export function revalidateStageRunImmutableSpecContent(input: {
   spec: StageRunImmutableSpec;
   domainPackRoot: string;
   workspaceLocator: Record<string, unknown>;
+  skipManagedPackBytes?: boolean;
 }) {
   const required = [
     ['stage_manifest', input.spec.stage_manifest.ref],
@@ -538,6 +566,7 @@ export function revalidateStageRunImmutableSpecContent(input: {
     workspaceRoot: optionalText(input.workspaceLocator.workspace_root)
       ?? optionalText(input.workspaceLocator.repo_root),
     bindings: input.spec.content_bindings,
+    skipManagedPackBytes: input.skipManagedPackBytes,
   });
   return input.spec;
 }
