@@ -92,6 +92,12 @@ function commandForAction(actionId: string | null) {
   return null;
 }
 
+function workerStopCompletedForSupervisorRestart(stop: TemporalWorkerLifecycleStop | null) {
+  return stop !== null
+    && ['not_running', 'stopped', 'force_stopped'].includes(stop.stop_status)
+    && stop.orphan_stop_incomplete_pids.length === 0;
+}
+
 function recordValue(value: unknown) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null;
 }
@@ -208,6 +214,7 @@ function workerLifecycleReceipt(input: {
   restartGuard?: WorkerRestartGuard | null;
   restartReason?: 'duplicate_worker' | 'worker_source_stale' | null;
   restartStrategy?: 'manual_stop_then_start' | 'supervisor_keepalive_stop_only' | null;
+  restartReadinessPending?: boolean;
   supervisorState?: ProviderWorkerSupervisorState | null;
   error?: unknown;
 }) {
@@ -225,6 +232,7 @@ function workerLifecycleReceipt(input: {
     restart_guard: input.restartGuard ?? null,
     restart_reason: input.restartReason ?? null,
     restart_strategy: input.restartStrategy ?? null,
+    restart_readiness_pending: input.restartReadinessPending ?? false,
     supervisor_state: input.supervisorState ?? null,
     blocker_ids: input.restartGuard?.blocker_ids ?? [],
     error: input.error
@@ -322,8 +330,11 @@ export async function repairTemporalWorkerLifecycleForProvider(
     const after = start && 'status' in start && start.status
       ? start.status as TemporalWorkerLifecycle
       : await inspectTemporalWorkerLifecycle(paths);
+    const restartReadinessPending = restartStrategy === 'supervisor_keepalive_stop_only'
+      && workerStopCompletedForSupervisorRestart(stop)
+      && after.lifecycle_status === 'worker_not_ready';
     return workerLifecycleReceipt({
-      status: after.lifecycle_status === 'ready' ? 'executed' : 'blocked',
+      status: after.lifecycle_status === 'ready' || restartReadinessPending ? 'executed' : 'blocked',
       trigger: input.trigger,
       before,
       after,
@@ -333,6 +344,7 @@ export async function repairTemporalWorkerLifecycleForProvider(
       restartGuard,
       restartReason,
       restartStrategy,
+      restartReadinessPending,
       supervisorState,
     });
   } catch (error) {

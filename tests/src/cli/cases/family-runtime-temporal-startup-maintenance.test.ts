@@ -343,7 +343,10 @@ test('Temporal startup maintenance safely restarts a stale Worker before install
     repairWorker: (async () => {
       order.push('worker_restart');
       workerRestarted = true;
-      return { repair_status: 'executed' } as never;
+      return {
+        repair_status: 'executed',
+        restart_readiness_pending: true,
+      } as never;
     }) as never,
     runScheduler: (async (
       _db: unknown,
@@ -369,6 +372,16 @@ test('Temporal startup maintenance safely restarts a stale Worker before install
   assert.equal(result.steps.provider_worker_supervisor.action, 'restart');
   assert.equal(result.steps.provider_worker_supervisor.ready, true);
   assert.equal(result.steps.temporal_scheduler_cadence.ready, true);
+  assert.deepEqual((result.steps.provider_worker_supervisor.after as {
+    readiness_wait?: unknown;
+  } | null)?.readiness_wait, {
+    status: 'ready',
+    timeout_ms: 1_000,
+    poll_interval_ms: 250,
+    elapsed_ms: 500,
+    inspection_count: 3,
+    poll_count: 2,
+  });
   assert.deepEqual(order, [
     'worker_status',
     'worker_runtime_status',
@@ -425,9 +438,60 @@ test('Temporal startup maintenance blocks after the bounded restart readiness ti
   assert.equal(result.failed_step, 'provider_worker_supervisor');
   assert.equal(result.steps.provider_worker_supervisor.action, 'restart');
   assert.equal(result.steps.provider_worker_supervisor.reason, 'worker_not_ready');
+  assert.deepEqual((result.steps.provider_worker_supervisor.after as {
+    readiness_wait?: unknown;
+  } | null)?.readiness_wait, {
+    status: 'timed_out',
+    timeout_ms: 500,
+    poll_interval_ms: 250,
+    elapsed_ms: 500,
+    inspection_count: 3,
+    poll_count: 2,
+  });
   assert.equal(result.steps.temporal_scheduler_cadence.status, 'skipped_dependency_not_ready');
   assert.equal(workerReadbackCount, 4);
   assert.deepEqual(sleeps, [250, 250]);
+  assert.equal(schedulerCallCount, 0);
+});
+
+test('Temporal startup maintenance does not wait or run Scheduler after a blocked Worker repair', async () => {
+  let workerRestarted = false;
+  let sleepCallCount = 0;
+  let schedulerCallCount = 0;
+  const result = await reconcileTemporalRuntimeStartupMaintenance({
+    platform: 'darwin',
+    env: { OPL_APP_HOST_KIND: 'desktop', OPL_APP_PROCESS_INSTANCE_ID: 'desktop-worker-restart-blocked' },
+    openRuntime: fakeRuntimeHandle,
+    inspectService: async () => serviceLifecycle({ ready: true }),
+    runServiceSupervisor: (async () => ({ status: 'already_ready', ready: true })) as never,
+    runWorkerSupervisor: (async () => workerSupervisorStatus(true)) as never,
+    inspectWorker: async () => workerRestarted
+      ? workerLifecycle(false, 'worker_not_ready')
+      : workerLifecycle(false, 'worker_source_stale'),
+    repairWorker: (async () => {
+      workerRestarted = true;
+      return {
+        repair_status: 'blocked',
+        blocker_ids: ['active_stage_attempts_present'],
+      } as never;
+    }) as never,
+    runScheduler: (async () => {
+      schedulerCallCount += 1;
+      return schedulerStatus(false);
+    }) as never,
+    workerReadinessTimeoutMs: 1_000,
+    sleep: async () => { sleepCallCount += 1; },
+  });
+
+  assert.equal(result.status, 'blocked');
+  assert.equal(result.failed_step, 'provider_worker_supervisor');
+  assert.equal(result.steps.provider_worker_supervisor.action, 'restart');
+  assert.equal(result.steps.provider_worker_supervisor.reason, 'worker_not_ready');
+  assert.equal((result.steps.provider_worker_supervisor.after as {
+    readiness_wait?: unknown;
+  } | null)?.readiness_wait, null);
+  assert.equal(result.steps.temporal_scheduler_cadence.status, 'skipped_dependency_not_ready');
+  assert.equal(sleepCallCount, 0);
   assert.equal(schedulerCallCount, 0);
 });
 

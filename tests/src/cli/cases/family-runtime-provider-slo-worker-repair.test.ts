@@ -150,6 +150,100 @@ test('family-runtime provider-slo restarts stale OPL managed Temporal worker bef
   }
 });
 
+test('family-runtime provider-slo records a successful supervisor restart while readiness is pending', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-provider-slo-worker-supervisor-restart-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  let db: DatabaseSync | null = null;
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    db = initializeQueueDbForCurrentStateDir();
+    let inspectCount = 0;
+    let stopCount = 0;
+    let startCount = 0;
+    const receipt = await maybeRepairTemporalWorkerForProviderSlo(familyRuntimePaths(), {
+      inspectTemporalWorkerLifecycle: async () => {
+        inspectCount += 1;
+        return inspectCount === 1
+          ? explicitDeveloperSupervisorStaleWorker()
+          : temporalWorkerStatus('worker_not_ready');
+      },
+      stopTemporalWorkerLifecycle: async () => {
+        stopCount += 1;
+        return {
+          surface_kind: 'temporal_worker_lifecycle_stop',
+          provider_kind: 'temporal',
+          stop_status: 'stopped',
+          stopped_pid: 12345,
+          stop_actions: [],
+          orphan_stopped_pids: [],
+          orphan_stop_incomplete_pids: [],
+          orphan_stop_actions: [],
+          before: explicitDeveloperSupervisorStaleWorker(),
+          status: temporalWorkerStatus('worker_not_ready'),
+        };
+      },
+      startTemporalWorkerLifecycle: async () => {
+        startCount += 1;
+        return temporalWorkerStartedLifecycle();
+      },
+      inspectProviderWorkerSupervisor: async (paths) => supervisorState(paths, true),
+    });
+
+    assert.equal(stopCount, 1);
+    assert.equal(startCount, 0);
+    assert.equal(receipt.repair_status, 'executed');
+    assert.equal(receipt.restart_strategy, 'supervisor_keepalive_stop_only');
+    assert.equal(receipt.restart_readiness_pending, true);
+    assert.equal(receipt.after?.lifecycle_status, 'worker_not_ready');
+  } finally {
+    db?.close();
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime provider-slo keeps an incomplete supervisor stop blocked', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-provider-slo-worker-supervisor-stop-blocked-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  let db: DatabaseSync | null = null;
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    db = initializeQueueDbForCurrentStateDir();
+    let inspectCount = 0;
+    const receipt = await maybeRepairTemporalWorkerForProviderSlo(familyRuntimePaths(), {
+      inspectTemporalWorkerLifecycle: async () => {
+        inspectCount += 1;
+        return inspectCount === 1
+          ? explicitDeveloperSupervisorStaleWorker()
+          : temporalWorkerStatus('worker_not_ready');
+      },
+      stopTemporalWorkerLifecycle: async () => ({
+        surface_kind: 'temporal_worker_lifecycle_stop',
+        provider_kind: 'temporal',
+        stop_status: 'stop_incomplete',
+        stopped_pid: 12346,
+        stop_actions: [],
+        orphan_stopped_pids: [],
+        orphan_stop_incomplete_pids: [12346],
+        orphan_stop_actions: [],
+        before: explicitDeveloperSupervisorStaleWorker(),
+        status: temporalWorkerStatus('worker_not_ready'),
+      }),
+      inspectProviderWorkerSupervisor: async (paths) => supervisorState(paths, true),
+    });
+
+    assert.equal(receipt.repair_status, 'blocked');
+    assert.equal(receipt.restart_strategy, 'supervisor_keepalive_stop_only');
+    assert.equal(receipt.restart_readiness_pending, false);
+  } finally {
+    db?.close();
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime provider-slo blocks stale worker restart while active stage attempt exists', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-provider-slo-worker-active-attempt-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
