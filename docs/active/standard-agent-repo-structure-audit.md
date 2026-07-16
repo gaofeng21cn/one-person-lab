@@ -47,21 +47,22 @@ fresh readback 摘要：
 
 ## OMA 生成流程检查
 
-OMA 的 `build-agent-baseline` 当前走正确 owner split：
+OMA 的公开入口现在只提交 `engineer-agent` 意图，实际生成链路由 OPL Foundry Kernel 编排：
 
-1. 调用 `opl agents scaffold --target-dir ... --domain-id ... --domain-label ... --json` 生成标准目录。
-2. 写入最小领域 pack / morphology fixture，并通过 stage-decomposition materializer 写入目标 agent 的 stage / prompt / skill / quality / knowledge refs。
-3. 调用 `opl agents scaffold --validate <targetAgentDir> --json` 做 scaffold validation。
-4. 调用 `opl agents interfaces --repo-dir <targetAgentDir> --json` 生成统一接口。
-5. 进入 Agent Lab suite、independent reviewer、delivery gate、owner receipt / typed blocker / developer work order 收口。
+1. OPL 将 create/takeover/improve 目标、exact target version、验收条件、source refs 与约束固化为 `DesignRequest`。
+2. OPL 通过内部 `design` StageRun 调用 OMA；OMA 返回完整 `AgentBlueprint` 与内嵌 `EvalSpec`，不接触 repo path、worktree、命令或保护测试正文。
+3. OPL Pack 以 blueprint 做确定性物化和 scaffold validation；Runway/Evaluation Runtime 使用冻结测试计划与独立 evaluator 生成 `EvidenceBundle`。
+4. 失败时 OPL 通过内部 `diagnose` StageRun 调用 OMA；OMA 返回绑定 exact blueprint/evidence digest 的 `EvolutionProposal` 和完整 `next_blueprint`。
+5. OPL 在 generation budget 内重新物化和评测，通过后写入不可变 `AgentVersion`，再按风险进入 Owner gate、canary、ActivationPointer CAS 或 `qualify_only` 终态。
 
-判断：OMA 没有另起私有 target repo 目录标准。它以 OPL scaffold 为目录来源，以 OMA stage-decomposition 为领域语义来源，以 OPL validation / interfaces / Agent Lab 为机器消费和收口来源，符合标准方向。
+判断：目录形态、文件物化、评测、证据、版本、canary、activation 与 rollback 都属于 OPL；OMA 只拥有 Agent 工程语义。公开 scaffold 命令和 OMA 本地执行代理已经退役，不存在第二套 target repo 标准或生命周期状态。
 
-当前优化点：
+持续防回归点：
 
-- OMA 文档需要明确：生成 target agent 时，目录标准属于 OPL scaffold；OMA 只提供 domain semantics、stage decomposition、candidate package 和 owner-gated closeout refs。
-- OMA 自身 pack 的 Stage Pack v2 advisory 应逐步折回，尤其是 `stage_contract.requires/ensures`、tool affordance boundary、receipt schema refs、authority function refs、L4/L5 entry gate 和 stage completion policy。
-- `writeMinimalAgentDomainPack` 写入的 README 只做人读索引，不能被理解为 semantic pack source；真实 semantic source 必须来自非 README pack files 和 stage-decomposition closeout。
+- OMA 保持一个公开 action、两个内部 provider operation、八个语义 Stage，并拒绝协议中的物理路径、执行字段、patch、版本或晋级状态。
+- Pack scaffold 是 OPL 内部 API；相同 blueprint 必须生成相同 bytes，并拒绝 path traversal、symlink escape、active version 原地修改与 forbidden write。
+- 正式 verdict 必须来自独立 evaluator/reviewer；OMA 只能看到聚合 evidence，不能删除、修改或读取保护测试。
+- 新 target Agent 只输出 observation/improvement signal，不安装自进化 daemon，也不能修改自身版本、评测、权限或 active pointer。
 
 ## 迁移顺序
 

@@ -482,7 +482,7 @@ test('help returns machine-readable command discovery without retired entries', 
   assert.equal(output.help.command, null);
   assert.equal(output.help.usage, 'opl [command ...|request...] [args]');
   assert.ok(
-    ['charter status', 'atlas inspect', 'stagecraft interfaces', 'runway doctor', 'ledger validate', 'console status', 'foundry-lab inspect', 'connect sync-skills', 'agents foundry status'].every((command) =>
+    ['charter status', 'atlas inspect', 'stagecraft interfaces', 'runway doctor', 'ledger validate', 'console status', 'foundry status', 'foundry versions', 'connect sync-skills'].every((command) =>
       output.help.commands.some((entry: { command: string }) => entry.command === command),
     ),
   );

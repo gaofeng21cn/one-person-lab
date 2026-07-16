@@ -12,10 +12,10 @@ import {
 import {
   frameworkStatusFromAttentionCounts,
   splitOperatorAttentionCounts,
-} from '../../../../src/modules/foundry-lab/framework-readiness-attention-counts.ts';
+} from '../../../../src/modules/console/framework-readiness-attention-counts.ts';
 import {
   domainBlockedTypedBlockerAttention,
-} from '../../../../src/modules/foundry-lab/framework-readiness-typed-blocker-attention.ts';
+} from '../../../../src/modules/console/framework-readiness-typed-blocker-attention.ts';
 import { createFamilyWorkspaceFixture } from './runtime-app-operator-drilldown-helpers.ts';
 
 test('framework readiness status treats blocked refs-only attention separately from operator-actionable work', () => {

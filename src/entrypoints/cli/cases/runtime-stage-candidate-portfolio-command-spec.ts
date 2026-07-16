@@ -1,7 +1,7 @@
 import {
   summarizeStageCandidatePortfolio,
   validateStageCandidatePortfolio,
-} from '../../../modules/foundry-lab/stage-candidate-portfolio.ts';
+} from '../../../modules/console/index.ts';
 import {
   assertSinglePayloadSource,
   buildUsageError,

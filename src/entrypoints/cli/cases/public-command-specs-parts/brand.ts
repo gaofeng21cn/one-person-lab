@@ -36,7 +36,6 @@ export function buildBrandCommandSpecs(
     ...buildBrandModuleSurfaceSpecs(getContracts, 'runway', 'brand-runway'),
     ...buildBrandModuleSurfaceSpecs(getContracts, 'ledger', 'brand-ledger'),
     ...buildBrandModuleSurfaceSpecs(getContracts, 'console', 'brand-console'),
-    ...buildBrandModuleSurfaceSpecs(getContracts, 'foundry-lab', 'brand-foundry-lab'),
     ...buildBrandModuleSurfaceSpecs(getContracts, 'connect', 'brand-connect'),
   };
   const ledgerBundleCommandSpecs = buildLedgerBundleCommandSpecs();

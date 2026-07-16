@@ -100,3 +100,25 @@ export type {
   ArtifactProjectionMaterializationHooks,
   ArtifactProjectionMaterializationRequest,
 } from './artifact-projection-materialization.ts';
+export * from './agent-profile-spine.ts';
+export * from './agent-scaffold-materialization.ts';
+export * from './profile-capability-plan.ts';
+export * from './profile-selection-intent.ts';
+export * from './public/foundry-agent-series-policy.ts';
+export * from './public/source-derived-agent-design-abi.ts';
+export * from './reference-build-proof.ts';
+export * from './source-derived-agent-design-abi.ts';
+export * from './standard-agent-capability-map.ts';
+export * from './standard-agent-conformance-profile.ts';
+export * from './standard-agent-evaluation-manifest.ts';
+export * from './standard-agent-principles.ts';
+export * from './standard-domain-agent-conformance-utils.ts';
+export * from './standard-domain-agent-scaffold-constants.ts';
+export * from './standard-domain-agent-scaffold-policy.ts';
+export * from './standard-domain-agent-scaffold-stage-run-canary.ts';
+export * from './standard-domain-agent-scaffold-template.ts';
+export * from './standard-domain-agent-scaffold-validation.ts';
+export * from './standard-domain-agent-scaffold.ts';
+export * from './standard-domain-agent-stage-operating-principles.ts';
+export * from './standard-domain-agent-stage-pack-v2.ts';
+export * from './standard-domain-agent-stage-quality-route-conformance.ts';

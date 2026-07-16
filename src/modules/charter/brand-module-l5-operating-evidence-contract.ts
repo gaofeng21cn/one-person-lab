@@ -21,7 +21,7 @@ const BRAND_MODULE_IDS = [
   'runway',
   'ledger',
   'console',
-  'foundry-lab',
+  'foundry',
   'connect',
 ] as const satisfies readonly BrandModuleId[];
 

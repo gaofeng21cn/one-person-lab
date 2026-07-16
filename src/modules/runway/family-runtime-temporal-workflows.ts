@@ -65,6 +65,13 @@ import {
 } from './family-runtime-temporal-history-summary.ts';
 import { isStageRunQualityAttempt, requireGenericResumeAllowed, requireStageQualityAttemptBoundary, requireStageRunAttemptContentBindingVersion } from './family-runtime-stage-quality-attempt-boundary.ts';
 
+export {
+  FoundryRunWorkflow,
+  foundryCancelUpdate,
+  foundryOwnerDecisionUpdate,
+  foundryRunQuery,
+} from './foundry-temporal-workflow.ts';
+
 type StageAttemptActivities = {
   codexStageActivity(input: TemporalStageAttemptWorkflowInput): Promise<Record<string, unknown>>;
   domainHandlerDispatchActivity(input: TemporalStageAttemptWorkflowInput): Promise<Record<string, unknown>>;

@@ -5,8 +5,7 @@ export type BuildViewModelSectionsInput = {
   developerMode: JsonRecord;
   modules: JsonRecord;
   settingsControlCenter: JsonRecord;
-  agentLabFeedbackSelfEvolution?: JsonRecord;
-  feedbackOps?: JsonRecord;
+  foundry?: JsonRecord;
 };
 
 function asRecord(value: unknown): JsonRecord {
@@ -61,17 +60,10 @@ export function buildSections(input: BuildViewModelSectionsInput) {
       lazy: false,
     },
     {
-      section_id: 'agent_lab_feedback',
-      label: 'Agent Lab feedback',
-      state: asString(asRecord(input.agentLabFeedbackSelfEvolution).status) ?? 'unknown',
-      source_ref: 'app_state.operator.workbench.agent_lab_feedback_self_evolution',
-      lazy: false,
-    },
-    {
-      section_id: 'feedbackops',
-      label: 'FeedbackOps',
-      state: asString(asRecord(input.feedbackOps).status) ?? 'unknown',
-      source_ref: 'app_state.operator.workbench.feedbackops',
+      section_id: 'foundry_runs',
+      label: 'Foundry runs',
+      state: asString(asRecord(input.foundry).status) ?? 'unknown',
+      source_ref: 'app_state.foundry',
       lazy: false,
     },
     {

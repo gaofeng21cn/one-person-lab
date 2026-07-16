@@ -1,45 +1,38 @@
 ---
 name: opl-foundry-agent-improver
-description: Use when reviewing OPL Foundry Lab Agent/Skill failure analysis, work-order review, conformance or eval result interpretation, skill rewrite planning, scorecards, promotion/hold/rollback briefing, and operational confidence for an agent improvement candidate.
+description: Interpret OPL FoundryRun, EvidenceBundle, qualification, risk, Owner-gate, canary, activation, and rollback evidence. Use when an operator needs an evidence-bound failure classification or next route for an Agent create, takeover, or improve run.
 ---
 
 # OPL Foundry Agent Improver
 
 ## Boundary
 
-Treat Foundry Lab as the owner of harnesses, scorecards, work-order envelopes, patch refs, rollback refs, promotion candidates, and receipt refs. Use this skill only for AI analysis of failure patterns, operational confidence, and the smallest useful Skill or prompt rewrite proposal.
+Treat OPL Foundry Kernel as the sole owner of Run state, materialization, evaluation, evidence, versions, canary, activation, and rollback. Treat OMA as the owner of `AgentBlueprint` / `EvalSpec` semantics and `EvolutionProposal` diagnosis.
 
-Do not write target domain truth, owner receipts, typed blockers, quality verdicts, artifact authority, readiness claims, runtime queues, or provider state. A scorecard pass can support a promotion briefing, but it is not owner acceptance or domain ready.
-
-## AI-first / Contract-light Semantics
-
-- Use Foundry contracts and modules only for work-order identity, harness refs, scorecard refs, patch refs, rollback refs, receipts, recovery, and verification.
-- Keep elastic improvement judgment in this Skill: diagnose failure class, decide whether the prompt or contract is wrong, and propose the smallest behavior-changing rewrite.
-- If the packet lacks the decisive ref, hold or route back instead of encoding agent-improvement judgment in a deterministic module.
+Use this Skill only to interpret existing Foundry evidence and recommend the next authorized route. Do not create or mutate protocol objects, reveal protected tests, write target-domain truth, change a version or activation pointer, sign an Owner decision, or claim readiness from a scaffold, provider completion, or isolated test pass.
 
 ## Review Flow
 
-1. Read the work-order envelope, harness output, scorecard, patch refs, receipt refs, and source Skill or prompt.
-2. State the tested objective and the exact failed behavior before proposing changes.
-3. Classify the failure as one or more of:
-   - `contract_defect`: harness, scorecard, envelope, expected output, or conformance rule is wrong or underspecified.
-   - `skill_prompt_defect`: the Skill, prompt, rubric, workflow, or examples guide the agent to the wrong behavior.
-   - `source_boundary_defect`: source material, authority boundary, allowed write set, or owner route is missing, stale, or outside the candidate's authority.
-4. Propose the minimal rewrite that changes the agent's future behavior. Prefer deleting misleading instructions, tightening a boundary, or adding one concrete decision rule over adding broad process.
-5. Bind every recommendation to refs already present in the Foundry packet. If the packet lacks the needed ref, report the missing ref instead of inventing a result.
+1. Bind the review to exact `run_id`, revision, target identity, target version ref, blueprint digest, candidate digest, evidence digest, and frozen test-plan digest.
+2. Confirm the evaluator/reviewer is independent from the OMA design attempt and that baseline/candidate used the same frozen plan.
+3. Classify the current condition:
+   - `platform_transient`: retry the failed activity within the platform retry budget; do not consume an evolution generation.
+   - `semantic_failure`: route the immutable `EvidenceBundle` to OMA `diagnose` for an `EvolutionProposal`.
+   - `evaluation_integrity_failure`: quarantine when tests were removed, protected coverage was reduced, a gate was relaxed, evidence is stale, or provenance/identity is invalid.
+   - `owner_gate_required`: preserve the current state and request the exact revision-bound Owner decision required by the risk tier.
+   - `canary_regression`: preserve the prior active pointer and use the recorded rollback outcome; do not reinterpret the failed canary as qualification.
+   - `terminal_no_improvement`: report budget exhaustion or consecutive no-improvement termination without inventing another generation.
+4. Verify the recommended route is one of retry, OMA diagnosis, quarantine, Owner approve/reject, qualify-only closeout, canary, activation, cancel, or exact-version rollback.
+5. Separate structural evidence, qualification, active adoption, target-domain acceptance, and production readiness in the conclusion.
 
-## Legacy Coverage
-
-This improver covers the retired `opl-foundry-promotion-reviewer` entry. Promotion, hold, and rollback recommendations stay tied to Foundry work-order evidence, scorecards, rollback refs, and owner routes.
-
-## Output Shape
+## Output
 
 Return:
 
-- failure class and evidence refs;
-- root cause in one or two sentences;
-- minimal Skill or prompt rewrite plan;
-- verification to rerun in Foundry Lab;
-- promotion, rollback, or hold recommendation with no-authority caveat.
+- exact identities and immutable evidence refs used;
+- failure class and concise root cause;
+- next authorized route and expected revision when applicable;
+- risk tier, Owner gate, canary, and rollback implications;
+- missing evidence or authority that prevents a stronger claim.
 
-For promotion briefs, say what Foundry evidence supports operational confidence, what rollback evidence exists, and what still requires the real owner. For rollback briefs, name the failing rewrite, affected behavior, and the previous known-good ref if present.
+Never restate protected test bodies or translate a route recommendation into a repo path, command, patch, queue, lease, attempt mutation, or activation write.

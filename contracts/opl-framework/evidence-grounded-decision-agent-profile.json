@@ -121,7 +121,7 @@
     "source_readback_refs": [
       "src/modules/pack/evidence-grounded-decision-agent-profile.ts",
       "src/modules/atlas/evidence-grounded-profile-catalog.ts",
-      "src/modules/foundry-lab/agent-profile-spine.ts",
+      "src/modules/foundry/agent-profile-spine.ts",
       "opl profiles inspect evidence_grounded_decision_agent_profile.v1 --json",
       "opl foundry evidence-profile inspect --json"
     ]
@@ -172,7 +172,7 @@
     {
       "object_name": "IndependentReviewReceipt",
       "object_id": "independent_review_receipt",
-      "owner_module": "foundry-lab",
+      "owner_module": "foundry",
       "role": "Evaluation or independent review receipt ref for promotion and regression review."
     },
     {
@@ -345,8 +345,8 @@
       "owns": "drilldown_projection"
     },
     {
-      "module_id": "foundry-lab",
-      "brand_module": "OPL Foundry Lab",
+      "module_id": "foundry",
+      "brand_module": "OPL Foundry Kernel",
       "owns": "evaluation_and_promotion"
     },
     {

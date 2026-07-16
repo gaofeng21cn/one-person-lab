@@ -9,7 +9,7 @@ Machine boundary: 本文只记录当前清理目标、完成度和 blocker。机
 
 本轮按 Ponytail ultra 执行：删除优先，能回到 Node 标准库或既有 OPL primitive 就不保留私有实现。清理不能删掉 authority、currentness、replay、receipt、typed blocker、human gate、不可逆写保护或真实 active caller。
 
-主模块是 `OPL Runway`、`OPL Console`、`OPL Connect/CLI`、`OPL Ledger`。协同模块是 `Workspace`、`Pack`、`Stagecraft`、`Foundry Lab`。不触碰 AionUI upstream body，也不把 domain truth、quality verdict、artifact authority 或 owner acceptance 上收到 OPL。
+主模块是 `OPL Runway`、`OPL Console`、`OPL Connect/CLI`、`OPL Ledger`。协同模块是 `Workspace`、`Pack`、`Stagecraft`、`Foundry Kernel`。不触碰 AionUI upstream body，也不把 domain truth、quality verdict、artifact authority 或 owner acceptance 上收到 OPL。
 
 ## 当前净变化
 

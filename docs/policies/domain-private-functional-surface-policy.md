@@ -3,7 +3,7 @@
 Owner: `One Person Lab`
 Purpose: `domain_private_functional_surface_policy`
 State: `active_policy`
-Machine boundary: 本文是人读治理规则。机器口径以 `contracts/opl-framework/standard-domain-agent-skeleton-contract.json`、`opl agents scaffold`、`functional_privatization_audit` 和 repo-native tests 为准。
+Machine boundary: 本文是人读治理规则。机器口径以 `contracts/opl-framework/standard-domain-agent-skeleton-contract.json`、`OPL Pack buildStandardDomainAgentScaffold`、`functional_privatization_audit` 和 repo-native tests 为准。
 
 ## 结论
 

@@ -1,6 +1,9 @@
 import { fs, os, parseJsonText, path, runCli } from '../helpers.ts';
-import { compileStandardAgentStageManifest } from '../../../../src/modules/pack/index.ts';
-import { FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES } from '../../../../src/modules/foundry-lab/standard-domain-agent-scaffold-constants.ts';
+import {
+  buildStandardDomainAgentScaffold,
+  compileStandardAgentStageManifest,
+} from '../../../../src/modules/pack/index.ts';
+import { FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES } from '../../../../src/modules/pack/standard-domain-agent-scaffold-constants.ts';
 
 const OPL_DOMAIN_READONLY_AUTHORITY = {
   opl_can_write_domain_truth: false,
@@ -196,16 +199,11 @@ function syncStandardAgentConformanceProfile(repoDir: string) {
 
 export function buildReadyAgentRepo() {
   const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-conformance-'));
-  runCli([
-    'agents',
-    'scaffold',
-    '--target-dir',
+  buildStandardDomainAgentScaffold({
     targetDir,
-    '--domain-id',
-    'sample-brief-agent',
-    '--domain-label',
-    'Sample Brief Agent',
-  ]);
+    domainId: 'sample-brief-agent',
+    domainLabel: 'Sample Brief Agent',
+  });
 
   writeJson(path.join(targetDir, 'package.json'), {
     name: 'sample-brief-agent',
@@ -950,76 +948,6 @@ export function configureReadyRcaMorphology(repoDir: string) {
       active_generic_runtime_owner_allowed: false,
       active_generic_gateway_owner_allowed: false,
       active_generic_session_runtime_owner_allowed: false,
-    },
-  });
-}
-
-export function configureReadyMetaMorphology(repoDir: string) {
-  const stageControlPlane = setStagePlaneTarget(repoDir, 'opl-meta-agent', 'opl-meta-agent');
-  const baseStage = stageControlPlane.stages[0];
-  stageControlPlane.stages = [
-    {
-      stageId: 'intent-intake',
-      stageKind: 'intake',
-      title: 'Intent Intake',
-      summary: 'Normalize a target-agent request into a bounded OMA work order.',
-      goal: 'Produce work-order refs and route target authority to the target owner.',
-      defaultExecutor: true,
-    },
-    {
-      stageId: 'stage-decomposition',
-      stageKind: 'planning',
-      title: 'Stage Decomposition',
-      summary: 'Materialize a target stage-pack proposal without becoming a second OPL framework.',
-      goal: 'Produce proposal/materializer refs plus target-owner handoff refs.',
-    },
-    {
-      stageId: 'target-agent-takeover',
-      stageKind: 'domain_specific',
-      title: 'Target Agent Takeover',
-      summary: 'Execute a bounded target-agent takeover work order without owning the target domain.',
-      goal: 'Produce target-agent work-order output refs, no-forbidden-write proof, and target-owner handoff refs.',
-    },
-  ].map((stage) => stageFromBase(baseStage, { owner: 'opl-meta-agent', ...stage }));
-  const actionCatalogPath = contractPath(repoDir, 'action_catalog.json');
-  const actionCatalog = readJson(actionCatalogPath);
-  actionCatalog.actions[0].stage_route = {
-    entry_stage_ref: 'intent-intake',
-    required_stage_refs: [
-      'intent-intake',
-      'stage-decomposition',
-      'target-agent-takeover',
-    ],
-    optional_stage_refs: [],
-    terminal_stage_refs: ['target-agent-takeover'],
-    route_policy: 'ai_selected_progress_route',
-  };
-  writeJson(actionCatalogPath, actionCatalog);
-  syncStageManifestFromPlane(repoDir, stageControlPlane);
-  syncStandardAgentConformanceProfile(repoDir);
-
-  fs.mkdirSync(path.join(repoDir, 'runtime', 'authority_functions'), { recursive: true });
-  const privateSurfacePolicyPath = contractPath(repoDir, 'private_functional_surface_policy.json');
-  const privateSurfacePolicy = readJson(privateSurfacePolicyPath);
-  privateSurfacePolicy.forbidden_script_roles = [
-    'generic_runtime_owner',
-    'generic_registry_owner',
-    'app_shell_owner',
-    'agent_lab_execution_owner',
-    'promotion_gate_owner',
-    'target_domain_truth_writer',
-  ];
-  writeJson(privateSurfacePolicyPath, privateSurfacePolicy);
-  writeJson(path.join(repoDir, 'runtime', 'authority_functions', 'meta-agent-authority-functions.json'), {
-    script_morphology_policy: {
-      allowed_classes: [
-        'authority_function_implementation_ref',
-        'smoke_helper',
-        'fixture_or_proof_helper',
-        'developer_work_order_materializer',
-      ],
-      forbidden_roles: privateSurfacePolicy.forbidden_script_roles,
-      script_classifications: [],
     },
   });
 }

@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 
-import { buildAgentProfileConformance } from '../../../src/modules/foundry-lab/agent-profile-spine.ts';
+import { buildAgentProfileConformance } from '../../../src/modules/pack/agent-profile-spine.ts';
 import {
   makeConformantAgentFixture,
   makeSourceDerivedAgentFixture,

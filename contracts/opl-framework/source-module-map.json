@@ -117,15 +117,15 @@
       "owner_note": "Console owns App/operator projections, action catalog, status narration, drilldown, and human-facing management surfaces; it is not a private backend for Connect or a domain authority owner."
     },
     {
-      "module_id": "foundry-lab",
-      "brand_name": "OPL Foundry Lab",
-      "physical_root": "src/modules/foundry-lab",
-      "public_entrypoint": "src/modules/foundry-lab/index.ts",
+      "module_id": "foundry",
+      "brand_name": "OPL Foundry Kernel",
+      "physical_root": "src/modules/foundry",
+      "public_entrypoint": "src/modules/foundry/index.ts",
       "primary_source_globs": [
-        "src/modules/foundry-lab/**"
+        "src/modules/foundry/**"
       ],
       "shared_source_globs": [],
-      "owner_note": "Foundry Lab owns agent creation, conformance, evaluation, mechanism improvement, promotion, and rollback surfaces."
+      "owner_note": "Foundry is an internal, producer-neutral Kernel for FoundryRun state, semantic protocol validation, deterministic candidate assembly, evaluation coordination, immutable versions, activation CAS, and rollback; it is not a standalone product Actor or domain authority owner."
     },
     {
       "module_id": "connect",
@@ -155,7 +155,7 @@
         "runway",
         "ledger",
         "console",
-        "foundry-lab",
+        "foundry",
         "connect"
       ],
       "role": "CLI dispatcher for all module command families."
@@ -172,7 +172,7 @@
         "runway",
         "ledger",
         "console",
-        "foundry-lab",
+        "foundry",
         "connect"
       ],
       "role": "Shared public type barrel."

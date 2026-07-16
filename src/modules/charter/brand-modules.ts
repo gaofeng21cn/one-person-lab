@@ -39,7 +39,7 @@ const BRAND_MODULE_DOC_PATHS: Record<BrandModuleId, string> = {
   runway: 'docs/references/brand-modules/runway.md',
   ledger: 'docs/references/brand-modules/ledger.md',
   console: 'docs/references/brand-modules/console.md',
-  'foundry-lab': 'docs/references/brand-modules/foundry-lab.md',
+  'foundry': 'docs/references/brand-modules/foundry.md',
   connect: 'docs/references/brand-modules/connect.md',
 };
 

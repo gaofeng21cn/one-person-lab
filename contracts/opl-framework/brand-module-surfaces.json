@@ -13,6 +13,14 @@
     "validate",
     "doctor"
   ],
+  "foundry_control_operations": [
+    "status",
+    "approve",
+    "reject",
+    "cancel",
+    "versions",
+    "rollback"
+  ],
   "required_gates": [
     "object_model",
     "native_cli_family",
@@ -1616,97 +1624,115 @@
       "notes": "Console owns OPL-produced current_owner_delta default read models, capability execution view projections, agent operational card projections, ToolResultEnvelope projections, App/operator projections, and safe action descriptors. Console ordinary paths consume Pack-produced execution views, operational cards, and result envelopes; they do not consume raw MAS contract details, sign owner answers, own domain truth, or hold App release truth."
     },
     {
-      "module_id": "foundry-lab",
-      "brand_name": "OPL Foundry Lab",
-      "command_prefix": "foundry-lab",
-      "surface_kind_prefix": "opl_foundry_lab",
+      "module_id": "foundry",
+      "brand_name": "OPL Foundry Kernel",
+      "command_prefix": "foundry",
+      "surface_kind_prefix": "opl_foundry_kernel",
       "state": "L4_module_surface_baseline",
       "module_doc_ref": "human_doc:opl_brand_module_foundry_lab",
       "object_model": {
         "primary_objects": [
-          "agent_blueprint",
-          "developer_work_order",
-          "conformance_report",
-          "risk_tier_promotion",
-          "canary_evidence",
-          "target_agent_handoff"
+          "foundry_run",
+          "agent_version",
+          "qualification_record",
+          "evidence_bundle",
+          "activation_pointer",
+          "activation_transaction"
         ],
         "canonical_contract_refs": [
-          "contracts/opl-framework/agent-lab-contract.json",
+          "contracts/opl-framework/foundry-design-request.schema.json",
+          "contracts/opl-framework/foundry-agent-blueprint.schema.json",
+          "contracts/opl-framework/foundry-evidence-bundle.schema.json",
+          "contracts/opl-framework/foundry-evolution-proposal.schema.json",
           "contracts/opl-framework/foundry-agent-series-contract.json",
-          "contracts/opl-framework/standard-domain-agent-skeleton-contract.json",
-          "contracts/opl-framework/domain-pack-compiler-contract.json",
-          "contracts/opl-framework/guardrail-tier-policy.json"
+          "contracts/opl-framework/target-operating-architecture-contract.json"
         ],
         "read_model_refs": [
-          "opl foundry-lab status --json",
-          "opl foundry-lab inspect --json"
+          "opl foundry status --run-id <run_id> --json",
+          "opl foundry versions --target-agent-id <agent_id> --target-domain-id <domain_id> --json",
+          "opl brand-modules inspect --module foundry --json"
         ]
       },
       "native_cli_family": {
-        "status": "opl foundry-lab status --json",
-        "inspect": "opl foundry-lab inspect --json",
-        "interfaces": "opl foundry-lab interfaces --json",
-        "validate": "opl foundry-lab validate --json",
-        "doctor": "opl foundry-lab doctor --json",
-        "additional_commands": [
-          "opl foundry-lab blueprints --json",
-          "opl foundry-lab work-orders --json",
-          "opl foundry-lab conformance --json",
-          "opl foundry-lab promotions --json",
-          "opl agents scaffold --json",
-          "opl agents conformance --family-defaults --json",
-          "opl agents readiness --family-defaults --json"
-        ]
+        "control_commands": {
+          "status": "opl foundry status --run-id <run_id> --json",
+          "approve": "opl foundry approve --run-id <run_id> --expected-revision <n> --authority-receipt-ref <ref> --json",
+          "reject": "opl foundry reject --run-id <run_id> --expected-revision <n> --authority-receipt-ref <ref> --json",
+          "cancel": "opl foundry cancel --run-id <run_id> --expected-revision <n> --authority-receipt-ref <ref> --json",
+          "versions": "opl foundry versions --target-agent-id <agent_id> --target-domain-id <domain_id> --json",
+          "rollback": "opl foundry rollback --target-agent-id <agent_id> --target-domain-id <domain_id> --version-digest <sha256:...> --expected-revision <n> --authority-receipt-ref <ref> --json"
+        },
+        "additional_commands": []
       },
       "app_read_model": {
         "descriptors": [
           {
-            "action_id": "foundry_lab_status",
-            "command": "opl foundry-lab status --json",
+            "action_id": "foundry_run_status",
+            "command": "opl foundry status --run-id <run_id> --json",
             "mutation": false,
             "descriptor_only": true
           },
           {
-            "action_id": "foundry_lab_inspect",
-            "command": "opl foundry-lab inspect --json",
+            "action_id": "foundry_owner_approve",
+            "command": "opl foundry approve --run-id <run_id> --expected-revision <n> --authority-receipt-ref <ref> --json",
+            "mutation": true,
+            "descriptor_only": true
+          },
+          {
+            "action_id": "foundry_owner_reject",
+            "command": "opl foundry reject --run-id <run_id> --expected-revision <n> --authority-receipt-ref <ref> --json",
+            "mutation": true,
+            "descriptor_only": true
+          },
+          {
+            "action_id": "foundry_run_cancel",
+            "command": "opl foundry cancel --run-id <run_id> --expected-revision <n> --authority-receipt-ref <ref> --json",
+            "mutation": true,
+            "descriptor_only": true
+          },
+          {
+            "action_id": "foundry_version_history",
+            "command": "opl foundry versions --target-agent-id <agent_id> --target-domain-id <domain_id> --json",
             "mutation": false,
             "descriptor_only": true
           },
           {
-            "action_id": "foundry_lab_doctor",
-            "command": "opl foundry-lab doctor --json",
-            "mutation": false,
+            "action_id": "foundry_activation_rollback",
+            "command": "opl foundry rollback --target-agent-id <agent_id> --target-domain-id <domain_id> --version-digest <sha256:...> --expected-revision <n> --authority-receipt-ref <ref> --json",
+            "mutation": true,
             "descriptor_only": true
           }
         ],
         "projection_refs": [
-          "opl app state --profile full --json#developer_mode",
+          "opl app state --profile full --json#foundry",
           "opl brand-modules interfaces --json#app.descriptors.brand_modules_inspect"
         ]
       },
       "descriptor_surface": {
         "delegate_ids": [
-          "foundry_lab_surface_contract",
-          "foundry_lab_cli_family"
+          "foundry_kernel_surface_contract",
+          "foundry_control_cli_family"
         ],
         "descriptor_refs": [
-          "contracts/opl-framework/brand-module-surfaces.json#modules.foundry-lab",
-          "opl foundry-lab interfaces --json",
-          "contracts/opl-framework/agent-lab-contract.json",
+          "contracts/opl-framework/brand-module-surfaces.json#modules.foundry",
+          "opl brand-modules inspect --module foundry --json",
+          "contracts/opl-framework/foundry-design-request.schema.json",
+          "contracts/opl-framework/foundry-agent-blueprint.schema.json",
+          "contracts/opl-framework/foundry-evidence-bundle.schema.json",
+          "contracts/opl-framework/foundry-evolution-proposal.schema.json",
           "contracts/opl-framework/foundry-agent-series-contract.json",
-          "contracts/opl-framework/brand-module-registry.json#modules.foundry-lab"
+          "contracts/opl-framework/brand-module-registry.json#modules.foundry"
         ]
       },
       "validation": {
         "commands": [
-          "opl foundry-lab validate --json",
-          "opl foundry-lab doctor --json",
-          "opl contract validate --json"
+          "opl contract validate --json",
+          "npm run typecheck",
+          "scripts/verify.sh structure"
         ],
         "checks": [
           "module_surface_contract",
-          "native_cli_family",
+          "dedicated_foundry_control_cli_family",
           "app_read_model",
           "descriptor_surface",
           "validation_surface",
@@ -1714,17 +1740,17 @@
           "forbidden_claims"
         ],
         "required_refs": [
-          "contracts/opl-framework/brand-module-surfaces.json#modules.foundry-lab",
-          "contracts/opl-framework/brand-module-registry.json#modules.foundry-lab"
+          "contracts/opl-framework/brand-module-surfaces.json#modules.foundry",
+          "contracts/opl-framework/brand-module-registry.json#modules.foundry"
         ]
       },
       "doctor": {
         "checks": [
           "surface_contract_loaded",
           "registry_cross_reference",
-          "native_cli_family_present",
+          "dedicated_foundry_control_cli_family_present",
           "app_descriptor_present",
-          "validation_commands_present",
+          "contract_validation_present",
           "authority_boundary_false",
           "forbidden_claims_present"
         ],
@@ -1739,9 +1765,9 @@
       "status": {
         "completion_level": "L4_structural_baseline",
         "evidence_refs": [
-          "contracts/opl-framework/brand-module-surfaces.json#modules.foundry-lab",
-          "opl foundry-lab validate --json",
-          "opl foundry-lab doctor --json",
+          "contracts/opl-framework/brand-module-surfaces.json#modules.foundry",
+          "opl brand-modules inspect --module foundry --json",
+          "opl contract validate --json",
           "human_doc:opl_brand_module_maturity_against_workspace",
           "human_doc:opl_foundry_agent_target_operating_architecture",
           "human_doc:opl_status"
@@ -1774,7 +1800,7 @@
         "owner_receipt_signed_by_opl",
         "production_ready"
       ],
-      "notes": "Foundry Lab owns agent blueprint, conformance, work-order, canary, and promotion/rollback improvement surfaces; domain owner acceptance remains external."
+      "notes": "Foundry Kernel owns FoundryRun orchestration, deterministic materialization, evaluation, immutable versions, canary, activation CAS, and rollback. OMA owns design and diagnosis semantics; target Owner acceptance remains external."
     },
     {
       "module_id": "connect",

@@ -137,12 +137,12 @@ test('stage attempt closeout preserves OPL-selected action route and ignores for
     const attempt = createStageAttempt(db, {
       domainId: 'redcube',
       stageId: 'intent-intake',
-      actionId: 'build-agent-baseline',
+      actionId: 'render-visual-deliverable',
       providerKind: 'temporal',
       workspaceLocator: { workspace_root: '/tmp/redcube-runtime' },
       sourceFingerprint: 'sha256:selected-route',
       routeImpact: {
-        selected_action_id: 'build-agent-baseline',
+        selected_action_id: 'render-visual-deliverable',
         selected_stage_route: selectedRoute,
       },
     }).attempt;
@@ -151,7 +151,7 @@ test('stage attempt closeout preserves OPL-selected action route and ignores for
       stageAttemptId: attempt.stage_attempt_id,
       packet: closeoutPacket('receipt:selected-route'),
     }).attempt;
-    assert.equal(accepted.route_impact.selected_action_id, 'build-agent-baseline');
+    assert.equal(accepted.route_impact.selected_action_id, 'render-visual-deliverable');
     assert.deepEqual(accepted.route_impact.selected_stage_route, selectedRoute);
 
     const forged = ingestStageAttemptCloseout(db, {
@@ -166,7 +166,7 @@ test('stage attempt closeout preserves OPL-selected action route and ignores for
         },
       },
     }).attempt;
-    assert.equal(forged.route_impact.selected_action_id, 'build-agent-baseline');
+    assert.equal(forged.route_impact.selected_action_id, 'render-visual-deliverable');
     assert.deepEqual(forged.route_impact.selected_stage_route, selectedRoute);
     assert.equal(forged.route_impact.domain_progress, 'observed');
   } finally {

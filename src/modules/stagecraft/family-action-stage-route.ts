@@ -53,6 +53,10 @@ export function buildFamilyActionStageRouteParity(
       }
       continue;
     }
+    if (action.execution_binding.kind === 'foundry_binding') {
+      // The provider manifest owns the internal Foundry route graph.
+      continue;
+    }
     if (!action.stage_route) {
       issues.push(`${action.action_id}: stage-bound action is missing required stage_route`);
       continue;

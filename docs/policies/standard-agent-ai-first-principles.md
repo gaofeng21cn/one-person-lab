@@ -44,7 +44,7 @@ OPL 标准智能体采用 AI-first 原则包：AI 负责阶段内的开放式理
 - `runway`：provider-backed runtime、attempt admission、progress reconciliation、handoff gate 和 recovery repair。
 - `ledger`：refs-only evidence、receipt、typed blocker、artifact lineage、restore/provenance 和 read-model ledger。
 - `console`：operator cockpit，默认读 `current_owner_delta`、next action、blocker、workspace action 和 evidence drilldown。
-- `foundry-lab`：标准智能体 scaffold、conformance、canary、testing takeover、promotion 和 rollback。
+- `foundry`：标准智能体 scaffold、conformance、canary、testing takeover、promotion 和 rollback。
 - `connect`：CLI/MCP/OpenAI/AI SDK/Skill/plugin 等 generated/distributed interface 与 drift detection。
 
 ## Domain Adoption
@@ -53,8 +53,8 @@ OPL 标准智能体采用 AI-first 原则包：AI 负责阶段内的开放式理
 
 - MAS：把 OPL `domain_intake` 映射到 `01-study_intake` 和 `study_task_intake` surfaces；MAS 继续持有 study truth、source readiness、publication/artifact authority。
 - MAG：映射到 grant/request intake 与 grant authority surface；OPL 只消费 refs 和 generated entry。
-- RCA：映射到 RCA visual/work-order intake 与 visual-deliverable authority surface。
-- OMA：映射到 meta-agent work-order intake 与 foundry/test-takeover authority surface。
+- RCA：映射到 RCA visual/evidence intake 与 visual-deliverable authority surface。
+- OMA：映射到 `engineer-agent` 语义入口以及内部 `design|diagnose` provider operation；Foundry lifecycle authority 留在 OPL。
 - BookForge：映射到 book/project intake 与 manuscript/export authority surface。
 
 MAS ScholarSkills 是 capability pack，不是 domain intake owner。active professional modules 只由能力合同声明，不能通过 `intake` 或 `omics` 文案扩大成 active domain stage。

@@ -1,54 +1,43 @@
 ---
 name: opl-eval-harness-designer
-description: "Use when designing OPL Foundry Lab eval harnesses, scorecards, task cases, failure taxonomies, promotion/hold evidence, and candidate evaluation packets for agents, skills, prompts, or work orders without claiming owner acceptance or readiness."
+description: Design domain-neutral Foundry EvalSpec cases, gates, protected-test requirement categories, failure taxonomies, and EvidenceBundle expectations. Use when creating or reviewing evaluation semantics for an AgentBlueprint without taking over protected tests, execution, qualification, or Owner acceptance.
 ---
 
 # OPL Eval Harness Designer
 
-Use this skill to design a source-only Foundry Lab evaluation harness. The output should make agent or Skill behavior testable and reviewable; it does not promote the candidate by itself.
-
 ## Boundary
 
-- Treat Foundry Lab or the owning program as authority for harness execution, scorecards, promotion decisions, rollback, and receipt refs.
-- Use this skill only to design task cases, score criteria, failure taxonomy, evidence shape, and promotion/hold briefing inputs.
-- Do not write owner receipts, typed blockers, domain truth, artifact authority, runtime queues, readiness claims, release claims, production claims, or promotion decisions.
-- Do not treat harness pass, scorecard pass, candidate patch, or AI review as owner acceptance, domain readiness, runtime readiness, or release readiness.
+Keep three owners distinct:
+
+- OMA owns `EvalSpec` semantics inside an `AgentBlueprint`.
+- Target Owner owns protected test bodies, domain acceptance, permissions, and production adoption.
+- OPL Evaluation Runtime owns the frozen test plan, isolated execution, independent review, aggregation, and `EvidenceBundle`.
+
+Use this Skill to design observable cases, score gates, protected-test requirement categories, failure taxonomy, and evidence expectations. Do not reveal or synthesize protected test bodies, execute a suite, qualify a candidate, write a version/activation pointer, sign an Owner decision, or claim readiness.
 
 ## Workflow
 
-1. Identify evaluation target: agent, Skill, prompt, work-order envelope, tool route, or candidate patch.
-2. State the behavior under test as observable outcomes, not implementation preference.
-3. Build the smallest useful case set:
+1. Bind the design to target agent/domain identity, objective, acceptance criteria, non-goals, authority boundary, and blueprint behavior.
+2. State each behavior under test as an observable outcome, not an implementation preference.
+3. Build the smallest useful public case set:
    - `happy_path`: expected successful behavior;
-   - `boundary`: allowed/forbidden write set, authority split, or evidence-class edge;
-   - `negative`: forbidden claim, missing source, stale ref, or wrong owner route;
-   - `regression`: known failure mode when available.
-4. Define the scorecard with pass/hold criteria:
-   - required inputs inspected;
-   - correct owner and authority boundary;
-   - output shape complete;
-   - evidence matched to claim class;
-   - forbidden claims absent;
-   - no unnecessary scope expansion.
-5. Classify failures as:
-   - `contract_defect`;
-   - `case_defect`;
-   - `skill_prompt_defect`;
-   - `source_boundary_defect`;
-   - `evidence_mismatch`;
-   - `authority_overclaim`;
-   - `executor_behavior_defect`.
-6. Define promotion or hold evidence as refs the real owner can inspect: harness command, scorecard result, candidate diff, failure summary, residual risk, and owner route.
+   - `boundary`: permission, authority, memory, artifact, or capability edge;
+   - `negative`: forbidden claim, missing source, stale identity, or wrong owner route;
+   - `regression`: a known failure or newly diagnosed failure class.
+4. Declare protected requirements only as category plus minimum case count. Never include protected prompts, fixtures, expected answers, or individual results in OMA-facing data.
+5. Define required gates with metric, operator, threshold, weight/required status, and baseline regression tolerance. Candidate and baseline must use the same frozen plan.
+6. Define failure classes that OMA can diagnose from aggregate evidence, such as semantic defect, source/evidence defect, authority overclaim, capability/tool mismatch, safety regression, cost/latency regression, and evaluation-integrity failure.
+7. Require an evaluator/reviewer identity independent from the OMA design attempt and evidence refs sufficient to reproduce the verdict inside OPL authority.
 
-## Output Shape
+## Output
 
 Return:
 
-- `eval_target`;
-- `behavior_under_test`;
-- `task_cases`;
-- `scorecard`;
-- `failure_taxonomy`;
-- `promotion_or_hold_evidence`;
-- `rerun_command_or_owner_ref`;
-- `no_authority_caveat`: no owner receipts, no typed blockers, no domain truth, no artifact authority, no runtime queues, no readiness/release/production claims.
+- public case definitions and weights;
+- protected requirement categories and minimum counts;
+- gate definitions and baseline comparison policy;
+- failure taxonomy and aggregate evidence shape;
+- evaluator independence requirements;
+- explicit Owner-only decisions and forbidden claims.
+
+The result is an `EvalSpec` design candidate, not a frozen plan, `EvidenceBundle`, qualification, activation, or production verdict.

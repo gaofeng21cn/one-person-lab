@@ -10,8 +10,7 @@ import {
 import {
   buildActionQueue,
   buildSummaryCards,
-  feedbackOpsStatusItems,
-  feedbackWorkOrderStatusItems,
+  foundryRunItems,
 } from './app-state-parts/view-model-queues-and-cards.ts';
 import { buildNavigation, buildSections } from './app-state-parts/view-model-sections.ts';
 
@@ -33,8 +32,7 @@ export type OplAppOperatorViewModelInput = {
   brandSystemProfile: JsonRecord;
   targetOperatingArchitecture: JsonRecord;
   currentOwnerDeltaReadModel?: JsonRecord;
-  agentLabFeedbackSelfEvolution?: JsonRecord;
-  feedbackOps?: JsonRecord;
+  foundry?: JsonRecord;
 };
 
 function asRecord(value: unknown): JsonRecord {
@@ -811,7 +809,7 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
   const ordinaryCockpit = buildOrdinaryCockpit(currentOwnerDeltaTopline, input);
   const brandExperienceProfile = buildBrandExperienceProfile(input);
   const oneShotPlanLanding = buildOneShotPlanLandingProfile(input);
-  const agentLabFeedbackSelfEvolution = asRecord(input.agentLabFeedbackSelfEvolution);
+  const foundry = asRecord(input.foundry);
   const lazyRefs = [
     {
       ref_id: 'full_app_state_refresh',
@@ -845,8 +843,7 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
       ordinary_cockpit: ordinaryCockpit,
       brand_experience_profile: brandExperienceProfile,
       one_shot_plan_landing: oneShotPlanLanding,
-      agent_lab_feedback_self_evolution: agentLabFeedbackSelfEvolution,
-      feedbackops: input.feedbackOps ?? {},
+      foundry,
       settings_control_center: {
         surface_kind: 'opl_settings_control_center_workbench_ref.v1',
         source_ref: 'app_state.settings_control_center',
@@ -895,15 +892,10 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
         label: action.label,
         action_id: action.action_id,
       })),
-      agent_lab_feedback_work_order_refs: feedbackWorkOrderStatusItems(input).map((item) => ({
-        ref: asString(item.work_order_ref),
-        label: asString(item.status),
-        action_route_ref: asString(item.action_route_ref),
-      })),
-      feedbackops_work_order_refs: feedbackOpsStatusItems(input).map((item) => ({
-        ref: asString(item.work_order_ref),
-        label: asString(item.status),
-        action_route_ref: asString(item.action_route_ref),
+      foundry_run_refs: foundryRunItems(input).map((item) => ({
+        ref: asString(item.run_id),
+        label: asString(item.state),
+        status_ref: asString(item.status_ref),
       })),
     },
     owner_boundary: {

@@ -164,7 +164,7 @@ test('generated interfaces block default cutover without handoff proof but keep 
   ]);
   assert.match(
     bundle.cli.descriptors[0].command,
-    /^opl agents run --domain med-autoscience --action study_packet --workspace /,
+    /^opl agents run --domain mas --action study_packet --workspace /,
   );
   assert.equal(bundle.cli.descriptors[0].execution_binding.kind, 'stage_binding');
   assert.equal(bundle.mcp.descriptors[0].name, 'study_packet');

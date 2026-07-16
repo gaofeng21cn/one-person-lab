@@ -296,6 +296,6 @@
     "med-autoscience": "primary small-file compaction candidate; MAS keeps study truth publication quality artifact/package authority owner receipts and typed blockers",
     "med-autogrant": "consume OPL sidecar indexes as opaque refs; no private generic SQLite migration required",
     "redcube-ai": "deferred or trigger-based SQLite locator index only; no PNG/PPTX/PDF blob or visual verdict storage",
-    "opl-meta-agent": "refs-only Agent Lab/work-order/proposal indexes; no target truth runtime worktree lifecycle or promotion verdict ownership"
+    "opl-meta-agent": "refs-only FoundryRun, blueprint, evidence, proposal, version, and activation indexes; no target truth, candidate bytes, or activation authority ownership"
   }
 }

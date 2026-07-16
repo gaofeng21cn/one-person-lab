@@ -35,7 +35,7 @@ const REQUIRED_OWNER_MODULES = [
   'workspace',
   'atlas',
   'console',
-  'foundry-lab',
+  'foundry',
   'charter',
 ] as const;
 
@@ -130,11 +130,11 @@ const MODULE_SURFACE_READBACK_REFS = [
     readback_scope: 'refs_only_evidence_drilldown_projection',
   },
   {
-    module_id: 'foundry-lab',
-    brand_module: 'OPL Foundry Lab',
-    source_module_ref: 'src/modules/foundry-lab/evidence-grounded-profile-eval.ts',
-    exported_builder: 'buildEvidenceGroundedDecisionAgentProfileFoundryLabEvalSurface',
-    readback_scope: 'eval_suite_independent_review_and_promotion_gate',
+    module_id: 'foundry',
+    brand_module: 'OPL Foundry Kernel',
+    source_module_ref: 'src/modules/foundry/evaluation-runtime.ts',
+    exported_builder: 'FrozenPlanEvaluationRuntime',
+    readback_scope: 'frozen_plan_independent_evaluation_without_self_verdict',
   },
   {
     module_id: 'charter',

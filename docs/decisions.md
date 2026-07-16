@@ -5,6 +5,21 @@ Purpose: `decisions`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+## 2026-07-16
+
+### 决策：FoundryRun 是智能体工程唯一运行事实，OMA 只提供语义决策
+
+原因：被本决策取代的独立实验室控制面同时暴露 scaffold、suite、执行工单、promotion 和 OMA 专用交接对象，导致设计 owner 与运行 owner 之间存在第二状态机、第二晋级口径和路径型 ABI。普通用户也被迫理解内部执行生命周期，无法从一个入口获得设计、独立评测、自进化、激活和回滚的完整结果。
+
+影响：
+
+- OPL Foundry Kernel 独占 `FoundryRun`、物化、冻结测试计划、独立评测、事件链、generation 预算、`AgentVersion`、Qualification、canary、activation CAS 和 rollback。Temporal 是 durable workflow；Ledger 是不可变审计事实；StateIndex 只作可重建 projection。
+- OMA 作为 `agent_id/package_id=oma`、`domain_id=agent_engineering` 的语义 provider，只接受 `DesignRequest` 或 `EvidenceBundle`，只返回完整 `AgentBlueprint` / `EvalSpec` 或 `EvolutionProposal`。OMA 不返回 patch、执行计划、repo path、CLI、queue、lease、attempt、promotion ledger 或隐藏测试正文。
+- 跨 OMA/OPL 的唯一协议对象是 `DesignRequest`、`AgentBlueprint`、`EvidenceBundle` 和 `EvolutionProposal`；它们使用 closed JSON Schema、canonical JSON 和 SHA-256 content digest。Owner 决定是独立 OPL authority receipt，不进入 OMA 协议。
+- 普通入口收敛为 `opl agents run --domain oma --action engineer-agent`；`opl foundry status|approve|reject|cancel|versions|rollback` 只作 operator/debug。OMA 内部 `design|diagnose` provider operation 不投影为普通 action。
+- 被取代的独立实验室控制面、执行工单 ABI、公开 scaffold 命令和静态 promotion 记录只读归档，不能 resume、不能成为新 active truth，也不提供兼容写路径。该 hard cut 与 OMA provider 必须在同一 Release Set 发布；半套实现不得单独晋级。
+- 低风险 prompt/knowledge/新增测试可自动晋级；中风险可自动 canary 但 active 需 Owner；高风险在 canary 与 active 前均需 Owner。任何运行累计风险只能保持或上调，OMA risk hint 不能降低 OPL 重算结果。
+
 ## 2026-07-13
 
 ### 决策：Workspace registry 测试状态与真实用户状态强隔离，缺失 binding 通过显式归档治理
@@ -67,7 +82,7 @@ Re-review 采用 finding closure，不得用普通新建议无限重开循环。
 - descriptor discovery 必须消费 canonical package readiness，要求 dependency/scope 闭合、managed runtime source tree digest 一致、health/handler probe current；隐式 sibling/cwd 扫描退役，显式 workspace root 只作开发 fallback。
 - `standard-agent-registry.ts` 只保留 identity、label、package locator、aliases 和 membership；workspace/runtime/installer/golden-path/Pack/authority 示例全部移出。Workspace 缺 descriptor 时使用统一 generic baseline，runtime dispatch 缺失时 fail closed。
 - progress alias 只从 `standard_agent_interface.progress` 读取；缺 descriptor 时只接受两个 canonical delta 字段。OPL attempt/Temporal contract 不再列出 paper/grant/visual alias 或 `paper_stage_log`。
-- Atlas、Workspace、Runway、Stagecraft、Ledger、Console 和 Foundry Lab 只能投影/运输声明内容；不得据此写 domain truth、artifact/memory body、质量/导出裁决、owner receipt、typed blocker、App release verdict 或 ready 声明。
+- Atlas、Workspace、Runway、Stagecraft、Ledger、Console 和 Foundry Kernel 只能投影/运输声明内容；不得据此写 domain truth、artifact/memory body、质量/导出裁决、owner receipt、typed blocker、App release verdict 或 ready 声明。
 
 ### 决策：安装、管理与更新统一为 OPL Base、OPL App、OPL Packages 三层生命周期
 
@@ -419,8 +434,8 @@ Re-review 采用 finding closure，不得用普通新建议无限重开循环。
 
 - 标准能力必须按 [OPL 标准智能体能力管理规范](./policies/standard-agent-capability-management-policy.md) 声明 `capability_kind`、`canonical_owner`、`physical_source`、`runtime_projection`、`sync_policy`、`authority_boundary` 和 `externalization_reason`。
 - `capability_kind` 固定六类：`stage_prompt`、`stage_projection/runtime_projection`、`professional_skill`、`tool_connector`、`reference_pack`、`contract_module`。
-- 标准 scaffold 必须生成 `contracts/capability_map.json`，作为 OMA / Agent Lab / Pack compiler 定位 stage prompt、professional skill、tool connector、knowledge pack、quality gate 和 eval suite 的 refs-only resolver 索引；它不是 domain truth、owner receipt、typed blocker、quality verdict 或 readiness 证据。
-- `capability_map` 还必须为每个能力声明 `improvement_tokens`、`canonical_target_paths`、`verification_refs`、`forbidden_surfaces` 和 owner closeout boundary。这样 OMA / Agent Lab 可以把反馈和 suite failure 路由到单源文件与验证入口；命中不到时返回 developer work-order / typed blocker 路径，而不是靠宽泛关键词猜 patch target。
+- 标准 scaffold 必须生成 `contracts/capability_map.json`，作为 OMA / Foundry Kernel / Pack compiler 定位 stage prompt、professional skill、tool connector、knowledge pack、quality gate 和 eval suite 的 refs-only resolver 索引；它不是 domain truth、owner receipt、typed blocker、quality verdict 或 readiness 证据。
+- `capability_map` 还必须为每个能力声明 `improvement_tokens`、`canonical_target_paths`、`verification_refs`、`forbidden_surfaces` 和 owner closeout boundary。Foundry Kernel 在协议边界内消费 OMA 的语义 refs，再由 Pack 在边界内解析单源文件与验证入口；解析失败时 fail closed 或 quarantine，不能把物理路径暴露给 OMA，也不能靠宽泛关键词猜 patch target。
 - 重复 policy 可以收敛到顶层 `capability_policy_profiles`，capability 通过本地 `capability_policy_profile_ref` 引用；Framework 在 conformance 与 capability-plan 消费前展开 profile。现有 per-capability expanded fields 继续有效；profile ref 缺失或无法解析必须 fail closed，不能回退到空 authority 或宽泛默认值。
 - 默认归属是内置在 domain agent；只有跨 workspace 复用、体量大、引用/模板/脚本多、独立版本维护、多个 stage 反复调用或需要 Codex 原生 discovery 时，才外置为专业 pack、reference pack 或 connector。
 - Connector 只负责资源访问、source refs、invocation refs 和 receipt，不承接专业判断；contract module 只负责机器边界，不伪装成 true Skill。
@@ -524,36 +539,22 @@ Re-review 采用 finding closure，不得用普通新建议无限重开循环。
 - 触发方式必须明确：用户显式命名工具/数据库/工作流、MAS 核心专业 Skill route-back、stage prompt 判断默认八技不能覆盖，或任务需要联网、云计算、敏感数据与环境策略。
 - OPL Connect 只负责发现、读取、同步和 receipt；不写 MAS paper truth、不签 owner receipt、不创建 typed blocker / human gate，也不声明 domain-ready、publication-ready 或 production-ready。
 
-### 决策：FeedbackOps 是所有标准 Agent 的显式用户反馈入口，执行仍走 OMA work-order 与目标 owner closeout
+### 决策：用户反馈通过新的 improve FoundryRun 进入自进化闭环
 
-原因：用户对 MAS、MAG、RCA、BookForge、MAS Scholar Skills 或其它标准 OPL agent 的交付结果提出明确建议时，反馈不应只靠前台 Codex 临时修，也不应只在 MAS 特化流程中触发。成熟做法是把用户反馈作为可幂等事件进入控制面，之后由 external suite、OMA developer work-order、既有 `opl work-order execute`、目标 repo owner closeout 和 App read-model 串联。OPL 不能因此新增第二套 runner/queue，也不能替目标 agent 签质量结论或 owner receipt。
-
-影响：
-
-- `opl feedback submit|read|reconcile` 成为通用 refs-only feedback intake/readback 入口；捕获反馈不要求 Developer Mode。
-- `contracts/opl-framework/agent-lab-contract.json#feedbackops_delivery_feedback_surface` 固定 `target_agent_feedback_external_suite` profile、状态 `suite_ready / queued_requires_developer_mode / executable / completed_or_blocker`、App action-queue 投影和 authority boundary。
-- `contracts/opl-framework/foundry-agent-series-contract.json#standard_feedback_self_evolution_trigger_policy` 固定所有标准 Foundry Agent 的触发合同；`opl foundry agents inspect <agent_id> --json` 必须对 MAS、MAG、RCA、OMA、OBF 和 MAS Scholar Skills 投影同形 `feedback_self_evolution_trigger`，至少包含 `feedbackops_event_kind`、`accepted_feedback_profile`、target agent id、idempotency key、external suite ref、Developer Mode gate refs、`oma-agent-evolution` skill ref 和 owner closeout readback refs。
-- Developer Mode 只控制 repo 修复 / work-order 执行 / promotion 路由；没有 direct route 时只能读成 `queued_requires_developer_mode`，不能因为 `status=ready` 就自动可执行。
-- MAS 与 MAS Scholar Skills 等目标仍持有 domain truth、artifact body、quality/export verdict、owner receipt、typed blocker 和 human gate。OPL FeedbackOps 只搬运 refs、状态和合法执行入口。
-
-### 决策：Agent Lab domain feedback 自进化只投影 work-order 状态，不接管执行或 domain authority
-
-原因：MAS 等 domain agent 会产出 refs-only external suite、review/eval evidence 和 developer work-order candidate。OPL Agent Lab 需要把这些反馈接到自进化闭环，让 App/status/read-model 能看到 `queued`、`runnable`、`completed_or_blocker` 的 work-order 状态；但如果 Agent Lab 同时实现第二套 runner、queue、typed blocker/human gate body 或 owner receipt，就会把 domain truth 和 OPL runtime authority 再次分裂。
+原因：用户对标准 OPL Agent 的交付提出明确建议时，反馈不能只靠前台临时修，也不能绕过版本、评测与回滚直接修改 active bytes。统一做法是把反馈保存为 source/evidence refs，绑定 exact active version，并创建新的 `mode=improve` FoundryRun。
 
 影响：
 
-- `contracts/opl-framework/agent-lab-contract.json#domain_feedback_self_evolution_surface` 固定机器边界：contract 本身不会触发执行；输入只接受 domain feedback external suite refs、developer work-order candidate refs、completion refs 和 domain-owned blocker refs；输出只投影 `suite_missing / suite_stale / queued / runnable / completed_or_blocker` work-order status shape。
-- 标准组织链路是 `domain thin adapter -> OPL FeedbackOps / Agent Lab -> OMA developer work-order -> target agent patch -> domain readback`；任何一步缺 refs 时只形成 read-model/work-order 状态或 owner route，不写 domain truth。
-- `src/agent-lab-control-read-models.ts` 的 `buildAgentLabDomainFeedbackSelfEvolutionReadModel` 是 canonical builder；`agent-lab complete`、`agent-lab workbench` 和 `opl app state` 只消费同一 read-model。
-- `runnable` 只表示已有 developer work-order candidate 可交给现有 `opl work-order execute` 原语；Agent Lab 不新增 runner/queue，不写 runtime DB/provider queue，不执行 MAS truth mutation。
-- `opl work-order execute --dry-run` 只做 no-write 计划与形状检查，输出 execution plan / dry-run receipt，不打开 target worktree、不启动 Codex、不吸收 patch；它用于 operator/OMA 在真实执行前确认 target repo、verification command、forbidden surface 和 closeout boundary。
+- feedback intake 只负责保留反馈内容、target identity、source refs 与幂等键；它不直接修改 Agent，也不生成第二套运行状态。
+- OPL 将反馈、当前版本 digest、验收条件与约束组装为 `DesignRequest`，启动 FoundryRun，并用同一冻结测试计划比较 baseline 与 candidate。
+- OMA 的 `design|diagnose` operation 只消费 `DesignRequest` 或 `EvidenceBundle`，只返回 `AgentBlueprint` / `EvalSpec` 或 `EvolutionProposal`；它看不到保护测试正文，也不返回文件 patch 或执行指令。
+- Foundry Kernel 负责确定性物化、独立评测、generation budget、风险重算、Owner gate、canary、CAS activation 与 rollback。App/Console 只投影同一 Run、版本和 Owner wait，不维护另一份自进化状态。
+- MAS、MAG、RCA、OBF 及其他 target owner 继续持有 domain truth、保护测试、artifact body、quality/export verdict、权限授权与生产采用决定。
 
-### 决策：work-order 物理物化和 Python family-runtime transport 统一归 OPL
+### 决策：Python family-runtime transport 统一归 OPL Runway
 
-- `opl work-order materialize-request --request <semantic-request.json> --target-dir <new-dir> --json` 是 canonical work-order 物化入口。它直接消费 domain-neutral request 或 OMA stdout 的 `semantic_requests`，在创建目标目录前完成全部 shape/authority/path preflight，再以 staging directory rename 原子写入 canonical JSON 和逐文件 SHA256 receipt。
-- OMA 继续拥有 agent-building judgment、evaluation/developer work-order semantics 与 refs；OPL 只拥有物理 JSON、schema binding、digest 和 materialization receipt。该 receipt 不证明 patch 已执行、target owner 已 closeout、domain ready 或 production ready。
 - Python domain consumer 统一通过 `opl_framework.family_runtime_client` submit/query Temporal stage attempt；bin resolution、subprocess lifecycle、timeout 和 canonical JSON envelope validation 归 OPL Runway，domain repo 不再保留自己的 OPL CLI transport wrapper。
-- `completed_or_blocker` 只携带 completion ref 或 domain-owned typed blocker ref；OPL 不创建 owner receipt、typed blocker body、human gate body、quality/export verdict、paper progress 或 domain-ready claim。
+- StageRun transport receipt 只证明请求被可靠执行和回读；它不等于 Foundry qualification、AgentVersion、Owner acceptance、domain ready 或 production ready。
 
 ## 2026-07-01
 
@@ -606,7 +607,7 @@ Re-review 采用 finding closure，不得用普通新建议无限重开循环。
 
 - `contracts/opl-framework/foundry-agent-series-contract.json#/skill_mcp_surface_policy` 固定 `standard_agent_standalone_mcp_default_enabled=false`、`standard_agent_plugin_manifest_must_not_expose_mcp_servers=true`、`opl_unified_mcp_projection_owner=one-person-lab` 和 `future_unified_mcp_server_strategy=opl_owned_unified_server_when_runtime_verified`。
 - CLI/MCP 关系固定为：CLI 是 authoritative broad operator / control / debug / admin surface；MCP 是 curated agent-facing discovery / invocation surface；`all_cli_commands_are_mcp_tools=false`，不得默认 mirror 全量 CLI。
-- `opl connect skills --json` / `opl connect sync-skills --json` 对所有标准 agent 投影同一 `mcp_projection`；`opl foundry agents inspect --json` 也显示 standalone MCP 默认关闭和 full CLI mirror 禁止。
+- `opl connect skills --json` / `opl connect sync-skills --json` 对所有标准 agent 投影同一 `mcp_projection`；`opl foundry inspect --json` 也显示 standalone MCP 默认关闭和 full CLI mirror 禁止。
 - MAS/MAG/RCA/OMA/OBF plugin manifest 不得用 `mcpServers` 暴露 standalone server；repo-local MCP server 只可作为 direct protocol adapter、domain handler target、proof lane、fixture 或 migration/provenance 保留。
 - 未来 OPL unified MCP server 必须按 toolsets / progressive discovery / descriptor-first lazy schema / read-only default / explicit mutation gate 设计；mutation tool 不得绕过 domain owner receipt、typed blocker、human gate、quality/export verdict、artifact authority 或 release verdict。
 
@@ -687,7 +688,7 @@ Re-review 采用 finding closure，不得用普通新建议无限重开循环。
 影响：
 
 - `contracts/opl-framework/okf-context-bundle-contract.json` 成为 OPL-owned OKF context bundle 边界合同；`src/okf-context-bundle.ts` 和 `opl okf validate|inspect|project-pack|project-repo --json` 提供可执行投影、校验、读回和物化入口。
-- OKF 映射到现有品牌模块，不新增模块：主模块是 `OPL Atlas`、`OPL Pack`、`OPL Stagecraft` 和 `OPL Connect`；协同模块是 `OPL Ledger`、`OPL Console`、`OPL Workspace` 和 `OPL Foundry Lab`。`OPL Runway`、Codex route selection、domain quality verdict、owner receipt、typed blocker、artifact authority 和 production readiness 不消费 OKF 作为授权证据。
+- OKF 映射到现有品牌模块，不新增模块：主模块是 `OPL Atlas`、`OPL Pack`、`OPL Stagecraft` 和 `OPL Connect`；协同模块是 `OPL Ledger`、`OPL Console`、`OPL Workspace` 和 `OPL Foundry Kernel`。`OPL Runway`、Codex route selection、domain quality verdict、owner receipt、typed blocker、artifact authority 和 production readiness 不消费 OKF 作为授权证据。
 - `opl okf project-pack --pack <pack_compiler_input.json> --output <dir>` 只把 Foundry Agent declarative pack refs 投影成 body-free OKF bundle；`opl okf project-repo --repo <domain_repo> --output <dir>` 在同一边界内读取 domain repo 的 `contracts/pack_compiler_input.json` 和可选 `contracts/memory_descriptor.json`，把 pack refs 与 memory locator refs 合成完整 body-free bundle。prompt、skill、knowledge、quality gate、artifact、memory body 和 domain truth 仍留在 domain repo。
 - `buildOkfMemoryLocatorConcept` 只生成 memory locator concept，默认 `resource_body_mode=body_free_locator`，不复制 memory body，不接受/拒绝 writeback，不替 MAS/MAG/RCA/OMA owner 做 memory authority decision。
 - 原生 OKF frontmatter 只作为 opt-in advisory migration lane：稳定 domain-owned `agent/**/*.md` 可以携带 OKF-compatible `type`、`body_owner`、`domain_authority` metadata，并通过 `opl okf native-frontmatter inspect --repo <domain_repo> --json` 做只读 advisory readiness readback；默认 bundle source 仍是 exporter-generated body-free projection。OPL 只能 preserve / validate / inspect / project refs-only metadata，不能通过 frontmatter 迁移成为正文 owner、domain truth owner、artifact authority、owner receipt / typed blocker authority、runtime scheduler 或 readiness gate。
@@ -765,21 +766,20 @@ Re-review 采用 finding closure，不得用普通新建议无限重开循环。
 - Domain dispatch evidence 的 `domain_ready_claim_count` 只统计明确 positive verdict，例如 `ready`、`domain_ready`、`domain_ready_claimed` 和正向 `*_ready` / `*_ready_claimed`；包含 `not`、`non`、`pending`、`observed`、`blocker`、`blocked`、`failed` 或 `rejected` token 的 verdict 一律按非 ready observation 处理。
 - 该修复属于 OPL Console / Runway / Stagecraft false-authority guard：它只防止读面误降级或误计数，不让 OPL 签 domain owner receipt、创建 typed blocker、写 domain truth、授权 quality/export verdict、声明 domain ready、App release ready、Brand L5 或 production ready。
 
-### 决策：Standard Agent landing acceptance 成为 family-level 验收门
+### 决策：FoundryRun qualification 与 activation 成为 Standard Agent 验收门
 
-原因：MAS DM002/DM003 暴露的问题不是某个 domain repo 的单点 bug，而是标准 Agent 迁移、生成、接管时容易把 descriptor ready、generated interface ready、conformance pass、suite pass、classification zero、provider completion、refs-only ledger 或 App projection 误读成完成。没有 family-level 验收门，OMA 以后构建 target agent 仍会复制半标准形态，旧 scheduler、queue、wrapper、read-model residue 也会在默认路径里复活。
+原因：标准 Agent 迁移、创建、接管和改进时，容易把 descriptor、generated interface、conformance、单次 suite、provider completion、refs-only ledger 或 App projection 误读成完成。验收必须绑定确切版本、独立证据、风险与可回滚激活，而不能绑定某个仓库形态或一次命令成功。
 
 影响：
 
-- `contracts/opl-framework/standard-agent-landing-acceptance-contract.json` 成为标准 Agent landing 的机器验收定义，状态只能先读作 `acceptance_definition_landed` / `family_evidence_tail_open_not_complete`。
-- `contracts/opl-framework/standard-agent-landing-evidence-status.json` 成为标准 Agent landing 的 evidence/status ledger，七个 gate 必须逐项记录 `satisfied`、`evidence_required` 或 `satisfied_or_owner_typed_blocker`；generated-surface production consumption、OMA target-agent samples、cross-agent negative conformance scaleout 和 long-soak / real-user-path owner evidence 不能被误报 complete。
-- 标准 Agent 完成必须同时看真实 `agent/` pack semantics、generated surface production consumption、private-platform residue owner decision、`current_owner_delta` single ordinary route、stage-route currentness / advisory no-progress、OMA target-agent work-order guard 和 cross-agent negative conformance。
-- `descriptor_ready`、`generated_interface_ready`、`standard_pack_conformance_passed`、`suite_pass`、`Agent_Lab_pass`、`functional_structure_gap_count_zero` / `classification_zero`、`provider_completed`、`verified_refs_only_ledger`、`App_projection_ready` 和 `contract_landed` 都只能作为输入，不能声明 domain ready、caller migration、physical retirement、target owner acceptance、Brand L5 或 production readiness。
-- `contracts/opl-framework/target-operating-architecture-contract.json#foundry_agent_os_standard.new_agent_baseline_handoff_policy` 固定 OMA 新建 target agent 的 family-level handoff gate；`opl agents conformance` 必须投影同一 policy。MAS Scholar Skills 保持 Foundry public projection 下的 `framework_capability_package`，不是 standard domain agent；其 capability refs 只作为 domain owner consumption / typed blocker 输入，不能成为第二 runtime、第二 truth 或 production-ready evidence。
-- OMA / new-agent builder / takeover path 在缺 target owner route、source morphology、generated surface consumption、private residue decision、no-forbidden-write proof 或 owner answer shape 时必须物化candidate package与质量债，并可继续进入下一evaluation/review stage；这些缺口只关闭delivery/promotion/ready claim。`opl work-order execute`仅在wrong-target、forbidden write、权限安全、不可逆mutation或明确human decision时硬停。OMA不能签target owner receipt、创建target typed blocker、写target truth或在缺target owner evidence时promotion默认agent。
-- MAS-specific `paper_recovery_state` 留在 MAS；OPL 只上收 generic stage-route currentness、recovery obligation identity、StageRun execution、attempt ledger、closeout refs-only transport、operator projection shell 和 private residue decision ledger。
+- 机器验收边界由四份 Foundry protocol schema、FoundryRun 哈希事件链、不可变 `EvidenceBundle` / `QualificationRecord` / `AgentVersion` 与 `ActivationPointer` CAS 共同定义，不再维护独立 landing status ledger。
+- create、takeover、improve 都必须绑定 target identity；takeover/improve 还必须绑定 exact `target_version_ref`。baseline 与 candidate 使用同一冻结测试计划，正式 verdict 来自独立 evaluator/reviewer。
+- qualification 只证明 exact candidate 满足冻结 gate；production adoption 还必须满足风险策略、必要 Owner receipt、canary 和 activation transaction。`qualify_only` 可以终止为 `completed_qualified`，不能冒充 active。
+- OMA 只负责 `AgentBlueprint` / `EvalSpec` 与失败后的 `EvolutionProposal`，不能签 target Owner receipt、创建 target truth、读取保护测试正文或修改 active pointer。
+- descriptor ready、generated interface ready、schema/conformance pass、provider completion、Console projection、候选 bytes 或单次公开测试通过都只能作为输入，不能单独声明 Agent delivered、domain ready、Brand L5 或 production ready。
+- MAS-specific recovery 与领域质量状态继续留在 MAS 等 target owner；OPL 只持有通用 StageRun transport、FoundryRun、证据、版本、激活和 operator projection。
 
-本决策只落 family-level acceptance contract、evidence/status ledger、OMA work-order guard、negative conformance tests、docs 和 meta tests；不声明 MAS/MAG/RCA/OMA domain ready、App release ready、Brand L5、physical delete authorized 或 production ready。
+本决策只定义 family-level Foundry 验收边界；它不声明任何既有 domain Agent 已完成重新评测、Owner 接受、生产采用或发布安装。
 
 ### 决策：StageRun currentness identity 绑定 selected dispatch / stage packet
 
@@ -848,8 +848,8 @@ Re-review 采用 finding closure，不得用普通新建议无限重开循环。
 - `opl-family-ideal-operating-model-redesign.md` 固定为 `active_reference`：只表达 north-star、评估标准、plane / primitive 分类和 acceptance standard，不维护第二 owner queue、第二 ordinary route、第二 truth source 或 worktree closeout。
 - `current-state-vs-ideal-gap.md` 继续是唯一 active owner：multi-plane operating model、OPL 基座优化、Runway / Console / Ledger false-authority、`current_owner_delta` single ordinary route、证据缺口、next action 和完成口径都折回该文档。
 - Ordinary App/CLI/operator route 固定为 fresh `current_owner_delta`。Runway 只承接 durable execution / repair / reconcile，Console 只承接 owner-action projection，Ledger 只承接 refs-only evidence / telemetry / audit packet；它们都不能生成 domain owner answer、domain typed blocker、quality/export/review verdict、artifact authority、App release verdict、Brand L5、physical delete authorization 或 ready declaration。
-- OPL 基座优化只推进 generated/hosted surfaces、durable Runway、Stage Artifact Unit、passive Ledger、Console owner-action producer、Foundry Lab work-order loop 和 human/domain owner decision gate；domain repo 私有 scheduler、queue、dashboard、status shell、generic wrapper 或 selector 只能作为迁移输入、diagnostic/support surface 或 retirement candidate。
-- 后续 docs foldback 只能关闭 `hygiene_only_supporting_active_gap` 或支撑具体 owner-evidence work order；不能用 docs updated、plane health、provider completion、verified refs-only ledger、conformance pass 或 App projection 声明 domain ready、App release ready、Brand L5 或 production ready。
+- OPL 基座优化只推进 generated/hosted surfaces、durable Runway、Stage Artifact Unit、passive Ledger、Console owner-action producer、FoundryRun improvement loop 和 human/domain owner decision gate；domain repo 私有 scheduler、queue、dashboard、status shell、generic wrapper 或 selector 只能作为迁移输入、diagnostic/support surface 或 retirement candidate。
+- 后续 docs foldback 只能关闭 `hygiene_only_supporting_active_gap` 或支撑具体 owner-evidence requirement；不能用 docs updated、plane health、provider completion、verified refs-only ledger、conformance pass 或 App projection 声明 domain ready、App release ready、Brand L5 或 production ready。
 
 ### 决策：MAS Agent OS 方案提升为 family-level Foundry Agent OS 标准
 
@@ -864,7 +864,7 @@ Re-review 采用 finding closure，不得用普通新建议无限重开循环。
 - `brand-module-registry.json`、`brand-module-surfaces.json` 和 `brand-module-l5-operating-evidence.json` 同步补充 Pack compile parity、`current_owner_delta` default read、capability fail-open、domain-authority false boundary 和 cross-agent adoption 证据类。
 - Cross-agent conformance 必须证明 default read root 是 `current_owner_delta`，OPL generated / hosted surfaces 不写 domain truth，Ledger / Console / Runway / Pack 不签 owner receipt、不创建 typed blocker、不授权 quality/export verdict，conformance pass 不等于 domain ready。
 - family-level 目标架构、primitive、迁移阶段和验收门统一回 `docs/active/opl-foundry-agent-target-operating-architecture.md`；当前 active gap、执行顺序和完成口径仍回 `docs/active/current-state-vs-ideal-gap.md`，不再保留第二实施计划。
-- 当前读法：MAG/RCA/OMA/OBF 的 default CLI、Skill/plugin、App/product-entry、status read model、workbench 和 conformance readback 必须把 ordinary owner route 表达为 `StageRun + current_owner_delta`；repo-local runner、private wrapper、generic owner surface 或旧 product/status shell 只能作为 migration residue / deletion gate / diagnostic。`generated_direct_parity`、Capability Registry resolver ABI、W7 refs-only intake、owner-route work orders、private-platform retirement work order 和 owner evidence ref-shape readout 是 machine readback 输入，不是 completion truth。它们不能替代真实 owner receipt、typed blocker、human gate、reviewer/quality/export receipt、long-soak、release/install、physical delete owner decision 或 owner acceptance evidence；`open_count=0`、conformance pass、App projection 或 docs foldback 均不得授权 domain ready、App release ready、Brand L5 或 production ready。
+- 当前读法：MAG/RCA/OMA/OBF 的 default CLI、Skill/plugin、App/product-entry、status read model、workbench 和 conformance readback 必须把 ordinary owner route 表达为 `StageRun + current_owner_delta`；repo-local runner、private wrapper、generic owner surface 或旧 product/status shell 只能作为 migration residue / deletion gate / diagnostic。`generated_direct_parity`、Capability Registry resolver ABI、W7 refs-only intake、owner-route refs、private-platform retirement decision 和 owner evidence ref-shape readout 是 machine readback 输入，不是 completion truth。它们不能替代真实 owner receipt、typed blocker、human gate、reviewer/quality/export receipt、long-soak、release/install、physical delete owner decision 或 owner acceptance evidence；`open_count=0`、conformance pass、App projection 或 docs foldback 均不得授权 domain ready、App release ready、Brand L5 或 production ready。
 - 本决策不声明 MAS/MAG/RCA/OMA 已 domain ready，不声明 App release ready、Brand L5 或 production ready；后续必须由 domain-owned owner receipt、typed blocker、quality/export/review receipt、human gate、no-regression ref 或真实 L5 operating evidence 关闭。
 
 ## 2026-06-09
@@ -904,11 +904,11 @@ Re-review 采用 finding closure，不得用普通新建议无限重开循环。
 
 ### 决策：新增 OPL Pack，品牌模块 taxonomy 从九模块扩展为当前十模块
 
-原因：九模块基线已经证明品牌模块作为 Framework 顶层 taxonomy 有价值，但 `Declarative Domain Pack + Authority ABI + pack compiler + generated/hosted surfaces + minimal authority functions` 不是 Atlas、Stagecraft、Foundry Lab 或 Connect 的子细节。Atlas 负责 catalog/discovery，Stagecraft 负责 stage 内认知设计，Foundry Lab 负责 agent improvement control plane，Connect 负责外部接口和分发 transport；把 Pack 强塞进这些模块会模糊 domain pack source、authority ABI、generated surface input 和 domain owner boundary。
+原因：九模块基线已经证明品牌模块作为 Framework 顶层 taxonomy 有价值，但 `Declarative Domain Pack + Authority ABI + pack compiler + generated/hosted surfaces + minimal authority functions` 不是 Atlas、Stagecraft、Foundry Kernel 或 Connect 的子细节。Atlas 负责 catalog/discovery，Stagecraft 负责 stage 内认知设计，Foundry Kernel 负责 agent improvement control plane，Connect 负责外部接口和分发 transport；把 Pack 强塞进这些模块会模糊 domain pack source、authority ABI、generated surface input 和 domain owner boundary。
 
 影响：
 
-- 当前 OPL Framework 品牌模块读作十模块：`OPL Charter`、`OPL Atlas`、`OPL Workspace`、`OPL Pack`、`OPL Stagecraft`、`OPL Runway`、`OPL Ledger`、`OPL Console`、`OPL Foundry Lab` 和 `OPL Connect`。
+- 当前 OPL Framework 品牌模块读作十模块：`OPL Charter`、`OPL Atlas`、`OPL Workspace`、`OPL Pack`、`OPL Stagecraft`、`OPL Runway`、`OPL Ledger`、`OPL Console`、`OPL Foundry Kernel` 和 `OPL Connect`。
 - `OPL Pack` 持有 Declarative Domain Pack、authority ABI、pack compiler、generated/hosted surfaces 和 minimal authority functions 的模块级 read/validate/doctor 语义；minimal authority functions 仍通过标准 ABI 返回 refs / receipt / typed blocker / safe action，不接管 domain handler implementation、owner receipt、typed blocker、quality verdict、artifact authority、App release truth 或 production readiness。
 - 2026-06-07 的九模块决策保留为历史基线，表示品牌模块 taxonomy 正式进入 Framework 设计语言；它不是模块数量上限。后续新增或拆分模块必须证明独立 bounded context、owner、purpose、machine boundary、authority false flags、L4/L5 口径和 docs/contracts/tests foldback。
 - 核心五件套、`docs/references/brand-modules/*`、contracts README、CLI help 和 focused tests 必须以 registry 的当前模块集为准，避免把旧“九模块”写成当前硬约束。
@@ -960,7 +960,7 @@ Re-review 采用 finding closure，不得用普通新建议无限重开循环。
 
 ### 决策：采用 OPL 九个品牌模块作为长期顶层 taxonomy
 
-原因：OPL 已经从单一 CLI/runtime 项目演进成 `OPL Framework -> One Person Lab App -> Foundry Agents` 的 family-level 系统。仅用 runtime、workspace、stage、App、Agent Lab 等局部技术名组织长期设计，会让 owner boundary、文档分层、contract 入口、用户理解和后续重构继续分散。九个品牌模块把这些能力收成可管理的 bounded context：`OPL Charter`、`OPL Atlas`、`OPL Workspace`、`OPL Stagecraft`、`OPL Runway`、`OPL Ledger`、`OPL Console`、`OPL Foundry Lab` 和 `OPL Connect`。
+原因：OPL 已经从单一 CLI/runtime 项目演进成 `OPL Framework -> One Person Lab App -> Foundry Agents` 的 family-level 系统。仅用 runtime、workspace、stage、App、Foundry Kernel 等局部技术名组织长期设计，会让 owner boundary、文档分层、contract 入口、用户理解和后续重构继续分散。九个品牌模块把这些能力收成可管理的 bounded context：`OPL Charter`、`OPL Atlas`、`OPL Workspace`、`OPL Stagecraft`、`OPL Runway`、`OPL Ledger`、`OPL Console`、`OPL Foundry Kernel` 和 `OPL Connect`。
 
 2026-06-08 追加：本决策定义的是品牌模块 taxonomy 的采用基线，不是模块数量上限。当前 taxonomy 已扩展为十模块，并新增 `OPL Pack` 承接 Domain Pack、Authority ABI、pack compiler 和 generated/hosted surfaces 的独立边界。
 
@@ -970,7 +970,7 @@ Re-review 采用 finding closure，不得用普通新建议无限重开循环。
 - 新增 capability、CLI/App surface、contract、read model、docs support、release/install path 或 external interface 时，应能归入一个主品牌模块，并写清该模块不拥有的 truth / authority。
 - 成熟度按 `L1 conceptual`、`L2 emerging`、`L3 structural`、`L4 executable baseline`、`L5 production operating maturity` 管理。`OPL Workspace` 当前只是 `L4 executable baseline`，不能外推为 domain ready、App release ready 或 production ready。
 - `L5` 需要真实用户路径、跨 agent scaleout、长跑/恢复 evidence、release/install evidence、运维闭环和 owner acceptance。docs foldback、conformance pass、provider completion、verified ledger 或 App projection 只能作为输入，不能单独形成 L5 结论。
-- `Charter / Atlas / Runway / Ledger` 是下一轮 L3/L4 优先补强对象；`Console / Foundry Lab / Connect` 的成熟度必须绑定 App release/user-path、agent improvement loop、install/release drift matrix 和真实 owner evidence。
+- `Charter / Atlas / Runway / Ledger` 是下一轮 L3/L4 优先补强对象；`Console / Foundry Kernel / Connect` 的成熟度必须绑定 App release/user-path、agent improvement loop、install/release drift matrix 和真实 owner evidence。
 
 ### 决策：Foundry Agent CLI 使用系列 spine，不复制 OPL Framework 品牌模块
 
@@ -978,9 +978,9 @@ Re-review 采用 finding closure，不得用普通新建议无限重开循环。
 
 影响：
 
-- `opl agents foundry status|inspect|interfaces|validate|doctor|peers` 成为 Foundry Agent series 的普通 CLI command spine，表达 `workspace -> work -> stage -> run -> ledger -> handoff -> connect` 的同源执行链。
+- `opl foundry status|inspect|interfaces|validate|doctor|peers` 成为 Foundry Agent series 的普通 CLI command spine，表达 `workspace -> work -> stage -> run -> ledger -> handoff -> connect` 的同源执行链。
 - MAS/MAG/RCA 的品牌 CLI 字段是 series identity / shorthand，不再等同于本机 PATH-safe 可执行命令。当前标准 public / active surface 是 OPL generated/hosted Foundry Agent surfaces 与 domain-owned direct skill / handler path；旧专属命令只作为历史 provenance 读取，不能作为当前 standard surface、当前验证目标、membership/status/list 分组依据、兼容面或新 Agent 模板。相关 tombstone 见 `docs/history/compatibility/domain-foundry-cli-tombstone.md`。
-- Agent CLI 的机器输出统一接受 `--json`。OPL 聚合面 `opl foundry agents list|inspect` 只能投影当前 generated/hosted series surface、membership/status policy 和 no-authority flags；不得为旧专属命令保留验证字段、入口别名或 JSON flag alias。
+- Agent CLI 的机器输出统一接受 `--json`。OPL 聚合面 `opl foundry list|inspect` 只能投影当前 generated/hosted series surface、membership/status policy 和 no-authority flags；不得为旧专属命令保留验证字段、入口别名或 JSON flag alias。
 - `contracts/opl-framework/foundry-agent-series-contract.json` 固定 series CLI policy、Skill/MCP surface policy 和旧实现桶退役策略；新 scaffold 生成的 `contracts/foundry_agent_series.json` 必须继承这些字段。
 - `opl connect skills` / `opl connect sync-skills` 输出同一 series contract 派生的 `foundry_agent_series`、series spine projection、`mcp_projection` 和旧桶退役策略，Skill/MCP 不再另起一套解释。
 - 旧 `skill`、`module/modules`、`packages`、`engine` 等实现桶作为普通入口已退役并 fail closed 到 Connect；`runtime`、`family-runtime`、`index`、`stage-artifact`、`domain`、`system`、`status`、`session` 等只能作为诊断、迁移或内部治理下钻，不进入 root help 的普通入口。
@@ -1088,7 +1088,7 @@ Re-review 采用 finding closure，不得用普通新建议无限重开循环。
 
 ### 决策：Progress-First 成为 OPL family shared stage contract
 
-原因：MAS late-stage paper lane 暴露的问题不是单一研究个案，而是所有 Foundry Agent 都需要统一回答四件事：当前有没有交付物实质进展、是否只是 platform repair、下一次必须产出什么 delta 或 typed blocker、重复 blocker 何时升级。若这些字段留在各 domain 的局部 read model 中，App/operator、Agent Lab、evidence-worklist 和 readiness 会继续把 refs-only/currentness 修复误读成交付推进。
+原因：MAS late-stage paper lane 暴露的问题不是单一研究个案，而是所有 Foundry Agent 都需要统一回答四件事：当前有没有交付物实质进展、是否只是 platform repair、下一次必须产出什么 delta 或 typed blocker、重复 blocker 何时升级。若这些字段留在各 domain 的局部 read model 中，App/operator、Foundry Kernel、evidence-worklist 和 readiness 会继续把 refs-only/currentness 修复误读成交付推进。
 
 影响：
 
@@ -1165,7 +1165,7 @@ Re-review 采用 finding closure，不得用普通新建议无限重开循环。
 - `stage_progress_log.user_stage_log` 是 OPL 投影面；OPL 负责 attempt ledger、duration、token、cost、usage refs、closeout refs、receipt refs 和 missing/null 语义，不生成领域解释。`duration` 可以用 provider start/end 或 attempt created/updated 作为用户可读 fallback，但 `duration_telemetry_status` 仍必须保留真实 telemetry 是否缺失。
 - 标准 domain agent scaffold / admission contract 现在要求 `user_stage_log_contract`，并要求每个 stage closeout 提供 `stage_name`、`problem_summary`、`stage_goal`、`progress_delta_classification`、`deliverable_progress_delta`、`platform_repair_delta`、`next_forced_delta`、`stage_work_done`、`changed_stage_surfaces`、`outcome`、`remaining_blockers` 和 `evidence_refs`，或给出 typed blocker。
 - `token_usage` / `cost` 缺失时只能显式保留为 observed-missing/null，不允许填 0 或事后猜测；domain 给了不完整人话摘要时，OPL 必须暴露 `missing_domain_fields`，不能把半截摘要当成完整 stage log。
-- MAG、RCA、OMA 这类 Foundry Agent 需要在各自 stage plane 中声明同一合同，并由各自 owner 提供 grant-facing、visual-facing 或 agent-building-facing 的人话摘要。OPL admission / App / Agent Lab 只消费该摘要和 refs，不写 domain truth、不读 artifact body、不授权质量或 export ready。
+- MAG、RCA、OMA 这类 Foundry Agent 需要在各自 stage plane 中声明同一合同，并由各自 owner 提供 grant-facing、visual-facing 或 agent-building-facing 的人话摘要。OPL admission / App / Foundry Kernel 只消费该摘要和 refs，不写 domain truth、不读 artifact body、不授权质量或 export ready。
 
 ### 决策：嵌套 runtime help 是只读命令发现面
 
@@ -1263,9 +1263,9 @@ Re-review 采用 finding closure，不得用普通新建议无限重开循环。
 - OPL 消费 MAS sidecar export / owner-route handoff 时，也必须先通过 OPL module locator 解析 active MAS module checkout，再以 `uv run --directory <checkout> --extra analysis medautosci sidecar export ...` 调用 domain sidecar；不得裸调用 PATH 上的旧 `medautosci` 工具。DM002 这类 live paper handoff 的完成证据是 Temporal-backed stage-attempt evidence 加 MAS owner receipt 或 typed blocker，不是本地 queue hydrate 成功或 MAS 内部 runtime liveness/resume 投影。
 - 该决策不改变 domain truth、quality verdict、artifact authority 或 direct app skill path 的 owner。MAS/MAG/RCA 继续持有领域权威；OPL/App 只管理安装、发现、同步、投影、health 和可见维护状态。
 
-### 决策：OPL Developer Mode 由系统配置、App 设置开关和 Agent Lab 巡检/修复路由共同承接
+### 决策：OPL Developer Mode 由系统配置、App 设置开关和 Foundry Kernel 巡检/修复路由共同承接
 
-原因：OPL 同时服务普通用户和开发者。普通用户路径需要稳定的 managed environment；开发者路径需要在智能体调用过程中把发现的 framework / domain repo 问题直接转成可审计的修复、提交或 PR。若只靠 developer checkout override，容易把产品运行真相和开发修复权限混在一起；若只靠观察告警，又会让已经具备 repo 权限的维护者无法把问题闭环。因此需要把 Developer Mode 定义成独立系统配置和 App 设置面，并把外围 AI 巡检、问题归因、owner route、repo fix / PR route 放到 OPL Agent Lab 优先承接。
+原因：OPL 同时服务普通用户和开发者。普通用户路径需要稳定的 managed environment；开发者路径需要在智能体调用过程中把发现的 framework / domain repo 问题直接转成可审计的修复、提交或 PR。若只靠 developer checkout override，容易把产品运行真相和开发修复权限混在一起；若只靠观察告警，又会让已经具备 repo 权限的维护者无法把问题闭环。因此需要把 Developer Mode 定义成独立系统配置和 App 设置面，并把外围 AI 巡检、问题归因、owner route、repo fix / PR route 放到 OPL Foundry Kernel 优先承接。
 
 影响：
 
@@ -1274,11 +1274,11 @@ Re-review 采用 finding closure，不得用普通新建议无限重开循环。
 - One Person Lab App 设置页必须有 Developer Mode 开关，并显示当前状态、配置来源、GitHub login、模式、当前 source channel 和可用 repo authority。安装流程检测到配置的 developer login（默认 `gaofeng21cn`）时可以默认开启 local checkout source channel；其他用户可以手动开启。
 - Developer Mode 至少区分只观察的外围巡检模式和 `developer_apply_safe` 模式。前者只产生 evidence / issue / PR proposal；后者在权限满足时允许进入 repo 层修复、提交和 owner-visible 审计路径。
 - repo developer / collaborator 身份必须按目标 repo 判断。direct write 只来自 target repo / target agent 的真实 GitHub authority；具备直接写权限时，可以在对应 repo 的受控 worktree / branch 中修复并提交；不具备直接写权限时，只能创建 fork / branch / pull request 或进入 owner handoff，不得静默推送到 upstream。
-- Developer Mode 的 developer 身份不是单一全局身份：OPL maintainer 只在 GitHub repo permission 覆盖的 OPL/agent repo 上获得 direct-fix；target-agent developer 只在自己 agent repo 上获得 direct-fix；普通 contributor 即使手动开启 Developer Mode，也只能捕获反馈、生成 work-order candidate 和 fork/PR evidence。手动开启不能把无写权限 repo 升级成 direct mutation。
-- Developer Mode 开启后，任务可以默认启动外围 AI 巡检。巡检由 Agent Lab 或同等 refs-only control plane 组织，输出 blocker、owner route、candidate fix、evidence refs 和 PR refs；它不拥有 domain truth、quality verdict、artifact authority、memory body 或 owner receipt authority。
+- Developer Mode 的 developer 身份不是单一全局身份：OPL maintainer 只在 GitHub repo permission 覆盖的 OPL/agent repo 上获得 direct-fix；target-agent developer 只在自己 agent repo 上获得 direct-fix；普通 contributor 即使手动开启 Developer Mode，也只能捕获反馈、生成 issue/fork/PR evidence。手动开启不能把无写权限 repo 升级成 direct mutation。
+- Developer Mode 开启后，任务可以默认启动外围 AI 巡检。巡检由 Foundry Kernel 或同等 refs-only control plane 组织，输出 blocker、owner route、candidate fix、evidence refs 和 PR refs；它不拥有 domain truth、quality verdict、artifact authority、memory body 或 owner receipt authority。
 - Developer Mode 不改变 managed environment 优先原则。普通用户运行仍以 OPL-managed modules / skills / plugin metadata / provider state 为真相；开发修复和开发 checkout source 只通过显式配置、显式身份和可审计 repo route 生效。`auto` 命中只允许 source channel 选用本机开发 checkout；shared runtime mutation 仍必须满足 `enabled=on`、`mode=developer_apply_safe`、`source=user_config`。
 - 2026-07-05 追加：Developer Mode public CLI/read-model 输出必须保留 `enabled`、`mode`、`effective_state`、`allowed_route` 兼容字段，但新消费方应优先读取 `developer_profile`、`capabilities` 与 `agent_authority`。`developer_profile` 至少区分 Contributor、Maintainer、Runtime Maintainer；`capabilities` 必须分别表达 `source_channel`、`workspace_trust`、`github_authority`、`agent_automation`、`runtime_mutation_scope` 的 `status`、`level`、`source` 和 `impact`；`agent_authority` 固定 feedback capture、authorized direct-fix、manual-on-without-write、official/third-party-without-authority 的 route matrix。local checkout source、repo direct/fork route、shared runtime mutation许可不得继续压缩成单一 Developer Mode 开关；shared runtime mutation 只有在 `enabled=on`、`mode=developer_apply_safe`、`source=user_config` 时投影为 ready。
-- 2026-07-05 追加：标准 OPL Agent 的 feedback self-evolution 采用固定分工。target agent / package 只发布 domain-thin feedback adapter 与 trigger refs；优化策略、patch planning 和 work-order materialization 统一由 `opl-meta-agent:oma-agent-evolution` 承担；FeedbackOps / Agent Lab 只负责事件账本、状态投影、Developer Mode 执行 gate 和 target-scoped owner route。反馈捕获不需要 Developer Mode；repo mutation 必须满足 Developer Mode gate，并按目标仓 authority 路由到 `direct_repo_fix`、`fork_pull_request` 或 `owner_handoff`。MAS 侧在这条链路中是 thin adapter / trigger，不是承担优化策略的 skill。
+- 2026-07-16 supersession：标准 OPL Agent 的 feedback self-evolution 统一创建新的 `mode=improve` FoundryRun。target agent / package 只发布 domain-thin observation 与 feedback refs；OPL 绑定 exact active version、运行 OMA `design|diagnose`、物化新候选、独立评测并按风险进入 Owner gate/canary/activation。OMA 返回完整下一版 blueprint，不规划 repo patch；MAS 等 domain 侧仍是 feedback source 与 target Owner，不承担通用优化控制面。
 
 ## 2026-05-17
 
@@ -1374,7 +1374,7 @@ Re-review 采用 finding closure，不得用普通新建议无限重开循环。
 - Temporal 仍是 production online durable workflow / wakeup / retry / human-gate substrate。Sandbox provider 不持有 workflow history、stage-attempt request/projection、human gate、attempt ledger、owner route 或 domain authority。
 - Runtime environment substrate 不继续扩张成自研 VM/container sandbox；Docker/devcontainer 和 E2B 只是后置 provider，不是所有 runtime env profile 的必备 substrate。
 - 当前 Framework 的默认环境 profile 是 `fast_local_env`：doctor / prepare / run-context 负责确认 R/Python/MAS display 这类本机依赖是否可消费；R 标准 handoff 是 `renv.lock` refs + `R_LIBS_USER` managed library，Python 标准 handoff 是 `uv.lock` / project refs + `UV_PROJECT_ENVIRONMENT` managed env。Fast Local Env doctor 只检查 host binary、language packages 和 system hints；缺 run-context、target identity mismatch 或 doctor failure 必须 fail closed，不能偷偷回落到未声明的宿主机包环境，也不能声明 runtime/domain/App ready。
-- Local Docker / Devcontainer slice 保留为显式 local provider：只有显式选择 `local_sandbox` / `local_docker` / `local_devcontainer` profile 或 `OPL_CODEX_STAGE_SANDBOX_PROVIDER=local_docker|local_devcontainer` 时，Runway 才进入 Docker/devcontainer path；Codex stage runner 无显式 sandbox provider 时走 host executor，不默认启动 local devcontainer。Runway 通过 Docker/devcontainer preflight、workspace transport、executor run 和 `sandbox_execution` receipt 证明隔离执行路径；缺本地 image / Docker preflight 或 workspace transport 时只输出 repair / preflight work order。
+- Local Docker / Devcontainer slice 保留为显式 local provider：只有显式选择 `local_sandbox` / `local_docker` / `local_devcontainer` profile 或 `OPL_CODEX_STAGE_SANDBOX_PROVIDER=local_docker|local_devcontainer` 时，Runway 才进入 Docker/devcontainer path；Codex stage runner 无显式 sandbox provider 时走 host executor，不默认启动 local devcontainer。Runway 通过 Docker/devcontainer preflight、workspace transport、executor run 和 `sandbox_execution` receipt 证明隔离执行路径；缺本地 image / Docker preflight 或 workspace transport 时只输出 repair / preflight action。
 - E2B slice 保留为当前唯一已实现的显式 remote provider / OPL Connect 配置辅助，不是默认依赖：选择 `remote_sandbox` / `e2b` profile 时，Runway 会创建或连接 E2B sandbox，并保留 credential-ref / provider-receipt-ref / no-secret-log guard。其他外部 compute provider只能进入通用 external adapter / Connect discovery候选，不构成 Runway executor support。E2B adapter不读取、打印或转发 host secret material，不在缺 credential 或 git workspace transport 时回落到 Fast Local Env，也不声明 provider ready / runtime ready / domain ready。
 - Fast Local Env doctor/run-context、live Docker/devcontainer run、live E2B credential run、provider long-soak、App release cohort 和真实用户路径是不同证据层；docs、contracts、focused tests、materialization receipt、cache hit、doctor pass、run-context exists、mocked local Docker path 或 provider adapter dry-run 都不能声明 runtime ready、provider ready、domain ready、App release ready、Brand L5 或 production ready。
 

@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import {
   frameworkAttentionNextSafeActions,
-} from '../../src/modules/foundry-lab/framework-readiness-attention-actions.ts';
+} from '../../src/modules/console/framework-readiness-attention-actions.ts';
 
 type JsonRecord = Record<string, unknown>;
 

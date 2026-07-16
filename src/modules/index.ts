@@ -6,5 +6,5 @@ export { OPL_STAGECRAFT_SOURCE_MODULE } from './stagecraft/index.ts';
 export { OPL_RUNWAY_SOURCE_MODULE } from './runway/index.ts';
 export { OPL_LEDGER_SOURCE_MODULE } from './ledger/index.ts';
 export { OPL_CONSOLE_SOURCE_MODULE } from './console/index.ts';
-export { OPL_FOUNDRY_LAB_SOURCE_MODULE } from './foundry-lab/index.ts';
+export { OPL_FOUNDRY_SOURCE_MODULE } from './foundry/index.ts';
 export { OPL_CONNECT_SOURCE_MODULE } from './connect/index.ts';

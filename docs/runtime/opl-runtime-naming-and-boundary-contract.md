@@ -117,12 +117,12 @@ Human / Agent
 
 | 仓库 | 当前固定定位 | 与 runtime 的关系 |
 | --- | --- | --- |
-| `one-person-lab` | OPL Framework；session/runtime、activation、provider、Agent Lab、work-order primitive 与 shared indexes 的 contract-first surface | 定义并运行 framework runtime / projection / safe action shell；不接管 domain truth |
+| `one-person-lab` | OPL Framework；session/runtime、provider、FoundryRun、evaluation、evidence、version、activation/rollback 与 shared indexes 的 contract-first surface | 定义并运行 framework runtime / projection / safe action shell；不接管 domain truth |
 | `one-person-lab-app` | One Person Lab App / workbench | 消费 framework/provider 状态和 domain-owned projection；不驱动外围长跑任务，不生成 release-ready / production-ready verdict |
 | `med-autoscience` | 独立 medical research Foundry Agent | 拥有医学领域 truth、publication quality、artifact authority、owner receipt 与 direct skill path |
 | `med-autogrant` | 独立 grant-writing Foundry Agent | 拥有基金领域 truth、fundability/export verdict、artifact authority、owner receipt 与 direct skill path |
 | `redcube-ai` | 独立 visual-deliverable Foundry Agent | 拥有视觉交付 truth、visual/export verdict、artifact authority、owner receipt 与 direct skill path |
-| `opl-meta-agent` | OPL-compatible Foundry Agent / new-agent builder | 消费 Agent Lab / OPL work-order refs，生成 developer patch work order 或 typed blocker；不持有 MAS/MAG/RCA truth、quality verdict 或 artifact authority |
+| `opl-meta-agent` | OMA Agent engineering semantic provider | 消费 `DesignRequest` / `EvidenceBundle`，生成 `AgentBlueprint` / `EvalSpec` 或 `EvolutionProposal`；不持有 FoundryRun state、评测执行、版本/激活或 target-domain truth |
 
 `MedDeepScientist` 不属于 `OPL` 顶层 family 中的一个平级 `domain repo`。
 当前更准确的表达是：

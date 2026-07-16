@@ -610,7 +610,7 @@ function findModuleSpecOrThrow(moduleId: string): DomainModuleRuntimeSpec {
         entry.plugin_name,
         entry.canonical_plugin_name,
         ...entry.aliases,
-      ].map((alias) => [alias.toLowerCase(), entry.domain_id as OplModuleId] as const)),
+      ].map((alias) => [alias.toLowerCase(), entry.module_id.toLowerCase() as OplModuleId] as const)),
     ['mds', 'meddeepscientist'],
     ['med-deepscientist', 'meddeepscientist'],
     ['med_deepscientist', 'meddeepscientist'],

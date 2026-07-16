@@ -13,7 +13,7 @@ import {
   writeManifestContractOverrides,
 } from './domain-pack-compiler-fixtures.ts';
 import { createAdmittedStagePackFixture } from './workspace-domain-test-helper.ts';
-import { FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES } from '../../../../src/modules/foundry-lab/standard-domain-agent-scaffold-constants.ts';
+import { FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES } from '../../../../src/modules/pack/standard-domain-agent-scaffold-constants.ts';
 
 function buildDelayedManifestCommand(payload: Record<string, unknown>, delayMs: number) {
   return `${process.execPath} -e ${

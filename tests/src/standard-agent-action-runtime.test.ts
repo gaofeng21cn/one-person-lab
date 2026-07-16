@@ -129,6 +129,9 @@ function action(input: {
 }
 
 function writeContracts(checkoutRoot: string, actions: Record<string, unknown>[], registry?: Record<string, unknown>) {
+  const foundryBound = actions.some((entry) => (
+    (entry.execution_binding as Record<string, unknown> | undefined)?.kind === 'foundry_binding'
+  ));
   fs.mkdirSync(path.join(checkoutRoot, 'contracts'), { recursive: true });
   fs.writeFileSync(path.join(checkoutRoot, 'contracts', 'action_catalog.json'), `${JSON.stringify({
     surface_kind: 'family_action_catalog',
@@ -138,7 +141,7 @@ function writeContracts(checkoutRoot: string, actions: Record<string, unknown>[]
     owner: 'fixture-owner',
     authority_boundary: {
       domain_truth_owner: 'fixture-owner',
-      opl_role: 'projection_consumer_only',
+      opl_role: foundryBound ? 'foundry_runtime_owner' : 'projection_consumer_only',
       write_policy: 'no_domain_truth_writes',
       opl_can_write_domain_truth: false,
       opl_can_write_memory_body: false,
@@ -471,6 +474,136 @@ test('Hosted Stage action keeps started truth when post-launch query is unavaila
       error_code: 'standard_agent_action_observation_failed',
       message: 'temporal query temporarily unavailable',
     });
+  } finally {
+    fs.rmSync(checkoutRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('Hosted Foundry action starts one OPL-owned FoundryRun and replays immutable launch bytes', async () => {
+  const checkoutRoot = root('opl-foundry-action-checkout-');
+  const workspaceRoot = root('opl-foundry-action-workspace-');
+  let starts = 0;
+  try {
+    const foundryAction = {
+      ...action({
+        actionId: 'engineer-agent',
+        executionBinding: { kind: 'foundry_binding', provider_manifest_ref: 'contracts/foundry_provider.json' },
+      }),
+      effect: 'mutating',
+      input_schema_ref: 'opl://foundry-protocol/DesignRequest',
+      output_schema_ref: 'opl://foundry-control/FoundryRun',
+      required_fields: [
+        'surface_kind', 'version', 'request_id', 'mode', 'target_agent_id', 'target_domain_id',
+        'target_version_ref', 'objective', 'acceptance_criteria', 'non_goals', 'source_refs', 'constraints',
+        'delivery_policy',
+      ],
+      workspace_locator_fields: [],
+    };
+    writeContracts(checkoutRoot, [foundryAction]);
+    fs.writeFileSync(path.join(checkoutRoot, 'contracts', 'foundry_provider.json'), `${JSON.stringify({
+      surface_kind: 'opl_foundry_provider',
+      version: 'opl-foundry-provider.v1',
+      provider_id: 'fixture-provider',
+      agent_id: 'fixture-provider',
+      package_id: 'fixture-provider',
+      domain_id: 'agent_engineering',
+      carrier_slug: 'fixture-provider',
+      operations: {
+        design: {
+          input_schema_refs: ['opl://foundry-protocol/DesignRequest'],
+          output_schema_ref: 'opl://foundry-protocol/AgentBlueprint',
+          entry_stage_ref: 'mission-intake',
+          required_stage_refs: ['mission-intake'],
+          optional_stage_refs: [],
+          terminal_stage_ref: 'evaluation-design',
+        },
+        diagnose: {
+          input_schema_refs: [
+            'opl://foundry-protocol/DesignRequest',
+            'opl://foundry-protocol/AgentBlueprint',
+            'opl://foundry-protocol/EvidenceBundle',
+          ],
+          output_schema_ref: 'opl://foundry-protocol/EvolutionProposal',
+          entry_stage_ref: 'evidence-diagnosis',
+          required_stage_refs: ['evidence-diagnosis'],
+          optional_stage_refs: [],
+          terminal_stage_ref: 'evolution-proposal',
+        },
+      },
+      projection_policy: {
+        public_action_ids: ['engineer-agent'],
+        internal_operations_are_public_actions: false,
+        internal_operations_are_cli_commands: false,
+        internal_operations_are_mcp_tools: false,
+      },
+      authority_boundary: {
+        provider_owns_design_semantics: true,
+        provider_owns_evaluation_semantics: true,
+        provider_owns_evidence_diagnosis: true,
+        provider_owns_evolution_proposals: true,
+        provider_owns_foundry_run_state: false,
+        provider_owns_candidate_materialization: false,
+        provider_owns_evaluation_execution: false,
+        provider_owns_versions_or_activation: false,
+        provider_can_return_patch_or_work_order: false,
+        provider_can_view_protected_test_bodies: false,
+        opl_can_write_target_domain_truth: false,
+      },
+    })}\n`);
+    const payload = {
+      surface_kind: 'opl_foundry_design_request',
+      version: 'opl-foundry-protocol.v1',
+      request_id: 'request:hosted-foundry',
+      mode: 'create',
+      target_agent_id: 'fixture-target',
+      target_domain_id: 'fixture-domain',
+      target_version_ref: null,
+      objective: 'Build a tested fixture Agent.',
+      acceptance_criteria: ['The required gate passes.'],
+      non_goals: ['No production activation without policy.'],
+      source_refs: ['source:fixture'],
+      constraints: {
+        capability_refs: ['capability:text'],
+        permission_refs: [],
+        privacy_requirements: ['privacy:no-sensitive-data'],
+        cost_limits: { usd: 1 },
+        latency_limits: { milliseconds: 1000 },
+      },
+      delivery_policy: { activation_mode: 'activate', max_generations: 5 },
+    };
+    const dependencies = {
+      resolveManagedCheckout: managed(checkoutRoot, workspaceRoot) as never,
+      recordLedger,
+      startFoundryRun: async ({ run_id }: { run_id: string }) => {
+        starts += 1;
+        return {
+          run: {
+            surface_kind: 'opl_foundry_run',
+            version: 'opl-foundry-run.v1',
+            run_id,
+            state: 'accepted',
+            revision: 1,
+          },
+          activation: { active_version_digest: null, revision: 0 },
+        };
+      },
+    };
+    const first = await runStandardAgentAction({
+      domainId: 'mas', actionId: 'engineer-agent', workspaceRoot, payload, runId: 'foundry-hosted-run',
+    }, dependencies as never);
+    const replay = await runStandardAgentAction({
+      domainId: 'mas', actionId: 'engineer-agent', workspaceRoot, payload, runId: 'foundry-hosted-run',
+    }, dependencies as never);
+    assert.equal(first.standard_agent_action_run.execution_kind, 'foundry_binding');
+    assert.equal(first.standard_agent_action_run.status, 'started');
+    assert.equal(
+      first.standard_agent_action_run.authority_boundary.provider_role,
+      'agent_design_evaluation_semantics_evidence_diagnosis_and_evolution_proposal',
+    );
+    assert.equal('oma_role' in first.standard_agent_action_run.authority_boundary, false);
+    assert.equal(replay.standard_agent_action_run.output.sha256, first.standard_agent_action_run.output.sha256);
+    assert.equal(starts, 1);
   } finally {
     fs.rmSync(checkoutRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });

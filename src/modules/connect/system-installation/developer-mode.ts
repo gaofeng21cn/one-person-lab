@@ -9,7 +9,7 @@ export function buildOplDeveloperModeAction(endpoints: OplEndpoints): OplInitial
     action_id: 'developer_supervisor',
     label: 'Configure Developer Mode',
     description:
-      'Turn Developer Mode on, off, or into observe-only mode for Agent Lab patrol and repository repair routing.',
+      'Turn Developer Mode on, off, or into observe-only mode for supervised patrol and repository repair routing.',
     section_id: 'settings',
     endpoint: endpoints.system_action,
     method: 'POST',
@@ -39,7 +39,7 @@ export function buildOplDeveloperModeSurface(
     setting_status: 'config_surface_available',
     runtime_projection_status: projection.status,
     description:
-      'Developer Mode controls whether OPL may expose supervised Agent Lab patrol, repository repair, and pull request routes from App settings.',
+      'Developer Mode controls whether OPL may expose supervised patrol, repository repair, and pull request routes from App settings.',
     endpoint: endpoints.system_settings,
     action_endpoint: endpoints.system_action,
     action,
@@ -53,7 +53,7 @@ export function buildOplDeveloperModeSurface(
     capability_projection: {
       github_identity_detection: projection.github_identity.status,
       repository_permission_detection: projection.repo_authority.status,
-      agent_lab_outer_inspection: 'agent_lab_developer_mode_repair_routes_ready',
+      console_outer_inspection: 'console_developer_mode_repair_routes_ready',
       repo_repair_pull_request_route: projection.allowed_route,
     },
     notes: [

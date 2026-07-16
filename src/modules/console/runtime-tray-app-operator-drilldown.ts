@@ -79,9 +79,7 @@ import {
 import {
   buildMemoryArtifactLifecycleEvidenceProjection,
 } from '../ledger/index.ts';
-import {
-  buildDeveloperModeAgentLabRepairRouteReadModel,
-} from '../foundry-lab/index.ts';
+import { buildDeveloperModeRepairRouteReadModel } from './developer-mode-repair-route.ts';
 
 const APP_OPERATOR_EVIDENCE_ATTEMPT_LIMIT = 25;
 const APP_OPERATOR_EVIDENCE_ATTEMPT_DISTINCT_KEY_LIMIT = 50;
@@ -150,7 +148,7 @@ export function buildAppOperatorDrilldown(input: {
   const providerCapabilitySlo = providerCapabilitySloSummary(input.providerContinuousProof);
   const providerLongSoakEvidence = record(input.providerContinuousProof.provider_long_soak_evidence);
   const appRuntimeRole = buildCodexAppRuntimeRole();
-  const developerModeRepairRoutes = buildDeveloperModeAgentLabRepairRouteReadModel();
+  const developerModeRepairRoutes = buildDeveloperModeRepairRouteReadModel();
   const developerModeLiveCloseoutEvidence =
     record(developerModeRepairRoutes.live_closeout_evidence);
   const runtimeManagerRouteSupport = runtimeManagerRouteSupportRefs();

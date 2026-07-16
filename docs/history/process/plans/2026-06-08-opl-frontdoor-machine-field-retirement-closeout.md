@@ -18,7 +18,7 @@ Machine boundary: 本文是人读 OPL Doc / source-contract-test tranche closeou
 | Brand module command surface governance | `contracts/opl-framework/brand-cli-governance.json` plus `src/contracts.ts`, `src/brand-modules.ts`, `src/brand-module-surfaces.ts` | JSON contract shape、loader validation 和 CLI/read-model payload 是 active machine interface。 |
 | Foundry Agent series command spine | `contracts/opl-framework/foundry-agent-series-contract.json`, `src/foundry-agent-cli-spine.ts`, `src/opl-skills.ts`, scaffold constants and generated skeleton contract | Foundry Agent CLI, skill catalog, scaffold output and generated skeleton must share one field vocabulary. |
 | No-compatibility guard | Focused CLI/skill/scaffold tests | Tests assert new payload fields and assert old `frontdoor_*` keys are absent. |
-| Human support docs | `contracts/README.md`, `contracts/opl-framework/README*`, `docs/references/brand-modules/connect.md`, `docs/references/brand-modules/foundry-lab.md` | Support docs point readers to the new machine field names without becoming machine truth. |
+| Human support docs | `contracts/README.md`, `contracts/opl-framework/README*`, `docs/references/brand-modules/connect.md`, `docs/references/brand-modules/foundry.md` | Support docs point readers to the new machine field names without becoming machine truth. |
 | Retired route vocabulary provenance | `docs/history/**` and negative guards | Old route terms remain only as history, tombstone, provenance or no-resurrection guard material. |
 
 ## Coverage Summary

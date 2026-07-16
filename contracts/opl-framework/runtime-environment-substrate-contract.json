@@ -60,8 +60,8 @@
       "role": "stage_runtime_consumption_refs",
       "owner": "OPL Framework"
     },
-    "foundry-lab": {
-      "role": "agent_lab_environment_consumption",
+    "foundry": {
+      "role": "foundry_kernel_evaluation_environment_consumption",
       "owner": "OPL Framework"
     },
     "charter": {

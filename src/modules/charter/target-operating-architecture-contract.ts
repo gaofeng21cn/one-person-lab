@@ -11,8 +11,8 @@ import {
 } from './brand-module-contracts.ts';
 import {
   TARGET_ARCHITECTURE_ACCEPTED_OWNER_ANSWER_SHAPES,
-  TARGET_ARCHITECTURE_AGENT_LAB_MAY_PRODUCE,
-  TARGET_ARCHITECTURE_AGENT_LAB_MUST_NOT_PRODUCE,
+  TARGET_ARCHITECTURE_FOUNDRY_KERNEL_MAY_PRODUCE,
+  TARGET_ARCHITECTURE_FOUNDRY_KERNEL_MUST_NOT_PRODUCE,
   TARGET_ARCHITECTURE_APP_DEFAULT_FIELDS,
   TARGET_ARCHITECTURE_APP_DRILLDOWN_FIELDS,
   TARGET_ARCHITECTURE_ATLAS_CATALOGS,
@@ -67,7 +67,7 @@ export function validateTargetOperatingArchitecture(
   const catalogRaw = value.catalog_and_telemetry;
   const appConsoleRaw = value.app_console_policy;
   const experienceOperatingModelRaw = value.experience_operating_model;
-  const agentLabRaw = value.agent_lab_improvement_plane;
+  const foundryKernelRaw = value.foundry_kernel_plane;
   const oneShotPlanLandingModelRaw = value.one_shot_plan_landing_model;
   const foundryAgentOsStandardRaw = value.foundry_agent_os_standard;
   const multiPlaneRaw = value.multi_plane_operating_system;
@@ -81,14 +81,14 @@ export function validateTargetOperatingArchitecture(
     || !isRecord(catalogRaw)
     || !isRecord(appConsoleRaw)
     || !isRecord(experienceOperatingModelRaw)
-    || !isRecord(agentLabRaw)
+    || !isRecord(foundryKernelRaw)
     || !isRecord(oneShotPlanLandingModelRaw)
     || !isRecord(foundryAgentOsStandardRaw)
     || !isRecord(multiPlaneRaw)
   ) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
-      'target-operating-architecture-contract.json must declare resource, authority, ABI, surface, multi-plane, reconciler, catalog, App, Agent Lab, and Foundry Agent OS sections.',
+      'target-operating-architecture-contract.json must declare resource, authority, ABI, surface, multi-plane, reconciler, catalog, App, Foundry Kernel, and Foundry Agent OS sections.',
       {
         file: filePath,
         field: !isRecord(multiPlaneRaw)
@@ -331,18 +331,18 @@ export function validateTargetOperatingArchitecture(
   );
   requireEveryValue(drilldownOnlyFields, TARGET_ARCHITECTURE_APP_DRILLDOWN_FIELDS, 'app_console_policy.drilldown_only_fields', filePath);
 
-  const agentLabMayProduce = expectNonEmptyStringArray(
-    agentLabRaw.may_produce,
-    'agent_lab_improvement_plane.may_produce',
+  const foundryKernelMayProduce = expectNonEmptyStringArray(
+    foundryKernelRaw.may_produce,
+    'foundry_kernel_plane.may_produce',
     filePath,
   );
-  requireEveryValue(agentLabMayProduce, TARGET_ARCHITECTURE_AGENT_LAB_MAY_PRODUCE, 'agent_lab_improvement_plane.may_produce', filePath);
-  const agentLabMustNotProduce = expectNonEmptyStringArray(
-    agentLabRaw.must_not_produce,
-    'agent_lab_improvement_plane.must_not_produce',
+  requireEveryValue(foundryKernelMayProduce, TARGET_ARCHITECTURE_FOUNDRY_KERNEL_MAY_PRODUCE, 'foundry_kernel_plane.may_produce', filePath);
+  const foundryKernelMustNotProduce = expectNonEmptyStringArray(
+    foundryKernelRaw.must_not_produce,
+    'foundry_kernel_plane.must_not_produce',
     filePath,
   );
-  requireEveryValue(agentLabMustNotProduce, TARGET_ARCHITECTURE_AGENT_LAB_MUST_NOT_PRODUCE, 'agent_lab_improvement_plane.must_not_produce', filePath);
+  requireEveryValue(foundryKernelMustNotProduce, TARGET_ARCHITECTURE_FOUNDRY_KERNEL_MUST_NOT_PRODUCE, 'foundry_kernel_plane.must_not_produce', filePath);
 
   return {
     contract_kind: (() => {
@@ -563,10 +563,10 @@ export function validateTargetOperatingArchitecture(
       filePath,
       experienceOperatingModelRaw,
     ),
-    agent_lab_improvement_plane: {
-      role: expectString(agentLabRaw.role, 'agent_lab_improvement_plane.role', filePath),
-      may_produce: agentLabMayProduce,
-      must_not_produce: agentLabMustNotProduce,
+    foundry_kernel_plane: {
+      role: expectString(foundryKernelRaw.role, 'foundry_kernel_plane.role', filePath),
+      may_produce: foundryKernelMayProduce,
+      must_not_produce: foundryKernelMustNotProduce,
     },
     one_shot_plan_landing_model: validateOneShotPlanLandingModel(
       filePath,

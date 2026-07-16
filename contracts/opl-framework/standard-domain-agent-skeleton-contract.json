@@ -99,11 +99,11 @@
     "version": "standard-domain-agent-scaffold.v1",
     "scaffold_id": "opl.standard_domain_agent.scaffold.v1",
     "owner": "one-person-lab",
-    "command": "opl agents scaffold",
+    "api_ref": "opl.pack.buildStandardDomainAgentScaffold",
     "state": "scaffold_contract_available",
     "contract_ref": "contracts/opl-framework/standard-domain-agent-skeleton-contract.json",
     "generation_policy": {
-      "scaffold_command_is_read_only": true,
+      "scaffold_request_is_read_only": true,
       "creates_files": false,
       "default_mode": "describe_without_target_dir",
       "write_requires_explicit_target_dir": true,
@@ -681,7 +681,7 @@
           "version": "foundry-agent-standard-public-projection.v1",
           "policy_id": "standard_agent_public_foundry_surface_is_opl_generated_hosted_series",
           "standard_public_foundry_surface": "opl_generated_hosted_series",
-          "canonical_inspect_command_pattern": "opl foundry agents inspect <agent_id>",
+          "canonical_inspect_command_pattern": "opl agents inspect <agent_id>",
           "allowed_active_public_foundry_surfaces": [
             "opl_foundry_agent_series_spine",
             "opl_family_hosted_surfaces"
@@ -884,7 +884,7 @@
             "runway",
             "ledger",
             "console",
-            "foundry-lab",
+            "foundry",
             "connect"
           ],
           "agent_cli_public_command_surface_role": "foundry_agent_series_spine",
@@ -897,15 +897,10 @@
           "surface_kind": "opl_foundry_agent_series_cli_command_surface_policy",
           "version": "foundry-agent-cli-command-surface.v1",
           "policy_id": "foundry_agent_series_spine_public_command_surface",
-          "canonical_opl_command_surface": "opl agents foundry",
+          "canonical_opl_command_surface": "opl agents run",
           "agent_cli_series_label": "OPL Foundry Agent",
           "ordinary_operations": [
-            "status",
-            "inspect",
-            "interfaces",
-            "validate",
-            "doctor",
-            "peers"
+            "run"
           ],
           "ordinary_public_command_surface_spine": [
             "workspace",
@@ -929,7 +924,7 @@
           "surface_kind": "opl_foundry_agent_non_standard_implementation_bucket_policy",
           "version": "foundry-agent-legacy-bucket-retirement.v1",
           "ordinary_public_command_surface_allowed": false,
-          "replacement_command_surface": "opl agents foundry",
+          "replacement_command_surface": "opl agents run",
           "non_standard_bucket_prefixes": [
             "runtime",
             "family-runtime",
@@ -996,7 +991,7 @@
           "legacy_skill_command_retired": true,
           "legacy_standalone_mcp_servers_retired": true,
           "derived_surface_refs": [
-            "opl agents foundry interfaces --json",
+            "opl agents run --domain <agent_id> --action <action_id> --json",
             "opl connect skills --json",
             "opl connect sync-skills --json"
           ]
@@ -1233,7 +1228,7 @@
         }
       },
       "conformance_version": "standard-stage-pack.v2",
-      "validator": "opl agents scaffold --validate <repo-dir>",
+      "validator_api_ref": "opl.pack.validateStandardDomainAgentScaffold",
       "empty_agent_directory_policy": "blocked"
     },
     "capability_map_contract": {
@@ -1603,7 +1598,7 @@
         "version": "foundry-agent-standard-public-projection.v1",
         "policy_id": "standard_agent_public_foundry_surface_is_opl_generated_hosted_series",
         "standard_public_foundry_surface": "opl_generated_hosted_series",
-        "canonical_inspect_command_pattern": "opl foundry agents inspect <agent_id>",
+        "canonical_inspect_command_pattern": "opl agents inspect <agent_id>",
         "allowed_active_public_foundry_surfaces": [
           "opl_foundry_agent_series_spine",
           "opl_family_hosted_surfaces"
@@ -1806,7 +1801,7 @@
           "runway",
           "ledger",
           "console",
-          "foundry-lab",
+          "foundry",
           "connect"
         ],
         "agent_cli_public_command_surface_role": "foundry_agent_series_spine",
@@ -1819,15 +1814,10 @@
         "surface_kind": "opl_foundry_agent_series_cli_command_surface_policy",
         "version": "foundry-agent-cli-command-surface.v1",
         "policy_id": "foundry_agent_series_spine_public_command_surface",
-        "canonical_opl_command_surface": "opl agents foundry",
+        "canonical_opl_command_surface": "opl agents run",
         "agent_cli_series_label": "OPL Foundry Agent",
         "ordinary_operations": [
-          "status",
-          "inspect",
-          "interfaces",
-          "validate",
-          "doctor",
-          "peers"
+          "run"
         ],
         "ordinary_public_command_surface_spine": [
           "workspace",
@@ -1851,7 +1841,7 @@
         "surface_kind": "opl_foundry_agent_non_standard_implementation_bucket_policy",
         "version": "foundry-agent-legacy-bucket-retirement.v1",
         "ordinary_public_command_surface_allowed": false,
-        "replacement_command_surface": "opl agents foundry",
+        "replacement_command_surface": "opl agents run",
         "non_standard_bucket_prefixes": [
           "runtime",
           "family-runtime",
@@ -1918,7 +1908,7 @@
         "legacy_skill_command_retired": true,
         "legacy_standalone_mcp_servers_retired": true,
         "derived_surface_refs": [
-          "opl agents foundry interfaces --json",
+          "opl agents run --domain <agent_id> --action <action_id> --json",
           "opl connect skills --json",
           "opl connect sync-skills --json"
         ]

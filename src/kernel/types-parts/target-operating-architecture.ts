@@ -122,7 +122,7 @@ export interface TargetOperatingArchitectureContract {
     authority_boundary: Record<string, false>;
     forbidden_claims: string[];
   };
-  agent_lab_improvement_plane: {
+  foundry_kernel_plane: {
     role: string;
     may_produce: string[];
     must_not_produce: string[];

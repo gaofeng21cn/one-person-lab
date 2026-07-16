@@ -24,9 +24,10 @@ const validRoute = {
 function catalogValue(
   route: Record<string, unknown> | undefined,
   options: {
-    binding?: 'stage_binding' | 'handler_ref';
+    binding?: 'stage_binding' | 'handler_ref' | 'foundry_binding';
     handlerRef?: unknown;
     stageManifestRef?: unknown;
+    providerManifestRef?: unknown;
   } = {},
 ) {
   const binding = options.binding ?? 'stage_binding';
@@ -38,7 +39,7 @@ function catalogValue(
     owner: 'sample',
     authority_boundary: {
       domain_truth_owner: 'sample',
-      opl_role: 'projection_consumer_only',
+      opl_role: binding === 'foundry_binding' ? 'foundry_runtime_owner' : 'projection_consumer_only',
       write_policy: 'no_domain_truth_writes',
     },
     actions: [{
@@ -49,7 +50,12 @@ function catalogValue(
       effect: 'mutating',
       execution_binding: binding === 'handler_ref'
         ? { kind: 'handler_ref', handler_ref: options.handlerRef ?? 'handler:sample.build' }
-        : {
+        : binding === 'foundry_binding'
+          ? {
+              kind: 'foundry_binding',
+              provider_manifest_ref: options.providerManifestRef ?? 'contracts/foundry_provider.json',
+            }
+          : {
             kind: 'stage_binding',
             stage_manifest_ref: options.stageManifestRef ?? 'agent/stages/manifest.json',
           },
@@ -162,6 +168,18 @@ test('handler-bound action fails when a stage exposes it as executable', () => {
   assert.match(parity.issues.join('\n'), /handler-bound action must not be allowed by a stage/);
 });
 
+test('foundry-bound action delegates its internal route graph to the provider manifest', () => {
+  const normalizedCatalog = catalog(undefined, { binding: 'foundry_binding' });
+  const parity = buildFamilyActionStageRouteParity(normalizedCatalog, plane(), {
+    require_declared_routes: true,
+  });
+
+  assert.equal(normalizedCatalog.actions[0]!.execution_binding.kind, 'foundry_binding');
+  assert.equal(parity.status, 'aligned');
+  assert.equal(parity.declared_route_count, 0);
+  assert.equal(parity.required_route_action_count, 0);
+});
+
 test('catalog v2 rejects legacy command metadata and incomplete execution bindings', () => {
   const legacyCatalog = catalogValue(validRoute) as Record<string, any>;
   legacyCatalog.actions[0].source_command = { command: 'sample build', surface_kind: 'domain_cli' };
@@ -178,6 +196,10 @@ test('catalog v2 rejects legacy command metadata and incomplete execution bindin
   assert.throws(
     () => catalog(validRoute, { binding: 'handler_ref' }),
     /execution_binding.kind=handler_ref must not declare stage_route/,
+  );
+  assert.throws(
+    () => catalog(validRoute, { binding: 'foundry_binding' }),
+    /execution_binding.kind=foundry_binding must not declare stage_route/,
   );
   assert.throws(
     () => catalog(undefined, { binding: 'handler_ref', handlerRef: 'sample.build' }),

@@ -28,7 +28,7 @@ Machine boundary: 本文是人读审计与治理建议；机器真相仍归各 r
 | MAS Scholar Skills | 外部 package owner 持有当前 plugin manifest、Skill 目录与内容合同；OPL 不冻结数量或 core/optional 分类。 | 合理。它是 external professional capability package，不是 MAS truth owner。 | 新增或分类调整在 package owner 仓完成；OPL 只验证、同步并保留 no-authority receipt。 |
 | MAG | 8 个 repo-local professional skills，全部进入 `contracts/capability_map.json`；另有 stage prompt、tool connector、reference pack、contract module。 | 合理。Grant 方法留 repo-local，authority 留 MAG。 | `agent/stages/manifest.json` 引用 `agent/skills/grant_authoring.md`，OPL Pack 将其编译进 generated stage plane；如未来需要 executor 直接按 specialist 注入，可从 capability map 投影，不另建新目录。 |
 | RCA | 7 个 repo-local professional skills，全部进入 capability map；stage prompts / control plane 对主要 PPT specialist 有直接 refs。 | 合理。视觉方法、template profiling、native PPT design 与 memory curation 分层清楚。 | `agent/skills/*.md` 作为 legacy policy ref 的边界要继续保持，不能退回成“又一套 professional skill”。 |
-| OMA | 9 个 repo-local professional skills，全部进入 capability map；`agent/skills/*.md` 明确是 domain skill declarations。 | 合理。OMA 的 target-agent improvement / work-order / suite design 等是元智能体专业方法。 | 继续防止把 action flow、target truth 或 takeover authority 写进 professional Skill。 |
+| OMA | 2026-07-16 hard cut 后保留 4 个 repo-local professional skills，分别服务 design basis、stage architecture、blueprint authoring 和 evidence diagnosis/evolution proposal。 | 合理。OMA 只保留 Agent engineering semantic judgment。 | 继续防止把 FoundryRun、物化、评测执行、版本或 activation authority 写进 professional Skill。 |
 | BookForge | 9 个 repo-local professional skills，全部进入 capability map；book stage prompt 只做目标和 handoff，方法下沉到 professional skills。 | 合理。长文写作、style、reference absorption、publication design 与 source claim review 是专业方法。 | PDF/export 后端属于 helper/connector/authority 边界，不应放进 professional Skill 正文。 |
 | OPL App companion skills | App Full 从 OPL Flow 的 `requires + recommends` 闭包打包 OfficeCLI、MinerU、UI/UX 等通用能力。 | 合理。它们是 workflow dependency，不是 domain agent professional skills，也不由 App 维护第二份清单。 | 新增 companion skill 要先进入 OPL Flow policy，再由 Framework package lifecycle 执行；`tmp/**`、VM evidence 和 generated cache 不能当 current skill source。 |
 
@@ -79,14 +79,14 @@ Machine boundary: 本文是人读审计与治理建议；机器真相仍归各 r
 | 能力模块 | Skill / surface | 物理位置 | 暴露方式 | 合理性 |
 | --- | --- | --- | --- | --- |
 | Agent evolution | `oma-agent-evolution` | `agent/professional_skills/oma-agent-evolution/SKILL.md` | capability map | 合理。 |
-| Agent Lab suite design | `oma-agent-lab-suite-designer` | repo-local professional skill | capability map | 合理。 |
+| Foundry Kernel suite design | `oma-foundry-kernel-suite-designer` | repo-local professional skill | capability map | 合理。 |
 | External pattern research | `oma-external-pattern-researcher` | repo-local professional skill | capability map | 合理；external learning 只产 candidate refs。 |
 | Intent architecture | `oma-intent-architect` | repo-local professional skill | capability map | 合理。 |
 | Stage pack architecture | `oma-stage-pack-architect` | repo-local professional skill | capability map | 合理。 |
 | Script-to-pack hygiene | `oma-script-to-pack-hygiene-reviewer` | repo-local professional skill | capability map | 合理；正好服务本次准入原则。 |
 | Takeover review | `oma-takeover-reviewer` | repo-local professional skill | capability map | 合理；不签 takeover authority。 |
 | Trajectory learning | `oma-trajectory-learning-analyst` | repo-local professional skill | capability map | 合理。 |
-| Work-order authoring | `oma-work-order-author` | repo-local professional skill | capability map | 合理；work-order 不等于 patch authority。 |
+| Evolution proposal authoring | `oma-evolution-proposal` | repo-local professional skill | capability map | 合理；只返回完整 next blueprint、semantic diff、根因、新测试与 risk hints。 |
 
 ### BookForge
 

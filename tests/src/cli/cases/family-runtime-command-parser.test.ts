@@ -22,7 +22,7 @@ test('family runtime support and aliases derive from standard-agent runtime prof
     'medautoscience',
     'medautogrant',
     'redcube_ai',
-    'opl-meta-agent',
+    'agent_engineering',
     'opl-bookforge',
   ]);
   assert.equal(resolveFamilyRuntimeDomainId('mas'), 'medautoscience');
@@ -66,13 +66,13 @@ test('family-runtime scheduler treats every standard Agent through the generic r
   ]);
   assert.equal(parsed.mode, 'scheduler_status');
   assert.equal(
-    parsed.mode === 'scheduler_status' ? parsed.domainProfiles?.['opl-meta-agent'] : null,
+    parsed.mode === 'scheduler_status' ? parsed.domainProfiles?.['agent_engineering'] : null,
     '/tmp/oma.toml',
   );
   const workflowArgs = buildTemporalSchedulerTickWorkflowArgs({
-    domainProfiles: { 'opl-meta-agent': '/tmp/oma.toml' },
+    domainProfiles: { 'agent_engineering': '/tmp/oma.toml' },
   });
-  assert.equal(workflowArgs.domain_profiles?.['opl-meta-agent'], '/tmp/oma.toml');
+  assert.equal(workflowArgs.domain_profiles?.['agent_engineering'], '/tmp/oma.toml');
 });
 
 test('family-runtime registry parser reuses shared option walking without changing command payloads', () => {
@@ -115,19 +115,19 @@ test('family-runtime registry parser reuses shared option walking without changi
     'attempt',
     'create',
     '--domain',
-    'opl-meta-agent',
+    'agent_engineering',
     '--stage',
-    'intent-intake',
+    'mission-intake',
     '--action',
-    'build-agent-baseline',
+    'engineer-agent',
     '--workspace-locator',
     '{"workspace_root":"/tmp/oma"}',
   ]), {
     mode: 'attempt_create',
     input: {
-      domainId: 'opl-meta-agent',
-      stageId: 'intent-intake',
-      actionId: 'build-agent-baseline',
+      domainId: 'agent_engineering',
+      stageId: 'mission-intake',
+      actionId: 'engineer-agent',
       providerKind: undefined,
       workspaceLocator: { workspace_root: '/tmp/oma' },
       sourceFingerprint: undefined,

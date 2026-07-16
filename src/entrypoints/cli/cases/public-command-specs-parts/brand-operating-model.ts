@@ -130,14 +130,14 @@ const OPERATING_MODEL_PLANE_PROJECTION_METADATA: Record<string, {
     drilldown_policy: 'drilldown_fields_do_not_override_current_owner_delta',
   },
   improvement_plane: {
-    projection_role: 'agent_lab_improvement_work_order_projection',
+    projection_role: 'foundry_run_version_activation_projection',
     source_contract_fields: [
       'multi_plane_operating_system.planes.improvement_plane',
-      'agent_lab_improvement_plane',
-      'resource_model.resource_kinds.ImprovementWorkOrder',
+      'foundry_kernel_plane',
+      'resource_model.resource_kinds.FoundryRun',
     ],
-    resource_kind_refs: ['ImprovementWorkOrder', 'EvidenceRef'],
-    ordinary_path_role: 'advisory_work_order_and_patch_proposal_projection',
+    resource_kind_refs: ['FoundryRun', 'EvidenceRef'],
+    ordinary_path_role: 'durable_agent_engineering_run_projection',
     drilldown_policy: 'no_target_agent_acceptance_or_production_authority',
   },
 };

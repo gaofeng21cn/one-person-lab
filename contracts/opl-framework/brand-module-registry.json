@@ -773,51 +773,52 @@
       ]
     },
     {
-      "module_id": "foundry-lab",
-      "brand_name": "OPL Foundry Lab",
-      "owner": "OPL Framework + OPL Meta Agent",
-      "purpose": "Agent creation, scaffold, testing takeover, mechanism improvement, work order, canary, promotion, rollback, and risk-tier lifecycle.",
+      "module_id": "foundry",
+      "brand_name": "OPL Foundry Kernel",
+      "owner": "OPL Framework",
+      "purpose": "Internal producer-neutral FoundryRun protocol, deterministic Agent Pack assembly, independent evaluation, immutable versions, canary, activation CAS, and rollback.",
       "state": "active_structural_baseline",
-      "machine_boundary": "Foundry Lab creates and improves OPL-compatible agent structures and work orders. It does not take over domain authority or certify domain deliverables.",
+      "machine_boundary": "The Foundry Kernel orchestrates and persists Agent engineering runs. OMA owns design and diagnosis semantics; target Owners own protected tests and acceptance. Foundry is not a standalone product Actor and does not own target-domain truth.",
       "module_doc_ref": "human_doc:opl_brand_module_foundry_lab",
       "contract_refs": [
         "contracts/opl-framework/brand-module-surfaces.json",
-        "contracts/opl-framework/agent-lab-contract.json",
+        "contracts/opl-framework/foundry-design-request.schema.json",
+        "contracts/opl-framework/foundry-agent-blueprint.schema.json",
+        "contracts/opl-framework/foundry-evidence-bundle.schema.json",
+        "contracts/opl-framework/foundry-evolution-proposal.schema.json",
         "contracts/opl-framework/foundry-agent-series-contract.json",
-        "contracts/opl-framework/standard-domain-agent-skeleton-contract.json",
-        "contracts/opl-framework/domain-pack-compiler-contract.json",
-        "contracts/opl-framework/guardrail-tier-policy.json"
+        "contracts/opl-framework/target-operating-architecture-contract.json"
       ],
       "cli_surfaces": [
-        "opl foundry-lab status --json",
-        "opl foundry-lab inspect --json",
-        "opl foundry-lab interfaces --json",
-        "opl foundry-lab validate --json",
-        "opl foundry-lab doctor --json",
-        "opl agents scaffold --json",
-        "opl agents conformance --family-defaults --json",
-        "opl agents readiness --family-defaults --json",
-        "opl agents default-callers --family-defaults --json"
+        "opl foundry status --run-id <run_id> --json",
+        "opl foundry approve --run-id <run_id> --expected-revision <n> --authority-receipt-ref <ref> --json",
+        "opl foundry reject --run-id <run_id> --expected-revision <n> --authority-receipt-ref <ref> --json",
+        "opl foundry cancel --run-id <run_id> --expected-revision <n> --authority-receipt-ref <ref> --json",
+        "opl foundry versions --target-agent-id <agent_id> --target-domain-id <domain_id> --json",
+        "opl foundry rollback --target-agent-id <agent_id> --target-domain-id <domain_id> --version-digest <sha256:...> --expected-revision <n> --authority-receipt-ref <ref> --json"
       ],
       "app_surfaces": [
-        "app_action:foundry_lab_status",
-        "app_action:foundry_lab_inspect",
-        "opl app state --profile full --json#developer_mode",
+        "app_action:foundry_run_status",
+        "app_action:foundry_owner_decision",
+        "app_action:foundry_version_history",
+        "app_action:foundry_activation_rollback",
+        "opl app state --profile full --json#foundry",
         "opl brand-modules interfaces --json#app.descriptors.brand_modules_inspect"
       ],
       "descriptor_surfaces": [
-        "opl foundry-lab interfaces --json",
-        "contracts/opl-framework/brand-module-surfaces.json#modules.foundry-lab",
-        "contracts/opl-framework/agent-lab-contract.json",
+        "opl brand-modules inspect --module foundry --json",
+        "contracts/opl-framework/brand-module-surfaces.json#modules.foundry",
+        "contracts/opl-framework/foundry-design-request.schema.json",
+        "contracts/opl-framework/foundry-agent-blueprint.schema.json",
+        "contracts/opl-framework/foundry-evidence-bundle.schema.json",
+        "contracts/opl-framework/foundry-evolution-proposal.schema.json",
         "contracts/opl-framework/foundry-agent-series-contract.json",
-        "contracts/opl-framework/brand-module-registry.json#modules.foundry-lab"
+        "contracts/opl-framework/brand-module-registry.json#modules.foundry"
       ],
       "validation_surfaces": [
-        "opl foundry-lab validate --json",
-        "opl foundry-lab doctor --json",
-        "opl agents conformance --family-defaults --json",
-        "opl agents readiness --family-defaults --json",
-        "opl contract validate --json"
+        "opl contract validate --json",
+        "npm run typecheck",
+        "scripts/verify.sh structure"
       ],
       "status_doc_refs": [
         "human_doc:opl_brand_module_maturity_against_workspace",

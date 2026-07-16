@@ -4,7 +4,7 @@
   "owner": "one-person-lab",
   "state": "active_contract",
   "contract_ref": "contracts/opl-framework/private-platform-residue-owner-decisions.json",
-  "purpose": "Freeze the refs-only owner-decision ledger for MAS, MAG, RCA, OMA, and future standard-agent private platform residue such as schedulers, queues, session stores, workbenches, status shells, domain wrappers, runtime watches, and agent-lab materializers.",
+  "purpose": "Freeze the refs-only owner-decision ledger for MAS, MAG, RCA, OMA, and future standard-agent private platform residue such as schedulers, queues, session stores, workbenches, status shells, domain wrappers, runtime watches, and legacy Agent materializers.",
   "command": "opl agents residue-decisions [--repo-dir <path> ...] [--agent <id>=<path> ...] [--family-defaults]",
   "source_surfaces": [
     "contracts/opl-framework/standard-agent-admission-gates.json",
@@ -20,7 +20,7 @@
     "status_shell",
     "domain_wrapper",
     "runtime_watch",
-    "agent_lab_materializer"
+    "legacy_agent_materializer"
   ],
   "allowed_owner_decisions": [
     "retain_authority_function",

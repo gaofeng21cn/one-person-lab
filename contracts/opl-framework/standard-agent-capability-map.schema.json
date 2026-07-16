@@ -200,16 +200,6 @@
           "type": "string",
           "pattern": "^#/capability_policy_profiles/[^/]+$"
         },
-        "failure_token_registry_ref": {
-          "const": "contracts/opl-framework/agent-lab-failure-token-registry.json"
-        },
-        "improvement_tokens": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
         "verification_refs": {
           "type": "array",
           "items": {

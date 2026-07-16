@@ -104,7 +104,7 @@ const capabilityRegistryRaw = value.capability_registry_boundary;
   for (const requiredGate of [
     'scaffold_validation',
     'generated_interface_projection',
-    'agent_lab_baseline_or_takeover_suite',
+    'foundry_evidence_bundle',
     'independent_reviewer_assessment',
     'oma_improvement_or_no_patch_loop',
     'delivery_receipt_or_work_order_or_typed_blocker',

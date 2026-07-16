@@ -14,7 +14,7 @@ Currentness policy: 本文不冻结 Pack L4 状态、registry entry、pack compi
 
 ## 真实 L4 口径
 
-`OPL Pack` 达到 Workspace 级 `L4_structural_baseline` 时，不能只依赖 `Atlas` catalog、`Connect` descriptor 或 `Foundry Lab` improvement loop。它必须有自己的对象模型、contract refs、模块级 CLI family、App/operator read-model、validate/doctor、测试和状态 foldback。
+`OPL Pack` 达到 Workspace 级 `L4_structural_baseline` 时，不能只依赖 `Atlas` catalog、`Connect` descriptor 或 `Foundry Kernel` improvement loop。它必须有自己的对象模型、contract refs、模块级 CLI family、App/operator read-model、validate/doctor、测试和状态 foldback。
 
 Fresh registry and surface readback records Pack 的结构入口和 authority boundary；`contracts/opl-framework/brand-module-surfaces.json#modules.pack` 与 `opl pack status|inspect|interfaces|validate|doctor --json` 是 Pack 自身的 L4 executable surface。该声明只覆盖结构完成度，不覆盖 MAS/MAG/RCA/OMA domain ready、handler readiness、owner acceptance 或 production maturity。
 
@@ -204,7 +204,7 @@ App read-model 只投影 Pack refs 和 Pack 生成的 ordinary consumption views
 - 不让 ToolResultEnvelope、tool card、capability registry hit 或 tool availability 变成 owner answer、current-owner authorization、quality verdict 或 artifact authority。
 - 不让 capability invocation lifecycle 本身变成 domain authority；hard gate 只能引用 `current_owner_delta`，Runway 不能因此写 domain truth、owner receipt 或 typed blocker。
 - 不让 Agent ordinary path 直接消费 MAS 原始合同细节；普通路径只消费 Pack 生成/校验后的 execution view、operational card 和 result envelope。
-- 不让 Pack 接管 Atlas catalog、Stagecraft stage semantics、Runway durable execution、Ledger evidence body、Console release truth、Foundry Lab improvement verdict 或 Connect transport/install evidence。
+- 不让 Pack 接管 Atlas catalog、Stagecraft stage semantics、Runway durable execution、Ledger evidence body、Console release truth、Foundry Kernel improvement verdict 或 Connect transport/install evidence。
 
 ## L4 / L5 成熟度读法
 

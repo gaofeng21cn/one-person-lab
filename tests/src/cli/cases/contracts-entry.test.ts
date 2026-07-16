@@ -192,7 +192,7 @@ test('workspace, help, and runtime manager commands expose stable smoke shapes',
     const commands = help.help.commands.map((entry: { command: string }) => entry.command);
     assert.equal(commands.includes('ask'), false);
     assert.equal(commands.includes('connect sync-skills'), true);
-    assert.equal(commands.includes('agents foundry status'), true);
+    assert.equal(commands.includes('foundry status'), true);
     assert.equal(help.help.examples.some((entry: string) => entry.includes('opl ask')), false);
 
     const runtime = runCli(['status', 'runtime', '--limit', '2'], {

@@ -33,6 +33,7 @@ test('hosted Standard Agent actions use exact managed packages and typed binding
   assert.deepEqual(actionAbi.execution_binding_union.map((binding: any) => binding.required_shape), [
     { kind: 'handler_ref', handler_ref: 'handler:<handler_id>' },
     { kind: 'stage_binding', stage_manifest_ref: 'agent/stages/manifest.json' },
+    { kind: 'foundry_binding', provider_manifest_ref: 'contracts/foundry_provider.json' },
   ]);
 });
 

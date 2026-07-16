@@ -191,31 +191,31 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
     assert.equal(pack.professional_skill_exposure.on_demand_exposure_policy.default_global_user_allowed, false);
     assert.equal(pack.professional_skill_exposure.codex_default_exposure_required, false);
     assert.equal(pack.professional_skill_exposure.default_codex_exposed_count, 0);
-    assert.equal(pack.foundry_agent_series.canonical_command_surface, 'opl agents foundry');
+    assert.equal(pack.foundry_agent_series.canonical_command_surface, 'opl agents run');
     assert.equal(pack.foundry_agent_series.series_membership, 'standard_domain_agent');
     assert.equal(pack.foundry_agent_series.standard_agent_registry_ref, 'src/kernel/standard-agent-registry.ts');
     assert.equal(
       pack.foundry_agent_series.default_foundry_command_surface,
-      `opl foundry agents inspect ${pack.foundry_agent_series.foundry_agent_id}`,
+      `opl agents run --domain ${pack.foundry_agent_series.foundry_agent_id} --action <action_id>`,
     );
     assertOnlyAllowedFoundrySeriesFields(pack);
     assert.equal(pack.plugin_transport.source_kind_role, 'standard_source_model_not_agent_membership_or_status');
     assert.equal(pack.plugin_transport.public_agent_list_must_not_split_by_transport, true);
     if (pack.canonical_plugin_name === 'oma') {
-      assert.equal(pack.foundry_agent_series.default_foundry_command_surface, 'opl foundry agents inspect oma');
+      assert.equal(pack.foundry_agent_series.default_foundry_command_surface, 'opl agents run --domain oma --action <action_id>');
     } else if (pack.canonical_plugin_name === 'obf') {
       assert.equal(pack.foundry_agent_series.brand_cli, 'obf');
-      assert.equal(pack.foundry_agent_series.default_foundry_command_surface, 'opl foundry agents inspect obf');
+      assert.equal(pack.foundry_agent_series.default_foundry_command_surface, 'opl agents run --domain obf --action <action_id>');
       assert.equal(pack.command_surface_spine.work_alias, 'work');
     } else if (pack.canonical_plugin_name === 'mas') {
       assert.equal(pack.foundry_agent_series.brand_cli, 'mas');
-      assert.equal(pack.foundry_agent_series.default_foundry_command_surface, 'opl foundry agents inspect mas');
+      assert.equal(pack.foundry_agent_series.default_foundry_command_surface, 'opl agents run --domain mas --action <action_id>');
     } else if (pack.canonical_plugin_name === 'mag') {
       assert.equal(pack.foundry_agent_series.brand_cli, 'mag');
-      assert.equal(pack.foundry_agent_series.default_foundry_command_surface, 'opl foundry agents inspect mag');
+      assert.equal(pack.foundry_agent_series.default_foundry_command_surface, 'opl agents run --domain mag --action <action_id>');
     } else if (pack.canonical_plugin_name === 'rca') {
       assert.equal(pack.foundry_agent_series.brand_cli, 'rca');
-      assert.equal(pack.foundry_agent_series.default_foundry_command_surface, 'opl foundry agents inspect rca');
+      assert.equal(pack.foundry_agent_series.default_foundry_command_surface, 'opl agents run --domain rca --action <action_id>');
     } else {
       assert.fail(`unexpected plugin: ${pack.canonical_plugin_name}`);
     }
@@ -223,7 +223,7 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
     assert.equal('frontdoor_spine' in pack, false);
     assert.equal('canonical_frontdoor' in pack.foundry_agent_series, false);
     assert.equal('skill_sync_frontdoor' in pack.command_surface_spine, false);
-    assert.equal(ordinaryOperations.includes('status'), true);
+    assert.deepEqual(ordinaryOperations, ['run']);
     assert.equal(ordinaryPublicCommandSurfaceSpine.includes('work'), true);
     assert.equal(pack.mcp_projection.mcp_descriptor_must_delegate_to_series_spine, true);
     assert.equal(pack.mcp_projection.standard_agent_standalone_mcp_default_enabled, false);
@@ -240,8 +240,9 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
     assert.equal(mcpContextBudgetPolicy.toolset_filtering_required_for_broad_surfaces, true);
     assert.equal(mcpContextBudgetPolicy.search_describe_execute_pattern_allowed, true);
     assert.equal(mcpContextBudgetPolicy.full_cli_mirror_forbidden, true);
-    assert.equal(seriesDelegateToolRefs.includes('opl agents foundry interfaces'), true);
-    assert.equal(seriesDelegateToolRefs.includes('opl agents foundry status'), true);
+    assert.deepEqual(seriesDelegateToolRefs, [
+      `opl agents run --domain ${pack.foundry_agent_series.foundry_agent_id} --action <action_id>`,
+    ]);
     assert.equal('legacy_implementation_bucket_policy' in pack, false);
   }
 });

@@ -118,7 +118,7 @@ One Person Lab 同时包含框架、桌面工作台和专业 Agent 三层：
 
 | 产品线 | 当前智能体 | 适合的工作 | 典型交付物 |
 | --- | --- | --- | --- |
-| 智能体工坊 | [`OPL Meta Agent`](https://github.com/gaofeng21cn/opl-meta-agent) | 新智能体开发、测试接管、机制自进化 | 智能体基线、测试套件、机制补丁建议 |
+| 智能体工坊 | [`OPL Meta Agent`](https://github.com/gaofeng21cn/opl-meta-agent) | 通过 `engineer-agent` 把新建、接管和改进意图转成智能体设计与证据驱动演进语义 | `AgentBlueprint`、`EvalSpec`、`EvolutionProposal` |
 | 研究工坊 | [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience) | 医学研究、证据整理、数据分析、稿件准备 | 分析包、证据包、稿件 |
 | 基金工坊 | [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) | 基金方向判断、申请书写作、修订准备 | 申请书、提纲、修订包 |
 | 汇报工坊 | [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) | 讲课、组会、汇报、答辩和项目材料 | 幻灯片、讲稿、汇报材料 |
@@ -151,7 +151,7 @@ One Person Lab 同时包含框架、桌面工作台和专业 Agent 三层：
 
 - 完善桌面应用的首次安装包、更新通道和跨平台发布流程。
 - 继续强化长任务推进能力，让恢复、重试、人工确认、阶段审阅和进度展示更加完整。
-- 将 OPL Meta Agent 作为智能体工坊入口，用于开发新领域智能体、接管既有智能体测试，并通过 Agent Lab 组织机制自进化。
+- 将 OPL Meta Agent 的 `engineer-agent` action 作为智能体工坊唯一公开入口，用于提交新建、接管和改进语义；候选物化、评测、版本、canary、activation 与 rollback 归 Foundry Kernel，保护测试正文、最终验收、权限授权和生产采用归目标 owner。
 - 推进研究工坊、基金工坊、汇报工坊和图书工坊的稳定交付体验。
 - 将 Book Forge 作为默认标准 Foundry Agent surface 纳入 OPL Connect / App 可见面，同时继续让书稿质量、导出交接、出版和 production-ready 声明保持 owner-gated。
 - 将专利、报奖、论文、审稿等高价值知识工作纳入同一产品家族。
@@ -199,7 +199,7 @@ opl family-runtime attempt list
 
 OPL 采用 AI-first、executor-first、contract-light 的 surface 模型：active 框架叙事统一为 `Minimal Trust Kernel + Stage Strategy Kernel + Readiness + Derived Diagnostic Lenses + Surface Budget + AI Capability Aperture`。Kernel 负责 stage pack 准入和 owner boundary、权限、expected receipt、audit、replay、route-back 证据；prompt/skill/tool-affordance/knowledge/rubric refs 是为了可审计、可复用和可交接的策略与边界引用，不是 OPL launch hard gate。工具目录是 affordance catalog，不是 workflow script：OPL 标准化权限、凭据、可写范围、side effect 和 forbidden authority，executor 在 attempt 内自主决定使用、跳过、组合、替代或追问哪些工具。Readiness 聚合启动和证据缺口，不签发 domain verdict；Diagnostic lenses 解释 blocker、stale assumption、replay gap 或 route-back evidence，但不升级为 runtime planner、proof assistant、workflow compiler 或质量权威。Surface Budget 限制新增 default surface：不满足启动安全、权威边界、证据/replay/audit/route-back 或 App/runtime 反复消费的学习点，只能进入 refs、warning、diagnostic 或 history。AI Capability Aperture 保持专家工作对更强 executor 开放，让 Codex 和后续更强 AI 能力直接受益；质量、publication、fundability、visual 和 export 判断仍回到独立 AI reviewer 或 domain-owner receipt。
 
-生产在线运行由 Temporal-backed provider 承接；Temporal 是 production online substrate，负责 durable workflow、activity retry/timeout、signal/update、query、visibility 和 event history。local provider 只用于开发、CI 和离线诊断，不能替代 production online readiness。OPL SQLite attempt ledger 记录 stage attempt identity、queue linkage、checkpoint/closeout refs、owner receipt refs、typed blocker refs、human gate 和 dead-letter state；`stage_progress_log` 只是从 Temporal provider refs、OPL ledger refs 和 domain-owned refs 派生的进度投影。其 `user_stage_log` 是标准 OPL Agent 的用户可读进度面：OPL 只投影时间、usage、refs 与显式缺失状态，MAS/MAG/RCA 等 domain agent 用 `stage_work_done` / `changed_stage_surfaces` 提供人话 closeout；缺失时必须显示 `missing_domain_semantic_summary`。Agent Lab 只消费这些 refs 做评估和改进，不拥有 runtime log 或 domain truth。Codex CLI 是当前第一公民执行器；Hermes-Agent、Claude Code 等工具可以作为显式执行器适配器接入，并通过回执与审计信息证明运行过程。
+生产在线运行由 Temporal-backed provider 承接；Temporal 是 production online substrate，负责 durable workflow、activity retry/timeout、signal/update、query、visibility 和 event history。local provider 只用于开发、CI 和离线诊断，不能替代 production online readiness。OPL SQLite attempt ledger 记录 stage attempt identity、queue linkage、checkpoint/closeout refs、owner receipt refs、typed blocker refs、human gate 和 dead-letter state；`stage_progress_log` 只是从 Temporal provider refs、OPL ledger refs 和 domain-owned refs 派生的进度投影。其 `user_stage_log` 是标准 OPL Agent 的用户可读进度面：OPL 只投影时间、usage、refs 与显式缺失状态，MAS/MAG/RCA 等 domain agent 用 `stage_work_done` / `changed_stage_surfaces` 提供人话 closeout；缺失时必须显示 `missing_domain_semantic_summary`。Foundry Kernel 消费这些 refs 以执行独立评测、形成 `EvidenceBundle` 并管理候选生命周期，再由 OMA 基于证据诊断并提出 `EvolutionProposal`；候选设计语义归 OMA，物化、版本、canary、activation 与 rollback 归 Foundry Kernel，二者都不拥有 runtime log 或 domain truth。Codex CLI 是当前第一公民执行器；Hermes-Agent、Claude Code 等工具可以作为显式执行器适配器接入，并通过回执与审计信息证明运行过程。
 
 ### 文档
 

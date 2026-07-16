@@ -38,7 +38,7 @@ test('target operating architecture keeps framework-wide ownership and authority
     'OwnerAnswer',
     'EvidenceRef',
     'ReleaseCohort',
-    'ImprovementWorkOrder',
+    'FoundryRun',
     'RunwayControlLoop',
     'ProgressReconciler',
   ]);
@@ -193,16 +193,16 @@ test('target operating architecture keeps framework-wide ownership and authority
     assert.notEqual(slice.false_completion_claims.length, 0, slice.plan_id);
   }
 
-  assert.equal(contract.agent_lab_improvement_plane.role, 'refs_only_improvement_control_plane');
+  assert.equal(contract.foundry_kernel_plane.role, 'durable_agent_engineering_control_plane');
   for (const forbiddenOutput of [
     'domain_quality_verdict',
     'artifact_authority',
     'memory_body',
-    'owner_receipt',
+    'owner_receipt_body',
     'typed_blocker',
-    'production_acceptance',
+    'protected_test_body',
   ]) {
-    assert.equal(contract.agent_lab_improvement_plane.must_not_produce.includes(forbiddenOutput), true);
+    assert.equal(contract.foundry_kernel_plane.must_not_produce.includes(forbiddenOutput), true);
   }
 
   const foundry = contract.foundry_agent_os_standard;

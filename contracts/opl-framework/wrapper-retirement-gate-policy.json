@@ -76,7 +76,7 @@
       "status_shell",
       "domain_wrapper",
       "runtime_watch",
-      "agent_lab_materializer"
+      "legacy_agent_materializer"
     ],
     "allowed_dispositions": [
       "retain_authority_function",
@@ -234,16 +234,16 @@
           "workbench",
           "status_shell"
         ],
-        "replacement_owner": "one-person-lab Agent Lab/Runway/promotion gate read model",
+        "replacement_owner": "OPL Foundry Kernel, Pack, Runway, Ledger, and Console owner surfaces",
         "domain_retained_authority": [
           "agent_building_semantics",
           "candidate_package_refs",
-          "work_order_refs",
+          "agent_blueprint_refs",
           "proposal_materialization_refs",
           "target_agent_typed_blocker_refs"
         ],
         "owner_route": "OMA source-structure and script-to-pack readback decides helper versus private runner; target owner receipt or typed blocker closes promotion",
-        "app_aion_policy": "App/Aion may show Agent Lab workbench refs only and cannot promote or launch target-agent runners from shell-local state",
+        "app_aion_policy": "App/Aion may show Console-projected FoundryRun refs only and cannot activate or launch target-agent runners from shell-local state",
         "accepted_decision_shapes": [
           "physical_delete_authorization_ref",
           "keep_as_authority_adapter_ref",
@@ -251,7 +251,7 @@
         ],
         "forbidden_claims": [
           "target_agent_ready",
-          "agent_lab_suite_pass_as_owner_acceptance",
+          "foundry_qualification_as_owner_acceptance",
           "materializer_as_private_runner",
           "physical_delete_authorized_by_opl"
         ]

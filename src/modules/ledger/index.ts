@@ -42,6 +42,16 @@ export { appReleaseUserPathEvidencePayloadPreflight, listAppReleaseUserPathEvide
 export type { AppReleaseUserPathEvidenceReceiptInput } from './app-release-user-path-evidence-ledger.ts';
 export { appReleaseUserPathPayloadRefHints, appReleaseUserPathPayloadTemplate, appReleaseUserPathPayloadWorkorder } from './app-release-user-path-evidence-payload.ts';
 export {
+  listDeveloperModeCloseoutReceipts,
+  recordDeveloperModeCloseoutReceipts,
+  verifyDeveloperModeCloseoutReceipt,
+} from './developer-mode-closeout-ledger.ts';
+export type {
+  DeveloperModeCloseoutReceipt,
+  DeveloperModeCloseoutReceiptInput,
+  DeveloperModeCloseoutReceiptVerifyInput,
+} from './developer-mode-closeout-ledger.ts';
+export {
   buildStandardAgentActionRunLedgerEntry,
   buildStandardAgentActionRunLedgerEvent,
 } from './standard-agent-action-run-ledger.ts';
@@ -52,3 +62,13 @@ export type {
   StandardAgentActionRunLedgerInput,
   StandardAgentActionRunStatus,
 } from './standard-agent-action-run-ledger.ts';
+export {
+  ContentAddressedCandidateCompiler,
+  FileFoundryContentStore,
+  FileFoundryObjectStore,
+  foundryStoragePaths,
+  LedgerFoundryEventStore,
+  LedgerFoundryOperationResultJournal,
+  LedgerVersionRegistry,
+} from './foundry-persistent-adapters.ts';
+export type { FoundryStoragePaths } from './foundry-persistent-adapters.ts';

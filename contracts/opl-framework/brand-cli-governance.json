@@ -47,9 +47,9 @@
       "operations": ["status", "inspect", "interfaces", "validate", "doctor"]
     },
     {
-      "module_id": "foundry-lab",
-      "command": "opl foundry-lab",
-      "operations": ["status", "inspect", "interfaces", "validate", "doctor"]
+      "module_id": "foundry",
+      "command": "opl foundry",
+      "operations": ["status", "approve", "reject", "cancel", "versions", "rollback"]
     },
     {
       "module_id": "connect",
@@ -110,10 +110,10 @@
         "command_pattern": "opl agents modules inspect --domain <domain_id> --module agent-console"
       },
       {
-        "agent_module_id": "agent-foundry-lab",
-        "platform_analogue_module_id": "foundry-lab",
-        "purpose": "Domain-agent internal Foundry Lab spine that maps to the OPL platform foundry-lab module without becoming a platform module.",
-        "command_pattern": "opl agents modules inspect --domain <domain_id> --module agent-foundry-lab"
+        "agent_module_id": "agent-foundry",
+        "platform_analogue_module_id": "foundry",
+        "purpose": "Domain-agent internal design and evolution spine that maps to OPL Foundry Kernel without becoming a platform module.",
+        "command_pattern": "opl agents modules inspect --domain <domain_id> --module agent-foundry"
       },
       {
         "agent_module_id": "agent-connect",
@@ -140,7 +140,7 @@
     {
       "command_prefix": "opl brand-modules",
       "primary_module_id": "charter",
-      "secondary_module_ids": ["atlas", "workspace", "pack", "stagecraft", "runway", "ledger", "console", "foundry-lab", "connect"],
+      "secondary_module_ids": ["atlas", "workspace", "pack", "stagecraft", "runway", "ledger", "console", "foundry", "connect"],
       "status": "active_aggregate_registry_command_surface",
       "migration_target": "Keep as aggregate registry/read-model while module-owned command surfaces provide per-module status/inspect/validate/doctor.",
       "command_refs": [

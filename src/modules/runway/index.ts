@@ -62,6 +62,19 @@ export type { CodexExecEvent } from './codex.ts';
 export { listCodexAppRuntimeEvidenceReceipts } from './codex-app-runtime-evidence-ledger.ts';
 export { runFamilyRuntime } from './family-runtime.ts';
 export { runStandardAgentAction } from './standard-agent-action-runtime.ts';
+export {
+  cancelTemporalFoundryRun,
+  foundryTemporalWorkflowId,
+  queryTemporalFoundryRunWorkflow,
+  startTemporalFoundryRunWorkflow,
+  submitTemporalFoundryOwnerDecision,
+} from './foundry-temporal-control.ts';
+export type {
+  FoundryCancelUpdate,
+  FoundryOwnerDecisionUpdate,
+  FoundryRunWorkflowInput,
+  FoundryRunWorkflowState,
+} from './foundry-temporal.ts';
 export { recordStandardAgentActionRunEvent } from './standard-agent-action-run-recorder.ts';
 export type { StandardAgentActionRunEventInput } from './standard-agent-action-run-recorder.ts';
 export { readFamilyRuntimeLifecycleApplyReceipts, readFamilyRuntimeLifecycleRefs, reconcileFamilyRuntimeLifecycleRefs } from './family-runtime-lifecycle-index.ts';

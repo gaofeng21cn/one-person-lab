@@ -615,6 +615,15 @@ test('provider-hosted attempt launch consumes typed capability readout without c
   process.env.OPL_FAMILY_WORKSPACE_ROOT = familyRoot;
   process.env.OPL_STATE_DIR = path.join(familyRoot, 'state');
   process.env.CODEX_HOME = path.join(familyRoot, 'codex-home');
+  fs.mkdirSync(process.env.OPL_STATE_DIR, { recursive: true });
+  fs.writeFileSync(path.join(process.env.OPL_STATE_DIR, 'developer-supervisor.json'), `${JSON.stringify({
+    version: 'g1',
+    enabled: 'off',
+    mode: 'developer_apply_safe',
+    auto_enable_github_login: null,
+    module_source_preferences: {},
+    updated_at: '2026-07-16T00:00:00.000Z',
+  }, null, 2)}\n`);
   const packageFiles = {
     '.codex-plugin/plugin.json': `${JSON.stringify({ name: 'med-autoscience', version: '0.2.1' })}\n`,
     'skills/med-autoscience/SKILL.md': '# Med Auto Science\n',

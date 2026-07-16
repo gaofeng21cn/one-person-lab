@@ -27,7 +27,7 @@
     "one_ordinary_golden_path_per_agent",
     "small_idempotent_reconcilers",
     "app_console_thin_default_surface",
-    "agent_lab_refs_only_improvement_control_plane",
+    "foundry_kernel_single_control_plane",
     "runway_control_loop_runtime_module"
   ],
   "resource_model": {
@@ -102,10 +102,10 @@
         "truth_boundary": "App release truth stays with the App repository and release evidence; release diagnostics do not become domain readiness"
       },
       {
-        "kind": "ImprovementWorkOrder",
-        "owner": "agent_lab",
-        "default_lane": "advisory",
-        "truth_boundary": "Agent Lab may propose eval, root cause, candidate fix, work order, promotion, rollback, and evidence refs but cannot claim domain verdict or production acceptance"
+        "kind": "FoundryRun",
+        "owner": "one-person-lab",
+        "default_lane": "ordinary",
+        "truth_boundary": "OPL Foundry Kernel owns durable run state, materialization, independent evaluation, immutable versions, activation, and rollback; OMA owns design semantics and the target owner retains domain truth and authority receipts."
       },
       {
         "kind": "RunwayControlLoop",
@@ -517,22 +517,23 @@
       {
         "plane_id": "improvement_plane",
         "owner_modules": [
-          "foundry-lab",
+          "foundry",
           "atlas",
           "pack"
         ],
         "default_lane": "advisory",
         "inputs": [
-          "eval_ref",
-          "root_cause_ref",
-          "candidate_fix_ref",
-          "owner_acceptance_ref"
+          "design_request_ref",
+          "agent_blueprint_ref",
+          "evidence_bundle_ref",
+          "owner_authority_receipt_ref"
         ],
         "outputs": [
-          "work_order_ref",
-          "promotion_proposal_ref",
-          "rollback_ref",
-          "reevaluation_ref"
+          "foundry_run_ref",
+          "qualification_record_ref",
+          "agent_version_ref",
+          "activation_transaction_ref",
+          "rollback_transaction_ref"
         ],
         "forbidden_claims": [
           "domain_ready_declaration",
@@ -945,24 +946,24 @@
       "can_authorize_physical_delete": false
     }
   },
-  "agent_lab_improvement_plane": {
-    "role": "refs_only_improvement_control_plane",
+  "foundry_kernel_plane": {
+    "role": "durable_agent_engineering_control_plane",
     "may_produce": [
-      "eval_ref",
-      "root_cause_ref",
-      "candidate_fix_ref",
-      "work_order_ref",
-      "promotion_proposal_ref",
-      "rollback_ref",
-      "reevaluation_ref"
+      "foundry_run_ref",
+      "evidence_bundle_ref",
+      "qualification_record_ref",
+      "agent_version_ref",
+      "activation_transaction_ref",
+      "rollback_transaction_ref",
+      "owner_gate_ref"
     ],
     "must_not_produce": [
       "domain_quality_verdict",
       "artifact_authority",
       "memory_body",
-      "owner_receipt",
+      "owner_receipt_body",
       "typed_blocker",
-      "production_acceptance"
+      "protected_test_body"
     ]
   },
   "authority_boundary": {
@@ -985,7 +986,7 @@
     "provider_completion_is_owner_receipt",
     "evidence_count_is_progress",
     "release_diagnostics_are_app_release_truth",
-    "agent_lab_eval_is_domain_verdict",
+    "foundry_evaluation_is_target_domain_verdict",
     "cleanup_lane_is_physical_delete_authority",
     "runway_control_loop_writes_domain_truth",
     "progress_reconciler_signs_owner_receipt",
@@ -1052,14 +1053,14 @@
       },
       {
         "target_capability": "agent_improvement_and_target_delta",
-        "primary_module": "foundry-lab",
+        "primary_module": "foundry",
         "supporting_modules": [
           "atlas",
           "pack",
           "connect"
         ],
         "ordinary_lane": "advisory",
-        "authority_boundary": "Foundry Lab and OMA may produce work orders, candidate fixes, and promotion proposals; target domain owner acceptance remains external to OPL."
+        "authority_boundary": "OMA produces AgentBlueprint and EvolutionProposal semantics; OPL Foundry Kernel owns FoundryRun, evidence, versions, activation, and rollback; target domain owner acceptance remains external to OPL."
       }
     ],
     "capability_registry_boundary": {
@@ -1189,7 +1190,7 @@
       "required_gates": [
         "scaffold_validation",
         "generated_interface_projection",
-        "agent_lab_baseline_or_takeover_suite",
+        "foundry_evidence_bundle",
         "independent_reviewer_assessment",
         "oma_improvement_or_no_patch_loop",
         "delivery_receipt_or_work_order_or_typed_blocker"

@@ -1,7 +1,7 @@
 import type { DomainManifestCatalogEntry } from '../../atlas/index.ts';
 import {
   buildStandardDomainAgentSkeletonInspection,
-} from '../../foundry-lab/index.ts';
+} from '../../workspace/index.ts';
 import type {
   ProviderContinuousProof,
 } from '../../runway/index.ts';

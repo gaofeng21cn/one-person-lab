@@ -2,8 +2,8 @@ import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 
 import { assert, fs, os, path, runCli, test } from '../helpers.ts';
-import { loadSourceClosureEffectContract } from '../../../../src/modules/foundry-lab/standard-agent-source-closure-parts/analysis.ts';
-import { buildPythonSourceGraph } from '../../../../src/modules/foundry-lab/standard-agent-source-closure-parts/python-graph.ts';
+import { loadSourceClosureEffectContract } from '../../../../src/modules/workspace/standard-agent-source-closure-parts/analysis.ts';
+import { buildPythonSourceGraph } from '../../../../src/modules/workspace/standard-agent-source-closure-parts/python-graph.ts';
 
 function writeJson(filePath: string, value: unknown) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });

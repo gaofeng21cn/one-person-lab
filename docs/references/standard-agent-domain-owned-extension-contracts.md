@@ -13,11 +13,11 @@
 - `golden_path.required_stage_ids`、`allowed_stage_ids`、`default_stage_id`、`forbidden_owner_tokens`；
 - `physical_morphology.scan_roots`、`allowed_residue_prefixes`、`required_surface_ids`、`surface_classifications`、`forbidden_name_tokens`、`required_parity_gates`。
 
-OPL Foundry Lab 只解释和验证这些字段。文件缺失、结构无效或 required surface 未分类时必须返回 typed blockers，不从 MAS/MAG/RCA/OMA 常量或旧 private policy 回退。
+OPL Foundry Kernel 只解释和验证这些字段。文件缺失、结构无效或 required surface 未分类时必须返回 typed blockers，不从 MAS/MAG/RCA/OMA 常量或旧 private policy 回退。
 
-## Agent Lab suite
+## Foundry Kernel suite
 
-领域 scenario、stage refs、oracle refs、scorer refs、scorecard、recovery observation 与 promotion gate 由 domain/eval pack 的 suite manifest 持有。OPL Agent Lab 只负责读取 manifest、验证 authority boundary、运行 suite engine 和投影结果。
+领域 scenario、stage refs、oracle refs、scorer refs、scorecard、recovery observation 与 promotion gate 由 domain/eval pack 的 suite manifest 持有。OPL Foundry Kernel 只负责读取 manifest、验证 authority boundary、运行 suite engine 和投影结果。
 
 仓内 `example-domain-longline-suite.json` 是 blocked framework fixture，只验证 engine shape，不是 MAS/MAG/RCA 的 live、quality 或 acceptance evidence。
 

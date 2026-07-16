@@ -1,7 +1,7 @@
 {
   "surface_kind": "opl_source_derived_agent_design_abi",
   "version": "opl.source-derived-agent-design-abi.v1",
-  "owner": "one-person-lab/OPL Foundry Lab",
+  "owner": "one-person-lab/OPL Foundry Kernel",
   "purpose": "Define the generic typed-object identity consumed by Agent Profile Spine without binding the framework ABI to one producer agent.",
   "typed_objects": {
     "reference_design_packet": {"surface_kind": "opl_foundry_reference_design_packet", "version": "opl.foundry.reference-design-packet.v1", "identity_ref_field": "packet_ref"},

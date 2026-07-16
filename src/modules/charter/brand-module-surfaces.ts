@@ -4,6 +4,7 @@ import type {
   BrandModuleRegistryEntry,
   BrandModuleSurfaceContractEntry,
   BrandModuleCliOperation,
+  FoundryControlCliFamily,
   FrameworkContracts,
 } from '../../kernel/types.ts';
 
@@ -21,9 +22,26 @@ const BRAND_MODULE_OBJECT_VIEWS: Partial<Record<BrandModuleId, readonly string[]
   runway: ['attempt-index', 'attempts', 'provider', 'blockers'],
   ledger: ['evidence', 'artifacts', 'receipts', 'lineage'],
   console: ['actions', 'read-model', 'drilldown'],
-  'foundry-lab': ['blueprints', 'work-orders', 'conformance', 'promotions'],
   connect: ['descriptors', 'packages', 'channels', 'drift'],
 };
+
+function isFoundryControlCliFamily(
+  family: BrandModuleSurfaceContractEntry['native_cli_family'],
+): family is FoundryControlCliFamily {
+  return 'control_commands' in family;
+}
+
+function coreNativeCommands(entry: BrandModuleSurfaceContractEntry) {
+  const family = entry.native_cli_family;
+  if (isFoundryControlCliFamily(family)) {
+    return Object.values(family.control_commands);
+  }
+  return NATIVE_SUBCOMMANDS.map((subcommand) => family[subcommand]);
+}
+
+function allNativeCommands(entry: BrandModuleSurfaceContractEntry) {
+  return [...coreNativeCommands(entry), ...entry.native_cli_family.additional_commands];
+}
 
 function findRegistryEntry(contracts: FrameworkContracts, moduleId: BrandModuleId) {
   const entry = contracts.brandModuleRegistry.modules.find((candidate) => candidate.module_id === moduleId);
@@ -54,11 +72,12 @@ function authorityBoundaryViolations(entry: BrandModuleSurfaceContractEntry) {
 }
 
 function missingNativeCommands(entry: BrandModuleSurfaceContractEntry) {
-  return NATIVE_SUBCOMMANDS
-    .map((subcommand) => `opl ${entry.module_id} ${subcommand} --json`)
-    .filter((command) => !Object.values(entry.native_cli_family).some((value) => (
-      value === command || (Array.isArray(value) && value.includes(command))
-    )));
+  const commands = coreNativeCommands(entry);
+  return entry.module_id === 'foundry'
+    ? commands.length === 6 ? [] : ['dedicated_foundry_control_abi']
+    : NATIVE_SUBCOMMANDS
+      .map((subcommand) => `opl ${entry.module_id} ${subcommand} --json`)
+      .filter((command) => !commands.includes(command));
 }
 
 function missingRegistryCrossRefs(
@@ -69,20 +88,28 @@ function missingRegistryCrossRefs(
   if (!registry.contract_refs.includes('contracts/opl-framework/brand-module-surfaces.json')) {
     missing.push('registry.contract_refs:brand-module-surfaces');
   }
-  for (const subcommand of NATIVE_SUBCOMMANDS) {
-    const command = `opl ${surface.module_id} ${subcommand} --json`;
+  for (const command of coreNativeCommands(surface)) {
     if (!registry.cli_surfaces.includes(command)) {
       missing.push(`registry.cli_surfaces:${command}`);
     }
   }
-  if (!registry.descriptor_surfaces.includes(`opl ${surface.module_id} interfaces --json`)) {
-    missing.push(`registry.descriptor_surfaces:opl ${surface.module_id} interfaces --json`);
-  }
-  if (!registry.validation_surfaces.includes(`opl ${surface.module_id} validate --json`)) {
-    missing.push(`registry.validation_surfaces:opl ${surface.module_id} validate --json`);
-  }
-  if (!registry.validation_surfaces.includes(`opl ${surface.module_id} doctor --json`)) {
-    missing.push(`registry.validation_surfaces:opl ${surface.module_id} doctor --json`);
+  if (surface.module_id === 'foundry') {
+    if (!registry.descriptor_surfaces.includes('opl brand-modules inspect --module foundry --json')) {
+      missing.push('registry.descriptor_surfaces:opl brand-modules inspect --module foundry --json');
+    }
+    if (!registry.validation_surfaces.includes('opl contract validate --json')) {
+      missing.push('registry.validation_surfaces:opl contract validate --json');
+    }
+  } else {
+    if (!registry.descriptor_surfaces.includes(`opl ${surface.module_id} interfaces --json`)) {
+      missing.push(`registry.descriptor_surfaces:opl ${surface.module_id} interfaces --json`);
+    }
+    if (!registry.validation_surfaces.includes(`opl ${surface.module_id} validate --json`)) {
+      missing.push(`registry.validation_surfaces:opl ${surface.module_id} validate --json`);
+    }
+    if (!registry.validation_surfaces.includes(`opl ${surface.module_id} doctor --json`)) {
+      missing.push(`registry.validation_surfaces:opl ${surface.module_id} doctor --json`);
+    }
   }
   return missing;
 }
@@ -95,6 +122,14 @@ function buildChecks(
   const registryMissingRefs = missingRegistryCrossRefs(surface, registry);
   const authorityViolations = authorityBoundaryViolations(surface);
   const forbiddenClaimGate = surface.forbidden_claims.length > 0 && registry.forbidden_claims.length > 0;
+
+  const descriptorRef = surface.module_id === 'foundry'
+    ? 'opl brand-modules inspect --module foundry --json'
+    : `opl ${surface.module_id} interfaces --json`;
+  const validationCommandsPresent = surface.module_id === 'foundry'
+    ? surface.validation.commands.includes('opl contract validate --json')
+    : surface.validation.commands.includes(`opl ${surface.module_id} validate --json`)
+      && surface.validation.commands.includes(`opl ${surface.module_id} doctor --json`);
 
   return [
     {
@@ -119,15 +154,12 @@ function buildChecks(
     },
     {
       check_id: 'descriptor_surface_present',
-      status: surface.descriptor_surface.descriptor_refs.includes(`opl ${surface.module_id} interfaces --json`) ? 'pass' : 'fail',
+      status: surface.descriptor_surface.descriptor_refs.includes(descriptorRef) ? 'pass' : 'fail',
       descriptor_refs: surface.descriptor_surface.descriptor_refs,
     },
     {
-      check_id: 'validation_and_doctor_present',
-      status: surface.validation.commands.includes(`opl ${surface.module_id} validate --json`)
-        && surface.validation.commands.includes(`opl ${surface.module_id} doctor --json`)
-        ? 'pass'
-        : 'fail',
+      check_id: surface.module_id === 'foundry' ? 'foundry_contract_validation_present' : 'validation_and_doctor_present',
+      status: validationCommandsPresent ? 'pass' : 'fail',
       commands: surface.validation.commands,
     },
     {
@@ -261,14 +293,7 @@ function buildBrandModuleSurfaceInterfaces(
       ...moduleEnvelope(surface),
       status,
       cli: {
-        commands: [
-          surface.native_cli_family.status,
-          surface.native_cli_family.inspect,
-          surface.native_cli_family.interfaces,
-          surface.native_cli_family.validate,
-          surface.native_cli_family.doctor,
-          ...surface.native_cli_family.additional_commands,
-        ],
+        commands: allNativeCommands(surface),
       },
       app: surface.app_read_model,
       descriptor: surface.descriptor_surface,
@@ -519,6 +544,14 @@ export function buildBrandModuleSurfaceCommand(
   moduleId: BrandModuleId,
   command: BrandModuleSurfaceCommand,
 ) {
+  if (moduleId === 'foundry') {
+    throw new FrameworkContractError('cli_usage_error', 'Foundry uses its dedicated operator control ABI.', {
+      module_id: moduleId,
+      requested_operation: command,
+      allowed_operations: ['status', 'approve', 'reject', 'cancel', 'versions', 'rollback'],
+      inspection_surface: 'opl brand-modules inspect --module foundry --json',
+    });
+  }
   switch (command) {
     case 'status':
       return buildBrandModuleSurfaceStatus(contracts, moduleId);

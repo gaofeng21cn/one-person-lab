@@ -20,7 +20,7 @@ Machine boundary: 本文是人读任务版图。domain admission、runtime readi
 - `Presentation Ops`
 
 这个拆分定义的是顶层任务语义。
-`Agent Foundry` / `OPL Meta Agent` 是面向新智能体创建、测试接管和机制改进的 builder/tester module，不属于这七类正式交付 workstream，也不持有 MAS/MAG/RCA 或未来 domain 的领域真相、质量裁决、artifact authority 或 owner receipt。
+`Agent Foundry` 不属于这七类正式交付 workstream。它以 `OPL Meta Agent` 的 `engineer-agent` 作为唯一公开工程入口：OMA 负责把新建、接管和改进意图转成 `AgentBlueprint`、`EvalSpec` 与基于证据诊断的 `EvolutionProposal`；OPL Foundry Kernel 负责物化、评测、`EvidenceBundle`、版本、canary、activation 和 rollback；目标 owner 负责保护测试、最终验收、权限授权与生产采用。OMA 和 Foundry Kernel 都不持有 MAS/MAG/RCA 或未来 domain 的领域真相、质量裁决、artifact authority 或 owner receipt。
 在运行时，这些语义通过 Codex-default executor 路径、按需显式进入 `OPL` activation，由 provider-backed stage runtime 承载可恢复的阶段尝试，再路由到选定的 domain capability surface，同时保留清楚的 ownership 与 handoff 边界。
 
 在执行层面，这些 workstream 也共享同一条目标原则：

@@ -74,8 +74,8 @@ test('opl connect skills discovers the family plugin packs through the configure
     assert.equal(metaPack?.ready_to_sync, true);
     assert.deepEqual(metaPack?.command_preview, ['opl', 'connect', 'sync-skills', '--domain', 'oplmetaagent']);
     assert.deepEqual(metaPack?.plugin_transport.generation_preview_command?.slice(0, 3), ['opl', 'agents', 'interfaces']);
-    assert.equal(metaPack?.foundry_agent_series?.canonical_command_surface, 'opl agents foundry');
-    assert.equal(metaPack?.foundry_agent_series?.default_foundry_command_surface, 'opl foundry agents inspect oma');
+    assert.equal(metaPack?.foundry_agent_series?.canonical_command_surface, 'opl agents run');
+    assert.equal(metaPack?.foundry_agent_series?.default_foundry_command_surface, 'opl agents run --domain oma --action <action_id>');
     assert.equal(metaPack?.command_surface_spine?.skill_sync_command_surface, 'opl connect sync-skills');
     assert.equal(metaPack?.mcp_projection?.mcp_descriptor_must_delegate_to_series_spine, true);
     assert.equal('legacy_implementation_bucket_policy' in metaPack, false);
@@ -96,8 +96,8 @@ test('opl connect skills discovers the family plugin packs through the configure
     assert.equal(bookforgePack?.ready_to_sync, true);
     assert.deepEqual(bookforgePack?.command_preview, ['opl', 'connect', 'sync-skills', '--domain', 'oplbookforge']);
     assert.deepEqual(bookforgePack?.plugin_transport.generation_preview_command?.slice(0, 3), ['opl', 'agents', 'interfaces']);
-    assert.equal(bookforgePack?.foundry_agent_series?.canonical_command_surface, 'opl agents foundry');
-    assert.equal(bookforgePack?.foundry_agent_series?.default_foundry_command_surface, 'opl foundry agents inspect obf');
+    assert.equal(bookforgePack?.foundry_agent_series?.canonical_command_surface, 'opl agents run');
+    assert.equal(bookforgePack?.foundry_agent_series?.default_foundry_command_surface, 'opl agents run --domain obf --action <action_id>');
     assert.deepEqual(Object.keys(bookforgePack.foundry_agent_series).sort(), [
       'brand_cli',
       'canonical_command_surface',
@@ -143,13 +143,13 @@ test('opl connect skills discovers the family plugin packs through the configure
     const generatedSkillDescriptor = previewOutput.generated_agent_interfaces.skill.descriptors[0];
     assert.match(
       generatedSkillDescriptor.command,
-      /^opl agents run --domain opl-meta-agent --action build-agent-baseline --workspace /,
+      /^opl agents run --domain oma --action engineer-agent --workspace /,
     );
     assert.deepEqual(generatedSkillDescriptor.execution_binding, {
-      kind: 'stage_binding',
-      stage_manifest_ref: 'agent/stages/manifest.json',
+      kind: 'foundry_binding',
+      provider_manifest_ref: 'contracts/foundry_provider.json',
     });
-    assert.doesNotMatch(JSON.stringify(previewOutput.generated_agent_interfaces), /npm run build-agent-baseline/);
+    assert.doesNotMatch(JSON.stringify(previewOutput.generated_agent_interfaces), /npm run/);
     assert.doesNotMatch(JSON.stringify(previewOutput.generated_agent_interfaces), /bootstrap:sample/);
     assert.equal(fs.existsSync(syncLogPath), false);
   } finally {
@@ -345,7 +345,7 @@ test('opl connect skills prefers managed roots over Full runtime module path ove
     assert.equal(output.skill_catalog.packs[0].domain_id, 'redcube');
     assert.equal(output.skill_catalog.packs[0].repo_root, path.join(managedModulesRoot, 'redcube-ai'));
     assert.deepEqual(output.skill_catalog.packs[0].command_preview, ['opl', 'connect', 'sync-skills', '--domain', 'redcube']);
-    assert.equal(output.skill_catalog.packs[0].foundry_agent_series.canonical_command_surface, 'opl agents foundry');
+    assert.equal(output.skill_catalog.packs[0].foundry_agent_series.canonical_command_surface, 'opl agents run');
   } finally {
     fs.rmSync(captureDir, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });

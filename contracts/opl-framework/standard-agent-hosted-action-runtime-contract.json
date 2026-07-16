@@ -64,6 +64,13 @@
           "kind": "stage_binding",
           "stage_manifest_ref": "agent/stages/manifest.json"
         }
+      },
+      {
+        "kind": "foundry_binding",
+        "required_shape": {
+          "kind": "foundry_binding",
+          "provider_manifest_ref": "contracts/foundry_provider.json"
+        }
       }
     ],
     "handler_binding_union": [

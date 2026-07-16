@@ -3,8 +3,10 @@ import type {
   BrandModuleAuthorityBoundary,
   BrandModuleCliOperation,
   BrandModuleId,
+  BrandModuleNativeCliFamily,
   BrandModuleRegistryContract,
   BrandModuleSurfacesContract,
+  FoundryControlOperation,
   SourceModuleMapContract,
 } from '../../kernel/types.ts';
 import {
@@ -31,11 +33,11 @@ export const BRAND_MODULE_IDS = [
   'runway',
   'ledger',
   'console',
-  'foundry-lab',
+  'foundry',
   'connect',
 ] as const satisfies readonly BrandModuleId[];
 
-const BRAND_MODULE_CLI_OPERATIONS = [
+const STANDARD_BRAND_MODULE_CLI_OPERATIONS = [
   'status',
   'inspect',
   'interfaces',
@@ -43,10 +45,33 @@ const BRAND_MODULE_CLI_OPERATIONS = [
   'doctor',
 ] as const satisfies readonly BrandModuleCliOperation[];
 
+export const FOUNDRY_CONTROL_OPERATIONS = [
+  'status',
+  'approve',
+  'reject',
+  'cancel',
+  'versions',
+  'rollback',
+] as const satisfies readonly FoundryControlOperation[];
+
+const BRAND_MODULE_CLI_OPERATIONS = [
+  ...STANDARD_BRAND_MODULE_CLI_OPERATIONS,
+  ...FOUNDRY_CONTROL_OPERATIONS,
+] as const satisfies readonly BrandModuleCliOperation[];
+
 const WORKSPACE_BRAND_MODULE_CLI_OPERATIONS = [
   'status',
   'inspect',
 ] as const satisfies readonly BrandModuleCliOperation[];
+
+export const FOUNDRY_CONTROL_COMMANDS = {
+  status: 'opl foundry status --run-id <run_id> --json',
+  approve: 'opl foundry approve --run-id <run_id> --expected-revision <n> --authority-receipt-ref <ref> --json',
+  reject: 'opl foundry reject --run-id <run_id> --expected-revision <n> --authority-receipt-ref <ref> --json',
+  cancel: 'opl foundry cancel --run-id <run_id> --expected-revision <n> --authority-receipt-ref <ref> --json',
+  versions: 'opl foundry versions --target-agent-id <agent_id> --target-domain-id <domain_id> --json',
+  rollback: 'opl foundry rollback --target-agent-id <agent_id> --target-domain-id <domain_id> --version-digest <sha256:...> --expected-revision <n> --authority-receipt-ref <ref> --json',
+} as const satisfies Record<FoundryControlOperation, string>;
 
 const AGENT_INTERNAL_BRAND_MODULE_CLI_OPERATIONS = [
   'list',
@@ -221,17 +246,18 @@ export function validateBrandModuleRegistry(
       }
     }
 
-    const expectedCommandPrefix = moduleId;
     const expectedSurfaceContractRef = 'contracts/opl-framework/brand-module-surfaces.json';
     const cliSurfaces = expectNonEmptyStringArray(entry.cli_surfaces, 'cli_surfaces', filePath);
     const contractRefs = expectNonEmptyStringArray(entry.contract_refs, 'contract_refs', filePath);
     const appSurfaces = expectNonEmptyStringArray(entry.app_surfaces, 'app_surfaces', filePath);
     const descriptorSurfaces = expectNonEmptyStringArray(entry.descriptor_surfaces, 'descriptor_surfaces', filePath);
     const validationSurfaces = expectNonEmptyStringArray(entry.validation_surfaces, 'validation_surfaces', filePath);
-    for (const subcommand of ['status', 'inspect', 'interfaces', 'validate', 'doctor']) {
-      const expectedCommand = `opl ${expectedCommandPrefix} ${subcommand} --json`;
+    const expectedCliSurfaces = moduleId === 'foundry'
+      ? Object.values(FOUNDRY_CONTROL_COMMANDS)
+      : STANDARD_BRAND_MODULE_CLI_OPERATIONS.map((subcommand) => `opl ${moduleId} ${subcommand} --json`);
+    for (const expectedCommand of expectedCliSurfaces) {
       if (!cliSurfaces.includes(expectedCommand)) {
-        throw new FrameworkContractError('contract_shape_invalid', 'Each brand module registry entry must reference its native module CLI family.', {
+        throw new FrameworkContractError('contract_shape_invalid', 'Each brand module registry entry must reference its exact native CLI family.', {
           file: filePath,
           index,
           module_id: moduleId,
@@ -249,7 +275,10 @@ export function validateBrandModuleRegistry(
         missing_ref: expectedSurfaceContractRef,
       });
     }
-    if (!appSurfaces.includes(`app_action:${moduleId.replace(/-/g, '_')}_status`)) {
+    const expectedAppStatusSurface = moduleId === 'foundry'
+      ? 'app_action:foundry_run_status'
+      : `app_action:${moduleId.replace(/-/g, '_')}_status`;
+    if (!appSurfaces.includes(expectedAppStatusSurface)) {
       throw new FrameworkContractError('contract_shape_invalid', 'Each brand module registry entry must expose a module status App action descriptor ref.', {
         file: filePath,
         index,
@@ -257,16 +286,23 @@ export function validateBrandModuleRegistry(
         field: 'app_surfaces',
       });
     }
-    if (!descriptorSurfaces.includes(`opl ${expectedCommandPrefix} interfaces --json`)) {
-      throw new FrameworkContractError('contract_shape_invalid', 'Each brand module registry entry must expose its native interfaces descriptor surface.', {
+    const expectedDescriptorSurface = moduleId === 'foundry'
+      ? 'opl brand-modules inspect --module foundry --json'
+      : `opl ${moduleId} interfaces --json`;
+    if (!descriptorSurfaces.includes(expectedDescriptorSurface)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Each brand module registry entry must expose its canonical descriptor surface.', {
         file: filePath,
         index,
         module_id: moduleId,
         field: 'descriptor_surfaces',
       });
     }
-    if (!validationSurfaces.includes(`opl ${expectedCommandPrefix} validate --json`) || !validationSurfaces.includes(`opl ${expectedCommandPrefix} doctor --json`)) {
-      throw new FrameworkContractError('contract_shape_invalid', 'Each brand module registry entry must expose native validate and doctor surfaces.', {
+    const hasExpectedValidation = moduleId === 'foundry'
+      ? validationSurfaces.includes('opl contract validate --json')
+      : validationSurfaces.includes(`opl ${moduleId} validate --json`)
+        && validationSurfaces.includes(`opl ${moduleId} doctor --json`);
+    if (!hasExpectedValidation) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Each brand module registry entry must expose its canonical validation surfaces.', {
         file: filePath,
         index,
         module_id: moduleId,
@@ -558,7 +594,9 @@ export function validateBrandCliGovernance(
     );
     const expectedOperations: readonly BrandModuleCliOperation[] = moduleId === 'workspace'
       ? WORKSPACE_BRAND_MODULE_CLI_OPERATIONS
-      : BRAND_MODULE_CLI_OPERATIONS;
+      : moduleId === 'foundry'
+        ? FOUNDRY_CONTROL_OPERATIONS
+        : STANDARD_BRAND_MODULE_CLI_OPERATIONS;
     requireEveryValue(operations, expectedOperations, 'platform_command_surfaces.operations', filePath);
     const unexpectedOperations = operations.filter((operation) => !expectedOperations.includes(operation));
     if (unexpectedOperations.length > 0) {
@@ -723,6 +761,18 @@ export function validateBrandModuleSurfaces(
     'required_native_subcommands',
     filePath,
   );
+  const foundryControlOperations = expectAllowedStringArray(
+    value.foundry_control_operations,
+    'foundry_control_operations',
+    filePath,
+    FOUNDRY_CONTROL_OPERATIONS,
+  );
+  requireEveryValue(
+    foundryControlOperations,
+    FOUNDRY_CONTROL_OPERATIONS,
+    'foundry_control_operations',
+    filePath,
+  );
   const requiredGates = expectNonEmptyStringArray(value.required_gates, 'required_gates', filePath);
   for (const subcommand of ['status', 'inspect', 'interfaces', 'validate', 'doctor']) {
     if (!requiredSubcommands.includes(subcommand)) {
@@ -803,25 +853,72 @@ export function validateBrandModuleSurfaces(
       });
     }
 
-    const nativeCommands = {
-      status: expectString(nativeCliFamily.status, 'native_cli_family.status', filePath),
-      inspect: expectString(nativeCliFamily.inspect, 'native_cli_family.inspect', filePath),
-      interfaces: expectString(nativeCliFamily.interfaces, 'native_cli_family.interfaces', filePath),
-      validate: expectString(nativeCliFamily.validate, 'native_cli_family.validate', filePath),
-      doctor: expectString(nativeCliFamily.doctor, 'native_cli_family.doctor', filePath),
-      additional_commands: expectStringArray(nativeCliFamily.additional_commands, 'native_cli_family.additional_commands', filePath),
-    };
-    for (const subcommand of ['status', 'inspect', 'interfaces', 'validate', 'doctor'] as const) {
-      const expectedCommand = `opl ${moduleId} ${subcommand} --json`;
-      if (nativeCommands[subcommand] !== expectedCommand) {
-        throw new FrameworkContractError('contract_shape_invalid', 'Native brand module command must match its module prefix and subcommand.', {
+    let nativeCommands: BrandModuleNativeCliFamily;
+    if (moduleId === 'foundry') {
+      if (!isRecord(nativeCliFamily.control_commands)) {
+        throw new FrameworkContractError('contract_shape_invalid', 'Foundry native_cli_family must declare control_commands.', {
           file: filePath,
           index,
           module_id: moduleId,
-          field: `native_cli_family.${subcommand}`,
-          expected_command: expectedCommand,
+          field: 'native_cli_family.control_commands',
         });
       }
+      for (const legacyOperation of STANDARD_BRAND_MODULE_CLI_OPERATIONS) {
+        if (legacyOperation !== 'status' && legacyOperation in nativeCliFamily) {
+          throw new FrameworkContractError('contract_shape_invalid', 'Foundry must not expose the generic brand-module CLI family.', {
+            file: filePath,
+            index,
+            module_id: moduleId,
+            forbidden_operation: legacyOperation,
+          });
+        }
+      }
+      const controlCommands = {} as Record<FoundryControlOperation, string>;
+      for (const operation of FOUNDRY_CONTROL_OPERATIONS) {
+        const actualCommand = expectString(
+          nativeCliFamily.control_commands[operation],
+          `native_cli_family.control_commands.${operation}`,
+          filePath,
+        );
+        const expectedCommand = FOUNDRY_CONTROL_COMMANDS[operation];
+        if (actualCommand !== expectedCommand) {
+          throw new FrameworkContractError('contract_shape_invalid', 'Foundry control command must match the dedicated operator ABI.', {
+            file: filePath,
+            index,
+            module_id: moduleId,
+            operation,
+            expected_command: expectedCommand,
+            actual_command: actualCommand,
+          });
+        }
+        controlCommands[operation] = actualCommand;
+      }
+      nativeCommands = {
+        control_commands: controlCommands,
+        additional_commands: expectStringArray(nativeCliFamily.additional_commands, 'native_cli_family.additional_commands', filePath),
+      };
+    } else {
+      const standardCommands = {
+        status: expectString(nativeCliFamily.status, 'native_cli_family.status', filePath),
+        inspect: expectString(nativeCliFamily.inspect, 'native_cli_family.inspect', filePath),
+        interfaces: expectString(nativeCliFamily.interfaces, 'native_cli_family.interfaces', filePath),
+        validate: expectString(nativeCliFamily.validate, 'native_cli_family.validate', filePath),
+        doctor: expectString(nativeCliFamily.doctor, 'native_cli_family.doctor', filePath),
+        additional_commands: expectStringArray(nativeCliFamily.additional_commands, 'native_cli_family.additional_commands', filePath),
+      };
+      for (const subcommand of STANDARD_BRAND_MODULE_CLI_OPERATIONS) {
+        const expectedCommand = `opl ${moduleId} ${subcommand} --json`;
+        if (standardCommands[subcommand] !== expectedCommand) {
+          throw new FrameworkContractError('contract_shape_invalid', 'Native brand module command must match its module prefix and subcommand.', {
+            file: filePath,
+            index,
+            module_id: moduleId,
+            field: `native_cli_family.${subcommand}`,
+            expected_command: expectedCommand,
+          });
+        }
+      }
+      nativeCommands = standardCommands;
     }
 
     const descriptorsRaw = appReadModel.descriptors;
@@ -920,6 +1017,7 @@ export function validateBrandModuleSurfaces(
     machine_boundary: expectString(value.machine_boundary, 'machine_boundary', filePath),
     baseline_module_id: expectBrandModuleId(value.baseline_module_id, 'baseline_module_id', filePath),
     required_native_subcommands: requiredSubcommands,
+    foundry_control_operations: foundryControlOperations,
     required_gates: requiredGates,
     modules,
   };

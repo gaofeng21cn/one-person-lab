@@ -133,10 +133,11 @@ const OPL_REPLACEMENT_COVERAGE: Record<string, ReplacementCoverage> = {
     coverage_status: 'opl_replacement_surface_available',
     replacement_owner: 'one-person-lab',
     replacement_surface_refs: [
-      'opl agents scaffold',
+      'opl.pack.buildStandardDomainAgentScaffold',
+      'opl.pack.validateStandardDomainAgentScaffold',
       'contracts/opl-framework/standard-domain-agent-skeleton-contract.json',
-      'src/standard-domain-agent-scaffold.ts',
-      'src/standard-domain-agent-scaffold-policy.ts',
+      'src/modules/pack/standard-domain-agent-scaffold.ts',
+      'src/modules/pack/standard-domain-agent-scaffold-validation.ts',
     ],
     focused_verification_refs: [
       'tests/src/cli/cases/domain-pack-compiler.test.ts',

@@ -1,19 +1,21 @@
 import { assert, test } from '../helpers.ts';
 import {
   buildStandardDomainAgentTemplateConsumptionReadModel,
-} from '../../../../src/modules/foundry-lab/standard-domain-agent-scaffold.ts';
+} from '../../../../src/modules/pack/standard-domain-agent-scaffold.ts';
 
 test('standard agent template consumption read model exposes replayable evidence contract', () => {
   const readModel = buildStandardDomainAgentTemplateConsumptionReadModel();
 
   assert.equal(readModel.surface_kind, 'opl_standard_agent_template_consumption_read_model');
-  assert.equal(readModel.status, 'explicit_repeat_consumption_proof_command_available');
-  assert.deepEqual(readModel.proof_command, ['agents', 'scaffold', '--consumption-evidence']);
-  assert.deepEqual(readModel.evidence_contract.replay_command, [
-    'agents',
-    'scaffold',
-    '--consumption-evidence',
-  ]);
+  assert.equal(readModel.status, 'explicit_repeat_consumption_api_available');
+  assert.equal(
+    readModel.proof_api_ref,
+    'opl.console.buildStandardDomainAgentScaffoldConsumptionEvidence',
+  );
+  assert.equal(
+    readModel.evidence_contract.replay_api_ref,
+    'opl.console.buildStandardDomainAgentScaffoldConsumptionEvidence',
+  );
   assert.equal(
     readModel.evidence_contract.expected_output_root,
     '/standard_domain_agent_template_consumption_evidence',

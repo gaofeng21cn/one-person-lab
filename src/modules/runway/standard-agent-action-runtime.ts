@@ -15,6 +15,8 @@ import { parseJsonText } from '../../kernel/json-file.ts';
 import { assertRepoJsonSchemaPayload } from '../../kernel/repo-json-schema.ts';
 import { resolveContainedRepoJsonFile } from '../../kernel/repo-contained-json-file.ts';
 import { resolveStandardAgent } from '../../kernel/standard-agent-registry.ts';
+import { readFoundryProviderManifest, validateDesignRequest } from '../foundry/index.ts';
+import { startTemporalFoundryRunWorkflow } from './foundry-temporal-control.ts';
 import { compileStandardAgentStageManifest } from '../pack/public/standard-agent-action-runtime.ts';
 import {
   commitStandardAgentActionOutput,
@@ -43,6 +45,10 @@ type RuntimeDependencies = {
   runStageRuntime?: typeof runFamilyRuntime;
   compileStageManifest?: typeof compileStandardAgentStageManifest;
   recordLedger?: typeof actionLedger;
+  startFoundryRun?: (input: {
+    request: ReturnType<typeof validateDesignRequest>;
+    run_id: string;
+  }) => Promise<unknown>;
 };
 
 type StandardAgentStageActionLaunch = {
@@ -63,6 +69,19 @@ type StandardAgentStageActionLaunch = {
   temporal_stage_run_query_error: ReturnType<typeof observationFailure> | null;
   blocked_reason: string | null;
   authority_boundary: ReturnType<typeof actionAuthorityBoundary>;
+};
+
+type StandardAgentFoundryActionLaunch = {
+  surface_kind: 'opl_standard_agent_foundry_action_launch';
+  version: 'opl-standard-agent-foundry-action-launch.v1';
+  status: 'started';
+  execution_kind: 'foundry_binding';
+  run_id: string;
+  domain_id: string;
+  action_id: string;
+  binding_ref: string;
+  foundry_run: Record<string, unknown>;
+  authority_boundary: ReturnType<typeof foundryActionAuthorityBoundary>;
 };
 
 function fail(message: string, details: Record<string, unknown> = {}): never {
@@ -237,6 +256,170 @@ function actionAuthorityBoundary() {
     opl_can_create_typed_blocker: false,
     opl_can_claim_quality_or_export_ready: false,
   } as const;
+}
+
+function foundryActionAuthorityBoundary() {
+  return {
+    opl_role: 'foundry_run_state_materialization_evaluation_version_activation_and_rollback_authority',
+    provider_role: 'agent_design_evaluation_semantics_evidence_diagnosis_and_evolution_proposal',
+    target_owner_role: 'domain_truth_protected_tests_quality_acceptance_permission_and_production_adoption',
+    generated_agent_can_modify_versions_tests_permissions_or_activation: false,
+    provider_completion_is_qualification_or_activation: false,
+  } as const;
+}
+
+function persistedFoundryActionLaunch(input: {
+  stored: NonNullable<ReturnType<typeof inspectStandardAgentActionRunOutput>>;
+  runId: string;
+  domainId: string;
+  actionId: string;
+}) {
+  const persisted = parseJsonText(fs.readFileSync(input.stored.output.file_path, 'utf8'));
+  if (
+    !isRecord(persisted)
+    || persisted.surface_kind !== 'opl_standard_agent_foundry_action_launch'
+    || persisted.version !== 'opl-standard-agent-foundry-action-launch.v1'
+    || persisted.status !== 'started'
+    || persisted.execution_kind !== 'foundry_binding'
+    || persisted.run_id !== input.runId
+    || persisted.domain_id !== input.domainId
+    || persisted.action_id !== input.actionId
+    || typeof persisted.binding_ref !== 'string'
+    || !isRecord(persisted.foundry_run)
+    || !isRecord(persisted.authority_boundary)
+  ) {
+    fail('Existing Standard Agent action output is not the immutable Foundry launch for this run identity.', {
+      run_id: input.runId,
+      output_ref: input.stored.output.ref,
+    });
+  }
+  return persisted as unknown as StandardAgentFoundryActionLaunch;
+}
+
+async function runFoundryAction(input: {
+  action: FamilyActionCatalogAction;
+  checkoutRoot: string;
+  workspaceRoot: string;
+  domainId: string;
+  runId: string;
+  requestBytes: Buffer;
+  request: ReturnType<typeof validateDesignRequest>;
+  packageUseBinding: unknown;
+  startedAt: string;
+  startFoundryRun?: RuntimeDependencies['startFoundryRun'];
+  recordLedger: typeof actionLedger;
+}) {
+  const executionBinding = input.action.execution_binding;
+  if (executionBinding.kind !== 'foundry_binding') {
+    fail('Foundry action has an invalid execution binding.', { action_id: input.action.action_id });
+  }
+  const provider = readFoundryProviderManifest(input.checkoutRoot, executionBinding.provider_manifest_ref);
+  const bindingRef = `foundry:${provider.provider_id}:${executionBinding.provider_manifest_ref}`;
+  const existing = inspectStandardAgentActionRunOutput({
+    workspaceRoot: input.workspaceRoot,
+    runId: input.runId,
+    domainId: input.domainId,
+    actionId: input.action.action_id,
+    requestBytes: input.requestBytes,
+  });
+  if (existing) {
+    const persisted = persistedFoundryActionLaunch({
+      stored: existing,
+      runId: input.runId,
+      domainId: input.domainId,
+      actionId: input.action.action_id,
+    });
+    const ledger = input.recordLedger({
+      runId: input.runId,
+      domainId: input.domainId,
+      actionId: input.action.action_id,
+      bindingRef,
+      status: 'started',
+      startedAt: input.startedAt,
+      recordedAt: new Date().toISOString(),
+      stored: existing,
+    });
+    return {
+      ...persisted,
+      package_use_binding: input.packageUseBinding,
+      request: existing.request,
+      output: existing.output,
+      ledger: ledger.ledger_entry,
+    };
+  }
+  prepareStandardAgentActionRunRequest({
+    workspaceRoot: input.workspaceRoot,
+    runId: input.runId,
+    domainId: input.domainId,
+    actionId: input.action.action_id,
+    requestBytes: input.requestBytes,
+  });
+  try {
+    const foundryRun = await (input.startFoundryRun ?? startTemporalFoundryRunWorkflow)({
+      request: input.request,
+      run_id: input.runId,
+    });
+    if (!isRecord(foundryRun)) fail('Foundry control returned an invalid run inspection.');
+    const output: StandardAgentFoundryActionLaunch = {
+      surface_kind: 'opl_standard_agent_foundry_action_launch',
+      version: 'opl-standard-agent-foundry-action-launch.v1',
+      status: 'started',
+      execution_kind: 'foundry_binding',
+      run_id: input.runId,
+      domain_id: input.domainId,
+      action_id: input.action.action_id,
+      binding_ref: bindingRef,
+      foundry_run: foundryRun,
+      authority_boundary: foundryActionAuthorityBoundary(),
+    };
+    const recordedAt = new Date().toISOString();
+    const stored = commitStandardAgentActionOutput({
+      workspaceRoot: input.workspaceRoot,
+      runId: input.runId,
+      domainId: input.domainId,
+      actionId: input.action.action_id,
+      requestBytes: input.requestBytes,
+      outputBytes: canonicalJsonBytes(output),
+    });
+    const ledger = input.recordLedger({
+      runId: input.runId,
+      domainId: input.domainId,
+      actionId: input.action.action_id,
+      bindingRef,
+      status: 'started',
+      startedAt: input.startedAt,
+      recordedAt,
+      stored,
+    });
+    return {
+      ...output,
+      package_use_binding: input.packageUseBinding,
+      request: stored.request,
+      output: stored.output,
+      ledger: ledger.ledger_entry,
+    };
+  } catch (error) {
+    const recordedAt = new Date().toISOString();
+    const stored = commitStandardAgentActionOutput({
+      workspaceRoot: input.workspaceRoot,
+      runId: input.runId,
+      domainId: input.domainId,
+      actionId: input.action.action_id,
+      requestBytes: input.requestBytes,
+      outputBytes: failureBytes(error),
+    });
+    input.recordLedger({
+      runId: input.runId,
+      domainId: input.domainId,
+      actionId: input.action.action_id,
+      bindingRef,
+      status: 'failed',
+      startedAt: input.startedAt,
+      recordedAt,
+      stored,
+    });
+    wrapFailure(error, stored);
+  }
 }
 
 async function runHandlerAction(input: {
@@ -608,12 +791,21 @@ export async function runStandardAgentAction(
   if (action.execution_binding.kind === 'stage_binding') {
     (dependencies.compileStageManifest ?? compileStandardAgentStageManifest)(managed.checkout_root);
   }
-  const inputValidation = assertRepoJsonSchemaPayload({
-    repoRoot: managed.checkout_root,
-    schemaRef: action.input_schema_ref,
-    payload,
-    label: `Standard Agent action ${action.action_id} input`,
-  });
+  const foundryRequest = action.execution_binding.kind === 'foundry_binding'
+    ? validateDesignRequest(payload)
+    : null;
+  const inputValidation = foundryRequest
+    ? {
+        status: 'valid' as const,
+        schema_ref: action.input_schema_ref,
+        validator: 'opl_foundry_protocol',
+      }
+    : assertRepoJsonSchemaPayload({
+        repoRoot: managed.checkout_root,
+        schemaRef: action.input_schema_ref,
+        payload,
+        label: `Standard Agent action ${action.action_id} input`,
+      });
   const runId = canonicalRunId(input.runId);
   const requestBytes = canonicalJsonBytes(payload);
   const common = {
@@ -634,12 +826,20 @@ export async function runStandardAgentAction(
         runHandler: dependencies.runHandler ?? runStandardAgentHandlerSandbox,
         recordLedger: dependencies.recordLedger ?? actionLedger,
       })
-    : await runStageAction({
+    : action.execution_binding.kind === 'stage_binding'
+      ? await runStageAction({
         ...common,
         runtimeDomainId: managed.agent.domain_id,
         runStageRuntime: dependencies.runStageRuntime ?? runFamilyRuntime,
         recordLedger: dependencies.recordLedger ?? actionLedger,
-      });
+      })
+      : await runFoundryAction({
+          ...common,
+          checkoutRoot: managed.checkout_root,
+          request: foundryRequest!,
+          startFoundryRun: dependencies.startFoundryRun,
+          recordLedger: dependencies.recordLedger ?? actionLedger,
+        });
   return {
     version: 'g2',
     standard_agent_action_run: {

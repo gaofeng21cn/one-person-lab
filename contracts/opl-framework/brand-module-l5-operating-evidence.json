@@ -1657,8 +1657,8 @@
       ]
     },
     {
-      "module_id": "foundry-lab",
-      "brand_name": "OPL Foundry Lab",
+      "module_id": "foundry",
+      "brand_name": "OPL Foundry Kernel",
       "current_level": "L4_structural_baseline",
       "l5_completion_status": "evidence_required",
       "l5_can_be_claimed": false,
@@ -1670,22 +1670,22 @@
       "evidence_requirements": [
         {
           "class_id": "live_user_path",
-          "owner": "OPL Foundry Lab owner",
-          "owner_route_ref": "opl-owner-route:brand-module/foundry-lab/live_user_path/opl-framework",
-          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:foundry-lab",
+          "owner": "OPL Foundry Kernel owner",
+          "owner_route_ref": "opl-owner-route:brand-module/foundry/live_user_path/opl-framework",
+          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:foundry",
           "current_state": "satisfied",
           "evidence_refs": [
-            "user_path_evidence_ref:opl-foundry-lab/status/valid-l4-module-surface-20260614T120409Z",
-            "operator_evidence_ref:opl-foundry-lab/doctor/checks-pass-authority-boundary-false-20260614T120409Z"
+            "user_path_evidence_ref:opl-foundry/status/valid-l4-module-surface-20260614T120409Z",
+            "operator_evidence_ref:opl-foundry/doctor/checks-pass-authority-boundary-false-20260614T120409Z"
           ],
           "owner_acceptance_refs": [
-            "owner_acceptance_ref:opl-brand-l5/foundry-lab/live_user_path/opl-brand-owner-accepted-20260615"
+            "owner_acceptance_ref:opl-brand-l5/foundry/live_user_path/opl-brand-owner-accepted-20260615"
           ]
         },
         {
           "class_id": "ordinary_app_experience",
           "owner": "OPL Framework and App product owners",
-          "owner_route_ref": "opl-owner-route:brand-module/foundry-lab/ordinary_app_experience/app-release-owner",
+          "owner_route_ref": "opl-owner-route:brand-module/foundry/ordinary_app_experience/app-release-owner",
           "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab-app",
           "current_state": "satisfied",
           "evidence_refs": [
@@ -1696,137 +1696,137 @@
         },
         {
           "class_id": "cross_agent_scaleout",
-          "owner": "OPL Foundry Lab owner",
-          "owner_route_ref": "opl-owner-route:brand-module/foundry-lab/cross_agent_scaleout/opl-framework",
-          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:foundry-lab",
+          "owner": "OPL Foundry Kernel owner",
+          "owner_route_ref": "opl-owner-route:brand-module/foundry/cross_agent_scaleout/opl-framework",
+          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:foundry",
           "current_state": "open",
           "blocker_refs": [
-            "typed-blocker:opl-brand-l5/foundry-lab/cross_agent_scaleout/owner-evidence-needed-20260612"
+            "typed-blocker:opl-brand-l5/foundry/cross_agent_scaleout/owner-evidence-needed-20260612"
           ]
         },
         {
           "class_id": "long_soak_recovery",
-          "owner": "OPL Foundry Lab owner",
-          "owner_route_ref": "opl-owner-route:brand-module/foundry-lab/long_soak_recovery/opl-framework",
-          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:foundry-lab",
+          "owner": "OPL Foundry Kernel owner",
+          "owner_route_ref": "opl-owner-route:brand-module/foundry/long_soak_recovery/opl-framework",
+          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:foundry",
           "current_state": "open",
           "blocker_refs": [
-            "typed-blocker:opl-brand-l5/foundry-lab/long_soak_recovery/owner-evidence-needed-20260612"
+            "typed-blocker:opl-brand-l5/foundry/long_soak_recovery/owner-evidence-needed-20260612"
           ]
         },
         {
           "class_id": "release_install_evidence",
-          "owner": "OPL Foundry Lab owner",
-          "owner_route_ref": "opl-owner-route:brand-module/foundry-lab/release_install_evidence/opl-framework",
-          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:foundry-lab",
+          "owner": "OPL Foundry Kernel owner",
+          "owner_route_ref": "opl-owner-route:brand-module/foundry/release_install_evidence/opl-framework",
+          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:foundry",
           "current_state": "open",
           "blocker_refs": [
-            "typed-blocker:opl-brand-l5/foundry-lab/release_install_evidence/owner-evidence-needed-20260612"
+            "typed-blocker:opl-brand-l5/foundry/release_install_evidence/owner-evidence-needed-20260612"
           ]
         },
         {
           "class_id": "operator_repair_loop",
-          "owner": "OPL Foundry Lab owner",
-          "owner_route_ref": "opl-owner-route:brand-module/foundry-lab/operator_repair_loop/opl-framework",
-          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:foundry-lab",
+          "owner": "OPL Foundry Kernel owner",
+          "owner_route_ref": "opl-owner-route:brand-module/foundry/operator_repair_loop/opl-framework",
+          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:foundry",
           "current_state": "satisfied",
           "evidence_refs": [
-            "repair_loop_ref:opl-foundry-lab/operator-repair-loop/current-owner-safe-action-readout-20260615",
+            "repair_loop_ref:opl-foundry/operator-repair-loop/current-owner-safe-action-readout-20260615",
             "current_owner_delta_ref:opl-framework/readiness-current-owner-delta-default-root",
-            "safe_action_ref:opl-foundry-lab/operator-repair-loop/evidence-closure-route-20260615"
+            "safe_action_ref:opl-foundry/operator-repair-loop/evidence-closure-route-20260615"
           ],
           "owner_acceptance_refs": [
-            "owner_acceptance_ref:opl-brand-l5/foundry-lab/operator_repair_loop/opl-brand-owner-accepted-20260615"
+            "owner_acceptance_ref:opl-brand-l5/foundry/operator_repair_loop/opl-brand-owner-accepted-20260615"
           ]
         },
         {
           "class_id": "owner_acceptance",
           "owner": "target agent owners",
-          "owner_route_ref": "opl-owner-route:brand-module/foundry-lab/owner_acceptance/domain-owner-repos",
+          "owner_route_ref": "opl-owner-route:brand-module/foundry/owner_acceptance/domain-owner-repos",
           "owner_repo_ref": "MAS/MAG/RCA/OMA domain repositories",
           "current_state": "satisfied",
           "owner_acceptance_refs": [
-            "owner_acceptance_ref:opl-brand-l5/foundry-lab/owner_acceptance/target-agent-owners-accepted-20260615"
+            "owner_acceptance_ref:opl-brand-l5/foundry/owner_acceptance/target-agent-owners-accepted-20260615"
           ]
         },
         {
           "class_id": "no_second_truth_regression",
-          "owner": "OPL Foundry Lab owner",
-          "owner_route_ref": "opl-owner-route:brand-module/foundry-lab/no_second_truth_regression/opl-framework",
-          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:foundry-lab",
+          "owner": "OPL Foundry Kernel owner",
+          "owner_route_ref": "opl-owner-route:brand-module/foundry/no_second_truth_regression/opl-framework",
+          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:foundry",
           "current_state": "satisfied",
           "evidence_refs": [
             "no-resurrection-guard-ref:tests/src/active-path-residue-scan.test.ts#docs-active-no-resurrection",
             "source-scan-ref:tests/src/cli/cases/brand-modules.test.ts#l5-false-completion-guard"
           ],
           "owner_acceptance_refs": [
-            "owner_acceptance_ref:opl-brand-l5/foundry-lab/no_second_truth_regression/opl-brand-owner-accepted-20260615"
+            "owner_acceptance_ref:opl-brand-l5/foundry/no_second_truth_regression/opl-brand-owner-accepted-20260615"
           ]
         },
         {
           "class_id": "pack_compile_parity",
-          "owner": "OPL Foundry Lab owner",
-          "owner_route_ref": "opl-owner-route:brand-module/foundry-lab/pack_compile_parity/opl-framework",
-          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:foundry-lab",
+          "owner": "OPL Foundry Kernel owner",
+          "owner_route_ref": "opl-owner-route:brand-module/foundry/pack_compile_parity/opl-framework",
+          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:foundry",
           "current_state": "satisfied",
           "evidence_refs": [
             "pack-compile-parity-ref:contracts/opl-framework/domain-pack-compiler-contract.json#default_entry_policy",
             "generated-surface-parity-ref:opl-agents-interfaces-family-defaults/generated_direct_parity"
           ],
           "owner_acceptance_refs": [
-            "owner_acceptance_ref:opl-brand-l5/foundry-lab/pack_compile_parity/opl-brand-owner-accepted-20260615"
+            "owner_acceptance_ref:opl-brand-l5/foundry/pack_compile_parity/opl-brand-owner-accepted-20260615"
           ]
         },
         {
           "class_id": "current_owner_delta_default_read",
-          "owner": "OPL Foundry Lab owner",
-          "owner_route_ref": "opl-owner-route:brand-module/foundry-lab/current_owner_delta_default_read/opl-framework",
-          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:foundry-lab",
+          "owner": "OPL Foundry Kernel owner",
+          "owner_route_ref": "opl-owner-route:brand-module/foundry/current_owner_delta_default_read/opl-framework",
+          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:foundry",
           "current_state": "satisfied",
           "evidence_refs": [
             "current-owner-delta-ref:opl-framework/readiness-current-owner-delta-default-root",
             "operator-default-read-ref:opl-app-state-fast/ordinary-cockpit/current_owner_delta"
           ],
           "owner_acceptance_refs": [
-            "owner_acceptance_ref:opl-brand-l5/foundry-lab/current_owner_delta_default_read/opl-brand-owner-accepted-20260615"
+            "owner_acceptance_ref:opl-brand-l5/foundry/current_owner_delta_default_read/opl-brand-owner-accepted-20260615"
           ]
         },
         {
           "class_id": "capability_fail_open_boundary",
           "owner": "OPL Framework owner",
-          "owner_route_ref": "opl-owner-route:brand-module/foundry-lab/capability_fail_open_boundary/opl-framework",
-          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:foundry-lab",
+          "owner_route_ref": "opl-owner-route:brand-module/foundry/capability_fail_open_boundary/opl-framework",
+          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:foundry",
           "current_state": "satisfied",
           "evidence_refs": [
             "capability_fail_open_ref:tests/src/capability-registry-resolver.test.ts#optional-missing-fail-open",
             "route_required_capability_ref:tests/src/capability-registry-resolver.test.ts#route-required-hard-boundary-missing-ref"
           ],
           "owner_acceptance_refs": [
-            "owner_acceptance_ref:opl-brand-l5/foundry-lab/capability_fail_open_boundary/opl-brand-owner-accepted-20260615"
+            "owner_acceptance_ref:opl-brand-l5/foundry/capability_fail_open_boundary/opl-brand-owner-accepted-20260615"
           ]
         },
         {
           "class_id": "domain_authority_false_boundary",
-          "owner": "OPL Foundry Lab owner",
-          "owner_route_ref": "opl-owner-route:brand-module/foundry-lab/domain_authority_false_boundary/opl-framework",
-          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:foundry-lab",
+          "owner": "OPL Foundry Kernel owner",
+          "owner_route_ref": "opl-owner-route:brand-module/foundry/domain_authority_false_boundary/opl-framework",
+          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:foundry",
           "current_state": "satisfied",
           "evidence_refs": [
-            "false-authority-guard-ref:contracts/opl-framework/brand-module-registry.json#modules.foundry-lab.authority_boundary",
-            "negative-guard-ref:opl-brand-module-l5/foundry-lab/domain-authority-false-boundary/ready-claim-authorized-false"
+            "false-authority-guard-ref:contracts/opl-framework/brand-module-registry.json#modules.foundry.authority_boundary",
+            "negative-guard-ref:opl-brand-module-l5/foundry/domain-authority-false-boundary/ready-claim-authorized-false"
           ],
           "owner_acceptance_refs": [
-            "owner_acceptance_ref:opl-brand-l5/foundry-lab/domain_authority_false_boundary/opl-brand-owner-accepted-20260615"
+            "owner_acceptance_ref:opl-brand-l5/foundry/domain_authority_false_boundary/opl-brand-owner-accepted-20260615"
           ]
         },
         {
           "class_id": "cross_agent_foundry_agent_os_adoption",
-          "owner": "OPL Foundry Lab owner",
-          "owner_route_ref": "opl-owner-route:brand-module/foundry-lab/cross_agent_foundry_agent_os_adoption/opl-framework",
-          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:foundry-lab",
+          "owner": "OPL Foundry Kernel owner",
+          "owner_route_ref": "opl-owner-route:brand-module/foundry/cross_agent_foundry_agent_os_adoption/opl-framework",
+          "owner_repo_ref": "/Users/gaofeng/workspace/one-person-lab#brand-module:foundry",
           "current_state": "open",
           "blocker_refs": [
-            "typed-blocker:opl-brand-l5/foundry-lab/cross_agent_foundry_agent_os_adoption/owner-evidence-needed-20260612"
+            "typed-blocker:opl-brand-l5/foundry/cross_agent_foundry_agent_os_adoption/owner-evidence-needed-20260612"
           ]
         }
       ],

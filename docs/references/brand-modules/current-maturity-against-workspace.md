@@ -49,7 +49,7 @@ Currentness policy: 本文不冻结模块完成度、L5 evidence 数量、owner 
 | `OPL Runway` | `L4_structural_baseline` | 达到 Workspace 结构基线 | 已有 `brand-module-surfaces.json#modules.runway`、`opl runway status|inspect|interfaces|validate|doctor --json`，并补 `queue|attempts|provider|blockers` 对象视图；Temporal/provider/worker lifecycle/readiness、SLO repair 和 attempt refs 仍不等于 production long-soak 或 domain ready。 |
 | `OPL Ledger` | `L4_structural_baseline` | 达到 Workspace 结构基线 | 已有 `brand-module-surfaces.json#modules.ledger`、`opl ledger status|inspect|interfaces|validate|doctor --json`，并补 `evidence|artifacts|receipts|lineage` 对象视图；Ledger 只持有 refs-only evidence/lineage/read-model，不读取 body。 |
 | `OPL Console` | `L4_structural_baseline` | 达到 Workspace 结构基线 | 已有 `brand-module-surfaces.json#modules.console`、`opl console status|inspect|interfaces|validate|doctor --json`，并补 `actions|read-model|drilldown` 对象视图；本仓只证明 App state/action/invocation-plan projection producer，不声明 App GUI release truth、owner answer 或 domain readiness。 |
-| `OPL Foundry Lab` | `L4_structural_baseline` | 达到 Workspace 结构基线 | 已有 `brand-module-surfaces.json#modules.foundry-lab`、`opl foundry-lab status|inspect|interfaces|validate|doctor --json`，并补 `blueprints|work-orders|conformance|promotions` 对象视图；不替 target domain owner 签 acceptance。 |
+| `OPL Foundry Kernel` | `L4_structural_baseline` | 达到 Workspace 结构基线 | 已有四协议 schema、FoundryRun state machine/control、Temporal/StageRun adapter、persistent Ledger/Version Registry 与 `opl foundry status|approve|reject|cancel|versions|rollback --json`；不替 target domain owner 签领域质量或生产采用。 |
 | `OPL Connect` | `L4_structural_baseline` | 达到 Workspace 结构基线 | 已有 `brand-module-surfaces.json#modules.connect`、`opl connect status|inspect|interfaces|validate|doctor --json`，并补 `descriptors|packages|channels|drift` 对象视图；MCP/OpenAI/AI SDK/Skill/ToolResultEnvelope descriptor、transport/install success 与 semantic authority 分开。 |
 
 ## L5 规划
@@ -68,7 +68,7 @@ L5 不是再补一层文档，而是把模块变成可持续运营能力：
 - `Runway`: Temporal-backed durable orchestration、Runway worker lifecycle/readiness surface、部署 substrate、queue、lease、retry/dead-letter、human gate 和 recovery 在长窗口内稳定承接真实 owner chain。
 - `Ledger`: memory/artifact/lifecycle/restore/no-regression receipts 在多个 domain 中形成 body-free、可验证、可回放的运营 ledger。
 - `Console`: App 普通用户路径有同 cohort release/user-path evidence，能稳定展示 current owner、accepted answer shape、artifact/blocker 和 repair loop。
-- `Foundry Lab`: agent improvement loop 能从 evidence -> work order -> canary -> promotion/rollback -> owner acceptance 持续闭环。
+- `Foundry Kernel`: Agent improvement loop 能从 exact-version `EvidenceBundle` -> OMA `EvolutionProposal` -> immutable candidate -> qualification -> canary -> activation/rollback -> Owner decision 持续闭环。
 - `Connect`: CLI/MCP/Skill/OpenAI/AI SDK/App/release/install surfaces 从同一 contract 派生，并有 drift matrix、release evidence 和安装证据。
 
 ## 当前机器验收
@@ -103,7 +103,7 @@ opl stagecraft status|inspect|interfaces|validate|doctor --json
 opl runway status|inspect|interfaces|validate|doctor --json
 opl ledger status|inspect|interfaces|validate|doctor --json
 opl console status|inspect|interfaces|validate|doctor --json
-opl foundry-lab status|inspect|interfaces|validate|doctor --json
+opl foundry status|inspect|interfaces|validate|doctor --json
 opl connect status|inspect|interfaces|validate|doctor --json
 ```
 
@@ -118,7 +118,7 @@ opl stagecraft l5-status --json
 opl runway l5-status --json
 opl ledger l5-status --json
 opl console l5-status --json
-opl foundry-lab l5-status --json
+opl foundry l5-status --json
 opl connect l5-status --json
 ```
 
@@ -147,7 +147,7 @@ opl stagecraft receipts --json
 opl runway queue --json
 opl ledger evidence --json
 opl console actions --json
-opl foundry-lab blueprints --json
+opl foundry blueprints --json
 opl connect drift --json
 ```
 

@@ -69,7 +69,7 @@
       "runway",
       "ledger",
       "console",
-      "foundry-lab",
+      "foundry",
       "connect"
     ],
     "module_role_refs": [
@@ -122,10 +122,10 @@
         "surface_contract_ref": "contracts/opl-framework/brand-module-surfaces.json#modules.console"
       },
       {
-        "module_id": "foundry-lab",
+        "module_id": "foundry",
         "product_grammar_role": "agent creation, test takeover, mechanism improvement, canary, promotion, and rollback",
-        "registry_ref": "contracts/opl-framework/brand-module-registry.json#modules.foundry-lab",
-        "surface_contract_ref": "contracts/opl-framework/brand-module-surfaces.json#modules.foundry-lab"
+        "registry_ref": "contracts/opl-framework/brand-module-registry.json#modules.foundry",
+        "surface_contract_ref": "contracts/opl-framework/brand-module-surfaces.json#modules.foundry"
       },
       {
         "module_id": "connect",

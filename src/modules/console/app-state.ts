@@ -40,10 +40,7 @@ import { buildOplAppOperatorViewModel } from './app-state-view-model.ts';
 import { buildAppRuntimeWorkItemProjection } from './app-runtime-work-item-projection.ts';
 import { projectWorkItemRuntimeActivityItems } from './work-item-projection/legacy-adapter.ts';
 import { selectAppStateCurrentOwnerDeltaReadModel } from './app-state-current-owner-delta.ts';
-import {
-  buildAgentLabDomainFeedbackSelfEvolutionReadModel,
-  buildFeedbackOpsReadModel,
-} from '../foundry-lab/public/app-state.ts';
+import { buildFoundryOperatorProjection } from './foundry-operator-projection.ts';
 import { readCodexUserInstructions } from './codex-personalization.ts';
 import {
   projectAppAgentPackageStatus,
@@ -660,29 +657,6 @@ function compactFastLegacyAgentPackageStatus(value: unknown) {
   };
 }
 
-function compactFastFeedbackOps(value: unknown) {
-  return {
-    ...pickRecordFields(value, [
-      'version',
-      'surface_kind',
-      'read_model_id',
-      'status',
-      'refs_only',
-      'summary',
-      'status_buckets',
-      'status_items',
-      'intake_event_count',
-      'app_projection',
-      'authority_boundary',
-    ]),
-    work_order_status_items: [],
-    detail_policy: {
-      work_order_status_items: 'alias_deferred_use_status_items',
-      full_detail_surface: 'opl app state --profile full --json#feedbackops',
-    },
-  };
-}
-
 function compactFastDefaultReadSurfacePolicy(value: unknown) {
   return pickRecordFields(value, [
     'surface_kind',
@@ -1026,13 +1000,7 @@ export async function buildOplAppState(input: {
     runtimeActivityItems,
     statePaths,
   });
-  const agentLabFeedbackSelfEvolution = buildAgentLabDomainFeedbackSelfEvolutionReadModel({
-    sourceRefs: ['app-state:operator-workbench'],
-  });
-  const rawFeedbackOps = buildFeedbackOpsReadModel({ developerMode });
-  const feedbackOps = profile === 'fast'
-    ? compactFastFeedbackOps(rawFeedbackOps)
-    : rawFeedbackOps;
+  const foundry = await buildFoundryOperatorProjection({ profile });
   const paths = {
     home_dir: statePaths.home_dir,
     state_dir: statePaths.state_dir,
@@ -1095,8 +1063,7 @@ export async function buildOplAppState(input: {
     brandSystemProfile: contracts.brandSystemProfile as unknown as JsonRecord,
     targetOperatingArchitecture: contracts.targetOperatingArchitecture as unknown as JsonRecord,
     currentOwnerDeltaReadModel,
-    agentLabFeedbackSelfEvolution,
-    feedbackOps,
+    foundry,
   });
   const operator = profile === 'fast'
     ? compactFastOperatorRuntimeProjection(rawOperator)
@@ -1159,8 +1126,7 @@ export async function buildOplAppState(input: {
       release,
       settings_control_center: settingsControlCenter,
       operator,
-      agent_lab_feedback_self_evolution: agentLabFeedbackSelfEvolution,
-      feedbackops: feedbackOps,
+      foundry,
       runtime_workbench: fullRuntimeWorkbenchSummary(fullRuntimeDrilldown),
       paths,
       actions,

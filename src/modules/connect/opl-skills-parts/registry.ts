@@ -140,7 +140,7 @@ let cachedDomainAliasMap: Map<string, SkillPackSpec['domain_id']> | null = null;
 
 export function listFamilySkillPackSpecs(): SkillPackSpec[] {
   cachedFamilySkillPackSpecs ??= STANDARD_AGENT_REGISTRY.map((entry) => ({
-    domain_id: entry.domain_id,
+    domain_id: entry.module_id.toLowerCase() as SkillPackSpec['domain_id'],
     module_id: entry.module_id,
     project: entry.project,
     label: entry.label,
@@ -162,7 +162,7 @@ function domainAliasMap() {
   cachedDomainAliasMap ??= new Map<string, SkillPackSpec['domain_id']>([
     ...standardAgentDomainAliasEntries().map((entry) => [
       entry.alias,
-      entry.domain_id as SkillPackSpec['domain_id'],
+      entry.module_locator_id as SkillPackSpec['domain_id'],
     ] as const),
   ]);
   return cachedDomainAliasMap;

@@ -6,6 +6,7 @@ import type {
   FamilyActionExportFormat,
 } from './family-action-catalog-contract.ts';
 import { record, stringValue, type JsonRecord } from './json-record.ts';
+import { resolveStandardAgentByDomainId } from './standard-agent-registry.ts';
 
 type FamilyActionCatalogProjectionManifest = {
   operator_loop_actions?: Record<string, JsonRecord | undefined> | null;
@@ -28,9 +29,10 @@ function absoluteWorkspacePath(workspacePath: string) {
 }
 
 export function hostedFamilyActionCommand(targetDomainId: string, actionId: string, workspacePath: string) {
+  const publicAgentId = resolveStandardAgentByDomainId(targetDomainId)?.agent_id ?? targetDomainId;
   return [
     'opl agents run --domain',
-    shellArgument(targetDomainId),
+    shellArgument(publicAgentId),
     '--action',
     shellArgument(actionId),
     '--workspace',

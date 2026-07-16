@@ -1,6 +1,7 @@
 import { assert, fs, os, path, runCli, test } from '../helpers.ts';
 import { buildRepoContractDescriptor } from '../../../../src/modules/pack/domain-pack-compiler/repo-contract-descriptor.ts';
-import { FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES } from '../../../../src/modules/foundry-lab/standard-domain-agent-scaffold-constants.ts';
+import { FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES } from '../../../../src/modules/pack/standard-domain-agent-scaffold-constants.ts';
+import { validateStandardDomainAgentScaffold } from '../../../../src/modules/pack/standard-domain-agent-scaffold-validation.ts';
 import { buildReadyAgentRepo, writeJson } from './agents-conformance-fixtures.ts';
 
 function writeCompactAudit(repoDir: string, codePaths: string[]) {
@@ -198,13 +199,13 @@ test('generated interfaces consume compact functional audits directly without so
   delete packInput.source_refs.functional_privatization_audit_source_ref;
   writeJson(packInputPath, packInput);
 
-  const validation = runCli(['agents', 'scaffold', '--validate', repoDir]).standard_domain_agent_scaffold;
+  const validation = validateStandardDomainAgentScaffold({ repoDir }).standard_domain_agent_scaffold_validation;
   const bundle = runCli(['agents', 'interfaces', '--repo-dir', repoDir]).generated_agent_interfaces;
   const sourceConsumption = bundle.source_contract_consumption.consumed_contracts.find(
     (contract: { contract_id: string }) => contract.contract_id === 'functional_privatization_audit',
   );
 
-  assert.equal(validation.validation.status, 'passed');
+  assert.equal(validation.status, 'passed');
   assert.equal(bundle.status, 'ready');
   assert.equal(sourceConsumption.status, 'resolved');
 });

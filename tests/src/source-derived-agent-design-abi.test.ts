@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 
-import { SOURCE_DERIVED_AGENT_DESIGN_TYPED_OBJECTS } from '../../src/modules/foundry-lab/source-derived-agent-design-abi.ts';
+import { SOURCE_DERIVED_AGENT_DESIGN_TYPED_OBJECTS } from '../../src/modules/pack/source-derived-agent-design-abi.ts';
 
 test('source-derived design runtime identities match the canonical contract', () => {
   const contract = JSON.parse(fs.readFileSync(

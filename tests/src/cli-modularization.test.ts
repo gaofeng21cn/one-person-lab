@@ -49,9 +49,9 @@ test('family-runtime command parser keeps a thin public entrypoint and semantic 
 });
 
 test('standard domain-agent conformance keeps physical morphology in scoped modules', () => {
-  const entryPath = path.join(repoRoot, 'src', 'modules', 'foundry-lab', 'standard-domain-agent-conformance.ts');
-  const morphologyPath = path.join(repoRoot, 'src', 'modules', 'foundry-lab', 'standard-domain-agent-conformance-physical-morphology.ts');
-  const utilsPath = path.join(repoRoot, 'src', 'modules', 'foundry-lab', 'standard-domain-agent-conformance-utils.ts');
+  const entryPath = path.join(repoRoot, 'src', 'modules', 'foundry', 'standard-domain-agent-conformance.ts');
+  const morphologyPath = path.join(repoRoot, 'src', 'modules', 'foundry', 'standard-domain-agent-conformance-physical-morphology.ts');
+  const utilsPath = path.join(repoRoot, 'src', 'modules', 'foundry', 'standard-domain-agent-conformance-utils.ts');
   const entrySource = fs.readFileSync(entryPath, 'utf8');
   const morphologySource = fs.readFileSync(morphologyPath, 'utf8');
   const entryLines = entrySource.trimEnd().split('\n').length;

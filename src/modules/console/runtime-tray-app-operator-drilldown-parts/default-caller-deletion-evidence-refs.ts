@@ -15,8 +15,8 @@ import {
 } from '../../pack/index.ts';
 import {
   buildAgentDefaultCallerReadinessForRepo,
-} from '../../foundry-lab/index.ts';
-import { defaultCallerSurfaceGates } from '../../foundry-lab/index.ts';
+} from '../../workspace/index.ts';
+import { defaultCallerSurfaceGates } from '../../workspace/index.ts';
 import {
   buildAppDrilldownRefsOnlyAuthorityBoundary,
 } from './authority-boundary.ts';
@@ -29,7 +29,7 @@ import {
   DEFAULT_CALLER_STATIC_RETIREMENT_PREREQUISITE_GATE_IDS,
   DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES,
   defaultCallerOwnerDecisionCloseoutReadout,
-} from '../../foundry-lab/index.ts';
+} from '../../workspace/index.ts';
 
 function uniqueStrings(values: string[]) {
   return [...new Set(values.filter((entry) => entry.trim().length > 0))];

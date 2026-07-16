@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/foundry-design-request.schema.json",
+  "title": "OPL Foundry DesignRequest",
+  "type": "object",
+  "required": [
+    "surface_kind",
+    "version",
+    "request_id",
+    "mode",
+    "target_agent_id",
+    "target_domain_id",
+    "target_version_ref",
+    "objective",
+    "acceptance_criteria",
+    "non_goals",
+    "source_refs",
+    "constraints",
+    "delivery_policy"
+  ],
+  "properties": {
+    "surface_kind": { "const": "opl_foundry_design_request" },
+    "version": { "const": "opl-foundry-protocol.v1" },
+    "request_id": { "$ref": "#/$defs/non_empty" },
+    "mode": { "enum": ["create", "takeover", "improve"] },
+    "target_agent_id": { "$ref": "#/$defs/non_empty" },
+    "target_domain_id": { "$ref": "#/$defs/non_empty" },
+    "target_version_ref": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" },
+    "objective": { "$ref": "#/$defs/non_empty" },
+    "acceptance_criteria": { "$ref": "#/$defs/string_list" },
+    "non_goals": { "$ref": "#/$defs/string_list" },
+    "source_refs": { "$ref": "#/$defs/string_list" },
+    "constraints": {
+      "type": "object",
+      "required": ["capability_refs", "permission_refs", "privacy_requirements", "cost_limits", "latency_limits"],
+      "properties": {
+        "capability_refs": { "$ref": "#/$defs/string_list" },
+        "permission_refs": { "$ref": "#/$defs/string_list" },
+        "privacy_requirements": { "$ref": "#/$defs/string_list" },
+        "cost_limits": { "$ref": "#/$defs/numeric_map" },
+        "latency_limits": { "$ref": "#/$defs/numeric_map" }
+      },
+      "additionalProperties": false
+    },
+    "delivery_policy": {
+      "type": "object",
+      "required": ["activation_mode", "max_generations"],
+      "properties": {
+        "activation_mode": { "enum": ["qualify_only", "activate"] },
+        "max_generations": { "type": "integer", "minimum": 1, "maximum": 5 }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": { "properties": { "mode": { "const": "create" } } },
+      "then": { "properties": { "target_version_ref": { "type": "null" } } },
+      "else": { "properties": { "target_version_ref": { "type": "string" } } }
+    }
+  ],
+  "$defs": {
+    "non_empty": { "type": "string", "minLength": 1 },
+    "string_list": { "type": "array", "items": { "$ref": "#/$defs/non_empty" }, "uniqueItems": true },
+    "numeric_map": { "type": "object", "additionalProperties": { "type": "number", "minimum": 0 } }
+  }
+}

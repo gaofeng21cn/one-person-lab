@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { buildStageQualityRoutePromptAlignmentChecks } from '../../src/modules/foundry-lab/standard-domain-agent-stage-quality-route-conformance.ts';
+import { buildStageQualityRoutePromptAlignmentChecks } from '../../src/modules/pack/standard-domain-agent-stage-quality-route-conformance.ts';
 import {
   buildReadyAgentRepo,
   writeJson,

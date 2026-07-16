@@ -571,8 +571,8 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
     domain_legacy_cleanup_domain_physical_delete_can_execute_count:
       legacyCleanupSummary.legacy_cleanup_domain_physical_delete_can_execute_count,
     standard_agent_template_consumption_status: input.standardAgentTemplateConsumption.status ?? null,
-    standard_agent_template_consumption_proof_command_count:
-      numberValue(standardAgentTemplateSummary.proof_command_count),
+    standard_agent_template_consumption_proof_api_ref_count:
+      numberValue(standardAgentTemplateSummary.proof_api_ref_count),
     standard_agent_template_consumption_app_operator_ref_count:
       numberValue(standardAgentTemplateSummary.app_operator_consumable_ref_count),
     standard_agent_template_consumption_default_sample_count:
@@ -648,8 +648,8 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
       developerModeLiveCloseoutSummary.verified_fork_pr_ledger_receipt_ref_count,
     developer_mode_live_closeout_route_repetition_ref_count:
       developerModeLiveCloseoutSummary.route_repetition_ref_count,
-    developer_mode_live_closeout_risk_tier_auto_promotion_ref_count:
-      developerModeLiveCloseoutSummary.risk_tier_auto_promotion_ref_count,
+    developer_mode_live_closeout_foundry_activation_transaction_ref_count:
+      developerModeLiveCloseoutSummary.foundry_activation_transaction_ref_count,
     developer_mode_live_closeout_app_patrol_mount_ref_count:
       developerModeLiveCloseoutSummary.app_patrol_mount_ref_count,
     developer_mode_live_closeout_scaleout_followthrough_open_gate_count:

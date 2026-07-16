@@ -151,89 +151,49 @@ export function buildSummaryCards(input: OplAppOperatorViewModelInput, runtimeSu
   ];
 }
 
-export function feedbackWorkOrderStatusItems(input: OplAppOperatorViewModelInput) {
-  return asRecordArray(asRecord(input.agentLabFeedbackSelfEvolution).work_order_status_items);
+export function foundryRunItems(input: OplAppOperatorViewModelInput) {
+  return asRecordArray(asRecord(input.foundry).runs);
 }
 
-export function feedbackOpsStatusItems(input: OplAppOperatorViewModelInput) {
-  return asRecordArray(asRecord(input.feedbackOps).work_order_status_items);
-}
-
-function feedbackWorkOrderQueueItems(input: OplAppOperatorViewModelInput) {
-  return feedbackWorkOrderStatusItems(input).map((item, index) => {
-    const workOrderRef = asString(item.work_order_ref) ?? `agent-lab-feedback-work-order-${index + 1}`;
-    const status = asString(item.status) ?? 'queued';
-    const runnable = item.runnable === true;
-    const blockerRef = asString(item.blocker_ref);
-    return {
-      item_id: `agent_lab_feedback:${encodeURIComponent(workOrderRef)}`,
-      task_id: workOrderRef,
-      title: workOrderRef,
-      subtitle: 'Agent Lab feedback work-order projection',
-      domain_id: asString(item.domain_id) ?? 'opl',
-      domain_label: asString(item.domain_id) ?? 'OPL',
-      state: status,
-      priority_bucket: status === 'runnable'
-        ? 'can_execute_work_order'
-        : status === 'completed_or_blocker'
-          ? 'terminal_or_blocked'
-          : 'queued',
-      safe_action_ref_count: runnable ? 1 : 0,
-      blocker_ref_count: blockerRef ? 1 : 0,
-      trigger_ref: asString(item.trigger_ref),
-      external_suite_ref: asString(item.external_suite_ref),
-      developer_work_order_candidate_ref: asString(item.developer_work_order_candidate_ref),
-      completion_ref: asString(item.completion_ref),
-      blocker_ref: blockerRef,
-      action_route_ref: asString(item.action_route_ref),
-      execution_surface: asString(item.execution_surface),
-      authority_boundary: asRecord(item.authority_boundary),
-    };
-  });
-}
-
-function feedbackOpsQueueItems(input: OplAppOperatorViewModelInput) {
-  return feedbackOpsStatusItems(input).map((item, index) => {
-    const workOrderRef = asString(item.work_order_ref) ?? `feedbackops-work-order-${index + 1}`;
-    const status = asString(item.status) ?? 'suite_ready';
-    const runnable = item.runnable === true;
-    const blockerRef = asString(item.blocker_ref);
-    return {
-      item_id: `feedbackops:${encodeURIComponent(workOrderRef)}`,
-      task_id: workOrderRef,
-      title: workOrderRef,
-      subtitle: 'FeedbackOps delivery feedback projection',
-      domain_id: asString(item.domain_id) ?? 'opl',
-      domain_label: asString(item.domain_id) ?? 'OPL',
-      state: status,
-      priority_bucket: status === 'executable'
-        ? 'can_execute_work_order'
-        : status === 'queued_requires_developer_mode'
-          ? 'requires_developer_mode'
-          : status === 'completed_or_blocker'
-            ? 'terminal_or_blocked'
-            : 'suite_ready',
-      safe_action_ref_count: runnable ? 1 : 0,
-      blocker_ref_count: blockerRef ? 1 : 0,
-      trigger_ref: asString(item.trigger_ref),
-      external_suite_ref: asString(item.external_suite_ref),
-      developer_work_order_candidate_ref: asString(item.developer_work_order_candidate_ref),
-      completion_ref: asString(item.completion_ref),
-      blocker_ref: blockerRef,
-      action_route_ref: asString(item.action_route_ref),
-      execution_surface: asString(item.execution_surface),
-      authority_boundary: asRecord(item.authority_boundary),
-    };
+function foundryQueueItems(input: OplAppOperatorViewModelInput) {
+  return foundryRunItems(input).flatMap((run, index) => {
+    const state = asString(run.state) ?? 'unknown';
+    const terminal = run.terminal === true;
+    const ownerDecisionRequired = run.owner_decision_required === true;
+    const attention = ['failed', 'quarantined', 'completed_unqualified'].includes(state);
+    if (terminal && !attention) return [];
+    const runId = asString(run.run_id) ?? `foundry-run-${index + 1}`;
+    const targetAgentId = asString(run.target_agent_id) ?? 'unknown-agent';
+    const targetDomainId = asString(run.target_domain_id) ?? 'unknown-domain';
+    return [{
+      item_id: `foundry:${encodeURIComponent(runId)}`,
+      task_id: runId,
+      title: targetAgentId,
+      subtitle: `FoundryRun ${state}`,
+      domain_id: targetDomainId,
+      domain_label: targetDomainId,
+      state,
+      priority_bucket: ownerDecisionRequired
+        ? 'needs_owner_decision'
+        : attention
+          ? 'foundry_attention'
+          : 'automation_running',
+      safe_action_ref_count: 0,
+      blocker_ref_count: ownerDecisionRequired || attention ? 1 : 0,
+      status_ref: asString(run.status_ref),
+      expected_revision: asNumber(run.revision),
+      authority_boundary: {
+        owner_decision_requires_authority_receipt: ownerDecisionRequired,
+        app_can_write_foundry_state: false,
+      },
+    }];
   });
 }
 
 export function buildActionQueue(input: OplAppOperatorViewModelInput) {
   const limit = input.profile === 'fast' ? 16 : 48;
-  const feedbackItems = [
-    ...feedbackWorkOrderQueueItems(input),
-    ...feedbackOpsQueueItems(input),
-  ];
-  const actionLimit = Math.max(0, limit - feedbackItems.length);
+  const foundryItems = foundryQueueItems(input);
+  const actionLimit = Math.max(0, limit - foundryItems.length);
   return {
     items: [
       ...input.actions.slice(0, actionLimit).map((action, index) => {
@@ -252,9 +212,9 @@ export function buildActionQueue(input: OplAppOperatorViewModelInput) {
           blocker_ref_count: payloadFree ? 0 : 1,
         };
       }),
-      ...feedbackItems,
+      ...foundryItems,
     ],
     item_limit: limit,
-    source_ref: 'app_state.actions + app_state.operator.workbench.agent_lab_feedback_self_evolution + app_state.operator.workbench.feedbackops',
+    source_ref: 'app_state.actions + app_state.foundry',
   };
 }

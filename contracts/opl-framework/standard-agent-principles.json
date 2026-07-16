@@ -80,7 +80,7 @@
       "runway",
       "ledger",
       "console",
-      "foundry-lab",
+      "foundry",
       "connect"
     ],
     "standard_domain_agent_shape": "declarative_domain_pack_plus_minimal_authority_functions",

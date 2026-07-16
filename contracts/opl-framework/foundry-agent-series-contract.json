@@ -11,9 +11,9 @@
     "canonical_registry_ref": "src/kernel/standard-agent-registry.ts",
     "membership_value": "standard_domain_agent",
     "derived_projection_surfaces": [
-      "src/modules/foundry-lab/foundry-agent-cli-spine.ts",
+      "src/modules/atlas/family-domain-agent-descriptor.ts",
       "src/modules/connect/opl-skills.ts",
-      "src/modules/foundry-lab/standard-domain-agent-conformance-foundry-agent-os.ts",
+      "src/modules/foundry/standard-domain-agent-conformance-foundry-agent-os.ts",
       "contracts/opl-framework/target-operating-architecture-contract.json"
     ],
     "public_agent_identity_must_derive_from_registry": true,
@@ -113,7 +113,7 @@
     "version": "foundry-agent-standard-public-projection.v1",
     "policy_id": "standard_agent_public_foundry_surface_is_opl_generated_hosted_series",
     "standard_public_foundry_surface": "opl_generated_hosted_series",
-    "canonical_inspect_command_pattern": "opl foundry agents inspect <agent_id>",
+    "canonical_inspect_command_pattern": "opl agents inspect <agent_id>",
     "allowed_active_public_foundry_surfaces": [
       "opl_foundry_agent_series_spine",
       "opl_family_hosted_surfaces"
@@ -130,59 +130,6 @@
       "history",
       "tombstone"
     ]
-  },
-  "standard_feedback_self_evolution_trigger_policy": {
-    "surface_kind": "opl_foundry_agent_standard_feedback_self_evolution_trigger_policy",
-    "version": "foundry-agent-feedback-self-evolution-trigger.v1",
-    "policy_id": "standard_agent_feedback_self_evolution_trigger.v1",
-    "applies_to_series_memberships": [
-      "standard_domain_agent",
-      "framework_capability_package"
-    ],
-    "feedbackops_event_kind": "target_agent_feedback_external_suite",
-    "accepted_feedback_profile": "target_agent_feedback_external_suite",
-    "trigger_chain": [
-      "domain_or_package_thin_feedback_adapter",
-      "opl_feedbackops_agent_lab_status_projection",
-      "opl_meta_agent_oma_agent_evolution_work_order",
-      "developer_mode_direct_fix_or_fork_pr_route",
-      "target_owner_closeout_readback"
-    ],
-    "required_trigger_fields": [
-      "feedbackops_event_kind",
-      "accepted_feedback_profile",
-      "target_agent_id",
-      "idempotency_key",
-      "external_suite_ref",
-      "developer_mode_execution_gate_refs",
-      "oma_evolution_skill_ref",
-      "owner_closeout_readback_refs"
-    ],
-    "standard_status_projection_ref": "contracts/opl-framework/agent-lab-contract.json#domain_feedback_self_evolution_surface",
-    "feedback_capture_requires_developer_mode": false,
-    "repo_fix_execution_requires_opl_developer_mode": true,
-    "contract_can_trigger_execution": false,
-    "developer_mode_execution_gate_refs": [
-      "opl-developer-mode:repo-fix-execution",
-      "opl-developer-mode:direct-fix-or-fork-pr-route"
-    ],
-    "developer_route_policy": {
-      "feedback_capture_route": "allowed_for_all_users_refs_only",
-      "direct_fix_route": "requires_target_repo_direct_write_authority_or_agent_owner_developer_authority",
-      "manual_enable_without_direct_write_route": "fork_pull_request",
-      "official_or_third_party_agent_without_authority_route": "fork_pull_request_or_owner_handoff",
-      "manual_developer_mode_cannot_grant_direct_repo_write": true,
-      "auto_developer_mode_can_select_local_checkout_source_when_identity_matches": true
-    },
-    "authority_boundary": {
-      "refs_only": true,
-      "can_write_domain_truth": false,
-      "can_mutate_artifact_body": false,
-      "can_authorize_quality_or_export": false,
-      "can_create_owner_receipt": false,
-      "can_create_typed_blocker": false,
-      "can_execute_repo_patch_without_developer_mode": false
-    }
   },
   "series_design_profile": {
     "surface_kind": "opl_foundry_agent_series_design_profile",
@@ -369,7 +316,7 @@
       "runway",
       "ledger",
       "console",
-      "foundry-lab",
+      "foundry",
       "connect"
     ],
     "agent_cli_public_command_surface_role": "foundry_agent_series_spine",
@@ -382,15 +329,10 @@
     "surface_kind": "opl_foundry_agent_series_cli_command_surface_policy",
     "version": "foundry-agent-cli-command-surface.v1",
     "policy_id": "foundry_agent_series_spine_public_command_surface",
-    "canonical_opl_command_surface": "opl agents foundry",
+    "canonical_opl_command_surface": "opl agents run",
     "agent_cli_series_label": "OPL Foundry Agent",
     "ordinary_operations": [
-      "status",
-      "inspect",
-      "interfaces",
-      "validate",
-      "doctor",
-      "peers"
+      "run"
     ],
     "ordinary_public_command_surface_spine": [
       "workspace",
@@ -414,7 +356,7 @@
     "surface_kind": "opl_foundry_agent_non_standard_implementation_bucket_policy",
     "version": "foundry-agent-legacy-bucket-retirement.v1",
     "ordinary_public_command_surface_allowed": false,
-    "replacement_command_surface": "opl agents foundry",
+    "replacement_command_surface": "opl agents run",
     "non_standard_bucket_prefixes": [
       "runtime",
       "family-runtime",
@@ -481,7 +423,7 @@
     "legacy_skill_command_retired": true,
     "legacy_standalone_mcp_servers_retired": true,
     "derived_surface_refs": [
-      "opl agents foundry interfaces --json",
+      "opl agents run --domain <agent_id> --action <action_id> --json",
       "opl connect skills --json",
       "opl connect sync-skills --json"
     ]

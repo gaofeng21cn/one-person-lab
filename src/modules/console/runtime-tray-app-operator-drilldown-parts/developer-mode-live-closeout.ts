@@ -32,8 +32,8 @@ function developerModeCloseoutPayloadTemplate(missingRouteKinds: string[]) {
       ? '<github-pr-owner-acceptance-ref>'
       : '<external-owner-ref>',
     route_repetition_refs: ['<developer-mode-route-repetition-ref>'],
-    risk_tier_auto_promotion_refs: [
-      '<verified-agent-lab-risk-tier-auto-promotion-receipt-ref>',
+    foundry_activation_transaction_refs: [
+      '<foundry-activation-transaction-ref>',
     ],
     app_patrol_mount_refs: ['<app-patrol-mount-ref>'],
   };
@@ -79,7 +79,7 @@ function developerModeCloseoutPayloadRefHints() {
     owner_acceptance_ref_policy:
       'direct_fix_accepts_external_owner_ref_fork_pr_requires_github_pr_owner_acceptance_ref_no_owner_receipt_ref',
     scaleout_ref_policy:
-      'base direct-fix and fork-PR receipts close live route evidence; route repetition can be explicit or derived from verified ledger receipts, risk-tier auto-promotion must reference a verified Agent Lab risk-tier-promotion ledger receipt, and App patrol mounting remains an explicit follow-through ref',
+      'base direct-fix and fork-PR receipts close live route evidence; route repetition can be explicit or derived from verified ledger receipts, Foundry activation must reference an immutable activation transaction, and App patrol mounting remains an explicit follow-through ref',
   };
 }
 
@@ -161,15 +161,13 @@ function developerModeCloseoutPayloadWorkorder(missingRouteKinds: string[]) {
     ],
     optional_scaleout_payload_refs: [
       'route_repetition_refs',
-      'risk_tier_auto_promotion_refs_verified_by_agent_lab_risk_tier_promotion_ledger',
+      'foundry_activation_transaction_refs',
       'app_patrol_mount_refs',
     ],
-    risk_tier_auto_promotion_ref_policy:
-      'verified_agent_lab_risk_tier_promotion_ledger_receipt_required',
-    risk_tier_auto_promotion_record_command_ref:
-      'opl agent-lab risk-tier-promotion record --payload <json>',
-    risk_tier_auto_promotion_verify_command_ref:
-      'opl agent-lab risk-tier-promotion verify --receipt-ref <ref>',
+    foundry_activation_transaction_ref_policy:
+      'immutable_foundry_activation_transaction_ref_required',
+    foundry_activation_status_command_ref:
+      'opl foundry status --run-id <run_id>',
     required_return_shapes:
       developerModeCloseoutRequiredReturnShapes(missingRouteKinds),
     payload_template: developerModeCloseoutPayloadTemplate(missingRouteKinds),
@@ -236,8 +234,8 @@ export function developerModeLiveCloseoutEvidenceSummary(evidence: JsonRecord) {
       verifiedForkPrLedgerReceiptRefCount,
     route_repetition_ref_count:
       numberValue(summary.route_repetition_ref_count),
-    risk_tier_auto_promotion_ref_count:
-      numberValue(summary.risk_tier_auto_promotion_ref_count),
+    foundry_activation_transaction_ref_count:
+      numberValue(summary.foundry_activation_transaction_ref_count),
     app_patrol_mount_ref_count:
       numberValue(summary.app_patrol_mount_ref_count),
     scaleout_followthrough_open_gate_count: scaleoutOpenGateCount,
@@ -270,7 +268,7 @@ export function buildDeveloperModeLiveCloseoutEvidenceAttention(operatorProjecti
     return {
       surface_kind: 'opl_app_drilldown_developer_mode_live_closeout_evidence_attention',
       owner: 'one-person-lab',
-      target_surface: 'opl_developer_mode_agent_lab_live_closeout',
+      target_surface: 'opl_developer_mode_live_closeout',
       status: 'not_observed',
       ledger_evidence_status: null,
       developer_mode_live_route_closeout_refs_ready: false,
@@ -287,7 +285,7 @@ export function buildDeveloperModeLiveCloseoutEvidenceAttention(operatorProjecti
       verified_direct_fix_ledger_receipt_ref_count: 0,
       verified_fork_pr_ledger_receipt_ref_count: 0,
       route_repetition_ref_count: 0,
-      risk_tier_auto_promotion_ref_count: 0,
+      foundry_activation_transaction_ref_count: 0,
       app_patrol_mount_ref_count: 0,
       scaleout_followthrough_open_gate_count: 0,
       scaleout_followthrough: {},
@@ -351,7 +349,7 @@ export function buildDeveloperModeLiveCloseoutEvidenceAttention(operatorProjecti
   return {
     surface_kind: 'opl_app_drilldown_developer_mode_live_closeout_evidence_attention',
     owner: 'one-person-lab',
-    target_surface: 'opl_developer_mode_agent_lab_live_closeout',
+    target_surface: 'opl_developer_mode_live_closeout',
     status: summary.status ?? 'closeout_refs_incomplete',
     ledger_evidence_status: summary.ledger_evidence_status,
     developer_mode_live_route_closeout_refs_ready:
@@ -374,8 +372,8 @@ export function buildDeveloperModeLiveCloseoutEvidenceAttention(operatorProjecti
     verified_fork_pr_ledger_receipt_ref_count:
       summary.verified_fork_pr_ledger_receipt_ref_count,
     route_repetition_ref_count: summary.route_repetition_ref_count,
-    risk_tier_auto_promotion_ref_count:
-      summary.risk_tier_auto_promotion_ref_count,
+    foundry_activation_transaction_ref_count:
+      summary.foundry_activation_transaction_ref_count,
     app_patrol_mount_ref_count: summary.app_patrol_mount_ref_count,
     scaleout_followthrough_open_gate_count:
       summary.scaleout_followthrough_open_gate_count,
@@ -441,7 +439,7 @@ export function developerModeLiveCloseoutEvidenceNextStep(evidence: JsonRecord) 
     step_kind: 'developer_mode_live_closeout_evidence',
     owner: stringValue(evidence.owner) ?? 'one-person-lab',
     target_surface:
-      stringValue(evidence.target_surface) ?? 'opl_developer_mode_agent_lab_live_closeout',
+      stringValue(evidence.target_surface) ?? 'opl_developer_mode_live_closeout',
     status: stringValue(evidence.status),
     ledger_evidence_status: stringValue(evidence.ledger_evidence_status),
     developer_mode_live_route_closeout_refs_ready:
@@ -460,8 +458,8 @@ export function developerModeLiveCloseoutEvidenceNextStep(evidence: JsonRecord) 
       numberValue(evidence.verified_fork_pr_ledger_receipt_ref_count),
     route_repetition_ref_count:
       numberValue(evidence.route_repetition_ref_count),
-    risk_tier_auto_promotion_ref_count:
-      numberValue(evidence.risk_tier_auto_promotion_ref_count),
+    foundry_activation_transaction_ref_count:
+      numberValue(evidence.foundry_activation_transaction_ref_count),
     app_patrol_mount_ref_count:
       numberValue(evidence.app_patrol_mount_ref_count),
     scaleout_followthrough_open_gate_count:
