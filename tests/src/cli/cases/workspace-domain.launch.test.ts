@@ -226,6 +226,7 @@ test('MAS launch activates a new workspace scope and automatically recovers mana
     OPL_STATE_DIR: stateRoot,
     CODEX_HOME: codexHome,
     OPL_OPEN_BIN: openFixture.openPath,
+    OPL_DEVELOPER_MODE_GITHUB_IDENTITY_FIXTURE: 'opl-managed-package-test',
     ...releaseSet.env,
   };
   fs.mkdirSync(workspace, { recursive: true });
@@ -287,7 +288,12 @@ test('quest activation materializes core skills and automatically recovers manag
   const providerManifest = writeCapabilityProvider(path.join(root, 'provider'));
   const consumerManifest = writeMasConsumer(root, providerManifest);
   const releaseSet = writeCapabilityCatalog(path.join(root, 'release-set'), [consumerManifest, providerManifest]);
-  const env = { OPL_STATE_DIR: stateRoot, CODEX_HOME: codexHome, ...releaseSet.env };
+  const env = {
+    OPL_STATE_DIR: stateRoot,
+    CODEX_HOME: codexHome,
+    OPL_DEVELOPER_MODE_GITHUB_IDENTITY_FIXTURE: 'opl-managed-package-test',
+    ...releaseSet.env,
+  };
   fs.mkdirSync(quest, { recursive: true });
   try {
     await runCliAsync([
@@ -345,6 +351,7 @@ test('workspace activation automatically ensures the installed MAS package scope
     OPL_STATE_DIR: stateRoot,
     CODEX_HOME: codexHome,
     OPL_WORKSPACE_ROOT: workspaceA,
+    OPL_DEVELOPER_MODE_GITHUB_IDENTITY_FIXTURE: 'opl-managed-package-test',
     ...releaseSet.env,
   };
   fs.mkdirSync(workspaceA, { recursive: true });

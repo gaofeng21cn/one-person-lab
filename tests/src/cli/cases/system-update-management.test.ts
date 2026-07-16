@@ -311,11 +311,24 @@ console.log(JSON.stringify({ sync: 'ok' }));
     const adapter = output.managed_update.execution.adapter_results[0];
     const targets = new Map<string, any>(adapter.result.targets.map((entry: any) => [entry.target_id, entry]));
     assert.equal(adapter.component_id, 'opl_packages');
-    assert.equal(adapter.status, 'manual_required');
+    assert.equal(adapter.status, 'partial_success');
     assert.deepEqual(adapter.result.summary, {
       total_targets_count: 5,
+      current_targets_count: 0,
       completed_targets_count: 3,
+      changed_targets_count: 3,
       manual_required_targets_count: 2,
+      failed_targets_count: 0,
+      manual_required_reasons: [
+        {
+          target_id: 'medautogrant',
+          reason: 'developer_or_dirty_checkout_visible',
+        },
+        {
+          target_id: 'redcube',
+          reason: 'developer_or_dirty_checkout_visible',
+        },
+      ],
     });
     assert.equal(targets.get('medautoscience')?.status, 'completed');
     assert.equal(targets.get('medautoscience')?.reason, 'capability_packages_refresh');
