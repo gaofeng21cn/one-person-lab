@@ -23,6 +23,9 @@ import {
   repairTemporalWorkerForProviderRepair,
 } from './family-runtime-provider-worker-repair.ts';
 import {
+  inspectTemporalSchedulerCadenceReadiness,
+} from './family-runtime-temporal-provider-parts/scheduler-cadence.ts';
+import {
   buildExternalSandboxProviderAdapterPlan,
   EXTERNAL_SANDBOX_IMPLEMENTED_SUBSTRATES,
   inspectExternalSandboxProviderAdapterEnv,
@@ -50,6 +53,7 @@ type ManagedProviderProjection = Partial<Pick<
 type ProviderLifecycleOptions = {
   managedProviderProjection?: ManagedProviderProjection;
   detail?: 'fast' | 'full';
+  includeScheduler?: boolean;
 };
 
 function providerMetadata(kind: FamilyRuntimeProviderKind) {
@@ -273,6 +277,9 @@ export async function inspectFamilyRuntimeProviderWithLifecycle(
     ? buildManagedTemporalWorkerReadiness(managedTemporalProjection)
     : null;
   const workerReady = workerReadiness.worker_ready === true;
+  const scheduler = options.includeScheduler
+    ? await inspectTemporalSchedulerCadenceReadiness(paths)
+    : null;
   const degradedReason = workerReadiness.blockers[0] ?? null;
   return {
     provider_kind: kind,
@@ -317,6 +324,12 @@ export async function inspectFamilyRuntimeProviderWithLifecycle(
           }
         : null,
       managed_domain_provider_projection_summary: managedProviderProjection,
+      ...(scheduler
+        ? {
+            scheduler,
+            scheduler_status: scheduler.status,
+          }
+        : {}),
       worker_lifecycle: {
         worker_required: true,
         task_queue: workerReadiness.task_queue,

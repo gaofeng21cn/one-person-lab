@@ -31,6 +31,7 @@ type TemporalWorkerReadinessInput = {
   workerEnabled?: string | null;
   workerStatus?: string | null;
   serverReachable?: boolean | null;
+  serviceReady?: boolean | null;
   liveProbeStartedWorker?: boolean | null;
   unreachableReason?: string | null;
   managedWorkerPid?: number | null;
@@ -364,6 +365,7 @@ export function buildTemporalWorkerReadiness(input: TemporalWorkerReadinessInput
     readiness_status: readiness.readinessStatus,
     worker_ready: readiness.workerReady,
     server_reachable: readiness.serverReachable,
+    service_ready: input.serviceReady ?? null,
     address: readiness.address,
     address_source: readiness.addressSource,
     namespace: readiness.namespace,

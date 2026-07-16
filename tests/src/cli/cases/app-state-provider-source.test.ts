@@ -38,7 +38,7 @@ test('app state fast fails closed on stale worker source without live manifest r
       provider_kind: 'temporal',
       service_kind: 'custom_command',
       pid: child.pid,
-      address: '127.0.0.1:7233',
+      address: '127.0.0.1:65534',
       started_at: new Date().toISOString(),
       status: 'running',
       command: 'test temporal service',
@@ -50,7 +50,7 @@ test('app state fast fails closed on stale worker source without live manifest r
     const workerState = {
       provider_kind: 'temporal',
       pid: child.pid,
-      address: '127.0.0.1:7233',
+      address: '127.0.0.1:65534',
       namespace: 'default',
       task_queue: taskQueue,
       started_at: new Date().toISOString(),
@@ -81,9 +81,24 @@ test('app state fast fails closed on stale worker source without live manifest r
               worker_readiness: {
                 inspection_detail: string;
                 readiness_status: string;
+                service_ready: boolean | null;
                 server_reachable: boolean | null;
+                temporal_service_lifecycle: {
+                  service_status: string;
+                };
+                worker_mutation_guard: {
+                  mutation_guard_status: string;
+                  allowed: boolean;
+                };
                 visibility_readiness: { readiness_status: string };
               };
+              scheduler: {
+                status: string;
+                ready: boolean;
+                observed_at: string;
+                inspection_error: string | null;
+              };
+              scheduler_status: string;
             };
           };
         };
@@ -107,8 +122,26 @@ test('app state fast fails closed on stale worker source without live manifest r
     assert.equal(output.app_state.provider.temporal.details.inspection_detail, 'fast');
     assert.equal(output.app_state.provider.temporal.details.worker_readiness.inspection_detail, 'fast');
     assert.equal(output.app_state.provider.temporal.details.worker_readiness.readiness_status, 'ready');
+    assert.equal(output.app_state.provider.temporal.details.worker_readiness.service_ready, true);
     assert.equal(output.app_state.provider.temporal.details.worker_readiness.server_reachable, null);
+    assert.equal(
+      output.app_state.provider.temporal.details.worker_readiness.temporal_service_lifecycle.service_status,
+      'running',
+    );
+    assert.equal(
+      typeof output.app_state.provider.temporal.details.worker_readiness.worker_mutation_guard.mutation_guard_status,
+      'string',
+    );
+    assert.equal(
+      typeof output.app_state.provider.temporal.details.worker_readiness.worker_mutation_guard.allowed,
+      'boolean',
+    );
     assert.equal(output.app_state.provider.temporal.details.worker_readiness.visibility_readiness.readiness_status, 'not_verified');
+    assert.equal(output.app_state.provider.temporal.details.scheduler.status, 'error');
+    assert.equal(output.app_state.provider.temporal.details.scheduler.ready, false);
+    assert.equal(typeof output.app_state.provider.temporal.details.scheduler.observed_at, 'string');
+    assert.equal(typeof output.app_state.provider.temporal.details.scheduler.inspection_error, 'string');
+    assert.equal(output.app_state.provider.temporal.details.scheduler_status, 'error');
   } finally {
     if (child.pid) {
       try {
@@ -194,6 +227,8 @@ test('app state full uses lifecycle-aware Temporal readiness from the same provi
               address_source: string | null;
               adapter_mode: string | null;
               worker_readiness: { readiness_status: string; worker_ready: boolean; blockers: string[] };
+              scheduler: { status: string; ready: boolean; observed_at: string };
+              scheduler_status: string;
             };
           };
         };
@@ -210,6 +245,10 @@ test('app state full uses lifecycle-aware Temporal readiness from the same provi
     assert.equal(output.app_state.provider.temporal.details.worker_readiness.readiness_status, 'not_configured');
     assert.equal(output.app_state.provider.temporal.details.worker_readiness.worker_ready, false);
     assert.deepEqual(output.app_state.provider.temporal.details.worker_readiness.blockers, ['temporal_runtime_not_configured']);
+    assert.equal(output.app_state.provider.temporal.details.scheduler.status, 'not_configured');
+    assert.equal(output.app_state.provider.temporal.details.scheduler.ready, false);
+    assert.equal(typeof output.app_state.provider.temporal.details.scheduler.observed_at, 'string');
+    assert.equal(output.app_state.provider.temporal.details.scheduler_status, 'not_configured');
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(workspacePath, { recursive: true, force: true });

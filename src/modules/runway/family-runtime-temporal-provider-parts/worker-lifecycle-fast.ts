@@ -71,6 +71,11 @@ export function inspectTemporalWorkerLifecycleFast(
       : serviceState
         ? 'stale_state_unverified'
         : 'not_configured';
+  const serviceReady = serviceStatus === 'running'
+    ? true
+    : serviceStatus === 'configured_external_unverified'
+      ? null
+      : false;
   const readiness = buildTemporalWorkerReadiness({
     address,
     addressSource,
@@ -79,6 +84,7 @@ export function inspectTemporalWorkerLifecycleFast(
     workerEnabled: envWorkerReady ? '1' : null,
     workerStatus: workerStatusReady ? 'ready' : null,
     serverReachable: null,
+    serviceReady,
     managedWorkerPid: statePidAlive && state ? state.pid : null,
     managedWorkerStatePath: temporalWorkerStatePath(paths),
     managedWorkerSourceVersion: state?.source_version ?? null,

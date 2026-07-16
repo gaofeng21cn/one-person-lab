@@ -102,6 +102,8 @@ export async function inspectTemporalWorkerLifecycleWithDetail(
     workerEnabled: envWorkerReady ? '1' : null,
     workerStatus: pidAlive ? 'ready' : null,
     serverReachable,
+    serviceReady: service.server_reachable === true
+      && (service.service_status === 'running' || service.service_status === 'external_running'),
     managedWorkerPid: state?.pid ?? null,
     managedWorkerProcessAlive: state ? stateProcessAlive : null,
     managedWorkerStatePath: temporalWorkerStatePath(paths),

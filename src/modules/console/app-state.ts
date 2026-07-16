@@ -262,6 +262,7 @@ async function buildProviderState(profile: AppStateProfile) {
     familyRuntimePaths(),
     {
       detail: profile,
+      includeScheduler: true,
       managedProviderProjection: profile === 'fast'
         ? readManagedProviderProjectionSummary({ includeManifest: false })
         : readManagedProviderProjectionSummary(),
@@ -469,6 +470,13 @@ function compactFastProviderState(value: unknown) {
   const temporal = isRecord(provider.temporal) ? provider.temporal : {};
   const details = isRecord(temporal.details) ? temporal.details : {};
   const workerReadiness = isRecord(details.worker_readiness) ? details.worker_readiness : {};
+  const serviceLifecycle = isRecord(workerReadiness.temporal_service_lifecycle)
+    ? workerReadiness.temporal_service_lifecycle
+    : {};
+  const workerMutationGuard = isRecord(workerReadiness.worker_mutation_guard)
+    ? workerReadiness.worker_mutation_guard
+    : {};
+  const scheduler = isRecord(details.scheduler) ? details.scheduler : {};
   const visibilityReadiness = isRecord(workerReadiness.visibility_readiness)
     ? workerReadiness.visibility_readiness
     : {};
@@ -493,6 +501,7 @@ function compactFastProviderState(value: unknown) {
           'task_queue',
           'adapter_mode',
           'worker_ready',
+          'scheduler_status',
           'runtime_dependency',
           'required_env',
         ]),
@@ -505,6 +514,21 @@ function compactFastProviderState(value: unknown) {
             'server_reachable',
             'blockers',
           ]),
+          temporal_service_lifecycle: pickRecordFields(serviceLifecycle, [
+            'inspection_detail',
+            'service_status',
+            'address_source',
+            'server_reachable',
+            'managed_service_pid',
+            'service_kind',
+            'blockers',
+          ]),
+          worker_mutation_guard: pickRecordFields(workerMutationGuard, [
+            'mutation_guard_status',
+            'allowed',
+            'state_dir_explicit',
+            'explicit_developer_override',
+          ]),
           visibility_readiness: pickRecordFields(visibilityReadiness, [
             'readiness_status',
             'status',
@@ -512,6 +536,16 @@ function compactFastProviderState(value: unknown) {
             'inspection_detail',
           ]),
         },
+        scheduler: pickRecordFields(scheduler, [
+          'status',
+          'ready',
+          'observed_at',
+          'schedule_status',
+          'health_status',
+          'degraded_reason',
+          'repair_action',
+          'inspection_error',
+        ]),
         detail_policy: {
           detail: 'startup',
           full_detail_surface: 'opl app state --profile full --json#provider.temporal.details',
