@@ -373,21 +373,21 @@ export async function reconcileTemporalRuntimeStartupMaintenance(
 
     let workerBefore: WorkerSupervisorOperation;
     const workerOperations: Array<WorkerSupervisorOperation | WorkerRepairOperation> = [];
+    let workerAction = 'status';
     try {
       workerBefore = await runWorkerSupervisor(handle.db, handle.paths, {
         action: 'status',
         providerKind: 'temporal',
       });
       let workerAfter = workerBefore;
-      let workerAction = 'none';
       const loadedForDifferentRuntime = !workerSupervisorReady(workerBefore)
         && readBoolean(readRecord(workerBefore, 'supervisor_state'), 'launchctl_loaded') === true;
       if (!workerSupervisorReady(workerBefore) && !loadedForDifferentRuntime) {
+        workerAction = 'install';
         workerOperations.push(await runWorkerSupervisor(handle.db, handle.paths, {
           action: 'install',
           providerKind: 'temporal',
         }));
-        workerAction = 'install';
         workerAfter = await runWorkerSupervisor(handle.db, handle.paths, {
           action: 'status',
           providerKind: 'temporal',
@@ -398,11 +398,11 @@ export async function reconcileTemporalRuntimeStartupMaintenance(
         ? await waitForWorkerReadiness(handle.paths, inspectWorker, runtime)
         : await inspectWorker(handle.paths);
       if (supervisorIsReady && workerLifecycle.readiness_status === 'worker_source_stale') {
+        workerAction = 'restart';
         workerOperations.push(await repairWorker(handle.paths, {
           trigger: 'startup_maintenance',
           allowRestart: true,
         }));
-        workerAction = 'restart';
         workerAfter = await runWorkerSupervisor(handle.db, handle.paths, {
           action: 'status',
           providerKind: 'temporal',
@@ -414,6 +414,7 @@ export async function reconcileTemporalRuntimeStartupMaintenance(
       }
       const runtimeIsReady = workerLifecycle.worker_ready === true;
       const workerIsReady = supervisorIsReady && runtimeIsReady;
+      if (workerAction === 'status') workerAction = 'none';
       steps.provider_worker_supervisor = step({
         status: workerIsReady ? 'ready' : 'blocked',
         action: workerAction,
@@ -435,7 +436,7 @@ export async function reconcileTemporalRuntimeStartupMaintenance(
     } catch (error) {
       steps.provider_worker_supervisor = step({
         status: 'blocked',
-        action: workerOperations.length > 0 ? 'install' : 'status',
+        action: workerAction,
         ready: false,
         reason: 'provider_worker_supervisor_maintenance_failed',
         operations: workerOperations,
