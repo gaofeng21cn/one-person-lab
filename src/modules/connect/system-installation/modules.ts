@@ -111,11 +111,11 @@ function isModuleUpdateAvailable(git: NonNullable<ModuleInspection['git']>) {
   return !git.dirty && git.sync_status === 'behind';
 }
 
-function buildModuleRepoUrlEnvKey(moduleId: OplModuleId) {
+function buildModuleRepoUrlEnvKey(moduleId: string) {
   return `OPL_MODULE_REPO_URL_${moduleId.toUpperCase()}`;
 }
 
-function buildModulePathEnvKey(moduleId: OplModuleId) {
+function buildModulePathEnvKey(moduleId: string) {
   return `OPL_MODULE_PATH_${moduleId.toUpperCase()}`;
 }
 
@@ -155,18 +155,24 @@ function resolveModuleRepoUrl(spec: DomainModuleSpec) {
   return normalizeOptionalString(process.env[buildModuleRepoUrlEnvKey(spec.module_id)]) ?? spec.repo_url;
 }
 
-function moduleHasGitCheckoutOverride(spec: DomainModuleSpec) {
+export type OplSourcePolicySubject = {
+  module_id: string;
+  repo_name: string;
+  developer_mode_auto_eligible?: boolean;
+};
+
+function moduleHasGitCheckoutOverride(spec: OplSourcePolicySubject) {
   return Boolean(
     normalizeOptionalString(process.env[buildModuleRepoUrlEnvKey(spec.module_id)])
     || normalizeOptionalString(process.env[buildModulePathEnvKey(spec.module_id)]),
   );
 }
 
-function moduleHasRepoUrlOverride(spec: DomainModuleSpec) {
+function moduleHasRepoUrlOverride(spec: OplSourcePolicySubject) {
   return Boolean(normalizeOptionalString(process.env[buildModuleRepoUrlEnvKey(spec.module_id)]));
 }
 
-function moduleHasPathOverride(spec: DomainModuleSpec) {
+function moduleHasPathOverride(spec: OplSourcePolicySubject) {
   return Boolean(normalizeOptionalString(process.env[buildModulePathEnvKey(spec.module_id)]));
 }
 
@@ -174,14 +180,14 @@ function explicitGitCheckoutSourceMode() {
   return moduleSourceMode() === 'git_checkout';
 }
 
-function moduleSourcePreference(spec: DomainModuleSpec): OplModuleSourcePreference {
+function moduleSourcePreference(spec: OplSourcePolicySubject): OplModuleSourcePreference {
   return readOplDeveloperSupervisorConfig().module_source_preferences?.[spec.module_id] ?? 'auto';
 }
 
 type ModuleInspectionProfile = 'fast' | 'full';
 
 function developerModeUsesGitCheckouts(
-  spec: DomainModuleSpec,
+  spec: OplSourcePolicySubject,
   profile: ModuleInspectionProfile = 'full',
 ) {
   const sourcePreference = moduleSourcePreference(spec);
@@ -189,6 +195,9 @@ function developerModeUsesGitCheckouts(
     return true;
   }
   if (sourcePreference !== 'auto') {
+    return false;
+  }
+  if (spec.developer_mode_auto_eligible === false) {
     return false;
   }
 
@@ -243,7 +252,7 @@ function externalCheckoutSyncAvailable(
 }
 
 function buildModuleSourcePolicy(
-  spec: DomainModuleSpec,
+  spec: OplSourcePolicySubject,
   profile: ModuleInspectionProfile = 'full',
 ): ModuleSourcePolicy {
   const pathOverride = moduleHasPathOverride(spec);
@@ -323,6 +332,31 @@ function buildModuleSourcePolicy(
     app_setting_surface: null,
     low_level_override_env: null,
   };
+}
+
+export function resolveOplInstallUpdateSourcePolicy(
+  subject: OplSourcePolicySubject,
+  input: { profile?: ModuleInspectionProfile } = {},
+) {
+  const profile = input.profile ?? 'full';
+  const sourcePolicy = buildModuleSourcePolicy(subject, profile);
+  const explicitPath = normalizeOptionalString(process.env[buildModulePathEnvKey(subject.module_id)]);
+  const developerCheckoutPath = path.resolve(
+    explicitPath ?? path.join(resolveSiblingWorkspaceRoot(), subject.repo_name),
+  );
+  return {
+    module_id: subject.module_id,
+    repo_name: subject.repo_name,
+    source_policy: sourcePolicy,
+    developer_checkout_path: developerCheckoutPath,
+    developer_checkout_available: sourcePolicy.effective_install_update_source === 'git_checkout'
+      && fs.existsSync(developerCheckoutPath)
+      && fs.statSync(developerCheckoutPath).isDirectory(),
+  };
+}
+
+export function resolveOplModuleSourcePolicy(moduleId: string, input: { profile?: ModuleInspectionProfile } = {}) {
+  return resolveOplInstallUpdateSourcePolicy(findModuleSpecOrThrow(moduleId), input);
 }
 
 function sourcePolicyForOrigin(

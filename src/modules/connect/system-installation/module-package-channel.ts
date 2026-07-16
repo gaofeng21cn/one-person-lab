@@ -157,7 +157,16 @@ function resolveChannelManifestRef(declaredRef?: string) {
 }
 
 function runCurl(args: string[], errorKind: string, details: Record<string, unknown>, capture = true) {
-  const result = runCommand('curl', args, undefined, { maxBuffer: 64 * 1024 * 1024 });
+  const result = runCommand('curl', [
+    '--connect-timeout',
+    '10',
+    '--max-time',
+    '60',
+    ...args,
+  ], undefined, {
+    timeoutMs: 70_000,
+    maxBuffer: 64 * 1024 * 1024,
+  });
   if (result.exitCode !== 0) {
     throw new FrameworkContractError(
       'build_command_failed',

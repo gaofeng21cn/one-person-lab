@@ -178,6 +178,7 @@ export async function fetchManagedPackageCatalog(source: AgentPackageManagedVers
       })();
   return {
     catalog: normalizeManagedPackageCatalog(fetched.payload),
+    catalog_payload: fetched.payload,
     source_sha256: fetched.source_sha256,
     channel_ref: fetched.channel_ref,
     channel_digest: fetched.channel_digest,

@@ -41,6 +41,15 @@ import {
 import { buildInstallationCarrierComponent } from './managed-update-kernel-parts/installation-carrier.ts';
 import { buildRuntimeSubstrateComponent } from './managed-update-kernel-parts/runtime-substrate.ts';
 import { readInstalledOplAgentPackageLocks } from './agent-package-registry.ts';
+import { resolveFirstPartyPackageCatalog } from './agent-package-first-party.ts';
+import { agentPackageTargetCurrentness } from './agent-package-registry-parts/currentness.ts';
+import {
+  readFirstPartyPackageCatalogSnapshot,
+  resolveFirstPartyPackageCatalogSnapshot,
+} from './agent-package-registry-parts/release-catalog-cache.ts';
+import { resolveAgentPackageEffectiveSourcePolicy } from './agent-package-registry-parts/source-policy.ts';
+import { selectManagedCatalogPackageVersion } from './agent-package-registry-parts/capability-reconciliation.ts';
+import type { FirstPartyDirectoryCatalogSnapshot } from './agent-package-registry-parts/directory.ts';
 import { asRecord, booleanValue, stringValue } from './managed-update-kernel-parts/shared.ts';
 
 function requestedComponentId(componentId: string | undefined) {
@@ -92,7 +101,11 @@ function moduleState(module: Record<string, unknown>): ManagedUpdateComponentSta
   return 'current';
 }
 
-function buildCapabilityPackagesComponent(modules: Record<string, unknown>[], channel: string): ManagedUpdateComponent {
+function buildCapabilityPackagesComponent(
+  modules: Record<string, unknown>[],
+  channel: string,
+  releaseCatalog: FirstPartyDirectoryCatalogSnapshot | null,
+): ManagedUpdateComponent {
   const defaultModules = modules.filter((entry) => booleanValue(entry, 'default_install') === true);
   const moduleStates = defaultModules.map((entry) => ({
     module_id: stringValue(entry, 'module_id'),
@@ -110,16 +123,75 @@ function buildCapabilityPackagesComponent(modules: Record<string, unknown>[], ch
   const packageStates = installedPackages
     .filter((lock) => !dependencyIds.has(lock.package_id))
     .map((lock) => {
-      const manual = lock.source_kind === 'developer_checkout_override'
-        || !lock.content_digest || !lock.manifest_sha256 || !lock.lock_ref
-        || Boolean(lock.physical_surface?.failure_reason);
+      const firstParty = resolveFirstPartyPackageCatalog(lock.package_id);
+      const sourcePolicy = resolveAgentPackageEffectiveSourcePolicy(lock.package_id, { profile: 'fast' });
+      const sourceReconciliationAvailable = Boolean(
+        firstParty
+        && sourcePolicy.desired_source_kind
+        && lock.source_kind !== sourcePolicy.desired_source_kind
+        && (
+          sourcePolicy.desired_source_kind === 'first_party_managed_cohort'
+          || sourcePolicy.developer_checkout_available
+        ),
+      );
+      const manualReason = !firstParty || !sourcePolicy.desired_source_kind
+        ? 'external_or_unowned_package_source'
+        : sourcePolicy.desired_source_kind === 'developer_checkout_override'
+          && !sourcePolicy.developer_checkout_available
+          ? 'developer_checkout_unavailable'
+          : !lock.content_digest || !lock.manifest_sha256 || !lock.lock_ref
+            ? 'package_content_identity_incomplete'
+            : lock.physical_surface?.failure_reason
+              ? 'package_physical_surface_requires_repair'
+              : null;
+      let target = null;
+      let currentness = null;
+      if (firstParty && releaseCatalog) {
+        try {
+          target = selectManagedCatalogPackageVersion(releaseCatalog.catalog, lock.package_id);
+          if (sourcePolicy.desired_source_kind) {
+            currentness = agentPackageTargetCurrentness({
+              lock,
+              target,
+              desiredSourceKind: sourcePolicy.desired_source_kind,
+            });
+          }
+        } catch {
+          target = null;
+        }
+      }
+      const state: ManagedUpdateComponentState = manualReason
+        ? 'skipped_manual_required'
+        : sourceReconciliationAvailable
+            ? 'update_available'
+            : currentness?.status === 'current'
+              ? 'current'
+              : 'update_available';
       return {
         package_id: lock.package_id,
-        state: manual ? 'skipped_manual_required' : 'update_available',
+        state,
+        reason: manualReason
+          ?? (sourceReconciliationAvailable
+              ? 'source_policy_reconciliation_available'
+              : currentness?.status === 'current'
+                ? 'installed_identity_matches_release_set_target'
+                : releaseCatalog
+                  ? 'release_set_target_differs'
+                  : 'release_set_refresh_required'),
         source_kind: lock.source_kind,
+        source_policy: sourcePolicy,
         manifest_sha256: lock.manifest_sha256,
         content_digest: lock.content_digest,
+        artifact_digest: lock.artifact_digest ?? null,
         lock_ref: lock.lock_ref,
+        currentness,
+        target: target ? {
+          package_version: target.package_version,
+          manifest_sha256: target.manifest_sha256,
+          content_digest: target.content_digest,
+          artifact_digest: target.artifact_digest,
+          source_artifact_ref: target.source_artifact_ref,
+        } : null,
       };
     });
   const legacyStates = process.env.OPL_PACKAGE_CHANNEL_MANIFEST_REF?.trim() ? moduleStates : [];
@@ -127,18 +199,18 @@ function buildCapabilityPackagesComponent(modules: Record<string, unknown>[], ch
   const failedWithRepairCount = targetStates.filter((entry) => entry.state === 'failed_with_repair').length;
   const updateCount = targetStates.filter((entry) => entry.state === 'update_available').length;
   const manualCount = targetStates.filter((entry) => entry.state === 'skipped_manual_required').length;
-  const cleanManagedTargetsCount = targetStates.length - manualCount;
+  const cleanManagedTargetsCount = targetStates.filter((entry) => entry.state === 'update_available').length;
   const state: ManagedUpdateComponentState =
     failedWithRepairCount > 0
         ? 'failed_with_repair'
-        : updateCount > 0 || cleanManagedTargetsCount > 0
+        : updateCount > 0
           ? 'update_available'
           : manualCount > 0
             ? 'skipped_manual_required'
           : 'current';
   const action = failedWithRepairCount > 0
       ? 'install'
-      : updateCount > 0 || cleanManagedTargetsCount > 0
+      : updateCount > 0
         ? 'update'
         : manualCount > 0
           ? 'manual_review'
@@ -173,7 +245,7 @@ function buildCapabilityPackagesComponent(modules: Record<string, unknown>[], ch
   });
   const route = ownerRoute({
     owner: 'one-person-lab-managed-modules',
-    authority_surface: 'OCI/content-addressed capability package channel and clean managed module roots',
+    authority_surface: 'Release Set catalog, effective Package source policy, installed lock identity, and protected runtime source roots',
     route_kind: 'clean_managed_package_executor',
     readback_ref: 'opl connect modules --json',
     apply_owner: 'opl_connect_managed_module_reconciler',
@@ -201,7 +273,7 @@ function buildCapabilityPackagesComponent(modules: Record<string, unknown>[], ch
       receipt_projection: 'component_receipt_with_owner_route',
       diagnostic_only: false,
       notes: [
-        'Runner is limited to clean managed module roots with digest/source identity; it does not own domain truth or package-manager semantics.',
+        'Runner may reconcile clean digest-locked managed or developer Package locks, but it never overwrites developer checkout content or owns domain truth.',
       ],
     }),
     label: 'OPL Packages',
@@ -214,7 +286,7 @@ function buildCapabilityPackagesComponent(modules: Record<string, unknown>[], ch
         installed_digest_required: true,
         content_identity_fields: ['digest', 'sha256', 'source_fingerprint', 'git_head_sha'],
         dirty_checkout_policy: 'fail_closed_no_overwrite',
-        developer_checkout_policy: 'fail_closed_no_auto_update',
+        developer_checkout_policy: 'source_reconcile_then_protect_no_channel_overwrite',
         codex_skill_plugin_sync: 'same_transaction_post_apply',
         profile_semantic_merge: 'fail_closed_owner_handoff',
         receipt_policy: 'single_package_transaction_receipt',
@@ -230,11 +302,17 @@ function buildCapabilityPackagesComponent(modules: Record<string, unknown>[], ch
       module_states: moduleStates,
       installed_root_package_count: packageStates.length,
       package_lock_states: packageStates,
+      release_catalog: releaseCatalog ? {
+        freshness: releaseCatalog.freshness,
+        catalog_ref: releaseCatalog.catalog_ref,
+        catalog_digest: releaseCatalog.catalog_digest,
+        checked_at: releaseCatalog.checked_at,
+      } : null,
     },
     target: state === 'current'
       ? null
       : {
-        source: 'GHCR one-person-lab-manifest channel target',
+        source: 'Framework Release Set target under the effective Package source policy',
         content_identity: 'digest_or_source_fingerprint_required_in_receipt',
         oci_descriptor: {
           media_type: 'application/vnd.opl.capability-package.channel.v1+json',
@@ -248,8 +326,8 @@ function buildCapabilityPackagesComponent(modules: Record<string, unknown>[], ch
         state === 'current' ? 'True' : 'False',
         state === 'current' ? 'CapabilityPackagesCurrent' : 'CapabilityPackageMaintenanceAvailable',
         state === 'current'
-          ? 'Managed default capability packages are current or have no clean update available.'
-          : 'Managed package-channel maintenance is available for clean OPL module roots.',
+          ? 'Installed first-party Package locks match the effective source policy and available Release Set targets.'
+          : 'First-party Package maintenance or manual review is required.',
       ),
       condition(
         'DigestPinned',
@@ -262,8 +340,8 @@ function buildCapabilityPackagesComponent(modules: Record<string, unknown>[], ch
         manualCount > 0 ? 'False' : 'True',
         manualCount > 0 ? 'ManualSourceVisible' : 'CleanManagedRootsOnly',
         manualCount > 0
-          ? 'At least one module is dirty, developer-sourced, or otherwise manual; silent update is blocked for that module.'
-          : 'Silent capability package updates are limited to clean OPL-managed module roots.',
+          ? 'At least one Package is unowned, missing content identity, has an unavailable selected checkout, or requires physical repair.'
+          : 'Silent Package maintenance is limited to clean digest-locked first-party Package locks.',
       ),
     ],
     lifecycle: KERNEL_LIFECYCLE,
@@ -275,7 +353,7 @@ function buildCapabilityPackagesComponent(modules: Record<string, unknown>[], ch
       scope: packageStates.length > 0 ? 'clean_digest_locked_installed_root_packages_only' : 'legacy_explicit_channel_roots_only',
       command_ref: autoApplyEligible ? 'opl packages update --json' : null,
       blocked_reasons: manualCount > 0
-        ? ['manual_or_developer_targets_are_detect_only_and_skipped']
+        ? ['manual_required_targets_are_detect_only_and_skipped']
         : [],
     },
     status_detail: detail,
@@ -292,13 +370,13 @@ function buildCapabilityPackagesComponent(modules: Record<string, unknown>[], ch
         ? 'No managed capability package maintenance is required.'
         : action === 'manual_review'
           ? 'Manual review is required before OPL can update one or more capability package roots.'
-          : 'Reconcile managed modules from the GHCR package channel, then sync Codex-visible skills and plugins.',
+          : 'Reconcile installed Package locks against effective source policy and Release Set targets, then sync Codex-visible skills and plugins.',
       command_refs: action === 'manual_review'
         ? [
           manualCommand(
             'inspect_packages',
             'opl packages status --json',
-            'Inspect canonical package state and manual or developer checkout blockers.',
+            'Inspect canonical Package state and manual source or checkout-availability blockers.',
           ),
         ]
         : action === 'none'
@@ -337,6 +415,7 @@ function buildCapabilityPackagesComponent(modules: Record<string, unknown>[], ch
     },
     notes: [
       'GHCR package channel is the ordinary non-development source for managed capability packages.',
+      'Developer checkout content remains protected while its Package lock is compared with and reprojected from the Release Set target.',
       'Package-channel freshness does not claim domain readiness, artifact authority, quality verdict, or export readiness.',
     ],
   });
@@ -383,7 +462,18 @@ export async function buildManagedUpdateKernelProjection(
   if (shouldBuildComponent(requested, 'opl_packages')) {
     const modulesPayload = buildOplModules({ profile: 'fast' }).modules;
     const modules = modulesPayload.modules as Record<string, unknown>[];
-    const capabilityPackages = buildCapabilityPackagesComponent(modules, channel);
+    const refreshReleaseCatalog = input.refreshReleaseCatalog ?? (
+      input.operation === 'check'
+      || input.operation === 'plan'
+      || (input.operation === 'apply' && !input.componentId)
+    );
+    const releaseCatalog = refreshReleaseCatalog
+      ? await resolveFirstPartyPackageCatalogSnapshot({
+          refresh: true,
+          persist: input.persistReleaseCatalog !== false,
+        })
+      : readFirstPartyPackageCatalogSnapshot();
+    const capabilityPackages = buildCapabilityPackagesComponent(modules, channel, releaseCatalog);
     const projectionStatus = buildCodexProjectionStatus(capabilityPackages);
     components.push({
       ...capabilityPackages,

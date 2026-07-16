@@ -88,6 +88,15 @@ export type AgentPackageManifestValidateInput = {
   sourceKind?: AgentPackageSourceKind | null;
 };
 
+export type AgentPackageOperationProvenance = {
+  trigger: string;
+  initiator: string;
+  source_policy: string;
+  source_policy_reason: string;
+  operation_id: string;
+  correlation_id: string;
+};
+
 export type AgentPackageInstallInput = AgentPackageManifestValidateInput & {
   dryRun?: boolean;
   agentRoot?: string | null;
@@ -95,6 +104,8 @@ export type AgentPackageInstallInput = AgentPackageManifestValidateInput & {
   targetWorkspace?: string | null;
   targetQuest?: string | null;
   keepMigrationIds?: string[];
+  agentRoots?: Record<string, string>;
+  provenance?: AgentPackageOperationProvenance;
 };
 
 export type AgentPackageRole =
@@ -716,6 +727,12 @@ export type AgentPackageLifecycleReceipt = {
   trust_tier: string | null;
   writes_performed: boolean;
   source_surface: 'opl_connect_agent_package_registry';
+  trigger: string;
+  initiator: string;
+  source_policy: string;
+  source_policy_reason: string;
+  operation_id: string;
+  correlation_id: string;
   authority_boundary: AgentPackageAuthorityBoundary;
   physical_surface?: AgentPackagePhysicalSurface;
   dependency_transaction_id?: string;

@@ -118,7 +118,13 @@ export function lifecycleReceipt(input: {
   sourceSelection?: AgentPackageLifecycleReceipt['source_selection'];
   networkAccessed?: AgentPackageLifecycleReceipt['network_accessed'];
   remoteDependencyPolicy?: AgentPackageLifecycleReceipt['remote_dependency_policy'];
+  provenance?: AgentPackageInstallInput['provenance'];
 }): AgentPackageLifecycleReceipt {
+  const operationId = input.provenance?.operation_id ?? packageReceiptRef({
+    action: input.action,
+    packageId: input.packageId,
+    sourceSha256: input.sourceSha256,
+  });
   const receipt: AgentPackageLifecycleReceipt = {
     surface_kind: 'opl_agent_package_lifecycle_receipt',
     receipt_ref: packageReceiptRef({
@@ -146,6 +152,12 @@ export function lifecycleReceipt(input: {
     trust_tier: input.trustTier ?? null,
     writes_performed: input.writesPerformed,
     source_surface: 'opl_connect_agent_package_registry',
+    trigger: input.provenance?.trigger ?? 'explicit_package_action',
+    initiator: input.provenance?.initiator ?? 'opl_cli_or_app_action',
+    source_policy: input.provenance?.source_policy ?? input.sourceKind,
+    source_policy_reason: input.provenance?.source_policy_reason ?? 'explicit_package_action_selection',
+    operation_id: operationId,
+    correlation_id: input.provenance?.correlation_id ?? operationId,
     authority_boundary: refsOnlyAuthorityBoundary(),
   };
   if (input.physicalSurface) {

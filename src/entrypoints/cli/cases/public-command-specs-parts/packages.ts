@@ -351,6 +351,7 @@ export function buildPackagesCommandSpecs(
           return buildManagedUpdateKernelProjection(getContracts(), {
             operation: 'plan',
             componentId: 'opl_packages',
+            persistReleaseCatalog: false,
           });
         }
         return runManagedUpdateKernelOperation(getContracts(), {

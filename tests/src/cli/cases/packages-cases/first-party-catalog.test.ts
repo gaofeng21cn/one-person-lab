@@ -18,6 +18,11 @@ import {
   normalizeOplReleaseChannelTag,
   resolveOplReleaseManifestRef,
 } from '../../../../../src/modules/connect/system-installation/release-channel.ts';
+import {
+  writeCapabilityCatalog,
+  writeCapabilityProvider,
+  writeMasConsumer,
+} from './capability-fixtures.ts';
 
 const PACKAGE_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.package.source.v1+gzip';
 const CHANNEL_MANIFEST_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.release.channel-manifest.v1+json';
@@ -561,5 +566,276 @@ test('first-party activation rejects an internally resolved catalog member witho
     fs.rmSync(workspace, { recursive: true, force: true });
     fs.rmSync(installedFixture.root, { recursive: true, force: true });
     fs.rmSync(invalidFixture.root, { recursive: true, force: true });
+  }
+});
+
+test('developer checkout policy tracks Release Set currentness without accepting an arbitrary checkout path', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-first-party-developer-currentness-'));
+  const homeDir = path.join(root, 'home');
+  const stateDir = path.join(root, 'state');
+  const masCheckout = path.join(root, 'workspace', 'med-autoscience');
+  const scholarCheckout = path.join(root, 'workspace', 'mas-scholar-skills');
+  const wrongCheckout = path.join(root, 'workspace', 'wrong-med-autoscience');
+  const oldProvider = writeCapabilityProvider(path.join(root, 'old-provider'), '0.1.0');
+  const oldMas = writeMasConsumer(path.join(root, 'old-mas'), oldProvider, '0.1.0');
+  const oldReleaseSet = writeCapabilityCatalog(path.join(root, 'old-release-set'), [oldMas, oldProvider]);
+  const nextProvider = writeCapabilityProvider(path.join(root, 'next-provider'), '0.1.1');
+  const nextMas = writeMasConsumer(path.join(root, 'next-mas'), nextProvider, '0.1.1');
+  const nextReleaseSet = writeCapabilityCatalog(path.join(root, 'next-release-set'), [nextMas, nextProvider]);
+  const commonEnv = {
+    HOME: homeDir,
+    CODEX_HOME: path.join(homeDir, '.codex'),
+    OPL_STATE_DIR: stateDir,
+    OPL_MODULE_PATH_MEDAUTOSCIENCE: masCheckout,
+    OPL_MODULE_PATH_SCHOLARSKILLS: scholarCheckout,
+  };
+  fs.mkdirSync(masCheckout, { recursive: true });
+  fs.mkdirSync(scholarCheckout, { recursive: true });
+  fs.mkdirSync(wrongCheckout, { recursive: true });
+
+  try {
+    const pathFailure = runCliFailure([
+      'packages', 'install', 'mas',
+      '--source-kind', 'developer_checkout_override',
+      '--agent-root', wrongCheckout,
+    ], { ...commonEnv, ...oldReleaseSet.env });
+    assert.equal(pathFailure.payload.error.code, 'contract_shape_invalid');
+    assert.equal(
+      pathFailure.payload.error.details.failure_code,
+      'first_party_package_developer_checkout_path_mismatch',
+    );
+    assert.equal(fs.existsSync(path.join(stateDir, 'agent-package-locks.json')), false);
+
+    const installed = runCli(['packages', 'install', 'mas'], {
+      ...commonEnv,
+      ...oldReleaseSet.env,
+    }) as any;
+    assert.equal(installed.opl_agent_package_install.package_lock.package_version, '0.1.0');
+    assert.equal(installed.opl_agent_package_install.package_lock.source_kind, 'developer_checkout_override');
+    assert.deepEqual(
+      installed.opl_agent_package_install.dependency_package_locks.map((lock: any) => [
+        lock.package_id,
+        lock.package_version,
+        lock.source_kind,
+      ]),
+      [
+        ['mas-scholar-skills', '0.1.0', 'developer_checkout_override'],
+        ['mas', '0.1.0', 'developer_checkout_override'],
+      ],
+    );
+
+    const releaseCatalogCache = path.join(stateDir, 'agent-package-release-catalog-cache.json');
+    const cachedOldReleaseSet = formatJsonPayload({
+      surface_kind: 'opl_agent_package_release_catalog_cache.v1',
+      catalog_ref: 'ghcr.io/fixture/one-person-lab-manifest:fixture',
+      catalog_digest: `sha256:${'9'.repeat(64)}`,
+      checked_at: new Date().toISOString(),
+      catalog_payload: JSON.parse(fs.readFileSync(oldReleaseSet.catalogPath, 'utf8')),
+    });
+    fs.writeFileSync(releaseCatalogCache, cachedOldReleaseSet);
+    const preview = runCli(['packages', 'update', '--dry-run'], {
+      ...commonEnv,
+      ...nextReleaseSet.env,
+    }) as any;
+    const previewPackages = preview.managed_update.components.find(
+      (entry: any) => entry.component_id === 'opl_packages',
+    );
+    const previewMas = previewPackages.current.package_lock_states.find(
+      (entry: any) => entry.package_id === 'mas',
+    );
+    assert.equal(previewMas.state, 'update_available');
+    assert.equal(previewMas.currentness.status, 'update_available');
+    assert.equal(fs.readFileSync(releaseCatalogCache, 'utf8'), cachedOldReleaseSet);
+
+    const updated = runCli(['update', 'apply'], {
+      ...commonEnv,
+      ...nextReleaseSet.env,
+    }) as any;
+    const adapter = updated.managed_update.execution.adapter_results.find(
+      (entry: any) => entry.component_id === 'opl_packages',
+    );
+    const target = adapter.result.targets.find((entry: any) => entry.target_id === 'mas');
+    assert.equal(target.status, 'completed');
+    assert.equal(target.action, 'source_reconcile');
+    assert.equal(target.currentness.status, 'update_available');
+    assert.ok(target.currentness.reasons.includes('package_version_changed'));
+    assert.equal(target.result.package_lock.package_version, '0.1.1');
+    assert.equal(target.result.package_lock.source_kind, 'developer_checkout_override');
+    assert.equal(target.result.lifecycle_receipt.trigger, 'managed_update_kernel_apply');
+
+    const lockIndex = JSON.parse(fs.readFileSync(path.join(stateDir, 'agent-package-locks.json'), 'utf8'));
+    assert.deepEqual(
+      lockIndex.packages
+        .map((lock: any) => [lock.package_id, lock.package_version, lock.source_kind])
+        .sort((left: string[], right: string[]) => left[0].localeCompare(right[0])),
+      [
+        ['mas', '0.1.1', 'developer_checkout_override'],
+        ['mas-scholar-skills', '0.1.1', 'developer_checkout_override'],
+      ],
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('single-package developer update reconciles from the live Release Set and becomes a byte-stable no-op', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-first-party-single-developer-update-'));
+  const homeDir = path.join(root, 'home');
+  const stateDir = path.join(root, 'state');
+  const masCheckout = path.join(root, 'workspace', 'med-autoscience');
+  const scholarCheckout = path.join(root, 'workspace', 'mas-scholar-skills');
+  const wrongCheckout = path.join(root, 'workspace', 'wrong-med-autoscience');
+  const oldProvider = writeCapabilityProvider(path.join(root, 'old-provider'), '0.1.0');
+  const oldMas = writeMasConsumer(path.join(root, 'old-mas'), oldProvider, '0.1.0');
+  const oldReleaseSet = writeCapabilityCatalog(path.join(root, 'old-release-set'), [oldMas, oldProvider]);
+  const nextProvider = writeCapabilityProvider(path.join(root, 'next-provider'), '0.1.1');
+  const nextMas = writeMasConsumer(path.join(root, 'next-mas'), nextProvider, '0.1.1');
+  const nextReleaseSet = writeCapabilityCatalog(path.join(root, 'next-release-set'), [nextMas, nextProvider]);
+  const lockFile = path.join(stateDir, 'agent-package-locks.json');
+  const ledgerFile = path.join(stateDir, 'agent-package-lifecycle-ledger.json');
+  const releaseCatalogCache = path.join(stateDir, 'agent-package-release-catalog-cache.json');
+  const masSentinel = path.join(masCheckout, 'developer-source.txt');
+  const scholarSentinel = path.join(scholarCheckout, 'developer-source.txt');
+  const commonEnv = {
+    HOME: homeDir,
+    CODEX_HOME: path.join(homeDir, '.codex'),
+    OPL_STATE_DIR: stateDir,
+    OPL_MODULE_PATH_MEDAUTOSCIENCE: masCheckout,
+    OPL_MODULE_PATH_SCHOLARSKILLS: scholarCheckout,
+  };
+  fs.mkdirSync(masCheckout, { recursive: true });
+  fs.mkdirSync(scholarCheckout, { recursive: true });
+  fs.mkdirSync(wrongCheckout, { recursive: true });
+  fs.writeFileSync(masSentinel, 'developer MAS source\n');
+  fs.writeFileSync(scholarSentinel, 'developer ScholarSkills source\n');
+
+  try {
+    const installed = runCli(['packages', 'install', 'mas'], {
+      ...commonEnv,
+      ...oldReleaseSet.env,
+    }) as any;
+    assert.equal(installed.opl_agent_package_install.package_lock.package_version, '0.1.0');
+    assert.equal(installed.opl_agent_package_install.package_lock.source_kind, 'developer_checkout_override');
+    const installedLockBytes = fs.readFileSync(lockFile, 'utf8');
+    const installedLedgerBytes = fs.readFileSync(ledgerFile, 'utf8');
+    assert.equal(fs.existsSync(releaseCatalogCache), false);
+
+    const pathFailure = runCliFailure([
+      'packages', 'update', 'mas', '--agent-root', wrongCheckout,
+    ], {
+      ...commonEnv,
+      ...nextReleaseSet.env,
+    });
+    assert.equal(pathFailure.payload.error.code, 'contract_shape_invalid');
+    assert.equal(
+      pathFailure.payload.error.details.failure_code,
+      'first_party_package_developer_checkout_path_mismatch',
+    );
+    assert.equal(fs.readFileSync(lockFile, 'utf8'), installedLockBytes);
+    assert.equal(fs.readFileSync(ledgerFile, 'utf8'), installedLedgerBytes);
+    assert.equal(fs.existsSync(releaseCatalogCache), false);
+
+    const preview = runCli(['packages', 'update', 'mas', '--dry-run'], {
+      ...commonEnv,
+      ...nextReleaseSet.env,
+    }) as any;
+    const previewUpdate = preview.opl_agent_package_update;
+    assert.equal(previewUpdate.status, 'validated_no_write');
+    assert.equal(previewUpdate.reconciliation_action, 'source_reconcile');
+    assert.equal(previewUpdate.currentness.status, 'update_available');
+    assert.ok(previewUpdate.currentness.reasons.includes('package_version_changed'));
+    assert.equal(previewUpdate.target_version, '0.1.1');
+    assert.equal(previewUpdate.package_lock.package_version, '0.1.1');
+    assert.equal(previewUpdate.lifecycle_receipt.writes_performed, false);
+    assert.equal(fs.existsSync(releaseCatalogCache), false);
+    assert.equal(fs.readFileSync(lockFile, 'utf8'), installedLockBytes);
+    assert.equal(fs.readFileSync(ledgerFile, 'utf8'), installedLedgerBytes);
+
+    const updated = runCli(['packages', 'update', 'mas'], {
+      ...commonEnv,
+      ...nextReleaseSet.env,
+    }) as any;
+    const appliedUpdate = updated.opl_agent_package_update;
+    assert.equal(appliedUpdate.status, 'updated');
+    assert.equal(appliedUpdate.reconciliation_action, 'source_reconcile');
+    assert.equal(appliedUpdate.currentness.status, 'update_available');
+    assert.equal(appliedUpdate.package_lock.package_version, '0.1.1');
+    assert.equal(appliedUpdate.package_lock.source_kind, 'developer_checkout_override');
+    assert.deepEqual(
+      appliedUpdate.dependency_package_locks.map((lock: any) => [
+        lock.package_id,
+        lock.package_version,
+        lock.source_kind,
+      ]),
+      [
+        ['mas-scholar-skills', '0.1.1', 'developer_checkout_override'],
+        ['mas', '0.1.1', 'developer_checkout_override'],
+      ],
+    );
+    const updatedLockIndex = JSON.parse(fs.readFileSync(lockFile, 'utf8'));
+    assert.deepEqual(
+      updatedLockIndex.packages
+        .map((lock: any) => [lock.package_id, lock.package_version, lock.source_kind])
+        .sort((left: string[], right: string[]) => left[0].localeCompare(right[0])),
+      [
+        ['mas', '0.1.1', 'developer_checkout_override'],
+        ['mas-scholar-skills', '0.1.1', 'developer_checkout_override'],
+      ],
+    );
+    assert.equal(fs.readFileSync(masSentinel, 'utf8'), 'developer MAS source\n');
+    assert.equal(fs.readFileSync(scholarSentinel, 'utf8'), 'developer ScholarSkills source\n');
+    assert.equal(fs.existsSync(releaseCatalogCache), false);
+
+    const driftedLockIndex = JSON.parse(fs.readFileSync(lockFile, 'utf8'));
+    const driftedScholarLock = driftedLockIndex.packages.find(
+      (lock: any) => lock.package_id === 'mas-scholar-skills',
+    );
+    driftedScholarLock.source_kind = 'first_party_managed_cohort';
+    fs.writeFileSync(lockFile, `${JSON.stringify(driftedLockIndex, null, 2)}\n`);
+    const dependencyReconciled = runCli(['packages', 'update', 'mas'], {
+      ...commonEnv,
+      ...nextReleaseSet.env,
+    }) as any;
+    const dependencyUpdate = dependencyReconciled.opl_agent_package_update;
+    assert.equal(dependencyUpdate.status, 'updated');
+    assert.equal(dependencyUpdate.currentness.status, 'update_available');
+    assert.deepEqual(dependencyUpdate.currentness.reasons, ['dependency_closure_changed']);
+    assert.equal(
+      dependencyUpdate.closure_currentness.find(
+        (entry: any) => entry.package_id === 'mas-scholar-skills',
+      ).status,
+      'update_available',
+    );
+    assert.equal(
+      dependencyUpdate.dependency_package_locks.find(
+        (lock: any) => lock.package_id === 'mas-scholar-skills',
+      ).source_kind,
+      'developer_checkout_override',
+    );
+    assert.equal(fs.existsSync(releaseCatalogCache), false);
+
+    const currentLockBytes = fs.readFileSync(lockFile, 'utf8');
+    const currentLedgerBytes = fs.readFileSync(ledgerFile, 'utf8');
+    const current = runCli(['packages', 'update', 'mas'], {
+      ...commonEnv,
+      ...nextReleaseSet.env,
+    }) as any;
+    const currentUpdate = current.opl_agent_package_update;
+    assert.equal(currentUpdate.status, 'current_noop');
+    assert.equal(currentUpdate.currentness.status, 'current');
+    assert.equal(currentUpdate.reconciliation_action, null);
+    assert.equal(currentUpdate.lifecycle_receipt, null);
+    assert.deepEqual(
+      currentUpdate.dependency_package_locks.map((lock: any) => [lock.package_id, lock.source_kind]),
+      [
+        ['mas-scholar-skills', 'developer_checkout_override'],
+        ['mas', 'developer_checkout_override'],
+      ],
+    );
+    assert.equal(fs.readFileSync(lockFile, 'utf8'), currentLockBytes);
+    assert.equal(fs.readFileSync(ledgerFile, 'utf8'), currentLedgerBytes);
+    assert.equal(fs.existsSync(releaseCatalogCache), false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
   }
 });

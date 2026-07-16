@@ -467,6 +467,30 @@
       "authority": "Each installed root package lock selects its manifest/channel target; digest and package lifecycle receipt identify installed content.",
       "default_policy": "silent_background_for_clean_digest_locked_installed_packages",
       "mutation_scope": "installed_root_package_locks_only",
+      "source_policy": {
+        "authority": "effective Developer Mode and per-package source preference",
+        "developer_checkout_effect": "compare_installed_lock_to_live_release_set_target_then_relock_and_reproject_from_the_exact_effective_checkout_without_overwriting_checkout_content",
+        "managed_effect": "compare_installed_lock_to_release_set_target_then_apply_only_when_identity_differs",
+        "external_package_effect": "manual_explicit_update_only"
+      },
+      "release_catalog_cache_policy": {
+        "live_refresh_operations": [
+          "check",
+          "plan",
+          "apply"
+        ],
+        "status_and_fast_app_state": "validated_cache_or_framework_projection_only",
+        "dry_run_refresh": "live_lookup_without_catalog_cache_persistence",
+        "fresh_cache_max_age_hours": 24,
+        "expired_cache_role": "last_known_good_read_model_only"
+      },
+      "currentness_identity_fields": [
+        "source_kind",
+        "package_version",
+        "manifest_sha256",
+        "content_digest",
+        "artifact_digest"
+      ],
       "auto_apply": {
         "mode": "auto_apply",
         "app_background_safe": true,
@@ -474,18 +498,20 @@
         "eligible_scope": "clean_digest_locked_installed_root_package_locks_only",
         "eligible_when": [
           "installed root package lock exists",
-          "source kind is not developer_checkout_override",
+          "effective source policy selects managed release target with a different identity",
+          "or effective source policy selects an available developer checkout whose lock source, version, manifest digest, content digest, or artifact digest differs from the live Release Set target",
           "manifest sha256, content digest, and lock ref are present",
           "physical package surface has no recorded failure"
         ],
         "blocked_when": [
           "dirty checkout",
-          "developer checkout",
-          "developer checkout override",
+          "developer checkout selected but unavailable",
+          "external package without Framework source authority",
           "missing manifest sha256, content digest, or lock ref",
           "physical surface requires repair",
           "package lifecycle update failed without overwriting the installed lock"
-        ]
+        ],
+        "current_noop_receipt_policy": "do_not_write_component_receipt"
       },
       "transaction_status_fields": [
         "projection_status",
@@ -494,7 +520,7 @@
       "transaction_guards": {
         "installed_digest_required": true,
         "dirty_checkout_policy": "fail_closed_no_overwrite",
-        "developer_checkout_policy": "fail_closed_no_auto_update",
+        "developer_checkout_policy": "source_reconcile_then_protect_no_channel_overwrite",
         "codex_skill_plugin_sync": "same_transaction_post_apply",
         "receipt_policy": "single_package_transaction_receipt"
       },
@@ -507,7 +533,8 @@
         "reconcile_packages",
         "sync_skills",
         "sync_codex_skill_plugin_projection"
-      ]
+      ],
+      "partial_outcome_policy": "apply_all_eligible_targets_run_post_apply_when_any_target_changed_and_report_current_changed_manual_failed_separately"
     }
   ],
   "components": [
@@ -566,12 +593,16 @@
     ],
     "execution_status_values": [
       "completed",
+      "partial_success",
+      "partial_failure",
       "skipped",
       "manual_required",
       "failed_with_repair"
     ],
     "adapter_result_status_values": [
       "completed",
+      "partial_success",
+      "partial_failure",
       "skipped",
       "manual_required",
       "failed"
@@ -607,7 +638,10 @@
         "auto_apply_eligible",
         "app_background_safe",
         "clean_managed_targets_count",
+        "current_targets_count",
+        "changed_targets_count",
         "manual_required_targets_count",
+        "failed_targets_count",
         "post_apply_status",
         "reload_status"
       ],

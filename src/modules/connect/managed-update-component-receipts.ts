@@ -143,7 +143,10 @@ function defaultStatusDetail(): ManagedUpdateReceiptStatusDetail {
     auto_apply_eligible: null,
     app_background_safe: null,
     clean_managed_targets_count: null,
+    current_targets_count: null,
+    changed_targets_count: null,
     manual_required_targets_count: null,
+    failed_targets_count: null,
     post_apply_status: 'unknown',
     reload_status: 'unknown',
   };
@@ -179,7 +182,10 @@ function normalizeStatusDetail(value: unknown): ManagedUpdateReceiptStatusDetail
     auto_apply_eligible: optionalBoolean(value.auto_apply_eligible),
     app_background_safe: optionalBoolean(value.app_background_safe),
     clean_managed_targets_count: optionalNumber(value.clean_managed_targets_count),
+    current_targets_count: optionalNumber(value.current_targets_count),
+    changed_targets_count: optionalNumber(value.changed_targets_count),
     manual_required_targets_count: optionalNumber(value.manual_required_targets_count),
+    failed_targets_count: optionalNumber(value.failed_targets_count),
     post_apply_status: normalizePostApplyStatus(value.post_apply_status),
     reload_status: normalizeReloadStatus(value.reload_status),
   };

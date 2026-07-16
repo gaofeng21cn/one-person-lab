@@ -56,7 +56,10 @@ export type ManagedUpdateReceiptStatusDetail = {
   auto_apply_eligible: boolean | null;
   app_background_safe: boolean | null;
   clean_managed_targets_count: number | null;
+  current_targets_count: number | null;
+  changed_targets_count: number | null;
   manual_required_targets_count: number | null;
+  failed_targets_count: number | null;
   post_apply_status: 'not_run' | 'completed' | 'manual_required' | 'failed' | 'skipped' | 'unknown';
   reload_status: 'not_required' | 'recommended' | 'required' | 'manual_required' | 'unknown';
 };

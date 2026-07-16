@@ -52,6 +52,7 @@ type AdapterExecutionResult = ManagedUpdateOwnerExecutionReceiptResult & {
   reason: string;
   result: Record<string, unknown> | null;
   error: Record<string, unknown> | null;
+  write_receipt?: boolean;
 };
 
 function stringValue(value: unknown) {
@@ -284,9 +285,9 @@ function buildAgentPackagePostApplyActions(
 
 function agentPackageReloadGuidance(
   operation: ManagedUpdateKernelInput['operation'],
-  status: ManagedUpdateOwnerExecutionStatus,
+  changedCount: number,
 ): ManagedUpdateReloadGuidance {
-  if (status !== 'completed' || operation === MANAGED_UPDATE_OWNER_ACTIONS.revert) {
+  if (changedCount === 0 || operation === MANAGED_UPDATE_OWNER_ACTIONS.revert) {
     return {
       reload_required: false,
       reload_recommended: false,
@@ -308,7 +309,11 @@ function buildAgentPackageStatusDetail(input: {
   componentState: string;
   applyMode: ManagedUpdateReceiptApplyMode;
   completedCount: number;
+  currentCount?: number;
+  changedCount?: number;
   manualCount: number;
+  failedCount?: number;
+  appBackgroundSafe?: boolean;
   postApplyActions: ManagedUpdateOwnerPostApplyAction[];
   reloadGuidance: ManagedUpdateReloadGuidance;
   status: ManagedUpdateOwnerExecutionStatus;
@@ -316,9 +321,12 @@ function buildAgentPackageStatusDetail(input: {
   return {
     component_state: input.componentState,
     auto_apply_eligible: input.applyMode === 'auto_apply',
-    app_background_safe: input.applyMode === 'auto_apply',
+    app_background_safe: input.appBackgroundSafe ?? input.applyMode === 'auto_apply',
     clean_managed_targets_count: input.completedCount,
+    current_targets_count: input.currentCount ?? 0,
+    changed_targets_count: input.changedCount ?? input.completedCount,
     manual_required_targets_count: input.manualCount,
+    failed_targets_count: input.failedCount ?? 0,
     post_apply_status: managedUpdatePostApplyStatus(input.postApplyActions, input.status),
     reload_status: managedUpdateReloadStatus(input.reloadGuidance, input.status),
   };
@@ -370,7 +378,7 @@ async function runAgentPackageAdapter(operation: ManagedUpdateKernelInput['opera
     const manualCount = targets.filter((target) => target.status === 'manual_required').length;
     const completedCount = targets.filter((target) => target.status === 'completed').length;
     const status: AdapterExecutionResult['status'] = completedCount > 0 && manualCount === 0 ? 'completed' : 'manual_required';
-    const reloadGuidance = agentPackageReloadGuidance(operation, status);
+    const reloadGuidance = agentPackageReloadGuidance(operation, completedCount);
     const result = {
       surface_kind: 'capability_packages_rollback_result',
       apply_mode: 'manual_required',
@@ -417,23 +425,56 @@ async function runAgentPackageAdapter(operation: ManagedUpdateKernelInput['opera
     : reconcileLegacyChannelTargets();
   const manualCount = targets.filter((target) => target.status === 'manual_required').length;
   const completedCount = targets.filter((target) => target.status === 'completed').length;
-  const status: AdapterExecutionResult['status'] = manualCount > 0 ? 'manual_required' : 'completed';
-  const applyMode: ManagedUpdateReceiptApplyMode = manualCount > 0 ? 'manual_required' : 'auto_apply';
-  const postApplyActions = manualCount > 0 ? [] : buildAgentPackagePostApplyActions(operation, {
+  const validatedCount = targets.filter((target) => target.status === 'validated').length;
+  const changedCount = completedCount + validatedCount;
+  const currentCount = targets.filter((target) => target.status === 'current').length;
+  const failedCount = targets.filter((target) => target.status === 'failed').length;
+  const baseStatus: AdapterExecutionResult['status'] = failedCount > 0
+    ? changedCount > 0 ? 'partial_failure' : 'failed'
+    : manualCount > 0
+      ? changedCount > 0 ? 'partial_success' : 'manual_required'
+      : changedCount > 0
+        ? 'completed'
+        : 'skipped';
+  const applyMode: ManagedUpdateReceiptApplyMode = changedCount > 0
+    ? 'auto_apply'
+    : manualCount > 0 || failedCount > 0
+      ? 'manual_required'
+      : 'projection_only';
+  const postApplyActions = changedCount > 0 ? buildAgentPackagePostApplyActions(operation, {
     surface_kind: 'capability_packages_adapter_result',
     targets,
     summary: {
       total_targets_count: targets.length,
+      current_targets_count: currentCount,
       completed_targets_count: completedCount,
+      changed_targets_count: changedCount,
       manual_required_targets_count: manualCount,
+      failed_targets_count: failedCount,
     },
-  });
-  const reloadGuidance = agentPackageReloadGuidance(operation, status);
+  }) : [];
+  const postApplyFailed = postApplyActions.some((entry) => entry.status === 'failed');
+  const postApplyManual = postApplyActions.some((entry) => entry.status === 'manual_required');
+  const status: AdapterExecutionResult['status'] = postApplyFailed
+    ? changedCount > 0 ? 'partial_failure' : 'failed'
+    : postApplyManual && baseStatus === 'completed'
+      ? 'partial_success'
+      : baseStatus;
+  const reloadGuidance = agentPackageReloadGuidance(operation, changedCount);
+  const componentState = failedCount > 0 || postApplyFailed
+    ? 'failed_with_repair'
+    : manualCount > 0 || postApplyManual
+      ? 'skipped_manual_required'
+      : 'current';
   const statusDetail = buildAgentPackageStatusDetail({
-    componentState: status === 'completed' ? 'current' : 'skipped_manual_required',
+    componentState,
     applyMode,
     completedCount,
+    currentCount,
+    changedCount,
     manualCount,
+    failedCount,
+    appBackgroundSafe: applyMode === 'auto_apply' && failedCount === 0 && !postApplyFailed,
     postApplyActions,
     reloadGuidance,
     status,
@@ -441,7 +482,7 @@ async function runAgentPackageAdapter(operation: ManagedUpdateKernelInput['opera
   const result = {
     surface_kind: 'capability_packages_adapter_result',
     apply_mode: applyMode,
-    app_background_safe: applyMode === 'auto_apply',
+    app_background_safe: applyMode === 'auto_apply' && failedCount === 0 && !postApplyFailed,
     auto_apply_scope: packageTargets.length > 0
       ? 'clean_digest_locked_installed_root_packages_only'
       : 'legacy_explicit_channel_roots_only',
@@ -450,27 +491,46 @@ async function runAgentPackageAdapter(operation: ManagedUpdateKernelInput['opera
     read_model_guidance: {
       status_plane: 'opl packages status --json',
       component_receipt_ledger: managedUpdateComponentReceiptLedgerFilePath(),
-      app_consumer: 'App may call this apply path only when auto_apply.eligible is true and manual_required_targets_count is 0.',
+      app_consumer: 'App may apply eligible targets when auto_apply.eligible is true and must surface manual or failed targets separately.',
     },
     targets,
     summary: {
       total_targets_count: targets.length,
+      current_targets_count: currentCount,
       completed_targets_count: completedCount,
+      changed_targets_count: changedCount,
       manual_required_targets_count: manualCount,
+      failed_targets_count: failedCount,
+      manual_required_reasons: targets
+        .filter((target) => target.status === 'manual_required')
+        .map((target) => ({ target_id: target.target_id, reason: target.reason })),
     },
   };
   return {
     component_id: 'opl_packages',
     adapter_id: 'capability_packages_adapter',
     status,
-    reason: manualCount > 0 ? 'manual_review_required' : 'managed_modules_reconciled_and_codex_surface_synced',
-    result_ref: adapterResultRef('capability_packages', operation, result),
+    reason: status === 'skipped'
+      ? 'package_targets_current_noop'
+      : status === 'partial_success'
+        ? 'eligible_package_targets_updated_manual_targets_remain'
+        : status === 'partial_failure'
+          ? 'eligible_package_targets_partially_updated_failures_remain'
+          : status === 'manual_required'
+            ? 'manual_review_required'
+            : status === 'failed'
+              ? 'package_update_failed_with_repair'
+              : 'managed_modules_reconciled_and_codex_surface_synced',
+    result_ref: changedCount > 0 || failedCount > 0 || manualCount > 0
+      ? adapterResultRef('capability_packages', operation, result)
+      : null,
     result,
     error: null,
     apply_mode: applyMode,
     status_detail: statusDetail,
     reload_guidance: reloadGuidance,
     post_apply_actions: postApplyActions,
+    write_receipt: changedCount > 0 || failedCount > 0 || manualCount > 0,
   };
 }
 
@@ -517,8 +577,14 @@ async function runAdapter(
 }
 
 function executionStatus(results: AdapterExecutionResult[]) {
-  if (results.some((entry) => entry.status === 'failed')) {
+  if (results.some((entry) => entry.status === 'failed' || entry.status === 'partial_failure')) {
+    if (results.some((entry) => entry.status === 'partial_failure')) {
+      return 'partial_failure';
+    }
     return 'failed_with_repair';
+  }
+  if (results.some((entry) => entry.status === 'partial_success')) {
+    return 'partial_success';
   }
   if (results.some((entry) => entry.status === 'manual_required')) {
     return 'manual_required';
@@ -636,6 +702,7 @@ export async function runManagedUpdateKernelOperation(
       results.push(component ? bindOwnerExecutionResult(component, result) : result);
     }
     const receipts = results
+      .filter((result) => result.write_receipt !== false)
       .map((result) => {
         const component = componentsById.get(result.component_id);
         return component ? managedUpdateComponentReceiptInput({
@@ -647,7 +714,10 @@ export async function runManagedUpdateKernelOperation(
       .filter((receipt): receipt is ManagedUpdateComponentReceiptInput => Boolean(receipt));
     const receiptRecord = recordManagedUpdateComponentReceipts(receipts);
     lock.release();
-    const refreshedProjection = await buildManagedUpdateKernelProjection(contracts, input);
+    const refreshedProjection = await buildManagedUpdateKernelProjection(contracts, {
+      ...input,
+      refreshReleaseCatalog: false,
+    });
     const selectedIds = new Set(componentIds);
     const selectedComponents = refreshedProjection.managed_update.components.filter((component) =>
       selectedIds.has(component.component_id)

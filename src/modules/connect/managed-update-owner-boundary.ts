@@ -163,14 +163,22 @@ export type ManagedUpdateKernelInput = {
   operation: ManagedUpdateOperation;
   componentId?: string;
   receiptId?: string;
+  persistReleaseCatalog?: boolean;
+  refreshReleaseCatalog?: boolean;
 };
 
-export type ManagedUpdateOwnerExecutionStatus = 'completed' | 'skipped' | 'manual_required' | 'failed';
+export type ManagedUpdateOwnerExecutionStatus =
+  | 'completed'
+  | 'partial_success'
+  | 'partial_failure'
+  | 'skipped'
+  | 'manual_required'
+  | 'failed';
 
 export type ManagedUpdateOwnerPostApplyAction = {
   action_id: string;
   command_ref: string;
-  status: ManagedUpdateOwnerExecutionStatus;
+  status: ManagedUpdatePostApplyActionReceipt['status'];
   result_ref: string | null;
   result: Record<string, unknown> | null;
 };
@@ -456,36 +464,36 @@ export function managedUpdatePostApplyStatus(
   actions: ManagedUpdateOwnerPostApplyAction[],
   fallbackStatus: ManagedUpdateOwnerExecutionStatus,
 ): ManagedUpdateReceiptStatusDetail['post_apply_status'] {
-  if (fallbackStatus === 'failed') {
+  if (actions.length > 0) {
+    if (actions.some((entry) => entry.status === 'failed')) {
+      return 'failed';
+    }
+    if (actions.some((entry) => entry.status === 'manual_required')) {
+      return 'manual_required';
+    }
+    return 'completed';
+  }
+  if (fallbackStatus === 'failed' || fallbackStatus === 'partial_failure') {
     return 'failed';
   }
-  if (fallbackStatus === 'manual_required') {
+  if (fallbackStatus === 'manual_required' || fallbackStatus === 'partial_success') {
     return 'manual_required';
   }
-  if (actions.length === 0) {
-    return fallbackStatus === 'skipped' ? 'skipped' : 'not_run';
-  }
-  if (actions.some((entry) => entry.status === 'failed')) {
-    return 'failed';
-  }
-  if (actions.some((entry) => entry.status === 'manual_required')) {
-    return 'manual_required';
-  }
-  return 'completed';
+  return fallbackStatus === 'skipped' ? 'skipped' : 'not_run';
 }
 
 export function managedUpdateReloadStatus(
   guidance: ManagedUpdateReloadGuidance,
   fallbackStatus: ManagedUpdateOwnerExecutionStatus,
 ): ManagedUpdateReceiptStatusDetail['reload_status'] {
-  if (fallbackStatus === 'manual_required') {
-    return 'manual_required';
-  }
   if (guidance.reload_required) {
     return 'required';
   }
   if (guidance.reload_recommended) {
     return 'recommended';
+  }
+  if (fallbackStatus === 'manual_required' || fallbackStatus === 'partial_success') {
+    return 'manual_required';
   }
   return 'not_required';
 }
@@ -544,16 +552,21 @@ export function managedUpdateComponentReceiptInput(input: {
     from_digest: input.component.receipt.from_digest,
     to_version: input.component.receipt.to_version,
     to_digest: input.component.receipt.to_digest,
-    verify_result: input.result.status === 'failed'
+    verify_result: input.result.status === 'failed' || input.result.status === 'partial_failure'
       ? 'failed'
       : input.result.status === 'manual_required'
         ? 'unknown'
         : 'passed',
     post_apply_hooks: input.component.post_apply_hooks,
     rollback_ref: input.result.status === 'completed'
+      || input.result.status === 'partial_success'
+      || input.result.status === 'partial_failure'
       ? componentExecutionRollbackRef(input.component.component_id, input.result.result_ref)
       : input.component.receipt.rollback_ref,
-    repair_action: input.result.status === 'failed' || input.result.status === 'manual_required'
+    repair_action: input.result.status === 'failed'
+      || input.result.status === 'manual_required'
+      || input.result.status === 'partial_success'
+      || input.result.status === 'partial_failure'
       ? input.component.receipt.repair_action ?? input.component.plan.command_refs[0]?.action_id ?? null
       : input.component.receipt.repair_action,
     adapter_result_ref: input.result.result_ref,
@@ -591,7 +604,10 @@ export function statusDetail(input: {
   auto_apply_eligible?: boolean;
   app_background_safe?: boolean;
   clean_managed_targets_count?: number | null;
+  current_targets_count?: number | null;
+  changed_targets_count?: number | null;
   manual_required_targets_count?: number | null;
+  failed_targets_count?: number | null;
   post_apply_status?: ManagedUpdateReceiptStatusDetail['post_apply_status'];
   reload_status?: ManagedUpdateReceiptStatusDetail['reload_status'];
 }): ManagedUpdateReceiptStatusDetail {
@@ -600,7 +616,10 @@ export function statusDetail(input: {
     auto_apply_eligible: input.auto_apply_eligible ?? false,
     app_background_safe: input.app_background_safe ?? false,
     clean_managed_targets_count: input.clean_managed_targets_count ?? null,
+    current_targets_count: input.current_targets_count ?? null,
+    changed_targets_count: input.changed_targets_count ?? null,
     manual_required_targets_count: input.manual_required_targets_count ?? null,
+    failed_targets_count: input.failed_targets_count ?? null,
     post_apply_status: input.post_apply_status ?? 'not_run',
     reload_status: input.reload_status ?? 'not_required',
   };

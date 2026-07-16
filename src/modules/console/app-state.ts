@@ -15,6 +15,7 @@ import {
   listOplAgentPackages,
   readOplAgentPackageLockIndex,
   readOplFlowDefaultUserInstructions,
+  resolveFirstPartyPackageCatalogSnapshot,
   resolveCodexVersion,
   resolveDefaultFamilyWorkspaceRoot,
   runOplAgentPackageStatus,
@@ -953,8 +954,12 @@ export async function buildOplAppState(input: {
   const readAgentPackageStatus = requestCachedAgentPackageStatusReader(
     input.readAgentPackageStatus ?? runOplAgentPackageStatus,
   );
+  const firstPartyCatalog = profile === 'full'
+    ? await resolveFirstPartyPackageCatalogSnapshot({ refresh: true })
+    : undefined;
   const agentPackagesReadback = listOplAgentPackages({
     detail: profile,
+    firstPartyCatalog,
     readStatus: readAgentPackageStatus,
     statusContext: () => appAgentPackageStatusContext(
       workspaceRoot.selected_path,

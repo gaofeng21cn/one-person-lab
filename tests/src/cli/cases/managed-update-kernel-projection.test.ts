@@ -42,9 +42,21 @@ test('managed update contract exposes only OPL Base, OPL App, and OPL Packages l
   assert.deepEqual(packages.transaction_status_fields, ['projection_status', 'profile_migration_status']);
   assert.equal(packages.transaction_guards.installed_digest_required, true);
   assert.equal(packages.transaction_guards.dirty_checkout_policy, 'fail_closed_no_overwrite');
-  assert.equal(packages.transaction_guards.developer_checkout_policy, 'fail_closed_no_auto_update');
+  assert.equal(packages.transaction_guards.developer_checkout_policy, 'source_reconcile_then_protect_no_channel_overwrite');
   assert.equal(packages.transaction_guards.codex_skill_plugin_sync, 'same_transaction_post_apply');
   assert.equal(packages.transaction_guards.receipt_policy, 'single_package_transaction_receipt');
+  assert.deepEqual(packages.currentness_identity_fields, [
+    'source_kind',
+    'package_version',
+    'manifest_sha256',
+    'content_digest',
+    'artifact_digest',
+  ]);
+  assert.equal(packages.auto_apply.current_noop_receipt_policy, 'do_not_write_component_receipt');
+  assert.equal(
+    packages.partial_outcome_policy,
+    'apply_all_eligible_targets_run_post_apply_when_any_target_changed_and_report_current_changed_manual_failed_separately',
+  );
   assert.equal(packages.profile_migration_policy.semantic_merge_required, true);
   assert.equal(packages.profile_migration_policy.silent_overwrite_allowed, false);
   assert.deepEqual(contract.base_dependency_catalog_contract.update_mode_values, [

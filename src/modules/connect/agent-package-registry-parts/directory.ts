@@ -9,11 +9,14 @@ import {
 import { getOplPackageSpecs } from '../package-distribution.ts';
 import {
   selectManagedCatalogPackageVersion,
+  type ManagedCatalogVersion,
   type ManagedPackageCatalog,
 } from './capability-reconciliation.ts';
+import { agentPackageTargetCurrentness } from './currentness.ts';
 import { normalizePackageManifest } from './manifest-normalizers.ts';
 import { packageRoleFromInstalledLock } from './package-role.ts';
 import { agentPackageLifecycleUxReadback } from './readback.ts';
+import { resolveAgentPackageEffectiveSourcePolicy } from './source-policy.ts';
 import {
   assertExplicitExternalRegistryClaim,
   fetchJsonSource,
@@ -61,6 +64,7 @@ type DirectorySource = {
   version_source_ref: string;
   source_kind: 'first_party_framework_projection' | 'first_party_release_catalog' | 'agent_package_registry_cache' | 'installed_package_lock';
   registry_source_ref: string | null;
+  release_target: ManagedCatalogVersion | null;
   version_currentness: {
     status: 'live_release_set' | 'cached_release_set' | 'last_known_good_release_set' | 'framework_projection_only' | 'registry_cache' | 'installed_lock_only';
     live_verified: boolean;
@@ -348,6 +352,7 @@ function firstPartyDirectorySources(snapshot: FirstPartyDirectoryCatalogSnapshot
         source_digest: snapshot?.catalog_digest ?? null,
         checked_at: snapshot?.checked_at ?? null,
       },
+      release_target: selected,
     };
   });
 }
@@ -377,6 +382,7 @@ function registryDirectorySource(cache: AgentPackageRegistryCache, entry: AgentP
       source_digest: cache.registry_sha256,
       checked_at: cache.refreshed_at,
     },
+    release_target: null,
   };
 }
 
@@ -405,6 +411,7 @@ function lockDirectorySource(lock: AgentPackageLock, packageRole: AgentPackageRo
       source_digest: lock.release_channel_digest ?? null,
       checked_at: lock.updated_at,
     },
+    release_target: null,
   };
 }
 
@@ -601,6 +608,9 @@ export function buildAgentPackageDirectory(input: {
   const entries = [...sources.values()].map((source) => {
     const lock = locksById.get(source.package_id) ?? null;
     const installed = Boolean(lock);
+    const sourcePolicy = resolveFirstPartyPackageCatalog(source.package_id)
+      ? resolveAgentPackageEffectiveSourcePolicy(source.package_id, { profile: input.detail })
+      : null;
     const installedRole = lock ? installedRoles.get(source.package_id)! : null;
     const effectiveSource = installed
       ? { ...source, package_role: installedRole!.role }
@@ -646,6 +656,33 @@ export function buildAgentPackageDirectory(input: {
       || status.runtime_source_readiness?.live_verification_deferred === true
     );
     const actionContext = input.actionContext?.(source.package_id) ?? null;
+    const desiredSourceKind = sourcePolicy?.desired_source_kind ?? lock?.source_kind ?? null;
+    const targetCurrentness = lock && source.release_target && desiredSourceKind
+      ? agentPackageTargetCurrentness({
+          lock,
+          target: source.release_target,
+          desiredSourceKind,
+        })
+      : null;
+    const sourcePolicyStatus = !sourcePolicy
+      ? 'not_applicable'
+      : sourcePolicy.desired_source_kind === 'developer_checkout_override'
+        ? !sourcePolicy.developer_checkout_available
+          ? 'manual_required'
+          : lock?.source_kind === 'developer_checkout_override'
+            ? 'current'
+            : 'reconciliation_available'
+        : lock && lock.source_kind !== 'first_party_managed_cohort'
+          ? 'reconciliation_available'
+          : 'current';
+    const automaticSourceReconciliationAllowed = Boolean(
+      sourcePolicy
+      && sourcePolicyStatus === 'reconciliation_available'
+      && (
+        sourcePolicy.desired_source_kind === 'first_party_managed_cohort'
+        || sourcePolicy.developer_checkout_available
+      ),
+    );
     const actions = statusReadError
       ? [packageAction('agent_package_repair', { package_id: source.package_id }, ['package_id'], true)]
       : availableActions(
@@ -654,7 +691,11 @@ export function buildAgentPackageDirectory(input: {
           activated,
           actionContext,
           lock?.exposure_state !== 'disabled',
-          lock?.source_kind !== 'developer_checkout_override',
+          lock?.source_kind !== 'developer_checkout_override' && (
+            sourcePolicy?.package_channel_auto_update === true
+            || automaticSourceReconciliationAllowed
+            || !sourcePolicy
+          ),
         );
     const recommendedAction = recommendedActionId({
       installed,
@@ -711,13 +752,43 @@ export function buildAgentPackageDirectory(input: {
         registry_url: source.registry_url,
         registry_source_ref: source.registry_source_ref,
         version_source_ref: source.version_source_ref,
+        installed_source_kind: lock?.source_kind ?? null,
+        effective_source_policy: sourcePolicy,
+        source_policy_status: sourcePolicyStatus,
       },
       manifest_url: source.manifest_url,
       projected_version: source.projected_version,
       selected_version: source.selected_version,
       stable_version: source.stable_version,
       version_currentness: source.version_currentness,
+      target_manifest_sha256: source.release_target?.manifest_sha256 ?? null,
+      target_content_digest: source.release_target?.content_digest ?? null,
+      target_artifact_digest: source.release_target?.artifact_digest ?? null,
+      package_currentness: !installed
+        ? {
+            status: source.release_target ? 'not_installed' : 'unknown',
+            reasons: source.release_target ? ['package_not_installed'] : ['release_set_unavailable'],
+          }
+        : sourcePolicyStatus === 'manual_required'
+          ? {
+              status: 'manual_required',
+              reasons: [
+                'developer_checkout_unavailable',
+                ...(targetCurrentness?.reasons ?? []),
+              ],
+            }
+          : sourcePolicyStatus === 'reconciliation_available'
+            ? targetCurrentness ?? {
+              status: 'update_available',
+              reasons: ['source_policy_mismatch', 'release_set_unavailable'],
+            }
+            : targetCurrentness ?? {
+                status: 'unknown',
+                reasons: ['release_set_unavailable'],
+              },
       installed_version: lock?.package_version ?? null,
+      installed_content_digest: lock?.content_digest ?? null,
+      installed_artifact_digest: lock?.artifact_digest ?? null,
       installed,
       activated,
       installability: {

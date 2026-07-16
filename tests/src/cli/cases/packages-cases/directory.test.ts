@@ -146,6 +146,47 @@ exit 1
   }
 });
 
+test('Developer Mode selects every available first-party Package checkout', () => {
+  const fixture = isolatedPackageEnv('opl-package-directory-developer-policy');
+  const workspace = path.join(fixture.home, 'workspace');
+  const repoNames = [
+    'med-autoscience',
+    'med-autogrant',
+    'redcube-ai',
+    'opl-meta-agent',
+    'opl-bookforge',
+    'mas-scholar-skills',
+    'opl-flow',
+  ];
+  try {
+    fs.mkdirSync(fixture.env.OPL_STATE_DIR, { recursive: true });
+    for (const repoName of repoNames) {
+      fs.mkdirSync(path.join(workspace, repoName), { recursive: true });
+    }
+    fs.writeFileSync(path.join(fixture.env.OPL_STATE_DIR, 'developer-supervisor.json'), formatJsonPayload({
+      version: 'g1',
+      enabled: 'on',
+      mode: 'developer_apply_safe',
+      auto_enable_github_login: 'gaofeng21cn',
+      module_source_preferences: {},
+      updated_at: '2026-07-16T00:00:00.000Z',
+    }));
+    const directory = (runCli(['packages', 'list'], {
+      ...fixture.env,
+      OPL_WORKSPACE_ROOT: workspace,
+    }) as any).opl_agent_packages.directory;
+    for (const packageId of CANONICAL_PACKAGE_IDS) {
+      const policy = directory.entries.find((entry: any) => entry.package_id === packageId)
+        .source_explanation.effective_source_policy;
+      assert.equal(policy.desired_source_kind, 'developer_checkout_override');
+      assert.equal(policy.developer_checkout_available, true);
+      assert.equal(policy.package_channel_auto_update, false);
+    }
+  } finally {
+    fs.rmSync(fixture.home, { recursive: true, force: true });
+  }
+});
+
 test('first-party Directory versions come only from the managed Release Set selector', () => {
   const versions = new Map(getOplPackageSpecs().map((spec) => {
     const packageVersion = spec.package_id === 'opl-flow' ? '0.1.19' : spec.selected_version;

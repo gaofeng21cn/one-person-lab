@@ -54,6 +54,7 @@ import {
   type ManagedCatalogVersion,
   type ManagedPackageCatalog,
 } from './agent-package-registry-parts/capability-reconciliation.ts';
+import { agentPackageTargetCurrentness } from './agent-package-registry-parts/currentness.ts';
 import {
   materializeCapabilityScope,
   materializeCapabilityScopeFromLock,
@@ -115,6 +116,21 @@ import {
   enrichRegistryCacheManifestMetadata,
 } from './agent-package-registry-parts/directory.ts';
 import {
+  readFirstPartyPackageCatalogSnapshot,
+  refreshFirstPartyPackageCatalogSnapshot,
+  resolveFirstPartyPackageCatalogSnapshot,
+} from './agent-package-registry-parts/release-catalog-cache.ts';
+import { resolveAgentPackageEffectiveSourcePolicy } from './agent-package-registry-parts/source-policy.ts';
+import {
+  agentPackageClosureTargetCurrentness,
+  agentPackageUpdateReadback,
+  assertFirstPartyPackageUpdateSelection,
+  developerAgentRootsForPackageIds,
+  firstPartyCatalogClosure,
+  installedPackageClosure,
+  packageBulkUpdateSafety,
+} from './agent-package-registry-parts/update-reconciliation.ts';
+import {
   fetchJsonSource,
   normalizeSourceKind,
   nowIso,
@@ -173,6 +189,7 @@ type PreparedPackage = {
   previousLock: AgentPackageLock | null;
   catalogVersion: ManagedCatalogVersion | null;
   packageChannelSelection: ManagedModulePackageChannelSelection | null;
+  developerCheckoutPath: string | null;
 };
 
 type TrustedBundledFullRuntimeInstall = {
@@ -371,12 +388,12 @@ async function applyManifestPackageLock(
     );
   }
   if (action !== 'install' && existingLock?.source_kind === 'developer_checkout_override') {
-    throw new FrameworkContractError('contract_shape_invalid', 'Developer checkout agent package sources require an explicit install after checkout review.', {
+    throw new FrameworkContractError('contract_shape_invalid', 'Developer checkout package locks must be reconciled through the effective source policy without package-channel checkout overwrite.', {
       package_id: existingLock.package_id,
       action,
       source_kind: existingLock.source_kind,
       failure_code: 'agent_package_developer_checkout_auto_update_forbidden',
-      manual_confirmation_path: 'review the checkout and run an explicit install with --source-kind developer_checkout_override and --agent-root',
+      manual_confirmation_path: 'review the checkout and run an explicit install/relock through the effective developer source policy',
     });
   }
   const shouldUseFirstPartyCatalog = (!hasExplicitSource || hasResolvedCatalogSelection || Boolean(trustedBundledInstall))
@@ -575,15 +592,44 @@ async function applyManifestPackageLock(
       && input.sourceKind === 'bundled_full_runtime_modules'
       && stringValue(trustedBundledInstall?.packageRoots[manifest.package_id]),
     );
+    const effectiveSourcePolicy = manifestFirstPartyOwner && !trustedBundledManifestSelection
+      ? resolveAgentPackageEffectiveSourcePolicy(manifest.package_id)
+      : null;
+    const policySourceKind = effectiveSourcePolicy?.desired_source_kind ?? firstParty?.sourceKind ?? null;
+    const requestedDeveloperCheckoutPath = input.agentRoots?.[manifest.package_id]
+      ?? (manifest.package_id === packageId ? stringValue(input.agentRoot) : null);
+    if (policySourceKind === 'developer_checkout_override'
+      && !effectiveSourcePolicy?.developer_checkout_available) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Developer Mode selected a package checkout that is not available.', {
+        package_id: manifest.package_id,
+        module_id: effectiveSourcePolicy?.module_id ?? null,
+        checkout_path: effectiveSourcePolicy?.developer_checkout_path ?? null,
+        source_policy_reason: effectiveSourcePolicy?.reason ?? null,
+        failure_code: 'agent_package_developer_checkout_unavailable',
+      });
+    }
+    if (policySourceKind === 'developer_checkout_override'
+      && requestedDeveloperCheckoutPath
+      && effectiveSourcePolicy?.developer_checkout_path
+      && path.resolve(requestedDeveloperCheckoutPath) !== path.resolve(effectiveSourcePolicy.developer_checkout_path)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'First-party Package developer checkout must match the effective module source policy.', {
+        package_id: manifest.package_id,
+        requested_checkout_path: path.resolve(requestedDeveloperCheckoutPath),
+        required_checkout_path: path.resolve(effectiveSourcePolicy.developer_checkout_path),
+        source_policy_reason: effectiveSourcePolicy.reason,
+        failure_code: 'first_party_package_developer_checkout_path_mismatch',
+      });
+    }
     if (firstParty
       && input.sourceKind
-      && input.sourceKind !== firstParty.sourceKind
+      && input.sourceKind !== policySourceKind
       && !trustedBundledManifestSelection) {
-      throw new FrameworkContractError('contract_shape_invalid', 'First-party catalog packages use the managed cohort source kind.', {
+      throw new FrameworkContractError('contract_shape_invalid', 'First-party Package source kind must match the effective module source policy.', {
         package_id: manifest.package_id,
         requested_source_kind: input.sourceKind,
-        required_source_kind: firstParty.sourceKind,
-        failure_code: 'first_party_package_source_kind_override_forbidden',
+        required_source_kind: policySourceKind,
+        source_policy_reason: effectiveSourcePolicy?.reason ?? null,
+        failure_code: 'first_party_package_source_kind_policy_mismatch',
       });
     }
     const sourceKind = normalizeSourceKind(
@@ -591,7 +637,7 @@ async function applyManifestPackageLock(
         ? input.sourceKind
         : trustedBundledManifestSelection
           ? firstParty!.sourceKind
-        : firstParty && catalogVersion ? firstParty.sourceKind : input.sourceKind,
+        : firstParty && catalogVersion ? policySourceKind : input.sourceKind,
       nextSelection.manifestUrl,
     );
     return {
@@ -603,6 +649,11 @@ async function applyManifestPackageLock(
       previousLock: index.packages.find((entry) => entry.package_id === manifest.package_id) ?? null,
       catalogVersion: catalogVersion ?? null,
       packageChannelSelection: immutableSelection,
+      developerCheckoutPath: sourceKind === 'developer_checkout_override'
+        ? requestedDeveloperCheckoutPath
+          ?? effectiveSourcePolicy?.developer_checkout_path
+          ?? null
+        : null,
     };
   }
 
@@ -611,12 +662,12 @@ async function applyManifestPackageLock(
     assertNoRequiredInstalledDependents(index, root.manifest.package_id, 'install');
   }
   if (root.sourceKind === 'developer_checkout_override' && action !== 'install') {
-    throw new FrameworkContractError('contract_shape_invalid', 'Developer checkout agent package sources are Developer Profile inputs and must not auto-update.', {
+    throw new FrameworkContractError('contract_shape_invalid', 'Developer checkout package locks must use source-policy reconciliation instead of a package-channel update action.', {
       package_id: root.manifest.package_id,
       action,
       source_kind: root.sourceKind,
       failure_code: 'agent_package_developer_checkout_auto_update_forbidden',
-      manual_confirmation_path: 'review the checkout and run an explicit install from the selected manifest when intended',
+      manual_confirmation_path: 'review the checkout and run an explicit install/relock through the effective developer source policy',
     });
   }
   if (action !== 'install' && !root.previousLock) {
@@ -745,9 +796,8 @@ async function applyManifestPackageLock(
         sourceKind: prepared.sourceKind,
         checkoutPath: trustedBundledInstall
           ? trustedBundledInstall.packageRoots[prepared.manifest.package_id] ?? null
-          : prepared.manifest.package_id === root.manifest.package_id
-            ? input.agentRoot
-            : null,
+          : prepared.developerCheckoutPath
+            ?? (prepared.manifest.package_id === root.manifest.package_id ? input.agentRoot : null),
         packageChannelSelection: prepared.packageChannelSelection,
         verifiedCarrierSourceCommit: prepared.manifest.verified_payload_source_commit,
         transactionId: sha256Text([
@@ -961,6 +1011,7 @@ async function applyManifestPackageLock(
       releaseChannelDigest: prepared.catalogVersion ? channelDigest : prepared.previousLock?.release_channel_digest ?? null,
       networkAccessed: trustedBundledInstall ? false : undefined,
       remoteDependencyPolicy: trustedBundledInstall ? 'forbidden' : undefined,
+      provenance: input.provenance,
     });
     Object.assign(lock, {
       action_receipt_id: receipt.receipt_ref,
@@ -1257,62 +1308,90 @@ export async function runOplBundledFullRuntimeAgentPackageInstall(input: {
 }
 
 export async function runOplAgentPackageUpdate(input: AgentPackageInstallInput) {
-  const result = await applyManifestPackageLock(input, 'update');
-  return {
-    version: 'g2',
-    opl_agent_package_update: {
-      surface_kind: 'opl_agent_package_update',
-      status: result.status,
-      dry_run: input.dryRun === true,
-      package_lock: result.lock,
-      physical_surface: result.physicalSurface,
-      framework_link: result.frameworkLink,
-      lifecycle_receipt: result.receipt,
-      owner_route_readback: ownerRouteReadback({
-        selectedPackageId: result.lock.package_id,
-        scope: input.scope,
-        targetWorkspace: input.targetWorkspace,
-        targetQuest: input.targetQuest,
-        packages: result.closureLocks.map((lock) => ({
-          packageId: lock.package_id,
-          lock,
-          receipt: result.closureReceipts.find((receipt) => receipt.package_id === lock.package_id) ?? null,
-        })),
-      }),
-      dependency_transaction_id: result.dependencyTransactionId,
-      dependency_closure_digest: result.dependencyClosureDigest,
-      dependency_package_locks: result.closureLocks,
-      lock_file: resolveOplStatePaths().agent_package_lock_file,
-      lifecycle_ledger_file: resolveOplStatePaths().agent_package_lifecycle_ledger_file,
-      registry_entry: result.registryEntry,
-      authority_boundary: refsOnlyAuthorityBoundary(),
-    },
-  };
-}
+  const packageId = canonicalAgentPackageId(stringValue(input.packageId));
+  const firstParty = resolveFirstPartyPackageCatalog(packageId);
+  if (packageId && firstParty) {
+    const { index } = readRecoveredLockIndex(true);
+    const { lock } = requireInstalledPackage(index, packageId, 'update');
+    if (lock.source_kind === 'bundled_full_runtime_modules') {
+      const result = await applyManifestPackageLock(input, 'update');
+      return agentPackageUpdateReadback(input, result);
+    }
+    const sourcePolicy = resolveAgentPackageEffectiveSourcePolicy(packageId);
+    assertFirstPartyPackageUpdateSelection(input, firstParty, sourcePolicy);
+    const liveCatalog = await refreshFirstPartyPackageCatalogSnapshot(packageId, { persist: false });
+    const targetVersion = selectManagedCatalogPackageVersion(liveCatalog.catalog, packageId);
+    assertFirstPartyPackageCatalogVersion(packageId, targetVersion);
+    const rootCurrentness = agentPackageTargetCurrentness({
+      lock,
+      target: targetVersion,
+      desiredSourceKind: sourcePolicy.desired_source_kind!,
+    });
+    const closureTargets = firstPartyCatalogClosure(liveCatalog.catalog, packageId, targetVersion);
+    const closureCurrentness = agentPackageClosureTargetCurrentness(index.packages, closureTargets);
+    const dependencyUpdateRequired = closureCurrentness.some((entry) =>
+      entry.package_id !== packageId && entry.status !== 'current');
+    const currentness = dependencyUpdateRequired && rootCurrentness.status === 'current'
+      ? {
+          ...rootCurrentness,
+          status: 'update_available' as const,
+          reasons: [...rootCurrentness.reasons, 'dependency_closure_changed'],
+        }
+      : rootCurrentness;
+    const reconciliationBase = {
+      currentness,
+      closureCurrentness,
+      sourcePolicy,
+      targetVersion,
+      catalogRef: liveCatalog.catalog_ref,
+      catalogDigest: liveCatalog.catalog_digest,
+    };
+    if (currentness.status === 'current') {
+      const closureLocks = installedPackageClosure(index.packages, closureTargets);
+      return agentPackageUpdateReadback(input, {
+        status: 'current_noop',
+        lock,
+        physicalSurface: lock.physical_surface,
+        frameworkLink: null,
+        receipt: null,
+        registryEntry: null,
+        closureLocks,
+        closureReceipts: [],
+        dependencyTransactionId: lock.dependency_transaction_id,
+        dependencyClosureDigest: lock.dependency_closure_digest,
+      }, {
+        ...reconciliationBase,
+        action: null,
+      });
+    }
 
-function packageBulkUpdateSafety(lock: AgentPackageLock) {
-  if (lock.source_kind === 'developer_checkout_override') {
-    return {
-      eligible: false,
-      reason: 'developer_checkout_is_user_managed',
-    } as const;
+    const developerSource = sourcePolicy.desired_source_kind === 'developer_checkout_override';
+    const action = developerSource ? 'install' : 'update';
+    const packageInput: AgentPackageInstallInput = {
+      ...input,
+      packageId,
+      sourceKind: sourcePolicy.desired_source_kind,
+      agentRoot: developerSource ? sourcePolicy.developer_checkout_path : input.agentRoot,
+      agentRoots: developerAgentRootsForPackageIds(closureTargets.map((entry) => entry.packageId)),
+    };
+    const applied = await applyManifestPackageLock(packageInput, action, {
+      catalog: liveCatalog.catalog,
+      rootVersion: targetVersion,
+      catalogSource: firstParty.catalogSource,
+      channelRef: liveCatalog.catalog_ref,
+      channelDigest: liveCatalog.catalog_digest,
+    });
+    return agentPackageUpdateReadback(input, {
+      ...applied,
+      status: developerSource && input.dryRun !== true ? 'updated' : applied.status,
+    }, {
+      ...reconciliationBase,
+      action: developerSource ? 'source_reconcile' : 'update',
+    });
   }
-  if (!lock.content_digest || !lock.manifest_sha256 || !lock.lock_ref) {
-    return {
-      eligible: false,
-      reason: 'package_content_identity_incomplete',
-    } as const;
-  }
-  if (lock.physical_surface?.failure_reason) {
-    return {
-      eligible: false,
-      reason: 'package_physical_surface_requires_repair',
-    } as const;
-  }
-  return {
-    eligible: true,
-    reason: 'installed_digest_locked_package',
-  } as const;
+
+  const result = await applyManifestPackageLock(input, 'update');
+  return agentPackageUpdateReadback(input, result);
 }
 
 export async function runOplAgentPackageBulkUpdate(input: { dryRun?: boolean } = {}) {
@@ -1324,46 +1403,227 @@ export async function runOplAgentPackageBulkUpdate(input: { dryRun?: boolean } =
   const roots = index.packages.filter((lock) =>
     recordedRootIds.has(lock.package_id) || !dependencyIds.has(lock.package_id));
   const targets: Array<Record<string, unknown>> = [];
+  const operationId = sha256Text([
+    'agent-package-bulk-update',
+    String(process.pid),
+    nowIso(),
+    ...roots.map((lock) => lock.lock_ref).sort(),
+  ].join('\n'));
+  const policies = new Map(roots.map((lock) => [
+    lock.package_id,
+    resolveAgentPackageEffectiveSourcePolicy(lock.package_id),
+  ]));
+  const requiresLiveCatalog = roots.some((lock) =>
+    Boolean(resolveFirstPartyPackageCatalog(lock.package_id)));
+  let liveCatalog: Awaited<ReturnType<typeof refreshFirstPartyPackageCatalogSnapshot>> | null = null;
+  let liveCatalogError: unknown = null;
+  if (requiresLiveCatalog) {
+    try {
+      liveCatalog = await refreshFirstPartyPackageCatalogSnapshot(
+        roots.find((lock) => resolveFirstPartyPackageCatalog(lock.package_id))?.package_id ?? 'mas',
+        { persist: input.dryRun !== true },
+      );
+    } catch (error) {
+      liveCatalogError = error;
+    }
+  }
+  const agentRoots = developerAgentRootsForPackageIds(index.packages.map((lock) => lock.package_id));
 
   for (const lock of roots) {
-    const safety = packageBulkUpdateSafety(lock);
-    if (!safety.eligible) {
+    const firstParty = resolveFirstPartyPackageCatalog(lock.package_id);
+    const policy = policies.get(lock.package_id)!;
+    const baseTarget = {
+      target_type: 'package_lock',
+      target_id: lock.package_id,
+      installed_lock_ref: lock.lock_ref,
+      installed_version: lock.package_version,
+      installed_content_digest: lock.content_digest,
+      installed_artifact_digest: lock.artifact_digest ?? null,
+      source_policy: policy,
+      operation_id: operationId,
+    };
+    if (!firstParty) {
+      const safety = packageBulkUpdateSafety(lock);
+      if (!safety.eligible) {
+        targets.push({
+          ...baseTarget,
+          status: 'manual_required',
+          reason: safety.reason,
+          action: null,
+          result: null,
+        });
+        continue;
+      }
+      try {
+        const result = await runOplAgentPackageUpdate({
+          packageId: lock.package_id,
+          dryRun: input.dryRun === true,
+        });
+        targets.push({
+          ...baseTarget,
+          status: input.dryRun ? 'validated' : 'completed',
+          reason: safety.reason,
+          action: 'update',
+          result: result.opl_agent_package_update,
+        });
+      } catch (error) {
+        targets.push({
+          ...baseTarget,
+          status: 'manual_required',
+          reason: 'package_update_failed_without_overwrite',
+          action: 'update',
+          result: null,
+          error: error && typeof error === 'object' && 'toJSON' in error && typeof error.toJSON === 'function'
+            ? error.toJSON()
+            : { message: error instanceof Error ? error.message : String(error) },
+        });
+      }
+      continue;
+    }
+    if (!policy.desired_source_kind) {
       targets.push({
-        target_type: 'package_lock',
-        target_id: lock.package_id,
+        ...baseTarget,
         status: 'manual_required',
-        reason: safety.reason,
+        reason: 'package_source_policy_requires_manual_reconciliation',
         action: null,
-        installed_lock_ref: lock.lock_ref,
-        installed_content_digest: lock.content_digest,
+        result: null,
+      });
+      continue;
+    }
+    if (policy.desired_source_kind === 'developer_checkout_override'
+      && !policy.developer_checkout_available) {
+      targets.push({
+        ...baseTarget,
+        status: 'manual_required',
+        reason: 'developer_checkout_unavailable',
+        action: 'source_reconcile',
+        result: null,
+      });
+      continue;
+    }
+    if (!liveCatalog) {
+      targets.push({
+        ...baseTarget,
+        status: 'manual_required',
+        reason: 'live_release_set_unavailable',
+        action: policy.desired_source_kind === 'developer_checkout_override' ? 'source_reconcile' : 'update',
+        result: null,
+        error: liveCatalogError && typeof liveCatalogError === 'object'
+          && 'toJSON' in liveCatalogError && typeof liveCatalogError.toJSON === 'function'
+          ? liveCatalogError.toJSON()
+          : { message: liveCatalogError instanceof Error ? liveCatalogError.message : String(liveCatalogError) },
+      });
+      continue;
+    }
+    const targetVersion = selectManagedCatalogPackageVersion(liveCatalog.catalog, lock.package_id);
+    const currentness = agentPackageTargetCurrentness({
+      lock,
+      target: targetVersion,
+      desiredSourceKind: policy.desired_source_kind,
+    });
+    const targetIdentity = {
+      target_version: targetVersion.package_version,
+      target_manifest_sha256: targetVersion.manifest_sha256,
+      target_content_digest: targetVersion.content_digest,
+      target_artifact_digest: targetVersion.artifact_digest,
+      target_source_artifact_ref: targetVersion.source_artifact_ref,
+      release_catalog_ref: liveCatalog.catalog_ref,
+      release_catalog_digest: liveCatalog.catalog_digest,
+    };
+    if (currentness.status === 'current') {
+      targets.push({
+        ...baseTarget,
+        ...targetIdentity,
+        status: 'current',
+        reason: 'installed_identity_matches_release_set_target',
+        currentness,
+        action: null,
+        result: null,
+      });
+      continue;
+    }
+    if (!lock.content_digest || !lock.manifest_sha256 || !lock.lock_ref) {
+      targets.push({
+        ...baseTarget,
+        ...targetIdentity,
+        status: 'manual_required',
+        reason: 'package_content_identity_incomplete',
+        currentness,
+        action: null,
+        result: null,
+      });
+      continue;
+    }
+    if (lock.physical_surface?.failure_reason) {
+      targets.push({
+        ...baseTarget,
+        ...targetIdentity,
+        status: 'manual_required',
+        reason: 'package_physical_surface_requires_repair',
+        currentness,
+        action: 'repair',
         result: null,
       });
       continue;
     }
     try {
-      const result = await runOplAgentPackageUpdate({
+      const action = policy.desired_source_kind === 'developer_checkout_override' ? 'install' : 'update';
+      const packageInput: AgentPackageInstallInput = {
         packageId: lock.package_id,
+        sourceKind: policy.desired_source_kind,
+        agentRoot: policy.developer_checkout_path,
+        agentRoots,
         dryRun: input.dryRun === true,
+        provenance: {
+          trigger: 'managed_update_kernel_apply',
+          initiator: 'opl_managed_update_kernel',
+          source_policy: policy.desired_source_kind,
+          source_policy_reason: policy.reason,
+          operation_id: operationId,
+          correlation_id: operationId,
+        },
+      };
+      const applied = await applyManifestPackageLock(packageInput, action, {
+        catalog: liveCatalog.catalog,
+        rootVersion: targetVersion,
+        catalogSource: firstParty.catalogSource,
+        channelRef: liveCatalog.catalog_ref,
+        channelDigest: liveCatalog.catalog_digest,
       });
+      const result = action === 'install'
+        ? agentPackageInstallReadback(packageInput, applied).opl_agent_package_install
+        : {
+            surface_kind: 'opl_agent_package_update',
+            status: applied.status,
+            dry_run: input.dryRun === true,
+            package_lock: applied.lock,
+            physical_surface: applied.physicalSurface,
+            lifecycle_receipt: applied.receipt,
+            dependency_package_locks: applied.closureLocks,
+            dependency_transaction_id: applied.dependencyTransactionId,
+            dependency_closure_digest: applied.dependencyClosureDigest,
+          };
       targets.push({
-        target_type: 'package_lock',
-        target_id: lock.package_id,
+        ...baseTarget,
+        ...targetIdentity,
         status: input.dryRun ? 'validated' : 'completed',
-        reason: safety.reason,
-        action: 'update',
-        installed_lock_ref: lock.lock_ref,
-        installed_content_digest: lock.content_digest,
-        result: result.opl_agent_package_update,
+        reason: action === 'install'
+          ? currentness.reasons.includes('source_policy_mismatch')
+            ? 'source_policy_reconciled_to_developer_checkout'
+            : 'developer_checkout_lock_reprojected_to_release_set_target'
+          : 'release_set_target_applied',
+        currentness,
+        action: action === 'install' ? 'source_reconcile' : 'update',
+        result,
       });
     } catch (error) {
       targets.push({
-        target_type: 'package_lock',
-        target_id: lock.package_id,
-        status: 'manual_required',
+        ...baseTarget,
+        ...targetIdentity,
+        status: 'failed',
         reason: 'package_update_failed_without_overwrite',
-        action: 'update',
-        installed_lock_ref: lock.lock_ref,
-        installed_content_digest: lock.content_digest,
+        currentness,
+        action: policy.desired_source_kind === 'developer_checkout_override' ? 'source_reconcile' : 'update',
         result: null,
         error: error && typeof error === 'object' && 'toJSON' in error && typeof error.toJSON === 'function'
           ? error.toJSON()
@@ -1374,12 +1634,21 @@ export async function runOplAgentPackageBulkUpdate(input: { dryRun?: boolean } =
 
   const completedCount = targets.filter((entry) =>
     entry.status === 'completed' || entry.status === 'validated').length;
+  const currentCount = targets.filter((entry) => entry.status === 'current').length;
   const manualRequiredCount = targets.filter((entry) => entry.status === 'manual_required').length;
+  const failedCount = targets.filter((entry) => entry.status === 'failed').length;
+  const status = failedCount > 0
+    ? completedCount > 0 ? 'partial_failure' : 'failed'
+    : manualRequiredCount > 0
+      ? completedCount > 0 ? 'partial_success' : 'attention_needed'
+      : completedCount > 0
+        ? input.dryRun ? 'validated_no_write' : 'completed'
+        : 'current_noop';
   return {
     version: 'g2',
     opl_agent_package_bulk_update: {
       surface_kind: 'opl_agent_package_bulk_update',
-      status: manualRequiredCount > 0 ? 'attention_needed' : input.dryRun ? 'validated_no_write' : 'completed',
+      status,
       dry_run: input.dryRun === true,
       lifecycle_owner: 'opl_packages',
       selection: 'installed_root_package_locks',
@@ -1387,8 +1656,17 @@ export async function runOplAgentPackageBulkUpdate(input: { dryRun?: boolean } =
       summary: {
         installed_package_count: index.packages.length,
         root_package_count: roots.length,
+        current_targets_count: currentCount,
         completed_targets_count: completedCount,
         manual_required_targets_count: manualRequiredCount,
+        failed_targets_count: failedCount,
+        changed_targets_count: completedCount,
+      },
+      provenance: {
+        trigger: 'managed_update_kernel_apply',
+        initiator: 'opl_managed_update_kernel',
+        operation_id: operationId,
+        correlation_id: operationId,
       },
       authority_boundary: refsOnlyAuthorityBoundary(),
     },
@@ -2859,7 +3137,7 @@ export function listOplAgentPackages(input: {
     registryCache,
     locks: lockIndex.packages,
     detail,
-    firstPartyCatalog: input.firstPartyCatalog,
+    firstPartyCatalog: input.firstPartyCatalog ?? readFirstPartyPackageCatalogSnapshot(),
     actionContext: input.statusContext,
     readStatus: (packageId) => {
       const context = input.statusContext?.(packageId) ?? {};
@@ -2913,6 +3191,19 @@ export function listOplAgentPackages(input: {
       authority_boundary: refsOnlyAuthorityBoundary(),
     },
   };
+}
+
+export async function refreshAndListOplAgentPackages(input: {
+  detail?: 'fast' | 'full';
+  refresh?: boolean;
+} = {}) {
+  const firstPartyCatalog = await resolveFirstPartyPackageCatalogSnapshot({
+    refresh: input.refresh !== false,
+  });
+  return listOplAgentPackages({
+    detail: input.detail,
+    firstPartyCatalog,
+  });
 }
 
 export function readInstalledOplAgentPackageLocks() {
