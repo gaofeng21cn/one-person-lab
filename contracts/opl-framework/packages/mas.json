@@ -4,10 +4,10 @@
   "package_id": "mas",
   "display_name": "Med Auto Science",
   "publisher": "one-person-lab",
-  "version": "0.2.9",
+  "version": "0.2.10",
   "owner_language_version": {
     "scheme": "pep440",
-    "value": "0.2.9"
+    "value": "0.2.10"
   },
   "source": "first_party",
   "registry_entry": {
@@ -46,8 +46,8 @@
   },
   "codex_surface": {
     "plugin_id": "med-autoscience",
-    "plugin_payload_manifest_url": "payloads/mas-0.2.9.json",
-    "carrier_source_commit": "d95b681bfd5d55ee2038456689927518caac0161",
+    "plugin_payload_manifest_url": "payloads/mas-0.2.10.json",
+    "carrier_source_commit": "9ca3f57aaf581baf959530e9c0b55343d80f595b",
     "standalone_distribution": "repo_carrier_source",
     "required_skill_ids": [
       "med-autoscience"

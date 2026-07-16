@@ -853,9 +853,9 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
   const manifest = manifests.mas;
   const expectedReleases: Record<string, { version: string; sourceCommit: string; payloadRef: string }> = {
     mas: {
-      version: '0.2.9',
-      sourceCommit: 'd95b681bfd5d55ee2038456689927518caac0161',
-      payloadRef: 'payloads/mas-0.2.9.json',
+      version: '0.2.10',
+      sourceCommit: '9ca3f57aaf581baf959530e9c0b55343d80f595b',
+      payloadRef: 'payloads/mas-0.2.10.json',
     },
     mag: {
       version: '0.3.2',
@@ -882,7 +882,7 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
   assert.equal(manifest.schema_ref, 'contracts/opl-framework/agent-package-manifest.schema.json');
   assert.equal(manifest.package_id, 'mas');
   assert.equal(manifest.agent_id, 'mas');
-  assert.equal(manifest.version, '0.2.9');
+  assert.equal(manifest.version, '0.2.10');
   assert.equal(manifest.carrier_source_role, 'codex_plugin_default_carrier_not_package_truth');
   assert.equal(schema.required.includes('distribution_payload'), false);
   assert.equal(schema.properties.distribution_payload.properties.install_truth.const, 'resolved_digest_lock');
