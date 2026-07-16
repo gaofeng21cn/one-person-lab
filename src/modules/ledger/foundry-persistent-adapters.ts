@@ -18,6 +18,7 @@ import {
 } from '../foundry/index.ts';
 import type {
   ActivationPointer,
+  ActivationRuntimeBindingVerification,
   ActivationTransaction,
   AgentVersion,
   CandidateCompiler,
@@ -27,7 +28,6 @@ import type {
   QualificationRecord,
   VersionRegistry,
 } from '../foundry/index.ts';
-import type { ActivationRuntimeBindingVerification } from '../foundry/ports.ts';
 import {
   assertFoundryEventReplay,
   FOUNDRY_TERMINAL_STATES,

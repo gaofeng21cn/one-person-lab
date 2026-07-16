@@ -13,6 +13,7 @@ export * from './owner-gate.ts';
 export * from './operation-result.ts';
 export type {
   ActivationRuntime,
+  ActivationRuntimeBindingVerification,
   ActivationRuntimePreflight,
   ActivationRuntimeReadback,
   ActivationRuntimeTransactionResult,
