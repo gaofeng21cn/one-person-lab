@@ -1,7 +1,8 @@
-import { assert, fs, os, parseJsonText, path, runCli, test } from '../helpers.ts';
+import { assert, createFakeCodexFixture, fs, os, parseJsonText, path, runCli, test } from '../helpers.ts';
 import { runGitFixtureCommand } from '../helpers-parts/family-fixtures.ts';
-import { withCliTimeout } from './system-startup-maintenance-cases/shared.ts';
 import './system-seed-manifest-cases/docker-webui-doctor.test.ts';
+
+const FIXTURE_CODEX_VERSION = '0.134.0';
 
 function writeDeveloperCheckout(root: string) {
   fs.mkdirSync(root, { recursive: true });
@@ -17,6 +18,41 @@ function writeDeveloperCheckout(root: string) {
     '-m',
     'Initial developer checkout',
   ]);
+}
+
+function createCurrentCodexFixture() {
+  return createFakeCodexFixture(`
+if [[ "$1" == "--version" ]]; then
+  echo "codex-cli ${FIXTURE_CODEX_VERSION}"
+  exit 0
+fi
+echo "Unsupported codex fixture command: $*" >&2
+exit 1
+`);
+}
+
+function currentCodexEnvironment(codexFixture: ReturnType<typeof createCurrentCodexFixture>) {
+  return {
+    OPL_CODEX_BIN: codexFixture.codexPath,
+    OPL_MIN_CODEX_CLI_VERSION: FIXTURE_CODEX_VERSION,
+    OPL_CODEX_CLI_LATEST_VERSION: FIXTURE_CODEX_VERSION,
+    PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
+  };
+}
+
+function assertCurrentCodexTarget(details: { engine_targets: unknown }) {
+  assert.deepEqual(details.engine_targets, [{
+    target_type: 'engine',
+    target_id: 'codex',
+    status: 'skipped',
+    reason: 'selected_codex_ready',
+    action: null,
+    version_status_before: 'compatible',
+    latest_version_status_before: 'current',
+    update_available_before: false,
+    result: null,
+    error: null,
+  }]);
 }
 
 function writeMinimalFrameworkRoot(root: string, marker: string) {
@@ -258,13 +294,16 @@ test('system seed-apply rejects non-canonical full seed strategy names', () => {
   }
 });
 
-test('system startup-maintenance reports seed boundary for WebUI first run', () => {
+test('system startup-maintenance reports seed boundary for WebUI first run', (t) => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-startup-maintenance-seed-home-'));
+  t.after(() => removeTree(homeRoot));
   const dataDir = path.join(homeRoot, 'data');
   const stateDir = path.join(dataDir, 'opl', 'state');
   const projectsDir = path.join(homeRoot, 'project-volume');
   const imageManifestPath = path.join(homeRoot, 'image-manifest.json');
   const developerCheckout = path.join(homeRoot, 'developer-module-checkout');
+  const codexFixture = createCurrentCodexFixture();
+  t.after(() => removeTree(codexFixture.fixtureRoot));
   fs.writeFileSync(imageManifestPath, JSON.stringify({
     image_version: '26.6.31-webui',
     image_digest: 'sha256:seed456',
@@ -289,9 +328,10 @@ test('system startup-maintenance reports seed boundary for WebUI first run', () 
       OPL_MODULE_PATH_OPLBOOKFORGE: developerCheckout,
       OPL_MODULE_PATH_SCHOLARSKILLS: developerCheckout,
       OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
-      PATH: process.env.PATH ?? '',
+      ...currentCodexEnvironment(codexFixture),
     };
-    const output = withCliTimeout('120000', () => runCli(['system', 'startup-maintenance'], env)).system_action.details;
+    const output = runCli(['system', 'startup-maintenance'], env).system_action.details;
+    assertCurrentCodexTarget(output);
     assert.equal(output.seed_boundary.image.version, '26.6.31-webui');
     assert.equal(output.seed_boundary.image.seed_strategy_status, 'accepted');
     assert.equal(output.seed_boundary.install.projects_dir, projectsDir);
@@ -305,22 +345,26 @@ test('system startup-maintenance reports seed boundary for WebUI first run', () 
     const initialize = runCli(['system', 'initialize'], {
       HOME: homeRoot,
       OPL_STATE_DIR: stateDir,
-      PATH: process.env.PATH ?? '',
+      ...currentCodexEnvironment(codexFixture),
     }).system_initialize.seed_install;
     assert.equal(initialize.status, 'applied');
     assert.equal(initialize.image_version, '26.6.31-webui');
     assert.equal(initialize.can_claim_ready_or_current, false);
   } finally {
     removeTree(homeRoot);
+    removeTree(codexFixture.fixtureRoot);
   }
 });
 
-test('system startup-maintenance accepts runtime substrate scope for WebUI entrypoint startup', () => {
+test('system startup-maintenance accepts runtime substrate scope for WebUI entrypoint startup', (t) => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-startup-maintenance-runtime-substrate-home-'));
+  t.after(() => removeTree(homeRoot));
   const dataDir = path.join(homeRoot, 'data');
   const stateDir = path.join(dataDir, 'opl', 'state');
   const projectsDir = path.join(homeRoot, 'project-volume');
   const imageManifestPath = path.join(homeRoot, 'image-manifest.json');
+  const codexFixture = createCurrentCodexFixture();
+  t.after(() => removeTree(codexFixture.fixtureRoot));
   fs.writeFileSync(imageManifestPath, JSON.stringify({
     image_version: '26.7.1-webui',
     image_digest: 'sha256:runtime-substrate',
@@ -328,7 +372,7 @@ test('system startup-maintenance accepts runtime substrate scope for WebUI entry
   }, null, 2));
 
   try {
-    const output = withCliTimeout('120000', () => runCli(['system', 'startup-maintenance', '--scope', 'runtime_substrate'], {
+    const output = runCli(['system', 'startup-maintenance', '--scope', 'runtime_substrate'], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       OPL_STATE_DIR: stateDir,
@@ -338,10 +382,11 @@ test('system startup-maintenance accepts runtime substrate scope for WebUI entry
       OPL_IMAGE_SEED_DIR: path.join(homeRoot, 'missing-seed-dir'),
       OPL_MODULES_ROOT: path.join(homeRoot, 'managed-modules'),
       OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
-      PATH: process.env.PATH ?? '',
-    })).system_action.details;
+      ...currentCodexEnvironment(codexFixture),
+    }).system_action.details;
 
     assert.equal(output.mode, 'runtime_substrate_adapter_startup');
+    assertCurrentCodexTarget(output);
     assert.equal(output.scope, 'runtime_substrate');
     assert.equal(output.summary.total_targets_count, 0);
     assert.deepEqual(output.module_targets, []);
@@ -349,5 +394,6 @@ test('system startup-maintenance accepts runtime substrate scope for WebUI entry
     assert.equal(output.seed_boundary.image.seed_strategy_status, 'accepted');
   } finally {
     removeTree(homeRoot);
+    removeTree(codexFixture.fixtureRoot);
   }
 });
