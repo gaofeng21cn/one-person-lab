@@ -44,7 +44,7 @@ function cliTestEnvOverrides(envOverrides: Record<string, string> = {}) {
   return {
     NODE_NO_WARNINGS: '1',
     OPL_STATE_DIR: cliTestStateDir(),
-    OPL_DEVELOPER_MODE_GH_FIXTURE: JSON.stringify({ login: 'opl-test-user' }),
+    OPL_DEVELOPER_MODE_GH_BINARY: path.join(cliTestStateDir(), 'missing-gh'),
     ...envOverrides,
   };
 }
