@@ -17,6 +17,7 @@ import {
   processIsAlive,
   readTemporalWorkerState,
   temporalWorkerStatePath,
+  workerSourceVersionsEquivalent,
 } from './worker-state.ts';
 import {
   buildTemporalWorkerMutationGuard,
@@ -24,6 +25,9 @@ import {
 import {
   resolveTemporalWorkerTaskQueue,
 } from './worker-task-queue.ts';
+import {
+  expectedWorkerSourceVersionForState,
+} from './worker-source-currentness.ts';
 
 export function inspectTemporalWorkerLifecycleFast(
   paths: TemporalWorkerPaths,
@@ -41,9 +45,15 @@ export function inspectTemporalWorkerLifecycleFast(
     && state.task_queue === taskQueue;
   const stateProcessAlive = state ? processIsAlive(state.pid) : false;
   const statePidAlive = stateMatchesConfig && stateProcessAlive;
+  const expectedWorkerSourceVersion = statePidAlive && state
+    ? expectedWorkerSourceVersionForState(state, input.providerModuleUrl ?? import.meta.url)
+    : null;
+  const stateSourceCurrent = statePidAlive && state
+    ? workerSourceVersionsEquivalent(state.source_version, expectedWorkerSourceVersion)
+    : null;
   const envWorkerReady = process.env.OPL_TEMPORAL_WORKER_ENABLED?.trim() === '1'
     || process.env.OPL_TEMPORAL_WORKER_STATUS?.trim() === 'ready';
-  const workerStatusReady = statePidAlive || envWorkerReady;
+  const workerStatusReady = (statePidAlive && stateSourceCurrent === true) || envWorkerReady;
   const workerMutationGuard = buildTemporalWorkerMutationGuard({
     moduleUrl: input.providerModuleUrl ?? import.meta.url,
     paths,
@@ -61,6 +71,11 @@ export function inspectTemporalWorkerLifecycleFast(
       : serviceState
         ? 'stale_state_unverified'
         : 'not_configured';
+  const serviceReady = serviceStatus === 'running'
+    ? true
+    : serviceStatus === 'configured_external_unverified'
+      ? null
+      : false;
   const readiness = buildTemporalWorkerReadiness({
     address,
     addressSource,
@@ -69,15 +84,16 @@ export function inspectTemporalWorkerLifecycleFast(
     workerEnabled: envWorkerReady ? '1' : null,
     workerStatus: workerStatusReady ? 'ready' : null,
     serverReachable: null,
+    serviceReady,
     managedWorkerPid: statePidAlive && state ? state.pid : null,
     managedWorkerStatePath: temporalWorkerStatePath(paths),
     managedWorkerSourceVersion: state?.source_version ?? null,
-    expectedWorkerSourceVersion: null,
-    managedWorkerSourceCurrent: null,
+    expectedWorkerSourceVersion,
+    managedWorkerSourceCurrent: stateSourceCurrent,
     managedWorkerWorkflowBundlePath: state?.workflow_bundle_path ?? null,
     managedWorkerWorkflowBundleVersion: state?.workflow_bundle_version ?? null,
     managedWorkerWorkflowBundleSourceVersion: state?.workflow_bundle_source_version ?? null,
-    staleWorkerPid: null,
+    staleWorkerPid: statePidAlive && stateSourceCurrent === false && state ? state.pid : null,
     temporalServiceLifecycle: {
       surface_kind: 'temporal_service_lifecycle_status',
       provider_kind: 'temporal',

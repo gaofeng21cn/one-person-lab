@@ -3,13 +3,73 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 
 import {
+  buildTemporalSchedulerCadenceReadiness,
   buildTemporalSchedulerHealthProjection,
   buildTemporalSchedulerTickWorkflowArgs,
+  inspectTemporalSchedulerCadenceReadiness,
 } from '../../../src/modules/runway/family-runtime-temporal-provider-parts/scheduler-cadence.ts';
+import { runTemporalSchedulerCadenceCommand } from '../../../src/modules/runway/family-runtime-scheduler.ts';
+import {
+  createFamilyRuntimeQueueTables,
+  familyRuntimePaths,
+} from '../../../src/modules/runway/family-runtime-store.ts';
 import { loadFrameworkContracts } from '../../../src/modules/charter/index.ts';
 import { bindWorkspace } from '../../../src/modules/workspace/workspace-registry.ts';
+
+test('Temporal scheduler status does not resolve unrelated Standard Agent domain profiles', async () => {
+  const db = new DatabaseSync(':memory:');
+  createFamilyRuntimeQueueTables(db);
+  try {
+    const result = await runTemporalSchedulerCadenceCommand(db, familyRuntimePaths(), {
+      mode: 'scheduler_status',
+      providerKind: 'temporal',
+      domainProfiles: {
+        unrelated_incomplete_agent: '/tmp/unrelated-incomplete-agent.toml',
+      },
+    }, {
+      inspectProvidersWithLifecycle: async () => ({
+        providers: {
+          temporal: {
+            provider_kind: 'temporal',
+            status: 'ready',
+            ready: true,
+            degraded_reason: null,
+            capabilities: [],
+            details: {},
+          },
+        },
+      } as never),
+      inspectSchedulerCadence: async () => ({
+        surface_kind: 'temporal_scheduler_cadence_status',
+        provider_kind: 'temporal',
+        schedule_status: 'active',
+        schedule_id: 'opl-family-runtime-provider-scheduler',
+        action: null,
+        spec: null,
+        policies: null,
+        info: null,
+        health: buildTemporalSchedulerHealthProjection({
+          scheduleStatus: 'active',
+          info: null,
+        }),
+      }),
+    });
+
+    assert.equal(result.status, 'ok');
+    assert.ok('action' in result);
+    assert.ok('schedule_status' in result.action);
+    assert.equal(result.action.schedule_status, 'active');
+    assert.equal(
+      result.replaces_domain_daemon_surface['opl-meta-agent'],
+      'opl_runway_provider_cadence_and_stage_attempt_runtime',
+    );
+  } finally {
+    db.close();
+  }
+});
 
 test('Temporal scheduler health projection surfaces current stale action repair without domain authority', () => {
   const healthy = buildTemporalSchedulerHealthProjection({
@@ -60,14 +120,98 @@ test('Temporal scheduler health projection requires cadence install when missing
   assert.equal(missing.authority_boundary.can_write_domain_truth, false);
 });
 
+test('Temporal scheduler App readiness fails closed for every non-healthy cadence state', () => {
+  const observedAt = '2026-07-17T01:00:00.000Z';
+  const projection = (scheduleStatus: string, healthStatus: string) =>
+    buildTemporalSchedulerCadenceReadiness({
+      cadence: {
+        schedule_status: scheduleStatus,
+        health: {
+          health_status: healthStatus,
+          repair_action: {
+            action_id: healthStatus === 'healthy' ? 'none' : 'repair_scheduler',
+          },
+        },
+      },
+      observedAt,
+    });
+
+  const ready = projection('active', 'healthy');
+  const missing = projection('not_installed', 'attention_required');
+  const paused = projection('paused', 'healthy');
+  const attention = projection('active', 'attention_required');
+  const malformed = buildTemporalSchedulerCadenceReadiness({
+    cadence: { schedule_status: 'active', health: null },
+    observedAt,
+  });
+  const failed = buildTemporalSchedulerCadenceReadiness({
+    cadence: { schedule_status: 'active' },
+    observedAt,
+    inspectionError: 'scheduler RPC unavailable',
+  });
+
+  assert.deepEqual(
+    [ready.status, missing.status, paused.status, attention.status, malformed.status, failed.status],
+    ['ready', 'not_installed', 'paused', 'attention_needed', 'unknown', 'error'],
+  );
+  assert.deepEqual(
+    [ready.ready, missing.ready, paused.ready, attention.ready, malformed.ready, failed.ready],
+    [true, false, false, false, false, false],
+  );
+  assert.equal(ready.observed_at, observedAt);
+  assert.equal(paused.repair_action.action_id, 'resume_scheduler_cadence');
+  assert.equal(attention.repair_action.action_id, 'repair_scheduler');
+  assert.equal(failed.inspection_error, 'scheduler RPC unavailable');
+});
+
+test('Temporal scheduler App readiness returns not_configured without opening a client', async () => {
+  const previousAddress = process.env.OPL_TEMPORAL_ADDRESS;
+  const previousFallbackAddress = process.env.TEMPORAL_ADDRESS;
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scheduler-unconfigured-'));
+  try {
+    delete process.env.OPL_TEMPORAL_ADDRESS;
+    delete process.env.TEMPORAL_ADDRESS;
+    let inspected = false;
+    const readiness = await inspectTemporalSchedulerCadenceReadiness(
+      { root: stateRoot },
+      {
+        observedAt: '2026-07-17T01:02:00.000Z',
+        inspectCadence: async () => {
+          inspected = true;
+          throw new Error('must not inspect');
+        },
+      },
+    );
+
+    assert.equal(inspected, false);
+    assert.equal(readiness.status, 'not_configured');
+    assert.equal(readiness.ready, false);
+    assert.equal(readiness.repair_action.action_id, 'configure_temporal_service');
+  } finally {
+    if (previousAddress === undefined) {
+      delete process.env.OPL_TEMPORAL_ADDRESS;
+    } else {
+      process.env.OPL_TEMPORAL_ADDRESS = previousAddress;
+    }
+    if (previousFallbackAddress === undefined) {
+      delete process.env.TEMPORAL_ADDRESS;
+    } else {
+      process.env.TEMPORAL_ADDRESS = previousFallbackAddress;
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('Temporal scheduler cadence resolves explicit, env, and registry domain profiles', () => {
   const previousProfile = process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE;
   const previousGrantProfile = process.env.OPL_FAMILY_RUNTIME_MEDAUTOGRANT_PROFILE;
   const previousStateDir = process.env.OPL_STATE_DIR;
+  const previousModulesRoot = process.env.OPL_MODULES_ROOT;
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scheduler-profiles-'));
   const registryProfile = path.join(stateRoot, 'mas-workspace.toml');
   try {
     process.env.OPL_STATE_DIR = stateRoot;
+    process.env.OPL_MODULES_ROOT = path.join(stateRoot, 'modules');
     fs.mkdirSync(path.join(stateRoot, 'contracts'), { recursive: true });
     fs.writeFileSync(path.join(stateRoot, 'contracts', 'domain_descriptor.json'), `${JSON.stringify({
       domain_id: 'medautoscience',
@@ -147,6 +291,11 @@ test('Temporal scheduler cadence resolves explicit, env, and registry domain pro
       delete process.env.OPL_STATE_DIR;
     } else {
       process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    if (previousModulesRoot === undefined) {
+      delete process.env.OPL_MODULES_ROOT;
+    } else {
+      process.env.OPL_MODULES_ROOT = previousModulesRoot;
     }
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

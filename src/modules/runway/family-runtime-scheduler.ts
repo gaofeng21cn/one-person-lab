@@ -19,7 +19,6 @@ import {
 } from './family-runtime-types.ts';
 import type { FamilyRuntimeDomainProfiles, FamilyRuntimeTaskScope } from './family-runtime-command.ts';
 import { readManagedProviderProjectionSummary } from './family-runtime-managed-provider-projection.ts';
-import { resolveFamilyRuntimeDomainProfiles } from './family-runtime-domain-profiles.ts';
 import {
   familyRuntimePaths,
   insertEvent,
@@ -34,6 +33,10 @@ type ProviderSloTick = Awaited<ReturnType<typeof runTemporalProviderSloTick>>;
 type ProviderCadenceReadbackDeps = {
   inspectProvidersWithLifecycle?: InspectFamilyRuntimeProvidersWithLifecycle;
   runProviderSloTick?: typeof runTemporalProviderSloTick;
+};
+type SchedulerCadenceCommandDeps = {
+  inspectProvidersWithLifecycle?: InspectFamilyRuntimeProvidersWithLifecycle;
+  inspectSchedulerCadence?: typeof inspectTemporalSchedulerCadence;
 };
 
 function resolveSchedulerFamilyRuntimeProviderKind(
@@ -212,8 +215,8 @@ export async function runTemporalSchedulerCadenceCommand(
     providerKind?: FamilyRuntimeProviderKind;
     domainProfiles?: FamilyRuntimeDomainProfiles;
   },
+  deps: SchedulerCadenceCommandDeps = {},
 ) {
-  const domainProfiles = resolveFamilyRuntimeDomainProfiles(input.domainProfiles);
   const providerKind = resolveSchedulerFamilyRuntimeProviderKind(input.providerKind);
   if (providerKind !== 'temporal') {
     throw new FrameworkContractError('cli_usage_error', 'family-runtime scheduler cadence supports only --provider temporal.', {
@@ -221,7 +224,8 @@ export async function runTemporalSchedulerCadenceCommand(
       allowed_provider_kinds: ['temporal'],
     });
   }
-  const provider = await inspectProvidersWithLifecycleDefault(providerKind, paths, {
+  const inspectProvidersWithLifecycle = deps.inspectProvidersWithLifecycle ?? inspectProvidersWithLifecycleDefault;
+  const provider = await inspectProvidersWithLifecycle(providerKind, paths, {
     managedProviderProjection: readManagedProviderProjectionSummary(),
   });
   const selected = provider.providers.temporal;
@@ -253,12 +257,12 @@ export async function runTemporalSchedulerCadenceCommand(
     };
   }
   const action = input.mode === 'scheduler_install'
-    ? await ensureTemporalSchedulerCadence(paths, { domainProfiles })
+    ? await ensureTemporalSchedulerCadence(paths, { domainProfiles: input.domainProfiles })
     : input.mode === 'scheduler_remove'
       ? await removeTemporalSchedulerCadence(paths)
       : input.mode === 'scheduler_trigger'
         ? await triggerTemporalSchedulerCadence(paths)
-        : await inspectTemporalSchedulerCadence(paths);
+        : await (deps.inspectSchedulerCadence ?? inspectTemporalSchedulerCadence)(paths);
   const health = input.mode === 'scheduler_status' && 'health' in action
     ? action.health as Record<string, unknown>
     : null;
