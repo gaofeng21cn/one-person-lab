@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import crypto from 'node:crypto';
 
-import { createGitModuleRemoteFixture, fs, parseJsonText, path } from '../../helpers.ts';
+import { createFakeCodexFixture, createGitModuleRemoteFixture, fs, parseJsonText, path } from '../../helpers.ts';
 import { runGitFixtureCommand } from '../../helpers-parts/family-fixtures.ts';
 import {
   writeFakeBookForgeGeneratedSurfacePack,
@@ -10,6 +10,7 @@ import {
 
 const PACKAGE_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.package.source.v1+gzip';
 const CHANNEL_MANIFEST_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.release.channel-manifest.v1+json';
+const FIXTURE_CODEX_VERSION = '0.134.0';
 
 function sha256(filePath: string) {
   return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
@@ -49,6 +50,31 @@ export function withCliTimeout<T>(timeoutMs: string, fn: () => T): T {
       process.env.OPL_CLI_TEST_TIMEOUT_MS = previous;
     }
   }
+}
+
+export function createCurrentCodexFixture() {
+  const fixture = createFakeCodexFixture(`
+if [[ "$1" == "--version" ]]; then
+  echo "codex-cli ${FIXTURE_CODEX_VERSION}"
+  exit 0
+fi
+echo "Unsupported codex fixture command: $*" >&2
+exit 1
+`);
+  fs.symlinkSync(process.execPath, path.join(fixture.fixtureRoot, 'node'));
+  return fixture;
+}
+
+export function currentCodexEnvironment(
+  codexFixture: ReturnType<typeof createCurrentCodexFixture>,
+  additionalBinRoots: string[] = [],
+) {
+  return {
+    OPL_CODEX_BIN: codexFixture.codexPath,
+    OPL_MIN_CODEX_CLI_VERSION: FIXTURE_CODEX_VERSION,
+    OPL_CODEX_CLI_LATEST_VERSION: FIXTURE_CODEX_VERSION,
+    PATH: [codexFixture.fixtureRoot, ...additionalBinRoots, '/usr/bin', '/bin'].join(path.delimiter),
+  };
 }
 
 export function createDomainModuleRemote(input: {

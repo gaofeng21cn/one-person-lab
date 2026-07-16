@@ -1,7 +1,9 @@
 import { assert, fs, os, path, runCli, runCliFailure, test } from '../helpers.ts';
 import { listManagedInstallUpdateReceipts } from '../../../../src/modules/connect/managed-install-update-ledger.ts';
 import {
+  createCurrentCodexFixture,
   createStartupDomainModuleRemotes,
+  currentCodexEnvironment,
   removeStartupDomainModuleRemotes,
   scholarSkillsPluginFixtureFiles,
   withCliTimeout,
@@ -15,6 +17,7 @@ test('system startup-maintenance installs clean managed modules and returns App 
   const logPath = path.join(homeRoot, 'startup-maintenance.log');
   const remotes = createStartupDomainModuleRemotes({ logPath });
   const { masRemote, magRemote, rcaRemote, metaRemote, bookForgeRemote } = remotes;
+  const codexFixture = createCurrentCodexFixture();
   try {
     const output = withCliTimeout('120000', () => runCli(['system', 'startup-maintenance'], {
       HOME: homeRoot,
@@ -27,7 +30,7 @@ test('system startup-maintenance installs clean managed modules and returns App 
       OPL_MODULE_REPO_URL_OPLMETAAGENT: metaRemote.remoteRoot,
       OPL_MODULE_REPO_URL_OPLBOOKFORGE: bookForgeRemote.remoteRoot,
       OPL_GIT_RETRY_ATTEMPTS: '1',
-      PATH: process.env.PATH ?? '',
+      ...currentCodexEnvironment(codexFixture),
       ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
     })) as {
       system_action: {
@@ -304,6 +307,7 @@ test('system startup-maintenance installs clean managed modules and returns App 
       }
     }
   } finally {
+    fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
     removeStartupDomainModuleRemotes(remotes);
   }
@@ -319,6 +323,7 @@ test('system startup-maintenance does not install ScholarSkills without an insta
     version: '26.6.10-nightly',
     modules: [scholarSkillsPackageFixture('v1')],
   });
+  const codexFixture = createCurrentCodexFixture();
 
   try {
     const startup = withCliTimeout('120000', () => runCli(['system', 'startup-maintenance'], {
@@ -333,7 +338,7 @@ test('system startup-maintenance does not install ScholarSkills without an insta
       OPL_MODULE_REPO_URL_OPLBOOKFORGE: bookForgeRemote.remoteRoot,
       OPL_PACKAGE_CHANNEL_MANIFEST_REF: 'ghcr.io/owner/one-person-lab-manifest:26.6.10-nightly',
       OPL_GIT_RETRY_ATTEMPTS: '1',
-      PATH: `${scholarSkillsChannel.fakeBin}${path.delimiter}${process.env.PATH ?? ''}`,
+      ...currentCodexEnvironment(codexFixture, [scholarSkillsChannel.fakeBin]),
       ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
     })) as {
       system_action: {
@@ -346,6 +351,7 @@ test('system startup-maintenance does not install ScholarSkills without an insta
     assert.deepEqual(startup.system_action.details.capability_targets, []);
     assert.equal(fs.existsSync(path.join(modulesRoot, 'mas-scholar-skills')), false);
   } finally {
+    fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
     removeStartupDomainModuleRemotes(remotes);
   }

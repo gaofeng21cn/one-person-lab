@@ -1,8 +1,10 @@
-import { assert, createFakeCodexFixture, fs, os, parseJsonText, path, runCli, test } from '../helpers.ts';
+import { assert, fs, os, parseJsonText, path, runCli, test } from '../helpers.ts';
 import { runGitFixtureCommand } from '../helpers-parts/family-fixtures.ts';
+import {
+  createCurrentCodexFixture,
+  currentCodexEnvironment,
+} from './system-startup-maintenance-cases/shared.ts';
 import './system-seed-manifest-cases/docker-webui-doctor.test.ts';
-
-const FIXTURE_CODEX_VERSION = '0.134.0';
 
 function writeDeveloperCheckout(root: string) {
   fs.mkdirSync(root, { recursive: true });
@@ -18,26 +20,6 @@ function writeDeveloperCheckout(root: string) {
     '-m',
     'Initial developer checkout',
   ]);
-}
-
-function createCurrentCodexFixture() {
-  return createFakeCodexFixture(`
-if [[ "$1" == "--version" ]]; then
-  echo "codex-cli ${FIXTURE_CODEX_VERSION}"
-  exit 0
-fi
-echo "Unsupported codex fixture command: $*" >&2
-exit 1
-`);
-}
-
-function currentCodexEnvironment(codexFixture: ReturnType<typeof createCurrentCodexFixture>) {
-  return {
-    OPL_CODEX_BIN: codexFixture.codexPath,
-    OPL_MIN_CODEX_CLI_VERSION: FIXTURE_CODEX_VERSION,
-    OPL_CODEX_CLI_LATEST_VERSION: FIXTURE_CODEX_VERSION,
-    PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
-  };
 }
 
 function assertCurrentCodexTarget(details: { engine_targets: unknown }) {
