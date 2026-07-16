@@ -1,8 +1,10 @@
 import { spawn } from 'node:child_process';
+import { pathToFileURL } from 'node:url';
 
-import { assert, buildManifestCommand, fs, loadFamilyManifestFixtures, os, path, runCli, test } from '../helpers.ts';
+import { assert, buildManifestCommand, fs, loadFamilyManifestFixtures, os, path, repoRoot, runCli, test } from '../helpers.ts';
 import { runGitFixtureCommand } from '../helpers-parts/family-fixtures.ts';
 import { resolveTemporalWorkerTaskQueue } from '../../../../src/modules/runway/family-runtime-temporal-provider-parts/worker-task-queue.ts';
+import { currentWorkerSourceVersion } from '../../../../src/modules/runway/family-runtime-temporal-provider-parts/worker-state.ts';
 
 function buildMasManifestWithManagedTemporalProjection(managedTemporal: Record<string, unknown>) {
   const fixtures = loadFamilyManifestFixtures();
@@ -20,7 +22,7 @@ function buildMasManifestWithManagedTemporalProjection(managedTemporal: Record<s
   };
 }
 
-test('app state fast uses local Temporal lifecycle state without live manifest refresh', () => {
+test('app state fast fails closed on stale worker source without live manifest refresh', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-local-temporal-'));
   const runtimeRoot = path.join(stateRoot, 'family-runtime');
   const child = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 30000);'], {
@@ -41,7 +43,11 @@ test('app state fast uses local Temporal lifecycle state without live manifest r
       status: 'running',
       command: 'test temporal service',
     }, null, 2)}\n`);
-    fs.writeFileSync(path.join(runtimeRoot, 'temporal-worker.json'), `${JSON.stringify({
+    const currentSourceVersion = currentWorkerSourceVersion(pathToFileURL(path.join(
+      repoRoot,
+      'src/modules/runway/family-runtime-temporal-provider.ts',
+    )).href);
+    const workerState = {
       provider_kind: 'temporal',
       pid: child.pid,
       address: '127.0.0.1:7233',
@@ -49,10 +55,12 @@ test('app state fast uses local Temporal lifecycle state without live manifest r
       task_queue: taskQueue,
       started_at: new Date().toISOString(),
       status: 'ready',
-      source_version: 'test-worker-source',
-    }, null, 2)}\n`);
+      source_version: `worker-runtime:/tmp/stale:${'0'.repeat(64)}`,
+    } as const;
+    const workerStatePath = path.join(runtimeRoot, 'temporal-worker.json');
+    fs.writeFileSync(workerStatePath, `${JSON.stringify(workerState, null, 2)}\n`);
 
-    const output = runCli(['app', 'state', '--profile', 'fast'], {
+    const env = {
       OPL_STATE_DIR: stateRoot,
       OPL_FAMILY_RUNTIME_PROVIDER: '',
       OPL_TEMPORAL_ADDRESS: '',
@@ -61,7 +69,8 @@ test('app state fast uses local Temporal lifecycle state without live manifest r
       OPL_TEMPORAL_WORKER_ENABLED: '',
       OPL_DEVELOPER_MODE_GH_BINARY: path.join(stateRoot, 'missing-gh'),
       PATH: '/usr/bin:/bin',
-    }) as {
+    };
+    const readFastState = () => runCli(['app', 'state', '--profile', 'fast'], env) as {
       app_state: {
         provider: {
           temporal: {
@@ -81,6 +90,18 @@ test('app state fast uses local Temporal lifecycle state without live manifest r
       };
     };
 
+    const stale = readFastState();
+    assert.equal(stale.app_state.provider.temporal.ready, false);
+    assert.equal(stale.app_state.provider.temporal.health_status, 'attention_needed');
+    assert.equal(
+      stale.app_state.provider.temporal.details.worker_readiness.readiness_status,
+      'worker_source_stale',
+    );
+    fs.writeFileSync(workerStatePath, `${JSON.stringify({
+      ...workerState,
+      source_version: currentSourceVersion,
+    }, null, 2)}\n`);
+    const output = readFastState();
     assert.equal(output.app_state.provider.temporal.ready, true);
     assert.equal(output.app_state.provider.temporal.health_status, 'ready');
     assert.equal(output.app_state.provider.temporal.details.inspection_detail, 'fast');

@@ -3,13 +3,71 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 
 import {
   buildTemporalSchedulerHealthProjection,
   buildTemporalSchedulerTickWorkflowArgs,
 } from '../../../src/modules/runway/family-runtime-temporal-provider-parts/scheduler-cadence.ts';
+import { runTemporalSchedulerCadenceCommand } from '../../../src/modules/runway/family-runtime-scheduler.ts';
+import {
+  createFamilyRuntimeQueueTables,
+  familyRuntimePaths,
+} from '../../../src/modules/runway/family-runtime-store.ts';
 import { loadFrameworkContracts } from '../../../src/modules/charter/index.ts';
 import { bindWorkspace } from '../../../src/modules/workspace/workspace-registry.ts';
+
+test('Temporal scheduler status does not resolve unrelated Standard Agent domain profiles', async () => {
+  const db = new DatabaseSync(':memory:');
+  createFamilyRuntimeQueueTables(db);
+  try {
+    const result = await runTemporalSchedulerCadenceCommand(db, familyRuntimePaths(), {
+      mode: 'scheduler_status',
+      providerKind: 'temporal',
+      domainProfiles: {
+        unrelated_incomplete_agent: '/tmp/unrelated-incomplete-agent.toml',
+      },
+    }, {
+      inspectProvidersWithLifecycle: async () => ({
+        providers: {
+          temporal: {
+            provider_kind: 'temporal',
+            status: 'ready',
+            ready: true,
+            degraded_reason: null,
+            capabilities: [],
+            details: {},
+          },
+        },
+      } as never),
+      inspectSchedulerCadence: async () => ({
+        surface_kind: 'temporal_scheduler_cadence_status',
+        provider_kind: 'temporal',
+        schedule_status: 'active',
+        schedule_id: 'opl-family-runtime-provider-scheduler',
+        action: null,
+        spec: null,
+        policies: null,
+        info: null,
+        health: buildTemporalSchedulerHealthProjection({
+          scheduleStatus: 'active',
+          info: null,
+        }),
+      }),
+    });
+
+    assert.equal(result.status, 'ok');
+    assert.ok('action' in result);
+    assert.ok('schedule_status' in result.action);
+    assert.equal(result.action.schedule_status, 'active');
+    assert.equal(
+      result.replaces_domain_daemon_surface['opl-meta-agent'],
+      'opl_runway_provider_cadence_and_stage_attempt_runtime',
+    );
+  } finally {
+    db.close();
+  }
+});
 
 test('Temporal scheduler health projection surfaces current stale action repair without domain authority', () => {
   const healthy = buildTemporalSchedulerHealthProjection({
@@ -64,10 +122,12 @@ test('Temporal scheduler cadence resolves explicit, env, and registry domain pro
   const previousProfile = process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE;
   const previousGrantProfile = process.env.OPL_FAMILY_RUNTIME_MEDAUTOGRANT_PROFILE;
   const previousStateDir = process.env.OPL_STATE_DIR;
+  const previousModulesRoot = process.env.OPL_MODULES_ROOT;
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scheduler-profiles-'));
   const registryProfile = path.join(stateRoot, 'mas-workspace.toml');
   try {
     process.env.OPL_STATE_DIR = stateRoot;
+    process.env.OPL_MODULES_ROOT = path.join(stateRoot, 'modules');
     fs.mkdirSync(path.join(stateRoot, 'contracts'), { recursive: true });
     fs.writeFileSync(path.join(stateRoot, 'contracts', 'domain_descriptor.json'), `${JSON.stringify({
       domain_id: 'medautoscience',
@@ -147,6 +207,11 @@ test('Temporal scheduler cadence resolves explicit, env, and registry domain pro
       delete process.env.OPL_STATE_DIR;
     } else {
       process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    if (previousModulesRoot === undefined) {
+      delete process.env.OPL_MODULES_ROOT;
+    } else {
+      process.env.OPL_MODULES_ROOT = previousModulesRoot;
     }
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
