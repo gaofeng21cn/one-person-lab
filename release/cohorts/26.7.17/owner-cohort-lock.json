@@ -1,12 +1,12 @@
 {
   "surface_kind": "opl_package_owner_cohort_lock.v1",
-  "generated_at": "2026-07-17T04:07:08.000Z",
+  "generated_at": "2026-07-17T09:28:14.000Z",
   "packages": {
     "mas": {
       "package_id": "mas",
       "repo_name": "med-autoscience",
       "repo_url": "https://github.com/gaofeng21cn/med-autoscience.git",
-      "source_commit": "a4a41fce399ace11ee4dd2617329b128d9d410e1"
+      "source_commit": "17056c5d3170d945da89e7ac1499f4f952b5d004"
     },
     "mag": {
       "package_id": "mag",
@@ -24,7 +24,7 @@
       "package_id": "oma",
       "repo_name": "opl-meta-agent",
       "repo_url": "https://github.com/gaofeng21cn/opl-meta-agent.git",
-      "source_commit": "33a91c7d7f6f71670c13ae63024c54f9063945ee"
+      "source_commit": "7e7a347f2af701138e22ef7b0385059990eea7fa"
     },
     "obf": {
       "package_id": "obf",

@@ -8,7 +8,9 @@ import {
 } from '../../../../src/modules/pack/domain-pack-compiler/repo-contract-descriptor.ts';
 import {
   bindFamilyManifests,
+  bindFamilyContractModulePaths,
   createFamilyDefaultContractWorkspace,
+  initializeFixtureGitCheckout,
   withPackCompilerReadySurfaces,
 } from './domain-pack-compiler-fixtures.ts';
 
@@ -219,6 +221,7 @@ test('generated interfaces block default cutover without handoff proof but keep 
   ));
   const bundle = runCli(['agents', 'interfaces', '--domain', 'mas'], env).generated_agent_interfaces;
 
+  assert.equal(bundle.standard_agent_contract_resolution.status, 'resolved');
   assert.equal(bundle.surface_kind, 'opl_generated_agent_interface_bundle');
   assert.equal(bundle.status, 'blocked');
   assert.equal(bundle.owner, 'one-person-lab');
@@ -690,6 +693,7 @@ test('generated interfaces family-defaults expose product-entry feed and direct 
     OPL_STATE_DIR: stateRoot,
     OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
   };
+  bindFamilyContractModulePaths(env, workspaceRoot);
 
   try {
     const feed = runCli(['agents', 'interfaces', '--family-defaults', '--format', 'product-entry'], env)
@@ -760,7 +764,11 @@ test('generated interfaces consume active repo handoff and disambiguate multi-ac
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generated-interfaces-domain-handoff-'));
   const targetDir = buildReadyAgentRepo();
   retargetReadyRepo(targetDir, 'med-autoscience', 'MedAutoScience');
-  const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
+  const env = {
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_STATE_DIR: stateRoot,
+    OPL_MODULE_PATH_MEDAUTOSCIENCE: targetDir,
+  };
   const fixtures = loadFamilyManifestFixtures();
   const manifest = withPackCompilerReadySurfaces(fixtures.medautoscience, {
     agentId: 'mas',
@@ -771,6 +779,7 @@ test('generated interfaces consume active repo handoff and disambiguate multi-ac
     memoryRefId: 'mas_publication_route_memory',
   }) as Record<string, any>;
   const manifestSurface = writeDomainRepoContracts(targetDir, manifest);
+  initializeFixtureGitCheckout(targetDir);
 
   runCli([
     'workspace',
@@ -784,6 +793,7 @@ test('generated interfaces consume active repo handoff and disambiguate multi-ac
   ], env);
 
   const readyBundle = runCli(['agents', 'interfaces', '--domain', 'mas'], env).generated_agent_interfaces;
+  assert.equal(readyBundle.standard_agent_contract_resolution.status, 'resolved');
   assert.equal(readyBundle.status, 'ready');
   assert.equal(readyBundle.active_caller_target_proof.status, 'ready');
   assert.equal(readyBundle.generated_direct_parity.status, 'aligned');

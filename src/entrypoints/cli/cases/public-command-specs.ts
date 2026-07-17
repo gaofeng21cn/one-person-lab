@@ -41,6 +41,7 @@ import {
   buildStandardAgentCheck,
   buildFamilyAgentInspect,
   buildFamilyAgentsList,
+  runFamilyAgentLegacyCleanupApply,
   withStandardDomainAgentSkeletonInspection,
 } from '../../../modules/workspace/index.ts';
 import { agentsEvidenceApplySpec } from './agent-evidence-command-spec.ts';
@@ -547,6 +548,18 @@ export function buildPublicCommandSpecs(
       examples: ['opl agents inspect --domain mas'],
       group: 'domain',
       handler: (args) => buildFamilyAgentInspect(getContracts(), args),
+    },
+    'agents legacy-cleanup apply': {
+      usage: 'opl agents legacy-cleanup apply --domain <domain> [--mode dry-run|apply|verify] [--source-ref <ref>] [--receipt-ref <ref>]',
+      summary:
+        'Apply the OPL-owned legacy cleanup ledger plan for one domain-agent skeleton without deleting domain repo files.',
+      examples: [
+        'opl agents legacy-cleanup apply --domain mag --mode dry-run',
+        'opl agents legacy-cleanup apply --domain mas --mode apply',
+        'opl agents legacy-cleanup apply --domain rca --mode verify',
+      ],
+      group: 'domain',
+      handler: (args) => runFamilyAgentLegacyCleanupApply(getContracts(), args),
     },
     'agents evidence apply': agentsEvidenceApplySpec,
     'agents run': cloneCommandSpec(commandSpecs['agents run'], {

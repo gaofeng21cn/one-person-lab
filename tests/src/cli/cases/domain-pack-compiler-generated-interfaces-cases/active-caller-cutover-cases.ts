@@ -2,6 +2,7 @@ import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loa
 import { buildReadyAgentRepo, writeJson } from '../agents-conformance-fixtures.ts';
 import {
   attachManifestSurface,
+  bindFamilyContractModulePaths,
   bindFamilyManifests,
   createFamilyDefaultContractWorkspace,
   writeManifestContractOverrides,
@@ -13,6 +14,7 @@ test('generated interfaces keep active caller cutover blocked while repo-local m
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generated-interfaces-bridge-blocked-'));
   const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
   const workspaceRoot = createFamilyDefaultContractWorkspace();
+  bindFamilyContractModulePaths(env, workspaceRoot);
   const fixtures = loadFamilyManifestFixtures();
   const bridgeMas = attachManifestSurface(
     attachManifestSurface(
@@ -73,6 +75,7 @@ test('generated interfaces keep active caller cutover blocked while repo-local m
   ], env);
 
   const bundle = runCli(['agents', 'interfaces', '--domain', 'mas'], env).generated_agent_interfaces;
+  assert.equal(bundle.standard_agent_contract_resolution.status, 'resolved');
   assert.equal(bundle.active_caller_cutover_proof.status, 'blocked');
   assert.equal(bundle.active_caller_cutover_proof.generated_blocks_ready, true);
   assert.equal(bundle.active_caller_cutover_proof.blocked_target_count >= 1, true);
@@ -89,6 +92,7 @@ test('generated interfaces reject retired wrapper names as implicit canonical su
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generated-interfaces-no-wrapper-alias-'));
   const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
   const workspaceRoot = createFamilyDefaultContractWorkspace();
+  bindFamilyContractModulePaths(env, workspaceRoot);
   const fixtures = loadFamilyManifestFixtures();
   const wrapperOnlyMas = attachManifestSurface(
     attachManifestSurface(
@@ -174,6 +178,7 @@ test('generated interfaces expose active legacy caller deletion gate refs withou
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generated-interfaces-delete-gate-'));
   const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
   const workspaceRoot = createFamilyDefaultContractWorkspace();
+  bindFamilyContractModulePaths(env, workspaceRoot);
   const fixtures = loadFamilyManifestFixtures();
   const bridgeExitGate = {
     no_forbidden_write_refs: ['no-forbidden-write:mas/status-read-model'],

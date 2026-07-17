@@ -22,6 +22,8 @@ test('system startup-maintenance does not block all modules on a timed-out modul
     modules: [scholarSkillsPackageFixture('v1')],
   });
   const codexFixture = createCurrentCodexFixture();
+  // Keep normal fixture probes below the timeout even when the full lane is under load.
+  const moduleActionStepTimeoutMs = 2_000;
 
   try {
     fs.writeFileSync(
@@ -51,7 +53,7 @@ test('system startup-maintenance does not block all modules on a timed-out modul
       OPL_MODULE_REPO_URL_OPLMETAAGENT: metaRemote.remoteRoot,
       OPL_MODULE_REPO_URL_OPLBOOKFORGE: bookForgeRemote.remoteRoot,
       OPL_PACKAGE_CHANNEL_MANIFEST_REF: 'ghcr.io/owner/one-person-lab-manifest:26.6.10-nightly',
-      OPL_MODULE_ACTION_STEP_TIMEOUT_MS: '100',
+      OPL_MODULE_ACTION_STEP_TIMEOUT_MS: String(moduleActionStepTimeoutMs),
       OPL_GIT_RETRY_ATTEMPTS: '1',
       ...currentCodexEnvironment(codexFixture, [scholarSkillsChannel.fakeBin]),
       ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
@@ -105,7 +107,7 @@ test('system startup-maintenance does not block all modules on a timed-out modul
     assert.equal(magTarget?.reason, 'module_health_check_blocked');
     assert.equal(magTarget?.result.turnkey.health_check.status, 'blocked');
     assert.equal(magTarget?.result.turnkey.health_check.result.blocker_kind, 'module_action_step_timeout');
-    assert.equal(magTarget?.result.turnkey.health_check.result.timeout_ms, 100);
+    assert.equal(magTarget?.result.turnkey.health_check.result.timeout_ms, moduleActionStepTimeoutMs);
     assert.equal(
       magTarget?.result.turnkey.health_check.result.authority_boundary.can_claim_module_healthy,
       false,

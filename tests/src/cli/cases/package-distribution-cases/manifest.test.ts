@@ -307,10 +307,10 @@ test('packages manifest exposes canonical Release Set coordinates for Package in
   );
   assert.equal(
     output.packages_manifest.packages.package_artifacts.mas.artifact,
-    'ghcr.io/gaofeng21cn/one-person-lab-packages/mas:0.2.11',
+    'ghcr.io/gaofeng21cn/one-person-lab-packages/mas:0.2.12',
   );
   assert.equal(output.packages_manifest.packages.package_artifacts.mas.package_id, 'mas');
-  assert.equal(output.packages_manifest.packages.package_artifacts.mas.package_version, '0.2.11');
+  assert.equal(output.packages_manifest.packages.package_artifacts.mas.package_version, '0.2.12');
   assert.equal(output.packages_manifest.packages.package_artifacts.mas.carrier_locator.module_id, 'medautoscience');
   assert.equal(output.packages_manifest.packages.package_artifacts.mas.carrier_locator.repo_name, 'med-autoscience');
   assert.equal(Object.hasOwn(output.packages_manifest.packages.package_artifacts.mas, 'module_id'), false);
@@ -440,7 +440,7 @@ test('packages manifest exposes canonical Release Set coordinates for Package in
   );
   assert.equal(
     output.packages_manifest.packages.package_artifacts.oma.artifact,
-    'ghcr.io/gaofeng21cn/one-person-lab-packages/oma:0.4.0',
+    'ghcr.io/gaofeng21cn/one-person-lab-packages/oma:0.4.1',
   );
   assert.equal(
     output.packages_manifest.packages.package_artifacts.oma.remote_publish_status,

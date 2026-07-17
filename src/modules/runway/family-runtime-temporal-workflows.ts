@@ -1044,7 +1044,17 @@ export async function StageRunWorkflow(
       .review_input_snapshot_quality_debt_receipt_ref === 'string'
       ? childContextManifest.review_input_snapshot_quality_debt_receipt_ref
       : null;
-    const executionPolicy = executionPolicyForAttempt(childInput);
+    const allowLegacyUnboundExecutionPolicy = !childInput.execution_content_binding
+      && !patched('opl-stage-run-controller-attempt-content-binding-v1');
+    const executionPolicy = allowLegacyUnboundExecutionPolicy
+      ? {
+          binding: null,
+          formalReviewRequired: input.quality_policy.formal_review.required,
+          maxRepairRounds: input.quality_policy.formal_review.max_repair_rounds,
+          rubricRefs: input.quality_rubric_refs,
+          declaredStageIds: input.declared_stage_ids,
+        }
+      : executionPolicyForAttempt(childInput);
     state = {
       ...state,
       max_repair_rounds: executionPolicy.maxRepairRounds,

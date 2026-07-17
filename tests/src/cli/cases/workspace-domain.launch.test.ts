@@ -8,6 +8,7 @@ import {
   loadFamilyManifestFixtures,
   os,
   path,
+  removeFixtureTree,
   repoRoot,
   runCli,
   runCliAsync,
@@ -275,7 +276,7 @@ test('MAS launch activates a new workspace scope and automatically recovers mana
     assert.equal(fs.readFileSync(openFixture.capturePath, 'utf8').trim(), entryUrl);
     assert.equal(fs.existsSync(path.join(skillsRoot, 'medical-manuscript-writing', 'SKILL.md')), true);
   } finally {
-    fs.rmSync(root, { recursive: true, force: true });
+    removeFixtureTree(root);
     fs.rmSync(openFixture.fixtureRoot, { recursive: true, force: true });
   }
 });
@@ -333,7 +334,7 @@ test('quest activation materializes core skills and automatically recovers manag
     assert.equal(repaired.materialization_readiness.status, 'current');
     assert.equal(repaired.operational_ready, true);
   } finally {
-    fs.rmSync(root, { recursive: true, force: true });
+    removeFixtureTree(root);
   }
 });
 
@@ -430,6 +431,6 @@ test('workspace activation automatically ensures the installed MAS package scope
     assert.equal(recovered.materialization_readiness.status, 'current');
     assert.equal(recovered.operational_ready, true);
   } finally {
-    fs.rmSync(root, { recursive: true, force: true });
+    removeFixtureTree(root);
   }
 });

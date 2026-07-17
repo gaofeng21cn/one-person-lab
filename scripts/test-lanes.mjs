@@ -333,8 +333,15 @@ const fastTemporalHeavyTestFiles = [
   'tests/src/family-runtime-pack-bound-stage-quality-e2e.test.ts',
 ];
 
+const fastIsolatedCliTestFiles = [
+  'tests/src/cli/cases/packages.test.ts',
+  'tests/src/cli/cases/cli-command-registry.test.ts',
+];
+
 const fastNonTemporalHeavyTestFiles = fastTestFiles.filter(
   (file) => !fastTemporalHeavyTestFiles.includes(file),
+).filter(
+  (file) => !fastIsolatedCliTestFiles.includes(file),
 );
 
 const readModelGateStartupMaintenanceHeavyTestFiles = [
@@ -376,6 +383,10 @@ const lanes = {
   fast: [
     { kind: 'command', command: 'scripts/repo-hygiene.sh', args: [] },
     nodeTest(fastNonTemporalHeavyTestFiles, { batchSize: 20 }),
+    nodeTest(fastIsolatedCliTestFiles, {
+      batchSize: 1,
+      env: { OPL_CLI_TEST_TIMEOUT_MS: '90000' },
+    }),
     nodeTest(fastTemporalHeavyTestFiles, { batchSize: 1 }),
   ],
   'read-model-gates': [

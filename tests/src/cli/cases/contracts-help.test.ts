@@ -331,6 +331,16 @@ test('domain selection uses package-locked domain routing signals for natural-la
         },
       },
     })}\n`);
+    for (const [relativePath, content] of [
+      ['contracts/action_catalog.json', '{}\n'],
+      ['contracts/pack_compiler_input.json', '{}\n'],
+      ['agent/stages/manifest.json', '{}\n'],
+      ['agent/primary_skill/SKILL.md', '# RedCube AI fixture\n'],
+    ]) {
+      const targetPath = path.join(domainRepo, relativePath);
+      fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+      fs.writeFileSync(targetPath, content);
+    }
     fs.writeFileSync(path.join(domainRepo, 'package.json'), `${JSON.stringify({
       name: 'redcube-ai-fixture',
       scripts: { redcube: 'node scripts/handler.mjs' },

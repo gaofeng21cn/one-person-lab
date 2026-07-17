@@ -858,9 +858,9 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
   const manifest = manifests.mas;
   const expectedReleases: Record<string, { version: string; sourceCommit: string; payloadRef: string }> = {
     mas: {
-      version: '0.2.11',
-      sourceCommit: 'a4a41fce399ace11ee4dd2617329b128d9d410e1',
-      payloadRef: 'payloads/mas-0.2.11.json',
+      version: '0.2.12',
+      sourceCommit: '17056c5d3170d945da89e7ac1499f4f952b5d004',
+      payloadRef: 'payloads/mas-0.2.12.json',
     },
     mag: {
       version: '0.3.3',
@@ -873,9 +873,9 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
       payloadRef: 'payloads/rca-0.2.7.json',
     },
     oma: {
-      version: '0.4.0',
-      sourceCommit: '33a91c7d7f6f71670c13ae63024c54f9063945ee',
-      payloadRef: 'payloads/oma-0.4.0.json',
+      version: '0.4.1',
+      sourceCommit: '7e7a347f2af701138e22ef7b0385059990eea7fa',
+      payloadRef: 'payloads/oma-0.4.1.json',
     },
     obf: {
       version: '0.3.5',
@@ -887,7 +887,7 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
   assert.equal(manifest.schema_ref, 'contracts/opl-framework/agent-package-manifest.schema.json');
   assert.equal(manifest.package_id, 'mas');
   assert.equal(manifest.agent_id, 'mas');
-  assert.equal(manifest.version, '0.2.11');
+  assert.equal(manifest.version, '0.2.12');
   assert.equal(manifest.carrier_source_role, 'codex_plugin_default_carrier_not_package_truth');
   assert.equal(schema.required.includes('distribution_payload'), false);
   assert.equal(schema.properties.distribution_payload.properties.install_truth.const, 'resolved_digest_lock');

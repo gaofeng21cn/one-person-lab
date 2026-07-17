@@ -6,6 +6,7 @@ import {
   path,
   runCli,
 } from '../helpers.ts';
+import { execFileSync } from 'node:child_process';
 import {
   FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES,
   STANDARD_AGENT_PACK_ABI,
@@ -23,6 +24,34 @@ type FamilyDefaultContractRepoSpec = {
   stageId: string;
   memoryRefId: string;
 };
+
+export function initializeFixtureGitCheckout(repoDir: string) {
+  execFileSync('git', ['init', '--quiet'], { cwd: repoDir });
+  execFileSync('git', ['add', '.'], { cwd: repoDir });
+  execFileSync('git', [
+    '-c',
+    'user.name=OPL Fixture',
+    '-c',
+    'user.email=opl-fixture@example.invalid',
+    '-c',
+    'commit.gpgSign=false',
+    'commit',
+    '--quiet',
+    '-m',
+    'fixture',
+  ], { cwd: repoDir });
+}
+
+export function bindFamilyContractModulePaths(
+  env: Record<string, string>,
+  workspaceRoot: string,
+) {
+  env.OPL_MODULE_PATH_MEDAUTOSCIENCE ??= path.join(workspaceRoot, 'med-autoscience');
+  env.OPL_MODULE_PATH_MEDAUTOGRANT ??= path.join(workspaceRoot, 'med-autogrant');
+  env.OPL_MODULE_PATH_REDCUBE ??= path.join(workspaceRoot, 'redcube-ai');
+  env.OPL_MODULE_PATH_OPLMETAAGENT ??= path.join(workspaceRoot, 'opl-meta-agent');
+  return env;
+}
 
 export function attachManifestSurface(payload: JsonRecord, field: string, value: JsonRecord) {
   if (payload.product_entry_manifest && typeof payload.product_entry_manifest === 'object') {
@@ -495,6 +524,7 @@ function writeFamilyDefaultContractRepo(workspaceRoot: string, spec: FamilyDefau
   if (spec.targetDomainId === 'redcube_ai') {
     writeRcaOwnerChainEvidenceFixture(contractsDir);
   }
+  initializeFixtureGitCheckout(repoDir);
   return repoDir;
 }
 
@@ -586,6 +616,7 @@ export function bindFamilyManifests(
 ) {
   const fixtures = loadFamilyManifestFixtures();
   const workspaceRoot = createFamilyDefaultContractWorkspace();
+  bindFamilyContractModulePaths(env, workspaceRoot);
   if (options.includeOma !== false) {
     env.OPL_META_AGENT_REPO_DIR ??= path.join(workspaceRoot, 'opl-meta-agent');
   }

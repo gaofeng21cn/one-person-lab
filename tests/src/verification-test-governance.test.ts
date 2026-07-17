@@ -315,6 +315,19 @@ test('test:full stays in the single test lane registry', () => {
     })),
     [{ source_lane: 'read-model-gates', batch_size: 1 }],
   );
+  for (const file of [
+    'tests/src/cli/cases/packages-cases/managed-runtime-source-transaction.test.ts',
+    'tests/src/cli/cases/cli-command-registry.test.ts',
+  ]) {
+    assert.deepEqual(
+      groupFor(file).map((group) => ({
+        source_lane: group.source_lane,
+        batch_size: group.batch_size,
+        cli_timeout_ms: group.env.OPL_CLI_TEST_TIMEOUT_MS,
+      })),
+      [{ source_lane: 'fast', batch_size: 1, cli_timeout_ms: '90000' }],
+    );
+  }
 
   const listed = spawnSync(process.execPath, [registryPath, 'list'], {
     cwd: repoRoot,

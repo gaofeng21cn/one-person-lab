@@ -48,7 +48,12 @@ async function ensureDomainPackageLaunchReady(
     targetWorkspace: workspaceLocator.absolute_path,
   }).opl_agent_package_status;
   if (packageStatus.launch_allowed === true) return;
-  const hardStopReason = packageLaunchHardStopReason(packageStatus);
+  const hardStopReason = packageLaunchHardStopReason(options.activateMissingScope === false
+    ? {
+        ...packageStatus,
+        materialization_readiness: undefined,
+      }
+    : packageStatus);
   if (!hardStopReason) return;
   throw new FrameworkContractError(
     'contract_shape_invalid',

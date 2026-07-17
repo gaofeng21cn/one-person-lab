@@ -567,11 +567,11 @@ test('resolveBindingManifest accepts parseable stdout even when the process time
       workspacePath,
       'stdout-before-timeout.sh',
       `printf '%s\\n' ${shellSingleQuote(JSON.stringify(manifest))}\n`
-        + 'sleep 1\n',
+        + 'sleep 5\n',
     );
 
     const entry = resolveWithCommand(workspacePath, `/bin/sh ${scriptPath}`, {
-      timeoutMs: 50,
+      timeoutMs: 2000,
       timeoutPolicy: 'fixed',
     });
 

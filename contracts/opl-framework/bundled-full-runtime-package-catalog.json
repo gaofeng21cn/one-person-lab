@@ -6,12 +6,12 @@
     "mas": {
       "package_id": "mas",
       "package_role": "standard_agent",
-      "package_version": "0.2.11",
-      "owner_source_commit": "a4a41fce399ace11ee4dd2617329b128d9d410e1",
+      "package_version": "0.2.12",
+      "owner_source_commit": "17056c5d3170d945da89e7ac1499f4f952b5d004",
       "manifest_ref": "packages/mas.json",
-      "manifest_sha256": "sha256:a300c4371f59af55289005371d4707a5857d29de321e62ff41c13c8f1991c55c",
-      "payload_manifest_ref": "packages/payloads/mas-0.2.11.json",
-      "payload_manifest_sha256": "sha256:205cb03f8ddde539715a7b7bbf928934f9fe282cc921993b8f92e2cedd5fca8f",
+      "manifest_sha256": "sha256:f42351aaa3e8019cfedd22850e988718bd2f943f5ac1bddf77ead030920139c6",
+      "payload_manifest_ref": "packages/payloads/mas-0.2.12.json",
+      "payload_manifest_sha256": "sha256:47731cc617459d18216c1561a777982e6b2ec0dcc7bc52210a0b811251a24e1d",
       "runtime_module_relative_path": "modules/mas"
     },
     "mag": {
@@ -39,12 +39,12 @@
     "oma": {
       "package_id": "oma",
       "package_role": "standard_agent",
-      "package_version": "0.4.0",
-      "owner_source_commit": "33a91c7d7f6f71670c13ae63024c54f9063945ee",
+      "package_version": "0.4.1",
+      "owner_source_commit": "7e7a347f2af701138e22ef7b0385059990eea7fa",
       "manifest_ref": "packages/oma.json",
-      "manifest_sha256": "sha256:6529cdfbf45d070a9b9acdae1c2b4cfdc3f1ef4c7bf77b2bef21d8d6ad30e6c8",
-      "payload_manifest_ref": "packages/payloads/oma-0.4.0.json",
-      "payload_manifest_sha256": "sha256:f6a8e86449ca27192d25193107a2f20d6b24ee26de7c7eb95cdc12f82e1b180d",
+      "manifest_sha256": "sha256:f95a7d6b15e77be0de056e822a2b5079e75db11518b6259dc46a7c12b92cb709",
+      "payload_manifest_ref": "packages/payloads/oma-0.4.1.json",
+      "payload_manifest_sha256": "sha256:3ebd36cbb5e72ec2495b1e380d2c498815c81ee9dbd0f11bcba6d3d28539a19b",
       "runtime_module_relative_path": "modules/meta-agent"
     },
     "obf": {

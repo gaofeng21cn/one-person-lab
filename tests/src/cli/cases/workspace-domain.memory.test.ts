@@ -1,4 +1,4 @@
-import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, installRuntimePackageFixture, loadFamilyManifestFixtures, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, installRuntimePackageFixture, loadFamilyManifestFixtures, os, path, removeFixtureTree, repoRoot, runCli, test } from '../helpers.ts';
 import { createMasScoutStage } from './family-runtime-stage-fixtures.ts';
 import {
   buildAdmittedActionCatalog,
@@ -443,7 +443,7 @@ test('domain memory read model projects runtime receipt refs without applying me
     });
     assert.equal(inspectedMas.family_domain_memory.runtime_receipt_evidence.summary.closeout_count, 0);
   } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
+    removeFixtureTree(stateRoot);
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(masPack.repoDir, { recursive: true, force: true });
     fs.rmSync(magPack.repoDir, { recursive: true, force: true });

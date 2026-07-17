@@ -29,6 +29,7 @@ test('family-runtime command parser keeps a thin public entrypoint and semantic 
     'lifecycle.ts',
     'provider.ts',
     'registry.ts',
+    'review-transport.ts',
     'scheduler.ts',
     'service-worker.ts',
     'shared.ts',

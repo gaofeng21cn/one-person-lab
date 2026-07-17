@@ -7,6 +7,7 @@ import {
   loadFamilyManifestFixtures,
   os,
   path,
+  removeFixtureTree,
   runCli,
   test,
 } from '../../helpers.ts';
@@ -245,7 +246,7 @@ test('runtime action execute can create OPL-owned stage production attempt reque
     assert.equal(startDryRun.execution.executed_runtime_command.includes('opl family-runtime attempt start'), true);
     assert.equal(startDryRun.authority_boundary.can_write_domain_truth, false);
   } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
+    removeFixtureTree(stateRoot);
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(stagePack.repoDir, { recursive: true, force: true });
   }
