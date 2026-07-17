@@ -605,6 +605,7 @@ function toGeneratedSurfaceAction(pack: GeneratedSurfacePackFixture, action: Gen
 
 function writeGeneratedSurfacePackFixture(repoRoot: string, pack: GeneratedSurfacePackFixture) {
   const carrierSlug = pack.carrierSlug ?? pack.domainId;
+  const foundryBound = pack.actions.some((action) => action.executionBinding?.kind === 'foundry_binding');
   fs.mkdirSync(path.join(repoRoot, 'agent', 'skills'), { recursive: true });
   fs.mkdirSync(path.join(repoRoot, 'contracts'), { recursive: true });
   if (pack.authorityFile) {
@@ -631,7 +632,7 @@ function writeGeneratedSurfacePackFixture(repoRoot: string, pack: GeneratedSurfa
     target_domain_id: pack.domainId,
     owner: pack.domainId,
     authority_boundary: {
-      opl_role: 'projection_consumer_only',
+      opl_role: foundryBound ? 'foundry_runtime_owner' : 'projection_consumer_only',
       domain_truth_owner: pack.domainId,
       write_policy: 'no_domain_truth_writes',
     },
