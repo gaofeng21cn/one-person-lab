@@ -29,6 +29,16 @@ Live Evidence 后置：release、production、Brand L5、owner-chain scaleout、
 
 North-star 参考仍归 [OPL 与 Foundry Agents 理想目标态](../references/runtime-substrate/opl-family-agent-ideal-state.md)、[OPL Family 理想系统评估](../references/runtime-substrate/opl-family-ideal-system-assessment.md)、[OPL Family Ideal Operating Model Redesign](./opl-family-ideal-operating-model-redesign.md) 和核心五件套。本文不复制这些目标态细节，只维护当前 gap 与 baton。
 
+## 当前完成进度
+
+| 范围 | 当前完成状态 | 证据边界 |
+| --- | --- | --- |
+| 非 live 功能 / 结构基线 | `no_active_gap_selected` | 当前未选择 active gap；任何新 gap 都必须由 fresh contracts、source、tests、CLI/read-model 与 owner docs 重新证明。 |
+| Active Truth 治理 | `single_owner_guard_active` | 本文是唯一 active truth owner，只保留当前 gap、完成口径与下一轮 baton，不保存 dated proof 或 closeout 流水。 |
+| Live / release / production / owner evidence | `deferred_to_evidence_owners` | 继续由 App release、provider long-soak、Brand L5、domain owner receipt、typed blocker 与 human gate 等 owner surface 单独证明。 |
+
+这些状态只描述当前文档治理与非 live 功能 / 结构 gap 选择，不表示 runtime ready、domain ready、App release ready、Brand L5、production ready、owner acceptance 或 physical delete authorized。
+
 ## 当前功能 / 结构读法
 
 当前默认读法：默认 OPL family maintained repo 的非 live 功能/结构基线只能从 fresh repo truth、四份 `contracts/opl-framework/foundry-*.schema.json`、FoundryRun source/tests 与各 domain owner surface 读取。本文不冻结日期、branch、SHA、`origin/main` 状态、receipt id、worktree closeout、workflow run 或某轮 readback。

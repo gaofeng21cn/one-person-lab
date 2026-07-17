@@ -1,9 +1,9 @@
 # Action-to-Stage 路由与 Stage 规模原则
 
-owner: OPL Stagecraft
-purpose: 固化 OPL family 的 Stage 规模、Action 必经路由与 Progress-first 边界
-state: active
-machine boundary: `family-action-catalog.v2.actions[].execution_binding`、`family-action-catalog.v2.actions[].stage_route`、`family-stage-control-plane.v1`、`opl agents run`
+Owner: `OPL Stagecraft`
+Purpose: `action_stage_route_and_stage_size`
+State: `active_support`
+Machine boundary: 本文是人读设计原则。机器真相归 `family-action-catalog.v2.actions[].execution_binding`、`family-action-catalog.v2.actions[].stage_route`、`family-stage-control-plane.v1`、`opl agents run` 及其 contracts、source 和 tests。
 
 ## 结论
 

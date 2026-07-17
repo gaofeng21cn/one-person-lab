@@ -156,6 +156,10 @@ function buildPdfMarkdown(metadata: WhitepaperMetadata, markdown: string, config
   return `${cover}${stripMarkdownTitleBlock(normalizePdfInlineCode(markdown))}`;
 }
 
+function markdownResourcePath(config: WhitepaperConfig, sourceMarkdownPath: string) {
+  return [path.dirname(sourceMarkdownPath), config.repoRoot].join(path.delimiter);
+}
+
 function paths(config: WhitepaperConfig) {
   const whitepaperDir = path.join(config.repoRoot, 'docs', 'site', 'latest', 'whitepapers');
   const catalogSourcePath = path.join(config.repoRoot, 'docs', 'whitepapers', 'index.md');
@@ -181,6 +185,7 @@ function buildHtml(config: WhitepaperConfig, metadata: WhitepaperMetadata, sourc
     sourceMarkdownPath,
     '--standalone',
     '--embed-resources',
+    '--resource-path', markdownResourcePath(config, sourceMarkdownPath),
     '--css', stylePath,
     '--variable', `pagetitle=${metadata.title}`,
     '--metadata', 'lang=zh-CN',
@@ -208,6 +213,7 @@ function buildPdf(config: WhitepaperConfig, metadata: WhitepaperMetadata, markdo
     '--standalone',
     '--pdf-engine=xelatex',
     '--number-sections',
+    '--resource-path', markdownResourcePath(config, output.sourceMarkdownPath),
     '--metadata', `title-meta=${metadata.title}`,
     '--metadata', `author-meta=${metadata.owner}`,
     '--metadata', 'lang=zh-CN',

@@ -22,7 +22,7 @@ src/modules/foundry
 src/modules/connect
 ```
 
-`src/modules/<module_id>/` 是 Framework 源码 owner。`OPL Cloud`、在线 Workspace、Console 页面、Gateway/API 和 `OPL Fabric` 是产品层或 Cloud 层语义，可以组合多个 Framework 模块形成用户可见能力；它们不作为第 11 个源码模块。`OPL Fabric` 的通用资源底座能力由 `Connect`、`Runway`、`Pack`、`Workspace` 和 `Ledger` 协作承接。
+`src/modules/<module_id>/` 是 Framework 源码 owner。`OPL Cloud`、在线 Workspace、Console 页面、Gateway/API 和 `OPL Fabric` 是长期、条件启用的产品层或 Cloud 层语义，可以在真实 account、storage、isolation、backend 与 owner policy 齐备后组合多个 Framework 模块形成用户可见能力；它们不作为第 11 个源码模块，也不成为当前 App desktop + Docker/WebUI 的必要 gate。`OPL Fabric` 的通用资源底座能力由 `Connect`、`Runway`、`Pack`、`Workspace` 和 `Ledger` 协作承接。
 
 ## 机器入口
 

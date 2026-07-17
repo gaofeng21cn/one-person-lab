@@ -1,5 +1,10 @@
 # Temporal Service Supervision
 
+Owner: `OPL Runway`
+Purpose: `temporal_service_supervision_support`
+State: `active_runtime_support`
+Machine boundary: 本文是 Temporal 本机服务托管的人读运维说明。机器真相归 family-runtime contracts、supervisor source、CLI/App readback 与 focused tests；本文不证明 provider、domain、artifact、App release 或 production ready。
+
 Temporal Server 是 OPL durable workflow 的必要依赖，不是可隐藏的可选诊断项。Desktop macOS 由 OPL-owned launchd supervisor 托管本机 Temporal CLI；Worker supervisor 与 scheduler cadence 仍是两个独立生命周期。
 
 ## Desktop macOS

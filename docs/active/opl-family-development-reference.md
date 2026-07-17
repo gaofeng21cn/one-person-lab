@@ -151,7 +151,7 @@ App 普通用户产品面按 `Codex App wrapper` 设计：固定 `Codex CLI` con
 
 ## Docs 目录结构对齐
 
-OPL series 的开发文档治理默认巡检 OPL、MAS、MAG、RCA、OMA 和 App 六仓。OPL、MAS、MAG、RCA 采用同名 canonical docs taxonomy。统一目录名不是因为
+OPL series 的开发文档治理默认巡检 [文档组合治理](../docs_portfolio_consolidation.md) 登记的 12 个维护仓：Framework、App、条件 Cloud 产品、Native Workbench、Flow、Doc、MAS、MAG、RCA、OMA、BookForge 与 MAS Scholar Skills。OPL、MAS、MAG、RCA 采用同名 canonical docs taxonomy，其余仓按 repo-specific 职责维护轻量 truth。统一目录名不是因为
 这些目录现在都必须很厚，而是因为 framework / domain owner repo 的长期生命周期角色已经稳定：
 读者进入任意由 OPL 系列直接管理的 framework/domain repo 时，都应能在同一组目录下找到同类材料。
 

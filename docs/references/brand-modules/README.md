@@ -42,7 +42,7 @@ OPL 借鉴的是成熟工程的分层原则，不引入外部 runtime dependency
 | [OPL Runway](./runway.md) | Durable execution、stage-attempt request/projection、lease、retry/dead-letter、wakeup 和 human gate。 | OPL Framework |
 | [OPL Ledger](./ledger.md) | Evidence、receipt、typed blocker、artifact lineage、restore/provenance 和 refs-only ledger。 | OPL Framework + domain authority owner |
 | [OPL Console](./console.md) | App/operator 工作台，消费 execution view、operational card、result envelope、current owner、invocation plan、next action、阻塞、产物和 drilldown。 | One Person Lab App |
-| [OPL Foundry Kernel](./foundry.md) | 消费 OMA 的 blueprint / eval / evolution semantics，负责候选物化、评测、`EvidenceBundle`、版本、canary、activation 和 rollback。 | OPL Framework |
+| [OPL Foundry Kernel](./foundry-kernel.md) | 消费 OMA 的 blueprint / eval / evolution semantics，负责候选物化、评测、`EvidenceBundle`、版本、canary、activation 和 rollback。 | OPL Framework |
 | [OPL Connect](./connect.md) | CLI、MCP、OpenAI/AI SDK tools、execution view / operational card / ToolResultEnvelope descriptor、Skill/plugin、release/install 分发。 | OPL Framework + App release owner |
 
 ## 模块关系
@@ -75,7 +75,7 @@ OPL Charter
 
 Agent Tool Arsenal / Capability Invocation OS 不新增品牌模块。它以 `OPL Pack` 为 ABI owner；合同是生成/校验材料，Agent ordinary path 只消费 Pack 派生的 execution view、operational card 和 result envelope。`Atlas`、`Stagecraft`、`Console`、`Connect` 分别消费 catalog、use-policy、current-owner projection / ordinary execution view 和 descriptor/export 边界；`Runway` / `Ledger` 只承运执行与 refs evidence。
 
-`OPL Fabric` 属于 Cloud / Product 层的资源底座语义，不新增 Framework 第 11 个源码模块。Fabric 能力由当前十模块组合实现：`Connect` 负责连接、分发和可调用 surface，`Runway` 负责 durable execution / queue / retry-dead-letter，`Pack` 负责 ABI、descriptor 和 generated surface，`Workspace` 负责可检查物理落点，`Ledger` 负责 refs-only evidence / receipt / lineage。`Console` 把这些能力组织成治理、投影、current owner、next action 和 drilldown 页面。
+`OPL Fabric` 属于长期、条件启用的 Cloud / Product 层资源底座语义，不新增 Framework 第 11 个源码模块，也不成为当前 App desktop + Docker/WebUI 的必要 gate。只有真实 account、storage、isolation、backend 与 owner policy 齐备时，Fabric 才可由当前十模块组合形成用户可见能力：`Connect` 负责连接、分发和可调用 surface，`Runway` 负责 durable execution / queue / retry-dead-letter，`Pack` 负责 ABI、descriptor 和 generated surface，`Workspace` 负责可检查物理落点，`Ledger` 负责 refs-only evidence / receipt / lineage。`Console` 把这些能力组织成治理、投影、current owner、next action 和 drilldown 页面。
 
 ## 当前完成度对照
 

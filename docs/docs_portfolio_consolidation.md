@@ -10,7 +10,7 @@ Machine boundary: 本文是人读治理入口。机器可读真相继续归 `con
 
 `docs/**` 是 OPL 的中文内部开发与维护参考，不再维护 docs 层双语镜像。稳定文档路径优先使用无语言后缀 `.md` 承载中文 canonical 内容。历史文档可以保留旧双语方案、旧路径和旧命令作为 provenance，但 active/reference 索引必须指向当前无后缀路径。
 
-OPL family docs governance 的默认维护巡检范围是 11 个 repo：`one-person-lab`、`one-person-lab-app`、`opl-native-workbench`、`opl-flow`、`opl-doc`、`med-autoscience`、`med-autogrant`、`redcube-ai`、`opl-meta-agent`、`opl-bookforge` 和 `mas-scholar-skills`。其中严格同名 canonical docs taxonomy 适用于当前 framework / domain owner repo：OPL、MAS、MAG、RCA。OMA、BookForge、App、Native Workbench、OPL Flow、OPL Doc 和 MAS Scholar Skills 按各自 repo 职责维护轻量 docs / support / capability-pack / workflow-profile truth，不反向扩大 framework/domain canonical taxonomy。
+OPL family docs governance 的默认维护巡检范围是 12 个 repo：`one-person-lab`、`one-person-lab-app`、`one-person-lab-cloud`、`opl-native-workbench`、`opl-flow`、`opl-doc`、`med-autoscience`、`med-autogrant`、`redcube-ai`、`opl-meta-agent`、`opl-bookforge` 和 `mas-scholar-skills`。其中严格同名 canonical docs taxonomy 适用于当前 framework / domain owner repo：OPL、MAS、MAG、RCA。Cloud、OMA、BookForge、App、Native Workbench、OPL Flow、OPL Doc 和 MAS Scholar Skills 按各自 repo 职责维护轻量 product / docs / support / capability-pack / workflow-profile truth，不反向扩大 framework/domain canonical taxonomy；Cloud 纳入治理不等于把 Hosted Workspace 认定为当前必要产品面。
 
 `opl-aion-shell`、`opl-hermes-shell`、`one-person-lab-app/shells/aionui` 和 `one-person-lab-app/_external/hermes-agent` 是 upstream fork / reference body，默认只做 owner、fork 状态、overlay 边界和文档链接的 read-only 盘点。`opl-agui-codex-shell` 只作为 archived technical proof / explicit replay provenance，除非用户明确要求 AGUI replay 或历史技术验证审计，不进入默认维护、polish、release 或功能面落地巡检。
 
@@ -29,7 +29,7 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 - OPL 全局目标、全局差距、shared primitive 上收边界、App/workbench 目标、domain admission 与跨仓开发顺序；
 - MAS/MAG/RCA 单仓目标、差距、authority、direct/hosted 边界和上收候选的放置规则；
 - 过时模块、接口、alias、facade、聚合测试和旧文档入口的 direct retirement 规则；
-- OPL/MAS/MAG/RCA canonical docs taxonomy、OMA/BookForge/App/Native Workbench/OPL Flow/OPL Doc/MAS Scholar Skills repo-specific docs governance 范围，以及非 canonical 目录迁移规则。
+- OPL/MAS/MAG/RCA canonical docs taxonomy、Cloud/OMA/BookForge/App/Native Workbench/OPL Flow/OPL Doc/MAS Scholar Skills repo-specific docs governance 范围，以及非 canonical 目录迁移规则。
 
 单仓文档只维护本仓 truth、差距、计划、authority 和与 OPL 的上收边界。MAS/MAG/RCA 不在本仓维护其他 domain 的 backlog，也不保留 parallel framework plan。
 
@@ -122,7 +122,7 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 - dated follow-through、closeout 流水、receipt/proof 命令摘要和阶段性校准过程进入 [OPL family 文档过程归档 2026-05](./history/process/plans/2026-05-18-opl-family-doc-process-history.md) 或其他 `docs/history/**`。
 - `docs/decisions.md` 可以保留决策日期日志，但被 supersede 的段落必须显式标注当前读法。
 - path-stable reference/spec 如果仍因 contract、human_doc 或 audit context 保留原路径，必须在索引或文件开头说明生命周期；不得恢复旧 provider、Gateway、frontdoor、compatibility、direct-entry 或 host-agent-only 叙述为 active plan。
-- 2026-06-03 起，`docs/active/current-state-vs-ideal-gap.md` 是 compact active gap plan；它不再承载 dated App/runtime/domain evidence ledger。相关归档见 [OPL Active Gap Plan Lifecycle Cleanup](./history/process/plans/2026-06-03-opl-active-gap-plan-lifecycle-cleanup.md)。2026-06-30 的历史折返仍按 legacy family scope 读取；当前维护巡检按 11 个 maintained repo 读取，并让 active gap 文档只保留 no-gap baton、后置 evidence 指针和 fresh-audit 入口。已完成功能/结构推进折回 [OPL family functional gap closure foldback](./history/process/plans/2026-06-30-opl-family-functional-gap-closure-foldback.md)。
+- 2026-06-03 起，`docs/active/current-state-vs-ideal-gap.md` 是 compact active gap plan；它不再承载 dated App/runtime/domain evidence ledger。相关归档见 [OPL Active Gap Plan Lifecycle Cleanup](./history/process/plans/2026-06-03-opl-active-gap-plan-lifecycle-cleanup.md)。2026-06-30 的历史折返仍按 legacy family scope 读取；当前维护巡检按 12 个 maintained repo 读取，并让 active gap 文档只保留 no-gap baton、后置 evidence 指针和 fresh-audit 入口。已完成功能/结构推进折回 [OPL family functional gap closure foldback](./history/process/plans/2026-06-30-opl-family-functional-gap-closure-foldback.md)。
 - 用户原始 8 条调研建议的当前 tracker 只允许作为 `current-state-vs-ideal-gap.md` 内的 compact audit index：保留主题、当前功能 / 结构闭环、后置 owner/evidence lane 和 completion audit 入口；不得追加 branch/worktree、receipt id、attempt id、workflow run、closeout transcript 或逐轮 readback proof。若某条建议重新变成 active gap，必须从 fresh repo truth 另开 lane，并把过程写入 history / runtime ledger / owner repo provenance。
 
 ## 维护仓治理范围与目录状态
@@ -136,6 +136,7 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 | `OPL Meta Agent` | 纳入维护巡检；当前保持轻量 docs root / active / references 形态。只有当 target-agent builder 职责产生长期 public、product、runtime、delivery、source、policies、specs 或 history 内容时，才新增对应目录索引。 |
 | `OPL BookForge` | 纳入维护巡检；按 authoring agent / artifact lifecycle owner 职责维护 active truth、history/provenance 和必要 reference。只有当长期 public、product、runtime、delivery、source、policies、specs 或 history 内容稳定出现时，才新增对应目录索引。 |
 | `One Person Lab App` | 纳入维护巡检；App docs 归产品、release、testing、user guides 和 screenshot lifecycle。App release truth、GUI product truth、GUI candidate policy 和 active-shell validation 回 App repo 自身 contracts/source/tests；AionUI upstream docs 不合入 App 默认分支，也不主导 OPL framework/domain taxonomy。`opl-native-workbench` 是 foreground alternative；Hermes Desktop 是 retained explicit reference candidate；AGUI 只作为 archived technical proof / explicit replay provenance。 |
+| `One Person Lab Cloud` | 纳入维护巡检；只持有长期、条件启用的 Cloud 产品包装、owner policy 与公开白皮书 truth。Hosted Workspace、Gateway、Fabric、Console 或组织协作面只有在 account、storage、isolation、backend 与 owner policy 齐备时才进入产品面，不成为当前 App desktop + Docker/WebUI、Framework runtime 或 release 必要 gate。 |
 | `OPL Native Workbench` | 纳入维护巡检；作为 native GUI / workbench candidate 的 repo-native truth 读取，只对 App / Framework canonical `app_state`、`action_refs`、package/runtime/task projection 的消费边界负责，不声明 App release ready 或 runtime ready。 |
 | `OPL Flow` | 纳入维护巡检；只持有 workflow profile、managed surface sync 和 repo profile drift 检查边界，不替代目标 repo 的 source/contracts/docs/runtime truth。 |
 | `OPL Doc` | 纳入维护巡检；只持有 docs doctor、support repo policy、family-plan workflow 和文档治理工具边界，不成为 OPL family domain/App/runtime truth。 |

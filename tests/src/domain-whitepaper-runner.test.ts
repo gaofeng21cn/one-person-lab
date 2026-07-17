@@ -24,8 +24,10 @@ function makeDomainRepo(t: TestContext) {
   const binDir = path.join(domainRepo, 'bin');
   fs.mkdirSync(path.join(domainRepo, 'contracts'), { recursive: true });
   fs.mkdirSync(path.join(domainRepo, 'docs', 'whitepapers'), { recursive: true });
+  fs.mkdirSync(path.join(domainRepo, 'assets', 'branding'), { recursive: true });
   fs.mkdirSync(binDir, { recursive: true });
   fs.copyFileSync(fixtureProfile, path.join(domainRepo, 'contracts', 'whitepaper_profile.json'));
+  fs.writeFileSync(path.join(domainRepo, 'assets', 'branding', 'domain-journey.png'), 'image fixture\n');
   fs.writeFileSync(path.join(domainRepo, 'docs', 'whitepapers', 'domain-whitepaper.md'), [
     '# Domain Whitepaper',
     '',
@@ -39,16 +41,24 @@ function makeDomainRepo(t: TestContext) {
     '',
     'One Person Lab keeps domain truth in the domain repository.',
     '',
+    '![Domain journey](../../assets/branding/domain-journey.png)',
+    '',
   ].join('\n'));
   writeCommand(binDir, 'pandoc', [
     '#!/bin/sh',
     'output=""',
     'title_block=""',
+    'resource_path=""',
     'while [ "$#" -gt 0 ]; do',
     '  if [ "$1" = "-o" ]; then output="$2"; shift; fi',
     '  if [ "$1" = "--metadata" ] && [ "${2#title=}" != "$2" ]; then title_block="yes"; fi',
+    '  if [ "$1" = "--resource-path" ]; then resource_path="$2"; shift; fi',
     '  shift',
     'done',
+    'case "$resource_path" in',
+    '  *"$PWD/docs/whitepapers"*) ;;',
+    '  *) printf "missing source Markdown resource path\\n" >&2; exit 2 ;;',
+    'esac',
     'mkdir -p "$(dirname "$output")"',
     'if [ "${output##*.}" = "html" ]; then',
     '  if [ -n "$title_block" ]; then printf "<header id=\\"title-block-header\\"><h1>Domain Whitepaper</h1></header>" > "$output"; fi',

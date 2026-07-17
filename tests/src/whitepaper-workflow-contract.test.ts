@@ -8,6 +8,8 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 
 test('whitepaper publication deploys the approved artifact and closes with exact-byte readback', () => {
   const reusable = fs.readFileSync(path.join(repoRoot, '.github', 'workflows', 'reusable-whitepaper.yml'), 'utf8');
+  const entry = fs.readFileSync(path.join(repoRoot, '.github', 'workflows', 'whitepaper.yml'), 'utf8');
+  assert.match(entry, /- assets\/branding\/\*\*/);
   assert.match(reusable, /environment: whitepaper-production/);
   assert.match(reusable, /actions\/download-artifact@/);
   assert.match(reusable, /verify-whitepaper-publication\.ts/);

@@ -1,9 +1,9 @@
 # OPL 标准智能体边界收敛计划
 
-- Owner: OPL Framework
-- Purpose: 关闭 MAS/MAG/RCA/OMA/OBF 与 OPL Base 之间的通用 mechanics / domain authority 双向泄漏。
-- State: completed_structural_2026-07-12
-- Machine boundary: 本文是跨仓实施与验收入口；machine truth 仍由各仓 source、contracts、tests 与 `opl agents * --json` readback 持有。
+Owner: `OPL Framework`
+Purpose: `standard_agent_boundary_convergence_history`
+State: `history_only`
+Machine boundary: 本文是 2026-07-12 跨仓实施与验收过程归档；当前机器真相仍由各仓 source、contracts、tests 与 fresh `opl agents * --json` readback 持有。
 
 ## 验收边界
 

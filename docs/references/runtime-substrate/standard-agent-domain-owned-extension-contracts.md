@@ -1,9 +1,9 @@
 # 标准智能体 domain-owned extension 合同
 
-- Owner: OPL Framework / 各标准智能体仓
-- Purpose: 固定 OPL 通用 engine 与 domain-owned profile、suite、adapter 之间的 machine boundary。
-- State: current reference
-- Machine boundary: `contracts/opl-framework/standard-agent-conformance-profile.schema.json`、`contracts/opl-framework/source-derived-agent-design-abi.json` 与各 domain repo 的 canonical contracts。
+Owner: `OPL Framework / 各标准智能体仓`
+Purpose: `standard_agent_domain_owned_extension_contract_support`
+State: `support_reference`
+Machine boundary: 本文是 OPL 通用 engine 与 domain-owned profile、suite、adapter 边界的人读说明。机器真相归 `contracts/opl-framework/standard-agent-conformance-profile.schema.json`、`contracts/opl-framework/source-derived-agent-design-abi.json` 与各 domain repo 的 canonical contracts、source 和 tests。
 
 ## Conformance profile
 

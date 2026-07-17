@@ -1,6 +1,7 @@
 # OPL Connect 引用校验
 
 Owner: OPL Connect
+Purpose: `reference_verification_connector_support`
 State: active connector surface
 Machine boundary: 机器真相以 `opl connect references verify` CLI、
 `src/modules/connect/opl-connect-reference-verification.ts`、CLI command registry

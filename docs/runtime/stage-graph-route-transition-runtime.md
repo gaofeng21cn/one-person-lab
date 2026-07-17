@@ -1,9 +1,9 @@
 # Stage graph 与 AI 路由边界
 
-- Owner：OPL Runway
-- Purpose：冻结 decisive Attempt、StageRun durable identity 与跨 Stage 物化的职责分工。
-- State：active support
-- Machine boundary：`contracts/opl-framework/stage-quality-cycle-contract.json`、`contracts/opl-framework/stage-run-kernel-contract.json`、`contracts/opl-framework/stage-route-transport-contract.json`
+Owner: `OPL Runway`
+Purpose: `stage_graph_route_transition_runtime_support`
+State: `active_support`
+Machine boundary: 本文是 decisive Attempt、StageRun durable identity 与跨 Stage 物化边界的人读说明。机器真相归 `contracts/opl-framework/stage-quality-cycle-contract.json`、`contracts/opl-framework/stage-run-kernel-contract.json`、`contracts/opl-framework/stage-route-transport-contract.json` 及其 source、CLI/read-model 和 tests。
 
 ## 当前结论
 

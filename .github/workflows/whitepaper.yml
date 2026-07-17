@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - docs/whitepapers/**
+      - assets/branding/**
       - contracts/whitepaper_profile.json
       - contracts/opl-framework/public-whitepaper-registry.json
       - scripts/opl-whitepaper-builder.ts

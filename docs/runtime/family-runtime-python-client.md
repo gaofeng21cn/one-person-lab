@@ -1,12 +1,9 @@
 # Family Runtime Python Client
 
-owner: `one-person-lab / OPL Runway`
-
-purpose: 为 Python domain consumer 提供统一的 Temporal stage-attempt submit/query transport，避免 MAS、MAG、RCA 或新 Agent 各自实现 OPL CLI 查找、子进程超时和 JSON envelope 解析。
-
-state: `active_contract`
-
-machine boundary: `python/opl_framework/family_runtime_client.py`
+Owner: `one-person-lab / OPL Runway`
+Purpose: `family_runtime_python_client_support`
+State: `active_contract_support`
+Machine boundary: 本文是 Python consumer 的人读 API 说明。机器真相归 `python/opl_framework/family_runtime_client.py` 及其 tests；本文不持有 domain truth、owner receipt 或 provider/domain readiness。
 
 ## 稳定 API
 
