@@ -1059,10 +1059,14 @@ export async function StageRunWorkflow(
       workflow_state: result,
     });
     const syncReceiptBody = asRecord(syncReceipt);
-    const reviewEvidenceCacheQualityDebtRef = stageReviewEvidenceCacheQualityDebtRef({
-      receiptRef: syncReceiptBody.opl_review_evidence_cache_receipt_ref ?? null,
-      receipt: syncReceiptBody.opl_review_evidence_cache_receipt ?? null,
-    });
+    const reviewRole = attemptInput.role === 'reviewer' || attemptInput.role === 're_reviewer';
+    const reviewEvidenceCacheQualityDebtRef = reviewRole
+      ? stageReviewEvidenceCacheQualityDebtRef({
+          receiptRef: syncReceiptBody.opl_review_evidence_cache_receipt_ref,
+          receipt: syncReceiptBody.opl_review_evidence_cache_receipt,
+          reviewerAttemptRef: materialized.attempt_ref,
+        })
+      : null;
     const executionSessionRef = executionSessionRefFromAttemptState(result);
     if (result.status === 'completed') {
       if (!executionSessionRef) {
@@ -1074,7 +1078,6 @@ export async function StageRunWorkflow(
       observedSessions.add(executionSessionRef);
     }
     const envelope = qualityEnvelopeFromAttempt(result);
-    const reviewRole = attemptInput.role === 'reviewer' || attemptInput.role === 're_reviewer';
     const outcome = result.status === 'completed'
       ? stageQualityAttemptOutcomeFromEnvelope({ attemptRole: attemptInput.role, envelope })
       : null;
@@ -1240,6 +1243,15 @@ export async function StageRunWorkflow(
     };
   };
 
+  const cacheQualityDebtRefFromReviewReceipt = (receipt: StageReviewReceipt) => (
+    stageReviewEvidenceCacheQualityDebtRef({
+      receiptRef: receipt.opl_review_evidence_cache_receipt_ref,
+      receipt: receipt.opl_review_evidence_cache_receipt,
+      evaluation: receipt.opl_review_evidence_cache_receipt_evaluation,
+      reviewerAttemptRef: receipt.reviewer_attempt_ref,
+    })
+  );
+
   const commitTerminalRouteDecision = (attempt: Awaited<ReturnType<typeof runAttempt>>) => {
     if (!attempt.routeEvaluation.decision) return;
     decisiveExecutionContentBinding = attempt.executionPolicy.binding;
@@ -1343,12 +1355,17 @@ export async function StageRunWorkflow(
         rubric_refs: review.executionPolicy.rubricRefs,
         verdict: stageReviewVerdictForOutcome(initialOutcome),
       });
+      const hardStopCacheQualityDebtRef = cacheQualityDebtRefFromReviewReceipt(hardStopReceipt);
       state = {
         ...state,
         review_receipts: [...state.review_receipts, hardStopReceipt],
-        quality_debt_refs: review.reviewInputSnapshotQualityDebtRef
-          ? [...new Set([...state.quality_debt_refs, review.reviewInputSnapshotQualityDebtRef])]
-          : state.quality_debt_refs,
+        quality_debt_refs: [...new Set([
+          ...state.quality_debt_refs,
+          ...(review.reviewInputSnapshotQualityDebtRef
+            ? [review.reviewInputSnapshotQualityDebtRef]
+            : []),
+          ...(hardStopCacheQualityDebtRef ? [hardStopCacheQualityDebtRef] : []),
+        ])],
       };
       return terminalize(state);
     }
@@ -1362,14 +1379,21 @@ export async function StageRunWorkflow(
       rubric_refs: review.executionPolicy.rubricRefs,
       verdict: stageReviewVerdictForOutcome(initialOutcome),
     });
+    const initialReceiptCacheQualityDebtRef = cacheQualityDebtRefFromReviewReceipt(
+      initialReviewReceipt,
+    );
     let currentRevisionTransport = revisionTransportFromReceipt(initialReviewReceipt);
     state = {
       ...state,
       findings,
       review_receipts: [...state.review_receipts, initialReviewReceipt],
-      quality_debt_refs: review.reviewInputSnapshotQualityDebtRef
-        ? [...new Set([...state.quality_debt_refs, review.reviewInputSnapshotQualityDebtRef])]
-        : state.quality_debt_refs,
+      quality_debt_refs: [...new Set([
+        ...state.quality_debt_refs,
+        ...(review.reviewInputSnapshotQualityDebtRef
+          ? [review.reviewInputSnapshotQualityDebtRef]
+          : []),
+        ...(initialReceiptCacheQualityDebtRef ? [initialReceiptCacheQualityDebtRef] : []),
+      ])],
     };
     if (isEarlyRepairRouteBack(review)) {
       return terminalizeEarlyRepairRouteBack(review, findings);
@@ -1378,7 +1402,9 @@ export async function StageRunWorkflow(
       commitTerminalRouteDecision(review);
       return terminalize({
         ...state,
-        status: review.reviewInputSnapshotQualityDebtRef || review.reviewEvidenceCacheQualityDebtRef
+        status: review.reviewInputSnapshotQualityDebtRef
+          || review.reviewEvidenceCacheQualityDebtRef
+          || initialReceiptCacheQualityDebtRef
           ? 'completed_with_quality_debt'
           : 'completed',
         current_role: null,
@@ -1482,12 +1508,17 @@ export async function StageRunWorkflow(
           rubric_refs: reReview.executionPolicy.rubricRefs,
           verdict: stageReviewVerdictForOutcome(reReviewOutcome),
         });
+        const hardStopCacheQualityDebtRef = cacheQualityDebtRefFromReviewReceipt(hardStopReceipt);
         state = {
           ...state,
           review_receipts: [...state.review_receipts, hardStopReceipt],
-          quality_debt_refs: reReview.reviewInputSnapshotQualityDebtRef
-            ? [...new Set([...state.quality_debt_refs, reReview.reviewInputSnapshotQualityDebtRef])]
-            : state.quality_debt_refs,
+          quality_debt_refs: [...new Set([
+            ...state.quality_debt_refs,
+            ...(reReview.reviewInputSnapshotQualityDebtRef
+              ? [reReview.reviewInputSnapshotQualityDebtRef]
+              : []),
+            ...(hardStopCacheQualityDebtRef ? [hardStopCacheQualityDebtRef] : []),
+          ])],
         };
         return terminalize(state);
       }
@@ -1513,20 +1544,29 @@ export async function StageRunWorkflow(
         rubric_refs: reReview.executionPolicy.rubricRefs,
         verdict: stageReviewVerdictForOutcome(reReviewOutcome),
       });
+      const reReviewReceiptCacheQualityDebtRef = cacheQualityDebtRefFromReviewReceipt(
+        reReviewReceipt,
+      );
       currentRevisionTransport = revisionTransportFromReceipt(reReviewReceipt);
       state = {
         ...state,
         finding_closures: reReviewResult.finding_closures,
         review_receipts: [...state.review_receipts, reReviewReceipt],
-        quality_debt_refs: reReview.reviewInputSnapshotQualityDebtRef
-          ? [...new Set([...state.quality_debt_refs, reReview.reviewInputSnapshotQualityDebtRef])]
-          : state.quality_debt_refs,
+        quality_debt_refs: [...new Set([
+          ...state.quality_debt_refs,
+          ...(reReview.reviewInputSnapshotQualityDebtRef
+            ? [reReview.reviewInputSnapshotQualityDebtRef]
+            : []),
+          ...(reReviewReceiptCacheQualityDebtRef ? [reReviewReceiptCacheQualityDebtRef] : []),
+        ])],
       };
       if (reReviewOutcome === 'pass') {
         commitTerminalRouteDecision(reReview);
         return terminalize({
           ...state,
-          status: reReview.reviewInputSnapshotQualityDebtRef || reReview.reviewEvidenceCacheQualityDebtRef
+          status: reReview.reviewInputSnapshotQualityDebtRef
+            || reReview.reviewEvidenceCacheQualityDebtRef
+            || reReviewReceiptCacheQualityDebtRef
             ? 'completed_with_quality_debt'
             : 'completed',
           current_role: null,

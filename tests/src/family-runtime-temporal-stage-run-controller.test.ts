@@ -122,6 +122,9 @@ async function runController(input: {
     decisionKind: 'advance' | 'route_back';
     targetStageId: string;
   };
+  reviewReceiptCacheContextMismatch?: boolean;
+  legacySyncCacheBindingOmitted?: boolean;
+  legacyReviewReceiptCacheBindingOmitted?: boolean;
 }) {
   const testEnv = await createTemporalTestWorkflowEnvironment();
   const taskQueue = `opl-stage-run-controller-${input.id}-${Date.now()}`;
@@ -237,8 +240,15 @@ async function runController(input: {
       async stageQualityCycleProjectActivity() {
         return { projected: true };
       },
-      async stageQualityAttemptSyncActivity() {
-        return { synced: true };
+      async stageQualityAttemptSyncActivity(syncInput: { attempt_ref: string }) {
+        const reviewAttempt = syncInput.attempt_ref.includes('_reviewer_');
+        return input.legacySyncCacheBindingOmitted && reviewAttempt
+          ? { synced: true }
+          : {
+              synced: true,
+              opl_review_evidence_cache_receipt_ref: null,
+              opl_review_evidence_cache_receipt: null,
+            };
       },
       async stageQualityReviewReceiptActivity(receiptInput: any) {
         reviewReceiptInputs.push(receiptInput);
@@ -248,6 +258,50 @@ async function runController(input: {
         if (reviewerRole === input.failReceiptForReviewerRole) {
           throw new Error(`contract_shape_invalid:simulated-${reviewerRole}-receipt-validation-failure`);
         }
+        const cacheReceiptRef = input.reviewReceiptCacheContextMismatch
+          ? {
+              kind: 'opl_review_evidence_cache_receipt',
+              ref: `file:///tmp/${input.id}-${reviewerRole}-cache-receipt.json`,
+              size_bytes: 321,
+              sha256: `sha256:${'4'.repeat(64)}`,
+            }
+          : null;
+        const cacheReceipt = cacheReceiptRef
+          ? {
+              surface_kind: 'opl_review_evidence_cache_receipt',
+              cache_reuse_eligible: true,
+              stage_transition_allowed: true,
+              typed_blocker_ref: null,
+              cache_authority: false,
+              requires_fresh_reviewer_invocation: true,
+              requires_fresh_reviewer_receipt: true,
+              requires_mas_judgment: true,
+              quality_debt: null,
+            }
+          : null;
+        const cacheEvaluation = cacheReceiptRef
+          ? {
+              surface_kind: 'opl_review_evidence_cache_receipt_evaluation',
+              schema_version: 1,
+              status: 'quality_debt',
+              receipt_ref: cacheReceiptRef,
+              current_context_binding: {
+                reviewer_attempt_ref: receiptInput.reviewer_attempt_ref,
+              },
+              cache_reuse_eligible: false,
+              quality_debt: {
+                status: 'quality_debt',
+                ordinary_progress_may_advance: true,
+                stage_transition_allowed: true,
+                typed_blocker_ref: null,
+              },
+              stage_transition_allowed: true,
+              typed_blocker_ref: null,
+              requires_fresh_reviewer_invocation: true,
+              requires_fresh_reviewer_receipt: true,
+              requires_mas_judgment: true,
+            }
+          : null;
         return {
           surface_kind: 'opl_stage_review_receipt',
           version: 'stage-review-receipt.v1',
@@ -262,6 +316,11 @@ async function runController(input: {
           reviewed_artifact_hashes: ['sha256:deck-v1'],
           rubric_refs: receiptInput.rubric_refs,
           verdict: receiptInput.verdict,
+          ...(input.legacyReviewReceiptCacheBindingOmitted ? {} : {
+            opl_review_evidence_cache_receipt_ref: cacheReceiptRef,
+            opl_review_evidence_cache_receipt: cacheReceipt,
+            opl_review_evidence_cache_receipt_evaluation: cacheEvaluation,
+          }),
         };
       },
       async stageRunRouteLaunchActivity(routeInput: any) {
@@ -750,6 +809,40 @@ test('producer Attempt current policy can enable Review after a primary-only Sta
   );
   assert.deepEqual(reviewReceiptInputs[0]?.rubric_refs, ['rubric:v1-reviewer']);
 });
+
+test('cache receipt from another Attempt becomes non-blocking StageRun quality debt', async () => {
+  const { state } = await runController({
+    id: 'cache-attempt-substitution',
+    closeFindingAfterRound: null,
+    initialReviewerOutcome: 'pass',
+    reviewReceiptCacheContextMismatch: true,
+  });
+  assert.equal(state.status, 'completed_with_quality_debt');
+  assert.ok(state.quality_debt_refs.includes(
+    'file:///tmp/cache-attempt-substitution-reviewer-cache-receipt.json',
+  ));
+  assert.deepEqual(state.typed_blocker_refs, []);
+  assert.equal(state.blocked_reason, null);
+});
+
+for (const legacySurface of ['sync', 'review-receipt'] as const) {
+  test(`pre-cache ${legacySurface} history becomes non-blocking StageRun quality debt`, async () => {
+    const id = `legacy-cache-${legacySurface}`;
+    const { state } = await runController({
+      id,
+      closeFindingAfterRound: null,
+      initialReviewerOutcome: 'pass',
+      legacySyncCacheBindingOmitted: legacySurface === 'sync',
+      legacyReviewReceiptCacheBindingOmitted: legacySurface === 'review-receipt',
+    });
+    assert.equal(state.status, 'completed_with_quality_debt');
+    assert.ok(state.quality_debt_refs.includes(
+      `opl://stage_attempts/sat_${id}_reviewer_0#review-evidence-cache-binding-missing`,
+    ));
+    assert.deepEqual(state.typed_blocker_refs, []);
+    assert.equal(state.blocked_reason, null);
+  });
+}
 
 test('decisive Attempt route validation uses its current declared Stage catalog', async () => {
   const currentDeclaredStageIds = [

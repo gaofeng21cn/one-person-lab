@@ -5,10 +5,12 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { canonicalJsonBytes, canonicalJsonText } from '../../kernel/canonical-json.ts';
 import {
-  canonicalReviewTransportSha256, persistCanonicalReviewTransportJson, readReviewTransportJsonExactRef,
+  canonicalReviewTransportSha256, ensureReviewTransportDirectory,
+  persistCanonicalReviewTransportJson, readReviewTransportJsonExactRef,
   requireExactReviewTransportKeys, requireReviewTransportRecord, requiredReviewTransportText,
   reviewTransportError, reviewTransportRoots, reviewTransportSize, type ReviewTransportExactRef,
 } from './family-runtime-review-transport-store.ts';
+import { readReviewerInputSnapshotManifest } from './family-runtime-reviewer-input-snapshot.ts';
 
 const PAGE_HASH_RASTER_CONTRACT = {
   contract_id: 'scholarskills_pdf_page_pixel_raster',
@@ -320,29 +322,46 @@ function normalizeContextBinding(value: unknown): ReviewEvidenceCacheContextBind
     'Review evidence cache context snapshot manifest digest must match its exact ref.',
     { snapshot_manifest_ref_sha256: snapshotManifestRef.sha256, snapshot_manifest_sha256: snapshotManifestSha256 },
   );
+  const reviewerAttemptRef = requiredReviewTransportText(
+    binding.reviewer_attempt_ref,
+    'context_binding.reviewer_attempt_ref',
+  );
+  const executionContentBindingSha256 = canonicalReviewTransportSha256(
+    binding.execution_content_binding_sha256,
+    'context_binding.execution_content_binding_sha256',
+  );
+  const originInvocation = normalizeOriginRef(
+    binding.origin_reviewer_invocation_ref,
+    'context_binding.origin_reviewer_invocation_ref',
+  );
+  if (
+    originInvocation.kind !== 'opl_stage_attempt'
+    || originInvocation.ref !== reviewerAttemptRef
+    || originInvocation.sha256 !== executionContentBindingSha256
+  ) throw reviewTransportError(
+    'review_evidence_cache_context_attempt_binding_mismatch',
+    'Review evidence cache context must bind one reviewer Attempt and execution identity.',
+  );
   return {
-    reviewer_attempt_ref: requiredReviewTransportText(binding.reviewer_attempt_ref, 'context_binding.reviewer_attempt_ref'),
-    execution_content_binding_sha256: canonicalReviewTransportSha256(binding.execution_content_binding_sha256,
-      'context_binding.execution_content_binding_sha256'),
+    reviewer_attempt_ref: reviewerAttemptRef,
+    execution_content_binding_sha256: executionContentBindingSha256,
     snapshot_manifest_ref: snapshotManifestRef, snapshot_manifest_sha256: snapshotManifestSha256,
     review_scope_sha256: canonicalReviewTransportSha256(binding.review_scope_sha256, 'context_binding.review_scope_sha256'),
     rubric_sha256: canonicalReviewTransportSha256(binding.rubric_sha256, 'context_binding.rubric_sha256'),
-    origin_reviewer_invocation_ref: normalizeOriginRef(binding.origin_reviewer_invocation_ref,
-      'context_binding.origin_reviewer_invocation_ref'),
+    origin_reviewer_invocation_ref: originInvocation,
     origin_reviewer_evidence_ref: normalizeOriginRef(binding.origin_reviewer_evidence_ref,
       'context_binding.origin_reviewer_evidence_ref'),
   };
 }
 
 function validateContextSnapshot(binding: ReviewEvidenceCacheContextBinding) {
-  const persisted = readReviewTransportJsonExactRef({
-    exactRef: binding.snapshot_manifest_ref, expectedKind: 'opl_reviewer_input_snapshot_manifest',
-    trustedRoot: reviewTransportRoots().reviewer_snapshot_manifest_root,
-  });
+  const persisted = readReviewerInputSnapshotManifest(binding.snapshot_manifest_ref);
   if (
-    persisted.value.surface_kind !== 'opl_reviewer_input_snapshot_manifest'
-    || persisted.value.schema_version !== 1
-    || canonicalReviewTransportSha256(persisted.value.review_scope_sha256,
+    !refsEqual(persisted.manifest_ref, binding.snapshot_manifest_ref)
+    || persisted.manifest.surface_kind !== 'opl_reviewer_input_snapshot_manifest'
+    || persisted.manifest.schema_version !== 1
+    || persisted.manifest.review_lane !== 'display'
+    || canonicalReviewTransportSha256(persisted.manifest.review_scope_sha256,
       'snapshot_manifest.review_scope_sha256') !== binding.review_scope_sha256
   ) throw reviewTransportError(
     'review_evidence_cache_context_snapshot_scope_mismatch',
@@ -407,10 +426,10 @@ function assertDirectDirectory(root: string, parent: string) {
 function prepareEntryRoot(cacheKey: string, contextBindingSha256: string) {
   const base = reviewTransportRoots().evidence_cache_entry_root;
   const keyRoot = path.join(base, cacheKey.replace(/^sha256:/, ''));
-  fs.mkdirSync(keyRoot, { recursive: true, mode: 0o700 });
+  ensureReviewTransportDirectory(keyRoot);
   assertDirectDirectory(keyRoot, base);
   const root = entryRootFor(cacheKey, contextBindingSha256);
-  fs.mkdirSync(root, { mode: 0o700 });
+  ensureReviewTransportDirectory(root);
   assertDirectDirectory(root, keyRoot);
   return root;
 }
@@ -455,8 +474,10 @@ function normalizeEntry(value: unknown, candidate: PageHashEvidenceCandidate,
     || reviewScopeSha256 !== candidate.review_scope_sha256
     || rubricSha256 !== candidate.rubric_sha256
     || canonicalJsonText(pages) !== canonicalJsonText(candidate.pages)
+    || !refsEqual(originInvocation, candidate.origin_reviewer_invocation_ref)
+    || !refsEqual(originEvidence, candidate.origin_reviewer_evidence_ref)
   ) throw reviewTransportError('review_evidence_cache_entry_context_mismatch',
-    'Persisted review evidence cache entry does not bind the candidate pages, scope, rubric, and key.',
+    'Persisted review evidence cache entry does not bind the candidate pages, scope, rubric, origins, and key.',
     { supplied_cache_key_sha256: suppliedCacheKey, recomputed_cache_key_sha256: recomputedCacheKey });
   return {
     surface_kind: 'opl_review_evidence_cache_entry', schema_version: 1,
@@ -681,11 +702,8 @@ function normalizeReceipt(value: unknown) {
           || reusableOriginEvidence === null
           || (status === 'cache_hit' && receipt.cache_hit !== true)
           || (status === 'cache_miss_stored' && receipt.cache_hit !== false)
-          || (
-            status === 'cache_miss_stored'
-            && (!refsEqual(candidateOriginInvocation, reusableOriginInvocation)
-              || !refsEqual(candidateOriginEvidence, reusableOriginEvidence))
-          )
+          || !refsEqual(candidateOriginInvocation, reusableOriginInvocation)
+          || !refsEqual(candidateOriginEvidence, reusableOriginEvidence)
         )
   ) {
     throw reviewTransportError(
@@ -754,7 +772,7 @@ function readCandidateExactRef(exactRef: unknown) {
 }
 
 export function persistReviewEvidenceCacheCandidate(value: unknown,
-  context?: ReviewEvidenceCacheContextBinding | null) {
+  context?: unknown) {
   const candidate = normalizeCandidate(value);
   const roots = reviewTransportRoots();
   const candidatePersisted = persistCanonicalReviewTransportJson({
@@ -774,7 +792,23 @@ export function persistReviewEvidenceCacheCandidate(value: unknown,
       debtReason = 'review_evidence_cache_context_binding_invalid';
     }
   }
-  if (contextBinding) validateContextSnapshot(contextBinding);
+  if (contextBinding) {
+    try {
+      validateContextSnapshot(contextBinding);
+    } catch (error) {
+      if (
+        error instanceof Error
+        && 'details' in error
+        && (error as { details?: Record<string, unknown> }).details?.failure_code
+          === 'review_evidence_cache_context_snapshot_scope_mismatch'
+      ) {
+        contextBinding = null;
+        debtReason = 'review_evidence_cache_context_binding_invalid';
+      } else {
+        throw error;
+      }
+    }
+  }
   const contextBindingMatch = contextBinding !== null
     && contextBindingMatchesCandidate(contextBinding, candidate);
   if (!debtReason && !contextBindingMatch) {
@@ -964,15 +998,36 @@ function receiptEvaluation(input: {
 }
 
 export function evaluateReviewEvidenceCacheReceipt(exactRef: unknown,
-  currentContext: unknown): ReviewEvidenceCacheReceiptEvaluation {
+  currentContext: unknown, expectedReceiptBody?: unknown): ReviewEvidenceCacheReceiptEvaluation {
   let normalizedContext: ReviewEvidenceCacheContextBinding | null = null;
   try {
     normalizedContext = normalizeContextBinding(currentContext);
   } catch {
     // A missing or malformed current binding cannot authorize reuse, but must not block progress.
   }
-  if (normalizedContext) validateContextSnapshot(normalizedContext);
+  if (normalizedContext) {
+    try {
+      validateContextSnapshot(normalizedContext);
+    } catch (error) {
+      if (
+        error instanceof Error
+        && 'details' in error
+        && (error as { details?: Record<string, unknown> }).details?.failure_code
+          === 'review_evidence_cache_context_snapshot_scope_mismatch'
+      ) normalizedContext = null;
+      else throw error;
+    }
+  }
   const transport = readReceiptTransport(exactRef);
+  if (
+    expectedReceiptBody !== undefined
+    && canonicalJsonText(transport.value) !== canonicalJsonText(expectedReceiptBody)
+  ) {
+    throw reviewTransportError(
+      'review_evidence_cache_receipt_persisted_body_mismatch',
+      'Persisted reviewer page-evidence cache receipt body does not match its exact bytes.',
+    );
+  }
   const unsupported = transport.value.surface_kind !== 'opl_review_evidence_cache_receipt'
     || transport.value.schema_version !== 2;
   if (unsupported) {

@@ -25,6 +25,14 @@ import {
 } from '../../src/modules/runway/family-runtime-stage-attempts.ts';
 import { openQueueDb } from '../../src/modules/runway/family-runtime-store.ts';
 import { stageQualityReviewReceiptActivity } from '../../src/modules/runway/family-runtime-temporal-activities.ts';
+import {
+  stageAttemptExecutionContentBindingSha256,
+  stageRunSpecSha256,
+} from '../../src/modules/runway/family-runtime-stage-run-identity.ts';
+import {
+  persistCanonicalReviewTransportJson,
+  reviewTransportRoots,
+} from '../../src/modules/runway/family-runtime-review-transport-store.ts';
 
 const rubricRefs = ['rubric:quality'];
 const artifactRefs = ['artifact:document-v1'];
@@ -165,6 +173,83 @@ function materializeInitialReceipt(db: DatabaseSync, pair: ReturnType<typeof val
     rubricRefs,
     verdict: 'pass',
   });
+}
+
+function bindLegacyCacheEvidence(
+  db: DatabaseSync,
+  pair: ReturnType<typeof validInitialReviewPair>,
+) {
+  const executionSpec = {
+    domain_id: 'redcube',
+    stage_id: 'review',
+    quality_rubric_refs: rubricRefs,
+    role_prompt_refs: { reviewer: 'prompt:quality-role' },
+    content_bindings: [{
+      purpose: 'quality_rubric',
+      ref: rubricRefs[0],
+      effective_content_sha256: `sha256:${'7'.repeat(64)}`,
+    }],
+  };
+  const specSha256 = stageRunSpecSha256(executionSpec as never);
+  const bindingPayload = {
+    surface_kind: 'opl_stage_attempt_execution_content_binding' as const,
+    version: 'opl-stage-attempt-execution-content-binding.v1' as const,
+    parent_stage_run_spec_sha256: crypto.createHash('sha256').update('parent').digest('hex'),
+    use_boundary_id: 'package-use:review-receipt-ledger',
+    spec_sha256: specSha256,
+    spec: executionSpec as any,
+    declared_stage_ids: ['review'],
+  };
+  const executionBinding = {
+    ...bindingPayload,
+    binding_sha256: stageAttemptExecutionContentBindingSha256(bindingPayload),
+  };
+  const reviewerAttemptRef = `opl://stage_attempts/${pair.reviewer.stage_attempt_id}`;
+  const evidenceRef = 'scholarskills://display/review-evidence';
+  const evidenceSha256 = `sha256:${crypto.createHash('sha256').update('review evidence').digest('hex')}`;
+  const candidate = {
+    origin_reviewer_invocation_ref: {
+      kind: 'opl_stage_attempt',
+      ref: reviewerAttemptRef,
+      sha256: `sha256:${executionBinding.binding_sha256}`,
+    },
+    origin_reviewer_evidence_ref: {
+      kind: 'scholarskills_display_evidence',
+      ref: evidenceRef,
+      sha256: evidenceSha256,
+      size_bytes: 321,
+    },
+  };
+  const legacyBody = {
+    surface_kind: 'opl_review_evidence_cache_receipt',
+    schema_version: 1,
+    status: 'legacy',
+  };
+  const persisted = persistCanonicalReviewTransportJson({
+    root: reviewTransportRoots().evidence_cache_receipt_root,
+    kind: 'opl_review_evidence_cache_receipt',
+    value: legacyBody,
+  });
+  db.prepare('UPDATE stage_attempts SET quality_context_json = ?, route_impact_json = ? WHERE stage_attempt_id = ?')
+    .run(JSON.stringify({
+      execution_content_binding: executionBinding,
+      opl_review_evidence_cache_receipt_ref: persisted.exact_ref,
+      opl_review_evidence_cache_receipt: legacyBody,
+    }), JSON.stringify({
+      stage_quality_cycle: { outcome: 'pass', findings: [], page_hash_evidence_candidate: candidate },
+    }), pair.reviewer.stage_attempt_id);
+  db.prepare(`
+    INSERT INTO stage_attempt_closeouts(closeout_id, stage_attempt_id, packet_json, created_at)
+    VALUES (?, ?, ?, ?)
+  `).run(
+    `closeout:${pair.reviewer.stage_attempt_id}`,
+    pair.reviewer.stage_attempt_id,
+    JSON.stringify({
+      closeout_ref_metadata: [{ ref: evidenceRef, sha256: evidenceSha256, size_bytes: 321 }],
+    }),
+    new Date().toISOString(),
+  );
+  return { executionBinding, candidate };
 }
 
 function validReReviewPair(db: DatabaseSync, input: {
@@ -371,6 +456,55 @@ test('ledger binds the receipt to the reviewer Attempt rubric across a package g
     assert.deepEqual(receipt.rubric_refs, reviewerRubricRefs);
   } finally {
     db.close();
+  }
+});
+
+test('ledger rebuilds cache execution and evidence identity from current persisted Attempt truth', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-review-receipt-cache-ledger-'));
+  const previousStateRoot = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = stateRoot;
+  try {
+    for (const mutation of ['execution-spec', 'evidence'] as const) {
+      const db = new DatabaseSync(':memory:');
+      try {
+        const pair = validInitialReviewPair(db);
+        const fixture = bindLegacyCacheEvidence(db, pair);
+        if (mutation === 'execution-spec') {
+          fixture.executionBinding.spec.stage_id = 'tampered-review';
+          const row = db.prepare('SELECT quality_context_json FROM stage_attempts WHERE stage_attempt_id = ?')
+            .get(pair.reviewer.stage_attempt_id) as { quality_context_json: string };
+          const context = JSON.parse(row.quality_context_json) as Record<string, unknown>;
+          context.execution_content_binding = fixture.executionBinding;
+          db.prepare('UPDATE stage_attempts SET quality_context_json = ? WHERE stage_attempt_id = ?')
+            .run(JSON.stringify(context), pair.reviewer.stage_attempt_id);
+        } else if (mutation === 'evidence') {
+          fixture.candidate.origin_reviewer_evidence_ref.sha256 = `sha256:${'9'.repeat(64)}`;
+          db.prepare('UPDATE stage_attempts SET route_impact_json = ? WHERE stage_attempt_id = ?')
+            .run(JSON.stringify({
+              stage_quality_cycle: {
+                outcome: 'pass',
+                findings: [],
+                page_hash_evidence_candidate: fixture.candidate,
+              },
+            }), pair.reviewer.stage_attempt_id);
+        }
+        assert.throws(
+          () => materializeInitialReceipt(db, pair),
+          (error) => error instanceof FrameworkContractError
+            && error.details?.failure_code === (
+              mutation === 'execution-spec'
+                ? 'stage_review_receipt_execution_binding_mismatch'
+                : 'stage_review_receipt_cache_evidence_mismatch'
+            ),
+        );
+      } finally {
+        db.close();
+      }
+    }
+  } finally {
+    if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateRoot;
+    fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
 

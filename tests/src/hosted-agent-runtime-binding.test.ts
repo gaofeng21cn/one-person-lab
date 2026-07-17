@@ -141,6 +141,57 @@ function writePackageCheckout(checkoutRoot: string) {
   ].join('\n'));
 }
 
+function managedCheckout(input: {
+  checkoutRoot: string;
+  workspaceRoot: string;
+  useBoundaryId?: string;
+  sourceKind?: string;
+  artifactDigest?: string | null;
+  checkoutPath?: string;
+  launchAllowed?: boolean;
+  rootOverrides?: Record<string, unknown>;
+  bindingOverrides?: Record<string, unknown>;
+}) {
+  const useBoundaryId = input.useBoundaryId ?? 'package-use:fixture';
+  const rootPackage = {
+    package_id: 'mas',
+    package_version: '0.2.11',
+    package_lock_ref: 'opl://agent-package-lock/mas/0.2.11',
+    manifest_sha256: '1'.repeat(64),
+    content_digest: `sha256:${'2'.repeat(64)}`,
+    artifact_digest: input.artifactDigest === undefined
+      ? `sha256:${'3'.repeat(64)}`
+      : input.artifactDigest,
+    source_kind: input.sourceKind ?? 'first_party_managed_cohort',
+    ...input.rootOverrides,
+  };
+  const packageUseBinding = {
+    surface_kind: 'opl_agent_package_use_binding.v1',
+    use_boundary_id: useBoundaryId,
+    use_receipt_ref: `opl://agent-package/use/${encodeURIComponent(useBoundaryId)}`,
+    root_package: rootPackage,
+    dependency_closure_digest: '4'.repeat(64),
+    ...input.bindingOverrides,
+  };
+  return {
+    agent: resolveStandardAgent('mas')!,
+    package_id: 'mas',
+    workspace_root: fs.realpathSync.native(input.workspaceRoot),
+    checkout_root: fs.realpathSync.native(input.checkoutRoot),
+    package_status: {
+      installed_package_count: 1,
+      launch_allowed: input.launchAllowed ?? true,
+      quality_debt_refs: input.launchAllowed === false ? ['quality-debt:fixture'] : [],
+      runtime_source_readiness: {
+        operational_ready: true,
+        checkout_path: input.checkoutPath ?? input.checkoutRoot,
+      },
+    },
+    package_use_binding: packageUseBinding,
+    use_boundary_id: useBoundaryId,
+  };
+}
+
 function createHostedCandidate(input: {
   stateRoot: string;
   targetAgentId: string;
@@ -630,19 +681,7 @@ test('inactive Foundry target falls back to its managed package', async () => {
       foundryRootOverride: stateRoot,
       resolveManagedCheckout: (async () => {
         packageFallbackCalls += 1;
-        return {
-          agent: resolveStandardAgent('mas')!,
-          package_id: 'mas',
-          workspace_root: fs.realpathSync.native(workspaceRoot),
-          checkout_root: fs.realpathSync.native(checkoutRoot),
-          package_status: { launch_allowed: true },
-          package_use_binding: {
-            surface_kind: 'opl_agent_package_use_binding.v1',
-            use_boundary_id: 'package-use:fixture',
-            root_package: { package_id: 'mas' },
-          },
-          use_boundary_id: 'package-use:fixture',
-        };
+        return managedCheckout({ checkoutRoot, workspaceRoot });
       }) as never,
       recordLedger,
     });
@@ -652,6 +691,152 @@ test('inactive Foundry target falls back to its managed package', async () => {
     assert.deepEqual(run.result, { accepted: true, value: 9 });
     assert.equal(run.hosted_runtime_binding.source_kind, 'managed_package_checkout');
     assert.equal(packageFallbackCalls, 1);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(checkoutRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('managed package provenance accepts bare carrier digests and progress-first developer checkout', async () => {
+  const stateRoot = root('opl-hosted-binding-managed-policy-state-');
+  const checkoutRoot = root('opl-hosted-binding-managed-policy-checkout-');
+  const otherCheckout = root('opl-hosted-binding-managed-policy-other-');
+  const workspaceRoot = root('opl-hosted-binding-managed-policy-workspace-');
+  const sameCheckoutLink = path.join(workspaceRoot, 'same-checkout-link');
+  fs.symlinkSync(checkoutRoot, sameCheckoutLink, 'dir');
+  try {
+    const developer = new DefaultHostedAgentRuntimeBindingResolver({
+      root_override: stateRoot,
+      resolve_managed_checkout: (async () => managedCheckout({
+        checkoutRoot,
+        workspaceRoot,
+        sourceKind: 'developer_checkout_override',
+        artifactDigest: null,
+        checkoutPath: sameCheckoutLink,
+        launchAllowed: false,
+      })) as never,
+    });
+    const snapshot = await developer.resolve({ domainId: 'mas', workspaceRoot });
+    assert.equal(snapshot.provenance.source_kind, 'managed_package_checkout');
+    if (snapshot.provenance.source_kind !== 'managed_package_checkout') assert.fail();
+    assert.equal(snapshot.provenance.package_manifest_sha256, '1'.repeat(64));
+    assert.equal(snapshot.provenance.package_dependency_closure_digest, '4'.repeat(64));
+    assert.equal(snapshot.provenance.package_content_digest, `sha256:${'2'.repeat(64)}`);
+    assert.equal(snapshot.provenance.package_artifact_digest, null);
+    assert.equal(snapshot.provenance.package_source_kind, 'developer_checkout_override');
+
+    await assert.rejects(new DefaultHostedAgentRuntimeBindingResolver({
+      root_override: stateRoot,
+      resolve_managed_checkout: (async () => managedCheckout({
+        checkoutRoot,
+        workspaceRoot,
+        artifactDigest: null,
+      })) as never,
+    }).resolve({ domainId: 'mas', workspaceRoot }), /artifact_digest must be a non-empty string/i);
+    await assert.rejects(new DefaultHostedAgentRuntimeBindingResolver({
+      root_override: stateRoot,
+      resolve_managed_checkout: (async () => managedCheckout({
+        checkoutRoot,
+        workspaceRoot,
+        sourceKind: 'unknown_source_kind',
+      })) as never,
+    }).resolve({ domainId: 'mas', workspaceRoot }), /source_kind is not supported/i);
+    await assert.rejects(new DefaultHostedAgentRuntimeBindingResolver({
+      root_override: stateRoot,
+      resolve_managed_checkout: (async () => managedCheckout({
+        checkoutRoot,
+        workspaceRoot,
+        checkoutPath: otherCheckout,
+      })) as never,
+    }).resolve({ domainId: 'mas', workspaceRoot }), /one launchable binding/i);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(checkoutRoot, { recursive: true, force: true });
+    fs.rmSync(otherCheckout, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('pinned managed package resolution preserves its boundary and rejects every provenance drift', async () => {
+  const stateRoot = root('opl-hosted-binding-pinned-policy-state-');
+  const checkoutRoot = root('opl-hosted-binding-pinned-policy-checkout-');
+  const workspaceRoot = root('opl-hosted-binding-pinned-policy-workspace-');
+  const boundaryId = 'package-use:pinned-policy';
+  try {
+    const baseManaged = managedCheckout({ checkoutRoot, workspaceRoot, useBoundaryId: boundaryId });
+    const initial = await new DefaultHostedAgentRuntimeBindingResolver({
+      root_override: stateRoot,
+      resolve_managed_checkout: (async () => baseManaged) as never,
+    }).resolve({ domainId: 'mas', workspaceRoot });
+    if (initial.provenance.source_kind !== 'managed_package_checkout') assert.fail();
+
+    let observedBoundaryId: string | undefined;
+    const pinnedResolver = new DefaultHostedAgentRuntimeBindingResolver({
+      root_override: stateRoot,
+      resolve_managed_checkout: (async (input: { useBoundaryId?: string }) => {
+        observedBoundaryId = input.useBoundaryId;
+        return baseManaged;
+      }) as never,
+    });
+    const pinned = await pinnedResolver.resolvePinned({
+      provenance: initial.provenance,
+      provenance_ref: initial.provenance_ref,
+      workspaceRoot,
+    });
+    assert.equal(observedBoundaryId, boundaryId);
+    assert.equal(pinned.provenance_ref, initial.provenance_ref);
+
+    const driftCases = [
+      managedCheckout({ checkoutRoot, workspaceRoot, useBoundaryId: 'package-use:drifted' }),
+      {
+        ...managedCheckout({ checkoutRoot, workspaceRoot, useBoundaryId: boundaryId }),
+        package_status: {
+          installed_package_count: 1,
+          runtime_source_readiness: { operational_ready: false, checkout_path: checkoutRoot },
+        },
+      },
+      managedCheckout({ checkoutRoot, workspaceRoot, useBoundaryId: boundaryId,
+        rootOverrides: { manifest_sha256: '5'.repeat(64) } }),
+      managedCheckout({ checkoutRoot, workspaceRoot, useBoundaryId: boundaryId,
+        rootOverrides: { content_digest: `sha256:${'6'.repeat(64)}` } }),
+      managedCheckout({ checkoutRoot, workspaceRoot, useBoundaryId: boundaryId,
+        rootOverrides: { artifact_digest: `sha256:${'7'.repeat(64)}` } }),
+      managedCheckout({ checkoutRoot, workspaceRoot, useBoundaryId: boundaryId,
+        bindingOverrides: { dependency_closure_digest: '8'.repeat(64) } }),
+      managedCheckout({ checkoutRoot, workspaceRoot, useBoundaryId: boundaryId,
+        sourceKind: 'developer_checkout_override' }),
+    ];
+    for (const [index, drifted] of driftCases.entries()) {
+      await assert.rejects(new DefaultHostedAgentRuntimeBindingResolver({
+        root_override: stateRoot,
+        resolve_managed_checkout: (async () => drifted) as never,
+      }).resolvePinned({
+        provenance: initial.provenance,
+        provenance_ref: initial.provenance_ref,
+        workspaceRoot,
+      }), index === 1 ? /one launchable binding/i : /no longer resolvable exactly/i);
+    }
+
+    const invalid = managedCheckout({
+      checkoutRoot,
+      workspaceRoot,
+      useBoundaryId: boundaryId,
+      sourceKind: 'invalid_source_kind',
+    });
+    const invalidResolver = new DefaultHostedAgentRuntimeBindingResolver({
+      root_override: stateRoot,
+      resolve_managed_checkout: (async () => invalid) as never,
+    });
+    await assert.rejects(
+      invalidResolver.resolve({ domainId: 'mas', workspaceRoot }),
+      /source_kind is not supported/i,
+    );
+    await assert.rejects(invalidResolver.resolvePinned({
+      provenance: initial.provenance,
+      provenance_ref: initial.provenance_ref,
+      workspaceRoot,
+    }), /source_kind is not supported/i);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(checkoutRoot, { recursive: true, force: true });

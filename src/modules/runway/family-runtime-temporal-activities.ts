@@ -58,7 +58,10 @@ import {
   readReviewerInputSnapshotManifest,
   resolveReviewerInputSnapshotMaterialization,
 } from './family-runtime-reviewer-input-snapshot.ts';
-import { persistReviewEvidenceCacheCandidate } from './family-runtime-review-evidence-cache.ts';
+import {
+  persistReviewEvidenceCacheCandidate,
+  type ReviewEvidenceCacheContextBinding,
+} from './family-runtime-review-evidence-cache.ts';
 import {
   materializeOplRevisionTransport,
   revisionTransportContext,
@@ -1317,7 +1320,7 @@ function reviewerEvidenceCacheContext(input: {
   rubricRefsJson: string | null | undefined;
   closeout: Record<string, unknown>;
   candidate: unknown;
-}) {
+}): ReviewEvidenceCacheContextBinding | null {
   const executionContentBinding = input.qualityContext.execution_content_binding;
   if (!isRecord(executionContentBinding) || !isRecord(executionContentBinding.spec)) {
     throw new FrameworkContractError(
@@ -1394,8 +1397,6 @@ function reviewerEvidenceCacheContext(input: {
   if (!evidenceSha256 || !/^sha256:[a-f0-9]{64}$/.test(evidenceSha256)) return null;
 
   return {
-    surface_kind: 'opl_review_evidence_cache_attempt_context' as const,
-    schema_version: 1 as const,
     reviewer_attempt_ref: input.attemptRef,
     execution_content_binding_sha256: expectedBindingSha256,
     snapshot_manifest_ref: snapshot.manifest_ref,
@@ -1436,7 +1437,13 @@ export async function stageQualityAttemptSyncActivity(input: TemporalStageQualit
     const envelope = isRecord(routeImpact.stage_quality_cycle)
       ? routeImpact.stage_quality_cycle
       : {};
-    if (!Object.hasOwn(envelope, 'page_hash_evidence_candidate')) return syncReceipt;
+    if (!Object.hasOwn(envelope, 'page_hash_evidence_candidate')) {
+      return {
+        ...(isRecord(syncReceipt) ? syncReceipt : {}),
+        opl_review_evidence_cache_receipt_ref: null,
+        opl_review_evidence_cache_receipt: null,
+      };
+    }
     const row = db.prepare(`
       SELECT attempt_role, quality_context_json, quality_rubric_refs_json, context_manifest_json
       FROM stage_attempts
@@ -1476,11 +1483,10 @@ export async function stageQualityAttemptSyncActivity(input: TemporalStageQualit
       closeout,
       candidate: envelope.page_hash_evidence_candidate,
     });
-    const contextBoundPersist = persistReviewEvidenceCacheCandidate as unknown as (
-      candidate: unknown,
-      context: ReturnType<typeof reviewerEvidenceCacheContext>,
-    ) => ReturnType<typeof persistReviewEvidenceCacheCandidate>;
-    const persisted = contextBoundPersist(envelope.page_hash_evidence_candidate, cacheContext);
+    const persisted = persistReviewEvidenceCacheCandidate(
+      envelope.page_hash_evidence_candidate,
+      cacheContext,
+    );
     db.prepare(`
       UPDATE stage_attempts
       SET quality_context_json = ?, updated_at = ?

@@ -32,7 +32,16 @@ import {
   type StageReviewReceipt,
 } from '../stagecraft/index.ts';
 import { validateStageQualityAttemptContextManifest } from './family-runtime-stage-quality-context-manifest.ts';
-import { readReviewEvidenceCacheReceipt } from './family-runtime-review-evidence-cache.ts';
+import {
+  evaluateReviewEvidenceCacheReceipt,
+  readReviewEvidenceCacheReceipt,
+} from './family-runtime-review-evidence-cache.ts';
+import {
+  canonicalStageAttemptDeclaredStageIds,
+  stageAttemptExecutionContentBindingSha256,
+  stageRunSpecSha256,
+  type StageRunImmutableSpec,
+} from './family-runtime-stage-run-identity.ts';
 
 export type StageAttemptStatus =
   | 'queued'
@@ -413,6 +422,197 @@ function canonicalSha256(value: unknown) {
   return `sha256:${crypto.createHash('sha256').update(canonicalJsonText(value)).digest('hex')}`;
 }
 
+function optionalText(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function sha256Hex(value: unknown) {
+  const candidate = optionalText(value);
+  const match = candidate?.match(/^(?:sha256:)?([a-f0-9]{64})$/i);
+  return match ? match[1]!.toLowerCase() : null;
+}
+
+function currentExecutionBindingSha256(input: {
+  reviewer: StageAttemptRow;
+  reviewerQualityContext: Record<string, unknown>;
+  reviewerRubricRefs: string[];
+}) {
+  const executionBinding = record(input.reviewerQualityContext.execution_content_binding);
+  if (Object.keys(executionBinding).length === 0) return null;
+  const executionSpec = record(executionBinding.spec);
+  const parentSpecSha256 = optionalText(executionBinding.parent_stage_run_spec_sha256);
+  const useBoundaryId = optionalText(executionBinding.use_boundary_id);
+  const suppliedSpecSha256 = optionalText(executionBinding.spec_sha256);
+  const suppliedBindingSha256 = optionalText(executionBinding.binding_sha256);
+  if (!parentSpecSha256 || !useBoundaryId || !suppliedSpecSha256 || !suppliedBindingSha256) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Persisted reviewer execution content binding is incomplete.',
+      { failure_code: 'stage_review_receipt_execution_binding_incomplete' },
+    );
+  }
+  const declaredStageIds = canonicalStageAttemptDeclaredStageIds(executionBinding.declared_stage_ids);
+  const expectedSpecSha256 = stageRunSpecSha256(executionSpec as StageRunImmutableSpec);
+  const expectedBindingSha256 = stageAttemptExecutionContentBindingSha256({
+    parent_stage_run_spec_sha256: parentSpecSha256,
+    use_boundary_id: useBoundaryId,
+    spec_sha256: suppliedSpecSha256,
+    spec: executionSpec as StageRunImmutableSpec,
+    declared_stage_ids: declaredStageIds,
+  });
+  const specRubricRefs = Array.isArray(executionSpec.quality_rubric_refs)
+    ? executionSpec.quality_rubric_refs.filter(
+        (ref): ref is string => typeof ref === 'string' && Boolean(ref.trim()),
+      ).map((ref) => ref.trim())
+    : [];
+  const rolePromptRefs = record(executionSpec.role_prompt_refs);
+  const reviewerRole = normalizeStageQualityAttemptRole(input.reviewer.attempt_role);
+  if (
+    executionBinding.surface_kind !== 'opl_stage_attempt_execution_content_binding'
+    || executionBinding.version !== 'opl-stage-attempt-execution-content-binding.v1'
+    || suppliedSpecSha256 !== expectedSpecSha256
+    || suppliedBindingSha256 !== expectedBindingSha256
+    || !exactStringList(
+      Array.isArray(executionBinding.declared_stage_ids)
+        ? executionBinding.declared_stage_ids as string[]
+        : [],
+      declaredStageIds,
+    )
+    || executionSpec.domain_id !== input.reviewer.domain_id
+    || executionSpec.stage_id !== input.reviewer.stage_id
+    || !exactStringList(specRubricRefs, input.reviewerRubricRefs)
+    || optionalText(rolePromptRefs[reviewerRole]) !== input.reviewer.quality_role_prompt_ref
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Persisted reviewer execution content binding does not match the current Attempt.',
+      {
+        failure_code: 'stage_review_receipt_execution_binding_mismatch',
+        supplied_spec_sha256: suppliedSpecSha256,
+        expected_spec_sha256: expectedSpecSha256,
+        supplied_binding_sha256: suppliedBindingSha256,
+        expected_binding_sha256: expectedBindingSha256,
+      },
+    );
+  }
+  return expectedBindingSha256;
+}
+
+function currentReviewEvidenceCacheContext(input: {
+  reviewer: StageAttemptRow;
+  reviewerQualityContext: Record<string, unknown>;
+  reviewerContextManifest: Record<string, unknown>;
+  reviewerEnvelope: Record<string, unknown>;
+  reviewerCloseout: Record<string, unknown>;
+  reviewerRubricRefs: string[];
+}) {
+  const executionBindingSha256 = currentExecutionBindingSha256(input);
+  const executionBinding = record(input.reviewerQualityContext.execution_content_binding);
+  const executionSpec = record(executionBinding.spec);
+  const contentBindings = Array.isArray(executionSpec.content_bindings)
+    ? executionSpec.content_bindings.map(record)
+    : [];
+  const rubricBindings = contentBindings.filter((binding) => (
+    binding.purpose === 'quality_rubric'
+    && typeof binding.ref === 'string'
+    && input.reviewerRubricRefs.includes(binding.ref)
+  ));
+  const rubricSha256 = rubricBindings.length === 1 && input.reviewerRubricRefs.length === 1
+    ? optionalText(rubricBindings[0]!.effective_content_sha256)
+      ?? optionalText(rubricBindings[0]!.sha256)
+    : null;
+  const snapshotManifestRef = record(
+    input.reviewerContextManifest.opl_reviewer_input_snapshot_manifest_ref,
+  );
+  const snapshotManifest = record(
+    input.reviewerContextManifest.opl_reviewer_input_snapshot_manifest,
+  );
+  const snapshotManifestSha256 = optionalText(snapshotManifestRef.sha256);
+  const reviewScopeSha256 = optionalText(snapshotManifest.review_scope_sha256);
+  const candidate = record(input.reviewerEnvelope.page_hash_evidence_candidate);
+  const originInvocation = record(candidate.origin_reviewer_invocation_ref);
+  const originEvidence = record(candidate.origin_reviewer_evidence_ref);
+  const originInvocationKind = optionalText(originInvocation.kind);
+  const originInvocationRef = optionalText(originInvocation.ref);
+  const originInvocationSha256 = sha256Hex(originInvocation.sha256);
+  const originEvidenceKind = optionalText(originEvidence.kind);
+  const originEvidenceRef = optionalText(originEvidence.ref);
+  const originEvidenceSha256 = sha256Hex(originEvidence.sha256);
+  if (
+    !executionBindingSha256
+    || !rubricSha256
+    || !originInvocationKind
+    || !originInvocationRef
+    || !originInvocationSha256
+    || !originEvidenceKind
+    || !originEvidenceRef
+    || !originEvidenceSha256
+  ) return null;
+  const reviewerAttemptRef = `opl://stage_attempts/${input.reviewer.stage_attempt_id}`;
+  if (
+    originInvocationKind !== 'opl_stage_attempt'
+    || originInvocationRef !== reviewerAttemptRef
+    || originInvocationSha256 !== executionBindingSha256
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Persisted reviewer cache candidate invocation does not match the current Attempt.',
+      { failure_code: 'stage_review_receipt_cache_invocation_mismatch' },
+    );
+  }
+  const closeoutMetadata = Array.isArray(input.reviewerCloseout.closeout_ref_metadata)
+    ? input.reviewerCloseout.closeout_ref_metadata.map(record)
+    : [];
+  const sameRefMetadata = closeoutMetadata.filter((entry) => (
+    (optionalText(entry.ref) ?? optionalText(entry.uri)) === originEvidenceRef
+  ));
+  const matchedEvidence = sameRefMetadata.find((entry) => (
+    sha256Hex(entry.sha256) === originEvidenceSha256
+  ));
+  const candidateSize = typeof originEvidence.size_bytes === 'number'
+    ? originEvidence.size_bytes
+    : null;
+  const closeoutSize = typeof matchedEvidence?.size_bytes === 'number'
+    ? matchedEvidence.size_bytes
+    : null;
+  if (!matchedEvidence || (candidateSize !== null && closeoutSize !== null && candidateSize !== closeoutSize)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Persisted reviewer cache evidence does not match current Attempt closeout metadata.',
+      {
+        failure_code: 'stage_review_receipt_cache_evidence_mismatch',
+        origin_reviewer_evidence_ref: originEvidenceRef,
+      },
+    );
+  }
+  if (
+    !snapshotManifestSha256
+    || !reviewScopeSha256
+    || Object.keys(snapshotManifestRef).length === 0
+  ) return null;
+  return {
+    reviewer_attempt_ref: reviewerAttemptRef,
+    execution_content_binding_sha256: executionBindingSha256,
+    snapshot_manifest_ref: snapshotManifestRef,
+    snapshot_manifest_sha256: snapshotManifestSha256,
+    review_scope_sha256: reviewScopeSha256,
+    rubric_sha256: rubricSha256,
+    origin_reviewer_invocation_ref: {
+      kind: 'opl_stage_attempt',
+      ref: reviewerAttemptRef,
+      sha256: executionBindingSha256,
+    },
+    origin_reviewer_evidence_ref: {
+      kind: originEvidenceKind,
+      ref: originEvidenceRef,
+      sha256: `sha256:${originEvidenceSha256}`,
+      ...(closeoutSize !== null || candidateSize !== null
+        ? { size_bytes: closeoutSize ?? candidateSize }
+        : {}),
+    },
+  };
+}
+
 function persistedQualityEnvelope(row: StageAttemptRow) {
   return record(parseJsonObject(row.route_impact_json).stage_quality_cycle);
 }
@@ -668,6 +868,7 @@ function persistedStageReviewReceiptInputs(db: DatabaseSync, input: PersistedSta
     });
   }
   const producerEnvelope = persistedQualityEnvelope(producer);
+  const reviewerEnvelope = persistedQualityEnvelope(reviewer);
   stageQualityAttemptOutcomeFromEnvelope({
     attemptRole: normalizeStageQualityAttemptRole(producer.attempt_role),
     envelope: producerEnvelope,
@@ -746,6 +947,7 @@ function persistedStageReviewReceiptInputs(db: DatabaseSync, input: PersistedSta
   const cacheReceiptBody = record(reviewerQualityContext.opl_review_evidence_cache_receipt);
   const hasCacheReceiptRef = Object.keys(cacheReceiptRef).length > 0;
   const hasCacheReceiptBody = Object.keys(cacheReceiptBody).length > 0;
+  let cacheReceiptEvaluation: Record<string, unknown> | null = null;
   if (hasCacheReceiptRef !== hasCacheReceiptBody) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
@@ -754,13 +956,32 @@ function persistedStageReviewReceiptInputs(db: DatabaseSync, input: PersistedSta
     );
   }
   if (hasCacheReceiptRef) {
-    const cacheReadback = readReviewEvidenceCacheReceipt(cacheReceiptRef);
-    if (canonicalJsonText(cacheReadback.receipt) !== canonicalJsonText(cacheReceiptBody)) {
-      throw new FrameworkContractError(
-        'contract_shape_invalid',
-        'Persisted reviewer page-evidence cache receipt body does not match its exact ref.',
-        { failure_code: 'stage_review_receipt_cache_binding_mismatch' },
-      );
+    const currentContext = currentReviewEvidenceCacheContext({
+      reviewer,
+      reviewerQualityContext,
+      reviewerContextManifest,
+      reviewerEnvelope,
+      reviewerCloseout: latestStageAttemptCloseoutPacketsByAttempt(
+        db,
+        [reviewer.stage_attempt_id],
+      ).get(reviewer.stage_attempt_id) ?? {},
+      reviewerRubricRefs,
+    });
+    const evaluation = evaluateReviewEvidenceCacheReceipt(
+      cacheReceiptRef,
+      currentContext,
+      cacheReceiptBody,
+    );
+    cacheReceiptEvaluation = { ...evaluation };
+    if (cacheReceiptBody.schema_version === 2) {
+      const cacheReadback = readReviewEvidenceCacheReceipt(cacheReceiptRef);
+      if (canonicalJsonText(cacheReadback.receipt) !== canonicalJsonText(cacheReceiptBody)) {
+        throw new FrameworkContractError(
+          'contract_shape_invalid',
+          'Persisted reviewer page-evidence cache receipt body does not match its exact ref.',
+          { failure_code: 'stage_review_receipt_cache_binding_mismatch' },
+        );
+      }
     }
   }
   return {
@@ -789,6 +1010,7 @@ function persistedStageReviewReceiptInputs(db: DatabaseSync, input: PersistedSta
       : null,
     reviewEvidenceCacheReceiptRef: hasCacheReceiptRef ? cacheReceiptRef : null,
     reviewEvidenceCacheReceipt: hasCacheReceiptBody ? cacheReceiptBody : null,
+    reviewEvidenceCacheReceiptEvaluation: cacheReceiptEvaluation,
   };
 }
 
@@ -821,6 +1043,8 @@ export function materializePersistedStageReviewReceipt(
       persisted.reviewInputSnapshotQualityDebtReceipt,
     opl_review_evidence_cache_receipt_ref: persisted.reviewEvidenceCacheReceiptRef,
     opl_review_evidence_cache_receipt: persisted.reviewEvidenceCacheReceipt,
+    opl_review_evidence_cache_receipt_evaluation:
+      persisted.reviewEvidenceCacheReceiptEvaluation,
     finding_lineage: {
       review_kind: persisted.reviewerRole === 'reviewer' ? 'initial_review' : 'finding_closure_review',
       finding_ids: persisted.reviewerEvidence.findings.map((finding) => finding.finding_id),

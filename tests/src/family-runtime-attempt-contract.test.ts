@@ -285,6 +285,7 @@ test('Stage quality contracts bind bounded Attempts, exact artifact identity, re
     'review_input_snapshot_quality_debt_receipt_ref',
     'review_input_snapshot_quality_debt_receipt',
     'opl_review_evidence_cache_receipt_ref', 'opl_review_evidence_cache_receipt',
+    'opl_review_evidence_cache_receipt_evaluation',
     'finding_lineage',
   ]);
   assert.ok(quality.context_isolation.review_context_allowlist

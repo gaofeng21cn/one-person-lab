@@ -362,6 +362,7 @@
       "review_input_snapshot_quality_debt_receipt",
       "opl_review_evidence_cache_receipt_ref",
       "opl_review_evidence_cache_receipt",
+      "opl_review_evidence_cache_receipt_evaluation",
       "finding_lineage"
     ],
     "review_transport_binding": {
@@ -380,6 +381,9 @@
         "origin_reviewer_evidence_ref"
       ],
       "page_evidence_cache_missing_or_mismatched_context_is_quality_debt": true,
+      "page_evidence_cache_current_attempt_evaluation_is_projected": true,
+      "page_evidence_cache_evaluation_receipt_ref_must_match_exact_receipt_ref": true,
+      "page_evidence_cache_evaluation_attempt_must_match_review_receipt_attempt_when_present": true,
       "page_evidence_cache_quality_debt_stage_transition_allowed": true,
       "page_evidence_cache_quality_debt_typed_blocker_ref": null,
       "page_evidence_cache_quality_debt_projects_to_stage_run_quality_debt_refs": true,

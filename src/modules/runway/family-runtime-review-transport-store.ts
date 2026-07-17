@@ -93,7 +93,8 @@ export function requireExactReviewTransportKeys(
 
 export function reviewTransportRoots() {
   const state = ensureOplStateDir();
-  const root = path.join(state.state_dir, 'family-runtime', 'review-transport');
+  const stateRoot = fs.realpathSync.native(state.state_dir);
+  const root = path.join(stateRoot, 'family-runtime', 'review-transport');
   return {
     root,
     reviewer_snapshot_root: path.join(root, 'reviewer-input-snapshots'),
@@ -106,6 +107,58 @@ export function reviewTransportRoots() {
     evidence_cache_entry_root: path.join(root, 'page-evidence-cache', 'entries'),
     evidence_cache_receipt_root: path.join(root, 'page-evidence-cache', 'receipts'),
   };
+}
+
+export function ensureReviewTransportDirectory(directoryInput: string) {
+  const state = ensureOplStateDir();
+  const anchor = fs.realpathSync.native(state.state_dir);
+  const directory = path.resolve(directoryInput);
+  const relative = path.relative(anchor, directory);
+  if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    throw reviewTransportError(
+      'review_transport_persist_root_untrusted',
+      'Review transport persistence root must stay inside the OPL state directory.',
+      { persistence_root: directory, state_root: anchor },
+    );
+  }
+  let current = anchor;
+  for (const component of relative.split(path.sep).filter(Boolean)) {
+    current = path.join(current, component);
+    try {
+      const observed = fs.lstatSync(current);
+      if (!observed.isDirectory() || observed.isSymbolicLink()) {
+        throw reviewTransportError(
+          'review_transport_persist_root_untrusted',
+          'Review transport persistence directory chain must not contain symlinks.',
+          { persistence_root: directory, offending_directory: current },
+        );
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      try {
+        fs.mkdirSync(current, { mode: 0o700 });
+      } catch (mkdirError) {
+        if ((mkdirError as NodeJS.ErrnoException).code !== 'EEXIST') throw mkdirError;
+      }
+      const created = fs.lstatSync(current);
+      if (!created.isDirectory() || created.isSymbolicLink()) {
+        throw reviewTransportError(
+          'review_transport_persist_root_untrusted',
+          'Review transport persistence directory changed while it was being prepared.',
+          { persistence_root: directory, offending_directory: current },
+        );
+      }
+    }
+  }
+  const realDirectory = fs.realpathSync.native(directory);
+  if (realDirectory !== directory || !pathInside(realDirectory, anchor)) {
+    throw reviewTransportError(
+      'review_transport_persist_root_untrusted',
+      'Review transport persistence directory changed identity while it was being prepared.',
+      { persistence_root: directory, resolved_root: realDirectory, state_root: anchor },
+    );
+  }
+  return realDirectory;
 }
 
 function sameFileIdentity(left: fs.BigIntStats, right: fs.BigIntStats) {
@@ -290,10 +343,10 @@ function persistBytesAtDigest(input: {
   digest: string;
   bytes: Buffer;
 }) {
-  fs.mkdirSync(input.root, { recursive: true, mode: 0o700 });
-  const target = path.join(input.root, `${digestHex(input.digest)}${input.extension}`);
+  const root = ensureReviewTransportDirectory(input.root);
+  const target = path.join(root, `${digestHex(input.digest)}${input.extension}`);
   if (fs.existsSync(target)) {
-    const observed = stableFileObservation(target, pathToFileURL(target).href, { trustedRoot: input.root });
+    const observed = stableFileObservation(target, pathToFileURL(target).href, { trustedRoot: root });
     if (observed.sha256 !== input.digest || observed.size_bytes !== input.bytes.length) {
       throw reviewTransportError(
         'review_transport_persisted_bytes_tampered',
@@ -305,7 +358,7 @@ function persistBytesAtDigest(input: {
   }
 
   const temporary = path.join(
-    input.root,
+    root,
     `.${digestHex(input.digest)}.${process.pid}.${crypto.randomUUID()}.tmp`,
   );
   let descriptor: number | null = null;
@@ -321,7 +374,7 @@ function persistBytesAtDigest(input: {
       return { path: target, created: true };
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
-      const observed = stableFileObservation(target, pathToFileURL(target).href, { trustedRoot: input.root });
+      const observed = stableFileObservation(target, pathToFileURL(target).href, { trustedRoot: root });
       if (observed.sha256 !== input.digest || observed.size_bytes !== input.bytes.length) {
         throw reviewTransportError(
           'review_transport_persisted_bytes_tampered',
@@ -411,14 +464,14 @@ export function persistReviewerSnapshotObject(input: {
   expectedSizeBytes: number;
 }) {
   const roots = reviewTransportRoots();
-  fs.mkdirSync(roots.reviewer_snapshot_object_root, { recursive: true, mode: 0o700 });
+  const objectRoot = ensureReviewTransportDirectory(roots.reviewer_snapshot_object_root);
   const target = path.join(
-    roots.reviewer_snapshot_object_root,
+    objectRoot,
     `${digestHex(input.expectedSha256)}.bin`,
   );
   if (fs.existsSync(target)) {
     const observed = stableFileObservation(target, pathToFileURL(target).href, {
-      trustedRoot: roots.reviewer_snapshot_object_root,
+      trustedRoot: objectRoot,
     });
     if (observed.sha256 !== input.expectedSha256 || observed.size_bytes !== input.expectedSizeBytes) {
       throw reviewTransportError(
@@ -444,7 +497,7 @@ export function persistReviewerSnapshotObject(input: {
   }
 
   const temporary = path.join(
-    roots.reviewer_snapshot_object_root,
+    objectRoot,
     `.${digestHex(input.expectedSha256)}.${process.pid}.${crypto.randomUUID()}.tmp`,
   );
   let source: number | null = null;
@@ -538,7 +591,7 @@ export function persistReviewerSnapshotObject(input: {
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
       const observed = stableFileObservation(target, pathToFileURL(target).href, {
-        trustedRoot: roots.reviewer_snapshot_object_root,
+        trustedRoot: objectRoot,
       });
       if (observed.sha256 !== input.expectedSha256 || observed.size_bytes !== input.expectedSizeBytes) {
         throw reviewTransportError(
@@ -588,6 +641,19 @@ function readReviewTransportFileExactRefInternal(input: {
       'review_transport_exact_ref_not_file_url',
       'Review transport exact ref must be a local file URL.',
       { ref },
+    );
+  }
+  let canonicalRef: string;
+  try {
+    canonicalRef = pathToFileURL(fs.realpathSync.native(filePath)).href;
+  } catch {
+    canonicalRef = pathToFileURL(path.resolve(filePath)).href;
+  }
+  if (canonicalRef !== ref) {
+    throw reviewTransportError(
+      'review_transport_exact_ref_not_canonical',
+      'Review transport exact ref must use the canonical local file URL.',
+      { ref, canonical_ref: canonicalRef },
     );
   }
   if (!pathInside(filePath, input.trustedRoot)) {

@@ -94,13 +94,14 @@ function stagePackageUseBinding() {
       package_version: '0.2.2',
       owner_language_version: { scheme: 'pep440', value: '0.2.2' },
       package_lock_ref: 'opl://agent-package-lock/mas/0.2.2',
-      manifest_sha256: `sha256:${'1'.repeat(64)}`,
+      manifest_sha256: '1'.repeat(64),
       content_digest: `sha256:${'2'.repeat(64)}`,
       source_artifact_ref: 'oci://opl/mas@sha256:fixture',
       artifact_digest: `sha256:${'3'.repeat(64)}`,
+      source_kind: 'first_party_managed_cohort',
     },
     provider_packages: [],
-    dependency_closure_digest: `sha256:${'4'.repeat(64)}`,
+    dependency_closure_digest: '4'.repeat(64),
     core_skill_tree_digest: null,
     skill_tree_digest: null,
   };
@@ -198,7 +199,14 @@ function managed(checkoutRoot: string, workspaceRoot: string) {
       package_id: 'mas',
       workspace_root: fs.realpathSync.native(workspaceRoot),
       checkout_root: fs.realpathSync.native(checkoutRoot),
-      package_status: { launch_allowed: true },
+      package_status: {
+        installed_package_count: 1,
+        launch_allowed: true,
+        runtime_source_readiness: {
+          operational_ready: true,
+          checkout_path: fs.realpathSync.native(checkoutRoot),
+        },
+      },
       package_use_binding: packageUseBinding,
       use_boundary_id: packageUseBinding.use_boundary_id,
     };
@@ -220,10 +228,14 @@ function hostedSnapshot(input: {
     target_domain_id: 'medautoscience',
     package_id: 'mas',
     package_use_boundary_id: `package-use:${input.label}`,
+    package_use_receipt_ref: `opl://agent-package/use/${encodeURIComponent(input.label)}`,
     package_version: input.label,
     package_lock_ref: `opl://agent-package-lock/mas/${input.label}`,
+    package_manifest_sha256: '1'.repeat(64),
     package_content_digest: contentDigest,
     package_artifact_digest: artifactDigest,
+    package_dependency_closure_digest: '4'.repeat(64),
+    package_source_kind: 'first_party_managed_cohort',
   };
   return {
     source_kind: provenance.source_kind,
@@ -319,6 +331,18 @@ test('Hosted Handler action validates schemas, runs the callable, and persists e
     if (replay.standard_agent_action_run.execution_kind !== 'handler_ref') assert.fail();
     assert.equal(replay.standard_agent_action_run.output.sha256, run.output.sha256);
     assert.deepEqual(replay.standard_agent_action_run.result, run.result);
+    const durableBinding = inspectStandardAgentActionRunBinding({
+      workspaceRoot,
+      runId: 'handler-run',
+    });
+    assert.deepEqual(durableBinding?.hosted_runtime_binding, run.hosted_runtime_binding);
+    if (durableBinding?.hosted_runtime_binding.source_kind !== 'managed_package_checkout') assert.fail();
+    assert.equal(durableBinding.hosted_runtime_binding.package_use_receipt_ref,
+      'opl://agent-package/use/hosted-stage-test');
+    assert.equal(durableBinding.hosted_runtime_binding.package_manifest_sha256, '1'.repeat(64));
+    assert.equal(durableBinding.hosted_runtime_binding.package_dependency_closure_digest, '4'.repeat(64));
+    assert.equal(durableBinding.hosted_runtime_binding.package_source_kind,
+      'first_party_managed_cohort');
     assert.equal(handlerCalls, 1);
     await assert.rejects(
       runStandardAgentAction({
@@ -824,7 +848,23 @@ test('legacy v1 durable binding remains readable without an unbound v2 plan', ()
   const checkoutRoot = root('opl-action-v1-binding-checkout-');
   const workspaceRoot = root('opl-action-v1-binding-workspace-');
   try {
-    const snapshot = hostedSnapshot({ checkoutRoot, workspaceRoot, label: 'legacy-v1' });
+    const currentSnapshot = hostedSnapshot({ checkoutRoot, workspaceRoot, label: 'legacy-v1' });
+    if (currentSnapshot.provenance.source_kind !== 'managed_package_checkout') assert.fail();
+    const legacyProvenance = structuredClone(
+      currentSnapshot.provenance,
+    ) as unknown as Record<string, unknown>;
+    delete legacyProvenance.package_use_receipt_ref;
+    delete legacyProvenance.package_manifest_sha256;
+    delete legacyProvenance.package_dependency_closure_digest;
+    delete legacyProvenance.package_source_kind;
+    legacyProvenance.package_artifact_digest = null;
+    const snapshot = {
+      ...currentSnapshot,
+      provenance: legacyProvenance as unknown as HostedAgentRuntimeBindingProvenance,
+      provenance_ref: `opl://hosted-agent-runtime-binding/sha256/${sha256(
+        canonicalJsonBytes(legacyProvenance),
+      ).slice('sha256:'.length)}`,
+    };
     const binding = {
       surface_kind: 'opl_standard_agent_action_run_binding' as const,
       version: 'opl-standard-agent-action-run-binding.v1' as const,

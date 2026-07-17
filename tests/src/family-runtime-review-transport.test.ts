@@ -6,7 +6,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import { canonicalJsonText } from '../../src/kernel/canonical-json.ts';
+import { canonicalJsonBytes, canonicalJsonText } from '../../src/kernel/canonical-json.ts';
 import { FrameworkContractError } from '../../src/kernel/contract-validation.ts';
 import {
   materializeReviewerInputSnapshot,
@@ -15,7 +15,11 @@ import {
   type ReviewerInputSnapshotMaterializationRequest,
   type ReviewerInputSnapshotMember,
 } from '../../src/modules/runway/family-runtime-reviewer-input-snapshot.ts';
-import { reviewTransportRoots } from '../../src/modules/runway/family-runtime-review-transport-store.ts';
+import {
+  persistCanonicalReviewTransportJson,
+  reviewTransportRoots,
+} from '../../src/modules/runway/family-runtime-review-transport-store.ts';
+import { runFamilyRuntime } from '../../src/modules/runway/family-runtime.ts';
 import {
   materializeOplRevisionTransport,
   readOplRevisionIntake,
@@ -23,6 +27,7 @@ import {
 } from '../../src/modules/runway/family-runtime-revision-intake.ts';
 import type { StageReviewReceipt } from '../../src/modules/stagecraft/public/stage-quality-cycle.ts';
 import {
+  evaluateReviewEvidenceCacheReceipt,
   persistReviewEvidenceCacheCandidate,
   readReviewEvidenceCacheReceipt,
   reviewEvidenceCacheKey,
@@ -154,6 +159,26 @@ function withFixture(run: (fixture: { workspaceRoot: string; outsideRoot: string
   }
 }
 
+async function withAsyncFixture(
+  run: (fixture: { workspaceRoot: string; outsideRoot: string }) => Promise<void>,
+) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-review-transport-'));
+  const workspaceRoot = path.join(root, 'workspace');
+  const outsideRoot = path.join(root, 'outside');
+  const stateRoot = path.join(root, 'state');
+  fs.mkdirSync(workspaceRoot);
+  fs.mkdirSync(outsideRoot);
+  const previousStateRoot = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = stateRoot;
+  try {
+    await run({ workspaceRoot, outsideRoot });
+  } finally {
+    if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateRoot;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+}
+
 function assertFailureCode(run: () => unknown, expected: string) {
   assert.throws(run, (error: unknown) => (
     error instanceof FrameworkContractError
@@ -161,7 +186,11 @@ function assertFailureCode(run: () => unknown, expected: string) {
   ));
 }
 
-function pageEvidenceCandidate() {
+function pageEvidenceCandidate(input: {
+  reviewScopeSha256?: string;
+  reviewerAttemptRef?: string;
+  reviewerInvocationSha256?: string;
+} = {}) {
   const pages = [{
     page_number: 1,
     width: 1200,
@@ -169,7 +198,7 @@ function pageEvidenceCandidate() {
     pixel_format: 'RGB8' as const,
     pixel_sha256: sha256('page pixels'),
   }];
-  const reviewScopeSha256 = sha256('display scope');
+  const reviewScopeSha256 = input.reviewScopeSha256 ?? sha256('display scope');
   const rubricSha256 = sha256('display rubric');
   return {
     surface_kind: 'scholarskills_page_hash_evidence_candidate',
@@ -182,8 +211,8 @@ function pageEvidenceCandidate() {
     cache_key_sha256: reviewEvidenceCacheKey({ pages, reviewScopeSha256, rubricSha256 }),
     origin_reviewer_invocation_ref: {
       kind: 'opl_stage_attempt',
-      ref: 'opl://stage_attempts/reviewer',
-      sha256: sha256('reviewer invocation'),
+      ref: input.reviewerAttemptRef ?? 'opl://stage_attempts/reviewer',
+      sha256: input.reviewerInvocationSha256 ?? sha256('reviewer invocation'),
     },
     origin_reviewer_evidence_ref: {
       kind: 'scholarskills_display_evidence',
@@ -205,6 +234,41 @@ function pageEvidenceCandidate() {
       can_claim_current_package_authority: false,
     },
   };
+}
+
+function pageEvidenceFixture(
+  workspaceRoot: string,
+  lane: ReviewerInputSnapshotMaterializationRequest['review_lane'] = 'display',
+) {
+  const sourceRef = 'display.pdf';
+  const sourceBytes = Buffer.from('display review bytes\n');
+  fs.writeFileSync(path.join(workspaceRoot, sourceRef), sourceBytes);
+  const snapshot = materializeReviewerInputSnapshot(requestFor({
+    workspaceRoot,
+    lane,
+    members: [{
+      member_id: 'display-pdf',
+      role: 'review_pdf',
+      owner_ref: 'workspace://submission/display.pdf',
+      source_ref: sourceRef,
+      sha256: sha256(sourceBytes),
+      size_bytes: sourceBytes.length,
+    }],
+  }));
+  const candidate = pageEvidenceCandidate({
+    reviewScopeSha256: snapshot.manifest.review_scope_sha256,
+  });
+  const context = {
+    reviewer_attempt_ref: candidate.origin_reviewer_invocation_ref.ref,
+    execution_content_binding_sha256: candidate.origin_reviewer_invocation_ref.sha256,
+    snapshot_manifest_ref: snapshot.manifest_ref,
+    snapshot_manifest_sha256: snapshot.manifest_ref.sha256,
+    review_scope_sha256: candidate.review_scope_sha256,
+    rubric_sha256: candidate.rubric_sha256,
+    origin_reviewer_invocation_ref: candidate.origin_reviewer_invocation_ref,
+    origin_reviewer_evidence_ref: candidate.origin_reviewer_evidence_ref,
+  };
+  return { candidate, context, snapshot };
 }
 
 test('reviewer input snapshot freezes bytes and cache hits do not re-read changed live content', () => {
@@ -438,7 +502,7 @@ test('review transport rejects noncanonical manifest JSON and symlink swaps', ()
     fs.symlinkSync(outsideLeaf, manifestPath);
     assertFailureCode(
       () => readReviewerInputSnapshotManifest(materialized.manifest_ref),
-      'review_transport_exact_ref_untrusted_root',
+      'review_transport_exact_ref_not_canonical',
     );
     fs.rmSync(manifestPath);
     fs.writeFileSync(manifestPath, manifestBytes);
@@ -452,7 +516,7 @@ test('review transport rejects noncanonical manifest JSON and symlink swaps', ()
     fs.symlinkSync(outsideParent, manifestRoot);
     assertFailureCode(
       () => readReviewerInputSnapshotManifest(materialized.manifest_ref),
-      'review_transport_exact_ref_untrusted_root',
+      'review_transport_exact_ref_not_canonical',
     );
   });
 });
@@ -483,6 +547,7 @@ test('revision transport binds an immutable OPL review receipt without claiming 
       },
       opl_review_evidence_cache_receipt_ref: null,
       opl_review_evidence_cache_receipt: null,
+      opl_review_evidence_cache_receipt_evaluation: null,
       finding_lineage: {
         review_kind: 'finding_closure_review',
         finding_ids: ['finding:revision-1'],
@@ -525,12 +590,12 @@ test('revision transport binds an immutable OPL review receipt without claiming 
 });
 
 test('page evidence cache persists exact receipts while cache hits still require fresh review', () => {
-  withFixture(() => {
-    const candidate = pageEvidenceCandidate();
-    const first = persistReviewEvidenceCacheCandidate(candidate);
+  withFixture(({ workspaceRoot }) => {
+    const { candidate, context } = pageEvidenceFixture(workspaceRoot);
+    const first = persistReviewEvidenceCacheCandidate(candidate, context);
     assert.equal(first.receipt.status, 'cache_miss_stored');
     assert.equal(first.receipt.cache_hit, false);
-    const second = persistReviewEvidenceCacheCandidate(candidate);
+    const second = persistReviewEvidenceCacheCandidate(candidate, context);
     assert.equal(second.receipt.status, 'cache_hit');
     assert.equal(second.receipt.cache_hit, true);
     for (const receipt of [first.receipt, second.receipt]) {
@@ -539,9 +604,209 @@ test('page evidence cache persists exact receipts while cache hits still require
       assert.equal(receipt.requires_fresh_reviewer_receipt, true);
       assert.equal(receipt.requires_mas_judgment, true);
     }
-    const readback = readReviewEvidenceCacheReceipt(second.receipt_ref);
+    const readback = readReviewEvidenceCacheReceipt(second.receipt_ref, context);
     assert.deepEqual(readback.receipt_ref, second.receipt_ref);
     assert.deepEqual(readback.receipt, second.receipt);
+    const evaluation = evaluateReviewEvidenceCacheReceipt(second.receipt_ref, context);
+    assert.equal(evaluation.status, 'cache_reusable');
+    assert.equal(evaluation.cache_reuse_eligible, true);
+    assert.equal(evaluation.requires_fresh_reviewer_invocation, true);
+    assert.equal(evaluation.requires_fresh_reviewer_receipt, true);
+  });
+});
+
+test('page evidence cache treats missing or different Attempt context as non-blocking quality debt', () => {
+  withFixture(({ workspaceRoot }) => {
+    const { candidate, context } = pageEvidenceFixture(workspaceRoot);
+    const missing = persistReviewEvidenceCacheCandidate(candidate);
+    assert.equal(missing.receipt.status, 'stored_not_reusable');
+    assert.equal(missing.receipt.cache_reuse_eligible, false);
+    assert.equal(missing.receipt.quality_debt?.reason_code,
+      'review_evidence_cache_context_binding_missing');
+    assert.equal(missing.receipt.stage_transition_allowed, true);
+    assert.equal(missing.receipt.typed_blocker_ref, null);
+
+    const current = persistReviewEvidenceCacheCandidate(candidate, context);
+    const substitutedAttempt = evaluateReviewEvidenceCacheReceipt(current.receipt_ref, {
+      ...context,
+      reviewer_attempt_ref: 'opl://stage_attempts/different-reviewer',
+    });
+    assert.equal(substitutedAttempt.status, 'quality_debt');
+    assert.equal(substitutedAttempt.cache_reuse_eligible, false);
+    assert.equal(substitutedAttempt.quality_debt?.reason_code,
+      'review_evidence_cache_receipt_context_mismatch');
+    assert.equal(substitutedAttempt.stage_transition_allowed, true);
+    assert.equal(substitutedAttempt.typed_blocker_ref, null);
+
+    const contradictory = persistReviewEvidenceCacheCandidate(candidate, {
+      ...context,
+      reviewer_attempt_ref: 'opl://stage_attempts/contradictory-reviewer',
+    });
+    assert.equal(contradictory.receipt.status, 'stored_not_reusable');
+    assert.equal(contradictory.receipt.quality_debt?.reason_code,
+      'review_evidence_cache_context_binding_invalid');
+    assert.equal(contradictory.receipt.stage_transition_allowed, true);
+    assert.equal(contradictory.receipt.typed_blocker_ref, null);
+  });
+});
+
+test('page evidence cache rejects a non-display snapshot as non-blocking context debt', () => {
+  withFixture(({ workspaceRoot }) => {
+    const { candidate, context } = pageEvidenceFixture(workspaceRoot, 'medical');
+    const persisted = persistReviewEvidenceCacheCandidate(candidate, context);
+    assert.equal(persisted.receipt.status, 'stored_not_reusable');
+    assert.equal(persisted.receipt.quality_debt?.reason_code,
+      'review_evidence_cache_context_binding_invalid');
+    assert.equal(persisted.receipt.stage_transition_allowed, true);
+    assert.equal(persisted.receipt.typed_blocker_ref, null);
+  });
+});
+
+test('page evidence cache fails closed when persisted receipt bytes are modified', () => {
+  withFixture(({ workspaceRoot }) => {
+    const { candidate, context } = pageEvidenceFixture(workspaceRoot);
+    const persisted = persistReviewEvidenceCacheCandidate(candidate, context);
+    const receiptPath = fileURLToPath(persisted.receipt_ref.ref);
+    fs.chmodSync(receiptPath, 0o600);
+    fs.writeFileSync(receiptPath, `${fs.readFileSync(receiptPath, 'utf8')}\n`);
+    assertFailureCode(
+      () => evaluateReviewEvidenceCacheReceipt(persisted.receipt_ref, context),
+      'review_transport_exact_ref_byte_mismatch',
+    );
+  });
+});
+
+test('page evidence cache verifies snapshot members and persisted entry origins before reuse', () => {
+  withFixture(({ workspaceRoot }) => {
+    const firstFixture = pageEvidenceFixture(workspaceRoot);
+    const immutableRef = firstFixture.snapshot.manifest.members[0]!.immutable_ref;
+    const immutablePath = fileURLToPath(immutableRef.ref);
+    fs.chmodSync(immutablePath, 0o600);
+    fs.writeFileSync(immutablePath, 'tampered display review bytes\n');
+    assertFailureCode(
+      () => persistReviewEvidenceCacheCandidate(firstFixture.candidate, firstFixture.context),
+      'review_transport_exact_ref_byte_mismatch',
+    );
+  });
+
+  withFixture(({ workspaceRoot }) => {
+    const { candidate, context } = pageEvidenceFixture(workspaceRoot);
+    const first = persistReviewEvidenceCacheCandidate(candidate, context);
+    assert.ok(first.receipt.stored_entry_ref);
+    const entryPath = fileURLToPath(first.receipt.stored_entry_ref!.ref);
+    const entry = JSON.parse(fs.readFileSync(entryPath, 'utf8')) as Record<string, unknown>;
+    const replacement = {
+      ...entry,
+      origin_reviewer_invocation_ref: {
+        kind: 'opl_stage_attempt',
+        ref: 'opl://stage_attempts/replacement',
+        sha256: sha256('replacement invocation'),
+      },
+      origin_reviewer_evidence_ref: {
+        kind: 'scholarskills_display_evidence',
+        ref: 'scholarskills://display-evidence/replacement',
+        sha256: sha256('replacement evidence'),
+      },
+    };
+    const replacementBytes = canonicalJsonBytes(replacement);
+    const replacementPath = path.join(
+      path.dirname(entryPath),
+      `${sha256(replacementBytes).slice('sha256:'.length)}.json`,
+    );
+    fs.rmSync(entryPath);
+    fs.writeFileSync(replacementPath, replacementBytes, { mode: 0o444 });
+    assertFailureCode(
+      () => persistReviewEvidenceCacheCandidate(candidate, context),
+      'review_evidence_cache_entry_context_mismatch',
+    );
+  });
+});
+
+test('page evidence cache refuses symlink persistence roots before creating outside bytes', () => {
+  withFixture(({ outsideRoot }) => {
+    const roots = reviewTransportRoots();
+    fs.mkdirSync(path.dirname(roots.evidence_cache_candidate_root), { recursive: true });
+    fs.symlinkSync(outsideRoot, roots.evidence_cache_candidate_root, 'dir');
+    const before = fs.readdirSync(outsideRoot);
+    assertFailureCode(
+      () => persistReviewEvidenceCacheCandidate(pageEvidenceCandidate()),
+      'review_transport_persist_root_untrusted',
+    );
+    assert.deepEqual(fs.readdirSync(outsideRoot), before);
+  });
+});
+
+test('page evidence cache binds unsupported receipt bodies and canonical top-level refs', () => {
+  withFixture(({ workspaceRoot }) => {
+    const { candidate, context } = pageEvidenceFixture(workspaceRoot);
+    const current = persistReviewEvidenceCacheCandidate(candidate, context);
+    const aliasRef = {
+      ...current.receipt_ref,
+      ref: current.receipt_ref.ref.replace('/receipts/', '/receipts/../receipts/'),
+    };
+    assertFailureCode(
+      () => evaluateReviewEvidenceCacheReceipt(aliasRef, context),
+      'review_transport_exact_ref_not_canonical',
+    );
+
+    const legacyBody = {
+      surface_kind: 'opl_review_evidence_cache_receipt',
+      schema_version: 1,
+      status: 'legacy',
+    };
+    const legacy = persistCanonicalReviewTransportJson({
+      root: reviewTransportRoots().evidence_cache_receipt_root,
+      kind: 'opl_review_evidence_cache_receipt',
+      value: legacyBody,
+    });
+    const evaluation = evaluateReviewEvidenceCacheReceipt(
+      legacy.exact_ref,
+      context,
+      legacyBody,
+    );
+    assert.equal(evaluation.status, 'quality_debt');
+    assert.equal(evaluation.quality_debt?.reason_code,
+      'review_evidence_cache_receipt_unsupported');
+    assertFailureCode(
+      () => evaluateReviewEvidenceCacheReceipt(
+        legacy.exact_ref,
+        context,
+        { ...legacyBody, status: 'substituted' },
+      ),
+      'review_evidence_cache_receipt_persisted_body_mismatch',
+    );
+  });
+});
+
+test('family-runtime review evidence-cache accepts current context and keeps legacy candidate intake', async () => {
+  await withAsyncFixture(async ({ workspaceRoot }) => {
+    const { candidate, context } = pageEvidenceFixture(workspaceRoot);
+    const wrapped = await runFamilyRuntime([
+      'review',
+      'evidence-cache',
+      '--payload',
+      JSON.stringify({ candidate, context_binding: context }),
+    ]);
+    const wrappedReceipt = (wrapped.family_runtime_review_evidence_cache as {
+      receipt: Record<string, unknown>;
+    }).receipt;
+    assert.equal(wrappedReceipt.status, 'cache_miss_stored');
+    assert.equal(wrappedReceipt.cache_reuse_eligible, true);
+
+    const legacy = await runFamilyRuntime([
+      'review',
+      'evidence-cache',
+      '--payload',
+      JSON.stringify(candidate),
+    ]);
+    const legacyReceipt = (legacy.family_runtime_review_evidence_cache as {
+      receipt: Record<string, unknown>;
+    }).receipt;
+    assert.equal(legacyReceipt.status, 'stored_not_reusable');
+    assert.equal((legacyReceipt.quality_debt as Record<string, unknown>).reason_code,
+      'review_evidence_cache_context_binding_missing');
+    assert.equal(legacyReceipt.stage_transition_allowed, true);
+    assert.equal(legacyReceipt.typed_blocker_ref, null);
   });
 });
 

@@ -472,9 +472,16 @@ export async function runFamilyRuntime(
       };
     }
     if (parsed.mode === 'review_evidence_cache_persist') {
+      const wrapped = isRecord(parsed.input.candidate)
+        || Object.hasOwn(parsed.input, 'context_binding');
+      const candidate = wrapped ? parsed.input.candidate : parsed.input;
+      const contextBinding = wrapped ? parsed.input.context_binding : undefined;
       return {
         version: 'g2',
-        family_runtime_review_evidence_cache: persistReviewEvidenceCacheCandidate(parsed.input),
+        family_runtime_review_evidence_cache: persistReviewEvidenceCacheCandidate(
+          candidate,
+          wrapped ? contextBinding : undefined,
+        ),
       };
     }
     if (parsed.mode === 'evidence_worklist') {

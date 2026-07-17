@@ -255,6 +255,14 @@ function sha256Digest(value: unknown, field: string) {
   return digest;
 }
 
+function packageSha256Digest(value: unknown, field: string) {
+  const digest = text(value, field);
+  if (!/^(?:sha256:)?[a-f0-9]{64}$/.test(digest)) {
+    fail(`${field} must be a package sha256 digest.`, { field });
+  }
+  return digest;
+}
+
 function nullableSha256Digest(value: unknown, field: string) {
   return value === null ? null : sha256Digest(value, field);
 }
@@ -278,10 +286,14 @@ function hostedRuntimeProvenanceRecord(value: Record<string, unknown>): HostedAg
       ? [
           'package_id',
           'package_use_boundary_id',
+          'package_use_receipt_ref',
           'package_version',
           'package_lock_ref',
+          'package_manifest_sha256',
           'package_content_digest',
           'package_artifact_digest',
+          'package_dependency_closure_digest',
+          'package_source_kind',
         ]
       : fail('Hosted runtime provenance has an unsupported source_kind.');
   exactKeys(value, [...commonKeys, ...sourceKeys], 'Hosted runtime provenance');
@@ -295,6 +307,35 @@ function hostedRuntimeProvenanceRecord(value: Record<string, unknown>): HostedAg
   }
   if (sourceKind === 'managed_package_checkout') {
     const packageId = text(value.package_id, 'provenance.package_id');
+    const packageSourceKind = value.package_source_kind === undefined
+      ? undefined
+      : text(value.package_source_kind, 'provenance.package_source_kind');
+    if (
+      packageSourceKind !== undefined
+      && ![
+        'first_party_managed_cohort',
+        'bundled_full_runtime_modules',
+        'local_manifest_file',
+        'manifest_url',
+        'manifest_import',
+        'developer_checkout_override',
+      ].includes(packageSourceKind)
+    ) {
+      fail('provenance.package_source_kind is not supported.', {
+        package_source_kind: packageSourceKind,
+      });
+    }
+    const packageArtifactDigest = nullableSha256Digest(
+      value.package_artifact_digest,
+      'provenance.package_artifact_digest',
+    );
+    if (
+      packageArtifactDigest === null
+      && packageSourceKind !== undefined
+      && packageSourceKind !== 'developer_checkout_override'
+    ) {
+      fail('Only developer checkout provenance may omit package_artifact_digest.');
+    }
     if (packageId !== targetAgentId) {
       fail('Managed package provenance package_id must match target_agent_id.', {
         package_id: packageId,
@@ -309,16 +350,32 @@ function hostedRuntimeProvenanceRecord(value: Record<string, unknown>): HostedAg
       target_domain_id: targetDomainId,
       package_id: packageId,
       package_use_boundary_id: text(value.package_use_boundary_id, 'provenance.package_use_boundary_id'),
-      package_version: nullableText(value.package_version, 'provenance.package_version'),
-      package_lock_ref: nullableText(value.package_lock_ref, 'provenance.package_lock_ref'),
-      package_content_digest: nullableSha256Digest(
+      ...(value.package_use_receipt_ref === undefined ? {} : {
+        package_use_receipt_ref: text(
+          value.package_use_receipt_ref,
+          'provenance.package_use_receipt_ref',
+        ),
+      }),
+      package_version: text(value.package_version, 'provenance.package_version'),
+      package_lock_ref: text(value.package_lock_ref, 'provenance.package_lock_ref'),
+      ...(value.package_manifest_sha256 === undefined ? {} : {
+        package_manifest_sha256: packageSha256Digest(
+          value.package_manifest_sha256,
+          'provenance.package_manifest_sha256',
+        ),
+      }),
+      package_content_digest: sha256Digest(
         value.package_content_digest,
         'provenance.package_content_digest',
       ),
-      package_artifact_digest: nullableSha256Digest(
-        value.package_artifact_digest,
-        'provenance.package_artifact_digest',
-      ),
+      package_artifact_digest: packageArtifactDigest,
+      ...(value.package_dependency_closure_digest === undefined ? {} : {
+        package_dependency_closure_digest: packageSha256Digest(
+          value.package_dependency_closure_digest,
+          'provenance.package_dependency_closure_digest',
+        ),
+      }),
+      ...(packageSourceKind === undefined ? {} : { package_source_kind: packageSourceKind }),
     };
   }
   if (
@@ -707,10 +764,26 @@ function assertPlanRuntimeIdentity(
     if (
       packageBinding.surface_kind !== 'opl_agent_package_use_binding.v1'
       || rootPackage.package_id !== provenance.package_id
+      || (
+        provenance.package_use_receipt_ref !== undefined
+        && packageBinding.use_receipt_ref !== provenance.package_use_receipt_ref
+      )
       || nullableRecordText(rootPackage, 'package_version') !== provenance.package_version
       || nullableRecordText(rootPackage, 'package_lock_ref') !== provenance.package_lock_ref
+      || (
+        provenance.package_manifest_sha256 !== undefined
+        && nullableRecordText(rootPackage, 'manifest_sha256') !== provenance.package_manifest_sha256
+      )
       || nullableRecordText(rootPackage, 'content_digest') !== provenance.package_content_digest
       || nullableRecordText(rootPackage, 'artifact_digest') !== provenance.package_artifact_digest
+      || (
+        provenance.package_dependency_closure_digest !== undefined
+        && packageBinding.dependency_closure_digest !== provenance.package_dependency_closure_digest
+      )
+      || (
+        provenance.package_source_kind !== undefined
+        && rootPackage.source_kind !== provenance.package_source_kind
+      )
     ) {
       fail('Managed package-use identity conflicts with runtime provenance.', { run_id: plan.run_id });
     }
