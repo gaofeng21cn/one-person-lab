@@ -295,24 +295,34 @@ test('explicit developer checkout records provenance and runs an immutable manag
     fs.writeFileSync(snapshotRuntimePath, 'snapshot provenance drift\n');
     const snapshotDrift = runCli(['packages', 'status', '--package-id', FIXTURE_MAS_PACKAGE_ID], env) as any;
     assert.equal(snapshotDrift.opl_agent_package_status.runtime_source_readiness.status, 'incompatible');
-    assert.equal(snapshotDrift.opl_agent_package_status.runtime_source_readiness.operational_ready, true);
-    assert.equal(snapshotDrift.opl_agent_package_status.runtime_source_readiness.reason, 'managed_runtime_source_observation_changed');
+    assert.equal(snapshotDrift.opl_agent_package_status.runtime_source_readiness.operational_ready, false);
+    assert.equal(
+      snapshotDrift.opl_agent_package_status.runtime_source_readiness.reason,
+      'managed_runtime_source_snapshot_integrity_mismatch',
+    );
     assert.equal(snapshotDrift.opl_agent_package_status.runtime_source_readiness.provenance_observation.runtime_snapshot.status, 'changed');
-    assert.equal(snapshotDrift.opl_agent_package_status.launch_allowed, true);
+    assert.equal(snapshotDrift.opl_agent_package_status.launch_allowed, false);
     fs.writeFileSync(snapshotRuntimePath, snapshotRuntime);
     fs.chmodSync(snapshotRuntimePath, 0o444);
+
+    const missingSnapshotDigest = managedRuntimeSourceReadiness({
+      ...installedSource,
+      runtime_snapshot_sha256: null,
+    } as any);
+    assert.equal(missingSnapshotDigest.operational_ready, false);
+    assert.equal(missingSnapshotDigest.reason, 'managed_runtime_source_snapshot_digest_missing');
 
     const snapshotContractPath = path.join(snapshotPath, 'contracts', 'domain_descriptor.json');
     const snapshotContract = fs.readFileSync(snapshotContractPath);
     fs.chmodSync(path.dirname(snapshotContractPath), 0o755);
     fs.rmSync(snapshotContractPath);
-    const probeFailed = runCli(['packages', 'status', '--package-id', FIXTURE_MAS_PACKAGE_ID], env) as any;
-    assert.equal(probeFailed.opl_agent_package_status.runtime_source_readiness.status, 'incompatible');
+    const snapshotContractMissing = runCli(['packages', 'status', '--package-id', FIXTURE_MAS_PACKAGE_ID], env) as any;
+    assert.equal(snapshotContractMissing.opl_agent_package_status.runtime_source_readiness.status, 'incompatible');
     assert.equal(
-      probeFailed.opl_agent_package_status.runtime_source_readiness.reason,
-      'managed_runtime_source_probe_failed',
+      snapshotContractMissing.opl_agent_package_status.runtime_source_readiness.reason,
+      'managed_runtime_source_snapshot_integrity_mismatch',
     );
-    assert.equal(probeFailed.opl_agent_package_status.launch_allowed, false);
+    assert.equal(snapshotContractMissing.opl_agent_package_status.launch_allowed, false);
     fs.writeFileSync(snapshotContractPath, snapshotContract, { mode: 0o444 });
     fs.chmodSync(path.dirname(snapshotContractPath), 0o555);
     const recovered = runCli(['packages', 'status', '--package-id', FIXTURE_MAS_PACKAGE_ID], env) as any;
@@ -775,6 +785,9 @@ test('bundled Full runtime source requires a matching carrier marker and rejects
     assert.equal(adopted.after?.source_git_head_sha, 'a'.repeat(40));
     assert.equal(adopted.after?.source_mode, 'bundled_full_runtime');
     assert.equal(adopted.after?.channel_version, null);
+    const ready = managedRuntimeSourceReadiness(adopted.after);
+    assert.equal(ready.status, 'current');
+    assert.equal(ready.operational_ready, true);
 
     const invalid = runCliFailure([
       'packages', 'install', '--manifest-url', manifestPath, '--trust-tier', 'first_party',
@@ -795,10 +808,10 @@ test('bundled Full runtime source requires a matching carrier marker and rejects
     fs.writeFileSync(path.join(bundledRoot, 'runtime.txt'), 'drifted bundled source\n');
     const drifted = managedRuntimeSourceReadiness(adopted.after);
     assert.equal(drifted.status, 'incompatible');
-    assert.equal(drifted.operational_ready, true);
+    assert.equal(drifted.operational_ready, false);
     assert.equal(
       drifted.reason,
-      'managed_runtime_source_observation_changed',
+      'managed_runtime_source_identity_mismatch',
     );
   } finally {
     removeFixtureTree(stateDir);
@@ -1158,7 +1171,10 @@ test('Packages compensates managed runtime source across downstream failure upda
       '--scope', 'workspace', '--target-workspace', workspaceRoot,
     ], env) as any;
     assert.equal(missingRuntimeStatus.opl_agent_package_status.runtime_source_readiness.status, 'incompatible');
-    assert.equal(missingRuntimeStatus.opl_agent_package_status.runtime_source_readiness.reason, 'managed_runtime_source_probe_failed');
+    assert.equal(
+      missingRuntimeStatus.opl_agent_package_status.runtime_source_readiness.reason,
+      'managed_runtime_source_identity_mismatch',
+    );
     assert.equal(missingRuntimeStatus.opl_agent_package_status.launch_allowed, false);
     fs.writeFileSync(requiredPackPath, requiredPackBytes);
     Object.assign(env, writeManagedRuntimeSourceFixture({
@@ -1192,13 +1208,16 @@ test('Packages compensates managed runtime source across downstream failure upda
       '--scope', 'workspace', '--target-workspace', workspaceRoot,
     ], env) as any;
     assert.equal(driftedStatus.opl_agent_package_status.runtime_source_readiness.status, 'incompatible');
-    assert.equal(driftedStatus.opl_agent_package_status.runtime_source_readiness.operational_ready, true);
+    assert.equal(driftedStatus.opl_agent_package_status.runtime_source_readiness.operational_ready, false);
     assert.equal(
       driftedStatus.opl_agent_package_status.runtime_source_readiness.reason,
-      'managed_runtime_source_observation_changed',
+      'managed_runtime_source_identity_mismatch',
     );
-    assert.equal(driftedStatus.opl_agent_package_status.launch_allowed, true);
-    assert.equal(driftedStatus.opl_agent_package_status.launch_blocked_reason, null);
+    assert.equal(driftedStatus.opl_agent_package_status.launch_allowed, false);
+    assert.equal(
+      driftedStatus.opl_agent_package_status.launch_blocked_reason,
+      'runtime_source_incompatible',
+    );
     const staleManifestIndex = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
     staleManifestIndex.packages.find(
       (entry: any) => entry.package_id === FIXTURE_RCA_PACKAGE_ID,
@@ -1373,12 +1392,12 @@ test('Packages recovers durable runtime-source markers after interrupted apply a
     assert.equal(recoveredStatus.opl_agent_package_status.runtime_source_recovery.recovered_transaction_count, 0);
     assert.equal(fs.readFileSync(path.join(modulesRoot, 'redcube-ai', '.runtime-prepared'), 'utf8').trim(), '0.1.1');
     assert.equal(recoveredStatus.opl_agent_package_status.runtime_source_readiness.status, 'incompatible');
-    assert.equal(recoveredStatus.opl_agent_package_status.runtime_source_readiness.operational_ready, true);
+    assert.equal(recoveredStatus.opl_agent_package_status.runtime_source_readiness.operational_ready, false);
     assert.equal(
       recoveredStatus.opl_agent_package_status.runtime_source_readiness.reason,
-      'managed_runtime_source_observation_changed',
+      'managed_runtime_source_identity_mismatch',
     );
-    assert.equal(recoveredStatus.opl_agent_package_status.launch_allowed, true);
+    assert.equal(recoveredStatus.opl_agent_package_status.launch_allowed, false);
     assert.deepEqual(fs.readFileSync(appliedMarkerPath), appliedMarkerBytes);
 
     runCli(['packages', 'update', '--package-id', FIXTURE_RCA_PACKAGE_ID], env);
@@ -1593,12 +1612,12 @@ test('MAS package install probes its declarative source carrier instead of a ret
     const tamperedStatus = runCli(['packages', 'status', '--package-id', FIXTURE_MAS_PACKAGE_ID], env) as any;
     assert.equal(fs.existsSync(maliciousSentinel), false);
     assert.equal(tamperedStatus.opl_agent_package_status.runtime_source_readiness.status, 'incompatible');
-    assert.equal(tamperedStatus.opl_agent_package_status.runtime_source_readiness.operational_ready, true);
+    assert.equal(tamperedStatus.opl_agent_package_status.runtime_source_readiness.operational_ready, false);
     assert.equal(
       tamperedStatus.opl_agent_package_status.runtime_source_readiness.reason,
-      'managed_runtime_source_observation_changed',
+      'managed_runtime_source_command_drift',
     );
-    assert.equal(tamperedStatus.opl_agent_package_status.launch_allowed, true);
+    assert.equal(tamperedStatus.opl_agent_package_status.launch_allowed, false);
 
     const repaired = runCli(['packages', 'repair', '--package-id', FIXTURE_MAS_PACKAGE_ID], env) as any;
     assert.notDeepEqual(

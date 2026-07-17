@@ -21,6 +21,7 @@ import {
   type VersionRegistry,
 } from '../foundry/index.ts';
 import { foundryStoragePaths, LedgerVersionRegistry } from '../ledger/index.ts';
+import { packageLaunchHardStopReason } from './family-runtime-package-readiness.ts';
 import { resolveStandardAgentManagedCheckout } from './standard-agent-managed-checkout.ts';
 
 const PROVENANCE_VERSION = 'opl-hosted-agent-runtime-binding-provenance.v1' as const;
@@ -56,10 +57,14 @@ export type PackageHostedAgentRuntimeBindingProvenance = {
   target_domain_id: string;
   package_id: string;
   package_use_boundary_id: string;
-  package_version: string | null;
-  package_lock_ref: string | null;
-  package_content_digest: string | null;
+  package_use_receipt_ref?: string;
+  package_version: string;
+  package_lock_ref: string;
+  package_manifest_sha256?: string;
+  package_content_digest: string;
   package_artifact_digest: string | null;
+  package_dependency_closure_digest?: string;
+  package_source_kind?: string;
 };
 
 export type HostedAgentRuntimeBindingProvenance =
@@ -159,7 +164,11 @@ function requireDigest(value: unknown, field: string) {
   if (!/^sha256:[a-f0-9]{64}$/.test(digest)) fail(`${field} must be a sha256 digest.`, { field });
   return digest;
 }
-
+function requirePackageDigest(value: unknown, field: string) {
+  const digest = requireString(value, field);
+  if (!/^(?:sha256:)?[a-f0-9]{64}$/.test(digest)) fail(`${field} must be a package sha256 digest.`, { field });
+  return digest;
+}
 function existingWorkspaceRoot(input: string) {
   if (!path.isAbsolute(input)) {
     fail('Hosted Agent action requires an absolute workspace root.', { workspace_root: input });
@@ -577,14 +586,42 @@ function durablePreparedRuntimeBindingRef(input: {
   return verification.runtime_binding_ref;
 }
 
-function packageString(record: Record<string, unknown> | null, field: string) {
-  const value = record?.[field];
-  return typeof value === 'string' && value.length > 0 ? value : null;
+function requiredRecord(value: unknown, field: string) {
+  if (!isRecord(value)) fail(`${field} must be an object.`, { field });
+  return value;
 }
-
 function managedPackageProvenance(managed: ManagedCheckout): PackageHostedAgentRuntimeBindingProvenance {
-  const useBinding = isRecord(managed.package_use_binding) ? managed.package_use_binding : null;
-  const rootPackage = useBinding && isRecord(useBinding.root_package) ? useBinding.root_package : null;
+  const packageStatus = requiredRecord(managed.package_status, 'package_status');
+  const sourceReadiness = requiredRecord(packageStatus.runtime_source_readiness, 'runtime_source_readiness');
+  const useBinding = requiredRecord(managed.package_use_binding, 'package_use_binding');
+  const rootPackage = requiredRecord(useBinding.root_package, 'package_use_binding.root_package');
+  const launchHardStop = packageLaunchHardStopReason(packageStatus);
+  const readinessCheckoutRoot = fs.realpathSync.native(requireString(sourceReadiness.checkout_path, 'checkout_path'));
+  if (
+    managed.package_id !== managed.agent.agent_id
+    || launchHardStop !== null
+    || sourceReadiness?.operational_ready !== true
+    || readinessCheckoutRoot !== managed.checkout_root
+    || useBinding.surface_kind !== 'opl_agent_package_use_binding.v1'
+    || requireString(useBinding.use_boundary_id, 'package_use_binding.use_boundary_id')
+      !== managed.use_boundary_id
+    || requireString(rootPackage.package_id, 'package_use_binding.root_package.package_id')
+      !== managed.package_id
+  ) {
+    fail('Managed checkout, readiness, and package-use identities must resolve as one launchable binding.', {
+      package_id: managed.package_id,
+      agent_id: managed.agent.agent_id,
+      launch_blocked_reason: launchHardStop,
+      use_boundary_id: managed.use_boundary_id,
+    });
+  }
+  const packageSourceKind = requireString(rootPackage.source_kind, 'root_package.source_kind');
+  if (!['first_party_managed_cohort', 'bundled_full_runtime_modules', 'local_manifest_file',
+    'manifest_url', 'manifest_import', 'developer_checkout_override',
+  ].includes(packageSourceKind)) fail('root_package.source_kind is not supported.', { package_source_kind: packageSourceKind });
+  const artifactDigest = rootPackage.artifact_digest === null && packageSourceKind === 'developer_checkout_override'
+    ? null
+    : requirePackageDigest(rootPackage.artifact_digest, 'root_package.artifact_digest');
   return {
     surface_kind: 'opl_hosted_agent_runtime_binding_provenance',
     version: PROVENANCE_VERSION,
@@ -593,10 +630,14 @@ function managedPackageProvenance(managed: ManagedCheckout): PackageHostedAgentR
     target_domain_id: managed.agent.target_domain_id,
     package_id: managed.package_id,
     package_use_boundary_id: managed.use_boundary_id,
-    package_version: packageString(rootPackage, 'package_version'),
-    package_lock_ref: packageString(rootPackage, 'package_lock_ref'),
-    package_content_digest: packageString(rootPackage, 'content_digest'),
-    package_artifact_digest: packageString(rootPackage, 'artifact_digest'),
+    package_use_receipt_ref: requireString(useBinding.use_receipt_ref, 'package_use_binding.use_receipt_ref'),
+    package_version: requireString(rootPackage.package_version, 'package_use_binding.root_package.package_version'),
+    package_lock_ref: requireString(rootPackage.package_lock_ref, 'package_use_binding.root_package.package_lock_ref'),
+    package_manifest_sha256: requirePackageDigest(rootPackage.manifest_sha256, 'root_package.manifest_sha256'),
+    package_content_digest: requirePackageDigest(rootPackage.content_digest, 'root_package.content_digest'),
+    package_artifact_digest: artifactDigest,
+    package_dependency_closure_digest: requirePackageDigest(useBinding.dependency_closure_digest, 'dependency_closure_digest'),
+    package_source_kind: packageSourceKind,
   };
 }
 
@@ -787,9 +828,18 @@ export class DefaultHostedAgentRuntimeBindingResolver implements HostedAgentRunt
       });
     }
 
+    const targetAgentId = requireString(provenance.target_agent_id, 'provenance.target_agent_id');
+    if (provenance.package_id !== targetAgentId) {
+      fail('Pinned managed package provenance does not match its Standard Agent identity.', {
+        target_agent_id: targetAgentId,
+        package_id: provenance.package_id,
+      });
+    }
+    const packageUseBoundaryId = requireString(provenance.package_use_boundary_id, 'provenance.package_use_boundary_id');
     const managed = await this.#resolveManagedCheckout({
-      domainId: provenance.target_agent_id,
+      domainId: targetAgentId,
       workspaceRoot,
+      useBoundaryId: packageUseBoundaryId,
     });
     const resolvedProvenance = managedPackageProvenance(managed);
     if (canonicalJsonText(resolvedProvenance) !== canonicalJsonText(provenance)) {

@@ -358,7 +358,15 @@ function sourceState(input: {
     source_git_head_sha: lifecycle.current.source_git_head_sha,
     tree_sha256: lifecycle.current.tree_sha256,
     rollback_ref: lifecycle.rollback_ref,
-    ...input.preparation,
+    preparation_status: input.preparation.preparation_status,
+    bootstrap_command: input.preparation.bootstrap_command,
+    package_prepare_command: input.preparation.package_prepare_command,
+    health_check_command: input.preparation.health_check_command,
+    handler_probe_command: input.preparation.handler_probe_command,
+    health_output_sha256: input.preparation.health_output_sha256,
+    handler_probe_output_sha256: input.preparation.handler_probe_output_sha256,
+    preparation_root: input.preparation.preparation_root,
+    preparation_scope: input.preparation.preparation_scope,
   };
 }
 
@@ -406,12 +414,26 @@ function validateCurrentState(state: AgentPackageManagedRuntimeSourceState) {
       tree_sha256: verified.treeSha256,
     };
   }
-  return sourceState({
+  const current = sourceState({
     config: { carrier_kind: state.carrier_kind, module_id: state.module_id },
     checkoutPath: state.checkout_path,
     ownership: state.ownership,
     preparation: state,
   });
+  if (current.channel_version !== state.channel_version
+    || current.artifact_ref !== state.artifact_ref
+    || current.layer_digest !== state.layer_digest
+    || current.source_archive_sha256 !== state.source_archive_sha256
+    || current.source_git_head_sha !== state.source_git_head_sha
+    || current.tree_sha256 !== state.tree_sha256) {
+    throw sourceFailure('Managed runtime source carrier no longer matches its persisted lock identity.', {
+      module_id: state.module_id,
+      checkout_path: state.checkout_path,
+      expected_tree_sha256: state.tree_sha256,
+      actual_tree_sha256: current.tree_sha256,
+    });
+  }
+  return current;
 }
 
 function commandDigest(stdout: string, stderr: string) {
@@ -629,26 +651,39 @@ function developerCheckoutReadiness(state: AgentPackageManagedRuntimeSourceState
     };
   }
   let actualRuntimeSnapshotSha256: string | null = null;
+  let snapshotFailureReason: string | null = null;
   if (managedSnapshot) {
-    try {
-      actualRuntimeSnapshotSha256 = computePackageChannelTreeSha256(state.checkout_path);
-    } catch {
-      return {
-        status: 'incompatible' as const,
-        operational_ready: false,
-        module_id: state.module_id,
-        checkout_path: state.checkout_path,
-        expected_tree_sha256: state.tree_sha256,
-        actual_tree_sha256: null,
-        reason: 'managed_runtime_source_snapshot_invalid',
-      };
+    if (typeof state.runtime_snapshot_sha256 !== 'string'
+      || !SHA256_HEX.test(state.runtime_snapshot_sha256)) {
+      snapshotFailureReason = 'managed_runtime_source_snapshot_digest_missing';
+    } else {
+      try {
+        actualRuntimeSnapshotSha256 = computePackageChannelTreeSha256(state.checkout_path);
+        if (actualRuntimeSnapshotSha256 !== state.runtime_snapshot_sha256) {
+          snapshotFailureReason = 'managed_runtime_source_snapshot_integrity_mismatch';
+        }
+      } catch {
+        snapshotFailureReason = 'managed_runtime_source_snapshot_invalid';
+      }
     }
   }
   let probeFailed = false;
-  try {
-    probeCurrentRuntimeSource(state, resolvedCurrentProbeCommands(state));
-  } catch {
-    probeFailed = true;
+  if (!snapshotFailureReason) {
+    try {
+      probeCurrentRuntimeSource(state, resolvedCurrentProbeCommands(state));
+    } catch {
+      probeFailed = true;
+    }
+  }
+  if (managedSnapshot && !snapshotFailureReason && !probeFailed) {
+    try {
+      actualRuntimeSnapshotSha256 = computePackageChannelTreeSha256(state.checkout_path);
+      if (actualRuntimeSnapshotSha256 !== state.runtime_snapshot_sha256) {
+        snapshotFailureReason = 'managed_runtime_source_snapshot_integrity_mismatch';
+      }
+    } catch {
+      snapshotFailureReason = 'managed_runtime_source_snapshot_invalid';
+    }
   }
 
   let actualSourceGitHeadSha: string | null = null;
@@ -672,23 +707,22 @@ function developerCheckoutReadiness(state: AgentPackageManagedRuntimeSourceState
   const snapshotIdentityChanged = managedSnapshot
     && !snapshotIdentityUnavailable
     && actualRuntimeSnapshotSha256 !== state.runtime_snapshot_sha256;
-  const observationChanged = identityChanged || snapshotIdentityChanged;
+  const operationalReady = !probeFailed && !snapshotFailureReason;
 
   return {
-    status: probeFailed || snapshotIdentityChanged ? 'incompatible' as const : 'current' as const,
-    operational_ready: !probeFailed,
+    status: operationalReady ? 'current' as const : 'incompatible' as const,
+    operational_ready: operationalReady,
     module_id: state.module_id,
     checkout_path: state.checkout_path,
     expected_tree_sha256: state.tree_sha256,
     actual_tree_sha256: actualTreeSha256,
-    reason: probeFailed
-      ? 'managed_runtime_source_probe_failed'
-      : snapshotIdentityChanged ? 'managed_runtime_source_observation_changed' : null,
+    reason: snapshotFailureReason
+      ?? (probeFailed ? 'managed_runtime_source_probe_failed' : null),
     provenance_observation: {
       policy: 'observation_only' as const,
       status: identityUnavailable
         ? 'unavailable' as const
-        : observationChanged ? 'changed' as const : 'unchanged' as const,
+        : identityChanged ? 'changed' as const : 'unchanged' as const,
       recorded_source_git_head_sha: state.source_git_head_sha,
       actual_source_git_head_sha: actualSourceGitHeadSha,
       recorded_tree_sha256: state.tree_sha256,
@@ -749,6 +783,66 @@ export function managedRuntimeSourceReadiness(
       return developerCheckoutReadiness(state);
     }
     const commands = resolvedCurrentProbeCommands(state);
+    const readImmutableIdentity = () => {
+      const lifecycle = readPackageChannelLifecycle(state.checkout_path, spec);
+      const packaged = readPackagedModuleMarker(state.checkout_path, spec);
+      const actualTreeSha256 = computePackageChannelTreeSha256(state.checkout_path);
+      if ((sourceMode === 'package_channel' && !lifecycle)
+        || (sourceMode === 'bundled_full_runtime' && !packaged)) {
+        throw new Error('immutable runtime identity metadata is missing');
+      }
+      return {
+        lifecycle,
+        packaged,
+        actualTreeSha256,
+        actualSourceGitHeadSha: sourceMode === 'bundled_full_runtime'
+          ? packaged?.source_git.head_sha ?? null
+          : lifecycle?.current.source_git_head_sha ?? null,
+        actualLayerDigest: sourceMode === 'package_channel'
+          ? lifecycle?.current.layer_digest ?? null
+          : null,
+      };
+    };
+    let identity: ReturnType<typeof readImmutableIdentity>;
+    const immutableIdentityChanged = (candidate: ReturnType<typeof readImmutableIdentity>) =>
+      candidate.actualTreeSha256 !== state.tree_sha256
+      || candidate.actualSourceGitHeadSha !== state.source_git_head_sha
+      || candidate.actualLayerDigest !== state.layer_digest
+      || (sourceMode === 'package_channel' && (
+        candidate.lifecycle!.current.channel_version !== state.channel_version
+        || candidate.lifecycle!.current.artifact_ref !== state.artifact_ref
+        || candidate.lifecycle!.current.source_archive_sha256 !== state.source_archive_sha256
+      ));
+    try {
+      identity = readImmutableIdentity();
+    } catch {
+      return {
+        status: 'incompatible' as const,
+        operational_ready: false,
+        module_id: state.module_id,
+        checkout_path: state.checkout_path,
+        expected_tree_sha256: state.tree_sha256,
+        actual_tree_sha256: null,
+        reason: 'managed_runtime_source_identity_unavailable',
+      };
+    }
+    const commandChanged = sourceMode === 'package_channel'
+      && (!matchingCommand(commands.healthCommand, state.health_check_command)
+        || !matchingCommand(commands.handlerCommand, state.handler_probe_command));
+    const identityChanged = immutableIdentityChanged(identity);
+    if (identityChanged || commandChanged) {
+      return {
+        status: 'incompatible' as const,
+        operational_ready: false,
+        module_id: state.module_id,
+        checkout_path: state.checkout_path,
+        expected_tree_sha256: state.tree_sha256,
+        actual_tree_sha256: identity.actualTreeSha256,
+        reason: identityChanged
+          ? 'managed_runtime_source_identity_mismatch'
+          : 'managed_runtime_source_command_drift',
+      };
+    }
     try {
       probeCurrentRuntimeSource(state, commands);
     } catch {
@@ -758,64 +852,32 @@ export function managedRuntimeSourceReadiness(
         module_id: state.module_id,
         checkout_path: state.checkout_path,
         expected_tree_sha256: state.tree_sha256,
-        actual_tree_sha256: null,
+        actual_tree_sha256: identity.actualTreeSha256,
         reason: 'managed_runtime_source_probe_failed',
       };
     }
-    let lifecycle: ReturnType<typeof readPackageChannelLifecycle>;
-    let packaged: ReturnType<typeof readPackagedModuleMarker>;
-    let actualTreeSha256: string;
     try {
-      lifecycle = readPackageChannelLifecycle(state.checkout_path, spec);
-      packaged = readPackagedModuleMarker(state.checkout_path, spec);
-      actualTreeSha256 = computePackageChannelTreeSha256(state.checkout_path);
+      identity = readImmutableIdentity();
     } catch {
       return {
         status: 'incompatible' as const,
-        operational_ready: true,
+        operational_ready: false,
         module_id: state.module_id,
         checkout_path: state.checkout_path,
         expected_tree_sha256: state.tree_sha256,
         actual_tree_sha256: null,
-        reason: 'managed_runtime_source_observation_unavailable',
-        provenance_observation: {
-          policy: 'observation_only' as const,
-          status: 'unavailable' as const,
-          recorded_source_git_head_sha: state.source_git_head_sha,
-          actual_source_git_head_sha: null,
-          recorded_tree_sha256: state.tree_sha256,
-          actual_tree_sha256: null,
-        },
+        reason: 'managed_runtime_source_identity_unavailable',
       };
     }
-    const actualSourceGitHeadSha = sourceMode === 'bundled_full_runtime'
-      ? packaged?.source_git.head_sha ?? null
-      : lifecycle?.current.source_git_head_sha ?? null;
-    const actualLayerDigest = sourceMode === 'package_channel'
-      ? lifecycle?.current.layer_digest ?? null
-      : null;
-    const commandChanged = !matchingCommand(commands.healthCommand, state.health_check_command)
-      || !matchingCommand(commands.handlerCommand, state.handler_probe_command);
-    const identityChanged = actualTreeSha256 !== state.tree_sha256
-      || actualSourceGitHeadSha !== state.source_git_head_sha
-      || actualLayerDigest !== state.layer_digest;
-    const observationChanged = commandChanged || identityChanged;
+    const postProbeIdentityChanged = immutableIdentityChanged(identity);
     return {
-      status: observationChanged ? 'incompatible' as const : 'current' as const,
-      operational_ready: true,
+      status: postProbeIdentityChanged ? 'incompatible' as const : 'current' as const,
+      operational_ready: !postProbeIdentityChanged,
       module_id: state.module_id,
       checkout_path: state.checkout_path,
       expected_tree_sha256: state.tree_sha256,
-      actual_tree_sha256: actualTreeSha256,
-      reason: observationChanged ? 'managed_runtime_source_observation_changed' : null,
-      provenance_observation: {
-        policy: 'observation_only' as const,
-        status: observationChanged ? 'changed' as const : 'unchanged' as const,
-        recorded_source_git_head_sha: state.source_git_head_sha,
-        actual_source_git_head_sha: actualSourceGitHeadSha,
-        recorded_tree_sha256: state.tree_sha256,
-        actual_tree_sha256: actualTreeSha256,
-      },
+      actual_tree_sha256: identity.actualTreeSha256,
+      reason: postProbeIdentityChanged ? 'managed_runtime_source_identity_mismatch' : null,
     };
   } catch {
     return {
