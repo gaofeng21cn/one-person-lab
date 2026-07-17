@@ -653,8 +653,12 @@ export function retargetReadyRepo(repoDir: string, domainId: string, domainLabel
   actionCatalog.target_domain_id = domainId;
   writeJson(actionCatalogPath, actionCatalog);
   const canonicalAgentIds: Record<string, string> = {
+    medautoscience: 'mas',
     'med-autoscience': 'mas',
+    medautogrant: 'mag',
+    redcube_ai: 'rca',
     'redcube-ai': 'rca',
+    agent_engineering: 'oma',
     'opl-meta-agent': 'oma',
     'opl-bookforge': 'obf',
   };
