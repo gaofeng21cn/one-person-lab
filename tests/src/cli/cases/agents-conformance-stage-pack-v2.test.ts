@@ -1,4 +1,5 @@
 import { assert, fs, os, parseJsonText, path, runCli, test } from '../helpers.ts';
+import { buildStandardDomainAgentScaffold } from '../../../../src/modules/pack/index.ts';
 
 function writeJson(filePath: string, payload: unknown) {
   fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
@@ -6,16 +7,11 @@ function writeJson(filePath: string, payload: unknown) {
 
 function buildScaffoldRepo() {
   const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-stage-pack-v2-'));
-  runCli([
-    'agents',
-    'scaffold',
-    '--target-dir',
+  buildStandardDomainAgentScaffold({
     targetDir,
-    '--domain-id',
-    'sample-brief-agent',
-    '--domain-label',
-    'Sample Brief Agent',
-  ]);
+    domainId: 'sample-brief-agent',
+    domainLabel: 'Sample Brief Agent',
+  });
   return targetDir;
 }
 

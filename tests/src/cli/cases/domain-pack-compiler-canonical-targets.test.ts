@@ -1,13 +1,37 @@
-import { assert, fs, parseJsonText, path, runCli, test } from '../helpers.ts';
-import { buildReadyAgentRepo, writeJson } from './agents-conformance-fixtures.ts';
+import { assert, fs, os, parseJsonText, path, runCli, test } from '../helpers.ts';
+import {
+  buildReadyAgentRepo,
+  retargetReadyRepo,
+  writeJson,
+} from './agents-conformance-fixtures.ts';
 import { buildFunctionalPrivatizationAudit } from '../../../../src/modules/pack/functional-privatization-audit.ts';
 
 test('generated interfaces expose a family-defaults source for readiness drilldown', () => {
-  const report = runCli([
-    'agents',
-    'interfaces',
-    '--family-defaults',
-  ]).generated_agent_interfaces;
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-canonical-family-'));
+  for (const [repoDirectory, targetDomainId, label] of [
+    ['med-autoscience', 'medautoscience', 'Med Auto Science'],
+    ['med-autogrant', 'medautogrant', 'Med Auto Grant'],
+    ['redcube-ai', 'redcube_ai', 'RedCube AI'],
+    ['opl-meta-agent', 'agent_engineering', 'OPL Meta Agent'],
+    ['opl-bookforge', 'opl-bookforge', 'OPL Book Forge'],
+  ]) {
+    const repoDir = buildReadyAgentRepo();
+    retargetReadyRepo(repoDir, targetDomainId, label);
+    fs.renameSync(repoDir, path.join(workspaceRoot, repoDirectory));
+  }
+
+  let report: any;
+  try {
+    report = runCli([
+      'agents',
+      'interfaces',
+      '--family-defaults',
+    ], {
+      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+    }).generated_agent_interfaces;
+  } finally {
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
 
   assert.equal(report.surface_kind, 'opl_generated_agent_interfaces_family_report');
   assert.equal(report.owner, 'one-person-lab');
@@ -28,9 +52,9 @@ test('generated interfaces expose a family-defaults source for readiness drilldo
   }
   for (const [agentId, targetDomainId] of [
     ['mas', 'medautoscience'],
-    ['mag', 'med-autogrant'],
+    ['mag', 'medautogrant'],
     ['rca', 'redcube_ai'],
-    ['oma', 'opl-meta-agent'],
+    ['oma', 'agent_engineering'],
     ['obf', 'opl-bookforge'],
   ]) {
     const entry = report.reports.find(
