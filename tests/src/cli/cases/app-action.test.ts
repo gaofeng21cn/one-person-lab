@@ -19,6 +19,17 @@ import './app-action-cases/connection-actions.test.ts';
 import './app-action-cases/settings-and-workspace-actions.test.ts';
 import './app-action-cases/work-item-control.test.ts';
 
+function makeTreeWritable(root: string) {
+  if (!fs.existsSync(root)) return;
+  const stat = fs.lstatSync(root);
+  if (stat.isDirectory()) {
+    fs.chmodSync(root, 0o755);
+    for (const entry of fs.readdirSync(root)) makeTreeWritable(path.join(root, entry));
+  } else if (!stat.isSymbolicLink()) {
+    fs.chmodSync(root, 0o644);
+  }
+}
+
 test('app action execute wraps runtime action dry-run as the App mutating boundary', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-action-state-'));
   try {
@@ -341,6 +352,7 @@ test('generic package activation action returns the launch binding at the App bo
     assert.equal(activation.package_use_binding.use_receipt_ref, activation.use_receipt_ref);
     assert.match(activation.use_receipt_ref, /^opl:\/\/agent-package\/use\/fixture\.app-action-consumer\//);
   } finally {
+    makeTreeWritable(root);
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
@@ -383,6 +395,7 @@ test('dependency-free activation returns only persisted receipt refs', async () 
     assert.equal(activation.package_use_binding.use_receipt_ref, activation.use_receipt_ref);
     assert.equal(returnedRefs.every((receiptRef) => persistedRefs.has(receiptRef)), true);
   } finally {
+    makeTreeWritable(root);
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
