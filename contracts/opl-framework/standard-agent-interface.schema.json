@@ -53,6 +53,22 @@
       },
       "additionalProperties": false
     },
+    "domain_detail_views": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "required": ["view_id", "view_kind", "schema_version", "source_kind", "relative_path"],
+        "properties": {
+          "view_id": { "type": "string", "minLength": 1 },
+          "view_kind": { "const": "scientific_reasoning_map" },
+          "schema_version": { "const": "scientific-reasoning-map.v1" },
+          "source_kind": { "const": "work_item_relative_json" },
+          "relative_path": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": false
+      }
+    },
     "workspace_binding": {
       "type": "object",
       "required": ["locator_surface_kind", "default_profile_id", "workspace_kind", "project_kind", "project_collection_label", "default_workspace_id", "default_project_id", "required_locator_fields", "optional_locator_fields"],

@@ -167,6 +167,7 @@ test('standard Agent interface parses a domain-owned descriptor without domain b
   assert.equal(descriptor.workspace_binding.locator_surface_kind, 'fixture_workspace_locator');
   assert.equal(descriptor.inventory_projection, null);
   assert.equal(descriptor.stage_catalog, null);
+  assert.deepEqual(descriptor.domain_detail_views, []);
   assert.equal(descriptor.runtime.registration_ref, 'contracts/domain_descriptor.json#/runtime');
 });
 
@@ -272,6 +273,50 @@ test('standard Agent interface accepts a repo-relative Stage Catalog declaration
   assert.throws(
     () => parseStandardAgentInterface(incomplete, 'fixture.json#/standard_agent_interface'),
     /field_map is incomplete/,
+  );
+});
+
+test('standard Agent interface accepts optional work-item detail view declarations', () => {
+  const value = {
+    ...fixture(),
+    domain_detail_views: [
+      {
+        view_id: 'scientific-reasoning',
+        view_kind: 'scientific_reasoning_map',
+        schema_version: 'scientific-reasoning-map.v1',
+        source_kind: 'work_item_relative_json',
+        relative_path: 'artifacts/research_trajectory/snapshot.json',
+      },
+    ],
+  };
+
+  const parsed = parseStandardAgentInterface(value, 'fixture.json#/standard_agent_interface');
+  assert.deepEqual(parsed.domain_detail_views, value.domain_detail_views);
+
+  const schemaRef = 'contracts/opl-framework/standard-agent-interface.schema.json';
+  const schema = parseJsonText(fs.readFileSync(path.join(process.cwd(), schemaRef), 'utf8')) as Record<string, unknown>;
+  const validation = validateJsonSchemaPayload({
+    schemaId: 'opl.standard_agent_interface.v1',
+    schema,
+    sourceRef: schemaRef,
+  }, value);
+  assert.equal(validation.ok, true, validation.ok ? undefined : JSON.stringify(validation.errors, null, 2));
+
+  const escaped = structuredClone(value);
+  escaped.domain_detail_views[0]!.relative_path = '../snapshot.json';
+  assert.throws(
+    () => parseStandardAgentInterface(escaped, 'fixture.json#/standard_agent_interface'),
+    /must stay inside the work item/,
+  );
+
+  const duplicateId = structuredClone(value);
+  duplicateId.domain_detail_views.push({
+    ...duplicateId.domain_detail_views[0]!,
+    relative_path: 'artifacts/research_trajectory/other.json',
+  });
+  assert.throws(
+    () => parseStandardAgentInterface(duplicateId, 'fixture.json#/standard_agent_interface'),
+    /view ids must be unique/,
   );
 });
 

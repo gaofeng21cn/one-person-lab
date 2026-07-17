@@ -46,10 +46,19 @@ export type StandardAgentStageCatalogDeclaration = {
   };
 };
 
+export type StandardAgentDomainDetailViewDeclaration = {
+  view_id: string;
+  view_kind: 'scientific_reasoning_map';
+  schema_version: 'scientific-reasoning-map.v1';
+  source_kind: 'work_item_relative_json';
+  relative_path: string;
+};
+
 export type StandardAgentInterface = {
   version: typeof STANDARD_AGENT_INTERFACE_VERSION;
   inventory_projection: StandardAgentInventoryProjection | null;
   stage_catalog: StandardAgentStageCatalogDeclaration | null;
+  domain_detail_views: StandardAgentDomainDetailViewDeclaration[];
   workspace_binding: {
     locator_surface_kind: string;
     default_profile_id: 'one_off' | 'series' | 'portfolio';
@@ -276,6 +285,65 @@ function stageCatalog(value: unknown, sourceRef: string): StandardAgentStageCata
   };
 }
 
+function domainDetailViews(value: unknown, sourceRef: string): StandardAgentDomainDetailViewDeclaration[] {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value)) {
+    invalid('Standard Agent interface field domain_detail_views must be an array.', sourceRef, {
+      field: 'domain_detail_views',
+    });
+  }
+  const seen = new Set<string>();
+  return value.map((entry, index) => {
+    if (!isRecord(entry)) {
+      invalid('Standard Agent interface domain detail view declaration must be an object.', sourceRef, {
+        field: `domain_detail_views.${index}`,
+      });
+    }
+    assertKnownKeys(
+      entry,
+      ['view_id', 'view_kind', 'schema_version', 'source_kind', 'relative_path'],
+      `domain_detail_views.${index}`,
+      sourceRef,
+    );
+    const viewId = stringValue(entry.view_id, `domain_detail_views.${index}.view_id`, sourceRef);
+    if (seen.has(viewId)) {
+      invalid('Standard Agent interface domain detail view ids must be unique.', sourceRef, {
+        field: `domain_detail_views.${index}.view_id`,
+        view_id: viewId,
+      });
+    }
+    seen.add(viewId);
+    if (entry.view_kind !== 'scientific_reasoning_map'
+      || entry.schema_version !== 'scientific-reasoning-map.v1'
+      || entry.source_kind !== 'work_item_relative_json') {
+      invalid('Standard Agent interface domain detail view declaration is unsupported.', sourceRef, {
+        field: `domain_detail_views.${index}`,
+        view_kind: entry.view_kind ?? null,
+        schema_version: entry.schema_version ?? null,
+        source_kind: entry.source_kind ?? null,
+      });
+    }
+    const relativePath = stringValue(
+      entry.relative_path,
+      `domain_detail_views.${index}.relative_path`,
+      sourceRef,
+    );
+    if (path.isAbsolute(relativePath) || relativePath.split(/[\\/]+/).includes('..')) {
+      invalid('Standard Agent interface domain detail view path must stay inside the work item.', sourceRef, {
+        field: `domain_detail_views.${index}.relative_path`,
+        relative_path: relativePath,
+      });
+    }
+    return {
+      view_id: viewId,
+      view_kind: 'scientific_reasoning_map',
+      schema_version: 'scientific-reasoning-map.v1',
+      source_kind: 'work_item_relative_json',
+      relative_path: relativePath,
+    };
+  });
+}
+
 export function parseStandardAgentInterface(value: unknown, sourceRef: string): StandardAgentInterface {
   if (!isRecord(value)) invalid('Standard Agent interface must be an object.', sourceRef);
   if (value.version !== STANDARD_AGENT_INTERFACE_VERSION) {
@@ -293,7 +361,16 @@ export function parseStandardAgentInterface(value: unknown, sourceRef: string): 
   }
   assertKnownKeys(
     value,
-    ['version', 'inventory_projection', 'stage_catalog', 'workspace_binding', 'runtime', 'progress', 'routing'],
+    [
+      'version',
+      'inventory_projection',
+      'stage_catalog',
+      'domain_detail_views',
+      'workspace_binding',
+      'runtime',
+      'progress',
+      'routing',
+    ],
     'root',
     sourceRef,
   );
@@ -355,6 +432,7 @@ export function parseStandardAgentInterface(value: unknown, sourceRef: string): 
     version: STANDARD_AGENT_INTERFACE_VERSION,
     inventory_projection: inventoryProjection(value.inventory_projection, sourceRef),
     stage_catalog: stageCatalog(value.stage_catalog, sourceRef),
+    domain_detail_views: domainDetailViews(value.domain_detail_views, sourceRef),
     workspace_binding: {
       locator_surface_kind: stringValue(
         workspaceBinding.locator_surface_kind,
