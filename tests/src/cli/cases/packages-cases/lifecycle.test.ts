@@ -24,6 +24,7 @@ test('packages fetches registry URL, validates manifest, and writes lock receipt
     OPL_STATE_DIR: stateDir,
     HOME: homeDir,
     CODEX_HOME: codexHome,
+    OPL_CLI_TEST_TIMEOUT_MS: '90000',
   };
   try {
     await withAgentPackageServer(async (baseUrl) => {
