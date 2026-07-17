@@ -51,6 +51,18 @@ import {
   runtimeHardStopClassForReason,
 } from '../../kernel/progress-hard-stop-policy.ts';
 import { buildStageReviewContextManifest } from '../stagecraft/index.ts';
+import {
+  buildStageReviewInputSnapshotContext,
+} from './family-runtime-stage-quality-context-manifest.ts';
+import {
+  readReviewerInputSnapshotManifest,
+  resolveReviewerInputSnapshotMaterialization,
+} from './family-runtime-reviewer-input-snapshot.ts';
+import { persistReviewEvidenceCacheCandidate } from './family-runtime-review-evidence-cache.ts';
+import {
+  materializeOplRevisionTransport,
+  revisionTransportContext,
+} from './family-runtime-revision-intake.ts';
 import { resolveStandardAgentStageQualityRuntimeBinding } from '../pack/index.ts';
 import { launchRegisteredStageRun } from './family-runtime-stage-run-launch.ts';
 import {
@@ -985,6 +997,7 @@ export async function stageQualityAttemptMaterializeActivity(
       input.findings ?? [],
       input.repair_map ?? [],
       input.route_recommendations ?? [],
+      input.review_input_snapshot_materialization_request ?? null,
     ]);
     const existingAttempt = findStageAttemptByIdempotencyBoundary(db, {
       domainId: stageRun.domain_id,
@@ -1166,12 +1179,31 @@ export async function stageQualityAttemptMaterializeActivity(
       non_decisive_output: 'route_impact.stage_route_recommendation',
       prior_route_recommendations: input.route_recommendations ?? [],
     };
-    const contextManifest = input.attempt_role === 'reviewer' || input.attempt_role === 're_reviewer'
+    const reviewAttemptRole = input.attempt_role === 'reviewer' || input.attempt_role === 're_reviewer'
+      ? input.attempt_role
+      : null;
+    const reviewInputSnapshotContext = reviewAttemptRole
+      ? buildStageReviewInputSnapshotContext({
+          stageRunId: stageRun.stage_run_id,
+          qualityCycleId: input.quality_cycle_id,
+          reviewerAttemptRole: reviewAttemptRole,
+          resolution: resolveReviewerInputSnapshotMaterialization(
+            input.review_input_snapshot_materialization_request,
+          ),
+        })
+      : null;
+    const revisionConsumptionContext = (input.revision_intake_refs?.length ?? 0) > 0
+      ? revisionTransportContext({
+          revisionIntakeRefs: input.revision_intake_refs,
+          oplStageReviewReceiptRef: input.opl_stage_review_receipt_ref,
+        })
+      : null;
+    const contextManifest = reviewAttemptRole
       ? {
           ...buildStageReviewContextManifest({
           stageRunId: stageRun.stage_run_id,
           qualityCycleId: input.quality_cycle_id,
-          reviewerAttemptRole: input.attempt_role,
+          reviewerAttemptRole: reviewAttemptRole,
           stageGoalRefs: executionStageBinding.stage_goal_refs,
           artifactRefs: inputArtifactIdentity.artifact_refs,
           artifactHashes: inputArtifactIdentity.artifact_hashes,
@@ -1181,6 +1213,8 @@ export async function stageQualityAttemptMaterializeActivity(
           priorFindingRefs: (input.findings ?? []).map((finding) => finding.finding_id),
           repairMapRefs: (input.repair_map ?? []).map((entry) => `repair-map:${entry.finding_id}`),
           }),
+          ...reviewInputSnapshotContext,
+          ...(revisionConsumptionContext ? { revision_consumption_context: revisionConsumptionContext } : {}),
           artifact_producer_attempt_ref: artifactProducerAttemptRef,
           cross_stage_route_selection: crossStageRouteSelection,
         }
@@ -1199,6 +1233,7 @@ export async function stageQualityAttemptMaterializeActivity(
           artifact_hashes: inputArtifactIdentity.artifact_hashes,
           prior_finding_refs: (input.findings ?? []).map((finding) => finding.finding_id),
           repair_map_refs: (input.repair_map ?? []).map((entry) => `repair-map:${entry.finding_id}`),
+          ...(revisionConsumptionContext ? { revision_consumption_context: revisionConsumptionContext } : {}),
           no_context_inheritance: true,
           cross_stage_route_selection: crossStageRouteSelection,
         };
@@ -1230,6 +1265,7 @@ export async function stageQualityAttemptMaterializeActivity(
         findings: input.findings ?? [],
         repair_map: input.repair_map ?? [],
         route_recommendations: input.route_recommendations ?? [],
+        ...(revisionConsumptionContext ? { revision_consumption_context: revisionConsumptionContext } : {}),
         execution_content_binding: executionContentBinding,
       },
       qualityRolePromptRef: rolePromptRef,
@@ -1259,12 +1295,133 @@ function stageAttemptIdFromRef(ref: string) {
   return ref.slice(prefix.length);
 }
 
+function persistedJsonRecord(value: string | null | undefined, failureCode: string) {
+  if (!value) return {};
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (isRecord(parsed)) return parsed;
+  } catch {
+    // Use the typed persisted-context error below.
+  }
+  throw new FrameworkContractError(
+    'contract_shape_invalid',
+    'Persisted reviewer context is not valid JSON.',
+    { failure_code: failureCode },
+  );
+}
+
+function reviewerEvidenceCacheContext(input: {
+  attemptRef: string;
+  qualityContext: Record<string, unknown>;
+  contextManifest: Record<string, unknown>;
+  rubricRefsJson: string | null | undefined;
+  closeout: Record<string, unknown>;
+  candidate: unknown;
+}) {
+  const executionContentBinding = input.qualityContext.execution_content_binding;
+  if (!isRecord(executionContentBinding) || !isRecord(executionContentBinding.spec)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Reviewer page-evidence cache context is missing its durable execution content binding.',
+      { failure_code: 'review_evidence_cache_execution_binding_missing' },
+    );
+  }
+  const declaredStageIds = canonicalStageAttemptDeclaredStageIds(
+    executionContentBinding.declared_stage_ids,
+  );
+  const expectedBindingSha256 = stageAttemptExecutionContentBindingSha256({
+    parent_stage_run_spec_sha256: readString(
+      executionContentBinding.parent_stage_run_spec_sha256,
+    ) ?? '',
+    use_boundary_id: readString(executionContentBinding.use_boundary_id) ?? '',
+    spec_sha256: readString(executionContentBinding.spec_sha256) ?? '',
+    spec: executionContentBinding.spec as NonNullable<
+      TemporalStageAttemptWorkflowInput['execution_content_binding']
+    >['spec'],
+    declared_stage_ids: declaredStageIds,
+  });
+  if (executionContentBinding.binding_sha256 !== expectedBindingSha256) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Reviewer page-evidence cache execution content binding was modified after reservation.',
+      { failure_code: 'review_evidence_cache_execution_binding_mismatch' },
+    );
+  }
+
+  const snapshotStatus = input.contextManifest.review_input_snapshot_status;
+  if (snapshotStatus !== 'materialized' && snapshotStatus !== 'already_materialized') return null;
+  const snapshot = readReviewerInputSnapshotManifest(
+    input.contextManifest.opl_reviewer_input_snapshot_manifest_ref,
+  );
+  if (snapshot.manifest.review_lane !== 'display') return null;
+
+  const rubricRefs = JSON.parse(input.rubricRefsJson ?? '[]') as unknown;
+  if (!Array.isArray(rubricRefs) || rubricRefs.some((ref) => typeof ref !== 'string' || !ref.trim())) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Persisted reviewer rubric refs are invalid.',
+      { failure_code: 'review_evidence_cache_rubric_refs_invalid' },
+    );
+  }
+  const contentBindings = Array.isArray(executionContentBinding.spec.content_bindings)
+    ? executionContentBinding.spec.content_bindings.filter(isRecord)
+    : [];
+  const rubricBindings = contentBindings.filter((binding) => (
+    binding.purpose === 'quality_rubric'
+    && typeof binding.ref === 'string'
+    && rubricRefs.includes(binding.ref)
+  ));
+  if (rubricBindings.length !== 1 || rubricRefs.length !== 1) return null;
+  const rubricSha256 = readString(rubricBindings[0]!.effective_content_sha256)
+    ?? readString(rubricBindings[0]!.sha256);
+  if (!rubricSha256 || !/^sha256:[a-f0-9]{64}$/.test(rubricSha256)) return null;
+
+  const candidate = isRecord(input.candidate) ? input.candidate : {};
+  const candidateEvidence = isRecord(candidate.origin_reviewer_evidence_ref)
+    ? candidate.origin_reviewer_evidence_ref
+    : {};
+  const candidateEvidenceKind = readString(candidateEvidence.kind);
+  const candidateEvidenceRef = readString(candidateEvidence.ref);
+  const metadata = Array.isArray(input.closeout.closeout_ref_metadata)
+    ? input.closeout.closeout_ref_metadata.filter(isRecord)
+    : [];
+  const evidence = metadata.find((entry) => (
+    (readString(entry.ref) ?? readString(entry.uri)) === candidateEvidenceRef
+    && readString(entry.sha256) === readString(candidateEvidence.sha256)
+  ));
+  if (!evidence || !candidateEvidenceKind || !candidateEvidenceRef) return null;
+  const evidenceSha256 = readString(evidence.sha256);
+  if (!evidenceSha256 || !/^sha256:[a-f0-9]{64}$/.test(evidenceSha256)) return null;
+
+  return {
+    surface_kind: 'opl_review_evidence_cache_attempt_context' as const,
+    schema_version: 1 as const,
+    reviewer_attempt_ref: input.attemptRef,
+    execution_content_binding_sha256: expectedBindingSha256,
+    snapshot_manifest_ref: snapshot.manifest_ref,
+    snapshot_manifest_sha256: snapshot.manifest_ref.sha256,
+    review_scope_sha256: snapshot.manifest.review_scope_sha256,
+    rubric_sha256: rubricSha256,
+    origin_reviewer_invocation_ref: {
+      kind: 'opl_stage_attempt',
+      ref: input.attemptRef,
+      sha256: expectedBindingSha256,
+    },
+    origin_reviewer_evidence_ref: {
+      kind: candidateEvidenceKind,
+      ref: candidateEvidenceRef,
+      sha256: evidenceSha256,
+      ...(typeof evidence.size_bytes === 'number' ? { size_bytes: evidence.size_bytes } : {}),
+    },
+  };
+}
+
 export async function stageQualityAttemptSyncActivity(input: TemporalStageQualityAttemptSyncInput) {
   const { db } = openQueueDb();
   try {
     createStageAttemptTable(db);
     const stageAttemptId = stageAttemptIdFromRef(input.attempt_ref);
-    return syncStageAttemptFromTemporalTerminalObservation(db, {
+    const syncReceipt = syncStageAttemptFromTemporalTerminalObservation(db, {
       surface_kind: 'temporal_stage_attempt_query_receipt',
       provider_kind: 'temporal',
       stage_attempt_id: stageAttemptId,
@@ -1272,6 +1429,72 @@ export async function stageQualityAttemptSyncActivity(input: TemporalStageQualit
       workflow_status: 'COMPLETED',
       query: input.workflow_state,
     });
+    const closeout = isRecord(input.workflow_state.closeout_packet)
+      ? input.workflow_state.closeout_packet
+      : {};
+    const routeImpact = isRecord(closeout.route_impact) ? closeout.route_impact : {};
+    const envelope = isRecord(routeImpact.stage_quality_cycle)
+      ? routeImpact.stage_quality_cycle
+      : {};
+    if (!Object.hasOwn(envelope, 'page_hash_evidence_candidate')) return syncReceipt;
+    const row = db.prepare(`
+      SELECT attempt_role, quality_context_json, quality_rubric_refs_json, context_manifest_json
+      FROM stage_attempts
+      WHERE stage_attempt_id = ?
+      LIMIT 1
+    `).get(stageAttemptId) as {
+      attempt_role?: string | null;
+      quality_context_json?: string | null;
+      quality_rubric_refs_json?: string | null;
+      context_manifest_json?: string | null;
+    } | undefined;
+    if (!row || (row.attempt_role !== 'reviewer' && row.attempt_role !== 're_reviewer')) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Page evidence cache candidate may only be persisted from a reviewer Attempt.',
+        {
+          failure_code: 'review_evidence_cache_candidate_non_reviewer',
+          stage_attempt_id: stageAttemptId,
+          attempt_role: row?.attempt_role ?? null,
+        },
+      );
+    }
+    const qualityContext = persistedJsonRecord(
+      row.quality_context_json,
+      'review_evidence_cache_quality_context_invalid',
+    );
+    const contextManifest = persistedJsonRecord(
+      row.context_manifest_json,
+      'review_evidence_cache_context_manifest_invalid',
+    );
+    const attemptRef = `opl://stage_attempts/${stageAttemptId}`;
+    const cacheContext = reviewerEvidenceCacheContext({
+      attemptRef,
+      qualityContext,
+      contextManifest,
+      rubricRefsJson: row.quality_rubric_refs_json,
+      closeout,
+      candidate: envelope.page_hash_evidence_candidate,
+    });
+    const contextBoundPersist = persistReviewEvidenceCacheCandidate as unknown as (
+      candidate: unknown,
+      context: ReturnType<typeof reviewerEvidenceCacheContext>,
+    ) => ReturnType<typeof persistReviewEvidenceCacheCandidate>;
+    const persisted = contextBoundPersist(envelope.page_hash_evidence_candidate, cacheContext);
+    db.prepare(`
+      UPDATE stage_attempts
+      SET quality_context_json = ?, updated_at = ?
+      WHERE stage_attempt_id = ?
+    `).run(JSON.stringify({
+      ...qualityContext,
+      opl_review_evidence_cache_receipt_ref: persisted.receipt_ref,
+      opl_review_evidence_cache_receipt: persisted.receipt,
+    }), new Date().toISOString(), stageAttemptId);
+    return {
+      ...(isRecord(syncReceipt) ? syncReceipt : {}),
+      opl_review_evidence_cache_receipt_ref: persisted.receipt_ref,
+      opl_review_evidence_cache_receipt: persisted.receipt,
+    };
   } finally {
     db.close();
   }
@@ -1281,12 +1504,16 @@ export async function stageQualityReviewReceiptActivity(input: TemporalStageQual
   const { db } = openQueueDb();
   try {
     createStageAttemptTable(db);
-    return materializePersistedStageReviewReceipt(db, {
+    const receipt = materializePersistedStageReviewReceipt(db, {
       producerAttemptId: stageAttemptIdFromRef(input.producer_attempt_ref),
       reviewerAttemptId: stageAttemptIdFromRef(input.reviewer_attempt_ref),
       rubricRefs: input.rubric_refs,
       verdict: input.verdict,
     });
+    return {
+      ...receipt,
+      revision_transport: materializeOplRevisionTransport(receipt),
+    };
   } finally {
     db.close();
   }

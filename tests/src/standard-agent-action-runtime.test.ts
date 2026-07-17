@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
+import { canonicalJsonBytes } from '../../src/kernel/canonical-json.ts';
 import { resolveStandardAgent } from '../../src/kernel/standard-agent-registry.ts';
 import type { StandardAgentStageQualityRuntimeBinding } from '../../src/modules/pack/index.ts';
 import { runFamilyRuntime } from '../../src/modules/runway/family-runtime.ts';
@@ -13,7 +14,12 @@ import type {
   HostedAgentRuntimeBindingProvenance,
   HostedAgentRuntimeBindingSnapshot,
 } from '../../src/modules/runway/hosted-agent-runtime-binding.ts';
-import { inspectStandardAgentActionRunCompletion } from '../../src/modules/runway/standard-agent-action-run-state.ts';
+import {
+  inspectStandardAgentActionRunBinding,
+  inspectStandardAgentActionRunCompletion,
+  inspectStandardAgentActionRunPlan,
+  reserveStandardAgentActionRunBinding,
+} from '../../src/modules/runway/standard-agent-action-run-state.ts';
 import { runStandardAgentAction } from '../../src/modules/runway/standard-agent-action-runtime.ts';
 import { runStandardAgentHandlerSandbox } from '../../src/modules/runway/standard-agent-handler-sandbox.ts';
 import { normalizeStageQualityCyclePolicy } from '../../src/modules/stagecraft/stage-quality-cycle.ts';
@@ -185,15 +191,18 @@ function writeContracts(checkoutRoot: string, actions: Record<string, unknown>[]
 }
 
 function managed(checkoutRoot: string, workspaceRoot: string) {
-  return async () => ({
-    agent: resolveStandardAgent('mas')!,
-    package_id: 'mas',
-    workspace_root: fs.realpathSync.native(workspaceRoot),
-    checkout_root: fs.realpathSync.native(checkoutRoot),
-    package_status: { launch_allowed: true },
-    package_use_binding: { use_boundary_id: 'package-use:fixture' },
-    use_boundary_id: 'package-use:fixture',
-  });
+  return async () => {
+    const packageUseBinding = stagePackageUseBinding();
+    return {
+      agent: resolveStandardAgent('mas')!,
+      package_id: 'mas',
+      workspace_root: fs.realpathSync.native(workspaceRoot),
+      checkout_root: fs.realpathSync.native(checkoutRoot),
+      package_status: { launch_allowed: true },
+      package_use_binding: packageUseBinding,
+      use_boundary_id: packageUseBinding.use_boundary_id,
+    };
+  };
 }
 
 function hostedSnapshot(input: {
@@ -224,9 +233,20 @@ function hostedSnapshot(input: {
     runtime_domain_id: 'medautoscience',
     target_domain_id: 'medautoscience',
     catalog_target_domain_ids: ['mas', 'medautoscience'],
-    package_use_binding: { use_boundary_id: provenance.package_use_boundary_id },
+    package_use_binding: {
+      ...stagePackageUseBinding(),
+      use_boundary_id: provenance.package_use_boundary_id,
+      use_receipt_ref: `opl://agent-package/use/${encodeURIComponent(input.label)}`,
+      root_package: {
+        ...stagePackageUseBinding().root_package,
+        package_version: input.label,
+        package_lock_ref: `opl://agent-package-lock/mas/${input.label}`,
+        content_digest: contentDigest,
+        artifact_digest: artifactDigest,
+      },
+    },
     provenance,
-    provenance_ref: `opl://hosted-agent-runtime-binding/${contentDigest}`,
+    provenance_ref: `opl://hosted-agent-runtime-binding/sha256/${sha256(canonicalJsonBytes(provenance)).slice('sha256:'.length)}`,
   };
 }
 
@@ -300,9 +320,88 @@ test('Hosted Handler action validates schemas, runs the callable, and persists e
     assert.equal(replay.standard_agent_action_run.output.sha256, run.output.sha256);
     assert.deepEqual(replay.standard_agent_action_run.result, run.result);
     assert.equal(handlerCalls, 1);
+    await assert.rejects(
+      runStandardAgentAction({
+        domainId: 'mas',
+        actionId: 'evaluate',
+        workspaceRoot,
+        payload: { value: 7 },
+        runId: 'handler-run',
+        timeoutMs: 1_000,
+      }, dependencies),
+      /timeout conflicts with its frozen run plan/i,
+    );
+    assert.equal(handlerCalls, 1);
   } finally {
     fs.rmSync(checkoutRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('managed action identity faults fail before reservation or Handler execution', async () => {
+  for (const fault of ['missing-surface', 'package-id', 'package-content'] as const) {
+    const checkoutRoot = root(`opl-action-managed-${fault}-checkout-`);
+    const workspaceRoot = root(`opl-action-managed-${fault}-workspace-`);
+    let handlerCalls = 0;
+    try {
+      writeContracts(checkoutRoot, [action({
+        actionId: 'evaluate',
+        executionBinding: { kind: 'handler_ref', handler_ref: 'handler:fixture.evaluate' },
+      })], {
+        surface_kind: 'domain_handler_registry',
+        version: 'domain-handler-registry.v1',
+        handlers: [{
+          handler_id: 'fixture.evaluate',
+          binding: { kind: 'typescript_export', file: 'handler.ts', export: 'evaluate' },
+        }],
+      });
+      fs.writeFileSync(path.join(checkoutRoot, 'handler.ts'), [
+        'export function evaluate(request: Record<string, unknown>) {',
+        '  return { accepted: true, value: request.value };',
+        '}',
+        '',
+      ].join('\n'));
+      const snapshot = structuredClone(hostedSnapshot({ checkoutRoot, workspaceRoot, label: fault }));
+      if (fault === 'missing-surface') {
+        delete (snapshot.package_use_binding as Record<string, unknown>).surface_kind;
+      } else if (fault === 'package-id') {
+        if (snapshot.provenance.source_kind !== 'managed_package_checkout') assert.fail();
+        (snapshot.provenance as { package_id: string }).package_id = 'not-mas';
+        (snapshot as unknown as { provenance_ref: string }).provenance_ref = `opl://hosted-agent-runtime-binding/sha256/${sha256(
+          canonicalJsonBytes(snapshot.provenance),
+        ).slice('sha256:'.length)}`;
+      } else {
+        const rootPackage = (snapshot.package_use_binding as Record<string, unknown>).root_package;
+        if (!rootPackage || typeof rootPackage !== 'object') assert.fail();
+        (rootPackage as Record<string, unknown>).content_digest = `sha256:${'9'.repeat(64)}`;
+      }
+
+      await assert.rejects(
+        runStandardAgentAction({
+          domainId: 'mas',
+          actionId: 'evaluate',
+          workspaceRoot,
+          payload: { value: 5 },
+          runId: `managed-${fault}`,
+        }, {
+          resolveRuntimeBinding: async () => snapshot,
+          runHandler: (input: Parameters<typeof runStandardAgentHandlerSandbox>[0]) => {
+            handlerCalls += 1;
+            return runStandardAgentHandlerSandbox(input);
+          },
+          recordLedger,
+        }),
+        /(?:package_id must match|missing root_package|package-use identity conflicts)/i,
+      );
+      assert.equal(handlerCalls, 0);
+      assert.equal(
+        fs.existsSync(path.join(workspaceRoot, 'control', 'opl', 'action_run_state')),
+        false,
+      );
+    } finally {
+      fs.rmSync(checkoutRoot, { recursive: true, force: true });
+      fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    }
   }
 });
 
@@ -347,7 +446,11 @@ test('completed managed Handler replay survives package replacement from durable
         const useBoundaryId = `package-use:${activeVersion}`;
         return {
           ...resolved,
-          package_use_binding: { use_boundary_id: useBoundaryId },
+          package_use_binding: {
+            ...resolved.package_use_binding,
+            use_boundary_id: useBoundaryId,
+            use_receipt_ref: `opl://agent-package/use/${activeVersion}`,
+          },
           use_boundary_id: useBoundaryId,
         };
       }) as never,
@@ -391,18 +494,18 @@ test('completed managed Handler replay survives package replacement from durable
     assert.deepEqual(firstRun.result, { accepted: true, value: 7 });
     assert.deepEqual(replayRun.result, { accepted: true, value: 7 });
     assert.deepEqual(laterRun.result, { accepted: true, value: 107 });
-    assert.deepEqual(replayRun.package_use_binding, {
-      use_boundary_id: 'package-use:v1',
-    });
-    assert.deepEqual(laterRun.package_use_binding, {
-      use_boundary_id: 'package-use:v2',
-    });
+    const replayPackageBinding = replayRun.package_use_binding as ReturnType<typeof stagePackageUseBinding>;
+    const laterPackageBinding = laterRun.package_use_binding as ReturnType<typeof stagePackageUseBinding>;
+    assert.equal(replayPackageBinding.use_boundary_id, 'package-use:v1');
+    assert.equal(laterPackageBinding.use_boundary_id, 'package-use:v2');
+    assert.equal(replayPackageBinding.root_package.package_id, 'mas');
+    assert.equal(laterPackageBinding.root_package.package_id, 'mas');
     assert.equal(resolverCalls, 2);
     assert.equal(handlerCalls, 2);
 
     await assert.rejects(
       runStandardAgentAction({ ...request, payload: { value: 8 } }, dependencies),
-      /payload conflicts with the original request/i,
+      /payload conflicts with (?:the original request|its frozen run plan)/i,
     );
     assert.equal(resolverCalls, 2);
     assert.equal(handlerCalls, 2);
@@ -466,8 +569,17 @@ test('corrupted durable binding fails before runtime resolution or handler execu
     assert.equal(resolverCalls, 1);
     assert.equal(handlerCalls, 1);
 
+    const bindingPath = path.join(
+      workspaceRoot,
+      'control',
+      'opl',
+      'action_run_state',
+      request.runId,
+      'binding.json',
+    );
+    const originalBinding = fs.readFileSync(bindingPath);
     fs.writeFileSync(
-      path.join(workspaceRoot, 'control', 'opl', 'action_run_state', request.runId, 'binding.json'),
+      bindingPath,
       '{"surface_kind":"opl_standard_agent_action_run_binding","version":"corrupt"}\n',
     );
     await assert.rejects(
@@ -476,6 +588,266 @@ test('corrupted durable binding fails before runtime resolution or handler execu
     );
     assert.equal(resolverCalls, 1);
     assert.equal(handlerCalls, 1);
+
+    const bindingCopy = path.join(workspaceRoot, 'binding-copy.json');
+    fs.writeFileSync(bindingCopy, originalBinding);
+    fs.rmSync(bindingPath);
+    fs.symlinkSync(bindingCopy, bindingPath);
+    await assert.rejects(
+      runStandardAgentAction(request, dependencies),
+      /binding must be a physical file/i,
+    );
+    assert.equal(resolverCalls, 1);
+    assert.equal(handlerCalls, 1);
+  } finally {
+    fs.rmSync(checkoutRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('completion identity, schema, shape, and physical-file tampering fail before replay', async () => {
+  const checkoutRoot = root('opl-action-completion-tamper-checkout-');
+  const workspaceRoot = root('opl-action-completion-tamper-workspace-');
+  let handlerCalls = 0;
+  try {
+    writeContracts(checkoutRoot, [action({
+      actionId: 'evaluate',
+      executionBinding: { kind: 'handler_ref', handler_ref: 'handler:fixture.evaluate' },
+    })], {
+      surface_kind: 'domain_handler_registry',
+      version: 'domain-handler-registry.v1',
+      handlers: [{
+        handler_id: 'fixture.evaluate',
+        binding: { kind: 'typescript_export', file: 'handler.ts', export: 'evaluate' },
+      }],
+    });
+    fs.writeFileSync(path.join(checkoutRoot, 'handler.ts'), [
+      'export function evaluate(request: Record<string, unknown>) {',
+      '  return { accepted: true, value: request.value };',
+      '}',
+      '',
+    ].join('\n'));
+    const dependencies = {
+      resolveManagedCheckout: managed(checkoutRoot, workspaceRoot) as never,
+      runHandler: (input: Parameters<typeof runStandardAgentHandlerSandbox>[0]) => {
+        handlerCalls += 1;
+        return runStandardAgentHandlerSandbox(input);
+      },
+      recordLedger,
+    };
+    const request = {
+      domainId: 'mas', actionId: 'evaluate', workspaceRoot, payload: { value: 17 }, runId: 'completion-tamper',
+    };
+    await runStandardAgentAction(request, dependencies);
+    const completionPath = path.join(
+      workspaceRoot,
+      'control',
+      'opl',
+      'action_run_state',
+      request.runId,
+      'completion.json',
+    );
+    const original = JSON.parse(fs.readFileSync(completionPath, 'utf8')) as Record<string, any>;
+    const cases = [
+      { ...original, canonical_domain_id: ' ' },
+      { ...original, action_id: ' ' },
+      { ...original, binding_ref: ' ' },
+      { ...original, status: 'started' },
+      {
+        ...original,
+        execution_kind: 'stage_binding',
+        status: 'completed',
+        sandbox: null,
+        completed_handler_replay: null,
+      },
+      { ...original, sandbox: { ...original.sandbox, exit_code: 1 } },
+      { ...original, sandbox: { ...original.sandbox, timed_out: true } },
+      { ...original, error: { error_code: 'bad', message: 'bad', details: {} } },
+      { ...original, sandbox: { ...original.sandbox, unexpected: true } },
+      {
+        ...original,
+        completed_handler_replay: {
+          ...original.completed_handler_replay,
+          output_schema_validation: {
+            ...original.completed_handler_replay.output_schema_validation,
+            schema_ref: 'contracts/input.schema.json',
+          },
+        },
+      },
+    ];
+    for (const tampered of cases) {
+      fs.writeFileSync(completionPath, canonicalJsonBytes(tampered));
+      await assert.rejects(runStandardAgentAction(request, dependencies));
+      fs.writeFileSync(completionPath, canonicalJsonBytes(original));
+    }
+    const physicalCopy = path.join(workspaceRoot, 'completion-copy.json');
+    fs.writeFileSync(physicalCopy, canonicalJsonBytes(original));
+    fs.rmSync(completionPath);
+    fs.symlinkSync(physicalCopy, completionPath);
+    await assert.rejects(
+      runStandardAgentAction(request, dependencies),
+      /completion must be a physical file/i,
+    );
+    assert.equal(handlerCalls, 1);
+  } finally {
+    fs.rmSync(checkoutRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('durable action plan tampering and coherent shape forgery fail before G2 resolution', async () => {
+  const checkoutRoot = root('opl-action-plan-tamper-checkout-');
+  const workspaceRoot = root('opl-action-plan-tamper-workspace-');
+  let resolverCalls = 0;
+  let handlerCalls = 0;
+  try {
+    writeContracts(checkoutRoot, [action({
+      actionId: 'evaluate',
+      executionBinding: { kind: 'handler_ref', handler_ref: 'handler:fixture.evaluate' },
+    })], {
+      surface_kind: 'domain_handler_registry',
+      version: 'domain-handler-registry.v1',
+      handlers: [{
+        handler_id: 'fixture.evaluate',
+        binding: { kind: 'typescript_export', file: 'handler.ts', export: 'evaluate' },
+      }],
+    });
+    fs.writeFileSync(path.join(checkoutRoot, 'handler.ts'), [
+      'export function evaluate(request: Record<string, unknown>) {',
+      '  return { accepted: true, value: request.value };',
+      '}',
+      '',
+    ].join('\n'));
+    const dependencies = {
+      resolveManagedCheckout: (async () => {
+        resolverCalls += 1;
+        return await managed(checkoutRoot, workspaceRoot)();
+      }) as never,
+      runHandler: (input: Parameters<typeof runStandardAgentHandlerSandbox>[0]) => {
+        handlerCalls += 1;
+        return runStandardAgentHandlerSandbox(input);
+      },
+      recordLedger,
+    };
+    const request = (runId: string) => ({
+      domainId: 'mas',
+      actionId: 'evaluate',
+      workspaceRoot,
+      payload: { value: 29 },
+      runId,
+    });
+
+    await runStandardAgentAction(request('plan-hash-tamper'), dependencies);
+    const hashState = path.join(
+      workspaceRoot,
+      'control',
+      'opl',
+      'action_run_state',
+      'plan-hash-tamper',
+    );
+    const hashPlan = JSON.parse(fs.readFileSync(path.join(hashState, 'plan.json'), 'utf8'));
+    hashPlan.started_at = '2099-01-01T00:00:00.000Z';
+    fs.writeFileSync(path.join(hashState, 'plan.json'), canonicalJsonBytes(hashPlan));
+    await assert.rejects(
+      runStandardAgentAction(request('plan-hash-tamper'), dependencies),
+      /plan conflicts with its frozen binding/i,
+    );
+
+    await runStandardAgentAction(request('plan-shape-forgery'), dependencies);
+    const forgedState = path.join(
+      workspaceRoot,
+      'control',
+      'opl',
+      'action_run_state',
+      'plan-shape-forgery',
+    );
+    const forgedPlan = JSON.parse(fs.readFileSync(path.join(forgedState, 'plan.json'), 'utf8'));
+    const forgedBinding = JSON.parse(fs.readFileSync(path.join(forgedState, 'binding.json'), 'utf8'));
+    forgedPlan.execution_kind = 'stage_binding';
+    const forgedPlanBytes = canonicalJsonBytes(forgedPlan);
+    forgedBinding.plan_sha256 = crypto.createHash('sha256').update(forgedPlanBytes).digest('hex');
+    forgedBinding.plan_byte_size = forgedPlanBytes.byteLength;
+    fs.writeFileSync(path.join(forgedState, 'plan.json'), forgedPlanBytes);
+    fs.writeFileSync(path.join(forgedState, 'binding.json'), canonicalJsonBytes(forgedBinding));
+    await assert.rejects(
+      runStandardAgentAction(request('plan-shape-forgery'), dependencies),
+      /does not contain its selected execution binding/i,
+    );
+
+    await runStandardAgentAction(request('plan-catalog-actions-forgery'), dependencies);
+    const catalogState = path.join(
+      workspaceRoot,
+      'control',
+      'opl',
+      'action_run_state',
+      'plan-catalog-actions-forgery',
+    );
+    const catalogPlan = JSON.parse(fs.readFileSync(path.join(catalogState, 'plan.json'), 'utf8'));
+    const catalogBinding = JSON.parse(fs.readFileSync(path.join(catalogState, 'binding.json'), 'utf8'));
+    catalogPlan.catalog.actions = {};
+    const catalogPlanBytes = canonicalJsonBytes(catalogPlan);
+    catalogBinding.plan_sha256 = crypto.createHash('sha256').update(catalogPlanBytes).digest('hex');
+    catalogBinding.plan_byte_size = catalogPlanBytes.byteLength;
+    fs.writeFileSync(path.join(catalogState, 'plan.json'), catalogPlanBytes);
+    fs.writeFileSync(path.join(catalogState, 'binding.json'), canonicalJsonBytes(catalogBinding));
+    await assert.rejects(
+      runStandardAgentAction(request('plan-catalog-actions-forgery'), dependencies),
+      /catalog is invalid/i,
+    );
+
+    await runStandardAgentAction(request('plan-symlink'), dependencies);
+    const symlinkState = path.join(
+      workspaceRoot,
+      'control',
+      'opl',
+      'action_run_state',
+      'plan-symlink',
+    );
+    const planPath = path.join(symlinkState, 'plan.json');
+    const planCopy = path.join(workspaceRoot, 'plan-copy.json');
+    fs.writeFileSync(planCopy, fs.readFileSync(planPath));
+    fs.rmSync(planPath);
+    fs.symlinkSync(planCopy, planPath);
+    await assert.rejects(
+      runStandardAgentAction(request('plan-symlink'), dependencies),
+      /plan must be a physical file/i,
+    );
+    assert.equal(resolverCalls, 4);
+    assert.equal(handlerCalls, 4);
+  } finally {
+    fs.rmSync(checkoutRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('legacy v1 durable binding remains readable without an unbound v2 plan', () => {
+  const checkoutRoot = root('opl-action-v1-binding-checkout-');
+  const workspaceRoot = root('opl-action-v1-binding-workspace-');
+  try {
+    const snapshot = hostedSnapshot({ checkoutRoot, workspaceRoot, label: 'legacy-v1' });
+    const binding = {
+      surface_kind: 'opl_standard_agent_action_run_binding' as const,
+      version: 'opl-standard-agent-action-run-binding.v1' as const,
+      run_id: 'legacy-v1-run',
+      canonical_domain_id: 'mas',
+      action_id: 'evaluate',
+      hosted_runtime_binding_ref: snapshot.provenance_ref,
+      hosted_runtime_binding: snapshot.provenance,
+    };
+    const reserved = reserveStandardAgentActionRunBinding({ workspaceRoot, binding });
+    assert.equal(reserved.status, 'reserved');
+    assert.deepEqual(inspectStandardAgentActionRunBinding({
+      workspaceRoot,
+      runId: binding.run_id,
+    }), binding);
+    assert.equal(inspectStandardAgentActionRunPlan({
+      workspaceRoot,
+      runId: binding.run_id,
+    }), null);
+    assert.equal(
+      reserveStandardAgentActionRunBinding({ workspaceRoot, binding }).status,
+      'existing',
+    );
   } finally {
     fs.rmSync(checkoutRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
@@ -532,7 +904,10 @@ test('Hosted Stage action passes a SHA-bound request ref into Temporal StageRun 
     assert.deepEqual(calls[1], ['stage-run', 'query', 'wf-stage-run']);
     const workspaceLocatorIndex = calls[0].indexOf('--workspace-locator');
     const runtimeWorkspaceLocator = JSON.parse(calls[0][workspaceLocatorIndex + 1]) as Record<string, unknown>;
-    assert.deepEqual(runtimeWorkspaceLocator.package_use_binding, { use_boundary_id: 'package-use:fixture' });
+    assert.equal(
+      (runtimeWorkspaceLocator.package_use_binding as Record<string, unknown>).use_boundary_id,
+      'package-use:hosted-stage-test',
+    );
     assert.equal(runtimeWorkspaceLocator.domain_pack_root, fs.realpathSync.native(checkoutRoot));
     const checkpointIndex = calls[0].indexOf('--checkpoint-ref');
     assert.match(calls[0][checkpointIndex + 1], /^file:/);
@@ -675,7 +1050,7 @@ test('Hosted Stage action replays one durable registry launch and starts a later
     assert.deepEqual(startedWorkflowIds.length, 2);
     assert.equal(new Set(startedWorkflowIds).size, 2);
     assert.equal(currentBindingResolutions, 2);
-    assert.equal(pinnedBindingResolutions, 1);
+    assert.equal(pinnedBindingResolutions, 0);
   } finally {
     if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
     else process.env.OPL_STATE_DIR = previousStateRoot;
@@ -685,7 +1060,7 @@ test('Hosted Stage action replays one durable registry launch and starts a later
   }
 });
 
-test('Hosted Stage action keeps started truth when post-launch query is unavailable', async () => {
+test('Hosted Stage action keeps started truth when query is unavailable and refreshes terminal replay', async () => {
   const checkoutRoot = root('opl-stage-action-query-failure-checkout-');
   const workspaceRoot = root('opl-stage-action-query-failure-workspace-');
   const ledgerStatuses: string[] = [];
@@ -742,7 +1117,10 @@ test('Hosted Stage action keeps started truth when post-launch query is unavaila
       resolveManagedCheckout: managed(checkoutRoot, workspaceRoot) as never,
       compileStageManifest: (() => ({})) as never,
       recordLedger,
-      runStageRuntime: async () => assert.fail('completed launch replay must not reach Stage runtime'),
+      runStageRuntime: async (args) => {
+        assert.deepEqual(args, ['stage-run', 'query', 'wf-stage-query-unavailable']);
+        return { family_runtime_stage_run_query: { status: 'completed' } };
+      },
     });
     const run = result.standard_agent_action_run;
     assert.equal(run.execution_kind, 'stage_binding');
@@ -754,7 +1132,14 @@ test('Hosted Stage action keeps started truth when post-launch query is unavaila
       error_code: 'standard_agent_action_observation_failed',
       message: 'temporal query temporarily unavailable',
     });
-    assert.equal(replay.standard_agent_action_run.output.sha256, run.output.sha256);
+    const replayRun = replay.standard_agent_action_run;
+    assert.equal(replayRun.execution_kind, 'stage_binding');
+    if (replayRun.execution_kind !== 'stage_binding') assert.fail('expected Stage action replay');
+    assert.equal(replayRun.output.sha256, run.output.sha256);
+    assert.equal(replayRun.status, 'completed');
+    assert.deepEqual(replayRun.temporal_stage_run_query, {
+      family_runtime_stage_run_query: { status: 'completed' },
+    });
     assert.equal(attemptCalls, 1);
     assert.equal(queryCalls, 1);
     const completion = inspectStandardAgentActionRunCompletion({
@@ -774,6 +1159,8 @@ test('Hosted Stage unknown-success retry reuses the frozen launch identity witho
   const workspaceRoot = root('opl-stage-action-unknown-success-workspace-');
   const invocationIds: string[] = [];
   let attemptCalls = 0;
+  let resolverCalls = 0;
+  let compileCalls = 0;
   try {
     writeContracts(checkoutRoot, [action({
       actionId: 'launch',
@@ -786,9 +1173,16 @@ test('Hosted Stage unknown-success retry reuses the frozen launch identity witho
         route_policy: 'ai_selected_progress_route',
       },
     })]);
+    const resolveG1 = managed(checkoutRoot, workspaceRoot);
     const dependencies = {
-      resolveManagedCheckout: managed(checkoutRoot, workspaceRoot) as never,
-      compileStageManifest: (() => ({})) as never,
+      resolveManagedCheckout: (async () => {
+        resolverCalls += 1;
+        return resolveG1();
+      }) as never,
+      compileStageManifest: (() => {
+        compileCalls += 1;
+        return {};
+      }) as never,
       recordLedger,
       runStageRuntime: async (args: string[]) => {
         if (args[0] === 'attempt') {
@@ -827,21 +1221,58 @@ test('Hosted Stage unknown-success retry reuses the frozen launch identity witho
       inspectStandardAgentActionRunCompletion({ workspaceRoot, runId: request.runId }),
       null,
     );
+    const binding = inspectStandardAgentActionRunBinding({ workspaceRoot, runId: request.runId });
+    const plan = inspectStandardAgentActionRunPlan({ workspaceRoot, runId: request.runId });
+    assert.equal(binding?.version, 'opl-standard-agent-action-run-binding.v2');
+    assert.equal(plan?.execution_kind, 'stage_binding');
+    assert.equal(plan?.catalog.actions[0]?.stage_route?.entry_stage_ref, 'intake');
+    const stateDirectory = path.join(
+      workspaceRoot,
+      'control',
+      'opl',
+      'action_run_state',
+      request.runId,
+    );
+    assert.deepEqual(fs.readdirSync(stateDirectory).sort(), ['binding.json', 'plan.json']);
+
+    writeContracts(checkoutRoot, [action({
+      actionId: 'launch',
+      executionBinding: { kind: 'stage_binding', stage_manifest_ref: 'agent/stages/manifest.json' },
+      stageRoute: {
+        entry_stage_ref: 'review',
+        required_stage_refs: ['review'],
+        optional_stage_refs: [],
+        terminal_stage_refs: ['review'],
+        route_policy: 'ai_selected_progress_route',
+      },
+    })]);
 
     const retried = await runStandardAgentAction(request, dependencies);
     const run = retried.standard_agent_action_run;
     assert.equal(run.execution_kind, 'stage_binding');
     if (run.execution_kind !== 'stage_binding') assert.fail();
     assert.equal(run.status, 'started');
+    assert.equal(run.stage_route.entry_stage_ref, 'intake');
     assert.equal(attemptCalls, 2);
     assert.equal(invocationIds.length, 2);
     assert.equal(invocationIds[1], invocationIds[0]);
+    assert.equal(resolverCalls, 1);
+    assert.equal(compileCalls, 1);
     const completion = inspectStandardAgentActionRunCompletion({
       workspaceRoot,
       runId: request.runId,
     });
     assert.equal(completion?.status, 'started');
     assert.equal(completion?.failure_disposition, null);
+
+    const later = await runStandardAgentAction({ ...request, runId: 'stage-after-g2-drift' }, dependencies);
+    const laterRun = later.standard_agent_action_run;
+    assert.equal(laterRun.execution_kind, 'stage_binding');
+    if (laterRun.execution_kind !== 'stage_binding') assert.fail();
+    assert.equal(laterRun.stage_route.entry_stage_ref, 'review');
+    assert.notEqual(laterRun.stage_run_invocation_id, invocationIds[0]);
+    assert.equal(resolverCalls, 2);
+    assert.equal(compileCalls, 2);
   } finally {
     fs.rmSync(checkoutRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
@@ -980,6 +1411,10 @@ test('Hosted Foundry action starts one OPL-owned FoundryRun and replays immutabl
       domainId: 'mas', actionId: 'engineer-agent', workspaceRoot, payload, runId: 'foundry-hosted-run',
     }, dependencies as never);
     activeSnapshot = v2Snapshot;
+    fs.writeFileSync(
+      path.join(checkoutRoot, 'contracts', 'foundry_provider.json'),
+      '{"broken_live_provider":true}\n',
+    );
     const replay = await runStandardAgentAction({
       domainId: 'mas', actionId: 'engineer-agent', workspaceRoot, payload, runId: 'foundry-hosted-run',
     }, dependencies as never);
@@ -995,7 +1430,7 @@ test('Hosted Foundry action starts one OPL-owned FoundryRun and replays immutabl
     assert.equal(replay.standard_agent_action_run.hosted_runtime_binding_ref, v1Snapshot.provenance_ref);
     assert.equal(starts, 1);
     assert.equal(currentBindingResolutions, 1);
-    assert.equal(pinnedBindingResolutions, 1);
+    assert.equal(pinnedBindingResolutions, 0);
   } finally {
     fs.rmSync(checkoutRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });

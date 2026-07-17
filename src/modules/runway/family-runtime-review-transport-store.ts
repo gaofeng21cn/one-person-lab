@@ -99,6 +99,8 @@ export function reviewTransportRoots() {
     reviewer_snapshot_root: path.join(root, 'reviewer-input-snapshots'),
     reviewer_snapshot_object_root: path.join(root, 'reviewer-input-snapshots', 'objects'),
     reviewer_snapshot_manifest_root: path.join(root, 'reviewer-input-snapshots', 'manifests'),
+    stage_review_receipt_root: path.join(root, 'revision-consumption', 'stage-review-receipts'),
+    revision_intake_root: path.join(root, 'revision-consumption', 'revision-intakes'),
     evidence_cache_root: path.join(root, 'page-evidence-cache'),
     evidence_cache_candidate_root: path.join(root, 'page-evidence-cache', 'candidates'),
     evidence_cache_entry_root: path.join(root, 'page-evidence-cache', 'entries'),
@@ -106,8 +108,59 @@ export function reviewTransportRoots() {
   };
 }
 
-function stableStatIdentity(stat: fs.Stats) {
-  return [stat.dev, stat.ino, stat.size, stat.mtimeMs, stat.ctimeMs].join(':');
+function sameFileIdentity(left: fs.BigIntStats, right: fs.BigIntStats) {
+  return left.dev === right.dev && left.ino === right.ino;
+}
+
+function sameStableFile(left: fs.BigIntStats, right: fs.BigIntStats) {
+  return sameFileIdentity(left, right)
+    && left.size === right.size
+    && left.mtimeNs === right.mtimeNs
+    && left.ctimeNs === right.ctimeNs;
+}
+
+function stableDirectoryChain(candidatePath: string, trustedAnchor: string, ref: string) {
+  const anchor = path.resolve(trustedAnchor);
+  const candidateDirectory = path.dirname(path.resolve(candidatePath));
+  const relative = path.relative(anchor, candidateDirectory);
+  if (
+    relative === '..'
+    || relative.startsWith(`..${path.sep}`)
+    || path.isAbsolute(relative)
+  ) {
+    throw reviewTransportError(
+      'review_transport_exact_ref_untrusted_root',
+      'Review transport exact ref is outside its trusted directory anchor.',
+      { ref, trusted_anchor: anchor },
+    );
+  }
+  const chain = [
+    anchor,
+    ...relative.split(path.sep).filter(Boolean).map((_, index, components = relative.split(path.sep).filter(Boolean)) => (
+      path.join(anchor, ...components.slice(0, index + 1))
+    )),
+  ];
+  return chain.map((directory) => {
+    const observed = fs.lstatSync(directory, { bigint: true });
+    if (!observed.isDirectory() || observed.isSymbolicLink()) {
+      throw reviewTransportError(
+        'review_transport_exact_ref_untrusted_root',
+        'Review transport trusted directory chain must not contain symlinks.',
+        { ref, offending_directory: directory, trusted_anchor: anchor },
+      );
+    }
+    return { directory, observed };
+  });
+}
+
+function sameStableDirectoryChain(
+  left: Array<{ directory: string; observed: fs.BigIntStats }>,
+  right: Array<{ directory: string; observed: fs.BigIntStats }>,
+) {
+  return left.length === right.length && left.every((entry, index) => (
+    entry.directory === right[index]?.directory
+    && sameStableFile(entry.observed, right[index]!.observed)
+  ));
 }
 
 function digestHex(value: string) {
@@ -131,36 +184,90 @@ function pathInside(candidateInput: string, rootInput: string) {
   );
 }
 
-function stableFileObservation(filePath: string, ref: string) {
+function stableFileObservation(
+  filePath: string,
+  ref: string,
+  options: { trustedRoot?: string; trustedAnchor?: string; captureBytes?: boolean } = {},
+) {
   let descriptor: number | null = null;
   try {
-    descriptor = fs.openSync(filePath, 'r');
-    const before = fs.fstatSync(descriptor);
-    if (!before.isFile()) {
+    const directoryChainBefore = options.trustedAnchor
+      ? stableDirectoryChain(filePath, options.trustedAnchor, ref)
+      : null;
+    if (options.trustedRoot && !pathInside(filePath, options.trustedRoot)) {
+      throw reviewTransportError(
+        'review_transport_exact_ref_untrusted_root',
+        'Review transport exact ref is outside its trusted root.',
+        { ref, trusted_root: options.trustedRoot },
+      );
+    }
+    const pathBefore = fs.lstatSync(filePath, { bigint: true });
+    if (!pathBefore.isFile() || pathBefore.isSymbolicLink()) {
       throw reviewTransportError(
         'review_transport_ref_not_file',
         'Review transport exact ref must resolve to a regular file.',
         { ref, resolved_path: filePath },
       );
     }
+    const noFollow = typeof fs.constants.O_NOFOLLOW === 'number' ? fs.constants.O_NOFOLLOW : 0;
+    descriptor = fs.openSync(filePath, fs.constants.O_RDONLY | noFollow);
+    const before = fs.fstatSync(descriptor, { bigint: true });
+    if (!before.isFile() || !sameFileIdentity(pathBefore, before)) {
+      throw reviewTransportError(
+        'review_transport_ref_changed_during_read',
+        'Review transport exact ref changed identity before it was read.',
+        { ref, resolved_path: filePath },
+      );
+    }
     const hash = crypto.createHash('sha256');
+    const chunks: Buffer[] = [];
     let sizeBytes = 0;
     while (true) {
       const chunk = Buffer.allocUnsafe(READ_CHUNK_BYTES);
       const read = fs.readSync(descriptor, chunk, 0, chunk.length, null);
       if (read === 0) break;
       sizeBytes += read;
-      hash.update(chunk.subarray(0, read));
+      const bytes = chunk.subarray(0, read);
+      hash.update(bytes);
+      if (options.captureBytes) chunks.push(Buffer.from(bytes));
     }
-    const after = fs.fstatSync(descriptor);
-    if (sizeBytes !== before.size || stableStatIdentity(before) !== stableStatIdentity(after)) {
+    const after = fs.fstatSync(descriptor, { bigint: true });
+    const directoryChainAfter = options.trustedAnchor
+      ? stableDirectoryChain(filePath, options.trustedAnchor, ref)
+      : null;
+    let pathAfter: fs.BigIntStats;
+    try {
+      pathAfter = fs.lstatSync(filePath, { bigint: true });
+    } catch {
+      throw reviewTransportError(
+        'review_transport_ref_changed_during_read',
+        'Review transport exact ref changed identity while it was read.',
+        { ref, resolved_path: filePath },
+      );
+    }
+    if (
+      pathAfter!.isSymbolicLink()
+      || BigInt(sizeBytes) !== before.size
+      || !sameStableFile(before, after)
+      || !sameStableFile(after, pathAfter!)
+      || (
+        directoryChainBefore !== null
+        && directoryChainAfter !== null
+        && !sameStableDirectoryChain(directoryChainBefore, directoryChainAfter)
+      )
+      || (options.trustedRoot && !pathInside(filePath, options.trustedRoot))
+    ) {
       throw reviewTransportError(
         'review_transport_ref_changed_during_read',
         'Review transport exact ref changed while it was being verified.',
         { ref, resolved_path: filePath },
       );
     }
-    return { sha256: `sha256:${hash.digest('hex')}`, size_bytes: sizeBytes };
+    return {
+      sha256: `sha256:${hash.digest('hex')}`,
+      size_bytes: sizeBytes,
+      bytes: options.captureBytes ? Buffer.concat(chunks, sizeBytes) : null,
+    };
   } catch (error) {
     if (error instanceof FrameworkContractError) throw error;
     throw reviewTransportError(
@@ -186,7 +293,7 @@ function persistBytesAtDigest(input: {
   fs.mkdirSync(input.root, { recursive: true, mode: 0o700 });
   const target = path.join(input.root, `${digestHex(input.digest)}${input.extension}`);
   if (fs.existsSync(target)) {
-    const observed = stableFileObservation(target, pathToFileURL(target).href);
+    const observed = stableFileObservation(target, pathToFileURL(target).href, { trustedRoot: input.root });
     if (observed.sha256 !== input.digest || observed.size_bytes !== input.bytes.length) {
       throw reviewTransportError(
         'review_transport_persisted_bytes_tampered',
@@ -214,7 +321,7 @@ function persistBytesAtDigest(input: {
       return { path: target, created: true };
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
-      const observed = stableFileObservation(target, pathToFileURL(target).href);
+      const observed = stableFileObservation(target, pathToFileURL(target).href, { trustedRoot: input.root });
       if (observed.sha256 !== input.digest || observed.size_bytes !== input.bytes.length) {
         throw reviewTransportError(
           'review_transport_persisted_bytes_tampered',
@@ -299,6 +406,7 @@ export function resolveContainedWorkspaceFile(workspaceRootInput: unknown, refIn
 export function persistReviewerSnapshotObject(input: {
   sourcePath?: string;
   sourceRef?: string;
+  trustedWorkspaceRoot?: string;
   expectedSha256: string;
   expectedSizeBytes: number;
 }) {
@@ -309,7 +417,9 @@ export function persistReviewerSnapshotObject(input: {
     `${digestHex(input.expectedSha256)}.bin`,
   );
   if (fs.existsSync(target)) {
-    const observed = stableFileObservation(target, pathToFileURL(target).href);
+    const observed = stableFileObservation(target, pathToFileURL(target).href, {
+      trustedRoot: roots.reviewer_snapshot_object_root,
+    });
     if (observed.sha256 !== input.expectedSha256 || observed.size_bytes !== input.expectedSizeBytes) {
       throw reviewTransportError(
         'reviewer_input_snapshot_object_tampered',
@@ -340,12 +450,31 @@ export function persistReviewerSnapshotObject(input: {
   let source: number | null = null;
   let destination: number | null = null;
   try {
-    source = fs.openSync(input.sourcePath, 'r');
-    const before = fs.fstatSync(source);
-    if (!before.isFile()) {
+    if (
+      !input.trustedWorkspaceRoot
+      || !pathInside(input.sourcePath, input.trustedWorkspaceRoot)
+    ) {
+      throw reviewTransportError(
+        'reviewer_input_snapshot_source_path_escape',
+        'Reviewer input snapshot source escaped its declared workspace root before copy.',
+        { source_ref: input.sourceRef, workspace_root: input.trustedWorkspaceRoot ?? null },
+      );
+    }
+    const pathBefore = fs.lstatSync(input.sourcePath, { bigint: true });
+    if (!pathBefore.isFile() || pathBefore.isSymbolicLink()) {
       throw reviewTransportError(
         'reviewer_input_snapshot_source_not_file',
         'Reviewer input snapshot source must be a regular file.',
+        { source_ref: input.sourceRef },
+      );
+    }
+    const noFollow = typeof fs.constants.O_NOFOLLOW === 'number' ? fs.constants.O_NOFOLLOW : 0;
+    source = fs.openSync(input.sourcePath, fs.constants.O_RDONLY | noFollow);
+    const before = fs.fstatSync(source, { bigint: true });
+    if (!before.isFile() || !sameFileIdentity(pathBefore, before)) {
+      throw reviewTransportError(
+        'reviewer_input_snapshot_source_changed_during_copy',
+        'Reviewer input snapshot source changed identity before copy.',
         { source_ref: input.sourceRef },
       );
     }
@@ -361,9 +490,25 @@ export function persistReviewerSnapshotObject(input: {
       hash.update(bytes);
       fs.writeSync(destination, bytes);
     }
-    const after = fs.fstatSync(source);
+    const after = fs.fstatSync(source, { bigint: true });
+    let pathAfter: fs.BigIntStats;
+    try {
+      pathAfter = fs.lstatSync(input.sourcePath, { bigint: true });
+    } catch {
+      throw reviewTransportError(
+        'reviewer_input_snapshot_source_changed_during_copy',
+        'Reviewer input snapshot source changed identity during copy.',
+        { source_ref: input.sourceRef },
+      );
+    }
     const sha256 = `sha256:${hash.digest('hex')}`;
-    if (sizeBytes !== before.size || stableStatIdentity(before) !== stableStatIdentity(after)) {
+    if (
+      pathAfter!.isSymbolicLink()
+      || BigInt(sizeBytes) !== before.size
+      || !sameStableFile(before, after)
+      || !sameStableFile(after, pathAfter!)
+      || !pathInside(input.sourcePath, input.trustedWorkspaceRoot)
+    ) {
       throw reviewTransportError(
         'reviewer_input_snapshot_source_changed_during_copy',
         'Reviewer input snapshot source changed while it was being copied.',
@@ -392,7 +537,9 @@ export function persistReviewerSnapshotObject(input: {
       return { created: true, ref: pathToFileURL(target).href };
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
-      const observed = stableFileObservation(target, pathToFileURL(target).href);
+      const observed = stableFileObservation(target, pathToFileURL(target).href, {
+        trustedRoot: roots.reviewer_snapshot_object_root,
+      });
       if (observed.sha256 !== input.expectedSha256 || observed.size_bytes !== input.expectedSizeBytes) {
         throw reviewTransportError(
           'reviewer_input_snapshot_object_tampered',
@@ -416,11 +563,11 @@ export function persistReviewerSnapshotObject(input: {
   }
 }
 
-export function readReviewTransportFileExactRef(input: {
+function readReviewTransportFileExactRefInternal(input: {
   exactRef: unknown;
   expectedKind: string;
   trustedRoot: string;
-}) {
+}, captureBytes: boolean) {
   const exactRef = requireReviewTransportRecord(input.exactRef, 'exact_ref');
   requireExactReviewTransportKeys(exactRef, ['kind', 'ref', 'size_bytes', 'sha256'], 'exact_ref');
   if (exactRef.kind !== input.expectedKind) {
@@ -450,7 +597,11 @@ export function readReviewTransportFileExactRef(input: {
       { ref, trusted_root: input.trustedRoot },
     );
   }
-  const observed = stableFileObservation(filePath, ref);
+  const observed = stableFileObservation(filePath, ref, {
+    trustedRoot: input.trustedRoot,
+    trustedAnchor: reviewTransportRoots().root,
+    captureBytes,
+  });
   const filenameDigest = path.basename(filePath).replace(/\.(?:json|bin)$/, '').toLowerCase();
   if (
     observed.sha256 !== sha256
@@ -477,7 +628,17 @@ export function readReviewTransportFileExactRef(input: {
       sha256,
     } satisfies ReviewTransportExactRef,
     file_path: filePath,
+    bytes: observed.bytes,
   };
+}
+
+export function readReviewTransportFileExactRef(input: {
+  exactRef: unknown;
+  expectedKind: string;
+  trustedRoot: string;
+}) {
+  const { bytes: _bytes, ...verified } = readReviewTransportFileExactRefInternal(input, false);
+  return verified;
 }
 
 export function readReviewTransportJsonExactRef(input: {
@@ -485,13 +646,22 @@ export function readReviewTransportJsonExactRef(input: {
   expectedKind: string;
   trustedRoot: string;
 }) {
-  const verified = readReviewTransportFileExactRef(input);
+  const verified = readReviewTransportFileExactRefInternal(input, true);
   let value: Record<string, unknown>;
   try {
-    const parsed: unknown = JSON.parse(fs.readFileSync(verified.file_path, 'utf8'));
+    if (!verified.bytes) throw new Error('verified bytes were not captured');
+    const parsed: unknown = JSON.parse(verified.bytes.toString('utf8'));
     if (!isRecord(parsed)) throw new Error('body is not an object');
+    if (!verified.bytes.equals(canonicalJsonBytes(parsed))) {
+      throw reviewTransportError(
+        'review_transport_json_noncanonical',
+        'Review transport exact ref JSON must use canonical bytes.',
+        { ref: verified.exact_ref.ref },
+      );
+    }
     value = parsed;
   } catch (error) {
+    if (error instanceof FrameworkContractError) throw error;
     throw reviewTransportError(
       'review_transport_json_invalid',
       'Review transport exact ref body is not valid JSON.',

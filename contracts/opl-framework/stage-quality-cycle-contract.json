@@ -305,12 +305,27 @@
       "stage_goal_refs",
       "exact_artifact_refs_and_hashes",
       "artifact_identity_receipt_refs_verified_by_opl_transport",
+      "mas_review_input_snapshot_binding_or_nonblocking_snapshot_quality_debt_receipt",
+      "opl_reviewer_input_snapshot_manifest_exact_ref_and_body",
+      "immutable_snapshot_member_refs_for_review_content",
       "source_refs_and_fingerprint",
       "quality_rubric_refs",
       "necessary_artifact_lineage_refs",
       "prior_finding_refs_and_acceptance_criteria_for_re_review",
       "validated_prior_route_recommendations_with_attempt_and_evidence_lineage"
     ],
+    "review_input_snapshot": {
+      "materialization_request_source": "producer_or_repairer_stage_quality_envelope_only",
+      "artifact_refs_may_not_be_inferred_as_snapshot_members": true,
+      "request_participates_in_reviewer_attempt_idempotency": true,
+      "present_invalid_request_fails_closed_before_reviewer_attempt_creation": true,
+      "missing_request_hosted_action_launch_allowed": true,
+      "missing_request_adds_quality_debt_without_overwriting_reviewer_outcome_findings_or_hard_stop": true,
+      "live_artifact_and_source_refs_are_identity_only": true,
+      "review_content_locator_source": "opl_reviewer_input_snapshot_manifest.members[].immutable_ref",
+      "live_workspace_content_read_after_materialization_allowed": false,
+      "missing_snapshot_stage_transition_allowed": true
+    },
     "forbidden_context": [
       "producer_conversation_history",
       "producer_or_reviewer_thread_resume",
@@ -339,8 +354,48 @@
       "reviewed_artifact_hashes",
       "rubric_refs",
       "verdict",
+      "review_input_snapshot_status",
+      "mas_review_input_snapshot_binding",
+      "opl_reviewer_input_snapshot_manifest_ref",
+      "opl_reviewer_input_snapshot_manifest",
+      "review_input_snapshot_quality_debt_receipt_ref",
+      "review_input_snapshot_quality_debt_receipt",
+      "opl_review_evidence_cache_receipt_ref",
+      "opl_review_evidence_cache_receipt",
       "finding_lineage"
     ],
+    "review_transport_binding": {
+      "snapshot_binding_or_nonblocking_quality_debt_receipt_required": true,
+      "snapshot_manifest_exact_ref_and_body_required_when_materialized": true,
+      "missing_snapshot_does_not_overwrite_reviewer_outcome_or_skip_fresh_review": true,
+      "page_evidence_cache_receipt_ref_and_body_present_or_absent_together": true,
+      "page_evidence_cache_context_binding_fields": [
+        "reviewer_attempt_ref",
+        "execution_content_binding_sha256",
+        "snapshot_manifest_ref",
+        "snapshot_manifest_sha256",
+        "review_scope_sha256",
+        "rubric_sha256",
+        "origin_reviewer_invocation_ref",
+        "origin_reviewer_evidence_ref"
+      ],
+      "page_evidence_cache_missing_or_mismatched_context_is_quality_debt": true,
+      "page_evidence_cache_quality_debt_stage_transition_allowed": true,
+      "page_evidence_cache_quality_debt_typed_blocker_ref": null,
+      "page_evidence_cache_quality_debt_projects_to_stage_run_quality_debt_refs": true,
+      "page_evidence_cache_persisted_bytes_path_key_or_entry_tamper_fails_closed": true,
+      "page_evidence_cache_authority": false,
+      "page_evidence_cache_hit_can_skip_fresh_reviewer_invocation": false,
+      "page_evidence_cache_hit_can_skip_fresh_reviewer_receipt": false,
+      "page_evidence_cache_hit_can_skip_mas_judgment": false,
+      "revision_transport": {
+        "opl_stage_review_receipt_and_revision_intake_are_immutable_exact_refs": true,
+        "framework_can_sign_mas_revision_consumption_receipt": false,
+        "missing_revision_consumption_binding_is_quality_debt": true,
+        "missing_revision_consumption_binding_stage_transition_allowed": true,
+        "missing_revision_consumption_binding_typed_blocker_ref": null
+      }
+    },
     "reviewed_hash_must_match_current_artifact": true,
     "producer_and_repairer_identity_source": "transport_verified_local_bytes_with_opl_transport_artifact_identity_receipt_or_independent_domain_artifact_identity_receipt",
     "local_artifact_identity_policy": "OPL transport reads final bytes, computes SHA-256, and creates an opl_transport_artifact_identity_receipt before formal Review",
@@ -385,7 +440,9 @@
       "distinct_nonempty_execution_sessions",
       "producer_output_artifact_refs_and_hashes_equal_reviewer_inputs",
       "reviewer_attempt_and_controller_rubric_refs_equal",
-      "requested_receipt_verdict_matches_reviewer_canonical_outcome"
+      "requested_receipt_verdict_matches_reviewer_canonical_outcome",
+      "reviewer_snapshot_exact_ref_body_binding_or_nonblocking_debt_valid",
+      "page_evidence_cache_receipt_exact_ref_body_binding_valid_when_present"
     ],
     "finding_lineage_binding": {
       "canonicalization": "canonical_json_sorted_object_keys",

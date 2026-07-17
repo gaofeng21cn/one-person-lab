@@ -109,6 +109,9 @@ export type TemporalStageQualityAttemptMaterializationInput = {
   findings?: StageQualityFinding[];
   repair_map?: StageQualityRepairMapEntry[];
   route_recommendations?: StageQualityRouteRecommendationRecord[];
+  review_input_snapshot_materialization_request?: unknown;
+  revision_intake_refs?: Array<Record<string, unknown>>;
+  opl_stage_review_receipt_ref?: Record<string, unknown> | null;
 };
 
 export type TemporalStageQualityCycleProjectionInput = {

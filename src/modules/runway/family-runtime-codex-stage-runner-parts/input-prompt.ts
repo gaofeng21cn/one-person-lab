@@ -163,6 +163,13 @@ function qualityAttemptPromptLines(
   const rolePromptRef = optionalString(attempt.quality_role_prompt_ref);
   const qualityContext = isRecord(attempt.quality_context) ? attempt.quality_context : {};
   const contextManifest = isRecord(qualityContext.context_manifest) ? qualityContext.context_manifest : {};
+  const reviewInputSnapshotStatus = optionalString(contextManifest.review_input_snapshot_status);
+  const reviewInputSnapshotManifest = isRecord(contextManifest.opl_reviewer_input_snapshot_manifest)
+    ? contextManifest.opl_reviewer_input_snapshot_manifest
+    : null;
+  const reviewInputSnapshotManifestRef = isRecord(
+    contextManifest.opl_reviewer_input_snapshot_manifest_ref,
+  ) ? contextManifest.opl_reviewer_input_snapshot_manifest_ref : null;
   const routeSelectionContext = isRecord(contextManifest.cross_stage_route_selection)
     ? contextManifest.cross_stage_route_selection
     : {};
@@ -236,6 +243,16 @@ function qualityAttemptPromptLines(
     'Do not resume, recover, inspect, or inherit the producer or repairer conversation/session history.',
     'Use only the declared context manifest, exact artifact refs and hashes, source refs, rubric refs, and necessary lineage.',
     `Context manifest ref: ${contextManifestRef ?? 'missing'}`,
+    `Immutable reviewer input snapshot status: ${reviewInputSnapshotStatus ?? 'missing'}`,
+    `Immutable reviewer input snapshot manifest exact ref: ${JSON.stringify(reviewInputSnapshotManifestRef)}`,
+    `Immutable reviewer input snapshot manifest: ${JSON.stringify(reviewInputSnapshotManifest)}`,
+    'The live artifact refs and source refs above are identity/provenance checks only. Do not read their live workspace bytes as review content.',
+    'Read review content only from opl_reviewer_input_snapshot_manifest.members[].immutable_ref. Do not infer members from artifact refs or substitute another locator.',
+    ...(reviewInputSnapshotStatus === 'quality_debt'
+      ? [
+          'No immutable reviewer input snapshot is available. Continue the hosted action and record any independently available findings, diagnostics, or hard-stop evidence, but do not read unfrozen live bytes or claim quality pass from them. The controller attaches snapshot quality debt independently; do not change the reviewer outcome solely because the snapshot is missing.',
+        ]
+      : []),
     'The review closeout must bind reviewed artifact hashes and declare no_context_inheritance=true.',
     `Repair budget: ${maxRepairRounds ?? 'unavailable'} rounds. outcome=repair_required normally continues the internal quality loop while repair budget remains.`,
     'If the required work belongs to a different declared Stage, a reviewer or re_reviewer may instead end this StageRun with outcome=repair_required plus decision_kind=route_back to that different Stage. This is the only terminal route allowed before repair-budget exhaustion for repair_required.',

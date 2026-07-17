@@ -11,7 +11,9 @@
     "review_lane",
     "review_scope_sha256",
     "workspace_root",
-    "members"
+    "members",
+    "mas_authority_record_ref",
+    "mas_authority_record"
   ],
   "properties": {
     "surface_kind": { "const": "opl_reviewer_input_snapshot_materialization_request" },
@@ -28,18 +30,80 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["member_id", "role", "source_ref", "sha256", "size_bytes"],
+        "required": ["member_id", "role", "owner_ref", "source_ref", "sha256", "size_bytes"],
         "properties": {
           "member_id": { "type": "string", "minLength": 1 },
           "role": { "type": "string", "minLength": 1 },
+          "owner_ref": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Original MAS owner locator used only for owner scope identity, including exact-byte review scope hashing."
+          },
           "source_ref": { "type": "string", "minLength": 1 },
           "sha256": { "$ref": "#/$defs/sha256" },
           "size_bytes": { "type": "integer", "minimum": 0 }
         }
       }
+    },
+    "mas_authority_record_ref": {
+      "$ref": "#/$defs/mas_authority_record_ref"
+    },
+    "mas_authority_record": {
+      "$ref": "#/$defs/mas_authority_record"
     }
   },
   "$defs": {
-    "sha256": { "type": "string", "pattern": "^(?:sha256:)?[a-fA-F0-9]{64}$" }
+    "sha256": { "type": "string", "pattern": "^(?:sha256:)?[a-fA-F0-9]{64}$" },
+    "mas_authority_record_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "ref", "size_bytes", "sha256"],
+      "properties": {
+        "kind": { "const": "mas_review_input_snapshot_authority" },
+        "ref": {
+          "type": "string",
+          "pattern": "^mas-review-input-snapshot-authority:[a-f0-9]{64}$"
+        },
+        "size_bytes": { "type": "integer", "minimum": 1 },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "mas_authority_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface_kind",
+        "schema_version",
+        "generation_ref",
+        "review_lane",
+        "review_scope_sha256",
+        "members"
+      ],
+      "properties": {
+        "surface_kind": { "const": "mas_review_input_snapshot_authority" },
+        "schema_version": { "const": 1 },
+        "generation_ref": { "type": "string", "minLength": 1 },
+        "review_lane": {
+          "enum": ["medical", "statistical", "reference", "display", "publication", "exact_byte_package"]
+        },
+        "review_scope_sha256": { "$ref": "#/$defs/sha256" },
+        "members": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["member_id", "role", "owner_ref", "sha256", "size_bytes"],
+            "properties": {
+              "member_id": { "type": "string", "minLength": 1 },
+              "role": { "type": "string", "minLength": 1 },
+              "owner_ref": { "type": "string", "minLength": 1 },
+              "sha256": { "$ref": "#/$defs/sha256" },
+              "size_bytes": { "type": "integer", "minimum": 0 }
+            }
+          }
+        }
+      }
+    }
   }
 }

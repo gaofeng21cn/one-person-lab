@@ -49,6 +49,7 @@ import {
   type StageQualityReReviewResult,
   type StageReviewReceipt,
 } from '../stagecraft/public/stage-quality-cycle.ts';
+import { stageReviewEvidenceCacheQualityDebtRef } from '../stagecraft/stage-quality-cycle.ts';
 import {
   evaluateStageQualityAttemptRoute,
   isRepairRequiredCrossStageRouteBackDecision,
@@ -1014,6 +1015,9 @@ export async function StageRunWorkflow(
     artifactIdentityReceiptRefs: string[];
     findings?: StageQualityFinding[];
     repairMap?: StageQualityRepairMapEntry[];
+    reviewInputSnapshotMaterializationRequest?: unknown;
+    revisionIntakeRefs?: Array<Record<string, unknown>>;
+    oplStageReviewReceiptRef?: Record<string, unknown> | null;
   }) => {
     state = { ...state, status: 'running', current_role: attemptInput.role, updated_at: nowIso() };
     const materialized = await stageQualityAttemptMaterializeActivity({
@@ -1029,8 +1033,17 @@ export async function StageRunWorkflow(
       findings: attemptInput.findings,
       repair_map: attemptInput.repairMap,
       route_recommendations: state.route_recommendations,
+      review_input_snapshot_materialization_request:
+        attemptInput.reviewInputSnapshotMaterializationRequest,
+      revision_intake_refs: attemptInput.revisionIntakeRefs,
+      opl_stage_review_receipt_ref: attemptInput.oplStageReviewReceiptRef,
     });
     const childInput = materialized.workflow_input;
+    const childContextManifest = asRecord(asRecord(childInput.quality_context).context_manifest);
+    const reviewInputSnapshotQualityDebtRef = typeof childContextManifest
+      .review_input_snapshot_quality_debt_receipt_ref === 'string'
+      ? childContextManifest.review_input_snapshot_quality_debt_receipt_ref
+      : null;
     const executionPolicy = executionPolicyForAttempt(childInput);
     state = {
       ...state,
@@ -1041,9 +1054,14 @@ export async function StageRunWorkflow(
       args: [childInput],
       workflowId: childInput.workflow_id,
     });
-    await stageQualityAttemptSyncActivity({
+    const syncReceipt = await stageQualityAttemptSyncActivity({
       attempt_ref: materialized.attempt_ref,
       workflow_state: result,
+    });
+    const syncReceiptBody = asRecord(syncReceipt);
+    const reviewEvidenceCacheQualityDebtRef = stageReviewEvidenceCacheQualityDebtRef({
+      receiptRef: syncReceiptBody.opl_review_evidence_cache_receipt_ref ?? null,
+      receipt: syncReceiptBody.opl_review_evidence_cache_receipt ?? null,
     });
     const executionSessionRef = executionSessionRefFromAttemptState(result);
     if (result.status === 'completed') {
@@ -1112,6 +1130,9 @@ export async function StageRunWorkflow(
           ...routeRejectionReasons.map((reason) => qualityFailureRef(input, `route-output:${reason}`)),
         ]),
       ],
+      quality_debt_refs: reviewEvidenceCacheQualityDebtRef
+        ? [...new Set([...state.quality_debt_refs, reviewEvidenceCacheQualityDebtRef])]
+        : state.quality_debt_refs,
       route_recommendations: routeEvaluation.recommendation
         ? [...state.route_recommendations, {
             attempt_ref: materialized.attempt_ref,
@@ -1187,9 +1208,35 @@ export async function StageRunWorkflow(
       executionSessionRef,
       routeEvaluation,
       executionPolicy,
+      reviewInputSnapshotQualityDebtRef,
+      reviewEvidenceCacheQualityDebtRef,
       reviewedArtifactRefs: attemptInput.artifactRefs,
       reviewedArtifactHashes: attemptInput.artifactHashes,
       artifactIdentity,
+    };
+  };
+
+  const revisionTransportFromReceipt = (receipt: StageReviewReceipt) => {
+    const transport = asRecord(receipt.revision_transport);
+    const revisionIntakeRef = asRecord(transport.opl_revision_intake_ref);
+    const stageReviewReceiptRef = asRecord(transport.opl_stage_review_receipt_ref);
+    if (
+      transport.surface_kind !== 'opl_revision_transport'
+      || revisionIntakeRef.kind !== 'opl_revision_intake'
+      || stageReviewReceiptRef.kind !== 'opl_stage_review_receipt'
+    ) {
+      state = {
+        ...state,
+        quality_debt_refs: [...new Set([
+          ...state.quality_debt_refs,
+          qualityFailureRef(input, 'revision-intake-binding-required'),
+        ])],
+      };
+      return null;
+    }
+    return {
+      revisionIntakeRefs: [revisionIntakeRef],
+      oplStageReviewReceiptRef: stageReviewReceiptRef,
     };
   };
 
@@ -1275,6 +1322,8 @@ export async function StageRunWorkflow(
       artifactRefs: state.artifact_refs,
       artifactHashes: state.artifact_hashes,
       artifactIdentityReceiptRefs: state.artifact_identity_receipt_refs,
+      reviewInputSnapshotMaterializationRequest:
+        producer.envelope.review_input_snapshot_materialization_request,
     });
     parentAttemptRef = review.attemptRef;
     if (stageRunStopped(state)) return terminalize(state);
@@ -1294,7 +1343,13 @@ export async function StageRunWorkflow(
         rubric_refs: review.executionPolicy.rubricRefs,
         verdict: stageReviewVerdictForOutcome(initialOutcome),
       });
-      state = { ...state, review_receipts: [...state.review_receipts, hardStopReceipt] };
+      state = {
+        ...state,
+        review_receipts: [...state.review_receipts, hardStopReceipt],
+        quality_debt_refs: review.reviewInputSnapshotQualityDebtRef
+          ? [...new Set([...state.quality_debt_refs, review.reviewInputSnapshotQualityDebtRef])]
+          : state.quality_debt_refs,
+      };
       return terminalize(state);
     }
     let findings = validateInitialStageQualityReviewOutcome({
@@ -1307,13 +1362,28 @@ export async function StageRunWorkflow(
       rubric_refs: review.executionPolicy.rubricRefs,
       verdict: stageReviewVerdictForOutcome(initialOutcome),
     });
-    state = { ...state, findings, review_receipts: [...state.review_receipts, initialReviewReceipt] };
+    let currentRevisionTransport = revisionTransportFromReceipt(initialReviewReceipt);
+    state = {
+      ...state,
+      findings,
+      review_receipts: [...state.review_receipts, initialReviewReceipt],
+      quality_debt_refs: review.reviewInputSnapshotQualityDebtRef
+        ? [...new Set([...state.quality_debt_refs, review.reviewInputSnapshotQualityDebtRef])]
+        : state.quality_debt_refs,
+    };
     if (isEarlyRepairRouteBack(review)) {
       return terminalizeEarlyRepairRouteBack(review, findings);
     }
     if (initialOutcome === 'pass') {
       commitTerminalRouteDecision(review);
-      return terminalize({ ...state, status: 'completed', current_role: null, updated_at: nowIso() });
+      return terminalize({
+        ...state,
+        status: review.reviewInputSnapshotQualityDebtRef || review.reviewEvidenceCacheQualityDebtRef
+          ? 'completed_with_quality_debt'
+          : 'completed',
+        current_role: null,
+        updated_at: nowIso(),
+      });
     }
     if (initialOutcome === 'quality_debt') {
       commitTerminalRouteDecision(review);
@@ -1354,6 +1424,7 @@ export async function StageRunWorkflow(
         artifactHashes: state.artifact_hashes,
         artifactIdentityReceiptRefs: state.artifact_identity_receipt_refs,
         findings,
+        ...(currentRevisionTransport ?? {}),
       });
       parentAttemptRef = repair.attemptRef;
       if (stageRunStopped(state)) return terminalize(state);
@@ -1388,6 +1459,9 @@ export async function StageRunWorkflow(
         artifactIdentityReceiptRefs: state.artifact_identity_receipt_refs,
         findings,
         repairMap,
+        reviewInputSnapshotMaterializationRequest:
+          repair.envelope.review_input_snapshot_materialization_request,
+        ...(currentRevisionTransport ?? {}),
       });
       parentAttemptRef = reReview.attemptRef;
       state = { ...state, repair_rounds_used: round };
@@ -1408,7 +1482,13 @@ export async function StageRunWorkflow(
           rubric_refs: reReview.executionPolicy.rubricRefs,
           verdict: stageReviewVerdictForOutcome(reReviewOutcome),
         });
-        state = { ...state, review_receipts: [...state.review_receipts, hardStopReceipt] };
+        state = {
+          ...state,
+          review_receipts: [...state.review_receipts, hardStopReceipt],
+          quality_debt_refs: reReview.reviewInputSnapshotQualityDebtRef
+            ? [...new Set([...state.quality_debt_refs, reReview.reviewInputSnapshotQualityDebtRef])]
+            : state.quality_debt_refs,
+        };
         return terminalize(state);
       }
       const reReviewResult: StageQualityReReviewResult = {
@@ -1433,14 +1513,25 @@ export async function StageRunWorkflow(
         rubric_refs: reReview.executionPolicy.rubricRefs,
         verdict: stageReviewVerdictForOutcome(reReviewOutcome),
       });
+      currentRevisionTransport = revisionTransportFromReceipt(reReviewReceipt);
       state = {
         ...state,
         finding_closures: reReviewResult.finding_closures,
         review_receipts: [...state.review_receipts, reReviewReceipt],
+        quality_debt_refs: reReview.reviewInputSnapshotQualityDebtRef
+          ? [...new Set([...state.quality_debt_refs, reReview.reviewInputSnapshotQualityDebtRef])]
+          : state.quality_debt_refs,
       };
       if (reReviewOutcome === 'pass') {
         commitTerminalRouteDecision(reReview);
-        return terminalize({ ...state, status: 'completed', current_role: null, updated_at: nowIso() });
+        return terminalize({
+          ...state,
+          status: reReview.reviewInputSnapshotQualityDebtRef || reReview.reviewEvidenceCacheQualityDebtRef
+            ? 'completed_with_quality_debt'
+            : 'completed',
+          current_role: null,
+          updated_at: nowIso(),
+        });
       }
       if (reReviewOutcome === 'quality_debt') {
         commitTerminalRouteDecision(reReview);

@@ -527,16 +527,22 @@ test('active candidate is frozen per invocation and later activation and rollbac
       `${v1.version.version_digest.slice('sha256:'.length)}.json`,
     );
     fs.rmSync(pinnedVersionFile);
-    await assert.rejects(
-      runStandardAgentAction({
-        domainId: targetAgentId,
-        actionId: 'evaluate',
-        workspaceRoot,
-        payload: { value: 1 },
-        runId: 'generated-v1-frozen',
-      }, dependencies),
-      /AgentVersion|version/i,
+    const replayAfterVersionDeletion = await runStandardAgentAction({
+      domainId: targetAgentId,
+      actionId: 'evaluate',
+      workspaceRoot,
+      payload: { value: 1 },
+      runId: 'generated-v1-frozen',
+    }, dependencies);
+    const replayedRun = replayAfterVersionDeletion.standard_agent_action_run;
+    assert.equal(replayedRun.execution_kind, 'handler_ref');
+    if (replayedRun.execution_kind !== 'handler_ref') assert.fail();
+    assert.deepEqual(replayedRun.result, firstRun.result);
+    assert.equal(
+      replayedRun.hosted_runtime_binding_ref,
+      firstRun.hosted_runtime_binding_ref,
     );
+    assert.equal(replayedRun.output.sha256, firstRun.output.sha256);
     assert.equal(handlerCalls, 3);
     assert.equal(packageFallbackCalls, 0);
   } finally {
@@ -630,7 +636,11 @@ test('inactive Foundry target falls back to its managed package', async () => {
           workspace_root: fs.realpathSync.native(workspaceRoot),
           checkout_root: fs.realpathSync.native(checkoutRoot),
           package_status: { launch_allowed: true },
-          package_use_binding: { use_boundary_id: 'package-use:fixture' },
+          package_use_binding: {
+            surface_kind: 'opl_agent_package_use_binding.v1',
+            use_boundary_id: 'package-use:fixture',
+            root_package: { package_id: 'mas' },
+          },
           use_boundary_id: 'package-use:fixture',
         };
       }) as never,

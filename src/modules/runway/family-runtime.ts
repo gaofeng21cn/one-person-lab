@@ -551,6 +551,9 @@ export async function runFamilyRuntime(
         );
       }
       const useBoundaryId = stableId('package-use', [stageRunInvocationId]);
+      const pinnedUseBinding = isRecord(parsed.input.workspaceLocator.package_use_binding)
+        ? parsed.input.workspaceLocator.package_use_binding
+        : null;
       const packageReadiness = existingStageRunLaunch
         ? null
         : await (
@@ -561,6 +564,7 @@ export async function runFamilyRuntime(
             workspaceLocator: parsed.input.workspaceLocator,
             activateMissingScope: Boolean(parsed.input.start),
             ...(parsed.input.start ? { useBoundaryId } : {}),
+            ...(pinnedUseBinding ? { pinnedUseBinding } : {}),
           });
       const explicitDomainPackRoot = typeof parsed.input.workspaceLocator.domain_pack_root === 'string'
         ? parsed.input.workspaceLocator.domain_pack_root.trim()
@@ -569,13 +573,17 @@ export async function runFamilyRuntime(
         ? packageReadiness.runtime_source_readiness.checkout_path.trim()
         : '';
       const persistedDomainPackRoot = existingStageRunLaunch?.stage_run_input.domain_pack_root?.trim() ?? '';
-      const domainPackRoot = persistedDomainPackRoot || managedDomainPackRoot || explicitDomainPackRoot || null;
+      const domainPackRoot = persistedDomainPackRoot
+        || (pinnedUseBinding
+          ? explicitDomainPackRoot || managedDomainPackRoot
+          : managedDomainPackRoot || explicitDomainPackRoot)
+        || null;
       const stageQualityBinding = !existingStageRunLaunch && domainPackRoot
         ? (options.stageRunRuntime?.resolveStageBinding
           ?? resolveStandardAgentStageQualityRuntimeBinding)(domainPackRoot, parsed.input.stageId)
         : null;
       const selectedPackageUseBinding = parsed.input.start
-        ? packageReadiness?.package_use_binding
+        ? pinnedUseBinding ?? packageReadiness?.package_use_binding
         : null;
       const useBoundWorkspaceLocator = selectedPackageUseBinding
         ? {

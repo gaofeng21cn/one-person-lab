@@ -82,6 +82,14 @@ export type StageReviewReceipt = {
   reviewed_artifact_hashes: string[];
   rubric_refs: string[];
   verdict: StageQualityReviewVerdict;
+  review_input_snapshot_status: 'materialized' | 'already_materialized' | 'quality_debt';
+  mas_review_input_snapshot_binding: Record<string, unknown> | null;
+  opl_reviewer_input_snapshot_manifest_ref: Record<string, unknown> | null;
+  opl_reviewer_input_snapshot_manifest: Record<string, unknown> | null;
+  review_input_snapshot_quality_debt_receipt_ref: string | null;
+  review_input_snapshot_quality_debt_receipt: Record<string, unknown> | null;
+  opl_review_evidence_cache_receipt_ref: Record<string, unknown> | null;
+  opl_review_evidence_cache_receipt: Record<string, unknown> | null;
   finding_lineage: {
     review_kind: 'initial_review' | 'finding_closure_review';
     finding_ids: string[];
@@ -89,6 +97,7 @@ export type StageReviewReceipt = {
     repair_map_sha256: string | null;
     re_review_result_sha256: string | null;
   };
+  revision_transport?: Record<string, unknown>;
 };
 
 export type StageQualityCycleState = {
@@ -414,6 +423,57 @@ export function buildStageReviewContextManifest(input: {
   };
 }
 
+export function stageReviewEvidenceCacheQualityDebtRef(input: {
+  receiptRef: unknown;
+  receipt: unknown;
+}) {
+  if (input.receiptRef === null && input.receipt === null) return null;
+  const receiptRef = input.receiptRef;
+  const receipt = input.receipt;
+  if (
+    !receiptRef
+    || typeof receiptRef !== 'object'
+    || Array.isArray(receiptRef)
+    || !receipt
+    || typeof receipt !== 'object'
+    || Array.isArray(receipt)
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Page-evidence cache receipt ref and body must be present together.',
+    );
+  }
+  const body = receipt as Record<string, unknown>;
+  if (body.quality_debt === null || body.quality_debt === undefined) return null;
+  const debt = body.quality_debt;
+  if (
+    !debt
+    || typeof debt !== 'object'
+    || Array.isArray(debt)
+    || (debt as Record<string, unknown>).status !== 'quality_debt'
+    || (debt as Record<string, unknown>).ordinary_progress_may_advance !== true
+    || (debt as Record<string, unknown>).stage_transition_allowed !== true
+    || (debt as Record<string, unknown>).typed_blocker_ref !== null
+    || body.surface_kind !== 'opl_review_evidence_cache_receipt'
+    || body.cache_reuse_eligible !== false
+    || body.stage_transition_allowed !== true
+    || body.typed_blocker_ref !== null
+    || body.cache_authority !== false
+    || body.requires_fresh_reviewer_invocation !== true
+    || body.requires_fresh_reviewer_receipt !== true
+    || body.requires_mas_judgment !== true
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Page-evidence cache quality debt must remain progress-first and non-blocking.',
+    );
+  }
+  return requiredText(
+    (receiptRef as Record<string, unknown>).ref,
+    'opl_review_evidence_cache_receipt_ref.ref',
+  );
+}
+
 export function validateIndependentStageReviewReceipt(receipt: StageReviewReceipt) {
   if (receipt.surface_kind !== 'opl_stage_review_receipt' || receipt.version !== 'stage-review-receipt.v1') {
     throw new FrameworkContractError(
@@ -422,6 +482,73 @@ export function validateIndependentStageReviewReceipt(receipt: StageReviewReceip
       { surface_kind: receipt.surface_kind, version: receipt.version },
     );
   }
+  const snapshotMaterialized = receipt.review_input_snapshot_status === 'materialized'
+    || receipt.review_input_snapshot_status === 'already_materialized';
+  const snapshotBindingValid = receipt.mas_review_input_snapshot_binding !== null
+    && typeof receipt.mas_review_input_snapshot_binding === 'object'
+    && !Array.isArray(receipt.mas_review_input_snapshot_binding)
+    && receipt.mas_review_input_snapshot_binding.surface_kind === 'mas_review_input_snapshot_binding';
+  const snapshotManifestRefValid = receipt.opl_reviewer_input_snapshot_manifest_ref !== null
+    && typeof receipt.opl_reviewer_input_snapshot_manifest_ref === 'object'
+    && !Array.isArray(receipt.opl_reviewer_input_snapshot_manifest_ref);
+  const snapshotManifestValid = receipt.opl_reviewer_input_snapshot_manifest !== null
+    && typeof receipt.opl_reviewer_input_snapshot_manifest === 'object'
+    && !Array.isArray(receipt.opl_reviewer_input_snapshot_manifest)
+    && receipt.opl_reviewer_input_snapshot_manifest.surface_kind
+      === 'opl_reviewer_input_snapshot_manifest';
+  const snapshotDebtValid = typeof receipt.review_input_snapshot_quality_debt_receipt_ref === 'string'
+    && receipt.review_input_snapshot_quality_debt_receipt_ref.length > 0
+    && receipt.review_input_snapshot_quality_debt_receipt !== null
+    && typeof receipt.review_input_snapshot_quality_debt_receipt === 'object'
+    && !Array.isArray(receipt.review_input_snapshot_quality_debt_receipt)
+    && receipt.review_input_snapshot_quality_debt_receipt.surface_kind
+      === 'opl_review_input_snapshot_quality_debt_receipt';
+  if (
+    snapshotMaterialized
+      ? !snapshotBindingValid
+        || !snapshotManifestRefValid
+        || !snapshotManifestValid
+        || receipt.review_input_snapshot_quality_debt_receipt_ref !== null
+        || receipt.review_input_snapshot_quality_debt_receipt !== null
+      : receipt.review_input_snapshot_status !== 'quality_debt'
+        || receipt.mas_review_input_snapshot_binding !== null
+        || receipt.opl_reviewer_input_snapshot_manifest_ref !== null
+        || receipt.opl_reviewer_input_snapshot_manifest !== null
+        || !snapshotDebtValid
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Stage Review receipt must bind either the exact immutable reviewer snapshot or its non-blocking quality debt receipt.',
+      { review_input_snapshot_status: receipt.review_input_snapshot_status ?? null },
+    );
+  }
+  if (
+    (receipt.opl_review_evidence_cache_receipt_ref === null)
+      !== (receipt.opl_review_evidence_cache_receipt === null)
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Stage Review receipt page-evidence cache ref and body must be present or absent together.',
+    );
+  }
+  if (receipt.opl_review_evidence_cache_receipt) {
+    if (
+      receipt.opl_review_evidence_cache_receipt.surface_kind !== 'opl_review_evidence_cache_receipt'
+      || receipt.opl_review_evidence_cache_receipt.cache_authority !== false
+      || receipt.opl_review_evidence_cache_receipt.requires_fresh_reviewer_invocation !== true
+      || receipt.opl_review_evidence_cache_receipt.requires_fresh_reviewer_receipt !== true
+      || receipt.opl_review_evidence_cache_receipt.requires_mas_judgment !== true
+    ) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Stage Review receipt page-evidence cache binding violates its refs-only no-authority contract.',
+      );
+    }
+  }
+  stageReviewEvidenceCacheQualityDebtRef({
+    receiptRef: receipt.opl_review_evidence_cache_receipt_ref,
+    receipt: receipt.opl_review_evidence_cache_receipt,
+  });
   requiredText(receipt.stage_run_id, 'stage_run_id');
   requiredText(receipt.quality_cycle_id, 'quality_cycle_id');
   const producerAttemptRef = requiredText(receipt.producer_attempt_ref, 'producer_attempt_ref');

@@ -165,15 +165,56 @@ function storedBytes(filePath: string, expected: Buffer, label: string): Standar
   return observed;
 }
 
-function observedStoredBytes(filePath: string, label: string): StandardAgentActionRunStoredBytes {
-  const stat = fs.lstatSync(filePath);
-  if (stat.isSymbolicLink() || !stat.isFile()) {
+function sameFileIdentity(left: fs.BigIntStats, right: fs.BigIntStats) {
+  return left.dev === right.dev && left.ino === right.ino;
+}
+
+function sameStableFile(left: fs.BigIntStats, right: fs.BigIntStats) {
+  return sameFileIdentity(left, right)
+    && left.size === right.size
+    && left.mtimeNs === right.mtimeNs
+    && left.ctimeNs === right.ctimeNs;
+}
+
+function readStablePhysicalFile(filePath: string, label: string) {
+  const before = fs.lstatSync(filePath, { bigint: true });
+  if (before.isSymbolicLink() || !before.isFile()) {
     fail(`Standard Agent action ${label} path is not a regular file.`, {
       file_path: filePath,
-      symbolic_link: stat.isSymbolicLink(),
+      symbolic_link: before.isSymbolicLink(),
     });
   }
-  const actual = fs.readFileSync(filePath);
+  const noFollow = typeof fs.constants.O_NOFOLLOW === 'number' ? fs.constants.O_NOFOLLOW : 0;
+  const fd = fs.openSync(filePath, fs.constants.O_RDONLY | noFollow);
+  try {
+    const openedBefore = fs.fstatSync(fd, { bigint: true });
+    if (!openedBefore.isFile() || !sameFileIdentity(before, openedBefore)) {
+      fail(`Standard Agent action ${label} changed identity before reading.`, { file_path: filePath });
+    }
+    const bytes = fs.readFileSync(fd);
+    const openedAfter = fs.fstatSync(fd, { bigint: true });
+    let after: fs.BigIntStats;
+    try {
+      after = fs.lstatSync(filePath, { bigint: true });
+    } catch {
+      fail(`Standard Agent action ${label} changed identity while reading.`, { file_path: filePath });
+    }
+    if (
+      after!.isSymbolicLink()
+      || !sameStableFile(openedBefore, openedAfter)
+      || !sameStableFile(openedAfter, after!)
+      || BigInt(bytes.byteLength) !== after!.size
+    ) {
+      fail(`Standard Agent action ${label} changed while reading.`, { file_path: filePath });
+    }
+    return bytes;
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
+function observedStoredBytes(filePath: string, label: string): StandardAgentActionRunStoredBytes {
+  const actual = readStablePhysicalFile(filePath, label);
   const actualSha256 = sha256(actual);
   return {
     ref: pathToFileURL(filePath).href,
@@ -181,6 +222,24 @@ function observedStoredBytes(filePath: string, label: string): StandardAgentActi
     sha256: actualSha256,
     byte_size: actual.byteLength,
   };
+}
+
+export function readStandardAgentActionStoredBytes(
+  stored: StandardAgentActionRunStoredBytes,
+  label = 'stored bytes',
+) {
+  const actual = readStablePhysicalFile(stored.file_path, label);
+  const actualSha256 = sha256(actual);
+  if (actualSha256 !== stored.sha256 || actual.byteLength !== stored.byte_size) {
+    fail(`Standard Agent action ${label} no longer matches its recorded identity.`, {
+      file_path: stored.file_path,
+      expected_sha256: stored.sha256,
+      actual_sha256: actualSha256,
+      expected_byte_size: stored.byte_size,
+      actual_byte_size: actual.byteLength,
+    });
+  }
+  return actual;
 }
 
 function readPublishedRun(

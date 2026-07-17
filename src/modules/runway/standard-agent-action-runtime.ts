@@ -1,15 +1,19 @@
 import crypto from 'node:crypto';
-import fs from 'node:fs';
 
 import { canonicalJsonBytes, canonicalJsonText } from '../../kernel/canonical-json.ts';
 import { FrameworkContractError, isRecord, type ErrorCode } from '../../kernel/contract-validation.ts';
 import {
   type DomainHandlerRegistry,
+  type FamilyActionCatalog,
   type FamilyActionCatalogAction,
 } from '../../kernel/family-action-catalog-contract.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
 import { assertRepoJsonSchemaPayload } from '../../kernel/repo-json-schema.ts';
-import { readFoundryProviderManifest, validateDesignRequest } from '../foundry/index.ts';
+import {
+  readFoundryProviderManifest,
+  validateDesignRequest,
+  type FoundryProviderManifest,
+} from '../foundry/index.ts';
 import { startTemporalFoundryRunWorkflow } from './foundry-temporal-control.ts';
 import { compileStandardAgentStageManifest } from '../pack/public/standard-agent-action-runtime.ts';
 import {
@@ -17,6 +21,7 @@ import {
   inspectStandardAgentActionRunOutput,
   inspectStoredStandardAgentActionRunOutput,
   prepareStandardAgentActionRunRequest,
+  readStandardAgentActionStoredBytes,
 } from '../workspace/public/standard-agent-action-runtime.ts';
 import { runFamilyRuntime } from './family-runtime.ts';
 import { buildHostedActionStageRunInvocationId } from './family-runtime-stage-run-identity.ts';
@@ -31,12 +36,13 @@ import {
 } from './hosted-agent-runtime-binding.ts';
 import {
   commitStandardAgentActionRunCompletion,
-  inspectStandardAgentActionRunBinding,
   inspectStandardAgentActionRunCompletion,
+  inspectStandardAgentActionRunState,
   reserveStandardAgentActionRunBinding,
   type StandardAgentCompletedHandlerReplay,
   type StandardAgentActionRunBinding,
   type StandardAgentActionRunCompletion,
+  type StandardAgentActionRunPlan,
 } from './standard-agent-action-run-state.ts';
 import { recordStandardAgentActionRunEvent } from './standard-agent-action-run-recorder.ts';
 import { runStandardAgentHandlerSandbox } from './standard-agent-handler-sandbox.ts';
@@ -66,6 +72,16 @@ type RuntimeDependencies = {
   }) => Promise<unknown>;
 };
 
+type StandardAgentActionContext = {
+  action: FamilyActionCatalogAction;
+  catalog: FamilyActionCatalog;
+  registry: DomainHandlerRegistry | null;
+  payload: Record<string, unknown>;
+  foundryRequest: ReturnType<typeof validateDesignRequest> | null;
+  foundryProvider: FoundryProviderManifest | null;
+  inputValidation: Record<string, unknown>;
+};
+
 type StandardAgentStageActionLaunch = {
   surface_kind: 'opl_standard_agent_stage_action_launch';
   version: 'opl-standard-agent-stage-action-launch.v1';
@@ -87,6 +103,22 @@ type StandardAgentStageActionLaunch = {
   hosted_runtime_binding: HostedAgentRuntimeBindingProvenance;
   authority_boundary: ReturnType<typeof actionAuthorityBoundary>;
 };
+
+type StandardAgentStageActionReadback = Omit<StandardAgentStageActionLaunch, 'status'> & {
+  status: StandardAgentStageActionLaunch['status']
+    | 'completed'
+    | 'completed_with_quality_debt'
+    | 'human_gate'
+    | 'failed';
+};
+
+const STAGE_ACTION_TERMINAL_STATUSES = new Set<StandardAgentStageActionReadback['status']>([
+  'completed',
+  'completed_with_quality_debt',
+  'blocked',
+  'human_gate',
+  'failed',
+]);
 
 type StandardAgentFoundryActionLaunch = {
   surface_kind: 'opl_standard_agent_foundry_action_launch';
@@ -114,6 +146,24 @@ function sha256(value: string | Buffer) {
 function canonicalRunId(value?: string) {
   if (value?.trim()) return value.trim();
   return `action_${crypto.randomUUID()}`;
+}
+
+function canonicalTimeoutMs(value?: number) {
+  if (value === undefined) return null;
+  if (!Number.isSafeInteger(value) || value < 1) {
+    fail('Standard Agent action timeoutMs must be a positive integer.', { timeout_ms: value });
+  }
+  return value;
+}
+
+function packageUseBinding(value: unknown) {
+  if (value === null || value === undefined) return null;
+  if (!isRecord(value)) fail('Hosted Agent package_use_binding must be an object or null.');
+  return value;
+}
+
+function canonicalDomainIds(values: readonly string[]) {
+  return [...new Set(values.map((value) => value.trim()).filter(Boolean))].sort();
 }
 
 function normalizedPayload(action: FamilyActionCatalogAction, payload: Record<string, unknown>, workspaceRoot: string) {
@@ -391,7 +441,9 @@ function persistedStageActionLaunch(input: {
   domainId: string;
   actionId: string;
 }): StandardAgentStageActionLaunch {
-  const persisted = parseJsonText(fs.readFileSync(input.stored.output.file_path, 'utf8'));
+  const persisted = parseJsonText(
+    readStandardAgentActionStoredBytes(input.stored.output, 'Stage action output').toString('utf8'),
+  );
   if (
     !isRecord(persisted)
     || persisted.surface_kind !== 'opl_standard_agent_stage_action_launch'
@@ -420,6 +472,61 @@ function persistedStageActionLaunch(input: {
     });
   }
   return persisted as unknown as StandardAgentStageActionLaunch;
+}
+
+function stageActionWorkflowId(launch: StandardAgentStageActionLaunch) {
+  const stageRun = isRecord(launch.temporal_stage_run.family_runtime_stage_run)
+    ? launch.temporal_stage_run.family_runtime_stage_run
+    : null;
+  const stageRunInput = stageRun && isRecord(stageRun.stage_run_input) ? stageRun.stage_run_input : null;
+  if (!stageRunInput || typeof stageRunInput.workflow_id !== 'string' || !stageRunInput.workflow_id.trim()) {
+    fail('Persisted Standard Agent Stage launch is missing its Temporal workflow id.', {
+      run_id: launch.run_id,
+    });
+  }
+  return stageRunInput.workflow_id.trim();
+}
+
+function stageActionObservedStatus(
+  query: Record<string, unknown> | null,
+  fallback: 'started' | 'blocked',
+): StandardAgentStageActionReadback['status'] {
+  const stageRunQuery = query && isRecord(query.family_runtime_stage_run_query)
+    ? query.family_runtime_stage_run_query
+    : null;
+  const status = stageRunQuery?.status;
+  if (status === 'registered' || status === 'running') return 'started';
+  if (typeof status === 'string' && STAGE_ACTION_TERMINAL_STATUSES.has(status as StandardAgentStageActionReadback['status'])) {
+    return status as StandardAgentStageActionReadback['status'];
+  }
+  return fallback;
+}
+
+function stageReadbackLedgerStatus(status: StandardAgentStageActionReadback['status']) {
+  if (status === 'completed_with_quality_debt') return 'completed' as const;
+  if (status === 'human_gate') return 'blocked' as const;
+  return status;
+}
+
+async function refreshStageActionReadback(input: {
+  launch: StandardAgentStageActionLaunch;
+  runStageRuntime: typeof runFamilyRuntime;
+}) {
+  const durableLaunchStatus = input.launch.status === 'blocked' ? 'blocked' as const : 'started' as const;
+  if (durableLaunchStatus === 'blocked') return input.launch;
+  let query: Record<string, unknown> | null = null;
+  let queryError: ReturnType<typeof observationFailure> | null = null;
+  try {
+    query = await input.runStageRuntime(['stage-run', 'query', stageActionWorkflowId(input.launch)]);
+  } catch (error) {
+    queryError = observationFailure(error);
+  }
+  return {
+    ...input.launch,
+    status: stageActionObservedStatus(query, durableLaunchStatus),
+    temporal_stage_run_query: query,
+    temporal_stage_run_query_error: queryError,
+  };
 }
 
 function wrapFailure(error: unknown, stored: ReturnType<typeof commitStandardAgentActionOutput>): never {
@@ -520,7 +627,9 @@ function replayCompletedHandlerAction(input: {
     actionId: input.binding.action_id,
   }) ?? fail('Completed Handler replay is missing persisted request or output bytes.', { run_id: input.runId });
   assertCompletionMatchesStored(input.completion, stored);
-  const result = parseJsonText(fs.readFileSync(stored.output.file_path, 'utf8'));
+  const result = parseJsonText(
+    readStandardAgentActionStoredBytes(stored.output, 'completed Handler output').toString('utf8'),
+  );
   const ledger = input.recordLedger({
     runId: input.runId,
     domainId: input.binding.canonical_domain_id,
@@ -567,7 +676,9 @@ function persistedFoundryActionLaunch(input: {
   domainId: string;
   actionId: string;
 }) {
-  const persisted = parseJsonText(fs.readFileSync(input.stored.output.file_path, 'utf8'));
+  const persisted = parseJsonText(
+    readStandardAgentActionStoredBytes(input.stored.output, 'Foundry action output').toString('utf8'),
+  );
   if (
     !isRecord(persisted)
     || persisted.surface_kind !== 'opl_standard_agent_foundry_action_launch'
@@ -599,6 +710,7 @@ async function runFoundryAction(input: {
   runId: string;
   requestBytes: Buffer;
   request: ReturnType<typeof validateDesignRequest>;
+  foundryProvider: FoundryProviderManifest;
   packageUseBinding: unknown;
   runtimeBindingRef: string;
   runtimeBinding: HostedAgentRuntimeBindingProvenance;
@@ -610,7 +722,7 @@ async function runFoundryAction(input: {
   if (executionBinding.kind !== 'foundry_binding') {
     fail('Foundry action has an invalid execution binding.', { action_id: input.action.action_id });
   }
-  const provider = readFoundryProviderManifest(input.checkoutRoot, executionBinding.provider_manifest_ref);
+  const provider = input.foundryProvider;
   const bindingRef = `foundry:${provider.provider_id}:${executionBinding.provider_manifest_ref}`;
   const ledgerBindingRef = hostedRuntimeExecutionBindingRef({ provenance_ref: input.runtimeBindingRef }, bindingRef);
   const prepared = prepareStandardAgentActionRunRequest({
@@ -635,7 +747,9 @@ async function runFoundryAction(input: {
     fail('Standard Agent action completion exists without persisted output bytes.', { run_id: input.runId });
   }
   if (existing) {
-    const raw = parseJsonText(fs.readFileSync(existing.output.file_path, 'utf8'));
+    const raw = parseJsonText(
+      readStandardAgentActionStoredBytes(existing.output, 'Foundry action output').toString('utf8'),
+    );
     if (!recordedCompletion && isRecord(raw) && raw.surface_kind === 'opl_standard_agent_action_failure') {
       recordedCompletion = persistCompletion(input.workspaceRoot, {
         ...completionBase({
@@ -882,7 +996,9 @@ async function runHandlerAction(input: {
     fail('Standard Agent action completion exists without persisted output bytes.', { run_id: input.runId });
   }
   if (existing) {
-    const persisted = parseJsonText(fs.readFileSync(existing.output.file_path, 'utf8'));
+    const persisted = parseJsonText(
+      readStandardAgentActionStoredBytes(existing.output, 'Handler action output').toString('utf8'),
+    );
     let completion = recordedCompletion;
     if (isRecord(persisted) && persisted.surface_kind === 'opl_standard_agent_action_failure') {
       const error = {
@@ -1225,10 +1341,12 @@ async function runStageAction(input: {
     actionRunRef: prepared.action_run_ref,
   });
 
-  const replayStored = (
+  const replayStored = async (
     existing: NonNullable<ReturnType<typeof inspectStandardAgentActionRunOutput>>,
   ) => {
-    const raw = parseJsonText(fs.readFileSync(existing.output.file_path, 'utf8'));
+    const raw = parseJsonText(
+      readStandardAgentActionStoredBytes(existing.output, 'Stage action output').toString('utf8'),
+    );
     let completion = inspectStandardAgentActionRunCompletion({
       workspaceRoot: input.workspaceRoot,
       runId: input.runId,
@@ -1300,18 +1418,22 @@ async function runStageAction(input: {
       error: null,
       completed_handler_replay: null,
     });
+    const readback = await refreshStageActionReadback({
+      launch: persisted,
+      runStageRuntime: input.runStageRuntime,
+    });
     const ledger = input.recordLedger({
       runId: input.runId,
       domainId: input.domainId,
       actionId: input.action.action_id,
       bindingRef: ledgerBindingRef,
-      status: persisted.status,
+      status: stageReadbackLedgerStatus(readback.status),
       startedAt: input.startedAt,
       recordedAt: new Date().toISOString(),
       stored: existing,
     });
     return {
-      ...persisted,
+      ...readback,
       package_use_binding: input.packageUseBinding,
       request: existing.request,
       output: existing.output,
@@ -1326,7 +1448,7 @@ async function runStageAction(input: {
     actionId: input.action.action_id,
     requestBytes: input.requestBytes,
   });
-  if (beforeLaunch) return replayStored(beforeLaunch);
+  if (beforeLaunch) return await replayStored(beforeLaunch);
 
   let launchRpcReturned = false;
   const output: StandardAgentStageActionLaunch = await (async () => {
@@ -1461,9 +1583,7 @@ async function runStageAction(input: {
     actionId: input.action.action_id,
     requestBytes: input.requestBytes,
   });
-  if (existing) {
-    return replayStored(existing);
-  }
+  if (existing) return await replayStored(existing);
   const stored = commitStandardAgentActionOutput({
     workspaceRoot: input.workspaceRoot,
     runId: input.runId,
@@ -1488,22 +1608,240 @@ async function runStageAction(input: {
     error: null,
     completed_handler_replay: null,
   });
+  const readback = {
+    ...output,
+    status: stageActionObservedStatus(
+      output.temporal_stage_run_query,
+      output.status,
+    ),
+  };
   const ledger = input.recordLedger({
     runId: input.runId,
     domainId: input.domainId,
     actionId: input.action.action_id,
     bindingRef: ledgerBindingRef,
-    status: output.status,
+    status: stageReadbackLedgerStatus(readback.status),
     startedAt: input.startedAt,
     recordedAt,
     stored,
   });
   return {
-    ...output,
+    ...readback,
     package_use_binding: input.packageUseBinding,
     request: stored.request,
     output: stored.output,
     ledger: ledger.ledger_entry,
+  };
+}
+
+function buildLiveActionContext(input: {
+  runtimeInput: StandardAgentActionRuntimeInput;
+  runtimeBinding: HostedAgentRuntimeBindingSnapshot;
+  dependencies: RuntimeDependencies;
+}): StandardAgentActionContext {
+  const { catalog, registry } = readHostedAgentRuntimeActionContracts(
+    input.runtimeBinding.checkout_root,
+    input.runtimeBinding.catalog_target_domain_ids,
+  );
+  const action = catalog.actions.find((candidate) => candidate.action_id === input.runtimeInput.actionId)
+    ?? fail('Hosted Agent action is not declared by the frozen runtime binding.', {
+      domain_id: input.runtimeBinding.agent_id,
+      action_id: input.runtimeInput.actionId,
+      available_action_ids: catalog.actions.map((candidate) => candidate.action_id),
+    });
+  const payload = normalizedPayload(
+    action,
+    input.runtimeInput.payload,
+    input.runtimeBinding.workspace_root,
+  );
+  if (action.execution_binding.kind === 'stage_binding') {
+    (input.dependencies.compileStageManifest ?? compileStandardAgentStageManifest)(
+      input.runtimeBinding.checkout_root,
+    );
+  }
+  const foundryRequest = action.execution_binding.kind === 'foundry_binding'
+    ? validateDesignRequest(payload)
+    : null;
+  const foundryProvider = action.execution_binding.kind === 'foundry_binding'
+    ? readFoundryProviderManifest(
+        input.runtimeBinding.checkout_root,
+        action.execution_binding.provider_manifest_ref,
+      )
+    : null;
+  const inputValidation = foundryRequest
+    ? {
+        status: 'valid' as const,
+        schema_ref: action.input_schema_ref,
+        validator: 'opl_foundry_protocol',
+      }
+    : assertRepoJsonSchemaPayload({
+        repoRoot: input.runtimeBinding.checkout_root,
+        schemaRef: action.input_schema_ref,
+        payload,
+        label: `Standard Agent action ${action.action_id} input`,
+      });
+  return {
+    action,
+    catalog,
+    registry,
+    payload,
+    foundryRequest,
+    foundryProvider,
+    inputValidation,
+  };
+}
+
+function requestFromFrozenPlan(input: {
+  runtimeInput: StandardAgentActionRuntimeInput;
+  plan: StandardAgentActionRunPlan;
+}) {
+  const requestedDomainId = input.runtimeInput.domainId.trim();
+  if (
+    input.runtimeInput.actionId !== input.plan.action_id
+    || !input.plan.accepted_domain_ids.includes(requestedDomainId)
+  ) {
+    fail('Hosted Agent action request conflicts with its frozen run plan.', {
+      run_id: input.plan.run_id,
+      requested_domain_id: requestedDomainId,
+      accepted_domain_ids: input.plan.accepted_domain_ids,
+      requested_action_id: input.runtimeInput.actionId,
+      frozen_action_id: input.plan.action_id,
+    });
+  }
+  const requestPayloadSha256 = sha256(canonicalJsonBytes(input.runtimeInput.payload));
+  if (requestPayloadSha256 !== input.plan.request_payload_sha256) {
+    fail('Hosted Agent action payload conflicts with its frozen run plan.', {
+      run_id: input.plan.run_id,
+    });
+  }
+  const requestedTimeoutMs = canonicalTimeoutMs(input.runtimeInput.timeoutMs);
+  if (requestedTimeoutMs !== input.plan.timeout_ms) {
+    fail('Hosted Agent action timeout conflicts with its frozen run plan.', {
+      run_id: input.plan.run_id,
+      requested_timeout_ms: requestedTimeoutMs,
+      frozen_timeout_ms: input.plan.timeout_ms,
+    });
+  }
+  const action = input.plan.catalog.actions.find(
+    (candidate) => candidate.action_id === input.plan.action_id,
+  ) ?? fail('Frozen Standard Agent action plan is missing its selected action.', {
+    run_id: input.plan.run_id,
+    action_id: input.plan.action_id,
+  });
+  const payload = normalizedPayload(action, input.runtimeInput.payload, input.plan.workspace_root);
+  const requestBytes = canonicalJsonBytes(payload);
+  const requestSha256 = sha256(requestBytes);
+  if (
+    requestSha256 !== input.plan.request_sha256
+    || requestBytes.byteLength !== input.plan.request_byte_size
+  ) {
+    fail('Hosted Agent action request bytes conflict with its frozen run plan.', {
+      run_id: input.plan.run_id,
+      expected_request_sha256: input.plan.request_sha256,
+      actual_request_sha256: requestSha256,
+      expected_request_byte_size: input.plan.request_byte_size,
+      actual_request_byte_size: requestBytes.byteLength,
+    });
+  }
+  const foundryRequest = action.execution_binding.kind === 'foundry_binding'
+    ? validateDesignRequest(payload)
+    : null;
+  const foundryProvider = action.execution_binding.kind === 'foundry_binding'
+    ? input.plan.foundry_provider_manifest as unknown as FoundryProviderManifest
+    : null;
+  return {
+    requestBytes,
+    context: {
+      action,
+      catalog: input.plan.catalog,
+      registry: input.plan.handler_registry,
+      payload,
+      foundryRequest,
+      foundryProvider,
+      inputValidation: input.plan.input_schema_validation,
+    } satisfies StandardAgentActionContext,
+  };
+}
+
+async function executeActionContext(input: {
+  runtimeInput: StandardAgentActionRuntimeInput;
+  runId: string;
+  workspaceRoot: string;
+  domainId: string;
+  runtimeDomainId: string;
+  checkoutRoot: string;
+  acceptedDomainIds: string[];
+  packageUseBinding: Record<string, unknown> | null;
+  runtimeBindingRef: string;
+  runtimeBinding: HostedAgentRuntimeBindingProvenance;
+  startedAt: string;
+  timeoutMs: number | null;
+  requestPayloadSha256: string;
+  requestBytes: Buffer;
+  context: StandardAgentActionContext;
+  dependencies: RuntimeDependencies;
+}) {
+  const { action, registry, payload, foundryRequest, foundryProvider, inputValidation } = input.context;
+  prepareStandardAgentActionRunRequest({
+    workspaceRoot: input.workspaceRoot,
+    runId: input.runId,
+    domainId: input.domainId,
+    actionId: action.action_id,
+    requestBytes: input.requestBytes,
+  });
+  const common = {
+    action,
+    workspaceRoot: input.workspaceRoot,
+    domainId: input.domainId,
+    runId: input.runId,
+    requestBytes: input.requestBytes,
+    packageUseBinding: input.packageUseBinding,
+    runtimeBindingRef: input.runtimeBindingRef,
+    runtimeBinding: input.runtimeBinding,
+    startedAt: input.startedAt,
+  };
+  const result = action.execution_binding.kind === 'handler_ref'
+    ? await runHandlerAction({
+        ...common,
+        runtimeInput: {
+          ...input.runtimeInput,
+          workspaceRoot: input.workspaceRoot,
+          payload,
+          runId: input.runId,
+          ...(input.timeoutMs === null ? { timeoutMs: undefined } : { timeoutMs: input.timeoutMs }),
+        },
+        registry: registry ?? fail('Handler-bound action requires a handler registry.'),
+        acceptedDomainIds: input.acceptedDomainIds,
+        requestPayloadSha256: input.requestPayloadSha256,
+        inputSchemaValidation: inputValidation,
+        checkoutRoot: input.checkoutRoot,
+        runHandler: input.dependencies.runHandler ?? runStandardAgentHandlerSandbox,
+        recordLedger: input.dependencies.recordLedger ?? actionLedger,
+      })
+    : action.execution_binding.kind === 'stage_binding'
+      ? await runStageAction({
+          ...common,
+          checkoutRoot: input.checkoutRoot,
+          runtimeDomainId: input.runtimeDomainId,
+          runStageRuntime: input.dependencies.runStageRuntime ?? runFamilyRuntime,
+          recordLedger: input.dependencies.recordLedger ?? actionLedger,
+        })
+      : await runFoundryAction({
+          ...common,
+          checkoutRoot: input.checkoutRoot,
+          request: foundryRequest ?? fail('Foundry action requires a frozen validated request.'),
+          foundryProvider: foundryProvider ?? fail('Foundry action requires a frozen provider manifest.'),
+          startFoundryRun: input.dependencies.startFoundryRun,
+          recordLedger: input.dependencies.recordLedger ?? actionLedger,
+        });
+  return {
+    version: 'g2' as const,
+    standard_agent_action_run: {
+      ...result,
+      hosted_runtime_binding_ref: input.runtimeBindingRef,
+      hosted_runtime_binding: input.runtimeBinding,
+      input_schema_validation: inputValidation,
+    },
   };
 }
 
@@ -1512,32 +1850,62 @@ export async function runStandardAgentAction(
   dependencies: RuntimeDependencies = {},
 ) {
   if (!isRecord(input.payload)) fail('Standard Agent action payload must be a JSON object.');
-  const startedAt = new Date().toISOString();
   const runId = canonicalRunId(input.runId);
-  const requestPayloadSha256 = sha256(canonicalJsonBytes(input.payload));
-  let frozenBinding = inspectStandardAgentActionRunBinding({
+  const observedAt = new Date().toISOString();
+  const frozenState = inspectStandardAgentActionRunState({
     workspaceRoot: input.workspaceRoot,
     runId,
   });
-  if (frozenBinding) {
-    const completion = inspectStandardAgentActionRunCompletion({
+  let frozenBinding = frozenState?.binding ?? null;
+  let frozenPlan = frozenState?.plan ?? null;
+  const completion = frozenBinding
+    ? inspectStandardAgentActionRunCompletion({
       workspaceRoot: input.workspaceRoot,
       runId,
-    });
-    if (
-      completion?.status === 'completed'
-      && frozenBinding.hosted_runtime_binding.source_kind === 'managed_package_checkout'
-    ) {
+    })
+    : null;
+  if (frozenBinding && frozenPlan) {
+    const frozen = requestFromFrozenPlan({ runtimeInput: input, plan: frozenPlan });
+    if (completion?.execution_kind === 'handler_ref' && completion.status === 'completed') {
       return replayCompletedHandlerAction({
         runtimeInput: input,
         runId,
-        startedAt,
+        startedAt: frozenPlan.started_at,
         binding: frozenBinding,
         completion,
         recordLedger: dependencies.recordLedger ?? actionLedger,
       });
     }
+    return executeActionContext({
+      runtimeInput: input,
+      runId,
+      workspaceRoot: frozenPlan.workspace_root,
+      domainId: frozenPlan.canonical_domain_id,
+      runtimeDomainId: frozenPlan.runtime_domain_id,
+      checkoutRoot: frozenPlan.checkout_root,
+      acceptedDomainIds: frozenPlan.accepted_domain_ids,
+      packageUseBinding: frozenPlan.package_use_binding,
+      runtimeBindingRef: frozenBinding.hosted_runtime_binding_ref,
+      runtimeBinding: frozenBinding.hosted_runtime_binding,
+      startedAt: frozenPlan.started_at,
+      timeoutMs: frozenPlan.timeout_ms,
+      requestPayloadSha256: frozenPlan.request_payload_sha256,
+      requestBytes: frozen.requestBytes,
+      context: frozen.context,
+      dependencies,
+    });
   }
+  if (frozenBinding && completion?.execution_kind === 'handler_ref' && completion.status === 'completed') {
+    return replayCompletedHandlerAction({
+      runtimeInput: input,
+      runId,
+      startedAt: observedAt,
+      binding: frozenBinding,
+      completion,
+      recordLedger: dependencies.recordLedger ?? actionLedger,
+    });
+  }
+
   const defaultResolver = new DefaultHostedAgentRuntimeBindingResolver({
     root_override: dependencies.foundryRootOverride,
     resolve_managed_checkout: dependencies.resolveManagedCheckout ?? resolveStandardAgentManagedCheckout,
@@ -1546,23 +1914,11 @@ export async function runStandardAgentAction(
     ? {
         resolve: dependencies.resolveRuntimeBinding,
         resolvePinned: dependencies.resolvePinnedRuntimeBinding ?? (async () => fail(
-          'A custom hosted runtime resolver must provide resolvePinned for durable action replay.',
+          'A custom hosted runtime resolver must provide resolvePinned for legacy durable action replay.',
         )),
       }
     : defaultResolver;
-  const assertFrozenIdentity = (runtimeBinding: HostedAgentRuntimeBindingSnapshot) => {
-    if (!frozenBinding) return;
-    if (
-      frozenBinding.run_id !== runId
-      || frozenBinding.canonical_domain_id !== runtimeBinding.agent_id
-      || frozenBinding.action_id !== input.actionId
-      || frozenBinding.hosted_runtime_binding_ref !== runtimeBinding.provenance_ref
-      || canonicalJsonText(frozenBinding.hosted_runtime_binding) !== canonicalJsonText(runtimeBinding.provenance)
-    ) {
-      fail('Hosted Agent action request conflicts with its frozen run binding.', { run_id: runId });
-    }
-  };
-  let runtimeBinding = frozenBinding
+  const runtimeBinding = frozenBinding
     ? await runtimeResolver.resolvePinned({
         provenance: frozenBinding.hosted_runtime_binding,
         provenance_ref: frozenBinding.hosted_runtime_binding_ref,
@@ -1573,126 +1929,121 @@ export async function runStandardAgentAction(
         workspaceRoot: input.workspaceRoot,
       });
   assertRequestedDomainMatchesBinding(input.domainId, runtimeBinding);
-  assertFrozenIdentity(runtimeBinding);
+  if (frozenBinding && (
+    frozenBinding.run_id !== runId
+    || frozenBinding.canonical_domain_id !== runtimeBinding.agent_id
+    || frozenBinding.action_id !== input.actionId
+    || frozenBinding.hosted_runtime_binding_ref !== runtimeBinding.provenance_ref
+    || canonicalJsonText(frozenBinding.hosted_runtime_binding) !== canonicalJsonText(runtimeBinding.provenance)
+  )) {
+    fail('Hosted Agent action request conflicts with its frozen legacy run binding.', { run_id: runId });
+  }
+  const liveContext = buildLiveActionContext({
+    runtimeInput: input,
+    runtimeBinding,
+    dependencies,
+  });
+  const liveRequestBytes = canonicalJsonBytes(liveContext.payload);
+  const requestPayloadSha256 = sha256(canonicalJsonBytes(input.payload));
+  const timeoutMs = canonicalTimeoutMs(input.timeoutMs);
 
-  const buildContext = (binding: HostedAgentRuntimeBindingSnapshot) => {
-    const { catalog, registry } = readHostedAgentRuntimeActionContracts(
-      binding.checkout_root,
-      binding.catalog_target_domain_ids,
-    );
-    const action = catalog.actions.find((candidate) => candidate.action_id === input.actionId)
-      ?? fail('Hosted Agent action is not declared by the frozen runtime binding.', {
-        domain_id: binding.agent_id,
-        action_id: input.actionId,
-        available_action_ids: catalog.actions.map((candidate) => candidate.action_id),
-      });
-    const payload = normalizedPayload(action, input.payload, binding.workspace_root);
-    if (action.execution_binding.kind === 'stage_binding') {
-      (dependencies.compileStageManifest ?? compileStandardAgentStageManifest)(binding.checkout_root);
-    }
-    const foundryRequest = action.execution_binding.kind === 'foundry_binding'
-      ? validateDesignRequest(payload)
-      : null;
-    const inputValidation = foundryRequest
-      ? {
-          status: 'valid' as const,
-          schema_ref: action.input_schema_ref,
-          validator: 'opl_foundry_protocol',
-        }
-      : assertRepoJsonSchemaPayload({
-          repoRoot: binding.checkout_root,
-          schemaRef: action.input_schema_ref,
-          payload,
-          label: `Standard Agent action ${action.action_id} input`,
-        });
-    return { action, registry, payload, foundryRequest, inputValidation };
-  };
-
-  let context = buildContext(runtimeBinding);
   if (!frozenBinding) {
+    const acceptedDomainIds = canonicalDomainIds([
+      input.domainId,
+      runtimeBinding.agent_id,
+      runtimeBinding.runtime_domain_id,
+      runtimeBinding.target_domain_id,
+      ...runtimeBinding.catalog_target_domain_ids,
+    ]);
+    const catalogTargetDomainIds = canonicalDomainIds(runtimeBinding.catalog_target_domain_ids);
+    const plan: StandardAgentActionRunPlan = {
+      surface_kind: 'opl_standard_agent_action_run_plan',
+      version: 'opl-standard-agent-action-run-plan.v2',
+      run_id: runId,
+      canonical_domain_id: runtimeBinding.agent_id,
+      accepted_domain_ids: acceptedDomainIds,
+      action_id: liveContext.action.action_id,
+      workspace_root: runtimeBinding.workspace_root,
+      checkout_root: runtimeBinding.checkout_root,
+      runtime_domain_id: runtimeBinding.runtime_domain_id,
+      target_domain_id: runtimeBinding.target_domain_id,
+      catalog_target_domain_ids: catalogTargetDomainIds,
+      package_use_binding: packageUseBinding(runtimeBinding.package_use_binding),
+      hosted_runtime_binding_ref: runtimeBinding.provenance_ref,
+      execution_kind: liveContext.action.execution_binding.kind,
+      catalog: liveContext.catalog,
+      handler_registry: liveContext.registry,
+      foundry_provider_manifest: liveContext.foundryProvider as unknown as Record<string, unknown> | null,
+      request_payload_sha256: requestPayloadSha256,
+      request_sha256: sha256(liveRequestBytes),
+      request_byte_size: liveRequestBytes.byteLength,
+      input_schema_validation: liveContext.inputValidation,
+      timeout_ms: timeoutMs,
+      started_at: observedAt,
+    };
+    const planBytes = canonicalJsonBytes(plan);
     const reservation = reserveStandardAgentActionRunBinding({
       workspaceRoot: runtimeBinding.workspace_root,
       binding: {
         surface_kind: 'opl_standard_agent_action_run_binding',
-        version: 'opl-standard-agent-action-run-binding.v1',
+        version: 'opl-standard-agent-action-run-binding.v2',
         run_id: runId,
         canonical_domain_id: runtimeBinding.agent_id,
-        action_id: input.actionId,
+        action_id: liveContext.action.action_id,
         hosted_runtime_binding_ref: runtimeBinding.provenance_ref,
         hosted_runtime_binding: runtimeBinding.provenance,
+        plan_sha256: sha256(planBytes),
+        plan_byte_size: planBytes.byteLength,
       },
+      plan,
     });
-    frozenBinding = reservation.binding;
-    if (reservation.status === 'existing') {
-      runtimeBinding = await runtimeResolver.resolvePinned({
-        provenance: frozenBinding.hosted_runtime_binding,
-        provenance_ref: frozenBinding.hosted_runtime_binding_ref,
-        workspaceRoot: input.workspaceRoot,
-      });
-      assertRequestedDomainMatchesBinding(input.domainId, runtimeBinding);
-      assertFrozenIdentity(runtimeBinding);
-      context = buildContext(runtimeBinding);
+    if (!reservation.plan || reservation.binding.version !== 'opl-standard-agent-action-run-binding.v2') {
+      fail('Hosted Agent action run_id is already bound to an incompatible legacy run.', { run_id: runId });
     }
+    frozenBinding = reservation.binding;
+    frozenPlan = reservation.plan;
+    const frozen = requestFromFrozenPlan({ runtimeInput: input, plan: frozenPlan });
+    return executeActionContext({
+      runtimeInput: input,
+      runId,
+      workspaceRoot: frozenPlan.workspace_root,
+      domainId: frozenPlan.canonical_domain_id,
+      runtimeDomainId: frozenPlan.runtime_domain_id,
+      checkoutRoot: frozenPlan.checkout_root,
+      acceptedDomainIds: frozenPlan.accepted_domain_ids,
+      packageUseBinding: frozenPlan.package_use_binding,
+      runtimeBindingRef: frozenBinding.hosted_runtime_binding_ref,
+      runtimeBinding: frozenBinding.hosted_runtime_binding,
+      startedAt: frozenPlan.started_at,
+      timeoutMs: frozenPlan.timeout_ms,
+      requestPayloadSha256: frozenPlan.request_payload_sha256,
+      requestBytes: frozen.requestBytes,
+      context: frozen.context,
+      dependencies,
+    });
   }
-  const { action, registry, payload, foundryRequest, inputValidation } = context;
-  const requestBytes = canonicalJsonBytes(payload);
-  prepareStandardAgentActionRunRequest({
-    workspaceRoot: runtimeBinding.workspace_root,
+
+  return executeActionContext({
+    runtimeInput: input,
     runId,
-    domainId: runtimeBinding.agent_id,
-    actionId: action.action_id,
-    requestBytes,
-  });
-  const common = {
-    action,
     workspaceRoot: runtimeBinding.workspace_root,
     domainId: runtimeBinding.agent_id,
-    runId,
-    requestBytes,
-    packageUseBinding: runtimeBinding.package_use_binding,
+    runtimeDomainId: runtimeBinding.runtime_domain_id,
+    checkoutRoot: runtimeBinding.checkout_root,
+    acceptedDomainIds: canonicalDomainIds([
+      runtimeBinding.agent_id,
+      runtimeBinding.runtime_domain_id,
+      runtimeBinding.target_domain_id,
+      ...runtimeBinding.catalog_target_domain_ids,
+    ]),
+    packageUseBinding: packageUseBinding(runtimeBinding.package_use_binding),
     runtimeBindingRef: runtimeBinding.provenance_ref,
     runtimeBinding: runtimeBinding.provenance,
-    startedAt,
-  };
-  const result = action.execution_binding.kind === 'handler_ref'
-    ? await runHandlerAction({
-        ...common,
-        runtimeInput: { ...input, payload },
-        registry: registry ?? fail('Handler-bound action requires a handler registry.'),
-        acceptedDomainIds: [
-          runtimeBinding.agent_id,
-          runtimeBinding.runtime_domain_id,
-          runtimeBinding.target_domain_id,
-          ...runtimeBinding.catalog_target_domain_ids,
-        ],
-        requestPayloadSha256,
-        inputSchemaValidation: inputValidation as Record<string, unknown>,
-        checkoutRoot: runtimeBinding.checkout_root,
-        runHandler: dependencies.runHandler ?? runStandardAgentHandlerSandbox,
-        recordLedger: dependencies.recordLedger ?? actionLedger,
-      })
-    : action.execution_binding.kind === 'stage_binding'
-      ? await runStageAction({
-        ...common,
-        checkoutRoot: runtimeBinding.checkout_root,
-        runtimeDomainId: runtimeBinding.runtime_domain_id,
-        runStageRuntime: dependencies.runStageRuntime ?? runFamilyRuntime,
-        recordLedger: dependencies.recordLedger ?? actionLedger,
-      })
-      : await runFoundryAction({
-          ...common,
-          checkoutRoot: runtimeBinding.checkout_root,
-          request: foundryRequest!,
-          startFoundryRun: dependencies.startFoundryRun,
-          recordLedger: dependencies.recordLedger ?? actionLedger,
-        });
-  return {
-    version: 'g2',
-    standard_agent_action_run: {
-      ...result,
-      hosted_runtime_binding_ref: runtimeBinding.provenance_ref,
-      hosted_runtime_binding: runtimeBinding.provenance,
-      input_schema_validation: inputValidation,
-    },
-  };
+    startedAt: observedAt,
+    timeoutMs,
+    requestPayloadSha256,
+    requestBytes: liveRequestBytes,
+    context: liveContext,
+    dependencies,
+  });
 }

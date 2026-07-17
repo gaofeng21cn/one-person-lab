@@ -1,13 +1,23 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
 import { FrameworkContractError } from '../../src/modules/charter/contracts.ts';
+import { canonicalJsonText } from '../../src/kernel/canonical-json.ts';
 import { buildStageReviewContextManifest } from '../../src/modules/stagecraft/index.ts';
-import { buildStageQualityContextManifestRef } from '../../src/modules/runway/family-runtime-stage-quality-context-manifest.ts';
+import {
+  buildStageQualityContextManifestRef,
+  buildStageReviewInputSnapshotContext,
+} from '../../src/modules/runway/family-runtime-stage-quality-context-manifest.ts';
+import {
+  materializeReviewerInputSnapshot,
+  resolveReviewerInputSnapshotMaterialization,
+} from '../../src/modules/runway/family-runtime-reviewer-input-snapshot.ts';
 import {
   createStageAttempt,
   createStageAttemptTable,
@@ -29,6 +39,7 @@ function contextBinding(input: {
   priorFindingRefs?: string[];
   repairMapRefs?: string[];
   rubricRefs?: string[];
+  reviewInputSnapshotContext?: Record<string, unknown>;
 }) {
   const attemptRubricRefs = input.rubricRefs ?? rubricRefs;
   const artifactIdentity = {
@@ -36,7 +47,8 @@ function contextBinding(input: {
     artifact_hashes: input.artifactHashes ?? [],
   };
   const manifest = input.role === 'reviewer' || input.role === 're_reviewer'
-    ? buildStageReviewContextManifest({
+    ? {
+        ...buildStageReviewContextManifest({
         stageRunId: input.stageRunId,
         qualityCycleId: input.qualityCycleId,
         reviewerAttemptRole: input.role,
@@ -45,7 +57,14 @@ function contextBinding(input: {
         qualityRubricRefs: attemptRubricRefs,
         priorFindingRefs: input.priorFindingRefs,
         repairMapRefs: input.repairMapRefs,
-      })
+        }),
+        ...(input.reviewInputSnapshotContext ?? buildStageReviewInputSnapshotContext({
+            stageRunId: input.stageRunId,
+            qualityCycleId: input.qualityCycleId,
+            reviewerAttemptRole: input.role,
+            resolution: resolveReviewerInputSnapshotMaterialization(null),
+          })),
+      }
     : {
         surface_kind: 'opl_stage_quality_attempt_context_manifest',
         version: 'stage-quality-attempt-context-manifest.v1',
@@ -83,6 +102,7 @@ function completeAttempt(
 function validInitialReviewPair(db: DatabaseSync, input: {
   producerRubricRefs?: string[];
   reviewerRubricRefs?: string[];
+  reviewInputSnapshotContext?: Record<string, unknown>;
 } = {}) {
   createStageAttemptTable(db);
   const shared = {
@@ -124,6 +144,7 @@ function validInitialReviewPair(db: DatabaseSync, input: {
       artifactRefs,
       artifactHashes,
       rubricRefs: input.reviewerRubricRefs,
+      reviewInputSnapshotContext: input.reviewInputSnapshotContext,
     }),
   }).attempt;
   completeAttempt(db, producer.stage_attempt_id, 'codex://threads/producer', {
@@ -242,6 +263,94 @@ test('ledger materializes an initial review receipt only from exact persisted At
     assert.equal(receipt.verdict, 'pass');
   } finally {
     db.close();
+  }
+});
+
+test('persisted review receipt keeps immutable reviewer bytes after the live source mutates', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-review-receipt-snapshot-'));
+  const workspaceRoot = path.join(root, 'workspace');
+  fs.mkdirSync(workspaceRoot);
+  const sourcePath = path.join(workspaceRoot, 'paper.txt');
+  const original = Buffer.from('reviewed immutable bytes\n');
+  fs.writeFileSync(sourcePath, original);
+  const digest = `sha256:${crypto.createHash('sha256').update(original).digest('hex')}`;
+  const member = {
+    member_id: 'manuscript',
+    role: 'manuscript_file',
+    owner_ref: 'workspace://submission/paper.txt',
+    source_ref: 'paper.txt',
+    sha256: digest,
+    size_bytes: original.length,
+  };
+  const reviewScopeSha256 = `sha256:${crypto.createHash('sha256').update(canonicalJsonText({
+    scope_policy_id: 'mas_review_scope_dependency_map',
+    scope_policy_version: 1,
+    review_lane: 'medical',
+    reviewed_members: [{
+      member_id: member.member_id,
+      role: member.role,
+      sha256: member.sha256,
+      size_bytes: member.size_bytes,
+    }],
+  })).digest('hex')}`;
+  const authorityRecord = {
+    surface_kind: 'mas_review_input_snapshot_authority' as const,
+    schema_version: 1 as const,
+    generation_ref: 'mas-generation:receipt-mutation',
+    review_lane: 'medical' as const,
+    review_scope_sha256: reviewScopeSha256,
+    members: [{
+      member_id: member.member_id,
+      role: member.role,
+      owner_ref: member.owner_ref,
+      sha256: member.sha256,
+      size_bytes: member.size_bytes,
+    }],
+  };
+  const authorityBytes = Buffer.from(canonicalJsonText(authorityRecord), 'utf8');
+  const authoritySha256 = `sha256:${crypto.createHash('sha256').update(authorityBytes).digest('hex')}`;
+  const previousStateRoot = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = path.join(root, 'state');
+  const db = new DatabaseSync(':memory:');
+  try {
+    const snapshot = materializeReviewerInputSnapshot({
+      surface_kind: 'opl_reviewer_input_snapshot_materialization_request',
+      schema_version: 1,
+      generation_ref: 'mas-generation:receipt-mutation',
+      review_lane: 'medical',
+      review_scope_sha256: reviewScopeSha256,
+      workspace_root: workspaceRoot,
+      members: [member],
+      mas_authority_record_ref: {
+        kind: 'mas_review_input_snapshot_authority',
+        ref: `mas-review-input-snapshot-authority:${authoritySha256.slice('sha256:'.length)}`,
+        size_bytes: authorityBytes.length,
+        sha256: authoritySha256,
+      },
+      mas_authority_record: authorityRecord,
+    });
+    const snapshotContext = buildStageReviewInputSnapshotContext({
+      stageRunId: 'stage-run:review-receipt',
+      qualityCycleId: 'quality-cycle:review-receipt',
+      reviewerAttemptRole: 'reviewer',
+      resolution: snapshot,
+    });
+    fs.writeFileSync(sourcePath, 'mutated live bytes must not replace reviewed input\n');
+    const pair = validInitialReviewPair(db, {
+      reviewInputSnapshotContext: snapshotContext,
+    });
+    const receipt = materializeInitialReceipt(db, pair);
+    assert.equal(receipt.review_input_snapshot_status, 'materialized');
+    assert.deepEqual(receipt.mas_review_input_snapshot_binding, snapshot.review_input_snapshot_binding);
+    assert.deepEqual(receipt.opl_reviewer_input_snapshot_manifest_ref, snapshot.manifest_ref);
+    const immutableRef = snapshot.manifest.members[0]!.immutable_ref.ref;
+    assert.deepEqual(fs.readFileSync(fileURLToPath(immutableRef)), original);
+    assert.notDeepEqual(fs.readFileSync(sourcePath), original);
+  } finally {
+    db.close();
+    if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateRoot;
+    fs.rmSync(root, { recursive: true, force: true });
   }
 });
 

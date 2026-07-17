@@ -32,6 +32,7 @@ import {
   type StageReviewReceipt,
 } from '../stagecraft/index.ts';
 import { validateStageQualityAttemptContextManifest } from './family-runtime-stage-quality-context-manifest.ts';
+import { readReviewEvidenceCacheReceipt } from './family-runtime-review-evidence-cache.ts';
 
 export type StageAttemptStatus =
   | 'queued'
@@ -639,7 +640,7 @@ function persistedStageReviewReceiptInputs(db: DatabaseSync, input: PersistedSta
   requireSameReviewIdentity(producer, reviewer);
   const { reviewerRole } = requireReviewRolePair(producer, reviewer);
   requirePersistedQualityContextManifest(producer);
-  requirePersistedQualityContextManifest(reviewer);
+  const reviewerContextManifest = requirePersistedQualityContextManifest(reviewer);
   if (producer.status !== 'completed' || reviewer.status !== 'completed') {
     throw new FrameworkContractError(
       'contract_shape_invalid',
@@ -728,6 +729,40 @@ function persistedStageReviewReceiptInputs(db: DatabaseSync, input: PersistedSta
       },
     );
   }
+  const snapshotStatus = reviewerContextManifest.review_input_snapshot_status;
+  if (
+    snapshotStatus !== 'materialized'
+    && snapshotStatus !== 'already_materialized'
+    && snapshotStatus !== 'quality_debt'
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Review receipt requires a typed reviewer input snapshot status.',
+      { failure_code: 'stage_review_receipt_snapshot_status_invalid' },
+    );
+  }
+  const reviewerQualityContext = persistedQualityContext(reviewer);
+  const cacheReceiptRef = record(reviewerQualityContext.opl_review_evidence_cache_receipt_ref);
+  const cacheReceiptBody = record(reviewerQualityContext.opl_review_evidence_cache_receipt);
+  const hasCacheReceiptRef = Object.keys(cacheReceiptRef).length > 0;
+  const hasCacheReceiptBody = Object.keys(cacheReceiptBody).length > 0;
+  if (hasCacheReceiptRef !== hasCacheReceiptBody) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Persisted reviewer page-evidence cache receipt ref and body must be present together.',
+      { failure_code: 'stage_review_receipt_cache_binding_incomplete' },
+    );
+  }
+  if (hasCacheReceiptRef) {
+    const cacheReadback = readReviewEvidenceCacheReceipt(cacheReceiptRef);
+    if (canonicalJsonText(cacheReadback.receipt) !== canonicalJsonText(cacheReceiptBody)) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Persisted reviewer page-evidence cache receipt body does not match its exact ref.',
+        { failure_code: 'stage_review_receipt_cache_binding_mismatch' },
+      );
+    }
+  }
   return {
     producer,
     reviewer,
@@ -736,6 +771,24 @@ function persistedStageReviewReceiptInputs(db: DatabaseSync, input: PersistedSta
     requestedRubricRefs,
     reviewerRole,
     reviewerEvidence,
+    snapshotStatus: snapshotStatus as StageReviewReceipt['review_input_snapshot_status'],
+    masReviewInputSnapshotBinding: snapshotStatus === 'quality_debt'
+      ? null
+      : record(reviewerContextManifest.mas_review_input_snapshot_binding),
+    reviewerInputSnapshotManifestRef: snapshotStatus === 'quality_debt'
+      ? null
+      : record(reviewerContextManifest.opl_reviewer_input_snapshot_manifest_ref),
+    reviewerInputSnapshotManifest: snapshotStatus === 'quality_debt'
+      ? null
+      : record(reviewerContextManifest.opl_reviewer_input_snapshot_manifest),
+    reviewInputSnapshotQualityDebtReceiptRef: snapshotStatus === 'quality_debt'
+      ? String(reviewerContextManifest.review_input_snapshot_quality_debt_receipt_ref)
+      : null,
+    reviewInputSnapshotQualityDebtReceipt: snapshotStatus === 'quality_debt'
+      ? record(reviewerContextManifest.review_input_snapshot_quality_debt_receipt)
+      : null,
+    reviewEvidenceCacheReceiptRef: hasCacheReceiptRef ? cacheReceiptRef : null,
+    reviewEvidenceCacheReceipt: hasCacheReceiptBody ? cacheReceiptBody : null,
   };
 }
 
@@ -758,6 +811,16 @@ export function materializePersistedStageReviewReceipt(
     reviewed_artifact_hashes: persisted.reviewedArtifactHashes,
     rubric_refs: persisted.requestedRubricRefs,
     verdict: input.verdict,
+    review_input_snapshot_status: persisted.snapshotStatus,
+    mas_review_input_snapshot_binding: persisted.masReviewInputSnapshotBinding,
+    opl_reviewer_input_snapshot_manifest_ref: persisted.reviewerInputSnapshotManifestRef,
+    opl_reviewer_input_snapshot_manifest: persisted.reviewerInputSnapshotManifest,
+    review_input_snapshot_quality_debt_receipt_ref:
+      persisted.reviewInputSnapshotQualityDebtReceiptRef,
+    review_input_snapshot_quality_debt_receipt:
+      persisted.reviewInputSnapshotQualityDebtReceipt,
+    opl_review_evidence_cache_receipt_ref: persisted.reviewEvidenceCacheReceiptRef,
+    opl_review_evidence_cache_receipt: persisted.reviewEvidenceCacheReceipt,
     finding_lineage: {
       review_kind: persisted.reviewerRole === 'reviewer' ? 'initial_review' : 'finding_closure_review',
       finding_ids: persisted.reviewerEvidence.findings.map((finding) => finding.finding_id),

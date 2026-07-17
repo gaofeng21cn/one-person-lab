@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/revision-intake.schema.json",
+  "title": "OPL Revision Intake",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "surface_kind",
+    "schema_version",
+    "stage_run_id",
+    "quality_cycle_id",
+    "producer_attempt_ref",
+    "reviewer_attempt_ref",
+    "opl_stage_review_receipt_ref",
+    "verdict",
+    "finding_lineage",
+    "authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": { "const": "opl_revision_intake" },
+    "schema_version": { "const": 1 },
+    "stage_run_id": { "type": "string", "minLength": 1 },
+    "quality_cycle_id": { "type": "string", "minLength": 1 },
+    "producer_attempt_ref": { "type": "string", "minLength": 1 },
+    "reviewer_attempt_ref": { "type": "string", "minLength": 1 },
+    "opl_stage_review_receipt_ref": { "$ref": "#/$defs/stage_review_receipt_ref" },
+    "verdict": { "enum": ["pass", "repair_required", "quality_debt", "hard_stop"] },
+    "finding_lineage": { "type": "object" },
+    "authority_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "transport_owner",
+        "records_revision_input_only",
+        "can_sign_review_verdict",
+        "can_sign_revision_consumption",
+        "can_sign_owner_receipt",
+        "can_create_typed_blocker",
+        "can_claim_quality_readiness",
+        "can_claim_publication_readiness",
+        "can_claim_submission_readiness"
+      ],
+      "properties": {
+        "transport_owner": { "const": "one-person-lab" },
+        "records_revision_input_only": { "const": true },
+        "can_sign_review_verdict": { "const": false },
+        "can_sign_revision_consumption": { "const": false },
+        "can_sign_owner_receipt": { "const": false },
+        "can_create_typed_blocker": { "const": false },
+        "can_claim_quality_readiness": { "const": false },
+        "can_claim_publication_readiness": { "const": false },
+        "can_claim_submission_readiness": { "const": false }
+      }
+    }
+  },
+  "$defs": {
+    "stage_review_receipt_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "ref", "size_bytes", "sha256"],
+      "properties": {
+        "kind": { "const": "opl_stage_review_receipt" },
+        "ref": { "type": "string", "pattern": "^file://" },
+        "size_bytes": { "type": "integer", "minimum": 1 },
+        "sha256": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+      }
+    }
+  }
+}

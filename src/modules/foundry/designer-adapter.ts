@@ -199,9 +199,10 @@ function authorityBoundary(value: unknown): FoundryProviderAuthorityBoundary {
   return value as FoundryProviderAuthorityBoundary;
 }
 
-export function readFoundryProviderManifest(checkoutRoot: string, manifestRef = 'contracts/foundry_provider.json') {
-  const resolved = resolveContainedRepoJsonFile(checkoutRoot, manifestRef, 'Foundry provider manifest', 'managed package checkout');
-  const parsed = parseJsonText(fs.readFileSync(resolved.real_path, 'utf8'));
+export function normalizeFoundryProviderManifest(
+  parsed: unknown,
+  manifestRef = 'contracts/foundry_provider.json',
+) {
   if (!isRecord(parsed) || parsed.surface_kind !== 'opl_foundry_provider' || parsed.version !== FOUNDRY_PROVIDER_VERSION) {
     fail('Foundry provider manifest has an unsupported identity or version.', { manifest_ref: manifestRef });
   }
@@ -263,6 +264,14 @@ export function readFoundryProviderManifest(checkoutRoot: string, manifestRef = 
   return manifest;
 }
 
+export function readFoundryProviderManifest(checkoutRoot: string, manifestRef = 'contracts/foundry_provider.json') {
+  const resolved = resolveContainedRepoJsonFile(checkoutRoot, manifestRef, 'Foundry provider manifest', 'managed package checkout');
+  return normalizeFoundryProviderManifest(
+    parseJsonText(fs.readFileSync(resolved.real_path, 'utf8')),
+    manifestRef,
+  );
+}
+
 export class ManifestFoundryDesignerAdapter implements DesignerPort {
   readonly producer_id: string;
   readonly #checkoutRoot: string;
@@ -272,10 +281,13 @@ export class ManifestFoundryDesignerAdapter implements DesignerPort {
   constructor(input: {
     checkout_root: string;
     provider_manifest_ref?: string;
+    provider_manifest?: FoundryProviderManifest;
     invoker: FoundryProviderOperationInvoker;
   }) {
     this.#checkoutRoot = fs.realpathSync.native(input.checkout_root);
-    this.#provider = readFoundryProviderManifest(this.#checkoutRoot, input.provider_manifest_ref);
+    this.#provider = input.provider_manifest
+      ? normalizeFoundryProviderManifest(input.provider_manifest, input.provider_manifest_ref)
+      : readFoundryProviderManifest(this.#checkoutRoot, input.provider_manifest_ref);
     this.#invoker = input.invoker;
     this.producer_id = `foundry-provider:${this.#provider.provider_id}`;
   }

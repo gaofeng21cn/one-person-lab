@@ -1,4 +1,4 @@
-import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { requireAgentPackageReadinessPort } from '../../kernel/agent-package-readiness-port.ts';
 import {
   resolveStandardAgent,
@@ -79,6 +79,16 @@ export async function ensureFamilyRuntimePackageLaunchReady(input: {
   useBoundaryId?: string;
   pinnedUseBinding?: any;
 }) {
+  const pinnedUseBinding = input.pinnedUseBinding === null || input.pinnedUseBinding === undefined
+    ? null
+    : isRecord(input.pinnedUseBinding)
+      ? input.pinnedUseBinding
+      : (() => {
+          throw new FrameworkContractError(
+            'contract_shape_invalid',
+            'Pinned family runtime package-use binding must be an object.',
+          );
+        })();
   const agent = resolveStandardAgent(input.domainId);
   if (!agent || agent.series_membership !== STANDARD_AGENT_SERIES_MEMBERSHIP) {
     return null;
@@ -94,7 +104,7 @@ export async function ensureFamilyRuntimePackageLaunchReady(input: {
       packageId,
       ...scope,
       useBoundaryId: input.useBoundaryId,
-      pinnedUseBinding: input.pinnedUseBinding,
+      pinnedUseBinding,
     });
   }
   const packageStatus = activation?.package_status ?? packageReadiness.readStatus({
@@ -104,7 +114,7 @@ export async function ensureFamilyRuntimePackageLaunchReady(input: {
   if (packageStatus.launch_allowed === true) {
     return {
       ...packageStatus,
-      package_use_binding: activation?.package_use_binding ?? null,
+      package_use_binding: pinnedUseBinding ?? activation?.package_use_binding ?? null,
       package_quality_debt: null,
     };
   }

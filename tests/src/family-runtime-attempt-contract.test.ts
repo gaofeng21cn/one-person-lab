@@ -280,8 +280,49 @@ test('Stage quality contracts bind bounded Attempts, exact artifact identity, re
     'stage_run_id', 'quality_cycle_id', 'producer_attempt_ref', 'reviewer_attempt_ref',
     'producer_session_ref', 'reviewer_session_ref', 'no_context_inheritance',
     'reviewed_artifact_refs', 'reviewed_artifact_hashes', 'rubric_refs', 'verdict',
+    'review_input_snapshot_status', 'mas_review_input_snapshot_binding',
+    'opl_reviewer_input_snapshot_manifest_ref', 'opl_reviewer_input_snapshot_manifest',
+    'review_input_snapshot_quality_debt_receipt_ref',
+    'review_input_snapshot_quality_debt_receipt',
+    'opl_review_evidence_cache_receipt_ref', 'opl_review_evidence_cache_receipt',
     'finding_lineage',
   ]);
+  assert.ok(quality.context_isolation.review_context_allowlist
+    .includes('opl_reviewer_input_snapshot_manifest_exact_ref_and_body'));
+  assert.equal(
+    quality.context_isolation.review_input_snapshot
+      .missing_request_adds_quality_debt_without_overwriting_reviewer_outcome_findings_or_hard_stop,
+    true,
+  );
+  assert.equal(
+    quality.review_receipt.review_transport_binding
+      .page_evidence_cache_hit_can_skip_fresh_reviewer_invocation,
+    false,
+  );
+  assert.deepEqual(
+    quality.review_receipt.review_transport_binding.page_evidence_cache_context_binding_fields,
+    [
+      'reviewer_attempt_ref', 'execution_content_binding_sha256',
+      'snapshot_manifest_ref', 'snapshot_manifest_sha256',
+      'review_scope_sha256', 'rubric_sha256',
+      'origin_reviewer_invocation_ref', 'origin_reviewer_evidence_ref',
+    ],
+  );
+  assert.equal(
+    quality.review_receipt.review_transport_binding
+      .page_evidence_cache_missing_or_mismatched_context_is_quality_debt,
+    true,
+  );
+  assert.equal(
+    quality.review_receipt.review_transport_binding
+      .page_evidence_cache_quality_debt_stage_transition_allowed,
+    true,
+  );
+  assert.equal(
+    quality.review_receipt.review_transport_binding
+      .page_evidence_cache_quality_debt_typed_blocker_ref,
+    null,
+  );
   assert.equal(
     quality.review_receipt.local_artifact_identity_receipt_surface_kind,
     'opl_transport_artifact_identity_receipt',
@@ -301,6 +342,28 @@ test('Stage quality contracts bind bounded Attempts, exact artifact identity, re
   assert.equal(quality.review_receipt.reviewed_artifact_ref_hash_cardinality_must_match, true);
   assert.equal(attempts.stage_quality_cycle_contract.review_receipt_surface_kind,
     'opl_stage_review_receipt');
+  assert.equal(
+    attempts.stage_quality_cycle_contract.review_transport_persistence
+      .review_input_snapshot_materialization_request_participates_in_attempt_idempotency,
+    true,
+  );
+  assert.equal(
+    attempts.stage_quality_cycle_contract.review_transport_persistence
+      .stage_review_receipt_binds_snapshot_or_debt_and_optional_page_cache_receipt,
+    true,
+  );
+  assert.equal(
+    attempts.stage_quality_cycle_contract.review_transport_persistence
+      .page_cache_public_cli_without_attempt_context_cannot_create_reusable_entry,
+    true,
+  );
+  assert.equal(
+    attempts.stage_quality_cycle_contract.review_transport_persistence
+      .page_cache_quality_debt_projects_to_attempt_and_quality_cycle_readback,
+    true,
+  );
+  assert.ok(attempts.required_ledger_fields.includes('context_manifest'));
+  assert.ok(attempts.required_ledger_fields.includes('quality_context'));
   assert.equal(attempts.stage_quality_cycle_contract.terminal_route_output,
     'route_impact.stage_route_decision');
   assert.equal(attempts.stage_quality_cycle_contract.non_terminal_route_output,

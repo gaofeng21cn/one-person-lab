@@ -16,10 +16,12 @@ import {
   normalizeStageQualityCyclePolicy,
   reduceStageQualityCycleState,
   stageQualityAttemptOutcomeFromEnvelope,
+  stageReviewEvidenceCacheQualityDebtRef,
   STAGE_QUALITY_OUTCOMES,
   validateInitialStageQualityReviewOutcome,
   validateIndependentStageReviewReceipt,
 } from '../../src/modules/stagecraft/stage-quality-cycle.ts';
+
 import { buildFamilyStageConformanceReview } from '../../src/modules/stagecraft/family-stage-conformance.ts';
 import {
   bindStageAttemptExecutionSession,
@@ -43,11 +45,48 @@ import {
   buildPackBoundTemporalStageRunInput,
 } from '../../src/modules/runway/family-runtime-pack-bound-stage-run.ts';
 import type { StandardAgentStageQualityRuntimeBinding } from '../../src/modules/pack/index.ts';
-import { buildStageQualityContextManifestRef } from '../../src/modules/runway/family-runtime-stage-quality-context-manifest.ts';
+import {
+  buildStageQualityContextManifestRef,
+  buildStageReviewInputSnapshotContext,
+} from '../../src/modules/runway/family-runtime-stage-quality-context-manifest.ts';
+import { resolveReviewerInputSnapshotMaterialization } from '../../src/modules/runway/family-runtime-reviewer-input-snapshot.ts';
 import { OFFICIAL_KNOWLEDGE_DELIVERABLE_QUALITY_PROFILE } from '../../src/modules/pack/standard-agent-stage-manifest.ts';
 import {
   STANDARD_AGENT_REGISTRY,
 } from '../../src/kernel/standard-agent-registry.ts';
+
+test('page-evidence cache quality debt remains progress-first and projects its exact receipt ref', () => {
+  const receiptRef = {
+    kind: 'opl_review_evidence_cache_receipt',
+    ref: 'file:///tmp/review-evidence-cache-debt.json',
+    size_bytes: 123,
+    sha256: `sha256:${'1'.repeat(64)}`,
+  };
+  const receipt = {
+    surface_kind: 'opl_review_evidence_cache_receipt',
+    cache_reuse_eligible: false,
+    stage_transition_allowed: true,
+    typed_blocker_ref: null,
+    cache_authority: false,
+    requires_fresh_reviewer_invocation: true,
+    requires_fresh_reviewer_receipt: true,
+    requires_mas_judgment: true,
+    quality_debt: {
+      status: 'quality_debt',
+      ordinary_progress_may_advance: true,
+      stage_transition_allowed: true,
+      typed_blocker_ref: null,
+    },
+  };
+  assert.equal(stageReviewEvidenceCacheQualityDebtRef({ receiptRef, receipt }), receiptRef.ref);
+  assert.throws(() => stageReviewEvidenceCacheQualityDebtRef({
+    receiptRef,
+    receipt: {
+      ...receipt,
+      quality_debt: { ...receipt.quality_debt, stage_transition_allowed: false },
+    },
+  }), /progress-first and non-blocking/);
+});
 
 const repoRoot = path.resolve(import.meta.dirname, '../..');
 
@@ -66,7 +105,8 @@ function qualityContextBinding(input: {
     artifact_hashes: input.artifactHashes ?? [],
   };
   const contextManifest = input.role === 'reviewer' || input.role === 're_reviewer'
-    ? buildStageReviewContextManifest({
+    ? {
+        ...buildStageReviewContextManifest({
         stageRunId: input.stageRunId,
         qualityCycleId: input.qualityCycleId,
         reviewerAttemptRole: input.role,
@@ -75,7 +115,14 @@ function qualityContextBinding(input: {
         qualityRubricRefs: input.rubricRefs,
         priorFindingRefs: input.priorFindingRefs,
         repairMapRefs: input.repairMapRefs,
-      })
+        }),
+        ...buildStageReviewInputSnapshotContext({
+          stageRunId: input.stageRunId,
+          qualityCycleId: input.qualityCycleId,
+          reviewerAttemptRole: input.role,
+          resolution: resolveReviewerInputSnapshotMaterialization(null),
+        }),
+      }
     : {
         surface_kind: 'opl_stage_quality_attempt_context_manifest',
         version: 'stage-quality-attempt-context-manifest.v1',
@@ -160,6 +207,21 @@ test('official quality profile is explicit without adding per-agent registry pol
   assert.equal(contract.review_receipt.review_receipt_rubric_source,
     'reviewer_attempt_execution_content_binding');
   assert.equal(contract.review_receipt.producer_and_reviewer_rubric_equality_required, false);
+  assert.equal(
+    contract.context_isolation.review_input_snapshot
+      .present_invalid_request_fails_closed_before_reviewer_attempt_creation,
+    true,
+  );
+  assert.equal(
+    contract.context_isolation.review_input_snapshot
+      .missing_request_adds_quality_debt_without_overwriting_reviewer_outcome_findings_or_hard_stop,
+    true,
+  );
+  assert.equal(
+    contract.review_receipt.review_transport_binding
+      .page_evidence_cache_hit_can_skip_fresh_reviewer_receipt,
+    false,
+  );
   assert.equal(
     contract.cross_stage_route_selection
       .repair_required_review_or_re_review_may_select_cross_stage_route_back_before_budget_exhaustion,
@@ -326,6 +388,16 @@ test('formal review rejects shared provider sessions even when the same model is
     reviewed_artifact_hashes: ['sha256:v1'],
     rubric_refs: ['rubric:quality'],
     verdict: 'pass',
+    review_input_snapshot_status: 'quality_debt',
+    mas_review_input_snapshot_binding: null,
+    opl_reviewer_input_snapshot_manifest_ref: null,
+    opl_reviewer_input_snapshot_manifest: null,
+    review_input_snapshot_quality_debt_receipt_ref: 'quality-debt:snapshot',
+    review_input_snapshot_quality_debt_receipt: {
+      surface_kind: 'opl_review_input_snapshot_quality_debt_receipt',
+    },
+    opl_review_evidence_cache_receipt_ref: null,
+    opl_review_evidence_cache_receipt: null,
     finding_lineage: {
       review_kind: 'initial_review',
       finding_ids: [],
@@ -352,6 +424,16 @@ function reviewReceipt(overrides: Record<string, unknown> = {}) {
     reviewed_artifact_hashes: ['sha256:reviewed'],
     rubric_refs: ['rubric:quality'],
     verdict: 'pass',
+    review_input_snapshot_status: 'quality_debt',
+    mas_review_input_snapshot_binding: null,
+    opl_reviewer_input_snapshot_manifest_ref: null,
+    opl_reviewer_input_snapshot_manifest: null,
+    review_input_snapshot_quality_debt_receipt_ref: 'quality-debt:snapshot',
+    review_input_snapshot_quality_debt_receipt: {
+      surface_kind: 'opl_review_input_snapshot_quality_debt_receipt',
+    },
+    opl_review_evidence_cache_receipt_ref: null,
+    opl_review_evidence_cache_receipt: null,
     finding_lineage: {
       review_kind: 'initial_review',
       finding_ids: [],
@@ -633,6 +715,14 @@ test('formal reviewer prompt binds isolated context and exact artifact identity'
       reviewed_artifact_hashes: ['sha256:deck-v1'],
       context_manifest_ref: 'manifest:review-context-v1',
       no_context_inheritance: true,
+      quality_context: {
+        context_manifest: buildStageReviewInputSnapshotContext({
+          stageRunId: 'stage-run:rca/artifact-creation',
+          qualityCycleId: 'quality-cycle:rca/artifact-creation',
+          reviewerAttemptRole: 'reviewer',
+          resolution: resolveReviewerInputSnapshotMaterialization(null),
+        }),
+      },
     },
   });
   const prompt = activity.runner_status.command_preview.join('\n');
@@ -653,6 +743,10 @@ test('formal reviewer prompt binds isolated context and exact artifact identity'
   assert.match(prompt, /or fabricate findings, finding closures, or a Re-review result/);
   assert.match(prompt, /Review receipt verdict is generated by the OPL StageRun controller/);
   assert.match(prompt, /cannot write a Stage current pointer or materialize a Stage transition/);
+  assert.match(prompt, /live artifact refs and source refs above are identity\/provenance checks only/);
+  assert.match(prompt, /Read review content only from opl_reviewer_input_snapshot_manifest\.members\[\]\.immutable_ref/);
+  assert.match(prompt, /controller attaches snapshot quality debt independently/);
+  assert.doesNotMatch(prompt, /return outcome=quality_debt/);
 });
 
 test('Re-review prompt requires closure fields only for non-hard-stop outcomes', () => {
