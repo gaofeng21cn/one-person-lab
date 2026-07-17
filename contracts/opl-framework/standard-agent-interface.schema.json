@@ -62,7 +62,7 @@
         "properties": {
           "view_id": { "type": "string", "minLength": 1 },
           "view_kind": { "const": "scientific_reasoning_map" },
-          "schema_version": { "const": "scientific-reasoning-map.v1" },
+          "schema_version": { "enum": ["scientific-reasoning-map.v1", "scientific-reasoning-map.v2"] },
           "source_kind": { "const": "work_item_relative_json" },
           "relative_path": { "type": "string", "minLength": 1 }
         },

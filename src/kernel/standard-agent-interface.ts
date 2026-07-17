@@ -49,7 +49,7 @@ export type StandardAgentStageCatalogDeclaration = {
 export type StandardAgentDomainDetailViewDeclaration = {
   view_id: string;
   view_kind: 'scientific_reasoning_map';
-  schema_version: 'scientific-reasoning-map.v1';
+  schema_version: 'scientific-reasoning-map.v1' | 'scientific-reasoning-map.v2';
   source_kind: 'work_item_relative_json';
   relative_path: string;
 };
@@ -314,7 +314,7 @@ function domainDetailViews(value: unknown, sourceRef: string): StandardAgentDoma
     }
     seen.add(viewId);
     if (entry.view_kind !== 'scientific_reasoning_map'
-      || entry.schema_version !== 'scientific-reasoning-map.v1'
+      || !['scientific-reasoning-map.v1', 'scientific-reasoning-map.v2'].includes(String(entry.schema_version))
       || entry.source_kind !== 'work_item_relative_json') {
       invalid('Standard Agent interface domain detail view declaration is unsupported.', sourceRef, {
         field: `domain_detail_views.${index}`,
@@ -337,7 +337,7 @@ function domainDetailViews(value: unknown, sourceRef: string): StandardAgentDoma
     return {
       view_id: viewId,
       view_kind: 'scientific_reasoning_map',
-      schema_version: 'scientific-reasoning-map.v1',
+      schema_version: entry.schema_version as StandardAgentDomainDetailViewDeclaration['schema_version'],
       source_kind: 'work_item_relative_json',
       relative_path: relativePath,
     };

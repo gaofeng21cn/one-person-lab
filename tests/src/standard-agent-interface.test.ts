@@ -290,17 +290,27 @@ test('standard Agent interface accepts optional work-item detail view declaratio
     ],
   };
 
-  const parsed = parseStandardAgentInterface(value, 'fixture.json#/standard_agent_interface');
-  assert.deepEqual(parsed.domain_detail_views, value.domain_detail_views);
-
   const schemaRef = 'contracts/opl-framework/standard-agent-interface.schema.json';
   const schema = parseJsonText(fs.readFileSync(path.join(process.cwd(), schemaRef), 'utf8')) as Record<string, unknown>;
-  const validation = validateJsonSchemaPayload({
-    schemaId: 'opl.standard_agent_interface.v1',
-    schema,
-    sourceRef: schemaRef,
-  }, value);
-  assert.equal(validation.ok, true, validation.ok ? undefined : JSON.stringify(validation.errors, null, 2));
+  for (const schemaVersion of ['scientific-reasoning-map.v1', 'scientific-reasoning-map.v2'] as const) {
+    const candidate = structuredClone(value);
+    candidate.domain_detail_views[0]!.schema_version = schemaVersion;
+    const parsed = parseStandardAgentInterface(candidate, 'fixture.json#/standard_agent_interface');
+    assert.deepEqual(parsed.domain_detail_views, candidate.domain_detail_views);
+    const validation = validateJsonSchemaPayload({
+      schemaId: 'opl.standard_agent_interface.v1',
+      schema,
+      sourceRef: schemaRef,
+    }, candidate);
+    assert.equal(validation.ok, true, validation.ok ? undefined : JSON.stringify(validation.errors, null, 2));
+  }
+
+  const unsupportedVersion = structuredClone(value);
+  unsupportedVersion.domain_detail_views[0]!.schema_version = 'scientific-reasoning-map.v3';
+  assert.throws(
+    () => parseStandardAgentInterface(unsupportedVersion, 'fixture.json#/standard_agent_interface'),
+    /domain detail view declaration is unsupported/,
+  );
 
   const escaped = structuredClone(value);
   escaped.domain_detail_views[0]!.relative_path = '../snapshot.json';
