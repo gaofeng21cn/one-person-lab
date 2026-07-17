@@ -494,9 +494,14 @@ Close findings using the latest package.
     assert.equal(explicitNewLaunch.durable_launch.start_status, 'started');
     assert.equal(compatibilityAliasLaunch.durable_launch.start_status, 'started');
 
-    assert.equal(state.status, 'completed', JSON.stringify(state, null, 2));
+    assert.equal(state.status, 'completed_with_quality_debt', JSON.stringify(state, null, 2));
     assert.equal(state.sqlite_projection.status, 'synced');
     assert.equal(state.repair_rounds_used, 0);
+    assert.equal(state.typed_blocker_refs.length, 0);
+    assert.equal(state.quality_debt_refs.length, 1);
+    assert.match(state.quality_debt_refs[0], /stage-review-input-snapshot-quality-debt/);
+    assert.equal(state.route_quality_debt_refs.length, 1);
+    assert.match(state.route_quality_debt_refs[0], /decisive_attempt_route_decision_missing/);
     assert.deepEqual(state.attempts.map((attempt: any) => attempt.attempt_role), ['producer', 'reviewer']);
     assert.deepEqual(state.artifact_refs, [artifactRef]);
     assert.deepEqual(state.artifact_hashes, [artifactHash]);
@@ -569,6 +574,10 @@ Close findings using the latest package.
       assert.deepEqual(receipt.reviewed_artifact_hashes, [artifactHash]);
       assert.deepEqual(receipt.rubric_refs, ['agent/quality_gates/quality.md']);
       assert.equal(receipt.verdict, 'pass');
+      assert.equal(receipt.review_input_snapshot_status, 'quality_debt');
+      assert.equal(receipt.mas_review_input_snapshot_binding, null);
+      assert.equal(receipt.review_input_snapshot_quality_debt_receipt.stage_transition_allowed, true);
+      assert.equal(receipt.review_input_snapshot_quality_debt_receipt.typed_blocker_ref, null);
 
       const cycle = db.prepare(`
         SELECT stage_run_id, state_json, current_attempt_ref
@@ -577,9 +586,9 @@ Close findings using the latest package.
       const projected = JSON.parse(cycle.state_json);
       assert.equal(cycle.stage_run_id, stageRunInput.stage_run_id);
       assert.equal(cycle.current_attempt_ref, null);
-      assert.equal(projected.status, 'passed');
+      assert.equal(projected.status, 'quality_debt');
       assert.deepEqual(projected.selected_artifact_refs, [artifactRef]);
-      assert.equal(projected.controller_readback.controller_status, 'completed');
+      assert.equal(projected.controller_readback.controller_status, 'completed_with_quality_debt');
       assert.deepEqual(
         projected.controller_readback.attempts.map((attempt: any) => attempt.attempt_role),
         ['producer', 'reviewer'],
@@ -594,7 +603,10 @@ Close findings using the latest package.
       assert.equal(launches.length, 3);
       assert.equal(new Set(launches.map((entry) => entry.stage_run_id)).size, 3);
       assert.equal(launches.every((entry) => entry.launch_status === 'closed'), true);
-      assert.equal(launches.every((entry) => entry.terminal_status === 'completed'), true);
+      assert.equal(
+        launches.every((entry) => entry.terminal_status === 'completed_with_quality_debt'),
+        true,
+      );
     } finally {
       db.close();
     }
