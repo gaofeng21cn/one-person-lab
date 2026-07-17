@@ -6,12 +6,12 @@
     "mas": {
       "package_id": "mas",
       "package_role": "standard_agent",
-      "package_version": "0.2.10",
-      "owner_source_commit": "9ca3f57aaf581baf959530e9c0b55343d80f595b",
+      "package_version": "0.2.11",
+      "owner_source_commit": "a4a41fce399ace11ee4dd2617329b128d9d410e1",
       "manifest_ref": "packages/mas.json",
-      "manifest_sha256": "sha256:1705ec92a0ccf70f41b1025991e49206fcd6c9ba5fe3ec1f1f9e6b98f5de43e0",
-      "payload_manifest_ref": "packages/payloads/mas-0.2.10.json",
-      "payload_manifest_sha256": "sha256:a706f6e6e1c671c091cfe0ffa518fafb5b2560cc8d493316a42da5befd2470fd",
+      "manifest_sha256": "sha256:a300c4371f59af55289005371d4707a5857d29de321e62ff41c13c8f1991c55c",
+      "payload_manifest_ref": "packages/payloads/mas-0.2.11.json",
+      "payload_manifest_sha256": "sha256:205cb03f8ddde539715a7b7bbf928934f9fe282cc921993b8f92e2cedd5fca8f",
       "runtime_module_relative_path": "modules/mas"
     },
     "mag": {
@@ -61,12 +61,12 @@
     "mas-scholar-skills": {
       "package_id": "mas-scholar-skills",
       "package_role": "framework_capability_package",
-      "package_version": "0.2.6",
-      "owner_source_commit": "7da5e95a833217fe0670d29b9d8c19cfd1071db1",
+      "package_version": "0.2.7",
+      "owner_source_commit": "9f3be98bd76a6426bb4f066636c67231b37045ab",
       "manifest_ref": "packages/mas-scholar-skills.json",
-      "manifest_sha256": "sha256:dbb6e431883fa686f2ca16d4d3b785e1f570c0b528f2c18c1675f25882548332",
-      "payload_manifest_ref": "packages/payloads/mas-scholar-skills-0.2.6.json",
-      "payload_manifest_sha256": "sha256:fd5b651672682213705eb0a8d953f77ff294cf7b5ef3c19521460d1e8543e8c7",
+      "manifest_sha256": "sha256:b2965e6f47843cda3c00dc9804bcf1111dc071012887bf509c6459cc8fda46fb",
+      "payload_manifest_ref": "packages/payloads/mas-scholar-skills-0.2.7.json",
+      "payload_manifest_sha256": "sha256:2070bbb14c4ef5f54db4375d574ae592c4f8d5bcdbf88967a58e04db84bc96c8",
       "runtime_module_relative_path": "modules/mas-scholar-skills"
     },
     "opl-flow": {

@@ -1,0 +1,48 @@
+{
+  "surface_kind": "opl_package_owner_cohort_lock.v1",
+  "generated_at": "2026-07-17T04:07:08.000Z",
+  "packages": {
+    "mas": {
+      "package_id": "mas",
+      "repo_name": "med-autoscience",
+      "repo_url": "https://github.com/gaofeng21cn/med-autoscience.git",
+      "source_commit": "a4a41fce399ace11ee4dd2617329b128d9d410e1"
+    },
+    "mag": {
+      "package_id": "mag",
+      "repo_name": "med-autogrant",
+      "repo_url": "https://github.com/gaofeng21cn/med-autogrant.git",
+      "source_commit": "96dc9fc1832c191daa99407f38acfbc1d0ec61df"
+    },
+    "rca": {
+      "package_id": "rca",
+      "repo_name": "redcube-ai",
+      "repo_url": "https://github.com/gaofeng21cn/redcube-ai.git",
+      "source_commit": "c10ad7e198b10cd3491ff43343b50fe1d6f11c74"
+    },
+    "oma": {
+      "package_id": "oma",
+      "repo_name": "opl-meta-agent",
+      "repo_url": "https://github.com/gaofeng21cn/opl-meta-agent.git",
+      "source_commit": "33a91c7d7f6f71670c13ae63024c54f9063945ee"
+    },
+    "obf": {
+      "package_id": "obf",
+      "repo_name": "opl-bookforge",
+      "repo_url": "https://github.com/gaofeng21cn/opl-bookforge.git",
+      "source_commit": "eb1ad4a44b1809e4e1e15490abf7f34710a797eb"
+    },
+    "mas-scholar-skills": {
+      "package_id": "mas-scholar-skills",
+      "repo_name": "mas-scholar-skills",
+      "repo_url": "https://github.com/gaofeng21cn/mas-scholar-skills.git",
+      "source_commit": "9f3be98bd76a6426bb4f066636c67231b37045ab"
+    },
+    "opl-flow": {
+      "package_id": "opl-flow",
+      "repo_name": "opl-flow",
+      "repo_url": "https://github.com/gaofeng21cn/opl-flow.git",
+      "source_commit": "0e6be1220cddeed791e8e09b0170024d95e06f9f"
+    }
+  }
+}

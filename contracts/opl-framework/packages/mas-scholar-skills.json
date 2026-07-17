@@ -3,7 +3,7 @@
   "package_id": "mas-scholar-skills",
   "display_name": "MAS Scholar Skills",
   "publisher": "one-person-lab",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/mas-scholar-skills.git",
   "package_role": "required_agent_capability_package",
@@ -345,7 +345,7 @@
       "skills/medical-data-freeze-and-analysis-readiness-reviewer/kernel.py",
       "skills/medical-research-portfolio-memory-curator/SKILL.md"
     ],
-    "digest": "sha256:103242c995774b6750c00aa0353f27358aee987cc93ca53255db4c2f9b08c2c9"
+    "digest": "sha256:746c1f32e91847e9d8c5e64627f95cc01cb66c61c41537c0ac99130eace95a92"
   },
   "lifecycle": {
     "owner": "one-person-lab",
@@ -380,13 +380,13 @@
   },
   "codex_surface": {
     "plugin_id": "mas-scholar-skills",
-    "carrier_source_commit": "7da5e95a833217fe0670d29b9d8c19cfd1071db1",
+    "carrier_source_commit": "9f3be98bd76a6426bb4f066636c67231b37045ab",
     "carrier_source_role": "codex_plugin_carrier_not_package_truth",
     "required_skill_ids_ref": "#/exports/core_skill_ids",
     "default_materialized_skill_ids_ref": "#/exports/all_skill_ids",
     "codex_default_exposure": false,
     "optional_install_policy": "all_exported_skills",
-    "plugin_payload_manifest_url": "payloads/mas-scholar-skills-0.2.6.json"
+    "plugin_payload_manifest_url": "payloads/mas-scholar-skills-0.2.7.json"
   },
   "authority_boundary": {
     "can_write_domain_truth": false,
