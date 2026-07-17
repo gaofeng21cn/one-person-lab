@@ -2576,6 +2576,7 @@ function packageUseReconciliationSource(lock: AgentPackageLock) {
 function packageUseLastKnownGood(
   lock: AgentPackageLock,
   error: unknown,
+  refreshTimeoutMs: number,
 ): PackageUseReconciliation {
   const failureCode = error instanceof FrameworkContractError
     && typeof error.details?.failure_code === 'string'
@@ -2594,6 +2595,7 @@ function packageUseLastKnownGood(
       status: 'update_failed_using_last_known_good',
       source: packageUseReconciliationSource(lock),
       failure_code: failureCode,
+      refresh_timeout_ms: refreshTimeoutMs,
       message,
     },
   };
@@ -2641,7 +2643,7 @@ async function reconcilePackageClosureForUse(
         reconciliationIssue: null,
       };
     } catch (error) {
-      return packageUseLastKnownGood(lock, error);
+      return packageUseLastKnownGood(lock, error, refreshTimeoutMs);
     }
   }
 
@@ -2653,6 +2655,7 @@ async function reconcilePackageClosureForUse(
         package_id: lock.package_id,
         failure_code: 'agent_package_capability_channel_unavailable',
       }),
+      refreshTimeoutMs,
     );
   }
   try {
@@ -2696,7 +2699,7 @@ async function reconcilePackageClosureForUse(
       reconciliationIssue: null,
     };
   } catch (error) {
-    return packageUseLastKnownGood(lock, error);
+    return packageUseLastKnownGood(lock, error, refreshTimeoutMs);
   }
 }
 
@@ -2957,7 +2960,7 @@ function packageUseLastKnownGoodFallback(
   if (!input.scope || !targetRoot) throw error;
 
   const materializationReadiness = scopeMaterializationReadiness(lock, index, input);
-  const reconciliation = packageUseLastKnownGood(lock, error);
+  const reconciliation = packageUseLastKnownGood(lock, error, packageUseRefreshTimeoutMs());
   const resolvedProviderLocks = lock.resolved_dependencies.map((dependency) => {
     const provider = index.packages.find((entry) => entry.package_id === dependency.package_id);
     if (!provider) {

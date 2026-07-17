@@ -829,6 +829,7 @@ export type AgentPackageUseBinding = {
     status: 'update_failed_using_last_known_good';
     source: 'developer_checkout' | 'package_channel' | 'mixed';
     failure_code: string | null;
+    refresh_timeout_ms?: number;
     message: string;
   } | null;
   scope: 'workspace' | 'quest';

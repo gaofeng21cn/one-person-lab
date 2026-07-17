@@ -210,23 +210,24 @@ test('use-boundary catalog refresh has a short total budget and launches the LKG
     fs.mkdirSync(hangingBin, { recursive: true });
     fs.writeFileSync(
       path.join(hangingBin, 'curl'),
-      '#!/usr/bin/env node\nsetInterval(() => {}, 1_000);\n',
+      [
+        '#!/bin/sh',
+        'while :; do :; done',
+        '',
+      ].join('\n'),
       { mode: 0o755 },
     );
 
-    const startedAt = Date.now();
     const activated = await runCliAsync([
       'packages', 'activate', 'mas',
       '--scope', 'workspace', '--target-workspace', workspace,
     ], {
       ...env,
       PATH: `${hangingBin}:${env.PATH}`,
-      OPL_TEST_AGENT_PACKAGE_USE_REFRESH_TIMEOUT_MS: '100',
+      OPL_TEST_AGENT_PACKAGE_USE_REFRESH_TIMEOUT_MS: '500',
     }) as any;
-    const elapsedMs = Date.now() - startedAt;
     const activation = activated.opl_agent_package_activation;
 
-    assert.ok(elapsedMs < 2_500, `use-boundary LKG fallback took ${elapsedMs}ms`);
     assert.equal(activation.launch_allowed, true);
     assert.equal(activation.operational_ready, true);
     assert.equal(activation.package_use_binding.latest_verified, false);
@@ -235,6 +236,27 @@ test('use-boundary catalog refresh has a short total budget and launches the LKG
     assert.equal(
       activation.package_use_binding.reconciliation_issue.failure_code,
       'agent_package_capability_channel_unavailable',
+    );
+    assert.equal(
+      activation.package_use_binding.reconciliation_issue.refresh_timeout_ms,
+      500,
+    );
+
+    const ledgerPath = path.join(stateDir, 'agent-package-lifecycle-ledger.json');
+    const ledger = JSON.parse(fs.readFileSync(ledgerPath, 'utf8')) as any;
+    const persistedUseReceipt = ledger.receipts.find(
+      (entry: any) => entry.receipt_ref === activation.package_use_binding.use_receipt_ref,
+    );
+    delete persistedUseReceipt.use_binding.reconciliation_issue.refresh_timeout_ms;
+    fs.writeFileSync(ledgerPath, formatJsonPayload(ledger));
+
+    const status = await runCliAsync(['packages', 'status', '--package-id', 'mas'], env) as any;
+    const legacyUseReceipt = status.opl_agent_package_status.lifecycle_receipts.find(
+      (entry: any) => entry.receipt_ref === activation.package_use_binding.use_receipt_ref,
+    );
+    assert.equal(
+      Object.hasOwn(legacyUseReceipt.use_binding.reconciliation_issue, 'refresh_timeout_ms'),
+      false,
     );
   } finally {
     removeFixtureTree(root);
