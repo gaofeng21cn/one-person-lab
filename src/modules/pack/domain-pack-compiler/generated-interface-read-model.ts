@@ -31,9 +31,24 @@ import {
   stringList,
 } from '../../../kernel/json-record.ts';
 import { optionalString } from '../../../kernel/json-file.ts';
+import { resolveStandardAgentContractCheckout } from '../../connect/index.ts';
 
 type JsonRecord = Record<string, unknown>;
 export type GeneratedInterfaceFormat = FamilyActionExportFormat | 'product-entry';
+
+type StandardAgentContractResolutionReadback = {
+  surface_kind: 'opl_standard_agent_contract_checkout_resolution';
+  status: 'resolved' | 'blocked' | 'not_applicable';
+  launch_allowed: boolean;
+  reason: string | null;
+  source_status: string | null;
+};
+
+type GeneratedInterfaceReadModelOptions = {
+  standardAgentContractResolution?: StandardAgentContractResolutionReadback;
+};
+
+const BLOCKED_STANDARD_AGENT_CONTRACT_RESOLUTION = 'blocked_by_standard_agent_contract_resolution';
 
 export const GENERATED_INTERFACE_SOURCE_REFS = [
   'family_action_catalog',
@@ -331,6 +346,72 @@ function rawDescriptorSurface<T>(descriptor: JsonRecord, key: string): T | null 
   }
   const raw = surface.raw_descriptor;
   return isRecord(raw) ? raw as T : null;
+}
+
+function standardAgentContractResolutionForDescriptor(
+  descriptor: JsonRecord,
+  options: GeneratedInterfaceReadModelOptions,
+): StandardAgentContractResolutionReadback | null {
+  if (options.standardAgentContractResolution) {
+    return options.standardAgentContractResolution;
+  }
+  if (optionalString(descriptor.source_kind) === 'standard_agent_repo_contracts') {
+    return null;
+  }
+  const domainId = optionalString(descriptor.agent_id)
+    ?? optionalString(descriptor.requested_agent_id)
+    ?? optionalString(descriptor.project_id)
+    ?? optionalString(descriptor.target_domain_id);
+  if (!domainId) {
+    return null;
+  }
+  const resolution = resolveStandardAgentContractCheckout(
+    domainId,
+    undefined,
+    undefined,
+    { result: 'typed_resolution' },
+  );
+  if (resolution.status === 'not_applicable') {
+    return null;
+  }
+  return {
+    surface_kind: resolution.surface_kind,
+    status: resolution.status,
+    launch_allowed: resolution.launch_allowed,
+    reason: resolution.reason,
+    source_status: resolution.source_status,
+  };
+}
+
+function projectStandardAgentContractBlock<T extends JsonRecord>(
+  block: T,
+  blockedReason: string | null,
+) {
+  return blockedReason
+    ? {
+        ...block,
+        status: BLOCKED_STANDARD_AGENT_CONTRACT_RESOLUTION,
+        blocked_reason: blockedReason,
+      }
+    : block;
+}
+
+function projectGeneratedDirectParitySourceBlock<T extends JsonRecord>(
+  parity: T,
+  blockedReason: string | null,
+) {
+  if (!blockedReason) {
+    return parity;
+  }
+  const issues = Array.isArray(parity.issues)
+    ? parity.issues.filter((issue) => issue !== 'missing family_action_catalog')
+    : [];
+  return {
+    ...parity,
+    status: BLOCKED_STANDARD_AGENT_CONTRACT_RESOLUTION,
+    blocked_reason: blockedReason,
+    issues: [...issues, `standard agent contract source blocked: ${blockedReason}`],
+  };
 }
 
 function descriptorRecord(descriptor: JsonRecord, key: string) {
@@ -836,17 +917,33 @@ export function buildGeneratedInterfaceBundle(
   descriptor: JsonRecord,
   compilerStatus: string,
   selectedFormat: GeneratedInterfaceFormat | 'all' = 'all',
+  options: GeneratedInterfaceReadModelOptions = {},
 ) {
-  const catalog = rawDescriptorSurface<FamilyActionCatalog>(descriptor, 'family_action_catalog');
-  const stageControlPlane = rawDescriptorSurface<FamilyStageControlPlane>(descriptor, 'family_stage_control_plane');
+  const rawCatalog = rawDescriptorSurface<FamilyActionCatalog>(descriptor, 'family_action_catalog');
+  const standardAgentContractResolution = standardAgentContractResolutionForDescriptor(
+    descriptor,
+    options,
+  );
+  const sourceBlockedReason = standardAgentContractResolution?.status === 'blocked'
+    ? standardAgentContractResolution.reason ?? 'standard_agent_contract_resolution_blocked'
+    : null;
+  const catalog = sourceBlockedReason ? null : rawCatalog;
+  const rawStageControlPlane = rawDescriptorSurface<FamilyStageControlPlane>(
+    descriptor,
+    'family_stage_control_plane',
+  );
+  const stageControlPlane = catalog ? rawStageControlPlane : null;
   const workspacePath = catalog ? hostedWorkspacePath(descriptor) : '';
   const formats: GeneratedInterfaceFormat[] = ['cli', 'mcp', 'skill', 'product-entry', 'openai', 'ai-sdk'];
   const include = (format: GeneratedInterfaceFormat) => selectedFormat === 'all' || selectedFormat === format;
-  const block = (format: GeneratedInterfaceFormat) => formatDescriptorBlock(
-    catalog,
-    format,
-    stageControlPlane,
-    workspacePath,
+  const block = (format: GeneratedInterfaceFormat) => projectStandardAgentContractBlock(
+    formatDescriptorBlock(
+      catalog,
+      format,
+      stageControlPlane,
+      workspacePath,
+    ),
+    sourceBlockedReason,
   );
   const allBlocks = Object.fromEntries(
     formats.map((format) => [
@@ -874,12 +971,16 @@ export function buildGeneratedInterfaceBundle(
     return isRecord(value) && optionalString(value.status) === 'ready';
   });
   const activeCallerTargetProof = buildActiveCallerTargetProof(descriptor, GENERATED_SURFACES);
-  const productStatus = {
+  const sourceOfWorkLineage = projectStandardAgentContractBlock(
+    buildSourceOfWorkLineage(catalog, stageControlPlane),
+    sourceBlockedReason,
+  );
+  const productStatus = projectStandardAgentContractBlock({
     surface_kind: 'opl_generated_product_status_descriptor',
     owner: 'one-person-lab',
     status: catalog ? 'ready_from_family_action_catalog' : 'blocked_missing_family_action_catalog',
     descriptor_source_surfaces: ['family_action_catalog', 'runtime_surfaces'],
-    source_of_work_lineage: buildSourceOfWorkLineage(catalog, stageControlPlane),
+    source_of_work_lineage: sourceOfWorkLineage,
     default_source_of_work: defaultSourceOfWork(catalog, stageControlPlane, workspacePath),
     source_of_work_consumption_policy:
       'status_read_model_consumes_generated_surface_lineage_without_claiming_domain_ready',
@@ -889,15 +990,26 @@ export function buildGeneratedInterfaceBundle(
       product_status_can_authorize_quality_or_export: false,
       product_status_reads_refs_only: true,
     },
+  }, sourceBlockedReason);
+  const productSession = projectStandardAgentContractBlock(
+    buildProductSessionDescriptorFromDescriptor(descriptor, stageControlPlane),
+    sourceBlockedReason,
+  );
+  const domainHandler = projectStandardAgentContractBlock(
+    buildDomainHandlerDescriptorBlock(catalog, descriptor, workspacePath),
+    sourceBlockedReason,
+  );
+  const workbench = {
+    ...projectStandardAgentContractBlock(
+      buildWorkbenchDescriptorBlock(catalog, stageControlPlane, descriptor, workspacePath),
+      sourceBlockedReason,
+    ),
+    source_of_work_lineage: sourceOfWorkLineage,
   };
-  const productSession = buildProductSessionDescriptorFromDescriptor(descriptor, stageControlPlane);
-  const domainHandler = buildDomainHandlerDescriptorBlock(catalog, descriptor, workspacePath);
-  const workbench = buildWorkbenchDescriptorBlock(catalog, stageControlPlane, descriptor, workspacePath);
   const generatedDefaultEntryNoResurrectionGate = buildGeneratedDefaultEntryNoResurrectionGate(
     catalog,
     stageControlPlane,
   );
-  const sourceOfWorkLineage = buildSourceOfWorkLineage(catalog, stageControlPlane);
   const wrapperBlocks = {
     ...allBlocks,
     product_status: productStatus,
@@ -905,11 +1017,14 @@ export function buildGeneratedInterfaceBundle(
     domain_handler: domainHandler,
     workbench,
   };
-  const generatedDirectParity = buildGeneratedDirectParityProof(
-    catalog,
-    allBlocks,
-    activeCallerTargetProof,
-    workspacePath,
+  const generatedDirectParity = projectGeneratedDirectParitySourceBlock(
+    buildGeneratedDirectParityProof(
+      catalog,
+      allBlocks,
+      activeCallerTargetProof,
+      workspacePath,
+    ),
+    sourceBlockedReason,
   );
   const activeCallerCutoverProof = buildActiveCallerCutoverProof(
     descriptor,
@@ -948,6 +1063,12 @@ export function buildGeneratedInterfaceBundle(
       && generatedDirectParity.status === 'aligned'
         ? 'ready'
         : 'blocked',
+    blocker_reasons: sourceBlockedReason
+      ? [sourceBlockedReason]
+      : catalog
+        ? []
+        : ['blocked_missing_family_action_catalog'],
+    standard_agent_contract_resolution: standardAgentContractResolution,
     selected_format: selectedFormat,
     project_id: optionalString(descriptor.project_id),
     target_domain_id: optionalString(descriptor.target_domain_id),
@@ -1011,6 +1132,8 @@ export function selectGeneratedInterfaceBundleFormat(
     generated_surface_owner: bundle.generated_surface_owner,
     domain_repo_can_own_generated_surface: bundle.domain_repo_can_own_generated_surface,
     status: bundle.status,
+    blocker_reasons: bundle.blocker_reasons,
+    standard_agent_contract_resolution: bundle.standard_agent_contract_resolution,
     selected_format: selectedFormat,
     project_id: bundle.project_id,
     target_domain_id: bundle.target_domain_id,

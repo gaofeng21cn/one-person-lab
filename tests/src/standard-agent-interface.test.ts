@@ -417,15 +417,39 @@ test('package dependency and runtime source readiness gate descriptor discovery 
       readPackageManagedStandardAgentDescriptor(['mas'], observedDeveloperDriftReader)?.repo_dir,
       repoDir,
     );
+    const observedDriftResolution = resolveStandardAgentContractCheckout(
+      'mas',
+      observedDeveloperDriftReader,
+      () => null,
+      { result: 'typed_resolution' },
+    );
+    assert.equal(observedDriftResolution.status, 'resolved');
+    assert.equal(observedDriftResolution.launch_allowed, true);
+    assert.equal(observedDriftResolution.reason, null);
+    assert.equal(
+      fs.realpathSync.native(observedDriftResolution.checkout?.checkout_path ?? ''),
+      fs.realpathSync.native(repoDir),
+    );
     const incompatibleSourceStatusReader = ((input: { packageId?: string | null }) => {
       const readback = statusReader(input);
       if (input.packageId === 'mas') {
         readback.opl_agent_package_status.runtime_source_readiness.status = 'incompatible';
         readback.opl_agent_package_status.runtime_source_readiness.operational_ready = false;
+        readback.opl_agent_package_status.runtime_source_readiness.reason =
+          'managed_runtime_source_lock_mismatch';
       }
       return readback;
     }) as any;
     assert.equal(readPackageManagedStandardAgentDescriptor(['mas'], incompatibleSourceStatusReader), null);
+    const incompatibleResolution = resolveStandardAgentContractCheckout(
+      'mas',
+      incompatibleSourceStatusReader,
+      () => null,
+      { result: 'typed_resolution' },
+    );
+    assert.equal(incompatibleResolution.status, 'blocked');
+    assert.equal(incompatibleResolution.launch_allowed, false);
+    assert.equal(incompatibleResolution.reason, 'managed_runtime_source_lock_mismatch');
     const missingDependencyStatusReader = ((input: { packageId?: string | null }) => {
       const readback = statusReader(input);
       if (input.packageId === 'mas') {
@@ -534,6 +558,43 @@ test('managed-root contract checkout requires matching current package source', 
     fs.rmSync(selectedRepo, { recursive: true, force: true });
     fs.rmSync(packageRepo, { recursive: true, force: true });
   }
+});
+
+test('typed contract checkout resolution preserves managed runtime source reason', () => {
+  const statusReader = (() => ({
+    opl_agent_package_status: {
+      installed_package_count: 1,
+      package_dependency_readiness: {
+        status: 'current',
+        operational_ready: true,
+      },
+      runtime_source_readiness: {
+        status: 'incompatible',
+        operational_ready: false,
+        checkout_path: '/tmp/opl-managed-runtime-source-mismatch',
+        expected_tree_sha256: 'sha256:expected',
+        actual_tree_sha256: 'sha256:actual',
+        reason: 'managed_runtime_source_lock_mismatch',
+      },
+      operational_ready: false,
+      launch_allowed: false,
+      launch_blocked_reason: 'runtime_source_incompatible',
+    },
+  })) as PackageStatusReaderFixture;
+
+  const resolution = resolveStandardAgentContractCheckout(
+    'mas',
+    statusReader,
+    () => null,
+    { result: 'typed_resolution' },
+  );
+
+  assert.equal(resolution.status, 'blocked');
+  assert.equal(resolution.reason, 'managed_runtime_source_lock_mismatch');
+  assert.equal(resolution.source_status, 'incompatible');
+  assert.equal(resolution.launch_allowed, false);
+  assert.equal(resolution.checkout, null);
+  assert.equal(resolveStandardAgentContractCheckout('mas', statusReader, () => null), null);
 });
 
 test('developer-selected sibling descriptor wins over an inactive stale managed mirror', () => {

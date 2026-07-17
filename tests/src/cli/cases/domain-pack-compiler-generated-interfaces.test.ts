@@ -1,6 +1,11 @@
 import './domain-pack-compiler-generated-interfaces-cases/active-caller-cutover-cases.ts';
 import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, parseJsonText, path, repoRoot, runCli, runCliFailure, test } from '../helpers.ts';
 import { buildReadyAgentRepo, retargetReadyRepo, writeJson } from './agents-conformance-fixtures.ts';
+import { buildGeneratedInterfaceBundle } from '../../../../src/modules/pack/domain-pack-compiler/generated-interface-read-model.ts';
+import {
+  buildRepoContractDescriptor,
+  repoContractDescriptorForPackCompiler,
+} from '../../../../src/modules/pack/domain-pack-compiler/repo-contract-descriptor.ts';
 import {
   bindFamilyManifests,
   createFamilyDefaultContractWorkspace,
@@ -139,6 +144,70 @@ function writeDomainRepoContracts(targetDir: string, manifest: Record<string, an
   }
   return manifestSurface;
 }
+
+test('generated interfaces preserve typed source mismatch and emit zero routes', () => {
+  const repoDir = buildReadyAgentRepo();
+  try {
+    retargetReadyRepo(repoDir, 'med-autoscience', 'Med Auto Science');
+    const descriptor = repoContractDescriptorForPackCompiler(
+      buildRepoContractDescriptor(repoDir),
+      'mas',
+    ) as Record<string, any>;
+    const bundle = buildGeneratedInterfaceBundle(descriptor, 'ready', 'all', {
+      standardAgentContractResolution: {
+        surface_kind: 'opl_standard_agent_contract_checkout_resolution',
+        status: 'blocked',
+        launch_allowed: false,
+        reason: 'managed_runtime_source_lock_mismatch',
+        source_status: 'incompatible',
+      },
+    }) as Record<string, any>;
+
+    assert.equal(bundle.status, 'blocked');
+    assert.deepEqual(bundle.blocker_reasons, ['managed_runtime_source_lock_mismatch']);
+    assert.equal(bundle.standard_agent_contract_resolution?.status, 'blocked');
+    assert.equal(
+      bundle.standard_agent_contract_resolution?.reason,
+      'managed_runtime_source_lock_mismatch',
+    );
+    assert.equal(bundle.standard_agent_contract_resolution?.launch_allowed, false);
+    assert.equal(bundle.cli.status, 'blocked_by_standard_agent_contract_resolution');
+    assert.equal(bundle.cli.blocked_reason, 'managed_runtime_source_lock_mismatch');
+    assert.equal(bundle.cli.descriptors.length, 0);
+    assert.equal(bundle.stage_routes.length, 0);
+    assert.equal(bundle.action_stage_routes.length, 0);
+    assert.equal(bundle.product_status.descriptors.length, 0);
+    assert.equal(JSON.stringify(bundle).includes('blocked_missing_family_action_catalog'), false);
+  } finally {
+    fs.rmSync(repoDir, { recursive: true, force: true });
+  }
+});
+
+test('generated interfaces retain missing catalog reason only when the catalog is absent', () => {
+  const repoDir = buildReadyAgentRepo();
+  try {
+    retargetReadyRepo(repoDir, 'med-autoscience', 'Med Auto Science');
+    const descriptor = repoContractDescriptorForPackCompiler(
+      buildRepoContractDescriptor(repoDir),
+      'mas',
+    ) as Record<string, any>;
+    descriptor.family_action_catalog = {
+      status: 'missing',
+      raw_descriptor: null,
+    };
+    const bundle = buildGeneratedInterfaceBundle(descriptor, 'blocked') as Record<string, any>;
+
+    assert.equal(bundle.status, 'blocked');
+    assert.deepEqual(bundle.blocker_reasons, ['blocked_missing_family_action_catalog']);
+    assert.equal(bundle.standard_agent_contract_resolution, null);
+    assert.equal(bundle.cli.status, 'blocked_missing_family_action_catalog');
+    assert.equal(bundle.cli.descriptors.length, 0);
+    assert.equal(bundle.stage_routes.length, 0);
+    assert.equal(bundle.action_stage_routes.length, 0);
+  } finally {
+    fs.rmSync(repoDir, { recursive: true, force: true });
+  }
+});
 
 test('generated interfaces block default cutover without handoff proof but keep authority false', () => {
   const { env, workspaceRoot } = boundFamilyEnv('opl-generated-interfaces-state-');
