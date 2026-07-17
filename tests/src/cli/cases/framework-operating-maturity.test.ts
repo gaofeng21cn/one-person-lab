@@ -1,6 +1,8 @@
 import { assert, fs, os, path, runCli, test } from '../helpers.ts';
 import { createFamilyDefaultContractWorkspace } from './domain-pack-compiler-fixtures.ts';
 
+const OPERATING_MATURITY_CLI_TIMEOUT_MS = '90000';
+
 test('framework operating maturity reports owner gates and false-ready boundaries', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-operating-maturity-state-'));
   const workspaceRoot = createFamilyDefaultContractWorkspace();
@@ -8,6 +10,7 @@ test('framework operating maturity reports owner gates and false-ready boundarie
     const env = {
       OPL_STATE_DIR: stateRoot,
       OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+      OPL_CLI_TEST_TIMEOUT_MS: OPERATING_MATURITY_CLI_TIMEOUT_MS,
     };
     const maturity = runCli([
       'framework',
@@ -75,6 +78,7 @@ test('framework operating maturity compact readback stays projection-only', () =
     const env = {
       OPL_STATE_DIR: stateRoot,
       OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+      OPL_CLI_TEST_TIMEOUT_MS: OPERATING_MATURITY_CLI_TIMEOUT_MS,
     };
     const full = runCli([
       'framework',
