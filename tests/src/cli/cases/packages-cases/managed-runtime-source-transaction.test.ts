@@ -1303,7 +1303,12 @@ test('Packages recovers durable runtime-source markers after interrupted apply a
       version: '0.1.0',
       sourceHeadSha: 'recovery-v1',
     });
-    const env = { OPL_STATE_DIR: stateDir, OPL_MODULES_ROOT: modulesRoot, ...fixtureEnv };
+    const env = {
+      OPL_STATE_DIR: stateDir,
+      OPL_MODULES_ROOT: modulesRoot,
+      OPL_CLI_TEST_TIMEOUT_MS: '90000',
+      ...fixtureEnv,
+    };
     const installed = runCli([
       'packages', 'install', '--manifest-url', manifestPath, '--trust-tier', 'first_party',
     ], env) as any;

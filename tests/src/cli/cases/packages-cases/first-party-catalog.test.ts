@@ -410,6 +410,7 @@ test('first-party install and update lock one Release Set catalog member by vers
     HOME: homeDir,
     CODEX_HOME: path.join(homeDir, '.codex'),
     OPL_STATE_DIR: stateDir,
+    OPL_CLI_TEST_TIMEOUT_MS: '90000',
   };
   try {
     const installedAction = runCli([
