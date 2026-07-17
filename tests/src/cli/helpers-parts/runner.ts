@@ -56,8 +56,9 @@ function cliTestEnv(envOverrides: Record<string, string> = {}) {
   };
 }
 
-function cliTestTimeoutMs() {
-  const raw = process.env.OPL_CLI_TEST_TIMEOUT_MS?.trim();
+function cliTestTimeoutMs(envOverrides: Record<string, string> = {}) {
+  const raw = envOverrides.OPL_CLI_TEST_TIMEOUT_MS?.trim()
+    || process.env.OPL_CLI_TEST_TIMEOUT_MS?.trim();
   if (!raw) {
     return DEFAULT_CLI_TEST_TIMEOUT_MS;
   }
@@ -105,7 +106,7 @@ function runCliProcess(args: string[], cwd: string, envOverrides: Record<string,
     encoding: 'utf8',
     maxBuffer: CLI_TEST_MAX_BUFFER,
     env: cliTestEnv(envOverrides),
-    timeout: cliTestTimeoutMs(),
+    timeout: cliTestTimeoutMs(envOverrides),
     detached: true,
     killSignal: 'SIGTERM',
   };
@@ -173,7 +174,7 @@ export function runCliViaEntryPathInCwd(
     encoding: 'utf8',
     maxBuffer: CLI_TEST_MAX_BUFFER,
     env: cliTestEnv(envOverrides),
-    timeout: cliTestTimeoutMs(),
+    timeout: cliTestTimeoutMs(envOverrides),
     detached: true,
     killSignal: 'SIGTERM',
   };
@@ -225,6 +226,7 @@ export function runCliFailureInCwd(
 
 export async function runCliAsync(args: string[], envOverrides: Record<string, string> = {}) {
   return await new Promise<Record<string, unknown>>((resolve, reject) => {
+    const timeoutMs = cliTestTimeoutMs(envOverrides);
     const child = spawn(
       process.execPath,
       ['--experimental-strip-types', cliPath, ...args],
@@ -241,8 +243,8 @@ export async function runCliAsync(args: string[], envOverrides: Record<string, s
       } catch {
         child.kill('SIGKILL');
       }
-      reject(new Error(`CLI timed out after ${cliTestTimeoutMs()}ms: opl ${args.join(' ')}`));
-    }, cliTestTimeoutMs());
+      reject(new Error(`CLI timed out after ${timeoutMs}ms: opl ${args.join(' ')}`));
+    }, timeoutMs);
 
     let stdout = '';
     let stderr = '';
