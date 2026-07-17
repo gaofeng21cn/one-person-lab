@@ -64,8 +64,8 @@ export const STANDARD_AGENT_REGISTRY = [
   },
   {
     agent_id: 'oma',
-    domain_id: 'oplmetaagent',
-    target_domain_id: 'opl-meta-agent',
+    domain_id: 'agent_engineering',
+    target_domain_id: 'agent_engineering',
     label: 'OPL Meta Agent',
     short_label: 'OMA',
     display_name: 'OPL Meta Agent',
@@ -76,6 +76,8 @@ export const STANDARD_AGENT_REGISTRY = [
     canonical_plugin_name: 'oma',
     aliases: [
       'oma',
+      'agent_engineering',
+      'agent-engineering',
       'oplmetaagent',
       'opl-meta-agent',
       'opl_meta_agent',
@@ -212,6 +214,10 @@ export function matchesStandardDomainAgentCatalogEntry(
 
 export function standardAgentDomainAliasEntries() {
   return STANDARD_AGENT_REGISTRY.flatMap((entry) =>
-    registryAliases(entry).map((alias) => ({ alias, domain_id: entry.domain_id }))
+    registryAliases(entry).map((alias) => ({
+      alias,
+      domain_id: entry.domain_id,
+      module_locator_id: entry.module_id.toLowerCase(),
+    }))
   );
 }

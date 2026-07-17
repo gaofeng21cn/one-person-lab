@@ -48,8 +48,9 @@ test('public and internal command specs no longer carry removed UI adapter comma
   assert.equal(typeof publicSpecs['update status'].handler, 'function');
   assert.equal(typeof publicSpecs['update plan'].handler, 'function');
   assert.equal(typeof publicSpecs['update apply'].handler, 'function');
-  assert.equal(typeof publicSpecs['agents foundry status'].handler, 'function');
-  assert.equal(typeof publicSpecs['agents foundry peers'].handler, 'function');
+  assert.equal(typeof publicSpecs['foundry status'].handler, 'function');
+  assert.equal(typeof publicSpecs['foundry rollback'].handler, 'function');
+  assert.equal(publicSpecs['agents foundry status'], undefined);
   assert.equal(typeof publicSpecs['engine install'].handler, 'function');
   assert.equal(publicSpecs['service install'], undefined);
 });
@@ -72,7 +73,7 @@ test('current readiness projection is derived from current OPL surfaces', () => 
     assert.equal(readiness.domain_binding_parity.summary.total_projects_count, 5);
     assert.deepEqual(
       readiness.domain_binding_parity.projects.map((entry) => entry.project_id).sort(),
-      ['medautogrant', 'medautoscience', 'oplbookforge', 'oplmetaagent', 'redcube'],
+      ['agent_engineering', 'medautogrant', 'medautoscience', 'oplbookforge', 'redcube'],
     );
     assert.equal(refs.entry_guide_surface.command, 'opl start --project <project_id>');
     assert.equal(refs.readiness_surface.command, 'opl status dashboard');
@@ -226,10 +227,13 @@ test('default help advertises Connect canonical installation surfaces while reti
   assert.equal(commands.includes('connect scientific search'), true);
   assert.equal(commands.includes('connect packages manifest'), true);
   assert.equal(commands.includes('connect reconcile-modules'), false);
-  assert.equal(commands.includes('agents foundry status'), true);
-  assert.equal(commands.includes('agents foundry interfaces'), true);
-  assert.equal(commands.includes('agents foundry peers'), true);
-  assert.equal(commands.includes('foundry evidence-profile inspect'), true);
+  assert.equal(commands.includes('foundry status'), true);
+  assert.equal(commands.includes('foundry approve'), true);
+  assert.equal(commands.includes('foundry reject'), true);
+  assert.equal(commands.includes('foundry cancel'), true);
+  assert.equal(commands.includes('foundry versions'), true);
+  assert.equal(commands.includes('foundry rollback'), true);
+  assert.equal(commands.includes('agents foundry status'), false);
   assert.equal(commands.includes('profiles list'), true);
   assert.equal(commands.includes('profiles select'), true);
   assert.equal(commands.includes('profiles conformance'), true);
@@ -239,8 +243,8 @@ test('default help advertises Connect canonical installation surfaces while reti
   assert.equal(commands.includes('packages manifest'), false);
   assert.match(examples, /opl connect install --module medautoscience/);
   assert.match(examples, /opl connect sync-skills/);
-  assert.match(examples, /opl agents foundry status/);
-  assert.match(examples, /opl agents foundry peers/);
+  assert.match(examples, /opl foundry status/);
+  assert.match(examples, /opl foundry versions/);
   assert.doesNotMatch(examples, /opl modules/);
   assert.doesNotMatch(examples, /opl packages manifest/);
   assert.doesNotMatch(examples, /opl module install --module medautoscience/);

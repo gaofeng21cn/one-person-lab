@@ -9,7 +9,7 @@ Machine boundary: 本文是人读迁移验收源。机器真相继续归 `contra
 
 本文既是本轮结构迁移的原始验收源，也是终局 Plan Completion Audit。落地范围包括 OPL 与各 domain repo 的 source / contract / tests / docs / generated surfaces / caller cutover；本文本身仍是人读支持面，不取代 machine contract 或 runtime evidence。任何结构完成结论都不声明 production readiness、runtime ready、domain ready、owner acceptance、App release ready、Brand L5 或 live owner-chain scaleout。
 
-涉及的 OPL 主模块是 `OPL Pack`、`OPL Runway`、`OPL Stagecraft`、`OPL Console`、`OPL Ledger`、`OPL Workspace`、`OPL Connect`、`OPL Atlas` 和 `OPL Foundry Lab`。协同 owner 是 MAS、MAG、RCA、OMA、OBF 各自 domain repo。不触碰范围是 App runtime、domain truth、quality/export/review verdict、artifact body、memory body、owner receipt、typed blocker、human gate 与 live runtime state。
+涉及的 OPL 主模块是 `OPL Pack`、`OPL Runway`、`OPL Stagecraft`、`OPL Console`、`OPL Ledger`、`OPL Workspace`、`OPL Connect`、`OPL Atlas` 和 `OPL Foundry Kernel`。协同 owner 是 MAS、MAG、RCA、OMA、OBF 各自 domain repo。不触碰范围是 App runtime、domain truth、quality/export/review verdict、artifact body、memory body、owner receipt、typed blocker、human gate 与 live runtime state。
 
 ## 目标态
 
@@ -40,8 +40,8 @@ Machine boundary: 本文是人读迁移验收源。机器真相继续归 `contra
 8. `RCA entry / status / session shell`：quickstart、start、readiness、resume、status 与 session response 改由 Pack / Console generated surface 承担。
 9. `RCA executor envelope`：Codex timeout、attempt、telemetry 与 blocker envelope 由 Runway 托管；PPT invocation 与视觉失败解释留 RCA。
 10. `RCA lifecycle / operator transport`：memory / artifact lifecycle、review-repair transport、operator evidence 与 native-helper receipt shell 分别由 Workspace / Ledger / Stagecraft / Pack 托管；visual memory judgment、artifact mutation 与 renderer 留 RCA。
-11. `OMA Agent Lab ledger`：suite、owner receipt、learning candidate、promotion / mechanism / scaleout ledger 由 Foundry Lab 托管；OMA 保留 agent-building judgment 与 candidate refs。
-12. `OMA takeover materializer`：suite 写入、Agent Lab 调用与 delivery gate 组装由 Foundry Lab execution 承担；OMA 只提交 declarative work order。
+11. `Foundry lifecycle authority`：FoundryRun event、EvidenceBundle、QualificationRecord、AgentVersion、canary、activation 与 rollback 由 OPL Foundry Kernel 托管；OMA 只保留 agent-building semantic judgment。
+12. `OMA provider handoff`：OPL 负责确定性物化、冻结测试计划、独立评测和版本治理；OMA 只在四协议边界内返回 `AgentBlueprint` / `EvalSpec` 或 `EvolutionProposal`。
 13. `OBF project hygiene`：通用目录遍历、source byproduct、cache 与 lifecycle 检查由 Workspace / Charter 承担；书稿长度、章节、图表与 review-PDF 判断留 OBF。
 14. `OBF native-helper shell`：Pack 已提供 provider/domain-neutral `opl pack native-helper probe`，用 descriptor/content SHA-256 绑定 `resolved|missing` 工具探测 receipt；renderer、helper 执行、publication proof、版式质量与 export authority 留 OBF。OBF caller cutover 与私有通用 shell 删除仍由 OBF domain lane 验收。
 
@@ -52,7 +52,7 @@ Machine boundary: 本文是人读迁移验收源。机器真相继续归 `contra
 3. `ScholarSkills 医学 catalog`：医学 module IDs、validator 规则、artifact engines 与 profile 内容由 `mas-scholar-skills` 持有；OPL 只保留 capability-pack validation、安装、同步与 provenance。
 4. `MAS Display Pack v2 转换`：迁至 MAS / ScholarSkills display adapter；OPL Pack 只接受通用 descriptor。
 5. `RCA visual transition schema`：已退役；RCA 只提供 visual artifact、review finding 与非权威 route context，Codex CLI 选择语义路线。
-6. `RCA cost preset`：`rca-ppt-40` 归 RCA / registry-owned profile；Foundry Lab 只保留通用 estimator。
+6. `RCA cost preset`：`rca-ppt-40` 归 RCA / registry-owned profile；Foundry Kernel 只保留通用 estimator。
 7. `MAG sustained-consumption shell`：MAG 专用 command / projection 折叠到 generic owner-evidence ledger；grant 语义归 MAG adapter。
 8. `Workspace norm 硬编码`：supported agents 与 topology 全部从 standard-agent registry / profile 派生，不内置 MAS `studies` 语义。
 9. `BookForge dependency 默认值`：dependency doctor 不再默认 `bookforge-publication-proof`；profile 由 active agent / package 显式选择。
@@ -68,7 +68,7 @@ Machine boundary: 本文是人读迁移验收源。机器真相继续归 `contra
 | progress / owner-delta / workbench / operator projection / delegation | `Console` current owner delta、App/operator drilldown、`Stagecraft` owner-answer projection、`Ledger` refs-only evidence | domain progress truth、artifact delta、quality/export/review verdict、owner receipt | generated surface cutover、active caller proof、route-back / owner receipt roundtrip、no second truth |
 | tool affordance、skill inventory、professional Skill carrier、capability registry | `Pack` ABI、`Atlas` registry、`Connect` skill/package sync、generated Codex carrier | professional Skill source truth、domain rubric、domain knowledge、tool-use judgment | pack/compiler conformance、canonical skill source pointer、carrier provenance、no-authority flags |
 | artifact lifecycle、delivery export、workspace/source locator、memory locator | `Workspace` project / stage artifact units、`Pack` descriptor / lifecycle refs、`Ledger` evidence refs、delivery/source shell docs | artifact body、package/export authority、memory body、accept/reject decision、domain source semantics | same-ref parity、owner receipt or typed blocker binding、no body migration by OPL、domain delete/keep/typed-blocker decision |
-| conformance scaffolding、default caller、domain action adapter、status/read model | `Foundry Lab` scaffold/conformance、`Pack` generated interfaces、`Stagecraft` stage control plane, `Console` status projection | domain handler implementation、authority functions、domain-specific source code | `opl agents conformance` / `default-callers` fresh readback、active-caller cutover、tombstone/provenance ref、owner decision |
+| conformance scaffolding、default caller、domain action adapter、status/read model | `Pack` scaffold/conformance/generated interfaces、`Stagecraft` stage control plane、`Console` status projection | domain handler implementation、authority functions、domain-specific source code | `opl agents conformance` / `default-callers` fresh readback、active-caller cutover、tombstone/provenance ref、owner decision |
 
 ## Per-agent owner route
 
@@ -77,7 +77,7 @@ Machine boundary: 本文是人读迁移验收源。机器真相继续归 `contra
 | `MAS` | paper route wrapper、progress/workbench shell、session/currentness/delegation、workspace/source/artifact lifecycle transport、provider heartbeat、scientific connector receipt transport | study truth、paper mission truth、publication quality、source/evidence judgment、paper package authority、MAS Scholar Skills professional truth、owner receipt、typed blocker、human gate | OPL 只托管 route / attempt / refs / projection；`paper_mission` 等旧名只能作为 compatibility carrier，不能继续做 OPL canonical vocabulary。 |
 | `MAG` | product/status/workbench shell、grant loop session shell、runtime report locator、package/lifecycle/memory projection envelope、default caller | grant truth、fundability verdict、grant strategy memory、grant package/export authority、AI route context、owner receipt、typed blocker | grant / proposal 词汇可以在 public routing 或 domain profile 中出现，不能作为 OPL base assertion 或 generic lifecycle。 |
 | `RCA` | product/session/status sidecar、domain action wrapper、runtimeWatch/operator evidence shell、artifact gallery/handoff shell、generic native-helper envelope | visual truth、layout/review/export verdict、canonical artifact authority、visual memory accept/reject、native helper implementation、owner receipt、typed blocker | visual / RCA 词汇只保留在 profile、fixture、domain repo 或 history；generated domain action / workbench 走 OPL generic surface。 |
-| `OMA` | Agent Lab runner、promotion gate read model、target-agent work-order execution refs、generic materializer shell、generated interfaces | agent-building semantics、candidate package refs、proposal materialization refs、target-agent typed blocker refs | OMA 是 standard domain agent；`opl-meta-agent` 只是 repo/package/plugin carrier 名。scripts 只能是 authority implementation、smoke/helper、fixture/proof 或 work-order materializer。 |
+| `OMA` | FoundryRun、Pack materialization、Evaluation Runtime、EvidenceBundle、Version Registry、Owner gate、canary、activation/rollback 与 generated interfaces | 目标理解、设计依据、`AgentBlueprint` / `EvalSpec`、证据诊断与 `EvolutionProposal` | OMA 是 `agent_id/package_id=oma`、`domain_id=agent_engineering` 的 semantic provider；`opl-meta-agent` 只是 carrier slug。OMA 不保留本地执行器、物化器、版本或晋级状态。 |
 | `OBF` | hosted/generated package/workbench、StageRun、Pack / Workspace / Ledger locator、dependency profile / package transport、delivery lifecycle shell | manuscript truth、chapter/source/reference judgment、quality/export verdict、book artifact authority、style/reference memory accept/reject、owner receipt、typed blocker | OBF 是当前 Stage Pack v2 样板；BookForge helper/materializer 的物理删除仍需 owner delete/keep/typed-blocker decision。 |
 
 ## OPL base -> 迁出 / 通用化 owner map
@@ -139,8 +139,8 @@ Private residue owner-decision ledger 当前 `decision_item_count=0`、`physical
 | 8 | RCA entry / status / session shell | done | 100% | RCA tracked stage plane、手写generic product/status/workbench shell已退役；product manifest只投影generated session/stage refs与RCA authority refs。fresh interfaces ready、conformance blockers=0。 |
 | 9 | RCA executor envelope | done | 100% | timeout、attempt、telemetry、blocker envelope归Runway；PPT invocation与视觉失败解释留RCA。 |
 | 10 | RCA lifecycle / operator transport | done | 100% | Workspace/Ledger/Stagecraft/Pack持有generic transport；RCA domain-handler已收薄为约3.4KB refs-only projection，generic operator/evidence/workorder/lifecycle builders删除，renderer、visual memory judgment与artifact mutation仍归RCA。 |
-| 11 | OMA Agent Lab ledger | done | 100% | OPL Foundry Lab从thin evaluation request编译suite并拥有execution/result/ledger；OMA不再生产suite seed/plan，只保留agent-building judgment与candidate refs。 |
-| 12 | OMA takeover materializer | done | 100% | OMA只写raw-byte digest绑定的evaluation request与Foundry work order；OPL在parse/write前校验digest/task/target/provenance并执行suite。legacy suite body被strict schema拒绝。 |
+| 11 | Foundry lifecycle authority | done | 100% | OPL Foundry Kernel 持有 FoundryRun、冻结测试计划、EvidenceBundle、qualification、AgentVersion、canary、activation 与 rollback；OMA 不持有执行或版本账本。 |
+| 12 | OMA provider handoff | done | 100% | 跨仓只允许 `DesignRequest`、`AgentBlueprint`、`EvidenceBundle`、`EvolutionProposal`；OPL 校验 canonical digest、identity、lineage 与 forbidden fields，并独立执行评测。 |
 | 13 | OBF project hygiene | done | 100% | OBF默认verify前后调用`opl workspace source-hygiene`；旧hygiene helper已收薄为无default caller的书稿领域诊断，不再承担source byproduct/lifecycle遍历。 |
 | 14 | OBF native-helper shell | done | 100% | OBF默认caller使用`opl pack native-helper probe`验证PDF/imagegen descriptor与helper SHA；保留代码仅负责BookForge renderer、publication proof与export authority。 |
 

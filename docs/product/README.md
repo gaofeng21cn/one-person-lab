@@ -56,9 +56,9 @@ opl app state
 | 当前产物 | stage artifact unit 的 current pointer、manifest validity、owner answer / typed blocker refs。 | artifact gallery internals、historical attempts、orphan/broken artifact drilldown。 |
 | 当前行动 | `opl app action execute` 暴露的 owner-aware action；action payload 必须保持 App-facing envelope。 | provider redrive、worker repair、safe-action evidence record、legacy cleanup。 |
 | 当前证据 | hard gate、owner receipt ref、typed blocker ref、human gate ref、no-regression ref。 | Atlas / Ledger telemetry、replay packet、long-soak refs、receipt counters、cleanup provenance。 |
-| Agent Lab | improvement candidate、risk route、work-order status、target owner receipt / typed blocker ref。 | suite internals、variant comparison detail、promotion ledger body、worktree lifecycle trace。 |
+| Foundry Kernel | FoundryRun 状态、qualification、risk route、Owner wait、version、canary、activation / rollback。 | 保护测试正文、内部 attempt/lease、物化路径、target domain truth。 |
 
-App Console 不选择 executor/backend，不拼接 domain truth，不读取 artifact/memory body，不把 full drilldown counter 写成完成状态。非默认 executor、provider repair、Agent Lab promotion、Developer Mode 和 cleanup route 都必须是显式 operator/developer surface；普通用户路径保持 `Codex CLI` concrete executor + Foundry Agent task entry。
+App Console 不选择 executor/backend，不拼接 domain truth，不读取 artifact/memory body，不把 full drilldown counter 写成完成状态。非默认 executor、provider repair、Foundry Kernel promotion、Developer Mode 和 cleanup route 都必须是显式 operator/developer surface；普通用户路径保持 `Codex CLI` concrete executor + Foundry Agent task entry。
 
 App Console 与 `OPL Atlas` / `OPL Ledger` 的关系也固定：Atlas/Ledger 负责收集和索引 refs-only telemetry；Console 只消费 fold 后的 owner delta、hard gate、artifact/blocker summary 和 drilldown locator。telemetry 增长、ledger verified、provider completion、scorecard pass 或 full detail visible 不能被 Console 升级成 domain ready、artifact ready、App release ready 或 production ready。
 

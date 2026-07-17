@@ -263,15 +263,15 @@ test('agents conformance classifies private platform residue deletion gate dispo
       },
     },
     {
-      module_id: 'oma_agent_lab_materializer_residue',
-      classification: 'generic_agent_lab_materializer',
+      module_id: 'oma_legacy_agent_materializer_residue',
+      classification: 'generic_legacy_agent_materializer',
       owner: 'OPL Meta Agent',
-      code_paths: ['scripts/agent-lab-materializer.ts'],
+      code_paths: ['scripts/legacy-agent-materializer.ts'],
       active_callers: [],
       active_caller_status: 'historical_work_order_fixture_only',
       migration_action: 'history_tombstone_only',
       private_platform_residue_gate: {
-        residue_kind: 'agent_lab_materializer',
+        residue_kind: 'legacy_agent_materializer',
         disposition: 'tombstone',
       },
     },
@@ -318,7 +318,7 @@ test('agents conformance classifies private platform residue deletion gate dispo
     'status_shell',
     'domain_wrapper',
     'runtime_watch',
-    'agent_lab_materializer',
+    'legacy_agent_materializer',
   ]);
   assert.equal(cleanupGate.disposition_summary.absorb_opl_primitive, 1);
   assert.equal(cleanupGate.disposition_summary.no_active_caller_delete, 1);
@@ -335,8 +335,8 @@ test('agents conformance classifies private platform residue deletion gate dispo
     'rca_runtime_watch_residue',
   ]);
   assert.deepEqual(
-    cleanupGate.by_residue_kind.agent_lab_materializer.map((item: { module_id: string }) => item.module_id),
-    ['oma_agent_lab_materializer_residue'],
+    cleanupGate.by_residue_kind.legacy_agent_materializer.map((item: { module_id: string }) => item.module_id),
+    ['oma_legacy_agent_materializer_residue'],
   );
   assert.equal(cleanupGate.by_residue_kind.domain_wrapper[0].disposition, 'retain_authority_function');
 });

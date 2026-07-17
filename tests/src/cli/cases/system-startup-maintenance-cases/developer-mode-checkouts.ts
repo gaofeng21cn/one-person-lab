@@ -1,8 +1,10 @@
 import { assert, fs, os, parseJsonText, path, runCli, test } from '../../helpers.ts';
 import { runGitFixtureCommand } from '../../helpers-parts/family-fixtures.ts';
 import {
+  createCurrentCodexFixture,
   createScholarSkillsRemote,
   createStartupDomainModuleRemotes,
+  currentCodexEnvironment,
   removeStartupDomainModuleRemotes,
   withCliTimeout,
 } from './shared.ts';
@@ -15,6 +17,7 @@ test('system startup-maintenance uses Developer Mode domain checkouts without gl
   const remotes = createStartupDomainModuleRemotes({ logPath });
   const { masRemote, magRemote, rcaRemote, metaRemote, bookForgeRemote } = remotes;
   const scholarSkillsRemote = createScholarSkillsRemote();
+  const codexFixture = createCurrentCodexFixture();
   const siblingCheckouts = {
     medautoscience: path.join(workspaceRoot, 'med-autoscience'),
     medautogrant: path.join(workspaceRoot, 'med-autogrant'),
@@ -51,6 +54,7 @@ test('system startup-maintenance uses Developer Mode domain checkouts without gl
         },
       }),
       OPL_GIT_RETRY_ATTEMPTS: '1',
+      ...currentCodexEnvironment(codexFixture),
       ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
     })) as {
       system_action: {
@@ -156,6 +160,7 @@ test('system startup-maintenance uses Developer Mode domain checkouts without gl
     assert.match(codexConfig, /codex-plugin-marketplaces\/opl-bookforge-local/);
     assert.doesNotMatch(codexConfig, /mas-scholar-skills|scholarskills/);
   } finally {
+    fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
     removeStartupDomainModuleRemotes(remotes);
     fs.rmSync(scholarSkillsRemote.fixtureRoot, { recursive: true, force: true });

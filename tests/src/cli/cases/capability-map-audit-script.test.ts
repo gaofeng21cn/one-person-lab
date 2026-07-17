@@ -1,7 +1,10 @@
 import { spawnSync } from 'node:child_process';
 
 import { assert, fs, os, path, repoRoot, test } from '../helpers.ts';
-import { readJson } from './agent-lab-work-order-fixtures.ts';
+
+function readJson(filePath: string): any {
+  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+}
 
 function writeJson(filePath: string, payload: unknown): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });

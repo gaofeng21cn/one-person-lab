@@ -237,7 +237,7 @@ export async function buildOplEnvironment(
         'OPL reports native helper lifecycle readiness here; opl install can run the native repair path when helper binaries are missing.',
         'AionUI provides the GUI/WebUI shell; OPL no longer hosts a local Product API service on port 8787.',
         'Domain modules are tracked separately so the GUI can manage install and upgrade actions from one settings area.',
-        'Developer Mode is exposed as a settings surface backed by the existing developer_supervisor system action and includes GitHub identity, repository authority, and Agent Lab repair route projections.',
+        'Developer Mode is exposed as a settings surface backed by the existing developer_supervisor system action and includes GitHub identity, repository authority, and supervised repair route projections.',
         'Docker/WebUI seed state is reported from the install manifest when startup maintenance or seed-apply has recorded it; this read model does not claim runtime readiness.',
       ],
     },

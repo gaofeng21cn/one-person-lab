@@ -11,12 +11,17 @@ import {
   type TemporalWorkerPaths,
 } from '../family-runtime-temporal-client.ts';
 import {
+  inspectTemporalServiceLifecycle,
   resolveTemporalAddressForPaths,
 } from '../family-runtime-temporal-service.ts';
+import type {
+  TemporalServiceSupervisorStateRuntime,
+} from '../family-runtime-temporal-service-supervisor-state.ts';
 import {
   processIsAlive,
   readTemporalWorkerState,
   temporalWorkerStatePath,
+  workerSourceVersionsEquivalent,
 } from './worker-state.ts';
 import {
   buildTemporalWorkerMutationGuard,
@@ -24,13 +29,20 @@ import {
 import {
   resolveTemporalWorkerTaskQueue,
 } from './worker-task-queue.ts';
+import {
+  expectedWorkerSourceVersionForState,
+} from './worker-source-currentness.ts';
 
-export function inspectTemporalWorkerLifecycleFast(
+export async function inspectTemporalWorkerLifecycleFast(
   paths: TemporalWorkerPaths,
-  input: { providerModuleUrl?: string } = {},
+  input: {
+    providerModuleUrl?: string;
+    serviceRuntime?: TemporalServiceSupervisorStateRuntime;
+  } = {},
 ) {
   const resolved = resolveTemporalAddressForPaths(paths);
-  const { address, addressSource, serviceState } = resolved;
+  const { address, addressSource } = resolved;
+  const service = await inspectTemporalServiceLifecycle(paths, input.serviceRuntime);
   const namespace = resolveTemporalNamespace();
   const taskQueue = resolveTemporalWorkerTaskQueue(paths);
   const state = readTemporalWorkerState(paths);
@@ -41,9 +53,15 @@ export function inspectTemporalWorkerLifecycleFast(
     && state.task_queue === taskQueue;
   const stateProcessAlive = state ? processIsAlive(state.pid) : false;
   const statePidAlive = stateMatchesConfig && stateProcessAlive;
+  const expectedWorkerSourceVersion = statePidAlive && state
+    ? expectedWorkerSourceVersionForState(state, input.providerModuleUrl ?? import.meta.url)
+    : null;
+  const stateSourceCurrent = statePidAlive && state
+    ? workerSourceVersionsEquivalent(state.source_version, expectedWorkerSourceVersion)
+    : null;
   const envWorkerReady = process.env.OPL_TEMPORAL_WORKER_ENABLED?.trim() === '1'
     || process.env.OPL_TEMPORAL_WORKER_STATUS?.trim() === 'ready';
-  const workerStatusReady = statePidAlive || envWorkerReady;
+  const workerStatusReady = (statePidAlive && stateSourceCurrent === true) || envWorkerReady;
   const workerMutationGuard = buildTemporalWorkerMutationGuard({
     moduleUrl: input.providerModuleUrl ?? import.meta.url,
     paths,
@@ -54,13 +72,9 @@ export function inspectTemporalWorkerLifecycleFast(
     namespace,
     taskQueue,
   });
-  const serviceStatus = addressSource === 'managed_local_service_state'
-    ? 'running'
-    : addressSource === 'environment'
-      ? 'configured_external_unverified'
-      : serviceState
-        ? 'stale_state_unverified'
-        : 'not_configured';
+  const serviceStatus = service.service_status;
+  const serviceReady = service.server_reachable === true
+    && (serviceStatus === 'running' || serviceStatus === 'external_running');
   const readiness = buildTemporalWorkerReadiness({
     address,
     addressSource,
@@ -68,45 +82,23 @@ export function inspectTemporalWorkerLifecycleFast(
     taskQueue,
     workerEnabled: envWorkerReady ? '1' : null,
     workerStatus: workerStatusReady ? 'ready' : null,
-    serverReachable: null,
+    serverReachable: service.server_reachable,
+    serviceReady,
     managedWorkerPid: statePidAlive && state ? state.pid : null,
     managedWorkerStatePath: temporalWorkerStatePath(paths),
     managedWorkerSourceVersion: state?.source_version ?? null,
-    expectedWorkerSourceVersion: null,
-    managedWorkerSourceCurrent: null,
+    expectedWorkerSourceVersion,
+    managedWorkerSourceCurrent: stateSourceCurrent,
     managedWorkerWorkflowBundlePath: state?.workflow_bundle_path ?? null,
     managedWorkerWorkflowBundleVersion: state?.workflow_bundle_version ?? null,
     managedWorkerWorkflowBundleSourceVersion: state?.workflow_bundle_source_version ?? null,
-    staleWorkerPid: null,
+    staleWorkerPid: statePidAlive && stateSourceCurrent === false && state ? state.pid : null,
     temporalServiceLifecycle: {
-      surface_kind: 'temporal_service_lifecycle_status',
-      provider_kind: 'temporal',
+      ...service,
       inspection_detail: 'fast',
-      service_status: serviceStatus,
-      address,
-      address_source: addressSource,
-      server_reachable: null,
-      managed_service_pid: addressSource === 'managed_local_service_state'
-        ? serviceState?.pid ?? null
-        : null,
-      service_kind: serviceState?.service_kind ?? null,
-      command: serviceState?.command ?? null,
-      blockers: [
-        ...(!address ? ['temporal_runtime_not_configured'] : []),
-        ...(serviceStatus === 'stale_state_unverified' ? ['temporal_local_service_stale_state_unverified'] : []),
-      ],
-      repair_action: {
-        surface_kind: 'temporal_service_repair_action',
-        provider_kind: 'temporal',
-        action_id: address ? 'none' : 'start_local_temporal_service',
-        next_command: address
-          ? 'opl family-runtime worker start --provider temporal'
-          : 'opl family-runtime service start --provider temporal',
-        required_launcher: ['temporal CLI on PATH', 'OPL_TEMPORAL_SERVICE_START_COMMAND'],
-      },
       authority_boundary: {
-        opl: 'temporal_local_service_lifecycle_fast_projection_only',
-        domain: 'truth_quality_artifact_gate_owner',
+        ...service.authority_boundary,
+        inspection: 'fresh_tcp_probe_with_compact_projection',
       },
     },
     visibilityReadiness,

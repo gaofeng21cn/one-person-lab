@@ -36,6 +36,7 @@ test('hosted Standard Agent actions enforce immutable releases and live-probe de
   assert.deepEqual(actionAbi.execution_binding_union.map((binding: any) => binding.required_shape), [
     { kind: 'handler_ref', handler_ref: 'handler:<handler_id>' },
     { kind: 'stage_binding', stage_manifest_ref: 'agent/stages/manifest.json' },
+    { kind: 'foundry_binding', provider_manifest_ref: 'contracts/foundry_provider.json' },
   ]);
 });
 
@@ -70,8 +71,59 @@ test('hosted action persistence and ledger distinguish Stage launch from complet
   assert.equal(contract.stage_execution.post_launch_query_is_observation_only, true);
   assert.equal(contract.stage_execution.post_launch_query_failure_changes_started_to_failed, false);
   assert.equal(contract.stage_execution.provider_completion_is_domain_ready, false);
+  assert.equal(contract.foundry_execution.design_request_protocol_validation_before_launch, true);
+  assert.equal(contract.foundry_execution.same_action_run_reuses_exact_foundry_run_id, true);
+  assert.match(contract.foundry_execution.same_action_run_provider_start_rpc_delivery, /at_least_once/);
+  assert.equal(contract.foundry_execution.unknown_provider_success_requires_same_run_retry, true);
+  assert.equal(contract.foundry_execution.started_is_foundry_terminal_completion, false);
+  assert.equal(contract.foundry_execution.started_is_target_agent_delivery, false);
+  assert.equal(contract.foundry_execution.semantic_provider_can_execute_evaluation, false);
+  assert.equal(contract.foundry_execution.semantic_provider_can_activate_version, false);
   assert.equal(contract.exact_byte_persistence.workspace_relative_root, 'control/opl/action_runs');
   assert.equal(contract.exact_byte_persistence.same_run_identity_conflicting_bytes_fail_closed, true);
+  assert.equal(contract.durable_run_binding_and_completion.workspace_relative_root, 'control/opl/action_run_state');
+  assert.equal(contract.durable_run_binding_and_completion.first_writer_binding_is_immutable, true);
+  assert.equal(
+    contract.durable_run_binding_and_completion.non_terminal_run_replay_uses_exact_pinned_runtime_provenance,
+    true,
+  );
+  assert.equal(
+    contract.durable_run_binding_and_completion
+      .completed_handler_replay_uses_durable_binding_completion_request_and_output,
+    true,
+  );
+  assert.equal(
+    contract.durable_run_binding_and_completion.completed_handler_replay_requires_historical_managed_checkout,
+    false,
+  );
+  assert.equal(
+    contract.durable_run_binding_and_completion.completed_handler_replay_requires_exact_original_payload_digest,
+    true,
+  );
+  assert.equal(
+    contract.durable_run_binding_and_completion.completed_handler_replay_requires_exact_request_and_output_digests,
+    true,
+  );
+  assert.equal(contract.durable_run_binding_and_completion.activation_change_cannot_rebind_existing_run, true);
+  assert.equal(
+    contract.durable_run_binding_and_completion.foundry_active_binding_requires_durable_activation_transaction_verification,
+    true,
+  );
+  assert.equal(
+    contract.durable_run_binding_and_completion.activation_pointer_without_matching_transaction_verification_fails_closed,
+    true,
+  );
+  assert.equal(
+    contract.durable_run_binding_and_completion
+      .non_terminal_corrupt_or_unresolvable_pinned_binding_fails_before_downstream_launch,
+    true,
+  );
+  assert.equal(
+    contract.durable_run_binding_and_completion
+      .completed_handler_corrupt_durable_binding_or_bytes_fails_before_replay,
+    true,
+  );
+  assert.equal(contract.durable_run_binding_and_completion.unknown_provider_success_does_not_publish_false_completion, true);
   assert.deepEqual(contract.refs_only_ledger.statuses, ['started', 'completed', 'blocked', 'failed']);
   assert.deepEqual(contract.refs_only_ledger.timestamp_fields, ['started_at', 'recorded_at']);
   assert.equal(contract.refs_only_ledger.contains_request_or_output_body, false);

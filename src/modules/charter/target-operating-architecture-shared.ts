@@ -42,7 +42,7 @@ export const TARGET_ARCHITECTURE_DESIGN_PRINCIPLES = [
   'one_ordinary_golden_path_per_agent',
   'small_idempotent_reconcilers',
   'app_console_thin_default_surface',
-  'agent_lab_refs_only_improvement_control_plane',
+  'foundry_kernel_single_control_plane',
   'runway_control_loop_runtime_module',
 ] as const;
 
@@ -69,7 +69,7 @@ export const TARGET_ARCHITECTURE_RESOURCE_KINDS = [
   'OwnerAnswer',
   'EvidenceRef',
   'ReleaseCohort',
-  'ImprovementWorkOrder',
+  'FoundryRun',
 ] as const;
 
 export const TARGET_ARCHITECTURE_LANES = [
@@ -272,23 +272,23 @@ export const TARGET_ARCHITECTURE_EXPERIENCE_AXIS_IDS = [
   'brand_feel',
 ] as const;
 
-export const TARGET_ARCHITECTURE_AGENT_LAB_MAY_PRODUCE = [
-  'eval_ref',
-  'root_cause_ref',
-  'candidate_fix_ref',
-  'work_order_ref',
-  'promotion_proposal_ref',
-  'rollback_ref',
-  'reevaluation_ref',
+export const TARGET_ARCHITECTURE_FOUNDRY_KERNEL_MAY_PRODUCE = [
+  'foundry_run_ref',
+  'evidence_bundle_ref',
+  'qualification_record_ref',
+  'agent_version_ref',
+  'activation_transaction_ref',
+  'rollback_transaction_ref',
+  'owner_gate_ref',
 ] as const;
 
-export const TARGET_ARCHITECTURE_AGENT_LAB_MUST_NOT_PRODUCE = [
+export const TARGET_ARCHITECTURE_FOUNDRY_KERNEL_MUST_NOT_PRODUCE = [
   'domain_quality_verdict',
   'artifact_authority',
   'memory_body',
-  'owner_receipt',
+  'owner_receipt_body',
   'typed_blocker',
-  'production_acceptance',
+  'protected_test_body',
 ] as const;
 
 export const TARGET_ARCHITECTURE_ONE_SHOT_PLAN_IDS = [

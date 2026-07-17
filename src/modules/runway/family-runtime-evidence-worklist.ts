@@ -7,7 +7,7 @@ import {
   compactDomainDispatchEvidenceWorkorderAttentionItems,
   compactDomainDispatchEvidenceWorkorderGroupAttentionItems,
 } from '../ledger/index.ts';
-import { familyDefaultCallerSupplementalDomains } from './family-runtime-evidence-worklist-parts/default-caller-family-scope.ts';
+import { familyDefaultCallerFallbackDomains } from './family-runtime-evidence-worklist-parts/default-caller-family-scope.ts';
 import { defaultCallerDeletionEvidenceRoutes } from './family-runtime-evidence-worklist-parts/default-caller-deletion-evidence-routes.ts';
 import { attentionQueueItem, nextSafeActions } from './family-runtime-evidence-worklist-parts/attention-actions.ts';
 import { buildZeroOpenCompletionGuard, zeroOpenCompletionGuardSummaryFields } from './family-runtime-evidence-worklist-parts/zero-open-completion-guard.ts';
@@ -133,7 +133,7 @@ export async function runFamilyRuntimeEvidenceWorklist(
     ...defaultCallerDeletionEvidenceRoutes(
       drilldown,
       NOT_AUTHORIZED_CLAIMS,
-      familyDefaultCallerSupplementalDomains(input, drilldown),
+      familyDefaultCallerFallbackDomains(input, drilldown),
     )
       .map((route, index) =>
         readOnlyWorklistItem(route, routes.length + diagnosticRoutes.length + index, drilldown)

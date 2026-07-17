@@ -12,8 +12,8 @@ import {
 } from '../../../../modules/runway/observability-export.ts';
 import { buildNativeIndexSummary } from '../../../../modules/runway/native-index-summary.ts';
 import { runFamilyRuntime } from '../../../../modules/runway/family-runtime.ts';
-import { buildStandardDomainAgentScaffold } from '../../../../modules/foundry-lab/standard-domain-agent-scaffold.ts';
-import { runFamilyAgentLegacyCleanupApply } from '../../../../modules/foundry-lab/family-domain-agent-skeleton.ts';
+import { buildStandardDomainAgentScaffold } from '../../../../modules/pack/index.ts';
+import { runFamilyAgentLegacyCleanupApply } from '../../../../modules/workspace/index.ts';
 import type { FrameworkContracts } from '../../../../kernel/types.ts';
 import { buildRuntimeAppReleaseEvidenceCommandSpecs } from '../runtime-app-release-evidence-command-spec.ts';
 import {
@@ -648,7 +648,7 @@ export function buildPrivateRuntimeCommandSpecs({
         'opl family-runtime status',
         'opl family-runtime status --provider temporal',
         'opl family-runtime lifecycle apply --mode dry-run --domain medautogrant --source-ref mag://cleanup/plan --action \'{"action_id":"mark-opl-tombstone","owner_scope":"opl_owned_tombstone_ref","target_ref":"opl://history/mag/tombstone"}\'',
-        'opl family-runtime attempt create --domain opl-meta-agent --stage intent-intake --action build-agent-baseline --provider temporal --workspace-locator \'{"workspace_root":"/tmp/oma"}\' --start',
+        'opl family-runtime attempt create --domain agent_engineering --stage mission-intake --action engineer-agent --provider temporal --workspace-locator \'{"workspace_root":"/tmp/oma"}\' --start',
         'opl family-runtime attempt start <stage_attempt_id>',
         'opl family-runtime attempt cancel <stage_attempt_id> --reason operator_superseded',
         'opl family-runtime attempt list',

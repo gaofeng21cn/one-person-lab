@@ -64,7 +64,7 @@ export const DEFAULT_CALLER_PRIVATE_PLATFORM_RESIDUE_TARGET_KINDS = [
   'status_shell',
   'domain_wrapper',
   'runtime_watch',
-  'agent_lab_materializer',
+  'legacy_agent_materializer',
 ] as const;
 
 export const DEFAULT_CALLER_PRIVATE_PLATFORM_CLEANUP_ALLOWED_DISPOSITIONS = [

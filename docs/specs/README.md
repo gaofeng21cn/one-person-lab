@@ -26,7 +26,7 @@ Machine boundary: 仅人读索引；机器可读行为必须使用 contracts、s
 
 | 文件 | 生命周期状态 | 当前 owner | 阅读规则 |
 | --- | --- | --- | --- |
-| `standard-domain-agent-implementation.md` | `active_support` | OPL Framework / Foundry Lab | 标准 Agent Pack、可选 helper、五仓参考矩阵和 OMA 新 Agent 生成规则；机器真相归 ABI/profile contracts 与 conformance source。 |
+| `standard-domain-agent-implementation.md` | `active_support` | OPL Framework / Foundry Kernel | 标准 Agent Pack、可选 helper、五仓参考矩阵和 OMA 新 Agent 生成规则；机器真相归 ABI/profile contracts 与 conformance source。 |
 | `opl-domain-onboarding-contract.md` | `active_support` | Domain admission owner | 候选 domain-agent 准入、truth ownership、entry surface、execution model 和 stage selection readiness 审阅支撑。 |
 | `shared-runtime-contract.md` | `active_support` | OPL shared runtime owner | OPL 与 domain repo 之间的 shared runtime 边界支撑；机器真相归 contracts/source/runtime evidence。 |
 | `shared-domain-contract.md` | `active_support` | OPL shared domain owner | Domain truth、quality verdict、artifact authority、receipt refs 和 projection 边界支撑。 |

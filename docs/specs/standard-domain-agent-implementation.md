@@ -22,7 +22,7 @@ Agent 的身份、stage、prompt、skill、knowledge、tool affordance、quality
 3. 保持 `agent_identity=declarative_standard_agent_pack`、`pack_formats=[markdown,json]`、`generated_surfaces_owner=one-person-lab`。
 4. 只为真实存在、具有 active caller 且通过仓内审计的 helper root 声明 helper entry。
 5. 只使用 `authority_function`、`domain_helper`、`native_helper` 三种 helper role；role 描述 owner 关系，不描述具体业务名称。
-6. 保持 `language_is_identity=false`。新 baseline 可以是 pack-only；尚未实现的 helper 需求进入 AgentPackPlan、capability requirement 或 developer work order，不能伪装成已落地实现。
+6. 保持 `language_is_identity=false`。新 baseline 可以是 pack-only；尚未实现的 helper 需求进入 blueprint capability requirement、显式假设或质量债，不能伪装成已落地实现。
 7. 不以 helper profile 合法化私有 scheduler、runner、session store、generic CLI/MCP、workbench、status sidecar 或 product wrapper。这些通用 surface 应由 OPL 生成或托管。
 8. 不在 domain profile 中声明 Rust。Rust 只用于 OPL Framework 明确的系统 hot path / native boundary，不持有 domain truth、quality verdict、typed blocker、owner receipt 或 Agent identity。
 
@@ -45,7 +45,7 @@ OMA 设计或接管新的 Agent 时必须先生成语言中立 Pack：
 - 新建 baseline 默认 `helpers.entries=[]`。
 - 只有目标仓已存在并通过审计的 helper root 才进入 implementation profile。
 - helper 建议必须包含 role、language、source root、active caller、不可上收原因和验证方式；未实现时只生成 plan / work order。
-- OMA 持有设计判断、TransferMap、AgentPackPlan 和 candidate semantics；OPL Foundry Lab 持有物理 scaffold、文件 digest、最终 `AgentBuildReceipt`、generated interfaces 与 conformance。
+- OMA 持有设计判断、TransferMap、AgentPackPlan 和 candidate semantics；OPL Foundry Kernel 持有物理 scaffold、文件 digest、最终 `AgentBuildReceipt`、generated interfaces 与 conformance。
 - OMA 生成的 `ReferenceDesignPacket`、`TransferMap`、`AgentPackPlan`、`DesignAdmissionReceipt` 必须使用 Framework 的 source-derived Agent design ABI；不得维护 producer 私有 identity alias。
 
 ## 验证与完成边界
@@ -53,7 +53,7 @@ OMA 设计或接管新的 Agent 时必须先生成语言中立 Pack：
 结构验收至少包括：
 
 ```text
-opl agents scaffold --validate <repo> --json
+OPL Pack validateStandardDomainAgentScaffold <repo> --json
 opl agents interfaces --repo-dir <repo> --json
 opl agents conformance --repo-dir <repo> --json
 ```

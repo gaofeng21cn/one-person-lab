@@ -30,7 +30,7 @@ function schemaDef(schema: JsonRecord, name: string): JsonRecord {
 
 async function loadHelper() {
   try {
-    return await import('../../src/modules/foundry-lab/stage-candidate-portfolio.ts');
+    return await import('../../src/modules/console/stage-candidate-portfolio.ts');
   } catch (error) {
     assert.fail(error instanceof Error ? error.message : 'stage candidate portfolio helper module should load');
   }

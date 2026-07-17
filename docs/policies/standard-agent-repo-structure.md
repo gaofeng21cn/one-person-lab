@@ -118,14 +118,14 @@ OMA 生成 target agent 时不维护私有目录标准。正确链路是：
 
 ```text
 OMA stage-decomposition / agent-building semantics
-  -> OPL agents scaffold 生成标准目录
-  -> OMA 写入领域 pack refs / candidate package refs
-  -> OPL agents scaffold --validate
+  -> OPL Pack scaffold API 生成标准目录
+  -> OMA 返回 AgentBlueprint / EvalSpec 语义
+  -> OPL Pack scaffold API --validate
   -> OPL agents interfaces 生成统一接口
-  -> Agent Lab / reviewer / owner gate 收口
+  -> Foundry Kernel / reviewer / owner gate 收口
 ```
 
-OMA 负责 agent-building 语义、stage decomposition、candidate package、developer work order、mechanism proposal 和 typed blocker。OPL Framework 负责 scaffold、conformance、generated interfaces、Agent Lab、runtime 和 workspace projection。目标 agent 负责自己的 domain truth、artifact body、quality verdict、owner receipt、typed blocker 和 human gate。
+OMA 负责目标理解、设计依据、`AgentBlueprint` / `EvalSpec`、证据诊断和 `EvolutionProposal`。OPL Framework 负责 Pack scaffold/conformance、generated interfaces、FoundryRun、物化、评测、证据、版本、canary、activation、rollback 和 workspace projection。目标 agent/owner 负责自己的 domain truth、保护测试、artifact body、quality verdict、owner receipt、human gate 与生产采用。
 
 ## 迁移口径
 

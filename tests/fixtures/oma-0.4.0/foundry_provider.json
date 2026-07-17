@@ -1,0 +1,53 @@
+{
+  "surface_kind": "opl_foundry_provider",
+  "version": "opl-foundry-provider.v1",
+  "provider_id": "oma",
+  "agent_id": "oma",
+  "package_id": "oma",
+  "domain_id": "agent_engineering",
+  "carrier_slug": "opl-meta-agent",
+  "operations": {
+    "design": {
+      "input_schema_refs": ["opl://foundry-protocol/DesignRequest"],
+      "output_schema_ref": "opl://foundry-protocol/AgentBlueprint",
+      "entry_stage_ref": "mission-intake",
+      "required_stage_refs": [
+        "mission-intake", "design-basis-admission", "stage-architecture", "agent-blueprint-authoring",
+        "evaluation-design"
+      ],
+      "optional_stage_refs": ["target-agent-assessment"],
+      "terminal_stage_ref": "evaluation-design"
+    },
+    "diagnose": {
+      "input_schema_refs": [
+        "opl://foundry-protocol/DesignRequest",
+        "opl://foundry-protocol/AgentBlueprint",
+        "opl://foundry-protocol/EvidenceBundle"
+      ],
+      "output_schema_ref": "opl://foundry-protocol/EvolutionProposal",
+      "entry_stage_ref": "evidence-diagnosis",
+      "required_stage_refs": ["evidence-diagnosis", "evolution-proposal"],
+      "optional_stage_refs": [],
+      "terminal_stage_ref": "evolution-proposal"
+    }
+  },
+  "projection_policy": {
+    "public_action_ids": ["engineer-agent"],
+    "internal_operations_are_public_actions": false,
+    "internal_operations_are_cli_commands": false,
+    "internal_operations_are_mcp_tools": false
+  },
+  "authority_boundary": {
+    "provider_owns_design_semantics": true,
+    "provider_owns_evaluation_semantics": true,
+    "provider_owns_evidence_diagnosis": true,
+    "provider_owns_evolution_proposals": true,
+    "provider_owns_foundry_run_state": false,
+    "provider_owns_candidate_materialization": false,
+    "provider_owns_evaluation_execution": false,
+    "provider_owns_versions_or_activation": false,
+    "provider_can_return_patch_or_work_order": false,
+    "provider_can_view_protected_test_bodies": false,
+    "opl_can_write_target_domain_truth": false
+  }
+}

@@ -3,7 +3,7 @@ import {
   recordDeveloperModeCloseoutReceipts,
   verifyDeveloperModeCloseoutReceipt,
   type DeveloperModeCloseoutReceiptInput,
-} from '../../../modules/foundry-lab/developer-mode-closeout-ledger.ts';
+} from '../../../modules/ledger/index.ts';
 import {
   readJsonObject,
   readOptionalString,
@@ -33,8 +33,10 @@ function parseRuntimeDeveloperModeCloseoutPayload(
     pr_review_ref: readOptionalString(parsed.pr_review_ref),
     owner_acceptance_ref: readOptionalString(parsed.owner_acceptance_ref),
     route_repetition_refs: readStringList(parsed.route_repetition_refs ?? parsed.route_repetition_ref),
-    risk_tier_auto_promotion_refs:
-      readStringList(parsed.risk_tier_auto_promotion_refs ?? parsed.risk_tier_auto_promotion_ref),
+    foundry_activation_transaction_refs: readStringList(
+      parsed.foundry_activation_transaction_refs
+        ?? parsed.foundry_activation_transaction_ref,
+    ),
     app_patrol_mount_refs: readStringList(parsed.app_patrol_mount_refs ?? parsed.app_patrol_mount_ref),
     receipt_ref: readOptionalString(parsed.receipt_ref),
   };
@@ -94,10 +96,10 @@ export function buildRuntimeDeveloperModeCloseoutCommandSpecs(): Record<string, 
     'runtime developer-mode-closeout record': {
       usage: 'opl runtime developer-mode-closeout record --payload <json>',
       summary:
-        'Record refs-only Developer Mode live repair closeout refs; risk-tier auto-promotion refs must already be verified Agent Lab risk-tier-promotion receipts.',
+        'Record refs-only Developer Mode live repair closeout refs and optional immutable Foundry activation transaction refs.',
       examples: [
-        'opl runtime developer-mode-closeout record --payload \'{"target_repo_id":"med-autoscience","route_decision":"direct-fix","route_eligibility":"eligible_direct_fix","patrol_observation_ref":"patrol:ref","diff_ref":"diff:ref","verification_refs":["test:ref"],"no_forbidden_write_ref":"scan:ref","commit_ref":"git:ref","owner_acceptance_ref":"external-owner-ref:accepted"}\'',
-        'opl agent-lab risk-tier-promotion record --payload <json> && opl agent-lab risk-tier-promotion verify --receipt-ref <ref> && opl runtime developer-mode-closeout record --payload \'{"risk_tier_auto_promotion_refs":["<verified-agent-lab-risk-tier-auto-promotion-receipt-ref>"]}\'',
+        'opl runtime developer-mode-closeout record --payload \'{"target_repo_id":"demo-agent","route_decision":"direct-fix","route_eligibility":"eligible_direct_fix","patrol_observation_ref":"patrol:ref","diff_ref":"diff:ref","verification_refs":["test:ref"],"no_forbidden_write_ref":"scan:ref","commit_ref":"git:ref","owner_acceptance_ref":"external-owner-ref:accepted"}\'',
+        'opl runtime developer-mode-closeout record --payload \'{"foundry_activation_transaction_refs":["opl://foundry/activation-transaction/demo"]}\'',
       ],
       handler: (args) => ({
         developer_mode_closeout_ledger_record:
@@ -114,7 +116,7 @@ export function buildRuntimeDeveloperModeCloseoutCommandSpecs(): Record<string, 
       summary:
         'Verify an existing refs-only Developer Mode live repair closeout receipt without claiming production ready.',
       examples: [
-        'opl runtime developer-mode-closeout verify --receipt-ref opl://developer-mode-closeout/med-autoscience/patrol%3Aref',
+        'opl runtime developer-mode-closeout verify --receipt-ref opl://developer-mode-closeout/demo-agent/patrol%3Aref',
       ],
       handler: (args) => ({
         developer_mode_closeout_ledger_verify:

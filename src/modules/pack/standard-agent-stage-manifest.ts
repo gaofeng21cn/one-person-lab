@@ -870,6 +870,9 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
   if (!actionCatalog || actionCatalog.target_domain_id !== domainId) {
     fail('Action catalog target_domain_id must match domain_descriptor.domain_id.', { repo_dir: repoDir });
   }
+  const foundryProviderPack = actionCatalog.actions.every(
+    (action) => action.execution_binding.kind === 'foundry_binding',
+  );
   assertNoOplAuthority(
     record(actionCatalog.authority_boundary, 'action_catalog.authority_boundary', repoDir),
     'action_catalog.authority_boundary',
@@ -944,26 +947,32 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
   );
   const defaultSkillRefs = resolvedRequiredPackPaths.filter((entry) => entry.startsWith('agent/skills/'));
   const defaultToolRefs = resolvedRequiredPackPaths.filter((entry) => entry.startsWith('agent/tools/'));
-  const ownerReceiptContractRef = repoFile(repoDir, OWNER_RECEIPT_CONTRACT_REF, 'owner_receipt_contract_ref').ref;
-  const ownerReceiptContract = record(
-    readJson(repoDir, ownerReceiptContractRef, 'owner_receipt_contract_ref').payload,
-    'owner_receipt_contract',
-    repoDir,
-  );
-  if (text(
-    ownerReceiptContract.surface_kind,
-    'owner_receipt_contract.surface_kind',
-    repoDir,
-  ) !== 'owner_receipt_contract') {
-    fail('owner_receipt_contract.surface_kind must be owner_receipt_contract.', {
-      repo_dir: repoDir,
-    });
+  const ownerReceiptContractRef = foundryProviderPack
+    ? null
+    : repoFile(repoDir, OWNER_RECEIPT_CONTRACT_REF, 'owner_receipt_contract_ref').ref;
+  if (ownerReceiptContractRef) {
+    const ownerReceiptContract = record(
+      readJson(repoDir, ownerReceiptContractRef, 'owner_receipt_contract_ref').payload,
+      'owner_receipt_contract',
+      repoDir,
+    );
+    if (text(
+      ownerReceiptContract.surface_kind,
+      'owner_receipt_contract.surface_kind',
+      repoDir,
+    ) !== 'owner_receipt_contract') {
+      fail('owner_receipt_contract.surface_kind must be owner_receipt_contract.', {
+        repo_dir: repoDir,
+      });
+    }
   }
-  const authorityFunctionInventoryRef = repoFile(
-    repoDir,
-    AUTHORITY_FUNCTION_INVENTORY_REF,
-    'authority_function_inventory_ref',
-  ).ref;
+  const authorityFunctionInventoryRef = foundryProviderPack
+    ? null
+    : repoFile(
+      repoDir,
+      AUTHORITY_FUNCTION_INVENTORY_REF,
+      'authority_function_inventory_ref',
+    ).ref;
   const stagePackDeclaration = isRecord(packCompilerInput.standard_stage_pack_conformance)
     ? packCompilerInput.standard_stage_pack_conformance
     : null;
@@ -1074,6 +1083,8 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
       text(stage.prompt_ref, 'stage.prompt_ref', repoDir),
     );
     const knowledgeRefs = strings(stage.knowledge_refs, 'stage.knowledge_refs', repoDir);
+    const stageSkillRefs = optionalStrings(stage.skill_refs, 'stage.skill_refs', repoDir);
+    const skillRefs = [...new Set([...defaultSkillRefs, ...stageSkillRefs])];
     const qualityGateRefs = strings(stage.quality_gate_refs, 'stage.quality_gate_refs', repoDir);
     const allowedActionRefs = strings(stage.allowed_action_refs, 'stage.allowed_action_refs', repoDir);
     const nextStageRefs = strings(stage.next_stage_refs, 'stage.next_stage_refs', repoDir);
@@ -1144,11 +1155,12 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
         'domain_stage_closeout',
         'domain_ref',
       )],
-      receipt_schema_refs: [repoSurfaceRef(ownerReceiptContractRef, 'owner_receipt_schema')],
-      authority_function_refs: [repoSurfaceRef(
-        authorityFunctionInventoryRef,
-        'minimal_authority_function_inventory',
-      )],
+      receipt_schema_refs: ownerReceiptContractRef
+        ? [repoSurfaceRef(ownerReceiptContractRef, 'owner_receipt_schema')]
+        : [],
+      authority_function_refs: authorityFunctionInventoryRef
+        ? [repoSurfaceRef(authorityFunctionInventoryRef, 'minimal_authority_function_inventory')]
+        : [],
       l4_entry_gate: STANDARD_AGENT_PACK_ABI.l4_entry_gate,
       l5_entry_gate: STANDARD_AGENT_PACK_ABI.l5_entry_gate,
       stage_completion_policy: STANDARD_STAGE_COMPLETION_POLICY,
@@ -1304,8 +1316,8 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
       knowledge_refs: knowledgeRefs.map((entry, refIndex) =>
         surfaceRef(repoDir, entry, `stage.knowledge_refs[${refIndex}]`, 'stage_knowledge')
       ),
-      skills: defaultSkillRefs.map((entry, refIndex) =>
-        surfaceRef(repoDir, entry, `pack_compiler_input.skill_refs[${refIndex}]`, 'domain_skill_declaration')
+      skills: skillRefs.map((entry, refIndex) =>
+        surfaceRef(repoDir, entry, `stage.skill_refs[${refIndex}]`, 'domain_skill_declaration')
       ),
       prompt_refs: [{
         ...surfaceRef(repoDir, promptSource.ref, 'stage.prompt_ref', 'stage_prompt'),
@@ -1365,7 +1377,7 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
         effect_boundary: effectBoundary,
         records_runtime_events: effectBoundary,
         ...(runtimeEventRefs.length > 0 ? { runtime_event_refs: runtimeEventRefs } : {}),
-        owner_receipt_required: true,
+        owner_receipt_required: !foundryProviderPack,
         human_gate_required: trustLane === 'human_gate',
       },
       authority_boundary: {

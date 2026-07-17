@@ -30,7 +30,7 @@ import { buildAppOperatorOwnerDeltaTopline } from './owner-delta-topline.ts';
 import { buildOwnerPayloadWorkorder } from './owner-payload-workorder.ts';
 import { buildOwnerDeltaFirstProjection } from './owner-delta-first.ts';
 import { ownerDeltaAvailable } from './owner-delta-availability.ts';
-import { splitOperatorAttentionCounts } from '../../foundry-lab/index.ts';
+import { splitOperatorAttentionCounts } from '../framework-readiness-attention-counts.ts';
 import {
   LAZY_LOAD_TARGETS,
   SUMMARY_DRILLDOWN_KEYS,

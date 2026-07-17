@@ -307,6 +307,36 @@ export const retiredCliCommandMatrix: Array<{
     errorCode: 'cli_usage_error',
     replacements: [/opl connect exec/],
   },
+  {
+    args: ['agents', 'foundry', 'status'],
+    command: 'opl agents foundry',
+    errorCode: 'unknown_command',
+  },
+  {
+    args: ['agents', 'scaffold'],
+    command: 'opl agents scaffold',
+    errorCode: 'unknown_command',
+  },
+  {
+    args: ['agent-lab', 'sample'],
+    command: 'opl agent-lab',
+    errorCode: 'unknown_command',
+  },
+  {
+    args: ['foundry-lab', 'status'],
+    command: 'opl foundry-lab',
+    errorCode: 'unknown_command',
+  },
+  {
+    args: ['feedback', 'submit'],
+    command: 'opl feedback',
+    errorCode: 'unknown_command',
+  },
+  {
+    args: ['work-order', 'execute'],
+    command: 'opl work-order',
+    errorCode: 'unknown_command',
+  },
 ];
 
 export function createFakeFamilySkillWorkspace(captureDir: string) {
@@ -444,10 +474,15 @@ type GeneratedSurfaceActionFixture = {
   summary: string;
   inputSchemaRef: string;
   outputSchemaRef: string;
+  requiredFields?: string[];
   workspaceLocatorFields: string[];
   humanGateIds: string[];
   toolName: string;
   commandContractId: string;
+  executionBinding?: {
+    kind: 'foundry_binding';
+    providerManifestRef: string;
+  };
 };
 
 type GeneratedSurfaceStageFixture = {
@@ -463,6 +498,7 @@ type GeneratedSurfaceStageFixture = {
 type GeneratedSurfacePackFixture = {
   canonicalAgentId: string;
   domainId: string;
+  carrierSlug?: string;
   domainLabel: string;
   primarySkillBody: string;
   skillPath: string;
@@ -528,29 +564,37 @@ function toGeneratedSurfaceAction(pack: GeneratedSurfacePackFixture, action: Gen
     command_contract_id: action.commandContractId,
     surface_kind: 'opl_generated_skill_contract',
   };
+  const executionBinding = action.executionBinding
+    ? {
+      kind: action.executionBinding.kind,
+      provider_manifest_ref: action.executionBinding.providerManifestRef,
+    }
+    : {
+      kind: 'stage_binding' as const,
+      stage_manifest_ref: 'agent/stages/manifest.json',
+    };
   return {
     action_id: action.actionId,
     title: action.title,
     summary: action.summary,
     owner: pack.domainId,
     effect: 'mutating',
-    execution_binding: {
-      kind: 'stage_binding',
-      stage_manifest_ref: 'agent/stages/manifest.json',
-    },
+    execution_binding: executionBinding,
     input_schema_ref: action.inputSchemaRef,
     output_schema_ref: action.outputSchemaRef,
-    required_fields: action.workspaceLocatorFields,
+    required_fields: action.requiredFields ?? action.workspaceLocatorFields,
     optional_fields: [],
     workspace_locator_fields: action.workspaceLocatorFields,
     human_gate_ids: action.humanGateIds,
-    stage_route: {
-      entry_stage_ref: pack.stage.stageId,
-      required_stage_refs: [pack.stage.stageId],
-      optional_stage_refs: [],
-      terminal_stage_refs: [pack.stage.stageId],
-      route_policy: 'ai_selected_progress_route',
-    },
+    ...(action.executionBinding ? {} : {
+      stage_route: {
+        entry_stage_ref: pack.stage.stageId,
+        required_stage_refs: [pack.stage.stageId],
+        optional_stage_refs: [],
+        terminal_stage_refs: [pack.stage.stageId],
+        route_policy: 'ai_selected_progress_route',
+      },
+    }),
     supported_surfaces: {
       cli: {
         surface_kind: 'opl_generated_action_cli',
@@ -574,13 +618,14 @@ function toGeneratedSurfaceAction(pack: GeneratedSurfacePackFixture, action: Gen
 }
 
 function writeGeneratedSurfacePackFixture(repoRoot: string, pack: GeneratedSurfacePackFixture) {
+  const carrierSlug = pack.carrierSlug ?? pack.domainId;
   fs.mkdirSync(path.join(repoRoot, 'agent', 'skills'), { recursive: true });
   fs.mkdirSync(path.join(repoRoot, 'contracts'), { recursive: true });
   if (pack.authorityFile) {
     fs.mkdirSync(path.join(repoRoot, 'runtime', 'authority_functions'), { recursive: true });
   }
-  writeFakePrimarySkill(repoRoot, pack.domainId, pack.domainLabel, pack.primarySkillBody);
-  writeFakeRepoLocalPluginCarrier(repoRoot, pack.domainId);
+  writeFakePrimarySkill(repoRoot, carrierSlug, pack.domainLabel, pack.primarySkillBody);
+  writeFakeRepoLocalPluginCarrier(repoRoot, carrierSlug);
   writeGeneratedSkillFixture(path.join(repoRoot, pack.skillPath), pack.skillTitle, pack.skillDescription);
   writeJsonFixture(path.join(repoRoot, 'contracts', 'domain_descriptor.json'), {
     surface_kind: 'domain_agent_descriptor',
@@ -608,15 +653,15 @@ function writeGeneratedSurfacePackFixture(repoRoot: string, pack: GeneratedSurfa
     notes: [],
   });
   for (const action of pack.actions) {
-    writeJsonFixture(path.join(repoRoot, action.inputSchemaRef), {
+    if (!action.inputSchemaRef.startsWith('opl://')) writeJsonFixture(path.join(repoRoot, action.inputSchemaRef), {
       $schema: 'https://json-schema.org/draft/2020-12/schema',
       type: 'object',
-      required: action.workspaceLocatorFields,
+      required: action.requiredFields ?? action.workspaceLocatorFields,
       properties: Object.fromEntries(
-        action.workspaceLocatorFields.map((field) => [field, { type: 'string' }]),
+        (action.requiredFields ?? action.workspaceLocatorFields).map((field) => [field, { type: 'string' }]),
       ),
     });
-    writeJsonFixture(path.join(repoRoot, action.outputSchemaRef), {
+    if (!action.outputSchemaRef.startsWith('opl://')) writeJsonFixture(path.join(repoRoot, action.outputSchemaRef), {
       $schema: 'https://json-schema.org/draft/2020-12/schema',
       type: 'object',
     });
@@ -752,70 +797,73 @@ function writeGeneratedSurfacePackFixture(repoRoot: string, pack: GeneratedSurfa
 export function writeFakeOmaGeneratedSurfacePack(repoRoot: string) {
   writeGeneratedSurfacePackFixture(repoRoot, {
     canonicalAgentId: 'oma',
-    domainId: 'opl-meta-agent',
+    domainId: 'agent_engineering',
+    carrierSlug: 'opl-meta-agent',
     domainLabel: 'OPL Meta Agent',
-    primarySkillBody: 'Use this rich primary skill to design, test, improve, or take over testing for OPL-compatible Foundry Agents. Generated action contracts may be appended by OPL, but they are not the primary skill source.',
-    skillPath: 'agent/skills/opl-meta-agent-domain-skill.md',
-    skillTitle: 'OPL Meta Agent Domain Skill',
-    skillDescription: 'Use this generated-surface fixture to build, test, and improve OPL-compatible Foundry Agents.',
-    catalogId: 'opl_meta_agent_action_catalog',
-    planeId: 'opl_meta_agent_stage_plane',
+    primarySkillBody: 'Use this rich primary skill to provide Agent engineering semantics to the OPL Foundry Kernel without owning execution, evidence, versions, activation, or rollback.',
+    skillPath: 'agent/professional_skills/oma-design-basis-architecture/SKILL.md',
+    skillTitle: 'OMA Design Basis Architecture',
+    skillDescription: 'Design a traceable AgentBlueprint without materializing or activating target bytes.',
+    catalogId: 'oma_action_catalog',
+    planeId: 'oma_stage_plane',
     actions: [
       {
-        actionId: 'build-agent-baseline',
-        title: 'Build Agent Baseline',
-        summary: 'Generate an OPL-compatible candidate agent package from a user natural-language target-agent request, validate its standard scaffold, run an Agent Lab baseline suite, consume a structured AI reviewer evaluation, and emit baseline delivery and learning refs.',
-        inputSchemaRef: 'contracts/schemas/build-agent-baseline.input.schema.json',
-        outputSchemaRef: 'contracts/schemas/build-agent-baseline.output.schema.json',
-        workspaceLocatorFields: [
-          'output_dir',
-          'opl_bin',
-          'ai_reviewer_evaluation',
-          'domain_id',
-          'domain_label',
-          'delivery_domain',
-          'target_brief',
+        actionId: 'engineer-agent',
+        title: 'Engineer Agent',
+        summary: 'Start one OPL-owned FoundryRun that uses OMA semantics to design or evolve an Agent and OPL to independently qualify and activate it.',
+        inputSchemaRef: 'opl://foundry-protocol/DesignRequest',
+        outputSchemaRef: 'opl://foundry-control/FoundryRun',
+        requiredFields: [
+          'surface_kind',
+          'version',
+          'request_id',
+          'mode',
+          'target_agent_id',
+          'target_domain_id',
+          'target_version_ref',
+          'objective',
+          'acceptance_criteria',
+          'non_goals',
+          'source_refs',
+          'constraints',
+          'delivery_policy',
         ],
-        humanGateIds: ['baseline_delivery_owner_review'],
-        toolName: 'opl_meta_agent_build_agent_baseline',
-        commandContractId: 'opl-meta-agent.build-agent-baseline',
+        workspaceLocatorFields: [],
+        humanGateIds: [],
+        toolName: 'oma_engineer_agent',
+        commandContractId: 'oma.engineer-agent',
+        executionBinding: {
+          kind: 'foundry_binding',
+          providerManifestRef: 'contracts/foundry_provider.json',
+        },
       },
     ],
     stage: {
-      stageId: 'agent-skeleton-build',
-      stageKind: 'creation',
-      title: 'Agent Skeleton Build',
-      summary: 'Generate a candidate agent skeleton.',
-      goal: 'Generate an OPL-compatible candidate agent skeleton.',
-      domainStageRefs: ['agent-skeleton-build'],
-      allowedActionRefs: ['build-agent-baseline'],
+      stageId: 'mission-intake',
+      stageKind: 'intake',
+      title: 'Mission Intake',
+      summary: 'Normalize the Agent engineering mission and exact target identity.',
+      goal: 'Admit a precise DesignRequest without inventing target-domain truth.',
+      domainStageRefs: ['mission-intake'],
+      allowedActionRefs: ['engineer-agent'],
     },
     modules: [
       {
-        module_id: 'opl_meta_agent_domain_pack',
+        module_id: 'oma_domain_pack',
         classification: 'declarative_pack',
-        owner: 'opl-meta-agent',
+        owner: 'oma',
         code_paths: ['agent/'],
       },
       {
-        module_id: 'opl_meta_agent_generated_skill',
+        module_id: 'oma_generated_skill',
         classification: 'declarative_pack_generated_surface',
-        owner: 'opl-meta-agent',
-        code_paths: ['agent/skills/opl-meta-agent-domain-skill.md'],
+        owner: 'oma',
+        code_paths: ['agent/professional_skills/oma-design-basis-architecture/SKILL.md'],
         active_callers: ['OPL generated Skill'],
         active_caller_status: 'domain_pack_metadata_consumed_by_opl_generated_skill',
         migration_action: 'derive_skill_metadata_from_declarative_pack_and_opl_generated_surfaces',
       },
     ],
-    authorityFile: {
-      fileName: 'meta-agent-authority-functions.json',
-      payload: {
-        script_morphology_policy: {
-          allowed_classes: ['authority_function_implementation_ref'],
-          forbidden_roles: ['generic_cli_mcp_product_wrapper_owner'],
-        },
-      },
-    },
   });
 }
 

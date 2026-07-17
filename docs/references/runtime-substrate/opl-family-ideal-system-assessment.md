@@ -46,7 +46,7 @@ OPL 应吸收成熟工程原则，不引入外部系统作为第二 runtime trut
 | 成熟经验 | 可吸收原则 | OPL 目标态映射 | 吸收分类 |
 | --- | --- | --- | --- |
 | CNCF platform engineering maturity model / platform as product | 平台要按产品经营，提供 self-service、golden path、反馈循环和可扩展治理。 | OPL 是面向 Foundry Agent 和普通用户的 agent platform；模块、CLI、App、skill、install 都从同一合同派生。 | `adopt_template` |
-| Backstage Software Catalog / Software Templates | catalog 统一 owner/metadata/discovery，templates 生成标准组件和最佳实践脚手架。 | `OPL Atlas` 管 agent/capability/surface catalog；`Foundry Lab` 和 pack compiler 生成标准 domain-agent skeleton。 | `adopt_template` |
+| Backstage Software Catalog / Software Templates | catalog 统一 owner/metadata/discovery，templates 生成标准组件和最佳实践脚手架。 | `OPL Atlas` 管 agent/capability/surface catalog；`Foundry Kernel` 和 pack compiler 生成标准 domain-agent skeleton。 | `adopt_template` |
 | Kubernetes controller / operator pattern | desired state 与 observed state 分离，controller reconcile current drift，不把 status 当业务目标。 | `current_owner_delta` / stage pack 是 desired；attempt/provider/worklist 是 observed；`Runway Progress Reconciler` 只输出 safe action、owner/gate wait 或 OPL repair blocker。 | `adopt_contract` |
 | Temporal durable execution | durable execution、task queue、retry、timer、signal/query/update、workflow history 交给专门 substrate。 | `OPL Runway` 持有 Temporal-backed provider、attempt、lease、retry/dead-letter、human gate、recovery 和 provider refs；domain repo 不保 generic scheduler。 | `adopt_contract` |
 | Dagster assets / asset checks | asset、materialization、dependency、check、freshness 分开建模。 | `Stage Artifact Unit` 按 asset unit 读取：manifest、hash、upstream refs、current pointer、artifact check refs 与 owner receipt 分离。 | `adopt_template` |
@@ -84,7 +84,7 @@ One Person Lab 对外应保持三层产品认知：
 | `Runway` | durable execution、attempt、lease、retry、dead-letter、human gate。 | 长跑可靠性和恢复。 |
 | `Ledger` | refs-only evidence、receipt、typed blocker、lineage、restore/provenance。 | 证据可追踪，但不抢 domain authority。 |
 | `Console` | App/operator cockpit、next owner、blocked action、artifact/blocker view。 | 默认使用体验变短、变清楚。 |
-| `Foundry Lab` | agent 创建、测试接管、mechanism improvement、canary/promotion。 | 让新增 agent 走同一生产线。 |
+| `Foundry Kernel` | agent 创建、测试接管、mechanism improvement、canary/promotion。 | 让新增 agent 走同一生产线。 |
 | `Connect` | CLI、MCP、OpenAI/AI SDK tool、Skill/plugin、install/release。 | 同一能力多入口一致暴露。 |
 
 品牌一致性的关键不是给每个模块加 logo，而是固定 `product grammar`：
@@ -108,7 +108,7 @@ One Person Lab 对外应保持三层产品认知：
 | `generated-surface-host` | 托管 CLI、MCP、Skill/product-entry、status、workbench、default caller。 | 不让 domain repo 长期维护重复 wrapper。 |
 | `passive-evidence-ledger` | 保存 refs-only evidence、trace、replay、typed blocker group、long-soak、cleanup provenance。 | 不作为默认 planning root。 |
 | `app-state-action-producer` | 产出 App fast/full state、safe action shell、operator handoff payload。 | 不持有 GUI release verdict 之外的 product truth。 |
-| `agent-lab-improvement-loop` | 组织 eval refs、root cause、candidate fix、promotion/canary/rollback evidence。 | 不接管目标 agent 的 owner receipt 或 domain truth。 |
+| `foundry-kernel-improvement-loop` | 组织 eval refs、root cause、candidate fix、promotion/canary/rollback evidence。 | 不接管目标 agent 的 owner receipt 或 domain truth。 |
 | `human-owner-decision-gate` | approval/edit/reject/respond、quality reviewer、release owner、physical delete owner 和 route-back decision。 | 不用隐式默认、provider completion 或 old blocker 代替 owner decision。 |
 
 基座维护原则：
@@ -221,7 +221,7 @@ OPL Meta Agent 的理想定位是 agent builder / tester / mechanism improver，
 
 保留：
 
-- target-agent pack candidate、work order、mechanism patch proposal、test takeover plan。
+- exact-version DesignRequest、AgentBlueprint / EvalSpec、EvidenceBundle、EvolutionProposal 与 risk-gated activation plan。
 - conformance/eval evidence refs、risk-tier promotion recommendation、typed blocker。
 
 上收或约束：
@@ -318,7 +318,7 @@ MCP / OpenAI tool / CLI / App action 需要从同一 action catalog 派生，避
 2. 再固定 standard Agent Pack ABI，让 `agent/`、`contracts/`、`runtime/authority_functions/`、stage / quality / receipt / tool boundary 成为所有 Foundry Agent 的标准接入形态。
 3. 把 MAS/MAG/RCA/OMA 压到同一 ordinary golden path：domain pack 声明领域语义，OPL 生成/托管通用 surface，domain owner 仍持有 receipt、typed blocker、human gate、quality/export/no-regression verdict。
 4. 让 CLI、MCP、OpenAI/AI SDK tool、Skill/plugin、App action、status read model 和 workbench 从同一 action / stage / pack metadata 派生，避免 domain repo 继续复制 generated wrapper。
-5. 把 private platform residue 进入显式删除门：scheduler、queue、session store、workbench、status shell、domain wrapper、runtimeWatch、agent-lab materializer 等只能在 no-active-caller、replacement parity、owner receipt / typed blocker、no-forbidden-write 和 tombstone/provenance 成立后物理退役。
+5. 把 private platform residue 进入显式删除门：scheduler、queue、session store、workbench、status shell、domain wrapper、runtimeWatch、foundry-kernel materializer 等只能在 no-active-caller、replacement parity、owner receipt / typed blocker、no-forbidden-write 和 tombstone/provenance 成立后物理退役。
 6. 最后用真实 user path、release/install cohort、long-soak、owner-chain scaleout、operator repair、owner acceptance 和 no-second-truth regression 关闭 L5；contract validation、conformance、provider completion、verified refs-only ledger 或 App projection 都只能作为输入。
 7. 长期治理只在证据表明普通路径仍慢、不清楚或越权时新增 surface；否则优先 demote、merge 或 retire。
 

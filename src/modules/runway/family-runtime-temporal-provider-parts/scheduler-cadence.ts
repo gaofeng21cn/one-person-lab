@@ -15,19 +15,178 @@ import {
   resolveTemporalAddressForPaths,
 } from '../family-runtime-temporal-service.ts';
 import { resolveFamilyRuntimeDomainProfiles } from '../family-runtime-domain-profiles.ts';
+import { record, stringValue } from '../../../kernel/json-record.ts';
 
 type TemporalSchedulerInfoProjection = {
   num_actions_skipped_overlap?: number;
   running_actions?: unknown[];
 };
 
+const TEMPORAL_SCHEDULER_APP_CONNECT_TIMEOUT_MS = 750;
+const TEMPORAL_SCHEDULER_APP_RPC_TIMEOUT_MS = 750;
+
+type TemporalSchedulerCadenceReadinessStatus =
+  | 'ready'
+  | 'not_configured'
+  | 'not_installed'
+  | 'paused'
+  | 'attention_needed'
+  | 'error'
+  | 'unknown';
+
+function schedulerRepairAction(input: {
+  status: TemporalSchedulerCadenceReadinessStatus;
+  projectedRepairAction: Record<string, unknown>;
+}) {
+  if (
+    input.status === 'attention_needed'
+    && Object.keys(input.projectedRepairAction).length > 0
+  ) {
+    return input.projectedRepairAction;
+  }
+  const actionByStatus: Record<TemporalSchedulerCadenceReadinessStatus, {
+    action_id: string;
+    reason: string;
+    next_command: string | null;
+  }> = {
+    ready: {
+      action_id: 'none',
+      reason: 'scheduler_cadence_ready',
+      next_command: null,
+    },
+    not_configured: {
+      action_id: 'configure_temporal_service',
+      reason: 'temporal_service_not_configured',
+      next_command: 'opl family-runtime service start --provider temporal',
+    },
+    not_installed: {
+      action_id: 'install_scheduler_cadence',
+      reason: 'scheduler_cadence_not_installed',
+      next_command: 'opl family-runtime scheduler install --provider temporal',
+    },
+    paused: {
+      action_id: 'resume_scheduler_cadence',
+      reason: 'scheduler_cadence_paused',
+      next_command: 'opl family-runtime scheduler install --provider temporal',
+    },
+    attention_needed: {
+      action_id: 'inspect_scheduler_cadence',
+      reason: 'scheduler_cadence_attention_needed',
+      next_command: 'opl family-runtime scheduler status --provider temporal',
+    },
+    error: {
+      action_id: 'inspect_scheduler_cadence',
+      reason: 'scheduler_cadence_inspection_failed',
+      next_command: 'opl family-runtime scheduler status --provider temporal',
+    },
+    unknown: {
+      action_id: 'inspect_scheduler_cadence',
+      reason: 'scheduler_cadence_status_unknown',
+      next_command: 'opl family-runtime scheduler status --provider temporal',
+    },
+  };
+  return actionByStatus[input.status];
+}
+
+export function buildTemporalSchedulerCadenceReadiness(input: {
+  cadence?: unknown;
+  observedAt?: string;
+  inspectionError?: string | null;
+} = {}) {
+  const cadence = record(input.cadence);
+  const health = record(cadence.health);
+  const scheduleStatus = stringValue(cadence.schedule_status);
+  const healthStatus = stringValue(health.health_status);
+  const inspectionError = stringValue(input.inspectionError);
+  const status: TemporalSchedulerCadenceReadinessStatus = inspectionError
+    ? 'error'
+    : scheduleStatus === 'not_configured'
+      ? 'not_configured'
+      : scheduleStatus === 'not_installed'
+        ? 'not_installed'
+        : scheduleStatus === 'paused'
+          ? 'paused'
+          : scheduleStatus === 'active' && healthStatus === 'healthy'
+            ? 'ready'
+            : scheduleStatus === 'active' && healthStatus === 'attention_required'
+              ? 'attention_needed'
+              : 'unknown';
+  const degradedReasonByStatus: Record<TemporalSchedulerCadenceReadinessStatus, string | null> = {
+    ready: null,
+    not_configured: 'temporal_service_not_configured',
+    not_installed: 'scheduler_cadence_not_installed',
+    paused: 'scheduler_cadence_paused',
+    attention_needed: 'scheduler_cadence_attention_needed',
+    error: 'scheduler_cadence_inspection_failed',
+    unknown: 'scheduler_cadence_status_unknown',
+  };
+  return {
+    surface_kind: 'temporal_scheduler_cadence_readiness',
+    provider_kind: 'temporal',
+    status,
+    ready: status === 'ready',
+    observed_at: input.observedAt ?? new Date().toISOString(),
+    schedule_status: scheduleStatus,
+    health_status: healthStatus,
+    degraded_reason: degradedReasonByStatus[status],
+    repair_action: schedulerRepairAction({
+      status,
+      projectedRepairAction: record(health.repair_action),
+    }),
+    inspection_error: inspectionError,
+    authority_boundary: {
+      opl: 'temporal_scheduler_cadence_readiness_projection_only',
+      domain: 'truth_quality_artifact_gate_owner',
+      can_write_domain_truth: false,
+    },
+  };
+}
+
+export async function inspectTemporalSchedulerCadenceReadiness(
+  paths: TemporalWorkerPaths,
+  input: {
+    observedAt?: string;
+    inspectCadence?: typeof inspectTemporalSchedulerCadence;
+  } = {},
+) {
+  const resolved = resolveTemporalAddressForPaths(paths);
+  if (!resolved.address) {
+    return buildTemporalSchedulerCadenceReadiness({
+      cadence: { schedule_status: 'not_configured' },
+      observedAt: input.observedAt,
+    });
+  }
+  try {
+    const cadence = await (input.inspectCadence ?? inspectTemporalSchedulerCadence)(paths, {
+      connectTimeoutMs: TEMPORAL_SCHEDULER_APP_CONNECT_TIMEOUT_MS,
+      rpcTimeoutMs: TEMPORAL_SCHEDULER_APP_RPC_TIMEOUT_MS,
+    });
+    return buildTemporalSchedulerCadenceReadiness({
+      cadence,
+      observedAt: input.observedAt,
+    });
+  } catch (error) {
+    return buildTemporalSchedulerCadenceReadiness({
+      cadence: { schedule_status: 'unknown' },
+      observedAt: input.observedAt,
+      inspectionError: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
 function temporalAddressForScheduler(paths: TemporalWorkerPaths) {
   const { address } = resolveTemporalAddressForPaths(paths);
   return address;
 }
 
-function temporalSchedulerClientOptions(paths: TemporalWorkerPaths) {
-  return { addressOverride: temporalAddressForScheduler(paths) };
+function temporalSchedulerClientOptions(
+  paths: TemporalWorkerPaths,
+  input: { connectTimeoutMs?: number; rpcTimeoutMs?: number } = {},
+) {
+  return {
+    addressOverride: temporalAddressForScheduler(paths),
+    ...input,
+  };
 }
 
 export function buildTemporalSchedulerTickWorkflowArgs(input: {
@@ -182,15 +341,19 @@ export async function ensureTemporalSchedulerCadence(paths: TemporalWorkerPaths,
   }, temporalSchedulerClientOptions(paths));
 }
 
-export async function inspectTemporalSchedulerCadence(paths: TemporalWorkerPaths) {
+export async function inspectTemporalSchedulerCadence(
+  paths: TemporalWorkerPaths,
+  input: { connectTimeoutMs?: number; rpcTimeoutMs?: number } = {},
+) {
   const scheduleId = 'opl-family-runtime-provider-scheduler';
+  const clientOptions = temporalSchedulerClientOptions(paths, input);
   return withTemporalClient(async (client) => {
     try {
       const handle = client.schedule.getHandle(scheduleId);
       const description = await withTemporalRpcDeadline(
         client,
         () => handle.describe(),
-        temporalSchedulerClientOptions(paths),
+        clientOptions,
       );
       return {
         surface_kind: 'temporal_scheduler_cadence_status',
@@ -234,7 +397,7 @@ export async function inspectTemporalSchedulerCadence(paths: TemporalWorkerPaths
       }
       throw error;
     }
-  }, temporalSchedulerClientOptions(paths));
+  }, clientOptions);
 }
 
 export async function removeTemporalSchedulerCadence(paths: TemporalWorkerPaths) {

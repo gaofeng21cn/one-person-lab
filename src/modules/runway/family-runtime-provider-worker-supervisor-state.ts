@@ -9,6 +9,7 @@ type RuntimePaths = ReturnType<typeof familyRuntimePaths>;
 
 export const PROVIDER_WORKER_SUPERVISOR_LABEL = 'ai.opl.family-runtime.provider-worker';
 export const LEGACY_PROVIDER_SLO_WATCHDOG_LABEL = 'ai.opl.family-runtime.provider-slo';
+export const PROVIDER_WORKER_SUPERVISOR_THROTTLE_SECONDS = 15;
 
 export type ProviderWorkerSupervisorState = ReturnType<typeof inspectProviderWorkerSupervisorState>;
 
@@ -96,6 +97,7 @@ export function inspectProviderWorkerSupervisorState(paths: RuntimePaths) {
     launchctl,
     keep_alive: true,
     run_at_load: true,
+    throttle_interval_seconds: PROVIDER_WORKER_SUPERVISOR_THROTTLE_SECONDS,
     resident_worker_process: true,
     supervises_family_runtime_root: supervisesCurrentRoot,
     family_runtime_root: paths.root,

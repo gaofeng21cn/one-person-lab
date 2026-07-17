@@ -11,8 +11,8 @@ import { parseJsonText, readJsonPayloadFile } from '../../src/kernel/json-file.t
 import {
   buildProfileCapabilityPlan,
   buildProfileCapabilityPlanInputProjection,
-} from '../../src/modules/foundry-lab/profile-capability-plan.ts';
-import { buildStandardDomainAgentScaffold } from '../../src/modules/foundry-lab/standard-domain-agent-scaffold.ts';
+} from '../../src/modules/pack/profile-capability-plan.ts';
+import { buildStandardDomainAgentScaffold } from '../../src/modules/pack/standard-domain-agent-scaffold.ts';
 
 type JsonRecord = Record<string, unknown>;
 

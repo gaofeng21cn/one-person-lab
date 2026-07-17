@@ -4,8 +4,8 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { readStandardAgentConformanceProfile } from '../../src/modules/foundry-lab/standard-agent-conformance-profile.ts';
-import { buildPhysicalMorphologyChecks } from '../../src/modules/foundry-lab/standard-domain-agent-conformance-physical-morphology.ts';
+import { readStandardAgentConformanceProfile } from '../../src/modules/pack/standard-agent-conformance-profile.ts';
+import { buildPhysicalMorphologyChecks } from '../../src/modules/workspace/standard-domain-agent-conformance-physical-morphology.ts';
 
 function fixtureRepo() {
   const repoDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-conformance-profile-'));

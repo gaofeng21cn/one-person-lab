@@ -38,7 +38,7 @@ test('target operating architecture keeps framework-wide ownership and authority
     'OwnerAnswer',
     'EvidenceRef',
     'ReleaseCohort',
-    'ImprovementWorkOrder',
+    'FoundryRun',
     'RunwayControlLoop',
     'ProgressReconciler',
   ]);
@@ -193,20 +193,34 @@ test('target operating architecture keeps framework-wide ownership and authority
     assert.notEqual(slice.false_completion_claims.length, 0, slice.plan_id);
   }
 
-  assert.equal(contract.agent_lab_improvement_plane.role, 'refs_only_improvement_control_plane');
+  assert.equal(contract.foundry_kernel_plane.role, 'durable_agent_engineering_control_plane');
   for (const forbiddenOutput of [
     'domain_quality_verdict',
     'artifact_authority',
     'memory_body',
-    'owner_receipt',
+    'owner_receipt_body',
     'typed_blocker',
-    'production_acceptance',
+    'protected_test_body',
   ]) {
-    assert.equal(contract.agent_lab_improvement_plane.must_not_produce.includes(forbiddenOutput), true);
+    assert.equal(contract.foundry_kernel_plane.must_not_produce.includes(forbiddenOutput), true);
   }
 
   const foundry = contract.foundry_agent_os_standard;
   assert.equal(foundry.pattern_id, 'foundry_agent_os_standard.v1');
+  assert.equal(
+    foundry.new_agent_baseline_handoff_policy.semantic_provider_contract_ref,
+    'contracts/opl-framework/foundry-provider-manifest.schema.json',
+  );
+  assert.equal(Object.hasOwn(foundry.new_agent_baseline_handoff_policy, 'oma_owner'), false);
+  assert.deepEqual(foundry.new_agent_baseline_handoff_policy.accepted_terminal_outcomes, [
+    'completed_active',
+    'completed_qualified',
+    'completed_unqualified',
+    'rejected',
+    'cancelled',
+    'failed',
+    'quarantined',
+  ]);
   assert.equal(foundry.os_readback_contract.requires_lane_to_plan_mapping, true);
   assert.equal(foundry.os_readback_contract.requires_main_session_fresh_verification, true);
   assert.equal(foundry.os_readback_contract.docs_refs_tests_commit_only_can_score_100, false);

@@ -4,6 +4,7 @@ import { stringValue, type JsonRecord } from './json-record.ts';
 export const FAMILY_ACTION_CATALOG_VERSION = 'family-action-catalog.v2' as const;
 export const DOMAIN_HANDLER_REGISTRY_VERSION = 'domain-handler-registry.v1' as const;
 export const FAMILY_ACTION_STAGE_MANIFEST_REF = 'agent/stages/manifest.json' as const;
+export const FOUNDRY_PROVIDER_MANIFEST_REF = 'contracts/foundry_provider.json' as const;
 
 export type FamilyActionEffect = 'read_only' | 'mutating';
 export type FamilyActionExportFormat = 'cli' | 'mcp' | 'skill' | 'openai' | 'ai-sdk';
@@ -16,6 +17,10 @@ export type FamilyActionExecutionBinding =
   | {
       kind: 'stage_binding';
       stage_manifest_ref: typeof FAMILY_ACTION_STAGE_MANIFEST_REF;
+    }
+  | {
+      kind: 'foundry_binding';
+      provider_manifest_ref: typeof FOUNDRY_PROVIDER_MANIFEST_REF;
     };
 
 export interface FamilyActionSurfaceDescriptor {
@@ -225,8 +230,8 @@ function normalizeCatalogAuthorityBoundary(value: unknown, field: string): JsonR
     throw new Error(`${field} must be an object.`);
   }
   requireString(value.domain_truth_owner, `${field}.domain_truth_owner`);
-  if (value.opl_role !== 'projection_consumer_only') {
-    throw new Error(`${field}.opl_role must be projection_consumer_only.`);
+  if (value.opl_role !== 'projection_consumer_only' && value.opl_role !== 'foundry_runtime_owner') {
+    throw new Error(`${field}.opl_role must be projection_consumer_only or foundry_runtime_owner.`);
   }
   if (value.write_policy !== 'no_domain_truth_writes') {
     throw new Error(`${field}.write_policy must be no_domain_truth_writes.`);
@@ -414,7 +419,15 @@ function normalizeExecutionBinding(value: unknown, field: string): FamilyActionE
     }
     return { kind: 'stage_binding', stage_manifest_ref: FAMILY_ACTION_STAGE_MANIFEST_REF };
   }
-  throw new Error(`${field}.kind must be handler_ref or stage_binding.`);
+  if (kind === 'foundry_binding') {
+    assertKnownKeys(value, ['kind', 'provider_manifest_ref'], field);
+    const providerManifestRef = requireString(value.provider_manifest_ref, `${field}.provider_manifest_ref`);
+    if (providerManifestRef !== FOUNDRY_PROVIDER_MANIFEST_REF) {
+      throw new Error(`${field}.provider_manifest_ref must be ${FOUNDRY_PROVIDER_MANIFEST_REF}.`);
+    }
+    return { kind: 'foundry_binding', provider_manifest_ref: FOUNDRY_PROVIDER_MANIFEST_REF };
+  }
+  throw new Error(`${field}.kind must be handler_ref, stage_binding, or foundry_binding.`);
 }
 
 function normalizeFamilyAction(
@@ -438,8 +451,8 @@ function normalizeFamilyAction(
   if (executionBinding.kind === 'stage_binding' && !stageRoute) {
     throw new Error(`${field}.execution_binding.kind=stage_binding requires stage_route.`);
   }
-  if (executionBinding.kind === 'handler_ref' && stageRoute) {
-    throw new Error(`${field}.execution_binding.kind=handler_ref must not declare stage_route.`);
+  if (executionBinding.kind !== 'stage_binding' && stageRoute) {
+    throw new Error(`${field}.execution_binding.kind=${executionBinding.kind} must not declare stage_route.`);
   }
   const requiredFields = requiredStringArray(value.required_fields, `${field}.required_fields`);
   const optionalFields = requiredStringArray(value.optional_fields, `${field}.optional_fields`);
@@ -543,6 +556,20 @@ export function normalizeFamilyActionCatalog(
     seen.add(action.action_id);
     return action;
   });
+  const foundryActionCount = actions.filter((action) => action.execution_binding.kind === 'foundry_binding').length;
+  if (foundryActionCount > 0 && foundryActionCount !== actions.length) {
+    throw new Error(`${field}.actions must not mix foundry_binding with domain action bindings.`);
+  }
+  const authorityBoundary = normalizeCatalogAuthorityBoundary(
+    value.authority_boundary,
+    `${field}.authority_boundary`,
+  );
+  const expectedOplRole = foundryActionCount > 0 ? 'foundry_runtime_owner' : 'projection_consumer_only';
+  if (authorityBoundary.opl_role !== expectedOplRole) {
+    throw new Error(
+      `${field}.authority_boundary.opl_role must be ${expectedOplRole} for the declared execution bindings.`,
+    );
+  }
   assertUniqueProjectedSurfaceIds(actions, field);
   return {
     surface_kind: 'family_action_catalog',
@@ -550,10 +577,7 @@ export function normalizeFamilyActionCatalog(
     catalog_id: catalogId,
     target_domain_id: requireString(value.target_domain_id, `${field}.target_domain_id`),
     owner: requireString(value.owner, `${field}.owner`),
-    authority_boundary: normalizeCatalogAuthorityBoundary(
-      value.authority_boundary,
-      `${field}.authority_boundary`,
-    ),
+    authority_boundary: authorityBoundary,
     actions,
     notes: optionalStringArray(value.notes, `${field}.notes`),
   };

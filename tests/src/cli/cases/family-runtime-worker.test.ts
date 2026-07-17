@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import net from 'node:net';
 
 import {
   assert,
@@ -9,6 +10,7 @@ import {
   path,
   repoRoot,
   runCli,
+  shellSingleQuote,
   test,
 } from '../helpers.ts';
 
@@ -18,6 +20,56 @@ function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {})
     ...extra,
   };
 }
+
+async function reserveLocalPort() {
+  const server = net.createServer();
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', resolve);
+  });
+  const address = server.address();
+  if (!address || typeof address === 'string') {
+    server.close();
+    throw new Error('Unable to reserve a local Temporal test port.');
+  }
+  await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  return address.port;
+}
+
+test('family-runtime service start waits for a delayed Temporal listener', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-service-start-'));
+  const serverScript = path.join(stateRoot, 'delayed-server.mjs');
+  const port = await reserveLocalPort();
+  fs.writeFileSync(
+    serverScript,
+    [
+      "import net from 'node:net';",
+      'const port = Number.parseInt(process.argv[2], 10);',
+      "const server = net.createServer((socket) => socket.end());",
+      "setTimeout(() => server.listen(port, '127.0.0.1'), 650);",
+      "process.on('SIGTERM', () => server.close(() => process.exit(0)));",
+      'setInterval(() => {}, 1_000);',
+    ].join('\n'),
+    'utf8',
+  );
+  const env = familyRuntimeEnv(stateRoot, {
+    OPL_TEMPORAL_ADDRESS: `127.0.0.1:${port}`,
+    OPL_TEMPORAL_SERVICE_START_COMMAND:
+      `exec ${shellSingleQuote(process.execPath)} ${shellSingleQuote(serverScript)} ${port}`,
+  });
+
+  try {
+    const output = runCli(['family-runtime', 'service', 'start', '--provider', 'temporal'], env);
+    const service = output.family_runtime_service;
+
+    assert.equal(service.start_status, 'started');
+    assert.equal(service.status.service_status, 'running');
+    assert.equal(service.status.server_reachable, true);
+  } finally {
+    runCli(['family-runtime', 'service', 'stop', '--provider', 'temporal'], env);
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
 
 test('family-runtime worker parser exposes temporal lifecycle status command', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-worker-status-'));

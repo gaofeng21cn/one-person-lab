@@ -14,7 +14,7 @@ function buildOmaScaleoutTarget(domainId: string, receiptKind: 'owner_receipt' |
     typed_blocker_refs: receiptKind === 'typed_blocker'
       ? [`typed-blocker:oma-fixture/${domainId}`]
       : [],
-    agent_lab_result_refs: [`agent-lab:oma-fixture/${domainId}`],
+    foundry_evidence_refs: [`foundry-evidence:oma-fixture/${domainId}`],
     no_forbidden_write_proof_refs: [`no-forbidden-write:oma-fixture/${domainId}`],
     cleanup_closeout_refs: [`cleanup:oma-fixture/${domainId}`],
     failure_evidence_refs: [`failure-evidence:oma-fixture/${domainId}`],
@@ -56,7 +56,7 @@ export function createOmaContractFixture(
     workbench_sections: [
       { section_id: 'target_brief', projection_fields: ['domain_descriptor_ref'], write_boundary: 'display_refs_only' },
       { section_id: 'candidate_package', projection_fields: ['candidate_agent_package_ref'], write_boundary: 'display_refs_only' },
-      { section_id: 'agent_lab_results', projection_fields: ['scaleout_evidence_ref'], write_boundary: 'display_refs_only' },
+      { section_id: 'foundry_evaluation_results', projection_fields: ['scaleout_evidence_ref'], write_boundary: 'display_refs_only' },
       { section_id: 'developer_work_order', projection_fields: ['developer_patch_work_order_ref'], write_boundary: 'display_refs_only' },
       { section_id: 'mechanism_patch_proposal', projection_fields: ['mechanism_patch_proposal_ref'], write_boundary: 'display_refs_only' },
       { section_id: 'scaleout_evidence', projection_fields: ['real_target_agent_scaleout_evidence_ref'], write_boundary: 'display_refs_only' },
@@ -70,7 +70,7 @@ export function createOmaContractFixture(
           'predicted_impact_ref',
           'next_run_falsification_ref',
           'owner_receipt_or_typed_blocker_ref',
-          'agent_lab_re_evaluation_ref',
+          'foundry_re_evaluation_ref',
           'patch_absorption_ref',
         ],
         write_boundary: 'display_refs_only',

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://opl.onepersonlab/contracts/family-orchestration/family-action-catalog.schema.json",
   "title": "OPL Family Action Catalog",
-  "description": "Canonical Standard Agent action contract. OPL owns executable command generation; domain packs declare only stage or handler execution bindings.",
+  "description": "Canonical Standard Agent action contract. OPL owns executable command generation and FoundryRun execution; domain packs declare handler, stage, or Foundry provider bindings.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -27,7 +27,7 @@
           "required": ["domain_truth_owner", "opl_role", "write_policy"],
           "properties": {
             "domain_truth_owner": { "type": "string", "minLength": 1 },
-            "opl_role": { "const": "projection_consumer_only" },
+            "opl_role": { "enum": ["projection_consumer_only", "foundry_runtime_owner"] },
             "write_policy": { "const": "no_domain_truth_writes" }
           }
         }
@@ -43,6 +43,51 @@
       "items": { "type": "string" }
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "actions": {
+            "contains": {
+              "properties": {
+                "execution_binding": {
+                  "properties": { "kind": { "const": "foundry_binding" } },
+                  "required": ["kind"]
+                }
+              },
+              "required": ["execution_binding"]
+            }
+          }
+        },
+        "required": ["actions"]
+      },
+      "then": {
+        "properties": {
+          "authority_boundary": {
+            "properties": { "opl_role": { "const": "foundry_runtime_owner" } }
+          },
+          "actions": {
+            "items": {
+              "properties": {
+                "execution_binding": {
+                  "properties": { "kind": { "const": "foundry_binding" } },
+                  "required": ["kind"]
+                }
+              },
+              "required": ["execution_binding"]
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "authority_boundary": {
+            "properties": { "opl_role": { "const": "projection_consumer_only" } }
+          }
+        }
+      }
+    }
+  ],
   "$defs": {
     "action": {
       "type": "object",
@@ -128,6 +173,15 @@
           "properties": {
             "kind": { "const": "stage_binding" },
             "stage_manifest_ref": { "const": "agent/stages/manifest.json" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "provider_manifest_ref"],
+          "properties": {
+            "kind": { "const": "foundry_binding" },
+            "provider_manifest_ref": { "const": "contracts/foundry_provider.json" }
           }
         }
       ]

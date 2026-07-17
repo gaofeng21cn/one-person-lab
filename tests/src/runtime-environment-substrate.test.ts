@@ -311,7 +311,7 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
     'charter',
     'connect',
     'console',
-    'foundry-lab',
+    'foundry',
     'ledger',
     'pack',
     'runway',

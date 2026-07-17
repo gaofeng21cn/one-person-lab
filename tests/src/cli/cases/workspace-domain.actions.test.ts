@@ -326,7 +326,7 @@ test('standard family action catalogs resolve from managed contracts and export 
     assert.equal(inspect.family_action.action.action_id, 'start_deliverable');
     assert.equal(
       inspect.family_action.projections.cli.command,
-      `opl agents run --domain redcube_ai --action start_deliverable --workspace ${repoRoot}`,
+      `opl agents run --domain rca --action start_deliverable --workspace ${repoRoot}`,
     );
     assert.equal(inspect.family_action.catalog_source.source_kind, 'managed_standard_agent_contract');
     assert.equal(inspect.family_action.stage_catalog.stage_ids[0], 'stage_1');

@@ -19,6 +19,15 @@ export function installRuntimePackageFixture(stateRoot: string, packageId: strin
   const canonicalPackageId = canonicalAgentPackageId(packageId);
   assert.ok(canonicalPackageId);
   fs.mkdirSync(stateRoot, { recursive: true });
+  const pluginRoot = path.join(stateRoot, 'fixture-agent-packages', canonicalPackageId);
+  const skillRoot = path.join(pluginRoot, 'skills', canonicalPackageId);
+  const codexHome = path.join(stateRoot, 'codex-home');
+  fs.mkdirSync(skillRoot, { recursive: true });
+  fs.writeFileSync(
+    path.join(skillRoot, 'SKILL.md'),
+    `---\nname: ${canonicalPackageId}\ndescription: Runtime package fixture.\n---\n`,
+    'utf8',
+  );
   const lockPath = path.join(stateRoot, 'agent-package-locks.json');
   const ledgerPath = path.join(stateRoot, 'agent-package-lifecycle-ledger.json');
   const lockIndex = fs.existsSync(lockPath)
@@ -69,6 +78,83 @@ export function installRuntimePackageFixture(stateRoot: string, packageId: strin
     runtime_source_carrier: null,
     managed_runtime_source: null,
     managed_update_source: null,
+    physical_surface: {
+      surface_kind: 'opl_agent_package_physical_codex_surface',
+      status: 'materialized',
+      package_id: canonicalPackageId,
+      plugin_id: canonicalPackageId,
+      marketplace_id: null,
+      codex_home: codexHome,
+      codex_config_path: path.join(codexHome, 'config.toml'),
+      codex_config_preexisting: false,
+      plugin_source_path: pluginRoot,
+      plugin_manifest_path: null,
+      codex_plugin_cache_path: null,
+      marketplace_root: null,
+      marketplace_path: null,
+      marketplace_plugin_path: null,
+      plugin_payload_manifest_url: null,
+      plugin_payload_manifest_sha256: null,
+      plugin_payload_cache_path: null,
+      materialized_required_skill_ids: [canonicalPackageId],
+      materialized_required_skill_paths: [path.join(skillRoot, 'SKILL.md')],
+      removed_paths: [],
+      writes_performed: false,
+      reload_required: false,
+      failure_reason: null,
+      note: 'Runtime package fixture.',
+      profile_config: null,
+      profile_migration: {
+        surface_kind: 'opl_package_profile_migration',
+        status: 'not_requested',
+        source_path: null,
+        target_path: null,
+        source_sha256: null,
+        target_sha256: null,
+        receipt_path: null,
+        merge_packet_path: null,
+        apply_command: null,
+        authoring_source_paths: [],
+        mutation_actions: [],
+        rollback_backups_retained: false,
+        writes_performed: false,
+        note: 'Runtime package fixture.',
+      },
+      managed_policy_config: null,
+      workflow_policy_migration: {
+        surface_kind: 'opl_package_managed_policy_migration',
+        status: 'not_requested',
+        policy_kind: null,
+        policy_path: null,
+        schema_path: null,
+        policy_sha256: null,
+        inventory_digest: null,
+        dependency_ids: [],
+        dependencies: [],
+        optional_dependency_ids: [],
+        migration_ids: [],
+        detected_conflicts: [],
+        actions: [],
+        service_actions: [],
+        dependency_sync: null,
+        model_projection: null,
+        backup_root: null,
+        backup_active: false,
+        writes_performed: false,
+        note: 'Runtime package fixture.',
+      },
+      authority_boundary: {
+        refs_only: true,
+        can_write_domain_truth: false,
+        can_write_domain_memory_body: false,
+        can_mutate_domain_artifact_body: false,
+        can_authorize_quality_or_export: false,
+        can_create_owner_receipt: false,
+        can_create_typed_blocker: false,
+        can_claim_domain_ready: false,
+        can_claim_production_ready: false,
+      },
+    },
   });
   fs.writeFileSync(lockPath, `${JSON.stringify(lockIndex, null, 2)}\n`, 'utf8');
 

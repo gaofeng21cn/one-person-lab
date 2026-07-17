@@ -1,20 +1,14 @@
 {
   "surface_kind": "opl_agent_scaffold_materialization_contract",
   "version": "opl-agent-scaffold-materialization-contract.v2",
-  "owner": "one-person-lab/OPL Foundry Lab",
-  "command": "opl agents scaffold --materialize-request <request.json> --target-dir <dir> --json",
+  "owner": "one-person-lab/OPL Foundry Kernel",
+  "api_ref": "opl.pack.materializeAgentScaffold",
   "request_schema_ref": "contracts/opl-framework/agent-scaffold-materialization-request.schema.json",
   "request_abi": {
     "canonical_version": "opl-agent-scaffold-materialization-request.v2",
     "producer_identity_field": "producer_agent_id",
     "producer_neutral": true,
-    "compatibility_adapters": [
-      {
-        "input_version": "opl-agent-scaffold-materialization-request.v1",
-        "adapter": "opl_agent_scaffold_materialization_request.v1_to_v2",
-        "legacy_producer": "oma"
-      }
-    ]
+    "compatibility_adapters": []
   },
   "write_policy": {
     "mode": "replace_declared_files_only",
@@ -29,7 +23,7 @@
     "surface_kind": "opl_agent_scaffold_materialization_receipt",
     "digest_algorithm": "sha256",
     "digest_source": "post_write_target_bytes",
-    "final_build_receipt_owner": "one-person-lab/OPL Foundry Lab",
+    "final_build_receipt_owner": "one-person-lab/OPL Foundry Kernel",
     "validation_refs_are_requests_not_pass_claims": true
   },
   "authority_boundary": {

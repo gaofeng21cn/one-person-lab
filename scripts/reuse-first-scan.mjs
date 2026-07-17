@@ -269,7 +269,6 @@ function isAllowedOwnerRoutedCommandProjectionLine(relativePath, line) {
     'src/entrypoints/cli/cases/public-command-specs-parts/update.ts',
     'src/entrypoints/cli/cases/runtime-environment-command-spec.ts',
     'src/entrypoints/cli/cases/runtime-public-command-specs.ts',
-    'src/entrypoints/cli/cases/agent-lab-public-command-specs.ts',
   ].includes(relativePath);
 }
 

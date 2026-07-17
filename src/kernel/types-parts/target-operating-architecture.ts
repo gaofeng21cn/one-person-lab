@@ -122,7 +122,7 @@ export interface TargetOperatingArchitectureContract {
     authority_boundary: Record<string, false>;
     forbidden_claims: string[];
   };
-  agent_lab_improvement_plane: {
+  foundry_kernel_plane: {
     role: string;
     may_produce: string[];
     must_not_produce: string[];
@@ -161,7 +161,7 @@ export interface TargetOperatingArchitectureContract {
       surface_kind: string;
       policy_id: string;
       owner: string;
-      oma_owner: string;
+      semantic_provider_contract_ref: string;
       required_gates: string[];
       scaffold_or_generated_interface_can_claim_complete: false;
       conformance_or_suite_pass_can_claim_complete: false;

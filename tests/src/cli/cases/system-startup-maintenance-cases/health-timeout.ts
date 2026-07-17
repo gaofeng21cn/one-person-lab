@@ -1,7 +1,9 @@
 import { assert, fs, os, path, runCli, test } from '../../helpers.ts';
 import { runGitFixtureCommand } from '../../helpers-parts/family-fixtures.ts';
 import {
+  createCurrentCodexFixture,
   createStartupDomainModuleRemotes,
+  currentCodexEnvironment,
   removeStartupDomainModuleRemotes,
   withCliTimeout,
   writeStartupPackageChannelFixture,
@@ -19,6 +21,7 @@ test('system startup-maintenance does not block all modules on a timed-out modul
     version: '26.6.10-nightly',
     modules: [scholarSkillsPackageFixture('v1')],
   });
+  const codexFixture = createCurrentCodexFixture();
 
   try {
     fs.writeFileSync(
@@ -50,7 +53,7 @@ test('system startup-maintenance does not block all modules on a timed-out modul
       OPL_PACKAGE_CHANNEL_MANIFEST_REF: 'ghcr.io/owner/one-person-lab-manifest:26.6.10-nightly',
       OPL_MODULE_ACTION_STEP_TIMEOUT_MS: '100',
       OPL_GIT_RETRY_ATTEMPTS: '1',
-      PATH: `${scholarSkillsChannel.fakeBin}${path.delimiter}${process.env.PATH ?? ''}`,
+      ...currentCodexEnvironment(codexFixture, [scholarSkillsChannel.fakeBin]),
       ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
     })) as {
       system_action: {
@@ -132,6 +135,7 @@ test('system startup-maintenance does not block all modules on a timed-out modul
     assert.equal(fs.readFileSync(logPath, 'utf8').includes('opl-meta-agent-health'), true);
     assert.equal(fs.readFileSync(logPath, 'utf8').includes('opl-bookforge-health'), true);
   } finally {
+    fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
     removeStartupDomainModuleRemotes(remotes);
   }

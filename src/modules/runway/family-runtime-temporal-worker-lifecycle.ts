@@ -18,7 +18,6 @@ import {
   resolveTemporalAddressForPaths,
 } from './family-runtime-temporal-service.ts';
 import {
-  currentWorkerSourceVersion,
   buildTemporalWorkerCrashDiagnostic,
   processIsAlive,
   readTemporalWorkerState,
@@ -27,9 +26,10 @@ import {
 } from './family-runtime-temporal-provider-parts/worker-state.ts';
 import {
   findTemporalForegroundWorkerPids,
-  temporalForegroundWorkerCommand,
-  temporalForegroundWorkerModulePathFromCommand,
 } from './family-runtime-temporal-provider-parts/worker-process.ts';
+import {
+  expectedWorkerSourceVersionForState,
+} from './family-runtime-temporal-provider-parts/worker-source-currentness.ts';
 import {
   inspectTemporalWorkerLifecycleFast,
 } from './family-runtime-temporal-provider-parts/worker-lifecycle-fast.ts';
@@ -48,19 +48,6 @@ type TemporalLifecycleInspectionDetail = 'fast' | 'full';
 function temporalProviderModuleUrl() {
   const extension = import.meta.url.endsWith('.js') ? 'js' : 'ts';
   return new URL(`./family-runtime-temporal-provider.${extension}`, import.meta.url).href;
-}
-
-function expectedWorkerSourceVersionForState(state: ReturnType<typeof readTemporalWorkerState> | null) {
-  const providerModuleUrl = temporalProviderModuleUrl();
-  if (!state || !processIsAlive(state.pid)) {
-    return currentWorkerSourceVersion(providerModuleUrl);
-  }
-  const command = temporalForegroundWorkerCommand(state.pid);
-  const workerModulePath = temporalForegroundWorkerModulePathFromCommand(command);
-  if (!workerModulePath) {
-    return currentWorkerSourceVersion(providerModuleUrl);
-  }
-  return currentWorkerSourceVersion(new URL(workerModulePath, 'file://').href);
 }
 
 export async function inspectTemporalWorkerLifecycle(paths: TemporalWorkerPaths) {
@@ -85,7 +72,7 @@ export async function inspectTemporalWorkerLifecycleWithDetail(
     state?.address === address
     && state.namespace === namespace
     && state.task_queue === taskQueue;
-  const expectedWorkerSourceVersion = expectedWorkerSourceVersionForState(state);
+  const expectedWorkerSourceVersion = expectedWorkerSourceVersionForState(state, providerModuleUrl);
   const stateSourceCurrent = stateMatchesConfig && state
     ? workerSourceVersionsEquivalent(state.source_version, expectedWorkerSourceVersion)
     : false;
@@ -115,6 +102,8 @@ export async function inspectTemporalWorkerLifecycleWithDetail(
     workerEnabled: envWorkerReady ? '1' : null,
     workerStatus: pidAlive ? 'ready' : null,
     serverReachable,
+    serviceReady: service.server_reachable === true
+      && (service.service_status === 'running' || service.service_status === 'external_running'),
     managedWorkerPid: state?.pid ?? null,
     managedWorkerProcessAlive: state ? stateProcessAlive : null,
     managedWorkerStatePath: temporalWorkerStatePath(paths),

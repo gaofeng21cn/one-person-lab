@@ -110,7 +110,7 @@ The desktop product follows the Codex App interaction shape and presents MAS, MA
 
 | Product line | Current agent | Best for | Typical deliverables |
 | --- | --- | --- | --- |
-| `Agent Foundry` | [`OPL Meta Agent`](https://github.com/gaofeng21cn/opl-meta-agent) | Building new agents, taking over external-agent testing, mechanism self-evolution | Agent baselines, Agent Lab suites, mechanism patch proposals |
+| `Agent Foundry` | [`OPL Meta Agent`](https://github.com/gaofeng21cn/opl-meta-agent) | Turning create, takeover, and improve intent into agent design and evidence-grounded evolution semantics through `engineer-agent` | `AgentBlueprint`, `EvalSpec`, `EvolutionProposal` |
 | `Research Foundry` | [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience) | Medical research, evidence organization, analysis, manuscript preparation | Analysis packages, evidence packages, manuscripts |
 | `Grant Foundry` | [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) | Grant direction setting, proposal writing, revision preparation | Proposals, outlines, revision packs |
 | `Presentation Foundry` | [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) | Lectures, lab talks, reports, defenses, project materials | Slide decks, scripts, presentation packages |
@@ -143,7 +143,7 @@ Source of truth: https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/re
 
 - Improve the desktop App first-install package, update channel, and cross-platform release workflow.
 - Continue strengthening long-task progress with recovery, retry, human approval, stage review, and clearer progress views.
-- Use OPL Meta Agent as the Agent Foundry entry for building new domain agents, taking over testing for existing agents, and organizing Agent Lab mechanism evolution.
+- Use OPL Meta Agent's `engineer-agent` action as the only public Agent Foundry entry for create, takeover, and improve semantics; let the Foundry Kernel materialize, evaluate, version, canary, activate, and roll back candidates, with protected-test definitions, final acceptance, permissions, and production adoption owned by the target owner.
 - Stabilize the Research, Grant, Presentation, and Book Foundry user experience.
 - Maintain Book Forge as a default standard Foundry Agent surface in OPL Connect / App while keeping manuscript quality, export handoff, publication, and production-ready claims owner-gated.
 - Bring Patent, Award, Thesis, and Review work into the same product family.

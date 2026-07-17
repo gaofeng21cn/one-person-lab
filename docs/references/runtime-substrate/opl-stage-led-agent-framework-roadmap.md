@@ -35,7 +35,7 @@ Currentness rule: 本文不冻结日期、receipt id、attempt id、worklist cou
 
 - Temporal provider 支撑参考：`docs/references/runtime-substrate/temporal-family-runtime-provider-plan.md`
 - Production closure gap matrix：`docs/active/production-framework-closure-gap-matrix.md`
-- Agent Lab 控制面边界：`docs/runtime/opl-agent-lab-control-plane.md`
+- Foundry Kernel 控制面边界：`docs/runtime/opl-foundry-kernel-control-plane.md`
 - MAS runtime 退役计划：`med-autoscience/docs/active/opl_temporal_mas_runtime_retirement_program.md`
 - Stage control plane adoption：`docs/references/convergence-governance/family-stage-control-plane-adoption-plan.md`
 - Domain memory 总入口：`docs/references/operating-governance/family-domain-memory-governance.md`

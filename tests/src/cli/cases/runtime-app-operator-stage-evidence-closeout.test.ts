@@ -13,7 +13,7 @@ import {
 import {
   STANDARD_PROGRESS_DELTA_POLICY,
   STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
-} from '../../../../src/modules/foundry-lab/standard-domain-agent-scaffold-constants.ts';
+} from '../../../../src/modules/pack/standard-domain-agent-scaffold-constants.ts';
 import { createAdmittedStagePackFixture } from './workspace-domain-test-helper.ts';
 
 function manifestWithStageEvidenceRequest() {

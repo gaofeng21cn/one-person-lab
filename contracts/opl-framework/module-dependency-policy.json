@@ -56,7 +56,7 @@
       },
       {
         "from_module_id": "charter",
-        "to_module_id": "foundry-lab",
+        "to_module_id": "foundry",
         "reason": "Charter must not depend on agent-improvement surfaces."
       },
       {
@@ -80,9 +80,9 @@
         "reason": "Workspace owns protocol and file lifecycle projection; Console consumes workspace projections for operator surfaces."
       },
       {
-        "from_module_id": "foundry-lab",
+        "from_module_id": "foundry",
         "to_module_id": "console",
-        "reason": "Foundry Lab owns readiness, maturity, and improvement readouts; Console-owned operator snapshots must be injected by entrypoint callers rather than becoming a Foundry prerequisite."
+        "reason": "Foundry Kernel owns producer-neutral FoundryRun orchestration; Console-owned readiness and operator projections must not become a Foundry prerequisite."
       }
     ],
     "next_forbidden_dependency_candidates": [

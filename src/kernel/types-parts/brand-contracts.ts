@@ -7,7 +7,7 @@ export type BrandModuleId =
   | 'runway'
   | 'ledger'
   | 'console'
-  | 'foundry-lab'
+  | 'foundry'
   | 'connect';
 
 export type BrandModuleMaturityLevel = 'L4_structural_baseline';
@@ -105,12 +105,22 @@ export interface BrandModuleL5OperatingEvidenceContract {
   modules: BrandModuleL5OperatingEvidenceEntry[];
 }
 
-export type BrandModuleCliOperation =
+export type StandardBrandModuleCliOperation =
   | 'status'
   | 'inspect'
   | 'interfaces'
   | 'validate'
   | 'doctor';
+
+export type FoundryControlOperation =
+  | 'status'
+  | 'approve'
+  | 'reject'
+  | 'cancel'
+  | 'versions'
+  | 'rollback';
+
+export type BrandModuleCliOperation = StandardBrandModuleCliOperation | FoundryControlOperation;
 
 export type AgentInternalBrandModuleCliOperation =
   | 'list'
@@ -242,7 +252,7 @@ export interface BrandCliGovernanceContract {
   drift_guards: string[];
 }
 
-export interface BrandModuleNativeCliFamily {
+export interface StandardBrandModuleNativeCliFamily {
   status: string;
   inspect: string;
   interfaces: string;
@@ -250,6 +260,13 @@ export interface BrandModuleNativeCliFamily {
   doctor: string;
   additional_commands: string[];
 }
+
+export interface FoundryControlCliFamily {
+  control_commands: Record<FoundryControlOperation, string>;
+  additional_commands: string[];
+}
+
+export type BrandModuleNativeCliFamily = StandardBrandModuleNativeCliFamily | FoundryControlCliFamily;
 
 export interface BrandModuleSurfaceAppDescriptor {
   action_id: string;
@@ -307,6 +324,7 @@ export interface BrandModuleSurfacesContract {
   machine_boundary: string;
   baseline_module_id: BrandModuleId;
   required_native_subcommands: string[];
+  foundry_control_operations: FoundryControlOperation[];
   required_gates: string[];
   modules: BrandModuleSurfaceContractEntry[];
 }

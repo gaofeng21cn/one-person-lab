@@ -21,6 +21,7 @@ import {
   providerWorkerSupervisorLaunchctlTarget,
   providerWorkerSupervisorPlistPath,
   PROVIDER_WORKER_SUPERVISOR_LABEL,
+  PROVIDER_WORKER_SUPERVISOR_THROTTLE_SECONDS,
   runProviderWorkerSupervisorLaunchctl,
 } from './family-runtime-provider-worker-supervisor-state.ts';
 import type { FamilyRuntimeProviderKind } from './family-runtime-types.ts';
@@ -113,6 +114,8 @@ ${plistEnvironmentXml(paths)}
   <true/>
   <key>RunAtLoad</key>
   <true/>
+  <key>ThrottleInterval</key>
+  <integer>${PROVIDER_WORKER_SUPERVISOR_THROTTLE_SECONDS}</integer>
   <key>StandardOutPath</key>
   <string>${escapeXml(path.join(logsDir, 'provider-worker-supervisor.out.log'))}</string>
   <key>StandardErrorPath</key>
@@ -171,6 +174,7 @@ function basePayload(input: {
     plist_path: pathToPlist,
     keep_alive: true,
     run_at_load: true,
+    throttle_interval_seconds: PROVIDER_WORKER_SUPERVISOR_THROTTLE_SECONDS,
     resident_worker_process: true,
     temporal_worker_dependency: true,
     provider_scheduler_dependency: false,

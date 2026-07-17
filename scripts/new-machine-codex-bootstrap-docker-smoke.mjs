@@ -42,7 +42,7 @@ for (const id of wanted) {
   if (!pack.ready_to_sync) {
     throw new Error('not ready_to_sync ' + id + ': ' + JSON.stringify(pack));
   }
-  if (pack.foundry_agent_series?.canonical_command_surface !== 'opl agents foundry') {
+  if (pack.foundry_agent_series?.canonical_command_surface !== 'opl agents run') {
     throw new Error('missing Foundry Agent series command surface for ' + id);
   }
   if (pack.mcp_projection?.mcp_descriptor_must_delegate_to_series_spine !== true) {

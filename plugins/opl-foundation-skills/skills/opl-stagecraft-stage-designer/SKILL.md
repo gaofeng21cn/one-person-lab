@@ -48,5 +48,5 @@ For each design, provide:
 - `prompt_strategy`: concise stage prompt outline and execution guidance;
 - `rubric`: criteria for candidate quality and route-back;
 - `capability_use_policy`: when to use, skip, or route a capability/tool;
-- `handoff_lower_bound`: required refs for candidate package, evidence, owner route, receipt candidate, or blocker candidate;
+- `handoff_lower_bound`: required refs for candidate artifact, evidence, owner route, receipt candidate, or blocker candidate;
 - `authority_boundary`: explicit forbidden claims and owner surfaces that must consume the candidate.

@@ -3,12 +3,10 @@ import {
   buildAgentProfileConformance,
   buildAgentProfileInspect,
   buildAgentProfileSelection,
-} from '../../../../modules/foundry-lab/agent-profile-spine.ts';
-import { buildProfileCapabilityPlan } from '../../../../modules/foundry-lab/profile-capability-plan.ts';
-import {
+  buildProfileCapabilityPlan,
   PROFILE_PATTERN_PACKET_OPTIONS,
   PROFILE_REFERENCE_SOURCE_OPTIONS,
-} from '../../../../modules/foundry-lab/profile-selection-intent.ts';
+} from '../../../../modules/pack/index.ts';
 import {
   parseRegisteredCommandOptions,
   type CommandSpec,
@@ -69,7 +67,7 @@ export function buildProfileCommandSpecs(): Record<string, CommandSpec> {
       ],
       json_output_schema_ref: 'opl-cli-schema:profile-selection-receipt.v1',
       authority_boundary: {
-        owner: 'OPL Foundry Lab',
+        owner: 'OPL Foundry Kernel',
         surface: 'refs_only_profile_selection',
         can_write_domain_truth: false,
         can_create_owner_receipt: false,
@@ -132,7 +130,7 @@ export function buildProfileCommandSpecs(): Record<string, CommandSpec> {
       ],
       json_output_schema_ref: 'opl-cli-schema:profile-capability-plan.v1',
       authority_boundary: {
-        owner: 'OPL Foundry Lab',
+        owner: 'OPL Foundry Kernel',
         surface: 'refs_only_profile_capability_plan',
         can_write_domain_truth: false,
         can_create_owner_receipt: false,

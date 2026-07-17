@@ -11,7 +11,7 @@ import type { FamilyStageContract, FamilyStageControlPlane } from '../../src/mod
 import {
   STANDARD_PROGRESS_DELTA_POLICY,
   STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
-} from '../../src/modules/foundry-lab/standard-domain-agent-scaffold-constants.ts';
+} from '../../src/modules/pack/standard-domain-agent-scaffold-constants.ts';
 import { parseJsonText } from '../../src/kernel/json-file.ts';
 
 type JsonRecord = Record<string, unknown>;

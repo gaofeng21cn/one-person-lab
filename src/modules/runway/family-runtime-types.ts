@@ -144,9 +144,9 @@ export function resolveFamilyRuntimeSchedulerDomainId(value: string) {
 }
 
 export function runtimeDomainDaemonReplacementSurfaces() {
-  return Object.fromEntries(runtimeManagerDomainProfiles().map((profile) => [
-    profile.domain_id,
-    profile.scheduler.daemon_replacement_surface,
+  return Object.fromEntries(runtimeEnabledStandardAgents().map((entry) => [
+    entry.target_domain_id,
+    'opl_runway_provider_cadence_and_stage_attempt_runtime',
   ])) as Partial<Record<FamilyRuntimeDomainId, string>>;
 }
 

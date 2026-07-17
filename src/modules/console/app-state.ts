@@ -40,10 +40,7 @@ import { buildOplAppOperatorViewModel } from './app-state-view-model.ts';
 import { buildAppRuntimeWorkItemProjection } from './app-runtime-work-item-projection.ts';
 import { projectWorkItemRuntimeActivityItems } from './work-item-projection/legacy-adapter.ts';
 import { selectAppStateCurrentOwnerDeltaReadModel } from './app-state-current-owner-delta.ts';
-import {
-  buildAgentLabDomainFeedbackSelfEvolutionReadModel,
-  buildFeedbackOpsReadModel,
-} from '../foundry-lab/public/app-state.ts';
+import { buildFoundryOperatorProjection } from './foundry-operator-projection.ts';
 import { readCodexUserInstructions } from './codex-personalization.ts';
 import {
   projectAppAgentPackageStatus,
@@ -262,6 +259,7 @@ async function buildProviderState(profile: AppStateProfile) {
     familyRuntimePaths(),
     {
       detail: profile,
+      includeScheduler: true,
       managedProviderProjection: profile === 'fast'
         ? readManagedProviderProjectionSummary({ includeManifest: false })
         : readManagedProviderProjectionSummary(),
@@ -284,12 +282,15 @@ async function buildProviderState(profile: AppStateProfile) {
         actions: [
           'provider_service_status',
           'provider_service_start',
+          'provider_service_restart',
+          'provider_service_stop',
           'provider_scheduler_status',
           'provider_scheduler_install',
           'provider_scheduler_trigger',
           'provider_worker_status',
           'provider_worker_start',
           'provider_worker_restart',
+          'provider_worker_stop',
         ],
       },
     },
@@ -464,11 +465,24 @@ function pickRecordFields(value: unknown, fields: readonly string[]): JsonRecord
   ) as JsonRecord;
 }
 
-function compactFastProviderState(value: unknown) {
+export function compactFastProviderState(value: unknown) {
   const provider = isRecord(value) ? value : {};
   const temporal = isRecord(provider.temporal) ? provider.temporal : {};
   const details = isRecord(temporal.details) ? temporal.details : {};
   const workerReadiness = isRecord(details.worker_readiness) ? details.worker_readiness : {};
+  const serviceLifecycle = isRecord(workerReadiness.temporal_service_lifecycle)
+    ? workerReadiness.temporal_service_lifecycle
+    : {};
+  const workerMutationGuard = isRecord(workerReadiness.worker_mutation_guard)
+    ? workerReadiness.worker_mutation_guard
+    : {};
+  const serviceSupervisor = isRecord(serviceLifecycle.supervisor)
+    ? serviceLifecycle.supervisor
+    : {};
+  const serviceRepairAction = isRecord(serviceLifecycle.repair_action)
+    ? serviceLifecycle.repair_action
+    : {};
+  const scheduler = isRecord(details.scheduler) ? details.scheduler : {};
   const visibilityReadiness = isRecord(workerReadiness.visibility_readiness)
     ? workerReadiness.visibility_readiness
     : {};
@@ -493,6 +507,7 @@ function compactFastProviderState(value: unknown) {
           'task_queue',
           'adapter_mode',
           'worker_ready',
+          'scheduler_status',
           'runtime_dependency',
           'required_env',
         ]),
@@ -505,6 +520,55 @@ function compactFastProviderState(value: unknown) {
             'server_reachable',
             'blockers',
           ]),
+          temporal_service_lifecycle: {
+            ...pickRecordFields(serviceLifecycle, [
+              'inspection_detail',
+              'service_status',
+              'address_source',
+              'server_reachable',
+              'managed_service_pid',
+              'service_kind',
+              'blockers',
+            ]),
+            supervisor: pickRecordFields(serviceSupervisor, [
+              'surface_kind',
+              'status',
+              'installed',
+              'loaded',
+              'ready',
+              'observed_at',
+              'error',
+              'supported',
+              'applicable',
+              'required',
+              'configuration_current',
+              'process_state',
+              'pid',
+              'last_exit_status',
+              'last_exit_signal',
+              'run_at_load',
+              'keep_alive',
+              'throttle_interval_seconds',
+              'address',
+              'database_path',
+              'launcher_source',
+              'schedule_independent',
+            ]),
+            repair_action: pickRecordFields(serviceRepairAction, [
+              'surface_kind',
+              'provider_kind',
+              'supervisor_applicable',
+              'supervisor_required',
+              'action_id',
+              'next_command',
+            ]),
+          },
+          worker_mutation_guard: pickRecordFields(workerMutationGuard, [
+            'mutation_guard_status',
+            'allowed',
+            'state_dir_explicit',
+            'explicit_developer_override',
+          ]),
           visibility_readiness: pickRecordFields(visibilityReadiness, [
             'readiness_status',
             'status',
@@ -512,6 +576,16 @@ function compactFastProviderState(value: unknown) {
             'inspection_detail',
           ]),
         },
+        scheduler: pickRecordFields(scheduler, [
+          'status',
+          'ready',
+          'observed_at',
+          'schedule_status',
+          'health_status',
+          'degraded_reason',
+          'repair_action',
+          'inspection_error',
+        ]),
         detail_policy: {
           detail: 'startup',
           full_detail_surface: 'opl app state --profile full --json#provider.temporal.details',
@@ -659,29 +733,6 @@ function compactFastLegacyAgentPackageStatus(value: unknown) {
     detail_policy: {
       package_statuses: 'canonical_source_ref',
       full_detail_surface: 'opl app state --profile full --json#agent_packages.status_index',
-    },
-  };
-}
-
-function compactFastFeedbackOps(value: unknown) {
-  return {
-    ...pickRecordFields(value, [
-      'version',
-      'surface_kind',
-      'read_model_id',
-      'status',
-      'refs_only',
-      'summary',
-      'status_buckets',
-      'status_items',
-      'intake_event_count',
-      'app_projection',
-      'authority_boundary',
-    ]),
-    work_order_status_items: [],
-    detail_policy: {
-      work_order_status_items: 'alias_deferred_use_status_items',
-      full_detail_surface: 'opl app state --profile full --json#feedbackops',
     },
   };
 }
@@ -1029,13 +1080,7 @@ export async function buildOplAppState(input: {
     runtimeActivityItems,
     statePaths,
   });
-  const agentLabFeedbackSelfEvolution = buildAgentLabDomainFeedbackSelfEvolutionReadModel({
-    sourceRefs: ['app-state:operator-workbench'],
-  });
-  const rawFeedbackOps = buildFeedbackOpsReadModel({ developerMode });
-  const feedbackOps = profile === 'fast'
-    ? compactFastFeedbackOps(rawFeedbackOps)
-    : rawFeedbackOps;
+  const foundry = await buildFoundryOperatorProjection({ profile });
   const paths = {
     home_dir: statePaths.home_dir,
     state_dir: statePaths.state_dir,
@@ -1099,8 +1144,7 @@ export async function buildOplAppState(input: {
     brandSystemProfile: contracts.brandSystemProfile as unknown as JsonRecord,
     targetOperatingArchitecture: contracts.targetOperatingArchitecture as unknown as JsonRecord,
     currentOwnerDeltaReadModel,
-    agentLabFeedbackSelfEvolution,
-    feedbackOps,
+    foundry,
   });
   const operator = profile === 'fast'
     ? compactFastOperatorRuntimeProjection(rawOperator)
@@ -1163,8 +1207,7 @@ export async function buildOplAppState(input: {
       release,
       settings_control_center: settingsControlCenter,
       operator,
-      agent_lab_feedback_self_evolution: agentLabFeedbackSelfEvolution,
-      feedbackops: feedbackOps,
+      foundry,
       runtime_workbench: fullRuntimeWorkbenchSummary(fullRuntimeDrilldown),
       paths,
       actions,

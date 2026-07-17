@@ -71,7 +71,37 @@ export {
   readReviewEvidenceCacheReceipt,
   reviewEvidenceCacheKey,
 } from './family-runtime-review-evidence-cache.ts';
+export {
+  reconcileTemporalRuntimeStartupMaintenance,
+  type TemporalStartupMaintenanceRuntime,
+} from './family-runtime-temporal-startup-maintenance.ts';
 export { runStandardAgentAction } from './standard-agent-action-runtime.ts';
+export {
+  DefaultHostedAgentRuntimeBindingResolver,
+  hostedRuntimeExecutionBindingRef,
+  readHostedAgentRuntimeActionContracts,
+} from './hosted-agent-runtime-binding.ts';
+export type {
+  FoundryHostedAgentCandidatePreflight,
+  FoundryHostedAgentPackageUseBinding,
+  HostedAgentRuntimeBindingProvenance,
+  HostedAgentRuntimeBindingResolver,
+  HostedAgentRuntimeBindingSnapshot,
+} from './hosted-agent-runtime-binding.ts';
+export { HostedFoundryActivationRuntime } from './foundry-activation-runtime.ts';
+export {
+  cancelTemporalFoundryRun,
+  foundryTemporalWorkflowId,
+  queryTemporalFoundryRunWorkflow,
+  startTemporalFoundryRunWorkflow,
+  submitTemporalFoundryOwnerDecision,
+} from './foundry-temporal-control.ts';
+export type {
+  FoundryCancelUpdate,
+  FoundryOwnerDecisionUpdate,
+  FoundryRunWorkflowInput,
+  FoundryRunWorkflowState,
+} from './foundry-temporal.ts';
 export { recordStandardAgentActionRunEvent } from './standard-agent-action-run-recorder.ts';
 export type { StandardAgentActionRunEventInput } from './standard-agent-action-run-recorder.ts';
 export { readFamilyRuntimeLifecycleApplyReceipts, readFamilyRuntimeLifecycleRefs, reconcileFamilyRuntimeLifecycleRefs } from './family-runtime-lifecycle-index.ts';

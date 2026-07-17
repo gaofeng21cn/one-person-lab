@@ -194,7 +194,7 @@ blocker readiness.
 
 Primary OPL brand module: `OPL Charter`, because this closeout only governs
 docs lifecycle and cross-repo cleanup provenance. Coordinating modules:
-`OPL Runway` and `OPL Foundry Lab`, because the recorded landed work touches
+`OPL Runway` and `OPL Foundry Kernel`, because the recorded landed work touches
 runtime/history boundary wording and standard-agent cleanup surfaces. Not
 touched: source, tests, contracts, release artifacts, provider queues, domain
 truth, owner receipts, typed blockers, MAS backlog bodies, Aion shell bodies or

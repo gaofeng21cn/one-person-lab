@@ -11,7 +11,7 @@
     "contracts/opl-framework/private-platform-residue-owner-decisions.json",
     "contracts/opl-framework/wrapper-retirement-gate-policy.json",
     "contracts/opl-framework/target-operating-architecture-contract.json",
-    "contracts/opl-framework/standard-agent-landing-acceptance-contract.json",
+    "contracts/opl-framework/standard-agent-admission-gates.json",
     "opl agents default-callers --family-defaults --json",
     "opl agents conformance --family-defaults --json"
   ],
@@ -242,22 +242,23 @@
         "status_shell"
       ],
       "replacement_opl_primitive": [
-        "OPL Agent Lab",
-        "Runway StageRun",
-        "promotion gate read model",
-        "work-order execution refs"
+        "OPL Foundry Kernel",
+        "Pack AgentBlueprint materialization",
+        "Runway FoundryRun execution",
+        "Ledger version and activation transaction refs",
+        "Console operator projection"
       ],
       "authority_retained": [
-        "agent_building_semantics",
-        "candidate_package_refs",
-        "work_order_refs",
-        "proposal_materialization_refs",
-        "target_agent_typed_blocker_refs"
+        "agent_design_semantics",
+        "agent_blueprint_refs",
+        "eval_spec_refs",
+        "evidence_diagnosis_refs",
+        "evolution_proposal_refs"
       ],
       "active_caller_readback": {
-        "expected_state": "helpers_remain_explicit_or_owner_decision_gate_blocks_private_runner",
+        "expected_state": "legacy_agent_materializers_are_retired_or_owner_decision_gate_blocks_private_runner",
         "readback": "opl agents default-callers --family-defaults --json#reports[domain_id=opl-meta-agent]",
-        "domain_repo_surface": "OMA source-structure and script-to-pack readback"
+        "domain_repo_surface": "OMA provider contract and scripts/verify.sh readback"
       },
       "delete_or_tombstone_gate": {
         "gate_status": "owner_decision_or_tombstone_required_before_physical_delete",
@@ -274,8 +275,8 @@
       },
       "forbidden_claims": [
         "target_agent_ready",
-        "agent_lab_suite_pass_as_owner_acceptance",
-        "materializer_as_private_runner",
+        "foundry_qualification_as_owner_acceptance",
+        "legacy_agent_materializer_as_private_runner",
         "physical_delete_authorized_by_opl"
       ],
       "owner_decision_required": true,

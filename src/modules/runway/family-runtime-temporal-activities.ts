@@ -1,5 +1,13 @@
 import { Context, heartbeat } from '@temporalio/activity';
 
+export {
+  foundryAdvanceRunActivity,
+  foundryCancelRunActivity,
+  foundryFailRunActivity,
+  foundryStartRunActivity,
+  foundrySubmitOwnerDecisionActivity,
+} from './foundry-temporal-activities.ts';
+
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import {
   buildTemporalStageAttemptWorkflowInput,

@@ -318,7 +318,7 @@ gate 等 domain-owned evidence。
 - Fast Local Env 必须是显式 environment profile 和 run-context，不得作为 sandbox provider
   失败后的隐式 host fallback。Local Sandbox / Docker 或 Remote Sandbox / E2B 接入不得回落到
   host process / host workspace 伪装成功；本地 Docker/devcontainer image 缺失、remote provider
-  credential 缺失或 sandbox receipt 缺失时只能 fail closed 或输出 repair / preflight work order。
+  credential 缺失或 sandbox receipt 缺失时只能 fail closed 或输出 repair / preflight action。
 - Fast Local Env doctor 只检查 host binary、language packages 和 system hints；它不能声明
   runtime ready、domain ready、App ready、provider ready 或 production ready。
 

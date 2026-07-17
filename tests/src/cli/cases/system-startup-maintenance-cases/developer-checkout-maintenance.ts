@@ -1,7 +1,9 @@
 import { assert, fs, os, path, runCli, test } from '../../helpers.ts';
 import { runGitFixtureCommand } from '../../helpers-parts/family-fixtures.ts';
 import {
+  createCurrentCodexFixture,
   createStartupDomainModuleRemotes,
+  currentCodexEnvironment,
   removeStartupDomainModuleRemotes,
   withCliTimeout,
   writeStartupPackageChannelFixture,
@@ -19,6 +21,7 @@ test('system startup-maintenance syncs explicit developer checkouts and reports 
     version: '26.6.10-nightly',
     modules: [scholarSkillsPackageFixture('v1')],
   });
+  const codexFixture = createCurrentCodexFixture();
   const masDeveloperCheckout = path.join(homeRoot, 'developer-med-autoscience');
 
   try {
@@ -35,7 +38,7 @@ test('system startup-maintenance syncs explicit developer checkouts and reports 
       OPL_MODULE_REPO_URL_OPLBOOKFORGE: bookForgeRemote.remoteRoot,
       OPL_PACKAGE_CHANNEL_MANIFEST_REF: 'ghcr.io/owner/one-person-lab-manifest:26.6.10-nightly',
       OPL_GIT_RETRY_ATTEMPTS: '1',
-      PATH: `${scholarSkillsChannel.fakeBin}${path.delimiter}${process.env.PATH ?? ''}`,
+      ...currentCodexEnvironment(codexFixture, [scholarSkillsChannel.fakeBin]),
       ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
     })) as {
       system_action: {
@@ -69,7 +72,7 @@ test('system startup-maintenance syncs explicit developer checkouts and reports 
       OPL_MODULE_REPO_URL_OPLBOOKFORGE: bookForgeRemote.remoteRoot,
       OPL_PACKAGE_CHANNEL_MANIFEST_REF: 'ghcr.io/owner/one-person-lab-manifest:26.6.10-nightly',
       OPL_GIT_RETRY_ATTEMPTS: '1',
-      PATH: `${scholarSkillsChannel.fakeBin}${path.delimiter}${process.env.PATH ?? ''}`,
+      ...currentCodexEnvironment(codexFixture, [scholarSkillsChannel.fakeBin]),
       ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
     })) as {
       system_action: {
@@ -113,6 +116,7 @@ test('system startup-maintenance syncs explicit developer checkouts and reports 
       true,
     );
   } finally {
+    fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
     removeStartupDomainModuleRemotes(remotes);
   }

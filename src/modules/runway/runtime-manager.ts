@@ -197,7 +197,7 @@ type RuntimeManagerDependencies = {
 function standardDomainAgentScaffoldProjection(dependencies: RuntimeManagerDependencies) {
   return dependencies.buildStandardDomainAgentScaffold?.().standard_domain_agent_scaffold ?? {
     status: 'standard_domain_agent_scaffold_builder_not_injected',
-    owner_boundary: 'Foundry Lab owns scaffold generation; Runway projects it only when an entrypoint injects the public Foundry builder.',
+    owner_boundary: 'OPL Pack owns internal scaffold generation; Runway only projects an explicitly injected Pack builder.',
   };
 }
 

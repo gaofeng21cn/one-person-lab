@@ -6,6 +6,8 @@ import {
   runCli,
 } from '../helpers.ts';
 import test from 'node:test';
+import { buildStandardDomainAgentScaffoldConsumptionEvidence } from '../../../../src/modules/console/standard-domain-agent-template-consumption.ts';
+import { buildStandardDomainAgentTemplateConsumptionReadModel } from '../../../../src/modules/pack/standard-domain-agent-scaffold.ts';
 
 test('runtime standard agent template consumption CLI records and verifies refs-only replay evidence', () => {
   const stateRoot = fs.mkdtempSync(path.join(
@@ -13,13 +15,9 @@ test('runtime standard agent template consumption CLI records and verifies refs-
     'opl-standard-agent-template-consumption-state-',
   ));
   try {
-    const consumptionEvidence = runCli([
-      'agents',
-      'scaffold',
-      '--consumption-evidence',
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).standard_domain_agent_template_consumption_evidence;
+    const consumptionEvidence = buildStandardDomainAgentScaffoldConsumptionEvidence()
+      .standard_domain_agent_template_consumption_evidence;
+    const consumptionReadModel = buildStandardDomainAgentTemplateConsumptionReadModel();
 
     const payload = {
       evidence_ref: consumptionEvidence.evidence_ref,
@@ -32,8 +30,8 @@ test('runtime standard agent template consumption CLI records and verifies refs-
       sample_evidence_fingerprints: consumptionEvidence.consumption_cohort.samples.map(
         (sample: { evidence_fingerprint: string }) => sample.evidence_fingerprint,
       ),
-      consumed_surface_refs: consumptionEvidence.consumed_surface_refs,
-      replay_command_ref: 'opl agents scaffold --consumption-evidence',
+      consumed_surface_refs: consumptionReadModel.consumed_surface_refs,
+      replay_api_ref: 'opl.console.buildStandardDomainAgentScaffoldConsumptionEvidence',
       receipt_ref: 'opl://standard-agent-template-consumption-ledger/test-cohort',
     };
 
@@ -59,6 +57,7 @@ test('runtime standard agent template consumption CLI records and verifies refs-
     assert.equal(recorded.receipts[0].evidence_ref, consumptionEvidence.evidence_ref);
     assert.equal(recorded.receipts[0].cohort_evidence_ref, consumptionEvidence.cohort_evidence_ref);
     assert.equal(recorded.receipts[0].sample_evidence_refs.length, 3);
+    assert.equal(recorded.receipts[0].replay_api_ref, payload.replay_api_ref);
     assert.equal(recorded.receipts[0].authority_boundary.refs_only, true);
     assert.equal(recorded.receipts[0].authority_boundary.can_write_domain_truth, false);
     assert.equal(recorded.receipts[0].authority_boundary.can_create_owner_receipt, false);

@@ -62,8 +62,8 @@ export function assertBlockedDeveloperModeSurface(developerMode: any) {
   assert.equal(developerMode.capability_projection.github_identity_detection, 'unavailable');
   assert.equal(developerMode.capability_projection.repository_permission_detection, 'blocked');
   assert.equal(
-    developerMode.capability_projection.agent_lab_outer_inspection,
-    'agent_lab_developer_mode_repair_routes_ready',
+    developerMode.capability_projection.console_outer_inspection,
+    'console_developer_mode_repair_routes_ready',
   );
   assert.equal(developerMode.capability_projection.repo_repair_pull_request_route, 'blocked');
 }

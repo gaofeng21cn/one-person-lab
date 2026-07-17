@@ -5,7 +5,7 @@
   "state": "active_negative_conformance_samples",
   "purpose": "Repo-backed cross-agent negative conformance samples for OPL standard-agent landing acceptance. These samples prove false completion signals stay rejected across representative registry-backed and family-default target dimensions.",
   "machine_boundary": "This sample ledger is negative conformance evidence only. Registered target names are representative registry samples, not base framework invariants. It does not declare family completion, domain readiness, production readiness, long-soak completion, owner receipt acceptance, target typed blocker creation, or live deliverable progress.",
-  "source_contract_ref": "contracts/opl-framework/standard-agent-landing-acceptance-contract.json#cross_agent_negative_conformance",
+  "source_contract_ref": "contracts/opl-framework/standard-agent-admission-gates.json#false_authority_boundary",
   "can_claim_family_complete": false,
   "can_claim_standard_agent_complete": false,
   "samples": [
@@ -18,7 +18,7 @@
       "false_completion_signal": "provider_completed",
       "status": "blocked_false_completion",
       "rejected_completion_claim": "standard_agent_completion",
-      "required_next_shape": "typed_blocker",
+      "required_next_shape": "foundry_evidence_or_owner_decision",
       "can_claim_standard_agent_complete": false,
       "domain_specific_kernel_written_as_opl_generic_kernel_allowed": false
     },
@@ -31,7 +31,7 @@
       "false_completion_signal": "classification_zero",
       "status": "blocked_false_completion",
       "rejected_completion_claim": "physical_cleanup_complete",
-      "required_next_shape": "developer_work_order",
+      "required_next_shape": "owner_cleanup_decision",
       "can_claim_standard_agent_complete": false,
       "domain_specific_kernel_written_as_opl_generic_kernel_allowed": false
     },
@@ -44,7 +44,7 @@
       "false_completion_signal": "generated_interface_ready",
       "status": "blocked_false_completion",
       "rejected_completion_claim": "generated_surface_production_consumption",
-      "required_next_shape": "developer_work_order",
+      "required_next_shape": "production_consumption_evidence",
       "can_claim_standard_agent_complete": false,
       "domain_specific_kernel_written_as_opl_generic_kernel_allowed": false
     },
@@ -57,7 +57,7 @@
       "false_completion_signal": "verified_refs_only_ledger",
       "status": "blocked_false_completion",
       "rejected_completion_claim": "domain_ready_or_brand_l5",
-      "required_next_shape": "typed_blocker",
+      "required_next_shape": "owner_acceptance_evidence",
       "can_claim_standard_agent_complete": false,
       "domain_specific_kernel_written_as_opl_generic_kernel_allowed": false
     },
@@ -68,7 +68,7 @@
       "false_completion_signal": "domain_specific_kernel_copied_to_opl",
       "status": "blocked_false_completion",
       "rejected_completion_claim": "opl_generic_kernel_landed",
-      "required_next_shape": "developer_work_order",
+      "required_next_shape": "source_boundary_repair",
       "can_claim_standard_agent_complete": false,
       "domain_specific_kernel_written_as_opl_generic_kernel_allowed": false
     },
@@ -79,7 +79,7 @@
       "false_completion_signal": "stage_output_without_domain_completion_policy",
       "status": "blocked_false_completion",
       "rejected_completion_claim": "stage_complete_or_next_stage_admission",
-      "required_next_shape": "stage_completion_policy_or_typed_blocker",
+      "required_next_shape": "stage_completion_policy_or_owner_decision",
       "can_claim_standard_agent_complete": false,
       "domain_specific_kernel_written_as_opl_generic_kernel_allowed": false
     }

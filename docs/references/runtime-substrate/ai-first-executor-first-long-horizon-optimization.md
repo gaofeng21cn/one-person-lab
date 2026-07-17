@@ -79,7 +79,7 @@ OPL 的长期目标继续固定为 `AI-first / executor-first / Codex-first`：O
 | MAS | ownership 方向正确，但仍是最大 residual 风险源 | 继续写成 `physical thinning tail`：runtime transport、sidecar、SQLite/lifecycle 等只可作为 domain bridge、receipt/typed-blocker、refs-only adapter 或 diagnostic；验收必须是 no-active-caller、OPL parity、domain receipt parity、tests 和 tombstone refs |
 | MAG | 结构边界较干净 | 主要缺口归测试/证据差距：live OPL-hosted grant-stage receipt、App/production caller receipt、long soak、workspace receipt scaleout |
 | RCA | 旧 managed runtime 退役较彻底 | 防止 artifact-heavy helper、product sidecar、native helper、artifact lifecycle 被复制成通用 runtime scaffold；RCA 只提供 visual pack、authority function 和 refs-only adapter |
-| OMA | 语义深度已够，不再是空壳；MAS/MAG real-target scaleout refs、registry/App drilldown、owner receipt / typed blocker、Agent Lab result、no-forbidden-write 与 cleanup counters 都只从 fresh OMA / OPL read-model 读取。 | 继续增加真实 target patch/rerun/owner receipt 样本；防止 scripts 增长成 meta-runtime 或默认 promotion authority；任何 OMA counter、verified refs 或 OMA production-consumption ready 都不能授权目标 domain ready、family production ready 或默认 promotion。 |
+| OMA | 语义深度已够，不再是空壳；MAS/MAG real-target scaleout refs、registry/App drilldown、owner receipt / typed blocker、Foundry Kernel result、no-forbidden-write 与 cleanup counters 都只从 fresh OMA / OPL read-model 读取。 | 继续增加真实 target patch/rerun/owner receipt 样本；防止 scripts 增长成 meta-runtime 或默认 promotion authority；任何 OMA counter、verified refs 或 OMA production-consumption ready 都不能授权目标 domain ready、family production ready 或默认 promotion。 |
 
 ## 长期优化候选与 intake 判据
 

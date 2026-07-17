@@ -1,6 +1,6 @@
 import {
   buildStandardDomainAgentTemplateConsumptionReadModel,
-} from '../../foundry-lab/index.ts';
+} from '../../pack/index.ts';
 import {
   listStandardAgentTemplateConsumptionReceipts,
 } from '../../ledger/index.ts';

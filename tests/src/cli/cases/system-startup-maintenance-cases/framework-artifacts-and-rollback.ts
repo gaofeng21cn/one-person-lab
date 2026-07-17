@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 
-import { assert, createFakeCodexFixture, fs, os, path, runCli, test } from '../../helpers.ts';
-import { withCliTimeout } from './shared.ts';
+import { assert, fs, os, path, runCli, test } from '../../helpers.ts';
+import { createCurrentCodexFixture, currentCodexEnvironment, withCliTimeout } from './shared.ts';
 import { readOplFrameworkRuntimeUpdateStatus } from '../../../../../src/modules/connect/system-installation/framework-self-update.ts';
 
 function writeMinimalFrameworkRoot(root: string, marker: string) {
@@ -180,14 +180,7 @@ test('system startup-maintenance applies OPL Framework runtime archive to a mana
   const sourceParent = path.join(homeRoot, 'artifact-source');
   const sourceRoot = path.join(sourceParent, 'one-person-lab');
   const archivePath = path.join(homeRoot, 'one-person-lab-framework.tar.gz');
-  const codexFixture = createFakeCodexFixture(`
-if [[ "$1" == "--version" ]]; then
-  echo "codex-cli 0.134.0"
-  exit 0
-fi
-echo "Unsupported codex fixture command: $*" >&2
-exit 1
-`);
+  const codexFixture = createCurrentCodexFixture();
 
   try {
     writeMinimalFrameworkRoot(targetRoot, 'old-framework');
@@ -203,8 +196,7 @@ exit 1
       OPL_FRAMEWORK_UPDATE_ARCHIVE: archivePath,
       OPL_FRAMEWORK_UPDATE_ARCHIVE_SHA256: sha256(archivePath),
       OPL_FRAMEWORK_UPDATE_SKIP_DEPENDENCY_INSTALL: '1',
-      OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
-      PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
+      ...currentCodexEnvironment(codexFixture),
     })) as {
       system_action: {
         status: string;
@@ -259,14 +251,7 @@ test('system startup-maintenance applies OPL Framework runtime artifact from pac
   const sourceParent = path.join(homeRoot, 'artifact-source');
   const sourceRoot = path.join(sourceParent, 'one-person-lab');
   const archivePath = path.join(homeRoot, 'one-person-lab-framework.tar.gz');
-  const codexFixture = createFakeCodexFixture(`
-if [[ "$1" == "--version" ]]; then
-  echo "codex-cli 0.134.0"
-  exit 0
-fi
-echo "Unsupported codex fixture command: $*" >&2
-exit 1
-`);
+  const codexFixture = createCurrentCodexFixture();
 
   try {
     writeMinimalFrameworkRoot(targetRoot, 'old-framework');
@@ -288,8 +273,7 @@ exit 1
       OPL_FRAMEWORK_UPDATE_SKIP_DEPENDENCY_INSTALL: '1',
       OPL_PACKAGE_CHANNEL_MANIFEST_REF: 'ghcr.io/owner/one-person-lab-manifest:26.7.9',
       OPL_CURL_BIN: path.join(channel.fakeBin, 'curl'),
-      OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
-      PATH: `${channel.fakeBin}${path.delimiter}${codexFixture.fixtureRoot}${path.delimiter}/usr/bin:/bin`,
+      ...currentCodexEnvironment(codexFixture, [channel.fakeBin]),
     })) as {
       system_action: {
         status: string;
@@ -335,14 +319,7 @@ test('system startup-maintenance applies package channel framework artifact into
   const sourceParent = path.join(homeRoot, 'artifact-source');
   const sourceRoot = path.join(sourceParent, 'one-person-lab');
   const archivePath = path.join(homeRoot, 'one-person-lab-framework.tar.gz');
-  const codexFixture = createFakeCodexFixture(`
-if [[ "$1" == "--version" ]]; then
-  echo "codex-cli 0.134.0"
-  exit 0
-fi
-echo "Unsupported codex fixture command: $*" >&2
-exit 1
-`);
+  const codexFixture = createCurrentCodexFixture();
 
   try {
     writeRuntimeOnlyFrameworkRoot(sourceRoot, 'new-docker-data-framework');
@@ -361,8 +338,7 @@ exit 1
       OPL_FRAMEWORK_UPDATE_SKIP_DEPENDENCY_INSTALL: '1',
       OPL_PACKAGE_CHANNEL_MANIFEST_REF: 'ghcr.io/owner/one-person-lab-manifest:26.7.10',
       OPL_CURL_BIN: path.join(channel.fakeBin, 'curl'),
-      OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
-      PATH: `${channel.fakeBin}${path.delimiter}${codexFixture.fixtureRoot}${path.delimiter}/usr/bin:/bin`,
+      ...currentCodexEnvironment(codexFixture, [channel.fakeBin]),
     })) as {
       system_action: {
         status: string;
@@ -409,14 +385,7 @@ test('OPL Base rollback restores the previous OPL Framework runtime root', () =>
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-substrate-framework-rollback-')); // reuse-first: allow owner-routed runtime materializer fixture.
   const targetRoot = path.join(homeRoot, 'data', 'opl', 'framework-current');
   const previousRoot = `${targetRoot}.previous`;
-  const codexFixture = createFakeCodexFixture(`
-if [[ "$1" == "--version" ]]; then
-  echo "codex-cli 0.134.0"
-  exit 0
-fi
-echo "Unsupported codex fixture command: $*" >&2
-exit 1
-`);
+  const codexFixture = createCurrentCodexFixture();
 
   try {
     writeMinimalFrameworkRoot(targetRoot, 'new-framework');
@@ -428,8 +397,7 @@ exit 1
       OPL_DATA_DIR: path.join(homeRoot, 'data'),
       OPL_STATE_DIR: path.join(homeRoot, 'data', 'opl', 'state'),
       OPL_FRAMEWORK_UPDATE_TARGET_ROOT: targetRoot,
-      OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
-      PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
+      ...currentCodexEnvironment(codexFixture),
     })) as {
       managed_update: {
         execution: {

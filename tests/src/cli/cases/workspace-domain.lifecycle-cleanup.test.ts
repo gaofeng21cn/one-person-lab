@@ -1,7 +1,7 @@
 import {
   buildFamilyAgentsList,
   runFamilyAgentLegacyCleanupApply,
-} from '../../../../src/modules/foundry-lab/family-domain-agent-skeleton.ts';
+} from '../../../../src/modules/workspace/family-domain-agent-skeleton.ts';
 import type { DomainManifestCatalogEntry } from '../../../../src/modules/atlas/domain-manifest/types.ts';
 import type { FrameworkContracts } from '../../../../src/kernel/types.ts';
 import {

@@ -7,11 +7,13 @@ export const expectedModuleIds = [
   'runway',
   'ledger',
   'console',
-  'foundry-lab',
+  'foundry',
   'connect',
 ];
 
-export const moduleSurfaceIds = expectedModuleIds.filter((moduleId) => moduleId !== 'workspace');
+export const moduleSurfaceIds = expectedModuleIds.filter(
+  (moduleId) => moduleId !== 'workspace' && moduleId !== 'foundry',
+);
 
 export type L5Route = {
   module_id: string;

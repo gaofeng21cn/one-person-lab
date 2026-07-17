@@ -2,7 +2,7 @@ import { assert, runCli, test } from '../../helpers.ts';
 
 import { moduleSurfaceIds } from './shared.ts';
 
-test('each non-workspace brand module exposes its own executable status validate doctor and interfaces family', () => {
+test('each standard non-workspace brand module exposes the generic executable module family', () => {
   const operations = ['status', 'inspect', 'interfaces', 'validate', 'doctor'] as const;
 
   for (const moduleId of moduleSurfaceIds) {

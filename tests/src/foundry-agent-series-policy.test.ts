@@ -8,7 +8,7 @@ import {
   FOUNDRY_AGENT_SERIES_CONTRACT_REF,
   STANDARD_DOMAIN_AGENT_SKELETON_CONTRACT_REF,
   canonicalFoundryAgentSeriesPolicy,
-} from '../../src/modules/foundry-lab/public/foundry-agent-series-policy.ts';
+} from '../../src/modules/pack/public/foundry-agent-series-policy.ts';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const readJson = (ref: string) => JSON.parse(fs.readFileSync(path.join(repoRoot, ref), 'utf8'));

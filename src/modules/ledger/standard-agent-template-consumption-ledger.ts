@@ -22,7 +22,7 @@ export type StandardAgentTemplateConsumptionReceipt = {
   sample_evidence_refs: string[];
   sample_evidence_fingerprints: string[];
   consumed_surface_refs: string[];
-  replay_command_ref: string;
+  replay_api_ref: string;
   source_surface: 'opl_standard_agent_template_consumption_evidence';
   evidence_ref_policy:
     'deterministic_body_free_shape_refs_for_replayable_template_consumption_evidence_not_recorded_ledger_receipts';
@@ -49,7 +49,7 @@ export type StandardAgentTemplateConsumptionReceiptInput = {
   sample_evidence_refs?: string[];
   sample_evidence_fingerprints?: string[];
   consumed_surface_refs?: string[];
-  replay_command_ref?: string | null;
+  replay_api_ref?: string | null;
   receipt_ref?: string | null;
 };
 
@@ -215,8 +215,8 @@ function normalizeReceipt(value: unknown): StandardAgentTemplateConsumptionRecei
     sample_evidence_refs: uniqueStrings(stringListValue(source.sample_evidence_refs)),
     sample_evidence_fingerprints: uniqueStrings(stringListValue(source.sample_evidence_fingerprints)),
     consumed_surface_refs: uniqueStrings(stringListValue(source.consumed_surface_refs)),
-    replay_command_ref: optionalString(source.replay_command_ref)
-      ?? 'opl agents scaffold --consumption-evidence',
+    replay_api_ref: optionalString(source.replay_api_ref)
+      ?? 'opl.console.buildStandardDomainAgentScaffoldConsumptionEvidence',
     source_surface: 'opl_standard_agent_template_consumption_evidence',
     evidence_ref_policy:
       'deterministic_body_free_shape_refs_for_replayable_template_consumption_evidence_not_recorded_ledger_receipts',
@@ -251,8 +251,8 @@ function normalizeInput(
     sample_evidence_refs: uniqueStrings(input.sample_evidence_refs ?? []),
     sample_evidence_fingerprints: uniqueStrings(input.sample_evidence_fingerprints ?? []),
     consumed_surface_refs: uniqueStrings(input.consumed_surface_refs ?? []),
-    replay_command_ref: optionalString(input.replay_command_ref)
-      ?? 'opl agents scaffold --consumption-evidence',
+    replay_api_ref: optionalString(input.replay_api_ref)
+      ?? 'opl.console.buildStandardDomainAgentScaffoldConsumptionEvidence',
     source_surface: 'opl_standard_agent_template_consumption_evidence',
     evidence_ref_policy:
       'deterministic_body_free_shape_refs_for_replayable_template_consumption_evidence_not_recorded_ledger_receipts',

@@ -1,5 +1,7 @@
 import { assert, fs, os, path, runCli, test } from '../../helpers.ts';
 import {
+  createCurrentCodexFixture,
+  currentCodexEnvironment,
   readPackageChannelMarker,
   withCliTimeout,
   writeStartupPackageChannelFixture,
@@ -73,6 +75,7 @@ test('system startup-maintenance silently updates package-channel modules and sy
     version: '26.6.11-nightly',
     modules: moduleFixtures('v2'),
   });
+  const codexFixture = createCurrentCodexFixture();
 
   try {
     for (const moduleId of ['medautoscience', 'medautogrant', 'redcube', 'oplmetaagent', 'oplbookforge']) {
@@ -83,7 +86,7 @@ test('system startup-maintenance silently updates package-channel modules and sy
         OPL_PACKAGES_OWNER: 'owner',
         OPL_PACKAGE_CHANNEL_MANIFEST_REF: 'ghcr.io/owner/one-person-lab-manifest:26.6.10-nightly',
         OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
-        PATH: `${firstChannel.fakeBin}${path.delimiter}${process.env.PATH ?? ''}`,
+        ...currentCodexEnvironment(codexFixture, [firstChannel.fakeBin]),
       });
     }
 
@@ -94,7 +97,7 @@ test('system startup-maintenance silently updates package-channel modules and sy
       OPL_PACKAGES_OWNER: 'owner',
       OPL_RELEASE_VERSION: '26.6.3',
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
-      PATH: `${secondChannel.fakeBin}${path.delimiter}${process.env.PATH ?? ''}`,
+      ...currentCodexEnvironment(codexFixture, [secondChannel.fakeBin]),
     })) as {
       system_action: {
         status: string;
@@ -201,6 +204,7 @@ test('system startup-maintenance silently updates package-channel modules and sy
     assert.match(curlLog, /one-person-lab-manifest\/manifests\/latest/);
     assert.doesNotMatch(curlLog, /one-person-lab-manifest\/manifests\/26\.6\.3/);
   } finally {
+    fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
 });

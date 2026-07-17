@@ -198,8 +198,9 @@ function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
   const workAlias = 'work';
   const ordinaryOperations = readStringListField(commandSurface, 'ordinary_operations');
   const ordinarySpine = readStringListField(commandSurface, 'ordinary_public_command_surface_spine');
-  const defaultFoundryCommandSurface = `opl foundry agents inspect ${foundryAgentId}`;
-  const seriesFoundryOperations = ordinaryOperations.map((operation) => `opl agents foundry ${operation}`);
+  const defaultFoundryCommandSurface =
+    `opl agents run --domain ${foundryAgentId} --action <action_id>`;
+  const seriesFoundryOperations = [defaultFoundryCommandSurface];
 
   return {
     foundry_agent_series: {
@@ -228,7 +229,7 @@ function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
       required_public_surface_derivatives: readStringListField(commandSurface, 'required_public_surface_derivatives'),
       skill_sync_command_surface: readStringField(skillMcp, 'canonical_skill_sync_command_surface'),
       skill_inspect_command_surface: readStringField(skillMcp, 'canonical_skill_connect_command_surface'),
-      foundry_agent_inspect_command_surface: `opl foundry agents inspect ${foundryAgentId}`,
+      foundry_agent_inspect_command_surface: defaultFoundryCommandSurface,
       agent_cli_must_use_series_spine: readBooleanField(commandSurface, 'agent_cli_must_use_series_spine'),
       agent_cli_must_not_replicate_top_level_modules: readBooleanField(
         commandSurface,
@@ -242,11 +243,7 @@ function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
         skillMcp,
         'mcp_descriptor_must_delegate_to_series_spine',
       ),
-      series_delegate_tool_refs: [
-        'opl agents foundry interfaces',
-        'opl agents foundry status',
-        `opl foundry agents inspect ${foundryAgentId}`,
-      ],
+      series_delegate_tool_refs: [defaultFoundryCommandSurface],
       standard_agent_standalone_mcp_default_enabled: readBooleanField(
         skillMcp,
         'standard_agent_standalone_mcp_default_enabled',

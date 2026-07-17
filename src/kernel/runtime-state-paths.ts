@@ -38,8 +38,6 @@ export type OplStatePaths = {
   owner_evidence_sustained_consumption_ledger_file: string;
   stage_replay_missing_receipt_ledger_file: string;
   current_owner_delta_read_model_cache_file: string;
-  agent_lab_risk_tier_auto_promotion_ledger_file: string;
-  agent_lab_feedbackops_event_ledger_file: string;
   developer_mode_closeout_ledger_file: string;
   domain_manifest_projection_cache_file: string;
   install_manifest_file: string;
@@ -133,14 +131,6 @@ export function resolveOplStatePaths(input: { dataDir?: string | null } = {}): O
     current_owner_delta_read_model_cache_file: path.join(
       stateDir,
       'current-owner-delta-read-model-cache.json',
-    ),
-    agent_lab_risk_tier_auto_promotion_ledger_file: path.join(
-      stateDir,
-      'agent-lab-risk-tier-auto-promotion-ledger.json',
-    ),
-    agent_lab_feedbackops_event_ledger_file: path.join(
-      stateDir,
-      'agent-lab-feedbackops-events.json',
     ),
     developer_mode_closeout_ledger_file: path.join(stateDir, 'developer-mode-closeout-ledger.json'),
     domain_manifest_projection_cache_file: path.join(stateDir, 'domain-manifest-projection-cache.json'),

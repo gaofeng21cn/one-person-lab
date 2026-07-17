@@ -1,7 +1,9 @@
 import { assert, fs, os, path, runCli, test } from '../../helpers.ts';
 import { runGitFixtureCommand } from '../../helpers-parts/family-fixtures.ts';
 import {
+  createCurrentCodexFixture,
   createStartupDomainModuleRemotes,
+  currentCodexEnvironment,
   removeStartupDomainModuleRemotes,
   withCliTimeout,
   writeStartupPackageChannelFixture,
@@ -27,6 +29,7 @@ test('system startup-maintenance installs OMA managed root when only a sibling c
     version: '26.6.10-nightly',
     modules: [scholarSkillsPackageFixture('v1')],
   });
+  const codexFixture = createCurrentCodexFixture();
 
   try {
     fs.mkdirSync(onePersonLabRoot, { recursive: true });
@@ -46,7 +49,7 @@ test('system startup-maintenance installs OMA managed root when only a sibling c
       OPL_STATE_DIR: stateRoot,
       OPL_DEVELOPER_MODE_GH_FIXTURE: JSON.stringify({ login: 'ordinary-user' }),
       OPL_GIT_RETRY_ATTEMPTS: '1',
-      PATH: `${scholarSkillsChannel.fakeBin}${path.delimiter}${process.env.PATH ?? ''}`,
+      ...currentCodexEnvironment(codexFixture, [scholarSkillsChannel.fakeBin]),
       ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
     })) as {
       system_action: {
@@ -93,6 +96,7 @@ test('system startup-maintenance installs OMA managed root when only a sibling c
       true,
     );
   } finally {
+    fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
     removeStartupDomainModuleRemotes(remotes);
   }

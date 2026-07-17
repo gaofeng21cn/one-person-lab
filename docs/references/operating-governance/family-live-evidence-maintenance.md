@@ -27,7 +27,7 @@ Machine boundary: 本文是人读 live / production / release / owner-evidence l
 | MAS paper progress / owner-chain / reviewer / publication gate | `med-autoscience` study/runtime/controller surfaces、owner receipts、typed blockers、human gates、artifacts | MAS evidence lane；OPL transport/readback 不声明 paper progress。 |
 | MAG grant readiness / submission-ready / fundability / export | `med-autogrant` owner receipts、human-gate receipts、quality/export/package evidence | MAG evidence lane；provider completion 或 package existence 不是 grant-ready。 |
 | RCA visual ready / exportable / handoffable / no-regression | `redcube-ai` visual artifacts、review/export gates、owner receipts、typed blockers、workspace evidence | RCA evidence lane；mock proof或单次样片不是 production soak。 |
-| OMA target-agent ready / promotion / live registry-App consumption | `opl-meta-agent` target owner receipts、developer work-order receipts、OPL/App registry evidence | OMA evidence lane；candidate package 或 suite pass 不是 target ready。 |
+| OMA target-agent qualification / activation / live registry-App consumption | FoundryRun、EvidenceBundle、AgentVersion、Owner decision、canary/activation receipts 与 OPL/App registry evidence | OPL Foundry lane；materialized candidate 或 isolated suite pass 不是 target ready。 |
 | BookForge long-book / publication proof / final export acceptance | `opl-bookforge` manuscript/package refs、proof/export receipts、owner acceptance、workspace lifecycle receipts | BookForge evidence lane；scaffold、pilot export、render helper 或 OMA evidence 不是 publication-ready。 |
 
 ## 禁止混写

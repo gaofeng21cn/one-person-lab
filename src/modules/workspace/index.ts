@@ -34,6 +34,7 @@ export { WORKSPACE_TOPOLOGY_PROFILE_CONTRACT } from './workspace-topology.ts';
 export {
   commitStandardAgentActionOutput,
   inspectStandardAgentActionRunOutput,
+  inspectStoredStandardAgentActionRunOutput,
   prepareStandardAgentActionRunRequest,
   STANDARD_AGENT_ACTION_RUNS_RELATIVE_ROOT,
 } from './standard-agent-action-output.ts';
@@ -42,3 +43,14 @@ export type {
   StandardAgentActionRunOutput,
   StandardAgentActionRunStoredBytes,
 } from './standard-agent-action-output.ts';
+export * from './agent-default-caller-delete-read-model.ts';
+export * from './agent-platform-surface-ownership.ts';
+export * from './default-caller-retirement-guard.ts';
+export * from './default-caller-surface-gates.ts';
+export * from './domain-private-platform-tail-matrix.ts';
+export * from './family-agent-conformance-probe.ts';
+export * from './family-domain-agent-skeleton.ts';
+export * from './standard-agent-check.ts';
+export * from './standard-agent-source-closure.ts';
+export * from './standard-domain-agent-conformance.ts';
+export * from './standard-domain-agent-source-behavior.ts';

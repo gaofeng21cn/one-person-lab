@@ -46,6 +46,7 @@ export function temporalWorkerStatus(
     readiness_status: status,
     worker_ready: status === 'ready',
     server_reachable: serverReachable,
+    service_ready: serverReachable,
     address: '127.0.0.1:7233',
     address_source: 'managed_local_service_state',
     namespace: 'default',

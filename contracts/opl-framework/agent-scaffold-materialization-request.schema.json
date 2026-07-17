@@ -14,7 +14,7 @@
     "version": { "const": "opl-agent-scaffold-materialization-request.v2" },
     "canonical_schema_ref": { "const": "contracts/opl-framework/agent-scaffold-materialization-request.schema.json" },
     "producer_agent_id": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$" },
-    "execution_owner": { "const": "one-person-lab/OPL Foundry Lab" },
+    "execution_owner": { "const": "one-person-lab/OPL Foundry Kernel" },
     "target_identity": {
       "type": "object",
       "required": ["domain_id", "domain_label", "target_agent_ref"],

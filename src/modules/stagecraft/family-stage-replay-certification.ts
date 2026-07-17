@@ -173,7 +173,7 @@ const REPLAY_EVIDENCE_BUCKET_BY_ROLE: Record<string, FamilyStageReplayEvidenceBu
   opl_stage_attempt_ledger_ref: 'attempt_ledger_refs',
   codex_attempt_trace_ref: 'attempt_ledger_refs',
   codex_attempt_trace_refs: 'attempt_ledger_refs',
-  agent_lab_codex_attempt_trace_ref: 'attempt_ledger_refs',
+  foundry_evaluation_attempt_trace_ref: 'attempt_ledger_refs',
   stage_manifest_ref: 'stage_manifest_refs',
   stage_manifest_refs: 'stage_manifest_refs',
   current_pointer_ref: 'current_pointer_refs',

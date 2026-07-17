@@ -1,6 +1,6 @@
 import { assert, fs, parseJsonText, path, runCli, test } from '../helpers.ts';
 import { buildReadyAgentRepo, writeJson } from './agents-conformance-fixtures.ts';
-import { buildFunctionalPrivatizationAudit } from '../../../../src/modules/foundry-lab/functional-privatization-audit.ts';
+import { buildFunctionalPrivatizationAudit } from '../../../../src/modules/pack/functional-privatization-audit.ts';
 
 test('generated interfaces expose a family-defaults source for readiness drilldown', () => {
   const report = runCli([

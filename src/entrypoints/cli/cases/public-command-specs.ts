@@ -4,9 +4,11 @@ import { buildOplFrameworkLocator } from '../../../modules/connect/opl-framework
 import {
   buildFrameworkOperatingMaturityCompactReadback,
   buildFrameworkOperatingMaturityReadout,
-} from '../../../modules/foundry-lab/framework-operating-maturity.ts';
-import { buildFrameworkReadinessCompactReadback } from '../../../modules/foundry-lab/framework-readiness-compact-readback.ts';
-import { buildFrameworkReadinessSummary } from '../../../modules/foundry-lab/framework-readiness.ts';
+  buildFrameworkReadinessCompactReadback,
+  buildFrameworkReadinessSummary,
+  buildPrivatePlatformResidueOwnerDecisionLedgerCommand,
+  buildAgentReadinessSummary,
+} from '../../../modules/console/index.ts';
 import { buildSourceStructureOperatorReadback } from '../../../modules/charter/source-structure-operator-readback.ts';
 import { buildRuntimeTraySnapshot } from '../../../modules/console/runtime-tray-snapshot.ts';
 import { runOplEngineAction } from '../../../modules/connect/system-installation/engine-actions.ts';
@@ -34,21 +36,14 @@ import {
 import {
   buildAgentDefaultCallerReadinessReport,
   buildAgentPlatformSurfaceOwnershipReport,
-} from '../../../modules/foundry-lab/agent-platform-surface-ownership.ts';
-import {
-  buildPrivatePlatformResidueOwnerDecisionLedgerCommand,
-} from '../../../modules/foundry-lab/private-platform-residue-owner-decisions.ts';
-import { buildAgentReadinessSummary } from '../../../modules/foundry-lab/agent-readiness.ts';
-import { buildStandardDomainAgentConformanceReport } from '../../../modules/foundry-lab/standard-domain-agent-conformance.ts';
-import { buildStandardAgentSourceClosureReport } from '../../../modules/foundry-lab/standard-agent-source-closure.ts';
-import { buildStandardAgentCheck } from '../../../modules/foundry-lab/standard-agent-check.ts';
-import { agentsEvidenceApplySpec } from './agent-evidence-command-spec.ts';
-import {
+  buildStandardDomainAgentConformanceReport,
+  buildStandardAgentSourceClosureReport,
+  buildStandardAgentCheck,
   buildFamilyAgentInspect,
   buildFamilyAgentsList,
-  runFamilyAgentLegacyCleanupApply,
   withStandardDomainAgentSkeletonInspection,
-} from '../../../modules/foundry-lab/family-domain-agent-skeleton.ts';
+} from '../../../modules/workspace/index.ts';
+import { agentsEvidenceApplySpec } from './agent-evidence-command-spec.ts';
 import {
   buildFamilyDomainMemoryInspect,
   buildFamilyDomainMemoryList,
@@ -63,9 +58,6 @@ import { readFamilyDomainMemoryRuntimeReceiptEvidenceByDomain } from '../../../m
 import { runProductEntryResume } from '../../../modules/console/product-entry-runtime.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
 import { buildPublicSystemCommandSpecs } from './system-public-command-specs.ts';
-import { buildPublicAgentLabCommandSpecs } from './agent-lab-public-command-specs.ts';
-import { buildPublicWorkOrderCommandSpecs } from './work-order-public-command-specs.ts';
-import { buildPublicFeedbackOpsCommandSpecs } from './feedbackops-public-command-specs.ts';
 import { buildPublicRuntimeCommandSpecs } from './runtime-public-command-specs.ts';
 import {
   buildPublicEngineActionPayload,
@@ -168,9 +160,6 @@ export function buildPublicCommandSpecs(
     ),
   );
   const systemCommandSpecs = buildPublicSystemCommandSpecs(getContracts);
-  const agentLabCommandSpecs = buildPublicAgentLabCommandSpecs();
-  const workOrderCommandSpecs = buildPublicWorkOrderCommandSpecs();
-  const feedbackOpsCommandSpecs = buildPublicFeedbackOpsCommandSpecs();
   const runtimeCommandSpecs = buildPublicRuntimeCommandSpecs(commandSpecs);
   const brandCommandSpecs = buildBrandCommandSpecs(getContracts);
   const connectCommandSpecs = buildConnectCommandSpecs(commandSpecs, systemCommandSpecs);
@@ -265,8 +254,6 @@ export function buildPublicCommandSpecs(
     ...connectCommandSpecs,
     ...packagesCommandSpecs,
     ...updateCommandSpecs,
-    ...workOrderCommandSpecs,
-    ...feedbackOpsCommandSpecs,
     ...okfCommandSpecs,
     'framework locate': {
       usage: 'opl framework locate',
@@ -365,7 +352,6 @@ export function buildPublicCommandSpecs(
         return buildSourceStructureOperatorReadback({ strict: args.includes('--strict') });
       },
     },
-    ...agentLabCommandSpecs,
     doctor: cloneCommandSpec(commandSpecs.doctor, { group: 'top_level' }),
     start: cloneCommandSpec(commandSpecs.start, { group: 'top_level' }),
     'quality details': {
@@ -562,34 +548,12 @@ export function buildPublicCommandSpecs(
       group: 'domain',
       handler: (args) => buildFamilyAgentInspect(getContracts(), args),
     },
-    'agents legacy-cleanup apply': {
-      usage: 'opl agents legacy-cleanup apply --domain <domain> [--mode dry-run|apply|verify] [--source-ref <ref>] [--receipt-ref <ref>]',
-      summary:
-        'Apply the OPL-owned legacy cleanup ledger plan for one domain-agent skeleton without deleting domain repo files.',
-      examples: [
-        'opl agents legacy-cleanup apply --domain mag --mode dry-run',
-        'opl agents legacy-cleanup apply --domain mas --mode apply',
-        'opl agents legacy-cleanup apply --domain rca --mode verify',
-      ],
-      group: 'domain',
-      handler: (args) => runFamilyAgentLegacyCleanupApply(getContracts(), args),
-    },
     'agents evidence apply': agentsEvidenceApplySpec,
     'agents run': cloneCommandSpec(commandSpecs['agents run'], {
       usage: 'opl agents run --domain <agent> --action <action_id> --workspace <absolute_path> [--payload <json> | --payload-file <path>] [--run-id <id>] [--timeout-ms <ms>]',
       examples: [
         'opl agents run --domain obf --action shape-storyline --workspace /path/to/book --payload \'{"workspace_root":"/path/to/book"}\'',
         'opl agents run --domain mas --action study-progress --workspace /path/to/workspace --payload-file request.json --json',
-      ],
-      group: 'domain',
-    }),
-    'agents scaffold': cloneCommandSpec(commandSpecs['agents scaffold'], {
-      usage: 'opl agents scaffold [--target-dir <path>] [--domain-id <id>] [--domain-label <label>] [--force] | [--validate <repo-dir>] | [--consumption-evidence]',
-      examples: [
-        'opl agents scaffold',
-        'opl agents scaffold --target-dir /tmp/new-agent --domain-id award-foundry',
-        'opl agents scaffold --validate /tmp/new-agent',
-        'opl agents scaffold --consumption-evidence',
       ],
       group: 'domain',
     }),

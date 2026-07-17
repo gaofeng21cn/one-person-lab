@@ -683,7 +683,7 @@ export async function buildOplInitialize(
       notes: [
         'Initialize OPL reuses the same truth surfaces as long-lived settings management.',
         'Workspace root and update channel are stored in OPL-managed state files.',
-        'Developer Mode settings are exposed through the same developer_supervisor system action used by CLI/system settings; GitHub identity, repository authority, and Agent Lab repair routing are projected on the developer_mode surface.',
+        'Developer Mode settings are exposed through the same developer_supervisor system action used by CLI/system settings; GitHub identity, repository authority, and supervised repair routing are projected on the developer_mode surface.',
         'A configured family runtime provider is required for Full OPL readiness. Local CLI/status surfaces can still report degraded diagnostics when the online provider is missing or disabled.',
         'The OPL desktop GUI is an OPL-branded App maintained in one-person-lab-app, with the active AionUI adapter under shells/aionui; the upstream AionUI app is not itself the OPL GUI.',
       ],

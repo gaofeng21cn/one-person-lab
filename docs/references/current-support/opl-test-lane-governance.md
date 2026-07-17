@@ -34,7 +34,7 @@ Currentness policy：查看当前 lane 集合时先读 `package.json` 的 `test:
 | typecheck | `./scripts/verify.sh typecheck` | `npm run typecheck`。 |
 | full | `npm run test:full` | clean-clone / release-style 基线入口；先把 artifact、fast、fresh-install、read-model-gates、meta、regression、integration 与结构/类型/native gate 编译成唯一执行计划，再执行。 |
 
-`npm test` 等同 `npm run test:smoke`，用于普通开发的最低成本入口。`npm run test:fast` 是显式标准本地入口；当改动触及 shared runtime、contract registry、stage pack、Agent Lab 或 quality details 时再运行。`test:meta` 是独立治理 / quality / contract meta lane，不再等价 `test:fast`；共享 SQLite/state 的 framework readiness、App drilldown 和 evidence worklist 相关 read-model gates 通过 `test:read-model-gates` 串行执行，避免并行抢占同一状态面。
+`npm test` 等同 `npm run test:smoke`，用于普通开发的最低成本入口。`npm run test:fast` 是显式标准本地入口；当改动触及 shared runtime、contract registry、stage pack、Foundry Kernel 或 quality details 时再运行。`test:meta` 是独立治理 / quality / contract meta lane，不再等价 `test:fast`；共享 SQLite/state 的 framework readiness、App drilldown 和 evidence worklist 相关 read-model gates 通过 `test:read-model-gates` 串行执行，避免并行抢占同一状态面。
 
 ## 开发时如何选测试
 
@@ -45,7 +45,7 @@ node --experimental-strip-types --test <test-file...>
 npm test
 ```
 
-只有改动触及共享 runtime、contract/schema registry、stage pack、跨模块 read model 或 Agent Lab 时，才补 `npm run test:fast` 或对应的 `read-model-gates` / `meta` / `regression` lane。开发循环不要求每次跑 `full`；CI 按独立 job 运行 standalone lane，发布、clean-clone 基线或跨 lane 治理变更再跑 `npm run test:full`。
+只有改动触及共享 runtime、contract/schema registry、stage pack、跨模块 read model 或 Foundry Kernel 时，才补 `npm run test:fast` 或对应的 `read-model-gates` / `meta` / `regression` lane。开发循环不要求每次跑 `full`；CI 按独立 job 运行 standalone lane，发布、clean-clone 基线或跨 lane 治理变更再跑 `npm run test:full`。
 
 `npm run test:full:plan` 输出 full 的 fresh machine-readable 执行计划。组合器会展开只包含 import 的纯测试聚合器，按原 lane 的 env 与 batch isolation 为重复入口选择唯一 owner，并对最终 test import closure 执行零重复硬门。独立 lane 的 standalone 行为保持不变；去重只发生在 full 组合执行中，因此不会改变 focused、CI 分 job 或手工单 lane 的语义。
 
@@ -81,4 +81,4 @@ node scripts/test-lanes.mjs assert-coverage
 rg "test\\.skip|describe\\.skip" tests/src tests/built
 ```
 
-根据变更面选择最小充分验证：先跑 CodeGraph/字面检索命中的 focused tests，再跑 `npm test` / `npm run test:smoke`；触及 shared runtime、contract registry、stage pack、Agent Lab 或 quality details 时再补 `npm run test:fast`；runtime/install 改动跑 `npm run test:integration`；发布前先用 `npm run test:full:plan` readback 唯一执行计划，再跑 `npm run test:full` 或 `./scripts/verify.sh full`。
+根据变更面选择最小充分验证：先跑 CodeGraph/字面检索命中的 focused tests，再跑 `npm test` / `npm run test:smoke`；触及 shared runtime、contract registry、stage pack、Foundry Kernel 或 quality details 时再补 `npm run test:fast`；runtime/install 改动跑 `npm run test:integration`；发布前先用 `npm run test:full:plan` readback 唯一执行计划，再跑 `npm run test:full` 或 `./scripts/verify.sh full`。

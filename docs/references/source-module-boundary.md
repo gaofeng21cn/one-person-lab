@@ -18,7 +18,7 @@ src/modules/stagecraft
 src/modules/runway
 src/modules/ledger
 src/modules/console
-src/modules/foundry-lab
+src/modules/foundry
 src/modules/connect
 ```
 
@@ -68,23 +68,23 @@ src/modules/connect
 | 模块 | 源码 owner 重点 | 主要协作关系 |
 | --- | --- | --- |
 | `charter` | 命名、合同、术语、authority matrix 和品牌治理。 | 为所有模块固定语言和 forbidden claim 边界。 |
-| `atlas` | Agent / capability / surface / owner / lifecycle catalog。 | 给 Pack、Console、Connect 和 Foundry Lab 提供 refs-only catalog。 |
+| `atlas` | Agent / capability / surface / owner / lifecycle catalog。 | 给 Pack、Console、Connect 和 Foundry Kernel 提供 refs-only catalog。 |
 | `workspace` | Workspace protocol、Project Unit、Stage Artifact Unit 和文件生命周期投影。 | 给 Runway、Console、Ledger 和 domain owner 提供可检查落点。 |
-| `pack` | Declarative Domain Pack、Capability Invocation ABI、authority ABI、generated surfaces。 | 给 Stagecraft、Runway、Console、Connect 和 Foundry Lab 提供声明式 ABI。 |
+| `pack` | Declarative Domain Pack、Capability Invocation ABI、authority ABI、generated surfaces。 | 给 Stagecraft、Runway、Console、Connect 和 Foundry Kernel 提供声明式 ABI。 |
 | `stagecraft` | Stage 设计、tool affordance、quality gate refs、handoff 和 route-back。 | 给 Runway 提供 launch/admission 约束，给 Console 提供 stage readiness 投影。 |
 | `runway` | Durable execution、stage-attempt request/projection、attempt、lease、retry/dead-letter、human gate 和 reconciler。 | 执行和恢复归 Runway；domain truth、owner receipt 和 quality verdict 回 domain owner。 |
-| `ledger` | refs-only evidence、receipt/blocker refs、lineage、restore/no-regression refs。 | 给 Console、Runway、Foundry Lab 和 domain owner 提供可审计证据索引。 |
+| `ledger` | refs-only evidence、receipt/blocker refs、lineage、restore/no-regression refs。 | 给 Console、Runway、Foundry Kernel 和 domain owner 提供可审计证据索引。 |
 | `console` | App/operator projection、current owner、next action、governance 和 drilldown。 | 负责展示和治理；需要连接/安装/同步时进入 Connect，运行恢复进入 Runway，证据进入 Ledger。 |
-| `foundry-lab` | Agent 创建、测试接管、自进化、work order、canary、promotion/rollback。 | 产出改进 work order 和 handoff；target domain owner 保留采纳/拒绝和 authority verdict。 |
+| `foundry` | Agent 创建、接管、自进化、FoundryRun、评测证据、版本、canary、activation/rollback。 | 编排 OMA semantic provider、Pack/Runway/Ledger 与 Owner gate；target domain owner 保留保护测试、质量接受和生产采用。 |
 | `connect` | 外部 connector、CLI/MCP/OpenAI/AI SDK/Skill descriptor、install/release distribution。 | 可以被 App、CLI、Runway 或 MAS 等 domain agent 直接调用；Console 是展示和治理面，不是 Connect 的调用前置条件。 |
 
-Console / Runway / Ledger / Connect / Foundry Lab 的边界可按一句话记忆：
+Console / Runway / Ledger / Connect / Foundry Kernel 的边界可按一句话记忆：
 
 - `Console` 负责让人知道当前看什么、做什么、等谁。
 - `Runway` 负责把可执行 stage attempt 持续跑起来并安全恢复。
 - `Ledger` 负责保存 refs-only evidence、receipt/blocker ref 和 lineage。
 - `Connect` 负责外部连接、descriptor 派生、skill/plugin/module sync 和分发。
-- `Foundry Lab` 负责从 evidence 生成改进 work order，并把采纳权交给目标 owner。
+- `Foundry Kernel` 负责把 exact-version evidence 交给 OMA 诊断，再物化、评测和版本化完整下一版 blueprint；目标 owner 保留质量接受、权限授权与生产采用决定。
 
 ## 完成度口径
 
@@ -109,23 +109,23 @@ Console / Runway / Ledger / Connect / Foundry Lab 的边界可按一句话记忆
 
 2026-07-03 的 Runway -> Console 收薄已分两步完成：先移除 Runway 经由 Console public re-export 反向读取自身 generic projection 的调用，再通过 `runtime-tray-snapshot-provider.ts` 把 `family-runtime-evidence-worklist.ts`、`runtime-operator-action-execution.ts` 和 `observability-export.ts` 改成由 CLI/App/Console caller 显式注入 Console-owned `buildRuntimeTraySnapshot`。当前 fresh `source:modules` readback 中 `runway -> console` pair 已消失。该口径只证明源码依赖方向更清楚，不改变 Console 仍拥有 App/operator snapshot projection 的事实，也不声明 runtime ready、Temporal live migration、domain ready 或 production readiness。
 
-2026-07-03 的 Foundry Lab -> Console 收薄继续沿用 provider injection：`framework readiness`、`framework readiness --detail compact` 和 `framework operating-maturity` 不再直接 import Console 的 runtime tray snapshot builder；public CLI caller 显式注入 Console-owned `buildRuntimeTraySnapshot`。App release user-path evidence 的 payload / workorder projection 迁入 Ledger public surface，Foundry Lab 的 readiness next-safe-action 直接消费 Ledger payload helper 和 runtime snapshot 中的 refs-only evidence。当前 fresh `source:modules -- --strict-imports` readback 中 `foundry-lab -> console` pair 已消失，Console 也不再进入 dependency-cycle SCC；剩余 SCC 覆盖 `atlas`、`charter`、`connect`、`foundry-lab`、`ledger`、`pack`、`runway`、`stagecraft`、`workspace` 九个模块，edge_count 为 47。该口径只证明 Foundry Lab 不再把 Console implementation 当作前置依赖，不改变 Console 作为 App/operator projection owner 的事实，也不声明 owner acceptance、App release ready、domain ready 或 production readiness。
+2026-07-03 的 Foundry Kernel -> Console 收薄继续沿用 provider injection：`framework readiness`、`framework readiness --detail compact` 和 `framework operating-maturity` 不再直接 import Console 的 runtime tray snapshot builder；public CLI caller 显式注入 Console-owned `buildRuntimeTraySnapshot`。App release user-path evidence 的 payload / workorder projection 迁入 Ledger public surface，Foundry Kernel 的 readiness next-safe-action 直接消费 Ledger payload helper 和 runtime snapshot 中的 refs-only evidence。当前 fresh `source:modules -- --strict-imports` readback 中 `foundry -> console` pair 已消失，Console 也不再进入 dependency-cycle SCC；剩余 SCC 覆盖 `atlas`、`charter`、`connect`、`foundry`、`ledger`、`pack`、`runway`、`stagecraft`、`workspace` 九个模块，edge_count 为 47。该口径只证明 Foundry Kernel 不再把 Console implementation 当作前置依赖，不改变 Console 作为 App/operator projection owner 的事实，也不声明 owner acceptance、App release ready、domain ready 或 production readiness。
 
-2026-07-03 的 family action catalog 收薄已把 action catalog contract 从 Console 实现面迁到 `src/kernel/family-action-catalog-contract.ts`。Console 只保留 thin re-export facade；Atlas、Connect、Foundry Lab、Pack 和 Stagecraft 等消费者直接从 kernel shared contract 读取。该口径只证明 shared contract owner 与 import direction 更清楚，不改变 domain truth、owner receipt、typed blocker、runtime DB/provider queues 或 release artifacts。
+2026-07-03 的 family action catalog 收薄已把 action catalog contract 从 Console 实现面迁到 `src/kernel/family-action-catalog-contract.ts`。Console 只保留 thin re-export facade；Atlas、Connect、Foundry Kernel、Pack 和 Stagecraft 等消费者直接从 kernel shared contract 读取。该口径只证明 shared contract owner 与 import direction 更清楚，不改变 domain truth、owner receipt、typed blocker、runtime DB/provider queues 或 release artifacts。
 
 2026-07-03 的 Charter error boundary 收薄把跨模块常用的 `FrameworkContractError` 调整为 `src/kernel/contract-validation.ts` 的 brand-neutral shared primitive。模块实现不再为了抛出统一合同 / CLI 错误而依赖 `charter` public index；`charter` 仍保留对外 re-export，服务旧的 public import surface 和 contract loader 语义。当前 fresh `source:modules -- --strict-imports` readback 中 `stagecraft -> charter`、`workspace -> charter`、`pack -> charter` 这些仅由错误类型造成的 pair 已消失，剩余 SCC edge_count 从 47 收薄到 44。该口径只证明错误 vocabulary 不再放大模块依赖图，不改变 `Charter` 对合同语言与 forbidden claim 的 owner 身份，也不声明 strict cycle 已完成。
 
-2026-07-03 的 Workspace topology 收薄把 `workspace_topology_profile` 从 Foundry Agent series 内联常量迁回 Workspace owner，Foundry Lab 只消费 Workspace public contract。Owner id normalization 也从 Connect public entrypoint 收回到 `kernel` shared primitive，Ledger / Foundry Lab 不再为了通用 owner alias normalization 依赖 Connect。当前 fresh `source:modules` readback 中 `workspace -> foundry-lab` pair 已消失，Workspace 不再进入 dependency-cycle SCC，剩余 SCC 覆盖 `atlas`、`charter`、`connect`、`foundry-lab`、`ledger`、`pack`、`runway`、`stagecraft` 八个模块，edge_count 从 44 收薄到 35。该口径只证明 Workspace topology / Project Unit / Stage Artifact Unit 的合同 owner 回到 Workspace、通用 owner id vocabulary 回到 kernel，不改变 Foundry Lab 对 agent scaffold / work order / canary 的 owner 身份，也不声明 strict cycle 已完成。
+2026-07-03 的 Workspace topology 收薄把 `workspace_topology_profile` 从 Foundry Agent series 内联常量迁回 Workspace owner，Foundry Kernel 只消费 Workspace public contract。Owner id normalization 也从 Connect public entrypoint 收回到 `kernel` shared primitive，Ledger / Foundry Kernel 不再为了通用 owner alias normalization 依赖 Connect。该历史 readback 只证明 Workspace topology / Project Unit / Stage Artifact Unit 的合同 owner 回到 Workspace、通用 owner id vocabulary 回到 kernel；2026-07-16 hard cut 后，scaffold/conformance 归 Pack，Foundry Kernel 持有 FoundryRun、评测证据、版本、canary、activation 与 rollback。
 
-2026-07-03 的后续 source owner 收薄把 product-entry handoff bundle 从 Ledger 迁到 Console / Product Entry owner、developer-mode closeout ledger 从 Connect 迁到 Foundry Lab owner、repo generated-interface bundle 组装收回 Pack owner，并把 contract loader 使用的 domain / workspace / pack / ScholarSkills contract validators 迁回 Charter `contract-validators/`。当前 fresh `source:modules` readback 仍为 `status=ok`、`deep_import_violations=0`、`forbidden_dependency_violations=0`，dependency-cycle SCC 不含 Console / Workspace，edge_count 稳定为 31。该口径只证明这些实现的源码 owner 更贴近实际语义，不改变 Ledger evidence vocabulary、Connect connector authority、Pack descriptor authority、Workspace protocol、domain truth、owner receipt、typed blocker、runtime truth、release/currentness claim 或 Brand L5 状态。
+2026-07-03 的后续 source owner 收薄把 product-entry handoff bundle 从 Ledger 迁到 Console / Product Entry owner、developer-mode closeout ledger 从 Connect 迁到 Foundry Kernel owner、repo generated-interface bundle 组装收回 Pack owner，并把 contract loader 使用的 domain / workspace / pack / ScholarSkills contract validators 迁回 Charter `contract-validators/`。当前 fresh `source:modules` readback 仍为 `status=ok`、`deep_import_violations=0`、`forbidden_dependency_violations=0`，dependency-cycle SCC 不含 Console / Workspace，edge_count 稳定为 31。该口径只证明这些实现的源码 owner 更贴近实际语义，不改变 Ledger evidence vocabulary、Connect connector authority、Pack descriptor authority、Workspace protocol、domain truth、owner receipt、typed blocker、runtime truth、release/currentness claim 或 Brand L5 状态。
 
-2026-07-04 的 strict cycle 收薄把三类反向依赖拆开：Atlas 只消费 manifest / descriptor 字段，不再读取 Runway provider closure；Runway 通过 entrypoint / Connect caller 注入 OPL module exec resolver 和 Foundry scaffold builder，不再直接 import Connect 或 Foundry Lab；local Codex defaults 与 managed runtime contract 下沉到 brand-neutral `kernel/`。当前 fresh `source:modules -- --strict-imports --strict-cycles` readback 为 `status=ok`、`deep_import_violations=0`、`forbidden_dependency_violations=0`、`dependency_cycles.count=0`。该口径只证明源码依赖图已无 public-entry-level 环，不改变 Connect connector authority、Foundry Lab agent scaffold owner、Runway runtime owner、domain truth、owner receipt、typed blocker、runtime truth、release/currentness claim 或 Brand L5 状态。
+2026-07-04 的 strict cycle 收薄把三类反向依赖拆开：Atlas 只消费 manifest / descriptor 字段，不再读取 Runway provider closure；Runway 通过 entrypoint / Connect caller 注入 OPL module exec resolver 和 Foundry scaffold builder，不再直接 import Connect 或 Foundry Kernel；local Codex defaults 与 managed runtime contract 下沉到 brand-neutral `kernel/`。当前 fresh `source:modules -- --strict-imports --strict-cycles` readback 为 `status=ok`、`deep_import_violations=0`、`forbidden_dependency_violations=0`、`dependency_cycles.count=0`。该口径只证明源码依赖图已无 public-entry-level 环，不改变 Connect connector authority、Foundry Kernel agent scaffold owner、Runway runtime owner、domain truth、owner receipt、typed blocker、runtime truth、release/currentness claim 或 Brand L5 状态。
 
 2026-07-04 的模块内聚收薄继续处理三个高风险长文件族：Console 把 Settings Control Center 静态 catalog、action payload 解析和 App state view sections 拆入 Console-owned parts；Connect 把 managed update kernel 的 installation carrier 与 runtime substrate projection 拆入 `managed-update-kernel-parts/`；Runway 把 paper-mission route handoff、runtime approval 和 observability export shared projection 拆入 Runway-owned parts。当前 formerly targeted 文件均降到 1000 行以内，且 fresh `source:modules -- --strict-imports --strict-cycles`、focused Console / Connect / Runway tests、`npm test`、`typecheck` 和 `build` 仍作为吸收证据。该口径只证明模块内部文件边界更清楚、维护面更薄，不改变 runtime/live evidence、release readiness、domain readiness、owner receipt 或 Brand L5 状态。
 
-2026-07-04 的后续内聚收薄把剩余超 1000 行的 `src/modules/**/*.ts` 文件按 owner 内部边界拆完：Charter 将 contract manifest / location resolver 与 target operating architecture plan / experience validators 拆入 Charter-owned parts；Ledger 将 artifact provenance bundle 的类型与常量拆入 Ledger-owned types；Connect 将 framework self-update channel artifact 组装拆入 system-installation parts；Foundry Lab 将 work-order execution IO / prompt、framework readiness agent diagnostic、standard agent capability map 组装拆入 Foundry Lab-owned parts。当前 `src/modules/**/*.ts` 行数读回已无超过 1000 行的文件。仓库级 `line-budget:strict` 对剩余非模块源码 / 测试长文件使用 `source-structure-budget.json` 的 reviewed baseline 进行 ratchet，不把测试 fixture 拆分作为本轮模块源码 owner closure 的阻塞项。该口径只证明 Framework 模块源码的第一批超线文件已经清零，不代表 public API 已最小化，也不声明 runtime/live evidence、release readiness、domain readiness、owner receipt 或 Brand L5 状态。
+2026-07-04 的后续内聚收薄曾把剩余超 1000 行的 `src/modules/**/*.ts` 文件按当时 owner 边界拆分；其中旧执行 IO、readiness diagnostic 和 capability map 归属已经被 2026-07-16 hard cut 取代。当前 owner 是：Foundry 只持状态机/协议/风险/端口编排，Pack 持 scaffold/conformance，Runway 持执行，Ledger 持证据/版本，Console 持 operator projection。历史行数 readback 不代表当前 public API、runtime/live evidence、release readiness、domain readiness、owner receipt 或 Brand L5 状态。
 
-`module-dependency-policy.json` 也开始记录第一批方向约束：`ledger -> runway`、`stagecraft -> runway`、`workspace -> console`、`foundry-lab -> console` 与 Charter 对 operator / improvement / connector surfaces 的依赖都不允许出现。该约束用于保护 evidence、stage policy、workspace protocol、Foundry improvement readout 与 operator projection 的 owner 边界。
+`module-dependency-policy.json` 也开始记录第一批方向约束：`ledger -> runway`、`stagecraft -> runway`、`workspace -> console`、`foundry -> console` 与 Charter 对 operator / improvement / connector surfaces 的依赖都不允许出现。该约束用于保护 evidence、stage policy、workspace protocol、Foundry improvement readout 与 operator projection 的 owner 边界。
 
 后续治理重点是 public API 收薄和依赖方向治理。`source:modules` 的 `cross_module_imports.pair_counts` 可以暴露 public API 依赖热点；cycle audit 或人工架构审查可以定位需要调整的依赖方向。此类治理优先通过收窄 public API、拆 thin public entry、移动 brand-neutral primitive 到 `kernel/`、或重新划分调用方向来完成。它们是维护质量和耦合度改进，不改变“十个源码 owner 已归位且 strict cycle 清零”的结构结论。当前 public entrypoint 仍是合法性边界，不是最小 API 证明：模块 `index.ts` 可以是 broad re-export，只有迁移到更薄的 `public/**` 或明确 owner API 后，才能把对应依赖方向升级为更严格 forbidden policy。
 

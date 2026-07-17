@@ -6,6 +6,7 @@ import {
   runCli,
   test,
 } from '../helpers.ts';
+import { buildDeveloperModeRepairRouteReadModel } from '../../../../src/modules/console/developer-mode-repair-route.ts';
 
 const completePayload = {
   target_repo_id: 'med-autoscience',
@@ -19,39 +20,8 @@ const completePayload = {
   owner_acceptance_ref: 'external-owner-ref:mas/live-direct-fix-accepted',
 };
 
-const verifiedRiskTierPromotionPayload = {
-  target_repo_id: 'med-autoscience',
-  mechanism_candidate_ref: 'mechanism-candidate:agent-lab/mas-medium-risk-canary-20260529',
-  risk_tier: 'medium_risk',
-  failure_delta_refs: ['failure-delta:mas/developer-mode-risk-tier-20260529'],
-  independent_ai_review_receipt_ref:
-    'independent-ai-review-receipt:mas/developer-mode-risk-tier-20260529',
-  independent_ai_review_receipt: {
-    receipt_ref: 'independent-ai-review-receipt:mas/developer-mode-risk-tier-20260529',
-    receipt_source: 'real_independent_ai_review',
-    assessment_mode: 'real_independent_ai_review',
-    reviewer_ref: 'reviewer:codex-independent-agent',
-    reviewer_agent_ref: 'agent-ref:opl-agent-lab/independent-ai-reviewer',
-    reviewed_mechanism_candidate_ref:
-      'mechanism-candidate:agent-lab/mas-medium-risk-canary-20260529',
-    execution_attempt_ref: 'stage-attempt-ref:developer-mode/executor-attempt-20260529',
-    review_attempt_ref: 'stage-attempt-ref:developer-mode/reviewer-attempt-20260529',
-    request_ref: 'review-request-ref:developer-mode/risk-tier-20260529',
-    response_ref: 'review-response-ref:developer-mode/risk-tier-20260529',
-    evidence_refs: ['failure-delta:mas/developer-mode-risk-tier-20260529'],
-    no_shared_context: true,
-    review_context_inherits_executor_context: false,
-    forbidden_write_scan_ref: 'no-forbidden-write-ref:developer-mode/risk-tier-20260529',
-    verdict: 'approved_for_risk_tiered_auto_promotion',
-    risk_tier: 'medium_risk',
-  },
-  promotion_receipt_refs: ['mechanism-promotion-receipt:mas/developer-mode-risk-tier-20260529'],
-  rollback_target_refs: ['rollback-target-ref:mas/developer-mode-risk-tier-20260529'],
-  canary_observation_refs: ['canary-observation-ref:mas/developer-mode-risk-tier-20260529'],
-  no_forbidden_write_refs: ['no-forbidden-write-ref:developer-mode/risk-tier-20260529'],
-  verification_refs: ['test-result-ref:mas/developer-mode-risk-tier-20260529'],
-  receipt_ref: 'agent-lab-risk-tier-auto-promotion-ref:mas/medium-risk-canary-20260529',
-};
+const foundryActivationTransactionRef =
+  'opl://foundry/activation-transaction/mas/sha256-20260716';
 
 function withStateRoot(prefix: string, run: (stateRoot: string) => void) {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
@@ -82,6 +52,17 @@ function verifyCloseout(stateRoot: string, receiptRef: string) {
   ], { OPL_STATE_DIR: stateRoot }).developer_mode_closeout_ledger_verify;
 }
 
+function readCloseoutEvidence(stateRoot: string) {
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = stateRoot;
+  try {
+    return buildDeveloperModeRepairRouteReadModel().live_closeout_evidence;
+  } finally {
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+  }
+}
+
 test('Developer Mode closeout records and verifies refs-only current evidence', () => {
   withStateRoot('opl-developer-mode-closeout-', (stateRoot) => {
     const env = { OPL_STATE_DIR: stateRoot };
@@ -104,8 +85,7 @@ test('Developer Mode closeout records and verifies refs-only current evidence', 
     assert.equal(listed.verified_receipt_ref_count, 1);
     assert.equal(listed.authority_boundary.can_write_domain_truth, false);
 
-    const readModel = runCli(['agent-lab', 'complete', '--json'], env)
-      .agent_lab_complete.developer_mode_repair_routes.live_closeout_evidence;
+    const readModel = readCloseoutEvidence(stateRoot);
     assert.equal(readModel.summary.ledger_verified_receipt_ref_count, 1);
     assert.equal(readModel.ledger_evidence_status, 'verified_direct_fix_closeout_refs_observed');
     assert.equal(readModel.non_authority_outputs.writes_owner_receipt, false);
@@ -113,77 +93,28 @@ test('Developer Mode closeout records and verifies refs-only current evidence', 
   });
 });
 
-test('Developer Mode scaleout accepts only verified risk-tier evidence', () => {
+test('Developer Mode scaleout projects immutable Foundry activation transaction refs', () => {
   withStateRoot('opl-developer-mode-scaleout-', (stateRoot) => {
     const env = { OPL_STATE_DIR: stateRoot };
     const scaleoutPayload = {
       ...completePayload,
       receipt_ref: 'opl://developer-mode-closeout/med-autoscience/scaleout-followthrough',
       route_repetition_refs: ['developer-mode-route-repetition-ref:mas/direct-fix-repeat'],
-      risk_tier_auto_promotion_refs: [verifiedRiskTierPromotionPayload.receipt_ref],
+      foundry_activation_transaction_refs: [foundryActivationTransactionRef],
       app_patrol_mount_refs: ['app-patrol-mount-ref:one-person-lab-app/developer-mode-patrol'],
     };
-    const unverified = recordCloseout(stateRoot, scaleoutPayload);
-    assert.equal(unverified.status, 'no_eligible_developer_mode_closeout_receipts');
-    assert.equal(
-      unverified.blocked_receipts[0].blocker.blocker_id,
-      'developer_mode_risk_tier_auto_promotion_ref_not_verified_agent_lab_receipt',
-    );
-
-    for (const { payload, blocker } of [
-      {
-        payload: {
-          ...verifiedRiskTierPromotionPayload,
-          independent_ai_review_receipt: {
-            ...verifiedRiskTierPromotionPayload.independent_ai_review_receipt,
-            receipt_source: 'generated_fixture',
-            assessment_mode: 'generated_fixture',
-          },
-          receipt_ref: 'agent-lab-risk-tier-auto-promotion-ref:mas/generated-fixture',
-        },
-        blocker: 'agent_lab_risk_tier_auto_promotion_independent_ai_review_not_verified',
-      },
-      {
-        payload: {
-          ...verifiedRiskTierPromotionPayload,
-          risk_tier: 'high_risk',
-          receipt_ref: 'agent-lab-risk-tier-auto-promotion-ref:mas/high-risk-blocked',
-        },
-        blocker: 'agent_lab_risk_tier_auto_promotion_requires_low_or_medium_risk',
-      },
-    ]) {
-      const blocked = runCli([
-        'agent-lab',
-        'risk-tier-promotion',
-        'record',
-        '--payload',
-        JSON.stringify(payload),
-      ], env).agent_lab_risk_tier_promotion_ledger_record;
-      assert.equal(blocked.status, 'no_eligible_agent_lab_risk_tier_auto_promotion_receipts');
-      assert.equal(blocked.blocked_receipts[0].blocker.blocker_id, blocker);
-    }
-
-    const promotion = runCli([
-      'agent-lab',
-      'risk-tier-promotion',
-      'record',
-      '--payload',
-      JSON.stringify(verifiedRiskTierPromotionPayload),
-    ], env).agent_lab_risk_tier_promotion_ledger_record;
-    runCli([
-      'agent-lab',
-      'risk-tier-promotion',
-      'verify',
-      '--receipt-ref',
-      promotion.receipt_refs[0],
-    ], env);
-
     const recorded = recordCloseout(stateRoot, scaleoutPayload);
     assert.equal(recorded.status, 'recorded');
-    assert.deepEqual(recorded.receipts[0].risk_tier_auto_promotion_refs, [
-      verifiedRiskTierPromotionPayload.receipt_ref,
+    assert.deepEqual(recorded.receipts[0].foundry_activation_transaction_refs, [
+      foundryActivationTransactionRef,
     ]);
     assert.equal(recorded.receipts[0].authority_boundary.can_write_owner_receipt, false);
+    verifyCloseout(stateRoot, recorded.receipt_refs[0]);
+    const readModel = readCloseoutEvidence(stateRoot);
+    assert.equal(readModel.summary.foundry_activation_transaction_ref_count, 1);
+    assert.deepEqual(readModel.foundry_activation_transaction_receipt_refs, [
+      foundryActivationTransactionRef,
+    ]);
   });
 });
 
@@ -203,9 +134,7 @@ test('Developer Mode derives route repetition only from verified live receipts',
     }).receipt_refs[0] as string;
     verifyCloseout(stateRoot, second);
 
-    const readModel = runCli(['agent-lab', 'complete', '--json'], {
-      OPL_STATE_DIR: stateRoot,
-    }).agent_lab_complete.developer_mode_repair_routes.live_closeout_evidence;
+    const readModel = readCloseoutEvidence(stateRoot);
     assert.equal(readModel.scaleout_followthrough.derived_route_repetition_ref_count, 1);
     assert.match(
       readModel.scaleout_followthrough.derived_route_repetition_refs[0],

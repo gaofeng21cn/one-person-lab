@@ -432,11 +432,18 @@ exit 65
 test('installed opl launcher routes family discovery commands to OPL instead of Codex passthrough', () => {
   const commandMatrix = [
     {
-      args: ['agents', 'foundry', 'status'],
+      args: [
+        'foundry',
+        'versions',
+        '--target-agent-id',
+        'fixture-agent',
+        '--target-domain-id',
+        'fixture-domain',
+      ],
       assertPayload: (payload: Record<string, unknown>) => {
         assert.equal(
-          (payload.foundry_agent_cli_spine as { canonical_command_surface: string }).canonical_command_surface,
-          'opl agents foundry',
+          (payload.foundry_versions as { target_agent_id: string }).target_agent_id,
+          'fixture-agent',
         );
       },
     },

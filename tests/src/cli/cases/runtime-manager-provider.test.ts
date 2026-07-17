@@ -179,7 +179,7 @@ test('runtime manager reports OPL control plane over provider-backed family runt
     );
     assert.equal(output.runtime_manager.standard_domain_agent_scaffold.surface_kind, 'opl_standard_domain_agent_scaffold');
     assert.equal(output.runtime_manager.standard_domain_agent_scaffold.owner, 'one-person-lab');
-    assert.equal(output.runtime_manager.standard_domain_agent_scaffold.generation_policy.scaffold_command_is_read_only, true);
+    assert.equal(output.runtime_manager.standard_domain_agent_scaffold.generation_policy.scaffold_request_is_read_only, true);
     assert.equal(output.runtime_manager.standard_domain_agent_scaffold.generation_policy.creates_files, false);
     assert.equal(
       output.runtime_manager.standard_domain_agent_scaffold.opl_owned_generic_primitives

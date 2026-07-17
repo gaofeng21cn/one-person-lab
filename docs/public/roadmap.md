@@ -44,7 +44,7 @@ Machine boundary: 本文是人读公开路线图。当前实现和 readiness tru
 - 保持 provider-backed stage runtime 的诚实表达：Temporal 是 production online runtime 的必需 substrate，`hermes_agent`、`claude_code` 与 `antigravity_cli` 是 canonical 的显式非默认 executor adapter/backend，并通过独立 receipt、audit、executor binding ref 与 fail-closed gate 约束；旧 Hermes provider / Gateway 语料只保留为 provenance、diagnostic、fixture 或负向 guard
 - 保持 public help、当前文档与 operator-facing guidance 不再展示默认 Hermes/Gateway/frontdoor/local-manager wording；保留旧名时必须显式属于 legacy/provenance/diagnostic/history/fixture
 - 保持未来 hosted / desktop 入口继续围绕 Codex-default executor 路径背后的 runtime / activation boundary 演进
-- 保持 `OPL Meta Agent` 作为 Agent Foundry / new-agent builder-test module 的公开入口；它支撑新智能体创建、测试接管和机制改进，不接管 MAS/MAG/RCA 的 domain truth、quality verdict、artifact authority 或 owner receipt
+- 保持 `OPL Meta Agent` 的 `engineer-agent` 作为 Agent Foundry 唯一公开入口；`design` / `diagnose` 仅为内部 operation，OMA 只持有目标理解、设计依据、`AgentBlueprint` / `EvalSpec`、证据诊断和 `EvolutionProposal`，不执行评测或候选生命周期
 - 保持 candidate domain 沿定义、审查与 onboarding 路径推进
 
 ## 家族形态
@@ -54,7 +54,7 @@ Machine boundary: 本文是人读公开路线图。当前实现和 readiness tru
 - `MedAutoScience` 持有 `Research Ops` domain entry、research truth、publication quality gate、memory/artifact authority、owner receipt / typed blocker 与 direct skill path
 - `MedAutoGrant` 持有 admitted 的 `Grant Ops` domain entry、grant workflow truth、fundability / proposal quality gate、artifact authority、owner receipt / typed blocker 与 direct skill path
 - `RedCube AI` 持有视觉交付 domain entry、visual truth、review/export gate、artifact authority、owner receipt / typed blocker 与 direct skill path
-- `OPL Meta Agent` 持有 Agent Foundry / new-agent builder-test module 入口、agent-building semantics、developer work order / mechanism proposal refs 与 target-agent handoff refs；OPL Framework 继续持有 Agent Lab、generated surfaces、promotion gate、runtime、queue 和 App shell，目标 domain agent 继续持有最终 owner receipt、domain truth、quality verdict 和 artifact authority
+- `OPL Meta Agent` 是 Agent engineering semantic provider，持有目标理解、设计依据、`AgentBlueprint` / `EvalSpec`、证据诊断与 `EvolutionProposal`；OPL Framework 持有 FoundryRun、generated surfaces、物化、评测、`EvidenceBundle`、版本、canary、activation、rollback 和 App projection，target owner 持有保护测试正文、最终验收、权限授权、生产采用、domain truth 和 artifact authority
 - `ppt_deck` 继续是当前最直接映射到 `Presentation Ops` 的 family
 - `IP Ops` 继续作为 `IP Foundry` / `Med Auto Patent` 的定义与 onboarding 路径推进
 - `Award Ops` 继续作为 `Award Foundry` / `Med Auto Award` 的定义与 onboarding 路径推进
@@ -82,7 +82,7 @@ Machine boundary: 本文是人读公开路线图。当前实现和 readiness tru
 - admitted domain 在这个壳层之下继续持有各自 authority
 - 默认 executor 仍是 `Codex CLI`，`OPL Runtime Manager` 是已配置 family runtime provider 之上的产品控制面
 - Temporal-backed provider、StageRun、readiness、App/operator drilldown 和 domain owner-chain 的当前证据只从核心五件套、active gap plan、contracts 与 live CLI/read-model 读取；路线图只保留方向和下一跳
-- MAS paper-line、MAG grant、RCA visual 和 OMA target-agent 的真实完成仍回各 domain owner receipt、quality/review gate、human gate 或 typed blocker；OPL public roadmap 不承载这些 live proof 的当前状态
+- MAS paper-line、MAG grant、RCA visual 的真实完成回各 domain owner receipt、quality/review gate、human gate 或 typed blocker；OMA 工程请求的最终验收与生产采用回目标 owner。OPL public roadmap 不承载这些 live proof 的当前状态
 - 旧 `OPL Gateway`、`opl web`、`Product API`、Hermes default、local-manager 与 AionUI-first-shell 材料，除非被当前核心文档重新提升，否则按 provenance、diagnostic、history 或 fixture context 阅读
 - 未来 hosted / desktop 工作继续沿同一套 runtime / activation truth 演进
 - 新工作线会以边界清楚的 domain surface 进入家族体系

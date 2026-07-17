@@ -399,7 +399,7 @@ Single Source of Truth:
 Brand-module scope:
 
 - Primary module: `OPL Charter`, because this is docs lifecycle / owner-boundary governance.
-- Coordinating modules: `OPL Foundry Lab`, `OPL Runway`, and `OPL Console`, because the edited support docs explain Foundry Agent target shape, runtime/progress spine, and operator/current-owner readback.
+- Coordinating modules: `OPL Foundry Kernel`, `OPL Runway`, and `OPL Console`, because the edited support docs explain Foundry Agent target shape, runtime/progress spine, and operator/current-owner readback.
 - Not touched: `OPL Vault`, `OPL Workspace`, `OPL Pack`, `OPL Connect`, domain truth, App release truth, artifact authority, quality/export verdicts, owner receipts, typed blockers, runtime implementation, source/test/workflow/package/CLI/API surfaces.
 
 Edited / pushed repo-local docs:
@@ -444,7 +444,7 @@ Single Source of Truth:
 Brand-module scope:
 
 - Primary module: `OPL Charter`, because this is docs lifecycle / SSOT governance.
-- Coordinating modules: `OPL Foundry Lab` and `OPL Runway`, because the MAS support docs explain standard Foundry Agent shape, StageRun / owner-route boundary and ordinary progress support.
+- Coordinating modules: `OPL Foundry Kernel` and `OPL Runway`, because the MAS support docs explain standard Foundry Agent shape, StageRun / owner-route boundary and ordinary progress support.
 - Not touched: runtime implementation, domain truth, App release truth, artifact authority, quality/export verdicts, owner receipts, typed blockers, source/test/workflow/package/CLI/API surfaces or physical deletion gates.
 
 Edited / pushed repo-local docs:
@@ -544,7 +544,7 @@ Single Source of Truth:
 Brand-module scope:
 
 - Primary module: `OPL Charter`, because this is docs lifecycle / SSOT governance.
-- Coordinating modules: `OPL Foundry Lab` and `OPL Runway`, because the compressed text concerns a Foundry Agent's private-surface classification, generated/default caller thinning and hosted-runtime handoff boundaries.
+- Coordinating modules: `OPL Foundry Kernel` and `OPL Runway`, because the compressed text concerns a Foundry Agent's private-surface classification, generated/default caller thinning and hosted-runtime handoff boundaries.
 - Not touched: runtime implementation, RCA visual truth, App release truth, artifact authority, quality/export verdicts, owner receipts, typed blockers, source/test/workflow/package/CLI/API surfaces or physical deletion gates.
 
 Edited / pushed repo-local docs:
@@ -594,7 +594,7 @@ Single Source of Truth:
 Brand-module scope:
 
 - Primary module: `OPL Charter`, because this is docs lifecycle / SSOT governance.
-- Coordinating modules: `OPL Runway` and `OPL Foundry Lab`, because the edited MAS prose describes StageRun provider execution and a standard Foundry Agent's owner-callable execution boundary.
+- Coordinating modules: `OPL Runway` and `OPL Foundry Kernel`, because the edited MAS prose describes StageRun provider execution and a standard Foundry Agent's owner-callable execution boundary.
 - Not touched: runtime implementation, MAS study truth, paper body, publication verdict, controller decision, artifact authority, owner receipts, typed blockers, contracts/source/tests/CLI/API/workflows/packages, or physical deletion gates.
 
 Edited / pushed repo-local docs:
@@ -696,7 +696,7 @@ Single Source of Truth:
 Brand-module scope:
 
 - Primary module: `OPL Charter`, because this is docs lifecycle / SSOT governance.
-- Coordinating modules: `OPL Runway` and `OPL Foundry Lab`, because the compressed text concerns Stage Folder Kernel refs, provider/read-model consumption and a standard Foundry Agent's artifact/authority boundary.
+- Coordinating modules: `OPL Runway` and `OPL Foundry Kernel`, because the compressed text concerns Stage Folder Kernel refs, provider/read-model consumption and a standard Foundry Agent's artifact/authority boundary.
 - Not touched: runtime implementation, MAG grant truth, fundability / quality / export verdicts, package authority, owner receipts, typed blockers, contracts/source/tests/CLI/API/workflows/packages, or physical deletion gates.
 
 Edited / pushed repo-local docs:
@@ -749,7 +749,7 @@ Single Source of Truth:
 Brand-module scope:
 
 - Primary module: `OPL Charter`, because this is docs lifecycle / SSOT governance.
-- Coordinating modules: `OPL Runway`, `OPL Foundry Lab` and `OPL Console`, because the compressed text concerns provider/read-model projections, a standard Foundry Agent's stage/action boundary, and App/operator/Agent Lab read surfaces.
+- Coordinating modules: `OPL Runway`, `OPL Foundry Kernel` and `OPL Console`, because the compressed text concerns provider/read-model projections, a standard Foundry Agent's stage/action boundary, and App/operator/Agent Lab read surfaces.
 - Not touched: runtime implementation, RCA visual truth, review/export verdicts, artifact authority, owner receipts, typed blockers, contracts/source/tests/CLI/API/workflows/packages, or physical deletion gates.
 
 Edited / pushed repo-local docs:
@@ -803,7 +803,7 @@ Single Source of Truth:
 Brand-module scope:
 
 - Primary module: `OPL Charter`, because this is docs lifecycle / SSOT governance.
-- Coordinating modules: `OPL Runway`, `OPL Foundry Lab` and `OPL Console`, because the compressed text concerns provider/read-model evidence, standard Foundry Agent stage surfaces and App/operator/Agent Lab readouts.
+- Coordinating modules: `OPL Runway`, `OPL Foundry Kernel` and `OPL Console`, because the compressed text concerns provider/read-model evidence, standard Foundry Agent stage surfaces and App/operator/Agent Lab readouts.
 - Not touched: runtime implementation, RCA visual truth, review/export verdicts, artifact authority, owner receipts, typed blockers, contracts/source/tests/CLI/API/workflows/packages, or physical deletion gates.
 
 Edited / pushed repo-local docs:
@@ -857,7 +857,7 @@ Single Source of Truth:
 Brand-module scope:
 
 - Primary module: `OPL Charter`, because this is docs lifecycle / SSOT governance.
-- Coordinating modules: `OPL Runway`, `OPL Foundry Lab` and `OPL Console`, because the compressed text concerns provider/read-model evidence, standard Foundry Agent stage/progress contracts and App/operator readouts.
+- Coordinating modules: `OPL Runway`, `OPL Foundry Kernel` and `OPL Console`, because the compressed text concerns provider/read-model evidence, standard Foundry Agent stage/progress contracts and App/operator readouts.
 - Not touched: MAG grant truth, fundability / quality / export verdicts, artifact authority, owner receipts, typed blockers, contracts/source/tests/CLI/API/workflows/packages, or physical deletion gates.
 
 Edited / pushed repo-local docs:
@@ -964,7 +964,7 @@ Single Source of Truth:
 Brand-module scope:
 
 - Primary module: `OPL Runway`, because this lane concerns provider-backed runtime, stage attempt lifecycle and control-loop boundary wording.
-- Coordinating modules: `OPL Charter`, `OPL Console`, `OPL Vault`, `OPL Workspace`, `OPL Foundry Lab` and `OPL Pack`, because the compressed text concerns docs lifecycle, App/operator projection, refs-only evidence, workspace/artifact indexes, Agent Lab control plane and native/helper packaging surfaces.
+- Coordinating modules: `OPL Charter`, `OPL Console`, `OPL Vault`, `OPL Workspace`, `OPL Foundry Kernel` and `OPL Pack`, because the compressed text concerns docs lifecycle, App/operator projection, refs-only evidence, workspace/artifact indexes, Agent Lab control plane and native/helper packaging surfaces.
 - Not touched: runtime implementation, contracts, source/tests/CLI/API/workflows/packages, domain truth, App release truth, owner receipts, typed blockers, quality/export verdicts, artifact authority or physical deletion gates.
 
 Edited docs:

@@ -10,7 +10,7 @@ import {
 import {
   compactFunctionalPrivatizationAuditEnvelope,
   buildFunctionalSourcePurityTailReadModel,
-} from '../../foundry-lab/index.ts';
+} from '../../pack/index.ts';
 import {
   buildAppDrilldownRefsOnlyAuthorityBoundary,
 } from './authority-boundary.ts';

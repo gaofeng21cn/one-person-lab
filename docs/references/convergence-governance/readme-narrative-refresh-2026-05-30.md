@@ -120,7 +120,7 @@ Machine boundary: 本文只记录 2026-05-30 这一轮 OPL series 根层 README 
 | 入口定位 | “用于开发、测试和持续优化新智能体的元智能体” | “把专业工作流变成可测试、可接入 OPL、可持续改进的 AI 智能体” | 从内部元智能体概念转向用户想要的产物 |
 | 问题描述 | 以能力清单和技术边界为主 | 增加“为什么存在”：prompt 不等于可交付智能体 | 用户能快速理解它解决的缺口 |
 | 核心亮点 | 分散在适合处理的工作中 | 独立列出蓝图、边界、测试、改进、接管测试 | 产品价值更可扫读 |
-| 技术边界 | Agent Lab、proposal-only、refs-only | 保留在后半段 | 不弱化 target domain owner 边界 |
+| 技术边界 | Foundry Kernel、proposal-only、refs-only | 保留在后半段 | 不弱化 target domain owner 边界 |
 | 图片 | `opl-meta-agent-overview.png` | 未改 | 本轮未要求重绘 |
 
 ### `opl-meta-agent/README.md`

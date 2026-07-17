@@ -1,4 +1,4 @@
-import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, installRuntimePackageFixture, loadFamilyManifestFixtures, os, path, runCli, test } from '../helpers.ts';
+import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, installRuntimePackageFixture, loadFamilyManifestFixtures, os, path, removeFixtureTree, runCli, test } from '../helpers.ts';
 import {
   createMasScoutStage,
   createMedAutoScienceStageManifest,
@@ -85,7 +85,7 @@ function routedAction(actionId: string, requiredStageRefs: string[], optionalSta
   };
 }
 
-function omaShapedRouteManifest(baseManifest: Record<string, unknown>) {
+function multiActionRouteManifest(baseManifest: Record<string, unknown>) {
   const stage = (
     stageId: string,
     allowedActionRefs: string[],
@@ -101,19 +101,19 @@ function omaShapedRouteManifest(baseManifest: Record<string, unknown>) {
   });
   return {
     ...createMedAutoScienceStageManifest(baseManifest, [
-      stage('intent-intake', ['build-agent-baseline', 'takeover-target-agent-test', 'materialize-learning'],
-        ['web-research', 'stage-decomposition', 'target-agent-takeover', 'learning-intake'],
+      stage('request-intake', ['compose-deliverable', 'assess-existing-deliverable', 'ingest-feedback'],
+        ['context-research', 'delivery-planning', 'baseline-assessment', 'feedback-intake'],
         'target_agent_request', 'route_selected'),
-      stage('web-research', ['build-agent-baseline'], ['stage-decomposition'], 'research_route_selected', 'research_ready'),
-      stage('stage-decomposition', ['build-agent-baseline'], [], 'design_ready', 'plan_ready'),
-      stage('target-agent-takeover', ['takeover-target-agent-test'], [], 'takeover_ready', 'takeover_done'),
-      stage('learning-intake', ['materialize-learning'], [], 'learning_refs_ready', 'learning_ready'),
-      stage('optimizer', ['optimize'], [], 'result_ready', 'optimization_ready'),
+      stage('context-research', ['compose-deliverable'], ['delivery-planning'], 'research_route_selected', 'research_ready'),
+      stage('delivery-planning', ['compose-deliverable'], [], 'design_ready', 'plan_ready'),
+      stage('baseline-assessment', ['assess-existing-deliverable'], [], 'takeover_ready', 'takeover_done'),
+      stage('feedback-intake', ['ingest-feedback'], [], 'learning_refs_ready', 'learning_ready'),
+      stage('optimization', ['optimize'], [], 'result_ready', 'optimization_ready'),
     ]),
     family_action_catalog: {
       surface_kind: 'family_action_catalog',
       version: 'family-action-catalog.v2',
-      catalog_id: 'oma_shaped_actions',
+      catalog_id: 'multi_action_route_fixture',
       target_domain_id: 'med-autoscience',
       owner: 'med-autoscience',
       authority_boundary: {
@@ -122,12 +122,12 @@ function omaShapedRouteManifest(baseManifest: Record<string, unknown>) {
         write_policy: 'no_domain_truth_writes',
       },
       actions: [
-        routedAction('build-agent-baseline', ['intent-intake', 'stage-decomposition'], ['web-research']),
-        routedAction('takeover-target-agent-test', ['intent-intake', 'target-agent-takeover']),
-        routedAction('materialize-learning', ['intent-intake', 'learning-intake']),
-        routedAction('optimize', ['optimizer']),
+        routedAction('compose-deliverable', ['request-intake', 'delivery-planning'], ['context-research']),
+        routedAction('assess-existing-deliverable', ['request-intake', 'baseline-assessment']),
+        routedAction('ingest-feedback', ['request-intake', 'feedback-intake']),
+        routedAction('optimize', ['optimization']),
         {
-          ...routedAction('inspect', ['intent-intake']),
+          ...routedAction('inspect', ['request-intake']),
           effect: 'read_only',
           execution_binding: { kind: 'handler_ref', handler_ref: 'handler:draft_brief' },
           stage_route: undefined,
@@ -249,7 +249,7 @@ test('family-runtime attempt create projects launch invocation and gates non-def
     assert.equal(boundedEditInvocation.bounded_edit_ref, 'bounded-edit:gfl/proposed-stage-pack-1');
     assert.equal(boundedEditInvocation.launch_refs.bounded_edit_ref, 'bounded-edit:gfl/proposed-stage-pack-1');
   } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
+    removeFixtureTree(stateRoot);
     if (repoDir) fs.rmSync(repoDir, { recursive: true, force: true });
   }
 });
@@ -257,13 +257,13 @@ test('family-runtime attempt create projects launch invocation and gates non-def
 test('family-runtime observes one declared action route without treating future branches as entry blockers', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-selected-action-route-'));
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
-  const manifest = omaShapedRouteManifest(loadFamilyManifestFixtures().medautoscience);
+  const manifest = multiActionRouteManifest(loadFamilyManifestFixtures().medautoscience);
   const env = familyRuntimeEnv(stateRoot, { OPL_CONTRACTS_DIR: fixtureContractsRoot });
-  const createArgs = (actionId?: string, stageId = 'intent-intake') => [
+  const createArgs = (actionId?: string, stageId = 'request-intake') => [
     'family-runtime', 'attempt', 'create', '--domain', 'medautoscience', '--stage', stageId,
     ...(actionId ? ['--action', actionId] : []),
-    '--provider', 'temporal', '--workspace-locator', workspaceLocatorArg(stateRoot, 'oma-workspace'),
-    '--source-fingerprint', 'sha256:oma-selected-route',
+    '--provider', 'temporal', '--workspace-locator', workspaceLocatorArg(stateRoot, 'route-workspace'),
+    '--source-fingerprint', 'sha256:selected-route-fixture',
   ];
   const repoDirs: string[] = [];
   try {
@@ -272,7 +272,7 @@ test('family-runtime observes one declared action route without treating future 
     const staticReview = buildFamilyStageConformanceReview(staticPlane, { family_action_catalog: staticCatalog });
     assert.equal(staticReview.findings.filter((finding) =>
       finding.code === 'composition_obligation_not_satisfied'
-      && finding.stage_id === 'intent-intake'
+      && finding.stage_id === 'request-intake'
     ).length, 4);
     repoDirs.push(bindMedAutoScienceManifest(stateRoot, fixtureContractsRoot, manifest));
 
@@ -304,21 +304,21 @@ test('family-runtime observes one declared action route without treating future 
       (finding: { code: string }) => finding.code === 'stage_route_stage_outside_action_advisory',
     ), true);
 
-    const build = runCli([...createArgs('build-agent-baseline'), '--new-attempt'], env).family_runtime_stage_attempt;
-    const takeover = runCli([...createArgs('takeover-target-agent-test'), '--new-attempt'], env).family_runtime_stage_attempt;
+    const build = runCli([...createArgs('compose-deliverable'), '--new-attempt'], env).family_runtime_stage_attempt;
+    const takeover = runCli([...createArgs('assess-existing-deliverable'), '--new-attempt'], env).family_runtime_stage_attempt;
     assert.equal(build.attempt.status, 'queued');
     assert.equal(build.stage_context_observation.status, 'declared');
     assert.equal(build.stage_context_observation.progression_effect, 'stage_may_start');
-    assert.equal(build.stage_context_observation.selected_action_id, 'build-agent-baseline');
-    assert.equal(build.stage_context_observation.selected_stage_route.entry_stage_ref, 'intent-intake');
+    assert.equal(build.stage_context_observation.selected_action_id, 'compose-deliverable');
+    assert.equal(build.stage_context_observation.selected_stage_route.entry_stage_ref, 'request-intake');
     assert.equal(build.stage_context_observation.quality_debt_findings.length, 0);
-    assert.equal(build.attempt.route_impact.selected_action_id, 'build-agent-baseline');
+    assert.equal(build.attempt.route_impact.selected_action_id, 'compose-deliverable');
     assert.deepEqual(build.attempt.route_impact.selected_stage_route, build.stage_context_observation.selected_stage_route);
     assert.notEqual(build.attempt.idempotency_key, takeover.attempt.idempotency_key);
     assert.notEqual(build.attempt.stage_attempt_id, takeover.attempt.stage_attempt_id);
 
     const downstream = runCli([
-      ...createArgs('build-agent-baseline', 'stage-decomposition'), '--new-attempt',
+      ...createArgs('compose-deliverable', 'delivery-planning'), '--new-attempt',
     ], env).family_runtime_stage_attempt;
     assert.equal(downstream.attempt.status, 'queued');
     assert.equal(downstream.stage_context_observation.progression_effect, 'stage_may_start');
@@ -329,7 +329,7 @@ test('family-runtime observes one declared action route without treating future 
     const manifestWithIncomingEntry = structuredClone(manifest) as Record<string, any>;
     manifestWithIncomingEntry.family_stage_control_plane.stages.push(createMasScoutStage({
       stage_id: 'route-prerequisite',
-      handoff: { next_stage_refs: ['intent-intake'] },
+      handoff: { next_stage_refs: ['request-intake'] },
       stage_contract: { requires: ['source_ready'], ensures: ['different_entry_requirement'] },
     }));
     const incomingEntryReview = buildFamilyStageConformanceReview(
@@ -340,10 +340,10 @@ test('family-runtime observes one declared action route without treating future 
       (finding) =>
         finding.code === 'composition_obligation_not_satisfied'
         && finding.stage_id === 'route-prerequisite'
-        && finding.target_stage_id === 'intent-intake'
+        && finding.target_stage_id === 'request-intake'
     ), true);
   } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
+    removeFixtureTree(stateRoot);
     for (const repoDir of repoDirs) fs.rmSync(repoDir, { recursive: true, force: true });
   }
 });
@@ -389,7 +389,7 @@ test('family-runtime attempt create keeps an undeclared requested stage launchab
     assert.equal(observation.quality_debt_findings[0].severity, 'warning');
     assert.equal(observation.quality_debt_findings[0].code, 'stage_not_in_declared_control_plane');
   } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
+    removeFixtureTree(stateRoot);
     if (repoDir) fs.rmSync(repoDir, { recursive: true, force: true });
   }
 });
@@ -493,7 +493,7 @@ test('family-runtime blocks only an unavailable selected executor and keeps stat
       true,
     );
   } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
+    removeFixtureTree(stateRoot);
     for (const repoDir of repoDirs) fs.rmSync(repoDir, { recursive: true, force: true });
   }
 });

@@ -124,7 +124,7 @@ test('family-runtime attempt roundtrip preserves a consumable domain-owned outpu
     const domainOutput = {
       surface_kind: 'domain_owned_stage_output_ref',
       version: 'domain-owned-stage-output-ref.v1',
-      domain_id: 'opl-meta-agent',
+      domain_id: 'agent_engineering',
       output_ref: outputRef,
     };
 
@@ -152,7 +152,7 @@ test('family-runtime attempt roundtrip preserves a consumable domain-owned outpu
     assert.equal(query.operator_visibility.domain_output, undefined);
     assert.equal(query.completion_boundary.domain_ready_verdict, null);
     assert.equal(query.completion_boundary.provider_completion_is_domain_ready, false);
-    assert.equal(query.operator_visibility.next_owner, 'opl-meta-agent');
+    assert.equal(query.operator_visibility.next_owner, 'agent_engineering');
     assert.equal(
       query.operator_visibility.authority_boundary.opl,
       'attempt_control_metadata_projection_only',
@@ -186,7 +186,7 @@ test('family-runtime attempt rejects domain output refs that cross the attempt b
         domainOutput: {
           surface_kind: 'domain_owned_stage_output_ref',
           version: 'domain-owned-stage-output-ref.v1',
-          domain_id: 'opl-meta-agent',
+          domain_id: 'agent_engineering',
           output_ref: 'file:///tmp/oma-domain-output.json',
         },
         closeoutRefs: ['receipt:oma-domain-output'],
@@ -197,7 +197,7 @@ test('family-runtime attempt rejects domain output refs that cross the attempt b
         domainOutput: {
           surface_kind: 'domain_owned_stage_output_ref',
           version: 'domain-owned-stage-output-ref.v1',
-          domain_id: 'opl-meta-agent',
+          domain_id: 'agent_engineering',
           output_ref: 'file:///tmp/oma-domain-output.json',
           payload: { stage_decomposition_pack_draft: { forbidden: true } },
         },

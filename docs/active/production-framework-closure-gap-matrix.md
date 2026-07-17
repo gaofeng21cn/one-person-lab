@@ -13,7 +13,7 @@ Machine boundary: 本文是人读 production closure 证据门支撑。机器真
 
 ## 当前判断
 
-OPL 已具备 production framework control plane 的主要结构：Temporal-backed provider、stage-attempt projection、stage attempt ledger、retry/dead-letter、human gate transport、safe action shell、refs-only evidence ledger、stage artifact/progress truth、App/operator drilldown、generated surface read model、standard conformance、Agent Lab 与 lifecycle/source/artifact/memory refs-only primitives。
+OPL 已具备 production framework control plane 的主要结构：Temporal-backed provider、stage-attempt projection、stage attempt ledger、retry/dead-letter、human gate transport、safe action shell、refs-only evidence ledger、stage artifact/progress truth、App/operator drilldown、generated surface read model、standard conformance、Foundry Kernel 与 lifecycle/source/artifact/memory refs-only primitives。
 
 这仍不能写成全量 production ready。Production closure 只能由正确 owner 的真实 delta 关闭：
 

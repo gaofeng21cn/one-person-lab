@@ -42,7 +42,7 @@ OPL 借鉴的是成熟工程的分层原则，不引入外部 runtime dependency
 | [OPL Runway](./runway.md) | Durable execution、stage-attempt request/projection、lease、retry/dead-letter、wakeup 和 human gate。 | OPL Framework |
 | [OPL Ledger](./ledger.md) | Evidence、receipt、typed blocker、artifact lineage、restore/provenance 和 refs-only ledger。 | OPL Framework + domain authority owner |
 | [OPL Console](./console.md) | App/operator 工作台，消费 execution view、operational card、result envelope、current owner、invocation plan、next action、阻塞、产物和 drilldown。 | One Person Lab App |
-| [OPL Foundry Lab](./foundry-lab.md) | Agent 创建、测试接管、机制改进、canary、promotion 和 rollback。 | OPL Framework + OPL Meta Agent |
+| [OPL Foundry Kernel](./foundry.md) | 消费 OMA 的 blueprint / eval / evolution semantics，负责候选物化、评测、`EvidenceBundle`、版本、canary、activation 和 rollback。 | OPL Framework |
 | [OPL Connect](./connect.md) | CLI、MCP、OpenAI/AI SDK tools、execution view / operational card / ToolResultEnvelope descriptor、Skill/plugin、release/install 分发。 | OPL Framework + App release owner |
 
 ## 模块关系
@@ -56,7 +56,7 @@ OPL Charter
   -> OPL Runway
   -> OPL Ledger
   -> OPL Console
-  -> OPL Foundry Lab
+  -> OPL Foundry Kernel
   -> OPL Connect
 ```
 
@@ -70,7 +70,7 @@ OPL Charter
 - `Runway` 只负责把 stage attempt 跑起来、恢复和收口，不创建 domain verdict。
 - `Ledger` 只保存 refs、receipt、blocker、lineage 和 provenance，不保存 memory/artifact body。
 - `Console` 只消费 projection、invocation plan、execution view、operational card 和 result envelope，不读取 MAS 原始合同细节，也不成为第二 runtime 或第二 domain truth。
-- `Foundry Lab` 只改进 agent 机制和生成 work order，不接管 domain authority。
+- `Foundry Kernel` 调用 OMA `engineer-agent` 获取设计与演进语义，并持有候选物化、评测执行、`EvidenceBundle`、版本、canary、activation 与 rollback；它不接管 target owner 持有的保护测试正文、最终验收、权限授权、生产采用或 domain authority。
 - `Connect` 只把同一合同派生为不同外部调用面的 descriptors，不导出 MAS 原始合同细节，不重新解释语义或把 tool result envelope 写成 authority outcome。
 
 Agent Tool Arsenal / Capability Invocation OS 不新增品牌模块。它以 `OPL Pack` 为 ABI owner；合同是生成/校验材料，Agent ordinary path 只消费 Pack 派生的 execution view、operational card 和 result envelope。`Atlas`、`Stagecraft`、`Console`、`Connect` 分别消费 catalog、use-policy、current-owner projection / ordinary execution view 和 descriptor/export 边界；`Runway` / `Ledger` 只承运执行与 refs evidence。
@@ -104,7 +104,7 @@ src/modules/stagecraft
 src/modules/runway
 src/modules/ledger
 src/modules/console
-src/modules/foundry-lab
+src/modules/foundry
 src/modules/connect
 ```
 

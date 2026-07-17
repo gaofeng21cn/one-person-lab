@@ -523,17 +523,17 @@ function resolveDeveloperCapabilities(input: {
       disabled ? 'disabled' : 'limited',
       'observe_only',
       disabled ? 'developer_mode_disabled' : 'developer_supervisor_mode',
-      'Agent Lab can inspect state without repository repair automation.',
+      'OPL Console can inspect state without repository repair automation.',
     )
     : developerCapability(
       blocked ? 'blocked' : disabled ? 'disabled' : 'ready',
       blocked ? 'blocked' : disabled ? 'disabled' : 'repo_repair_automation',
       blocked ? 'developer_mode_not_active' : disabled ? 'developer_mode_disabled' : 'developer_supervisor_mode',
       blocked
-        ? 'Agent Lab repair automation is not offered until Developer Mode is active.'
+        ? 'Supervised repair automation is not offered until Developer Mode is active.'
         : disabled
-          ? 'Agent Lab repair automation is disabled.'
-          : 'Agent Lab can expose supervised repository repair routes.',
+          ? 'Supervised repair automation is disabled.'
+          : 'OPL Console can expose supervised repository repair routes.',
     );
 
   const runtimeMutationScope = explicitlyTrusted

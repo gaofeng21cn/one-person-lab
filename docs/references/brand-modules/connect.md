@@ -79,7 +79,7 @@ opl connect doctor --json
 现有 delegate / source-of-truth 入口：
 
 ```text
-opl agents foundry interfaces --json
+opl foundry interfaces --json
 opl agents interfaces --family-defaults --json
 opl actions export --domain <id> --json
 opl connect scientific search --provider crossref|openalex --query <query> --limit <n> --json

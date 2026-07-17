@@ -4,7 +4,7 @@ import test from 'node:test';
 import {
   buildAgentProfileInspect,
   buildAgentProfileSelection,
-} from '../../../src/modules/foundry-lab/agent-profile-spine.ts';
+} from '../../../src/modules/pack/agent-profile-spine.ts';
 import { buildProfileCommandSpecs } from '../../../src/entrypoints/cli/cases/public-command-specs-parts/profiles.ts';
 import { profileCatalogEntry } from './fixtures.ts';
 

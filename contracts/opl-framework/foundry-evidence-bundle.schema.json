@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/foundry-evidence-bundle.schema.json",
+  "title": "OPL Foundry EvidenceBundle",
+  "type": "object",
+  "required": [
+    "surface_kind", "version", "evidence_id", "target_agent_id", "target_domain_id", "target_version_ref",
+    "blueprint_digest", "candidate_digest", "baseline_version_digest", "frozen_test_plan_digest", "public_results",
+    "baseline_public_results", "baseline_protected_aggregates",
+    "protected_aggregates", "independent_review", "candidate_cost_observations",
+    "candidate_latency_observations", "safety_observations", "safety_delta", "cost_delta", "latency_delta",
+    "failure_classification", "qualified", "gate_score", "provenance"
+  ],
+  "properties": {
+    "surface_kind": { "const": "opl_foundry_evidence_bundle" },
+    "version": { "const": "opl-foundry-protocol.v1" },
+    "evidence_id": { "$ref": "#/$defs/non_empty" },
+    "target_agent_id": { "$ref": "#/$defs/non_empty" },
+    "target_domain_id": { "$ref": "#/$defs/non_empty" },
+    "target_version_ref": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" },
+    "blueprint_digest": { "$ref": "#/$defs/digest" },
+    "candidate_digest": { "$ref": "#/$defs/digest" },
+    "baseline_version_digest": { "anyOf": [{ "$ref": "#/$defs/digest" }, { "type": "null" }] },
+    "frozen_test_plan_digest": { "$ref": "#/$defs/digest" },
+    "public_results": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/public_result" } },
+    "baseline_public_results": {
+      "anyOf": [
+        { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/public_result" } },
+        { "type": "null" }
+      ]
+    },
+    "baseline_protected_aggregates": {
+      "anyOf": [
+        { "type": "array", "items": { "$ref": "#/$defs/protected_aggregate" } },
+        { "type": "null" }
+      ]
+    },
+    "protected_aggregates": { "type": "array", "items": { "$ref": "#/$defs/protected_aggregate" } },
+    "independent_review": {
+      "type": "object",
+      "required": ["evaluator_ref", "evaluation_execution_ref", "review_execution_ref", "verdict", "findings", "evidence_refs"],
+      "properties": {
+        "evaluator_ref": { "$ref": "#/$defs/non_empty" },
+        "evaluation_execution_ref": { "$ref": "#/$defs/non_empty" },
+        "review_execution_ref": { "$ref": "#/$defs/non_empty" },
+        "verdict": { "$ref": "#/$defs/status" },
+        "findings": { "$ref": "#/$defs/string_list" },
+        "evidence_refs": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/non_empty" }, "uniqueItems": true }
+      },
+      "additionalProperties": false
+    },
+    "candidate_cost_observations": { "$ref": "#/$defs/non_negative_numeric_map" },
+    "candidate_latency_observations": { "$ref": "#/$defs/non_negative_numeric_map" },
+    "safety_observations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/safety_observation" }
+    },
+    "safety_delta": { "$ref": "#/$defs/numeric_map" },
+    "cost_delta": { "$ref": "#/$defs/numeric_map" },
+    "latency_delta": { "$ref": "#/$defs/numeric_map" },
+    "failure_classification": { "type": "array", "items": { "$ref": "#/$defs/failure" } },
+    "qualified": { "type": "boolean" },
+    "gate_score": { "type": "number", "minimum": 0, "maximum": 1 },
+    "provenance": {
+      "type": "object",
+      "required": ["foundry_run_id", "generation", "producer_id", "evaluated_at", "source_refs"],
+      "properties": {
+        "foundry_run_id": { "$ref": "#/$defs/non_empty" },
+        "generation": { "type": "integer", "minimum": 0 },
+        "producer_id": { "$ref": "#/$defs/non_empty" },
+        "evaluated_at": { "type": "string", "format": "date-time" },
+        "source_refs": { "$ref": "#/$defs/string_list" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": { "baseline_version_digest": { "type": "null" } },
+        "required": ["baseline_version_digest"]
+      },
+      "then": {
+        "properties": {
+          "baseline_public_results": { "type": "null" },
+          "baseline_protected_aggregates": { "type": "null" }
+        }
+      },
+      "else": {
+        "properties": {
+          "baseline_public_results": { "type": "array" },
+          "baseline_protected_aggregates": { "type": "array" }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "non_empty": { "type": "string", "minLength": 1 },
+    "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "status": { "enum": ["pass", "fail", "blocked"] },
+    "string_list": { "type": "array", "items": { "$ref": "#/$defs/non_empty" }, "uniqueItems": true },
+    "numeric_map": { "type": "object", "additionalProperties": { "type": "number" } },
+    "non_negative_numeric_map": {
+      "type": "object",
+      "additionalProperties": { "type": "number", "minimum": 0 }
+    },
+    "safety_observation": {
+      "type": "object",
+      "required": ["observation_id", "event_type", "severity", "evidence_refs"],
+      "properties": {
+        "observation_id": { "$ref": "#/$defs/non_empty" },
+        "event_type": { "$ref": "#/$defs/non_empty" },
+        "severity": { "enum": ["low", "medium", "high", "critical"] },
+        "evidence_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/non_empty" },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "public_result": {
+      "type": "object",
+      "required": ["case_id", "status", "score", "evidence_refs"],
+      "properties": {
+        "case_id": { "$ref": "#/$defs/non_empty" },
+        "status": { "$ref": "#/$defs/status" },
+        "score": { "type": "number", "minimum": 0, "maximum": 1 },
+        "evidence_refs": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/non_empty" }, "uniqueItems": true }
+      },
+      "additionalProperties": false
+    },
+    "protected_aggregate": {
+      "type": "object",
+      "required": ["category", "total", "passed", "failed", "score"],
+      "properties": {
+        "category": { "$ref": "#/$defs/non_empty" },
+        "total": { "type": "integer", "minimum": 0 },
+        "passed": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 },
+        "score": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "failure": {
+      "type": "object",
+      "required": ["failure_class", "gate_id", "severity", "evidence_refs"],
+      "properties": {
+        "failure_class": { "$ref": "#/$defs/non_empty" },
+        "gate_id": { "$ref": "#/$defs/non_empty" },
+        "severity": { "enum": ["low", "medium", "high", "critical"] },
+        "evidence_refs": { "$ref": "#/$defs/string_list" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

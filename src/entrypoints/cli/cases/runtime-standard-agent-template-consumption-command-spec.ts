@@ -39,7 +39,7 @@ function parseRuntimeStandardAgentTemplateConsumptionPayload(
       parsed.sample_evidence_fingerprints ?? parsed.sample_evidence_fingerprint,
     ),
     consumed_surface_refs: readStringList(parsed.consumed_surface_refs ?? parsed.consumed_surface_ref),
-    replay_command_ref: readOptionalString(parsed.replay_command_ref),
+    replay_api_ref: readOptionalString(parsed.replay_api_ref),
     receipt_ref: readOptionalString(parsed.receipt_ref),
   };
 }

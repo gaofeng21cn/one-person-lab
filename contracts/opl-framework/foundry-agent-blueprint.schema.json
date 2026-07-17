@@ -1,0 +1,188 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/foundry-agent-blueprint.schema.json",
+  "title": "OPL Foundry AgentBlueprint",
+  "type": "object",
+  "required": [
+    "surface_kind", "version", "blueprint_id", "target_agent_id", "target_domain_id", "target_version_ref",
+    "design_request_digest", "generation", "stage_graph", "actions", "artifact_contracts", "content_refs",
+    "capability_requirements", "authority_policy", "memory_policy", "assumptions", "design_evidence_refs",
+    "eval_spec", "risk_hint"
+  ],
+  "properties": {
+    "surface_kind": { "const": "opl_foundry_agent_blueprint" },
+    "version": { "const": "opl-foundry-protocol.v1" },
+    "blueprint_id": { "$ref": "#/$defs/non_empty" },
+    "target_agent_id": { "$ref": "#/$defs/non_empty" },
+    "target_domain_id": { "$ref": "#/$defs/non_empty" },
+    "target_version_ref": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" },
+    "design_request_digest": { "$ref": "#/$defs/digest" },
+    "generation": { "type": "integer", "minimum": 0 },
+    "stage_graph": {
+      "type": "object",
+      "required": ["entry_stage_id", "stages"],
+      "properties": {
+        "entry_stage_id": { "$ref": "#/$defs/non_empty" },
+        "stages": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/stage" } }
+      },
+      "additionalProperties": false
+    },
+    "actions": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/action" } },
+    "artifact_contracts": { "type": "array", "items": { "$ref": "#/$defs/artifact_contract" } },
+    "content_refs": {
+      "type": "object",
+      "required": ["prompt_refs", "skill_refs", "knowledge_refs", "helper_refs", "model_refs", "tool_refs", "schema_refs"],
+      "properties": {
+        "prompt_refs": { "$ref": "#/$defs/string_list" },
+        "skill_refs": { "$ref": "#/$defs/string_list" },
+        "knowledge_refs": { "$ref": "#/$defs/string_list" },
+        "helper_refs": { "$ref": "#/$defs/string_list" },
+        "model_refs": { "$ref": "#/$defs/string_list" },
+        "tool_refs": { "$ref": "#/$defs/string_list" },
+        "schema_refs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/exact_content_ref" },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "capability_requirements": { "$ref": "#/$defs/string_list" },
+    "authority_policy": {
+      "type": "object",
+      "required": [
+        "truth_owner_ref", "artifact_owner_ref", "quality_owner_ref", "permission_refs",
+        "generated_agent_can_modify_versions", "generated_agent_can_modify_evaluation",
+        "generated_agent_can_modify_permissions", "generated_agent_can_modify_activation"
+      ],
+      "properties": {
+        "truth_owner_ref": { "$ref": "#/$defs/non_empty" },
+        "artifact_owner_ref": { "$ref": "#/$defs/non_empty" },
+        "quality_owner_ref": { "$ref": "#/$defs/non_empty" },
+        "permission_refs": { "$ref": "#/$defs/string_list" },
+        "generated_agent_can_modify_versions": { "const": false },
+        "generated_agent_can_modify_evaluation": { "const": false },
+        "generated_agent_can_modify_permissions": { "const": false },
+        "generated_agent_can_modify_activation": { "const": false }
+      },
+      "additionalProperties": false
+    },
+    "memory_policy": {
+      "type": "object",
+      "required": ["memory_classes", "retention_refs", "write_authority_refs"],
+      "properties": {
+        "memory_classes": { "$ref": "#/$defs/string_list" },
+        "retention_refs": { "$ref": "#/$defs/string_list" },
+        "write_authority_refs": { "$ref": "#/$defs/string_list" }
+      },
+      "additionalProperties": false
+    },
+    "assumptions": { "$ref": "#/$defs/string_list" },
+    "design_evidence_refs": { "$ref": "#/$defs/string_list" },
+    "eval_spec": { "$ref": "#/$defs/eval_spec" },
+    "risk_hint": { "$ref": "#/$defs/risk_tier" }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "non_empty": { "type": "string", "minLength": 1 },
+    "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "exact_content_ref": { "type": "string", "pattern": "^opl-content://sha256/[a-f0-9]{64}$" },
+    "risk_tier": { "enum": ["low", "medium", "high"] },
+    "string_list": { "type": "array", "items": { "$ref": "#/$defs/non_empty" }, "uniqueItems": true },
+    "stage": {
+      "type": "object",
+      "required": [
+        "stage_id", "stage_kind", "goal", "input_artifact_types", "output_artifact_types", "prompt_ref",
+        "skill_refs", "knowledge_refs", "capability_refs", "next_stage_ids"
+      ],
+      "properties": {
+        "stage_id": { "$ref": "#/$defs/non_empty" },
+        "stage_kind": { "$ref": "#/$defs/non_empty" },
+        "goal": { "$ref": "#/$defs/non_empty" },
+        "input_artifact_types": { "$ref": "#/$defs/string_list" },
+        "output_artifact_types": { "$ref": "#/$defs/string_list" },
+        "prompt_ref": { "$ref": "#/$defs/non_empty" },
+        "skill_refs": { "$ref": "#/$defs/string_list" },
+        "knowledge_refs": { "$ref": "#/$defs/string_list" },
+        "capability_refs": { "$ref": "#/$defs/string_list" },
+        "next_stage_ids": { "$ref": "#/$defs/string_list" }
+      },
+      "additionalProperties": false
+    },
+    "action": {
+      "type": "object",
+      "required": ["action_id", "summary", "entry_stage_id", "input_schema_ref", "output_schema_ref"],
+      "properties": {
+        "action_id": { "$ref": "#/$defs/non_empty" },
+        "summary": { "$ref": "#/$defs/non_empty" },
+        "entry_stage_id": { "$ref": "#/$defs/non_empty" },
+        "input_schema_ref": { "$ref": "#/$defs/exact_content_ref" },
+        "output_schema_ref": { "$ref": "#/$defs/exact_content_ref" }
+      },
+      "additionalProperties": false
+    },
+    "artifact_contract": {
+      "type": "object",
+      "required": ["artifact_type", "schema_ref", "authority_owner_ref"],
+      "properties": {
+        "artifact_type": { "$ref": "#/$defs/non_empty" },
+        "schema_ref": { "$ref": "#/$defs/exact_content_ref" },
+        "authority_owner_ref": { "$ref": "#/$defs/non_empty" }
+      },
+      "additionalProperties": false
+    },
+    "eval_spec": {
+      "type": "object",
+      "required": [
+        "eval_spec_id", "public_cases", "protected_requirements", "gates", "baseline_comparison",
+        "independent_evaluator_required"
+      ],
+      "properties": {
+        "eval_spec_id": { "$ref": "#/$defs/non_empty" },
+        "public_cases": { "type": "array", "items": { "$ref": "#/$defs/public_case" } },
+        "protected_requirements": { "type": "array", "items": { "$ref": "#/$defs/protected_requirement" } },
+        "gates": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/gate" } },
+        "baseline_comparison": {
+          "type": "object",
+          "required": ["required", "regression_tolerance"],
+          "properties": { "required": { "type": "boolean" }, "regression_tolerance": { "type": "number", "minimum": 0 } },
+          "additionalProperties": false
+        },
+        "independent_evaluator_required": { "const": true }
+      },
+      "additionalProperties": false
+    },
+    "public_case": {
+      "type": "object",
+      "required": ["case_id", "test_ref", "weight", "required"],
+      "properties": {
+        "case_id": { "$ref": "#/$defs/non_empty" },
+        "test_ref": { "$ref": "#/$defs/non_empty" },
+        "weight": { "type": "number", "minimum": 0 },
+        "required": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "protected_requirement": {
+      "type": "object",
+      "required": ["category", "minimum_case_count"],
+      "properties": {
+        "category": { "$ref": "#/$defs/non_empty" },
+        "minimum_case_count": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "gate": {
+      "type": "object",
+      "required": ["gate_id", "metric", "operator", "threshold", "required"],
+      "properties": {
+        "gate_id": { "$ref": "#/$defs/non_empty" },
+        "metric": { "$ref": "#/$defs/non_empty" },
+        "operator": { "enum": ["gte", "lte", "eq"] },
+        "threshold": { "type": "number" },
+        "required": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

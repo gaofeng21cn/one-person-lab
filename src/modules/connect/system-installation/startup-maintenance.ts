@@ -1,5 +1,9 @@
 import { readOplUpdateChannel, readOplWorkspaceRoot } from '../../../kernel/system-preferences.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
+import {
+  reconcileTemporalRuntimeStartupMaintenance,
+  type TemporalStartupMaintenanceRuntime,
+} from '../../runway/index.ts';
 import { recordManagedInstallUpdateReceipts } from '../managed-install-update-ledger.ts';
 
 import { buildOplEnvironment } from './environment.ts';
@@ -406,7 +410,10 @@ async function maybeRunEngineStartupMaintenance(
 
 export async function runOplStartupMaintenance(
   contracts: FrameworkContracts,
-  options: { scope?: StartupMaintenanceScope } = {},
+  options: {
+    scope?: StartupMaintenanceScope;
+    temporalRuntime?: TemporalStartupMaintenanceRuntime;
+  } = {},
 ) {
   const scope = options.scope ?? 'all';
   const pendingRuntimeActivation = activatePendingCodexRuntimeGeneration();
@@ -443,6 +450,7 @@ export async function runOplStartupMaintenance(
     .map((target) => readSkillSyncDomain(target))
     .filter((domainId): domainId is string => Boolean(domainId));
   const seedApply = await applyOplSeedManifest();
+  const temporalRuntimeReconcile = await reconcileTemporalRuntimeStartupMaintenance(options.temporalRuntime);
   const refreshedEnvironment = (await buildOplEnvironment(contracts)).system_environment;
   const dockerWebuiStartup = buildDockerWebuiStartupReadback();
 
@@ -454,6 +462,7 @@ export async function runOplStartupMaintenance(
         || engineSummary.manual_required_targets_count > 0
         || frameworkSummary.manual_required_targets_count > 0
         || capabilitySummary.manual_required_targets_count > 0
+        || temporalRuntimeReconcile.status === 'blocked'
         ? 'manual_required'
         : 'completed',
       update_channel: readOplUpdateChannel().channel,
@@ -487,6 +496,7 @@ export async function runOplStartupMaintenance(
           image: dockerWebuiStartup.image,
           next_actions: dockerWebuiStartup.nextActions,
         },
+        temporal_runtime_reconcile: temporalRuntimeReconcile,
         managed_install_update_receipts: managedReceiptRecord,
         plugin_cache_freshness: {
           status: syncedDomains.length > 0
@@ -516,6 +526,8 @@ export async function runOplStartupMaintenance(
           can_write_domain_memory_body: false,
           can_mutate_domain_artifact_body: false,
           can_install_domain_daemon: false,
+          can_install_opl_provider_supervisor:
+            temporalRuntimeReconcile.authority_boundary.can_install_opl_provider_supervisor,
         },
         refreshed_system_environment: refreshedEnvironment,
         notes: [
@@ -525,6 +537,7 @@ export async function runOplStartupMaintenance(
           'Dirty, ahead, diverged, no-upstream, env override, sibling workspace, and invalid checkouts are reported for manual review.',
           'MAS Scholar Skills is a framework capability plugin pack, not a domain module; workspace/quest-local sync is still explicit and target-bound.',
           'Docker/WebUI startup records image seed, /data, and /projects boundaries in the OPL state install manifest without claiming runtime or domain readiness.',
+          'Desktop macOS startup reconciles the OPL-owned Temporal Server supervisor, Worker supervisor, and scheduler cadence in strict dependency order; non-Desktop, external, custom, and non-Darwin hosts do not receive launchd mutations.',
           'This action never writes domain truth, domain memory body, artifact body, quality verdict, export verdict, or domain daemons.',
         ],
       },

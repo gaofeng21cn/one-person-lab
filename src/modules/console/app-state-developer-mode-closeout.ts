@@ -1,7 +1,7 @@
-import { buildDeveloperModeAgentLabRepairRouteReadModel } from '../foundry-lab/public/app-state.ts';
+import { buildDeveloperModeRepairRouteReadModel } from './developer-mode-repair-route.ts';
 
 export function buildDeveloperModeLiveCloseoutEvidenceSummary() {
-  const readModel = buildDeveloperModeAgentLabRepairRouteReadModel();
+  const readModel = buildDeveloperModeRepairRouteReadModel();
   const evidence = readModel.live_closeout_evidence;
 
   return {
@@ -23,7 +23,8 @@ export function buildDeveloperModeLiveCloseoutEvidenceSummary() {
       verified_direct_fix_ledger_receipt_ref_count: evidence.summary.verified_direct_fix_ledger_receipt_ref_count,
       verified_fork_pr_ledger_receipt_ref_count: evidence.summary.verified_fork_pr_ledger_receipt_ref_count,
       route_repetition_ref_count: evidence.summary.route_repetition_ref_count,
-      risk_tier_auto_promotion_ref_count: evidence.summary.risk_tier_auto_promotion_ref_count,
+      foundry_activation_transaction_ref_count:
+        evidence.summary.foundry_activation_transaction_ref_count,
       app_patrol_mount_ref_count: evidence.summary.app_patrol_mount_ref_count,
       scaleout_followthrough_open_gate_count:
         evidence.summary.scaleout_followthrough_open_gate_count,
@@ -40,8 +41,8 @@ export function buildDeveloperModeLiveCloseoutEvidenceSummary() {
       refs_only: true,
       can_write_domain_truth: evidence.authority_boundary.can_write_domain_truth,
       can_write_memory_body: evidence.authority_boundary.can_write_memory_body,
-      can_write_owner_receipt: evidence.authority_boundary.can_write_owner_receipt,
-      can_modify_managed_runtime: evidence.authority_boundary.can_modify_managed_runtime,
+      can_write_owner_receipt: evidence.authority_boundary.writes_owner_receipt,
+      can_modify_managed_runtime: evidence.authority_boundary.modifies_managed_runtime,
       can_claim_release_ready: false,
       can_claim_production_ready: false,
       can_close_developer_mode_live_route: false,

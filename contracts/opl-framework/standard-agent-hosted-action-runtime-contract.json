@@ -67,6 +67,13 @@
           "kind": "stage_binding",
           "stage_manifest_ref": "agent/stages/manifest.json"
         }
+      },
+      {
+        "kind": "foundry_binding",
+        "required_shape": {
+          "kind": "foundry_binding",
+          "provider_manifest_ref": "contracts/foundry_provider.json"
+        }
       }
     ],
     "handler_binding_union": [
@@ -136,6 +143,21 @@
     "launch_receipt_is_domain_output": false,
     "provider_completion_is_domain_ready": false
   },
+  "foundry_execution": {
+    "host_owner": "runway",
+    "controller_owner": "foundry_kernel",
+    "provider_manifest_ref_from_closed_action_binding": true,
+    "design_request_protocol_validation_before_launch": true,
+    "same_action_run_reuses_exact_foundry_run_id": true,
+    "same_action_run_provider_start_rpc_delivery": "at_least_once_under_unknown_success_recovery",
+    "unknown_provider_success_requires_same_run_retry": true,
+    "started_means": "foundry_run_accepted_or_exact_existing_run_inspected",
+    "started_is_foundry_terminal_completion": false,
+    "started_is_target_agent_delivery": false,
+    "semantic_provider_can_execute_evaluation": false,
+    "semantic_provider_can_activate_version": false,
+    "foundry_kernel_remains_state_evidence_version_and_activation_owner": true
+  },
   "exact_byte_persistence": {
     "owner_module": "workspace",
     "workspace_relative_root": "control/opl/action_runs",
@@ -152,6 +174,27 @@
     "symbolic_link_or_workspace_escape_forbidden": true,
     "same_run_identity_same_bytes_is_idempotent": true,
     "same_run_identity_conflicting_bytes_fail_closed": true
+  },
+  "durable_run_binding_and_completion": {
+    "owner_module": "runway",
+    "workspace_relative_root": "control/opl/action_run_state",
+    "binding_file": "binding.json",
+    "completion_file": "completion.json",
+    "binding_published_before_handler_stage_or_foundry_launch": true,
+    "first_writer_binding_is_immutable": true,
+    "non_terminal_run_replay_uses_exact_pinned_runtime_provenance": true,
+    "completed_handler_replay_uses_durable_binding_completion_request_and_output": true,
+    "completed_handler_replay_requires_historical_managed_checkout": false,
+    "completed_handler_replay_requires_exact_original_payload_digest": true,
+    "completed_handler_replay_requires_exact_request_and_output_digests": true,
+    "activation_change_cannot_rebind_existing_run": true,
+    "foundry_active_binding_requires_durable_activation_transaction_verification": true,
+    "activation_pointer_without_matching_transaction_verification_fails_closed": true,
+    "non_terminal_corrupt_or_unresolvable_pinned_binding_fails_before_downstream_launch": true,
+    "completed_handler_corrupt_durable_binding_or_bytes_fails_before_replay": true,
+    "completion_requires_matching_persisted_request_and_output_identity": true,
+    "unknown_provider_success_does_not_publish_false_completion": true,
+    "atomic_publish_and_fsync_required": true
   },
   "refs_only_ledger": {
     "owner_module": "ledger",
@@ -213,6 +256,8 @@
   "verification_refs": [
     "src/modules/runway/standard-agent-managed-checkout.ts",
     "src/modules/runway/standard-agent-action-runtime.ts",
+    "src/modules/runway/hosted-agent-runtime-binding.ts",
+    "src/modules/runway/standard-agent-action-run-state.ts",
     "src/modules/runway/family-runtime-stage-run-identity.ts",
     "src/modules/runway/family-runtime-stage-run-launch-registry.ts",
     "src/modules/runway/family-runtime-stage-run-launch.ts",
@@ -222,6 +267,7 @@
     "src/modules/ledger/standard-agent-action-run-ledger.ts",
     "tests/src/standard-agent-hosted-action-runtime-contract.test.ts",
     "tests/src/standard-agent-action-runtime.test.ts",
+    "tests/src/hosted-agent-runtime-binding.test.ts",
     "tests/src/family-runtime-stage-run-launch.test.ts",
     "tests/src/standard-agent-action-output.test.ts"
   ]

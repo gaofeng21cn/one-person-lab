@@ -146,18 +146,18 @@
     "version": "standard-domain-agent-scaffold.v1",
     "owner": "one-person-lab",
     "state": "scaffold_contract_available",
-    "command": "opl agents scaffold",
+    "api_ref": "opl.pack.buildStandardDomainAgentScaffold",
     "contract_ref": "contracts/opl-framework/standard-domain-agent-skeleton-contract.json",
     "generation_policy": {
-      "scaffold_command_is_read_only": true,
+      "scaffold_request_is_read_only": true,
       "creates_files": false,
       "default_mode": "describe_without_target_dir",
       "write_requires_explicit_target_dir": true,
       "scaffold_role": "physical_skeleton_and_lower_bound_guardrail",
       "scaffold_is_agent_design_template_source": false,
       "scaffold_shape_source_ref": "contracts/opl-framework/standard-domain-agent-skeleton-contract.json",
-      "generate_command": "opl agents scaffold --target-dir <path> --domain-id <id>",
-      "validate_command": "opl agents scaffold --validate <repo-dir>",
+      "generate_api_ref": "opl.pack.buildStandardDomainAgentScaffold",
+      "validate_api_ref": "opl.pack.validateStandardDomainAgentScaffold",
       "copy_existing_domain_repo_as_template": false
     },
     "design_source_boundary": {

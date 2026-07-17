@@ -67,7 +67,7 @@ exit 1
               verified_direct_fix_ledger_receipt_ref_count: number;
               verified_fork_pr_ledger_receipt_ref_count: number;
               route_repetition_ref_count: number;
-              risk_tier_auto_promotion_ref_count: number;
+              foundry_activation_transaction_ref_count: number;
               app_patrol_mount_ref_count: number;
               scaleout_followthrough_open_gate_count: number;
               fixture_drill_owner_acceptance_open_count: number;
@@ -98,7 +98,7 @@ exit 1
     assert.equal(evidence.surface_kind, 'opl_app_state_developer_mode_live_closeout_evidence_summary');
     assert.equal(
       evidence.source_surface_kind,
-      'opl_agent_lab_developer_mode_live_closeout_evidence_read_model',
+      'opl_console_developer_mode_live_closeout_evidence_read_model',
     );
     assert.equal(evidence.status, 'closeout_refs_incomplete');
     assert.equal(evidence.ledger_evidence_status, 'verified_direct_fix_closeout_refs_observed');
@@ -110,7 +110,7 @@ exit 1
     assert.equal(evidence.summary.verified_direct_fix_ledger_receipt_ref_count, 1);
     assert.equal(evidence.summary.verified_fork_pr_ledger_receipt_ref_count, 0);
     assert.equal(evidence.summary.route_repetition_ref_count, 0);
-    assert.equal(evidence.summary.risk_tier_auto_promotion_ref_count, 0);
+    assert.equal(evidence.summary.foundry_activation_transaction_ref_count, 0);
     assert.equal(evidence.summary.app_patrol_mount_ref_count, 0);
     assert.equal(evidence.summary.scaleout_followthrough_open_gate_count, 0);
     assert.equal(

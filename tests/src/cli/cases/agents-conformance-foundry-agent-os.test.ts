@@ -1,9 +1,8 @@
-import { assert, runCliReadOnly, test } from '../helpers.ts';
+import { assert, runCliReadOnly, runCliReadOnlyFailure, test } from '../helpers.ts';
 import {
   buildReadyAgentRepo,
   configureReadyCapabilityPackage,
   configureReadyMagMorphology,
-  configureReadyMetaMorphology,
   configureReadyRcaMorphology,
   retargetReadyRepo,
   retargetReadyRepoToMag,
@@ -25,7 +24,6 @@ function readyFoundryRepos() {
 
   const omaRepo = buildReadyAgentRepo();
   retargetReadyRepo(omaRepo, 'opl-meta-agent', 'OPL Meta Agent');
-  configureReadyMetaMorphology(omaRepo);
 
   const bookForgeRepo = buildReadyAgentRepo();
   retargetReadyRepo(bookForgeRepo, 'opl-bookforge', 'OPL Book Forge');
@@ -89,50 +87,20 @@ test('agents conformance exposes Foundry Agent OS membership without readiness a
   assert.equal(foundry.authority_boundary.capability_registry_can_create_typed_blocker, false);
 });
 
-test('foundry agents inspect exposes stage profile and owner-answer shape without OPL domain authority', async () => {
-  for (const agentId of STANDARD_FOUNDRY_DOMAIN_AGENT_IDS) {
-    const inspect = (await runCliReadOnly([
-      'foundry',
-      'agents',
-      'inspect',
-      agentId,
-    ])).foundry_agent;
+test('Foundry exposes only the new operator surface and keeps the retired agent inspector absent', async () => {
+  const statusHelp = await runCliReadOnly(['help', 'foundry', 'status']);
+  assert.equal(statusHelp.help.command, 'foundry status');
+  assert.equal(statusHelp.help.usage, 'opl foundry status --run-id <run_id>');
 
-    assert.equal(inspect.series_membership, 'standard_domain_agent');
-    assert.equal(inspect.status, 'standard_domain_agent');
-    assert.match(inspect.ordinary_golden_path, /stage/);
-    assert.equal(inspect.stage_profile.profile_id, 'opl_foundry_agent_series_design_profile.v1');
-    assert.equal(inspect.stage_profile.applies_to_agent_id, agentId);
-    assert.equal(inspect.stage_profile.default_read_root, 'current_owner_delta');
-    assert.equal(inspect.stage_profile.provider_completion_is_closeout, false);
-    assert.equal(
-      inspect.stage_profile.stage_delivery_progress_marker,
-      'validated_consumable_artifact_progress_ref_or_domain_owner_receipt_ref',
-    );
-    assert.equal(inspect.owner_answer_shape.applies_to_agent_id, agentId);
-    assert.equal(
-      inspect.owner_answer_shape.success_shape,
-      'validated_consumable_artifact_progress_ref_or_domain_owner_receipt_ref',
-    );
-    assert.equal(inspect.owner_answer_shape.blocked_shape, 'domain_owned_typed_hard_blocker_ref');
-    assert.equal(
-      inspect.owner_answer_shape.route_back_shape,
-      'quality_debt_repair_recommendation_or_human_gate_ref',
-    );
-    assert.equal(inspect.owner_answer_shape.opl_base_authority.can_ready, false);
-    assert.equal(inspect.owner_answer_shape.opl_base_authority.can_truth, false);
-    assert.equal(inspect.owner_answer_shape.opl_base_authority.can_receipt, false);
-    assert.equal(inspect.owner_answer_shape.opl_base_authority.can_blocker, false);
-    assert.equal(inspect.opl_base_domain_authority.can_write_domain_truth, false);
-    assert.equal(inspect.opl_base_domain_authority.can_sign_owner_receipt, false);
-    assert.equal(inspect.opl_base_domain_authority.can_create_typed_blocker, false);
-  }
+  const retired = await runCliReadOnlyFailure(['foundry', 'agents', 'inspect', 'mas']);
+  assert.equal(retired.status, 2);
+  assert.equal(retired.payload.error.code, 'unknown_command');
+  assert.equal(retired.payload.error.details.command, 'foundry');
 });
 
 test('Foundry Agent OS canonicalizes OPL Meta Agent as OMA without renaming domain truth', async () => {
   const omaRepo = buildReadyAgentRepo();
   retargetReadyRepo(omaRepo, 'opl-meta-agent', 'OPL Meta Agent');
-  configureReadyMetaMorphology(omaRepo);
 
   const foundry = (await runCliReadOnly([
     'agents',
