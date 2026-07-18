@@ -287,6 +287,7 @@ function validateWorkflow(manifest, manifestPath, failures) {
   assertCondition(/oras repo tags/.test(dailySource) && /release-set-generation\.mjs/.test(dailySource), 'Daily workflow must allocate a new immutable same-day revision', failures);
   assertCondition(!/if ! oras repo tags/.test(dailySource), 'Daily Release Set generation must fail closed when tag readback fails', failures);
   assertCondition(/OPL_PACKAGE_RELEASE_GATE:\s*daily_package_channel_detection/.test(dailySource), 'Daily detection build must carry an explicit candidate-only release gate', failures);
+  assertCondition(/--owner-cohort-mode\s+framework-projection/.test(dailySource), 'Daily detection must freeze Framework-selected owner commits instead of unrelated owner HEADs', failures);
   assertCondition(/one-person-lab-manifest:latest-stable/.test(dailySource), 'Daily workflow must compare with latest-stable', failures);
   assertCondition(
     /owner_manifest=""[\s\S]*gh release download[\s\S]*app_commit=""[\s\S]*if \[ -n "\$owner_manifest" \]; then[\s\S]*jq -r \.source_commit "\$owner_manifest"[\s\S]*if \[ -z "\$app_commit" \]; then[\s\S]*gh api "repos\/gaofeng21cn\/one-person-lab-app\/commits\/v\$app_version"/.test(dailySource),

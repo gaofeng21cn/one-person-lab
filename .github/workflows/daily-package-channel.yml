@@ -145,6 +145,7 @@ jobs:
             --release-set-generation "$OPL_RELEASE_SET_GENERATION"
             --owner "$OPL_PACKAGES_OWNER"
             --out-dir dist/opl-daily-packages
+            --owner-cohort-mode framework-projection
             --app-component-manifest "$RUNNER_TEMP/opl-app-component-manifest.json"
           )
           if [ -n "${{ steps.current.outputs.current_manifest }}" ]; then

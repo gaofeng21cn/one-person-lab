@@ -194,6 +194,7 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.match(dailyPackageWorkflow, /force_publish[\s\S]*publish_required=true/);
   assert.match(dailyPackageWorkflow, /npm run packages:manifest/);
   assert.match(dailyPackageWorkflow, /OPL_PACKAGE_RELEASE_GATE:\s*daily_package_channel_detection/);
+  assert.match(dailyPackageWorkflow, /--owner-cohort-mode\s+framework-projection/);
   assert.match(dailyPackageWorkflow, /owner_manifest=""/);
   assert.match(
     dailyPackageWorkflow,

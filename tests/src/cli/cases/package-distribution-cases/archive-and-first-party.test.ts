@@ -115,6 +115,35 @@ function createFrozenFrameworkFixture(version: string) {
   };
 }
 
+function addFrameworkPackageProjections(
+  sourceRoot: string,
+  commits: Record<string, string>,
+) {
+  const manifestRefs: Record<string, string> = {
+    mas: 'mas.json',
+    mag: 'mag.json',
+    rca: 'rca.json',
+    oma: 'oma.json',
+    obf: 'obf.json',
+    'mas-scholar-skills': 'mas-scholar-skills.json',
+    'opl-flow': 'opl-flow.json',
+  };
+  for (const [packageId, fileName] of Object.entries(manifestRefs)) {
+    const target = path.join(sourceRoot, 'contracts/opl-framework/packages', fileName);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, `${JSON.stringify({
+      package_id: packageId,
+      codex_surface: { carrier_source_commit: commits[packageId] },
+    }, null, 2)}\n`, 'utf8');
+  }
+  execFileSync('git', ['add', '--all'], { cwd: sourceRoot, encoding: 'utf8' });
+  execFileSync('git', ['-c', 'commit.gpgsign=false', 'commit', '--quiet', '-m', 'Add Package projections'], {
+    cwd: sourceRoot,
+    encoding: 'utf8',
+  });
+  return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: sourceRoot, encoding: 'utf8' }).trim();
+}
+
 test('package archive builder writes channel manifest checksums git source and release discipline gate', () => {
   const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-out-'));
   const previousManifest = path.join(outDir, 'previous-manifest.json');
@@ -372,6 +401,15 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(channelManifest.packages.framework_core.artifact, manifest.packages.framework_core.artifact);
 
   const frozenFramework = createFrozenFrameworkFixture('0.1.0');
+  frozenFramework.headSha = addFrameworkPackageProjections(frozenFramework.sourceRoot, {
+    mas: fixtures.medautoscience.getHeadSha(),
+    mag: fixtures.medautogrant.getHeadSha(),
+    rca: fixtures.redcube.getHeadSha(),
+    oma: fixtures.oplmetaagent.getHeadSha(),
+    obf: fixtures.oplbookforge.getHeadSha(),
+    'mas-scholar-skills': fixtures.scholarskills.getHeadSha(),
+    'opl-flow': fixtures.oplflow.getHeadSha(),
+  });
   const frozenOutDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-frozen-framework-out-'));
   const fakeBin = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-frozen-framework-bin-'));
   fs.writeFileSync(path.join(fakeBin, 'npm'), '#!/bin/sh\nexit 0\n', { mode: 0o755 });
@@ -382,7 +420,7 @@ test('package archive builder writes channel manifest checksums git source and r
       '--release-set-generation', '26.4.31-r2',
       '--owner', 'gaofeng21cn',
       '--out-dir', frozenOutDir,
-      '--owner-cohort-lock', archiveBuilderResult.owner_cohort_lock,
+      '--owner-cohort-mode', 'framework-projection',
       '--app-component-manifest', appComponentManifest,
       '--framework-source-root', frozenFramework.sourceRoot,
     ], {
@@ -401,6 +439,7 @@ test('package archive builder writes channel manifest checksums git source and r
     const frozenArchive = path.join(frozenOutDir, 'framework', 'one-person-lab-framework-0.1.0.tar.gz');
     assert.notEqual(frozenFramework.sourceRoot, repoRoot);
     assert.equal(frozenResult.framework_source_root, frozenFramework.sourceRoot);
+    assert.equal(frozenResult.owner_cohort_mode, 'framework-projection');
     assert.equal(frozenManifest.release_set.components.base.version, '0.1.0');
     assert.equal(frozenManifest.release_set.components.base.source_commit, frozenFramework.headSha);
     assert.equal(frozenManifest.packages.framework_core.version, '0.1.0');

@@ -43,6 +43,7 @@ function parseCliOptions(argv) {
     retainVersions: process.env.OPL_PACKAGE_RETAIN_VERSIONS || undefined,
     appComponentManifest: process.env.OPL_APP_COMPONENT_MANIFEST || undefined,
     ownerCohortLock: process.env.OPL_PACKAGE_OWNER_COHORT_LOCK || undefined,
+    ownerCohortMode: process.env.OPL_PACKAGE_OWNER_COHORT_MODE || 'owner-head',
     frameworkSourceRoot: process.env.OPL_FRAMEWORK_SOURCE_ROOT
       ? path.resolve(process.env.OPL_FRAMEWORK_SOURCE_ROOT)
       : repoRoot,
@@ -76,6 +77,9 @@ function parseCliOptions(argv) {
     '--owner-cohort-lock': (value) => {
       parsed.ownerCohortLock = path.resolve(value);
     },
+    '--owner-cohort-mode': (value) => {
+      parsed.ownerCohortMode = value.trim();
+    },
     '--framework-source-root': (value) => {
       parsed.frameworkSourceRoot = path.resolve(value);
     },
@@ -83,6 +87,9 @@ function parseCliOptions(argv) {
 
   if (!parsed.cloneRoot) {
     parsed.cloneRoot = path.join(path.dirname(parsed.outDir), `${path.basename(parsed.outDir)}-package-sources`);
+  }
+  if (!['owner-head', 'framework-projection'].includes(parsed.ownerCohortMode)) {
+    throw new Error(`Invalid --owner-cohort-mode: ${parsed.ownerCohortMode}`);
   }
 
   return parsed;
@@ -357,6 +364,16 @@ function validateOwnerCohortLock(lock) {
   return lock;
 }
 
+function readProjectedCarrierCommit(spec, frameworkSourceRoot) {
+  const manifestPath = path.join(frameworkSourceRoot, spec.package_manifest_ref);
+  const manifest = readJsonFile(manifestPath);
+  const sourceCommit = manifest?.codex_surface?.carrier_source_commit ?? manifest?.source_commit;
+  if (!/^[0-9a-f]{40}$/.test(sourceCommit ?? '')) {
+    throw new Error(`${spec.package_id}: Framework projection has no exact carrier source commit`);
+  }
+  return sourceCommit;
+}
+
 function resolveOwnerCohort(options) {
   const supplied = options.ownerCohortLock
     ? validateOwnerCohortLock(readJsonFile(options.ownerCohortLock))
@@ -364,7 +381,10 @@ function resolveOwnerCohort(options) {
   const resolved = new Map();
   const packages = {};
   for (const spec of getOplPackageSpecs()) {
-    const lockedCommit = supplied?.packages?.[spec.package_id]?.source_commit ?? null;
+    const lockedCommit = supplied?.packages?.[spec.package_id]?.source_commit
+      ?? (options.ownerCohortMode === 'framework-projection'
+        ? readProjectedCarrierCommit(spec, options.frameworkSourceRoot)
+        : null);
     const repoPath = resolveModuleRepo(spec, options.cloneRoot, lockedCommit);
     const sourceCommit = readGitValue(repoPath, ['rev-parse', 'HEAD']);
     resolved.set(spec.package_id, repoPath);
@@ -382,6 +402,7 @@ function resolveOwnerCohort(options) {
       packages,
     },
     resolved,
+    mode: supplied ? 'supplied-lock' : options.ownerCohortMode,
   };
 }
 
@@ -491,7 +512,7 @@ function main() {
       process.env.OPL_PACKAGE_RELEASE_GATE?.trim() || null,
     );
     validatePackageSourceProjection({
-      frameworkRoot: repoRoot,
+      frameworkRoot: options.frameworkSourceRoot,
       spec,
       ownerRepoPath: repoPath,
       releaseGate: process.env.OPL_PACKAGE_RELEASE_GATE?.trim() || null,
@@ -565,6 +586,7 @@ function main() {
     framework_dir: frameworkOutDir,
     clone_root: options.cloneRoot,
     framework_source_root: options.frameworkSourceRoot,
+    owner_cohort_mode: ownerCohort.mode,
     framework_core: {
       artifact: manifest.packages.framework_core.artifact,
       source_archive: manifest.packages.framework_core.source_archive,
