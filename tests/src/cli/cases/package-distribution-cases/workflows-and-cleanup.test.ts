@@ -12,6 +12,11 @@ import {
   runCli,
   test,
 } from './helpers.ts';
+import {
+  compareReleaseSetGenerations,
+  nextReleaseSetGeneration,
+  parseReleaseSetGeneration,
+} from '../../../../../scripts/release-set-generation.mjs';
 
 test('framework packages workflow is release-gated and manually repairable without WebUI publishing', () => {
   const workflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/packages.yml'), 'utf8');
@@ -237,6 +242,14 @@ test('daily Release Set generation allocates the next immutable same-day revisio
     '--existing-tags-file', tags,
   ], { encoding: 'utf8' }).trim();
   assert.equal(first, '26.7.13');
+
+  assert.equal(nextReleaseSetGeneration('26.7.18', ['26.7.18-r8', '26.7.18-r9']), '26.7.18-r10');
+  assert.equal(compareReleaseSetGenerations('26.7.18-r10', '26.7.18-r9'), 1);
+  assert.equal(compareReleaseSetGenerations('26.7.18-r11', '26.7.18-r10'), 1);
+  assert.equal(compareReleaseSetGenerations('26.7.19', '26.7.18-r999'), 1);
+  assert.equal(compareReleaseSetGenerations('v26.7.18-r10', '26.7.18-r10'), 0);
+  assert.equal(parseReleaseSetGeneration('26.7.18-r10').revision, 10n);
+  assert.throws(() => compareReleaseSetGenerations('26.7.18-rx', '26.7.18-r9'));
 });
 
 function writeDailyCatalogFixture(root: string, name: string, packages: Record<string, { version: string; digest: string; commit?: string }>) {

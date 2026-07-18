@@ -5,6 +5,37 @@ import { fileURLToPath } from 'node:url';
 
 import { parseRequiredValueOptions } from './required-value-options.mjs';
 
+const RELEASE_SET_GENERATION_PATTERN = /^v?(\d{2})\.(\d{1,2})\.(\d{1,2})(?:-r([1-9]\d*))?$/;
+
+export function parseReleaseSetGeneration(value) {
+  if (typeof value !== 'string') {
+    throw new Error(`Release Set generation must be a string: ${String(value)}`);
+  }
+  const normalized = value.trim();
+  const match = normalized.match(RELEASE_SET_GENERATION_PATTERN);
+  if (!match) {
+    throw new Error(`Release Set generation must use YY.M.D[-rN]: ${value}`);
+  }
+  return {
+    normalized: normalized.replace(/^v/, ''),
+    year: Number(match[1]),
+    month: Number(match[2]),
+    day: Number(match[3]),
+    revision: match[4] ? BigInt(match[4]) : 0n,
+  };
+}
+
+export function compareReleaseSetGenerations(left, right) {
+  const leftGeneration = parseReleaseSetGeneration(left);
+  const rightGeneration = parseReleaseSetGeneration(right);
+  for (const field of ['year', 'month', 'day']) {
+    const delta = leftGeneration[field] - rightGeneration[field];
+    if (delta !== 0) return Math.sign(delta);
+  }
+  if (leftGeneration.revision === rightGeneration.revision) return 0;
+  return leftGeneration.revision > rightGeneration.revision ? 1 : -1;
+}
+
 function parseCliOptions(argv) {
   const parsed = { base: null, existingTagsFile: null };
   parseRequiredValueOptions(argv, {
@@ -22,22 +53,25 @@ function parseCliOptions(argv) {
 }
 
 export function nextReleaseSetGeneration(base, existingTags) {
-  if (!/^\d{2}\.\d{1,2}\.\d{1,2}$/.test(base)) {
+  const baseGeneration = parseReleaseSetGeneration(base);
+  if (baseGeneration.normalized !== base || baseGeneration.revision !== 0n) {
     throw new Error(`Release Set base must use YY.M.D: ${base}`);
   }
-  const escapedBase = base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const revisionPattern = new RegExp(`^${escapedBase}-r([1-9]\\d*)$`);
-  let highestRevision = 0;
+  let highestRevision = 0n;
   for (const rawTag of existingTags) {
-    const tag = rawTag.trim().replace(/^v/, '');
-    if (tag === base) {
-      highestRevision = Math.max(highestRevision, 1);
+    let candidate;
+    try {
+      candidate = parseReleaseSetGeneration(rawTag);
+    } catch {
       continue;
     }
-    const match = tag.match(revisionPattern);
-    if (match) highestRevision = Math.max(highestRevision, Number(match[1]));
+    if (candidate.year !== baseGeneration.year
+      || candidate.month !== baseGeneration.month
+      || candidate.day !== baseGeneration.day) continue;
+    const candidateRevision = candidate.revision === 0n ? 1n : candidate.revision;
+    if (candidateRevision > highestRevision) highestRevision = candidateRevision;
   }
-  return highestRevision === 0 ? base : `${base}-r${highestRevision + 1}`;
+  return highestRevision === 0n ? base : `${base}-r${highestRevision + 1n}`;
 }
 
 function main() {
