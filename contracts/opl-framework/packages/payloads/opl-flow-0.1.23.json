@@ -1,0 +1,71 @@
+{
+  "surface_kind": "opl_package_payload_manifest.v2",
+  "schema_ref": "contracts/opl-framework/package-payload-manifest-v2.schema.json",
+  "package_id": "opl-flow",
+  "plugin_id": "opl-flow",
+  "package_version": "0.1.23",
+  "source_repo": "https://github.com/gaofeng21cn/opl-flow.git",
+  "source_commit": "a8cf79ee7b751ea9f6d704a703019955379a1b43",
+  "source_root": ".",
+  "content_lock": {
+    "algorithm": "sha256",
+    "canonicalization": "ordered_path_length_file_length_bytes",
+    "digest": "sha256:d258fe042fac15f85729ee0a5a22400bde9dfd63db56eaf765d443121a7e7473"
+  },
+  "files": [
+    {
+      "path": ".codex-plugin/plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/a8cf79ee7b751ea9f6d704a703019955379a1b43/.codex-plugin/plugin.json",
+      "sha256": "sha256:b9e2127dac5b070d348d00d0fa2628e632874523f91339ac9e6d8654da40f682"
+    },
+    {
+      "path": "contracts/workflow-policy.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/a8cf79ee7b751ea9f6d704a703019955379a1b43/contracts/workflow-policy.json",
+      "sha256": "sha256:d6f4d2575d1b84ad06d207db0b94373b13d29ce7278eeb743a7a41e487d6a3b7"
+    },
+    {
+      "path": "contracts/workflow-policy.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/a8cf79ee7b751ea9f6d704a703019955379a1b43/contracts/workflow-policy.schema.json",
+      "sha256": "sha256:d6111e5f11d7063faa051063b66f265b46ea62a0cb889c1bf34e94da6fb9128e"
+    },
+    {
+      "path": "profile/manifest.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/a8cf79ee7b751ea9f6d704a703019955379a1b43/profile/manifest.json",
+      "sha256": "sha256:7f80dc27cf9c504bd2230c385ba18dd8007a813afebbfa67fcfb4b5502f9440c"
+    },
+    {
+      "path": "profile/modules/01-user-preferences.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/a8cf79ee7b751ea9f6d704a703019955379a1b43/profile/modules/01-user-preferences.md",
+      "sha256": "sha256:bf83abd15102e88175a0139506778db176bbec12af260c202a09d6783841508d"
+    },
+    {
+      "path": "skills/opl-flow/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/a8cf79ee7b751ea9f6d704a703019955379a1b43/skills/opl-flow/SKILL.md",
+      "sha256": "sha256:92e07e2934f059280d09ccbdb5b3dcf1787accc608504e15d00bb83bae9db888"
+    },
+    {
+      "path": "skills/opl-flow/agents/openai.yaml",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/a8cf79ee7b751ea9f6d704a703019955379a1b43/skills/opl-flow/agents/openai.yaml",
+      "sha256": "sha256:a0fa9e393a35c165493be062387e5f33a96ffc8f4527245ebe8c838ceff467a0"
+    },
+    {
+      "path": "templates/AGENTS.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/a8cf79ee7b751ea9f6d704a703019955379a1b43/templates/AGENTS.md",
+      "sha256": "sha256:bf83abd15102e88175a0139506778db176bbec12af260c202a09d6783841508d"
+    },
+    {
+      "path": "templates/TASTE.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/a8cf79ee7b751ea9f6d704a703019955379a1b43/templates/TASTE.md",
+      "sha256": "sha256:b47d094adb7ef10a14ec2b245959db7267894eb380db6add09b71cf6587b227e"
+    }
+  ]
+}

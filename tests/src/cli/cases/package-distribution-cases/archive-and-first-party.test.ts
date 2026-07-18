@@ -1007,14 +1007,18 @@ test('OPL Flow is a workflow-profile Package without Agent identity', () => {
     'utf8',
   )) as Record<string, any>;
   assert.equal(manifest.surface_kind, 'opl_workflow_profile_package_manifest.v1');
-  assert.equal(manifest.version, '0.1.22');
-  assert.equal(manifest.codex_surface.carrier_source_commit, '0e6be1220cddeed791e8e09b0170024d95e06f9f');
+  assert.equal(manifest.version, '0.1.23');
+  assert.equal(manifest.codex_surface.carrier_source_commit, 'a8cf79ee7b751ea9f6d704a703019955379a1b43');
   assert.equal(schema.properties.codex_surface.required.includes('carrier_source_commit'), true);
   assert.equal(Object.hasOwn(manifest, 'agent_id'), false);
   assert.equal(normalized.agent_id, null);
   assert.equal(normalized.profile_surface?.existing_profile_policy, 'semantic_merge_required');
   assert.equal(payload.surface_kind, 'opl_package_payload_manifest.v2');
-  assert.equal(payload.source_commit, '0e6be1220cddeed791e8e09b0170024d95e06f9f');
+  assert.equal(payload.source_commit, 'a8cf79ee7b751ea9f6d704a703019955379a1b43');
+  assert.equal(
+    payload.files.some((file: Record<string, unknown>) => String(file.path).startsWith('optional-skills/codex-ops-kit/')),
+    false,
+  );
   assert.equal(Object.hasOwn(payload, 'agent_id'), false);
 });
 

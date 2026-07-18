@@ -80,7 +80,7 @@
       ],
       "managed_surfaces": [],
       "management": "workflow_profile_pointer",
-      "version": "0.1.20"
+      "version": "0.1.23"
     }
   },
   "owned_by_repo": [
