@@ -345,6 +345,11 @@ export function joinAttemptsToWorkItems(input: {
         : currentStageTokens.state === 'observed' || cumulativeTokens.state === 'observed'
           ? 'partial'
           : 'missing';
+    const cumulativeTelemetryObservedWithNoApplicableCurrentStage = cumulativeTokens.state === 'observed'
+      && currentStageTokens.state === 'missing'
+      && currentStageTokens.missing_reason === 'current_stage_not_applicable';
+    const telemetryConditionObserved = telemetryState === 'observed'
+      || cumulativeTelemetryObservedWithNoApplicableCurrentStage;
     const repairRoute = currentAttempt
       ? currentRepairRoute(item, currentAttempt)
       : {
@@ -420,11 +425,17 @@ export function joinAttemptsToWorkItems(input: {
       }),
       condition({
         type: 'TelemetryObserved',
-        status: telemetryState === 'observed' ? 'True' : telemetryState === 'missing' ? 'Unknown' : 'False',
-        reason: telemetryState === 'observed' ? 'token_usage_observed' : `token_usage_${telemetryState}`,
+        status: telemetryConditionObserved ? 'True' : telemetryState === 'missing' ? 'Unknown' : 'False',
+        reason: telemetryState === 'observed'
+          ? 'token_usage_observed'
+          : cumulativeTelemetryObservedWithNoApplicableCurrentStage
+            ? 'cumulative_token_usage_observed_current_stage_not_applicable'
+            : `token_usage_${telemetryState}`,
         message: telemetryState === 'observed'
           ? 'Current-stage and cumulative token usage are observed.'
-          : 'Token usage is missing, partial, or stale.',
+          : cumulativeTelemetryObservedWithNoApplicableCurrentStage
+            ? 'Cumulative token usage is observed; current-stage telemetry is not applicable.'
+            : 'Token usage is missing, partial, or stale.',
         owner: 'opl_framework',
         severity: telemetryState === 'stale' ? 'warning' : 'none',
         last_transition_time: executionObservedAt,

@@ -432,6 +432,117 @@ test('App Runtime fast producer includes registered work items with bounded atte
   }
 });
 
+test('TelemetryObserved accepts non-applicable current-stage usage without weakening partial or missing states', () => {
+  const input = fixture();
+  try {
+    const projection = buildWorkItemProjectionV2({
+      profile: 'full',
+      bindings: input.bindings,
+      packageProjectionItems: input.packageProjectionItems,
+      packageStatusById: input.packageStatusById,
+      attempts: [
+        attempt({
+          id: 'sat-dm003-token-readback',
+          root: input.diabetes,
+          workItemId: '003-dpcc-primary-care-phenotype-treatment-gap',
+          status: 'completed',
+          stageId: '08-publication_package_handoff',
+          updatedAt: '2026-07-15T00:00:00.000Z',
+          tokenUsage: { input_tokens: 20_000, output_tokens: 5_490, total_tokens: 25_490 },
+        }),
+        attempt({
+          id: 'sat-dm001-current-stage-missing-token-readback',
+          root: input.diabetes,
+          workItemId: '001-dm-cvd-mortality-risk',
+          status: 'completed',
+          stageId: '01-study_intake',
+          updatedAt: '2026-07-16T00:00:00.000Z',
+        }),
+        attempt({
+          id: 'sat-dm001-historical-token-readback',
+          root: input.diabetes,
+          workItemId: '001-dm-cvd-mortality-risk',
+          status: 'completed',
+          stageId: '00-historical_intake',
+          updatedAt: '2026-07-14T00:00:00.000Z',
+          tokenUsage: { input_tokens: 1200, output_tokens: 300, total_tokens: 1500 },
+        }),
+        attempt({
+          id: 'sat-obesity-missing-token-readback',
+          root: input.obesity,
+          workItemId: 'obesity_multicenter_phenotype_atlas',
+          status: 'completed',
+          stageId: '01-study_intake',
+          updatedAt: '2026-07-16T00:00:00.000Z',
+        }),
+      ],
+      resolveDescriptor: input.resolveDescriptor,
+      generatedAt: '2026-07-16T00:01:00.000Z',
+    });
+    const delivered = projection.items.find(
+      (item) => item.identity.work_item_id === '003-dpcc-primary-care-phenotype-treatment-gap',
+    )!;
+    const partial = projection.items.find(
+      (item) => item.identity.work_item_id === '001-dm-cvd-mortality-risk',
+    )!;
+    const missing = projection.items.find(
+      (item) => item.identity.work_item_id === 'obesity_multicenter_phenotype_atlas',
+    )!;
+    const deliveredCondition = delivered.conditions.find((entry) => entry.type === 'TelemetryObserved')!;
+    const partialCondition = partial.conditions.find((entry) => entry.type === 'TelemetryObserved')!;
+    const missingCondition = missing.conditions.find((entry) => entry.type === 'TelemetryObserved')!;
+
+    assert.equal(delivered.lifecycle.business_state, 'delivered_paused');
+    assert.equal(delivered.execution.state, 'idle');
+    assert.deepEqual(
+      [
+        delivered.telemetry.state,
+        delivered.telemetry.current_stage.state,
+        delivered.telemetry.current_stage.missing_reason,
+        delivered.telemetry.cumulative.state,
+        delivered.telemetry.cumulative.total_tokens,
+      ],
+      ['partial', 'missing', 'current_stage_not_applicable', 'observed', 25_490],
+    );
+    assert.deepEqual(
+      [deliveredCondition.status, deliveredCondition.reason, deliveredCondition.severity],
+      ['True', 'cumulative_token_usage_observed_current_stage_not_applicable', 'none'],
+    );
+
+    assert.deepEqual(
+      [
+        partial.telemetry.state,
+        partial.telemetry.current_stage.state,
+        partial.telemetry.current_stage.missing_reason,
+        partial.telemetry.cumulative.state,
+        partial.telemetry.cumulative.total_tokens,
+      ],
+      ['partial', 'missing', 'no_stage_attempt_usage_telemetry_observed', 'observed', 1500],
+    );
+    assert.deepEqual(
+      [partialCondition.status, partialCondition.reason, partialCondition.severity],
+      ['False', 'token_usage_partial', 'none'],
+    );
+
+    assert.equal(missing.execution.attempt_id, 'sat-obesity-missing-token-readback');
+    assert.deepEqual(
+      [
+        missing.telemetry.state,
+        missing.telemetry.current_stage.state,
+        missing.telemetry.cumulative.state,
+        missing.telemetry.cumulative.total_tokens,
+      ],
+      ['missing', 'missing', 'missing', null],
+    );
+    assert.deepEqual(
+      [missingCondition.status, missingCondition.reason, missingCondition.severity],
+      ['Unknown', 'token_usage_missing', 'none'],
+    );
+  } finally {
+    fs.rmSync(input.root, { recursive: true, force: true });
+  }
+});
+
 test('delivered Stage Map uses the canonical recorded boundary without inferring a missing one', () => {
   const workItemRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-terminal-stage-map-'));
   const stageIndexRef = 'control/stage_index.json';
