@@ -123,7 +123,9 @@ export function buildLazyCommandSpecs(
           return buildMetadataHelp(commandSpecs, args);
         }
 
-        const executableSpecs = command === 'app state' || command === 'app action execute'
+        const executableSpecs = command === 'app state'
+          || command === 'app action execute'
+          || command === 'app view read'
           ? await loadAppSpecs()
           : await loadExecutableSpecs();
         const executableSpec = executableSpecs[command];

@@ -34,5 +34,20 @@ export function buildPublicAppCommandSpecs(
         return runOplAppActionExecute(getContracts(), options);
       },
     },
+    'app view read': {
+      usage: 'opl app view read --item-id <canonical-item-id> --view-id <view-id> [--if-revision <n>]',
+      summary: 'Read one descriptor-declared, item-scoped JSON detail view without accepting arbitrary paths.',
+      examples: [
+        'opl app view read --item-id <canonical-item-id> --view-id scientific-reasoning --json',
+        'opl app view read --item-id <canonical-item-id> --view-id scientific-reasoning --if-revision 4 --json',
+      ],
+      group: 'app',
+      handler: async (args) => {
+        const { buildDomainDetailViewReadback, parseAppViewReadArgs } = await import(
+          '../../../modules/console/domain-detail-view.ts'
+        );
+        return buildDomainDetailViewReadback(parseAppViewReadArgs(args));
+      },
+    },
   };
 }

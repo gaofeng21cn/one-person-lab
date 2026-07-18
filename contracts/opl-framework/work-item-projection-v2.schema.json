@@ -211,6 +211,20 @@
       },
       "additionalProperties": false
     },
+    "domainDetailView": {
+      "type": "object",
+      "required": ["item_id", "view_id", "view_kind", "schema_version", "availability"],
+      "properties": {
+        "item_id": { "type": "string", "minLength": 1 },
+        "view_id": { "type": "string", "minLength": 1 },
+        "view_kind": { "const": "scientific_reasoning_map" },
+        "schema_version": { "enum": ["scientific-reasoning-map.v1", "scientific-reasoning-map.v2"] },
+        "availability": { "enum": ["unread", "available", "missing", "stale", "invalid", "read_error"] },
+        "revision": { "type": "integer", "minimum": 0 },
+        "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+      },
+      "additionalProperties": false
+    },
     "action": {
       "type": "object",
       "required": ["kind", "title", "title_key", "summary", "summary_key", "message_args", "owner", "owner_kind", "owner_display_name", "action_ref", "dry_run_required"],
@@ -400,6 +414,7 @@
         },
         "action": { "$ref": "#/$defs/action" },
         "stage_map": { "type": "array", "items": { "$ref": "#/$defs/stage" } },
+        "domain_detail_views": { "type": "array", "items": { "$ref": "#/$defs/domainDetailView" } },
         "conditions": { "type": "array", "items": { "$ref": "#/$defs/condition" } },
         "freshness": {
           "type": "object",

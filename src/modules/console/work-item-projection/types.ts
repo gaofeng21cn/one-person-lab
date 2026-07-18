@@ -53,6 +53,24 @@ export type WorkItemStageDisplayNames = {
   [locale: string]: string;
 };
 
+export type DomainDetailViewAvailability =
+  | 'unread'
+  | 'available'
+  | 'missing'
+  | 'stale'
+  | 'invalid'
+  | 'read_error';
+
+export type DomainDetailViewLocator = {
+  item_id: string;
+  view_id: string;
+  view_kind: 'scientific_reasoning_map';
+  schema_version: 'scientific-reasoning-map.v1' | 'scientific-reasoning-map.v2';
+  availability: DomainDetailViewAvailability;
+  revision?: number;
+  digest?: string;
+};
+
 export type WorkItemSourceRef = {
   ref_kind: 'file' | 'sqlite' | 'projection';
   ref: string;
@@ -230,6 +248,7 @@ export type WorkItemProjectionItem = {
     usage: TokenObservation | null;
     next_action: string | null;
   }>;
+  domain_detail_views?: DomainDetailViewLocator[];
   conditions: WorkItemCondition[];
   freshness: {
     state: WorkItemFreshnessState;

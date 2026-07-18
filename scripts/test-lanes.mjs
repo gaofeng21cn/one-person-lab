@@ -189,6 +189,7 @@ const fastTestFiles = [
 ];
 
 const readModelGateTestFiles = [
+  'tests/src/domain-detail-view.test.ts',
   'tests/src/work-item-projection-v2.test.ts',
   'tests/src/app-runtime-fast-work-item-projection-contract.test.ts',
   'tests/src/work-item-hosted-readback.test.ts',

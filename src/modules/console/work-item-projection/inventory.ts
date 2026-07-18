@@ -7,6 +7,7 @@ import { readJsonFileOrNull } from '../../../kernel/json-file.ts';
 import { stringValue, type JsonRecord } from '../../../kernel/json-record.ts';
 import type { StandardAgentDescriptorInterface } from '../../../kernel/standard-agent-interface.ts';
 import { readStandardAgentDescriptorForDomain } from '../../connect/index.ts';
+import { projectDomainDetailViewLocators } from '../domain-detail-view-locator.ts';
 import type {
   ProjectCatalogEntry,
   WorkItemBusinessState,
@@ -334,6 +335,11 @@ export function readProjectInventory(input: {
       },
       action: actionProjection.action,
       stage_map: stagePresentation.stage_map,
+      domain_detail_views: projectDomainDetailViewLocators({
+        itemId,
+        workItemRoot,
+        declarations: descriptor.interface.domain_detail_views,
+      }),
       conditions: [],
       freshness: {
         state: 'current',
