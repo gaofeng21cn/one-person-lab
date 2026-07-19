@@ -111,6 +111,7 @@ export * from './source-derived-agent-design-abi.ts';
 export * from './standard-agent-capability-map.ts';
 export * from './standard-agent-conformance-profile.ts';
 export * from './standard-agent-evaluation-manifest.ts';
+export * from './standard-agent-execution-profile.ts';
 export * from './standard-agent-principles.ts';
 export * from './standard-domain-agent-conformance-utils.ts';
 export * from './standard-domain-agent-scaffold-constants.ts';

@@ -158,6 +158,39 @@
     "semantic_provider_can_activate_version": false,
     "foundry_kernel_remains_state_evidence_version_and_activation_owner": true
   },
+  "conformance_profile": {
+    "profile_id": "opl_hosted_foundry_semantic_provider",
+    "selection": {
+      "domain_descriptor_agent_role": "foundry_semantic_provider",
+      "all_action_execution_bindings": "foundry_binding",
+      "joint_match_required": true,
+      "agent_id_special_case_allowed": false
+    },
+    "repo_local_required_surfaces": [
+      "semantic_stage_pack",
+      "foundry_provider_manifest",
+      "foundry_agent_series",
+      "capability_map",
+      "source_closure",
+      "generated_surface_handoff",
+      "private_surface_boundary"
+    ],
+    "opl_hosted_surfaces": [
+      "runtime_scaffold",
+      "artifact_and_receipt_storage",
+      "workspace_lifecycle",
+      "stage_run_profile",
+      "controlled_canary_evidence",
+      "state_index",
+      "physical_runtime_morphology"
+    ],
+    "raw_repo_diagnostics_preserved": true,
+    "effective_blockers_are_profile_aware": true,
+    "managed_runtime_identity_and_currentness_owner": "opl_managed_package_gate",
+    "live_qualification_and_canary_evidence_owner": "opl_foundry_kernel",
+    "provider_completion_is_qualification_or_closeout": false,
+    "repo_local_placeholder_contracts_can_close_hosted_evidence": false
+  },
   "exact_byte_persistence": {
     "owner_module": "workspace",
     "workspace_relative_root": "control/opl/action_runs",

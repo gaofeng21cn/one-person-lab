@@ -25,6 +25,10 @@ import { validateFoundryAgentSeriesContract } from './standard-domain-agent-scaf
 import { normalizeStandardAgentCapabilityMapPolicies } from './standard-agent-capability-map.ts';
 import { validateStandardAgentImplementationProfileRefs } from '../pack/public/standard-agent-implementation-profile.ts';
 import { readStandardAgentInterface } from '../../kernel/standard-agent-interface.ts';
+import {
+  OPL_HOSTED_FOUNDRY_SEMANTIC_PROVIDER_PROFILE_ID,
+  resolveStandardAgentExecutionProfile,
+} from './standard-agent-execution-profile.ts';
 
 interface ScaffoldValidateInput {
   repoDir: string;
@@ -194,9 +198,17 @@ function validateCapabilityMap(capabilityMap: unknown) {
 
 export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput) {
   const repoDir = path.resolve(input.repoDir);
-  const missingRequiredDirs = REQUIRED_REPO_SOURCE_DIRS.filter((dir) => !fs.existsSync(path.join(repoDir, dir)));
+  const executionProfile = resolveStandardAgentExecutionProfile(repoDir);
+  const hostedFoundryProvider = executionProfile.selected_profile_id
+    === OPL_HOSTED_FOUNDRY_SEMANTIC_PROVIDER_PROFILE_ID;
+  const rawRequiredDirs = [...REQUIRED_REPO_SOURCE_DIRS];
+  const requiredDirs = hostedFoundryProvider
+    ? rawRequiredDirs.filter((dir) => dir !== 'runtime')
+    : rawRequiredDirs;
+  const rawMissingRequiredDirs = rawRequiredDirs.filter((dir) => !fs.existsSync(path.join(repoDir, dir)));
+  const missingRequiredDirs = requiredDirs.filter((dir) => !fs.existsSync(path.join(repoDir, dir)));
   const forbiddenPresentDirs = ['artifacts'].filter((dir) => fs.existsSync(path.join(repoDir, dir)));
-  const requiredContractFiles = [
+  const rawRequiredContractFiles = [
     'contracts/domain_descriptor.json',
     'contracts/pack_compiler_input.json',
     'contracts/generated_surface_handoff.json',
@@ -214,6 +226,23 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
     'contracts/standard_agent_conformance_profile.json',
     'contracts/workspace_lifecycle_policy.json',
   ];
+  const hostedContractOmissions = new Set([
+    'contracts/artifact_locator_contract.json',
+    'contracts/owner_receipt_contract.json',
+    'contracts/standard-agent-principles-adoption.json',
+    'contracts/stage_operating_principles.json',
+    'contracts/private_functional_surface_policy.json',
+    'contracts/standard_agent_conformance_profile.json',
+    'contracts/workspace_lifecycle_policy.json',
+  ]);
+  const requiredContractFiles = hostedFoundryProvider
+    ? [
+        ...rawRequiredContractFiles.filter((file) => !hostedContractOmissions.has(file)),
+        'contracts/foundry_provider.json',
+      ]
+    : rawRequiredContractFiles;
+  const rawMissingContractFiles = rawRequiredContractFiles
+    .filter((file) => !fs.existsSync(path.join(repoDir, file)));
   const missingContractFiles = requiredContractFiles.filter((file) => !fs.existsSync(path.join(repoDir, file)));
   const functionalPrivatizationAudit = readJsonFileOrNull(
     path.join(repoDir, 'contracts/functional_privatization_audit.json'),
@@ -224,7 +253,11 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
   const forbiddenRoles = Array.isArray(functionalPrivatizationAuditRecord.forbidden_generic_owner_roles)
     ? functionalPrivatizationAuditRecord.forbidden_generic_owner_roles
     : [];
-  const missingForbiddenRoleGuards = FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES.filter((role) => !forbiddenRoles.includes(role));
+  const rawMissingForbiddenRoleGuards = FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES
+    .filter((role) => !forbiddenRoles.includes(role));
+  const missingForbiddenRoleGuards = hostedFoundryProvider
+    ? []
+    : rawMissingForbiddenRoleGuards;
   const descriptor = readJsonFileOrNull(path.join(repoDir, 'contracts/domain_descriptor.json'));
   const descriptorRecord = isRecord(descriptor) ? descriptor : {};
   let standardAgentInterfaceValidation: {
@@ -255,7 +288,7 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
   const implementationProfileValidation = validateStandardAgentImplementationProfileRefs(
     packCompilerInputRecord.implementation_profile,
     repoDir,
-    { required: true },
+    { required: !hostedFoundryProvider },
   );
   const generatedSurfaceHandoff = readJsonFileOrNull(path.join(repoDir, 'contracts/generated_surface_handoff.json'));
   const generatedSurfaceHandoffRecord = isRecord(generatedSurfaceHandoff) ? generatedSurfaceHandoff : {};
@@ -273,7 +306,7 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
   const stagePackV2Validation = validateStagePackV2(stageControlPlane, packCompilerInput, stagePackV2Required, {
     repoDir,
   });
-  const authorityViolations = [
+  const rawAuthorityViolations = [
     authority.opl_can_write_domain_truth === false ? null : 'opl_can_write_domain_truth_must_be_false',
     authority.opl_can_write_memory_body === false ? null : 'opl_can_write_memory_body_must_be_false',
     authority.opl_can_authorize_quality_or_export === false ? null : 'opl_can_authorize_quality_or_export_must_be_false',
@@ -295,6 +328,42 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
       ? null
       : 'generated_surface_handoff_domain_owner_must_be_false',
   ].filter(Boolean);
+  const authorityViolations = hostedFoundryProvider
+    ? [
+        packCompilerInputRecord.generated_surface_owner === 'one-person-lab'
+          ? null
+          : 'pack_compiler_generated_surface_owner_must_be_opl',
+        generatedSurfaceHandoffRecord.generated_surface_owner === 'one-person-lab'
+          ? null
+          : 'generated_surface_handoff_owner_must_be_opl',
+        generatedSurfaceHandoffRecord.domain_repo_can_own_generated_surface === false
+          ? null
+          : 'generated_surface_handoff_domain_owner_must_be_false',
+      ].filter(Boolean)
+    : rawAuthorityViolations;
+  const hostedNonApplicablePackSectionBlockers = new Set(hostedFoundryProvider
+    ? agentPackValidation.section_status
+      .filter((section) => section.section === 'skills' && section.status !== 'ok')
+      .map((section) => `missing_agent_pack_section:${section.section}`)
+    : []);
+  const effectiveAgentPackBlockers = agentPackValidation.blockers
+    .filter((blocker) => !hostedNonApplicablePackSectionBlockers.has(blocker));
+  const rawBlockers = [
+    ...rawMissingRequiredDirs.map((item) => `missing_required_dir:${item}`),
+    ...forbiddenPresentDirs.map((item) => `forbidden_source_dir_present:${item}`),
+    ...rawMissingContractFiles.map((item) => `missing_contract:${item}`),
+    ...repoContractReadout.blockers,
+    ...rawMissingForbiddenRoleGuards.map((item) => `missing_forbidden_role_guard:${item}`),
+    ...rawAuthorityViolations,
+    standardAgentInterfaceValidation.blocker,
+    ...agentPackValidation.blockers,
+    ...stageRefValidation.blockers,
+    ...userStageLogValidation.blockers,
+    ...foundryAgentSeriesValidation.blockers,
+    ...capabilityMapValidation.blockers,
+    ...stagePackV2Validation.blockers,
+    ...executionProfile.blockers,
+  ].filter((entry): entry is string => Boolean(entry));
   const blockers = [
     ...missingRequiredDirs.map((item) => `missing_required_dir:${item}`),
     ...forbiddenPresentDirs.map((item) => `forbidden_source_dir_present:${item}`),
@@ -303,12 +372,13 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
     ...missingForbiddenRoleGuards.map((item) => `missing_forbidden_role_guard:${item}`),
     ...authorityViolations,
     standardAgentInterfaceValidation.blocker,
-    ...agentPackValidation.blockers,
+    ...effectiveAgentPackBlockers,
     ...stageRefValidation.blockers,
     ...userStageLogValidation.blockers,
     ...foundryAgentSeriesValidation.blockers,
     ...capabilityMapValidation.blockers,
     ...stagePackV2Validation.blockers,
+    ...executionProfile.blockers,
   ].filter((entry): entry is string => Boolean(entry));
   const advisoryFindings = [
     ...agentPackValidation.advisory_findings,
@@ -322,15 +392,24 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
       surface_kind: 'opl_standard_domain_agent_scaffold_validation',
       repo_dir: repoDir,
       status: blockers.length === 0 ? 'passed' : 'blocked',
+      raw_status: rawBlockers.length === 0 ? 'passed' : 'blocked',
+      execution_profile: executionProfile,
       scaffold_ref: 'contracts/opl-framework/standard-domain-agent-skeleton-contract.json',
-      required_dirs: REQUIRED_REPO_SOURCE_DIRS,
+      required_dirs: requiredDirs,
       missing_required_dirs: missingRequiredDirs,
+      raw_required_dirs: rawRequiredDirs,
+      raw_missing_required_dirs: rawMissingRequiredDirs,
       forbidden_dirs_present: forbiddenPresentDirs,
       required_contract_files: requiredContractFiles,
       missing_contract_files: missingContractFiles,
+      raw_required_contract_files: rawRequiredContractFiles,
+      raw_missing_contract_files: rawMissingContractFiles,
       missing_forbidden_role_guards: missingForbiddenRoleGuards,
+      raw_missing_forbidden_role_guards: rawMissingForbiddenRoleGuards,
       authority_violations: authorityViolations,
+      raw_authority_violations: rawAuthorityViolations,
       agent_pack_validation: agentPackValidation,
+      agent_pack_effective_blockers: effectiveAgentPackBlockers,
       stage_ref_validation: stageRefValidation,
       user_stage_log_validation: userStageLogValidation,
       foundry_agent_series_validation: foundryAgentSeriesValidation,
@@ -340,6 +419,7 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
       standard_agent_interface_validation: standardAgentInterfaceValidation,
       functional_privatization_audit_required: true,
       blockers,
+      raw_blockers: rawBlockers,
       advisory_findings: advisoryFindings,
       authority_boundary: {
         opl_can_write_domain_truth: false,

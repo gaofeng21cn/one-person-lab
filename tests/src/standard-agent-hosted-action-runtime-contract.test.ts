@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { parseJsonText } from '../../src/kernel/json-file.ts';
+import { OPL_HOSTED_FOUNDRY_SEMANTIC_PROVIDER_PROFILE_ID } from '../../src/modules/pack/index.ts';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -128,6 +129,22 @@ test('hosted action persistence and ledger distinguish Stage launch from complet
   assert.deepEqual(contract.refs_only_ledger.timestamp_fields, ['started_at', 'recorded_at']);
   assert.equal(contract.refs_only_ledger.contains_request_or_output_body, false);
   assert.equal(contract.refs_only_ledger.started_is_terminal_domain_completion, false);
+});
+
+test('hosted Foundry conformance profile is jointly selected and keeps live evidence OPL-owned', () => {
+  const profile = readContract().conformance_profile;
+
+  assert.equal(profile.profile_id, OPL_HOSTED_FOUNDRY_SEMANTIC_PROVIDER_PROFILE_ID);
+  assert.equal(profile.selection.domain_descriptor_agent_role, 'foundry_semantic_provider');
+  assert.equal(profile.selection.all_action_execution_bindings, 'foundry_binding');
+  assert.equal(profile.selection.joint_match_required, true);
+  assert.equal(profile.selection.agent_id_special_case_allowed, false);
+  assert.equal(profile.raw_repo_diagnostics_preserved, true);
+  assert.equal(profile.effective_blockers_are_profile_aware, true);
+  assert.equal(profile.managed_runtime_identity_and_currentness_owner, 'opl_managed_package_gate');
+  assert.equal(profile.live_qualification_and_canary_evidence_owner, 'opl_foundry_kernel');
+  assert.equal(profile.provider_completion_is_qualification_or_closeout, false);
+  assert.equal(profile.repo_local_placeholder_contracts_can_close_hosted_evidence, false);
 });
 
 test('hosted action runtime does not restore private control planes or domain authority', () => {

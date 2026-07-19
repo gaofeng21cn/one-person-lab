@@ -37,6 +37,7 @@ import { buildStageRunDomainAdoptionReadModel } from './standard-domain-agent-co
 import { buildFoundryAgentOsConformance } from './standard-domain-agent-conformance-foundry-agent-os.ts';
 import { validateStandardDomainAgentScaffold } from '../pack/index.ts';
 import { buildPackCompilerChecks } from './standard-domain-agent-conformance-pack.ts';
+import { buildProfileAwareConformanceChecks } from './standard-domain-agent-conformance-effective-profile.ts';
 import {
   collectFieldValues,
   isRecord,
@@ -258,6 +259,7 @@ function buildRepoConformance(
     repoDir,
     repoContractReadout,
   }).standard_domain_agent_scaffold_validation;
+  const conformanceProfile = scaffoldValidation.execution_profile;
   const packCompilerChecks = buildPackCompilerChecks(
     repoDir,
     resolveStandardAgent(domainId)?.agent_id,
@@ -292,28 +294,29 @@ function buildRepoConformance(
     agentRepoDir: repoDir,
   });
   const evidenceTailClassification = buildEvidenceTailClassification(repoDir, domainId, generatedInterfaceChecks);
-  const blockers = unique([
-    ...scaffoldValidation.blockers,
-    ...packCompilerChecks.blockers,
-    ...generatedSurfaceHandoffChecks.blockers,
-    ...privateSurfaceChecks.blockers,
-    ...legacyRuntimeResidueGuard.blockers,
-    ...generatedInterfaceChecks.blockers,
-    ...platformSurfaceOwnershipChecks.blockers,
-    ...physicalMorphologyChecks.blockers,
-    ...sourceBehaviorChecks.blockers,
-    ...sourceClosureChecks.blockers.map((blocker) => `source_closure:${blocker}`),
-    ...workspaceFileLifecycleChecks.blockers,
-    ...stageArtifactKernelAdoptionChecks.blockers,
-    ...stageRunKernelProfileChecks.blockers,
-    ...stageRunCanaryEvidenceChecks.blockers,
-    ...stageOperatingPrincipleChecks.blockers,
-    ...stageQualityRoutePromptAlignmentChecks.blockers,
-    ...standardAgentPrincipleChecks.blockers,
-    ...stateIndexKernelAdoptionChecks.blockers,
-    ...goldenPathDefaultSurfaceBudgetChecks.blockers,
-    ...workspaceNormChecks.blockers,
-  ]);
+  const profileAwareChecks = buildProfileAwareConformanceChecks({
+    scaffold_validation: scaffoldValidation,
+    pack_compiler_checks: packCompilerChecks,
+    generated_surface_handoff_checks: generatedSurfaceHandoffChecks,
+    private_surface_checks: privateSurfaceChecks,
+    legacy_runtime_residue_guard: legacyRuntimeResidueGuard,
+    generated_interface_checks: generatedInterfaceChecks,
+    platform_surface_ownership_checks: platformSurfaceOwnershipChecks,
+    physical_morphology_checks: physicalMorphologyChecks,
+    source_behavior_checks: sourceBehaviorChecks,
+    source_closure_checks: sourceClosureChecks,
+    workspace_file_lifecycle_checks: workspaceFileLifecycleChecks,
+    stage_artifact_kernel_adoption_checks: stageArtifactKernelAdoptionChecks,
+    stage_run_kernel_profile_checks: stageRunKernelProfileChecks,
+    stage_run_canary_evidence_checks: stageRunCanaryEvidenceChecks,
+    stage_operating_principle_checks: stageOperatingPrincipleChecks,
+    stage_quality_route_prompt_alignment_checks: stageQualityRoutePromptAlignmentChecks,
+    standard_agent_principle_checks: standardAgentPrincipleChecks,
+    state_index_kernel_adoption_checks: stateIndexKernelAdoptionChecks,
+    golden_path_default_surface_budget_checks: goldenPathDefaultSurfaceBudgetChecks,
+    workspace_norm_checks: workspaceNormChecks,
+  });
+  const { blockers, raw_blockers: rawBlockers, effective_checks: effectiveChecks } = profileAwareChecks;
 
   return {
     repo_dir: repoDir,
@@ -321,8 +324,25 @@ function buildRepoConformance(
     domain_id: domainId,
     status: blockers.length === 0 ? 'passed' : 'blocked',
     blockers,
+    effective_blocker_count: blockers.length,
+    conformance_profile: conformanceProfile,
+    effective_checks: effectiveChecks,
+    raw_repo_diagnostics: {
+      status: rawBlockers.length === 0 ? 'passed' : 'blocked',
+      blocker_count: rawBlockers.length,
+      checks: Object.fromEntries(Object.entries(effectiveChecks).map(([checkId, check]) => [
+        checkId,
+        {
+          status: check.raw_status,
+          blocker_count: check.raw_blocker_count,
+        },
+      ])),
+    },
     scaffold_validation: {
       status: scaffoldValidation.status, blockers: scaffoldValidation.blockers,
+      raw_status: scaffoldValidation.raw_status,
+      raw_blocker_count: scaffoldValidation.raw_blockers.length,
+      execution_profile: conformanceProfile,
       agent_pack_validation: scaffoldValidation.agent_pack_validation,
       stage_ref_validation: scaffoldValidation.stage_ref_validation,
       stage_pack_v2_validation: scaffoldValidation.stage_pack_v2_validation,

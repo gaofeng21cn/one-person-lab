@@ -1,5 +1,6 @@
 import { assert, fs, path, runCliReadOnly, test } from '../helpers.ts';
 import './agents-conformance-cases/production-acceptance-and-morphology.ts';
+import './agents-conformance-cases/hosted-foundry-provider-profile.ts';
 import {
   buildReadyAgentRepo,
   configureReadyMagMorphology,

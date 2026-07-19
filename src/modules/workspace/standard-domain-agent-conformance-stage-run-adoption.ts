@@ -1,6 +1,7 @@
 import { canonicalOwnerId } from '../../kernel/owner-id.ts';
 import {
   isRecord,
+  OPL_HOSTED_FOUNDRY_SEMANTIC_PROVIDER_PROFILE_ID,
   optionalString,
   readJsonFile,
   recordList,
@@ -16,6 +17,15 @@ interface StageRunAdoptionReport {
   requested_agent_id: string | null;
   domain_id: string;
   status: string;
+  conformance_profile: {
+    selected_profile_id: string | null;
+    opl_hosted_evidence: {
+      owner: string;
+      runtime_owner: string;
+      structural_contract_ref: string;
+      live_evidence_status: string;
+    } | null;
+  };
   stage_run_kernel_profile_checks: {
     status: string;
     profile_source: unknown;
@@ -83,6 +93,15 @@ const LIVE_STAGE_RUN_PROGRESS_ACCEPTED_RESULT_SHAPES = [
   'long_soak_ref',
 ];
 
+const HOSTED_FOUNDRY_EVIDENCE_ACCEPTED_RESULT_SHAPES = [
+  'opl_foundry_run',
+  'opl_foundry_run_event',
+  'opl_foundry_qualification_record',
+  'opl_foundry_agent_version',
+  'opl_foundry_activation_transaction',
+  'opl_foundry_owner_gate_verification',
+];
+
 const LIVE_STAGE_RUN_PROGRESS_FORBIDDEN_OPL_CLAIMS = [
   'live_domain_progress_complete',
   'domain_ready',
@@ -105,6 +124,12 @@ const LIVE_STAGE_RUN_PROGRESS_STOP_LOSS = [
   'if status is owner_typed_blocker_recorded_not_ready_claim, wait for domain owner route-back, no_regression_ref, or updated live progress evidence before treating the lane as complete',
   'if verification commands fail, keep the domain in required_from_domain_owner or owner_typed_blocker_recorded_not_ready_claim and do not claim domain_ready',
   'if observed refs are not bound to contracts/live_stage_run_progress_evidence.json, request a domain-owned contract update instead of synthesizing an owner receipt',
+];
+
+const HOSTED_FOUNDRY_EVIDENCE_STOP_LOSS = [
+  'provider completion alone is not qualification, canary, activation, rollback, or closeout evidence',
+  'missing or unreadable FoundryRun evidence remains required_from_opl_foundry_kernel and must not be replaced by repo-local placeholder contracts',
+  'managed package identity or currentness failure remains owned by the OPL managed package gate and blocks launch authority',
 ];
 
 const LIVE_STAGE_RUN_PROGRESS_EVIDENCE_CONTRACT =
@@ -153,6 +178,30 @@ function countTailItems(report: StageRunAdoptionReport, status: string) {
   return report.evidence_tail_classification.tail_items
     .filter((item) => optionalString(item.status) === status)
     .length;
+}
+
+function isHostedFoundrySemanticProvider(report: StageRunAdoptionReport) {
+  return report.conformance_profile.selected_profile_id
+    === OPL_HOSTED_FOUNDRY_SEMANTIC_PROVIDER_PROFILE_ID;
+}
+
+function hostedFoundryLiveEvidence(report: StageRunAdoptionReport): LiveStageRunProgressEvidence {
+  const contractRef = report.conformance_profile.opl_hosted_evidence?.structural_contract_ref
+    ?? 'contracts/opl-framework/standard-agent-hosted-action-runtime-contract.json#foundry_execution';
+  return {
+    status: 'required_from_opl_foundry_kernel',
+    evidence_contract_ref: contractRef,
+    evidence_contract_status: 'opl_hosted_evidence_required',
+    observed_receipt_refs: [],
+    observed_ref_shapes: [],
+    observed_ref_counts: countShapes([]),
+    doc_refs: [],
+    next_verification_refs: ['opl foundry status --run-id <run_id> --json'],
+    typed_blocker_kind: null,
+    next_required_owner_action:
+      'run_or_inspect_opl_owned_foundry_qualification_and_controlled_canary_evidence',
+    open: true,
+  };
 }
 
 function refString(value: unknown) {
@@ -386,28 +435,54 @@ export function buildStageRunDomainAdoptionReadModel(reports: StageRunAdoptionRe
     const profile = report.stage_run_kernel_profile_checks;
     const canary = report.stage_run_canary_evidence_checks;
     const domainId = canonicalOwnerId(report.domain_id);
-    const liveProgressEvidence = readLiveStageRunProgressEvidence(report);
+    const hostedFoundryProvider = isHostedFoundrySemanticProvider(report);
+    const hostedEvidence = report.conformance_profile.opl_hosted_evidence;
+    const liveProgressEvidence = hostedFoundryProvider
+      ? hostedFoundryLiveEvidence(report)
+      : readLiveStageRunProgressEvidence(report);
     return {
       domain_id: domainId,
       ...(domainId !== report.domain_id ? { source_domain_id: report.domain_id } : {}),
       requested_agent_id: report.requested_agent_id,
       repo_dir: report.repo_dir,
       status: report.status,
-      stage_run_kernel_profile_status: profile.status,
-      stage_run_kernel_profile_source: profile.profile_source,
-      stage_run_default_read_surface_root: profile.default_read_surface.root,
+      execution_profile_id: report.conformance_profile.selected_profile_id,
+      repo_local_stage_run_contract_applicability:
+        hostedFoundryProvider ? 'opl_hosted' : 'required_from_agent_repo',
+      raw_stage_run_kernel_profile_status: profile.status,
+      stage_run_kernel_profile_status: hostedFoundryProvider ? 'opl_hosted' : profile.status,
+      stage_run_kernel_profile_source: hostedFoundryProvider
+        ? hostedEvidence?.structural_contract_ref
+        : profile.profile_source,
+      stage_run_default_read_surface_root: hostedFoundryProvider
+        ? 'opl_foundry_run'
+        : profile.default_read_surface.root,
       stage_run_semantic_route_decision_owner:
-        profile.codex_semantic_route_policy.semantic_route_decision_owner,
+        hostedFoundryProvider
+          ? 'opl_foundry_kernel'
+          : profile.codex_semantic_route_policy.semantic_route_decision_owner,
       stage_run_transition_materialization_owner:
-        profile.codex_semantic_route_policy.stage_transition_materialization_owner,
-      stage_run_canary_evidence_status: canary.status,
-      stage_run_canary_evidence_scope: canary.evidence_scope,
-      stage_run_canary_operator_status: canary.operator_summary.status,
+        hostedFoundryProvider
+          ? 'opl_foundry_kernel'
+          : profile.codex_semantic_route_policy.stage_transition_materialization_owner,
+      raw_stage_run_canary_evidence_status: canary.status,
+      stage_run_canary_evidence_status: hostedFoundryProvider ? 'opl_hosted' : canary.status,
+      stage_run_canary_evidence_scope: hostedFoundryProvider
+        ? 'opl_foundry_run_qualification_and_controlled_canary'
+        : canary.evidence_scope,
+      stage_run_canary_operator_status: hostedFoundryProvider
+        ? 'live_evidence_required'
+        : canary.operator_summary.status,
       stage_run_canary_stage_id: canary.stage_id,
       stage_run_canary_id: canary.canary_id,
-      stage_operating_principles_status: report.stage_operating_principle_checks.status,
+      raw_stage_operating_principles_status: report.stage_operating_principle_checks.status,
+      stage_operating_principles_status: hostedFoundryProvider
+        ? 'opl_hosted'
+        : report.stage_operating_principle_checks.status,
       stage_operating_principles_source:
-        report.stage_operating_principle_checks.policy_source,
+        hostedFoundryProvider
+          ? hostedEvidence?.structural_contract_ref
+          : report.stage_operating_principle_checks.policy_source,
       management_boundary_stage_unit:
         report.stage_operating_principle_checks.management_boundary.stage_unit,
       speed_policy_executor_autonomy_inside_stage:
@@ -437,7 +512,10 @@ export function buildStageRunDomainAdoptionReadModel(reports: StageRunAdoptionRe
       production_evidence_tail_open_count: countTailItems(report, 'open'),
       production_evidence_tail_typed_blocker_count: countTailItems(report, 'domain_owned_typed_blocker'),
       live_stage_run_progress_evidence_status: liveProgressEvidence.status,
-      live_stage_run_progress_evidence_required_from: 'domain_owner',
+      live_stage_run_progress_evidence_required_from:
+        hostedFoundryProvider ? 'one-person-lab' : 'domain_owner',
+      opl_hosted_evidence_owner: hostedFoundryProvider ? hostedEvidence?.owner ?? 'one-person-lab' : null,
+      opl_hosted_runtime_owner: hostedFoundryProvider ? hostedEvidence?.runtime_owner ?? 'opl_foundry_kernel' : null,
       live_stage_run_progress_evidence_contract_ref:
         liveProgressEvidence.evidence_contract_ref,
       live_stage_run_progress_evidence_contract_status:
@@ -453,6 +531,9 @@ export function buildStageRunDomainAdoptionReadModel(reports: StageRunAdoptionRe
         liveProgressEvidence.next_verification_refs,
       live_stage_run_progress_typed_blocker_kind:
         liveProgressEvidence.typed_blocker_kind,
+      live_stage_run_progress_accepted_result_shapes: hostedFoundryProvider
+        ? HOSTED_FOUNDRY_EVIDENCE_ACCEPTED_RESULT_SHAPES
+        : LIVE_STAGE_RUN_PROGRESS_ACCEPTED_RESULT_SHAPES,
       live_stage_run_progress_evidence_open: liveProgressEvidence.open,
       structural_conformance_is_domain_ready: false,
       next_required_owner_action: liveProgressEvidence.next_required_owner_action,
@@ -469,10 +550,10 @@ export function buildStageRunDomainAdoptionReadModel(reports: StageRunAdoptionRe
     };
   });
   const profilePassedCount = domains
-    .filter((domain) => domain.stage_run_kernel_profile_status === 'passed')
+    .filter((domain) => ['passed', 'opl_hosted'].includes(domain.stage_run_kernel_profile_status))
     .length;
   const canaryPassedCount = domains
-    .filter((domain) => domain.stage_run_canary_evidence_status === 'passed')
+    .filter((domain) => ['passed', 'opl_hosted'].includes(domain.stage_run_canary_evidence_status))
     .length;
   const productionEvidenceTailCount = domains.reduce(
     (total, domain) => total + domain.production_evidence_tail_count,
@@ -492,17 +573,38 @@ export function buildStageRunDomainAdoptionReadModel(reports: StageRunAdoptionRe
   );
   const liveStageRunProgressEvidenceOpenDomains = domains
     .filter((domain) => domain.live_stage_run_progress_evidence_open);
+  const liveEvidenceOwners = unique(liveStageRunProgressEvidenceOpenDomains
+    .map((domain) => domain.live_stage_run_progress_evidence_required_from));
   const liveStageRunProgressEvidenceStatus =
     liveStageRunProgressEvidenceOpenDomains.length === 0
       ? 'owner_evidence_recorded_not_ready_claim'
-      : 'required_from_domain_owner';
+      : liveEvidenceOwners.length === 1 && liveEvidenceOwners[0] === 'domain_owner'
+        ? 'required_from_domain_owner'
+        : liveEvidenceOwners.length === 1 && liveEvidenceOwners[0] === 'one-person-lab'
+          ? 'required_from_opl_foundry_kernel'
+          : 'required_from_profile_evidence_owners';
+  const worklistOwner = liveEvidenceOwners.length === 1
+    ? liveEvidenceOwners[0]!
+    : 'profile_evidence_owners';
+  const acceptedResultShapes = domains.every((domain) =>
+    domain.execution_profile_id === OPL_HOSTED_FOUNDRY_SEMANTIC_PROVIDER_PROFILE_ID
+  )
+    ? HOSTED_FOUNDRY_EVIDENCE_ACCEPTED_RESULT_SHAPES
+    : domains.every((domain) =>
+        domain.execution_profile_id !== OPL_HOSTED_FOUNDRY_SEMANTIC_PROVIDER_PROFILE_ID
+      )
+      ? LIVE_STAGE_RUN_PROGRESS_ACCEPTED_RESULT_SHAPES
+      : unique([
+          ...LIVE_STAGE_RUN_PROGRESS_ACCEPTED_RESULT_SHAPES,
+          ...HOSTED_FOUNDRY_EVIDENCE_ACCEPTED_RESULT_SHAPES,
+        ]);
   const liveStageRunProgressEvidenceWorklist = {
     surface_kind: 'opl_live_stage_run_progress_evidence_worklist',
-    owner: 'domain_owner',
+    owner: worklistOwner,
     status: liveStageRunProgressEvidenceStatus,
     open_domain_count: liveStageRunProgressEvidenceOpenDomains.length,
-    required_from: 'domain_owner',
-    accepted_refs_only_result_shapes: LIVE_STAGE_RUN_PROGRESS_ACCEPTED_RESULT_SHAPES,
+    required_from: worklistOwner,
+    accepted_refs_only_result_shapes: acceptedResultShapes,
     domains: domains.map((domain) => ({
       domain_id: domain.domain_id,
       requested_agent_id: domain.requested_agent_id,
@@ -517,22 +619,35 @@ export function buildStageRunDomainAdoptionReadModel(reports: StageRunAdoptionRe
       next_verification_refs: domain.live_stage_run_progress_next_verification_refs,
       verification_commands: unique([
         ...domain.live_stage_run_progress_next_verification_refs,
-        conformanceCommandForDomain(domain),
+        ...(domain.execution_profile_id === OPL_HOSTED_FOUNDRY_SEMANTIC_PROVIDER_PROFILE_ID
+          ? []
+          : [conformanceCommandForDomain(domain)]),
       ]),
-      source_command: conformanceCommandForDomain(domain),
-      owner_repo: domain.repo_dir,
-      next_owner_repo: domain.repo_dir,
-      closing_ref_source:
-        liveStageRunProgressClosingRefSource(domain.live_stage_run_progress_evidence_contract_ref),
-      typed_blocker_source:
-        `${domain.live_stage_run_progress_evidence_contract_ref}#typed_blocker_refs`,
+      source_command: domain.execution_profile_id === OPL_HOSTED_FOUNDRY_SEMANTIC_PROVIDER_PROFILE_ID
+        ? 'opl foundry status --run-id <run_id> --json'
+        : conformanceCommandForDomain(domain),
+      owner_repo: domain.execution_profile_id === OPL_HOSTED_FOUNDRY_SEMANTIC_PROVIDER_PROFILE_ID
+        ? null
+        : domain.repo_dir,
+      next_owner_repo: domain.execution_profile_id === OPL_HOSTED_FOUNDRY_SEMANTIC_PROVIDER_PROFILE_ID
+        ? null
+        : domain.repo_dir,
+      evidence_owner: domain.live_stage_run_progress_evidence_required_from,
+      closing_ref_source: domain.execution_profile_id === OPL_HOSTED_FOUNDRY_SEMANTIC_PROVIDER_PROFILE_ID
+        ? `${domain.live_stage_run_progress_evidence_contract_ref}|FoundryRun|QualificationRecord|ActivationTransaction`
+        : liveStageRunProgressClosingRefSource(domain.live_stage_run_progress_evidence_contract_ref),
+      typed_blocker_source: domain.execution_profile_id === OPL_HOSTED_FOUNDRY_SEMANTIC_PROVIDER_PROFILE_ID
+        ? `${domain.live_stage_run_progress_evidence_contract_ref}|foundry_run_failed|foundry_output_quarantined`
+        : `${domain.live_stage_run_progress_evidence_contract_ref}#typed_blocker_refs`,
       forbidden_opl_claims: LIVE_STAGE_RUN_PROGRESS_FORBIDDEN_OPL_CLAIMS,
       non_closing_inputs: LIVE_STAGE_RUN_PROGRESS_NON_CLOSING_INPUTS,
-      stop_loss: LIVE_STAGE_RUN_PROGRESS_STOP_LOSS,
+      stop_loss: domain.execution_profile_id === OPL_HOSTED_FOUNDRY_SEMANTIC_PROVIDER_PROFILE_ID
+        ? HOSTED_FOUNDRY_EVIDENCE_STOP_LOSS
+        : LIVE_STAGE_RUN_PROGRESS_STOP_LOSS,
       ready_claim_authorized: false,
       typed_blocker_kind: domain.live_stage_run_progress_typed_blocker_kind,
       next_required_owner_action: domain.next_required_owner_action,
-      accepted_refs_only_result_shapes: LIVE_STAGE_RUN_PROGRESS_ACCEPTED_RESULT_SHAPES,
+      accepted_refs_only_result_shapes: domain.live_stage_run_progress_accepted_result_shapes,
       structural_conformance_is_domain_ready: domain.structural_conformance_is_domain_ready,
       conformance_can_claim_live_domain_progress: false,
       conformance_can_claim_domain_ready: false,
@@ -567,7 +682,13 @@ export function buildStageRunDomainAdoptionReadModel(reports: StageRunAdoptionRe
       domain.stage_run_canary_evidence_scope === 'controlled_fixture_not_live_domain_progress'
     )
       ? 'controlled_fixture_not_live_domain_progress'
-      : 'mixed_or_blocked',
+      : domains.every((domain) =>
+          domain.stage_run_canary_evidence_scope === 'controlled_fixture_not_live_domain_progress'
+          || domain.stage_run_canary_evidence_scope
+            === 'opl_foundry_run_qualification_and_controlled_canary'
+        )
+        ? 'profile_selected_structural_and_live_evidence_separated'
+        : 'mixed_or_blocked',
     production_evidence_tail_count: productionEvidenceTailCount,
     open_production_evidence_tail_count: openProductionEvidenceTailCount,
     production_evidence_tail_policy: 'reported_separately_not_a_structural_pass_condition',
