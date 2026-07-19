@@ -11,7 +11,7 @@ OPL-compatible Foundry Agent 的默认形态是 `Declarative Domain Pack + OPL g
 
 新 Agent 默认不得实现私有 runtime / platform 功能。`functional_privatization_audit` 审计的是所有容易被误读为“功能面”的 domain 代码路径，但机器口径先把它拆成三层：标准 domain pack、minimal authority function、私有 platform residue。只有第三层才是真正需要上收、生成、收薄或退役的私有功能面。
 
-标准机器入口只接受 canonical `functional_privatization_audit`。MAS/MAG/RCA 历史 repo-local 形状，例如 `functional_consumer_boundary`、`privatized_functional_module_audit`、`mag_consumer_thinning_contract.privatized_functional_module_audit` 和 `runtime_framework.rca_thin_surface_policy.privatized_functional_module_audit`，只能作为 `legacy_import_adapter` 读取；它们不得作为新 Agent 模板、accepted source、scaffold 输入或长期 ABI 组成。
+标准机器入口只接受 canonical `functional_privatization_audit`。MAS/MAG/RCA 历史 repo-local 形状，例如 `functional_consumer_boundary`、`privatized_functional_module_audit`、`mag_consumer_thinning_contract.privatized_functional_module_audit` 和 `runtime_framework.rca_thin_surface_policy.privatized_functional_module_audit`，已停止解析；它们不得作为新 Agent 模板、accepted source、scaffold 输入或长期 ABI 组成。
 
 本政策按理想态优先执行。当前 MAS/MAG/RCA 已存在的私有实现不自动获得长期豁免；它们只是迁移清单。为了清洁的标准 OPL Agent 形态，四个 repo 都可以重构，旧 caller 可以迁移，旧模块可以删除。例外必须是小而明确的接口，不是整块私有平台。
 

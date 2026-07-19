@@ -6,7 +6,6 @@ import {
 } from './functional-privatization-envelope.ts';
 import type { FunctionalPrivatizationAudit } from './functional-privatization-audit-types.ts';
 import {
-  itemsFromMasBoundary,
   itemsFromPackInventory,
   itemsFromRetiredGeneratedSurfaceProvenance,
   itemsFromStructuredAudit,
@@ -96,7 +95,6 @@ function missingAudit(targetDomainId: string | null): FunctionalPrivatizationAud
       status: 'missing',
       sourceField: null,
       sourceFieldRole: null,
-      legacyImportSourceFields: [],
       targetDomainId,
       summary: EMPTY_SUMMARY,
       evidenceGateProjection: gates,
@@ -138,16 +136,13 @@ export function buildFunctionalPrivatizationAudit(
     source,
     sourceField,
     sourceFieldRole,
-    legacyImportSourceFields,
   } = selectedAuditSource(manifest);
   if (!source) {
     return missingAudit(stringValue(manifest.target_domain_id));
   }
 
   const compactCanonicalAudit = isCompactCanonicalAudit(source);
-  const sourceModules = sourceField === 'functional_consumer_boundary'
-    ? itemsFromMasBoundary(source)
-    : itemsFromStructuredAudit(source);
+  const sourceModules = itemsFromStructuredAudit(source);
   const modules = compactCanonicalAudit
     ? [
         ...sourceModules,
@@ -169,9 +164,9 @@ export function buildFunctionalPrivatizationAudit(
   } = summarize(modules);
   const allBlockers = unique([...blockers, ...compactAuditSchemaBlockers(source)]);
   const normalizedSummary = { ...summary, blocker_count: allBlockers.length };
-  const evidencePack = externalEvidenceRequestPack(source, manifest);
+  const evidencePack = externalEvidenceRequestPack(source);
   const gates = evidenceGateProjection(source);
-  const replacementExpectations = oplReplacementExpectations(source, manifest);
+  const replacementExpectations = oplReplacementExpectations(source);
   const targetDomainId = stringValue(source.target_domain_id) ?? stringValue(manifest.target_domain_id);
 
   return {
@@ -182,7 +177,6 @@ export function buildFunctionalPrivatizationAudit(
       status: 'resolved',
       sourceField,
       sourceFieldRole,
-      legacyImportSourceFields,
       targetDomainId,
       summary: normalizedSummary,
       evidenceGateProjection: gates,
@@ -192,7 +186,7 @@ export function buildFunctionalPrivatizationAudit(
     }),
     source_field: sourceField,
     source_field_role: sourceFieldRole,
-    legacy_import_source_fields: legacyImportSourceFields,
+    legacy_import_source_fields: [],
     target_domain_id: targetDomainId,
     summary: normalizedSummary,
     source_purity_tail_read_model: buildFunctionalSourcePurityTailReadModel(normalizedSummary),

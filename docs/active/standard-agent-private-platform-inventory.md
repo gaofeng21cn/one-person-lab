@@ -27,7 +27,7 @@ Standard Agent Pack ABI 已成为这条 source-purity 口径的机器入口。`s
 
 Standard Agent registry / alias tables 的 active 机器来源现在是 `src/kernel/standard-agent-registry.ts`。Foundry Agent CLI list/inspect、`opl connect skills` 的 domain-agent pack projection、`standard-domain-agent-conformance-foundry-agent-os` 和 target architecture `foundry_agent_os_standard.applies_to_domain_agents` 都从该 registry 派生；`contracts/opl-framework/foundry-agent-series-contract.json` 只保留 registry pointer 和 projection policy，不再作为第二套 agent identity / alias table。MAS/MAG/RCA/OMA/OBF 公开 membership 统一为 `standard_domain_agent`，不得按 generated surface、plugin transport、domain-native CLI 或 minimal authority functions 拆分；MAS Scholar Skills 只保留 Foundry public projection，machine membership 是 `framework_capability_package`。
 
-`functional_privatization_audit` 的 active standard source 现在是 canonical-only：标准 OPL Agent 只从 `contracts/functional_privatization_audit.json` 的 `functional_privatization_audit` 读取标准形状。MAS/MAG/RCA 历史字段只保留为 `legacy_import_adapter`，通过 `source_field_role=legacy_import_adapter` 暴露给读模型，不能再作为 scaffold、conformance、new-agent template 或 accepted source。当前三仓 canonical contract readback 已来自 `functional_privatization_audit` 顶层 module inventory；legacy adapter 仅保留为旧仓库诊断导入能力，不定义标准 Agent 形态。
+`functional_privatization_audit` 的 active standard source 现在是 canonical-only：标准 OPL Agent 只从 `contracts/functional_privatization_audit.json` 的 `functional_privatization_audit` 读取标准形状。MAS/MAG/RCA 历史字段已停止解析，不能再作为 scaffold、conformance、new-agent template、accepted source 或诊断导入源。当前三仓 canonical contract readback 已来自 `functional_privatization_audit` 顶层 module inventory。
 
 Generated surfaces 现在是默认入口基线。`domain-pack-compiler-contract.json` 的 `default_entry_policy` / `supported_derived_surfaces` 把 CLI、MCP、OpenAI/AI SDK tool、Skill/plugin、App action、status read model 和 workbench 归到 OPL generated surface owner；`family-action-catalog.schema.json` 要求 action catalog 保留对应 surface slots。domain repo retained surface 只能是 domain handler target、refs-only adapter、migration input 或 tombstone candidate，不能重新长成 status/workbench shell、default caller 或 compatibility wrapper。
 
@@ -60,7 +60,7 @@ OPL read-model 只作为 fresh-live source 使用：`opl agents conformance --fa
 
 | 复杂度来源 | 状态 | 处置口径 |
 | --- | --- | --- |
-| `functional_privatization_audit` legacy source shape | 已落地收敛 | 标准 source 只接受 canonical `functional_privatization_audit`；MAS/MAG/RCA 旧字段只作为 `legacy_import_adapter`，不再污染新 Agent 标准形态。 |
+| `functional_privatization_audit` legacy source shape | 已落地删除 | 标准 source 只接受 canonical `functional_privatization_audit`；MAS/MAG/RCA 旧字段不再解析。 |
 | MAS 嵌套 `functional_consumer_boundary.generated_surface_handoff` fallback | 已落地删除 | `repo-contract-descriptor` 只从标准 `contracts/generated_surface_handoff.json` 读取 generated handoff；旧 MAS 嵌套 handoff 不再补写 domain handler descriptor。 |
 | MAS legacy DHD / default-executor / current-control active runtime path | 已落地切断 active owner-dispatch bridge | Codex stage runner 不再在缺 typed closeout 时主动调用 MAS owner dispatch；只允许读取已存在的 legacy default-executor execution receipt 作为 migration/diagnostic recovery，否则生成 OPL provider-runtime closeout blocker。旧 current-control / default-executor queue diagnostic 仍作为迁移输入与非退化测试存在，不再作为普通 MAS paper mission active route。 |
 | MAS/MAG/RCA handler closeout 多形状 parser | ordinary path 已落地收敛 | family-runtime dispatch 的标准完成路径只接受 canonical `domain_stage_closeout_packet`；MAS/MAG/RCA 旧 closeout 形状保留为显式 legacy import adapter/diagnostic，不能写入 `accepted_typed_closeout` 或定义普通 closeout 语义。 |

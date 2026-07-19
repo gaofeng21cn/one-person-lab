@@ -48,34 +48,19 @@ Machine boundary: 本文只记录当前清理目标、完成度和 blocker。机
 | OBF source-byproduct caller cutover | done | `opl-bookforge/scripts/verify.sh` 已直接调用 `opl workspace source-hygiene`；旧 `bookforge_project_hygiene.py` 已从 OBF 消失。 |
 | OBF native-helper 私有 shell 退役 | partial | OPL 已提供 `opl pack native-helper probe` receipt envelope；OBF renderer/export authority应留在 OBF。只有 OBF 默认 caller 切到 OPL primitive并删除重复通用 shell后才能关闭。 |
 
-## Fresh 结构 readback
+## 结构 readback
 
-当前 `opl agents default-callers --family-defaults --json` 返回：
-
-- `blocked_count=1`
-- `active_deletion_evidence_worklist_count=8`
-- `closed_surface_retirement_gate_count=32`
-- `default_caller_delete_ready=false`
-- `physical_delete_authorized=false`
-- `no_further_opl_default_caller_delete_work=false`
-
-当前 `opl agents conformance --family-defaults --json` 返回：
-
-- `passed_count=5`
-- `blocked_count=1`
-- `structural_conformance_status=blocked`
-- `structural_contract_status=blocked`
-- `family_live_conformance_probe_status=blocked`
-
-当前唯一 structural blocker 是 OMA 的 full-profile 误配；五仓 generated interfaces 均为 ready。结构 blocker 与 live owner evidence 分账；任一 readback 都不能授权 domain physical delete 或声明 production ready。
+结构状态只以 fresh `opl agents default-callers --family-defaults --json` 和
+`opl agents conformance --family-defaults --json` 为准，不在治理文档固化计数或 blocker
+归因。结构结果与 live owner evidence 分账；任一 readback 都不能授权 domain physical
+delete 或声明 production ready。
 
 ## 下一步停止条件
 
 OPL 仓内原始 12 条 overengineering 候选中，11条已关闭；Runway旧策略的物理清理已完成，但follow-up no-progress enforcement按当前contract明确不落地。后续只在以下条件成立时重开：
 
 1. OBF owner 完成 native-helper no-active-caller evidence 与通用 shell cutover。
-2. OMA 的 execution/artifact profile 分型由 implementation discriminator 驱动，并保留 OPL-hosted canary/currentness 证据。
-3. Runway owner为no-progress enforcement指定canonical admission consumer并修改当前advisory-only contract。
-4. fresh source/readback 发现新的零调用实现、第二真相源或标准库替代机会。
+2. Runway owner为no-progress enforcement指定canonical admission consumer并修改当前advisory-only contract。
+3. fresh source/readback 发现新的零调用实现、第二真相源或标准库替代机会。
 
 Live provider long-soak、真实 App 用户路径、domain owner acceptance、Brand L5 和 release-ready 继续作为后置证据，不属于本清理计划的功能结构完成声明。

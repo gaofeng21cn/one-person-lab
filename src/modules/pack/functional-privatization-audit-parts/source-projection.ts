@@ -1,6 +1,5 @@
 import { isRecord } from '../../../kernel/contract-validation.ts';
 import { stringList, stringValue } from '../../../kernel/json-record.ts';
-import type { FunctionalPrivatizationAuditSourceFieldRole } from '../functional-privatization-envelope.ts';
 import type {
   FunctionalEvidenceGateProjection,
   FunctionalExternalEvidenceRequestPack,
@@ -9,12 +8,8 @@ import type {
 } from '../functional-privatization-audit-types.ts';
 import { nestedRecord, recordList, unique, type JsonRecord } from './json-record-helpers.ts';
 
-export function externalEvidenceRequestPack(source: JsonRecord, manifest: JsonRecord) {
-  const pack =
-    nestedRecord(source, ['mag_consumer_thinning_contract', 'external_evidence_request_pack'])
-    ?? nestedRecord(source, ['external_evidence_request_pack'])
-    ?? nestedRecord(manifest, ['mag_consumer_thinning_contract', 'external_evidence_request_pack'])
-    ?? nestedRecord(manifest, ['product_entry_manifest', 'mag_consumer_thinning_contract', 'external_evidence_request_pack']);
+export function externalEvidenceRequestPack(source: JsonRecord) {
+  const pack = nestedRecord(source, ['external_evidence_request_pack']);
   if (!pack) {
     return null;
   }
@@ -82,16 +77,7 @@ export function evidenceGateProjection(source: JsonRecord) {
     };
   };
   const projections = [
-    collect(nestedRecord(source, ['functional_structure_gap_closure']), '/functional_structure_gap_closure'),
     collect(nestedRecord(source, ['bridge_exit_gate']), '/bridge_exit_gate'),
-    collect(
-      nestedRecord(source, ['generated_interface_consumption', 'bridge_exit_gate']),
-      '/generated_interface_consumption/bridge_exit_gate',
-    ),
-    collect(
-      nestedRecord(source, ['mag_consumer_thinning_contract', 'generated_surface_handoff', 'bridge_exit_gate']),
-      '/mag_consumer_thinning_contract/generated_surface_handoff/bridge_exit_gate',
-    ),
   ];
   const remainingEvidenceGateIds = unique(projections.flatMap((projection) => projection.evidenceGateIds));
   const remainingBridgeModuleIds = unique(projections.flatMap((projection) => projection.bridgeModuleIds));
@@ -110,18 +96,8 @@ export function evidenceGateProjection(source: JsonRecord) {
   } satisfies FunctionalEvidenceGateProjection;
 }
 
-export function oplReplacementExpectations(source: JsonRecord, manifest: JsonRecord) {
-  const expectations = recordList(
-    nestedRecord(source, ['mag_consumer_thinning_contract'])?.opl_replacement_expectations,
-  );
-  const manifestExpectations = recordList(
-    nestedRecord(manifest, ['mag_consumer_thinning_contract'])?.opl_replacement_expectations,
-  );
-  const productManifestExpectations = recordList(
-    nestedRecord(manifest, ['product_entry_manifest', 'mag_consumer_thinning_contract'])
-      ?.opl_replacement_expectations,
-  );
-  return [...expectations, ...manifestExpectations, ...productManifestExpectations].map((entry) => ({
+export function oplReplacementExpectations(source: JsonRecord) {
+  return recordList(source.opl_replacement_expectations).map((entry) => ({
     primitive_id:
       stringValue(entry.primitive_id)
       ?? stringValue(entry.primitive)
@@ -129,101 +105,29 @@ export function oplReplacementExpectations(source: JsonRecord, manifest: JsonRec
     owner: stringValue(entry.owner),
     state: stringValue(entry.state),
     opl_provides: stringList(entry.opl_provides),
-    domain_keeps: unique([
-      ...stringList(entry.mag_keeps),
-      ...stringList(entry.domain_keeps),
-      ...stringList(entry.rca_keeps),
-    ]),
-    implemented_in_domain:
-      typeof entry.implemented_in_mag === 'boolean'
-        ? entry.implemented_in_mag
-        : typeof entry.implemented_in_domain === 'boolean'
-          ? entry.implemented_in_domain
-          : null,
-    source_pointer: '/mag_consumer_thinning_contract/opl_replacement_expectations',
+    domain_keeps: unique(stringList(entry.domain_keeps)),
+    implemented_in_domain: typeof entry.implemented_in_domain === 'boolean'
+      ? entry.implemented_in_domain
+      : null,
+    source_pointer: '/functional_privatization_audit/opl_replacement_expectations',
   } satisfies FunctionalOplReplacementExpectation));
 }
 
 export function selectedAuditSource(manifest: JsonRecord) {
-  const standardSource = nestedRecord(manifest, ['functional_privatization_audit']);
+  const nestedStandardSource = nestedRecord(manifest, ['functional_privatization_audit']);
+  const standardSource = nestedStandardSource
+    ?? (isCompactCanonicalAudit(manifest) ? manifest : null);
   if (standardSource) {
-    if (isRecord(standardSource.functional_consumer_boundary)) {
-      return {
-        source: standardSource.functional_consumer_boundary,
-        sourceField: 'functional_consumer_boundary',
-        sourceFieldRole: 'legacy_import_adapter' as const,
-        legacyImportSourceFields: ['functional_consumer_boundary'],
-      };
-    }
-    if (isRecord(standardSource.privatized_functional_module_audit)) {
-      return {
-        source: standardSource.privatized_functional_module_audit,
-        sourceField: 'privatized_functional_module_audit',
-        sourceFieldRole: 'legacy_import_adapter' as const,
-        legacyImportSourceFields: ['privatized_functional_module_audit'],
-      };
-    }
-    if (isRecord(standardSource.mag_consumer_thinning_contract)
-      && isRecord(standardSource.mag_consumer_thinning_contract.privatized_functional_module_audit)) {
-      return {
-        source: standardSource.mag_consumer_thinning_contract.privatized_functional_module_audit,
-        sourceField: 'mag_consumer_thinning_contract.privatized_functional_module_audit',
-        sourceFieldRole: 'legacy_import_adapter' as const,
-        legacyImportSourceFields: ['mag_consumer_thinning_contract.privatized_functional_module_audit'],
-      };
-    }
-    if (isRecord(standardSource.runtime_framework)
-      && isRecord(standardSource.runtime_framework.rca_thin_surface_policy)
-      && isRecord(standardSource.runtime_framework.rca_thin_surface_policy.privatized_functional_module_audit)) {
-      return {
-        source: standardSource.runtime_framework.rca_thin_surface_policy.privatized_functional_module_audit,
-        sourceField: 'runtime_framework.rca_thin_surface_policy.privatized_functional_module_audit',
-        sourceFieldRole: 'legacy_import_adapter' as const,
-        legacyImportSourceFields: [
-          'runtime_framework.rca_thin_surface_policy.privatized_functional_module_audit',
-        ],
-      };
-    }
     return {
       source: standardSource,
       sourceField: 'functional_privatization_audit',
       sourceFieldRole: 'standard_contract_source' as const,
-      legacyImportSourceFields: [],
-    };
-  }
-
-  const legacySources: Array<{ source: JsonRecord | null; sourceField: string }> = [
-    {
-      source: nestedRecord(manifest, ['privatized_functional_module_audit']),
-      sourceField: 'privatized_functional_module_audit',
-    },
-    {
-      source: nestedRecord(manifest, ['mag_consumer_thinning_contract', 'privatized_functional_module_audit']),
-      sourceField: 'mag_consumer_thinning_contract.privatized_functional_module_audit',
-    },
-    {
-      source: nestedRecord(manifest, ['runtime_framework', 'rca_thin_surface_policy', 'privatized_functional_module_audit']),
-      sourceField: 'runtime_framework.rca_thin_surface_policy.privatized_functional_module_audit',
-    },
-    {
-      source: nestedRecord(manifest, ['functional_consumer_boundary']),
-      sourceField: 'functional_consumer_boundary',
-    },
-  ];
-  const legacy = legacySources.find((entry) => entry.source);
-  if (!legacy?.source) {
-    return {
-      source: null,
-      sourceField: null,
-      sourceFieldRole: null,
-      legacyImportSourceFields: [] as string[],
     };
   }
   return {
-    source: legacy.source,
-    sourceField: legacy.sourceField,
-    sourceFieldRole: 'legacy_import_adapter' as FunctionalPrivatizationAuditSourceFieldRole,
-    legacyImportSourceFields: [legacy.sourceField],
+    source: null,
+    sourceField: null,
+    sourceFieldRole: null,
   };
 }
 

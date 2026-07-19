@@ -3,20 +3,15 @@
   "version": "opl-functional-privatization-audit-envelope.v1",
   "owner": "one-person-lab",
   "contract_ref": "contracts/opl-framework/functional-privatization-audit-envelope-contract.json",
-  "purpose": "Normalize canonical standard-agent functional_privatization_audit contracts into one AI-first, contract-light OPL read-model envelope; legacy MAS/MAG/RCA repo-local shapes are import adapters only.",
+  "purpose": "Normalize canonical standard-agent functional_privatization_audit contracts into one AI-first, contract-light OPL read-model envelope.",
   "accepted_source_shapes": [
     "functional_privatization_audit"
   ],
-  "legacy_import_source_shapes": [
-    "privatized_functional_module_audit",
-    "functional_consumer_boundary",
-    "mag_consumer_thinning_contract.privatized_functional_module_audit",
-    "runtime_framework.rca_thin_surface_policy.privatized_functional_module_audit"
-  ],
+  "legacy_import_source_shapes": [],
   "source_shape_policy": {
     "standard_agent_contract_source": "contracts/functional_privatization_audit.json",
     "legacy_repo_local_shapes_are_standard_contract": false,
-    "legacy_import_adapter_only": true,
+    "legacy_import_adapter_available": false,
     "new_agents_must_emit_canonical_functional_privatization_audit": true
   },
   "normalized_inventory_layers": [

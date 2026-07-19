@@ -387,16 +387,11 @@ export function buildStandardDomainAgentScaffold(input: ScaffoldInput = {}) {
         accepted_source_fields: [
           'functional_privatization_audit',
         ],
-        legacy_import_source_fields: [
-          'privatized_functional_module_audit',
-          'functional_consumer_boundary',
-          'mag_consumer_thinning_contract.privatized_functional_module_audit',
-          'runtime_framework.rca_thin_surface_policy.privatized_functional_module_audit',
-        ],
+        legacy_import_source_fields: [],
         source_shape_policy: {
           standard_agent_contract_source: 'contracts/functional_privatization_audit.json',
           legacy_repo_local_shapes_are_standard_contract: false,
-          legacy_import_adapter_only: true,
+          legacy_import_adapter_available: false,
           new_agents_must_emit_canonical_functional_privatization_audit: true,
         },
         module_inventory_fields: [

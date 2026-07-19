@@ -1,8 +1,6 @@
 type JsonRecord = Record<string, unknown>;
 
-export type FunctionalPrivatizationAuditSourceFieldRole =
-  | 'standard_contract_source'
-  | 'legacy_import_adapter';
+export type FunctionalPrivatizationAuditSourceFieldRole = 'standard_contract_source';
 
 export type FunctionalPrivatizationAuditEnvelopeSummaryInput = {
   total_module_count: number;
@@ -60,7 +58,6 @@ export type FunctionalPrivatizationEnvelopeInput = {
   status: 'missing' | 'resolved';
   sourceField: string | null;
   sourceFieldRole: FunctionalPrivatizationAuditSourceFieldRole | null;
-  legacyImportSourceFields: string[];
   targetDomainId: string | null;
   summary: FunctionalPrivatizationAuditEnvelopeSummaryInput;
   evidenceGateProjection: FunctionalPrivatizationAuditEnvelopeEvidenceInput;
@@ -83,7 +80,7 @@ export type FunctionalPrivatizationAuditEnvelope = {
   source_shape_policy: {
     standard_agent_contract_source: 'contracts/functional_privatization_audit.json';
     legacy_repo_local_shapes_are_standard_contract: false;
-    legacy_import_adapter_only: true;
+    legacy_import_adapter_available: false;
     new_agents_must_emit_canonical_functional_privatization_audit: true;
   };
   normalized_inventory_layers: string[];
@@ -223,20 +220,15 @@ export const FUNCTIONAL_PRIVATIZATION_AUDIT_ENVELOPE_CONTRACT = {
   owner: 'one-person-lab',
   contract_ref: 'contracts/opl-framework/functional-privatization-audit-envelope-contract.json',
   purpose:
-    'Normalize canonical standard-agent functional_privatization_audit contracts into one AI-first, contract-light OPL read-model envelope; legacy MAS/MAG/RCA repo-local shapes are import adapters only.',
+    'Normalize canonical standard-agent functional_privatization_audit contracts into one AI-first, contract-light OPL read-model envelope.',
   accepted_source_shapes: [
     'functional_privatization_audit',
   ],
-  legacy_import_source_shapes: [
-    'privatized_functional_module_audit',
-    'functional_consumer_boundary',
-    'mag_consumer_thinning_contract.privatized_functional_module_audit',
-    'runtime_framework.rca_thin_surface_policy.privatized_functional_module_audit',
-  ],
+  legacy_import_source_shapes: [],
   source_shape_policy: {
     standard_agent_contract_source: 'contracts/functional_privatization_audit.json',
     legacy_repo_local_shapes_are_standard_contract: false,
-    legacy_import_adapter_only: true,
+    legacy_import_adapter_available: false,
     new_agents_must_emit_canonical_functional_privatization_audit: true,
   },
   normalized_inventory_layers: [
@@ -329,7 +321,7 @@ export function buildFunctionalPrivatizationAuditEnvelope(
     legacy_import_source_shapes: [
       ...FUNCTIONAL_PRIVATIZATION_AUDIT_ENVELOPE_CONTRACT.legacy_import_source_shapes,
     ],
-    legacy_import_source_fields: [...new Set(input.legacyImportSourceFields)],
+    legacy_import_source_fields: [],
     source_shape_policy: {
       ...FUNCTIONAL_PRIVATIZATION_AUDIT_ENVELOPE_CONTRACT.source_shape_policy,
     },
@@ -379,7 +371,6 @@ export function buildFunctionalPrivatizationAuditEnvelopeFromAudit(args: {
   status: 'missing' | 'resolved';
   sourceField: string | null;
   sourceFieldRole: FunctionalPrivatizationAuditSourceFieldRole | null;
-  legacyImportSourceFields?: readonly string[];
   targetDomainId: string | null;
   summary: FunctionalPrivatizationAuditEnvelopeSummaryInput;
   evidenceGateProjection: FunctionalPrivatizationAuditEnvelopeEvidenceInput;
@@ -391,7 +382,6 @@ export function buildFunctionalPrivatizationAuditEnvelopeFromAudit(args: {
     status: args.status,
     sourceField: args.sourceField,
     sourceFieldRole: args.sourceFieldRole,
-    legacyImportSourceFields: [...(args.legacyImportSourceFields ?? [])],
     targetDomainId: args.targetDomainId,
     summary: args.summary,
     evidenceGateProjection: args.evidenceGateProjection,

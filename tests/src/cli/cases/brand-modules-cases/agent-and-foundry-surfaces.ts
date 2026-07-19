@@ -94,4 +94,7 @@ test('standard owner aliases normalize to the repo owner ids used by evidence su
   assert.equal(canonicalOwnerId('opl_meta_agent'), 'opl-meta-agent');
   assert.equal(canonicalOwnerId('obf'), 'opl-bookforge');
   assert.equal(canonicalOwnerId('opl_bookforge'), 'opl-bookforge');
+  assert.equal(canonicalOwnerId('study'), 'study');
+  assert.equal(canonicalOwnerId('agent'), 'agent');
+  assert.equal(canonicalOwnerId('book'), 'book');
 });

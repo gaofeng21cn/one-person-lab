@@ -19,84 +19,66 @@ function readJson(relativePath: string) {
   return parseJsonText(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as Record<string, any>;
 }
 
-test('functional privatization audit envelope normalizes MAS functional consumer boundary', () => {
-  const audit = buildFunctionalPrivatizationAudit({
-    target_domain_id: 'med-autoscience',
-    functional_consumer_boundary: {
-      surface_kind: 'mas_functional_consumer_boundary',
-      target_domain_id: 'med-autoscience',
-      functional_module_inventory: [
-        {
-          module_id: 'study_stage_policy_pack',
-          classification: 'declarative_pack',
-          active_caller_status: 'declarative_pack_active',
-        },
-        {
-          module_id: 'study_truth',
-          classification: 'domain_minimal_authority_function',
-          cannot_absorb_reason: 'Domain truth stays domain-owned.',
-        },
-        {
-          module_id: 'runtime_lifecycle_sqlite_reference_adapter',
-          classification: 'refs_only_adapter',
-          active_caller_status: 'refs_only_adapter_active',
-        },
-      ],
+test('functional privatization audit ignores retired repo-local source shapes', () => {
+  const legacyManifests = [
+    {
+      functional_consumer_boundary: {
+        functional_module_inventory: [{ module_id: 'mas_legacy_surface' }],
+      },
     },
-  });
+    {
+      privatized_functional_module_audit: {
+        modules: [{ module_id: 'top_level_legacy_surface' }],
+      },
+    },
+    {
+      mag_consumer_thinning_contract: {
+        privatized_functional_module_audit: {
+          modules: [{ module_id: 'mag_legacy_surface' }],
+        },
+      },
+    },
+    {
+      runtime_framework: {
+        rca_thin_surface_policy: {
+          privatized_functional_module_audit: {
+            modules: [{ module_id: 'rca_legacy_surface' }],
+          },
+        },
+      },
+    },
+  ];
 
-  assert.equal(audit.envelope.surface_kind, 'opl_functional_privatization_audit_envelope');
-  assert.equal(audit.envelope.state, 'resolved');
-  assert.equal(audit.envelope.source_field, 'functional_consumer_boundary');
-  assert.equal(audit.envelope.source_field_role, 'legacy_import_adapter');
-  assert.deepEqual(audit.envelope.accepted_source_shapes, ['functional_privatization_audit']);
-  assert.deepEqual(audit.envelope.legacy_import_source_fields, ['functional_consumer_boundary']);
-  assert.equal(audit.envelope.source_shape_policy.legacy_import_adapter_only, true);
-  assert.equal(audit.envelope.summary.standard_domain_pack_inventory_count, 1);
-  assert.equal(audit.envelope.summary.authority_function_inventory_count, 1);
-  assert.equal(audit.envelope.summary.private_platform_residue_inventory_count, 1);
-  assert.deepEqual(audit.envelope.source_purity_tail_read_model, {
-    default_action_required_count: 0,
-    action_required_blocker_count: 0,
-    hidden_cleared_audit_ledger_count: 3,
-    hidden_cleared_entries_remain_traceable: true,
-    private_platform_residue_inventory_audit_only_count: 1,
-    private_platform_residue_inventory_counts_as_action_required: false,
-    private_platform_residue_inventory_counts_as_blocker: false,
-    physical_delete_authorized: false,
-    physical_delete_authority: 'not_authorized_by_descriptor_or_app_read_model',
-    source_purity_tail_status: 'audit_only_tail_traceable_no_action_required_blocker',
-    source_purity_tail_policy:
-      'physical_delete_requires_separate_domain_owner_receipt_or_typed_blocker_no_active_caller_no_forbidden_write_and_replacement_parity',
-  });
-  assert.equal(audit.envelope.summary.default_watchlist_count, 0);
-  assert.equal(audit.envelope.semantic_equivalence_evidence_gate.status, 'not_required');
-  assert.equal(audit.envelope.semantic_equivalence_evidence_gate.review_required_count, 0);
-  assert.equal(audit.envelope.semantic_equivalence_evidence_gate.active_private_generic_residue_count, 0);
-  assert.equal(audit.envelope.semantic_equivalence_evidence_gate.can_close_without_evidence, false);
-  assert.equal(
-    audit.envelope.semantic_equivalence_evidence_gate.authority_boundary.can_claim_private_residue_deleted,
-    false,
-  );
-  assert.equal(audit.envelope.ai_first_contract_light_policy.contract_floor_only, true);
-  assert.equal(audit.envelope.ai_first_contract_light_policy.expert_executor_strategy_contract, false);
-  assert.equal(audit.envelope.authority_boundary.envelope_can_claim_domain_ready, false);
+  for (const manifest of legacyManifests) {
+    const audit = buildFunctionalPrivatizationAudit({
+      target_domain_id: 'legacy-domain',
+      ...manifest,
+    });
+    assert.equal(audit.envelope.surface_kind, 'opl_functional_privatization_audit_envelope');
+    assert.equal(audit.envelope.state, 'missing');
+    assert.equal(audit.envelope.source_field, null);
+    assert.equal(audit.envelope.source_field_role, null);
+    assert.deepEqual(audit.envelope.accepted_source_shapes, ['functional_privatization_audit']);
+    assert.deepEqual(audit.envelope.legacy_import_source_fields, []);
+    assert.deepEqual(audit.envelope.legacy_import_source_shapes, []);
+    assert.equal(audit.envelope.source_shape_policy.legacy_import_adapter_available, false);
+    assert.equal(audit.summary.total_module_count, 0);
+  }
 });
 
-test('functional privatization audit envelope reports MAG evidence requests without domain authority', () => {
+test('functional privatization audit envelope reports canonical evidence requests without domain authority', () => {
   const audit = buildFunctionalPrivatizationAudit({
     target_domain_id: 'med-autogrant',
-    mag_consumer_thinning_contract: {
-      privatized_functional_module_audit: {
-        target_domain_id: 'med-autogrant',
-        refs_only_adapter_surfaces: [
-          {
-            module_id: 'session_ledger_attention_queue',
-            classification: 'refs_only_adapter',
-            active_caller_status: 'handoff_required',
-          },
-        ],
-      },
+    functional_privatization_audit: {
+      surface_kind: 'functional_privatization_audit',
+      target_domain_id: 'med-autogrant',
+      modules: [
+        {
+          module_id: 'session_ledger_attention_queue',
+          classification: 'refs_only_adapter',
+          active_caller_status: 'handoff_required',
+        },
+      ],
       external_evidence_request_pack: {
         requests: [
           {
@@ -115,12 +97,10 @@ test('functional privatization audit envelope reports MAG evidence requests with
     },
   });
 
-  assert.equal(audit.envelope.source_field, 'mag_consumer_thinning_contract.privatized_functional_module_audit');
-  assert.equal(audit.envelope.source_field_role, 'legacy_import_adapter');
+  assert.equal(audit.envelope.source_field, 'functional_privatization_audit');
+  assert.equal(audit.envelope.source_field_role, 'standard_contract_source');
   assert.deepEqual(audit.envelope.accepted_source_shapes, ['functional_privatization_audit']);
-  assert.deepEqual(audit.envelope.legacy_import_source_fields, [
-    'mag_consumer_thinning_contract.privatized_functional_module_audit',
-  ]);
+  assert.deepEqual(audit.envelope.legacy_import_source_fields, []);
   assert.equal(audit.envelope.summary.external_evidence_request_count, 1);
   assert.equal(audit.envelope.summary.external_evidence_open_request_count, 1);
   assert.equal(audit.envelope.summary.replacement_expectation_count, 1);
@@ -255,15 +235,10 @@ test('functional privatization audit envelope contract is tracked and contract-l
   assert.deepEqual(contract, FUNCTIONAL_PRIVATIZATION_AUDIT_ENVELOPE_CONTRACT);
   assert.equal(contract.ai_first_contract_light_policy.contract_floor_only, true);
   assert.deepEqual(contract.accepted_source_shapes, ['functional_privatization_audit']);
+  assert.deepEqual(contract.legacy_import_source_shapes, []);
   assert.equal(contract.source_shape_policy.legacy_repo_local_shapes_are_standard_contract, false);
-  assert.equal(contract.source_shape_policy.legacy_import_adapter_only, true);
+  assert.equal(contract.source_shape_policy.legacy_import_adapter_available, false);
   assert.equal(contract.source_shape_policy.new_agents_must_emit_canonical_functional_privatization_audit, true);
-  assert.equal(
-    contract.legacy_import_source_shapes.includes(
-      'runtime_framework.rca_thin_surface_policy.privatized_functional_module_audit',
-    ),
-    true,
-  );
   assert.equal(contract.ai_first_contract_light_policy.mechanical_completion_can_close_domain_quality, false);
   assert.deepEqual(contract.semantic_equivalence_evidence_gate.status_values, [
     'not_required',

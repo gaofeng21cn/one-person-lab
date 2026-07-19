@@ -13,6 +13,8 @@ export type StandardAgentRegistryEntry = {
   plugin_name: string;
   canonical_plugin_name: string;
   aliases: string[];
+  owner_id: string;
+  owner_aliases: string[];
 };
 
 export const STANDARD_AGENT_REGISTRY_REF = 'src/kernel/standard-agent-registry.ts';
@@ -33,6 +35,8 @@ export const STANDARD_AGENT_REGISTRY = [
     plugin_name: 'med-autoscience',
     canonical_plugin_name: 'mas',
     aliases: ['mas', 'medautoscience', 'med-autoscience', 'med_auto_science', 'study'],
+    owner_id: 'med-autoscience',
+    owner_aliases: ['mas', 'medautoscience', 'med-autoscience', 'med-auto-science'],
   },
   {
     agent_id: 'mag',
@@ -47,6 +51,8 @@ export const STANDARD_AGENT_REGISTRY = [
     plugin_name: 'med-autogrant',
     canonical_plugin_name: 'mag',
     aliases: ['mag', 'medautogrant', 'med-autogrant', 'med_auto_grant', 'grant'],
+    owner_id: 'med-autogrant',
+    owner_aliases: ['mag', 'medautogrant', 'med-autogrant', 'med-auto-grant'],
   },
   {
     agent_id: 'rca',
@@ -61,6 +67,8 @@ export const STANDARD_AGENT_REGISTRY = [
     plugin_name: 'redcube-ai',
     canonical_plugin_name: 'rca',
     aliases: ['rca', 'redcube', 'redcube-ai', 'redcube_ai', 'redcubeai', 'deck'],
+    owner_id: 'redcube-ai',
+    owner_aliases: ['rca', 'redcube', 'redcubeai', 'redcube-ai'],
   },
   {
     agent_id: 'oma',
@@ -85,6 +93,8 @@ export const STANDARD_AGENT_REGISTRY = [
       'meta_agent',
       'agent',
     ],
+    owner_id: 'opl-meta-agent',
+    owner_aliases: ['oma', 'oplmetaagent', 'opl-meta-agent', 'meta-agent'],
   },
   {
     agent_id: 'obf',
@@ -108,6 +118,8 @@ export const STANDARD_AGENT_REGISTRY = [
       'opl_bookforge',
       'book',
     ],
+    owner_id: 'opl-bookforge',
+    owner_aliases: ['obf', 'oplbookforge', 'opl-bookforge', 'bookforge', 'book-forge'],
   },
   {
     agent_id: 'mas-scholar-skills',
@@ -130,6 +142,8 @@ export const STANDARD_AGENT_REGISTRY = [
       'capability',
       'capabilities',
     ],
+    owner_id: 'mas-scholar-skills',
+    owner_aliases: ['mas-scholar-skills'],
   },
 ] as const satisfies readonly StandardAgentRegistryEntry[];
 
@@ -194,6 +208,13 @@ export function resolveStandardAgentByDomainId(domainId: string) {
 
 export function resolveStandardAgentByCanonicalPluginName(canonicalPluginName: string) {
   return STANDARD_AGENT_REGISTRY.find((entry) => entry.canonical_plugin_name === canonicalPluginName) ?? null;
+}
+
+export function resolveStandardAgentByOwnerAlias(value: string) {
+  const normalized = normalizeAgentKey(value);
+  return STANDARD_AGENT_REGISTRY.find((entry) =>
+    entry.owner_aliases.some((alias) => normalizeAgentKey(alias) === normalized)
+  ) ?? null;
 }
 
 export function normalizeStandardDomainAgentId(value: string) {
