@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
+import { inspectStandardAgentFrameworkImports } from '../connect/standard-agent-framework-link.ts';
 import { buildGeneratedAgentInterfaces } from '../pack/index.ts';
 import { buildAgentProfileConformance } from '../pack/index.ts';
 import { validateStandardDomainAgentScaffold } from '../pack/index.ts';
@@ -29,23 +30,9 @@ function frameworkCompatibility(repoDir: string) {
   const pythonDependencyRef = pyproject.includes('git+https://github.com/gaofeng21cn/one-person-lab.git')
     ? 'git_owned_framework_dependency'
     : null;
-  const sourceFiles = fs.globSync('**/*.{ts,tsx,js,mjs,cjs}', {
-    cwd: repoDir,
-    exclude: ['node_modules/**', 'dist/**', 'build/**'],
-  });
-  const requiredExports = [...new Set(sourceFiles.flatMap((file) => {
-    const source = fs.readFileSync(path.join(repoDir, file), 'utf8');
-    return [...source.matchAll(/(?:from\s+|import\s*\()(['"])opl-framework(\/[^'"\)]+)?\1/g)]
-      .map((match) => match[2] ? `.${match[2]}` : '.');
-  }))].sort();
-  const pythonSourceFiles = fs.globSync('**/*.py', {
-    cwd: repoDir,
-    exclude: ['.venv/**', 'build/**', 'dist/**', 'src/opl_framework/**'],
-  });
-  const requiresPythonFramework = pythonSourceFiles.some((file) => {
-    const source = fs.readFileSync(path.join(repoDir, file), 'utf8');
-    return /(?:from|import)\s+opl_framework(?:\.|\s|$)/m.test(source);
-  });
+  const frameworkImports = inspectStandardAgentFrameworkImports(repoDir);
+  const requiredExports = frameworkImports.requiredExports;
+  const requiresPythonFramework = frameworkImports.hasPythonImport;
   if (!dependencyRef && !pythonDependencyRef && requiredExports.length === 0 && !requiresPythonFramework) {
     return { status: 'not_applicable', dependency_ref: null, required_exports: [], missing_exports: [] };
   }

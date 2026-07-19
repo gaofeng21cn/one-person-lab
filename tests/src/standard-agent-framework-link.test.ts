@@ -44,6 +44,21 @@ function withPythonAgent(run: (agentRoot: string) => void) {
   }
 }
 
+function withRuntimePythonAgent(run: (agentRoot: string) => void) {
+  const agentRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-python-framework-link-'));
+  try {
+    const helperRoot = path.join(agentRoot, 'runtime', 'native_helpers');
+    fs.mkdirSync(helperRoot, { recursive: true });
+    fs.writeFileSync(
+      path.join(helperRoot, 'consumer.py'),
+      'from opl_framework.artifact_inspection import sha256_bytes\n',
+    );
+    run(agentRoot);
+  } finally {
+    fs.rmSync(agentRoot, { recursive: true, force: true });
+  }
+}
+
 test('Standard Agent framework link is OPL-owned, checkable, and does not install a local runtime tree', () => {
   withAgent((agentRoot) => {
     assert.throws(
@@ -143,6 +158,22 @@ test('Python-only Standard Agents receive the OPL-owned Framework source carrier
     );
     assert.equal(imported.status, 0, imported.stderr);
     assert.equal(imported.stdout.trim(), 'SchemaSubsetValidator');
+    assert.equal(materializeStandardAgentFrameworkLink({ agentRoot, checkOnly: true }).status, 'already_linked');
+  });
+});
+
+test('Python helpers outside src receive the same Framework source carrier', () => {
+  withRuntimePythonAgent((agentRoot) => {
+    const preview = materializeStandardAgentFrameworkLink({ agentRoot, dryRun: true });
+    assert.equal(preview.status, 'validated_no_write');
+    assert.equal(
+      preview.python_link_path,
+      path.join(fs.realpathSync.native(agentRoot), 'src', 'opl_framework'),
+    );
+
+    const linked = materializeStandardAgentFrameworkLink({ agentRoot });
+    assert.equal(linked.status, 'linked');
+    assert.equal(fs.realpathSync(linked.python_link_path!), fs.realpathSync(linked.python_target_root!));
     assert.equal(materializeStandardAgentFrameworkLink({ agentRoot, checkOnly: true }).status, 'already_linked');
   });
 });

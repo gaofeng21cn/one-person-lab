@@ -6,11 +6,16 @@ import { parseJsonText } from '../../kernel/json-file.ts';
 import { buildOplFrameworkLocator } from './opl-framework-locator.ts';
 
 const FRAMEWORK_PACKAGE_NAME = 'opl-framework';
-const JAVASCRIPT_SOURCE_GLOBS = [
-  '*.{js,mjs,cjs,ts,mts,cts}',
-  '{src,scripts,apps,packages}/**/*.{js,mjs,cjs,ts,mts,cts}',
+const JAVASCRIPT_SOURCE_GLOBS = ['**/*.{js,mjs,cjs,ts,mts,cts,tsx}'];
+const PYTHON_SOURCE_GLOBS = ['**/*.py'];
+const SOURCE_EXCLUDES = [
+  '**/.git/**',
+  '**/.venv/**',
+  '**/build/**',
+  '**/dist/**',
+  '**/node_modules/**',
+  'src/opl_framework/**',
 ];
-const PYTHON_SOURCE_GLOBS = ['*.py', '{src,scripts}/**/*.py'];
 const PYTHON_IMPORT_NAME = 'opl_framework';
 
 export type StandardAgentFrameworkLinkInput = {
@@ -39,11 +44,39 @@ function declaresFrameworkDependency(manifest: Record<string, unknown>) {
   });
 }
 
-function sourceContains(agentRoot: string, globs: string[], importName: string) {
+function sourceFiles(agentRoot: string, globs: string[]) {
   return fs.globSync(globs, {
     cwd: agentRoot,
-    exclude: ['**/node_modules/**', '**/dist/**', '**/build/**', '**/.git/**'],
-  }).some((relativePath) => fs.readFileSync(path.join(agentRoot, relativePath), 'utf8').includes(importName));
+    exclude: SOURCE_EXCLUDES,
+  });
+}
+
+function javascriptFrameworkExports(source: string) {
+  const matches = [
+    ...source.matchAll(/\bfrom\s+(['"])opl-framework(\/[^'"]+)?\1/g),
+    ...source.matchAll(/\bimport\s*\(\s*(['"])opl-framework(\/[^'"]+)?\1/g),
+    ...source.matchAll(/\bimport\s+(['"])opl-framework(\/[^'"]+)?\1/g),
+    ...source.matchAll(/\brequire\s*\(\s*(['"])opl-framework(\/[^'"]+)?\1/g),
+  ];
+  return matches.map((match) => match[2] ? `.${match[2]}` : '.');
+}
+
+export function inspectStandardAgentFrameworkImports(agentRoot: string) {
+  const javascriptFiles = sourceFiles(agentRoot, JAVASCRIPT_SOURCE_GLOBS);
+  const requiredExports = [...new Set(javascriptFiles.flatMap((relativePath) => {
+    const source = fs.readFileSync(path.join(agentRoot, relativePath), 'utf8');
+    return javascriptFrameworkExports(source);
+  }))].sort();
+  const pythonFiles = sourceFiles(agentRoot, PYTHON_SOURCE_GLOBS);
+  const hasPythonImport = pythonFiles.some((relativePath) => {
+    const source = fs.readFileSync(path.join(agentRoot, relativePath), 'utf8');
+    return /(?:from|import)\s+opl_framework(?:\.|\s|$)/m.test(source);
+  });
+  return {
+    hasJavaScriptImport: requiredExports.length > 0,
+    hasPythonImport,
+    requiredExports,
+  };
 }
 
 function readLinkTarget(linkPath: string) {
@@ -78,8 +111,9 @@ export function materializeStandardAgentFrameworkLink(input: StandardAgentFramew
   const agentRoot = fs.realpathSync.native(path.resolve(input.agentRoot));
   const packageReadout = readPackageManifest(agentRoot);
   const frameworkRoot = buildOplFrameworkLocator().framework_locator.resolved.root;
-  const hasJavaScriptImport = sourceContains(agentRoot, JAVASCRIPT_SOURCE_GLOBS, FRAMEWORK_PACKAGE_NAME);
-  const hasPythonImport = sourceContains(agentRoot, PYTHON_SOURCE_GLOBS, PYTHON_IMPORT_NAME);
+  const frameworkImports = inspectStandardAgentFrameworkImports(agentRoot);
+  const hasJavaScriptImport = frameworkImports.hasJavaScriptImport;
+  const hasPythonImport = frameworkImports.hasPythonImport;
   const javascriptLinkPath = path.join(agentRoot, 'node_modules', FRAMEWORK_PACKAGE_NAME);
   const pythonLinkPath = path.join(agentRoot, 'src', PYTHON_IMPORT_NAME);
   const pythonTargetRoot = path.join(frameworkRoot, 'python', PYTHON_IMPORT_NAME);

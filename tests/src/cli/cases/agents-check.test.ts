@@ -7,6 +7,7 @@ import {
   PRIVATE_FUNCTIONAL_SURFACE_ADMISSION_POLICY,
   PRIVATE_FUNCTIONAL_SURFACE_ADMISSION_POLICY_REF,
 } from '../../../../src/modules/pack/standard-domain-agent-scaffold-constants.ts';
+import { materializeStandardAgentFrameworkLink } from '../../../../src/modules/connect/standard-agent-framework-link.ts';
 
 function readJson(filePath: string) {
   return parseJsonText(fs.readFileSync(filePath, 'utf8')) as Record<string, any>;
@@ -45,6 +46,37 @@ test('agents check returns one blocked report when an existing check rejects the
     assert.equal(check.status, 'blocked');
     assert.equal(check.blocked_checks.includes('scaffold'), true);
     assert.equal(check.blocked_checks.includes('generated_interfaces'), true);
+  } finally {
+    fs.rmSync(targetDir, { recursive: true, force: true });
+  }
+});
+
+test('agents check and link-framework share Python helper dependency discovery', () => {
+  const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agents-check-python-helper-'));
+  try {
+    buildStandardDomainAgentScaffold({ targetDir, domainId: 'sample-python-helper' });
+    const helperDir = path.join(targetDir, 'runtime', 'native_helpers');
+    fs.mkdirSync(helperDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(helperDir, 'consumer.py'),
+      'from opl_framework.artifact_inspection import sha256_bytes\n',
+    );
+
+    let compatibility = runCli(['agents', 'check', '--repo', targetDir])
+      .standard_agent_check.checks.framework_compatibility;
+    assert.equal(compatibility.status, 'blocked');
+    assert.equal(compatibility.requires_python_framework, true);
+    assert.equal(
+      compatibility.blockers.includes('opl_managed_framework_python_link_missing'),
+      true,
+    );
+
+    const link = materializeStandardAgentFrameworkLink({ agentRoot: targetDir });
+    assert.equal(link.status, 'linked');
+    compatibility = runCli(['agents', 'check', '--repo', targetDir])
+      .standard_agent_check.checks.framework_compatibility;
+    assert.equal(compatibility.status, 'compatible');
+    assert.equal(compatibility.managed_python_link, true);
   } finally {
     fs.rmSync(targetDir, { recursive: true, force: true });
   }
