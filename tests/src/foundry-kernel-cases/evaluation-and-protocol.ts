@@ -24,6 +24,7 @@ import {
   validateDesignRequest,
   validateEvidenceBundle,
   validateEvolutionProposal,
+  validateFoundryProtocolFixtureSet,
   ProcessFoundryEvaluationExecutor,
   ownerGate,
   authorizeRunMutation,
@@ -848,5 +849,61 @@ test('the runtime Foundry validators enforce the same closed nested protocol bou
   assert.throws(
     () => validateEvolutionProposal({ ...proposal, semantic_diff: [missingRationale] }),
     /closed protocol shape/,
+  );
+});
+
+test('the public Foundry fixture runner owns generic conformance and exact digest lineage', async () => {
+  const designRequest = request({ request_id: 'request:fixture-conformance' });
+  const exactRef = (value: string) => `opl-content://sha256/${value.repeat(64)}`;
+  const agentBlueprint = blueprint(designRequest, 0, exactRef('c'));
+  agentBlueprint.stage_graph.stages[0]!.skill_refs = [exactRef('d')];
+  agentBlueprint.stage_graph.stages[0]!.knowledge_refs = [exactRef('e')];
+  agentBlueprint.content_refs.skill_refs = [exactRef('d')];
+  agentBlueprint.content_refs.knowledge_refs = [exactRef('e')];
+  agentBlueprint.content_refs.model_refs = [exactRef('f')];
+  const candidate = await new DeterministicInMemoryCandidateCompiler().materialize({
+    run_id: 'run:fixture-conformance',
+    blueprint: agentBlueprint,
+    blueprint_digest: foundryContentDigest(agentBlueprint),
+  });
+  const evidenceBundle = evidence({
+    runId: 'run:fixture-conformance',
+    designRequest,
+    agentBlueprint,
+    candidate,
+    baselineDigest: null,
+    qualified: false,
+  });
+  const evolutionProposal = await new NoChangeDesigner().diagnose({
+    request: designRequest,
+    blueprint: agentBlueprint,
+    evidence: evidenceBundle,
+    activity: {
+      run_id: 'run:fixture-conformance',
+      iteration: 0,
+      phase: 'diagnose',
+      input_digest: foundryContentDigest({
+        blueprint_digest: foundryContentDigest(agentBlueprint),
+        evidence_digest: foundryContentDigest(evidenceBundle),
+      }),
+    },
+  });
+  const fixtureSet = {
+    design_request: designRequest,
+    agent_blueprint: agentBlueprint,
+    evidence_bundle: evidenceBundle,
+    evolution_proposal: evolutionProposal,
+  };
+
+  assert.equal(
+    validateFoundryProtocolFixtureSet(fixtureSet).version,
+    'opl-foundry-protocol-fixture-conformance.v1',
+  );
+  assert.throws(
+    () => validateFoundryProtocolFixtureSet({
+      ...fixtureSet,
+      evidence_bundle: { ...evidenceBundle, blueprint_digest: `sha256:${'0'.repeat(64)}` },
+    }),
+    /digest lineage is stale or mismatched/,
   );
 });

@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     "./foundry-protocol": "./dist/modules/foundry/protocol.js",
+    "./foundry-protocol-fixture-conformance": "./dist/modules/foundry/protocol-fixture-conformance.js",
     "./foundry-control": "./dist/modules/foundry/control.js",
     "./automation-companions": "./dist/modules/console/automation-companions.js",
     "./advisory-knowledge-boundary": "./dist/modules/charter/advisory-knowledge-boundary.js",

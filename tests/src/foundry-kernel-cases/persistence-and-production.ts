@@ -16,14 +16,8 @@ import {
   readFoundryProviderManifest,
   FoundryKernel,
   FoundryTransientActivityError,
-  assertBlueprintSatisfiesDesignRequest,
-  assertEvaluationEvidenceFacts,
-  foundryFrozenEvaluationPlanDigest,
   foundryContentDigest,
-  validateAgentBlueprint,
-  validateDesignRequest,
-  validateEvidenceBundle,
-  validateEvolutionProposal,
+  validateFoundryProtocolFixtureSet,
   createProductionFoundryKernel,
   compileStandardAgentStageManifest,
   ownerGate,
@@ -589,6 +583,18 @@ test('the exact OMA checkout exposes the canonical producer manifest', {
 test('the four Foundry protocol fixtures from the exact OMA checkout pass OPL authority validation', {
   skip: process.env.OPL_OMA_CHECKOUT ? false : 'set OPL_OMA_CHECKOUT for the cross-repo lane',
 }, () => {
+  const fixtureManifest = JSON.parse(fs.readFileSync(
+    path.join(process.env.OPL_OMA_CHECKOUT!, 'contracts/foundry_protocol_fixture_manifest.json'),
+    'utf8',
+  ));
+  assert.equal(
+    fixtureManifest.validation_surface_ref,
+    'opl-framework/foundry-protocol-fixture-conformance',
+  );
+  assert.equal(
+    fixtureManifest.validation_surface_version,
+    'opl-foundry-protocol-fixture-conformance.v1',
+  );
   const fixtureRoot = path.join(process.env.OPL_OMA_CHECKOUT!, 'contracts/fixtures/foundry-protocol');
   const fixtures = {
     request: JSON.parse(fs.readFileSync(path.join(fixtureRoot, 'design-request.json'), 'utf8')),
@@ -609,27 +615,11 @@ test('the four Foundry protocol fixtures from the exact OMA checkout pass OPL au
       label: `OMA fixture ${schemaRef}`,
     }).status, 'valid');
   }
-  assert.equal(fixtures.blueprint.design_request_digest, foundryContentDigest(fixtures.request));
-  assert.equal(fixtures.evidence.blueprint_digest, foundryContentDigest(fixtures.blueprint));
-  assert.equal(fixtures.proposal.blueprint_digest, foundryContentDigest(fixtures.blueprint));
-  assert.equal(fixtures.proposal.evidence_digest, foundryContentDigest(fixtures.evidence));
-  assert.notEqual(
-    fixtures.evidence.independent_review.evaluation_execution_ref,
-    fixtures.evidence.independent_review.review_execution_ref,
-  );
-  const exactRequest = validateDesignRequest(fixtures.request);
-  const exactBlueprint = validateAgentBlueprint(fixtures.blueprint);
-  const exactEvidence = validateEvidenceBundle(fixtures.evidence);
-  validateEvolutionProposal(fixtures.proposal);
-  assertBlueprintSatisfiesDesignRequest(exactRequest, exactBlueprint);
-  assert.equal(
-    exactEvidence.frozen_test_plan_digest,
-    foundryFrozenEvaluationPlanDigest(exactBlueprint.eval_spec),
-  );
-  assertEvaluationEvidenceFacts({
-    request: exactRequest,
-    spec: exactBlueprint.eval_spec,
-    evidence: exactEvidence,
-    baseline_present: false,
+  const conformance = validateFoundryProtocolFixtureSet({
+    design_request: fixtures.request,
+    agent_blueprint: fixtures.blueprint,
+    evidence_bundle: fixtures.evidence,
+    evolution_proposal: fixtures.proposal,
   });
+  assert.equal(conformance.version, 'opl-foundry-protocol-fixture-conformance.v1');
 });

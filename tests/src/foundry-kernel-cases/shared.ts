@@ -66,6 +66,7 @@ import {
   type EvidenceBundle,
   type EvolutionProposal,
 } from '../../../src/modules/foundry/protocol.ts';
+import { validateFoundryProtocolFixtureSet } from '../../../src/modules/foundry/protocol-fixture-conformance.ts';
 import { verifyFoundryEventChain } from '../../../src/modules/foundry/state-machine.ts';
 import { ProcessFoundryEvaluationExecutor } from '../../../src/modules/runway/foundry-process-evaluator.ts';
 import { createProductionFoundryKernel } from '../../../src/modules/runway/foundry-production-runtime.ts';
@@ -725,6 +726,7 @@ export {
   validateDesignRequest,
   validateEvidenceBundle,
   validateEvolutionProposal,
+  validateFoundryProtocolFixtureSet,
   verifyFoundryEventChain,
   ProcessFoundryEvaluationExecutor,
   createProductionFoundryKernel,
