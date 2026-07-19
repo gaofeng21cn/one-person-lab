@@ -14,6 +14,15 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 
+OPL_EXECUTOR_ADAPTER_OWNER = "one-person-lab"
+OPL_EXECUTOR_ADAPTER_CONTRACT_REF = (
+    "contracts/opl-framework/family-executor-adapter-defaults.json"
+)
+OPL_AGENT_EXECUTION_REQUEST_CONTRACT = "AgentExecutionRequest"
+OPL_AGENT_EXECUTION_RECEIPT_CONTRACT = "AgentExecutionReceipt"
+DEFAULT_EXECUTOR_SELECTION = "inherit_local_executor_default"
+
+
 def _resolve_opl_command(opl_command: str | Sequence[str] | None) -> list[str]:
     value: str | Sequence[str] | None = opl_command
     if value is None:
@@ -119,3 +128,122 @@ def run_agent_execution_request(
     if receipt.get("surface_kind") != "opl_agent_execution_receipt":
         raise RuntimeError("OPL executor response contains an invalid agent execution receipt.")
     return receipt
+
+
+def require_agent_execution_receipt(
+    payload: Mapping[str, Any],
+    *,
+    expected_executor_kind: str,
+) -> dict[str, Any]:
+    """Validate the executor-owned receipt envelope without domain semantics."""
+
+    if not isinstance(payload, Mapping):
+        raise RuntimeError("OPL executor receipt must be an object.")
+    receipt = dict(payload)
+    if receipt.get("surface_kind") != "opl_agent_execution_receipt":
+        raise RuntimeError(
+            "OPL executor receipt surface_kind must be opl_agent_execution_receipt."
+        )
+    if receipt.get("executor_kind") != expected_executor_kind:
+        raise RuntimeError(
+            f"OPL executor receipt executor_kind must be {expected_executor_kind}."
+        )
+    exit_code = receipt.get("exit_code")
+    if not isinstance(exit_code, int) or isinstance(exit_code, bool) or exit_code != 0:
+        raise RuntimeError("OPL executor receipt exit_code must be 0.")
+    expected_notice = (
+        "codex_cli_first_class_default"
+        if expected_executor_kind == "codex_cli"
+        else "connectivity_lifecycle_receipt_audit_only"
+    )
+    if receipt.get("non_equivalence_notice") != expected_notice:
+        raise RuntimeError(
+            f"OPL executor receipt non_equivalence_notice must be {expected_notice}."
+        )
+    return receipt
+
+
+def project_agent_execution_receipt_metadata(
+    payload: Mapping[str, Any],
+    *,
+    expected_executor_kind: str,
+) -> dict[str, Any]:
+    """Project the shared executor metadata carried by a canonical receipt."""
+
+    receipt = require_agent_execution_receipt(
+        payload,
+        expected_executor_kind=expected_executor_kind,
+    )
+    proof = receipt.get("proof") if isinstance(receipt.get("proof"), dict) else {}
+    contract = (
+        receipt.get("executor_contract")
+        if isinstance(receipt.get("executor_contract"), dict)
+        else {}
+    )
+    mode = receipt.get("mode")
+    notice = receipt.get("non_equivalence_notice")
+    if not isinstance(mode, str) or not mode.strip():
+        raise RuntimeError("OPL executor receipt mode must be a non-empty string.")
+    if not isinstance(notice, str) or not notice.strip():
+        raise RuntimeError(
+            "OPL executor receipt non_equivalence_notice must be a non-empty string."
+        )
+    projected: dict[str, Any] = {
+        "kind": expected_executor_kind,
+        "mode": mode.strip(),
+        "adapter_owner": OPL_EXECUTOR_ADAPTER_OWNER,
+        "adapter_contract_ref": OPL_EXECUTOR_ADAPTER_CONTRACT_REF,
+        "request_contract": OPL_AGENT_EXECUTION_REQUEST_CONTRACT,
+        "receipt_contract": OPL_AGENT_EXECUTION_RECEIPT_CONTRACT,
+        "fallback_allowed": False,
+        "non_equivalence_notice": notice.strip(),
+        "session_id": receipt.get("session_id") or proof.get("session_id"),
+        "model": proof.get("model")
+        or contract.get("model")
+        or DEFAULT_EXECUTOR_SELECTION,
+        "provider": proof.get("provider") or contract.get("provider"),
+        "reasoning_effort": proof.get("reasoning_effort")
+        or contract.get("reasoning_effort")
+        or DEFAULT_EXECUTOR_SELECTION,
+        "agent_execution_receipt": receipt,
+    }
+    if expected_executor_kind == "hermes_agent":
+        entrypoint = contract.get("entrypoint")
+        provider_status = proof.get("provider_reasoning_status")
+        if not isinstance(entrypoint, str) or not entrypoint.strip():
+            raise RuntimeError(
+                "Hermes executor contract entrypoint must be a non-empty string."
+            )
+        if not isinstance(provider_status, str) or not provider_status.strip():
+            raise RuntimeError(
+                "Hermes proof provider_reasoning_status must be a non-empty string."
+            )
+        for field in ("api_calls", "tool_call_count", "event_count"):
+            value = proof.get(field)
+            if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+                raise RuntimeError(f"Hermes proof {field} must be a non-negative integer.")
+        event_stream = proof.get("event_stream")
+        if not isinstance(event_stream, list) or any(
+            not isinstance(item, dict) for item in event_stream
+        ):
+            raise RuntimeError("Hermes proof event_stream must be an object list.")
+        projected.update(
+            {
+                "entrypoint": entrypoint.strip(),
+                "api_mode": contract.get("api_mode"),
+                "full_agent_loop_proved": proof.get("full_agent_loop_proved") is True,
+                "api_calls": proof["api_calls"],
+                "tool_call_count": proof["tool_call_count"],
+                "event_count": proof["event_count"],
+                "reasoning_semantics_status": provider_status.strip(),
+                "event_stream": event_stream,
+            }
+        )
+        if (
+            not projected["full_agent_loop_proved"]
+            or projected["tool_call_count"] <= 0
+        ):
+            raise RuntimeError(
+                "Hermes proof must prove a full agent loop and at least one tool call."
+            )
+    return projected

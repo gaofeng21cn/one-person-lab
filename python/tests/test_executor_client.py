@@ -6,7 +6,12 @@ import sys
 
 import pytest
 
-from opl_framework.executor_client import run_agent_execution_request, run_opl_json
+from opl_framework.executor_client import (
+    project_agent_execution_receipt_metadata,
+    require_agent_execution_receipt,
+    run_agent_execution_request,
+    run_opl_json,
+)
 
 
 def _script(tmp_path: Path, body: str) -> list[str]:
@@ -65,3 +70,59 @@ def test_run_opl_json_kills_timed_out_process_group(tmp_path: Path) -> None:
     command = _script(tmp_path, "import time; time.sleep(30)")
     with pytest.raises(TimeoutError, match="timed out"):
         run_opl_json([], opl_command=command, timeout_seconds=0.05)
+
+
+def test_receipt_validation_and_metadata_projection_are_framework_owned() -> None:
+    receipt = {
+        "surface_kind": "opl_agent_execution_receipt",
+        "executor_kind": "codex_cli",
+        "mode": "structured_call",
+        "session_id": "session-1",
+        "exit_code": 0,
+        "non_equivalence_notice": "codex_cli_first_class_default",
+        "proof": {"provider": "openai", "model": "gpt-test"},
+    }
+
+    assert require_agent_execution_receipt(
+        receipt,
+        expected_executor_kind="codex_cli",
+    ) == receipt
+    projection = project_agent_execution_receipt_metadata(
+        receipt,
+        expected_executor_kind="codex_cli",
+    )
+    assert projection["adapter_owner"] == "one-person-lab"
+    assert projection["request_contract"] == "AgentExecutionRequest"
+    assert projection["receipt_contract"] == "AgentExecutionReceipt"
+    assert projection["session_id"] == "session-1"
+    assert projection["provider"] == "openai"
+    assert projection["model"] == "gpt-test"
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("surface_kind", "wrong", "surface_kind"),
+        ("executor_kind", "hermes_agent", "executor_kind"),
+        ("exit_code", 1, "exit_code"),
+        ("non_equivalence_notice", "fallback", "non_equivalence_notice"),
+    ],
+)
+def test_receipt_validation_fails_closed(
+    field: str,
+    value: object,
+    message: str,
+) -> None:
+    receipt = {
+        "surface_kind": "opl_agent_execution_receipt",
+        "executor_kind": "codex_cli",
+        "mode": "structured_call",
+        "exit_code": 0,
+        "non_equivalence_notice": "codex_cli_first_class_default",
+        field: value,
+    }
+    with pytest.raises(RuntimeError, match=message):
+        require_agent_execution_receipt(
+            receipt,
+            expected_executor_kind="codex_cli",
+        )

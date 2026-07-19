@@ -135,8 +135,20 @@ from .runtime_task_companions import (
     build_task_surface_descriptor,
 )
 from .runtime_registration import build_stage_runtime_registration
-from .executor_client import run_agent_execution_request, run_opl_json
+from .executor_client import (
+    project_agent_execution_receipt_metadata,
+    require_agent_execution_receipt,
+    run_agent_execution_request,
+    run_opl_json,
+)
 from .family_runtime_client import query_family_runtime_readback, submit_stage_attempt_request
+from .json_io import (
+    ExistingJsonIdentityMismatch,
+    JsonObjectReadError,
+    guard_existing_json_identity,
+    read_json_object,
+    write_json_object_atomic,
+)
 from .schema_validation import SchemaSubsetValidator, SchemaValidationIssue
 from .status_narration import (
     PAPER_MILESTONE_ANSWER_CHECKLIST,
@@ -188,7 +200,14 @@ __all__ = [
     "build_owner_evidence_reconciliation_proof",
     "build_stage_runtime_registration",
     "run_agent_execution_request",
+    "require_agent_execution_receipt",
+    "project_agent_execution_receipt_metadata",
     "run_opl_json",
+    "ExistingJsonIdentityMismatch",
+    "JsonObjectReadError",
+    "guard_existing_json_identity",
+    "read_json_object",
+    "write_json_object_atomic",
     "submit_stage_attempt_request",
     "query_family_runtime_readback",
     "build_checkpoint_summary",
