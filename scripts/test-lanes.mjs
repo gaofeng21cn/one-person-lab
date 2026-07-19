@@ -80,6 +80,7 @@ const fastTestFiles = [
   'tests/src/target-architecture-schema-contracts.test.ts',
   'tests/src/capability-registry-resolver.test.ts',
   'tests/src/family-runtime-capability-stage-context.test.ts',
+  'tests/src/family-runtime-provider-hosted-task-stage-bindings.test.ts',
   'tests/src/cognitive-computation-kernel-contract.test.ts',
   'tests/src/epistemic-review-currentness.test.ts',
   'tests/src/stage-quality-cycle.test.ts',
