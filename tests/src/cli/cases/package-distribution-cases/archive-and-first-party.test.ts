@@ -144,6 +144,88 @@ function addFrameworkPackageProjections(
   return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: sourceRoot, encoding: 'utf8' }).trim();
 }
 
+test('App component resolver canonicalizes a Draft alias without weakening immutable asset locks', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-component-'));
+  const releasePath = path.join(root, 'release.json');
+  const ownerPath = path.join(root, 'owner.json');
+  const outputPath = path.join(root, 'resolved.json');
+  const version = '26.7.18';
+  const tag = `v${version}`;
+  const repo = 'gaofeng21cn/one-person-lab-app';
+  const alias = 'untagged-fdc466c0e1f7f719bfd8';
+  const names = [
+    'latest-arm64-mac.yml',
+    `One-Person-Lab-${version}-mac-arm64.dmg`,
+    `One-Person-Lab-${version}-mac-arm64.zip`,
+    `One-Person-Lab-${version}-mac-arm64.zip.blockmap`,
+    'standard-local-authorization-policy.json',
+  ];
+  const releaseAssets = names.map((name, index) => ({
+    name,
+    url: `https://github.com/${repo}/releases/download/${tag}/${name}`,
+    digest: `sha256:${String(index + 1).repeat(64)}`,
+    size: index + 1,
+    contentType: 'application/octet-stream',
+  }));
+  const ownerArtifacts = releaseAssets.map((asset) => ({
+    name: asset.name,
+    ref: asset.url.replace(`/download/${tag}/`, `/download/${alias}/`),
+    digest: asset.digest,
+    size: asset.size,
+    content_type: asset.contentType,
+  }));
+  const ownerCore = {
+    surface_kind: 'opl_app_component_manifest.v1',
+    component_id: 'opl-app',
+    version,
+    source_commit: 'b'.repeat(40),
+    release_tag: tag,
+    release_url: `https://github.com/${repo}/releases/tag/${alias}`,
+    primary_artifact: ownerArtifacts[1],
+    artifacts: [...ownerArtifacts].sort((left, right) => left.name.localeCompare(right.name)),
+    component_manifest_ref: `https://github.com/${repo}/releases/download/${tag}/opl-app-component-manifest.json`,
+  };
+  const owner = {
+    ...ownerCore,
+    component_manifest_digest: `sha256:${crypto.createHash('sha256').update(JSON.stringify(ownerCore)).digest('hex')}`,
+  };
+  fs.writeFileSync(releasePath, `${JSON.stringify({
+    tagName: tag,
+    isDraft: false,
+    isPrerelease: false,
+    url: `https://github.com/${repo}/releases/tag/${tag}`,
+    assets: releaseAssets,
+  }, null, 2)}\n`);
+  fs.writeFileSync(ownerPath, `${JSON.stringify(owner, null, 2)}\n`);
+
+  const resolve = () => execFileSync(process.execPath, [
+    path.join(repoRoot, 'scripts/resolve-opl-app-component.mjs'),
+    '--release-json', releasePath,
+    '--source-commit', owner.source_commit,
+    '--owner-manifest', ownerPath,
+    '--output', outputPath,
+  ], { encoding: 'utf8' });
+  resolve();
+  const resolved = parseJsonText(fs.readFileSync(outputPath, 'utf8')) as Record<string, any>;
+  assert.equal(resolved.release_status, 'published');
+  assert.equal(resolved.primary_artifact.ref, releaseAssets[1]!.url);
+  assert.notEqual(resolved.component_manifest_digest, owner.component_manifest_digest);
+
+  const tampered = structuredClone(owner);
+  tampered.artifacts[0].digest = `sha256:${'f'.repeat(64)}`;
+  fs.writeFileSync(ownerPath, `${JSON.stringify(tampered, null, 2)}\n`);
+  assert.throws(resolve, /owner manifest digest does not bind its exact core/);
+
+  const wrongRepo = structuredClone(owner);
+  wrongRepo.release_url = wrongRepo.release_url.replace(repo, 'other/repo');
+  wrongRepo.component_manifest_digest = `sha256:${crypto.createHash('sha256').update(JSON.stringify({
+    ...ownerCore,
+    release_url: wrongRepo.release_url,
+  })).digest('hex')}`;
+  fs.writeFileSync(ownerPath, `${JSON.stringify(wrongRepo, null, 2)}\n`);
+  assert.throws(resolve, /does not bind the exact repository/);
+});
+
 test('package archive builder writes channel manifest checksums git source and release discipline gate', () => {
   const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-out-'));
   const previousManifest = path.join(outDir, 'previous-manifest.json');
