@@ -54,6 +54,9 @@ exit 1
       assert.equal(typeof carrier.source_present, 'boolean');
     }
     assert.equal(output.app_state.agent_packages.status_index.installed_package_count, 0);
+    assert.equal(output.app_state.agent_packages.storage_inventory.status, 'unavailable');
+    assert.equal(output.app_state.agent_packages.storage_inventory.bytes, null);
+    assert.equal(output.app_state.agent_packages.storage_inventory.owner_route, '/settings/agents');
     assert.equal(output.app_state.runtime_source_carriers.items.some((entry: any) => entry.carrier_id === 'meddeepscientist'), false);
 
     assert.equal(output.app_state.settings_control_center.surface_kind, 'opl_settings_control_center.v2');
@@ -69,6 +72,22 @@ exit 1
       output.app_state.settings_control_center.allowed_action_ids.includes('settings_rollback_runtime_substrate'),
       true,
     );
+    assert.equal(
+      output.app_state.settings_control_center.allowed_action_ids.includes('settings_inventory_agent_package_store'),
+      true,
+    );
+    assert.equal(
+      output.app_state.settings_control_center.allowed_action_ids.includes('settings_inventory_webui_data_volume'),
+      true,
+    );
+    const storageLifecycle = output.app_state.settings_control_center.app_settings_read_model.storage_lifecycle;
+    assert.equal(storageLifecycle.surface_kind, 'opl_settings_storage_owner_read_model.v1');
+    assert.equal(storageLifecycle.agent_package_store.status, 'unavailable');
+    assert.equal(storageLifecycle.agent_package_store.bytes, null);
+    assert.equal(storageLifecycle.agent_package_store.projected_action.kind, 'navigate');
+    assert.equal(storageLifecycle.webui_data_volume.status, 'unavailable');
+    assert.equal(storageLifecycle.webui_data_volume.bytes, null);
+    assert.equal(storageLifecycle.webui_data_volume.projected_action.execution_owner, 'carrier_host');
     for (const actionId of [
       'connection_list',
       'connection_create',

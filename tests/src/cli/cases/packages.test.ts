@@ -8,3 +8,4 @@ import './packages-cases/dependency-closure.test.ts';
 import './packages-cases/workflow-policy-transaction.test.ts';
 import './packages-cases/managed-runtime-source-transaction.test.ts';
 import './packages-cases/package-lifecycle-writer-lock.test.ts';
+import './packages-cases/storage-owner-inventory.test.ts';

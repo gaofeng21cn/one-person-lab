@@ -12,9 +12,12 @@ import {
   buildOplModules,
   CANONICAL_OPL_PACKAGE_IDS,
   canonicalAgentPackageId,
+  compactStorageOwnerInventorySnapshot,
+  compactStorageOwnerProjection,
   listOplAgentPackages,
   readOplAgentPackageLockIndex,
   readOplFlowDefaultUserInstructions,
+  readStorageOwnerInventorySnapshot,
   resolveFirstPartyPackageCatalogSnapshot,
   resolveCodexVersion,
   resolveDefaultFamilyWorkspaceRoot,
@@ -689,6 +692,7 @@ function compactFastSettingsControlCenter(value: unknown) {
         'source_refs',
       ]),
       docker_webui: compactFastDockerWebuiReadModel(readModel.docker_webui),
+      storage_lifecycle: compactStorageOwnerInventorySnapshot(readModel.storage_lifecycle),
     },
     task_entries: [],
     action_catalog: [],
@@ -984,6 +988,7 @@ export async function buildOplAppState(input: {
   const profile = input.profile ?? 'fast';
   const contracts = loadFrameworkContracts() as FrameworkContracts;
   const statePaths = ensureOplStateDir(resolveOplStatePaths());
+  const storageOwnerInventory = readStorageOwnerInventorySnapshot();
   const runtimeSourceCarriers = publicRuntimeSourceCarriers(profile);
   const moduleSource = resolveModuleSource(runtimeSourceCarriers);
   const developerMode = {
@@ -1046,6 +1051,10 @@ export async function buildOplAppState(input: {
       status_surface: 'opl packages status --package-id <package_id> --json',
     },
     directory: agentPackagesReadback.directory,
+    storage_inventory: compactStorageOwnerProjection(
+      storageOwnerInventory.agent_package_store,
+      'agent_package_store',
+    ),
     status_index: {
       surface_kind: 'opl_agent_package_status_index',
       status: packageStatusFailures.length > 0 ? 'attention_required' : 'available',
@@ -1124,6 +1133,7 @@ export async function buildOplAppState(input: {
     provider,
     release,
     paths,
+    storageOwnerInventory: storageOwnerInventory as unknown as JsonRecord,
   });
   const settingsControlCenter = profile === 'fast'
     ? compactFastSettingsControlCenter(rawSettingsControlCenter)

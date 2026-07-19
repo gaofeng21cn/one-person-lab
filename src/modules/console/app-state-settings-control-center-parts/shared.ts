@@ -9,6 +9,7 @@ export type BuildSettingsControlCenterInput = {
   provider: JsonRecord;
   release: JsonRecord;
   paths: JsonRecord;
+  storageOwnerInventory?: JsonRecord;
 };
 
 export function asRecord(value: unknown): JsonRecord {

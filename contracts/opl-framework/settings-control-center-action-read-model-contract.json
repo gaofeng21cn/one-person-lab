@@ -175,6 +175,7 @@
       "connections",
       "capability_task_awareness_refs",
       "docker_webui",
+      "storage_lifecycle",
       "local_environment",
       "consumer_only_readback",
       "action_policy"
@@ -192,6 +193,7 @@
       "app_state.settings_control_center.capability_task_awareness_refs",
       "app_state.codex_personalization",
       "app_state.opl_agent_codex_context",
+      "OPL_STATE_DIR/storage-owner-inventory-snapshot.json",
       "application.systemInfo.logDir"
     ],
     "workspace_services": {
@@ -294,6 +296,47 @@
         "runtime_readiness_claim": "not_claimed"
       }
     },
+    "storage_lifecycle": {
+      "surface_kind": "opl_settings_storage_owner_read_model.v1",
+      "purpose": "Fail-open owner-scoped usage inventory for Agent Package storage and WebUI data without creating a second cleanup engine.",
+      "required_fields": [
+        "snapshot_updated_at",
+        "agent_package_store",
+        "webui_data_volume",
+        "action_surface",
+        "owner_action_ids",
+        "authority_boundary"
+      ],
+      "inventory_action_ids": [
+        "settings_inventory_agent_package_store",
+        "settings_inventory_webui_data_volume"
+      ],
+      "status_values": [
+        "available",
+        "attention_required",
+        "unavailable",
+        "not_configured"
+      ],
+      "policy": {
+        "ordinary_read_uses_bounded_snapshot_only": true,
+        "inventory_is_explicit_and_lazy": true,
+        "unknown_bytes_remain_null": true,
+        "typed_package_lock_index_is_only_package_inventory_source": true,
+        "raw_lock_or_filesystem_owner_inference_forbidden": true,
+        "package_root_selection": "current_and_last_known_good_package_created_safe_managed_roots_only",
+        "agent_package_cleanup_action": "agent_package_uninstall",
+        "agent_package_storage_action_policy": "navigate_to_agents_reuse_owner_uninstall_no_duplicate_storage_lifecycle",
+        "webui_projects_excluded": true,
+        "webui_destructive_action_owner": "carrier_host",
+        "missing_carrier_host_capability": "status_only_fail_open",
+        "generic_docker_prune_allowed": false,
+        "shell_direct_filesystem_or_package_mutation_allowed": false
+      },
+      "owner_preview_boundary": {
+        "agent_package_store": "Framework projects measured bytes and the existing Agents owner route; it does not project a delete plan.",
+        "webui_data_volume": "Framework projects measured bytes plus host_action_required ABI only; plan, execute, restore, archive, manifest, and receipt refs remain carrier-host owned."
+      }
+    },
     "shell_policy": {
       "app_consumes_read_model_only": true,
       "aion_shell_is_renderer_only": true,
@@ -358,7 +401,8 @@
     "codex_surface",
     "docker_webui",
     "updates",
-    "runtime_roots"
+    "runtime_roots",
+    "storage_lifecycle"
   ],
   "issue_status_codes": [
     "manual_required",
@@ -388,6 +432,8 @@
     "agent_package_preferences_set",
     "settings_check_app_update",
     "settings_prune_runtime_roots_dry_run",
+    "settings_inventory_agent_package_store",
+    "settings_inventory_webui_data_volume",
     "settings_rollback_runtime_substrate",
     "settings_install_docker_webui",
     "settings_configure_webui_api_key",
@@ -423,6 +469,8 @@
     "agent_package_preferences_set": "settings.capabilities.agent_package.preferences",
     "settings_check_app_update": "settings.updates.check_app_update",
     "settings_prune_runtime_roots_dry_run": "settings.runtime_roots.cleanup_plan",
+    "settings_inventory_agent_package_store": "settings.storage.agent_package_store.inventory",
+    "settings_inventory_webui_data_volume": "settings.storage.webui_data_volume.inventory",
     "settings_rollback_runtime_substrate": "settings.updates.rollback_runtime_substrate",
     "settings_install_docker_webui": "settings.docker_webui.install",
     "settings_configure_webui_api_key": "settings.docker_webui.configure_api_key",
@@ -476,6 +524,7 @@
     "issue_queue": "user_readable_projection_from_existing_app_state_and_update_status_codes_only",
     "app_update_check": "reads_managed_update_projection_app_release_truth_remains_app_repo_owned",
     "runtime_roots_cleanup": "dry_run_plan_only_no_delete",
+    "storage_inventory": "explicit_bounded_read_with_optional_snapshot_cache_write_no_cleanup_or_host_mutation",
     "docker_webui": "delegates_to_existing_install_configure_startup_maintenance_doctor_routes_without_secret_payloads_or_release_runtime_ready_claims"
   },
   "consumer_only_enforcement": {
@@ -618,6 +667,8 @@
     "does_not_sign_owner_receipt",
     "does_not_create_typed_blocker",
     "does_not_delete_runtime_roots",
+    "does_not_create_storage_claim_graph_or_orphan_gc_engine",
+    "does_not_execute_webui_storage_mutation_or_generic_docker_prune",
     "does_not_define_app_release_truth",
     "does_not_make_aion_shell_a_truth_owner"
   ]

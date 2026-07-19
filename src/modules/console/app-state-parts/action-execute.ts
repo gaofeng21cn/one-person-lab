@@ -20,6 +20,8 @@ import {
   refreshOplGatewayAccount,
   repairOplGatewayAccount,
   useOplGatewayForModelAccess,
+  buildAgentPackageStoreStorageInventory,
+  buildWebuiDataVolumeStorageInventory,
 } from '../../connect/index.ts';
 import { runOplSystemAction } from '../../connect/index.ts';
 import { writeOplWorkspaceRootSurface } from '../../connect/index.ts';
@@ -570,6 +572,28 @@ async function executeDirectAppAction(
     return {
       delegatedSurface: 'opl settings control-center cleanup_plan --dry-run',
       result: buildSettingsPruneRuntimeRootsPlan(),
+    };
+  }
+
+  if (options.actionId === 'settings_inventory_agent_package_store') {
+    const action = buildSettingsControlCenterDryRun(options.actionId, options.payload);
+    return {
+      delegatedSurface: 'opl app action execute --action settings_inventory_agent_package_store',
+      result: {
+        settings_control_center_action: action.settings_control_center_action,
+        agent_package_store: buildAgentPackageStoreStorageInventory({ persist: !options.dryRun }),
+      },
+    };
+  }
+
+  if (options.actionId === 'settings_inventory_webui_data_volume') {
+    const action = buildSettingsControlCenterDryRun(options.actionId, options.payload);
+    return {
+      delegatedSurface: 'opl app action execute --action settings_inventory_webui_data_volume',
+      result: {
+        settings_control_center_action: action.settings_control_center_action,
+        webui_data_volume: buildWebuiDataVolumeStorageInventory({ persist: !options.dryRun }),
+      },
     };
   }
 

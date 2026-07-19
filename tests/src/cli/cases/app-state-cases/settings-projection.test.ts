@@ -41,6 +41,7 @@ test('full Settings projection follows App page ownership without treating activ
     path.join(repoRoot, 'contracts', 'opl-framework', 'settings-control-center-action-read-model-contract.json'),
     'utf8',
   ));
+  const storageObservedAt = new Date().toISOString();
   const settings = buildSettingsControlCenter({
     profile: 'full',
     core: {
@@ -86,6 +87,23 @@ test('full Settings projection follows App page ownership without treating activ
     paths: {
       workspace_root: { health_status: 'ready', selected_path: '/tmp/workspace' },
       workspace_root_path: '/tmp/workspace',
+    },
+    storageOwnerInventory: {
+      surface_kind: 'opl_storage_owner_inventory_snapshot.v1',
+      version: 1,
+      updated_at: storageObservedAt,
+      agent_package_store: {
+        status: 'available',
+        observed_at: storageObservedAt,
+        bytes: 2048,
+        reclaimable_bytes: null,
+      },
+      webui_data_volume: {
+        status: 'not_configured',
+        observed_at: storageObservedAt,
+        bytes: null,
+        reclaimable_bytes: null,
+      },
     },
   });
 
@@ -170,6 +188,40 @@ test('full Settings projection follows App page ownership without treating activ
   assert.equal(
     settings.control_center_groups.find((group) => group.group_id === 'storage')?.role,
     'local_data_usage_safe_cleanup_and_owner_page_references',
+  );
+  const storageLifecycle = settings.app_settings_read_model.storage_lifecycle;
+  assert.equal(storageLifecycle.agent_package_store.status, 'available');
+  assert.equal(storageLifecycle.agent_package_store.bytes, 2048);
+  assert.equal(storageLifecycle.agent_package_store.reclaimable_bytes, null);
+  assert.equal(storageLifecycle.agent_package_store.cleanup_action_id, 'agent_package_uninstall');
+  assert.equal(storageLifecycle.agent_package_store.projected_action.route, '/settings/agents');
+  assert.equal(storageLifecycle.webui_data_volume.status, 'not_configured');
+  assert.equal(storageLifecycle.webui_data_volume.bytes, null);
+  assert.equal(storageLifecycle.webui_data_volume.destructive_action_owner, 'carrier_host');
+  assert.equal(storageLifecycle.webui_data_volume.framework_execute_status, 'host_action_required');
+  assert.equal(storageLifecycle.webui_data_volume.projected_action.host_action_abi?.execute_action_id, null);
+  assert.equal(storageLifecycle.authority_boundary.generic_docker_prune_allowed, false);
+  assert.equal(
+    settings.settings_projection.sections.storage.items
+      .find((item) => item.item_id === 'agent_package_store_inventory')?.risk,
+    'read_only',
+  );
+  assert.equal(
+    settings.settings_projection.sections.storage.items
+      .find((item) => item.item_id === 'webui_data_volume_inventory')?.next_action,
+    'settings_inventory_webui_data_volume',
+  );
+  assert.equal(settings.allowed_action_ids.includes('settings_inventory_agent_package_store'), true);
+  assert.equal(settings.allowed_action_ids.includes('settings_inventory_webui_data_volume'), true);
+  assert.equal(contract.action_sections.includes('storage_lifecycle'), true);
+  assert.equal(
+    contract.app_settings_read_model.storage_lifecycle.policy.typed_package_lock_index_is_only_package_inventory_source,
+    true,
+  );
+  assert.equal(contract.app_settings_read_model.storage_lifecycle.policy.generic_docker_prune_allowed, false);
+  assert.equal(
+    contract.app_settings_read_model.storage_lifecycle.policy.missing_carrier_host_capability,
+    'status_only_fail_open',
   );
   assert.doesNotMatch(
     settings.settings_projection.sections.preferences.items[0].normal_summary,

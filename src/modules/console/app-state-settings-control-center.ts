@@ -1,6 +1,7 @@
 import { buildDockerWebuiSettingsReadModel } from './app-state-settings-control-center-parts/docker-webui-read-model.ts';
 import { resolveSettingsCodexAccess } from './app-state-settings-control-center-parts/codex-access-read-model.ts';
 import { listOplConnections, readOplGatewayAccount } from '../connect/public/app-state.ts';
+import { buildStorageOwnerReadModel } from './app-state-settings-control-center-parts/storage-owner-read-model.ts';
 import {
   actionCatalogEntry,
   buildCapabilityTaskAwarenessRefs,
@@ -60,7 +61,7 @@ function taskByActionId(taskEntries: ReturnType<typeof buildTaskEntries>, action
 }
 
 function riskForTask(task: ReturnType<typeof buildTaskEntries>[number] | undefined) {
-  if (!task || task.mutates === 'none_read_only') {
+  if (!task || task.task_kind === 'read' || task.mutates === 'none_read_only') {
     return 'read_only';
   }
   if (task.danger_level === 'high') {
@@ -132,6 +133,7 @@ function buildSettingsProjection(
   taskEntries: ReturnType<typeof buildTaskEntries>,
   issueQueue: Array<Record<string, unknown>>,
   connectionRegistry: ReturnType<typeof listOplConnections>,
+  storageOwnerReadModel: ReturnType<typeof buildStorageOwnerReadModel>,
 ) {
   const moduleSummary = asRecord(asRecord(input.modules).summary);
   const temporal = asRecord(asRecord(input.provider).temporal);
@@ -152,6 +154,8 @@ function buildSettingsProjection(
   const developerEffectiveState = asString(input.developerMode.effective_state) ?? 'unknown';
   const developerModeState = asString(input.developerMode.status) ?? 'unknown';
   const developerMode = asString(input.developerMode.mode) ?? 'unknown';
+  const agentPackageStorage = asRecord(storageOwnerReadModel.agent_package_store);
+  const webuiDataStorage = asRecord(storageOwnerReadModel.webui_data_volume);
 
   const sections = {
     overview: settingsSection('overview', 'Overview', 'general', 'settings_overview_and_recommended_action', [
@@ -312,6 +316,32 @@ function buildSettingsProjection(
       drilldown_section_ids: ['diagnostics'],
     },
     storage: settingsSection('storage', 'Storage', 'storage', 'storage_inventory_cleanup_plan_and_receipt_status', [
+      settingsItem({
+        item_id: 'agent_package_store_inventory',
+        label: 'Agent Package storage',
+        state: asString(agentPackageStorage.status) ?? 'unavailable',
+        surface_class: 'status',
+        scope: 'local_machine',
+        owner: 'one-person-lab',
+        risk: riskForTask(taskByActionId(taskEntries, 'settings_inventory_agent_package_store')),
+        normal_summary: 'Storage totals come from managed package locks; cleanup remains the existing package uninstall action.',
+        next_action: 'settings_inventory_agent_package_store',
+        details_ref: 'app_state.settings_control_center.app_settings_read_model.storage_lifecycle.agent_package_store',
+        editable_reason: editableReasonForTask(taskEntries, 'settings_inventory_agent_package_store', 'owner_inventory_unavailable'),
+      }),
+      settingsItem({
+        item_id: 'webui_data_volume_inventory',
+        label: 'WebUI data storage',
+        state: asString(webuiDataStorage.status) ?? 'unavailable',
+        surface_class: 'status',
+        scope: 'local_machine',
+        owner: 'carrier_host',
+        risk: riskForTask(taskByActionId(taskEntries, 'settings_inventory_webui_data_volume')),
+        normal_summary: 'Framework reports bounded usage only; archive, reset, and restore remain carrier-host actions.',
+        next_action: 'settings_inventory_webui_data_volume',
+        details_ref: 'app_state.settings_control_center.app_settings_read_model.storage_lifecycle.webui_data_volume',
+        editable_reason: editableReasonForTask(taskEntries, 'settings_inventory_webui_data_volume', 'owner_inventory_unavailable'),
+      }),
       settingsItem({
         item_id: 'app_log_usage_and_cleanup_reference',
         label: 'App log usage and cleanup',
@@ -574,6 +604,7 @@ function buildAppSettingsReadModel(
   settingsIa: ReturnType<typeof buildSettingsIa>,
   consumerOnlyReadback: ReturnType<typeof buildAppAionConsumerOnlyReadback>,
   connectionRegistry: ReturnType<typeof listOplConnections>,
+  storageOwnerReadModel: ReturnType<typeof buildStorageOwnerReadModel>,
 ) {
   const codex = asRecord(asRecord(input.core).codex);
   const defaultProfile = asRecord(codex.default_profile);
@@ -708,6 +739,7 @@ function buildAppSettingsReadModel(
       app_log_directory: buildAppLogDirectoryHostProjection(),
     },
     docker_webui: buildDockerWebuiSettingsReadModel(input, taskEntries, issueQueue),
+    storage_lifecycle: storageOwnerReadModel,
     local_environment: {
       source_ref: 'app_state.paths + app_state.release + app_state.provider',
       state_dir: asString(input.paths.state_dir),
@@ -812,11 +844,13 @@ export function buildSettingsControlCenter(input: BuildSettingsControlCenterInpu
   const capabilityTaskAwarenessRefs = buildCapabilityTaskAwarenessRefs(input);
   const appAionConsumerOnlyReadback = buildAppAionConsumerOnlyReadback();
   const connectionRegistry = listOplConnections();
+  const storageOwnerReadModel = buildStorageOwnerReadModel(input.storageOwnerInventory);
   const settingsProjection = buildSettingsProjection(
     input,
     taskEntries,
     issueQueue,
     connectionRegistry,
+    storageOwnerReadModel,
   );
   const configurationCatalog = buildConfigurationCatalog(input);
   const appSettingsReadModel = buildAppSettingsReadModel(
@@ -826,6 +860,7 @@ export function buildSettingsControlCenter(input: BuildSettingsControlCenterInpu
     settingsIa,
     appAionConsumerOnlyReadback,
     connectionRegistry,
+    storageOwnerReadModel,
   );
 
   return {
@@ -888,6 +923,7 @@ export function buildSettingsControlCenter(input: BuildSettingsControlCenterInpu
       apply: 'delegates_only_to_existing_opl_owned_app_action_routes',
       verify: 'read_existing_opl_app_state_or_existing_opl_owned_status_actions',
       runtime_roots_cleanup: 'dry_run_plan_only_no_delete',
+      storage_inventory: 'explicit_bounded_read_with_optional_snapshot_cache_write_no_cleanup_or_host_mutation',
     },
     authority_boundary: {
       framework_owner: 'one-person-lab',

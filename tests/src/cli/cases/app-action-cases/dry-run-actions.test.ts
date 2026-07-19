@@ -355,6 +355,52 @@ test('app action execute dry-runs Codex, module, scheduler, and worker actions f
     assert.equal(cleanupPlan.result.settings_runtime_roots_cleanup_plan.status, 'dry_run_plan_only');
     assert.equal(cleanupPlan.result.settings_runtime_roots_cleanup_plan.authority_boundary.can_delete_runtime_roots, false);
 
+    const packageStorageInventory = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'settings_inventory_agent_package_store',
+      '--dry-run',
+    ], env).app_action_execution;
+
+    assert.equal(
+      packageStorageInventory.delegated_surface,
+      'opl app action execute --action settings_inventory_agent_package_store',
+    );
+    assert.equal(packageStorageInventory.result.agent_package_store.status, 'available');
+    assert.equal(packageStorageInventory.result.agent_package_store.bytes, 0);
+    assert.equal(packageStorageInventory.result.agent_package_store.reclaimable_bytes, 0);
+    assert.equal(packageStorageInventory.result.settings_control_center_action.task_kind, 'read');
+    assert.equal(
+      fs.existsSync(path.join(env.OPL_STATE_DIR, 'storage-owner-inventory-snapshot.json')),
+      false,
+    );
+
+    const webuiStorageInventory = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'settings_inventory_webui_data_volume',
+      '--dry-run',
+    ], { ...env, OPL_DATA_DIR: '', AIONUI_DATA_DIR: '' }).app_action_execution;
+
+    assert.equal(
+      webuiStorageInventory.delegated_surface,
+      'opl app action execute --action settings_inventory_webui_data_volume',
+    );
+    assert.equal(webuiStorageInventory.result.webui_data_volume.status, 'not_configured');
+    assert.equal(webuiStorageInventory.result.webui_data_volume.bytes, null);
+    assert.equal(
+      webuiStorageInventory.result.webui_data_volume.projected_action.execution_owner,
+      'carrier_host',
+    );
+    assert.equal(
+      fs.existsSync(path.join(env.OPL_STATE_DIR, 'storage-owner-inventory-snapshot.json')),
+      false,
+    );
+
     const rollbackPlan = runCli([
       'app',
       'action',

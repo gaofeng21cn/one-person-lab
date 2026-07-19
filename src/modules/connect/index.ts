@@ -143,3 +143,12 @@ export type { OplEngineAction, OplModuleAction, OplModuleId } from './system-ins
 export { runOplSystemAction } from './system-installation/system-actions.ts';
 export { runOplTurnkeyInstall } from './system-installation/turnkey.ts';
 export { writeOplWorkspaceRootSurface } from './system-installation/workspace-root.ts';
+export {
+  buildAgentPackageStoreStorageInventory,
+  buildWebuiDataVolumeStorageInventory,
+} from './storage-owner-inventory.ts';
+export {
+  compactStorageOwnerInventorySnapshot,
+  compactStorageOwnerProjection,
+  readStorageOwnerInventorySnapshot,
+} from './storage-owner-inventory-snapshot.ts';
