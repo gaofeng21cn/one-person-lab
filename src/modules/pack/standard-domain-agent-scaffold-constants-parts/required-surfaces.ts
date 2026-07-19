@@ -41,7 +41,6 @@ export const REQUIRED_CONTRACT_SURFACES = [
   'quality_or_export_gate_refs',
   'physical_skeleton_follow_through',
   'legacy_retirement_tombstone_proof',
-  'private_functional_surface_policy',
   'functional_privatization_audit',
   'workspace_lifecycle_policy',
   'stage_artifact_kernel_adoption',

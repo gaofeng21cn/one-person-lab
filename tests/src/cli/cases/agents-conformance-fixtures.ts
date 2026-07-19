@@ -173,7 +173,7 @@ function syncStandardAgentConformanceProfile(repoDir: string) {
   const defaultStage = stages.find((stage: Record<string, any>) =>
     stage.selected_executor?.default_executor === true
   ) ?? stages[0];
-  const morphology = readJson(contractPath(repoDir, 'private_functional_surface_policy.json'))
+  const morphology = readJson(contractPath(repoDir, 'functional_privatization_audit.json'))
     .physical_source_morphology_policy;
   writeJson(contractPath(repoDir, 'standard_agent_conformance_profile.json'), {
     surface_kind: 'opl_standard_agent_conformance_profile',
@@ -341,9 +341,24 @@ export function buildReadyAgentRepo() {
     ],
   });
 
+  const generatedFunctionalAudit = readJson(contractPath(targetDir, 'functional_privatization_audit.json'));
   writeJson(contractPath(targetDir, 'functional_privatization_audit.json'), {
     surface_kind: 'functional_privatization_audit',
     target_domain_id: 'sample-brief-agent',
+    private_functional_surface_admission_policy_ref:
+      generatedFunctionalAudit.private_functional_surface_admission_policy_ref,
+    physical_source_morphology_policy: {
+      ...generatedFunctionalAudit.physical_source_morphology_policy,
+      required_surface_ids: SAMPLE_SOURCE_CLASSIFICATIONS.map(({ surface_id }) => surface_id),
+      classification_buckets: [
+        'declarative_domain_pack',
+        'domain_handler_target',
+        'refs_only_adapter',
+        'minimal_authority_function',
+        'legacy_proof_tombstone',
+      ],
+      surface_classifications: SAMPLE_SOURCE_CLASSIFICATIONS,
+    },
     forbidden_generic_owner_roles: FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES,
     authority_boundary: {
       ...OPL_DOMAIN_READONLY_AUTHORITY,
@@ -398,26 +413,6 @@ export function buildReadyAgentRepo() {
       },
     ],
   });
-
-  const privateSurfacePolicyPath = contractPath(targetDir, 'private_functional_surface_policy.json');
-  const privateSurfacePolicy = readJson(privateSurfacePolicyPath);
-  privateSurfacePolicy.physical_source_morphology_policy = {
-    policy_id: 'sample_brief_agent.physical_source_morphology.v1',
-    state: 'classified_no_generic_runtime_reflow',
-    required_surface_ids: SAMPLE_SOURCE_CLASSIFICATIONS.map(({ surface_id }) => surface_id),
-    classification_buckets: [
-      'declarative_domain_pack',
-      'domain_handler_target',
-      'refs_only_adapter',
-      'minimal_authority_function',
-      'legacy_proof_tombstone',
-    ],
-    authority_boundary: {
-      ...DOMAIN_GENERATED_SURFACE_READONLY_AUTHORITY,
-    },
-    surface_classifications: SAMPLE_SOURCE_CLASSIFICATIONS,
-  };
-  writeJson(privateSurfacePolicyPath, privateSurfacePolicy);
 
   writeJson(contractPath(targetDir, 'workspace_lifecycle_policy.json'), {
     surface_kind: 'opl_domain_workspace_file_lifecycle_policy',
@@ -779,9 +774,9 @@ function stageFromBase(baseStage: Record<string, any>, input: {
 }
 
 export function configureReadyMagMorphology(repoDir: string) {
-  const privateSurfacePolicyPath = contractPath(repoDir, 'private_functional_surface_policy.json');
-  const privateSurfacePolicy = readJson(privateSurfacePolicyPath);
-  privateSurfacePolicy.physical_source_morphology_policy.required_surface_ids = [
+  const functionalAuditPath = contractPath(repoDir, 'functional_privatization_audit.json');
+  const functionalAudit = readJson(functionalAuditPath);
+  functionalAudit.physical_source_morphology_policy.required_surface_ids = [
     'domain_runtime',
     'product_entry',
     'status',
@@ -795,26 +790,27 @@ export function configureReadyMagMorphology(repoDir: string) {
     'autonomy_controller',
     'legacy_runtime_residue',
   ];
-  privateSurfacePolicy.physical_source_morphology_policy.surface_classifications = (
-    privateSurfacePolicy.physical_source_morphology_policy.required_surface_ids.map((surface_id: string) => ({
+  functionalAudit.physical_source_morphology_policy.surface_classifications = (
+    functionalAudit.physical_source_morphology_policy.required_surface_ids.map((surface_id: string) => ({
       surface_id,
       classification: surface_id === 'legacy_runtime_residue' ? 'legacy_proof_tombstone' : 'refs_only_adapter',
       source_refs: surface_id === 'legacy_runtime_residue' ? ['docs/history/runtime-tombstone.md'] : ['agent/'],
     }))
   );
-  privateSurfacePolicy.physical_source_morphology_policy.forbidden_residue_classes = [
+  functionalAudit.physical_source_morphology_policy.forbidden_residue_classes = [
     'legacy_local_persistence_surface',
     'legacy_attempt_record_surface',
     'legacy_repo_cadence_owner',
     'legacy_executor_runtime_probe',
     'legacy_compat_alias_surface',
   ];
-  privateSurfacePolicy.physical_source_morphology_policy.authority_boundary = {
+  functionalAudit.physical_source_morphology_policy.authority_boundary = {
+    ...DOMAIN_GENERATED_SURFACE_READONLY_AUTHORITY,
     mag_can_own_generic_runtime: false,
     mag_can_own_generated_wrapper: false,
     mag_can_restore_legacy_compat_alias: false,
   };
-  writeJson(privateSurfacePolicyPath, privateSurfacePolicy);
+  writeJson(functionalAuditPath, functionalAudit);
   syncStandardAgentConformanceProfile(repoDir);
 }
 

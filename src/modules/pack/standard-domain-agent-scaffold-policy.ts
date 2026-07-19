@@ -24,6 +24,9 @@ export const MINIMAL_AUTHORITY_FUNCTIONS = [
   'domain_specific_native_helper_implementation',
 ] as const;
 
+export const PRIVATE_FUNCTIONAL_SURFACE_ADMISSION_POLICY_REF =
+  'contracts/opl-framework/standard-domain-agent-skeleton-contract.json#/new_agent_scaffold/private_functional_surface_admission_policy';
+
 export const PRIVATE_FUNCTIONAL_SURFACE_ADMISSION_POLICY = {
   surface_kind: 'opl_domain_private_functional_surface_admission_policy',
   version: 'opl-domain-private-functional-surface-admission.v1',
@@ -228,7 +231,7 @@ export const PRIVATE_FUNCTIONAL_SURFACE_ADMISSION_POLICY = {
     'contracts/pack_compiler_input.json',
     'contracts/generated_surface_handoff.json',
     'contracts/owner_receipt_contract.json',
-    'contracts/private_functional_surface_policy.json',
+    PRIVATE_FUNCTIONAL_SURFACE_ADMISSION_POLICY_REF,
   ],
   required_evidence_before_retaining_private_surface: [
     'code_paths',

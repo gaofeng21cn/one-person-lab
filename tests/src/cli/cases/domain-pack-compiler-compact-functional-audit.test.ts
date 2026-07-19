@@ -18,12 +18,19 @@ function writeCompactAudit(repoDir: string, codePaths: string[]) {
   const packInput = JSON.parse(fs.readFileSync(packInputPath, 'utf8')) as Record<string, unknown>;
   packInput.declarative_domain_pack = ['stage_manifest', 'action_catalog'];
   writeJson(packInputPath, packInput);
+  const generatedAudit = JSON.parse(fs.readFileSync(
+    path.join(repoDir, 'contracts', 'functional_privatization_audit.json'),
+    'utf8',
+  )) as Record<string, unknown>;
   writeJson(path.join(repoDir, 'contracts', 'functional_privatization_audit.json'), {
     schema_version: 1,
     surface_kind: 'functional_privatization_audit',
     owner: 'SampleBriefAgent',
     domain_id: 'sample-brief-agent',
     target_domain_id: 'sample-brief-agent',
+    private_functional_surface_admission_policy_ref:
+      generatedAudit.private_functional_surface_admission_policy_ref,
+    physical_source_morphology_policy: generatedAudit.physical_source_morphology_policy,
     forbidden_generic_owner_roles: FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES,
     authority_boundary: {
       domain_can_claim_generic_runtime_owner: false,

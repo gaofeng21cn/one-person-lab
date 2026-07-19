@@ -17,11 +17,14 @@
     "source_policy": "machine_contracts_receipts_and_proofs_only",
     "required_machine_sources": [
       "contracts/functional_privatization_audit.json#authority_boundary",
-      "contracts/private_functional_surface_policy.json#authority_boundary",
+      "contracts/functional_privatization_audit.json#/physical_source_morphology_policy/authority_boundary",
       "contracts/physical_source_morphology_policy.json#authority_boundary",
       "domain_owner_receipt_ref",
       "typed_blocker_ref",
       "no_forbidden_write_proof_ref"
+    ],
+    "compatibility_machine_sources": [
+      "contracts/private_functional_surface_policy.json#authority_boundary"
     ],
     "blocks_standard_agent_admission": true,
     "prose_path_filename_or_markdown_text_can_block_admission": false

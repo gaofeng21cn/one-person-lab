@@ -175,7 +175,6 @@
       "quality_or_export_gate_refs",
       "physical_skeleton_follow_through",
       "legacy_retirement_tombstone_proof",
-      "private_functional_surface_policy",
       "functional_privatization_audit",
       "workspace_lifecycle_policy",
       "stage_artifact_kernel_adoption",
@@ -2521,7 +2520,7 @@
       ],
       "forbidden_private_surface_classes": [
         "generic_scheduler_or_daemon",
-        "generic_queue_or_attempt_ledger",
+        "generic_local_queue_or_attempt_loop",
         "generic_state_machine_runner",
         "generic_persistence_or_sqlite_lifecycle_engine",
         "generic_cli_mcp_product_wrapper",
@@ -2539,7 +2538,7 @@
         "contracts/pack_compiler_input.json",
         "contracts/generated_surface_handoff.json",
         "contracts/owner_receipt_contract.json",
-        "contracts/private_functional_surface_policy.json"
+        "contracts/opl-framework/standard-domain-agent-skeleton-contract.json#/new_agent_scaffold/private_functional_surface_admission_policy"
       ],
       "required_evidence_before_retaining_private_surface": [
         "code_paths",

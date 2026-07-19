@@ -330,11 +330,22 @@ function diagnosticRefsForSubdomain(repoDir: string, aliases: readonly string[])
 }
 
 function hardGateEvidenceRefs(repoDir: string) {
+  const audit = readJsonFile(repoDir, 'contracts/functional_privatization_audit.json');
+  const auditMorphology = isRecord(audit.payload)
+    && isRecord(audit.payload.physical_source_morphology_policy)
+    && isRecord(audit.payload.physical_source_morphology_policy.authority_boundary);
   return [
-    'contracts/functional_privatization_audit.json#authority_boundary',
+    audit.status === 'resolved'
+      ? 'contracts/functional_privatization_audit.json#authority_boundary'
+      : null,
+    auditMorphology
+      ? 'contracts/functional_privatization_audit.json#/physical_source_morphology_policy/authority_boundary'
+      : null,
     'contracts/private_functional_surface_policy.json#authority_boundary',
     'contracts/physical_source_morphology_policy.json#authority_boundary',
-  ].filter((ref) => fs.existsSync(path.join(repoDir, ref.split('#')[0])));
+  ].filter((ref): ref is string => (
+    typeof ref === 'string' && fs.existsSync(path.join(repoDir, ref.split('#')[0]))
+  ));
 }
 
 function explicitForbiddenOwnerClaims(repoDir: string) {

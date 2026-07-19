@@ -12,6 +12,7 @@ import {
 } from '../pack/index.ts';
 import {
   FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES,
+  PRIVATE_FUNCTIONAL_SURFACE_ADMISSION_POLICY_REF,
   REQUIRED_REPO_SOURCE_DIRS,
 } from './standard-domain-agent-scaffold-constants.ts';
 import {
@@ -222,7 +223,6 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
     'contracts/capability_map.json',
     'contracts/stage_operating_principles.json',
     'contracts/functional_privatization_audit.json',
-    'contracts/private_functional_surface_policy.json',
     'contracts/standard_agent_conformance_profile.json',
     'contracts/workspace_lifecycle_policy.json',
   ];
@@ -250,6 +250,41 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
   const functionalPrivatizationAuditRecord = isRecord(functionalPrivatizationAudit)
     ? functionalPrivatizationAudit
     : {};
+  const observedPrivatePolicyRef = typeof functionalPrivatizationAuditRecord.private_functional_surface_admission_policy_ref === 'string'
+    ? functionalPrivatizationAuditRecord.private_functional_surface_admission_policy_ref.trim()
+    : null;
+  const auditMorphology = isRecord(functionalPrivatizationAuditRecord.physical_source_morphology_policy)
+    ? functionalPrivatizationAuditRecord.physical_source_morphology_policy
+    : null;
+  const legacyPrivatePolicy = readJsonFileOrNull(
+    path.join(repoDir, 'contracts/private_functional_surface_policy.json'),
+  );
+  const privatePolicyMode = observedPrivatePolicyRef !== null || auditMorphology !== null
+    ? 'canonical_ref_with_domain_morphology'
+    : isRecord(legacyPrivatePolicy)
+      ? 'legacy_repo_local_policy'
+      : 'missing';
+  const morphologyAuthority = auditMorphology && isRecord(auditMorphology.authority_boundary)
+    ? auditMorphology.authority_boundary
+    : {};
+  const privatePolicyBlockers = privatePolicyMode === 'canonical_ref_with_domain_morphology'
+    ? [
+        observedPrivatePolicyRef === PRIVATE_FUNCTIONAL_SURFACE_ADMISSION_POLICY_REF
+          ? null
+          : 'private_functional_surface_admission_policy_ref_must_equal_canonical_ref',
+        auditMorphology
+          ? null
+          : 'physical_source_morphology_policy_missing',
+        auditMorphology && morphologyAuthority.domain_can_claim_generic_runtime_owner !== false
+          ? 'physical_source_morphology_policy_domain_can_claim_generic_runtime_owner_must_be_false'
+          : null,
+        auditMorphology && morphologyAuthority.domain_repo_can_own_generated_surface !== false
+          ? 'physical_source_morphology_policy_domain_repo_can_own_generated_surface_must_be_false'
+          : null,
+      ].filter((blocker): blocker is string => Boolean(blocker))
+    : privatePolicyMode === 'legacy_repo_local_policy'
+      ? []
+      : ['private_functional_surface_policy_ref_or_legacy_contract_required'];
   const forbiddenRoles = Array.isArray(functionalPrivatizationAuditRecord.forbidden_generic_owner_roles)
     ? functionalPrivatizationAuditRecord.forbidden_generic_owner_roles
     : [];
@@ -370,6 +405,7 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
     ...missingContractFiles.map((item) => `missing_contract:${item}`),
     ...repoContractReadout.blockers,
     ...missingForbiddenRoleGuards.map((item) => `missing_forbidden_role_guard:${item}`),
+    ...privatePolicyBlockers,
     ...authorityViolations,
     standardAgentInterfaceValidation.blocker,
     ...effectiveAgentPackBlockers,
@@ -418,6 +454,13 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
       implementation_profile_validation: implementationProfileValidation,
       standard_agent_interface_validation: standardAgentInterfaceValidation,
       functional_privatization_audit_required: true,
+      private_functional_surface_policy_validation: {
+        status: privatePolicyBlockers.length === 0 ? 'passed' : 'blocked',
+        mode: privatePolicyMode,
+        canonical_policy_ref: PRIVATE_FUNCTIONAL_SURFACE_ADMISSION_POLICY_REF,
+        observed_policy_ref: observedPrivatePolicyRef,
+        blockers: privatePolicyBlockers,
+      },
       blockers,
       raw_blockers: rawBlockers,
       advisory_findings: advisoryFindings,

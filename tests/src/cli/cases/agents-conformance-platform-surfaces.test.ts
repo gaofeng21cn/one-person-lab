@@ -8,7 +8,7 @@ test('agents platform-surfaces blocks explicit generic platform owner claims', a
   const repoDir = buildReadyAgentRepo();
   const functionalAuditPath = path.join(repoDir, 'contracts', 'functional_privatization_audit.json');
   const functionalAudit = parseJsonText(fs.readFileSync(functionalAuditPath, 'utf8')) as any;
-  functionalAudit.authority_boundary.domain_can_claim_generic_runtime_owner = true;
+  functionalAudit.physical_source_morphology_policy.authority_boundary.domain_can_claim_generic_runtime_owner = true;
   writeJson(functionalAuditPath, functionalAudit);
 
   const platformSurfaces = (await runCliReadOnly([
