@@ -69,8 +69,8 @@ export function buildWorkspaceCommandSpecs(
         },
         {
           command: 'workspace source-hygiene',
-          usage: 'opl workspace source-hygiene [--source-root <repo>]',
-          summary: 'Fail closed when a source checkout contains cache or install byproducts.',
+          usage: 'opl workspace source-hygiene [--source-root <repo>] [--fix]',
+          summary: 'Inspect source byproducts or explicitly remove only ignored scan hits.',
         },
         {
           command: 'workspace inspect',
@@ -174,9 +174,10 @@ export function buildWorkspaceCommandSpecs(
       group: 'workspace',
     }),
     'workspace source-hygiene': cloneCommandSpec(commandSpecs['workspace source-hygiene'], {
-      usage: 'opl workspace source-hygiene [--source-root <repo>]',
+      usage: 'opl workspace source-hygiene [--source-root <repo>] [--fix]',
       examples: [
         'opl workspace source-hygiene --source-root /Users/gaofeng/workspace/opl-bookforge',
+        'opl workspace source-hygiene --source-root /Users/gaofeng/workspace/opl-meta-agent --fix',
       ],
       group: 'workspace',
     }),

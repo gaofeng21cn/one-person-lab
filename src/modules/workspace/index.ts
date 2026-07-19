@@ -27,7 +27,11 @@ export {
   renderDomainWorkspaceGitignore,
 } from './domain-source-runtime.ts';
 export type { DomainSourceInput } from './domain-source-runtime.ts';
-export { assertRepoSourceByproductsClean, inspectRepoSourceByproducts } from './repo-source-byproduct-guard.ts';
+export {
+  assertRepoSourceByproductsClean,
+  fixRepoSourceByproducts,
+  inspectRepoSourceByproducts,
+} from './repo-source-byproduct-guard.ts';
 export { buildWorkspaceCatalog, getActiveWorkspaceBinding, inspectWorkspacePathCurrentness, listWorkspaceBindings, pruneWorkspaceRegistry, resolveWorkspaceLocator } from './workspace-registry.ts';
 export type { WorkspaceBinding, WorkspacePathCurrentness } from './workspace-registry.ts';
 export { WORKSPACE_TOPOLOGY_PROFILE_CONTRACT } from './workspace-topology.ts';

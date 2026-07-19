@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -10,6 +11,7 @@ import {
 } from '../../src/modules/workspace/index.ts';
 import {
   assertRepoSourceByproductsClean,
+  fixRepoSourceByproducts,
   inspectRepoSourceByproducts,
 } from '../../src/modules/workspace/repo-source-byproduct-guard.ts';
 import { runCli } from './cli/helpers.ts';
@@ -89,5 +91,38 @@ test('workspace source-hygiene is the public fail-closed transport', () => {
     );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('workspace source-hygiene fix removes only ignored scan hits without following links', () => {
+  const tempRoot = process.env.OPL_REPO_TEMP_ROOT || os.tmpdir();
+  const root = fs.mkdtempSync(path.join(tempRoot, 'opl-source-fix-'));
+  const outside = fs.mkdtempSync(path.join(tempRoot, 'opl-source-fix-outside-'));
+  try {
+    const initialized = spawnSync('git', ['init', '--quiet'], { cwd: root, encoding: 'utf8' });
+    assert.equal(initialized.status, 0, initialized.stderr);
+    fs.writeFileSync(path.join(root, '.gitignore'), '.venv/\nnode_modules\n');
+    fs.mkdirSync(path.join(root, '.venv'));
+    fs.writeFileSync(path.join(outside, 'sentinel.txt'), 'preserve');
+    fs.symlinkSync(outside, path.join(root, 'node_modules'));
+    fs.mkdirSync(path.join(root, 'dist'));
+
+    assert.throws(
+      () => fixRepoSourceByproducts(root),
+      /unignored or unremovable cache or install byproducts/,
+    );
+    assert.equal(fs.existsSync(path.join(root, '.venv')), false);
+    assert.equal(fs.existsSync(path.join(root, 'node_modules')), false);
+    assert.equal(fs.existsSync(path.join(outside, 'sentinel.txt')), true);
+    assert.equal(fs.existsSync(path.join(root, 'dist')), true);
+
+    fs.appendFileSync(path.join(root, '.gitignore'), 'dist/\n');
+    const output = runCli(['workspace', 'source-hygiene', '--source-root', root, '--fix']);
+    assert.equal(output.status, 'passed');
+    assert.deepEqual(output.cleanup.removed_paths, ['dist']);
+    assert.deepEqual(output.cleanup.skipped_paths, []);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(outside, { recursive: true, force: true });
   }
 });

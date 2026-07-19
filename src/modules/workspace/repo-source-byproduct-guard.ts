@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -60,6 +61,35 @@ function scanDirectory(root: string, issues: RepoSourceByproductIssue[]) {
     })));
 }
 
+function isContainedTarget(root: string, target: string) {
+  const relativePath = path.relative(root, target);
+  return relativePath.length > 0
+    && !path.isAbsolute(relativePath)
+    && relativePath !== '..'
+    && !relativePath.startsWith(`..${path.sep}`);
+}
+
+function hasSymlinkParent(root: string, target: string) {
+  const parts = path.relative(root, target).split(path.sep);
+  let current = root;
+  for (const part of parts.slice(0, -1)) {
+    current = path.join(current, part);
+    if (fs.lstatSync(current).isSymbolicLink()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function isGitIgnored(root: string, relativePath: string) {
+  const result = spawnSync(
+    'git',
+    ['-C', root, 'check-ignore', '--quiet', '--', relativePath],
+    { stdio: 'ignore' },
+  );
+  return result.status === 0;
+}
+
 export function inspectRepoSourceByproducts(sourceRoot: string) {
   const root = path.resolve(sourceRoot);
   const issues: RepoSourceByproductIssue[] = [];
@@ -107,6 +137,53 @@ export function inspectRepoSourceByproducts(sourceRoot: string) {
       source_clean_counts_as_production_ready: false,
     },
   };
+}
+
+export function fixRepoSourceByproducts(sourceRoot: string) {
+  const root = path.resolve(sourceRoot);
+  const initialReport = inspectRepoSourceByproducts(root);
+  const removedPaths: string[] = [];
+  const skippedPaths: string[] = [];
+
+  for (const issue of initialReport.issues) {
+    if (issue.kind !== 'repo_source_generated_byproduct' || !isGitIgnored(root, issue.path)) {
+      skippedPaths.push(issue.path);
+      continue;
+    }
+    const target = path.resolve(root, issue.path);
+    try {
+      if (!isContainedTarget(root, target) || hasSymlinkParent(root, target)) {
+        skippedPaths.push(issue.path);
+        continue;
+      }
+      const targetStat = fs.lstatSync(target);
+      fs.rmSync(target, {
+        recursive: targetStat.isDirectory() && !targetStat.isSymbolicLink(),
+        force: false,
+      });
+      removedPaths.push(issue.path);
+    } catch {
+      skippedPaths.push(issue.path);
+    }
+  }
+
+  const report = {
+    ...inspectRepoSourceByproducts(root),
+    cleanup: {
+      mode: 'fix' as const,
+      removed_paths: removedPaths,
+      skipped_paths: [...new Set(skippedPaths)].sort(),
+      policy: 'explicit_fix_git_ignored_scan_hits_only_no_symlink_parent_traversal',
+    },
+  };
+  if (report.status === 'blocked') {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Repository source contains unignored or unremovable cache or install byproducts.',
+      { report },
+    );
+  }
+  return report;
 }
 
 export function assertRepoSourceByproductsClean(sourceRoot: string) {

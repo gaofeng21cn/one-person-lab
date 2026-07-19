@@ -24,7 +24,10 @@ import {
 } from '../../../modules/workspace/workspace-lifecycle.ts';
 import { materializeWorkspaceArtifactLifecycle } from '../../../modules/workspace/workspace-artifact-lifecycle.ts';
 import { ingestWorkspaceSourceMaterial } from '../../../modules/workspace/workspace-source-material.ts';
-import { assertRepoSourceByproductsClean } from '../../../modules/workspace/repo-source-byproduct-guard.ts';
+import {
+  assertRepoSourceByproductsClean,
+  fixRepoSourceByproducts,
+} from '../../../modules/workspace/repo-source-byproduct-guard.ts';
 import { buildBrandModuleSurfaceInspect } from '../../../modules/charter/brand-module-surfaces.ts';
 import { buildHostedWorkItemReadback } from '../../../modules/console/work-item-hosted-readback.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
@@ -48,11 +51,17 @@ function parseRepoSourceHygieneArgs(
   try {
     const { values } = parseArgs({
       args,
-      options: { 'source-root': { type: 'string' } },
+      options: {
+        'source-root': { type: 'string' },
+        fix: { type: 'boolean' },
+      },
       strict: true,
       allowPositionals: false,
     });
-    return values['source-root'] ?? process.cwd();
+    return {
+      sourceRoot: values['source-root'] ?? process.cwd(),
+      fix: values.fix === true,
+    };
   } catch (error) {
     throw buildUsageError(
       error instanceof Error ? error.message : String(error),
@@ -150,16 +159,19 @@ export function buildWorkspaceInitializeCommandSpecs(
       },
     },
     'workspace source-hygiene': {
-      usage: 'opl workspace source-hygiene [--source-root <repo>]',
+      usage: 'opl workspace source-hygiene [--source-root <repo>] [--fix]',
       summary:
-        'Fail closed when a source checkout contains cache or install byproducts; this does not assert domain or release readiness.',
+        'Fail closed when a source checkout contains cache or install byproducts; --fix removes only explicit scan hits that Git marks ignored.',
       examples: [
         'opl workspace source-hygiene --source-root /Users/gaofeng/workspace/opl-bookforge',
+        'opl workspace source-hygiene --source-root /Users/gaofeng/workspace/opl-meta-agent --fix',
       ],
-      handler: (args) =>
-        assertRepoSourceByproductsClean(
-          parseRepoSourceHygieneArgs(args, specs['workspace source-hygiene']),
-        ),
+      handler: (args) => {
+        const parsed = parseRepoSourceHygieneArgs(args, specs['workspace source-hygiene']);
+        return parsed.fix
+          ? fixRepoSourceByproducts(parsed.sourceRoot)
+          : assertRepoSourceByproductsClean(parsed.sourceRoot);
+      },
     },
     'workspace adopt': {
       usage:
