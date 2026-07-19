@@ -5,6 +5,3 @@ export const OBSERVABILITY_ATTEMPT_LEDGER_LABEL = 'stage attempt refs projection
 export const OBSERVABILITY_RUNTIME_LEDGER_LABEL = 'runtime refs projection';
 export const OBSERVABILITY_EVIDENCE_LEDGER_FILE = '/evidence/evidence_ledger.json';
 export const OBSERVABILITY_SOURCE_LEDGER_FILE = '/source/source_ledger.json';
-
-// Compatibility alias for MAS paper-progress imports; not canonical OPL core vocabulary.
-export const OBSERVABILITY_COMPAT_PAPER_EVIDENCE_LEDGER_FILE = '/paper/evidence_ledger.json';

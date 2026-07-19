@@ -67,7 +67,7 @@ test('standard Agent family labels never mix compact and full product names', ()
   );
 });
 
-test('package and module aliases derive standard agents without promoting ScholarSkills', () => {
+test('package and module aliases derive registry entries without promoting ScholarSkills', () => {
   const standardAgents = STANDARD_AGENT_REGISTRY.filter((entry) =>
     entry.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP
   );
@@ -79,10 +79,22 @@ test('package and module aliases derive standard agents without promoting Schola
     }
   }
 
+  for (const agent of STANDARD_AGENT_REGISTRY) {
+    for (const alias of [
+      agent.agent_id,
+      agent.domain_id,
+      agent.target_domain_id,
+      agent.project,
+      agent.plugin_name,
+      agent.canonical_plugin_name,
+      ...agent.aliases,
+    ]) {
+      assert.equal(resolveOplDomainModuleSpec(alias).module_id, agent.module_id.toLowerCase(), alias);
+    }
+  }
+
   assert.equal(canonicalAgentPackageId('mas-scholar-skills'), 'mas-scholar-skills');
   assert.equal(normalizeStandardDomainAgentId('mas-scholar-skills'), 'mas-scholar-skills');
-  assert.equal(resolveOplDomainModuleSpec('oma').module_id, 'oplmetaagent');
-  assert.equal(resolveOplDomainModuleSpec('bookforge').module_id, 'oplbookforge');
   assert.equal(matchesStandardDomainAgentCatalogEntry('rca', {
     project_id: 'redcube',
     project: 'redcube-ai',

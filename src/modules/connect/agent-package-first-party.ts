@@ -1,18 +1,13 @@
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
-import { canonicalAgentPackageId } from './agent-package-identity.ts';
+import {
+  CANONICAL_OPL_PACKAGE_IDS,
+  canonicalAgentPackageId,
+} from './agent-package-identity.ts';
 import { resolveOplReleaseManifestRef } from './system-installation/release-channel.ts';
 import type { ManagedCatalogVersion } from './agent-package-registry-parts/capability-reconciliation.ts';
 import type { AgentPackageManagedVersionCatalogSource } from './agent-package-registry-parts/types.ts';
 
-const FIRST_PARTY_PACKAGE_IDS = new Set([
-  'mas',
-  'mag',
-  'rca',
-  'oma',
-  'obf',
-  'mas-scholar-skills',
-  'opl-flow',
-]);
+const FIRST_PARTY_PACKAGE_IDS = new Set<string>(CANONICAL_OPL_PACKAGE_IDS);
 
 export function resolveFirstPartyPackageCatalog(packageId: string | null | undefined) {
   const canonicalId = canonicalAgentPackageId(packageId);

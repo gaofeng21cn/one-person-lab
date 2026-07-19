@@ -40,40 +40,41 @@ Machine boundary: 本文只记录当前清理目标、完成度和 blocker。机
 | 11 | CLI parser 回归 `node:util.parseArgs` | done | safe pure-options parser 已迁移，最后两条 lane 的CLI source为`+392/-1,180`，净删788行；含新增回归测试后总净删655行。残余手写arg loop只保留positionals、alias出现顺序、跨flag累积、`--`分隔或dry-run/apply状态机。共享adapter对unknown/positional/missing/空字符串fail-closed，保留raw whitespace。 |
 | 12 | CLI 测试按语义合并 | done | `tests/src/cli/**` 净删 12,947 行；authority/currentness/no-authority/replay/admission owner coverage保留。删除收益按 path-filtered 统计，不再引用旧 mixed-commit `8,008` 下界。 |
 
-## 明确拒绝与外部 blocker
+## 明确拒绝、已完成切换与外部 blocker
 
 | 项目 | 状态 | 证据与停止条件 |
 | --- | --- | --- |
 | Runway no-progress enforcement | rejected_by_current_contract | `stage-run-kernel-contract.json` 当前声明 `canonical_admission_consumer=null`、`enforcement=advisory_only_outside_stage_run_reducer`、`can_block_or_exhaust_stage_run=false`。只有Runway owner先修改canonical admission contract并给出consumer/回归，才能重开correctness实现。 |
-| OBF source-byproduct caller cutover | blocked | `opl-bookforge/scripts/verify.sh` 仍两处调用 `bookforge_project_hygiene.py --source-byproduct-check`。OPL 的 Workspace source guard 已落地，但 OBF caller 未切换，不能声明 List 1 #13 完成。 |
+| OBF source-byproduct caller cutover | done | `opl-bookforge/scripts/verify.sh` 已直接调用 `opl workspace source-hygiene`；旧 `bookforge_project_hygiene.py` 已从 OBF 消失。 |
 | OBF native-helper 私有 shell 退役 | partial | OPL 已提供 `opl pack native-helper probe` receipt envelope；OBF renderer/export authority应留在 OBF。只有 OBF 默认 caller 切到 OPL primitive并删除重复通用 shell后才能关闭。 |
 
 ## Fresh 结构 readback
 
 当前 `opl agents default-callers --family-defaults --json` 返回：
 
-- `blocked_count=2`
+- `blocked_count=1`
 - `active_deletion_evidence_worklist_count=8`
-- `closed_surface_retirement_gate_count=16`
+- `closed_surface_retirement_gate_count=32`
 - `default_caller_delete_ready=false`
 - `physical_delete_authorized=false`
 - `no_further_opl_default_caller_delete_work=false`
 
 当前 `opl agents conformance --family-defaults --json` 返回：
 
-- `passed_count=3`
-- `blocked_count=3`
+- `passed_count=5`
+- `blocked_count=1`
 - `structural_conformance_status=blocked`
 - `structural_contract_status=blocked`
 - `family_live_conformance_probe_status=blocked`
 
-因此旧的 `passed_count=6 / blocked_count=0`、`no_further_opl_default_caller_delete_work=true` 和 Runway `95%` 均已撤销。结构 blocker 与 live owner evidence 分账；任一 readback 都不能授权 domain physical delete 或声明 production ready。
+当前唯一 structural blocker 是 OMA 的 full-profile 误配；五仓 generated interfaces 均为 ready。结构 blocker 与 live owner evidence 分账；任一 readback 都不能授权 domain physical delete 或声明 production ready。
 
 ## 下一步停止条件
 
 OPL 仓内原始 12 条 overengineering 候选中，11条已关闭；Runway旧策略的物理清理已完成，但follow-up no-progress enforcement按当前contract明确不落地。后续只在以下条件成立时重开：
 
-1. OBF owner 完成 caller cutover并给出 source guard/native-helper no-active-caller evidence。
+1. OBF owner 完成 native-helper no-active-caller evidence 与通用 shell cutover。
+2. OMA 的 execution/artifact profile 分型由 implementation discriminator 驱动，并保留 OPL-hosted canary/currentness 证据。
 3. Runway owner为no-progress enforcement指定canonical admission consumer并修改当前advisory-only contract。
 4. fresh source/readback 发现新的零调用实现、第二真相源或标准库替代机会。
 

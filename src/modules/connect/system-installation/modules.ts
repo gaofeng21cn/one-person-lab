@@ -17,10 +17,7 @@ import {
 import { ensureOplStateDir } from '../../../kernel/runtime-state-paths.ts';
 import { resolveDefaultFamilyWorkspaceRoot } from '../opl-skills.ts';
 import { developerModePrefersLocalCheckouts } from '../developer-mode-source-policy.ts';
-import {
-  STANDARD_AGENT_REGISTRY,
-  STANDARD_AGENT_SERIES_MEMBERSHIP,
-} from '../../../kernel/standard-agent-registry.ts';
+import { resolveStandardAgent } from '../../../kernel/standard-agent-registry.ts';
 import {
   type DomainModuleSpec,
   type ModuleSourcePolicy,
@@ -599,45 +596,15 @@ function inspectModule(spec: DomainModuleSpec, profile: ModuleInspectionProfile 
 
 function findModuleSpecOrThrow(moduleId: string): DomainModuleRuntimeSpec {
   const normalized = moduleId.trim().toLowerCase();
-  const aliases = new Map<string, OplModuleId>([
-    ...STANDARD_AGENT_REGISTRY
-      .filter((entry) => entry.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP)
-      .flatMap((entry) => [
-        entry.agent_id,
-        entry.domain_id,
-        entry.target_domain_id,
-        entry.project,
-        entry.plugin_name,
-        entry.canonical_plugin_name,
-        ...entry.aliases,
-      ].map((alias) => [alias.toLowerCase(), entry.module_id.toLowerCase() as OplModuleId] as const)),
+  const legacyAliases = new Map<string, OplModuleId>([
     ['mds', 'meddeepscientist'],
     ['med-deepscientist', 'meddeepscientist'],
     ['med_deepscientist', 'meddeepscientist'],
     ['meddeepscientist', 'meddeepscientist'],
-    ['med-autogrant', 'medautogrant'],
-    ['med_autogrant', 'medautogrant'],
-    ['mag', 'medautogrant'],
-    ['opl-meta-agent', 'oplmetaagent'],
-    ['opl_meta_agent', 'oplmetaagent'],
-    ['oplmetaagent', 'oplmetaagent'],
-    ['meta-agent', 'oplmetaagent'],
-    ['meta_agent', 'oplmetaagent'],
-    ['bookforge', 'oplbookforge'],
-    ['book-forge', 'oplbookforge'],
-    ['book_forge', 'oplbookforge'],
-    ['opl-bookforge', 'oplbookforge'],
-    ['opl_bookforge', 'oplbookforge'],
-    ['oplbookforge', 'oplbookforge'],
-    ['redcube-ai', 'redcube'],
-    ['redcube_ai', 'redcube'],
-    ['rca', 'redcube'],
-    ['mas-scholar-skills', 'scholarskills'],
-    ['mas_scholar_skills', 'scholarskills'],
-    ['scholar-skills', 'scholarskills'],
-    ['scholar_skills', 'scholarskills'],
   ]);
-  const canonical = aliases.get(normalized) ?? normalized;
+  const canonical = (
+    resolveStandardAgent(moduleId)?.module_id.toLowerCase() as OplModuleId | undefined
+  ) ?? legacyAliases.get(normalized) ?? normalized;
   const spec = DOMAIN_MODULE_SPECS.find((entry) => entry.module_id === canonical);
   if (!spec) {
     throw new FrameworkContractError(

@@ -2,7 +2,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-  OBSERVABILITY_COMPAT_PAPER_EVIDENCE_LEDGER_FILE,
   OBSERVABILITY_EVIDENCE_LEDGER_FIELD,
   OBSERVABILITY_EVIDENCE_LEDGER_FILE,
   OBSERVABILITY_SOURCE_LEDGER_FIELD,
@@ -14,9 +13,4 @@ test('observability projection vocabulary keeps generic evidence and source ledg
   assert.equal(OBSERVABILITY_SOURCE_LEDGER_FIELD, 'source_ledger');
   assert.equal(OBSERVABILITY_EVIDENCE_LEDGER_FILE, '/evidence/evidence_ledger.json');
   assert.equal(OBSERVABILITY_SOURCE_LEDGER_FILE, '/source/source_ledger.json');
-});
-
-test('observability paper evidence ledger path remains a compatibility alias only', () => {
-  assert.equal(OBSERVABILITY_COMPAT_PAPER_EVIDENCE_LEDGER_FILE, '/paper/evidence_ledger.json');
-  assert.notEqual(OBSERVABILITY_COMPAT_PAPER_EVIDENCE_LEDGER_FILE, OBSERVABILITY_EVIDENCE_LEDGER_FILE);
 });
