@@ -114,13 +114,18 @@ function parseRequest(requestPath: string) {
 export function runPackNativeHelper(input: { catalog: string; helper: string; request: string }) {
   const catalog = parseCatalog(input.catalog, input.helper);
   const request = parseRequest(input.request);
+  const frameworkPythonRoot = path.resolve(import.meta.dirname, '../../../python');
   const execution = runDomainPythonHelper({
     module: catalog.module,
     args: request.args,
     cwd: catalog.repoRoot,
     timeout_ms: Math.ceil(request.timeoutSeconds * 1000),
     env: {
-      PYTHONPATH: [catalog.sourceRoot, process.env.PYTHONPATH].filter(Boolean).join(path.delimiter),
+      PYTHONPATH: [
+        catalog.sourceRoot,
+        frameworkPythonRoot,
+        process.env.PYTHONPATH,
+      ].filter(Boolean).join(path.delimiter),
     },
   });
   if (execution.error?.includes('ETIMEDOUT') || execution.signal === 'SIGTERM') {

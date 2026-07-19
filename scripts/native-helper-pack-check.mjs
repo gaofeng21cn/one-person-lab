@@ -15,6 +15,7 @@ const requiredFiles = [
   'native/opl-native-helper/Cargo.toml',
   'native/opl-native-helper/src/lib.rs',
   'python/opl_framework/__init__.py',
+  'python/opl_framework/artifact_inspection.py',
   'python/opl_framework/managed_runtime.py',
   'scripts/native-helper-cache.mjs',
   'scripts/native-helper-doctor.mjs',

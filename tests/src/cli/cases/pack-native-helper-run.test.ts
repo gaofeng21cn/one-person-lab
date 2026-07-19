@@ -7,7 +7,8 @@ function fixture() {
   fs.writeFileSync(path.join(root, 'python', 'fixture', '__init__.py'), '');
   fs.writeFileSync(path.join(root, 'python', 'fixture', 'helper.py'), [
     'import json, sys',
-    'print(json.dumps({"argv": sys.argv[1:]}))',
+    'from opl_framework.artifact_inspection import sha256_bytes',
+    'print(json.dumps({"argv": sys.argv[1:], "framework_digest": sha256_bytes(b"framework-public-api")}))',
   ].join('\n'));
   const catalog = path.join(root, 'contracts', 'runtime-program', 'catalog.json');
   fs.writeFileSync(catalog, JSON.stringify({
@@ -31,6 +32,10 @@ test('pack native-helper run executes a catalog-declared Python module with no a
     assert.equal(receipt.surface_kind, 'opl_pack_native_helper_execution_receipt');
     assert.equal(receipt.status, 'executed');
     assert.deepEqual(receipt.payload.argv, ['--output', 'result.json']);
+    assert.equal(
+      receipt.payload.framework_digest,
+      'sha256:96ac0c8567837f63e29b690c8223e3f94db784a27152241219b2161c1f50fc7d',
+    );
     assert.equal(receipt.authority_boundary.can_sign_owner_receipt, false);
     assert.equal(receipt.authority_boundary.can_authorize_export_readiness, false);
   } finally {
