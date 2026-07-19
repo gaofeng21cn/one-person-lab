@@ -688,6 +688,16 @@
       "provider_run_projection",
       "typed_stage_closeout_ledger"
     ],
+    "quality_debt_projection": {
+      "fields": [
+        "quality_debt_refs",
+        "quality_debt_reason_codes",
+        "quality_summary"
+      ],
+      "source_policy": "copy_domain_or_runtime_authored_quality_debt_without_semantic_inference",
+      "domain_quality_verdict_inferred": false,
+      "quality_or_readiness_authorized": false
+    },
     "forbidden_derivation_sources": [
       "domain_latest",
       "domain_dispatch_latest",

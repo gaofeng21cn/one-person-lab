@@ -154,6 +154,50 @@ function typedBlockerRefsFromCloseoutRefs(refs: string[]) {
   );
 }
 
+function qualityDebtProjectionFromRecords(records: Record<string, unknown>[]) {
+  const topLevelSources = records.flatMap((source) => [
+    source,
+    parseRecord(source.route_impact),
+  ]);
+  const nestedQualityDebtSources = topLevelSources.map((source) =>
+    parseRecord(source.quality_debt)
+  );
+  const qualityDebtRefs = uniqueStrings([
+    ...topLevelSources,
+    ...nestedQualityDebtSources,
+  ].flatMap((source) =>
+    refListFromRecord(source, ['quality_debt_ref', 'quality_debt_refs'])
+  ));
+  const explicitQualityDebtReasonKeys = [
+    'quality_debt_reason',
+    'quality_debt_reasons',
+    'quality_debt_codes',
+    'normalization_findings',
+  ];
+  const qualityDebtReasonCodes = uniqueStrings([
+    ...topLevelSources.flatMap((source) =>
+      refListFromRecord(source, explicitQualityDebtReasonKeys)
+    ),
+    ...nestedQualityDebtSources.flatMap((source) =>
+      refListFromRecord(source, [
+        'reason_code',
+        'reason_codes',
+        ...explicitQualityDebtReasonKeys,
+      ])
+    ),
+  ]);
+  return {
+    status: qualityDebtRefs.length > 0 || qualityDebtReasonCodes.length > 0
+      ? 'quality_debt_observed'
+      : 'no_quality_debt_observed',
+    quality_debt_refs: qualityDebtRefs,
+    quality_debt_reason_codes: qualityDebtReasonCodes,
+    projection_policy: 'copy_domain_or_runtime_authored_quality_debt_without_semantic_inference',
+    domain_quality_verdict_inferred: false,
+    quality_or_readiness_authorized: false,
+  };
+}
+
 function currentControlAuthorityBoundary() {
   return {
     opl: 'reconciled_stage_runtime_control_projection_only',
@@ -607,6 +651,11 @@ function deriveCurrentControlStateFromRows(
     ...refListFromRecord(routeImpact, ['typed_blocker_ref', 'typed_blocker_refs']),
     ...typedBlockerRefsFromCloseoutRefs(closeoutRefs),
   ]);
+  const qualitySummary = qualityDebtProjectionFromRecords([
+    taskPayload,
+    routeImpact,
+    latestCloseout,
+  ]);
   const ownerAnswerObservation = task
     && isDomainRouteTask(task.domain_id, task.task_kind, taskPayload)
     ? domainOwnerAnswerObservationFromRecords([
@@ -633,6 +682,9 @@ function deriveCurrentControlStateFromRows(
     closeout_receipt_status: current?.closeout_receipt_status ?? null,
     owner_receipt_refs: ownerReceiptRefs,
     typed_blocker_refs: typedBlockerRefs,
+    quality_debt_refs: qualitySummary.quality_debt_refs,
+    quality_debt_reason_codes: qualitySummary.quality_debt_reason_codes,
+    quality_summary: qualitySummary,
     stale_epoch_kinds: staleEpochs,
     stale_work_unit_diagnostic: staleWorkUnit,
     stage_run_currentness_identity: stageRunCurrentnessIdentity,

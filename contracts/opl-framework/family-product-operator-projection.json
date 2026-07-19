@@ -24,6 +24,7 @@
       "finding_lineage",
       "repair_lineage",
       "quality_debt_refs",
+      "quality_debt_reason_codes",
       "token_and_cost"
     ],
     "attempt_must_not_be_presented_as_sub_stage": true,

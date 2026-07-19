@@ -139,6 +139,89 @@ test('runtime operator summary exposes running provider attempts as liveness ref
   }
 });
 
+test('runtime full detail preserves domain-authored quality debt reasons without inferring quality', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-operator-quality-debt-'));
+  installRuntimePackageFixture(stateRoot, 'mas');
+  try {
+    const taskId = insertFamilyRuntimeTaskProjectionFixture({
+      stateRoot,
+      domainId: 'medautoscience',
+      taskKind: 'domain_owner/default-executor-dispatch',
+      payload: {
+        study_id: 'DM003',
+        action_type: 'finalize_and_publication_handoff',
+        dispatch_ref: 'studies/DM003/finalize.json',
+        workspace_root: '/tmp/mas-quality-debt',
+        source_fingerprint: 'mas-source:quality-debt',
+      },
+      dedupeKey: 'mas:DM003:quality-debt-projection',
+    }).task_id;
+    const created = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'finalize_and_publication_handoff',
+      '--provider',
+      'temporal',
+      '--workspace-locator',
+      JSON.stringify({
+        workspace_root: '/tmp/mas-quality-debt',
+        domain_source_fingerprint: 'mas-source:quality-debt',
+      }),
+      '--source-fingerprint',
+      'sha256:mas-quality-debt',
+      '--task',
+      taskId,
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    const attemptId = created.family_runtime_stage_attempt.attempt.stage_attempt_id;
+    const db = new DatabaseSync(path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
+    try {
+      db.prepare(`
+        UPDATE stage_attempts
+        SET route_impact_json = ?
+        WHERE stage_attempt_id = ?
+      `).run(JSON.stringify({
+        transition_outcome: 'completed_with_quality_debt',
+        reason_code: 'ordinary_route_reason_must_not_be_quality_debt',
+        quality_debt_refs: ['mas://DM003/quality-debt/submission-role'],
+        quality_debt: {
+          reason_codes: [
+            'professional_submission_prep_consumption_missing',
+            'internal_review_artifact_exposed_to_journal',
+          ],
+        },
+      }), attemptId);
+    } finally {
+      db.close();
+    }
+
+    const full = runCli(FULL_DETAIL_COMMAND, {
+      OPL_STATE_DIR: stateRoot,
+    }).app_operator_drilldown;
+    const state = full.current_control_state.states.find(
+      (item: Record<string, unknown>) => item.current_stage_attempt_id === attemptId,
+    );
+    assert.ok(state);
+    assert.deepEqual(state.quality_debt_refs, [
+      'mas://DM003/quality-debt/submission-role',
+    ]);
+    assert.deepEqual(state.quality_debt_reason_codes, [
+      'professional_submission_prep_consumption_missing',
+      'internal_review_artifact_exposed_to_journal',
+    ]);
+    assert.equal(state.quality_summary.status, 'quality_debt_observed');
+    assert.equal(state.quality_summary.domain_quality_verdict_inferred, false);
+    assert.equal(state.quality_summary.quality_or_readiness_authorized, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('runtime operator projection does not count stale MAS work-unit live attempt as current running', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-operator-stale-workunit-'));
   installRuntimePackageFixture(stateRoot, 'mas');

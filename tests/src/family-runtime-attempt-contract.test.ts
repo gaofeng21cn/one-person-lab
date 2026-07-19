@@ -100,6 +100,19 @@ test('family runtime attempt contract keeps Temporal attempt, progress-first clo
     'domain_readiness_verdict',
     'domain_artifact_ready_verdict',
   ]);
+  assert.deepEqual(contract.current_control_state_projection.quality_debt_projection.fields, [
+    'quality_debt_refs',
+    'quality_debt_reason_codes',
+    'quality_summary',
+  ]);
+  assert.equal(
+    contract.current_control_state_projection.quality_debt_projection.source_policy,
+    'copy_domain_or_runtime_authored_quality_debt_without_semantic_inference',
+  );
+  assert.equal(
+    contract.current_control_state_projection.quality_debt_projection.domain_quality_verdict_inferred,
+    false,
+  );
   assert.equal(
     Object.hasOwn(contract.current_control_state_projection.authority_boundary, 'can_claim_publication_ready'),
     false,
