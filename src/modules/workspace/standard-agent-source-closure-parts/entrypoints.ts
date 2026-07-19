@@ -1,6 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import {
+  OPL_HOSTED_FOUNDRY_SEMANTIC_PROVIDER_PROFILE_ID,
+  resolveStandardAgentExecutionProfile,
+} from '../../pack/standard-agent-execution-profile.ts';
 import type { SourceClosureEntrypoint, SourceClosureLanguage } from './types.ts';
 
 type JsonRecord = Record<string, unknown>;
@@ -286,6 +290,11 @@ export function discoverSourceClosureEntrypoints(
     }));
 
   const actions = Array.isArray(actionCatalog.actions) ? actionCatalog.actions.map(record) : [];
+  const foundryExecutionProfile = actions.some((action) => (
+    record(action.execution_binding).kind === 'foundry_binding'
+  ))
+    ? resolveStandardAgentExecutionProfile(repoDir)
+    : null;
   for (const action of actions) {
     const actionId = typeof action.action_id === 'string' ? action.action_id : '<missing-action-id>';
     const executionBinding = record(action.execution_binding);
@@ -320,6 +329,33 @@ export function discoverSourceClosureEntrypoints(
         entrypoint_id: `action_catalog:${actionId}`,
         source_kind: 'action_catalog',
         declared_ref: `contracts/action_catalog.json#/actions/${actionId}/execution_binding/stage_manifest_ref`,
+        file: null,
+        module_name: null,
+        symbol: null,
+        hosted_by_opl: true,
+        hosted_binding_verified: hostedBindingVerified,
+        action_id: actionId,
+      }));
+      continue;
+    }
+    if (bindingKind === 'foundry_binding') {
+      const providerManifestRef = typeof executionBinding.provider_manifest_ref === 'string'
+        ? normalizedFile(executionBinding.provider_manifest_ref)
+        : '';
+      const providerValidation = foundryExecutionProfile?.provider_manifest_validation;
+      const hostedBindingVerified =
+        foundryExecutionProfile?.selected_profile_id === OPL_HOSTED_FOUNDRY_SEMANTIC_PROVIDER_PROFILE_ID
+        && foundryExecutionProfile.action_catalog_validation.status === 'passed'
+        && providerValidation?.status === 'passed'
+        && typeof providerValidation.manifest_ref === 'string'
+        && normalizedFile(providerValidation.manifest_ref) === providerManifestRef
+        && !foundryExecutionProfile.blockers.some((blocker) => (
+          blocker.startsWith('hosted_foundry_provider_')
+        ));
+      entries.push(entrypoint({
+        entrypoint_id: `action_catalog:${actionId}`,
+        source_kind: 'action_catalog',
+        declared_ref: `contracts/action_catalog.json#/actions/${actionId}/execution_binding/provider_manifest_ref`,
         file: null,
         module_name: null,
         symbol: null,

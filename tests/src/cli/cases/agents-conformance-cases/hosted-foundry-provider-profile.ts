@@ -12,6 +12,9 @@ import {
   resolveStandardAgentExecutionProfile,
 } from '../../../../../src/modules/pack/index.ts';
 import {
+  discoverSourceClosureEntrypoints,
+} from '../../../../../src/modules/workspace/standard-agent-source-closure-parts/entrypoints.ts';
+import {
   buildReadyAgentRepo,
   writeJson,
 } from '../agents-conformance-fixtures.ts';
@@ -85,6 +88,13 @@ function removeRepoLocalRuntimeContracts(repoDir: string) {
   }
 }
 
+function foundryActionEntrypoint(repoDir: string) {
+  const entry = discoverSourceClosureEntrypoints(repoDir, [], {}, [])
+    .find((candidate) => candidate.entrypoint_id.startsWith('action_catalog:'));
+  assert.ok(entry);
+  return entry;
+}
+
 test('agents conformance selects the hosted Foundry provider profile without hiding raw diagnostics', async () => {
   const repoDir = buildReadyAgentRepo();
   configureHostedProvider(repoDir);
@@ -116,7 +126,8 @@ test('agents conformance selects the hosted Foundry provider profile without hid
   );
   assert.equal(repo.blockers.includes('missing_required_dir:runtime'), false);
   assert.equal(repo.blockers.some((blocker: string) => blocker.startsWith('stage_run_kernel_profile_')), false);
-  assert.equal(repo.blockers.some((blocker: string) => blocker.startsWith('source_closure:')), true);
+  assert.equal(repo.blockers.some((blocker: string) => blocker.startsWith('source_closure:')), false);
+  assert.equal(foundryActionEntrypoint(repoDir).resolution_status, 'resolved');
   assert.equal(adoption.status, 'passed');
   assert.equal(domain.raw_stage_run_kernel_profile_status, 'blocked');
   assert.equal(domain.stage_run_kernel_profile_status, 'opl_hosted');
@@ -203,6 +214,7 @@ test('hosted Foundry profile blocks provider identity mismatch', () => {
   assert.equal(profile.selected_profile_id, OPL_HOSTED_FOUNDRY_SEMANTIC_PROVIDER_PROFILE_ID);
   assert.equal(profile.status, 'blocked');
   assert.ok(profile.blockers.includes('hosted_foundry_provider_domain_identity_mismatch'));
+  assert.equal(foundryActionEntrypoint(repoDir).resolution_status, 'hosted_declaration_unverified');
 });
 
 test('hosted Foundry profile reuses the manifest authority validator', () => {
@@ -217,4 +229,5 @@ test('hosted Foundry profile reuses the manifest authority validator', () => {
   assert.equal(profile.selected_profile_id, OPL_HOSTED_FOUNDRY_SEMANTIC_PROVIDER_PROFILE_ID);
   assert.equal(profile.provider_manifest_validation.status, 'blocked');
   assert.ok(profile.blockers.includes('hosted_foundry_provider_manifest_invalid'));
+  assert.equal(foundryActionEntrypoint(repoDir).resolution_status, 'hosted_declaration_unverified');
 });
