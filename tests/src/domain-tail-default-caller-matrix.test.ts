@@ -5,6 +5,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { defaultCallerSurfaceGates } from '../../src/kernel/default-caller-surface-gates.ts';
+import {
+  aggregateDefaultCallerOwnerDecisionResultShape,
+  buildDefaultCallerOwnerDecisionReadModel,
+} from '../../src/kernel/default-caller-retirement-guard.ts';
 import { parseJsonText } from '../../src/kernel/json-file.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -178,4 +182,31 @@ test('default caller gate treats keep-as-authority adapter as OPL closeout, not 
   assert.equal(worklist.physical_delete_authorization_request_observed, false);
   assert.equal(worklist.physical_delete_authorized, false);
   assert.equal(worklist.default_caller_delete_ready, false);
+});
+
+test('default caller owner-decision read model preserves result precedence without granting delete authority', () => {
+  const ownerDecisionResultShape = aggregateDefaultCallerOwnerDecisionResultShape({
+    resultShapes: [
+      'owner_receipt_ref',
+      'typed_blocker_ref',
+      'keep_as_authority_adapter_ref',
+    ],
+  });
+  const readModel = buildDefaultCallerOwnerDecisionReadModel({
+    prerequisitesObserved: true,
+    ownerDecisionObserved: true,
+    ownerDecisionResultShape,
+  });
+
+  assert.equal(ownerDecisionResultShape, 'keep_as_authority_adapter_ref');
+  assert.equal(readModel.owner_decision_status, 'owner_decision_observed_refs_only_not_delete_authorized');
+  assert.equal(readModel.keep_as_authority_adapter_observed, true);
+  assert.equal(readModel.physical_delete_authorization_request_observed, false);
+  assert.equal(
+    aggregateDefaultCallerOwnerDecisionResultShape({
+      physicalDeleteAuthorized: true,
+      resultShapes: ['typed_blocker_ref'],
+    }),
+    'physical_delete_authorization_ref',
+  );
 });

@@ -10,6 +10,8 @@ import {
   DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
   DEFAULT_CALLER_STATIC_RETIREMENT_PREREQUISITE_GATE_IDS,
   DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES,
+  aggregateDefaultCallerOwnerDecisionResultShape,
+  buildDefaultCallerOwnerDecisionReadModel,
   defaultCallerOwnerDecisionCloseoutReadout,
 } from './default-caller-retirement-guard.ts';
 import { buildPrivatePlatformResidueDeletionGate } from '../pack/index.ts';
@@ -47,31 +49,6 @@ function deleteOrKeepPrerequisitesObserved(summary: {
     && summary.missingTombstoneOrProvenanceRefCount === 0;
 }
 
-function ownerDecisionReadout(
-  prerequisitesObserved: boolean,
-  allRequirementsObserved: boolean,
-  physicalDeleteAuthorized = false,
-  ownerDecisionResultShape: string | null = null,
-) {
-  return {
-    ...defaultCallerOwnerDecisionCloseoutReadout({
-      prerequisitesObserved,
-      ownerDecisionObserved: allRequirementsObserved,
-      physicalDeleteAuthorized,
-      ownerDecisionResultShape,
-    }),
-    delete_or_keep_prerequisites_observed: prerequisitesObserved,
-    owner_decision_required_after_prerequisites_observed: prerequisitesObserved,
-    next_required_owner_action: prerequisitesObserved
-      ? DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION
-      : 'domain_repo_owner_physical_delete_receipt_or_typed_blocker_after_surface_review',
-    accepted_refs_only_result_shapes: prerequisitesObserved
-      ? [...DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES]
-      : ['typed_blocker_ref'],
-    owner_decision_required_after_all_refs_observed: allRequirementsObserved,
-  };
-}
-
 function ownerDecisionStatus(
   prerequisitesObserved: boolean,
   allRequirementsObserved: boolean,
@@ -93,23 +70,6 @@ function ownerDecisionShapeFromWorklist(worklist: JsonRecord) {
   const domainDecision = record(worklist.domain_owner_receipt_or_typed_blocker);
   return optionalString(worklist.owner_decision_result_shape)
     ?? optionalString(domainDecision.owner_decision_result_shape);
-}
-
-function aggregateOwnerDecisionResultShape(surfaces: JsonRecord[], physicalDeleteAuthorized: boolean) {
-  const shapes = unique(surfaces.map((surface) => optionalString(surface.owner_decision_result_shape) ?? ''));
-  if (physicalDeleteAuthorized) {
-    return 'physical_delete_authorization_ref';
-  }
-  if (shapes.includes('keep_as_authority_adapter_ref')) {
-    return 'keep_as_authority_adapter_ref';
-  }
-  if (shapes.includes('typed_blocker_ref')) {
-    return 'typed_blocker_ref';
-  }
-  if (shapes.includes('owner_receipt_ref')) {
-    return 'owner_receipt_ref';
-  }
-  return null;
 }
 
 function structuralPrerequisiteGateGroup(input: {
@@ -407,6 +367,12 @@ function compactSurfaceDeletionGate(worklist: JsonRecord) {
     && physicalDeleteAuthorizationRefs.length > 0
     && keepAsAuthorityAdapterRefs.length === 0
     && typedBlockerRefs.length === 0;
+  const ownerDecisionReadModel = buildDefaultCallerOwnerDecisionReadModel({
+    prerequisitesObserved,
+    ownerDecisionObserved: allRequirementsObserved,
+    physicalDeleteAuthorized,
+    ownerDecisionResultShape,
+  });
   return {
     surface_id: optionalString(worklist.surface_id) ?? 'unknown_surface',
     status: optionalString(worklist.status) ?? 'unknown',
@@ -421,16 +387,10 @@ function compactSurfaceDeletionGate(worklist: JsonRecord) {
     default_caller_delete_ready: physicalDeleteAuthorized,
     active_deletion_worklist_item: worklist.active_deletion_worklist_item !== false,
     needs_drilldown_for_surface_refs: worklist.active_deletion_worklist_item !== false,
-    owner_decision_result_shape: ownerDecisionResultShape,
     physical_delete_authorization_refs: physicalDeleteAuthorizationRefs,
     keep_as_authority_adapter_refs: keepAsAuthorityAdapterRefs,
     owner_receipt_refs: ownerReceiptRefs,
     typed_blocker_refs: typedBlockerRefs,
-    owner_decision_status: ownerDecisionStatus(
-      prerequisitesObserved,
-      allRequirementsObserved,
-      physicalDeleteAuthorized,
-    ),
     structural_prerequisites_observed_but_domain_owner_decision_missing_count:
       missingDomainOwnerDecisionCount,
     missing_gate_groups: {
@@ -452,12 +412,7 @@ function compactSurfaceDeletionGate(worklist: JsonRecord) {
     same_work_unit_live_evidence_scope: {
       ...DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
     },
-    ...ownerDecisionReadout(
-      prerequisitesObserved,
-      allRequirementsObserved,
-      physicalDeleteAuthorized,
-      ownerDecisionResultShape,
-    ),
+    ...ownerDecisionReadModel,
   };
 }
 
@@ -509,12 +464,20 @@ function repoDeletionGateSummary(
       surfaceDeletionGateSummary.length > 0
       && surfaceDeletionGateSummary.every((surface) => surface.physical_delete_authorized === true)
     );
-  const repoOwnerDecisionResultShape = aggregateOwnerDecisionResultShape(
-    surfaceDeletionGateSummary,
-    repoPhysicalDeleteAuthorized,
-  )
+  const repoOwnerDecisionResultShape = aggregateDefaultCallerOwnerDecisionResultShape({
+    physicalDeleteAuthorized: repoPhysicalDeleteAuthorized,
+    resultShapes: surfaceDeletionGateSummary.map((surface) =>
+      optionalString(surface.owner_decision_result_shape)
+    ),
+  })
     ?? optionalString(deletionGate.owner_decision_result_shape)
     ?? optionalString(summary.owner_decision_result_shape);
+  const ownerDecisionReadModel = buildDefaultCallerOwnerDecisionReadModel({
+    prerequisitesObserved,
+    ownerDecisionObserved: allRequirementsObserved,
+    physicalDeleteAuthorized: repoPhysicalDeleteAuthorized,
+    ownerDecisionResultShape: repoOwnerDecisionResultShape,
+  });
   const cleanupLane = cleanupLaneFromReport(report);
   const ordinaryLane = ordinaryLaneReadout({
     deletionEvidenceWorklistCount: worklists.length,
@@ -554,7 +517,6 @@ function repoDeletionGateSummary(
     missing_tombstone_or_provenance_ref_count: missingTombstoneOrProvenanceRefCount,
     physical_delete_authorized: repoPhysicalDeleteAuthorized,
     default_caller_delete_ready: repoPhysicalDeleteAuthorized,
-    owner_decision_result_shape: repoOwnerDecisionResultShape,
     generated_default_caller_readiness_can_authorize_physical_delete: false,
     physical_delete_authorization_status:
       repoPhysicalDeleteAuthorized
@@ -566,11 +528,6 @@ function repoDeletionGateSummary(
     physical_delete_authority_owner:
       optionalString(deletionGate.physical_delete_authority_owner)
       ?? 'domain_repo_owner_after_receipt_parity',
-    owner_decision_status: ownerDecisionStatus(
-      prerequisitesObserved,
-      allRequirementsObserved,
-      repoPhysicalDeleteAuthorized,
-    ),
     structural_prerequisites_observed_but_domain_owner_decision_missing_count:
       structuralPrerequisitesObservedButDomainOwnerDecisionMissingCount,
     missing_gate_groups: {
@@ -596,12 +553,7 @@ function repoDeletionGateSummary(
     same_work_unit_live_evidence_scope: {
       ...DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
     },
-    ...ownerDecisionReadout(
-      prerequisitesObserved,
-      allRequirementsObserved,
-      repoPhysicalDeleteAuthorized,
-      repoOwnerDecisionResultShape,
-    ),
+    ...ownerDecisionReadModel,
     physical_delete_blocked_by: repoPhysicalDeleteAuthorized ? [] : physicalDeleteBlockedBy,
     not_authorized_claims: repoPhysicalDeleteAuthorized ? [] : notAuthorizedClaims,
     needs_drilldown_for_surface_refs: activeWorklists.length > 0,
@@ -665,10 +617,16 @@ export function buildDefaultCallerPhysicalDeleteAuthorityReadModel(
   );
   const physicalDeleteAuthorized = repoSummaries.length > 0
     && repoSummaries.every((repo) => repo.physical_delete_authorized === true);
-  const ownerDecisionResultShape = aggregateOwnerDecisionResultShape(
-    repoSummaries,
+  const ownerDecisionResultShape = aggregateDefaultCallerOwnerDecisionResultShape({
     physicalDeleteAuthorized,
-  );
+    resultShapes: repoSummaries.map((repo) => optionalString(repo.owner_decision_result_shape)),
+  });
+  const ownerDecisionReadModel = buildDefaultCallerOwnerDecisionReadModel({
+    prerequisitesObserved: allReposHaveDeleteOrKeepPrerequisites,
+    ownerDecisionObserved: allReposAllDeletionEvidenceRequirementsObserved,
+    physicalDeleteAuthorized,
+    ownerDecisionResultShape,
+  });
   const ordinaryLaneWithCloseout = ordinaryLaneReadout({
     deletionEvidenceWorklistCount,
     prerequisitesObserved: allReposHaveDeleteOrKeepPrerequisites,
@@ -721,18 +679,12 @@ export function buildDefaultCallerPhysicalDeleteAuthorityReadModel(
     },
     physical_delete_authorized: physicalDeleteAuthorized,
     default_caller_delete_ready: physicalDeleteAuthorized,
-    owner_decision_result_shape: ownerDecisionResultShape,
     generated_default_caller_readiness_can_authorize_physical_delete: false,
     physical_delete_authorization_status: physicalDeleteAuthorized
       ? 'authorized_by_domain_owner_physical_delete_ref'
       : 'not_authorized_by_opl_projection',
     physical_delete_authority_owner: 'domain_repo_owner_after_receipt_parity',
     active_legacy_caller_deletion_gate: legacyCallerDeletionGate,
-    owner_decision_status: ownerDecisionStatus(
-      allReposHaveDeleteOrKeepPrerequisites,
-      allReposAllDeletionEvidenceRequirementsObserved,
-      physicalDeleteAuthorized,
-    ),
     structural_prerequisites_observed_but_domain_owner_decision_missing_count:
       structuralPrerequisitesObservedButDomainOwnerDecisionMissingCount,
     missing_gate_groups: {
@@ -750,12 +702,7 @@ export function buildDefaultCallerPhysicalDeleteAuthorityReadModel(
         ownerDecisionResultShape,
       }),
     },
-    ...ownerDecisionReadout(
-      allReposHaveDeleteOrKeepPrerequisites,
-      allReposAllDeletionEvidenceRequirementsObserved,
-      physicalDeleteAuthorized,
-      ownerDecisionResultShape,
-    ),
+    ...ownerDecisionReadModel,
     physical_delete_blocked_by: physicalDeleteAuthorized ? [] : policy.physical_delete_blocked_by,
     not_authorized_claims: physicalDeleteAuthorized ? [] : policy.not_authorized_claims,
     needs_drilldown_for_surface_refs: deletionEvidenceWorklistCount > 0,

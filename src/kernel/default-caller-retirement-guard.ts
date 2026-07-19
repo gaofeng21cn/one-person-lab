@@ -140,5 +140,63 @@ export function defaultCallerOwnerDecisionCloseoutReadout(input: {
   };
 }
 
+export function aggregateDefaultCallerOwnerDecisionResultShape(input: {
+  physicalDeleteAuthorized?: boolean;
+  resultShapes: readonly (string | null | undefined)[];
+}) {
+  if (input.physicalDeleteAuthorized === true) {
+    return 'physical_delete_authorization_ref';
+  }
+  const resultShapes = new Set(input.resultShapes.filter(
+    (entry): entry is string => typeof entry === 'string' && entry.length > 0,
+  ));
+  if (resultShapes.has('keep_as_authority_adapter_ref')) {
+    return 'keep_as_authority_adapter_ref';
+  }
+  if (resultShapes.has('typed_blocker_ref')) {
+    return 'typed_blocker_ref';
+  }
+  if (resultShapes.has('owner_receipt_ref')) {
+    return 'owner_receipt_ref';
+  }
+  return null;
+}
+
+export function buildDefaultCallerOwnerDecisionReadModel(input: {
+  prerequisitesObserved: boolean;
+  ownerDecisionObserved: boolean;
+  physicalDeleteAuthorized?: boolean;
+  ownerDecisionResultShape?: string | null;
+}) {
+  const physicalDeleteAuthorized = input.physicalDeleteAuthorized === true;
+  const ownerDecisionResultShape = input.ownerDecisionResultShape ?? null;
+  const ownerDecisionStatus = !input.prerequisitesObserved
+      ? 'waiting_for_structural_prerequisites'
+    : !input.ownerDecisionObserved
+      ? 'owner_decision_required'
+    : physicalDeleteAuthorized
+      ? 'owner_decision_observed_physical_delete_authorized'
+    : 'owner_decision_observed_refs_only_not_delete_authorized';
+  return {
+    owner_decision_result_shape: ownerDecisionResultShape,
+    ...defaultCallerOwnerDecisionCloseoutReadout({
+      prerequisitesObserved: input.prerequisitesObserved,
+      ownerDecisionObserved: input.ownerDecisionObserved,
+      physicalDeleteAuthorized,
+      ownerDecisionResultShape,
+    }),
+    owner_decision_status: ownerDecisionStatus,
+    delete_or_keep_prerequisites_observed: input.prerequisitesObserved,
+    owner_decision_required_after_prerequisites_observed: input.prerequisitesObserved,
+    next_required_owner_action: input.prerequisitesObserved
+      ? DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION
+      : 'domain_repo_owner_physical_delete_receipt_or_typed_blocker_after_surface_review',
+    accepted_refs_only_result_shapes: input.prerequisitesObserved
+      ? [...DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES]
+      : ['typed_blocker_ref'],
+    owner_decision_required_after_all_refs_observed: input.ownerDecisionObserved,
+  };
+}
+
 export type DefaultCallerPrivatePlatformCleanupDisposition =
   typeof DEFAULT_CALLER_PRIVATE_PLATFORM_CLEANUP_ALLOWED_DISPOSITIONS[number];
