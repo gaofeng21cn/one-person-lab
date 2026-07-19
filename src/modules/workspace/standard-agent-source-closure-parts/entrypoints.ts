@@ -4,7 +4,7 @@ import path from 'node:path';
 import {
   OPL_HOSTED_FOUNDRY_SEMANTIC_PROVIDER_PROFILE_ID,
   resolveStandardAgentExecutionProfile,
-} from '../../pack/standard-agent-execution-profile.ts';
+} from '../../pack/index.ts';
 import type { SourceClosureEntrypoint, SourceClosureLanguage } from './types.ts';
 
 type JsonRecord = Record<string, unknown>;

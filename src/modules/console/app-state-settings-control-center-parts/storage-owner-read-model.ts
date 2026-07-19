@@ -2,7 +2,7 @@ import {
   agentPackageStorageNavigationAction,
   compactStorageOwnerInventorySnapshot,
   webuiHostActionRequired,
-} from '../../connect/storage-owner-inventory-snapshot.ts';
+} from '../../connect/index.ts';
 import { asRecord } from './shared.ts';
 
 export function buildStorageOwnerReadModel(value: unknown) {

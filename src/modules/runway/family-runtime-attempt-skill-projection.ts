@@ -4,8 +4,8 @@ import path from 'node:path';
 import {
   agentPackageSkillProjectionFromUnknown,
   assertAgentPackageSkillProjection,
-} from '../connect/agent-package-registry-parts/skill-projection.ts';
-import type { AgentPackageSkillProjection } from '../connect/agent-package-registry-parts/types.ts';
+  type AgentPackageSkillProjection,
+} from '../connect/index.ts';
 import { isRecord, type JsonRecord } from './family-runtime-codex-stage-runner-parts/shared.ts';
 
 function projectionFromAttempt(attempt: JsonRecord) {

@@ -6,6 +6,7 @@ export {
   normalizeStageQualityOutcome,
   stageQualityAttemptOutcomeFromEnvelope,
   stageQualityOutcomeFromEnvelope,
+  stageReviewEvidenceCacheQualityDebtRef,
   stageReviewVerdictForOutcome,
   STAGE_QUALITY_HARD_STOP_CLASSES,
   STAGE_QUALITY_OUTCOMES,

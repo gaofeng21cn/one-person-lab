@@ -88,6 +88,14 @@ export type {
   AgentPackageRepairInput,
 } from './agent-package-registry.ts';
 export {
+  agentPackageSkillProjectionFromUnknown,
+  assertAgentPackageSkillProjection,
+  projectionFiles,
+} from './agent-package-registry-parts/skill-projection.ts';
+export type {
+  AgentPackageSkillProjection,
+} from './agent-package-registry-parts/types.ts';
+export {
   readPackageManagedStandardAgentDescriptor,
   readStandardAgentDescriptorForDomain,
   resolveStandardAgentContractCheckout,
@@ -148,7 +156,9 @@ export {
   buildWebuiDataVolumeStorageInventory,
 } from './storage-owner-inventory.ts';
 export {
+  agentPackageStorageNavigationAction,
   compactStorageOwnerInventorySnapshot,
   compactStorageOwnerProjection,
   readStorageOwnerInventorySnapshot,
+  webuiHostActionRequired,
 } from './storage-owner-inventory-snapshot.ts';

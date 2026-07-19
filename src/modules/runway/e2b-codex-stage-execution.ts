@@ -10,7 +10,7 @@ import { stringValue as optionalString } from '../../kernel/json-record.ts';
 import { isRecord, normalizeTimeoutMs, type JsonRecord } from './family-runtime-codex-stage-runner-parts/shared.ts';
 import { inspectExternalSandboxProviderAdapterEnv } from './external-sandbox-provider-adapter.ts';
 import type { RunnerEventSummary } from './family-runtime-codex-stage-runner-parts/input-prompt.ts';
-import { projectionFiles } from '../connect/agent-package-registry-parts/skill-projection.ts';
+import { projectionFiles } from '../connect/index.ts';
 import { sandboxAttemptSkillRuntime } from './family-runtime-attempt-skill-projection.ts';
 
 type E2bCommandResult = {

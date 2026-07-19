@@ -12,7 +12,7 @@ import {
   type FamilyActionCatalog,
 } from '../../kernel/family-action-catalog-contract.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
-import { normalizeFoundryProviderManifest } from '../foundry/designer-adapter.ts';
+import { normalizeFoundryProviderManifest } from '../foundry/index.ts';
 import type { HostedAgentRuntimeBindingProvenance } from './hosted-agent-runtime-binding.ts';
 
 const ACTION_RUN_STATE_RELATIVE_ROOT = 'control/opl/action_run_state';

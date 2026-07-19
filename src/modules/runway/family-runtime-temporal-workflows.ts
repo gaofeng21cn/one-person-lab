@@ -33,6 +33,7 @@ import {
   evaluateStageQualityFindingClosure,
   normalizeStageQualityArtifactIdentity,
   stageQualityAttemptOutcomeFromEnvelope,
+  stageReviewEvidenceCacheQualityDebtRef,
   stageReviewVerdictForOutcome,
   STAGE_QUALITY_HARD_STOP_CLASSES,
   validateInitialStageQualityReviewOutcome,
@@ -49,7 +50,6 @@ import {
   type StageQualityReReviewResult,
   type StageReviewReceipt,
 } from '../stagecraft/public/stage-quality-cycle.ts';
-import { stageReviewEvidenceCacheQualityDebtRef } from '../stagecraft/stage-quality-cycle.ts';
 import {
   evaluateStageQualityAttemptRoute,
   isRepairRequiredCrossStageRouteBackDecision,
