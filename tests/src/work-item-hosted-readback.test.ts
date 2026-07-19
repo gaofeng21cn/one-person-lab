@@ -97,7 +97,20 @@ function fixtureProjection(workspaceRoot: string, workItemRoot: string): WorkIte
         last_heartbeat_at: '2026-07-15T00:01:00.000Z',
         updated_at: '2026-07-15T00:01:00.000Z',
         running_proof_status: 'observed',
-        diagnostic_reason: null
+        diagnostic_reason: null,
+        quality_budget: {
+          state: 'available',
+          scope_id: 'quality-cycle:fixture',
+          max_attempts: 3,
+          attempts_used: 1,
+          attempts_remaining: 2,
+          max_elapsed_ms: 21600000,
+          elapsed_ms: 60000,
+          max_tokens: 1000000,
+          tokens_used: 42,
+          token_observation_status: 'observed',
+          stop_reason: null
+        }
       },
       attention: {
         kind: 'none',

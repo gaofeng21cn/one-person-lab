@@ -19,12 +19,14 @@ import {
   DEFAULT_STAGE_EXECUTOR_BINDING_REF,
   buildFamilyActionStageRouteParity,
   normalizeFamilyStageControlPlane,
+  normalizeStageQualityScopeBudget,
   STANDARD_PROGRESS_DELTA_POLICY,
   STANDARD_STAGE_PACK_CONFORMANCE_VERSION,
   STANDARD_STAGE_COMPLETION_POLICY,
   STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
   STANDARD_USER_STAGE_LOG_CONTRACT,
   type FamilyStageControlPlane,
+  type StageQualityScopeBudget,
 } from '../stagecraft/index.ts';
 import {
   readStandardAgentQualityRolePromptFile,
@@ -94,6 +96,7 @@ export type StandardAgentStageQualityPolicy = {
     attempt_internal_parallel_review_facets_allowed: boolean;
     context_isolation_required: true;
     max_repair_rounds: number;
+    scope_budget: StageQualityScopeBudget;
   };
   budget_exhaustion: 'complete_with_quality_debt_if_consumable';
 };
@@ -612,6 +615,7 @@ function validateStageQualityCyclePolicy(input: {
   const formalReview = record(policy.formal_review, 'stage_quality_cycle_policy.formal_review', input.repoDir);
   exactObjectKeys(formalReview, [
     'required', 'risk_tier', 'review_depth', 'context_isolation_required', 'max_repair_rounds',
+    ...(Object.hasOwn(formalReview, 'scope_budget') ? ['scope_budget'] : []),
   ], 'stage_quality_cycle_policy.formal_review', input.repoDir);
   const maxRepairRounds = formalReview.max_repair_rounds;
   if (
@@ -682,6 +686,9 @@ function validateStageQualityCyclePolicy(input: {
     });
   }
   const riskTier = formalReview.risk_tier as StandardAgentStageQualityPolicy['formal_review']['risk_tier'];
+  const scopeBudget = normalizeStageQualityScopeBudget(formalReview.scope_budget, {
+    legacyMaxRepairRounds: Number(maxRepairRounds),
+  });
   return {
     enabled,
     stage_prompt_ref: policyStagePromptRef,
@@ -702,6 +709,7 @@ function validateStageQualityCyclePolicy(input: {
         attempt_internal_parallel_review_facets_allowed: riskTier === 'high',
         context_isolation_required: true,
         max_repair_rounds: Number(maxRepairRounds),
+        scope_budget: scopeBudget,
       },
       budget_exhaustion: 'complete_with_quality_debt_if_consumable',
     },

@@ -82,6 +82,41 @@
   "additionalProperties": false,
   "$defs": {
     "nullableString": { "type": ["string", "null"] },
+    "qualityBudget": {
+      "type": "object",
+      "required": [
+        "state",
+        "scope_id",
+        "max_attempts",
+        "attempts_used",
+        "attempts_remaining",
+        "max_elapsed_ms",
+        "elapsed_ms",
+        "max_tokens",
+        "tokens_used",
+        "token_observation_status",
+        "stop_reason"
+      ],
+      "properties": {
+        "state": { "enum": ["not_managed", "available", "exhausted", "unknown"] },
+        "scope_id": { "$ref": "#/$defs/nullableString" },
+        "max_attempts": { "type": ["integer", "null"], "minimum": 0 },
+        "attempts_used": { "type": "integer", "minimum": 0 },
+        "attempts_remaining": { "type": ["integer", "null"], "minimum": 0 },
+        "max_elapsed_ms": { "type": ["integer", "null"], "minimum": 0 },
+        "elapsed_ms": { "type": ["integer", "null"], "minimum": 0 },
+        "max_tokens": { "type": ["integer", "null"], "minimum": 0 },
+        "tokens_used": { "type": ["integer", "null"], "minimum": 0 },
+        "token_observation_status": { "enum": ["observed", "missing", "not_applicable"] },
+        "stop_reason": {
+          "anyOf": [
+            { "enum": ["max_attempts_exhausted", "max_elapsed_exhausted", "max_tokens_exhausted"] },
+            { "type": "null" }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
     "sourceRef": {
       "type": "object",
       "required": ["ref_kind", "ref", "role"],
@@ -350,7 +385,7 @@
         },
         "execution": {
           "type": "object",
-          "required": ["state", "stage_id", "stage_status", "current_stage_id", "current_stage_display_name", "next_stage_id", "next_stage_display_name", "attempt_id", "attempt_ids", "workflow_id", "provider_kind", "started_at", "last_heartbeat_at", "updated_at", "running_proof_status", "diagnostic_reason"],
+          "required": ["state", "stage_id", "stage_status", "current_stage_id", "current_stage_display_name", "next_stage_id", "next_stage_display_name", "attempt_id", "attempt_ids", "workflow_id", "provider_kind", "started_at", "last_heartbeat_at", "updated_at", "running_proof_status", "diagnostic_reason", "quality_budget"],
           "properties": {
             "state": { "enum": ["running", "queued", "idle", "succeeded", "failed", "unknown"] },
             "stage_id": { "$ref": "#/$defs/nullableString" },
@@ -367,7 +402,8 @@
             "last_heartbeat_at": { "$ref": "#/$defs/nullableString" },
             "updated_at": { "$ref": "#/$defs/nullableString" },
             "running_proof_status": { "type": "string", "minLength": 1 },
-            "diagnostic_reason": { "$ref": "#/$defs/nullableString" }
+            "diagnostic_reason": { "$ref": "#/$defs/nullableString" },
+            "quality_budget": { "$ref": "#/$defs/qualityBudget" }
           },
           "additionalProperties": false
         },

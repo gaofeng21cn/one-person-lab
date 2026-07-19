@@ -207,6 +207,19 @@ export type WorkItemProjectionItem = {
     updated_at: string | null;
     running_proof_status: string;
     diagnostic_reason: string | null;
+    quality_budget: {
+      state: 'not_managed' | 'available' | 'exhausted' | 'unknown';
+      scope_id: string | null;
+      max_attempts: number | null;
+      attempts_used: number;
+      attempts_remaining: number | null;
+      max_elapsed_ms: number | null;
+      elapsed_ms: number | null;
+      max_tokens: number | null;
+      tokens_used: number | null;
+      token_observation_status: 'observed' | 'missing' | 'not_applicable';
+      stop_reason: string | null;
+    };
   };
   attention: {
     kind: WorkItemAttentionKind;

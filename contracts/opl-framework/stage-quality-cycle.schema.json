@@ -60,7 +60,8 @@
         "risk_tier": { "enum": ["low", "medium", "high"] },
         "review_depth": { "enum": ["focused", "full", "multi_axis"] },
         "context_isolation_required": { "const": true },
-        "max_repair_rounds": { "type": "integer", "minimum": 0, "maximum": 3 }
+        "max_repair_rounds": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "scope_budget": { "$ref": "#/$defs/scopeBudget" }
       },
       "additionalProperties": false
     },
@@ -100,5 +101,27 @@
       }
     }
   ],
-  "additionalProperties": false
+  "additionalProperties": false,
+  "$defs": {
+    "scopeBudget": {
+      "type": "object",
+      "required": [
+        "max_attempts",
+        "max_elapsed_ms",
+        "max_tokens",
+        "token_budget_requires_observed_usage",
+        "foreground_execution_must_use_managed_attempt"
+      ],
+      "properties": {
+        "surface_kind": { "const": "opl_stage_quality_scope_budget" },
+        "version": { "const": "opl-stage-quality-scope-budget.v1" },
+        "max_attempts": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "max_elapsed_ms": { "type": "integer", "minimum": 1, "maximum": 604800000 },
+        "max_tokens": { "type": "integer", "minimum": 1, "maximum": 10000000 },
+        "token_budget_requires_observed_usage": { "const": true },
+        "foreground_execution_must_use_managed_attempt": { "const": true }
+      },
+      "additionalProperties": false
+    }
+  }
 }

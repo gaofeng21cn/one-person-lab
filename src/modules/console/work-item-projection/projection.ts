@@ -63,6 +63,7 @@ export type BuildWorkItemProjectionV2Options = {
   packageStatusById?: Readonly<Record<string, JsonRecord>>;
   bindings?: ReadonlyArray<WorkspaceBinding>;
   attempts?: JsonRecord[];
+  qualityCycles?: JsonRecord[];
   queueDb?: string;
   resolveDescriptor?: InventoryDescriptorResolver;
   findWorkItemControl?: WorkItemControlResolver;
@@ -148,13 +149,19 @@ export function buildWorkItemProjectionV2(
   });
   diagnostics.push(...controlled.diagnostics);
   const ledger = options.attempts
-    ? { queue_db: options.queueDb ?? 'in-memory-stage-attempt-fixture', attempts: options.attempts, diagnostics: [] }
+    ? {
+        queue_db: options.queueDb ?? 'in-memory-stage-attempt-fixture',
+        attempts: options.attempts,
+        quality_cycles: options.qualityCycles ?? [],
+        diagnostics: [],
+      }
     : readWorkItemStageAttempts();
   diagnostics.push(...ledger.diagnostics);
   const joined = joinAttemptsToWorkItems({
     items: controlled.items,
     projects: projectCatalog.projects,
     attempts: ledger.attempts,
+    qualityCycles: ledger.quality_cycles,
     queueDb: ledger.queue_db,
     attemptRefLimit: profile === 'fast' ? 1 : 8,
   });

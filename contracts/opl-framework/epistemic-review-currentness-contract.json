@@ -1,0 +1,72 @@
+{
+  "contract_kind": "opl_epistemic_review_currentness_contract.v2",
+  "surface_kind": "opl_epistemic_review_currentness_contract",
+  "version": "opl-epistemic-review-currentness-contract.v2",
+  "owner": "OPL Framework",
+  "schema_ref": "contracts/opl-framework/epistemic-review-scope-v2.schema.json",
+  "purpose": "Prevent AI hallucination and support audit, recalculation, and reproduction by binding review verdicts to the artifact, claim, and provenance dependencies they actually assessed.",
+  "default_evidence_profile": "epistemic_provenance",
+  "default_trust_model": "trusted_local_workspace",
+  "adversary_model": "trusted_local_workspace_without_malicious_whole-workspace_forgery",
+  "node_kinds": [
+    "artifact",
+    "claim",
+    "provenance"
+  ],
+  "provenance_roles": [
+    "source_data",
+    "context",
+    "analysis_code",
+    "analysis_parameters",
+    "analysis_result",
+    "claim",
+    "reference_source",
+    "citation_linkage",
+    "limitation",
+    "reproduction_instruction",
+    "visual_content",
+    "layout",
+    "render_template",
+    "package_content",
+    "package_wrapper"
+  ],
+  "review_scope_kinds": [
+    "content",
+    "reference",
+    "display",
+    "package"
+  ],
+  "currentness": {
+    "unit": "reviewed_node_and_transitive_declared_dependencies",
+    "semantic_change_required_for_invalidation": true,
+    "hash_change_alone_invalidates_review": false,
+    "locator_hash_role": "optional_locator_stale_hint_and_deduplication_only",
+    "governance_metadata_can_invalidate_content_review": false,
+    "review_receipt_can_invalidate_its_own_content_review": false,
+    "layout_or_render_template_can_invalidate_content_or_reference_review": false,
+    "package_wrapper_can_invalidate_content_reference_or_display_review": false,
+    "analysis_data_code_parameters_or_result_change_invalidates_only_declared_dependents": true,
+    "claim_change_invalidates_only_declared_dependents": true,
+    "reference_or_citation_linkage_change_invalidates_only_declared_dependents": true
+  },
+  "integrity_separation": {
+    "release_integrity_is_separate_contract": true,
+    "software_package_install_and_external_distribution_may_require_exact_byte_integrity": true,
+    "release_integrity_receipt_can_replace_epistemic_review": false,
+    "epistemic_review_can_replace_release_integrity": false
+  },
+  "agent_adoption": {
+    "framework_owns_generic_contract_validation_currentness_and_attempt_enforcement": true,
+    "agent_owner_declares_domain_artifact_claim_and_provenance_dependencies": true,
+    "agent_owner_may_create_parallel_evidence_control_plane": false,
+    "professional_skills_supply_quality_rules_only": true,
+    "professional_skills_own_generation_signatures_or_loop_scheduling": false
+  },
+  "authority_boundary": {
+    "framework_can_write_domain_truth": false,
+    "framework_can_issue_domain_quality_verdict": false,
+    "framework_can_infer_unobserved_scientific_dependencies": false,
+    "hash_is_content_authority": false,
+    "domain_owner_retains_review_scope_and_verdict_authority": true
+  }
+}

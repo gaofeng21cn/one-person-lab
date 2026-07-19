@@ -196,19 +196,42 @@ function condition(input: Omit<WorkItemCondition, 'ref'> & { ref?: string | null
 export function readWorkItemStageAttempts() {
   const queueDb = path.join(resolveOplStatePaths().state_dir, 'family-runtime', 'queue.sqlite');
   if (!fs.existsSync(queueDb)) {
-    return { queue_db: queueDb, attempts: [] as JsonRecord[], diagnostics: [] as WorkItemProjectionDiagnostic[] };
+    return {
+      queue_db: queueDb,
+      attempts: [] as JsonRecord[],
+      quality_cycles: [] as JsonRecord[],
+      diagnostics: [] as WorkItemProjectionDiagnostic[],
+    };
   }
   const db = openFamilyRuntimeSqlite(queueDb, { readOnly: true });
   try {
+    const qualityCycleTable = db.prepare(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'stage_quality_cycles'",
+    ).get();
+    const qualityCycles = qualityCycleTable
+      ? (db.prepare('SELECT * FROM stage_quality_cycles').all() as Array<Record<string, unknown>>).map((row) => {
+          try {
+            return {
+              ...row,
+              policy: JSON.parse(String(row.policy_json ?? '{}')),
+              state: JSON.parse(String(row.state_json ?? '{}')),
+            } as JsonRecord;
+          } catch {
+            return { ...row, policy: {}, state: {} } as JsonRecord;
+          }
+        })
+      : [];
     return {
       queue_db: queueDb,
       attempts: listStageAttempts(db, { archived: 'exclude' }).filter(isRecord),
+      quality_cycles: qualityCycles,
       diagnostics: [] as WorkItemProjectionDiagnostic[],
     };
   } catch (error) {
     return {
       queue_db: queueDb,
       attempts: [] as JsonRecord[],
+      quality_cycles: [] as JsonRecord[],
       diagnostics: [{
         reason: 'stage_attempt_ledger_read_failed',
         ref: queueDb,
@@ -224,6 +247,7 @@ export function joinAttemptsToWorkItems(input: {
   items: WorkItemProjectionItem[];
   projects: ProjectCatalogEntry[];
   attempts: JsonRecord[];
+  qualityCycles?: JsonRecord[];
   queueDb: string;
   attemptRefLimit: number;
 }) {
@@ -234,6 +258,9 @@ export function joinAttemptsToWorkItems(input: {
     item,
   ]));
   const grouped = new Map<string, JsonRecord[]>();
+  const qualityCycleById = new Map(
+    (input.qualityCycles ?? []).map((cycle) => [stringValue(cycle.quality_cycle_id), cycle]),
+  );
   for (const attempt of input.attempts) {
     const workspacePath = attemptWorkspacePath(attempt);
     const workItemId = attemptWorkItemId(attempt);
@@ -384,6 +411,25 @@ export function joinAttemptsToWorkItems(input: {
       ? stringValue(currentAttempt.updated_at) ?? stringValue(currentAttempt.created_at)
       : null;
     const currentExecutionState = currentExecution?.state ?? 'idle';
+    const currentQualityCycleId = currentAttempt ? stringValue(currentAttempt.quality_cycle_id) : null;
+    const currentQualityCycle = currentQualityCycleId
+      ? qualityCycleById.get(currentQualityCycleId) ?? null
+      : null;
+    const currentQualityCycleState = record(currentQualityCycle?.state);
+    const currentQualityCyclePolicy = record(currentQualityCycle?.policy);
+    const policyScopeBudget = record(record(currentQualityCyclePolicy.formal_review).scope_budget);
+    const retryScopeBudget = record(record(currentAttempt?.retry_budget).quality_scope_budget);
+    const scopeBudget = Object.keys(policyScopeBudget).length > 0 ? policyScopeBudget : retryScopeBudget;
+    const budgetUsage = record(currentQualityCycleState.quality_scope_budget_usage);
+    const maxAttempts = numberValue(scopeBudget.max_attempts);
+    const attemptsUsed = numberValue(budgetUsage.attempts_used)
+      ?? (currentQualityCycleId
+        ? Math.max(0, ...attempts
+            .filter((attempt) => stringValue(attempt.quality_cycle_id) === currentQualityCycleId)
+            .map((attempt) => numberValue(attempt.quality_round_index) ?? 0))
+        : 0);
+    const budgetStopReason = stringValue(currentQualityCycleState.quality_scope_budget_stop_reason);
+    const managedQualityBudget = currentQualityCycleId !== null && Object.keys(scopeBudget).length > 0;
     const conditions = [
       condition({
         type: 'InventoryResolved',
@@ -486,6 +532,23 @@ export function joinAttemptsToWorkItems(input: {
             : attempts.length > 0 && !currentAttempt
               ? 'historical_attempts_not_current_business_execution'
               : null,
+        quality_budget: managedQualityBudget
+          ? {
+              state: budgetStopReason ? 'exhausted' : 'available',
+              scope_id: currentQualityCycleId,
+              max_attempts: maxAttempts,
+              attempts_used: attemptsUsed,
+              attempts_remaining: maxAttempts === null ? null : Math.max(0, maxAttempts - attemptsUsed),
+              max_elapsed_ms: numberValue(scopeBudget.max_elapsed_ms),
+              elapsed_ms: numberValue(budgetUsage.elapsed_ms),
+              max_tokens: numberValue(scopeBudget.max_tokens),
+              tokens_used: numberValue(budgetUsage.tokens_used),
+              token_observation_status: budgetUsage.token_observation_status === 'observed'
+                ? 'observed'
+                : 'missing',
+              stop_reason: budgetStopReason,
+            }
+          : item.execution.quality_budget,
       },
       attention,
       action: systemAttention

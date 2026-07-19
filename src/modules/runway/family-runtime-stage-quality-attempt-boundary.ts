@@ -1,8 +1,10 @@
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { canonicalJsonText } from '../../kernel/canonical-json.ts';
 import {
   normalizeStageQualityAttemptRole,
   type StageQualityAttemptRole,
 } from '../stagecraft/public/stage-quality-cycle.ts';
+import { normalizeStageQualityScopeBudget } from '../stagecraft/public/review-evidence-currentness.ts';
 
 const FORBIDDEN_STAGE_FIELDS = [
   'next_stage_refs',
@@ -221,6 +223,38 @@ export function requireStageQualityAttemptBoundary(input: Record<string, unknown
       'Quality-cycle StageAttempt requires quality rubric refs.',
       { attempt_role: role },
     );
+  }
+  if (input.stage_run_content_binding_version === STAGE_RUN_ATTEMPT_CONTENT_BINDING_VERSION) {
+    const retryBudget = input.retry_budget;
+    const qualityContext = input.quality_context;
+    const contextManifest = qualityContext && typeof qualityContext === 'object' && !Array.isArray(qualityContext)
+      ? (qualityContext as Record<string, unknown>).context_manifest
+      : null;
+    if (
+      !retryBudget || typeof retryBudget !== 'object' || Array.isArray(retryBudget)
+      || !contextManifest || typeof contextManifest !== 'object' || Array.isArray(contextManifest)
+      || !Object.hasOwn(retryBudget, 'quality_scope_budget')
+      || !Object.hasOwn(contextManifest, 'quality_scope_budget')
+    ) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Managed Stage quality Attempt requires a durable scope budget in retry and context bindings.',
+        { failure_code: 'stage_quality_scope_budget_missing' },
+      );
+    }
+    const retryScopeBudget = normalizeStageQualityScopeBudget(
+      (retryBudget as Record<string, unknown>).quality_scope_budget,
+    );
+    const contextScopeBudget = normalizeStageQualityScopeBudget(
+      (contextManifest as Record<string, unknown>).quality_scope_budget,
+    );
+    if (canonicalJsonText(retryScopeBudget) !== canonicalJsonText(contextScopeBudget)) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Managed Stage quality Attempt retry and context scope budgets must match.',
+        { failure_code: 'stage_quality_scope_budget_binding_mismatch' },
+      );
+    }
   }
   if (role === 'reviewer' || role === 're_reviewer') {
     const artifactRefs = refs(input.input_artifact_refs);

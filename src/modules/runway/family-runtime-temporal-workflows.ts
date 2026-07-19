@@ -51,6 +51,12 @@ import {
   type StageReviewReceipt,
 } from '../stagecraft/public/stage-quality-cycle.ts';
 import {
+  aggregateStageQualityScopeTokenUsage,
+  evaluateStageQualityScopeBudget,
+  normalizeStageQualityScopeBudget,
+  type StageQualityScopeBudget,
+} from '../stagecraft/public/review-evidence-currentness.ts';
+import {
   evaluateStageQualityAttemptRoute,
   isRepairRequiredCrossStageRouteBackDecision,
 } from '../stagecraft/public/stage-quality-route-selection.ts';
@@ -172,6 +178,39 @@ function asRecord(value: unknown) {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
     ? value as Record<string, unknown>
     : {};
+}
+
+function finiteNonNegativeInteger(value: unknown) {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : null;
+}
+
+function observedAttemptTotalTokens(state: TemporalStageAttemptWorkflowState) {
+  const observations = state.activity_events.flatMap((event) => {
+    const direct = finiteNonNegativeInteger(asRecord(event.token_usage).total_tokens);
+    const costSummary = asRecord(event.cost_summary);
+    const nested = finiteNonNegativeInteger(asRecord(costSummary.token_usage).total_tokens);
+    return [direct, nested].filter((value): value is number => value !== null);
+  });
+  return observations.length > 0 ? Math.max(...observations) : null;
+}
+
+function findingPriorities(findings: StageQualityFinding[]) {
+  return findings
+    .filter((finding) => finding.required)
+    .map((finding) => finding.severity === 'critical' ? 'p0' as const
+      : finding.severity === 'major' ? 'p1' as const
+        : 'p2' as const);
+}
+
+function qualityScopeBudgetUsage(state: TemporalStageRunWorkflowState) {
+  const tokenObservations = state.attempts.map((attempt) => attempt.total_tokens_observed);
+  const tokenUsage = aggregateStageQualityScopeTokenUsage(tokenObservations);
+  const elapsedMs = Math.max(0, Date.parse(state.updated_at) - Date.parse(state.started_at));
+  return {
+    attempts_used: state.repair_rounds_used,
+    elapsed_ms: Number.isFinite(elapsedMs) ? elapsedMs : 0,
+    ...tokenUsage,
+  };
 }
 
 function executionPolicyForAttempt(input: TemporalStageAttemptWorkflowInput) {
@@ -888,6 +927,10 @@ export async function StageRunWorkflow(
   const earlyRepairRouteBackEnabled = patched(
     'opl-stage-run-repair-required-cross-stage-route-back-v1',
   );
+  const qualityScopeBudget = normalizeStageQualityScopeBudget(
+    input.quality_policy.formal_review.scope_budget,
+    { legacyMaxRepairRounds: input.quality_policy.formal_review.max_repair_rounds },
+  );
   const qualityCycleId = stageRunQualityCycleId(input);
   const initialArtifactIdentity = normalizeStageQualityArtifactIdentity({
     artifactRefs: input.artifact_refs ?? [],
@@ -906,6 +949,14 @@ export async function StageRunWorkflow(
     current_role: null,
     repair_rounds_used: 0,
     max_repair_rounds: input.quality_policy.formal_review.max_repair_rounds,
+    quality_scope_budget: qualityScopeBudget,
+    quality_scope_budget_usage: {
+      attempts_used: 0,
+      elapsed_ms: 0,
+      tokens_used: null,
+      token_observation_status: 'missing',
+    },
+    quality_scope_budget_stop_reason: null,
     attempts: [],
     findings: [],
     repair_map: [],
@@ -1131,6 +1182,7 @@ export async function StageRunWorkflow(
         artifact_refs: artifactIdentity.artifactRefs,
         artifact_hashes: artifactIdentity.artifactHashes,
         artifact_identity_receipt_refs: artifactIdentity.artifactIdentityReceiptRefs,
+        total_tokens_observed: observedAttemptTotalTokens(result),
       }],
       artifact_refs: attemptInput.role === 'repairer' ? state.artifact_refs : artifactIdentity.artifactRefs,
       artifact_hashes: attemptInput.role === 'repairer' ? state.artifact_hashes : artifactIdentity.artifactHashes,
@@ -1155,6 +1207,10 @@ export async function StageRunWorkflow(
           }]
         : state.route_recommendations,
       updated_at: nowIso(),
+    };
+    state = {
+      ...state,
+      quality_scope_budget_usage: qualityScopeBudgetUsage(state),
     };
     if (result.status === 'human_gate') {
       state = {
@@ -1313,6 +1369,70 @@ export async function StageRunWorkflow(
     });
   };
 
+  const terminalizeScopeBudgetIfNeeded = async (inputBudget: {
+    sourceAttemptRef: string;
+    findings: StageQualityFinding[];
+    includeAttemptLimit: boolean;
+  }) => {
+    const usage = state.quality_scope_budget_usage ?? {
+      attempts_used: state.repair_rounds_used,
+      elapsed_ms: 0,
+      tokens_used: null,
+      token_observation_status: 'missing' as const,
+    };
+    const evaluation = evaluateStageQualityScopeBudget({
+      budget: state.quality_scope_budget ?? qualityScopeBudget,
+      usage,
+      openFindingPriorities: findingPriorities(inputBudget.findings),
+      hasConsumableArtifact: hasConsumableArtifact(state),
+    });
+    const exhaustedReasons = inputBudget.includeAttemptLimit
+      ? evaluation.exhausted_reasons
+      : evaluation.exhausted_reasons.filter((reason) => reason !== 'max_attempts_exhausted');
+    if (exhaustedReasons.length === 0) return null;
+    const stopReason = exhaustedReasons[0]!;
+    const budgetRef = qualityFailureRef(input, `scope-budget-${stopReason}`);
+    state = {
+      ...state,
+      quality_scope_budget_stop_reason: stopReason,
+      quality_debt_refs: [...new Set([
+        ...state.quality_debt_refs,
+        ...(evaluation.disposition === 'complete_with_quality_debt' ? [budgetRef] : []),
+      ])],
+      updated_at: nowIso(),
+    };
+    if (evaluation.disposition === 'hard_stop_no_consumable_artifact') {
+      return terminalize({
+        ...state,
+        status: 'blocked',
+        current_role: null,
+        blocked_reason: 'stage_quality_scope_budget_exhausted_without_consumable_artifact',
+        hard_stop_class: 'zero_consumable_artifact',
+        typed_blocker_refs: [budgetRef],
+        source_attempt_ref: inputBudget.sourceAttemptRef,
+      });
+    }
+    if (evaluation.disposition === 'route_back_or_human_owner') {
+      const humanGateRef = `opl://stage-runs/${encodeURIComponent(input.stage_run_id)}/human-gates/${stopReason}`;
+      return terminalize({
+        ...state,
+        status: 'human_gate',
+        current_role: null,
+        blocked_reason: `stage_quality_scope_budget_${stopReason}`,
+        hard_stop_class: 'human_decision_required',
+        human_gate_refs: [...new Set([...state.human_gate_refs, humanGateRef])],
+        source_attempt_ref: inputBudget.sourceAttemptRef,
+      });
+    }
+    return terminalize({
+      ...state,
+      status: 'completed_with_quality_debt',
+      current_role: null,
+      quality_debt_refs: [...new Set([...state.quality_debt_refs, budgetRef])],
+      updated_at: nowIso(),
+    });
+  };
+
   try {
     let parentAttemptRef: string | null = null;
     let currentArtifactProducerAttemptRef: string | null = null;
@@ -1435,6 +1555,12 @@ export async function StageRunWorkflow(
         updated_at: nowIso(),
       });
     }
+    const initialBudgetTerminal = await terminalizeScopeBudgetIfNeeded({
+      sourceAttemptRef: review.attemptRef,
+      findings,
+      includeAttemptLimit: true,
+    });
+    if (initialBudgetTerminal) return initialBudgetTerminal;
     if (state.max_repair_rounds === 0) {
       commitTerminalRouteDecision(review);
       return terminalize({
@@ -1485,6 +1611,12 @@ export async function StageRunWorkflow(
         artifact_hashes: repair.artifactIdentity.artifactHashes,
         artifact_identity_receipt_refs: repair.artifactIdentity.artifactIdentityReceiptRefs,
       };
+      const repairBudgetTerminal = await terminalizeScopeBudgetIfNeeded({
+        sourceAttemptRef: repair.attemptRef,
+        findings,
+        includeAttemptLimit: false,
+      });
+      if (repairBudgetTerminal) return repairBudgetTerminal;
       const reReview = await runAttempt({
         role: 're_reviewer',
         round,
@@ -1501,6 +1633,10 @@ export async function StageRunWorkflow(
       });
       parentAttemptRef = reReview.attemptRef;
       state = { ...state, repair_rounds_used: round };
+      state = {
+        ...state,
+        quality_scope_budget_usage: qualityScopeBudgetUsage(state),
+      };
       if (stageRunStopped(state)) return terminalize(state);
       const reReviewOutcome = reReview.outcome;
       if (!reReviewOutcome) {
@@ -1604,6 +1740,12 @@ export async function StageRunWorkflow(
         ...reReviewResult.critical_new_findings,
       ];
       state = { ...state, findings };
+      const reReviewBudgetTerminal = await terminalizeScopeBudgetIfNeeded({
+        sourceAttemptRef: reReview.attemptRef,
+        findings,
+        includeAttemptLimit: true,
+      });
+      if (reReviewBudgetTerminal) return reReviewBudgetTerminal;
       if (isEarlyRepairRouteBack(reReview)) {
         return terminalizeEarlyRepairRouteBack(reReview, findings);
       }

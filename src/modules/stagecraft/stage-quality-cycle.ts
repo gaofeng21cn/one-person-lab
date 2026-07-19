@@ -1,5 +1,10 @@
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { canonicalJsonText } from '../../kernel/canonical-json.ts';
+import {
+  normalizeStageQualityScopeBudget,
+  type StageQualityScopeBudget,
+  type StageQualityScopeBudgetStopReason,
+} from './stage-quality-scope-budget.ts';
 
 export const STAGE_QUALITY_ATTEMPT_ROLES = [
   'producer',
@@ -47,6 +52,7 @@ export type StageQualityCyclePolicy = {
     attempt_internal_parallel_review_facets_allowed: boolean;
     context_isolation_required: true;
     max_repair_rounds: number;
+    scope_budget: StageQualityScopeBudget;
   };
   budget_exhaustion: 'complete_with_quality_debt_if_consumable';
 };
@@ -113,6 +119,14 @@ export type StageQualityCycleState = {
   status: 'awaiting_producer' | 'awaiting_review' | 'awaiting_repair' | 'passed' | 'quality_debt' | 'hard_stopped';
   selected_artifact_refs: string[];
   quality_debt_refs: string[];
+  quality_scope_budget?: StageQualityScopeBudget;
+  quality_scope_budget_usage?: {
+    attempts_used: number;
+    elapsed_ms: number;
+    tokens_used: number | null;
+    token_observation_status: 'observed' | 'missing';
+  } | null;
+  quality_scope_budget_stop_reason?: StageQualityScopeBudgetStopReason | null;
 };
 
 export type StageQualityFinding = {
@@ -378,6 +392,9 @@ export function normalizeStageQualityCyclePolicy(value: unknown): StageQualityCy
       attempt_internal_parallel_review_facets_allowed: riskTier === 'high',
       context_isolation_required: true,
       max_repair_rounds: Number(maxRepairRounds),
+      scope_budget: normalizeStageQualityScopeBudget(review.scope_budget, {
+        legacyMaxRepairRounds: Number(maxRepairRounds),
+      }),
     },
     budget_exhaustion: 'complete_with_quality_debt_if_consumable',
   };
@@ -979,6 +996,7 @@ export function initialStageQualityCycleState(input: {
   stageRunId: string;
   qualityCycleId: string;
   maxRepairRounds?: number;
+  scopeBudget?: unknown;
 }): StageQualityCycleState {
   const maxRepairRounds = input.maxRepairRounds ?? 3;
   if (!Number.isInteger(maxRepairRounds) || maxRepairRounds < 0) {
@@ -995,6 +1013,16 @@ export function initialStageQualityCycleState(input: {
     status: 'awaiting_producer',
     selected_artifact_refs: [],
     quality_debt_refs: [],
+    quality_scope_budget: normalizeStageQualityScopeBudget(input.scopeBudget, {
+      legacyMaxRepairRounds: maxRepairRounds,
+    }),
+    quality_scope_budget_usage: {
+      attempts_used: 0,
+      elapsed_ms: 0,
+      tokens_used: null,
+      token_observation_status: 'missing',
+    },
+    quality_scope_budget_stop_reason: null,
   };
 }
 

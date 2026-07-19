@@ -7,6 +7,8 @@ import type {
   StageQualityHardStopClass,
   StageQualityRepairMapEntry,
   StageReviewReceipt,
+  StageQualityScopeBudget,
+  StageQualityScopeBudgetStopReason,
   StageRouteDecision,
 } from '../stagecraft/index.ts';
 import type { FamilyRuntimeDomainId } from './family-runtime-types.ts';
@@ -142,6 +144,7 @@ export type TemporalStageRunAttemptSummary = {
   artifact_refs: string[];
   artifact_hashes: string[];
   artifact_identity_receipt_refs: string[];
+  total_tokens_observed?: number | null;
 };
 
 export type TemporalStageRunWorkflowState = {
@@ -156,6 +159,14 @@ export type TemporalStageRunWorkflowState = {
   current_role: StageQualityAttemptRole | null;
   repair_rounds_used: number;
   max_repair_rounds: number;
+  quality_scope_budget?: StageQualityScopeBudget;
+  quality_scope_budget_usage?: {
+    attempts_used: number;
+    elapsed_ms: number;
+    tokens_used: number | null;
+    token_observation_status: 'observed' | 'missing';
+  };
+  quality_scope_budget_stop_reason?: StageQualityScopeBudgetStopReason | null;
   attempts: TemporalStageRunAttemptSummary[];
   findings: StageQualityFinding[];
   repair_map: StageQualityRepairMapEntry[];

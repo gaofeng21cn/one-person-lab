@@ -20,6 +20,16 @@ const parent = {
   },
 };
 
+const managedBudget = {
+  surface_kind: 'opl_stage_quality_scope_budget',
+  version: 'opl-stage-quality-scope-budget.v1',
+  max_attempts: 3,
+  max_elapsed_ms: 21_600_000,
+  max_tokens: 1_000_000,
+  token_budget_requires_observed_usage: true,
+  foreground_execution_must_use_managed_attempt: true,
+} as const;
+
 test('quality Attempt roles accept only their bounded round indexes', () => {
   assert.doesNotThrow(() => requireStageQualityAttemptBoundary({
     ...base,
@@ -106,6 +116,43 @@ test('non-producer Attempt requires a machine-verifiable parent in the same line
     quality_round_index: 0,
     ...parent,
   }), /Producer StageAttempt cannot declare a parent attempt/);
+});
+
+test('managed quality Attempts require the same explicit scope budget in retry and context bindings', () => {
+  const managed = {
+    ...base,
+    attempt_role: 'producer',
+    quality_round_index: 0,
+    stage_run_content_binding_version: 'opl-stage-run-attempt-content-binding.v1',
+    retry_budget: { quality_scope_budget: managedBudget },
+    quality_context: { context_manifest: { quality_scope_budget: managedBudget } },
+  };
+  assert.doesNotThrow(() => requireStageQualityAttemptBoundary(managed));
+  assert.throws(() => requireStageQualityAttemptBoundary({
+    ...managed,
+    retry_budget: {},
+  }), (error: unknown) => (
+    (error as { details?: { failure_code?: string } }).details?.failure_code
+      === 'stage_quality_scope_budget_missing'
+  ));
+  assert.throws(() => requireStageQualityAttemptBoundary({
+    ...managed,
+    quality_context: { context_manifest: {} },
+  }), (error: unknown) => (
+    (error as { details?: { failure_code?: string } }).details?.failure_code
+      === 'stage_quality_scope_budget_missing'
+  ));
+  assert.throws(() => requireStageQualityAttemptBoundary({
+    ...managed,
+    quality_context: {
+      context_manifest: {
+        quality_scope_budget: { ...managedBudget, max_tokens: 999_999 },
+      },
+    },
+  }), (error: unknown) => (
+    (error as { details?: { failure_code?: string } }).details?.failure_code
+      === 'stage_quality_scope_budget_binding_mismatch'
+  ));
 });
 
 test('forbidden Stage authority fields are rejected recursively', () => {

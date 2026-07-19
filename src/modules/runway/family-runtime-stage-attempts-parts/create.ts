@@ -18,6 +18,7 @@ import {
   buildDuplicateTaskEnvelope,
   buildFamilyConflictSubject,
   normalizeStageQualityAttemptRole,
+  normalizeStageQualityScopeBudget,
   type StageQualityAttemptRole,
 } from '../../stagecraft/index.ts';
 import { validateStageQualityAttemptContextManifest } from '../family-runtime-stage-quality-context-manifest.ts';
@@ -123,6 +124,7 @@ function stageAttemptBaseIdempotencyKey(input: StageAttemptCreateInput) {
     normalizeJsonList(input.priorFindingRefs),
     normalizeJsonList(input.repairMapRefs),
     input.qualityContext ?? null,
+    input.retryBudget ?? null,
     input.qualityRolePromptRef?.trim() || null,
     input.contextManifestRef?.trim() || null,
     input.contextManifest ?? null,
@@ -224,9 +226,15 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
   const sourceFingerprint = input.sourceFingerprint?.trim() || null;
   const executorKind = input.executorKind?.trim() || 'codex_cli';
   const stageAttemptExecutorPolicy = input.stageAttemptExecutorPolicy ?? null;
-  const retryBudget = input.retryBudget ?? taskRetryBudgetProjection(3);
+  let retryBudget: Record<string, unknown> = input.retryBudget ?? taskRetryBudgetProjection(3);
   const taskId = input.taskId?.trim() || null;
   const attemptRole = input.attemptRole ? normalizeStageQualityAttemptRole(input.attemptRole) : null;
+  if (attemptRole) {
+    retryBudget = {
+      ...retryBudget,
+      quality_scope_budget: normalizeStageQualityScopeBudget(retryBudget['quality_scope_budget']),
+    };
+  }
   const qualityRoundIndex = input.qualityRoundIndex ?? (attemptRole ? 0 : null);
   if (qualityRoundIndex !== null && (!Number.isInteger(qualityRoundIndex) || qualityRoundIndex < 0)) {
     throw new FrameworkContractError('contract_shape_invalid', 'qualityRoundIndex must be a non-negative integer.');

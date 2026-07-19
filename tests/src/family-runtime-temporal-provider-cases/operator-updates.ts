@@ -22,6 +22,16 @@ import { createTemporalTestWorkflowEnvironment } from '../temporal-test-environm
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..', '..');
 
+const qualityScopeBudget = {
+  surface_kind: 'opl_stage_quality_scope_budget',
+  version: 'opl-stage-quality-scope-budget.v1',
+  max_attempts: 3,
+  max_elapsed_ms: 21_600_000,
+  max_tokens: 1_000_000,
+  token_budget_requires_observed_usage: true,
+  foreground_execution_must_use_managed_attempt: true,
+} as const;
+
 function workflowInput(): TemporalStageAttemptWorkflowInput {
   return {
     stage_attempt_id: 'sat_temporal_update',
@@ -31,7 +41,9 @@ function workflowInput(): TemporalStageAttemptWorkflowInput {
     workspace_locator: { workspace_root: '/tmp/redcube-runtime' },
     source_fingerprint: 'sha256:operator-update',
     executor_kind: 'codex_cli',
-    retry_budget: {},
+    retry_budget: {
+      quality_scope_budget: qualityScopeBudget,
+    },
     task_id: 'task-temporal-update',
     stage_packet_ref: 'packet:artifact-creation',
     checkpoint_refs: ['checkpoint:seed'],
@@ -59,6 +71,9 @@ function qualityWorkflowInput(): TemporalStageAttemptWorkflowInput {
     quality_role_prompt_ref: 'agent/prompts/stage-quality.md#producer',
     context_manifest_ref: 'opl://stage-quality-context/quality-update',
     no_context_inheritance: true,
+    quality_context: {
+      context_manifest: { quality_scope_budget: qualityScopeBudget },
+    },
   };
 }
 

@@ -174,6 +174,7 @@ async function runController(input: {
           ...executionBindingPayload,
           binding_sha256: stageAttemptExecutionContentBindingSha256(executionBindingPayload),
         };
+        const qualityScopeBudget = executionPolicy.formal_review.scope_budget;
         const contextManifest = {
           surface_kind: 'opl_stage_quality_attempt_context_manifest',
           version: 'stage-quality-attempt-context-manifest.v1',
@@ -186,7 +187,9 @@ async function runController(input: {
             current_attempt_role: role,
             declared_stage_ids: executionDeclaredStageIds,
             max_repair_rounds: executionPolicy.formal_review.max_repair_rounds,
+            quality_scope_budget: qualityScopeBudget,
           },
+          quality_scope_budget: qualityScopeBudget,
         };
         const workflowInput: TemporalStageAttemptWorkflowInput = {
           stage_attempt_id: `sat_${input.id}_${role}_${round}`,
@@ -196,7 +199,7 @@ async function runController(input: {
           workspace_locator: materialization.stage_run.workspace_locator,
           source_fingerprint: materialization.stage_run.source_fingerprint,
           executor_kind: 'codex_cli',
-          retry_budget: { max_attempts: 1 },
+          retry_budget: { max_attempts: 1, quality_scope_budget: qualityScopeBudget },
           stage_packet_ref: materialization.stage_run.stage_packet_ref,
           checkpoint_refs: [materialization.stage_run.stage_packet_ref],
           stage_run_id: materialization.stage_run.stage_run_id,
@@ -699,9 +702,11 @@ test('repair_required advance remains non-terminal while repair budget remains',
   )));
 });
 
-test('StageRun controller caps quality work at three repair rounds and carries consumable debt', async () => {
+test('StageRun controller caps quality work at three repair rounds and routes P1 debt to a human gate', async () => {
   const { state, attempts } = await runController({ id: 'budget', closeFindingAfterRound: null });
-  assert.equal(state.status, 'completed_with_quality_debt');
+  assert.equal(state.status, 'human_gate');
+  assert.equal(state.blocked_reason, 'stage_quality_scope_budget_max_attempts_exhausted');
+  assert.equal(state.hard_stop_class, 'human_decision_required');
   assert.equal(state.repair_rounds_used, 3);
   assert.equal(attempts.length, 8);
   assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), [
@@ -710,16 +715,20 @@ test('StageRun controller caps quality work at three repair rounds and carries c
     'repairer', 're_reviewer',
     'repairer', 're_reviewer',
   ]);
-  assert.ok(state.quality_debt_refs.includes('quality-debt:finding:visual-clipping'));
+  assert.equal(state.quality_debt_refs.includes('quality-debt:finding:visual-clipping'), false);
+  assert.ok(state.human_gate_refs.some((ref) => ref.includes('max_attempts_exhausted')));
+  assert.equal(state.quality_scope_budget?.max_attempts, 3);
+  assert.equal(state.quality_scope_budget_usage?.attempts_used, 3);
+  assert.equal(state.quality_scope_budget_stop_reason, 'max_attempts_exhausted');
   assert.equal(state.sqlite_projection.status, 'synced');
   assert.equal(state.review_receipts.length, 4);
   assert.equal(state.review_receipts[3]?.verdict, 'repair_required');
-  assert.equal(state.decisive_attempt_role, 're_reviewer');
-  assert.equal(state.selected_stage_route?.target_stage_id, 'review_and_revision');
-  assert.equal(state.route_quality_debt_refs.some((ref) => ref.includes('decisive_attempt_route_decision_missing')), false);
+  assert.equal(state.source_attempt_ref, `opl://stage_attempts/${state.attempts.at(-1)?.stage_attempt_id}`);
+  assert.equal(state.decisive_attempt_role, null);
+  assert.equal(state.selected_stage_route, null);
 });
 
-test('max=0 initial reviewer repair_required is the decisive terminal quality-debt route owner', async () => {
+test('max=0 initial reviewer repair_required is the decisive human-gate route owner', async () => {
   const { state, attempts } = await runController({
     id: 'zero-repair-budget',
     closeFindingAfterRound: null,
@@ -727,12 +736,18 @@ test('max=0 initial reviewer repair_required is the decisive terminal quality-de
     initialReviewerOutcome: 'repair_required',
   });
   assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), ['producer', 'reviewer']);
-  assert.equal(state.status, 'completed_with_quality_debt');
+  assert.equal(state.status, 'human_gate');
+  assert.equal(state.blocked_reason, 'stage_quality_scope_budget_max_attempts_exhausted');
+  assert.equal(state.hard_stop_class, 'human_decision_required');
   assert.equal(state.repair_rounds_used, 0);
   assert.equal(state.review_receipts[0]?.verdict, 'repair_required');
-  assert.equal(state.decisive_attempt_role, 'reviewer');
-  assert.equal(state.selected_stage_route?.target_stage_id, 'review_and_revision');
-  assert.ok(state.quality_debt_refs.includes('quality-debt:finding:visual-clipping'));
+  assert.equal(state.source_attempt_ref, `opl://stage_attempts/${state.attempts[1]?.stage_attempt_id}`);
+  assert.equal(state.decisive_attempt_role, null);
+  assert.equal(state.selected_stage_route, null);
+  assert.equal(state.quality_debt_refs.includes('quality-debt:finding:visual-clipping'), false);
+  assert.ok(state.human_gate_refs.some((ref) => ref.includes('max_attempts_exhausted')));
+  assert.equal(state.quality_scope_budget?.max_attempts, 0);
+  assert.equal(state.quality_scope_budget_stop_reason, 'max_attempts_exhausted');
 });
 
 test('a truly unavailable pre-Codex provider may omit a session and remains a hard stop', async () => {

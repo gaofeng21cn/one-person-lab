@@ -50,7 +50,10 @@ import {
   isRuntimeHardStopReason,
   runtimeHardStopClassForReason,
 } from '../../kernel/progress-hard-stop-policy.ts';
-import { buildStageReviewContextManifest } from '../stagecraft/index.ts';
+import {
+  buildStageReviewContextManifest,
+  normalizeStageQualityScopeBudget,
+} from '../stagecraft/index.ts';
 import {
   buildStageReviewInputSnapshotContext,
 } from './family-runtime-stage-quality-context-manifest.ts';
@@ -77,6 +80,7 @@ import {
   resolveStageRunAttemptExecutorContent,
   STAGE_RUN_ATTEMPT_CONTENT_BINDING_VERSION,
 } from './family-runtime-stage-run-attempt-content.ts';
+import { taskRetryBudgetProjection } from './family-runtime-queue-projection-boundary.ts';
 import {
   buildStageRunImmutableSpec,
   canonicalStageAttemptDeclaredStageIds,
@@ -1104,6 +1108,13 @@ export async function stageQualityAttemptMaterializeActivity(
     const executionStagePacketRef = `${executionStageBinding.manifest_ref}`
       + `@sha256:${executionStageBinding.manifest_sha256}`
       + `#stage=${encodeURIComponent(stageRun.stage_id)}`;
+    const qualityScopeBudget = normalizeStageQualityScopeBudget(
+      executionStageBinding.quality_policy.formal_review.scope_budget,
+      {
+        legacyMaxRepairRounds:
+          executionStageBinding.quality_policy.formal_review.max_repair_rounds,
+      },
+    );
     const executionCheckpointRefs = [
       executionStagePacketRef,
       ...(stageRun.checkpoint_refs ?? []).filter((ref) => (
@@ -1175,6 +1186,7 @@ export async function stageQualityAttemptMaterializeActivity(
       current_attempt_role: input.attempt_role,
       declared_stage_ids: executionDeclaredStageIds,
       max_repair_rounds: executionStageBinding.quality_policy.formal_review.max_repair_rounds,
+      quality_scope_budget: qualityScopeBudget,
       terminal_route_selection_requires_stage_run_terminal: true,
       prior_required_finding_ids: (input.findings ?? [])
         .filter((finding) => finding.required)
@@ -1220,6 +1232,7 @@ export async function stageQualityAttemptMaterializeActivity(
           ...(revisionConsumptionContext ? { revision_consumption_context: revisionConsumptionContext } : {}),
           artifact_producer_attempt_ref: artifactProducerAttemptRef,
           cross_stage_route_selection: crossStageRouteSelection,
+          quality_scope_budget: qualityScopeBudget,
         }
       : {
           surface_kind: 'opl_stage_quality_attempt_context_manifest',
@@ -1239,6 +1252,7 @@ export async function stageQualityAttemptMaterializeActivity(
           ...(revisionConsumptionContext ? { revision_consumption_context: revisionConsumptionContext } : {}),
           no_context_inheritance: true,
           cross_stage_route_selection: crossStageRouteSelection,
+          quality_scope_budget: qualityScopeBudget,
         };
     const contextManifestRef = `opl://stage-quality-context/${stableId('ctx', [contextManifest])}`;
     const attempt = createStageAttempt(db, {
@@ -1275,6 +1289,10 @@ export async function stageQualityAttemptMaterializeActivity(
       contextManifestRef,
       contextManifest,
       noContextInheritance: true,
+      retryBudget: {
+        ...taskRetryBudgetProjection(3),
+        quality_scope_budget: qualityScopeBudget,
+      },
       newAttempt: false,
     }).attempt;
     const attemptRef = `opl://stage_attempts/${attempt.stage_attempt_id}`;

@@ -103,6 +103,23 @@
     "surface_kind": "opl_stage_quality_cycle_policy",
     "version": "stage-quality-cycle-policy.v1",
     "default_max_repair_rounds": 3,
+    "scope_budget": {
+      "surface_kind": "opl_stage_quality_scope_budget",
+      "version": "opl-stage-quality-scope-budget.v1",
+      "default_max_attempts": 3,
+      "default_max_elapsed_ms": 21600000,
+      "default_max_tokens": 1000000,
+      "token_budget_requires_observed_usage": true,
+      "missing_token_telemetry_is_not_zero_usage": true,
+      "foreground_execution_must_use_managed_attempt": true,
+      "stop_reasons": [
+        "max_attempts_exhausted",
+        "max_elapsed_exhausted",
+        "max_tokens_exhausted"
+      ],
+      "p0_or_p1_exhaustion": "route_back_or_human_owner",
+      "p2_exhaustion_with_consumable_artifact": "completed_with_quality_debt"
+    },
     "initial_producer_attempt_counts_as_repair": false,
     "repair_round_unit": "one_repairer_attempt_followed_by_one_fresh_re_reviewer_attempt",
     "provider_retry_consumes_quality_budget": false,
@@ -336,6 +353,9 @@
   "review_receipt": {
     "surface_kind": "opl_stage_review_receipt",
     "version": "stage-review-receipt.v1",
+    "epistemic_currentness_contract_ref": "contracts/opl-framework/epistemic-review-currentness-contract.json",
+    "reviewed_artifact_hashes_role": "transport_identity_and_optional_stale_locator_not_content_review_authority",
+    "whole_generation_hash_change_invalidates_unrelated_review_scopes": false,
     "verdicts": [
       "pass",
       "repair_required",

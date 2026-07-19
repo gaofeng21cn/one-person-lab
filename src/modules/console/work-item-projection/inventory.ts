@@ -106,6 +106,19 @@ function emptyExecution(input: {
     updated_at: null,
     running_proof_status: 'not_applicable',
     diagnostic_reason: null,
+    quality_budget: {
+      state: 'not_managed',
+      scope_id: null,
+      max_attempts: null,
+      attempts_used: 0,
+      attempts_remaining: null,
+      max_elapsed_ms: null,
+      elapsed_ms: null,
+      max_tokens: null,
+      tokens_used: null,
+      token_observation_status: 'not_applicable',
+      stop_reason: null,
+    },
   };
 }
 

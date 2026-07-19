@@ -89,6 +89,7 @@ export function createStageQualityCycle(db: DatabaseSync, input: {
     stageRunId: input.stageRunId,
     qualityCycleId,
     maxRepairRounds: policy.formal_review.max_repair_rounds,
+    scopeBudget: policy.formal_review.scope_budget,
   });
   db.prepare(`
     INSERT INTO stage_quality_cycles(
@@ -170,6 +171,9 @@ export function projectTemporalStageRunQualityCycle(
   }
   const projected: StageQualityCycleState & { controller_readback: Record<string, unknown> } = {
     ...parseState(row),
+    quality_scope_budget: parsePolicy(row).formal_review.scope_budget,
+    quality_scope_budget_usage: state.quality_scope_budget_usage ?? null,
+    quality_scope_budget_stop_reason: state.quality_scope_budget_stop_reason ?? null,
     repair_rounds_used: state.repair_rounds_used,
     current_role: state.current_role,
     status: projectedCycleStatus(state),
@@ -188,7 +192,11 @@ export function projectTemporalStageRunQualityCycle(
         workflow_id: attempt.workflow_id,
         execution_session_ref: attempt.execution_session_ref,
         status: attempt.status,
+        total_tokens_observed: attempt.total_tokens_observed ?? null,
       })),
+      quality_scope_budget: parsePolicy(row).formal_review.scope_budget,
+      quality_scope_budget_usage: state.quality_scope_budget_usage ?? null,
+      quality_scope_budget_stop_reason: state.quality_scope_budget_stop_reason ?? null,
       findings: state.findings,
       repair_map: state.repair_map,
       finding_closures: state.finding_closures,
