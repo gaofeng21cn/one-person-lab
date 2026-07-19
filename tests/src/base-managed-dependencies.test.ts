@@ -135,7 +135,7 @@ test('Base dependency catalog identifies the App-owned runtime Codex by owner pa
       assert.equal(temporal?.activation_policy, 'app_launch_reconcile_generation_switch');
     });
   } finally {
-    fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
   }
 });
 
