@@ -13,7 +13,7 @@ import { buildPrivatePlatformResidueDeletionGate } from '../pack/index.ts';
 import {
   resolveFunctionalPrivatizationAuditContract,
   resolveGeneratedSurfaceHandoffContract,
-} from '../pack/standard-agent-proof-contract-defaults.ts';
+} from '../pack/index.ts';
 import {
   defaultFamilyRepoInputs,
   DEFAULT_FAMILY_REPOS,

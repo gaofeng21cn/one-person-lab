@@ -21,6 +21,10 @@ export {
   buildRepoContractDescriptor,
   buildStandardAgentRepoContractReadout,
 } from './domain-pack-compiler/repo-contract-descriptor.ts';
+export {
+  resolveFunctionalPrivatizationAuditContract,
+  resolveGeneratedSurfaceHandoffContract,
+} from './standard-agent-proof-contract-defaults.ts';
 export type {
   StandardAgentRepoContractDescriptor,
   StandardAgentRepoContractReadout,

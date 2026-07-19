@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
-import { inspectStandardAgentFrameworkImports } from '../connect/standard-agent-framework-link.ts';
+import { inspectStandardAgentFrameworkImports } from '../connect/index.ts';
 import { buildGeneratedAgentInterfaces } from '../pack/index.ts';
 import { buildAgentProfileConformance } from '../pack/index.ts';
 import { validateStandardDomainAgentScaffold } from '../pack/index.ts';
