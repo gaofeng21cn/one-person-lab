@@ -395,6 +395,7 @@
           "domain_truth_owner",
           "source",
           "opl_role",
+          "source_profile_sha256",
           "authority_boundary"
         ],
         "properties": {
@@ -445,6 +446,10 @@
           "source_descriptor_ref": {
             "type": "string",
             "minLength": 1
+          },
+          "source_profile_sha256": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
           },
           "dependencies": {
             "type": "array",

@@ -85,6 +85,7 @@
       },
       "opl_role": "dependency_environment_check",
       "source_descriptor_ref": "opl-bookforge/contracts/domain_descriptor.json#/dependency_profiles/0",
+      "source_profile_sha256": "sha256:d13f062cca559183c6e10d7786e6ac760b8dd1f5693e9c2f102373c0ce04dd3b",
       "dependencies": [
         {
           "dependency_id": "pandoc",
@@ -171,6 +172,27 @@
           "required_level": "required",
           "install_target": "ctex",
           "purpose": "Chinese book document class."
+        },
+        {
+          "dependency_id": "FandolSong-Regular.otf",
+          "kind": "latex_package",
+          "required_level": "required",
+          "install_target": "fandol",
+          "purpose": "Portable Chinese serif body font supplied by the TeX Live CTEX distribution."
+        },
+        {
+          "dependency_id": "FandolHei-Regular.otf",
+          "kind": "latex_package",
+          "required_level": "required",
+          "install_target": "fandol",
+          "purpose": "Portable Chinese sans-serif heading font supplied by the TeX Live CTEX distribution."
+        },
+        {
+          "dependency_id": "FandolFang-Regular.otf",
+          "kind": "latex_package",
+          "required_level": "required",
+          "install_target": "fandol",
+          "purpose": "Portable Chinese monospaced font supplied by the TeX Live CTEX distribution."
         },
         {
           "dependency_id": "titling.sty",

@@ -22,6 +22,7 @@ type DomainDependencyProfile = {
   };
   opl_role: 'dependency_environment_check';
   source_descriptor_ref?: string;
+  source_profile_sha256: string;
   dependencies: DependencyProfileCheckSpec[];
   authority_boundary?: {
     can_write_domain_truth?: false;
@@ -98,6 +99,7 @@ type DependencyDoctor = {
     domain_agent: string;
     domain_helper: string;
     source_profile_ref: string;
+    source_profile_sha256: string;
     command: string;
     maintenance_command: string;
   };
@@ -233,6 +235,7 @@ function normalizeDependencyProfile(value: unknown): DomainDependencyProfile | n
   const domainTruthOwner = asString(value.domain_truth_owner);
   const profileRef = source ? asString(source.profile_ref) : null;
   const helperRef = source ? asString(source.helper_ref) : null;
+  const sourceProfileSha256 = asString(value.source_profile_sha256);
   const dependencies = Array.isArray(value.dependencies)
     ? value.dependencies.map((entry) => normalizeDependencyCheckSpec(entry))
     : [];
@@ -247,6 +250,8 @@ function normalizeDependencyProfile(value: unknown): DomainDependencyProfile | n
     source.source_kind !== 'domain_profile_ref' ||
     !profileRef ||
     !helperRef ||
+    !sourceProfileSha256 ||
+    !/^sha256:[0-9a-f]{64}$/.test(sourceProfileSha256) ||
     value.opl_role !== 'dependency_environment_check' ||
     !authorityBoundary ||
     authorityBoundary.can_write_domain_truth !== false ||
@@ -272,6 +277,7 @@ function normalizeDependencyProfile(value: unknown): DomainDependencyProfile | n
     },
     opl_role: 'dependency_environment_check',
     source_descriptor_ref: asString(value.source_descriptor_ref) ?? undefined,
+    source_profile_sha256: sourceProfileSha256,
     dependencies: dependencies as DependencyProfileCheckSpec[],
     authority_boundary: {
       can_write_domain_truth: false,
@@ -428,6 +434,7 @@ export function buildOplSystemDependencyDoctor(input: { profile?: string } = {})
         domain_agent: profile.domain_id,
         domain_helper: profile.source.helper_ref,
         source_profile_ref: profile.source.profile_ref,
+        source_profile_sha256: profile.source_profile_sha256,
         command: `opl system dependency-doctor --profile ${profile.profile_id} --json`,
         maintenance_command: `opl system dependency-maintenance --profile ${profile.profile_id} --json`,
       },

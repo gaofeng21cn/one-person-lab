@@ -2,7 +2,9 @@ import {
   assert,
   fs,
   os,
+  parseJsonText,
   path,
+  repoRoot,
   runCli,
   runCliFailure,
   test,
@@ -59,6 +61,10 @@ function createFakeDependencyBin(options: { missingLatexPackage?: string; marker
 test('system dependency-doctor blocks only the Book Forge proof profile when a required LaTeX package is missing', () => {
   const binDir = createFakeDependencyBin({ missingLatexPackage: 'titlesec.sty' });
   try {
+    const manifestSchema = parseJsonText(fs.readFileSync(
+      path.join(repoRoot, 'contracts/opl-framework/agent-package-manifest.schema.json'),
+      'utf8',
+    )) as Record<string, any>;
     const output = runCli(['system', 'dependency-doctor', '--profile', 'bookforge-publication-proof'], {
       PATH: binDir,
     });
@@ -75,6 +81,33 @@ test('system dependency-doctor blocks only the Book Forge proof profile when a r
     assert.equal(
       doctor.profile.source_descriptor_ref,
       'opl-bookforge/contracts/domain_descriptor.json#/dependency_profiles/0',
+    );
+    assert.equal(
+      doctor.profile.source_profile_sha256,
+      'sha256:d13f062cca559183c6e10d7786e6ac760b8dd1f5693e9c2f102373c0ce04dd3b',
+    );
+    assert.equal(
+      manifestSchema.properties.dependency_profiles.items.properties.source_profile_sha256.pattern,
+      '^sha256:[0-9a-f]{64}$',
+    );
+    assert.equal(
+      manifestSchema.properties.dependency_profiles.items.required.includes('source_profile_sha256'),
+      true,
+    );
+    assert.equal(
+      doctor.integration_refs.source_profile_sha256,
+      doctor.profile.source_profile_sha256,
+    );
+    assert.equal(doctor.dependencies.length, 18);
+    assert.deepEqual(
+      doctor.dependencies
+        .filter((entry: { install_target?: string }) => entry.install_target === 'fandol')
+        .map((entry: { dependency_id: string }) => entry.dependency_id),
+      [
+        'FandolSong-Regular.otf',
+        'FandolHei-Regular.otf',
+        'FandolFang-Regular.otf',
+      ],
     );
     assert.equal(doctor.opl_role, 'dependency_environment_check');
     assert.equal(doctor.status, 'blocked');
