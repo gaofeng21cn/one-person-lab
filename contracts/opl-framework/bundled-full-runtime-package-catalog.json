@@ -53,7 +53,7 @@
       "package_version": "0.3.5",
       "owner_source_commit": "eb1ad4a44b1809e4e1e15490abf7f34710a797eb",
       "manifest_ref": "packages/obf.json",
-      "manifest_sha256": "sha256:f042073c72a3c4a9f0d9ba434196fdc23665200c99a9be18e896367e94608ca5",
+      "manifest_sha256": "sha256:4c7f048fd233a78fc9248c6326dfe494b9e7b4dda5d34bbd06897ba1013f8c66",
       "payload_manifest_ref": "packages/payloads/obf-0.3.5.json",
       "payload_manifest_sha256": "sha256:921435eca00e332257f53d624c3898d7645c9193805f671bcc5d09d934a2fcaa",
       "runtime_module_relative_path": "modules/bookforge"
