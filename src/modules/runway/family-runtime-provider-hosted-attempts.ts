@@ -38,6 +38,10 @@ import {
   attachCheckoutCurrentnessToStageContext,
   providerHostedCheckoutCurrentnessPreflight,
 } from './family-runtime-provider-hosted-attempts-parts/context-currentness.ts';
+import {
+  declaredProviderHostedTaskStageId,
+  legacyPersistedProviderHostedTaskStageId,
+} from './family-runtime-provider-hosted-attempts-parts/task-stage-binding.ts';
 import { ensureFamilyRuntimePackageLaunchReady } from './family-runtime-package-readiness.ts';
 export {
   DEFAULT_EXECUTOR_DISPATCH_TASK_KIND,
@@ -616,7 +620,8 @@ export function stageIdForProviderHostedTask(row: FamilyRuntimeTaskRow, payload:
   if (transition) {
     return `family_transition:${optionalString(transition.transition_id)}`;
   }
-  if (!providerHostedTaskDeclared(payload)) {
+  const declaredStageId = declaredProviderHostedTaskStageId(row, payload);
+  if (!providerHostedTaskDeclared(payload) && !declaredStageId) {
     return null;
   }
   for (const key of ['stage_id', 'stageId', 'stage_attempt_stage_id']) {
@@ -625,13 +630,7 @@ export function stageIdForProviderHostedTask(row: FamilyRuntimeTaskRow, payload:
       return stageId;
     }
   }
-  if (row.domain_id === 'redcube' && row.task_kind === 'emit_no_regression_evidence') {
-    return 'controlled_visual_stage_attempt';
-  }
-  if (row.domain_id === 'medautogrant' && row.task_kind.startsWith('autonomy-controller/')) {
-    return 'controlled_stage_attempt_projection';
-  }
-  return null;
+  return declaredStageId ?? legacyPersistedProviderHostedTaskStageId(row);
 }
 
 function workspaceLocatorForProviderHostedTask(row: FamilyRuntimeTaskRow, payload: Record<string, unknown>) {
