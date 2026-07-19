@@ -10,10 +10,32 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
-  build-and-typecheck:
-    name: Build and typecheck
+  javascript:
+    name: ${{ matrix.name }}
     runs-on: macos-latest
-    timeout-minutes: 15
+    timeout-minutes: ${{ matrix.timeout_minutes }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Build and typecheck
+            timeout_minutes: 15
+            command: npm run build && npm run typecheck
+          - name: Fast lane
+            timeout_minutes: 25
+            command: npm run test:fast
+          - name: Read-model gates
+            timeout_minutes: 30
+            command: npm run test:read-model-gates
+          - name: Regression lane
+            timeout_minutes: 20
+            command: npm run test:regression
+          - name: Integration lane
+            timeout_minutes: 25
+            command: npm run test:integration
+          - name: Fresh-install lane
+            timeout_minutes: 15
+            command: npm run test:fresh-install
 
     steps:
       - name: Checkout
@@ -28,116 +50,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build TypeScript
-        run: npm run build
-
-      - name: Typecheck
-        run: npm run typecheck
-
-  fast:
-    name: Fast lane
-    runs-on: macos-latest
-    timeout-minutes: 25
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '24'
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Verify fast lane
-        run: npm run test:fast
-
-  read-model-gates:
-    name: Read-model gates
-    runs-on: macos-latest
-    timeout-minutes: 30
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '24'
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Verify read-model gates
-        run: npm run test:read-model-gates
-
-  regression:
-    name: Regression lane
-    runs-on: macos-latest
-    timeout-minutes: 20
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '24'
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Verify regression lane
-        run: npm run test:regression
-
-  integration:
-    name: Integration lane
-    runs-on: macos-latest
-    timeout-minutes: 25
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '24'
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Verify integration lane
-        run: npm run test:integration
-
-  fresh-install:
-    name: Fresh-install lane
-    runs-on: macos-latest
-    timeout-minutes: 15
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '24'
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Verify fresh-install clean-room matrix
-        run: npm run test:fresh-install
+      - name: Run JavaScript gate
+        run: ${{ matrix.command }}
 
   native:
     name: Native helper lane

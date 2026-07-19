@@ -41,7 +41,10 @@ const verifyWorkflowBuildAndJsLanePatterns = [
   /npm run test:integration/,
   /npm run test:fresh-install/,
   /FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'/,
-  /fast:\n\s+name: Fast lane\n\s+runs-on: macos-latest\n\s+timeout-minutes: 25/,
+  /javascript:\n\s+name: \$\{\{ matrix\.name \}\}/,
+  /timeout-minutes: \$\{\{ matrix\.timeout_minutes \}\}/,
+  /strategy:\n\s+fail-fast: false\n\s+matrix:\n\s+include:/,
+  /run: \$\{\{ matrix\.command \}\}/,
 ];
 
 const verifyWorkflowNativeAndStructurePatterns = [
@@ -131,18 +134,9 @@ const expectedTestScripts = {
   'test:fresh-install': 'node ./scripts/test-lanes.mjs run fresh-install',
   'test:native': './scripts/verify.sh native',
   'test:structure': './scripts/verify.sh structure',
-  'test:full:plan': 'node ./scripts/test-lanes.mjs plan full',
-  'test:full': 'node ./scripts/test-lanes.mjs run full',
+  'test:full': 'npm run test:artifact && npm run test:fast && npm run test:fresh-install && npm run test:structure && npm run typecheck && npm run lint && npm run test:read-model-gates && npm run test:meta && npm run test:regression && npm run test:integration && npm run test:native',
   test: 'npm run test:smoke',
 };
-
-const fullLanePatterns = [
-  /buildUniqueFullLanePlan/,
-  /expandPureTestAggregator/,
-  /duplicateTestImportClosure/,
-  /nodeTestIsolationScore/,
-  /import_closure_duplicate_count/,
-];
 
 function read(relativePath: string) {
   return fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
@@ -257,93 +251,22 @@ test('package.json exposes a single test lane registry for active test ownership
   assert.equal(coverage.status, 0, coverage.stderr);
 });
 
-test('test:full stays in the single test lane registry', () => {
-  assert.equal(packageJson.scripts?.['test:full'], 'node ./scripts/test-lanes.mjs run full');
-  assertFilePatterns('scripts/test-lanes.mjs', fullLanePatterns);
-
-  const registryPath = path.join(repoRoot, 'scripts/test-lanes.mjs');
-  const plan = spawnSync(process.execPath, [registryPath, 'plan', 'full'], {
-    cwd: repoRoot,
-    encoding: 'utf8',
-  });
-  assert.equal(plan.status, 0, plan.stderr);
-  const payload = parseJsonText(plan.stdout) as {
-    deduplicated_entry_count: number;
-    import_closure_duplicate_count: number;
-    node_test_groups: Array<{
-      source_lane: string;
-      batch_size: number | null;
-      env: Record<string, string>;
-      files: string[];
-    }>;
-  };
-  assert.ok(payload.deduplicated_entry_count > 0);
-  assert.equal(payload.import_closure_duplicate_count, 0);
-  assert.equal(
-    payload.node_test_groups.some((group) =>
-      group.source_lane === 'read-model-gates'
-        && group.batch_size === 1
-        && group.env.OPL_CLI_TEST_TIMEOUT_MS === '90000'),
-    true,
+test('test:full composes the existing lanes through standard npm ordering', () => {
+  assert.deepEqual(packageJson.scripts?.['test:full']?.split(' && '), [
+    'npm run test:artifact',
+    'npm run test:fast',
+    'npm run test:fresh-install',
+    'npm run test:structure',
+    'npm run typecheck',
+    'npm run lint',
+    'npm run test:read-model-gates',
+    'npm run test:meta',
+    'npm run test:regression',
+    'npm run test:integration',
+    'npm run test:native',
+  ]);
+  assert.doesNotMatch(
+    read('scripts/test-lanes.mjs'),
+    /buildUniqueFullLanePlan|duplicateTestImportClosure|Execution planning is only available/,
   );
-
-  const groupFor = (file: string) => payload.node_test_groups.filter(
-    (group) => group.files.includes(file),
-  );
-  assert.deepEqual(
-    groupFor('tests/src/family-runtime-temporal-terminal-sync.test.ts').map((group) => ({
-      source_lane: group.source_lane,
-      batch_size: group.batch_size,
-    })),
-    [{ source_lane: 'read-model-gates', batch_size: 1 }],
-  );
-  assert.deepEqual(
-    groupFor('tests/src/cli/cases/family-runtime-cases/provider-repair.ts').map((group) => ({
-      source_lane: group.source_lane,
-      batch_size: group.batch_size,
-    })),
-    [{ source_lane: 'read-model-gates', batch_size: 1 }],
-  );
-  assert.equal(
-    groupFor('tests/src/cli/cases/app-state-cases/public-surface.ts').length,
-    1,
-  );
-  assert.deepEqual(
-    groupFor('tests/src/cli/cases/system-startup-maintenance-cases/developer-mode-checkouts.ts').map((group) => ({
-      source_lane: group.source_lane,
-      batch_size: group.batch_size,
-    })),
-    [{ source_lane: 'read-model-gates', batch_size: 1 }],
-  );
-  for (const file of [
-    'tests/src/cli/cases/packages-cases/managed-runtime-source-transaction.test.ts',
-    'tests/src/cli/cases/cli-command-registry.test.ts',
-  ]) {
-    assert.deepEqual(
-      groupFor(file).map((group) => ({
-        source_lane: group.source_lane,
-        batch_size: group.batch_size,
-        cli_timeout_ms: group.env.OPL_CLI_TEST_TIMEOUT_MS,
-      })),
-      [{ source_lane: 'fast', batch_size: 1, cli_timeout_ms: '90000' }],
-    );
-  }
-
-  const listed = spawnSync(process.execPath, [registryPath, 'list'], {
-    cwd: repoRoot,
-    encoding: 'utf8',
-  });
-  assert.equal(listed.status, 0, listed.stderr);
-  const fullOutput = listed.stdout.slice(listed.stdout.indexOf('\nfull\n') + 1);
-  for (const nestedLane of [
-    'test:artifact',
-    'test:fast',
-    'test:fresh-install',
-    'test:read-model-gates',
-    'test:meta',
-    'test:regression',
-    'test:integration',
-  ]) {
-    assert.doesNotMatch(fullOutput, new RegExp(`npm run ${nestedLane}`));
-  }
 });
