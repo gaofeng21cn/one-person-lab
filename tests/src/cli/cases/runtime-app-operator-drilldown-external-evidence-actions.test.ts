@@ -184,15 +184,40 @@ test('runtime action execute records functional semantic equivalence refs throug
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-action-execute-functional-semantic-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const rcaManifest = structuredClone(loadFamilyManifestFixtures().redcube);
-  rcaManifest.privatized_functional_module_audit = {
+  rcaManifest.functional_privatization_audit = {
+    surface_kind: 'functional_privatization_audit',
+    schema_version: 1,
+    owner: 'redcube-ai',
+    domain_id: 'redcube_ai',
     target_domain_id: 'redcube_ai',
     modules: [
       {
         module_id: 'codex_executor_adapter',
-        classification: 'refs_only_adapter',
+        classification: 'refs_only_domain_adapter',
+        code_paths: ['agent/executors/codex_executor_adapter.ts'],
+        active_callers: [],
+        migration_action: 'retain_refs_only_domain_adapter',
+        retention_reason: 'RCA retains visual-domain semantics while OPL owns execution.',
+        standardization_layer: 'private_platform_residue_inventory',
         semantic_equivalence_status: 'review_required',
       },
     ],
+    retired_generated_surface_provenance: [
+      {
+        surface_id: 'rca_private_codex_executor',
+        replacement_ref: 'opl://executors/codex-cli/default',
+        provenance_refs: ['rca://history/codex-executor-adapter'],
+      },
+    ],
+    bridge_exit_gate: {
+      physical_delete_authorization_refs: [],
+      no_forbidden_write_refs: [],
+      provenance_refs: [],
+    },
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_authorize_quality_verdict: false,
+    },
   };
   const payloadPath = path.join(stateRoot, 'functional-semantic-payload.json');
   fs.writeFileSync(payloadPath, JSON.stringify({
