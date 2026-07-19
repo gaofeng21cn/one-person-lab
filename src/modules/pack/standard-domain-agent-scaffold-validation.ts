@@ -30,6 +30,10 @@ import {
   OPL_HOSTED_FOUNDRY_SEMANTIC_PROVIDER_PROFILE_ID,
   resolveStandardAgentExecutionProfile,
 } from './standard-agent-execution-profile.ts';
+import {
+  resolveFunctionalPrivatizationAuditContract,
+  resolveGeneratedSurfaceHandoffContract,
+} from './standard-agent-proof-contract-defaults.ts';
 
 interface ScaffoldValidateInput {
   repoDir: string;
@@ -244,8 +248,8 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
   const rawMissingContractFiles = rawRequiredContractFiles
     .filter((file) => !fs.existsSync(path.join(repoDir, file)));
   const missingContractFiles = requiredContractFiles.filter((file) => !fs.existsSync(path.join(repoDir, file)));
-  const functionalPrivatizationAudit = readJsonFileOrNull(
-    path.join(repoDir, 'contracts/functional_privatization_audit.json'),
+  const functionalPrivatizationAudit = resolveFunctionalPrivatizationAuditContract(
+    readJsonFileOrNull(path.join(repoDir, 'contracts/functional_privatization_audit.json')),
   );
   const functionalPrivatizationAuditRecord = isRecord(functionalPrivatizationAudit)
     ? functionalPrivatizationAudit
@@ -325,7 +329,9 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
     repoDir,
     { required: !hostedFoundryProvider },
   );
-  const generatedSurfaceHandoff = readJsonFileOrNull(path.join(repoDir, 'contracts/generated_surface_handoff.json'));
+  const generatedSurfaceHandoff = resolveGeneratedSurfaceHandoffContract(
+    readJsonFileOrNull(path.join(repoDir, 'contracts/generated_surface_handoff.json')),
+  );
   const generatedSurfaceHandoffRecord = isRecord(generatedSurfaceHandoff) ? generatedSurfaceHandoff : {};
   const capabilityMap = readJsonFileOrNull(path.join(repoDir, 'contracts/capability_map.json'));
   const foundryAgentSeries = readJsonFileOrNull(path.join(repoDir, 'contracts/foundry_agent_series.json'));

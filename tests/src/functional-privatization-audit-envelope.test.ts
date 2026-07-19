@@ -11,6 +11,11 @@ import {
 import {
   FUNCTIONAL_PRIVATIZATION_AUDIT_ENVELOPE_CONTRACT,
 } from '../../src/modules/pack/functional-privatization-envelope.ts';
+import {
+  resolveFunctionalPrivatizationAuditContract,
+  STANDARD_FUNCTIONAL_PRIVATIZATION_AUDIT_DEFAULTS_PROFILE,
+  STANDARD_FUNCTIONAL_PRIVATIZATION_CLASSIFICATION_POLICY,
+} from '../../src/modules/pack/standard-agent-proof-contract-defaults.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
@@ -179,6 +184,94 @@ test('functional privatization audit reads MAS canonical modules as standard con
   assert.equal(audit.summary.refs_only_domain_adapter_count, 1);
   assert.equal(audit.summary.declarative_pack_count, 1);
   assert.equal(audit.summary.minimal_authority_function_count, 1);
+});
+
+test('compact functional audit inherits platform proof policy without repeating derivable fields', () => {
+  const declared = {
+    surface_kind: 'functional_privatization_audit',
+    schema_version: 1,
+    defaults_profile: STANDARD_FUNCTIONAL_PRIVATIZATION_AUDIT_DEFAULTS_PROFILE,
+    owner: 'example-domain',
+    domain_id: 'example-domain',
+    target_domain_id: 'example-domain',
+    physical_source_morphology_policy: {
+      authority_boundary: {
+        domain_can_claim_generic_runtime_owner: false,
+        domain_repo_can_own_generated_surface: false,
+      },
+    },
+    modules: [
+      {
+        module_id: 'domain-pack',
+        classification: 'declarative_pack',
+        code_paths: ['agent/'],
+        active_callers: ['OPL pack compiler'],
+        migration_action: 'retain declarative domain pack',
+        retention_reason: 'domain semantics remain domain-owned',
+      },
+      {
+        module_id: 'native-helper',
+        classification: 'native_helper_implementation',
+        code_paths: ['runtime/native_helper.py'],
+        active_callers: ['OPL native-helper envelope'],
+        migration_action: 'retain domain-specific implementation',
+        retention_reason: 'artifact semantics remain domain-owned',
+      },
+    ],
+    retired_generated_surface_provenance: [{
+      surface_id: 'legacy-wrapper',
+      replacement_ref: 'opl-generated:standard-agent-surfaces',
+      provenance_refs: ['docs/history/retired-wrapper.md'],
+    }],
+    bridge_exit_gate: {
+      physical_delete_authorization_refs: [],
+      no_forbidden_write_refs: ['contracts/authority.json'],
+      provenance_refs: ['docs/history/retired-wrapper.md'],
+    },
+    authority_boundary: {
+      domain_can_claim_generic_runtime_owner: false,
+      domain_repo_can_own_generated_surface: false,
+    },
+  };
+  const effective = resolveFunctionalPrivatizationAuditContract(declared)!;
+  assert.deepEqual(
+    effective.classification_policy,
+    STANDARD_FUNCTIONAL_PRIVATIZATION_CLASSIFICATION_POLICY,
+  );
+  assert.equal((effective.forbidden_generic_owner_roles as string[]).length > 0, true);
+  assert.equal(
+    effective.private_functional_surface_admission_policy_ref,
+    'contracts/opl-framework/standard-domain-agent-skeleton-contract.json#/new_agent_scaffold/private_functional_surface_admission_policy',
+  );
+
+  const audit = buildFunctionalPrivatizationAudit({
+    target_domain_id: 'example-domain',
+    functional_privatization_audit: declared,
+  });
+  assert.deepEqual(audit.blockers, []);
+  assert.equal(audit.summary.declarative_pack_count, 1);
+  assert.equal(audit.summary.minimal_authority_function_count, 1);
+  assert.equal(audit.summary.provenance_or_fixture_count, 1);
+  assert.equal(audit.summary.standard_domain_pack_inventory_count, 1);
+  assert.equal(audit.summary.authority_function_inventory_count, 1);
+
+  assert.throws(
+    () => resolveFunctionalPrivatizationAuditContract({
+      ...declared,
+      private_functional_surface_admission_policy_ref: 'domain-owned-copy',
+    }),
+    /must not repeat platform-owned policy fields/,
+  );
+  assert.throws(
+    () => resolveFunctionalPrivatizationAuditContract({
+      ...declared,
+      classification_policy: {
+        rule: 'domain-specific narrowing',
+        accepted_migration_classes: ['invented_runtime_owner'],
+      },
+    }),
+    /cannot introduce unsupported migration classes/,
+  );
 });
 
 test('functional privatization audit accepts explicit semantic equivalence evidence refs', () => {

@@ -6,6 +6,9 @@ import type {
   FunctionalOplReplacementExpectation,
   FunctionalPrivatizationStandardizationLayer,
 } from '../functional-privatization-audit-types.ts';
+import {
+  resolveFunctionalPrivatizationAuditContract,
+} from '../standard-agent-proof-contract-defaults.ts';
 import { nestedRecord, recordList, unique, type JsonRecord } from './json-record-helpers.ts';
 
 export function externalEvidenceRequestPack(source: JsonRecord) {
@@ -115,8 +118,9 @@ export function oplReplacementExpectations(source: JsonRecord) {
 
 export function selectedAuditSource(manifest: JsonRecord) {
   const nestedStandardSource = nestedRecord(manifest, ['functional_privatization_audit']);
-  const standardSource = nestedStandardSource
+  const declaredStandardSource = nestedStandardSource
     ?? (isCompactCanonicalAudit(manifest) ? manifest : null);
+  const standardSource = resolveFunctionalPrivatizationAuditContract(declaredStandardSource);
   if (standardSource) {
     return {
       source: standardSource,
@@ -156,8 +160,12 @@ export function compactAuditSchemaBlockers(source: JsonRecord) {
     isRecord(source.bridge_exit_gate) ? null : 'compact_functional_audit_missing_bridge_exit_gate',
   ].filter((entry): entry is string => Boolean(entry));
   const expectedLayers: Record<string, FunctionalPrivatizationStandardizationLayer> = {
+    declarative_pack: 'standard_domain_pack_inventory',
     minimal_authority_function: 'authority_function_inventory',
+    native_helper_implementation: 'authority_function_inventory',
+    domain_handler_target: 'private_platform_residue_inventory',
     refs_only_domain_adapter: 'private_platform_residue_inventory',
+    provenance_or_fixture: 'private_platform_residue_inventory',
   };
   for (const [index, module] of recordList(source.modules).entries()) {
     const classification = stringValue(module.classification);
@@ -171,7 +179,8 @@ export function compactAuditSchemaBlockers(source: JsonRecord) {
     if (!Array.isArray(module.active_callers)) blockers.push(`compact_functional_audit_missing_active_callers:${index}`);
     if (!stringValue(module.migration_action)) blockers.push(`compact_functional_audit_missing_migration_action:${index}`);
     if (!stringValue(module.retention_reason)) blockers.push(`compact_functional_audit_missing_retention_reason:${index}`);
-    if (stringValue(module.standardization_layer) !== expectedLayer) {
+    const declaredLayer = stringValue(module.standardization_layer);
+    if (declaredLayer && declaredLayer !== expectedLayer) {
       blockers.push(`compact_functional_audit_standardization_layer_mismatch:${index}`);
     }
   }

@@ -6,11 +6,9 @@ import {
   FOUNDRY_AGENT_SERIES_CONSUMER_VERSION,
   FOUNDRY_AGENT_SERIES_POLICY_EXPORT,
   FOUNDRY_AGENT_SERIES_POLICY_RELEASE,
-  FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES,
   MINIMAL_AUTHORITY_FUNCTIONS,
   OPL_GENERATED_SURFACES,
   OPL_OWNED_GENERIC_PRIMITIVES,
-  PRIVATE_FUNCTIONAL_SURFACE_ADMISSION_POLICY_REF,
   SCAFFOLD_MARKER,
   STARTER_STAGE_ID,
   STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT,
@@ -32,6 +30,10 @@ import {
   CAPABILITY_MAP_REF,
   standardCapabilityMap,
 } from './standard-domain-agent-scaffold-template-parts/capability-map.ts';
+import {
+  STANDARD_GENERATED_SURFACE_HANDOFF_DEFAULTS_PROFILE,
+  STANDARD_FUNCTIONAL_PRIVATIZATION_AUDIT_DEFAULTS_PROFILE,
+} from './standard-agent-proof-contract-defaults.ts';
 
 export {
   STANDARD_AGENT_CAPABILITY_MAP_CONTRACT,
@@ -50,60 +52,6 @@ function toolNamePrefix(domainId: string) {
   return domainId
     .replace(/[^A-Za-z0-9_]+/g, '_')
     .replace(/^_+|_+$/g, '') || 'new_domain_agent';
-}
-
-function generatedSurfaceDescriptors() {
-  return OPL_GENERATED_SURFACES.map((surface) => ({
-    ...surface,
-    status: 'descriptor_source_available',
-  }));
-}
-
-function generatedSurfaceHandoffSurfaces() {
-  return [
-    {
-      surface_id: 'cli',
-      current_paths: ['agent/cli.ts'],
-      current_role: 'domain_handler_target',
-      target_role: 'opl_generated_command_surface',
-    },
-    {
-      surface_id: 'mcp',
-      current_paths: ['agent/mcp.ts'],
-      current_role: 'domain_handler_target',
-      target_role: 'opl_generated_mcp_descriptor_surface',
-    },
-    {
-      surface_id: 'skill',
-      current_paths: ['agent/skills/domain_execution.md'],
-      current_role: 'domain_handler_target',
-      target_role: 'opl_generated_skill_descriptor_surface',
-    },
-    {
-      surface_id: 'product_entry_manifest',
-      current_paths: ['agent/product-entry.ts'],
-      current_role: 'domain_handler_target',
-      target_role: 'opl_generated_product_entry_surface',
-    },
-    {
-      surface_id: 'domain_handler',
-      current_paths: [STARTER_HANDLER_REF],
-      current_role: 'domain_authority_function_target',
-      target_role: 'opl_generated_domain_handler_handoff_surface',
-    },
-    {
-      surface_id: 'status_read_model',
-      current_paths: ['contracts/owner_receipt_contract.json'],
-      current_role: 'domain_projection_refs',
-      target_role: 'opl_generated_status_read_model_surface',
-    },
-    {
-      surface_id: 'workbench_drilldown',
-      current_paths: ['contracts/artifact_locator_contract.json'],
-      current_role: 'projection_refs',
-      target_role: 'opl_hosted_workbench_shell_consuming_domain_refs',
-    },
-  ];
 }
 
 function foundryAgentSeriesContract(domainId: string, domainLabel: string) {
@@ -586,20 +534,12 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
     {
       path: 'contracts/generated_surface_handoff.json',
       content: json({
-        surface_kind: 'opl_generated_surface_handoff',
+        surface_kind: 'opl_generated_surface_handoff_delta',
         schema_version: 1,
+        defaults_profile: STANDARD_GENERATED_SURFACE_HANDOFF_DEFAULTS_PROFILE,
         domain_id: domainId,
         generated_surface_owner: 'one-person-lab',
         domain_repo_can_own_generated_surface: false,
-        source_contract_ref: 'contracts/pack_compiler_input.json',
-        generated_surfaces: generatedSurfaceDescriptors(),
-        handoff_surfaces: generatedSurfaceHandoffSurfaces(),
-        required_domain_handoff: [
-          'owner_receipt_schema',
-          'typed_blocker_schema',
-          'minimal_authority_function_refs',
-          'no_forbidden_write_evidence',
-        ],
         marker: SCAFFOLD_MARKER,
       }),
     },
@@ -712,32 +652,15 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
       content: json({
         surface_kind: 'functional_privatization_audit',
         schema_version: 1,
+        defaults_profile: STANDARD_FUNCTIONAL_PRIVATIZATION_AUDIT_DEFAULTS_PROFILE,
         domain_id: domainId,
         marker: SCAFFOLD_MARKER,
-        classification_policy: {
-          rule: 'domain_declares_non_knowledge_functional_modules_for_opl_unified_audit',
-          accepted_migration_classes: [
-            'opl_hosted_surface',
-            'opl_generated_surface',
-            'declarative_pack',
-            'minimal_authority_function',
-            'refs_only_domain_adapter',
-            'opl_storage_substrate_mas_refs_projection',
-            'domain_handler_target',
-            'native_helper_implementation',
-            'temporary_migration_bridge',
-            'diagnostic_cleanup_path',
-            'provenance_or_fixture',
-          ],
-        },
         opl_owned_replacement_surfaces: OPL_OWNED_GENERIC_PRIMITIVES.map((primitive) => primitive.primitive_id),
         opl_generated_surfaces: OPL_GENERATED_SURFACES.map((surface) => surface.surface_id),
-        private_functional_surface_admission_policy_ref: PRIVATE_FUNCTIONAL_SURFACE_ADMISSION_POLICY_REF,
         physical_source_morphology_policy: physicalSourceMorphologyPolicy(domainId),
         declarative_domain_pack: DECLARATIVE_DOMAIN_PACK,
         minimal_authority_functions: MINIMAL_AUTHORITY_FUNCTIONS,
         domain_retained_thin_surfaces: DOMAIN_RETAINED_THIN_SURFACES,
-        forbidden_generic_owner_roles: FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES,
         modules: functionalPrivatizationModules(domainId),
         authority_boundary: {
           opl_can_write_domain_truth: false,

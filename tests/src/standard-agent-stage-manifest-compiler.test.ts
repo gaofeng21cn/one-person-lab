@@ -16,6 +16,11 @@ import {
 import { FrameworkContractError } from '../../src/kernel/contract-validation.ts';
 import { normalizeFamilyStageControlPlane } from '../../src/modules/stagecraft/family-stage-control-plane-contract.ts';
 import { buildReadyAgentRepo, retargetReadyRepo } from './cli/cases/agents-conformance-fixtures.ts';
+import {
+  HOSTED_FOUNDRY_GENERATED_SURFACE_HANDOFF_DEFAULTS_PROFILE,
+  resolveGeneratedSurfaceHandoffContract,
+  STANDARD_GENERATED_SURFACE_HANDOFF_DEFAULTS_PROFILE,
+} from '../../src/modules/pack/standard-agent-proof-contract-defaults.ts';
 
 type JsonRecord = Record<string, any>;
 
@@ -877,6 +882,161 @@ test('standard Agent repo contracts reject generated-surface authority escalatio
       assert.equal(readout.status, 'blocked');
     });
   }
+});
+
+test('generated-surface handoff defaults preserve legacy contracts and materialize compact deltas', () => {
+  const legacy = {
+    surface_kind: 'opl_generated_surface_handoff',
+    schema_version: 1,
+    domain_id: 'legacy-domain',
+    generated_surface_owner: 'one-person-lab',
+    domain_repo_can_own_generated_surface: false,
+    generated_surfaces: [],
+    handoff_surfaces: [],
+  };
+  assert.equal(resolveGeneratedSurfaceHandoffContract(legacy), legacy);
+
+  const resolved = resolveGeneratedSurfaceHandoffContract({
+    surface_kind: 'opl_generated_surface_handoff_delta',
+    schema_version: 1,
+    defaults_profile: STANDARD_GENERATED_SURFACE_HANDOFF_DEFAULTS_PROFILE,
+    domain_id: 'compact-domain',
+    generated_surface_owner: 'one-person-lab',
+    domain_repo_can_own_generated_surface: false,
+    generated_surface_overrides: [{
+      surface_id: 'product_entry_manifest',
+      source_contract: 'contracts/product-registration.json',
+    }],
+    handoff_surface_overrides: [{
+      surface_id: 'domain_handler',
+      current_paths: ['runtime/authority_functions/custom.ts'],
+    }],
+    authority_boundary: {
+      generated_surface_can_write_target_truth: false,
+    },
+  })!;
+
+  assert.equal(resolved.surface_kind, 'opl_generated_surface_handoff');
+  assert.equal(resolved.schema_version, 2);
+  assert.equal(resolved.generated_surface_owner, 'one-person-lab');
+  assert.equal(resolved.domain_repo_can_own_generated_surface, false);
+  assert.equal((resolved.generated_surfaces as JsonRecord[]).length, 7);
+  assert.equal(
+    (resolved.generated_surfaces as JsonRecord[])
+      .find((surface) => surface.surface_id === 'product_entry_manifest')
+      ?.source_contract,
+    'contracts/product-registration.json',
+  );
+  assert.deepEqual(
+    (resolved.handoff_surfaces as JsonRecord[])
+      .find((surface) => surface.surface_id === 'domain_handler')
+      ?.current_paths,
+    ['runtime/authority_functions/custom.ts'],
+  );
+  assert.equal(
+    (resolved.authority_boundary as JsonRecord).generated_surface_can_write_domain_truth,
+    false,
+  );
+  assert.equal(
+    (resolved.authority_boundary as JsonRecord).generated_surface_can_write_target_truth,
+    false,
+  );
+});
+
+test('generated-surface handoff defaults expand retired default callers and reject ambiguous deltas', () => {
+  const resolved = resolveGeneratedSurfaceHandoffContract({
+    surface_kind: 'opl_generated_surface_handoff_delta',
+    schema_version: 1,
+    defaults_profile: STANDARD_GENERATED_SURFACE_HANDOFF_DEFAULTS_PROFILE,
+    agent_id: 'example',
+    domain_id: 'example-domain',
+    generated_surface_owner: 'one-person-lab',
+    domain_repo_can_own_generated_surface: false,
+    retired_default_surfaces: [
+      { surface_id: 'cli' },
+      { surface_id: 'workbench' },
+    ],
+  })!;
+  const surfaces = resolved.handoff_surfaces as JsonRecord[];
+  assert.deepEqual(surfaces.map((surface) => surface.surface_id), ['cli', 'workbench']);
+  assert.deepEqual(surfaces[0].current_surface_refs, [
+    'opl-generated-default-caller:example/cli',
+  ]);
+  assert.equal(surfaces[1].target_role, 'opl_hosted_surface');
+  assert.equal(surfaces[1].source_contract, 'contracts/artifact_locator_contract.json');
+
+  assert.throws(
+    () => resolveGeneratedSurfaceHandoffContract({
+      surface_kind: 'opl_generated_surface_handoff_delta',
+      schema_version: 1,
+      defaults_profile: STANDARD_GENERATED_SURFACE_HANDOFF_DEFAULTS_PROFILE,
+      domain_id: 'invalid-domain',
+      generated_surface_owner: 'one-person-lab',
+      domain_repo_can_own_generated_surface: false,
+      generated_surfaces: [],
+    }),
+    (error: unknown) => error instanceof FrameworkContractError
+      && error.code === 'contract_shape_invalid',
+  );
+});
+
+test('hosted generated-surface defaults preserve declared surfaces and reject authority transfer', () => {
+  const generatedSurfaceIds = [
+    'cli',
+    'mcp',
+    'skill',
+    'product_entry',
+    'openai',
+    'ai_sdk',
+    'status_read_model',
+  ];
+  const baseDelta = {
+    surface_kind: 'opl_generated_surface_handoff_delta',
+    schema_version: 1,
+    defaults_profile: HOSTED_FOUNDRY_GENERATED_SURFACE_HANDOFF_DEFAULTS_PROFILE,
+    domain_id: 'agent-engineering',
+    generated_surface_owner: 'one-person-lab',
+    domain_repo_can_own_generated_surface: false,
+    generated_surface_ids: generatedSurfaceIds,
+  };
+  const resolved = resolveGeneratedSurfaceHandoffContract(baseDelta)!;
+
+  assert.deepEqual(
+    (resolved.generated_surfaces as JsonRecord[]).map((surface) => surface.surface_id),
+    generatedSurfaceIds,
+  );
+  assert.equal((resolved.generated_surfaces as JsonRecord[])[0].owner, 'one-person-lab');
+  assert.equal((resolved.handoff_surfaces as JsonRecord[]).length, 7);
+
+  assert.throws(
+    () => resolveGeneratedSurfaceHandoffContract({
+      ...baseDelta,
+      generated_surface_overrides: [{
+        surface_id: 'cli',
+        owner: 'agent-engineering',
+      }],
+    }),
+    /cannot transfer generated-surface ownership/,
+  );
+  assert.throws(
+    () => resolveGeneratedSurfaceHandoffContract({
+      ...baseDelta,
+      handoff_surface_overrides: [{
+        surface_id: 'domain_handler',
+        owner: 'agent-engineering',
+      }],
+    }),
+    /cannot transfer generated-surface ownership/,
+  );
+  assert.throws(
+    () => resolveGeneratedSurfaceHandoffContract({
+      ...baseDelta,
+      authority_boundary: {
+        generated_surface_can_write_target_truth: true,
+      },
+    }),
+    /authority delta cannot grant authority/,
+  );
 });
 
 test('standard Agent stage manifest compiler requires every declared pack source', () => {

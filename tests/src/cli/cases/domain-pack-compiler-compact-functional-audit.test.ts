@@ -1,6 +1,9 @@
 import { assert, fs, os, path, runCli, test } from '../helpers.ts';
 import { buildRepoContractDescriptor } from '../../../../src/modules/pack/domain-pack-compiler/repo-contract-descriptor.ts';
-import { FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES } from '../../../../src/modules/pack/standard-domain-agent-scaffold-constants.ts';
+import {
+  FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES,
+  PRIVATE_FUNCTIONAL_SURFACE_ADMISSION_POLICY_REF,
+} from '../../../../src/modules/pack/standard-domain-agent-scaffold-constants.ts';
 import { validateStandardDomainAgentScaffold } from '../../../../src/modules/pack/standard-domain-agent-scaffold-validation.ts';
 import { buildReadyAgentRepo, writeJson } from './agents-conformance-fixtures.ts';
 
@@ -29,7 +32,7 @@ function writeCompactAudit(repoDir: string, codePaths: string[]) {
     domain_id: 'sample-brief-agent',
     target_domain_id: 'sample-brief-agent',
     private_functional_surface_admission_policy_ref:
-      generatedAudit.private_functional_surface_admission_policy_ref,
+      PRIVATE_FUNCTIONAL_SURFACE_ADMISSION_POLICY_REF,
     physical_source_morphology_policy: generatedAudit.physical_source_morphology_policy,
     forbidden_generic_owner_roles: FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES,
     authority_boundary: {

@@ -3,7 +3,6 @@ import {
   buildStandardDomainAgentScaffold,
   compileStandardAgentStageManifest,
 } from '../../../../src/modules/pack/index.ts';
-import { FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES } from '../../../../src/modules/pack/standard-domain-agent-scaffold-constants.ts';
 
 const OPL_DOMAIN_READONLY_AUTHORITY = {
   opl_can_write_domain_truth: false,
@@ -344,9 +343,9 @@ export function buildReadyAgentRepo() {
   const generatedFunctionalAudit = readJson(contractPath(targetDir, 'functional_privatization_audit.json'));
   writeJson(contractPath(targetDir, 'functional_privatization_audit.json'), {
     surface_kind: 'functional_privatization_audit',
+    schema_version: 1,
+    defaults_profile: generatedFunctionalAudit.defaults_profile,
     target_domain_id: 'sample-brief-agent',
-    private_functional_surface_admission_policy_ref:
-      generatedFunctionalAudit.private_functional_surface_admission_policy_ref,
     physical_source_morphology_policy: {
       ...generatedFunctionalAudit.physical_source_morphology_policy,
       required_surface_ids: SAMPLE_SOURCE_CLASSIFICATIONS.map(({ surface_id }) => surface_id),
@@ -359,7 +358,6 @@ export function buildReadyAgentRepo() {
       ],
       surface_classifications: SAMPLE_SOURCE_CLASSIFICATIONS,
     },
-    forbidden_generic_owner_roles: FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES,
     authority_boundary: {
       ...OPL_DOMAIN_READONLY_AUTHORITY,
       ...DOMAIN_GENERATED_SURFACE_READONLY_AUTHORITY,

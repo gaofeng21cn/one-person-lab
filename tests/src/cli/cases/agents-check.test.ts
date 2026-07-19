@@ -5,8 +5,10 @@ import {
 } from '../../../../src/modules/pack/standard-domain-agent-scaffold.ts';
 import {
   PRIVATE_FUNCTIONAL_SURFACE_ADMISSION_POLICY,
-  PRIVATE_FUNCTIONAL_SURFACE_ADMISSION_POLICY_REF,
 } from '../../../../src/modules/pack/standard-domain-agent-scaffold-constants.ts';
+import {
+  STANDARD_FUNCTIONAL_PRIVATIZATION_AUDIT_DEFAULTS_PROFILE,
+} from '../../../../src/modules/pack/standard-agent-proof-contract-defaults.ts';
 import { materializeStandardAgentFrameworkLink } from '../../../../src/modules/connect/standard-agent-framework-link.ts';
 
 function readJson(filePath: string) {
@@ -82,7 +84,7 @@ test('agents check and link-framework share Python helper dependency discovery',
   }
 });
 
-test('standard agent scaffold projects the canonical private policy by ref and keeps only domain morphology', () => {
+test('standard agent scaffold inherits platform proof policy and keeps only domain morphology', () => {
   const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-private-policy-ref-'));
   try {
     buildStandardDomainAgentScaffold({ targetDir, domainId: 'sample-private-policy' });
@@ -90,9 +92,12 @@ test('standard agent scaffold projects the canonical private policy by ref and k
     const skeleton = readJson('contracts/opl-framework/standard-domain-agent-skeleton-contract.json');
 
     assert.equal(
-      audit.private_functional_surface_admission_policy_ref,
-      PRIVATE_FUNCTIONAL_SURFACE_ADMISSION_POLICY_REF,
+      audit.defaults_profile,
+      STANDARD_FUNCTIONAL_PRIVATIZATION_AUDIT_DEFAULTS_PROFILE,
     );
+    assert.equal(audit.private_functional_surface_admission_policy_ref, undefined);
+    assert.equal(audit.forbidden_generic_owner_roles, undefined);
+    assert.equal(audit.classification_policy, undefined);
     assert.equal(audit.private_functional_surface_admission_policy, undefined);
     assert.equal(
       fs.existsSync(path.join(targetDir, 'contracts', 'private_functional_surface_policy.json')),
@@ -119,7 +124,7 @@ test('standard agent scaffold projects the canonical private policy by ref and k
   }
 });
 
-test('standard agent scaffold fails closed on unknown private policy refs and morphology owner overclaims', () => {
+test('standard agent scaffold fails closed on repeated platform policy and morphology owner overclaims', () => {
   const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-private-policy-fail-close-'));
   try {
     buildStandardDomainAgentScaffold({ targetDir, domainId: 'sample-private-policy-blocked' });
@@ -129,18 +134,15 @@ test('standard agent scaffold fails closed on unknown private policy refs and mo
     audit.private_functional_surface_admission_policy_ref =
       'contracts/opl-framework/standard-domain-agent-skeleton-contract.json#/unknown_private_policy';
     writeJson(auditPath, audit);
-    let validation = validateStandardDomainAgentScaffold({ repoDir: targetDir })
-      .standard_domain_agent_scaffold_validation;
-    assert.equal(validation.status, 'blocked');
-    assert.equal(
-      validation.blockers.includes('private_functional_surface_admission_policy_ref_must_equal_canonical_ref'),
-      true,
+    assert.throws(
+      () => validateStandardDomainAgentScaffold({ repoDir: targetDir }),
+      /must not repeat platform-owned policy fields/,
     );
 
-    audit.private_functional_surface_admission_policy_ref = PRIVATE_FUNCTIONAL_SURFACE_ADMISSION_POLICY_REF;
+    delete audit.private_functional_surface_admission_policy_ref;
     audit.physical_source_morphology_policy.authority_boundary.domain_can_claim_generic_runtime_owner = true;
     writeJson(auditPath, audit);
-    validation = validateStandardDomainAgentScaffold({ repoDir: targetDir })
+    const validation = validateStandardDomainAgentScaffold({ repoDir: targetDir })
       .standard_domain_agent_scaffold_validation;
     assert.equal(validation.status, 'blocked');
     assert.equal(

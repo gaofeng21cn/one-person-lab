@@ -11,6 +11,10 @@ import { buildAgentPlatformSurfaceOwnershipForRepo } from './agent-platform-surf
 import { buildFunctionalPrivatizationAudit } from '../pack/index.ts';
 import { buildPrivatePlatformResidueDeletionGate } from '../pack/index.ts';
 import {
+  resolveFunctionalPrivatizationAuditContract,
+  resolveGeneratedSurfaceHandoffContract,
+} from '../pack/standard-agent-proof-contract-defaults.ts';
+import {
   defaultFamilyRepoInputs,
   DEFAULT_FAMILY_REPOS,
 } from '../atlas/index.ts';
@@ -127,7 +131,7 @@ function parseConformanceArgs(args: string[]): RepoInput[] {
 
 function buildGeneratedSurfaceHandoffChecks(repoDir: string) {
   const generatedSurfaceHandoff = readJsonFile(repoDir, 'contracts/generated_surface_handoff.json');
-  const payload = generatedSurfaceHandoff.payload;
+  const payload = resolveGeneratedSurfaceHandoffContract(generatedSurfaceHandoff.payload);
   const blockers = [
     generatedSurfaceHandoff.status === 'resolved' ? null : `generated_surface_handoff_${generatedSurfaceHandoff.status}`,
     isRecord(payload) && payload.generated_surface_owner === 'one-person-lab'
@@ -148,7 +152,7 @@ function buildGeneratedSurfaceHandoffChecks(repoDir: string) {
 
 function buildPrivateSurfaceChecks(repoDir: string) {
   const functionalAudit = readJsonFile(repoDir, 'contracts/functional_privatization_audit.json');
-  const payload = functionalAudit.payload;
+  const payload = resolveFunctionalPrivatizationAuditContract(functionalAudit.payload);
   const authority = isRecord(payload) && isRecord(payload.authority_boundary) ? payload.authority_boundary : null;
   const normalizedAudit = buildFunctionalPrivatizationAudit(isRecord(payload)
     ? {

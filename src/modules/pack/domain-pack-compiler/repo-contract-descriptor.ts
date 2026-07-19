@@ -21,6 +21,10 @@ import {
   optionalString,
   parseJsonText,
 } from '../../../kernel/json-file.ts';
+import {
+  resolveFunctionalPrivatizationAuditContract,
+  resolveGeneratedSurfaceHandoffContract,
+} from '../standard-agent-proof-contract-defaults.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -413,11 +417,13 @@ export function buildRepoContractDescriptor(repoDirInput: string) {
   const actionCatalog = normalizeRepoActionCatalog(repoDir, readRepoJson(repoDir, 'contracts/action_catalog.json'));
   const stageCompilation = compileStandardAgentStageManifest(repoDir);
   const stageControlPlane = stageCompilation.stage_control_plane;
-  const functionalAuditRaw = readRepoJson(repoDir, 'contracts/functional_privatization_audit.json');
+  const functionalAuditRaw = resolveFunctionalPrivatizationAuditContract(
+    readRepoJson(repoDir, 'contracts/functional_privatization_audit.json'),
+  );
   const generatedSurfaceHandoffRaw = readRepoJson(repoDir, 'contracts/generated_surface_handoff.json');
   const packCompilerInput = readRepoJson(repoDir, 'contracts/pack_compiler_input.json');
   const memoryDescriptor = readRepoJson(repoDir, 'contracts/memory_descriptor.json');
-  const generatedSurfaceHandoff = isRecord(generatedSurfaceHandoffRaw) ? generatedSurfaceHandoffRaw : null;
+  const generatedSurfaceHandoff = resolveGeneratedSurfaceHandoffContract(generatedSurfaceHandoffRaw);
   if (generatedSurfaceHandoff && (
     generatedSurfaceHandoff.generated_surface_owner !== 'one-person-lab'
     || generatedSurfaceHandoff.domain_repo_can_own_generated_surface !== false
@@ -820,14 +826,16 @@ function repoGeneratedSurfaceHandoffFromDescriptor(descriptor: JsonRecord) {
       ? descriptor.generated_surface_handoff
       : null;
   if (current) {
-    return current;
+    return resolveGeneratedSurfaceHandoffContract(current);
   }
 
   const workspacePath = optionalString(descriptor.workspace_path);
   if (!workspacePath || !fs.existsSync(workspacePath) || !fs.statSync(workspacePath).isDirectory()) {
     return null;
   }
-  return readRepoJson(workspacePath, 'contracts/generated_surface_handoff.json');
+  return resolveGeneratedSurfaceHandoffContract(
+    readRepoJson(workspacePath, 'contracts/generated_surface_handoff.json'),
+  );
 }
 
 export function descriptorWithRepoContractInputs(descriptor: JsonRecord) {
