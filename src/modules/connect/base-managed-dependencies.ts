@@ -82,7 +82,7 @@ export function inspectBaseManagedDependencies(
       .map((alias) => ({ binaryPath: alias, version: typeof entry.version === 'string' ? entry.version : null })),
   ]).filter((entry): entry is { binaryPath: string; version: string | null } => Boolean(entry));
   const seenCodexPaths = new Set<string>();
-  const externalCodexInstallations = candidatePaths
+  const inspectedCodexInstallations = candidatePaths
     .filter((entry) => {
       const normalized = path.resolve(entry.binaryPath);
       if (normalized === currentManagedPath || seenCodexPaths.has(normalized)) return false;
@@ -93,8 +93,11 @@ export function inspectBaseManagedDependencies(
       ...entry,
       latestVersion: typeof codexRecord.latest_version === 'string' ? codexRecord.latest_version : null,
     }));
-  const selectedExternalCodex = externalCodexInstallations.find((entry) => (
+  const selectedExternalCodex = inspectedCodexInstallations.find((entry) => (
     Boolean(codexPath) && path.resolve(entry.binary_path ?? '') === path.resolve(codexPath!)
+  ));
+  const externalCodexInstallations = inspectedCodexInstallations.filter((entry) => (
+    !codexPath || path.resolve(entry.binary_path ?? '') !== path.resolve(codexPath)
   ));
   const temporalVersions = {
     client: packageVersion('@temporalio/client'),

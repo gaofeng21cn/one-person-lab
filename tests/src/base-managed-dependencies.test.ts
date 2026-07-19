@@ -255,6 +255,14 @@ test('verified Homebrew external dependencies expose confirmation-only owner act
       assert.equal(installation.update_action?.action_id, 'external_codex_update_homebrew');
       assert.equal(installation.update_action?.confirmation_required, true);
       assert.equal(installation.update_action?.auto_apply_allowed, false);
+      const catalog = inspectBaseManagedDependencies(root, { refreshManagedLatest: true });
+      const catalogCodex = catalog.dependencies.find((entry) => entry.dependency_id === 'codex-cli');
+      assert.equal(catalogCodex?.ownership, 'homebrew_formula');
+      assert.equal(catalogCodex?.update_action?.action_id, 'external_codex_update_homebrew');
+      assert.equal(
+        catalogCodex?.external_installations?.some((entry) => path.resolve(entry.binary_path ?? '') === codex),
+        false,
+      );
       const component = buildRuntimeSubstrateComponent({ core_engines: { codex: {
         installed: true,
         update_available: true,
