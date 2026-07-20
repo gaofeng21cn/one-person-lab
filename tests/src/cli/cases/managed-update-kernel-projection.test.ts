@@ -1,8 +1,12 @@
 import { assert, fs, parseJsonText, path, repoRoot, runCli, runCliFailure, test } from '../helpers.ts';
 import os from 'node:os';
+import { formatJsonPayload } from '../../../../src/kernel/json-file.ts';
 import { loadFrameworkContracts } from '../../../../src/modules/charter/contracts.ts';
 import { buildManagedUpdateKernelProjection } from '../../../../src/modules/connect/managed-update-kernel.ts';
 import { selectedManagedUpdateComponentIds } from '../../../../src/modules/connect/managed-update-owner-boundary.ts';
+import { getOplPackageSpecs } from '../../../../src/modules/connect/package-distribution.ts';
+import { loadDeveloperCheckoutPackageSource } from '../../../../src/modules/connect/agent-package-registry-parts/developer-checkout-package-source.ts';
+import { writePackageCatalog } from './packages-cases/capability-fixtures.ts';
 
 function readManagedUpdateKernelContract() {
   return parseJsonText(
@@ -11,6 +15,103 @@ function readManagedUpdateKernelContract() {
       'utf8',
     ),
   ) as Record<string, any>;
+}
+
+function writeFixtureFile(root: string, relativePath: string, content: string) {
+  const targetPath = path.join(root, relativePath);
+  fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+  fs.writeFileSync(targetPath, content);
+  return targetPath;
+}
+
+function writeDeveloperPackageFixture(root: string, packageId: 'mag' | 'opl-flow', version: string) {
+  const spec = getOplPackageSpecs().find((entry) => entry.package_id === packageId)!;
+  const frameworkManifest = parseJsonText(fs.readFileSync(
+    path.join(repoRoot, spec.package_manifest_ref),
+    'utf8',
+  )) as Record<string, any>;
+  const checkoutPath = path.join(root, spec.repo_name);
+  const ownerPayload = packageId === 'opl-flow'
+    ? {
+        schema: 'opl_flow_workflow_policy.v1',
+        package: {
+          id: packageId,
+          version,
+          owner: packageId,
+          kind: 'workflow_profile',
+        },
+      }
+    : {
+        ...frameworkManifest,
+        version,
+        source: 'first_party_repo_local',
+      };
+  writeFixtureFile(
+    checkoutPath,
+    spec.owner_package_manifest_ref,
+    formatJsonPayload(ownerPayload),
+  );
+  writeFixtureFile(
+    checkoutPath,
+    spec.owner_plugin_manifest_ref,
+    formatJsonPayload({
+      name: frameworkManifest.codex_surface.plugin_id,
+      version,
+      skills: './skills/',
+    }),
+  );
+  const pluginRoot = path.dirname(path.dirname(path.join(checkoutPath, spec.owner_plugin_manifest_ref)));
+  const requiredSkillIds = frameworkManifest.codex_surface.required_skill_ids as string[];
+  const skillPaths = requiredSkillIds.map((skillId) => writeFixtureFile(
+    pluginRoot,
+    path.join('skills', skillId, 'SKILL.md'),
+    `# ${skillId}\n`,
+  ));
+  if (packageId === 'opl-flow') {
+    const declaredPaths = [
+      frameworkManifest.profile_surface.runtime_profile.source_path,
+      ...frameworkManifest.profile_surface.authoring_sources.map((entry: any) => entry.source_path),
+      ...frameworkManifest.profile_surface.merge_context_paths,
+      frameworkManifest.managed_policy_surface.schema_path,
+    ] as string[];
+    for (const relativePath of new Set(declaredPaths)) {
+      writeFixtureFile(
+        checkoutPath,
+        relativePath,
+        relativePath.endsWith('.json') ? formatJsonPayload({ type: 'object' }) : '# Fixture\n',
+      );
+    }
+  }
+  return {
+    checkoutPath,
+    skillPath: skillPaths[0],
+    source: loadDeveloperCheckoutPackageSource(packageId, checkoutPath),
+  };
+}
+
+function developerPackageLock(
+  packageId: 'mag' | 'opl-flow',
+  source: ReturnType<typeof loadDeveloperCheckoutPackageSource>,
+) {
+  return {
+    surface_kind: 'opl_agent_package_lock',
+    package_id: packageId,
+    agent_id: packageId === 'opl-flow' ? null : packageId,
+    package_role: source.ownerManifest.package_role,
+    display_name: source.ownerManifest.display_name,
+    publisher: source.ownerManifest.publisher,
+    package_version: source.ownerManifest.version,
+    source_kind: 'developer_checkout_override',
+    manifest_url: source.source.owner_manifest_path,
+    manifest_sha256: source.source.owner_manifest_sha256,
+    content_digest: source.source.payload_digest,
+    artifact_digest: null,
+    owner_source_commit: source.source.source_git_head_sha,
+    lock_ref: `opl://agent-package-lock/${packageId}/${source.ownerManifest.version}/fixture`,
+    physical_surface: { status: 'materialized', failure_reason: null },
+    resolved_dependencies: [],
+    developer_checkout_source: source.source,
+  };
 }
 
 test('managed update contract exposes only OPL Base, OPL App, and OPL Packages lifecycle owners', () => {
@@ -142,6 +243,109 @@ test('OPL Packages folds Codex projection and profile migration into one guarded
   ]);
   assert.equal(components[0].authority_boundary.can_overwrite_dirty_checkout, false);
   assert.equal(components[0].authority_boundary.can_overwrite_developer_checkout, false);
+});
+
+test('OPL Packages evaluates MAG and OPL Flow against their effective developer targets', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-managed-update-developer-targets-'));
+  const homeDir = path.join(root, 'home');
+  const stateDir = path.join(root, 'state');
+  const developerVersion = '9.9.0';
+  const releaseVersion = '0.1.0';
+  const mag = writeDeveloperPackageFixture(root, 'mag', developerVersion);
+  const flow = writeDeveloperPackageFixture(root, 'opl-flow', developerVersion);
+  const oldMagManifest = parseJsonText(fs.readFileSync(
+    path.join(repoRoot, 'contracts/opl-framework/packages/mag.json'),
+    'utf8',
+  )) as Record<string, any>;
+  const oldMagManifestPath = writeFixtureFile(
+    path.join(root, 'release-source'),
+    'mag.json',
+    formatJsonPayload({ ...oldMagManifest, version: releaseVersion }),
+  );
+  const releaseCatalog = writePackageCatalog(path.join(root, 'release-catalog'), [oldMagManifestPath]);
+  fs.mkdirSync(stateDir, { recursive: true });
+  fs.writeFileSync(path.join(stateDir, 'agent-package-locks.json'), formatJsonPayload({
+    surface_kind: 'opl_agent_package_lock_index',
+    version: 'opl-agent-package-lock-index.v1',
+    packages: [
+      developerPackageLock('mag', mag.source),
+      developerPackageLock('opl-flow', flow.source),
+    ],
+    last_known_good_transactions: [],
+  }));
+  fs.writeFileSync(path.join(stateDir, 'agent-package-release-catalog-cache.json'), formatJsonPayload({
+    surface_kind: 'opl_agent_package_release_catalog_cache.v1',
+    catalog_ref: 'ghcr.io/fixture/one-person-lab-manifest:fixture',
+    catalog_digest: `sha256:${'9'.repeat(64)}`,
+    checked_at: new Date().toISOString(),
+    catalog_payload: parseJsonText(fs.readFileSync(releaseCatalog.catalogPath, 'utf8')),
+  }));
+  const env = {
+    HOME: homeDir,
+    CODEX_HOME: path.join(homeDir, '.codex'),
+    OPL_STATE_DIR: stateDir,
+    OPL_MODULES_ROOT: path.join(stateDir, 'modules'),
+    OPL_MODULE_PATH_MEDAUTOGRANT: mag.checkoutPath,
+    OPL_MODULE_PATH_OPLFLOW: flow.checkoutPath,
+    OPL_FULL_RUNTIME_MODULE_OVERRIDES: '',
+  };
+  const previousEnv = new Map(Object.keys(env).map((key) => [key, process.env[key]]));
+
+  try {
+    for (const [key, value] of Object.entries(env)) process.env[key] = value;
+    const current = await buildManagedUpdateKernelProjection(loadFrameworkContracts(), {
+      operation: 'status',
+      componentId: 'opl_packages',
+    }) as Record<string, any>;
+    const currentPackages = current.managed_update.components[0];
+    const magCurrent = currentPackages.current.package_lock_states.find(
+      (entry: Record<string, unknown>) => entry.package_id === 'mag',
+    );
+    const flowCurrent = currentPackages.current.package_lock_states.find(
+      (entry: Record<string, unknown>) => entry.package_id === 'opl-flow',
+    );
+
+    assert.equal(currentPackages.state, 'current');
+    assert.equal(currentPackages.plan.action, 'none');
+    for (const entry of [magCurrent, flowCurrent]) {
+      assert.equal(entry.state, 'current');
+      assert.equal(entry.reason, 'installed_identity_matches_developer_checkout_target');
+      assert.equal(entry.currentness.status, 'current');
+      assert.equal(entry.currentness.target_version, developerVersion);
+      assert.equal(entry.target.source_kind, 'developer_checkout_override');
+      assert.equal(entry.target.package_version, developerVersion);
+      assert.equal(entry.target.source_artifact_ref, null);
+      assert.notEqual(entry.target.package_version, releaseVersion);
+    }
+
+    fs.appendFileSync(mag.skillPath, '\nDeveloper checkout changed.\n');
+    const drifted = await buildManagedUpdateKernelProjection(loadFrameworkContracts(), {
+      operation: 'status',
+      componentId: 'opl_packages',
+    }) as Record<string, any>;
+    const driftedPackages = drifted.managed_update.components[0];
+    const magDrifted = driftedPackages.current.package_lock_states.find(
+      (entry: Record<string, unknown>) => entry.package_id === 'mag',
+    );
+    const flowStillCurrent = driftedPackages.current.package_lock_states.find(
+      (entry: Record<string, unknown>) => entry.package_id === 'opl-flow',
+    );
+
+    assert.equal(driftedPackages.state, 'update_available');
+    assert.equal(driftedPackages.plan.action, 'update');
+    assert.equal(magDrifted.state, 'update_available');
+    assert.equal(magDrifted.reason, 'developer_checkout_target_differs');
+    assert.equal(magDrifted.currentness.status, 'update_available');
+    assert.equal(magDrifted.currentness.reasons.includes('developer_payload_changed'), true);
+    assert.equal(magDrifted.target.package_version, developerVersion);
+    assert.equal(flowStillCurrent.state, 'current');
+  } finally {
+    for (const [key, value] of previousEnv) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('generic apply selects only eligible background-safe components while explicit owner actions stay scoped', async () => {

@@ -44,6 +44,10 @@ import { readInstalledOplAgentPackageLocks } from './agent-package-registry.ts';
 import { resolveFirstPartyPackageCatalog } from './agent-package-first-party.ts';
 import { agentPackageTargetCurrentness } from './agent-package-registry-parts/currentness.ts';
 import {
+  developerCheckoutPackageCurrentness,
+  loadDeveloperCheckoutPackageSource,
+} from './agent-package-registry-parts/developer-checkout-package-source.ts';
+import {
   readFirstPartyPackageCatalogSnapshot,
   resolveFirstPartyPackageCatalogSnapshot,
 } from './agent-package-registry-parts/release-catalog-cache.ts';
@@ -125,6 +129,22 @@ function buildCapabilityPackagesComponent(
     .map((lock) => {
       const firstParty = resolveFirstPartyPackageCatalog(lock.package_id);
       const sourcePolicy = resolveAgentPackageEffectiveSourcePolicy(lock.package_id, { profile: 'fast' });
+      const developerSourceSelected = sourcePolicy.desired_source_kind === 'developer_checkout_override';
+      let developerTarget = null;
+      let developerTargetInvalid = false;
+      if (firstParty
+        && developerSourceSelected
+        && sourcePolicy.developer_checkout_available
+        && sourcePolicy.developer_checkout_path) {
+        try {
+          developerTarget = loadDeveloperCheckoutPackageSource(
+            lock.package_id,
+            sourcePolicy.developer_checkout_path,
+          );
+        } catch {
+          developerTargetInvalid = true;
+        }
+      }
       const sourceReconciliationAvailable = Boolean(
         firstParty
         && sourcePolicy.desired_source_kind
@@ -136,9 +156,10 @@ function buildCapabilityPackagesComponent(
       );
       const manualReason = !firstParty || !sourcePolicy.desired_source_kind
         ? 'external_or_unowned_package_source'
-        : sourcePolicy.desired_source_kind === 'developer_checkout_override'
-          && !sourcePolicy.developer_checkout_available
+        : developerSourceSelected && !sourcePolicy.developer_checkout_available
           ? 'developer_checkout_unavailable'
+          : developerTargetInvalid
+            ? 'developer_checkout_package_source_invalid'
           : !lock.content_digest || !lock.manifest_sha256 || !lock.lock_ref
             ? 'package_content_identity_incomplete'
             : lock.physical_surface?.failure_reason
@@ -146,7 +167,13 @@ function buildCapabilityPackagesComponent(
               : null;
       let target = null;
       let currentness = null;
-      if (firstParty && releaseCatalog) {
+      if (developerTarget) {
+        currentness = developerCheckoutPackageCurrentness({
+          lock,
+          ownerManifest: developerTarget.ownerManifest,
+          source: developerTarget.source,
+        });
+      } else if (!developerSourceSelected && firstParty && releaseCatalog) {
         try {
           target = selectManagedCatalogPackageVersion(releaseCatalog.catalog, lock.package_id);
           if (sourcePolicy.desired_source_kind) {
@@ -174,8 +201,12 @@ function buildCapabilityPackagesComponent(
           ?? (sourceReconciliationAvailable
               ? 'source_policy_reconciliation_available'
               : currentness?.status === 'current'
-                ? 'installed_identity_matches_release_set_target'
-                : releaseCatalog
+                ? developerTarget
+                  ? 'installed_identity_matches_developer_checkout_target'
+                  : 'installed_identity_matches_release_set_target'
+                : developerTarget
+                  ? 'developer_checkout_target_differs'
+                  : releaseCatalog
                   ? 'release_set_target_differs'
                   : 'release_set_refresh_required'),
         source_kind: lock.source_kind,
@@ -185,13 +216,28 @@ function buildCapabilityPackagesComponent(
         artifact_digest: lock.artifact_digest ?? null,
         lock_ref: lock.lock_ref,
         currentness,
-        target: target ? {
-          package_version: target.package_version,
-          manifest_sha256: target.manifest_sha256,
-          content_digest: target.content_digest,
-          artifact_digest: target.artifact_digest,
-          source_artifact_ref: target.source_artifact_ref,
-        } : null,
+        target: developerTarget
+          ? {
+              source_kind: 'developer_checkout_override',
+              package_version: developerTarget.ownerManifest.version,
+              manifest_sha256: developerTarget.source.owner_manifest_sha256,
+              content_digest: developerTarget.source.payload_digest,
+              artifact_digest: null,
+              source_artifact_ref: null,
+              checkout_path: developerTarget.source.checkout_path,
+              owner_source_commit: developerTarget.source.source_git_head_sha,
+              tree_sha256: developerTarget.source.tree_sha256,
+            }
+          : target
+            ? {
+                source_kind: 'first_party_managed_cohort',
+                package_version: target.package_version,
+                manifest_sha256: target.manifest_sha256,
+                content_digest: target.content_digest,
+                artifact_digest: target.artifact_digest,
+                source_artifact_ref: target.source_artifact_ref,
+              }
+            : null,
       };
     });
   const legacyStates = process.env.OPL_PACKAGE_CHANNEL_MANIFEST_REF?.trim() ? moduleStates : [];
@@ -311,7 +357,7 @@ function buildCapabilityPackagesComponent(
     target: state === 'current'
       ? null
       : {
-        source: 'Framework Release Set target under the effective Package source policy',
+        source: 'Effective Package source target selected by Framework source policy',
         content_identity: 'digest_or_source_fingerprint_required_in_receipt',
         oci_descriptor: {
           media_type: 'application/vnd.opl.capability-package.channel.v1+json',
@@ -325,7 +371,7 @@ function buildCapabilityPackagesComponent(
         state === 'current' ? 'True' : 'False',
         state === 'current' ? 'CapabilityPackagesCurrent' : 'CapabilityPackageMaintenanceAvailable',
         state === 'current'
-          ? 'Installed first-party Package locks match the effective source policy and available Release Set targets.'
+          ? 'Installed first-party Package locks match the effective source policy and selected source targets.'
           : 'First-party Package maintenance or manual review is required.',
       ),
       condition(
@@ -369,7 +415,7 @@ function buildCapabilityPackagesComponent(
         ? 'No managed capability package maintenance is required.'
         : action === 'manual_review'
           ? 'Manual review is required before OPL can update one or more capability package roots.'
-          : 'Reconcile installed Package locks against effective source policy and Release Set targets, then sync Codex-visible skills and plugins.',
+          : 'Reconcile installed Package locks against effective source-policy targets, then sync Codex-visible skills and plugins.',
       command_refs: action === 'manual_review'
         ? [
           manualCommand(
