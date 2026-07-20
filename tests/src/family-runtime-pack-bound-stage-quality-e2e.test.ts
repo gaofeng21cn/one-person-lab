@@ -17,6 +17,7 @@ import {
   runOplAgentPackageStatus,
 } from '../../src/modules/connect/agent-package-registry.ts';
 import { runFamilyRuntime } from '../../src/modules/runway/family-runtime.ts';
+import { resolveStageRunAttemptExecutorContent } from '../../src/modules/runway/family-runtime-stage-run-attempt-content.ts';
 import {
   stageQualityAttemptMaterializeActivity,
   stageQualityAttemptSyncActivity,
@@ -329,6 +330,7 @@ Close findings using the latest package.
     stageQualityCycleProjectActivity,
     stageQualityReviewReceiptActivity,
     async codexStageActivity(attempt: TemporalStageAttemptWorkflowInput) {
+      resolveStageRunAttemptExecutorContent(attempt);
       observedAttemptInputs.push(attempt);
       const threadId = `thread-${attempt.attempt_role}-${attempt.stage_attempt_id}`;
       const closeoutPacket = attempt.attempt_role === 'producer'
@@ -535,6 +537,11 @@ Close findings using the latest package.
     assert.notEqual(
       firstRunAttemptInputs[0]?.execution_content_binding?.spec_sha256,
       firstRunAttemptInputs[1]?.execution_content_binding?.spec_sha256,
+    );
+    assert.equal(firstRunAttemptInputs[1]?.reviewed_artifact_hashes?.[0], artifactHash);
+    assert.equal(
+      firstRunAttemptInputs[1]?.execution_content_binding?.spec.input_artifacts[0]?.sha256,
+      `sha256:${artifactHash}`,
     );
 
     const db = new DatabaseSync(path.join(stateRoot, 'family-runtime', 'queue.sqlite'));

@@ -6,6 +6,7 @@ import {
 } from '../pack/index.ts';
 import type { TemporalStageAttemptWorkflowInput } from './family-runtime-temporal.ts';
 import {
+  canonicalStageRunInputArtifacts,
   canonicalStageAttemptDeclaredStageIds,
   immutablePackageClosureFromWorkspaceLocator,
   revalidateStageRunImmutableSpecContent,
@@ -24,12 +25,10 @@ function text(value: unknown) {
 }
 
 function artifactPairs(refs: unknown, hashes: unknown) {
-  const artifactRefs = Array.isArray(refs) ? refs : [];
-  const artifactHashes = Array.isArray(hashes) ? hashes : [];
-  return artifactRefs.map((ref, index) => ({
+  return canonicalStageRunInputArtifacts(refs, hashes, []).map(({ ref, sha256 }) => ({
     ref,
-    sha256: artifactHashes[index],
-  })).sort((left, right) => canonicalJsonText(left).localeCompare(canonicalJsonText(right)));
+    sha256,
+  }));
 }
 
 export function resolveStageRunAttemptExecutorContent(
