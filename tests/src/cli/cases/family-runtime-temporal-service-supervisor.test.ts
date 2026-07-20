@@ -69,11 +69,25 @@ function launchctlResult(args: string[], ok: boolean, stdout = '', stderr = ''):
   };
 }
 
-function createFakeLaunchctl(options: { replacePidOnKickstart?: boolean } = {}) {
+function createFakeLaunchctl(options: {
+  replacePidOnKickstart?: boolean;
+  kickstartDelayMs?: number;
+  monotonicNowMs?: () => number;
+} = {}) {
   let loaded = false;
   let bootstrapCount = 0;
   let pid = 4242;
+  let kickstartReadyAtMs: number | null = null;
   const calls: string[][] = [];
+  const settleKickstart = () => {
+    if (
+      kickstartReadyAtMs !== null
+      && (options.monotonicNowMs?.() ?? Date.now()) >= kickstartReadyAtMs
+    ) {
+      pid += 1;
+      kickstartReadyAtMs = null;
+    }
+  };
   return {
     calls,
     get loaded() {
@@ -82,11 +96,18 @@ function createFakeLaunchctl(options: { replacePidOnKickstart?: boolean } = {}) 
     get bootstrapCount() {
       return bootstrapCount;
     },
+    get kickstartPending() {
+      settleKickstart();
+      return kickstartReadyAtMs !== null;
+    },
     run(args: string[]) {
       calls.push(args);
       if (args[0] === 'print') {
+        settleKickstart();
         return loaded
-          ? launchctlResult(args, true, `state = running\npid = ${pid}\nlast exit code = 0\n`)
+          ? kickstartReadyAtMs === null
+            ? launchctlResult(args, true, `state = running\npid = ${pid}\nlast exit code = 0\n`)
+            : launchctlResult(args, true, 'state = waiting\nlast exit code = 0\n')
           : launchctlResult(args, false, '', 'Could not find service');
       }
       if (args[0] === 'bootstrap') {
@@ -101,7 +122,12 @@ function createFakeLaunchctl(options: { replacePidOnKickstart?: boolean } = {}) 
       if (args[0] === 'kickstart') {
         loaded = true;
         if (options.replacePidOnKickstart !== false) {
-          pid += 1;
+          const delayMs = options.kickstartDelayMs ?? 0;
+          if (delayMs > 0) {
+            kickstartReadyAtMs = (options.monotonicNowMs?.() ?? Date.now()) + delayMs;
+          } else {
+            pid += 1;
+          }
         }
         return launchctlResult(args, true);
       }
@@ -595,6 +621,66 @@ test('managed macOS Temporal restart uses kickstart -k and only succeeds after f
       restartCalls.find((args) => args[0] === 'kickstart'),
       ['kickstart', '-k', 'gui/501/ai.opl.family-runtime.temporal-service'],
     );
+  } finally {
+    if (previousAddress === undefined) {
+      delete process.env.OPL_TEMPORAL_ADDRESS;
+    } else {
+      process.env.OPL_TEMPORAL_ADDRESS = previousAddress;
+    }
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    fixture.close();
+  }
+});
+
+test('managed macOS Temporal restart waits through the configured launchd throttle window', async () => {
+  const fixture = createFixture();
+  let elapsedMs = 0;
+  const fakeLaunchctl = createFakeLaunchctl({
+    kickstartDelayMs: 15_000,
+    monotonicNowMs: () => elapsedMs,
+  });
+  const server = net.createServer((socket) => socket.end());
+  const previousAddress = process.env.OPL_TEMPORAL_ADDRESS;
+  delete process.env.OPL_TEMPORAL_ADDRESS;
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', resolve);
+  });
+  const serverAddress = server.address();
+  assert.equal(typeof serverAddress, 'object');
+  const port = typeof serverAddress === 'object' && serverAddress ? serverAddress.port : 0;
+  const launcher: TemporalServiceLauncher = {
+    ...fixture.launcher,
+    address: `127.0.0.1:${port}`,
+    args: ['server', 'start-dev', '--ip', '127.0.0.1', '--port', String(port)],
+    command: `${fixture.launcher.executable} server start-dev --ip 127.0.0.1 --port ${port}`,
+  };
+  const runtime = {
+    platform: 'darwin' as const,
+    launchAgentsDir: fixture.launchAgentsDir,
+    launchctlTarget: 'gui/501',
+    runLaunchctl: (args: string[]) => fakeLaunchctl.run(args),
+    resolveLauncher: () => launcher,
+    probeServer: async () => fakeLaunchctl.loaded && !fakeLaunchctl.kickstartPending,
+    readinessPollMs: 1_000,
+    monotonicNowMs: () => elapsedMs,
+    sleep: async (milliseconds: number) => {
+      elapsedMs += milliseconds;
+    },
+    now: () => '2026-07-20T07:21:24.000Z',
+  };
+  try {
+    const installed = await runTemporalServiceSupervisorCommand(fixture.db, fixture.paths, 'install', runtime);
+    assert.equal(installed.ready, true);
+
+    const restarted = await restartTemporalServiceLifecycle(fixture.db, fixture.paths, runtime);
+
+    assert.equal(restarted.restart_status, 'restarted');
+    assert.equal(restarted.ready, true);
+    assert.equal(restarted.previous_supervisor_pid, 4242);
+    assert.equal(restarted.supervisor_pid, 4243);
+    assert.equal(restarted.supervisor_pid_changed, true);
+    assert.equal(elapsedMs, 15_000);
   } finally {
     if (previousAddress === undefined) {
       delete process.env.OPL_TEMPORAL_ADDRESS;

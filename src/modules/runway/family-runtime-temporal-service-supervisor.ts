@@ -42,6 +42,7 @@ export type TemporalServiceSupervisorRuntime = TemporalServiceSupervisorStateRun
   probeServer?: (address: string) => Promise<boolean>;
   readinessTimeoutMs?: number;
   readinessPollMs?: number;
+  monotonicNowMs?: () => number;
   sleep?: (milliseconds: number) => Promise<void>;
   inspectDetachedService?: typeof inspectDetachedTemporalServiceState;
   stopDetachedService?: typeof stopTemporalServiceLifecycle;
@@ -50,6 +51,9 @@ export type TemporalServiceSupervisorRuntime = TemporalServiceSupervisorStateRun
 
 const DEFAULT_READINESS_TIMEOUT_MS = 5_000;
 const DEFAULT_READINESS_POLL_MS = 100;
+const DEFAULT_KICKSTART_READINESS_TIMEOUT_MS = (
+  TEMPORAL_SERVICE_SUPERVISOR_THROTTLE_SECONDS * 1_000
+) + DEFAULT_READINESS_TIMEOUT_MS;
 
 function now(runtime: TemporalServiceSupervisorRuntime) {
   return runtime.now?.() ?? new Date().toISOString();
@@ -235,16 +239,18 @@ async function inspectReady(
 async function waitForReady(
   paths: RuntimePaths,
   runtime: TemporalServiceSupervisorRuntime,
+  defaultTimeoutMs = DEFAULT_READINESS_TIMEOUT_MS,
 ) {
-  const timeoutMs = runtime.readinessTimeoutMs ?? DEFAULT_READINESS_TIMEOUT_MS;
+  const timeoutMs = runtime.readinessTimeoutMs ?? defaultTimeoutMs;
   const pollMs = runtime.readinessPollMs ?? DEFAULT_READINESS_POLL_MS;
+  const monotonicNowMs = runtime.monotonicNowMs ?? Date.now;
   const sleep = runtime.sleep ?? ((milliseconds: number) => new Promise<void>((resolve) => {
     setTimeout(resolve, milliseconds);
   }));
-  const deadline = Date.now() + timeoutMs;
+  const deadline = monotonicNowMs() + timeoutMs;
   let state = await inspectReady(paths, runtime);
-  while (!state.ready && Date.now() < deadline) {
-    await sleep(Math.min(pollMs, Math.max(0, deadline - Date.now())));
+  while (!state.ready && monotonicNowMs() < deadline) {
+    await sleep(Math.min(pollMs, Math.max(0, deadline - monotonicNowMs())));
     state = await inspectReady(paths, runtime);
   }
   return state;
@@ -540,7 +546,9 @@ async function installSupervisor(
       '-k',
       `${temporalServiceSupervisorLaunchctlTarget(runtime)}/${TEMPORAL_SERVICE_SUPERVISOR_LABEL}`,
     ], runtime);
-    const supervisor = trigger.ok ? await waitForReady(paths, runtime) : await inspectReady(paths, runtime);
+    const supervisor = trigger.ok
+      ? await waitForReady(paths, runtime, DEFAULT_KICKSTART_READINESS_TIMEOUT_MS)
+      : await inspectReady(paths, runtime);
     const payload = basePayload({
       action: 'install',
       status: trigger.ok && supervisor.ready ? 'ready' : 'installed_unready',
@@ -646,7 +654,9 @@ async function triggerSupervisor(
     '-k',
     `${temporalServiceSupervisorLaunchctlTarget(runtime)}/${TEMPORAL_SERVICE_SUPERVISOR_LABEL}`,
   ], runtime);
-  const supervisor = result.ok ? await waitForReady(paths, runtime) : await inspectReady(paths, runtime);
+  const supervisor = result.ok
+    ? await waitForReady(paths, runtime, DEFAULT_KICKSTART_READINESS_TIMEOUT_MS)
+    : await inspectReady(paths, runtime);
   const payload = basePayload({
     action: 'trigger',
     status: result.ok && supervisor.ready ? 'ready' : result.ok ? 'triggered_unready' : 'blocked_trigger_failed',
