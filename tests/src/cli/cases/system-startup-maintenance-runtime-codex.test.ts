@@ -1,6 +1,7 @@
 import { assert, fs, os, path, runCli, shellSingleQuote, test } from '../helpers.ts';
 import { runGitFixtureCommand } from '../helpers-parts/family-fixtures.ts';
 import { withCliTimeout } from './system-startup-maintenance-cases/shared.ts';
+import { rollbackCodexRuntimeGeneration } from '../../../../src/modules/connect/system-installation/engine-helpers.ts';
 
 function writeFakeNpmRuntimeInstaller(fakeNpm: string, logPath: string) {
   fs.writeFileSync(
@@ -49,6 +50,24 @@ test('system startup-maintenance applies staged App-owned runtime Codex update w
   fs.mkdirSync(fakeBin, { recursive: true });
   fs.writeFileSync(runtimeCodex, '#!/usr/bin/env bash\necho "codex-cli 0.130.0"\n', { mode: 0o755 });
   fs.writeFileSync(runtimeRg, '#!/usr/bin/env bash\necho "rg old"\n', { mode: 0o755 });
+  const fullRuntimeSentinels = new Map([
+    ['bin/opl', '#!/usr/bin/env bash\necho "opl full runtime"\n'],
+    ['opl/package.json', '{"name":"one-person-lab"}\n'],
+    ['python/lib/python3.12/site-packages/opl_framework/source_transport.py', 'FULL_MAG_IMPORT_OK = True\n'],
+    ['contracts/framework-contract.json', '{"surface":"framework"}\n'],
+    ['modules/mag/opl-runtime-module.json', '{"module_id":"medautogrant"}\n'],
+  ]);
+  for (const [relativePath, content] of fullRuntimeSentinels) {
+    const targetPath = path.join(homeRoot, 'runtime', 'current', relativePath);
+    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+    fs.writeFileSync(targetPath, content, relativePath === 'bin/opl' ? { mode: 0o755 } : undefined);
+  }
+  const sentinelBytes = new Map(
+    [...fullRuntimeSentinels.keys()].map((relativePath) => [
+      relativePath,
+      fs.readFileSync(path.join(homeRoot, 'runtime', 'current', relativePath)),
+    ]),
+  );
   writeFakeNpmRuntimeInstaller(fakeNpm, npmLog);
 
   fs.mkdirSync(developerCheckout, { recursive: true });
@@ -154,6 +173,14 @@ test('system startup-maintenance applies staged App-owned runtime Codex update w
     const pendingMetadataPath = path.join(homeRoot, 'runtime', 'pending-codex-generation.json');
     assert.equal(fs.existsSync(pendingMetadataPath), true);
     const pendingBeforeDaily = fs.readFileSync(pendingMetadataPath, 'utf8');
+    const pendingGeneration = JSON.parse(pendingBeforeDaily) as { generation_root: string };
+    const pendingBin = path.join(pendingGeneration.generation_root, 'bin');
+    for (const entry of fs.readdirSync(pendingBin)) {
+      if (entry !== 'codex' && entry !== 'rg') {
+        fs.rmSync(path.join(pendingBin, entry), { recursive: true, force: true });
+      }
+    }
+    assert.deepEqual(fs.readdirSync(pendingBin).sort(), ['codex', 'rg']);
     const npmLogBeforeDaily = fs.readFileSync(npmLog, 'utf8');
 
     const daily = withCliTimeout('120000', () => runCli(['system', 'startup-maintenance'], {
@@ -174,6 +201,55 @@ test('system startup-maintenance applies staged App-owned runtime Codex update w
     assert.equal(activated.system_action.details.pending_runtime_activation.status, 'activated');
     assert.match(fs.readFileSync(runtimeCodex, 'utf8'), /0\.134\.0/);
     assert.match(fs.readFileSync(runtimeRg, 'utf8'), /rg staged/);
+    for (const [relativePath, expectedBytes] of sentinelBytes) {
+      assert.deepEqual(
+        fs.readFileSync(path.join(homeRoot, 'runtime', 'current', relativePath)),
+        expectedBytes,
+        `${relativePath} must survive Codex activation`,
+      );
+    }
+
+    const previousRuntimeRoot = process.env.OPL_RUNTIME_ROOT;
+    process.env.OPL_RUNTIME_ROOT = path.join(homeRoot, 'runtime');
+    try {
+      for (const failureAt of [2, 3]) {
+        let renameCount = 0;
+        assert.throws(
+          () => rollbackCodexRuntimeGeneration({
+            renameSync(from, to) {
+              renameCount += 1;
+              if (renameCount === failureAt) throw new Error(`injected Codex rollback failure ${failureAt}`);
+              fs.renameSync(from, to);
+            },
+          }),
+          /injected Codex rollback failure/,
+        );
+        assert.match(fs.readFileSync(runtimeCodex, 'utf8'), /0\.134\.0/);
+        assert.match(
+          fs.readFileSync(path.join(homeRoot, 'runtime', 'previous-toolchain', 'codex'), 'utf8'),
+          /0\.130\.0/,
+        );
+        assert.equal(
+          fs.readdirSync(path.join(homeRoot, 'runtime'))
+            .some((entry) => entry.startsWith('.rollback-toolchain-swap-')),
+          false,
+        );
+      }
+      const rolledBack = rollbackCodexRuntimeGeneration();
+      assert.equal(rolledBack.status, 'completed');
+      assert.match(fs.readFileSync(runtimeCodex, 'utf8'), /0\.130\.0/);
+      assert.match(fs.readFileSync(runtimeRg, 'utf8'), /rg old/);
+      for (const [relativePath, expectedBytes] of sentinelBytes) {
+        assert.deepEqual(
+          fs.readFileSync(path.join(homeRoot, 'runtime', 'current', relativePath)),
+          expectedBytes,
+          `${relativePath} must survive Codex rollback`,
+        );
+      }
+    } finally {
+      if (previousRuntimeRoot === undefined) delete process.env.OPL_RUNTIME_ROOT;
+      else process.env.OPL_RUNTIME_ROOT = previousRuntimeRoot;
+    }
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }

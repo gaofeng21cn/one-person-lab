@@ -31,6 +31,8 @@ import {
   rollbackManagedRuntimeSourceMutation,
 } from '../../../../../src/modules/connect/agent-package-registry-parts/managed-runtime-source-carrier.ts';
 import {
+  computePackageChannelTreeSha256,
+  readPackageChannelLifecycle,
   rollbackManagedModulePackageChannel,
 } from '../../../../../src/modules/connect/system-installation/module-package-channel.ts';
 import { resolveOplDomainModuleSpec } from '../../../../../src/modules/connect/system-installation/modules.ts';
@@ -1245,9 +1247,32 @@ test('Packages compensates managed runtime source across downstream failure upda
     assert.equal(fs.readFileSync(path.join(modulesRoot, 'redcube-ai', '.runtime-prepared'), 'utf8').trim(), '0.1.1');
 
     const spec = resolveOplDomainModuleSpec('redcube');
+    const managedCheckout = path.join(modulesRoot, 'redcube-ai');
+    const previousCheckout = `${managedCheckout}.previous`;
+    const repairedSource = missingSourceRepaired.opl_agent_package_repair.package_lock.managed_runtime_source;
+    const pythonCacheRoot = path.join(managedCheckout, 'src', '__pycache__');
+    fs.mkdirSync(pythonCacheRoot, { recursive: true });
+    fs.writeFileSync(path.join(pythonCacheRoot, 'fixture_agent.cpython-312.pyc'), 'derived bytecode\n');
+    const cacheStatus = runCli(['packages', 'status', '--package-id', FIXTURE_RCA_PACKAGE_ID], env) as any;
+    assert.equal(cacheStatus.opl_agent_package_status.runtime_source_readiness.status, 'current');
+    assert.equal(computePackageChannelTreeSha256(managedCheckout), repairedSource.tree_sha256);
+
+    const previousPreparedPath = path.join(previousCheckout, '.runtime-prepared');
+    const previousPreparedBytes = fs.readFileSync(previousPreparedPath);
+    fs.writeFileSync(previousPreparedPath, 'previous generation drift\n');
+    assert.throws(
+      () => rollbackManagedModulePackageChannel(spec, managedCheckout),
+      /clean managed package root/,
+    );
+    fs.writeFileSync(previousPreparedPath, previousPreparedBytes);
+
+    const preservedFailurePath = path.join(managedCheckout, 'failed-update-diagnostic.txt');
+    fs.writeFileSync(preservedFailurePath, 'retain failed RCA generation for diagnosis\n');
+    const dirtyCurrentTreeSha256 = computePackageChannelTreeSha256(managedCheckout);
+    assert.notEqual(dirtyCurrentTreeSha256, repairedSource.tree_sha256);
     for (const failureAt of [2, 3]) {
       let renameCount = 0;
-      assert.throws(() => rollbackManagedModulePackageChannel(spec, path.join(modulesRoot, 'redcube-ai'), {
+      assert.throws(() => rollbackManagedModulePackageChannel(spec, managedCheckout, {
         renameSync(from: string, to: string) {
           renameCount += 1;
           if (renameCount === failureAt) throw new Error(`injected rename failure ${failureAt}`);
@@ -1256,6 +1281,7 @@ test('Packages compensates managed runtime source across downstream failure upda
       } as any), /injected rename failure/);
       assert.equal(fs.readFileSync(path.join(modulesRoot, 'redcube-ai', '.runtime-prepared'), 'utf8').trim(), '0.1.1');
       assert.equal(fs.readFileSync(path.join(modulesRoot, 'redcube-ai.previous', '.runtime-prepared'), 'utf8').trim(), '0.1.0');
+      assert.equal(fs.readFileSync(preservedFailurePath, 'utf8').trim(), 'retain failed RCA generation for diagnosis');
       assert.equal(fs.existsSync(`${path.join(modulesRoot, 'redcube-ai')}.revert-${process.pid}`), false);
     }
 
@@ -1267,6 +1293,12 @@ test('Packages compensates managed runtime source across downstream failure upda
     assert.equal(rolledBack.opl_agent_package_rollback.runtime_source_cleanup.status, 'cleanup_pending');
     assert.equal(rolledBack.opl_agent_package_rollback.package_lock.managed_runtime_source.source_git_head_sha, 'source-transaction-v1');
     assert.equal(fs.readFileSync(path.join(modulesRoot, 'redcube-ai', '.runtime-prepared'), 'utf8').trim(), '0.1.0');
+    assert.equal(
+      fs.readFileSync(path.join(previousCheckout, 'failed-update-diagnostic.txt'), 'utf8').trim(),
+      'retain failed RCA generation for diagnosis',
+    );
+    const preservedFailureLifecycle = readPackageChannelLifecycle(previousCheckout, spec);
+    assert.equal(preservedFailureLifecycle?.current.tree_sha256, dirtyCurrentTreeSha256);
     const rollbackCleanup = runCli(['packages', 'status', '--package-id', FIXTURE_RCA_PACKAGE_ID], env) as any;
     assert.equal(rollbackCleanup.opl_agent_package_status.runtime_source_recovery.status, 'recovery_required');
     assert.equal(rollbackCleanup.opl_agent_package_status.runtime_source_recovery.pending_transaction_count, 1);

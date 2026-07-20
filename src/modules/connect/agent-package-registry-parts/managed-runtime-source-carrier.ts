@@ -11,6 +11,8 @@ import {
   readPackageChannelLifecycle,
   refreshPackageChannelCurrentSnapshot,
   rollbackManagedModulePackageChannel,
+  validateManagedModulePackageChannelRollback,
+  type PackageChannelActivationSnapshot,
   type ManagedModulePackageChannelSelection,
 } from '../system-installation/module-package-channel.ts';
 import {
@@ -436,6 +438,18 @@ function validateCurrentState(state: AgentPackageManagedRuntimeSourceState) {
   return current;
 }
 
+function packageChannelSnapshotMatchesState(
+  snapshot: PackageChannelActivationSnapshot,
+  state: AgentPackageManagedRuntimeSourceState,
+) {
+  return snapshot.channel_version === state.channel_version
+    && snapshot.artifact_ref === state.artifact_ref
+    && snapshot.layer_digest === state.layer_digest
+    && snapshot.source_archive_sha256 === state.source_archive_sha256
+    && snapshot.source_git_head_sha === state.source_git_head_sha
+    && snapshot.tree_sha256 === state.tree_sha256;
+}
+
 function commandDigest(stdout: string, stderr: string) {
   return `sha256:${crypto.createHash('sha256').update(stdout).update('\0').update(stderr).digest('hex')}`;
 }
@@ -507,9 +521,12 @@ function prepareRuntimeSource(
     lifecycle.current.tree_sha256,
   );
   const managedPackageScope = includeBootstrap || packageProbeOnly;
-  const commandEnv = managedPackageScope
-    ? {
-        ...process.env,
+  const commandEnv = {
+    ...process.env,
+    PYTHONDONTWRITEBYTECODE: '1',
+    PYTHONPYCACHEPREFIX: path.join(preparationRoot, 'python-cache'),
+    ...(managedPackageScope
+      ? {
         HOME: path.join(preparationRoot, 'home'),
         UV_TOOL_DIR: path.join(preparationRoot, 'uv-tools'),
         UV_TOOL_BIN_DIR: path.join(preparationRoot, 'bin'),
@@ -517,7 +534,8 @@ function prepareRuntimeSource(
         npm_config_cache: path.join(preparationRoot, 'npm-cache'),
         PATH: `${path.join(preparationRoot, 'bin')}${path.delimiter}${process.env.PATH ?? ''}`,
       }
-    : process.env;
+      : {}),
+  };
   if (managedPackageScope) fs.mkdirSync(commandEnv.HOME!, { recursive: true });
   const bootstrap = includeBootstrap
     ? runRequiredCommand(
@@ -568,9 +586,16 @@ function prepareRuntimeSource(
 }
 
 function currentProbeEnvironment(state: AgentPackageManagedRuntimeSourceState) {
-  if (!state.preparation_root) return process.env;
+  if (!state.preparation_root) {
+    return {
+      ...process.env,
+      PYTHONDONTWRITEBYTECODE: '1',
+    };
+  }
   return {
     ...process.env,
+    PYTHONDONTWRITEBYTECODE: '1',
+    PYTHONPYCACHEPREFIX: path.join(state.preparation_root, 'python-cache'),
     HOME: path.join(state.preparation_root, 'home'),
     UV_TOOL_DIR: path.join(state.preparation_root, 'uv-tools'),
     UV_TOOL_BIN_DIR: path.join(state.preparation_root, 'bin'),
@@ -1404,8 +1429,8 @@ export function restoreManagedRuntimeSourceCarrier(input: {
       checkout_path: input.restored.checkout_path,
     });
   }
-  const current = validateCurrentState(input.current);
-  if (path.resolve(current.checkout_path) !== path.resolve(input.restored.checkout_path)) {
+  if (path.resolve(input.current.checkout_path) !== path.resolve(input.restored.checkout_path)) {
+    const current = validateCurrentState(input.current);
     const restored = validateCurrentState(input.restored);
     return {
       kind: 'none',
@@ -1416,7 +1441,8 @@ export function restoreManagedRuntimeSourceCarrier(input: {
       staged_removal_paths: [],
     };
   }
-  if (current.tree_sha256 === input.restored.tree_sha256) {
+  if (input.current.tree_sha256 === input.restored.tree_sha256) {
+    const current = validateCurrentState(input.current);
     return {
       kind: 'none',
       module_id: current.module_id,
@@ -1426,16 +1452,25 @@ export function restoreManagedRuntimeSourceCarrier(input: {
       staged_removal_paths: [],
     };
   }
-  const spec = resolveOplDomainModuleSpec(current.module_id);
-  const lifecycle = readPackageChannelLifecycle(current.checkout_path, spec);
-  if (!lifecycle?.previous || lifecycle.previous.tree_sha256 !== input.restored.tree_sha256) {
+  const spec = resolveOplDomainModuleSpec(input.current.module_id);
+  const rollbackTarget = validateManagedModulePackageChannelRollback(spec, input.current.checkout_path);
+  if (
+    input.restored.module_id !== input.current.module_id
+    || !packageChannelSnapshotMatchesState(rollbackTarget.lifecycle.current, input.current)
+    || !packageChannelSnapshotMatchesState(rollbackTarget.previousSnapshot, input.restored)
+  ) {
     throw sourceFailure('Managed runtime source rollback generation is unavailable.', {
-      module_id: current.module_id,
-      checkout_path: current.checkout_path,
+      module_id: input.current.module_id,
+      checkout_path: input.current.checkout_path,
       expected_previous_tree_sha256: input.restored.tree_sha256,
-      actual_previous_tree_sha256: lifecycle?.previous?.tree_sha256 ?? null,
+      actual_previous_tree_sha256: rollbackTarget.previousSnapshot.tree_sha256,
     });
   }
+  const current = {
+    ...input.current,
+    source_mode: 'package_channel' as const,
+    tree_sha256: computePackageChannelTreeSha256(input.current.checkout_path),
+  };
   if (input.dryRun) {
     return {
       kind: 'none',

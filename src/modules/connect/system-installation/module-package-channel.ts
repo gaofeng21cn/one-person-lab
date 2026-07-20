@@ -308,7 +308,10 @@ export function computePackageChannelTreeSha256(rootPath: string) {
     for (const entry of entries) {
       const absolutePath = path.join(directory, entry.name);
       const relativePath = toPosixPath(path.relative(rootPath, absolutePath));
-      if (relativePath === PACKAGED_MODULE_MARKER_FILE) {
+      if (
+        relativePath === PACKAGED_MODULE_MARKER_FILE
+        || (entry.isDirectory() && entry.name === '__pycache__')
+      ) {
         continue;
       }
 
@@ -1018,15 +1021,14 @@ export function installManagedModuleFromPackageChannel(
   }
 }
 
-export function rollbackManagedModulePackageChannel(
+export function validateManagedModulePackageChannelRollback(
   spec: DomainModuleSpec,
   targetPath: string,
-  operations: { renameSync?: typeof fs.renameSync } = {},
-): PackageChannelRollbackResult {
+) {
   const previousPath = packageChannelPreviousRoot(targetPath);
-  const stagePath = packageChannelStageRoot(targetPath);
   const lifecycle = readPackageChannelLifecycle(targetPath, spec);
-  if (!lifecycle?.previous) {
+  const previousSnapshot = lifecycle?.previous;
+  if (!lifecycle || !previousSnapshot) {
     throw new FrameworkContractError(
       'cli_usage_error',
       'Module package-channel revert requires a recorded previous root.',
@@ -1038,14 +1040,14 @@ export function rollbackManagedModulePackageChannel(
       2,
     );
   }
-  if (path.resolve(lifecycle.previous.root) !== path.resolve(previousPath)) {
+  if (path.resolve(previousSnapshot.root) !== path.resolve(previousPath)) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
       'Module package-channel revert previous root does not match the managed previous path.',
       {
         module_id: spec.module_id,
         checkout_path: targetPath,
-        previous_root: lifecycle.previous.root,
+        previous_root: previousSnapshot.root,
         expected_previous_root: previousPath,
       },
     );
@@ -1063,8 +1065,18 @@ export function rollbackManagedModulePackageChannel(
     );
   }
 
-  assertCleanPackageChannelRoot(targetPath, spec);
   assertCleanPackageChannelRoot(previousPath, spec);
+
+  return { lifecycle, previousPath, previousSnapshot };
+}
+
+export function rollbackManagedModulePackageChannel(
+  spec: DomainModuleSpec,
+  targetPath: string,
+  operations: { renameSync?: typeof fs.renameSync } = {},
+): PackageChannelRollbackResult {
+  const { lifecycle, previousPath, previousSnapshot } = validateManagedModulePackageChannelRollback(spec, targetPath);
+  const stagePath = packageChannelStageRoot(targetPath);
 
   const swapPath = `${targetPath}.revert-${process.pid}`;
   const renameSync = operations.renameSync ?? fs.renameSync;
@@ -1089,7 +1101,7 @@ export function rollbackManagedModulePackageChannel(
 
   const activatedAt = nowIso();
   const current = {
-    ...lifecycle.previous,
+    ...previousSnapshot,
     root: targetPath,
     tree_sha256: computePackageChannelTreeSha256(targetPath),
     activated_at: activatedAt,

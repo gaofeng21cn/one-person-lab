@@ -155,7 +155,7 @@ function resolveOplRuntimeToolchainPaths(): RuntimeToolchainPaths {
     staging_root: stagingRoot,
     generations_root: path.join(runtimeRoot, 'generations'),
     pending_metadata_path: path.join(runtimeRoot, 'pending-codex-generation.json'),
-    previous_root: path.join(runtimeRoot, 'previous'),
+    previous_root: path.join(runtimeRoot, 'previous-toolchain'),
   };
 }
 
@@ -781,7 +781,12 @@ function applyCodexVendorToRuntime(
   const generationRoot = path.join(paths.generations_root, `codex-${Date.now()}-${process.pid}`);
   const generationBinDir = path.join(generationRoot, 'bin');
   const generationCodexPath = path.join(generationBinDir, 'codex');
-  fs.mkdirSync(generationBinDir, { recursive: true });
+  if (fs.existsSync(paths.current_bin_dir)) {
+    copyDirectoryContents(paths.current_bin_dir, generationBinDir);
+  } else {
+    fs.mkdirSync(generationBinDir, { recursive: true });
+  }
+  fs.rmSync(generationCodexPath, { force: true });
   copyExecutable(vendor.codex!, generationCodexPath);
   const verification = verifyCodexExecutable(generationCodexPath);
   if (!verification.verified) {
@@ -800,6 +805,7 @@ function applyCodexVendorToRuntime(
   let rgPath: string | null = null;
   if (vendor.rg) {
     const targetRg = path.join(generationBinDir, 'rg');
+    fs.rmSync(targetRg, { force: true });
     copyExecutable(vendor.rg, targetRg);
     rgPath = targetRg;
   }
@@ -901,16 +907,53 @@ export function activatePendingCodexRuntimeGeneration() {
       previous_root: paths.previous_root,
     };
   }
-  fs.rmSync(paths.previous_root, { recursive: true, force: true });
+  const generationBinDir = path.join(generationRoot, 'bin');
+  const activationBinDir = path.join(generationRoot, '.activation-bin');
+  fs.rmSync(activationBinDir, { recursive: true, force: true });
+  fs.mkdirSync(activationBinDir, { recursive: true });
+  for (const sourceRoot of [paths.current_bin_dir, generationBinDir]) {
+    if (!fs.existsSync(sourceRoot)) continue;
+    for (const entry of fs.readdirSync(sourceRoot)) {
+      const targetPath = path.join(activationBinDir, entry);
+      fs.rmSync(targetPath, { recursive: true, force: true });
+      fs.cpSync(path.join(sourceRoot, entry), targetPath, {
+        recursive: true,
+        force: true,
+      });
+    }
+  }
+  fs.mkdirSync(paths.current_root, { recursive: true });
+  const retiredPreviousRoot = path.join(
+    paths.runtime_root,
+    `.previous-toolchain-retired-${process.pid}-${Date.now()}`,
+  );
+  if (fs.existsSync(paths.previous_root)) {
+    fs.renameSync(paths.previous_root, retiredPreviousRoot);
+  }
+  let movedCurrentToolchain = false;
   try {
-    if (fs.existsSync(paths.current_root)) fs.renameSync(paths.current_root, paths.previous_root);
-    fs.renameSync(generationRoot, paths.current_root);
+    if (fs.existsSync(paths.current_bin_dir)) {
+      fs.renameSync(paths.current_bin_dir, paths.previous_root);
+      movedCurrentToolchain = true;
+    }
+    fs.renameSync(activationBinDir, paths.current_bin_dir);
   } catch (error) {
-    if (!fs.existsSync(paths.current_root) && fs.existsSync(paths.previous_root)) {
-      fs.renameSync(paths.previous_root, paths.current_root);
+    if (!fs.existsSync(paths.current_bin_dir) && movedCurrentToolchain && fs.existsSync(paths.previous_root)) {
+      fs.renameSync(paths.previous_root, paths.current_bin_dir);
+    }
+    if (!fs.existsSync(paths.previous_root) && fs.existsSync(retiredPreviousRoot)) {
+      fs.renameSync(retiredPreviousRoot, paths.previous_root);
     }
     throw error;
   }
+  if (fs.existsSync(retiredPreviousRoot)) {
+    if (movedCurrentToolchain) {
+      fs.rmSync(retiredPreviousRoot, { recursive: true, force: true });
+    } else {
+      fs.renameSync(retiredPreviousRoot, paths.previous_root);
+    }
+  }
+  fs.rmSync(generationRoot, { recursive: true, force: true });
   fs.rmSync(paths.pending_metadata_path, { force: true });
   return {
     surface_kind: 'opl_runtime_generation_activation.v1',
@@ -923,7 +966,9 @@ export function activatePendingCodexRuntimeGeneration() {
   };
 }
 
-export function rollbackCodexRuntimeGeneration() {
+export function rollbackCodexRuntimeGeneration(
+  operations: { renameSync?: typeof fs.renameSync } = {},
+) {
   const paths = resolveOplRuntimeToolchainPaths();
   if (!fs.existsSync(paths.previous_root)) {
     return {
@@ -932,13 +977,30 @@ export function rollbackCodexRuntimeGeneration() {
       reason: 'previous_generation_missing',
     };
   }
-  const swapRoot = path.join(paths.runtime_root, `.rollback-swap-${process.pid}-${Date.now()}`);
-  fs.renameSync(paths.current_root, swapRoot);
+  if (!fs.existsSync(paths.current_bin_dir)) {
+    return {
+      surface_kind: 'opl_runtime_generation_rollback.v1',
+      status: 'manual_required',
+      reason: 'current_toolchain_missing',
+    };
+  }
+  const swapRoot = path.join(paths.runtime_root, `.rollback-toolchain-swap-${process.pid}-${Date.now()}`);
+  const renameSync = operations.renameSync ?? fs.renameSync;
+  let completedRenameCount = 0;
   try {
-    fs.renameSync(paths.previous_root, paths.current_root);
-    fs.renameSync(swapRoot, paths.previous_root);
+    renameSync(paths.current_bin_dir, swapRoot);
+    completedRenameCount = 1;
+    renameSync(paths.previous_root, paths.current_bin_dir);
+    completedRenameCount = 2;
+    renameSync(swapRoot, paths.previous_root);
+    completedRenameCount = 3;
   } catch (error) {
-    if (!fs.existsSync(paths.current_root) && fs.existsSync(swapRoot)) fs.renameSync(swapRoot, paths.current_root);
+    if (completedRenameCount === 2) {
+      renameSync(paths.current_bin_dir, paths.previous_root);
+      renameSync(swapRoot, paths.current_bin_dir);
+    } else if (completedRenameCount === 1 && !fs.existsSync(paths.current_bin_dir) && fs.existsSync(swapRoot)) {
+      renameSync(swapRoot, paths.current_bin_dir);
+    }
     throw error;
   }
   fs.rmSync(paths.pending_metadata_path, { force: true });
