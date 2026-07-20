@@ -1,0 +1,172 @@
+{
+  "surface_kind": "opl_release_set.v2",
+  "schema_ref": "contracts/opl-framework/release-set-v2.schema.json",
+  "generation": "26.7.20",
+  "component_count": 9,
+  "component_ids": [
+    "opl-base",
+    "opl-app",
+    "mas",
+    "mag",
+    "rca",
+    "oma",
+    "obf",
+    "mas-scholar-skills",
+    "opl-flow"
+  ],
+  "bom_status": "planned",
+  "bom_digest": null,
+  "owner_cohort_lock": {
+    "surface_kind": "opl_package_owner_cohort_lock.v1",
+    "ref": "owner-cohort-lock.json",
+    "digest": "sha256:2f1acedf0690c2d42675c81b80b9dfdff4972f49b8e3550965f1ea6601607af9",
+    "package_ids": [
+      "mag",
+      "mas",
+      "mas-scholar-skills",
+      "obf",
+      "oma",
+      "opl-flow",
+      "rca"
+    ]
+  },
+  "update_decision": {
+    "comparison_key": "component_id+version+artifact_digest",
+    "release_set_revision_affects_component_update": false,
+    "unchanged_component_behavior": "reuse_existing_artifact_digest_without_rebuild_or_reinstall"
+  },
+  "channel_pointer_policy": {
+    "mutable_tags": [
+      "candidate",
+      "latest-stable"
+    ],
+    "promotion_mode": "retag_exact_immutable_release_set_digest",
+    "channel_is_not_bom_content": true
+  },
+  "components": {
+    "base": {
+      "component_id": "opl-base",
+      "component_kind": "base",
+      "version": "0.3.4",
+      "source_commit": null,
+      "artifact_ref": "ghcr.io/gaofeng21cn/one-person-lab-framework:0.3.4",
+      "artifact_digest": null,
+      "artifact_status": "pending_bundle_source_freeze"
+    },
+    "app": {
+      "component_id": "opl-app",
+      "component_kind": "app",
+      "version": "26.7.20",
+      "source_commit": null,
+      "artifact_ref": null,
+      "artifact_digest": null,
+      "artifact_status": "pending_bundle_source_freeze"
+    },
+    "packages": {
+      "component_kind": "package_collection",
+      "package_count": 7,
+      "package_ids": [
+        "mas",
+        "mag",
+        "rca",
+        "oma",
+        "obf",
+        "mas-scholar-skills",
+        "opl-flow"
+      ],
+      "members": {
+        "mas": {
+          "component_id": "mas",
+          "component_kind": "package",
+          "version": "0.2.15",
+          "source_commit": "2ccb8dcded76d8d6ad04634f98e3a757ef7f75da",
+          "artifact_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/mas:0.2.15",
+          "artifact_digest": null,
+          "artifact_status": "pending_remote_verification",
+          "manifest_ref": "contracts/opl-framework/packages/mas.json",
+          "manifest_sha256": "sha256:38a15c3fa754f945686398e52dfc299624735428be7104b43d25e6d9d366d717",
+          "payload_manifest_ref": "contracts/opl-framework/packages/payloads/mas-0.2.15.json",
+          "payload_manifest_sha256": "sha256:b5b224142d41b5c41019870b083fdaf5bb29065db56f93759bde4d40006c7182"
+        },
+        "mag": {
+          "component_id": "mag",
+          "component_kind": "package",
+          "version": "0.3.4",
+          "source_commit": "c62c09c8b52fc13bdf0b2725189c2bec6ed82772",
+          "artifact_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/mag:0.3.4",
+          "artifact_digest": null,
+          "artifact_status": "pending_remote_verification",
+          "manifest_ref": "contracts/opl-framework/packages/mag.json",
+          "manifest_sha256": "sha256:f57822620c084b20b0fde6b84b233c4ddc3d6bf61a547e148f6f5a90a24626bb",
+          "payload_manifest_ref": "contracts/opl-framework/packages/payloads/mag-0.3.4.json",
+          "payload_manifest_sha256": "sha256:8e3dfe8917dc86359b206c2c3746771f0abfa925bdaebcc327aa30cc3a7b5d46"
+        },
+        "rca": {
+          "component_id": "rca",
+          "component_kind": "package",
+          "version": "0.2.8",
+          "source_commit": "d41360070fd2f02b85f2eed5761670746d10e25e",
+          "artifact_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/rca:0.2.8",
+          "artifact_digest": null,
+          "artifact_status": "pending_remote_verification",
+          "manifest_ref": "contracts/opl-framework/packages/rca.json",
+          "manifest_sha256": "sha256:87f73b832411933848b16c1dad70bf96279c35208b62404063d887603e5fe08f",
+          "payload_manifest_ref": "contracts/opl-framework/packages/payloads/rca-0.2.8.json",
+          "payload_manifest_sha256": "sha256:141fbca6ac17a20571af06d19c64a9e19052e4765b83606e685586d625086d48"
+        },
+        "oma": {
+          "component_id": "oma",
+          "component_kind": "package",
+          "version": "0.4.2",
+          "source_commit": "53523ba4f5b7f1f8046696db2be3c88feb225c10",
+          "artifact_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/oma:0.4.2",
+          "artifact_digest": null,
+          "artifact_status": "pending_remote_verification",
+          "manifest_ref": "contracts/opl-framework/packages/oma.json",
+          "manifest_sha256": "sha256:dc5222460778825dedd3493884b61e91c12ff1df0d613b0ef90d1e793030ce49",
+          "payload_manifest_ref": "contracts/opl-framework/packages/payloads/oma-0.4.2.json",
+          "payload_manifest_sha256": "sha256:60bf4bd73b7237b35cd99c6cde23ae1a4ae8df30ffe73658924082f83905d93e"
+        },
+        "obf": {
+          "component_id": "obf",
+          "component_kind": "package",
+          "version": "0.3.6",
+          "source_commit": "0e0a9b57060fb35e73375692bf8cc708ae685f31",
+          "artifact_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/obf:0.3.6",
+          "artifact_digest": null,
+          "artifact_status": "pending_remote_verification",
+          "manifest_ref": "contracts/opl-framework/packages/obf.json",
+          "manifest_sha256": "sha256:25908a5b1d03681eb083630bb6652eed5c0dd319210bdf45e364eca048b053da",
+          "payload_manifest_ref": "contracts/opl-framework/packages/payloads/obf-0.3.6.json",
+          "payload_manifest_sha256": "sha256:104cd680b9d15c0603b00b231716165544cb81acea82f5bd8f64c0fa136412cf"
+        },
+        "mas-scholar-skills": {
+          "component_id": "mas-scholar-skills",
+          "component_kind": "package",
+          "version": "0.2.13",
+          "source_commit": "c25a589b7b5ceccada8f46227334fccf185abd0a",
+          "artifact_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/mas-scholar-skills:0.2.13",
+          "artifact_digest": null,
+          "artifact_status": "pending_remote_verification",
+          "manifest_ref": "contracts/opl-framework/packages/mas-scholar-skills.json",
+          "manifest_sha256": "sha256:1dec0576f2a853b4e130ede4eef527bd7609804f8ca2afac439ba2a9acc70d5c",
+          "payload_manifest_ref": "contracts/opl-framework/packages/payloads/mas-scholar-skills-0.2.13.json",
+          "payload_manifest_sha256": "sha256:38a48b2dcc5dd570eb564c0cc6a219bf5773adb0e2a0b282706d6aae67c80dd7"
+        },
+        "opl-flow": {
+          "component_id": "opl-flow",
+          "component_kind": "package",
+          "version": "0.1.24",
+          "source_commit": "ea94cbc5d660caf870fefe2842fd0157fca52bd0",
+          "artifact_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/opl-flow:0.1.24",
+          "artifact_digest": null,
+          "artifact_status": "pending_remote_verification",
+          "manifest_ref": "contracts/opl-framework/packages/opl-flow.json",
+          "manifest_sha256": "sha256:9c109ccad6d4af130424e905d68fa2da47c664b4f744a88ed4fb71f2a21607d8",
+          "payload_manifest_ref": "contracts/opl-framework/packages/payloads/opl-flow-0.1.24.json",
+          "payload_manifest_sha256": "sha256:cb0b352fc82ec7d97a3f04c5f4b08477688d9f41570d27fc3351d610e37e6610"
+        }
+      }
+    }
+  }
+}

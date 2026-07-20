@@ -77,6 +77,7 @@ import { buildFoundryCommandSpecs } from './public-command-specs-parts/foundry.t
 import { buildOkfCommandSpecs } from './public-command-specs-parts/okf.ts';
 import { buildPackagesCommandSpecs } from './public-command-specs-parts/packages.ts';
 import { buildProfileCommandSpecs } from './public-command-specs-parts/profiles.ts';
+import { buildReleaseCommandSpecs } from './public-command-specs-parts/release.ts';
 import { buildStageCommandSpecs, validateStageDerivedLensCommandSpecs } from './public-command-specs-parts/stages.ts';
 import { buildUpdateCommandSpecs } from './public-command-specs-parts/update.ts';
 import { buildWorkspaceCommandSpecs } from './public-command-specs-parts/workspace.ts';
@@ -194,6 +195,7 @@ export function buildPublicCommandSpecs(
   const okfCommandSpecs = buildOkfCommandSpecs();
   const packagesCommandSpecs = buildPackagesCommandSpecs(getContracts, (command) => publicCommandSpecs[command]);
   const profileCommandSpecs = buildProfileCommandSpecs();
+  const releaseCommandSpecs = buildReleaseCommandSpecs((command) => publicCommandSpecs[command]);
   const stageCommandSpecs = buildStageCommandSpecs(getContracts);
   const updateCommandSpecs = buildUpdateCommandSpecs(getContracts);
   const workspaceCommandSpecs = buildWorkspaceCommandSpecs(commandSpecs);
@@ -506,6 +508,7 @@ export function buildPublicCommandSpecs(
       group: 'status',
     }),
     ...workspaceCommandSpecs,
+    ...releaseCommandSpecs,
     'domain manifests': cloneCommandSpec(commandSpecs['domain manifests'], {
       usage: 'opl domain manifests',
       examples: ['opl domain manifests'],

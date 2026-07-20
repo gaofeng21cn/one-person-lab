@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.dev/contracts/opl-framework/release-bundle-operation-receipt.schema.json",
+  "title": "OPL Release Bundle Operation Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "surface_kind",
+    "schema_ref",
+    "operation",
+    "status",
+    "bundle_digest",
+    "track",
+    "executor",
+    "attempt_id",
+    "recorded_at",
+    "details"
+  ],
+  "properties": {
+    "surface_kind": { "const": "opl_release_bundle_operation_receipt.v1" },
+    "schema_ref": {
+      "const": "contracts/opl-framework/release-bundle-operation-receipt.schema.json"
+    },
+    "operation": { "enum": ["freeze", "build", "verify", "publish", "reconcile"] },
+    "status": {
+      "enum": ["frozen", "complete", "idempotent", "upload_required", "reconcile_only"]
+    },
+    "bundle_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "track": { "type": ["string", "null"], "enum": ["standard", "full", null] },
+    "executor": { "type": ["string", "null"], "enum": ["local", "remote", null] },
+    "attempt_id": { "type": ["string", "null"] },
+    "recorded_at": { "type": "string", "format": "date-time" },
+    "details": { "type": "object" }
+  }
+}

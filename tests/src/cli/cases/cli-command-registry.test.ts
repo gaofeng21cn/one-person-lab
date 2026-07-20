@@ -87,6 +87,12 @@ const registryCases = [
   ['runtime observability-export', 'runtime_observability_export', ['format'], undefined],
   ['runtime observability-endpoint', 'runtime_observability_endpoint', ['host', 'port', 'metrics-path', 'once', 'ready-file'], undefined],
   ['runtime observability-collector-smoke', 'runtime_observability_collector_smoke', ['collector-command', 'endpoint', 'host', 'port', 'metrics-path', 'timeout-ms'], undefined],
+  ['release freeze', 'release_freeze', ['request', 'source-root', 'store'], 'OPL Release'],
+  ['release build', 'release_build', ['bundle', 'executor-receipt', 'store'], 'OPL Release'],
+  ['release verify', 'release_verify', ['bundle', 'qualification-receipt', 'track', 'store'], 'OPL Release'],
+  ['release publish', 'release_publish', ['bundle', 'executor-receipt', 'store'], 'OPL Release'],
+  ['release reconcile', 'release_reconcile', ['bundle', 'executor-receipt', 'store'], 'OPL Release'],
+  ['release status', 'release_status', ['bundle', 'store'], 'OPL Release'],
   ['update status', 'update_status', [], 'OPL Base'],
   ['update check', 'update_check', [], 'OPL Base'],
   ['update plan', 'update_plan', [], 'OPL Base'],
@@ -107,7 +113,7 @@ function loadCliCommandRegistryContract() {
 test('registered command help mirrors the canonical command registry', () => {
   const contract = loadCliCommandRegistryContract();
 
-  for (const prefix of ['status', 'runtime manager', 'stages', 'runtime observability', 'update', 'packages']) {
+  for (const prefix of ['status', 'runtime manager', 'stages', 'runtime observability', 'update', 'packages', 'release']) {
     assert.equal(contract.protected_command_prefixes.includes(prefix), true, prefix);
   }
   assert.equal(contract.protected_command_prefixes.includes('connect pubmed'), false);

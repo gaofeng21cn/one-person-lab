@@ -405,7 +405,7 @@ test('OPL Flow manifest resolves its package-owned 0.1.24 carrier and managed po
   });
 });
 
-test('RCA first-party manifest resolves the projected 0.2.7 carrier payload', () => {
+test('RCA first-party manifest resolves the projected 0.2.8 carrier payload', () => {
   const manifestPath = path.join(repoRoot, 'contracts', 'opl-framework', 'packages', 'rca.json');
   const manifest = normalizePackageManifest(
     parseJsonText(fs.readFileSync(manifestPath, 'utf8')),
@@ -413,13 +413,13 @@ test('RCA first-party manifest resolves the projected 0.2.7 carrier payload', ()
   );
 
   assert.equal(manifest.package_id, 'rca');
-  assert.equal(manifest.version, '0.2.7');
+  assert.equal(manifest.version, '0.2.8');
   assert.deepEqual(manifest.required_skill_ids, ['redcube-ai']);
   assert.equal(
     manifest.plugin_payload_manifest_url,
-    path.join(repoRoot, 'contracts', 'opl-framework', 'packages', 'payloads', 'rca-0.2.7.json'),
+    path.join(repoRoot, 'contracts', 'opl-framework', 'packages', 'payloads', 'rca-0.2.8.json'),
   );
-  assert.equal(manifest.carrier_source_commit, 'c10ad7e198b10cd3491ff43343b50fe1d6f11c74');
+  assert.equal(manifest.carrier_source_commit, 'd41360070fd2f02b85f2eed5761670746d10e25e');
 });
 
 test('standard Agent manifests declare managed runtime source carriers while capability and policy packages do not', () => {

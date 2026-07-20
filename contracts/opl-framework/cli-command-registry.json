@@ -17,12 +17,290 @@
     "runtime manager",
     "runtime app-operator-drilldown",
     "runtime observability",
+    "release",
     "pack provision-submission-resource",
     "packages",
     "system codex-config-hygiene",
     "workspace work-item readback"
   ],
   "commands": {
+    "release_freeze": {
+      "command_id": "release freeze",
+      "owner": "OPL Release",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "request",
+          "flag": "--request",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Exact local path to an opl_release_bundle_freeze_request.v1 JSON file."
+        },
+        {
+          "name": "source-root",
+          "flag": "--source-root",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Source tree whose exact Release Set, owner cohort lock and Package manifest bytes are verified before freeze."
+        },
+        {
+          "name": "store",
+          "flag": "--store",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Optional Release Bundle store root; defaults under OPL_STATE_DIR."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": ["version", "release_bundle_freeze"],
+        "additionalProperties": false,
+        "properties": {
+          "version": { "const": "g2" },
+          "release_bundle_freeze": { "type": "object", "additionalProperties": true }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Release",
+        "surface": "immutable_release_bundle_freeze"
+      }
+    },
+    "release_build": {
+      "command_id": "release build",
+      "owner": "OPL Release",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "bundle",
+          "flag": "--bundle",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Exact sha256 Release Bundle digest."
+        },
+        {
+          "name": "executor-receipt",
+          "flag": "--executor-receipt",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Exact local or remote build executor receipt path."
+        },
+        {
+          "name": "store",
+          "flag": "--store",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Optional Release Bundle store root."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": ["version", "release_bundle_build"],
+        "additionalProperties": false,
+        "properties": {
+          "version": { "const": "g2" },
+          "release_bundle_build": { "type": "object", "additionalProperties": true }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Release",
+        "surface": "build_once_executor_receipt_ingest"
+      }
+    },
+    "release_verify": {
+      "command_id": "release verify",
+      "owner": "OPL Release",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "bundle",
+          "flag": "--bundle",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Exact sha256 Release Bundle digest."
+        },
+        {
+          "name": "qualification-receipt",
+          "flag": "--qualification-receipt",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Passed same-byte installed-artifact qualification receipt path."
+        },
+        {
+          "name": "track",
+          "flag": "--track",
+          "value_kind": "string",
+          "required": false,
+          "allowed_values": ["standard", "full"],
+          "summary": "Optional explicit track; otherwise inferred from the qualification receipt."
+        },
+        {
+          "name": "store",
+          "flag": "--store",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Optional Release Bundle store root."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": ["version", "release_bundle_verify"],
+        "additionalProperties": false,
+        "properties": {
+          "version": { "const": "g2" },
+          "release_bundle_verify": { "type": "object", "additionalProperties": true }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Release",
+        "surface": "same_byte_installed_artifact_qualification_binding"
+      }
+    },
+    "release_publish": {
+      "command_id": "release publish",
+      "owner": "OPL Release",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "bundle",
+          "flag": "--bundle",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Exact sha256 Release Bundle digest."
+        },
+        {
+          "name": "executor-receipt",
+          "flag": "--executor-receipt",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Fresh remote_inspect executor receipt used for idempotent publish planning."
+        },
+        {
+          "name": "store",
+          "flag": "--store",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Optional Release Bundle store root."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": ["version", "release_bundle_publish"],
+        "additionalProperties": false,
+        "properties": {
+          "version": { "const": "g2" },
+          "release_bundle_publish": { "type": "object", "additionalProperties": true }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Release",
+        "surface": "idempotent_release_asset_publish_plan"
+      }
+    },
+    "release_reconcile": {
+      "command_id": "release reconcile",
+      "owner": "OPL Release",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "bundle",
+          "flag": "--bundle",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Exact sha256 Release Bundle digest."
+        },
+        {
+          "name": "executor-receipt",
+          "flag": "--executor-receipt",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Fresh executor receipt resolving a prior unknown build or publish outcome."
+        },
+        {
+          "name": "store",
+          "flag": "--store",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Optional Release Bundle store root."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": ["version", "release_bundle_reconcile"],
+        "additionalProperties": false,
+        "properties": {
+          "version": { "const": "g2" },
+          "release_bundle_reconcile": { "type": "object", "additionalProperties": true }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Release",
+        "surface": "unknown_outcome_readback_reconciliation"
+      }
+    },
+    "release_status": {
+      "command_id": "release status",
+      "owner": "OPL Release",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "bundle",
+          "flag": "--bundle",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Exact sha256 Release Bundle digest."
+        },
+        {
+          "name": "store",
+          "flag": "--store",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Optional Release Bundle store root."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": ["version", "release_bundle_status"],
+        "additionalProperties": false,
+        "properties": {
+          "version": { "const": "g2" },
+          "release_bundle_status": { "type": "object", "additionalProperties": true }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Release",
+        "surface": "immutable_release_bundle_status_readback"
+      }
+    },
     "pack_provision_submission_resource": {
       "command_id": "pack provision-submission-resource",
       "owner": "OPL Pack",

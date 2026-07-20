@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.dev/contracts/opl-framework/release-bundle-executor-receipt.schema.json",
+  "title": "OPL Release Bundle Executor Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "surface_kind",
+    "schema_ref",
+    "operation",
+    "executor",
+    "attempt_id",
+    "bundle_digest",
+    "track",
+    "outcome",
+    "assets"
+  ],
+  "properties": {
+    "surface_kind": { "const": "opl_release_bundle_executor_receipt.v1" },
+    "schema_ref": {
+      "const": "contracts/opl-framework/release-bundle-executor-receipt.schema.json"
+    },
+    "operation": { "enum": ["build", "remote_inspect"] },
+    "executor": { "enum": ["local", "remote"] },
+    "attempt_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "bundle_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "track": { "enum": ["standard", "full"] },
+    "outcome": { "enum": ["complete", "unknown"] },
+    "assets": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "size_bytes", "sha256"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 255 },
+          "size_bytes": { "type": "integer", "minimum": 1 },
+          "sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+          "path": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "outcome": { "const": "unknown" } } },
+      "then": { "properties": { "assets": { "maxItems": 0 } } }
+    }
+  ]
+}

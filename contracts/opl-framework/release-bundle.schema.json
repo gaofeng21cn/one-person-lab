@@ -1,0 +1,232 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.dev/contracts/opl-framework/release-bundle.schema.json",
+  "title": "OPL Immutable Release Bundle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "surface_kind",
+    "schema_ref",
+    "bundle_digest",
+    "release",
+    "sources",
+    "framework_release_set",
+    "packages",
+    "prepared_notes",
+    "tracks",
+    "policy"
+  ],
+  "properties": {
+    "surface_kind": { "const": "opl_release_bundle.v1" },
+    "schema_ref": { "const": "contracts/opl-framework/release-bundle.schema.json" },
+    "bundle_digest": { "$ref": "#/$defs/digest" },
+    "release": { "$ref": "#/$defs/release" },
+    "sources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["app", "shell", "framework"],
+      "properties": {
+        "app": { "$ref": "#/$defs/source" },
+        "shell": { "$ref": "#/$defs/source" },
+        "framework": { "$ref": "#/$defs/source" }
+      }
+    },
+    "framework_release_set": { "$ref": "#/$defs/releaseSet" },
+    "packages": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mas",
+        "mag",
+        "rca",
+        "oma",
+        "obf",
+        "mas-scholar-skills",
+        "opl-flow"
+      ],
+      "properties": {
+        "mas": { "$ref": "#/$defs/package" },
+        "mag": { "$ref": "#/$defs/package" },
+        "rca": { "$ref": "#/$defs/package" },
+        "oma": { "$ref": "#/$defs/package" },
+        "obf": { "$ref": "#/$defs/package" },
+        "mas-scholar-skills": { "$ref": "#/$defs/package" },
+        "opl-flow": { "$ref": "#/$defs/package" }
+      }
+    },
+    "prepared_notes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "format",
+        "markdown",
+        "markdown_sha256",
+        "evidence",
+        "evidence_sha256"
+      ],
+      "properties": {
+        "source": { "const": "prepared_ai" },
+        "format": { "const": "markdown" },
+        "markdown": { "type": "string", "minLength": 1 },
+        "markdown_sha256": { "$ref": "#/$defs/digest" },
+        "evidence": { "type": "object" },
+        "evidence_sha256": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "tracks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["standard", "full"],
+      "properties": {
+        "standard": {
+          "allOf": [
+            { "$ref": "#/$defs/track" },
+            {
+              "properties": {
+                "required_for_latest": { "const": true },
+                "additive_only": { "const": false },
+                "updater_metadata_allowed": { "const": true }
+              }
+            }
+          ]
+        },
+        "full": {
+          "allOf": [
+            { "$ref": "#/$defs/track" },
+            {
+              "properties": {
+                "required_for_latest": { "const": false },
+                "additive_only": { "const": true },
+                "updater_metadata_allowed": { "const": false }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "build_once",
+        "verify_and_promote_many",
+        "executor_neutral",
+        "allowed_executors",
+        "prepared_notes_required_before_build",
+        "publish_may_generate_notes",
+        "latest_required_track",
+        "full_additive_only",
+        "full_updates_updater_metadata"
+      ],
+      "properties": {
+        "build_once": { "const": true },
+        "verify_and_promote_many": { "const": true },
+        "executor_neutral": { "const": true },
+        "allowed_executors": { "const": ["local", "remote"] },
+        "prepared_notes_required_before_build": { "const": true },
+        "publish_may_generate_notes": { "const": false },
+        "latest_required_track": { "const": "standard" },
+        "full_additive_only": { "const": true },
+        "full_updates_updater_metadata": { "const": false }
+      }
+    }
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "gitSha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "release": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["channel", "version", "tag", "prerelease"],
+      "properties": {
+        "channel": { "enum": ["stable", "nightly"] },
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]{2}\\.[0-9]{1,2}\\.[0-9]{1,2}(?:-[0-9A-Za-z.-]+)?$"
+        },
+        "tag": { "type": "string", "minLength": 2 },
+        "prerelease": { "type": "boolean" }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repo", "source_commit"],
+      "properties": {
+        "repo": { "type": "string", "minLength": 1 },
+        "source_commit": { "$ref": "#/$defs/gitSha" }
+      }
+    },
+    "releaseSet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["generation", "manifest_ref", "digest"],
+      "properties": {
+        "generation": {
+          "type": "string",
+          "pattern": "^[0-9]{2}\\.[0-9]{1,2}\\.[0-9]{1,2}(?:-r[1-9][0-9]*)?$"
+        },
+        "manifest_ref": { "$ref": "#/$defs/ref" },
+        "digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "ref": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\\\)[^\\u0000-\\u001f\\u007f]+$"
+    },
+    "package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "package_id",
+        "version",
+        "owner_source_commit",
+        "manifest_ref",
+        "manifest_sha256",
+        "payload_manifest_ref",
+        "payload_manifest_sha256"
+      ],
+      "properties": {
+        "package_id": {
+          "enum": ["mas", "mag", "rca", "oma", "obf", "mas-scholar-skills", "opl-flow"]
+        },
+        "version": { "type": "string", "minLength": 1 },
+        "owner_source_commit": { "$ref": "#/$defs/gitSha" },
+        "manifest_ref": { "$ref": "#/$defs/ref" },
+        "manifest_sha256": { "$ref": "#/$defs/digest" },
+        "payload_manifest_ref": { "$ref": "#/$defs/ref" },
+        "payload_manifest_sha256": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "track": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required_asset_names",
+        "required_for_latest",
+        "additive_only",
+        "updater_metadata_allowed"
+      ],
+      "properties": {
+        "required_asset_names": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "required_for_latest": { "type": "boolean" },
+        "additive_only": { "type": "boolean" },
+        "updater_metadata_allowed": { "type": "boolean" }
+      }
+    }
+  }
+}

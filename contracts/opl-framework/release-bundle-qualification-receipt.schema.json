@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.dev/contracts/opl-framework/release-bundle-qualification-receipt.schema.json",
+  "title": "OPL Release Bundle Qualification Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "surface_kind",
+    "schema_ref",
+    "bundle_digest",
+    "track",
+    "subject",
+    "cohort",
+    "qualification"
+  ],
+  "properties": {
+    "surface_kind": { "const": "opl_release_bundle_qualification_receipt.v1" },
+    "schema_ref": {
+      "const": "contracts/opl-framework/release-bundle-qualification-receipt.schema.json"
+    },
+    "bundle_digest": { "$ref": "#/$defs/digest" },
+    "track": { "enum": ["standard", "full"] },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["asset_name", "size_bytes", "sha256"],
+      "properties": {
+        "asset_name": { "type": "string", "minLength": 1 },
+        "size_bytes": { "type": "integer", "minimum": 1 },
+        "sha256": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "cohort": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "app_sha",
+        "shell_sha",
+        "framework_sha",
+        "framework_release_set_digest",
+        "package_payload_manifest_sha256"
+      ],
+      "properties": {
+        "app_sha": { "$ref": "#/$defs/gitSha" },
+        "shell_sha": { "$ref": "#/$defs/gitSha" },
+        "framework_sha": { "$ref": "#/$defs/gitSha" },
+        "framework_release_set_digest": { "$ref": "#/$defs/digest" },
+        "package_payload_manifest_sha256": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mas",
+            "mag",
+            "rca",
+            "oma",
+            "obf",
+            "mas-scholar-skills",
+            "opl-flow"
+          ],
+          "properties": {
+            "mas": { "$ref": "#/$defs/digest" },
+            "mag": { "$ref": "#/$defs/digest" },
+            "rca": { "$ref": "#/$defs/digest" },
+            "oma": { "$ref": "#/$defs/digest" },
+            "obf": { "$ref": "#/$defs/digest" },
+            "mas-scholar-skills": { "$ref": "#/$defs/digest" },
+            "opl-flow": { "$ref": "#/$defs/digest" }
+          }
+        }
+      }
+    },
+    "qualification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "result",
+        "installed_artifact_same_bytes",
+        "harness_sha256",
+        "evidence_refs"
+      ],
+      "properties": {
+        "kind": { "const": "installed_artifact" },
+        "result": { "const": "passed" },
+        "installed_artifact_same_bytes": { "const": true },
+        "harness_sha256": { "$ref": "#/$defs/digest" },
+        "evidence_refs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "gitSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" }
+  }
+}
