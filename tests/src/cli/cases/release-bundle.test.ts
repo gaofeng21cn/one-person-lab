@@ -185,6 +185,8 @@ function fixtureRequest(sourceRoot: string) {
     release: {
       channel: 'stable',
       version: '26.7.20',
+      display_version: '26.7.20',
+      updater_version: '26.7.20',
       tag: 'v26.7.20',
       prerelease: false,
     },
@@ -369,6 +371,8 @@ test('freeze computes one canonical digest over sources, seven package payloads,
       fixture.request.framework_release_set.digest,
     );
     assert.equal(first.bundle.prepared_notes.source, 'prepared_ai');
+    assert.equal(first.bundle.release.version, first.bundle.release.display_version);
+    assert.equal(first.bundle.release.updater_version, '26.7.20');
     assert.equal(first.bundle.policy.build_once, true);
     assert.deepEqual(first.bundle.policy.allowed_executors, ['local', 'remote']);
     const status = runCliInCwd([
@@ -382,6 +386,40 @@ test('freeze computes one canonical digest over sources, seven package payloads,
     assert.equal(status.release_bundle_status.bundle_digest, first.bundle_digest);
   } finally {
     fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test('freeze rejects a compatibility version alias that differs from display_version', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-release-bundle-display-alias-'));
+  try {
+    const sourceRoot = path.join(root, 'source');
+    const request = fixtureRequest(sourceRoot);
+    request.release.version = '26.7.20-r1';
+    const requestPath = path.join(root, 'freeze.json');
+    writeJson(requestPath, request);
+    assert.throws(
+      () => freezeReleaseBundle({ requestPath, sourceRoot, storeRoot: path.join(root, 'store') }),
+      /version compatibility alias must equal display_version/,
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('freeze rejects an invalid updater machine identity before computing a Bundle digest', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-release-bundle-updater-version-'));
+  try {
+    const sourceRoot = path.join(root, 'source');
+    const request = fixtureRequest(sourceRoot);
+    request.release.updater_version = 'not-semver';
+    const requestPath = path.join(root, 'freeze.json');
+    writeJson(requestPath, request);
+    assert.throws(
+      () => freezeReleaseBundle({ requestPath, sourceRoot, storeRoot: path.join(root, 'store') }),
+      /Payload failed JSON Schema validation/,
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
   }
 });
 

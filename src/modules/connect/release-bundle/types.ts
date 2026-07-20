@@ -35,6 +35,8 @@ export type ReleaseBundleFreezeRequest = {
   release: {
     channel: 'stable' | 'nightly';
     version: string;
+    display_version: string;
+    updater_version: string;
     tag: string;
     prerelease: boolean;
   };

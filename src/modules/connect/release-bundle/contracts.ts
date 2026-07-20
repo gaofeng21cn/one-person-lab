@@ -406,9 +406,15 @@ function assertAssetName(name: string, track: ReleaseBundleTrackName) {
 }
 
 function assertFreezeSemantics(request: ReleaseBundleFreezeRequest) {
-  if (request.release.tag !== `v${request.release.version}`) {
-    fail('Release Bundle tag must be the exact v-prefixed release version.', {
+  if (request.release.version !== request.release.display_version) {
+    fail('Release Bundle version compatibility alias must equal display_version.', {
       version: request.release.version,
+      display_version: request.release.display_version,
+    });
+  }
+  if (request.release.tag !== `v${request.release.display_version}`) {
+    fail('Release Bundle tag must be the exact v-prefixed display version.', {
+      display_version: request.release.display_version,
       tag: request.release.tag,
     });
   }

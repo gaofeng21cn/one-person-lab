@@ -144,12 +144,20 @@
     "release": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["channel", "version", "tag", "prerelease"],
+      "required": ["channel", "version", "display_version", "updater_version", "tag", "prerelease"],
       "properties": {
         "channel": { "enum": ["stable", "nightly"] },
         "version": {
           "type": "string",
           "pattern": "^[0-9]{2}\\.[0-9]{1,2}\\.[0-9]{1,2}(?:-[0-9A-Za-z.-]+)?$"
+        },
+        "display_version": {
+          "type": "string",
+          "pattern": "^[0-9]{2}\\.[0-9]{1,2}\\.[0-9]{1,2}(?:-[0-9A-Za-z.-]+)?$"
+        },
+        "updater_version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"
         },
         "tag": { "type": "string", "minLength": 2 },
         "prerelease": { "type": "boolean" }
