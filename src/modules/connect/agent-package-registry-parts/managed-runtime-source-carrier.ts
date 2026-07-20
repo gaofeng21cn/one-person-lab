@@ -583,7 +583,8 @@ function currentProbeEnvironment(state: AgentPackageManagedRuntimeSourceState) {
 function resolvedCurrentProbeCommands(state: AgentPackageManagedRuntimeSourceState) {
   const spec = resolveOplDomainModuleSpec(state.module_id);
   const developerSnapshot = state.preparation_scope === 'developer_snapshot_root';
-  const health = state.preparation_scope === 'managed_source_root'
+  const immutablePackagedRuntime = state.source_mode === 'bundled_full_runtime';
+  const health = state.preparation_scope === 'managed_source_root' || immutablePackagedRuntime
     ? packageHealthCommand(state.module_id, state.checkout_path)
     : developerSnapshot
       ? (spec.package_health_check_command

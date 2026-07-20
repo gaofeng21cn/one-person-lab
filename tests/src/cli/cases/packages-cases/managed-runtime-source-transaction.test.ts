@@ -695,7 +695,8 @@ test('bundled Full runtime source requires a matching carrier marker and rejects
   fs.writeFileSync(path.join(bundledRoot, 'scripts', 'opl-module-healthcheck.sh'), [
     '#!/bin/sh',
     'set -eu',
-    'printf "ready\\n"',
+    'printf "development health checks must not run for bundled Full runtimes\\n" >&2',
+    'exit 91',
   ].join('\n'), { mode: 0o755 });
   fs.writeFileSync(path.join(unmanagedRoot, 'runtime.txt'), 'unmarked source\n');
   writeStandardAgentPackProbeFixture(bundledRoot, '0.1.0');
