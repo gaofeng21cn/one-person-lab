@@ -135,7 +135,7 @@ export type ReleaseBundleQualificationReceipt = {
 export type ReleaseBundleOperationReceipt = {
   surface_kind: 'opl_release_bundle_operation_receipt.v1';
   schema_ref: 'contracts/opl-framework/release-bundle-operation-receipt.schema.json';
-  operation: 'freeze' | 'build' | 'verify' | 'publish' | 'reconcile';
+  operation: 'freeze' | 'build' | 'verify' | 'publish' | 'reconcile' | 'checkpoint_import';
   status: 'frozen' | 'complete' | 'idempotent' | 'upload_required' | 'reconcile_only';
   bundle_digest: string;
   track: ReleaseBundleTrackName | null;
@@ -143,6 +143,45 @@ export type ReleaseBundleOperationReceipt = {
   attempt_id: string | null;
   recorded_at: string;
   details: Record<string, unknown>;
+};
+
+export type ReleaseBundleCheckpointStage =
+  | 'frozen'
+  | 'standard_built'
+  | 'standard_qualified'
+  | 'full_built'
+  | 'full_qualified';
+
+export type ReleaseBundleCheckpointEntry = {
+  path: string;
+  role: 'bundle' | 'prepared_notes' | 'track_asset' | 'qualification_receipt';
+  track: ReleaseBundleTrackName | null;
+  asset_name: string | null;
+  size_bytes: number;
+  sha256: string;
+};
+
+export type ReleaseBundleCheckpointTrack = {
+  built: boolean;
+  verified: boolean;
+  asset_names: string[];
+  qualification_receipt_path: string | null;
+  qualification_receipt_sha256: string | null;
+};
+
+export type ReleaseBundleCheckpoint = {
+  surface_kind: 'opl_release_bundle_checkpoint.v1';
+  schema_ref: 'contracts/opl-framework/release-bundle-checkpoint.schema.json';
+  checkpoint_digest: string;
+  bundle_digest: string;
+  checkpoint_stage: ReleaseBundleCheckpointStage;
+  tracks: Record<ReleaseBundleTrackName, ReleaseBundleCheckpointTrack>;
+  entries: ReleaseBundleCheckpointEntry[];
+  policy: {
+    portable_between_executors: true;
+    import_never_rebuilds: true;
+    publish_state_requires_fresh_remote_readback: true;
+  };
 };
 
 export type ReleaseBundleOperationInput = {

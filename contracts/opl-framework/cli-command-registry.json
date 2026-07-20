@@ -116,6 +116,91 @@
         "surface": "build_once_executor_receipt_ingest"
       }
     },
+    "release_checkpoint_export": {
+      "command_id": "release checkpoint export",
+      "owner": "OPL Release",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "bundle",
+          "flag": "--bundle",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Exact sha256 Release Bundle digest to checkpoint."
+        },
+        {
+          "name": "output",
+          "flag": "--output",
+          "value_kind": "string",
+          "required": true,
+          "summary": "New deterministic checkpoint directory."
+        },
+        {
+          "name": "store",
+          "flag": "--store",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Optional source Release Bundle store root."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": ["version", "release_bundle_checkpoint_export"],
+        "additionalProperties": false,
+        "properties": {
+          "version": { "const": "g2" },
+          "release_bundle_checkpoint_export": { "type": "object", "additionalProperties": true }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Release",
+        "surface": "portable_release_bundle_checkpoint_export"
+      }
+    },
+    "release_checkpoint_import": {
+      "command_id": "release checkpoint import",
+      "owner": "OPL Release",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "checkpoint",
+          "flag": "--checkpoint",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Exact opl_release_bundle_checkpoint.v1 manifest path."
+        },
+        {
+          "name": "store",
+          "flag": "--store",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Optional destination Release Bundle store root."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": ["version", "release_bundle_checkpoint_import"],
+        "additionalProperties": false,
+        "properties": {
+          "version": { "const": "g2" },
+          "release_bundle_checkpoint_import": { "type": "object", "additionalProperties": true }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Release",
+        "surface": "portable_release_bundle_checkpoint_import"
+      }
+    },
     "release_verify": {
       "command_id": "release verify",
       "owner": "OPL Release",

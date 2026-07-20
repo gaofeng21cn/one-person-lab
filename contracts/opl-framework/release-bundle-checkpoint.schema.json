@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.dev/contracts/opl-framework/release-bundle-checkpoint.schema.json",
+  "title": "OPL Release Bundle Portable Checkpoint",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "surface_kind",
+    "schema_ref",
+    "checkpoint_digest",
+    "bundle_digest",
+    "checkpoint_stage",
+    "tracks",
+    "entries",
+    "policy"
+  ],
+  "properties": {
+    "surface_kind": { "const": "opl_release_bundle_checkpoint.v1" },
+    "schema_ref": {
+      "const": "contracts/opl-framework/release-bundle-checkpoint.schema.json"
+    },
+    "checkpoint_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "bundle_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "checkpoint_stage": {
+      "enum": [
+        "frozen",
+        "standard_built",
+        "standard_qualified",
+        "full_built",
+        "full_qualified"
+      ]
+    },
+    "tracks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["standard", "full"],
+      "properties": {
+        "standard": { "$ref": "#/$defs/track" },
+        "full": { "$ref": "#/$defs/track" }
+      }
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 2,
+      "items": { "$ref": "#/$defs/entry" }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "portable_between_executors",
+        "import_never_rebuilds",
+        "publish_state_requires_fresh_remote_readback"
+      ],
+      "properties": {
+        "portable_between_executors": { "const": true },
+        "import_never_rebuilds": { "const": true },
+        "publish_state_requires_fresh_remote_readback": { "const": true }
+      }
+    }
+  },
+  "$defs": {
+    "track": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "built",
+        "verified",
+        "asset_names",
+        "qualification_receipt_path",
+        "qualification_receipt_sha256"
+      ],
+      "properties": {
+        "built": { "type": "boolean" },
+        "verified": { "type": "boolean" },
+        "asset_names": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1, "maxLength": 255 }
+        },
+        "qualification_receipt_path": { "type": ["string", "null"] },
+        "qualification_receipt_sha256": {
+          "type": ["string", "null"],
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "role",
+        "track",
+        "asset_name",
+        "size_bytes",
+        "sha256"
+      ],
+      "properties": {
+        "path": { "type": "string", "minLength": 1, "maxLength": 1024 },
+        "role": {
+          "enum": ["bundle", "prepared_notes", "track_asset", "qualification_receipt"]
+        },
+        "track": { "type": ["string", "null"], "enum": ["standard", "full", null] },
+        "asset_name": { "type": ["string", "null"], "maxLength": 255 },
+        "size_bytes": { "type": "integer", "minimum": 1 },
+        "sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+      }
+    }
+  }
+}

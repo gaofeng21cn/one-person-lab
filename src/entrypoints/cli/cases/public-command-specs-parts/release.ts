@@ -1,6 +1,8 @@
 import {
   buildReleaseBundle,
+  exportReleaseBundleCheckpoint,
   freezeReleaseBundle,
+  importReleaseBundleCheckpoint,
   publishReleaseBundle,
   readReleaseBundleStatus,
   reconcileReleaseBundle,
@@ -48,6 +50,37 @@ export function buildReleaseCommandSpecs(
         return buildReleaseBundle({
           bundleDigest: String(values.bundle),
           executorReceiptPath: String(values['executor-receipt']),
+          storeRoot: stringOption(values, 'store'),
+        });
+      },
+    },
+    'release checkpoint export': {
+      usage: 'opl release checkpoint export --bundle <sha256:digest> --output <directory> [--store <directory>]',
+      summary: 'Export one deterministic portable checkpoint without rebuilding or importing publication state.',
+      examples: [
+        'opl release checkpoint export --bundle sha256:<digest> --output release-checkpoint --json',
+      ],
+      group: 'release',
+      handler: (args) => {
+        const values = parse('release checkpoint export', args);
+        return exportReleaseBundleCheckpoint({
+          bundleDigest: String(values.bundle),
+          outputDirectory: String(values.output),
+          storeRoot: stringOption(values, 'store'),
+        });
+      },
+    },
+    'release checkpoint import': {
+      usage: 'opl release checkpoint import --checkpoint <checkpoint.json> [--store <directory>]',
+      summary: 'Import exact frozen, built, and qualified bytes without rebuilding; publication still requires fresh readback.',
+      examples: [
+        'opl release checkpoint import --checkpoint release-checkpoint/checkpoint.json --json',
+      ],
+      group: 'release',
+      handler: (args) => {
+        const values = parse('release checkpoint import', args);
+        return importReleaseBundleCheckpoint({
+          checkpointPath: String(values.checkpoint),
           storeRoot: stringOption(values, 'store'),
         });
       },

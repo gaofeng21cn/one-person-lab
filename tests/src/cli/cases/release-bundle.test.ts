@@ -10,7 +10,9 @@ import { repoRoot, runCliInCwd } from '../helpers.ts';
 
 import {
   buildReleaseBundle,
+  exportReleaseBundleCheckpoint,
   freezeReleaseBundle,
+  importReleaseBundleCheckpoint,
   publishReleaseBundle,
   readReleaseBundleStatus,
   reconcileReleaseBundle,
@@ -507,6 +509,266 @@ test('build stages exact bytes once and rejects a second executor with different
       () => buildReleaseBundle({ bundleDigest, executorReceiptPath: conflictReceipt, storeRoot: fixture.storeRoot }),
       /already contains different asset bytes/,
     );
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test('portable checkpoint switches executors without rebuilding and never imports publish state', () => {
+  const fixture = createFixture();
+  try {
+    const bundleDigest = fixture.frozen.release_bundle_freeze.bundle_digest;
+    const localBuild = writeBuildReceipt({
+      root: fixture.root,
+      bundleDigest,
+      executor: 'local',
+      attemptId: 'local-standard-build',
+    });
+    buildReleaseBundle({
+      bundleDigest,
+      executorReceiptPath: localBuild,
+      storeRoot: fixture.storeRoot,
+    });
+    const qualificationReceiptPath = writeQualification({
+      root: fixture.root,
+      bundle: fixture.request,
+      bundleDigest,
+    });
+    verifyReleaseBundle({
+      bundleDigest,
+      track: 'standard',
+      qualificationReceiptPath,
+      storeRoot: fixture.storeRoot,
+    });
+    const publishedReceipt = writeRemoteInspection({
+      root: fixture.root,
+      bundleDigest,
+      attemptId: 'source-published',
+      assets: [
+        { name: 'standard.dmg', bytes: 'standard dmg' },
+        { name: 'latest.yml', bytes: 'updater' },
+      ],
+    });
+    publishReleaseBundle({
+      bundleDigest,
+      executorReceiptPath: publishedReceipt,
+      storeRoot: fixture.storeRoot,
+    });
+
+    const checkpointDirectory = path.join(fixture.root, 'checkpoint');
+    const exported = exportReleaseBundleCheckpoint({
+      bundleDigest,
+      outputDirectory: checkpointDirectory,
+      storeRoot: fixture.storeRoot,
+    }).release_bundle_checkpoint_export;
+    assert.equal(exported.status, 'complete');
+    assert.equal(exported.checkpoint_stage, 'standard_qualified');
+    assert.match(exported.checkpoint_digest, /^sha256:[0-9a-f]{64}$/);
+    const exportedAgain = exportReleaseBundleCheckpoint({
+      bundleDigest,
+      outputDirectory: checkpointDirectory,
+      storeRoot: fixture.storeRoot,
+    }).release_bundle_checkpoint_export;
+    assert.equal(exportedAgain.status, 'idempotent');
+    assert.equal(exportedAgain.checkpoint_digest, exported.checkpoint_digest);
+
+    const importedStore = path.join(fixture.root, 'imported-store');
+    const imported = importReleaseBundleCheckpoint({
+      checkpointPath: path.join(checkpointDirectory, 'checkpoint.json'),
+      storeRoot: importedStore,
+    }).release_bundle_checkpoint_import;
+    assert.equal(imported.status, 'complete');
+    assert.equal(imported.rebuild_performed, false);
+    assert.equal(imported.publish_state_imported, false);
+    const importedAgain = importReleaseBundleCheckpoint({
+      checkpointPath: path.join(checkpointDirectory, 'checkpoint.json'),
+      storeRoot: importedStore,
+    }).release_bundle_checkpoint_import;
+    assert.equal(importedAgain.status, 'idempotent');
+
+    const status = readReleaseBundleStatus({ bundleDigest, storeRoot: importedStore })
+      .release_bundle_status;
+    assert.equal(status.tracks.standard.built, true);
+    assert.equal(status.tracks.standard.verified, true);
+    assert.equal(status.tracks.standard.published, false);
+    assert.equal(status.latest_eligible, false);
+
+    const remoteReplay = writeBuildReceipt({
+      root: fixture.root,
+      bundleDigest,
+      executor: 'remote',
+      attemptId: 'remote-same-byte-resume',
+    });
+    const resumed = buildReleaseBundle({
+      bundleDigest,
+      executorReceiptPath: remoteReplay,
+      storeRoot: importedStore,
+    });
+    assert.equal(resumed.release_bundle_build.status, 'idempotent');
+
+    fs.appendFileSync(path.join(checkpointDirectory, 'tracks', 'standard', 'assets', 'standard.dmg'), 'tamper');
+    assert.throws(
+      () => importReleaseBundleCheckpoint({
+        checkpointPath: path.join(checkpointDirectory, 'checkpoint.json'),
+        storeRoot: path.join(fixture.root, 'tampered-store'),
+      }),
+      /does not match its declared identity/,
+    );
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test('portable checkpoint covers every executor handoff stage', () => {
+  const fixture = createFixture();
+  try {
+    const bundleDigest = fixture.frozen.release_bundle_freeze.bundle_digest;
+    const checkpoints: Array<{
+      label: string;
+      stage: 'frozen' | 'standard_built' | 'standard_qualified' | 'full_built' | 'full_qualified';
+    }> = [];
+    const capture = (label: string, stage: typeof checkpoints[number]['stage']) => {
+      const result = exportReleaseBundleCheckpoint({
+        bundleDigest,
+        outputDirectory: path.join(fixture.root, `checkpoint-${label}`),
+        storeRoot: fixture.storeRoot,
+      }).release_bundle_checkpoint_export;
+      assert.equal(result.checkpoint_stage, stage);
+      checkpoints.push({ label, stage });
+    };
+
+    capture('frozen', 'frozen');
+    buildReleaseBundle({
+      bundleDigest,
+      executorReceiptPath: writeBuildReceipt({
+        root: fixture.root,
+        bundleDigest,
+        executor: 'local',
+        attemptId: 'matrix-standard-build',
+      }),
+      storeRoot: fixture.storeRoot,
+    });
+    capture('standard-built', 'standard_built');
+    verifyReleaseBundle({
+      bundleDigest,
+      track: 'standard',
+      qualificationReceiptPath: writeQualification({
+        root: fixture.root,
+        bundle: fixture.request,
+        bundleDigest,
+      }),
+      storeRoot: fixture.storeRoot,
+    });
+    capture('standard-qualified', 'standard_qualified');
+    buildReleaseBundle({
+      bundleDigest,
+      executorReceiptPath: writeBuildReceipt({
+        root: fixture.root,
+        bundleDigest,
+        track: 'full',
+        executor: 'local',
+        attemptId: 'matrix-full-build',
+      }),
+      storeRoot: fixture.storeRoot,
+    });
+    capture('full-built', 'full_built');
+    verifyReleaseBundle({
+      bundleDigest,
+      track: 'full',
+      qualificationReceiptPath: writeQualification({
+        root: fixture.root,
+        bundle: fixture.request,
+        bundleDigest,
+        track: 'full',
+      }),
+      storeRoot: fixture.storeRoot,
+    });
+    capture('full-qualified', 'full_qualified');
+
+    for (const checkpoint of checkpoints) {
+      const importedStore = path.join(fixture.root, `imported-${checkpoint.label}`);
+      const imported = importReleaseBundleCheckpoint({
+        checkpointPath: path.join(fixture.root, `checkpoint-${checkpoint.label}`, 'checkpoint.json'),
+        storeRoot: importedStore,
+      }).release_bundle_checkpoint_import;
+      assert.equal(imported.checkpoint_stage, checkpoint.stage);
+      assert.equal(imported.rebuild_performed, false);
+      const status = readReleaseBundleStatus({ bundleDigest, storeRoot: importedStore })
+        .release_bundle_status;
+      assert.equal(status.tracks.standard.built, checkpoint.stage !== 'frozen');
+      assert.equal(
+        status.tracks.standard.verified,
+        ['standard_qualified', 'full_built', 'full_qualified'].includes(checkpoint.stage),
+      );
+      assert.equal(
+        status.tracks.full.built,
+        ['full_built', 'full_qualified'].includes(checkpoint.stage),
+      );
+      assert.equal(status.tracks.full.verified, checkpoint.stage === 'full_qualified');
+      assert.equal(status.tracks.standard.published, false);
+      assert.equal(status.tracks.full.published, false);
+    }
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test('checkpoint export refuses to switch executors while an outcome is unknown', () => {
+  const fixture = createFixture();
+  try {
+    const bundleDigest = fixture.frozen.release_bundle_freeze.bundle_digest;
+    buildReleaseBundle({
+      bundleDigest,
+      executorReceiptPath: writeBuildReceipt({
+        root: fixture.root,
+        bundleDigest,
+        executor: 'local',
+        attemptId: 'unknown-before-handoff',
+        outcome: 'unknown',
+      }),
+      storeRoot: fixture.storeRoot,
+    });
+    assert.throws(
+      () => exportReleaseBundleCheckpoint({
+        bundleDigest,
+        outputDirectory: path.join(fixture.root, 'blocked-checkpoint'),
+        storeRoot: fixture.storeRoot,
+      }),
+      /requires every executor outcome to be reconciled/,
+    );
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test('public CLI exports and imports a frozen portable checkpoint', () => {
+  const fixture = createFixture();
+  try {
+    const bundleDigest = fixture.frozen.release_bundle_freeze.bundle_digest;
+    const checkpointDirectory = path.join(fixture.root, 'cli-checkpoint');
+    const exported = runCliInCwd([
+      'release',
+      'checkpoint',
+      'export',
+      '--bundle',
+      bundleDigest,
+      '--output',
+      checkpointDirectory,
+      '--store',
+      fixture.storeRoot,
+    ], fixture.root);
+    assert.equal(exported.release_bundle_checkpoint_export.checkpoint_stage, 'frozen');
+    const imported = runCliInCwd([
+      'release',
+      'checkpoint',
+      'import',
+      '--checkpoint',
+      path.join(checkpointDirectory, 'checkpoint.json'),
+      '--store',
+      path.join(fixture.root, 'cli-imported-store'),
+    ], fixture.root);
+    assert.equal(imported.release_bundle_checkpoint_import.rebuild_performed, false);
+    assert.equal(imported.release_bundle_checkpoint_import.checkpoint_stage, 'frozen');
   } finally {
     fs.rmSync(fixture.root, { recursive: true, force: true });
   }

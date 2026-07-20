@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import bundleSchema from '../../../../contracts/opl-framework/release-bundle.schema.json' with { type: 'json' };
+import checkpointSchema from '../../../../contracts/opl-framework/release-bundle-checkpoint.schema.json' with { type: 'json' };
 import executorReceiptSchema from '../../../../contracts/opl-framework/release-bundle-executor-receipt.schema.json' with { type: 'json' };
 import freezeRequestSchema from '../../../../contracts/opl-framework/release-bundle-freeze-request.schema.json' with { type: 'json' };
 import operationReceiptSchema from '../../../../contracts/opl-framework/release-bundle-operation-receipt.schema.json' with { type: 'json' };
@@ -16,6 +17,7 @@ import { assertJsonSchemaPayload } from '../../../kernel/schema-registry.ts';
 import {
   RELEASE_BUNDLE_PACKAGE_IDS,
   type ReleaseBundle,
+  type ReleaseBundleCheckpoint,
   type ReleaseBundleExecutorReceipt,
   type ReleaseBundleFreezeRequest,
   type ReleaseBundleOperationReceipt,
@@ -25,6 +27,8 @@ import {
 
 export const RELEASE_BUNDLE_SCHEMA_REF =
   'contracts/opl-framework/release-bundle.schema.json' as const;
+export const RELEASE_BUNDLE_CHECKPOINT_SCHEMA_REF =
+  'contracts/opl-framework/release-bundle-checkpoint.schema.json' as const;
 export const RELEASE_BUNDLE_FREEZE_REQUEST_SCHEMA_REF =
   'contracts/opl-framework/release-bundle-freeze-request.schema.json' as const;
 export const RELEASE_BUNDLE_EXECUTOR_RECEIPT_SCHEMA_REF =
@@ -525,6 +529,30 @@ export function assertReleaseBundle(value: unknown): asserts value is ReleaseBun
       actual_markdown_sha256: notesDigest,
       expected_evidence_sha256: bundle.prepared_notes.evidence_sha256,
       actual_evidence_sha256: evidenceDigest,
+    });
+  }
+}
+
+export function releaseBundleCheckpointCore(checkpoint: ReleaseBundleCheckpoint) {
+  const { checkpoint_digest: _checkpointDigest, ...core } = checkpoint;
+  return core;
+}
+
+export function assertReleaseBundleCheckpoint(
+  value: unknown,
+): asserts value is ReleaseBundleCheckpoint {
+  assertSchema(
+    checkpointSchema as Record<string, unknown>,
+    RELEASE_BUNDLE_CHECKPOINT_SCHEMA_REF,
+    value,
+  );
+  if (!isRecord(value)) fail('Release Bundle checkpoint must be a JSON object.');
+  const checkpoint = value as ReleaseBundleCheckpoint;
+  const actual = sha256(canonicalJsonBytes(releaseBundleCheckpointCore(checkpoint)));
+  if (checkpoint.checkpoint_digest !== actual) {
+    fail('Release Bundle checkpoint digest does not match its canonical contents.', {
+      expected_checkpoint_digest: checkpoint.checkpoint_digest,
+      actual_checkpoint_digest: actual,
     });
   }
 }

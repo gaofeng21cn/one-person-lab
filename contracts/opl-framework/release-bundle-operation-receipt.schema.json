@@ -21,7 +21,9 @@
     "schema_ref": {
       "const": "contracts/opl-framework/release-bundle-operation-receipt.schema.json"
     },
-    "operation": { "enum": ["freeze", "build", "verify", "publish", "reconcile"] },
+    "operation": {
+      "enum": ["freeze", "build", "verify", "publish", "reconcile", "checkpoint_import"]
+    },
     "status": {
       "enum": ["frozen", "complete", "idempotent", "upload_required", "reconcile_only"]
     },
