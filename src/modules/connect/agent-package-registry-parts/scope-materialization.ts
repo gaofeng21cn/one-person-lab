@@ -580,10 +580,9 @@ export function scopeMaterializationReadiness(
     };
   }
   const scope = input.scope ?? null;
-  const targetRoot = scope
-    ? path.resolve(scope === 'workspace' ? input.targetWorkspace ?? '' : input.targetQuest ?? '')
-    : null;
-  if (!scope || !targetRoot || targetRoot === path.resolve('')) {
+  const target = scope === 'workspace' ? input.targetWorkspace : input.targetQuest;
+  const targetRoot = scope && target ? path.resolve(target) : null;
+  if (!scope || !targetRoot) {
     return {
       status: 'scope_required',
       scope,

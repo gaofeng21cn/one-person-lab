@@ -10,6 +10,7 @@ import {
   runCliFailure,
   test,
 } from './helpers.ts';
+import { runCliInCwd } from '../../helpers.ts';
 import {
   scholarSkillsCoreSkillIds as coreSkillIds,
   scholarSkillsModuleIds as moduleIds,
@@ -108,6 +109,13 @@ test('MAS package lifecycle atomically installs and repairs its 11-core capabili
     assert.match(current.opl_agent_package_status.materialization_readiness.lifecycle_receipt_ref, /^opl:\/\//);
     assert.equal(current.opl_agent_package_status.operational_ready, true);
     assert.equal(current.opl_agent_package_status.launch_allowed, true);
+
+    const currentFromWorkspace = runCliInCwd([
+      'packages', 'status', '--package-id', FIXTURE_CONSUMER_PACKAGE_ID,
+      '--scope', 'workspace', '--target-workspace', workspace,
+    ], workspace, env) as any;
+    assert.equal(currentFromWorkspace.opl_agent_package_status.materialization_readiness.status, 'current');
+    assert.equal(currentFromWorkspace.opl_agent_package_status.materialization_readiness.target_root, workspace);
 
     fs.rmSync(path.join(localSkillRoot, 'medical-manuscript-writing'), { recursive: true, force: true });
     const degraded = runCli([
