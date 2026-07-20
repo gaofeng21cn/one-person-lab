@@ -484,6 +484,7 @@ export function ownerRouteReadback(input: {
   scope?: 'workspace' | 'quest' | null;
   targetWorkspace?: string | null;
   targetQuest?: string | null;
+  allLocks?: AgentPackageLock[];
   packages: Array<{
     packageId: string;
     lock?: AgentPackageLock | null;
@@ -504,7 +505,8 @@ export function ownerRouteReadback(input: {
     package_count: input.packages.length,
     packages: input.packages.map((entry) => ownerRouteReadbackItem({
       ...entry,
-      allLocks: input.packages.flatMap((candidate) => candidate.lock ? [candidate.lock] : []),
+      allLocks: input.allLocks
+        ?? input.packages.flatMap((candidate) => candidate.lock ? [candidate.lock] : []),
       scope: input.scope,
       targetWorkspace: input.targetWorkspace,
       targetQuest: input.targetQuest,

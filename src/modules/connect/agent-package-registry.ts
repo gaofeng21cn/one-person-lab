@@ -3638,6 +3638,7 @@ export function runOplAgentPackageStatus(input: {
             scope: input.scope,
             targetWorkspace: input.targetWorkspace,
             targetQuest: input.targetQuest,
+            allLocks: lockIndex.packages,
             packages: installedPackages.map((lock) => ({
               packageId: lock.package_id,
               lock,
