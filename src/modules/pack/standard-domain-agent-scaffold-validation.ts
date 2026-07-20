@@ -23,7 +23,7 @@ import { validateAgentPackFiles } from './standard-domain-agent-scaffold-validat
 import { validateStageRefs } from './standard-domain-agent-scaffold-validation-parts/stage-refs.ts';
 import { validateUserStageLogContracts } from './standard-domain-agent-scaffold-validation-parts/user-stage-log.ts';
 import { validateFoundryAgentSeriesContract } from './standard-domain-agent-scaffold-validation-parts/foundry-contract.ts';
-import { normalizeStandardAgentCapabilityMapPolicies } from './standard-agent-capability-map.ts';
+import { materializeStandardAgentCapabilityMap } from './standard-agent-capability-map.ts';
 import { validateStandardAgentImplementationProfileRefs } from '../pack/public/standard-agent-implementation-profile.ts';
 import { readStandardAgentInterface } from '../../kernel/standard-agent-interface.ts';
 import {
@@ -129,7 +129,7 @@ function validateSelfEvolutionRoutingFields(capabilities: JsonCapabilityEntry[])
   };
 }
 
-function validateCapabilityMap(capabilityMap: unknown) {
+function validateCapabilityMap(capabilityMap: unknown, repoDir: string) {
   if (capabilityMap === null || capabilityMap === undefined) {
     return {
       status: 'missing',
@@ -144,13 +144,28 @@ function validateCapabilityMap(capabilityMap: unknown) {
       blockers: [],
     };
   }
+  const materialized = materializeStandardAgentCapabilityMap(repoDir, capabilityMap);
+  if (materialized.blockers.length > 0) {
+    return {
+      status: 'blocked',
+      observed_roles: [],
+      missing_roles: REQUIRED_CAPABILITY_MAP_SURFACE_ROLES,
+      self_evolution_routing_validation: {
+        status: 'blocked',
+        checked_capability_count: 0,
+        self_evolution_ready_capability_count: 0,
+        blockers: materialized.blockers,
+      },
+      blockers: materialized.blockers,
+    };
+  }
   const schemaValidation = validateJsonSchemaPayload(
     {
       schemaId: 'opl.standard_agent_capability_map.v1',
       schema: standardAgentCapabilityMapSchema,
       sourceRef: 'contracts/opl-framework/standard-agent-capability-map.schema.json',
     },
-    capabilityMap,
+    materialized.capabilityMap,
   );
   if (!schemaValidation.ok) {
     return {
@@ -168,22 +183,7 @@ function validateCapabilityMap(capabilityMap: unknown) {
       ),
     };
   }
-  const normalized = normalizeStandardAgentCapabilityMapPolicies(capabilityMap);
-  if (normalized.blockers.length > 0) {
-    return {
-      status: 'blocked',
-      observed_roles: [],
-      missing_roles: REQUIRED_CAPABILITY_MAP_SURFACE_ROLES,
-      self_evolution_routing_validation: {
-        status: 'blocked',
-        checked_capability_count: 0,
-        self_evolution_ready_capability_count: 0,
-        blockers: normalized.blockers,
-      },
-      blockers: normalized.blockers,
-    };
-  }
-  const capabilities = (normalized.capabilityMap as CapabilityMapPayload).capabilities;
+  const capabilities = (materialized.capabilityMap as CapabilityMapPayload).capabilities;
   const observedRoles = [...new Set(capabilities
     .map((entry) => entry.surface_role))];
   const missingRoles = REQUIRED_CAPABILITY_MAP_SURFACE_ROLES.filter((role) => !observedRoles.includes(role));
@@ -343,7 +343,7 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
   const stageRefValidation = validateStageRefs(repoDir, stageControlPlane, stagePackV2Required);
   const userStageLogValidation = validateUserStageLogContracts(stageControlPlane);
   const foundryAgentSeriesValidation = validateFoundryAgentSeriesContract(foundryAgentSeries);
-  const capabilityMapValidation = validateCapabilityMap(capabilityMap);
+  const capabilityMapValidation = validateCapabilityMap(capabilityMap, repoDir);
   const stagePackV2Validation = validateStagePackV2(stageControlPlane, packCompilerInput, stagePackV2Required, {
     repoDir,
   });

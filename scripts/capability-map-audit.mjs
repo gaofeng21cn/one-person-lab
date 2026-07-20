@@ -7,6 +7,8 @@ import {
   readJsonFile,
   stringList,
 } from './script-json-boundary.mjs';
+import { materializeStandardAgentCapabilityMap } from '../src/modules/pack/standard-agent-capability-map.ts';
+import { listRepoProfessionalSkillRefs } from '../src/modules/pack/standard-agent-capability-inventory.ts';
 
 const LOCAL_REF_PREFIXES = ['external_repo:', 'opl-framework:', 'human_doc:', 'runtime:', 'policy:', 'contract:'];
 
@@ -68,28 +70,6 @@ function capabilitiesFor(map) {
   return [];
 }
 
-function normalizePolicyProfiles(map) {
-  if (!isJsonObject(map) || !Array.isArray(map.capabilities)) return { map, blockers: [] };
-  const profiles = isJsonObject(map.capability_policy_profiles) ? map.capability_policy_profiles : {};
-  const blockers = [];
-  const capabilities = map.capabilities.map((entry, index) => {
-    if (!isJsonObject(entry) || typeof entry.capability_policy_profile_ref !== 'string') return entry;
-    const id = typeof entry.capability_id === 'string' && entry.capability_id.trim()
-      ? entry.capability_id.trim()
-      : `capability_${index}`;
-    const prefix = '#/capability_policy_profiles/';
-    const profileRef = entry.capability_policy_profile_ref;
-    const profileId = profileRef.startsWith(prefix) ? profileRef.slice(prefix.length) : '';
-    const profile = profiles[profileId];
-    if (!profileId || profileId.includes('/') || !Object.hasOwn(profiles, profileId) || !isJsonObject(profile)) {
-      blockers.push(`${id}:unresolved_capability_policy_profile:${profileRef}`);
-      return entry;
-    }
-    return { ...profile, ...entry };
-  });
-  return { map: { ...map, capabilities }, blockers };
-}
-
 function verificationRefsFor(capability, map) {
   const explicitRefs = stringList(capability.verification_refs);
   if (explicitRefs.length > 0) return explicitRefs;
@@ -125,20 +105,13 @@ function auditRepo(repoDir) {
   if (!fs.existsSync(mapPath)) {
     return { repo, repo_dir: repoDir, status: 'skipped', blockers: [`missing:${mapPath}`], warnings: [] };
   }
-  const normalized = normalizePolicyProfiles(readJsonFile(mapPath));
-  const map = normalized.map;
+  const normalized = materializeStandardAgentCapabilityMap(repoDir, readJsonFile(mapPath));
+  const map = normalized.capabilityMap;
   const capabilities = capabilitiesFor(map);
   const blockers = [...normalized.blockers];
   const warnings = [];
   const seenIds = new Set();
-  const professionalSkillRoot = path.join(repoDir, 'agent', 'professional_skills');
-  const repoProfessionalSkillRefs = fs.existsSync(professionalSkillRoot)
-    ? fs.readdirSync(professionalSkillRoot, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => `agent/professional_skills/${entry.name}/SKILL.md`)
-      .filter((ref) => fs.existsSync(path.join(repoDir, ref)))
-      .sort()
-    : [];
+  const repoProfessionalSkillRefs = listRepoProfessionalSkillRefs(repoDir);
   const representedProfessionalSkillRefs = new Set();
 
   if (capabilities.length === 0) blockers.push('capability_map_has_no_capabilities');

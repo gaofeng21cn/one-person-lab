@@ -126,6 +126,7 @@ const fastTestFiles = [
   'tests/src/cli/cases/agents-run.test.ts',
   'tests/src/repo-json-schema.test.ts',
   'tests/src/standard-agent-implementation-profile.test.ts',
+  'tests/src/standard-agent-capability-map.test.ts',
   'tests/src/source-derived-agent-design-abi.test.ts',
   'tests/src/mas-mag-cognitive-kernel-stage-pack-fixtures.test.ts',
   ...expandTestFiles(['tests/src/stage-artifact-runtime.test.ts', 'tests/src/stage-artifact-contract.test.ts']),

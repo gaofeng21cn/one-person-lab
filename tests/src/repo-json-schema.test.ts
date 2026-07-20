@@ -4,6 +4,10 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
+import {
+  resolveContainedRepoJsonFile,
+  resolveContainedRepoPath,
+} from '../../src/kernel/repo-contained-json-file.ts';
 import { assertRepoJsonSchemaPayload } from '../../src/kernel/repo-json-schema.ts';
 
 function fixture() {
@@ -23,6 +27,24 @@ function fixture() {
   })}\n`);
   return root;
 }
+
+test('contained repo path helpers retain the JSON-specific error contract', () => {
+  const root = fixture();
+  try {
+    assert.throws(
+      () => resolveContainedRepoJsonFile(root, 'https://example.invalid/schema.json', 'Fixture schema'),
+      (error) => error instanceof Error
+        && error.message === 'Fixture schema must be a repo-relative local JSON path: https://example.invalid/schema.json',
+    );
+    assert.throws(
+      () => resolveContainedRepoPath(root, 'https://example.invalid/source', 'Fixture source'),
+      (error) => error instanceof Error
+        && error.message === 'Fixture source must be a repo-relative local path: https://example.invalid/source',
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
 
 test('repo JSON Schema validation resolves a contained fragment and rejects invalid payloads', () => {
   const root = fixture();

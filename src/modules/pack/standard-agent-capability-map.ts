@@ -1,4 +1,5 @@
 import { isRecord } from '../../kernel/contract-validation.ts';
+import { deriveStandardAgentCapabilityInventory } from './standard-agent-capability-inventory.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -44,5 +45,14 @@ export function normalizeStandardAgentCapabilityMapPolicies(capabilityMap: unkno
       capabilities,
     },
     blockers,
+  };
+}
+
+export function materializeStandardAgentCapabilityMap(repoDir: string, capabilityMap: unknown) {
+  const derived = deriveStandardAgentCapabilityInventory(repoDir, capabilityMap);
+  const normalized = normalizeStandardAgentCapabilityMapPolicies(derived.capabilityMap);
+  return {
+    capabilityMap: normalized.capabilityMap,
+    blockers: [...new Set([...derived.blockers, ...normalized.blockers])],
   };
 }

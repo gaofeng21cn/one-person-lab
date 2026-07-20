@@ -9,6 +9,8 @@ import {
   parseJsonText,
   readJsonFileResult,
 } from '../../kernel/json-file.ts';
+import { materializeStandardAgentCapabilityMap } from '../pack/standard-agent-capability-map.ts';
+import { listRepoProfessionalSkillRefs } from '../pack/standard-agent-capability-inventory.ts';
 import { syncOplCompanionSkills, type OplCompanionSkillApplyMode } from './install-companions.ts';
 import {
   registerOplFamilyCodexPlugins,
@@ -435,19 +437,6 @@ function validateStandardPluginCarrier(
   };
 }
 
-function listRepoProfessionalSkillRefs(repoRoot: string) {
-  const professionalSkillsRoot = path.join(repoRoot, 'agent', 'professional_skills');
-  if (!fs.existsSync(professionalSkillsRoot) || !fs.statSync(professionalSkillsRoot).isDirectory()) {
-    return [];
-  }
-
-  return fs.readdirSync(professionalSkillsRoot, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => path.join('agent', 'professional_skills', entry.name, 'SKILL.md'))
-    .filter((relativePath) => fs.existsSync(path.join(repoRoot, relativePath)))
-    .sort();
-}
-
 function capabilityKind(capability: Record<string, unknown>) {
   return normalizeOptionalString(
     typeof capability.capability_kind === 'string'
@@ -510,8 +499,18 @@ function inspectProfessionalSkillExposure(repoRoot: string): InspectFamilySkillP
     };
   }
 
-  const capabilities = Array.isArray(read.payload.capabilities)
-    ? read.payload.capabilities.filter(isRecord)
+  const materialized = materializeStandardAgentCapabilityMap(repoRoot, read.payload);
+  if (materialized.blockers.length > 0 || !isRecord(materialized.capabilityMap)) {
+    return {
+      ...base,
+      status: 'blocked',
+      blockers: materialized.blockers.length > 0
+        ? materialized.blockers
+        : ['failed_to_materialize_capability_map'],
+    };
+  }
+  const capabilities = Array.isArray(materialized.capabilityMap.capabilities)
+    ? materialized.capabilityMap.capabilities.filter(isRecord)
     : [];
   const professionalCapabilities = capabilities.filter((capability) => capabilityKind(capability) === 'professional_skill');
   const blockers: string[] = [];

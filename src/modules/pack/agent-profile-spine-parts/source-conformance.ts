@@ -13,6 +13,7 @@ import {
 } from '../agent-profile-spine-conformance.ts';
 import { validateReferenceBuildReceiptMaterialization } from '../reference-build-proof.ts';
 import { SOURCE_DERIVED_AGENT_DESIGN_TYPED_OBJECTS } from '../source-derived-agent-design-abi.ts';
+import { materializeStandardAgentCapabilityMap } from '../standard-agent-capability-map.ts';
 import {
   AGENT_PACK_PLAN_REF_FIELDS,
   AGENT_PACK_PLAN_REQUIREMENT_FIELDS,
@@ -415,7 +416,9 @@ function buildSourceDerivedTypedObjectFloor(
 
 export function buildAgentProfileConformance(args: string[]) {
   const { repoDir, profileId } = parseConformanceArgs(args);
-  const capabilityMap = readJsonFileOrNull(path.join(repoDir, 'contracts', 'capability_map.json'));
+  const rawCapabilityMap = readJsonFileOrNull(path.join(repoDir, 'contracts', 'capability_map.json'));
+  const materializedCapabilityMap = materializeStandardAgentCapabilityMap(repoDir, rawCapabilityMap);
+  const capabilityMap = materializedCapabilityMap.capabilityMap;
   const repoContractReadout = buildStandardAgentRepoContractReadout(repoDir);
   const stageControlPlane = repoContractReadout.stage_control_plane;
   const profile = conformanceProfileFor(profileId, capabilityMap);
@@ -553,6 +556,7 @@ export function buildAgentProfileConformance(args: string[]) {
     && designAdmissionReceiptForbiddenClaims.length > 0;
 
   const blockers = [
+    ...materializedCapabilityMap.blockers,
     fs.existsSync(path.join(repoDir, 'contracts', 'capability_map.json')) ? null : 'missing_contract:contracts/capability_map.json',
     fs.existsSync(path.join(repoDir, STANDARD_AGENT_STAGE_MANIFEST_REF))
       ? null

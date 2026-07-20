@@ -44,6 +44,50 @@ function writeCapabilityRepo(root: string, overrides: Record<string, unknown> = 
   });
 }
 
+function writeDerivedCapabilityRepo(root: string) {
+  fs.mkdirSync(path.join(root, 'agent', 'professional_skills', 'demo'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'agent', 'quality_gates'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'scripts'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'agent', 'professional_skills', 'demo', 'SKILL.md'), '---\nname: demo\n---\n');
+  fs.writeFileSync(path.join(root, 'agent', 'quality_gates', 'quality.md'), '# Quality\n');
+  fs.writeFileSync(path.join(root, 'scripts', 'verify.sh'), '#!/usr/bin/env bash\nexit 0\n');
+  writeJson(path.join(root, 'contracts', 'capability_map.json'), {
+    surface_kind: 'opl_standard_agent_capability_map',
+    schema_version: 'standard-agent-capability-map.v1',
+    domain_id: 'demo-agent',
+    owner: 'demo-owner',
+    authority_boundary: { can_write_domain_truth: false },
+    capability_policy_profiles: {
+      standard: {
+        authority_boundary: { can_write_domain_truth: false },
+        verification_refs: ['scripts/verify.sh'],
+        forbidden_surfaces: ['owner_receipts'],
+        owner_closeout_boundary: {
+          owner: 'demo-owner',
+          required_return_shapes: ['owner_receipt_ref'],
+          can_write_owner_receipt_body: false,
+          can_create_typed_blocker: false,
+        },
+      },
+    },
+    capability_inventory: {
+      source_kind: 'standard_agent_repo_scan.v1',
+      policy_profile_ref: '#/capability_policy_profiles/standard',
+      professional_skill_order: ['demo'],
+      deltas: [{
+        capability_id: 'demo-quality',
+        source_ref: 'agent/quality_gates/',
+      }],
+    },
+    feedback_token_index: {
+      demo_feedback: {
+        canonical_capability_ids: ['demo'],
+        owner_stage_refs: ['demo-stage'],
+      },
+    },
+  });
+}
+
 test('capability-map audit passes valid cross-repo capability maps', () => {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-capability-audit-'));
   try {
@@ -165,6 +209,26 @@ test('capability-map audit expands shared policy profiles', () => {
 
     assert.equal(result.status, 0, result.stderr || result.stdout);
     assert.equal(readJsonPayload(result.stdout).status, 'passed');
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('capability-map audit consumes scan-derived capability inventory', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-capability-audit-derived-'));
+  try {
+    const repo = path.join(fixtureRoot, 'derived-agent');
+    writeDerivedCapabilityRepo(repo);
+    const result = spawnSync('node', [
+      path.join(repoRoot, 'scripts', 'capability-map-audit.mjs'),
+      repo,
+      '--json',
+    ], { encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    const payload = readJsonPayload(result.stdout);
+    assert.equal(payload.status, 'passed');
+    assert.equal(payload.results[0].capability_count, 2);
+    assert.equal(payload.results[0].repo_professional_skill_count, 1);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
