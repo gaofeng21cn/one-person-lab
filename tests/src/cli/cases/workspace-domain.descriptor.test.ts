@@ -13,6 +13,7 @@ import {
   test,
 } from '../helpers.ts';
 import { attachManifestSurface, createAdmittedStagePackFixture } from './workspace-domain-test-helper.ts';
+import { initializeFixtureGitCheckout } from './domain-pack-compiler-fixtures.ts';
 
 function insertFreshTemporalProviderProof(stateRoot: string) {
   const db = new DatabaseSync(path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
@@ -78,8 +79,14 @@ test('agent descriptor commands keep partial domain surfaces discoverable and no
     'med-autoscience',
     'MedAutoScience',
   );
+  initializeFixtureGitCheckout(masPack.repoDir);
   manifests.medautoscience = masPack.manifest;
-  const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
+  const env = {
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_STATE_DIR: stateRoot,
+    OPL_MODULES_ROOT: path.join(stateRoot, 'modules'),
+    OPL_MODULE_PATH_MEDAUTOSCIENCE: masPack.repoDir,
+  };
 
   try {
     runCli(['family-runtime', 'events', 'export'], env);

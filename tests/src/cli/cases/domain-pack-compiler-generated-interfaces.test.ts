@@ -700,8 +700,8 @@ test('generated interfaces family-defaults expose product-entry feed and direct 
       .generated_agent_interfaces;
     assert.equal(feed.surface_kind, 'opl_generated_agent_interfaces_family_report');
     assert.deepEqual(feed.summary, {
-      total_domain_count: 4,
-      ready_domain_count: 4,
+      total_domain_count: 5,
+      ready_domain_count: 5,
       blocked_domain_count: 0,
     });
     assert.equal(feed.authority_boundary.report_can_claim_domain_ready, false);
@@ -726,7 +726,8 @@ test('generated interfaces family-defaults expose product-entry feed and direct 
       ['mas', { domain: 'med-autoscience', action: 'study_packet' }],
       ['mag', { domain: 'med-autogrant', action: 'grant_packet' }],
       ['rca', { domain: 'redcube_ai', action: 'visual_packet' }],
-      ['oma', { domain: 'opl-meta-agent', action: 'agent_packet' }],
+      ['oma', { domain: 'agent_engineering', action: 'agent_packet' }],
+      ['obf', { domain: 'opl-bookforge', action: 'book_packet' }],
     ]);
     assert.deepEqual(
       report.reports.map((entry: { requested_agent_id: string }) => entry.requested_agent_id).sort(),

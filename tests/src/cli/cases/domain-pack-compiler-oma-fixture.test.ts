@@ -21,8 +21,8 @@ test('domain pack compiler exposes OMA through the explicit family-defaults rout
 
   try {
     const list = runCli(['agents', 'pack-compiler', '--family-defaults'], env).domain_pack_compiler;
-    assert.equal(list.summary.total_domain_count, 4);
-    assert.equal(list.summary.ready_domain_count, 4);
+    assert.equal(list.summary.total_domain_count, 5);
+    assert.equal(list.summary.ready_domain_count, 5);
 
     const oma = runCli(['agents', 'pack-compiler', 'inspect', '--family-defaults', '--domain', 'opl-meta-agent'], env)
       .domain_pack_compiler;

@@ -278,7 +278,7 @@ const readModelGateTestFiles = [
     'tests/src/cli/cases/domain-pack-compiler-real-repo.test.ts',
   ]),
   ...expandTestFiles([
-    'tests/src/cli/cases/workspace-domain.stages-artifact-locator.test.ts', 'tests/src/cli/cases/workspace-domain.stages-graph.test.ts',
+    'tests/src/cli/cases/workspace-domain.stages-graph.test.ts',
     'tests/src/cli/cases/workspace-domain.stages-replay.test.ts',
   ]),
   'tests/src/cli/cases/workspace-domain.agent-skeleton.test.ts',

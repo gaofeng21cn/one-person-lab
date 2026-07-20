@@ -13,6 +13,7 @@ import {
 import {
   attachManifestSurface,
   bindFamilyManifests,
+  initializeFixtureGitCheckout,
   withPackCompilerReadySurfaces,
   writeManifestContractOverrides,
 } from './domain-pack-compiler-fixtures.ts';
@@ -26,7 +27,7 @@ import { FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES } from '../../../../src/modules/pa
 test('domain pack compiler emits aligned generated artifact drift manifests for admitted packs', () => {
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-compiler-drift-state-'));
-  const env = {
+  const env: Record<string, string> = {
     OPL_CONTRACTS_DIR: fixtureContractsRoot,
     OPL_FAMILY_WORKSPACE_ROOT: fixtureRoot,
     OPL_STATE_DIR: stateRoot,
@@ -82,7 +83,11 @@ test('default domain pack compiler surface treats admitted generated artifacts a
 test('domain pack compiler marks generated artifact drift when blockers remain', () => {
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-compiler-drift-blocked-'));
-  const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
+  const env: Record<string, string> = {
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_STATE_DIR: stateRoot,
+    OPL_MODULES_ROOT: path.join(stateRoot, 'modules'),
+  };
   const fixtures = loadFamilyManifestFixtures();
   const blockedMas = attachManifestSurface(
     withPackCompilerReadySurfaces(fixtures.medautoscience, {
@@ -113,6 +118,8 @@ test('domain pack compiler marks generated artifact drift when blockers remain',
   );
   const masPack = createAdmittedStagePackFixture(blockedMas, 'med-autoscience', 'MedAutoScience');
   writeManifestContractOverrides(masPack.repoDir, blockedMas);
+  initializeFixtureGitCheckout(masPack.repoDir);
+  env.OPL_MODULE_PATH_MEDAUTOSCIENCE = masPack.repoDir;
 
   try {
     runCli([

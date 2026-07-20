@@ -35,8 +35,8 @@ test('framework operating maturity reports owner gates and false-ready boundarie
     ]);
     assert.equal(maturity.current_owner_delta_bridge.default_planning_root, 'current_owner_delta');
     assert.equal(maturity.current_owner_delta_bridge.hard_gate.domain_ready_authorized, false);
-    assert.equal(maturity.summary.domain_owner_chain_open_domain_count, 4);
-    assert.equal(maturity.domain_owner_chain_scaleout.domains.length, 4);
+    assert.equal(maturity.summary.domain_owner_chain_open_domain_count, 5);
+    assert.equal(maturity.domain_owner_chain_scaleout.domains.length, 5);
     assert.equal(maturity.owner_evidence_intake.status, 'owner_evidence_required');
     const domainOwnerEvidence = maturity.owner_evidence_intake.lane_evidence.find(
       (entry: { lane: string }) => entry.lane === 'domain_owner_chain_scaleout',

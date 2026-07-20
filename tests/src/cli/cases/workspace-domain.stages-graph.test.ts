@@ -5,9 +5,11 @@ import {
   fs,
   loadFamilyManifestFixtures,
   os,
+  path,
   runCli,
   test,
 } from '../helpers.ts';
+import { initializeFixtureGitCheckout } from './domain-pack-compiler-fixtures.ts';
 import {
   createAdmittedStagePackFixture,
   type JsonRecord,
@@ -26,9 +28,21 @@ test('family stage list, proof bundle, and readiness stay refs-only without doma
     project,
     createAdmittedStagePackFixture(fixture, targetDomainId, owner),
   ] as const);
+  const env: Record<string, string> = {
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_STATE_DIR: stateRoot,
+    OPL_MODULES_ROOT: path.join(stateRoot, 'modules'),
+  };
+  const modulePathFields: Record<string, string> = {
+    medautoscience: 'OPL_MODULE_PATH_MEDAUTOSCIENCE',
+    medautogrant: 'OPL_MODULE_PATH_MEDAUTOGRANT',
+    redcube: 'OPL_MODULE_PATH_REDCUBE',
+  };
 
   try {
     for (const [project, stagePack] of stagePacks) {
+      initializeFixtureGitCheckout(stagePack.repoDir);
+      env[modulePathFields[project]!] = stagePack.repoDir;
       runCli([
         'workspace',
         'bind',
@@ -38,21 +52,18 @@ test('family stage list, proof bundle, and readiness stay refs-only without doma
         stagePack.repoDir,
         '--manifest-command',
         buildManifestCommand(stagePack.manifest),
-      ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
+      ], env);
     }
 
-    const list = runCli(['stages', 'list'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    }).family_stages;
-    const proofBundle = runCli(['stages', 'proof-bundle', '--domain', 'mas'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    }).family_stage_proof_bundle.proof_bundle;
-    const readiness = runCli(['stages', 'readiness', '--family-defaults'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    }).family_stage_readiness;
+    const list = runCli(['stages', 'list'], env).family_stages;
+    const proofBundle = runCli(
+      ['stages', 'proof-bundle', '--domain', 'mas'],
+      env,
+    ).family_stage_proof_bundle.proof_bundle;
+    const readiness = runCli(
+      ['stages', 'readiness', '--family-defaults'],
+      env,
+    ).family_stage_readiness;
     const boundStages = list.stages.filter(
       (stage: { project_id: string }) => stage.project_id !== 'opl-meta-agent',
     );
@@ -106,6 +117,13 @@ test('family stage readiness keeps missing replay refs as non-authoritative warn
     'med-autoscience',
     'MedAutoScience',
   );
+  initializeFixtureGitCheckout(stagePack.repoDir);
+  const env = {
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_STATE_DIR: stateRoot,
+    OPL_MODULES_ROOT: path.join(stateRoot, 'modules'),
+    OPL_MODULE_PATH_MEDAUTOSCIENCE: stagePack.repoDir,
+  };
 
   try {
     runCli([
@@ -117,12 +135,12 @@ test('family stage readiness keeps missing replay refs as non-authoritative warn
       stagePack.repoDir,
       '--manifest-command',
       buildManifestCommand(stagePack.manifest),
-    ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
+    ], env);
 
-    const readiness = runCli(['stages', 'readiness', '--domain', 'mas'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    }).family_stage_readiness;
+    const readiness = runCli(
+      ['stages', 'readiness', '--domain', 'mas'],
+      env,
+    ).family_stage_readiness;
     const replayCheck = readiness.lens_summary.find((entry: { check_id: string }) =>
       entry.check_id === 'replay_certification'
     );

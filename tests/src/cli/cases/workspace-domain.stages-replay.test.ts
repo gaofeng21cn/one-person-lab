@@ -3,12 +3,20 @@ import {
   createAdmittedStagePackFixture,
   type JsonRecord,
 } from './workspace-domain-test-helper.ts';
+import { initializeFixtureGitCheckout } from './domain-pack-compiler-fixtures.ts';
 
 test('family stage replay drilldowns expose missing runtime evidence from generated packs', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-stage-replay-drilldown-state-'));
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const fixtures = loadFamilyManifestFixtures();
   const stagePack = createAdmittedStagePackFixture(fixtures.medautoscience as JsonRecord, 'med-autoscience', 'MedAutoScience');
+  initializeFixtureGitCheckout(stagePack.repoDir);
+  const env = {
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_STATE_DIR: stateRoot,
+    OPL_MODULES_ROOT: path.join(stateRoot, 'modules'),
+    OPL_MODULE_PATH_MEDAUTOSCIENCE: stagePack.repoDir,
+  };
 
   try {
     runCli([
@@ -20,16 +28,16 @@ test('family stage replay drilldowns expose missing runtime evidence from genera
       stagePack.repoDir,
       '--manifest-command',
       buildManifestCommand(stagePack.manifest),
-    ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
+    ], env);
 
-    const replay = runCli(['stages', 'replay-certification', '--domain', 'mas'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    }).family_stage_replay_certification.certification;
-    const sourceSpec = runCli(['stages', 'source-spec', '--domain', 'mas'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    }).family_stage_pack_source_spec.source_spec;
+    const replay = runCli(
+      ['stages', 'replay-certification', '--domain', 'mas'],
+      env,
+    ).family_stage_replay_certification.certification;
+    const sourceSpec = runCli(
+      ['stages', 'source-spec', '--domain', 'mas'],
+      env,
+    ).family_stage_pack_source_spec.source_spec;
 
     assert.equal(replay.replay_status, 'blocked');
     assert.equal(replay.summary.blocker_count, 11);
@@ -59,6 +67,13 @@ test('family stage readiness exposes missing human gate replay refs as refs-only
     'MedAutoScience',
     { stage2HumanGate: true },
   );
+  initializeFixtureGitCheckout(stagePack.repoDir);
+  const env = {
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_STATE_DIR: stateRoot,
+    OPL_MODULES_ROOT: path.join(stateRoot, 'modules'),
+    OPL_MODULE_PATH_MEDAUTOSCIENCE: stagePack.repoDir,
+  };
 
   try {
     runCli([
@@ -70,16 +85,16 @@ test('family stage readiness exposes missing human gate replay refs as refs-only
       stagePack.repoDir,
       '--manifest-command',
       buildManifestCommand(stagePack.manifest),
-    ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
+    ], env);
 
-    const readiness = runCli(['stages', 'readiness', '--domain', 'mas', '--detail', 'full'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    }).family_stage_readiness.family_stage_readiness;
-    const replay = runCli(['stages', 'replay-certification', '--domain', 'mas'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    }).family_stage_replay_certification.certification;
+    const readiness = runCli(
+      ['stages', 'readiness', '--domain', 'mas', '--detail', 'full'],
+      env,
+    ).family_stage_readiness.family_stage_readiness;
+    const replay = runCli(
+      ['stages', 'replay-certification', '--domain', 'mas'],
+      env,
+    ).family_stage_replay_certification.certification;
 
     assert.equal(readiness.launch_readiness_status, 'launch_warning');
     assert.equal(readiness.summary.hard_blocker_count, 0);

@@ -50,6 +50,7 @@ export function bindFamilyContractModulePaths(
   env.OPL_MODULE_PATH_MEDAUTOGRANT ??= path.join(workspaceRoot, 'med-autogrant');
   env.OPL_MODULE_PATH_REDCUBE ??= path.join(workspaceRoot, 'redcube-ai');
   env.OPL_MODULE_PATH_OPLMETAAGENT ??= path.join(workspaceRoot, 'opl-meta-agent');
+  env.OPL_MODULE_PATH_OPLBOOKFORGE ??= path.join(workspaceRoot, 'opl-bookforge');
   return env;
 }
 
@@ -561,11 +562,20 @@ export function createFamilyDefaultContractWorkspace() {
     {
       repoDirectory: 'opl-meta-agent',
       agentId: 'oma',
-      targetDomainId: 'opl-meta-agent',
-      owner: 'OPLMetaAgent',
+      targetDomainId: 'agent_engineering',
+      owner: 'OPL Meta Agent',
       actionId: 'agent_packet',
       stageId: 'agent_stage',
       memoryRefId: 'oma_agent_improvement_memory',
+    },
+    {
+      repoDirectory: 'opl-bookforge',
+      agentId: 'obf',
+      targetDomainId: 'opl-bookforge',
+      owner: 'OPL Book Forge',
+      actionId: 'book_packet',
+      stageId: 'book_stage',
+      memoryRefId: 'obf_book_production_memory',
     },
   ];
   for (const spec of specs) {

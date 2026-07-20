@@ -204,10 +204,12 @@ export function buildPublicCommandSpecs(
     );
   const loadAgentDescriptorsForPackCompiler = () =>
     buildFamilyAgentDescriptorList(getContracts(), {
-      domainManifests: buildAgentDescriptorManifests({
-        manifestCommandTimeoutMs: 120_000,
-        manifestCommandTimeoutPolicy: 'fixed',
-      }),
+      domainManifests: withStandardDomainAgentSkeletonInspection(
+        buildDomainManifestCatalog(getContracts(), {
+          manifestCommandTimeoutMs: 120_000,
+          manifestCommandTimeoutPolicy: 'fixed',
+        }).domain_manifests,
+      ),
       manifestCommandTimeoutMs: 120_000,
       manifestCommandTimeoutPolicy: 'fixed',
     }).family_agent_descriptors.descriptors as Record<string, unknown>[];

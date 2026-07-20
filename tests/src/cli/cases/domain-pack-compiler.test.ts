@@ -170,8 +170,8 @@ test('domain pack compiler family-defaults consumes standard repo contracts with
   try {
     const list = runCli(['agents', 'pack-compiler', '--family-defaults'], env).domain_pack_compiler;
     assert.equal(list.source_kind, 'standard_agent_repo_contracts');
-    assert.equal(list.summary.total_domain_count, 4);
-    assert.equal(list.summary.ready_domain_count, 4);
+    assert.equal(list.summary.total_domain_count, 5);
+    assert.equal(list.summary.ready_domain_count, 5);
     assert.equal(list.summary.blocked_domain_count, 0);
     assert.equal(list.summary.generated_artifact_drift_detected_count, 0);
 

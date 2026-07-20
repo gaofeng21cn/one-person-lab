@@ -148,6 +148,7 @@ test('standard domain-agent skeleton inspection requires repo-source dirs and ar
     assert.ok(drift.family_agent.issues.includes('repo_source_skeleton_must_not_include_real_artifacts_dir'));
     assert.ok(drift.family_agent.issues.includes('domain_repo_must_not_contain_real_artifacts'));
     assert.ok(drift.family_agent.issues.includes('artifact_roots_must_be_locators'));
+    assert.ok(drift.family_agent.issues.includes('artifact_locator_surface_required'));
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
