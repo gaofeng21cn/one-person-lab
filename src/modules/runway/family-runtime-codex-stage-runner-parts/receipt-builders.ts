@@ -119,6 +119,7 @@ export type CodexStageRunnerProcessOutputSummary = {
     status: 'completed' | 'failed';
     same_thread: true;
     thread_id: string;
+    timeout_ms: number;
     creates_stage_attempt: false;
     counts_as_review: false;
     consumes_quality_budget: false;

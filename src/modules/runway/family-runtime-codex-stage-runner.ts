@@ -14,6 +14,7 @@ import {
   type StageAttemptExecutorPolicy,
 } from './agent-executor.ts';
 import {
+  DEFAULT_CODEX_PROTOCOL_CLOSEOUT_RESUME_TIMEOUT_MS,
   DEFAULT_CODEX_STAGE_RUNNER_COMMAND_NO_PROGRESS_TIMEOUT_MS,
   DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS,
   DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS,
@@ -514,6 +515,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   let domainReceiptRecoveryRef: string | null = null;
   let protocolCloseoutResumeStatus: 'not_applicable' | 'completed' | 'failed' = 'not_applicable';
   let protocolCloseoutResumeThreadId: string | null = null;
+  let protocolCloseoutResumeTimeoutMs: number | null = null;
   let protocolCloseoutResumeResult: CodexCommandResult | null = null;
   let protocolCloseoutResumePacketObserved = false;
   const protocolCloseoutResumeViolationKinds = new Set<'command_execution' | 'unsupported_function_call'>();
@@ -557,6 +559,10 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
     runnerEvents.push({ event_kind: 'protocol_closeout_resume.started', value: parsed.threadId });
     input.onRunnerProgress?.({ event_kind: 'protocol_closeout_resume.started', value: parsed.threadId });
     try {
+      protocolCloseoutResumeTimeoutMs = normalizeTimeoutMs(
+        process.env.OPL_CODEX_PROTOCOL_CLOSEOUT_RESUME_TIMEOUT_MS,
+        DEFAULT_CODEX_PROTOCOL_CLOSEOUT_RESUME_TIMEOUT_MS,
+      );
       const resumeArgs = buildCodexExecResumeArgs(
         parsed.threadId,
         protocolCloseoutResumePrompt(input.attempt),
@@ -567,6 +573,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
           }),
           json: true,
           sandboxMode: 'read-only',
+          reasoningEffort: 'low',
           packageSkillBindings: hostSkillRuntime?.packageSkillBindings,
           shellHome: hostSkillRuntime?.shellHome,
         },
@@ -574,7 +581,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
       protocolCloseoutResumeResult = await runCodexCommandStreaming(resumeArgs, {
         cwd: workspaceRoot,
         env: { ...input.env, ...providerEnv, ...hostSkillRuntime?.env },
-        timeoutMs: normalizeTimeoutMs(process.env.OPL_CODEX_PROTOCOL_CLOSEOUT_RESUME_TIMEOUT_MS, 30_000),
+        timeoutMs: protocolCloseoutResumeTimeoutMs,
         noOutputTimeoutMs,
         commandNoProgressTimeoutMs,
         signal: input.signal,
@@ -816,6 +823,8 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
               status: protocolCloseoutResumeStatus,
               same_thread: true,
               thread_id: protocolCloseoutResumeThreadId,
+              timeout_ms: protocolCloseoutResumeTimeoutMs
+                ?? DEFAULT_CODEX_PROTOCOL_CLOSEOUT_RESUME_TIMEOUT_MS,
               creates_stage_attempt: false,
               counts_as_review: false,
               consumes_quality_budget: false,

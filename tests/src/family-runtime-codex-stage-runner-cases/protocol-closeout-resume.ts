@@ -89,10 +89,12 @@ test('formal quality Attempt uses one same-thread closeout-only resume without c
   const previousBin = process.env.OPL_CODEX_BIN;
   const previousRecoveryTimeout = process.env.OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS;
   const previousRecoveryInterval = process.env.OPL_CODEX_SESSION_RECOVERY_INTERVAL_MS;
+  const previousProtocolResumeTimeout = process.env.OPL_CODEX_PROTOCOL_CLOSEOUT_RESUME_TIMEOUT_MS;
   try {
     process.env.OPL_CODEX_BIN = codexPath;
     process.env.OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS = '1';
     process.env.OPL_CODEX_SESSION_RECOVERY_INTERVAL_MS = '1';
+    delete process.env.OPL_CODEX_PROTOCOL_CLOSEOUT_RESUME_TIMEOUT_MS;
     const receipt = await runPublicCodexStageRunner({
       attempt: {
         stage_attempt_id: 'sat-protocol-closeout-resume',
@@ -113,6 +115,7 @@ test('formal quality Attempt uses one same-thread closeout-only resume without c
     const protocol = receipt.process_output_summary?.protocol_closeout_resume as Record<string, unknown>;
     assert.equal(protocol.status, 'completed');
     assert.equal(protocol.same_thread, true);
+    assert.equal(protocol.timeout_ms, 120_000);
     assert.equal(protocol.creates_stage_attempt, false);
     assert.equal(protocol.counts_as_review, false);
     assert.equal(protocol.consumes_quality_budget, false);
@@ -120,12 +123,14 @@ test('formal quality Attempt uses one same-thread closeout-only resume without c
     const invocation = fs.readFileSync(invocationLog, 'utf8');
     assert.equal(invocation.match(/exec resume --skip-git-repo-check/g)?.length, 1);
     assert.match(invocation, /--config sandbox_mode="read-only"/);
+    assert.match(invocation, /--config model_reasoning_effort="low"/);
     assert.match(invocation, /protocol_closeout_resume, not Review/);
     assert.match(invocation, /Do not call tools, edit files, change artifact bytes/);
   } finally {
     restoreEnv('OPL_CODEX_BIN', previousBin);
     restoreEnv('OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS', previousRecoveryTimeout);
     restoreEnv('OPL_CODEX_SESSION_RECOVERY_INTERVAL_MS', previousRecoveryInterval);
+    restoreEnv('OPL_CODEX_PROTOCOL_CLOSEOUT_RESUME_TIMEOUT_MS', previousProtocolResumeTimeout);
     fs.rmSync(invocationLog, { force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
