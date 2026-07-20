@@ -153,8 +153,6 @@ test('app state isolates one invalid package status while direct status reads re
 
   const statuses = buildAppAgentPackageStatuses({
     packageIds: ['mas', 'obf'],
-    activeWorkspaceBindings: [],
-    workspaceRootPath: null,
     profile: 'fast',
     readStatus,
     lockIndex,
@@ -187,18 +185,15 @@ test('app state isolates one invalid package status while direct status reads re
   assert.equal(availability.find((entry) => entry.agent_id === 'obf')?.reason, 'package_status_read_failed');
 });
 
-test('app package status uses only the selected workspace and keeps fast readiness fail closed', () => {
-  const selectedWorkspaceRoot = '/tmp/opl-selected-workspace';
-  const packageWorkspace = '/tmp/opl-mas-workspace';
+test('app package status stays scope-less and keeps fast readiness fail closed', () => {
   const requests: Array<{ packageId: string; scope?: string; targetWorkspace?: string; detail?: string }> = [];
   const readStatus = ((input: { packageId: string; scope?: string; targetWorkspace?: string; detail?: string }) => {
     requests.push(input);
-    const materialized = input.scope === 'workspace'
-      && input.targetWorkspace === selectedWorkspaceRoot;
+    const scopeLess = input.scope === undefined && input.targetWorkspace === undefined;
     return {
       opl_agent_package_status: {
         package_id: input.packageId,
-        status: materialized ? 'available' : 'attention_needed',
+        status: scopeLess ? 'available' : 'attention_needed',
         recommended_action: null,
         installed_packages: [{
           package_version: '1.0.0',
@@ -208,11 +203,11 @@ test('app package status uses only the selected workspace and keeps fast readine
           exposure_state: 'visible',
         }],
         package_dependency_readiness: { status: 'current', operational_ready: true },
-        operational_ready: materialized,
+        operational_ready: scopeLess,
         operational_ready_scope: 'package_dependency_scope_and_runtime_source',
-        launch_allowed: materialized,
-        launch_blocked_reason: materialized ? null : 'scope_materialization_scope_required',
-        materialization_readiness: { status: materialized ? 'current' : 'scope_required' },
+        launch_allowed: scopeLess,
+        launch_blocked_reason: scopeLess ? null : 'scope_materialization_scope_required',
+        materialization_readiness: { status: scopeLess ? 'not_required' : 'scope_required' },
         runtime_source_readiness: { status: 'current', operational_ready: true },
         allowed_when_blocked: ['status', 'doctor', 'repair'],
         repair_action: null,
@@ -222,33 +217,18 @@ test('app package status uses only the selected workspace and keeps fast readine
 
   const fastStatuses = buildAppAgentPackageStatuses({
     packageIds: ['mas', 'opl-flow'],
-    activeWorkspaceBindings: [{ project_id: 'mas', workspace_path: packageWorkspace }],
-    workspaceRootPath: selectedWorkspaceRoot,
     profile: 'fast',
     readStatus,
   });
   const fullStatuses = buildAppAgentPackageStatuses({
     packageIds: ['opl-flow'],
-    activeWorkspaceBindings: [{ project_id: 'mas', workspace_path: packageWorkspace }],
-    workspaceRootPath: selectedWorkspaceRoot,
     profile: 'full',
     readStatus,
   });
-  const noSelectedWorkspace = buildAppAgentPackageStatuses({
-    packageIds: ['mas'],
-    activeWorkspaceBindings: [{ project_id: 'mas', workspace_path: packageWorkspace }],
-    workspaceRootPath: null,
-    profile: 'fast',
-    readStatus,
-  });
 
-  const fastMasRequest = requests.find((entry) => entry.packageId === 'mas' && entry.detail === 'fast'
-    && entry.targetWorkspace === selectedWorkspaceRoot);
-  const noWorkspaceRequest = requests.find((entry) => entry.packageId === 'mas' && entry.detail === 'fast'
-    && entry.targetWorkspace === undefined);
-  assert.equal(fastMasRequest?.targetWorkspace, selectedWorkspaceRoot);
-  assert.equal(noWorkspaceRequest?.scope, undefined);
-  assert.equal(noWorkspaceRequest?.targetWorkspace, undefined);
+  assert.equal(requests.length, 3);
+  assert.equal(requests.every((entry) => entry.scope === undefined), true);
+  assert.equal(requests.every((entry) => entry.targetWorkspace === undefined), true);
   assert.equal(fastStatuses['opl-flow'].status, 'verification_deferred');
   assert.equal(fastStatuses['opl-flow'].operational_ready, false);
   assert.equal(fastStatuses['opl-flow'].launch_allowed, false);
@@ -256,12 +236,12 @@ test('app package status uses only the selected workspace and keeps fast readine
   assert.equal(fullStatuses['opl-flow'].status, 'available');
   assert.equal(fullStatuses['opl-flow'].operational_ready, true);
   assert.equal(fullStatuses['opl-flow'].launch_allowed, true);
-  assert.equal(noSelectedWorkspace.mas.status, 'verification_deferred');
-  assert.equal(noSelectedWorkspace.mas.launch_blocked_reason, 'live_verification_deferred');
-  assert.equal(Object.hasOwn(noSelectedWorkspace.mas, 'activation_action'), false);
+  assert.equal(fastStatuses.mas.status, 'verification_deferred');
+  assert.equal(fastStatuses.mas.launch_blocked_reason, 'live_verification_deferred');
+  assert.equal(Object.hasOwn(fastStatuses.mas, 'activation_action'), false);
   assert.equal(
     (fastStatuses['opl-flow'].materialization_readiness as Record<string, unknown>).status,
-    'current',
+    'not_required',
   );
   assert.equal(Object.hasOwn(fastStatuses['opl-flow'], 'activation_action'), false);
   assert.equal(Object.hasOwn(fullStatuses['opl-flow'], 'activation_action'), false);
@@ -386,14 +366,12 @@ test('app package status normalizes dependency closure and dependent guards for 
 
   const fast = buildAppAgentPackageStatuses({
     packageIds: ['mas', 'oma', 'mas-scholar-skills'],
-    workspaceRootPath: '/tmp/opl-workspace',
     profile: 'fast',
     readStatus,
     lockIndex,
   });
   const full = buildAppAgentPackageStatuses({
     packageIds: ['mas', 'oma', 'mas-scholar-skills'],
-    workspaceRootPath: '/tmp/opl-workspace',
     profile: 'full',
     readStatus,
     lockIndex,
@@ -551,14 +529,12 @@ test('app package status keeps dependency currentness drift observable without r
     })) as any;
   const fullStatuses = buildAppAgentPackageStatuses({
     packageIds: ['mas'],
-    workspaceRootPath: '/tmp/opl-workspace',
     profile: 'full',
     lockIndex,
     readStatus,
   });
   const fastStatuses = buildAppAgentPackageStatuses({
     packageIds: ['mas'],
-    workspaceRootPath: '/tmp/opl-workspace',
     profile: 'fast',
     lockIndex,
     readStatus,
@@ -614,6 +590,7 @@ exit 1
   };
   const previousEnv = new Map(Object.keys(env).map((key) => [key, process.env[key]]));
   const calls = new Map<string, number>();
+  const requests: Array<{ packageId?: string; scope?: string; targetWorkspace?: string }> = [];
   try {
     fs.mkdirSync(stateDir, { recursive: true });
     fs.mkdirSync(workspaceRoot, { recursive: true });
@@ -704,13 +681,12 @@ exit 1
     for (const [key, value] of Object.entries(env)) process.env[key] = value;
 
     const readAgentPackageStatus = ((input: { packageId?: string; scope?: string; targetWorkspace?: string } = {}) => {
+        requests.push(input);
         const packageId = input.packageId ?? 'unknown';
         calls.set(packageId, (calls.get(packageId) ?? 0) + 1);
         const lock = packageLockIndexFixture.packages.find((entry) => entry.package_id === packageId) ?? null;
         const installed = Boolean(lock);
-        const materialized = installed
-          && input.scope === 'workspace'
-          && input.targetWorkspace === workspaceRoot;
+        const scopeLess = input.scope === undefined && input.targetWorkspace === undefined;
         const dependencies = packageId === 'mas' ? [{
           package_id: 'third.party.research',
           required: true,
@@ -729,7 +705,7 @@ exit 1
         return {
           opl_agent_package_status: {
             package_id: packageId,
-            status: installed ? materialized ? 'available' : 'attention_needed' : 'not_installed',
+            status: installed ? scopeLess ? 'available' : 'attention_needed' : 'not_installed',
             recommended_action: null,
             installed_packages: installed ? [lock] : [],
             package_dependency_readiness: installed ? {
@@ -738,12 +714,12 @@ exit 1
               repair_command: `opl packages repair --package-id ${packageId}`,
               dependencies,
             } : null,
-            materialization_readiness: { status: installed ? materialized ? 'current' : 'scope_required' : 'not_required' },
+            materialization_readiness: { status: installed ? scopeLess ? 'not_required' : 'scope_required' : 'not_required' },
             runtime_source_readiness: { status: installed ? 'current' : 'not_installed', operational_ready: installed },
-            operational_ready: materialized,
+            operational_ready: installed && scopeLess,
             operational_ready_scope: 'package_dependency_scope_and_runtime_source',
-            launch_allowed: materialized,
-            launch_blocked_reason: installed ? materialized ? null : 'scope_materialization_scope_required' : 'package_not_installed',
+            launch_allowed: installed && scopeLess,
+            launch_blocked_reason: installed ? scopeLess ? null : 'scope_materialization_scope_required' : 'package_not_installed',
             allowed_when_blocked: ['status', 'doctor', 'repair'],
             repair_action: null,
           },
@@ -817,8 +793,13 @@ exit 1
       {
         package_id: 'third.party.research',
         scope: 'workspace',
-        target_workspace: workspaceRoot,
       },
+    );
+    assert.deepEqual(
+      directoryEntry.available_actions.find(
+        (entry: any) => entry.action_id === 'agent_package_activate',
+      )?.required_payload_fields,
+      ['package_id', 'target_workspace'],
     );
     const statusIndexEntry = fastAppState.app_state.agent_packages.status_index.packages['third.party.research'];
     const fullStatusIndexEntry = fullAppState.app_state.agent_packages.status_index.packages['third.party.research'];
@@ -899,6 +880,10 @@ exit 1
     assert.equal(fastAppState.app_state.agent_packages.directory.entry_count, 8);
     assert.equal(fastAppState.app_state.agent_packages.directory.entries.length, 8);
     assert.equal('installed_packages' in fastAppState.app_state.agent_packages.directory, false);
+    assert.equal(requests.every((entry) => entry.scope === undefined), true);
+    assert.equal(requests.every((entry) => entry.targetWorkspace === undefined), true);
+    assert.equal(fastAppState.app_state.paths.workspace_root_path, workspaceRoot);
+    assert.equal(fullAppState.app_state.paths.workspace_root_path, workspaceRoot);
     assert.equal(calls.get('third.party.research'), 2);
   } finally {
     for (const [key, value] of previousEnv) {

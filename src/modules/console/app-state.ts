@@ -23,7 +23,7 @@ import {
   resolveDefaultFamilyWorkspaceRoot,
   runOplAgentPackageStatus,
 } from '../connect/public/app-state.ts';
-import { listWorkspaceBindings, type WorkspaceBinding } from '../workspace/public/app-state.ts';
+import { listWorkspaceBindings } from '../workspace/public/app-state.ts';
 import { buildOplEndpoints } from '../../kernel/opl-runtime-endpoints.ts';
 import {
   familyRuntimePaths,
@@ -215,8 +215,6 @@ function unavailableAgentPackageStatus(
 
 export function buildAppAgentPackageStatuses(input: {
   packageIds: readonly string[];
-  activeWorkspaceBindings?: ReadonlyArray<Pick<WorkspaceBinding, 'project_id' | 'workspace_path'>>;
-  workspaceRootPath: string | null;
   profile: AppStateProfile;
   readStatus?: AgentPackageStatusReader;
   lockIndex?: ReturnType<typeof readOplAgentPackageLockIndex>;
@@ -225,13 +223,9 @@ export function buildAppAgentPackageStatuses(input: {
   const lockIndex = input.lockIndex ?? readOplAgentPackageLockIndex();
   const statuses: Record<string, JsonRecord> = {};
   for (const packageId of input.packageIds) {
-    const context = appAgentPackageStatusContext(
-      input.workspaceRootPath,
-    );
     try {
       const status = readStatus({
         packageId,
-        ...context,
         recoverRuntimeSource: false,
         detail: input.profile,
       }).opl_agent_package_status;
@@ -245,14 +239,6 @@ export function buildAppAgentPackageStatuses(input: {
     }
   }
   return statuses;
-}
-
-function appAgentPackageStatusContext(
-  workspaceRootPath: string | null,
-) {
-  return workspaceRootPath
-    ? { scope: 'workspace' as const, targetWorkspace: workspaceRootPath }
-    : {};
 }
 
 async function buildProviderState(profile: AppStateProfile) {
@@ -1020,9 +1006,6 @@ export async function buildOplAppState(input: {
     detail: profile,
     firstPartyCatalog,
     readStatus: readAgentPackageStatus,
-    statusContext: () => appAgentPackageStatusContext(
-      workspaceRoot.selected_path,
-    ),
   }).opl_agent_packages;
   const workspaceBindings = listWorkspaceBindings();
   const packageIds = [...new Set([
@@ -1031,7 +1014,6 @@ export async function buildOplAppState(input: {
   ])];
   const agentPackageStatuses = buildAppAgentPackageStatuses({
     packageIds,
-    workspaceRootPath: workspaceRoot.selected_path,
     profile,
     readStatus: readAgentPackageStatus,
     lockIndex: readOplAgentPackageLockIndex(),
