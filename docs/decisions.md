@@ -334,7 +334,7 @@ Re-review 采用 finding closure，不得用普通新建议无限重开循环。
 - `OPL Packages` 持有 Agent Package registry / manifest / lock / lifecycle receipt，并通过 `opl packages` 暴露公共生命周期；package core 只管理 package id、version、digest、dependency、trust tier、lock、lifecycle receipt、exposure 和 shortcut refs。
 - Carrier adapters 负责 Codex Plugin、OPL App、Capability Pack、MCP/Web/native 等物理投影；adapter 不能写入 domain workflow、prompt body、artifact schema、quality verdict、owner receipt、typed blocker、human gate 或 runtime authority。
 - `OPL App` 是 package cockpit 和操作入口，只消费 Framework 输出的 package refs、install/update/repair/rollback/uninstall/exposure/shortcut action refs 和 receipt refs；App 不 hard-code MAS/MAG/RCA 语义，也不成为 package truth owner。Agent Package rollback 是 `opl packages` 的闭包事务，按 last-known-good lock 恢复 package 及其 dependency/carrier，不另设 App 或 package-channel 专属 rollback lifecycle。
-- Package manager 的优化路线写入 [OPL 过度设计退役与收薄计划](./active/overengineering-retirement-plan.md)：先迁移/删除无语义 wrapper，再收薄 local scheduler/observability/test tail。该计划只授权功能/结构清理，不声明 App release-ready、domain-ready、Brand L5 或 production-ready。
+- Package manager 的优化遵循删除无语义 wrapper、复用标准库与既有 Framework primitive 的稳定原则；完成度只从 source、contracts、tests 与 fresh `opl packages ... --json` readback 判断，不维护静态清理快照。该原则不声明 App release-ready、domain-ready、Brand L5 或 production-ready。
 
 ### 决策：Full runtime bundle producer 由 Framework `runtime env build` 暴露，App 只消费 refs
 
