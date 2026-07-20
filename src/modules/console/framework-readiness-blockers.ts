@@ -22,7 +22,7 @@ export function frameworkReadinessBlockers(input: {
       blocker_id: 'stage_readiness_hard_blocker_present',
       count: input.stageHardBlockerCount,
       route_ref: '/framework_readiness/stages',
-      source_command: 'opl stages readiness --domain mas --json',
+      source_command: SOURCE_COMMANDS.stages_readiness_family,
     });
   }
   if (input.agentHardBlockerCount > 0) {

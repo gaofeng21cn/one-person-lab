@@ -127,10 +127,11 @@ function buildDescriptorRefs(manifest: NormalizedDomainManifest | null) {
 function buildEntryProjection(entry: DomainManifestCatalogEntry) {
   const manifest = entry.manifest;
   const spec = manifest?.domain_entry_contract?.domain_agent_entry_spec ?? null;
+  const standardAgentIdentity = record(entry.standard_agent_identity);
   return {
     status: componentStatus(entry, Boolean(spec)),
-    agent_id: spec?.agent_id ?? null,
-    title: spec?.title ?? null,
+    agent_id: spec?.agent_id ?? stringValue(standardAgentIdentity.agent_id),
+    title: spec?.title ?? stringValue(standardAgentIdentity.display_name),
     description: spec?.description ?? null,
     default_engine: spec?.default_engine ?? null,
     workspace_requirement: spec?.workspace_requirement ?? null,
@@ -595,6 +596,9 @@ function buildDescriptor(entry: DomainManifestCatalogEntry) {
       opl_owns_artifact_authority: false,
       descriptor_embeds_longform_agent_context: false,
     },
+    standard_agent_identity: entry.standard_agent_identity ?? null,
+    standard_agent_contract_resolution: entry.standard_agent_contract_resolution ?? null,
+    legacy_workspace_manifest_diagnostic: entry.legacy_workspace_manifest_diagnostic ?? null,
     error: entry.error,
   };
 }

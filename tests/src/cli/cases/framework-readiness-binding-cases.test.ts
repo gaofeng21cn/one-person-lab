@@ -68,13 +68,25 @@ test('framework readiness treats stale domain workspace bindings as registry att
       assert.deepEqual(readiness.summary.domain_manifest_live_failed_project_ids, []);
       assert.equal(
         readiness.stages.readiness_by_domain.rca.diagnostic_failure_count,
-        0,
+        1,
       );
+      const rcaDiagnostic = readiness.stages.diagnostic_failures.find(
+        (failure: { details?: { domain?: string } }) => failure.details?.domain === 'rca',
+      );
+      assert.ok(rcaDiagnostic);
+      const rcaDiagnosticDetails = rcaDiagnostic.details as {
+        manifest_error?: { code?: string };
+        manifest_status?: string;
+      };
+      assert.equal(
+        rcaDiagnosticDetails.manifest_error?.code,
+        'standard_agent_managed_contract_checkout_unavailable',
+      );
+      assert.equal(rcaDiagnosticDetails.manifest_status, 'managed_contract_unavailable');
       assert.equal(
         readiness.stages.diagnostic_failures.some(
-          (failure: { details?: { domain?: string; manifest_status?: string } }) =>
-            failure.details?.domain === 'rca'
-              || failure.details?.manifest_status === 'workspace_missing',
+          (failure: { details?: { manifest_status?: string } }) =>
+            failure.details?.manifest_status === 'workspace_missing',
         ),
         false,
       );
@@ -137,13 +149,25 @@ test('framework readiness treats missing manifest commands as config attention, 
       assert.deepEqual(readiness.summary.domain_manifest_live_failed_project_ids, []);
       assert.equal(
         readiness.stages.readiness_by_domain.mag.diagnostic_failure_count,
-        0,
+        1,
       );
+      const magDiagnostic = readiness.stages.diagnostic_failures.find(
+        (failure: { details?: { domain?: string } }) => failure.details?.domain === 'mag',
+      );
+      assert.ok(magDiagnostic);
+      const magDiagnosticDetails = magDiagnostic.details as {
+        manifest_error?: { code?: string };
+        manifest_status?: string;
+      };
+      assert.equal(
+        magDiagnosticDetails.manifest_error?.code,
+        'standard_agent_managed_contract_checkout_unavailable',
+      );
+      assert.equal(magDiagnosticDetails.manifest_status, 'managed_contract_unavailable');
       assert.equal(
         readiness.stages.diagnostic_failures.some(
-          (failure: { details?: { domain?: string; manifest_status?: string } }) =>
-            failure.details?.domain === 'mag'
-              || failure.details?.manifest_status === 'manifest_not_configured',
+          (failure: { details?: { manifest_status?: string } }) =>
+            failure.details?.manifest_status === 'manifest_not_configured',
         ),
         false,
       );

@@ -2,6 +2,7 @@ import { buildAgentReadinessSummary } from './agent-readiness.ts';
 import { buildCurrentOwnerDeltaTopline } from '../ledger/index.ts';
 import {
   buildDomainManifestCatalog,
+  buildStandardAgentDomainManifestCatalog,
 } from '../atlas/index.ts';
 import { buildDomainPackCompilerList } from '../pack/index.ts';
 import {
@@ -121,14 +122,20 @@ async function buildFrameworkReadinessCompactCoreModel(
         materializeFamilyTransitions: false,
         useProjectionCacheOnFailure: true,
       }).domain_manifests;
+  const standardAgentDomainManifests = buildStandardAgentDomainManifestCatalog(contracts, {
+    legacyDomainManifests: domainManifests,
+  }).domain_manifests;
   const packCompiler = record(
     buildDomainPackCompilerList(contracts, { familyDefaults: true }).domain_pack_compiler,
   );
-  const familyStages = record(buildFamilyStagesList(contracts, { domainManifests }).family_stages);
+  const familyStages = record(buildFamilyStagesList(
+    contracts,
+    { domainManifests: standardAgentDomainManifests },
+  ).family_stages);
   const familyStageReadiness = record(buildFamilyStageReadinessInspect(
     contracts,
     ['--family-defaults', '--detail', 'full'],
-    { domainManifests },
+    { domainManifests: standardAgentDomainManifests },
   ).family_stage_readiness);
   const runtimeSnapshot = await runtimeSnapshotProvider(contracts, {
     appOperatorDrilldownDetailLevel: 'summary',

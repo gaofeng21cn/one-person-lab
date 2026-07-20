@@ -495,7 +495,12 @@ export function buildStandardDomainAgentSkeletonInspection(
     agent_id:
       skeleton?.agent_id
       ?? entry.manifest?.domain_entry_contract?.domain_agent_entry_spec?.agent_id
+      ?? optionalString(entry.standard_agent_identity?.agent_id)
       ?? null,
+    standard_agent_identity: entry.standard_agent_identity ?? null,
+    standard_agent_contract_resolution: entry.standard_agent_contract_resolution ?? null,
+    legacy_workspace_manifest_diagnostic: entry.legacy_workspace_manifest_diagnostic ?? null,
+    manifest_error: entry.error,
     required_repo_source_dirs: [...REQUIRED_REPO_SOURCE_DIRS],
     declared_repo_source_dirs: repoSourceDirs,
     missing_repo_source_dirs: REQUIRED_REPO_SOURCE_DIRS.filter((dir) => !repoSourceDirs.includes(dir)),
@@ -670,10 +675,14 @@ export function buildFamilyAgentsList(contracts: FrameworkContracts, options: Ma
   };
 }
 
-export function buildFamilyAgentInspect(contracts: FrameworkContracts, args: string[]) {
+export function buildFamilyAgentInspect(
+  contracts: FrameworkContracts,
+  args: string[],
+  options: ManifestCatalogOptions = {},
+) {
   const { domain } = parseInspectArgs(args);
-  const entry = findAgentEntry(contracts, domain);
-  const providerContinuousProof = readProviderContinuousProof();
+  const entry = findAgentEntry(contracts, domain, options);
+  const providerContinuousProof = options.providerContinuousProof ?? readProviderContinuousProof();
   return {
     version: 'g2',
     family_agent: {

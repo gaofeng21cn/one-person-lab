@@ -36,6 +36,9 @@ type AdmissionGateContract = {
     candidate_backlog_or_direction_signal_can_admit_domain: boolean;
     conformance_or_scaffold_signal_can_claim_domain_ready: boolean;
     production_readiness_claim_allowed: boolean;
+    standard_agent_registry_source_ref: string;
+    managed_owner_contract_source_refs: string[];
+    legacy_domain_catalog_role: string;
   };
   standard_agent_admission_package: {
     required_gate_ids: string[];
@@ -53,7 +56,7 @@ test('standard domain-agent admission gates freeze required package sections as 
   const contract = readAdmissionGateContract();
 
   assert.equal(contract.surface_kind, 'opl_standard_agent_admission_gates');
-  assert.equal(contract.version, 'standard-agent-admission-gates.v1');
+  assert.equal(contract.version, 'standard-agent-admission-gates.v2');
   assert.equal(contract.owner, 'one-person-lab');
   assert.equal(contract.state, 'active_contract');
   assert.equal(typeof contract.purpose, 'string');
@@ -63,6 +66,19 @@ test('standard domain-agent admission gates freeze required package sections as 
   assert.equal(contract.admission_policy.candidate_backlog_or_direction_signal_can_admit_domain, false);
   assert.equal(contract.admission_policy.conformance_or_scaffold_signal_can_claim_domain_ready, false);
   assert.equal(contract.admission_policy.production_readiness_claim_allowed, false);
+  assert.equal(
+    contract.admission_policy.standard_agent_registry_source_ref,
+    'src/kernel/standard-agent-registry.ts',
+  );
+  assert.deepEqual(contract.admission_policy.managed_owner_contract_source_refs, [
+    'candidate_domain_repo:domain_descriptor',
+    'candidate_domain_repo:action_catalog_contract',
+    'candidate_domain_repo:stage_manifest_contract',
+  ]);
+  assert.equal(
+    contract.admission_policy.legacy_domain_catalog_role,
+    'workspace_runtime_and_legacy_manifest_configuration_not_standard_agent_discovery_or_admission',
+  );
   assert.equal(contract.non_readiness_statement.this_contract_admits_any_domain, false);
   assert.equal(contract.non_readiness_statement.this_contract_claims_existing_domain_ready, false);
   assert.equal(contract.non_readiness_statement.this_contract_claims_production_ready, false);

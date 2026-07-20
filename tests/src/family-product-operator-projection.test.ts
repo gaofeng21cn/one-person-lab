@@ -6,6 +6,10 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 import { parseJsonText } from '../../src/kernel/json-file.ts';
+import {
+  STANDARD_AGENT_REGISTRY_REF,
+  STANDARD_AGENT_SERIES_MEMBERSHIP,
+} from '../../src/kernel/standard-agent-registry.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
@@ -185,6 +189,15 @@ test('family product operator projection pins OPL as App state/action producer o
   assert.equal(boundary.default_read_surface_policy.full_detail_auto_poll, false);
   assert.equal(boundary.default_read_surface_policy.shell_must_not_derive_layout_from_raw_runtime_projection, true);
   assert.equal(boundary.default_read_surface_policy.shell_must_not_use_full_drilldown_as_normal_state, true);
+  const foundryProjection = boundary.ordinary_app_builtin_foundry_entry_projection;
+  assert.equal(foundryProjection.canonical_registry_ref, STANDARD_AGENT_REGISTRY_REF);
+  assert.equal(foundryProjection.membership_field, 'series_membership');
+  assert.equal(foundryProjection.membership_value, STANDARD_AGENT_SERIES_MEMBERSHIP);
+  assert.equal(foundryProjection.identity_field, 'agent_id');
+  assert.equal(foundryProjection.include_all_members, true);
+  assert.equal(foundryProjection.legacy_domain_manifest_is_membership_source, false);
+  assert.equal(foundryProjection.snapshot_can_control_membership, false);
+  assert.equal('ordinary_app_builtin_foundry_entries' in boundary, false);
   assert.equal(
     boundary.rules.some((rule: string) =>
       rule.includes('must not use it as normal GUI page state')

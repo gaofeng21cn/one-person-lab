@@ -135,11 +135,16 @@
     "active_shell_implementation_carrier": "opl-aion-shell",
     "ordinary_app_product_shape": "codex_app_wrapper",
     "ordinary_app_fixed_executor": "codex_cli",
-    "ordinary_app_builtin_foundry_entries": [
-      "mas",
-      "mag",
-      "rca"
-    ],
+    "ordinary_app_builtin_foundry_entry_projection": {
+      "surface_kind": "opl_standard_agent_registry_projection_policy",
+      "canonical_registry_ref": "src/kernel/standard-agent-registry.ts",
+      "membership_field": "series_membership",
+      "membership_value": "standard_domain_agent",
+      "identity_field": "agent_id",
+      "include_all_members": true,
+      "legacy_domain_manifest_is_membership_source": false,
+      "snapshot_can_control_membership": false
+    },
     "ordinary_app_exposes_shell_backend_selector": false,
     "ordinary_app_exposes_non_default_executor_selector": false,
     "rules": [
@@ -147,7 +152,7 @@
       "GUI mutations go through the app action command.",
       "Full operator/status drilldown may call the explicit runtime drilldown exception on demand, but shell adapters must not use it as normal GUI page state.",
       "App state/action projections do not move domain truth, quality verdicts, artifact authority, or runtime provider ownership into the GUI shell.",
-      "The ordinary App product is a Codex App wrapper with Codex CLI fixed as the concrete executor and MAS/MAG/RCA presented as built-in Foundry task entries.",
+      "The ordinary App product is a Codex App wrapper with Codex CLI fixed as the concrete executor and every standard_domain_agent registry member presented as a built-in Foundry task entry.",
       "Shell backend or non-default executor selectors may appear only in explicit developer/operator diagnostics or stage-level bindings, not in the ordinary user product surface."
     ]
   },

@@ -25,6 +25,7 @@ export type DomainManifestCatalog = {
     failed_count: number;
     projection_cache_used_count: number;
     live_failed_project_ids: string[];
+    [key: string]: unknown;
   };
   projects: DomainManifestCatalogEntry[];
   currentness_owner_action_packet?: {

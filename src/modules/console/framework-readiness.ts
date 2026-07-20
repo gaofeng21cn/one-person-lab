@@ -2,9 +2,12 @@ import type { FrameworkContracts } from '../../kernel/types.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import {
   buildDomainManifestCatalog,
+  buildStandardAgentDomainManifestCatalog,
   defaultStandardDomainAgentRepoInputs,
   DEFAULT_STANDARD_DOMAIN_AGENT_REPOS,
+  type DomainManifestCatalog,
 } from '../atlas/index.ts';
+import { listStandardDomainAgentIds } from '../../kernel/standard-agent-registry.ts';
 import { buildDomainPackCompilerList } from '../pack/index.ts';
 import {
   buildDomainRouteSupportProjection,
@@ -31,7 +34,10 @@ import {
 import {
   semanticHygieneContractFloor,
 } from './framework-readiness-semantic-hygiene.ts';
-import { FRAMEWORK_READINESS_SOURCE_COMMANDS as SOURCE_COMMANDS } from './framework-readiness-source-commands.ts';
+import {
+  FRAMEWORK_READINESS_SOURCE_COMMANDS as SOURCE_COMMANDS,
+  frameworkReadinessStageSourceCommand,
+} from './framework-readiness-source-commands.ts';
 import { domainBlockedTypedBlockerAttention } from './framework-readiness-typed-blocker-attention.ts';
 import { buildOwnerDeltaHandoffSummaryFromFrameworkReadiness, OWNER_DELTA_HANDOFF_TAXONOMY, ownerDeltaHandoffFrameworkReadinessSection } from './framework-readiness-owner-delta-handoff-summary.ts';
 import { buildCurrentOwnerDeltaTopline } from '../ledger/index.ts';
@@ -79,10 +85,10 @@ function isDomainManifestConfigAttentionStageDiagnostic(error: unknown) {
 
 function buildStageReadinessDiagnostic(
   contracts: FrameworkContracts,
-  domain: 'mas' | 'mag' | 'rca',
-  domainManifests: ReturnType<typeof buildDomainManifestCatalog>['domain_manifests'],
+  domain: string,
+  domainManifests: DomainManifestCatalog,
 ) {
-  const sourceCommand = SOURCE_COMMANDS[`stages_readiness_${domain}`];
+  const sourceCommand = frameworkReadinessStageSourceCommand(domain);
   try {
     return {
       readiness: record(buildFamilyStageReadinessInspect(
@@ -179,27 +185,31 @@ export async function buildFrameworkReadinessSummary(
         materializeFamilyTransitions: false,
         useProjectionCacheOnFailure: true,
       }).domain_manifests;
+  const standardAgentDomainManifests = buildStandardAgentDomainManifestCatalog(contracts, {
+    legacyDomainManifests: domainManifests,
+  }).domain_manifests;
   const packCompiler = record(buildDomainPackCompilerList(contracts, {
     familyDefaults: true,
     familyRepoInputs: defaultStandardDomainAgentRepoInputs(),
     defaultRepoDirectories: DEFAULT_STANDARD_DOMAIN_AGENT_REPOS.map((repo) => repo.directory),
   }).domain_pack_compiler);
-  const familyStages = record(buildFamilyStagesList(contracts, { domainManifests }).family_stages);
+  const familyStages = record(buildFamilyStagesList(
+    contracts,
+    { domainManifests: standardAgentDomainManifests },
+  ).family_stages);
   const familyStageReadiness = record(buildFamilyStageReadinessInspect(
     contracts,
     ['--family-defaults', '--detail', 'full'],
-    { domainManifests },
+    { domainManifests: standardAgentDomainManifests },
   ).family_stage_readiness);
-  const stageReadinessDiagnostics = {
-    mas: buildStageReadinessDiagnostic(contracts, 'mas', domainManifests),
-    mag: buildStageReadinessDiagnostic(contracts, 'mag', domainManifests),
-    rca: buildStageReadinessDiagnostic(contracts, 'rca', domainManifests),
-  };
-  const stageReadiness = {
-    mas: stageReadinessDiagnostics.mas.readiness,
-    mag: stageReadinessDiagnostics.mag.readiness,
-    rca: stageReadinessDiagnostics.rca.readiness,
-  };
+  const standardAgentIds = listStandardDomainAgentIds();
+  const stageReadinessDiagnostics = Object.fromEntries(standardAgentIds.map((agentId) => [
+    agentId,
+    buildStageReadinessDiagnostic(contracts, agentId, standardAgentDomainManifests),
+  ]));
+  const stageReadiness = Object.fromEntries(Object.entries(stageReadinessDiagnostics).map(
+    ([agentId, diagnostic]) => [agentId, diagnostic.readiness],
+  ));
   const runtimeSnapshot = await runtimeSnapshotProvider(contracts, {
     appOperatorDrilldownDetailLevel: 'full',
     domainManifests,
@@ -719,9 +729,7 @@ export async function buildFrameworkReadinessSummary(
         source_commands: [
           SOURCE_COMMANDS.stages_list,
           SOURCE_COMMANDS.stages_readiness_family,
-          SOURCE_COMMANDS.stages_readiness_mas,
-          SOURCE_COMMANDS.stages_readiness_mag,
-          SOURCE_COMMANDS.stages_readiness_rca,
+          ...standardAgentIds.map(frameworkReadinessStageSourceCommand),
         ],
         summary: stagesSummary,
         readiness_by_domain: stageSummaries,

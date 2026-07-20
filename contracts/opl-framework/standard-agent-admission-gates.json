@@ -1,9 +1,9 @@
 {
   "surface_kind": "opl_standard_agent_admission_gates",
-  "version": "standard-agent-admission-gates.v1",
+  "version": "standard-agent-admission-gates.v2",
   "owner": "one-person-lab",
   "state": "active_contract",
-  "purpose": "Freeze the minimum machine-readable admission gates for candidate standard OPL domain agents.",
+  "purpose": "Freeze the minimum machine-readable admission gates for candidate standard OPL Agents.",
   "machine_boundary": "Framework-owned admission gate shape and false-authority flags only. This contract does not admit any specific domain, claim domain readiness, claim production readiness, create owner receipts, create typed blockers, write domain truth, or replace domain/human review authority.",
   "admission_policy": {
     "applies_to": "candidate_standard_opl_domain_agent",
@@ -11,7 +11,13 @@
     "candidate_backlog_or_direction_signal_can_admit_domain": false,
     "conformance_or_scaffold_signal_can_claim_domain_ready": false,
     "production_readiness_claim_allowed": false,
-    "admitted_domain_catalog_source_ref": "contracts/opl-framework/domains.json",
+    "standard_agent_registry_source_ref": "src/kernel/standard-agent-registry.ts",
+    "managed_owner_contract_source_refs": [
+      "candidate_domain_repo:domain_descriptor",
+      "candidate_domain_repo:action_catalog_contract",
+      "candidate_domain_repo:stage_manifest_contract"
+    ],
+    "legacy_domain_catalog_role": "workspace_runtime_and_legacy_manifest_configuration_not_standard_agent_discovery_or_admission",
     "human_spec_ref": "human_doc:opl_domain_onboarding_contract"
   },
   "standard_agent_admission_package": {
@@ -34,12 +40,12 @@
         "gate_id": "identity",
         "requirement_kind": "identity",
         "required_for_formal_admission": true,
-        "summary": "The candidate declares a stable domain id, label, project, independent domain-agent identity, owned workstreams, and product-layer role before catalog admission.",
+        "summary": "The candidate declares a stable Agent id, domain id, project, package identity, and product-layer role before registry admission; domain-specific workstreams remain optional owner metadata.",
         "required_evidence_refs": [
           "candidate_domain_repo:domain_identity_contract",
           "candidate_domain_repo:public_domain_agent_entry_doc",
-          "contracts/opl-framework/domains.json",
-          "contracts/opl-framework/workstreams.json"
+          "src/kernel/standard-agent-registry.ts",
+          "opl_registry:standard_agent_package_manifest"
         ],
         "forbidden_claims": [
           "domain_ready",
@@ -54,7 +60,7 @@
         "required_evidence_refs": [
           "candidate_domain_repo:truth_ownership_contract",
           "candidate_domain_repo:authority_boundary_contract",
-          "contracts/opl-framework/domains.json#domain_truth_owner"
+          "candidate_domain_repo:domain_descriptor_authority_boundary"
         ],
         "forbidden_claims": [
           "domain_ready",
@@ -210,7 +216,7 @@
         "required_evidence_refs": [
           "candidate_domain_repo:authority_boundary_contract",
           "candidate_domain_repo:review_surface_contract",
-          "contracts/opl-framework/domains.json#runtime_dependency_boundary",
+          "candidate_domain_repo:runtime_dependency_boundary",
           "contracts/opl-framework/guardrail-tier-policy.json",
           "contracts/opl-framework/default-surface-budget.schema.json"
         ],
@@ -304,9 +310,11 @@
     "this_contract_claims_existing_domain_ready": false,
     "this_contract_claims_production_ready": false,
     "formal_admission_source_of_truth": [
-      "contracts/opl-framework/domains.json",
-      "contracts/opl-framework/workstreams.json",
-      "contracts/opl-framework/task-topology.json",
+      "src/kernel/standard-agent-registry.ts",
+      "opl_registry:standard_agent_package_manifest",
+      "candidate_domain_repo:domain_descriptor",
+      "candidate_domain_repo:action_catalog_contract",
+      "candidate_domain_repo:stage_manifest_contract",
       "candidate_domain_repo:admission_package_evidence"
     ]
   }

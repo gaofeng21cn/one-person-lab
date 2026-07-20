@@ -20,6 +20,9 @@ export type FamilyStageDomainManifestCatalogEntry = {
   manifest_command?: string | null;
   status: string;
   manifest?: FamilyStageDomainManifest | null;
+  standard_agent_identity?: Record<string, unknown> | null;
+  standard_agent_contract_resolution?: Record<string, unknown> | null;
+  legacy_workspace_manifest_diagnostic?: Record<string, unknown> | null;
   error?: unknown;
   currentness_owner_action_packet?: Record<string, unknown> | null;
   manifest_cache?: Record<string, unknown> | null;

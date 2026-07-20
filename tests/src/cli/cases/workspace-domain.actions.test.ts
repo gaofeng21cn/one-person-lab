@@ -316,7 +316,8 @@ test('standard family action catalogs resolve from managed contracts and export 
       list.family_actions.actions.map((entry: { action_id: string }) => entry.action_id).sort(),
       ['inspect_study_progress', 'open_grant_user_loop', 'start_deliverable'],
     );
-    assert.ok(list.family_actions.domains.every((entry: any) =>
+    assert.equal(list.family_actions.summary.total_projects_count, 5);
+    assert.ok(list.family_actions.domains.filter((entry: any) => entry.ready).every((entry: any) =>
       entry.catalog_source.source_kind === 'managed_standard_agent_contract'
       && entry.stage_catalog.stage_count === 1
       && entry.legacy_binding.used_for_catalog_resolution === false

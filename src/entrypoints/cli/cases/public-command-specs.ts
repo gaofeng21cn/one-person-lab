@@ -1,6 +1,10 @@
 import { FrameworkContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkstreamOrThrow } from '../../../modules/charter/contracts.ts';
-import { resolveStandardAgent } from '../../../modules/charter/index.ts';
+import {
+  resolveStandardAgent,
+  STANDARD_AGENT_SERIES_MEMBERSHIP,
+} from '../../../modules/charter/index.ts';
 import { buildOplFrameworkLocator } from '../../../modules/connect/opl-framework-locator.ts';
+import { resolveStandardAgentContractCheckout } from '../../../modules/connect/index.ts';
 import {
   buildFrameworkOperatingMaturityCompactReadback,
   buildFrameworkOperatingMaturityReadout,
@@ -24,6 +28,7 @@ import {
 } from '../../../modules/atlas/family-domain-agent-descriptor.ts';
 import { buildDomainManifestCatalog } from '../../../modules/atlas/domain-manifest/catalog-builder.ts';
 import {
+  buildStandardAgentDomainManifestCatalog,
   defaultStandardDomainAgentRepoInputs,
   DEFAULT_STANDARD_DOMAIN_AGENT_REPOS,
 } from '../../../modules/atlas/index.ts';
@@ -85,6 +90,27 @@ export function buildPublicCommandSpecs(
     familyRepoInputs: defaultStandardDomainAgentRepoInputs(),
     defaultRepoDirectories: DEFAULT_STANDARD_DOMAIN_AGENT_REPOS.map((repo) => repo.directory),
     resolveDomainSelection: (value: string) => resolveStandardAgent(value)?.domain_id ?? value,
+    resolveStandardAgentRepo: (value: string) => {
+      const agent = resolveStandardAgent(value);
+      if (!agent || agent.series_membership !== STANDARD_AGENT_SERIES_MEMBERSHIP) return null;
+      const resolution = resolveStandardAgentContractCheckout(
+        agent.agent_id,
+        undefined,
+        undefined,
+        { result: 'typed_resolution' },
+      );
+      return {
+        requested_agent_id: agent.agent_id,
+        repo_dir: resolution.checkout?.checkout_path ?? null,
+        contract_resolution: {
+          surface_kind: resolution.surface_kind,
+          status: resolution.status,
+          launch_allowed: resolution.launch_allowed,
+          reason: resolution.reason,
+          source_status: resolution.source_status,
+        },
+      };
+    },
   });
   const buildEngineActionSpec = (
     action: 'install' | 'update' | 'reinstall' | 'remove',
@@ -174,7 +200,7 @@ export function buildPublicCommandSpecs(
   const appCommandSpecs = buildPublicAppCommandSpecs(getContracts);
   const buildAgentDescriptorManifests = (options: Parameters<typeof buildDomainManifestCatalog>[1] = {}) =>
     withStandardDomainAgentSkeletonInspection(
-      buildDomainManifestCatalog(getContracts(), options).domain_manifests,
+      buildStandardAgentDomainManifestCatalog(getContracts(), options).domain_manifests,
     );
   const loadAgentDescriptorsForPackCompiler = () =>
     buildFamilyAgentDescriptorList(getContracts(), {
@@ -534,12 +560,14 @@ export function buildPublicCommandSpecs(
     },
     'agents list': {
       usage: 'opl agents list',
-      summary: 'List standard domain-agent skeleton completeness for bound MAS, MAG, and RCA manifests.',
+      summary: 'List skeleton completeness for every Standard Agent registered with OPL.',
       examples: ['opl agents list'],
       group: 'domain',
       handler: (args) => {
         assertNoArgs(args, publicCommandSpecs['agents list']);
-        return buildFamilyAgentsList(getContracts());
+        return buildFamilyAgentsList(getContracts(), {
+          domainManifests: buildAgentDescriptorManifests(),
+        });
       },
     },
     'agents inspect': {
@@ -547,7 +575,9 @@ export function buildPublicCommandSpecs(
       summary: 'Inspect one standard domain-agent skeleton mapping without reading real artifact contents.',
       examples: ['opl agents inspect --domain mas'],
       group: 'domain',
-      handler: (args) => buildFamilyAgentInspect(getContracts(), args),
+      handler: (args) => buildFamilyAgentInspect(getContracts(), args, {
+        domainManifests: buildAgentDescriptorManifests(),
+      }),
     },
     'agents legacy-cleanup apply': {
       usage: 'opl agents legacy-cleanup apply --domain <domain> [--mode dry-run|apply|verify] [--source-ref <ref>] [--receipt-ref <ref>]',

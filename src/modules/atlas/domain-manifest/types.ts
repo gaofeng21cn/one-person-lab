@@ -204,6 +204,8 @@ export type DomainManifestStatus =
   | 'not_bound'
   | 'workspace_missing'
   | 'manifest_not_configured'
+  | 'managed_contract_unavailable'
+  | 'managed_contract_invalid'
   | 'command_failed'
   | 'command_timeout'
   | 'invalid_json'
@@ -512,6 +514,9 @@ export interface DomainManifestCatalogEntry {
   manifest_command: string | null;
   status: DomainManifestStatus;
   manifest: NormalizedDomainManifest | null;
+  standard_agent_identity?: JsonRecord | null;
+  standard_agent_contract_resolution?: JsonRecord | null;
+  legacy_workspace_manifest_diagnostic?: JsonRecord | null;
   currentness_owner_action_packet?: JsonRecord | null;
   error: {
     code: string;
@@ -519,6 +524,7 @@ export interface DomainManifestCatalogEntry {
     stdout: string | null;
     stderr: string | null;
     timeout_ms?: number | null;
+    details?: JsonRecord;
   } | null;
   manifest_cache?: JsonRecord | null;
 }

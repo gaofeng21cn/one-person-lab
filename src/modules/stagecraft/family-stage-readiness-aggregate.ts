@@ -1,5 +1,6 @@
 import type { FamilyStageDomainManifestCatalogEntry } from './family-stage-domain-manifest.ts';
 import type { FamilyStageControlPlane } from './family-stage-control-plane-contract.ts';
+import { listStandardDomainAgentIds } from '../../kernel/standard-agent-registry.ts';
 import {
   buildStageReadinessSummary,
   type FamilyStageReadinessSummary,
@@ -80,12 +81,9 @@ export function buildFamilyDefaultsStageReadiness(
       can_claim_production_ready: false,
     },
     domains: detail === 'full' ? fullDomains : domains,
-    drilldown_refs: [
-      'opl stages readiness --domain mas --json',
-      'opl stages readiness --domain mag --json',
-      'opl stages readiness --domain rca --json',
-      'opl stages readiness --domain oma --json',
-    ],
+    drilldown_refs: listStandardDomainAgentIds().map((agentId) =>
+      `opl stages readiness --domain ${agentId} --json`
+    ),
     authority_boundary: {
       opl_role: 'family_stage_readiness_aggregate_only',
       can_execute_stage: false,

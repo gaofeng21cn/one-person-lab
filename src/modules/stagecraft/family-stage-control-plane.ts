@@ -284,12 +284,15 @@ function buildStageIndex(contracts: FrameworkContracts, options: ManifestCatalog
     return {
       project_id: entry.project_id,
       project: entry.project,
+      agent_id: optionalString(entry.standard_agent_identity?.agent_id),
       binding_id: entry.binding_id,
       manifest_status: entry.status,
       target_domain_id: plane?.target_domain_id ?? entry.manifest?.target_domain_id ?? null,
       plane_id: plane?.plane_id ?? null,
       stage_count: plane?.stages.length ?? 0,
       ready: Boolean(plane),
+      standard_agent_contract_resolution: entry.standard_agent_contract_resolution ?? null,
+      legacy_workspace_manifest_diagnostic: entry.legacy_workspace_manifest_diagnostic ?? null,
       error: entry.error,
     };
   });
@@ -372,6 +375,8 @@ function findDomainEntry(contracts: FrameworkContracts, domain: string, options:
     throw new FrameworkContractError('missing_family_stage_control_plane', `Domain does not expose a family stage control plane: ${domain}.`, {
       domain,
       manifest_status: entry.status,
+      manifest_error: entry.error ?? null,
+      currentness_owner_action_packet: entry.currentness_owner_action_packet ?? null,
     });
   }
   return { entry, plane };

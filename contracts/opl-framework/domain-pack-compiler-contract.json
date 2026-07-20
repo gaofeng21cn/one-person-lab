@@ -2,7 +2,7 @@
   "contract_kind": "opl_domain_pack_compiler_contract.v1",
   "surface_kind": "opl_domain_pack_compiler_contract",
   "owner": "one-person-lab",
-  "scope": "framework-owned read model that compiles admitted domain packs into generated-surface handoff projections",
+  "scope": "framework-owned read model that compiles standard Agent owner packs and legacy admitted domain packs into generated-surface handoff projections",
   "contract_version": "opl-domain-pack-compiler.v1",
   "cli_surfaces": [
     "opl agents pack-compiler [--family-defaults]",
@@ -11,6 +11,20 @@
     "opl agents conformance [--repo-dir <path> ...] [--agent <id>=<path> ...]"
   ],
   "pack_compiler_source_modes": {
+    "managed_standard_agent_contract_mode": {
+      "command": "opl agents pack-compiler inspect --domain <domain> and opl agents interfaces --domain <domain>",
+      "source_kind": "managed_standard_agent_contract_checkout",
+      "purpose": "resolve any registered standard Agent through the shared registry, selected managed or developer checkout, and owner contracts without requiring a domains.json entry",
+      "discovery_chain": [
+        "src/kernel/standard-agent-registry.ts",
+        "resolveStandardAgentContractCheckout",
+        "contracts/domain_descriptor.json",
+        "contracts/action_catalog.json",
+        "agent/stages/manifest.json"
+      ],
+      "unavailable_policy": "registered but unavailable or non-current Agents return a typed managed-contract blocker, never unknown-domain",
+      "capability_package_policy": "framework capability packages are excluded by series_membership"
+    },
     "admitted_domain_manifest_mode": {
       "command": "opl agents pack-compiler",
       "source_kind": "admitted_domain_manifests",
@@ -20,7 +34,7 @@
       "command": "opl agents pack-compiler --family-defaults",
       "source_kind": "standard_agent_repo_contracts",
       "purpose": "compile default sibling standard-agent repo contracts through the same generated-surface projection used by App/workbench metadata feeds",
-      "repo_discovery": "OPL_FAMILY_WORKSPACE_ROOT or default workspace candidates containing med-autoscience, med-autogrant, redcube-ai, and opl-meta-agent contract packs",
+      "repo_discovery": "OPL_FAMILY_WORKSPACE_ROOT or default workspace candidates derived from every standard_domain_agent entry in the shared registry",
       "authority_boundary": {
         "can_claim_domain_ready": false,
         "can_claim_quality_verdict": false,
@@ -30,6 +44,19 @@
         "opl_can_authorize_quality_or_export": false
       }
     }
+  },
+  "standard_agent_discovery_contract": {
+    "identity_registry_ref": "src/kernel/standard-agent-registry.ts",
+    "included_series_membership": "standard_domain_agent",
+    "excluded_series_membership": "framework_capability_package",
+    "currentness_resolver": "resolveStandardAgentContractCheckout",
+    "owner_contract_refs": [
+      "contracts/domain_descriptor.json",
+      "contracts/action_catalog.json",
+      "agent/stages/manifest.json"
+    ],
+    "legacy_domains_catalog_role": "workspace_runtime_and_legacy_manifest_configuration_only",
+    "legacy_domains_catalog_can_admit_or_hide_standard_agent": false
   },
   "standard_agent_identity_binding": {
     "canonical_agent_id_source_ref": "contracts/pack_compiler_input.json#/canonical_agent_id",
@@ -614,7 +641,7 @@
       "--domain <domain>",
       "--repo-dir <path>"
     ],
-    "selector_policy": "exactly one selector is required; --family-defaults returns a refs-only family report, while --domain and --repo-dir keep the single generated interface bundle shape",
+    "selector_policy": "exactly one selector is required; --family-defaults returns a refs-only registry-derived family report, --domain resolves a registered standard Agent through its selected managed owner checkout before legacy fallback, and --repo-dir compiles the explicit checkout",
     "summary_fields": [
       "total_domain_count",
       "ready_domain_count",

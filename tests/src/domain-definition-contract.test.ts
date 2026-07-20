@@ -87,6 +87,9 @@ function readStandardAgentAdmissionGates() {
       formal_domain_admission_requires_all_gates: boolean;
       conformance_or_scaffold_signal_can_claim_domain_ready: boolean;
       production_readiness_claim_allowed: boolean;
+      standard_agent_registry_source_ref: string;
+      managed_owner_contract_source_refs: string[];
+      legacy_domain_catalog_role: string;
       human_spec_ref: string;
     };
     standard_agent_admission_package: {
@@ -280,11 +283,19 @@ test('standard agent admission gates freeze required package boundaries without 
   const gates = readStandardAgentAdmissionGates();
 
   assert.equal(gates.surface_kind, 'opl_standard_agent_admission_gates');
-  assert.equal(gates.version, 'standard-agent-admission-gates.v1');
+  assert.equal(gates.version, 'standard-agent-admission-gates.v2');
   assert.equal(gates.admission_policy.applies_to, 'candidate_standard_opl_domain_agent');
   assert.equal(gates.admission_policy.formal_domain_admission_requires_all_gates, true);
   assert.equal(gates.admission_policy.conformance_or_scaffold_signal_can_claim_domain_ready, false);
   assert.equal(gates.admission_policy.production_readiness_claim_allowed, false);
+  assert.equal(
+    gates.admission_policy.standard_agent_registry_source_ref,
+    'src/kernel/standard-agent-registry.ts',
+  );
+  assert.equal(
+    gates.admission_policy.legacy_domain_catalog_role,
+    'workspace_runtime_and_legacy_manifest_configuration_not_standard_agent_discovery_or_admission',
+  );
   assert.deepEqual(gates.standard_agent_admission_package.required_gate_ids, [
     'identity',
     'domain_truth_owner',

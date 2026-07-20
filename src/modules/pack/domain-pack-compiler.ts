@@ -33,6 +33,18 @@ type JsonRecord = Record<string, unknown>;
 
 const PACK_COMPILER_MANIFEST_COMMAND_TIMEOUT_MS = 120_000;
 
+type StandardAgentContractResolutionReadback = {
+  surface_kind: 'opl_standard_agent_contract_checkout_resolution';
+  status: 'resolved' | 'blocked' | 'not_applicable';
+  launch_allowed: boolean;
+  reason: string | null;
+  source_status: string | null;
+};
+
+type ResolvedStandardAgentRepoInput = StandardDomainAgentRepoInput & {
+  contract_resolution: StandardAgentContractResolutionReadback;
+};
+
 type DomainPackCompilerOptions = {
   familyDefaults?: boolean;
   agentDescriptors?: JsonRecord[];
@@ -40,6 +52,11 @@ type DomainPackCompilerOptions = {
   familyRepoInputs?: StandardDomainAgentRepoInput[];
   defaultRepoDirectories?: string[];
   resolveDomainSelection?: (value: string) => string;
+  resolveStandardAgentRepo?: (value: string) => {
+    requested_agent_id: string;
+    repo_dir: string | null;
+    contract_resolution: StandardAgentContractResolutionReadback;
+  } | null;
 };
 
 function recordPathList(value: unknown) {
@@ -523,6 +540,50 @@ function blockedRepoContractDescriptor(
   };
 }
 
+function buildCompilerDomainFromRepo(repo: StandardDomainAgentRepoInput) {
+  try {
+    return buildPackCompilerProjection(
+      descriptorWithRepoContractInputs(
+        repoContractDescriptorForPackCompiler(
+          buildRepoContractDescriptor(repo.repo_dir),
+          repo.requested_agent_id,
+        ),
+      ),
+    );
+  } catch (error) {
+    if (!(error instanceof FrameworkContractError)) {
+      throw error;
+    }
+    return buildPackCompilerProjection(blockedRepoContractDescriptor(repo, error));
+  }
+}
+
+function resolveStandardAgentRepo(
+  domain: string,
+  options: DomainPackCompilerOptions,
+): ResolvedStandardAgentRepoInput | null {
+  const resolution = options.resolveStandardAgentRepo?.(domain) ?? null;
+  if (!resolution) return null;
+  if (!resolution.repo_dir) {
+    throw new FrameworkContractError(
+      'contract_file_missing',
+      `Standard Agent managed contract checkout is unavailable: ${domain}.`,
+      {
+        domain,
+        requested_agent_id: resolution.requested_agent_id,
+        reason: resolution.contract_resolution.reason,
+        source_status: resolution.contract_resolution.source_status,
+        failure_code: 'standard_agent_managed_contract_checkout_unavailable',
+      },
+    );
+  }
+  return {
+    requested_agent_id: resolution.requested_agent_id,
+    repo_dir: resolution.repo_dir,
+    contract_resolution: resolution.contract_resolution,
+  };
+}
+
 function buildCompilerDomains(contracts: FrameworkContracts, options: DomainPackCompilerOptions = {}) {
   if (options.familyDefaults) {
     const repos = options.familyRepoInputs;
@@ -539,23 +600,7 @@ function buildCompilerDomains(contracts: FrameworkContracts, options: DomainPack
         env_override: 'OPL_FAMILY_WORKSPACE_ROOT',
       });
     }
-    return repos.map((repo) => {
-      try {
-        return buildPackCompilerProjection(
-          descriptorWithRepoContractInputs(
-            repoContractDescriptorForPackCompiler(
-              buildRepoContractDescriptor(repo.repo_dir),
-              repo.requested_agent_id,
-            ),
-          ),
-        );
-      } catch (error) {
-        if (!(error instanceof FrameworkContractError)) {
-          throw error;
-        }
-        return buildPackCompilerProjection(blockedRepoContractDescriptor(repo, error));
-      }
-    });
+    return repos.map(buildCompilerDomainFromRepo);
   }
   const descriptors = options.agentDescriptors ?? options.loadAgentDescriptors?.();
   if (!descriptors) {
@@ -628,10 +673,15 @@ export function buildDomainPackCompilerInspect(
 ) {
   const parsed = parseInspectArgs(args);
   const domain = parsed.domain;
-  const domains = buildCompilerDomains(contracts, {
-    ...options,
-    familyDefaults: options.familyDefaults ?? parsed.familyDefaults,
-  });
+  const standardAgentRepo = parsed.familyDefaults
+    ? null
+    : resolveStandardAgentRepo(domain, options);
+  const domains = standardAgentRepo
+    ? [buildCompilerDomainFromRepo(standardAgentRepo)]
+    : buildCompilerDomains(contracts, {
+        ...options,
+        familyDefaults: options.familyDefaults ?? parsed.familyDefaults,
+      });
   const selected = domains.find((candidate) =>
     domainSelectionMatches(candidate as JsonRecord, domain, options)
   );
@@ -654,11 +704,14 @@ export function buildRepoGeneratedInterfaceBundle(
   repoDir: string,
   format: GeneratedInterfaceFormat | 'all' = 'all',
   requestedAgentId: string | null = null,
+  standardAgentContractResolution?: StandardAgentContractResolutionReadback,
 ) {
   const repoProjection = buildRepoContractDescriptor(repoDir);
   const descriptor = repoContractDescriptorForPackCompiler(repoProjection, requestedAgentId);
   const bundle = {
-    ...buildGeneratedInterfaceBundle(descriptor, repoProjection.status, format),
+    ...buildGeneratedInterfaceBundle(descriptor, repoProjection.status, format, {
+      standardAgentContractResolution,
+    }),
     source_kind: 'standard_agent_repo_contracts',
     repo_dir: repoProjection.repoDir,
     blocker_reasons: repoProjection.blockerReasons,
@@ -771,6 +824,20 @@ export function buildGeneratedAgentInterfaces(
           opl_can_authorize_quality_or_export: false,
         },
       },
+    };
+  }
+
+  const standardAgentRepo = resolveStandardAgentRepo(domain, options);
+  if (standardAgentRepo) {
+    const generated = buildRepoGeneratedInterfaceBundle(
+      standardAgentRepo.repo_dir,
+      format,
+      standardAgentRepo.requested_agent_id,
+      standardAgentRepo.contract_resolution,
+    );
+    return {
+      version: 'g2',
+      generated_agent_interfaces: generated.bundle,
     };
   }
 

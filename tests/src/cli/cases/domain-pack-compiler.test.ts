@@ -1,3 +1,5 @@
+import { execFileSync } from 'node:child_process';
+
 import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, loadFrameworkContracts, os, path, runCli, runCliInCwd, shellSingleQuote, test } from '../helpers.ts';
 import { buildFamilyAgentDescriptorList } from '../../../../src/modules/atlas/family-domain-agent-descriptor.ts';
 import {
@@ -21,10 +23,22 @@ function buildDelayedManifestCommand(payload: Record<string, unknown>, delayMs: 
   } ${shellSingleQuote(JSON.stringify(payload))}`;
 }
 
+function initializeManagedCheckout(repoDir: string) {
+  execFileSync('git', ['init', '--quiet'], { cwd: repoDir });
+  execFileSync('git', ['config', 'user.email', 'fixture@example.com'], { cwd: repoDir });
+  execFileSync('git', ['config', 'user.name', 'Fixture'], { cwd: repoDir });
+  execFileSync('git', ['add', '.'], { cwd: repoDir });
+  execFileSync(
+    'git',
+    ['-c', 'commit.gpgsign=false', 'commit', '--quiet', '-m', 'fixture'],
+    { cwd: repoDir },
+  );
+}
+
 test('domain pack compiler projects OPL-owned generated surfaces for admitted domain packs', () => {
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-compiler-state-'));
-  const env = {
+  const env: Record<string, string> = {
     OPL_CONTRACTS_DIR: fixtureContractsRoot,
     OPL_FAMILY_WORKSPACE_ROOT: fixtureRoot,
     OPL_STATE_DIR: stateRoot,
@@ -200,10 +214,10 @@ test('domain pack compiler family-defaults consumes standard repo contracts with
   }
 });
 
-test('domain pack compiler uses an extended manifest discovery budget without changing descriptor default timeout', () => {
+test('standard Agent pack compiler uses its owner checkout without changing descriptor manifest timeout', () => {
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-compiler-timeout-state-'));
-  const env = {
+  const env: Record<string, string> = {
     OPL_CONTRACTS_DIR: fixtureContractsRoot,
     OPL_STATE_DIR: stateRoot,
   };
@@ -217,6 +231,8 @@ test('domain pack compiler uses an extended manifest discovery budget without ch
     memoryRefId: 'mas_publication_route_memory',
   });
   const masPack = createAdmittedStagePackFixture(slowMas, 'med-autoscience', 'MedAutoScience');
+  const ownerWorkspaceRoot = createFamilyDefaultContractWorkspace();
+  env.OPL_MODULE_PATH_MEDAUTOSCIENCE = path.join(ownerWorkspaceRoot, 'med-autoscience');
 
   try {
     runCli([
@@ -258,18 +274,26 @@ test('domain pack compiler uses an extended manifest discovery budget without ch
     assert.equal(masDescriptor.manifest_status, 'command_timeout');
 
     const packCompiler = runCli(['agents', 'pack-compiler', 'inspect', '--domain', 'mas'], env);
-    assert.equal(packCompiler.domain_pack_compiler.compiler_status, 'ready');
+    assert.equal(
+      packCompiler.domain_pack_compiler.compiler_status,
+      'ready',
+      JSON.stringify(packCompiler.domain_pack_compiler.blocker_reasons),
+    );
     assert.deepEqual(packCompiler.domain_pack_compiler.blocker_reasons, []);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(masPack.repoDir, { recursive: true, force: true });
+    fs.rmSync(ownerWorkspaceRoot, { recursive: true, force: true });
   }
 });
 
 test('domain pack compiler blocks generated handoff when a domain still declares generic residue', () => {
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-compiler-blocked-state-'));
-  const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
+  const env: Record<string, string> = {
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_STATE_DIR: stateRoot,
+  };
   const fixtures = loadFamilyManifestFixtures();
   const blockedMas = attachManifestSurface(
     withPackCompilerReadySurfaces(fixtures.medautoscience, {
@@ -300,6 +324,8 @@ test('domain pack compiler blocks generated handoff when a domain still declares
   );
   const masPack = createAdmittedStagePackFixture(blockedMas, 'med-autoscience', 'MedAutoScience');
   writeManifestContractOverrides(masPack.repoDir, blockedMas);
+  initializeManagedCheckout(masPack.repoDir);
+  env.OPL_MODULE_PATH_MEDAUTOSCIENCE = masPack.repoDir;
 
   try {
     runCli([

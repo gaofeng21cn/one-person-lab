@@ -9,7 +9,10 @@ import {
 test('generated interfaces fail closed when active caller target kind is not proven', () => {
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generated-interfaces-unknown-target-'));
-  const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
+  const env: Record<string, string> = {
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_STATE_DIR: stateRoot,
+  };
   const workspaceRoot = createFamilyDefaultContractWorkspace();
   const fixtures = loadFamilyManifestFixtures();
   const unknownTargetMas = attachManifestSurface(
@@ -58,6 +61,7 @@ test('generated interfaces fail closed when active caller target kind is not pro
   );
   const repoDir = path.join(workspaceRoot, 'med-autoscience');
   writeManifestContractOverrides(repoDir, unknownTargetMas);
+  env.OPL_MODULE_PATH_MEDAUTOSCIENCE = repoDir;
 
   runCli([
     'workspace',

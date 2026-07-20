@@ -9,6 +9,7 @@ export const OPL_ATLAS_SOURCE_MODULE = {
 export { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 export type { DomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 export { normalizeManifest } from './domain-manifest/normalizers.ts';
+export { buildStandardAgentDomainManifestCatalog } from './domain-manifest/standard-agent-catalog.ts';
 export { resolveBindingManifest } from './domain-manifest/resolver.ts';
 export {
   loadManagedStandardAgentContractCatalog,

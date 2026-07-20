@@ -1,9 +1,24 @@
 import { spawnSync } from 'node:child_process';
 
-import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, loadFrameworkContracts, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import {
+  buildFamilyAgentInspect,
+  buildFamilyAgentsList,
+} from '../../../../src/modules/workspace/family-domain-agent-skeleton.ts';
+import { readProviderContinuousProof } from '../../../../src/modules/runway/index.ts';
 import { createAdmittedStagePackFixture } from './workspace-domain-test-helper.ts';
 
 type JsonRecord = Record<string, unknown>;
+
+function readLegacyDomainManifests(
+  fixtureContractsRoot: string,
+  stateRoot: string,
+) {
+  return runCli(['domain', 'manifests'], {
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_STATE_DIR: stateRoot,
+  }).domain_manifests;
+}
 
 function withStandardSkeleton(payload: JsonRecord, overrides: JsonRecord = {}) {
   const physicalSkeletonFollowThrough = {
@@ -110,18 +125,19 @@ test('standard domain-agent skeleton inspection requires repo-source dirs and ar
       buildManifestCommand(driftManifest),
     ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
 
-    const list = runCli(['agents', 'list'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    });
-    const inspect = runCli(['agents', 'inspect', '--domain', 'mas'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    });
-    const drift = runCli(['agents', 'inspect', '--domain', 'redcube'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    });
+    const contracts = loadFrameworkContracts(fixtureContractsRoot);
+    const domainManifests = readLegacyDomainManifests(fixtureContractsRoot, stateRoot);
+    const list = buildFamilyAgentsList(contracts, { domainManifests }) as any;
+    const inspect = buildFamilyAgentInspect(
+      contracts,
+      ['--domain', 'mas'],
+      { domainManifests },
+    ) as any;
+    const drift = buildFamilyAgentInspect(
+      contracts,
+      ['--domain', 'redcube'],
+      { domainManifests },
+    ) as any;
 
     assert.equal(list.family_agents.summary.aligned_count, 1);
     assert.equal(list.family_agents.summary.drift_detected_count, 1);
@@ -137,7 +153,7 @@ test('standard domain-agent skeleton inspection requires repo-source dirs and ar
   }
 });
 
-test('domain-agent skeleton inspection accepts only the canonical MAS MAG RCA surface', () => {
+test('legacy domain-manifest skeleton inspection accepts MAS MAG RCA fixture surfaces', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-agent-canonical-state-'));
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const fixtures = loadFamilyManifestFixtures();
@@ -309,22 +325,12 @@ test('domain-agent skeleton inspection accepts only the canonical MAS MAG RCA su
       buildManifestCommand(rcaManifest),
     ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
 
-    const list = runCli(['agents', 'list'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    });
-    const mas = runCli(['agents', 'inspect', '--domain', 'mas'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    });
-    const mag = runCli(['agents', 'inspect', '--domain', 'mag'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    });
-    const rca = runCli(['agents', 'inspect', '--domain', 'rca'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    });
+    const contracts = loadFrameworkContracts(fixtureContractsRoot);
+    const domainManifests = readLegacyDomainManifests(fixtureContractsRoot, stateRoot);
+    const list = buildFamilyAgentsList(contracts, { domainManifests }) as any;
+    const mas = buildFamilyAgentInspect(contracts, ['--domain', 'mas'], { domainManifests }) as any;
+    const mag = buildFamilyAgentInspect(contracts, ['--domain', 'mag'], { domainManifests }) as any;
+    const rca = buildFamilyAgentInspect(contracts, ['--domain', 'rca'], { domainManifests }) as any;
 
     assert.equal(list.family_agents.summary.aligned_count, 3);
     assert.equal(list.family_agents.summary.missing_count, 0);
@@ -459,14 +465,25 @@ db.close();`,
       ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
     }
 
-    const list = runCli(['agents', 'list'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    });
-    const mas = runCli(['agents', 'inspect', '--domain', 'mas'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    });
+    const contracts = loadFrameworkContracts(fixtureContractsRoot);
+    const domainManifests = readLegacyDomainManifests(fixtureContractsRoot, stateRoot);
+    const previousStateDir = process.env.OPL_STATE_DIR;
+    process.env.OPL_STATE_DIR = stateRoot;
+    const providerContinuousProof = readProviderContinuousProof();
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    const list = buildFamilyAgentsList(
+      contracts,
+      { domainManifests, providerContinuousProof },
+    ) as any;
+    const mas = buildFamilyAgentInspect(
+      contracts,
+      ['--domain', 'mas'],
+      { domainManifests, providerContinuousProof },
+    ) as any;
 
     assert.equal(list.family_agents.summary.provider_temporal_residency_gap_status, 'closed_by_fresh_proven_proof');
     assert.equal(list.family_agents.summary.production_closure_gap_count, 12);

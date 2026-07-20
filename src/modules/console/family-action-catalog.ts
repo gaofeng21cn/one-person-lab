@@ -3,6 +3,7 @@ import {
   matchesStandardDomainAgentCatalogEntry,
   normalizeStandardDomainAgentId,
   resolveStandardAgent,
+  STANDARD_AGENT_REGISTRY,
   STANDARD_AGENT_SERIES_MEMBERSHIP,
 } from '../../kernel/standard-agent-registry.ts';
 import {
@@ -135,19 +136,19 @@ function managedContractError(error: unknown) {
 }
 
 function buildManagedActionDomainEntry(
-  domain: FrameworkContracts['domains']['domains'][number],
+  agent: typeof STANDARD_AGENT_REGISTRY[number],
 ): FamilyActionDomainEntry {
-  const binding = getActiveWorkspaceBinding(domain.domain_id);
+  const binding = getActiveWorkspaceBinding(agent.domain_id);
   try {
-    const source = resolveStandardAgentContractCheckout(domain.domain_id);
+    const source = resolveStandardAgentContractCheckout(agent.domain_id);
     if (!source) {
       return {
-        project_id: domain.domain_id,
-        project: domain.project,
+        project_id: agent.domain_id,
+        project: agent.project,
         binding_id: binding?.binding_id ?? null,
         workspace_path: process.cwd(),
         manifest_status: 'managed_contract_unavailable',
-        target_domain_id: resolveStandardAgent(domain.domain_id)?.target_domain_id ?? null,
+        target_domain_id: agent.target_domain_id,
         catalog: null,
         projection_manifest: null,
         catalog_source: null,
@@ -160,14 +161,14 @@ function buildManagedActionDomainEntry(
       };
     }
     const resolved = loadManagedStandardAgentContractCatalog({
-      requested_domain_id: domain.domain_id,
+      requested_domain_id: agent.domain_id,
       checkout_agent_id: source.agent_id,
       checkout_path: source.checkout_path,
     });
 
     return {
-      project_id: domain.domain_id,
-      project: domain.project,
+      project_id: agent.domain_id,
+      project: agent.project,
       binding_id: binding?.binding_id ?? null,
       workspace_path: process.cwd(),
       manifest_status: 'resolved',
@@ -195,12 +196,12 @@ function buildManagedActionDomainEntry(
     };
   } catch (error) {
     return {
-      project_id: domain.domain_id,
-      project: domain.project,
+      project_id: agent.domain_id,
+      project: agent.project,
       binding_id: binding?.binding_id ?? null,
       workspace_path: process.cwd(),
       manifest_status: 'managed_contract_invalid',
-      target_domain_id: resolveStandardAgent(domain.domain_id)?.target_domain_id ?? null,
+      target_domain_id: agent.target_domain_id,
       catalog: null,
       projection_manifest: null,
       catalog_source: null,
@@ -271,12 +272,19 @@ function buildLegacyActionDomainEntry(
 }
 
 function buildActionIndex(contracts: FrameworkContracts) {
-  const entries = contracts.domains.domains.map((domain) => {
-    const agent = resolveStandardAgent(domain.domain_id);
-    return agent?.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP
-      ? buildManagedActionDomainEntry(domain)
-      : buildLegacyActionDomainEntry(domain);
-  });
+  const standardAgents = STANDARD_AGENT_REGISTRY.filter(
+    (agent) => agent.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP,
+  );
+  const standardAgentIds = new Set<string>(standardAgents.map((agent) => agent.agent_id));
+  const entries = [
+    ...standardAgents.map(buildManagedActionDomainEntry),
+    ...contracts.domains.domains
+      .filter((domain) => {
+        const agent = resolveStandardAgent(domain.domain_id);
+        return !agent || !standardAgentIds.has(agent.agent_id);
+      })
+      .map(buildLegacyActionDomainEntry),
+  ];
   const domains = entries.map((entry) => {
     const actionCatalog = entry.catalog;
     return {

@@ -5,7 +5,7 @@ Purpose: `specs_opl_domain_onboarding_contract`
 State: `active_spec_support`
 Machine boundary: 本文是人读 spec 支撑材料。机器可读行为继续归 contracts、schema、source、CLI/API 行为、runtime ledger、生成产物和 semantic human_doc ids。
 
-> Currentness rule: 本文只定义候选 domain-agent admission 的审查合同，不冻结当前已收录 domain、workstream 数量或候选清单。使用本文前，先读取核心五件套、`docs/active/current-development-lines.md`、candidate backlog、`domains.json`、`workstreams.json`、`task-topology.json`、`public-surface-index.json`、CLI/read-model 与相关测试；只有这些 live surfaces 能证明某个 domain-agent entry、workstream 或 candidate lane 的当前状态。已收录 domain 仍必须保留 direct Codex/domain-skill activation 与 durable OPL stage-attempt hosting：`Codex-default executor -> explicit OPL activation -> provider-backed stage runtime -> selected domain-agent entry`，并保持 domain-owned truth 与 authority。
+> Currentness rule: 本文只定义候选 domain-agent admission 的审查合同，不冻结当前已收录 Agent、workstream 数量或候选清单。标准 Agent 的身份与成员资格以 `src/kernel/standard-agent-registry.ts` 为准；可调用性继续由 selected managed/developer checkout 与 owner-owned `domain_descriptor`、`action_catalog`、stage manifest 合同共同证明。`domains.json`、`workstreams.json` 与 `task-topology.json` 只描述 workspace/runtime/legacy topology 和候选 workstream，不得作为标准 Agent 的发现白名单。使用本文前还应读取 `docs/active/current-development-lines.md`、candidate backlog、`public-surface-index.json`、CLI/read-model 与相关测试。已收录 Agent 仍必须保留 direct Codex/domain-skill activation 与 durable OPL stage-attempt hosting：`Codex-default executor -> explicit OPL activation -> provider-backed stage runtime -> selected domain-agent entry`，并保持 domain-owned truth 与 authority。
 
 ## 目的
 
@@ -30,6 +30,7 @@ Domain-agent admission 以当前活跃 framework 合同集为审查依据：
 ## 机器可读配套工件
 
 - [`../contracts/opl-framework/standard-agent-admission-gates.json`](../../contracts/opl-framework/standard-agent-admission-gates.json)
+- [`../src/kernel/standard-agent-registry.ts`](../../src/kernel/standard-agent-registry.ts)
 - [`../contracts/opl-framework/domains.json`](../../contracts/opl-framework/domains.json)
 - [`../contracts/opl-framework/workstreams.json`](../../contracts/opl-framework/workstreams.json)
 - [`../contracts/opl-framework/task-topology.json`](../../contracts/opl-framework/task-topology.json)
@@ -37,12 +38,12 @@ Domain-agent admission 以当前活跃 framework 合同集为审查依据：
 - `opl agents descriptors --json`
 - `opl agents descriptor --domain <domain> --json`
 
-这些合同把已收录 domain-agent catalog 与 stage topology 落成 non-executing framework surface。
+Registry 与 owner contracts 把已收录标准 Agent 的身份、公开 action 和 stage pack 落成 generated surface；其余合同保留 workspace/runtime/legacy topology 的 non-executing framework projection。
 它们不会授予 OPL domain truth，也不会自动收录候选 workstream。
 `standard-agent-admission-gates.json` 是本文 admission package 的机器可读 gate 面：它要求正式收录前至少覆盖 identity、domain truth owner、generated surface default entry、standard pack ABI、stage artifact contract、execution model、authority boundary、owner receipt boundary、typed blocker boundary 与 human gate false-authority；它只冻结 gate 与 false-authority 语义，不声明任何当前或候选 domain ready / production ready。
-`opl agents descriptors` 是这些工件之上的统一检查入口：正式收录的 domain 应能在该 read model 中暴露 entry、standard skeleton、action catalog、stage control plane、domain memory descriptor、skill catalog、runtime/session/progress/artifact refs 和 authority boundary。它仍然是 descriptor/projection surface，不读取或嵌入 domain memory 正文、prompt 长正文、route 判断或 quality verdict。
+`opl agents descriptors` 是 registry-derived 的统一公共 descriptor projection，覆盖每个 `standard_domain_agent` 成员；selected checkout 与 owner contracts 决定各成员是 resolved 还是返回 typed blocker。Workspace-bound legacy manifest/skeleton 只作为 descriptor 中的嵌套诊断信息，不决定 membership、公开可发现性、action 或 Stage 合同。Descriptor projection 仍不读取或嵌入 domain memory 正文、prompt 长正文、route 判断或 quality verdict。
 公开 scaffold 或 domain-direction hint 可以帮助说明 candidate path，但在真实 domain-agent boundary package 落地前，它们仍然只算 top-level signal。
-这条规则的适用对象必须从 live machine surfaces 读取：`workstreams.json` 只列出已注册 active workstream，`domains.json` 只列出已收录 domain-agent catalog，`task-topology.json` 的 `under_definition` / `not_registered` / `candidate_domain_agent_pending` entry 与 candidate backlog 共同说明仍在 formal inclusion 之下的 candidate lane。当前机器面把 `Grant Ops` 归入已收录 `MedAutoGrant` domain-agent entry；候选 lane 仍需要完整 admission package 才能进入正式收录。
+这条规则的适用对象必须从 live machine surfaces 读取：standard Agent registry 列出已注册 Agent；selected checkout 与 owner contracts 决定其当前 generated/hosted surface 是否可用；`workstreams.json` 只列出 active workstream，`domains.json` 只保留 workspace/runtime/legacy domain manifest 配置，`task-topology.json` 的 `under_definition` / `not_registered` / `candidate_domain_agent_pending` entry 与 candidate backlog 共同说明仍在 formal inclusion 之下的 candidate lane。当前机器面把 `Grant Ops` 归入已收录 `MedAutoGrant` Agent；候选 lane 仍需要完整 admission package 才能进入 registry。
 
 ## 执行模型审查配套文档
 
@@ -90,9 +91,11 @@ Domain-agent admission 以当前活跃 framework 合同集为审查依据：
 
 一个新 domain 必须提供完整 registry package。
 
-#### 必需的 domain-agent registry entry
+#### 必需的 standard Agent registry entry
 
-该 domain entry 必须完整定义活跃 domain-agent 字段：
+候选必须在 shared standard Agent registry 中定义稳定身份、别名、package/module locator 与 series membership，并在 owner repo 中提供 `domain_descriptor`、`action_catalog` 和 stage manifest。标准 Agent 的公开发现不得依赖 `domains.json` 条目。
+
+Owner domain descriptor 必须完整定义活跃 domain-agent 字段：
 
 - `domain_id`
 - `label`
@@ -106,9 +109,9 @@ Domain-agent admission 以当前活跃 framework 合同集为审查依据：
 - `owned_workstreams`
 - `non_opl_families`
 
-#### 必需的 workstream registry entry
+#### 条件必需的 workspace/workstream registry entry
 
-如果这个新 domain 拥有一个新的 OPL workstream，它还必须提供完整的 workstream entry，覆盖全部 `G1` 字段：
+只有当新 Agent 同时引入 OPL workspace/runtime topology 或新的 OPL workstream 时，才需要更新 `domains.json`、`workstreams.json` 或 `task-topology.json`。这些配置不参与 standard Agent discovery。新 workstream entry 覆盖全部 `G1` 字段：
 
 - `workstream_id`
 - `label`

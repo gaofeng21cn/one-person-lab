@@ -122,6 +122,7 @@ const fastTestFiles = [
   'tests/src/standard-agent-handler-sandbox.test.ts',
   'tests/src/standard-agent-hosted-action-runtime-contract.test.ts',
   'tests/src/standard-agent-managed-checkout.test.ts',
+  'tests/src/cli/cases/standard-agent-unified-public-surfaces.test.ts',
   'tests/src/cli/cases/agents-run.test.ts',
   'tests/src/repo-json-schema.test.ts',
   'tests/src/standard-agent-implementation-profile.test.ts',
