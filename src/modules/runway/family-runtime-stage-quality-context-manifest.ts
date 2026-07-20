@@ -85,7 +85,7 @@ export function buildStageReviewInputSnapshotContext(input: {
   if (input.resolution.surface_kind === 'opl_reviewer_input_snapshot_materialization') {
     return {
       review_input_snapshot_status: input.resolution.materialization_status,
-      mas_review_input_snapshot_binding: input.resolution.review_input_snapshot_binding,
+      review_input_snapshot_binding: input.resolution.review_input_snapshot_binding,
       opl_reviewer_input_snapshot_manifest_ref: input.resolution.manifest_ref,
       opl_reviewer_input_snapshot_manifest: input.resolution.manifest,
       review_input_snapshot_read_policy: REVIEW_INPUT_SNAPSHOT_READ_POLICY,
@@ -109,7 +109,7 @@ export function buildStageReviewInputSnapshotContext(input: {
   } as const;
   return {
     review_input_snapshot_status: 'quality_debt',
-    mas_review_input_snapshot_binding: null,
+    review_input_snapshot_binding: null,
     opl_reviewer_input_snapshot_manifest_ref: null,
     opl_reviewer_input_snapshot_manifest: null,
     review_input_snapshot_read_policy: REVIEW_INPUT_SNAPSHOT_READ_POLICY,
@@ -134,7 +134,7 @@ function validateStageReviewInputSnapshotContext(manifest: Record<string, unknow
   }
   if (status === 'quality_debt') {
     if (
-      manifest.mas_review_input_snapshot_binding !== null
+      manifest.review_input_snapshot_binding !== null
       || manifest.opl_reviewer_input_snapshot_manifest_ref !== null
       || manifest.opl_reviewer_input_snapshot_manifest !== null
     ) {
@@ -154,7 +154,10 @@ function validateStageReviewInputSnapshotContext(manifest: Record<string, unknow
       || receipt.stage_run_id !== manifest.stage_run_id
       || receipt.quality_cycle_id !== manifest.quality_cycle_id
       || receipt.reviewer_attempt_role !== manifest.reviewer_attempt_role
-      || receipt.reason_code !== 'review_input_snapshot_binding_required'
+      || ![
+        'review_input_snapshot_binding_required',
+        'review_input_snapshot_authority_upgrade_required',
+      ].includes(String(receipt.reason_code))
       || receipt.hosted_action_launch_allowed !== true
       || receipt.ordinary_progress_may_advance !== true
       || receipt.stage_transition_allowed !== true
@@ -199,11 +202,11 @@ function validateStageReviewInputSnapshotContext(manifest: Record<string, unknow
   );
   if (
     canonicalJsonText(readback.manifest) !== canonicalJsonText(manifest.opl_reviewer_input_snapshot_manifest)
-    || canonicalJsonText(readback.binding) !== canonicalJsonText(manifest.mas_review_input_snapshot_binding)
+    || canonicalJsonText(readback.binding) !== canonicalJsonText(manifest.review_input_snapshot_binding)
   ) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
-      'Stage Review context manifest snapshot body or MAS binding does not match its exact persisted ref.',
+      'Stage Review context manifest snapshot body or binding does not match its exact persisted ref.',
       { failure_code: 'review_input_snapshot_context_binding_mismatch' },
     );
   }

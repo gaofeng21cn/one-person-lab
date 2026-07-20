@@ -80,7 +80,7 @@ import { canonicalStageRunSha256 } from './family-runtime-stage-run-identity-par
 import { launchRegisteredStageRun } from './family-runtime-stage-run-launch.ts';
 import { findStageRunLaunch } from './family-runtime-stage-run-launch-registry.ts';
 import { materializeReviewerInputSnapshot } from './family-runtime-reviewer-input-snapshot.ts';
-import { persistReviewEvidenceCacheCandidate } from './family-runtime-review-evidence-cache.ts';
+import { persistReviewEvidenceArtifactCandidate } from './family-runtime-review-evidence-artifact.ts';
 
 function stageRunReplayBusinessIdentity(
   input: Parameters<typeof launchRegisteredStageRun>[0]['stageRunInput'],
@@ -471,16 +471,12 @@ export async function runFamilyRuntime(
         family_runtime_review_snapshot: materializeReviewerInputSnapshot(parsed.input),
       };
     }
-    if (parsed.mode === 'review_evidence_cache_persist') {
-      const wrapped = isRecord(parsed.input.candidate)
-        || Object.hasOwn(parsed.input, 'context_binding');
-      const candidate = wrapped ? parsed.input.candidate : parsed.input;
-      const contextBinding = wrapped ? parsed.input.context_binding : undefined;
+    if (parsed.mode === 'review_evidence_artifact_persist') {
       return {
         version: 'g2',
-        family_runtime_review_evidence_cache: persistReviewEvidenceCacheCandidate(
-          candidate,
-          wrapped ? contextBinding : undefined,
+        family_runtime_review_evidence_artifact: persistReviewEvidenceArtifactCandidate(
+          parsed.input.candidate,
+          parsed.input.context_binding,
         ),
       };
     }

@@ -67,10 +67,9 @@ export {
   resolveReviewerInputSnapshotMaterialization,
 } from './family-runtime-reviewer-input-snapshot.ts';
 export {
-  persistReviewEvidenceCacheCandidate,
-  readReviewEvidenceCacheReceipt,
-  reviewEvidenceCacheKey,
-} from './family-runtime-review-evidence-cache.ts';
+  persistReviewEvidenceArtifactCandidate,
+  readReviewEvidenceArtifactReceipt,
+} from './family-runtime-review-evidence-artifact.ts';
 export {
   reconcileTemporalRuntimeStartupMaintenance,
   type TemporalStartupMaintenanceRuntime,

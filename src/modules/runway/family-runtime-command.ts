@@ -93,7 +93,7 @@ export type FamilyRuntimeCommandInput =
     };
   }
   | {
-    mode: 'review_snapshot_materialize' | 'review_evidence_cache_persist';
+    mode: 'review_snapshot_materialize' | 'review_evidence_artifact_persist';
     input: Record<string, unknown>;
   }
   | { mode: 'stage_run_query'; workflowId: string }

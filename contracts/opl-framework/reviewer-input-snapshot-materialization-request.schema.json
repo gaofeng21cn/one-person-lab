@@ -7,102 +7,53 @@
   "required": [
     "surface_kind",
     "schema_version",
-    "generation_ref",
-    "review_lane",
-    "review_scope_sha256",
+    "owner_authority_ref",
+    "producer_attempt_ref",
+    "execution_content_binding_sha256",
     "workspace_root",
-    "members",
-    "mas_authority_record_ref",
-    "mas_authority_record"
+    "members"
   ],
   "properties": {
     "surface_kind": { "const": "opl_reviewer_input_snapshot_materialization_request" },
-    "schema_version": { "const": 1 },
-    "generation_ref": { "type": "string", "minLength": 1 },
-    "review_lane": {
-      "enum": ["medical", "statistical", "reference", "display", "publication", "exact_byte_package"]
+    "schema_version": { "const": 2 },
+    "owner_authority_ref": { "$ref": "#/$defs/exact_ref" },
+    "producer_attempt_ref": {
+      "type": "string",
+      "pattern": "^opl://stage_attempts/.+$"
     },
-    "review_scope_sha256": { "$ref": "#/$defs/sha256" },
+    "execution_content_binding_sha256": { "$ref": "#/$defs/sha256" },
     "workspace_root": { "type": "string", "minLength": 1 },
     "members": {
       "type": "array",
       "minItems": 1,
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["member_id", "role", "owner_ref", "source_ref", "sha256", "size_bytes"],
-        "properties": {
-          "member_id": { "type": "string", "minLength": 1 },
-          "role": { "type": "string", "minLength": 1 },
-          "owner_ref": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Original MAS owner locator used only for owner scope identity, including exact-byte review scope hashing."
-          },
-          "source_ref": { "type": "string", "minLength": 1 },
-          "sha256": { "$ref": "#/$defs/sha256" },
-          "size_bytes": { "type": "integer", "minimum": 0 }
-        }
-      }
-    },
-    "mas_authority_record_ref": {
-      "$ref": "#/$defs/mas_authority_record_ref"
-    },
-    "mas_authority_record": {
-      "$ref": "#/$defs/mas_authority_record"
+      "items": { "$ref": "#/$defs/member" }
     }
   },
   "$defs": {
-    "sha256": { "type": "string", "pattern": "^(?:sha256:)?[a-fA-F0-9]{64}$" },
-    "mas_authority_record_ref": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "exact_ref": {
       "type": "object",
       "additionalProperties": false,
       "required": ["kind", "ref", "size_bytes", "sha256"],
       "properties": {
-        "kind": { "const": "mas_review_input_snapshot_authority" },
-        "ref": {
-          "type": "string",
-          "pattern": "^mas-review-input-snapshot-authority:[a-f0-9]{64}$"
-        },
-        "size_bytes": { "type": "integer", "minimum": 1 },
+        "kind": { "type": "string", "minLength": 1 },
+        "ref": { "type": "string", "minLength": 1 },
+        "size_bytes": { "type": "integer", "minimum": 0 },
         "sha256": { "$ref": "#/$defs/sha256" }
       }
     },
-    "mas_authority_record": {
+    "member": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "surface_kind",
-        "schema_version",
-        "generation_ref",
-        "review_lane",
-        "review_scope_sha256",
-        "members"
-      ],
+      "required": ["member_id", "source_ref", "sha256", "size_bytes"],
       "properties": {
-        "surface_kind": { "const": "mas_review_input_snapshot_authority" },
-        "schema_version": { "const": 1 },
-        "generation_ref": { "type": "string", "minLength": 1 },
-        "review_lane": {
-          "enum": ["medical", "statistical", "reference", "display", "publication", "exact_byte_package"]
-        },
-        "review_scope_sha256": { "$ref": "#/$defs/sha256" },
-        "members": {
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["member_id", "role", "owner_ref", "sha256", "size_bytes"],
-            "properties": {
-              "member_id": { "type": "string", "minLength": 1 },
-              "role": { "type": "string", "minLength": 1 },
-              "owner_ref": { "type": "string", "minLength": 1 },
-              "sha256": { "$ref": "#/$defs/sha256" },
-              "size_bytes": { "type": "integer", "minimum": 0 }
-            }
-          }
-        }
+        "member_id": { "type": "string", "minLength": 1 },
+        "source_ref": { "type": "string", "minLength": 1 },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "size_bytes": { "type": "integer", "minimum": 0 }
       }
     }
   }

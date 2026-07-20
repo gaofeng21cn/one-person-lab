@@ -1,4 +1,5 @@
 import { stringValue as optionalString } from '../../../kernel/json-record.ts';
+import { stageAttemptPackageClosureIdentity } from '../family-runtime-stage-run-identity.ts';
 import { isRecord, type JsonRecord } from './shared.ts';
 
 function readRecordList(value: unknown) {
@@ -33,6 +34,14 @@ function workUnitIdFromAttempt(attempt: JsonRecord) {
   return workUnitFingerprint?.startsWith('truth-snapshot::') ? workUnitFingerprint : null;
 }
 
+function executionContentBinding(attempt: JsonRecord) {
+  if (isRecord(attempt.execution_content_binding)) return attempt.execution_content_binding;
+  const qualityContext = isRecord(attempt.quality_context) ? attempt.quality_context : {};
+  return isRecord(qualityContext.execution_content_binding)
+    ? qualityContext.execution_content_binding
+    : {};
+}
+
 export function codexStageAttemptEnv(input: {
   attempt: JsonRecord;
   stagePacketRef?: string | null;
@@ -46,8 +55,23 @@ export function codexStageAttemptEnv(input: {
   const idempotencyKey = optionalString(input.attempt.idempotency_key);
   const stageRunId = optionalString(workspaceLocator.stage_run_id);
   const stageManifestRef = optionalString(workspaceLocator.stage_manifest_ref);
+  const binding = executionContentBinding(input.attempt);
+  const spec = isRecord(binding.spec) ? binding.spec : null;
+  const content = spec && isRecord(spec.package_closure)
+    ? stageAttemptPackageClosureIdentity(binding)
+    : null;
   return {
     OPL_STAGE_ATTEMPT_ID: optionalString(input.attempt.stage_attempt_id) ?? undefined,
+    OPL_STAGE_ATTEMPT_REF: stageAttemptId
+      ? `opl://stage_attempts/${stageAttemptId}`
+      : undefined,
+    OPL_EXECUTION_CONTENT_BINDING_SHA256: content?.binding_sha256,
+    OPL_PACKAGE_USE_BOUNDARY_ID: content?.use_boundary_id,
+    OPL_ROOT_PACKAGE_ID: content?.root_package.package_id,
+    OPL_ROOT_PACKAGE_CONTENT_DIGEST: content?.root_package.package_content_digest,
+    OPL_PROVIDER_PACKAGES_JSON: content && content.provider_packages.length > 0
+      ? JSON.stringify(content.provider_packages)
+      : undefined,
     OPL_STAGE_ID: stageIdFromAttempt(input.attempt),
     OPL_STAGE_PACKET_REF: optionalString(input.stagePacketRef) === 'unavailable'
       ? undefined

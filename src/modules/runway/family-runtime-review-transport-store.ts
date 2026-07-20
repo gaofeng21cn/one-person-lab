@@ -102,10 +102,8 @@ export function reviewTransportRoots() {
     reviewer_snapshot_manifest_root: path.join(root, 'reviewer-input-snapshots', 'manifests'),
     stage_review_receipt_root: path.join(root, 'revision-consumption', 'stage-review-receipts'),
     revision_intake_root: path.join(root, 'revision-consumption', 'revision-intakes'),
-    evidence_cache_root: path.join(root, 'page-evidence-cache'),
-    evidence_cache_candidate_root: path.join(root, 'page-evidence-cache', 'candidates'),
-    evidence_cache_entry_root: path.join(root, 'page-evidence-cache', 'entries'),
-    evidence_cache_receipt_root: path.join(root, 'page-evidence-cache', 'receipts'),
+    review_evidence_candidate_root: path.join(root, 'review-evidence-artifacts', 'candidates'),
+    review_evidence_receipt_root: path.join(root, 'review-evidence-artifacts', 'receipts'),
   };
 }
 

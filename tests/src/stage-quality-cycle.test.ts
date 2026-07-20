@@ -16,7 +16,6 @@ import {
   normalizeStageQualityCyclePolicy,
   reduceStageQualityCycleState,
   stageQualityAttemptOutcomeFromEnvelope,
-  stageReviewEvidenceCacheQualityDebtRef,
   STAGE_QUALITY_OUTCOMES,
   validateInitialStageQualityReviewOutcome,
   validateIndependentStageReviewReceipt,
@@ -54,127 +53,6 @@ import { OFFICIAL_KNOWLEDGE_DELIVERABLE_QUALITY_PROFILE } from '../../src/module
 import {
   STANDARD_AGENT_REGISTRY,
 } from '../../src/kernel/standard-agent-registry.ts';
-
-test('page-evidence cache quality debt remains progress-first and projects its exact receipt ref', () => {
-  const receiptRef = {
-    kind: 'opl_review_evidence_cache_receipt',
-    ref: 'file:///tmp/review-evidence-cache-debt.json',
-    size_bytes: 123,
-    sha256: `sha256:${'1'.repeat(64)}`,
-  };
-  const receipt = {
-    surface_kind: 'opl_review_evidence_cache_receipt',
-    cache_reuse_eligible: false,
-    stage_transition_allowed: true,
-    typed_blocker_ref: null,
-    cache_authority: false,
-    requires_fresh_reviewer_invocation: true,
-    requires_fresh_reviewer_receipt: true,
-    requires_mas_judgment: true,
-    quality_debt: {
-      status: 'quality_debt',
-      ordinary_progress_may_advance: true,
-      stage_transition_allowed: true,
-      typed_blocker_ref: null,
-    },
-  };
-  assert.equal(stageReviewEvidenceCacheQualityDebtRef({ receiptRef, receipt }), receiptRef.ref);
-  assert.throws(() => stageReviewEvidenceCacheQualityDebtRef({
-    receiptRef,
-    receipt: {
-      ...receipt,
-      quality_debt: { ...receipt.quality_debt, stage_transition_allowed: false },
-    },
-  }), /progress-first and non-blocking/);
-  assert.equal(stageReviewEvidenceCacheQualityDebtRef({
-    receiptRef: undefined,
-    receipt: undefined,
-    reviewerAttemptRef: 'opl://stage_attempts/legacy-reviewer',
-  }), 'opl://stage_attempts/legacy-reviewer#review-evidence-cache-binding-missing');
-});
-
-test('page-evidence cache evaluation binds the exact receipt and current reviewer Attempt', () => {
-  const receiptRef = {
-    kind: 'opl_review_evidence_cache_receipt',
-    ref: 'file:///tmp/review-evidence-cache-current.json',
-    size_bytes: 234,
-    sha256: `sha256:${'2'.repeat(64)}`,
-  };
-  const receipt = {
-    surface_kind: 'opl_review_evidence_cache_receipt',
-    cache_reuse_eligible: true,
-    stage_transition_allowed: true,
-    typed_blocker_ref: null,
-    cache_authority: false,
-    requires_fresh_reviewer_invocation: true,
-    requires_fresh_reviewer_receipt: true,
-    requires_mas_judgment: true,
-    quality_debt: null,
-  };
-  const evaluation = {
-    surface_kind: 'opl_review_evidence_cache_receipt_evaluation',
-    schema_version: 1,
-    status: 'cache_reusable',
-    receipt_ref: receiptRef,
-    current_context_binding: {
-      reviewer_attempt_ref: 'opl://stage_attempts/reviewer',
-    },
-    cache_reuse_eligible: true,
-    quality_debt: null,
-    stage_transition_allowed: true,
-    typed_blocker_ref: null,
-    requires_fresh_reviewer_invocation: true,
-    requires_fresh_reviewer_receipt: true,
-    requires_mas_judgment: true,
-  };
-  assert.equal(stageReviewEvidenceCacheQualityDebtRef({
-    receiptRef,
-    receipt,
-    evaluation,
-    reviewerAttemptRef: 'opl://stage_attempts/reviewer',
-  }), null);
-  assert.throws(() => stageReviewEvidenceCacheQualityDebtRef({
-    receiptRef,
-    receipt,
-    evaluation: { ...evaluation, receipt_ref: { ...receiptRef, sha256: `sha256:${'3'.repeat(64)}` } },
-    reviewerAttemptRef: 'opl://stage_attempts/reviewer',
-  }), /evaluation violates its progress-first contract/);
-  assert.equal(stageReviewEvidenceCacheQualityDebtRef({
-    receiptRef,
-    receipt,
-    evaluation: {
-      ...evaluation,
-      status: 'quality_debt',
-      current_context_binding: null,
-      cache_reuse_eligible: false,
-      quality_debt: {
-        status: 'quality_debt',
-        ordinary_progress_may_advance: true,
-        stage_transition_allowed: true,
-        typed_blocker_ref: null,
-      },
-    },
-    reviewerAttemptRef: 'opl://stage_attempts/reviewer',
-  }), receiptRef.ref);
-  assert.throws(() => stageReviewEvidenceCacheQualityDebtRef({
-    receiptRef,
-    receipt,
-    evaluation: {
-      ...evaluation,
-      current_context_binding: {},
-    },
-    reviewerAttemptRef: 'opl://stage_attempts/reviewer',
-  }), /evaluation violates its progress-first contract/);
-  assert.throws(() => stageReviewEvidenceCacheQualityDebtRef({
-    receiptRef,
-    receipt,
-    evaluation: {
-      ...evaluation,
-      current_context_binding: { reviewer_attempt_ref: 'opl://stage_attempts/other-reviewer' },
-    },
-    reviewerAttemptRef: 'opl://stage_attempts/reviewer',
-  }), /evaluation violates its progress-first contract/);
-});
 
 const repoRoot = path.resolve(import.meta.dirname, '../..');
 
@@ -307,7 +185,7 @@ test('official quality profile is explicit without adding per-agent registry pol
   );
   assert.equal(
     contract.review_receipt.review_transport_binding
-      .page_evidence_cache_hit_can_skip_fresh_reviewer_receipt,
+      .review_evidence_artifact_defines_cache_reuse_or_domain_verdict,
     false,
   );
   assert.equal(
@@ -477,16 +355,15 @@ test('formal review rejects shared provider sessions even when the same model is
     rubric_refs: ['rubric:quality'],
     verdict: 'pass',
     review_input_snapshot_status: 'quality_debt',
-    mas_review_input_snapshot_binding: null,
+    review_input_snapshot_binding: null,
     opl_reviewer_input_snapshot_manifest_ref: null,
     opl_reviewer_input_snapshot_manifest: null,
     review_input_snapshot_quality_debt_receipt_ref: 'quality-debt:snapshot',
     review_input_snapshot_quality_debt_receipt: {
       surface_kind: 'opl_review_input_snapshot_quality_debt_receipt',
     },
-    opl_review_evidence_cache_receipt_ref: null,
-    opl_review_evidence_cache_receipt: null,
-    opl_review_evidence_cache_receipt_evaluation: null,
+    opl_review_evidence_artifact_receipt_ref: null,
+    opl_review_evidence_artifact_receipt: null,
     finding_lineage: {
       review_kind: 'initial_review',
       finding_ids: [],
@@ -514,16 +391,15 @@ function reviewReceipt(overrides: Record<string, unknown> = {}) {
     rubric_refs: ['rubric:quality'],
     verdict: 'pass',
     review_input_snapshot_status: 'quality_debt',
-    mas_review_input_snapshot_binding: null,
+    review_input_snapshot_binding: null,
     opl_reviewer_input_snapshot_manifest_ref: null,
     opl_reviewer_input_snapshot_manifest: null,
     review_input_snapshot_quality_debt_receipt_ref: 'quality-debt:snapshot',
     review_input_snapshot_quality_debt_receipt: {
       surface_kind: 'opl_review_input_snapshot_quality_debt_receipt',
     },
-    opl_review_evidence_cache_receipt_ref: null,
-    opl_review_evidence_cache_receipt: null,
-    opl_review_evidence_cache_receipt_evaluation: null,
+    opl_review_evidence_artifact_receipt_ref: null,
+    opl_review_evidence_artifact_receipt: null,
     finding_lineage: {
       review_kind: 'initial_review',
       finding_ids: [],

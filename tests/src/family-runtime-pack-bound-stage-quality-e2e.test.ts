@@ -575,7 +575,7 @@ Close findings using the latest package.
       assert.deepEqual(receipt.rubric_refs, ['agent/quality_gates/quality.md']);
       assert.equal(receipt.verdict, 'pass');
       assert.equal(receipt.review_input_snapshot_status, 'quality_debt');
-      assert.equal(receipt.mas_review_input_snapshot_binding, null);
+      assert.equal(receipt.review_input_snapshot_binding, null);
       assert.equal(receipt.review_input_snapshot_quality_debt_receipt.stage_transition_allowed, true);
       assert.equal(receipt.review_input_snapshot_quality_debt_receipt.typed_blocker_ref, null);
 

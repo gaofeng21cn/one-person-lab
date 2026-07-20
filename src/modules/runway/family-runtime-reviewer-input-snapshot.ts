@@ -1,4 +1,3 @@
-import crypto from 'node:crypto';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -20,33 +19,8 @@ import {
   type ReviewTransportExactRef,
 } from './family-runtime-review-transport-store.ts';
 
-const REVIEW_LANES = [
-  'medical',
-  'statistical',
-  'reference',
-  'display',
-  'publication',
-  'exact_byte_package',
-] as const;
-
-const SNAPSHOT_AUTHORITY_BOUNDARY = {
-  storage_role: 'immutable_reviewer_input_transport',
-  mas_selects_review_lane_scope_and_members: true,
-  framework_can_select_or_narrow_members: false,
-  framework_can_interpret_member_roles: false,
-  framework_can_write_domain_truth: false,
-  framework_can_sign_reviewer_receipt: false,
-  framework_can_sign_owner_receipt: false,
-  framework_can_create_typed_blocker: false,
-  framework_can_claim_quality_readiness: false,
-  framework_can_claim_publication_readiness: false,
-  framework_can_claim_artifact_authority: false,
-} as const;
-
 export type ReviewerInputSnapshotMember = {
   member_id: string;
-  role: string;
-  owner_ref: string;
   source_ref: string;
   sha256: string;
   size_bytes: number;
@@ -54,324 +28,160 @@ export type ReviewerInputSnapshotMember = {
 
 export type ReviewerInputSnapshotMaterializationRequest = {
   surface_kind: 'opl_reviewer_input_snapshot_materialization_request';
-  schema_version: 1;
-  generation_ref: string;
-  review_lane: typeof REVIEW_LANES[number];
-  review_scope_sha256: string;
+  schema_version: 2;
+  owner_authority_ref: ReviewTransportExactRef;
+  producer_attempt_ref: string;
+  execution_content_binding_sha256: string;
   workspace_root: string;
   members: ReviewerInputSnapshotMember[];
-  mas_authority_record_ref: ReviewTransportExactRef;
-  mas_authority_record: {
-    surface_kind: 'mas_review_input_snapshot_authority';
-    schema_version: 1;
-    generation_ref: string;
-    review_lane: typeof REVIEW_LANES[number];
-    review_scope_sha256: string;
-    members: Array<Omit<ReviewerInputSnapshotMember, 'source_ref'>>;
-  };
 };
 
-function normalizeReviewLane(value: unknown) {
-  const lane = requiredReviewTransportText(value, 'review_lane');
-  if (!REVIEW_LANES.includes(lane as typeof REVIEW_LANES[number])) {
-    throw reviewTransportError(
-      'reviewer_input_snapshot_review_lane_invalid',
-      'Reviewer input snapshot review_lane is not supported by the MAS binding ABI.',
-      { review_lane: lane, allowed_review_lanes: REVIEW_LANES },
-    );
-  }
-  return lane as typeof REVIEW_LANES[number];
+export type ReviewerInputSnapshotAuthorityBinding = {
+  producer_attempt_ref: string;
+  execution_content_binding_sha256: string;
+  owner_authority_refs: ReviewTransportExactRef[];
+};
+
+function normalizeExactRef(value: unknown, field: string): ReviewTransportExactRef {
+  const exactRef = requireReviewTransportRecord(value, field);
+  requireExactReviewTransportKeys(exactRef, ['kind', 'ref', 'size_bytes', 'sha256'], field);
+  return {
+    kind: requiredReviewTransportText(exactRef.kind, `${field}.kind`),
+    ref: requiredReviewTransportText(exactRef.ref, `${field}.ref`),
+    size_bytes: reviewTransportSize(exactRef.size_bytes, `${field}.size_bytes`),
+    sha256: canonicalReviewTransportSha256(exactRef.sha256, `${field}.sha256`),
+  };
 }
 
-function normalizeSnapshotMember(value: unknown, index: number): ReviewerInputSnapshotMember {
+function normalizeAttemptRef(value: unknown, field: string) {
+  const attemptRef = requiredReviewTransportText(value, field);
+  if (!attemptRef.startsWith('opl://stage_attempts/') || !attemptRef.slice('opl://stage_attempts/'.length)) {
+    throw reviewTransportError(
+      'reviewer_input_snapshot_producer_attempt_ref_invalid',
+      'Reviewer input snapshot must bind one persisted OPL Stage Attempt.',
+      { field, producer_attempt_ref: attemptRef },
+    );
+  }
+  return attemptRef;
+}
+
+function normalizeMember(value: unknown, index: number): ReviewerInputSnapshotMember {
   const field = `members[${index}]`;
   const member = requireReviewTransportRecord(value, field);
   requireExactReviewTransportKeys(
     member,
-    ['member_id', 'role', 'owner_ref', 'source_ref', 'sha256', 'size_bytes'],
+    ['member_id', 'source_ref', 'sha256', 'size_bytes'],
     field,
   );
   return {
     member_id: requiredReviewTransportText(member.member_id, `${field}.member_id`),
-    role: requiredReviewTransportText(member.role, `${field}.role`),
-    owner_ref: requiredReviewTransportText(member.owner_ref, `${field}.owner_ref`),
     source_ref: requiredReviewTransportText(member.source_ref, `${field}.source_ref`),
     sha256: canonicalReviewTransportSha256(member.sha256, `${field}.sha256`),
     size_bytes: reviewTransportSize(member.size_bytes, `${field}.size_bytes`),
   };
 }
 
-function comparePythonText(left: string, right: string) {
-  const leftPoints = [...left].map((character) => character.codePointAt(0)!);
-  const rightPoints = [...right].map((character) => character.codePointAt(0)!);
-  const length = Math.min(leftPoints.length, rightPoints.length);
-  for (let index = 0; index < length; index += 1) {
-    if (leftPoints[index] !== rightPoints[index]) return leftPoints[index]! - rightPoints[index]!;
-  }
-  return leftPoints.length - rightPoints.length;
-}
-
-function canonicalMembers(members: ReviewerInputSnapshotMember[]) {
-  return [...members].sort((left, right) => (
-    comparePythonText(left.role, right.role)
-    || comparePythonText(left.member_id, right.member_id)
-    || comparePythonText(left.sha256, right.sha256)
-    || left.size_bytes - right.size_bytes
-  ));
-}
-
-function pythonCompatibleCanonicalJsonText(value: unknown) {
-  return canonicalJsonText(value).replace(/[^\x00-\x7f]/gu, (character) => {
-    let escaped = '';
-    for (let index = 0; index < character.length; index += 1) {
-      escaped += `\\u${character.charCodeAt(index).toString(16).padStart(4, '0')}`;
-    }
-    return escaped;
-  });
-}
-
-function pythonCompatibleCanonicalJsonBytes(value: unknown) {
-  return Buffer.from(pythonCompatibleCanonicalJsonText(value), 'utf8');
-}
-
-function normalizeMasAuthorityRecord(value: unknown) {
-  const record = requireReviewTransportRecord(value, 'mas_authority_record');
-  requireExactReviewTransportKeys(record, [
-    'surface_kind',
-    'schema_version',
-    'generation_ref',
-    'review_lane',
-    'review_scope_sha256',
-    'members',
-  ], 'mas_authority_record');
-  if (
-    record.surface_kind !== 'mas_review_input_snapshot_authority'
-    || record.schema_version !== 1
-    || !Array.isArray(record.members)
-    || record.members.length === 0
-  ) {
+function normalizeAuthorityBinding(
+  value: ReviewerInputSnapshotAuthorityBinding,
+): ReviewerInputSnapshotAuthorityBinding {
+  if (!Array.isArray(value.owner_authority_refs)) {
     throw reviewTransportError(
-      'reviewer_input_snapshot_authority_record_invalid',
-      'Reviewer input snapshot requires a MAS authority record using schema 1.',
-    );
-  }
-  const members = canonicalMembers(record.members.map((value, index) => {
-    const field = `mas_authority_record.members[${index}]`;
-    const member = requireReviewTransportRecord(value, field);
-    requireExactReviewTransportKeys(
-      member,
-      ['member_id', 'role', 'owner_ref', 'sha256', 'size_bytes'],
-      field,
-    );
-    return {
-      member_id: requiredReviewTransportText(member.member_id, `${field}.member_id`),
-      role: requiredReviewTransportText(member.role, `${field}.role`),
-      owner_ref: requiredReviewTransportText(member.owner_ref, `${field}.owner_ref`),
-      source_ref: '',
-      sha256: canonicalReviewTransportSha256(member.sha256, `${field}.sha256`),
-      size_bytes: reviewTransportSize(member.size_bytes, `${field}.size_bytes`),
-    };
-  }));
-  const memberIds = members.map((member) => member.member_id);
-  if (new Set(memberIds).size !== memberIds.length) {
-    throw reviewTransportError(
-      'reviewer_input_snapshot_authority_member_id_duplicate',
-      'MAS reviewer input snapshot authority contains duplicate member ids.',
-      { member_ids: memberIds },
-    );
-  }
-  const normalizedMembers = members.map(({ source_ref: _sourceRef, ...member }) => member);
-  const normalized = {
-    surface_kind: 'mas_review_input_snapshot_authority' as const,
-    schema_version: 1 as const,
-    generation_ref: requiredReviewTransportText(record.generation_ref, 'mas_authority_record.generation_ref'),
-    review_lane: normalizeReviewLane(record.review_lane),
-    review_scope_sha256: canonicalReviewTransportSha256(
-      record.review_scope_sha256,
-      'mas_authority_record.review_scope_sha256',
-    ),
-    members: normalizedMembers,
-  };
-  const expectedScope = reviewScopeSha256(
-    normalized.review_lane,
-    members,
-  );
-  if (normalized.review_scope_sha256 !== expectedScope) {
-    throw reviewTransportError(
-      'reviewer_input_snapshot_authority_scope_mismatch',
-      'MAS reviewer input snapshot authority scope does not match its complete member inventory.',
-    );
-  }
-  return normalized;
-}
-
-function normalizeMasAuthorityRecordRef(value: unknown, record: ReturnType<typeof normalizeMasAuthorityRecord>) {
-  const exactRef = requireReviewTransportRecord(value, 'mas_authority_record_ref');
-  requireExactReviewTransportKeys(exactRef, ['kind', 'ref', 'size_bytes', 'sha256'], 'mas_authority_record_ref');
-  const bytes = pythonCompatibleCanonicalJsonBytes(record);
-  const sha256 = `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
-  const ref = requiredReviewTransportText(exactRef.ref, 'mas_authority_record_ref.ref');
-  if (
-    exactRef.kind !== 'mas_review_input_snapshot_authority'
-    || canonicalReviewTransportSha256(exactRef.sha256, 'mas_authority_record_ref.sha256') !== sha256
-    || reviewTransportSize(exactRef.size_bytes, 'mas_authority_record_ref.size_bytes', 1) !== bytes.length
-    || ref !== `mas-review-input-snapshot-authority:${sha256.slice('sha256:'.length)}`
-  ) {
-    throw reviewTransportError(
-      'reviewer_input_snapshot_authority_ref_mismatch',
-      'MAS reviewer input snapshot authority ref does not bind its canonical exact bytes.',
-      { expected_sha256: sha256, expected_size_bytes: bytes.length },
+      'reviewer_input_snapshot_owner_authority_metadata_missing',
+      'Reviewer input snapshot authority must be present in producer closeout exact-ref metadata.',
     );
   }
   return {
-    kind: 'mas_review_input_snapshot_authority',
-    ref,
-    size_bytes: bytes.length,
-    sha256,
-  } satisfies ReviewTransportExactRef;
-}
-
-function reviewScopeSha256(
-  reviewLane: typeof REVIEW_LANES[number],
-  members: ReviewerInputSnapshotMember[],
-) {
-  const reviewedMembers = reviewLane === 'exact_byte_package'
-    ? members
-      .map((member) => ({
-        member_id: member.member_id,
-        role: member.role,
-        ref: member.owner_ref,
-        size_bytes: member.size_bytes,
-        sha256: member.sha256,
-      }))
-      .sort((left, right) => (
-        comparePythonText(left.role, right.role)
-        || comparePythonText(left.ref, right.ref)
-        || comparePythonText(left.sha256, right.sha256)
-      ))
-    : members
-      .map((member) => ({
-        member_id: member.member_id,
-        role: member.role,
-        sha256: member.sha256,
-        size_bytes: member.size_bytes,
-      }))
-      .sort((left, right) => (
-        comparePythonText(left.member_id, right.member_id)
-        || comparePythonText(left.role, right.role)
-        || comparePythonText(left.sha256, right.sha256)
-        || left.size_bytes - right.size_bytes
-      ));
-  const payload = {
-    scope_policy_id: 'mas_review_scope_dependency_map',
-    scope_policy_version: 1,
-    review_lane: reviewLane,
-    reviewed_members: reviewedMembers,
+    producer_attempt_ref: normalizeAttemptRef(
+      value.producer_attempt_ref,
+      'expected_authority.producer_attempt_ref',
+    ),
+    execution_content_binding_sha256: canonicalReviewTransportSha256(
+      value.execution_content_binding_sha256,
+      'expected_authority.execution_content_binding_sha256',
+    ),
+    owner_authority_refs: value.owner_authority_refs.map((ref, index) => (
+      normalizeExactRef(ref, `expected_authority.owner_authority_refs[${index}]`)
+    )),
   };
-  return `sha256:${crypto.createHash('sha256')
-    .update(pythonCompatibleCanonicalJsonText(payload))
-    .digest('hex')}`;
 }
 
 export function normalizeReviewerInputSnapshotRequest(
   value: unknown,
+  expectedAuthority?: ReviewerInputSnapshotAuthorityBinding,
 ): ReviewerInputSnapshotMaterializationRequest {
   const request = requireReviewTransportRecord(value, 'reviewer_input_snapshot_request');
   requireExactReviewTransportKeys(request, [
     'surface_kind',
     'schema_version',
-    'generation_ref',
-    'review_lane',
-    'review_scope_sha256',
+    'owner_authority_ref',
+    'producer_attempt_ref',
+    'execution_content_binding_sha256',
     'workspace_root',
     'members',
-    'mas_authority_record_ref',
-    'mas_authority_record',
   ], 'reviewer_input_snapshot_request');
   if (
     request.surface_kind !== 'opl_reviewer_input_snapshot_materialization_request'
-    || request.schema_version !== 1
+    || request.schema_version !== 2
   ) {
     throw reviewTransportError(
       'reviewer_input_snapshot_request_version_invalid',
-      'Reviewer input snapshot request must use its Framework schema 1 surface.',
-      {
-        surface_kind: request.surface_kind ?? null,
-        schema_version: request.schema_version ?? null,
-      },
+      'Reviewer input snapshot request must use Framework schema 2.',
     );
   }
   if (!Array.isArray(request.members) || request.members.length === 0) {
     throw reviewTransportError(
       'reviewer_input_snapshot_members_missing',
-      'Reviewer input snapshot request must contain the complete non-empty MAS member inventory.',
+      'Reviewer input snapshot request must contain a non-empty member inventory.',
     );
   }
-  const members = canonicalMembers(request.members.map(normalizeSnapshotMember));
+  const members = request.members.map(normalizeMember);
   const memberIds = members.map((member) => member.member_id);
   if (new Set(memberIds).size !== memberIds.length) {
     throw reviewTransportError(
       'reviewer_input_snapshot_member_id_duplicate',
-      'Reviewer input snapshot request contains duplicate MAS member_id values.',
+      'Reviewer input snapshot request contains duplicate member ids.',
       { member_ids: memberIds },
     );
   }
-  const reviewLane = normalizeReviewLane(request.review_lane);
-  const suppliedReviewScopeSha256 = canonicalReviewTransportSha256(
-    request.review_scope_sha256,
-    'review_scope_sha256',
-  );
-  const expectedReviewScopeSha256 = reviewScopeSha256(reviewLane, members);
-  if (suppliedReviewScopeSha256 !== expectedReviewScopeSha256) {
-    throw reviewTransportError(
-      'reviewer_input_snapshot_review_scope_mismatch',
-      'Reviewer input snapshot review_scope_sha256 does not match the MAS v1 lane projection.',
-      {
-        supplied_review_scope_sha256: suppliedReviewScopeSha256,
-        expected_review_scope_sha256: expectedReviewScopeSha256,
-        review_lane: reviewLane,
-      },
-    );
-  }
-  const masAuthorityRecord = normalizeMasAuthorityRecord(request.mas_authority_record);
-  const masAuthorityRecordRef = normalizeMasAuthorityRecordRef(
-    request.mas_authority_record_ref,
-    masAuthorityRecord,
-  );
-  const generationRef = requiredReviewTransportText(request.generation_ref, 'generation_ref');
-  const requestedAuthorityMembers = members.map(({ source_ref: _sourceRef, ...member }) => member);
-  if (
-    masAuthorityRecord.generation_ref !== generationRef
-    || masAuthorityRecord.review_lane !== reviewLane
-    || masAuthorityRecord.review_scope_sha256 !== expectedReviewScopeSha256
-    || canonicalJsonText(masAuthorityRecord.members) !== canonicalJsonText(requestedAuthorityMembers)
-  ) {
-    throw reviewTransportError(
-      'reviewer_input_snapshot_request_authority_mismatch',
-      'Reviewer input snapshot request does not exactly match the MAS authority record.',
-      { generation_ref: generationRef, review_lane: reviewLane },
-    );
-  }
-  return {
-    surface_kind: 'opl_reviewer_input_snapshot_materialization_request',
-    schema_version: 1,
-    generation_ref: generationRef,
-    review_lane: reviewLane,
-    review_scope_sha256: expectedReviewScopeSha256,
+  const normalized = {
+    surface_kind: 'opl_reviewer_input_snapshot_materialization_request' as const,
+    schema_version: 2 as const,
+    owner_authority_ref: normalizeExactRef(request.owner_authority_ref, 'owner_authority_ref'),
+    producer_attempt_ref: normalizeAttemptRef(request.producer_attempt_ref, 'producer_attempt_ref'),
+    execution_content_binding_sha256: canonicalReviewTransportSha256(
+      request.execution_content_binding_sha256,
+      'execution_content_binding_sha256',
+    ),
     workspace_root: requiredReviewTransportText(request.workspace_root, 'workspace_root'),
     members,
-    mas_authority_record_ref: masAuthorityRecordRef,
-    mas_authority_record: masAuthorityRecord,
   };
+  if (expectedAuthority) {
+    const expected = normalizeAuthorityBinding(expectedAuthority);
+    const authorityMetadataMatch = expected.owner_authority_refs.some((ref) => (
+      canonicalJsonText(ref) === canonicalJsonText(normalized.owner_authority_ref)
+    ));
+    if (
+      normalized.producer_attempt_ref !== expected.producer_attempt_ref
+      || normalized.execution_content_binding_sha256
+        !== expected.execution_content_binding_sha256
+      || !authorityMetadataMatch
+    ) {
+      throw reviewTransportError(
+        'reviewer_input_snapshot_authority_binding_mismatch',
+        'Reviewer input snapshot request does not match its producer Attempt binding and closeout metadata.',
+        { producer_attempt_ref: normalized.producer_attempt_ref },
+      );
+    }
+  }
+  return normalized;
 }
 
-function snapshotMemberExactRef(member: ReviewerInputSnapshotMember): ReviewTransportExactRef {
-  const roots = reviewTransportRoots();
+function memberExactRef(member: ReviewerInputSnapshotMember): ReviewTransportExactRef {
   return {
     kind: 'opl_reviewer_input_snapshot_member',
     ref: pathToFileURL(path.join(
-      roots.reviewer_snapshot_object_root,
-      `${member.sha256.replace(/^sha256:/, '')}.bin`,
+      reviewTransportRoots().reviewer_snapshot_object_root,
+      `${member.sha256.slice('sha256:'.length)}.bin`,
     )).href,
     size_bytes: member.size_bytes,
     sha256: member.sha256,
@@ -381,20 +191,17 @@ function snapshotMemberExactRef(member: ReviewerInputSnapshotMember): ReviewTran
 function manifestForRequest(request: ReviewerInputSnapshotMaterializationRequest) {
   return {
     surface_kind: 'opl_reviewer_input_snapshot_manifest',
-    schema_version: 1,
-    generation_ref: request.generation_ref,
-    review_lane: request.review_lane,
-    review_scope_sha256: request.review_scope_sha256,
-    mas_authority_record_ref: request.mas_authority_record_ref,
+    schema_version: 3,
+    owner_authority_ref: request.owner_authority_ref,
+    producer_attempt_ref: request.producer_attempt_ref,
+    execution_content_binding_sha256: request.execution_content_binding_sha256,
     members: request.members.map((member) => ({
       member_id: member.member_id,
-      role: member.role,
       sha256: member.sha256,
       size_bytes: member.size_bytes,
-      immutable_ref: snapshotMemberExactRef(member),
+      immutable_ref: memberExactRef(member),
     })),
-    authority_boundary: SNAPSHOT_AUTHORITY_BOUNDARY,
-  };
+  } as const;
 }
 
 function bindingForManifest(
@@ -402,22 +209,13 @@ function bindingForManifest(
   manifestRef: ReviewTransportExactRef,
 ) {
   return {
-    surface_kind: 'mas_review_input_snapshot_binding',
-    schema_version: 1,
+    surface_kind: 'opl_reviewer_input_snapshot_binding',
+    schema_version: 3,
     snapshot_manifest_ref: manifestRef,
-    generation_ref: manifest.generation_ref,
-    review_lane: manifest.review_lane,
-    review_scope_sha256: manifest.review_scope_sha256,
-    mas_authority_record_ref: manifest.mas_authority_record_ref,
-    members: manifest.members.map((member) => ({
-      member_id: member.member_id,
-      role: member.role,
-      sha256: member.sha256,
-      size_bytes: member.size_bytes,
-    })),
-    materialization_owner: 'one-person-lab',
-    authority_boundary: SNAPSHOT_AUTHORITY_BOUNDARY,
-  };
+    owner_authority_ref: manifest.owner_authority_ref,
+    producer_attempt_ref: manifest.producer_attempt_ref,
+    execution_content_binding_sha256: manifest.execution_content_binding_sha256,
+  } as const;
 }
 
 export function readReviewerInputSnapshotManifest(exactRef: unknown) {
@@ -431,38 +229,35 @@ export function readReviewerInputSnapshotManifest(exactRef: unknown) {
   requireExactReviewTransportKeys(manifest, [
     'surface_kind',
     'schema_version',
-    'generation_ref',
-    'review_lane',
-    'review_scope_sha256',
-    'mas_authority_record_ref',
+    'owner_authority_ref',
+    'producer_attempt_ref',
+    'execution_content_binding_sha256',
     'members',
-    'authority_boundary',
   ], 'reviewer_input_snapshot_manifest');
   if (
     manifest.surface_kind !== 'opl_reviewer_input_snapshot_manifest'
-    || manifest.schema_version !== 1
+    || manifest.schema_version !== 3
     || !Array.isArray(manifest.members)
     || manifest.members.length === 0
   ) {
     throw reviewTransportError(
       'reviewer_input_snapshot_manifest_invalid',
-      'Reviewer input snapshot manifest does not match schema 1.',
+      'Reviewer input snapshot manifest must use Framework schema 3.',
     );
   }
-  const normalizedMembers = manifest.members.map((value, index) => {
+  const members = manifest.members.map((value, index) => {
     const field = `reviewer_input_snapshot_manifest.members[${index}]`;
     const member = requireReviewTransportRecord(value, field);
     requireExactReviewTransportKeys(
       member,
-      ['member_id', 'role', 'sha256', 'size_bytes', 'immutable_ref'],
+      ['member_id', 'sha256', 'size_bytes', 'immutable_ref'],
       field,
     );
     const normalized = {
       member_id: requiredReviewTransportText(member.member_id, `${field}.member_id`),
-      role: requiredReviewTransportText(member.role, `${field}.role`),
       sha256: canonicalReviewTransportSha256(member.sha256, `${field}.sha256`),
       size_bytes: reviewTransportSize(member.size_bytes, `${field}.size_bytes`),
-      immutable_ref: member.immutable_ref,
+      immutable_ref: normalizeExactRef(member.immutable_ref, `${field}.immutable_ref`),
     };
     const immutable = readReviewTransportFileExactRef({
       exactRef: normalized.immutable_ref,
@@ -481,82 +276,29 @@ export function readReviewerInputSnapshotManifest(exactRef: unknown) {
     }
     return { ...normalized, immutable_ref: immutable.exact_ref };
   });
-  const canonical = canonicalMembers(normalizedMembers.map((member) => ({
-    member_id: member.member_id,
-    role: member.role,
-    source_ref: '',
-    owner_ref: '',
-    sha256: member.sha256,
-    size_bytes: member.size_bytes,
-  })));
-  if (
-    JSON.stringify(canonical.map(({
-      source_ref: _sourceRef,
-      owner_ref: _ownerRef,
-      ...member
-    }) => member))
-    !== JSON.stringify(normalizedMembers.map(({ immutable_ref: _immutableRef, ...member }) => member))
-  ) {
+  const memberIds = members.map((member) => member.member_id);
+  if (new Set(memberIds).size !== memberIds.length) {
     throw reviewTransportError(
-      'reviewer_input_snapshot_manifest_member_order_invalid',
-      'Reviewer input snapshot manifest members are not in MAS canonical order.',
-    );
-  }
-  const authority = requireReviewTransportRecord(
-    manifest.authority_boundary,
-    'reviewer_input_snapshot_manifest.authority_boundary',
-  );
-  if (
-    authority.storage_role !== SNAPSHOT_AUTHORITY_BOUNDARY.storage_role
-    || Object.entries(SNAPSHOT_AUTHORITY_BOUNDARY).some(([key, expected]) => authority[key] !== expected)
-  ) {
-    throw reviewTransportError(
-      'reviewer_input_snapshot_manifest_authority_invalid',
-      'Reviewer input snapshot manifest grants or misstates authority.',
-    );
-  }
-  const masAuthorityRecordRef = requireReviewTransportRecord(
-    manifest.mas_authority_record_ref,
-    'reviewer_input_snapshot_manifest.mas_authority_record_ref',
-  );
-  requireExactReviewTransportKeys(
-    masAuthorityRecordRef,
-    ['kind', 'ref', 'size_bytes', 'sha256'],
-    'reviewer_input_snapshot_manifest.mas_authority_record_ref',
-  );
-  if (masAuthorityRecordRef.kind !== 'mas_review_input_snapshot_authority') {
-    throw reviewTransportError(
-      'reviewer_input_snapshot_authority_ref_kind_mismatch',
-      'Reviewer input snapshot manifest must preserve its MAS authority record ref.',
+      'reviewer_input_snapshot_manifest_member_id_duplicate',
+      'Reviewer input snapshot manifest contains duplicate member ids.',
     );
   }
   const normalizedManifest = {
     surface_kind: 'opl_reviewer_input_snapshot_manifest' as const,
-    schema_version: 1 as const,
-    generation_ref: requiredReviewTransportText(manifest.generation_ref, 'generation_ref'),
-    review_lane: normalizeReviewLane(manifest.review_lane),
-    review_scope_sha256: canonicalReviewTransportSha256(
-      manifest.review_scope_sha256,
-      'review_scope_sha256',
+    schema_version: 3 as const,
+    owner_authority_ref: normalizeExactRef(
+      manifest.owner_authority_ref,
+      'reviewer_input_snapshot_manifest.owner_authority_ref',
     ),
-    mas_authority_record_ref: {
-      kind: 'mas_review_input_snapshot_authority',
-      ref: requiredReviewTransportText(
-        masAuthorityRecordRef.ref,
-        'reviewer_input_snapshot_manifest.mas_authority_record_ref.ref',
-      ),
-      size_bytes: reviewTransportSize(
-        masAuthorityRecordRef.size_bytes,
-        'reviewer_input_snapshot_manifest.mas_authority_record_ref.size_bytes',
-        1,
-      ),
-      sha256: canonicalReviewTransportSha256(
-        masAuthorityRecordRef.sha256,
-        'reviewer_input_snapshot_manifest.mas_authority_record_ref.sha256',
-      ),
-    },
-    members: normalizedMembers,
-    authority_boundary: SNAPSHOT_AUTHORITY_BOUNDARY,
+    producer_attempt_ref: normalizeAttemptRef(
+      manifest.producer_attempt_ref,
+      'reviewer_input_snapshot_manifest.producer_attempt_ref',
+    ),
+    execution_content_binding_sha256: canonicalReviewTransportSha256(
+      manifest.execution_content_binding_sha256,
+      'reviewer_input_snapshot_manifest.execution_content_binding_sha256',
+    ),
+    members,
   };
   return {
     manifest_ref: persisted.exact_ref,
@@ -565,8 +307,11 @@ export function readReviewerInputSnapshotManifest(exactRef: unknown) {
   };
 }
 
-export function materializeReviewerInputSnapshot(value: unknown) {
-  const request = normalizeReviewerInputSnapshotRequest(value);
+export function materializeReviewerInputSnapshot(
+  value: unknown,
+  expectedAuthority?: ReviewerInputSnapshotAuthorityBinding,
+) {
+  const request = normalizeReviewerInputSnapshotRequest(value, expectedAuthority);
   let createdObjectCount = 0;
   for (const member of request.members) {
     const source = resolveContainedWorkspaceFile(request.workspace_root, member.source_ref);
@@ -578,19 +323,12 @@ export function materializeReviewerInputSnapshot(value: unknown) {
       if (existing.created) createdObjectCount += 1;
       continue;
     } catch (error) {
-      if (
-        !isRecord(error)
-        && !(error instanceof Error)
-      ) throw error;
-      const errorDetails = error instanceof Error
+      const details = error instanceof Error
         ? (error as unknown as { details?: unknown }).details
         : null;
-      const failureCode = isRecord(errorDetails)
-        ? errorDetails.failure_code
-        : isRecord(error)
-          ? error.failure_code
-          : null;
-      if (failureCode !== 'reviewer_input_snapshot_source_required') throw error;
+      if (!isRecord(details) || details.failure_code !== 'reviewer_input_snapshot_source_required') {
+        throw error;
+      }
     }
     const persisted = persistReviewerSnapshotObject({
       sourcePath: source.source_path,
@@ -601,51 +339,43 @@ export function materializeReviewerInputSnapshot(value: unknown) {
     });
     if (persisted.created) createdObjectCount += 1;
   }
-  const manifest = manifestForRequest(request);
   const persistedManifest = persistCanonicalReviewTransportJson({
     root: reviewTransportRoots().reviewer_snapshot_manifest_root,
     kind: 'opl_reviewer_input_snapshot_manifest',
-    value: manifest,
+    value: manifestForRequest(request),
   });
   const readback = readReviewerInputSnapshotManifest(persistedManifest.exact_ref);
-  const materializationStatus = createdObjectCount > 0 || persistedManifest.created
-    ? 'materialized'
-    : 'already_materialized';
   return {
     surface_kind: 'opl_reviewer_input_snapshot_materialization',
-    schema_version: 1,
-    materialization_status: materializationStatus,
+    schema_version: 2,
+    materialization_status: createdObjectCount > 0 || persistedManifest.created
+      ? 'materialized'
+      : 'already_materialized',
     manifest_ref: readback.manifest_ref,
     manifest: readback.manifest,
     review_input_snapshot_binding: readback.binding,
-    reviewer_context: {
-      review_input_snapshot_binding: readback.binding,
-      immutable_snapshot_manifest_ref: readback.manifest_ref,
-      read_member_locators_from_manifest_only: true,
-      live_workspace_locator_read_after_materialization_allowed: false,
-    },
-    hosted_action_launch_allowed: true,
-    typed_blocker_ref: null,
-    authority_boundary: SNAPSHOT_AUTHORITY_BOUNDARY,
   } as const;
 }
 
-export function resolveReviewerInputSnapshotMaterialization(value: unknown) {
+function snapshotQualityDebt(reasonCode: string, resumeCondition: string) {
+  return {
+    surface_kind: 'opl_reviewer_input_snapshot_resolution',
+    schema_version: 2,
+    status: 'quality_debt',
+    reason_code: reasonCode,
+    resume_condition: resumeCondition,
+  } as const;
+}
+
+export function resolveReviewerInputSnapshotMaterialization(
+  value: unknown,
+  expectedAuthority?: ReviewerInputSnapshotAuthorityBinding,
+) {
   if (value === null || value === undefined) {
-    return {
-      surface_kind: 'opl_reviewer_input_snapshot_resolution',
-      schema_version: 1,
-      status: 'quality_debt',
-      reason_code: 'review_input_snapshot_binding_required',
-      resume_condition: 'materialize the complete MAS-provided review scope as an immutable OPL snapshot',
-      review_input_snapshot_binding: null,
-      hosted_action_launch_allowed: true,
-      ordinary_progress_may_advance: true,
-      stage_transition_allowed: true,
-      quality_publication_export_or_submission_claim_allowed: false,
-      typed_blocker_ref: null,
-      authority_boundary: SNAPSHOT_AUTHORITY_BOUNDARY,
-    } as const;
+    return snapshotQualityDebt(
+      'review_input_snapshot_binding_required',
+      'materialize the complete owner-provided review scope as an immutable OPL snapshot',
+    );
   }
-  return materializeReviewerInputSnapshot(value);
+  return materializeReviewerInputSnapshot(value, expectedAuthority);
 }

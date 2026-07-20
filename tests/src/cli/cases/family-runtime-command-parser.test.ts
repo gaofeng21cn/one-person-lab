@@ -164,6 +164,19 @@ test('family-runtime registry parser reuses shared option walking without changi
   });
 
   assert.deepEqual(parseRegisteredFamilyRuntimeCommand([
+    'review',
+    'evidence-artifact',
+    '--payload',
+    '{"candidate":{"surface_kind":"owner_evidence"},"context_binding":{"producer_attempt_ref":"opl://stage_attempts/reviewer"}}',
+  ]), {
+    mode: 'review_evidence_artifact_persist',
+    input: {
+      candidate: { surface_kind: 'owner_evidence' },
+      context_binding: { producer_attempt_ref: 'opl://stage_attempts/reviewer' },
+    },
+  });
+
+  assert.deepEqual(parseRegisteredFamilyRuntimeCommand([
     'stage-artifact',
     'commit',
     '--domain',

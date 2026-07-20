@@ -4,7 +4,7 @@ import { parseCliOptions, parsePayloadArg } from './shared.ts';
 
 export function parseReviewTransportArgs(rest: string[]): FamilyRuntimeCommandInput | null {
   const action = rest[0];
-  if (action !== 'snapshot' && action !== 'evidence-cache') return null;
+  if (action !== 'snapshot' && action !== 'evidence-artifact') return null;
   let payload: string | undefined;
   let payloadFile: string | undefined;
   parseCliOptions(rest, 1, (token, value) => {
@@ -34,7 +34,7 @@ export function parseReviewTransportArgs(rest: string[]): FamilyRuntimeCommandIn
   return {
     mode: action === 'snapshot'
       ? 'review_snapshot_materialize'
-      : 'review_evidence_cache_persist',
+      : 'review_evidence_artifact_persist',
     input: parsePayloadArg(payload, payloadFile),
   };
 }

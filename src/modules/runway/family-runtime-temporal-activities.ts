@@ -36,6 +36,10 @@ import {
   syncStageAttemptFromTemporalTerminalObservation,
 } from './family-runtime-stage-attempts.ts';
 import {
+  getStageAttemptRow,
+  latestStageAttemptCloseoutPacketsByAttempt,
+} from './family-runtime-stage-attempt-ledger.ts';
+import {
   createStageQualityCycle,
   markStageQualityCycleCurrentAttempt,
   projectTemporalStageRunQualityCycle,
@@ -58,13 +62,13 @@ import {
   buildStageReviewInputSnapshotContext,
 } from './family-runtime-stage-quality-context-manifest.ts';
 import {
-  readReviewerInputSnapshotManifest,
   resolveReviewerInputSnapshotMaterialization,
+  type ReviewerInputSnapshotAuthorityBinding,
 } from './family-runtime-reviewer-input-snapshot.ts';
 import {
-  persistReviewEvidenceCacheCandidate,
-  type ReviewEvidenceCacheContextBinding,
-} from './family-runtime-review-evidence-cache.ts';
+  persistReviewEvidenceArtifactCandidate,
+  type ReviewEvidenceArtifactContext,
+} from './family-runtime-review-evidence-artifact.ts';
 import {
   materializeOplRevisionTransport,
   revisionTransportContext,
@@ -84,6 +88,7 @@ import { taskRetryBudgetProjection } from './family-runtime-queue-projection-bou
 import {
   buildStageRunImmutableSpec,
   canonicalStageAttemptDeclaredStageIds,
+  selectStageAttemptPackageIdentity,
   stageAttemptExecutionContentBindingSha256,
   stageRunSpecSha256,
 } from './family-runtime-stage-run-identity.ts';
@@ -116,6 +121,89 @@ function readNumber(value: unknown) {
 
 function readBoolean(value: unknown) {
   return typeof value === 'boolean' ? value : null;
+}
+
+function exactRefsFromCloseoutMetadata(value: unknown) {
+  const entries = Array.isArray(value) ? value.filter(isRecord) : [];
+  return entries.flatMap((entry) => {
+    const kind = readString(entry.kind);
+    const ref = readString(entry.ref) ?? readString(entry.uri);
+    const sha256 = readString(entry.sha256);
+    const sizeBytes = readNumber(entry.size_bytes);
+    if (
+      !kind
+      || !ref
+      || !sha256
+      || !/^sha256:[a-f0-9]{64}$/.test(sha256)
+      || sizeBytes === null
+      || !Number.isSafeInteger(sizeBytes)
+      || sizeBytes < 0
+    ) return [];
+    return [{ kind, ref, sha256, size_bytes: sizeBytes }];
+  });
+}
+
+function reviewerSnapshotAuthorityBinding(
+  db: ReturnType<typeof openQueueDb>['db'],
+  artifactProducerAttemptRef: string,
+): ReviewerInputSnapshotAuthorityBinding {
+  const producer = getStageAttemptRow(
+    db,
+    stageAttemptIdFromRef(artifactProducerAttemptRef),
+  );
+  if (!producer) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Reviewer snapshot authority producer Attempt is not persisted.',
+      {
+        failure_code: 'reviewer_input_snapshot_authority_issuer_attempt_missing',
+        stage_attempt_ref: artifactProducerAttemptRef,
+      },
+    );
+  }
+  const qualityContext = persistedJsonRecord(
+    producer.quality_context_json,
+    'reviewer_input_snapshot_authority_issuer_context_invalid',
+  );
+  const executionBinding = isRecord(qualityContext.execution_content_binding)
+    ? qualityContext.execution_content_binding
+    : {};
+  const spec = isRecord(executionBinding.spec) ? executionBinding.spec : {};
+  const declaredStageIds = canonicalStageAttemptDeclaredStageIds(
+    executionBinding.declared_stage_ids,
+  );
+  const bindingSha256 = stageAttemptExecutionContentBindingSha256({
+    parent_stage_run_spec_sha256: readString(
+      executionBinding.parent_stage_run_spec_sha256,
+    ) ?? '',
+    use_boundary_id: readString(executionBinding.use_boundary_id) ?? '',
+    spec_sha256: readString(executionBinding.spec_sha256) ?? '',
+    spec: spec as NonNullable<
+      TemporalStageAttemptWorkflowInput['execution_content_binding']
+    >['spec'],
+    declared_stage_ids: declaredStageIds,
+  });
+  if (executionBinding.binding_sha256 !== bindingSha256) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Reviewer snapshot authority does not match the persisted producer Attempt binding.',
+      {
+        failure_code: 'reviewer_input_snapshot_authority_issuer_binding_invalid',
+        stage_attempt_ref: artifactProducerAttemptRef,
+      },
+    );
+  }
+  const producerCloseout = latestStageAttemptCloseoutPacketsByAttempt(
+    db,
+    [producer.stage_attempt_id],
+  ).get(producer.stage_attempt_id) ?? {};
+  return {
+    producer_attempt_ref: artifactProducerAttemptRef,
+    execution_content_binding_sha256: bindingSha256,
+    owner_authority_refs: exactRefsFromCloseoutMetadata(
+      producerCloseout.closeout_ref_metadata,
+    ),
+  };
 }
 
 function persistedStageQualityAttemptMaterializationReceipt(
@@ -1197,6 +1285,9 @@ export async function stageQualityAttemptMaterializeActivity(
     const reviewAttemptRole = input.attempt_role === 'reviewer' || input.attempt_role === 're_reviewer'
       ? input.attempt_role
       : null;
+    const snapshotAuthorityBinding = reviewAttemptRole
+      ? reviewerSnapshotAuthorityBinding(db, artifactProducerAttemptRef!)
+      : null;
     const reviewInputSnapshotContext = reviewAttemptRole
       ? buildStageReviewInputSnapshotContext({
           stageRunId: stageRun.stage_run_id,
@@ -1204,6 +1295,7 @@ export async function stageQualityAttemptMaterializeActivity(
           reviewerAttemptRole: reviewAttemptRole,
           resolution: resolveReviewerInputSnapshotMaterialization(
             input.review_input_snapshot_materialization_request,
+            snapshotAuthorityBinding!,
           ),
         })
       : null;
@@ -1331,20 +1423,19 @@ function persistedJsonRecord(value: string | null | undefined, failureCode: stri
   );
 }
 
-function reviewerEvidenceCacheContext(input: {
+function reviewerEvidenceArtifactContext(input: {
   attemptRef: string;
   qualityContext: Record<string, unknown>;
-  contextManifest: Record<string, unknown>;
-  rubricRefsJson: string | null | undefined;
   closeout: Record<string, unknown>;
-  candidate: unknown;
-}): ReviewEvidenceCacheContextBinding | null {
+  producerPackageId: unknown;
+  originEvidenceRef: unknown;
+}): ReviewEvidenceArtifactContext {
   const executionContentBinding = input.qualityContext.execution_content_binding;
   if (!isRecord(executionContentBinding) || !isRecord(executionContentBinding.spec)) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
-      'Reviewer page-evidence cache context is missing its durable execution content binding.',
-      { failure_code: 'review_evidence_cache_execution_binding_missing' },
+      'Review evidence artifact is missing its durable execution content binding.',
+      { failure_code: 'review_evidence_artifact_execution_binding_missing' },
     );
   }
   const declaredStageIds = canonicalStageAttemptDeclaredStageIds(
@@ -1364,74 +1455,34 @@ function reviewerEvidenceCacheContext(input: {
   if (executionContentBinding.binding_sha256 !== expectedBindingSha256) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
-      'Reviewer page-evidence cache execution content binding was modified after reservation.',
-      { failure_code: 'review_evidence_cache_execution_binding_mismatch' },
+      'Review evidence artifact execution content binding was modified after reservation.',
+      { failure_code: 'review_evidence_artifact_execution_binding_mismatch' },
     );
   }
-
-  const snapshotStatus = input.contextManifest.review_input_snapshot_status;
-  if (snapshotStatus !== 'materialized' && snapshotStatus !== 'already_materialized') return null;
-  const snapshot = readReviewerInputSnapshotManifest(
-    input.contextManifest.opl_reviewer_input_snapshot_manifest_ref,
-  );
-  if (snapshot.manifest.review_lane !== 'display') return null;
-
-  const rubricRefs = JSON.parse(input.rubricRefsJson ?? '[]') as unknown;
-  if (!Array.isArray(rubricRefs) || rubricRefs.some((ref) => typeof ref !== 'string' || !ref.trim())) {
+  const declaredOrigin = isRecord(input.originEvidenceRef) ? input.originEvidenceRef : {};
+  const originEvidenceRef = exactRefsFromCloseoutMetadata(
+    input.closeout.closeout_ref_metadata,
+  ).find((entry) => (
+    entry.kind === declaredOrigin.kind
+    && entry.ref === declaredOrigin.ref
+    && entry.sha256 === declaredOrigin.sha256
+    && entry.size_bytes === declaredOrigin.size_bytes
+  ));
+  if (!originEvidenceRef) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
-      'Persisted reviewer rubric refs are invalid.',
-      { failure_code: 'review_evidence_cache_rubric_refs_invalid' },
+      'Review evidence origin ref is not bound by reviewer closeout exact-ref metadata.',
+      { failure_code: 'review_evidence_artifact_origin_metadata_mismatch' },
     );
   }
-  const contentBindings = Array.isArray(executionContentBinding.spec.content_bindings)
-    ? executionContentBinding.spec.content_bindings.filter(isRecord)
-    : [];
-  const rubricBindings = contentBindings.filter((binding) => (
-    binding.purpose === 'quality_rubric'
-    && typeof binding.ref === 'string'
-    && rubricRefs.includes(binding.ref)
-  ));
-  if (rubricBindings.length !== 1 || rubricRefs.length !== 1) return null;
-  const rubricSha256 = readString(rubricBindings[0]!.effective_content_sha256)
-    ?? readString(rubricBindings[0]!.sha256);
-  if (!rubricSha256 || !/^sha256:[a-f0-9]{64}$/.test(rubricSha256)) return null;
-
-  const candidate = isRecord(input.candidate) ? input.candidate : {};
-  const candidateEvidence = isRecord(candidate.origin_reviewer_evidence_ref)
-    ? candidate.origin_reviewer_evidence_ref
-    : {};
-  const candidateEvidenceKind = readString(candidateEvidence.kind);
-  const candidateEvidenceRef = readString(candidateEvidence.ref);
-  const metadata = Array.isArray(input.closeout.closeout_ref_metadata)
-    ? input.closeout.closeout_ref_metadata.filter(isRecord)
-    : [];
-  const evidence = metadata.find((entry) => (
-    (readString(entry.ref) ?? readString(entry.uri)) === candidateEvidenceRef
-    && readString(entry.sha256) === readString(candidateEvidence.sha256)
-  ));
-  if (!evidence || !candidateEvidenceKind || !candidateEvidenceRef) return null;
-  const evidenceSha256 = readString(evidence.sha256);
-  if (!evidenceSha256 || !/^sha256:[a-f0-9]{64}$/.test(evidenceSha256)) return null;
-
   return {
-    reviewer_attempt_ref: input.attemptRef,
-    execution_content_binding_sha256: expectedBindingSha256,
-    snapshot_manifest_ref: snapshot.manifest_ref,
-    snapshot_manifest_sha256: snapshot.manifest_ref.sha256,
-    review_scope_sha256: snapshot.manifest.review_scope_sha256,
-    rubric_sha256: rubricSha256,
-    origin_reviewer_invocation_ref: {
-      kind: 'opl_stage_attempt',
-      ref: input.attemptRef,
-      sha256: expectedBindingSha256,
-    },
-    origin_reviewer_evidence_ref: {
-      kind: candidateEvidenceKind,
-      ref: candidateEvidenceRef,
-      sha256: evidenceSha256,
-      ...(typeof evidence.size_bytes === 'number' ? { size_bytes: evidence.size_bytes } : {}),
-    },
+    producer_attempt_ref: input.attemptRef,
+    execution_content_binding_sha256: `sha256:${expectedBindingSha256}`,
+    producer_package: selectStageAttemptPackageIdentity(
+      executionContentBinding,
+      input.producerPackageId,
+    ),
+    origin_evidence_ref: originEvidenceRef,
   };
 }
 
@@ -1458,27 +1509,25 @@ export async function stageQualityAttemptSyncActivity(input: TemporalStageQualit
     if (!Object.hasOwn(envelope, 'page_hash_evidence_candidate')) {
       return {
         ...(isRecord(syncReceipt) ? syncReceipt : {}),
-        opl_review_evidence_cache_receipt_ref: null,
-        opl_review_evidence_cache_receipt: null,
+        opl_review_evidence_artifact_receipt_ref: null,
+        opl_review_evidence_artifact_receipt: null,
       };
     }
     const row = db.prepare(`
-      SELECT attempt_role, quality_context_json, quality_rubric_refs_json, context_manifest_json
+      SELECT attempt_role, quality_context_json
       FROM stage_attempts
       WHERE stage_attempt_id = ?
       LIMIT 1
     `).get(stageAttemptId) as {
       attempt_role?: string | null;
       quality_context_json?: string | null;
-      quality_rubric_refs_json?: string | null;
-      context_manifest_json?: string | null;
     } | undefined;
     if (!row || (row.attempt_role !== 'reviewer' && row.attempt_role !== 're_reviewer')) {
       throw new FrameworkContractError(
         'contract_shape_invalid',
-        'Page evidence cache candidate may only be persisted from a reviewer Attempt.',
+        'Review evidence artifact may only be persisted from a reviewer Attempt.',
         {
-          failure_code: 'review_evidence_cache_candidate_non_reviewer',
+          failure_code: 'review_evidence_artifact_candidate_non_reviewer',
           stage_attempt_id: stageAttemptId,
           attempt_role: row?.attempt_role ?? null,
         },
@@ -1486,24 +1535,19 @@ export async function stageQualityAttemptSyncActivity(input: TemporalStageQualit
     }
     const qualityContext = persistedJsonRecord(
       row.quality_context_json,
-      'review_evidence_cache_quality_context_invalid',
-    );
-    const contextManifest = persistedJsonRecord(
-      row.context_manifest_json,
-      'review_evidence_cache_context_manifest_invalid',
+      'review_evidence_artifact_quality_context_invalid',
     );
     const attemptRef = `opl://stage_attempts/${stageAttemptId}`;
-    const cacheContext = reviewerEvidenceCacheContext({
+    const artifactContext = reviewerEvidenceArtifactContext({
       attemptRef,
       qualityContext,
-      contextManifest,
-      rubricRefsJson: row.quality_rubric_refs_json,
       closeout,
-      candidate: envelope.page_hash_evidence_candidate,
+      producerPackageId: envelope.page_hash_evidence_candidate_package_id,
+      originEvidenceRef: envelope.page_hash_evidence_origin_ref,
     });
-    const persisted = persistReviewEvidenceCacheCandidate(
+    const persisted = persistReviewEvidenceArtifactCandidate(
       envelope.page_hash_evidence_candidate,
-      cacheContext,
+      artifactContext,
     );
     db.prepare(`
       UPDATE stage_attempts
@@ -1511,13 +1555,13 @@ export async function stageQualityAttemptSyncActivity(input: TemporalStageQualit
       WHERE stage_attempt_id = ?
     `).run(JSON.stringify({
       ...qualityContext,
-      opl_review_evidence_cache_receipt_ref: persisted.receipt_ref,
-      opl_review_evidence_cache_receipt: persisted.receipt,
+      opl_review_evidence_artifact_receipt_ref: persisted.receipt_ref,
+      opl_review_evidence_artifact_receipt: persisted.receipt,
     }), new Date().toISOString(), stageAttemptId);
     return {
       ...(isRecord(syncReceipt) ? syncReceipt : {}),
-      opl_review_evidence_cache_receipt_ref: persisted.receipt_ref,
-      opl_review_evidence_cache_receipt: persisted.receipt,
+      opl_review_evidence_artifact_receipt_ref: persisted.receipt_ref,
+      opl_review_evidence_artifact_receipt: persisted.receipt,
     };
   } finally {
     db.close();

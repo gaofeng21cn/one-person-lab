@@ -195,6 +195,24 @@ test('Codex stage activity prompt carries refs-only transport identity without a
         command_source: 'env_override',
         source_ref: 'domain://example/route-handoffs/current',
       },
+      execution_content_binding: {
+        binding_sha256: `sha256:${'1'.repeat(64)}`,
+        use_boundary_id: 'package-use:attempt',
+        spec: {
+          package_closure: {
+            root_package: {
+              package_id: 'mas',
+              package_version: '0.3.3',
+              content_digest: `sha256:${'2'.repeat(64)}`,
+            },
+            provider_packages: [{
+              package_id: 'mas-scholar-skills',
+              package_version: '0.2.10',
+              content_digest: `sha256:${'3'.repeat(64)}`,
+            }],
+          },
+        },
+      },
       checkpoint_refs: ['studies/002/artifacts/supervision/consumer/default_executor_dispatches/immutable/packet.json'],
     },
   });
@@ -202,6 +220,14 @@ test('Codex stage activity prompt carries refs-only transport identity without a
   const commandPreview = activity.runner_status.command_preview.join('\n');
   assert.match(commandPreview, /explicitly pass these OPL_\* bindings to the child command environment/);
   assert.match(commandPreview, /"OPL_PROVIDER_ATTEMPT_REF":"temporal:\/\/attempt\/sat_codex_auth_prompt_test"/);
+  assert.match(commandPreview, /"OPL_STAGE_ATTEMPT_REF":"opl:\/\/stage_attempts\/sat_codex_auth_prompt_test"/);
+  assert.match(commandPreview, /"OPL_EXECUTION_CONTENT_BINDING_SHA256":"sha256:1111111111111111111111111111111111111111111111111111111111111111"/);
+  assert.match(commandPreview, /"OPL_PACKAGE_USE_BOUNDARY_ID":"package-use:attempt"/);
+  assert.match(commandPreview, /"OPL_ROOT_PACKAGE_ID":"mas"/);
+  assert.match(commandPreview, /"OPL_ROOT_PACKAGE_CONTENT_DIGEST":"sha256:2222222222222222222222222222222222222222222222222222222222222222"/);
+  assert.match(commandPreview, /\\"package_id\\":\\"mas-scholar-skills\\"/);
+  assert.doesNotMatch(commandPreview, /\\"package_version\\"/);
+  assert.match(commandPreview, /\\"package_content_digest\\":\\"sha256:3333333333333333333333333333333333333333333333333333333333333333\\"/);
   assert.doesNotMatch(commandPreview, /OPL_ATTEMPT_LEASE_STATUS/);
   assert.doesNotMatch(commandPreview, /OPL_EXECUTION_AUTHORIZATION_DECISION_REF/);
   assert.doesNotMatch(commandPreview, /OPL_CLOSEOUT_BINDING_JSON/);

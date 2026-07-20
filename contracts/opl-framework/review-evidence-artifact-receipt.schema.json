@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/review-evidence-artifact-receipt.schema.json",
+  "title": "OPL Review Evidence Artifact Receipt",
+  "description": "Generic immutable artifact transport receipt. It does not define cache hits, reuse, currentness, review scope, or domain authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "surface_kind",
+    "schema_version",
+    "candidate_ref",
+    "producer_attempt_ref",
+    "execution_content_binding_sha256",
+    "producer_package",
+    "origin_evidence_ref"
+  ],
+  "properties": {
+    "surface_kind": { "const": "opl_review_evidence_artifact_receipt" },
+    "schema_version": { "const": 1 },
+    "candidate_ref": {
+      "allOf": [
+        { "$ref": "#/$defs/exact_ref" },
+        {
+          "type": "object",
+          "properties": {
+            "kind": { "const": "opl_review_evidence_candidate" }
+          }
+        }
+      ]
+    },
+    "producer_attempt_ref": {
+      "type": "string",
+      "pattern": "^opl://stage_attempts/.+$"
+    },
+    "execution_content_binding_sha256": { "$ref": "#/$defs/sha256" },
+    "producer_package": { "$ref": "#/$defs/package_identity" },
+    "origin_evidence_ref": { "$ref": "#/$defs/exact_ref" }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "exact_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "ref", "size_bytes", "sha256"],
+      "properties": {
+        "kind": { "type": "string", "minLength": 1 },
+        "ref": { "type": "string", "minLength": 1 },
+        "size_bytes": { "type": "integer", "minimum": 0 },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "package_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["package_id", "package_content_digest"],
+      "properties": {
+        "package_id": { "type": "string", "minLength": 1 },
+        "package_content_digest": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  }
+}

@@ -48,6 +48,11 @@ export type StageRunImmutableSpec = {
   parent_route_decision_ref: string | null;
 };
 
+export type StageAttemptPackageIdentity = {
+  package_id: string;
+  package_content_digest: string;
+};
+
 const WORKSPACE_OBSERVATION_FIELDS = new Set([
   'checked_at',
   'checkout_currentness',
@@ -167,6 +172,107 @@ function packageIdentity(value: unknown, field: string) {
     ['source_artifact_ref', optionalText(value.source_artifact_ref)],
     ['artifact_digest', optionalSha256(value.artifact_digest, `${field}.artifact_digest`)],
   ]);
+}
+
+function strictStageAttemptPackageIdentity(
+  value: unknown,
+  field: string,
+): StageAttemptPackageIdentity {
+  if (!isRecord(value)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      `Stage Attempt package closure requires ${field}.`,
+      { failure_code: 'stage_attempt_package_identity_missing', field },
+    );
+  }
+  return {
+    package_id: text(value.package_id, `${field}.package_id`),
+    package_content_digest: canonicalStageRunSha256(
+      value.content_digest,
+      `${field}.content_digest`,
+    ),
+  };
+}
+
+export function stageAttemptPackageClosureIdentity(executionBinding: unknown) {
+  if (!isRecord(executionBinding)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Stage Attempt package closure requires an execution content binding.',
+      { failure_code: 'stage_attempt_execution_content_binding_missing' },
+    );
+  }
+  const spec = executionBinding.spec;
+  if (!isRecord(spec) || !isRecord(spec.package_closure)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Stage Attempt execution content binding is missing its package closure.',
+      { failure_code: 'stage_attempt_package_closure_missing' },
+    );
+  }
+  const closure = spec.package_closure;
+  if (!Array.isArray(closure.provider_packages)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Stage Attempt package closure provider inventory must be an array.',
+      { failure_code: 'stage_attempt_provider_package_inventory_invalid' },
+    );
+  }
+  const rootPackage = strictStageAttemptPackageIdentity(
+    closure.root_package,
+    'execution_content_binding.spec.package_closure.root_package',
+  );
+  const providerPackages = closure.provider_packages
+    .map((value, index) => strictStageAttemptPackageIdentity(
+      value,
+      `execution_content_binding.spec.package_closure.provider_packages[${index}]`,
+    ))
+    .sort((left, right) => (
+      left.package_id.localeCompare(right.package_id)
+      || left.package_content_digest.localeCompare(right.package_content_digest)
+    ));
+  const packageIds = [rootPackage, ...providerPackages].map((entry) => entry.package_id);
+  if (new Set(packageIds).size !== packageIds.length) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Stage Attempt package closure contains duplicate package ids.',
+      { failure_code: 'stage_attempt_package_closure_duplicate', package_ids: packageIds },
+    );
+  }
+  return {
+    binding_sha256: canonicalStageRunSha256(
+      executionBinding.binding_sha256,
+      'execution_content_binding.binding_sha256',
+    ),
+    use_boundary_id: text(
+      executionBinding.use_boundary_id,
+      'execution_content_binding.use_boundary_id',
+    ),
+    root_package: rootPackage,
+    provider_packages: providerPackages,
+  };
+}
+
+export function selectStageAttemptPackageIdentity(
+  executionBinding: unknown,
+  packageIdInput: unknown,
+) {
+  const packageId = text(packageIdInput, 'producer_package_id');
+  const closure = stageAttemptPackageClosureIdentity(executionBinding);
+  const matches = [closure.root_package, ...closure.provider_packages]
+    .filter((entry) => entry.package_id === packageId);
+  if (matches.length !== 1) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Producer package declaration must select exactly one package from the bound closure.',
+      {
+        failure_code: 'stage_attempt_producer_package_binding_invalid',
+        package_id: packageId,
+        match_count: matches.length,
+      },
+    );
+  }
+  return matches[0]!;
 }
 
 export function immutablePackageClosureFromWorkspaceLocator(

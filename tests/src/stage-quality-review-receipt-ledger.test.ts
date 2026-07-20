@@ -8,7 +8,6 @@ import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
 import { FrameworkContractError } from '../../src/modules/charter/contracts.ts';
-import { canonicalJsonText } from '../../src/kernel/canonical-json.ts';
 import { buildStageReviewContextManifest } from '../../src/modules/stagecraft/index.ts';
 import {
   buildStageQualityContextManifestRef,
@@ -30,9 +29,8 @@ import {
   stageRunSpecSha256,
 } from '../../src/modules/runway/family-runtime-stage-run-identity.ts';
 import {
-  persistCanonicalReviewTransportJson,
-  reviewTransportRoots,
-} from '../../src/modules/runway/family-runtime-review-transport-store.ts';
+  persistReviewEvidenceArtifactCandidate,
+} from '../../src/modules/runway/family-runtime-review-evidence-artifact.ts';
 
 const rubricRefs = ['rubric:quality'];
 const artifactRefs = ['artifact:document-v1'];
@@ -175,10 +173,13 @@ function materializeInitialReceipt(db: DatabaseSync, pair: ReturnType<typeof val
   });
 }
 
-function bindLegacyCacheEvidence(
+function bindReviewEvidenceArtifact(
   db: DatabaseSync,
   pair: ReturnType<typeof validInitialReviewPair>,
 ) {
+  const scholarPackageDigest = `sha256:${crypto.createHash('sha256')
+    .update('scholarskills package')
+    .digest('hex')}`;
   const executionSpec = {
     domain_id: 'redcube',
     stage_id: 'review',
@@ -189,6 +190,16 @@ function bindLegacyCacheEvidence(
       ref: rubricRefs[0],
       effective_content_sha256: `sha256:${'7'.repeat(64)}`,
     }],
+    package_closure: {
+      root_package: {
+        package_id: 'redcube',
+        content_digest: `sha256:${'6'.repeat(64)}`,
+      },
+      provider_packages: [{
+        package_id: 'mas-scholar-skills',
+        content_digest: scholarPackageDigest,
+      }],
+    },
   };
   const specSha256 = stageRunSpecSha256(executionSpec as never);
   const bindingPayload = {
@@ -207,36 +218,45 @@ function bindLegacyCacheEvidence(
   const reviewerAttemptRef = `opl://stage_attempts/${pair.reviewer.stage_attempt_id}`;
   const evidenceRef = 'scholarskills://display/review-evidence';
   const evidenceSha256 = `sha256:${crypto.createHash('sha256').update('review evidence').digest('hex')}`;
+  const originEvidenceRef = {
+    kind: 'scholarskills_display_evidence',
+    ref: evidenceRef,
+    sha256: evidenceSha256,
+    size_bytes: 321,
+  };
   const candidate = {
-    origin_reviewer_invocation_ref: {
-      kind: 'opl_stage_attempt',
-      ref: reviewerAttemptRef,
-      sha256: `sha256:${executionBinding.binding_sha256}`,
+    surface_kind: 'scholarskills_page_hash_evidence_candidate',
+    schema_version: 3,
+    review_scope_sha256: `sha256:${'2'.repeat(64)}`,
+    rubric_sha256: `sha256:${'7'.repeat(64)}`,
+    evidence_payload: {
+      pages: [{ page_number: 1, pixel_sha256: `sha256:${'1'.repeat(64)}` }],
     },
-    origin_reviewer_evidence_ref: {
-      kind: 'scholarskills_display_evidence',
-      ref: evidenceRef,
-      sha256: evidenceSha256,
-      size_bytes: 321,
+    cache_key_sha256: `sha256:${'3'.repeat(64)}`,
+    origin_reviewer_evidence_ref: originEvidenceRef,
+  };
+  const persisted = persistReviewEvidenceArtifactCandidate(candidate, {
+    producer_attempt_ref: reviewerAttemptRef,
+    execution_content_binding_sha256: `sha256:${executionBinding.binding_sha256}`,
+    producer_package: {
+      package_id: 'mas-scholar-skills',
+      package_content_digest: scholarPackageDigest,
     },
-  };
-  const legacyBody = {
-    surface_kind: 'opl_review_evidence_cache_receipt',
-    schema_version: 1,
-    status: 'legacy',
-  };
-  const persisted = persistCanonicalReviewTransportJson({
-    root: reviewTransportRoots().evidence_cache_receipt_root,
-    kind: 'opl_review_evidence_cache_receipt',
-    value: legacyBody,
+    origin_evidence_ref: originEvidenceRef,
   });
   db.prepare('UPDATE stage_attempts SET quality_context_json = ?, route_impact_json = ? WHERE stage_attempt_id = ?')
     .run(JSON.stringify({
       execution_content_binding: executionBinding,
-      opl_review_evidence_cache_receipt_ref: persisted.exact_ref,
-      opl_review_evidence_cache_receipt: legacyBody,
+      opl_review_evidence_artifact_receipt_ref: persisted.receipt_ref,
+      opl_review_evidence_artifact_receipt: persisted.receipt,
     }), JSON.stringify({
-      stage_quality_cycle: { outcome: 'pass', findings: [], page_hash_evidence_candidate: candidate },
+      stage_quality_cycle: {
+        outcome: 'pass',
+        findings: [],
+        page_hash_evidence_candidate: candidate,
+        page_hash_evidence_candidate_package_id: 'mas-scholar-skills',
+        page_hash_evidence_origin_ref: originEvidenceRef,
+      },
     }), pair.reviewer.stage_attempt_id);
   db.prepare(`
     INSERT INTO stage_attempt_closeouts(closeout_id, stage_attempt_id, packet_json, created_at)
@@ -245,11 +265,11 @@ function bindLegacyCacheEvidence(
     `closeout:${pair.reviewer.stage_attempt_id}`,
     pair.reviewer.stage_attempt_id,
     JSON.stringify({
-      closeout_ref_metadata: [{ ref: evidenceRef, sha256: evidenceSha256, size_bytes: 321 }],
+      closeout_ref_metadata: [originEvidenceRef],
     }),
     new Date().toISOString(),
   );
-  return { executionBinding, candidate };
+  return { executionBinding, candidate, originEvidenceRef };
 }
 
 function validReReviewPair(db: DatabaseSync, input: {
@@ -361,58 +381,31 @@ test('persisted review receipt keeps immutable reviewer bytes after the live sou
   const digest = `sha256:${crypto.createHash('sha256').update(original).digest('hex')}`;
   const member = {
     member_id: 'manuscript',
-    role: 'manuscript_file',
-    owner_ref: 'workspace://submission/paper.txt',
     source_ref: 'paper.txt',
     sha256: digest,
     size_bytes: original.length,
   };
-  const reviewScopeSha256 = `sha256:${crypto.createHash('sha256').update(canonicalJsonText({
-    scope_policy_id: 'mas_review_scope_dependency_map',
-    scope_policy_version: 1,
-    review_lane: 'medical',
-    reviewed_members: [{
-      member_id: member.member_id,
-      role: member.role,
-      sha256: member.sha256,
-      size_bytes: member.size_bytes,
-    }],
-  })).digest('hex')}`;
-  const authorityRecord = {
-    surface_kind: 'mas_review_input_snapshot_authority' as const,
-    schema_version: 1 as const,
-    generation_ref: 'mas-generation:receipt-mutation',
-    review_lane: 'medical' as const,
-    review_scope_sha256: reviewScopeSha256,
-    members: [{
-      member_id: member.member_id,
-      role: member.role,
-      owner_ref: member.owner_ref,
-      sha256: member.sha256,
-      size_bytes: member.size_bytes,
-    }],
-  };
-  const authorityBytes = Buffer.from(canonicalJsonText(authorityRecord), 'utf8');
+  const authorityBytes = Buffer.from('opaque MAS owner authority bytes\n');
   const authoritySha256 = `sha256:${crypto.createHash('sha256').update(authorityBytes).digest('hex')}`;
+  const executionBindingSha256 =
+    `sha256:${crypto.createHash('sha256').update('producer binding').digest('hex')}`;
   const previousStateRoot = process.env.OPL_STATE_DIR;
   process.env.OPL_STATE_DIR = path.join(root, 'state');
   const db = new DatabaseSync(':memory:');
   try {
     const snapshot = materializeReviewerInputSnapshot({
       surface_kind: 'opl_reviewer_input_snapshot_materialization_request',
-      schema_version: 1,
-      generation_ref: 'mas-generation:receipt-mutation',
-      review_lane: 'medical',
-      review_scope_sha256: reviewScopeSha256,
-      workspace_root: workspaceRoot,
-      members: [member],
-      mas_authority_record_ref: {
+      schema_version: 2,
+      owner_authority_ref: {
         kind: 'mas_review_input_snapshot_authority',
         ref: `mas-review-input-snapshot-authority:${authoritySha256.slice('sha256:'.length)}`,
         size_bytes: authorityBytes.length,
         sha256: authoritySha256,
       },
-      mas_authority_record: authorityRecord,
+      producer_attempt_ref: 'opl://stage_attempts/producer',
+      execution_content_binding_sha256: executionBindingSha256,
+      workspace_root: workspaceRoot,
+      members: [member],
     });
     const snapshotContext = buildStageReviewInputSnapshotContext({
       stageRunId: 'stage-run:review-receipt',
@@ -426,7 +419,7 @@ test('persisted review receipt keeps immutable reviewer bytes after the live sou
     });
     const receipt = materializeInitialReceipt(db, pair);
     assert.equal(receipt.review_input_snapshot_status, 'materialized');
-    assert.deepEqual(receipt.mas_review_input_snapshot_binding, snapshot.review_input_snapshot_binding);
+    assert.deepEqual(receipt.review_input_snapshot_binding, snapshot.review_input_snapshot_binding);
     assert.deepEqual(receipt.opl_reviewer_input_snapshot_manifest_ref, snapshot.manifest_ref);
     const immutableRef = snapshot.manifest.members[0]!.immutable_ref.ref;
     assert.deepEqual(fs.readFileSync(fileURLToPath(immutableRef)), original);
@@ -459,8 +452,8 @@ test('ledger binds the receipt to the reviewer Attempt rubric across a package g
   }
 });
 
-test('ledger rebuilds cache execution and evidence identity from current persisted Attempt truth', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-review-receipt-cache-ledger-'));
+test('ledger rebuilds artifact execution and evidence identity from current persisted Attempt truth', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-review-receipt-artifact-ledger-'));
   const previousStateRoot = process.env.OPL_STATE_DIR;
   process.env.OPL_STATE_DIR = stateRoot;
   try {
@@ -468,7 +461,7 @@ test('ledger rebuilds cache execution and evidence identity from current persist
       const db = new DatabaseSync(':memory:');
       try {
         const pair = validInitialReviewPair(db);
-        const fixture = bindLegacyCacheEvidence(db, pair);
+        const fixture = bindReviewEvidenceArtifact(db, pair);
         if (mutation === 'execution-spec') {
           fixture.executionBinding.spec.stage_id = 'tampered-review';
           const row = db.prepare('SELECT quality_context_json FROM stage_attempts WHERE stage_attempt_id = ?')
@@ -478,13 +471,15 @@ test('ledger rebuilds cache execution and evidence identity from current persist
           db.prepare('UPDATE stage_attempts SET quality_context_json = ? WHERE stage_attempt_id = ?')
             .run(JSON.stringify(context), pair.reviewer.stage_attempt_id);
         } else if (mutation === 'evidence') {
-          fixture.candidate.origin_reviewer_evidence_ref.sha256 = `sha256:${'9'.repeat(64)}`;
+          fixture.candidate.cache_key_sha256 = `sha256:${'9'.repeat(64)}`;
           db.prepare('UPDATE stage_attempts SET route_impact_json = ? WHERE stage_attempt_id = ?')
             .run(JSON.stringify({
               stage_quality_cycle: {
                 outcome: 'pass',
                 findings: [],
                 page_hash_evidence_candidate: fixture.candidate,
+                page_hash_evidence_candidate_package_id: 'mas-scholar-skills',
+                page_hash_evidence_origin_ref: fixture.originEvidenceRef,
               },
             }), pair.reviewer.stage_attempt_id);
         }
@@ -494,8 +489,9 @@ test('ledger rebuilds cache execution and evidence identity from current persist
             && error.details?.failure_code === (
               mutation === 'execution-spec'
                 ? 'stage_review_receipt_execution_binding_mismatch'
-                : 'stage_review_receipt_cache_evidence_mismatch'
+                : 'stage_review_receipt_artifact_binding_mismatch'
             ),
+          mutation,
         );
       } finally {
         db.close();
