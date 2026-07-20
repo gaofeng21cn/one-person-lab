@@ -437,8 +437,9 @@ export function materializeAgentPackageSkillProjection(input: {
     );
     fs.chmodSync(stageSkillsRoot, 0o555);
     fs.chmodSync(path.join(stageRoot, '.agents'), 0o555);
-    fs.chmodSync(stageRoot, 0o555);
     try {
+      // macOS refuses to rename a directory after its owner write bit is
+      // removed, even when source and destination share the same parent.
       fs.renameSync(stageRoot, projectionRoot);
     } catch (error) {
       if (!fs.existsSync(projectionRoot)) throw error;
@@ -450,6 +451,7 @@ export function materializeAgentPackageSkillProjection(input: {
         recursive: true,
       });
     }
+    fs.chmodSync(projectionRoot, 0o555);
     return assertProjectionBytes(projection);
   } catch (error) {
     if (fs.existsSync(stageRoot)) {

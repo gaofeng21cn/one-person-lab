@@ -297,6 +297,7 @@ test('package use materializes one immutable root and specialist Skill generatio
       fs.readFileSync(path.join(projection.skills_root, 'fixture-agent', 'SKILL.md'), 'utf8').includes('generation one'),
       true,
     );
+    assert.equal(fs.statSync(projection.projection_root).mode & 0o222, 0);
     assert.equal(fs.statSync(path.join(projection.skills_root, 'fixture-agent', 'SKILL.md')).mode & 0o222, 0);
 
     fs.writeFileSync(
