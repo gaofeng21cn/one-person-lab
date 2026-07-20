@@ -118,6 +118,30 @@ test('OCI publication readback verifies exact digest with an anonymous registry 
   ], { encoding: 'utf8', env: value.env }), /OCI digest readback mismatch/);
 });
 
+test('OCI publication readback reuses an exact stable digest without rebuilding historical layers', () => {
+  const value = fixture();
+  const output = parseJsonText(execFileSync(process.execPath, [
+    path.join(repoRoot, 'scripts/oci-publication-preflight.mjs'),
+    '--ref', 'ghcr.io/example/one-person-lab-packages/mas:0.1.0',
+    '--artifact-type', 'application/vnd.onepersonlab.package.v1',
+    '--source-url', 'https://github.com/example/one-person-lab',
+    '--digest-only',
+    '--verify-only',
+    '--expected-digest', remoteDigest,
+    '--anonymous',
+  ], { encoding: 'utf8', env: value.env })) as Record<string, unknown>;
+  assert.equal(output.status, 'verified');
+  assert.equal(output.digest, remoteDigest);
+  assert.throws(() => execFileSync(process.execPath, [
+    path.join(repoRoot, 'scripts/oci-publication-preflight.mjs'),
+    '--ref', 'ghcr.io/example/one-person-lab-packages/mas:0.1.0',
+    '--artifact-type', 'application/vnd.onepersonlab.package.v1',
+    '--source-url', 'https://github.com/example/one-person-lab',
+    '--digest-only',
+    '--expected-digest', remoteDigest,
+  ], { encoding: 'utf8', env: value.env }), /--digest-only requires --verify-only/);
+});
+
 test('complete publication-set preflight reports every conflict before any push', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-publication-set-preflight-'));
   const packageRoot = path.join(root, 'packages', 'mas');
@@ -139,6 +163,7 @@ test('complete publication-set preflight reports every conflict before any push'
               package_version: '0.2.1',
               owner_source_commit: '2'.repeat(40),
               artifact_ref: 'ghcr.io/example/one-person-lab-packages/mas:0.2.1',
+              artifact_digest: remoteDigest,
             },
           },
         },
@@ -158,11 +183,15 @@ test('complete publication-set preflight reports every conflict before any push'
   const fakePreflight = path.join(root, 'fake-preflight.mjs');
   fs.writeFileSync(fakePreflight, `
 const ref = process.argv[process.argv.indexOf('--ref') + 1];
-if (ref.includes('/mas:')) {
+if (ref.includes('/mas:') && !process.argv.includes('--digest-only')) {
   console.error('mas immutable conflict');
   process.exit(1);
 }
-console.log(JSON.stringify({ status: 'absent_publish_required', action: 'publish', digest: null }));
+console.log(JSON.stringify({
+  status: process.argv.includes('--digest-only') ? 'verified' : 'absent_publish_required',
+  action: process.argv.includes('--digest-only') ? 'verify' : 'publish',
+  digest: process.argv.includes('--digest-only') ? '${remoteDigest}' : null,
+}));
 `);
   const reportPath = path.join(root, 'report.json');
   const result = spawnSync(process.execPath, [
@@ -186,6 +215,22 @@ console.log(JSON.stringify({ status: 'absent_publish_required', action: 'publish
   );
   assert.match(report.components[0].error, /mas immutable conflict/);
   assert.equal(report.components[1].action, 'publish');
+
+  const reuseResult = spawnSync(process.execPath, [
+    path.join(repoRoot, 'scripts/preflight-package-publication-set.mjs'),
+    '--root', root,
+    '--owner', 'example',
+    '--source-url', 'https://github.com/example/one-person-lab',
+    '--harness-sha', '6'.repeat(40),
+    '--changed-packages-json', '[]',
+    '--preflight-script', fakePreflight,
+  ], { encoding: 'utf8' });
+  assert.equal(reuseResult.status, 0);
+  const reuseReport = parseJsonText(reuseResult.stdout) as Record<string, any>;
+  assert.equal(reuseReport.status, 'passed');
+  assert.equal(reuseReport.summary.reuse_count, 1);
+  assert.equal(reuseReport.components[0].status, 'existing_digest_reuse');
+  assert.equal(reuseReport.components[0].digest, remoteDigest);
 
   const wrongOwnerManifest = parseJsonText(fs.readFileSync(
     path.join(root, 'opl-release-manifest.json'),

@@ -16,6 +16,7 @@ function parseOptions(argv) {
     sourceUrl: '',
     harnessSha: '',
     report: '',
+    changedPackagesJson: '',
     preflightScript: path.join(scriptRoot, 'oci-publication-preflight.mjs'),
   };
   parseRequiredValueOptions(argv, {
@@ -24,6 +25,7 @@ function parseOptions(argv) {
     '--source-url': (value) => { options.sourceUrl = value.trim(); },
     '--harness-sha': (value) => { options.harnessSha = value.trim(); },
     '--report': (value) => { options.report = path.resolve(value); },
+    '--changed-packages-json': (value) => { options.changedPackagesJson = value.trim(); },
     '--preflight-script': (value) => { options.preflightScript = path.resolve(value); },
   });
   if (!options.root || !options.owner || !options.sourceUrl || !options.harnessSha) {
@@ -86,9 +88,18 @@ function packageArgs(options, packageId, packageVersion, artifactRef) {
   ];
 }
 
-function componentResult(identity, preflight) {
+function componentResult(identity, preflight, reuseVerifiedDigest = false) {
   if (!preflight.ok) {
     return { ...identity, status: 'conflict', action: 'reject', digest: null, error: preflight.error };
+  }
+  if (reuseVerifiedDigest) {
+    return {
+      ...identity,
+      status: 'existing_digest_reuse',
+      action: 'reuse',
+      digest: preflight.value.digest,
+      error: null,
+    };
   }
   return {
     ...identity,
@@ -97,6 +108,25 @@ function componentResult(identity, preflight) {
     digest: preflight.value.digest,
     error: null,
   };
+}
+
+function parseChangedPackageIds(rawValue, packageIds) {
+  if (!rawValue) return null;
+  let parsed;
+  try {
+    parsed = JSON.parse(rawValue);
+  } catch {
+    throw new Error('--changed-packages-json must be a JSON array of Package ids.');
+  }
+  if (!Array.isArray(parsed) || parsed.some((value) => typeof value !== 'string')) {
+    throw new Error('--changed-packages-json must be a JSON array of Package ids.');
+  }
+  const changed = new Set(parsed);
+  const unknown = [...changed].filter((packageId) => !packageIds.includes(packageId));
+  if (changed.size !== parsed.length || unknown.length > 0) {
+    throw new Error(`--changed-packages-json contains duplicate or unknown Package ids: ${unknown.join(', ')}`);
+  }
+  return changed;
 }
 
 function main() {
@@ -108,9 +138,12 @@ function main() {
     objectValue(components.packages, 'release_set.components.packages').members,
     'release_set.components.packages.members',
   );
+  const packageIds = Object.keys(packages).sort((left, right) => left.localeCompare(right, 'en'));
+  const changedPackageIds = parseChangedPackageIds(options.changedPackagesJson, packageIds);
   const results = [];
 
-  for (const [packageId, rawMember] of Object.entries(packages).sort(([left], [right]) => left.localeCompare(right, 'en'))) {
+  for (const packageId of packageIds) {
+    const rawMember = packages[packageId];
     const member = objectValue(rawMember, `release_set.components.packages.members.${packageId}`);
     const packageVersion = stringValue(member.package_version ?? member.version, `${packageId}.package_version`);
     const artifactRef = ownedArtifactRef(
@@ -119,13 +152,29 @@ function main() {
       options.owner,
     );
     const ownerSourceCommit = stringValue(member.owner_source_commit, `${packageId}.owner_source_commit`, /^[0-9a-f]{40}$/);
+    const reuseVerifiedDigest = changedPackageIds !== null && !changedPackageIds.has(packageId);
+    const preflightArgs = reuseVerifiedDigest
+      ? [
+          '--ref', artifactRef,
+          '--artifact-type', 'application/vnd.onepersonlab.package.v1',
+          '--source-url', options.sourceUrl,
+          '--digest-only',
+          '--verify-only',
+          '--expected-digest', stringValue(
+            member.artifact_digest ?? member.oci_artifact_digest,
+            `${packageId}.artifact_digest`,
+            /^sha256:[0-9a-f]{64}$/,
+          ),
+          '--anonymous',
+        ]
+      : packageArgs(options, packageId, packageVersion, artifactRef);
     results.push(componentResult({
       component_id: packageId,
       component_kind: 'package',
       version: packageVersion,
       source_commit: ownerSourceCommit,
       ref: artifactRef,
-    }, runPreflight(options.preflightScript, packageArgs(options, packageId, packageVersion, artifactRef))));
+    }, runPreflight(options.preflightScript, preflightArgs), reuseVerifiedDigest));
   }
 
   const base = objectValue(components.base, 'release_set.components.base');

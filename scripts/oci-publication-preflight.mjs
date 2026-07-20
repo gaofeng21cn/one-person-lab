@@ -13,6 +13,7 @@ function parseOptions(argv) {
     layers: [],
     expectedDigest: '',
     verifyOnly: false,
+    digestOnly: false,
     anonymous: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -25,6 +26,10 @@ function parseOptions(argv) {
       options.anonymous = true;
       continue;
     }
+    if (token === '--digest-only') {
+      options.digestOnly = true;
+      continue;
+    }
     const value = argv[index + 1];
     if (!value || value.startsWith('--')) throw new Error(`Missing value for ${token}`);
     index += 1;
@@ -35,11 +40,14 @@ function parseOptions(argv) {
     else if (token === '--expected-digest') options.expectedDigest = value;
     else throw new Error(`Unknown argument: ${token}`);
   }
-  if (!options.ref || !options.artifactType || !options.sourceUrl || options.layers.length === 0) {
-    throw new Error('Usage: oci-publication-preflight.mjs --ref <oci-ref> --artifact-type <media-type> --source-url <url> --layer <path=media-type> [...] [--verify-only --expected-digest <sha256:digest> --anonymous]');
+  if (!options.ref || !options.artifactType || !options.sourceUrl || (!options.digestOnly && options.layers.length === 0)) {
+    throw new Error('Usage: oci-publication-preflight.mjs --ref <oci-ref> --artifact-type <media-type> --source-url <url> [--layer <path=media-type> ... | --digest-only] [--verify-only --expected-digest <sha256:digest> --anonymous]');
   }
   if (options.verifyOnly && !/^sha256:[0-9a-f]{64}$/.test(options.expectedDigest)) {
     throw new Error('--verify-only requires --expected-digest sha256:<64 lowercase hex>');
+  }
+  if (options.digestOnly && !options.verifyOnly) {
+    throw new Error('--digest-only requires --verify-only and an exact expected digest');
   }
   return options;
 }
@@ -120,7 +128,7 @@ function assertRemoteMatches(remote, options, layers) {
   const expected = comparableLayers(layers);
   if (remote.manifest?.artifactType !== options.artifactType
     || remote.manifest?.annotations?.['org.opencontainers.image.source'] !== options.sourceUrl
-    || JSON.stringify(actualLayers) !== JSON.stringify(expected)) {
+    || (!options.digestOnly && JSON.stringify(actualLayers) !== JSON.stringify(expected))) {
     throw new Error(`Immutable OCI tag mutation rejected for ${options.ref}: remote artifact metadata or layer digests differ from the requested publication`);
   }
   const digest = remote.descriptor?.digest;

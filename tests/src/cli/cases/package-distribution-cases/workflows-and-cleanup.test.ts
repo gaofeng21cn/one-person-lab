@@ -155,6 +155,8 @@ test('framework packages workflow is release-gated and manually repairable witho
       < workflow.indexOf('Publish immutable Packages and finalize complete BOM'),
   );
   assert.match(workflow, /--report dist\/opl-packages\/package-publication-preflight-report\.json/);
+  assert.match(workflow, /preflight-package-publication-set\.mjs[\s\S]*--changed-packages-json "\$OPL_CHANGED_PACKAGES_JSON"/);
+  assert.match(workflow, /--digest-only --verify-only --expected-digest "\$digest" --anonymous/);
   assert.match(workflow, /finalize-package-channel-digests\.mjs/);
   assert.match(workflow, /owner-cohort-lock\.json/);
   assert.match(workflow, /owner_cohort_artifact_name/);

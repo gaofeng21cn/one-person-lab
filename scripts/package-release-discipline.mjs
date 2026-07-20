@@ -235,6 +235,8 @@ function validateWorkflow(manifest, manifestPath, failures) {
   assertCondition(/oci-publication-preflight\.mjs/.test(source), 'Package workflow must run OCI immutable preflight', failures);
   assertCondition(/preflight-package-publication-set\.mjs/.test(source)
     && source.indexOf('preflight-package-publication-set.mjs') < source.indexOf('oras push --format json'), 'Complete immutable publication-set preflight must run before the first OCI push', failures);
+  assertCondition(/preflight-package-publication-set\.mjs[\s\S]*--changed-packages-json "\$OPL_CHANGED_PACKAGES_JSON"/.test(source)
+    && /--digest-only --verify-only --expected-digest "\$digest" --anonymous/.test(source), 'Unchanged Packages must reuse the exact previous stable digest without rebuilding historical OCI layers', failures);
   assertCondition(/existing_identical_reuse|\.action.*reuse|= reuse/.test(source), 'Package workflow must reuse identical immutable tags', failures);
   assertCondition(/org\.opencontainers\.image\.source/.test(source), 'OCI artifacts must declare repository source association', failures);
   assertCondition(/visibility" -f visibility=public|visibility=public/.test(source), 'Package workflow must enforce public GHCR visibility', failures);

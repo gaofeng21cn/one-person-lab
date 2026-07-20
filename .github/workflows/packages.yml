@@ -399,6 +399,7 @@ jobs:
             --owner "$OPL_PACKAGES_OWNER" \
             --source-url "$OPL_OCI_SOURCE_URL" \
             --harness-sha "$GITHUB_SHA" \
+            --changed-packages-json "$OPL_CHANGED_PACKAGES_JSON" \
             --report dist/opl-packages/package-publication-preflight-report.json
 
       - name: Publish immutable Packages and finalize complete BOM
@@ -488,13 +489,29 @@ jobs:
             image="ghcr.io/${OPL_PACKAGES_OWNER}/one-person-lab-packages/${package_id}"
             ensure_public_package "one-person-lab-packages/${package_id}"
             mapfile -t preflight_args < <(package_preflight_args "$package_root" "$package_id" "$package_version")
-            node "$OPL_RELEASE_HARNESS_ROOT/scripts/oci-publication-preflight.mjs" \
-              --ref "${image}@${digest}" "${preflight_args[@]}" \
-              --verify-only --expected-digest "$digest" --anonymous
+            if jq -e --arg id "$package_id" 'index($id) != null' <<<"$changed_packages_json" >/dev/null; then
+              node "$OPL_RELEASE_HARNESS_ROOT/scripts/oci-publication-preflight.mjs" \
+                --ref "${image}@${digest}" "${preflight_args[@]}" \
+                --verify-only --expected-digest "$digest" --anonymous
+            else
+              node "$OPL_RELEASE_HARNESS_ROOT/scripts/oci-publication-preflight.mjs" \
+                --ref "${image}@${digest}" \
+                --artifact-type application/vnd.onepersonlab.package.v1 \
+                --source-url "$OPL_OCI_SOURCE_URL" \
+                --digest-only --verify-only --expected-digest "$digest" --anonymous
+            fi
             oras tag "${image}@${digest}" candidate
-            node "$OPL_RELEASE_HARNESS_ROOT/scripts/oci-publication-preflight.mjs" \
-              --ref "${image}:candidate" "${preflight_args[@]}" \
-              --verify-only --expected-digest "$digest" --anonymous
+            if jq -e --arg id "$package_id" 'index($id) != null' <<<"$changed_packages_json" >/dev/null; then
+              node "$OPL_RELEASE_HARNESS_ROOT/scripts/oci-publication-preflight.mjs" \
+                --ref "${image}:candidate" "${preflight_args[@]}" \
+                --verify-only --expected-digest "$digest" --anonymous
+            else
+              node "$OPL_RELEASE_HARNESS_ROOT/scripts/oci-publication-preflight.mjs" \
+                --ref "${image}:candidate" \
+                --artifact-type application/vnd.onepersonlab.package.v1 \
+                --source-url "$OPL_OCI_SOURCE_URL" \
+                --digest-only --verify-only --expected-digest "$digest" --anonymous
+            fi
           done
 
           framework_version="$(jq -r '.release_set.components.base.version' dist/opl-packages/opl-release-manifest.json)"
