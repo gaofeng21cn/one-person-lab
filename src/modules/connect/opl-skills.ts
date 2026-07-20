@@ -9,8 +9,10 @@ import {
   parseJsonText,
   readJsonFileResult,
 } from '../../kernel/json-file.ts';
-import { materializeStandardAgentCapabilityMap } from '../pack/standard-agent-capability-map.ts';
-import { listRepoProfessionalSkillRefs } from '../pack/standard-agent-capability-inventory.ts';
+import {
+  listRepoProfessionalSkillRefs,
+  materializeStandardAgentCapabilityMap,
+} from '../pack/index.ts';
 import { syncOplCompanionSkills, type OplCompanionSkillApplyMode } from './install-companions.ts';
 import {
   registerOplFamilyCodexPlugins,

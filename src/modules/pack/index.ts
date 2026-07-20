@@ -112,6 +112,7 @@ export * from './public/foundry-agent-series-policy.ts';
 export * from './public/source-derived-agent-design-abi.ts';
 export * from './reference-build-proof.ts';
 export * from './source-derived-agent-design-abi.ts';
+export * from './standard-agent-capability-inventory.ts';
 export * from './standard-agent-capability-map.ts';
 export * from './standard-agent-conformance-profile.ts';
 export * from './standard-agent-evaluation-manifest.ts';
