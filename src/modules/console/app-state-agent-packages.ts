@@ -151,7 +151,6 @@ function packageHardRepairReason(status: RawAgentPackageStatus) {
     .find((reason) => HARD_DEPENDENCY_FAILURE_REASONS.has(reason));
   if (hardDependencyReason) return hardDependencyReason;
   const materialization = status.materialization_readiness;
-  const coreStatus = materialization?.core_readiness?.status;
   const requiredSkillIds = materialization?.core_readiness?.required_skill_ids
     ?? materialization?.required_skill_ids
     ?? [];
@@ -164,8 +163,7 @@ function packageHardRepairReason(status: RawAgentPackageStatus) {
   if (requiredSkillMissing) {
     return 'required_skill_repair_required';
   }
-  if ((coreStatus === 'missing' || materialization?.status === 'missing')
-    && requiredSkillIds.length === 0) {
+  if (materialization?.status === 'missing' && requiredSkillIds.length === 0) {
     return 'required_skill_repair_required';
   }
   if (status.runtime_source_readiness?.operational_ready === false) {
