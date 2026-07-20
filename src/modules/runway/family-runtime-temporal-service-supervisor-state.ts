@@ -17,6 +17,9 @@ type ConfigPaths = Pick<ReturnType<typeof familyRuntimePaths>, 'root'>;
 export const TEMPORAL_SERVICE_SUPERVISOR_LABEL = 'ai.opl.family-runtime.temporal-service';
 export const TEMPORAL_SERVICE_SUPERVISOR_THROTTLE_SECONDS = 15;
 export const TEMPORAL_SERVICE_SUPERVISOR_LAUNCHCTL_TIMEOUT_MS = 5_000;
+export const TEMPORAL_SERVICE_SUPERVISOR_KICKSTART_TIMEOUT_MS = (
+  TEMPORAL_SERVICE_SUPERVISOR_THROTTLE_SECONDS * 1_000
+) + TEMPORAL_SERVICE_SUPERVISOR_LAUNCHCTL_TIMEOUT_MS;
 
 export type TemporalServiceSupervisorLaunchctlResult = {
   ok: boolean;
@@ -54,6 +57,12 @@ export type TemporalServiceSupervisorConfig = {
   plist_sha256: string;
   installed_at: string;
 };
+
+export function temporalServiceSupervisorLaunchctlTimeoutMs(args: string[]) {
+  return args[0] === 'kickstart'
+    ? TEMPORAL_SERVICE_SUPERVISOR_KICKSTART_TIMEOUT_MS
+    : TEMPORAL_SERVICE_SUPERVISOR_LAUNCHCTL_TIMEOUT_MS;
+}
 
 function stringArray(value: unknown): string[] | null {
   return Array.isArray(value) && value.every((entry) => typeof entry === 'string') ? value : null;
@@ -130,7 +139,7 @@ export function runTemporalServiceSupervisorLaunchctl(
   }
   const result = spawnSync('launchctl', args, {
     encoding: 'utf8',
-    timeout: TEMPORAL_SERVICE_SUPERVISOR_LAUNCHCTL_TIMEOUT_MS,
+    timeout: temporalServiceSupervisorLaunchctlTimeoutMs(args),
   });
   return {
     ok: result.status === 0 && !result.error,

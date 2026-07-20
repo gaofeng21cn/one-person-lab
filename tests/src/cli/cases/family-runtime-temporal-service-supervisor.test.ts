@@ -10,8 +10,11 @@ import {
   runTemporalServiceSupervisorCommand,
 } from '../../../../src/modules/runway/family-runtime-temporal-service-supervisor.ts';
 import {
+  temporalServiceSupervisorLaunchctlTimeoutMs,
   temporalServiceSupervisorConfigPath,
   temporalServiceSupervisorPlistPath,
+  TEMPORAL_SERVICE_SUPERVISOR_KICKSTART_TIMEOUT_MS,
+  TEMPORAL_SERVICE_SUPERVISOR_LAUNCHCTL_TIMEOUT_MS,
   type TemporalServiceSupervisorLaunchctlResult,
 } from '../../../../src/modules/runway/family-runtime-temporal-service-supervisor-state.ts';
 import type { TemporalServiceLauncher } from '../../../../src/modules/runway/family-runtime-temporal-service.ts';
@@ -68,6 +71,18 @@ function launchctlResult(args: string[], ok: boolean, stdout = '', stderr = ''):
     args,
   };
 }
+
+test('Temporal launchctl kickstart timeout includes the launchd throttle window', () => {
+  assert.equal(
+    temporalServiceSupervisorLaunchctlTimeoutMs(['kickstart', '-k', 'gui/501/ai.opl.family-runtime.temporal-service']),
+    TEMPORAL_SERVICE_SUPERVISOR_KICKSTART_TIMEOUT_MS,
+  );
+  assert.equal(TEMPORAL_SERVICE_SUPERVISOR_KICKSTART_TIMEOUT_MS, 20_000);
+  assert.equal(
+    temporalServiceSupervisorLaunchctlTimeoutMs(['print', 'gui/501/ai.opl.family-runtime.temporal-service']),
+    TEMPORAL_SERVICE_SUPERVISOR_LAUNCHCTL_TIMEOUT_MS,
+  );
+});
 
 function createFakeLaunchctl(options: {
   replacePidOnKickstart?: boolean;
