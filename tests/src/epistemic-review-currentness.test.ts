@@ -6,6 +6,7 @@ import type { AnySchema } from 'ajv';
 
 import { parseJsonText } from '../../src/kernel/json-file.ts';
 import { validateJsonSchemaPayload } from '../../src/kernel/schema-registry.ts';
+import { listStandardDomainAgentIds } from '../../src/kernel/standard-agent-registry.ts';
 import {
   evaluateEpistemicReviewCurrentness,
   normalizeEpistemicReviewScope,
@@ -64,7 +65,7 @@ function contentScope(owner: string) {
 }
 
 test('layout package and governance-only deltas do not invalidate content reviews across Agents', () => {
-  for (const owner of ['mas', 'mag', 'bookforge', 'redcube']) {
+  for (const owner of listStandardDomainAgentIds()) {
     const evaluation = evaluateEpistemicReviewCurrentness({
       scope: contentScope(owner),
       changes: [
@@ -259,9 +260,18 @@ test('machine contract keeps Agent and professional Skill ownership separate', (
     'contracts/opl-framework/epistemic-review-currentness-contract.json',
     'utf8',
   )) as Record<string, any>;
+  assert.match(contract.purpose, /Prevent AI hallucination/);
   assert.equal(contract.default_evidence_profile, 'epistemic_provenance');
   assert.equal(contract.default_trust_model, 'trusted_local_workspace');
+  assert.equal(
+    contract.adversary_model,
+    'trusted_local_workspace_without_malicious_whole-workspace_forgery',
+  );
   assert.equal(contract.currentness.hash_change_alone_invalidates_review, false);
+  assert.equal(
+    contract.currentness.locator_hash_role,
+    'optional_locator_stale_hint_and_deduplication_only',
+  );
   assert.equal(contract.integrity_separation.release_integrity_is_separate_contract, true);
   assert.equal(contract.agent_adoption.framework_owns_generic_contract_validation_currentness_and_attempt_enforcement, true);
   assert.equal(contract.agent_adoption.agent_owner_declares_domain_artifact_claim_and_provenance_dependencies, true);
