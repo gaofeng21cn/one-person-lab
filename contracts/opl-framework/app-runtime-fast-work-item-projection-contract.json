@@ -4,6 +4,35 @@
   "producer_surface": "opl app state --profile fast --json#app_state.operator.workbench.work_item_projection_v2",
   "projection_schema_ref": "contracts/opl-framework/work-item-projection-v2.schema.json",
   "consumer_role": "default_runtime_page_state",
+  "compatibility_capabilities": {
+    "ids": [
+      "opl_app.domain_detail_views.v2"
+    ],
+    "definitions": [
+      {
+        "capability_id": "opl_app.domain_detail_views.v2",
+        "producer_owner": "one-person-lab",
+        "state_surface": "opl app state --profile fast --json#app_state.operator.workbench.work_item_projection_v2",
+        "state_field": "items[].domain_detail_views",
+        "descriptor_contract_ref": "contracts/opl-framework/standard-agent-interface.schema.json#/properties/domain_detail_views",
+        "projection_contract_ref": "contracts/opl-framework/work-item-projection-v2.schema.json#/$defs/domainDetailView",
+        "accepted_descriptor_schema_versions": [
+          "scientific-reasoning-map.v1",
+          "scientific-reasoning-map.v2"
+        ],
+        "missing_descriptor_projection": [],
+        "lazy_read_command": "opl app view read --item-id <canonical-item-id> --view-id <view-id> [--if-revision <n>] --json",
+        "lazy_read_surface_kind": "opl_domain_detail_view",
+        "lazy_read_schema_version": "opl_domain_detail_view.v1",
+        "legacy_consumer_policy": {
+          "capability_discovery_additive": true,
+          "domain_detail_views_optional_in_agent_descriptor": true,
+          "missing_domain_detail_views_projects_empty_array": true,
+          "consumer_may_ignore_capability": true
+        }
+      }
+    ]
+  },
   "cognitive_model": [
     "Agent",
     "Project",

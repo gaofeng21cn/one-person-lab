@@ -3,9 +3,18 @@ import fs from 'node:fs';
 import test from 'node:test';
 
 import { parseJsonText } from '../../src/kernel/json-file.ts';
+import { buildPublicAppCommandSpecs } from '../../src/entrypoints/cli/cases/app-public-command-specs.ts';
 import { buildAppRuntimeWorkItemProjection } from '../../src/modules/console/app-runtime-work-item-projection.ts';
+import {
+  APP_DOMAIN_DETAIL_VIEWS_V2_CAPABILITY_ID,
+  validateAppRuntimeFastWorkItemProjectionContract,
+} from '../../src/modules/charter/contract-validators/app-runtime-fast-work-item-projection-contract.ts';
 
 const CONTRACT_REF = 'contracts/opl-framework/app-runtime-fast-work-item-projection-contract.json';
+
+function readJson(ref: string) {
+  return parseJsonText(fs.readFileSync(ref, 'utf8')) as Record<string, any>;
+}
 
 test('App Runtime fast producer contract keeps summaries complete and diagnostics bounded', () => {
   const contract = parseJsonText(fs.readFileSync(CONTRACT_REF, 'utf8')) as Record<string, any>;
@@ -53,4 +62,57 @@ test('App Runtime producer never defers fast inventory even with no registered p
   assert.equal(projection.detail_policy.attempt_ref_limit_per_item, 1);
   assert.equal(projection.diagnostics.detail_policy, 'summary_only');
   assert.deepEqual(projection.diagnostics.items, []);
+});
+
+test('App Runtime publishes a producer-owned domain detail view compatibility capability', () => {
+  const contract = readJson(CONTRACT_REF);
+  const commandIds = Object.keys(buildPublicAppCommandSpecs(() => {
+    throw new Error('Contract loading is not needed to enumerate App commands.');
+  }));
+
+  validateAppRuntimeFastWorkItemProjectionContract({
+    filePath: CONTRACT_REF,
+    value: contract,
+    standardAgentInterfaceSchema: readJson('contracts/opl-framework/standard-agent-interface.schema.json'),
+    workItemProjectionSchema: readJson('contracts/opl-framework/work-item-projection-v2.schema.json'),
+    publicAppCommandIds: commandIds,
+  });
+
+  assert.deepEqual(contract.compatibility_capabilities.ids, [
+    APP_DOMAIN_DETAIL_VIEWS_V2_CAPABILITY_ID,
+  ]);
+  assert.deepEqual(
+    contract.compatibility_capabilities.definitions[0].accepted_descriptor_schema_versions,
+    ['scientific-reasoning-map.v1', 'scientific-reasoning-map.v2'],
+  );
+  assert.equal(
+    contract.compatibility_capabilities.definitions[0].legacy_consumer_policy.consumer_may_ignore_capability,
+    true,
+  );
+
+  const publicSurfaceIndex = readJson('contracts/opl-framework/public-surface-index.json');
+  const appWorkbench = publicSurfaceIndex.surfaces.find(
+    (entry: Record<string, unknown>) => entry.surface_id === 'one_person_lab_app_workbench',
+  );
+  assert.equal(publicSurfaceIndex.version, 'p19.stage-runtime');
+  assert.equal(
+    appWorkbench.refs.some(
+      (ref: Record<string, unknown>) => ref.ref
+        === `${CONTRACT_REF}#compatibility_capabilities`,
+    ),
+    true,
+  );
+});
+
+test('App Runtime capability validator rejects an unrecognized compatibility id', () => {
+  const contract = structuredClone(readJson(CONTRACT_REF));
+  contract.compatibility_capabilities.ids = ['opl_app.domain_detail_views.v3'];
+
+  assert.throws(() => validateAppRuntimeFastWorkItemProjectionContract({
+    filePath: CONTRACT_REF,
+    value: contract,
+    standardAgentInterfaceSchema: readJson('contracts/opl-framework/standard-agent-interface.schema.json'),
+    workItemProjectionSchema: readJson('contracts/opl-framework/work-item-projection-v2.schema.json'),
+    publicAppCommandIds: ['app view read'],
+  }), /compatibility_capabilities.ids must remain opl_app\.domain_detail_views\.v2/);
 });

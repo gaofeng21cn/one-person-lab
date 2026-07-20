@@ -128,6 +128,10 @@
           "ref": "contracts/opl-framework/public-surface-index.json#one_person_lab_app_workbench"
         },
         {
+          "ref_kind": "machine_contract",
+          "ref": "contracts/opl-framework/app-runtime-fast-work-item-projection-contract.json#compatibility_capabilities"
+        },
+        {
           "ref_kind": "machine_cli",
           "ref": "opl app state --profile fast --json"
         },
@@ -138,6 +142,10 @@
         {
           "ref_kind": "machine_cli",
           "ref": "opl app action execute --json"
+        },
+        {
+          "ref_kind": "machine_cli",
+          "ref": "opl app view read --item-id <canonical-item-id> --view-id <view-id> --json"
         },
         {
           "ref_kind": "machine_cli",
