@@ -183,6 +183,25 @@ function normalizedPayload(action: FamilyActionCatalogAction, payload: Record<st
   return normalized;
 }
 
+const WORK_ITEM_IDENTITY_FIELDS = ['work_item_id', 'study_id', 'quest_id'] as const;
+
+function actionWorkItemIdentityLocator(
+  action: FamilyActionCatalogAction,
+  payload: Record<string, unknown>,
+) {
+  const allowedFields = new Set([
+    ...action.required_fields,
+    ...action.optional_fields,
+    ...action.workspace_locator_fields,
+  ]);
+  return Object.fromEntries(WORK_ITEM_IDENTITY_FIELDS.flatMap((field) => {
+    const value = payload[field];
+    return allowedFields.has(field) && typeof value === 'string' && value.trim()
+      ? [[field, value.trim()]]
+      : [];
+  }));
+}
+
 function storedBytesRef(value: { ref: string; sha256: string; byte_size: number }) {
   return { ref: value.ref, sha256: value.sha256, byte_size: value.byte_size };
 }
@@ -1298,6 +1317,7 @@ async function runHandlerAction(input: {
 
 async function runStageAction(input: {
   action: FamilyActionCatalogAction;
+  payload: Record<string, unknown>;
   checkoutRoot: string;
   workspaceRoot: string;
   domainId: string;
@@ -1325,6 +1345,7 @@ async function runStageAction(input: {
   });
   const workspaceLocator = canonicalJsonText({
     workspace_root: input.workspaceRoot,
+    ...actionWorkItemIdentityLocator(input.action, input.payload),
     domain_pack_root: input.checkoutRoot,
     ...(input.packageUseBinding ? { package_use_binding: input.packageUseBinding } : {}),
     standard_agent_action_run_ref: prepared.action_run_ref,
@@ -1821,6 +1842,7 @@ async function executeActionContext(input: {
     : action.execution_binding.kind === 'stage_binding'
       ? await runStageAction({
           ...common,
+          payload,
           checkoutRoot: input.checkoutRoot,
           runtimeDomainId: input.runtimeDomainId,
           runStageRuntime: input.dependencies.runStageRuntime ?? runFamilyRuntime,

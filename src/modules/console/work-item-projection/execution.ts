@@ -27,6 +27,12 @@ const MAX_DIAGNOSTIC_ATTEMPTS = 100;
 const QUEUED_STATUSES = new Set(['created', 'pending', 'queued', 'scheduled']);
 const SUCCEEDED_STATUSES = new Set(['completed', 'succeeded', 'closed']);
 const FAILED_STATUSES = new Set(['blocked', 'dead_lettered', 'failed']);
+const LIVE_STAGE_ATTEMPT_STATUSES = new Set([
+  ...QUEUED_STATUSES,
+  'running',
+  'checkpointed',
+  'human_gate',
+]);
 
 function normalizedStatus(value: unknown) {
   return stringValue(value)?.toLowerCase().replace(/[\s-]+/g, '_') ?? 'unknown';
@@ -45,6 +51,7 @@ function attemptWorkItemId(attempt: JsonRecord) {
   const taskIntake = record(locator.task_intake_ref);
   return stringValue(locator.work_item_id)
     ?? stringValue(locator.study_id)
+    ?? stringValue(locator.quest_id)
     ?? stringValue(locator.work_unit_id)
     ?? stringValue(locator.task_or_work_unit_ref)
     ?? stringValue(locator.task_ref)
@@ -139,6 +146,29 @@ function executionState(latest: JsonRecord) {
     state = 'failed';
   }
   return { state, ledgerStatus, currentness };
+}
+
+function attemptStartedAfterLifecycleSnapshot(
+  attempt: JsonRecord,
+  lifecycleSnapshotAt: string,
+) {
+  const startedAt = stringValue(record(attempt.provider_run).started_at)
+    ?? stringValue(attempt.created_at);
+  const startedTime = Date.parse(startedAt ?? '');
+  const snapshotTime = Date.parse(lifecycleSnapshotAt);
+  return Number.isFinite(startedTime)
+    && Number.isFinite(snapshotTime)
+    && startedTime > snapshotTime;
+}
+
+function currentRuntimeWakeAttempt(
+  attempts: JsonRecord[],
+  lifecycleSnapshotAt: string,
+) {
+  return attempts.find((attempt) => (
+    LIVE_STAGE_ATTEMPT_STATUSES.has(normalizedStatus(attempt.status))
+    && attemptStartedAfterLifecycleSnapshot(attempt, lifecycleSnapshotAt)
+  )) ?? null;
 }
 
 function firstRecord(...values: unknown[]) {
@@ -339,13 +369,18 @@ export function joinAttemptsToWorkItems(input: {
     }
     const latest = attempts[0]!;
     const latestExecution = executionState(latest);
+    const runtimeWakeAttempt = item.lifecycle.business_state === 'active'
+      ? null
+      : currentRuntimeWakeAttempt(attempts, item.lifecycle.last_transition_at);
     const currentStageId = item.lifecycle.business_state === 'active'
       ? item.lifecycle.current_stage_id
-      : null;
+      : stringValue(runtimeWakeAttempt?.stage_id);
     const currentStageAttempts = currentStageId
       ? attempts.filter((attempt) => stringValue(attempt.stage_id) === currentStageId)
       : [];
-    const currentAttempt = currentStageAttempts[0] ?? null;
+    const currentAttempt = item.lifecycle.business_state === 'active'
+      ? currentStageAttempts[0] ?? null
+      : runtimeWakeAttempt;
     const currentExecution = currentAttempt ? executionState(currentAttempt) : null;
     const stale = currentExecution?.currentness.projection_status === 'stale_projection';
     const attemptProjections = attempts.map((attempt) => ({

@@ -906,17 +906,40 @@ test('Hosted Stage action passes a SHA-bound request ref into Temporal StageRun 
       terminal_stage_refs: ['intake'],
       route_policy: 'ai_selected_progress_route',
     };
-    writeContracts(checkoutRoot, [action({
-      actionId: 'launch',
-      executionBinding: { kind: 'stage_binding', stage_manifest_ref: 'agent/stages/manifest.json' },
-      stageRoute,
-    })]);
+    const stageAction = {
+      ...action({
+        actionId: 'launch',
+        executionBinding: { kind: 'stage_binding', stage_manifest_ref: 'agent/stages/manifest.json' },
+        stageRoute,
+      }),
+      required_fields: ['workspace_root', 'study_id', 'value'],
+      optional_fields: ['work_item_id', 'quest_id'],
+    };
+    writeContracts(checkoutRoot, [stageAction]);
+    fs.writeFileSync(path.join(checkoutRoot, 'contracts', 'input.schema.json'), `${JSON.stringify({
+      $id: 'https://fixture.local/input.schema.json',
+      type: 'object',
+      required: ['workspace_root', 'study_id', 'value'],
+      properties: {
+        workspace_root: { type: 'string', minLength: 1 },
+        study_id: { type: 'string', minLength: 1 },
+        work_item_id: { type: 'string', minLength: 1 },
+        quest_id: { type: 'string', minLength: 1 },
+        value: { type: 'integer' },
+      },
+      additionalProperties: false,
+    })}\n`);
 
     const result = await runStandardAgentAction({
       domainId: 'mas',
       actionId: 'launch',
       workspaceRoot,
-      payload: { value: 3 },
+      payload: {
+        value: 3,
+        study_id: 'study-001',
+        work_item_id: 'work-item-001',
+        quest_id: 'quest-001',
+      },
       runId: 'stage-run',
     }, {
       resolveManagedCheckout: managed(checkoutRoot, workspaceRoot) as never,
@@ -949,6 +972,9 @@ test('Hosted Stage action passes a SHA-bound request ref into Temporal StageRun 
       'package-use:hosted-stage-test',
     );
     assert.equal(runtimeWorkspaceLocator.domain_pack_root, fs.realpathSync.native(checkoutRoot));
+    assert.equal(runtimeWorkspaceLocator.study_id, 'study-001');
+    assert.equal(runtimeWorkspaceLocator.work_item_id, 'work-item-001');
+    assert.equal(runtimeWorkspaceLocator.quest_id, 'quest-001');
     const checkpointIndex = calls[0].indexOf('--checkpoint-ref');
     assert.match(calls[0][checkpointIndex + 1], /^file:/);
     assert.equal(fs.existsSync(new URL(calls[0][checkpointIndex + 1])), true);

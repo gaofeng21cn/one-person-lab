@@ -200,7 +200,11 @@ function attempt(input: {
   qualityCycleId?: string;
   qualityRoundIndex?: number;
   qualityScopeBudget?: Record<string, unknown>;
+  createdAt?: string;
+  identityField?: 'work_item_id' | 'study_id' | 'quest_id' | 'work_unit_id';
 }) {
+  const createdAt = input.createdAt ?? '2026-07-10T00:00:00.000Z';
+  const identityField = input.identityField ?? 'work_unit_id';
   return {
     stage_attempt_id: input.id,
     provider_kind: 'temporal',
@@ -209,7 +213,7 @@ function attempt(input: {
     stage_id: input.stageId ?? '01-study_intake',
     workspace_locator: {
       workspace_root: input.root,
-      work_unit_id: input.workItemId,
+      [identityField]: input.workItemId,
     },
     executor_kind: 'codex_cli',
     status: input.status,
@@ -223,13 +227,13 @@ function attempt(input: {
     blocked_reason: input.status === 'failed' ? 'historical_provider_failure' : null,
     provider_run: {
       provider_status: input.status,
-      started_at: '2026-07-10T00:00:00.000Z',
+      started_at: createdAt,
       completed_at: input.status === 'running' ? null : input.updatedAt,
       last_heartbeat_at: input.status === 'running' ? input.updatedAt : null,
     },
     activity_events: input.tokenUsage ? [{ token_usage: input.tokenUsage, usage_status: 'observed' }] : [],
     route_impact: input.repairRoute ? { current_repair_route: input.repairRoute } : {},
-    created_at: '2026-07-10T00:00:00.000Z',
+    created_at: createdAt,
     updated_at: input.updatedAt,
   };
 }
@@ -595,6 +599,69 @@ test('TelemetryObserved accepts non-applicable current-stage usage without weake
       [missingCondition.status, missingCondition.reason, missingCondition.severity],
       ['Unknown', 'token_usage_missing', 'none'],
     );
+  } finally {
+    fs.rmSync(input.root, { recursive: true, force: true });
+  }
+});
+
+test('paused lifecycle projects only a post-snapshot live wake attempt as current execution', () => {
+  const input = fixture();
+  try {
+    const workItemId = '004-dpcc-longitudinal-care-inertia-intensification-gap';
+    const lifecycleSnapshotAt = new Date('2026-07-13T00:00:00.000Z');
+    fs.utimesSync(
+      path.join(input.diabetes, 'workspace_index.json'),
+      lifecycleSnapshotAt,
+      lifecycleSnapshotAt,
+    );
+    const wakeAttempt = attempt({
+      id: 'sat-paused-explicit-wake',
+      root: input.diabetes,
+      workItemId,
+      identityField: 'quest_id',
+      status: 'queued',
+      stageId: 'baseline_and_evidence_setup',
+      createdAt: '2026-07-14T00:00:00.000Z',
+      updatedAt: '2026-07-14T00:01:00.000Z',
+    });
+    const projection = buildWorkItemProjectionV2({
+      profile: 'full',
+      bindings: input.bindings,
+      packageProjectionItems: input.packageProjectionItems,
+      packageStatusById: input.packageStatusById,
+      attempts: [
+        attempt({
+          id: 'sat-paused-terminal-after-snapshot',
+          root: input.diabetes,
+          workItemId,
+          status: 'completed',
+          stageId: 'baseline_and_evidence_setup',
+          createdAt: '2026-07-15T00:00:00.000Z',
+          updatedAt: '2026-07-15T00:01:00.000Z',
+        }),
+        attempt({
+          id: 'sat-paused-old-live-history',
+          root: input.diabetes,
+          workItemId,
+          status: 'running',
+          stageId: 'baseline_and_evidence_setup',
+          createdAt: '2026-07-12T00:00:00.000Z',
+          updatedAt: '2026-07-16T00:01:00.000Z',
+        }),
+        wakeAttempt,
+      ],
+      resolveDescriptor: input.resolveDescriptor,
+      generatedAt: '2026-07-13T00:00:00.000Z',
+    });
+    const item = projection.items.find((candidate) => candidate.identity.work_item_id === workItemId)!;
+
+    assert.equal(item.lifecycle.business_state, 'paused');
+    assert.equal(item.lifecycle.current_stage_id, null);
+    assert.equal(item.execution.current_stage_id, 'baseline_and_evidence_setup');
+    assert.equal(item.execution.stage_id, 'baseline_and_evidence_setup');
+    assert.equal(item.execution.attempt_id, 'sat-paused-explicit-wake');
+    assert.equal(item.execution.state, 'queued');
+    assert.equal(item.execution.diagnostic_reason, null);
   } finally {
     fs.rmSync(input.root, { recursive: true, force: true });
   }
