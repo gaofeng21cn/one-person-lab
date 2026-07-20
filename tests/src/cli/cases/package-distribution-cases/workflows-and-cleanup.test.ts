@@ -101,6 +101,13 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.match(workflow, /one-person-lab-manifest:latest-stable/);
   assert.match(workflow, /OPL_PREVIOUS_PACKAGE_MANIFEST/);
   assert.match(workflow, /args\+=\(--previous-manifest "\$OPL_PREVIOUS_PACKAGE_MANIFEST"\)/);
+  for (const source of [workflow, dailyPackageWorkflow]) {
+    assert.match(source, /previous_app_version="\$\(jq -r '\.release_set\.components\.app\.version'/);
+    assert.match(source, /gh release view "v\$previous_app_version"/);
+    assert.match(source, /jq -e '\.isDraft == false and \.isPrerelease == false and \.publishedAt != null'/);
+    assert.match(source, /Previous latest-stable App release v\$previous_app_version is unavailable or no longer stable/);
+    assert.ok(source.indexOf('gh release view "v$previous_app_version"') < source.indexOf('gh release list --repo gaofeng21cn/one-person-lab-app'));
+  }
   assert.ok(workflow.indexOf('Fetch previous latest-stable Release Set') < workflow.indexOf('Build Package archives and Release Set manifests'));
   assert.ok(workflow.indexOf('Verify exact release roots') < workflow.indexOf('Resolve immutable OPL App component'));
   assert.match(workflow, /OPL_RELEASE_HARNESS_ROOT: \$\{\{ github\.workspace \}\}\/\.release-harness/);
@@ -220,6 +227,9 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.doesNotMatch(dailyPackageWorkflow, /publish_required="true"/);
   assert.match(dailyPackageWorkflow, /changed_packages_json:/);
   assert.match(dailyPackageWorkflow, /owner_cohort_artifact_name:/);
+  assert.match(dailyPackageWorkflow, /app_version: \$\{\{ steps\.app\.outputs\.app_version \}\}/);
+  assert.match(dailyPackageWorkflow, /app_version: \$\{\{ needs\.detect-package-channel-change\.outputs\.app_version \}\}/);
+  assert.match(dailyPackageWorkflow, /echo "app_version=\$app_version" >> "\$GITHUB_OUTPUT"/);
   assert.match(dailyPackageWorkflow, /promotion_target:\s*candidate/);
   assert.doesNotMatch(dailyPackageWorkflow, /\n\s*push:\n/);
   assert.doesNotMatch(dailyPackageWorkflow, /one-person-lab-webui/);

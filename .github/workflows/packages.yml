@@ -280,12 +280,22 @@ jobs:
         run: |
           set -euo pipefail
           requested="${{ inputs.app_version }}"
+          app_version=""
           if [ -n "$requested" ]; then
             app_version="${requested#v}"
           elif [ -n "${OPL_PREVIOUS_PACKAGE_MANIFEST:-}" ] \
             && [ "$(jq -r '.release_set.surface_kind // empty' "$OPL_PREVIOUS_PACKAGE_MANIFEST")" = opl_release_set.v2 ]; then
-            app_version="$(jq -r '.release_set.components.app.version' "$OPL_PREVIOUS_PACKAGE_MANIFEST")"
-          else
+            previous_app_version="$(jq -r '.release_set.components.app.version' "$OPL_PREVIOUS_PACKAGE_MANIFEST")"
+            if gh release view "v$previous_app_version" --repo gaofeng21cn/one-person-lab-app \
+              --json isDraft,isPrerelease,publishedAt > "$RUNNER_TEMP/opl-previous-app-release.json" 2>/dev/null \
+              && jq -e '.isDraft == false and .isPrerelease == false and .publishedAt != null' \
+                "$RUNNER_TEMP/opl-previous-app-release.json" >/dev/null; then
+              app_version="$previous_app_version"
+            else
+              echo "::notice::Previous latest-stable App release v$previous_app_version is unavailable or no longer stable; resolving the latest published stable App release."
+            fi
+          fi
+          if [ -z "$app_version" ]; then
             app_version="$(gh release list --repo gaofeng21cn/one-person-lab-app --limit 50 \
               --json tagName,isDraft,isPrerelease,publishedAt \
               --jq '[.[] | select(.isDraft == false and .isPrerelease == false and .publishedAt != null)][0].tagName' | sed 's/^v//')"

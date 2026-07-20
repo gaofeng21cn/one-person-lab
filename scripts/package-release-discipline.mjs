@@ -289,6 +289,15 @@ function validateWorkflow(manifest, manifestPath, failures) {
   assertCondition(/OPL_PACKAGE_RELEASE_GATE:\s*daily_package_channel_detection/.test(dailySource), 'Daily detection build must carry an explicit candidate-only release gate', failures);
   assertCondition(/--owner-cohort-mode\s+framework-projection/.test(dailySource), 'Daily detection must freeze Framework-selected owner commits instead of unrelated owner HEADs', failures);
   assertCondition(/one-person-lab-manifest:latest-stable/.test(dailySource), 'Daily workflow must compare with latest-stable', failures);
+  for (const [label, workflowSource] of [['Package', source], ['Daily', dailySource]]) {
+    assertCondition(
+      workflowSource.includes('gh release view "v$previous_app_version"')
+        && workflowSource.includes("jq -e '.isDraft == false and .isPrerelease == false and .publishedAt != null'")
+        && workflowSource.includes('Previous latest-stable App release v$previous_app_version is unavailable or no longer stable'),
+      `${label} workflow must recover when the previous stable App release is unavailable`,
+      failures,
+    );
+  }
   assertCondition(
     /owner_manifest=""[\s\S]*gh release download[\s\S]*app_commit=""[\s\S]*if \[ -n "\$owner_manifest" \]; then[\s\S]*jq -r \.source_commit "\$owner_manifest"[\s\S]*if \[ -z "\$app_commit" \]; then[\s\S]*gh api "repos\/gaofeng21cn\/one-person-lab-app\/commits\/v\$app_version"/.test(dailySource),
     'Daily App resolution must prefer the published owner component manifest and use tag readback only as fallback',
@@ -298,6 +307,8 @@ function validateWorkflow(manifest, manifestPath, failures) {
   assertCondition(/publish_required == 'true'/.test(dailySource), 'Daily workflow must skip publication when unchanged', failures);
   assertCondition(/promotion_target:\s*candidate/.test(dailySource), 'Daily workflow may promote candidate only', failures);
   assertCondition(/owner_cohort_artifact_name/.test(dailySource), 'Daily detection must pass the frozen owner cohort into publication', failures);
+  assertCondition(/app_version:\s*\$\{\{ steps\.app\.outputs\.app_version \}\}/.test(dailySource)
+    && /app_version:\s*\$\{\{ needs\.detect-package-channel-change\.outputs\.app_version \}\}/.test(dailySource), 'Daily publication must bind the exact App version selected during detection', failures);
   assertCondition(/expected_framework_source_commit:\s*\$\{\{ github\.sha \}\}/.test(dailySource), 'Daily publication must bind packages.yml to its exact Framework workflow commit', failures);
   assertCondition(!/:latest(?:["'\s]|$)/m.test(dailySource), 'Daily Package workflow must not use bare latest', failures);
 }

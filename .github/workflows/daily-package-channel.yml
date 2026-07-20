@@ -38,6 +38,7 @@ jobs:
       release_set_generation: ${{ steps.generation.outputs.release_set_generation }}
       changed_packages_json: ${{ steps.decide.outputs.changed_packages_json }}
       owner_cohort_artifact_name: ${{ steps.generation.outputs.owner_cohort_artifact_name }}
+      app_version: ${{ steps.app.outputs.app_version }}
     steps:
       - name: Checkout OPL
         uses: actions/checkout@v6
@@ -101,23 +102,36 @@ jobs:
           fi
 
       - name: Build candidate Package archives and Release Set manifest
+        id: app
         shell: bash
         env:
           OPL_PACKAGE_RELEASE_GATE: daily_package_channel_detection
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          app_version=""
           if [ -n "${{ steps.current.outputs.current_manifest }}" ] \
             && [ "$(jq -r '.release_set.surface_kind // empty' '${{ steps.current.outputs.current_manifest }}')" = opl_release_set.v2 ]; then
-            app_version="$(jq -r '.release_set.components.app.version' '${{ steps.current.outputs.current_manifest }}')"
-          else
+            previous_app_version="$(jq -r '.release_set.components.app.version' '${{ steps.current.outputs.current_manifest }}')"
+            if gh release view "v$previous_app_version" --repo gaofeng21cn/one-person-lab-app \
+              --json isDraft,isPrerelease,publishedAt > "$RUNNER_TEMP/opl-previous-app-release.json" 2>/dev/null \
+              && jq -e '.isDraft == false and .isPrerelease == false and .publishedAt != null' \
+                "$RUNNER_TEMP/opl-previous-app-release.json" >/dev/null; then
+              app_version="$previous_app_version"
+            else
+              echo "::notice::Previous latest-stable App release v$previous_app_version is unavailable or no longer stable; resolving the latest published stable App release."
+            fi
+          fi
+          if [ -z "$app_version" ]; then
             app_version="$(gh release list --repo gaofeng21cn/one-person-lab-app --limit 50 \
               --json tagName,isDraft,isPrerelease,publishedAt \
               --jq '[.[] | select(.isDraft == false and .isPrerelease == false and .publishedAt != null)][0].tagName' | sed 's/^v//')"
           fi
+          [[ "$app_version" =~ ^[0-9]{2}\.[0-9]{1,2}\.[0-9]{1,2}$ ]]
           gh release view "v$app_version" --repo gaofeng21cn/one-person-lab-app \
             --json tagName,isDraft,isPrerelease,publishedAt,targetCommitish,assets,url \
             > "$RUNNER_TEMP/opl-app-release.json"
+          echo "app_version=$app_version" >> "$GITHUB_OUTPUT"
           owner_manifest=""
           mkdir -p "$RUNNER_TEMP/opl-app-owner-component"
           if gh release download "v$app_version" --repo gaofeng21cn/one-person-lab-app \
@@ -190,6 +204,7 @@ jobs:
     with:
       release_set_generation: ${{ needs.detect-package-channel-change.outputs.release_set_generation }}
       expected_framework_source_commit: ${{ github.sha }}
+      app_version: ${{ needs.detect-package-channel-change.outputs.app_version }}
       release_gate: ${{ inputs.force_publish && 'daily_package_channel_forced' || 'daily_package_channel_changed' }}
       changed_packages_json: ${{ needs.detect-package-channel-change.outputs.changed_packages_json }}
       promotion_target: candidate
