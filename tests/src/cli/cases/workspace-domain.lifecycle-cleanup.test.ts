@@ -516,20 +516,15 @@ test('MAS current standard-agent evidence closes cleanup ledger without resurrec
   );
 });
 
-test('MAS standard-agent evidence survives manifest normalization without authorizing physical delete', () => {
+test('MAS legacy workspace evidence stays diagnostic after managed owner contract selection', () => {
   for (const scenario of [
     {
       prefix: 'opl-agent-mas-cleanup-normalized-',
       manifest: fullMasManifestWithCurrentStandardAgentEvidence(),
-      evidenceRefs: [],
     },
     {
       prefix: 'opl-agent-mas-cutover-cleanup-',
       manifest: fullMasManifestWithCutoverPendingStandardAgentEvidence(),
-      evidenceRefs: [
-        '/product_entry_manifest/functional_consumer_boundary/standard_agent_purity.default_caller_readiness_status=opl_generated_default_caller_ready',
-        '/product_entry_manifest/functional_consumer_boundary/standard_agent_purity.source_purity_cutover_status=physical_wrapper_retirement_pending',
-      ],
     },
   ]) {
     const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
@@ -551,16 +546,12 @@ test('MAS standard-agent evidence survives manifest normalization without author
       const descriptor = runCli(['agents', 'descriptor', '--domain', 'mas'], env);
       const gate = descriptor.family_agent_descriptor.standard_domain_agent_skeleton
         .physical_skeleton_follow_through_gate;
-      const plan = gate.executable_cleanup_plan;
+      const diagnostic = descriptor.family_agent_descriptor.legacy_workspace_manifest_diagnostic;
 
-      assert.equal(gate.status, 'ready_for_supervised_physical_delete_or_history_tombstone');
-      assert.equal(plan.plan_status, 'ready');
-      assert.deepEqual(plan.actions, []);
-      assert.equal(gate.delete_gate.opl_cleanup_apply_can_execute, true);
-      assert.equal(gate.delete_gate.can_execute_domain_physical_delete, false);
-      for (const evidenceRef of scenario.evidenceRefs) {
-        assert.equal(gate.evidence_refs.includes(evidenceRef), true);
-      }
+      assert.equal(gate, null);
+      assert.equal(diagnostic.manifest_status, 'resolved');
+      assert.equal(diagnostic.used_for_standard_agent_membership, false);
+      assert.equal(diagnostic.used_for_owner_action_or_stage_contracts, false);
     } finally {
       fs.rmSync(stateRoot, { recursive: true, force: true });
     }
