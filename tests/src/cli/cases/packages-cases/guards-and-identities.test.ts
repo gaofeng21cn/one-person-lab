@@ -384,7 +384,7 @@ test('package actions describe both positional and flagged package selection', (
   );
 });
 
-test('OPL Flow manifest resolves its package-owned 0.1.23 carrier and managed policy payload', () => {
+test('OPL Flow manifest resolves its package-owned 0.1.24 carrier and managed policy payload', () => {
   const manifestPath = path.join(repoRoot, 'contracts', 'opl-framework', 'packages', 'opl-flow.json');
   const manifest = normalizePackageManifest(
     parseJsonText(fs.readFileSync(manifestPath, 'utf8')),
@@ -392,11 +392,11 @@ test('OPL Flow manifest resolves its package-owned 0.1.23 carrier and managed po
   );
 
   assert.equal(manifest.package_id, 'opl-flow');
-  assert.equal(manifest.version, '0.1.23');
+  assert.equal(manifest.version, '0.1.24');
   assert.deepEqual(manifest.required_skill_ids, ['opl-flow']);
   assert.equal(
     manifest.plugin_payload_manifest_url,
-    path.join(repoRoot, 'contracts', 'opl-framework', 'packages', 'payloads', 'opl-flow-0.1.23.json'),
+    path.join(repoRoot, 'contracts', 'opl-framework', 'packages', 'payloads', 'opl-flow-0.1.24.json'),
   );
   assert.deepEqual(manifest.managed_policy_surface, {
     policy_kind: 'opl_flow_workflow_policy',

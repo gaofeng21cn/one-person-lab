@@ -114,7 +114,7 @@ exit 1
     const flow = directory.entries.find((entry: any) => entry.package_id === 'opl-flow');
     const scholarSkills = directory.entries.find((entry: any) => entry.package_id === 'mas-scholar-skills');
     assert.equal(flow.package_role, 'workflow_profile');
-    assert.equal(flow.projected_version, '0.1.23');
+    assert.equal(flow.projected_version, '0.1.24');
     assert.equal(flow.selected_version, null);
     assert.equal(flow.stable_version, null);
     assert.equal(flow.source_explanation.kind, 'first_party_framework_projection');
@@ -227,7 +227,7 @@ test('first-party Directory versions come only from the managed Release Set sele
     },
   });
   const flow = directory.entries.find((entry) => entry.package_id === 'opl-flow')!;
-  assert.equal(flow.projected_version, '0.1.23');
+  assert.equal(flow.projected_version, '0.1.24');
   assert.equal(flow.selected_version, '0.1.19');
   assert.equal(flow.stable_version, '0.1.19');
   assert.equal(flow.version_currentness.status, 'live_release_set');
