@@ -126,6 +126,11 @@ test('formal quality Attempt uses one same-thread closeout-only resume without c
     assert.match(invocation, /--config model_reasoning_effort="low"/);
     assert.match(invocation, /protocol_closeout_resume, not Review/);
     assert.match(invocation, /Do not call tools, edit files, change artifact bytes/);
+    assert.match(invocation, /surface_kind "stage_attempt_closeout_packet" exactly/);
+    assert.match(invocation, /Do not use "opl_stage_attempt_typed_closeout"/);
+    assert.match(invocation, /non-empty closeout_refs array/);
+    assert.match(invocation, /closeout_ref_metadata with the identical ref/);
+    assert.match(invocation, /Never output typed_closeout_ref_metadata/);
   } finally {
     restoreEnv('OPL_CODEX_BIN', previousBin);
     restoreEnv('OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS', previousRecoveryTimeout);

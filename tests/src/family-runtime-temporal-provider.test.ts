@@ -55,6 +55,7 @@ function workflowInput(): TemporalStageAttemptWorkflowInput {
 
 test('Temporal stage attempt contract exposes Codex runner total and no-output budgets', () => {
   const contract = buildTemporalStageAttemptWorkflowContract();
+  assert.equal(DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS, 900_000);
   assert.equal(
     contract.activity_timeout_policy.codex_stage_activity.runner_timeout_ms,
     DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS,

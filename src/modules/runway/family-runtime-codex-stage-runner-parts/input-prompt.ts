@@ -325,6 +325,12 @@ export function protocolCloseoutResumePrompt(attempt: JsonRecord) {
     'This is protocol_closeout_resume, not Review, repair, another quality round, or permission to continue authoring.',
     'Do not call tools, edit files, change artifact bytes, add findings, reconsider the work, or choose a different semantic route.',
     'Bind the closeout to the existing Attempt and exact artifacts already produced. Output one JSON object and no prose.',
+    'Use surface_kind "stage_attempt_closeout_packet" exactly. Do not use "opl_stage_attempt_typed_closeout" or any other surface alias.',
+    `Use stage_attempt_id "${attemptId}" exactly.`,
+    'Use a non-empty closeout_refs array containing only refs for artifacts or receipts that already exist from this Attempt.',
+    'For every artifact ref in closeout_refs, include a matching refs-only object in closeout_ref_metadata with the identical ref (or uri) and exact sha256. Do not bind an input-only ref as a substitute for a produced artifact.',
+    'closeout_ref_metadata objects may contain only ref_kind, kind, uri, sha256, ref, size_bytes, and artifact_identity_receipt_ref.',
+    'Never output typed_closeout_ref_metadata or any renamed closeout field.',
   ].join('\n');
 }
 
