@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -120,6 +121,12 @@ test('formal quality Attempt uses one same-thread closeout-only resume without c
     assert.equal(protocol.counts_as_review, false);
     assert.equal(protocol.consumes_quality_budget, false);
     assert.equal(protocol.may_change_artifact_bytes, false);
+    assert.equal(protocol.initial_route_impact_candidate_observed, false);
+    assert.equal(protocol.initial_route_impact_preserved, false);
+    const resumedQuality = receipt.closeout_packet?.route_impact?.stage_quality_cycle as
+      | Record<string, unknown>
+      | undefined;
+    assert.equal(resumedQuality?.outcome, 'pass');
     const invocation = fs.readFileSync(invocationLog, 'utf8');
     assert.equal(invocation.match(/exec resume --skip-git-repo-check/g)?.length, 1);
     assert.match(invocation, /--config sandbox_mode="read-only"/);
@@ -137,6 +144,136 @@ test('formal quality Attempt uses one same-thread closeout-only resume without c
     restoreEnv('OPL_CODEX_SESSION_RECOVERY_INTERVAL_MS', previousRecoveryInterval);
     restoreEnv('OPL_CODEX_PROTOCOL_CLOSEOUT_RESUME_TIMEOUT_MS', previousProtocolResumeTimeout);
     fs.rmSync(invocationLog, { force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('protocol closeout resume preserves the initial quality route and verifies its artifact identity', async () => {
+  const attemptId = 'sat-protocol-route-merge';
+  const artifactRef = 'artifacts/conditional-manuscript.md';
+  const artifactBytes = Buffer.from('bounded conditional manuscript\n');
+  const artifactHash = `sha256:${crypto.createHash('sha256').update(artifactBytes).digest('hex')}`;
+  const initialRouteImpact = {
+    stage_quality_cycle: {
+      artifact_refs: [artifactRef],
+      artifact_hashes: [artifactHash],
+    },
+    stage_route_recommendation: {
+      decision_kind: 'reverse',
+      target_stage_id: 'bounded_analysis_campaign',
+      reason: 'The candidate analysis still requires formal admission.',
+      evidence_refs: [artifactRef],
+    },
+  };
+  const initialCloseoutCandidate = {
+    surface_kind: 'opl_stage_attempt_closeout',
+    version: 'opl-stage-attempt-closeout.v1',
+    stage_attempt_id: attemptId,
+    closeout_ref_metadata: [{
+      kind: 'conditional_manuscript_delta',
+      ref: artifactRef,
+      sha256: artifactHash,
+      size_bytes: artifactBytes.length,
+    }],
+    route_impact: initialRouteImpact,
+  };
+  const resumedCloseout = {
+    surface_kind: 'stage_attempt_closeout_packet',
+    stage_attempt_id: attemptId,
+    closeout_refs: [artifactRef],
+    closeout_ref_metadata: [{
+      kind: 'conditional_manuscript_delta',
+      ref: artifactRef,
+      sha256: artifactHash,
+      size_bytes: artifactBytes.length,
+    }],
+  };
+  const initialEvent = JSON.stringify({
+    type: 'item.completed',
+    item: { type: 'agent_message', id: 'initial-closeout', text: JSON.stringify(initialCloseoutCandidate) },
+  });
+  const resumeEvent = JSON.stringify({
+    type: 'item.completed',
+    item: { type: 'agent_message', id: 'resume-closeout', text: JSON.stringify(resumedCloseout) },
+  });
+  const script = [
+    'if [ "$1" = "exec" ] && [ "${2:-}" = "resume" ]; then',
+    '  printf \'{"type":"thread.started","thread_id":"thread-protocol-route-merge"}\\n\'',
+    '  printf "%s\\n" ' + JSON.stringify(resumeEvent),
+    '  printf \'{"type":"turn.completed"}\\n\'',
+    '  exit 0',
+    'fi',
+    'if [ "$1" = "exec" ]; then',
+    '  printf \'{"type":"thread.started","thread_id":"thread-protocol-route-merge"}\\n\'',
+    '  printf "%s\\n" ' + JSON.stringify(initialEvent),
+    '  printf \'{"type":"turn.completed"}\\n\'',
+    '  exit 0',
+    'fi',
+    'exit 64',
+  ].join('\n');
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(script);
+  const artifactPath = path.join(fixtureRoot, artifactRef);
+  fs.mkdirSync(path.dirname(artifactPath), { recursive: true });
+  fs.writeFileSync(artifactPath, artifactBytes);
+  const previousBin = process.env.OPL_CODEX_BIN;
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  const previousRecoveryTimeout = process.env.OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS;
+  const previousRecoveryInterval = process.env.OPL_CODEX_SESSION_RECOVERY_INTERVAL_MS;
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    process.env.OPL_STATE_DIR = path.join(fixtureRoot, 'opl-state');
+    process.env.OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS = '1';
+    process.env.OPL_CODEX_SESSION_RECOVERY_INTERVAL_MS = '1';
+    const receipt = await runPublicCodexStageRunner({
+      attempt: {
+        stage_attempt_id: attemptId,
+        stage_run_id: 'sr-protocol-route-merge',
+        quality_cycle_id: 'quality-cycle:sr-protocol-route-merge',
+        attempt_role: 'producer',
+        quality_round_index: 0,
+        stage_id: 'manuscript_authoring',
+        domain_id: 'example-domain',
+        workspace_locator: { workspace_root: fixtureRoot },
+        checkpoint_refs: ['packet:authoring'],
+      },
+      runnerMode: 'codex_cli',
+      timeoutMs: 10_000,
+      env: { OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'host' },
+    });
+
+    assert.equal(receipt.process_output_summary?.protocol_closeout_resume?.status, 'completed');
+    assert.equal(
+      receipt.process_output_summary?.protocol_closeout_resume?.initial_route_impact_candidate_observed,
+      true,
+    );
+    assert.equal(
+      receipt.process_output_summary?.protocol_closeout_resume?.initial_route_impact_preserved,
+      true,
+    );
+    assert.equal(receipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet');
+    assert.equal(receipt.closeout_packet?.authority_boundary.opl, 'closeout_transport_only');
+    assert.equal('version' in (receipt.closeout_packet ?? {}), false);
+    assert.deepEqual(
+      receipt.closeout_packet?.route_impact?.stage_route_recommendation,
+      initialRouteImpact.stage_route_recommendation,
+    );
+    assert.deepEqual(
+      receipt.closeout_packet?.route_impact?.stage_quality_cycle,
+      {
+        artifact_refs: [artifactRef],
+        artifact_hashes: [artifactHash.slice('sha256:'.length)],
+      },
+    );
+    assert.deepEqual(receipt.closeout_packet?.closeout_refs, [artifactRef]);
+    assert.equal(
+      typeof receipt.closeout_packet?.closeout_ref_metadata?.[0]?.artifact_identity_receipt_ref,
+      'string',
+    );
+  } finally {
+    restoreEnv('OPL_CODEX_BIN', previousBin);
+    restoreEnv('OPL_STATE_DIR', previousStateDir);
+    restoreEnv('OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS', previousRecoveryTimeout);
+    restoreEnv('OPL_CODEX_SESSION_RECOVERY_INTERVAL_MS', previousRecoveryInterval);
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });

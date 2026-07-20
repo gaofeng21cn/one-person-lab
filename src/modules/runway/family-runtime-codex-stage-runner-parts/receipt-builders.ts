@@ -124,6 +124,8 @@ export type CodexStageRunnerProcessOutputSummary = {
     counts_as_review: false;
     consumes_quality_budget: false;
     may_change_artifact_bytes: boolean;
+    initial_route_impact_candidate_observed: boolean;
+    initial_route_impact_preserved: boolean;
     protocol_violation?: 'tool_or_command_event_observed';
     tool_event_kinds?: Array<'command_execution' | 'unsupported_function_call'>;
   };

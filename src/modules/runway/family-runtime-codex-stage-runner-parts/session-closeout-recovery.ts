@@ -6,9 +6,13 @@ import { parseJsonText } from '../../../kernel/json-file.ts';
 import {
   normalizeTypedStageCloseoutPacket,
 } from './closeout-normalization.ts';
-import { normalizeTimeoutMs } from './shared.ts';
+import {
+  isRecord,
+  normalizeTimeoutMs,
+  type JsonRecord,
+} from './shared.ts';
 
-export function parseCloseoutFromCodexMessages(messages: string[]) {
+export function parseTerminalJsonRecordFromCodexMessages(messages: string[]): JsonRecord | null {
   const terminalMessages = messages.filter((entry) => entry.trim().length > 0);
   if (terminalMessages.length === 0) {
     return null;
@@ -23,12 +27,23 @@ export function parseCloseoutFromCodexMessages(messages: string[]) {
     }
     try {
       const parsed = parseJsonText(suffix.trim());
-      return normalizeTypedStageCloseoutPacket(parsed);
+      if (isRecord(parsed)) return parsed;
     } catch {
-      // Keep fail-closed: only an exact terminal JSON object is accepted.
+      // Keep scanning only adjacent terminal message chunks for one exact JSON object.
     }
   }
   return null;
+}
+
+export function parseCloseoutFromCodexMessages(messages: string[]) {
+  const candidate = parseTerminalJsonRecordFromCodexMessages(messages);
+  if (!candidate) return null;
+  try {
+    return normalizeTypedStageCloseoutPacket(candidate);
+  } catch {
+    // Keep fail-closed: an exact JSON object still must satisfy the typed closeout contract.
+    return null;
+  }
 }
 
 function sleep(ms: number) {
