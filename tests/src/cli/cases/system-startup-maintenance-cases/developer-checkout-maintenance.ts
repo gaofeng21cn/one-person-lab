@@ -1,5 +1,6 @@
 import { assert, fs, os, path, runCli, test } from '../../helpers.ts';
 import { runGitFixtureCommand } from '../../helpers-parts/family-fixtures.ts';
+import { runModuleStartupMaintenance } from '../../../../../src/modules/connect/system-installation/startup-maintenance.ts';
 import {
   createCurrentCodexFixture,
   createStartupDomainModuleRemotes,
@@ -9,6 +10,53 @@ import {
   writeStartupPackageChannelFixture,
 } from './shared.ts';
 import { scholarSkillsPackageFixture } from '../system-startup-maintenance-fixtures.ts';
+
+test('system startup-maintenance leaves healthy Full runtime launch sources to package reconciliation', () => {
+  const targets = [
+    'medautoscience',
+    'medautogrant',
+    'redcube',
+    'oplmetaagent',
+    'oplbookforge',
+  ].map((targetId) => runModuleStartupMaintenance({
+    module_id: targetId,
+    default_install: true,
+    installed: true,
+    install_origin: 'env_override',
+    health_status: 'ready',
+    git: {
+      sync_status: 'no_upstream',
+      dirty: false,
+    },
+    source_policy: {
+      effective_install_update_source: 'full_runtime',
+      configured_by: 'full_runtime_override',
+    },
+  } as any));
+
+  assert.deepEqual(targets.map((target) => ({
+    target_id: target.target_id,
+    status: target.status,
+    reason: target.reason,
+    action: target.action,
+    result: target.result,
+    error: target.error,
+  })), [
+    'medautoscience',
+    'medautogrant',
+    'redcube',
+    'oplmetaagent',
+    'oplbookforge',
+  ].map((targetId) => ({
+    target_id: targetId,
+    status: 'skipped',
+    reason: 'full_runtime_launch_source_owned_by_package_reconciliation',
+    action: null,
+    result: null,
+    error: null,
+  })));
+  assert.equal(targets.some((target) => target.status === 'manual_required'), false);
+});
 
 test('system startup-maintenance syncs explicit developer checkouts and reports dirty managed checkouts', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-startup-maintenance-manual-home-'));

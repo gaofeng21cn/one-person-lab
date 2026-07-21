@@ -180,7 +180,25 @@ function readBlockedWorkflowStep(target: StartupMaintenanceModuleTarget) {
   return null;
 }
 
-function runModuleStartupMaintenance(module: ModuleStatus): StartupMaintenanceModuleTarget {
+function isHealthyFullRuntimeLaunchSource(module: ModuleStatus) {
+  return module.installed
+    && module.install_origin === 'env_override'
+    && module.health_status === 'ready'
+    && module.source_policy.effective_install_update_source === 'full_runtime'
+    && module.source_policy.configured_by === 'full_runtime_override';
+}
+
+export function runModuleStartupMaintenance(module: ModuleStatus): StartupMaintenanceModuleTarget {
+  if (isHealthyFullRuntimeLaunchSource(module)) {
+    return buildTarget(module, {
+      status: 'skipped',
+      reason: 'full_runtime_launch_source_owned_by_package_reconciliation',
+      action: null,
+      result: null,
+      error: null,
+    });
+  }
+
   const plan = shouldAutoMaintain(module);
   if (!plan.action) {
     return buildTarget(module, {
