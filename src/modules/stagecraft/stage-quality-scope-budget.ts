@@ -14,7 +14,7 @@ export type StageQualityScopeBudget = {
   version: 'opl-stage-quality-scope-budget.v1';
   max_attempts: number;
   max_elapsed_ms: number;
-  max_tokens: number;
+  max_tokens: number | null;
   token_budget_requires_observed_usage: true;
   foreground_execution_must_use_managed_attempt: true;
 };
@@ -26,7 +26,7 @@ export type StageQualityScopeBudgetUsage = {
 };
 
 export const DEFAULT_STAGE_QUALITY_SCOPE_MAX_ELAPSED_MS = 6 * 60 * 60 * 1000;
-export const DEFAULT_STAGE_QUALITY_SCOPE_MAX_TOKENS = 1_000_000;
+export const DEFAULT_STAGE_QUALITY_SCOPE_MAX_TOKENS = null;
 
 export function aggregateStageQualityScopeTokenUsage(
   observations: Array<number | null | undefined>,
@@ -123,12 +123,14 @@ export function normalizeStageQualityScopeBudget(
     1,
     7 * 24 * 60 * 60 * 1000,
   );
-  const maxTokens = boundedInteger(
-    input.max_tokens ?? DEFAULT_STAGE_QUALITY_SCOPE_MAX_TOKENS,
-    'scope_budget.max_tokens',
-    1,
-    10_000_000,
-  );
+  const maxTokens = input.max_tokens === undefined || input.max_tokens === null
+    ? DEFAULT_STAGE_QUALITY_SCOPE_MAX_TOKENS
+    : boundedInteger(
+        input.max_tokens,
+        'scope_budget.max_tokens',
+        1,
+        Number.MAX_SAFE_INTEGER,
+      );
   if (
     input.token_budget_requires_observed_usage !== undefined
     && input.token_budget_requires_observed_usage !== true
@@ -173,7 +175,13 @@ export function evaluateStageQualityScopeBudget(input: {
   const exhaustedReasons: StageQualityScopeBudgetStopReason[] = [];
   if (attemptsUsed >= budget.max_attempts) exhaustedReasons.push('max_attempts_exhausted');
   if (elapsedMs >= budget.max_elapsed_ms) exhaustedReasons.push('max_elapsed_exhausted');
-  if (tokensUsed !== null && tokensUsed >= budget.max_tokens) exhaustedReasons.push('max_tokens_exhausted');
+  if (
+    budget.max_tokens !== null
+    && tokensUsed !== null
+    && tokensUsed >= budget.max_tokens
+  ) {
+    exhaustedReasons.push('max_tokens_exhausted');
+  }
   const exhausted = exhaustedReasons.length > 0;
   const highPriorityOpen = input.openFindingPriorities.some((priority) => priority === 'p0' || priority === 'p1');
   const disposition = !exhausted
@@ -196,7 +204,9 @@ export function evaluateStageQualityScopeBudget(input: {
       elapsed_ms: elapsedMs,
       elapsed_ms_remaining: Math.max(0, budget.max_elapsed_ms - elapsedMs),
       tokens_used: tokensUsed,
-      tokens_remaining: tokensUsed === null ? null : Math.max(0, budget.max_tokens - tokensUsed),
+      tokens_remaining: tokensUsed === null || budget.max_tokens === null
+        ? null
+        : Math.max(0, budget.max_tokens - tokensUsed),
       token_observation_status: tokensUsed === null ? 'missing' as const : 'observed' as const,
     },
     budget,

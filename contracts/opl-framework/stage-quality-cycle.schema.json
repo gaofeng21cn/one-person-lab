@@ -117,7 +117,12 @@
         "version": { "const": "opl-stage-quality-scope-budget.v1" },
         "max_attempts": { "type": "integer", "minimum": 0, "maximum": 3 },
         "max_elapsed_ms": { "type": "integer", "minimum": 1, "maximum": 604800000 },
-        "max_tokens": { "type": "integer", "minimum": 1, "maximum": 10000000 },
+        "max_tokens": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "maximum": 9007199254740991,
+          "description": "Optional owner- or user-configured token cap. Null disables token-based exhaustion while preserving usage telemetry; the numeric maximum is JavaScript's safe-integer representation boundary, not a policy budget."
+        },
         "token_budget_requires_observed_usage": { "const": true },
         "foreground_execution_must_use_managed_attempt": { "const": true }
       },

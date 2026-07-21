@@ -202,11 +202,34 @@ test('scope schema accepts epistemic provenance and rejects release integrity su
   }, { ...valid, evidence_profile: 'release_integrity' }).ok, false);
 });
 
+test('scope budget schema accepts a disabled cap and large explicit safe-integer caps', () => {
+  const policySchema = parseJsonText(fs.readFileSync(
+    'contracts/opl-framework/stage-quality-cycle.schema.json',
+    'utf8',
+  )) as Record<string, any>;
+  const schema = {
+    $schema: policySchema.$schema,
+    $id: 'https://one-person-lab.local/contracts/opl-framework/scope-budget-test.schema.json',
+    ...policySchema.$defs.scopeBudget,
+  } as AnySchema;
+  const base = normalizeStageQualityScopeBudget(undefined);
+  for (const max_tokens of [null, 50_000_000, Number.MAX_SAFE_INTEGER]) {
+    assert.equal(validateJsonSchemaPayload({
+      schemaId: `scope-budget-${String(max_tokens)}`,
+      schema,
+    }, { ...base, max_tokens }).ok, true);
+  }
+  assert.equal(validateJsonSchemaPayload({
+    schemaId: 'scope-budget-unsafe-integer',
+    schema,
+  }, { ...base, max_tokens: Number.MAX_SAFE_INTEGER + 1 }).ok, false);
+});
+
 test('scope budget enforces attempts elapsed and observed tokens with typed dispositions', () => {
   const budget = normalizeStageQualityScopeBudget(undefined, { legacyMaxRepairRounds: 3 });
   assert.deepEqual(
     [budget.max_attempts, budget.max_elapsed_ms, budget.max_tokens],
-    [3, 21_600_000, 1_000_000],
+    [3, 21_600_000, null],
   );
   const missingTokens = evaluateStageQualityScopeBudget({
     budget,
@@ -217,8 +240,25 @@ test('scope budget enforces attempts elapsed and observed tokens with typed disp
   assert.equal(missingTokens.status, 'available');
   assert.equal(missingTokens.usage.token_observation_status, 'missing');
 
-  const p2 = evaluateStageQualityScopeBudget({
+  const observedWithoutExplicitCap = evaluateStageQualityScopeBudget({
     budget,
+    usage: { attempts_used: 1, elapsed_ms: 1000, tokens_used: 8_579_482 },
+    openFindingPriorities: ['p2'],
+    hasConsumableArtifact: true,
+  });
+  assert.equal(observedWithoutExplicitCap.status, 'available');
+  assert.equal(observedWithoutExplicitCap.stop_reason, null);
+  assert.equal(observedWithoutExplicitCap.usage.tokens_used, 8_579_482);
+  assert.equal(observedWithoutExplicitCap.usage.tokens_remaining, null);
+
+  const ownerConfiguredCap = normalizeStageQualityScopeBudget({
+    ...budget,
+    max_tokens: 50_000_000,
+  });
+  assert.equal(ownerConfiguredCap.max_tokens, 50_000_000);
+
+  const p2 = evaluateStageQualityScopeBudget({
+    budget: { ...budget, max_tokens: 1_000_000 },
     usage: { attempts_used: 1, elapsed_ms: 1000, tokens_used: 1_000_000 },
     openFindingPriorities: ['p2'],
     hasConsumableArtifact: true,

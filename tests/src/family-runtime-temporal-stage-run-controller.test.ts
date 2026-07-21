@@ -90,6 +90,8 @@ async function runController(input: {
   closeFindingAfterRound: number | null;
   formalReviewRequired?: boolean;
   maxRepairRounds?: number;
+  maxTokens?: number | null;
+  tokensPerAttempt?: number;
   executionFormalReviewRequired?: boolean;
   executionMaxRepairRounds?: number;
   executionDeclaredStageIds?: string[];
@@ -141,6 +143,9 @@ async function runController(input: {
             risk_tier: 'high',
             max_repair_rounds:
               input.executionMaxRepairRounds ?? input.maxRepairRounds ?? 3,
+            ...(input.maxTokens === undefined
+              ? {}
+              : { scope_budget: { max_tokens: input.maxTokens } }),
           },
         });
         const executionDeclaredStageIds = [...new Set(
@@ -324,6 +329,9 @@ async function runController(input: {
             stage_attempt_id: attempt.stage_attempt_id,
             closeout_refs: [`closeout:${attempt.stage_attempt_id}`],
           },
+          ...(input.tokensPerAttempt === undefined
+            ? {}
+            : { cost_summary: { token_usage: { total_tokens: input.tokensPerAttempt } } }),
         };
       },
       async domainHandlerDispatchActivity(attempt: TemporalStageAttemptWorkflowInput) {
@@ -546,6 +554,9 @@ async function runController(input: {
             required: input.formalReviewRequired ?? true,
             risk_tier: 'high',
             max_repair_rounds: input.maxRepairRounds ?? 3,
+            ...(input.maxTokens === undefined
+              ? {}
+              : { scope_budget: { max_tokens: input.maxTokens } }),
         },
       });
       const handle = await testEnv.client.workflow.start(StageRunWorkflow, {
@@ -583,6 +594,35 @@ test('StageRun controller materializes isolated producer-review-repair-re-review
   assert.equal(state.next_stage_run_launch?.materialization_status, 'launched');
   assert.equal(state.next_stage_run_launch?.target_stage_run_id, 'target:review_and_revision');
   assert.equal(state.route_quality_debt_refs.length, 0);
+});
+
+test('StageRun preserves high token telemetry without an implicit token stop', async () => {
+  const { state, attempts } = await runController({
+    id: 'no-implicit-token-cap',
+    closeFindingAfterRound: 1,
+    tokensPerAttempt: 4_289_741,
+  });
+  assert.equal(state.status, 'completed');
+  assert.equal(attempts.length, 4);
+  assert.equal(state.quality_scope_budget?.max_tokens, null);
+  assert.equal(state.quality_scope_budget_usage?.tokens_used, 17_158_964);
+  assert.equal(state.quality_scope_budget_usage?.token_observation_status, 'observed');
+  assert.equal(state.quality_scope_budget_stop_reason, null);
+});
+
+test('StageRun enforces a token cap only when explicitly configured', async () => {
+  const { state, attempts } = await runController({
+    id: 'explicit-token-cap',
+    closeFindingAfterRound: 1,
+    maxTokens: 5_000_000,
+    tokensPerAttempt: 3_000_000,
+  });
+  assert.equal(state.status, 'human_gate');
+  assert.equal(attempts.length, 2);
+  assert.equal(state.quality_scope_budget?.max_tokens, 5_000_000);
+  assert.equal(state.quality_scope_budget_usage?.tokens_used, 6_000_000);
+  assert.equal(state.quality_scope_budget_stop_reason, 'max_tokens_exhausted');
+  assert.equal(state.blocked_reason, 'stage_quality_scope_budget_max_tokens_exhausted');
 });
 
 test('initial reviewer routes cross-Stage repair without creating an inapplicable repair Attempt', async () => {
