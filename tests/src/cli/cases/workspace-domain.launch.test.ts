@@ -281,7 +281,7 @@ test('MAS launch activates a new workspace scope and automatically recovers mana
   }
 });
 
-test('quest activation materializes core skills and automatically recovers managed Skill drift', async () => {
+test('quest root activation through a canonical MAS workspace binding materializes core skills and recovers drift', async () => {
   const root = fs.mkdtempSync(`${os.tmpdir()}/opl-quest-package-activation-`);
   const stateRoot = path.join(root, 'state');
   const codexHome = path.join(root, 'codex-home');
@@ -297,18 +297,31 @@ test('quest activation materializes core skills and automatically recovers manag
   };
   fs.mkdirSync(quest, { recursive: true });
   try {
+    const bound = runCli([
+      'workspace', 'bind', '--project', 'medautoscience', '--path', quest,
+      '--manifest-command', buildManifestCommand(loadFamilyManifestFixtures().medautoscience),
+    ], env).workspace_catalog;
+    const boundProject = bound.projects.find(
+      (entry: { project_id: string }) => entry.project_id === 'medautoscience',
+    );
+    assert.equal(bound.action, 'bind');
+    assert.equal(bound.binding.status, 'active');
+    assert.equal(bound.binding.workspace_path, quest);
+    assert.equal(boundProject.active_binding.binding_id, bound.binding.binding_id);
+    assert.equal(boundProject.bindings[0].workspace_path_currentness.status, 'current');
     await runCliAsync([
       'packages', 'install', 'mas',
     ], env);
+    assert.equal(fs.existsSync(path.join(quest, '.codex', 'skills')), false);
     const preview = runCli([
-      'packages', 'activate', 'mas', '--scope', 'quest', '--target-quest', quest, '--dry-run',
+      'packages', 'activate', 'mas', '--scope', 'workspace', '--target-workspace', quest, '--dry-run',
     ], env).opl_agent_package_activation;
     assert.equal(preview.status, 'validated_no_write');
     assert.equal(preview.operational_ready, false);
     assert.equal(preview.launch_allowed, false);
     assert.equal(fs.existsSync(path.join(quest, '.codex', 'skills')), false);
     const activation = runCli([
-      'packages', 'activate', 'mas', '--scope', 'quest', '--target-quest', quest,
+      'packages', 'activate', 'mas', '--scope', 'workspace', '--target-workspace', quest,
     ], env).opl_agent_package_activation;
     assert.equal(activation.status, 'activated');
     assert.equal(activation.package_id, 'mas');
@@ -317,19 +330,19 @@ test('quest activation materializes core skills and automatically recovers manag
     assert.deepEqual(fs.readdirSync(skillsRoot).sort(), [...scholarSkillsCoreSkillIds].sort());
     assert.equal(fs.existsSync(path.join(skillsRoot, 'medical-optional-specialty')), false);
     const current = runCli([
-      'packages', 'status', '--package-id', 'mas', '--scope', 'quest', '--target-quest', quest,
+      'packages', 'status', '--package-id', 'mas', '--scope', 'workspace', '--target-workspace', quest,
     ], env).opl_agent_package_status;
     assert.equal(current.materialization_readiness.status, 'current');
     assert.equal(current.operational_ready, true);
 
     fs.rmSync(path.join(skillsRoot, 'medical-manuscript-writing'), { recursive: true, force: true });
     const recovered = runCli([
-      'packages', 'activate', 'mas', '--scope', 'quest', '--target-quest', quest,
+      'packages', 'activate', 'mas', '--scope', 'workspace', '--target-workspace', quest,
     ], env).opl_agent_package_activation;
     assert.equal(recovered.operational_ready, true);
     assert.equal(fs.existsSync(path.join(skillsRoot, 'medical-manuscript-writing', 'SKILL.md')), true);
     const repaired = runCli([
-      'packages', 'status', '--package-id', 'mas', '--scope', 'quest', '--target-quest', quest,
+      'packages', 'status', '--package-id', 'mas', '--scope', 'workspace', '--target-workspace', quest,
     ], env).opl_agent_package_status;
     assert.equal(repaired.materialization_readiness.status, 'current');
     assert.equal(repaired.operational_ready, true);

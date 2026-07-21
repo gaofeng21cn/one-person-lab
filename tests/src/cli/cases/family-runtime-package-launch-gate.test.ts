@@ -186,6 +186,17 @@ test('family-runtime keeps duplicate create idempotent and refreshes the scope a
   };
   fs.mkdirSync(workspace, { recursive: true });
   try {
+    const bound = runCli([
+      'workspace', 'bind', '--project', 'medautoscience', '--path', workspace,
+    ], env).workspace_catalog;
+    const boundProject = bound.projects.find(
+      (entry: { project_id: string }) => entry.project_id === 'medautoscience',
+    );
+    assert.equal(bound.action, 'bind');
+    assert.equal(bound.binding.status, 'active');
+    assert.equal(bound.binding.workspace_path, workspace);
+    assert.equal(boundProject.active_binding.binding_id, bound.binding.binding_id);
+    assert.equal(boundProject.bindings[0].workspace_path_currentness.status, 'current');
     await runCliAsync([
       'packages', 'install', 'mas', '--scope', 'workspace', '--target-workspace', workspace,
     ], env);
@@ -278,7 +289,7 @@ test('family-runtime keeps duplicate create idempotent and refreshes the scope a
   }
 });
 
-test('family-runtime quest first start activates every declared Skill while retry stays pinned and repair restores drift', async () => {
+test('family-runtime quest first start activates every Skill while a new attempt use boundary restores drift', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-quest-package-scope-'));
   const quest = path.join(root, 'quest');
   const providerManifest = writeCapabilityProvider(path.join(root, 'provider'), '0.1.0', {
@@ -301,6 +312,7 @@ test('family-runtime quest first start activates every declared Skill while retr
     assert.equal(notInstalled.payload.error.details.launch_blocked_reason, 'package_not_installed');
     assertNoAttemptWasQueued(env.OPL_STATE_DIR, env);
 
+    fs.mkdirSync(quest, { recursive: true });
     await runCliAsync(['packages', 'install', 'mas'], env);
     assert.equal(fs.existsSync(path.join(quest, '.codex', 'skills')), false);
 
@@ -349,10 +361,17 @@ test('family-runtime quest first start activates every declared Skill while retr
       force: true,
     });
 
-    const repaired = await runCliAsync([
-      'packages', 'repair', 'mas', '--scope', 'quest', '--target-quest', quest,
-    ], env) as any;
-    assert.equal(repaired.opl_agent_package_repair.status, 'repaired');
+    const nextStartFailure = runCliFailure([
+      ...createQuestArgs(quest), '--new-attempt', '--start',
+    ], {
+      ...env,
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
+    });
+    assert.notEqual(
+      nextStartFailure.payload.error.details?.failure_code,
+      'agent_package_operational_readiness_blocked',
+    );
     assert.deepEqual(
       fs.readdirSync(skillRoot).sort(),
       [...scholarSkillsCoreSkillIds, ...scholarSkillsSpecialtySkillIds].sort(),
@@ -362,16 +381,30 @@ test('family-runtime quest first start activates every declared Skill while retr
       'packages', 'status', '--package-id', 'mas', '--scope', 'quest', '--target-quest', quest,
     ], env).opl_agent_package_status;
     assert.equal(status.materialization_readiness.status, 'current');
-    assert.match(
-      status.materialization_readiness.lifecycle_receipt_ref,
-      /^opl:\/\/agent-package\/repair\/mas\//,
-    );
     assert.equal(status.operational_ready, true);
     assert.equal(status.launch_allowed, true);
 
-    const resumed = runCli([...createQuestArgs(quest), '--new-attempt'], env)
-      .family_runtime_stage_attempt.attempt;
+    const attempts = runCli([
+      'family-runtime', 'attempt', 'list', '--domain', 'medautoscience', '--full',
+    ], env).family_runtime_stage_attempts;
+    assert.equal(attempts.summary.total, 2);
+    const resumedSummary = attempts.attempts.find(
+      (entry: { stage_attempt_id: string }) => entry.stage_attempt_id !== created.stage_attempt_id,
+    );
+    const resumed = queryAttempt(resumedSummary.stage_attempt_id, env);
     assert.notEqual(resumed.stage_attempt_id, created.stage_attempt_id);
+    assert.match(resumed.workspace_locator.package_use_binding.use_boundary_id, /^package-use[_:]/);
+    assert.match(resumed.workspace_locator.package_use_binding.use_receipt_ref, /^opl:\/\/agent-package\/use\//);
+    assert.equal(resumed.workspace_locator.package_use_binding.scope, 'quest');
+    assert.equal(resumed.workspace_locator.package_use_binding.target_root, quest);
+    assert.equal(
+      resumed.provider_run.execution_package_use_context.status,
+      'attempt_launch_binding_persisted',
+    );
+    assert.deepEqual(
+      resumed.provider_run.execution_package_use_context.package_use_binding,
+      resumed.workspace_locator.package_use_binding,
+    );
   } finally {
     removeFixtureTree(root);
   }
