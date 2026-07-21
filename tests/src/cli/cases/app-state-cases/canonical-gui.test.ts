@@ -196,14 +196,22 @@ exit 1
     );
     const appLogDirectory = configurationCatalog.host_owned_configuration_surfaces[0];
     assert.equal(appLogDirectory.configuration_id, 'log_directory');
-    assert.equal(appLogDirectory.owner_page_id, 'workspace');
-    assert.equal(appLogDirectory.typed_host_action_ref, 'application.updateSystemInfo');
+    assert.equal(appLogDirectory.owner_page_id, 'maintenance');
+    assert.equal(appLogDirectory.owner_destination_id, 'logs_diagnostics');
+    assert.equal(appLogDirectory.current_value_source_ref, 'application.systemInfo.logDir');
+    assert.equal(appLogDirectory.typed_host_action_ref, 'application.setLogDirectory');
+    assert.deepEqual(appLogDirectory.typed_host_action_payload_fields, ['path']);
+    assert.deepEqual(appLogDirectory.typed_host_action_success_value_fields, ['hostLogDir']);
     assert.deepEqual(appLogDirectory.preserved_payload_fields, ['cacheDir', 'workDir']);
+    assert.equal(appLogDirectory.persistence_target, 'desktop_client_system_info.logDir');
+    assert.equal(appLogDirectory.readback_ref, 'application.systemInfo.logDir');
     assert.equal(appLogDirectory.framework_action_id, null);
     assert.equal(appLogDirectory.framework_write_allowed, false);
-    assert.equal(appLogDirectory.docker_volume_projection.host_volume_ref, 'OnePersonLab/data');
-    assert.equal(appLogDirectory.docker_volume_projection.container_path, '/data');
-    assert.equal(appLogDirectory.docker_volume_projection.framework_rewire_allowed, false);
+    assert.equal(appLogDirectory.carrier_policy.desktop, 'read_and_edit_through_typed_host_surfaces');
+    assert.equal(appLogDirectory.carrier_policy.webui, 'read_application.systemInfo.logDir_without_host_mutation');
+    assert.equal(appLogDirectory.carrier_policy.docker_default_log_path, '/data/logs');
+    assert.equal(appLogDirectory.carrier_policy.docker_projection_requires_owner_confirmed_deployment, true);
+    assert.equal(appLogDirectory.carrier_policy.host_mount_rewire_allowed, false);
     assert.equal(JSON.stringify(output.app_state.settings_control_center).includes('log_directory_set'), false);
     assert.deepEqual(
       configurationCatalog.items.map((entry: any) => entry.action_id).filter(
