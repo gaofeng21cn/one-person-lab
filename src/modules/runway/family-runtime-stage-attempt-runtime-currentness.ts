@@ -3,6 +3,8 @@ import { stringValue } from '../../kernel/json-record.ts';
 
 type JsonRecord = Record<string, unknown>;
 
+const PROVIDER_PENDING_STATUSES = new Set(['created', 'pending', 'queued', 'scheduled']);
+
 function normalizedStatus(value: unknown) {
   return stringValue(value)?.toLowerCase() ?? null;
 }
@@ -13,6 +15,12 @@ function providerRunHasRunningEvidence(providerRun: JsonRecord) {
     || providerStatus === 'started'
     || providerStatus === 'checkpointed'
     || Boolean(stringValue(providerRun.last_heartbeat_at));
+}
+
+function providerRunStatusHasRunningEvidence(providerRun: JsonRecord) {
+  return ['running', 'started', 'checkpointed'].includes(
+    normalizedStatus(providerRun.provider_status) ?? '',
+  );
 }
 
 function temporalQueryWorkflowStatus(temporalQuery: JsonRecord | null) {
@@ -33,6 +41,8 @@ export function buildStageAttemptRuntimeCurrentness(input: {
   const providerStatus = normalizedStatus(input.providerRun.provider_status);
   const temporalWorkflowStatus = temporalQueryWorkflowStatus(input.temporalQuery ?? null);
   const temporalStateStatus = temporalQueryStatus(input.temporalQuery ?? null);
+  const temporalHasRunningEvidence = temporalWorkflowStatus === 'running'
+    || ['running', 'checkpointed'].includes(temporalStateStatus ?? '');
   const runningProofSources = [
     providerRunHasRunningEvidence(input.providerRun) ? 'provider_run' : null,
     temporalWorkflowStatus === 'running' ? 'temporal_workflow_visibility' : null,
@@ -42,20 +52,37 @@ export function buildStageAttemptRuntimeCurrentness(input: {
     input.ledgerStatus === 'running'
     && input.providerKind === 'temporal'
     && runningProofSources.length === 0;
-  const running_proof_status = input.ledgerStatus === 'running'
+  const laggingRunningProjection =
+    PROVIDER_PENDING_STATUSES.has(input.ledgerStatus)
+    && input.providerKind === 'temporal'
+    && (providerRunStatusHasRunningEvidence(input.providerRun) || temporalHasRunningEvidence);
+  const running_proof_status = input.ledgerStatus === 'running' || laggingRunningProjection
     ? staleRunningProjection
       ? 'not_running'
       : 'running_confirmed'
     : 'not_applicable';
+  const effectiveRuntimeStatus = laggingRunningProjection
+    ? 'running'
+    : staleRunningProjection
+      ? 'not_running'
+      : input.ledgerStatus;
+  const projectionStatus = laggingRunningProjection
+    ? 'ledger_lagging_projection'
+    : staleRunningProjection
+      ? 'stale_projection'
+      : 'current_or_not_running_claim';
+  const reason = laggingRunningProjection
+    ? 'ledger_pending_while_provider_or_temporal_running'
+    : staleRunningProjection
+      ? 'ledger_running_without_provider_status_heartbeat_or_temporal_running_visibility'
+      : null;
   return {
     surface_kind: 'stage_attempt_runtime_currentness',
     ledger_status: input.ledgerStatus,
-    effective_runtime_status: staleRunningProjection ? 'not_running' : input.ledgerStatus,
+    effective_runtime_status: effectiveRuntimeStatus,
     running_proof_status,
-    projection_status: staleRunningProjection ? 'stale_projection' : 'current_or_not_running_claim',
-    reason: staleRunningProjection
-      ? 'ledger_running_without_provider_status_heartbeat_or_temporal_running_visibility'
-      : null,
+    projection_status: projectionStatus,
+    reason,
     running_proof_sources: runningProofSources,
     observed_provider_status: providerStatus,
     observed_last_heartbeat_at: stringValue(input.providerRun.last_heartbeat_at),

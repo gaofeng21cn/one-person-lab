@@ -363,6 +363,8 @@ printf '%s\\n' '{"type":"turn.completed","usage":{"input_tokens":120,"cached_inp
       'codex://threads/thread-persisted-telemetry',
       'thread.started must bind before terminal persistence',
     );
+    assert.equal(inspectStageAttempt(db, attempt.stage_attempt_id).status, 'running');
+    assert.equal(inspectStageAttempt(db, attempt.stage_attempt_id).provider_run.provider_status, 'running');
     const first = persistStageAttemptUsageObservation(db, {
       stageAttemptId: attempt.stage_attempt_id,
       costSummary: receipt.cost_summary,
@@ -390,5 +392,47 @@ printf '%s\\n' '{"type":"turn.completed","usage":{"input_tokens":120,"cached_inp
     db.close();
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('activity heartbeat promotes queued liveness without reopening a terminal attempt', () => {
+  const db = new DatabaseSync(':memory:');
+  createStageAttemptTable(db);
+  try {
+    const attempt = createStageAttempt(db, {
+      domainId: 'redcube_ai',
+      stageId: 'heartbeat_liveness',
+      providerKind: 'temporal',
+      workspaceLocator: { workspace_root: '/tmp/redcube-ai' },
+      executorKind: 'codex_cli',
+      checkpointRefs: ['packet:heartbeat'],
+    }).attempt;
+
+    const running = recordStageAttemptActivityHeartbeat(db, {
+      stageAttemptId: attempt.stage_attempt_id,
+      heartbeatKind: 'codex_stage_activity_runner_progress',
+      runnerEventKind: 'thread.started',
+      executionSessionRef: 'codex://threads/thread-heartbeat',
+      observedAt: OBSERVED_AT,
+    });
+    assert.equal(running?.status, 'running');
+    assert.equal(running?.provider_run.provider_status, 'running');
+    assert.equal(running?.provider_run.started_at, OBSERVED_AT);
+
+    db.prepare(`
+      UPDATE stage_attempts
+      SET status = 'completed', provider_run_json = json_set(provider_run_json, '$.provider_status', 'completed')
+      WHERE stage_attempt_id = ?
+    `).run(attempt.stage_attempt_id);
+    const terminal = recordStageAttemptActivityHeartbeat(db, {
+      stageAttemptId: attempt.stage_attempt_id,
+      heartbeatKind: 'codex_stage_activity_runner_progress',
+      observedAt: '2026-07-13T00:00:03.000Z',
+    });
+    assert.equal(terminal?.status, 'completed');
+    assert.equal(terminal?.provider_run.provider_status, 'completed');
+    assert.equal(terminal?.provider_run.last_heartbeat_at, OBSERVED_AT);
+  } finally {
+    db.close();
   }
 });

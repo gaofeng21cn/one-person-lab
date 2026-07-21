@@ -122,6 +122,9 @@ export function recordStageAttemptActivityHeartbeat(
   if (!row) {
     return null;
   }
+  if (!['queued', 'running'].includes(row.status)) {
+    return inspectStageAttempt(db, input.stageAttemptId);
+  }
   const observedAt = input.observedAt ?? nowIso();
   const executionSessionRef = input.executionSessionRef?.trim() || null;
   if (
@@ -133,8 +136,11 @@ export function recordStageAttemptActivityHeartbeat(
       `StageAttempt execution session drift: ${row.execution_session_ref} != ${executionSessionRef}`,
     );
   }
+  const currentProviderRun = parseStageAttemptJsonObject(row.provider_run_json);
   const providerRun = {
-    ...parseStageAttemptJsonObject(row.provider_run_json),
+    ...currentProviderRun,
+    provider_status: 'running',
+    started_at: currentProviderRun.started_at ?? observedAt,
     last_heartbeat_at: observedAt,
     liveness_source: 'provider_activity_event',
     last_activity_heartbeat_kind: input.heartbeatKind,
@@ -157,9 +163,9 @@ export function recordStageAttemptActivityHeartbeat(
   });
   db.prepare(`
     UPDATE stage_attempts
-    SET execution_session_ref = COALESCE(execution_session_ref, ?),
+    SET status = 'running', execution_session_ref = COALESCE(execution_session_ref, ?),
       provider_run_json = ?, activity_events_json = ?, updated_at = ?
-    WHERE stage_attempt_id = ?
+    WHERE stage_attempt_id = ? AND status IN ('queued', 'running')
   `).run(
     executionSessionRef,
     JSON.stringify(providerRun),

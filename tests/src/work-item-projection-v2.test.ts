@@ -16,6 +16,7 @@ import { buildAppRuntimeWorkItemProjection } from '../../src/modules/console/app
 import { readStageIndexPresentation } from '../../src/modules/console/work-item-projection/inventory-presentation.ts';
 import { buildWorkItemProjectionV2 } from '../../src/modules/console/work-item-projection/projection.ts';
 import { projectWorkItemPrimaryState } from '../../src/modules/console/work-item-projection/primary-state.ts';
+import { buildStageAttemptRuntimeCurrentness } from '../../src/modules/runway/family-runtime-stage-attempt-runtime-currentness.ts';
 import {
   setWorkItemControlState,
   setWorkItemVisibilityState,
@@ -202,6 +203,8 @@ function attempt(input: {
   qualityScopeBudget?: Record<string, unknown>;
   createdAt?: string;
   identityField?: 'work_item_id' | 'study_id' | 'quest_id' | 'work_unit_id';
+  providerStatus?: string;
+  lastHeartbeatAt?: string | null;
 }) {
   const createdAt = input.createdAt ?? '2026-07-10T00:00:00.000Z';
   const identityField = input.identityField ?? 'work_unit_id';
@@ -226,10 +229,11 @@ function attempt(input: {
     task_id: `task:${input.workItemId}`,
     blocked_reason: input.status === 'failed' ? 'historical_provider_failure' : null,
     provider_run: {
-      provider_status: input.status,
+      provider_status: input.providerStatus ?? input.status,
       started_at: createdAt,
       completed_at: input.status === 'running' ? null : input.updatedAt,
-      last_heartbeat_at: input.status === 'running' ? input.updatedAt : null,
+      last_heartbeat_at: input.lastHeartbeatAt
+        ?? (input.status === 'running' ? input.updatedAt : null),
     },
     activity_events: input.tokenUsage ? [{ token_usage: input.tokenUsage, usage_status: 'observed' }] : [],
     route_impact: input.repairRoute ? { current_repair_route: input.repairRoute } : {},
@@ -665,6 +669,68 @@ test('paused lifecycle projects only a post-snapshot live wake attempt as curren
   } finally {
     fs.rmSync(input.root, { recursive: true, force: true });
   }
+});
+
+test('WorkItem execution projects provider-confirmed running state across a lagging queued ledger', () => {
+  const input = fixture();
+  try {
+    const workItemId = '004-dpcc-longitudinal-care-inertia-intensification-gap';
+    const lifecycleSnapshotAt = new Date('2026-07-13T00:00:00.000Z');
+    fs.utimesSync(
+      path.join(input.diabetes, 'workspace_index.json'),
+      lifecycleSnapshotAt,
+      lifecycleSnapshotAt,
+    );
+    const projection = buildWorkItemProjectionV2({
+      profile: 'full',
+      bindings: input.bindings,
+      packageProjectionItems: input.packageProjectionItems,
+      packageStatusById: input.packageStatusById,
+      attempts: [attempt({
+        id: 'sat-provider-running-ledger-queued',
+        root: input.diabetes,
+        workItemId,
+        status: 'queued',
+        providerStatus: 'running',
+        lastHeartbeatAt: '2026-07-14T00:01:00.000Z',
+        stageId: 'bounded_analysis_campaign',
+        createdAt: '2026-07-14T00:00:00.000Z',
+        updatedAt: '2026-07-14T00:01:00.000Z',
+      })],
+      resolveDescriptor: input.resolveDescriptor,
+      generatedAt: '2026-07-14T00:01:00.000Z',
+    });
+    const item = projection.items.find((candidate) => candidate.identity.work_item_id === workItemId)!;
+    const executionRunning = item.conditions.find((condition) => condition.type === 'ExecutionRunning');
+
+    assert.equal(item.execution.state, 'running');
+    assert.equal(item.execution.stage_status, 'running');
+    assert.equal(item.execution.running_proof_status, 'running_confirmed');
+    assert.equal(item.execution.diagnostic_reason, 'ledger_pending_while_provider_or_temporal_running');
+    assert.equal(executionRunning?.status, 'True');
+  } finally {
+    fs.rmSync(input.root, { recursive: true, force: true });
+  }
+});
+
+test('Temporal running query overrides a lagging queued attempt ledger', () => {
+  const currentness = buildStageAttemptRuntimeCurrentness({
+    ledgerStatus: 'queued',
+    providerKind: 'temporal',
+    providerRun: { provider_status: 'registered' },
+    temporalQuery: {
+      workflow_status: 'RUNNING',
+      query: { status: 'running' },
+    },
+  });
+
+  assert.equal(currentness.effective_runtime_status, 'running');
+  assert.equal(currentness.running_proof_status, 'running_confirmed');
+  assert.equal(currentness.projection_status, 'ledger_lagging_projection');
+  assert.deepEqual(currentness.running_proof_sources, [
+    'temporal_workflow_visibility',
+    'temporal_workflow_query',
+  ]);
 });
 
 test('delivered Stage Map uses the canonical recorded boundary without inferring a missing one', () => {

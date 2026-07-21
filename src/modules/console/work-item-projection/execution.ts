@@ -135,17 +135,18 @@ function executionState(latest: JsonRecord) {
     providerKind: stringValue(latest.provider_kind) ?? 'unknown',
     providerRun,
   });
+  const effectiveRuntimeStatus = normalizedStatus(currentness.effective_runtime_status);
   let state: WorkItemExecutionState = 'unknown';
-  if (ledgerStatus === 'running') {
+  if (effectiveRuntimeStatus === 'running') {
     state = currentness.running_proof_status === 'running_confirmed' ? 'running' : 'unknown';
-  } else if (QUEUED_STATUSES.has(ledgerStatus)) {
+  } else if (QUEUED_STATUSES.has(effectiveRuntimeStatus)) {
     state = 'queued';
-  } else if (SUCCEEDED_STATUSES.has(ledgerStatus)) {
+  } else if (SUCCEEDED_STATUSES.has(effectiveRuntimeStatus)) {
     state = 'succeeded';
-  } else if (FAILED_STATUSES.has(ledgerStatus)) {
+  } else if (FAILED_STATUSES.has(effectiveRuntimeStatus)) {
     state = 'failed';
   }
-  return { state, ledgerStatus, currentness };
+  return { state, ledgerStatus, effectiveRuntimeStatus, currentness };
 }
 
 function attemptStartedAfterLifecycleSnapshot(
@@ -543,7 +544,7 @@ export function joinAttemptsToWorkItems(input: {
       execution: {
         state: currentExecutionState,
         stage_id: currentAttempt ? stringValue(currentAttempt.stage_id) : null,
-        stage_status: currentExecution?.ledgerStatus ?? null,
+        stage_status: currentExecution?.effectiveRuntimeStatus ?? null,
         current_stage_id: currentStageId,
         current_stage_display_name: currentStageId ? item.lifecycle.current_stage_display_name : null,
         next_stage_id: currentStageId ? item.execution.next_stage_id : null,
@@ -560,8 +561,8 @@ export function joinAttemptsToWorkItems(input: {
           : null,
         updated_at: currentExecutionObservedAt,
         running_proof_status: currentExecution?.currentness.running_proof_status ?? 'not_applicable',
-        diagnostic_reason: stale
-          ? currentExecution!.currentness.reason
+        diagnostic_reason: currentExecution?.currentness.reason
+          ? currentExecution.currentness.reason
           : currentExecution?.state === 'failed'
             ? stringValue(currentAttempt?.blocked_reason)
             : attempts.length > 0 && !currentAttempt
