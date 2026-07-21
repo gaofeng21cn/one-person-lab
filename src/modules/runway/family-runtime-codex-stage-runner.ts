@@ -78,6 +78,7 @@ import {
   normalizeTimeoutMs,
   type JsonRecord,
 } from './family-runtime-codex-stage-runner-parts/shared.ts';
+import { resolveProtocolCloseoutResumePacket } from './family-runtime-codex-stage-runner-parts/referenced-closeout-hydration.ts';
 import { stringValue as optionalString } from '../../kernel/json-record.ts';
 import {
   hostAttemptSkillRuntime,
@@ -90,43 +91,6 @@ export {
   type TypedStageCloseoutPacket,
 } from './family-runtime-codex-stage-runner-parts/closeout-normalization.ts';
 
-function mergeProtocolCloseoutResumeRouteImpact(input: {
-  initialCandidate: JsonRecord | null;
-  resumedCloseout: TypedStageCloseoutPacket | null;
-  attempt: JsonRecord;
-}) {
-  const initialCandidate = input.initialCandidate;
-  const resumedCloseout = input.resumedCloseout;
-  if (!initialCandidate || !resumedCloseout || !optionalString(initialCandidate.surface_kind)) {
-    return { closeoutPacket: resumedCloseout, initialRouteImpactPreserved: false };
-  }
-  const initialRouteImpact = isRecord(initialCandidate.route_impact)
-    ? initialCandidate.route_impact
-    : null;
-  const attemptId = optionalString(input.attempt.stage_attempt_id);
-  const candidateAttemptId = optionalString(initialCandidate.stage_attempt_id);
-  const attemptIdempotencyKey = optionalString(input.attempt.idempotency_key);
-  const candidateIdempotencyKey = optionalString(initialCandidate.idempotency_key);
-  if (
-    !initialRouteImpact
-    || Object.keys(initialRouteImpact).length === 0
-    || (attemptId && candidateAttemptId !== attemptId)
-    || (
-      attemptIdempotencyKey
-      && candidateIdempotencyKey
-      && candidateIdempotencyKey !== attemptIdempotencyKey
-    )
-  ) {
-    return { closeoutPacket: resumedCloseout, initialRouteImpactPreserved: false };
-  }
-  return {
-    closeoutPacket: {
-      ...resumedCloseout,
-      route_impact: initialRouteImpact,
-    },
-    initialRouteImpactPreserved: true,
-  };
-}
 export {
   createCodexCloseoutCaptureForTest,
 } from './family-runtime-codex-stage-runner-parts/stage-closeout-capture.ts';
@@ -562,6 +526,12 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   let protocolCloseoutResumeResult: CodexCommandResult | null = null;
   let protocolCloseoutResumePacketObserved = false;
   let protocolCloseoutResumeInitialRouteImpactPreserved = false;
+  let protocolCloseoutReferenceHydrationStatus: 'not_applicable' | 'hydrated' = 'not_applicable';
+  let protocolCloseoutReferenceObservation: {
+    ref: string;
+    sha256: string;
+    size_bytes: number;
+  } | null = null;
   const protocolCloseoutResumeViolationKinds = new Set<'command_execution' | 'unsupported_function_call'>();
   let closeoutRejection: ReturnType<typeof validateCloseoutPacketForAttempt>['rejection'] = null;
   if (
@@ -655,17 +625,26 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
         );
       }
       const resumedCapture = parseCapturedCloseoutMessage(resumeCapture.outputLastMessagePath);
+      const resumedCandidate = parseTerminalJsonRecordFromCodexMessages(resumed.messages)
+        ?? (resumedCapture.message
+          ? parseTerminalJsonRecordFromCodexMessages([resumedCapture.message])
+          : null);
       const resumedCloseout = parseCloseoutFromCodexMessages(resumed.messages) ?? resumedCapture.closeoutPacket;
-      const mergedCloseout = mergeProtocolCloseoutResumeRouteImpact({
+      const resolvedCloseout = resolveProtocolCloseoutResumePacket({
         initialCandidate: initialCloseoutCandidate,
         resumedCloseout,
+        resumedCandidate,
         attempt: input.attempt,
+        workspaceRoot,
+        protocolViolation: protocolCloseoutResumeViolationKinds.size > 0,
       });
+      protocolCloseoutReferenceHydrationStatus = resolvedCloseout.hydrationStatus;
+      protocolCloseoutReferenceObservation = resolvedCloseout.observation;
       protocolCloseoutResumePacketObserved = Boolean(resumedCloseout);
       protocolCloseoutResumeInitialRouteImpactPreserved = protocolCloseoutResumeViolationKinds.size === 0
-        && mergedCloseout.initialRouteImpactPreserved;
+        && resolvedCloseout.initialRouteImpactPreserved;
       closeoutPacket = protocolCloseoutResumeViolationKinds.size === 0
-        ? mergedCloseout.closeoutPacket
+        ? resolvedCloseout.closeoutPacket
         : null;
     } finally {
       resumeCapture.cleanup();
@@ -887,6 +866,10 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
               may_change_artifact_bytes: protocolCloseoutResumeViolationKinds.size > 0,
               initial_route_impact_candidate_observed: isRecord(initialCloseoutCandidate?.route_impact),
               initial_route_impact_preserved: protocolCloseoutResumeInitialRouteImpactPreserved,
+              referenced_closeout_hydration_status: protocolCloseoutReferenceHydrationStatus,
+              ...(protocolCloseoutReferenceObservation
+                ? { referenced_closeout_observation: protocolCloseoutReferenceObservation }
+                : {}),
               ...(protocolCloseoutResumeViolationKinds.size > 0
                 ? {
                     protocol_violation: 'tool_or_command_event_observed',

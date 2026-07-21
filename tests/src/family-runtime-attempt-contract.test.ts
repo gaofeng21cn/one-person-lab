@@ -64,6 +64,22 @@ test('family runtime attempt contract keeps Temporal attempt, progress-first clo
   );
   assert.equal(contract.progress_closeout_contract.output_schema_control_plane_enabled, false);
   assert.equal(contract.progress_closeout_contract.same_session_closeout_enforcement_enabled, false);
+  assert.deepEqual(
+    contract.progress_closeout_contract.protocol_closeout_resume_referenced_packet_hydration,
+    {
+      eligible_metadata_kind_field: 'kind',
+      eligible_metadata_kind: 'stage_attempt_closeout_packet',
+      exactly_one_eligible_ref_required: true,
+      local_workspace_file_only: true,
+      regular_stable_file_required: true,
+      canonical_sha256_required: true,
+      declared_size_when_present_must_match: true,
+      observed_size_bound_into_transport_metadata: true,
+      stage_attempt_id_required_and_exact: true,
+      explicit_field_conflict_policy: 'fail_closed',
+      arbitrary_closeout_ref_hydration_forbidden: true,
+    },
+  );
   assert.ok(contract.progress_closeout_contract.tracked_refs.includes('domain_output.output_ref'));
   assert.equal(
     contract.progress_closeout_contract.domain_output_contract.transport_policy,

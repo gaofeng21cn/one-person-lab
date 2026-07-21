@@ -137,6 +137,8 @@ test('formal quality Attempt uses one same-thread closeout-only resume without c
     assert.match(invocation, /Do not use "opl_stage_attempt_typed_closeout"/);
     assert.match(invocation, /non-empty closeout_refs array/);
     assert.match(invocation, /closeout_ref_metadata with the identical ref/);
+    assert.match(invocation, /kind "stage_attempt_closeout_packet"/);
+    assert.match(invocation, /exact sha256, and exact size_bytes when known/);
     assert.match(invocation, /Never output typed_closeout_ref_metadata/);
   } finally {
     restoreEnv('OPL_CODEX_BIN', previousBin);

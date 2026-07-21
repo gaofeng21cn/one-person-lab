@@ -126,6 +126,12 @@ export type CodexStageRunnerProcessOutputSummary = {
     may_change_artifact_bytes: boolean;
     initial_route_impact_candidate_observed: boolean;
     initial_route_impact_preserved: boolean;
+    referenced_closeout_hydration_status: 'not_applicable' | 'hydrated';
+    referenced_closeout_observation?: {
+      ref: string;
+      sha256: string;
+      size_bytes: number;
+    };
     protocol_violation?: 'tool_or_command_event_observed';
     tool_event_kinds?: Array<'command_execution' | 'unsupported_function_call'>;
   };
