@@ -67,6 +67,59 @@ test('Temporal worker source version ignores documentation-only git HEAD drift',
   }
 });
 
+test('Temporal worker source version covers the executable source dependency closure', () => {
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-worker-source-dependency-closure-'));
+  const srcRoot = path.join(repoRoot, 'src');
+  const modulePath = path.join(srcRoot, 'modules', 'runway', 'family-runtime-temporal-provider.ts');
+  const runwayHelperPath = path.join(
+    srcRoot,
+    'modules',
+    'runway',
+    'family-runtime-temporal-provider-parts',
+    'worker-state.ts',
+  );
+  const stagecraftPath = path.join(srcRoot, 'modules', 'stagecraft', 'stage-quality-scope-budget.ts');
+  const packPath = path.join(srcRoot, 'modules', 'pack', 'index.ts');
+  const kernelPath = path.join(srcRoot, 'kernel', 'contract-validation.ts');
+  const docsPath = path.join(repoRoot, 'docs', 'status.md');
+  const previousSourceVersion = process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION;
+  try {
+    delete process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION;
+    for (const filePath of [modulePath, runwayHelperPath, stagecraftPath, packPath, kernelPath, docsPath]) {
+      fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    }
+    fs.writeFileSync(modulePath, 'export const workerRuntime = 1;\n');
+    fs.writeFileSync(runwayHelperPath, 'export const helperRuntime = 1;\n');
+    fs.writeFileSync(stagecraftPath, 'export const stageBudget = 1;\n');
+    fs.writeFileSync(packPath, 'export const packageBinding = 1;\n');
+    fs.writeFileSync(kernelPath, 'export const contractValidation = 1;\n');
+    fs.writeFileSync(docsPath, 'initial docs\n');
+
+    const initial = currentWorkerSourceVersion(pathToFileURL(modulePath).href);
+    fs.writeFileSync(docsPath, 'updated docs\n');
+    assert.equal(currentWorkerSourceVersion(pathToFileURL(modulePath).href), initial);
+
+    fs.writeFileSync(stagecraftPath, 'export const stageBudget = 2;\n');
+    const stagecraftChanged = currentWorkerSourceVersion(pathToFileURL(modulePath).href);
+    assert.notEqual(stagecraftChanged, initial);
+
+    fs.writeFileSync(packPath, 'export const packageBinding = 2;\n');
+    const packChanged = currentWorkerSourceVersion(pathToFileURL(modulePath).href);
+    assert.notEqual(packChanged, stagecraftChanged);
+
+    fs.writeFileSync(kernelPath, 'export const contractValidation = 2;\n');
+    assert.notEqual(currentWorkerSourceVersion(pathToFileURL(modulePath).href), packChanged);
+    assert.equal(initial.startsWith(`worker-runtime:${srcRoot}:`), true);
+  } finally {
+    if (previousSourceVersion === undefined) {
+      delete process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION;
+    } else {
+      process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = previousSourceVersion;
+    }
+    fs.rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
+
 test('Temporal worker source version tracks executable dist runtime for built provider module', () => {
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-worker-runtime-built-source-version-'));
   const srcRoot = path.join(repoRoot, 'src');

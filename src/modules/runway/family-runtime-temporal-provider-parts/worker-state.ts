@@ -71,7 +71,23 @@ function repoRootFromModulePath(moduleUrl: string) {
 
 function runtimeSourceRootFromModulePath(modulePath: string) {
   const moduleDir = path.dirname(modulePath);
-  const moduleBase = path.basename(modulePath);
+  let currentDir = moduleDir;
+  while (true) {
+    if (
+      path.basename(currentDir) === 'runway'
+      && path.basename(path.dirname(currentDir)) === 'modules'
+    ) {
+      const executionRoot = path.dirname(path.dirname(currentDir));
+      if (path.basename(executionRoot) === 'src' || path.basename(executionRoot) === 'dist') {
+        return executionRoot;
+      }
+    }
+    const parentDir = path.dirname(currentDir);
+    if (parentDir === currentDir) {
+      break;
+    }
+    currentDir = parentDir;
+  }
   return moduleDir;
 }
 
@@ -118,17 +134,13 @@ function runtimeSourceVersion(modulePath: string) {
     const collect = (dir: string) => {
       for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
         const filePath = path.join(dir, entry.name);
-        if (
-          entry.isDirectory()
-          && (entry.name.startsWith('family-runtime-') || dir !== sourceRoot)
-        ) {
+        if (entry.isDirectory()) {
           collect(filePath);
           continue;
         }
         if (
           entry.isFile()
           && (entry.name.endsWith('.ts') || entry.name.endsWith('.js'))
-          && (dir !== sourceRoot || entry.name.startsWith('family-runtime-'))
         ) {
           files.push(filePath);
         }
