@@ -97,6 +97,17 @@
       "update_channel": "update_channel",
       "developer_supervisor": "developer_supervisor"
     },
+    "deployment_managed_workspace_root_policy": {
+      "condition": "app_state.paths.workspace_root.source == env",
+      "lifecycle": "deployment_managed_read_only",
+      "action_id": null,
+      "route": null,
+      "payload_fields": [],
+      "payload_required": false,
+      "mutates": "none_deployment_managed",
+      "persistence_target": "environment:OPL_WORKSPACE_ROOT",
+      "settings_mutation_allowed": false
+    },
     "execution_metadata_required": [
       "stable_id",
       "surface_class",
@@ -135,29 +146,30 @@
         "label": "App log directory",
         "surface_class": "host_owned_configuration",
         "owner": "one-person-lab-app",
-        "owner_page_id": "workspace",
+        "owner_page_id": "maintenance",
+        "owner_destination_id": "logs_diagnostics",
         "current_value_source_ref": "application.systemInfo.logDir",
-        "typed_host_action_ref": "application.updateSystemInfo",
+        "typed_host_action_ref": "application.setLogDirectory",
         "typed_host_action_payload_fields": [
-          "cacheDir",
-          "workDir",
-          "logDir"
+          "path"
+        ],
+        "typed_host_action_success_value_fields": [
+          "hostLogDir"
         ],
         "preserved_payload_fields": [
           "cacheDir",
           "workDir"
         ],
-        "persistence_target": "desktop_client_system_info",
+        "persistence_target": "desktop_client_system_info.logDir",
         "readback_ref": "application.systemInfo.logDir",
         "framework_action_id": null,
         "framework_write_allowed": false,
-        "docker_volume_projection": {
-          "host_volume_ref": "OnePersonLab/data",
-          "container_path": "/data",
-          "log_path": "/data/logs",
-          "sync_owner": "one-person-lab-app_and_opl-aion-shell",
-          "sync_policy": "shell_keeps_host_app_log_root_projection_aligned_with_existing_docker_volume_mapping",
-          "framework_rewire_allowed": false
+        "carrier_policy": {
+          "desktop": "read_and_edit_through_typed_host_surfaces",
+          "webui": "read_application.systemInfo.logDir_without_host_mutation",
+          "docker_default_log_path": "/data/logs",
+          "docker_projection_requires_owner_confirmed_deployment": true,
+          "host_mount_rewire_allowed": false
         }
       }
     ],
@@ -203,20 +215,26 @@
         "app_log_directory"
       ],
       "app_log_directory": {
-        "owner_page_id": "workspace",
+        "owner_page_id": "maintenance",
+        "owner_destination_id": "logs_diagnostics",
         "current_value_source_ref": "application.systemInfo.logDir",
-        "typed_host_action_ref": "application.updateSystemInfo",
+        "typed_host_action_ref": "application.setLogDirectory",
         "preserved_payload_fields": [
           "cacheDir",
           "workDir"
         ],
-        "persistence_target": "desktop_client_system_info",
+        "persistence_target": "desktop_client_system_info.logDir",
         "readback_ref": "application.systemInfo.logDir",
         "framework_action_id": null,
         "framework_write_allowed": false,
         "storage_reference_policy": "read_only_usage_and_cleanup_reference",
-        "docker_volume_mapping": "OnePersonLab/data -> /data",
-        "framework_rewire_allowed": false
+        "carrier_policy": {
+          "desktop": "read_and_edit_through_typed_host_surfaces",
+          "webui": "read_application.systemInfo.logDir_without_host_mutation",
+          "docker_default_log_path": "/data/logs",
+          "docker_projection_requires_owner_confirmed_deployment": true,
+          "host_mount_rewire_allowed": false
+        }
       }
     },
     "settings_projection": {

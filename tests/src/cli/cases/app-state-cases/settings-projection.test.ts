@@ -161,17 +161,21 @@ test('full Settings projection follows App page ownership without treating activ
     ['app_state.codex_personalization.user_agents', 'app_state.opl_agent_codex_context'],
   );
   const logDirectory = settings.app_settings_read_model.workspace_services.app_log_directory;
-  assert.equal(logDirectory.owner_page_id, 'workspace');
+  assert.equal(logDirectory.owner_page_id, 'maintenance');
+  assert.equal(logDirectory.owner_destination_id, 'logs_diagnostics');
   assert.equal(logDirectory.current_value_source_ref, 'application.systemInfo.logDir');
-  assert.equal(logDirectory.typed_host_action_ref, 'application.updateSystemInfo');
+  assert.equal(logDirectory.typed_host_action_ref, 'application.setLogDirectory');
+  assert.deepEqual(logDirectory.typed_host_action_payload_fields, ['path']);
+  assert.deepEqual(logDirectory.typed_host_action_success_value_fields, ['hostLogDir']);
   assert.deepEqual(logDirectory.preserved_payload_fields, ['cacheDir', 'workDir']);
-  assert.equal(logDirectory.persistence_target, 'desktop_client_system_info');
+  assert.equal(logDirectory.persistence_target, 'desktop_client_system_info.logDir');
   assert.equal(logDirectory.readback_ref, 'application.systemInfo.logDir');
   assert.equal(logDirectory.framework_action_id, null);
   assert.equal(logDirectory.framework_write_allowed, false);
-  assert.equal(logDirectory.docker_volume_projection.host_volume_ref, 'OnePersonLab/data');
-  assert.equal(logDirectory.docker_volume_projection.container_path, '/data');
-  assert.equal(logDirectory.docker_volume_projection.framework_rewire_allowed, false);
+  assert.equal(logDirectory.carrier_policy.webui, 'read_application.systemInfo.logDir_without_host_mutation');
+  assert.equal(logDirectory.carrier_policy.docker_default_log_path, '/data/logs');
+  assert.equal(logDirectory.carrier_policy.docker_projection_requires_owner_confirmed_deployment, true);
+  assert.equal(logDirectory.carrier_policy.host_mount_rewire_allowed, false);
   assert.deepEqual(settings.configuration_catalog.host_owned_configuration_surfaces, [logDirectory]);
   assert.equal(
     settings.control_center_groups.find((group) => group.group_id === 'workspace')?.role,
@@ -228,9 +232,20 @@ test('full Settings projection follows App page ownership without treating activ
     /instructions|context/i,
   );
   assert.deepEqual(contract.configuration_catalog.host_owned_configuration_surfaces, [logDirectory]);
-  assert.equal(contract.app_settings_read_model.workspace_services.app_log_directory.owner_page_id, 'workspace');
+  assert.deepEqual(contract.configuration_catalog.deployment_managed_workspace_root_policy, {
+    condition: 'app_state.paths.workspace_root.source == env',
+    lifecycle: 'deployment_managed_read_only',
+    action_id: null,
+    route: null,
+    payload_fields: [],
+    payload_required: false,
+    mutates: 'none_deployment_managed',
+    persistence_target: 'environment:OPL_WORKSPACE_ROOT',
+    settings_mutation_allowed: false,
+  });
+  assert.equal(contract.app_settings_read_model.workspace_services.app_log_directory.owner_page_id, 'maintenance');
   assert.equal(contract.app_settings_read_model.workspace_services.app_log_directory.typed_host_action_ref,
-    'application.updateSystemInfo');
+    'application.setLogDirectory');
   assert.equal(contract.app_settings_read_model.workspace_services.app_log_directory.storage_reference_policy,
     'read_only_usage_and_cleanup_reference');
   assert.equal(contract.configuration_catalog.excluded_configuration_ids.includes('log_directory'), false);
@@ -245,6 +260,44 @@ test('full Settings projection follows App page ownership without treating activ
       .every((entry) => entry.section_id === 'gateway_account'),
     true,
   );
+});
+
+test('Settings projects environment-managed workspace roots as read-only', () => {
+  const settings = buildSettingsControlCenter({
+    profile: 'fast',
+    core: { codex: {} },
+    developerMode: {},
+    modules: { summary: {}, items: [] },
+    agentPackages: { status_index: { packages: {} } },
+    provider: { selected_provider: 'temporal', temporal: {} },
+    release: { channel: 'stable' },
+    paths: {
+      workspace_root: {
+        selected_path: '/projects',
+        source: 'env',
+        exists: true,
+        writable: true,
+        health_status: 'ready',
+      },
+      workspace_root_path: '/projects',
+    },
+  });
+
+  const workspaceRoot = settings.configuration_catalog.items.find(
+    (item) => item.configuration_id === 'workspace_root',
+  );
+  assert.ok(workspaceRoot);
+  assert.equal(workspaceRoot.current_value, '/projects');
+  assert.equal(workspaceRoot.lifecycle, 'deployment_managed_read_only');
+  assert.equal(workspaceRoot.action_id, null);
+  assert.equal(workspaceRoot.route, null);
+  assert.deepEqual(workspaceRoot.payload_fields, []);
+  assert.equal(workspaceRoot.payload_required, false);
+  assert.equal(workspaceRoot.mutates, 'none_deployment_managed');
+  assert.equal(workspaceRoot.dry_run_supported, false);
+  assert.equal(workspaceRoot.persistence_target, 'environment:OPL_WORKSPACE_ROOT');
+  assert.equal(workspaceRoot.editable, false);
+  assert.equal(workspaceRoot.editable_reason, 'deployment_environment_owns_workspace_root');
 });
 
 test('Settings treats runtime source carrier health as provenance and package generations as functional truth', () => {

@@ -108,22 +108,23 @@ function buildAppLogDirectoryHostProjection() {
     label: 'App log directory',
     surface_class: 'host_owned_configuration',
     owner: 'one-person-lab-app',
-    owner_page_id: 'workspace',
+    owner_page_id: 'maintenance',
+    owner_destination_id: 'logs_diagnostics',
     current_value_source_ref: 'application.systemInfo.logDir',
-    typed_host_action_ref: 'application.updateSystemInfo',
-    typed_host_action_payload_fields: ['cacheDir', 'workDir', 'logDir'],
+    typed_host_action_ref: 'application.setLogDirectory',
+    typed_host_action_payload_fields: ['path'],
+    typed_host_action_success_value_fields: ['hostLogDir'],
     preserved_payload_fields: ['cacheDir', 'workDir'],
-    persistence_target: 'desktop_client_system_info',
+    persistence_target: 'desktop_client_system_info.logDir',
     readback_ref: 'application.systemInfo.logDir',
     framework_action_id: null,
     framework_write_allowed: false,
-    docker_volume_projection: {
-      host_volume_ref: 'OnePersonLab/data',
-      container_path: '/data',
-      log_path: '/data/logs',
-      sync_owner: 'one-person-lab-app_and_opl-aion-shell',
-      sync_policy: 'shell_keeps_host_app_log_root_projection_aligned_with_existing_docker_volume_mapping',
-      framework_rewire_allowed: false,
+    carrier_policy: {
+      desktop: 'read_and_edit_through_typed_host_surfaces',
+      webui: 'read_application.systemInfo.logDir_without_host_mutation',
+      docker_default_log_path: '/data/logs',
+      docker_projection_requires_owner_confirmed_deployment: true,
+      host_mount_rewire_allowed: false,
     },
   };
 }
@@ -456,6 +457,7 @@ function buildSettingsProjection(
 
 function buildConfigurationCatalog(input: BuildSettingsControlCenterInput) {
   const workspaceRoot = asRecord(input.paths.workspace_root);
+  const workspaceRootDeploymentManaged = asString(workspaceRoot.source) === 'env';
   const developerProfile = asRecord(asRecord(input.developerMode).developer_profile);
 
   return {
@@ -470,25 +472,35 @@ function buildConfigurationCatalog(input: BuildSettingsControlCenterInput) {
         label: 'Workspace root',
         surface_class: 'configuration',
         owner: 'one-person-lab',
-        lifecycle: 'persistent_configuration_mutation',
+        lifecycle: workspaceRootDeploymentManaged
+          ? 'deployment_managed_read_only'
+          : 'persistent_configuration_mutation',
         value_type: 'path',
         current_value: asString(workspaceRoot.selected_path) ?? asString(input.paths.workspace_root_path),
         source_ref: 'app_state.paths.workspace_root',
-        action_id: 'workspace_root_set',
-        route: routeFor('workspace_root_set'),
-        delegated_surface: 'opl workspace root set',
-        payload_fields: ['path'],
-        payload_required: true,
-        mutates: 'opl_workspace_root_config',
-        dry_run_supported: true,
+        action_id: workspaceRootDeploymentManaged ? null : 'workspace_root_set',
+        route: workspaceRootDeploymentManaged ? null : routeFor('workspace_root_set'),
+        delegated_surface: workspaceRootDeploymentManaged ? null : 'opl workspace root set',
+        payload_fields: workspaceRootDeploymentManaged ? [] : ['path'],
+        payload_required: !workspaceRootDeploymentManaged,
+        mutates: workspaceRootDeploymentManaged ? 'none_deployment_managed' : 'opl_workspace_root_config',
+        dry_run_supported: !workspaceRootDeploymentManaged,
         confirmation_required: false,
         danger_level: 'low',
-        impact: 'updates_framework_owned_default_workspace_root',
+        impact: workspaceRootDeploymentManaged
+          ? 'read_only_owner_projected_workspace_root'
+          : 'updates_framework_owned_default_workspace_root',
         rollback_action_id: null,
         follow_up_action_ids: ['settings_verify_workspace'],
         verify_action_id: 'settings_verify_workspace',
         verify_route: routeFor('settings_verify_workspace'),
-        persistence_target: 'opl_workspace_root_config',
+        persistence_target: workspaceRootDeploymentManaged
+          ? 'environment:OPL_WORKSPACE_ROOT'
+          : 'opl_workspace_root_config',
+        editable: !workspaceRootDeploymentManaged,
+        editable_reason: workspaceRootDeploymentManaged
+          ? 'deployment_environment_owns_workspace_root'
+          : 'framework_owned_persistent_configuration',
         authority_flags: settingsAuthorityFlags(),
       },
       {
