@@ -58,6 +58,8 @@ export type StandardAgentActionRunPlan = {
   handler_registry: DomainHandlerRegistry | null;
   foundry_provider_manifest: Record<string, unknown> | null;
   request_payload_sha256: string;
+  original_invocation_sha256?: string;
+  effective_payload?: Record<string, unknown>;
   request_sha256: string;
   request_byte_size: number;
   input_schema_validation: Record<string, unknown>;
@@ -505,6 +507,8 @@ function planRecord(value: Record<string, unknown>): StandardAgentActionRunPlan 
     'handler_registry',
     'foundry_provider_manifest',
     'request_payload_sha256',
+    'original_invocation_sha256',
+    'effective_payload',
     'request_sha256',
     'request_byte_size',
     'input_schema_validation',
@@ -523,6 +527,11 @@ function planRecord(value: Record<string, unknown>): StandardAgentActionRunPlan 
     || !isRecord(value.input_schema_validation)
     || typeof value.request_payload_sha256 !== 'string'
     || !DIGEST_PATTERN.test(value.request_payload_sha256)
+    || (value.original_invocation_sha256 !== undefined && (
+      typeof value.original_invocation_sha256 !== 'string'
+      || !DIGEST_PATTERN.test(value.original_invocation_sha256)
+    ))
+    || (value.effective_payload !== undefined && !isRecord(value.effective_payload))
     || typeof value.request_sha256 !== 'string'
     || !DIGEST_PATTERN.test(value.request_sha256)
     || !Number.isSafeInteger(value.request_byte_size)
@@ -579,6 +588,15 @@ function planRecord(value: Record<string, unknown>): StandardAgentActionRunPlan 
       action_id: actionId,
       execution_kind: executionKind,
     });
+  }
+  if (isRecord(value.effective_payload)) {
+    const effectiveBytes = canonicalJsonBytes(value.effective_payload);
+    if (
+      crypto.createHash('sha256').update(effectiveBytes).digest('hex') !== value.request_sha256
+      || effectiveBytes.byteLength !== value.request_byte_size
+    ) {
+      fail('Standard Agent action run plan effective_payload does not match frozen request bytes.');
+    }
   }
   const foundryProvider = value.foundry_provider_manifest;
   if (
@@ -647,6 +665,10 @@ function planRecord(value: Record<string, unknown>): StandardAgentActionRunPlan 
     handler_registry: handlerRegistry,
     foundry_provider_manifest: normalizedFoundryProvider,
     request_payload_sha256: value.request_payload_sha256,
+    ...(typeof value.original_invocation_sha256 === 'string'
+      ? { original_invocation_sha256: value.original_invocation_sha256 }
+      : {}),
+    ...(isRecord(value.effective_payload) ? { effective_payload: value.effective_payload } : {}),
     request_sha256: value.request_sha256,
     request_byte_size: Number(value.request_byte_size),
     input_schema_validation: value.input_schema_validation,

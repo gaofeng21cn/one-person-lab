@@ -47,6 +47,15 @@ import {
 import { recordStandardAgentActionRunEvent } from './standard-agent-action-run-recorder.ts';
 import { runStandardAgentHandlerSandbox } from './standard-agent-handler-sandbox.ts';
 import { resolveStandardAgentManagedCheckout } from './standard-agent-managed-checkout.ts';
+import { applyDomainArtifactCasMaterialization } from './domain-artifact-cas-materialization.ts';
+import {
+  bindStandardAgentLifecycleReactivation,
+  materializedStandardAgentLifecycleAdmission,
+  preflightStandardAgentDomainLifecycleAdmission,
+  prepareStandardAgentLifecycleReactivation,
+  standardAgentLifecycleAdmissionContract,
+  type PreparedStandardAgentLifecycleReactivation,
+} from './standard-agent-domain-lifecycle-admission.ts';
 
 type StandardAgentActionRuntimeInput = {
   domainId: string;
@@ -63,6 +72,7 @@ type RuntimeDependencies = {
   resolvePinnedRuntimeBinding?: HostedAgentRuntimeBindingResolver['resolvePinned'];
   foundryRootOverride?: string;
   runHandler?: typeof runStandardAgentHandlerSandbox;
+  applyDomainArtifactCas?: typeof applyDomainArtifactCasMaterialization;
   runStageRuntime?: typeof runFamilyRuntime;
   compileStageManifest?: typeof compileStandardAgentStageManifest;
   recordLedger?: typeof actionLedger;
@@ -154,6 +164,24 @@ function canonicalTimeoutMs(value?: number) {
     fail('Standard Agent action timeoutMs must be a positive integer.', { timeout_ms: value });
   }
   return value;
+}
+
+function originalInvocationSha256(input: {
+  domainId: string;
+  actionId: string;
+  runId: string;
+  workspaceRoot: string;
+  requestPayloadSha256: string;
+  timeoutMs: number | null;
+}) {
+  return sha256(canonicalJsonBytes({
+    canonical_domain_id: input.domainId,
+    action_id: input.actionId,
+    run_id: input.runId,
+    workspace_root: input.workspaceRoot,
+    request_payload_sha256: input.requestPayloadSha256,
+    timeout_ms: input.timeoutMs,
+  }));
 }
 
 function packageUseBinding(value: unknown) {
@@ -967,6 +995,30 @@ async function runFoundryAction(input: {
   }
 }
 
+function materializeHandlerOutput(input: {
+  action: FamilyActionCatalogAction;
+  workspaceRoot: string;
+  domainId: string;
+  runId: string;
+  handlerRef: string;
+  runtimeBindingRef: string;
+  output: unknown;
+  stored: ReturnType<typeof commitStandardAgentActionOutput>;
+}, applyMaterialization = applyDomainArtifactCasMaterialization) {
+  return applyMaterialization({
+    workspaceRoot: input.workspaceRoot,
+    domainId: input.domainId,
+    actionId: input.action.action_id,
+    runId: input.runId,
+    handlerRef: input.handlerRef,
+    hostedRuntimeBindingRef: input.runtimeBindingRef,
+    actionAuthorityBoundary: input.action.authority_boundary,
+    handlerOutput: input.output,
+    handlerOutputRef: input.stored.output.ref,
+    handlerOutputSha256: input.stored.output.sha256,
+  });
+}
+
 async function runHandlerAction(input: {
   runtimeInput: StandardAgentActionRuntimeInput;
   action: FamilyActionCatalogAction;
@@ -983,6 +1035,7 @@ async function runHandlerAction(input: {
   runtimeBindingRef: string;
   startedAt: string;
   runHandler: typeof runStandardAgentHandlerSandbox;
+  applyDomainArtifactCas: typeof applyDomainArtifactCasMaterialization;
   recordLedger: typeof actionLedger;
 }) {
   const handlerRef = input.action.execution_binding.kind === 'handler_ref'
@@ -1019,6 +1072,7 @@ async function runHandlerAction(input: {
       readStandardAgentActionStoredBytes(existing.output, 'Handler action output').toString('utf8'),
     );
     let completion = recordedCompletion;
+    let hostMaterialization: ReturnType<typeof materializeHandlerOutput> = null;
     if (isRecord(persisted) && persisted.surface_kind === 'opl_standard_agent_action_failure') {
       const error = {
         error_code: typeof persisted.error_code === 'string' ? persisted.error_code : 'contract_shape_invalid',
@@ -1049,6 +1103,16 @@ async function runHandlerAction(input: {
           payload: persisted,
           label: `Standard Agent action ${input.action.action_id} output`,
         });
+        hostMaterialization = materializeHandlerOutput({
+          action: input.action,
+          workspaceRoot: input.workspaceRoot,
+          domainId: input.domainId,
+          runId: input.runId,
+          handlerRef,
+          runtimeBindingRef: input.runtimeBindingRef,
+          output: persisted,
+          stored: existing,
+        }, input.applyDomainArtifactCas);
         completion = persistCompletion(input.workspaceRoot, {
           ...completionBase({
             runId: input.runId,
@@ -1073,6 +1137,24 @@ async function runHandlerAction(input: {
           }),
         });
       } catch (error) {
+        if (!(error instanceof FrameworkContractError)) {
+          input.recordLedger({
+            runId: input.runId,
+            domainId: input.domainId,
+            actionId: input.action.action_id,
+            bindingRef: ledgerBindingRef,
+            status: 'failed',
+            startedAt: input.startedAt,
+            recordedAt: new Date().toISOString(),
+            stored: existing,
+          });
+          unknownSuccess(error, {
+            runId: input.runId,
+            actionRunRef: existing.action_run_ref,
+            requestRef: existing.request.ref,
+            runtimeBindingRef: input.runtimeBindingRef,
+          });
+        }
         completion = persistCompletion(input.workspaceRoot, {
           ...completionBase({
             runId: input.runId,
@@ -1121,6 +1203,16 @@ async function runHandlerAction(input: {
       payload: persisted,
       label: `Standard Agent action ${input.action.action_id} output`,
     });
+    hostMaterialization ??= materializeHandlerOutput({
+      action: input.action,
+      workspaceRoot: input.workspaceRoot,
+      domainId: input.domainId,
+      runId: input.runId,
+      handlerRef,
+      runtimeBindingRef: input.runtimeBindingRef,
+      output: persisted,
+      stored: existing,
+    }, input.applyDomainArtifactCas);
     return {
       surface_kind: 'opl_standard_agent_action_run',
       version: 'opl-standard-agent-action-run.v1',
@@ -1136,6 +1228,7 @@ async function runHandlerAction(input: {
       request: existing.request,
       output: existing.output,
       result: persisted,
+      host_materialization: hostMaterialization,
       sandbox: completion!.sandbox ?? handlerSandboxSummary(handler.binding),
       ledger: ledger.ledger_entry,
       authority_boundary: actionAuthorityBoundary(),
@@ -1251,6 +1344,70 @@ async function runHandlerAction(input: {
     requestBytes: input.requestBytes,
     outputBytes: receipt.stdout_bytes,
   });
+  let hostMaterialization: ReturnType<typeof materializeHandlerOutput>;
+  try {
+    hostMaterialization = materializeHandlerOutput({
+      action: input.action,
+      workspaceRoot: input.workspaceRoot,
+      domainId: input.domainId,
+      runId: input.runId,
+      handlerRef,
+      runtimeBindingRef: input.runtimeBindingRef,
+      output: receipt.output,
+      stored,
+    }, input.applyDomainArtifactCas);
+  } catch (error) {
+    if (!(error instanceof FrameworkContractError)) {
+      input.recordLedger({
+        runId: input.runId,
+        domainId: input.domainId,
+        actionId: input.action.action_id,
+        bindingRef: ledgerBindingRef,
+        status: 'failed',
+        startedAt: input.startedAt,
+        recordedAt,
+        stored,
+      });
+      unknownSuccess(error, {
+        runId: input.runId,
+        actionRunRef: stored.action_run_ref,
+        requestRef: stored.request.ref,
+        runtimeBindingRef: input.runtimeBindingRef,
+      });
+    }
+    persistCompletion(input.workspaceRoot, {
+      ...completionBase({
+        runId: input.runId,
+        domainId: input.domainId,
+        actionId: input.action.action_id,
+        executionKind: 'handler_ref',
+        status: 'failed',
+        bindingRef: handlerRef,
+        runtimeBindingRef: input.runtimeBindingRef,
+        stored,
+      }),
+      failure_disposition: 'permanent',
+      sandbox: {
+        runtime_kind: receipt.runtime_kind,
+        sandbox_kind: receipt.sandbox_kind,
+        exit_code: receipt.exit_code,
+        timed_out: receipt.timed_out,
+      },
+      error: persistedError(error),
+      completed_handler_replay: null,
+    });
+    input.recordLedger({
+      runId: input.runId,
+      domainId: input.domainId,
+      actionId: input.action.action_id,
+      bindingRef: ledgerBindingRef,
+      status: 'failed',
+      startedAt: input.startedAt,
+      recordedAt,
+      stored,
+    });
+    wrapFailure(error, stored);
+  }
   persistCompletion(input.workspaceRoot, {
     ...completionBase({
       runId: input.runId,
@@ -1304,6 +1461,7 @@ async function runHandlerAction(input: {
     request: stored.request,
     output: stored.output,
     result: receipt.output,
+    host_materialization: hostMaterialization,
     sandbox: {
       runtime_kind: receipt.runtime_kind,
       sandbox_kind: receipt.sandbox_kind,
@@ -1712,6 +1870,143 @@ function buildLiveActionContext(input: {
   };
 }
 
+function actionDeclaresHostMaterialization(action: FamilyActionCatalogAction) {
+  return isRecord(action.authority_boundary?.host_materialization_contract);
+}
+
+function originalInternalHandlerPayload(input: {
+  action: FamilyActionCatalogAction;
+  plan: StandardAgentActionRunPlan;
+}) {
+  if (!input.plan.effective_payload) {
+    fail('Lifecycle reactivation child run lacks its frozen effective Handler payload.', {
+      handler_run_id: input.plan.run_id,
+    });
+  }
+  const payload = structuredClone(input.plan.effective_payload);
+  for (const field of input.action.workspace_locator_fields) {
+    if (
+      (field === 'workspace_root' || field === 'workspace_path')
+      && payload[field] === input.plan.workspace_root
+    ) delete payload[field];
+  }
+  if (sha256(canonicalJsonBytes(payload)) !== input.plan.request_payload_sha256) {
+    fail('Lifecycle reactivation child run cannot reconstruct its frozen original Handler invocation.', {
+      handler_run_id: input.plan.run_id,
+    });
+  }
+  return payload;
+}
+
+async function materializeLifecycleAdmissionContext(input: {
+  runtimeInput: StandardAgentActionRuntimeInput;
+  runId: string;
+  workspaceRoot: string;
+  domainId: string;
+  checkoutRoot: string;
+  originalInvocationSha256: string;
+  context: StandardAgentActionContext;
+  dependencies: RuntimeDependencies;
+}) {
+  const bound = bindStandardAgentLifecycleReactivation({
+    action: input.context.action,
+    payload: input.context.payload,
+    workspaceRoot: input.workspaceRoot,
+    domainId: input.domainId,
+    runId: input.runId,
+    originalInvocationSha256: input.originalInvocationSha256,
+  });
+  if (!bound) {
+    const admission = preflightStandardAgentDomainLifecycleAdmission({
+      action: input.context.action,
+      payload: input.context.payload,
+      checkoutRoot: input.checkoutRoot,
+      workspaceRoot: input.workspaceRoot,
+      domainId: input.domainId,
+      runId: input.runId,
+      originalInvocationSha256: input.originalInvocationSha256,
+    });
+    return { context: input.context, admission };
+  }
+  const handlerAction = input.context.catalog.actions.find(
+    (candidate) => candidate.action_id === bound.handlerActionId,
+  ) ?? fail('Lifecycle reactivation action is absent from the frozen domain catalog.', {
+    reactivation_action_id: bound.handlerActionId,
+  });
+  if (
+    handlerAction.execution_binding.kind !== 'handler_ref'
+    || Object.values(handlerAction.supported_surfaces).some((surface) => surface !== null)
+    || !actionDeclaresHostMaterialization(handlerAction)
+  ) fail('Lifecycle reactivation action must be an internal registry-bound host-materializing Handler action.', {
+    reactivation_action_id: bound.handlerActionId,
+  });
+
+  const childState = inspectStandardAgentActionRunState({
+    workspaceRoot: input.workspaceRoot,
+    runId: bound.handlerRunId,
+  });
+  let prepared: PreparedStandardAgentLifecycleReactivation;
+  if (childState) {
+    if (
+      !childState.plan
+      || childState.plan.action_id !== bound.handlerActionId
+      || !childState.plan.effective_payload
+    ) fail('Existing lifecycle reactivation child run lacks its frozen effective Handler payload.', {
+      handler_run_id: bound.handlerRunId,
+    });
+    prepared = {
+      ...bound,
+      handlerPayload: originalInternalHandlerPayload({ action: handlerAction, plan: childState.plan }),
+    };
+  } else {
+    prepared = prepareStandardAgentLifecycleReactivation({
+      action: input.context.action,
+      payload: input.context.payload,
+      checkoutRoot: input.checkoutRoot,
+      workspaceRoot: input.workspaceRoot,
+      domainId: input.domainId,
+      runId: input.runId,
+      originalInvocationSha256: input.originalInvocationSha256,
+    }) ?? fail('Lifecycle reactivation request could not be prepared.');
+  }
+  const handlerRun = await runStandardAgentAction({
+    domainId: input.domainId,
+    actionId: prepared.handlerActionId,
+    workspaceRoot: input.workspaceRoot,
+    payload: prepared.handlerPayload,
+    runId: prepared.handlerRunId,
+    timeoutMs: input.runtimeInput.timeoutMs,
+  }, input.dependencies);
+  const effectivePayload = {
+    ...input.context.payload,
+    [prepared.admissionPayloadField]: materializedStandardAgentLifecycleAdmission({
+      prepared,
+      handlerRun,
+    }),
+  };
+  const inputValidation = assertRepoJsonSchemaPayload({
+    repoRoot: input.checkoutRoot,
+    schemaRef: input.context.action.input_schema_ref,
+    payload: effectivePayload,
+    label: `Standard Agent action ${input.context.action.action_id} materialized input`,
+  });
+  const context = {
+    ...input.context,
+    payload: effectivePayload,
+    inputValidation,
+  };
+  const admission = preflightStandardAgentDomainLifecycleAdmission({
+    action: context.action,
+    payload: context.payload,
+    checkoutRoot: input.checkoutRoot,
+    workspaceRoot: input.workspaceRoot,
+    domainId: input.domainId,
+    runId: input.runId,
+    originalInvocationSha256: input.originalInvocationSha256,
+  });
+  return { context, admission };
+}
+
 function requestFromFrozenPlan(input: {
   runtimeInput: StandardAgentActionRuntimeInput;
   plan: StandardAgentActionRunPlan;
@@ -1749,7 +2044,25 @@ function requestFromFrozenPlan(input: {
     run_id: input.plan.run_id,
     action_id: input.plan.action_id,
   });
-  const payload = normalizedPayload(action, input.runtimeInput.payload, input.plan.workspace_root);
+  const invocationSha256 = originalInvocationSha256({
+    domainId: input.plan.canonical_domain_id,
+    actionId: input.plan.action_id,
+    runId: input.plan.run_id,
+    workspaceRoot: input.plan.workspace_root,
+    requestPayloadSha256,
+    timeoutMs: requestedTimeoutMs,
+  });
+  if (
+    input.plan.original_invocation_sha256 !== undefined
+    && input.plan.original_invocation_sha256 !== invocationSha256
+  ) fail('Hosted Agent action invocation conflicts with its frozen run plan.', { run_id: input.plan.run_id });
+  if (
+    standardAgentLifecycleAdmissionContract(action)
+    && (!input.plan.original_invocation_sha256 || !input.plan.effective_payload)
+  ) fail('Lifecycle-gated action requires a frozen effective payload and original invocation fingerprint.');
+  const payload = input.plan.effective_payload
+    ? structuredClone(input.plan.effective_payload)
+    : normalizedPayload(action, input.runtimeInput.payload, input.plan.workspace_root);
   const requestBytes = canonicalJsonBytes(payload);
   const requestSha256 = sha256(requestBytes);
   if (
@@ -1772,6 +2085,7 @@ function requestFromFrozenPlan(input: {
     : null;
   return {
     requestBytes,
+    originalInvocationSha256: invocationSha256,
     context: {
       action,
       catalog: input.plan.catalog,
@@ -1798,11 +2112,21 @@ async function executeActionContext(input: {
   startedAt: string;
   timeoutMs: number | null;
   requestPayloadSha256: string;
+  originalInvocationSha256: string;
   requestBytes: Buffer;
   context: StandardAgentActionContext;
   dependencies: RuntimeDependencies;
 }) {
   const { action, registry, payload, foundryRequest, foundryProvider, inputValidation } = input.context;
+  const lifecycleAdmission = preflightStandardAgentDomainLifecycleAdmission({
+    action,
+    payload,
+    checkoutRoot: input.checkoutRoot,
+    workspaceRoot: input.workspaceRoot,
+    domainId: input.domainId,
+    runId: input.runId,
+    originalInvocationSha256: input.originalInvocationSha256,
+  });
   prepareStandardAgentActionRunRequest({
     workspaceRoot: input.workspaceRoot,
     runId: input.runId,
@@ -1837,6 +2161,7 @@ async function executeActionContext(input: {
         inputSchemaValidation: inputValidation,
         checkoutRoot: input.checkoutRoot,
         runHandler: input.dependencies.runHandler ?? runStandardAgentHandlerSandbox,
+        applyDomainArtifactCas: input.dependencies.applyDomainArtifactCas ?? applyDomainArtifactCasMaterialization,
         recordLedger: input.dependencies.recordLedger ?? actionLedger,
       })
     : action.execution_binding.kind === 'stage_binding'
@@ -1863,6 +2188,7 @@ async function executeActionContext(input: {
       hosted_runtime_binding_ref: input.runtimeBindingRef,
       hosted_runtime_binding: input.runtimeBinding,
       input_schema_validation: inputValidation,
+      domain_lifecycle_admission: lifecycleAdmission,
     },
   };
 }
@@ -1888,7 +2214,11 @@ export async function runStandardAgentAction(
     : null;
   if (frozenBinding && frozenPlan) {
     const frozen = requestFromFrozenPlan({ runtimeInput: input, plan: frozenPlan });
-    if (completion?.execution_kind === 'handler_ref' && completion.status === 'completed') {
+    if (
+      completion?.execution_kind === 'handler_ref'
+      && completion.status === 'completed'
+      && !actionDeclaresHostMaterialization(frozen.context.action)
+    ) {
       return replayCompletedHandlerAction({
         runtimeInput: input,
         runId,
@@ -1912,6 +2242,7 @@ export async function runStandardAgentAction(
       startedAt: frozenPlan.started_at,
       timeoutMs: frozenPlan.timeout_ms,
       requestPayloadSha256: frozenPlan.request_payload_sha256,
+      originalInvocationSha256: frozen.originalInvocationSha256,
       requestBytes: frozen.requestBytes,
       context: frozen.context,
       dependencies,
@@ -1960,14 +2291,33 @@ export async function runStandardAgentAction(
   )) {
     fail('Hosted Agent action request conflicts with its frozen legacy run binding.', { run_id: runId });
   }
-  const liveContext = buildLiveActionContext({
+  let liveContext = buildLiveActionContext({
     runtimeInput: input,
     runtimeBinding,
     dependencies,
   });
-  const liveRequestBytes = canonicalJsonBytes(liveContext.payload);
   const requestPayloadSha256 = sha256(canonicalJsonBytes(input.payload));
   const timeoutMs = canonicalTimeoutMs(input.timeoutMs);
+  const invocationSha256 = originalInvocationSha256({
+    domainId: runtimeBinding.agent_id,
+    actionId: liveContext.action.action_id,
+    runId,
+    workspaceRoot: runtimeBinding.workspace_root,
+    requestPayloadSha256,
+    timeoutMs,
+  });
+  const materializedContext = await materializeLifecycleAdmissionContext({
+    runtimeInput: input,
+    runId,
+    workspaceRoot: runtimeBinding.workspace_root,
+    domainId: runtimeBinding.agent_id,
+    checkoutRoot: runtimeBinding.checkout_root,
+    originalInvocationSha256: invocationSha256,
+    context: liveContext,
+    dependencies,
+  });
+  liveContext = materializedContext.context;
+  const liveRequestBytes = canonicalJsonBytes(liveContext.payload);
 
   if (!frozenBinding) {
     const acceptedDomainIds = canonicalDomainIds([
@@ -1997,6 +2347,8 @@ export async function runStandardAgentAction(
       handler_registry: liveContext.registry,
       foundry_provider_manifest: liveContext.foundryProvider as unknown as Record<string, unknown> | null,
       request_payload_sha256: requestPayloadSha256,
+      original_invocation_sha256: invocationSha256,
+      effective_payload: liveContext.payload,
       request_sha256: sha256(liveRequestBytes),
       request_byte_size: liveRequestBytes.byteLength,
       input_schema_validation: liveContext.inputValidation,
@@ -2039,6 +2391,7 @@ export async function runStandardAgentAction(
       startedAt: frozenPlan.started_at,
       timeoutMs: frozenPlan.timeout_ms,
       requestPayloadSha256: frozenPlan.request_payload_sha256,
+      originalInvocationSha256: frozen.originalInvocationSha256,
       requestBytes: frozen.requestBytes,
       context: frozen.context,
       dependencies,
@@ -2064,6 +2417,7 @@ export async function runStandardAgentAction(
     startedAt: observedAt,
     timeoutMs,
     requestPayloadSha256,
+    originalInvocationSha256: invocationSha256,
     requestBytes: liveRequestBytes,
     context: liveContext,
     dependencies,

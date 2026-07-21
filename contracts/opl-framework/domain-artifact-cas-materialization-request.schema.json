@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/domain-artifact-cas-materialization-request.schema.json",
+  "title": "OPL Domain Artifact CAS Materialization Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "surface_kind",
+    "version",
+    "capability_id",
+    "request_id",
+    "domain_id",
+    "authorization_ref",
+    "operations_sha256",
+    "operations"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "opl_domain_artifact_cas_materialization_request"
+    },
+    "version": {
+      "const": "opl-domain-artifact-cas-materialization.v1"
+    },
+    "capability_id": {
+      "const": "opl_domain_artifact_cas_materialization.v1"
+    },
+    "request_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "domain_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "authorization_ref": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+    },
+    "operations_sha256": {
+      "type": "string",
+      "pattern": "^(?:sha256:)?[a-f0-9]{64}$"
+    },
+    "operations": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "target_relative_path",
+          "precondition",
+          "replacement_bytes_base64",
+          "replacement_sha256",
+          "replacement_byte_size"
+        ],
+        "properties": {
+          "target_relative_path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "precondition": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["kind", "sha256", "byte_size"],
+                "properties": {
+                  "kind": { "const": "existing_exact" },
+                  "sha256": {
+                    "type": "string",
+                    "pattern": "^(?:sha256:)?[a-f0-9]{64}$"
+                  },
+                  "byte_size": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 16777216
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["kind"],
+                "properties": {
+                  "kind": { "const": "absent" }
+                }
+              }
+            ]
+          },
+          "replacement_bytes_base64": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 22369624
+          },
+          "replacement_sha256": {
+            "type": "string",
+            "pattern": "^(?:sha256:)?[a-f0-9]{64}$"
+          },
+          "replacement_byte_size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 16777216
+          }
+        }
+      }
+    }
+  }
+}
