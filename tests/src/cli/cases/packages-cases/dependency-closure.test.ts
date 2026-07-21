@@ -21,6 +21,13 @@ import {
 const FIXTURE_CONSUMER_PACKAGE_ID = 'fixture.mas';
 const FIXTURE_PROVIDER_PACKAGE_ID = 'fixture.mas-scholar-skills';
 
+function bindMasWorkspace(workspace: string, env: Record<string, string>) {
+  fs.mkdirSync(workspace, { recursive: true });
+  runCli([
+    'workspace', 'bind', '--project', 'medautoscience', '--path', workspace,
+  ], env);
+}
+
 function writeFixtureCapabilityProvider(
   root: string,
   version = '0.1.0',
@@ -81,6 +88,7 @@ test('MAS package lifecycle atomically installs and repairs its 11-core capabili
   const consumerManifestPath = writeFixtureMasConsumer(root, providerManifestPath);
   const env = { OPL_STATE_DIR: stateDir, CODEX_HOME: codexHome };
   try {
+    bindMasWorkspace(workspace, env);
     const install = await runCliAsync([
       'packages', 'install', '--manifest-url', consumerManifestPath,
       '--trust-tier', 'first_party', '--scope', 'workspace', '--target-workspace', workspace,
@@ -201,6 +209,7 @@ test('MAS accepts a newer capability provider beyond the recorded version range 
     CODEX_HOME: path.join(root, 'codex-home'),
   };
   try {
+    bindMasWorkspace(workspace, env);
     const installed = await runCliAsync([
       'packages', 'install', '--manifest-url', consumerManifestPath,
       '--trust-tier', 'first_party', '--scope', 'workspace', '--target-workspace', workspace,
@@ -252,6 +261,8 @@ test('MAS dependency closure update and rollback atomically rematerialize known 
   const env = { OPL_STATE_DIR: stateDir, CODEX_HOME: codexHome };
   const helperPath = path.join(workspace, '.codex', 'skills', 'medical-manuscript-writing', 'helper.txt');
   try {
+    bindMasWorkspace(workspace, env);
+    bindMasWorkspace(secondWorkspace, env);
     await runCliAsync([
       'packages', 'install', '--manifest-url', consumerV1, '--trust-tier', 'first_party',
       '--scope', 'workspace', '--target-workspace', workspace,
@@ -318,6 +329,7 @@ test('installed-source optimize records dependency and scope transactions and ro
   const env = { OPL_STATE_DIR: stateDir, CODEX_HOME: codexHome };
   const helperPath = path.join(workspace, '.codex', 'skills', 'medical-manuscript-writing', 'helper.txt');
   try {
+    bindMasWorkspace(workspace, env);
     await runCliAsync([
       'packages', 'install', '--manifest-url', consumerManifest, '--trust-tier', 'first_party',
       '--scope', 'workspace', '--target-workspace', workspace,
@@ -374,6 +386,7 @@ test('MAS scope materialization never overwrites an unowned local Skill', async 
   try {
     fs.mkdirSync(localSkill, { recursive: true });
     fs.writeFileSync(path.join(localSkill, 'SKILL.md'), '# user-owned local Skill\n');
+    bindMasWorkspace(workspace, env);
     const blocked = await runCliFailure([
       'packages', 'install', '--manifest-url', consumerManifest, '--trust-tier', 'first_party',
       '--scope', 'workspace', '--target-workspace', workspace,
@@ -419,6 +432,8 @@ test('MAS scope materialization adopts verified legacy OPL-managed Skills and ro
       pack_id: 'medical-manuscript-writing',
       source_skill_dir: path.join(providerRoot, 'skills', 'medical-manuscript-writing'),
     }));
+
+    bindMasWorkspace(workspace, env);
 
     await runCliAsync([
       'packages', 'install', '--manifest-url', providerManifest, '--trust-tier', 'first_party',
@@ -467,6 +482,7 @@ test('MAS scope materialization rejects forged legacy OPL management markers', a
       pack_id: 'medical-manuscript-writing',
       source_skill_dir: path.join(root, 'unrelated', 'skills', 'medical-manuscript-writing'),
     }));
+    bindMasWorkspace(workspace, env);
     const blocked = await runCliFailure([
       'packages', 'install', '--manifest-url', consumerManifest, '--trust-tier', 'first_party',
       '--scope', 'workspace', '--target-workspace', workspace,
@@ -492,6 +508,7 @@ test('initial MAS rollback preserves a preinstalled provider and restores the wo
     fs.mkdirSync(originalSkillRoot, { recursive: true });
     fs.writeFileSync(path.join(originalSkillRoot, 'SKILL.md'), '# workspace-owned prestate\n');
     fs.writeFileSync(path.join(originalSkillRoot, 'local.txt'), 'preserve me\n');
+    bindMasWorkspace(workspace, env);
 
     await runCliAsync([
       'packages', 'install', '--manifest-url', providerManifest, '--trust-tier', 'first_party',
@@ -538,6 +555,7 @@ test('fresh MAS install has no virtual rollback target and preserves its install
     fs.mkdirSync(originalSkillRoot, { recursive: true });
     fs.writeFileSync(path.join(originalSkillRoot, 'SKILL.md'), '# workspace prestate\n');
     fs.writeFileSync(path.join(originalSkillRoot, 'local.txt'), 'keep me\n');
+    bindMasWorkspace(workspace, env);
     await runCliAsync([
       'packages', 'install', '--manifest-url', consumerManifest, '--trust-tier', 'first_party',
       '--scope', 'workspace', '--target-workspace', workspace,
@@ -690,6 +708,7 @@ test('failed MAS closure update and rollback restore package state and scope fil
     }
   };
   try {
+    bindMasWorkspace(workspace, env);
     fs.mkdirSync(stateDir, { recursive: true });
     withReadOnlyState(() => {
       runCliFailure([

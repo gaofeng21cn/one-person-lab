@@ -10,6 +10,7 @@ import {
   fs,
   os,
   path,
+  runCli,
   runCliAsync,
   runCliFailure,
   test,
@@ -48,6 +49,13 @@ function assertNoScopeTransactionArtifacts(workspace: string) {
   if (fs.existsSync(transactionRoot)) {
     assert.deepEqual(fs.readdirSync(transactionRoot), []);
   }
+}
+
+function bindMasWorkspace(workspace: string, env: Record<string, string>) {
+  fs.mkdirSync(workspace, { recursive: true });
+  runCli([
+    'workspace', 'bind', '--project', 'medautoscience', '--path', workspace,
+  ], env);
 }
 
 test('package lifecycle SQLite writer mutex times out on live contention and recovers after release or failure', async () => {
@@ -117,6 +125,9 @@ test('concurrent package activation preserves distinct workspaces and avoids sha
   };
 
   try {
+    for (const workspace of [workspaceA, workspaceB, sharedWorkspace]) {
+      bindMasWorkspace(workspace, env);
+    }
     await runCliAsync(['packages', 'install', 'mas'], env);
     await Promise.all([workspaceA, workspaceB].map((workspace) => runCliAsync([
       'packages', 'activate', 'mas',
@@ -206,6 +217,7 @@ test('use-boundary catalog refresh has a short total budget and launches the LKG
   };
 
   try {
+    bindMasWorkspace(workspace, env);
     await runCliAsync(['packages', 'install', 'mas'], env);
     fs.mkdirSync(hangingBin, { recursive: true });
     fs.writeFileSync(

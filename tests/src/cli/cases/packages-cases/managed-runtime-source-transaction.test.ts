@@ -43,6 +43,13 @@ const FIXTURE_MAG_PACKAGE_ID = 'fixture.mag';
 const FIXTURE_RCA_PACKAGE_ID = 'fixture.rca';
 const FIXTURE_PROVIDER_PACKAGE_ID = 'fixture.mas-scholar-skills';
 
+function bindMasWorkspace(workspace: string, env: Record<string, string>) {
+  fs.mkdirSync(workspace, { recursive: true });
+  runCli([
+    'workspace', 'bind', '--project', 'medautoscience', '--path', workspace,
+  ], env);
+}
+
 function runGit(checkoutPath: string, args: string[]) {
   const result = spawnSync('git', args, { cwd: checkoutPath, encoding: 'utf8' });
   assert.equal(result.status, 0, `${args.join(' ')}\n${result.stdout}\n${result.stderr}`);
@@ -844,6 +851,7 @@ test('ordinary-user latest-stable use advances MAS and ScholarSkills by immutabl
   fs.writeFileSync(badWorkspace, 'not a directory\n');
 
   try {
+    bindMasWorkspace(workspace, commonEnv);
     const installed = runCli(['packages', 'install', 'mas'], {
       ...commonEnv,
       ...releaseV1.env,
@@ -1093,6 +1101,7 @@ test('Packages compensates managed runtime source across downstream failure upda
       CODEX_HOME: path.join(homeDir, '.codex'),
       ...fixtureEnv,
     };
+    bindMasWorkspace(workspaceRoot, env);
     const installArgs = [
       'packages', 'install', '--manifest-url', consumerManifest, '--trust-tier', 'first_party',
     ];

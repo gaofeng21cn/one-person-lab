@@ -6,6 +6,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { pathToFileURL } from 'node:url';
 
+import { admitMasWorkspaceScopedPackageMutation } from '../../../../../src/entrypoints/cli/cases/public-command-specs-parts/packages.ts';
 import { parseJsonText } from '../../../../../src/kernel/json-file.ts';
 import { buildLock } from '../../../../../src/modules/connect/agent-package-registry-parts/lifecycle-lock.ts';
 import { normalizePackageManifest } from '../../../../../src/modules/connect/agent-package-registry-parts/manifest-normalizers.ts';
@@ -24,6 +25,39 @@ function withEnvironment<T>(values: Record<string, string>, run: () => T) {
       else process.env[key] = value;
     }
   }
+}
+
+function writeWorkspaceRegistry(
+  stateDir: string,
+  bindings: Array<{
+    bindingId: string;
+    projectId: string;
+    project: string;
+    workspacePath: string;
+    status: 'active' | 'inactive' | 'archived';
+  }>,
+) {
+  fs.mkdirSync(stateDir, { recursive: true });
+  fs.writeFileSync(path.join(stateDir, 'workspace-registry.json'), `${JSON.stringify({
+    version: 'g2',
+    bindings: bindings.map((binding) => ({
+      binding_id: binding.bindingId,
+      project_id: binding.projectId,
+      project: binding.project,
+      workspace_path: binding.workspacePath,
+      label: null,
+      status: binding.status,
+      direct_entry: {
+        command: null,
+        manifest_command: null,
+        url: null,
+        workspace_locator: null,
+      },
+      created_at: '2026-07-21T00:00:00.000Z',
+      updated_at: '2026-07-21T00:00:00.000Z',
+      archived_at: binding.status === 'archived' ? '2026-07-21T00:00:00.000Z' : null,
+    })),
+  }, null, 2)}\n`);
 }
 
 test('all package manifest normalizers preserve typed Codex default exposure', () => {
@@ -52,7 +86,10 @@ test('hidden capability packages keep immutable cache but leave global Codex sur
   const codexHome = path.join(home, 'Library', 'Application Support', 'OPL', 'codex');
   const stateDir = path.join(home, 'Library', 'Application Support', 'OPL', 'state');
   const providerRoot = path.join(root, 'provider');
-  const workspace = path.join(root, 'workspace');
+  const masWorkspace = path.join(root, 'mas-workspace');
+  const unboundWorkspace = path.join(root, 'unbound-workspace');
+  const wrongDomainWorkspace = path.join(root, 'wrong-domain-workspace');
+  const archivedMasWorkspace = path.join(root, 'archived-mas-workspace');
   const manifestPath = writeCapabilityProvider(providerRoot);
   const configPath = path.join(codexHome, 'config.toml');
   const canonicalMarketplaceId = 'mas-scholar-skills-local';
@@ -65,6 +102,37 @@ test('hidden capability packages keep immutable cache but leave global Codex sur
   fs.mkdirSync(path.join(canonicalMarketplaceRoot, 'plugins', 'mas-scholar-skills'), { recursive: true });
   fs.mkdirSync(legacyCacheRoot, { recursive: true });
   fs.mkdirSync(path.dirname(configPath), { recursive: true });
+  for (const workspace of [
+    masWorkspace,
+    unboundWorkspace,
+    wrongDomainWorkspace,
+    archivedMasWorkspace,
+  ]) {
+    fs.mkdirSync(workspace, { recursive: true });
+  }
+  writeWorkspaceRegistry(stateDir, [
+    {
+      bindingId: 'mas-active',
+      projectId: 'medautoscience',
+      project: 'med-autoscience',
+      workspacePath: masWorkspace,
+      status: 'active',
+    },
+    {
+      bindingId: 'mag-wrong-domain',
+      projectId: 'medautogrant',
+      project: 'med-autogrant',
+      workspacePath: wrongDomainWorkspace,
+      status: 'active',
+    },
+    {
+      bindingId: 'mas-archived',
+      projectId: 'medautoscience',
+      project: 'med-autoscience',
+      workspacePath: archivedMasWorkspace,
+      status: 'archived',
+    },
+  ]);
   fs.writeFileSync(configPath, [
     '[features]',
     'fixture = true',
@@ -128,18 +196,75 @@ test('hidden capability packages keep immutable cache but leave global Codex sur
       });
       assert.equal(lock.exposure_state, 'hidden');
 
-      fs.mkdirSync(workspace, { recursive: true });
+      for (const command of [
+        'packages install',
+        'packages activate',
+        'packages update',
+        'packages repair',
+        'packages optimize',
+        'packages rollback',
+      ]) {
+        assert.throws(
+          () => admitMasWorkspaceScopedPackageMutation(command, {
+            packageId: 'mas',
+            scope: 'workspace',
+            targetWorkspace: unboundWorkspace,
+          }),
+          (error: any) =>
+            error?.details?.failure_code === 'mas_scholar_skills_workspace_binding_required'
+            && error?.details?.binding_status === 'unbound',
+          command,
+        );
+      }
+      assert.throws(
+        () => admitMasWorkspaceScopedPackageMutation('packages activate', {
+          packageId: 'mas',
+          scope: 'workspace',
+          targetWorkspace: wrongDomainWorkspace,
+        }),
+        (error: any) =>
+          error?.details?.failure_code === 'mas_scholar_skills_workspace_binding_required'
+          && error?.details?.binding_status === 'wrong_domain',
+      );
+      assert.throws(
+        () => admitMasWorkspaceScopedPackageMutation('packages activate', {
+          packageId: 'mas',
+          scope: 'workspace',
+          targetWorkspace: archivedMasWorkspace,
+        }),
+        (error: any) =>
+          error?.details?.failure_code === 'mas_scholar_skills_workspace_binding_archived',
+      );
+      assert.throws(
+        () => admitMasWorkspaceScopedPackageMutation('packages activate', {
+          packageId: 'mas',
+          scope: 'quest',
+          targetQuest: path.join(masWorkspace, 'quest'),
+        }),
+        (error: any) =>
+          error?.details?.failure_code === 'mas_scholar_skills_quest_scope_not_admitted',
+      );
+      for (const workspace of [unboundWorkspace, wrongDomainWorkspace, archivedMasWorkspace]) {
+        assert.equal(fs.existsSync(path.join(workspace, '.codex', 'skills')), false);
+      }
+
+      const admitted = admitMasWorkspaceScopedPackageMutation('packages activate', {
+        packageId: 'medautoscience',
+        scope: 'workspace' as const,
+        targetWorkspace: masWorkspace,
+      });
+      assert.equal(admitted.targetWorkspace, masWorkspace);
       const materialization = materializeCapabilityScopeFromLock({
         provider: lock,
         scope: 'workspace',
-        targetRoot: workspace,
+        targetRoot: masWorkspace,
         transactionId: 'hidden-capability-workspace-projection',
         dryRun: false,
       });
       assert.equal(materialization.scope, 'workspace');
       assert.equal(
         fs.existsSync(path.join(
-          workspace,
+          masWorkspace,
           '.codex',
           'skills',
           'medical-manuscript-writing',

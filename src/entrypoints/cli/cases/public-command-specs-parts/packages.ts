@@ -1,4 +1,7 @@
+import path from 'node:path';
+
 import {
+  canonicalAgentPackageId,
   listOplAgentPackages,
   buildManagedUpdateKernelProjection,
   runManagedUpdateKernelOperation,
@@ -23,9 +26,14 @@ import {
   type AgentPackageProfileApplyInput,
   type AgentPackageRepairInput,
 } from '../../../../modules/connect/index.ts';
+import { FrameworkContractError } from '../../../../kernel/contract-validation.ts';
 import type { FrameworkContracts } from '../../../../kernel/types.ts';
 import { STANDARD_AGENT_REGISTRY } from '../../../../kernel/standard-agent-registry.ts';
-import { getActiveWorkspaceBinding } from '../../../../modules/workspace/index.ts';
+import {
+  getActiveWorkspaceBinding,
+  listWorkspaceBindings,
+  resolveWorkspaceLocator,
+} from '../../../../modules/workspace/index.ts';
 import { readOptionalString } from '../../modules/json-boundary.ts';
 import {
   buildUsageError,
@@ -133,6 +141,81 @@ function parsePackageRepair(args: string[], spec: CommandSpec): AgentPackageRepa
 
 function hasExplicitPackageSelection(input: AgentPackageInstallInput) {
   return Boolean(input.manifestUrl || input.registryUrl || input.packageId || input.agentRoot);
+}
+
+type ScopedPackageMutationInput = {
+  packageId?: string | null;
+  manifestUrl?: string | null;
+  registryUrl?: string | null;
+  agentRoot?: string | null;
+  scope?: 'workspace' | 'quest' | null;
+  targetWorkspace?: string | null;
+  targetQuest?: string | null;
+};
+
+export function admitMasWorkspaceScopedPackageMutation<T extends ScopedPackageMutationInput>(
+  command: string,
+  input: T,
+): T {
+  if (!input.scope) return input;
+  const packageId = canonicalAgentPackageId(input.packageId);
+  const unresolvedExplicitSelection = !packageId
+    && Boolean(input.manifestUrl || input.registryUrl || input.agentRoot);
+  if (packageId !== 'mas' && !unresolvedExplicitSelection) return input;
+  if (input.scope !== 'workspace' || !input.targetWorkspace || input.targetQuest) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'MAS Scholar Skills may only be projected through a registered MAS workspace binding.',
+      {
+        command,
+        package_id: packageId,
+        requested_scope: input.scope,
+        target_workspace: input.targetWorkspace ?? null,
+        target_quest: input.targetQuest ?? null,
+        failure_code: input.scope === 'quest'
+          ? 'mas_scholar_skills_quest_scope_not_admitted'
+          : 'mas_scholar_skills_workspace_binding_required',
+      },
+    );
+  }
+
+  let locator: ReturnType<typeof resolveWorkspaceLocator>;
+  try {
+    locator = resolveWorkspaceLocator('medautoscience', input.targetWorkspace);
+  } catch (error) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'MAS Scholar Skills target does not resolve to a current MAS workspace binding.',
+      {
+        command,
+        package_id: packageId,
+        target_workspace: input.targetWorkspace,
+        cause: error instanceof Error ? error.message : String(error),
+        failure_code: 'mas_scholar_skills_workspace_binding_required',
+      },
+    );
+  }
+  const samePathBindings = listWorkspaceBindings().filter((binding) =>
+    path.resolve(binding.workspace_path) === locator.absolute_path
+  );
+  if (!locator.binding || locator.binding.status === 'archived') {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'MAS Scholar Skills target must be a non-archived MAS workspace binding.',
+      {
+        command,
+        package_id: packageId,
+        target_workspace: locator.absolute_path,
+        binding_status: locator.binding?.status
+          ?? (samePathBindings.length > 0 ? 'wrong_domain' : 'unbound'),
+        bound_project_ids: samePathBindings.map((binding) => binding.project_id),
+        failure_code: locator.binding?.status === 'archived'
+          ? 'mas_scholar_skills_workspace_binding_archived'
+          : 'mas_scholar_skills_workspace_binding_required',
+      },
+    );
+  }
+  return input;
 }
 
 async function installPackageWithActiveWorkspace(input: AgentPackageInstallInput) {
@@ -316,9 +399,10 @@ export function buildPackagesCommandSpecs(
       ],
       group: 'packages',
       help_surface: 'default',
-      handler: (args) => installPackageWithActiveWorkspace(
+      handler: (args) => installPackageWithActiveWorkspace(admitMasWorkspaceScopedPackageMutation(
+        'packages install',
         parsePackageSelection('packages install', args, getCommandSpec('packages install')),
-      ),
+      )),
     },
     'packages activate': {
       usage: 'opl packages activate <package_id> --scope workspace|quest [--target-workspace <path>|--target-quest <path>] [--dry-run]',
@@ -329,9 +413,10 @@ export function buildPackagesCommandSpecs(
       ],
       group: 'packages',
       help_surface: 'migration_compatibility',
-      handler: (args) => runOplAgentPackageActivate(
+      handler: (args) => runOplAgentPackageActivate(admitMasWorkspaceScopedPackageMutation(
+        'packages activate',
         parsePackageAction('packages activate', args, getCommandSpec('packages activate')),
-      ),
+      )),
     },
     'packages update': {
       usage: 'opl packages update [<package_id>] [--scope workspace|quest --target-workspace <path>|--target-quest <path>] [--keep-migration <id,...>] [--manifest-url <url>|--registry-url <url>] [--trust-tier <tier>] [--source-kind <kind>] [--agent-root <repo>] [--dry-run]',
@@ -343,7 +428,10 @@ export function buildPackagesCommandSpecs(
       group: 'packages',
       help_surface: 'default',
       handler: (args) => {
-        const input = parsePackageSelection('packages update', args, getCommandSpec('packages update'));
+        const input = admitMasWorkspaceScopedPackageMutation(
+          'packages update',
+          parsePackageSelection('packages update', args, getCommandSpec('packages update')),
+        );
         if (hasExplicitPackageSelection(input)) {
           return runOplAgentPackageUpdate(input);
         }
@@ -420,9 +508,10 @@ export function buildPackagesCommandSpecs(
       examples: ['opl packages repair mas --scope workspace --target-workspace /path/to/study --json'],
       group: 'packages',
       help_surface: 'default',
-      handler: (args) => runOplAgentPackageRepair(
+      handler: (args) => runOplAgentPackageRepair(admitMasWorkspaceScopedPackageMutation(
+        'packages repair',
         parsePackageRepair(args, getCommandSpec('packages repair')),
-      ),
+      )),
     },
     'packages optimize': {
       usage: 'opl packages optimize <package_id> [--scope workspace|quest --target-workspace <path>|--target-quest <path>] [--dry-run]',
@@ -430,9 +519,10 @@ export function buildPackagesCommandSpecs(
       examples: ['opl packages optimize opl-flow --json'],
       group: 'packages',
       help_surface: 'default',
-      handler: (args) => runOplAgentPackageOptimize(
+      handler: (args) => runOplAgentPackageOptimize(admitMasWorkspaceScopedPackageMutation(
+        'packages optimize',
         parsePackageAction('packages optimize', args, getCommandSpec('packages optimize')),
-      ),
+      )),
     },
     'packages rollback': {
       usage: 'opl packages rollback <package_id> [--scope workspace|quest --target-workspace <path>|--target-quest <path>] [--dry-run]',
@@ -440,9 +530,10 @@ export function buildPackagesCommandSpecs(
       examples: ['opl packages rollback mas --scope workspace --target-workspace /path/to/study --json'],
       group: 'packages',
       help_surface: 'default',
-      handler: (args) => runOplAgentPackageRollback(
+      handler: (args) => runOplAgentPackageRollback(admitMasWorkspaceScopedPackageMutation(
+        'packages rollback',
         parsePackageAction('packages rollback', args, getCommandSpec('packages rollback')),
-      ),
+      )),
     },
     'packages profile apply': {
       usage: 'opl packages profile apply <package_id> --merged-file <path> [--dry-run]',
