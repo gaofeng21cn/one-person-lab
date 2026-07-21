@@ -948,6 +948,17 @@ test('system configure-codex syncs Full runtime family Codex plugins after API k
 
     const workspace = path.join(homeRoot, 'workspace');
     fs.mkdirSync(workspace, { recursive: true });
+    const bound = runCli([
+      'workspace', 'bind', '--project', 'medautoscience', '--path', workspace,
+    ], fixture.env).workspace_catalog;
+    const boundProject = bound.projects.find(
+      (entry: { project_id: string }) => entry.project_id === 'medautoscience',
+    );
+    assert.equal(bound.action, 'bind');
+    assert.equal(bound.binding.status, 'active');
+    assert.equal(bound.binding.workspace_path, workspace);
+    assert.equal(boundProject.active_binding.binding_id, bound.binding.binding_id);
+    assert.equal(boundProject.bindings[0].workspace_path_currentness.status, 'current');
     const activation = runCli([
       'packages', 'activate', 'mas', '--scope', 'workspace', '--target-workspace', workspace,
     ], fixture.env) as any;
