@@ -383,6 +383,18 @@ test('hosted readback contract retires private control-plane compatibility autho
     'utf8'
   )) as Record<string, any>;
   assert.equal(contract.command, 'opl workspace work-item readback');
+  assert.deepEqual(
+    contract.projection_model.quality_budget_readback.effective_current_cycle_statuses,
+    ['awaiting_producer', 'awaiting_review', 'awaiting_repair'],
+  );
+  assert.equal(
+    contract.projection_model.quality_budget_readback.terminal_cycle_projection,
+    'not_managed_with_null_limits',
+  );
+  assert.equal(
+    contract.projection_model.quality_budget_readback.historical_budget_evidence,
+    'retained_in_stage_attempt_and_quality_cycle_ledgers',
+  );
   assert.equal(contract.retirement_migration.private_dispatch_compatibility_authority_allowed, false);
   assert.equal(contract.authority_boundary.app_state_is_domain_quality_authority, false);
   assert.equal(contract.authority_boundary.can_authorize_quality_verdict, false);
