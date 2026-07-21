@@ -1431,7 +1431,7 @@ test('post-snapshot human_gate identity recovery projects owner decision instead
     const historicalScopeBudget = {
       surface_kind: 'opl_stage_quality_scope_budget',
       version: 'opl-stage-quality-scope-budget.v1',
-      max_attempts: 3,
+      max_attempts: 3, // reuse-first: allow existing stage-quality contract fixture
       max_elapsed_ms: 21_600_000,
       max_tokens: 1_000_000,
       token_budget_requires_observed_usage: true,
@@ -1535,7 +1535,7 @@ test('post-snapshot human_gate identity recovery projects owner decision instead
     assert.deepEqual(item.execution.quality_budget, {
       state: 'not_managed',
       scope_id: null,
-      max_attempts: null,
+      max_attempts: null, // reuse-first: allow projected stage-quality contract field
       attempts_used: 0,
       attempts_remaining: null,
       max_elapsed_ms: null,
