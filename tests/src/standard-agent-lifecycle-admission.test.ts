@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { DatabaseSync } from 'node:sqlite';
 
 import { canonicalJsonBytes } from '../../src/kernel/canonical-json.ts';
 import { resolveStandardAgent } from '../../src/kernel/standard-agent-registry.ts';
@@ -14,10 +15,27 @@ import {
   inspectStandardAgentActionRunPlan,
 } from '../../src/modules/runway/standard-agent-action-run-state.ts';
 import { runStandardAgentAction } from '../../src/modules/runway/standard-agent-action-runtime.ts';
+import { runFamilyRuntime } from '../../src/modules/runway/family-runtime.ts';
 import { applyDomainArtifactCasMaterialization } from
   '../../src/modules/runway/domain-artifact-cas-materialization.ts';
 import { standardAgentLifecycleReactivationHandlerRunId } from
   '../../src/modules/runway/standard-agent-domain-lifecycle-admission.ts';
+import { preflightFamilyRuntimeDomainLifecycleAdmission } from
+  '../../src/modules/runway/family-runtime-domain-lifecycle-admission.ts';
+import { ensureProviderHostedStageAttempt } from
+  '../../src/modules/runway/family-runtime-provider-hosted-attempts.ts';
+import { createFamilyRuntimeQueueTables, type FamilyRuntimeTaskRow } from
+  '../../src/modules/runway/family-runtime-store.ts';
+import { buildPackBoundTemporalStageRunInput } from
+  '../../src/modules/runway/family-runtime-pack-bound-stage-run.ts';
+import { materializeStageRunRoute } from
+  '../../src/modules/runway/family-runtime-stage-run-route-launch.ts';
+import {
+  stageAttemptExecutionContentBindingSha256,
+  stageRunSpecSha256,
+} from '../../src/modules/runway/family-runtime-stage-run-identity.ts';
+import { normalizeStageQualityCyclePolicy } from '../../src/modules/stagecraft/stage-quality-cycle.ts';
+import type { StandardAgentStageQualityRuntimeBinding } from '../../src/modules/pack/index.ts';
 import type { StandardAgentHandlerSandboxReceipt } from
   '../../src/modules/runway/standard-agent-handler-sandbox.ts';
 
@@ -123,7 +141,7 @@ function writeLifecycleContracts(checkoutRoot: string) {
     stage_route: {
       entry_stage_ref: 'intake',
       required_stage_refs: ['intake'],
-      optional_stage_refs: [],
+      optional_stage_refs: ['draft'],
       terminal_stage_refs: ['intake'],
       route_policy: 'ai_selected_progress_route',
     },
@@ -157,7 +175,7 @@ function writeLifecycleContracts(checkoutRoot: string) {
   };
   fs.mkdirSync(path.join(checkoutRoot, 'contracts'), { recursive: true });
   fs.mkdirSync(path.join(checkoutRoot, 'agent', 'stages'), { recursive: true });
-  fs.writeFileSync(path.join(checkoutRoot, 'agent', 'stages', 'manifest.json'), '{"stages":["intake"]}');
+  fs.writeFileSync(path.join(checkoutRoot, 'agent', 'stages', 'manifest.json'), '{"stages":["intake","draft"]}');
   fs.writeFileSync(path.join(checkoutRoot, 'contracts', 'action_catalog.json'), JSON.stringify({
     surface_kind: 'family_action_catalog',
     version: 'family-action-catalog.v2',
@@ -433,6 +451,411 @@ function refusingAuthorityHandler(
   };
 }
 
+test('internal-only lifecycle authority action rejects external invocation before reservation', async () => {
+  const fixtureRoot = temporaryRoot('opl-lifecycle-internal-only-');
+  const checkoutRoot = path.join(fixtureRoot, 'checkout');
+  const workspaceRoot = path.join(fixtureRoot, 'workspace');
+  let handlerCalls = 0;
+  try {
+    fs.mkdirSync(checkoutRoot, { recursive: true });
+    fs.mkdirSync(workspaceRoot, { recursive: true });
+    writeLifecycleContracts(checkoutRoot);
+    writeLifecycleWorkspace(workspaceRoot);
+    const packageBinding = packageUseBinding();
+    await assert.rejects(runStandardAgentAction({
+      domainId: 'mas',
+      actionId: 'reactivate_study',
+      workspaceRoot,
+      payload: {
+        study_id: 'study-001',
+        internal_standard_agent_action_invocation: true,
+      },
+      runId: 'external-internal-only',
+    }, {
+      resolveManagedCheckout: async () => ({
+        agent: resolveStandardAgent('mas')!,
+        package_id: 'mas',
+        workspace_root: fs.realpathSync.native(workspaceRoot),
+        checkout_root: fs.realpathSync.native(checkoutRoot),
+        package_status: {
+          installed_package_count: 1,
+          launch_allowed: true,
+          runtime_source_readiness: { operational_ready: true, checkout_path: checkoutRoot },
+        },
+        package_use_binding: packageBinding,
+        use_boundary_id: packageBinding.use_boundary_id,
+      }) as never,
+      runHandler: (() => {
+        handlerCalls += 1;
+        throw new Error('internal handler must not run');
+      }) as never,
+    }), (error: any) => {
+      assert.equal(error.details?.failure_code,
+        'standard_agent_internal_action_external_invocation_forbidden');
+      return true;
+    });
+    assert.equal(handlerCalls, 0);
+    assert.equal(inspectStandardAgentActionRunBinding({
+      workspaceRoot,
+      runId: 'external-internal-only',
+    }), null);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('family runtime lifecycle preflight fails closed on inactive and unresolved MAS launch identity', () => {
+  const fixtureRoot = temporaryRoot('opl-family-lifecycle-preflight-');
+  const checkoutRoot = path.join(fixtureRoot, 'checkout');
+  const workspaceRoot = path.join(fixtureRoot, 'workspace');
+  try {
+    fs.mkdirSync(checkoutRoot, { recursive: true });
+    fs.mkdirSync(workspaceRoot, { recursive: true });
+    writeLifecycleContracts(checkoutRoot);
+    const refs = writeLifecycleWorkspace(workspaceRoot);
+    const launch = {
+      domainId: 'mas',
+      stageId: 'intake',
+      actionId: 'launch_stage',
+      domainPackRoot: checkoutRoot,
+      workspaceLocator: { workspace_root: workspaceRoot, study_id: 'study-001' },
+    };
+
+    assert.throws(
+      () => preflightFamilyRuntimeDomainLifecycleAdmission(launch),
+      /lifecycle is inactive/i,
+    );
+    assert.throws(
+      () => preflightFamilyRuntimeDomainLifecycleAdmission({
+        ...launch,
+        domainPackRoot: null,
+      }),
+      /missing its pinned domain pack checkout/i,
+    );
+    const missingCatalogRoot = path.join(fixtureRoot, 'missing-catalog');
+    fs.mkdirSync(missingCatalogRoot);
+    assert.throws(
+      () => preflightFamilyRuntimeDomainLifecycleAdmission({
+        ...launch,
+        domainPackRoot: missingCatalogRoot,
+      }),
+      /missing its authoritative action catalog/i,
+    );
+    assert.throws(
+      () => preflightFamilyRuntimeDomainLifecycleAdmission({
+        ...launch,
+        actionId: 'stale-action-id',
+      }),
+      /action identity is not declared|cannot resolve the requested action/i,
+    );
+
+    writeJson(fileURLToPath(refs.lifecycle.ref), {
+      study_id: 'study-001', lifecycle_state: 'active', lifecycle_generation: 8,
+    });
+    const admitted = preflightFamilyRuntimeDomainLifecycleAdmission(launch);
+    assert.equal(admitted.status, 'admitted_by_canonical_active_lifecycle');
+    assert.equal(admitted.lifecycle_generation, 8);
+
+    const catalogFile = path.join(checkoutRoot, 'contracts', 'action_catalog.json');
+    const catalog = JSON.parse(fs.readFileSync(catalogFile, 'utf8'));
+    catalog.actions.splice(1, 0, {
+      ...catalog.actions[0],
+      action_id: 'launch_stage_alias',
+      title: 'Launch stage alias',
+    });
+    fs.writeFileSync(catalogFile, JSON.stringify(catalog));
+    assert.throws(
+      () => preflightFamilyRuntimeDomainLifecycleAdmission({ ...launch, actionId: null }),
+      /action identity is ambiguous/i,
+    );
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('direct family-runtime create --start gates before attempt reserve and replays after active recovery', async () => {
+  const fixtureRoot = temporaryRoot('opl-family-lifecycle-direct-');
+  const checkoutRoot = path.join(fixtureRoot, 'checkout');
+  const workspaceRoot = path.join(fixtureRoot, 'workspace');
+  const stateRoot = path.join(fixtureRoot, 'state');
+  const previousStateRoot = process.env.OPL_STATE_DIR;
+  try {
+    fs.mkdirSync(checkoutRoot, { recursive: true });
+    fs.mkdirSync(workspaceRoot, { recursive: true });
+    process.env.OPL_STATE_DIR = stateRoot;
+    writeLifecycleContracts(checkoutRoot);
+    const refs = writeLifecycleWorkspace(workspaceRoot);
+    const args = [
+      'attempt', 'create', '--domain', 'mas', '--stage', 'intake', '--action', 'launch_stage',
+      '--provider', 'temporal', '--workspace-locator', JSON.stringify({
+        workspace_root: workspaceRoot,
+        study_id: 'study-001',
+      }),
+      '--source-fingerprint', 'sha256:direct-lifecycle-fixture',
+      '--blocked-reason', 'fixture_provider_start_disabled',
+      '--start',
+    ];
+    const runtime = {
+      ensurePackageLaunchReady: async () => ({
+        runtime_source_readiness: { checkout_path: checkoutRoot },
+        package_use_binding: packageUseBinding(),
+      }) as never,
+      resolveStageBinding: () => null,
+    };
+
+    await assert.rejects(
+      runFamilyRuntime(args, { stageRunRuntime: runtime }),
+      /lifecycle is inactive/i,
+    );
+    const beforeRecovery = await runFamilyRuntime(['attempt', 'list']);
+    assert.equal((beforeRecovery.family_runtime_stage_attempts as any).attempts.length, 0);
+
+    writeJson(fileURLToPath(refs.lifecycle.ref), {
+      study_id: 'study-001', lifecycle_state: 'active', lifecycle_generation: 8,
+    });
+    const launched = await runFamilyRuntime(args, { stageRunRuntime: runtime });
+    const replayed = await runFamilyRuntime(args, { stageRunRuntime: runtime });
+    const launchedAttempt = (launched.family_runtime_stage_attempt as any).attempt;
+    const replayedSurface = replayed.family_runtime_stage_attempt as any;
+    assert.equal(launchedAttempt.status, 'blocked');
+    assert.equal(launchedAttempt.provider_run.execution_package_use_context ?? null, null);
+    assert.equal((launched.family_runtime_stage_attempt as any).temporal_start, null);
+    assert.equal(replayedSurface.idempotent_noop, true);
+    assert.equal(replayedSurface.attempt.stage_attempt_id, launchedAttempt.stage_attempt_id);
+    const launchEvent = launchedAttempt.activity_events.find((event: any) => (
+      event.event_kind === 'stage_context_observed'
+    ));
+    assert.equal(
+      launchEvent?.observation.domain_lifecycle_admission.status,
+      'admitted_by_canonical_active_lifecycle',
+    );
+  } finally {
+    if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateRoot;
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('provider-hosted launch preserves currentness observation and gates before attempt creation', async () => {
+  const fixtureRoot = temporaryRoot('opl-family-lifecycle-provider-hosted-');
+  const checkoutRoot = path.join(fixtureRoot, 'checkout');
+  const workspaceRoot = path.join(fixtureRoot, 'workspace');
+  const db = new DatabaseSync(':memory:');
+  createFamilyRuntimeQueueTables(db);
+  try {
+    fs.mkdirSync(checkoutRoot, { recursive: true });
+    fs.mkdirSync(workspaceRoot, { recursive: true });
+    writeLifecycleContracts(checkoutRoot);
+    const refs = writeLifecycleWorkspace(workspaceRoot);
+    const now = new Date().toISOString();
+    const row: FamilyRuntimeTaskRow = {
+      task_id: 'task:lifecycle-provider-hosted',
+      domain_id: 'medautoscience',
+      task_kind: 'test/lifecycle-provider-hosted',
+      payload_json: '{}',
+      dedupe_key: null,
+      priority: 0,
+      status: 'queued',
+      attempts: 0,
+      max_attempts: 3,
+      source: 'test',
+      requires_approval: 0,
+      approved_at: null,
+      lease_owner: null,
+      lease_expires_at: null,
+      last_error: null,
+      dead_letter_reason: null,
+      created_at: now,
+      updated_at: now,
+    };
+    const payload = {
+      opl_provider_hosted_stage_attempt: true,
+      stage_id: 'intake',
+      study_id: 'study-001',
+      workspace_root: workspaceRoot,
+    };
+    const options = {
+      ensurePackageLaunchReady: async () => ({
+        runtime_source_readiness: { checkout_path: checkoutRoot },
+        package_use_binding: packageUseBinding(),
+      }) as never,
+    };
+
+    await assert.rejects(
+      ensureProviderHostedStageAttempt(db, row, payload, options),
+      /lifecycle is inactive/i,
+    );
+    assert.equal((db.prepare('SELECT COUNT(*) AS count FROM stage_attempts').get() as any).count, 0);
+
+    writeJson(fileURLToPath(refs.lifecycle.ref), {
+      study_id: 'study-001', lifecycle_state: 'active', lifecycle_generation: 8,
+    });
+    const attempt = await ensureProviderHostedStageAttempt(db, row, payload, options);
+    assert.ok(attempt);
+    const launchEvent = attempt.activity_events.find((event: any) => (
+      event.event_kind === 'stage_context_observed'
+    ));
+    assert.equal(
+      launchEvent?.observation.domain_lifecycle_admission.status,
+      'admitted_by_canonical_active_lifecycle',
+    );
+    assert.equal(launchEvent?.observation.status, 'declaration_debt');
+  } finally {
+    db.close();
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('route launch requires fresh active lifecycle on first launch and persisted replay', async () => {
+  const fixtureRoot = temporaryRoot('opl-family-lifecycle-route-');
+  const checkoutRoot = path.join(fixtureRoot, 'checkout');
+  const workspaceRoot = path.join(fixtureRoot, 'workspace');
+  try {
+    fs.mkdirSync(checkoutRoot, { recursive: true });
+    fs.mkdirSync(workspaceRoot, { recursive: true });
+    writeLifecycleContracts(checkoutRoot);
+    const refs = writeLifecycleWorkspace(workspaceRoot);
+    const files: Record<string, string> = {
+      'contracts/stage-quality.json': '{}',
+      'agent/prompts/intake.md': '# Intake\n',
+      'agent/prompts/draft.md': '# Draft\n',
+      'agent/prompts/quality.md': [
+        '# Quality',
+        '## Producer', 'Produce.',
+        '## Reviewer', 'Review.',
+        '## Repairer', 'Repair.',
+        '## Re-reviewer', 'Re-review.',
+      ].join('\n'),
+      'agent/quality_gates/stage.md': '# Rubric\n',
+      'agent/goals/intake.md': '# Intake goal\n',
+      'agent/goals/draft.md': '# Draft goal\n',
+      'agent/sources/request.md': '# Request\n',
+      'agent/lineage/intake.json': '{"stage_id":"intake"}\n',
+      'agent/lineage/draft.json': '{"stage_id":"draft"}\n',
+      'artifacts/request.json': '{"request":"revise"}\n',
+    };
+    for (const [relativePath, bytes] of Object.entries(files)) {
+      const root = relativePath.startsWith('artifacts/') ? workspaceRoot : checkoutRoot;
+      const file = path.join(root, relativePath);
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, bytes);
+    }
+    const manifestSha256 = digest(fs.readFileSync(path.join(checkoutRoot, 'agent/stages/manifest.json')));
+    const binding = (stageId: string): StandardAgentStageQualityRuntimeBinding => ({
+      surface_kind: 'opl_pack_bound_stage_quality_runtime_binding',
+      version: 'opl-pack-bound-stage-quality-runtime-binding.v1',
+      stage_id: stageId,
+      declared_stage_ids: ['draft', 'intake'],
+      enabled: true,
+      stage_role: null,
+      policy_ref: 'contracts/stage-quality.json',
+      stage_prompt_ref: `agent/prompts/${stageId}.md`,
+      quality_policy: normalizeStageQualityCyclePolicy({
+        formal_review: { required: true, risk_tier: 'high', max_repair_rounds: 1 },
+      }),
+      handoff_review_boundary: null,
+      role_prompt_refs: {
+        producer: 'agent/prompts/quality.md#producer',
+        reviewer: 'agent/prompts/quality.md#reviewer',
+        repairer: 'agent/prompts/quality.md#repairer',
+        re_reviewer: 'agent/prompts/quality.md#re-reviewer',
+      },
+      quality_rubric_refs: ['agent/quality_gates/stage.md'],
+      stage_goal_refs: [`agent/goals/${stageId}.md`],
+      source_refs: ['agent/sources/request.md'],
+      lineage_refs: [`agent/lineage/${stageId}.json`],
+      manifest_ref: 'agent/stages/manifest.json',
+      manifest_sha256: manifestSha256,
+    });
+    const artifactBytes = fs.readFileSync(path.join(workspaceRoot, 'artifacts/request.json'));
+    const artifactSha256 = `sha256:${digest(artifactBytes)}`;
+    const parent = buildPackBoundTemporalStageRunInput({
+      binding: binding('intake'),
+      domainPackRoot: checkoutRoot,
+      domainId: 'mas',
+      stageId: 'intake',
+      stageRunInvocationId: 'sri_lifecycle_route_parent',
+      workspaceLocator: {
+        workspace_root: workspaceRoot,
+        study_id: 'study-001',
+        domain_pack_root: checkoutRoot,
+        package_use_binding: packageUseBinding(),
+      },
+      sourceFingerprint: artifactSha256,
+      executorKind: 'codex_cli',
+      actionId: 'launch_stage',
+      artifactRefs: ['artifacts/request.json'],
+      artifactHashes: [artifactSha256],
+    });
+    const decisivePayload = {
+      parent_stage_run_spec_sha256: parent.stage_run_spec_sha256,
+      use_boundary_id: 'package-use:lifecycle-route-decisive',
+      spec_sha256: stageRunSpecSha256(parent.stage_run_spec),
+      spec: parent.stage_run_spec,
+      declared_stage_ids: parent.declared_stage_ids,
+    };
+    const routeInput = {
+      parent_stage_run: parent,
+      decisive_attempt_ref: 'opl://stage_attempts/lifecycle-route-reviewer',
+      decisive_execution_content_binding: {
+        surface_kind: 'opl_stage_attempt_execution_content_binding' as const,
+        version: 'opl-stage-attempt-execution-content-binding.v1' as const,
+        ...decisivePayload,
+        binding_sha256: stageAttemptExecutionContentBindingSha256(decisivePayload),
+      },
+      decision: {
+        decision_kind: 'advance' as const,
+        target_stage_id: 'draft',
+        evidence_refs: ['artifact:request'],
+      },
+      artifact_refs: ['artifacts/request.json'],
+      artifact_hashes: [artifactSha256],
+      artifact_identity_receipt_refs: [],
+    };
+    let persistedTarget: ReturnType<typeof buildPackBoundTemporalStageRunInput> | null = null;
+    let providerStarts = 0;
+    const dependencies = {
+      findTargetStageRun: () => persistedTarget,
+      ensurePackageLaunchReady: async () => ({
+        runtime_source_readiness: { checkout_path: checkoutRoot },
+        package_use_binding: packageUseBinding(),
+      }) as never,
+      resolveStageBinding: (_root: string, stageId: string) => binding(stageId),
+      launchTargetStageRun: async (target: ReturnType<typeof buildPackBoundTemporalStageRunInput>) => {
+        providerStarts += 1;
+        const existing = persistedTarget !== null;
+        persistedTarget ??= target;
+        return { start_status: existing ? 'existing' : 'started' };
+      },
+    };
+
+    await assert.rejects(
+      materializeStageRunRoute(routeInput, dependencies),
+      /lifecycle is inactive/i,
+    );
+    assert.equal(providerStarts, 0);
+    assert.equal(persistedTarget, null);
+
+    writeJson(fileURLToPath(refs.lifecycle.ref), {
+      study_id: 'study-001', lifecycle_state: 'active', lifecycle_generation: 8,
+    });
+    const launched = await materializeStageRunRoute(routeInput, dependencies);
+    assert.equal(launched.materialization_status, 'launched');
+    assert.equal(providerStarts, 1);
+
+    writeJson(fileURLToPath(refs.lifecycle.ref), {
+      study_id: 'study-001', lifecycle_state: 'paused', lifecycle_generation: 9,
+    });
+    await assert.rejects(
+      materializeStageRunRoute(routeInput, dependencies),
+      /lifecycle is inactive/i,
+    );
+    assert.equal(providerStarts, 1);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('lifecycle admission preserves non-materializing MAS authority failures without reserving a Stage', async () => {
   for (const status of ['typed_blocker', 'invalid_host_input'] as const) {
     const fixtureRoot = temporaryRoot(`opl-lifecycle-${status}-`);
@@ -643,6 +1066,21 @@ test('lifecycle admission blocks inactive Stage reservation, materializes reacti
     assert.equal((plan?.effective_payload?.lifecycle_admission as Record<string, unknown>).mode,
       'materialized_receipt');
     assert.equal(JSON.stringify(plan?.effective_payload).includes('reactivation_request'), false);
+    const childPlan = inspectStandardAgentActionRunPlan({ workspaceRoot, runId: childRunId });
+    const externalChildPayload = structuredClone(childPlan?.effective_payload ?? {});
+    delete externalChildPayload.workspace_root;
+    await assert.rejects(runStandardAgentAction({
+      domainId: 'mas',
+      actionId: 'reactivate_study',
+      workspaceRoot,
+      payload: externalChildPayload,
+      runId: childRunId,
+    }, dependencies), (error: any) => {
+      assert.equal(error.details?.failure_code,
+        'standard_agent_internal_action_external_invocation_forbidden');
+      return true;
+    });
+    assert.equal(handlerCalls, 1);
   } finally {
     if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
     else process.env.OPL_STATE_DIR = previousStateRoot;

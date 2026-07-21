@@ -81,6 +81,7 @@ import { launchRegisteredStageRun } from './family-runtime-stage-run-launch.ts';
 import { findStageRunLaunch } from './family-runtime-stage-run-launch-registry.ts';
 import { materializeReviewerInputSnapshot } from './family-runtime-reviewer-input-snapshot.ts';
 import { persistReviewEvidenceArtifactCandidate } from './family-runtime-review-evidence-artifact.ts';
+import { preflightFamilyRuntimeDomainLifecycleAdmission } from './family-runtime-domain-lifecycle-admission.ts';
 
 function stageRunReplayBusinessIdentity(
   input: Parameters<typeof launchRegisteredStageRun>[0]['stageRunInput'],
@@ -625,10 +626,27 @@ export async function runFamilyRuntime(
         domainId: parsed.input.domainId,
         workspaceLocator: parsed.input.workspaceLocator,
       });
-      const stageLaunchContextObservation = attachCheckoutCurrentnessToStageContext(
+      const checkoutBoundStageContextObservation = attachCheckoutCurrentnessToStageContext(
         defaultStageContextObservation,
         checkoutCurrentnessPreflight,
       );
+      const lifecycleWorkspaceLocator = existingStageRunLaunch?.stage_run_input.workspace_locator
+        ?? useBoundWorkspaceLocator;
+      const domainLifecycleAdmission = parsed.input.start
+        ? preflightFamilyRuntimeDomainLifecycleAdmission({
+            domainId: parsed.input.domainId,
+            stageId: parsed.input.stageId,
+            actionId: existingStageRunLaunch?.stage_run_input.action_id ?? parsed.input.actionId,
+            domainPackRoot: existingStageRunLaunch?.stage_run_input.domain_pack_root ?? domainPackRoot,
+            workspaceLocator: lifecycleWorkspaceLocator,
+          })
+        : null;
+      const stageLaunchContextObservation = domainLifecycleAdmission
+        ? {
+            ...checkoutBoundStageContextObservation,
+            domain_lifecycle_admission: domainLifecycleAdmission,
+          }
+        : checkoutBoundStageContextObservation;
       const launchInvocation = buildStageLaunchInvocationProjection({
         domainId: parsed.input.domainId,
         stageId: parsed.input.stageId,
@@ -889,6 +907,22 @@ export async function runFamilyRuntime(
               : null,
             domainPackRoot: refreshedDomainPackRoot || null,
           });
+      const reboundPackRoot = typeof reboundAttempt.workspace_locator.domain_pack_root === 'string'
+        ? reboundAttempt.workspace_locator.domain_pack_root.trim()
+        : '';
+      const selectedActionId = isRecord(reboundAttempt.route_impact)
+        && typeof reboundAttempt.route_impact.selected_action_id === 'string'
+        ? reboundAttempt.route_impact.selected_action_id.trim()
+        : typeof reboundAttempt.workspace_locator.action_ref === 'string'
+          ? reboundAttempt.workspace_locator.action_ref.trim()
+          : '';
+      preflightFamilyRuntimeDomainLifecycleAdmission({
+        domainId: reboundAttempt.domain_id,
+        stageId: reboundAttempt.stage_id,
+        actionId: selectedActionId || null,
+        domainPackRoot: reboundPackRoot || null,
+        workspaceLocator: reboundAttempt.workspace_locator,
+      });
       const { startTemporalStageAttemptWorkflow } = await temporalProviderModule();
       const temporal_start = await startTemporalStageAttemptWorkflow(reboundAttempt, { paths });
       recordTemporalStartOnAttempt(db, reboundAttempt, temporal_start);

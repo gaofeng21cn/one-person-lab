@@ -1178,37 +1178,18 @@ export function preflightStandardAgentDomainLifecycleAdmission(input: {
   runId: string;
   originalInvocationSha256: string;
 }) {
-  const contract = standardAgentLifecycleAdmissionContract(input.action);
-  if (!contract) return { status: 'not_declared' as const };
-  const workItemId = text(input.payload[contract.work_item_id_field], contract.work_item_id_field);
-  const located = locateLifecycle({
-    checkoutRoot: input.checkoutRoot,
-    workspaceRoot: input.workspaceRoot,
+  const current = currentStandardAgentDomainLifecycle(input);
+  const {
+    contract,
     workItemId,
-  });
-  const lifecycle = located.lifecycle;
-  if (lifecycle.payload[contract.work_item_id_field] !== workItemId) {
-    blocked('Canonical lifecycle identity does not match the requested work item.', { work_item_id: workItemId });
-  }
-  const lifecycleState = text(
-    lifecycle.payload[contract.lifecycle_state_field],
-    `lifecycle.${contract.lifecycle_state_field}`,
-  );
-  const lifecycleGeneration = integer(
-    lifecycle.payload[contract.lifecycle_generation_field],
-    `lifecycle.${contract.lifecycle_generation_field}`,
-  );
+    lifecycle,
+    lifecycleState,
+    lifecycleGeneration,
+  } = current;
+  if (!contract) return { status: 'not_declared' as const };
   const admissionValue = input.payload[contract.admission_payload_field];
   if (lifecycleState === contract.active_state && admissionValue === undefined) {
-    return {
-      status: 'admitted_by_canonical_active_lifecycle' as const,
-      lifecycle_ref: lifecycle.ref,
-      lifecycle_sha256: lifecycle.sha256,
-      lifecycle_generation: lifecycleGeneration,
-      reactivation_receipt_ref: null,
-      materialization_receipt_ref: null,
-      admission_scope_id: null,
-    };
+    return activeLifecycleAdmission(current);
   }
   if (admissionValue !== undefined) {
     const admission = parseStandardAgentLifecycleAdmission(admissionValue);
@@ -1229,10 +1210,81 @@ export function preflightStandardAgentDomainLifecycleAdmission(input: {
       lifecycleGeneration,
     });
   }
-  blocked('Canonical domain lifecycle is inactive and no current reactivation authority was supplied.', {
-    work_item_id: workItemId,
-    lifecycle_state: lifecycleState,
-    lifecycle_generation: lifecycleGeneration,
-    lifecycle_ref: lifecycle.ref,
+  inactiveLifecycleBlocked(current);
+}
+
+function currentStandardAgentDomainLifecycle(input: {
+  action: FamilyActionCatalogAction;
+  payload: Record<string, unknown>;
+  checkoutRoot: string;
+  workspaceRoot: string;
+}) {
+  const contract = standardAgentLifecycleAdmissionContract(input.action);
+  if (!contract) {
+    return {
+      contract: null,
+      workItemId: null,
+      lifecycle: null,
+      lifecycleState: null,
+      lifecycleGeneration: null,
+    } as const;
+  }
+  const workItemId = text(input.payload[contract.work_item_id_field], contract.work_item_id_field);
+  const located = locateLifecycle({
+    checkoutRoot: input.checkoutRoot,
+    workspaceRoot: input.workspaceRoot,
+    workItemId,
   });
+  const lifecycle = located.lifecycle;
+  if (lifecycle.payload[contract.work_item_id_field] !== workItemId) {
+    blocked('Canonical lifecycle identity does not match the requested work item.', { work_item_id: workItemId });
+  }
+  const lifecycleState = text(
+    lifecycle.payload[contract.lifecycle_state_field],
+    `lifecycle.${contract.lifecycle_state_field}`,
+  );
+  const lifecycleGeneration = integer(
+    lifecycle.payload[contract.lifecycle_generation_field],
+    `lifecycle.${contract.lifecycle_generation_field}`,
+  );
+  return { contract, workItemId, lifecycle, lifecycleState, lifecycleGeneration };
+}
+
+function activeLifecycleAdmission(input: ReturnType<typeof currentStandardAgentDomainLifecycle>) {
+  if (!input.contract || !input.lifecycle || input.lifecycleGeneration === null) {
+    blocked('Canonical domain lifecycle admission is not declared.');
+  }
+  return {
+    status: 'admitted_by_canonical_active_lifecycle' as const,
+    lifecycle_ref: input.lifecycle.ref,
+    lifecycle_sha256: input.lifecycle.sha256,
+    lifecycle_generation: input.lifecycleGeneration,
+    reactivation_receipt_ref: null,
+    materialization_receipt_ref: null,
+    admission_scope_id: null,
+  };
+}
+
+function inactiveLifecycleBlocked(input: ReturnType<typeof currentStandardAgentDomainLifecycle>): never {
+  if (!input.contract || !input.lifecycle || input.workItemId === null || input.lifecycleGeneration === null) {
+    blocked('Canonical domain lifecycle admission is not declared.');
+  }
+  blocked('Canonical domain lifecycle is inactive and no current reactivation authority was supplied.', {
+    work_item_id: input.workItemId,
+    lifecycle_state: input.lifecycleState,
+    lifecycle_generation: input.lifecycleGeneration,
+    lifecycle_ref: input.lifecycle.ref,
+  });
+}
+
+export function preflightCanonicalActiveStandardAgentDomainLifecycle(input: {
+  action: FamilyActionCatalogAction;
+  payload: Record<string, unknown>;
+  checkoutRoot: string;
+  workspaceRoot: string;
+}) {
+  const current = currentStandardAgentDomainLifecycle(input);
+  if (!current.contract) return { status: 'not_declared' as const };
+  if (current.lifecycleState !== current.contract.active_state) inactiveLifecycleBlocked(current);
+  return activeLifecycleAdmission(current);
 }

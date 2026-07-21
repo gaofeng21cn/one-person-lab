@@ -43,6 +43,7 @@ import {
   legacyPersistedProviderHostedTaskStageId,
 } from './family-runtime-provider-hosted-attempts-parts/task-stage-binding.ts';
 import { ensureFamilyRuntimePackageLaunchReady } from './family-runtime-package-readiness.ts';
+import { preflightFamilyRuntimeDomainLifecycleAdmission } from './family-runtime-domain-lifecycle-admission.ts';
 export {
   DEFAULT_EXECUTOR_DISPATCH_TASK_KIND,
   DEFAULT_EXECUTOR_TRANSPORT_ONLY_CHECKPOINT_SUPERSEDED_REASON,
@@ -710,6 +711,8 @@ function workspaceLocatorForProviderHostedTask(row: FamilyRuntimeTaskRow, payloa
     'domain_truth_owner',
     'profile_ref',
     'scope',
+    'study_id',
+    'work_item_id',
     'quest_id',
     'quest_root',
     'quest_path',
@@ -857,6 +860,7 @@ export async function ensureProviderHostedStageAttempt(
   options: {
     newAttempt?: boolean;
     eventSource?: string;
+    ensurePackageLaunchReady?: typeof ensureFamilyRuntimePackageLaunchReady;
   } = {},
 ) {
   const existingAttempts = listStageAttemptsForTask(db, row.task_id);
@@ -918,7 +922,9 @@ export async function ensureProviderHostedStageAttempt(
         && attempt.source_fingerprint === expectedSourceFingerprint
       )).length + 1
     : 1;
-  const packageReadiness = await ensureFamilyRuntimePackageLaunchReady({
+  const packageReadiness = await (
+    options.ensurePackageLaunchReady ?? ensureFamilyRuntimePackageLaunchReady
+  )({
     domainId: row.domain_id,
     workspaceLocator,
     useBoundaryId: stableId('package-use', [
@@ -928,9 +934,19 @@ export async function ensureProviderHostedStageAttempt(
       packageUseAttemptOrdinal,
     ]),
   });
+  const domainPackRoot = typeof packageReadiness?.runtime_source_readiness?.checkout_path === 'string'
+    ? packageReadiness.runtime_source_readiness.checkout_path.trim()
+    : '';
   const useBoundWorkspaceLocator = packageReadiness?.package_use_binding
-    ? { ...workspaceLocator, package_use_binding: packageReadiness.package_use_binding }
-    : workspaceLocator;
+    ? {
+        ...workspaceLocator,
+        ...(domainPackRoot ? { domain_pack_root: domainPackRoot } : {}),
+        package_use_binding: packageReadiness.package_use_binding,
+      }
+    : {
+        ...workspaceLocator,
+        ...(domainPackRoot ? { domain_pack_root: domainPackRoot } : {}),
+      };
   const stageContextObservation = attachCapabilityRegistryStageContext(
     buildFamilyStageContextObservation(loadFrameworkContracts(), {
       domainId: row.domain_id,
@@ -947,10 +963,22 @@ export async function ensureProviderHostedStageAttempt(
     row,
     useBoundWorkspaceLocator,
   );
-  const stageLaunchContextObservation = attachCheckoutCurrentnessToStageContext(
+  const checkoutBoundStageContextObservation = attachCheckoutCurrentnessToStageContext(
     stageContextObservation,
     checkoutCurrentnessPreflight,
   );
+  const domainLifecycleAdmission = preflightFamilyRuntimeDomainLifecycleAdmission({
+    domainId: row.domain_id,
+    stageId,
+    actionId: domainRouteActionRef(row.task_kind, payload),
+    domainPackRoot: domainPackRoot || null,
+    workspaceLocator: useBoundWorkspaceLocator,
+    taskPayload: payload,
+  });
+  const stageLaunchContextObservation = {
+    ...checkoutBoundStageContextObservation,
+    domain_lifecycle_admission: domainLifecycleAdmission,
+  };
   const result = createStageAttempt(db, {
     domainId: row.domain_id,
     stageId,

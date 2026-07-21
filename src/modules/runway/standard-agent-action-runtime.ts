@@ -66,6 +66,8 @@ type StandardAgentActionRuntimeInput = {
   timeoutMs?: number;
 };
 
+const INTERNAL_STANDARD_AGENT_ACTION_INVOCATION = Symbol('internal_standard_agent_action_invocation');
+
 type RuntimeDependencies = {
   resolveManagedCheckout?: typeof resolveStandardAgentManagedCheckout;
   resolveRuntimeBinding?: HostedAgentRuntimeBindingResolver['resolve'];
@@ -164,6 +166,37 @@ function canonicalTimeoutMs(value?: number) {
     fail('Standard Agent action timeoutMs must be a positive integer.', { timeout_ms: value });
   }
   return value;
+}
+
+function assertStandardAgentActionInvocationSurface(
+  action: FamilyActionCatalogAction,
+  invocationContext?: symbol,
+) {
+  const internalOnly = Object.values(action.supported_surfaces).every((surface) => surface === null);
+  if (internalOnly && invocationContext !== INTERNAL_STANDARD_AGENT_ACTION_INVOCATION) {
+    fail('Internal-only Standard Agent action cannot be invoked from an external runtime surface.', {
+      failure_code: 'standard_agent_internal_action_external_invocation_forbidden',
+      action_id: action.action_id,
+      supported_surfaces: action.supported_surfaces,
+    });
+  }
+}
+
+function standardAgentRuntimeResolver(
+  dependencies: RuntimeDependencies,
+): Pick<HostedAgentRuntimeBindingResolver, 'resolve' | 'resolvePinned'> {
+  const defaultResolver = new DefaultHostedAgentRuntimeBindingResolver({
+    root_override: dependencies.foundryRootOverride,
+    resolve_managed_checkout: dependencies.resolveManagedCheckout ?? resolveStandardAgentManagedCheckout,
+  });
+  return dependencies.resolveRuntimeBinding
+    ? {
+        resolve: dependencies.resolveRuntimeBinding,
+        resolvePinned: dependencies.resolvePinnedRuntimeBinding ?? (async () => fail(
+          'A custom hosted runtime resolver must provide resolvePinned for legacy durable action replay.',
+        )),
+      }
+    : defaultResolver;
 }
 
 function originalInvocationSha256(input: {
@@ -1976,7 +2009,7 @@ async function materializeLifecycleAdmissionContext(input: {
     payload: prepared.handlerPayload,
     runId: prepared.handlerRunId,
     timeoutMs: input.runtimeInput.timeoutMs,
-  }, input.dependencies);
+  }, input.dependencies, INTERNAL_STANDARD_AGENT_ACTION_INVOCATION);
   const effectivePayload = {
     ...input.context.payload,
     [prepared.admissionPayloadField]: materializedStandardAgentLifecycleAdmission({
@@ -2196,6 +2229,7 @@ async function executeActionContext(input: {
 export async function runStandardAgentAction(
   input: StandardAgentActionRuntimeInput,
   dependencies: RuntimeDependencies = {},
+  invocationContext?: symbol,
 ) {
   if (!isRecord(input.payload)) fail('Standard Agent action payload must be a JSON object.');
   const runId = canonicalRunId(input.runId);
@@ -2214,6 +2248,7 @@ export async function runStandardAgentAction(
     : null;
   if (frozenBinding && frozenPlan) {
     const frozen = requestFromFrozenPlan({ runtimeInput: input, plan: frozenPlan });
+    assertStandardAgentActionInvocationSurface(frozen.context.action, invocationContext);
     if (
       completion?.execution_kind === 'handler_ref'
       && completion.status === 'completed'
@@ -2249,28 +2284,40 @@ export async function runStandardAgentAction(
     });
   }
   if (frozenBinding && completion?.execution_kind === 'handler_ref' && completion.status === 'completed') {
+    const legacyBinding = frozenBinding;
+    const legacyRuntimeBinding = await standardAgentRuntimeResolver(dependencies).resolvePinned({
+      provenance: legacyBinding.hosted_runtime_binding,
+      provenance_ref: legacyBinding.hosted_runtime_binding_ref,
+      workspaceRoot: input.workspaceRoot,
+    });
+    assertRequestedDomainMatchesBinding(input.domainId, legacyRuntimeBinding);
+    if (
+      legacyBinding.run_id !== runId
+      || legacyBinding.canonical_domain_id !== legacyRuntimeBinding.agent_id
+      || legacyBinding.action_id !== input.actionId
+      || legacyBinding.hosted_runtime_binding_ref !== legacyRuntimeBinding.provenance_ref
+      || canonicalJsonText(legacyBinding.hosted_runtime_binding)
+        !== canonicalJsonText(legacyRuntimeBinding.provenance)
+    ) fail('Hosted Agent action request conflicts with its frozen legacy run binding.', { run_id: runId });
+    const legacyAction = readHostedAgentRuntimeActionContracts(
+      legacyRuntimeBinding.checkout_root,
+    ).catalog.actions.find((action) => action.action_id === legacyBinding.action_id)
+      ?? fail('Frozen legacy Standard Agent action is absent from its pinned action catalog.', {
+        run_id: runId,
+        action_id: legacyBinding.action_id,
+      });
+    assertStandardAgentActionInvocationSurface(legacyAction, invocationContext);
     return replayCompletedHandlerAction({
       runtimeInput: input,
       runId,
       startedAt: observedAt,
-      binding: frozenBinding,
+      binding: legacyBinding,
       completion,
       recordLedger: dependencies.recordLedger ?? actionLedger,
     });
   }
 
-  const defaultResolver = new DefaultHostedAgentRuntimeBindingResolver({
-    root_override: dependencies.foundryRootOverride,
-    resolve_managed_checkout: dependencies.resolveManagedCheckout ?? resolveStandardAgentManagedCheckout,
-  });
-  const runtimeResolver: Pick<HostedAgentRuntimeBindingResolver, 'resolve' | 'resolvePinned'> = dependencies.resolveRuntimeBinding
-    ? {
-        resolve: dependencies.resolveRuntimeBinding,
-        resolvePinned: dependencies.resolvePinnedRuntimeBinding ?? (async () => fail(
-          'A custom hosted runtime resolver must provide resolvePinned for legacy durable action replay.',
-        )),
-      }
-    : defaultResolver;
+  const runtimeResolver = standardAgentRuntimeResolver(dependencies);
   const runtimeBinding = frozenBinding
     ? await runtimeResolver.resolvePinned({
         provenance: frozenBinding.hosted_runtime_binding,
@@ -2296,6 +2343,7 @@ export async function runStandardAgentAction(
     runtimeBinding,
     dependencies,
   });
+  assertStandardAgentActionInvocationSurface(liveContext.action, invocationContext);
   const requestPayloadSha256 = sha256(canonicalJsonBytes(input.payload));
   const timeoutMs = canonicalTimeoutMs(input.timeoutMs);
   const invocationSha256 = originalInvocationSha256({

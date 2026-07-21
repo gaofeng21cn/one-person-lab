@@ -20,6 +20,8 @@ import type {
 } from './family-runtime-temporal.ts';
 import { requireTemporalStageRunWorkflowInputLaunchable } from './family-runtime-temporal.ts';
 import { stableId } from './family-runtime-store.ts';
+import { preflightDomainWorkspaceCheckoutCurrentness } from './family-runtime-checkout-currentness.ts';
+import { preflightFamilyRuntimeDomainLifecycleAdmission } from './family-runtime-domain-lifecycle-admission.ts';
 
 type PackageReadinessResult = Awaited<ReturnType<typeof ensureFamilyRuntimePackageLaunchReady>>;
 
@@ -258,6 +260,17 @@ export async function materializeStageRunRoute(
   };
   const persistedTarget = await findPersistedTarget();
   if (persistedTarget) {
+    preflightDomainWorkspaceCheckoutCurrentness({
+      domainId: persistedTarget.domain_id,
+      workspaceLocator: persistedTarget.workspace_locator,
+    });
+    preflightFamilyRuntimeDomainLifecycleAdmission({
+      domainId: persistedTarget.domain_id,
+      stageId: persistedTarget.stage_id,
+      actionId: null,
+      domainPackRoot: persistedTarget.domain_pack_root,
+      workspaceLocator: persistedTarget.workspace_locator,
+    });
     return launchReceipt(
       persistedTarget,
       await dependencies.launchTargetStageRun(persistedTarget),
@@ -298,6 +311,17 @@ export async function materializeStageRunRoute(
     domain_pack_root: domainPackRoot,
     ...(packageUseBinding ? { package_use_binding: packageUseBinding } : {}),
   };
+  preflightDomainWorkspaceCheckoutCurrentness({
+    domainId: parentStageRun.domain_id,
+    workspaceLocator,
+  });
+  preflightFamilyRuntimeDomainLifecycleAdmission({
+    domainId: parentStageRun.domain_id,
+    stageId: targetStageId,
+    actionId: null,
+    domainPackRoot,
+    workspaceLocator,
+  });
   let targetStageRun = buildPackBoundTemporalStageRunInput({
     binding,
     domainPackRoot,
