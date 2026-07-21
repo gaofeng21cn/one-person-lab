@@ -9,6 +9,7 @@
     "contracts/scholar-skills-capability-modules.json",
     "contracts/publication-layout-profile.schema.json",
     "contracts/scholarskills-page-hash-evidence-candidate-v3.schema.json",
+    "contracts/scholarskills-medical-initial-draft-preflight-candidate-v1.schema.json",
     "contracts/display-pack-receipt-templates.json",
     "contracts/professional-figure-workflow.schema.json",
     "references/professional-quality-ref-templates.md",

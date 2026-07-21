@@ -171,6 +171,7 @@ const fastTestFiles = [
   ...expandTestFiles(['tests/src/cli/cases/connect-scientific.test.ts', 'tests/src/cli/cases/connect-reference-verification.test.ts', 'tests/src/cli/cases/connect-external-skills.test.ts', 'tests/src/cli/cases/connect-foundation-skills.test.ts', 'tests/src/cli/cases/packages.test.ts']),
   'tests/src/standard-agent-framework-link.test.ts',
   'tests/src/cli/cases/cli-command-registry.test.ts',
+  'tests/src/cli/cases/release-cohort-closure.test.ts',
   'tests/src/cli/cases/release-bundle.test.ts',
   'tests/src/cli/cases/runtime-stage-run-evidence-pack-read-model.test.ts',
   'tests/src/cli/cases/runtime-stage-candidate-portfolio-read-model.test.ts',
