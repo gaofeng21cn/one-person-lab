@@ -354,6 +354,7 @@ function humanGateAction(
   attempt: JsonRecord,
 ): WorkItemProjectionItem['action'] {
   const attemptId = stringValue(attempt.stage_attempt_id) ?? 'unknown-stage-attempt';
+  const stageId = stringValue(attempt.stage_id);
   const gateRef = Array.isArray(attempt.human_gate_refs)
     ? attempt.human_gate_refs.map(stringValue).find(Boolean) ?? null
     : null;
@@ -368,8 +369,8 @@ function humanGateAction(
     message_args: {
       item_id: item.item_id,
       stage_attempt_id: attemptId,
-      stage_id: stringValue(attempt.stage_id),
-      human_gate_ref: gateRef,
+      ...(stageId ? { stage_id: stageId } : {}),
+      ...(gateRef ? { human_gate_ref: gateRef } : {}),
     },
     owner: 'user',
     owner_kind: 'user',

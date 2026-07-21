@@ -1158,6 +1158,67 @@ test('Temporal running query overrides a lagging queued attempt ledger', () => {
   ]);
 });
 
+test('human gate action omits empty optional message args and remains schema-valid', () => {
+  const input = fixture();
+  try {
+    const workItemId = '004-dpcc-longitudinal-care-inertia-intensification-gap';
+    const snapshot = new Date(Date.now() - 60_000);
+    fs.utimesSync(path.join(input.diabetes, 'workspace_index.json'), snapshot, snapshot);
+    const createdAt = new Date().toISOString();
+    const project = (stageId: string | null, humanGateRefs: string[]) => buildWorkItemProjectionV2({
+      profile: 'full',
+      bindings: input.bindings,
+      packageProjectionItems: input.packageProjectionItems,
+      packageStatusById: input.packageStatusById,
+      attempts: [{
+        ...attempt({
+          id: 'sat-human-gate-action-args',
+          root: input.diabetes,
+          workItemId,
+          status: 'human_gate',
+          createdAt,
+          updatedAt: createdAt,
+          humanGateRefs,
+        }),
+        stage_id: stageId,
+      }],
+      resolveDescriptor: input.resolveDescriptor,
+    });
+
+    const withoutOptionalArgs = project(null, []);
+    const item = withoutOptionalArgs.items.find(
+      (candidate) => candidate.identity.work_item_id === workItemId,
+    )!;
+    assert.deepEqual(item.action.message_args, {
+      item_id: item.item_id,
+      stage_attempt_id: 'sat-human-gate-action-args',
+    });
+    assert.equal(JSON.stringify(item.action.message_args).includes('null'), false);
+
+    const schemaRef = 'contracts/opl-framework/work-item-projection-v2.schema.json';
+    const schema = parseJsonText(fs.readFileSync(schemaRef, 'utf8')) as Record<string, unknown>;
+    const validation = validateJsonSchemaPayload({
+      schemaId: 'opl.work_item_projection.v2',
+      schema,
+      sourceRef: schemaRef,
+    }, withoutOptionalArgs);
+    assert.equal(validation.ok, true, validation.ok ? undefined : JSON.stringify(validation.errors, null, 2));
+
+    const withOptionalArgs = project('01-study_intake', ['human-gate:owner-review']);
+    const itemWithOptionalArgs = withOptionalArgs.items.find(
+      (candidate) => candidate.identity.work_item_id === workItemId,
+    )!;
+    assert.deepEqual(itemWithOptionalArgs.action.message_args, {
+      item_id: itemWithOptionalArgs.item_id,
+      stage_attempt_id: 'sat-human-gate-action-args',
+      stage_id: '01-study_intake',
+      human_gate_ref: 'human-gate:owner-review',
+    });
+  } finally {
+    fs.rmSync(input.root, { recursive: true, force: true });
+  }
+});
+
 test('post-snapshot human_gate identity recovery projects owner decision instead of paused idle', () => {
   const input = fixture();
   const previousStateDir = process.env.OPL_STATE_DIR;
