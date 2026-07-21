@@ -126,6 +126,11 @@
     ],
     "sqlite_sidecar_role": "projection_and_readback_index_only_not_runtime_provider",
     "workflow_code_evolution_guard": "Temporal patched markers preserve legacy command history while new executions enforce current hard-stop classification and artifact identity behavior",
+    "active_stage_run_patch_markers": [
+      "opl-stage-run-runtime-human-gate-classification-v1",
+      "opl-stage-run-repair-required-cross-stage-route-back-v1",
+      "opl-stage-run-formal-review-declared-artifact-identity-v1"
+    ],
     "legacy_history_replay_fixture_required": true
   },
   "durable_lifecycle_readback": {

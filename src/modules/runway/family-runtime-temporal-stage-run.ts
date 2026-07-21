@@ -162,6 +162,7 @@ export type TemporalStageRunWorkflowState = {
   quality_scope_budget?: StageQualityScopeBudget;
   quality_scope_budget_usage?: {
     attempts_used: number;
+    managed_attempts_used?: number;
     elapsed_ms: number;
     tokens_used: number | null;
     token_observation_status: 'observed' | 'missing';

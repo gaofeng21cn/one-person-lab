@@ -98,7 +98,17 @@ function attemptAlreadyAbsorbedCloseout(
   return packet.closeout_refs.every((ref) => existingCloseoutRefs.has(ref));
 }
 
-function syncAttemptRowFromAcceptedCloseout(
+function closeoutReceiptStatusForPacket(packet: TypedStageCloseoutPacket) {
+  const routeImpact = optionalRecord(packet.route_impact) ?? {};
+  const authorityBoundary = optionalRecord(packet.authority_boundary) ?? {};
+  return routeImpact.framework_generated_envelope === true
+    || authorityBoundary.opl === 'raw_executor_output_progress_envelope_only'
+    || authorityBoundary.opl === 'provider_quality_debt_diagnostic_projection_only'
+    ? 'framework_progress_envelope'
+    : 'accepted_typed_closeout';
+}
+
+function syncAttemptRowFromCloseout(
   db: DatabaseSync,
   input: {
     stageAttemptId: string;
@@ -109,9 +119,10 @@ function syncAttemptRowFromAcceptedCloseout(
     costSummary?: Record<string, unknown> | null;
   },
 ) {
+  const closeoutReceiptStatus = closeoutReceiptStatusForPacket(input.packet);
   if (
     input.attempt.status === 'completed'
-    && input.attempt.closeout_receipt_status === 'accepted_typed_closeout'
+    && input.attempt.closeout_receipt_status === closeoutReceiptStatus
     && attemptAlreadyAbsorbedCloseout(input.attempt, input.packet)
     && (!input.costSummary || optionalRecord(input.attempt.provider_run.cost_summary))
   ) {
@@ -132,10 +143,15 @@ function syncAttemptRowFromAcceptedCloseout(
     ...(input.costSummary ? { cost_summary: input.costSummary } : {}),
   };
   const activityEvents = appendActivityEventToRow(currentRow, {
-    activity_kind: 'typed_closeout_ingest',
-    activity_status: 'completed',
+    activity_kind: closeoutReceiptStatus === 'accepted_typed_closeout'
+      ? 'typed_closeout_ingest'
+      : 'framework_progress_closeout_ingest',
+    activity_status: closeoutReceiptStatus === 'accepted_typed_closeout'
+      ? 'completed'
+      : 'completed_with_quality_debt',
     closeout_id: input.closeoutId,
     closeout_refs: input.packet.closeout_refs,
+    closeout_receipt_status: closeoutReceiptStatus,
     ...(input.costSummary
       ? {
           usage_projection_source: 'provider_run.cost_summary',
@@ -155,7 +171,7 @@ function syncAttemptRowFromAcceptedCloseout(
     JSON.stringify(providerRun),
     JSON.stringify(activityEvents),
     JSON.stringify(normalizeRouteImpact(input.packet, input.attempt.route_impact, input.attempt)),
-    'accepted_typed_closeout',
+    closeoutReceiptStatus,
     input.observedAt,
     input.stageAttemptId,
   );
@@ -236,7 +252,7 @@ export function ingestStageAttemptCloseout(
         sourceFallbackRef: `stage_attempt:${input.stageAttemptId}#usage_observation`,
       });
     }
-    const syncedAttempt = syncAttemptRowFromAcceptedCloseout(db, {
+    const syncedAttempt = syncAttemptRowFromCloseout(db, {
       stageAttemptId: input.stageAttemptId,
       attempt,
       packet,
@@ -272,7 +288,7 @@ export function ingestStageAttemptCloseout(
   const persistedCloseouts = db.prepare(
     'SELECT COUNT(*) AS count FROM stage_attempt_closeouts WHERE closeout_id = ?',
   ).get(closeoutId) as { count: number };
-  const syncedAttempt = syncAttemptRowFromAcceptedCloseout(db, {
+  const syncedAttempt = syncAttemptRowFromCloseout(db, {
     stageAttemptId: input.stageAttemptId,
     attempt,
     packet,

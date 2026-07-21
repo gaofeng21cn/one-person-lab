@@ -706,6 +706,7 @@ test('StageRun controller caps quality work at three repair rounds and routes P1
   assert.ok(state.human_gate_refs.some((ref) => ref.includes('max_attempts_exhausted')));
   assert.equal(state.quality_scope_budget?.max_attempts, 3);
   assert.equal(state.quality_scope_budget_usage?.attempts_used, 3);
+  assert.equal(state.quality_scope_budget_usage?.managed_attempts_used, 8);
   assert.equal(state.quality_scope_budget_stop_reason, 'max_attempts_exhausted');
   assert.equal(state.sqlite_projection.status, 'synced');
   assert.equal(state.review_receipts.length, 4);
@@ -836,7 +837,7 @@ test('decisive Attempt route validation uses its current declared Stage catalog'
   assert.equal(routeInputs[0]?.decision.target_stage_id, 'publication_followup');
 });
 
-test('raw producer output uses its persisted ref-hash receipt as formal Review input', async () => {
+test('raw producer progress is recorded but cannot become formal Review input', async () => {
   const { state, attempts } = await runController({
     id: 'raw-producer-review',
     closeFindingAfterRound: null,
@@ -844,11 +845,16 @@ test('raw producer output uses its persisted ref-hash receipt as formal Review i
     initialReviewerOutcome: 'pass',
     initialReviewerFindings: 'none',
   });
-  assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), ['producer', 'reviewer']);
-  assert.deepEqual(attempts[1]?.artifact_refs, ['artifact:deck-v1']);
-  assert.deepEqual(attempts[1]?.artifact_hashes, ['sha256:deck-v1']);
-  assert.equal(state.status, 'completed');
-  assert.equal(state.review_receipts.length, 1);
+  assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), ['producer']);
+  assert.deepEqual(state.attempts.map((attempt) => attempt.attempt_role), ['producer']);
+  assert.deepEqual(state.attempts[0]?.artifact_refs, []);
+  assert.equal(state.status, 'blocked');
+  assert.equal(state.hard_stop_class, 'zero_consumable_artifact');
+  assert.equal(state.blocked_reason, 'stage_quality_attempt_without_consumable_artifact');
+  assert.equal(state.source_attempt_ref, `opl://stage_attempts/${state.attempts[0]?.stage_attempt_id}`);
+  assert.equal(state.quality_scope_budget_usage?.attempts_used, 0);
+  assert.equal(state.quality_scope_budget_usage?.managed_attempts_used, 1);
+  assert.equal(state.review_receipts.length, 0);
 });
 
 test('reviewer quality-debt verdict terminalizes the StageRun and retains reviewer route authority', async () => {
@@ -1248,7 +1254,7 @@ test('literal zero artifact hard-stops, while a failed repair preserves prior co
   assert.deepEqual(failedRepair.state.artifact_refs, ['artifact:deck-v1']);
   assert.equal(failedRepair.state.review_receipts.length, 1);
   assert.ok(failedRepair.state.quality_debt_refs.some((ref) => ref.includes(
-    'did%20not%20return%20a%20consumable%20artifact%20identity',
+    'stage_quality_attempt_without_consumable_artifact',
   )));
 });
 

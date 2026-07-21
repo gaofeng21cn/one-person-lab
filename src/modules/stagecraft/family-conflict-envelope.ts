@@ -31,6 +31,7 @@ const FAMILY_CONFLICT_STATUSES = [
 
 const FAMILY_ATTEMPT_CANONICAL_OUTCOMES = [
   'completed_with_receipt',
+  'completed_with_quality_debt',
   'blocked',
   'waiting_for_human',
   'retry_scheduled',
@@ -411,7 +412,9 @@ export function canonicalOutcomeForStageAttempt(input: {
     return 'conflict_fail_closed' satisfies FamilyAttemptCanonicalOutcome;
   }
   if (input.attemptStatus === 'completed') {
-    return 'completed_with_receipt' satisfies FamilyAttemptCanonicalOutcome;
+    return input.closeoutReceiptStatus === 'accepted_typed_closeout'
+      ? 'completed_with_receipt' satisfies FamilyAttemptCanonicalOutcome
+      : 'completed_with_quality_debt' satisfies FamilyAttemptCanonicalOutcome;
   }
   if (input.attemptStatus === 'human_gate') {
     return 'waiting_for_human' satisfies FamilyAttemptCanonicalOutcome;

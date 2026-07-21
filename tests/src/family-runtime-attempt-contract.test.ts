@@ -52,6 +52,16 @@ test('family runtime attempt contract keeps Temporal attempt, progress-first clo
   assert.equal(contract.progress_closeout_contract.typed_packet_required_for_progress, false);
   assert.equal(contract.progress_closeout_contract.raw_or_free_text_artifact_accepted_for_progress, true);
   assert.equal(contract.progress_closeout_contract.framework_derives_minimal_progress_envelope, true);
+  assert.equal(
+    contract.progress_closeout_contract.closeout_receipt_status_contract
+      .framework_progress_envelope_can_supply_formal_review_artifact_identity,
+    false,
+  );
+  assert.equal(
+    contract.progress_closeout_contract.closeout_receipt_status_contract
+      .framework_progress_envelope_can_authorize_domain_ready,
+    false,
+  );
   assert.equal(contract.progress_closeout_contract.output_schema_control_plane_enabled, false);
   assert.equal(contract.progress_closeout_contract.same_session_closeout_enforcement_enabled, false);
   assert.ok(contract.progress_closeout_contract.tracked_refs.includes('domain_output.output_ref'));
@@ -289,6 +299,22 @@ test('Stage quality contracts bind bounded Attempts, exact artifact identity, re
   assert.equal(quality.multi_attempt_stage_boundary.forbidden_attempt_fields_rejected_recursively, true);
   assert.equal(quality.multi_attempt_stage_boundary.parent_lineage_must_match_current_stage_run_and_quality_cycle, true);
   assert.equal(quality.stage_run_controller.maximum_attempt_instances, 8);
+  assert.equal(
+    quality.stage_run_controller.formal_review_declared_artifact_identity_patch_marker,
+    'opl-stage-run-formal-review-declared-artifact-identity-v1',
+  );
+  assert.equal(
+    quality.policy.scope_budget.usage_projection.attempts_used_semantics,
+    'completed_repair_rounds_for_v1_max_attempts_compatibility',
+  );
+  assert.equal(
+    quality.policy.scope_budget.usage_projection.managed_attempts_used_semantics,
+    'all_materialized_child_stage_attempts_including_producer_reviewer_repairer_and_re_reviewer',
+  );
+  assert.equal(
+    quality.policy.scope_budget.usage_projection.managed_attempts_used_is_budget_counter,
+    false,
+  );
   assert.deepEqual(quality.review_receipt.required_fields, [
     'stage_run_id', 'quality_cycle_id', 'producer_attempt_ref', 'reviewer_attempt_ref',
     'producer_session_ref', 'reviewer_session_ref', 'no_context_inheritance',
@@ -388,6 +414,9 @@ test('Stage quality contracts bind bounded Attempts, exact artifact identity, re
     true,
   );
   assert.equal(temporal.event_history_mapping.legacy_history_replay_fixture_required, true);
+  assert.ok(temporal.event_history_mapping.active_stage_run_patch_markers.includes(
+    'opl-stage-run-formal-review-declared-artifact-identity-v1',
+  ));
   assert.equal(
     attempts.stage_route_boundary.missing_or_invalid_route_fallback,
     'domain_pack_declared_default_progression_with_route_quality_debt_only',

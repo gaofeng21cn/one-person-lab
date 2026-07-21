@@ -99,6 +99,36 @@ test('stage attempt closeout replay repairs a persisted attempt missing closeout
   });
 });
 
+test('framework raw progress envelope is persisted without accepting a domain typed closeout', () => {
+  withAttempt((db, attemptId) => {
+    const packet = {
+      ...closeoutPacket('file:///tmp/raw-executor-output.txt'),
+      closeout_id: 'closeout:framework-progress-envelope',
+      route_impact: {
+        framework_generated_envelope: true,
+        transition_outcome: 'completed_with_quality_debt',
+      },
+      authority_boundary: {
+        opl: 'temporal_closeout_transport_projection_only',
+        domain: 'truth_quality_artifact_gate_owner',
+      },
+    };
+
+    const accepted = ingestStageAttemptCloseout(db, { stageAttemptId: attemptId, packet });
+    const replay = ingestStageAttemptCloseout(db, { stageAttemptId: attemptId, packet });
+
+    assert.equal(accepted.attempt.status, 'completed');
+    assert.equal(accepted.attempt.closeout_receipt_status, 'framework_progress_envelope');
+    assert.equal(replay.attempt.closeout_receipt_status, 'framework_progress_envelope');
+    assert.equal(replay.closeout.idempotent_noop, true);
+    assert.equal(listStageAttemptCloseouts(db, attemptId).length, 1);
+    assert.equal(
+      queryStageAttempt(db, attemptId).stage_attempt_query.canonical_outcome,
+      'completed_with_quality_debt',
+    );
+  });
+});
+
 test('stage attempt closeout replay backfills token usage projection', () => {
   withAttempt((db, attemptId) => {
     const packet = closeoutPacket('receipt:artifact-token-backfill');

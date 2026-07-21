@@ -201,12 +201,16 @@ function findingPriorities(findings: StageQualityFinding[]) {
         : 'p2' as const);
 }
 
-function qualityScopeBudgetUsage(state: TemporalStageRunWorkflowState) {
+function qualityScopeBudgetUsage(
+  state: TemporalStageRunWorkflowState,
+  includeManagedAttemptsUsed: boolean,
+) {
   const tokenObservations = state.attempts.map((attempt) => attempt.total_tokens_observed);
   const tokenUsage = aggregateStageQualityScopeTokenUsage(tokenObservations);
   const elapsedMs = Math.max(0, Date.parse(state.updated_at) - Date.parse(state.started_at));
   return {
     attempts_used: state.repair_rounds_used,
+    ...(includeManagedAttemptsUsed ? { managed_attempts_used: state.attempts.length } : {}),
     elapsed_ms: Number.isFinite(elapsedMs) ? elapsedMs : 0,
     ...tokenUsage,
   };
@@ -696,6 +700,7 @@ function executionSessionRefFromAttemptState(state: TemporalStageAttemptWorkflow
 function qualityArtifactIdentity(
   state: TemporalStageAttemptWorkflowState,
   value: Record<string, unknown>,
+  requireDeclaredArtifactIdentity: boolean,
   inputIdentity?: {
     artifactRefs: string[];
     artifactHashes: string[];
@@ -710,7 +715,8 @@ function qualityArtifactIdentity(
   }
   const closeout = asRecord(state.closeout_packet);
   const closeoutAuthority = asRecord(closeout.authority_boundary);
-  const rawArtifactIdentity = closeoutAuthority.opl === 'raw_executor_output_progress_envelope_only'
+  const legacyRawArtifactIdentity = !requireDeclaredArtifactIdentity
+    && closeoutAuthority.opl === 'raw_executor_output_progress_envelope_only'
     ? asRecordList(closeout.closeout_ref_metadata)
       .filter((entry) => entry.ref_kind === 'raw_executor_output')
       .map((entry) => ({
@@ -722,10 +728,10 @@ function qualityArtifactIdentity(
   const artifactIdentity = normalizeStageQualityArtifactIdentity({
     artifactRefs: declaredArtifactRefs.length > 0
       ? declaredArtifactRefs
-      : rawArtifactIdentity.map((entry) => entry.ref),
+      : legacyRawArtifactIdentity.map((entry) => entry.ref),
     artifactHashes: declaredArtifactHashes.length > 0
       ? declaredArtifactHashes
-      : rawArtifactIdentity.map((entry) => entry.hash),
+      : legacyRawArtifactIdentity.map((entry) => entry.hash),
     allowEmpty: true,
   });
   const artifactRefs = artifactIdentity.artifact_refs;
@@ -733,7 +739,7 @@ function qualityArtifactIdentity(
   if (artifactRefs.length === 0) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
-      'Stage quality producer or repairer did not return a consumable artifact identity.',
+      'Stage quality producer or repairer did not declare a consumable artifact identity in stage_quality_cycle.',
       {
         hard_stop_class: 'zero_consumable_artifact',
         blocked_reason: 'stage_quality_attempt_without_consumable_artifact',
@@ -853,6 +859,15 @@ function hasConsumableArtifact(state: TemporalStageRunWorkflowState) {
     && state.artifact_refs.length === state.artifact_hashes.length;
 }
 
+function hasProducedConsumableArtifact(state: TemporalStageRunWorkflowState) {
+  return state.attempts.some((attempt) => (
+    (attempt.attempt_role === 'producer' || attempt.attempt_role === 'repairer')
+    && attempt.artifact_refs.length > 0
+    && attempt.artifact_refs.length === attempt.artifact_hashes.length
+    && attempt.artifact_refs.length === attempt.artifact_identity_receipt_refs.length
+  ));
+}
+
 function qualityFailureRef(input: TemporalStageRunWorkflowInput, reason: string) {
   return `opl://stage-runs/${encodeURIComponent(input.stage_run_id)}/quality-debt/${encodeURIComponent(reason)}`;
 }
@@ -926,6 +941,9 @@ export async function StageRunWorkflow(
   const earlyRepairRouteBackEnabled = patched(
     'opl-stage-run-repair-required-cross-stage-route-back-v1',
   );
+  const formalReviewDeclaredArtifactIdentityEnabled = patched(
+    'opl-stage-run-formal-review-declared-artifact-identity-v1',
+  );
   const qualityScopeBudget = normalizeStageQualityScopeBudget(
     input.quality_policy.formal_review.scope_budget,
     { legacyMaxRepairRounds: input.quality_policy.formal_review.max_repair_rounds },
@@ -951,6 +969,7 @@ export async function StageRunWorkflow(
     quality_scope_budget: qualityScopeBudget,
     quality_scope_budget_usage: {
       attempts_used: 0,
+      ...(formalReviewDeclaredArtifactIdentityEnabled ? { managed_attempts_used: 0 } : {}),
       elapsed_ms: 0,
       tokens_used: null,
       token_observation_status: 'missing',
@@ -1134,23 +1153,58 @@ export async function StageRunWorkflow(
       ? stageQualityAttemptOutcomeFromEnvelope({ attemptRole: attemptInput.role, envelope })
       : null;
     const attemptReturnedArtifactIdentity = asStringList(envelope.artifact_refs).length > 0;
-    const artifactIdentity = result.status === 'completed' || (!reviewRole && attemptReturnedArtifactIdentity)
-      ? qualityArtifactIdentity(
+    let artifactIdentity: {
+      artifactRefs: string[];
+      artifactHashes: string[];
+      artifactIdentityReceiptRefs: string[];
+    };
+    try {
+      artifactIdentity = result.status === 'completed' || (!reviewRole && attemptReturnedArtifactIdentity)
+        ? qualityArtifactIdentity(
           result,
           envelope,
+          formalReviewDeclaredArtifactIdentityEnabled,
           reviewRole
-            ? {
-                artifactRefs: attemptInput.artifactRefs,
-                artifactHashes: attemptInput.artifactHashes,
-                artifactIdentityReceiptRefs: attemptInput.artifactIdentityReceiptRefs,
-              }
-            : undefined,
-        )
-      : {
-          artifactRefs: attemptInput.artifactRefs,
-          artifactHashes: attemptInput.artifactHashes,
-          artifactIdentityReceiptRefs: attemptInput.artifactIdentityReceiptRefs,
-        };
+              ? {
+                  artifactRefs: attemptInput.artifactRefs,
+                  artifactHashes: attemptInput.artifactHashes,
+                  artifactIdentityReceiptRefs: attemptInput.artifactIdentityReceiptRefs,
+                }
+              : undefined,
+          )
+        : {
+            artifactRefs: attemptInput.artifactRefs,
+            artifactHashes: attemptInput.artifactHashes,
+            artifactIdentityReceiptRefs: attemptInput.artifactIdentityReceiptRefs,
+          };
+    } catch (error) {
+      if (!formalReviewDeclaredArtifactIdentityEnabled) throw error;
+      state = {
+        ...state,
+        attempts: [...state.attempts, {
+          attempt_role: attemptInput.role,
+          quality_round_index: attemptInput.round,
+          stage_attempt_id: childInput.stage_attempt_id,
+          workflow_id: childInput.workflow_id,
+          execution_session_ref: executionSessionRef,
+          artifact_producer_attempt_ref: attemptInput.artifactProducerAttemptRef ?? null,
+          status: result.status,
+          artifact_refs: [],
+          artifact_hashes: [],
+          artifact_identity_receipt_refs: [],
+          total_tokens_observed: observedAttemptTotalTokens(result),
+        }],
+        updated_at: nowIso(),
+      };
+      state = {
+        ...state,
+        quality_scope_budget_usage: qualityScopeBudgetUsage(
+          state,
+          formalReviewDeclaredArtifactIdentityEnabled,
+        ),
+      };
+      throw error;
+    }
     const routeImpact = asRecord(asRecord(result.closeout_packet).route_impact);
     const routeEvaluation = evaluateStageQualityAttemptRoute({
       attempt: childInput as unknown as Record<string, unknown>,
@@ -1199,7 +1253,10 @@ export async function StageRunWorkflow(
     };
     state = {
       ...state,
-      quality_scope_budget_usage: qualityScopeBudgetUsage(state),
+      quality_scope_budget_usage: qualityScopeBudgetUsage(
+        state,
+        formalReviewDeclaredArtifactIdentityEnabled,
+      ),
     };
     if (result.status === 'human_gate') {
       state = {
@@ -1355,6 +1412,9 @@ export async function StageRunWorkflow(
   }) => {
     const usage = state.quality_scope_budget_usage ?? {
       attempts_used: state.repair_rounds_used,
+      ...(formalReviewDeclaredArtifactIdentityEnabled
+        ? { managed_attempts_used: state.attempts.length }
+        : {}),
       elapsed_ms: 0,
       tokens_used: null,
       token_observation_status: 'missing' as const,
@@ -1606,7 +1666,10 @@ export async function StageRunWorkflow(
       state = { ...state, repair_rounds_used: round };
       state = {
         ...state,
-        quality_scope_budget_usage: qualityScopeBudgetUsage(state),
+        quality_scope_budget_usage: qualityScopeBudgetUsage(
+          state,
+          formalReviewDeclaredArtifactIdentityEnabled,
+        ),
       };
       if (stageRunStopped(state)) return terminalize(state);
       const reReviewOutcome = reReview.outcome;
@@ -1767,7 +1830,12 @@ export async function StageRunWorkflow(
     if (stageRunStopped(state)) return terminalize(state);
     const hardStop = controllerHardStopFromError(error);
     const hardStopTerminates = hardStop
-      && (hardStop.hardStopClass !== 'zero_consumable_artifact' || !hasConsumableArtifact(state));
+      && (
+        hardStop.hardStopClass !== 'zero_consumable_artifact'
+        || !(formalReviewDeclaredArtifactIdentityEnabled
+          ? hasProducedConsumableArtifact(state)
+          : hasConsumableArtifact(state))
+      );
     if (hardStop && hardStopTerminates) {
       return terminalize({
         ...state,
@@ -1787,7 +1855,9 @@ export async function StageRunWorkflow(
         updated_at: nowIso(),
       });
     }
-    const reason = error instanceof Error ? error.message : String(error);
+    const reason = hardStop && !hardStopTerminates
+      ? hardStop.blockedReason
+      : error instanceof Error ? error.message : String(error);
     return terminalize(hasConsumableArtifact(state)
       ? {
           ...state,

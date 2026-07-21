@@ -322,6 +322,12 @@
     "typed_packet_required_for_progress": false,
     "raw_or_free_text_artifact_accepted_for_progress": true,
     "framework_derives_minimal_progress_envelope": true,
+    "closeout_receipt_status_contract": {
+      "accepted_typed_closeout": "A producer-declared typed closeout accepted for downstream domain and Stage quality processing.",
+      "framework_progress_envelope": "A framework-generated refs-only progress diagnostic that is not a domain typed closeout or formal Review artifact candidate.",
+      "framework_progress_envelope_can_supply_formal_review_artifact_identity": false,
+      "framework_progress_envelope_can_authorize_domain_ready": false
+    },
     "output_schema_control_plane_enabled": false,
     "same_session_closeout_enforcement_enabled": false,
     "tracked_refs": [

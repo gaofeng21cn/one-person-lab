@@ -113,6 +113,11 @@
       "token_budget_requires_observed_usage": true,
       "missing_token_telemetry_is_not_zero_usage": true,
       "foreground_execution_must_use_managed_attempt": true,
+      "usage_projection": {
+        "attempts_used_semantics": "completed_repair_rounds_for_v1_max_attempts_compatibility",
+        "managed_attempts_used_semantics": "all_materialized_child_stage_attempts_including_producer_reviewer_repairer_and_re_reviewer",
+        "managed_attempts_used_is_budget_counter": false
+      },
       "stop_reasons": [
         "max_attempts_exhausted",
         "max_elapsed_exhausted",
@@ -130,7 +135,9 @@
     "budget_exhaustion_without_consumable_artifact": "hard_stop",
     "repair_failure_with_prior_consumable_artifact": "completed_with_quality_debt",
     "content_addressed_no_output_or_failure_diagnostic_counts_as_consumable_progress_artifact": true,
-    "literal_zero_requires_no_candidate_and_no_content_addressed_progress_diagnostic": true,
+    "content_addressed_no_output_or_failure_diagnostic_counts_as_stage_quality_candidate": false,
+    "formal_review_candidate_identity_source": "producer_or_repairer_route_impact.stage_quality_cycle.artifact_refs_and_artifact_hashes_plus_identity_receipts",
+    "literal_zero_stage_quality_candidate_ignores_progress_diagnostic": true,
     "literal_zero_consumable_artifact": "hard_stop",
     "same_thread_refinement_can_close_review": false
   },
@@ -143,6 +150,7 @@
     "attempt_instances_declared_in_manifest": false,
     "attempt_instances_materialized_dynamically_from_policy": true,
     "stage_run_spec_quality_policy_and_declared_stage_ids_are_historical_after_creation": true,
+    "formal_review_declared_artifact_identity_patch_marker": "opl-stage-run-formal-review-declared-artifact-identity-v1",
     "new_attempt_execution_content_binding_is_effective_control_policy": true,
     "formal_review_requirement_source": "producer_attempt_execution_content_binding",
     "repair_budget_source": "latest_materialized_attempt_execution_content_binding",
