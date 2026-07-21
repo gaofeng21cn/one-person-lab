@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -15,13 +16,18 @@ import {
   inspectStandardAgentActionRunPlan,
 } from '../../src/modules/runway/standard-agent-action-run-state.ts';
 import { runStandardAgentAction } from '../../src/modules/runway/standard-agent-action-runtime.ts';
+import { runStandardAgentHandlerSandbox } from
+  '../../src/modules/runway/standard-agent-handler-sandbox.ts';
 import { runFamilyRuntime } from '../../src/modules/runway/family-runtime.ts';
 import {
   applyDomainArtifactCasMaterialization,
   observeDomainArtifactCasMaterialization,
 } from
   '../../src/modules/runway/domain-artifact-cas-materialization.ts';
-import { standardAgentLifecycleReactivationHandlerRunId } from
+import {
+  prepareStandardAgentLifecycleReactivation,
+  standardAgentLifecycleReactivationHandlerRunId,
+} from
   '../../src/modules/runway/standard-agent-domain-lifecycle-admission.ts';
 import { preflightFamilyRuntimeDomainLifecycleAdmission } from
   '../../src/modules/runway/family-runtime-domain-lifecycle-admission.ts';
@@ -351,6 +357,144 @@ function reactivationAdmission(refs: ReturnType<typeof writeLifecycleWorkspace>,
     },
   };
 }
+
+function prepareCanonicalLifecycleAuthorityPayload() {
+  const fixtureRoot = temporaryRoot('opl-lifecycle-authority-shape-');
+  const checkoutRoot = path.join(fixtureRoot, 'checkout');
+  const workspaceRoot = path.join(fixtureRoot, 'workspace');
+  fs.mkdirSync(checkoutRoot, { recursive: true });
+  fs.mkdirSync(workspaceRoot, { recursive: true });
+  writeLifecycleContracts(checkoutRoot);
+  const refs = writeLifecycleWorkspace(workspaceRoot);
+  const catalog = JSON.parse(fs.readFileSync(
+    path.join(checkoutRoot, 'contracts', 'action_catalog.json'),
+    'utf8',
+  ));
+  const action = {
+    ...catalog.actions[0],
+    action_id: 'review_and_quality_gate',
+  };
+  const prepared = prepareStandardAgentLifecycleReactivation({
+    action,
+    payload: {
+      study_id: 'study-001',
+      lifecycle_admission: reactivationAdmission(refs),
+    },
+    checkoutRoot,
+    workspaceRoot,
+    domainId: 'mas',
+    runId: 'canonical-authority-shape',
+    originalInvocationSha256: 'a'.repeat(64),
+  });
+  assert.ok(prepared);
+  return { fixtureRoot, handlerPayload: prepared.handlerPayload, refs };
+}
+
+function loadCanonicalMasAuthorityRequest(masRepo: string) {
+  const python = [
+    process.env.OPL_REAL_MAS_PYTHON,
+    path.join(masRepo, '.venv', 'bin', 'python'),
+    path.join(masRepo, '.venv', 'bin', 'python3'),
+    '/opt/homebrew/bin/python3',
+    '/usr/bin/python3',
+  ].find((candidate): candidate is string => Boolean(candidate && fs.existsSync(candidate)));
+  assert.ok(python, 'A Python runtime is required for the real MAS ABI smoke.');
+  const script = String.raw`
+import importlib.util
+import json
+import os
+import sys
+import types
+
+repo = os.path.realpath(sys.argv[1])
+sys.path.insert(0, os.path.join(repo, "src"))
+sys.modules["pytest"] = types.ModuleType("pytest")
+jsonschema = types.ModuleType("jsonschema")
+jsonschema.Draft202012Validator = object
+jsonschema.ValidationError = Exception
+sys.modules["jsonschema"] = jsonschema
+test_file = os.path.join(repo, "tests", "test_study_lifecycle_reactivation_authority.py")
+spec = importlib.util.spec_from_file_location("mas_lifecycle_authority_fixture", test_file)
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+sys.stdout.write(json.dumps(module._request(), sort_keys=True, separators=(",", ":")))
+`;
+  const loaded = spawnSync(python, ['-I', '-B', '-c', script, masRepo], {
+    encoding: 'utf8',
+    env: {
+      PATH: process.env.PATH ?? '/usr/bin:/bin',
+      HOME: process.env.HOME ?? '/',
+      LANG: process.env.LANG ?? 'C.UTF-8',
+      LC_ALL: process.env.LC_ALL ?? process.env.LANG ?? 'C.UTF-8',
+      PYTHONDONTWRITEBYTECODE: '1',
+    },
+  });
+  assert.equal(loaded.status, 0, loaded.stderr);
+  return JSON.parse(loaded.stdout) as Record<string, unknown>;
+}
+
+test('lifecycle reactivation authority context keeps profile only in the top-level profile input', () => {
+  const prepared = prepareCanonicalLifecycleAuthorityPayload();
+  try {
+    const authority = prepared.handlerPayload.authority_context as Record<string, unknown>;
+    assert.deepEqual(Object.keys(authority).sort(), [
+      'admission_scope_id',
+      'handler_call_ref',
+      'original_admission_request_ref',
+      'original_admission_request_sha256',
+      'original_invocation_sha256',
+      'owner_ledger_ref',
+      'requested_action_id',
+      'requested_run_id',
+    ]);
+    assert.equal(Object.hasOwn(authority, 'profile_ref'), false);
+    assert.equal(
+      (prepared.handlerPayload.profile as Record<string, unknown>).profile_ref,
+      prepared.refs.profile.ref,
+    );
+  } finally {
+    fs.rmSync(prepared.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('real MAS lifecycle authority accepts the exact OPL authority context ABI', {
+  skip: process.env.OPL_REAL_MAS_ABI_SMOKE !== '1',
+}, () => {
+  const masRepo = process.env.OPL_REAL_MAS_REPO ?? '/Users/gaofeng/workspace/med-autoscience';
+  assert.equal(fs.existsSync(masRepo), true, `MAS checkout is missing: ${masRepo}`);
+  const prepared = prepareCanonicalLifecycleAuthorityPayload();
+  try {
+    const authority = prepared.handlerPayload.authority_context as Record<string, unknown>;
+    const schema = JSON.parse(fs.readFileSync(path.join(
+      masRepo,
+      'contracts',
+      'schemas',
+      'v2',
+      'mas-study-lifecycle-reactivation-authority.input.schema.json',
+    ), 'utf8'));
+    assert.deepEqual(
+      Object.keys(authority).sort(),
+      Object.keys(schema.$defs.authority_context.properties).sort(),
+    );
+
+    const request = loadCanonicalMasAuthorityRequest(masRepo);
+    request.authority_context = authority;
+    const receipt = runStandardAgentHandlerSandbox({
+      checkoutRoot: masRepo,
+      binding: {
+        kind: 'python_callable',
+        module: 'med_autoscience.authority_handlers.study_lifecycle_reactivation',
+        callable: 'evaluate_study_lifecycle_reactivation_authority',
+      },
+      request,
+    });
+    const output = receipt.output as Record<string, unknown>;
+    assert.notEqual(output.status, 'invalid_host_input', JSON.stringify(output.error));
+    assert.equal(output.status, 'authorized');
+  } finally {
+    fs.rmSync(prepared.fixtureRoot, { recursive: true, force: true });
+  }
+});
 
 function authorityHandler(workspaceRoot: string, onCall: () => void) {
   const canonicalWorkspaceRoot = fs.realpathSync.native(workspaceRoot);

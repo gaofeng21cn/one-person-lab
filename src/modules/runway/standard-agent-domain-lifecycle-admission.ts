@@ -891,7 +891,6 @@ export function prepareStandardAgentLifecycleReactivation(input: {
     authority_context: {
       handler_call_ref: `opl://standard-agent-action-run/${encodeURIComponent(binding.handlerRunId)}`,
       owner_ledger_ref: binding.ownerLedgerRef,
-      profile_ref: profile.ref,
       original_admission_request_ref: binding.originalAdmissionRequestRef,
       original_admission_request_sha256: binding.originalAdmissionRequestSha256,
       admission_scope_id: binding.admissionScopeId,
