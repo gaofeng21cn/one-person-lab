@@ -728,6 +728,41 @@ test('direct family-runtime create --start gates before attempt reserve and repl
   }
 });
 
+test('legacy observation-only plan without action or pack stays typed not-declared', async () => {
+  const fixtureRoot = temporaryRoot('opl-family-lifecycle-legacy-observation-');
+  const workspaceRoot = path.join(fixtureRoot, 'workspace');
+  const stateRoot = path.join(fixtureRoot, 'state');
+  const previousStateRoot = process.env.OPL_STATE_DIR;
+  try {
+    fs.mkdirSync(workspaceRoot, { recursive: true });
+    process.env.OPL_STATE_DIR = stateRoot;
+    const planned = await runFamilyRuntime([
+      'attempt', 'create', '--domain', 'mas', '--stage', 'write',
+      '--provider', 'temporal', '--workspace-locator', JSON.stringify({
+        workspace_root: workspaceRoot,
+        study_id: 'legacy-study-observation',
+      }),
+      '--source-fingerprint', `sha256:${'6'.repeat(64)}`,
+    ], {
+      stageRunRuntime: {
+        ensurePackageLaunchReady: async () => null,
+        resolveStageBinding: () => null,
+        startWorkflow: async () => assert.fail('observation-only plan must not start a provider'),
+      },
+    });
+    assert.equal(
+      (planned.family_runtime_stage_attempt as any)
+        .stage_context_observation.domain_lifecycle_admission.status,
+      'not_declared',
+    );
+    assert.equal((planned.family_runtime_stage_attempt as any).temporal_start, null);
+  } finally {
+    if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateRoot;
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('public plan-only StageRun launch requires active lifecycle before durable registration', async () => {
   const fixtureRoot = temporaryRoot('opl-family-lifecycle-plan-only-');
   const checkoutRoot = path.join(fixtureRoot, 'checkout');

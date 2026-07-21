@@ -632,13 +632,22 @@ export async function runFamilyRuntime(
       );
       const lifecycleWorkspaceLocator = existingStageRunLaunch?.stage_run_input.workspace_locator
         ?? useBoundWorkspaceLocator;
-      const domainLifecycleAdmission = preflightFamilyRuntimeDomainLifecycleAdmission({
-        domainId: parsed.input.domainId,
-        stageId: parsed.input.stageId,
-        actionId: existingStageRunLaunch?.stage_run_input.action_id ?? parsed.input.actionId,
-        domainPackRoot: existingStageRunLaunch?.stage_run_input.domain_pack_root ?? domainPackRoot,
-        workspaceLocator: lifecycleWorkspaceLocator,
-      });
+      const canonicalLifecycleLaunch = Boolean(
+        existingStageRunLaunch
+        || domainPackRoot
+        || parsed.input.actionId?.trim()
+        || parsed.input.start
+        || stageQualityBinding?.enabled,
+      );
+      const domainLifecycleAdmission = canonicalLifecycleLaunch
+        ? preflightFamilyRuntimeDomainLifecycleAdmission({
+            domainId: parsed.input.domainId,
+            stageId: parsed.input.stageId,
+            actionId: existingStageRunLaunch?.stage_run_input.action_id ?? parsed.input.actionId,
+            domainPackRoot: existingStageRunLaunch?.stage_run_input.domain_pack_root ?? domainPackRoot,
+            workspaceLocator: lifecycleWorkspaceLocator,
+          })
+        : { status: 'not_declared' as const };
       const stageLaunchContextObservation = {
         ...checkoutBoundStageContextObservation,
         domain_lifecycle_admission: domainLifecycleAdmission,
