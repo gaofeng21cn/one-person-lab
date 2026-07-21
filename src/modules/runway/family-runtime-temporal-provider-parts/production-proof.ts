@@ -1,3 +1,7 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
 import { WorkflowIdConflictPolicy, WorkflowIdReusePolicy } from '@temporalio/common';
 import type { Client } from '@temporalio/client';
 
@@ -21,6 +25,7 @@ import {
 import { taskRetryBudgetProjection } from '../family-runtime-queue-projection-boundary.ts';
 
 const TEMPORAL_PRODUCTION_PROOF_RESULT_RPC_TIMEOUT_MS = 60_000;
+const TEMPORAL_PRODUCTION_PROOF_WORKSPACE_NAME = 'opl-temporal-production-residency-proof';
 
 type TemporalProductionWorkerLifecycle = {
   address: string | null;
@@ -49,15 +54,21 @@ type TemporalProductionUpdateHandle = {
 export function temporalProductionProbeInput(
   suffix: string,
   closeoutPacket: Record<string, unknown> | null,
+  options: { workspaceRoot?: string } = {},
 ): TemporalStageAttemptWorkflowInput {
+  const workspaceRoot = path.resolve(
+    options.workspaceRoot ?? path.join(os.tmpdir(), TEMPORAL_PRODUCTION_PROOF_WORKSPACE_NAME),
+  );
+  const artifactRoot = path.join(workspaceRoot, 'artifacts');
+  fs.mkdirSync(artifactRoot, { recursive: true, mode: 0o700 });
   return {
     stage_attempt_id: `sat_temporal_production_${suffix}`,
     workflow_id: `wf_temporal_production_${suffix}`,
     domain_id: 'example-domain' as TemporalStageAttemptWorkflowInput['domain_id'],
     stage_id: 'production-residency-proof',
     workspace_locator: {
-      workspace_root: '/tmp/opl-temporal-production-residency-proof',
-      artifact_root: '/tmp/opl-temporal-production-residency-proof/artifacts',
+      workspace_root: workspaceRoot,
+      artifact_root: artifactRoot,
     },
     source_fingerprint: `sha256:temporal-production-residency-${suffix}`,
     executor_kind: 'codex_cli',
