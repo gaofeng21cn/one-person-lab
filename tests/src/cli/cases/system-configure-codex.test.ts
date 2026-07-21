@@ -311,6 +311,7 @@ test('system configure-codex writes the product endpoint and App-owned install f
           model_provider: string;
           model: string;
           model_reasoning_effort: string;
+          provider_name: string;
           base_url: string;
           base_url_role: string;
           model_profile_role: string;
@@ -333,6 +334,7 @@ test('system configure-codex writes the product endpoint and App-owned install f
 
     assert.equal(output.codex_config.status, 'completed');
     assert.equal(output.codex_config.default_profile.model_provider, 'gflab');
+    assert.equal(output.codex_config.default_profile.provider_name, 'OPL Gateway');
     assert.equal(output.codex_config.default_profile.model, codexDefaultProfile.model);
     assert.equal(
       output.codex_config.default_profile.model_reasoning_effort,
@@ -350,6 +352,7 @@ test('system configure-codex writes the product endpoint and App-owned install f
 
     const config = fs.readFileSync(output.codex_config.config_path, 'utf8');
     assert.match(config, /model_provider = "gflab"/);
+    assert.match(config, /name = "OPL Gateway"/);
     assertBundledCodexModel(output.codex_config.bootstrap, config);
     assert.match(config, /base_url = "https:\/\/gflabtoken\.cn\/v1"/);
     assert.match(config, /experimental_bearer_token = "secret-stdin-key"/);
@@ -456,8 +459,66 @@ test('system configure-codex preserves an existing custom provider and registers
     assert.match(config, /\[model_providers\.custom\]/);
     assert.match(config, /base_url = "https:\/\/custom-provider\.example\.test\/v1"/);
     assert.match(config, /\[model_providers\.gflab\]/);
+    assert.match(config, /name = "OPL Gateway"/);
     assert.match(config, /base_url = "https:\/\/gflabtoken\.cn\/v1"/);
     assert.match(config, /experimental_bearer_token = "opl-gateway-key"/);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('system configure-codex preserves an existing inactive gflab provider name', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-configure-codex-existing-inactive-home-'));
+  const codexHome = path.join(homeRoot, 'codex-home');
+
+  try {
+    fs.mkdirSync(codexHome, { recursive: true });
+    fs.writeFileSync(
+      path.join(codexHome, 'config.toml'),
+      [
+        'model_provider = "custom"',
+        'model = "custom-model"',
+        '',
+        '[model_providers.custom]',
+        'name = "Custom Provider"',
+        'base_url = "https://custom-provider.example.test/v1"',
+        'experimental_bearer_token = "existing-custom-key"',
+        '',
+        '[model_providers.gflab]',
+        'name = "gflab"',
+        'base_url = "https://gflabtoken.cn/v1"',
+        'experimental_bearer_token = "existing-opl-key"',
+        '',
+      ].join('\n'),
+      'utf8',
+    );
+
+    const output = runCliWithStdin(
+      ['system', 'configure-codex', '--api-key-stdin'],
+      'replacement-opl-key\n',
+      {
+        HOME: homeRoot,
+        CODEX_HOME: codexHome,
+        OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      },
+    ) as {
+      codex_config: {
+        bootstrap: {
+          management_receipt: {
+            provider_id: string;
+            selection_mode: string;
+          };
+        };
+      };
+    };
+
+    assert.equal(output.codex_config.bootstrap.management_receipt.provider_id, 'gflab');
+    assert.equal(output.codex_config.bootstrap.management_receipt.selection_mode, 'inactive_provider');
+    const config = fs.readFileSync(path.join(codexHome, 'config.toml'), 'utf8');
+    assert.match(config, /model_provider = "custom"/);
+    assert.match(config, /^name = "gflab"$/m);
+    assert.doesNotMatch(config, /^name = "OPL Gateway"$/m);
+    assert.match(config, /experimental_bearer_token = "replacement-opl-key"/);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }

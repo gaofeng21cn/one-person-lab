@@ -702,6 +702,7 @@ test('install command applies bundled Codex defaults when only the API key is pr
     const bootstrap = output.install.codex_config_bootstrap;
     const config = fs.readFileSync(bootstrap.config_path, 'utf8');
     assertBundledCodexModel(bootstrap, config);
+    assert.match(config, /name = "OPL Gateway"/);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
@@ -768,6 +769,47 @@ test('install command upgrades an existing OPL Gateway alias while preserving it
     const updatedConfig = fs.readFileSync(configPath, 'utf8');
     assert.match(updatedConfig, /experimental_bearer_token = "explicit-opl-environment-key"/);
     assert.doesNotMatch(updatedConfig, /ambient-openai-key-must-not-replace-provider-token/);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('install command preserves the legacy gflab provider name for existing conversation affinity', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-existing-gflab-name-home-'));
+  const codexHome = path.join(homeRoot, 'codex-home');
+  const configPath = path.join(codexHome, 'config.toml');
+
+  try {
+    fs.mkdirSync(codexHome, { recursive: true });
+    fs.writeFileSync(
+      configPath,
+      [
+        'model_provider = "gflab"',
+        'model = "gpt-5.5"',
+        'model_reasoning_effort = "xhigh"',
+        '',
+        '[model_providers.gflab]',
+        'name = "gflab"',
+        `base_url = "${OPL_GATEWAY_BASE_URL}"`,
+        'experimental_bearer_token = "existing-opl-key"',
+        '',
+      ].join('\n'),
+      'utf8',
+    );
+
+    const output = runCli(['install', '--skip-packages', '--skip-engines', '--headless', '--skip-native-helper-repair'], {
+      HOME: homeRoot,
+      CODEX_HOME: codexHome,
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      ...disableRemoteCompanionInstall(),
+    }) as any;
+
+    assert.equal(output.install.codex_config_bootstrap.status, 'completed');
+    const config = fs.readFileSync(configPath, 'utf8');
+    assert.match(config, /model_provider = "gflab"/);
+    assert.match(config, /\[model_providers\.gflab\]/);
+    assert.match(config, /^name = "gflab"$/m);
+    assert.doesNotMatch(config, /^name = "OPL Gateway"$/m);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
@@ -857,6 +899,7 @@ test('install command does not overwrite a third-party provider using the gflab 
     assert.match(config, /base_url = "https:\/\/third-party\.example\.test\/v1"/);
     assert.match(config, /experimental_bearer_token = "third-party-key"/);
     assert.match(config, /\[model_providers\.opl_gateway\]/);
+    assert.match(config, /name = "OPL Gateway"/);
     assert.match(config, /base_url = "https:\/\/gflabtoken\.cn\/v1"/);
     assert.match(config, /experimental_bearer_token = "new-opl-key"/);
   } finally {

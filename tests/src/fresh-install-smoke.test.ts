@@ -715,7 +715,7 @@ test('bundled Codex profile carries the OPL Flow recommendation without runtime 
   assert.equal(profile.base_url, 'https://gflabtoken.cn/v1');
   assert.equal(profile.base_url_role, 'opl_base_default_provider_endpoint');
   assert.equal(profile.model_profile_role, 'opl_flow_recommendation_projection');
-  assert.equal(profile.provider_name.length > 0, true);
+  assert.equal(profile.provider_name, 'OPL Gateway');
   assert.equal(serialized.includes('experimental_bearer_token'), false);
   assert.equal(serialized.toLowerCase().includes('api_key'), false);
 });

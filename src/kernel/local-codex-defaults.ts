@@ -636,9 +636,10 @@ export function bootstrapLocalCodexDefaults(input: BootstrapLocalCodexDefaultsIn
   const providerId = activeOplProvider?.model_provider
     ? activeOplProvider.model_provider
     : selectInactiveProviderId(requestedProviderId, providerBaseUrl, providerValues);
+  const existingProviderName = normalizeOptionalString(providerValues.get(providerId)?.get('name'));
   const providerName = activeOplProvider
     ? activeOplProvider.provider_name ?? requestedProviderName
-    : requestedProviderName;
+    : existingProviderName ?? requestedProviderName;
   const preserveLocalOverride = activeOplProvider
     ? hasLocalOverride(activeOplProvider, receipt)
     : false;
