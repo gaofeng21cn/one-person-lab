@@ -10,6 +10,7 @@ import { pathToFileURL } from 'node:url';
 import { repoRoot, runCliFailureInCwd, runCliInCwd } from '../helpers.ts';
 import { canonicalJsonBytes } from '../../../../src/kernel/canonical-json.ts';
 import { FrameworkContractError } from '../../../../src/kernel/contract-validation.ts';
+import { parseJsonText } from '../../../../src/kernel/json-file.ts';
 
 import {
   admitReleaseBundleOperation,
@@ -41,6 +42,18 @@ const appendFullOperation = {
   operationStartedAt: '2026-07-21T02:00:00.000Z',
   operationDeadlineAt: '2099-07-21T02:50:00.000Z',
 };
+
+type MutableCheckpointFixture = {
+  checkpoint_digest: string;
+  active_unknown_markers?: Array<{
+    marker_digest: string;
+    prior_mutation_attempt_id: string;
+  }>;
+  operation_controls?: {
+    standard: ({ control_digest: string; operation_id: string } & Record<string, unknown>) | null;
+    append_full: ({ control_digest: string; operation_id: string } & Record<string, unknown>) | null;
+  };
+} & Record<string, unknown>;
 
 type OptionalOperationInput<T> = Omit<T, keyof ReleaseBundleOperationInvocation>
   & Partial<ReleaseBundleOperationInvocation>;
@@ -96,6 +109,10 @@ function writeJson(filePath: string, payload: unknown) {
   const source = `${JSON.stringify(payload, null, 2)}\n`;
   fs.writeFileSync(filePath, source, 'utf8');
   return digest(source);
+}
+
+function readCheckpointFixture(filePath: string) {
+  return parseJsonText(fs.readFileSync(filePath, 'utf8')) as MutableCheckpointFixture;
 }
 
 function fixtureRequest(sourceRoot: string) {
@@ -816,29 +833,575 @@ test('portable checkpoint covers every executor handoff stage', () => {
   }
 });
 
-test('checkpoint export refuses to switch executors while an outcome is unknown', () => {
+test('checkpoint export is idempotent only while the complete store state is unchanged', () => {
   const fixture = createFixture();
   try {
     const bundleDigest = fixture.frozen.release_bundle_freeze.bundle_digest;
+    const checkpointDirectory = path.join(fixture.root, 'state-bound-checkpoint');
+    const first = exportReleaseBundleCheckpoint({
+      bundleDigest,
+      outputDirectory: checkpointDirectory,
+      storeRoot: fixture.storeRoot,
+    }).release_bundle_checkpoint_export;
+    const unchanged = exportReleaseBundleCheckpoint({
+      bundleDigest,
+      outputDirectory: checkpointDirectory,
+      storeRoot: fixture.storeRoot,
+    }).release_bundle_checkpoint_export;
+    assert.equal(unchanged.status, 'idempotent');
+    assert.equal(unchanged.checkpoint_digest, first.checkpoint_digest);
+
+    buildReleaseBundle({
+      bundleDigest,
+      executorReceiptPath: writeBuildReceipt({ root: fixture.root, bundleDigest }),
+      storeRoot: fixture.storeRoot,
+    });
+    verifyReleaseBundle({
+      bundleDigest,
+      track: 'standard',
+      qualificationReceiptPath: writeQualification({
+        root: fixture.root,
+        bundle: fixture.request,
+        bundleDigest,
+      }),
+      storeRoot: fixture.storeRoot,
+    });
+    assertTypedContractFailure(
+      () => exportReleaseBundleCheckpoint({
+        bundleDigest,
+        outputDirectory: checkpointDirectory,
+        storeRoot: fixture.storeRoot,
+      }),
+      /stale for the current immutable Release Bundle state/,
+    );
+    const current = exportReleaseBundleCheckpoint({
+      bundleDigest,
+      outputDirectory: path.join(fixture.root, 'qualified-checkpoint'),
+      storeRoot: fixture.storeRoot,
+    }).release_bundle_checkpoint_export;
+    assert.equal(current.checkpoint_stage, 'standard_qualified');
+    assert.notEqual(current.checkpoint_digest, first.checkpoint_digest);
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test('checkpoint rename race returns the exact identity retained on disk across compatible formats', () => {
+  const fixture = createFixture();
+  try {
+    const bundleDigest = fixture.frozen.release_bundle_freeze.bundle_digest;
+    const legacyDirectory = path.join(fixture.root, 'legacy-race-source');
+    const current = exportReleaseBundleCheckpoint({
+      bundleDigest,
+      outputDirectory: legacyDirectory,
+      storeRoot: fixture.storeRoot,
+    }).release_bundle_checkpoint_export;
+    const legacyPath = path.join(legacyDirectory, 'checkpoint.json');
+    const legacyCheckpoint = readCheckpointFixture(legacyPath);
+    delete legacyCheckpoint.active_unknown_markers;
+    const { checkpoint_digest: _checkpointDigest, ...legacyCore } = legacyCheckpoint;
+    legacyCheckpoint.checkpoint_digest = digest(canonicalJsonBytes(legacyCore));
+    writeJson(legacyPath, legacyCheckpoint);
+    assert.notEqual(legacyCheckpoint.checkpoint_digest, current.checkpoint_digest);
+
+    const racedDirectory = path.join(fixture.root, 'mixed-format-race-target');
+    const originalRenameSync = fs.renameSync;
+    fs.renameSync = ((source: fs.PathLike, destination: fs.PathLike) => {
+      if (path.resolve(String(destination)) === path.resolve(racedDirectory)) {
+        fs.cpSync(legacyDirectory, racedDirectory, { recursive: true, errorOnExist: true });
+        throw Object.assign(new Error('simulated compatible checkpoint race'), { code: 'EEXIST' });
+      }
+      return originalRenameSync(source, destination);
+    }) as typeof fs.renameSync;
+    try {
+      const raced = exportReleaseBundleCheckpoint({
+        bundleDigest,
+        outputDirectory: racedDirectory,
+        storeRoot: fixture.storeRoot,
+      }).release_bundle_checkpoint_export;
+      assert.equal(raced.status, 'idempotent');
+      assert.equal(raced.checkpoint_digest, legacyCheckpoint.checkpoint_digest);
+      assert.equal(
+        readCheckpointFixture(path.join(racedDirectory, 'checkpoint.json')).checkpoint_digest,
+        raced.checkpoint_digest,
+      );
+    } finally {
+      fs.renameSync = originalRenameSync;
+    }
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test('checkpoint carries an exact unknown build marker across executors and never resurrects it', () => {
+  const fixture = createFixture();
+  try {
+    const bundleDigest = fixture.frozen.release_bundle_freeze.bundle_digest;
+    const staleCheckpointDirectory = path.join(fixture.root, 'stale-before-unknown-checkpoint');
+    exportReleaseBundleCheckpoint({
+      bundleDigest,
+      outputDirectory: staleCheckpointDirectory,
+      storeRoot: fixture.storeRoot,
+    });
+    const priorAttemptId = 'unknown-before-handoff';
+    const remoteTarget = 'build:standard';
     buildReleaseBundle({
       bundleDigest,
       executorReceiptPath: writeBuildReceipt({
         root: fixture.root,
         bundleDigest,
         executor: 'local',
-        attemptId: 'unknown-before-handoff',
+        attemptId: priorAttemptId,
         outcome: 'unknown',
+        remoteTarget,
       }),
       storeRoot: fixture.storeRoot,
     });
-    assert.throws(
+    assertTypedContractFailure(
       () => exportReleaseBundleCheckpoint({
         bundleDigest,
-        outputDirectory: path.join(fixture.root, 'blocked-checkpoint'),
+        outputDirectory: staleCheckpointDirectory,
         storeRoot: fixture.storeRoot,
       }),
-      /requires every executor outcome to be reconciled/,
+      /stale for the current immutable Release Bundle state/,
     );
+    const checkpointDirectory = path.join(fixture.root, 'unknown-checkpoint');
+    exportReleaseBundleCheckpoint({
+      bundleDigest,
+      outputDirectory: checkpointDirectory,
+      storeRoot: fixture.storeRoot,
+    });
+    const checkpoint = readCheckpointFixture(path.join(checkpointDirectory, 'checkpoint.json'));
+    assert.equal(checkpoint.active_unknown_markers?.length, 1);
+    assert.equal(checkpoint.active_unknown_markers?.[0].prior_mutation_attempt_id, priorAttemptId);
+    const mismatchedControlDirectory = path.join(fixture.root, 'mismatched-control-checkpoint');
+    fs.cpSync(checkpointDirectory, mismatchedControlDirectory, { recursive: true });
+    const mismatchedControlPath = path.join(mismatchedControlDirectory, 'checkpoint.json');
+    const mismatchedControlCheckpoint = readCheckpointFixture(mismatchedControlPath);
+    const { control_digest: _controlDigest, ...controlCore } =
+      mismatchedControlCheckpoint.operation_controls!.standard!;
+    controlCore.operation_id = 'different-operation-control';
+    mismatchedControlCheckpoint.operation_controls!.standard = {
+      ...controlCore,
+      control_digest: digest(canonicalJsonBytes(controlCore)),
+    };
+    const { checkpoint_digest: _checkpointDigest, ...mismatchedCheckpointCore } =
+      mismatchedControlCheckpoint;
+    mismatchedControlCheckpoint.checkpoint_digest = digest(canonicalJsonBytes(mismatchedCheckpointCore));
+    writeJson(mismatchedControlPath, mismatchedControlCheckpoint);
+    assertTypedContractFailure(
+      () => importReleaseBundleCheckpoint({
+        checkpointPath: mismatchedControlPath,
+        storeRoot: path.join(fixture.root, 'mismatched-control-store'),
+      }),
+      /unknown marker does not match its immutable operation control/,
+    );
+
+    const importedStore = path.join(fixture.root, 'unknown-imported-store');
+    const imported = importReleaseBundleCheckpoint({
+      checkpointPath: path.join(checkpointDirectory, 'checkpoint.json'),
+      storeRoot: importedStore,
+    }).release_bundle_checkpoint_import;
+    assert.equal(imported.rebuild_performed, false);
+    assert.equal(imported.unknown_outcomes_imported, true);
+    assert.equal(imported.active_unknown_marker_count, 1);
+    const importedStatus = readReleaseBundleStatus({ bundleDigest, storeRoot: importedStore })
+      .release_bundle_status;
+    assert.equal(importedStatus.live_mutation_allowed, false);
+    assert.equal(importedStatus.active_unknown_markers[0].marker_digest, checkpoint.active_unknown_markers?.[0].marker_digest);
+    assertTypedContractFailure(
+      () => admitReleaseBundleOperation({
+        bundleDigest,
+        storeRoot: importedStore,
+        ...standardOperation,
+        releaseOperation: 'resume_standard',
+      }),
+      /blocks every ordinary mutation/,
+    );
+
+    const conflictingFixture = createFixture();
+    try {
+      assert.equal(conflictingFixture.frozen.release_bundle_freeze.bundle_digest, bundleDigest);
+      buildReleaseBundle({
+        bundleDigest,
+        executorReceiptPath: writeBuildReceipt({
+          root: conflictingFixture.root,
+          bundleDigest,
+          attemptId: 'different-unknown-before-import',
+          outcome: 'unknown',
+        }),
+        storeRoot: conflictingFixture.storeRoot,
+      });
+      const conflictingMarker = readReleaseBundleStatus({
+        bundleDigest,
+        storeRoot: conflictingFixture.storeRoot,
+      }).release_bundle_status.active_unknown_markers[0];
+      assertTypedContractFailure(
+        () => importReleaseBundleCheckpoint({
+          checkpointPath: path.join(checkpointDirectory, 'checkpoint.json'),
+          storeRoot: conflictingFixture.storeRoot,
+        }),
+        /cannot overwrite or omit a different unknown outcome/,
+      );
+      assert.equal(readReleaseBundleStatus({
+        bundleDigest,
+        storeRoot: conflictingFixture.storeRoot,
+      }).release_bundle_status.active_unknown_markers[0].marker_digest, conflictingMarker.marker_digest);
+    } finally {
+      fs.rmSync(conflictingFixture.root, { recursive: true, force: true });
+    }
+
+    assertTypedContractFailure(
+      () => buildReleaseBundle({
+        releaseOperation: 'resume_standard',
+        bundleDigest,
+        executorReceiptPath: writeBuildReceipt({
+          root: fixture.root,
+          bundleDigest,
+          executor: 'remote',
+          attemptId: 'ordinary-build-after-import',
+          releaseOperation: 'resume_standard',
+          remoteTarget,
+        }),
+        storeRoot: importedStore,
+      }),
+      /blocks every ordinary mutation/,
+    );
+    assertTypedContractFailure(
+      () => reconcileReleaseBundle({
+        releaseOperation: 'resume_standard',
+        bundleDigest,
+        executorReceiptPath: writeBuildReceipt({
+          root: fixture.root,
+          bundleDigest,
+          executor: 'remote',
+          attemptId: 'wrong-prior-after-import',
+          releaseOperation: 'resume_standard',
+          remoteTarget,
+          priorAttemptId: 'not-the-prior-attempt',
+        }),
+        storeRoot: importedStore,
+      }),
+      /does not match the exact unknown outcome marker/,
+    );
+
+    const stillUnknown = reconcileReleaseBundle({
+      releaseOperation: 'resume_standard',
+      bundleDigest,
+      executorReceiptPath: writeBuildReceipt({
+        root: fixture.root,
+        bundleDigest,
+        executor: 'remote',
+        attemptId: 'still-unknown-after-import',
+        outcome: 'unknown',
+        releaseOperation: 'resume_standard',
+        remoteTarget,
+        priorAttemptId,
+      }),
+      storeRoot: importedStore,
+    }).release_bundle_reconcile;
+    assert.equal(stillUnknown.status, 'reconcile_only');
+    assert.equal(readReleaseBundleStatus({ bundleDigest, storeRoot: importedStore })
+      .release_bundle_status.active_unknown_markers[0].marker_digest, checkpoint.active_unknown_markers[0].marker_digest);
+    const stillUnknownCheckpointDirectory = path.join(fixture.root, 'still-unknown-checkpoint');
+    exportReleaseBundleCheckpoint({
+      bundleDigest,
+      outputDirectory: stillUnknownCheckpointDirectory,
+      storeRoot: importedStore,
+    });
+    const stillUnknownCheckpoint = readCheckpointFixture(
+      path.join(stillUnknownCheckpointDirectory, 'checkpoint.json'),
+    );
+    assert.equal(
+      stillUnknownCheckpoint.active_unknown_markers?.[0].marker_digest,
+      checkpoint.active_unknown_markers?.[0].marker_digest,
+    );
+
+    const reconciled = reconcileReleaseBundle({
+      releaseOperation: 'resume_standard',
+      bundleDigest,
+      executorReceiptPath: writeBuildReceipt({
+        root: fixture.root,
+        bundleDigest,
+        executor: 'remote',
+        attemptId: 'resolved-after-import',
+        releaseOperation: 'resume_standard',
+        remoteTarget,
+        priorAttemptId,
+      }),
+      storeRoot: importedStore,
+    }).release_bundle_reconcile;
+    assert.equal(reconciled.status, 'complete');
+    assert.equal(readReleaseBundleStatus({ bundleDigest, storeRoot: importedStore })
+      .release_bundle_status.active_unknown_markers.length, 0);
+
+    assertTypedContractFailure(
+      () => importReleaseBundleCheckpoint({
+        checkpointPath: path.join(checkpointDirectory, 'checkpoint.json'),
+        storeRoot: importedStore,
+      }),
+      /no longer matches its checkpoint stage/,
+    );
+    assert.equal(readReleaseBundleStatus({ bundleDigest, storeRoot: importedStore })
+      .release_bundle_status.active_unknown_markers.length, 0);
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test('portable external-target unknown marker preserves the track-assets prerequisite for exact reconcile', () => {
+  const fixture = createFixture();
+  try {
+    const bundleDigest = fixture.frozen.release_bundle_freeze.bundle_digest;
+    buildReleaseBundle({
+      bundleDigest,
+      executorReceiptPath: writeBuildReceipt({ root: fixture.root, bundleDigest }),
+      storeRoot: fixture.storeRoot,
+    });
+    verifyReleaseBundle({
+      bundleDigest,
+      track: 'standard',
+      qualificationReceiptPath: writeQualification({
+        root: fixture.root,
+        bundle: fixture.request,
+        bundleDigest,
+      }),
+      storeRoot: fixture.storeRoot,
+    });
+    publishReleaseBundle({
+      bundleDigest,
+      executorReceiptPath: writeRemoteInspection({
+        root: fixture.root,
+        bundleDigest,
+        attemptId: 'assets-before-external-target',
+        assets: [
+          { name: 'standard.dmg', bytes: 'standard dmg' },
+          { name: 'latest.yml', bytes: 'updater' },
+        ],
+      }),
+      storeRoot: fixture.storeRoot,
+    });
+    const remoteTarget = `homebrew:gaofeng21cn/homebrew-one-person-lab@${digest('cask')}`;
+    const priorAttemptId = 'homebrew-push-unknown';
+    publishReleaseBundle({
+      bundleDigest,
+      executorReceiptPath: writeRemoteInspection({
+        root: fixture.root,
+        bundleDigest,
+        attemptId: priorAttemptId,
+        outcome: 'unknown',
+        remoteTarget,
+        publicationScope: 'external_target',
+      }),
+      storeRoot: fixture.storeRoot,
+    });
+    const checkpointDirectory = path.join(fixture.root, 'external-target-unknown-checkpoint');
+    exportReleaseBundleCheckpoint({
+      bundleDigest,
+      outputDirectory: checkpointDirectory,
+      storeRoot: fixture.storeRoot,
+    });
+    const importedStore = path.join(fixture.root, 'external-target-unknown-store');
+    importReleaseBundleCheckpoint({
+      checkpointPath: path.join(checkpointDirectory, 'checkpoint.json'),
+      storeRoot: importedStore,
+    });
+
+    const conflictingFixture = createFixture();
+    try {
+      buildReleaseBundle({
+        bundleDigest,
+        executorReceiptPath: writeBuildReceipt({
+          root: conflictingFixture.root,
+          bundleDigest,
+          attemptId: 'conflicting-build-before-import',
+          assets: [
+            { name: 'standard.dmg', bytes: 'different standard dmg' },
+            { name: 'latest.yml', bytes: 'different updater' },
+          ],
+        }),
+        storeRoot: conflictingFixture.storeRoot,
+      });
+      assertTypedContractFailure(
+        () => importReleaseBundleCheckpoint({
+          checkpointPath: path.join(checkpointDirectory, 'checkpoint.json'),
+          storeRoot: conflictingFixture.storeRoot,
+        }),
+        /already contains different asset bytes/,
+      );
+      assert.equal(
+        readReleaseBundleStatus({ bundleDigest, storeRoot: conflictingFixture.storeRoot })
+          .release_bundle_status.active_unknown_markers[0].prior_mutation_attempt_id,
+        priorAttemptId,
+      );
+    } finally {
+      fs.rmSync(conflictingFixture.root, { recursive: true, force: true });
+    }
+
+    const reconciled = reconcileReleaseBundle({
+      releaseOperation: 'resume_standard',
+      bundleDigest,
+      executorReceiptPath: writeRemoteInspection({
+        root: fixture.root,
+        bundleDigest,
+        attemptId: 'homebrew-readback-after-import',
+        releaseOperation: 'resume_standard',
+        remoteTarget,
+        priorAttemptId,
+        publicationScope: 'external_target',
+      }),
+      storeRoot: importedStore,
+    }).release_bundle_reconcile;
+    assert.equal(reconciled.status, 'complete');
+    const status = readReleaseBundleStatus({ bundleDigest, storeRoot: importedStore })
+      .release_bundle_status;
+    assert.equal(status.active_unknown_markers.length, 0);
+    assert.equal(status.tracks.standard.published, true);
+
+    const repeated = importReleaseBundleCheckpoint({
+      checkpointPath: path.join(checkpointDirectory, 'checkpoint.json'),
+      storeRoot: importedStore,
+    }).release_bundle_checkpoint_import;
+    assert.equal(repeated.status, 'idempotent');
+    assert.equal(repeated.active_unknown_marker_count, 0);
+    assert.equal(repeated.reconcile_required, false);
+    assert.equal(readReleaseBundleStatus({ bundleDigest, storeRoot: importedStore })
+      .release_bundle_status.active_unknown_markers.length, 0);
+
+    publishReleaseBundle({
+      bundleDigest,
+      executorReceiptPath: writeRemoteInspection({
+        root: fixture.root,
+        bundleDigest,
+        attemptId: 'different-external-target-unknown',
+        outcome: 'unknown',
+        remoteTarget: `github-latest:gaofeng21cn/one-person-lab@${fixture.request.release.tag}`,
+        publicationScope: 'external_target',
+      }),
+      storeRoot: importedStore,
+    });
+    const differentMarker = readReleaseBundleStatus({ bundleDigest, storeRoot: importedStore })
+      .release_bundle_status.active_unknown_markers[0];
+    assertTypedContractFailure(
+      () => importReleaseBundleCheckpoint({
+        checkpointPath: path.join(checkpointDirectory, 'checkpoint.json'),
+        storeRoot: importedStore,
+      }),
+      /cannot overwrite or omit a different unknown outcome/,
+    );
+    assert.equal(readReleaseBundleStatus({ bundleDigest, storeRoot: importedStore })
+      .release_bundle_status.active_unknown_markers[0].marker_digest, differentMarker.marker_digest);
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test('portable external-target reconciliation inherits the expired deadline and never advances', () => {
+  const fixture = createFixture();
+  try {
+    const bundleDigest = fixture.frozen.release_bundle_freeze.bundle_digest;
+    buildReleaseBundle({
+      bundleDigest,
+      executorReceiptPath: writeBuildReceipt({ root: fixture.root, bundleDigest }),
+      storeRoot: fixture.storeRoot,
+    });
+    verifyReleaseBundle({
+      bundleDigest,
+      track: 'standard',
+      qualificationReceiptPath: writeQualification({
+        root: fixture.root,
+        bundle: fixture.request,
+        bundleDigest,
+      }),
+      storeRoot: fixture.storeRoot,
+    });
+    publishReleaseBundle({
+      bundleDigest,
+      executorReceiptPath: writeRemoteInspection({
+        root: fixture.root,
+        bundleDigest,
+        attemptId: 'deadline-assets-before-external-target',
+        assets: [
+          { name: 'standard.dmg', bytes: 'standard dmg' },
+          { name: 'latest.yml', bytes: 'updater' },
+        ],
+      }),
+      storeRoot: fixture.storeRoot,
+    });
+    const remoteTarget = `homebrew:gaofeng21cn/homebrew-one-person-lab@${digest('late-cask')}`;
+    const priorAttemptId = 'late-homebrew-push-unknown';
+    publishReleaseBundle({
+      bundleDigest,
+      executorReceiptPath: writeRemoteInspection({
+        root: fixture.root,
+        bundleDigest,
+        attemptId: priorAttemptId,
+        outcome: 'unknown',
+        remoteTarget,
+        publicationScope: 'external_target',
+      }),
+      storeRoot: fixture.storeRoot,
+    });
+    const checkpointDirectory = path.join(fixture.root, 'expired-external-target-checkpoint');
+    exportReleaseBundleCheckpoint({
+      bundleDigest,
+      outputDirectory: checkpointDirectory,
+      storeRoot: fixture.storeRoot,
+    });
+    const importedStore = path.join(fixture.root, 'expired-external-target-store');
+    importReleaseBundleCheckpoint({
+      checkpointPath: path.join(checkpointDirectory, 'checkpoint.json'),
+      storeRoot: importedStore,
+    });
+
+    const stillUnknown = reconcileReleaseBundle({
+      releaseOperation: 'resume_standard',
+      bundleDigest,
+      executorReceiptPath: writeRemoteInspection({
+        root: fixture.root,
+        bundleDigest,
+        attemptId: 'late-homebrew-still-unknown',
+        outcome: 'unknown',
+        releaseOperation: 'resume_standard',
+        remoteTarget,
+        priorAttemptId,
+        publicationScope: 'external_target',
+      }),
+      storeRoot: importedStore,
+      now: '2100-07-21T00:00:00.000Z',
+    }).release_bundle_reconcile;
+    assert.equal(stillUnknown.status, 'reconcile_only');
+    assert.equal(readReleaseBundleStatus({ bundleDigest, storeRoot: importedStore })
+      .release_bundle_status.active_unknown_markers.length, 1);
+
+    const resolved = reconcileReleaseBundle({
+      releaseOperation: 'resume_standard',
+      bundleDigest,
+      executorReceiptPath: writeRemoteInspection({
+        root: fixture.root,
+        bundleDigest,
+        attemptId: 'late-homebrew-readback',
+        releaseOperation: 'resume_standard',
+        remoteTarget,
+        priorAttemptId,
+        publicationScope: 'external_target',
+      }),
+      storeRoot: importedStore,
+      now: '2100-07-21T00:00:00.000Z',
+    }).release_bundle_reconcile;
+    assert.equal(resolved.status, 'late_observation');
+    assert.deepEqual(resolved.receipt.details.upload_actions, []);
+    assert.equal(resolved.receipt.details.stage_advanced, false);
+    assert.equal(resolved.receipt.details.late_success_recorded_as_evidence_only, true);
+    const status = readReleaseBundleStatus({
+      bundleDigest,
+      storeRoot: importedStore,
+      now: '2100-07-21T00:00:00.000Z',
+    }).release_bundle_status;
+    assert.equal(status.operation_controls.standard?.operation_deadline_at, standardOperation.operationDeadlineAt);
+    assert.equal(status.operation_controls.standard?.deadline_elapsed, true);
+    assert.equal(status.active_unknown_markers.length, 0);
+    assert.equal(status.tracks.standard.published, false);
   } finally {
     fs.rmSync(fixture.root, { recursive: true, force: true });
   }
@@ -1350,6 +1913,7 @@ test('checkpoint preserves exact operation controls while legacy checkpoints rem
     const legacyCheckpointPath = path.join(legacyDirectory, 'checkpoint.json');
     const legacyCheckpoint = JSON.parse(fs.readFileSync(legacyCheckpointPath, 'utf8'));
     delete legacyCheckpoint.operation_controls;
+    delete legacyCheckpoint.active_unknown_markers;
     const { checkpoint_digest: _oldDigest, ...legacyCore } = legacyCheckpoint;
     legacyCheckpoint.checkpoint_digest = digest(canonicalJsonBytes(legacyCore));
     writeJson(legacyCheckpointPath, legacyCheckpoint);

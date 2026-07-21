@@ -15,14 +15,15 @@ import { restoreQualifiedReleaseBundleTrackFromCheckpoint } from './operations.t
 import {
   installReleaseBundleOperationControl,
   installFrozenReleaseBundle,
+  listReleaseBundleUnknownOutcomes,
   markReleaseBundleLegacyCheckpointReadOnly,
   readReleaseBundleOperation,
   readReleaseBundleOperationControls,
   readStagedReleaseBundleAssets,
   readStoredReleaseBundle,
   recordReleaseBundleOperation,
+  recordReleaseBundleUnknownOutcome,
   releaseBundleStorePaths,
-  releaseBundleHasUnknownOutcome,
   releaseBundleLegacyCheckpointReadOnly,
   stageReleaseBundleAssets,
   withReleaseBundleStateLock,
@@ -34,6 +35,7 @@ import type {
   ReleaseBundleCheckpointTrack,
   ReleaseBundleOperationReceipt,
   ReleaseBundleTrackName,
+  ReleaseBundleUnknownOutcomeMarker,
 } from './types.ts';
 
 const BUFFER_SIZE = 1024 * 1024;
@@ -154,21 +156,6 @@ function derivedStage(
   return 'frozen';
 }
 
-function assertNoUnknownExecutorOutcome(
-  paths: ReturnType<typeof releaseBundleStorePaths>,
-) {
-  for (const track of TRACKS) {
-    for (const operation of ['build', 'publish'] as const) {
-      if (releaseBundleHasUnknownOutcome(paths, operation, track)) {
-        fail('Release Bundle checkpoint export requires every executor outcome to be reconciled.', {
-          operation,
-          track,
-        });
-      }
-    }
-  }
-}
-
 function qualificationPath(
   paths: ReturnType<typeof releaseBundleStorePaths>,
   track: ReleaseBundleTrackName,
@@ -195,6 +182,34 @@ function readCheckpointJson(filePath: string) {
   }
   assertReleaseBundleCheckpoint(value);
   return { checkpoint: value, path: snapshot.path, root: path.dirname(snapshot.path) };
+}
+
+function comparableCheckpointBytes(checkpoint: ReleaseBundleCheckpoint) {
+  const { checkpoint_digest: _checkpointDigest, ...core } = checkpoint;
+  return canonicalJsonBytes({
+    ...core,
+    active_unknown_markers: checkpoint.active_unknown_markers ?? [],
+  });
+}
+
+function assertCurrentCheckpointState(
+  existing: ReleaseBundleCheckpoint,
+  current: ReleaseBundleCheckpoint,
+  output: string,
+) {
+  if (!comparableCheckpointBytes(existing).equals(comparableCheckpointBytes(current))) {
+    fail('Checkpoint output is stale for the current immutable Release Bundle state.', {
+      output,
+      checkpoint_digest: existing.checkpoint_digest,
+      current_checkpoint_digest: current.checkpoint_digest,
+      checkpoint_stage: existing.checkpoint_stage,
+      current_checkpoint_stage: current.checkpoint_stage,
+      checkpoint_marker_digests: (existing.active_unknown_markers ?? [])
+        .map((marker) => marker.marker_digest),
+      current_marker_digests: (current.active_unknown_markers ?? [])
+        .map((marker) => marker.marker_digest),
+    });
+  }
 }
 
 function listFiles(root: string, current = root): string[] {
@@ -338,7 +353,29 @@ function assertCheckpointSemantics(input: ReturnType<typeof readCheckpointJson>)
       fail('append_full checkpoint control must use an independent operation identity.');
     }
   }
+  for (const marker of checkpoint.active_unknown_markers ?? []) {
+    const control = controls?.[marker.operation_kind];
+    if (!control || control.operation_id !== marker.operation_id || control.track !== marker.track) {
+      fail('Checkpoint unknown marker does not match its immutable operation control.', {
+        marker_digest: marker.marker_digest,
+      });
+    }
+  }
   return bundleValue;
+}
+
+function unknownMarkerResolvedExactly(
+  paths: ReturnType<typeof releaseBundleStorePaths>,
+  marker: ReleaseBundleUnknownOutcomeMarker,
+) {
+  const receipt = readReleaseBundleOperation(paths, 'reconcile', marker.track);
+  return Boolean(
+    receipt
+    && ['complete', 'late_observation'].includes(receipt.status)
+    && receipt.details.resolved_operation === marker.stage_operation
+    && receipt.unknown_marker
+    && canonicalJsonBytes(receipt.unknown_marker).equals(canonicalJsonBytes(marker)),
+  );
 }
 
 function exportReleaseBundleCheckpointUnlocked(input: {
@@ -347,27 +384,7 @@ function exportReleaseBundleCheckpointUnlocked(input: {
   storeRoot?: string;
 }) {
   const stored = readStoredReleaseBundle(input.bundleDigest, input.storeRoot);
-  assertNoUnknownExecutorOutcome(stored.paths);
   const output = path.resolve(input.outputDirectory);
-  if (fs.existsSync(output)) {
-    const existing = readCheckpointJson(path.join(output, 'checkpoint.json'));
-    validateCheckpointDirectory(existing);
-    assertCheckpointSemantics(existing);
-    if (existing.checkpoint.bundle_digest !== input.bundleDigest) {
-      fail('Checkpoint output already belongs to a different Release Bundle.', { output });
-    }
-    return {
-      version: 'g2' as const,
-      release_bundle_checkpoint_export: {
-        status: 'idempotent' as const,
-        checkpoint_digest: existing.checkpoint.checkpoint_digest,
-        checkpoint_stage: existing.checkpoint.checkpoint_stage,
-        bundle_digest: input.bundleDigest,
-        checkpoint_path: existing.path,
-      },
-    };
-  }
-
   fs.mkdirSync(path.dirname(output), { recursive: true });
   const temporary = path.join(
     path.dirname(output),
@@ -420,12 +437,14 @@ function exportReleaseBundleCheckpointUnlocked(input: {
     const operationControls = releaseBundleLegacyCheckpointReadOnly(stored.paths)
       ? undefined
       : readReleaseBundleOperationControls(stored.paths);
+    const activeUnknownMarkers = listReleaseBundleUnknownOutcomes(stored.paths);
     const core = {
       surface_kind: 'opl_release_bundle_checkpoint.v1' as const,
       schema_ref: 'contracts/opl-framework/release-bundle-checkpoint.schema.json' as const,
       bundle_digest: input.bundleDigest,
       checkpoint_stage: derivedStage(tracks),
       ...(operationControls ? { operation_controls: operationControls } : {}),
+      active_unknown_markers: activeUnknownMarkers,
       tracks,
       entries,
       policy: {
@@ -439,27 +458,49 @@ function exportReleaseBundleCheckpointUnlocked(input: {
       checkpoint_digest: sha256(canonicalJsonBytes(core)),
     };
     assertReleaseBundleCheckpoint(checkpoint);
+    if (fs.existsSync(output)) {
+      const existing = readCheckpointJson(path.join(output, 'checkpoint.json'));
+      validateCheckpointDirectory(existing);
+      assertCheckpointSemantics(existing);
+      if (existing.checkpoint.bundle_digest !== input.bundleDigest) {
+        fail('Checkpoint output already belongs to a different Release Bundle.', { output });
+      }
+      assertCurrentCheckpointState(existing.checkpoint, checkpoint, output);
+      return {
+        version: 'g2' as const,
+        release_bundle_checkpoint_export: {
+          status: 'idempotent' as const,
+          checkpoint_digest: existing.checkpoint.checkpoint_digest,
+          checkpoint_stage: existing.checkpoint.checkpoint_stage,
+          bundle_digest: input.bundleDigest,
+          checkpoint_path: existing.path,
+        },
+      };
+    }
     fs.writeFileSync(path.join(temporary, 'checkpoint.json'), formatJsonPayload(checkpoint), {
       encoding: 'utf8',
       flag: 'wx',
       mode: 0o644,
     });
+    let exportedCheckpoint = checkpoint;
+    let exportStatus: 'complete' | 'idempotent' = 'complete';
     try {
       fs.renameSync(temporary, output);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
       const existing = readCheckpointJson(path.join(output, 'checkpoint.json'));
       validateCheckpointDirectory(existing);
-      if (existing.checkpoint.checkpoint_digest !== checkpoint.checkpoint_digest) {
-        fail('Checkpoint output raced with different bytes.', { output });
-      }
+      assertCheckpointSemantics(existing);
+      assertCurrentCheckpointState(existing.checkpoint, checkpoint, output);
+      exportedCheckpoint = existing.checkpoint;
+      exportStatus = 'idempotent';
     }
     return {
       version: 'g2' as const,
       release_bundle_checkpoint_export: {
-        status: 'complete' as const,
-        checkpoint_digest: checkpoint.checkpoint_digest,
-        checkpoint_stage: checkpoint.checkpoint_stage,
+        status: exportStatus,
+        checkpoint_digest: exportedCheckpoint.checkpoint_digest,
+        checkpoint_stage: exportedCheckpoint.checkpoint_stage,
         bundle_digest: input.bundleDigest,
         checkpoint_path: path.join(output, 'checkpoint.json'),
       },
@@ -485,20 +526,33 @@ function importReleaseBundleCheckpointUnlocked(input: {
   validateCheckpointDirectory(source);
   const bundle = assertCheckpointSemantics(source);
   const installed = installFrozenReleaseBundle(bundle, input.storeRoot);
-  assertNoUnknownExecutorOutcome(installed.paths);
-  if (source.checkpoint.operation_controls) {
-    for (const control of Object.values(source.checkpoint.operation_controls)) {
-      if (control) installReleaseBundleOperationControl(installed.paths, control);
-    }
-  } else {
-    markReleaseBundleLegacyCheckpointReadOnly(
-      installed.paths,
-      source.checkpoint.checkpoint_digest,
-    );
-  }
-  const liveMutationCompatible = Boolean(source.checkpoint.operation_controls)
-    && !releaseBundleLegacyCheckpointReadOnly(installed.paths);
+  const sourceUnknownMarkers = source.checkpoint.active_unknown_markers ?? [];
+  const existingUnknownMarkers = listReleaseBundleUnknownOutcomes(installed.paths);
   const previous = readReleaseBundleOperation(installed.paths, 'checkpoint_import', null);
+  const markerSetsMatch = canonicalJsonBytes(existingUnknownMarkers).equals(
+    canonicalJsonBytes(sourceUnknownMarkers),
+  );
+  const sourceMarkersResolved = Boolean(
+    previous?.details.checkpoint_digest === source.checkpoint.checkpoint_digest
+    && existingUnknownMarkers.length === 0
+    && sourceUnknownMarkers.length > 0
+    && sourceUnknownMarkers.every((marker) => unknownMarkerResolvedExactly(installed.paths, marker)),
+  );
+  if (
+    !markerSetsMatch
+    && !sourceMarkersResolved
+    && (
+      existingUnknownMarkers.length > 0
+      || previous?.details.checkpoint_digest === source.checkpoint.checkpoint_digest
+    )
+  ) {
+    fail('Release Bundle checkpoint import cannot overwrite or omit a different unknown outcome.', {
+      active_marker_digests: existingUnknownMarkers.map((marker) => marker.marker_digest),
+      checkpoint_marker_digests: sourceUnknownMarkers.map((marker) => marker.marker_digest),
+      checkpoint_previously_imported: previous?.details.checkpoint_digest
+        === source.checkpoint.checkpoint_digest,
+    });
+  }
   if (previous?.details.checkpoint_digest === source.checkpoint.checkpoint_digest) {
     for (const track of TRACKS) {
       const expected = source.checkpoint.tracks[track];
@@ -513,6 +567,9 @@ function importReleaseBundleCheckpointUnlocked(input: {
         }
       }
     }
+    const liveMutationCompatible = Boolean(source.checkpoint.operation_controls)
+      && !releaseBundleLegacyCheckpointReadOnly(installed.paths);
+    const activeUnknownMarkerCount = listReleaseBundleUnknownOutcomes(installed.paths).length;
     return {
       version: 'g2' as const,
       release_bundle_checkpoint_import: {
@@ -523,10 +580,28 @@ function importReleaseBundleCheckpointUnlocked(input: {
         store_path: installed.paths.directory,
         rebuild_performed: false as const,
         publish_state_imported: false as const,
+        unknown_outcomes_imported: false as const,
+        active_unknown_marker_count: activeUnknownMarkerCount,
+        reconcile_required: activeUnknownMarkerCount > 0,
         live_mutation_compatible: liveMutationCompatible,
       },
     };
   }
+  for (const marker of sourceUnknownMarkers) {
+    recordReleaseBundleUnknownOutcome(installed.paths, marker);
+  }
+  if (source.checkpoint.operation_controls) {
+    for (const control of Object.values(source.checkpoint.operation_controls)) {
+      if (control) installReleaseBundleOperationControl(installed.paths, control);
+    }
+  } else {
+    markReleaseBundleLegacyCheckpointReadOnly(
+      installed.paths,
+      source.checkpoint.checkpoint_digest,
+    );
+  }
+  const liveMutationCompatible = Boolean(source.checkpoint.operation_controls)
+    && !releaseBundleLegacyCheckpointReadOnly(installed.paths);
 
   for (const track of TRACKS) {
     const checkpointTrack = source.checkpoint.tracks[track];
@@ -566,7 +641,6 @@ function importReleaseBundleCheckpointUnlocked(input: {
       });
     }
   }
-
   const receipt: ReleaseBundleOperationReceipt = {
     surface_kind: 'opl_release_bundle_operation_receipt.v1',
     schema_ref: 'contracts/opl-framework/release-bundle-operation-receipt.schema.json',
@@ -587,7 +661,12 @@ function importReleaseBundleCheckpointUnlocked(input: {
       imported_tracks: source.checkpoint.tracks,
       rebuild_performed: false,
       publish_state_imported: false,
-      required_next_remote_action: 'fresh_remote_inspect_then_publish_or_reconcile',
+      unknown_outcomes_imported: sourceUnknownMarkers.length > 0,
+      active_unknown_marker_count: sourceUnknownMarkers.length,
+      reconcile_required: sourceUnknownMarkers.length > 0,
+      required_next_action: sourceUnknownMarkers.length > 0
+        ? 'status_then_exact_reconcile'
+        : 'fresh_remote_inspect_then_publish',
       operation_control_imported: Boolean(source.checkpoint.operation_controls),
       live_mutation_compatible: liveMutationCompatible,
     },
@@ -603,6 +682,9 @@ function importReleaseBundleCheckpointUnlocked(input: {
       store_path: installed.paths.directory,
       rebuild_performed: false as const,
       publish_state_imported: false as const,
+      unknown_outcomes_imported: sourceUnknownMarkers.length > 0,
+      active_unknown_marker_count: sourceUnknownMarkers.length,
+      reconcile_required: sourceUnknownMarkers.length > 0,
       live_mutation_compatible: liveMutationCompatible,
     },
   };

@@ -684,6 +684,24 @@ export function assertReleaseBundleCheckpoint(
       track: controls.append_full.track,
     });
   }
+  for (const marker of checkpoint.active_unknown_markers ?? []) {
+    assertReleaseBundleUnknownOutcomeMarker(marker);
+    if (marker.bundle_digest !== checkpoint.bundle_digest) {
+      fail('Release Bundle checkpoint unknown marker belongs to another Bundle.', {
+        checkpoint_bundle_digest: checkpoint.bundle_digest,
+        marker_bundle_digest: marker.bundle_digest,
+      });
+    }
+    const control = controls?.[marker.operation_kind];
+    if (!control || control.operation_id !== marker.operation_id || control.track !== marker.track) {
+      fail('Release Bundle checkpoint unknown marker does not match its immutable operation control.', {
+        marker_digest: marker.marker_digest,
+        operation_id: marker.operation_id,
+        operation_kind: marker.operation_kind,
+        track: marker.track,
+      });
+    }
+  }
 }
 
 export function readReleaseBundleExecutorReceipt(filePath: string): ReleaseBundleExecutorReceipt {

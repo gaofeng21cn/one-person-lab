@@ -226,6 +226,7 @@ export type ReleaseBundleCheckpoint = {
     standard: ReleaseBundleOperationControl | null;
     append_full: ReleaseBundleOperationControl | null;
   };
+  active_unknown_markers?: ReleaseBundleUnknownOutcomeMarker[];
   tracks: Record<ReleaseBundleTrackName, ReleaseBundleCheckpointTrack>;
   entries: ReleaseBundleCheckpointEntry[];
   policy: {

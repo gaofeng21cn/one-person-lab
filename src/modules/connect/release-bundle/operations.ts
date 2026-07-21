@@ -609,8 +609,18 @@ function publishWithReceipt(input: ReleaseBundleOperationInput & ReleaseBundleOp
   const publicationScope = executorReceipt.publication_scope ?? 'track_assets';
   const previousPublication = latestPublicationState(stored, track);
   const previousTrackAssetsConfirmed = trackAssetsConfirmed(previousPublication);
+  const marker = input.reconcile
+    ? exactReconcileMarker({
+        paths: stored.paths,
+        executorReceipt,
+        invocation: input,
+        stageOperation: 'publish',
+      })
+    : null;
+  const trackAssetsConfirmedBeforeExternalAttempt = previousTrackAssetsConfirmed
+    || marker?.publication_scope === 'external_target';
   if (publicationScope === 'external_target') {
-    if (!previousTrackAssetsConfirmed) {
+    if (!trackAssetsConfirmedBeforeExternalAttempt) {
       fail('External target publication requires completed track asset publication first.', {
         track,
         remote_target: executorReceipt.remote_target,
@@ -624,14 +634,6 @@ function publishWithReceipt(input: ReleaseBundleOperationInput & ReleaseBundleOp
       });
     }
   }
-  const marker = input.reconcile
-    ? exactReconcileMarker({
-        paths: stored.paths,
-        executorReceipt,
-        invocation: input,
-        stageOperation: 'publish',
-      })
-    : null;
 
   if (!input.reconcile && executorReceipt.prior_attempt_id !== null) {
     fail('Ordinary publish receipts cannot act as reconcile observations.', {
@@ -662,7 +664,7 @@ function publishWithReceipt(input: ReleaseBundleOperationInput & ReleaseBundleOp
         remote_target: executorReceipt.remote_target,
         track_assets_confirmed: publicationScope === 'track_assets'
           ? false
-          : previousTrackAssetsConfirmed,
+          : trackAssetsConfirmedBeforeExternalAttempt,
         upload_actions: [],
         marker_overwritten: false,
         stage_advanced: false,
@@ -692,7 +694,7 @@ function publishWithReceipt(input: ReleaseBundleOperationInput & ReleaseBundleOp
         publication_scope: publicationScope,
         remote_target: executorReceipt.remote_target,
         upload_actions: [],
-        track_assets_confirmed: previousTrackAssetsConfirmed,
+        track_assets_confirmed: trackAssetsConfirmedBeforeExternalAttempt,
         external_target_observed_complete: true,
         operation_deadline_elapsed: late,
         late_success_recorded_as_evidence_only: late,
