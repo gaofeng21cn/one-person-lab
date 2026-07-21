@@ -586,7 +586,7 @@ export async function runFamilyRuntime(
         ? (options.stageRunRuntime?.resolveStageBinding
           ?? resolveStandardAgentStageQualityRuntimeBinding)(domainPackRoot, parsed.input.stageId)
         : null;
-      const selectedPackageUseBinding = parsed.input.start
+      const selectedPackageUseBinding = parsed.input.start || stageQualityBinding?.enabled
         ? pinnedUseBinding ?? packageReadiness?.package_use_binding
         : null;
       const useBoundWorkspaceLocator = selectedPackageUseBinding
@@ -632,21 +632,17 @@ export async function runFamilyRuntime(
       );
       const lifecycleWorkspaceLocator = existingStageRunLaunch?.stage_run_input.workspace_locator
         ?? useBoundWorkspaceLocator;
-      const domainLifecycleAdmission = parsed.input.start
-        ? preflightFamilyRuntimeDomainLifecycleAdmission({
-            domainId: parsed.input.domainId,
-            stageId: parsed.input.stageId,
-            actionId: existingStageRunLaunch?.stage_run_input.action_id ?? parsed.input.actionId,
-            domainPackRoot: existingStageRunLaunch?.stage_run_input.domain_pack_root ?? domainPackRoot,
-            workspaceLocator: lifecycleWorkspaceLocator,
-          })
-        : null;
-      const stageLaunchContextObservation = domainLifecycleAdmission
-        ? {
-            ...checkoutBoundStageContextObservation,
-            domain_lifecycle_admission: domainLifecycleAdmission,
-          }
-        : checkoutBoundStageContextObservation;
+      const domainLifecycleAdmission = preflightFamilyRuntimeDomainLifecycleAdmission({
+        domainId: parsed.input.domainId,
+        stageId: parsed.input.stageId,
+        actionId: existingStageRunLaunch?.stage_run_input.action_id ?? parsed.input.actionId,
+        domainPackRoot: existingStageRunLaunch?.stage_run_input.domain_pack_root ?? domainPackRoot,
+        workspaceLocator: lifecycleWorkspaceLocator,
+      });
+      const stageLaunchContextObservation = {
+        ...checkoutBoundStageContextObservation,
+        domain_lifecycle_admission: domainLifecycleAdmission,
+      };
       const launchInvocation = buildStageLaunchInvocationProjection({
         domainId: parsed.input.domainId,
         stageId: parsed.input.stageId,

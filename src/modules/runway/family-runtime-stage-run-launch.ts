@@ -2,6 +2,7 @@ import type { DatabaseSync } from 'node:sqlite';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import type { TemporalStageRunWorkflowInput } from './family-runtime-temporal.ts';
+import { preflightFamilyRuntimeDomainLifecycleAdmission } from './family-runtime-domain-lifecycle-admission.ts';
 import {
   claimStageRunStart,
   recordStageRunClosed,
@@ -40,6 +41,13 @@ export async function launchRegisteredStageRun(input: {
   now?: () => Date;
   startLeaseMs?: number;
 }) {
+  preflightFamilyRuntimeDomainLifecycleAdmission({
+    domainId: input.stageRunInput.domain_id,
+    stageId: input.stageRunInput.stage_id,
+    actionId: input.stageRunInput.action_id,
+    domainPackRoot: input.stageRunInput.domain_pack_root,
+    workspaceLocator: input.stageRunInput.workspace_locator,
+  });
   const registration = registerStageRunLaunch(input.db, input.stageRunInput);
   let launch = registration.launch;
   const receipt = (startStatus: 'registered' | 'existing' | 'starting' | 'started' | 'recovered', options: {

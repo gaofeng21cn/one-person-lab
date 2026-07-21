@@ -96,6 +96,22 @@ export type DomainArtifactCasMaterializationReadObservation = {
   error: string | null;
 };
 
+export type DomainArtifactCasReadWindowGuard =
+  | {
+      status: 'settled_stable';
+      reason: 'workspace_cas_read_window_stable';
+      initial: DomainArtifactCasMaterializationReadObservation;
+      current: DomainArtifactCasMaterializationReadObservation;
+      observed_generation: string;
+    }
+  | {
+      status: 'sync_pending';
+      reason: DomainArtifactCasMaterializationReadObservation['reason'];
+      initial: DomainArtifactCasMaterializationReadObservation;
+      current: DomainArtifactCasMaterializationReadObservation;
+      observation: DomainArtifactCasMaterializationReadObservation;
+    };
+
 type DomainArtifactCasReadEpoch = {
   phase: 'absent' | 'in_progress' | 'settled' | 'invalid';
   generation: string;
@@ -505,6 +521,56 @@ export function observeDomainArtifactCasMaterialization(
     observed_at: observedAt,
     error: null,
   };
+}
+
+export function guardDomainArtifactCasReadWindow(
+  initial: DomainArtifactCasMaterializationReadObservation,
+  current: DomainArtifactCasMaterializationReadObservation,
+): DomainArtifactCasReadWindowGuard {
+  const unsettled = initial.state === 'clear'
+    ? current.state === 'clear' ? null : current
+    : initial;
+  if (unsettled) {
+    return {
+      status: 'sync_pending',
+      reason: unsettled.reason,
+      initial,
+      current,
+      observation: unsettled,
+    };
+  }
+  if (initial.observed_generation !== current.observed_generation) {
+    const observation: DomainArtifactCasMaterializationReadObservation = {
+      ...current,
+      state: 'sync_pending',
+      reason: 'workspace_cas_read_generation_changed',
+      observed_generation: `${initial.observed_generation}->${current.observed_generation}`,
+    };
+    return {
+      status: 'sync_pending',
+      reason: observation.reason,
+      initial,
+      current,
+      observation,
+    };
+  }
+  return {
+    status: 'settled_stable',
+    reason: 'workspace_cas_read_window_stable',
+    initial,
+    current,
+    observed_generation: current.observed_generation,
+  };
+}
+
+export function assertDomainArtifactCasReadWindowStable(
+  initial: DomainArtifactCasMaterializationReadObservation,
+  current: DomainArtifactCasMaterializationReadObservation,
+  onSyncPending: (guard: Extract<DomainArtifactCasReadWindowGuard, { status: 'sync_pending' }>) => never,
+) {
+  const guard = guardDomainArtifactCasReadWindow(initial, current);
+  if (guard.status === 'sync_pending') onSyncPending(guard);
+  return guard;
 }
 
 export function domainArtifactCasMaterializationInProgress(input: {

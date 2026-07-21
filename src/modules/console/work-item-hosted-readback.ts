@@ -3,8 +3,9 @@ import path from 'node:path';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import {
+  assertDomainArtifactCasReadWindowStable,
   observeDomainArtifactCasMaterialization,
-  type DomainArtifactCasMaterializationReadObservation,
+  type DomainArtifactCasReadWindowGuard,
 } from '../runway/domain-artifact-cas-materialization.ts';
 import { buildWorkItemProjectionV2 } from './work-item-projection/projection.ts';
 import type { WorkItemProjectionV2 } from './work-item-projection/types.ts';
@@ -79,10 +80,10 @@ function consistencyResults(
   });
 }
 
-function assertDomainArtifactCasSettled(
-  observation: DomainArtifactCasMaterializationReadObservation,
-): DomainArtifactCasMaterializationReadObservation {
-  if (observation.state === 'clear') return observation;
+function hostedReadbackCasSyncPending(
+  guard: Extract<DomainArtifactCasReadWindowGuard, { status: 'sync_pending' }>,
+): never {
+  const observation = guard.observation;
   fail(
     'contract_shape_invalid',
     'Hosted work-item readback is sync-pending while a domain artifact transaction is unsettled.',
@@ -100,33 +101,23 @@ function assertDomainArtifactCasSettled(
   );
 }
 
-function assertDomainArtifactCasReadWindowStable(
-  initial: DomainArtifactCasMaterializationReadObservation,
-  current: DomainArtifactCasMaterializationReadObservation,
-) {
-  assertDomainArtifactCasSettled(current);
-  if (initial.observed_generation === current.observed_generation) return;
-  assertDomainArtifactCasSettled({
-    ...current,
-    state: 'sync_pending',
-    reason: 'workspace_cas_read_generation_changed',
-    observed_generation: `${initial.observed_generation}->${current.observed_generation}`,
-  });
-}
-
 export function buildHostedWorkItemReadback(
   input: HostedWorkItemReadbackInput,
   dependencies: HostedWorkItemReadbackDependencies = {},
 ) {
   const workspaceRoot = realDirectory(input.workspaceRoot, 'workspace root');
-  const initialCasObservation = assertDomainArtifactCasSettled(
-    observeDomainArtifactCasMaterialization({ workspaceRoot }),
+  const initialCasObservation = observeDomainArtifactCasMaterialization({ workspaceRoot });
+  assertDomainArtifactCasReadWindowStable(
+    initialCasObservation,
+    initialCasObservation,
+    hostedReadbackCasSyncPending,
   );
   const profile = input.profile ?? 'full';
   const projection = dependencies.projection ?? buildWorkItemProjectionV2({ profile });
   assertDomainArtifactCasReadWindowStable(
     initialCasObservation,
     observeDomainArtifactCasMaterialization({ workspaceRoot }),
+    hostedReadbackCasSyncPending,
   );
   const matches = projection.items.filter((item) => {
     let itemWorkspace: string;
@@ -158,7 +149,7 @@ export function buildHostedWorkItemReadback(
     item.lifecycle.primary_state === 'sync_pending'
     && item.lifecycle.primary_state_reason === 'domain_artifact_cas_materialization_sync_pending'
   ) {
-    assertDomainArtifactCasSettled({
+    const projectedCasObservation = {
       state: 'sync_pending',
       reason: 'workspace_cas_journal_present',
       workspace_root: workspaceRoot,
@@ -169,11 +160,17 @@ export function buildHostedWorkItemReadback(
       observed_generation: item.lifecycle.observed_generation,
       observed_at: projection.generated_at,
       error: null,
-    });
+    } as const;
+    assertDomainArtifactCasReadWindowStable(
+      projectedCasObservation,
+      projectedCasObservation,
+      hostedReadbackCasSyncPending,
+    );
   }
   assertDomainArtifactCasReadWindowStable(
     initialCasObservation,
     observeDomainArtifactCasMaterialization({ workspaceRoot }),
+    hostedReadbackCasSyncPending,
   );
   const workItemRoot = item.identity.work_item_root
     ? realDirectory(item.identity.work_item_root, 'work-item root')
@@ -204,6 +201,7 @@ export function buildHostedWorkItemReadback(
   assertDomainArtifactCasReadWindowStable(
     initialCasObservation,
     observeDomainArtifactCasMaterialization({ workspaceRoot }),
+    hostedReadbackCasSyncPending,
   );
   const consistency = consistencyResults(domainSources, sourceManifest?.manifest.consistency_checks ?? []);
   const diagnostics = [
@@ -234,6 +232,7 @@ export function buildHostedWorkItemReadback(
   assertDomainArtifactCasReadWindowStable(
     initialCasObservation,
     observeDomainArtifactCasMaterialization({ workspaceRoot }),
+    hostedReadbackCasSyncPending,
   );
 
   return {

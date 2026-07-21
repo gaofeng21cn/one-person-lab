@@ -4,6 +4,11 @@ import path from 'node:path';
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import type { FamilyActionCatalogAction } from '../../kernel/family-action-catalog-contract.ts';
 import { resolveStandardAgent } from '../../kernel/standard-agent-registry.ts';
+import {
+  assertDomainArtifactCasReadWindowStable,
+  observeDomainArtifactCasMaterialization,
+  type DomainArtifactCasReadWindowGuard,
+} from './domain-artifact-cas-materialization.ts';
 import { readHostedAgentRuntimeActionContracts } from './hosted-agent-runtime-binding.ts';
 import {
   preflightCanonicalActiveStandardAgentDomainLifecycle,
@@ -17,6 +22,10 @@ type StageLaunchLifecycleAdmissionInput = {
   domainPackRoot?: string | null;
   workspaceLocator: Record<string, unknown>;
   taskPayload?: Record<string, unknown> | null;
+};
+
+type StageLaunchLifecycleAdmissionDependencies = {
+  observeDomainArtifactCas?: typeof observeDomainArtifactCasMaterialization;
 };
 
 function fail(message: string, details: Record<string, unknown> = {}): never {
@@ -35,6 +44,22 @@ function fail(message: string, details: Record<string, unknown> = {}): never {
 
 function optionalText(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function launchCasSyncPending(
+  guard: Extract<DomainArtifactCasReadWindowGuard, { status: 'sync_pending' }>,
+): never {
+  const observation = guard.observation;
+  fail('Stage launch is sync-pending while canonical lifecycle bytes are unsettled.', {
+    sync_state: guard.status,
+    observation_state: observation.state,
+    observation_reason: guard.reason,
+    workspace_root: observation.workspace_root,
+    journal_refs: observation.journal_refs,
+    epoch_ref: observation.epoch_ref,
+    observed_generation: observation.observed_generation,
+    observation_error: observation.error,
+  });
 }
 
 function actionContainsStage(action: FamilyActionCatalogAction, stageId: string) {
@@ -56,21 +81,22 @@ function lifecycleAction(input: {
   const catalogLifecycleActions = input.actions.filter((action) => (
     standardAgentLifecycleAdmissionContract(action) !== null
   ));
+  const protectedStageActions = stageActions.filter((action) => (
+    standardAgentLifecycleAdmissionContract(action) !== null
+  ));
   if (input.actionId) {
     const exact = input.actions.find((action) => action.action_id === input.actionId) ?? null;
     if (exact && !actionContainsStage(exact, input.stageId)) {
-      if (standardAgentLifecycleAdmissionContract(exact)) {
-        fail('Lifecycle-gated action does not declare the requested Stage.', {
-          action_id: input.actionId,
+      if (standardAgentLifecycleAdmissionContract(exact) || protectedStageActions.length > 0) {
+        fail('Explicit action does not declare the requested lifecycle-gated Stage.', {
+          requested_action_id: input.actionId,
           stage_id: input.stageId,
+          declared_lifecycle_action_ids: protectedStageActions.map((action) => action.action_id).sort(),
         });
       }
       return null;
     }
     if (exact) return standardAgentLifecycleAdmissionContract(exact) ? exact : null;
-    const protectedStageActions = stageActions.filter((action) => (
-      standardAgentLifecycleAdmissionContract(action) !== null
-    ));
     if (protectedStageActions.length > 0) {
       fail('Requested Stage is lifecycle-gated but its action identity is not declared by the pinned domain pack.', {
         requested_action_id: input.actionId,
@@ -87,9 +113,6 @@ function lifecycleAction(input: {
     }
     return null;
   }
-  const protectedStageActions = stageActions.filter((action) => (
-    standardAgentLifecycleAdmissionContract(action) !== null
-  ));
   if (protectedStageActions.length > 1) {
     fail('Lifecycle-gated Stage action identity is ambiguous.', {
       stage_id: input.stageId,
@@ -139,6 +162,7 @@ function lifecycleResolutionExpected(input: StageLaunchLifecycleAdmissionInput) 
 
 export function preflightFamilyRuntimeDomainLifecycleAdmission(
   input: StageLaunchLifecycleAdmissionInput,
+  dependencies: StageLaunchLifecycleAdmissionDependencies = {},
 ) {
   const domainPackRoot = optionalText(input.domainPackRoot);
   const requiresAuthoritativeResolution = lifecycleResolutionExpected(input);
@@ -199,17 +223,35 @@ export function preflightFamilyRuntimeDomainLifecycleAdmission(
       observed_workspace_roots: workspaceRoots,
     });
   }
+  const observeCas = dependencies.observeDomainArtifactCas ?? observeDomainArtifactCasMaterialization;
+  const initialCasObservation = observeCas({ workspaceRoot: workspaceRoots[0]! });
+  assertDomainArtifactCasReadWindowStable(
+    initialCasObservation,
+    initialCasObservation,
+    launchCasSyncPending,
+  );
   const admission = preflightCanonicalActiveStandardAgentDomainLifecycle({
     action,
     payload: { [contract.work_item_id_field]: workItemIds[0] },
     checkoutRoot: domainPackRoot,
     workspaceRoot: workspaceRoots[0]!,
   });
+  const casReadGuard = assertDomainArtifactCasReadWindowStable(
+    initialCasObservation,
+    observeCas({ workspaceRoot: workspaceRoots[0]! }),
+    launchCasSyncPending,
+  );
   return {
     ...admission,
     action_id: action.action_id,
     stage_id: input.stageId,
     work_item_id_field: contract.work_item_id_field,
     work_item_id: workItemIds[0]!,
+    domain_artifact_cas_read_guard: {
+      status: casReadGuard.status,
+      reason: casReadGuard.reason,
+      workspace_root: initialCasObservation.workspace_root,
+      observed_generation: casReadGuard.observed_generation,
+    },
   };
 }

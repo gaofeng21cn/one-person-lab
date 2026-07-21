@@ -16,7 +16,10 @@ import {
 } from '../../src/modules/runway/standard-agent-action-run-state.ts';
 import { runStandardAgentAction } from '../../src/modules/runway/standard-agent-action-runtime.ts';
 import { runFamilyRuntime } from '../../src/modules/runway/family-runtime.ts';
-import { applyDomainArtifactCasMaterialization } from
+import {
+  applyDomainArtifactCasMaterialization,
+  observeDomainArtifactCasMaterialization,
+} from
   '../../src/modules/runway/domain-artifact-cas-materialization.ts';
 import { standardAgentLifecycleReactivationHandlerRunId } from
   '../../src/modules/runway/standard-agent-domain-lifecycle-admission.ts';
@@ -24,6 +27,10 @@ import { preflightFamilyRuntimeDomainLifecycleAdmission } from
   '../../src/modules/runway/family-runtime-domain-lifecycle-admission.ts';
 import { ensureProviderHostedStageAttempt } from
   '../../src/modules/runway/family-runtime-provider-hosted-attempts.ts';
+import { launchRegisteredStageRun } from
+  '../../src/modules/runway/family-runtime-stage-run-launch.ts';
+import { createStageRunLaunchTable } from
+  '../../src/modules/runway/family-runtime-stage-run-launch-registry.ts';
 import { createFamilyRuntimeQueueTables, type FamilyRuntimeTaskRow } from
   '../../src/modules/runway/family-runtime-store.ts';
 import { buildPackBoundTemporalStageRunInput } from
@@ -52,6 +59,45 @@ function writeJson(file: string, value: unknown) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, bytes);
   return { ref: pathToFileURL(fs.realpathSync.native(file)).href, sha256: digest(bytes), bytes };
+}
+
+function writeLifecycleCasReadState(input: {
+  stateRoot: string;
+  workspaceRoot: string;
+  phase: 'in_progress' | 'settled';
+  transitionId: string;
+  journal: boolean;
+}) {
+  const workspaceKey = digest(fs.realpathSync.native(input.workspaceRoot));
+  const requestSha256 = 'c'.repeat(64);
+  const casRoot = path.join(input.stateRoot, 'runway', 'domain-artifact-cas');
+  const journalPath = path.join(
+    casRoot,
+    'transactions',
+    `${workspaceKey}-${requestSha256}.json`,
+  );
+  writeJson(path.join(casRoot, 'read-epochs', `${workspaceKey}.json`), {
+    surface_kind: 'opl_domain_artifact_cas_read_epoch',
+    version: 'opl-domain-artifact-cas-read-epoch.v1',
+    workspace_sha256: workspaceKey,
+    request_sha256: requestSha256,
+    transition_id: input.transitionId,
+    phase: input.phase,
+    outcome: input.phase === 'settled' ? 'materialized' : null,
+    updated_at: new Date().toISOString(),
+  });
+  if (input.journal) {
+    writeJson(journalPath, {
+      surface_kind: 'opl_domain_artifact_cas_transaction_journal',
+      version: 'opl-domain-artifact-cas-transaction-journal.v1',
+      request_sha256: requestSha256,
+      phase: 'switching',
+      visibility_model: 'cooperating_opl_readers_must_treat_journal_as_sync_pending',
+      operations: [],
+    });
+  } else {
+    fs.rmSync(journalPath, { force: true });
+  }
 }
 
 function supportedSurfaces(internal = false) {
@@ -548,6 +594,13 @@ test('family runtime lifecycle preflight fails closed on inactive and unresolved
       }),
       /action identity is not declared|cannot resolve the requested action/i,
     );
+    assert.throws(
+      () => preflightFamilyRuntimeDomainLifecycleAdmission({
+        ...launch,
+        actionId: 'reactivate_study',
+      }),
+      /does not declare the requested lifecycle-gated Stage/i,
+    );
 
     writeJson(fileURLToPath(refs.lifecycle.ref), {
       study_id: 'study-001', lifecycle_state: 'active', lifecycle_generation: 8,
@@ -555,6 +608,25 @@ test('family runtime lifecycle preflight fails closed on inactive and unresolved
     const admitted = preflightFamilyRuntimeDomainLifecycleAdmission(launch);
     assert.equal(admitted.status, 'admitted_by_canonical_active_lifecycle');
     assert.equal(admitted.lifecycle_generation, 8);
+    assert.equal(admitted.domain_artifact_cas_read_guard.status, 'settled_stable');
+
+    const stableCas = observeDomainArtifactCasMaterialization({ workspaceRoot });
+    let observationCount = 0;
+    assert.throws(
+      () => preflightFamilyRuntimeDomainLifecycleAdmission(launch, {
+        observeDomainArtifactCas: () => ({
+          ...stableCas,
+          observed_generation: observationCount++ === 0
+            ? `sha256:${'1'.repeat(64)}`
+            : `sha256:${'2'.repeat(64)}`,
+        }),
+      }),
+      (error: any) => {
+        assert.equal(error.details?.failure_code, 'domain_lifecycle_stage_launch_blocked');
+        assert.equal(error.details?.observation_reason, 'workspace_cas_read_generation_changed');
+        return true;
+      },
+    );
 
     const catalogFile = path.join(checkoutRoot, 'contracts', 'action_catalog.json');
     const catalog = JSON.parse(fs.readFileSync(catalogFile, 'utf8'));
@@ -613,6 +685,26 @@ test('direct family-runtime create --start gates before attempt reserve and repl
     writeJson(fileURLToPath(refs.lifecycle.ref), {
       study_id: 'study-001', lifecycle_state: 'active', lifecycle_generation: 8,
     });
+    writeLifecycleCasReadState({
+      stateRoot,
+      workspaceRoot,
+      phase: 'in_progress',
+      transitionId: 'direct-pending',
+      journal: true,
+    });
+    await assert.rejects(
+      runFamilyRuntime(args, { stageRunRuntime: runtime }),
+      /sync-pending/i,
+    );
+    const whileCasPending = await runFamilyRuntime(['attempt', 'list']);
+    assert.equal((whileCasPending.family_runtime_stage_attempts as any).attempts.length, 0);
+    writeLifecycleCasReadState({
+      stateRoot,
+      workspaceRoot,
+      phase: 'settled',
+      transitionId: 'direct-settled',
+      journal: false,
+    });
     const launched = await runFamilyRuntime(args, { stageRunRuntime: runtime });
     const replayed = await runFamilyRuntime(args, { stageRunRuntime: runtime });
     const launchedAttempt = (launched.family_runtime_stage_attempt as any).attempt;
@@ -636,15 +728,161 @@ test('direct family-runtime create --start gates before attempt reserve and repl
   }
 });
 
+test('public plan-only StageRun launch requires active lifecycle before durable registration', async () => {
+  const fixtureRoot = temporaryRoot('opl-family-lifecycle-plan-only-');
+  const checkoutRoot = path.join(fixtureRoot, 'checkout');
+  const workspaceRoot = path.join(fixtureRoot, 'workspace');
+  const stateRoot = path.join(fixtureRoot, 'state');
+  const previousStateRoot = process.env.OPL_STATE_DIR;
+  try {
+    fs.mkdirSync(checkoutRoot, { recursive: true });
+    fs.mkdirSync(workspaceRoot, { recursive: true });
+    process.env.OPL_STATE_DIR = stateRoot;
+    writeLifecycleContracts(checkoutRoot);
+    const refs = writeLifecycleWorkspace(workspaceRoot);
+    const files: Record<string, string> = {
+      'contracts/stage-quality.json': '{}',
+      'agent/prompts/intake.md': '# Intake\n',
+      'agent/prompts/quality.md': [
+        '# Quality',
+        '## Producer', 'Produce.',
+        '## Reviewer', 'Review.',
+        '## Repairer', 'Repair.',
+        '## Re-reviewer', 'Re-review.',
+      ].join('\n'),
+      'agent/quality_gates/stage.md': '# Rubric\n',
+      'agent/goals/intake.md': '# Intake goal\n',
+      'agent/sources/request.md': '# Request\n',
+      'agent/lineage/intake.json': '{"stage_id":"intake"}\n',
+    };
+    for (const [relativePath, bytes] of Object.entries(files)) {
+      const file = path.join(checkoutRoot, relativePath);
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, bytes);
+    }
+    const binding: StandardAgentStageQualityRuntimeBinding = {
+      surface_kind: 'opl_pack_bound_stage_quality_runtime_binding',
+      version: 'opl-pack-bound-stage-quality-runtime-binding.v1',
+      stage_id: 'intake',
+      declared_stage_ids: ['intake'],
+      enabled: true,
+      stage_role: null,
+      policy_ref: 'contracts/stage-quality.json',
+      stage_prompt_ref: 'agent/prompts/intake.md',
+      quality_policy: normalizeStageQualityCyclePolicy({
+        formal_review: { required: true, risk_tier: 'high', max_repair_rounds: 1 },
+      }),
+      handoff_review_boundary: null,
+      role_prompt_refs: {
+        producer: 'agent/prompts/quality.md#producer',
+        reviewer: 'agent/prompts/quality.md#reviewer',
+        repairer: 'agent/prompts/quality.md#repairer',
+        re_reviewer: 'agent/prompts/quality.md#re-reviewer',
+      },
+      quality_rubric_refs: ['agent/quality_gates/stage.md'],
+      stage_goal_refs: ['agent/goals/intake.md'],
+      source_refs: ['agent/sources/request.md'],
+      lineage_refs: ['agent/lineage/intake.json'],
+      manifest_ref: 'agent/stages/manifest.json',
+      manifest_sha256: digest(fs.readFileSync(path.join(checkoutRoot, 'agent/stages/manifest.json'))),
+    };
+    const stageRunInput = buildPackBoundTemporalStageRunInput({
+      binding,
+      domainPackRoot: checkoutRoot,
+      domainId: 'mas',
+      stageId: 'intake',
+      stageRunInvocationId: 'sri_lifecycle_plan_only',
+      workspaceLocator: {
+        workspace_root: workspaceRoot,
+        study_id: 'study-001',
+        package_use_binding: packageUseBinding(),
+      },
+      sourceFingerprint: `sha256:${'7'.repeat(64)}`,
+      executorKind: 'codex_cli',
+      actionId: 'launch_stage',
+    });
+    const db = new DatabaseSync(':memory:');
+    createStageRunLaunchTable(db);
+
+    try {
+      await assert.rejects(
+        launchRegisteredStageRun({
+          db,
+          stageRunInput,
+          start: false,
+          startWorkflow: async () => assert.fail('plan-only launch must not start Temporal'),
+        }),
+        /lifecycle is inactive/i,
+      );
+      assert.equal((db.prepare(
+        'SELECT COUNT(*) AS count FROM stage_run_launches',
+      ).get() as any).count, 0);
+
+      writeJson(fileURLToPath(refs.lifecycle.ref), {
+        study_id: 'study-001', lifecycle_state: 'active', lifecycle_generation: 8,
+      });
+      writeLifecycleCasReadState({
+        stateRoot,
+        workspaceRoot,
+        phase: 'settled',
+        transitionId: 'plan-only-open-journal',
+        journal: true,
+      });
+      await assert.rejects(
+        launchRegisteredStageRun({
+          db,
+          stageRunInput,
+          start: false,
+          startWorkflow: async () => assert.fail('plan-only launch must not start Temporal'),
+        }),
+        (error: any) => {
+          assert.equal(error.details?.failure_code, 'domain_lifecycle_stage_launch_blocked');
+          assert.equal(error.details?.observation_reason, 'workspace_cas_journal_present');
+          return true;
+        },
+      );
+      assert.equal((db.prepare(
+        'SELECT COUNT(*) AS count FROM stage_run_launches',
+      ).get() as any).count, 0);
+      writeLifecycleCasReadState({
+        stateRoot,
+        workspaceRoot,
+        phase: 'settled',
+        transitionId: 'plan-only-settled',
+        journal: false,
+      });
+      const planned = await launchRegisteredStageRun({
+        db,
+        stageRunInput,
+        start: false,
+        startWorkflow: async () => assert.fail('plan-only launch must not start Temporal'),
+      });
+      assert.equal(planned.start_status, 'registered');
+      assert.equal((db.prepare(
+        'SELECT COUNT(*) AS count FROM stage_run_launches',
+      ).get() as any).count, 1);
+    } finally {
+      db.close();
+    }
+  } finally {
+    if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateRoot;
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('provider-hosted launch preserves currentness observation and gates before attempt creation', async () => {
   const fixtureRoot = temporaryRoot('opl-family-lifecycle-provider-hosted-');
   const checkoutRoot = path.join(fixtureRoot, 'checkout');
   const workspaceRoot = path.join(fixtureRoot, 'workspace');
+  const stateRoot = path.join(fixtureRoot, 'state');
+  const previousStateRoot = process.env.OPL_STATE_DIR;
   const db = new DatabaseSync(':memory:');
   createFamilyRuntimeQueueTables(db);
   try {
     fs.mkdirSync(checkoutRoot, { recursive: true });
     fs.mkdirSync(workspaceRoot, { recursive: true });
+    process.env.OPL_STATE_DIR = stateRoot;
     writeLifecycleContracts(checkoutRoot);
     const refs = writeLifecycleWorkspace(workspaceRoot);
     const now = new Date().toISOString();
@@ -690,6 +928,25 @@ test('provider-hosted launch preserves currentness observation and gates before 
     writeJson(fileURLToPath(refs.lifecycle.ref), {
       study_id: 'study-001', lifecycle_state: 'active', lifecycle_generation: 8,
     });
+    writeLifecycleCasReadState({
+      stateRoot,
+      workspaceRoot,
+      phase: 'in_progress',
+      transitionId: 'provider-pending',
+      journal: true,
+    });
+    await assert.rejects(
+      ensureProviderHostedStageAttempt(db, row, payload, options),
+      /sync-pending/i,
+    );
+    assert.equal((db.prepare('SELECT COUNT(*) AS count FROM stage_attempts').get() as any).count, 0);
+    writeLifecycleCasReadState({
+      stateRoot,
+      workspaceRoot,
+      phase: 'settled',
+      transitionId: 'provider-settled',
+      journal: false,
+    });
     const attempt = await ensureProviderHostedStageAttempt(db, row, payload, options);
     assert.ok(attempt);
     const launchEvent = attempt.activity_events.find((event: any) => (
@@ -701,6 +958,8 @@ test('provider-hosted launch preserves currentness observation and gates before 
     );
     assert.equal(launchEvent?.observation.status, 'declaration_debt');
   } finally {
+    if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateRoot;
     db.close();
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
@@ -710,9 +969,12 @@ test('route launch requires fresh active lifecycle on first launch and persisted
   const fixtureRoot = temporaryRoot('opl-family-lifecycle-route-');
   const checkoutRoot = path.join(fixtureRoot, 'checkout');
   const workspaceRoot = path.join(fixtureRoot, 'workspace');
+  const stateRoot = path.join(fixtureRoot, 'state');
+  const previousStateRoot = process.env.OPL_STATE_DIR;
   try {
     fs.mkdirSync(checkoutRoot, { recursive: true });
     fs.mkdirSync(workspaceRoot, { recursive: true });
+    process.env.OPL_STATE_DIR = stateRoot;
     writeLifecycleContracts(checkoutRoot);
     const refs = writeLifecycleWorkspace(workspaceRoot);
     const files: Record<string, string> = {
@@ -839,6 +1101,26 @@ test('route launch requires fresh active lifecycle on first launch and persisted
     writeJson(fileURLToPath(refs.lifecycle.ref), {
       study_id: 'study-001', lifecycle_state: 'active', lifecycle_generation: 8,
     });
+    writeLifecycleCasReadState({
+      stateRoot,
+      workspaceRoot,
+      phase: 'in_progress',
+      transitionId: 'route-pending',
+      journal: true,
+    });
+    await assert.rejects(
+      materializeStageRunRoute(routeInput, dependencies),
+      /sync-pending/i,
+    );
+    assert.equal(providerStarts, 0);
+    assert.equal(persistedTarget, null);
+    writeLifecycleCasReadState({
+      stateRoot,
+      workspaceRoot,
+      phase: 'settled',
+      transitionId: 'route-settled',
+      journal: false,
+    });
     const launched = await materializeStageRunRoute(routeInput, dependencies);
     assert.equal(launched.materialization_status, 'launched');
     assert.equal(providerStarts, 1);
@@ -852,6 +1134,8 @@ test('route launch requires fresh active lifecycle on first launch and persisted
     );
     assert.equal(providerStarts, 1);
   } finally {
+    if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateRoot;
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
