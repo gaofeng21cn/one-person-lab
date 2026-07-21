@@ -9,6 +9,7 @@ import { canonicalJsonBytes } from '../../src/kernel/canonical-json.ts';
 import {
   applyDomainArtifactCasMaterialization,
   domainArtifactCasMaterializationInProgress,
+  observeDomainArtifactCasMaterialization,
 } from '../../src/modules/runway/domain-artifact-cas-materialization.ts';
 
 function temporaryRoot(prefix: string) {
@@ -116,6 +117,7 @@ test('domain artifact CAS rejects an absent precondition collision without chang
       workspaceRoot,
       requestSha256: fixture.requestSha256,
     }), false);
+    assert.equal(observeDomainArtifactCasMaterialization({ workspaceRoot }).state, 'clear');
   });
 });
 
@@ -144,6 +146,7 @@ test('domain artifact CAS rolls back create and update targets after a mid-switc
       workspaceRoot,
       requestSha256: fixture.requestSha256,
     }), false);
+    assert.equal(observeDomainArtifactCasMaterialization({ workspaceRoot }).state, 'clear');
   });
 });
 
@@ -165,6 +168,10 @@ test('domain artifact CAS resumes the same exact request after targets switch be
       workspaceRoot,
       requestSha256: fixture.requestSha256,
     }), true);
+    const pending = observeDomainArtifactCasMaterialization({ workspaceRoot });
+    assert.equal(pending.state, 'sync_pending');
+    assert.equal(pending.reason, 'workspace_cas_epoch_in_progress');
+    const pendingGeneration = pending.observed_generation;
 
     const recovered = applyDomainArtifactCasMaterialization(fixture.input);
     assert.equal(recovered?.receipt.transaction instanceof Object, true);
@@ -175,5 +182,8 @@ test('domain artifact CAS resumes the same exact request after targets switch be
       requestSha256: fixture.requestSha256,
     }), false);
     assert.equal(fs.readFileSync(target, 'utf8'), after.toString('utf8'));
+    const settled = observeDomainArtifactCasMaterialization({ workspaceRoot });
+    assert.equal(settled.state, 'clear');
+    assert.notEqual(settled.observed_generation, pendingGeneration);
   });
 });

@@ -2,6 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import {
+  observeDomainArtifactCasMaterialization,
+  type DomainArtifactCasMaterializationReadObservation,
+} from '../runway/domain-artifact-cas-materialization.ts';
 import { buildWorkItemProjectionV2 } from './work-item-projection/projection.ts';
 import type { WorkItemProjectionV2 } from './work-item-projection/types.ts';
 import {
@@ -75,13 +79,55 @@ function consistencyResults(
   });
 }
 
+function assertDomainArtifactCasSettled(
+  observation: DomainArtifactCasMaterializationReadObservation,
+): DomainArtifactCasMaterializationReadObservation {
+  if (observation.state === 'clear') return observation;
+  fail(
+    'contract_shape_invalid',
+    'Hosted work-item readback is sync-pending while a domain artifact transaction is unsettled.',
+    {
+      failure_code: 'hosted_work_item_sync_pending',
+      sync_state: 'sync_pending',
+      observation_state: observation.state,
+      observation_reason: observation.reason,
+      workspace_root: observation.workspace_root,
+      journal_refs: observation.journal_refs,
+      epoch_ref: observation.epoch_ref,
+      observed_generation: observation.observed_generation,
+      observation_error: observation.error,
+    },
+  );
+}
+
+function assertDomainArtifactCasReadWindowStable(
+  initial: DomainArtifactCasMaterializationReadObservation,
+  current: DomainArtifactCasMaterializationReadObservation,
+) {
+  assertDomainArtifactCasSettled(current);
+  if (initial.observed_generation === current.observed_generation) return;
+  assertDomainArtifactCasSettled({
+    ...current,
+    state: 'sync_pending',
+    reason: 'workspace_cas_read_generation_changed',
+    observed_generation: `${initial.observed_generation}->${current.observed_generation}`,
+  });
+}
+
 export function buildHostedWorkItemReadback(
   input: HostedWorkItemReadbackInput,
   dependencies: HostedWorkItemReadbackDependencies = {},
 ) {
   const workspaceRoot = realDirectory(input.workspaceRoot, 'workspace root');
+  const initialCasObservation = assertDomainArtifactCasSettled(
+    observeDomainArtifactCasMaterialization({ workspaceRoot }),
+  );
   const profile = input.profile ?? 'full';
   const projection = dependencies.projection ?? buildWorkItemProjectionV2({ profile });
+  assertDomainArtifactCasReadWindowStable(
+    initialCasObservation,
+    observeDomainArtifactCasMaterialization({ workspaceRoot }),
+  );
   const matches = projection.items.filter((item) => {
     let itemWorkspace: string;
     try {
@@ -108,6 +154,27 @@ export function buildHostedWorkItemReadback(
     });
   }
   const item = matches[0]!;
+  if (
+    item.lifecycle.primary_state === 'sync_pending'
+    && item.lifecycle.primary_state_reason === 'domain_artifact_cas_materialization_sync_pending'
+  ) {
+    assertDomainArtifactCasSettled({
+      state: 'sync_pending',
+      reason: 'workspace_cas_journal_present',
+      workspace_root: workspaceRoot,
+      journal_refs: item.source_refs
+        .filter((source) => source.role === 'domain_artifact_cas_read_guard')
+        .map((source) => source.ref),
+      epoch_ref: '',
+      observed_generation: item.lifecycle.observed_generation,
+      observed_at: projection.generated_at,
+      error: null,
+    });
+  }
+  assertDomainArtifactCasReadWindowStable(
+    initialCasObservation,
+    observeDomainArtifactCasMaterialization({ workspaceRoot }),
+  );
   const workItemRoot = item.identity.work_item_root
     ? realDirectory(item.identity.work_item_root, 'work-item root')
     : fail('contract_shape_invalid', 'Hosted work-item readback requires a domain inventory work-item root.', {
@@ -134,6 +201,10 @@ export function buildHostedWorkItemReadback(
       declaration,
     }));
   }
+  assertDomainArtifactCasReadWindowStable(
+    initialCasObservation,
+    observeDomainArtifactCasMaterialization({ workspaceRoot }),
+  );
   const consistency = consistencyResults(domainSources, sourceManifest?.manifest.consistency_checks ?? []);
   const diagnostics = [
     ...domainSources
@@ -160,6 +231,10 @@ export function buildHostedWorkItemReadback(
         authority_precedence: check.authority_precedence,
       })),
   ];
+  assertDomainArtifactCasReadWindowStable(
+    initialCasObservation,
+    observeDomainArtifactCasMaterialization({ workspaceRoot }),
+  );
 
   return {
     version: 'g2',

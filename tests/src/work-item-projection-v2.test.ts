@@ -325,6 +325,54 @@ function writeActionRequest(root: string, runId: string, payload: Record<string,
   };
 }
 
+function casReadGuardPaths(stateRoot: string, workspaceRoot: string, requestSha256 = 'a'.repeat(64)) {
+  const workspaceKey = crypto.createHash('sha256')
+    .update(fs.realpathSync.native(workspaceRoot))
+    .digest('hex');
+  const root = path.join(stateRoot, 'runway', 'domain-artifact-cas');
+  return {
+    epoch: path.join(root, 'read-epochs', `${workspaceKey}.json`),
+    journal: path.join(root, 'transactions', `${workspaceKey}-${requestSha256}.json`),
+    workspaceKey,
+    requestSha256,
+  };
+}
+
+function writeCasReadEpoch(input: {
+  stateRoot: string;
+  workspaceRoot: string;
+  transitionId: string;
+  phase: 'in_progress' | 'settled';
+}) {
+  const paths = casReadGuardPaths(input.stateRoot, input.workspaceRoot);
+  fs.mkdirSync(path.dirname(paths.epoch), { recursive: true });
+  fs.writeFileSync(paths.epoch, `${JSON.stringify({
+    surface_kind: 'opl_domain_artifact_cas_read_epoch',
+    version: 'opl-domain-artifact-cas-read-epoch.v1',
+    workspace_sha256: paths.workspaceKey,
+    request_sha256: paths.requestSha256,
+    transition_id: input.transitionId,
+    phase: input.phase,
+    outcome: input.phase === 'settled' ? 'materialized' : null,
+    updated_at: new Date().toISOString(),
+  }, null, 2)}\n`, 'utf8');
+  return paths;
+}
+
+function writeCasJournal(stateRoot: string, workspaceRoot: string) {
+  const paths = casReadGuardPaths(stateRoot, workspaceRoot);
+  fs.mkdirSync(path.dirname(paths.journal), { recursive: true });
+  fs.writeFileSync(paths.journal, `${JSON.stringify({
+    surface_kind: 'opl_domain_artifact_cas_transaction_journal',
+    version: 'opl-domain-artifact-cas-transaction-journal.v1',
+    request_sha256: paths.requestSha256,
+    phase: 'switching',
+    visibility_model: 'cooperating_opl_readers_must_treat_journal_as_sync_pending',
+    operations: [],
+  }, null, 2)}\n`, 'utf8');
+  return paths;
+}
+
 function persistStageAttempt(db: DatabaseSync, value: ReturnType<typeof attempt>) {
   db.prepare(`
     INSERT INTO stage_attempts (
@@ -1057,6 +1105,151 @@ test('fresh Temporal runtime observation reconciles queued ledger in the fast pr
     );
     assert.equal(mismatchedItem.lifecycle.primary_state, 'paused');
   } finally {
+    fs.rmSync(input.root, { recursive: true, force: true });
+  }
+});
+
+test('CAS read epoch makes projection fail closed without changing fresh Temporal execution', () => {
+  const input = fixture();
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  const stateRoot = path.join(input.root, 'opl-state-cas-read-guard');
+  process.env.OPL_STATE_DIR = stateRoot;
+  try {
+    const workItemId = '004-dpcc-longitudinal-care-inertia-intensification-gap';
+    const snapshot = new Date(Date.now() - 60_000);
+    fs.utimesSync(path.join(input.diabetes, 'workspace_index.json'), snapshot, snapshot);
+    const observedAt = new Date(Date.now() - 1_000);
+    const runtimeObservation = {
+      surface_kind: 'temporal_stage_attempt_runtime_observation',
+      source: 'temporal_workflow_query',
+      observed_at: observedAt.toISOString(),
+      ttl_ms: 600_000,
+      expires_at: new Date(observedAt.getTime() + 600_000).toISOString(),
+      workflow_status: 'RUNNING',
+      query_status: 'running',
+      effective_runtime_status: 'running',
+      stage_attempt_id: 'sat-cas-read-guard-running',
+      workflow_id: 'workflow:sat-cas-read-guard-running',
+      run_id: 'temporal-run-cas-read-guard',
+      provider_updated_at: observedAt.toISOString(),
+      provider_completion_is_domain_ready: false,
+    };
+    const runningAttempt = attempt({
+      id: 'sat-cas-read-guard-running',
+      root: input.diabetes,
+      workItemId,
+      status: 'queued',
+      providerStatus: 'registered',
+      stageId: '01-study_intake',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      runtimeObservation,
+    });
+    const build = (resolveDescriptor = input.resolveDescriptor) => buildWorkItemProjectionV2({
+      profile: 'full',
+      bindings: input.bindings,
+      packageProjectionItems: input.packageProjectionItems,
+      packageStatusById: input.packageStatusById,
+      attempts: [runningAttempt],
+      resolveDescriptor,
+    });
+    const baseline = build();
+    const baselineItem = baseline.items.find((item) => item.identity.work_item_id === workItemId)!;
+    assert.equal(baselineItem.execution.state, 'running');
+    assert.equal(baselineItem.execution.running_proof_status, 'running_confirmed');
+    assert.equal(baselineItem.lifecycle.primary_state_reason, 'current_runtime_wake_running');
+
+    writeCasReadEpoch({
+      stateRoot,
+      workspaceRoot: input.diabetes,
+      transitionId: 'cas-read-guard-in-progress',
+      phase: 'in_progress',
+    });
+    const paths = writeCasJournal(stateRoot, input.diabetes);
+    const pending = build();
+    const pendingItem = pending.items.find((item) => item.identity.work_item_id === workItemId)!;
+    assert.equal(pendingItem.lifecycle.business_state, 'unknown');
+    assert.equal(pendingItem.lifecycle.domain_business_state, 'unknown');
+    assert.equal(pendingItem.lifecycle.primary_state, 'sync_pending');
+    assert.equal(pendingItem.action.kind, 'blocked_no_action');
+    assert.equal(pendingItem.attention.kind, 'system');
+    assert.deepEqual(pendingItem.execution, baselineItem.execution);
+    assert.equal(pending.summary.running_count, baseline.summary.running_count);
+    assert.equal(
+      pendingItem.conditions.some((condition) =>
+        condition.type === 'DomainArtifactMaterializationSettled'
+          && condition.status === 'False'
+      ),
+      true,
+    );
+    assert.equal(
+      pending.items
+        .filter((item) => item.identity.workspace_path === input.diabetes)
+        .every((item) => item.lifecycle.primary_state === 'sync_pending'),
+      true,
+    );
+    assert.notEqual(
+      pending.items.find((item) => item.identity.workspace_path === input.pitnet)?.lifecycle.primary_state,
+      'sync_pending',
+    );
+    const schemaRef = 'contracts/opl-framework/work-item-projection-v2.schema.json';
+    const schema = parseJsonText(fs.readFileSync(schemaRef, 'utf8')) as Record<string, unknown>;
+    const pendingValidation = validateJsonSchemaPayload({
+      schemaId: 'opl.work_item_projection.v2.cas_sync_pending',
+      schema,
+      sourceRef: schemaRef,
+    }, pending);
+    assert.equal(
+      pendingValidation.ok,
+      true,
+      pendingValidation.ok ? undefined : JSON.stringify(pendingValidation.errors, null, 2),
+    );
+
+    fs.rmSync(paths.journal);
+    writeCasReadEpoch({
+      stateRoot,
+      workspaceRoot: input.diabetes,
+      transitionId: 'cas-read-guard-settled',
+      phase: 'settled',
+    });
+    const recovered = build();
+    const recoveredItem = recovered.items.find((item) => item.identity.work_item_id === workItemId)!;
+    assert.equal(recoveredItem.lifecycle.business_state, 'paused');
+    assert.equal(recoveredItem.lifecycle.primary_state_reason, 'current_runtime_wake_running');
+    assert.deepEqual(recoveredItem.execution, baselineItem.execution);
+
+    writeCasReadEpoch({
+      stateRoot,
+      workspaceRoot: input.diabetes,
+      transitionId: 'cas-read-window-before',
+      phase: 'settled',
+    });
+    let completedInsideRead = false;
+    const raced = build((agentId) => {
+      if (!completedInsideRead) {
+        completedInsideRead = true;
+        writeCasReadEpoch({
+          stateRoot,
+          workspaceRoot: input.diabetes,
+          transitionId: 'cas-read-window-after',
+          phase: 'settled',
+        });
+      }
+      return input.resolveDescriptor(agentId);
+    });
+    const racedItem = raced.items.find((item) => item.identity.work_item_id === workItemId)!;
+    assert.equal(racedItem.lifecycle.primary_state, 'sync_pending');
+    assert.equal(
+      raced.diagnostics.items.some((diagnostic) =>
+        diagnostic.details?.observation_reason === 'workspace_cas_read_generation_changed'
+      ),
+      true,
+    );
+    assert.deepEqual(racedItem.execution, baselineItem.execution);
+    assert.equal(build().items.find((item) => item.identity.work_item_id === workItemId)?.lifecycle.business_state, 'paused');
+  } finally {
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
     fs.rmSync(input.root, { recursive: true, force: true });
   }
 });

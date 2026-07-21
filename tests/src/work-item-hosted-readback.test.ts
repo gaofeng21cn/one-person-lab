@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
+import { FrameworkContractError } from '../../src/kernel/contract-validation.ts';
 import { parseJsonText } from '../../src/kernel/json-file.ts';
 import { validateJsonSchemaPayload } from '../../src/kernel/schema-registry.ts';
 import { buildHostedWorkItemReadback } from '../../src/modules/console/work-item-hosted-readback.ts';
@@ -12,6 +14,45 @@ import type { WorkItemProjectionV2 } from '../../src/modules/console/work-item-p
 function writeJson(filePath: string, value: unknown) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+}
+
+function writeHostedCasReadState(input: {
+  stateRoot: string;
+  workspaceRoot: string;
+  phase: 'in_progress' | 'settled';
+  transitionId: string;
+  journal: boolean;
+}) {
+  const workspaceKey = crypto.createHash('sha256')
+    .update(fs.realpathSync.native(input.workspaceRoot))
+    .digest('hex');
+  const requestSha256 = 'b'.repeat(64);
+  const root = path.join(input.stateRoot, 'runway', 'domain-artifact-cas');
+  const epochPath = path.join(root, 'read-epochs', `${workspaceKey}.json`);
+  const journalPath = path.join(root, 'transactions', `${workspaceKey}-${requestSha256}.json`);
+  writeJson(epochPath, {
+    surface_kind: 'opl_domain_artifact_cas_read_epoch',
+    version: 'opl-domain-artifact-cas-read-epoch.v1',
+    workspace_sha256: workspaceKey,
+    request_sha256: requestSha256,
+    transition_id: input.transitionId,
+    phase: input.phase,
+    outcome: input.phase === 'settled' ? 'materialized' : null,
+    updated_at: new Date().toISOString(),
+  });
+  if (input.journal) {
+    writeJson(journalPath, {
+      surface_kind: 'opl_domain_artifact_cas_transaction_journal',
+      version: 'opl-domain-artifact-cas-transaction-journal.v1',
+      request_sha256: requestSha256,
+      phase: 'switching',
+      visibility_model: 'cooperating_opl_readers_must_treat_journal_as_sync_pending',
+      operations: [],
+    });
+  } else {
+    fs.rmSync(journalPath, { force: true });
+  }
+  return { epochPath, journalPath };
 }
 
 function fixtureProjection(workspaceRoot: string, workItemRoot: string): WorkItemProjectionV2 {
@@ -279,6 +320,59 @@ test('hosted work-item readback keeps runtime projection and domain truth author
     }, output);
     assert.equal(validation.ok, true, validation.ok ? undefined : JSON.stringify(validation.errors, null, 2));
   } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('hosted work-item readback fails closed on CAS recovery journal and recovers after settlement', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-hosted-readback-cas-'));
+  const itemRoot = path.join(root, 'studies/study-003');
+  const stateRoot = path.join(root, 'opl-state');
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  fs.mkdirSync(itemRoot, { recursive: true });
+  process.env.OPL_STATE_DIR = stateRoot;
+  try {
+    const projection = fixtureProjection(root, itemRoot);
+    writeHostedCasReadState({
+      stateRoot,
+      workspaceRoot: root,
+      phase: 'in_progress',
+      transitionId: 'hosted-readback-in-progress',
+      journal: true,
+    });
+    assert.throws(
+      () => buildHostedWorkItemReadback({
+        workspaceRoot: root,
+        workItemId: 'study-003',
+        agentId: 'mas',
+        profile: 'full',
+      }, { projection }),
+      (error: unknown) => error instanceof FrameworkContractError
+        && error.details?.failure_code === 'hosted_work_item_sync_pending'
+        && error.details?.sync_state === 'sync_pending'
+        && error.details?.observation_reason === 'workspace_cas_epoch_in_progress',
+    );
+
+    writeHostedCasReadState({
+      stateRoot,
+      workspaceRoot: root,
+      phase: 'settled',
+      transitionId: 'hosted-readback-settled',
+      journal: false,
+    });
+    const recovered = buildHostedWorkItemReadback({
+      workspaceRoot: root,
+      workItemId: 'study-003',
+      agentId: 'mas',
+      profile: 'full',
+    }, { projection }).hosted_work_item_readback;
+    assert.equal(recovered.business.lifecycle.business_state, 'delivered_paused');
+    assert.equal(recovered.business.next_owner.owner, 'mas');
+    assert.equal(recovered.runtime.execution.attempt_id, 'sat_fixture');
+    assert.equal(recovered.runtime.execution.running_proof_status, 'observed');
+  } finally {
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
     fs.rmSync(root, { recursive: true, force: true });
   }
 });

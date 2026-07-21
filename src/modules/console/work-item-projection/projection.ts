@@ -1,6 +1,10 @@
 import type { JsonRecord } from '../../../kernel/json-record.ts';
 import { readStandardAgentDescriptorForDomain } from '../../connect/index.ts';
 import { buildWorkItemControlResolver } from '../../ledger/index.ts';
+import {
+  observeDomainArtifactCasMaterialization,
+  type DomainArtifactCasMaterializationReadObservation,
+} from '../../runway/domain-artifact-cas-materialization.ts';
 import { listWorkspaceBindings, type WorkspaceBinding } from '../../workspace/public/app-state.ts';
 import { buildAgentCatalog, buildProjectCatalog } from './catalog.ts';
 import {
@@ -55,6 +59,108 @@ function lifecycleConditions(item: WorkItemProjectionItem): WorkItemCondition[] 
       ref: item.lifecycle.control_ref,
     },
   ];
+}
+
+function casSyncPendingItem(
+  item: WorkItemProjectionItem,
+  observation: DomainArtifactCasMaterializationReadObservation,
+): WorkItemProjectionItem {
+  const sourceRef = (observation.journal_refs[0] ?? observation.epoch_ref) || null;
+  const conditions = item.conditions.map((condition): WorkItemCondition => {
+    if (condition.type === 'BusinessLifecycleKnown') {
+      return {
+        ...condition,
+        status: 'Unknown',
+        reason: 'domain_artifact_cas_materialization_sync_pending',
+        message: 'Business lifecycle projection is withheld while domain artifact materialization is unsettled.',
+        owner: 'opl_framework',
+        severity: 'warning',
+        last_transition_time: observation.observed_at,
+        ref: sourceRef,
+      };
+    }
+    if (condition.type === 'ControlStateObserved') {
+      return {
+        ...condition,
+        status: 'Unknown',
+        reason: 'domain_artifact_cas_materialization_sync_pending',
+        message: 'Effective control state is withheld until domain artifact materialization settles.',
+        owner: 'opl_framework',
+        severity: 'warning',
+        last_transition_time: observation.observed_at,
+        ref: sourceRef,
+      };
+    }
+    return condition;
+  });
+  conditions.unshift({
+    type: 'DomainArtifactMaterializationSettled',
+    status: 'False',
+    reason: observation.reason,
+    message: 'A workspace-scoped domain artifact CAS journal is pending or cannot be observed safely.',
+    owner: 'opl_framework',
+    severity: 'warning',
+    last_transition_time: observation.observed_at,
+    observed_generation: item.lifecycle.observed_generation,
+    ref: sourceRef,
+  });
+  return {
+    ...item,
+    lifecycle: {
+      ...item.lifecycle,
+      business_state: 'unknown',
+      domain_business_state: 'unknown',
+      control_state: null,
+      primary_state: 'sync_pending',
+      primary_state_label: '状态待同步',
+      primary_state_reason: 'domain_artifact_cas_materialization_sync_pending',
+      reason: 'domain_artifact_cas_materialization_sync_pending',
+      raw_business_status: null,
+      current_stage_id: null,
+      current_stage_display_name: null,
+      current_stage_status: null,
+      package_status: null,
+    },
+    attention: {
+      kind: 'system',
+      reason: 'domain_artifact_cas_materialization_sync_pending',
+      owner: 'opl_framework',
+      responsible_component: 'opl_domain_artifact_cas_materialization',
+      issue: 'The domain artifact transaction is not yet settled.',
+      impact: 'Business lifecycle and next-owner projection cannot be trusted as one coherent generation.',
+      repair_action: 'Recover or complete the exact journaled CAS transaction before reading business state.',
+      expected_outcome: 'The journal is absent and the next read observes one settled domain generation.',
+    },
+    action: {
+      kind: 'blocked_no_action',
+      title: '等待状态同步',
+      title_key: 'domainArtifactCas.syncPending.title',
+      summary: 'Business state is temporarily unavailable while an authorized domain update settles.',
+      summary_key: 'domainArtifactCas.syncPending.summary',
+      message_args: {
+        sync_state: 'sync_pending',
+        observation_reason: observation.reason,
+        journal_refs: observation.journal_refs,
+      },
+      owner: 'opl_framework',
+      owner_kind: 'system',
+      owner_display_name: 'OPL Framework',
+      action_ref: sourceRef ?? 'opl://domain-artifact-cas/sync-pending',
+      dry_run_required: false,
+    },
+    conditions,
+    freshness: {
+      ...item.freshness,
+      state: 'unknown',
+      reason: 'domain_artifact_cas_materialization_sync_pending',
+    },
+    source_refs: sourceRef
+      ? [
+          ...item.source_refs,
+          { ref_kind: 'file', ref: sourceRef, role: 'domain_artifact_cas_read_guard' },
+        ]
+      : item.source_refs,
+  };
 }
 
 export type BuildWorkItemProjectionV2Options = {
@@ -130,6 +236,7 @@ export function buildWorkItemProjectionV2(
   }
   const inventoryItems: WorkItemProjectionItem[] = [];
   const diagnostics = [...projectCatalog.diagnostics];
+  const casObservationByWorkspace = new Map<string, DomainArtifactCasMaterializationReadObservation>();
   const descriptorCache = new Map<string, ReturnType<InventoryDescriptorResolver>>();
   const descriptorResolver = options.resolveDescriptor ?? readStandardAgentDescriptorForDomain;
   const resolveDescriptor = (agentId: string) => {
@@ -139,6 +246,8 @@ export function buildWorkItemProjectionV2(
     return descriptorCache.get(agentId) ?? null;
   };
   for (const project of projectCatalog.projects) {
+    const observation = observeDomainArtifactCasMaterialization({ workspaceRoot: project.workspace_path });
+    casObservationByWorkspace.set(project.workspace_path, observation);
     const inventory = readProjectInventory({ project, resolveDescriptor });
     inventoryItems.push(...inventory.items);
     diagnostics.push(...inventory.diagnostics);
@@ -166,11 +275,49 @@ export function buildWorkItemProjectionV2(
     attemptRefLimit: profile === 'fast' ? 1 : 8,
   });
   diagnostics.push(...joined.diagnostics);
+  const unsettledCasObservationByWorkspace = new Map<
+    string,
+    DomainArtifactCasMaterializationReadObservation
+  >();
+  for (const project of projectCatalog.projects) {
+    const before = casObservationByWorkspace.get(project.workspace_path)!;
+    const after = observeDomainArtifactCasMaterialization({ workspaceRoot: project.workspace_path });
+    const unsettled = before.state !== 'clear'
+      ? before
+      : after.state !== 'clear'
+        ? after
+        : before.observed_generation !== after.observed_generation
+          ? {
+              ...after,
+              state: 'sync_pending' as const,
+              reason: 'workspace_cas_read_generation_changed' as const,
+              observed_generation: `${before.observed_generation}->${after.observed_generation}`,
+            }
+          : null;
+    if (!unsettled) continue;
+    unsettledCasObservationByWorkspace.set(project.workspace_path, unsettled);
+    diagnostics.push({
+      reason: 'domain_artifact_cas_materialization_sync_pending',
+      agent_id: project.agent_id,
+      project_id: project.project_id,
+      ref: unsettled.journal_refs[0] ?? unsettled.epoch_ref,
+      details: {
+        observation_state: unsettled.state,
+        observation_reason: unsettled.reason,
+        journal_refs: unsettled.journal_refs,
+        observation_error: unsettled.error,
+      },
+    });
+  }
   const items = joined.items
     .map((item) => withProjectedWorkItemPrimaryState({
       ...item,
       conditions: [...lifecycleConditions(item), ...item.conditions],
     }))
+    .map((item) => {
+      const unsettled = unsettledCasObservationByWorkspace.get(item.identity.workspace_path);
+      return unsettled ? casSyncPendingItem(item, unsettled) : item;
+    })
     .sort((left, right) =>
       left.identity.agent_id.localeCompare(right.identity.agent_id)
         || left.identity.project_display_name.localeCompare(right.identity.project_display_name)

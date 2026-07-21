@@ -80,6 +80,29 @@ export type DomainArtifactCasMaterializationHooks = {
   beforePersistReceipt?: () => void;
 };
 
+export type DomainArtifactCasMaterializationReadObservation = {
+  state: 'clear' | 'sync_pending' | 'indeterminate';
+  reason:
+    | 'no_workspace_cas_journal'
+    | 'workspace_cas_journal_present'
+    | 'workspace_cas_epoch_in_progress'
+    | 'workspace_cas_read_generation_changed'
+    | 'workspace_cas_journal_observation_failed';
+  workspace_root: string;
+  journal_refs: string[];
+  epoch_ref: string;
+  observed_generation: string;
+  observed_at: string;
+  error: string | null;
+};
+
+type DomainArtifactCasReadEpoch = {
+  phase: 'absent' | 'in_progress' | 'settled' | 'invalid';
+  generation: string;
+  ref: string;
+  error: string | null;
+};
+
 function fail(message: string, details: Record<string, unknown> = {}): never {
   throw new FrameworkContractError('contract_shape_invalid', message, {
     failure_code: 'domain_artifact_cas_materialization_invalid',
@@ -311,8 +334,176 @@ function transactionPaths(workspaceRoot: string, requestSha256: string) {
   return {
     lock: path.join(stateRoot, 'locks', `${workspaceKey}.lock`),
     journal: path.join(stateRoot, 'transactions', `${workspaceKey}-${requestSha256}.json`),
+    readEpoch: path.join(stateRoot, 'read-epochs', `${workspaceKey}.json`),
     receiptByRequest: path.join(stateRoot, 'receipts', 'by-request', `${requestSha256}.json`),
     receiptRoot: path.join(stateRoot, 'receipts', 'sha256'),
+  };
+}
+
+function writeReadEpoch(input: {
+  file: string;
+  workspaceRoot: string;
+  requestSha256: string;
+  phase: 'in_progress' | 'settled';
+  outcome: 'materialized' | 'rolled_back' | null;
+}) {
+  atomicJson(input.file, {
+    surface_kind: 'opl_domain_artifact_cas_read_epoch',
+    version: 'opl-domain-artifact-cas-read-epoch.v1',
+    workspace_sha256: sha256(input.workspaceRoot),
+    request_sha256: input.requestSha256,
+    transition_id: crypto.randomUUID(),
+    phase: input.phase,
+    outcome: input.outcome,
+    updated_at: new Date().toISOString(),
+  });
+}
+
+function readReadEpoch(file: string, workspaceKey: string): DomainArtifactCasReadEpoch {
+  const ref = pathToFileURL(file).href;
+  if (!fs.existsSync(file)) {
+    return { phase: 'absent', generation: 'absent', ref, error: null };
+  }
+  try {
+    const bytes = readStableFile(file, 'Domain artifact CAS read epoch');
+    const value = parseJsonText(bytes.toString('utf8'));
+    if (
+      !isRecord(value)
+      || value.surface_kind !== 'opl_domain_artifact_cas_read_epoch'
+      || value.version !== 'opl-domain-artifact-cas-read-epoch.v1'
+      || value.workspace_sha256 !== workspaceKey
+      || !['in_progress', 'settled'].includes(String(value.phase))
+      || typeof value.transition_id !== 'string'
+      || !value.transition_id
+    ) {
+      return {
+        phase: 'invalid',
+        generation: `sha256:${sha256(bytes)}`,
+        ref,
+        error: 'Domain artifact CAS read epoch is invalid.',
+      };
+    }
+    return {
+      phase: value.phase as 'in_progress' | 'settled',
+      generation: `sha256:${sha256(bytes)}`,
+      ref,
+      error: null,
+    };
+  } catch (error) {
+    return {
+      phase: 'invalid',
+      generation: 'unreadable',
+      ref,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+export function observeDomainArtifactCasMaterialization(
+  input: { workspaceRoot: string },
+): DomainArtifactCasMaterializationReadObservation {
+  const observedAt = new Date().toISOString();
+  let workspaceRoot: string;
+  try {
+    workspaceRoot = fs.realpathSync.native(input.workspaceRoot);
+  } catch (error) {
+    return {
+      state: 'indeterminate',
+      reason: 'workspace_cas_journal_observation_failed',
+      workspace_root: path.resolve(input.workspaceRoot),
+      journal_refs: [],
+      epoch_ref: '',
+      observed_generation: 'unreadable',
+      observed_at: observedAt,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+  const transactionsRoot = path.join(
+    resolveOplStatePaths().state_dir,
+    'runway',
+    'domain-artifact-cas',
+    'transactions',
+  );
+  const workspaceKey = sha256(workspaceRoot);
+  const prefix = `${workspaceKey}-`;
+  const epochPath = path.join(
+    resolveOplStatePaths().state_dir,
+    'runway',
+    'domain-artifact-cas',
+    'read-epochs',
+    `${workspaceKey}.json`,
+  );
+  const beforeEpoch = readReadEpoch(epochPath, workspaceKey);
+  let journalRefs: string[];
+  try {
+    journalRefs = fs.readdirSync(transactionsRoot, { withFileTypes: true })
+      .filter((entry) => entry.name.startsWith(prefix) && entry.name.endsWith('.json'))
+      .map((entry) => pathToFileURL(path.join(transactionsRoot, entry.name)).href)
+      .sort();
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      journalRefs = [];
+    } else {
+      return {
+        state: 'indeterminate',
+        reason: 'workspace_cas_journal_observation_failed',
+        workspace_root: workspaceRoot,
+        journal_refs: [],
+        epoch_ref: beforeEpoch.ref,
+        observed_generation: beforeEpoch.generation,
+        observed_at: observedAt,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+  const afterEpoch = readReadEpoch(epochPath, workspaceKey);
+  if (beforeEpoch.phase === 'invalid' || afterEpoch.phase === 'invalid') {
+    return {
+      state: 'indeterminate',
+      reason: 'workspace_cas_journal_observation_failed',
+      workspace_root: workspaceRoot,
+      journal_refs: journalRefs,
+      epoch_ref: afterEpoch.ref,
+      observed_generation: afterEpoch.generation,
+      observed_at: observedAt,
+      error: afterEpoch.error ?? beforeEpoch.error,
+    };
+  }
+  if (beforeEpoch.generation !== afterEpoch.generation) {
+    return {
+      state: 'sync_pending',
+      reason: 'workspace_cas_read_generation_changed',
+      workspace_root: workspaceRoot,
+      journal_refs: journalRefs,
+      epoch_ref: afterEpoch.ref,
+      observed_generation: `${beforeEpoch.generation}->${afterEpoch.generation}`,
+      observed_at: observedAt,
+      error: null,
+    };
+  }
+  if (afterEpoch.phase === 'in_progress') {
+    return {
+      state: 'sync_pending',
+      reason: 'workspace_cas_epoch_in_progress',
+      workspace_root: workspaceRoot,
+      journal_refs: journalRefs,
+      epoch_ref: afterEpoch.ref,
+      observed_generation: afterEpoch.generation,
+      observed_at: observedAt,
+      error: null,
+    };
+  }
+  return {
+    state: journalRefs.length > 0 ? 'sync_pending' : 'clear',
+    reason: journalRefs.length > 0
+      ? 'workspace_cas_journal_present'
+      : 'no_workspace_cas_journal',
+    workspace_root: workspaceRoot,
+    journal_refs: journalRefs,
+    epoch_ref: afterEpoch.ref,
+    observed_generation: afterEpoch.generation,
+    observed_at: observedAt,
+    error: null,
   };
 }
 
@@ -678,13 +869,40 @@ export function applyDomainArtifactCasMaterialization(input: {
     handlerOutputSha256: digest(input.handlerOutputSha256, 'handler_output_sha256'),
   };
   const prior = existingReceipt(receiptInput);
-  if (prior) return prior;
+  if (prior) {
+    writeReadEpoch({
+      file: paths.readEpoch,
+      workspaceRoot,
+      requestSha256,
+      phase: 'settled',
+      outcome: 'materialized',
+    });
+    return prior;
+  }
 
   acquireLock(paths.lock, requestSha256);
+  let readEpochStarted = false;
   try {
     validatePreparedPaths(workspaceRoot, operations);
     const existing = existingReceipt(receiptInput);
-    if (existing) return existing;
+    if (existing) {
+      writeReadEpoch({
+        file: paths.readEpoch,
+        workspaceRoot,
+        requestSha256,
+        phase: 'settled',
+        outcome: 'materialized',
+      });
+      return existing;
+    }
+    writeReadEpoch({
+      file: paths.readEpoch,
+      workspaceRoot,
+      requestSha256,
+      phase: 'in_progress',
+      outcome: null,
+    });
+    readEpochStarted = true;
     const recoveryAction = switchTransaction({
       workspaceRoot,
       requestSha256,
@@ -695,8 +913,16 @@ export function applyDomainArtifactCasMaterialization(input: {
     if (fs.existsSync(paths.receiptByRequest)) {
       fs.rmSync(paths.journal, { force: true });
       fsyncDirectory(path.dirname(paths.journal));
-      return existingReceipt(receiptInput)
+      const recovered = existingReceipt(receiptInput)
         ?? fail('Recovered CAS receipt is not admissible after transaction finalization.');
+      writeReadEpoch({
+        file: paths.readEpoch,
+        workspaceRoot,
+        requestSha256,
+        phase: 'settled',
+        outcome: 'materialized',
+      });
+      return recovered;
     }
     const receipt = {
       surface_kind: 'opl_domain_artifact_cas_materialization_receipt',
@@ -745,7 +971,25 @@ export function applyDomainArtifactCasMaterialization(input: {
     const persisted = persistReceipt(paths, receipt);
     fs.rmSync(paths.journal, { force: true });
     fsyncDirectory(path.dirname(paths.journal));
+    writeReadEpoch({
+      file: paths.readEpoch,
+      workspaceRoot,
+      requestSha256,
+      phase: 'settled',
+      outcome: 'materialized',
+    });
     return persisted;
+  } catch (error) {
+    if (readEpochStarted && !fs.existsSync(paths.journal)) {
+      writeReadEpoch({
+        file: paths.readEpoch,
+        workspaceRoot,
+        requestSha256,
+        phase: 'settled',
+        outcome: fs.existsSync(paths.receiptByRequest) ? 'materialized' : 'rolled_back',
+      });
+    }
+    throw error;
   } finally {
     for (const operation of operations) fs.rmSync(operation.staging, { force: true });
     fs.rmSync(paths.lock, { force: true });
