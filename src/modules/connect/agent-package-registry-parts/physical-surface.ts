@@ -791,6 +791,52 @@ function buildPhysicalSurfacePaths(manifest: AgentPackageManifest) {
   };
 }
 
+function removeHiddenPackageGlobalExposure(
+  manifest: AgentPackageManifest,
+  paths: ReturnType<typeof buildPhysicalSurfacePaths>,
+  dryRun: boolean,
+  codexConfigPreexisting: boolean,
+) {
+  if (!manifest.plugin_id) return [];
+  const marketplaceIds = [...new Set([
+    paths.marketplaceId,
+    `${manifest.plugin_id}-local`,
+    `opl-agent-${safePathSegment(manifest.package_id)}-local`,
+  ])];
+  const marketplaceRootParent = path.join(resolveOplStatePaths().state_dir, 'codex-plugin-marketplaces');
+  const pluginCacheRoot = path.join(paths.codexHome, 'plugins', 'cache');
+  const candidates = [
+    ...marketplaceIds.map((marketplaceId) => ({
+      path: path.join(marketplaceRootParent, marketplaceId),
+      root: marketplaceRootParent,
+      kind: 'hidden_package.marketplace_root',
+    })),
+    ...marketplaceIds
+      .filter((marketplaceId) => marketplaceId !== paths.marketplaceId)
+      .map((marketplaceId) => ({
+        path: path.join(pluginCacheRoot, marketplaceId),
+        root: pluginCacheRoot,
+        kind: 'hidden_package.legacy_plugin_cache_root',
+      })),
+  ].filter((entry) => fs.existsSync(entry.path));
+
+  if (dryRun) return [];
+  for (const marketplaceId of marketplaceIds) {
+    unregisterLocalCodexPlugin(paths.codexConfigPath, marketplaceId, manifest.plugin_id);
+  }
+  removeCreatedEmptyCodexConfig(paths.codexConfigPath, codexConfigPreexisting);
+  for (const candidate of candidates) {
+    makeGenerationTreeWritable(candidate.path);
+    removeSafePersistedPackagePath({
+      candidatePath: candidate.path,
+      allowedRoots: [candidate.root],
+      pathKind: candidate.kind,
+      recursive: true,
+    });
+  }
+  return candidates.map((entry) => entry.path);
+}
+
 function removeCreatedEmptyCodexConfig(configPath: string, preexisting: boolean) {
   if (preexisting || !fs.existsSync(configPath) || !fs.statSync(configPath).isFile()) return;
   if (fs.readFileSync(configPath, 'utf8').trim().length === 0) {
@@ -1190,6 +1236,7 @@ export function materializePhysicalCodexSurface(
     });
   }
   const codexConfigPreexisting = fs.existsSync(paths.codexConfigPath);
+  const codexDefaultExposure = manifest.codex_default_exposure !== false;
   const pluginSourceInput = manifest.plugin_source_path;
   if (!pluginSourceInput && !manifest.plugin_id) {
     return {
@@ -1278,7 +1325,7 @@ export function materializePhysicalCodexSurface(
         companionNetworkAccess: options.companionNetworkAccess,
       });
     }
-    if (!dryRun) {
+    if (!dryRun && codexDefaultExposure) {
       materializeLocalCodexPluginMarketplace({
         marketplace_id: paths.marketplaceId,
         plugin_id: manifest.plugin_id,
@@ -1294,6 +1341,9 @@ export function materializePhysicalCodexSurface(
         manifest.plugin_id!,
       ));
     }
+    const removedHiddenExposurePaths = codexDefaultExposure
+      ? []
+      : removeHiddenPackageGlobalExposure(manifest, paths, dryRun, codexConfigPreexisting);
     if (!options.skipManagedSurfaces) {
       profileMigration = materializePackageProfile({
         manifest,
@@ -1302,12 +1352,15 @@ export function materializePhysicalCodexSurface(
         dryRun,
       });
     }
-    removedSupersededPaths = removeSupersededOplFamilyCodexPluginPaths(
-      manifest.package_id,
-      manifest.plugin_id,
-      path.dirname(paths.codexHome),
-      dryRun,
-    );
+    removedSupersededPaths = [
+      ...removedHiddenExposurePaths,
+      ...removeSupersededOplFamilyCodexPluginPaths(
+        manifest.package_id,
+        manifest.plugin_id,
+        path.dirname(paths.codexHome),
+        dryRun,
+      ),
+    ];
   } catch (error) {
     if (!dryRun) {
       rollbackPackageProfileMigration(profileMigration);
@@ -1328,16 +1381,16 @@ export function materializePhysicalCodexSurface(
     status: dryRun ? 'validated_no_write' : 'materialized',
     package_id: manifest.package_id,
     plugin_id: manifest.plugin_id,
-    marketplace_id: paths.marketplaceId,
+    marketplace_id: codexDefaultExposure ? paths.marketplaceId : null,
     codex_home: paths.codexHome,
     codex_config_path: paths.codexConfigPath,
     codex_config_preexisting: codexConfigPreexisting,
     plugin_source_path: pluginSourcePath,
     plugin_manifest_path: dryRun ? pluginManifestPath : path.join(paths.codexPluginCachePath!, '.codex-plugin', 'plugin.json'),
     codex_plugin_cache_path: paths.codexPluginCachePath,
-    marketplace_root: paths.marketplaceRoot,
-    marketplace_path: paths.marketplacePath,
-    marketplace_plugin_path: paths.marketplacePluginPath,
+    marketplace_root: codexDefaultExposure ? paths.marketplaceRoot : null,
+    marketplace_path: codexDefaultExposure ? paths.marketplacePath : null,
+    marketplace_plugin_path: codexDefaultExposure ? paths.marketplacePluginPath : null,
     plugin_payload_manifest_url: manifest.plugin_payload_manifest_url,
     plugin_payload_manifest_sha256: manifest.plugin_payload_manifest_sha256,
     plugin_payload_cache_path: manifest.plugin_payload_cache_path,
@@ -1347,9 +1400,15 @@ export function materializePhysicalCodexSurface(
     ),
     removed_paths: removedSupersededPaths,
     writes_performed: !dryRun,
-    reload_required: !dryRun,
+    reload_required: !dryRun && (
+      codexDefaultExposure
+      || pluginCacheCreated
+      || removedSupersededPaths.length > 0
+    ),
     failure_reason: null,
-    note: null,
+    note: codexDefaultExposure
+      ? null
+      : 'Package is cached for explicit workspace or quest projection and is not registered in global Codex surfaces.',
     profile_config: manifest.profile_surface,
     profile_migration: profileMigration,
     managed_policy_config: manifest.managed_policy_surface,
@@ -1571,6 +1630,7 @@ export function rematerializePhysicalCodexSurfaceFromLock(
     carrier_source_commit: lock.owner_source_commit ?? null,
     verified_payload_source_commit: lock.owner_source_commit ?? null,
     codex_surface: {},
+    codex_default_exposure: lock.exposure_state !== 'hidden',
     skill_packs: [],
     entrypoints: [],
     health_check: {},

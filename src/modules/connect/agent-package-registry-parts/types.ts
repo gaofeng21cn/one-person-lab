@@ -223,6 +223,7 @@ export type AgentPackageManifest = {
   carrier_source_commit: string | null;
   verified_payload_source_commit: string | null;
   codex_surface: Record<string, unknown>;
+  codex_default_exposure?: boolean;
   skill_packs: Record<string, unknown>[];
   entrypoints: Record<string, unknown>[];
   health_check: Record<string, unknown>;

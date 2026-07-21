@@ -9,6 +9,7 @@ import { recordManagedInstallUpdateReceipts } from '../managed-install-update-le
 import { buildOplEnvironment } from './environment.ts';
 import { buildDockerWebuiStartupReadback } from './docker-webui-doctor.ts';
 import { runOplEngineAction } from './engine-actions.ts';
+import { reconcileBundledFullRuntimePackagesIfAvailable } from './full-runtime-package-reconciliation.ts';
 import { activatePendingCodexRuntimeGeneration } from './engine-helpers.ts';
 import { activatePendingOplFrameworkRuntime, resolveFrameworkUpdateTargetRoot, runOplFrameworkSelfUpdate } from './framework-self-update.ts';
 import { buildOplModules, runOplModuleAction } from './modules.ts';
@@ -451,6 +452,9 @@ export async function runOplStartupMaintenance(
     .filter((domainId): domainId is string => Boolean(domainId));
   const seedApply = await applyOplSeedManifest();
   const temporalRuntimeReconcile = await reconcileTemporalRuntimeStartupMaintenance(options.temporalRuntime);
+  const fullRuntimePackageReconciliation = scope === 'runtime_substrate'
+    ? null
+    : await reconcileBundledFullRuntimePackagesIfAvailable();
   const refreshedEnvironment = (await buildOplEnvironment(contracts)).system_environment;
   const dockerWebuiStartup = buildDockerWebuiStartupReadback();
 
@@ -497,29 +501,46 @@ export async function runOplStartupMaintenance(
           next_actions: dockerWebuiStartup.nextActions,
         },
         temporal_runtime_reconcile: temporalRuntimeReconcile,
+        full_runtime_package_reconciliation: fullRuntimePackageReconciliation,
         managed_install_update_receipts: managedReceiptRecord,
         plugin_cache_freshness: {
-          status: syncedDomains.length > 0
+          status: fullRuntimePackageReconciliation?.status === 'incomplete'
+            ? 'manual_required'
+            : syncedDomains.length > 0
+              || (fullRuntimePackageReconciliation?.summary.installed ?? 0) > 0
             ? 'freshened'
             : summary.manual_required_targets_count > 0 || capabilitySummary.manual_required_targets_count > 0
               ? 'manual_required'
               : capabilitySummary.completed_targets_count > 0
                 ? 'package_refreshed'
                 : 'already_current',
-          source: capabilitySummary.total_targets_count > 0
-            ? 'module_turnkey_skill_sync_and_framework_capability_package'
-            : 'module_turnkey_skill_sync',
+          source: fullRuntimePackageReconciliation?.status === 'incomplete'
+            ? 'full_runtime_package_reconciliation_incomplete'
+            : fullRuntimePackageReconciliation
+              ? 'full_runtime_package_reconciliation'
+              : capabilitySummary.total_targets_count > 0
+                ? 'module_turnkey_skill_sync_and_framework_capability_package'
+                : 'module_turnkey_skill_sync',
           synced_domain_packs_count: syncedDomains.length,
           synced_domain_packs: syncedDomains,
           managed_capability_packages_count: capabilityTargets.filter((target) => target.status === 'completed').length,
           managed_capability_packages: capabilityTargets
             .filter((target) => target.status === 'completed')
             .map((target) => target.target_id),
+          full_runtime_materialized_packages_count:
+            fullRuntimePackageReconciliation?.summary.materialized_package_count ?? 0,
         },
         restart_reload_prompt: {
-          required: syncedDomains.length > 0,
-          action: syncedDomains.length > 0 ? 'reload_app_and_codex_plugin_cache' : 'none',
+          required: syncedDomains.length > 0
+            || (fullRuntimePackageReconciliation?.summary.installed ?? 0) > 0,
+          action: syncedDomains.length > 0
+            || (fullRuntimePackageReconciliation?.summary.installed ?? 0) > 0
+            ? 'reload_app_and_codex_plugin_cache'
+            : 'none',
           affected_domains: syncedDomains,
+          affected_packages: fullRuntimePackageReconciliation?.items
+            .filter((item) => item.status === 'installed')
+            .map((item) => item.package_id) ?? [],
         },
         authority_boundary: {
           can_write_domain_truth: false,
@@ -534,6 +555,7 @@ export async function runOplStartupMaintenance(
           'Startup maintenance refreshes the managed OPL Framework runtime only when an explicit framework update source is configured.',
           'Startup maintenance updates clean OPL-managed module checkouts and syncs repo-local plugin carriers.',
           'Startup maintenance installs or updates MAS Scholar Skills from the managed GHCR capability packages channel so App workspace/quest sync can materialize it into the active paper directory.',
+          'Bundled Full runtime startup reconciles the catalog-derived seven-package closure; MAS Scholar Skills remains hidden globally and is projected only into an explicit MAS workspace or quest.',
           'Dirty, ahead, diverged, no-upstream, env override, sibling workspace, and invalid checkouts are reported for manual review.',
           'MAS Scholar Skills is a framework capability plugin pack, not a domain module; workspace/quest-local sync is still explicit and target-bound.',
           'Docker/WebUI startup records image seed, /data, and /projects boundaries in the OPL state install manifest without claiming runtime or domain readiness.',

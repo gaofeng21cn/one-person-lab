@@ -49,6 +49,22 @@ function normalizeAgentPackageRole(value: unknown, field: string): AgentPackageR
   return role as AgentPackageRole;
 }
 
+function normalizeCodexDefaultExposure(
+  codexSurface: Record<string, unknown>,
+  manifestUrl: string,
+) {
+  const value = codexSurface.codex_default_exposure;
+  if (value === undefined) return true;
+  if (typeof value !== 'boolean') {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package codex_default_exposure must be a boolean when declared.', {
+      manifest_url: manifestUrl,
+      codex_default_exposure: value,
+      failure_code: 'agent_package_codex_default_exposure_invalid',
+    });
+  }
+  return value;
+}
+
 function normalizeCapabilityDependencies(
   value: unknown,
   manifestUrl: string,
@@ -734,6 +750,7 @@ export function normalizeManifest(payload: unknown, manifestUrl: string): AgentP
     carrier_source_commit: carrierAuthority.carrierSourceCommit,
     verified_payload_source_commit: null,
     codex_surface: payload.codex_surface,
+    codex_default_exposure: normalizeCodexDefaultExposure(payload.codex_surface, manifestUrl),
     skill_packs: skillPacks,
     entrypoints,
     health_check: healthCheck,
@@ -880,6 +897,7 @@ export function normalizeCapabilityPackageManifest(payload: unknown, manifestUrl
     carrier_source_commit: carrierAuthority.carrierSourceCommit,
     verified_payload_source_commit: null,
     codex_surface: codexSurface,
+    codex_default_exposure: normalizeCodexDefaultExposure(codexSurface, manifestUrl),
     skill_packs: [],
     entrypoints: [],
     health_check: {},
@@ -984,6 +1002,7 @@ export function normalizeWorkflowProfilePackageManifest(payload: unknown, manife
     carrier_source_commit: carrierAuthority.carrierSourceCommit,
     verified_payload_source_commit: null,
     codex_surface: codexSurface,
+    codex_default_exposure: normalizeCodexDefaultExposure(codexSurface, manifestUrl),
     skill_packs: [],
     entrypoints: [],
     health_check: {},

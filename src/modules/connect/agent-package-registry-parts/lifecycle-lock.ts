@@ -190,6 +190,7 @@ export function lifecycleReceipt(input: {
 
 export function permissionScopeSha256(manifest: AgentPackageManifest) {
   return sha256Text(JSON.stringify({
+    codex_default_exposure: manifest.codex_default_exposure === false ? false : undefined,
     codex_visible_entry: manifest.codex_visible_entry,
     entrypoints: manifest.entrypoints,
     permissions: manifest.permissions,
@@ -240,6 +241,12 @@ export function buildLock(input: {
 }): AgentPackageLock {
   const timestamp = nowIso();
   const distributionPayload = input.manifest.distribution_payload;
+  const exposureState = input.manifest.codex_default_exposure === false
+    ? 'hidden' as const
+    : input.previousLock?.exposure_state ?? 'visible';
+  const exposureUpdatedAt = input.previousLock?.exposure_state === exposureState
+    ? input.previousLock.exposure_updated_at ?? timestamp
+    : timestamp;
   return {
     surface_kind: 'opl_agent_package_lock',
     package_id: input.manifest.package_id,
@@ -281,8 +288,8 @@ export function buildLock(input: {
     permission_scope_sha256: permissionScopeSha256(input.manifest),
     lock_ref: packageLockRef(input.manifest.package_id, input.manifest.version, input.manifestSha256),
     physical_surface: input.physicalSurface,
-    exposure_state: input.previousLock?.exposure_state ?? 'visible',
-    exposure_updated_at: input.previousLock?.exposure_updated_at ?? timestamp,
+    exposure_state: exposureState,
+    exposure_updated_at: exposureUpdatedAt,
     capability_provider: input.manifest.capability_provider,
     capability_dependencies: input.manifest.capability_dependencies,
     resolved_dependencies: input.resolvedDependencies ?? [],
