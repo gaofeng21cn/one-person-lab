@@ -14,6 +14,9 @@
     "executor",
     "attempt_id",
     "recorded_at",
+    "release_operation",
+    "operation_control",
+    "unknown_marker",
     "details"
   ],
   "properties": {
@@ -22,16 +25,102 @@
       "const": "contracts/opl-framework/release-bundle-operation-receipt.schema.json"
     },
     "operation": {
-      "enum": ["freeze", "build", "verify", "publish", "reconcile", "checkpoint_import"]
+      "enum": ["freeze", "operation_admit", "build", "verify", "publish", "reconcile", "checkpoint_import"]
     },
     "status": {
-      "enum": ["frozen", "complete", "idempotent", "upload_required", "reconcile_only"]
+      "enum": ["frozen", "complete", "idempotent", "upload_required", "reconcile_only", "late_observation"]
     },
     "bundle_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
     "track": { "type": ["string", "null"], "enum": ["standard", "full", null] },
     "executor": { "type": ["string", "null"], "enum": ["local", "remote", null] },
     "attempt_id": { "type": ["string", "null"] },
     "recorded_at": { "type": "string", "format": "date-time" },
+    "release_operation": {
+      "type": ["string", "null"],
+      "enum": ["standard", "resume_standard", "append_full", null]
+    },
+    "operation_control": {
+      "anyOf": [
+        { "$ref": "#/$defs/operation_control" },
+        { "type": "null" }
+      ]
+    },
+    "unknown_marker": {
+      "anyOf": [
+        { "$ref": "#/$defs/unknown_marker" },
+        { "type": "null" }
+      ]
+    },
     "details": { "type": "object" }
+  },
+  "$defs": {
+    "operation_control": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface_kind",
+        "schema_ref",
+        "control_digest",
+        "bundle_digest",
+        "operation_id",
+        "operation_kind",
+        "track",
+        "operation_started_at",
+        "operation_deadline_at"
+      ],
+      "properties": {
+        "surface_kind": { "const": "opl_release_bundle_operation_control.v1" },
+        "schema_ref": {
+          "const": "contracts/opl-framework/release-bundle-operation-control.schema.json"
+        },
+        "control_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "bundle_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "operation_kind": { "enum": ["standard", "append_full"] },
+        "track": { "enum": ["standard", "full"] },
+        "operation_started_at": { "type": "string", "format": "date-time" },
+        "operation_deadline_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "unknown_marker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface_kind",
+        "schema_ref",
+        "marker_digest",
+        "bundle_digest",
+        "operation_id",
+        "operation_kind",
+        "stage_operation",
+        "publication_scope",
+        "track",
+        "remote_target",
+        "prior_mutation_attempt_id",
+        "executor"
+      ],
+      "properties": {
+        "surface_kind": { "const": "opl_release_bundle_unknown_outcome.v1" },
+        "schema_ref": {
+          "const": "contracts/opl-framework/release-bundle-unknown-outcome.schema.json"
+        },
+        "marker_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "bundle_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "operation_id": { "type": "string", "minLength": 1 },
+        "operation_kind": { "enum": ["standard", "append_full"] },
+        "stage_operation": { "enum": ["build", "publish"] },
+        "publication_scope": {
+          "type": ["string", "null"],
+          "enum": ["track_assets", "external_target", null]
+        },
+        "track": { "enum": ["standard", "full"] },
+        "remote_target": { "type": "string", "minLength": 3 },
+        "prior_mutation_attempt_id": { "type": "string", "minLength": 1 },
+        "executor": { "enum": ["local", "remote"] }
+      }
+    }
   }
 }

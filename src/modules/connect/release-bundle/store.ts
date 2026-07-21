@@ -1,27 +1,36 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
 import { canonicalJsonBytes } from '../../../kernel/canonical-json.ts';
 import { FrameworkContractError, isRecord } from '../../../kernel/contract-validation.ts';
-import { formatJsonPayload, parseJsonText, writeJsonPayloadFile } from '../../../kernel/json-file.ts';
+import { formatJsonPayload, parseJsonText } from '../../../kernel/json-file.ts';
 import { resolveOplStatePaths } from '../../../kernel/runtime-state-paths.ts';
 import {
   assertBundleDigest,
   assertOperationReceipt,
   assertReleaseBundle,
+  assertReleaseBundleOperationControl,
+  assertReleaseBundleUnknownOutcomeMarker,
   sha256,
 } from './contracts.ts';
 import type {
+  ReleaseBundleCanonicalOperation,
   ReleaseBundle,
   ReleaseBundleExecutorReceipt,
+  ReleaseBundleOperationControl,
   ReleaseBundleOperationReceipt,
   ReleaseBundleQualificationReceipt,
+  ReleaseBundleStageOperation,
   ReleaseBundleTrackName,
+  ReleaseBundleUnknownOutcomeMarker,
   StoredReleaseBundleAsset,
 } from './types.ts';
 
 const BUFFER_SIZE = 1024 * 1024;
+const STATE_LOCK_WAIT = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT));
+const STATE_LOCK_WAIT_MS = 30_000;
 
 function fail(message: string, details: Record<string, unknown> = {}): never {
   throw new FrameworkContractError('contract_shape_invalid', message, {
@@ -52,6 +61,90 @@ export function releaseBundleStorePaths(bundleDigest: string, selectedStoreRoot?
   };
 }
 
+export function withReleaseBundleStateLock<T>(
+  paths: ReturnType<typeof releaseBundleStorePaths>,
+  action: () => T,
+  options: { maxWaitMs?: number } = {},
+) {
+  ensureDirectory(paths.state);
+  const maxWaitMs = options.maxWaitMs ?? STATE_LOCK_WAIT_MS;
+  if (!Number.isInteger(maxWaitMs) || maxWaitMs < 0 || maxWaitMs > STATE_LOCK_WAIT_MS) {
+    fail('Release Bundle state lock wait must be a bounded non-negative integer.', { max_wait_ms: maxWaitMs });
+  }
+  const lockPath = path.join(paths.state, '.bundle-state-transition.lock');
+  const owner = {
+    surface_kind: 'opl_release_bundle_state_lock.v1',
+    owner_id: crypto.randomUUID(),
+    pid: process.pid,
+    hostname: os.hostname(),
+    acquired_at: new Date().toISOString(),
+  };
+  const ownerBytes = Buffer.from(formatJsonPayload(owner), 'utf8');
+  const candidatePath = `${lockPath}.${owner.owner_id}.candidate`;
+  const descriptor = fs.openSync(
+    candidatePath,
+    fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_WRONLY
+      | (fs.constants.O_NOFOLLOW ?? 0),
+    0o600,
+  );
+  try {
+    fs.writeFileSync(descriptor, ownerBytes);
+    fs.fsyncSync(descriptor);
+  } finally {
+    fs.closeSync(descriptor);
+  }
+
+  const waitStartedAt = Date.now();
+  try {
+    while (true) {
+      try {
+        fs.linkSync(candidatePath, lockPath);
+        fs.unlinkSync(candidatePath);
+        fsyncDirectory(paths.state);
+        break;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+        let currentOwner: unknown = null;
+        try {
+          currentOwner = parseJsonText(fs.readFileSync(lockPath, 'utf8'));
+        } catch {
+          currentOwner = { unreadable: true };
+        }
+        if (isRecord(currentOwner) && currentOwner.pid === process.pid) {
+          fail('Release Bundle state transition lock is not reentrant.', {
+            lock_path: lockPath,
+            current_owner: currentOwner,
+          });
+        }
+        const waitedMs = Date.now() - waitStartedAt;
+        if (waitedMs >= maxWaitMs) {
+          fail('Release Bundle state transition is already locked by another process.', {
+            lock_path: lockPath,
+            waited_ms: waitedMs,
+            current_owner: currentOwner,
+          });
+        }
+        Atomics.wait(STATE_LOCK_WAIT, 0, 0, Math.min(25, maxWaitMs - waitedMs));
+      }
+    }
+
+    try {
+      return action();
+    } finally {
+      const installedOwner = fs.readFileSync(lockPath);
+      if (!installedOwner.equals(ownerBytes)) {
+        fail('Release Bundle state transition lock ownership changed before release.', {
+          lock_path: lockPath,
+          owner_id: owner.owner_id,
+        });
+      }
+      removeDurableFile(lockPath);
+    }
+  } finally {
+    fs.rmSync(candidatePath, { force: true });
+  }
+}
+
 function fsyncDirectory(directory: string) {
   const descriptor = fs.openSync(
     directory,
@@ -70,6 +163,39 @@ function ensureDirectory(directory: string) {
   if (!stat.isDirectory() || stat.isSymbolicLink()) {
     fail('Release Bundle store path must be a real directory.', { path: directory });
   }
+}
+
+function writeDurableJsonState(filePath: string, payload: unknown) {
+  const directory = path.dirname(filePath);
+  ensureDirectory(directory);
+  const temporary = path.join(
+    directory,
+    `.${path.basename(filePath)}.${process.pid}.${crypto.randomBytes(12).toString('hex')}.tmp`,
+  );
+  let descriptor: number | undefined;
+  try {
+    descriptor = fs.openSync(
+      temporary,
+      fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_WRONLY
+        | (fs.constants.O_NOFOLLOW ?? 0),
+      0o600,
+    );
+    fs.writeFileSync(descriptor, formatJsonPayload(payload), 'utf8');
+    fs.fchmodSync(descriptor, 0o644);
+    fs.fsyncSync(descriptor);
+    fs.closeSync(descriptor);
+    descriptor = undefined;
+    fs.renameSync(temporary, filePath);
+    fsyncDirectory(directory);
+  } finally {
+    if (descriptor !== undefined) fs.closeSync(descriptor);
+    fs.rmSync(temporary, { force: true });
+  }
+}
+
+function removeDurableFile(filePath: string) {
+  fs.unlinkSync(filePath);
+  fsyncDirectory(path.dirname(filePath));
 }
 
 function installImmutableBytes(filePath: string, bytes: Buffer) {
@@ -398,7 +524,7 @@ export function recordReleaseBundleOperation(
   );
   installImmutableBytes(receiptPath, receiptBytes);
   const statePath = operationStatePath(paths, receipt.operation, receipt.track);
-  writeJsonPayloadFile(statePath, {
+  writeDurableJsonState(statePath, {
     surface_kind: 'opl_release_bundle_operation_state.v1',
     receipt_path: receiptPath,
     receipt_sha256: receiptSha256,
@@ -423,48 +549,148 @@ export function clearReleaseBundleOperation(
   operation: string,
   track: ReleaseBundleTrackName | null,
 ) {
-  fs.rmSync(operationStatePath(paths, operation, track), { force: true });
+  const filePath = operationStatePath(paths, operation, track);
+  if (fs.existsSync(filePath)) removeDurableFile(filePath);
+}
+
+function operationControlStatePath(
+  paths: ReturnType<typeof releaseBundleStorePaths>,
+  operation: ReleaseBundleCanonicalOperation,
+) {
+  return path.join(paths.state, `operation-control-${operation}.json`);
+}
+
+export function installReleaseBundleOperationControl(
+  paths: ReturnType<typeof releaseBundleStorePaths>,
+  control: ReleaseBundleOperationControl,
+) {
+  assertReleaseBundleOperationControl(control);
+  const filePath = operationControlStatePath(paths, control.operation_kind);
+  const status = installImmutableBytes(filePath, Buffer.from(formatJsonPayload(control), 'utf8'));
+  return { status, filePath };
+}
+
+export function readReleaseBundleOperationControl(
+  paths: ReturnType<typeof releaseBundleStorePaths>,
+  operation: ReleaseBundleCanonicalOperation,
+) {
+  const filePath = operationControlStatePath(paths, operation);
+  if (!fs.existsSync(filePath)) return null;
+  const value = readJsonObject(filePath, 'Release Bundle operation control');
+  assertReleaseBundleOperationControl(value);
+  return value;
+}
+
+export function readReleaseBundleOperationControls(
+  paths: ReturnType<typeof releaseBundleStorePaths>,
+) {
+  return {
+    standard: readReleaseBundleOperationControl(paths, 'standard'),
+    append_full: readReleaseBundleOperationControl(paths, 'append_full'),
+  };
+}
+
+function legacyCheckpointStatePath(paths: ReturnType<typeof releaseBundleStorePaths>) {
+  return path.join(paths.state, 'legacy-checkpoint-read-only.json');
+}
+
+export function markReleaseBundleLegacyCheckpointReadOnly(
+  paths: ReturnType<typeof releaseBundleStorePaths>,
+  checkpointDigest: string,
+) {
+  const marker = {
+    surface_kind: 'opl_release_bundle_legacy_checkpoint_read_only.v1',
+    checkpoint_digest: checkpointDigest,
+    live_mutation_compatible: false,
+    reason: 'operation_control_missing',
+  };
+  return installImmutableBytes(
+    legacyCheckpointStatePath(paths),
+    Buffer.from(formatJsonPayload(marker), 'utf8'),
+  );
+}
+
+export function releaseBundleLegacyCheckpointReadOnly(
+  paths: ReturnType<typeof releaseBundleStorePaths>,
+) {
+  return fs.existsSync(legacyCheckpointStatePath(paths));
 }
 
 function unknownStatePath(
   paths: ReturnType<typeof releaseBundleStorePaths>,
-  operation: 'build' | 'publish',
+  operation: ReleaseBundleStageOperation,
   track: ReleaseBundleTrackName,
 ) {
   return path.join(paths.state, `unknown-${operation}-${track}.json`);
 }
 
-export function releaseBundleHasUnknownOutcome(
+export function readReleaseBundleUnknownOutcome(
   paths: ReturnType<typeof releaseBundleStorePaths>,
-  operation: 'build' | 'publish',
+  operation: ReleaseBundleStageOperation,
   track: ReleaseBundleTrackName,
 ) {
-  return fs.existsSync(unknownStatePath(paths, operation, track));
+  const filePath = unknownStatePath(paths, operation, track);
+  if (!fs.existsSync(filePath)) return null;
+  const value = readJsonObject(filePath, 'Release Bundle unknown outcome marker');
+  assertReleaseBundleUnknownOutcomeMarker(value);
+  return value;
+}
+
+export function listReleaseBundleUnknownOutcomes(
+  paths: ReturnType<typeof releaseBundleStorePaths>,
+) {
+  const markers: ReleaseBundleUnknownOutcomeMarker[] = [];
+  for (const operation of ['build', 'publish'] as const) {
+    for (const track of ['standard', 'full'] as const) {
+      const marker = readReleaseBundleUnknownOutcome(paths, operation, track);
+      if (marker) markers.push(marker);
+    }
+  }
+  return markers.sort((left, right) => left.marker_digest.localeCompare(right.marker_digest));
+}
+
+export function releaseBundleHasUnknownOutcome(
+  paths: ReturnType<typeof releaseBundleStorePaths>,
+  operation: ReleaseBundleStageOperation,
+  track: ReleaseBundleTrackName,
+) {
+  return readReleaseBundleUnknownOutcome(paths, operation, track) !== null;
 }
 
 export function recordReleaseBundleUnknownOutcome(
   paths: ReturnType<typeof releaseBundleStorePaths>,
-  operation: 'build' | 'publish',
-  executorReceipt: ReleaseBundleExecutorReceipt,
+  marker: ReleaseBundleUnknownOutcomeMarker,
 ) {
-  const filePath = unknownStatePath(paths, operation, executorReceipt.track);
-  writeJsonPayloadFile(filePath, {
-    surface_kind: 'opl_release_bundle_unknown_outcome.v1',
-    operation,
-    bundle_digest: executorReceipt.bundle_digest,
-    track: executorReceipt.track,
-    executor: executorReceipt.executor,
-    attempt_id: executorReceipt.attempt_id,
-  });
-  return filePath;
+  assertReleaseBundleUnknownOutcomeMarker(marker);
+  const filePath = unknownStatePath(paths, marker.stage_operation, marker.track);
+  const status = installImmutableBytes(filePath, Buffer.from(formatJsonPayload(marker), 'utf8'));
+  return { status, filePath };
 }
 
-export function clearReleaseBundleUnknownOutcome(
+export function clearReleaseBundleUnknownOutcomeExact(
   paths: ReturnType<typeof releaseBundleStorePaths>,
-  operation: 'build' | 'publish',
-  track: ReleaseBundleTrackName,
+  expected: ReleaseBundleUnknownOutcomeMarker,
 ) {
-  fs.rmSync(unknownStatePath(paths, operation, track), { force: true });
+  assertReleaseBundleUnknownOutcomeMarker(expected);
+  const filePath = unknownStatePath(paths, expected.stage_operation, expected.track);
+  const current = readReleaseBundleUnknownOutcome(
+    paths,
+    expected.stage_operation,
+    expected.track,
+  );
+  if (!current) {
+    fail('Release Bundle exact unknown outcome marker no longer exists.', {
+      expected_marker_digest: expected.marker_digest,
+    });
+  }
+  if (!canonicalJsonBytes(current).equals(canonicalJsonBytes(expected))) {
+    fail('Release Bundle unknown outcome marker changed before exact clear.', {
+      expected_marker_digest: expected.marker_digest,
+      actual_marker_digest: current.marker_digest,
+    });
+  }
+  removeDurableFile(filePath);
+  return filePath;
 }
 
 export function installReleaseBundleQualificationReceipt(

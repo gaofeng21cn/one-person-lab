@@ -32,6 +32,22 @@
     },
     "track": { "enum": ["standard", "full"] },
     "outcome": { "enum": ["complete", "unknown"] },
+    "release_operation": { "enum": ["standard", "resume_standard", "append_full"] },
+    "operation_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "remote_target": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 1024,
+      "pattern": "^[a-z][a-z0-9+.-]{0,31}:[A-Za-z0-9][A-Za-z0-9._~:/?#@!$&'()*+,;=%-]*$"
+    },
+    "prior_attempt_id": {
+      "type": ["string", "null"],
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "publication_scope": { "enum": ["track_assets", "external_target"] },
     "assets": {
       "type": "array",
       "uniqueItems": true,
@@ -50,8 +66,38 @@
   },
   "allOf": [
     {
+      "if": {
+        "anyOf": [
+          { "required": ["release_operation"] },
+          { "required": ["operation_id"] },
+          { "required": ["remote_target"] },
+          { "required": ["prior_attempt_id"] }
+        ]
+      },
+      "then": {
+        "required": ["release_operation", "operation_id", "remote_target", "prior_attempt_id"]
+      }
+    },
+    {
       "if": { "properties": { "outcome": { "const": "unknown" } } },
-      "then": { "properties": { "assets": { "maxItems": 0 } } }
+      "then": {
+        "properties": { "assets": { "maxItems": 0 } },
+        "required": ["release_operation", "operation_id", "remote_target", "prior_attempt_id"]
+      }
+    },
+    {
+      "if": { "required": ["publication_scope"] },
+      "then": { "properties": { "operation": { "const": "remote_inspect" } } }
+    },
+    {
+      "if": {
+        "properties": { "publication_scope": { "const": "external_target" } },
+        "required": ["publication_scope"]
+      },
+      "then": {
+        "properties": { "assets": { "maxItems": 0 } },
+        "required": ["release_operation", "operation_id", "remote_target", "prior_attempt_id"]
+      }
     }
   ]
 }

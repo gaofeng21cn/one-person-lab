@@ -1,4 +1,5 @@
 import {
+  admitReleaseBundleOperation,
   buildReleaseBundle,
   exportReleaseBundleCheckpoint,
   freezeReleaseBundle,
@@ -7,16 +8,39 @@ import {
   readReleaseBundleStatus,
   reconcileReleaseBundle,
   verifyReleaseBundle,
+  type ReleaseBundleStableOperation,
   type ReleaseBundleTrackName,
 } from '../../../../modules/connect/release-bundle/index.ts';
 import {
   parseRegisteredCommandOptions,
   type CommandSpec,
 } from '../../modules/support.ts';
+import { FrameworkContractError } from '../../../../kernel/contract-validation.ts';
 
 function stringOption(values: Record<string, unknown>, name: string) {
   const value = values[name];
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
+function requiredString(values: Record<string, unknown>, name: string) {
+  const value = stringOption(values, name);
+  if (!value) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      `Release operation option --${name} must be a non-empty string.`,
+      { option: name, surface_kind: 'opl_release_bundle_operation_control.v1' },
+    );
+  }
+  return value;
+}
+
+function operationInvocation(values: Record<string, unknown>) {
+  return {
+    releaseOperation: requiredString(values, 'operation') as ReleaseBundleStableOperation,
+    operationId: requiredString(values, 'operation-id'),
+    operationStartedAt: requiredString(values, 'operation-started-at'),
+    operationDeadlineAt: requiredString(values, 'operation-deadline-at'),
+  };
 }
 
 export function buildReleaseCommandSpecs(
@@ -41,15 +65,34 @@ export function buildReleaseCommandSpecs(
       },
     },
     'release build': {
-      usage: 'opl release build --bundle <sha256:digest> --executor-receipt <receipt.json> [--store <directory>]',
+      usage: 'opl release build --bundle <sha256:digest> --executor-receipt <receipt.json> --operation <standard|resume_standard|append_full> --operation-id <id> --operation-started-at <timestamp> --operation-deadline-at <timestamp> [--store <directory>]',
       summary: 'Stage one local or remote executor result exactly once; unknown outcomes require reconcile.',
-      examples: ['opl release build --bundle sha256:<digest> --executor-receipt build-receipt.json --json'],
+      examples: [
+        'opl release build --bundle sha256:<digest> --executor-receipt build-receipt.json --operation standard --operation-id gha-123-standard --operation-started-at 2026-07-21T00:00:00.000Z --operation-deadline-at 2026-07-21T01:30:00.000Z --json',
+      ],
       group: 'release',
       handler: (args) => {
         const values = parse('release build', args);
         return buildReleaseBundle({
+          ...operationInvocation(values),
           bundleDigest: String(values.bundle),
           executorReceiptPath: String(values['executor-receipt']),
+          storeRoot: stringOption(values, 'store'),
+        });
+      },
+    },
+    'release operation admit': {
+      usage: 'opl release operation admit --bundle <sha256:digest> --operation <standard|resume_standard|append_full> --operation-id <id> --operation-started-at <timestamp> --operation-deadline-at <timestamp> [--store <directory>]',
+      summary: 'Freeze or exactly resume one immutable operation control before any build, verify, or publish plan.',
+      examples: [
+        'opl release operation admit --bundle sha256:<digest> --operation standard --operation-id gha-123-standard --operation-started-at 2026-07-21T00:00:00.000Z --operation-deadline-at 2026-07-21T01:30:00.000Z --json',
+      ],
+      group: 'release',
+      handler: (args) => {
+        const values = parse('release operation admit', args);
+        return admitReleaseBundleOperation({
+          ...operationInvocation(values),
+          bundleDigest: String(values.bundle),
           storeRoot: stringOption(values, 'store'),
         });
       },
@@ -86,13 +129,16 @@ export function buildReleaseCommandSpecs(
       },
     },
     'release verify': {
-      usage: 'opl release verify --bundle <sha256:digest> --qualification-receipt <receipt.json> [--track standard|full] [--store <directory>]',
+      usage: 'opl release verify --bundle <sha256:digest> --qualification-receipt <receipt.json> --operation <standard|resume_standard|append_full> --operation-id <id> --operation-started-at <timestamp> --operation-deadline-at <timestamp> [--track standard|full] [--store <directory>]',
       summary: 'Bind a passed same-byte installed-artifact qualification receipt to one staged Bundle track.',
-      examples: ['opl release verify --bundle sha256:<digest> --qualification-receipt vm-qualification.json --json'],
+      examples: [
+        'opl release verify --bundle sha256:<digest> --qualification-receipt vm-qualification.json --operation standard --operation-id gha-123-standard --operation-started-at 2026-07-21T00:00:00.000Z --operation-deadline-at 2026-07-21T01:30:00.000Z --json',
+      ],
       group: 'release',
       handler: (args) => {
         const values = parse('release verify', args);
         return verifyReleaseBundle({
+          ...operationInvocation(values),
           bundleDigest: String(values.bundle),
           qualificationReceiptPath: String(values['qualification-receipt']),
           track: stringOption(values, 'track') as ReleaseBundleTrackName | undefined,
@@ -101,13 +147,16 @@ export function buildReleaseCommandSpecs(
       },
     },
     'release publish': {
-      usage: 'opl release publish --bundle <sha256:digest> --executor-receipt <remote-inspect.json> [--store <directory>]',
+      usage: 'opl release publish --bundle <sha256:digest> --executor-receipt <remote-inspect.json> --operation <standard|resume_standard|append_full> --operation-id <id> --operation-started-at <timestamp> --operation-deadline-at <timestamp> [--store <directory>]',
       summary: 'Plan exact missing-asset uploads, accept same-name same-digest assets, and fail closed on conflicts.',
-      examples: ['opl release publish --bundle sha256:<digest> --executor-receipt remote-inspect.json --json'],
+      examples: [
+        'opl release publish --bundle sha256:<digest> --executor-receipt remote-inspect.json --operation standard --operation-id gha-123-standard --operation-started-at 2026-07-21T00:00:00.000Z --operation-deadline-at 2026-07-21T01:30:00.000Z --json',
+      ],
       group: 'release',
       handler: (args) => {
         const values = parse('release publish', args);
         return publishReleaseBundle({
+          ...operationInvocation(values),
           bundleDigest: String(values.bundle),
           executorReceiptPath: String(values['executor-receipt']),
           storeRoot: stringOption(values, 'store'),
@@ -115,13 +164,16 @@ export function buildReleaseCommandSpecs(
       },
     },
     'release reconcile': {
-      usage: 'opl release reconcile --bundle <sha256:digest> --executor-receipt <receipt.json> [--store <directory>]',
+      usage: 'opl release reconcile --bundle <sha256:digest> --executor-receipt <receipt.json> --operation <standard|resume_standard|append_full> --operation-id <id> --operation-started-at <timestamp> --operation-deadline-at <timestamp> [--store <directory>]',
       summary: 'Resolve a prior unknown build or publish result from one fresh executor observation without retrying it.',
-      examples: ['opl release reconcile --bundle sha256:<digest> --executor-receipt fresh-observation.json --json'],
+      examples: [
+        'opl release reconcile --bundle sha256:<digest> --executor-receipt fresh-observation.json --operation standard --operation-id gha-123-standard --operation-started-at 2026-07-21T00:00:00.000Z --operation-deadline-at 2026-07-21T01:30:00.000Z --json',
+      ],
       group: 'release',
       handler: (args) => {
         const values = parse('release reconcile', args);
         return reconcileReleaseBundle({
+          ...operationInvocation(values),
           bundleDigest: String(values.bundle),
           executorReceiptPath: String(values['executor-receipt']),
           storeRoot: stringOption(values, 'store'),

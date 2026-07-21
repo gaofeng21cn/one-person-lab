@@ -6,8 +6,10 @@ import bundleSchema from '../../../../contracts/opl-framework/release-bundle.sch
 import checkpointSchema from '../../../../contracts/opl-framework/release-bundle-checkpoint.schema.json' with { type: 'json' };
 import executorReceiptSchema from '../../../../contracts/opl-framework/release-bundle-executor-receipt.schema.json' with { type: 'json' };
 import freezeRequestSchema from '../../../../contracts/opl-framework/release-bundle-freeze-request.schema.json' with { type: 'json' };
+import operationControlSchema from '../../../../contracts/opl-framework/release-bundle-operation-control.schema.json' with { type: 'json' };
 import operationReceiptSchema from '../../../../contracts/opl-framework/release-bundle-operation-receipt.schema.json' with { type: 'json' };
 import qualificationReceiptSchema from '../../../../contracts/opl-framework/release-bundle-qualification-receipt.schema.json' with { type: 'json' };
+import unknownOutcomeSchema from '../../../../contracts/opl-framework/release-bundle-unknown-outcome.schema.json' with { type: 'json' };
 import ownerCohortLockSchema from '../../../../contracts/opl-framework/package-owner-cohort-lock.schema.json' with { type: 'json' };
 import releaseSetSchema from '../../../../contracts/opl-framework/release-set-v2.schema.json' with { type: 'json' };
 import { canonicalJsonBytes } from '../../../kernel/canonical-json.ts';
@@ -20,9 +22,11 @@ import {
   type ReleaseBundleCheckpoint,
   type ReleaseBundleExecutorReceipt,
   type ReleaseBundleFreezeRequest,
+  type ReleaseBundleOperationControl,
   type ReleaseBundleOperationReceipt,
   type ReleaseBundleQualificationReceipt,
   type ReleaseBundleTrackName,
+  type ReleaseBundleUnknownOutcomeMarker,
 } from './types.ts';
 
 export const RELEASE_BUNDLE_SCHEMA_REF =
@@ -35,8 +39,12 @@ export const RELEASE_BUNDLE_EXECUTOR_RECEIPT_SCHEMA_REF =
   'contracts/opl-framework/release-bundle-executor-receipt.schema.json' as const;
 export const RELEASE_BUNDLE_OPERATION_RECEIPT_SCHEMA_REF =
   'contracts/opl-framework/release-bundle-operation-receipt.schema.json' as const;
+export const RELEASE_BUNDLE_OPERATION_CONTROL_SCHEMA_REF =
+  'contracts/opl-framework/release-bundle-operation-control.schema.json' as const;
 export const RELEASE_BUNDLE_QUALIFICATION_RECEIPT_SCHEMA_REF =
   'contracts/opl-framework/release-bundle-qualification-receipt.schema.json' as const;
+export const RELEASE_BUNDLE_UNKNOWN_OUTCOME_SCHEMA_REF =
+  'contracts/opl-framework/release-bundle-unknown-outcome.schema.json' as const;
 
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
 
@@ -538,6 +546,105 @@ export function releaseBundleCheckpointCore(checkpoint: ReleaseBundleCheckpoint)
   return core;
 }
 
+function assertCanonicalUtcTimestamp(value: string, label: string) {
+  const milliseconds = Date.parse(value);
+  if (!Number.isFinite(milliseconds) || new Date(milliseconds).toISOString() !== value) {
+    fail(`${label} must be a canonical UTC ISO-8601 timestamp with milliseconds.`, {
+      value,
+    });
+  }
+  return milliseconds;
+}
+
+export function releaseBundleOperationControlCore(control: ReleaseBundleOperationControl) {
+  const { control_digest: _controlDigest, ...core } = control;
+  return core;
+}
+
+export function assertReleaseBundleOperationControl(
+  value: unknown,
+): asserts value is ReleaseBundleOperationControl {
+  assertSchema(
+    operationControlSchema as Record<string, unknown>,
+    RELEASE_BUNDLE_OPERATION_CONTROL_SCHEMA_REF,
+    value,
+  );
+  if (!isRecord(value)) fail('Release Bundle operation control must be a JSON object.');
+  const control = value as ReleaseBundleOperationControl;
+  const actual = sha256(canonicalJsonBytes(releaseBundleOperationControlCore(control)));
+  if (control.control_digest !== actual) {
+    fail('Release Bundle operation control digest does not match its canonical contents.', {
+      expected_control_digest: control.control_digest,
+      actual_control_digest: actual,
+    });
+  }
+  const startedAt = assertCanonicalUtcTimestamp(
+    control.operation_started_at,
+    'Release Bundle operation start',
+  );
+  const deadlineAt = assertCanonicalUtcTimestamp(
+    control.operation_deadline_at,
+    'Release Bundle operation deadline',
+  );
+  if (deadlineAt <= startedAt) {
+    fail('Release Bundle operation deadline must be after its immutable start.', {
+      operation_started_at: control.operation_started_at,
+      operation_deadline_at: control.operation_deadline_at,
+    });
+  }
+  if (
+    (control.operation_kind === 'standard' && control.track !== 'standard')
+    || (control.operation_kind === 'append_full' && control.track !== 'full')
+  ) {
+    fail('Release Bundle operation control kind and track do not match.', {
+      operation_kind: control.operation_kind,
+      track: control.track,
+    });
+  }
+}
+
+export function releaseBundleUnknownOutcomeCore(marker: ReleaseBundleUnknownOutcomeMarker) {
+  const { marker_digest: _markerDigest, ...core } = marker;
+  return core;
+}
+
+export function assertReleaseBundleUnknownOutcomeMarker(
+  value: unknown,
+): asserts value is ReleaseBundleUnknownOutcomeMarker {
+  assertSchema(
+    unknownOutcomeSchema as Record<string, unknown>,
+    RELEASE_BUNDLE_UNKNOWN_OUTCOME_SCHEMA_REF,
+    value,
+  );
+  if (!isRecord(value)) fail('Release Bundle unknown outcome marker must be a JSON object.');
+  const marker = value as ReleaseBundleUnknownOutcomeMarker;
+  const actual = sha256(canonicalJsonBytes(releaseBundleUnknownOutcomeCore(marker)));
+  if (marker.marker_digest !== actual) {
+    fail('Release Bundle unknown outcome marker digest does not match its canonical contents.', {
+      expected_marker_digest: marker.marker_digest,
+      actual_marker_digest: actual,
+    });
+  }
+  if (
+    (marker.operation_kind === 'append_full' && marker.track !== 'full')
+    || (marker.operation_kind !== 'append_full' && marker.track !== 'standard')
+  ) {
+    fail('Release Bundle unknown marker operation and track do not match.', {
+      operation_kind: marker.operation_kind,
+      track: marker.track,
+    });
+  }
+  if (
+    (marker.stage_operation === 'build' && marker.publication_scope !== null)
+    || (marker.stage_operation === 'publish' && marker.publication_scope === null)
+  ) {
+    fail('Release Bundle unknown marker stage and publication scope do not match.', {
+      stage_operation: marker.stage_operation,
+      publication_scope: marker.publication_scope,
+    });
+  }
+}
+
 export function assertReleaseBundleCheckpoint(
   value: unknown,
 ): asserts value is ReleaseBundleCheckpoint {
@@ -555,6 +662,28 @@ export function assertReleaseBundleCheckpoint(
       actual_checkpoint_digest: actual,
     });
   }
+  for (const control of Object.values(checkpoint.operation_controls ?? {})) {
+    if (control !== null) assertReleaseBundleOperationControl(control);
+  }
+  const controls = checkpoint.operation_controls;
+  if (controls?.standard && (
+    controls.standard.operation_kind !== 'standard'
+    || controls.standard.track !== 'standard'
+  )) {
+    fail('Release Bundle checkpoint Standard control is stored in the wrong operation slot.', {
+      operation_kind: controls.standard.operation_kind,
+      track: controls.standard.track,
+    });
+  }
+  if (controls?.append_full && (
+    controls.append_full.operation_kind !== 'append_full'
+    || controls.append_full.track !== 'full'
+  )) {
+    fail('Release Bundle checkpoint append_full control is stored in the wrong operation slot.', {
+      operation_kind: controls.append_full.operation_kind,
+      track: controls.append_full.track,
+    });
+  }
 }
 
 export function readReleaseBundleExecutorReceipt(filePath: string): ReleaseBundleExecutorReceipt {
@@ -565,6 +694,17 @@ export function readReleaseBundleExecutorReceipt(filePath: string): ReleaseBundl
     value,
   );
   const receipt = value as ReleaseBundleExecutorReceipt;
+  const binding = [
+    receipt.release_operation,
+    receipt.operation_id,
+    receipt.remote_target,
+    receipt.prior_attempt_id,
+  ];
+  if (binding.some((entry) => entry !== undefined) && binding.some((entry) => entry === undefined)) {
+    fail('Release Bundle executor receipt operation binding must be supplied as one closed set.', {
+      attempt_id: receipt.attempt_id,
+    });
+  }
   const names = receipt.assets.map((asset) => asset.name);
   if (names.length !== new Set(names).size) {
     fail('Release Bundle executor receipt contains duplicate asset names.', {
@@ -582,6 +722,12 @@ export function readReleaseBundleExecutorReceipt(filePath: string): ReleaseBundl
   if (receipt.operation === 'remote_inspect' && receipt.assets.some((asset) => asset.path !== undefined)) {
     fail('Remote inspection receipts must not transport local asset paths.', {
       attempt_id: receipt.attempt_id,
+    });
+  }
+  if (receipt.publication_scope === 'external_target' && receipt.assets.length > 0) {
+    fail('External target observations cannot carry Release Bundle track assets.', {
+      attempt_id: receipt.attempt_id,
+      remote_target: receipt.remote_target,
     });
   }
   return receipt;

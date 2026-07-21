@@ -88,10 +88,11 @@ const registryCases = [
   ['runtime observability-endpoint', 'runtime_observability_endpoint', ['host', 'port', 'metrics-path', 'once', 'ready-file'], undefined],
   ['runtime observability-collector-smoke', 'runtime_observability_collector_smoke', ['collector-command', 'endpoint', 'host', 'port', 'metrics-path', 'timeout-ms'], undefined],
   ['release freeze', 'release_freeze', ['request', 'source-root', 'store'], 'OPL Release'],
-  ['release build', 'release_build', ['bundle', 'executor-receipt', 'store'], 'OPL Release'],
-  ['release verify', 'release_verify', ['bundle', 'qualification-receipt', 'track', 'store'], 'OPL Release'],
-  ['release publish', 'release_publish', ['bundle', 'executor-receipt', 'store'], 'OPL Release'],
-  ['release reconcile', 'release_reconcile', ['bundle', 'executor-receipt', 'store'], 'OPL Release'],
+  ['release operation admit', 'release_operation_admit', ['bundle', 'operation', 'operation-id', 'operation-started-at', 'operation-deadline-at', 'store'], 'OPL Release'],
+  ['release build', 'release_build', ['bundle', 'executor-receipt', 'operation', 'operation-id', 'operation-started-at', 'operation-deadline-at', 'store'], 'OPL Release'],
+  ['release verify', 'release_verify', ['bundle', 'qualification-receipt', 'operation', 'operation-id', 'operation-started-at', 'operation-deadline-at', 'track', 'store'], 'OPL Release'],
+  ['release publish', 'release_publish', ['bundle', 'executor-receipt', 'operation', 'operation-id', 'operation-started-at', 'operation-deadline-at', 'store'], 'OPL Release'],
+  ['release reconcile', 'release_reconcile', ['bundle', 'executor-receipt', 'operation', 'operation-id', 'operation-started-at', 'operation-deadline-at', 'store'], 'OPL Release'],
   ['release status', 'release_status', ['bundle', 'store'], 'OPL Release'],
   ['update status', 'update_status', [], 'OPL Base'],
   ['update check', 'update_check', [], 'OPL Base'],
@@ -141,6 +142,29 @@ test('registered command help mirrors the canonical command registry', () => {
       'can_claim_production_ready',
     ]) {
       assert.equal(help.registry.authority_boundary[claim], false, `${command} must not claim ${claim}`);
+    }
+  }
+});
+
+test('Release mutation help examples carry the complete immutable operation identity', () => {
+  for (const command of [
+    'release operation admit',
+    'release build',
+    'release verify',
+    'release publish',
+    'release reconcile',
+  ]) {
+    const help = runCli(['help', ...command.split(' ')]).help;
+    assert.equal(help.examples.length > 0, true, command);
+    for (const example of help.examples as string[]) {
+      for (const flag of [
+        '--operation',
+        '--operation-id',
+        '--operation-started-at',
+        '--operation-deadline-at',
+      ]) {
+        assert.equal(example.includes(flag), true, `${command} example requires ${flag}`);
+      }
     }
   }
 });

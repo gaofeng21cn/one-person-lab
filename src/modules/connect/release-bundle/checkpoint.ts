@@ -11,16 +11,21 @@ import {
   readReleaseBundleQualificationReceipt,
   sha256,
 } from './contracts.ts';
-import { verifyReleaseBundle } from './operations.ts';
+import { restoreQualifiedReleaseBundleTrackFromCheckpoint } from './operations.ts';
 import {
+  installReleaseBundleOperationControl,
   installFrozenReleaseBundle,
+  markReleaseBundleLegacyCheckpointReadOnly,
   readReleaseBundleOperation,
+  readReleaseBundleOperationControls,
   readStagedReleaseBundleAssets,
   readStoredReleaseBundle,
   recordReleaseBundleOperation,
   releaseBundleStorePaths,
   releaseBundleHasUnknownOutcome,
+  releaseBundleLegacyCheckpointReadOnly,
   stageReleaseBundleAssets,
+  withReleaseBundleStateLock,
 } from './store.ts';
 import type {
   ReleaseBundleCheckpoint,
@@ -312,10 +317,31 @@ function assertCheckpointSemantics(input: ReturnType<typeof readCheckpointJson>)
   if (checkpoint.checkpoint_stage !== derivedStage(checkpoint.tracks)) {
     fail('Release Bundle checkpoint stage does not match its completed track state.');
   }
+  const controls = checkpoint.operation_controls;
+  if (controls) {
+    for (const control of Object.values(controls)) {
+      if (control && control.bundle_digest !== checkpoint.bundle_digest) {
+        fail('Checkpoint operation control belongs to another Release Bundle.');
+      }
+    }
+    if (controls.append_full && !controls.standard) {
+      fail('append_full checkpoint control requires the immutable Standard operation control.');
+    }
+    if (controls.append_full && !checkpoint.tracks.standard.verified) {
+      fail('append_full checkpoint control requires a qualified Standard track.');
+    }
+    if (
+      controls.standard
+      && controls.append_full
+      && controls.standard.operation_id === controls.append_full.operation_id
+    ) {
+      fail('append_full checkpoint control must use an independent operation identity.');
+    }
+  }
   return bundleValue;
 }
 
-export function exportReleaseBundleCheckpoint(input: {
+function exportReleaseBundleCheckpointUnlocked(input: {
   bundleDigest: string;
   outputDirectory: string;
   storeRoot?: string;
@@ -391,11 +417,15 @@ export function exportReleaseBundleCheckpoint(input: {
       };
     }
     entries.sort((left, right) => left.path.localeCompare(right.path));
+    const operationControls = releaseBundleLegacyCheckpointReadOnly(stored.paths)
+      ? undefined
+      : readReleaseBundleOperationControls(stored.paths);
     const core = {
       surface_kind: 'opl_release_bundle_checkpoint.v1' as const,
       schema_ref: 'contracts/opl-framework/release-bundle-checkpoint.schema.json' as const,
       bundle_digest: input.bundleDigest,
       checkpoint_stage: derivedStage(tracks),
+      ...(operationControls ? { operation_controls: operationControls } : {}),
       tracks,
       entries,
       policy: {
@@ -439,15 +469,35 @@ export function exportReleaseBundleCheckpoint(input: {
   }
 }
 
-export function importReleaseBundleCheckpoint(input: {
-  checkpointPath: string;
+export function exportReleaseBundleCheckpoint(input: {
+  bundleDigest: string;
+  outputDirectory: string;
   storeRoot?: string;
 }) {
-  const source = readCheckpointJson(path.resolve(input.checkpointPath));
+  const paths = releaseBundleStorePaths(input.bundleDigest, input.storeRoot);
+  return withReleaseBundleStateLock(paths, () => exportReleaseBundleCheckpointUnlocked(input));
+}
+
+function importReleaseBundleCheckpointUnlocked(input: {
+  checkpointPath: string;
+  storeRoot?: string;
+}, source: ReturnType<typeof readCheckpointJson>) {
   validateCheckpointDirectory(source);
   const bundle = assertCheckpointSemantics(source);
   const installed = installFrozenReleaseBundle(bundle, input.storeRoot);
   assertNoUnknownExecutorOutcome(installed.paths);
+  if (source.checkpoint.operation_controls) {
+    for (const control of Object.values(source.checkpoint.operation_controls)) {
+      if (control) installReleaseBundleOperationControl(installed.paths, control);
+    }
+  } else {
+    markReleaseBundleLegacyCheckpointReadOnly(
+      installed.paths,
+      source.checkpoint.checkpoint_digest,
+    );
+  }
+  const liveMutationCompatible = Boolean(source.checkpoint.operation_controls)
+    && !releaseBundleLegacyCheckpointReadOnly(installed.paths);
   const previous = readReleaseBundleOperation(installed.paths, 'checkpoint_import', null);
   if (previous?.details.checkpoint_digest === source.checkpoint.checkpoint_digest) {
     for (const track of TRACKS) {
@@ -473,6 +523,7 @@ export function importReleaseBundleCheckpoint(input: {
         store_path: installed.paths.directory,
         rebuild_performed: false as const,
         publish_state_imported: false as const,
+        live_mutation_compatible: liveMutationCompatible,
       },
     };
   }
@@ -504,11 +555,14 @@ export function importReleaseBundleCheckpoint(input: {
       },
     });
     if (checkpointTrack.verified) {
-      verifyReleaseBundle({
+      restoreQualifiedReleaseBundleTrackFromCheckpoint({
         bundleDigest: source.checkpoint.bundle_digest,
         track,
         qualificationReceiptPath: path.join(source.root, checkpointTrack.qualification_receipt_path!),
         storeRoot: input.storeRoot,
+        operationControl: source.checkpoint.operation_controls?.[
+          track === 'standard' ? 'standard' : 'append_full'
+        ] ?? null,
       });
     }
   }
@@ -523,6 +577,9 @@ export function importReleaseBundleCheckpoint(input: {
     executor: null,
     attempt_id: source.checkpoint.checkpoint_digest,
     recorded_at: new Date().toISOString(),
+    release_operation: null,
+    operation_control: null,
+    unknown_marker: null,
     details: {
       checkpoint_digest: source.checkpoint.checkpoint_digest,
       checkpoint_stage: source.checkpoint.checkpoint_stage,
@@ -531,6 +588,8 @@ export function importReleaseBundleCheckpoint(input: {
       rebuild_performed: false,
       publish_state_imported: false,
       required_next_remote_action: 'fresh_remote_inspect_then_publish_or_reconcile',
+      operation_control_imported: Boolean(source.checkpoint.operation_controls),
+      live_mutation_compatible: liveMutationCompatible,
     },
   };
   recordReleaseBundleOperation(installed.paths, receipt);
@@ -544,6 +603,19 @@ export function importReleaseBundleCheckpoint(input: {
       store_path: installed.paths.directory,
       rebuild_performed: false as const,
       publish_state_imported: false as const,
+      live_mutation_compatible: liveMutationCompatible,
     },
   };
+}
+
+export function importReleaseBundleCheckpoint(input: {
+  checkpointPath: string;
+  storeRoot?: string;
+}) {
+  const source = readCheckpointJson(path.resolve(input.checkpointPath));
+  const paths = releaseBundleStorePaths(source.checkpoint.bundle_digest, input.storeRoot);
+  return withReleaseBundleStateLock(
+    paths,
+    () => importReleaseBundleCheckpointUnlocked(input, source),
+  );
 }

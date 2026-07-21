@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.dev/contracts/opl-framework/release-bundle-operation-control.schema.json",
+  "title": "OPL Release Bundle Immutable Operation Control",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "surface_kind",
+    "schema_ref",
+    "control_digest",
+    "bundle_digest",
+    "operation_id",
+    "operation_kind",
+    "track",
+    "operation_started_at",
+    "operation_deadline_at"
+  ],
+  "properties": {
+    "surface_kind": { "const": "opl_release_bundle_operation_control.v1" },
+    "schema_ref": {
+      "const": "contracts/opl-framework/release-bundle-operation-control.schema.json"
+    },
+    "control_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "bundle_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "operation_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "operation_kind": { "enum": ["standard", "append_full"] },
+    "track": { "enum": ["standard", "full"] },
+    "operation_started_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
+    },
+    "operation_deadline_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
+    }
+  }
+}

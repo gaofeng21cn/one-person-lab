@@ -5,19 +5,77 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { pathToFileURL } from 'node:url';
 
-import { repoRoot, runCliInCwd } from '../helpers.ts';
+import { repoRoot, runCliFailureInCwd, runCliInCwd } from '../helpers.ts';
+import { canonicalJsonBytes } from '../../../../src/kernel/canonical-json.ts';
+import { FrameworkContractError } from '../../../../src/kernel/contract-validation.ts';
 
 import {
-  buildReleaseBundle,
+  admitReleaseBundleOperation,
+  buildReleaseBundle as buildReleaseBundleAuthority,
   exportReleaseBundleCheckpoint,
   freezeReleaseBundle,
   importReleaseBundleCheckpoint,
-  publishReleaseBundle,
+  publishReleaseBundle as publishReleaseBundleAuthority,
   readReleaseBundleStatus,
-  reconcileReleaseBundle,
-  verifyReleaseBundle,
+  reconcileReleaseBundle as reconcileReleaseBundleAuthority,
+  verifyReleaseBundle as verifyReleaseBundleAuthority,
+  type ReleaseBundleOperationInvocation,
 } from '../../../../src/modules/connect/release-bundle/index.ts';
+import {
+  releaseBundleStorePaths,
+  withReleaseBundleStateLock,
+} from '../../../../src/modules/connect/release-bundle/store.ts';
+
+const standardOperation = {
+  releaseOperation: 'standard' as const,
+  operationId: 'operation-standard-1',
+  operationStartedAt: '2026-07-21T00:00:00.000Z',
+  operationDeadlineAt: '2099-07-21T01:30:00.000Z',
+};
+
+const appendFullOperation = {
+  releaseOperation: 'append_full' as const,
+  operationId: 'operation-append-full-1',
+  operationStartedAt: '2026-07-21T02:00:00.000Z',
+  operationDeadlineAt: '2099-07-21T02:50:00.000Z',
+};
+
+type OptionalOperationInput<T> = Omit<T, keyof ReleaseBundleOperationInvocation>
+  & Partial<ReleaseBundleOperationInvocation>;
+
+function buildReleaseBundle(
+  input: OptionalOperationInput<Parameters<typeof buildReleaseBundleAuthority>[0]>,
+) {
+  return buildReleaseBundleAuthority({ ...standardOperation, ...input } as Parameters<
+    typeof buildReleaseBundleAuthority
+  >[0]);
+}
+
+function verifyReleaseBundle(
+  input: OptionalOperationInput<Parameters<typeof verifyReleaseBundleAuthority>[0]>,
+) {
+  return verifyReleaseBundleAuthority({ ...standardOperation, ...input } as Parameters<
+    typeof verifyReleaseBundleAuthority
+  >[0]);
+}
+
+function publishReleaseBundle(
+  input: OptionalOperationInput<Parameters<typeof publishReleaseBundleAuthority>[0]>,
+) {
+  return publishReleaseBundleAuthority({ ...standardOperation, ...input } as Parameters<
+    typeof publishReleaseBundleAuthority
+  >[0]);
+}
+
+function reconcileReleaseBundle(
+  input: OptionalOperationInput<Parameters<typeof reconcileReleaseBundleAuthority>[0]>,
+) {
+  return reconcileReleaseBundleAuthority({ ...standardOperation, ...input } as Parameters<
+    typeof reconcileReleaseBundleAuthority
+  >[0]);
+}
 
 const packageIds = [
   'mas',
@@ -272,7 +330,7 @@ function writeQualification(input: {
   return receiptPath;
 }
 
-function createFixture() {
+function createFixture(options: { admitStandard?: boolean } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-release-bundle-'));
   const sourceRoot = path.join(root, 'source');
   const storeRoot = path.join(root, 'store');
@@ -280,6 +338,13 @@ function createFixture() {
   const request = fixtureRequest(sourceRoot);
   writeJson(requestPath, request);
   const frozen = freezeReleaseBundle({ requestPath, sourceRoot, storeRoot });
+  if (options.admitStandard !== false) {
+    admitReleaseBundleOperation({
+      bundleDigest: frozen.release_bundle_freeze.bundle_digest,
+      storeRoot,
+      ...standardOperation,
+    });
+  }
   return { root, sourceRoot, storeRoot, requestPath, request, frozen };
 }
 
@@ -291,6 +356,10 @@ function writeBuildReceipt(input: {
   attemptId?: string;
   outcome?: 'complete' | 'unknown';
   assets?: Array<{ name: string; bytes: string }>;
+  releaseOperation?: 'standard' | 'resume_standard' | 'append_full';
+  operationId?: string;
+  remoteTarget?: string;
+  priorAttemptId?: string | null;
 }) {
   const track = input.track ?? 'standard';
   const outcome = input.outcome ?? 'complete';
@@ -319,6 +388,12 @@ function writeBuildReceipt(input: {
     track,
     outcome,
     assets,
+    release_operation: input.releaseOperation ?? (track === 'full' ? 'append_full' : 'standard'),
+    operation_id: input.operationId ?? (track === 'full'
+      ? appendFullOperation.operationId
+      : standardOperation.operationId),
+    remote_target: input.remoteTarget ?? `executor:${input.executor ?? 'local'}-${track}`,
+    prior_attempt_id: input.priorAttemptId ?? null,
   });
   return receiptPath;
 }
@@ -331,6 +406,11 @@ function writeRemoteInspection(input: {
   attemptId: string;
   outcome?: 'complete' | 'unknown';
   assets?: Array<{ name: string; bytes: string }>;
+  releaseOperation?: 'standard' | 'resume_standard' | 'append_full';
+  operationId?: string;
+  remoteTarget?: string;
+  priorAttemptId?: string | null;
+  publicationScope?: 'track_assets' | 'external_target';
 }) {
   const receiptPath = path.join(input.root, `${input.attemptId}.json`);
   writeJson(receiptPath, {
@@ -342,6 +422,13 @@ function writeRemoteInspection(input: {
     bundle_digest: input.bundleDigest,
     track: input.track ?? 'standard',
     outcome: input.outcome ?? 'complete',
+    release_operation: input.releaseOperation ?? (input.track === 'full' ? 'append_full' : 'standard'),
+    operation_id: input.operationId ?? (input.track === 'full'
+      ? appendFullOperation.operationId
+      : standardOperation.operationId),
+    remote_target: input.remoteTarget ?? `github-release:fixture/${input.track ?? 'standard'}`,
+    prior_attempt_id: input.priorAttemptId ?? null,
+    ...(input.publicationScope ? { publication_scope: input.publicationScope } : {}),
     assets: input.outcome === 'unknown' ? [] : (input.assets ?? []).map((asset) => ({
       name: asset.name,
       size_bytes: Buffer.byteLength(asset.bytes),
@@ -349,6 +436,15 @@ function writeRemoteInspection(input: {
     })),
   });
   return receiptPath;
+}
+
+function assertTypedContractFailure(action: () => unknown, message: RegExp) {
+  assert.throws(action, (error: unknown) => {
+    assert.equal(error instanceof FrameworkContractError, true);
+    assert.equal((error as FrameworkContractError).code, 'contract_shape_invalid');
+    assert.match((error as Error).message, message);
+    return true;
+  });
 }
 
 test('freeze computes one canonical digest over sources, seven package payloads, Release Set and prepared AI notes', () => {
@@ -660,7 +756,13 @@ test('portable checkpoint covers every executor handoff stage', () => {
       storeRoot: fixture.storeRoot,
     });
     capture('standard-qualified', 'standard_qualified');
+    admitReleaseBundleOperation({
+      bundleDigest,
+      storeRoot: fixture.storeRoot,
+      ...appendFullOperation,
+    });
     buildReleaseBundle({
+      ...appendFullOperation,
       bundleDigest,
       executorReceiptPath: writeBuildReceipt({
         root: fixture.root,
@@ -673,6 +775,7 @@ test('portable checkpoint covers every executor handoff stage', () => {
     });
     capture('full-built', 'full_built');
     verifyReleaseBundle({
+      ...appendFullOperation,
       bundleDigest,
       track: 'full',
       qualificationReceiptPath: writeQualification({
@@ -794,11 +897,18 @@ test('unknown build outcome blocks rebuild and can only be completed through rec
     const resolvedReceipt = writeBuildReceipt({ root: fixture.root, bundleDigest, attemptId: 'resolved-build' });
     assert.throws(
       () => buildReleaseBundle({ bundleDigest, executorReceiptPath: resolvedReceipt, storeRoot: fixture.storeRoot }),
-      /reconcile is required/,
+      /blocks every ordinary mutation/,
     );
+    const resolvedObservation = writeBuildReceipt({
+      root: fixture.root,
+      bundleDigest,
+      attemptId: 'resolved-build-observation',
+      remoteTarget: 'executor:local-standard',
+      priorAttemptId: 'unknown-build',
+    });
     const reconciled = reconcileReleaseBundle({
       bundleDigest,
-      executorReceiptPath: resolvedReceipt,
+      executorReceiptPath: resolvedObservation,
       storeRoot: fixture.storeRoot,
     });
     assert.equal(reconciled.release_bundle_reconcile.status, 'complete');
@@ -921,31 +1031,52 @@ test('publish is idempotent by remote name and digest and unknown results force 
     assert.equal(unknownResult.release_bundle_publish.status, 'reconcile_only');
     assert.throws(
       () => publishReleaseBundle({ bundleDigest, executorReceiptPath: complete, storeRoot: fixture.storeRoot }),
-      /reconcile is required/,
+      /blocks every ordinary mutation/,
     );
     const reconcileMissing = writeRemoteInspection({
       root: fixture.root,
       bundleDigest,
       attemptId: 'reconcile-missing',
       assets: [],
+      remoteTarget: 'github-release:fixture/standard',
+      priorAttemptId: 'remote-unknown',
     });
     const reconciled = reconcileReleaseBundle({
       bundleDigest,
       executorReceiptPath: reconcileMissing,
       storeRoot: fixture.storeRoot,
     });
-    assert.equal(reconciled.release_bundle_reconcile.status, 'upload_required');
+    assert.equal(reconciled.release_bundle_reconcile.status, 'reconcile_only');
     assert.equal(
       readReleaseBundleStatus({ bundleDigest, storeRoot: fixture.storeRoot })
         .release_bundle_status.latest_eligible,
       false,
     );
-    const afterReconcile = publishReleaseBundle({
+    assert.throws(
+      () => publishReleaseBundle({
+        bundleDigest,
+        executorReceiptPath: complete,
+        storeRoot: fixture.storeRoot,
+      }),
+      /blocks every ordinary mutation/,
+    );
+    const completeObservation = writeRemoteInspection({
+      root: fixture.root,
       bundleDigest,
-      executorReceiptPath: complete,
+      attemptId: 'reconcile-complete',
+      remoteTarget: 'github-release:fixture/standard',
+      priorAttemptId: 'remote-unknown',
+      assets: [
+        { name: 'standard.dmg', bytes: 'standard dmg' },
+        { name: 'latest.yml', bytes: 'updater' },
+      ],
+    });
+    const afterReconcile = reconcileReleaseBundle({
+      bundleDigest,
+      executorReceiptPath: completeObservation,
       storeRoot: fixture.storeRoot,
     });
-    assert.equal(afterReconcile.release_bundle_publish.status, 'complete');
+    assert.equal(afterReconcile.release_bundle_reconcile.status, 'complete');
     assert.equal(
       readReleaseBundleStatus({ bundleDigest, storeRoot: fixture.storeRoot })
         .release_bundle_status.latest_eligible,
@@ -984,5 +1115,1134 @@ test('verify rejects a qualification receipt bound to a different transitive Pac
     );
   } finally {
     fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test('release mutation CLI and direct callers reject missing operation identity with typed failures', () => {
+  const fixture = createFixture();
+  try {
+    const bundleDigest = fixture.frozen.release_bundle_freeze.bundle_digest;
+    const executorReceiptPath = writeBuildReceipt({ root: fixture.root, bundleDigest });
+    for (const [command, requiredReceipt] of [
+      ['operation admit', []],
+      ['build', ['--executor-receipt', executorReceiptPath]],
+      ['verify', ['--qualification-receipt', path.join(fixture.root, 'qualification.json')]],
+      ['publish', ['--executor-receipt', path.join(fixture.root, 'remote.json')]],
+      ['reconcile', ['--executor-receipt', path.join(fixture.root, 'reconcile.json')]],
+    ] as const) {
+      const failure = runCliFailureInCwd([
+        'release',
+        ...command.split(' '),
+        '--bundle',
+        bundleDigest,
+        ...requiredReceipt,
+        '--store',
+        fixture.storeRoot,
+        '--json',
+      ], fixture.root);
+      assert.equal(failure.status, 2, command);
+      assert.equal(failure.payload.error.code, 'cli_usage_error', command);
+      assert.match(failure.payload.error.message, /requires --operation/, command);
+    }
+
+    assertTypedContractFailure(
+      () => buildReleaseBundleAuthority({
+        bundleDigest,
+        executorReceiptPath,
+        storeRoot: fixture.storeRoot,
+      } as Parameters<typeof buildReleaseBundleAuthority>[0]),
+      /operation identity does not match/,
+    );
+    assertTypedContractFailure(
+      () => admitReleaseBundleOperation({
+        bundleDigest,
+        releaseOperation: 'standard',
+        operationId: standardOperation.operationId,
+        operationStartedAt: standardOperation.operationStartedAt,
+        storeRoot: fixture.storeRoot,
+      } as Parameters<typeof admitReleaseBundleOperation>[0]),
+      /operation_deadline_at must be a non-empty string/,
+    );
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test('Standard operation control freezes once, resume cannot refresh it, and append_full is independent', () => {
+  const fixture = createFixture({ admitStandard: false });
+  const missingResume = createFixture({ admitStandard: false });
+  try {
+    const bundleDigest = fixture.frozen.release_bundle_freeze.bundle_digest;
+    const admitted = admitReleaseBundleOperation({
+      bundleDigest,
+      storeRoot: fixture.storeRoot,
+      now: '2026-07-21T00:01:00.000Z',
+      ...standardOperation,
+    }).release_bundle_operation_admit;
+    const admittedAgain = admitReleaseBundleOperation({
+      bundleDigest,
+      storeRoot: fixture.storeRoot,
+      now: '2026-07-21T00:02:00.000Z',
+      ...standardOperation,
+    }).release_bundle_operation_admit;
+    assert.equal(admitted.status, 'complete');
+    assert.equal(admittedAgain.status, 'idempotent');
+    assert.equal(
+      admittedAgain.operation_control.control_digest,
+      admitted.operation_control.control_digest,
+    );
+
+    const resumeOperation = {
+      ...standardOperation,
+      releaseOperation: 'resume_standard' as const,
+    };
+    const resumed = admitReleaseBundleOperation({
+      bundleDigest,
+      storeRoot: fixture.storeRoot,
+      now: '2026-07-21T00:03:00.000Z',
+      ...resumeOperation,
+    }).release_bundle_operation_admit;
+    assert.equal(resumed.status, 'idempotent');
+    assert.equal(resumed.operation_control.control_digest, admitted.operation_control.control_digest);
+    for (const changed of [
+      { ...resumeOperation, operationId: 'operation-standard-refreshed' },
+      { ...resumeOperation, operationStartedAt: '2026-07-21T00:00:01.000Z' },
+      { ...resumeOperation, operationDeadlineAt: '2099-07-21T01:31:00.000Z' },
+    ]) {
+      assertTypedContractFailure(
+        () => admitReleaseBundleOperation({
+          bundleDigest,
+          storeRoot: fixture.storeRoot,
+          now: '2026-07-21T00:03:00.000Z',
+          ...changed,
+        }),
+        /immutable and does not match/,
+      );
+    }
+    assertTypedContractFailure(
+      () => admitReleaseBundleOperation({
+        bundleDigest: missingResume.frozen.release_bundle_freeze.bundle_digest,
+        storeRoot: missingResume.storeRoot,
+        now: '2026-07-21T00:03:00.000Z',
+        ...resumeOperation,
+      }),
+      /requires an existing Standard operation control/,
+    );
+
+    assertTypedContractFailure(
+      () => admitReleaseBundleOperation({
+        bundleDigest,
+        storeRoot: fixture.storeRoot,
+        now: '2026-07-21T00:04:00.000Z',
+        ...appendFullOperation,
+      }),
+      /requires a qualified Standard checkpoint/,
+    );
+    buildReleaseBundle({
+      bundleDigest,
+      executorReceiptPath: writeBuildReceipt({ root: fixture.root, bundleDigest }),
+      storeRoot: fixture.storeRoot,
+      now: '2026-07-21T00:04:00.000Z',
+    });
+    verifyReleaseBundle({
+      bundleDigest,
+      track: 'standard',
+      qualificationReceiptPath: writeQualification({
+        root: fixture.root,
+        bundle: fixture.request,
+        bundleDigest,
+      }),
+      storeRoot: fixture.storeRoot,
+      now: '2026-07-21T00:05:00.000Z',
+    });
+    assertTypedContractFailure(
+      () => admitReleaseBundleOperation({
+        bundleDigest,
+        storeRoot: fixture.storeRoot,
+        now: '2026-07-21T00:06:00.000Z',
+        ...appendFullOperation,
+        operationId: standardOperation.operationId,
+      }),
+      /independent operation identity/,
+    );
+    const append = admitReleaseBundleOperation({
+      bundleDigest,
+      storeRoot: fixture.storeRoot,
+      now: '2026-07-21T00:06:00.000Z',
+      ...appendFullOperation,
+    }).release_bundle_operation_admit.operation_control;
+    assert.notEqual(append.operation_id, admitted.operation_control.operation_id);
+    assert.notEqual(append.operation_deadline_at, admitted.operation_control.operation_deadline_at);
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+    fs.rmSync(missingResume.root, { recursive: true, force: true });
+  }
+});
+
+test('checkpoint preserves exact operation controls while legacy checkpoints remain permanently read-only', () => {
+  const fixture = createFixture();
+  try {
+    const bundleDigest = fixture.frozen.release_bundle_freeze.bundle_digest;
+    const currentDirectory = path.join(fixture.root, 'current-control-checkpoint');
+    exportReleaseBundleCheckpoint({
+      bundleDigest,
+      outputDirectory: currentDirectory,
+      storeRoot: fixture.storeRoot,
+    });
+    const checkpointPath = path.join(currentDirectory, 'checkpoint.json');
+    const currentCheckpoint = JSON.parse(fs.readFileSync(checkpointPath, 'utf8'));
+    assert.equal(
+      currentCheckpoint.operation_controls.standard.control_digest,
+      readReleaseBundleStatus({ bundleDigest, storeRoot: fixture.storeRoot })
+        .release_bundle_status.operation_controls.standard?.control_digest,
+    );
+
+    const importedStore = path.join(fixture.root, 'current-imported-store');
+    const imported = importReleaseBundleCheckpoint({ checkpointPath, storeRoot: importedStore })
+      .release_bundle_checkpoint_import;
+    assert.equal(imported.live_mutation_compatible, true);
+    const resumed = admitReleaseBundleOperation({
+      bundleDigest,
+      storeRoot: importedStore,
+      ...standardOperation,
+      releaseOperation: 'resume_standard',
+    }).release_bundle_operation_admit;
+    assert.equal(
+      resumed.operation_control.control_digest,
+      currentCheckpoint.operation_controls.standard.control_digest,
+    );
+
+    const wrongSlotDirectory = path.join(fixture.root, 'wrong-slot-checkpoint');
+    fs.cpSync(currentDirectory, wrongSlotDirectory, { recursive: true });
+    const wrongSlotPath = path.join(wrongSlotDirectory, 'checkpoint.json');
+    const wrongSlotCheckpoint = JSON.parse(fs.readFileSync(wrongSlotPath, 'utf8'));
+    const { control_digest: _standardControlDigest, ...standardControlCore } =
+      wrongSlotCheckpoint.operation_controls.standard;
+    const appendControlCore = {
+      ...standardControlCore,
+      operation_id: 'forged-append-full-before-standard-qualification',
+      operation_kind: 'append_full',
+      track: 'full',
+      operation_started_at: appendFullOperation.operationStartedAt,
+      operation_deadline_at: appendFullOperation.operationDeadlineAt,
+    };
+    const forgedAppendControl = {
+      ...appendControlCore,
+      control_digest: digest(canonicalJsonBytes(appendControlCore)),
+    };
+    wrongSlotCheckpoint.operation_controls = {
+      standard: forgedAppendControl,
+      append_full: null,
+    };
+    const { checkpoint_digest: _wrongSlotDigest, ...wrongSlotCore } = wrongSlotCheckpoint;
+    wrongSlotCheckpoint.checkpoint_digest = digest(canonicalJsonBytes(wrongSlotCore));
+    writeJson(wrongSlotPath, wrongSlotCheckpoint);
+    assertTypedContractFailure(
+      () => importReleaseBundleCheckpoint({
+        checkpointPath: wrongSlotPath,
+        storeRoot: path.join(fixture.root, 'wrong-slot-store'),
+      }),
+      /release-bundle-checkpoint|JSON schema/i,
+    );
+
+    const legacyDirectory = path.join(fixture.root, 'legacy-checkpoint');
+    fs.cpSync(currentDirectory, legacyDirectory, { recursive: true });
+    const legacyCheckpointPath = path.join(legacyDirectory, 'checkpoint.json');
+    const legacyCheckpoint = JSON.parse(fs.readFileSync(legacyCheckpointPath, 'utf8'));
+    delete legacyCheckpoint.operation_controls;
+    const { checkpoint_digest: _oldDigest, ...legacyCore } = legacyCheckpoint;
+    legacyCheckpoint.checkpoint_digest = digest(canonicalJsonBytes(legacyCore));
+    writeJson(legacyCheckpointPath, legacyCheckpoint);
+
+    const legacyStore = path.join(fixture.root, 'legacy-imported-store');
+    const legacyImport = importReleaseBundleCheckpoint({
+      checkpointPath: legacyCheckpointPath,
+      storeRoot: legacyStore,
+    }).release_bundle_checkpoint_import;
+    assert.equal(legacyImport.live_mutation_compatible, false);
+    assert.equal(
+      importReleaseBundleCheckpoint({ checkpointPath: legacyCheckpointPath, storeRoot: legacyStore })
+        .release_bundle_checkpoint_import.live_mutation_compatible,
+      false,
+    );
+    assert.equal(
+      importReleaseBundleCheckpoint({ checkpointPath, storeRoot: legacyStore })
+        .release_bundle_checkpoint_import.live_mutation_compatible,
+      false,
+    );
+    const legacyStatus = readReleaseBundleStatus({ bundleDigest, storeRoot: legacyStore })
+      .release_bundle_status;
+    assert.equal(legacyStatus.operation_control_compatible, false);
+    assert.equal(legacyStatus.live_mutation_allowed, false);
+    assertTypedContractFailure(
+      () => admitReleaseBundleOperation({
+        bundleDigest,
+        storeRoot: legacyStore,
+        ...standardOperation,
+      }),
+      /legacy checkpoint without operation control is read-only/,
+    );
+    assertTypedContractFailure(
+      () => buildReleaseBundle({
+        bundleDigest,
+        executorReceiptPath: writeBuildReceipt({
+          root: fixture.root,
+          bundleDigest,
+          attemptId: 'legacy-live-build',
+        }),
+        storeRoot: legacyStore,
+      }),
+      /legacy checkpoint without operation control is read-only/,
+    );
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test('Bundle state transitions use one cross-process lock and public mutations cannot reenter it', () => {
+  const fixture = createFixture();
+  try {
+    const bundleDigest = fixture.frozen.release_bundle_freeze.bundle_digest;
+    const paths = releaseBundleStorePaths(bundleDigest, fixture.storeRoot);
+    const storeModuleUrl = pathToFileURL(
+      path.join(repoRoot, 'src/modules/connect/release-bundle/store.ts'),
+    ).href;
+    const buildReceipt = writeBuildReceipt({
+      root: fixture.root,
+      bundleDigest,
+      attemptId: 'lock-exclusion-build',
+    });
+    withReleaseBundleStateLock(paths, () => {
+      const child = spawnSync(process.execPath, [
+        '--experimental-strip-types',
+        '--input-type=module',
+        '--eval',
+        `
+          import {
+            releaseBundleStorePaths,
+            withReleaseBundleStateLock,
+          } from ${JSON.stringify(storeModuleUrl)};
+          const paths = releaseBundleStorePaths(
+            ${JSON.stringify(bundleDigest)},
+            ${JSON.stringify(fixture.storeRoot)},
+          );
+          try {
+            withReleaseBundleStateLock(paths, () => {}, { maxWaitMs: 0 });
+          } catch (error) {
+            console.error(error instanceof Error ? error.message : String(error));
+            process.exit(23);
+          }
+        `,
+      ], {
+        cwd: repoRoot,
+        encoding: 'utf8',
+      });
+      assert.equal(child.status, 23, child.stderr);
+      assert.match(child.stderr, /state transition is already locked by another process/);
+      assertTypedContractFailure(
+        () => buildReleaseBundle({
+          bundleDigest,
+          executorReceiptPath: buildReceipt,
+          storeRoot: fixture.storeRoot,
+        }),
+        /state transition lock is not reentrant/,
+      );
+    });
+    assert.equal(
+      readReleaseBundleStatus({ bundleDigest, storeRoot: fixture.storeRoot })
+        .release_bundle_status.tracks.standard.built,
+      false,
+    );
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test('durable unknown marker binds exact identity, blocks the whole Bundle, and only exact reconcile clears it', () => {
+  const fixture = createFixture();
+  try {
+    const bundleDigest = fixture.frozen.release_bundle_freeze.bundle_digest;
+    buildReleaseBundle({
+      bundleDigest,
+      executorReceiptPath: writeBuildReceipt({ root: fixture.root, bundleDigest }),
+      storeRoot: fixture.storeRoot,
+    });
+    verifyReleaseBundle({
+      bundleDigest,
+      track: 'standard',
+      qualificationReceiptPath: writeQualification({
+        root: fixture.root,
+        bundle: fixture.request,
+        bundleDigest,
+      }),
+      storeRoot: fixture.storeRoot,
+    });
+    publishReleaseBundle({
+      bundleDigest,
+      executorReceiptPath: writeRemoteInspection({
+        root: fixture.root,
+        bundleDigest,
+        attemptId: 'standard-assets-complete-before-marker',
+        assets: [
+          { name: 'standard.dmg', bytes: 'standard dmg' },
+          { name: 'latest.yml', bytes: 'updater' },
+        ],
+      }),
+      storeRoot: fixture.storeRoot,
+    });
+    admitReleaseBundleOperation({
+      bundleDigest,
+      storeRoot: fixture.storeRoot,
+      ...appendFullOperation,
+    });
+    buildReleaseBundle({
+      ...appendFullOperation,
+      bundleDigest,
+      executorReceiptPath: writeBuildReceipt({
+        root: fixture.root,
+        bundleDigest,
+        track: 'full',
+        attemptId: 'full-build-before-marker',
+      }),
+      storeRoot: fixture.storeRoot,
+    });
+    verifyReleaseBundle({
+      ...appendFullOperation,
+      bundleDigest,
+      track: 'full',
+      qualificationReceiptPath: writeQualification({
+        root: fixture.root,
+        bundle: fixture.request,
+        bundleDigest,
+        track: 'full',
+      }),
+      storeRoot: fixture.storeRoot,
+    });
+    publishReleaseBundle({
+      ...appendFullOperation,
+      bundleDigest,
+      executorReceiptPath: writeRemoteInspection({
+        root: fixture.root,
+        bundleDigest,
+        track: 'full',
+        attemptId: 'full-assets-complete-before-marker',
+        assets: [
+          { name: 'full.dmg', bytes: 'full dmg' },
+          { name: 'full-manifest.json', bytes: '{}' },
+        ],
+      }),
+      storeRoot: fixture.storeRoot,
+    });
+
+    const target = `github-latest:gaofeng21cn/one-person-lab@${digest('latest-target')}`;
+    const priorAttempt = 'latest-patch-unknown';
+    const unknown = publishReleaseBundle({
+      bundleDigest,
+      executorReceiptPath: writeRemoteInspection({
+        root: fixture.root,
+        bundleDigest,
+        attemptId: priorAttempt,
+        outcome: 'unknown',
+        remoteTarget: target,
+        publicationScope: 'external_target',
+      }),
+      storeRoot: fixture.storeRoot,
+    }).release_bundle_publish;
+    assert.equal(unknown.status, 'reconcile_only');
+    const marker = readReleaseBundleStatus({ bundleDigest, storeRoot: fixture.storeRoot })
+      .release_bundle_status.active_unknown_markers[0];
+    assert.deepEqual({
+      bundle_digest: marker.bundle_digest,
+      operation_id: marker.operation_id,
+      operation_kind: marker.operation_kind,
+      stage_operation: marker.stage_operation,
+      publication_scope: marker.publication_scope,
+      track: marker.track,
+      remote_target: marker.remote_target,
+      prior_mutation_attempt_id: marker.prior_mutation_attempt_id,
+    }, {
+      bundle_digest: bundleDigest,
+      operation_id: standardOperation.operationId,
+      operation_kind: 'standard',
+      stage_operation: 'publish',
+      publication_scope: 'external_target',
+      track: 'standard',
+      remote_target: target,
+      prior_mutation_attempt_id: priorAttempt,
+    });
+    const assertMarkerUnchanged = () => {
+      const markers = readReleaseBundleStatus({ bundleDigest, storeRoot: fixture.storeRoot })
+        .release_bundle_status.active_unknown_markers;
+      assert.equal(markers.length, 1);
+      assert.equal(markers[0].marker_digest, marker.marker_digest);
+    };
+
+    assertTypedContractFailure(
+      () => admitReleaseBundleOperation({
+        bundleDigest,
+        storeRoot: fixture.storeRoot,
+        ...standardOperation,
+      }),
+      /blocks every ordinary mutation/,
+    );
+    assertTypedContractFailure(
+      () => buildReleaseBundle({
+        ...appendFullOperation,
+        bundleDigest,
+        executorReceiptPath: writeBuildReceipt({
+          root: fixture.root,
+          bundleDigest,
+          track: 'full',
+          attemptId: 'blocked-full-build',
+        }),
+        storeRoot: fixture.storeRoot,
+      }),
+      /blocks every ordinary mutation/,
+    );
+    assertTypedContractFailure(
+      () => verifyReleaseBundle({
+        ...appendFullOperation,
+        bundleDigest,
+        track: 'full',
+        qualificationReceiptPath: writeQualification({
+          root: fixture.root,
+          bundle: fixture.request,
+          bundleDigest,
+          track: 'full',
+        }),
+        storeRoot: fixture.storeRoot,
+      }),
+      /blocks every ordinary mutation/,
+    );
+    assertTypedContractFailure(
+      () => publishReleaseBundle({
+        ...appendFullOperation,
+        bundleDigest,
+        executorReceiptPath: writeRemoteInspection({
+          root: fixture.root,
+          bundleDigest,
+          track: 'full',
+          attemptId: 'blocked-full-publish',
+          assets: [
+            { name: 'full.dmg', bytes: 'full dmg' },
+            { name: 'full-manifest.json', bytes: '{}' },
+          ],
+        }),
+        storeRoot: fixture.storeRoot,
+      }),
+      /blocks every ordinary mutation/,
+    );
+    assertMarkerUnchanged();
+
+    const mismatchCases: Array<{ label: string; action: () => unknown; message: RegExp }> = [
+      {
+        label: 'bundle',
+        action: () => reconcileReleaseBundle({
+          bundleDigest,
+          executorReceiptPath: writeRemoteInspection({
+            root: fixture.root,
+            bundleDigest: `sha256:${'f'.repeat(64)}`,
+            attemptId: 'wrong-bundle-observation',
+            remoteTarget: target,
+            priorAttemptId: priorAttempt,
+            publicationScope: 'external_target',
+          }),
+          storeRoot: fixture.storeRoot,
+        }),
+        message: /different Release Bundle/,
+      },
+      {
+        label: 'operation id',
+        action: () => reconcileReleaseBundle({
+          bundleDigest,
+          operationId: 'wrong-operation-id',
+          executorReceiptPath: writeRemoteInspection({
+            root: fixture.root,
+            bundleDigest,
+            attemptId: 'wrong-operation-observation',
+            operationId: 'wrong-operation-id',
+            remoteTarget: target,
+            priorAttemptId: priorAttempt,
+            publicationScope: 'external_target',
+          }),
+          storeRoot: fixture.storeRoot,
+        }),
+        message: /immutable and does not match/,
+      },
+      {
+        label: 'target',
+        action: () => reconcileReleaseBundle({
+          bundleDigest,
+          executorReceiptPath: writeRemoteInspection({
+            root: fixture.root,
+            bundleDigest,
+            attemptId: 'wrong-target-observation',
+            remoteTarget: `github-latest:gaofeng21cn/other@${digest('other')}`,
+            priorAttemptId: priorAttempt,
+            publicationScope: 'external_target',
+          }),
+          storeRoot: fixture.storeRoot,
+        }),
+        message: /does not match the exact unknown outcome marker/,
+      },
+      {
+        label: 'prior attempt',
+        action: () => reconcileReleaseBundle({
+          bundleDigest,
+          executorReceiptPath: writeRemoteInspection({
+            root: fixture.root,
+            bundleDigest,
+            attemptId: 'wrong-prior-observation',
+            remoteTarget: target,
+            priorAttemptId: 'another-attempt',
+            publicationScope: 'external_target',
+          }),
+          storeRoot: fixture.storeRoot,
+        }),
+        message: /does not match the exact unknown outcome marker/,
+      },
+      {
+        label: 'publication scope',
+        action: () => reconcileReleaseBundle({
+          bundleDigest,
+          executorReceiptPath: writeRemoteInspection({
+            root: fixture.root,
+            bundleDigest,
+            attemptId: 'wrong-scope-observation',
+            remoteTarget: target,
+            priorAttemptId: priorAttempt,
+            publicationScope: 'track_assets',
+            assets: [
+              { name: 'standard.dmg', bytes: 'standard dmg' },
+              { name: 'latest.yml', bytes: 'updater' },
+            ],
+          }),
+          storeRoot: fixture.storeRoot,
+        }),
+        message: /does not match the exact unknown outcome marker/,
+      },
+      {
+        label: 'operation and track',
+        action: () => reconcileReleaseBundle({
+          ...appendFullOperation,
+          bundleDigest,
+          executorReceiptPath: writeRemoteInspection({
+            root: fixture.root,
+            bundleDigest,
+            track: 'full',
+            attemptId: 'wrong-track-observation',
+            remoteTarget: target,
+            priorAttemptId: priorAttempt,
+            publicationScope: 'external_target',
+          }),
+          storeRoot: fixture.storeRoot,
+        }),
+        message: /requires a prior durable unknown outcome marker/,
+      },
+      {
+        label: 'stage operation',
+        action: () => reconcileReleaseBundle({
+          bundleDigest,
+          executorReceiptPath: writeBuildReceipt({
+            root: fixture.root,
+            bundleDigest,
+            attemptId: 'wrong-stage-observation',
+            remoteTarget: target,
+            priorAttemptId: priorAttempt,
+          }),
+          storeRoot: fixture.storeRoot,
+        }),
+        message: /requires a prior durable unknown outcome marker/,
+      },
+    ];
+    for (const mismatch of mismatchCases) {
+      assertTypedContractFailure(mismatch.action, mismatch.message);
+      assertMarkerUnchanged();
+    }
+
+    const stillUnknown = reconcileReleaseBundle({
+      bundleDigest,
+      executorReceiptPath: writeRemoteInspection({
+        root: fixture.root,
+        bundleDigest,
+        attemptId: 'latest-readback-still-unknown',
+        outcome: 'unknown',
+        remoteTarget: target,
+        priorAttemptId: priorAttempt,
+        publicationScope: 'external_target',
+      }),
+      storeRoot: fixture.storeRoot,
+    }).release_bundle_reconcile;
+    assert.equal(stillUnknown.status, 'reconcile_only');
+    assertMarkerUnchanged();
+
+    const completeObservation = writeRemoteInspection({
+      root: fixture.root,
+      bundleDigest,
+      attemptId: 'latest-readback-complete',
+      remoteTarget: target,
+      priorAttemptId: priorAttempt,
+      publicationScope: 'external_target',
+    });
+    assert.equal(reconcileReleaseBundle({
+      bundleDigest,
+      executorReceiptPath: completeObservation,
+      storeRoot: fixture.storeRoot,
+    }).release_bundle_reconcile.status, 'complete');
+    assert.equal(
+      readReleaseBundleStatus({ bundleDigest, storeRoot: fixture.storeRoot })
+        .release_bundle_status.active_unknown_markers.length,
+      0,
+    );
+    assertTypedContractFailure(
+      () => reconcileReleaseBundle({
+        bundleDigest,
+        executorReceiptPath: completeObservation,
+        storeRoot: fixture.storeRoot,
+      }),
+      /requires a prior durable unknown outcome marker/,
+    );
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test('resume_standard exactly reconciles a Standard unknown after deadline without refreshing or advancing state', () => {
+  const fixture = createFixture({ admitStandard: false });
+  try {
+    const bundleDigest = fixture.frozen.release_bundle_freeze.bundle_digest;
+    const expiringStandard = {
+      releaseOperation: 'standard' as const,
+      operationId: 'operation-standard-expiring',
+      operationStartedAt: '2026-07-21T00:00:00.000Z',
+      operationDeadlineAt: '2026-07-21T00:10:00.000Z',
+    };
+    admitReleaseBundleOperation({
+      bundleDigest,
+      storeRoot: fixture.storeRoot,
+      now: '2026-07-21T00:01:00.000Z',
+      ...expiringStandard,
+    });
+    const target = 'executor:local-standard-expiring';
+    const priorAttempt = 'standard-build-unknown-before-run-ended';
+    assert.equal(buildReleaseBundle({
+      ...expiringStandard,
+      bundleDigest,
+      executorReceiptPath: writeBuildReceipt({
+        root: fixture.root,
+        bundleDigest,
+        attemptId: priorAttempt,
+        outcome: 'unknown',
+        operationId: expiringStandard.operationId,
+        remoteTarget: target,
+      }),
+      storeRoot: fixture.storeRoot,
+      now: '2026-07-21T00:05:00.000Z',
+    }).release_bundle_build.status, 'reconcile_only');
+    const markerBefore = readReleaseBundleStatus({ bundleDigest, storeRoot: fixture.storeRoot })
+      .release_bundle_status.active_unknown_markers[0];
+    assert.equal(markerBefore.operation_kind, 'standard');
+
+    const resume = {
+      ...expiringStandard,
+      releaseOperation: 'resume_standard' as const,
+    };
+    assertTypedContractFailure(
+      () => reconcileReleaseBundle({
+        ...resume,
+        operationDeadlineAt: '2026-07-21T00:20:00.000Z',
+        bundleDigest,
+        executorReceiptPath: writeBuildReceipt({
+          root: fixture.root,
+          bundleDigest,
+          attemptId: 'refreshed-deadline-observation',
+          releaseOperation: 'resume_standard',
+          operationId: expiringStandard.operationId,
+          remoteTarget: target,
+          priorAttemptId: priorAttempt,
+        }),
+        storeRoot: fixture.storeRoot,
+        now: '2026-07-21T00:11:00.000Z',
+      }),
+      /immutable and does not match/,
+    );
+    assert.equal(
+      readReleaseBundleStatus({ bundleDigest, storeRoot: fixture.storeRoot })
+        .release_bundle_status.active_unknown_markers[0].marker_digest,
+      markerBefore.marker_digest,
+    );
+
+    const stillUnknown = reconcileReleaseBundle({
+      ...resume,
+      bundleDigest,
+      executorReceiptPath: writeBuildReceipt({
+        root: fixture.root,
+        bundleDigest,
+        attemptId: 'resume-readback-still-unknown',
+        outcome: 'unknown',
+        releaseOperation: 'resume_standard',
+        operationId: expiringStandard.operationId,
+        remoteTarget: target,
+        priorAttemptId: priorAttempt,
+      }),
+      storeRoot: fixture.storeRoot,
+      now: '2026-07-21T00:11:00.000Z',
+    }).release_bundle_reconcile;
+    assert.equal(stillUnknown.status, 'reconcile_only');
+    assert.equal(
+      readReleaseBundleStatus({ bundleDigest, storeRoot: fixture.storeRoot })
+        .release_bundle_status.active_unknown_markers[0].marker_digest,
+      markerBefore.marker_digest,
+    );
+
+    const completeObservation = writeBuildReceipt({
+      root: fixture.root,
+      bundleDigest,
+      attemptId: 'resume-readback-late-success',
+      releaseOperation: 'resume_standard',
+      operationId: expiringStandard.operationId,
+      remoteTarget: target,
+      priorAttemptId: priorAttempt,
+    });
+    const late = reconcileReleaseBundle({
+      ...resume,
+      bundleDigest,
+      executorReceiptPath: completeObservation,
+      storeRoot: fixture.storeRoot,
+      now: '2026-07-21T00:11:00.000Z',
+    }).release_bundle_reconcile;
+    assert.equal(late.status, 'late_observation');
+    assert.equal(late.receipt.release_operation, 'resume_standard');
+    assert.equal(late.receipt.operation_control?.operation_deadline_at, expiringStandard.operationDeadlineAt);
+    assert.equal(late.receipt.details.stage_advanced, false);
+    const status = readReleaseBundleStatus({
+      bundleDigest,
+      storeRoot: fixture.storeRoot,
+      now: '2026-07-21T00:11:00.000Z',
+    }).release_bundle_status;
+    assert.equal(status.operation_controls.standard?.operation_deadline_at, expiringStandard.operationDeadlineAt);
+    assert.equal(status.operation_controls.standard?.deadline_elapsed, true);
+    assert.equal(status.active_unknown_markers.length, 0);
+    assert.equal(status.tracks.standard.built, false);
+    assert.equal(status.latest_eligible, false);
+    assertTypedContractFailure(
+      () => reconcileReleaseBundle({
+        ...resume,
+        bundleDigest,
+        executorReceiptPath: completeObservation,
+        storeRoot: fixture.storeRoot,
+        now: '2026-07-21T00:12:00.000Z',
+      }),
+      /requires a prior durable unknown outcome marker/,
+    );
+    assertTypedContractFailure(
+      () => admitReleaseBundleOperation({
+        ...resume,
+        bundleDigest,
+        storeRoot: fixture.storeRoot,
+        now: '2026-07-21T00:12:00.000Z',
+      }),
+      /absolute operation deadline has elapsed/,
+    );
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test('elapsed absolute deadline blocks admit, build, verify, and publish while status stays readable', () => {
+  const fixtures = Array.from({ length: 4 }, () => createFixture({ admitStandard: false }));
+  const expiringStandard = {
+    releaseOperation: 'standard' as const,
+    operationId: 'operation-deadline-gate',
+    operationStartedAt: '2026-07-21T00:00:00.000Z',
+    operationDeadlineAt: '2026-07-21T00:10:00.000Z',
+  };
+  const before = '2026-07-21T00:05:00.000Z';
+  const after = '2026-07-21T00:11:00.000Z';
+  try {
+    const [admitFixture, buildFixture, verifyFixture, publishFixture] = fixtures;
+    assertTypedContractFailure(
+      () => admitReleaseBundleOperation({
+        ...expiringStandard,
+        bundleDigest: admitFixture.frozen.release_bundle_freeze.bundle_digest,
+        storeRoot: admitFixture.storeRoot,
+        now: after,
+      }),
+      /absolute operation deadline has elapsed/,
+    );
+    assert.equal(
+      readReleaseBundleStatus({
+        bundleDigest: admitFixture.frozen.release_bundle_freeze.bundle_digest,
+        storeRoot: admitFixture.storeRoot,
+        now: after,
+      }).release_bundle_status.operation_controls.standard,
+      null,
+    );
+
+    for (const fixture of [buildFixture, verifyFixture, publishFixture]) {
+      admitReleaseBundleOperation({
+        ...expiringStandard,
+        bundleDigest: fixture.frozen.release_bundle_freeze.bundle_digest,
+        storeRoot: fixture.storeRoot,
+        now: before,
+      });
+    }
+    const buildDigest = buildFixture.frozen.release_bundle_freeze.bundle_digest;
+    assertTypedContractFailure(
+      () => buildReleaseBundle({
+        ...expiringStandard,
+        bundleDigest: buildDigest,
+        executorReceiptPath: writeBuildReceipt({
+          root: buildFixture.root,
+          bundleDigest: buildDigest,
+          operationId: expiringStandard.operationId,
+          attemptId: 'expired-build',
+        }),
+        storeRoot: buildFixture.storeRoot,
+        now: after,
+      }),
+      /absolute operation deadline has elapsed/,
+    );
+    assert.equal(readReleaseBundleStatus({
+      bundleDigest: buildDigest,
+      storeRoot: buildFixture.storeRoot,
+      now: after,
+    }).release_bundle_status.operation_controls.standard?.deadline_elapsed, true);
+
+    const verifyDigest = verifyFixture.frozen.release_bundle_freeze.bundle_digest;
+    buildReleaseBundle({
+      ...expiringStandard,
+      bundleDigest: verifyDigest,
+      executorReceiptPath: writeBuildReceipt({
+        root: verifyFixture.root,
+        bundleDigest: verifyDigest,
+        operationId: expiringStandard.operationId,
+        attemptId: 'before-deadline-build-for-verify',
+      }),
+      storeRoot: verifyFixture.storeRoot,
+      now: before,
+    });
+    assertTypedContractFailure(
+      () => verifyReleaseBundle({
+        ...expiringStandard,
+        bundleDigest: verifyDigest,
+        track: 'standard',
+        qualificationReceiptPath: writeQualification({
+          root: verifyFixture.root,
+          bundle: verifyFixture.request,
+          bundleDigest: verifyDigest,
+        }),
+        storeRoot: verifyFixture.storeRoot,
+        now: after,
+      }),
+      /absolute operation deadline has elapsed/,
+    );
+
+    const publishDigest = publishFixture.frozen.release_bundle_freeze.bundle_digest;
+    buildReleaseBundle({
+      ...expiringStandard,
+      bundleDigest: publishDigest,
+      executorReceiptPath: writeBuildReceipt({
+        root: publishFixture.root,
+        bundleDigest: publishDigest,
+        operationId: expiringStandard.operationId,
+        attemptId: 'before-deadline-build-for-publish',
+      }),
+      storeRoot: publishFixture.storeRoot,
+      now: before,
+    });
+    verifyReleaseBundle({
+      ...expiringStandard,
+      bundleDigest: publishDigest,
+      track: 'standard',
+      qualificationReceiptPath: writeQualification({
+        root: publishFixture.root,
+        bundle: publishFixture.request,
+        bundleDigest: publishDigest,
+      }),
+      storeRoot: publishFixture.storeRoot,
+      now: before,
+    });
+    assertTypedContractFailure(
+      () => publishReleaseBundle({
+        ...expiringStandard,
+        bundleDigest: publishDigest,
+        executorReceiptPath: writeRemoteInspection({
+          root: publishFixture.root,
+          bundleDigest: publishDigest,
+          operationId: expiringStandard.operationId,
+          attemptId: 'expired-publish',
+          assets: [
+            { name: 'standard.dmg', bytes: 'standard dmg' },
+            { name: 'latest.yml', bytes: 'updater' },
+          ],
+        }),
+        storeRoot: publishFixture.storeRoot,
+        now: after,
+      }),
+      /absolute operation deadline has elapsed/,
+    );
+  } finally {
+    for (const fixture of fixtures) fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test('Latest PATCH and Homebrew use the same external-target unknown/reconcile ABI without asset retry', () => {
+  const fixture = createFixture();
+  const premature = createFixture();
+  try {
+    const bundleDigest = fixture.frozen.release_bundle_freeze.bundle_digest;
+    buildReleaseBundle({
+      bundleDigest,
+      executorReceiptPath: writeBuildReceipt({ root: fixture.root, bundleDigest }),
+      storeRoot: fixture.storeRoot,
+    });
+    verifyReleaseBundle({
+      bundleDigest,
+      track: 'standard',
+      qualificationReceiptPath: writeQualification({
+        root: fixture.root,
+        bundle: fixture.request,
+        bundleDigest,
+      }),
+      storeRoot: fixture.storeRoot,
+    });
+    publishReleaseBundle({
+      bundleDigest,
+      executorReceiptPath: writeRemoteInspection({
+        root: fixture.root,
+        bundleDigest,
+        attemptId: 'asset-publication-complete',
+        assets: [
+          { name: 'standard.dmg', bytes: 'standard dmg' },
+          { name: 'latest.yml', bytes: 'updater' },
+        ],
+      }),
+      storeRoot: fixture.storeRoot,
+    });
+
+    for (const external of [
+      {
+        label: 'latest',
+        target: `github-latest:gaofeng21cn/one-person-lab@${digest('v26.7.21-r1')}`,
+      },
+      {
+        label: 'homebrew',
+        target: `homebrew:gaofeng21cn/homebrew-tap/one-person-lab@${digest('cask-commit')}`,
+      },
+    ]) {
+      const priorAttempt = `${external.label}-mutation-unknown`;
+      assert.equal(publishReleaseBundle({
+        bundleDigest,
+        executorReceiptPath: writeRemoteInspection({
+          root: fixture.root,
+          bundleDigest,
+          attemptId: priorAttempt,
+          outcome: 'unknown',
+          remoteTarget: external.target,
+          publicationScope: 'external_target',
+        }),
+        storeRoot: fixture.storeRoot,
+      }).release_bundle_publish.status, 'reconcile_only');
+      const marker = readReleaseBundleStatus({ bundleDigest, storeRoot: fixture.storeRoot })
+        .release_bundle_status.active_unknown_markers[0];
+      assert.equal(marker.remote_target, external.target);
+      assert.equal(marker.prior_mutation_attempt_id, priorAttempt);
+      assert.equal(marker.publication_scope, 'external_target');
+      assertTypedContractFailure(
+        () => publishReleaseBundle({
+          bundleDigest,
+          executorReceiptPath: writeRemoteInspection({
+            root: fixture.root,
+            bundleDigest,
+            attemptId: `${external.label}-forbidden-retry`,
+            remoteTarget: external.target,
+            publicationScope: 'external_target',
+          }),
+          storeRoot: fixture.storeRoot,
+        }),
+        /blocks every ordinary mutation/,
+      );
+      const unknownReadback = reconcileReleaseBundle({
+        bundleDigest,
+        executorReceiptPath: writeRemoteInspection({
+          root: fixture.root,
+          bundleDigest,
+          attemptId: `${external.label}-readback-unknown`,
+          outcome: 'unknown',
+          remoteTarget: external.target,
+          priorAttemptId: priorAttempt,
+          publicationScope: 'external_target',
+        }),
+        storeRoot: fixture.storeRoot,
+      }).release_bundle_reconcile;
+      assert.equal(unknownReadback.status, 'reconcile_only');
+      assert.deepEqual(unknownReadback.receipt.details.upload_actions, []);
+      assert.equal(
+        readReleaseBundleStatus({ bundleDigest, storeRoot: fixture.storeRoot })
+          .release_bundle_status.active_unknown_markers[0].marker_digest,
+        marker.marker_digest,
+      );
+      const completeReadback = reconcileReleaseBundle({
+        bundleDigest,
+        executorReceiptPath: writeRemoteInspection({
+          root: fixture.root,
+          bundleDigest,
+          attemptId: `${external.label}-readback-complete`,
+          remoteTarget: external.target,
+          priorAttemptId: priorAttempt,
+          publicationScope: 'external_target',
+        }),
+        storeRoot: fixture.storeRoot,
+      }).release_bundle_reconcile;
+      assert.equal(completeReadback.status, 'complete');
+      assert.deepEqual(completeReadback.receipt.details.upload_actions, []);
+      assert.equal(completeReadback.receipt.details.track_assets_confirmed, true);
+      assert.equal(
+        readReleaseBundleStatus({ bundleDigest, storeRoot: fixture.storeRoot })
+          .release_bundle_status.active_unknown_markers.length,
+        0,
+      );
+    }
+    assert.equal(
+      readReleaseBundleStatus({ bundleDigest, storeRoot: fixture.storeRoot })
+        .release_bundle_status.latest_eligible,
+      true,
+    );
+
+    const prematureDigest = premature.frozen.release_bundle_freeze.bundle_digest;
+    buildReleaseBundle({
+      bundleDigest: prematureDigest,
+      executorReceiptPath: writeBuildReceipt({ root: premature.root, bundleDigest: prematureDigest }),
+      storeRoot: premature.storeRoot,
+    });
+    verifyReleaseBundle({
+      bundleDigest: prematureDigest,
+      track: 'standard',
+      qualificationReceiptPath: writeQualification({
+        root: premature.root,
+        bundle: premature.request,
+        bundleDigest: prematureDigest,
+      }),
+      storeRoot: premature.storeRoot,
+    });
+    assertTypedContractFailure(
+      () => publishReleaseBundle({
+        bundleDigest: prematureDigest,
+        executorReceiptPath: writeRemoteInspection({
+          root: premature.root,
+          bundleDigest: prematureDigest,
+          attemptId: 'premature-latest-unknown',
+          outcome: 'unknown',
+          remoteTarget: 'github-latest:gaofeng21cn/one-person-lab@premature',
+          publicationScope: 'external_target',
+        }),
+        storeRoot: premature.storeRoot,
+      }),
+      /requires completed track asset publication first/,
+    );
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+    fs.rmSync(premature.root, { recursive: true, force: true });
   }
 });

@@ -11,6 +11,45 @@ export const RELEASE_BUNDLE_PACKAGE_IDS = [
 export type ReleaseBundlePackageId = typeof RELEASE_BUNDLE_PACKAGE_IDS[number];
 export type ReleaseBundleTrackName = 'standard' | 'full';
 export type ReleaseBundleExecutor = 'local' | 'remote';
+export type ReleaseBundleStableOperation = 'standard' | 'resume_standard' | 'append_full';
+export type ReleaseBundleCanonicalOperation = 'standard' | 'append_full';
+export type ReleaseBundleStageOperation = 'build' | 'publish';
+export type ReleaseBundlePublicationScope = 'track_assets' | 'external_target';
+
+export type ReleaseBundleOperationControl = {
+  surface_kind: 'opl_release_bundle_operation_control.v1';
+  schema_ref: 'contracts/opl-framework/release-bundle-operation-control.schema.json';
+  control_digest: string;
+  bundle_digest: string;
+  operation_id: string;
+  operation_kind: ReleaseBundleCanonicalOperation;
+  track: ReleaseBundleTrackName;
+  operation_started_at: string;
+  operation_deadline_at: string;
+};
+
+export type ReleaseBundleOperationInvocation = {
+  releaseOperation: ReleaseBundleStableOperation;
+  operationId: string;
+  operationStartedAt: string;
+  operationDeadlineAt: string;
+  now?: string | Date;
+};
+
+export type ReleaseBundleUnknownOutcomeMarker = {
+  surface_kind: 'opl_release_bundle_unknown_outcome.v1';
+  schema_ref: 'contracts/opl-framework/release-bundle-unknown-outcome.schema.json';
+  marker_digest: string;
+  bundle_digest: string;
+  operation_id: string;
+  operation_kind: ReleaseBundleCanonicalOperation;
+  stage_operation: ReleaseBundleStageOperation;
+  publication_scope: ReleaseBundlePublicationScope | null;
+  track: ReleaseBundleTrackName;
+  remote_target: string;
+  prior_mutation_attempt_id: string;
+  executor: ReleaseBundleExecutor;
+};
 
 export type ReleaseBundlePackageIdentity = {
   package_id: ReleaseBundlePackageId;
@@ -102,6 +141,11 @@ export type ReleaseBundleExecutorReceipt = {
   track: ReleaseBundleTrackName;
   outcome: 'complete' | 'unknown';
   assets: ReleaseBundleExecutorAsset[];
+  release_operation?: ReleaseBundleStableOperation;
+  operation_id?: string;
+  remote_target?: string;
+  prior_attempt_id?: string | null;
+  publication_scope?: ReleaseBundlePublicationScope;
 };
 
 export type StoredReleaseBundleAsset = Required<ReleaseBundleExecutorAsset>;
@@ -135,13 +179,16 @@ export type ReleaseBundleQualificationReceipt = {
 export type ReleaseBundleOperationReceipt = {
   surface_kind: 'opl_release_bundle_operation_receipt.v1';
   schema_ref: 'contracts/opl-framework/release-bundle-operation-receipt.schema.json';
-  operation: 'freeze' | 'build' | 'verify' | 'publish' | 'reconcile' | 'checkpoint_import';
-  status: 'frozen' | 'complete' | 'idempotent' | 'upload_required' | 'reconcile_only';
+  operation: 'freeze' | 'operation_admit' | 'build' | 'verify' | 'publish' | 'reconcile' | 'checkpoint_import';
+  status: 'frozen' | 'complete' | 'idempotent' | 'upload_required' | 'reconcile_only' | 'late_observation';
   bundle_digest: string;
   track: ReleaseBundleTrackName | null;
   executor: ReleaseBundleExecutor | null;
   attempt_id: string | null;
   recorded_at: string;
+  release_operation: ReleaseBundleStableOperation | null;
+  operation_control: ReleaseBundleOperationControl | null;
+  unknown_marker: ReleaseBundleUnknownOutcomeMarker | null;
   details: Record<string, unknown>;
 };
 
@@ -175,6 +222,10 @@ export type ReleaseBundleCheckpoint = {
   checkpoint_digest: string;
   bundle_digest: string;
   checkpoint_stage: ReleaseBundleCheckpointStage;
+  operation_controls?: {
+    standard: ReleaseBundleOperationControl | null;
+    append_full: ReleaseBundleOperationControl | null;
+  };
   tracks: Record<ReleaseBundleTrackName, ReleaseBundleCheckpointTrack>;
   entries: ReleaseBundleCheckpointEntry[];
   policy: {
@@ -187,4 +238,5 @@ export type ReleaseBundleCheckpoint = {
 export type ReleaseBundleOperationInput = {
   bundleDigest: string;
   storeRoot?: string;
+  now?: string | Date;
 };

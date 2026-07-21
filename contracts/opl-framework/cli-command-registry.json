@@ -70,6 +70,74 @@
         "surface": "immutable_release_bundle_freeze"
       }
     },
+    "release_operation_admit": {
+      "command_id": "release operation admit",
+      "owner": "OPL Release",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "bundle",
+          "flag": "--bundle",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Exact sha256 Release Bundle digest."
+        },
+        {
+          "name": "operation",
+          "flag": "--operation",
+          "value_kind": "string",
+          "required": true,
+          "allowed_values": ["standard", "resume_standard", "append_full"],
+          "summary": "Only admitted Stable operation kind."
+        },
+        {
+          "name": "operation-id",
+          "flag": "--operation-id",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Canonical immutable operation identity."
+        },
+        {
+          "name": "operation-started-at",
+          "flag": "--operation-started-at",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Canonical immutable UTC operation start."
+        },
+        {
+          "name": "operation-deadline-at",
+          "flag": "--operation-deadline-at",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Canonical absolute UTC operation deadline."
+        },
+        {
+          "name": "store",
+          "flag": "--store",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Optional Release Bundle store root."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": ["version", "release_bundle_operation_admit"],
+        "additionalProperties": false,
+        "properties": {
+          "version": { "const": "g2" },
+          "release_bundle_operation_admit": { "type": "object", "additionalProperties": true }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Release",
+        "surface": "immutable_release_operation_control_admission"
+      }
+    },
     "release_build": {
       "command_id": "release build",
       "owner": "OPL Release",
@@ -88,6 +156,35 @@
           "value_kind": "string",
           "required": true,
           "summary": "Exact local or remote build executor receipt path."
+        },
+        {
+          "name": "operation",
+          "flag": "--operation",
+          "value_kind": "string",
+          "required": true,
+          "allowed_values": ["standard", "resume_standard", "append_full"],
+          "summary": "Exact admitted operation kind."
+        },
+        {
+          "name": "operation-id",
+          "flag": "--operation-id",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Exact admitted operation identity."
+        },
+        {
+          "name": "operation-started-at",
+          "flag": "--operation-started-at",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Exact immutable operation start."
+        },
+        {
+          "name": "operation-deadline-at",
+          "flag": "--operation-deadline-at",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Exact immutable absolute deadline."
         },
         {
           "name": "store",
@@ -221,6 +318,35 @@
           "summary": "Passed same-byte installed-artifact qualification receipt path."
         },
         {
+          "name": "operation",
+          "flag": "--operation",
+          "value_kind": "string",
+          "required": true,
+          "allowed_values": ["standard", "resume_standard", "append_full"],
+          "summary": "Exact admitted operation kind."
+        },
+        {
+          "name": "operation-id",
+          "flag": "--operation-id",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Exact admitted operation identity."
+        },
+        {
+          "name": "operation-started-at",
+          "flag": "--operation-started-at",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Exact immutable operation start."
+        },
+        {
+          "name": "operation-deadline-at",
+          "flag": "--operation-deadline-at",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Exact immutable absolute deadline."
+        },
+        {
           "name": "track",
           "flag": "--track",
           "value_kind": "string",
@@ -275,6 +401,35 @@
           "summary": "Fresh remote_inspect executor receipt used for idempotent publish planning."
         },
         {
+          "name": "operation",
+          "flag": "--operation",
+          "value_kind": "string",
+          "required": true,
+          "allowed_values": ["standard", "resume_standard", "append_full"],
+          "summary": "Exact admitted operation kind."
+        },
+        {
+          "name": "operation-id",
+          "flag": "--operation-id",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Exact admitted operation identity."
+        },
+        {
+          "name": "operation-started-at",
+          "flag": "--operation-started-at",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Exact immutable operation start."
+        },
+        {
+          "name": "operation-deadline-at",
+          "flag": "--operation-deadline-at",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Exact immutable absolute deadline."
+        },
+        {
           "name": "store",
           "flag": "--store",
           "value_kind": "string",
@@ -319,6 +474,35 @@
           "value_kind": "string",
           "required": true,
           "summary": "Fresh executor receipt resolving a prior unknown build or publish outcome."
+        },
+        {
+          "name": "operation",
+          "flag": "--operation",
+          "value_kind": "string",
+          "required": true,
+          "allowed_values": ["standard", "resume_standard", "append_full"],
+          "summary": "Exact operation kind bound to the unknown marker."
+        },
+        {
+          "name": "operation-id",
+          "flag": "--operation-id",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Exact operation identity bound to the unknown marker."
+        },
+        {
+          "name": "operation-started-at",
+          "flag": "--operation-started-at",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Exact immutable operation start."
+        },
+        {
+          "name": "operation-deadline-at",
+          "flag": "--operation-deadline-at",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Exact immutable absolute deadline; may be elapsed only for reconcile."
         },
         {
           "name": "store",

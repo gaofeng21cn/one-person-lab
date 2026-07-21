@@ -9,26 +9,40 @@ import {
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import { canonicalJsonBytes } from '../../../kernel/canonical-json.ts';
 import {
-  clearReleaseBundleUnknownOutcome,
+  clearReleaseBundleUnknownOutcomeExact,
   clearReleaseBundleOperation,
   installFrozenReleaseBundle,
   installReleaseBundleQualificationReceipt,
+  listReleaseBundleUnknownOutcomes,
   readReleaseBundleOperation,
+  readReleaseBundleOperationControls,
+  readReleaseBundleUnknownOutcome,
   readStagedReleaseBundleAssets,
   readStoredReleaseBundle,
   recordReleaseBundleOperation,
   recordReleaseBundleUnknownOutcome,
-  releaseBundleHasUnknownOutcome,
+  releaseBundleStorePaths,
+  releaseBundleLegacyCheckpointReadOnly,
   stageReleaseBundleAssets,
+  withReleaseBundleStateLock,
 } from './store.ts';
+import {
+  assertReleaseBundleOperationTrack,
+  canonicalReleaseBundleOperation,
+  releaseBundleOperationDeadlineElapsed,
+  requireReleaseBundleOperation,
+} from './operation-control.ts';
+import { releaseBundleOperationReceipt } from './receipt.ts';
 import {
   RELEASE_BUNDLE_PACKAGE_IDS,
   type ReleaseBundle,
   type ReleaseBundleExecutorReceipt,
   type ReleaseBundleOperationInput,
-  type ReleaseBundleOperationReceipt,
+  type ReleaseBundleOperationInvocation,
   type ReleaseBundleQualificationReceipt,
+  type ReleaseBundleStageOperation,
   type ReleaseBundleTrackName,
+  type ReleaseBundleUnknownOutcomeMarker,
   type StoredReleaseBundleAsset,
 } from './types.ts';
 
@@ -37,19 +51,6 @@ function fail(message: string, details: Record<string, unknown> = {}): never {
     surface_kind: 'opl_release_bundle.v1',
     ...details,
   });
-}
-
-function now() {
-  return new Date().toISOString();
-}
-
-function operationReceipt(input: Omit<ReleaseBundleOperationReceipt, 'surface_kind' | 'schema_ref' | 'recorded_at'>) {
-  return {
-    surface_kind: 'opl_release_bundle_operation_receipt.v1' as const,
-    schema_ref: 'contracts/opl-framework/release-bundle-operation-receipt.schema.json' as const,
-    recorded_at: now(),
-    ...input,
-  };
 }
 
 function assertExecutorBinding(
@@ -72,6 +73,119 @@ function assertExecutorBinding(
   }
 }
 
+function assertExecutorOperationBinding(
+  executorReceipt: ReleaseBundleExecutorReceipt,
+  invocation: ReleaseBundleOperationInvocation,
+) {
+  if (
+    executorReceipt.release_operation === undefined
+    || executorReceipt.operation_id === undefined
+    || executorReceipt.remote_target === undefined
+    || executorReceipt.prior_attempt_id === undefined
+  ) {
+    fail('Legacy executor receipts without exact operation binding cannot drive live mutation.', {
+      attempt_id: executorReceipt.attempt_id,
+    });
+  }
+  if (
+    executorReceipt.release_operation !== invocation.releaseOperation
+    || executorReceipt.operation_id !== invocation.operationId
+  ) {
+    fail('Executor receipt operation identity does not match the admitted Release Bundle operation.', {
+      expected_operation: invocation.releaseOperation,
+      received_operation: executorReceipt.release_operation,
+      expected_operation_id: invocation.operationId,
+      received_operation_id: executorReceipt.operation_id,
+    });
+  }
+  assertReleaseBundleOperationTrack(invocation.releaseOperation, executorReceipt.track);
+}
+
+function unknownMarker(input: {
+  executorReceipt: ReleaseBundleExecutorReceipt;
+  invocation: ReleaseBundleOperationInvocation;
+  stageOperation: ReleaseBundleStageOperation;
+}) {
+  if (!input.executorReceipt.remote_target) {
+    fail('Unknown outcome requires one canonical remote target.');
+  }
+  if (input.executorReceipt.prior_attempt_id !== null) {
+    fail('A new unknown outcome cannot claim an earlier prior attempt.', {
+      prior_attempt_id: input.executorReceipt.prior_attempt_id,
+    });
+  }
+  const core = {
+    surface_kind: 'opl_release_bundle_unknown_outcome.v1' as const,
+    schema_ref: 'contracts/opl-framework/release-bundle-unknown-outcome.schema.json' as const,
+    bundle_digest: input.executorReceipt.bundle_digest,
+    operation_id: input.invocation.operationId,
+    operation_kind: canonicalReleaseBundleOperation(input.invocation.releaseOperation),
+    stage_operation: input.stageOperation,
+    publication_scope: input.stageOperation === 'publish'
+      ? input.executorReceipt.publication_scope ?? 'track_assets'
+      : null,
+    track: input.executorReceipt.track,
+    remote_target: input.executorReceipt.remote_target,
+    prior_mutation_attempt_id: input.executorReceipt.attempt_id,
+    executor: input.executorReceipt.executor,
+  };
+  return {
+    ...core,
+    marker_digest: sha256(canonicalJsonBytes(core)),
+  } satisfies ReleaseBundleUnknownOutcomeMarker;
+}
+
+function exactReconcileMarker(input: {
+  paths: ReturnType<typeof readStoredReleaseBundle>['paths'];
+  executorReceipt: ReleaseBundleExecutorReceipt;
+  invocation: ReleaseBundleOperationInvocation;
+  stageOperation: ReleaseBundleStageOperation;
+}) {
+  const marker = readReleaseBundleUnknownOutcome(
+    input.paths,
+    input.stageOperation,
+    input.executorReceipt.track,
+  );
+  if (!marker) {
+    fail('Release Bundle reconcile requires a prior durable unknown outcome marker.', {
+      stage_operation: input.stageOperation,
+      track: input.executorReceipt.track,
+    });
+  }
+  if (
+    input.executorReceipt.outcome !== 'unknown'
+    && input.executorReceipt.prior_attempt_id === null
+  ) {
+    fail('Release Bundle reconcile observation must name the prior unknown mutation attempt.');
+  }
+  const mismatches = {
+    bundle_digest: marker.bundle_digest !== input.executorReceipt.bundle_digest,
+    operation_id: marker.operation_id !== input.invocation.operationId,
+    operation_kind: marker.operation_kind !== canonicalReleaseBundleOperation(
+      input.invocation.releaseOperation,
+    ),
+    stage_operation: marker.stage_operation !== input.stageOperation,
+    publication_scope: marker.publication_scope !== (
+      input.stageOperation === 'publish'
+        ? input.executorReceipt.publication_scope ?? 'track_assets'
+        : null
+    ),
+    track: marker.track !== input.executorReceipt.track,
+    remote_target: marker.remote_target !== input.executorReceipt.remote_target,
+    prior_attempt: marker.prior_mutation_attempt_id !== input.executorReceipt.prior_attempt_id,
+  };
+  const mismatchedFields = Object.entries(mismatches)
+    .filter(([, mismatch]) => mismatch)
+    .map(([field]) => field);
+  if (mismatchedFields.length > 0) {
+    fail('Release Bundle reconcile observation does not match the exact unknown outcome marker.', {
+      marker_digest: marker.marker_digest,
+      mismatched_fields: mismatchedFields,
+    });
+  }
+  return marker;
+}
+
 export function freezeReleaseBundle(input: {
   requestPath: string;
   sourceRoot?: string;
@@ -81,13 +195,16 @@ export function freezeReleaseBundle(input: {
   const inputs = assertReleaseBundleFreezeInputs(request, input.sourceRoot);
   const bundle = buildFrozenReleaseBundle(request);
   const installed = installFrozenReleaseBundle(bundle, input.storeRoot);
-  const receipt = operationReceipt({
+  const receipt = releaseBundleOperationReceipt({
     operation: 'freeze',
     status: installed.status === 'idempotent' ? 'idempotent' : 'frozen',
     bundle_digest: bundle.bundle_digest,
     track: null,
     executor: null,
     attempt_id: null,
+    release_operation: null,
+    operation_control: null,
+    unknown_marker: null,
     details: {
       bundle_path: installed.paths.bundle,
       notes_path: installed.paths.notes,
@@ -118,33 +235,55 @@ export function freezeReleaseBundle(input: {
   };
 }
 
-function buildWithReceipt(input: ReleaseBundleOperationInput & {
+function buildWithReceipt(input: ReleaseBundleOperationInput & ReleaseBundleOperationInvocation & {
   executorReceiptPath: string;
   reconcile: boolean;
 }) {
   const stored = readStoredReleaseBundle(input.bundleDigest, input.storeRoot);
   const executorReceipt = readReleaseBundleExecutorReceipt(input.executorReceiptPath);
   assertExecutorBinding(stored.bundle, executorReceipt, 'build');
-  const unknown = releaseBundleHasUnknownOutcome(stored.paths, 'build', executorReceipt.track);
-  if (unknown && !input.reconcile) {
-    fail('A previous build executor result is unknown; reconcile is required before any build action.', {
-      bundle_digest: input.bundleDigest,
-      track: executorReceipt.track,
+  assertExecutorOperationBinding(executorReceipt, input);
+  const operation = requireReleaseBundleOperation(stored.paths, input.bundleDigest, input, {
+    allowExpired: input.reconcile,
+    allowActiveUnknown: input.reconcile,
+  });
+  const marker = input.reconcile
+    ? exactReconcileMarker({
+        paths: stored.paths,
+        executorReceipt,
+        invocation: input,
+        stageOperation: 'build',
+      })
+    : null;
+
+  if (!input.reconcile && executorReceipt.prior_attempt_id !== null) {
+    fail('Ordinary build receipts cannot act as reconcile observations.', {
+      prior_attempt_id: executorReceipt.prior_attempt_id,
     });
   }
 
   if (executorReceipt.outcome === 'unknown') {
-    recordReleaseBundleUnknownOutcome(stored.paths, 'build', executorReceipt);
-    const receipt = operationReceipt({
+    const activeMarker = marker ?? unknownMarker({
+      executorReceipt,
+      invocation: input,
+      stageOperation: 'build',
+    });
+    if (!input.reconcile) recordReleaseBundleUnknownOutcome(stored.paths, activeMarker);
+    const receipt = releaseBundleOperationReceipt({
       operation: input.reconcile ? 'reconcile' : 'build',
       status: 'reconcile_only',
       bundle_digest: input.bundleDigest,
       track: executorReceipt.track,
       executor: executorReceipt.executor,
       attempt_id: executorReceipt.attempt_id,
+      release_operation: input.releaseOperation,
+      operation_control: operation.control,
+      unknown_marker: activeMarker,
       details: {
         resolved_operation: 'build',
         writes_performed: false,
+        marker_overwritten: false,
+        stage_advanced: false,
         retry_allowed: false,
         required_next_command: 'opl release reconcile',
       },
@@ -161,26 +300,62 @@ function buildWithReceipt(input: ReleaseBundleOperationInput & {
     };
   }
 
+  if (input.reconcile && operation.deadlineElapsed) {
+    const receipt = releaseBundleOperationReceipt({
+      operation: 'reconcile',
+      status: 'late_observation',
+      bundle_digest: input.bundleDigest,
+      track: executorReceipt.track,
+      executor: executorReceipt.executor,
+      attempt_id: executorReceipt.attempt_id,
+      release_operation: input.releaseOperation,
+      operation_control: operation.control,
+      unknown_marker: marker,
+      details: {
+        resolved_operation: 'build',
+        observed_assets: executorReceipt.assets,
+        operation_deadline_elapsed: true,
+        stage_advanced: false,
+        late_success_recorded_as_evidence_only: true,
+      },
+    });
+    const recorded = recordReleaseBundleOperation(stored.paths, receipt);
+    clearReleaseBundleUnknownOutcomeExact(stored.paths, marker!);
+    return {
+      status: 'late_observation' as const,
+      bundleDigest: input.bundleDigest,
+      track: executorReceipt.track,
+      executor: executorReceipt.executor,
+      assets: [] as StoredReleaseBundleAsset[],
+      receipt,
+      receiptPath: recorded.receiptPath,
+    };
+  }
+
   const staged = stageReleaseBundleAssets({
     bundle: stored.bundle,
     paths: stored.paths,
     executorReceipt,
   });
-  if (input.reconcile) clearReleaseBundleUnknownOutcome(stored.paths, 'build', executorReceipt.track);
-  const receipt = operationReceipt({
+  const receipt = releaseBundleOperationReceipt({
     operation: input.reconcile ? 'reconcile' : 'build',
     status: staged.status,
     bundle_digest: input.bundleDigest,
     track: executorReceipt.track,
     executor: executorReceipt.executor,
     attempt_id: executorReceipt.attempt_id,
+    release_operation: input.releaseOperation,
+    operation_control: operation.control,
+    unknown_marker: marker,
     details: {
       resolved_operation: 'build',
       asset_manifest_path: staged.manifestPath,
       assets: staged.assets,
+      stage_advanced: true,
     },
   });
   const recorded = recordReleaseBundleOperation(stored.paths, receipt);
+  if (marker) clearReleaseBundleUnknownOutcomeExact(stored.paths, marker);
   return {
     status: staged.status,
     bundleDigest: input.bundleDigest,
@@ -192,22 +367,25 @@ function buildWithReceipt(input: ReleaseBundleOperationInput & {
   };
 }
 
-export function buildReleaseBundle(input: ReleaseBundleOperationInput & {
+export function buildReleaseBundle(input: ReleaseBundleOperationInput & ReleaseBundleOperationInvocation & {
   executorReceiptPath: string;
 }) {
-  const result = buildWithReceipt({ ...input, reconcile: false });
-  return {
-    version: 'g2' as const,
-    release_bundle_build: {
-      status: result.status,
-      bundle_digest: result.bundleDigest,
-      track: result.track,
-      executor: result.executor,
-      assets: result.assets,
-      receipt_path: result.receiptPath,
-      receipt: result.receipt,
-    },
-  };
+  const paths = releaseBundleStorePaths(input.bundleDigest, input.storeRoot);
+  return withReleaseBundleStateLock(paths, () => {
+    const result = buildWithReceipt({ ...input, reconcile: false });
+    return {
+      version: 'g2' as const,
+      release_bundle_build: {
+        status: result.status,
+        bundle_digest: result.bundleDigest,
+        track: result.track,
+        executor: result.executor,
+        assets: result.assets,
+        receipt_path: result.receiptPath,
+        receipt: result.receipt,
+      },
+    };
+  });
 }
 
 function expectedQualificationCohort(bundle: ReleaseBundle) {
@@ -258,13 +436,15 @@ function assertQualificationBinding(input: {
   }
 }
 
-export function verifyReleaseBundle(input: ReleaseBundleOperationInput & {
+function verifyReleaseBundleUnlocked(input: ReleaseBundleOperationInput & ReleaseBundleOperationInvocation & {
   qualificationReceiptPath: string;
   track?: ReleaseBundleTrackName;
 }) {
   const stored = readStoredReleaseBundle(input.bundleDigest, input.storeRoot);
+  const operation = requireReleaseBundleOperation(stored.paths, input.bundleDigest, input);
   const qualification = readReleaseBundleQualificationReceipt(input.qualificationReceiptPath);
   const track = input.track ?? qualification.track;
+  assertReleaseBundleOperationTrack(input.releaseOperation, track);
   if (qualification.track !== track) {
     fail('Qualification receipt track does not match the requested Release Bundle track.', {
       requested_track: track,
@@ -285,13 +465,16 @@ export function verifyReleaseBundle(input: ReleaseBundleOperationInput & {
   const status = previous?.details.qualification_receipt_sha256 === qualificationDigest
     ? 'idempotent' as const
     : 'complete' as const;
-  const receipt = operationReceipt({
+  const receipt = releaseBundleOperationReceipt({
     operation: 'verify',
     status,
     bundle_digest: input.bundleDigest,
     track,
     executor: null,
     attempt_id: null,
+    release_operation: input.releaseOperation,
+    operation_control: operation.control,
+    unknown_marker: null,
     details: {
       asset_manifest_path: staged.manifestPath,
       assets: staged.assets,
@@ -301,6 +484,7 @@ export function verifyReleaseBundle(input: ReleaseBundleOperationInput & {
       qualification_harness_sha256: qualification.qualification.harness_sha256,
       evidence_refs: qualification.qualification.evidence_refs,
       installed_artifact_same_bytes: true,
+      stage_advanced: true,
     },
   });
   const recorded = recordReleaseBundleOperation(stored.paths, receipt);
@@ -322,6 +506,55 @@ export function verifyReleaseBundle(input: ReleaseBundleOperationInput & {
   };
 }
 
+export function verifyReleaseBundle(input: ReleaseBundleOperationInput & ReleaseBundleOperationInvocation & {
+  qualificationReceiptPath: string;
+  track?: ReleaseBundleTrackName;
+}) {
+  const paths = releaseBundleStorePaths(input.bundleDigest, input.storeRoot);
+  return withReleaseBundleStateLock(paths, () => verifyReleaseBundleUnlocked(input));
+}
+
+export function restoreQualifiedReleaseBundleTrackFromCheckpoint(input: ReleaseBundleOperationInput & {
+  qualificationReceiptPath: string;
+  track: ReleaseBundleTrackName;
+  operationControl: ReturnType<typeof readReleaseBundleOperationControls>['standard'];
+}) {
+  const stored = readStoredReleaseBundle(input.bundleDigest, input.storeRoot);
+  const qualification = readReleaseBundleQualificationReceipt(input.qualificationReceiptPath);
+  if (qualification.track !== input.track) {
+    fail('Checkpoint qualification receipt track does not match its declared track.', {
+      checkpoint_track: input.track,
+      qualification_track: qualification.track,
+    });
+  }
+  const staged = readStagedReleaseBundleAssets(stored.paths, input.track);
+  if (!staged) fail('Checkpoint qualification restore requires staged immutable assets.');
+  assertQualificationBinding({ bundle: stored.bundle, assets: staged.assets, qualification });
+  const qualificationStored = installReleaseBundleQualificationReceipt(stored.paths, qualification);
+  const qualificationDigest = sha256(canonicalJsonBytes(qualification));
+  const receipt = releaseBundleOperationReceipt({
+    operation: 'verify',
+    status: 'complete',
+    bundle_digest: input.bundleDigest,
+    track: input.track,
+    executor: null,
+    attempt_id: null,
+    release_operation: input.operationControl?.operation_kind ?? null,
+    operation_control: input.operationControl,
+    unknown_marker: null,
+    details: {
+      asset_manifest_path: staged.manifestPath,
+      assets: staged.assets,
+      qualification_receipt_path: qualificationStored.receiptPath,
+      qualification_receipt_sha256: qualificationDigest,
+      imported_from_portable_checkpoint: true,
+      rebuild_performed: false,
+      stage_advanced: false,
+    },
+  });
+  recordReleaseBundleOperation(stored.paths, receipt);
+}
+
 function assertTrackQualified(
   stored: ReturnType<typeof readStoredReleaseBundle>,
   track: ReleaseBundleTrackName,
@@ -335,13 +568,35 @@ function assertTrackQualified(
   }
 }
 
-function publishWithReceipt(input: ReleaseBundleOperationInput & {
+function latestPublicationState(
+  stored: ReturnType<typeof readStoredReleaseBundle>,
+  track: ReleaseBundleTrackName,
+) {
+  const publication = readReleaseBundleOperation(stored.paths, 'publish', track);
+  const reconciliation = readReleaseBundleOperation(stored.paths, 'reconcile', track);
+  return reconciliation?.details.resolved_operation === 'publish'
+    ? reconciliation
+    : publication;
+}
+
+function trackAssetsConfirmed(receipt: ReturnType<typeof readReleaseBundleOperation>) {
+  if (!receipt) return false;
+  if (receipt.details.track_assets_confirmed === true) return true;
+  return receipt.status === 'complete' && receipt.details.publication_scope === undefined;
+}
+
+function publishWithReceipt(input: ReleaseBundleOperationInput & ReleaseBundleOperationInvocation & {
   executorReceiptPath: string;
   reconcile: boolean;
 }) {
   const stored = readStoredReleaseBundle(input.bundleDigest, input.storeRoot);
   const executorReceipt = readReleaseBundleExecutorReceipt(input.executorReceiptPath);
   assertExecutorBinding(stored.bundle, executorReceipt, 'remote_inspect');
+  assertExecutorOperationBinding(executorReceipt, input);
+  const operation = requireReleaseBundleOperation(stored.paths, input.bundleDigest, input, {
+    allowExpired: input.reconcile,
+    allowActiveUnknown: input.reconcile,
+  });
   const track = executorReceipt.track;
   const staged = readStagedReleaseBundleAssets(stored.paths, track);
   if (!staged) {
@@ -351,32 +606,103 @@ function publishWithReceipt(input: ReleaseBundleOperationInput & {
     });
   }
   assertTrackQualified(stored, track);
-  const unknown = releaseBundleHasUnknownOutcome(stored.paths, 'publish', track);
-  if (unknown && !input.reconcile) {
-    fail('A previous publish executor result is unknown; reconcile is required before any publish action.', {
-      bundle_digest: input.bundleDigest,
-      track,
+  const publicationScope = executorReceipt.publication_scope ?? 'track_assets';
+  const previousPublication = latestPublicationState(stored, track);
+  const previousTrackAssetsConfirmed = trackAssetsConfirmed(previousPublication);
+  if (publicationScope === 'external_target') {
+    if (!previousTrackAssetsConfirmed) {
+      fail('External target publication requires completed track asset publication first.', {
+        track,
+        remote_target: executorReceipt.remote_target,
+      });
+    }
+    if (!input.reconcile && previousPublication?.status !== 'complete') {
+      fail('A new external target mutation requires the previous publication target to be complete.', {
+        track,
+        remote_target: executorReceipt.remote_target,
+        previous_status: previousPublication?.status ?? null,
+      });
+    }
+  }
+  const marker = input.reconcile
+    ? exactReconcileMarker({
+        paths: stored.paths,
+        executorReceipt,
+        invocation: input,
+        stageOperation: 'publish',
+      })
+    : null;
+
+  if (!input.reconcile && executorReceipt.prior_attempt_id !== null) {
+    fail('Ordinary publish receipts cannot act as reconcile observations.', {
+      prior_attempt_id: executorReceipt.prior_attempt_id,
     });
   }
 
   if (executorReceipt.outcome === 'unknown') {
-    recordReleaseBundleUnknownOutcome(stored.paths, 'publish', executorReceipt);
-    const receipt = operationReceipt({
+    const activeMarker = marker ?? unknownMarker({
+      executorReceipt,
+      invocation: input,
+      stageOperation: 'publish',
+    });
+    if (!input.reconcile) recordReleaseBundleUnknownOutcome(stored.paths, activeMarker);
+    const receipt = releaseBundleOperationReceipt({
       operation: input.reconcile ? 'reconcile' : 'publish',
       status: 'reconcile_only',
       bundle_digest: input.bundleDigest,
       track,
       executor: executorReceipt.executor,
       attempt_id: executorReceipt.attempt_id,
+      release_operation: input.releaseOperation,
+      operation_control: operation.control,
+      unknown_marker: activeMarker,
       details: {
         resolved_operation: 'publish',
+        publication_scope: publicationScope,
+        remote_target: executorReceipt.remote_target,
+        track_assets_confirmed: publicationScope === 'track_assets'
+          ? false
+          : previousTrackAssetsConfirmed,
         upload_actions: [],
+        marker_overwritten: false,
+        stage_advanced: false,
         retry_allowed: false,
         required_next_command: 'opl release reconcile',
       },
     });
     const recorded = recordReleaseBundleOperation(stored.paths, receipt);
     return { status: 'reconcile_only' as const, receipt, receiptPath: recorded.receiptPath };
+  }
+
+  if (publicationScope === 'external_target') {
+    const late = input.reconcile && operation.deadlineElapsed;
+    const status = late ? 'late_observation' as const : 'complete' as const;
+    const receipt = releaseBundleOperationReceipt({
+      operation: input.reconcile ? 'reconcile' : 'publish',
+      status,
+      bundle_digest: input.bundleDigest,
+      track,
+      executor: executorReceipt.executor,
+      attempt_id: executorReceipt.attempt_id,
+      release_operation: input.releaseOperation,
+      operation_control: operation.control,
+      unknown_marker: marker,
+      details: {
+        resolved_operation: 'publish',
+        publication_scope: publicationScope,
+        remote_target: executorReceipt.remote_target,
+        upload_actions: [],
+        track_assets_confirmed: previousTrackAssetsConfirmed,
+        external_target_observed_complete: true,
+        operation_deadline_elapsed: late,
+        late_success_recorded_as_evidence_only: late,
+        stage_advanced: !late,
+      },
+    });
+    const recorded = recordReleaseBundleOperation(stored.paths, receipt);
+    if (marker) clearReleaseBundleUnknownOutcomeExact(stored.paths, marker);
+    if (!input.reconcile) clearReleaseBundleOperation(stored.paths, 'reconcile', track);
+    return { status, receipt, receiptPath: recorded.receiptPath };
   }
 
   const remote = new Map(executorReceipt.assets.map((asset) => [asset.name, asset]));
@@ -401,71 +727,116 @@ function publishWithReceipt(input: ReleaseBundleOperationInput & {
     }
     return [];
   }).sort((left, right) => left.name.localeCompare(right.name));
-  const status = uploadActions.length > 0 ? 'upload_required' as const : 'complete' as const;
-  if (input.reconcile) {
-    clearReleaseBundleUnknownOutcome(stored.paths, 'publish', track);
+  if (input.reconcile && uploadActions.length > 0) {
+    const receipt = releaseBundleOperationReceipt({
+      operation: 'reconcile',
+      status: 'reconcile_only',
+      bundle_digest: input.bundleDigest,
+      track,
+      executor: executorReceipt.executor,
+      attempt_id: executorReceipt.attempt_id,
+      release_operation: input.releaseOperation,
+      operation_control: operation.control,
+      unknown_marker: marker,
+      details: {
+        resolved_operation: 'publish',
+        publication_scope: publicationScope,
+        remote_target: executorReceipt.remote_target,
+        track_assets_confirmed: false,
+        remote_asset_count: executorReceipt.assets.length,
+        observed_missing_assets: uploadActions.map((entry) => entry.name),
+        upload_actions: [],
+        retry_allowed: false,
+        marker_cleared: false,
+        stage_advanced: false,
+      },
+    });
+    const recorded = recordReleaseBundleOperation(stored.paths, receipt);
+    return { status: 'reconcile_only' as const, receipt, receiptPath: recorded.receiptPath };
   }
-  const receipt = operationReceipt({
+
+  const late = input.reconcile && operation.deadlineElapsed;
+  const status = late
+    ? 'late_observation' as const
+    : uploadActions.length > 0 ? 'upload_required' as const : 'complete' as const;
+  const receipt = releaseBundleOperationReceipt({
     operation: input.reconcile ? 'reconcile' : 'publish',
     status,
     bundle_digest: input.bundleDigest,
     track,
     executor: executorReceipt.executor,
     attempt_id: executorReceipt.attempt_id,
+    release_operation: input.releaseOperation,
+    operation_control: operation.control,
+    unknown_marker: marker,
     details: {
       resolved_operation: 'publish',
+      publication_scope: publicationScope,
+      remote_target: executorReceipt.remote_target,
+      track_assets_confirmed: status === 'complete',
       remote_asset_count: executorReceipt.assets.length,
       upload_actions: uploadActions,
       same_name_same_digest_is_complete: true,
       same_name_different_digest_fails_closed: true,
+      operation_deadline_elapsed: late,
+      late_success_recorded_as_evidence_only: late,
+      stage_advanced: !late,
     },
   });
   const recorded = recordReleaseBundleOperation(stored.paths, receipt);
+  if (marker) clearReleaseBundleUnknownOutcomeExact(stored.paths, marker);
   if (!input.reconcile) clearReleaseBundleOperation(stored.paths, 'reconcile', track);
   return { status, receipt, receiptPath: recorded.receiptPath };
 }
 
-export function publishReleaseBundle(input: ReleaseBundleOperationInput & {
+export function publishReleaseBundle(input: ReleaseBundleOperationInput & ReleaseBundleOperationInvocation & {
   executorReceiptPath: string;
 }) {
-  const result = publishWithReceipt({ ...input, reconcile: false });
-  return {
-    version: 'g2' as const,
-    release_bundle_publish: {
-      status: result.status,
-      bundle_digest: input.bundleDigest,
-      track: result.receipt.track,
-      executor: result.receipt.executor,
-      receipt_path: result.receiptPath,
-      receipt: result.receipt,
-    },
-  };
+  const paths = releaseBundleStorePaths(input.bundleDigest, input.storeRoot);
+  return withReleaseBundleStateLock(paths, () => {
+    const result = publishWithReceipt({ ...input, reconcile: false });
+    return {
+      version: 'g2' as const,
+      release_bundle_publish: {
+        status: result.status,
+        bundle_digest: input.bundleDigest,
+        track: result.receipt.track,
+        executor: result.receipt.executor,
+        receipt_path: result.receiptPath,
+        receipt: result.receipt,
+      },
+    };
+  });
 }
 
-export function reconcileReleaseBundle(input: ReleaseBundleOperationInput & {
+export function reconcileReleaseBundle(input: ReleaseBundleOperationInput & ReleaseBundleOperationInvocation & {
   executorReceiptPath: string;
 }) {
-  const executorReceipt = readReleaseBundleExecutorReceipt(input.executorReceiptPath);
-  const result = executorReceipt.operation === 'build'
-    ? buildWithReceipt({ ...input, reconcile: true })
-    : publishWithReceipt({ ...input, reconcile: true });
-  return {
-    version: 'g2' as const,
-    release_bundle_reconcile: {
-      status: result.status,
-      bundle_digest: input.bundleDigest,
-      track: result.receipt.track,
-      executor: result.receipt.executor,
-      ...('assets' in result ? { assets: result.assets } : {}),
-      receipt_path: result.receiptPath,
-      receipt: result.receipt,
-    },
-  };
+  const paths = releaseBundleStorePaths(input.bundleDigest, input.storeRoot);
+  return withReleaseBundleStateLock(paths, () => {
+    const executorReceipt = readReleaseBundleExecutorReceipt(input.executorReceiptPath);
+    const result = executorReceipt.operation === 'build'
+      ? buildWithReceipt({ ...input, reconcile: true })
+      : publishWithReceipt({ ...input, reconcile: true });
+    return {
+      version: 'g2' as const,
+      release_bundle_reconcile: {
+        status: result.status,
+        bundle_digest: input.bundleDigest,
+        track: result.receipt.track,
+        executor: result.receipt.executor,
+        ...('assets' in result ? { assets: result.assets } : {}),
+        receipt_path: result.receiptPath,
+        receipt: result.receipt,
+      },
+    };
+  });
 }
 
 function trackStatus(
   stored: ReturnType<typeof readStoredReleaseBundle>,
   track: ReleaseBundleTrackName,
+  markers: ReleaseBundleUnknownOutcomeMarker[],
 ) {
   const staged = readStagedReleaseBundleAssets(stored.paths, track);
   const verification = readReleaseBundleOperation(stored.paths, 'verify', track);
@@ -478,22 +849,37 @@ function trackStatus(
     built: staged !== null,
     verified: Boolean(verification && ['complete', 'idempotent'].includes(verification.status)),
     published: (reconciledPublish ?? publication)?.status === 'complete',
-    reconcile_required: releaseBundleHasUnknownOutcome(stored.paths, 'build', track)
-      || releaseBundleHasUnknownOutcome(stored.paths, 'publish', track),
+    reconcile_required: markers.some((marker) => marker.track === track),
     assets: staged?.assets ?? [],
   };
 }
 
 export function readReleaseBundleStatus(input: ReleaseBundleOperationInput) {
   const stored = readStoredReleaseBundle(input.bundleDigest, input.storeRoot);
-  const standard = trackStatus(stored, 'standard');
-  const full = trackStatus(stored, 'full');
+  const markers = listReleaseBundleUnknownOutcomes(stored.paths);
+  const standard = trackStatus(stored, 'standard', markers);
+  const full = trackStatus(stored, 'full', markers);
+  const controls = readReleaseBundleOperationControls(stored.paths);
+  const legacyReadOnly = releaseBundleLegacyCheckpointReadOnly(stored.paths);
   return {
     version: 'g2' as const,
     release_bundle_status: {
       bundle_digest: input.bundleDigest,
       bundle_path: stored.paths.bundle,
       bundle: stored.bundle,
+      operation_controls: {
+        standard: controls.standard && {
+          ...controls.standard,
+          deadline_elapsed: releaseBundleOperationDeadlineElapsed(controls.standard, input.now),
+        },
+        append_full: controls.append_full && {
+          ...controls.append_full,
+          deadline_elapsed: releaseBundleOperationDeadlineElapsed(controls.append_full, input.now),
+        },
+      },
+      operation_control_compatible: !legacyReadOnly,
+      live_mutation_allowed: !legacyReadOnly && markers.length === 0,
+      active_unknown_markers: markers,
       tracks: { standard, full },
       latest_eligible: standard.verified && standard.published && !standard.reconcile_required,
     },
