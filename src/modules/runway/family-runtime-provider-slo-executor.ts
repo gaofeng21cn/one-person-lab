@@ -23,6 +23,10 @@ import {
   maybeRepairTemporalWorkerForProviderSlo,
   type TemporalWorkerRepairDeps,
 } from './family-runtime-provider-worker-repair.ts';
+import {
+  reconcileTemporalStageAttemptRuntimeObservations,
+  type TemporalRuntimeObservationReconciliationDeps,
+} from './family-runtime-temporal-runtime-observation-reconciliation.ts';
 
 type RuntimePaths = ReturnType<typeof familyRuntimePaths>;
 
@@ -100,6 +104,7 @@ export async function runTemporalProviderSloTick(
   input: {
     force?: boolean;
     workerRepairDeps?: TemporalWorkerRepairDeps;
+    runtimeObservationReconciliationDeps?: TemporalRuntimeObservationReconciliationDeps;
   } = {},
 ) {
   createFamilyRuntimeQueueTables(db);
@@ -114,6 +119,14 @@ export async function runTemporalProviderSloTick(
       payload: providerWorkerRepairReceipt,
     });
   }
+  const stageAttemptRuntimeReconciliation = await reconcileTemporalStageAttemptRuntimeObservations(
+    db,
+    paths,
+    {
+      trigger: 'provider_slo_tick',
+      ...input.runtimeObservationReconciliationDeps,
+    },
+  );
   const before = buildProviderContinuousProof(listEvents(db));
   const due = input.force === true || before.proof_slo_status !== 'proof_fresh';
 
@@ -131,6 +144,7 @@ export async function runTemporalProviderSloTick(
       skipped: true,
       force: input.force === true,
       provider_worker_repair_receipt: providerWorkerRepairReceipt,
+      stage_attempt_runtime_reconciliation: stageAttemptRuntimeReconciliation,
       before,
       after: buildProviderContinuousProof(listEvents(db)),
       provider_slo_execution_receipt: receipt,
@@ -182,6 +196,7 @@ export async function runTemporalProviderSloTick(
     skipped: false,
     force: input.force === true,
     provider_worker_repair_receipt: providerWorkerRepairReceipt,
+    stage_attempt_runtime_reconciliation: stageAttemptRuntimeReconciliation,
     before,
     after: buildProviderContinuousProof(listEvents(db)),
     proof,

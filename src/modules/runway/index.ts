@@ -17,6 +17,18 @@ export type { ExecutorUsageObservation, TokenUsageTotals } from './family-runtim
 export { buildStageProgressLog } from './family-runtime-stage-progress-log.ts';
 export { buildStageAttemptTruePathProof } from './family-runtime-stage-attempt-true-path-proof.ts';
 export { buildStageAttemptRuntimeCurrentness } from './family-runtime-stage-attempt-runtime-currentness.ts';
+export {
+  DEFAULT_TEMPORAL_STAGE_ATTEMPT_RUNTIME_OBSERVATION_TTL_MS,
+  DEFAULT_TEMPORAL_STAGE_ATTEMPT_RUNTIME_OBSERVATION_CANDIDATE_LIMIT,
+  DEFAULT_TEMPORAL_STAGE_ATTEMPT_RUNTIME_OBSERVATION_CONCURRENCY,
+  DEFAULT_TEMPORAL_STAGE_ATTEMPT_RUNTIME_OBSERVATION_LEGACY_LOOKBACK_MS,
+  MAX_TEMPORAL_STAGE_ATTEMPT_RUNTIME_OBSERVATION_CONCURRENCY,
+  MAX_TEMPORAL_STAGE_ATTEMPT_RUNTIME_OBSERVATION_TTL_MS,
+  TEMPORAL_STAGE_ATTEMPT_RUNTIME_OBSERVATION_SOURCE,
+  TEMPORAL_STAGE_ATTEMPT_RUNTIME_OBSERVATION_SURFACE_KIND,
+  readFreshTemporalStageAttemptRuntimeObservation,
+  reconcileTemporalStageAttemptRuntimeObservations,
+} from './family-runtime-temporal-runtime-observation-reconciliation.ts';
 export { buildEffectiveCurrentContextPacket, buildFamilyStallLineage } from './family-runtime-effective-current-context.ts';
 export type { TemporalStageAttemptVisibilityReadiness } from './family-runtime-temporal-visibility.ts';
 export { inspectFamilyRuntimeProviderWithLifecycle, isFamilyRuntimeProviderKind, resolveFamilyRuntimeProviderKind } from './family-runtime-providers.ts';

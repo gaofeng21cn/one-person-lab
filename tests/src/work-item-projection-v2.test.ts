@@ -1,10 +1,14 @@
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
+import { pathToFileURL } from 'node:url';
 import test from 'node:test';
 
 import { parseJsonText } from '../../src/kernel/json-file.ts';
+import { record } from '../../src/kernel/json-record.ts';
 import {
   parseStandardAgentInterface,
   STANDARD_AGENT_INTERFACE_VERSION,
@@ -14,9 +18,13 @@ import { validateJsonSchemaPayload } from '../../src/kernel/schema-registry.ts';
 import { buildAgentCatalog } from '../../src/modules/console/work-item-projection/catalog.ts';
 import { buildAppRuntimeWorkItemProjection } from '../../src/modules/console/app-runtime-work-item-projection.ts';
 import { readStageIndexPresentation } from '../../src/modules/console/work-item-projection/inventory-presentation.ts';
+import { readWorkItemStageAttempts } from '../../src/modules/console/work-item-projection/execution.ts';
+import { projectWorkItemRuntimeActivityItems } from '../../src/modules/console/work-item-projection/legacy-adapter.ts';
 import { buildWorkItemProjectionV2 } from '../../src/modules/console/work-item-projection/projection.ts';
 import { projectWorkItemPrimaryState } from '../../src/modules/console/work-item-projection/primary-state.ts';
 import { buildStageAttemptRuntimeCurrentness } from '../../src/modules/runway/family-runtime-stage-attempt-runtime-currentness.ts';
+import { createStageAttemptTable } from '../../src/modules/runway/family-runtime-stage-attempt-ledger.ts';
+import { createStageRunLaunchTable } from '../../src/modules/runway/family-runtime-stage-run-launch-registry.ts';
 import {
   setWorkItemControlState,
   setWorkItemVisibilityState,
@@ -202,12 +210,18 @@ function attempt(input: {
   qualityRoundIndex?: number;
   qualityScopeBudget?: Record<string, unknown>;
   createdAt?: string;
-  identityField?: 'work_item_id' | 'study_id' | 'quest_id' | 'work_unit_id';
+  identityField?: 'work_item_id' | 'study_id' | 'quest_id' | 'work_unit_id' | null;
   providerStatus?: string;
   lastHeartbeatAt?: string | null;
+  actionRequest?: { ref: string; sha256: string };
+  runtimeObservation?: Record<string, unknown>;
+  humanGateRefs?: string[];
+  blockedReason?: string;
+  stageRunId?: string;
+  stageRunLaunch?: Record<string, unknown>;
 }) {
   const createdAt = input.createdAt ?? '2026-07-10T00:00:00.000Z';
-  const identityField = input.identityField ?? 'work_unit_id';
+  const identityField = input.identityField === undefined ? 'work_unit_id' : input.identityField;
   return {
     stage_attempt_id: input.id,
     provider_kind: 'temporal',
@@ -216,9 +230,15 @@ function attempt(input: {
     stage_id: input.stageId ?? '01-study_intake',
     workspace_locator: {
       workspace_root: input.root,
-      [identityField]: input.workItemId,
+      ...(identityField ? { [identityField]: input.workItemId } : {}),
+      ...(input.actionRequest ? {
+        action_request_ref: input.actionRequest.ref,
+        action_request_sha256: input.actionRequest.sha256,
+      } : {}),
     },
     executor_kind: 'codex_cli',
+    stage_run_id: input.stageRunId ?? null,
+    ...(input.stageRunLaunch ? { stage_run_launch: input.stageRunLaunch } : {}),
     status: input.status,
     retry_budget: input.qualityScopeBudget
       ? { quality_scope_budget: input.qualityScopeBudget }
@@ -227,13 +247,16 @@ function attempt(input: {
     quality_round_index: input.qualityRoundIndex ?? null,
     attempt_count: 1,
     task_id: `task:${input.workItemId}`,
-    blocked_reason: input.status === 'failed' ? 'historical_provider_failure' : null,
+    blocked_reason: input.blockedReason
+      ?? (input.status === 'failed' ? 'historical_provider_failure' : null),
+    human_gate_refs: input.humanGateRefs ?? [],
     provider_run: {
       provider_status: input.providerStatus ?? input.status,
       started_at: createdAt,
       completed_at: input.status === 'running' ? null : input.updatedAt,
       last_heartbeat_at: input.lastHeartbeatAt
         ?? (input.status === 'running' ? input.updatedAt : null),
+      ...(input.runtimeObservation ? { runtime_observation: input.runtimeObservation } : {}),
     },
     activity_events: input.tokenUsage ? [{ token_usage: input.tokenUsage, usage_status: 'observed' }] : [],
     route_impact: input.repairRoute ? { current_repair_route: input.repairRoute } : {},
@@ -289,6 +312,52 @@ function fixture() {
     packageStatusById,
     resolveDescriptor: (agentId: string) => agentId === 'mas' ? masDescriptor() : null,
   };
+}
+
+function writeActionRequest(root: string, runId: string, payload: Record<string, unknown>) {
+  const requestPath = path.join(root, 'control', 'opl', 'action_runs', runId, 'request.json');
+  fs.mkdirSync(path.dirname(requestPath), { recursive: true });
+  const bytes = Buffer.from(JSON.stringify(payload), 'utf8');
+  fs.writeFileSync(requestPath, bytes);
+  return {
+    ref: pathToFileURL(requestPath).href,
+    sha256: crypto.createHash('sha256').update(bytes).digest('hex'),
+  };
+}
+
+function persistStageAttempt(db: DatabaseSync, value: ReturnType<typeof attempt>) {
+  db.prepare(`
+    INSERT INTO stage_attempts (
+      stage_attempt_id, idempotency_key, provider_kind, workflow_id,
+      domain_id, stage_id, workspace_locator_json, source_fingerprint,
+      executor_kind, stage_run_id, status, checkpoint_refs_json,
+      closeout_refs_json, human_gate_refs_json, retry_budget_json,
+      attempt_count, task_id, blocked_reason, provider_receipt_json,
+      provider_run_json, activity_events_json, route_impact_json,
+      created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, '[]', '[]', ?, ?, ?, ?, ?, '{}', ?, ?, ?, ?, ?)
+  `).run(
+    value.stage_attempt_id,
+    `idempotency:${value.stage_attempt_id}`,
+    value.provider_kind,
+    value.workflow_id,
+    value.domain_id,
+    value.stage_id,
+    JSON.stringify(value.workspace_locator),
+    value.executor_kind,
+    value.stage_run_id,
+    value.status,
+    JSON.stringify(value.human_gate_refs),
+    JSON.stringify(value.retry_budget),
+    value.attempt_count,
+    value.task_id,
+    value.blocked_reason,
+    JSON.stringify(value.provider_run),
+    JSON.stringify(value.activity_events),
+    JSON.stringify(value.route_impact),
+    value.created_at,
+    value.updated_at,
+  );
 }
 
 test('WorkItemProjection V2 discovers MAS 3 projects and 9 studies independently of Temporal', () => {
@@ -665,7 +734,7 @@ test('paused lifecycle projects only a post-snapshot live wake attempt as curren
     assert.equal(item.execution.stage_id, 'baseline_and_evidence_setup');
     assert.equal(item.execution.attempt_id, 'sat-paused-explicit-wake');
     assert.equal(item.execution.state, 'queued');
-    assert.equal(item.execution.diagnostic_reason, null);
+    assert.equal(item.execution.diagnostic_reason, 'temporal_runtime_observation_missing');
   } finally {
     fs.rmSync(input.root, { recursive: true, force: true });
   }
@@ -713,6 +782,362 @@ test('WorkItem execution projects provider-confirmed running state across a lagg
   }
 });
 
+test('legacy action request identity recovery is digest-bound and fail-closed', () => {
+  const input = fixture();
+  try {
+    const workItemId = '001-dm-cvd-mortality-risk';
+    const validRequest = writeActionRequest(input.diabetes, 'legacy-identity-valid', {
+      workspace_root: input.diabetes,
+      study_id: workItemId,
+    });
+    const valid = attempt({
+      id: 'sat-legacy-identity-valid',
+      root: input.diabetes,
+      workItemId,
+      status: 'queued',
+      identityField: null,
+      actionRequest: validRequest,
+      updatedAt: '2026-07-15T00:00:00.000Z',
+    });
+    const validProjection = buildWorkItemProjectionV2({
+      profile: 'full',
+      bindings: input.bindings,
+      packageProjectionItems: input.packageProjectionItems,
+      packageStatusById: input.packageStatusById,
+      attempts: [valid],
+      resolveDescriptor: input.resolveDescriptor,
+    });
+    const validItem = validProjection.items.find((item) => item.identity.work_item_id === workItemId)!;
+    assert.equal(validItem.execution.attempt_id, 'sat-legacy-identity-valid');
+    assert.equal(
+      validItem.source_refs.some((source) =>
+        source.role === 'stage_attempt_action_request_identity_evidence'
+          && source.ref === `${validRequest.ref}#sha256=${validRequest.sha256}`
+      ),
+      true,
+    );
+    assert.equal(validProjection.diagnostics.items.some((diagnostic) =>
+      diagnostic.reason === 'stage_attempt_action_request_identity_recovery_failed'
+    ), false);
+
+    const tampered = attempt({
+      id: 'sat-legacy-identity-tampered',
+      root: input.diabetes,
+      workItemId,
+      status: 'queued',
+      identityField: null,
+      actionRequest: { ref: validRequest.ref, sha256: '0'.repeat(64) },
+      updatedAt: '2026-07-15T00:02:00.000Z',
+    });
+    const tamperedProjection = buildWorkItemProjectionV2({
+      profile: 'full',
+      bindings: input.bindings,
+      packageProjectionItems: input.packageProjectionItems,
+      packageStatusById: input.packageStatusById,
+      attempts: [tampered],
+      resolveDescriptor: input.resolveDescriptor,
+    });
+    const tamperedItem = tamperedProjection.items.find((item) => item.identity.work_item_id === workItemId)!;
+    assert.equal(tamperedItem.execution.attempt_id, null);
+    assert.equal(
+      tamperedProjection.diagnostics.items.some((diagnostic) =>
+        diagnostic.reason === 'stage_attempt_action_request_identity_recovery_failed'
+          && diagnostic.details?.failure_reason === 'action_request_digest_mismatch'
+      ),
+      true,
+    );
+
+    const escapedRequest = writeActionRequest(input.pitnet, 'legacy-identity-escaped', {
+      workspace_root: input.diabetes,
+      study_id: workItemId,
+    });
+    const escapedProjection = buildWorkItemProjectionV2({
+      profile: 'full',
+      bindings: input.bindings,
+      packageProjectionItems: input.packageProjectionItems,
+      packageStatusById: input.packageStatusById,
+      attempts: [attempt({
+        id: 'sat-legacy-identity-escaped',
+        root: input.diabetes,
+        workItemId,
+        status: 'queued',
+        identityField: null,
+        actionRequest: escapedRequest,
+        updatedAt: '2026-07-15T00:02:30.000Z',
+      })],
+      resolveDescriptor: input.resolveDescriptor,
+    });
+    assert.equal(
+      escapedProjection.diagnostics.items.some((diagnostic) =>
+        diagnostic.details?.failure_reason === 'action_request_ref_escapes_workspace'
+      ),
+      true,
+    );
+
+    const symlinkRun = path.join(input.diabetes, 'control', 'opl', 'action_runs', 'legacy-identity-symlink');
+    fs.mkdirSync(symlinkRun, { recursive: true });
+    const symlinkTarget = path.join(input.diabetes, 'legacy-identity-target.json');
+    const symlinkBytes = Buffer.from(JSON.stringify({ study_id: workItemId }), 'utf8');
+    fs.writeFileSync(symlinkTarget, symlinkBytes);
+    const symlinkRequestPath = path.join(symlinkRun, 'request.json');
+    fs.symlinkSync(symlinkTarget, symlinkRequestPath);
+    const symlinkProjection = buildWorkItemProjectionV2({
+      profile: 'full',
+      bindings: input.bindings,
+      packageProjectionItems: input.packageProjectionItems,
+      packageStatusById: input.packageStatusById,
+      attempts: [attempt({
+        id: 'sat-legacy-identity-symlink',
+        root: input.diabetes,
+        workItemId,
+        status: 'queued',
+        identityField: null,
+        actionRequest: {
+          ref: pathToFileURL(symlinkRequestPath).href,
+          sha256: crypto.createHash('sha256').update(symlinkBytes).digest('hex'),
+        },
+        updatedAt: '2026-07-15T00:02:40.000Z',
+      })],
+      resolveDescriptor: input.resolveDescriptor,
+    });
+    assert.equal(
+      symlinkProjection.diagnostics.items.some((diagnostic) =>
+        diagnostic.details?.failure_reason === 'action_request_ref_symbolic_link'
+      ),
+      true,
+    );
+
+    const oversizedPath = path.join(
+      input.diabetes,
+      'control',
+      'opl',
+      'action_runs',
+      'legacy-identity-oversized',
+      'request.json',
+    );
+    fs.mkdirSync(path.dirname(oversizedPath), { recursive: true });
+    const oversizedBytes = Buffer.alloc(1_048_577, 0x20);
+    fs.writeFileSync(oversizedPath, oversizedBytes);
+    const oversizedProjection = buildWorkItemProjectionV2({
+      profile: 'full',
+      bindings: input.bindings,
+      packageProjectionItems: input.packageProjectionItems,
+      packageStatusById: input.packageStatusById,
+      attempts: [attempt({
+        id: 'sat-legacy-identity-oversized',
+        root: input.diabetes,
+        workItemId,
+        status: 'queued',
+        identityField: null,
+        actionRequest: {
+          ref: pathToFileURL(oversizedPath).href,
+          sha256: crypto.createHash('sha256').update(oversizedBytes).digest('hex'),
+        },
+        updatedAt: '2026-07-15T00:02:50.000Z',
+      })],
+      resolveDescriptor: input.resolveDescriptor,
+    });
+    assert.equal(
+      oversizedProjection.diagnostics.items.some((diagnostic) =>
+        diagnostic.details?.failure_reason === 'action_request_ref_too_large'
+      ),
+      true,
+    );
+
+    const conflictingRequest = writeActionRequest(input.diabetes, 'legacy-identity-conflict', {
+      workspace_root: input.diabetes,
+      study_id: workItemId,
+      work_item_id: '002-dm-china-us-mortality-attribution',
+    });
+    const conflicting = attempt({
+      id: 'sat-legacy-identity-conflict',
+      root: input.diabetes,
+      workItemId,
+      status: 'queued',
+      identityField: null,
+      actionRequest: conflictingRequest,
+      updatedAt: '2026-07-15T00:03:00.000Z',
+    });
+    const conflictingProjection = buildWorkItemProjectionV2({
+      profile: 'full',
+      bindings: input.bindings,
+      packageProjectionItems: input.packageProjectionItems,
+      packageStatusById: input.packageStatusById,
+      attempts: [conflicting],
+      resolveDescriptor: input.resolveDescriptor,
+    });
+    assert.equal(
+      conflictingProjection.diagnostics.items.some((diagnostic) =>
+        diagnostic.details?.failure_reason === 'action_request_identity_conflicting'
+      ),
+      true,
+    );
+    assert.equal(
+      conflictingProjection.items.find((item) => item.identity.work_item_id === workItemId)?.execution.attempt_id,
+      null,
+    );
+  } finally {
+    fs.rmSync(input.root, { recursive: true, force: true });
+  }
+});
+
+test('fresh Temporal runtime observation reconciles queued ledger in the fast producer', () => {
+  const input = fixture();
+  try {
+    const workItemId = '004-dpcc-longitudinal-care-inertia-intensification-gap';
+    const snapshot = new Date(Date.now() - 60_000);
+    fs.utimesSync(path.join(input.diabetes, 'workspace_index.json'), snapshot, snapshot);
+    const observedAt = new Date(Date.now() - 1_000);
+    const expiresAt = new Date(observedAt.getTime() + 600_000);
+    const runtimeObservation = {
+      surface_kind: 'temporal_stage_attempt_runtime_observation',
+      source: 'temporal_workflow_query',
+      observed_at: observedAt.toISOString(),
+      ttl_ms: 600_000,
+      expires_at: expiresAt.toISOString(),
+      workflow_status: 'RUNNING',
+      query_status: 'running',
+      effective_runtime_status: 'running',
+      stage_attempt_id: 'sat-temporal-observation-running',
+      workflow_id: 'workflow:sat-temporal-observation-running',
+      run_id: 'temporal-run-002',
+      provider_updated_at: observedAt.toISOString(),
+      provider_completion_is_domain_ready: false,
+    };
+    const projection = buildAppRuntimeWorkItemProjection({
+      profile: 'fast',
+      bindings: input.bindings,
+      packageProjectionItems: input.packageProjectionItems,
+      packageStatusById: input.packageStatusById,
+      attempts: [attempt({
+        id: 'sat-temporal-observation-running',
+        root: input.diabetes,
+        workItemId,
+        status: 'queued',
+        providerStatus: 'registered',
+        stageId: '01-study_intake',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        runtimeObservation,
+      })],
+      resolveDescriptor: input.resolveDescriptor,
+    });
+    const item = projection.items.find((candidate) => candidate.identity.work_item_id === workItemId)!;
+    assert.equal(item.execution.state, 'running');
+    assert.equal(item.execution.stage_status, 'running');
+    assert.equal(item.execution.running_proof_status, 'running_confirmed');
+    assert.equal(item.execution.diagnostic_reason, null);
+    assert.equal(item.lifecycle.primary_state, 'automatically_advancing');
+    assert.equal(item.lifecycle.primary_state_reason, 'current_runtime_wake_running');
+    assert.equal(projection.summary.running_count, 1);
+
+    const mismatched = buildWorkItemProjectionV2({
+      profile: 'full',
+      bindings: input.bindings,
+      packageProjectionItems: input.packageProjectionItems,
+      packageStatusById: input.packageStatusById,
+      attempts: [attempt({
+        id: 'sat-temporal-observation-copied',
+        root: input.diabetes,
+        workItemId,
+        status: 'queued',
+        providerStatus: 'registered',
+        stageId: '01-study_intake',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        runtimeObservation,
+      })],
+      resolveDescriptor: input.resolveDescriptor,
+    });
+    const mismatchedItem = mismatched.items.find((candidate) => candidate.identity.work_item_id === workItemId)!;
+    assert.equal(mismatchedItem.execution.state, 'queued');
+    assert.equal(
+      mismatchedItem.execution.diagnostic_reason,
+      'temporal_runtime_observation_identity_mismatch',
+    );
+    assert.equal(mismatchedItem.lifecycle.primary_state, 'paused');
+  } finally {
+    fs.rmSync(input.root, { recursive: true, force: true });
+  }
+});
+
+test('expired Temporal runtime observation stays queued with a diagnostic and does not wake stopped work', () => {
+  const input = fixture();
+  try {
+    const workItemId = '004-dpcc-longitudinal-care-inertia-intensification-gap';
+    const snapshot = new Date(Date.now() - 60_000);
+    fs.utimesSync(path.join(input.diabetes, 'workspace_index.json'), snapshot, snapshot);
+    const observedAt = new Date(Date.now() - 1_200_000);
+    const expiresAt = new Date(observedAt.getTime() + 600_000);
+    const runtimeObservation = {
+      surface_kind: 'temporal_stage_attempt_runtime_observation',
+      source: 'temporal_workflow_query',
+      observed_at: observedAt.toISOString(),
+      ttl_ms: 600_000,
+      expires_at: expiresAt.toISOString(),
+      workflow_status: 'RUNNING',
+      query_status: 'running',
+      effective_runtime_status: 'running',
+      stage_attempt_id: 'sat-temporal-observation-expired',
+      workflow_id: 'workflow:sat-temporal-observation-expired',
+      run_id: 'temporal-run-expired',
+      provider_updated_at: observedAt.toISOString(),
+      provider_completion_is_domain_ready: false,
+    };
+    const projection = buildWorkItemProjectionV2({
+      profile: 'full',
+      bindings: input.bindings,
+      packageProjectionItems: input.packageProjectionItems,
+      packageStatusById: input.packageStatusById,
+      attempts: [attempt({
+        id: 'sat-temporal-observation-expired',
+        root: input.diabetes,
+        workItemId,
+        status: 'queued',
+        providerStatus: 'registered',
+        stageId: '01-study_intake',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        runtimeObservation,
+      })],
+      resolveDescriptor: input.resolveDescriptor,
+    });
+    const item = projection.items.find((candidate) => candidate.identity.work_item_id === workItemId)!;
+    assert.equal(item.execution.state, 'queued');
+    assert.equal(item.execution.stage_status, 'queued');
+    assert.equal(item.execution.diagnostic_reason, 'temporal_runtime_observation_expired');
+    assert.equal(item.lifecycle.primary_state, 'paused');
+    assert.equal(projection.summary.running_count, 0);
+
+    const stoppedWorkItemId = '001-lineage-pfs';
+    const stoppedSnapshot = new Date(Date.now() - 60_000);
+    fs.utimesSync(path.join(input.pitnet, 'workspace_index.json'), stoppedSnapshot, stoppedSnapshot);
+    const stoppedProjection = buildWorkItemProjectionV2({
+      profile: 'full',
+      bindings: input.bindings,
+      packageProjectionItems: input.packageProjectionItems,
+      packageStatusById: input.packageStatusById,
+      attempts: [attempt({
+        id: 'sat-stopped-post-snapshot-human-gate',
+        root: input.pitnet,
+        workItemId: stoppedWorkItemId,
+        status: 'human_gate',
+        stageId: '01-study_intake',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      })],
+      resolveDescriptor: input.resolveDescriptor,
+    });
+    const stopped = stoppedProjection.items.find((item) => item.identity.work_item_id === stoppedWorkItemId)!;
+    assert.equal(stopped.lifecycle.business_state, 'stopped');
+    assert.equal(stopped.execution.attempt_id, null);
+    assert.equal(stopped.lifecycle.primary_state, 'stopped');
+    assert.equal(stopped.attention.kind, 'none');
+  } finally {
+    fs.rmSync(input.root, { recursive: true, force: true });
+  }
+});
+
 test('Temporal running query overrides a lagging queued attempt ledger', () => {
   const currentness = buildStageAttemptRuntimeCurrentness({
     ledgerStatus: 'queued',
@@ -731,6 +1156,123 @@ test('Temporal running query overrides a lagging queued attempt ledger', () => {
     'temporal_workflow_visibility',
     'temporal_workflow_query',
   ]);
+});
+
+test('post-snapshot human_gate identity recovery projects owner decision instead of paused idle', () => {
+  const input = fixture();
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  try {
+    const workItemId = '004-dpcc-longitudinal-care-inertia-intensification-gap';
+    const snapshot = new Date(Date.now() - 60_000);
+    fs.utimesSync(path.join(input.diabetes, 'workspace_index.json'), snapshot, snapshot);
+    const request = writeActionRequest(input.diabetes, 'legacy-human-gate', {
+      workspace_root: input.diabetes,
+      study_id: workItemId,
+    });
+    const createdAt = new Date().toISOString();
+    const stageRunId = 'sr_legacy_human_gate';
+    const stageRunLaunch = {
+      surface_kind: 'opl_stage_run_launch_registry_entry',
+      version: 'opl-stage-run-launch-registry-entry.v2',
+      stage_run_id: stageRunId,
+      stage_run_invocation_id: 'stage-run-invocation:legacy-human-gate',
+      stage_run_spec_sha256: 'a'.repeat(64),
+      domain_id: 'medautoscience',
+      stage_id: '01-study_intake',
+      workflow_id: 'stage-run-workflow:legacy-human-gate',
+      stage_run_input: {
+        workspace_locator: {
+          workspace_root: input.diabetes,
+          action_request_ref: request.ref,
+          action_request_sha256: request.sha256,
+        },
+      },
+      launch_status: 'closed',
+      terminal_status: 'human_gate',
+      created_at: createdAt,
+      updated_at: createdAt,
+    };
+    const gateAttempt = attempt({
+      id: 'sat-legacy-human-gate',
+      root: input.diabetes,
+      workItemId,
+      status: 'completed',
+      stageId: '01-study_intake',
+      identityField: null,
+      createdAt,
+      updatedAt: createdAt,
+      stageRunId,
+    });
+    process.env.OPL_STATE_DIR = path.join(input.root, 'opl-state');
+    const queueDb = path.join(process.env.OPL_STATE_DIR, 'family-runtime', 'queue.sqlite');
+    fs.mkdirSync(path.dirname(queueDb), { recursive: true });
+    const db = new DatabaseSync(queueDb);
+    try {
+      createStageAttemptTable(db);
+      createStageRunLaunchTable(db);
+      persistStageAttempt(db, gateAttempt);
+      db.prepare(`
+        INSERT INTO stage_run_launches (
+          stage_run_id, stage_run_invocation_id, stage_run_spec_sha256,
+          domain_id, stage_id, workflow_id, parent_route_decision_ref,
+          stage_run_input_json, launch_status, temporal_start_receipt_json,
+          terminal_status, last_start_error, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, NULL, ?, 'closed', NULL, 'human_gate', NULL, ?, ?)
+      `).run(
+        stageRunId,
+        stageRunLaunch.stage_run_invocation_id,
+        stageRunLaunch.stage_run_spec_sha256,
+        stageRunLaunch.domain_id,
+        stageRunLaunch.stage_id,
+        stageRunLaunch.workflow_id,
+        JSON.stringify(stageRunLaunch.stage_run_input),
+        createdAt,
+        createdAt,
+      );
+    } finally {
+      db.close();
+    }
+    const ledger = readWorkItemStageAttempts();
+    assert.equal(ledger.attempts[0]?.status, 'completed');
+    assert.equal(record(record(ledger.attempts[0]).stage_run_launch).terminal_status, 'human_gate');
+    const projection = buildWorkItemProjectionV2({
+      profile: 'full',
+      bindings: input.bindings,
+      packageProjectionItems: input.packageProjectionItems,
+      packageStatusById: input.packageStatusById,
+      attempts: ledger.attempts,
+      qualityCycles: ledger.quality_cycles,
+      queueDb: ledger.queue_db,
+      resolveDescriptor: input.resolveDescriptor,
+    });
+    const item = projection.items.find((candidate) => candidate.identity.work_item_id === workItemId)!;
+    assert.equal(item.lifecycle.business_state, 'paused');
+    assert.equal(item.execution.attempt_id, 'sat-legacy-human-gate');
+    assert.equal(item.execution.state, 'idle');
+    assert.equal(item.execution.stage_status, 'human_gate');
+    assert.equal(item.attention.kind, 'user');
+    assert.equal(item.attention.reason, 'runtime_human_gate_requires_owner_decision');
+    assert.equal(item.action.owner_kind, 'user');
+    assert.equal(item.action.action_ref, 'runtime-human-gate:sat-legacy-human-gate');
+    assert.equal(item.lifecycle.primary_state, 'awaiting_user_decision');
+    assert.equal(item.lifecycle.primary_state_label, '等待你决定');
+    assert.equal(item.stage_map.find((stage) => stage.stage_id === '01-study_intake')?.state, 'waiting_user');
+    assert.equal(projection.summary.user_attention_count, 1);
+    assert.equal(
+      item.source_refs.some((source) =>
+        source.role === 'stage_run_terminal_execution_evidence'
+          && source.ref.endsWith(`#stage_run_launches/${stageRunId}`)
+      ),
+      true,
+    );
+    const legacy = projectWorkItemRuntimeActivityItems(projection).find((entry) => entry.work_item_id === workItemId)!;
+    assert.equal(legacy.business_primary_state, 'owner_decision_required');
+    assert.equal(legacy.lane, 'attention');
+  } finally {
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(input.root, { recursive: true, force: true });
+  }
 });
 
 test('delivered Stage Map uses the canonical recorded boundary without inferring a missing one', () => {

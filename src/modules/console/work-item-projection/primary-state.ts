@@ -47,11 +47,25 @@ function lifecyclePrimaryState(
 export function projectWorkItemPrimaryState(input: {
   businessState: WorkItemProjectionItem['lifecycle']['business_state'];
   attention: WorkItemProjectionItem['attention'];
+  executionState?: WorkItemProjectionItem['execution']['state'];
   lastTransitionAt: string;
 }): PrimaryStateProjection {
   const lifecycleProjected = lifecyclePrimaryState(input.businessState);
-  const lifecycleIsTerminal = input.businessState !== 'active' && input.businessState !== 'unknown';
-  const projected = lifecycleIsTerminal
+  const runtimeRunningOverlay = input.executionState === 'running'
+    && ['paused', 'delivered_paused'].includes(input.businessState);
+  const runtimeHumanGateOverlay = input.attention.kind === 'user'
+    && input.attention.reason === 'runtime_human_gate_requires_owner_decision'
+    && ['paused', 'delivered_paused'].includes(input.businessState);
+  const lifecycleIsTerminal = input.businessState !== 'active'
+    && input.businessState !== 'unknown'
+    && !runtimeRunningOverlay
+    && !runtimeHumanGateOverlay;
+  const projected = runtimeRunningOverlay
+    ? {
+        primary_state: 'automatically_advancing' as const,
+        primary_state_reason: 'current_runtime_wake_running',
+      }
+    : lifecycleIsTerminal
     ? lifecycleProjected
     : input.attention.kind === 'system' && hasCompleteSystemResponsibility(input.attention)
     ? {
@@ -81,6 +95,7 @@ export function withProjectedWorkItemPrimaryState(item: WorkItemProjectionItem):
       ...projectWorkItemPrimaryState({
         businessState: item.lifecycle.business_state,
         attention: item.attention,
+        executionState: item.execution.state,
         lastTransitionAt: item.freshness.last_transition_time,
       }),
     },

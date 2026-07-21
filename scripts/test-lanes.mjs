@@ -209,6 +209,7 @@ const readModelGateTestFiles = [
   'tests/src/family-runtime-codex-stage-runner.test.ts',
   'tests/src/family-runtime-stage-attempt-closeout-ledger.test.ts',
   'tests/src/family-runtime-temporal-terminal-sync.test.ts',
+  'tests/src/family-runtime-temporal-runtime-observation-reconciliation.test.ts',
   'tests/src/foundry-temporal.test.ts',
   'tests/src/family-runtime-agent-stage-runner.test.ts',
   'tests/src/family-runtime-temporal-provider.test.ts',

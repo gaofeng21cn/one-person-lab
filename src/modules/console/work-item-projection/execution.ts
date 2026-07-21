@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { isRecord } from '../../../kernel/contract-validation.ts';
+import { parseJsonText } from '../../../kernel/json-file.ts';
 import { record, stringValue, type JsonRecord } from '../../../kernel/json-record.ts';
 import { resolveOplStatePaths } from '../../../kernel/runtime-state-paths.ts';
 import { resolveStandardAgent } from '../../../kernel/standard-agent-registry.ts';
@@ -13,6 +14,11 @@ import {
 } from '../../runway/public/app-state.ts';
 import { canonicalWorkspacePath } from './catalog.ts';
 import { systemRepairAction } from './inventory-presentation.ts';
+import {
+  explicitAttemptWorkItemId,
+  hasExplicitAttemptWorkItemIdentity,
+  recoverLegacyAttemptIdentity,
+} from './legacy-attempt-identity.ts';
 import { withProjectedWorkItemPrimaryState } from './primary-state.ts';
 import type {
   ProjectCatalogEntry,
@@ -42,21 +48,46 @@ function numberValue(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
-function attemptWorkspacePath(attempt: JsonRecord) {
-  return stringValue(record(attempt.workspace_locator).workspace_root);
+function attemptStageRunLaunch(attempt: JsonRecord) {
+  const launch = record(attempt.stage_run_launch);
+  return launch.surface_kind === 'opl_stage_run_launch_registry_entry'
+    && launch.version === 'opl-stage-run-launch-registry-entry.v2'
+    && stringValue(launch.stage_run_id) === stringValue(attempt.stage_run_id)
+    && stringValue(launch.domain_id) === stringValue(attempt.domain_id)
+    && stringValue(launch.stage_id) === stringValue(attempt.stage_id)
+    ? launch
+    : {};
 }
 
-function attemptWorkItemId(attempt: JsonRecord) {
-  const locator = record(attempt.workspace_locator);
-  const taskIntake = record(locator.task_intake_ref);
-  return stringValue(locator.work_item_id)
-    ?? stringValue(locator.study_id)
-    ?? stringValue(locator.quest_id)
-    ?? stringValue(locator.work_unit_id)
-    ?? stringValue(locator.task_or_work_unit_ref)
-    ?? stringValue(locator.task_ref)
-    ?? stringValue(taskIntake.work_item_id)
-    ?? stringValue(taskIntake.study_id);
+function attemptWorkspaceLocator(attempt: JsonRecord) {
+  const stageRunInput = record(attemptStageRunLaunch(attempt).stage_run_input);
+  return {
+    ...record(stageRunInput.workspace_locator),
+    ...record(attempt.workspace_locator),
+  };
+}
+
+function attemptWorkspacePath(attempt: JsonRecord) {
+  return stringValue(attemptWorkspaceLocator(attempt).workspace_root);
+}
+
+function effectiveAttemptStatus(attempt: JsonRecord) {
+  const launch = attemptStageRunLaunch(attempt);
+  const terminalStatus = normalizedStatus(launch.terminal_status);
+  return launch.launch_status === 'closed' && terminalStatus === 'human_gate'
+    ? terminalStatus
+    : normalizedStatus(attempt.status);
+}
+
+function attemptWorkflowId(attempt: JsonRecord) {
+  return stringValue(attemptStageRunLaunch(attempt).workflow_id)
+    ?? stringValue(attempt.workflow_id);
+}
+
+function attemptObservedAt(attempt: JsonRecord) {
+  return stringValue(attemptStageRunLaunch(attempt).updated_at)
+    ?? stringValue(attempt.updated_at)
+    ?? stringValue(attempt.created_at);
 }
 
 function attemptAgentId(attempt: JsonRecord) {
@@ -65,7 +96,7 @@ function attemptAgentId(attempt: JsonRecord) {
 }
 
 function newestFirst(left: JsonRecord, right: JsonRecord) {
-  const updated = Date.parse(stringValue(right.updated_at) ?? '') - Date.parse(stringValue(left.updated_at) ?? '');
+  const updated = Date.parse(attemptObservedAt(right) ?? '') - Date.parse(attemptObservedAt(left) ?? '');
   if (Number.isFinite(updated) && updated !== 0) return updated;
   return (stringValue(right.stage_attempt_id) ?? '').localeCompare(stringValue(left.stage_attempt_id) ?? '');
 }
@@ -127,14 +158,100 @@ function missingToken(reason: string): TokenObservation {
   };
 }
 
+const TEMPORAL_RUNTIME_OBSERVATION_SURFACE = 'temporal_stage_attempt_runtime_observation';
+const TEMPORAL_RUNTIME_OBSERVATION_SOURCE = 'temporal_workflow_query';
+
+type TemporalRuntimeObservation = {
+  fresh: boolean;
+  running: boolean;
+  reason: string;
+};
+
+function temporalRuntimeObservation(attempt: JsonRecord, providerRun: JsonRecord): TemporalRuntimeObservation {
+  const observation = record(providerRun.runtime_observation);
+  if (Object.keys(observation).length === 0) {
+    return { fresh: false, running: false, reason: 'temporal_runtime_observation_missing' };
+  }
+  if (
+    stringValue(observation.surface_kind) !== TEMPORAL_RUNTIME_OBSERVATION_SURFACE
+    || stringValue(observation.source) !== TEMPORAL_RUNTIME_OBSERVATION_SOURCE
+  ) {
+    return { fresh: false, running: false, reason: 'temporal_runtime_observation_provenance_invalid' };
+  }
+  if (
+    !stringValue(observation.stage_attempt_id)
+    || !stringValue(observation.workflow_id)
+    || stringValue(observation.stage_attempt_id) !== stringValue(attempt.stage_attempt_id)
+    || stringValue(observation.workflow_id) !== stringValue(attempt.workflow_id)
+  ) {
+    return { fresh: false, running: false, reason: 'temporal_runtime_observation_identity_mismatch' };
+  }
+  const observedAt = stringValue(observation.observed_at);
+  const expiresAt = stringValue(observation.expires_at);
+  const providerUpdatedAt = stringValue(observation.provider_updated_at);
+  const observedTime = Date.parse(observedAt ?? '');
+  const expiresTime = Date.parse(expiresAt ?? '');
+  const providerUpdatedTime = Date.parse(providerUpdatedAt ?? '');
+  const ttlMs = numberValue(observation.ttl_ms);
+  const now = Date.now();
+  if (
+    !observedAt
+    || !expiresAt
+    || !providerUpdatedAt
+    || !Number.isFinite(observedTime)
+    || !Number.isFinite(expiresTime)
+    || !Number.isFinite(providerUpdatedTime)
+    || ttlMs === null
+    || !Number.isSafeInteger(ttlMs)
+    || ttlMs <= 0
+    || ttlMs > 86_400_000
+    || expiresTime - observedTime !== ttlMs
+    || observedTime > now + 5_000
+    || providerUpdatedTime > now + 5_000
+  ) {
+    return { fresh: false, running: false, reason: 'temporal_runtime_observation_time_invalid' };
+  }
+  if (expiresTime <= now) {
+    return { fresh: false, running: false, reason: 'temporal_runtime_observation_expired' };
+  }
+  const workflowStatus = normalizedStatus(observation.workflow_status);
+  const queryStatus = normalizedStatus(observation.query_status);
+  const effectiveStatus = normalizedStatus(observation.effective_runtime_status);
+  if (
+    workflowStatus !== 'running'
+    || queryStatus !== 'running'
+    || effectiveStatus !== 'running'
+    || !stringValue(observation.run_id)
+    || observation.provider_completion_is_domain_ready !== false
+  ) {
+    return { fresh: false, running: false, reason: 'temporal_runtime_observation_not_running' };
+  }
+  return { fresh: true, running: true, reason: 'temporal_runtime_observation_running_confirmed' };
+}
+
 function executionState(latest: JsonRecord) {
-  const ledgerStatus = normalizedStatus(latest.status);
+  const ledgerStatus = effectiveAttemptStatus(latest);
   const providerRun = record(latest.provider_run);
-  const currentness = buildStageAttemptRuntimeCurrentness({
+  const runtimeObservation = stringValue(latest.provider_kind) === 'temporal'
+    ? temporalRuntimeObservation(latest, providerRun)
+    : { fresh: false, running: false, reason: 'runtime_observation_not_applicable' };
+  const baseCurrentness = buildStageAttemptRuntimeCurrentness({
     ledgerStatus,
     providerKind: stringValue(latest.provider_kind) ?? 'unknown',
     providerRun,
   });
+  const currentness = runtimeObservation.running
+    && QUEUED_STATUSES.has(ledgerStatus)
+    && normalizedStatus(baseCurrentness.effective_runtime_status) !== 'running'
+    ? {
+        ...baseCurrentness,
+        effective_runtime_status: 'running',
+        running_proof_status: 'running_confirmed',
+        projection_status: 'current_or_not_running_claim',
+        reason: null,
+        running_proof_sources: ['temporal_runtime_observation'],
+      }
+    : baseCurrentness;
   const effectiveRuntimeStatus = normalizedStatus(currentness.effective_runtime_status);
   let state: WorkItemExecutionState = 'unknown';
   if (effectiveRuntimeStatus === 'running') {
@@ -145,8 +262,16 @@ function executionState(latest: JsonRecord) {
     state = 'succeeded';
   } else if (FAILED_STATUSES.has(effectiveRuntimeStatus)) {
     state = 'failed';
+  } else if (ledgerStatus === 'human_gate') {
+    state = 'idle';
   }
-  return { state, ledgerStatus, effectiveRuntimeStatus, currentness };
+  return {
+    state,
+    ledgerStatus,
+    effectiveRuntimeStatus,
+    currentness,
+    runtimeObservation,
+  };
 }
 
 function attemptStartedAfterLifecycleSnapshot(
@@ -167,7 +292,7 @@ function currentRuntimeWakeAttempt(
   lifecycleSnapshotAt: string,
 ) {
   return attempts.find((attempt) => (
-    LIVE_STAGE_ATTEMPT_STATUSES.has(normalizedStatus(attempt.status))
+    LIVE_STAGE_ATTEMPT_STATUSES.has(effectiveAttemptStatus(attempt))
     && attemptStartedAfterLifecycleSnapshot(attempt, lifecycleSnapshotAt)
   )) ?? null;
 }
@@ -224,6 +349,36 @@ function condition(input: Omit<WorkItemCondition, 'ref'> & { ref?: string | null
   return { ...input, ref: input.ref ?? null };
 }
 
+function humanGateAction(
+  item: WorkItemProjectionItem,
+  attempt: JsonRecord,
+): WorkItemProjectionItem['action'] {
+  const attemptId = stringValue(attempt.stage_attempt_id) ?? 'unknown-stage-attempt';
+  const gateRef = Array.isArray(attempt.human_gate_refs)
+    ? attempt.human_gate_refs.map(stringValue).find(Boolean) ?? null
+    : null;
+  const summary = stringValue(attempt.blocked_reason)
+    ?? '当前阶段已到人工确认点，需要你决定后才能继续。';
+  return {
+    kind: 'user_action',
+    title: '确认后续处理',
+    title_key: 'runtimeHumanGate.action.title',
+    summary,
+    summary_key: 'runtimeHumanGate.action.summary',
+    message_args: {
+      item_id: item.item_id,
+      stage_attempt_id: attemptId,
+      stage_id: stringValue(attempt.stage_id),
+      human_gate_ref: gateRef,
+    },
+    owner: 'user',
+    owner_kind: 'user',
+    owner_display_name: '你',
+    action_ref: gateRef ?? `runtime-human-gate:${attemptId}`,
+    dry_run_required: false,
+  };
+}
+
 export function readWorkItemStageAttempts() {
   const queueDb = path.join(resolveOplStatePaths().state_dir, 'family-runtime', 'queue.sqlite');
   if (!fs.existsSync(queueDb)) {
@@ -236,6 +391,7 @@ export function readWorkItemStageAttempts() {
   }
   const db = openFamilyRuntimeSqlite(queueDb, { readOnly: true });
   try {
+    const diagnostics: WorkItemProjectionDiagnostic[] = [];
     const qualityCycleTable = db.prepare(
       "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'stage_quality_cycles'",
     ).get();
@@ -252,11 +408,69 @@ export function readWorkItemStageAttempts() {
           }
         })
       : [];
+    const launchTable = db.prepare(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'stage_run_launches'",
+    ).get();
+    const stageRunLaunchById = new Map<string, JsonRecord>();
+    if (launchTable) {
+      const launchRows = db.prepare(`
+        SELECT
+          stage_run_id, stage_run_invocation_id, stage_run_spec_sha256,
+          domain_id, stage_id, workflow_id, parent_route_decision_ref,
+          stage_run_input_json, launch_status, terminal_status,
+          last_start_error, created_at, updated_at
+        FROM stage_run_launches
+        WHERE EXISTS (
+          SELECT 1 FROM stage_attempts
+          WHERE stage_attempts.stage_run_id = stage_run_launches.stage_run_id
+            AND stage_attempts.archived_at IS NULL
+        )
+        ORDER BY updated_at DESC, stage_run_id DESC
+      `).all() as Array<Record<string, unknown>>;
+      for (const row of launchRows) {
+        const stageRunId = stringValue(row.stage_run_id);
+        if (!stageRunId) continue;
+        try {
+          const stageRunInput = parseJsonText(String(row.stage_run_input_json ?? '{}'));
+          if (!isRecord(stageRunInput)) throw new Error('stage_run_input_json is not an object');
+          stageRunLaunchById.set(stageRunId, {
+            surface_kind: 'opl_stage_run_launch_registry_entry',
+            version: 'opl-stage-run-launch-registry-entry.v2',
+            stage_run_id: stageRunId,
+            stage_run_invocation_id: row.stage_run_invocation_id,
+            stage_run_spec_sha256: row.stage_run_spec_sha256,
+            domain_id: row.domain_id,
+            stage_id: row.stage_id,
+            workflow_id: row.workflow_id,
+            parent_route_decision_ref: row.parent_route_decision_ref,
+            stage_run_input: stageRunInput,
+            launch_status: row.launch_status,
+            terminal_status: row.terminal_status,
+            last_start_error: row.last_start_error,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+          });
+        } catch (error) {
+          if (diagnostics.length < MAX_DIAGNOSTIC_ATTEMPTS) {
+            diagnostics.push({
+              reason: 'stage_run_launch_projection_invalid',
+              ref: stageRunId,
+              details: { error: error instanceof Error ? error.message : String(error) },
+            });
+          }
+        }
+      }
+    }
+    const attempts = listStageAttempts(db, { archived: 'exclude' }).filter(isRecord).map((attempt) => {
+      const stageRunId = stringValue(attempt.stage_run_id);
+      const stageRunLaunch = stageRunId ? stageRunLaunchById.get(stageRunId) : null;
+      return stageRunLaunch ? { ...attempt, stage_run_launch: stageRunLaunch } : attempt;
+    });
     return {
       queue_db: queueDb,
-      attempts: listStageAttempts(db, { archived: 'exclude' }).filter(isRecord),
+      attempts,
       quality_cycles: qualityCycles,
-      diagnostics: [] as WorkItemProjectionDiagnostic[],
+      diagnostics,
     };
   } catch (error) {
     return {
@@ -289,13 +503,21 @@ export function joinAttemptsToWorkItems(input: {
     item,
   ]));
   const grouped = new Map<string, JsonRecord[]>();
+  const recoveredIdentityByAttempt = new Map<JsonRecord, {
+    actionRequestRef: string;
+    actionRequestSha256: string;
+  }>();
   const qualityCycleById = new Map(
     (input.qualityCycles ?? []).map((cycle) => [stringValue(cycle.quality_cycle_id), cycle]),
   );
   for (const attempt of input.attempts) {
-    const workspacePath = attemptWorkspacePath(attempt);
-    const workItemId = attemptWorkItemId(attempt);
-    if (!workspacePath || !workItemId) {
+    const identityAttempt = {
+      ...attempt,
+      workspace_locator: attemptWorkspaceLocator(attempt),
+    };
+    const workspacePath = attemptWorkspacePath(identityAttempt);
+    let workItemId = explicitAttemptWorkItemId(identityAttempt);
+    if (!workspacePath) {
       if (diagnostics.length < MAX_DIAGNOSTIC_ATTEMPTS) {
         diagnostics.push({
           reason: 'stage_attempt_missing_explicit_workspace_or_work_item_identity',
@@ -303,6 +525,41 @@ export function joinAttemptsToWorkItems(input: {
         });
       }
       continue;
+    }
+    if (!workItemId && hasExplicitAttemptWorkItemIdentity(identityAttempt)) {
+      if (diagnostics.length < MAX_DIAGNOSTIC_ATTEMPTS) {
+        diagnostics.push({
+          reason: 'stage_attempt_explicit_work_item_identity_conflicting',
+          ref: stringValue(attempt.stage_attempt_id) ?? undefined,
+        });
+      }
+      continue;
+    }
+    if (!workItemId) {
+      const locator = record(identityAttempt.workspace_locator);
+      const recovered = recoverLegacyAttemptIdentity({
+        workspaceRoot: workspacePath,
+        actionRequestRef: stringValue(locator.action_request_ref),
+        actionRequestSha256: stringValue(locator.action_request_sha256),
+      });
+      if (!recovered.identity || recovered.failure) {
+        if (diagnostics.length < MAX_DIAGNOSTIC_ATTEMPTS) {
+          diagnostics.push({
+            reason: 'stage_attempt_action_request_identity_recovery_failed',
+            ref: stringValue(attempt.stage_attempt_id) ?? undefined,
+            details: {
+              failure_reason: recovered.failure?.reason ?? 'unknown_identity_recovery_failure',
+              ...(recovered.failure?.details ?? {}),
+            },
+          });
+        }
+        continue;
+      }
+      workItemId = recovered.identity.workItemId;
+      recoveredIdentityByAttempt.set(attempt, {
+        actionRequestRef: recovered.identity.actionRequestRef,
+        actionRequestSha256: recovered.identity.actionRequestSha256,
+      });
     }
     const project = projectByPath.get(canonicalWorkspacePath(workspacePath));
     if (!project) {
@@ -370,9 +627,9 @@ export function joinAttemptsToWorkItems(input: {
     }
     const latest = attempts[0]!;
     const latestExecution = executionState(latest);
-    const runtimeWakeAttempt = item.lifecycle.business_state === 'active'
-      ? null
-      : currentRuntimeWakeAttempt(attempts, item.lifecycle.last_transition_at);
+    const runtimeWakeAttempt = ['paused', 'delivered_paused'].includes(item.lifecycle.business_state)
+      ? currentRuntimeWakeAttempt(attempts, item.lifecycle.last_transition_at)
+      : null;
     const currentStageId = item.lifecycle.business_state === 'active'
       ? item.lifecycle.current_stage_id
       : stringValue(runtimeWakeAttempt?.stage_id);
@@ -424,11 +681,25 @@ export function joinAttemptsToWorkItems(input: {
           repair_action: null,
           expected_outcome: null,
         };
-    const systemAttention = item.lifecycle.business_state === 'active'
+    const runtimeHumanGate = currentAttempt !== null
+      && effectiveAttemptStatus(currentAttempt) === 'human_gate';
+    const systemAttention = !runtimeHumanGate
+      && item.lifecycle.business_state === 'active'
       && repairRoute.complete
       && item.attention.kind !== 'user';
-    const attention = systemAttention
+    const attention = runtimeHumanGate
       ? {
+          kind: 'user' as const,
+          reason: 'runtime_human_gate_requires_owner_decision',
+          owner: 'user',
+          responsible_component: null,
+          issue: null,
+          impact: null,
+          repair_action: null,
+          expected_outcome: null,
+        }
+      : systemAttention
+        ? {
           kind: 'system' as const,
           reason: 'current_repair_route_blocks_work_item',
           owner: repairRoute.responsible_component,
@@ -438,13 +709,13 @@ export function joinAttemptsToWorkItems(input: {
           repair_action: repairRoute.repair_action,
           expected_outcome: repairRoute.expected_outcome,
         }
-      : item.attention;
+        : item.attention;
     const attemptIds = attempts
       .map((attempt) => stringValue(attempt.stage_attempt_id))
       .filter((attemptId): attemptId is string => Boolean(attemptId));
-    const executionObservedAt = stringValue(latest.updated_at) ?? stringValue(latest.created_at);
+    const executionObservedAt = attemptObservedAt(latest);
     const currentExecutionObservedAt = currentAttempt
-      ? stringValue(currentAttempt.updated_at) ?? stringValue(currentAttempt.created_at)
+      ? attemptObservedAt(currentAttempt)
       : null;
     const currentExecutionState = currentExecution?.state ?? 'idle';
     const currentQualityCycleId = currentAttempt ? stringValue(currentAttempt.quality_cycle_id) : null;
@@ -488,6 +759,25 @@ export function joinAttemptsToWorkItems(input: {
         severity: currentExecutionState === 'running' ? 'info' : 'none',
         last_transition_time: currentExecutionObservedAt ?? executionObservedAt,
         observed_generation: item.lifecycle.observed_generation,
+      }),
+      condition({
+        type: 'OwnerDecisionRequired',
+        status: runtimeHumanGate ? 'True' : 'False',
+        reason: runtimeHumanGate
+          ? 'runtime_human_gate_requires_owner_decision'
+          : 'no_current_runtime_human_gate',
+        message: runtimeHumanGate
+          ? 'The current runtime attempt has reached a human gate and requires an owner decision.'
+          : 'No current runtime human gate requires an owner decision.',
+        owner: runtimeHumanGate ? 'user' : 'opl_framework',
+        severity: runtimeHumanGate ? 'warning' : 'none',
+        last_transition_time: currentExecutionObservedAt ?? executionObservedAt,
+        observed_generation: item.lifecycle.observed_generation,
+        ref: runtimeHumanGate
+          ? Array.isArray(currentAttempt?.human_gate_refs)
+            ? currentAttempt.human_gate_refs.map(stringValue).find(Boolean) ?? null
+            : null
+          : null,
       }),
       condition({
         type: 'NeedsSystemRepair',
@@ -551,7 +841,7 @@ export function joinAttemptsToWorkItems(input: {
         next_stage_display_name: currentStageId ? item.execution.next_stage_display_name : null,
         attempt_id: currentAttempt ? stringValue(currentAttempt.stage_attempt_id) : null,
         attempt_ids: attemptIds.slice(0, input.attemptRefLimit),
-        workflow_id: currentAttempt ? stringValue(currentAttempt.workflow_id) : null,
+        workflow_id: currentAttempt ? attemptWorkflowId(currentAttempt) : null,
         provider_kind: currentAttempt ? stringValue(currentAttempt.provider_kind) : null,
         started_at: currentAttempt
           ? stringValue(record(currentAttempt.provider_run).started_at) ?? stringValue(currentAttempt.created_at)
@@ -565,6 +855,10 @@ export function joinAttemptsToWorkItems(input: {
           ? currentExecution.currentness.reason
           : currentExecution?.state === 'failed'
             ? stringValue(currentAttempt?.blocked_reason)
+            : runtimeHumanGate
+              ? 'runtime_human_gate_requires_owner_decision'
+              : currentExecution?.state === 'queued' && stringValue(currentAttempt?.provider_kind) === 'temporal'
+                ? currentExecution.runtimeObservation.reason
             : attempts.length > 0 && !currentAttempt
               ? 'historical_attempts_not_current_business_execution'
               : null,
@@ -587,7 +881,9 @@ export function joinAttemptsToWorkItems(input: {
           : item.execution.quality_budget,
       },
       attention,
-      action: systemAttention
+      action: runtimeHumanGate
+        ? humanGateAction(item, currentAttempt!)
+        : systemAttention
         ? systemRepairAction({
             itemId: item.item_id,
             responsibleComponent: repairRoute.responsible_component!,
@@ -604,7 +900,11 @@ export function joinAttemptsToWorkItems(input: {
         });
         return {
           ...stage,
-          state: systemAttention && stage.stage_id === currentStageId ? 'system_attention' : stage.state,
+          state: runtimeHumanGate && stage.stage_id === currentStageId
+            ? 'waiting_user'
+            : systemAttention && stage.stage_id === currentStageId
+              ? 'system_attention'
+              : stage.state,
           usage: stageProjection.state === 'observed' ? stageProjection : null,
         };
       }),
@@ -633,6 +933,23 @@ export function joinAttemptsToWorkItems(input: {
           ref: `${input.queueDb}#stage_attempts/${attemptId}`,
           role: 'stage_attempt_execution_evidence',
         })),
+        ...attempts.slice(0, input.attemptRefLimit).flatMap((attempt) => {
+          const recovered = recoveredIdentityByAttempt.get(attempt);
+          return recovered ? [{
+            ref_kind: 'file' as const,
+            ref: `${recovered.actionRequestRef}#sha256=${recovered.actionRequestSha256}`,
+            role: 'stage_attempt_action_request_identity_evidence',
+          }] : [];
+        }),
+        ...attempts.slice(0, input.attemptRefLimit).flatMap((attempt) => {
+          const launch = attemptStageRunLaunch(attempt);
+          const stageRunId = stringValue(launch.stage_run_id);
+          return stageRunId ? [{
+            ref_kind: 'sqlite' as const,
+            ref: `${input.queueDb}#stage_run_launches/${stageRunId}`,
+            role: 'stage_run_terminal_execution_evidence',
+          }] : [];
+        }),
       ],
     });
   });

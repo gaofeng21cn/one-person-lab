@@ -13,6 +13,10 @@ import {
 } from './family-runtime-temporal-provider-parts/scheduler-cadence.ts';
 import { runTemporalProviderSloTick } from './family-runtime-provider-slo-executor.ts';
 import {
+  reconcileTemporalStageAttemptRuntimeObservations,
+  type TemporalRuntimeObservationReconciliationDeps,
+} from './family-runtime-temporal-runtime-observation-reconciliation.ts';
+import {
   FAMILY_RUNTIME_PROVIDER_KINDS,
   runtimeDomainDaemonReplacementSurfaces,
   type FamilyRuntimeProviderKind,
@@ -33,6 +37,7 @@ type ProviderSloTick = Awaited<ReturnType<typeof runTemporalProviderSloTick>>;
 type ProviderCadenceReadbackDeps = {
   inspectProvidersWithLifecycle?: InspectFamilyRuntimeProvidersWithLifecycle;
   runProviderSloTick?: typeof runTemporalProviderSloTick;
+  runtimeObservationReconciliationDeps?: TemporalRuntimeObservationReconciliationDeps;
 };
 type SchedulerCadenceCommandDeps = {
   inspectProvidersWithLifecycle?: InspectFamilyRuntimeProvidersWithLifecycle;
@@ -330,15 +335,28 @@ export async function runTemporalProviderCadenceReadback(
   let provider: ProviderInspection = providerBeforeSlo;
   let selected = selectedBeforeSlo;
   let blocker = blockerBeforeSlo;
+  let stageAttemptRuntimeReconciliation: Awaited<ReturnType<
+    typeof reconcileTemporalStageAttemptRuntimeObservations
+  >> | null = null;
   if (selectedBeforeSlo?.ready) {
     providerSlo = deferredProviderSloTick({
       reason: 'deferred_owner_delta_first',
       force: input.force ?? false,
     });
+    stageAttemptRuntimeReconciliation = await reconcileTemporalStageAttemptRuntimeObservations(
+      db,
+      paths,
+      {
+        trigger: 'temporal_scheduler_cadence',
+        ...deps.runtimeObservationReconciliationDeps,
+      },
+    );
   } else {
     providerSlo = await runProviderSloTick(db, paths, {
       force: input.force ?? false,
+      runtimeObservationReconciliationDeps: deps.runtimeObservationReconciliationDeps,
     });
+    stageAttemptRuntimeReconciliation = providerSlo.stage_attempt_runtime_reconciliation ?? null;
     provider = await inspectProvidersWithLifecycle(providerKind, paths, {
       managedProviderProjection: readManagedProviderProjectionSummary(),
       detail: 'fast',
@@ -365,6 +383,7 @@ export async function runTemporalProviderCadenceReadback(
       provider_runtime_after_slo: provider,
       provider_readiness_after_slo: buildProviderReadinessAfterSlo(providerKind, selected),
       provider_slo: providerSlo,
+      stage_attempt_runtime_reconciliation: stageAttemptRuntimeReconciliation,
       task_scope: input.taskScope ?? null,
       queue_projection_bridge: queueProjectionBridge,
       retired_queue_tick: null,
@@ -397,6 +416,7 @@ export async function runTemporalProviderCadenceReadback(
       domain_profiles: input.domainProfiles ?? null,
       provider_slo_receipt_status: providerSlo.provider_slo_execution_receipt.receipt_status,
       provider_slo_skip_reason: providerSloSkipReason(providerSlo),
+      stage_attempt_runtime_reconciliation: stageAttemptRuntimeReconciliation,
       queue_projection_bridge: queueProjectionBridge,
     },
   });
@@ -409,6 +429,7 @@ export async function runTemporalProviderCadenceReadback(
     provider_runtime_after_slo: provider,
     provider_readiness_after_slo: buildProviderReadinessAfterSlo(providerKind, selected),
     provider_slo: providerSlo,
+    stage_attempt_runtime_reconciliation: stageAttemptRuntimeReconciliation,
     queue_projection_bridge: queueProjectionBridge,
     task_scope: input.taskScope ?? null,
     retired_queue_tick: null,
