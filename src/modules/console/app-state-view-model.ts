@@ -82,6 +82,13 @@ function actionIsPayloadFree(action: JsonRecord) {
   return actionPayloadFields(action).length === 0;
 }
 
+function actionCanUseGenericSafeDryRunRoute(action: JsonRecord) {
+  return actionIsPayloadFree(action)
+    && action.dry_run_supported === true
+    && action.confirmation_required === false
+    && asString(action.danger_level) !== null;
+}
+
 function projectLineKey(task: JsonRecord) {
   return asString(task.task_id)
     ?? asString(task.project_scope_id)
@@ -745,16 +752,19 @@ function buildTaskDrilldowns(input: OplAppOperatorViewModelInput) {
 
 function buildSafeActionRoutes(input: OplAppOperatorViewModelInput) {
   return input.actions
-    .filter(actionIsPayloadFree)
+    .filter(actionCanUseGenericSafeDryRunRoute)
     .slice(0, input.profile === 'fast' ? 12 : 48)
     .map((action, index) => {
       const actionId = asString(action.action_id) ?? `app-action-${index + 1}`;
       return {
         action_id: actionId,
         label: asString(action.label) ?? actionId,
-        owner: 'opl_framework',
-        route: `opl app action execute --action ${actionId}`,
+        owner: asString(action.owner) ?? 'opl_framework',
+        route: asString(action.route) ?? `opl app action execute --action ${actionId}`,
+        dry_run_supported: asBoolean(action.dry_run_supported),
         dry_run_required: true,
+        confirmation_required: asBoolean(action.confirmation_required),
+        danger_level: asString(action.danger_level) ?? 'unknown',
         source_ref: 'app_state.actions',
       };
     });

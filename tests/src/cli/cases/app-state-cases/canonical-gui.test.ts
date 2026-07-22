@@ -300,6 +300,36 @@ exit 1
       ),
       true,
     );
+    const gatewayModelAccessAction = output.app_state.actions.find(
+      (entry: any) => entry.action_id === 'gateway_account_use_for_model_access',
+    );
+    assert.ok(gatewayModelAccessAction);
+    assert.equal(gatewayModelAccessAction.dry_run_supported, false);
+    assert.equal(gatewayModelAccessAction.confirmation_required, true);
+    assert.equal(gatewayModelAccessAction.danger_level, 'medium');
+    assert.equal(
+      output.app_state.operator.workbench.safe_action_routes.some(
+        (entry: any) => entry.action_id === gatewayModelAccessAction.action_id,
+      ),
+      false,
+    );
+    const connectionListSafeRoute = output.app_state.operator.workbench.safe_action_routes.find(
+      (entry: any) => entry.action_id === 'connection_list',
+    );
+    assert.ok(connectionListSafeRoute);
+    assert.equal(connectionListSafeRoute.dry_run_supported, true);
+    assert.equal(connectionListSafeRoute.dry_run_required, true);
+    assert.equal(connectionListSafeRoute.confirmation_required, false);
+    assert.equal(connectionListSafeRoute.danger_level, 'none');
+    assert.equal(
+      output.app_state.operator.workbench.safe_action_routes.every(
+        (entry: any) => entry.dry_run_supported === true
+          && entry.dry_run_required === true
+          && entry.confirmation_required === false
+          && entry.danger_level !== 'unknown',
+      ),
+      true,
+    );
     assert.equal(output.app_state.paths.state_dir, stateDir);
     assert.equal(output.app_state.paths.runtime_sources_root, path.join(stateDir, 'modules'));
   } finally {
