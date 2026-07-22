@@ -78,13 +78,28 @@ function committedSurfaceFixture(
     const manifest = readJson(path.join(repoRoot, member.manifest_ref));
     // The frozen digest proves this identity-only reconstruction is byte-exact.
     manifest.version = member.version;
+    if (manifest.owner_language_version?.value !== undefined) {
+      manifest.owner_language_version.value = member.version;
+    }
     manifest.codex_surface.carrier_source_commit = member.source_commit;
     manifest.codex_surface.plugin_payload_manifest_url = path.posix.relative(
       path.posix.dirname(member.manifest_ref),
       member.payload_manifest_ref,
     );
     if (manifest.content_lock !== undefined) {
-      manifest.content_lock.digest = payload.content_lock.digest;
+      manifest.content_lock = {
+        algorithm: payload.content_lock.algorithm,
+        canonicalization: payload.content_lock.canonicalization,
+        paths: payload.files.map((entry: { path: string }) => entry.path),
+        digest: payload.content_lock.digest,
+      };
+    }
+    if (packageId === 'mas' && member.version === '0.2.16') {
+      const scholarDependency = manifest.capability_dependencies.find(
+        (entry: { package_id: string }) => entry.package_id === 'mas-scholar-skills',
+      );
+      scholarDependency.version_requirement = '>=0.2.0 <0.3.0';
+      scholarDependency.required_for = ['workspace_or_quest_codex_discovery'];
     }
     const manifestPath = path.join(root, member.manifest_ref);
     writeJson(manifestPath, manifest);

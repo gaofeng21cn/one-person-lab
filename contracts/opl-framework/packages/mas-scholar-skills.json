@@ -3,7 +3,7 @@
   "package_id": "mas-scholar-skills",
   "display_name": "MAS Scholar Skills",
   "publisher": "one-person-lab",
-  "version": "0.2.16",
+  "version": "0.2.17",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/mas-scholar-skills.git",
   "package_role": "required_agent_capability_package",
@@ -274,6 +274,8 @@
       "skills/medical-manuscript-review/SKILL.md",
       "skills/medical-manuscript-review/docs/no-authority-boundary.md",
       "skills/medical-manuscript-review/kernel.py",
+      "skills/medical-manuscript-review/fixtures/anomaly-evidence-parity.json",
+      "skills/medical-manuscript-review/fixtures/receipt-version-member-delta.json",
       "skills/medical-manuscript-review/references/professional-quality-ref-templates.md",
       "skills/medical-figure-design/SKILL.md",
       "skills/medical-figure-design/docs/no-authority-boundary.md",
@@ -306,6 +308,7 @@
       "skills/medical-data-governance/agents/openai.yaml",
       "skills/medical-data-governance/docs/no-authority-boundary.md",
       "skills/medical-data-governance/kernel.py",
+      "skills/medical-data-governance/fixtures/governed-source-reconstruction.json",
       "skills/medical-data-governance/references/professional-quality-ref-templates.md",
       "skills/medical-advanced-biomed-router/SKILL.md",
       "skills/medical-methodology-planner/SKILL.md",
@@ -335,9 +338,11 @@
       "skills/medical-evidence-synthesis-and-claim-map/kernel.py",
       "skills/medical-reference-integrity-auditor/SKILL.md",
       "skills/medical-reference-integrity-auditor/kernel.py",
+      "skills/medical-reference-integrity-auditor/fixtures/post-csl-reader-semantics.json",
       "skills/medical-rebuttal-strategy/SKILL.md",
       "skills/medical-rebuttal-strategy/kernel.py",
       "skills/medical-display-qc/SKILL.md",
+      "skills/medical-display-qc/fixtures/figure-numbering-one-owner.json",
       "skills/medical-display-qc/fixtures/layout_qc_regression.json",
       "skills/medical-display-qc/kernel.py",
       "skills/medical-causal-inference-plan/SKILL.md",
@@ -346,6 +351,7 @@
       "skills/medical-survival-analysis-plan/kernel.py",
       "skills/medical-risk-model-transportability-reviewer/SKILL.md",
       "skills/medical-risk-model-transportability-reviewer/kernel.py",
+      "skills/medical-risk-model-transportability-reviewer/fixtures/construct-comparability-currentness.json",
       "skills/medical-registry-atlas-story-architect/SKILL.md",
       "skills/medical-registry-atlas-story-architect/kernel.py",
       "skills/medical-registry-atlas-story-architect/references/professional-quality-ref-templates.md",
@@ -355,7 +361,7 @@
       "skills/medical-data-freeze-and-analysis-readiness-reviewer/kernel.py",
       "skills/medical-research-portfolio-memory-curator/SKILL.md"
     ],
-    "digest": "sha256:cbe4544661b960de23d505b912df1d812dbd0225bfb7a56f1830e109ba9c0df3"
+    "digest": "sha256:52dcb0fd1b48b61f146adcb93c52bcbd28ed5db5e85bde1f7721660e33fc4bf9"
   },
   "lifecycle": {
     "owner": "one-person-lab",
@@ -390,13 +396,13 @@
   },
   "codex_surface": {
     "plugin_id": "mas-scholar-skills",
-    "carrier_source_commit": "aa034030b1c9f482923b1bbdbd4500369d7e0123",
+    "carrier_source_commit": "0daab4c4e1165cb550a299aaf0358d7d03c13100",
     "carrier_source_role": "codex_plugin_carrier_not_package_truth",
     "required_skill_ids_ref": "#/exports/core_skill_ids",
     "default_materialized_skill_ids_ref": "#/exports/all_skill_ids",
     "codex_default_exposure": false,
     "optional_install_policy": "all_exported_skills",
-    "plugin_payload_manifest_url": "payloads/mas-scholar-skills-0.2.16.json"
+    "plugin_payload_manifest_url": "payloads/mas-scholar-skills-0.2.17.json"
   },
   "authority_boundary": {
     "can_write_domain_truth": false,
