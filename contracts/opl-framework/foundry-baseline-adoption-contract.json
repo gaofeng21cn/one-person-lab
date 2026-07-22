@@ -1,0 +1,80 @@
+{
+  "surface_kind": "opl_foundry_baseline_adoption_contract",
+  "version": "opl-foundry-baseline-adoption-contract.v1",
+  "owner": "one-person-lab",
+  "state": "branch_candidate",
+  "purpose": "Gate an explicitly declared improve request before FoundryRun creation without creating a second Foundry state machine.",
+  "entry_contract": {
+    "design_request_schema_ref": "contracts/opl-framework/foundry-design-request.schema.json",
+    "extension_schema_ref": "contracts/opl-framework/foundry-baseline-adoption-request.schema.json",
+    "preflight_receipt_schema_ref": "contracts/opl-framework/foundry-baseline-adoption-preflight-receipt.schema.json",
+    "required_mode": "improve",
+    "required_public_invocation": "opl agents run --domain oma --action engineer-agent",
+    "same_foundry_run_lineage_required": true,
+    "parallel_state_machine_allowed": false
+  },
+  "admission_requirements": {
+    "registered_target_agent_version_required": true,
+    "exact_agent_version_ref_required": true,
+    "active_version_currentness_required": true,
+    "target_owner_authorization_required": true,
+    "owner_action": "authorize_improve",
+    "source_refs_must_be_opl_content_sha256": true,
+    "evidence_refs_must_be_opl_content_sha256": true,
+    "content_bytes_must_be_available": true,
+    "permission_refs_required_and_preserved_exactly": true,
+    "qualification_obligation_refs_required": true
+  },
+  "currentness_policy": {
+    "active_version_controls_admission": true,
+    "historical_versions_cannot_control_current_admission": true,
+    "historical_evidence_is_retained": true,
+    "currentness_change_during_admission_fails_closed": true
+  },
+  "forbidden_substitutions": {
+    "create_can_be_used_as_upgrade": false,
+    "direct_registry_write_allowed": false,
+    "package_installation_is_qualification": false,
+    "package_digest_is_agent_version_ref": false,
+    "package_lock_is_agent_version_ref": false,
+    "provider_completion_is_qualification": false,
+    "candidate_receipt_can_expand_authority": false,
+    "implicit_max_tokens_default_allowed": false
+  },
+  "failure_policy": {
+    "typed_failure_code_required": true,
+    "zero_authority_mutation_required": true,
+    "foundry_object_write_before_admission_allowed": false,
+    "foundry_run_creation_before_admission_allowed": false,
+    "temporal_workflow_creation_before_admission_allowed": false,
+    "provider_invocation_before_admission_allowed": false
+  },
+  "provider_boundary": {
+    "oma_semantic_outputs": [
+      "AgentBlueprint",
+      "EvalSpec",
+      "EvolutionProposal"
+    ],
+    "provider_completion_means_protocol_object_only": true,
+    "repo_patch_is_oma_output": false,
+    "qualification_owner": "opl_foundry",
+    "activation_owner": "opl_foundry_and_target_owner",
+    "rollback_owner": "opl_foundry_and_target_owner",
+    "adoption_owner": "target_owner"
+  },
+  "legacy_abi": {
+    "design_request_protocol_version": "opl-foundry-protocol.v1",
+    "baseline_adoption_extension_is_optional": true,
+    "legacy_create_takeover_and_improve_requests_remain_valid": true,
+    "requests_claiming_baseline_adoption_must_use_extension": true
+  },
+  "authority_boundary": {
+    "preflight_can_write_registry": false,
+    "preflight_can_create_foundry_run": false,
+    "preflight_can_invoke_provider": false,
+    "preflight_can_establish_qualification": false,
+    "preflight_can_activate": false,
+    "preflight_can_rollback": false,
+    "preflight_can_expand_permissions": false
+  }
+}

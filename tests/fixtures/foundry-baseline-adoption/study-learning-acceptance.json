@@ -1,0 +1,97 @@
+{
+  "surface_kind": "opl_foundry_baseline_adoption_acceptance_fixture",
+  "version": "opl-foundry-baseline-adoption-acceptance.v1",
+  "fixture_id": "mas-v2-study001-study002-deduplication",
+  "status": "candidate_acceptance_only",
+  "input_bindings": {
+    "study001_source_ref": "opl-content://sha256/a206f5b38b705e8604797abe4e58c93f04922bc8018956cd122cadd21b727868",
+    "study002_source_ref": "opl-content://sha256/2f421ab22ad5db2a6fded41ad38b44f0abac8501a5f90b4df044dbb536617322",
+    "qualification_obligations_ref": "opl-content://sha256/f228aa4617d3761723f0af7b0d8c29e0ba3981daa5600fe6220f63a39b463e42",
+    "design_request_candidate_sha256": "sha256:34400f71d18a9fb57c987a9a4829aa009b48c71d60c0f24bbffc4aca0de2fb58",
+    "preflight_receipt_sha256": "sha256:f6e4cfba4eaeb2d3c84d874445dfe651e8815501fde5ce0f19649e310eb196a6",
+    "pr4_audit_sha256": "sha256:b09455d69400edc2daeb0b0bb9558cb51cb47e86600087d30194103f7ac5eb50"
+  },
+  "expected_semantic_candidate": {
+    "single_mas_v2_initial_draft_gate": [
+      "identity",
+      "partition_estimand_censoring",
+      "complexity",
+      "linked_performance_and_dca",
+      "claim_boundary"
+    ],
+    "citation_and_currentness_state_machine": {
+      "required": true,
+      "active_sets": [
+        "active_manuscript_keys",
+        "active_bibliography_keys",
+        "active_source_context_keys",
+        "active_claim_map_keys"
+      ],
+      "excluded_ledger_separate": true,
+      "structural_and_currentness_results_separate": true
+    },
+    "build_snapshot_currentness_graph": {
+      "required": true,
+      "ordered_nodes": [
+        "structured_evidence",
+        "isolated_builds",
+        "archived_exact_bytes",
+        "archive_local_qa",
+        "immutable_reviewer_snapshot",
+        "selected_build",
+        "dependency_currentness",
+        "freeze"
+      ]
+    },
+    "scholar_roles": [
+      "professional_validator",
+      "professional_producer",
+      "independent_consumer"
+    ],
+    "study001_unique": {
+      "RL-003": "four_set_reference_closure_and_separate_currentness",
+      "RL-006": "reviewer_response_final_synchronization_and_immutable_lineage"
+    },
+    "study002_unique": {
+      "REV-LEARN-004": "construct_non_isomorphism_stop",
+      "REV-LEARN-006": "non_mutating_anomaly_sensitivity",
+      "REV-LEARN-007": "verification_scope",
+      "REV-LEARN-008": "development_performance_and_target_population_cross_surface_qualification"
+    }
+  },
+  "expected_drops": [
+    "duplicate_rules_across_studies",
+    "parallel_new_skill",
+    "candidate_receipt_authority_promotion",
+    "package_digest_as_agent_version_ref",
+    "package_installation_as_qualification",
+    "implicit_max_tokens_1000000_default"
+  ],
+  "preflight_expectation": {
+    "registered_versions": [],
+    "disposition": "blocked",
+    "invocation_status": "not_invoked",
+    "primary_failure_code": "foundry_baseline_adoption_target_version_missing",
+    "additional_failure_codes": [
+      "foundry_baseline_adoption_permission_refs_missing",
+      "foundry_baseline_adoption_owner_authorization_missing"
+    ],
+    "zero_authority_mutation": true
+  },
+  "resume_acceptance": [
+    "Fresh Foundry discovery resolves one exact active MAS AgentVersion.",
+    "The target owner receipt binds authorize_improve, the same run id, version digest, and activation revision.",
+    "permission_refs are copied exactly from the active target closure and remain unchanged through OMA output.",
+    "Every source, evidence, and qualification opl-content ref resolves to exact bytes.",
+    "The one legal OMA invocation uses engineer-agent mode=improve and remains in the same FoundryRun lineage.",
+    "Provider output remains AgentBlueprint, EvalSpec, or EvolutionProposal semantics only.",
+    "OPL evaluation plus target-owner evidence, not provider completion, decides qualification and adoption."
+  ],
+  "authority_boundary": {
+    "this_fixture_is_qualification": false,
+    "this_fixture_is_adoption": false,
+    "this_fixture_is_owner_authorization": false,
+    "this_fixture_can_activate_or_rollback": false,
+    "oma_was_invoked": false
+  }
+}

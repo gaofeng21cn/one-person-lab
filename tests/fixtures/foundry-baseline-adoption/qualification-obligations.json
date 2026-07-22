@@ -1,0 +1,34 @@
+{
+  "surface_kind": "opl_foundry_baseline_adoption_qualification_obligations",
+  "version": "opl-foundry-baseline-adoption-qualification-obligations.v1",
+  "obligation_set_id": "mas-v2-study-learning-baseline-adoption",
+  "required_protocol_objects": [
+    "AgentBlueprint",
+    "EvalSpec",
+    "EvolutionProposal"
+  ],
+  "required_independent_evaluation": [
+    "positive_fixture_passes",
+    "every_hard_stop_negative_fails_at_owning_gate",
+    "permission_refs_are_byte_for_byte_unchanged",
+    "no_parallel_skill_or_state_machine_is_created",
+    "candidate_receipts_do_not_gain_authority",
+    "currentness_change_invalidates_admission",
+    "historical_evidence_remains_auditable",
+    "no_implicit_max_tokens_default_exists"
+  ],
+  "required_owner_evidence": [
+    "target_owner_acceptance_receipt",
+    "registered_qualified_agent_version",
+    "activation_compare_and_swap_receipt_if_activation_requested",
+    "rollback_binding_if_activation_requested"
+  ],
+  "provider_boundary": {
+    "provider_completion_means_protocol_object_only": true,
+    "provider_can_write_repo_patch": false,
+    "provider_can_establish_qualification": false,
+    "provider_can_activate": false,
+    "provider_can_adopt": false
+  },
+  "delivery_policy": "qualify_only_until_target_owner_adjudication"
+}

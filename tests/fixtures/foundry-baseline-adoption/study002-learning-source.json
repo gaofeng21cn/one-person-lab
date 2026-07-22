@@ -1,0 +1,75 @@
+{
+  "surface_kind": "opl_foundry_baseline_adoption_learning_source",
+  "version": "opl-foundry-baseline-adoption-learning-source.v1",
+  "source_id": "study002-snapshot-8bfb8038c249ab983428-revision-learning",
+  "study_id": "002-dm-china-us-mortality-attribution",
+  "source_snapshot_id": "snapshot_8bfb8038c249ab983428",
+  "source_snapshot_sha256": "sha256:3e1409d3f709b932a0c4b5143d75044ed5c7b156cf1d7647ca6dd76699c2b224",
+  "source_status": "refs_only_no_authority",
+  "authority_boundary": {
+    "oma_invoked": false,
+    "mas_owner_accepted": false,
+    "skill_or_core_mutated": false,
+    "qualification_established": false,
+    "publication_or_submission_ready": false
+  },
+  "rejected_source_substitution": {
+    "claimed_target_version_ref": "sha256:379142503b579e821dc61d95258e07d8c6a8e6efe8a2e0080de4ca92335230e9",
+    "actual_evidence_kind": "installed_package_content_digest",
+    "registered_agent_version_count": 0,
+    "may_be_used_as_agent_version_ref": false,
+    "may_establish_qualification": false
+  },
+  "learning_items": [
+    {
+      "learning_id": "REV-LEARN-001",
+      "semantic_disposition": "merge_into_single_mas_v2_initial_draft_gate",
+      "rule": "Select the fixed-horizon estimand before interpreting event fractions; separate censoring-aware observed risk and prediction error from recorded deaths."
+    },
+    {
+      "learning_id": "REV-LEARN-002",
+      "semantic_disposition": "merge_into_single_mas_v2_initial_draft_gate",
+      "rule": "Keep discrimination, calibration, score-range compression, transport causation, and clinical utility as separate evidence-bound claim families."
+    },
+    {
+      "learning_id": "REV-LEARN-003",
+      "semantic_disposition": "merge_into_build_snapshot_currentness_graph",
+      "rule": "Generate tables and figures from one structured evidence source and bind source, request, renderer, and output fingerprints."
+    },
+    {
+      "learning_id": "REV-LEARN-004",
+      "semantic_disposition": "keep_study002_unique",
+      "rule": "Construct non-isomorphism or missing identity linkage terminates comparative attribution estimation instead of triggering proxy substitution."
+    },
+    {
+      "learning_id": "REV-LEARN-005",
+      "semantic_disposition": "merge_into_build_snapshot_currentness_graph",
+      "rule": "Freeze an immutable reviewer snapshot after candidate build and before independent review; reviewers consume only declared members."
+    },
+    {
+      "learning_id": "REV-LEARN-006",
+      "semantic_disposition": "keep_study002_unique",
+      "rule": "Analyze plausibility anomalies as non-mutating sensitivity evidence while preserving frozen source values."
+    },
+    {
+      "learning_id": "REV-LEARN-007",
+      "semantic_disposition": "keep_study002_unique",
+      "rule": "Every numeric verification claim declares evidence class, included and excluded quantities, replicate provenance, and independent-rerun status."
+    },
+    {
+      "learning_id": "REV-LEARN-008",
+      "semantic_disposition": "keep_study002_unique",
+      "rule": "Development-performance and target-population qualifiers follow every corresponding number or conclusion across all human and machine surfaces."
+    }
+  ],
+  "placement_policy": {
+    "scholar_role": [
+      "professional_validator",
+      "professional_producer",
+      "independent_consumer"
+    ],
+    "scholar_is_parallel_domain_owner": false,
+    "parallel_new_skill": false,
+    "candidate_receipt_can_gain_authority": false
+  }
+}

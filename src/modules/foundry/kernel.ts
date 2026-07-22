@@ -72,6 +72,13 @@ import {
   InMemoryFoundryOperationResultJournal,
   InMemoryVersionRegistry,
 } from './in-memory-adapters.ts';
+import {
+  assertBaselineAdoptionAdmitted,
+  isBaselineAdoptionDesignRequest,
+  preflightFoundryBaselineAdoption,
+  type BaselineAdoptionContentRefResolver,
+  type BaselineAdoptionPreflightReceipt,
+} from './baseline-adoption.ts';
 
 type KernelDependencies = {
   designer: DesignerPort;
@@ -83,6 +90,7 @@ type KernelDependencies = {
   activationRuntime?: ActivationRuntime;
   operationResults?: FoundryOperationResultJournal;
   ownerGate?: OwnerGate;
+  baselineAdoptionContentRefs?: BaselineAdoptionContentRefResolver;
   clock?: FoundryClock;
   createRunId?: () => string;
   activityMaxAttempts?: number;
@@ -175,6 +183,7 @@ export class FoundryKernel {
   readonly #activationRuntime: ActivationRuntime;
   readonly #operationResults: FoundryOperationResultJournal;
   readonly #ownerGate: OwnerGate;
+  readonly #baselineAdoptionContentRefs?: BaselineAdoptionContentRefResolver;
   readonly #clock: FoundryClock;
   readonly #createRunId: () => string;
   readonly #activityMaxAttempts: number;
@@ -196,6 +205,7 @@ export class FoundryKernel {
         : new FailClosedActivationRuntime());
     this.#operationResults = dependencies.operationResults ?? new InMemoryFoundryOperationResultJournal();
     this.#ownerGate = dependencies.ownerGate ?? new FailClosedOwnerGate();
+    this.#baselineAdoptionContentRefs = dependencies.baselineAdoptionContentRefs;
     this.#clock = dependencies.clock ?? systemClock();
     this.#createRunId = dependencies.createRunId ?? (() => `foundry_${crypto.randomUUID()}`);
     this.#activityMaxAttempts = dependencies.activityMaxAttempts ?? 3;
@@ -205,13 +215,45 @@ export class FoundryKernel {
     }
   }
 
+  preflightBaselineAdoption(input: { request: unknown; run_id: unknown }) {
+    return preflightFoundryBaselineAdoption(input, {
+      versions: this.#versions,
+      ownerGate: this.#ownerGate,
+      contentRefs: this.#baselineAdoptionContentRefs,
+      now: () => this.#clock.now(),
+    });
+  }
+
+  async startBaselineAdoptionRun(input: {
+    request: unknown;
+    run_id?: string;
+  }): Promise<FoundryRunSnapshot> {
+    return this.#startRun(input, true);
+  }
+
   async startRun(input: { request: unknown; run_id?: string }): Promise<FoundryRunSnapshot> {
-    const request = validateDesignRequest(input.request);
-    const requestDigest = foundryContentDigest(request);
-    const stored = await this.#objects.put(request);
-    if (stored.digest !== requestDigest) fail('Foundry object store changed DesignRequest bytes.');
+    return this.#startRun(input, false);
+  }
+
+  async #startRun(
+    input: { request: unknown; run_id?: string },
+    requireBaselineAdoption: boolean,
+  ): Promise<FoundryRunSnapshot> {
     const runId = input.run_id?.trim() || this.#createRunId();
     if (!runId) fail('FoundryRun id must not be empty.');
+    let request: DesignRequest;
+    try {
+      request = validateDesignRequest(input.request);
+    } catch (error) {
+      if (requireBaselineAdoption || isBaselineAdoptionDesignRequest(input.request)) {
+        assertBaselineAdoptionAdmitted(await this.preflightBaselineAdoption({
+          request: input.request,
+          run_id: runId,
+        }));
+      }
+      throw error;
+    }
+    const requestDigest = foundryContentDigest(request);
     const existingEvents = await this.#events.read(runId);
     if (existingEvents.length > 0) {
       const existing = snapshotFromEvents(existingEvents);
@@ -223,6 +265,13 @@ export class FoundryKernel {
         });
       }
       return existing;
+    }
+    let baselineAdoptionPreflight: BaselineAdoptionPreflightReceipt | null = null;
+    if (requireBaselineAdoption || isBaselineAdoptionDesignRequest(request)) {
+      baselineAdoptionPreflight = assertBaselineAdoptionAdmitted(await this.preflightBaselineAdoption({
+        request,
+        run_id: runId,
+      }));
     }
     const baseline = await this.#resolveBaseline(request);
     const activation = await this.#versions.activation(request.target_agent_id, request.target_domain_id);
@@ -243,6 +292,23 @@ export class FoundryKernel {
         active_version_digest: activation.active_version_digest,
       });
     }
+    if (
+      baselineAdoptionPreflight
+      && baselineAdoptionPreflight.activation_revision !== activation.revision
+    ) {
+      baselineAdoptionPreflight = assertBaselineAdoptionAdmitted(await this.preflightBaselineAdoption({
+        request,
+        run_id: runId,
+      }));
+      if (baselineAdoptionPreflight.activation_revision !== activation.revision) {
+        fail('Baseline adoption currentness changed during FoundryRun admission.', {
+          preflight_activation_revision: baselineAdoptionPreflight.activation_revision,
+          observed_activation_revision: activation.revision,
+        });
+      }
+    }
+    const stored = await this.#objects.put(request);
+    if (stored.digest !== requestDigest) fail('Foundry object store changed DesignRequest bytes.');
     const event = buildFoundryEvent({
       runId,
       revision: 1,

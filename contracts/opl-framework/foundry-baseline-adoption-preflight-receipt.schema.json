@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/foundry-baseline-adoption-preflight-receipt.schema.json",
+  "title": "OPL Foundry Baseline Adoption Preflight Receipt",
+  "type": "object",
+  "required": [
+    "surface_kind",
+    "version",
+    "disposition",
+    "invocation_status",
+    "run_id",
+    "request_digest",
+    "target_agent_id",
+    "target_domain_id",
+    "target_version_ref",
+    "registered_version_id",
+    "registered_version_ref",
+    "active_version_ref",
+    "activation_revision",
+    "owner_authorization_ref",
+    "owner_verification_ref",
+    "source_refs",
+    "evidence_refs",
+    "permission_refs",
+    "qualification_obligation_refs",
+    "content_refs_verified",
+    "failure_code",
+    "failure_codes",
+    "failure_details",
+    "currentness",
+    "authority_boundary",
+    "checked_at"
+  ],
+  "properties": {
+    "surface_kind": { "const": "opl_foundry_baseline_adoption_preflight_receipt" },
+    "version": { "const": "opl-foundry-baseline-adoption-preflight.v1" },
+    "disposition": { "enum": ["admitted", "blocked"] },
+    "invocation_status": { "const": "not_invoked" },
+    "run_id": { "$ref": "#/$defs/nullable_non_empty" },
+    "request_digest": { "$ref": "#/$defs/nullable_digest" },
+    "target_agent_id": { "$ref": "#/$defs/nullable_non_empty" },
+    "target_domain_id": { "$ref": "#/$defs/nullable_non_empty" },
+    "target_version_ref": { "$ref": "#/$defs/nullable_non_empty" },
+    "registered_version_id": { "$ref": "#/$defs/nullable_non_empty" },
+    "registered_version_ref": { "$ref": "#/$defs/nullable_digest" },
+    "active_version_ref": { "$ref": "#/$defs/nullable_digest" },
+    "activation_revision": { "type": ["integer", "null"], "minimum": 0 },
+    "owner_authorization_ref": { "$ref": "#/$defs/nullable_non_empty" },
+    "owner_verification_ref": { "$ref": "#/$defs/nullable_non_empty" },
+    "source_refs": { "$ref": "#/$defs/string_list" },
+    "evidence_refs": { "$ref": "#/$defs/string_list" },
+    "permission_refs": { "$ref": "#/$defs/string_list" },
+    "qualification_obligation_refs": { "$ref": "#/$defs/string_list" },
+    "content_refs_verified": { "type": "boolean" },
+    "failure_code": { "anyOf": [{ "$ref": "#/$defs/failure_code" }, { "type": "null" }] },
+    "failure_codes": { "type": "array", "items": { "$ref": "#/$defs/failure_code" }, "uniqueItems": true },
+    "failure_details": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["code", "message", "refs"],
+        "properties": {
+          "code": { "$ref": "#/$defs/failure_code" },
+          "message": { "type": "string", "minLength": 1 },
+          "refs": { "$ref": "#/$defs/string_list" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "currentness": {
+      "type": "object",
+      "required": ["active_version_required", "active_version_matches_target", "historical_evidence_retained"],
+      "properties": {
+        "active_version_required": { "const": true },
+        "active_version_matches_target": { "type": ["boolean", "null"] },
+        "historical_evidence_retained": { "const": true }
+      },
+      "additionalProperties": false
+    },
+    "authority_boundary": {
+      "type": "object",
+      "required": [
+        "authority_mutation_performed",
+        "foundry_object_written",
+        "foundry_run_created",
+        "provider_invoked",
+        "registry_written",
+        "qualification_established",
+        "activation_performed",
+        "rollback_performed",
+        "permissions_expanded"
+      ],
+      "properties": {
+        "authority_mutation_performed": { "const": false },
+        "foundry_object_written": { "const": false },
+        "foundry_run_created": { "const": false },
+        "provider_invoked": { "const": false },
+        "registry_written": { "const": false },
+        "qualification_established": { "const": false },
+        "activation_performed": { "const": false },
+        "rollback_performed": { "const": false },
+        "permissions_expanded": { "const": false }
+      },
+      "additionalProperties": false
+    },
+    "checked_at": { "type": "string", "minLength": 1 }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": { "properties": { "disposition": { "const": "admitted" } }, "required": ["disposition"] },
+      "then": {
+        "properties": {
+          "failure_code": { "type": "null" },
+          "failure_codes": { "maxItems": 0 },
+          "failure_details": { "maxItems": 0 },
+          "content_refs_verified": { "const": true },
+          "active_version_ref": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+          "registered_version_ref": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+        }
+      },
+      "else": {
+        "properties": {
+          "failure_code": { "$ref": "#/$defs/failure_code" },
+          "failure_codes": { "minItems": 1 },
+          "failure_details": { "minItems": 1 }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "nullable_non_empty": { "type": ["string", "null"], "minLength": 1 },
+    "nullable_digest": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" },
+    "string_list": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+    "failure_code": {
+      "enum": [
+        "foundry_baseline_adoption_contract_missing",
+        "foundry_baseline_adoption_contract_invalid",
+        "foundry_baseline_adoption_run_id_missing",
+        "foundry_baseline_adoption_mode_must_be_improve",
+        "foundry_baseline_adoption_target_version_missing",
+        "foundry_baseline_adoption_target_version_invalid",
+        "foundry_baseline_adoption_source_refs_missing",
+        "foundry_baseline_adoption_source_refs_invalid",
+        "foundry_baseline_adoption_evidence_refs_missing",
+        "foundry_baseline_adoption_evidence_refs_invalid",
+        "foundry_baseline_adoption_permission_refs_missing",
+        "foundry_baseline_adoption_qualification_obligations_missing",
+        "foundry_baseline_adoption_qualification_obligations_invalid",
+        "foundry_baseline_adoption_owner_authorization_missing",
+        "foundry_baseline_adoption_owner_authorization_invalid",
+        "foundry_baseline_adoption_content_resolver_unconfigured",
+        "foundry_baseline_adoption_content_unavailable",
+        "foundry_baseline_adoption_target_version_registry_unavailable",
+        "foundry_baseline_adoption_target_version_unregistered",
+        "foundry_baseline_adoption_registered_version_mismatch",
+        "foundry_baseline_adoption_currentness_unavailable",
+        "foundry_baseline_adoption_active_version_missing",
+        "foundry_baseline_adoption_target_version_not_current",
+        "foundry_baseline_adoption_owner_authorization_unverified"
+      ]
+    }
+  }
+}

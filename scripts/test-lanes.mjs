@@ -62,6 +62,7 @@ const fastTestFiles = [
   'tests/src/verification-package-surfaces.test.ts',
   'tests/src/base-managed-dependencies.test.ts',
   'tests/src/foundry-agent-series-policy.test.ts',
+  'tests/src/foundry-baseline-adoption.test.ts',
   'tests/src/foundry-activation-runtime.test.ts',
   'tests/src/foundry-candidate-resource-lock.test.ts',
   'tests/src/foundry-canonical-json.test.ts',

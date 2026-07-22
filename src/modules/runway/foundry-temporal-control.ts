@@ -7,7 +7,12 @@ import {
 } from '@temporalio/common';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
-import { foundryContentDigest } from '../foundry/index.ts';
+import {
+  assertBaselineAdoptionAdmitted,
+  foundryContentDigest,
+  isBaselineAdoptionDesignRequest,
+  type BaselineAdoptionPreflightReceipt,
+} from '../foundry/index.ts';
 
 import {
   foundryCancelUpdate,
@@ -36,10 +41,30 @@ function taskQueue(options: TemporalClientOptions) {
   return options.paths ? resolveTemporalWorkerTaskQueue(options.paths) : resolveTemporalTaskQueue();
 }
 
+export type FoundryTemporalControlDependencies = {
+  preflightBaselineAdoption?: (input: {
+    request: unknown;
+    run_id: string;
+  }) => Promise<BaselineAdoptionPreflightReceipt>;
+};
+
+async function productionBaselineAdoptionPreflight(input: {
+  request: unknown;
+  run_id: string;
+}) {
+  const runtime = await import('./foundry-production-runtime.ts');
+  return runtime.preflightProductionFoundryBaselineAdoption(input);
+}
+
 export async function startTemporalFoundryRunWorkflow(
   input: FoundryRunStartInput,
   options: TemporalClientOptions = {},
+  dependencies: FoundryTemporalControlDependencies = {},
 ) {
+  if (isBaselineAdoptionDesignRequest(input.request)) {
+    const preflight = dependencies.preflightBaselineAdoption ?? productionBaselineAdoptionPreflight;
+    assertBaselineAdoptionAdmitted(await preflight({ request: input.request, run_id: input.run_id }));
+  }
   const workflowId = foundryTemporalWorkflowId(input.run_id);
   const requestDigest = foundryContentDigest(input.request);
   const workflowInput = { ...input, request_digest: requestDigest };

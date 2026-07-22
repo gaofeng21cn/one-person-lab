@@ -1,0 +1,70 @@
+{
+  "surface_kind": "opl_foundry_baseline_adoption_preflight_receipt",
+  "version": "opl-foundry-baseline-adoption-preflight.v1",
+  "disposition": "blocked",
+  "invocation_status": "not_invoked",
+  "run_id": "foundry:mas-v2:study-learning:not-invoked",
+  "request_digest": "sha256:40a94960567bd2f954d8855399317701bac9d06f5167c94626ea1f2a8058fa99",
+  "target_agent_id": "medautoscience",
+  "target_domain_id": "mas",
+  "target_version_ref": null,
+  "registered_version_id": null,
+  "registered_version_ref": null,
+  "active_version_ref": null,
+  "activation_revision": null,
+  "owner_authorization_ref": null,
+  "owner_verification_ref": null,
+  "source_refs": [
+    "opl-content://sha256/a206f5b38b705e8604797abe4e58c93f04922bc8018956cd122cadd21b727868",
+    "opl-content://sha256/2f421ab22ad5db2a6fded41ad38b44f0abac8501a5f90b4df044dbb536617322"
+  ],
+  "evidence_refs": [
+    "opl-content://sha256/a206f5b38b705e8604797abe4e58c93f04922bc8018956cd122cadd21b727868",
+    "opl-content://sha256/2f421ab22ad5db2a6fded41ad38b44f0abac8501a5f90b4df044dbb536617322"
+  ],
+  "permission_refs": [],
+  "qualification_obligation_refs": [
+    "opl-content://sha256/f228aa4617d3761723f0af7b0d8c29e0ba3981daa5600fe6220f63a39b463e42"
+  ],
+  "content_refs_verified": false,
+  "failure_code": "foundry_baseline_adoption_target_version_missing",
+  "failure_codes": [
+    "foundry_baseline_adoption_target_version_missing",
+    "foundry_baseline_adoption_permission_refs_missing",
+    "foundry_baseline_adoption_owner_authorization_missing"
+  ],
+  "failure_details": [
+    {
+      "code": "foundry_baseline_adoption_target_version_missing",
+      "message": "Baseline adoption requires an exact registered target AgentVersion digest.",
+      "refs": []
+    },
+    {
+      "code": "foundry_baseline_adoption_permission_refs_missing",
+      "message": "The target permission_refs closure must be preserved exactly and cannot be inferred.",
+      "refs": []
+    },
+    {
+      "code": "foundry_baseline_adoption_owner_authorization_missing",
+      "message": "An exact target-owner authorization receipt is required before FoundryRun creation.",
+      "refs": []
+    }
+  ],
+  "currentness": {
+    "active_version_required": true,
+    "active_version_matches_target": null,
+    "historical_evidence_retained": true
+  },
+  "authority_boundary": {
+    "authority_mutation_performed": false,
+    "foundry_object_written": false,
+    "foundry_run_created": false,
+    "provider_invoked": false,
+    "registry_written": false,
+    "qualification_established": false,
+    "activation_performed": false,
+    "rollback_performed": false,
+    "permissions_expanded": false
+  },
+  "checked_at": "2026-07-22T10:00:00.000Z"
+}

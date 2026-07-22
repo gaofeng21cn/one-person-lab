@@ -21,6 +21,7 @@ const VERIFICATION_VERSION = 'opl-foundry-owner-gate-verification.v1';
 const DIGEST_PATTERN = /^sha256:[a-f0-9]{64}$/;
 
 const ACTION_DECISIONS: Record<OwnerGateAction, OwnerGateDecision> = {
+  authorize_improve: 'approve',
   approve_canary: 'approve',
   reject_canary: 'reject',
   approve_active: 'approve',

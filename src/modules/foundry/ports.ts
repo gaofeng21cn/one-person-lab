@@ -114,6 +114,7 @@ export interface FoundryEventStore {
 }
 
 export type OwnerGateAction =
+  | 'authorize_improve'
   | 'approve_canary'
   | 'reject_canary'
   | 'approve_active'

@@ -1,0 +1,65 @@
+{
+  "surface_kind": "opl_foundry_baseline_adoption_pr_audit",
+  "version": "opl-foundry-baseline-adoption-pr-audit.v1",
+  "repository": "gaofeng21cn/one-person-lab",
+  "pull_request": 4,
+  "title": "fix(console): separate historical quality budgets",
+  "state": "OPEN",
+  "base_commit": "54e74122a07aa0e3988bb58ba59596477b831289",
+  "head_commit": "32b3fb0f89de32ae23cceb9e52cc14056e2a46ad",
+  "commit_count": 2,
+  "aggregate_stable_patch_id": "43848a3aaa0abbbb1851e4c04811c9c6c84bf8fa",
+  "sorted_lf_write_set_sha256": "sha256:32a59b579f01a51f51c5e2694db014a6474b620ca179133fcab97c07047d826b",
+  "write_set": [
+    "contracts/opl-framework/hosted-work-item-readback-contract.json",
+    "src/modules/console/work-item-projection/execution.ts",
+    "tests/src/work-item-hosted-readback.test.ts",
+    "tests/src/work-item-projection-v2.test.ts"
+  ],
+  "main_integration": {
+    "audited_main": "0bf5a988f1208460e7e5cf877c44feabb3003467",
+    "head_is_ancestor_of_main": false,
+    "unique_commits": [
+      "9771d71df588778cd4ccab8101ea80e4802f89ee",
+      "32b3fb0f89de32ae23cceb9e52cc14056e2a46ad"
+    ]
+  },
+  "keep_drop_replay": [
+    {
+      "semantic_delta": "Only awaiting_producer, awaiting_review, and awaiting_repair represent a current managed quality cycle.",
+      "decision": "KEEP_AND_REPLAY",
+      "replay_surface": "foundry baseline adoption active AgentVersion currentness gate",
+      "reason": "Only active current state may control admission."
+    },
+    {
+      "semantic_delta": "Terminal or historical budget evidence remains in immutable ledgers but cannot control current admission.",
+      "decision": "KEEP_AND_REPLAY",
+      "replay_surface": "baseline adoption currentness policy and preflight receipt",
+      "reason": "Historical evidence is retained without becoming current authority."
+    },
+    {
+      "semantic_delta": "Direct edits to work-item projection and its hosted readback tests.",
+      "decision": "DROP_FROM_THIS_CANDIDATE",
+      "replay_surface": null,
+      "reason": "The files are outside baseline adoption and are not required to preserve the directly relevant currentness invariant."
+    },
+    {
+      "semantic_delta": "Explicit max_tokens=1000000 test fixtures.",
+      "decision": "DROP_FROM_THIS_CANDIDATE",
+      "replay_surface": null,
+      "reason": "They are historical test inputs, not a default; restoring an implicit one-million-token default is forbidden."
+    }
+  ],
+  "unique_items_not_replayed": [
+    "Console projection status-set implementation",
+    "Hosted work-item readback contract documentation",
+    "Terminal human-gate quality-budget regression fixture",
+    "Running quality-cycle projection fixture",
+    "Explicit one-million-token fixture values"
+  ],
+  "scope_boundary": {
+    "implicit_max_tokens_default_added": false,
+    "pr_files_replayed": [],
+    "directly_relevant_semantics_only": true
+  }
+}

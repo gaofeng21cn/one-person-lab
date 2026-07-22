@@ -1,0 +1,100 @@
+{
+  "surface_kind": "opl_foundry_baseline_adoption_learning_source",
+  "version": "opl-foundry-baseline-adoption-learning-source.v1",
+  "source_id": "study001-revision-v2-generalizable-learning",
+  "study_id": "001-dm-cvd-mortality-risk",
+  "source_snapshot_sha256": "sha256:640f15489c202d8edf1dae4946758f380523efbc2d8b67a1dc80620f00d5a806",
+  "source_status": "candidate_only_no_authority",
+  "authority_boundary": {
+    "oma_invoked": false,
+    "mas_owner_accepted": false,
+    "skill_or_core_mutated": false,
+    "qualification_established": false,
+    "publication_or_submission_ready": false
+  },
+  "learning_items": [
+    {
+      "learning_id": "RL-001",
+      "title": "Prediction-model initial-draft integrity gate",
+      "semantic_disposition": "merge_into_single_mas_v2_initial_draft_gate",
+      "retained_semantics": [
+        "partition_integrity",
+        "estimand_and_censoring_reconciliation",
+        "sparse_event_complexity",
+        "linked_performance_and_dca",
+        "claim_boundary"
+      ]
+    },
+    {
+      "learning_id": "RL-002",
+      "title": "Mandatory joint reporting of discrimination and adverse absolute-risk evidence",
+      "semantic_disposition": "merge_into_single_mas_v2_initial_draft_gate",
+      "retained_semantics": [
+        "linked_discrimination_prediction_error_and_calibration",
+        "negative_evidence_visibility",
+        "claim_boundary"
+      ]
+    },
+    {
+      "learning_id": "RL-003",
+      "title": "Four-set active citation closure with separate excluded and currentness states",
+      "semantic_disposition": "keep_study001_unique",
+      "retained_semantics": [
+        "active_manuscript_keys_equal_active_bibliography_keys",
+        "active_bibliography_keys_equal_active_source_context_keys",
+        "active_source_context_keys_equal_active_claim_map_keys",
+        "excluded_reference_ledger_is_separate",
+        "structural_closure_and_currentness_are_separate_states"
+      ]
+    },
+    {
+      "learning_id": "RL-004",
+      "title": "Renderer-measured semantic wrapping, containment, internal-overlap, font, and paired-export gate",
+      "semantic_disposition": "merge_into_build_snapshot_currentness_graph",
+      "retained_semantics": [
+        "renderer_identity_and_dimensions",
+        "paired_export_parity",
+        "programmatic_and_independent_final_scale_qa"
+      ]
+    },
+    {
+      "learning_id": "RL-005",
+      "title": "Archive-bound reader A/B rebuild, QA binding, and freeze currentness",
+      "semantic_disposition": "merge_into_build_snapshot_currentness_graph",
+      "retained_semantics": [
+        "isolated_builds",
+        "archive_local_qa",
+        "exact_byte_comparison",
+        "root_to_selected_build_equality",
+        "dependency_currentness_before_freeze"
+      ]
+    },
+    {
+      "learning_id": "RL-006",
+      "title": "Reviewer-response final synchronization and immutable-lineage rule",
+      "semantic_disposition": "keep_study001_unique",
+      "retained_semantics": [
+        "prefreeze_response_action_inventory_synchronization",
+        "postfreeze_review_status_in_external_synthesis",
+        "new_snapshot_required_for_frozen_response_change"
+      ]
+    },
+    {
+      "learning_id": "RL-007",
+      "title": "Baseline hard gate for cohort, endpoint, follow-up, ethics, and center semantics",
+      "semantic_disposition": "merge_as_first_step_of_single_mas_v2_initial_draft_gate",
+      "retained_semantics": [
+        "cohort_and_analytic_unit_identity",
+        "endpoint_and_three_state_derivation",
+        "followup_censoring_and_attrition",
+        "center_semantics",
+        "ethics_governance_and_release_authority"
+      ]
+    }
+  ],
+  "placement_policy": {
+    "enhance_existing_mas_core_and_existing_skills_first": true,
+    "parallel_new_skill": false,
+    "candidate_receipt_can_gain_authority": false
+  }
+}

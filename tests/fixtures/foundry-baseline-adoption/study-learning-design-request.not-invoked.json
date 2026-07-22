@@ -1,0 +1,92 @@
+{
+  "surface_kind": "opl_foundry_baseline_adoption_design_request_candidate",
+  "version": "opl-foundry-baseline-adoption-design-request-candidate.v1",
+  "status": "not_invoked",
+  "primary_failure_code": "foundry_baseline_adoption_target_version_missing",
+  "invocation_contract": {
+    "command": "opl agents run --domain oma --action engineer-agent",
+    "mode": "improve",
+    "same_foundry_run_lineage_required": true
+  },
+  "target_resolution": {
+    "target_agent_id": "medautoscience",
+    "target_domain_id": "mas",
+    "active_agent_version_ref": null,
+    "registered_versions": [],
+    "foundry_versions_readback": "opl foundry versions --target-agent-id medautoscience --target-domain-id mas --json",
+    "package_installation_may_substitute": false,
+    "package_content_digest_may_substitute": false,
+    "package_lock_may_substitute": false
+  },
+  "design_request_candidate": {
+    "surface_kind": "opl_foundry_design_request",
+    "version": "opl-foundry-protocol.v1",
+    "request_id": "request:mas-v2:study-learning-baseline-adoption",
+    "mode": "improve",
+    "target_agent_id": "medautoscience",
+    "target_domain_id": "mas",
+    "target_version_ref": null,
+    "objective": "Deduplicate Study001 RL-001..007 and Study002 REV-LEARN-001..008 into one MAS v2 initial-draft gate plus one citation/currentness and build/snapshot/currentness model.",
+    "acceptance_criteria": [
+      "One MAS v2 initial-draft gate orders identity, partition/estimand/censoring, complexity, linked performance/DCA, then claim boundary.",
+      "Citation closure/currentness and build/snapshot/currentness remain explicit state and dependency graphs.",
+      "Study001 RL-003 and RL-006 unique semantics remain present.",
+      "Study002 REV-LEARN-004, REV-LEARN-006, REV-LEARN-007, and REV-LEARN-008 unique semantics remain present.",
+      "Scholar remains a professional validator, producer, and independent consumer only.",
+      "Duplicate rules, a parallel new Skill, and candidate-receipt authority promotion are absent."
+    ],
+    "non_goals": [
+      "Do not emit a repository patch or developer work order from OMA.",
+      "Do not create, qualify, activate, adopt, or roll back an AgentVersion from provider completion.",
+      "Do not expand permissions or inspect protected test bodies.",
+      "Do not introduce an implicit max_tokens default."
+    ],
+    "source_refs": [
+      "opl-content://sha256/a206f5b38b705e8604797abe4e58c93f04922bc8018956cd122cadd21b727868",
+      "opl-content://sha256/2f421ab22ad5db2a6fded41ad38b44f0abac8501a5f90b4df044dbb536617322"
+    ],
+    "constraints": {
+      "capability_refs": [
+        "opl://capabilities/oma/agent-semantic-design"
+      ],
+      "permission_refs": [],
+      "privacy_requirements": [
+        "refs-only-no-protected-test-bodies"
+      ],
+      "cost_limits": {
+        "usd": 10
+      },
+      "latency_limits": {
+        "milliseconds": 1800000
+      }
+    },
+    "delivery_policy": {
+      "activation_mode": "qualify_only",
+      "max_generations": 2
+    },
+    "baseline_adoption": {
+      "surface_kind": "opl_foundry_baseline_adoption_request",
+      "version": "opl-foundry-baseline-adoption-request.v1",
+      "owner_authorization_ref": null,
+      "evidence_refs": [
+        "opl-content://sha256/a206f5b38b705e8604797abe4e58c93f04922bc8018956cd122cadd21b727868",
+        "opl-content://sha256/2f421ab22ad5db2a6fded41ad38b44f0abac8501a5f90b4df044dbb536617322"
+      ],
+      "qualification_obligation_refs": [
+        "opl-content://sha256/f228aa4617d3761723f0af7b0d8c29e0ba3981daa5600fe6220f63a39b463e42"
+      ]
+    }
+  },
+  "unresolved_authority_inputs": [
+    "exact_active_registered_agent_version_ref",
+    "target_owner_authorization_receipt_ref",
+    "exact_permission_refs_from_active_agent_version"
+  ],
+  "resume_conditions": [
+    "The MAS owner publishes and installs the authorized carrier closure.",
+    "Fresh discovery exposes one active registered MAS AgentVersion.",
+    "The target owner authorizes improve for the exact run, version, and activation revision.",
+    "The active AgentVersion permission_refs are copied without expansion.",
+    "All opl-content source, evidence, and qualification bytes are available to the StageRun."
+  ]
+}

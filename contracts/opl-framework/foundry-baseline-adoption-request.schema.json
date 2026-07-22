@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/foundry-baseline-adoption-request.schema.json",
+  "title": "OPL Foundry Baseline Adoption Request Extension",
+  "type": "object",
+  "required": [
+    "surface_kind",
+    "version",
+    "owner_authorization_ref",
+    "evidence_refs",
+    "qualification_obligation_refs"
+  ],
+  "properties": {
+    "surface_kind": { "const": "opl_foundry_baseline_adoption_request" },
+    "version": { "const": "opl-foundry-baseline-adoption-request.v1" },
+    "owner_authorization_ref": {
+      "type": "string",
+      "pattern": "^opl://foundry/owner-authority-receipts/sha256:[a-f0-9]{64}$"
+    },
+    "evidence_refs": { "$ref": "#/$defs/content_ref_list" },
+    "qualification_obligation_refs": { "$ref": "#/$defs/content_ref_list" }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "content_ref_list": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "pattern": "^opl-content://sha256/[a-f0-9]{64}$" },
+      "uniqueItems": true
+    }
+  }
+}

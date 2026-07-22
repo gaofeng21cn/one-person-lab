@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 
 import {
+  preflightFoundryBaselineAdoption,
   FoundryKernel,
   isQualificationGradeEvaluationRuntime,
   ManifestFoundryDesignerAdapter,
@@ -9,6 +10,7 @@ import {
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import {
   ContentAddressedCandidateCompiler,
+  FileFoundryContentStore,
   FileFoundryObjectStore,
   foundryStoragePaths,
   LedgerFoundryEventStore,
@@ -21,6 +23,18 @@ import { HostedFoundryActivationRuntime } from './foundry-activation-runtime.ts'
 import { DefaultHostedAgentRuntimeBindingResolver } from './hosted-agent-runtime-binding.ts';
 import { configuredFoundryOwnerGate } from './foundry-owner-gate.ts';
 import { resolveStandardAgentManagedCheckout } from './standard-agent-managed-checkout.ts';
+
+export function preflightProductionFoundryBaselineAdoption(input: {
+  request: unknown;
+  run_id: string;
+  root_override?: string;
+}) {
+  return preflightFoundryBaselineAdoption(input, {
+    versions: new LedgerVersionRegistry(input.root_override),
+    ownerGate: configuredFoundryOwnerGate(),
+    contentRefs: new FileFoundryContentStore(input.root_override),
+  });
+}
 
 export async function createProductionFoundryKernel(input: {
   root_override?: string;
@@ -48,6 +62,7 @@ export async function createProductionFoundryKernel(input: {
     workspaceRoot: storage.root,
   });
   const compiler = new ContentAddressedCandidateCompiler(input.root_override);
+  const contentRefs = new FileFoundryContentStore(input.root_override);
   const evaluator = input.trusted_evaluation_runtime ?? configuredFoundryEvaluationExecutor({
     candidate_pack_resolver: {
       resolveDirectory: (candidate) => compiler.candidateDirectory(candidate.candidate_digest),
@@ -74,6 +89,7 @@ export async function createProductionFoundryKernel(input: {
       workspace_root: storage.root,
     }),
     ownerGate: configuredFoundryOwnerGate(),
+    baselineAdoptionContentRefs: contentRefs,
     activityMaxAttempts: 1,
     propagateTransientActivityFailures: true,
   });

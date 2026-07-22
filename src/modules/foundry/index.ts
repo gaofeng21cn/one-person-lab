@@ -6,6 +6,7 @@ export const OPL_FOUNDRY_SOURCE_MODULE = {
 } as const;
 
 export * from './control.ts';
+export * from './baseline-adoption.ts';
 export * from './designer-adapter.ts';
 export * from './evaluation-runtime.ts';
 export * from './in-memory-adapters.ts';
