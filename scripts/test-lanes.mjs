@@ -120,6 +120,7 @@ const fastTestFiles = [
   'tests/src/standard-agent-action-output.test.ts',
   'tests/src/domain-artifact-cas-materialization.test.ts',
   'tests/src/standard-agent-lifecycle-admission.test.ts',
+  'tests/src/standard-agent-mas-lifecycle-roundtrip.test.ts',
   'tests/src/standard-agent-action-runtime.test.ts',
   'tests/src/standard-agent-handler-sandbox.test.ts',
   'tests/src/standard-agent-hosted-action-runtime-contract.test.ts',

@@ -559,7 +559,7 @@ function authorityHandler(workspaceRoot: string, onCall: () => void) {
         version: 'opl-domain-artifact-cas-materialization.v1',
         capability_id: 'opl_domain_artifact_cas_materialization.v1',
         request_id: requestId,
-        domain_id: 'mas',
+        domain_id: 'medautoscience',
         authorization_ref: authorizationRef,
         operations_sha256: operationsSha256,
         operations,
@@ -569,7 +569,7 @@ function authorityHandler(workspaceRoot: string, onCall: () => void) {
         authorization_ref: authorizationRef,
         capability_id: 'opl_domain_artifact_cas_materialization.v1',
         request_id: requestId,
-        domain_id: 'mas',
+        domain_id: 'medautoscience',
         operations_sha256: operationsSha256,
         authority_receipt_ref: authorityReceiptRef,
         satisfied_gate_ids: gateIds,
@@ -1526,8 +1526,10 @@ test('lifecycle admission blocks inactive Stage reservation, materializes reacti
     assert.equal(JSON.parse(fs.readFileSync(path.join(workspaceRoot, 'workspace_index.json'), 'utf8')).studies[0].status,
       'active');
     const plan = inspectStandardAgentActionRunPlan({ workspaceRoot, runId: 'reactivated-stage' });
-    assert.equal((plan?.effective_payload?.lifecycle_admission as Record<string, unknown>).mode,
-      'materialized_receipt');
+    const materializedAdmission = plan?.effective_payload?.lifecycle_admission as Record<string, unknown>;
+    assert.equal(materializedAdmission.mode, 'materialized_receipt');
+    assert.match(String(materializedAdmission.domain_authority_result_sha256), /^sha256:[a-f0-9]{64}$/u);
+    assert.match(String(materializedAdmission.materialization_receipt_sha256), /^sha256:[a-f0-9]{64}$/u);
     assert.equal(JSON.stringify(plan?.effective_payload).includes('reactivation_request'), false);
     const childPlan = inspectStandardAgentActionRunPlan({ workspaceRoot, runId: childRunId });
     const externalChildPayload = structuredClone(childPlan?.effective_payload ?? {});

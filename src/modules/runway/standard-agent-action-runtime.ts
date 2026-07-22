@@ -1031,7 +1031,7 @@ async function runFoundryAction(input: {
 function materializeHandlerOutput(input: {
   action: FamilyActionCatalogAction;
   workspaceRoot: string;
-  domainId: string;
+  materializationDomainId: string;
   runId: string;
   handlerRef: string;
   runtimeBindingRef: string;
@@ -1040,7 +1040,7 @@ function materializeHandlerOutput(input: {
 }, applyMaterialization = applyDomainArtifactCasMaterialization) {
   return applyMaterialization({
     workspaceRoot: input.workspaceRoot,
-    domainId: input.domainId,
+    domainId: input.materializationDomainId,
     actionId: input.action.action_id,
     runId: input.runId,
     handlerRef: input.handlerRef,
@@ -1062,6 +1062,7 @@ async function runHandlerAction(input: {
   checkoutRoot: string;
   workspaceRoot: string;
   domainId: string;
+  materializationDomainId: string;
   runId: string;
   requestBytes: Buffer;
   packageUseBinding: unknown;
@@ -1139,7 +1140,7 @@ async function runHandlerAction(input: {
         hostMaterialization = materializeHandlerOutput({
           action: input.action,
           workspaceRoot: input.workspaceRoot,
-          domainId: input.domainId,
+          materializationDomainId: input.materializationDomainId,
           runId: input.runId,
           handlerRef,
           runtimeBindingRef: input.runtimeBindingRef,
@@ -1239,7 +1240,7 @@ async function runHandlerAction(input: {
     hostMaterialization ??= materializeHandlerOutput({
       action: input.action,
       workspaceRoot: input.workspaceRoot,
-      domainId: input.domainId,
+      materializationDomainId: input.materializationDomainId,
       runId: input.runId,
       handlerRef,
       runtimeBindingRef: input.runtimeBindingRef,
@@ -1382,7 +1383,7 @@ async function runHandlerAction(input: {
     hostMaterialization = materializeHandlerOutput({
       action: input.action,
       workspaceRoot: input.workspaceRoot,
-      domainId: input.domainId,
+      materializationDomainId: input.materializationDomainId,
       runId: input.runId,
       handlerRef,
       runtimeBindingRef: input.runtimeBindingRef,
@@ -1956,6 +1957,7 @@ async function materializeLifecycleAdmissionContext(input: {
       checkoutRoot: input.checkoutRoot,
       workspaceRoot: input.workspaceRoot,
       domainId: input.domainId,
+      materializationDomainId: input.context.catalog.target_domain_id,
       runId: input.runId,
       originalInvocationSha256: input.originalInvocationSha256,
     });
@@ -2034,6 +2036,7 @@ async function materializeLifecycleAdmissionContext(input: {
     checkoutRoot: input.checkoutRoot,
     workspaceRoot: input.workspaceRoot,
     domainId: input.domainId,
+    materializationDomainId: context.catalog.target_domain_id,
     runId: input.runId,
     originalInvocationSha256: input.originalInvocationSha256,
   });
@@ -2157,6 +2160,7 @@ async function executeActionContext(input: {
     checkoutRoot: input.checkoutRoot,
     workspaceRoot: input.workspaceRoot,
     domainId: input.domainId,
+    materializationDomainId: input.context.catalog.target_domain_id,
     runId: input.runId,
     originalInvocationSha256: input.originalInvocationSha256,
   });
@@ -2189,6 +2193,7 @@ async function executeActionContext(input: {
           ...(input.timeoutMs === null ? { timeoutMs: undefined } : { timeoutMs: input.timeoutMs }),
         },
         registry: registry ?? fail('Handler-bound action requires a handler registry.'),
+        materializationDomainId: input.context.catalog.target_domain_id,
         acceptedDomainIds: input.acceptedDomainIds,
         requestPayloadSha256: input.requestPayloadSha256,
         inputSchemaValidation: inputValidation,

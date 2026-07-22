@@ -990,9 +990,9 @@ export function materializedStandardAgentLifecycleAdmission(input: {
     version: 'opl-domain-lifecycle-admission.v1',
     mode: 'materialized_receipt',
     domain_authority_result_ref: outputRef,
-    domain_authority_result_sha256: outputSha256,
+    domain_authority_result_sha256: `sha256:${outputSha256}`,
     materialization_receipt_ref: receiptRef,
-    materialization_receipt_sha256: receiptSha256,
+    materialization_receipt_sha256: `sha256:${receiptSha256}`,
   } as const;
 }
 
@@ -1017,6 +1017,7 @@ function validateMaterializedAdmission(input: {
   contract: StandardAgentLifecycleAdmissionContract;
   workspaceRoot: string;
   domainId: string;
+  materializationDomainId: string;
   actionId: string;
   runId: string;
   originalInvocationSha256: string;
@@ -1048,7 +1049,7 @@ function validateMaterializedAdmission(input: {
     receipt.surface_kind !== 'opl_domain_artifact_cas_materialization_receipt'
     || receipt.version !== 'opl-domain-artifact-cas-materialization-receipt.v1'
     || receipt.capability_id !== DOMAIN_ARTIFACT_CAS_CAPABILITY_ID
-    || receipt.domain_id !== input.domainId
+    || receipt.domain_id !== input.materializationDomainId
     || receipt.status !== 'materialized'
     || !isRecord(receipt.transaction)
     || receipt.transaction.journal_must_be_absent_for_admission !== true
@@ -1174,6 +1175,7 @@ export function preflightStandardAgentDomainLifecycleAdmission(input: {
   checkoutRoot: string;
   workspaceRoot: string;
   domainId: string;
+  materializationDomainId?: string;
   runId: string;
   originalInvocationSha256: string;
 }) {
@@ -1200,6 +1202,7 @@ export function preflightStandardAgentDomainLifecycleAdmission(input: {
       contract,
       workspaceRoot: input.workspaceRoot,
       domainId: input.domainId,
+      materializationDomainId: input.materializationDomainId ?? input.domainId,
       actionId: input.action.action_id,
       runId: input.runId,
       originalInvocationSha256: input.originalInvocationSha256,
