@@ -74,6 +74,12 @@ import {
   OPL_PACK_PROVISION_SUBMISSION_RESOURCE_ACTION_ID,
   provisionSubmissionResource,
 } from '../../pack/index.ts';
+import { buildOplRuntimeAppState } from '../app-runtime-state.ts';
+import {
+  observeWorkItemExecutionSessionBinding,
+  resolveWorkItemExecutionSessionObservationTarget,
+  type ObserveWorkItemExecutionSessionInput,
+} from '../work-item-projection/session-activity.ts';
 
 import type { AppActionExecuteOptions } from './action-execute-parser.ts';
 export { parseAppActionExecuteArgs } from './action-execute-parser.ts';
@@ -199,6 +205,23 @@ async function executeDirectAppAction(
             status: 'dry_run',
           }
         : await runFamilyRuntime(args),
+    };
+  }
+
+  if (options.actionId === 'work_item_execution_session_observe') {
+    const currentProjection = buildOplRuntimeAppState()
+      .app_state.operator.workbench.work_item_projection_v2;
+    const input = options.payload as ObserveWorkItemExecutionSessionInput;
+    const currentItem = resolveWorkItemExecutionSessionObservationTarget(
+      currentProjection.items,
+      input,
+    );
+    return {
+      delegatedSurface: 'OPL work-item coordination-session binding ledger',
+      result: observeWorkItemExecutionSessionBinding(
+        input,
+        { currentItem, dryRun: options.dryRun },
+      ),
     };
   }
 

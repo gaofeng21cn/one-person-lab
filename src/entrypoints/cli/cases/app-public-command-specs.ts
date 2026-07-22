@@ -6,13 +6,23 @@ export function buildPublicAppCommandSpecs(
 ): Record<string, CommandSpec> {
   return {
     'app state': {
-      usage: 'opl app state [--profile fast|full]',
+      usage: 'opl app state [--profile runtime|fast|full]',
       summary: 'Read the canonical OPL App state projection for GUI pages without page-local probing.',
-      examples: ['opl app state --profile fast', 'opl app state --profile full --json'],
+      examples: [
+        'opl app state --profile fast',
+        'opl app state --profile runtime --json',
+        'opl app state --profile full --json',
+      ],
       group: 'app',
       handler: async (args) => {
-        const { buildOplAppState, parseAppStateArgs } = await import('../../../modules/console/app-state.ts');
-        return buildOplAppState(parseAppStateArgs(args));
+        const { parseAppStateArgs } = await import('../../../modules/console/app-state-profile.ts');
+        const input = parseAppStateArgs(args);
+        if (input.profile === 'runtime') {
+          const { buildOplRuntimeAppState } = await import('../../../modules/console/app-runtime-state.ts');
+          return buildOplRuntimeAppState();
+        }
+        const { buildOplAppState } = await import('../../../modules/console/app-state.ts');
+        return buildOplAppState({ profile: input.profile });
       },
     },
     'app action execute': {

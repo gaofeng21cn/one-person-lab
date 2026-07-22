@@ -369,11 +369,19 @@ function usageInputs(input: StageAttemptUsageInput) {
   return [
     { ref: `stage_attempt:${input.stageAttemptId}#provider_run`, usage: input.providerRun, token_authority: true },
     { ref: `stage_attempt:${input.stageAttemptId}#provider_run.usage_projection`, usage: providerUsage, token_authority: true },
-    ...activityEvents.map((event, index) => ({
-      ref: `stage_attempt:${input.stageAttemptId}#activity_events[${index}]`,
-      usage: event,
-      token_authority: true,
-    })),
+    ...activityEvents.map((event, index) => {
+      const compactSourceIndex = numberValue(event.__opl_compact_source_index);
+      const sourceIndex = compactSourceIndex !== null
+        && Number.isSafeInteger(compactSourceIndex)
+        && compactSourceIndex >= 0
+        ? compactSourceIndex
+        : index;
+      return {
+        ref: `stage_attempt:${input.stageAttemptId}#activity_events[${sourceIndex}]`,
+        usage: event,
+        token_authority: true,
+      };
+    }),
     { ref: `stage_attempt:${input.stageAttemptId}#route_impact.usage_projection`, usage: routeUsage, token_authority: true },
   ].filter((entry) => hasUsageFields(entry.usage));
 }

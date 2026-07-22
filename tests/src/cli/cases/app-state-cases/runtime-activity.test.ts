@@ -109,6 +109,38 @@ function writeStageAttemptFixture(input: {
   }
 }
 
+test('app state keeps fast as the default and exposes runtime as an explicit capability', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-runtime-profile-'));
+  const stateDir = path.join(homeRoot, 'opl-state');
+  const env = {
+    HOME: homeRoot,
+    OPL_STATE_DIR: stateDir,
+    OPL_MODULES_ROOT: path.join(stateDir, 'modules'),
+    OPL_DEVELOPER_MODE_GH_BINARY: path.join(homeRoot, 'missing-gh'),
+    PATH: '/usr/bin:/bin',
+  };
+
+  try {
+    const defaultOutput = runCli(['app', 'state'], env) as any;
+    assert.equal(defaultOutput.app_state.meta.profile, 'fast');
+
+    const runtimeOutput = runCli(['app', 'state', '--profile', 'runtime'], env) as any;
+    assert.equal(runtimeOutput.app_state.meta.profile, 'runtime');
+    assert.equal(runtimeOutput.app_state.meta.projection_detail_profile, 'fast');
+    assert.deepEqual(runtimeOutput.app_state.meta.capabilities, [
+      'opl_app.runtime_state_profile.v1',
+    ]);
+    assert.equal(runtimeOutput.app_state.meta.network_access_allowed, false);
+    assert.equal(runtimeOutput.app_state.meta.mutation_allowed, false);
+    assert.equal(
+      runtimeOutput.app_state.operator.workbench.work_item_projection_v2.profile,
+      'fast',
+    );
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
 test('app state does not turn an unregistered failed attempt into a phantom work item', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-runtime-activity-'));
   const stateDir = path.join(homeRoot, 'opl-state');

@@ -38,7 +38,7 @@ import { readOplWorkspaceRoot } from '../../kernel/system-preferences.ts';
 import path from 'node:path';
 import { buildActionCatalog } from './app-state-action-catalog.ts';
 import { buildSettingsControlCenter } from './app-state-settings-control-center.ts';
-import { parseAppStateProfile, type AppStateProfile } from './app-state-profile.ts';
+import type { AppStateProfile } from './app-state-profile.ts';
 import { buildOplAppOperatorViewModel } from './app-state-view-model.ts';
 import { buildAppRuntimeWorkItemProjection } from './app-runtime-work-item-projection.ts';
 import { projectWorkItemRuntimeActivityItems } from './work-item-projection/legacy-adapter.ts';
@@ -54,30 +54,7 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-export function parseAppStateArgs(args: string[]): { profile: AppStateProfile } {
-  let profile: string | undefined;
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-    if (token !== '--profile') {
-      throw new FrameworkContractError('cli_usage_error', `Unknown app state option: ${token}.`, {
-        option: token,
-        usage: 'opl app state [--profile fast|full]',
-      });
-    }
-
-    const value = args[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw new FrameworkContractError('cli_usage_error', 'Missing value for --profile.', {
-        option: '--profile',
-      });
-    }
-    profile = value;
-    index += 1;
-  }
-
-  return { profile: parseAppStateProfile(profile) };
-}
+export { parseAppStateArgs } from './app-state-profile.ts';
 
 function publicRuntimeSourceCarriers(profile: AppStateProfile) {
   return buildOplModules({ profile })

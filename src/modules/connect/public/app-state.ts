@@ -1,5 +1,6 @@
 export { CANONICAL_OPL_PACKAGE_IDS, canonicalAgentPackageId } from '../agent-package-identity.ts';
 export {
+  createOplAgentPackageStatusReader,
   listOplAgentPackages,
   readOplFlowDefaultUserInstructions,
   runOplAgentPackageStatus,
@@ -17,6 +18,7 @@ export { buildOplReleaseTag, getOplReleaseRepo, getOplReleaseVersion } from '../
 export { buildOplDeveloperModeSurface } from '../system-installation/developer-mode.ts';
 export { resolveCodexVersion } from '../system-installation/engine-helpers.ts';
 export { buildOplModules } from '../system-installation/modules.ts';
+export { readStandardAgentDescriptorForDomain } from '../standard-agent-interface-discovery.ts';
 export {
   compactStorageOwnerInventorySnapshot,
   compactStorageOwnerProjection,

@@ -125,6 +125,13 @@ test('family product operator projection pins OPL as App state/action producer o
 
   assert.equal(boundary.framework_role, 'gui_ready_state_action_producer_only');
   assert.equal(boundary.default_state_command, 'opl app state --profile fast --json');
+  assert.equal(boundary.runtime_state_command, 'opl app state --profile runtime --json');
+  assert.equal(boundary.runtime_state_capability_id, 'opl_app.runtime_state_profile.v1');
+  assert.equal(boundary.runtime_profile_is_default, false);
+  assert.equal(
+    boundary.runtime_work_item_projection_producer_contract_ref,
+    'contracts/opl-framework/app-runtime-fast-work-item-projection-contract.json',
+  );
   assert.equal(
     boundary.fast_work_item_projection_producer_contract_ref,
     'contracts/opl-framework/app-runtime-fast-work-item-projection-contract.json',

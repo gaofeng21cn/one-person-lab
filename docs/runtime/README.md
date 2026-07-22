@@ -47,7 +47,7 @@ Foundry Agent product pack
 | 新 surface 如何进入默认入口？ | OPL policy/compiler owner | [Policies 文档](../policies/README.md) 与 `contracts/opl-framework/surface-budget-policy.json`；默认 surface 必须通过 surface budget 分类，不能从支持文档或 debug view 直接进入 ordinary path。 |
 | reconciler 如何拆小？ | OPL runtime owner | Route、artifact、owner-delta、telemetry 和 App Console reconciler 都只能做 desired/current 对齐和 refs-only 投影；它们不能生成 domain verdict、owner receipt 或 stage terminal state。 |
 | Atlas / Ledger telemetry 如何读？ | OPL Atlas / Ledger | telemetry 只记录 route graph、evidence、receipt、trace、replay、blocker、long-soak 和 cleanup refs；只有 fold 成 owner answer、typed blocker、hard gate 或 `current_owner_delta` 后才影响默认路径。 |
-| App Console 如何收薄？ | One Person Lab App / OPL Console | [Product 文档](../product/README.md)；App 默认消费 `opl app state` 与 `current_owner_delta`，full drilldown 只按 operator 显式展开。 |
+| App Console 如何收薄？ | One Person Lab App / OPL Console | [Product 文档](../product/README.md)；App 默认仍消费 `opl app state --profile fast --json` 与 `current_owner_delta`，`--profile runtime` 是显式 capability，full drilldown 只按 operator 显式展开。 |
 | 改进闭环在哪里？ | OPL Foundry Kernel + OMA | [OPL Foundry Kernel 控制面边界](./opl-foundry-kernel-control-plane.md)；OMA 产出 next blueprint 语义，Kernel 持有 EvidenceBundle、风险 gate、版本、canary、activation 与 rollback，不持有 domain truth 或 App release verdict。 |
 
 ## 动态证据入口

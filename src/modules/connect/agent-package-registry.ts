@@ -3506,29 +3506,50 @@ export async function runOplAgentPackageHomeShortcutPreferencesSet(input: AgentP
   );
 }
 
-export function runOplAgentPackageStatus(input: {
+export type OplAgentPackageStatusInput = {
   packageId?: string | null;
   scope?: 'workspace' | 'quest' | null;
   targetWorkspace?: string | null;
   targetQuest?: string | null;
   recoverRuntimeSource?: boolean;
   detail?: 'fast' | 'full';
-} = {}) {
-  const packageId = canonicalAgentPackageId(input.packageId);
+};
+
+function readAgentPackageStatusSnapshot() {
   const lockIndex = readLockIndex();
-  const runtimeSourceRecovery = inspectManagedRuntimeSourceTransactions();
   const lifecycleLedger = readLifecycleLedger();
-  const paths = resolveOplStatePaths();
   const registryCache = readRegistryCache();
+  return {
+    lockIndex,
+    lifecycleLedger,
+    registryCache,
+    paths: resolveOplStatePaths(),
+    runtimeSourceRecovery: inspectManagedRuntimeSourceTransactions(),
+    homeShortcutPreferences: mergedHomeShortcutPreferences(registryCache, lockIndex),
+    receiptsByRef: new Map(
+      lifecycleLedger.receipts.map((receipt) => [receipt.receipt_ref, receipt]),
+    ),
+  };
+}
+
+function buildOplAgentPackageStatus(
+  input: OplAgentPackageStatusInput,
+  snapshot: ReturnType<typeof readAgentPackageStatusSnapshot>,
+) {
+  const packageId = canonicalAgentPackageId(input.packageId);
+  const {
+    lockIndex,
+    runtimeSourceRecovery,
+    lifecycleLedger,
+    paths,
+    homeShortcutPreferences: allHomeShortcutPreferences,
+    receiptsByRef,
+  } = snapshot;
   const installedPackages = packageId
     ? lockIndex.packages.filter((entry) => entry.package_id === packageId)
     : lockIndex.packages;
-  const homeShortcutPreferences = mergedHomeShortcutPreferences(registryCache, lockIndex)
+  const homeShortcutPreferences = allHomeShortcutPreferences
     .filter((entry) => !packageId || entry.package_id === packageId);
-  const receiptsByRef = new Map<string, AgentPackageLifecycleReceipt>();
-  for (const receipt of lifecycleLedger.receipts) {
-    receiptsByRef.set(receipt.receipt_ref, receipt);
-  }
   const lifecycleUx = agentPackageLifecycleSummaryReadback({
     selectedPackageId: packageId ?? null,
     packages: installedPackages,
@@ -3651,6 +3672,15 @@ export function runOplAgentPackageStatus(input: {
       authority_boundary: refsOnlyAuthorityBoundary(),
     },
   };
+}
+
+export function createOplAgentPackageStatusReader() {
+  const snapshot = readAgentPackageStatusSnapshot();
+  return (input: OplAgentPackageStatusInput = {}) => buildOplAgentPackageStatus(input, snapshot);
+}
+
+export function runOplAgentPackageStatus(input: OplAgentPackageStatusInput = {}) {
+  return buildOplAgentPackageStatus(input, readAgentPackageStatusSnapshot());
 }
 
 export function listOplAgentPackages(input: {
