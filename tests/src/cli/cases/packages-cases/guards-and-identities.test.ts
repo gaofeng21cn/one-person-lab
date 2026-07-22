@@ -472,7 +472,7 @@ test('MAS package exposes ScholarSkills as a required managed capability depende
   assert.equal(dependency?.module_id, 'scholarskills');
   assert.equal(dependency?.kind, 'framework_capability_package');
   assert.equal(dependency?.required, true);
-  assert.equal(dependency?.version_requirement, '>=0.2.0 <0.3.0');
+  assert.equal(dependency?.version_requirement, '>=0.2.12 <0.3.0');
   assert.equal(dependency?.opl_distribution, 'managed_dependency');
 
 });

@@ -979,9 +979,9 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
   const manifest = manifests.mas;
   const expectedReleases: Record<string, { version: string; sourceCommit: string; payloadRef: string }> = {
     mas: {
-      version: '0.2.16',
-      sourceCommit: '56c6e238203f915944b00388ccb189d73b45c70e',
-      payloadRef: 'payloads/mas-0.2.16.json',
+      version: '0.2.17',
+      sourceCommit: 'e806c166a91250bdcc675fafa1078dbb86d0cc15',
+      payloadRef: 'payloads/mas-0.2.17.json',
     },
     mag: {
       version: '0.3.4',
@@ -1008,7 +1008,7 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
   assert.equal(manifest.schema_ref, 'contracts/opl-framework/agent-package-manifest.schema.json');
   assert.equal(manifest.package_id, 'mas');
   assert.equal(manifest.agent_id, 'mas');
-  assert.equal(manifest.version, '0.2.16');
+  assert.equal(manifest.version, '0.2.17');
   assert.equal(manifest.carrier_source_role, 'codex_plugin_default_carrier_not_package_truth');
   assert.equal(schema.required.includes('distribution_payload'), false);
   assert.equal(schema.properties.distribution_payload.properties.install_truth.const, 'resolved_digest_lock');
@@ -1095,7 +1095,7 @@ test('MAS Scholar Skills provider manifest separates core Skill exports from mod
   const payloadPath = path.join(path.dirname(manifestPath), manifest.codex_surface.plugin_payload_manifest_url);
   const payload = parseJsonText(fs.readFileSync(payloadPath, 'utf8')) as Record<string, any>;
   assert.equal(manifest.version, catalogEntry.package_version);
-  assert.equal(manifest.primary_consumer.version_requirement, '>=0.2.0 <0.3.0');
+  assert.equal(manifest.primary_consumer.version_requirement, '>=0.2.12 <0.3.0');
   assert.equal(manifest.content_lock.canonicalization, 'ordered_path_length_file_length_bytes');
   assert.equal(manifest.content_lock.digest, payload.content_lock.digest);
   assert.equal(manifest.codex_surface.carrier_source_commit, catalogEntry.owner_source_commit);

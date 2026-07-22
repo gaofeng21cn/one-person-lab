@@ -101,6 +101,9 @@ function committedSurfaceFixture(
       scholarDependency.version_requirement = '>=0.2.0 <0.3.0';
       scholarDependency.required_for = ['workspace_or_quest_codex_discovery'];
     }
+    if (packageId === 'mas-scholar-skills' && member.version === '0.2.14') {
+      manifest.primary_consumer.version_requirement = '>=0.2.0 <0.3.0';
+    }
     const manifestPath = path.join(root, member.manifest_ref);
     writeJson(manifestPath, manifest);
     assert.equal(sha256(fs.readFileSync(manifestPath)), member.manifest_sha256);
