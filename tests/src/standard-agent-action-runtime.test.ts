@@ -359,6 +359,44 @@ function hostedSnapshot(input: {
   };
 }
 
+function bundledFullRuntimeSnapshot(input: {
+  checkoutRoot: string;
+  workspaceRoot: string;
+  label: string;
+}) {
+  const snapshot = structuredClone(hostedSnapshot(input));
+  if (snapshot.provenance.source_kind !== 'managed_package_checkout') assert.fail();
+  const ownerSourceCommit = 'a'.repeat(40);
+  const carrierAuthority = {
+    surface_kind: 'opl_agent_package_carrier_authority.v1',
+    status: 'verified',
+    catalog_ref: 'opl://agent-package-catalog/full-runtime-test',
+    catalog_sha256: sha256('full-runtime-catalog'),
+    catalog_owner_source_commit: ownerSourceCommit,
+    manifest_carrier_source_commit: ownerSourceCommit,
+    payload_source_commit: ownerSourceCommit,
+    verified_source_commit: ownerSourceCommit,
+  };
+  const mutableProvenance = snapshot.provenance as unknown as Record<string, unknown>;
+  mutableProvenance.package_source_kind = 'bundled_full_runtime_modules';
+  mutableProvenance.package_artifact_digest = null;
+  const packageBinding = snapshot.package_use_binding as Record<string, unknown>;
+  const rootPackage = packageBinding.root_package;
+  if (!rootPackage || typeof rootPackage !== 'object' || Array.isArray(rootPackage)) assert.fail();
+  Object.assign(rootPackage, {
+    artifact_digest: null,
+    owner_source_commit: ownerSourceCommit,
+    carrier_authority: carrierAuthority,
+    source_kind: 'bundled_full_runtime_modules',
+  });
+  packageBinding.channel_ref = carrierAuthority.catalog_ref;
+  packageBinding.channel_digest = carrierAuthority.catalog_sha256;
+  (snapshot as unknown as { provenance_ref: string }).provenance_ref = `opl://hosted-agent-runtime-binding/sha256/${sha256(
+    canonicalJsonBytes(mutableProvenance),
+  ).slice('sha256:'.length)}`;
+  return snapshot;
+}
+
 function recordLedger(input: Record<string, unknown>) {
   return {
     ledger_entry: {
@@ -459,8 +497,87 @@ test('Hosted Handler action validates schemas, runs the callable, and persists e
   }
 });
 
+test('verified bundled Full runtime provenance keeps an explicit null artifact digest replayable', async () => {
+  const checkoutRoot = root('opl-action-bundled-checkout-');
+  const workspaceRoot = root('opl-action-bundled-workspace-');
+  let handlerCalls = 0;
+  let bindingResolutions = 0;
+  try {
+    writeContracts(checkoutRoot, [action({
+      actionId: 'evaluate',
+      executionBinding: { kind: 'handler_ref', handler_ref: 'handler:fixture.evaluate' },
+    })], {
+      surface_kind: 'domain_handler_registry',
+      version: 'domain-handler-registry.v1',
+      handlers: [{
+        handler_id: 'fixture.evaluate',
+        binding: { kind: 'typescript_export', file: 'handler.ts', export: 'evaluate' },
+      }],
+    });
+    fs.writeFileSync(path.join(checkoutRoot, 'handler.ts'), [
+      'export function evaluate(request: Record<string, unknown>) {',
+      '  return { accepted: true, value: request.value };',
+      '}',
+      '',
+    ].join('\n'));
+    const snapshot = bundledFullRuntimeSnapshot({ checkoutRoot, workspaceRoot, label: 'bundled-v1' });
+    const dependencies = {
+      resolveRuntimeBinding: async () => {
+        bindingResolutions += 1;
+        return snapshot;
+      },
+      resolvePinnedRuntimeBinding: async () => snapshot,
+      runHandler: (input: Parameters<typeof runStandardAgentHandlerSandbox>[0]) => {
+        handlerCalls += 1;
+        return runStandardAgentHandlerSandbox(input);
+      },
+      recordLedger,
+    };
+    const request = {
+      domainId: 'mas',
+      actionId: 'evaluate',
+      workspaceRoot,
+      payload: { value: 7 },
+      runId: 'bundled-handler-run',
+    };
+    const first = await runStandardAgentAction(request, dependencies);
+    const replay = await runStandardAgentAction(request, dependencies);
+    assert.equal(first.standard_agent_action_run.status, 'completed');
+    assert.equal(replay.standard_agent_action_run.status, 'completed');
+    assert.equal(handlerCalls, 1);
+    assert.equal(bindingResolutions, 1);
+    const binding = inspectStandardAgentActionRunBinding({ workspaceRoot, runId: request.runId });
+    assert.equal(binding?.hosted_runtime_binding.source_kind, 'managed_package_checkout');
+    if (binding?.hosted_runtime_binding.source_kind !== 'managed_package_checkout') assert.fail();
+    assert.equal(binding.hosted_runtime_binding.package_source_kind, 'bundled_full_runtime_modules');
+    assert.equal(binding.hosted_runtime_binding.package_artifact_digest, null);
+    const plan = inspectStandardAgentActionRunPlan({ workspaceRoot, runId: request.runId });
+    const packageBinding = plan?.package_use_binding;
+    const rootPackage = packageBinding?.root_package;
+    if (!rootPackage || typeof rootPackage !== 'object' || Array.isArray(rootPackage)) assert.fail();
+    assert.equal((rootPackage as Record<string, unknown>).artifact_digest, null);
+    assert.equal(
+      ((rootPackage as Record<string, unknown>).carrier_authority as Record<string, unknown>).status,
+      'verified',
+    );
+  } finally {
+    fs.rmSync(checkoutRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
 test('managed action identity faults fail before reservation or Handler execution', async () => {
-  for (const fault of ['missing-surface', 'package-id', 'package-content'] as const) {
+  for (const fault of [
+    'missing-surface',
+    'package-id',
+    'package-content',
+    'bundled-carrier-missing',
+    'bundled-carrier-status',
+    'bundled-carrier-commit',
+    'bundled-catalog-mismatch',
+    'first-party-null-artifact',
+    'missing-source-null-artifact',
+  ] as const) {
     const checkoutRoot = root(`opl-action-managed-${fault}-checkout-`);
     const workspaceRoot = root(`opl-action-managed-${fault}-workspace-`);
     let handlerCalls = 0;
@@ -482,7 +599,9 @@ test('managed action identity faults fail before reservation or Handler executio
         '}',
         '',
       ].join('\n'));
-      const snapshot = structuredClone(hostedSnapshot({ checkoutRoot, workspaceRoot, label: fault }));
+      const snapshot = fault.startsWith('bundled-')
+        ? bundledFullRuntimeSnapshot({ checkoutRoot, workspaceRoot, label: fault })
+        : structuredClone(hostedSnapshot({ checkoutRoot, workspaceRoot, label: fault }));
       if (fault === 'missing-surface') {
         delete (snapshot.package_use_binding as Record<string, unknown>).surface_kind;
       } else if (fault === 'package-id') {
@@ -491,10 +610,36 @@ test('managed action identity faults fail before reservation or Handler executio
         (snapshot as unknown as { provenance_ref: string }).provenance_ref = `opl://hosted-agent-runtime-binding/sha256/${sha256(
           canonicalJsonBytes(snapshot.provenance),
         ).slice('sha256:'.length)}`;
-      } else {
+      } else if (fault === 'package-content') {
         const rootPackage = (snapshot.package_use_binding as Record<string, unknown>).root_package;
         if (!rootPackage || typeof rootPackage !== 'object') assert.fail();
         (rootPackage as Record<string, unknown>).content_digest = `sha256:${'9'.repeat(64)}`;
+      } else {
+        if (snapshot.provenance.source_kind !== 'managed_package_checkout') assert.fail();
+        const mutableProvenance = snapshot.provenance as unknown as Record<string, unknown>;
+        const packageBinding = snapshot.package_use_binding as Record<string, unknown>;
+        const rootPackage = packageBinding.root_package;
+        if (!rootPackage || typeof rootPackage !== 'object' || Array.isArray(rootPackage)) assert.fail();
+        const mutableRoot = rootPackage as Record<string, unknown>;
+        if (fault === 'bundled-carrier-missing') {
+          mutableRoot.carrier_authority = null;
+        } else if (fault === 'bundled-carrier-status') {
+          (mutableRoot.carrier_authority as Record<string, unknown>).status = 'unverified';
+        } else if (fault === 'bundled-carrier-commit') {
+          (mutableRoot.carrier_authority as Record<string, unknown>).verified_source_commit = 'b'.repeat(40);
+        } else if (fault === 'bundled-catalog-mismatch') {
+          packageBinding.channel_digest = sha256('different-catalog');
+        } else {
+          mutableProvenance.package_artifact_digest = null;
+          mutableRoot.artifact_digest = null;
+          if (fault === 'missing-source-null-artifact') {
+            delete mutableProvenance.package_source_kind;
+            delete mutableRoot.source_kind;
+          }
+          (snapshot as unknown as { provenance_ref: string }).provenance_ref = `opl://hosted-agent-runtime-binding/sha256/${sha256(
+            canonicalJsonBytes(mutableProvenance),
+          ).slice('sha256:'.length)}`;
+        }
       }
 
       await assert.rejects(
@@ -512,7 +657,7 @@ test('managed action identity faults fail before reservation or Handler executio
           },
           recordLedger,
         }),
-        /(?:package_id must match|missing root_package|package-use identity conflicts)/i,
+        /(?:package_id must match|missing root_package|package-use identity conflicts|carrier authority|package_artifact_digest)/i,
       );
       assert.equal(handlerCalls, 0);
       assert.equal(
@@ -941,7 +1086,7 @@ test('durable action plan tampering and coherent shape forgery fail before G2 re
   }
 });
 
-test('legacy v1 durable binding remains readable without an unbound v2 plan', () => {
+test('legacy v1 developer checkout binding remains readable without an unbound v2 plan', () => {
   const checkoutRoot = root('opl-action-v1-binding-checkout-');
   const workspaceRoot = root('opl-action-v1-binding-workspace-');
   try {
@@ -953,7 +1098,7 @@ test('legacy v1 durable binding remains readable without an unbound v2 plan', ()
     delete legacyProvenance.package_use_receipt_ref;
     delete legacyProvenance.package_manifest_sha256;
     delete legacyProvenance.package_dependency_closure_digest;
-    delete legacyProvenance.package_source_kind;
+    legacyProvenance.package_source_kind = 'developer_checkout_override';
     legacyProvenance.package_artifact_digest = null;
     const snapshot = {
       ...currentSnapshot,
@@ -985,6 +1130,25 @@ test('legacy v1 durable binding remains readable without an unbound v2 plan', ()
       reserveStandardAgentActionRunBinding({ workspaceRoot, binding }).status,
       'existing',
     );
+    const bundledProvenance = structuredClone(legacyProvenance);
+    bundledProvenance.package_source_kind = 'bundled_full_runtime_modules';
+    const bundledProvenanceRef = `opl://hosted-agent-runtime-binding/sha256/${sha256(
+      canonicalJsonBytes(bundledProvenance),
+    ).slice('sha256:'.length)}`;
+    const bundledBinding = {
+      ...binding,
+      run_id: 'legacy-v1-bundled-null-run',
+      hosted_runtime_binding_ref: bundledProvenanceRef,
+      hosted_runtime_binding: bundledProvenance as unknown as HostedAgentRuntimeBindingProvenance,
+    };
+    assert.throws(
+      () => reserveStandardAgentActionRunBinding({ workspaceRoot, binding: bundledBinding }),
+      /Only developer checkout or verified bundled Full runtime provenance may omit package_artifact_digest/i,
+    );
+    assert.equal(inspectStandardAgentActionRunBinding({
+      workspaceRoot,
+      runId: bundledBinding.run_id,
+    }), null);
   } finally {
     fs.rmSync(checkoutRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
