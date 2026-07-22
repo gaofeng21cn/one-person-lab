@@ -1,0 +1,231 @@
+{
+  "fixture_kind": "opl_agent_package_launch_state_fixture.v1",
+  "owner": "one-person-lab",
+  "schema_ref": "contracts/opl-framework/agent-package-launch-state.schema.json",
+  "cases": [
+    {
+      "id": "visible_ready",
+      "input": {
+        "installed": true,
+        "exposure_state": "visible",
+        "operational_ready": true,
+        "launch_blocked_reason": null,
+        "degraded_reason": null,
+        "unavailable_reason": null
+      },
+      "expected": {
+        "launch_state_schema_version": "opl-agent-package-launch-state.v1",
+        "launch_state": "ready",
+        "launch_state_reason": null
+      }
+    },
+    {
+      "id": "hidden_but_enabled_ready",
+      "input": {
+        "installed": true,
+        "exposure_state": "hidden",
+        "operational_ready": true,
+        "launch_blocked_reason": null,
+        "degraded_reason": null,
+        "unavailable_reason": null
+      },
+      "expected": {
+        "launch_state_schema_version": "opl-agent-package-launch-state.v1",
+        "launch_state": "ready",
+        "launch_state_reason": null
+      }
+    },
+    {
+      "id": "live_verification_deferred",
+      "input": {
+        "installed": true,
+        "exposure_state": "visible",
+        "operational_ready": false,
+        "launch_blocked_reason": "live_verification_deferred",
+        "degraded_reason": "live_verification_deferred",
+        "unavailable_reason": null
+      },
+      "expected": {
+        "launch_state_schema_version": "opl-agent-package-launch-state.v1",
+        "launch_state": "degraded",
+        "launch_state_reason": "live_verification_deferred"
+      }
+    },
+    {
+      "id": "scope_materialization_deferred",
+      "input": {
+        "installed": true,
+        "exposure_state": "visible",
+        "operational_ready": true,
+        "launch_blocked_reason": null,
+        "degraded_reason": "scope_materialization_scope_required",
+        "unavailable_reason": null
+      },
+      "expected": {
+        "launch_state_schema_version": "opl-agent-package-launch-state.v1",
+        "launch_state": "degraded",
+        "launch_state_reason": "scope_materialization_scope_required"
+      }
+    },
+    {
+      "id": "installed_status_read_failed",
+      "input": {
+        "installed": true,
+        "exposure_state": "hidden",
+        "operational_ready": false,
+        "launch_blocked_reason": "package_status_read_failed",
+        "degraded_reason": "package_status_read_failed",
+        "unavailable_reason": null
+      },
+      "expected": {
+        "launch_state_schema_version": "opl-agent-package-launch-state.v1",
+        "launch_state": "degraded",
+        "launch_state_reason": "package_status_read_failed"
+      }
+    },
+    {
+      "id": "not_installed",
+      "input": {
+        "installed": false,
+        "exposure_state": "not_installed",
+        "operational_ready": false,
+        "launch_blocked_reason": "package_not_installed",
+        "degraded_reason": null,
+        "unavailable_reason": null
+      },
+      "expected": {
+        "launch_state_schema_version": "opl-agent-package-launch-state.v1",
+        "launch_state": "package_unavailable",
+        "launch_state_reason": "package_not_installed"
+      }
+    },
+    {
+      "id": "disabled",
+      "input": {
+        "installed": true,
+        "exposure_state": "disabled",
+        "operational_ready": true,
+        "launch_blocked_reason": "package_disabled",
+        "degraded_reason": "live_verification_deferred",
+        "unavailable_reason": "unknown_package_failure"
+      },
+      "expected": {
+        "launch_state_schema_version": "opl-agent-package-launch-state.v1",
+        "launch_state": "package_unavailable",
+        "launch_state_reason": "package_disabled"
+      }
+    },
+    {
+      "id": "carrier_authority_observation",
+      "input": {
+        "installed": true,
+        "exposure_state": "visible",
+        "operational_ready": true,
+        "launch_blocked_reason": null,
+        "degraded_reason": "carrier_authority_invalid",
+        "unavailable_reason": null
+      },
+      "expected": {
+        "launch_state_schema_version": "opl-agent-package-launch-state.v1",
+        "launch_state": "degraded",
+        "launch_state_reason": "carrier_authority_invalid"
+      }
+    },
+    {
+      "id": "required_dependency_missing",
+      "input": {
+        "installed": true,
+        "exposure_state": "visible",
+        "operational_ready": false,
+        "launch_blocked_reason": "package_dependency_missing",
+        "degraded_reason": null,
+        "unavailable_reason": "package_dependency_missing"
+      },
+      "expected": {
+        "launch_state_schema_version": "opl-agent-package-launch-state.v1",
+        "launch_state": "package_unavailable",
+        "launch_state_reason": "package_dependency_missing"
+      }
+    },
+    {
+      "id": "required_dependency_incompatible",
+      "input": {
+        "installed": true,
+        "exposure_state": "visible",
+        "operational_ready": false,
+        "launch_blocked_reason": "package_dependency_incompatible",
+        "degraded_reason": null,
+        "unavailable_reason": "package_dependency_incompatible"
+      },
+      "expected": {
+        "launch_state_schema_version": "opl-agent-package-launch-state.v1",
+        "launch_state": "package_unavailable",
+        "launch_state_reason": "package_dependency_incompatible"
+      }
+    },
+    {
+      "id": "scoped_required_core_skill_missing",
+      "input": {
+        "installed": true,
+        "exposure_state": "visible",
+        "operational_ready": false,
+        "launch_blocked_reason": "scope_materialization_missing",
+        "degraded_reason": null,
+        "unavailable_reason": "required_core_skill_missing"
+      },
+      "expected": {
+        "launch_state_schema_version": "opl-agent-package-launch-state.v1",
+        "launch_state": "package_unavailable",
+        "launch_state_reason": "required_core_skill_missing"
+      }
+    },
+    {
+      "id": "runtime_source_incompatible",
+      "input": {
+        "installed": true,
+        "exposure_state": "visible",
+        "operational_ready": false,
+        "launch_blocked_reason": "runtime_source_incompatible",
+        "degraded_reason": null,
+        "unavailable_reason": "runtime_source_incompatible"
+      },
+      "expected": {
+        "launch_state_schema_version": "opl-agent-package-launch-state.v1",
+        "launch_state": "package_unavailable",
+        "launch_state_reason": "runtime_source_incompatible"
+      }
+    },
+    {
+      "id": "managed_policy_invalid",
+      "input": {
+        "installed": true,
+        "exposure_state": "visible",
+        "operational_ready": false,
+        "launch_blocked_reason": "managed_policy_invalid",
+        "degraded_reason": null,
+        "unavailable_reason": "managed_policy_invalid"
+      },
+      "expected": {
+        "launch_state_schema_version": "opl-agent-package-launch-state.v1",
+        "launch_state": "package_unavailable",
+        "launch_state_reason": "managed_policy_invalid"
+      }
+    },
+    {
+      "id": "optional_dependency_missing",
+      "input": {
+        "installed": true,
+        "exposure_state": "visible",
+        "operational_ready": true,
+        "launch_blocked_reason": null,
+        "degraded_reason": "optional_dependency_missing",
+        "unavailable_reason": null
+      },
+      "expected": {
+        "launch_state_schema_version": "opl-agent-package-launch-state.v1",
+        "launch_state": "degraded",
+        "launch_state_reason": "optional_dependency_missing"
+      }
+    }
+  ]
+}

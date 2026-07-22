@@ -1,4 +1,5 @@
 import type { JsonRecord } from '../../kernel/json-record.ts';
+import { deriveAgentPackageLaunchState } from '../../kernel/agent-package-launch-state.ts';
 import {
   requiredDependents,
   type AgentPackageLockIndex,
@@ -229,6 +230,28 @@ export function projectAppAgentPackageStatus(input: {
   const operationalReady = functionallyRunnable;
   const launchAllowed = functionallyRunnable;
   const positiveReadinessDeferred = profile === 'fast' && functionallyRunnable;
+  const ownerUnavailableReason = status.launch_state === 'package_unavailable'
+    ? status.launch_state_reason
+    : hardRepairReason;
+  const ownerDegradedReason = status.launch_state === 'degraded'
+    ? status.launch_state_reason
+    : functionallyRunnable && status.launch_blocked_reason
+      ? status.launch_blocked_reason
+      : null;
+  const launchState = deriveAgentPackageLaunchState({
+    installed,
+    exposure_state: exposureStatus,
+    operational_ready: functionallyRunnable,
+    launch_blocked_reason: disabled
+      ? 'package_disabled'
+      : functionallyRunnable
+        ? null
+        : status.launch_blocked_reason,
+    degraded_reason: positiveReadinessDeferred
+      ? 'live_verification_deferred'
+      : ownerDegradedReason,
+    unavailable_reason: ownerUnavailableReason,
+  });
   const canonicalFields = {
     action_receipt_ref: lock?.action_receipt_id ?? null,
     rollback_ref: lock?.rollback_ref ?? null,
@@ -259,6 +282,7 @@ export function projectAppAgentPackageStatus(input: {
         : functionallyRunnable
           ? null
           : status.launch_blocked_reason,
+      ...launchState,
     };
   }
 
@@ -297,6 +321,7 @@ export function projectAppAgentPackageStatus(input: {
       : positiveReadinessDeferred
         ? 'live_verification_deferred'
         : status.launch_blocked_reason,
+    ...launchState,
     allowed_when_blocked: status.allowed_when_blocked,
     currentness_detail_deferred: true,
     detail_surface: 'opl packages status --package-id <package_id> --json',
@@ -315,6 +340,13 @@ export function unavailableAgentPackageCanonicalFields(
     ? 'agent_package_required_by_installed_dependents'
     : 'package_status_unavailable';
   return {
+    ...deriveAgentPackageLaunchState({
+      installed,
+      exposure_state: exposureStatus,
+      operational_ready: false,
+      launch_blocked_reason: 'package_status_read_failed',
+      degraded_reason: installed ? 'package_status_read_failed' : null,
+    }),
     action_receipt_ref: lock?.action_receipt_id ?? null,
     rollback_ref: lock?.rollback_ref ?? null,
     capability_exposure: {

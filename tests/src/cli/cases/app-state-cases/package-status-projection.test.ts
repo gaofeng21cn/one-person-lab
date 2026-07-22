@@ -1,5 +1,14 @@
+import { fileURLToPath } from 'node:url';
+
 import { assert, createFakeCodexFixture, fs, os, path, runCli, test } from '../../helpers.ts';
+import {
+  deriveAgentPackageLaunchState,
+  type AgentPackageLaunchStateInput,
+  type AgentPackageLaunchStateProjection,
+} from '../../../../../src/kernel/agent-package-launch-state.ts';
 import { FrameworkContractError } from '../../../../../src/kernel/contract-validation.ts';
+import { parseJsonText } from '../../../../../src/kernel/json-file.ts';
+import { validateJsonSchemaPayload } from '../../../../../src/kernel/schema-registry.ts';
 import {
   buildAppAgentPackageStatuses,
   buildOplAppState,
@@ -20,6 +29,77 @@ const CANONICAL_PACKAGE_IDS = [
   'mas-scholar-skills',
   'opl-flow',
 ] as const;
+
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../..');
+const launchStateSchemaRef = 'contracts/opl-framework/agent-package-launch-state.schema.json';
+const launchStateFixtureRef = 'contracts/opl-framework/agent-package-launch-state.fixture.json';
+
+function readContractJson(relativePath: string) {
+  return parseJsonText(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as Record<string, unknown>;
+}
+
+test('Framework package launch-state fixture is exact and schema-valid', () => {
+  const schema = readContractJson(launchStateSchemaRef);
+  const fixture = readContractJson(launchStateFixtureRef) as {
+    fixture_kind: string;
+    owner: string;
+    schema_ref: string;
+    cases: Array<{
+      id: string;
+      input: AgentPackageLaunchStateInput;
+      expected: AgentPackageLaunchStateProjection;
+    }>;
+  };
+  assert.equal(fixture.fixture_kind, 'opl_agent_package_launch_state_fixture.v1');
+  assert.equal(fixture.owner, 'one-person-lab');
+  assert.equal(fixture.schema_ref, launchStateSchemaRef);
+  assert.equal(new Set(fixture.cases.map((entry) => entry.id)).size, fixture.cases.length);
+
+  for (const entry of fixture.cases) {
+    assert.deepEqual(deriveAgentPackageLaunchState(entry.input), entry.expected, entry.id);
+    const validation = validateJsonSchemaPayload({
+      schemaId: 'opl.agent_package_launch_state.v1',
+      schema,
+      sourceRef: launchStateSchemaRef,
+    }, entry.expected);
+    assert.equal(validation.ok, true, entry.id);
+  }
+
+  for (const invalid of [
+    {
+      launch_state_schema_version: 'opl-agent-package-launch-state.v1',
+      launch_state: 'ready',
+      launch_state_reason: 'unexpected_reason',
+    },
+    {
+      launch_state_schema_version: 'opl-agent-package-launch-state.v1',
+      launch_state: 'degraded',
+      launch_state_reason: null,
+    },
+    {
+      launch_state_schema_version: 'opl-agent-package-launch-state.v1',
+      launch_state: 'package_unavailable',
+      launch_state_reason: '   ',
+    },
+  ]) {
+    assert.equal(validateJsonSchemaPayload({
+      schemaId: 'opl.agent_package_launch_state.v1',
+      schema,
+      sourceRef: launchStateSchemaRef,
+    }, invalid).ok, false);
+  }
+
+  assert.deepEqual(deriveAgentPackageLaunchState({
+    installed: true,
+    exposure_state: 'visible',
+    operational_ready: false,
+    launch_blocked_reason: 'unknown_package_failure',
+  }), {
+    launch_state_schema_version: 'opl-agent-package-launch-state.v1',
+    launch_state: 'package_unavailable',
+    launch_state_reason: 'unknown_package_failure',
+  }, 'unknown canonical unavailable reasons remain fail closed without a reason allowlist');
+});
 
 function assertCanonicalPackagesFailClosed(profile: 'fast' | 'full') {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), `opl-app-state-${profile}-packages-home-`));
@@ -53,6 +133,9 @@ exit 1
       assert.equal(status.operational_ready, false);
       assert.equal(status.launch_allowed, false);
       assert.equal(status.launch_blocked_reason, 'package_not_installed');
+      assert.equal(status.launch_state_schema_version, 'opl-agent-package-launch-state.v1');
+      assert.equal(status.launch_state, 'package_unavailable');
+      assert.equal(status.launch_state_reason, 'package_not_installed');
       assert.equal(status.action_receipt_ref, null);
       assert.equal(status.rollback_ref, null);
       assert.deepEqual(status.allowed_when_blocked, ['status', 'doctor', 'repair']);
@@ -166,8 +249,12 @@ test('app state isolates one invalid package status while direct status reads re
   assert.equal(statuses.mas.operational_ready, false);
   assert.equal(statuses.mas.launch_allowed, false);
   assert.equal(statuses.mas.launch_blocked_reason, 'live_verification_deferred');
+  assert.equal(statuses.mas.launch_state, 'degraded');
+  assert.equal(statuses.mas.launch_state_reason, 'live_verification_deferred');
   assert.equal(statuses.obf.status, 'unavailable');
   assert.equal(statuses.obf.launch_allowed, false);
+  assert.equal(statuses.obf.launch_state, 'degraded');
+  assert.equal(statuses.obf.launch_state_reason, 'package_status_read_failed');
   assert.equal((statuses.obf.dependency_readiness as Record<string, unknown>).status, 'blocked');
   assert.equal((statuses.obf.repair_action as Record<string, unknown>).action_id, 'agent_package_repair');
   assert.equal((statuses.obf.repair_action as Record<string, unknown>).reason_code, 'status_unavailable');
@@ -233,9 +320,13 @@ test('app package status stays scope-less and keeps fast readiness fail closed',
   assert.equal(fastStatuses['opl-flow'].operational_ready, false);
   assert.equal(fastStatuses['opl-flow'].launch_allowed, false);
   assert.equal(fastStatuses['opl-flow'].launch_blocked_reason, 'live_verification_deferred');
+  assert.equal(fastStatuses['opl-flow'].launch_state, 'degraded');
+  assert.equal(fastStatuses['opl-flow'].launch_state_reason, 'live_verification_deferred');
   assert.equal(fullStatuses['opl-flow'].status, 'available');
   assert.equal(fullStatuses['opl-flow'].operational_ready, true);
   assert.equal(fullStatuses['opl-flow'].launch_allowed, true);
+  assert.equal(fullStatuses['opl-flow'].launch_state, 'ready');
+  assert.equal(fullStatuses['opl-flow'].launch_state_reason, null);
   assert.equal(fastStatuses.mas.status, 'verification_deferred');
   assert.equal(fastStatuses.mas.launch_blocked_reason, 'live_verification_deferred');
   assert.equal(Object.hasOwn(fastStatuses.mas, 'activation_action'), false);
@@ -442,6 +533,8 @@ test('app package status normalizes dependency closure and dependent guards for 
   assert.equal(fastProvider.status, 'attention_needed');
   assert.equal(fastProvider.launch_allowed, false);
   assert.equal(fastProvider.launch_blocked_reason, 'package_disabled');
+  assert.equal(fastProvider.launch_state, 'package_unavailable');
+  assert.equal(fastProvider.launch_state_reason, 'package_disabled');
   assert.equal(Object.hasOwn(fastProvider, 'activation_action'), false);
 });
 
@@ -553,6 +646,8 @@ test('app package status keeps dependency currentness drift observable without r
   assert.equal(projected.operational_ready, true);
   assert.equal(projected.launch_allowed, true);
   assert.equal(projected.launch_blocked_reason, null);
+  assert.equal(projected.launch_state, 'degraded');
+  assert.equal(projected.launch_state_reason, 'codex_reload_required');
   assert.equal(Object.hasOwn(projected, 'activation_action'), false);
 
   const fastProjected = fastStatuses.mas as any;
@@ -560,6 +655,8 @@ test('app package status keeps dependency currentness drift observable without r
   assert.equal(fastProjected.operational_ready, false);
   assert.equal(fastProjected.launch_allowed, false);
   assert.equal(fastProjected.launch_blocked_reason, 'live_verification_deferred');
+  assert.equal(fastProjected.launch_state, 'degraded');
+  assert.equal(fastProjected.launch_state_reason, 'live_verification_deferred');
   assert.equal(fastProjected.repair_action.enabled, false);
   assert.equal(Object.hasOwn(fastProjected, 'activation_action'), false);
 });

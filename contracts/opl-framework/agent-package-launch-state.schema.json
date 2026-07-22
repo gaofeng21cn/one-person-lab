@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/agent-package-launch-state.schema.json",
+  "schema_id": "opl.agent_package_launch_state.v1",
+  "surface_kind": "opl_agent_package_launch_state_schema",
+  "owner": "one-person-lab",
+  "purpose": "Define the Framework-owned package launch state consumed by App and Shell compatibility bridges.",
+  "state": "active_contract",
+  "machine_boundary": "The projection summarizes Framework lifecycle facts. It does not replace package locks, receipts, materialization, cache verification, repair, activation, or lifecycle authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "launch_state_schema_version",
+    "launch_state",
+    "launch_state_reason"
+  ],
+  "properties": {
+    "launch_state_schema_version": {
+      "const": "opl-agent-package-launch-state.v1"
+    },
+    "launch_state": {
+      "type": "string",
+      "enum": [
+        "ready",
+        "degraded",
+        "package_unavailable"
+      ]
+    },
+    "launch_state_reason": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "launch_state": {
+            "const": "ready"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "launch_state_reason": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "launch_state": {
+            "enum": [
+              "degraded",
+              "package_unavailable"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "launch_state_reason": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          }
+        }
+      }
+    }
+  ]
+}

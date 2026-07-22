@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+import { deriveAgentPackageLaunchState } from '../../kernel/agent-package-launch-state.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { stringValue } from '../../kernel/json-record.ts';
 import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
@@ -2730,6 +2731,32 @@ async function reconcilePackageClosureForUse(
   }
 }
 
+function missingDependencyProviderIsOptional(
+  lock: AgentPackageLock,
+  packageId: string,
+) {
+  const declared = lock.capability_dependencies.find((entry) => entry.package_id === packageId);
+  const resolved = lock.resolved_dependencies.find((entry) => entry.package_id === packageId);
+  return declared?.required === false && resolved?.required === false;
+}
+
+function resolvedProviderLocksForUse(
+  lock: AgentPackageLock,
+  index: AgentPackageLockIndex,
+  failureMessage: string,
+) {
+  return lock.resolved_dependencies.flatMap((dependency) => {
+    const provider = index.packages.find((entry) => entry.package_id === dependency.package_id);
+    if (provider) return [provider];
+    if (missingDependencyProviderIsOptional(lock, dependency.package_id)) return [];
+    throw new FrameworkContractError('contract_shape_invalid', failureMessage, {
+      package_id: lock.package_id,
+      dependency_package_id: dependency.package_id,
+      failure_code: 'agent_package_dependency_lock_missing',
+    });
+  });
+}
+
 async function ensureOplAgentPackageScopeActivationUnlocked(input: AgentPackagePackageActionInput) {
   const packageId = requirePackageId(input.packageId, 'activate');
   const recovered = readRecoveredLockIndex(input.dryRun === true);
@@ -2769,6 +2796,7 @@ async function ensureOplAgentPackageScopeActivationUnlocked(input: AgentPackageP
     for (const dependency of lock.capability_dependencies) {
       const provider = index.packages.find((entry) => entry.package_id === dependency.package_id);
       if (!provider) {
+        if (missingDependencyProviderIsOptional(lock, dependency.package_id)) continue;
         throw new FrameworkContractError('contract_shape_invalid', 'Package scope activation requires every dependency provider lock.', {
           package_id: packageId,
           dependency_package_id: dependency.package_id,
@@ -2861,8 +2889,11 @@ async function ensureOplAgentPackageScopeActivationUnlocked(input: AgentPackageP
   const nextIndex = structuredClone(index);
   nextIndex.packages[lockIndex] = activatedLock;
   const materializationReadiness = scopeMaterializationReadiness(activatedLock, nextIndex, input);
-  const resolvedProviderLocks = activatedLock.resolved_dependencies.map((dependency) =>
-    nextIndex.packages.find((entry) => entry.package_id === dependency.package_id)!);
+  const resolvedProviderLocks = resolvedProviderLocksForUse(
+    activatedLock,
+    nextIndex,
+    'Package scope activation requires every required dependency provider lock.',
+  );
   const providerPackages = resolvedProviderLocks.map((provider) => {
     return {
       package_id: provider.package_id,
@@ -2988,17 +3019,11 @@ function packageUseLastKnownGoodFallback(
 
   const materializationReadiness = scopeMaterializationReadiness(lock, index, input);
   const reconciliation = packageUseLastKnownGood(lock, error, packageUseRefreshTimeoutMs());
-  const resolvedProviderLocks = lock.resolved_dependencies.map((dependency) => {
-    const provider = index.packages.find((entry) => entry.package_id === dependency.package_id);
-    if (!provider) {
-      throw new FrameworkContractError('contract_shape_invalid', 'Package LKG use requires every dependency provider lock.', {
-        package_id: packageId,
-        dependency_package_id: dependency.package_id,
-        failure_code: 'agent_package_dependency_lock_missing',
-      });
-    }
-    return provider;
-  });
+  const resolvedProviderLocks = resolvedProviderLocksForUse(
+    lock,
+    index,
+    'Package LKG use requires every required dependency provider lock.',
+  );
   const providerPackages = resolvedProviderLocks.map((provider) => {
     return {
       package_id: provider.package_id,
@@ -3090,6 +3115,28 @@ export async function ensureOplAgentPackageScopeActivation(input: AgentPackagePa
     return await withAgentPackageLifecycleTransaction(
       input.dryRun === true,
       async () => {
+        const beforeStatus = runOplAgentPackageStatus({
+          packageId: input.packageId,
+          scope: input.scope,
+          targetWorkspace: input.targetWorkspace,
+          targetQuest: input.targetQuest,
+        }).opl_agent_package_status;
+        const preflightHardStopReason = packageActivationPreflightHardStopReason(beforeStatus);
+        if (preflightHardStopReason) {
+          throw new FrameworkContractError(
+            'contract_shape_invalid',
+            'Package activation is blocked by the current package lifecycle state.',
+            {
+              package_id: input.packageId,
+              launch_blocked_reason: preflightHardStopReason,
+              allowed_when_blocked: beforeStatus.allowed_when_blocked,
+              package_dependency_readiness: beforeStatus.package_dependency_readiness,
+              materialization_readiness: beforeStatus.materialization_readiness,
+              repair_action: beforeStatus.repair_action,
+              failure_code: 'agent_package_scope_activation_blocked',
+            },
+          );
+        }
         const activation = await ensureOplAgentPackageScopeActivationUnlocked(input);
         const packageStatus = runOplAgentPackageStatus({
           packageId: input.packageId,
@@ -3118,6 +3165,12 @@ async function runOplAgentPackageActivateUnlocked(input: AgentPackagePackageActi
     targetQuest: input.targetQuest,
   }).opl_agent_package_status;
   if (input.dryRun && beforeStatus.installed_package_count === 0) {
+    const launchState = deriveAgentPackageLaunchState({
+      installed: false,
+      exposure_state: 'not_installed',
+      operational_ready: false,
+      launch_blocked_reason: 'package_not_installed',
+    });
     return {
       version: 'g2',
       opl_agent_package_activation: {
@@ -3130,6 +3183,7 @@ async function runOplAgentPackageActivateUnlocked(input: AgentPackagePackageActi
         operational_ready: false,
         launch_allowed: false,
         launch_blocked_reason: 'package_not_installed',
+        ...launchState,
         package_use_binding: null,
         use_boundary_id: input.useBoundaryId ?? null,
         use_receipt_ref: null,
@@ -3143,14 +3197,26 @@ async function runOplAgentPackageActivateUnlocked(input: AgentPackagePackageActi
     packageId,
   });
   const packageStatus = activation.package_status;
-  const hardStopReason = packageActivationHardStopReason(packageStatus);
-  if (!input.dryRun && hardStopReason) {
+  if (!input.dryRun && packageStatus.launch_state === 'package_unavailable') {
+    const launchStateReason = stringValue(packageStatus.launch_state_reason);
+    if (!launchStateReason) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Package activation received an invalid canonical launch-state projection.',
+        {
+          package_id: packageId,
+          launch_state: packageStatus.launch_state,
+          launch_state_reason: packageStatus.launch_state_reason,
+          failure_code: 'agent_package_launch_state_reason_missing',
+        },
+      );
+    }
     throw new FrameworkContractError(
       'contract_shape_invalid',
       'Package activation is blocked until dependency and scope readiness are repaired.',
       {
         package_id: packageId,
-        launch_blocked_reason: hardStopReason,
+        launch_blocked_reason: launchStateReason,
         allowed_when_blocked: packageStatus.allowed_when_blocked,
         package_dependency_readiness: packageStatus.package_dependency_readiness,
         materialization_readiness: packageStatus.materialization_readiness,
@@ -3167,7 +3233,13 @@ async function runOplAgentPackageActivateUnlocked(input: AgentPackagePackageActi
       package_dependency_readiness: packageStatus.package_dependency_readiness,
       materialization_readiness: packageStatus.materialization_readiness,
       operational_ready: input.dryRun ? false : packageStatus.operational_ready,
-      launch_allowed: input.dryRun ? false : hardStopReason === null,
+      launch_allowed: input.dryRun ? false : packageStatus.launch_state !== 'package_unavailable',
+      launch_blocked_reason: packageStatus.launch_state === 'package_unavailable'
+        ? packageStatus.launch_blocked_reason ?? packageStatus.launch_state_reason
+        : null,
+      launch_state_schema_version: packageStatus.launch_state_schema_version,
+      launch_state: packageStatus.launch_state,
+      launch_state_reason: packageStatus.launch_state_reason,
       use_boundary_id: activation.package_use_binding?.use_boundary_id ?? null,
       use_receipt_ref: activation.package_use_binding?.use_receipt_ref ?? null,
       lifecycle_receipt_ref: packageStatus.materialization_readiness?.lifecycle_receipt_ref ?? null,
@@ -3176,36 +3248,11 @@ async function runOplAgentPackageActivateUnlocked(input: AgentPackagePackageActi
   };
 }
 
-function packageActivationHardStopReason(packageStatus: any) {
-  if ((packageStatus?.installed_package_count ?? 0) === 0) return 'package_not_installed';
-  const runtimeSource = packageStatus?.runtime_source_readiness;
-  if (runtimeSource && runtimeSource.operational_ready !== true) {
-    return runtimeSource.reason ?? `runtime_source_${runtimeSource.status ?? 'unavailable'}`;
-  }
-  const hardDependencyReasons = new Set([
-    'dependency_lock_missing',
-    'dependency_disabled',
-    'package_id_mismatch',
-    'capability_abi_mismatch',
-    'required_exports_missing',
-    'required_modules_missing',
-  ]);
-  for (const dependency of packageStatus?.package_dependency_readiness?.dependencies ?? []) {
-    if (dependency?.required === false) continue;
-    const reason = Array.isArray(dependency?.reasons)
-      ? dependency.reasons.find((entry: unknown) =>
-          typeof entry === 'string' && hardDependencyReasons.has(entry))
-      : null;
-    if (reason) return reason;
-  }
-  const materialization = packageStatus?.materialization_readiness;
-  if (materialization?.core_readiness?.status === 'missing'
-    || (materialization?.status === 'missing' && !materialization?.core_readiness)) {
-    return 'required_core_skill_missing';
-  }
-  if (packageStatus?.managed_policy_currentness?.status === 'invalid') {
-    return 'managed_policy_invalid';
-  }
+function packageActivationPreflightHardStopReason(packageStatus: any) {
+  const selectedLock = packageStatus?.installed_packages?.find(
+    (entry: any) => entry?.package_id === packageStatus?.package_id,
+  ) ?? null;
+  if (selectedLock?.exposure_state === 'disabled') return 'package_disabled';
   return null;
 }
 
@@ -3644,6 +3691,52 @@ function buildOplAgentPackageStatus(
           ? policyCurrentness.repair_command
           : null
     : null;
+  const requiredSkillIds = materializationReadiness?.core_readiness?.required_skill_ids
+    ?? materializationReadiness?.required_skill_ids
+    ?? [];
+  const materializedSkillIds = new Set(
+    materializationReadiness?.core_readiness?.materialized_skill_ids
+      ?? materializationReadiness?.materialized_skill_ids
+      ?? [],
+  );
+  const requiredCoreSkillMissing = requiredSkillIds.some((skillId) => !materializedSkillIds.has(skillId))
+    || (materializationReadiness?.status === 'missing' && requiredSkillIds.length === 0);
+  const requiredDependencyUnavailable = packageDependencyReadiness?.operational_ready === false;
+  const optionalDependencyMissing = packageDependencyReadiness?.dependencies.some(
+    (dependency) => dependency.required === false && dependency.status === 'missing',
+  ) ?? false;
+  const dependencyObservationReason = packageDependencyReadiness?.dependencies
+    .flatMap((dependency) => dependency.reasons ?? [])[0] ?? null;
+  const materializationObservationReason = materializationReadiness
+    && !requiredCoreSkillMissing
+    && !['current', 'not_required'].includes(materializationReadiness.status)
+    ? `scope_materialization_${materializationReadiness.status}`
+    : null;
+  const unavailableReason = requiredDependencyUnavailable
+    ? `package_dependency_${packageDependencyReadiness?.status ?? 'incompatible'}`
+    : requiredCoreSkillMissing
+      ? 'required_core_skill_missing'
+      : !runtimeSourceReadiness.operational_ready
+        ? `runtime_source_${runtimeSourceReadiness.status}`
+        : policyCurrentness.status === 'invalid'
+          ? 'managed_policy_invalid'
+          : null;
+  const degradedReason = unavailableReason
+    ? null
+    : optionalDependencyMissing
+      ? 'optional_dependency_missing'
+      : materializationObservationReason
+      ?? (carrierAuthorityReadiness?.status === 'invalid' ? 'carrier_authority_invalid' : null)
+      ?? (policyCurrentness.status === 'drifted' ? 'managed_policy_drifted' : null)
+      ?? (dependencyObservationReason ? `package_dependency_${dependencyObservationReason}` : null);
+  const launchState = deriveAgentPackageLaunchState({
+    installed: Boolean(selectedLock),
+    exposure_state: selectedLock?.exposure_state ?? 'not_installed',
+    operational_ready: operationalReady,
+    launch_blocked_reason: operationalReady ? null : launchBlockedReason,
+    degraded_reason: degradedReason,
+    unavailable_reason: unavailableReason,
+  });
   return {
     version: 'g2',
     opl_agent_package_status: {
@@ -3670,6 +3763,7 @@ function buildOplAgentPackageStatus(
       operational_ready_scope: 'package_dependency_scope_runtime_source_and_managed_policy',
       launch_allowed: operationalReady,
       launch_blocked_reason: operationalReady ? null : launchBlockedReason,
+      ...launchState,
       allowed_when_blocked: ['status', 'doctor', 'repair'],
       repair_action: repairAction,
       home_shortcut_preferences: homeShortcutPreferences,
