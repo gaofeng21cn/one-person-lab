@@ -32,7 +32,7 @@
       "const": "opl_domain_artifact_cas_materialization.v1"
     },
     "status": {
-      "enum": ["materialized", "already_materialized"]
+      "enum": ["materialized", "already_materialized", "failed_rolled_back"]
     },
     "request_id": {
       "type": "string",
@@ -144,15 +144,38 @@
         "durable_recovery_journal": { "const": true },
         "visibility_model": { "const": "journaled_all_or_rollback_for_cooperating_opl_readers" },
         "journal_must_be_absent_for_admission": { "const": true },
+        "single_use_request_binding_ref": { "type": "string", "minLength": 1 },
+        "exact_request_replay_is_idempotent": { "const": true },
+        "created_parent_directory_refs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
         "recovery_action": {
           "enum": [
             "none",
             "resumed_interrupted_transaction",
             "finalized_interrupted_transaction",
-            "completed_receipt_reused"
+            "completed_receipt_reused",
+            "rolled_back_after_failure"
           ]
         }
       }
+    },
+    "failure": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["code", "message", "rolled_back"],
+          "properties": {
+            "code": { "const": "domain_artifact_cas_materialization_failed" },
+            "message": { "type": "string", "minLength": 1 },
+            "rolled_back": { "const": true }
+          }
+        }
+      ]
     },
     "authority_boundary": {
       "type": "object",
@@ -172,5 +195,24 @@
         "receipt_is_domain_owner_receipt": { "const": false }
       }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "failed_rolled_back" } } },
+      "then": {
+        "required": ["failure"],
+        "properties": {
+          "failure": { "type": "object" },
+          "transaction": {
+            "required": [
+              "single_use_request_binding_ref",
+              "exact_request_replay_is_idempotent",
+              "created_parent_directory_refs"
+            ]
+          }
+        }
+      },
+      "else": { "properties": { "failure": { "type": "null" } } }
+    }
+  ]
 }

@@ -131,6 +131,38 @@ test('hosted action persistence and ledger distinguish Stage launch from complet
   assert.equal(contract.refs_only_ledger.started_is_terminal_domain_completion, false);
 });
 
+test('hosted action runtime exposes one receipt-bound qualification provisioning argv', () => {
+  const provisioning = readContract().qualification_provisioning;
+
+  assert.equal(
+    provisioning.exact_argv,
+    'opl agents run --domain mas --action qualification_work_item_provisioning_authority_evaluate '
+      + '--workspace <workspace_root> --payload-file <request.json> --run-id <stable_run_id> --json',
+  );
+  assert.equal(provisioning.framework_trusted_route, true);
+  assert.equal(provisioning.domain_action_remains_internal_only, true);
+  assert.equal(provisioning.shell_direct_internal_handler_invocation_allowed, false);
+  assert.equal(provisioning.input.framework_derives_or_selects_study_id, false);
+  assert.equal(provisioning.domain_output.study_id_pointer,
+    '/standard_agent_action_run/result/study_identity/study_id');
+  assert.equal(provisioning.domain_output.provisioning_receipt_path_pointer,
+    '/standard_agent_action_run/result/provisioning_receipt/receipt_relative_path');
+  assert.equal(provisioning.host_materialization.framework_receipt_path_pointer,
+    '/standard_agent_action_run/host_materialization/receipt_path');
+  assert.equal(provisioning.host_materialization.operation_count, 3);
+  assert.equal(provisioning.host_materialization.journaled_all_or_rollback, true);
+  assert.equal(provisioning.host_materialization.exact_request_replay_is_idempotent, true);
+  assert.equal(provisioning.qualification_boundary.ordinary_stage_admission_reuse_allowed, false);
+  assert.equal(provisioning.qualification_boundary.shell_requires_domain_and_framework_receipts_before_provider_start,
+    true);
+  for (const field of [
+    'stage_body_authorized',
+    'business_action_authorized',
+    'publication_authorized',
+    'submission_authorized',
+  ]) assert.equal(provisioning.qualification_boundary[field], false, field);
+});
+
 test('hosted Foundry conformance profile is jointly selected and keeps live evidence OPL-owned', () => {
   const profile = readContract().conformance_profile;
 

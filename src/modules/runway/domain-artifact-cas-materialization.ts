@@ -26,6 +26,8 @@ type HostMaterializationContract = {
   capability_id: typeof DOMAIN_ARTIFACT_CAS_CAPABILITY_ID;
   request_output_field: string;
   authorization_output_field: string;
+  receipt_output_field: string | null;
+  receipt_content_binding_output_field: string | null;
   materialization_scope_sha256_field: string | null;
   absent_relative_path_preconditions_field: string | null;
 };
@@ -71,6 +73,11 @@ type PreparedOperation = {
 };
 
 type PreparedAbsentPrecondition = {
+  relative: string;
+  target: string;
+};
+
+type PreparedParentDirectory = {
   relative: string;
   target: string;
 };
@@ -176,6 +183,8 @@ function hostContract(value: unknown): HostMaterializationContract | null {
     'capability_id',
     'request_output_field',
     'authorization_output_field',
+    'receipt_output_field',
+    'receipt_content_binding_output_field',
     'materialization_scope_sha256_field',
     'absent_relative_path_preconditions_field',
   ];
@@ -198,10 +207,21 @@ function hostContract(value: unknown): HostMaterializationContract | null {
   if (materializationScopeField !== null && materializationScopeField === absentPreconditionsField) {
     fail('host_materialization_contract scope field names must be distinct.');
   }
+  const receiptOutputField = value.receipt_output_field === undefined
+    ? null
+    : text(value.receipt_output_field, 'receipt_output_field');
+  const receiptContentBindingOutputField = value.receipt_content_binding_output_field === undefined
+    ? null
+    : text(value.receipt_content_binding_output_field, 'receipt_content_binding_output_field');
+  if ((receiptOutputField === null) !== (receiptContentBindingOutputField === null)) {
+    fail('host_materialization_contract receipt fields must be declared together.');
+  }
   return {
     capability_id: DOMAIN_ARTIFACT_CAS_CAPABILITY_ID,
     request_output_field: text(value.request_output_field, 'request_output_field'),
     authorization_output_field: text(value.authorization_output_field, 'authorization_output_field'),
+    receipt_output_field: receiptOutputField,
+    receipt_content_binding_output_field: receiptContentBindingOutputField,
     materialization_scope_sha256_field: materializationScopeField,
     absent_relative_path_preconditions_field: absentPreconditionsField,
   };
@@ -226,7 +246,12 @@ function lstatOrNull(file: string) {
   }
 }
 
-function containedTarget(root: string, relative: string, field = 'operations[].target_relative_path') {
+function containedTarget(
+  root: string,
+  relative: string,
+  field = 'operations[].target_relative_path',
+  allowMissingParents = false,
+) {
   const normalized = safeRelativePath(relative, field);
   const target = path.resolve(root, normalized);
   const relation = path.relative(root, target);
@@ -234,15 +259,23 @@ function containedTarget(root: string, relative: string, field = 'operations[].t
     fail('CAS target escapes the selected workspace.', { target_relative_path: relative });
   }
   let cursor = root;
+  const parentDirectories: PreparedParentDirectory[] = [];
   for (const segment of path.relative(root, path.dirname(target)).split(path.sep).filter(Boolean)) {
     cursor = path.join(cursor, segment);
+    parentDirectories.push({
+      relative: path.relative(root, cursor).split(path.sep).join('/'),
+      target: cursor,
+    });
     const stat = lstatOrNull(cursor);
-    if (!stat) fail('CAS target parent is missing.', { path: cursor });
+    if (!stat) {
+      if (!allowMissingParents) fail('CAS target parent is missing.', { path: cursor });
+      continue;
+    }
     if (stat.isSymbolicLink() || !stat.isDirectory()) {
       fail('CAS target ancestors must be physical directories.', { path: cursor });
     }
   }
-  return { target, normalized };
+  return { target, normalized, parentDirectories };
 }
 
 function preparedAbsentPreconditions(workspaceRoot: string, value: unknown) {
@@ -250,7 +283,7 @@ function preparedAbsentPreconditions(workspaceRoot: string, value: unknown) {
   const relativePaths = exactStringList(value, field);
   return relativePaths.map((relative, index): PreparedAbsentPrecondition => {
     const entryField = `${field}[${index}]`;
-    const resolved = containedTarget(workspaceRoot, relative, entryField);
+    const resolved = containedTarget(workspaceRoot, relative, entryField, true);
     if (resolved.normalized !== relative) {
       fail(`${entryField} must use its canonical normalized relative path.`, { value: relative });
     }
@@ -418,7 +451,41 @@ function transactionPaths(workspaceRoot: string, requestSha256: string) {
     readEpoch: path.join(stateRoot, 'read-epochs', `${workspaceKey}.json`),
     receiptByRequest: path.join(stateRoot, 'receipts', 'by-request', `${requestSha256}.json`),
     receiptRoot: path.join(stateRoot, 'receipts', 'sha256'),
+    requestBindingRoot: path.join(stateRoot, 'request-bindings'),
   };
+}
+
+function bindSingleUseRequest(input: {
+  paths: TransactionPaths;
+  request: CasRequest;
+  requestSha256: string;
+}) {
+  const key = sha256(`${input.request.domain_id}\0${input.request.request_id}`);
+  const file = path.join(input.paths.requestBindingRoot, `${key}.json`);
+  const binding = {
+    surface_kind: 'opl_domain_artifact_cas_request_binding',
+    version: 'opl-domain-artifact-cas-request-binding.v1',
+    request_id: input.request.request_id,
+    domain_id: input.request.domain_id,
+    request_sha256: input.requestSha256,
+    authorization_ref: input.request.authorization_ref,
+  };
+  const bytes = Buffer.from(formatJsonPayload(binding));
+  fs.mkdirSync(input.paths.requestBindingRoot, { recursive: true });
+  try {
+    durableExclusiveFile(file, bytes);
+    fsyncDirectory(input.paths.requestBindingRoot);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+  }
+  if (!readStableFile(file, 'CAS single-use request binding').equals(bytes)) {
+    fail('CAS request_id is already bound to different exact request bytes.', {
+      request_id: input.request.request_id,
+      domain_id: input.request.domain_id,
+      request_binding_ref: pathToFileURL(file).href,
+    });
+  }
+  return pathToFileURL(file).href;
 }
 
 function writeReadEpoch(input: {
@@ -680,15 +747,34 @@ function acquireLock(lockPath: string, requestSha256: string) {
   }
 }
 
-function validatePreparedPaths(workspaceRoot: string, operations: PreparedOperation[]) {
+function validatePreparedPaths(
+  workspaceRoot: string,
+  operations: PreparedOperation[],
+  parentDirectories: PreparedParentDirectory[],
+) {
   for (const operation of operations) {
-    const resolved = containedTarget(workspaceRoot, operation.relative);
+    const resolved = containedTarget(workspaceRoot, operation.relative, 'operations[].target_relative_path', true);
     if (resolved.target !== operation.target) fail('CAS target resolution changed while waiting for the lock.');
     for (const auxiliary of [operation.staging, operation.backup]) {
       const stat = lstatOrNull(auxiliary);
       if (stat && (stat.isSymbolicLink() || !stat.isFile())) {
         fail('CAS transaction auxiliary paths must be physical files.', { path: auxiliary });
       }
+    }
+  }
+  for (const directory of parentDirectories) {
+    const resolved = containedTarget(
+      workspaceRoot,
+      path.posix.join(directory.relative, '.opl-directory-probe'),
+      'materialized_parent_directories[]',
+      true,
+    );
+    if (path.dirname(resolved.target) !== directory.target) {
+      fail('CAS parent-directory resolution changed while waiting for the lock.', { path: directory.target });
+    }
+    const stat = lstatOrNull(directory.target);
+    if (stat && (stat.isSymbolicLink() || !stat.isDirectory())) {
+      fail('CAS target ancestors must be physical directories.', { path: directory.target });
     }
   }
 }
@@ -704,14 +790,49 @@ function journalOperations(operations: PreparedOperation[]) {
   }));
 }
 
-function assertJournal(paths: TransactionPaths, requestSha256: string, operations: PreparedOperation[]) {
+function assertJournal(
+  paths: TransactionPaths,
+  requestSha256: string,
+  operations: PreparedOperation[],
+  parentDirectories: PreparedParentDirectory[],
+) {
   const journal = readJsonRecord(paths.journal, 'CAS recovery journal').value;
+  const allowedDirectories = new Set(parentDirectories.map((directory) => directory.target));
+  const createdDirectories = Array.isArray(journal.created_parent_directories)
+    ? journal.created_parent_directories
+    : null;
   if (
     journal.surface_kind !== 'opl_domain_artifact_cas_transaction_journal'
     || journal.version !== 'opl-domain-artifact-cas-transaction-journal.v1'
     || journal.request_sha256 !== requestSha256
     || JSON.stringify(journal.operations) !== JSON.stringify(journalOperations(operations))
+    || !createdDirectories
+    || createdDirectories.some((directory) => typeof directory !== 'string' || !allowedDirectories.has(directory))
+    || new Set(createdDirectories).size !== createdDirectories.length
   ) fail('CAS recovery journal does not match the exact authorized transaction.', { journal_path: paths.journal });
+  return createdDirectories.map((target) => parentDirectories.find((directory) => directory.target === target)!);
+}
+
+function ensureParentDirectories(input: {
+  directories: PreparedParentDirectory[];
+  recovering: boolean;
+  materializedDirectories: PreparedParentDirectory[];
+}) {
+  for (const directory of input.directories) {
+    const stat = lstatOrNull(directory.target);
+    if (stat) {
+      if (stat.isSymbolicLink() || !stat.isDirectory()) {
+        fail('CAS target ancestors must be physical directories.', { path: directory.target });
+      }
+      if (!input.recovering) {
+        fail('CAS parent-directory creation collided with a concurrent writer.', { path: directory.target });
+      }
+      continue;
+    }
+    fs.mkdirSync(directory.target, { mode: 0o700 });
+    input.materializedDirectories.push(directory);
+    fsyncDirectory(path.dirname(directory.target));
+  }
 }
 
 function ensureStaging(operation: PreparedOperation) {
@@ -722,7 +843,11 @@ function ensureStaging(operation: PreparedOperation) {
   durableExclusiveFile(operation.staging, operation.after);
 }
 
-function rollbackTransaction(operations: PreparedOperation[], journalPath: string) {
+function rollbackTransaction(
+  operations: PreparedOperation[],
+  createdDirectories: PreparedParentDirectory[],
+  journalPath: string,
+) {
   for (const operation of [...operations].reverse()) {
     if (operation.before.kind === 'absent') {
       if (afterMatches(operation)) fs.rmSync(operation.target);
@@ -737,7 +862,20 @@ function rollbackTransaction(operations: PreparedOperation[], journalPath: strin
     }
     fs.rmSync(operation.staging, { force: true });
     fs.rmSync(operation.backup, { force: true });
-    fsyncDirectory(path.dirname(operation.target));
+    const parent = lstatOrNull(path.dirname(operation.target));
+    if (parent?.isDirectory() && !parent.isSymbolicLink()) fsyncDirectory(path.dirname(operation.target));
+  }
+  for (const directory of [...createdDirectories].reverse()) {
+    const stat = lstatOrNull(directory.target);
+    if (!stat) continue;
+    if (stat.isSymbolicLink() || !stat.isDirectory()) {
+      fail('CAS rollback found an invalid created parent-directory state.', { path: directory.target });
+    }
+    if (fs.readdirSync(directory.target).length > 0) {
+      fail('CAS rollback cannot remove a non-empty transaction-created parent directory.', { path: directory.target });
+    }
+    fs.rmdirSync(directory.target);
+    fsyncDirectory(path.dirname(directory.target));
   }
   fs.rmSync(journalPath, { force: true });
   if (!targetsMatch(operations, 'before')) fail('CAS rollback did not restore every exact before state.');
@@ -748,24 +886,29 @@ function switchTransaction(input: {
   requestSha256: string;
   paths: TransactionPaths;
   operations: PreparedOperation[];
+  parentDirectories: PreparedParentDirectory[];
   absentPreconditions: PreparedAbsentPrecondition[];
   rename: typeof fs.renameSync;
   beforeJournalSwitch?: () => void;
 }) {
   assertAbsentPreconditions(input.absentPreconditions, 'before_journal_switch');
   const recovering = fs.existsSync(input.paths.journal);
+  let createdDirectories: PreparedParentDirectory[];
+  const materializedDirectories: PreparedParentDirectory[] = [];
   if (recovering) {
-    assertJournal(input.paths, input.requestSha256, input.operations);
+    createdDirectories = assertJournal(
+      input.paths,
+      input.requestSha256,
+      input.operations,
+      input.parentDirectories,
+    );
   } else {
     if (!targetsMatch(input.operations, 'before')) {
       fail('CAS targets do not match the authorized transaction preconditions.');
     }
-    for (const operation of input.operations) {
-      fs.rmSync(operation.staging, { force: true });
-      fs.rmSync(operation.backup, { force: true });
-      ensureStaging(operation);
-    }
+    createdDirectories = input.parentDirectories.filter((directory) => lstatOrNull(directory.target) === null);
     input.beforeJournalSwitch?.();
+    validatePreparedPaths(input.workspaceRoot, input.operations, input.parentDirectories);
     assertAbsentPreconditions(input.absentPreconditions, 'immediately_before_journal_switch');
     atomicJson(input.paths.journal, {
       surface_kind: 'opl_domain_artifact_cas_transaction_journal',
@@ -774,11 +917,25 @@ function switchTransaction(input: {
       operations_sha256: sha256(canonicalJsonBytes(journalOperations(input.operations))),
       phase: 'switching',
       visibility_model: 'cooperating_opl_readers_must_treat_journal_as_sync_pending',
+      created_parent_directories: createdDirectories.map((directory) => directory.target),
       operations: journalOperations(input.operations),
     });
   }
 
   try {
+    validatePreparedPaths(input.workspaceRoot, input.operations, input.parentDirectories);
+    ensureParentDirectories({
+      directories: createdDirectories,
+      recovering,
+      materializedDirectories,
+    });
+    for (const operation of input.operations) {
+      if (!recovering) {
+        fs.rmSync(operation.staging, { force: true });
+        fs.rmSync(operation.backup, { force: true });
+      }
+      ensureStaging(operation);
+    }
     for (const operation of input.operations) {
       if (afterMatches(operation)) {
         fs.rmSync(operation.staging, { force: true });
@@ -812,9 +969,16 @@ function switchTransaction(input: {
       fs.rmSync(operation.backup, { force: true });
       fsyncDirectory(path.dirname(operation.target));
     }
-    return recovering ? 'resumed_interrupted_transaction' as const : 'none' as const;
+    return {
+      recoveryAction: recovering ? 'resumed_interrupted_transaction' as const : 'none' as const,
+      createdDirectories,
+    };
   } catch (error) {
-    rollbackTransaction(input.operations, input.paths.journal);
+    rollbackTransaction(
+      input.operations,
+      recovering ? createdDirectories : materializedDirectories,
+      input.paths.journal,
+    );
     throw error;
   }
 }
@@ -830,6 +994,7 @@ function existingReceipt(input: {
   runId: string;
   handlerOutputRef: string;
   handlerOutputSha256: string;
+  requestBindingRef: string;
 }) {
   if (!fs.existsSync(input.paths.receiptByRequest) || fs.existsSync(input.paths.journal)) return null;
   const stored = readJsonRecord(input.paths.receiptByRequest, 'Stored CAS materialization receipt');
@@ -839,6 +1004,7 @@ function existingReceipt(input: {
     sourceRef: RECEIPT_SCHEMA_REF,
   }, stored.value);
   const result = isRecord(stored.value.domain_authority_result) ? stored.value.domain_authority_result : null;
+  const transaction = isRecord(stored.value.transaction) ? stored.value.transaction : null;
   if (
     stored.value.request_id !== input.request.request_id
     || stored.value.request_sha256 !== input.requestSha256
@@ -850,12 +1016,33 @@ function existingReceipt(input: {
     || result.action_id !== input.actionId
     || result.output_ref !== input.handlerOutputRef
     || result.output_sha256 !== input.handlerOutputSha256
+    || !transaction
+    || (
+      transaction.single_use_request_binding_ref !== undefined
+      && transaction.single_use_request_binding_ref !== input.requestBindingRef
+    )
+  ) fail('Stored CAS materialization receipt does not bind current exact bytes and run identity.');
+  const receiptPath = input.paths.receiptByRequest;
+  const receiptRef = pathToFileURL(receiptPath).href;
+  const receiptSha256 = sha256(stored.bytes);
+  if (stored.value.status === 'failed_rolled_back') {
+    if (!isRecord(stored.value.failure) || !targetsMatch(input.operations, 'before')) {
+      fail('Stored CAS failure receipt does not bind an exact rolled-back transaction.');
+    }
+    fail('CAS request previously failed and was rolled back.', {
+      failure_receipt_ref: receiptRef,
+      failure_receipt_sha256: receiptSha256,
+      original_failure: stored.value.failure,
+    });
+  }
+  if (
+    !['materialized', 'already_materialized'].includes(String(stored.value.status))
     || !targetsMatch(input.operations, 'after')
   ) fail('Stored CAS materialization receipt does not bind current exact bytes and run identity.');
   return {
-    receipt_path: input.paths.receiptByRequest,
-    receipt_ref: pathToFileURL(input.paths.receiptByRequest).href,
-    receipt_sha256: sha256(stored.bytes),
+    receipt_path: receiptPath,
+    receipt_ref: receiptRef,
+    receipt_sha256: receiptSha256,
     receipt: stored.value,
   } satisfies DomainArtifactCasMaterialization;
 }
@@ -918,9 +1105,20 @@ export function applyDomainArtifactCasMaterialization(input: {
   if (!output) fail('Host materialization requires an object handler output.');
   const requestValue = output[contract.request_output_field];
   const authorization = output[contract.authorization_output_field];
+  const domainReceipt = contract.receipt_output_field === null
+    ? undefined
+    : output[contract.receipt_output_field];
+  const domainReceiptBinding = contract.receipt_content_binding_output_field === null
+    ? undefined
+    : output[contract.receipt_content_binding_output_field];
   if (NON_MATERIALIZING_AUTHORITY_STATUSES.has(String(output.status))) {
-    if (requestValue !== null || authorization !== null) {
-      fail('Non-materializing domain authority output must set its host request and authorization to null.', {
+    if (
+      requestValue !== null
+      || authorization !== null
+      || domainReceipt !== undefined && domainReceipt !== null
+      || domainReceiptBinding !== undefined && domainReceiptBinding !== null
+    ) {
+      fail('Non-materializing domain authority output must set its host request, authorization, and receipt to null.', {
         domain_authority_status: output.status,
       });
     }
@@ -944,6 +1142,50 @@ export function applyDomainArtifactCasMaterialization(input: {
   const operationsSha256 = sha256(canonicalJsonBytes(request.operations));
   if (digest(request.operations_sha256, 'operations_sha256') !== operationsSha256) {
     fail('Host materialization operations_sha256 does not bind operations.');
+  }
+  if (contract.receipt_output_field !== null) {
+    if (!isRecord(domainReceipt) || !isRecord(domainReceiptBinding)) {
+      fail('Declared host materialization receipt output is missing its receipt or exact content binding.');
+    }
+    const receiptTarget = safeRelativePath(
+      text(domainReceiptBinding.target_relative_path, 'receipt_content_binding.target_relative_path'),
+      'receipt_content_binding.target_relative_path',
+    );
+    const receiptSha256 = digest(domainReceiptBinding.sha256, 'receipt_content_binding.sha256');
+    const receiptByteSize = domainReceiptBinding.byte_size;
+    if (!Number.isSafeInteger(receiptByteSize) || Number(receiptByteSize) < 1) {
+      fail('receipt_content_binding.byte_size must be a positive safe integer.');
+    }
+    const receiptOperation = request.operations.find((operation) => (
+      operation.target_relative_path === receiptTarget
+    ));
+    const receiptBytes = receiptOperation
+      ? replacementBytes(
+          receiptOperation.replacement_bytes_base64,
+          receiptOperation.replacement_byte_size,
+        )
+      : null;
+    let materializedReceipt: unknown = null;
+    try {
+      materializedReceipt = receiptBytes
+        ? parseJsonText(new TextDecoder('utf-8', { fatal: true }).decode(receiptBytes))
+        : null;
+    } catch {
+      fail('Domain owner receipt replacement bytes must be strict UTF-8 JSON.');
+    }
+    if (
+      !receiptOperation
+      || !receiptBytes
+      || receiptSha256 !== sha256(receiptBytes)
+      || receiptByteSize !== receiptBytes.byteLength
+      || digest(receiptOperation.replacement_sha256, 'receipt operation replacement_sha256') !== receiptSha256
+      || receiptOperation.replacement_byte_size !== receiptByteSize
+      || canonicalJsonBytes(materializedReceipt).toString('base64')
+        !== canonicalJsonBytes(domainReceipt).toString('base64')
+      || domainReceiptBinding.receipt_ref !== domainReceipt.receipt_ref
+    ) {
+      fail('Domain owner receipt content binding does not match one exact CAS replacement operation.');
+    }
   }
   const scopeSha256Field = contract.materialization_scope_sha256_field;
   const absentPreconditionsField = contract.absent_relative_path_preconditions_field;
@@ -1019,8 +1261,16 @@ export function applyDomainArtifactCasMaterialization(input: {
   const requestSha256 = sha256(canonicalJsonBytes(request));
   const suffix = requestSha256.slice(0, 20);
   const targetSet = new Set<string>();
+  const targetOperations = new Map<string, PreparedOperation>();
+  const parentDirectoryMap = new Map<string, PreparedParentDirectory>();
   const operations = request.operations.map((operation): PreparedOperation => {
-    const { target, normalized } = containedTarget(workspaceRoot, operation.target_relative_path);
+    const { target, normalized, parentDirectories: operationParentDirectories } = containedTarget(
+      workspaceRoot,
+      operation.target_relative_path,
+      'operations[].target_relative_path',
+      true,
+    );
+    for (const directory of operationParentDirectories) parentDirectoryMap.set(directory.target, directory);
     if (targetSet.has(target)) fail('Host materialization request contains duplicate targets.', { target });
     targetSet.add(target);
     const after = replacementBytes(operation.replacement_bytes_base64, operation.replacement_byte_size);
@@ -1033,7 +1283,7 @@ export function applyDomainArtifactCasMaterialization(input: {
           sha256: digest(operation.precondition.sha256, 'precondition.sha256'),
           byteSize: operation.precondition.byte_size,
         };
-    return {
+    const prepared = {
       relative: normalized,
       target,
       staging: path.join(path.dirname(target), `.${path.basename(target)}.${suffix}.opl-cas.staging`),
@@ -1042,19 +1292,32 @@ export function applyDomainArtifactCasMaterialization(input: {
       after,
       afterSha256,
     };
+    targetOperations.set(target, prepared);
+    return prepared;
   });
+  const parentDirectories = [...parentDirectoryMap.values()].sort((left, right) => (
+    left.relative.split('/').length - right.relative.split('/').length
+    || left.relative.localeCompare(right.relative)
+  ));
   const absentPreconditions = preparedAbsentPreconditions(
     workspaceRoot,
     absentRelativePathPreconditions,
   );
-  const overlappingAbsence = absentPreconditions.find((precondition) => targetSet.has(precondition.target));
+  const overlappingAbsence = absentPreconditions.find((precondition) => {
+    const operation = targetOperations.get(precondition.target);
+    return operation !== undefined && operation.before.kind !== 'absent';
+  });
   if (overlappingAbsence) {
-    fail('Absent-path authorization scope overlaps a materialization operation target.', {
+    fail('Absent-path authorization scope overlaps a materialization operation with a non-absent target precondition.', {
       target_relative_path: overlappingAbsence.relative,
     });
   }
-  assertAbsentPreconditions(absentPreconditions, 'before_receipt_reuse');
+  const independentAbsentPreconditions = absentPreconditions.filter((precondition) => (
+    !targetSet.has(precondition.target)
+  ));
+  assertAbsentPreconditions(independentAbsentPreconditions, 'before_receipt_reuse');
   const paths = transactionPaths(workspaceRoot, requestSha256);
+  const requestBindingRef = bindSingleUseRequest({ paths, request, requestSha256 });
   const receiptInput = {
     paths,
     request,
@@ -1066,6 +1329,7 @@ export function applyDomainArtifactCasMaterialization(input: {
     runId: input.runId,
     handlerOutputRef: input.handlerOutputRef,
     handlerOutputSha256: digest(input.handlerOutputSha256, 'handler_output_sha256'),
+    requestBindingRef,
   };
   const prior = existingReceipt(receiptInput);
   if (prior) {
@@ -1082,8 +1346,8 @@ export function applyDomainArtifactCasMaterialization(input: {
   acquireLock(paths.lock, requestSha256);
   let readEpochStarted = false;
   try {
-    validatePreparedPaths(workspaceRoot, operations);
-    assertAbsentPreconditions(absentPreconditions, 'before_locked_receipt_reuse');
+    validatePreparedPaths(workspaceRoot, operations, parentDirectories);
+    assertAbsentPreconditions(independentAbsentPreconditions, 'before_locked_receipt_reuse');
     const existing = existingReceipt(receiptInput);
     if (existing) {
       writeReadEpoch({
@@ -1103,12 +1367,13 @@ export function applyDomainArtifactCasMaterialization(input: {
       outcome: null,
     });
     readEpochStarted = true;
-    const recoveryAction = switchTransaction({
+    const transaction = switchTransaction({
       workspaceRoot,
       requestSha256,
       paths,
       operations,
-      absentPreconditions,
+      parentDirectories,
+      absentPreconditions: independentAbsentPreconditions,
       rename: hooks.rename ?? fs.renameSync,
       beforeJournalSwitch: hooks.beforeJournalSwitch,
     });
@@ -1152,9 +1417,14 @@ export function applyDomainArtifactCasMaterialization(input: {
         all_targets_revalidated_before_switch: true,
         rollback_on_failure: true,
         durable_recovery_journal: true,
-        recovery_action: recoveryAction,
+        recovery_action: transaction.recoveryAction,
         visibility_model: 'journaled_all_or_rollback_for_cooperating_opl_readers',
         journal_must_be_absent_for_admission: true,
+        single_use_request_binding_ref: requestBindingRef,
+        exact_request_replay_is_idempotent: true,
+        created_parent_directory_refs: transaction.createdDirectories.map((directory) => (
+          pathToFileURL(directory.target).href
+        )),
       },
       authority_boundary: {
         opl_role: 'exact_byte_cas_transport_and_receipt',
@@ -1163,6 +1433,7 @@ export function applyDomainArtifactCasMaterialization(input: {
         provider_completion_is_domain_truth: false,
         receipt_is_domain_owner_receipt: false,
       },
+      failure: null,
     };
     assertJsonSchemaPayload({
       schemaId: 'opl-domain-artifact-cas-materialization-receipt.v1',
@@ -1189,6 +1460,77 @@ export function applyDomainArtifactCasMaterialization(input: {
         requestSha256,
         phase: 'settled',
         outcome: fs.existsSync(paths.receiptByRequest) ? 'materialized' : 'rolled_back',
+      });
+    }
+    if (
+      !fs.existsSync(paths.journal)
+      && !fs.existsSync(paths.receiptByRequest)
+      && targetsMatch(operations, 'before')
+    ) {
+      const failureReceipt = {
+        surface_kind: 'opl_domain_artifact_cas_materialization_receipt',
+        version: 'opl-domain-artifact-cas-materialization-receipt.v1',
+        capability_id: DOMAIN_ARTIFACT_CAS_CAPABILITY_ID,
+        status: 'failed_rolled_back',
+        request_id: request.request_id,
+        request_sha256: requestSha256,
+        domain_id: input.domainId,
+        authorization_ref: authorizationFields.authorization_ref,
+        authority_receipt_ref: authorizationFields.authority_receipt_ref,
+        satisfied_gate_ids: authorizationFields.satisfied_gate_ids,
+        domain_authority_result: {
+          run_id: input.runId,
+          action_id: input.actionId,
+          handler_ref: input.handlerRef,
+          hosted_runtime_binding_ref: input.hostedRuntimeBindingRef,
+          output_ref: input.handlerOutputRef,
+          output_sha256: receiptInput.handlerOutputSha256,
+        },
+        operations_sha256: operationsSha256,
+        operations: operations.map(operationIdentity),
+        transaction: {
+          all_targets_preflighted_before_write: true,
+          all_targets_revalidated_before_switch: true,
+          rollback_on_failure: true,
+          durable_recovery_journal: true,
+          recovery_action: 'rolled_back_after_failure',
+          visibility_model: 'journaled_all_or_rollback_for_cooperating_opl_readers',
+          journal_must_be_absent_for_admission: true,
+          single_use_request_binding_ref: requestBindingRef,
+          exact_request_replay_is_idempotent: true,
+          created_parent_directory_refs: [],
+        },
+        authority_boundary: {
+          opl_role: 'exact_byte_cas_transport_and_receipt',
+          domain_role: 'mutation_semantics_and_authorization_owner',
+          opl_interprets_domain_semantics: false,
+          provider_completion_is_domain_truth: false,
+          receipt_is_domain_owner_receipt: false,
+        },
+        failure: {
+          code: 'domain_artifact_cas_materialization_failed',
+          message: error instanceof Error ? error.message : String(error),
+          rolled_back: true,
+        },
+      };
+      assertJsonSchemaPayload({
+        schemaId: 'opl-domain-artifact-cas-materialization-receipt.v1',
+        schema: receiptSchema,
+        sourceRef: RECEIPT_SCHEMA_REF,
+      }, failureReceipt);
+      const persistedFailure = persistReceipt(paths, failureReceipt);
+      if (error instanceof FrameworkContractError) {
+        throw new FrameworkContractError(error.code, error.message, {
+          ...error.details,
+          failure_receipt_ref: persistedFailure.receipt_ref,
+          failure_receipt_sha256: persistedFailure.receipt_sha256,
+        }, error.exitCode);
+      }
+      throw new FrameworkContractError('contract_shape_invalid', failureReceipt.failure.message, {
+        failure_code: failureReceipt.failure.code,
+        original_error_name: error instanceof Error ? error.name : typeof error,
+        failure_receipt_ref: persistedFailure.receipt_ref,
+        failure_receipt_sha256: persistedFailure.receipt_sha256,
       });
     }
     throw error;

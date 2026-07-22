@@ -6,12 +6,12 @@
     "mas": {
       "package_id": "mas",
       "package_role": "standard_agent",
-      "package_version": "0.2.16",
-      "owner_source_commit": "56c6e238203f915944b00388ccb189d73b45c70e",
+      "package_version": "0.2.17",
+      "owner_source_commit": "e806c166a91250bdcc675fafa1078dbb86d0cc15",
       "manifest_ref": "packages/mas.json",
-      "manifest_sha256": "sha256:379142503b579e821dc61d95258e07d8c6a8e6efe8a2e0080de4ca92335230e9",
-      "payload_manifest_ref": "packages/payloads/mas-0.2.16.json",
-      "payload_manifest_sha256": "sha256:94241540ea8cc8a0bfb0f9b3675d618c53ad4c065059b5badd05e7e95c2fafdc",
+      "manifest_sha256": "sha256:8bed4c3f0a0ceebd0ecd49a5ef06ba2f5e55c712b19a5137153f7ac8148a4242",
+      "payload_manifest_ref": "packages/payloads/mas-0.2.17.json",
+      "payload_manifest_sha256": "sha256:56a7cbb6c74b1eccd5461a1df2b327376b742e1a40a2ca2c82fff6827fd741b8",
       "runtime_module_relative_path": "modules/mas"
     },
     "mag": {

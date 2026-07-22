@@ -2,6 +2,12 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://one-person-lab.local/contracts/domain-artifact-cas-materialization-request.schema.json",
   "title": "OPL Domain Artifact CAS Materialization Request",
+  "x-opl-request-semantics": {
+    "single_use_key_fields": ["domain_id", "request_id"],
+    "exact_request_replay": "idempotent",
+    "same_key_different_bytes": "fail_closed",
+    "missing_parent_directories": "journaled_create_and_rollback"
+  },
   "type": "object",
   "additionalProperties": false,
   "required": [

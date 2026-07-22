@@ -1,4 +1,8 @@
-import { runStandardAgentAction } from '../../../../modules/runway/standard-agent-action-runtime.ts';
+import {
+  QUALIFICATION_PROVISIONING_ACTION_ID,
+  runStandardAgentAction,
+  runStandardAgentQualificationProvisioning,
+} from '../../../../modules/runway/standard-agent-action-runtime.ts';
 import type { CommandSpec } from '../../modules/support.ts';
 import { parseAgentsRunArgs } from './agents-run.ts';
 
@@ -17,7 +21,12 @@ export function buildPrivateAgentCommandSpecs({
         'opl agents run --domain obf --action shape-storyline --workspace /path/to/book --payload \'{"workspace_root":"/path/to/book"}\'',
         'opl agents run --domain mas --action study-progress --workspace /path/to/workspace --payload-file request.json --json',
       ],
-      handler: (args) => runStandardAgentAction(parseAgentsRunArgs(args, getCommandSpecs()['agents run'])),
+      handler: (args) => {
+        const input = parseAgentsRunArgs(args, getCommandSpecs()['agents run']);
+        return input.actionId === QUALIFICATION_PROVISIONING_ACTION_ID
+          ? runStandardAgentQualificationProvisioning(input)
+          : runStandardAgentAction(input);
+      },
     },
   };
 }

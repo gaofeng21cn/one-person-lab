@@ -107,6 +107,62 @@
     "completed_status_means": "handler_process_and_schema_validation_completed",
     "completed_status_is_domain_ready": false
   },
+  "qualification_provisioning": {
+    "surface_owner": "one-person-lab",
+    "surface_status": "available_only_when_installed_domain_contract_declares_exact_action",
+    "exact_argv": "opl agents run --domain mas --action qualification_work_item_provisioning_authority_evaluate --workspace <workspace_root> --payload-file <request.json> --run-id <stable_run_id> --json",
+    "framework_trusted_route": true,
+    "domain_action_remains_internal_only": true,
+    "shell_direct_internal_handler_invocation_allowed": false,
+    "action_id": "qualification_work_item_provisioning_authority_evaluate",
+    "execution_scope_kind": "none",
+    "handler_ref": "handler:mas.qualification-work-item-provisioning-authority-evaluate",
+    "input": {
+      "workspace_root_source": "--workspace",
+      "payload_fields": [
+        "surface_kind",
+        "schema_version",
+        "authority_context",
+        "qualification_authority",
+        "current_workspace_index"
+      ],
+      "qualification_authority_exact_bytes_required": true,
+      "current_workspace_index_exact_bytes_or_absence_required": true,
+      "framework_derives_or_selects_study_id": false
+    },
+    "domain_output": {
+      "result_pointer": "/standard_agent_action_run/result",
+      "allowed_statuses": ["authorized", "typed_blocker", "invalid_host_input"],
+      "study_id_pointer": "/standard_agent_action_run/result/study_identity/study_id",
+      "provisioning_receipt_pointer": "/standard_agent_action_run/result/provisioning_receipt",
+      "provisioning_receipt_path_pointer": "/standard_agent_action_run/result/provisioning_receipt/receipt_relative_path",
+      "provisioning_receipt_content_binding_pointer": "/standard_agent_action_run/result/provisioning_receipt_content_binding"
+    },
+    "host_materialization": {
+      "capability_id": "opl_domain_artifact_cas_materialization.v1",
+      "request_output_field": "opl_host_materialization_request",
+      "authorization_output_field": "mas_qualification_work_item_cas_mutation_authorization",
+      "receipt_output_field": "provisioning_receipt",
+      "receipt_content_binding_output_field": "provisioning_receipt_content_binding",
+      "operation_count": 3,
+      "target_kinds": ["workspace_index", "lifecycle", "provisioning_receipt"],
+      "framework_receipt_pointer": "/standard_agent_action_run/host_materialization",
+      "framework_receipt_path_pointer": "/standard_agent_action_run/host_materialization/receipt_path",
+      "journaled_all_or_rollback": true,
+      "exact_request_replay_is_idempotent": true,
+      "same_domain_and_request_id_different_bytes_fails_closed": true,
+      "failure_receipt_status": "failed_rolled_back"
+    },
+    "qualification_boundary": {
+      "qualification_only": true,
+      "stage_body_authorized": false,
+      "business_action_authorized": false,
+      "publication_authorized": false,
+      "submission_authorized": false,
+      "ordinary_stage_admission_reuse_allowed": false,
+      "shell_requires_domain_and_framework_receipts_before_provider_start": true
+    }
+  },
   "stage_execution": {
     "host_owner": "runway",
     "provider": "temporal",

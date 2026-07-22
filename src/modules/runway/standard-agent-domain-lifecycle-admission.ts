@@ -1416,6 +1416,7 @@ export function preflightStandardAgentDomainLifecycleAdmission(input: {
     lifecycleGeneration,
   } = current;
   if (!contract) return { status: 'not_declared' as const };
+  assertOrdinaryLifecycleAuthority(current);
   const admissionValue = input.payload[contract.admission_payload_field];
   if (lifecycleState === contract.active_state && admissionValue === undefined) {
     return activeLifecycleAdmission(current);
@@ -1495,6 +1496,31 @@ function activeLifecycleAdmission(input: ReturnType<typeof currentStandardAgentD
   };
 }
 
+function assertOrdinaryLifecycleAuthority(input: ReturnType<typeof currentStandardAgentDomainLifecycle>) {
+  if (!input.contract || !input.lifecycle) return;
+  const lifecycle = input.lifecycle.payload;
+  const boundary = isRecord(lifecycle.authority_boundary) ? lifecycle.authority_boundary : null;
+  const forbidden = [
+    'stage_body_authorized',
+    'business_action_authorized',
+    'publication_authorized',
+    'submission_authorized',
+  ].filter((field) => lifecycle[field] === false || boundary?.[field] === false);
+  if (
+    lifecycle.qualification_only === true
+    || lifecycle.business_status === 'qualification_only'
+    || forbidden.length > 0
+  ) {
+    blocked('Qualification-only lifecycle cannot authorize an ordinary Stage or business route.', {
+      lifecycle_ref: input.lifecycle.ref,
+      lifecycle_state: input.lifecycleState,
+      qualification_only: lifecycle.qualification_only === true,
+      business_status: lifecycle.business_status ?? null,
+      explicitly_unauthorized_routes: forbidden,
+    });
+  }
+}
+
 function inactiveLifecycleBlocked(input: ReturnType<typeof currentStandardAgentDomainLifecycle>): never {
   if (!input.contract || !input.lifecycle || input.workItemId === null || input.lifecycleGeneration === null) {
     blocked('Canonical domain lifecycle admission is not declared.');
@@ -1515,6 +1541,7 @@ export function preflightCanonicalActiveStandardAgentDomainLifecycle(input: {
 }) {
   const current = currentStandardAgentDomainLifecycle(input);
   if (!current.contract) return { status: 'not_declared' as const };
+  assertOrdinaryLifecycleAuthority(current);
   if (current.lifecycleState !== current.contract.active_state) inactiveLifecycleBlocked(current);
   return activeLifecycleAdmission(current);
 }

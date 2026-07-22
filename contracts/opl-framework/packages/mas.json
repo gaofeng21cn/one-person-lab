@@ -4,10 +4,10 @@
   "package_id": "mas",
   "display_name": "Med Auto Science",
   "publisher": "one-person-lab",
-  "version": "0.2.16",
+  "version": "0.2.17",
   "owner_language_version": {
     "scheme": "pep440",
-    "value": "0.2.16"
+    "value": "0.2.17"
   },
   "source": "first_party",
   "registry_entry": {
@@ -46,8 +46,8 @@
   },
   "codex_surface": {
     "plugin_id": "med-autoscience",
-    "plugin_payload_manifest_url": "payloads/mas-0.2.16.json",
-    "carrier_source_commit": "56c6e238203f915944b00388ccb189d73b45c70e",
+    "plugin_payload_manifest_url": "payloads/mas-0.2.17.json",
+    "carrier_source_commit": "e806c166a91250bdcc675fafa1078dbb86d0cc15",
     "standalone_distribution": "repo_carrier_source",
     "required_skill_ids": [
       "med-autoscience"
@@ -83,7 +83,7 @@
       "package_id": "mas-scholar-skills",
       "kind": "framework_capability_package",
       "required": true,
-      "version_requirement": ">=0.2.0 <0.3.0",
+      "version_requirement": ">=0.2.12 <0.3.0",
       "capability_abi": "mas-scholar-skills.v1",
       "required_export_ids": [
         "mas-scholar-skills",
@@ -116,7 +116,9 @@
       "opl_distribution": "managed_dependency",
       "developer_distribution": "source_checkout",
       "required_for": [
-        "workspace_or_quest_codex_discovery"
+        "workspace_or_quest_codex_discovery",
+        "mas_operational_readiness",
+        "all_mas_medical_research_workflows"
       ],
       "install_owner": "one-person-lab",
       "install_update_source": "ghcr_capability_packages_channel",
