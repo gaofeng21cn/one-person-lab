@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -23,6 +24,13 @@ import {
   runExternalOwnerDelegatedUpdate,
 } from '../../src/modules/connect/external-dependency-currentness.ts';
 import { buildRuntimeSubstrateComponent } from '../../src/modules/connect/managed-update-kernel-parts/runtime-substrate.ts';
+import {
+  readTemporalStableCohort,
+  TEMPORAL_SDK_PACKAGE_NAMES,
+  validateTemporalStableCohort,
+} from '../../src/modules/connect/temporal-stable-cohort.ts';
+
+const repoRoot = path.resolve(import.meta.dirname, '../..');
 
 function executable(filePath: string, output: string) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -137,6 +145,66 @@ test('Base dependency catalog identifies the App-owned runtime Codex by owner pa
   } finally {
     fs.rmSync(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
   }
+});
+
+test('Temporal stable cohort reports exact installed SDK package drift against its SSOT', () => {
+  const cohort = readTemporalStableCohort();
+  const catalog = inspectBaseManagedDependencies(os.homedir());
+  const temporal = catalog.dependencies.find((entry) => entry.dependency_id === 'temporal-runtime') as {
+    version: Record<string, string | null>;
+    latest_version: Record<string, string>;
+    currentness: string;
+    status: string;
+    stable_cohort_ref: string;
+    drifted_packages: string[];
+  } | undefined;
+  assert.ok(temporal);
+  const installedVersions = temporal.version;
+  const expectedVersions = Object.fromEntries(TEMPORAL_SDK_PACKAGE_NAMES.map((packageName) => [
+    packageName.slice('@temporalio/'.length),
+    cohort.sdk.packages[packageName],
+  ]));
+  const expectedDriftedPackages = TEMPORAL_SDK_PACKAGE_NAMES.filter((packageName) => (
+    installedVersions[packageName.slice('@temporalio/'.length)] !== cohort.sdk.packages[packageName]
+  ));
+
+  assert.equal(cohort.server.version, '1.31.2');
+  assert.equal(cohort.cli.version, '1.8.1');
+  assert.equal(cohort.sdk.version, '1.20.3');
+  assert.deepEqual(Object.keys(cohort.sdk.packages).sort(), [...TEMPORAL_SDK_PACKAGE_NAMES].sort());
+  assert.deepEqual(temporal.latest_version, expectedVersions);
+  assert.equal(temporal.currentness, expectedDriftedPackages.length === 0 ? 'current' : 'update_available');
+  assert.equal(temporal.status, expectedDriftedPackages.length === 0 ? 'ready' : 'attention_needed');
+  assert.equal(temporal.stable_cohort_ref, cohort.contract_ref);
+  assert.deepEqual(temporal.drifted_packages, expectedDriftedPackages);
+
+  for (const fixture of cohort.replay.fixtures) {
+    const bytes = fs.readFileSync(path.join(repoRoot, fixture.path));
+    const history = JSON.parse(bytes.toString('utf8')) as { events?: Array<Record<string, any>> };
+    const recordedSdkVersions = (history.events ?? []).flatMap((event) => {
+      const sdkVersion = event.workflowTaskCompletedEventAttributes?.sdkMetadata?.sdkVersion;
+      return typeof sdkVersion === 'string' ? [sdkVersion] : [];
+    });
+    assert.equal(bytes.byteLength, fixture.bytes, fixture.path);
+    assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'), fixture.sha256, fixture.path);
+    assert.ok(recordedSdkVersions.includes(fixture.recorded_sdk_version), fixture.path);
+  }
+});
+
+test('Temporal stable cohort rejects prerelease versions and split SDK package versions', () => {
+  const prerelease = structuredClone(readTemporalStableCohort()) as any;
+  prerelease.sdk.version = '1.20.4-rc.1';
+  assert.throws(
+    () => validateTemporalStableCohort(prerelease, 'fixture:prerelease'),
+    /must be an exact stable x\.y\.z version/,
+  );
+
+  const splitCohort = structuredClone(readTemporalStableCohort()) as any;
+  splitCohort.sdk.packages['@temporalio/worker'] = '1.20.2';
+  assert.throws(
+    () => validateTemporalStableCohort(splitCohort, 'fixture:split-sdk'),
+    /sdk\.packages\.@temporalio\/worker must equal "1\.20\.3"/,
+  );
 });
 
 test('App Full tool bytes seed the Base managed root and then lose source priority', () => {
@@ -258,6 +326,7 @@ test('verified Homebrew external dependencies expose confirmation-only owner act
       const catalog = inspectBaseManagedDependencies(root, { refreshManagedLatest: true });
       const catalogCodex = catalog.dependencies.find((entry) => entry.dependency_id === 'codex-cli');
       assert.equal(catalogCodex?.ownership, 'homebrew_formula');
+      assert.equal(catalogCodex?.update_mode, 'explicit_owner_delegated');
       assert.equal(catalogCodex?.update_action?.action_id, 'external_codex_update_homebrew');
       assert.equal(
         catalogCodex?.external_installations?.some((entry) => path.resolve(entry.binary_path ?? '') === codex),
@@ -270,8 +339,17 @@ test('verified Homebrew external dependencies expose confirmation-only owner act
         binary_path: codex,
         version: 'codex-cli 0.1.0',
       } } }, 'stable', { allowFrameworkChannelLookup: false, refreshManagedDependencyLatest: true });
-      assert.equal(component.state, 'current');
-      assert.equal(component.auto_apply.eligible, false);
+      const managedUpdateAvailable = catalog.dependencies.some((entry) => (
+        entry.update_mode === 'silent_managed' && entry.currentness === 'update_available'
+      ));
+      assert.equal(component.state, managedUpdateAvailable ? 'update_available' : 'current');
+      assert.equal(component.auto_apply.eligible, managedUpdateAvailable);
+      assert.equal(
+        catalog.dependencies.some((entry) => (
+          entry.dependency_id === 'codex-cli' && entry.update_mode === 'silent_managed'
+        )),
+        false,
+      );
       const delegated = runExternalOwnerDelegatedUpdate('external_codex_update_homebrew', false);
       assert.equal(delegated.external_dependency_update.status, 'completed');
       assert.match(fs.readFileSync(log, 'utf8'), /upgrade codex/);
@@ -355,6 +433,36 @@ test('verified Homebrew Temporal CLI reports currentness without inferring Tempo
       assert.equal(installation.update_action?.action_id, 'external_temporal_update_homebrew');
       assert.match(installation.guidance, /Temporal CLI/);
       assert.equal(JSON.stringify(installation).includes('server_version'), false);
+    });
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('Temporal CLI stable cohort outranks stale Homebrew metadata and ignores prerelease hints', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-external-temporal-stable-cohort-'));
+  const brew = path.join(root, 'bin', 'brew');
+  const temporal = path.join(root, 'Cellar', 'temporal', '1.8.0', 'bin', 'temporal');
+  executable(temporal, 'temporal version 1.8.0 (Server 1.31.2, UI 2.50.1)');
+  fs.mkdirSync(path.dirname(brew), { recursive: true });
+  fs.writeFileSync(brew, [
+    '#!/usr/bin/env bash',
+    'if [ "$*" = "list --formula --versions temporal" ]; then echo "temporal 1.8.0"; fi',
+    'if [ "$*" = "info --json=v2 temporal" ]; then echo \'{"formulae":[{"versions":{"stable":"1.8.0"}}]}\'; fi',
+    '',
+  ].join('\n'), { mode: 0o755 });
+  try {
+    withEnvironment({
+      OPL_HOMEBREW_BIN: brew,
+      OPL_TEMPORAL_BIN: temporal,
+      OPL_TEMPORAL_CLI_LATEST_VERSION: '1.9.0-rc.1',
+      PATH: '/usr/bin:/bin',
+    }, () => {
+      const installation = inspectExternalTemporalInstallation({ refreshLatest: true });
+      assert.equal(installation.version, '1.8.0');
+      assert.equal(installation.latest_version, '1.8.1');
+      assert.equal(installation.currentness, 'update_available');
+      assert.equal(installation.ownership, 'homebrew_formula');
     });
   } finally {
     fs.rmSync(root, { recursive: true, force: true });

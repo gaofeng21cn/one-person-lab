@@ -1,0 +1,103 @@
+{
+  "version": "opl-temporal-stable-cohort.v1",
+  "contract_id": "opl_temporal_stable_cohort",
+  "surface_kind": "opl_temporal_stable_cohort",
+  "contract_ref": "contracts/opl-framework/temporal-stable-cohort.json",
+  "audited_at": "2026-07-22",
+  "stability_policy": {
+    "release_channel": "stable",
+    "draft_allowed": false,
+    "prerelease_allowed": false
+  },
+  "server": {
+    "version": "1.31.2",
+    "release_tag": "v1.31.2",
+    "tag_commit": "19a774302c613da9adc4436ab14278ccdca8e0a5",
+    "published_at": "2026-07-08T17:10:11Z",
+    "release_url": "https://github.com/temporalio/temporal/releases/tag/v1.31.2",
+    "maintained_minor_lines": [
+      "1.29.7",
+      "1.30.6",
+      "1.31.2"
+    ]
+  },
+  "cli": {
+    "version": "1.8.1",
+    "release_tag": "v1.8.1",
+    "tag_commit": "d904a0d53bff2090274d494f3c201d9006b7237c",
+    "published_at": "2026-07-21T17:36:10Z",
+    "release_url": "https://github.com/temporalio/cli/releases/tag/v1.8.1",
+    "embedded_server_version": "1.31.2",
+    "darwin_arm64_artifact": {
+      "file_name": "temporal_cli_1.8.1_darwin_arm64.tar.gz",
+      "sha256": "e942d2ba2634720293bded2a9061ac471a7fd44d883a6704b8d0ecb94995d6a6"
+    }
+  },
+  "sdk": {
+    "version": "1.20.3",
+    "release_tag": "v1.20.3",
+    "tag_commit": "ae823d7f9dd513f3b90aeba8c66854c59c39a359",
+    "published_at": "2026-07-15T19:20:48Z",
+    "release_url": "https://github.com/temporalio/sdk-typescript/releases/tag/v1.20.3",
+    "npm_dist_tag": "latest",
+    "node_engine": ">=20.3.0",
+    "packages": {
+      "@temporalio/activity": "1.20.3",
+      "@temporalio/client": "1.20.3",
+      "@temporalio/common": "1.20.3",
+      "@temporalio/testing": "1.20.3",
+      "@temporalio/worker": "1.20.3",
+      "@temporalio/workflow": "1.20.3"
+    }
+  },
+  "compatibility": {
+    "sdk_server_release_independent": true,
+    "all_sdk_versions_compatible_with_all_server_versions": true,
+    "server_persistence_backward_compatibility": "successive_minor_versions_only",
+    "server_upgrade_order": "highest_current_patch_then_one_minor_at_a_time",
+    "sdk_server_source_ref": "https://github.com/temporalio/documentation/blob/main/docs/encyclopedia/temporal-service/temporal-server.mdx",
+    "server_upgrade_source_ref": "https://github.com/temporalio/documentation/blob/main/docs/production-deployment/self-hosted-guide/upgrade-server.mdx"
+  },
+  "migration": {
+    "grpc_gzip_default_since": "1.19.0",
+    "grpc_gzip_automatic_fallback_since": "1.20.0",
+    "replay_honors_recorded_sdk_flags_since": "1.20.0",
+    "protobufjs_required_range": "^7.6.4",
+    "workflow_bundler_regression_fix_version": "1.20.3"
+  },
+  "worker": {
+    "bundle_api": "@temporalio/worker.bundleWorkflowCode",
+    "start_api": "@temporalio/worker.Worker.create",
+    "workflow_bundle_input": "code_path",
+    "real_start_gate_required": true
+  },
+  "replay": {
+    "api": "@temporalio/worker.Worker.runReplayHistory",
+    "corrupt_or_incompatible_history_must_fail": true,
+    "fixtures": [
+      {
+        "path": "tests/fixtures/temporal-history/stage-attempt-hard-stop-pre-runtime-evidence-v1.json",
+        "bytes": 18765,
+        "sha256": "04b1a0af910c3587d69188742236082dbd36bbaf18fe917a2cf587e78fb05d0b",
+        "recorded_sdk_version": "1.18.1"
+      },
+      {
+        "path": "tests/fixtures/temporal-history/stage-attempt-quality-resume-pre-content-binding-v1.json",
+        "bytes": 27583,
+        "sha256": "3d34917f90ef989493616893299b77d283b608607fec18c293a8e481268033c1",
+        "recorded_sdk_version": "1.18.1"
+      },
+      {
+        "path": "tests/fixtures/temporal-history/stage-run-hard-stop-pre-runtime-evidence-v1.json",
+        "bytes": 41074,
+        "sha256": "c1c551c5bd0a0b820b83963ffa996f87f9d5edbbca957419ab7580e033831d4f",
+        "recorded_sdk_version": "1.18.1"
+      }
+    ]
+  },
+  "rollback": {
+    "preserve_previous_worker_bundle": true,
+    "replay_same_history_set_before_downgrade": true,
+    "lockfile_only_rollback_is_sufficient": false
+  }
+}

@@ -3,6 +3,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { readTemporalStableCohort } from './temporal-stable-cohort.ts';
 
 export type ExternalDependencyCurrentness = 'current' | 'update_available' | 'unknown' | 'missing';
 export type ExternalDependencyUpdateMode = 'explicit_owner_delegated' | 'detect_only_guidance';
@@ -198,27 +199,45 @@ export function inspectExternalCodexInstallation(input: {
   };
 }
 
-function latestTemporalVersion(brew: string) {
-  const configured = process.env.OPL_TEMPORAL_CLI_LATEST_VERSION?.trim();
-  if (configured) return parseVersion(configured)?.version ?? configured;
-  const raw = output(brew, ['info', '--json=v2', 'temporal']);
-  if (!raw) return null;
-  try {
-    const payload = JSON.parse(raw) as { formulae?: Array<{ versions?: { stable?: unknown } }> };
-    const stable = payload.formulae?.[0]?.versions?.stable;
-    return typeof stable === 'string' ? parseVersion(stable)?.version ?? stable : null;
-  } catch {
-    return null;
+function exactStableVersion(value: unknown) {
+  if (typeof value !== 'string' || !/^v?\d+\.\d+\.\d+$/.test(value.trim())) return null;
+  return parseVersion(value)?.version ?? null;
+}
+
+function newestStableVersion(versions: Array<string | null>) {
+  return versions.filter((entry): entry is string => Boolean(entry)).reduce((latest, candidate) => {
+    const parsedLatest = parseVersion(latest);
+    const parsedCandidate = parseVersion(candidate);
+    return parsedLatest && parsedCandidate && compareVersions(parsedCandidate, parsedLatest) > 0
+      ? candidate
+      : latest;
+  });
+}
+
+function latestTemporalVersion(brew: string | null) {
+  const cohortVersion = readTemporalStableCohort().cli.version;
+  const configured = exactStableVersion(process.env.OPL_TEMPORAL_CLI_LATEST_VERSION?.trim());
+  let brewStable: string | null = null;
+  const raw = brew ? output(brew, ['info', '--json=v2', 'temporal']) : null;
+  if (raw) {
+    try {
+      const payload = JSON.parse(raw) as { formulae?: Array<{ versions?: { stable?: unknown } }> };
+      brewStable = exactStableVersion(payload.formulae?.[0]?.versions?.stable);
+    } catch {
+      brewStable = null;
+    }
   }
+  return newestStableVersion([cohortVersion, configured, brewStable]);
 }
 
 export function inspectExternalTemporalInstallation(
   options: { refreshLatest?: boolean; inspectVersion?: boolean } = {},
 ): ExternalDependencyInstallation {
+  const cohortVersion = readTemporalStableCohort().cli.version;
   const binaryPath = process.env.OPL_TEMPORAL_BIN?.trim() || findExecutable('temporal');
   if (!binaryPath) {
     return {
-      dependency_id: 'temporal-system-cli', installed: false, binary_path: null, version: null, latest_version: null,
+      dependency_id: 'temporal-system-cli', installed: false, binary_path: null, version: null, latest_version: cohortVersion,
       currentness: 'missing', ownership: 'missing', update_mode: 'detect_only_guidance', update_action: null,
       guidance: 'No system Temporal CLI was detected. OPL-managed Temporal SDK runtime remains part of the OPL Base generation.',
     };
@@ -226,7 +245,7 @@ export function inspectExternalTemporalInstallation(
   const version = options.inspectVersion === false ? null : output(binaryPath, ['--version']);
   const brew = brewBinary();
   const owner = brew && isHomebrewFormulaOwner(binaryPath, 'temporal') ? 'homebrew_formula' : 'global_path';
-  const latest = owner === 'homebrew_formula' && brew && options.refreshLatest ? latestTemporalVersion(brew) : null;
+  const latest = latestTemporalVersion(options.refreshLatest && brew ? brew : null);
   const action = owner === 'homebrew_formula' ? updateAction('temporal-system-cli', owner) : null;
   return {
     dependency_id: 'temporal-system-cli', installed: true, binary_path: binaryPath,

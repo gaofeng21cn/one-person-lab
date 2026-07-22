@@ -1,5 +1,9 @@
 import { spawnSync } from 'node:child_process';
 import net from 'node:net';
+import { Worker } from '@temporalio/worker';
+
+import { buildTemporalStageAttemptWorkerOptionsForTest } from '../../../../src/modules/runway/family-runtime-temporal-provider.ts';
+import { createTemporalTestWorkflowEnvironment } from '../../temporal-test-environment.ts';
 
 import {
   assert,
@@ -67,6 +71,32 @@ test('family-runtime service start waits for a delayed Temporal listener', async
     assert.equal(service.status.server_reachable, true);
   } finally {
     runCli(['family-runtime', 'service', 'stop', '--provider', 'temporal'], env);
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('Temporal stable cohort gate materializes the shared workflow bundle and starts a real Worker', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-worker-stable-cohort-'));
+  const testEnv = await createTemporalTestWorkflowEnvironment();
+  try {
+    const built = await buildTemporalStageAttemptWorkerOptionsForTest({ root: stateRoot });
+    const worker = await Worker.create({
+      ...built.worker_options,
+      connection: testEnv.nativeConnection,
+      namespace: testEnv.namespace,
+    });
+    const result = await worker.runUntil(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      return 'worker_started';
+    });
+
+    assert.equal(result, 'worker_started');
+    assert.equal(fs.statSync(built.workflow_bundle.code_path).size > 0, true);
+    assert.equal(fs.existsSync(built.workflow_bundle.manifest_path), true);
+    assert.equal(built.worker_options.workflowBundle && 'codePath' in built.worker_options.workflowBundle, true);
+    assert.equal('workflowsPath' in built.worker_options, false);
+  } finally {
+    await testEnv.teardown();
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
@@ -144,6 +174,8 @@ test('family-runtime worker start fails closed when Temporal is not configured o
     assert.equal(unreachable.status, 3);
     assert.equal(unreachablePayload.error.code, 'contract_shape_invalid');
     assert.equal(unreachablePayload.error.details.lifecycle_status, 'server_unreachable');
+    assert.equal(fs.existsSync(path.join(missingStateRoot, 'family-runtime', 'temporal-workflow-bundle')), false);
+    assert.equal(fs.existsSync(path.join(unreachableStateRoot, 'family-runtime', 'temporal-workflow-bundle')), false);
   } finally {
     fs.rmSync(missingStateRoot, { recursive: true, force: true });
     fs.rmSync(unreachableStateRoot, { recursive: true, force: true });

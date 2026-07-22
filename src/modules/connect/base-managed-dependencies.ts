@@ -15,6 +15,10 @@ import {
   inspectExternalCodexInstallation,
   inspectExternalTemporalInstallation,
 } from './external-dependency-currentness.ts';
+import {
+  readTemporalStableCohort,
+  TEMPORAL_SDK_PACKAGE_NAMES,
+} from './temporal-stable-cohort.ts';
 
 function packageVersion(packageName: string) {
   const packagePath = path.join(resolveProjectRoot(), 'node_modules', packageName, 'package.json');
@@ -99,11 +103,21 @@ export function inspectBaseManagedDependencies(
   const externalCodexInstallations = inspectedCodexInstallations.filter((entry) => (
     !codexPath || path.resolve(entry.binary_path ?? '') !== path.resolve(codexPath)
   ));
-  const temporalVersions = {
-    client: packageVersion('@temporalio/client'),
-    worker: packageVersion('@temporalio/worker'),
-    workflow: packageVersion('@temporalio/workflow'),
-  };
+  const temporalCohort = readTemporalStableCohort();
+  const temporalVersions = Object.fromEntries(TEMPORAL_SDK_PACKAGE_NAMES.map((packageName) => [
+    packageName.slice('@temporalio/'.length),
+    packageVersion(packageName),
+  ]));
+  const temporalExpectedVersions = Object.fromEntries(TEMPORAL_SDK_PACKAGE_NAMES.map((packageName) => [
+    packageName.slice('@temporalio/'.length),
+    temporalCohort.sdk.packages[packageName],
+  ]));
+  const temporalInstalled = Object.values(temporalVersions).some(Boolean);
+  const temporalComplete = Object.values(temporalVersions).every(Boolean);
+  const temporalDriftedPackages = TEMPORAL_SDK_PACKAGE_NAMES.filter((packageName) => (
+    temporalVersions[packageName.slice('@temporalio/'.length)] !== temporalCohort.sdk.packages[packageName]
+  ));
+  const temporalCurrent = temporalComplete && temporalDriftedPackages.length === 0;
   const flowDependencyIds = readOplFlowManagedDependencyIds();
   const selectedToolIds = (['officecli', 'mineru-open-api'] as const).filter((id) => flowDependencyIds.includes(id));
   const refreshedToolMap = new Map(
@@ -136,17 +150,20 @@ export function inspectBaseManagedDependencies(
     {
       dependency_id: 'temporal-runtime',
       dependency_kind: 'runtime_substrate',
-      installed: Object.values(temporalVersions).some(Boolean),
+      installed: temporalInstalled,
       version: temporalVersions,
-      latest_version: temporalVersions,
-      currentness: Object.values(temporalVersions).every(Boolean) ? 'current' : 'missing',
+      latest_version: temporalExpectedVersions,
+      currentness: !temporalComplete ? 'missing' : temporalCurrent ? 'current' : 'update_available',
+      stable_cohort_version: temporalCohort.sdk.version,
+      stable_cohort_ref: temporalCohort.contract_ref,
+      drifted_packages: temporalDriftedPackages,
       ownership: 'opl_managed_runtime_generation',
       update_policy: 'updated_with_opl_base_framework_generation',
       update_mode: 'silent_managed',
       update_action: null,
       activation_policy: 'app_launch_reconcile_generation_switch',
       binary_path: null,
-      status: Object.values(temporalVersions).every(Boolean) ? 'ready' : 'attention_needed',
+      status: temporalCurrent ? 'ready' : 'attention_needed',
     },
     toolDependency(officeCli, 'officecli', flowDependencyIds.includes('officecli')),
     toolDependency(mineruOpenApi, 'mineru-open-api', flowDependencyIds.includes('mineru-open-api')),
