@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { TextDecoder } from 'node:util';
 
 import { canonicalJsonBytes } from '../../kernel/canonical-json.ts';
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
@@ -41,6 +42,19 @@ type LifecycleProjectionSource = {
   media_type: 'application/json';
 };
 
+const EXACT_BYTE_BINDING_SOURCE_KEYS = [
+  'user_authority',
+  'reviewer_revision_intake',
+  'current_lifecycle',
+  'projection_target',
+] as const;
+const EXACT_BYTE_BINDING_FIELD_KEYS = ['bytes_base64', 'byte_size', 'sha256', 'record'] as const;
+
+type ExactByteBindingSource = typeof EXACT_BYTE_BINDING_SOURCE_KEYS[number];
+type ExactByteBindingField = typeof EXACT_BYTE_BINDING_FIELD_KEYS[number];
+type ExactByteBindingFieldMap = Record<ExactByteBindingField, string>;
+type LifecycleExactByteBindingFields = Record<ExactByteBindingSource, ExactByteBindingFieldMap>;
+
 export type StandardAgentLifecycleAdmissionContract = {
   capability_id: typeof DOMAIN_LIFECYCLE_ADMISSION_CAPABILITY_ID;
   work_item_id_field: string;
@@ -56,6 +70,7 @@ export type StandardAgentLifecycleAdmissionContract = {
   stopped_relaunch_gate_id: string;
   reactivation_projection_sources: LifecycleProjectionSource[];
   reactivation_request_input_field_map: Record<ReactivationRequestInputField, string>;
+  exact_byte_binding_fields: LifecycleExactByteBindingFields | null;
 };
 
 type ExactFile = {
@@ -192,6 +207,51 @@ function jsonPointerText(value: unknown, field: string) {
   return pointer;
 }
 
+function exactByteBindingObjectField(value: unknown, field: string) {
+  const name = text(value, field);
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/u.test(name)) {
+    blocked(`${field} must be a safe JSON object field name.`, { field, value });
+  }
+  return name;
+}
+
+function lifecycleExactByteBindingFields(value: unknown): LifecycleExactByteBindingFields | null {
+  if (value === undefined) return null;
+  if (!isRecord(value)) {
+    blocked('lifecycle_admission_contract.exact_byte_binding_fields must be an object.');
+  }
+  exactKeys(
+    value,
+    EXACT_BYTE_BINDING_SOURCE_KEYS,
+    'lifecycle_admission_contract.exact_byte_binding_fields',
+  );
+  const reservedFields: Record<ExactByteBindingSource, readonly string[]> = {
+    user_authority: ['authority_ref'],
+    reviewer_revision_intake: ['intake_ref'],
+    current_lifecycle: ['lifecycle_ref'],
+    projection_target: ['projection_id', 'root', 'relative_path', 'ref'],
+  };
+  return Object.fromEntries(EXACT_BYTE_BINDING_SOURCE_KEYS.map((source) => {
+    const entry = value[source];
+    const entryField = `lifecycle_admission_contract.exact_byte_binding_fields.${source}`;
+    if (!isRecord(entry)) blocked(`${entryField} must be an object.`);
+    exactKeys(entry, EXACT_BYTE_BINDING_FIELD_KEYS, entryField);
+    const fields = Object.fromEntries(EXACT_BYTE_BINDING_FIELD_KEYS.map((bindingField) => [
+      bindingField,
+      exactByteBindingObjectField(entry[bindingField], `${entryField}.${bindingField}`),
+    ])) as ExactByteBindingFieldMap;
+    const names = Object.values(fields);
+    if (new Set(names).size !== names.length) {
+      blocked(`${entryField} field names must be unique.`, { field_names: names });
+    }
+    const reservedCollision = names.find((name) => reservedFields[source].includes(name));
+    if (reservedCollision) {
+      blocked(`${entryField} collides with a fixed injected field.`, { field_name: reservedCollision });
+    }
+    return [source, fields];
+  })) as LifecycleExactByteBindingFields;
+}
+
 export function standardAgentLifecycleAdmissionContract(
   action: FamilyActionCatalogAction,
 ): StandardAgentLifecycleAdmissionContract | null {
@@ -215,6 +275,7 @@ export function standardAgentLifecycleAdmissionContract(
     'stopped_relaunch_gate_id',
     'reactivation_projection_sources',
     'reactivation_request_input_field_map',
+    'exact_byte_binding_fields',
   ]);
   const unsupported = Object.keys(value).filter((key) => !allowed.has(key));
   if (unsupported.length > 0) {
@@ -303,6 +364,7 @@ export function standardAgentLifecycleAdmissionContract(
     stopped_relaunch_gate_id: optionalContractText(value, 'stopped_relaunch_gate_id', 'allow_stopped_relaunch'),
     reactivation_projection_sources: projectionSources,
     reactivation_request_input_field_map: fieldMap,
+    exact_byte_binding_fields: lifecycleExactByteBindingFields(value.exact_byte_binding_fields),
   };
 }
 
@@ -349,12 +411,136 @@ function sha256(bytes: string | Buffer | Uint8Array) {
   return crypto.createHash('sha256').update(bytes).digest('hex');
 }
 
+function assertNoDuplicateJsonKeys(raw: string) {
+  let index = 0;
+  const invalid = (reason: string): never => {
+    throw new SyntaxError(`${reason} at character ${index}`);
+  };
+  const whitespace = () => {
+    while (index < raw.length && /[\t\n\r ]/u.test(raw[index]!)) index += 1;
+  };
+  const quoted = (): string => {
+    if (raw[index] !== '"') invalid('expected JSON string');
+    const start = index;
+    index += 1;
+    while (index < raw.length) {
+      const character = raw[index]!;
+      if (character === '"') {
+        index += 1;
+        return parseJsonText(raw.slice(start, index)) as string;
+      }
+      if (character === '\\') {
+        index += 1;
+        const escape = raw[index];
+        if (escape === 'u') {
+          if (!/^[0-9a-fA-F]{4}$/u.test(raw.slice(index + 1, index + 5))) {
+            invalid('invalid JSON Unicode escape');
+          }
+          index += 5;
+          continue;
+        }
+        if (!escape || !'"\\/bfnrt'.includes(escape)) invalid('invalid JSON string escape');
+        index += 1;
+        continue;
+      }
+      if (character.charCodeAt(0) < 0x20) invalid('unescaped JSON control character');
+      index += 1;
+    }
+    return invalid('unterminated JSON string');
+  };
+  const value = (): void => {
+    whitespace();
+    const character = raw[index];
+    if (character === '{') {
+      index += 1;
+      whitespace();
+      const keys = new Set<string>();
+      if (raw[index] === '}') {
+        index += 1;
+        return;
+      }
+      while (index < raw.length) {
+        whitespace();
+        const key = quoted();
+        if (keys.has(key)) invalid(`duplicate JSON object key ${JSON.stringify(key)}`);
+        keys.add(key);
+        whitespace();
+        if (raw[index] !== ':') invalid('expected JSON object colon');
+        index += 1;
+        value();
+        whitespace();
+        if (raw[index] === '}') {
+          index += 1;
+          return;
+        }
+        if (raw[index] !== ',') invalid('expected JSON object comma');
+        index += 1;
+      }
+      invalid('unterminated JSON object');
+    }
+    if (character === '[') {
+      index += 1;
+      whitespace();
+      if (raw[index] === ']') {
+        index += 1;
+        return;
+      }
+      while (index < raw.length) {
+        value();
+        whitespace();
+        if (raw[index] === ']') {
+          index += 1;
+          return;
+        }
+        if (raw[index] !== ',') invalid('expected JSON array comma');
+        index += 1;
+      }
+      invalid('unterminated JSON array');
+    }
+    if (character === '"') {
+      quoted();
+      return;
+    }
+    for (const literal of ['true', 'false', 'null']) {
+      if (raw.startsWith(literal, index)) {
+        index += literal.length;
+        return;
+      }
+    }
+    const number = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/u.exec(raw.slice(index));
+    const numberText = number?.[0] ?? invalid('expected JSON value');
+    index += numberText.length;
+  };
+  value();
+  whitespace();
+  if (index !== raw.length) invalid('unexpected trailing JSON content');
+}
+
+function assertFiniteJsonNumbers(value: unknown, field: string): void {
+  if (typeof value === 'number' && !Number.isFinite(value)) {
+    throw new SyntaxError(`${field} contains a non-finite JSON number`);
+  }
+  if (Array.isArray(value)) {
+    value.forEach((entry, index) => assertFiniteJsonNumbers(entry, `${field}[${index}]`));
+  } else if (isRecord(value)) {
+    for (const [key, entry] of Object.entries(value)) {
+      assertFiniteJsonNumbers(entry, `${field}.${key}`);
+    }
+  }
+}
+
 function jsonRecord(bytes: Buffer, file: string, field: string) {
   let payload: unknown;
   try {
-    payload = parseJsonText(bytes.toString('utf8'));
+    const raw = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    assertNoDuplicateJsonKeys(raw);
+    payload = parseJsonText(raw);
+    assertFiniteJsonNumbers(payload, field);
   } catch (error) {
-    blocked(`${field} must be valid JSON.`, { file, cause: error instanceof Error ? error.message : String(error) });
+    blocked(`${field} must be strict UTF-8 JSON without duplicate keys.`, {
+      file,
+      cause: error instanceof Error ? error.message : String(error),
+    });
   }
   if (!isRecord(payload)) blocked(`${field} must contain a JSON object.`, { file });
   return payload!;
@@ -759,6 +945,30 @@ export function bindStandardAgentLifecycleReactivation(input: {
   };
 }
 
+function injectedExactJsonFile(input: {
+  exactFile: ExactFile;
+  refField: string;
+  binding: ExactByteBindingFieldMap | null;
+  legacySha256Field: string;
+  legacyIncludesByteSize?: boolean;
+}) {
+  if (!input.binding) {
+    return {
+      [input.refField]: input.exactFile.ref,
+      [input.legacySha256Field]: input.exactFile.sha256,
+      ...(input.legacyIncludesByteSize ? { byte_size: input.exactFile.bytes.byteLength } : {}),
+      record: input.exactFile.payload,
+    };
+  }
+  return {
+    [input.refField]: input.exactFile.ref,
+    [input.binding.bytes_base64]: input.exactFile.bytes.toString('base64'),
+    [input.binding.byte_size]: input.exactFile.bytes.byteLength,
+    [input.binding.sha256]: input.exactFile.sha256,
+    [input.binding.record]: input.exactFile.payload,
+  };
+}
+
 function buildProjectionInventory(input: {
   contract: StandardAgentLifecycleAdmissionContract;
   located: LocatedLifecycle;
@@ -797,10 +1007,13 @@ function buildProjectionInventory(input: {
       projection_id: source.projection_id,
       root: source.root,
       relative_path: source.relative_path,
-      ref: current.ref,
-      sha256: current.sha256,
-      byte_size: current.bytes.byteLength,
-      record: current.payload,
+      ...injectedExactJsonFile({
+        exactFile: current,
+        refField: 'ref',
+        binding: input.contract.exact_byte_binding_fields?.projection_target ?? null,
+        legacySha256Field: 'sha256',
+        legacyIncludesByteSize: true,
+      }),
     });
   }
   return {
@@ -904,21 +1117,36 @@ export function prepareStandardAgentLifecycleReactivation(input: {
       lifecycle_ref: lifecycle.ref,
       descriptor_domain_id: located.descriptorDomainId,
     },
-    user_authority: {
-      authority_ref: userAuthority.ref,
-      authority_sha256: userAuthority.sha256,
-      record: userAuthority.record,
-    },
-    reviewer_revision_intake: {
-      intake_ref: revisionIntake.ref,
-      intake_sha256: revisionIntake.sha256,
-      record: revisionIntake.record,
-    },
-    current_lifecycle: {
-      lifecycle_ref: lifecycle.ref,
-      lifecycle_sha256: lifecycle.sha256,
-      record: lifecycle.payload,
-    },
+    user_authority: injectedExactJsonFile({
+      exactFile: {
+        file: userAuthority.file,
+        ref: userAuthority.ref,
+        bytes: userAuthority.bytes,
+        sha256: userAuthority.sha256,
+        payload: userAuthority.record!,
+      },
+      refField: 'authority_ref',
+      binding: contract.exact_byte_binding_fields?.user_authority ?? null,
+      legacySha256Field: 'authority_sha256',
+    }),
+    reviewer_revision_intake: injectedExactJsonFile({
+      exactFile: {
+        file: revisionIntake.file,
+        ref: revisionIntake.ref,
+        bytes: revisionIntake.bytes,
+        sha256: revisionIntake.sha256,
+        payload: revisionIntake.record!,
+      },
+      refField: 'intake_ref',
+      binding: contract.exact_byte_binding_fields?.reviewer_revision_intake ?? null,
+      legacySha256Field: 'intake_sha256',
+    }),
+    current_lifecycle: injectedExactJsonFile({
+      exactFile: lifecycle,
+      refField: 'lifecycle_ref',
+      binding: contract.exact_byte_binding_fields?.current_lifecycle ?? null,
+      legacySha256Field: 'lifecycle_sha256',
+    }),
     profile: {
       profile_ref: profile.ref,
       profile_sha256: profile.sha256,

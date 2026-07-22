@@ -26,6 +26,7 @@ import {
   '../../src/modules/runway/domain-artifact-cas-materialization.ts';
 import {
   prepareStandardAgentLifecycleReactivation,
+  standardAgentLifecycleAdmissionContract,
   standardAgentLifecycleReactivationHandlerRunId,
 } from
   '../../src/modules/runway/standard-agent-domain-lifecycle-admission.ts';
@@ -112,6 +113,26 @@ function supportedSurfaces(internal = false) {
     : { cli: {}, mcp: null, skill: null, product_entry: null, openai: null, ai_sdk: null };
 }
 
+function exactByteBindingFields() {
+  return {
+    user_authority: {
+      bytes_base64: 'authority_bytes_base64', byte_size: 'authority_byte_size',
+      sha256: 'authority_sha256', record: 'record',
+    },
+    reviewer_revision_intake: {
+      bytes_base64: 'intake_bytes_base64', byte_size: 'intake_byte_size',
+      sha256: 'intake_sha256', record: 'record',
+    },
+    current_lifecycle: {
+      bytes_base64: 'lifecycle_bytes_base64', byte_size: 'lifecycle_byte_size',
+      sha256: 'lifecycle_sha256', record: 'record',
+    },
+    projection_target: {
+      bytes_base64: 'bytes_base64', byte_size: 'byte_size', sha256: 'sha256', record: 'record',
+    },
+  };
+}
+
 function packageUseBinding() {
   return {
     surface_kind: 'opl_agent_package_use_binding.v1',
@@ -176,6 +197,7 @@ function writeLifecycleContracts(checkoutRoot: string) {
       profile: '/profile',
       projection_inventory: '/projection_inventory',
     },
+    exact_byte_binding_fields: exactByteBindingFields(),
   };
   const stageAction = {
     action_id: 'launch_stage',
@@ -222,6 +244,8 @@ function writeLifecycleContracts(checkoutRoot: string) {
         capability_id: 'opl_domain_artifact_cas_materialization.v1',
         request_output_field: 'opl_host_materialization_request',
         authorization_output_field: 'mas_lifecycle_cas_mutation_authorization',
+        materialization_scope_sha256_field: 'materialization_scope_sha256',
+        absent_relative_path_preconditions_field: 'absent_relative_path_preconditions',
       },
     },
   };
@@ -407,8 +431,12 @@ import sys
 import types
 
 repo = os.path.realpath(sys.argv[1])
+framework_python_root = os.path.realpath(sys.argv[2])
 sys.path.insert(0, os.path.join(repo, "src"))
-sys.modules["pytest"] = types.ModuleType("pytest")
+sys.path.insert(0, framework_python_root)
+pytest = types.ModuleType("pytest")
+pytest.mark = types.SimpleNamespace(parametrize=lambda *args, **kwargs: lambda function: function)
+sys.modules["pytest"] = pytest
 jsonschema = types.ModuleType("jsonschema")
 jsonschema.Draft202012Validator = object
 jsonschema.ValidationError = Exception
@@ -419,7 +447,9 @@ module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 sys.stdout.write(json.dumps(module._request(), sort_keys=True, separators=(",", ":")))
 `;
-  const loaded = spawnSync(python, ['-I', '-B', '-c', script, masRepo], {
+  const loaded = spawnSync(python, [
+    '-I', '-B', '-c', script, masRepo, path.join(process.cwd(), 'python'),
+  ], {
     encoding: 'utf8',
     env: {
       PATH: process.env.PATH ?? '/usr/bin:/bin',
@@ -457,6 +487,112 @@ test('lifecycle reactivation authority context keeps profile only in the top-lev
   }
 });
 
+test('lifecycle reactivation injects every declared exact JSON byte binding and preserves legacy contracts', () => {
+  const prepared = prepareCanonicalLifecycleAuthorityPayload();
+  try {
+    const assertExactBinding = (
+      value: Record<string, unknown>,
+      fields: { bytes: string; size: string; sha256: string; record: string },
+    ) => {
+      const bytes = Buffer.from(String(value[fields.bytes]), 'base64');
+      assert.equal(value[fields.size], bytes.byteLength);
+      assert.equal(value[fields.sha256], digest(bytes));
+      assert.deepEqual(JSON.parse(bytes.toString('utf8')), value[fields.record]);
+    };
+    assertExactBinding(prepared.handlerPayload.user_authority as Record<string, unknown>, {
+      bytes: 'authority_bytes_base64', size: 'authority_byte_size',
+      sha256: 'authority_sha256', record: 'record',
+    });
+    assertExactBinding(prepared.handlerPayload.reviewer_revision_intake as Record<string, unknown>, {
+      bytes: 'intake_bytes_base64', size: 'intake_byte_size',
+      sha256: 'intake_sha256', record: 'record',
+    });
+    assertExactBinding(prepared.handlerPayload.current_lifecycle as Record<string, unknown>, {
+      bytes: 'lifecycle_bytes_base64', size: 'lifecycle_byte_size',
+      sha256: 'lifecycle_sha256', record: 'record',
+    });
+    const inventory = prepared.handlerPayload.projection_inventory as Record<string, any>;
+    assert.equal(inventory.targets.length, 2);
+    for (const target of inventory.targets as Record<string, unknown>[]) {
+      assertExactBinding(target, {
+        bytes: 'bytes_base64', size: 'byte_size', sha256: 'sha256', record: 'record',
+      });
+      assert.equal(
+        Buffer.from(String(target.bytes_base64), 'base64').equals(
+          fs.readFileSync(fileURLToPath(String(target.ref))),
+        ),
+        true,
+      );
+    }
+
+    const catalog = JSON.parse(fs.readFileSync(path.join(
+      prepared.fixtureRoot,
+      'checkout',
+      'contracts',
+      'action_catalog.json',
+    ), 'utf8'));
+    const legacyAction = structuredClone(catalog.actions[0]);
+    delete legacyAction.authority_boundary.lifecycle_admission_contract.exact_byte_binding_fields;
+    assert.equal(standardAgentLifecycleAdmissionContract(legacyAction)?.exact_byte_binding_fields, null);
+
+    const malformedAction = structuredClone(catalog.actions[0]);
+    delete malformedAction.authority_boundary.lifecycle_admission_contract
+      .exact_byte_binding_fields.projection_target.record;
+    assert.throws(
+      () => standardAgentLifecycleAdmissionContract(malformedAction),
+      /exact_byte_binding_fields\.projection_target.*invalid exact shape/i,
+    );
+    const collidingAction = structuredClone(catalog.actions[0]);
+    collidingAction.authority_boundary.lifecycle_admission_contract
+      .exact_byte_binding_fields.user_authority.record = 'authority_sha256';
+    assert.throws(
+      () => standardAgentLifecycleAdmissionContract(collidingAction),
+      /field names must be unique/i,
+    );
+  } finally {
+    fs.rmSync(prepared.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('lifecycle reactivation rejects duplicate-key invalid-UTF-8 and non-finite exact JSON sources', () => {
+  const cases = [
+    Buffer.from('{"study_id":"study-001","study_id":"study-001"}', 'utf8'),
+    Buffer.from([0x7b, 0x22, 0x78, 0x22, 0x3a, 0x22, 0xc3, 0x28, 0x22, 0x7d]),
+    Buffer.from('{"overflow":1e400}', 'utf8'),
+  ];
+  for (const bytes of cases) {
+    const fixtureRoot = temporaryRoot('opl-lifecycle-strict-json-');
+    const checkoutRoot = path.join(fixtureRoot, 'checkout');
+    const workspaceRoot = path.join(fixtureRoot, 'workspace');
+    try {
+      fs.mkdirSync(checkoutRoot, { recursive: true });
+      fs.mkdirSync(workspaceRoot, { recursive: true });
+      writeLifecycleContracts(checkoutRoot);
+      const refs = writeLifecycleWorkspace(workspaceRoot);
+      fs.writeFileSync(fileURLToPath(refs.userAuthority.ref), bytes);
+      refs.userAuthority.sha256 = digest(bytes);
+      const catalog = JSON.parse(fs.readFileSync(
+        path.join(checkoutRoot, 'contracts', 'action_catalog.json'),
+        'utf8',
+      ));
+      assert.throws(() => prepareStandardAgentLifecycleReactivation({
+        action: { ...catalog.actions[0], action_id: 'review_and_quality_gate' },
+        payload: {
+          study_id: 'study-001',
+          lifecycle_admission: reactivationAdmission(refs),
+        },
+        checkoutRoot,
+        workspaceRoot,
+        domainId: 'mas',
+        runId: 'strict-json-rejection',
+        originalInvocationSha256: 'a'.repeat(64),
+      }), /strict UTF-8 JSON without duplicate keys/i);
+    } finally {
+      fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    }
+  }
+});
+
 test('real MAS lifecycle authority accepts the exact OPL authority context ABI', {
   skip: process.env.OPL_REAL_MAS_ABI_SMOKE !== '1',
 }, () => {
@@ -478,16 +614,42 @@ test('real MAS lifecycle authority accepts the exact OPL authority context ABI',
     );
 
     const request = loadCanonicalMasAuthorityRequest(masRepo);
-    request.authority_context = authority;
-    const receipt = runStandardAgentHandlerSandbox({
-      checkoutRoot: masRepo,
+    const intake = request.reviewer_revision_intake as Record<string, unknown>;
+    const intakeRecord = intake.record as Record<string, unknown>;
+    const firstOwningStageId = intakeRecord.first_owning_stage_id;
+    assert.equal(typeof firstOwningStageId, 'string');
+    request.authority_context = {
+      ...authority,
+      requested_action_id: firstOwningStageId,
+    };
+    const sandboxCheckout = path.join(prepared.fixtureRoot, 'sandbox-checkout');
+    fs.mkdirSync(path.join(sandboxCheckout, 'src'), { recursive: true });
+    fs.mkdirSync(path.join(sandboxCheckout, 'python'), { recursive: true });
+    fs.cpSync(
+      path.join(masRepo, 'src', 'med_autoscience'),
+      path.join(sandboxCheckout, 'src', 'med_autoscience'),
+      { recursive: true },
+    );
+    fs.cpSync(
+      path.join(process.cwd(), 'python', 'opl_framework'),
+      path.join(sandboxCheckout, 'python', 'opl_framework'),
+      { recursive: true },
+    );
+    const sandboxRequest: Parameters<typeof runStandardAgentHandlerSandbox>[0] & {
+      workspaceRoot: string;
+      workspaceReadRoot: string;
+    } = {
+      checkoutRoot: sandboxCheckout,
+      workspaceRoot: fs.realpathSync.native(masRepo),
+      workspaceReadRoot: fs.realpathSync.native(masRepo),
       binding: {
         kind: 'python_callable',
         module: 'med_autoscience.authority_handlers.study_lifecycle_reactivation',
         callable: 'evaluate_study_lifecycle_reactivation_authority',
       },
       request,
-    });
+    };
+    const receipt = runStandardAgentHandlerSandbox(sandboxRequest);
     const output = receipt.output as Record<string, unknown>;
     assert.notEqual(output.status, 'invalid_host_input', JSON.stringify(output.error));
     assert.equal(output.status, 'authorized');
@@ -525,6 +687,19 @@ function authorityHandler(workspaceRoot: string, onCall: () => void) {
       replacement_byte_size: bytes.byteLength,
     }));
     const operationsSha256 = digest(canonicalJsonBytes(operations));
+    const absentRelativePathPreconditions = request.projection_inventory
+      .absent_optional_projection_ids
+      .map((projectionId: string) => {
+        const source = request.projection_inventory.targets.find(
+          (target: Record<string, unknown>) => target.projection_id === projectionId,
+        );
+        return source?.relative_path;
+      })
+      .filter((relativePath: unknown): relativePath is string => typeof relativePath === 'string');
+    const materializationScopeSha256 = digest(canonicalJsonBytes({
+      operations,
+      absent_relative_path_preconditions: absentRelativePathPreconditions,
+    }));
     const requestId = `reactivation:${authority.admission_scope_id}`;
     const authorizationRef = `opl://mas/lifecycle-authorization/${encodeURIComponent(requestId)}`;
     const authorityReceiptRef = `opl://mas/lifecycle-reactivation/${encodeURIComponent(requestId)}`;
@@ -562,6 +737,8 @@ function authorityHandler(workspaceRoot: string, onCall: () => void) {
         domain_id: 'medautoscience',
         authorization_ref: authorizationRef,
         operations_sha256: operationsSha256,
+        materialization_scope_sha256: materializationScopeSha256,
+        absent_relative_path_preconditions: absentRelativePathPreconditions,
         operations,
       },
       mas_lifecycle_cas_mutation_authorization: {
@@ -571,6 +748,8 @@ function authorityHandler(workspaceRoot: string, onCall: () => void) {
         request_id: requestId,
         domain_id: 'medautoscience',
         operations_sha256: operationsSha256,
+        materialization_scope_sha256: materializationScopeSha256,
+        absent_relative_path_preconditions: absentRelativePathPreconditions,
         authority_receipt_ref: authorityReceiptRef,
         satisfied_gate_ids: gateIds,
       },

@@ -26,6 +26,8 @@ type HostMaterializationContract = {
   capability_id: typeof DOMAIN_ARTIFACT_CAS_CAPABILITY_ID;
   request_output_field: string;
   authorization_output_field: string;
+  materialization_scope_sha256_field: string | null;
+  absent_relative_path_preconditions_field: string | null;
 };
 
 type ExistingExactPrecondition = {
@@ -53,6 +55,8 @@ type CasRequest = {
   domain_id: string;
   authorization_ref: string;
   operations_sha256: string;
+  materialization_scope_sha256?: string;
+  absent_relative_path_preconditions?: string[];
   operations: CasOperation[];
 };
 
@@ -66,6 +70,11 @@ type PreparedOperation = {
   afterSha256: string;
 };
 
+type PreparedAbsentPrecondition = {
+  relative: string;
+  target: string;
+};
+
 type TransactionPaths = ReturnType<typeof transactionPaths>;
 
 export type DomainArtifactCasMaterialization = {
@@ -77,6 +86,7 @@ export type DomainArtifactCasMaterialization = {
 
 export type DomainArtifactCasMaterializationHooks = {
   rename?: typeof fs.renameSync;
+  beforeJournalSwitch?: () => void;
   beforePersistReceipt?: () => void;
 };
 
@@ -151,10 +161,24 @@ function stringList(value: unknown, field: string) {
   return normalized;
 }
 
+function exactStringList(value: unknown, field: string) {
+  const normalized = stringList(value, field);
+  if (normalized.some((entry, index) => entry !== (value as unknown[])[index])) {
+    fail(`${field} entries must not contain surrounding whitespace.`, { field });
+  }
+  return normalized;
+}
+
 function hostContract(value: unknown): HostMaterializationContract | null {
   if (value === undefined) return null;
   if (!isRecord(value)) fail('host_materialization_contract must be an object.');
-  const allowed = ['capability_id', 'request_output_field', 'authorization_output_field'];
+  const allowed = [
+    'capability_id',
+    'request_output_field',
+    'authorization_output_field',
+    'materialization_scope_sha256_field',
+    'absent_relative_path_preconditions_field',
+  ];
   const unsupported = Object.keys(value).filter((key) => !allowed.includes(key));
   if (unsupported.length > 0) {
     fail('host_materialization_contract contains unsupported fields.', { unsupported_fields: unsupported });
@@ -162,10 +186,24 @@ function hostContract(value: unknown): HostMaterializationContract | null {
   if (value.capability_id !== DOMAIN_ARTIFACT_CAS_CAPABILITY_ID) {
     fail('host_materialization_contract capability_id is unsupported.', { capability_id: value.capability_id });
   }
+  const materializationScopeField = value.materialization_scope_sha256_field === undefined
+    ? null
+    : text(value.materialization_scope_sha256_field, 'materialization_scope_sha256_field');
+  const absentPreconditionsField = value.absent_relative_path_preconditions_field === undefined
+    ? null
+    : text(value.absent_relative_path_preconditions_field, 'absent_relative_path_preconditions_field');
+  if ((materializationScopeField === null) !== (absentPreconditionsField === null)) {
+    fail('host_materialization_contract scope fields must be declared together.');
+  }
+  if (materializationScopeField !== null && materializationScopeField === absentPreconditionsField) {
+    fail('host_materialization_contract scope field names must be distinct.');
+  }
   return {
     capability_id: DOMAIN_ARTIFACT_CAS_CAPABILITY_ID,
     request_output_field: text(value.request_output_field, 'request_output_field'),
     authorization_output_field: text(value.authorization_output_field, 'authorization_output_field'),
+    materialization_scope_sha256_field: materializationScopeField,
+    absent_relative_path_preconditions_field: absentPreconditionsField,
   };
 }
 
@@ -188,8 +226,8 @@ function lstatOrNull(file: string) {
   }
 }
 
-function containedTarget(root: string, relative: string) {
-  const normalized = safeRelativePath(relative, 'operations[].target_relative_path');
+function containedTarget(root: string, relative: string, field = 'operations[].target_relative_path') {
+  const normalized = safeRelativePath(relative, field);
   const target = path.resolve(root, normalized);
   const relation = path.relative(root, target);
   if (relation.startsWith(`..${path.sep}`) || relation === '..' || path.isAbsolute(relation)) {
@@ -205,6 +243,33 @@ function containedTarget(root: string, relative: string) {
     }
   }
   return { target, normalized };
+}
+
+function preparedAbsentPreconditions(workspaceRoot: string, value: unknown) {
+  const field = 'absent_relative_path_preconditions';
+  const relativePaths = exactStringList(value, field);
+  return relativePaths.map((relative, index): PreparedAbsentPrecondition => {
+    const entryField = `${field}[${index}]`;
+    const resolved = containedTarget(workspaceRoot, relative, entryField);
+    if (resolved.normalized !== relative) {
+      fail(`${entryField} must use its canonical normalized relative path.`, { value: relative });
+    }
+    return { relative, target: resolved.target };
+  });
+}
+
+function assertAbsentPreconditions(
+  preconditions: PreparedAbsentPrecondition[],
+  phase: string,
+) {
+  for (const precondition of preconditions) {
+    if (lstatOrNull(precondition.target) !== null) {
+      fail('Authorized absent path collided before materialization.', {
+        phase,
+        target_relative_path: precondition.relative,
+      });
+    }
+  }
 }
 
 function sameFileIdentity(left: fs.BigIntStats, right: fs.BigIntStats) {
@@ -683,8 +748,11 @@ function switchTransaction(input: {
   requestSha256: string;
   paths: TransactionPaths;
   operations: PreparedOperation[];
+  absentPreconditions: PreparedAbsentPrecondition[];
   rename: typeof fs.renameSync;
+  beforeJournalSwitch?: () => void;
 }) {
+  assertAbsentPreconditions(input.absentPreconditions, 'before_journal_switch');
   const recovering = fs.existsSync(input.paths.journal);
   if (recovering) {
     assertJournal(input.paths, input.requestSha256, input.operations);
@@ -697,6 +765,8 @@ function switchTransaction(input: {
       fs.rmSync(operation.backup, { force: true });
       ensureStaging(operation);
     }
+    input.beforeJournalSwitch?.();
+    assertAbsentPreconditions(input.absentPreconditions, 'immediately_before_journal_switch');
     atomicJson(input.paths.journal, {
       surface_kind: 'opl_domain_artifact_cas_transaction_journal',
       version: 'opl-domain-artifact-cas-transaction-journal.v1',
@@ -875,6 +945,58 @@ export function applyDomainArtifactCasMaterialization(input: {
   if (digest(request.operations_sha256, 'operations_sha256') !== operationsSha256) {
     fail('Host materialization operations_sha256 does not bind operations.');
   }
+  const scopeSha256Field = contract.materialization_scope_sha256_field;
+  const absentPreconditionsField = contract.absent_relative_path_preconditions_field;
+  const scopedContract = scopeSha256Field !== null && absentPreconditionsField !== null;
+  let absentRelativePathPreconditions: string[] = [];
+  if (!scopedContract) {
+    const undeclaredScopeFields = [
+      'materialization_scope_sha256',
+      'absent_relative_path_preconditions',
+    ].filter((field) => Object.hasOwn(requestValue, field) || Object.hasOwn(authorization, field));
+    if (undeclaredScopeFields.length > 0) {
+      fail('Legacy host materialization contract cannot consume undeclared authorization scope fields.', {
+        undeclared_scope_fields: undeclaredScopeFields,
+      });
+    }
+  } else {
+    const scopeField = scopeSha256Field!;
+    const absentField = absentPreconditionsField!;
+    const missingScopeBindings = [
+      [requestValue, scopeField, `request.${scopeField}`],
+      [requestValue, absentField, `request.${absentField}`],
+      [authorization, scopeField, `authorization.${scopeField}`],
+      [authorization, absentField, `authorization.${absentField}`],
+    ].filter(([record, field]) => !Object.hasOwn(record as Record<string, unknown>, String(field)))
+      .map(([, , label]) => label);
+    if (missingScopeBindings.length > 0) {
+      fail('Declared host materialization authorization scope fields are missing.', {
+        missing_scope_fields: missingScopeBindings,
+      });
+    }
+    absentRelativePathPreconditions = exactStringList(
+      requestValue[absentField],
+      `request.${absentField}`,
+    );
+    const authorizedAbsentPreconditions = exactStringList(
+      authorization[absentField],
+      `authorization.${absentField}`,
+    );
+    if (JSON.stringify(authorizedAbsentPreconditions) !== JSON.stringify(absentRelativePathPreconditions)) {
+      fail('Host materialization authorization absent-path scope does not bind the request.');
+    }
+    const materializationScopeSha256 = sha256(canonicalJsonBytes({
+      operations: request.operations,
+      absent_relative_path_preconditions: absentRelativePathPreconditions,
+    }));
+    if (
+      digest(requestValue[scopeField], `request.${scopeField}`) !== materializationScopeSha256
+      || digest(authorization[scopeField], `authorization.${scopeField}`)
+        !== materializationScopeSha256
+    ) {
+      fail('Host materialization materialization_scope_sha256 does not bind operations and absent paths.');
+    }
+  }
   const authorizationFields = {
     authorization_ref: text(authorization.authorization_ref, 'authorization.authorization_ref'),
     capability_id: text(authorization.capability_id, 'authorization.capability_id'),
@@ -895,7 +1017,6 @@ export function applyDomainArtifactCasMaterialization(input: {
 
   const workspaceRoot = fs.realpathSync.native(input.workspaceRoot);
   const requestSha256 = sha256(canonicalJsonBytes(request));
-  const paths = transactionPaths(workspaceRoot, requestSha256);
   const suffix = requestSha256.slice(0, 20);
   const targetSet = new Set<string>();
   const operations = request.operations.map((operation): PreparedOperation => {
@@ -922,6 +1043,18 @@ export function applyDomainArtifactCasMaterialization(input: {
       afterSha256,
     };
   });
+  const absentPreconditions = preparedAbsentPreconditions(
+    workspaceRoot,
+    absentRelativePathPreconditions,
+  );
+  const overlappingAbsence = absentPreconditions.find((precondition) => targetSet.has(precondition.target));
+  if (overlappingAbsence) {
+    fail('Absent-path authorization scope overlaps a materialization operation target.', {
+      target_relative_path: overlappingAbsence.relative,
+    });
+  }
+  assertAbsentPreconditions(absentPreconditions, 'before_receipt_reuse');
+  const paths = transactionPaths(workspaceRoot, requestSha256);
   const receiptInput = {
     paths,
     request,
@@ -950,6 +1083,7 @@ export function applyDomainArtifactCasMaterialization(input: {
   let readEpochStarted = false;
   try {
     validatePreparedPaths(workspaceRoot, operations);
+    assertAbsentPreconditions(absentPreconditions, 'before_locked_receipt_reuse');
     const existing = existingReceipt(receiptInput);
     if (existing) {
       writeReadEpoch({
@@ -974,7 +1108,9 @@ export function applyDomainArtifactCasMaterialization(input: {
       requestSha256,
       paths,
       operations,
+      absentPreconditions,
       rename: hooks.rename ?? fs.renameSync,
+      beforeJournalSwitch: hooks.beforeJournalSwitch,
     });
     if (fs.existsSync(paths.receiptByRequest)) {
       fs.rmSync(paths.journal, { force: true });

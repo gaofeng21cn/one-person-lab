@@ -36,9 +36,18 @@ function operation(input: {
   };
 }
 
-function materializationInput(workspaceRoot: string, operations: Record<string, unknown>[]) {
+function materializationInput(
+  workspaceRoot: string,
+  operations: Record<string, unknown>[],
+  options: { scoped?: boolean; absentPaths?: string[] } = {},
+) {
   const operationsSha256 = digest(canonicalJsonBytes(operations));
-  const request = {
+  const absentPaths = options.absentPaths ?? [];
+  const materializationScopeSha256 = digest(canonicalJsonBytes({
+    operations,
+    absent_relative_path_preconditions: absentPaths,
+  }));
+  const request: Record<string, unknown> = {
     surface_kind: 'opl_domain_artifact_cas_materialization_request',
     version: 'opl-domain-artifact-cas-materialization.v1',
     capability_id: 'opl_domain_artifact_cas_materialization.v1',
@@ -48,8 +57,34 @@ function materializationInput(workspaceRoot: string, operations: Record<string, 
     operations_sha256: operationsSha256,
     operations,
   };
+  const hostContract: Record<string, unknown> = {
+    capability_id: 'opl_domain_artifact_cas_materialization.v1',
+    request_output_field: 'materialization_request',
+    authorization_output_field: 'authorization',
+  };
+  const authorization: Record<string, unknown> = {
+    authorized: true,
+    authorization_ref: request.authorization_ref,
+    capability_id: request.capability_id,
+    request_id: request.request_id,
+    domain_id: request.domain_id,
+    operations_sha256: operationsSha256,
+    authority_receipt_ref: 'opl://mas/reactivation-receipt/fixture',
+    satisfied_gate_ids: ['explicit_user_wakeup'],
+  };
+  if (options.scoped) {
+    request.materialization_scope_sha256 = materializationScopeSha256;
+    request.absent_relative_path_preconditions = absentPaths;
+    authorization.materialization_scope_sha256 = materializationScopeSha256;
+    authorization.absent_relative_path_preconditions = absentPaths;
+    hostContract.materialization_scope_sha256_field = 'materialization_scope_sha256';
+    hostContract.absent_relative_path_preconditions_field = 'absent_relative_path_preconditions';
+  }
   return {
     requestSha256: digest(canonicalJsonBytes(request)),
+    request,
+    authorization,
+    hostContract,
     input: {
       workspaceRoot,
       domainId: 'mas',
@@ -57,33 +92,15 @@ function materializationInput(workspaceRoot: string, operations: Record<string, 
       runId: 'reactivate-run',
       handlerRef: 'handler:fixture.reactivate',
       hostedRuntimeBindingRef: 'opl://hosted-runtime/fixture',
-      actionAuthorityBoundary: {
-        host_materialization_contract: {
-          capability_id: 'opl_domain_artifact_cas_materialization.v1',
-          request_output_field: 'materialization_request',
-          authorization_output_field: 'authorization',
-        },
-      },
-      handlerOutput: {
-        materialization_request: request,
-        authorization: {
-          authorized: true,
-          authorization_ref: request.authorization_ref,
-          capability_id: request.capability_id,
-          request_id: request.request_id,
-          domain_id: request.domain_id,
-          operations_sha256: operationsSha256,
-          authority_receipt_ref: 'opl://mas/reactivation-receipt/fixture',
-          satisfied_gate_ids: ['explicit_user_wakeup'],
-        },
-      },
+      actionAuthorityBoundary: { host_materialization_contract: hostContract },
+      handlerOutput: { materialization_request: request, authorization },
       handlerOutputRef: 'file:///fixture/reactivation-output.json',
       handlerOutputSha256: digest('fixture handler output'),
     },
   };
 }
 
-function withCasFixture(run: (workspaceRoot: string) => void) {
+function withCasFixture(run: (workspaceRoot: string, stateRoot: string) => void) {
   const fixtureRoot = temporaryRoot('opl-domain-cas-');
   const workspaceRoot = path.join(fixtureRoot, 'workspace');
   const stateRoot = path.join(fixtureRoot, 'state');
@@ -91,12 +108,20 @@ function withCasFixture(run: (workspaceRoot: string) => void) {
   fs.mkdirSync(path.join(workspaceRoot, 'control'), { recursive: true });
   try {
     process.env.OPL_STATE_DIR = stateRoot;
-    run(workspaceRoot);
+    run(workspaceRoot, stateRoot);
   } finally {
     if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
     else process.env.OPL_STATE_DIR = previousStateRoot;
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
+}
+
+function filesUnder(root: string): string[] {
+  if (!fs.existsSync(root)) return [];
+  return fs.readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
+    const child = path.join(root, entry.name);
+    return entry.isDirectory() ? filesUnder(child) : [child];
+  });
 }
 
 test('domain artifact CAS rejects an absent precondition collision without changing bytes', () => {
@@ -185,5 +210,184 @@ test('domain artifact CAS resumes the same exact request after targets switch be
     const settled = observeDomainArtifactCasMaterialization({ workspaceRoot });
     assert.equal(settled.state, 'clear');
     assert.notEqual(settled.observed_generation, pendingGeneration);
+  });
+});
+
+test('domain artifact CAS v1 keeps legacy requests compatible and materializes scoped requests', () => {
+  withCasFixture((workspaceRoot) => {
+    const legacyTarget = path.join(workspaceRoot, 'control', 'legacy.json');
+    fs.writeFileSync(legacyTarget, 'legacy-before');
+    const legacy = materializationInput(workspaceRoot, [operation({
+      relativePath: 'control/legacy.json',
+      before: Buffer.from('legacy-before'),
+      after: Buffer.from('legacy-after'),
+    })]);
+    assert.equal(applyDomainArtifactCasMaterialization(legacy.input)?.receipt.status, 'materialized');
+    assert.equal(fs.readFileSync(legacyTarget, 'utf8'), 'legacy-after');
+  });
+
+  withCasFixture((workspaceRoot) => {
+    const scopedTarget = path.join(workspaceRoot, 'control', 'scoped.json');
+    const optionalTarget = path.join(workspaceRoot, 'control', 'optional.json');
+    fs.writeFileSync(scopedTarget, 'scoped-before');
+    const scoped = materializationInput(workspaceRoot, [operation({
+      relativePath: 'control/scoped.json',
+      before: Buffer.from('scoped-before'),
+      after: Buffer.from('scoped-after'),
+    })], { scoped: true, absentPaths: ['control/optional.json'] });
+    assert.equal(applyDomainArtifactCasMaterialization(scoped.input)?.receipt.status, 'materialized');
+    assert.equal(fs.readFileSync(scopedTarget, 'utf8'), 'scoped-after');
+    assert.equal(fs.existsSync(optionalTarget), false);
+  });
+});
+
+test('domain artifact CAS rejects partial scope declarations and legacy/scoped mixing without writes', () => {
+  withCasFixture((workspaceRoot, stateRoot) => {
+    const target = path.join(workspaceRoot, 'control', 'target.json');
+    fs.writeFileSync(target, 'before');
+    const fixture = materializationInput(workspaceRoot, [operation({
+      relativePath: 'control/target.json', before: Buffer.from('before'), after: Buffer.from('after'),
+    })], { scoped: true, absentPaths: ['control/optional.json'] });
+    delete fixture.hostContract.absent_relative_path_preconditions_field;
+
+    assert.throws(
+      () => applyDomainArtifactCasMaterialization(fixture.input),
+      /scope fields must be declared together/i,
+    );
+    assert.equal(fs.readFileSync(target, 'utf8'), 'before');
+    assert.deepEqual(filesUnder(stateRoot), []);
+  });
+
+  withCasFixture((workspaceRoot, stateRoot) => {
+    const target = path.join(workspaceRoot, 'control', 'target.json');
+    fs.writeFileSync(target, 'before');
+    const fixture = materializationInput(workspaceRoot, [operation({
+      relativePath: 'control/target.json', before: Buffer.from('before'), after: Buffer.from('after'),
+    })], { scoped: true, absentPaths: ['control/optional.json'] });
+    delete fixture.hostContract.materialization_scope_sha256_field;
+    delete fixture.hostContract.absent_relative_path_preconditions_field;
+
+    assert.throws(
+      () => applyDomainArtifactCasMaterialization(fixture.input),
+      /cannot consume undeclared authorization scope fields/i,
+    );
+    assert.equal(fs.readFileSync(target, 'utf8'), 'before');
+    assert.deepEqual(filesUnder(stateRoot), []);
+  });
+});
+
+test('domain artifact CAS rejects missing or tampered scoped authorization without writes', () => {
+  for (const missingField of [
+    'materialization_scope_sha256',
+    'absent_relative_path_preconditions',
+  ]) {
+    withCasFixture((workspaceRoot, stateRoot) => {
+      const target = path.join(workspaceRoot, 'control', 'target.json');
+      fs.writeFileSync(target, 'before');
+      const fixture = materializationInput(workspaceRoot, [operation({
+        relativePath: 'control/target.json', before: Buffer.from('before'), after: Buffer.from('after'),
+      })], { scoped: true, absentPaths: ['control/optional.json'] });
+      delete fixture.request[missingField];
+      assert.throws(
+        () => applyDomainArtifactCasMaterialization(fixture.input),
+        /failed JSON Schema validation/i,
+      );
+      assert.equal(fs.readFileSync(target, 'utf8'), 'before');
+      assert.deepEqual(filesUnder(stateRoot), []);
+    });
+  }
+
+  withCasFixture((workspaceRoot, stateRoot) => {
+    const target = path.join(workspaceRoot, 'control', 'target.json');
+    fs.writeFileSync(target, 'before');
+    const fixture = materializationInput(workspaceRoot, [operation({
+      relativePath: 'control/target.json', before: Buffer.from('before'), after: Buffer.from('after'),
+    })], { scoped: true, absentPaths: ['control/optional.json'] });
+    fixture.request.materialization_scope_sha256 = 'f'.repeat(64);
+    fixture.authorization.materialization_scope_sha256 = 'f'.repeat(64);
+    assert.throws(
+      () => applyDomainArtifactCasMaterialization(fixture.input),
+      /does not bind operations and absent paths/i,
+    );
+    assert.equal(fs.readFileSync(target, 'utf8'), 'before');
+    assert.deepEqual(filesUnder(stateRoot), []);
+  });
+
+  withCasFixture((workspaceRoot, stateRoot) => {
+    const target = path.join(workspaceRoot, 'control', 'target.json');
+    fs.writeFileSync(target, 'before');
+    const fixture = materializationInput(workspaceRoot, [operation({
+      relativePath: 'control/target.json', before: Buffer.from('before'), after: Buffer.from('after'),
+    })], { scoped: true, absentPaths: ['control/optional.json'] });
+    fixture.authorization.absent_relative_path_preconditions = [];
+    assert.throws(
+      () => applyDomainArtifactCasMaterialization(fixture.input),
+      /absent-path scope does not bind/i,
+    );
+    assert.equal(fs.readFileSync(target, 'utf8'), 'before');
+    assert.deepEqual(filesUnder(stateRoot), []);
+  });
+});
+
+test('domain artifact CAS rejects escaped duplicate noncanonical and overlapping absence paths', () => {
+  const cases = [
+    { absentPaths: ['../outside.json'], expected: /schema|relative path/i },
+    { absentPaths: ['control/optional.json', 'control/optional.json'], expected: /schema|duplicates/i },
+    { absentPaths: ['control\\optional.json'], expected: /canonical normalized relative path/i },
+    { absentPaths: ['control/target.json'], expected: /overlaps a materialization operation/i },
+  ];
+  for (const entry of cases) {
+    withCasFixture((workspaceRoot, stateRoot) => {
+      const target = path.join(workspaceRoot, 'control', 'target.json');
+      fs.writeFileSync(target, 'before');
+      const fixture = materializationInput(workspaceRoot, [operation({
+        relativePath: 'control/target.json', before: Buffer.from('before'), after: Buffer.from('after'),
+      })], { scoped: true, absentPaths: entry.absentPaths });
+      assert.throws(() => applyDomainArtifactCasMaterialization(fixture.input), entry.expected);
+      assert.equal(fs.readFileSync(target, 'utf8'), 'before');
+      assert.deepEqual(filesUnder(stateRoot), []);
+    });
+  }
+});
+
+test('domain artifact CAS rechecks absence immediately before journal switch with zero target journal or receipt writes', () => {
+  withCasFixture((workspaceRoot, stateRoot) => {
+    const target = path.join(workspaceRoot, 'control', 'target.json');
+    const optionalTarget = path.join(workspaceRoot, 'control', 'optional.json');
+    fs.writeFileSync(target, 'before');
+    const fixture = materializationInput(workspaceRoot, [operation({
+      relativePath: 'control/target.json', before: Buffer.from('before'), after: Buffer.from('after'),
+    })], { scoped: true, absentPaths: ['control/optional.json'] });
+
+    assert.throws(() => applyDomainArtifactCasMaterialization(fixture.input, {
+      beforeJournalSwitch: () => fs.writeFileSync(optionalTarget, 'racing-writer'),
+    }), /absent path collided/i);
+    assert.equal(fs.readFileSync(target, 'utf8'), 'before');
+    assert.equal(fs.readFileSync(optionalTarget, 'utf8'), 'racing-writer');
+    assert.deepEqual(filesUnder(path.join(stateRoot, 'runway', 'domain-artifact-cas', 'transactions')), []);
+    assert.deepEqual(filesUnder(path.join(stateRoot, 'runway', 'domain-artifact-cas', 'receipts')), []);
+  });
+});
+
+test('domain artifact CAS refuses completed receipt replay after an authorized absence collides', () => {
+  withCasFixture((workspaceRoot, stateRoot) => {
+    const target = path.join(workspaceRoot, 'control', 'target.json');
+    const optionalTarget = path.join(workspaceRoot, 'control', 'optional.json');
+    fs.writeFileSync(target, 'before');
+    const fixture = materializationInput(workspaceRoot, [operation({
+      relativePath: 'control/target.json', before: Buffer.from('before'), after: Buffer.from('after'),
+    })], { scoped: true, absentPaths: ['control/optional.json'] });
+    const first = applyDomainArtifactCasMaterialization(fixture.input);
+    assert.ok(first);
+    const receiptBytes = fs.readFileSync(first.receipt_path);
+    fs.writeFileSync(optionalTarget, 'late-projection');
+
+    assert.throws(
+      () => applyDomainArtifactCasMaterialization(fixture.input),
+      /absent path collided before materialization/i,
+    );
+    assert.equal(fs.readFileSync(target, 'utf8'), 'after');
+    assert.equal(fs.readFileSync(first.receipt_path).equals(receiptBytes), true);
+    assert.deepEqual(filesUnder(path.join(stateRoot, 'runway', 'domain-artifact-cas', 'transactions')), []);
   });
 });

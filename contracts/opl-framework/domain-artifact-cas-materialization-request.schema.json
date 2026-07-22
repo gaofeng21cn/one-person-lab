@@ -14,6 +14,10 @@
     "operations_sha256",
     "operations"
   ],
+  "dependentRequired": {
+    "materialization_scope_sha256": ["absent_relative_path_preconditions"],
+    "absent_relative_path_preconditions": ["materialization_scope_sha256"]
+  },
   "properties": {
     "surface_kind": {
       "const": "opl_domain_artifact_cas_materialization_request"
@@ -42,6 +46,20 @@
     "operations_sha256": {
       "type": "string",
       "pattern": "^(?:sha256:)?[a-f0-9]{64}$"
+    },
+    "materialization_scope_sha256": {
+      "type": "string",
+      "pattern": "^(?:sha256:)?[a-f0-9]{64}$"
+    },
+    "absent_relative_path_preconditions": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*//).+$"
+      }
     },
     "operations": {
       "type": "array",
