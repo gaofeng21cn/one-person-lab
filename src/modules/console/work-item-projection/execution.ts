@@ -39,6 +39,11 @@ const LIVE_STAGE_ATTEMPT_STATUSES = new Set([
   'checkpointed',
   'human_gate',
 ]);
+const CURRENT_QUALITY_CYCLE_STATUSES = new Set([
+  'awaiting_producer',
+  'awaiting_review',
+  'awaiting_repair',
+]);
 const STAGE_RUN_EXECUTION_IDENTITY_COLUMNS = [
   'stage_run_id',
   'domain_id',
@@ -1132,6 +1137,7 @@ export function joinAttemptsToWorkItems(input: {
       ? qualityCycleById.get(currentQualityCycleId) ?? null
       : null;
     const currentQualityCycleState = record(currentQualityCycle?.state);
+    const currentQualityCycleStatus = normalizedStatus(currentQualityCycleState.status);
     const currentQualityCyclePolicy = record(currentQualityCycle?.policy);
     const policyScopeBudget = record(record(currentQualityCyclePolicy.formal_review).scope_budget);
     const retryScopeBudget = record(record(currentAttempt?.retry_budget).quality_scope_budget);
@@ -1145,7 +1151,9 @@ export function joinAttemptsToWorkItems(input: {
             .map((attempt) => numberValue(attempt.quality_round_index) ?? 0))
         : 0);
     const budgetStopReason = stringValue(currentQualityCycleState.quality_scope_budget_stop_reason);
-    const managedQualityBudget = currentQualityCycleId !== null && Object.keys(scopeBudget).length > 0;
+    const managedQualityBudget = currentQualityCycleId !== null
+      && CURRENT_QUALITY_CYCLE_STATUSES.has(currentQualityCycleStatus)
+      && Object.keys(scopeBudget).length > 0;
     const conditions = [
       condition({
         type: 'InventoryResolved',

@@ -1485,7 +1485,7 @@ test('workspace move changes the selected binding without changing Project or Wo
   }
 });
 
-test('App Runtime fast producer includes registered work items with bounded attempt and telemetry summaries', () => {
+test('App Runtime fast producer projects an effective running quality-cycle budget with bounded summaries', () => {
   const input = fixture();
   try {
     const qualityScopeBudget = {
@@ -1516,10 +1516,10 @@ test('App Runtime fast producer includes registered work items with bounded atte
           id: 'sat-dm001-quality-budget',
           root: input.diabetes,
           workItemId: '001-dm-cvd-mortality-risk',
-          status: 'completed',
-          updatedAt: '2026-07-15T00:00:00.000Z',
+          status: 'running',
+          updatedAt: new Date().toISOString(),
           qualityCycleId: 'quality-cycle:dm001',
-          qualityRoundIndex: 3,
+          qualityRoundIndex: 1,
           qualityScopeBudget,
         }),
       ],
@@ -1527,13 +1527,14 @@ test('App Runtime fast producer includes registered work items with bounded atte
         quality_cycle_id: 'quality-cycle:dm001',
         policy: { formal_review: { scope_budget: qualityScopeBudget } },
         state: {
+          status: 'awaiting_review',
           quality_scope_budget_usage: {
-            attempts_used: 3,
-            elapsed_ms: 3_600_000,
-            tokens_used: null,
-            token_observation_status: 'missing',
+            attempts_used: 1,
+            elapsed_ms: 60_000,
+            tokens_used: 50_000,
+            token_observation_status: 'observed',
           },
-          quality_scope_budget_stop_reason: 'max_attempts_exhausted',
+          quality_scope_budget_stop_reason: null,
         },
       }],
       resolveDescriptor: input.resolveDescriptor,
@@ -1565,18 +1566,19 @@ test('App Runtime fast producer includes registered work items with bounded atte
     assert.deepEqual(dm003?.conditions, []);
     assert.deepEqual(dm003?.source_refs, []);
     assert.equal(dm003?.visibility.state, 'visible');
+    assert.equal(dm001?.execution.state, 'running');
     assert.deepEqual(dm001?.execution.quality_budget, {
-      state: 'exhausted',
+      state: 'available',
       scope_id: 'quality-cycle:dm001',
       max_attempts: 3,
-      attempts_used: 3,
-      attempts_remaining: 0,
+      attempts_used: 1,
+      attempts_remaining: 2,
       max_elapsed_ms: 21_600_000,
-      elapsed_ms: 3_600_000,
+      elapsed_ms: 60_000,
       max_tokens: 1_000_000,
-      tokens_used: null,
-      token_observation_status: 'missing',
-      stop_reason: 'max_attempts_exhausted',
+      tokens_used: 50_000,
+      token_observation_status: 'observed',
+      stop_reason: null,
     });
     const schemaRef = 'contracts/opl-framework/work-item-projection-v2.schema.json';
     const schema = parseJsonText(fs.readFileSync(schemaRef, 'utf8')) as Record<string, unknown>;
@@ -2413,6 +2415,16 @@ test('post-snapshot human_gate from an exact-scoped StageRun projects the owner 
     fs.utimesSync(path.join(input.diabetes, 'workspace_index.json'), snapshot, snapshot);
     const createdAt = new Date().toISOString();
     const stageRunId = 'sr_scoped_human_gate';
+    const qualityCycleId = `quality-cycle:${stageRunId}`;
+    const historicalScopeBudget = {
+      surface_kind: 'opl_stage_quality_scope_budget',
+      version: 'opl-stage-quality-scope-budget.v1',
+      max_attempts: 3,
+      max_elapsed_ms: 21_600_000,
+      max_tokens: 1_000_000,
+      token_budget_requires_observed_usage: true,
+      foreground_execution_must_use_managed_attempt: true,
+    };
     const stageRunLaunch = {
       surface_kind: 'opl_stage_run_launch_registry_entry',
       version: 'opl-stage-run-launch-registry-entry.v2',
@@ -2442,6 +2454,9 @@ test('post-snapshot human_gate from an exact-scoped StageRun projects the owner 
       createdAt,
       updatedAt: createdAt,
       stageRunId,
+      qualityCycleId,
+      qualityRoundIndex: 0,
+      qualityScopeBudget: historicalScopeBudget,
     });
     assert.ok(gateAttempt.execution_scope);
     const gateScope = gateAttempt.execution_scope;
@@ -2497,7 +2512,20 @@ test('post-snapshot human_gate from an exact-scoped StageRun projects the owner 
       packageProjectionItems: input.packageProjectionItems,
       packageStatusById: input.packageStatusById,
       attempts: ledger.attempts,
-      qualityCycles: ledger.quality_cycles,
+      qualityCycles: [{
+        quality_cycle_id: qualityCycleId,
+        policy: { formal_review: { scope_budget: historicalScopeBudget } },
+        state: {
+          status: 'hard_stopped',
+          quality_scope_budget_usage: {
+            attempts_used: 0,
+            elapsed_ms: 2_583_213,
+            tokens_used: 8_579_482,
+            token_observation_status: 'observed',
+          },
+          quality_scope_budget_stop_reason: 'max_tokens_exhausted',
+        },
+      }],
       queueDb: ledger.queue_db,
       resolveDescriptor: input.resolveDescriptor,
     });
@@ -2506,6 +2534,20 @@ test('post-snapshot human_gate from an exact-scoped StageRun projects the owner 
     assert.equal(item.execution.attempt_id, 'sat-scoped-human-gate');
     assert.equal(item.execution.state, 'idle');
     assert.equal(item.execution.stage_status, 'human_gate');
+    assert.deepEqual(item.execution.quality_budget, {
+      state: 'not_managed',
+      scope_id: null,
+      max_attempts: null,
+      attempts_used: 0,
+      attempts_remaining: null,
+      max_elapsed_ms: null,
+      elapsed_ms: null,
+      max_tokens: null,
+      tokens_used: null,
+      token_observation_status: 'not_applicable',
+      stop_reason: null,
+    });
+    assert.equal(item.execution.attempt_ids.includes('sat-scoped-human-gate'), true);
     assert.equal(item.attention.kind, 'user');
     assert.equal(item.attention.reason, 'runtime_human_gate_requires_owner_decision');
     assert.equal(item.action.owner_kind, 'user');
