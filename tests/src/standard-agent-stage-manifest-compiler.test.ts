@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -36,6 +37,15 @@ function writeText(root: string, ref: string) {
   const file = path.join(root, ref);
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, `# ${ref}\n`);
+}
+
+function resolvePython3Executable() {
+  for (const executable of [process.env.PYTHON, 'python3', 'python']) {
+    if (!executable) continue;
+    const result = spawnSync(executable, ['--version'], { encoding: 'utf8' });
+    if (result.status === 0) return executable;
+  }
+  throw new Error('Python 3 is required for the stage-manifest callable probe test.');
 }
 
 function writePrimaryOnlyDeliverPolicy(root: string) {
@@ -311,6 +321,87 @@ test('standard Agent stage manifest compiler keeps stable domain identity and ta
   const generated = buildRepoGeneratedInterfaceBundle(alphaRoot, 'product-entry').bundle as JsonRecord;
   assert.equal(generated.agent_id, 'agent-alpha');
   assert.equal(generated.target_domain_id, 'target-alpha');
+});
+
+test('Python callable validation disables bytecode even when isolated mode ignores Python env', () => {
+  const root = fixture('target-python-bytecode');
+  const moduleRoot = path.join(root, 'runtime', 'authority_functions');
+  const modulePath = path.join(moduleRoot, 'handler.py');
+  const argsRecordPath = path.join(root, 'python-probe-args.txt');
+  const pythonWrapperPath = path.join(root, 'python-probe-wrapper');
+  const pythonExecutable = resolvePython3Executable();
+  const previousPython = process.env.PYTHON;
+  const previousRealPython = process.env.OPL_TEST_REAL_PYTHON;
+  const previousArgsRecord = process.env.OPL_TEST_PYTHON_ARGS_RECORD;
+
+  fs.writeFileSync(modulePath, 'def execute():\n    return "ready"\n');
+  fs.chmodSync(modulePath, 0o444);
+  writeJson(root, 'contracts/domain_handler_registry.json', {
+    surface_kind: 'domain_handler_registry',
+    version: 'domain-handler-registry.v1',
+    handlers: [{
+      handler_id: 'python.execute',
+      binding: {
+        kind: 'python_callable',
+        module: 'runtime.authority_functions.handler',
+        callable: 'execute',
+      },
+    }],
+  });
+  fs.writeFileSync(
+    pythonWrapperPath,
+    [
+      '#!/bin/sh',
+      'printf "%s\\n%s\\n%s\\n" "$1" "$2" "$3" > "$OPL_TEST_PYTHON_ARGS_RECORD"',
+      'exec "$OPL_TEST_REAL_PYTHON" "$@"',
+      '',
+    ].join('\n'),
+  );
+  fs.chmodSync(pythonWrapperPath, 0o755);
+
+  try {
+    process.env.PYTHON = pythonWrapperPath;
+    process.env.OPL_TEST_REAL_PYTHON = pythonExecutable;
+    process.env.OPL_TEST_PYTHON_ARGS_RECORD = argsRecordPath;
+    assert.doesNotThrow(() => compileStandardAgentStageManifest(root));
+    assert.deepEqual(fs.readFileSync(argsRecordPath, 'utf8').trim().split('\n'), ['-I', '-B', '-c']);
+
+    const importProbe = 'import sys; sys.path.insert(0, sys.argv[1]); import handler';
+    const isolatedEnvOnly = spawnSync(
+      pythonExecutable,
+      ['-I', '-c', importProbe, moduleRoot],
+      {
+        encoding: 'utf8',
+        env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' },
+      },
+    );
+    assert.equal(isolatedEnvOnly.status, 0, isolatedEnvOnly.stderr || isolatedEnvOnly.stdout);
+    assert.equal(fs.existsSync(path.join(moduleRoot, '__pycache__')), true);
+
+    fs.rmSync(path.join(moduleRoot, '__pycache__'), { recursive: true, force: true });
+    const isolatedNoBytecode = spawnSync(
+      pythonExecutable,
+      ['-I', '-B', '-c', importProbe, moduleRoot],
+      {
+        encoding: 'utf8',
+        env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' },
+      },
+    );
+    assert.equal(isolatedNoBytecode.status, 0, isolatedNoBytecode.stderr || isolatedNoBytecode.stdout);
+    assert.equal(fs.existsSync(path.join(moduleRoot, '__pycache__')), false);
+    assert.deepEqual(
+      fs.readdirSync(moduleRoot).filter((entry) => /\.py[co]$/i.test(entry)),
+      [],
+    );
+  } finally {
+    if (previousPython === undefined) delete process.env.PYTHON;
+    else process.env.PYTHON = previousPython;
+    if (previousRealPython === undefined) delete process.env.OPL_TEST_REAL_PYTHON;
+    else process.env.OPL_TEST_REAL_PYTHON = previousRealPython;
+    if (previousArgsRecord === undefined) delete process.env.OPL_TEST_PYTHON_ARGS_RECORD;
+    else process.env.OPL_TEST_PYTHON_ARGS_RECORD = previousArgsRecord;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('standard Agent stage manifest compiler round-trips locale names and backfills legacy en-US', () => {

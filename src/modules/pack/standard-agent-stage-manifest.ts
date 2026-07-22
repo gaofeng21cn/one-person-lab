@@ -412,7 +412,7 @@ function assertPythonCallable(filePath: string, callableName: string, field: str
   const executables = [process.env.PYTHON, 'python3', 'python']
     .filter((entry, index, values): entry is string => Boolean(entry) && values.indexOf(entry) === index);
   for (const executable of executables) {
-    const result = spawnSync(executable, ['-I', '-c', PYTHON_CALLABLE_PROBE, filePath, callableName], {
+    const result = spawnSync(executable, ['-I', '-B', '-c', PYTHON_CALLABLE_PROBE, filePath, callableName], {
       encoding: 'utf8',
       maxBuffer: 1024 * 1024,
     });
