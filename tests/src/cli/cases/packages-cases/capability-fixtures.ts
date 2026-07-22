@@ -187,8 +187,14 @@ export function writeCapabilityProvider(
   }
   const lockPaths = [
     '.codex-plugin/plugin.json',
-    ...coreSkillIds.map((skillId) => `skills/${skillId}/SKILL.md`),
-    ...specialtySkillIds.map((skillId) => `skills/${skillId}/SKILL.md`),
+    ...coreSkillIds.flatMap((skillId) => [
+      `skills/${skillId}/SKILL.md`,
+      `skills/${skillId}/helper.txt`,
+    ]),
+    ...specialtySkillIds.flatMap((skillId) => [
+      `skills/${skillId}/SKILL.md`,
+      `skills/${skillId}/helper.txt`,
+    ]),
   ];
   const manifestPath = path.join(root, 'provider.json');
   fs.writeFileSync(manifestPath, formatJsonPayload({

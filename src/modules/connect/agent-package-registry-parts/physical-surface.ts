@@ -56,6 +56,10 @@ import {
 } from './developer-checkout-package-source.ts';
 import { verifyManifestContentLock } from './dependency-closure.ts';
 import {
+  assertInstalledPackagePluginSource,
+  installedPackageContentLockCanonicalization,
+} from './installed-plugin-source.ts';
+import {
   assertSafePersistedPackagePath,
   removeSafePersistedPackagePath,
 } from './persisted-path-safety.ts';
@@ -1209,6 +1213,59 @@ function validateMaterializedRequiredSkills(manifest: AgentPackageManifest, plug
   return requiredSkillPaths;
 }
 
+function validateProjectedSkillContentClosure(
+  manifest: AgentPackageManifest,
+  pluginSourcePath: string,
+) {
+  if (manifest.content_lock_paths.length === 0) return;
+  const lockedPaths = new Set(manifest.content_lock_paths);
+  const skillIds = [...new Set([
+    ...manifest.required_skill_ids,
+    ...(manifest.capability_provider?.exports ?? []).map((entry) => entry.skill_id),
+  ])];
+  const missingLockPaths: string[] = [];
+  const visit = (current: string) => {
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const absolutePath = path.join(current, entry.name);
+      const stat = fs.lstatSync(absolutePath);
+      if (stat.isSymbolicLink() || (!stat.isDirectory() && !stat.isFile())) {
+        throw new FrameworkContractError(
+          'contract_shape_invalid',
+          'Projected Skill content lock only admits regular files and directories.',
+          {
+            package_id: manifest.package_id,
+            skill_path: path.relative(pluginSourcePath, absolutePath).split(path.sep).join('/'),
+            failure_code: 'agent_package_skill_content_lock_entry_unsupported',
+          },
+        );
+      }
+      if (stat.isDirectory()) {
+        visit(absolutePath);
+        continue;
+      }
+      const relativePath = path.relative(pluginSourcePath, absolutePath).split(path.sep).join('/');
+      if (!lockedPaths.has(relativePath)) missingLockPaths.push(relativePath);
+    }
+  };
+  for (const skillId of skillIds) {
+    const skillRoot = path.dirname(requiredSkillPath(pluginSourcePath, skillId));
+    if (fs.existsSync(skillRoot) && fs.lstatSync(skillRoot).isDirectory()) {
+      visit(skillRoot);
+    }
+  }
+  if (missingLockPaths.length > 0) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Every projected Skill file must be included in the package content lock.',
+      {
+        package_id: manifest.package_id,
+        missing_content_lock_paths: [...new Set(missingLockPaths)].sort(),
+        failure_code: 'agent_package_skill_content_lock_incomplete',
+      },
+    );
+  }
+}
+
 export function materializePhysicalCodexSurface(
   manifest: AgentPackageManifest,
   dryRun: boolean,
@@ -1300,6 +1357,7 @@ export function materializePhysicalCodexSurface(
       failure_code: 'agent_package_plugin_manifest_missing',
     });
   }
+  validateProjectedSkillContentClosure(manifest, materializationSourcePath);
   const materializedRequiredSkills = validateMaterializedRequiredSkills(manifest, materializationSourcePath);
 
   let profileMigration = noPackageProfileMigration('Package profile materialization has not run.');
@@ -1518,12 +1576,11 @@ function payloadSourceRefs(index: AgentPackageLockIndex) {
     : []));
 }
 
-function developerPluginCacheRefs(index: AgentPackageLockIndex) {
+function pluginCacheRefs(index: AgentPackageLockIndex) {
   return new Set([
     ...index.packages,
     ...(index.last_known_good_transactions ?? []).flatMap((entry) => entry.package_locks),
-  ].flatMap((lock) => lock.source_kind === 'developer_checkout_override'
-    && lock.physical_surface?.codex_plugin_cache_path
+  ].flatMap((lock) => lock.physical_surface?.codex_plugin_cache_path
     ? [lock.physical_surface.codex_plugin_cache_path]
     : []));
 }
@@ -1544,10 +1601,10 @@ export function cleanupUnreferencedPackagePayloadSources(
       });
     }
   }
-  const retainedDeveloperCaches = developerPluginCacheRefs(current);
+  const retainedPluginCaches = pluginCacheRefs(current);
   const cacheRoot = path.resolve(resolveCodexHome(), 'plugins', 'cache');
-  for (const cachePath of developerPluginCacheRefs(previous)) {
-    if (!retainedDeveloperCaches.has(cachePath)) {
+  for (const cachePath of pluginCacheRefs(previous)) {
+    if (!retainedPluginCaches.has(cachePath)) {
       makeGenerationTreeWritable(cachePath);
       removeSafePersistedPackagePath({
         candidatePath: cachePath,
@@ -1572,7 +1629,8 @@ export function rematerializePhysicalCodexSurfaceFromLock(
   dryRun: boolean,
   options: Omit<PhysicalMaterializationOptions, 'keepMigrationIds'> = {},
 ): AgentPackagePhysicalSurface {
-  if (!lock.physical_surface?.plugin_source_path || !lock.physical_surface.plugin_id) {
+  const installedSourcePath = assertInstalledPackagePluginSource(lock);
+  if (!installedSourcePath || !lock.physical_surface?.plugin_id) {
     return {
       surface_kind: 'opl_agent_package_physical_codex_surface',
       status: 'not_requested',
@@ -1608,14 +1666,10 @@ export function rematerializePhysicalCodexSurfaceFromLock(
 
   const recordedCachePath = lock.physical_surface.codex_plugin_cache_path;
   const developerCache = lock.source_kind === 'developer_checkout_override';
-  const reuseExistingPluginCache = Boolean(recordedCachePath && fs.existsSync(recordedCachePath));
-  if (developerCache && !reuseExistingPluginCache) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Developer checkout rollback requires its retained LKG cache.', {
-      package_id: lock.package_id,
-      codex_plugin_cache_path: recordedCachePath ?? null,
-      failure_code: 'agent_package_developer_checkout_lkg_unavailable',
-    });
-  }
+  const reuseExistingPluginCache = Boolean(recordedCachePath);
+  const contentLockCanonicalization = developerCache
+    ? null
+    : installedPackageContentLockCanonicalization(lock, installedSourcePath);
   const materialized = materializePhysicalCodexSurface({
     package_id: lock.package_id,
     agent_id: lock.agent_id,
@@ -1642,7 +1696,7 @@ export function rematerializePhysicalCodexSurfaceFromLock(
     required_skill_ids: lock.bundled_required_skill_ids,
     optional_skill_refs: lock.optional_skill_refs,
     plugin_id: lock.physical_surface.plugin_id,
-    plugin_source_path: lock.physical_surface.plugin_source_path,
+    plugin_source_path: lock.physical_surface.plugin_source_path ?? installedSourcePath,
     plugin_payload_manifest_url: lock.physical_surface.plugin_payload_manifest_url,
     plugin_payload_manifest_sha256: lock.physical_surface.plugin_payload_manifest_sha256,
     plugin_payload_cache_path: lock.physical_surface.plugin_payload_cache_path,
@@ -1653,7 +1707,7 @@ export function rematerializePhysicalCodexSurfaceFromLock(
     capability_dependencies: lock.capability_dependencies ?? [],
     capability_provider: lock.capability_provider ?? null,
     content_digest: lock.content_digest ?? null,
-    content_lock_canonicalization: null,
+    content_lock_canonicalization: contentLockCanonicalization,
     content_lock_paths: lock.content_lock_paths ?? [],
     developer_checkout_source: lock.developer_checkout_source ?? null,
   }, dryRun, {

@@ -10,6 +10,7 @@ import {
   assertSafePersistedPackagePath,
   removeSafePersistedPackagePath,
 } from './persisted-path-safety.ts';
+import { assertInstalledPackagePluginSource } from './installed-plugin-source.ts';
 import { sha256Text } from './shared.ts';
 import type {
   AgentPackageLock,
@@ -43,10 +44,7 @@ function safeSkillId(value: string) {
 }
 
 function pluginSourceRoot(lock: AgentPackageLock) {
-  const physical = lock.physical_surface;
-  const root = lock.source_kind === 'developer_checkout_override'
-    ? physical?.codex_plugin_cache_path ?? physical?.plugin_source_path
-    : physical?.plugin_source_path ?? physical?.codex_plugin_cache_path;
+  const root = assertInstalledPackagePluginSource(lock);
   if (!root || !path.isAbsolute(root)) {
     throw new FrameworkContractError(
       'contract_shape_invalid',

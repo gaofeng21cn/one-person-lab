@@ -12,8 +12,15 @@ import {
   scopeMaterializationReadiness,
 } from '../../src/modules/connect/agent-package-registry-parts/scope-materialization.ts';
 import {
+  cleanupUnreferencedPackagePayloadSources,
+} from '../../src/modules/connect/agent-package-registry-parts/physical-surface.ts';
+import {
   materializeAgentPackageSkillProjection,
 } from '../../src/modules/connect/agent-package-registry-parts/skill-projection.ts';
+import {
+  assertInstalledPackagePluginSource,
+  installedPackagePluginSourcePath,
+} from '../../src/modules/connect/agent-package-registry-parts/installed-plugin-source.ts';
 import { hostAttemptSkillRuntime } from '../../src/modules/runway/family-runtime-attempt-skill-projection.ts';
 import { createFakeCodexFixture } from './cli/helpers.ts';
 import { runPublicCodexStageRunner } from './family-runtime-codex-stage-runner-helpers.ts';
@@ -21,6 +28,7 @@ import type {
   AgentPackageLock,
   AgentPackageLockIndex,
   AgentPackageManagedPolicyCurrentness,
+  AgentPackageSourceKind,
 } from '../../src/modules/connect/agent-package-registry-parts/types.ts';
 
 function carrierLock() {
@@ -223,11 +231,102 @@ function makeTreeWritable(root: string) {
   }
 }
 
+test('installed package source selection is cache-first for every source kind and legacy-compatible', () => {
+  const sourceKinds: AgentPackageSourceKind[] = [
+    'first_party_managed_cohort',
+    'bundled_full_runtime_modules',
+    'local_manifest_file',
+    'manifest_url',
+    'manifest_import',
+    'developer_checkout_override',
+  ];
+  for (const sourceKind of sourceKinds) {
+    const lock = {
+      source_kind: sourceKind,
+      physical_surface: {
+        plugin_source_path: `/tmp/${sourceKind}-transient`,
+        codex_plugin_cache_path: `/cache/${sourceKind}-immutable`,
+      },
+    } as unknown as AgentPackageLock;
+    assert.equal(
+      installedPackagePluginSourcePath(lock),
+      `/cache/${sourceKind}-immutable`,
+      sourceKind,
+    );
+    lock.physical_surface!.codex_plugin_cache_path = null;
+    assert.equal(
+      installedPackagePluginSourcePath(lock),
+      `/tmp/${sourceKind}-transient`,
+      `${sourceKind} legacy lock`,
+    );
+  }
+});
+
+test('installed package cache selection rejects paths outside the managed Codex cache', () => {
+  const outsideCache = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-outside-cache-'));
+  try {
+    assert.throws(() => assertInstalledPackagePluginSource({
+      package_id: 'fixture-outside-cache',
+      source_kind: 'first_party_managed_cohort',
+      physical_surface: {
+        plugin_source_path: outsideCache,
+        codex_plugin_cache_path: outsideCache,
+      },
+    } as unknown as AgentPackageLock), (error: any) =>
+      error?.details?.failure_code === 'agent_package_persisted_path_unsafe');
+  } finally {
+    fs.rmSync(outsideCache, { recursive: true, force: true });
+  }
+});
+
+test('package cache cleanup preserves referenced generations and removes retired LKG bytes', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-cache-cleanup-'));
+  const codexHome = path.join(fixtureRoot, 'codex-home');
+  const stateRoot = path.join(fixtureRoot, 'state');
+  const cacheRoot = path.join(codexHome, 'plugins', 'cache', 'fixture', 'fixture');
+  const currentCache = path.join(cacheRoot, 'current');
+  const retiredCache = path.join(cacheRoot, 'retired');
+  const previousCodexHome = process.env.CODEX_HOME;
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  try {
+    fs.mkdirSync(currentCache, { recursive: true });
+    fs.mkdirSync(retiredCache, { recursive: true });
+    process.env.CODEX_HOME = codexHome;
+    process.env.OPL_STATE_DIR = stateRoot;
+    const lock = (packageId: string, cachePath: string) => ({
+      package_id: packageId,
+      physical_surface: { codex_plugin_cache_path: cachePath },
+    } as unknown as AgentPackageLock);
+    cleanupUnreferencedPackagePayloadSources({
+      packages: [lock('fixture-current', currentCache)],
+      last_known_good_transactions: [{
+        root_package_id: 'fixture-current',
+        transaction_id: 'retired',
+        closure_digest: 'retired',
+        package_locks: [lock('fixture-retired', retiredCache)],
+      }],
+    } as AgentPackageLockIndex, {
+      packages: [lock('fixture-current', currentCache)],
+      last_known_good_transactions: [],
+    } as unknown as AgentPackageLockIndex);
+    assert.equal(fs.existsSync(currentCache), true);
+    assert.equal(fs.existsSync(retiredCache), false);
+  } finally {
+    if (previousCodexHome === undefined) delete process.env.CODEX_HOME;
+    else process.env.CODEX_HOME = previousCodexHome;
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('package use materializes one immutable root and specialist Skill generation for Codex', () => {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-skill-projection-'));
   const stateRoot = path.join(fixtureRoot, 'state');
-  const rootPlugin = path.join(fixtureRoot, 'root-plugin');
-  const providerPlugin = path.join(fixtureRoot, 'provider-plugin');
+  const codexHome = path.join(fixtureRoot, 'real-codex-home');
+  const pluginCacheRoot = path.join(codexHome, 'plugins', 'cache');
+  const rootPlugin = path.join(pluginCacheRoot, 'fixture-root', 'fixture-agent', 'generation-one');
+  const providerPlugin = path.join(pluginCacheRoot, 'fixture-provider', 'fixture-provider', 'generation-one');
   const previousStateDir = process.env.OPL_STATE_DIR;
   const previousCodexHome = process.env.CODEX_HOME;
   const previousHome = process.env.HOME;
@@ -251,19 +350,25 @@ test('package use materializes one immutable root and specialist Skill generatio
     }
     process.env.OPL_STATE_DIR = stateRoot;
     process.env.HOME = path.join(fixtureRoot, 'real-home');
-    process.env.CODEX_HOME = path.join(fixtureRoot, 'real-codex-home');
+    process.env.CODEX_HOME = codexHome;
     const rootLock = {
       package_id: 'fixture-agent-package',
       lock_ref: 'opl://agent-package/fixture-agent-package/generation-one',
       source_kind: 'first_party_managed_cohort',
       bundled_required_skill_ids: ['fixture-agent'],
-      physical_surface: { plugin_source_path: rootPlugin },
+      physical_surface: {
+        plugin_source_path: path.join(fixtureRoot, 'removed-root-source'),
+        codex_plugin_cache_path: rootPlugin,
+      },
     } as unknown as AgentPackageLock;
     const providerLock = {
       package_id: 'fixture-provider-package',
       lock_ref: 'opl://agent-package/fixture-provider-package/generation-one',
       source_kind: 'first_party_managed_cohort',
-      physical_surface: { plugin_source_path: providerPlugin },
+      physical_surface: {
+        plugin_source_path: path.join(fixtureRoot, 'removed-provider-source'),
+        codex_plugin_cache_path: providerPlugin,
+      },
       capability_provider: {
         exports: [
           { skill_id: 'fixture-core', install_mode: 'core_required' },

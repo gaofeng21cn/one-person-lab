@@ -3,6 +3,7 @@ import {
   formatJsonPayload,
   fs,
   os,
+  parseJsonText,
   path,
   removeFixtureTree,
   runCli,
@@ -254,10 +255,14 @@ test('MAS dependency closure update and rollback atomically rematerialize known 
   const secondWorkspace = path.join(root, 'workspace-two');
   fs.mkdirSync(workspace, { recursive: true });
   fs.mkdirSync(secondWorkspace, { recursive: true });
-  const providerV1 = writeFixtureCapabilityProvider(path.join(root, 'provider-v1'), '0.1.0');
-  const consumerV1 = writeFixtureMasConsumer(path.join(root, 'consumer-v1'), providerV1, '0.1.0a4');
-  const providerV2 = writeFixtureCapabilityProvider(path.join(root, 'provider-v2'), '0.1.1');
-  const consumerV2 = writeFixtureMasConsumer(path.join(root, 'consumer-v2'), providerV2, '0.1.0');
+  const providerV1Root = path.join(root, 'provider-v1');
+  const consumerV1Root = path.join(root, 'consumer-v1');
+  const providerV2Root = path.join(root, 'provider-v2');
+  const consumerV2Root = path.join(root, 'consumer-v2');
+  const providerV1 = writeFixtureCapabilityProvider(providerV1Root, '0.1.0');
+  const consumerV1 = writeFixtureMasConsumer(consumerV1Root, providerV1, '0.1.0a4');
+  const providerV2 = writeFixtureCapabilityProvider(providerV2Root, '0.1.1');
+  const consumerV2 = writeFixtureMasConsumer(consumerV2Root, providerV2, '0.1.0');
   const env = { OPL_STATE_DIR: stateDir, CODEX_HOME: codexHome };
   const helperPath = path.join(workspace, '.codex', 'skills', 'medical-manuscript-writing', 'helper.txt');
   try {
@@ -293,6 +298,22 @@ test('MAS dependency closure update and rollback atomically rematerialize known 
     ], env) as any;
     assert.equal(secondUpdatedStatus.opl_agent_package_status.materialization_readiness.status, 'current');
 
+    const beforeRollbackIndex = parseJsonText(fs.readFileSync(
+      path.join(stateDir, 'agent-package-locks.json'),
+      'utf8',
+    )) as any;
+    const rollbackGeneration = beforeRollbackIndex.last_known_good_transactions.find(
+      (entry: any) => entry.root_package_id === FIXTURE_CONSUMER_PACKAGE_ID,
+    );
+    assert.ok(rollbackGeneration);
+    for (const packageLock of rollbackGeneration.package_locks) {
+      assert.ok(packageLock.physical_surface.codex_plugin_cache_path);
+      assert.equal(fs.existsSync(packageLock.physical_surface.codex_plugin_cache_path), true);
+    }
+    for (const transientRoot of [providerV1Root, consumerV1Root, providerV2Root, consumerV2Root]) {
+      fs.rmSync(transientRoot, { recursive: true, force: true });
+    }
+
     const rolledBack = runCli(['packages', 'rollback', FIXTURE_CONSUMER_PACKAGE_ID], env) as any;
     assert.equal(rolledBack.opl_agent_package_rollback.status, 'rolled_back');
     assert.deepEqual(
@@ -300,6 +321,15 @@ test('MAS dependency closure update and rollback atomically rematerialize known 
         .map((entry: any) => `${entry.package_id}@${entry.package_version}`).sort(),
       [`${FIXTURE_PROVIDER_PACKAGE_ID}@0.1.0`, `${FIXTURE_CONSUMER_PACKAGE_ID}@0.1.0-alpha.4`],
     );
+    for (const packageLock of rolledBack.opl_agent_package_rollback.dependency_package_locks) {
+      const generationLock = rollbackGeneration.package_locks.find(
+        (entry: any) => entry.package_id === packageLock.package_id,
+      );
+      assert.equal(
+        packageLock.physical_surface.codex_plugin_cache_path,
+        generationLock.physical_surface.codex_plugin_cache_path,
+      );
+    }
     assert.match(fs.readFileSync(helperPath, 'utf8'), /0\.1\.0/);
     const rollbackStatus = runCli([
       'packages', 'status', '--package-id', FIXTURE_CONSUMER_PACKAGE_ID,
@@ -313,6 +343,18 @@ test('MAS dependency closure update and rollback atomically rematerialize known 
     ], env) as any;
     assert.equal(secondRollbackStatus.opl_agent_package_status.materialization_readiness.status, 'current');
     assert.equal(secondRollbackStatus.opl_agent_package_status.operational_ready, true);
+    const afterRollbackIndex = parseJsonText(fs.readFileSync(
+      path.join(stateDir, 'agent-package-locks.json'),
+      'utf8',
+    )) as any;
+    const updatedGeneration = afterRollbackIndex.last_known_good_transactions.find(
+      (entry: any) => entry.root_package_id === FIXTURE_CONSUMER_PACKAGE_ID
+        && entry.package_locks.some((packageLock: any) => packageLock.package_version === '0.1.1'),
+    );
+    assert.ok(updatedGeneration);
+    for (const packageLock of updatedGeneration.package_locks) {
+      assert.equal(fs.existsSync(packageLock.physical_surface.codex_plugin_cache_path), true);
+    }
   } finally {
     removeFixtureTree(root);
   }
@@ -350,7 +392,7 @@ test('installed-source optimize records dependency and scope transactions and ro
     );
     assert.equal(optimization.scope_materializations.length, 1);
     assert.equal(optimization.lifecycle_receipt.scope_materializations.length, 1);
-    assert.equal(fs.readFileSync(helperPath, 'utf8'), 'optimized installed source helper\n');
+    assert.equal(fs.readFileSync(helperPath, 'utf8'), originalHelper);
     const transactionRoot = path.join(
       workspace,
       '.codex',
@@ -358,6 +400,9 @@ test('installed-source optimize records dependency and scope transactions and ro
       optimization.scope_materializations[0].transaction_id,
     );
     assert.equal(fs.existsSync(transactionRoot), true);
+
+    fs.rmSync(providerRoot, { recursive: true, force: true });
+    fs.rmSync(path.join(root, 'consumer'), { recursive: true, force: true });
 
     const rolledBack = runCli(['packages', 'rollback', FIXTURE_CONSUMER_PACKAGE_ID], env) as any;
     const rollback = rolledBack.opl_agent_package_rollback;
@@ -610,7 +655,8 @@ test('multi-provider scope readiness checks every provider and activation compen
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-multi-provider-scope-'));
   const workspace = path.join(root, 'workspace');
   const failedWorkspace = path.join(root, 'failed-workspace');
-  const providerA = writeFixtureCapabilityProvider(path.join(root, 'provider-a'), '0.1.0', {
+  const providerARoot = path.join(root, 'provider-a');
+  const providerA = writeFixtureCapabilityProvider(providerARoot, '0.1.0', {
     packageId: 'capability-provider-a',
     capabilityAbi: 'capability-provider-a.v1',
     coreSkillIds: ['provider-a-skill'],
@@ -646,7 +692,21 @@ test('multi-provider scope readiness checks every provider and activation compen
     fs.mkdirSync(workspace, { recursive: true });
     fs.mkdirSync(failedWorkspace, { recursive: true });
     await runCliAsync(['packages', 'install', '--manifest-url', consumer, '--trust-tier', 'first_party'], env);
+    const lockIndex = parseJsonText(fs.readFileSync(
+      path.join(env.OPL_STATE_DIR, 'agent-package-locks.json'),
+      'utf8',
+    )) as any;
+    const providerBLock = lockIndex.packages.find(
+      (entry: any) => entry.package_id === 'capability-provider-b',
+    );
+    assert.ok(providerBLock.physical_surface.codex_plugin_cache_path);
+    fs.rmSync(providerARoot, { recursive: true, force: true });
+    fs.rmSync(providerBRoot, { recursive: true, force: true });
     runCli(['packages', 'activate', FIXTURE_CONSUMER_PACKAGE_ID, '--scope', 'workspace', '--target-workspace', workspace], env);
+    assert.equal(
+      fs.readFileSync(path.join(workspace, '.codex', 'skills', 'provider-b-skill', 'helper.txt'), 'utf8'),
+      'provider-b-skill helper 0.1.0\n',
+    );
     fs.rmSync(path.join(workspace, '.codex', 'skills', 'provider-b-skill'), { recursive: true, force: true });
     const degraded = runCli([
       'packages', 'status', '--package-id', FIXTURE_CONSUMER_PACKAGE_ID, '--scope', 'workspace', '--target-workspace', workspace,
@@ -654,11 +714,27 @@ test('multi-provider scope readiness checks every provider and activation compen
     assert.equal(degraded.materialization_readiness.status, 'missing');
     assert.equal(degraded.launch_allowed, false);
 
-    fs.rmSync(path.join(providerBRoot, 'skills', 'provider-b-skill', 'SKILL.md'), { force: true });
+    const providerBCacheSkill = path.join(
+      providerBLock.physical_surface.codex_plugin_cache_path,
+      'skills',
+      'provider-b-skill',
+    );
+    fs.writeFileSync(path.join(providerBCacheSkill, 'injected.txt'), 'not content locked\n');
+    const unexpectedCacheFailure = runCliFailure([
+      'packages', 'activate', FIXTURE_CONSUMER_PACKAGE_ID, '--scope', 'workspace', '--target-workspace', failedWorkspace,
+    ], env);
+    assert.equal(
+      unexpectedCacheFailure.payload.error.details.failure_code,
+      'agent_package_skill_content_lock_incomplete',
+    );
+    assert.equal(fs.existsSync(path.join(failedWorkspace, '.codex', 'skills', 'provider-a-skill')), false);
+    fs.rmSync(path.join(providerBCacheSkill, 'injected.txt'), { force: true });
+
+    fs.rmSync(path.join(providerBCacheSkill, 'SKILL.md'), { force: true });
     const failure = runCliFailure([
       'packages', 'activate', FIXTURE_CONSUMER_PACKAGE_ID, '--scope', 'workspace', '--target-workspace', failedWorkspace,
     ], env);
-    assert.equal(failure.payload.error.details.failure_code, 'agent_package_scope_core_skill_missing');
+    assert.equal(failure.payload.error.details.failure_code, 'capability_package_content_lock_path_missing');
     assert.equal(fs.existsSync(path.join(failedWorkspace, '.codex', 'skills', 'provider-a-skill')), false);
   } finally {
     removeFixtureTree(root);

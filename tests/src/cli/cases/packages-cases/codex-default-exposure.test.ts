@@ -10,7 +10,14 @@ import { admitMasWorkspaceScopedPackageMutation } from '../../../../../src/entry
 import { parseJsonText } from '../../../../../src/kernel/json-file.ts';
 import { buildLock } from '../../../../../src/modules/connect/agent-package-registry-parts/lifecycle-lock.ts';
 import { normalizePackageManifest } from '../../../../../src/modules/connect/agent-package-registry-parts/manifest-normalizers.ts';
-import { materializePhysicalCodexSurface } from '../../../../../src/modules/connect/agent-package-registry-parts/physical-surface.ts';
+import {
+  materializePhysicalCodexSurface,
+  rematerializePhysicalCodexSurfaceFromLock,
+} from '../../../../../src/modules/connect/agent-package-registry-parts/physical-surface.ts';
+import {
+  CANONICAL_PACKAGE_CONTENT_LOCK,
+  packageContentLockDigest,
+} from '../../../../../src/modules/connect/agent-package-registry-parts/payload-content-lock.ts';
 import { materializeCapabilityScopeFromLock } from '../../../../../src/modules/connect/agent-package-registry-parts/scope-materialization.ts';
 import { writeCapabilityProvider } from './capability-fixtures.ts';
 
@@ -92,6 +99,16 @@ test('hidden capability packages keep immutable cache but leave global Codex sur
   const archivedMasWorkspace = path.join(root, 'archived-mas-workspace');
   const nestedWrongDomainWorkspace = path.join(masWorkspace, 'wrong-domain-workspace');
   const manifestPath = writeCapabilityProvider(providerRoot);
+  const providerPayload = parseJsonText(fs.readFileSync(manifestPath, 'utf8')) as any;
+  providerPayload.content_lock.canonicalization = CANONICAL_PACKAGE_CONTENT_LOCK;
+  providerPayload.content_lock.digest = packageContentLockDigest(
+    CANONICAL_PACKAGE_CONTENT_LOCK,
+    providerPayload.content_lock.paths.map((relativePath: string) => ({
+      path: relativePath,
+      content: fs.readFileSync(path.join(providerRoot, relativePath)),
+    })),
+  );
+  fs.writeFileSync(manifestPath, `${JSON.stringify(providerPayload, null, 2)}\n`);
   const configPath = path.join(codexHome, 'config.toml');
   const canonicalMarketplaceId = 'mas-scholar-skills-local';
   const legacyMarketplaceId = 'opl-agent-mas-scholar-skills-local';
@@ -204,6 +221,12 @@ test('hidden capability packages keep immutable cache but leave global Codex sur
         physicalSurface,
       });
       assert.equal(lock.exposure_state, 'hidden');
+      assert.equal(physicalSurface.plugin_source_path, providerRoot);
+      fs.rmSync(providerRoot, { recursive: true, force: true });
+      const rematerialized = rematerializePhysicalCodexSurfaceFromLock(lock, false, {
+        skipManagedSurfaces: true,
+      });
+      assert.equal(rematerialized.codex_plugin_cache_path, physicalSurface.codex_plugin_cache_path);
 
       for (const command of [
         'packages install',
@@ -318,6 +341,16 @@ test('hidden capability packages keep immutable cache but leave global Codex sur
           'SKILL.md',
         )),
         true,
+      );
+      assert.equal(
+        fs.readFileSync(path.join(
+          masWorkspace,
+          '.codex',
+          'skills',
+          'medical-manuscript-writing',
+          'helper.txt',
+        ), 'utf8'),
+        'medical-manuscript-writing helper 0.1.0\n',
       );
       assert.equal(fs.existsSync(path.join(codexHome, 'skills')), false);
     });

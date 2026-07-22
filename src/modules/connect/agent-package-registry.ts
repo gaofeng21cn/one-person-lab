@@ -891,6 +891,10 @@ async function applyManifestPackageLock(
             surface.plugin_payload_cache_path
             && surface.plugin_payload_cache_path === prepared.previousLock?.physical_surface?.plugin_payload_cache_path,
           ),
+          retainPluginCache: Boolean(
+            surface.codex_plugin_cache_path
+            && surface.codex_plugin_cache_path === prepared.previousLock?.physical_surface?.codex_plugin_cache_path,
+          ),
         });
         rollbackManagedPolicySurface(surface);
         rollbackNewPackageProfileSurface(surface);
@@ -939,7 +943,13 @@ async function applyManifestPackageLock(
       for (const prepared of [...ordered].reverse()) {
         const surface = physicalSurfaces.get(prepared.manifest.package_id);
         if (!surface) continue;
-        removePhysicalCodexSurface(surface, false, prepared.manifest.package_id, { retainPayloadSource: true });
+        removePhysicalCodexSurface(surface, false, prepared.manifest.package_id, {
+          retainPayloadSource: true,
+          retainPluginCache: Boolean(
+            surface.codex_plugin_cache_path
+            && surface.codex_plugin_cache_path === prepared.previousLock?.physical_surface?.codex_plugin_cache_path,
+          ),
+        });
         rollbackManagedPolicySurface(surface);
         rollbackNewPackageProfileSurface(surface);
       }
@@ -1093,6 +1103,11 @@ async function applyManifestPackageLock(
               && nextLock.physical_surface.plugin_payload_cache_path
                 === preparedById.get(nextLock.package_id)?.previousLock?.physical_surface?.plugin_payload_cache_path,
             ),
+            retainPluginCache: Boolean(
+              nextLock.physical_surface?.codex_plugin_cache_path
+              && nextLock.physical_surface.codex_plugin_cache_path
+                === preparedById.get(nextLock.package_id)?.previousLock?.physical_surface?.codex_plugin_cache_path,
+            ),
           });
           rollbackManagedPolicySurface(nextLock.physical_surface);
           rollbackNewPackageProfileSurface(nextLock.physical_surface);
@@ -1223,8 +1238,13 @@ async function applyManifestPackageLock(
         removePhysicalCodexSurface(nextLock.physical_surface, false, nextLock.package_id, {
           retainPayloadSource: Boolean(
             nextLock.physical_surface?.plugin_payload_cache_path
-            && nextLock.physical_surface.plugin_payload_cache_path
-              === preparedById.get(nextLock.package_id)?.previousLock?.physical_surface?.plugin_payload_cache_path,
+              && nextLock.physical_surface.plugin_payload_cache_path
+                === preparedById.get(nextLock.package_id)?.previousLock?.physical_surface?.plugin_payload_cache_path,
+          ),
+          retainPluginCache: Boolean(
+            nextLock.physical_surface?.codex_plugin_cache_path
+            && nextLock.physical_surface.codex_plugin_cache_path
+              === preparedById.get(nextLock.package_id)?.previousLock?.physical_surface?.codex_plugin_cache_path,
           ),
         });
         rollbackManagedPolicySurface(nextLock.physical_surface);
@@ -1276,6 +1296,7 @@ async function applyManifestPackageLock(
         finalizeCapabilityScopeTransaction(scopeMaterialization);
       }
     }
+    cleanupUnreferencedPackagePayloadSources(index, nextIndex);
   }
 
   return {
@@ -2249,7 +2270,7 @@ function runOplAgentPackageRollbackUnlocked(input: AgentPackagePackageActionInpu
             currentLock.physical_surface,
             false,
             currentLock.package_id,
-            { retainPayloadSource: true },
+            { retainPayloadSource: true, retainPluginCache: true },
           );
           if (!restoredIds.has(currentLock.package_id)) {
             retainedPolicyRollbacks.push(rollbackManagedPolicyMigration(
@@ -2297,7 +2318,10 @@ function runOplAgentPackageRollbackUnlocked(input: AgentPackagePackageActionInpu
           assertPackageProfileRollbackReady(surface.profile_migration);
         }
         for (const [restoredPackageId, surface] of [...restoredPhysicalSurfaces.entries()].reverse()) {
-          removePhysicalCodexSurface(surface, false, restoredPackageId, { retainPayloadSource: true });
+          removePhysicalCodexSurface(surface, false, restoredPackageId, {
+            retainPayloadSource: true,
+            retainPluginCache: true,
+          });
           rollbackManagedPolicyMigration(surface.workflow_policy_migration);
           rollbackPackageProfileMigration(surface.profile_migration);
         }
@@ -2453,7 +2477,7 @@ function runOplAgentPackageRollbackUnlocked(input: AgentPackagePackageActionInpu
           currentLock.physical_surface,
           false,
           currentLock.package_id,
-          { retainPayloadSource: true },
+          { retainPayloadSource: true, retainPluginCache: true },
         );
       }
       for (const restoredLock of restoredLocks) {
@@ -2493,7 +2517,10 @@ function runOplAgentPackageRollbackUnlocked(input: AgentPackagePackageActionInpu
       }
       for (const materialization of scopeMaterializations) rollbackCapabilityScopeTransaction(materialization);
       for (const [restoredPackageId, surface] of [...restoredPhysicalSurfaces.entries()].reverse()) {
-        removePhysicalCodexSurface(surface, false, restoredPackageId, { retainPayloadSource: true });
+        removePhysicalCodexSurface(surface, false, restoredPackageId, {
+          retainPayloadSource: true,
+          retainPluginCache: true,
+        });
         rollbackManagedPolicyMigration(surface.workflow_policy_migration);
         rollbackPackageProfileMigration(surface.profile_migration);
       }
@@ -3282,7 +3309,7 @@ function runOplAgentPackageUninstallUnlocked(input: AgentPackagePackageActionInp
     lock.physical_surface,
     input.dryRun === true,
     packageId,
-    { retainPayloadSource: true },
+    { retainPayloadSource: true, retainPluginCache: true },
   );
   let runtimeSourceMutation: ReturnType<typeof removeManagedRuntimeSourceCarrier>;
   try {
@@ -3342,10 +3369,13 @@ function runOplAgentPackageUninstallUnlocked(input: AgentPackagePackageActionInp
     }
     runtimeSourceCleanup = finalizeManagedRuntimeSourceMutation(runtimeSourceMutation);
     cleanupUnreferencedPackagePayloadSources(index, nextIndex);
-    const payloadSource = lock.physical_surface?.plugin_payload_cache_path;
-    if (payloadSource && !fs.existsSync(payloadSource)) {
-      physicalSurface.removed_paths = [...new Set([...physicalSurface.removed_paths, payloadSource])];
-    }
+    const committedCleanupPaths = [
+      lock.physical_surface?.plugin_payload_cache_path,
+      lock.physical_surface?.codex_plugin_cache_path,
+    ].filter((candidate): candidate is string => Boolean(candidate && !fs.existsSync(candidate)));
+    physicalSurface.removed_paths = [
+      ...new Set([...physicalSurface.removed_paths, ...committedCleanupPaths]),
+    ];
   }
   return {
     version: 'g2',

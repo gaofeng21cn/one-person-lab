@@ -8,7 +8,9 @@ import {
   lifecycleReceipt,
   packageActionSourceSha256,
 } from './lifecycle-lock.ts';
+import { assertInstalledPackagePluginSource } from './installed-plugin-source.ts';
 import {
+  cleanupUnreferencedPackagePayloadSources,
   removePhysicalCodexSurface,
   rematerializePhysicalCodexSurfaceFromLock,
   rollbackManagedPolicySurface,
@@ -88,14 +90,15 @@ function assertInstalledPhysicalSources(locks: AgentPackageLock[]) {
     );
   }
   for (const lock of physicalLocks) {
-    const sourcePath = lock.physical_surface?.plugin_source_path;
+    const sourcePath = assertInstalledPackagePluginSource(lock);
     if (!sourcePath || !fs.existsSync(sourcePath) || !fs.statSync(sourcePath).isDirectory()) {
       throw new FrameworkContractError(
         'contract_shape_invalid',
         'Installed package optimization requires its locked local source directory.',
         {
           package_id: lock.package_id,
-          plugin_source_path: sourcePath ?? null,
+          plugin_source_path: lock.physical_surface?.plugin_source_path ?? null,
+          codex_plugin_cache_path: lock.physical_surface?.codex_plugin_cache_path ?? null,
           failure_code: 'agent_package_optimize_installed_source_missing',
           repair_command: `opl packages repair --package-id ${lock.package_id}`,
         },
@@ -122,7 +125,10 @@ function rollbackOptimizedPhysicalSurface(
   next: AgentPackagePhysicalSurface,
   previous: AgentPackageLock,
 ) {
-  removePhysicalCodexSurface(next, false, previous.package_id, { retainPayloadSource: true });
+  removePhysicalCodexSurface(next, false, previous.package_id, {
+    retainPayloadSource: true,
+    retainPluginCache: true,
+  });
   rollbackManagedPolicySurface(next);
   rollbackNewPackageProfileSurface(next);
   restorePreviousPhysicalSurface(previous);
@@ -308,6 +314,7 @@ export function optimizeInstalledPackageSource(input: {
       rollbackOptimizedPhysicalSurface(physicalSurface, input.root);
       throw error;
     }
+    cleanupUnreferencedPackagePayloadSources(input.index, nextIndex);
   }
 
   return {
@@ -366,6 +373,7 @@ function compensateOptimizationRollback(input: {
   if (input.restoredSurface) {
     removePhysicalCodexSurface(input.restoredSurface, false, input.currentRoot.package_id, {
       retainPayloadSource: true,
+      retainPluginCache: true,
     });
   }
   const compensationSurface = rematerializePhysicalCodexSurfaceFromLock(input.currentRoot, false, {
@@ -508,6 +516,7 @@ export function rollbackInstalledPackageOptimization(input: {
       }
       removePhysicalCodexSurface(input.root.physical_surface, false, input.root.package_id, {
         retainPayloadSource: true,
+        retainPluginCache: true,
       });
       restoredSurface = restorePreviousPhysicalSurface(restoredRoot);
       restoredRoot.physical_surface = restoredSurface;

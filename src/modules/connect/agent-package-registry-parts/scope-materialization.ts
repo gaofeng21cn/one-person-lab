@@ -2,7 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
+import { assertInstalledPackagePluginSource } from './installed-plugin-source.ts';
 import { packageRoleFromInstalledLock } from './package-role.ts';
+import { assertDeveloperCheckoutPluginCacheGeneration } from './physical-surface.ts';
 import {
   assertSafePersistedPackagePath,
   removeSafePersistedPackagePath,
@@ -510,6 +512,25 @@ export function materializeCapabilityScopeFromLock(input: {
   retainTransactionBackup?: boolean;
   previousMaterialization?: AgentPackageScopeMaterialization | null;
 }) {
+  const pluginSourcePath = assertInstalledPackagePluginSource(input.provider);
+  if (input.provider.source_kind === 'developer_checkout_override') {
+    if (!pluginSourcePath || !input.provider.developer_checkout_source) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Developer package scope materialization requires its captured immutable source.',
+        {
+          package_id: input.provider.package_id,
+          package_lock_ref: input.provider.lock_ref,
+          failure_code: 'agent_package_scope_provider_source_invalid',
+        },
+      );
+    }
+    assertDeveloperCheckoutPluginCacheGeneration({
+      packageId: input.provider.package_id,
+      cachePath: pluginSourcePath,
+      source: input.provider.developer_checkout_source,
+    });
+  }
   return materializeCapabilityScope({
     ...input,
     providerLockRef: input.provider.lock_ref,
@@ -538,11 +559,7 @@ export function materializeCapabilityScopeFromLock(input: {
       required_skill_ids: input.provider.bundled_required_skill_ids,
       optional_skill_refs: input.provider.optional_skill_refs,
       plugin_id: input.provider.physical_surface?.plugin_id ?? null,
-      plugin_source_path: input.provider.source_kind === 'developer_checkout_override'
-        ? input.provider.physical_surface?.codex_plugin_cache_path
-          ?? input.provider.physical_surface?.plugin_source_path
-          ?? null
-        : input.provider.physical_surface?.plugin_source_path ?? null,
+      plugin_source_path: pluginSourcePath,
       plugin_payload_manifest_url: input.provider.physical_surface?.plugin_payload_manifest_url ?? null,
       plugin_payload_manifest_sha256: input.provider.physical_surface?.plugin_payload_manifest_sha256 ?? null,
       plugin_payload_cache_path: input.provider.physical_surface?.plugin_payload_cache_path ?? null,
