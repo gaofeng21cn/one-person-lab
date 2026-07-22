@@ -8,6 +8,14 @@ export const OPL_RUNWAY_SOURCE_MODULE = {
 export { buildEvidenceGroundedRunwayProfilePolicyReadback } from './evidence-grounded-decision-agent-profile.ts';
 export { buildFamilyRuntimeControlledApplyContract } from './family-runtime-controlled-apply.ts';
 export { buildFamilyRuntimeLifecyclePrimitives } from './family-runtime-lifecycle.ts';
+export {
+  assertDomainArtifactCasReadWindowStable,
+  observeDomainArtifactCasMaterialization,
+} from './domain-artifact-cas-materialization.ts';
+export type {
+  DomainArtifactCasMaterializationReadObservation,
+  DomainArtifactCasReadWindowGuard,
+} from './domain-artifact-cas-materialization.ts';
 export { buildModelRouteCostProjection, buildStageAttemptUsageProjection } from './family-runtime-stage-attempt-usage.ts';
 export {
   executorUsageObservationFromCostSummary,

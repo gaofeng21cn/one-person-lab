@@ -6,7 +6,7 @@ import {
   assertDomainArtifactCasReadWindowStable,
   observeDomainArtifactCasMaterialization,
   type DomainArtifactCasReadWindowGuard,
-} from '../runway/domain-artifact-cas-materialization.ts';
+} from '../runway/index.ts';
 import { buildWorkItemProjectionV2 } from './work-item-projection/projection.ts';
 import type { WorkItemProjectionV2 } from './work-item-projection/types.ts';
 import {
