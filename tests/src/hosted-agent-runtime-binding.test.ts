@@ -192,6 +192,19 @@ function managedCheckout(input: {
   };
 }
 
+function verifiedCarrierAuthority(ownerSourceCommit = '5'.repeat(40)) {
+  return {
+    surface_kind: 'opl_agent_package_carrier_authority.v1',
+    status: 'verified',
+    catalog_ref: 'file:///opt/opl/contracts/bundled-full-runtime-package-catalog.json',
+    catalog_sha256: `sha256:${'6'.repeat(64)}`,
+    catalog_owner_source_commit: ownerSourceCommit,
+    manifest_carrier_source_commit: ownerSourceCommit,
+    payload_source_commit: ownerSourceCommit,
+    verified_source_commit: ownerSourceCommit,
+  };
+}
+
 function createHostedCandidate(input: {
   stateRoot: string;
   targetAgentId: string;
@@ -698,7 +711,7 @@ test('inactive Foundry target falls back to its managed package', async () => {
   }
 });
 
-test('managed package provenance accepts bare carrier digests and progress-first developer checkout', async () => {
+test('managed package provenance accepts only verified bundled null artifacts and developer checkout', async () => {
   const stateRoot = root('opl-hosted-binding-managed-policy-state-');
   const checkoutRoot = root('opl-hosted-binding-managed-policy-checkout-');
   const otherCheckout = root('opl-hosted-binding-managed-policy-other-');
@@ -726,6 +739,79 @@ test('managed package provenance accepts bare carrier digests and progress-first
     assert.equal(snapshot.provenance.package_artifact_digest, null);
     assert.equal(snapshot.provenance.package_source_kind, 'developer_checkout_override');
 
+    const ownerSourceCommit = '5'.repeat(40);
+    const carrierAuthority = verifiedCarrierAuthority(ownerSourceCommit);
+    const bundled = await new DefaultHostedAgentRuntimeBindingResolver({
+      root_override: stateRoot,
+      resolve_managed_checkout: (async () => managedCheckout({
+        checkoutRoot,
+        workspaceRoot,
+        sourceKind: 'bundled_full_runtime_modules',
+        artifactDigest: null,
+        rootOverrides: {
+          owner_source_commit: ownerSourceCommit,
+          carrier_authority: carrierAuthority,
+        },
+      })) as never,
+    }).resolve({ domainId: 'mas', workspaceRoot });
+    assert.equal(bundled.provenance.source_kind, 'managed_package_checkout');
+    if (bundled.provenance.source_kind !== 'managed_package_checkout') assert.fail();
+    assert.equal(bundled.provenance.package_artifact_digest, null);
+    assert.equal(bundled.provenance.package_source_kind, 'bundled_full_runtime_modules');
+    assert.deepEqual(bundled.provenance.package_carrier_authority, carrierAuthority);
+    assert.equal(Object.isFrozen(bundled.provenance.package_carrier_authority), true);
+
+    await assert.rejects(new DefaultHostedAgentRuntimeBindingResolver({
+      root_override: stateRoot,
+      resolve_managed_checkout: (async () => managedCheckout({
+        checkoutRoot,
+        workspaceRoot,
+        sourceKind: 'bundled_full_runtime_modules',
+        artifactDigest: null,
+      })) as never,
+    }).resolve({ domainId: 'mas', workspaceRoot }), /carrier_authority must be an object/i);
+    await assert.rejects(new DefaultHostedAgentRuntimeBindingResolver({
+      root_override: stateRoot,
+      resolve_managed_checkout: (async () => managedCheckout({
+        checkoutRoot,
+        workspaceRoot,
+        sourceKind: 'bundled_full_runtime_modules',
+        artifactDigest: null,
+        rootOverrides: {
+          owner_source_commit: ownerSourceCommit,
+          carrier_authority: { ...carrierAuthority, status: 'unverified' },
+        },
+      })) as never,
+    }).resolve({ domainId: 'mas', workspaceRoot }), /requires verified carrier authority/i);
+    await assert.rejects(new DefaultHostedAgentRuntimeBindingResolver({
+      root_override: stateRoot,
+      resolve_managed_checkout: (async () => managedCheckout({
+        checkoutRoot,
+        workspaceRoot,
+        sourceKind: 'bundled_full_runtime_modules',
+        artifactDigest: null,
+        rootOverrides: {
+          owner_source_commit: ownerSourceCommit,
+          carrier_authority: {
+            ...carrierAuthority,
+            verified_source_commit: '7'.repeat(40),
+          },
+        },
+      })) as never,
+    }).resolve({ domainId: 'mas', workspaceRoot }), /requires verified carrier authority/i);
+    await assert.rejects(new DefaultHostedAgentRuntimeBindingResolver({
+      root_override: stateRoot,
+      resolve_managed_checkout: (async () => managedCheckout({
+        checkoutRoot,
+        workspaceRoot,
+        sourceKind: 'first_party_managed_cohort',
+        artifactDigest: null,
+        rootOverrides: {
+          owner_source_commit: ownerSourceCommit,
+          carrier_authority: carrierAuthority,
+        },
+      })) as never,
+    }).resolve({ domainId: 'mas', workspaceRoot }), /artifact_digest must be a non-empty string/i);
     await assert.rejects(new DefaultHostedAgentRuntimeBindingResolver({
       root_override: stateRoot,
       resolve_managed_checkout: (async () => managedCheckout({

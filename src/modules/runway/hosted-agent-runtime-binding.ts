@@ -28,9 +28,20 @@ const PROVENANCE_VERSION = 'opl-hosted-agent-runtime-binding-provenance.v1' as c
 const VERSION_REGISTRY_EPOCH_VERSION = 'opl-foundry-version-registry.v1' as const;
 const VERSION_REGISTRY_EPOCH_DIRECTORY = 'epoch-v1';
 const VERSION_REGISTRY_EPOCH_MARKER = 'registry-epoch.json';
+const SOURCE_COMMIT_PATTERN = /^[a-f0-9]{40}$/;
 
 type ManagedCheckout = Awaited<ReturnType<typeof resolveStandardAgentManagedCheckout>>;
 type ManagedCheckoutResolver = typeof resolveStandardAgentManagedCheckout;
+type VerifiedPackageCarrierAuthority = Readonly<{
+  surface_kind: 'opl_agent_package_carrier_authority.v1';
+  status: 'verified';
+  catalog_ref: string;
+  catalog_sha256: string;
+  catalog_owner_source_commit: string;
+  manifest_carrier_source_commit: string;
+  payload_source_commit: string;
+  verified_source_commit: string;
+}>;
 
 export type FoundryHostedAgentRuntimeBindingProvenance = {
   surface_kind: 'opl_hosted_agent_runtime_binding_provenance';
@@ -65,6 +76,7 @@ export type PackageHostedAgentRuntimeBindingProvenance = {
   package_artifact_digest: string | null;
   package_dependency_closure_digest?: string;
   package_source_kind?: string;
+  package_carrier_authority?: VerifiedPackageCarrierAuthority;
 };
 
 export type HostedAgentRuntimeBindingProvenance =
@@ -590,6 +602,65 @@ function requiredRecord(value: unknown, field: string) {
   if (!isRecord(value)) fail(`${field} must be an object.`, { field });
   return value;
 }
+
+function verifiedBundledCarrierAuthority(
+  rootPackage: Record<string, unknown>,
+): VerifiedPackageCarrierAuthority {
+  const authority = requiredRecord(rootPackage.carrier_authority, 'root_package.carrier_authority');
+  const ownerSourceCommit = requireString(rootPackage.owner_source_commit, 'root_package.owner_source_commit');
+  const catalogRef = requireString(authority.catalog_ref, 'root_package.carrier_authority.catalog_ref');
+  const catalogSha256 = requireDigest(
+    authority.catalog_sha256,
+    'root_package.carrier_authority.catalog_sha256',
+  );
+  const catalogOwnerSourceCommit = requireString(
+    authority.catalog_owner_source_commit,
+    'root_package.carrier_authority.catalog_owner_source_commit',
+  );
+  const manifestCarrierSourceCommit = requireString(
+    authority.manifest_carrier_source_commit,
+    'root_package.carrier_authority.manifest_carrier_source_commit',
+  );
+  const payloadSourceCommit = requireString(
+    authority.payload_source_commit,
+    'root_package.carrier_authority.payload_source_commit',
+  );
+  const verifiedSourceCommit = requireString(
+    authority.verified_source_commit,
+    'root_package.carrier_authority.verified_source_commit',
+  );
+  const commits = [
+    ownerSourceCommit,
+    catalogOwnerSourceCommit,
+    manifestCarrierSourceCommit,
+    payloadSourceCommit,
+    verifiedSourceCommit,
+  ];
+  if (
+    authority.surface_kind !== 'opl_agent_package_carrier_authority.v1'
+    || authority.status !== 'verified'
+    || commits.some((commit) => !SOURCE_COMMIT_PATTERN.test(commit))
+    || commits.some((commit) => commit !== ownerSourceCommit)
+  ) {
+    fail('Bundled full runtime null artifact provenance requires verified carrier authority.', {
+      package_id: rootPackage.package_id ?? null,
+      owner_source_commit: ownerSourceCommit,
+      carrier_authority_status: authority.status ?? null,
+      carrier_authority_surface_kind: authority.surface_kind ?? null,
+    });
+  }
+  return Object.freeze({
+    surface_kind: 'opl_agent_package_carrier_authority.v1',
+    status: 'verified',
+    catalog_ref: catalogRef,
+    catalog_sha256: catalogSha256,
+    catalog_owner_source_commit: catalogOwnerSourceCommit,
+    manifest_carrier_source_commit: manifestCarrierSourceCommit,
+    payload_source_commit: payloadSourceCommit,
+    verified_source_commit: verifiedSourceCommit,
+  });
+}
+
 function managedPackageProvenance(managed: ManagedCheckout): PackageHostedAgentRuntimeBindingProvenance {
   const packageStatus = requiredRecord(managed.package_status, 'package_status');
   const sourceReadiness = requiredRecord(packageStatus.runtime_source_readiness, 'runtime_source_readiness');
@@ -619,7 +690,12 @@ function managedPackageProvenance(managed: ManagedCheckout): PackageHostedAgentR
   if (!['first_party_managed_cohort', 'bundled_full_runtime_modules', 'local_manifest_file',
     'manifest_url', 'manifest_import', 'developer_checkout_override',
   ].includes(packageSourceKind)) fail('root_package.source_kind is not supported.', { package_source_kind: packageSourceKind });
-  const artifactDigest = rootPackage.artifact_digest === null && packageSourceKind === 'developer_checkout_override'
+  const bundledCarrierAuthority = rootPackage.artifact_digest === null
+    && packageSourceKind === 'bundled_full_runtime_modules'
+    ? verifiedBundledCarrierAuthority(rootPackage)
+    : undefined;
+  const artifactDigest = rootPackage.artifact_digest === null
+    && (packageSourceKind === 'developer_checkout_override' || bundledCarrierAuthority)
     ? null
     : requirePackageDigest(rootPackage.artifact_digest, 'root_package.artifact_digest');
   return {
@@ -638,6 +714,7 @@ function managedPackageProvenance(managed: ManagedCheckout): PackageHostedAgentR
     package_artifact_digest: artifactDigest,
     package_dependency_closure_digest: requirePackageDigest(useBinding.dependency_closure_digest, 'dependency_closure_digest'),
     package_source_kind: packageSourceKind,
+    ...(bundledCarrierAuthority ? { package_carrier_authority: bundledCarrierAuthority } : {}),
   };
 }
 
