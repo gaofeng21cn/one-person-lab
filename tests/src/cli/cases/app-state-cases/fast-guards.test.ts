@@ -1,8 +1,10 @@
 import { DatabaseSync } from 'node:sqlite';
 
 import { buildAppStateRuntimeActivityItems } from '../../../../../src/modules/console/app-state-runtime-activity.ts';
+import { readWorkItemStageAttempts } from '../../../../../src/modules/console/work-item-projection/execution.ts';
 import { createStageAttemptTable } from '../../../../../src/modules/runway/family-runtime-stage-attempt-ledger.ts';
 import { createStageAttempt } from '../../../../../src/modules/runway/family-runtime-stage-attempts.ts';
+import { createWorkItemExecutionScopeSnapshot } from '../../../../../src/modules/workspace/execution-scope.ts';
 import { assert, createFakeCodexFixture, fs, os, path, runCli, runCliFailure, test } from '../../helpers.ts';
 import { assertCurrentOwnerDeltaProjection } from '../owner-payload-workorder-assertions.ts';
 import { writeCurrentOwnerDeltaProjectionCacheFixture } from './fixtures.ts';
@@ -266,7 +268,9 @@ test('app state fast excludes unregistered runtime history from the work-item in
     assert.equal(workbench.work_item_projection_v1.items.length, 0);
     assert.equal(workItemProjectionV2.items.length, 0);
     assert.equal(workItemProjectionV2.summary.work_item_count, 0);
-    assert.equal(workItemProjectionV2.identity_health.non_work_item_execution_count > 0, true);
+    assert.equal(workItemProjectionV2.identity_health.non_work_item_execution_count, 0);
+    assert.equal(workItemProjectionV2.identity_health.execution_count, 0);
+    assert.equal(workItemProjectionV2.summary.active_session_count, 0);
     assert.equal(workItemProjectionV2.diagnostics.detail_policy, 'summary_only');
     assert.deepEqual(workItemProjectionV2.diagnostics.items, []);
     assert.equal(workItemProjectionV2.detail_policy.inventory_detail, 'included');
@@ -293,6 +297,128 @@ test('app state fast excludes unregistered runtime history from the work-item in
     process.env.OPL_STATE_DIR = stateDir;
     assert.equal(buildAppStateRuntimeActivityItems().length, 0);
   } finally {
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('app state fast reads only exact resolved inventory-scoped attempts', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-fast-scope-home-'));
+  const stateDir = path.join(homeRoot, 'opl-state');
+  const queueDb = path.join(stateDir, 'family-runtime', 'queue.sqlite');
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  fs.mkdirSync(path.dirname(queueDb), { recursive: true });
+  const db = new DatabaseSync(queueDb);
+  createStageAttemptTable(db);
+
+  const scope = (id: string) => createWorkItemExecutionScopeSnapshot({
+    projectScopeId: `project:${id}`,
+    workspaceBindingId: `binding:${id}`,
+    domainId: 'medautoscience',
+    workspaceRoot: path.join(homeRoot, id),
+    payload: { work_item_id: id },
+    requirement: { kind: 'work_item', alias_fields: ['work_item_id'] },
+  });
+  const selectedScope = scope('selected');
+  const irrelevantScope = scope('irrelevant');
+
+  try {
+    const seedScopedAttempt = (
+      id: string,
+      executionScope: typeof selectedScope,
+    ) => {
+      db.prepare(`
+        INSERT INTO execution_scopes(
+          scope_digest, scope_kind, project_scope_id, work_item_scope_id, domain_id,
+          workspace_binding_id, binding_version_id, execution_scope_json, identity_state, created_at
+        ) VALUES (?, 'work_item', ?, ?, ?, ?, ?, ?, 'resolved', ?)
+      `).run(
+        executionScope.scope_digest,
+        executionScope.project_scope_id,
+        executionScope.work_item_scope_id,
+        executionScope.domain_id,
+        executionScope.workspace_binding_id,
+        executionScope.binding_version_id,
+        JSON.stringify(executionScope),
+        '2026-07-22T00:00:00.000Z',
+      );
+      db.prepare(`
+        INSERT INTO stage_attempts(
+          stage_attempt_id, idempotency_key, provider_kind, workflow_id, domain_id, stage_id,
+          workspace_locator_json, executor_kind, stage_run_id, scope_kind, project_scope_id,
+          work_item_scope_id, workspace_binding_id, binding_version_id, scope_digest,
+          execution_scope_json, identity_state, status, checkpoint_refs_json, closeout_refs_json,
+          human_gate_refs_json, retry_budget_json, attempt_count, task_id, provider_receipt_json,
+          provider_run_json, activity_events_json, route_impact_json, created_at, updated_at
+        ) VALUES (
+          ?, ?, 'temporal', ?, ?, ?, '{}', 'codex_cli', NULL, 'work_item', ?, ?, ?, ?, ?, ?,
+          'resolved', 'running', '[]', '[]', '[]', '{}', 1, ?, '{}', '{}', '[]', '{}', ?, ?
+        )
+      `).run(
+        id,
+        `idempotency:${id}`,
+        `workflow:${id}`,
+        executionScope.domain_id,
+        `${id}-stage`,
+        executionScope.project_scope_id,
+        executionScope.work_item_scope_id,
+        executionScope.workspace_binding_id,
+        executionScope.binding_version_id,
+        executionScope.scope_digest,
+        JSON.stringify(executionScope),
+        `task:${id}`,
+        '2026-07-22T00:00:00.000Z',
+        '2026-07-22T00:00:00.000Z',
+      );
+      return { stage_attempt_id: id };
+    };
+    const selected = seedScopedAttempt('attempt:selected', selectedScope);
+    const irrelevant = seedScopedAttempt('attempt:irrelevant', irrelevantScope);
+    db.prepare(`
+      UPDATE stage_attempts
+      SET activity_events_json = ?
+      WHERE stage_attempt_id = ?
+    `).run(JSON.stringify([
+      { event: 'unrelated' },
+      {
+        token_usage: { input_tokens: 7, output_tokens: 3, total_tokens: 10 },
+        usage_status: 'observed',
+      },
+    ]), selected.stage_attempt_id);
+    db.prepare(`
+      UPDATE stage_attempts
+      SET activity_events_json = ?
+      WHERE stage_attempt_id = ?
+    `).run('[{"token_usage":', irrelevant.stage_attempt_id);
+    db.close();
+
+    process.env.OPL_STATE_DIR = stateDir;
+    const ledger = readWorkItemStageAttempts({
+      items: [{
+        identity: {
+          domain_id: selectedScope.domain_id,
+          project_scope_id: selectedScope.project_scope_id,
+          work_item_scope_id: selectedScope.work_item_scope_id,
+          workspace_binding_id: selectedScope.workspace_binding_id,
+        },
+      } as any],
+    }, { validateIrrelevantActivityJson: false });
+
+    assert.deepEqual(
+      ledger.attempts.map((attempt) => attempt.stage_attempt_id),
+      [selected.stage_attempt_id],
+    );
+    assert.equal(ledger.diagnostics.length, 0);
+    const activityEvents = ledger.attempts[0]?.activity_events as Array<Record<string, any>>;
+    assert.equal(activityEvents.length, 1);
+    assert.equal(activityEvents[0]?.__opl_compact_source_index, 1);
+    assert.equal(activityEvents[0]?.token_usage.total_tokens, 10);
+  } finally {
+    if (db.isOpen) db.close();
     if (previousStateDir === undefined) {
       delete process.env.OPL_STATE_DIR;
     } else {

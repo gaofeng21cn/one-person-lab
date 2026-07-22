@@ -5,6 +5,7 @@ import test from 'node:test';
 import { parseJsonText } from '../../src/kernel/json-file.ts';
 import { buildPublicAppCommandSpecs } from '../../src/entrypoints/cli/cases/app-public-command-specs.ts';
 import { buildAppRuntimeWorkItemProjection } from '../../src/modules/console/app-runtime-work-item-projection.ts';
+import { APP_RUNTIME_STATE_PROFILE_V1_CAPABILITY_ID } from '../../src/modules/console/app-runtime-state.ts';
 import {
   APP_DOMAIN_DETAIL_VIEWS_V2_CAPABILITY_ID,
   validateAppRuntimeFastWorkItemProjectionContract,
@@ -24,6 +25,21 @@ test('App Runtime fast producer contract keeps summaries complete and diagnostic
     contract.producer_surface,
     'opl app state --profile fast --json#app_state.operator.workbench.work_item_projection_v2',
   );
+  assert.deepEqual(contract.runtime_capability_bridge, {
+    capability_id: APP_RUNTIME_STATE_PROFILE_V1_CAPABILITY_ID,
+    discovery_field: 'app_state.meta.capabilities[]',
+    runtime_state_surface: 'opl app state --profile runtime --json',
+    runtime_projection_surface:
+      'opl app state --profile runtime --json#app_state.operator.workbench.work_item_projection_v2',
+    projection_detail_profile: 'fast',
+    default_state_profile: 'fast',
+    runtime_profile_is_default: false,
+    fast_compatibility_required: true,
+    legacy_consumer_policy: {
+      capability_absent_requires_fast_fallback: true,
+      runtime_command_probe_before_capability_discovery: false,
+    },
+  });
   assert.equal(contract.inventory_policy.all_registered_work_item_summaries_included, true);
   assert.equal(contract.inventory_policy.archived_work_items_included, true);
   assert.equal(contract.inventory_policy.runtime_history_may_create_work_items, false);
@@ -48,12 +64,29 @@ test('App Runtime fast producer contract keeps summaries complete and diagnostic
     unresolved_quarantined_or_conflicting_scope_may_assign_work_item: false,
     diagnostic_details_are_bounded: true,
   });
+  assert.deepEqual(contract.session_activity_policy, {
+    projection_field: 'items[].session_activity',
+    summary_field: 'summary.active_session_count',
+    coordination_source: 'opl_work_item_execution_session_binding_ledger',
+    controlled_execution_source: 'opl_stage_attempt_execution_session_binding',
+    coordination_can_affect_execution: false,
+    controlled_execution_requires_resolved_execution_scope: true,
+    runtime_history_may_create_work_items: false,
+    human_gate_precedence: true,
+    fast_reader_scope: 'registered_inventory_exact_resolved_work_item_scope_only',
+    full_profile_retains_identity_diagnostics: true,
+  });
   assert.equal(contract.bounded_fast_policy.max_serialized_work_item_summary_bytes_per_item, 16_384);
   assert.equal(contract.bounded_fast_policy.current_projection_acceptance_budget_bytes, 131_072);
   assert.equal(contract.bounded_fast_policy.attempt_ref_limit_per_item, 1);
   assert.equal(contract.bounded_fast_policy.diagnostic_items_embedded, false);
   assert.equal(contract.bounded_fast_policy.identity_health_summary_embedded, true);
   assert.equal(contract.bounded_fast_policy.identity_health_sample_attempt_ref_limit, 1);
+  assert.equal(
+    contract.bounded_fast_policy.stage_attempt_read_scope,
+    'registered_inventory_exact_resolved_work_item_scope_only',
+  );
+  assert.equal(contract.bounded_fast_policy.irrelevant_runtime_history_parsed, false);
   assert.equal(contract.bounded_fast_policy.unresolved_execution_details_embedded, false);
   assert.equal(contract.bounded_fast_policy.condition_details_embedded, false);
   assert.equal(contract.bounded_fast_policy.source_ref_details_embedded, false);
@@ -62,6 +95,8 @@ test('App Runtime fast producer contract keeps summaries complete and diagnostic
   for (const requiredAxis of [
     'execution.current_stage_id',
     'execution.attempt_id',
+    'session_activity.state',
+    'session_activity.active_session_count',
     'telemetry.current_stage',
     'telemetry.cumulative',
     'visibility.state',

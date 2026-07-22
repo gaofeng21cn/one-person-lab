@@ -13,6 +13,12 @@ import {
 } from './control.ts';
 import { joinAttemptsToWorkItems, readWorkItemStageAttempts } from './execution.ts';
 import {
+  deriveControlledExecutionSessionBindings,
+  joinSessionActivityToWorkItems,
+  readWorkItemExecutionSessionBindings,
+  type WorkItemExecutionSessionBinding,
+} from './session-activity.ts';
+import {
   readProjectInventory,
   type InventoryDescriptorResolver,
 } from './inventory.ts';
@@ -171,6 +177,9 @@ export type BuildWorkItemProjectionV2Options = {
   attempts?: JsonRecord[];
   qualityCycles?: JsonRecord[];
   queueDb?: string;
+  sessionBindings?: WorkItemExecutionSessionBinding[];
+  sessionSourceRef?: string;
+  now?: () => number;
   resolveDescriptor?: InventoryDescriptorResolver;
   findWorkItemControl?: WorkItemControlResolver;
   generatedAt?: string;
@@ -218,6 +227,7 @@ export function buildWorkItemProjectionV2(
         archived_work_item_count: 0,
         total_work_item_count: 0,
         running_count: 0,
+        active_session_count: 0,
         user_attention_count: 0,
         system_attention_count: 0,
         telemetry_observed_count: 0,
@@ -276,7 +286,10 @@ export function buildWorkItemProjectionV2(
         quality_cycles: options.qualityCycles ?? [],
         diagnostics: [],
       }
-    : readWorkItemStageAttempts();
+    : readWorkItemStageAttempts(
+        profile === 'fast' ? { items: controlled.items } : undefined,
+        { validateIrrelevantActivityJson: profile === 'full' },
+      );
   diagnostics.push(...ledger.diagnostics);
   const joined = joinAttemptsToWorkItems({
     items: controlled.items,
@@ -286,6 +299,38 @@ export function buildWorkItemProjectionV2(
     attemptRefLimit: profile === 'fast' ? 1 : 8,
   });
   diagnostics.push(...joined.diagnostics);
+  const sessionLedger = options.sessionBindings !== undefined
+    ? {
+        bindings: options.sessionBindings,
+        source_ref: options.sessionSourceRef ?? 'in-memory-execution-session-fixture',
+        diagnostics: [] as WorkItemProjectionV2['diagnostics']['items'],
+      }
+    : options.attempts
+      ? {
+          bindings: [] as WorkItemExecutionSessionBinding[],
+          source_ref: options.sessionSourceRef ?? 'in-memory-execution-session-fixture',
+          diagnostics: [] as WorkItemProjectionV2['diagnostics']['items'],
+        }
+      : readWorkItemExecutionSessionBindings({ items: joined.items, now: options.now });
+  diagnostics.push(...sessionLedger.diagnostics);
+  const sessionJoined = joinSessionActivityToWorkItems({
+    items: joined.items,
+    bindings: [
+      ...sessionLedger.bindings,
+      ...deriveControlledExecutionSessionBindings({
+        items: joined.items,
+        attempts: ledger.attempts,
+        queueDb: ledger.queue_db,
+        now: options.now,
+      }),
+    ],
+    sourceRef: sessionLedger.source_ref,
+    now: options.now,
+  }) as {
+    items: WorkItemProjectionItem[];
+    diagnostics: WorkItemProjectionV2['diagnostics']['items'];
+  };
+  diagnostics.push(...sessionJoined.diagnostics);
   const unsettledCasObservationByWorkspace = new Map<
     string,
     DomainArtifactCasMaterializationReadObservation
@@ -320,7 +365,7 @@ export function buildWorkItemProjectionV2(
       },
     });
   }
-  const items = joined.items
+  const items = sessionJoined.items
     .map((item) => withProjectedWorkItemPrimaryState({
       ...item,
       conditions: [...lifecycleConditions(item), ...item.conditions],
@@ -363,6 +408,10 @@ export function buildWorkItemProjectionV2(
       archived_work_item_count: archivedItemCount,
       total_work_item_count: items.length,
       running_count: visibleItems.filter((item) => item.execution.state === 'running').length,
+      active_session_count: visibleItems.reduce(
+        (total, item) => total + item.session_activity.active_session_count,
+        0,
+      ),
       user_attention_count: visibleItems.filter((item) => item.attention.kind === 'user').length,
       system_attention_count: visibleItems.filter((item) => item.attention.kind === 'system').length,
       telemetry_observed_count: visibleItems.filter((item) => item.telemetry.cumulative.state === 'observed').length,

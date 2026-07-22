@@ -19,6 +19,8 @@ export type WorkItemExecutionState =
 export type WorkItemAttentionKind = 'none' | 'user' | 'system';
 export type WorkItemTelemetryState = 'observed' | 'partial' | 'missing' | 'stale';
 export type WorkItemFreshnessState = 'current' | 'stale' | 'unknown';
+export type WorkItemSessionActivityKind = 'coordination' | 'controlled_execution';
+export type WorkItemSessionActivityState = 'running' | 'waiting' | 'completed' | 'failed' | 'cancelled';
 export type WorkItemPrimaryState =
   | 'automatically_advancing'
   | 'awaiting_user_decision'
@@ -221,6 +223,28 @@ export type WorkItemProjectionItem = {
       stop_reason: string | null;
     };
   };
+  session_activity: {
+    state: 'active' | 'stale' | 'inactive';
+    active_session_count: number;
+    coordination_session_count: number;
+    controlled_execution_session_count: number;
+    active_session_refs: string[];
+    nonterminal_session_refs: string[];
+    session_sequences: Record<string, number>;
+    latest_session_ref: string | null;
+    latest_activity_kind: WorkItemSessionActivityKind | null;
+    latest_activity_state: WorkItemSessionActivityState | null;
+    latest_activity_at: string | null;
+    fresh_until: string | null;
+    label_key: string;
+    label_args: { active_session_count: number };
+    source:
+      | 'opl_work_item_execution_session_binding_ledger'
+      | 'opl_stage_attempt_execution_session_binding'
+      | 'opl_combined_work_item_session_activity';
+    can_affect_execution: boolean;
+    execution_effect_reason: string | null;
+  };
   attention: {
     kind: WorkItemAttentionKind;
     reason: string;
@@ -331,6 +355,7 @@ export type WorkItemProjectionV2 = {
     archived_work_item_count: number;
     total_work_item_count: number;
     running_count: number;
+    active_session_count: number;
     user_attention_count: number;
     system_attention_count: number;
     telemetry_observed_count: number;

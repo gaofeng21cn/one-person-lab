@@ -8,6 +8,7 @@ export type OplStatePaths = {
   workspace_registry_file: string;
   workspace_root_file: string;
   session_ledger_file: string;
+  work_item_execution_session_db: string;
   work_item_control_ledger_file: string;
   task_state_dir: string;
   runtime_modes_file: string;
@@ -125,6 +126,10 @@ export function resolveOplStatePaths(input: { dataDir?: string | null } = {}): O
     workspace_registry_file: path.join(stateDir, 'workspace-registry.json'),
     workspace_root_file: path.join(stateDir, 'workspace-root.json'),
     session_ledger_file: path.join(stateDir, 'session-ledger.json'),
+    work_item_execution_session_db: path.join(
+      stateDir,
+      'work-item-execution-session-bindings.sqlite',
+    ),
     work_item_control_ledger_file: path.join(stateDir, 'work-item-control-ledger.json'),
     task_state_dir: path.join(stateDir, 'tasks'),
     runtime_modes_file: path.join(stateDir, 'runtime-modes.json'),

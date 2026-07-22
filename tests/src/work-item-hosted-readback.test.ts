@@ -84,6 +84,7 @@ function fixtureProjection(workspaceRoot: string, workItemRoot: string): WorkIte
       archived_work_item_count: 0,
       total_work_item_count: 1,
       running_count: 1,
+      active_session_count: 0,
       user_attention_count: 0,
       system_attention_count: 0,
       telemetry_observed_count: 1,
@@ -164,6 +165,25 @@ function fixtureProjection(workspaceRoot: string, workItemRoot: string): WorkIte
           token_observation_status: 'observed',
           stop_reason: null
         }
+      },
+      session_activity: {
+        state: 'inactive',
+        active_session_count: 0,
+        coordination_session_count: 0,
+        controlled_execution_session_count: 0,
+        active_session_refs: [],
+        nonterminal_session_refs: [],
+        session_sequences: {},
+        latest_session_ref: null,
+        latest_activity_kind: null,
+        latest_activity_state: null,
+        latest_activity_at: null,
+        fresh_until: null,
+        label_key: 'runtimeSessionActivity.inactive',
+        label_args: { active_session_count: 0 },
+        source: 'opl_work_item_execution_session_binding_ledger',
+        can_affect_execution: false,
+        execution_effect_reason: null
       },
       attention: {
         kind: 'none',

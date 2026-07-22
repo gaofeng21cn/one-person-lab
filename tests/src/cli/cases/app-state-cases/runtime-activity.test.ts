@@ -164,7 +164,7 @@ test('app state does not turn an unregistered failed attempt into a phantom work
     assert.equal(task, undefined);
     assert.equal(workbench.work_item_projection_v2.items.length, 0);
     assert.equal(workbench.work_item_projection_v2.summary.system_attention_count, 0);
-    assert.equal(workbench.work_item_projection_v2.diagnostics.count > 0, true);
+    assert.equal(workbench.work_item_projection_v2.identity_health.non_work_item_execution_count, 0);
     assert.deepEqual(workbench.work_item_projection_v2.diagnostics.items, []);
     assert.equal(workbench.work_item_projection_v2.diagnostics.detail_policy, 'summary_only');
     assert.equal(workbench.work_item_projection_v2.detail_policy.inventory_detail, 'included');
