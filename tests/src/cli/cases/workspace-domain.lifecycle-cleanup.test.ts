@@ -544,14 +544,37 @@ test('MAS legacy workspace evidence stays diagnostic after managed owner contrac
       ], env);
 
       const descriptor = runCli(['agents', 'descriptor', '--domain', 'mas'], env);
+      const managedContractResolution =
+        descriptor.family_agent_descriptor.standard_agent_contract_resolution;
       const gate = descriptor.family_agent_descriptor.standard_domain_agent_skeleton
         .physical_skeleton_follow_through_gate;
       const diagnostic = descriptor.family_agent_descriptor.legacy_workspace_manifest_diagnostic;
 
-      assert.equal(gate, null);
       assert.equal(diagnostic.manifest_status, 'resolved');
       assert.equal(diagnostic.used_for_standard_agent_membership, false);
       assert.equal(diagnostic.used_for_owner_action_or_stage_contracts, false);
+      assert.equal(
+        managedContractResolution.surface_kind,
+        'opl_standard_agent_contract_checkout_resolution',
+      );
+      if (managedContractResolution.status === 'resolved') {
+        assert.equal(
+          managedContractResolution.checkout.checkout_path,
+          descriptor.family_agent_descriptor.workspace_path,
+        );
+        assert.equal(managedContractResolution.checkout.agent_id, 'mas');
+        assert.equal(gate.surface_kind, 'opl_physical_skeleton_follow_through_gate');
+        assert.equal(
+          gate.checklist.no_active_caller.source_surface,
+          'functional_consumer_boundary.standard_agent_purity',
+        );
+        assert.equal(
+          gate.evidence_refs.includes(
+            '/product_entry_manifest/functional_consumer_boundary/standard_agent_purity',
+          ),
+          true,
+        );
+      }
     } finally {
       fs.rmSync(stateRoot, { recursive: true, force: true });
     }
