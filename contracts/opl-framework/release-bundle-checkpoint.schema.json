@@ -216,6 +216,8 @@
         "built",
         "verified",
         "asset_names",
+        "asset_manifest_path",
+        "asset_manifest_sha256",
         "qualification_receipt_path",
         "qualification_receipt_sha256"
       ],
@@ -226,6 +228,11 @@
           "type": "array",
           "uniqueItems": true,
           "items": { "type": "string", "minLength": 1, "maxLength": 255 }
+        },
+        "asset_manifest_path": { "type": ["string", "null"] },
+        "asset_manifest_sha256": {
+          "type": ["string", "null"],
+          "pattern": "^sha256:[0-9a-f]{64}$"
         },
         "qualification_receipt_path": { "type": ["string", "null"] },
         "qualification_receipt_sha256": {
@@ -248,7 +255,7 @@
       "properties": {
         "path": { "type": "string", "minLength": 1, "maxLength": 1024 },
         "role": {
-          "enum": ["bundle", "prepared_notes", "track_asset", "qualification_receipt"]
+          "enum": ["bundle", "prepared_notes", "track_asset", "track_asset_manifest", "qualification_receipt"]
         },
         "track": { "type": ["string", "null"], "enum": ["standard", "full", null] },
         "asset_name": { "type": ["string", "null"], "maxLength": 255 },

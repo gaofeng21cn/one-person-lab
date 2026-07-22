@@ -201,7 +201,7 @@ export type ReleaseBundleCheckpointStage =
 
 export type ReleaseBundleCheckpointEntry = {
   path: string;
-  role: 'bundle' | 'prepared_notes' | 'track_asset' | 'qualification_receipt';
+  role: 'bundle' | 'prepared_notes' | 'track_asset' | 'track_asset_manifest' | 'qualification_receipt';
   track: ReleaseBundleTrackName | null;
   asset_name: string | null;
   size_bytes: number;
@@ -212,6 +212,8 @@ export type ReleaseBundleCheckpointTrack = {
   built: boolean;
   verified: boolean;
   asset_names: string[];
+  asset_manifest_path: string | null;
+  asset_manifest_sha256: string | null;
   qualification_receipt_path: string | null;
   qualification_receipt_sha256: string | null;
 };

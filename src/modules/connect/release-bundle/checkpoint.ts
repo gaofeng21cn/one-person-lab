@@ -146,6 +146,48 @@ function checkpointEntry(input: {
   } satisfies ReleaseBundleCheckpointEntry;
 }
 
+function checkpointEntryFromBytes(input: {
+  root: string;
+  bytes: Buffer;
+  relativePath: string;
+  role: ReleaseBundleCheckpointEntry['role'];
+  track?: ReleaseBundleTrackName;
+}) {
+  const relativePath = safeRelativePath(input.relativePath, 'Release Bundle checkpoint entry path');
+  const target = path.join(input.root, ...relativePath.split('/'));
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.writeFileSync(target, input.bytes, { flag: 'wx', mode: 0o644 });
+  const snapshot = inspectFile(target, 'Exported Release Bundle checkpoint entry');
+  return {
+    path: relativePath,
+    role: input.role,
+    track: input.track ?? null,
+    asset_name: null,
+    size_bytes: snapshot.size_bytes,
+    sha256: snapshot.sha256,
+  } satisfies ReleaseBundleCheckpointEntry;
+}
+
+function checkpointAssetManifestBytes(input: {
+  bundleDigest: string;
+  track: ReleaseBundleTrackName;
+  assets: Array<{ name: string; size_bytes: number; sha256: string }>;
+}) {
+  const assets = input.assets
+    .map((asset) => ({
+      name: asset.name,
+      size_bytes: asset.size_bytes,
+      sha256: asset.sha256,
+    }))
+    .sort((left, right) => left.name.localeCompare(right.name));
+  return Buffer.from(formatJsonPayload({
+    surface_kind: 'opl_release_bundle_staged_assets.v1',
+    bundle_digest: input.bundleDigest,
+    track: input.track,
+    assets,
+  }), 'utf8');
+}
+
 function derivedStage(
   tracks: Record<ReleaseBundleTrackName, ReleaseBundleCheckpointTrack>,
 ): ReleaseBundleCheckpointStage {
@@ -280,6 +322,9 @@ function assertCheckpointSemantics(input: ReturnType<typeof readCheckpointJson>)
   if (notes !== bundleValue.prepared_notes.markdown) {
     fail('Release Bundle checkpoint notes.md differs from the immutable prepared notes.');
   }
+  if (entryByRole(checkpoint, 'track_asset_manifest', null).length !== 0) {
+    fail('Release Bundle checkpoint asset manifests require a track.');
+  }
 
   for (const track of TRACKS) {
     const plan = checkpoint.tracks[track];
@@ -302,6 +347,43 @@ function assertCheckpointSemantics(input: ReturnType<typeof readCheckpointJson>)
       if (entry.path !== expectedPath) {
         fail('Checkpoint track asset path is not canonical.', { track, path: entry.path });
       }
+    }
+    const assetManifests = entryByRole(checkpoint, 'track_asset_manifest', track);
+    if (plan.built) {
+      if (assetManifests.length !== 1) {
+        fail('Built checkpoint track requires exactly one canonical asset manifest.', { track });
+      }
+      const assetManifest = assetManifests[0];
+      const expectedPath = `tracks/${track}/assets.json`;
+      if (
+        assetManifest.path !== expectedPath
+        || assetManifest.asset_name !== null
+        || plan.asset_manifest_path !== expectedPath
+      ) {
+        fail('Checkpoint asset manifest path is not canonical.', { track, path: assetManifest.path });
+      }
+      if (plan.asset_manifest_sha256 !== assetManifest.sha256) {
+        fail('Checkpoint track asset manifest digest does not match its declared entry.', { track });
+      }
+      const expectedBytes = checkpointAssetManifestBytes({
+        bundleDigest: checkpoint.bundle_digest,
+        track,
+        assets: assetEntries.map((entry) => ({
+          name: entry.asset_name!,
+          size_bytes: entry.size_bytes,
+          sha256: entry.sha256,
+        })),
+      });
+      const actualBytes = fs.readFileSync(path.join(root, expectedPath));
+      if (!actualBytes.equals(expectedBytes)) {
+        fail('Checkpoint asset manifest differs from the exact checkpoint asset identities.', { track });
+      }
+    } else if (
+      assetManifests.length !== 0
+      || plan.asset_manifest_path !== null
+      || plan.asset_manifest_sha256 !== null
+    ) {
+      fail('Unbuilt checkpoint track must not contain an asset manifest.', { track });
     }
     const qualifications = entryByRole(checkpoint, 'qualification_receipt', track);
     if (plan.verified) {
@@ -404,15 +486,45 @@ function exportReleaseBundleCheckpointUnlocked(input: {
       if (track === 'full' && staged && !qualificationPath(stored.paths, 'standard')) {
         fail('Full checkpoint bytes require a verified Standard track.');
       }
+      const trackAssetEntries: ReleaseBundleCheckpointEntry[] = [];
       for (const asset of staged?.assets ?? []) {
-        entries.push(checkpointEntry({
+        const entry = checkpointEntry({
           root: temporary,
           source: asset.path,
           relativePath: `tracks/${track}/assets/${asset.name}`,
           role: 'track_asset',
           track,
           assetName: asset.name,
-        }));
+        });
+        if (entry.size_bytes !== asset.size_bytes || entry.sha256 !== asset.sha256) {
+          fail('Stored Release Bundle asset drifted while its checkpoint was exported.', {
+            track,
+            asset_name: asset.name,
+            expected_sha256: asset.sha256,
+            actual_sha256: entry.sha256,
+          });
+        }
+        trackAssetEntries.push(entry);
+      }
+      entries.push(...trackAssetEntries);
+      let assetManifestEntry: ReleaseBundleCheckpointEntry | null = null;
+      if (staged) {
+        assetManifestEntry = checkpointEntryFromBytes({
+          root: temporary,
+          bytes: checkpointAssetManifestBytes({
+            bundleDigest: input.bundleDigest,
+            track,
+            assets: trackAssetEntries.map((entry) => ({
+              name: entry.asset_name!,
+              size_bytes: entry.size_bytes,
+              sha256: entry.sha256,
+            })),
+          }),
+          relativePath: `tracks/${track}/assets.json`,
+          role: 'track_asset_manifest',
+          track,
+        });
+        entries.push(assetManifestEntry);
       }
       let qualificationEntry: ReleaseBundleCheckpointEntry | null = null;
       if (qualification) {
@@ -429,6 +541,8 @@ function exportReleaseBundleCheckpointUnlocked(input: {
         built: staged !== null,
         verified: qualification !== null,
         asset_names: (staged?.assets ?? []).map((asset) => asset.name).sort(),
+        asset_manifest_path: assetManifestEntry?.path ?? null,
+        asset_manifest_sha256: assetManifestEntry?.sha256 ?? null,
         qualification_receipt_path: qualificationEntry?.path ?? null,
         qualification_receipt_sha256: qualificationEntry?.sha256 ?? null,
       };
@@ -482,6 +596,9 @@ function exportReleaseBundleCheckpointUnlocked(input: {
       flag: 'wx',
       mode: 0o644,
     });
+    const prepared = readCheckpointJson(path.join(temporary, 'checkpoint.json'));
+    validateCheckpointDirectory(prepared);
+    assertCheckpointSemantics(prepared);
     let exportedCheckpoint = checkpoint;
     let exportStatus: 'complete' | 'idempotent' = 'complete';
     try {

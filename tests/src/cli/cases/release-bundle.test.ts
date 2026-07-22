@@ -45,6 +45,24 @@ const appendFullOperation = {
 
 type MutableCheckpointFixture = {
   checkpoint_digest: string;
+  bundle_digest: string;
+  tracks: Record<'standard' | 'full', {
+    built: boolean;
+    verified: boolean;
+    asset_names: string[];
+    asset_manifest_path: string | null;
+    asset_manifest_sha256: string | null;
+    qualification_receipt_path: string | null;
+    qualification_receipt_sha256: string | null;
+  }>;
+  entries: Array<{
+    path: string;
+    role: string;
+    track: 'standard' | 'full' | null;
+    asset_name: string | null;
+    size_bytes: number;
+    sha256: string;
+  }>;
   active_unknown_markers?: Array<{
     marker_digest: string;
     prior_mutation_attempt_id: string;
@@ -115,7 +133,10 @@ function readCheckpointFixture(filePath: string) {
   return parseJsonText(fs.readFileSync(filePath, 'utf8')) as MutableCheckpointFixture;
 }
 
-function fixtureRequest(sourceRoot: string) {
+function fixtureRequest(
+  sourceRoot: string,
+  standardAssetNames = ['standard.dmg', 'latest.yml'],
+) {
   const sourceSha = '1'.repeat(40);
   const repoNames = {
     mas: 'med-autoscience',
@@ -289,7 +310,7 @@ function fixtureRequest(sourceRoot: string) {
     },
     tracks: {
       standard: {
-        required_asset_names: ['standard.dmg', 'latest.yml'],
+        required_asset_names: standardAssetNames,
         required_for_latest: true,
         additive_only: false,
         updater_metadata_allowed: true,
@@ -347,12 +368,12 @@ function writeQualification(input: {
   return receiptPath;
 }
 
-function createFixture(options: { admitStandard?: boolean } = {}) {
+function createFixture(options: { admitStandard?: boolean; standardAssetNames?: string[] } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-release-bundle-'));
   const sourceRoot = path.join(root, 'source');
   const storeRoot = path.join(root, 'store');
   const requestPath = path.join(root, 'freeze.json');
-  const request = fixtureRequest(sourceRoot);
+  const request = fixtureRequest(sourceRoot, options.standardAssetNames);
   writeJson(requestPath, request);
   const frozen = freezeReleaseBundle({ requestPath, sourceRoot, storeRoot });
   if (options.admitStandard !== false) {
@@ -621,6 +642,184 @@ test('build stages exact bytes once and rejects a second executor with different
     assert.throws(
       () => buildReleaseBundle({ bundleDigest, executorReceiptPath: conflictReceipt, storeRoot: fixture.storeRoot }),
       /already contains different asset bytes/,
+    );
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test('portable checkpoint binds one canonical six-asset manifest and rejects transport drift', () => {
+  const standardAssets = [
+    { name: 'standard.dmg', bytes: 'standard dmg' },
+    { name: 'standard.zip', bytes: 'standard zip' },
+    { name: 'standard.zip.blockmap', bytes: 'standard blockmap' },
+    { name: 'latest.yml', bytes: 'updater' },
+    { name: 'component-manifest.json', bytes: 'component manifest' },
+    { name: 'authorization-policy.json', bytes: 'authorization policy' },
+  ];
+  const fixture = createFixture({
+    standardAssetNames: standardAssets.map((asset) => asset.name),
+  });
+  try {
+    const bundleDigest = fixture.frozen.release_bundle_freeze.bundle_digest;
+    buildReleaseBundle({
+      bundleDigest,
+      executorReceiptPath: writeBuildReceipt({
+        root: fixture.root,
+        bundleDigest,
+        attemptId: 'six-asset-build',
+        assets: standardAssets,
+      }),
+      storeRoot: fixture.storeRoot,
+    });
+    verifyReleaseBundle({
+      bundleDigest,
+      track: 'standard',
+      qualificationReceiptPath: writeQualification({
+        root: fixture.root,
+        bundle: fixture.request,
+        bundleDigest,
+      }),
+      storeRoot: fixture.storeRoot,
+    });
+
+    const checkpointDirectory = path.join(fixture.root, 'six-asset-checkpoint');
+    const exported = exportReleaseBundleCheckpoint({
+      bundleDigest,
+      outputDirectory: checkpointDirectory,
+      storeRoot: fixture.storeRoot,
+    }).release_bundle_checkpoint_export;
+    const checkpointPath = path.join(checkpointDirectory, 'checkpoint.json');
+    const checkpoint = readCheckpointFixture(checkpointPath);
+    const manifestEntries = checkpoint.entries.filter((entry) => (
+      entry.role === 'track_asset_manifest' && entry.track === 'standard'
+    ));
+    assert.equal(manifestEntries.length, 1);
+    assert.equal(manifestEntries[0].path, 'tracks/standard/assets.json');
+    assert.equal(checkpoint.tracks.standard.asset_manifest_path, manifestEntries[0].path);
+    assert.equal(checkpoint.tracks.standard.asset_manifest_sha256, manifestEntries[0].sha256);
+    const manifestPath = path.join(checkpointDirectory, manifestEntries[0].path);
+    assert.equal(digest(fs.readFileSync(manifestPath)), manifestEntries[0].sha256);
+    const manifest = parseJsonText(fs.readFileSync(manifestPath, 'utf8')) as {
+      surface_kind: string;
+      bundle_digest: string;
+      track: string;
+      assets: Array<{ name: string; size_bytes: number; sha256: string }>;
+    };
+    const expectedManifestAssets = standardAssets
+      .map((asset) => ({
+        name: asset.name,
+        size_bytes: Buffer.byteLength(asset.bytes),
+        sha256: digest(asset.bytes),
+      }))
+      .sort((left, right) => left.name.localeCompare(right.name));
+    assert.deepEqual(manifest, {
+      surface_kind: 'opl_release_bundle_staged_assets.v1',
+      bundle_digest: bundleDigest,
+      track: 'standard',
+      assets: expectedManifestAssets,
+    });
+    assert.equal(manifest.assets.length, 6);
+    assert.equal(manifest.assets.some((asset) => 'path' in asset), false);
+    assert.deepEqual(
+      manifest.assets.map((asset) => asset.name).sort(),
+      [...fixture.request.tracks.standard.required_asset_names].sort(),
+    );
+
+    const importedStore = path.join(fixture.root, 'six-asset-imported-store');
+    const imported = importReleaseBundleCheckpoint({ checkpointPath, storeRoot: importedStore })
+      .release_bundle_checkpoint_import;
+    assert.equal(imported.status, 'complete');
+    const roundTripDirectory = path.join(fixture.root, 'six-asset-round-trip');
+    const roundTrip = exportReleaseBundleCheckpoint({
+      bundleDigest,
+      outputDirectory: roundTripDirectory,
+      storeRoot: importedStore,
+    }).release_bundle_checkpoint_export;
+    assert.equal(roundTrip.checkpoint_digest, exported.checkpoint_digest);
+    assert.deepEqual(
+      fs.readFileSync(path.join(roundTripDirectory, 'tracks/standard/assets.json')),
+      fs.readFileSync(manifestPath),
+    );
+
+    const rewriteCheckpointCopy = (
+      label: string,
+      mutate: (copy: MutableCheckpointFixture, directory: string) => void,
+    ) => {
+      const directory = path.join(fixture.root, label);
+      fs.cpSync(checkpointDirectory, directory, { recursive: true });
+      const copiedCheckpointPath = path.join(directory, 'checkpoint.json');
+      const copy = readCheckpointFixture(copiedCheckpointPath);
+      mutate(copy, directory);
+      const { checkpoint_digest: _checkpointDigest, ...core } = copy;
+      copy.checkpoint_digest = digest(canonicalJsonBytes(core));
+      writeJson(copiedCheckpointPath, copy);
+      return copiedCheckpointPath;
+    };
+
+    const missingManifestPath = rewriteCheckpointCopy('missing-manifest-checkpoint', (copy, directory) => {
+      const entry = copy.entries.find((candidate) => candidate.role === 'track_asset_manifest');
+      assert.ok(entry);
+      fs.rmSync(path.join(directory, entry.path));
+      copy.entries = copy.entries.filter((candidate) => candidate !== entry);
+      copy.tracks.standard.asset_manifest_path = null;
+      copy.tracks.standard.asset_manifest_sha256 = null;
+    });
+    assertTypedContractFailure(
+      () => importReleaseBundleCheckpoint({
+        checkpointPath: missingManifestPath,
+        storeRoot: path.join(fixture.root, 'missing-manifest-store'),
+      }),
+      /requires exactly one canonical asset manifest/,
+    );
+
+    const duplicateManifestPath = rewriteCheckpointCopy('duplicate-manifest-checkpoint', (copy, directory) => {
+      const entry = copy.entries.find((candidate) => candidate.role === 'track_asset_manifest');
+      assert.ok(entry);
+      const duplicatePath = 'tracks/standard/assets-copy.json';
+      fs.copyFileSync(path.join(directory, entry.path), path.join(directory, duplicatePath));
+      copy.entries.push({ ...entry, path: duplicatePath });
+      copy.entries.sort((left, right) => left.path.localeCompare(right.path));
+    });
+    assertTypedContractFailure(
+      () => importReleaseBundleCheckpoint({
+        checkpointPath: duplicateManifestPath,
+        storeRoot: path.join(fixture.root, 'duplicate-manifest-store'),
+      }),
+      /requires exactly one canonical asset manifest/,
+    );
+
+    const contentDriftPath = rewriteCheckpointCopy('content-drift-checkpoint', (copy, directory) => {
+      const entry = copy.entries.find((candidate) => candidate.role === 'track_asset_manifest');
+      assert.ok(entry);
+      const copiedManifestPath = path.join(directory, entry.path);
+      const copiedManifest = parseJsonText(fs.readFileSync(copiedManifestPath, 'utf8')) as {
+        assets: Array<{ sha256: string }>;
+      };
+      copiedManifest.assets[0].sha256 = `sha256:${'c'.repeat(64)}`;
+      writeJson(copiedManifestPath, copiedManifest);
+      const bytes = fs.readFileSync(copiedManifestPath);
+      entry.size_bytes = bytes.length;
+      entry.sha256 = digest(bytes);
+      copy.tracks.standard.asset_manifest_sha256 = entry.sha256;
+    });
+    assertTypedContractFailure(
+      () => importReleaseBundleCheckpoint({
+        checkpointPath: contentDriftPath,
+        storeRoot: path.join(fixture.root, 'content-drift-store'),
+      }),
+      /differs from the exact checkpoint asset identities/,
+    );
+
+    const digestDriftPath = rewriteCheckpointCopy('digest-drift-checkpoint', (copy) => {
+      copy.tracks.standard.asset_manifest_sha256 = `sha256:${'d'.repeat(64)}`;
+    });
+    assertTypedContractFailure(
+      () => importReleaseBundleCheckpoint({
+        checkpointPath: digestDriftPath,
+        storeRoot: path.join(fixture.root, 'digest-drift-store'),
+      }),
+      /asset manifest digest does not match its declared entry/,
     );
   } finally {
     fs.rmSync(fixture.root, { recursive: true, force: true });
